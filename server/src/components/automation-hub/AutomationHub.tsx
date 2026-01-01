@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useState, useCallback, useEffect } from 'react';
-import { useSearchParams } from 'next/navigation';
+import React, { useState, useCallback, useMemo } from 'react';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionContainer';
 import { DnDFlow as WorkflowDesigner } from '@product/workflows/entry';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from 'server/src/components/ui/Tabs';
@@ -13,43 +13,74 @@ import EventsCatalogV2 from './EventsCatalogV2';
 type TabValue = 'workflows' | 'designer' | 'runs' | 'events-catalog';
 
 export default function AutomationHub() {
-  const [activeTab, setActiveTab] = useState<TabValue>('workflows');
-  const [selectedWorkflowId, setSelectedWorkflowId] = useState<string | null>(null);
-  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
-  const [newWorkflowConfig, setNewWorkflowConfig] = useState<{
-    name: string;
-    triggerType: WorkflowTriggerType;
-  } | null>(null);
+  const router = useRouter();
   const searchParams = useSearchParams();
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
 
-  useEffect(() => {
+  const activeTab: TabValue = useMemo(() => {
     const tabRaw = searchParams.get('tab');
     const tab = tabRaw === 'events' ? 'events-catalog' : tabRaw;
     if (tab && ['workflows', 'designer', 'runs', 'events-catalog'].includes(tab)) {
-      setActiveTab(tab as TabValue);
+      return tab as TabValue;
     }
+    return 'workflows';
   }, [searchParams]);
 
+  const handleTabChange = useCallback((next: TabValue) => {
+    if (next === activeTab) return;
+    const newParams = new URLSearchParams(searchParams.toString());
+    newParams.set('tab', next);
+
+    if (next === 'workflows') {
+      newParams.delete('workflowId');
+      newParams.delete('new');
+    }
+
+    if (next === 'designer') {
+      // Manually selecting the Designer tab always opens "New Workflow" mode.
+      // Selecting a workflow from the list is the only path that sets workflowId.
+      newParams.delete('workflowId');
+      newParams.set('new', '1');
+    } else if (next === 'runs') {
+      newParams.delete('new');
+      // Keep workflowId for runs filtering if present.
+    } else {
+      newParams.delete('workflowId');
+      newParams.delete('new');
+    }
+
+    router.replace(`?${newParams.toString()}`, { scroll: false });
+  }, [activeTab, router, searchParams]);
+
   const handleSelectWorkflow = useCallback((workflowId: string) => {
-    setSelectedWorkflowId(workflowId);
-    setActiveTab('designer');
-  }, []);
+    // Update URL with workflowId so WorkflowDesigner can read it
+    const newParams = new URLSearchParams(searchParams.toString());
+    newParams.set('tab', 'designer');
+    newParams.set('workflowId', workflowId);
+    newParams.delete('new');
+    router.replace(`?${newParams.toString()}`, { scroll: false });
+  }, [searchParams, router]);
 
   const handleCreateNew = useCallback(() => {
     setIsCreateDialogOpen(true);
   }, []);
 
   const handleCreateWorkflow = useCallback((name: string, triggerType: WorkflowTriggerType) => {
-    setNewWorkflowConfig({ name, triggerType });
-    setSelectedWorkflowId(null);
-    setActiveTab('designer');
+    void name;
+    void triggerType;
+    // Clear workflowId from URL when creating new workflow
+    const newParams = new URLSearchParams(searchParams.toString());
+    newParams.set('tab', 'designer');
+    newParams.delete('workflowId');
+    newParams.set('new', '1');
+    router.replace(`?${newParams.toString()}`, { scroll: false });
     setIsCreateDialogOpen(false);
-  }, []);
+  }, [searchParams, router]);
 
   return (
     <ReflectionContainer id="automation-hub-container" label="Automation Hub" className="h-full min-h-0">
       <div className="flex flex-col h-full">
-        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as TabValue)} className="flex flex-col h-full min-h-0">
+        <Tabs value={activeTab} onValueChange={(v) => handleTabChange(v as TabValue)} className="flex flex-col h-full min-h-0">
           <div className="border-b border-[rgb(var(--color-border-200))] bg-white px-6">
             <TabsList className="gap-1 -mb-px">
               <TabsTrigger value="workflows" className="flex items-center gap-2">
