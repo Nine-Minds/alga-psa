@@ -189,7 +189,7 @@ export default function ManagerApprovalDashboard({ currentUser }: ManagerApprova
           },
           {
             title: 'Period',
-            dataIndex: 'time_period',
+            dataIndex: ['time_period', 'start_date'],
             width: '25%',
             render: (_, record) => (
               <>
