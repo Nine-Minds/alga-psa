@@ -540,6 +540,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
       boards,
       displaySettings: displaySettings || undefined,
       onTicketClick: handleTicketClick,
+      onEditClick: handleTicketClick, // Edit opens ticket in drawer (like Clients/Contacts pattern)
       onDeleteClick: handleDeleteTicket,
       ticketTagsRef,
       onTagsChange: handleTagsChange,

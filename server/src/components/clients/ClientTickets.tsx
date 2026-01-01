@@ -276,6 +276,7 @@ const ClientTickets: React.FC<ClientTicketsProps> = ({
       boards: initialBoards,
       displaySettings: displaySettings || undefined,
       onTicketClick: handleTicketClick,
+      onEditClick: handleTicketClick, // Edit opens ticket in drawer (like Clients/Contacts pattern)
       onDeleteClick: handleDeleteTicket,
       ticketTagsRef,
       onTagsChange: handleTagsChange,
