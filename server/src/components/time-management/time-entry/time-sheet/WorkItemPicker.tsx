@@ -501,6 +501,7 @@ export function WorkItemPicker({ onSelect, availableWorkItems, timePeriod }: Wor
                   }}
                   placeholder="Start date"
                   className="w-full"
+                  clearable
                 />
               </div>
               <div className="flex items-center">
@@ -514,6 +515,7 @@ export function WorkItemPicker({ onSelect, availableWorkItems, timePeriod }: Wor
                   }}
                   placeholder="End date"
                   className="w-full"
+                  clearable
                 />
               </div>
             </div>
