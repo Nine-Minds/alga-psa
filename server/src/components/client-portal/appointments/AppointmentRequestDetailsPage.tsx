@@ -37,7 +37,7 @@ interface AppointmentRequestDetails {
 export function AppointmentRequestDetailsPage() {
   const params = useParams();
   const router = useRouter();
-  const appointmentRequestId = params.appointmentRequestId as string;
+  const appointmentRequestId = params?.appointmentRequestId as string;
   const { t } = useTranslation('clientPortal');
 
   const [appointment, setAppointment] = useState<AppointmentRequestDetails | null>(null);

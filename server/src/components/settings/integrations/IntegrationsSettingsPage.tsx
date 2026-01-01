@@ -17,11 +17,9 @@ import {
   Monitor,
   Mail,
   Calendar,
-  ChevronRight,
   CreditCard,
 } from 'lucide-react';
-import QboIntegrationSettings from './QboIntegrationSettings';
-import XeroIntegrationSettings from './XeroIntegrationSettings';
+import AccountingIntegrationsSetup from './AccountingIntegrationsSetup';
 import { EmailProviderConfiguration } from '../../EmailProviderConfiguration';
 import { CalendarIntegrationsSettings } from '../../calendar/CalendarIntegrationsSettings';
 import dynamic from 'next/dynamic';
@@ -120,21 +118,15 @@ const IntegrationsSettingsPage: React.FC = () => {
     {
       id: 'accounting',
       label: 'Accounting',
-      description: 'Connect accounting software to sync invoices and payments',
+      description: 'Select an accounting package to configure synchronization for invoices, payments, and tax data.',
       icon: Building2,
       integrations: [
         {
-          id: 'qbo',
-          name: 'QuickBooks Online',
-          description: 'Sync invoices and payments with QuickBooks Online',
-          component: QboIntegrationSettings,
-        },
-        {
-          id: 'xero',
-          name: 'Xero',
-          description: 'Sync invoices and payments with Xero',
-          component: XeroIntegrationSettings,
-        },
+          id: 'accounting-setup',
+          name: 'Accounting Integrations',
+          description: 'Configure accounting synchronization and exports',
+          component: AccountingIntegrationsSetup,
+        }
       ],
     },
     {
@@ -226,11 +218,17 @@ const IntegrationsSettingsPage: React.FC = () => {
     content: (
       <div className="space-y-6">
         {/* Category header */}
-        <div className="flex items-start gap-3 pb-4 border-b">
-          <category.icon className="h-6 w-6 text-primary mt-0.5" />
-          <div>
-            <h3 className="text-lg font-semibold">{category.label} Integrations</h3>
-            <p className="text-sm text-muted-foreground">{category.description}</p>
+        <div className="rounded-xl border bg-muted/30 px-6 py-8 text-center">
+          <div className="mx-auto flex max-w-3xl flex-col items-center gap-3">
+            <div className="flex items-center justify-center gap-3">
+              <category.icon className="h-7 w-7 text-primary" />
+              <h2 className="text-3xl font-bold tracking-tight">
+                {category.label} Integrations
+              </h2>
+            </div>
+            <p className="max-w-2xl text-sm text-muted-foreground">
+              {category.description}
+            </p>
           </div>
         </div>
 

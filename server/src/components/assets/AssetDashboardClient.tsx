@@ -18,6 +18,7 @@ import {
 } from 'server/src/components/ui/DropdownMenu';
 import { Asset, AssetListResponse, ClientMaintenanceSummary } from 'server/src/interfaces/asset.interfaces';
 import { getClientMaintenanceSummaries, listAssets } from 'server/src/lib/actions/asset-actions/assetActions';
+import { loadAssetDetailDrawerData } from 'server/src/lib/actions/asset-actions/assetDrawerActions';
 import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
 import { QuickAddAsset } from './QuickAddAsset';
 import { AssetCommandPalette } from './AssetCommandPalette';
@@ -109,44 +110,33 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
   const [drawerError, setDrawerError] = useState<string | null>(null);
   const [drawerLoading, setDrawerLoading] = useState(false);
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
-  const drawerFetchRef = useRef<AbortController | null>(null);
+  const lastRequestIdRef = useRef<number>(0);
 
   const loadDrawerData = useCallback(async (assetId: string, tab: AssetDrawerTab) => {
-    drawerFetchRef.current?.abort();
-    const controller = new AbortController();
-    drawerFetchRef.current = controller;
+    const requestId = lastRequestIdRef.current + 1;
+    lastRequestIdRef.current = requestId;
 
     setDrawerLoading(true);
     setDrawerError(null);
 
     try {
-      const response = await fetch(`/api/assets/${assetId}/detail?panel=${tabToPanelParam(tab)}`, {
-        signal: controller.signal,
-      });
+      const result = await loadAssetDetailDrawerData({ assetId, panel: tabToPanelParam(tab) });
 
-      if (!response.ok) {
-        throw new Error('Failed to load');
-      }
-
-      type DrawerResponse = {
-        data?: AssetDrawerServerData;
-        error?: string | null;
-      };
-      const payload = (await response.json()) as DrawerResponse;
-      if (controller.signal.aborted) {
+      if (lastRequestIdRef.current !== requestId) {
         return;
       }
-      setDrawerData(payload.data ?? { asset: null });
-      setDrawerError(payload.error ?? null);
+
+      setDrawerData(result.data ?? { asset: null });
+      setDrawerError(result.error ?? null);
     } catch (error) {
-      if (controller.signal.aborted) {
+      if (lastRequestIdRef.current !== requestId) {
         return;
       }
       console.error('Failed to load asset drawer data', error);
       setDrawerData({ asset: null });
       setDrawerError('Unable to load asset details right now. Please try again.');
     } finally {
-      if (!controller.signal.aborted) {
+      if (lastRequestIdRef.current === requestId) {
         setDrawerLoading(false);
       }
     }
@@ -154,7 +144,7 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
 
   useEffect(() => {
     return () => {
-      drawerFetchRef.current?.abort();
+      // No cleanup needed
     };
   }, []);
 
@@ -202,7 +192,6 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
     setActiveDrawerTab(ASSET_DRAWER_TABS.OVERVIEW);
     setDrawerData({ asset: null });
     setDrawerError(null);
-    drawerFetchRef.current?.abort();
   }, []);
 
   const handleDrawerTabChange = useCallback((tab: AssetDrawerTab) => {

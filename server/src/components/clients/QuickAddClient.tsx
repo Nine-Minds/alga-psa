@@ -27,6 +27,8 @@ import CountryPicker from 'server/src/components/ui/CountryPicker';
 import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 import toast from 'react-hot-toast';
 import ClientCreatedDialog from './ClientCreatedDialog';
+import { QuickAddTagPicker, PendingTag } from 'server/src/components/tags';
+import { createTagsForEntity } from 'server/src/lib/actions/tagActions';
 import { 
   validateClientForm, 
   validateClientName, 
@@ -136,6 +138,7 @@ const QuickAddClient: React.FC<QuickAddClientProps> = ({
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [showSuccess, setShowSuccess] = useState(false);
   const [createdClient, setCreatedClient] = useState<IClient | null>(null);
+  const [pendingTags, setPendingTags] = useState<PendingTag[]>([]);
   const router = useRouter();
 
   useEffect(() => {
@@ -191,6 +194,7 @@ const QuickAddClient: React.FC<QuickAddClientProps> = ({
       setHasAttemptedSubmit(false);
       setValidationErrors([]);
       setFieldErrors({});
+      setPendingTags([]);
     }
   }, [open]);
 
@@ -434,10 +438,24 @@ const QuickAddClient: React.FC<QuickAddClientProps> = ({
         }
       }
 
+      // Create tags for the new client
+      let createdTags: typeof newClient.tags = [];
+      if (pendingTags.length > 0) {
+        try {
+          createdTags = await createTagsForEntity(newClient.client_id, 'client', pendingTags);
+          if (createdTags.length < pendingTags.length) {
+            toast.error(`${pendingTags.length - createdTags.length} tag(s) could not be created`);
+          }
+        } catch (tagError) {
+          console.error("Error creating client tags:", tagError);
+        }
+      }
 
-      setCreatedClient(newClient);
+      // Pass client with tags to callback
+      const clientWithTags = { ...newClient, tags: createdTags };
+      setCreatedClient(clientWithTags);
       setShowSuccess(true);
-      onClientAdded(newClient);
+      onClientAdded(clientWithTags);
       onOpenChange(false);
       } catch (error: any) {
       console.error("Error creating client:", error);
@@ -632,7 +650,8 @@ const QuickAddClient: React.FC<QuickAddClientProps> = ({
       id="quick-add-client-dialog"
       isOpen={open}
       onClose={() => onOpenChange(false)}
-      title="Add New Client">
+      title="Add New Client"
+      disableFocusTrap>
       {trigger && <DialogTrigger asChild>{trigger}</DialogTrigger>}
       <DialogContent>
         <form onSubmit={handleSubmit} id="quick-add-client-form" noValidate>
@@ -767,6 +786,15 @@ const QuickAddClient: React.FC<QuickAddClientProps> = ({
                   />
                 </div>
               </div>
+
+              {/* Tags */}
+              <QuickAddTagPicker
+                id="quick-add-client-tags"
+                entityType="client"
+                pendingTags={pendingTags}
+                onPendingTagsChange={setPendingTags}
+                disabled={isSubmitting}
+              />
             </div>
 
             {/* Client Location Section */}

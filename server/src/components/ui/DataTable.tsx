@@ -69,8 +69,9 @@ const getDisplayText = (columnDef: ColumnDefinition<any> | undefined, cellValue:
   // For JSX elements, try to extract text content based on common patterns
   if (React.isValidElement(renderResult)) {
     // Handle common patterns in the codebase
-    if (renderResult.props && renderResult.props.children) {
-      const children = renderResult.props.children;
+    const resultProps = renderResult.props as { children?: React.ReactNode };
+    if (resultProps && resultProps.children) {
+      const children = resultProps.children;
       if (typeof children === 'string') {
         return children;
       }
@@ -404,15 +405,22 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
     if (!manualSorting) {
       // Always filter sorting to only include visible columns
       setSorting(prev => {
-        const validSorting = prev.filter(sort => visibleColumnIds.includes(sort.id));
+        const filteredSorting = prev.filter(sort => visibleColumnIds.includes(sort.id));
         // If current sorting became invalid, try to use initialSorting
-        if (validSorting.length === 0 && initialSorting && initialSorting.length > 0) {
+        if (filteredSorting.length === 0 && initialSorting && initialSorting.length > 0) {
           return initialSorting.filter(sort => visibleColumnIds.includes(sort.id));
         }
-        return validSorting;
+        return filteredSorting;
       });
     }
   }, [initialSorting, manualSorting, visibleColumnIds]);
+
+  // Filter sorting to only include columns that exist in visibleColumnIds
+  // This prevents TanStack Table errors when columns are hidden due to responsive layout
+  const validSorting = useMemo(
+    () => sorting.filter(sort => visibleColumnIds.includes(sort.id)),
+    [sorting, visibleColumnIds]
+  );
 
   const table = useReactTable({
     data,
@@ -429,7 +437,7 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
         pageIndex,
         pageSize: currentPageSize,
       },
-      sorting,
+      sorting: validSorting,
     },
     onPaginationChange: setPagination,
     onSortingChange: (updater) => {
@@ -548,9 +556,9 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-white">
-              {table.getHeaderGroups().map((headerGroup): JSX.Element => (
+              {table.getHeaderGroups().map((headerGroup): React.JSX.Element => (
                 <tr key={`headergroup_${headerGroup.id}`}>
-                  {headerGroup.headers.map((header, headerIndex): JSX.Element => {
+                  {headerGroup.headers.map((header, headerIndex): React.JSX.Element => {
                     const columnId = header.column.columnDef.id || header.id;
                   const colDef = columns.find(col => {
                     const colId = Array.isArray(col.dataIndex) ? col.dataIndex.join('_') : col.dataIndex;
@@ -583,7 +591,7 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
               ))}
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {table.getPaginationRowModel().rows.map((row, rowIndex): JSX.Element => {
+              {table.getPaginationRowModel().rows.map((row, rowIndex): React.JSX.Element => {
                 // Use the id property if it exists in the data, otherwise use row.id
                 const rowId = ('id' in row.original) ? (row.original as { id: string }).id : row.id;
                 const extraRowClass = typeof rowClassName === 'function' ? rowClassName(row.original as any) : '';
@@ -593,11 +601,12 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
                     onClick={() => handleRowClick(row)}
                     className={`
                     ${rowIndex % 2 === 0 ? 'bg-gray-50' : 'bg-white'}
-                    hover:bg-blue-50 transition-colors cursor-pointer
+                    ${onRowClick ? 'hover:bg-blue-50 cursor-pointer' : 'cursor-default'}
+                    transition-colors
                     ${extraRowClass}
                   `}
                   >
-                    {row.getVisibleCells().map((cell, cellIndex): JSX.Element => {
+                    {row.getVisibleCells().map((cell, cellIndex): React.JSX.Element => {
                       const columnId = cell.column.columnDef.id || cell.column.id;
                       const cellValue = cell.getValue();
                       

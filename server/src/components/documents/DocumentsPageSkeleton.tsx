@@ -5,7 +5,7 @@ import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionCo
 /**
  * DocumentSkeletonCard - A skeleton loading component for document cards
  */
-export function DocumentSkeletonCard({ id }: { id: string }): JSX.Element {
+export function DocumentSkeletonCard({ id }: { id: string }): React.JSX.Element {
   return (
     <ReflectionContainer id={id} label="Document Skeleton Card">
       <div className="bg-white rounded-lg border border-[rgb(var(--color-border-200))] shadow-sm p-4 h-full flex flex-col">
@@ -64,7 +64,7 @@ export function DocumentsGridSkeleton({
 }: {
   count?: number,
   gridColumns?: 3 | 4
-}): JSX.Element {
+}): React.JSX.Element {
   const gridColumnsClass = gridColumns === 4
     ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'
     : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3';
@@ -83,7 +83,7 @@ export function DocumentsGridSkeleton({
 /**
  * DocumentsPageSkeleton - A skeleton loading component for the entire Documents page
  */
-export default function DocumentsPageSkeleton(): JSX.Element {
+export default function DocumentsPageSkeleton(): React.JSX.Element {
   return (
     <div className="p-6">
       {/* Skeleton for page header */}

@@ -114,7 +114,7 @@ interface TimeEntryContextType extends TimeEntryState {
 
 const TimeEntryContext = createContext<TimeEntryContextType | undefined>(undefined);
 
-export function TimeEntryProvider({ children }: { children: React.ReactNode }): JSX.Element {
+export function TimeEntryProvider({ children }: { children: React.ReactNode }): React.JSX.Element {
   const [state, dispatch] = useReducer(timeEntryReducer, initialState);
 
   const initializeEntries = async ({

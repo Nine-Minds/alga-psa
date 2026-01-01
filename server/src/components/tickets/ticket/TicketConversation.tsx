@@ -207,11 +207,11 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
     return null;
   };
 
-  const renderComments = (comments: IComment[]): JSX.Element[] => {
+  const renderComments = (comments: IComment[]): React.JSX.Element[] => {
     // Use the sorted comments based on the reverseOrder state
     const commentsToRender = reverseOrder ? [...comments].reverse() : comments;
     
-    return commentsToRender.map((conversation): JSX.Element => {
+    return commentsToRender.map((conversation): React.JSX.Element => {
       const override = overrides[conversation.comment_id || ''];
       const mergedConversation = override
         ? { ...conversation, ...(override.note ? { note: override.note } : {}), ...(override.updated_at ? { updated_at: override.updated_at } : {}) }

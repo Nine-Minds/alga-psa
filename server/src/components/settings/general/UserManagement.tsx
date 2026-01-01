@@ -25,7 +25,7 @@ import { validateContactName, validateEmailAddress, validatePassword, getPasswor
 import LoadingIndicator from 'server/src/components/ui/LoadingIndicator';
 import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 
-const UserManagement = (): JSX.Element => {
+const UserManagement = (): React.JSX.Element => {
   const [users, setUsers] = useState<IUser[]>([]);
   const [roles, setRoles] = useState<IRole[]>([]);
   const [clients, setClients] = useState<IClient[]>([]);
@@ -528,7 +528,7 @@ const fetchContacts = async (): Promise<void> => {
         )}
         <div className="flex justify-between mb-4">
           <div className="flex gap-6 items-center">
-            <div className="relative">
+            <div className="relative p-0.5">
               <Input
                 type="text"
                 placeholder="Search users"

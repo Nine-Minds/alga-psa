@@ -42,7 +42,7 @@ import SurveySettings from 'server/src/components/surveys/SurveySettings';
 import ProjectSettings from './ProjectSettings';
 
 // Wrapper component with UnsavedChangesProvider
-const SettingsPage = (): JSX.Element => {
+const SettingsPage = (): React.JSX.Element => {
   return (
     <UnsavedChangesProvider
       dialogTitle="Unsaved Changes"
@@ -54,7 +54,7 @@ const SettingsPage = (): JSX.Element => {
 };
 
 // Main content component
-const SettingsPageContent = (): JSX.Element =>  {
+const SettingsPageContent = (): React.JSX.Element =>  {
   const searchParams = useSearchParams();
   const tabParam = searchParams?.get('tab');
   // Extensions are conditionally available based on edition

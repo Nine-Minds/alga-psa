@@ -74,7 +74,7 @@ export default function ExtensionIframe({ domain, extensionId }: Props) {
   }, [isLoading]);
 
   return (
-    <div className="relative h-full w-full" aria-busy={isLoading}>
+    <div className="absolute h-full w-full" aria-busy={isLoading}>
       {isLoading && !hasError && (
         <div className="extension-loading-overlay" role="status">
           <LoadingIndicator

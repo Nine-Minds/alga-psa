@@ -640,16 +640,6 @@ async function ensureOAuthAccountLink(
         metadata.linkNonceIssuedAt,
         toOptionalString(metadata.linkNonceSignature),
     );
-    console.log('[oauth] account metadata for link', {
-        providerId,
-        userId: user.id,
-        linkUserId,
-        linkMode,
-        hasNonce: Boolean(linkNonce),
-        nonceIssuedAt: metadata.linkNonceIssuedAt,
-        hasSignature: Boolean(metadata.linkNonceSignature),
-        linkingAuthorized,
-    });
 
     const existingLink = await findOAuthAccountLink(normalizedProvider, providerAccountId);
     let autoLinkAuthorized = false;
@@ -773,7 +763,7 @@ export async function buildAuthOptions(): Promise<NextAuthConfig> {
                             typeof googleProfile.vanity_host === 'string'
                                 ? googleProfile.vanity_host
                                 : undefined;
-                        return mapOAuthProfileToExtendedUser({
+                        return await mapOAuthProfileToExtendedUser({
                             provider: 'google',
                             email: profile.email,
                             image: profile.picture,
@@ -781,7 +771,7 @@ export async function buildAuthOptions(): Promise<NextAuthConfig> {
                             tenantHint,
                             vanityHostHint,
                             userTypeHint,
-                        }) as Promise<ExtendedUser>;
+                        }) as ExtendedUser;
                     },
                 }),
             ]
@@ -1166,6 +1156,13 @@ export async function buildAuthOptions(): Promise<NextAuthConfig> {
             const request = (context as any).request; // NextAuth v5 runtime provides request
 
             if (extendedUser && providerId && providerId !== 'credentials') {
+                // NextAuth v5 can sometimes override the user.id with a random UUID.
+                // Since we return the DB user_id as the 'id' in our profile callbacks,
+                // the account.providerAccountId will contain the correct DB ID.
+                if (account?.providerAccountId) {
+                    extendedUser.id = account.providerAccountId;
+                }
+
                 const accountRecord = account as unknown as Record<string, unknown> | null;
                 try {
                     const enrichedUser = await applyOAuthAccountHints(
@@ -1287,42 +1284,44 @@ export async function buildAuthOptions(): Promise<NextAuthConfig> {
 
             return true; // Allow sign in
         },
-        async jwt({ token, user }) {
-            console.log('JWT callback - initial token:', {
-                id: token.id,
-                email: token.email,
-                clientId: token.clientId,
-                hasUser: !!user
-            });
+	        async jwt({ token, user }) {
+	            console.log('JWT callback - initial token:', {
+	                id: token.id,
+	                email: token.email,
+	                clientId: token.clientId,
+	                hasUser: !!user
+	            });
 
-            if (user) {
-                const extendedUser = user as ExtendedUser;
-                console.log('JWT callback - new user login:', {
-                    id: extendedUser.id,
-                    email: extendedUser.email,
-                    tenant: extendedUser.tenant,
-                    clientId: extendedUser.clientId
-                });
+	            if (user) {
+	                const extendedUser = user as ExtendedUser;
+	                console.log('JWT callback - new user login:', {
+	                    id: extendedUser.id,
+	                    email: extendedUser.email,
+	                    tenant: extendedUser.tenant,
+	                    clientId: extendedUser.clientId
+	                });
                 if (!extendedUser.tenantSlug && extendedUser.tenant) {
                     extendedUser.tenantSlug = buildTenantPortalSlug(extendedUser.tenant);
                 }
-                token.id = extendedUser.id;
-                token.email = extendedUser.email;
-                token.name = extendedUser.name;
-                token.username = extendedUser.username;
-                token.image = extendedUser.image;
-                token.proToken = extendedUser.proToken;
+	                token.id = extendedUser.id;
+	                // Keep `sub` aligned with `id` for middleware/legacy consumers that read `token.sub`.
+	                token.sub = extendedUser.id;
+	                token.email = extendedUser.email;
+	                token.name = extendedUser.name;
+	                token.username = extendedUser.username;
+	                token.image = extendedUser.image;
+	                token.proToken = extendedUser.proToken;
                 token.tenant = extendedUser.tenant;
                 token.tenantSlug = extendedUser.tenantSlug;
-                token.user_type = extendedUser.user_type;
-                token.clientId = extendedUser.clientId;
-                token.contactId = extendedUser.contactId;
-              }
+	                token.user_type = extendedUser.user_type;
+	                token.clientId = extendedUser.clientId;
+	                token.contactId = extendedUser.contactId;
+	              }
 
-            // NEW: Create session record on initial sign-in
-            // CRITICAL: Only create if session_id doesn't exist (prevents duplicates on OTT redemption)
-            if ((user as any)?.deviceInfo && !token.session_id) {
-                try {
+	            // NEW: Create session record on initial sign-in
+	            // CRITICAL: Only create if session_id doesn't exist (prevents duplicates on OTT redemption)
+	            if ((user as any)?.deviceInfo && !token.session_id) {
+	                try {
                     const extendedUser = user as any; // ExtendedUser with deviceInfo and loginMethod added in signIn callback
                     const expiresAt = new Date(Date.now() + SESSION_MAX_AGE * 1000);
 
@@ -1528,7 +1527,7 @@ export const options: NextAuthConfig = {
                             typeof googleProfile.vanity_host === 'string'
                                 ? googleProfile.vanity_host
                                 : undefined;
-                        return mapOAuthProfileToExtendedUser({
+                        return await mapOAuthProfileToExtendedUser({
                             provider: 'google',
                             email: profile.email,
                             image: (profile as any).picture,
@@ -1536,7 +1535,7 @@ export const options: NextAuthConfig = {
                             tenantHint,
                             vanityHostHint,
                             userTypeHint,
-                        }) as Promise<ExtendedUser>;
+                        }) as ExtendedUser;
                     },
                 }),
             ]
@@ -1926,35 +1925,10 @@ export const options: NextAuthConfig = {
             const extendedUser = user as ExtendedUser | undefined;
 
             if (extendedUser && providerId && providerId !== 'credentials') {
-                try {
-                    const enrichedUser = await applyOAuthAccountHints(
-                        toOAuthProfileMappingResult(extendedUser),
-                        account as unknown as Record<string, unknown>,
-                    );
-                    Object.assign(extendedUser, enrichedUser);
-                } catch (error) {
-                    console.warn('[signIn] failed to apply OAuth tenant hints', {
-                        providerId,
-                        error,
-                    });
+                if (account?.providerAccountId) {
+                    extendedUser.id = account.providerAccountId;
                 }
-            }
 
-            // Track last login
-            if (extendedUser?.id && extendedUser?.tenant && providerId) {
-                try {
-                    const User = (await import('server/src/lib/models/user')).default;
-                    await User.updateLastLogin(
-                        extendedUser.id,
-                        extendedUser.tenant,
-                        providerId
-                    );
-                } catch (error) {
-                    console.warn('[signIn] failed to update last login', error);
-                }
-            }
-
-            if (extendedUser && providerId && providerId !== 'credentials') {
                 const accountRecord = account as unknown as Record<string, unknown> | null;
                 try {
                     const enrichedUser = await applyOAuthAccountHints(
@@ -1972,13 +1946,26 @@ export const options: NextAuthConfig = {
                 await ensureOAuthAccountLink(extendedUser, accountRecord, providerId);
             }
 
+            // Track last login
+            if (extendedUser?.id && extendedUser?.tenant && providerId) {
+                try {
+                    const User = (await import('server/src/lib/models/user')).default;
+                    await User.updateLastLogin(
+                        extendedUser.id,
+                        extendedUser.tenant,
+                        providerId
+                    );
+                } catch (error) {
+                    console.warn('[signIn] failed to update last login', error);
+                }
+            }
+
             if (providerId === 'credentials') {
                 const callbackUrl = typeof credentials?.callbackUrl === 'string' ? credentials.callbackUrl : undefined;
                 const canonicalBaseUrl = process.env.NEXTAUTH_URL;
 
                 if (extendedUser?.user_type === 'client' && callbackUrl && canonicalBaseUrl) {
                     try {
-                        console.log('[signIn] computing vanity redirect');
                         const vanityRedirect = await computeVanityRedirect({
                             url: callbackUrl,
                             baseUrl: canonicalBaseUrl,
@@ -2018,34 +2005,36 @@ export const options: NextAuthConfig = {
                 hasUser: !!user
             });
 
-            if (user) {
-                const extendedUser = user as ExtendedUser;
-                console.log('JWT callback - new user login:', {
-                    id: extendedUser.id,
-                    email: extendedUser.email,
-                    tenant: extendedUser.tenant,
-                    clientId: extendedUser.clientId
-                });
+	            if (user) {
+	                const extendedUser = user as ExtendedUser;
+	                console.log('JWT callback - new user login:', {
+	                    id: extendedUser.id,
+	                    email: extendedUser.email,
+	                    tenant: extendedUser.tenant,
+	                    clientId: extendedUser.clientId
+	                });
                 if (!extendedUser.tenantSlug && extendedUser.tenant) {
                     extendedUser.tenantSlug = buildTenantPortalSlug(extendedUser.tenant);
                 }
-                token.id = extendedUser.id;
-                token.email = extendedUser.email;
-                token.name = extendedUser.name;
-                token.username = extendedUser.username;
-                token.image = extendedUser.image;
-                token.proToken = extendedUser.proToken;
+	                token.id = extendedUser.id;
+	                // Keep `sub` aligned with `id` for middleware/legacy consumers that read `token.sub`.
+	                token.sub = extendedUser.id;
+	                token.email = extendedUser.email;
+	                token.name = extendedUser.name;
+	                token.username = extendedUser.username;
+	                token.image = extendedUser.image;
+	                token.proToken = extendedUser.proToken;
                 token.tenant = extendedUser.tenant;
                 token.tenantSlug = extendedUser.tenantSlug;
-                token.user_type = extendedUser.user_type;
-                token.clientId = extendedUser.clientId;
-                token.contactId = extendedUser.contactId;
-              }
+	                token.user_type = extendedUser.user_type;
+	                token.clientId = extendedUser.clientId;
+	                token.contactId = extendedUser.contactId;
+	              }
 
-            // NEW: Create session record on initial sign-in
-            // CRITICAL: Only create if session_id doesn't exist (prevents duplicates on OTT redemption)
-            if ((user as any)?.deviceInfo && !token.session_id) {
-                try {
+	            // NEW: Create session record on initial sign-in
+	            // CRITICAL: Only create if session_id doesn't exist (prevents duplicates on OTT redemption)
+	            if ((user as any)?.deviceInfo && !token.session_id) {
+	                try {
                     const extendedUser = user as any; // ExtendedUser with deviceInfo and loginMethod added in signIn callback
                     const expiresAt = new Date(Date.now() + SESSION_MAX_AGE * 1000);
 

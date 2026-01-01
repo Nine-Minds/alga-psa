@@ -1,7 +1,9 @@
 import { AccountingExportAdapter } from './accountingExportAdapter';
 import { QuickBooksOnlineAdapter } from './quickBooksOnlineAdapter';
 import { QuickBooksDesktopAdapter } from './quickBooksDesktopAdapter';
+import { QuickBooksCSVAdapter } from './quickBooksCSVAdapter';
 import { XeroAdapter } from './xeroAdapter';
+import { XeroCsvAdapter } from './xeroCsvAdapter';
 
 export class AccountingAdapterRegistry {
   private readonly adapters = new Map<string, AccountingExportAdapter>();
@@ -26,7 +28,9 @@ export class AccountingAdapterRegistry {
     const adapters = await Promise.all([
       QuickBooksOnlineAdapter.create(),
       QuickBooksDesktopAdapter.create(),
-      XeroAdapter.create()
+      QuickBooksCSVAdapter.create(),
+      XeroAdapter.create(),
+      XeroCsvAdapter.create()
     ]);
     return new AccountingAdapterRegistry(adapters);
   }

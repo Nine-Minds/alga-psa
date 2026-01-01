@@ -23,6 +23,8 @@ export interface AccountingExportAdapterContext {
   taxDelegationMode?: TaxDelegationMode;
   /** If true, tax amounts should be omitted from exported invoices */
   excludeTaxFromExport?: boolean;
+  /** Adapter-specific settings (e.g., date format for CSV adapters) */
+  adapterSettings?: Record<string, unknown>;
 }
 
 export interface AccountingExportDocument {

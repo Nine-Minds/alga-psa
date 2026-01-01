@@ -14,7 +14,7 @@ import { getTeams } from 'server/src/lib/actions/team-actions/teamActions';
 
 export default function SchedulePage() {
   const searchParams = useSearchParams();
-  const requestIdFromUrl = searchParams.get('requestId');
+  const requestIdFromUrl = searchParams?.get('requestId') ?? null;
 
   const [showRequestsPanel, setShowRequestsPanel] = useState(false);
   const [showAvailabilitySettings, setShowAvailabilitySettings] = useState(false);

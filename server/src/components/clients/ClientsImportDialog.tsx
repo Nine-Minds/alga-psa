@@ -205,7 +205,7 @@ const ClientsImportDialog: React.FC<ClientsImportDialogProps> = ({
 
     try {
       const text = await uploadedFile.text();
-      const rows = parseCSV(text);
+      const rows = parseCSV(text) as string[][];
       
       if (rows.length < 2) {
         throw new Error('CSV file is empty or invalid');
@@ -378,7 +378,7 @@ const ClientsImportDialog: React.FC<ClientsImportDialogProps> = ({
               <div className="flex items-center gap-2 text-red-800">
                 <AlertTriangle className="h-4 w-4" />
                 <ul>
-                  {errors.map((error, index): JSX.Element => (
+                  {errors.map((error, index): React.JSX.Element => (
                     <li key={index}>{error}</li>
                   ))}
                 </ul>
@@ -439,7 +439,7 @@ const ClientsImportDialog: React.FC<ClientsImportDialogProps> = ({
                   <span className="w-2/3">Select CSV Column</span>
                 </div>
                 <div className="border-t pt-4 space-y-3">
-                  {Object.entries(COMPANY_FIELDS).map(([fieldKey, fieldLabel]: [string, string]): JSX.Element => {
+                  {Object.entries(COMPANY_FIELDS).map(([fieldKey, fieldLabel]: [string, string]): React.JSX.Element => {
                     const currentMapping = columnMappings.find(m => m.clientField === fieldKey);
                     const csvHeader = currentMapping?.csvHeader || 'unassigned';
                     

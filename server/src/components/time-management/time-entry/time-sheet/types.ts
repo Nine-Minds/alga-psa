@@ -39,7 +39,7 @@ export interface TimeEntryFormProps {
   onDelete: (index: number) => Promise<void>;
   onUpdateEntry: (index: number, entry: ITimeEntryWithNew) => void;
   onUpdateTimeInputs: (inputs: TimeInputs) => void;
-  lastNoteInputRef?: React.RefObject<HTMLInputElement>;
+  lastNoteInputRef?: React.RefObject<HTMLInputElement | null>;
   timePeriod?: ITimePeriodView;
   date?: Date;
   isNewEntry?: boolean;

@@ -11,6 +11,7 @@ RUN curl -sSL "https://storage.googleapis.com/kubernetes-release/release/$(curl 
     && chmod +x /usr/local/bin/kubectl
 
 WORKDIR /app
+ENV NODE_PATH=/app/shared/node_modules
 
 COPY shared/ /app/shared
 COPY packages/ /app/packages/
@@ -52,6 +53,8 @@ RUN npm install --ignore-scripts
 # Install server dependencies (needed for type-checking server source files via path aliases)
 WORKDIR /app/server
 RUN npm install --ignore-scripts --legacy-peer-deps || true
+# TS module resolution for ee/server/src expects dependencies under /app/ee/server
+RUN mkdir -p /app/ee/server && ln -sf /app/server/node_modules /app/ee/server/node_modules
 
 WORKDIR /app/ee/temporal-workflows
 # Ensure tsc-alias is available for the build

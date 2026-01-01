@@ -186,7 +186,7 @@ export function TicketList() {
 
   // Handle deep link - navigate to ticket page from URL parameter
   useEffect(() => {
-    const ticketParam = searchParams.get('ticket');
+    const ticketParam = searchParams?.get('ticket') ?? null;
     if (ticketParam && tickets.length > 0) {
       // Find ticket by ticket_id (UUID)
       const ticket = tickets.find(t => t.ticket_id === ticketParam);

@@ -18,7 +18,7 @@ export function TaskCommentForm({
   projectId,
   onCommentAdded,
   onCancel
-}: TaskCommentFormProps): JSX.Element {
+}: TaskCommentFormProps): React.JSX.Element {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const editorRef = useRef<BlockNoteEditor<any, any, any> | null>(null);
 

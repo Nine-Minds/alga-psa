@@ -11,7 +11,7 @@ import {
   updateTicketingDisplaySettings 
 } from 'server/src/lib/actions/ticket-actions/ticketDisplaySettings';
 
-const DisplaySettings = (): JSX.Element => {
+const DisplaySettings = (): React.JSX.Element => {
   // Ticket display preferences (tenant-wide)
   const [dateTimeFormat, setDateTimeFormat] = useState<string>('MMM d, yyyy h:mm a');
   const [isSavingDisplay, setIsSavingDisplay] = useState<boolean>(false);

@@ -441,7 +441,7 @@ const OverallInteractionsFeed: React.FC<OverallInteractionsFeedProps> = ({
       </Dialog>
       
       <ul className="space-y-4 overflow-y-auto max-h-[calc(100vh-300px)]">
-        {filteredInteractions.map((interaction: IInteraction): JSX.Element => (
+        {filteredInteractions.map((interaction: IInteraction): React.JSX.Element => (
           <li key={interaction.interaction_id} className="flex items-start space-x-3 p-2 hover:bg-gray-100 rounded cursor-pointer" onClick={() => handleInteractionClick(interaction)}>
             <InteractionIcon icon={interaction.icon} typeName={interaction.type_name} />
             <div>

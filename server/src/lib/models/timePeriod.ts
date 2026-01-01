@@ -7,10 +7,11 @@ import { v4 as uuidv4 } from 'uuid';
 import { Knex } from 'knex';
 
 // Database representation of time period
+// After migration to DATE type, pg driver may return Date objects for date columns
 interface DbTimePeriod {
   period_id: string;
-  start_date: string;
-  end_date: string;
+  start_date: string | Date;
+  end_date: string | Date;
   tenant: string;
 }
 
@@ -23,7 +24,11 @@ function toDbDate(date: Temporal.PlainDate | ISO8601String): string {
 }
 
 // Helper function to convert database date to Temporal.PlainDate
-function fromDbDate(date: string): Temporal.PlainDate {
+// After migration to DATE type, pg driver returns Date objects - handle both
+function fromDbDate(date: string | Date): Temporal.PlainDate {
+  if (date instanceof Date) {
+    return toPlainDate(date.toISOString().slice(0, 10));
+  }
   return toPlainDate(date);
 }
 
@@ -104,12 +109,20 @@ export class TimePeriod {
       .first();
 
     if (!period) return null;
-    
+
     // Convert to view type with string dates
+    // After migration to DATE type, pg driver returns Date objects - convert to ISO strings
+    const toIsoDateString = (d: string | Date): string => {
+      if (d instanceof Date) {
+        return d.toISOString().slice(0, 10);
+      }
+      return String(d);
+    };
+
     return {
       ...period,
-      start_date: period.start_date,
-      end_date: period.end_date
+      start_date: toIsoDateString(period.start_date),
+      end_date: toIsoDateString(period.end_date)
     };
   }
 

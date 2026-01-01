@@ -1,6 +1,7 @@
-import React, { useState, useEffect, useSyncExternalStore } from 'react';
+import React, { useState, useEffect, useSyncExternalStore, useRef } from 'react';
 import * as RadixSelect from '@radix-ui/react-select';
 import { ChevronDown, ChevronRight, X } from 'lucide-react';
+import { useModality } from './ModalityContext';
 import { AutomationProps } from '../../types/ui-reflection/types';
 import { Button } from './Button';
 import Spinner from './Spinner';
@@ -44,6 +45,7 @@ interface TreeSelectProps<T extends string = string> extends AutomationProps {
   showExclude?: boolean;
   showReset?: boolean;
   allowEmpty?: boolean;
+  modal?: boolean;
 }
 
 function TreeSelect<T extends string>({
@@ -62,12 +64,23 @@ function TreeSelect<T extends string>({
   showExclude = false,
   showReset = false,
   allowEmpty = false,
-}: TreeSelectProps<T>): JSX.Element {
+  modal,
+}: TreeSelectProps<T>): React.JSX.Element {
+  const { modal: parentModal } = useModality();
   const isClient = useIsClient();
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
   const [isOpen, setIsOpen] = useState(false);
   const [selectedValue, setSelectedValue] = useState(value);
   const [displayLabel, setDisplayLabel] = useState<string>('');
+
+  // Explicit prop overrides parent modality context
+  const isModal = modal !== undefined ? modal : parentModal;
+
+  // Track when we're handling internal clicks to prevent Radix from closing prematurely
+  const isHandlingInternalClick = useRef(false);
+
+  // Track if this is the initial mount - only auto-expand parents on first render
+  const hasInitializedRef = useRef(false);
 
   // Find the selected option and its ancestors
   const findSelectedOptionWithPath = (
@@ -99,7 +112,10 @@ function TreeSelect<T extends string>({
     if (!value) {
       setSelectedValue('');
       setDisplayLabel('');
-      setExpandedItems(new Set());
+      if (!hasInitializedRef.current) {
+        setExpandedItems(new Set());
+        hasInitializedRef.current = true;
+      }
       return;
     }
 
@@ -107,14 +123,18 @@ function TreeSelect<T extends string>({
     setSelectedValue(value);
     const result = findSelectedOptionWithPath(options, value);
     if (result) {
-      // Expand all parent nodes
-      setExpandedItems(prev => {
-        const next = new Set(prev);
-        result.path.forEach((p: TreeSelectOption<T>): void => {
-          next.add(p.value);
+      // Only auto-expand parent nodes on initial mount, not on subsequent renders
+      // This allows users to collapse categories while keeping their selection
+      if (!hasInitializedRef.current) {
+        setExpandedItems(prev => {
+          const next = new Set(prev);
+          result.path.forEach((p: TreeSelectOption<T>): void => {
+            next.add(p.value);
+          });
+          return next;
         });
-        return next;
-      });
+        hasInitializedRef.current = true;
+      }
 
       // Build the path object (not used directly here, but kept for parity)
       const pathObj: TreeSelectPath = {};
@@ -128,14 +148,17 @@ function TreeSelect<T extends string>({
           return p.label;
         }
         // If label is JSX (e.g., with ITIL badge), extract the text content
-        if (React.isValidElement(p.label) && p.label.props.children) {
-          const children = p.label.props.children;
-          if (Array.isArray(children)) {
-            // Find the text content (usually the first string element)
-            const textContent = children.find(child => typeof child === 'string');
-            if (textContent) return textContent;
-          } else if (typeof children === 'string') {
-            return children;
+        if (React.isValidElement(p.label)) {
+          const labelProps = p.label.props as { children?: React.ReactNode };
+          if (labelProps.children) {
+            const children = labelProps.children;
+            if (Array.isArray(children)) {
+              // Find the text content (usually the first string element)
+              const textContent = children.find(child => typeof child === 'string');
+              if (textContent) return textContent;
+            } else if (typeof children === 'string') {
+              return children;
+            }
           }
         }
         return ''; // Don't fall back to value (UUID)
@@ -147,6 +170,7 @@ function TreeSelect<T extends string>({
   const toggleExpand = (optionValue: string, e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
+    isHandlingInternalClick.current = true;
     setExpandedItems(prev => {
       const next = new Set(prev);
       if (next.has(optionValue)) {
@@ -155,6 +179,10 @@ function TreeSelect<T extends string>({
         next.add(optionValue);
       }
       return next;
+    });
+    // Reset the flag after a microtask to allow Radix's onOpenChange to be ignored
+    Promise.resolve().then(() => {
+      isHandlingInternalClick.current = false;
     });
   };
 
@@ -170,42 +198,71 @@ function TreeSelect<T extends string>({
   const handleSelect = (option: TreeSelectOption<T>, ancestors: TreeSelectOption<T>[], e: React.MouseEvent): void => {
     e.preventDefault();
     e.stopPropagation();
+    isHandlingInternalClick.current = true;
 
     const pathObj = buildPathObject(option, ancestors);
     onValueChange(option.value, option.type, false, pathObj);
 
-    if (!multiSelect || (!option.children?.length && !showExclude)) {
-      setIsOpen(false);
-    }
+    // For single-select without children/exclude options, close the dropdown
+    const shouldClose = !multiSelect || (!option.children?.length && !showExclude);
+
+    // Reset the flag after a microtask, then close if needed
+    Promise.resolve().then(() => {
+      isHandlingInternalClick.current = false;
+      if (shouldClose) {
+        setIsOpen(false);
+      }
+    });
   };
 
   const handleExclude = (option: TreeSelectOption<T>, ancestors: TreeSelectOption<T>[], e: React.MouseEvent): void => {
     e.preventDefault();
     e.stopPropagation();
-    
+    isHandlingInternalClick.current = true;
+
     const pathObj = buildPathObject(option, ancestors);
     onValueChange(option.value, option.type, true, pathObj);
+
+    // Reset the flag after a microtask - exclude should not close the dropdown
+    Promise.resolve().then(() => {
+      isHandlingInternalClick.current = false;
+    });
   };
 
   const handleReset = (e?: React.MouseEvent) => {
     e?.preventDefault();
     e?.stopPropagation();
-    
+    isHandlingInternalClick.current = true;
+
     onValueChange('', '' as T, false);
     setSelectedValue('');
     setDisplayLabel('');
-    setIsOpen(false);
+
+    // Reset the flag after a microtask, then close
+    Promise.resolve().then(() => {
+      isHandlingInternalClick.current = false;
+      setIsOpen(false);
+    });
+  };
+
+  // Wrapper for Radix's onOpenChange to prevent premature closing during internal clicks
+  const handleOpenChange = (open: boolean) => {
+    // If Radix is trying to close but we're handling an internal click, ignore it
+    if (!open && isHandlingInternalClick.current) {
+      return;
+    }
+    setIsOpen(open);
   };
 
   const renderOption = (
     option: TreeSelectOption<T>,
     level: number = 0,
     ancestors: TreeSelectOption<T>[] = []
-  ): JSX.Element[] => {
+  ): React.JSX.Element[] => {
     const isExpanded = expandedItems.has(option.value);
     const hasChildren = option.children && option.children.length > 0;
 
-    const elements: JSX.Element[] = [];
+    const elements: React.JSX.Element[] = [];
 
     elements.push(
       <div
@@ -347,8 +404,9 @@ function TreeSelect<T extends string>({
         <RadixSelect.Root
           value={selectedValue}
           open={isOpen}
-          onOpenChange={setIsOpen}
+          onOpenChange={handleOpenChange}
           disabled={disabled}
+          {...({ modal: isModal } as any)}
         >
           <RadixSelect.Trigger
             className={`

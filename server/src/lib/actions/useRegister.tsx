@@ -14,6 +14,7 @@ import { sendPasswordResetEmail } from 'server/src/lib/email/sendPasswordResetEm
 import logger from 'server/src/utils/logger';
 import { analytics } from '../analytics/posthog';
 import { AnalyticsEvents } from '../analytics/events';
+import { isValidEmail } from '../utils/validation';
 
 const VERIFY_EMAIL_ENABLED = process.env.VERIFY_EMAIL_ENABLED === 'true';
 const EMAIL_ENABLE = process.env.EMAIL_ENABLE === 'true';
@@ -139,6 +140,11 @@ export async function setNewPassword(password: string, token: string): Promise<b
 }
 
 export async function recoverPassword(email: string, portal: 'msp' | 'client' = 'msp'): Promise<boolean> {
+  if (!isValidEmail(email)) {
+    logger.debug(`Invalid email format: [ ${email} ]`);
+    return true; // Return true for security - don't reveal invalid format
+  }
+
   logger.debug(`Checking if email [ ${email} ] exists for portal type: ${portal}`);
   
   // For MSP portal, look for 'internal' users; for client portal, look for 'client' users

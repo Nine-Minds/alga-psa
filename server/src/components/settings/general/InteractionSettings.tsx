@@ -6,7 +6,7 @@ import CustomTabs from 'server/src/components/ui/CustomTabs';
 import InteractionTypesSettings from './InteractionTypeSettings';
 import InteractionStatusSettings from './InteractionStatusSettings';
 
-const InteractionSettings = (): JSX.Element => {
+const InteractionSettings = (): React.JSX.Element => {
   const searchParams = useSearchParams();
   const sectionParam = searchParams?.get('section');
 

@@ -9,6 +9,8 @@
 
 import logger from '@shared/core/logger';
 import axios from 'axios';
+import crypto from 'crypto';
+import fs from 'fs';
 import { getCurrentUser } from '@/lib/actions/user-actions/userActions';
 import { revalidatePath } from 'next/cache';
 import { getSecretProviderInstance } from '@shared/core/secretProvider';
@@ -17,13 +19,8 @@ import { createTenantKnex } from '@/db';
 import { auditLog } from '@/lib/logging/auditLog';
 import { createNinjaOneClient, disconnectNinjaOne } from '../../integrations/ninjaone';
 import { removeNinjaOneWebhook } from '../../integrations/ninjaone/webhooks/webhookRegistration';
-import {
-  NinjaOneSyncEngine,
-  runFullSync as runFullSyncEngine,
-  runIncrementalSync as runIncrementalSyncEngine,
-  syncSingleDevice,
-  SyncOptions,
-} from '../../integrations/ninjaone/sync/syncEngine';
+import type { SyncOptions } from '../../integrations/ninjaone/sync/syncEngine';
+import { getNinjaOneSyncStrategy } from '../../integrations/ninjaone/sync/syncStrategy';
 import {
   RmmConnectionStatus,
   RmmIntegration,
@@ -38,8 +35,43 @@ import {
   NinjaOneOAuthCredentials,
 } from '../../../interfaces/ninjaone.interfaces';
 
-// Secret name for NinjaOne credentials
+// Secret names for NinjaOne credentials
 const NINJAONE_CREDENTIALS_SECRET = 'ninjaone_credentials';
+const NINJAONE_CLIENT_ID_SECRET = 'ninjaone_client_id';
+const NINJAONE_CLIENT_SECRET_SECRET = 'ninjaone_client_secret';
+const NINJAONE_SCOPES = 'monitoring management offline_access';
+
+// Path to ngrok URL file (written by ngrok-sync container)
+const NGROK_URL_FILE = '/app/ngrok/url';
+
+const readNgrokUrl = () => {
+  try {
+    if (fs.existsSync(NGROK_URL_FILE)) {
+      const ngrokUrl = fs.readFileSync(NGROK_URL_FILE, 'utf-8').trim();
+      if (ngrokUrl) {
+        return ngrokUrl;
+      }
+    }
+  } catch {
+    // Ignore file read errors, fall back to env vars
+  }
+  return null;
+};
+
+// Redirect URI - priority: NINJAONE_REDIRECT_URI, ngrok file, NEXTAUTH_URL
+const getRedirectUri = () => {
+  if (process.env.NINJAONE_REDIRECT_URI) {
+    return process.env.NINJAONE_REDIRECT_URI;
+  }
+
+  const ngrokUrl = readNgrokUrl();
+  if (ngrokUrl) {
+    return `${ngrokUrl}/api/integrations/ninjaone/callback`;
+  }
+
+  const baseUrl = process.env.NEXTAUTH_URL || process.env.APP_BASE_URL || 'http://localhost:3000';
+  return `${baseUrl}/api/integrations/ninjaone/callback`;
+};
 
 /**
  * Extract safe error info for logging (avoids circular reference issues with axios errors)
@@ -62,6 +94,141 @@ function extractErrorInfo(error: unknown): object {
     };
   }
   return { message: String(error) };
+}
+
+/**
+ * Save NinjaOne API credentials for a tenant
+ * These credentials are used for OAuth authentication with NinjaOne
+ */
+export async function saveNinjaOneCredentials(
+  clientId: string,
+  clientSecret: string
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const user = await getCurrentUser();
+    if (!user || !user.tenant) {
+      throw new Error('User not authenticated');
+    }
+
+    // Check permission
+    const canUpdate = await hasPermission(user, 'settings', 'update');
+    if (!canUpdate) {
+      throw new Error('Insufficient permissions to update NinjaOne settings');
+    }
+
+    const { tenant } = await createTenantKnex();
+    if (!tenant) {
+      throw new Error('Tenant not found');
+    }
+
+    // Validate inputs
+    if (!clientId || !clientId.trim()) {
+      throw new Error('Client ID is required');
+    }
+    if (!clientSecret || !clientSecret.trim()) {
+      throw new Error('Client Secret is required');
+    }
+
+    // Store credentials in tenant secrets
+    const secretProvider = await getSecretProviderInstance();
+    await secretProvider.setTenantSecret(tenant, NINJAONE_CLIENT_ID_SECRET, clientId.trim());
+    await secretProvider.setTenantSecret(tenant, NINJAONE_CLIENT_SECRET_SECRET, clientSecret.trim());
+
+    logger.info('[NinjaOneActions] Successfully saved NinjaOne credentials', { tenant });
+    revalidatePath('/msp/settings');
+
+    return { success: true };
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    logger.error('[NinjaOneActions] Error saving NinjaOne credentials:', extractErrorInfo(error));
+    return { success: false, error: errorMessage };
+  }
+}
+
+/**
+ * Get the status of stored NinjaOne credentials
+ * Returns whether credentials exist and a masked version of the secret
+ */
+export async function getNinjaOneCredentialsStatus(): Promise<{
+  hasCredentials: boolean;
+  clientId?: string;
+  clientSecretMasked?: string;
+}> {
+  try {
+    const user = await getCurrentUser();
+    if (!user || !user.tenant) {
+      throw new Error('User not authenticated');
+    }
+
+    // Check permission
+    const canView = await hasPermission(user, 'settings', 'read');
+    if (!canView) {
+      throw new Error('Insufficient permissions to view NinjaOne settings');
+    }
+
+    const { tenant } = await createTenantKnex();
+    if (!tenant) {
+      throw new Error('Tenant not found');
+    }
+
+    const secretProvider = await getSecretProviderInstance();
+    const clientId = await secretProvider.getTenantSecret(tenant, NINJAONE_CLIENT_ID_SECRET);
+    const clientSecret = await secretProvider.getTenantSecret(tenant, NINJAONE_CLIENT_SECRET_SECRET);
+
+    if (!clientId || !clientSecret) {
+      return { hasCredentials: false };
+    }
+
+    // Mask the client secret - show only last 4 characters
+    const maskedSecret = clientSecret.length > 4
+      ? '•'.repeat(clientSecret.length - 4) + clientSecret.slice(-4)
+      : '•'.repeat(clientSecret.length);
+
+    return {
+      hasCredentials: true,
+      clientId,
+      clientSecretMasked: maskedSecret,
+    };
+  } catch (error) {
+    logger.error('[NinjaOneActions] Error getting NinjaOne credentials status:', extractErrorInfo(error));
+    return { hasCredentials: false };
+  }
+}
+
+/**
+ * Clear NinjaOne API credentials for a tenant
+ */
+export async function clearNinjaOneCredentials(): Promise<{ success: boolean; error?: string }> {
+  try {
+    const user = await getCurrentUser();
+    if (!user || !user.tenant) {
+      throw new Error('User not authenticated');
+    }
+
+    // Check permission
+    const canUpdate = await hasPermission(user, 'settings', 'update');
+    if (!canUpdate) {
+      throw new Error('Insufficient permissions to update NinjaOne settings');
+    }
+
+    const { tenant } = await createTenantKnex();
+    if (!tenant) {
+      throw new Error('Tenant not found');
+    }
+
+    const secretProvider = await getSecretProviderInstance();
+    await secretProvider.deleteTenantSecret(tenant, NINJAONE_CLIENT_ID_SECRET);
+    await secretProvider.deleteTenantSecret(tenant, NINJAONE_CLIENT_SECRET_SECRET);
+
+    logger.info('[NinjaOneActions] Successfully cleared NinjaOne credentials', { tenant });
+    revalidatePath('/msp/settings');
+
+    return { success: true };
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    logger.error('[NinjaOneActions] Error clearing NinjaOne credentials:', extractErrorInfo(error));
+    return { success: false, error: errorMessage };
+  }
 }
 
 /**
@@ -179,10 +346,16 @@ export async function disconnectNinjaOneIntegration(): Promise<{ success: boolea
       });
     }
 
-    // 2. Remove credentials from secret storage
+    // 2. Remove OAuth token credentials from secret storage
     await disconnectNinjaOne(tenant);
 
-    // 3. Update integration record (clear webhook-related settings)
+    // 3. Remove client credentials (client ID and secret) from secret storage
+    const secretProvider = await getSecretProviderInstance();
+    await secretProvider.deleteTenantSecret(tenant, NINJAONE_CLIENT_ID_SECRET);
+    await secretProvider.deleteTenantSecret(tenant, NINJAONE_CLIENT_SECRET_SECRET);
+    logger.info('[NinjaOneActions] Cleared NinjaOne client credentials', { tenant });
+
+    // 4. Update integration record (clear webhook-related settings)
     const existingIntegration = await knex('rmm_integrations')
       .where({ tenant, provider: 'ninjaone' })
       .first();
@@ -270,12 +443,6 @@ export async function testNinjaOneConnection(): Promise<{ success: boolean; erro
  * Sync organizations from NinjaOne
  */
 export async function syncNinjaOneOrganizations(): Promise<RmmSyncResult> {
-  const startTime = new Date().toISOString();
-  let itemsProcessed = 0;
-  let itemsCreated = 0;
-  let itemsUpdated = 0;
-  const errors: string[] = [];
-
   try {
     const user = await getCurrentUser();
     if (!user || !user.tenant) {
@@ -302,86 +469,16 @@ export async function syncNinjaOneOrganizations(): Promise<RmmSyncResult> {
       throw new Error('NinjaOne integration not configured');
     }
 
-    // Update sync status to syncing
-    await knex('rmm_integrations')
-      .where({ tenant, provider: 'ninjaone' })
-      .update({
-        sync_status: 'syncing',
-        updated_at: knex.fn.now(),
-      });
-
-    // Create client and fetch organizations
-    const client = await createNinjaOneClient(tenant);
-    const organizations = await client.getOrganizations();
-
-    itemsProcessed = organizations.length;
-
-    // Process each organization
-    for (const org of organizations) {
-      try {
-        // Check if mapping already exists
-        const existingMapping = await knex('rmm_organization_mappings')
-          .where({
-            tenant,
-            integration_id: integration.integration_id,
-            external_organization_id: String(org.id),
-          })
-          .first();
-
-        if (existingMapping) {
-          // Update existing mapping
-          await knex('rmm_organization_mappings')
-            .where({ tenant, mapping_id: existingMapping.mapping_id })
-            .update({
-              external_organization_name: org.name,
-              metadata: JSON.stringify({ description: org.description, tags: org.tags }),
-              updated_at: knex.fn.now(),
-            });
-          itemsUpdated++;
-        } else {
-          // Create new mapping (unmapped initially)
-          await knex('rmm_organization_mappings').insert({
-            tenant,
-            integration_id: integration.integration_id,
-            external_organization_id: String(org.id),
-            external_organization_name: org.name,
-            auto_sync_assets: true,
-            auto_create_tickets: false,
-            metadata: JSON.stringify({ description: org.description, tags: org.tags }),
-          });
-          itemsCreated++;
-        }
-      } catch (orgError) {
-        const errorMessage = orgError instanceof Error ? orgError.message : String(orgError);
-        errors.push(`Failed to process organization ${org.id}: ${errorMessage}`);
-        logger.error('[NinjaOneActions] Error processing organization:', { orgId: org.id, error: orgError });
-      }
-    }
-
-    // Update sync status to completed
-    await knex('rmm_integrations')
-      .where({ tenant, provider: 'ninjaone' })
-      .update({
-        sync_status: 'completed',
-        last_sync_at: knex.fn.now(),
-        sync_error: errors.length > 0 ? errors.join('; ') : null,
-        updated_at: knex.fn.now(),
-      });
+    const strategy = getNinjaOneSyncStrategy();
+    const result = await strategy.syncOrganizations({
+      tenantId: tenant,
+      integrationId: integration.integration_id,
+      performedBy: user.user_id,
+    });
 
     revalidatePath('/msp/settings');
 
-    return {
-      success: errors.length === 0,
-      provider: 'ninjaone',
-      sync_type: 'organizations',
-      started_at: startTime,
-      completed_at: new Date().toISOString(),
-      items_processed: itemsProcessed,
-      items_created: itemsCreated,
-      items_updated: itemsUpdated,
-      items_failed: errors.length,
-      errors: errors.length > 0 ? errors : undefined,
-    };
+    return result;
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
     logger.error('[NinjaOneActions] Error syncing organizations:', extractErrorInfo(error));
@@ -404,11 +501,11 @@ export async function syncNinjaOneOrganizations(): Promise<RmmSyncResult> {
       success: false,
       provider: 'ninjaone',
       sync_type: 'organizations',
-      started_at: startTime,
+      started_at: new Date().toISOString(),
       completed_at: new Date().toISOString(),
-      items_processed: itemsProcessed,
-      items_created: itemsCreated,
-      items_updated: itemsUpdated,
+      items_processed: 0,
+      items_created: 0,
+      items_updated: 0,
       items_failed: 1,
       errors: [errorMessage],
     };
@@ -530,14 +627,51 @@ export async function updateNinjaOneOrganizationMapping(
  * Get connect URL for NinjaOne OAuth
  */
 export async function getNinjaOneConnectUrl(region: NinjaOneRegion = 'US'): Promise<string> {
-  // Validate region
   if (!NINJAONE_REGIONS[region]) {
     throw new Error(`Invalid region: ${region}`);
   }
 
-  // Return the connect endpoint URL with region parameter
-  const baseUrl = process.env.NEXTAUTH_URL || process.env.APP_BASE_URL || 'http://localhost:3000';
-  return `${baseUrl}/api/integrations/ninjaone/connect?region=${region}`;
+  const user = await getCurrentUser();
+  if (!user || !user.tenant) {
+    throw new Error('User not authenticated');
+  }
+
+  const canView = await hasPermission(user, 'settings', 'read');
+  if (!canView) {
+    throw new Error('Insufficient permissions to view NinjaOne settings');
+  }
+
+  const { tenant } = await createTenantKnex();
+  if (!tenant) {
+    throw new Error('Tenant not found');
+  }
+
+  const secretProvider = await getSecretProviderInstance();
+  const clientId = await secretProvider.getTenantSecret(tenant, NINJAONE_CLIENT_ID_SECRET);
+  if (!clientId) {
+    throw new Error('NinjaOne client ID not configured for this tenant.');
+  }
+
+  const csrfToken = crypto.randomBytes(16).toString('hex');
+  const statePayload = {
+    tenantId: tenant,
+    region,
+    csrf: csrfToken,
+    timestamp: Date.now(),
+  };
+  const state = Buffer.from(JSON.stringify(statePayload)).toString('base64url');
+
+  const instanceUrl = NINJAONE_REGIONS[region];
+  const redirectUri = getRedirectUri();
+  const params = new URLSearchParams({
+    client_id: clientId,
+    response_type: 'code',
+    scope: NINJAONE_SCOPES,
+    redirect_uri: redirectUri,
+    state,
+  });
+
+  return `${instanceUrl}/oauth/authorize?${params.toString()}`;
 }
 
 /**
@@ -572,10 +706,14 @@ export async function triggerNinjaOneFullSync(
       throw new Error('NinjaOne integration not configured');
     }
 
-    // Run the sync
-    const result = await runFullSyncEngine(tenant, integration.integration_id, {
-      ...options,
-      performedBy: user.user_id,
+    const strategy = getNinjaOneSyncStrategy();
+    const result = await strategy.syncDevicesFull({
+      tenantId: tenant,
+      integrationId: integration.integration_id,
+      options: {
+        ...options,
+        performedBy: user.user_id,
+      },
     });
 
     revalidatePath('/msp/settings');
@@ -636,12 +774,13 @@ export async function triggerNinjaOneIncrementalSync(): Promise<RmmSyncResult> {
       || new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
 
     // Run the sync
-    const result = await runIncrementalSyncEngine(
-      tenant,
-      integration.integration_id,
-      new Date(since),
-      { performedBy: user.user_id }
-    );
+    const strategy = getNinjaOneSyncStrategy();
+    const result = await strategy.syncDevicesIncremental({
+      tenantId: tenant,
+      integrationId: integration.integration_id,
+      since: new Date(since),
+      options: { performedBy: user.user_id },
+    });
 
     revalidatePath('/msp/settings');
     revalidatePath('/msp/assets');
@@ -700,7 +839,12 @@ export async function syncNinjaOneDevice(deviceId: number): Promise<{
     }
 
     // Sync the device
-    const asset = await syncSingleDevice(tenant, integration.integration_id, deviceId);
+    const strategy = getNinjaOneSyncStrategy();
+    const asset = await strategy.syncDevice({
+      tenantId: tenant,
+      integrationId: integration.integration_id,
+      deviceId,
+    });
 
     revalidatePath('/msp/assets');
     revalidatePath(`/msp/assets/${asset.asset_id}`);

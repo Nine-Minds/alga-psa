@@ -46,7 +46,7 @@ export default function DocumentUpload({
     folderPath,
     onUploadComplete,
     onCancel
-}: DocumentUploadProps): JSX.Element {
+}: DocumentUploadProps): React.JSX.Element {
     const [isDragging, setIsDragging] = useState(false);
     const [isUploading, setIsUploading] = useState(false);
     const [error, setError] = useState<string | null>(null);

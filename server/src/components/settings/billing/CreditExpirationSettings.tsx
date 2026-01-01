@@ -6,7 +6,7 @@ import { Button } from "server/src/components/ui/Button";
 import toast from 'react-hot-toast';
 import { getDefaultBillingSettings, updateDefaultBillingSettings, type BillingSettings } from "server/src/lib/actions/billingSettingsActions";
 
-const CreditExpirationSettings = (): JSX.Element => {
+const CreditExpirationSettings = (): React.JSX.Element => {
   const [settings, setSettings] = React.useState<BillingSettings>({
     zeroDollarInvoiceHandling: 'normal',
     suppressZeroDollarInvoices: false,

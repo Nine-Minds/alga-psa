@@ -1,6 +1,7 @@
 'use client'
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
 import { IContact } from 'server/src/interfaces/contact.interfaces';
 import { Flex, Text, Heading } from '@radix-ui/themes';
 import { QuickAddInteraction } from 'server/src/components/interactions/QuickAddInteraction';
@@ -23,7 +24,6 @@ import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionCo
 import { ButtonComponent, ContainerComponent } from 'server/src/types/ui-reflection/types';
 import ContactAvatar from 'server/src/components/ui/ContactAvatar';
 import { getContactAvatarUrlAction } from 'server/src/lib/actions/avatar-actions';
-import { getDocumentsByEntity } from 'server/src/lib/actions/document-actions/documentActions';
 import { ClientPicker } from 'server/src/components/clients/ClientPicker';
 
 interface ContactDetailsViewProps {
@@ -115,25 +115,16 @@ const ContactDetailsView: React.FC<ContactDetailsViewProps> = ({
     setDocuments(initialDocuments);
   }, [initialDocuments]);
   
+  const router = useRouter();
+
   // Function to refresh documents when new ones are created
-  const handleDocumentCreated = async () => {
-    try {
-      if (onDocumentCreated) {
-        await onDocumentCreated();
-      } else {
-        // If no callback is provided, fetch documents directly
-        const refreshedDocuments = await getDocumentsByEntity(contact.contact_name_id, 'contact');
-        // Handle both array and paginated response formats
-        const documentsList = Array.isArray(refreshedDocuments)
-          ? refreshedDocuments
-          : refreshedDocuments.documents || [];
-        setDocuments(documentsList);
-      }
-    } catch (err) {
-      console.error('Error refreshing documents:', err);
-      setError('Failed to refresh documents. Please try again.');
+  const handleDocumentCreated = useCallback(async () => {
+    if (onDocumentCreated) {
+      await onDocumentCreated();
+    } else {
+      router.refresh();
     }
-  };
+  }, [onDocumentCreated, router]);
 
   const formatDateForDisplay = (dateString: string | null | undefined): string => {
     if (!dateString) return 'Not set';

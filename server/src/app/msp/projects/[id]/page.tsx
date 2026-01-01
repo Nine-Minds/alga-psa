@@ -22,7 +22,7 @@ interface ProjectMetadata {
 
 export default function ProjectPage({ params }: { params: Promise<{ id: string }> }) {
   const searchParams = useSearchParams();
-  const taskIdFromUrl = searchParams.get('taskId');
+  const taskIdFromUrl = searchParams?.get('taskId') ?? null;
   const [projectId, setProjectId] = useState<string | null>(null);
   const [projectMetadata, setProjectMetadata] = useState<ProjectMetadata | null>(null);
   const [projectTags, setProjectTags] = useState<ITag[]>([]);

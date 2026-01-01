@@ -805,7 +805,7 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
             )}
 
             <div className="space-y-2">
-              {additionalAgents.map((agent): JSX.Element => {
+              {additionalAgents.map((agent): React.JSX.Element => {
                 const agentUser = availableAgents.find(u => u.user_id === agent.additional_user_id);
                 return (
                   <div

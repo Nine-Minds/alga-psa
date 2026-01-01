@@ -8,7 +8,7 @@ import { StorageServiceError } from './errors';
 interface InstallRow {
   id: string;
   tenant_id: string;
-  enabled?: boolean;
+  is_enabled?: boolean;
   status?: string | null;
 }
 
@@ -27,13 +27,13 @@ export async function getStorageServiceForInstall(installId: string): Promise<St
   const knex = await getConnection();
   const install = await knex<InstallRow>('tenant_extension_install')
     .where({ id: installId })
-    .first(['id', 'tenant_id', 'enabled', 'status']);
+    .first(['id', 'tenant_id', 'is_enabled', 'status']);
 
   if (!install) {
     throw new StorageServiceError('NOT_FOUND', 'extension install not found');
   }
 
-  if (install.enabled === false || (install.status && install.status !== 'enabled')) {
+  if (install.is_enabled === false || (install.status && install.status !== 'enabled')) {
     throw new StorageServiceError('UNAUTHORIZED', 'extension install is disabled');
   }
 

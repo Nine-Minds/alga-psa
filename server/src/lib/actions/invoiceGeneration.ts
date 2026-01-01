@@ -288,7 +288,10 @@ export async function previewInvoice(billing_cycle_id: string): Promise<PreviewI
       .first();
 
     if (clientForValidation) {
-      await validateClientBillingEmail(knex, tenant, client_id, clientForValidation.client_name);
+      const emailValidation = await validateClientBillingEmail(knex, tenant, client_id, clientForValidation.client_name);
+      if (!emailValidation.valid) {
+        return { success: false, error: emailValidation.error! };
+      }
     }
 
     // Calculate cycle dates
@@ -490,7 +493,10 @@ export async function generateInvoice(billing_cycle_id: string): Promise<Invoice
     .first();
 
   if (clientForValidation) {
-    await validateClientBillingEmail(knex, tenant, client_id, clientForValidation.client_name);
+    const emailValidation = await validateClientBillingEmail(knex, tenant, client_id, clientForValidation.client_name);
+    if (!emailValidation.valid) {
+      throw new Error(emailValidation.error);
+    }
   }
 
   let cycleStart: ISO8601String;
