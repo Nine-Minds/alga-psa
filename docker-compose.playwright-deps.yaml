@@ -1,0 +1,33 @@
+version: '3.8'
+
+# Local deps for Playwright runs (Postgres + Redis) with fixed ports.
+# This avoids relying on image-specific *_FILE env support.
+
+services:
+  postgres-playwright:
+    image: ankane/pgvector:latest
+    container_name: extsched_playwright_postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postpass123
+      POSTGRES_DB: postgres
+    ports:
+      - "5433:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis-playwright:
+    image: redis:7-alpine
+    container_name: extsched_playwright_redis
+    command: ["redis-server", "--appendonly", "no"]
+    ports:
+      - "6380:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "--raw", "PING"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
