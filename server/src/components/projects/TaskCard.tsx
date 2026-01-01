@@ -283,7 +283,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({
       </div>
 
       <div className="flex items-center gap-2 mb-1 w-full px-1 mt-6">
-        <div className="font-semibold text-2xl flex-1">
+        <div className="font-semibold text-lg flex-1">
           {task.task_name}
         </div>
         {priority && (

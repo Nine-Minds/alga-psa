@@ -1,11 +1,11 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Label } from 'server/src/components/ui/Label';
 import { Input } from 'server/src/components/ui/Input';
 import { TextArea } from 'server/src/components/ui/TextArea';
 import { Alert, AlertDescription, AlertTitle } from 'server/src/components/ui/Alert';
-import { FileText, Tag, FolderTree } from 'lucide-react';
+import { FileText, FolderTree, ChevronDown, ChevronRight, Settings } from 'lucide-react';
 import { TemplateWizardData } from '../TemplateCreationWizard';
 import ClientPortalConfigEditor from 'server/src/components/projects/ClientPortalConfigEditor';
 import { DEFAULT_CLIENT_PORTAL_CONFIG } from 'server/src/interfaces/project.interfaces';
@@ -19,6 +19,8 @@ export function TemplateBasicsStep({
   data,
   updateData,
 }: TemplateBasicsStepProps) {
+  const [showClientPortalConfig, setShowClientPortalConfig] = useState(false);
+
   return (
     <div className="space-y-6">
       <div className="space-y-2">
@@ -71,11 +73,29 @@ export function TemplateBasicsStep({
         </p>
       </div>
 
+      {/* Client Portal Visibility - Expandable Section */}
       <div className="border-t pt-4 mt-4">
-        <ClientPortalConfigEditor
-          config={data.client_portal_config || DEFAULT_CLIENT_PORTAL_CONFIG}
-          onChange={(config) => updateData({ client_portal_config: config })}
-        />
+        <button
+          type="button"
+          onClick={() => setShowClientPortalConfig(!showClientPortalConfig)}
+          className="flex items-center gap-2 text-sm font-medium text-gray-700 hover:text-gray-900"
+        >
+          {showClientPortalConfig ? (
+            <ChevronDown className="h-4 w-4" />
+          ) : (
+            <ChevronRight className="h-4 w-4" />
+          )}
+          <Settings className="h-4 w-4" />
+          <span>Client Portal Visibility</span>
+        </button>
+        {showClientPortalConfig && (
+          <div className="mt-3">
+            <ClientPortalConfigEditor
+              config={data.client_portal_config || DEFAULT_CLIENT_PORTAL_CONFIG}
+              onChange={(config) => updateData({ client_portal_config: config })}
+            />
+          </div>
+        )}
       </div>
 
       <Alert variant="info">

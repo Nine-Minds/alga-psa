@@ -1,8 +1,9 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from 'server/src/components/ui/Button';
+import { Dialog } from 'server/src/components/ui/Dialog';
 import { Card } from 'server/src/components/ui/Card';
 import { Badge } from 'server/src/components/ui/Badge';
 import { Input } from 'server/src/components/ui/Input';
@@ -16,8 +17,6 @@ import {
   Plus,
   Pencil,
   GripVertical,
-  Save,
-  X,
   Settings,
   CheckSquare,
   Bug,
@@ -52,9 +51,6 @@ import {
   updateTemplateTask,
   deleteTemplateTask,
   updateTemplateTaskStatus,
-  addTemplateStatusMapping,
-  removeTemplateStatusMapping,
-  reorderTemplateStatusMappings,
   setTaskAdditionalAgents,
   saveTemplateChecklistItems,
   addTemplateDependency,
@@ -72,8 +68,10 @@ import { toast } from 'react-hot-toast';
 import { ApplyTemplateDialog } from './ApplyTemplateDialog';
 import { TemplateTaskForm } from './TemplateTaskForm';
 import { TemplateStatusManager } from './TemplateStatusManager';
+import TemplateTaskListView from './TemplateTaskListView';
+import ViewSwitcher from 'server/src/components/ui/ViewSwitcher';
+import { LayoutGrid, List } from 'lucide-react';
 import styles from '../ProjectDetail.module.css';
-import { generateKeyBetween } from 'fractional-indexing';
 import UserPicker from 'server/src/components/ui/UserPicker';
 import {
   DropdownMenu,
@@ -132,6 +130,28 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
   const [clientPortalConfig, setClientPortalConfig] = useState<IClientPortalConfig>(
     initialTemplate.client_portal_config || DEFAULT_CLIENT_PORTAL_CONFIG
   );
+
+  // View mode state
+  type TemplateViewMode = 'kanban' | 'list';
+  const [viewMode, setViewMode] = useState<TemplateViewMode>(() => {
+    if (typeof window !== 'undefined') {
+      return (localStorage.getItem('template_editor_view_mode') as TemplateViewMode) || 'kanban';
+    }
+    return 'kanban';
+  });
+
+  // Persist view mode to localStorage
+  const handleViewModeChange = (mode: TemplateViewMode) => {
+    setViewMode(mode);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('template_editor_view_mode', mode);
+    }
+  };
+
+  const viewOptions = [
+    { value: 'kanban' as const, label: 'Kanban', icon: LayoutGrid },
+    { value: 'list' as const, label: 'List', icon: List },
+  ];
 
   // Phase editing state
   const [editingPhaseId, setEditingPhaseId] = useState<string | null>(null);
@@ -584,6 +604,33 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
     }
   };
 
+  // Handler for list view drag and drop
+  const handleTaskMove = async (
+    taskId: string,
+    newStatusMappingId: string,
+    _newPhaseId: string,
+    beforeTaskId: string | null,
+    afterTaskId: string | null
+  ): Promise<void> => {
+    const task = tasks.find((t) => t.template_task_id === taskId);
+    if (!task) return;
+
+    // Skip if no change
+    if (task.template_status_mapping_id === newStatusMappingId && !beforeTaskId && !afterTaskId) {
+      return;
+    }
+
+    try {
+      const updated = await updateTemplateTaskStatus(taskId, newStatusMappingId, beforeTaskId, afterTaskId);
+      setTasks((prev) =>
+        prev.map((t) => (t.template_task_id === taskId ? updated : t))
+      );
+    } catch (error) {
+      toast.error('Failed to move task');
+      console.error(error);
+    }
+  };
+
   const handleAssigneeChange = async (taskId: string, assigneeId: string | null) => {
     try {
       const updated = await updateTemplateTask(taskId, { assigned_to: assigneeId });
@@ -703,36 +750,46 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
                 <h1 className="text-2xl font-bold">{template.template_name}</h1>
               </div>
             </div>
-            <div className="flex gap-2">
-              <Button
-                id="manage-statuses"
-                variant="outline"
-                onClick={() => setShowStatusManager(true)}
-              >
-                <Settings className="h-4 w-4 mr-2" />
-                Status Columns
-              </Button>
-              <Button
-                id="client-portal-settings"
-                variant="outline"
-                onClick={() => setShowClientPortalConfig(!showClientPortalConfig)}
-              >
-                <Users className="h-4 w-4 mr-2" />
-                Client Portal
-              </Button>
+            <div className="flex gap-2 items-center">
+              <ViewSwitcher
+                currentView={viewMode}
+                onChange={handleViewModeChange}
+                options={viewOptions}
+              />
               <Button id="use-template" onClick={() => setShowApplyDialog(true)}>
                 <Rocket className="h-4 w-4 mr-2" />
                 Use Template
               </Button>
-              <Button
-                id="delete-template"
-                variant="outline"
-                onClick={handleDeleteTemplate}
-                disabled={isDeleting}
-              >
-                <Trash className="h-4 w-4 mr-2" />
-                Delete
-              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    id="template-actions-button"
+                    variant="outline"
+                    className="flex items-center gap-2"
+                  >
+                    <MoreVertical className="h-4 w-4" />
+                    Actions
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onSelect={() => setShowStatusManager(true)}>
+                    <Settings className="h-4 w-4 mr-2" />
+                    Status Columns
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onSelect={() => setShowClientPortalConfig(true)}>
+                    <Users className="h-4 w-4 mr-2" />
+                    Client Portal Visibility
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onSelect={handleDeleteTemplate}
+                    disabled={isDeleting}
+                    className="text-red-600 focus:text-red-700 focus:bg-red-50"
+                  >
+                    <Trash className="h-4 w-4 mr-2" />
+                    Delete Template
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </div>
 
@@ -753,257 +810,311 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
             </div>
           </div>
 
-          {/* Client Portal Settings (collapsible) */}
-          {showClientPortalConfig && (
-            <div className="mt-4 border rounded-lg p-4 bg-gray-50">
+          {/* Client Portal Visibility Dialog */}
+          <Dialog
+            isOpen={showClientPortalConfig}
+            onClose={() => setShowClientPortalConfig(false)}
+            title="Client Portal Visibility"
+            id="template-client-portal-config-dialog"
+            className="max-w-lg"
+          >
+            <div className="p-4">
               <ClientPortalConfigEditor
                 config={clientPortalConfig}
                 onChange={handleClientPortalConfigChange}
               />
+              <div className="flex justify-end mt-4">
+                <Button
+                  id="close-template-client-portal-config"
+                  type="button"
+                  onClick={() => setShowClientPortalConfig(false)}
+                >
+                  Done
+                </Button>
+              </div>
             </div>
-          )}
+          </Dialog>
         </div>
 
         <div className={styles.mainContent}>
-          <div className={styles.contentWrapper}>
-            {/* Phases List - Left Side */}
-            <div className={styles.phasesList}>
-              <Card className="p-4">
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-sm font-semibold text-gray-700">Project Phases</h3>
-                  <Button id="add-phase" variant="ghost" size="sm" onClick={handleAddPhase}>
-                    <Plus className="h-4 w-4" />
-                  </Button>
-                </div>
-                <div className="space-y-1">
-                  {sortedPhases.length === 0 ? (
-                    <div className="text-sm text-gray-500 text-center py-4">
-                      No phases yet.
-                      <br />
-                      <button
-                        className="text-purple-600 hover:underline mt-1"
-                        onClick={handleAddPhase}
-                      >
-                        Add your first phase
-                      </button>
-                    </div>
-                  ) : (
-                    sortedPhases.map((phase) => {
-                      const isDropTarget = phaseDropTarget === phase.template_phase_id;
-                      const isTaskDrop = isDropTarget && draggedTaskId;
-                      const isPhaseDrop = isDropTarget && draggedPhaseId;
-                      const isCurrentPhaseForTask = draggedTaskId &&
-                        tasks.find((t) => t.template_task_id === draggedTaskId)?.template_phase_id === phase.template_phase_id;
-
-                      return (
-                      <div
-                        key={phase.template_phase_id}
-                        draggable={editingPhaseId !== phase.template_phase_id}
-                        onDragStart={(e) => handlePhaseDragStart(e, phase.template_phase_id)}
-                        onDragOver={(e) => handlePhaseDragOver(e, phase.template_phase_id)}
-                        onDragLeave={handlePhaseDragLeave}
-                        onDrop={(e) => handlePhaseDrop(e, phase)}
-                        onDragEnd={handlePhaseDragEnd}
-                        className={`${styles.phaseItem} group relative px-3 py-2 rounded-lg transition-all cursor-pointer ${
-                          selectedPhase?.template_phase_id === phase.template_phase_id
-                            ? 'bg-purple-100 text-purple-900'
-                            : 'hover:bg-gray-100 text-gray-700'
-                        } ${draggedPhaseId === phase.template_phase_id ? 'opacity-50' : ''} ${
-                          isPhaseDrop ? styles.dragOver + ' ring-2 ring-purple-400' : ''
-                        } ${
-                          isTaskDrop && !isCurrentPhaseForTask
-                            ? 'ring-2 ring-blue-400 bg-blue-50 scale-[1.02]'
-                            : ''
-                        }`}
-                        onClick={() => {
-                          if (editingPhaseId !== phase.template_phase_id) {
-                            setSelectedPhase(phase);
-                          }
-                        }}
-                      >
-                        {editingPhaseId === phase.template_phase_id ? (
-                          <div className="space-y-2" onClick={(e) => e.stopPropagation()}>
-                            <Input
-                              value={editingPhaseName}
-                              onChange={(e) => setEditingPhaseName(e.target.value)}
-                              placeholder="Phase name"
-                              autoFocus
-                            />
-                            <TextArea
-                              value={editingPhaseDescription}
-                              onChange={(e) => setEditingPhaseDescription(e.target.value)}
-                              placeholder="Description (optional)"
-                              rows={2}
-                            />
-                            <div className="grid grid-cols-2 gap-2">
-                              <div>
-                                <label className="text-xs text-gray-500">Duration (days)</label>
-                                <Input
-                                  type="number"
-                                  value={editingPhaseDuration || ''}
-                                  onChange={(e) =>
-                                    setEditingPhaseDuration(e.target.value ? parseInt(e.target.value) : undefined)
-                                  }
-                                  placeholder="Days"
-                                />
-                              </div>
-                              <div>
-                                <label className="text-xs text-gray-500">Start offset</label>
-                                <Input
-                                  type="number"
-                                  value={editingPhaseOffset}
-                                  onChange={(e) => setEditingPhaseOffset(parseInt(e.target.value) || 0)}
-                                  placeholder="Days"
-                                />
-                              </div>
-                            </div>
-                            <div className="flex justify-end gap-2">
-                              <Button
-                                id="cancel-edit-phase"
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => setEditingPhaseId(null)}
-                              >
-                                Cancel
-                              </Button>
-                              <Button id="save-edit-phase" size="sm" onClick={() => handleSavePhase(phase)}>
-                                Save
-                              </Button>
-                            </div>
-                          </div>
-                        ) : (
-                          <div className="flex items-center gap-2">
-                            <GripVertical className="w-4 h-4 text-gray-400 opacity-0 group-hover:opacity-100 cursor-grab" />
-                            <div className="flex-1 min-w-0">
-                              <div className="text-sm font-medium truncate">{phase.phase_name}</div>
-                              {phase.duration_days && (
-                                <div className="text-xs text-gray-500">{phase.duration_days} days</div>
-                              )}
-                            </div>
-                            <div className="flex gap-1 opacity-0 group-hover:opacity-100">
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleEditPhase(phase);
-                                }}
-                                className="p-1 rounded hover:bg-gray-200"
-                              >
-                                <Pencil className="w-3 h-3" />
-                              </button>
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleDeletePhase(phase);
-                                }}
-                                className="p-1 rounded hover:bg-red-100 text-red-600"
-                              >
-                                <Trash className="w-3 h-3" />
-                              </button>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                      );
-                    })
-                  )}
-                </div>
-              </Card>
+          {viewMode === 'list' ? (
+            /* List View - Full Width */
+            <div className="p-4 h-full">
+              <TemplateTaskListView
+                phases={sortedPhases}
+                tasks={tasks}
+                statusMappings={sortedStatusMappings}
+                checklistItems={checklistItems}
+                dependencies={dependencies}
+                taskAssignments={taskAssignments}
+                users={users}
+                taskTypes={taskTypes}
+                priorities={priorities}
+                onTaskClick={handleEditTask}
+                onTaskDelete={handleDeleteTask}
+                onAddPhase={handleAddPhase}
+                onAddTask={(phaseId, statusMappingId) => {
+                  const phase = phases.find((p) => p.template_phase_id === phaseId);
+                  if (phase) {
+                    setSelectedPhase(phase);
+                  }
+                  handleAddTask(statusMappingId);
+                }}
+                onTaskMove={handleTaskMove}
+              />
             </div>
-
-            {/* Kanban Board - Right Side */}
-            <div className={styles.kanbanContainer}>
-              {!selectedPhase ? (
-                <div className="flex items-center justify-center h-64 bg-gray-100 rounded-lg">
-                  <div className="text-center">
-                    <p className="text-xl text-gray-600">
-                      {phases.length === 0
-                        ? 'Add a phase to get started'
-                        : 'Select a phase to view tasks'}
-                    </p>
+          ) : (
+            /* Kanban View - Phases sidebar + Kanban board */
+            <div className={styles.contentWrapper}>
+              {/* Phases List - Left Side */}
+              <div className={styles.phasesList}>
+                <Card className="p-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="text-sm font-semibold text-gray-700">Project Phases</h3>
+                    <Button id="add-phase" variant="ghost" size="sm" onClick={handleAddPhase}>
+                      <Plus className="h-4 w-4" />
+                    </Button>
                   </div>
-                </div>
-              ) : (
-                <div className="flex flex-col h-full">
-                  {/* Phase Header */}
-                  <div className="mb-4">
-                    <div className="flex justify-between items-center gap-4">
-                      <div>
-                        <h2 className="text-xl font-bold mb-1">Phase: {selectedPhase.phase_name}</h2>
-                        {selectedPhase.description && (
-                          <p className="text-sm text-gray-600">{selectedPhase.description}</p>
-                        )}
-                        <div className="text-sm text-gray-500 mt-1">
-                          {selectedPhase.duration_days && `Duration: ${selectedPhase.duration_days} days`}
-                          {selectedPhase.start_offset_days > 0 &&
-                            ` | Start: +${selectedPhase.start_offset_days} days`}
+                  <div className="space-y-1">
+                    {sortedPhases.length === 0 ? (
+                      <div className="text-sm text-gray-500 text-center py-4">
+                        No phases yet.
+                        <br />
+                        <button
+                          className="text-purple-600 hover:underline mt-1"
+                          onClick={handleAddPhase}
+                        >
+                          Add your first phase
+                        </button>
+                      </div>
+                    ) : (
+                      sortedPhases.map((phase) => {
+                        const isDropTarget = phaseDropTarget === phase.template_phase_id;
+                        const isTaskDrop = isDropTarget && draggedTaskId;
+                        const isPhaseDrop = isDropTarget && draggedPhaseId;
+                        const isCurrentPhaseForTask = draggedTaskId &&
+                          tasks.find((t) => t.template_task_id === draggedTaskId)?.template_phase_id === phase.template_phase_id;
+
+                        return (
+                        <div
+                          key={phase.template_phase_id}
+                          draggable={editingPhaseId !== phase.template_phase_id}
+                          onDragStart={(e) => handlePhaseDragStart(e, phase.template_phase_id)}
+                          onDragOver={(e) => handlePhaseDragOver(e, phase.template_phase_id)}
+                          onDragLeave={handlePhaseDragLeave}
+                          onDrop={(e) => handlePhaseDrop(e, phase)}
+                          onDragEnd={handlePhaseDragEnd}
+                          className={`${styles.phaseItem} group relative px-3 py-2 rounded-lg transition-all cursor-pointer ${
+                            selectedPhase?.template_phase_id === phase.template_phase_id
+                              ? 'bg-purple-100 text-purple-900'
+                              : 'hover:bg-gray-100 text-gray-700'
+                          } ${draggedPhaseId === phase.template_phase_id ? 'opacity-50' : ''} ${
+                            isPhaseDrop ? styles.dragOver + ' ring-2 ring-purple-400' : ''
+                          } ${
+                            isTaskDrop && !isCurrentPhaseForTask
+                              ? 'ring-2 ring-blue-400 bg-blue-50 scale-[1.02]'
+                              : ''
+                          }`}
+                          onClick={() => {
+                            if (editingPhaseId !== phase.template_phase_id) {
+                              setSelectedPhase(phase);
+                            }
+                          }}
+                        >
+                          {editingPhaseId === phase.template_phase_id ? (
+                            <div className="space-y-2" onClick={(e) => e.stopPropagation()}>
+                              <Input
+                                value={editingPhaseName}
+                                onChange={(e) => setEditingPhaseName(e.target.value)}
+                                placeholder="Phase name"
+                                autoFocus
+                              />
+                              <TextArea
+                                value={editingPhaseDescription}
+                                onChange={(e) => setEditingPhaseDescription(e.target.value)}
+                                placeholder="Description (optional)"
+                                rows={2}
+                              />
+                              <div className="grid grid-cols-2 gap-2">
+                                <div>
+                                  <label className="text-xs text-gray-500">Duration (days)</label>
+                                  <Input
+                                    type="number"
+                                    value={editingPhaseDuration || ''}
+                                    onChange={(e) =>
+                                      setEditingPhaseDuration(e.target.value ? parseInt(e.target.value) : undefined)
+                                    }
+                                    placeholder="Days"
+                                  />
+                                </div>
+                                <div>
+                                  <label className="text-xs text-gray-500">Start offset</label>
+                                  <Input
+                                    type="number"
+                                    value={editingPhaseOffset}
+                                    onChange={(e) => setEditingPhaseOffset(parseInt(e.target.value) || 0)}
+                                    placeholder="Days"
+                                  />
+                                </div>
+                              </div>
+                              <div className="flex justify-end gap-2">
+                                <Button
+                                  id="cancel-edit-phase"
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => setEditingPhaseId(null)}
+                                >
+                                  Cancel
+                                </Button>
+                                <Button id="save-edit-phase" size="sm" onClick={() => handleSavePhase(phase)}>
+                                  Save
+                                </Button>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="flex items-start gap-2">
+                              <GripVertical className="w-4 h-4 text-gray-400 opacity-0 group-hover:opacity-100 cursor-grab mt-0.5 shrink-0" />
+                              <div className="flex-1 min-w-0">
+                                <div className="text-lg font-bold text-gray-900">{phase.phase_name}</div>
+                                {phase.description && (
+                                  <div className="text-sm text-gray-600 mt-1">
+                                    {phase.description}
+                                  </div>
+                                )}
+                                <div className="flex items-center gap-2 mt-1 text-xs text-gray-400">
+                                  {phase.duration_days !== undefined && phase.duration_days !== null && (
+                                    <span>{phase.duration_days}d</span>
+                                  )}
+                                  {phase.start_offset_days !== undefined && phase.start_offset_days > 0 && (
+                                    <span>+{phase.start_offset_days}d offset</span>
+                                  )}
+                                </div>
+                              </div>
+                              <div className="flex gap-1 opacity-0 group-hover:opacity-100 shrink-0">
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleEditPhase(phase);
+                                  }}
+                                  className="p-1 rounded hover:bg-gray-200"
+                                >
+                                  <Pencil className="w-3 h-3" />
+                                </button>
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleDeletePhase(phase);
+                                  }}
+                                  className="p-1 rounded hover:bg-red-100 text-red-600"
+                                >
+                                  <Trash className="w-3 h-3" />
+                                </button>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                        );
+                      })
+                    )}
+                  </div>
+                </Card>
+              </div>
+
+              {/* Kanban Board - Right Side */}
+              <div className={styles.kanbanContainer}>
+                {!selectedPhase ? (
+                  <div className="flex items-center justify-center h-64 bg-gray-100 rounded-lg">
+                    <div className="text-center">
+                      <p className="text-xl text-gray-600">
+                        {phases.length === 0
+                          ? 'Add a phase to get started'
+                          : 'Select a phase to view tasks'}
+                      </p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex flex-col h-full">
+                    {/* Phase Header */}
+                    <div className="mb-4">
+                      <div className="flex justify-between items-center gap-4">
+                        <div>
+                          <h2 className="text-xl font-bold mb-1">Phase: {selectedPhase.phase_name}</h2>
+                          {selectedPhase.description && (
+                            <p className="text-sm text-gray-600">{selectedPhase.description}</p>
+                          )}
+                          <div className="text-sm text-gray-500 mt-1">
+                            {selectedPhase.duration_days && `Duration: ${selectedPhase.duration_days} days`}
+                            {selectedPhase.start_offset_days > 0 &&
+                              ` | Start: +${selectedPhase.start_offset_days} days`}
+                          </div>
                         </div>
                       </div>
                     </div>
+
+                    {/* Kanban Board */}
+                    <div className={styles.kanbanWrapper}>
+                      {sortedStatusMappings.length === 0 ? (
+                        <div className="text-center py-8 text-gray-500">
+                          <p>No status columns defined</p>
+                          <Button
+                            id="add-status-columns-empty"
+                            variant="outline"
+                            className="mt-4"
+                            onClick={() => setShowStatusManager(true)}
+                          >
+                            <Settings className="h-4 w-4 mr-2" />
+                            Add Status Columns
+                          </Button>
+                        </div>
+                      ) : (
+                        <div className={styles.kanbanBoard}>
+                          {sortedStatusMappings.map((statusMapping, index) => {
+                            const isFirstColumn = index === 0;
+                            const statusTasks = phaseTasks.filter(
+                              (task) =>
+                                task.template_status_mapping_id ===
+                                  statusMapping.template_status_mapping_id ||
+                                (isFirstColumn && !task.template_status_mapping_id)
+                            );
+
+                            const displayName =
+                              statusMapping.status_name || statusMapping.custom_status_name || 'Status';
+                            const statusColor = statusMapping.color || '#6B7280';
+
+                            return (
+                              <StatusColumn
+                                key={statusMapping.template_status_mapping_id}
+                                statusMapping={statusMapping}
+                                displayName={displayName}
+                                statusColor={statusColor}
+                                tasks={statusTasks}
+                                lightenColor={lightenColor}
+                                onTaskDragStart={handleTaskDragStart}
+                                onTaskDragEnd={handleTaskDragEnd}
+                                onTaskDrop={handleTaskDrop}
+                                onEditTask={handleEditTask}
+                                onDeleteTask={handleDeleteTask}
+                                onAddTask={handleAddTask}
+                                onAssigneeChange={handleAssigneeChange}
+                                draggedTaskId={draggedTaskId}
+                                users={users}
+                                priorities={priorities}
+                                taskAssignments={taskAssignments}
+                                taskTypes={taskTypes}
+                                checklistItems={checklistItems}
+                                dependencies={dependencies}
+                                allTasks={tasks}
+                              />
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
                   </div>
-
-                  {/* Kanban Board */}
-                  <div className={styles.kanbanWrapper}>
-                    {sortedStatusMappings.length === 0 ? (
-                      <div className="text-center py-8 text-gray-500">
-                        <p>No status columns defined</p>
-                        <Button
-                          id="add-status-columns-empty"
-                          variant="outline"
-                          className="mt-4"
-                          onClick={() => setShowStatusManager(true)}
-                        >
-                          <Settings className="h-4 w-4 mr-2" />
-                          Add Status Columns
-                        </Button>
-                      </div>
-                    ) : (
-                      <div className={styles.kanbanBoard}>
-                        {sortedStatusMappings.map((statusMapping, index) => {
-                          const isFirstColumn = index === 0;
-                          const statusTasks = phaseTasks.filter(
-                            (task) =>
-                              task.template_status_mapping_id ===
-                                statusMapping.template_status_mapping_id ||
-                              (isFirstColumn && !task.template_status_mapping_id)
-                          );
-
-                          const displayName =
-                            statusMapping.status_name || statusMapping.custom_status_name || 'Status';
-                          const statusColor = statusMapping.color || '#6B7280';
-
-                          return (
-                            <StatusColumn
-                              key={statusMapping.template_status_mapping_id}
-                              statusMapping={statusMapping}
-                              displayName={displayName}
-                              statusColor={statusColor}
-                              tasks={statusTasks}
-                              lightenColor={lightenColor}
-                              onTaskDragStart={handleTaskDragStart}
-                              onTaskDragEnd={handleTaskDragEnd}
-                              onTaskDrop={handleTaskDrop}
-                              onEditTask={handleEditTask}
-                              onDeleteTask={handleDeleteTask}
-                              onAddTask={handleAddTask}
-                              onAssigneeChange={handleAssigneeChange}
-                              draggedTaskId={draggedTaskId}
-                              users={users}
-                              priorities={priorities}
-                              taskAssignments={taskAssignments}
-                              taskTypes={taskTypes}
-                              checklistItems={checklistItems}
-                              dependencies={dependencies}
-                              allTasks={tasks}
-                            />
-                          );
-                        })}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
+                )}
+              </div>
             </div>
-          </div>
+          )}
         </div>
       </div>
     </>
@@ -1128,10 +1239,13 @@ function StatusColumn({
 
   return (
     <div
-      className={`${styles.kanbanColumn} rounded-lg transition-all duration-200 border-2 ${
-        isDraggedOver && draggedTaskId ? 'border-purple-500 ' + styles.dragOver : 'border-transparent'
+      className={`${styles.kanbanColumn} rounded-lg transition-all duration-200 border-2 border-solid ${
+        isDraggedOver && draggedTaskId ? 'border-purple-500 ' + styles.dragOver : ''
       }`}
-      style={{ backgroundColor: lightenColor(statusColor, 0.85) }}
+      style={{
+        backgroundColor: lightenColor(statusColor, 0.85),
+        borderColor: isDraggedOver && draggedTaskId ? undefined : lightenColor(statusColor, 0.70)
+      }}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
@@ -1159,7 +1273,15 @@ function StatusColumn({
           >
             <Plus className="w-4 h-4 text-white" />
           </Button>
-          <div className={styles.taskCount}>{sortedTasks.length}</div>
+          <span
+            className="text-xs font-medium px-2 py-0.5 rounded-full"
+            style={{
+              backgroundColor: lightenColor(statusColor, 0.70),
+              color: statusColor
+            }}
+          >
+            {sortedTasks.length}
+          </span>
         </div>
       </div>
 
@@ -1317,7 +1439,7 @@ function TaskCard({
 
       {/* Task name and priority */}
       <div className="flex items-center gap-2 mb-1 w-full px-1 mt-5">
-        <div className="font-semibold text-sm flex-1 truncate">{task.task_name}</div>
+        <div className="font-semibold text-lg flex-1">{task.task_name}</div>
         {priority && (
           <div className="flex items-center gap-1 shrink-0">
             <div
@@ -1331,7 +1453,7 @@ function TaskCard({
 
       {/* Description */}
       {task.description && (
-        <p className="text-xs text-gray-600 mb-1 line-clamp-2 px-1">{task.description}</p>
+        <p className="text-sm text-gray-600 mb-1 line-clamp-2 px-1">{task.description}</p>
       )}
 
       {/* Assignee picker */}

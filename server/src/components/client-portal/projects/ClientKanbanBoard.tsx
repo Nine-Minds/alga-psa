@@ -111,16 +111,16 @@ function TaskCard({
     <div className="bg-white rounded-lg border border-gray-200 p-3 shadow-sm hover:shadow-md transition-shadow">
       {/* Task Name */}
       {visibleFields.includes('task_name') && task.task_name && (
-        <h4 className="font-medium text-gray-900 text-sm mb-2">{task.task_name}</h4>
+        <h4 className="font-semibold text-gray-900 text-lg mb-2">{task.task_name}</h4>
       )}
 
       {/* Task Description */}
       {visibleFields.includes('description') && task.description && (
-        <p className="text-xs text-gray-600 mb-2 line-clamp-2">{task.description}</p>
+        <p className="text-sm text-gray-600 mb-2 line-clamp-2">{task.description}</p>
       )}
 
       {/* Task Details */}
-      <div className="space-y-1.5 text-xs text-gray-600">
+      <div className="space-y-1.5 text-sm text-gray-600">
         {/* Due Date row with badges inline */}
         {(visibleFields.includes('due_date') || visibleFields.includes('checklist_progress') || showDependencies) && (
           <div className="flex items-center justify-between gap-2">
@@ -268,7 +268,7 @@ function PhaseCard({
       <div className="flex flex-col gap-1">
         {/* Phase name and task count */}
         <div className="flex items-center gap-2 flex-wrap">
-          <span className={`text-sm font-semibold ${isSelected ? 'text-purple-900' : 'text-gray-900'}`}>
+          <span className={`text-lg font-bold ${isSelected ? 'text-purple-900' : 'text-gray-900'}`}>
             {phase.phase_name}
           </span>
           <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-700">
@@ -293,7 +293,7 @@ function PhaseCard({
 
         {/* Phase description */}
         {phase.description && (
-          <p className="text-xs text-gray-500 line-clamp-2">
+          <p className="text-sm text-gray-600">
             {phase.description}
           </p>
         )}
@@ -317,8 +317,13 @@ export default function ClientKanbanBoard({
   const showPhases = config.show_phases ?? false;
   const showPhaseCompletion = config.show_phase_completion ?? false;
 
-  // Group tasks by status
-  const tasksByStatus = tasks.reduce((acc, task) => {
+  // Filter tasks by selected phase for display in columns
+  const phaseTasks = selectedPhaseId
+    ? tasks.filter(t => t.phase_id === selectedPhaseId)
+    : tasks;
+
+  // Group filtered tasks by status for display
+  const tasksByStatus = phaseTasks.reduce((acc, task) => {
     const statusId = task.project_status_mapping_id;
     if (!acc[statusId]) {
       acc[statusId] = [];
@@ -360,7 +365,7 @@ export default function ClientKanbanBoard({
       {/* Left Pane - Phase Cards */}
       {showPhases && phases.length > 0 && (
         <div className="w-56 flex-shrink-0 space-y-2">
-          <h4 className="text-xs font-medium text-gray-500 uppercase tracking-wider px-1 mb-3">
+          <h4 className="text-xs font-medium text-gray-500 px-1 mb-3">
             {t('projects.phases.title', 'Phases')}
           </h4>
           {phases.map((phase) => {

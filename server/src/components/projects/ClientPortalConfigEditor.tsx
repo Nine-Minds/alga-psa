@@ -4,6 +4,7 @@ import React from 'react';
 import { IClientPortalConfig, CONFIGURABLE_TASK_FIELDS } from 'server/src/interfaces/project.interfaces';
 import { Switch } from 'server/src/components/ui/Switch';
 import { Checkbox } from 'server/src/components/ui/Checkbox';
+import { Alert, AlertDescription, AlertTitle } from 'server/src/components/ui/Alert';
 
 interface ClientPortalConfigEditorProps {
   config: IClientPortalConfig;
@@ -29,16 +30,60 @@ export default function ClientPortalConfigEditor({
     updateConfig({ visible_task_fields: newFields });
   };
 
+  // Helper to generate summary of what clients will see
+  const getVisibilitySummary = (): string[] => {
+    const summary: string[] = ['Project name, description, dates, and overall progress'];
+
+    if (config.show_phases) {
+      summary.push('Phase names, descriptions, and date ranges');
+      if (config.show_phase_completion) {
+        summary.push('Completion percentage for each phase');
+      }
+    }
+
+    if (config.show_tasks && config.show_phases) {
+      const fields = config.visible_task_fields || [];
+      const fieldLabels: string[] = [];
+      if (fields.includes('task_name')) fieldLabels.push('task names');
+      if (fields.includes('description')) fieldLabels.push('descriptions');
+      if (fields.includes('due_date')) fieldLabels.push('due dates');
+      if (fields.includes('status')) fieldLabels.push('status');
+      if (fields.includes('assigned_to')) fieldLabels.push('assignees');
+      if (fields.includes('estimated_hours')) fieldLabels.push('estimated hours');
+      if (fields.includes('actual_hours')) fieldLabels.push('actual hours');
+      if (fields.includes('priority')) fieldLabels.push('priority');
+      if (fields.includes('checklist_progress')) fieldLabels.push('checklist progress');
+      if (fields.includes('dependencies')) fieldLabels.push('task dependencies');
+      if (fields.includes('document_uploads')) fieldLabels.push('document uploads');
+
+      if (fieldLabels.length > 0) {
+        summary.push(`Task details: ${fieldLabels.join(', ')}`);
+      }
+    }
+
+    return summary;
+  };
+
   return (
     <div className="space-y-4">
-      <div>
-        <h4 className="text-sm font-medium text-gray-900 mb-3">
-          Client Portal Visibility
-        </h4>
-        <p className="text-sm text-gray-500 mb-4">
-          Configure what clients can see about this project in their portal. Basic project information (name, description, dates, overall progress) is always visible.
-        </p>
-      </div>
+      <p className="text-sm text-gray-500">
+        Configure what clients can see about this project in their portal.
+      </p>
+
+      {/* What clients will see summary */}
+      <Alert variant="info">
+        <AlertTitle>Clients will see:</AlertTitle>
+        <AlertDescription>
+          <ul className="space-y-1 mt-1">
+            {getVisibilitySummary().map((item, index) => (
+              <li key={index} className="flex items-start gap-1.5">
+                <span className="mt-0.5">•</span>
+                <span>{item}</span>
+              </li>
+            ))}
+          </ul>
+        </AlertDescription>
+      </Alert>
 
       <div className="space-y-4 border-l-2 border-gray-200 pl-4">
         {/* Show Phases Toggle */}
@@ -49,7 +94,7 @@ export default function ClientPortalConfigEditor({
                 Show Phases
               </label>
               <p className="text-xs text-gray-500">
-                Display project phase breakdown to clients
+                Clients will see phase cards with names, descriptions, and date ranges. They can select phases to view associated tasks.
               </p>
             </div>
             <Switch
@@ -70,21 +115,22 @@ export default function ClientPortalConfigEditor({
           {/* Show Phase Completion (nested under Show Phases) */}
           {config.show_phases && (
             <div className="ml-6 border-l-2 border-gray-200 pl-4">
-              <div className="flex items-center justify-between">
-                <div className="flex-1">
+              <div className="flex items-center gap-2">
+                <Checkbox
+                  id="show-phase-completion"
+                  checked={config.show_phase_completion}
+                  onChange={(e) => updateConfig({ show_phase_completion: e.target.checked })}
+                  disabled={disabled || !config.show_phases}
+                  containerClassName=""
+                />
+                <div>
                   <label htmlFor="show-phase-completion" className="text-sm font-medium text-gray-700">
                     Show Completion %
                   </label>
                   <p className="text-xs text-gray-500">
-                    Show task completion percentage per phase
+                    Display a progress bar and percentage showing how many tasks are completed in each phase.
                   </p>
                 </div>
-                <Switch
-                  id="show-phase-completion"
-                  checked={config.show_phase_completion}
-                  onCheckedChange={(checked) => updateConfig({ show_phase_completion: checked })}
-                  disabled={disabled || !config.show_phases}
-                />
               </div>
             </div>
           )}
@@ -98,7 +144,7 @@ export default function ClientPortalConfigEditor({
                 Show Tasks
               </label>
               <p className="text-xs text-gray-500">
-                Display individual tasks to clients
+                Clients can view individual tasks within each phase. Tasks are displayed in a Kanban board or list view grouped by status.
               </p>
             </div>
             <Switch
@@ -112,9 +158,12 @@ export default function ClientPortalConfigEditor({
           {/* Task Fields Selection (nested under Show Tasks) */}
           {config.show_tasks && config.show_phases && (
             <div className="ml-6 border-l-2 border-gray-200 pl-4">
-              <label className="text-sm font-medium text-gray-700 block mb-2">
+              <label className="text-sm font-medium text-gray-700 block mb-1">
                 Visible Task Fields
               </label>
+              <p className="text-xs text-gray-500 mb-3">
+                Select which task details are visible to clients. Unchecked fields will be hidden from task cards.
+              </p>
               <div className="space-y-2">
                 {CONFIGURABLE_TASK_FIELDS.map(field => (
                   <div key={field.key} className="flex items-center">

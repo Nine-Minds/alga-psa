@@ -26,6 +26,7 @@ import { ProjectTaskStatusEditor } from './ProjectTaskStatusEditor';
 import { Dialog } from 'server/src/components/ui/Dialog';
 import ClientPortalConfigEditor from './ClientPortalConfigEditor';
 import { DEFAULT_CLIENT_PORTAL_CONFIG } from 'server/src/interfaces/project.interfaces';
+import { ChevronDown, ChevronRight, Settings } from 'lucide-react';
 
 interface ProjectDetailsEditProps {
   initialProject: IProject;
@@ -64,6 +65,7 @@ const ProjectDetailsEdit: React.FC<ProjectDetailsEditProps> = ({
   const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
   const [projectTags, setProjectTags] = useState<ITag[]>([]);
+  const [showClientPortalConfig, setShowClientPortalConfig] = useState(false);
   
   // TagContext is available if needed for tag-related features in the future
   // const { tags } = useTags();
@@ -405,15 +407,33 @@ const ProjectDetailsEdit: React.FC<ProjectDetailsEditProps> = ({
             />
           </div>
 
+          {/* Client Portal Visibility - Expandable Section */}
           <div className="border-t pt-4 mt-4">
-            <ClientPortalConfigEditor
-              config={project.client_portal_config || DEFAULT_CLIENT_PORTAL_CONFIG}
-              onChange={(config) => {
-                setProject(prev => ({ ...prev, client_portal_config: config }));
-                setHasChanges(true);
-              }}
-              disabled={isSubmitting}
-            />
+            <button
+              type="button"
+              onClick={() => setShowClientPortalConfig(!showClientPortalConfig)}
+              className="flex items-center gap-2 text-sm font-medium text-gray-700 hover:text-gray-900"
+            >
+              {showClientPortalConfig ? (
+                <ChevronDown className="h-4 w-4" />
+              ) : (
+                <ChevronRight className="h-4 w-4" />
+              )}
+              <Settings className="h-4 w-4" />
+              <span>Client Portal Visibility</span>
+            </button>
+            {showClientPortalConfig && (
+              <div className="mt-3">
+                <ClientPortalConfigEditor
+                  config={project.client_portal_config || DEFAULT_CLIENT_PORTAL_CONFIG}
+                  onChange={(config) => {
+                    setProject(prev => ({ ...prev, client_portal_config: config }));
+                    setHasChanges(true);
+                  }}
+                  disabled={isSubmitting}
+                />
+              </div>
+            )}
           </div>
         </div>
 

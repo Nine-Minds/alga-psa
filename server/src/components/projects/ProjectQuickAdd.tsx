@@ -24,6 +24,7 @@ import { ProjectTaskStatusSelector } from './ProjectTaskStatusSelector';
 import { QuickAddTagPicker, PendingTag } from 'server/src/components/tags';
 import { createTagsForEntity } from 'server/src/lib/actions/tagActions';
 import ClientPortalConfigEditor from './ClientPortalConfigEditor';
+import { ChevronDown, ChevronRight, Settings } from 'lucide-react';
 
 interface ProjectQuickAddProps {
   onClose: () => void;
@@ -53,6 +54,7 @@ const ProjectQuickAdd: React.FC<ProjectQuickAddProps> = ({ onClose, onProjectAdd
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
   const [pendingTags, setPendingTags] = useState<PendingTag[]>([]);
   const [clientPortalConfig, setClientPortalConfig] = useState<IClientPortalConfig>(DEFAULT_CLIENT_PORTAL_CONFIG);
+  const [showClientPortalConfig, setShowClientPortalConfig] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -326,12 +328,30 @@ const ProjectQuickAdd: React.FC<ProjectQuickAddProps> = ({ onClose, onProjectAdd
                 onPendingTagsChange={setPendingTags}
                 disabled={isSubmitting}
               />
+              {/* Client Portal Visibility - Expandable Section */}
               <div className="border-t pt-4 mt-2">
-                <ClientPortalConfigEditor
-                  config={clientPortalConfig}
-                  onChange={setClientPortalConfig}
-                  disabled={isSubmitting}
-                />
+                <button
+                  type="button"
+                  onClick={() => setShowClientPortalConfig(!showClientPortalConfig)}
+                  className="flex items-center gap-2 text-sm font-medium text-gray-700 hover:text-gray-900"
+                >
+                  {showClientPortalConfig ? (
+                    <ChevronDown className="h-4 w-4" />
+                  ) : (
+                    <ChevronRight className="h-4 w-4" />
+                  )}
+                  <Settings className="h-4 w-4" />
+                  <span>Client Portal Visibility</span>
+                </button>
+                {showClientPortalConfig && (
+                  <div className="mt-3">
+                    <ClientPortalConfigEditor
+                      config={clientPortalConfig}
+                      onChange={setClientPortalConfig}
+                      disabled={isSubmitting}
+                    />
+                  </div>
+                )}
               </div>
               <div className="flex justify-between mt-6">
                 <Button id='cancel-button' variant="ghost" onClick={() => {

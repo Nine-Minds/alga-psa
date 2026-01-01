@@ -192,42 +192,42 @@ export default function ClientTaskListView({
               {/* Expand icon space */}
               <th className="w-10 px-3 py-3" />
               {visibleFields.includes('task_name') && (
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500">
                   Task Name
                 </th>
               )}
               {visibleFields.includes('assigned_to') && (
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-36">
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 w-36">
                   Assignee
                 </th>
               )}
               {visibleFields.includes('due_date') && (
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-32">
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 w-32">
                   Due Date
                 </th>
               )}
               {visibleFields.includes('estimated_hours') && (
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-24">
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 w-24">
                   Est. Hours
                 </th>
               )}
               {visibleFields.includes('actual_hours') && (
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-28">
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 w-28">
                   Hours Logged
                 </th>
               )}
               {visibleFields.includes('checklist_progress') && (
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-24">
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 w-24">
                   Checklist
                 </th>
               )}
               {showDependencies && (
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-20">
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 w-20">
                   Deps
                 </th>
               )}
               {allowUploads && (
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-36">
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 w-36">
                   Attachments
                 </th>
               )}

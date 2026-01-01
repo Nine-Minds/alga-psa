@@ -174,12 +174,8 @@ export default function ProjectDetailView({ project }: ProjectDetailViewProps) {
 
       setDataLoading(true);
       try {
-        // Single function for both views - kanban passes phaseId filter, list doesn't
-        const options = effectiveViewMode === 'kanban' && selectedPhaseId
-          ? { phaseId: selectedPhaseId }
-          : undefined;
-
-        const result = await getClientProjectTasks(project.project_id, options);
+        // Fetch all tasks - filtering by phase is done in the component for kanban view
+        const result = await getClientProjectTasks(project.project_id);
 
         if (result?.tasks) {
           setTasks(result.tasks);
@@ -207,7 +203,7 @@ export default function ProjectDetailView({ project }: ProjectDetailViewProps) {
     };
 
     fetchTasks();
-  }, [project.project_id, showTasks, effectiveViewMode, selectedPhaseId]);
+  }, [project.project_id, showTasks, effectiveViewMode]);
 
   // View switcher options
   const viewOptions = useMemo(() => [
