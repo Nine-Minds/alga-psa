@@ -32,6 +32,8 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 ## Commands / Runbooks
 
 - Validate plan artifacts: `python3 /Users/roberisaacs/.codex/skills/alga-plan/scripts/validate_plan.py ee/docs/plans/2026-01-01-extension-scheduled-tasks`
+- Run Vitest schedules integration tests: `cd ee/server && npx vitest run src/__tests__/integration/extension-schedules.actions.integration.test.ts`
+- Run Playwright schedules UI test: `cd ee/server && PW_REUSE=false npx playwright test src/__tests__/integration/extension-schedules.playwright.test.ts --project=chromium --reporter=list`
 
 ## Links / References
 
@@ -41,6 +43,48 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - Job runner abstraction: `server/src/lib/jobs/interfaces/IJobRunner.ts`
 - Schedule actions: `ee/server/src/lib/actions/extensionScheduleActions.ts`
 - Extension update API: `ee/server/src/app/api/v1/extensions/update/route.ts`
+
+## Tests / Implementation Notes
+
+- (2026-01-01) Added Vitest integration coverage for endpoint materialization + schedule CRUD + run-now + rate limiting:
+  - `ee/server/src/__tests__/integration/extension-schedules.actions.integration.test.ts`
+- (2026-01-01) Fixed schedule action validation errors to return `{ success:false, fieldErrors }` instead of throwing (cron/timezone/uuid validation).
+- (2026-01-01) Fixed endpoint materialization to de-dupe within a batch by `(method,path)` to avoid Postgres `ON CONFLICT DO UPDATE command cannot affect row a second time`.
+- (2026-01-01) Updated `ee/server/vitest.config.ts` aliases so Vitest can resolve mixed EE + CE path patterns used by the extension subsystem.
+- (2026-01-01) Fixed `extRegistryV2Actions.ts` to only export async functions (Next.js server action restriction) by making helper types non-exported.
+- (2026-01-01) Added Vitest integration coverage for scheduled invocation handler behavior (payload shaping, errors, timeout, no-overlap, endpoint-missing disable policy):
+  - `ee/server/src/__tests__/integration/extension-scheduled-invocation.handler.integration.test.ts`
+- (2026-01-01) Adjusted scheduled invocation handler to:
+  - Use transaction-scoped advisory locks to enforce no-overlap without pooled-connection reentrancy issues.
+  - Persist `last_run_*` fields even when execution fails (avoid transaction rollback losing the update).
+  - Disable schedules when `endpoint_id` is broken/missing (policy).
+- (2026-01-01) Added Vitest integration coverage for extension v2 update/remap behavior (block vs override + disable only missing + recreate runner schedules when handles missing):
+  - `ee/server/src/__tests__/integration/extension-schedule-remap.integration.test.ts`
+- (2026-01-01) Tightened schedule input validation to match policy and improve UX:
+  - Reject cron when both DOM + DOW are set.
+  - Require payload to be JSON object/array and enforce size limit.
+  - Validate schedule name length and surface unique-name violations as field errors.
+  - Reject schedule creation when extension install is disabled.
+- (2026-01-01) Added unit coverage for Temporal runner schedule creation semantics (singletonKey => scheduleId, timezoneName):
+  - `ee/server/src/__tests__/unit/temporalJobRunner.scheduleRecurringJob.test.ts`
+- (2026-01-01) Added integration coverage for uninstall/toggle cleanup behavior (cancel jobs + delete schedules, pause/resume on extension enable/disable):
+  - `ee/server/src/__tests__/integration/extension-schedule-cleanup.integration.test.ts`
+- (2026-01-01) Added runner response size guardrail via `EXT_RUNNER_MAX_RESPONSE_BYTES` (default `262144`) and integration test coverage:
+  - `server/src/lib/jobs/handlers/extensionScheduledInvocationHandler.ts`
+  - `ee/server/src/__tests__/integration/extension-scheduled-invocation.handler.integration.test.ts`
+- (2026-01-01) Expanded schedule actions integration coverage to include stable endpoint IDs/handler field and run-now disabled policy:
+  - `ee/server/src/__tests__/integration/extension-schedules.actions.integration.test.ts`
+- (2026-01-01) Stabilized Playwright schedule toggle assertions by polling DB state instead of fixed sleeps:
+  - `ee/server/src/__tests__/integration/extension-schedules.playwright.test.ts`
+- (2026-01-01) Added strict assertion that scheduled invocation does not inject extra headers into runner `http.headers` payload:
+  - `ee/server/src/__tests__/integration/extension-scheduled-invocation.handler.integration.test.ts`
+- (2026-01-01) Made schedule create/update/delete transactional with runner scheduling/cancellation (atomic failure semantics):
+  - `ee/server/src/lib/actions/extensionScheduleActions.ts`
+  - `ee/server/src/__tests__/integration/extension-schedules.actions.integration.test.ts`
+- (2026-01-01) Defaulted schedule timezone input to current user's timezone (fallback UTC) and added Playwright coverage:
+  - `ee/server/src/lib/actions/extensionScheduleActions.ts`
+  - `ee/server/src/components/settings/extensions/ExtensionSettings.tsx`
+  - `ee/server/src/__tests__/integration/extension-schedules.playwright.test.ts`
 
 ## Open Questions
 

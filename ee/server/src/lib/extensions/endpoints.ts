@@ -15,7 +15,7 @@ function normalizeMethod(method: string): string {
 
 function normalizePath(path: string): string {
   const raw = String(path || '').trim();
-  if (!raw) return '/';
+  if (!raw) return '';
   const withSlash = raw.startsWith('/') ? raw : `/${raw}`;
   return withSlash.replace(/\/{2,}/g, '/');
 }
@@ -47,9 +47,17 @@ async function materializeEndpoints(db: Knex, versionId: string): Promise<void> 
   const endpoints = await readVersionEndpoints(db, versionId);
   if (endpoints.length === 0) return;
 
+  // De-dupe within this version by (method,path) to avoid Postgres error:
+  // "ON CONFLICT DO UPDATE command cannot affect row a second time".
+  // Last entry wins (consistent with later manifest entries overriding earlier ones).
+  const deduped = new Map<string, { method: string; path: string; handler: string }>();
+  for (const endpoint of endpoints) {
+    deduped.set(`${endpoint.method} ${endpoint.path}`, endpoint);
+  }
+
   await db('extension_api_endpoint')
     .insert(
-      endpoints.map((e) => ({
+      Array.from(deduped.values()).map((e) => ({
         version_id: versionId,
         method: e.method,
         path: e.path,
@@ -102,4 +110,3 @@ export async function findEndpointIdByMethodPath(params: {
     .first(['id']);
   return row?.id ?? null;
 }
-

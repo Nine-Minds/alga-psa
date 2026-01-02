@@ -30,7 +30,7 @@ async function assertExtensionPermissionIfUserPresent(action: ExtensionPermissio
   if (!allowed) throw new Error('Insufficient permissions');
 }
 
-export type V2ExtensionListItem = {
+type V2ExtensionListItem = {
   id: string; // registry_id
   name: string;
   version: string;
@@ -40,7 +40,7 @@ export type V2ExtensionListItem = {
   description?: string | null;
 };
 
-export type BundleInfo = {
+type BundleInfo = {
   content_hash: string;
   canonical_key: string; // sha256/<hex>/bundle.tar.zst
 };
@@ -142,7 +142,7 @@ function normalizeMethod(method: string): string {
 }
 function normalizePath(path: string): string {
   const raw = String(path || '').trim();
-  if (!raw) return '/';
+  if (!raw) return '';
   const withSlash = raw.startsWith('/') ? raw : `/${raw}`;
   return withSlash.replace(/\/{2,}/g, '/');
 }
@@ -168,9 +168,17 @@ async function materializeEndpointsForVersion(trx: Knex.Transaction, versionId: 
       updated_at: now,
     }))
     .filter((r) => r.method && r.path && r.handler);
-  if (rows.length === 0) return;
+
+  // De-dupe by (method,path) within this insert batch to avoid Postgres error:
+  // "ON CONFLICT DO UPDATE command cannot affect row a second time".
+  // Last entry wins.
+  const deduped = new Map<string, any>();
+  for (const r of rows) deduped.set(`${r.method} ${r.path}`, r);
+  const uniq = Array.from(deduped.values());
+
+  if (uniq.length === 0) return;
   await trx('extension_api_endpoint')
-    .insert(rows)
+    .insert(uniq)
     .onConflict(['version_id', 'method', 'path'])
     .merge({ handler: trx.raw('excluded.handler'), updated_at: now });
 }
@@ -237,17 +245,17 @@ export async function updateExtensionForCurrentTenantV2(params: { registryId: st
       throw new ExtensionUpdateBlockedError(missing);
     }
 
-    // Remap schedules we can.
-    for (const u of updates) {
-      await trx('tenant_extension_schedule')
-        .where({ id: u.scheduleId, tenant_id: tenant, install_id: installId })
-        .update({ endpoint_id: u.endpointId, updated_at: trx.fn.now() });
-    }
+	    // Remap schedules we can.
+	    for (const u of updates) {
+	      await trx('tenant_extension_schedule')
+	        .where({ id: u.scheduleId, tenant_id: tenant, install_id: installId })
+	        .update({ endpoint_id: u.endpointId, updated_at: trx.fn.now() });
+	    }
 
-    // Optionally disable those that cannot be remapped.
-    if (missing.length > 0 && disableMissingSchedules) {
-      const runner = getJobRunnerInstance() ?? (await initializeJobRunner());
-      for (const m of missing) {
+	    // Optionally disable those that cannot be remapped.
+	    if (missing.length > 0 && disableMissingSchedules) {
+	      const runner = getJobRunnerInstance() ?? (await initializeJobRunner());
+	      for (const m of missing) {
         const row = await trx('tenant_extension_schedule')
           .where({ id: m.scheduleId, tenant_id: tenant, install_id: installId })
           .first(['job_id']);
@@ -262,11 +270,48 @@ export async function updateExtensionForCurrentTenantV2(params: { registryId: st
             });
           }
         }
-        await trx('tenant_extension_schedule')
-          .where({ id: m.scheduleId, tenant_id: tenant, install_id: installId })
-          .update({ enabled: false, job_id: null, runner_schedule_id: null, updated_at: trx.fn.now(), last_error: 'Disabled due to missing endpoint on extension update' });
-      }
-    }
+	        await trx('tenant_extension_schedule')
+	          .where({ id: m.scheduleId, tenant_id: tenant, install_id: installId })
+	          .update({ enabled: false, job_id: null, runner_schedule_id: null, updated_at: trx.fn.now(), last_error: 'Disabled due to missing endpoint on extension update' });
+	      }
+	    }
+
+	    // Ensure enabled schedules have runner jobs. The handler reads schedule row + endpoint at runtime,
+	    // so remapping endpoint_id doesn't require recreating the runner schedule, but we still need to
+	    // (re)create schedules if the durable runner handle is missing.
+	    try {
+	      const enabledRows = await trx('tenant_extension_schedule')
+	        .where({ tenant_id: tenant, install_id: installId, enabled: true })
+	        .andWhere((b) => b.whereNull('job_id').orWhereNull('runner_schedule_id'))
+	        .select(['id', 'cron', 'timezone']);
+
+	      if (enabledRows.length > 0) {
+	        const runner = getJobRunnerInstance() ?? (await initializeJobRunner());
+	        for (const r of enabledRows as any[]) {
+	          const scheduleId = String(r.id);
+	          const cron = String(r.cron);
+	          const tz = r.timezone ? String(r.timezone) : 'UTC';
+	          try {
+	            const { jobId, externalId } = await runner.scheduleRecurringJob(
+	              'extension-scheduled-invocation',
+	              { tenantId: tenant, installId, scheduleId } as any,
+	              cron,
+	              { singletonKey: `extsched:${installId}:${scheduleId}`, metadata: { kind: 'extension_schedule', scheduleId, timezone: tz } }
+	            );
+	            await trx('tenant_extension_schedule')
+	              .where({ id: scheduleId, tenant_id: tenant, install_id: installId })
+	              .update({ job_id: jobId, runner_schedule_id: externalId, updated_at: trx.fn.now() });
+	          } catch (e) {
+	            console.warn('updateExtensionForCurrentTenantV2: failed to recreate runner schedule', {
+	              scheduleId,
+	              error: (e as any)?.message ?? String(e),
+	            });
+	          }
+	        }
+	      }
+	    } catch (e) {
+	      console.warn('updateExtensionForCurrentTenantV2: failed to ensure runner schedules', { error: (e as any)?.message ?? String(e) });
+	    }
 
     // Update install to new version.
     await trx('tenant_extension_install')

@@ -6,6 +6,7 @@ import type { Knex } from 'knex'
 import logger from '@shared/core/logger'
 import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions'
 import { hasPermission } from 'server/src/lib/auth/rbac'
+import { resolveUserTimeZone } from 'server/src/lib/utils/workDate'
 
 import { getInstallConfig } from '../extensions/installConfig'
 import { getJobRunnerInstance, initializeJobRunner } from 'server/src/lib/jobs/initializeJobRunner'
@@ -65,7 +66,9 @@ function failField(field: ExtensionScheduleInputError['field'], message: string)
   throw new ExtensionScheduleInputError(field, message)
 }
 
-async function ensureExtensionPermission(action: ExtensionPermissionAction): Promise<{ knex: Knex; tenantId: string }> {
+async function ensureExtensionPermission(
+  action: ExtensionPermissionAction
+): Promise<{ knex: Knex; tenantId: string; userId?: string }> {
   const user = await getCurrentUser()
   if (!user) throw new Error('User not authenticated')
   if (user.user_type === 'client') throw new Error('Insufficient permissions')
@@ -76,7 +79,10 @@ async function ensureExtensionPermission(action: ExtensionPermissionAction): Pro
   const allowed = await hasPermission(user, 'extension', action, knex)
   if (!allowed) throw new Error('Insufficient permissions')
 
-  return { knex, tenantId: tenant }
+  const rawUserId = String((user as any).id ?? (user as any).user_id ?? '').trim()
+  const userId = rawUserId.length > 0 ? rawUserId : undefined
+
+  return { knex, tenantId: tenant, userId }
 }
 
 function validateCronExpression(cron: string): string {
@@ -98,6 +104,13 @@ function validateCronExpression(cron: string): string {
   // Basic min-frequency guardrail: disallow every-minute schedules by default.
   // This is intentionally conservative; tune later if needed.
   const [min, hour, dom, mon, dow] = parts
+  // Policy: avoid ambiguous semantics when both day-of-month and day-of-week are set.
+  // In standard cron implementations this can behave as OR, which is easy to misconfigure.
+  const domIsSet = dom !== '*'
+  const dowIsSet = dow !== '*'
+  if (domIsSet && dowIsSet) {
+    failField('cron', 'Cron cannot set both day-of-month and day-of-week')
+  }
   const allOtherStars = hour === '*' && dom === '*' && mon === '*' && dow === '*'
   if (allOtherStars) {
     // Matches: "* * * * *" or "*/1 * * * *" or "*/2 * * * *" etc.
@@ -110,7 +123,15 @@ function validateCronExpression(cron: string): string {
 
 function validatePayloadJson(payload: unknown): unknown {
   if (payload === null || payload === undefined) return null
+  const isArray = Array.isArray(payload)
+  const isObject = typeof payload === 'object'
+  if (!isArray && !isObject) {
+    failField('payloadJson', 'Payload must be a JSON object or array')
+  }
   const json = JSON.stringify(payload)
+  if (typeof json !== 'string') {
+    failField('payloadJson', 'Payload must be JSON-serializable')
+  }
   if (json.length > 100_000) {
     failField('payloadJson', 'Payload too large')
   }
@@ -181,6 +202,25 @@ function scheduleSingletonKey(installId: string, scheduleId: string): string {
   return `extsched:${installId}:${scheduleId}`
 }
 
+function validateScheduleName(name: unknown): string | null {
+  if (name === null || name === undefined) return null
+  const value = String(name).trim()
+  if (!value) return null
+  if (value.length > 128) {
+    failField('name', 'Name too long')
+  }
+  return value
+}
+
+function isNameUniqueViolation(error: unknown): boolean {
+  const e: any = error as any
+  const code = String(e?.code ?? '')
+  const constraint = String(e?.constraint ?? '')
+  // Postgres unique_violation is 23505.
+  if (code === '23505' && constraint === 'tenant_extension_schedule_install_name_uniq') return true
+  return false
+}
+
 export async function listExtensionSchedules(extensionId: string): Promise<ExtensionScheduleListItem[]> {
   const { knex, tenantId: tenant } = await ensureExtensionPermission('read')
 
@@ -220,28 +260,37 @@ export async function listExtensionSchedules(extensionId: string): Promise<Exten
   }))
 }
 
+export async function getDefaultScheduleTimezone(): Promise<string> {
+  const { knex, tenantId, userId } = await ensureExtensionPermission('read')
+  if (!userId) return 'UTC'
+  try {
+    return await resolveUserTimeZone(knex, tenantId, userId)
+  } catch {
+    return 'UTC'
+  }
+}
+
 export async function createExtensionSchedule(
   extensionId: string,
   input: CreateExtensionScheduleInput
 ): Promise<{ success: boolean; message?: string; scheduleId?: string; fieldErrors?: Record<string, string> }> {
-  const { knex, tenantId: tenant } = await ensureExtensionPermission('write')
+  const { knex, tenantId: tenant, userId } = await ensureExtensionPermission('write')
 
   const install = await resolveInstallForTenant(knex, tenant, extensionId)
   if (!install) return { success: false, message: 'Extension install not found' }
 
-  const endpointId = validateUuid(input.endpointId, 'endpointId')
-  const cron = validateCronExpression(input.cron)
-  const timezone = validateTimezone(input.timezone)
-  const enabled = typeof input.enabled === 'boolean' ? input.enabled : true
-  if (enabled && !install.isEnabled) {
-    return { success: false, message: 'Extension is disabled; enable it before enabling schedules' }
-  }
-  const payloadJson = validatePayloadJson(input.payloadJson)
-
-  const scheduleId = crypto.randomUUID()
-  const now = knex.fn.now()
-
   try {
+    if (!install.isEnabled) return { success: false, message: 'Extension is disabled' }
+    const endpointId = validateUuid(input.endpointId, 'endpointId')
+    const cron = validateCronExpression(input.cron)
+    const timezone = validateTimezone(input.timezone)
+    const enabled = typeof input.enabled === 'boolean' ? input.enabled : true
+    const payloadJson = validatePayloadJson(input.payloadJson)
+    const name = validateScheduleName(input.name)
+
+    const scheduleId = crypto.randomUUID()
+    const now = knex.fn.now()
+
     // Guardrail: max schedules per install.
     const scheduleCountRow = await knex('tenant_extension_schedule')
       .where({ tenant_id: tenant, install_id: install.installId })
@@ -252,56 +301,75 @@ export async function createExtensionSchedule(
       return { success: false, message: 'Too many schedules (max 50 per extension install)' }
     }
 
-    // First persist schedule configuration (DB-only).
+    // Validate endpoint belongs to installed version before performing side effects.
     await knex.transaction(async (trx: Knex.Transaction) => {
       await assertEndpointBelongsToVersion(trx, endpointId, install.versionId)
-
-      const row = {
-        id: scheduleId,
-        install_id: install.installId,
-        tenant_id: tenant,
-        endpoint_id: endpointId,
-        name: input.name ? String(input.name).trim().slice(0, 128) : null,
-        cron,
-        timezone,
-        enabled,
-        payload_json: payloadJson ?? null,
-        created_at: now,
-        updated_at: now,
-      }
-
-      await trx('tenant_extension_schedule').insert(row)
     })
 
-    // Then create durable runner schedule (outside SQL txn to avoid cross-connection deadlocks).
+    // Create durable runner schedule first (so schedule creation is transactional from the user's POV).
+    // If runner schedule creation fails, no schedule row is persisted.
+    let jobId: string | null = null
+    let externalId: string | null = null
     if (enabled) {
-      try {
-        const runner = await getRunner()
-        const { jobId, externalId } = await runner.scheduleRecurringJob(
-          'extension-scheduled-invocation',
-          { tenantId: tenant, installId: install.installId, scheduleId } as any,
+      const runner = await getRunner()
+      const created = await runner.scheduleRecurringJob(
+        'extension-scheduled-invocation',
+        { tenantId: tenant, installId: install.installId, scheduleId } as any,
+        cron,
+        {
+          singletonKey: scheduleSingletonKey(install.installId, scheduleId),
+          ...(userId ? { userId } : {}),
+          metadata: { kind: 'extension_schedule', scheduleId, timezone },
+        }
+      )
+      jobId = created.jobId ?? null
+      externalId = (created as any).externalId ?? null
+    }
+
+    // Persist schedule configuration (DB-only).
+    try {
+      await knex.transaction(async (trx: Knex.Transaction) => {
+        const row = {
+          id: scheduleId,
+          install_id: install.installId,
+          tenant_id: tenant,
+          endpoint_id: endpointId,
+          name,
           cron,
-          { singletonKey: scheduleSingletonKey(install.installId, scheduleId), metadata: { kind: 'extension_schedule', scheduleId, timezone } }
-        )
-        await knex('tenant_extension_schedule')
-          .where({ id: scheduleId, tenant_id: tenant })
-          .update({
-            job_id: jobId,
-            runner_schedule_id: externalId,
-            updated_at: knex.fn.now(),
-          })
-      } catch (e: any) {
-        await knex('tenant_extension_schedule')
-          .where({ id: scheduleId, tenant_id: tenant })
-          .update({
-            enabled: false,
-            job_id: null,
-            runner_schedule_id: null,
-            last_error: `Failed to create runner schedule: ${e?.message ?? String(e)}`.slice(0, 4000),
-            updated_at: knex.fn.now(),
-          })
-        return { success: false, message: e?.message ?? 'Failed to create runner schedule' }
+          timezone,
+          enabled,
+          payload_json: payloadJson ?? null,
+          job_id: enabled ? jobId : null,
+          runner_schedule_id: enabled ? externalId : null,
+          created_at: now,
+          updated_at: now,
+        }
+
+        try {
+          await trx('tenant_extension_schedule').insert(row)
+        } catch (error) {
+          if (isNameUniqueViolation(error)) {
+            failField('name', 'Schedule name already in use for this extension')
+          }
+          throw error
+        }
+
+        // Best-effort touch install updated_at to signal config change.
+        await trx('tenant_extension_install')
+          .where({ id: install.installId, tenant_id: tenant })
+          .update({ updated_at: trx.fn.now() })
+      })
+    } catch (e) {
+      // If we created a runner schedule but failed to persist the schedule row, attempt cleanup.
+      if (enabled && jobId) {
+        try {
+          const runner = await getRunner()
+          await runner.cancelJob(String(jobId), tenant)
+        } catch {
+          // Best-effort cleanup.
+        }
       }
+      throw e
     }
 
     return { success: true, scheduleId }
@@ -309,6 +377,13 @@ export async function createExtensionSchedule(
     logger.error('Failed to create extension schedule', { tenant, extensionId, error })
     if (error instanceof ExtensionScheduleInputError) {
       return { success: false, message: error.message, fieldErrors: { [error.field]: error.message } }
+    }
+    if (isNameUniqueViolation(error)) {
+      return {
+        success: false,
+        message: 'Schedule name already in use for this extension',
+        fieldErrors: { name: 'Schedule name already in use for this extension' },
+      }
     }
     return { success: false, message: error?.message ?? 'Failed to create schedule' }
   }
@@ -319,22 +394,22 @@ export async function updateExtensionSchedule(
   scheduleIdRaw: string,
   input: UpdateExtensionScheduleInput
 ): Promise<{ success: boolean; message?: string; fieldErrors?: Record<string, string> }> {
-  const { knex, tenantId: tenant } = await ensureExtensionPermission('write')
+  const { knex, tenantId: tenant, userId } = await ensureExtensionPermission('write')
 
   const install = await resolveInstallForTenant(knex, tenant, extensionId)
   if (!install) return { success: false, message: 'Extension install not found' }
 
-  const scheduleId = validateUuid(scheduleIdRaw, 'scheduleId')
-  const nextEndpointId = input.endpointId ? validateUuid(input.endpointId, 'endpointId') : undefined
-  const nextCron = input.cron ? validateCronExpression(input.cron) : undefined
-  const nextTimezone = input.timezone ? validateTimezone(input.timezone) : undefined
-  const hasEnabledUpdate = typeof input.enabled === 'boolean'
-  const payloadJson =
-    'payloadJson' in input ? (input.payloadJson === null ? null : validatePayloadJson(input.payloadJson)) : undefined
-
-  const now = knex.fn.now()
-
   try {
+    const scheduleId = validateUuid(scheduleIdRaw, 'scheduleId')
+    const nextEndpointId = input.endpointId ? validateUuid(input.endpointId, 'endpointId') : undefined
+    const nextCron = input.cron ? validateCronExpression(input.cron) : undefined
+    const nextTimezone = input.timezone ? validateTimezone(input.timezone) : undefined
+    const hasEnabledUpdate = typeof input.enabled === 'boolean'
+    const payloadJson =
+      'payloadJson' in input ? (input.payloadJson === null ? null : validatePayloadJson(input.payloadJson)) : undefined
+
+    const now = knex.fn.now()
+
     const current = await knex('tenant_extension_schedule')
       .where({ id: scheduleId, tenant_id: tenant, install_id: install.installId })
       .first()
@@ -351,7 +426,7 @@ export async function updateExtensionSchedule(
     if (nextEndpointId) patch.endpoint_id = nextEndpointId
     if (nextCron) patch.cron = nextCron
     if (nextTimezone) patch.timezone = nextTimezone
-    if ('name' in input) patch.name = input.name === null ? null : (input.name ? String(input.name).trim().slice(0, 128) : null)
+    if ('name' in input) patch.name = input.name === null ? null : validateScheduleName(input.name)
     if ('payloadJson' in input) patch.payload_json = payloadJson
     if (hasEnabledUpdate) patch.enabled = Boolean(input.enabled)
 
@@ -360,53 +435,162 @@ export async function updateExtensionSchedule(
       (hasEnabledUpdate && Boolean(input.enabled) !== Boolean(current.enabled)) ||
       (nextTimezone && nextTimezone !== current.timezone)
 
-    // Apply DB updates first (DB-only).
-    await knex('tenant_extension_schedule')
-      .where({ id: scheduleId, tenant_id: tenant })
-      .update(patch)
-
     if (needsReschedule) {
       const runner = await getRunner()
-      // Cancel existing recurring schedule if present.
-      if (current.job_id) {
-        try {
-          await runner.cancelJob(String(current.job_id), tenant)
-        } catch (e) {
-          logger.warn('Failed to cancel existing schedule job', { scheduleId, tenant, error: e })
-        }
-      }
-
       const effectiveEnabled = hasEnabledUpdate ? Boolean(input.enabled) : Boolean(current.enabled)
       if (effectiveEnabled) {
         try {
           const cron = nextCron ?? String(current.cron)
           const tz = nextTimezone ?? String(current.timezone)
-          const { jobId, externalId } = await runner.scheduleRecurringJob(
-            'extension-scheduled-invocation',
-            { tenantId: tenant, installId: install.installId, scheduleId } as any,
-            cron,
-            { singletonKey: scheduleSingletonKey(install.installId, scheduleId), metadata: { kind: 'extension_schedule', scheduleId, timezone: tz } }
-          )
-          await knex('tenant_extension_schedule')
-            .where({ id: scheduleId, tenant_id: tenant })
-            .update({ job_id: jobId, runner_schedule_id: externalId, updated_at: now })
+
+          // To keep updates atomic, cancel the existing schedule first, then schedule the new one.
+          // If scheduling fails, attempt to restore the previous schedule. Only mutate DB after
+          // successful scheduling.
+          const currentJobId = current.job_id ? String(current.job_id) : null
+          if (currentJobId) {
+            const cancelled = await runner.cancelJob(currentJobId, tenant)
+            if (!cancelled) {
+              return { success: false, message: 'Failed to cancel existing schedule (cannot reschedule)' }
+            }
+          }
+
+          let scheduled: { jobId: string; externalId?: string | null } | null = null
+          try {
+            scheduled = await runner.scheduleRecurringJob(
+              'extension-scheduled-invocation',
+              { tenantId: tenant, installId: install.installId, scheduleId } as any,
+              cron,
+              {
+                singletonKey: scheduleSingletonKey(install.installId, scheduleId),
+                ...(userId ? { userId } : {}),
+                metadata: { kind: 'extension_schedule', scheduleId, timezone: tz },
+              }
+            )
+          } catch (e: any) {
+            // Restore best-effort.
+            if (currentJobId) {
+              try {
+                const restored = await runner.scheduleRecurringJob(
+                  'extension-scheduled-invocation',
+                  { tenantId: tenant, installId: install.installId, scheduleId } as any,
+                  String(current.cron),
+                  {
+                    singletonKey: scheduleSingletonKey(install.installId, scheduleId),
+                    ...(userId ? { userId } : {}),
+                    metadata: { kind: 'extension_schedule', scheduleId, timezone: String(current.timezone) },
+                  }
+                )
+
+                // Keep DB handles consistent with restored runner schedule (job IDs can change after cancel).
+                try {
+                  await knex('tenant_extension_schedule')
+                    .where({ id: scheduleId, tenant_id: tenant })
+                    .update({
+                      job_id: restored?.jobId ?? null,
+                      runner_schedule_id: (restored as any)?.externalId ?? null,
+                      updated_at: knex.fn.now(),
+                    })
+                } catch {
+                  // Best-effort; schedule is restored in the runner even if DB update fails.
+                }
+              } catch (restoreError) {
+                logger.warn('Failed to restore previous schedule after reschedule failure', {
+                  scheduleId,
+                  tenant,
+                  error: restoreError,
+                })
+                await knex('tenant_extension_schedule')
+                  .where({ id: scheduleId, tenant_id: tenant })
+                  .update({
+                    enabled: false,
+                    job_id: null,
+                    runner_schedule_id: null,
+                    last_error: `Failed to reschedule: ${e?.message ?? String(e)}`.slice(0, 4000),
+                    updated_at: knex.fn.now(),
+                  })
+              }
+            }
+            return { success: false, message: e?.message ?? 'Failed to reschedule' }
+          }
+
+          const jobId = scheduled?.jobId
+          const externalId = scheduled?.externalId ?? null
+
+          await knex.transaction(async (trx: Knex.Transaction) => {
+            // Apply DB updates only after runner scheduling succeeded.
+            try {
+              await trx('tenant_extension_schedule')
+                .where({ id: scheduleId, tenant_id: tenant })
+                .update({
+                  ...patch,
+                  job_id: jobId,
+                  runner_schedule_id: externalId,
+                  updated_at: now,
+                })
+            } catch (error) {
+              if (isNameUniqueViolation(error)) {
+                failField('name', 'Schedule name already in use for this extension')
+              }
+              throw error
+            }
+
+            await trx('tenant_extension_install')
+              .where({ id: install.installId, tenant_id: tenant })
+              .update({ updated_at: trx.fn.now() })
+          })
         } catch (e: any) {
-          await knex('tenant_extension_schedule')
-            .where({ id: scheduleId, tenant_id: tenant })
-            .update({
-              enabled: false,
-              job_id: null,
-              runner_schedule_id: null,
-              last_error: `Failed to reschedule: ${e?.message ?? String(e)}`.slice(0, 4000),
-              updated_at: knex.fn.now(),
-            })
           return { success: false, message: e?.message ?? 'Failed to reschedule' }
         }
       } else {
-        await knex('tenant_extension_schedule')
-          .where({ id: scheduleId, tenant_id: tenant })
-          .update({ job_id: null, runner_schedule_id: null, updated_at: now })
+        // Disable: cancel schedule first; only clear DB handles if cancellation succeeds.
+        const currentJobId = current.job_id ? String(current.job_id) : null
+        if (currentJobId) {
+          const cancelled = await runner.cancelJob(currentJobId, tenant)
+          if (!cancelled) {
+            return { success: false, message: 'Failed to cancel existing schedule (cannot disable)' }
+          }
+        }
+
+        await knex.transaction(async (trx: Knex.Transaction) => {
+          try {
+            await trx('tenant_extension_schedule')
+              .where({ id: scheduleId, tenant_id: tenant })
+              .update({ ...patch, job_id: null, runner_schedule_id: null, updated_at: now })
+          } catch (error) {
+            if (isNameUniqueViolation(error)) {
+              failField('name', 'Schedule name already in use for this extension')
+            }
+            throw error
+          }
+
+          await trx('tenant_extension_install')
+            .where({ id: install.installId, tenant_id: tenant })
+            .update({ updated_at: trx.fn.now() })
+        })
       }
+      return { success: true }
+    }
+
+    // No reschedule needed: apply DB updates only.
+    try {
+      await knex.transaction(async (trx: Knex.Transaction) => {
+        await trx('tenant_extension_schedule')
+          .where({ id: scheduleId, tenant_id: tenant })
+          .update(patch)
+
+        await trx('tenant_extension_install')
+          .where({ id: install.installId, tenant_id: tenant })
+          .update({ updated_at: trx.fn.now() })
+      })
+    } catch (error) {
+      if (isNameUniqueViolation(error)) {
+        return {
+          success: false,
+          message: 'Schedule name already in use for this extension',
+          fieldErrors: { name: 'Schedule name already in use for this extension' },
+        }
+      }
+      throw error
     }
 
     return { success: true }
@@ -414,6 +598,13 @@ export async function updateExtensionSchedule(
     logger.error('Failed to update extension schedule', { tenant, extensionId, scheduleId: scheduleIdRaw, error })
     if (error instanceof ExtensionScheduleInputError) {
       return { success: false, message: error.message, fieldErrors: { [error.field]: error.message } }
+    }
+    if (isNameUniqueViolation(error)) {
+      return {
+        success: false,
+        message: 'Schedule name already in use for this extension',
+        fieldErrors: { name: 'Schedule name already in use for this extension' },
+      }
     }
     return { success: false, message: error?.message ?? 'Failed to update schedule' }
   }
@@ -428,9 +619,9 @@ export async function deleteExtensionSchedule(
   const install = await resolveInstallForTenant(knex, tenant, extensionId)
   if (!install) return { success: false, message: 'Extension install not found' }
 
-  const scheduleId = validateUuid(scheduleIdRaw, 'scheduleId')
-
   try {
+    const scheduleId = validateUuid(scheduleIdRaw, 'scheduleId')
+
     const current = await knex('tenant_extension_schedule')
       .where({ id: scheduleId, tenant_id: tenant, install_id: install.installId })
       .first(['id', 'job_id'])
@@ -439,9 +630,13 @@ export async function deleteExtensionSchedule(
     if (current.job_id) {
       const runner = await getRunner()
       try {
-        await runner.cancelJob(String(current.job_id), tenant)
+        const cancelled = await runner.cancelJob(String(current.job_id), tenant)
+        if (!cancelled) {
+          return { success: false, message: 'Failed to cancel runner schedule (not deleted)' }
+        }
       } catch (e) {
         logger.warn('Failed to cancel schedule job during delete', { scheduleId, tenant, error: e })
+        return { success: false, message: 'Failed to cancel runner schedule (not deleted)' }
       }
     }
 
@@ -469,15 +664,15 @@ export async function runExtensionScheduleNow(
   extensionId: string,
   scheduleIdRaw: string
 ): Promise<{ success: boolean; message?: string; fieldErrors?: Record<string, string> }> {
-  const { knex, tenantId: tenant } = await ensureExtensionPermission('write')
+  const { knex, tenantId: tenant, userId } = await ensureExtensionPermission('write')
 
   const install = await resolveInstallForTenant(knex, tenant, extensionId)
   if (!install) return { success: false, message: 'Extension install not found' }
   if (!install.isEnabled) return { success: false, message: 'Extension is disabled' }
 
-  const scheduleId = validateUuid(scheduleIdRaw, 'scheduleId')
-
   try {
+    const scheduleId = validateUuid(scheduleIdRaw, 'scheduleId')
+
     const schedule = await knex('tenant_extension_schedule')
       .where({ id: scheduleId, tenant_id: tenant, install_id: install.installId })
       .first(['id', 'enabled'])
@@ -513,7 +708,11 @@ export async function runExtensionScheduleNow(
     await runner.scheduleJob(
       'extension-scheduled-invocation',
       { tenantId: tenant, installId: install.installId, scheduleId } as any,
-      { singletonKey: `extsched-run:${install.installId}:${scheduleId}:${keyMinute}`, metadata: { kind: 'extension_schedule_run_now', scheduleId } }
+      {
+        singletonKey: `extsched-run:${install.installId}:${scheduleId}:${keyMinute}`,
+        ...(userId ? { userId } : {}),
+        metadata: { kind: 'extension_schedule_run_now', scheduleId },
+      }
     )
 
     return { success: true }

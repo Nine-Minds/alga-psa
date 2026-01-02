@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { ChevronLeft, Plus, Trash2, Lock, Eye, EyeOff } from 'lucide-react';
 import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionContainer';
@@ -24,6 +24,7 @@ import {
 import {
   createExtensionSchedule,
   deleteExtensionSchedule,
+  getDefaultScheduleTimezone,
   listExtensionSchedules,
   runExtensionScheduleNow,
   updateExtensionSchedule,
@@ -57,6 +58,7 @@ export default function ExtensionSettings() {
   const [newScheduleCron, setNewScheduleCron] = useState<string>('0 0 * * *');
   const [newScheduleTimezone, setNewScheduleTimezone] = useState<string>('UTC');
   const [newSchedulePayload, setNewSchedulePayload] = useState<string>('');
+  const didTouchScheduleTimezoneRef = useRef(false);
   const [editingScheduleId, setEditingScheduleId] = useState<string | null>(null);
   const [editEndpointId, setEditEndpointId] = useState<string>('');
   const [editCron, setEditCron] = useState<string>('');
@@ -202,6 +204,16 @@ export default function ExtensionSettings() {
           ]);
           setApiEndpoints(endpoints);
           setSchedules(scheduleRows);
+
+          // Best-effort: default timezone to the current user's timezone (fallback UTC).
+          try {
+            const tz = await getDefaultScheduleTimezone();
+            if (!didTouchScheduleTimezoneRef.current && tz && tz !== 'UTC') {
+              setNewScheduleTimezone(tz);
+            }
+          } catch {
+            // Ignore; keep UTC default.
+          }
         } catch (scheduleErr) {
           console.warn('Failed to load extension schedules', scheduleErr);
           const msg = scheduleErr instanceof Error ? scheduleErr.message : String(scheduleErr);
@@ -786,7 +798,10 @@ export default function ExtensionSettings() {
                         <label className="text-sm font-medium">Timezone</label>
                         <Input
                           value={newScheduleTimezone}
-                          onChange={(e) => setNewScheduleTimezone(e.target.value)}
+                          onChange={(e) => {
+                            didTouchScheduleTimezoneRef.current = true;
+                            setNewScheduleTimezone(e.target.value);
+                          }}
                           placeholder="UTC"
                           {...automationId('extension-schedule-timezone')}
                         />

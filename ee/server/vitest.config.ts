@@ -29,14 +29,34 @@ export default defineConfig({
     ]
   },
   resolve: {
-    alias: {
-      '@': path.resolve(__dirname, './src'),
-      '@shared': path.resolve(__dirname, '../shared'),
-      '@main-server': path.resolve(__dirname, '../../server/src'),
-      '@main-test-utils': path.resolve(__dirname, '../../server/test-utils'),
-      'server': path.resolve(__dirname, '../../server'),
-      '@shared/core/secretProvider': path.resolve(__dirname, '../shared/core/secretProvider.ts'),
-      '@shared/core/logger': path.resolve(__dirname, '../shared/core/logger.ts'),
-    },
+    alias: [
+      // EE alias used in code/tests.
+      { find: /^@ee\/(.*)$/, replacement: `${path.resolve(__dirname, './src')}/$1` },
+
+      // Match tsconfig-style subpath overrides before the generic `@/` mapping.
+      { find: /^@\/config\/(.*)$/, replacement: `${path.resolve(__dirname, '../../server/src/config')}/$1` },
+      { find: /^@\/utils\/(.*)$/, replacement: `${path.resolve(__dirname, '../../server/src/utils')}/$1` },
+      { find: /^@\/interfaces\/(.*)$/, replacement: `${path.resolve(__dirname, '../../server/src/interfaces')}/$1` },
+      { find: /^@\/models\/(.*)$/, replacement: `${path.resolve(__dirname, '../../server/src/models')}/$1` },
+      { find: /^@\/services\/(.*)$/, replacement: `${path.resolve(__dirname, '../../server/src/services')}/$1` },
+      { find: /^@\/hooks\/(.*)$/, replacement: `${path.resolve(__dirname, '../../server/src/hooks')}/$1` },
+      { find: /^@\/constants\/(.*)$/, replacement: `${path.resolve(__dirname, '../../server/src/constants')}/$1` },
+      { find: /^@\/context\/(.*)$/, replacement: `${path.resolve(__dirname, '../../server/src/context')}/$1` },
+      { find: /^@\/middleware\/(.*)$/, replacement: `${path.resolve(__dirname, '../../server/src/middleware')}/$1` },
+      { find: /^@\/pages\/(.*)$/, replacement: `${path.resolve(__dirname, '../../server/src/pages')}/$1` },
+      { find: /^@\/components\/(.*)$/, replacement: `${path.resolve(__dirname, '../../server/src/components')}/$1` },
+
+      // Generic `@/` => EE source root.
+      { find: /^@\//, replacement: `${path.resolve(__dirname, './src')}/` },
+
+      // Root shared + server imports.
+      { find: /^@shared\/(.*)$/, replacement: `${path.resolve(__dirname, '../../shared')}/$1` },
+      { find: /^@alga-psa\/shared\/(.*)$/, replacement: `${path.resolve(__dirname, '../../shared')}/$1` },
+
+      // Convenience aliases used by tests/code.
+      { find: '@main-server', replacement: path.resolve(__dirname, '../../server/src') },
+      { find: '@main-test-utils', replacement: path.resolve(__dirname, '../../server/test-utils') },
+      { find: 'server', replacement: path.resolve(__dirname, '../../server') },
+    ],
   },
 });
