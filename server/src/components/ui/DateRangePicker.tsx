@@ -27,11 +27,13 @@ export const DateRangePicker: React.FC<DateRangePickerProps & AutomationProps> =
           value={value.from}
           onChange={(date) => onChange({ ...value, from: date })}
           placeholder="From date"
+          className="min-w-[160px]"
         />
         <DatePicker
           value={value.to}
           onChange={(date) => onChange({ ...value, to: date })}
           placeholder="To date"
+          className="min-w-[160px]"
         />
       </div>
     </div>
@@ -61,19 +63,21 @@ export const StringDateRangePicker: React.FC<StringDateRangePickerProps & Automa
       <div className="flex gap-2">
         <DatePicker
           value={value.from ? new Date(value.from) : undefined}
-          onChange={(date) => onChange({ 
-            ...value, 
-            from: date ? date.toISOString().split('T')[0] : '' 
+          onChange={(date) => onChange({
+            ...value,
+            from: date ? date.toISOString().split('T')[0] : ''
           })}
           placeholder="From date"
+          className="min-w-[160px]"
         />
         <DatePicker
           value={value.to ? new Date(value.to) : undefined}
-          onChange={(date) => onChange({ 
-            ...value, 
-            to: date ? date.toISOString().split('T')[0] : '' 
+          onChange={(date) => onChange({
+            ...value,
+            to: date ? date.toISOString().split('T')[0] : ''
           })}
           placeholder="To date"
+          className="min-w-[160px]"
         />
       </div>
     </div>
