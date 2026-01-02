@@ -598,16 +598,11 @@ export async function createTicketFromEmail(
       // Note: Event publishing failure should not prevent ticket creation
       if (assignedTo) {
         try {
-          const { publishEvent } = await import('@alga-psa/shared/events/publisher');
-          await publishEvent({
-            eventType: 'TICKET_ASSIGNED',
-            tenant,
-            payload: {
-              tenantId: tenant,
-              ticketId: result.ticket_id,
-              userId: assignedTo,
-              assignedByUserId: userId || ticketData.entered_by || undefined
-            }
+          await eventPublisher.publishTicketAssigned({
+            tenantId: tenant,
+            ticketId: result.ticket_id,
+            userId: assignedTo,
+            assignedByUserId: userId || ticketData.entered_by
           });
         } catch (eventError) {
           console.error('Failed to publish TICKET_ASSIGNED event:', eventError);

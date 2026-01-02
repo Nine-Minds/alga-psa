@@ -250,6 +250,13 @@ export interface IEventPublisher {
     userId?: string;
     metadata?: Record<string, any>;
   }): Promise<void>;
+
+  publishTicketAssigned(data: {
+    tenantId: string;
+    ticketId: string;
+    userId: string;
+    assignedByUserId?: string;
+  }): Promise<void>;
 }
 
 /**
