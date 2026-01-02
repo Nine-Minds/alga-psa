@@ -367,22 +367,25 @@ export default function TemplateTaskListView({
         <table className="w-full table-fixed">
           <colgroup>
             <col style={{ width: '40px' }} />
-            <col style={{ width: '28%' }} />
-            <col style={{ width: '8%' }} />
-            <col style={{ width: '14%' }} />
-            <col style={{ width: '14%' }} />
-            <col style={{ width: '10%' }} />
-            <col style={{ width: '12%' }} />
-            <col style={{ width: '10%' }} />
+            <col style={{ width: '36%' }} />  {/* Name */}
+            <col style={{ width: '8%' }} />   {/* Deps */}
+            <col style={{ width: '8%' }} />   {/* Checklist */}
+            <col style={{ width: '16%' }} />  {/* Assignee */}
+            <col style={{ width: '9%' }} />   {/* Est. Hours */}
+            <col style={{ width: '9%' }} />   {/* Duration */}
+            <col style={{ width: '10%' }} />  {/* Actions */}
           </colgroup>
           <thead>
             <tr>
               <th className="w-10 px-3 py-3" />
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500">
-                Task Name
+                Name
               </th>
               <th className="px-3 py-3 text-left text-xs font-medium text-gray-500">
                 Deps
+              </th>
+              <th className="px-3 py-3 text-left text-xs font-medium text-gray-500">
+                Checklist
               </th>
               <th className="px-3 py-3 text-left text-xs font-medium text-gray-500">
                 Assignee
@@ -392,9 +395,6 @@ export default function TemplateTaskListView({
               </th>
               <th className="px-3 py-3 text-left text-xs font-medium text-gray-500">
                 Duration
-              </th>
-              <th className="px-3 py-3 text-left text-xs font-medium text-gray-500">
-                Checklist
               </th>
               <th className="px-3 py-3 text-right text-xs font-medium text-gray-500">
                 Actions
@@ -414,13 +414,13 @@ export default function TemplateTaskListView({
               <table className="w-full table-fixed">
                 <colgroup>
                   <col style={{ width: '40px' }} />
-                  <col style={{ width: '28%' }} />
-                  <col style={{ width: '8%' }} />
-                  <col style={{ width: '14%' }} />
-                  <col style={{ width: '14%' }} />
-                  <col style={{ width: '10%' }} />
-                  <col style={{ width: '12%' }} />
-                  <col style={{ width: '10%' }} />
+                  <col style={{ width: '36%' }} />  {/* Name */}
+                  <col style={{ width: '8%' }} />   {/* Deps */}
+                  <col style={{ width: '8%' }} />   {/* Checklist */}
+                  <col style={{ width: '16%' }} />  {/* Assignee */}
+                  <col style={{ width: '9%' }} />   {/* Est. Hours */}
+                  <col style={{ width: '9%' }} />   {/* Duration */}
+                  <col style={{ width: '10%' }} />  {/* Actions */}
                 </colgroup>
 
                 {/* Phase header row */}
@@ -445,9 +445,8 @@ export default function TemplateTaskListView({
                                 <h4 className="font-semibold text-gray-900">
                                   {phaseGroup.phase.phase_name || 'Untitled Phase'}
                                 </h4>
-                                <span className="text-sm text-gray-500">
-                                  ({phaseGroup.totalTasks}{' '}
-                                  {phaseGroup.totalTasks === 1 ? 'task' : 'tasks'})
+                                <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-700">
+                                  {phaseGroup.totalTasks} {phaseGroup.totalTasks === 1 ? 'task' : 'tasks'}
                                 </span>
                               </div>
 
@@ -482,7 +481,7 @@ export default function TemplateTaskListView({
                               {/* Add Task button */}
                               <Button
                                 id={`add-task-${phaseGroup.phase.template_phase_id}`}
-                                variant="ghost"
+                                variant="default"
                                 size="sm"
                                 onClick={(e) => {
                                   e.stopPropagation();
@@ -648,6 +647,16 @@ export default function TemplateTaskListView({
                                     )}
                                   </td>
 
+                                  {/* Checklist */}
+                                  <td className="py-3 px-3">
+                                    {checklistCount > 0 && (
+                                      <div className="flex items-center gap-1 text-gray-600">
+                                        <CheckSquare className="h-3.5 w-3.5" />
+                                        <span className="text-xs">{checklistCount}</span>
+                                      </div>
+                                    )}
+                                  </td>
+
                                   {/* Assignee */}
                                   <td className="py-3 px-3">
                                     <div className="flex items-center gap-1">
@@ -676,16 +685,6 @@ export default function TemplateTaskListView({
                                     <span className="text-sm text-gray-700">
                                       {task.duration_days != null ? `${task.duration_days}d` : '-'}
                                     </span>
-                                  </td>
-
-                                  {/* Checklist */}
-                                  <td className="py-3 px-3">
-                                    {checklistCount > 0 && (
-                                      <div className="flex items-center gap-1 text-gray-500">
-                                        <CheckSquare className="h-3.5 w-3.5" />
-                                        <span className="text-sm">{checklistCount}</span>
-                                      </div>
-                                    )}
                                   </td>
 
                                   {/* Actions */}
@@ -732,9 +731,8 @@ export default function TemplateTaskListView({
         <div className="border-t border-gray-200 p-3">
           <Button
             id="add-phase-list-view"
-            variant="ghost"
+            variant="default"
             size="sm"
-            className="w-full justify-start text-gray-600 hover:text-gray-900"
             onClick={onAddPhase}
           >
             <Plus className="h-4 w-4 mr-2" />
@@ -751,7 +749,7 @@ export default function TemplateTaskListView({
             <p className="text-sm mt-1">Create phases and add tasks to see them here</p>
             <Button
               id="add-phase-empty-state"
-              variant="outline"
+              variant="default"
               size="sm"
               className="mt-4"
               onClick={onAddPhase}

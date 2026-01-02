@@ -21,7 +21,7 @@ import PhaseQuickAdd from './PhaseQuickAdd';
 import TaskListView from './TaskListView';
 import ViewSwitcher from 'server/src/components/ui/ViewSwitcher';
 import { getProjectTaskStatuses, updatePhase, deletePhase, getProjectTreeData, reorderPhase } from 'server/src/lib/actions/project-actions/projectActions';
-import { updateTaskStatus, reorderTask, reorderTasksInStatus, moveTaskToPhase, updateTaskWithChecklist, getTaskChecklistItems, getTaskResourcesAction, getTaskTicketLinksAction, duplicateTaskToPhase, deleteTask as deleteTaskAction, getTasksForPhase, getTaskById, getAllProjectTasksForListView } from 'server/src/lib/actions/project-actions/projectTaskActions';
+import { updateTaskStatus, reorderTask, reorderTasksInStatus, moveTaskToPhase, updateTaskWithChecklist, getTaskChecklistItems, getTaskResourcesAction, getTaskTicketLinksAction, duplicateTaskToPhase, deleteTask as deleteTaskAction, getTasksForPhase, getTaskById, getAllProjectTasksForListView, getPhaseTaskCounts } from 'server/src/lib/actions/project-actions/projectTaskActions';
 import styles from './ProjectDetail.module.css';
 import { Toaster, toast } from 'react-hot-toast';
 import { ConfirmationDialog } from 'server/src/components/ui/ConfirmationDialog';
@@ -32,7 +32,7 @@ import KanbanBoard from './KanbanBoard';
 import DonutChart from './DonutChart';
 import { calculateProjectCompletion } from 'server/src/lib/utils/projectUtils';
 import { IClient } from 'server/src/interfaces/client.interfaces';
-import { HelpCircle } from 'lucide-react';
+import { HelpCircle, LayoutGrid, List } from 'lucide-react';
 import { Tooltip } from 'server/src/components/ui/Tooltip';
 import { generateKeyBetween } from 'fractional-indexing';
 import KanbanBoardSkeleton from 'server/src/components/ui/skeletons/KanbanBoardSkeleton';
@@ -241,6 +241,22 @@ export default function ProjectDetail({
     ).length;
   }, [filteredTasks, projectStatuses]);
 
+  // Task counts per phase for the phase sidebar (fetched from server)
+  const [phaseTaskCounts, setPhaseTaskCounts] = useState<Record<string, number>>({});
+
+  // Fetch task counts for all phases when component loads
+  useEffect(() => {
+    const fetchTaskCounts = async () => {
+      try {
+        const counts = await getPhaseTaskCounts(project.project_id);
+        setPhaseTaskCounts(counts);
+      } catch (error) {
+        console.error('Error fetching phase task counts:', error);
+      }
+    };
+    fetchTaskCounts();
+  }, [project.project_id]);
+
   const [scrollInterval, setScrollInterval] = useState<NodeJS.Timeout | null>(null);
   const [projectTreeData, setProjectTreeData] = useState<any[]>([]);
 
@@ -297,6 +313,12 @@ export default function ProjectDetail({
       if (task.phase_id !== newPhaseId) {
         // Move to different phase with new status
         await moveTaskToPhase(taskId, newPhaseId, newStatusMappingId);
+        // Update task counts: decrement source, increment target
+        setPhaseTaskCounts(prev => ({
+          ...prev,
+          [task.phase_id]: Math.max((prev[task.phase_id] || 0) - 1, 0),
+          [newPhaseId]: (prev[newPhaseId] || 0) + 1
+        }));
         toast.success('Task moved to new phase');
       } else if (task.project_status_mapping_id !== newStatusMappingId) {
         // Same phase, different status
@@ -884,7 +906,13 @@ export default function ProjectDetail({
           task.task_id === updatedTask.task_id ? taskWithChecklist : task
         )
       );
-          
+      // Update task counts: decrement source, increment target
+      setPhaseTaskCounts(prev => ({
+        ...prev,
+        [moveConfirmation.sourcePhase.phase_id]: Math.max((prev[moveConfirmation.sourcePhase.phase_id] || 0) - 1, 0),
+        [moveConfirmation.targetPhase.phase_id]: (prev[moveConfirmation.targetPhase.phase_id] || 0) + 1
+      }));
+
       toast.success(`Task moved to ${moveConfirmation.targetPhase.phase_name}`);
     } catch (error) {
       console.error('Error moving task:', error);
@@ -902,8 +930,13 @@ export default function ProjectDetail({
       if (selectedPhase && newTask.wbs_code.startsWith(selectedPhase.wbs_code)) {
         const checklistItems = await getTaskChecklistItems(newTask.task_id);
         const taskWithChecklist = { ...newTask, checklist_items: checklistItems };
-        
+
         setProjectTasks((prevTasks) => [...prevTasks, taskWithChecklist]);
+        // Update task count for the phase
+        setPhaseTaskCounts(prev => ({
+          ...prev,
+          [newTask.phase_id]: (prev[newTask.phase_id] || 0) + 1
+        }));
         setShowQuickAdd(false);
         toast.success('New task added successfully!');
       } else {
@@ -1212,6 +1245,12 @@ export default function ProjectDetail({
           setProjectTasks(prevTasks =>
             prevTasks.filter(t => t.task_id !== movedTask.task_id)
           );
+          // Update task counts: decrement source, increment target
+          setPhaseTaskCounts(prev => ({
+            ...prev,
+            [taskToMove.phase_id]: Math.max((prev[taskToMove.phase_id] || 0) - 1, 0),
+            [targetPhaseId]: (prev[targetPhaseId] || 0) + 1
+          }));
           toast.success(`Task "${taskToMove.task_name}" moved to different phase successfully! Switch to the target phase to see it.`);
         } else {
           // Task moved within the same phase (to different status) - update in place
@@ -1254,9 +1293,7 @@ export default function ProjectDetail({
       return (
         <div className="flex flex-col h-full">
           <div className="mb-4">
-            <div className="flex justify-between items-center gap-4">
-              <h2 className="text-xl font-bold">Project Tasks - List View</h2>
-              <div className="flex items-center gap-4">
+            <div className="flex justify-end items-center gap-4">
                 {/* Tag Filter */}
                 <TagFilter
                   allTags={allTaskTags}
@@ -1294,24 +1331,27 @@ export default function ProjectDetail({
                   currentView={viewMode}
                   onChange={setViewMode}
                   options={[
-                    { value: 'kanban', label: 'Kanban' },
-                    { value: 'list', label: 'List' }
+                    { value: 'kanban', label: 'Kanban', icon: LayoutGrid },
+                    { value: 'list', label: 'List', icon: List }
                   ]}
                 />
-              </div>
             </div>
           </div>
           <TaskListView
-            projectId={project.project_id}
             phases={listViewData.phases}
             tasks={listViewData.tasks}
             statuses={listViewData.statuses}
-            ticketLinks={listViewData.ticketLinks}
             taskResources={listViewData.taskResources}
-            checklistItems={listViewData.checklistItems}
             taskTags={listViewData.taskTags}
             taskDependencies={listViewData.taskDependencies}
-            onTaskUpdate={refreshListView}
+            checklistItems={Object.entries(listViewData.checklistItems).reduce((acc, [taskId, items]) => {
+              acc[taskId] = {
+                total: items.length,
+                completed: items.filter(item => item.completed).length
+              };
+              return acc;
+            }, {} as Record<string, { total: number; completed: number }>)}
+            documentCounts={{}}
             onTaskClick={handleTaskSelected}
             onTaskDelete={handleDeleteTaskClick}
             onTaskDuplicate={handleDuplicateTaskClick}
@@ -1412,8 +1452,8 @@ export default function ProjectDetail({
                 currentView={viewMode}
                 onChange={setViewMode}
                 options={[
-                  { value: 'kanban', label: 'Kanban' },
-                  { value: 'list', label: 'List' }
+                  { value: 'kanban', label: 'Kanban', icon: LayoutGrid },
+                  { value: 'list', label: 'List', icon: List }
                 ]}
               />
             </div>
@@ -1483,6 +1523,7 @@ export default function ProjectDetail({
               editingPhaseDescription={editingPhaseDescription}
               editingStartDate={editingStartDate}
               editingEndDate={editingEndDate}
+              phaseTaskCounts={phaseTaskCounts}
               phaseDropTarget={phaseDropTarget}
               taskDraggingOverPhaseId={taskDraggingOverPhaseId} // Pass new state
               animatingPhases={animatingPhases}
@@ -1617,6 +1658,11 @@ export default function ProjectDetail({
               const checklistItems = await getTaskChecklistItems(newTask.task_id);
               const taskWithChecklist = { ...newTask, checklist_items: checklistItems };
               setProjectTasks(prev => [...prev, taskWithChecklist]);
+              // Update task count for the target phase
+              setPhaseTaskCounts(prev => ({
+                ...prev,
+                [newTask.phase_id]: (prev[newTask.phase_id] || 0) + 1
+              }));
 
               toast.success(`Task "${newTask.task_name}" duplicated successfully!`);
               setIsDuplicateDialogOpen(false);
@@ -1655,6 +1701,11 @@ export default function ProjectDetail({
             try {
               await deleteTaskAction(taskToDelete.task_id);
               setProjectTasks(prev => prev.filter(t => t.task_id !== taskToDelete.task_id));
+              // Update task count for the phase
+              setPhaseTaskCounts(prev => ({
+                ...prev,
+                [taskToDelete.phase_id]: Math.max((prev[taskToDelete.phase_id] || 0) - 1, 0)
+              }));
               toast.success(`Task "${taskToDelete.task_name}" deleted successfully!`);
               setTaskToDelete(null);
             } catch (error) {

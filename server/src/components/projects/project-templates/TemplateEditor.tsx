@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from 'server/src/components/ui/Button';
 import { Dialog } from 'server/src/components/ui/Dialog';
@@ -678,6 +678,17 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
   const sortedPhases = [...phases].sort((a, b) => (a.order_key || '').localeCompare(b.order_key || ''));
   const sortedStatusMappings = [...statusMappings].sort((a, b) => a.display_order - b.display_order);
 
+  // Compute task counts per phase
+  const phaseTaskCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    phases.forEach(phase => {
+      counts[phase.template_phase_id] = tasks.filter(
+        task => task.template_phase_id === phase.template_phase_id
+      ).length;
+    });
+    return counts;
+  }, [phases, tasks]);
+
   const phaseTasks = selectedPhase
     ? tasks.filter((task) => task.template_phase_id === selectedPhase.template_phase_id)
     : [];
@@ -871,7 +882,7 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
                 <Card className="p-4">
                   <div className="flex items-center justify-between mb-3">
                     <h3 className="text-sm font-semibold text-gray-700">Project Phases</h3>
-                    <Button id="add-phase" variant="ghost" size="sm" onClick={handleAddPhase}>
+                    <Button id="add-phase" variant="default" size="sm" onClick={handleAddPhase}>
                       <Plus className="h-4 w-4" />
                     </Button>
                   </div>
@@ -975,7 +986,14 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
                             <div className="flex items-start gap-2">
                               <GripVertical className="w-4 h-4 text-gray-400 opacity-0 group-hover:opacity-100 cursor-grab mt-0.5 shrink-0" />
                               <div className="flex-1 min-w-0">
-                                <div className="text-lg font-bold text-gray-900">{phase.phase_name}</div>
+                                <div className="flex items-start justify-between gap-2">
+                                  <span className="text-lg font-bold text-gray-900">{phase.phase_name}</span>
+                                  {phaseTaskCounts[phase.template_phase_id] !== undefined && (
+                                    <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-700 shrink-0">
+                                      {phaseTaskCounts[phase.template_phase_id]} {phaseTaskCounts[phase.template_phase_id] === 1 ? 'task' : 'tasks'}
+                                    </span>
+                                  )}
+                                </div>
                                 {phase.description && (
                                   <div className="text-sm text-gray-600 mt-1">
                                     {phase.description}

@@ -48,25 +48,39 @@ export async function getClientProjectPhases(projectId: string) {
     .where({ project_id: projectId, tenant })
     .orderBy('order_key');
 
-  // If show_phase_completion, calculate % per phase
-  if (result.config.show_phase_completion) {
+  // If show_phase_completion, calculate % per phase using a single aggregated query
+  if (result.config.show_phase_completion && phases.length > 0) {
+    const phaseIds = phases.map((p: { phase_id: string }) => p.phase_id);
+
+    // Single query to get completion stats for all phases
+    const phaseStats = await knex('project_tasks as pt')
+      .join('project_status_mappings as psm', function() {
+        this.on('pt.project_status_mapping_id', 'psm.project_status_mapping_id')
+            .andOn('pt.tenant', 'psm.tenant');
+      })
+      .leftJoin('statuses as s', function() {
+        this.on('psm.status_id', 's.status_id').andOn('psm.tenant', 's.tenant');
+      })
+      .whereIn('pt.phase_id', phaseIds)
+      .andWhere('pt.tenant', tenant)
+      .groupBy('pt.phase_id')
+      .select(
+        'pt.phase_id',
+        knex.raw('COUNT(*)::int as total'),
+        knex.raw('SUM(CASE WHEN s.is_closed THEN 1 ELSE 0 END)::int as completed')
+      );
+
+    // Create a lookup map for quick access
+    const statsMap = new Map(
+      phaseStats.map((s: { phase_id: string; total: number; completed: number }) => [s.phase_id, s])
+    );
+
+    // Attach completion_percentage to each phase
     for (const phase of phases) {
-      const stats = await knex('project_tasks as pt')
-        .join('project_status_mappings as psm', function() {
-          this.on('pt.project_status_mapping_id', 'psm.project_status_mapping_id')
-              .andOn('pt.tenant', 'psm.tenant');
-        })
-        .leftJoin('statuses as s', function() {
-          this.on('psm.status_id', 's.status_id').andOn('psm.tenant', 's.tenant');
-        })
-        .where({ 'pt.phase_id': phase.phase_id, 'pt.tenant': tenant })
-        .select(
-          knex.raw('COUNT(*)::int as total'),
-          knex.raw('SUM(CASE WHEN s.is_closed THEN 1 ELSE 0 END)::int as completed')
-        )
-        .first();
-      phase.completion_percentage = stats.total > 0
-        ? Math.round((stats.completed / stats.total) * 100) : 0;
+      const stats = statsMap.get(phase.phase_id);
+      phase.completion_percentage = stats && stats.total > 0
+        ? Math.round((stats.completed / stats.total) * 100)
+        : 0;
     }
   }
   return { phases };
@@ -321,7 +335,7 @@ export async function getClientProjectStatuses(projectId: string) {
 }
 
 /**
- * Upload document to task (if config.allow_document_uploads is true)
+ * Upload document to task (if 'document_uploads' is in visible_task_fields)
  * Client-safe path - does NOT use MSP RBAC
  */
 export async function uploadClientTaskDocument(taskId: string, formData: FormData) {

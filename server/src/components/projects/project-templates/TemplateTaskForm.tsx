@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogFooter } from 'server/src/components/ui/Dialog';
+import { ConfirmationDialog } from 'server/src/components/ui/ConfirmationDialog';
 import { Input } from 'server/src/components/ui/Input';
 import { TextArea } from 'server/src/components/ui/TextArea';
 import { Button } from 'server/src/components/ui/Button';
@@ -121,6 +122,25 @@ export function TemplateTaskForm({
   const [newDependencyTask, setNewDependencyTask] = useState('');
   const [newDependencyType, setNewDependencyType] = useState<DependencyType>('blocked_by');
 
+  // Confirmation dialog for unsaved changes
+  const [showCancelConfirm, setShowCancelConfirm] = useState(false);
+
+  // Track initial values for dirty state checking
+  const [initialValues, setInitialValues] = useState<{
+    taskName: string;
+    description: string;
+    estimatedHours: string;
+    durationDays: string;
+    taskTypeKey: string;
+    priorityId: string;
+    assignedTo: string;
+    additionalAgents: string[];
+    statusMappingId: string;
+    serviceId: string;
+    checklistItems: LocalChecklistItem[];
+    dependencies: LocalDependency[];
+  } | null>(null);
+
   // Fetch services on mount
   useEffect(() => {
     const fetchServices = async () => {
@@ -137,49 +157,72 @@ export function TemplateTaskForm({
   // Reset form when dialog opens/closes or task changes
   useEffect(() => {
     if (open) {
+      let formValues: typeof initialValues;
+
       if (task) {
-        setTaskName(task.task_name || '');
-        setDescription(task.description || '');
-        // Convert from minutes (storage) to hours (display)
-        setEstimatedHours(task.estimated_hours ? (Number(task.estimated_hours) / 60).toString() : '');
-        setDurationDays(task.duration_days?.toString() || '');
-        setTaskTypeKey(task.task_type_key || '');
-        setPriorityId(task.priority_id || '');
-        setAssignedTo(task.assigned_to || '');
-        // Get additional agents for this task from taskAssignments
+        const taskNameVal = task.task_name || '';
+        const descriptionVal = task.description || '';
+        const estimatedHoursVal = task.estimated_hours ? (Number(task.estimated_hours) / 60).toString() : '';
+        const durationDaysVal = task.duration_days?.toString() || '';
+        const taskTypeKeyVal = task.task_type_key || '';
+        const priorityIdVal = task.priority_id || '';
+        const assignedToVal = task.assigned_to || '';
         const taskAdditionalAgents = taskAssignments
           .filter(a => a.template_task_id === task.template_task_id)
           .map(a => a.user_id);
-        setAdditionalAgents(taskAdditionalAgents);
-        setStatusMappingId(task.template_status_mapping_id || statusMappings[0]?.template_status_mapping_id || '');
-        setServiceId(task.service_id || '');
-        // Initialize checklist from props
-        setLocalChecklistItems(
-          checklistItems.map(item => ({
-            id: item.template_checklist_id,
-            item_name: item.item_name,
-            description: item.description,
-            completed: item.completed,
-            order_number: item.order_number,
+        const statusMappingIdVal = task.template_status_mapping_id || statusMappings[0]?.template_status_mapping_id || '';
+        const serviceIdVal = task.service_id || '';
+        const checklistItemsVal = checklistItems.map(item => ({
+          id: item.template_checklist_id,
+          item_name: item.item_name,
+          description: item.description,
+          completed: item.completed,
+          order_number: item.order_number,
+          isNew: false,
+        }));
+        const dependenciesVal = dependencies.map(dep => {
+          const predTask = allTasks.find(t => t.template_task_id === dep.predecessor_task_id);
+          return {
+            id: dep.template_dependency_id,
+            predecessorTaskId: dep.predecessor_task_id,
+            predecessorTaskName: predTask?.task_name || 'Unknown task',
+            dependencyType: dep.dependency_type,
             isNew: false,
-          }))
-        );
-        // Initialize dependencies from props
-        setLocalDependencies(
-          dependencies.map(dep => {
-            const predTask = allTasks.find(t => t.template_task_id === dep.predecessor_task_id);
-            return {
-              id: dep.template_dependency_id,
-              predecessorTaskId: dep.predecessor_task_id,
-              predecessorTaskName: predTask?.task_name || 'Unknown task',
-              dependencyType: dep.dependency_type,
-              isNew: false,
-            };
-          })
-        );
+          };
+        });
+
+        setTaskName(taskNameVal);
+        setDescription(descriptionVal);
+        setEstimatedHours(estimatedHoursVal);
+        setDurationDays(durationDaysVal);
+        setTaskTypeKey(taskTypeKeyVal);
+        setPriorityId(priorityIdVal);
+        setAssignedTo(assignedToVal);
+        setAdditionalAgents(taskAdditionalAgents);
+        setStatusMappingId(statusMappingIdVal);
+        setServiceId(serviceIdVal);
+        setLocalChecklistItems(checklistItemsVal);
+        setLocalDependencies(dependenciesVal);
         setRemovedDependencyIds([]);
+
+        formValues = {
+          taskName: taskNameVal,
+          description: descriptionVal,
+          estimatedHours: estimatedHoursVal,
+          durationDays: durationDaysVal,
+          taskTypeKey: taskTypeKeyVal,
+          priorityId: priorityIdVal,
+          assignedTo: assignedToVal,
+          additionalAgents: [...taskAdditionalAgents],
+          statusMappingId: statusMappingIdVal,
+          serviceId: serviceIdVal,
+          checklistItems: checklistItemsVal,
+          dependencies: dependenciesVal,
+        };
       } else {
         // New task
+        const statusMappingIdVal = initialStatusMappingId || statusMappings[0]?.template_status_mapping_id || '';
+
         setTaskName('');
         setDescription('');
         setEstimatedHours('');
@@ -188,16 +231,34 @@ export function TemplateTaskForm({
         setPriorityId('');
         setAssignedTo('');
         setAdditionalAgents([]);
-        setStatusMappingId(initialStatusMappingId || statusMappings[0]?.template_status_mapping_id || '');
+        setStatusMappingId(statusMappingIdVal);
         setServiceId('');
         setLocalChecklistItems([]);
         setLocalDependencies([]);
         setRemovedDependencyIds([]);
+
+        formValues = {
+          taskName: '',
+          description: '',
+          estimatedHours: '',
+          durationDays: '',
+          taskTypeKey: '',
+          priorityId: '',
+          assignedTo: '',
+          additionalAgents: [],
+          statusMappingId: statusMappingIdVal,
+          serviceId: '',
+          checklistItems: [],
+          dependencies: [],
+        };
       }
+
+      setInitialValues(formValues);
       setError(null);
       setIsEditingChecklist(false);
       setNewDependencyTask('');
       setNewDependencyType('blocked_by');
+      setShowCancelConfirm(false);
     }
   }, [open, task, taskAssignments, statusMappings, initialStatusMappingId, checklistItems, dependencies, allTasks]);
 
@@ -328,10 +389,68 @@ export function TemplateTaskForm({
          !localDependencies.some(d => d.predecessorTaskId === t.template_task_id)
   );
 
+  // Check if any changes have been made
+  const hasChanges = (): boolean => {
+    if (!initialValues) return false;
+
+    // Compare simple values
+    if (taskName !== initialValues.taskName) return true;
+    if (description !== initialValues.description) return true;
+    if (estimatedHours !== initialValues.estimatedHours) return true;
+    if (durationDays !== initialValues.durationDays) return true;
+    if (taskTypeKey !== initialValues.taskTypeKey) return true;
+    if (priorityId !== initialValues.priorityId) return true;
+    if (assignedTo !== initialValues.assignedTo) return true;
+    if (statusMappingId !== initialValues.statusMappingId) return true;
+    if (serviceId !== initialValues.serviceId) return true;
+
+    // Compare additional agents array
+    if (additionalAgents.length !== initialValues.additionalAgents.length) return true;
+    const sortedCurrent = [...additionalAgents].sort();
+    const sortedInitial = [...initialValues.additionalAgents].sort();
+    if (sortedCurrent.some((id, i) => id !== sortedInitial[i])) return true;
+
+    // Compare checklist items
+    if (localChecklistItems.length !== initialValues.checklistItems.length) return true;
+    for (let i = 0; i < localChecklistItems.length; i++) {
+      const current = localChecklistItems[i];
+      const initial = initialValues.checklistItems[i];
+      if (!initial) return true;
+      if (current.item_name !== initial.item_name) return true;
+      if (current.completed !== initial.completed) return true;
+    }
+
+    // Compare dependencies (check for added or removed)
+    if (localDependencies.length !== initialValues.dependencies.length) return true;
+    if (removedDependencyIds.length > 0) return true;
+    if (localDependencies.some(d => d.isNew)) return true;
+
+    return false;
+  };
+
+  // Handle close with dirty state check
+  const handleClose = () => {
+    if (hasChanges()) {
+      setShowCancelConfirm(true);
+    } else {
+      onClose();
+    }
+  };
+
+  const handleCancelConfirm = () => {
+    setShowCancelConfirm(false);
+    onClose();
+  };
+
+  const handleCancelDismiss = () => {
+    setShowCancelConfirm(false);
+  };
+
   return (
+    <>
     <Dialog
       isOpen={open}
-      onClose={onClose}
+      onClose={handleClose}
       title={task ? 'Edit Task' : 'Add Task'}
       className="max-w-2xl"
       id="template-task-form-dialog"
@@ -719,7 +838,7 @@ export function TemplateTaskForm({
               id="cancel-task-form"
               type="button"
               variant="outline"
-              onClick={onClose}
+              onClick={handleClose}
               disabled={isSubmitting}
             >
               Cancel
@@ -731,5 +850,16 @@ export function TemplateTaskForm({
         </form>
       </DialogContent>
     </Dialog>
+
+    <ConfirmationDialog
+      isOpen={showCancelConfirm}
+      onClose={handleCancelDismiss}
+      onConfirm={handleCancelConfirm}
+      title="Cancel Edit"
+      message="Are you sure you want to cancel? Any unsaved changes will be lost."
+      confirmLabel="Discard changes"
+      cancelLabel="Continue editing"
+    />
+    </>
   );
 }

@@ -226,6 +226,21 @@ const ProjectDetailsEdit: React.FC<ProjectDetailsEditProps> = ({
           </div>
 
           <div>
+            <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-1">
+              Description
+            </label>
+            <TextArea
+              id="description"
+              name="description"
+              value={project.description || ''}
+              onChange={handleInputChange}
+              placeholder="Enter project description..."
+              className="w-full text-sm p-2 border border-gray-300 rounded-md resize-none focus:outline-none focus:ring-2 focus:ring-purple-500"
+              rows={3}
+            />
+          </div>
+
+          <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Status *</label>
             <CustomSelect
               value={project.status}

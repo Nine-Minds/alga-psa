@@ -595,15 +595,19 @@ export default function TaskForm({
     // Compare all form fields with their original values for edit mode
     if (!task) return false;
 
-    if (taskName !== task.task_name) return true;
-    if (description !== task.description) return true;
+    // Helper to normalize null/undefined/empty string for comparison
+    const normalizeString = (val: string | null | undefined): string => val || '';
+    const normalizeNullable = <T,>(val: T | null | undefined): T | null => val ?? null;
+
+    if (taskName !== (task.task_name || '')) return true;
+    if (normalizeString(description) !== normalizeString(task.description)) return true;
     if (selectedPhaseId !== task.phase_id) return true;
     if (selectedStatusId !== task.project_status_mapping_id) return true;
     if (estimatedHours !== Number(task.estimated_hours) / 60) return true;
     if (actualHours !== Number(task.actual_hours) / 60) return true;
-    if (assignedUser !== task.assigned_to) return true;
-    if (selectedPriorityId !== task.priority_id) return true;
-    if (selectedServiceId !== (task.service_id ?? null)) return true;
+    if (normalizeNullable(assignedUser) !== normalizeNullable(task.assigned_to)) return true;
+    if (normalizeNullable(selectedPriorityId) !== normalizeNullable(task.priority_id)) return true;
+    if (normalizeNullable(selectedServiceId) !== normalizeNullable(task.service_id)) return true;
 
     // Compare checklist items
     if (checklistItems.length !== task.checklist_items?.length) return true;

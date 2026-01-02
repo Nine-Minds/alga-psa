@@ -310,12 +310,19 @@
     "tasks": {
       "title": "Taken",
       "noTasks": "Geen taken om weer te geven",
+      "taskName": "Naam",
       "dueDate": "Vervaldatum",
       "status": "Status",
       "assignedTo": "Toegewezen aan",
+      "assignee": "Verantwoordelijke",
       "estimatedHours": "Geschatte uren",
+      "estHours": "Gesch. uren",
+      "hoursLogged": "Geregistreerde uren",
+      "checklist": "Checklist",
+      "dependencies": "Afh.",
       "priority": "Prioriteit",
-      "services": "Diensten"
+      "services": "Diensten",
+      "attachments": "Bijlagen"
     },
     "phases": {
       "title": "Projectfasen",

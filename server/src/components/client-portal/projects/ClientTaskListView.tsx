@@ -193,42 +193,42 @@ export default function ClientTaskListView({
               <th className="w-10 px-3 py-3" />
               {visibleFields.includes('task_name') && (
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500">
-                  Task Name
-                </th>
-              )}
-              {visibleFields.includes('assigned_to') && (
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 w-36">
-                  Assignee
-                </th>
-              )}
-              {visibleFields.includes('due_date') && (
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 w-32">
-                  Due Date
-                </th>
-              )}
-              {visibleFields.includes('estimated_hours') && (
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 w-24">
-                  Est. Hours
-                </th>
-              )}
-              {visibleFields.includes('actual_hours') && (
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 w-28">
-                  Hours Logged
-                </th>
-              )}
-              {visibleFields.includes('checklist_progress') && (
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 w-24">
-                  Checklist
+                  {t('projects.tasks.taskName')}
                 </th>
               )}
               {showDependencies && (
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 w-20">
-                  Deps
+                  {t('projects.tasks.dependencies')}
+                </th>
+              )}
+              {visibleFields.includes('checklist_progress') && (
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 w-24">
+                  {t('projects.tasks.checklist')}
+                </th>
+              )}
+              {visibleFields.includes('assigned_to') && (
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 w-36">
+                  {t('projects.tasks.assignee')}
+                </th>
+              )}
+              {visibleFields.includes('estimated_hours') && (
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 w-24">
+                  {t('projects.tasks.estHours')}
+                </th>
+              )}
+              {visibleFields.includes('actual_hours') && (
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 w-28">
+                  {t('projects.tasks.hoursLogged')}
+                </th>
+              )}
+              {visibleFields.includes('due_date') && (
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 w-32">
+                  {t('projects.tasks.dueDate')}
                 </th>
               )}
               {allowUploads && (
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 w-36">
-                  Attachments
+                  {t('projects.tasks.attachments')}
                 </th>
               )}
             </tr>
@@ -263,8 +263,8 @@ export default function ClientTaskListView({
                           <div className="flex items-center gap-2 flex-wrap">
                             <span className="text-base font-semibold text-gray-900">{phase.phase_name}</span>
                             {showTasks && (
-                              <span className="text-sm text-gray-500">
-                                ({totalTasks} {totalTasks === 1 ? t('projects.task', 'task') : t('projects.tasks.title', 'tasks').toLowerCase()})
+                              <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-700">
+                                {totalTasks} {totalTasks === 1 ? t('projects.task', 'task') : t('projects.tasks.title', 'tasks').toLowerCase()}
                               </span>
                             )}
                           </div>
@@ -377,52 +377,6 @@ export default function ClientTaskListView({
                                     </td>
                                   )}
 
-                                  {/* Assignee */}
-                                  {visibleFields.includes('assigned_to') && (
-                                    <td className="px-6 py-3 text-sm text-gray-700 w-36">
-                                      {task.assigned_to_name && (
-                                        <span className="flex items-center gap-1">
-                                          {task.assigned_to_name}
-                                          {task.additional_agents && task.additional_agents.length > 0 && (
-                                            <span className="text-xs text-purple-600 font-medium">
-                                              +{task.additional_agents.length}
-                                            </span>
-                                          )}
-                                        </span>
-                                      )}
-                                    </td>
-                                  )}
-
-                                  {/* Due Date */}
-                                  {visibleFields.includes('due_date') && (
-                                    <td className="px-6 py-3 text-sm text-gray-700 w-32">
-                                      {task.due_date && format(new Date(task.due_date), 'PP', { locale: dateLocale })}
-                                    </td>
-                                  )}
-
-                                  {/* Estimated Hours */}
-                                  {visibleFields.includes('estimated_hours') && (
-                                    <td className="px-6 py-3 text-sm text-gray-700 w-24">
-                                      {task.estimated_hours != null && (task.estimated_hours / 60).toFixed(1)}
-                                    </td>
-                                  )}
-
-                                  {/* Actual Hours */}
-                                  {visibleFields.includes('actual_hours') && (
-                                    <td className="px-6 py-3 text-sm text-gray-700 w-28">
-                                      {task.actual_hours != null && (task.actual_hours / 60).toFixed(1)}
-                                    </td>
-                                  )}
-
-                                  {/* Checklist Progress */}
-                                  {visibleFields.includes('checklist_progress') && (
-                                    <td className="px-6 py-3 text-sm text-gray-700 w-24">
-                                      {task.checklist_total != null && task.checklist_total > 0 && (
-                                        <span>{task.checklist_completed ?? 0}/{task.checklist_total}</span>
-                                      )}
-                                    </td>
-                                  )}
-
                                   {/* Dependencies */}
                                   {showDependencies && (
                                     <td className="px-6 py-3 text-sm text-gray-700 w-20">
@@ -480,6 +434,52 @@ export default function ClientTaskListView({
                                           </Tooltip>
                                         );
                                       })()}
+                                    </td>
+                                  )}
+
+                                  {/* Checklist Progress */}
+                                  {visibleFields.includes('checklist_progress') && (
+                                    <td className="px-6 py-3 text-sm text-gray-700 w-24">
+                                      {task.checklist_total != null && task.checklist_total > 0 && (
+                                        <span>{task.checklist_completed ?? 0}/{task.checklist_total}</span>
+                                      )}
+                                    </td>
+                                  )}
+
+                                  {/* Assignee */}
+                                  {visibleFields.includes('assigned_to') && (
+                                    <td className="px-6 py-3 text-sm text-gray-700 w-36">
+                                      {task.assigned_to_name && (
+                                        <span className="flex items-center gap-1">
+                                          {task.assigned_to_name}
+                                          {task.additional_agents && task.additional_agents.length > 0 && (
+                                            <span className="text-xs text-purple-600 font-medium">
+                                              +{task.additional_agents.length}
+                                            </span>
+                                          )}
+                                        </span>
+                                      )}
+                                    </td>
+                                  )}
+
+                                  {/* Estimated Hours */}
+                                  {visibleFields.includes('estimated_hours') && (
+                                    <td className="px-6 py-3 text-sm text-gray-700 w-24">
+                                      {task.estimated_hours != null && (task.estimated_hours / 60).toFixed(1)}
+                                    </td>
+                                  )}
+
+                                  {/* Actual Hours */}
+                                  {visibleFields.includes('actual_hours') && (
+                                    <td className="px-6 py-3 text-sm text-gray-700 w-28">
+                                      {task.actual_hours != null && (task.actual_hours / 60).toFixed(1)}
+                                    </td>
+                                  )}
+
+                                  {/* Due Date */}
+                                  {visibleFields.includes('due_date') && (
+                                    <td className="px-6 py-3 text-sm text-gray-700 w-32">
+                                      {task.due_date && format(new Date(task.due_date), 'PP', { locale: dateLocale })}
                                     </td>
                                   )}
 

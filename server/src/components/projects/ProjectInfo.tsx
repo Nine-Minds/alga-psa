@@ -143,6 +143,11 @@ export default function ProjectInfo({
         </div>
       </div>
       
+      {/* Project description */}
+      {currentProject.description && (
+        <p className="text-sm text-gray-600">{currentProject.description}</p>
+      )}
+
       {/* Second line: Project metadata */}
       <div className="flex items-center space-x-8">
         {/* Client Section */}

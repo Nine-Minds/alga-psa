@@ -1546,3 +1546,30 @@ export async function getAllProjectTasksForListView(projectId: string): Promise<
         return { phases, tasks, statuses, ticketLinks, taskResources, checklistItems, taskTags, taskDependencies };
     });
 }
+
+/**
+ * Get task counts per phase for a project (lightweight query for kanban sidebar)
+ */
+export async function getPhaseTaskCounts(projectId: string): Promise<Record<string, number>> {
+    const currentUser = await getCurrentUser();
+    if (!currentUser) throw new Error("user not found");
+
+    const { knex: db, tenant } = await createTenantKnex();
+
+    await checkPermission(currentUser, 'project', 'read', db);
+
+    const counts = await db('project_tasks as pt')
+        .join('project_phases as pp', function() {
+            this.on('pt.phase_id', 'pp.phase_id').andOn('pt.tenant', 'pp.tenant');
+        })
+        .where({ 'pp.project_id': projectId, 'pt.tenant': tenant })
+        .groupBy('pt.phase_id')
+        .select('pt.phase_id')
+        .count('pt.task_id as count');
+
+    const result: Record<string, number> = {};
+    for (const row of counts) {
+        result[row.phase_id] = Number(row.count);
+    }
+    return result;
+}

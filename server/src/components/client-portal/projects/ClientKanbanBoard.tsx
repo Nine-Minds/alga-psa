@@ -267,19 +267,19 @@ function PhaseCard({
     >
       <div className="flex flex-col gap-1">
         {/* Phase name and task count */}
-        <div className="flex items-center gap-2 flex-wrap">
+        <div className="flex items-start justify-between gap-2">
           <span className={`text-lg font-bold ${isSelected ? 'text-purple-900' : 'text-gray-900'}`}>
             {phase.phase_name}
           </span>
-          <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-700">
+          <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-700 shrink-0">
             {taskCount} {taskCount === 1 ? t('projects.task', 'task') : t('projects.tasks.title', 'tasks').toLowerCase()}
           </span>
-          {showCompletion && phase.completion_percentage !== undefined && (
-            <span className={`text-xs font-medium ${isSelected ? 'text-purple-600' : 'text-gray-500'}`}>
-              {phase.completion_percentage}%
-            </span>
-          )}
         </div>
+        {showCompletion && phase.completion_percentage !== undefined && (
+          <span className={`text-xs font-medium ${isSelected ? 'text-purple-600' : 'text-gray-500'}`}>
+            {phase.completion_percentage}%
+          </span>
+        )}
 
         {/* Phase dates */}
         {(phase.start_date || phase.end_date) && (

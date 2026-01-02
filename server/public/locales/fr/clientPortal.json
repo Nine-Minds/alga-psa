@@ -310,12 +310,19 @@
     "tasks": {
       "title": "Tâches",
       "noTasks": "Aucune tâche à afficher",
+      "taskName": "Nom",
       "dueDate": "Date d'échéance",
       "status": "Statut",
       "assignedTo": "Assigné à",
+      "assignee": "Responsable",
       "estimatedHours": "Heures estimées",
+      "estHours": "Heures est.",
+      "hoursLogged": "Heures enregistrées",
+      "checklist": "Liste de contrôle",
+      "dependencies": "Dép.",
       "priority": "Priorité",
-      "services": "Services"
+      "services": "Services",
+      "attachments": "Pièces jointes"
     },
     "phases": {
       "title": "Phases du projet",

@@ -1,10 +1,10 @@
 'use client';
 
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
-import { IProjectPhase, IProjectTask, ProjectStatus, IProjectTicketLinkWithDetails, ITaskChecklistItem, IProjectTaskDependency } from 'server/src/interfaces/project.interfaces';
+import { IProjectPhase, IProjectTask, ProjectStatus, IProjectTaskDependency } from 'server/src/interfaces/project.interfaces';
 import { ITag } from 'server/src/interfaces/tag.interfaces';
 import { ITaskResource } from 'server/src/interfaces/taskResource.interfaces';
-import { ChevronDown, ChevronRight, Pencil, Copy, Trash2, Link2, Ban, GitBranch, Calendar, GripVertical, Plus } from 'lucide-react';
+import { ChevronDown, ChevronRight, Pencil, Copy, Trash2, Link2, Ban, GitBranch, Calendar, GripVertical, Plus, CheckSquare, Paperclip } from 'lucide-react';
 import { Tooltip } from 'server/src/components/ui/Tooltip';
 import { Button } from 'server/src/components/ui/Button';
 import { format } from 'date-fns';
@@ -23,16 +23,14 @@ function ProgressBar({ percentage }: { percentage: number }) {
 }
 
 interface TaskListViewProps {
-  projectId: string;
   phases: IProjectPhase[];
   tasks: IProjectTask[];
   statuses: ProjectStatus[];
-  ticketLinks: Record<string, IProjectTicketLinkWithDetails[]>;
   taskResources: Record<string, ITaskResource[]>;
-  checklistItems: Record<string, ITaskChecklistItem[]>;
   taskTags: Record<string, ITag[]>;
   taskDependencies?: Record<string, { predecessors: IProjectTaskDependency[]; successors: IProjectTaskDependency[] }>;
-  onTaskUpdate: () => void;
+  checklistItems: Record<string, { total: number; completed: number }>;
+  documentCounts?: Record<string, number>;
   onTaskClick: (task: IProjectTask) => void;
   onTaskDelete: (task: IProjectTask) => void;
   onTaskDuplicate: (task: IProjectTask) => void;
@@ -54,16 +52,14 @@ interface PhaseGroup {
 }
 
 export default function TaskListView({
-  projectId: _projectId,
   phases,
   tasks,
   statuses,
-  ticketLinks: _ticketLinks,
   taskResources,
-  checklistItems: _checklistItems,
   taskTags,
   taskDependencies = {},
-  onTaskUpdate: _onTaskUpdate,
+  checklistItems,
+  documentCounts = {},
   onTaskClick,
   onTaskDelete,
   onTaskDuplicate,
@@ -74,11 +70,6 @@ export default function TaskListView({
   selectedPriorityFilter = 'all',
   selectedTaskTags = []
 }: TaskListViewProps) {
-  // Suppress unused variable warnings
-  void _projectId;
-  void _ticketLinks;
-  void _checklistItems;
-  void _onTaskUpdate;
   const [expandedPhases, setExpandedPhases] = useState<Set<string>>(new Set());
   const [expandedStatuses, setExpandedStatuses] = useState<Set<string>>(new Set());
 
@@ -381,23 +372,28 @@ export default function TaskListView({
         <table className="w-full table-fixed">
           <colgroup>
             <col style={{ width: '40px' }} />
-            <col style={{ width: '24%' }} />
-            <col style={{ width: '6%' }} />
-            <col style={{ width: '14%' }} />
-            <col style={{ width: '12%' }} />
-            <col style={{ width: '12%' }} />
-            <col style={{ width: '10%' }} />
-            <col style={{ width: '10%' }} />
-            <col style={{ width: '8%' }} />
+            <col style={{ width: '22%' }} />  {/* Name */}
+            <col style={{ width: '5%' }} />   {/* Deps */}
+            <col style={{ width: '6%' }} />   {/* Checklist */}
+            <col style={{ width: '12%' }} />  {/* Tags */}
+            <col style={{ width: '12%' }} />  {/* Assignee */}
+            <col style={{ width: '6%' }} />   {/* Est. Hours */}
+            <col style={{ width: '7%' }} />   {/* Actual Hours */}
+            <col style={{ width: '10%' }} />  {/* Due Date */}
+            <col style={{ width: '6%' }} />   {/* Attachments */}
+            <col style={{ width: '8%' }} />   {/* Actions */}
           </colgroup>
           <thead>
             <tr>
               <th className="w-10 px-3 py-3" />
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500">
-                Task Name
+                Name
               </th>
               <th className="px-3 py-3 text-left text-xs font-medium text-gray-500">
                 Deps
+              </th>
+              <th className="px-3 py-3 text-left text-xs font-medium text-gray-500">
+                Checklist
               </th>
               <th className="px-3 py-3 text-left text-xs font-medium text-gray-500">
                 Tags
@@ -406,13 +402,16 @@ export default function TaskListView({
                 Assignee
               </th>
               <th className="px-3 py-3 text-left text-xs font-medium text-gray-500">
-                Due Date
-              </th>
-              <th className="px-3 py-3 text-left text-xs font-medium text-gray-500">
                 Est. Hours
               </th>
               <th className="px-3 py-3 text-left text-xs font-medium text-gray-500">
                 Actual Hours
+              </th>
+              <th className="px-3 py-3 text-left text-xs font-medium text-gray-500">
+                Due Date
+              </th>
+              <th className="px-3 py-3 text-left text-xs font-medium text-gray-500">
+                Attachments
               </th>
               <th className="px-3 py-3 text-right text-xs font-medium text-gray-500">
                 Actions
@@ -432,14 +431,16 @@ export default function TaskListView({
               <table className="w-full table-fixed">
                 <colgroup>
                   <col style={{ width: '40px' }} />
-                  <col style={{ width: '24%' }} />
-                  <col style={{ width: '6%' }} />
-                  <col style={{ width: '14%' }} />
-                  <col style={{ width: '12%' }} />
-                  <col style={{ width: '12%' }} />
-                  <col style={{ width: '10%' }} />
-                  <col style={{ width: '10%' }} />
-                  <col style={{ width: '8%' }} />
+                  <col style={{ width: '22%' }} />  {/* Name */}
+                  <col style={{ width: '5%' }} />   {/* Deps */}
+                  <col style={{ width: '6%' }} />   {/* Checklist */}
+                  <col style={{ width: '12%' }} />  {/* Tags */}
+                  <col style={{ width: '12%' }} />  {/* Assignee */}
+                  <col style={{ width: '6%' }} />   {/* Est. Hours */}
+                  <col style={{ width: '7%' }} />   {/* Actual Hours */}
+                  <col style={{ width: '10%' }} />  {/* Due Date */}
+                  <col style={{ width: '6%' }} />   {/* Attachments */}
+                  <col style={{ width: '8%' }} />   {/* Actions */}
                 </colgroup>
 
                 {/* Phase header row */}
@@ -448,7 +449,7 @@ export default function TaskListView({
                     className="bg-white hover:bg-gray-50 cursor-pointer transition-colors"
                     onClick={() => togglePhase(phaseGroup.phase.phase_id)}
                   >
-                    <td className="py-3" colSpan={9}>
+                    <td className="py-3" colSpan={11}>
                       <div className="flex items-start gap-2 px-3">
                         <div className="pt-1 text-gray-400">
                           {isPhaseExpanded ? (
@@ -462,8 +463,8 @@ export default function TaskListView({
                             <div>
                               <div className="flex items-center gap-3">
                                 <h4 className="font-semibold text-gray-900">{phaseGroup.phase.phase_name}</h4>
-                                <span className="text-sm text-gray-500">
-                                  ({phaseGroup.totalTasks} {phaseGroup.totalTasks === 1 ? 'task' : 'tasks'})
+                                <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-700">
+                                  {phaseGroup.totalTasks} {phaseGroup.totalTasks === 1 ? 'task' : 'tasks'}
                                 </span>
                               </div>
 
@@ -508,7 +509,7 @@ export default function TaskListView({
                               {onAddTask && (
                                 <Button
                                   id={`add-task-${phaseGroup.phase.phase_id}`}
-                                  variant="ghost"
+                                  variant="default"
                                   size="sm"
                                   onClick={(e) => {
                                     e.stopPropagation();
@@ -563,7 +564,7 @@ export default function TaskListView({
                               }
                             }}
                           >
-                            <td className="py-1.5" colSpan={9}>
+                            <td className="py-1.5" colSpan={11}>
                               <div className="flex items-center gap-2 pl-8">
                                 {isStatusExpanded ? (
                                   <ChevronDown className="h-3.5 w-3.5 text-gray-400" />
@@ -596,9 +597,8 @@ export default function TaskListView({
                             const tags = taskTags[task.task_id] || [];
                             const resources = taskResources[task.task_id] || [];
                             const additionalCount = resources.length;
-                            const deps = taskDependencies[task.task_id];
-                            const hasDependencies = deps && (deps.predecessors.length > 0 || deps.successors.length > 0);
-                            const dependencyTooltipContent = renderDependenciesTooltipContent(task.task_id);
+                            const checklist = checklistItems[task.task_id];
+                            const docCount = documentCounts[task.task_id] || 0;
                             const isDragging = draggedTask?.task_id === task.task_id;
                             const showDropIndicator = isDropTarget && dropIndicatorIndex === taskIndex;
 
@@ -607,7 +607,7 @@ export default function TaskListView({
                                 {/* Drop indicator line above task */}
                                 {showDropIndicator && (
                                   <tr className="h-0">
-                                    <td colSpan={9} className="p-0">
+                                    <td colSpan={11} className="p-0">
                                       <div className="h-0.5 bg-primary-500 mx-2" />
                                     </td>
                                   </tr>
@@ -651,15 +651,33 @@ export default function TaskListView({
 
                                 {/* Dependencies */}
                                 <td className="py-3 px-3">
-                                  {hasDependencies && dependencyTooltipContent && (
-                                    <Tooltip content={dependencyTooltipContent}>
-                                      <div className="flex items-center gap-1 cursor-help">
-                                        {getDependencyIcon(task.task_id)}
-                                        <span className="text-xs text-gray-500">
-                                          {(deps?.predecessors.length || 0) + (deps?.successors.length || 0)}
-                                        </span>
-                                      </div>
-                                    </Tooltip>
+                                  {(() => {
+                                    const deps = taskDependencies[task.task_id];
+                                    const hasDependencies = deps && (deps.predecessors.length > 0 || deps.successors.length > 0);
+                                    const dependencyTooltipContent = renderDependenciesTooltipContent(task.task_id);
+                                    if (!hasDependencies || !dependencyTooltipContent) return null;
+                                    return (
+                                      <Tooltip content={dependencyTooltipContent}>
+                                        <div className="flex items-center gap-1 cursor-help">
+                                          {getDependencyIcon(task.task_id)}
+                                          <span className="text-xs text-gray-500">
+                                            {(deps?.predecessors.length || 0) + (deps?.successors.length || 0)}
+                                          </span>
+                                        </div>
+                                      </Tooltip>
+                                    );
+                                  })()}
+                                </td>
+
+                                {/* Checklist */}
+                                <td className="py-3 px-3">
+                                  {checklist && checklist.total > 0 && (
+                                    <div className="flex items-center gap-1 text-gray-600">
+                                      <CheckSquare className="h-3.5 w-3.5" />
+                                      <span className="text-xs">
+                                        {checklist.completed}/{checklist.total}
+                                      </span>
+                                    </div>
                                   )}
                                 </td>
 
@@ -687,15 +705,6 @@ export default function TaskListView({
                                   </div>
                                 </td>
 
-                                {/* Due Date */}
-                                <td className="py-3 px-3">
-                                  {task.due_date && (
-                                    <span className="text-sm text-gray-700">
-                                      {format(new Date(task.due_date), 'MMM d, yyyy')}
-                                    </span>
-                                  )}
-                                </td>
-
                                 {/* Est. Hours */}
                                 <td className="py-3 px-3">
                                   <span className="text-sm text-gray-700">
@@ -708,6 +717,25 @@ export default function TaskListView({
                                   <span className="text-sm text-gray-700">
                                     {task.actual_hours != null ? (task.actual_hours / 60).toFixed(1) : '-'}
                                   </span>
+                                </td>
+
+                                {/* Due Date */}
+                                <td className="py-3 px-3">
+                                  {task.due_date && (
+                                    <span className="text-sm text-gray-700">
+                                      {format(new Date(task.due_date), 'MMM d, yyyy')}
+                                    </span>
+                                  )}
+                                </td>
+
+                                {/* Attachments */}
+                                <td className="py-3 px-3">
+                                  {docCount > 0 && (
+                                    <div className="flex items-center gap-1 text-gray-600">
+                                      <Paperclip className="h-3.5 w-3.5" />
+                                      <span className="text-xs">{docCount}</span>
+                                    </div>
+                                  )}
                                 </td>
 
                                 {/* Actions */}
@@ -765,7 +793,7 @@ export default function TaskListView({
                               onDragOver={(e) => handleStatusDragOver(e, statusGroup.status.project_status_mapping_id, phaseGroup.phase.phase_id)}
                               onDrop={(e) => handleDrop(e, statusGroup.status.project_status_mapping_id, phaseGroup.phase.phase_id, statusGroup.tasks, -1)}
                             >
-                              <td colSpan={9} className="h-2">
+                              <td colSpan={11} className="h-2">
                                 {isDropTarget && dropIndicatorIndex === -1 && (
                                   <div className="h-0.5 bg-primary-400 ml-10" />
                                 )}
@@ -787,9 +815,8 @@ export default function TaskListView({
           <div className="border-t border-gray-200 p-3">
             <Button
               id="add-phase-list-view"
-              variant="ghost"
+              variant="default"
               size="sm"
-              className="w-full justify-start text-gray-600 hover:text-gray-900"
               onClick={onAddPhase}
             >
               <Plus className="h-4 w-4 mr-2" />
@@ -808,7 +835,7 @@ export default function TaskListView({
             {onAddPhase && (
               <Button
                 id="add-phase-empty-state"
-                variant="outline"
+                variant="default"
                 size="sm"
                 className="mt-4"
                 onClick={onAddPhase}

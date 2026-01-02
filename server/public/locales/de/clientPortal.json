@@ -310,12 +310,19 @@
     "tasks": {
       "title": "Aufgaben",
       "noTasks": "Keine Aufgaben anzuzeigen",
+      "taskName": "Name",
       "dueDate": "Fälligkeitsdatum",
       "status": "Status",
       "assignedTo": "Zugewiesen an",
+      "assignee": "Bearbeiter",
       "estimatedHours": "Geschätzte Stunden",
+      "estHours": "Gesch. Std.",
+      "hoursLogged": "Erfasste Stunden",
+      "checklist": "Checkliste",
+      "dependencies": "Abh.",
       "priority": "Priorität",
-      "services": "Dienstleistungen"
+      "services": "Dienstleistungen",
+      "attachments": "Anhänge"
     },
     "phases": {
       "title": "Projektphasen",
