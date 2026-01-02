@@ -9,8 +9,11 @@ import {
   IProjectTemplateWithDetails,
   IProjectTemplatePhase,
   IProjectTemplateTask,
-  IProjectTemplateChecklistItem
+  IProjectTemplateChecklistItem,
+  IProjectTemplateDependency
 } from 'server/src/interfaces/projectTemplate.interfaces';
+import { DependencyType } from 'server/src/interfaces/project.interfaces';
+import { DEFAULT_CLIENT_PORTAL_CONFIG } from 'server/src/interfaces/project.interfaces';
 import { addDays } from 'date-fns';
 import { hasPermission } from 'server/src/lib/auth/rbac';
 import { publishEvent } from 'server/src/lib/eventBus/publishers';
@@ -95,7 +98,10 @@ export async function createTemplateFromProject(
         description: templateData.description,
         category: templateData.category,
         created_by: currentUser.user_id,
-        use_count: 0
+        use_count: 0,
+        client_portal_config: JSON.stringify(
+          project.client_portal_config ?? DEFAULT_CLIENT_PORTAL_CONFIG
+        )
       })
       .returning('*');
 
@@ -391,6 +397,13 @@ export async function applyTemplate(
 
     const newProjectId = newProject.project_id;
     console.log(`[applyTemplate] Created project ${newProjectId}`);
+
+    // Apply client_portal_config from template
+    if (template.client_portal_config) {
+      await trx('projects')
+        .where({ project_id: newProjectId, tenant })
+        .update({ client_portal_config: template.client_portal_config });
+    }
 
     // 3. Load template phases (only if copyPhases is enabled)
     const templatePhases = options.copyPhases
@@ -953,6 +966,7 @@ export async function updateTemplate(
     template_name?: string;
     description?: string;
     category?: string;
+    client_portal_config?: import('server/src/interfaces/project.interfaces').IClientPortalConfig;
   }
 ): Promise<IProjectTemplate> {
   const currentUser = await getCurrentUser();
@@ -966,12 +980,19 @@ export async function updateTemplate(
   return await withTransaction(knex, async (trx: Knex.Transaction) => {
     await checkPermission(currentUser, 'project', 'update', trx);
 
+    // Handle client_portal_config JSON serialization
+    const { client_portal_config, ...restData } = validatedData;
+    const updateData: Record<string, unknown> = {
+      ...restData,
+      updated_at: trx.fn.now()
+    };
+    if (client_portal_config !== undefined) {
+      updateData.client_portal_config = JSON.stringify(client_portal_config);
+    }
+
     const [updated] = await trx('project_templates')
       .where({ template_id: templateId, tenant })
-      .update({
-        ...validatedData,
-        updated_at: trx.fn.now()
-      })
+      .update(updateData)
       .returning('*');
 
     if (!updated) {
@@ -1182,6 +1203,186 @@ export async function getTemplateCategories(): Promise<string[]> {
     .orderBy('category');
 
   return results.map(r => r.category).filter(Boolean);
+}
+
+// ============================================================
+// TEMPLATE DEPENDENCY ACTIONS
+// ============================================================
+
+/**
+ * Add a dependency to a template task
+ */
+export async function addTemplateDependency(
+  templateId: string,
+  predecessorTaskId: string,
+  successorTaskId: string,
+  dependencyType: DependencyType,
+  leadLagDays: number = 0,
+  notes?: string
+): Promise<IProjectTemplateDependency> {
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
+    throw new Error('No authenticated user found');
+  }
+
+  const { knex: db, tenant } = await createTenantKnex();
+
+  return await withTransaction(db, async (trx) => {
+    await checkPermission(currentUser, 'project', 'update', trx);
+
+    // Validate that both tasks belong to the template
+    const tasks = await trx('project_template_tasks')
+      .where('tenant', tenant)
+      .whereIn('template_task_id', [predecessorTaskId, successorTaskId]);
+
+    if (tasks.length !== 2) {
+      throw new Error('Invalid task IDs');
+    }
+
+    // Check for self-reference
+    if (predecessorTaskId === successorTaskId) {
+      throw new Error('A task cannot depend on itself');
+    }
+
+    // Check for existing dependency
+    const existing = await trx('project_template_dependencies')
+      .where({
+        tenant,
+        predecessor_task_id: predecessorTaskId,
+        successor_task_id: successorTaskId
+      })
+      .first();
+
+    if (existing) {
+      throw new Error('This dependency already exists');
+    }
+
+    // Insert new dependency
+    const [dependency] = await trx('project_template_dependencies')
+      .insert({
+        tenant,
+        template_id: templateId,
+        predecessor_task_id: predecessorTaskId,
+        successor_task_id: successorTaskId,
+        dependency_type: dependencyType,
+        lead_lag_days: leadLagDays,
+        notes
+      })
+      .returning('*');
+
+    return dependency;
+  });
+}
+
+/**
+ * Update a template dependency
+ */
+export async function updateTemplateDependency(
+  dependencyId: string,
+  data: {
+    dependency_type?: DependencyType;
+    lead_lag_days?: number;
+    notes?: string;
+  }
+): Promise<IProjectTemplateDependency> {
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
+    throw new Error('No authenticated user found');
+  }
+
+  const { knex: db, tenant } = await createTenantKnex();
+
+  return await withTransaction(db, async (trx) => {
+    await checkPermission(currentUser, 'project', 'update', trx);
+
+    const [dependency] = await trx('project_template_dependencies')
+      .where({ template_dependency_id: dependencyId, tenant })
+      .update(data)
+      .returning('*');
+
+    if (!dependency) {
+      throw new Error('Dependency not found');
+    }
+
+    return dependency;
+  });
+}
+
+/**
+ * Remove a template dependency
+ */
+export async function removeTemplateDependency(dependencyId: string): Promise<void> {
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
+    throw new Error('No authenticated user found');
+  }
+
+  const { knex: db, tenant } = await createTenantKnex();
+
+  return await withTransaction(db, async (trx) => {
+    await checkPermission(currentUser, 'project', 'update', trx);
+
+    const deleted = await trx('project_template_dependencies')
+      .where({ template_dependency_id: dependencyId, tenant })
+      .delete();
+
+    if (!deleted) {
+      throw new Error('Dependency not found');
+    }
+  });
+}
+
+/**
+ * Get all dependencies for a template
+ */
+export async function getTemplateDependencies(templateId: string): Promise<IProjectTemplateDependency[]> {
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
+    throw new Error('No authenticated user found');
+  }
+
+  const { knex, tenant } = await createTenantKnex();
+
+  await checkPermission(currentUser, 'project', 'read', knex);
+
+  return await knex('project_template_dependencies')
+    .where({ template_id: templateId, tenant });
+}
+
+/**
+ * Get dependencies for a specific task (both as predecessor and successor)
+ */
+export async function getTaskTemplateDependencies(taskId: string): Promise<{
+  predecessors: IProjectTemplateDependency[];
+  successors: IProjectTemplateDependency[];
+}> {
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
+    throw new Error('No authenticated user found');
+  }
+
+  const { knex, tenant } = await createTenantKnex();
+
+  await checkPermission(currentUser, 'project', 'read', knex);
+
+  const [predecessors, successors] = await Promise.all([
+    knex('project_template_dependencies as ptd')
+      .where({ 'ptd.successor_task_id': taskId, 'ptd.tenant': tenant })
+      .leftJoin('project_template_tasks as ptt', function() {
+        this.on('ptd.predecessor_task_id', '=', 'ptt.template_task_id')
+            .andOn('ptd.tenant', '=', 'ptt.tenant');
+      })
+      .select('ptd.*', 'ptt.task_name as predecessor_task_name'),
+    knex('project_template_dependencies as ptd')
+      .where({ 'ptd.predecessor_task_id': taskId, 'ptd.tenant': tenant })
+      .leftJoin('project_template_tasks as ptt', function() {
+        this.on('ptd.successor_task_id', '=', 'ptt.template_task_id')
+            .andOn('ptd.tenant', '=', 'ptt.tenant');
+      })
+      .select('ptd.*', 'ptt.task_name as successor_task_name')
+  ]);
+
+  return { predecessors, successors };
 }
 
 // ============================================================

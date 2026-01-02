@@ -81,17 +81,25 @@ export function DatePicker({
             {value ? format(value, 'MM/dd/yyyy') : placeholder}
           </span>
           {clearable && value && !disabled && (
-            <button
-              type="button"
+            <span
+              role="button"
+              tabIndex={0}
               onClick={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
                 onChange(undefined);
               }}
-              className="mr-2 text-gray-400 hover:text-gray-600"
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  onChange(undefined);
+                }
+              }}
+              className="mr-2 text-gray-400 hover:text-gray-600 cursor-pointer"
             >
               <X className="h-4 w-4" />
-            </button>
+            </span>
           )}
           <CalendarIcon className="h-4 w-4 opacity-50" />
         </Popover.Trigger>
