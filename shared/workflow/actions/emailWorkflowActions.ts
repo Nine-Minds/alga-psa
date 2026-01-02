@@ -602,7 +602,7 @@ export async function createTicketFromEmail(
             tenantId: tenant,
             ticketId: result.ticket_id,
             userId: assignedTo,
-            assignedByUserId: userId || ticketData.entered_by
+            assignedByUserId: userId || ticketData.entered_by || undefined
           });
         } catch (eventError) {
           console.error('Failed to publish TICKET_ASSIGNED event:', eventError);
