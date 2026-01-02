@@ -11,6 +11,9 @@ import {
   deleteBoard
 } from 'server/src/lib/actions/board-actions/boardActions';
 import { getAvailableReferenceData, importReferenceData, checkImportConflicts, ImportConflict } from 'server/src/lib/actions/referenceDataActions';
+import { getAllUsers } from 'server/src/lib/actions/user-actions/userActions';
+import UserPicker from 'server/src/components/ui/UserPicker';
+import { IUser } from 'server/src/interfaces';
 import { toast } from 'react-hot-toast';
 import { Dialog, DialogContent, DialogFooter } from 'server/src/components/ui/Dialog';
 import { Input } from 'server/src/components/ui/Input';
@@ -30,6 +33,7 @@ import {
 
 const BoardsSettings: React.FC = () => {
   const [boards, setBoards] = useState<IBoard[]>([]);
+  const [users, setUsers] = useState<IUser[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [deleteDialog, setDeleteDialog] = useState<{
     isOpen: boolean;
@@ -61,7 +65,8 @@ const BoardsSettings: React.FC = () => {
     is_inactive: false,
     category_type: 'custom' as CategoryType,
     priority_type: 'custom' as PriorityType,
-    is_itil_compliant: false
+    is_itil_compliant: false,
+    default_assigned_to: ''
   });
   
   // State for Import Dialog
@@ -77,6 +82,7 @@ const BoardsSettings: React.FC = () => {
 
   useEffect(() => {
     fetchBoards();
+    fetchUsers();
   }, []);
 
   const fetchBoards = async () => {
@@ -89,6 +95,16 @@ const BoardsSettings: React.FC = () => {
     }
   };
 
+  const fetchUsers = async () => {
+    try {
+      // Fetch only active internal users for the default assigned agent picker
+      const allUsers = await getAllUsers(false, 'internal');
+      setUsers(allUsers);
+    } catch (error) {
+      console.error('Error fetching users:', error);
+    }
+  };
+
   const startEditing = (board: IBoard) => {
     setEditingBoard(board);
     setFormData({
@@ -98,7 +114,8 @@ const BoardsSettings: React.FC = () => {
       is_inactive: board.is_inactive,
       category_type: board.category_type || 'custom',
       priority_type: board.priority_type || 'custom',
-      is_itil_compliant: board.category_type === 'itil' && board.priority_type === 'itil'
+      is_itil_compliant: board.category_type === 'itil' && board.priority_type === 'itil',
+      default_assigned_to: board.default_assigned_to || ''
     });
     setShowAddEditDialog(true);
     setError(null);
@@ -135,7 +152,8 @@ const BoardsSettings: React.FC = () => {
           display_order: formData.display_order,
           is_inactive: formData.is_inactive,
           category_type: categoryType,
-          priority_type: priorityType
+          priority_type: priorityType,
+          default_assigned_to: formData.default_assigned_to || null
         });
         toast.success('Board updated successfully');
       } else {
@@ -145,14 +163,15 @@ const BoardsSettings: React.FC = () => {
           display_order: formData.display_order,
           is_inactive: formData.is_inactive,
           category_type: categoryType,
-          priority_type: priorityType
+          priority_type: priorityType,
+          default_assigned_to: formData.default_assigned_to || null
         });
         toast.success('Board created successfully');
       }
 
       setShowAddEditDialog(false);
       setEditingBoard(null);
-      setFormData({ board_name: '', description: '', display_order: 0, is_inactive: false, category_type: 'custom', priority_type: 'custom', is_itil_compliant: false });
+      setFormData({ board_name: '', description: '', display_order: 0, is_inactive: false, category_type: 'custom', priority_type: 'custom', is_itil_compliant: false, default_assigned_to: '' });
       await fetchBoards();
     } catch (error) {
       console.error('Error saving board:', error);
@@ -408,7 +427,7 @@ const BoardsSettings: React.FC = () => {
             id="add-board-button"
             onClick={() => {
               setEditingBoard(null);
-              setFormData({ board_name: '', description: '', display_order: 0, is_inactive: false, category_type: 'custom', priority_type: 'custom', is_itil_compliant: false });
+              setFormData({ board_name: '', description: '', display_order: 0, is_inactive: false, category_type: 'custom', priority_type: 'custom', is_itil_compliant: false, default_assigned_to: '' });
               setShowAddEditDialog(true);
             }} 
             className="bg-primary-500 text-white hover:bg-primary-600"
@@ -445,14 +464,14 @@ const BoardsSettings: React.FC = () => {
       />
 
       {/* Add/Edit Dialog */}
-      <Dialog 
-        isOpen={showAddEditDialog} 
+      <Dialog
+        isOpen={showAddEditDialog}
         onClose={() => {
           setShowAddEditDialog(false);
           setEditingBoard(null);
-          setFormData({ board_name: '', description: '', display_order: 0, is_inactive: false, category_type: 'custom', priority_type: 'custom', is_itil_compliant: false });
+          setFormData({ board_name: '', description: '', display_order: 0, is_inactive: false, category_type: 'custom', priority_type: 'custom', is_itil_compliant: false, default_assigned_to: '' });
           setError(null);
-        }} 
+        }}
         title={editingBoard ? "Edit Board" : "Add Board"}
       >
         <DialogContent>
@@ -501,6 +520,22 @@ const BoardsSettings: React.FC = () => {
                 onCheckedChange={(checked) => setFormData({ ...formData, is_inactive: checked })}
               />
             </div>
+            <div>
+              <Label htmlFor="default-assigned-agent-picker">Default Assigned Agent</Label>
+              <UserPicker
+                id="default-assigned-agent-picker"
+                value={formData.default_assigned_to}
+                onValueChange={(value) => setFormData({ ...formData, default_assigned_to: value })}
+                users={users}
+                userTypeFilter="internal"
+                placeholder="None (manual assignment required)"
+                buttonWidth="full"
+                labelStyle="none"
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                When set, new tickets on this board will be automatically assigned to this agent. For tickets created via the client portal or email, assignment is automatic. For MSP users, this pre-fills the assigned agent field if empty.
+              </p>
+            </div>
 
             {/* ITIL Configuration - Only show for new boards */}
             {!editingBoard && (
@@ -531,13 +566,13 @@ const BoardsSettings: React.FC = () => {
           </div>
         </DialogContent>
         <DialogFooter>
-          <Button 
+          <Button
             id="cancel-board-dialog"
-            variant="outline" 
+            variant="outline"
             onClick={() => {
               setShowAddEditDialog(false);
               setEditingBoard(null);
-              setFormData({ board_name: '', description: '', display_order: 0, is_inactive: false, category_type: 'custom', priority_type: 'custom', is_itil_compliant: false });
+              setFormData({ board_name: '', description: '', display_order: 0, is_inactive: false, category_type: 'custom', priority_type: 'custom', is_itil_compliant: false, default_assigned_to: '' });
               setError(null);
             }}
           >

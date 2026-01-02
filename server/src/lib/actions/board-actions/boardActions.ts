@@ -96,6 +96,7 @@ export async function createBoard(boardData: Omit<IBoard, 'board_id' | 'tenant'>
           priority_type: boardData.priority_type || 'custom',
           display_itil_impact: boardData.display_itil_impact || false,
           display_itil_urgency: boardData.display_itil_urgency || false,
+          default_assigned_to: boardData.default_assigned_to || null,
           tenant
         })
         .returning('*');
@@ -167,9 +168,15 @@ export async function updateBoard(boardId: string, boardData: Partial<Omit<IBoar
           .update({ is_default: false });
       }
 
+      // Sanitize default_assigned_to: convert empty string to null
+      const sanitizedData = { ...boardData };
+      if ('default_assigned_to' in sanitizedData) {
+        sanitizedData.default_assigned_to = sanitizedData.default_assigned_to || null;
+      }
+
       const [updatedBoard] = await trx('boards')
         .where({ board_id: boardId, tenant })
-        .update(boardData)
+        .update(sanitizedData)
         .returning('*');
 
       // Handle ITIL type changes

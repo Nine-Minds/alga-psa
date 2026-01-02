@@ -350,6 +350,14 @@ export function QuickAddTicket({
     setSelectedCategories([]);
     setShowPriorityMatrix(false);
     clearErrorIfSubmitted();
+
+    // Pre-fill assigned agent from board's default if current assignedTo is empty
+    if (!assignedTo && newBoardId) {
+      const selectedBoard = boards.find(b => b.board_id === newBoardId);
+      if (selectedBoard?.default_assigned_to) {
+        setAssignedTo(selectedBoard.default_assigned_to);
+      }
+    }
   };
 
 

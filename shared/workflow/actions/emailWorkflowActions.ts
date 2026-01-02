@@ -548,6 +548,7 @@ export async function createTicketFromEmail(
     subcategory_id?: string;
     location_id?: string;
     entered_by?: string | null;
+    assigned_to?: string;
     email_metadata?: any;
   },
   tenant: string,
@@ -563,6 +564,18 @@ export async function createTicketFromEmail(
       const eventPublisher = new WorkflowEventPublisher();
       const analyticsTracker = new WorkflowAnalyticsTracker();
 
+      // Determine assigned_to: use provided value or fall back to board's default
+      let assignedTo = ticketData.assigned_to;
+      if (!assignedTo && ticketData.board_id) {
+        const board = await trx('boards')
+          .select('default_assigned_to')
+          .where({ board_id: ticketData.board_id, tenant })
+          .first();
+        if (board?.default_assigned_to) {
+          assignedTo = board.default_assigned_to;
+        }
+      }
+
       // Use enhanced TicketModel with events and analytics
       const result = await TicketModel.createTicketWithRetry({
         title: ticketData.title,
@@ -577,8 +590,30 @@ export async function createTicketFromEmail(
         subcategory_id: ticketData.subcategory_id,
         location_id: ticketData.location_id,
         entered_by: ticketData.entered_by || undefined,
+        assigned_to: assignedTo,
         email_metadata: ticketData.email_metadata
       }, tenant, trx, {}, eventPublisher, analyticsTracker, userId, 3);
+
+      // Publish TICKET_ASSIGNED event if an agent was assigned
+      // Note: Event publishing failure should not prevent ticket creation
+      if (assignedTo) {
+        try {
+          const { publishEvent } = await import('@alga-psa/shared/events/publisher');
+          await publishEvent({
+            eventType: 'TICKET_ASSIGNED',
+            tenant,
+            payload: {
+              tenantId: tenant,
+              ticketId: result.ticket_id,
+              userId: assignedTo,
+              assignedByUserId: userId || ticketData.entered_by || undefined
+            }
+          });
+        } catch (eventError) {
+          console.error('Failed to publish TICKET_ASSIGNED event:', eventError);
+          // Continue - ticket was created successfully, event can be retried or logged
+        }
+      }
 
       return {
         ticket_id: result.ticket_id,
