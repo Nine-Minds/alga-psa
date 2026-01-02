@@ -344,6 +344,19 @@ const BoardsSettings: React.FC = () => {
       ),
     },
     {
+      title: 'Default Agent',
+      dataIndex: 'default_assigned_to',
+      render: (value: string | null) => {
+        if (!value) return <span className="text-gray-400">-</span>;
+        const user = users.find(u => u.user_id === value);
+        return user ? (
+          <span className="text-gray-700">{user.first_name} {user.last_name}</span>
+        ) : (
+          <span className="text-gray-400 italic">Unknown</span>
+        );
+      },
+    },
+    {
       title: 'Order',
       dataIndex: 'display_order',
       render: (value: number) => (
