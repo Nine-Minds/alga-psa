@@ -1,7 +1,6 @@
 import React from 'react';
 import useSWR from 'swr';
 import { Card, CardContent, CardHeader, CardTitle } from 'server/src/components/ui/Card';
-import { Text, Timeline } from '@mantine/core';
 import { getAssetHistory } from '../../../lib/actions/asset-actions/assetActions';
 import { formatDateTime } from '../../../lib/utils/dateTimeUtils';
 
@@ -25,26 +24,27 @@ export const AuditLogTab: React.FC<AuditLogTabProps> = ({ assetId }) => {
         <CardTitle>Audit Log</CardTitle>
       </CardHeader>
       <CardContent>
-        <Timeline active={-1} bulletSize={12} lineWidth={2}>
+        <div className="space-y-6 relative before:absolute before:inset-0 before:left-2 before:h-full before:w-0.5 before:bg-gray-100">
           {history && history.map((record, index) => (
-            <Timeline.Item 
-              key={index} 
-              title={record.change_type.charAt(0).toUpperCase() + record.change_type.slice(1)}
-              bullet={<div className="w-2 h-2 rounded-full bg-gray-400" />}
-            >
-              <Text c="dimmed" size="sm">
-                Changed by user {record.changed_by}
-              </Text>
-              <Text size="xs" mt={4}>
-                {formatDateTime(new Date(record.changed_at), Intl.DateTimeFormat().resolvedOptions().timeZone)}
-              </Text>
-              {/* We could expand 'changes' JSON here if needed */}
-            </Timeline.Item>
+            <div key={index} className="relative pl-8">
+              <div className="absolute left-0 top-1 w-4 h-4 rounded-full border-2 border-white bg-gray-400 shadow-sm" />
+              <div className="flex flex-col">
+                <h4 className="text-sm font-semibold text-gray-900">
+                  {record.change_type.charAt(0).toUpperCase() + record.change_type.slice(1)}
+                </h4>
+                <p className="text-sm text-gray-500">
+                  Changed by {record.changed_by_name || `user ${record.changed_by}`}
+                </p>
+                <p className="text-xs text-gray-400 mt-1">
+                  {formatDateTime(new Date(record.changed_at), Intl.DateTimeFormat().resolvedOptions().timeZone)}
+                </p>
+              </div>
+            </div>
           ))}
           {(!history || history.length === 0) && (
-            <Text c="dimmed" ta="center">No audit history available.</Text>
+            <p className="text-sm text-gray-400 text-center py-4">No audit history available.</p>
           )}
-        </Timeline>
+        </div>
       </CardContent>
     </Card>
   );

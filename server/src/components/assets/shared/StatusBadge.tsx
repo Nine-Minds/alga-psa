@@ -1,5 +1,7 @@
 import React from 'react';
-import { Badge, Tooltip } from '@mantine/core';
+import { Badge } from 'server/src/components/ui/Badge';
+import { Tooltip } from 'server/src/components/ui/Tooltip';
+import { cn } from 'server/src/lib/utils';
 import { 
   Check, 
   AlertTriangle, 
@@ -24,18 +26,18 @@ const getStatusConfig = (status: StatusBadgeStatus) => {
     case 'healthy':
     case 'secure':
     case 'active':
-      return { color: 'green', icon: Check, label: 'Healthy' };
+      return { variant: 'success' as const, icon: Check, label: 'Healthy', colorClass: 'bg-emerald-100 text-emerald-700 border-emerald-200' };
     case 'warning':
     case 'at_risk':
     case 'expiring_soon':
-      return { color: 'yellow', icon: AlertTriangle, label: 'Warning' };
+      return { variant: 'warning' as const, icon: AlertTriangle, label: 'Warning', colorClass: 'bg-amber-100 text-amber-700 border-amber-200' };
     case 'critical':
     case 'expired':
     case 'offline':
-      return { color: 'red', icon: X, label: 'Critical' };
+      return { variant: 'error' as const, icon: X, label: 'Critical', colorClass: 'bg-red-100 text-red-700 border-red-200' };
     case 'unknown':
     default:
-      return { color: 'gray', icon: HelpCircle, label: 'Unknown' };
+      return { variant: 'default' as const, icon: HelpCircle, label: 'Unknown', colorClass: 'bg-gray-100 text-gray-700 border-gray-200' };
   }
 };
 
@@ -70,19 +72,22 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({
 
   const content = (
     <Badge 
-      color={config.color} 
-      size={size} 
-      variant="light"
-      className={className}
-      leftSection={showIcon && <Icon size={12} />}
+      className={cn(
+        'gap-1.5 py-1 px-3',
+        config.colorClass,
+        size === 'sm' && 'text-[10px] px-2 py-0.5',
+        size === 'lg' && 'text-sm px-4 py-1.5',
+        className
+      )}
     >
+      {showIcon && <Icon size={size === 'sm' ? 10 : size === 'lg' ? 14 : 12} />}
       {provider ? `${label} - ${provider}` : label}
     </Badge>
   );
 
   if (tooltip) {
     return (
-      <Tooltip label={tooltip}>
+      <Tooltip content={tooltip}>
         {content}
       </Tooltip>
     );

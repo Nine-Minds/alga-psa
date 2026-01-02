@@ -8,7 +8,7 @@
 import axios, { AxiosInstance, AxiosError, AxiosRequestConfig } from 'axios';
 import { getSecretProviderInstance } from '@alga-psa/shared/core/secretProvider';
 import logger from '@shared/core/logger';
-import {
+import type {
   NinjaOneOAuthCredentials,
   NinjaOneOAuthTokenResponse,
   NinjaOneOrganization,
@@ -21,14 +21,15 @@ import {
   NinjaOneActivity,
   NinjaOneDeviceLink,
   NinjaOneDevicePatchStatus,
+  NinjaOneOrganizationQueryParams,
   NinjaOneDeviceQueryParams,
   NinjaOneAlertQueryParams,
   NinjaOneActivityQueryParams,
   NinjaOneApiError,
-  NINJAONE_REGIONS,
   NinjaOneRegion,
   WebhookConfiguration,
 } from '../../../interfaces/ninjaone.interfaces';
+import { NINJAONE_REGIONS } from '../../../interfaces/ninjaone.interfaces';
 
 // Secret names for NinjaOne credentials
 const NINJAONE_CLIENT_ID_SECRET = 'ninjaone_client_id';
@@ -314,9 +315,29 @@ export class NinjaOneClient {
   /**
    * Get all organizations
    */
-  async getOrganizations(): Promise<NinjaOneOrganization[]> {
-    const response = await this.axiosInstance.get<NinjaOneOrganization[]>('/organizations');
-    return response.data;
+  async getOrganizations(params?: NinjaOneOrganizationQueryParams): Promise<NinjaOneOrganization[]> {
+    const organizations: NinjaOneOrganization[] = [];
+    let cursor: string | undefined = params?.after;
+
+    do {
+      const queryParams: Record<string, string | number> = {
+        pageSize: params?.pageSize || 100,
+      };
+
+      if (cursor) queryParams.after = cursor;
+
+      const response = await this.axiosInstance.get<NinjaOneOrganization[]>('/organizations', {
+        params: queryParams,
+      });
+
+      organizations.push(...response.data);
+
+      // Check for pagination cursor in response headers
+      const linkHeader = response.headers['link'];
+      cursor = this.extractCursorFromLink(linkHeader);
+    } while (cursor);
+
+    return organizations;
   }
 
   /**
@@ -332,43 +353,174 @@ export class NinjaOneClient {
   // ============ Devices API ============
 
   /**
-   * Get all devices with optional filters
+   * Get all devices with optional filters.
+   * Handles both response formats from NinjaOne API:
+   * 1. Direct array with Link header pagination
+   * 2. Object response with cursor property
    */
   async getDevices(params?: NinjaOneDeviceQueryParams): Promise<NinjaOneDevice[]> {
     const devices: NinjaOneDevice[] = [];
     let cursor: string | undefined = params?.after;
+    let pageNumber = 0;
+    const pageSize = params?.pageSize || 100;
 
     do {
+      pageNumber++;
       const queryParams: Record<string, string | number> = {
-        pageSize: params?.pageSize || 100,
+        pageSize,
       };
 
       if (cursor) queryParams.after = cursor;
       if (params?.df) queryParams.df = params.df;
       if (params?.org) queryParams.org = params.org;
 
-      const response = await this.axiosInstance.get<NinjaOneDevice[]>('/devices', {
+      logger.debug('[NinjaOneClient] Fetching devices page', {
+        tenantId: this.tenantId,
+        page: pageNumber,
+        cursor: cursor || '(none)',
+        org: params?.org,
+        pageSize,
+      });
+
+      // NinjaOne API can return either NinjaOneDevice[] or NinjaOneDevicesResponse
+      const response = await this.axiosInstance.get<NinjaOneDevice[] | NinjaOneDevicesResponse>('/devices', {
         params: queryParams,
       });
 
-      devices.push(...response.data);
+      // Handle both response formats
+      let pageDevices: NinjaOneDevice[];
+      let bodyCursor: string | undefined;
 
-      // Check for pagination cursor in response headers
+      if (Array.isArray(response.data)) {
+        // Format 1: Direct array response
+        pageDevices = response.data;
+      } else if (response.data && typeof response.data === 'object' && 'devices' in response.data) {
+        // Format 2: Object with devices array and optional cursor
+        const wrappedResponse = response.data as NinjaOneDevicesResponse;
+        pageDevices = wrappedResponse.devices || [];
+        bodyCursor = wrappedResponse.cursor;
+      } else {
+        // Unexpected format - log and treat as empty
+        logger.error('[NinjaOneClient] Unexpected devices response format', {
+          tenantId: this.tenantId,
+          responseType: typeof response.data,
+          isArray: Array.isArray(response.data),
+        });
+        pageDevices = [];
+      }
+
+      devices.push(...pageDevices);
+
+      // Check for pagination cursor in response headers (Link header)
       const linkHeader = response.headers['link'];
-      cursor = this.extractCursorFromLink(linkHeader);
+
+      logger.debug('[NinjaOneClient] Devices page response', {
+        tenantId: this.tenantId,
+        page: pageNumber,
+        devicesInPage: pageDevices.length,
+        totalDevicesSoFar: devices.length,
+        hasLinkHeader: !!linkHeader,
+        hasBodyCursor: !!bodyCursor,
+        allHeaders: Object.keys(response.headers).join(', '),
+      });
+
+      // Try to get cursor from Link header first, then fall back to body cursor
+      cursor = this.extractCursorFromLink(linkHeader) || bodyCursor;
+
+      // Safety check: if we got a full page but no cursor, log a warning
+      if (pageDevices.length === pageSize && !cursor) {
+        logger.warn('[NinjaOneClient] Full page received but no pagination cursor - possible data truncation', {
+          tenantId: this.tenantId,
+          org: params?.org,
+          page: pageNumber,
+          devicesInPage: pageDevices.length,
+          totalDevices: devices.length,
+          linkHeader: linkHeader || '(none)',
+        });
+      }
     } while (cursor);
+
+    logger.info('[NinjaOneClient] Finished fetching devices', {
+      tenantId: this.tenantId,
+      org: params?.org,
+      totalPages: pageNumber,
+      totalDevices: devices.length,
+    });
 
     return devices;
   }
 
   /**
-   * Get devices for a specific organization
+   * Get devices for a specific organization with pagination support.
+   * Uses the organization-specific endpoint which may have better pagination
+   * behavior than the global /devices endpoint with org filter.
    */
-  async getDevicesByOrganization(orgId: number): Promise<NinjaOneDevice[]> {
-    const response = await this.axiosInstance.get<NinjaOneDevice[]>(
-      `/organization/${orgId}/devices`
-    );
-    return response.data;
+  async getDevicesByOrganization(
+    orgId: number,
+    params?: { pageSize?: number }
+  ): Promise<NinjaOneDevice[]> {
+    const devices: NinjaOneDevice[] = [];
+    let cursor: string | undefined;
+    let pageNumber = 0;
+    const pageSize = params?.pageSize || 100;
+
+    do {
+      pageNumber++;
+      const queryParams: Record<string, string | number> = { pageSize };
+      if (cursor) queryParams.after = cursor;
+
+      logger.debug('[NinjaOneClient] Fetching org devices page', {
+        tenantId: this.tenantId,
+        orgId,
+        page: pageNumber,
+        cursor: cursor || '(none)',
+        pageSize,
+      });
+
+      const response = await this.axiosInstance.get<NinjaOneDevice[]>(
+        `/organization/${orgId}/devices`,
+        { params: queryParams }
+      );
+
+      const pageDevices = response.data || [];
+      devices.push(...pageDevices);
+
+      // Check for pagination cursor in response headers (Link header)
+      const linkHeader = response.headers['link'];
+
+      logger.debug('[NinjaOneClient] Org devices page response', {
+        tenantId: this.tenantId,
+        orgId,
+        page: pageNumber,
+        devicesInPage: pageDevices.length,
+        totalDevicesSoFar: devices.length,
+        hasLinkHeader: !!linkHeader,
+      });
+
+      // Extract cursor from Link header
+      cursor = this.extractCursorFromLink(linkHeader);
+
+      // Safety check: if we got a full page but no cursor, log a warning
+      if (pageDevices.length === pageSize && !cursor) {
+        logger.warn('[NinjaOneClient] Full page received but no pagination cursor - possible data truncation', {
+          tenantId: this.tenantId,
+          orgId,
+          page: pageNumber,
+          devicesInPage: pageDevices.length,
+          totalDevices: devices.length,
+          linkHeader: linkHeader || '(none)',
+        });
+      }
+    } while (cursor);
+
+    logger.info('[NinjaOneClient] Finished fetching devices for organization', {
+      tenantId: this.tenantId,
+      orgId,
+      totalPages: pageNumber,
+      totalDevices: devices.length,
+    });
+
+    return devices;
   }
 
   /**
@@ -388,11 +540,30 @@ export class NinjaOneClient {
     deviceId: number,
     params?: NinjaOneActivityQueryParams
   ): Promise<NinjaOneActivity[]> {
-    const response = await this.axiosInstance.get<NinjaOneActivity[]>(
-      `/device/${deviceId}/activities`,
-      { params }
-    );
-    return response.data;
+    const activities: NinjaOneActivity[] = [];
+    let cursor: string | undefined = params?.after;
+
+    do {
+      const queryParams: Record<string, string | number | undefined> = {
+        ...params,
+        pageSize: params?.pageSize || 100,
+      };
+
+      if (cursor) queryParams.after = cursor;
+
+      const response = await this.axiosInstance.get<NinjaOneActivity[]>(
+        `/device/${deviceId}/activities`,
+        { params: queryParams }
+      );
+
+      activities.push(...response.data);
+
+      // Check for pagination cursor in response headers
+      const linkHeader = response.headers['link'];
+      cursor = this.extractCursorFromLink(linkHeader);
+    } while (cursor);
+
+    return activities;
   }
 
   // ============ Alerts API ============
@@ -401,10 +572,31 @@ export class NinjaOneClient {
    * Get all active alerts
    */
   async getAlerts(params?: NinjaOneAlertQueryParams): Promise<NinjaOneAlert[]> {
-    const response = await this.axiosInstance.get<NinjaOneAlert[]>('/alerts', {
-      params,
-    });
-    return response.data;
+    const alerts: NinjaOneAlert[] = [];
+    let cursor: string | undefined = params?.after;
+
+    do {
+      const queryParams: Record<string, string | number | undefined> = {
+        pageSize: params?.pageSize || 100,
+        sourceType: params?.sourceType,
+        deviceFilter: params?.deviceFilter,
+        lang: params?.lang,
+      };
+
+      if (cursor) queryParams.after = cursor;
+
+      const response = await this.axiosInstance.get<NinjaOneAlert[]>('/alerts', {
+        params: queryParams,
+      });
+
+      alerts.push(...response.data);
+
+      // Check for pagination cursor in response headers
+      const linkHeader = response.headers['link'];
+      cursor = this.extractCursorFromLink(linkHeader);
+    } while (cursor);
+
+    return alerts;
   }
 
   /**
@@ -430,10 +622,29 @@ export class NinjaOneClient {
    * Get activities with optional filters
    */
   async getActivities(params?: NinjaOneActivityQueryParams): Promise<NinjaOneActivity[]> {
-    const response = await this.axiosInstance.get<NinjaOneActivity[]>('/activities', {
-      params,
-    });
-    return response.data;
+    const activities: NinjaOneActivity[] = [];
+    let cursor: string | undefined = params?.after;
+
+    do {
+      const queryParams: Record<string, string | number | undefined> = {
+        ...params,
+        pageSize: params?.pageSize || 100,
+      };
+
+      if (cursor) queryParams.after = cursor;
+
+      const response = await this.axiosInstance.get<NinjaOneActivity[]>('/activities', {
+        params: queryParams,
+      });
+
+      activities.push(...response.data);
+
+      // Check for pagination cursor in response headers
+      const linkHeader = response.headers['link'];
+      cursor = this.extractCursorFromLink(linkHeader);
+    } while (cursor);
+
+    return activities;
   }
 
   // ============ Patch Management API ============
@@ -560,13 +771,50 @@ export class NinjaOneClient {
 
   /**
    * Extract cursor from Link header for pagination
+   * NinjaOne uses standard RFC 5988 Link headers with format:
+   * <https://api.ninjarmm.com/v2/devices?after=CURSOR&pageSize=100>; rel="next"
    */
   private extractCursorFromLink(linkHeader: string | undefined): string | undefined {
-    if (!linkHeader) return undefined;
+    if (!linkHeader) {
+      return undefined;
+    }
 
-    // Parse Link header: <url>; rel="next"
-    const matches = linkHeader.match(/<[^>]*after=([^&>]+)[^>]*>;\s*rel="next"/);
-    return matches?.[1];
+    // Log the raw header for debugging pagination issues
+    logger.debug('[NinjaOneClient] Pagination Link header received', {
+      linkHeader,
+      tenantId: this.tenantId,
+    });
+
+    // Try multiple regex patterns to handle different Link header formats
+    // Pattern 1: Standard format with quotes - <url>; rel="next"
+    let matches = linkHeader.match(/<[^>]*[?&]after=([^&>]+)[^>]*>;\s*rel="next"/i);
+
+    // Pattern 2: Without quotes - <url>; rel=next
+    if (!matches) {
+      matches = linkHeader.match(/<[^>]*[?&]after=([^&>]+)[^>]*>;\s*rel=next/i);
+    }
+
+    // Pattern 3: Single quotes - <url>; rel='next'
+    if (!matches) {
+      matches = linkHeader.match(/<[^>]*[?&]after=([^&>]+)[^>]*>;\s*rel='next'/i);
+    }
+
+    const cursor = matches?.[1];
+
+    if (cursor) {
+      logger.debug('[NinjaOneClient] Extracted pagination cursor', {
+        cursor,
+        tenantId: this.tenantId,
+      });
+    } else if (linkHeader) {
+      // We had a Link header but couldn't extract cursor - this is suspicious
+      logger.warn('[NinjaOneClient] Link header present but could not extract cursor', {
+        linkHeader,
+        tenantId: this.tenantId,
+      });
+    }
+
+    return cursor;
   }
 
   /**

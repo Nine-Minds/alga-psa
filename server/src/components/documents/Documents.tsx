@@ -234,8 +234,21 @@ const Documents = ({
   }, [initialDocuments, inFolderMode]);
 
   // Folder mode: fetch documents from server
+  // Track all fetch dependencies to detect actual changes vs reference-only changes
+  const prevFetchKeyRef = useRef<string>('');
+
   useEffect(() => {
     if (!inFolderMode) return;
+
+    // Create a stable key from all dependencies that should trigger a fetch
+    const currentFiltersString = JSON.stringify(filters || {});
+    const fetchKey = `${currentPage}-${pageSize}-${currentFolder}-${currentFiltersString}`;
+
+    // Skip if nothing actually changed (prevents fetch on reference-only filter changes)
+    if (fetchKey === prevFetchKeyRef.current) {
+      return;
+    }
+    prevFetchKeyRef.current = fetchKey;
 
     let cancelled = false;
 
@@ -266,7 +279,9 @@ const Documents = ({
     return () => {
       cancelled = true;
     };
-  }, [currentPage, pageSize, inFolderMode, currentFolder, filters, t]);
+  // Include filters in deps but use ref-based comparison to skip duplicate fetches
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentPage, pageSize, inFolderMode, currentFolder, filters]);
 
   // Entity mode: handle search filtering
   useEffect(() => {

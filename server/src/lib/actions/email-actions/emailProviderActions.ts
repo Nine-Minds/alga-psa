@@ -8,6 +8,11 @@ import { setupPubSub } from './setupPubSub';
 import { EmailProviderService } from '../../../services/email/EmailProviderService';
 import { configureGmailProvider } from './configureGmailProvider';
 import { EmailWebhookMaintenanceService } from '@alga-psa/shared/services/email/EmailWebhookMaintenanceService';
+import { hasPermission } from 'server/src/lib/auth/rbac';
+import { throwPermissionError } from 'server/src/lib/utils/errorHandling';
+import { getWebhookBaseUrl } from 'server/src/utils/email/webhookHelpers';
+import { MicrosoftGraphAdapter } from '@alga-psa/shared/services/email/providers/MicrosoftGraphAdapter';
+import type { Microsoft365DiagnosticsReport } from '@alga-psa/shared/interfaces/microsoft365-diagnostics.interfaces';
 
 
 /**
@@ -682,6 +687,71 @@ export async function retryMicrosoftSubscriptionRenewal(providerId: string): Pro
   } catch (error: any) {
     console.error('Manual renewal failed:', error);
     return { success: false, message: error.message || 'Internal server error' };
+  }
+}
+
+export async function runMicrosoft365Diagnostics(providerId: string): Promise<{ success: boolean; report?: Microsoft365DiagnosticsReport; error?: string }> {
+  try {
+    const user = await assertAuthenticated();
+    const { knex, tenant } = await createTenantKnex();
+
+    const permitted = await hasPermission(user, 'ticket_settings', 'update', knex);
+    if (!permitted) {
+      throwPermissionError('run Microsoft 365 diagnostics');
+    }
+
+    const provider = await knex('email_providers')
+      .where({ id: providerId, tenant })
+      .first();
+
+    if (!provider) {
+      return { success: false, error: 'Provider not found' };
+    }
+
+    if (provider.provider_type !== 'microsoft') {
+      return { success: false, error: 'Diagnostics are only available for Microsoft 365 providers' };
+    }
+
+    const vendorConfig = await knex('microsoft_email_provider_config')
+      .where({ email_provider_id: providerId, tenant })
+      .first();
+
+    const baseUrl = getWebhookBaseUrl();
+    const webhookUrl = `${baseUrl}/api/email/webhooks/microsoft`;
+
+    const adapterConfig = {
+      id: provider.id,
+      tenant: provider.tenant,
+      name: provider.provider_name,
+      provider_type: 'microsoft' as const,
+      mailbox: provider.mailbox,
+      folder_to_monitor: 'Inbox',
+      active: provider.is_active,
+      webhook_notification_url: webhookUrl,
+      webhook_subscription_id: vendorConfig?.webhook_subscription_id || null,
+      webhook_verification_token: vendorConfig?.webhook_verification_token || null,
+      webhook_expires_at: vendorConfig?.webhook_expires_at || null,
+      last_subscription_renewal: vendorConfig?.last_subscription_renewal || null,
+      connection_status: provider.status || 'configuring',
+      last_connection_test: provider.last_sync_at || null,
+      connection_error_message: provider.error_message || null,
+      provider_config: vendorConfig || {},
+      created_at: provider.created_at,
+      updated_at: provider.updated_at,
+    };
+
+    const adapter = new MicrosoftGraphAdapter(adapterConfig as any);
+
+    const report = await adapter.runMicrosoft365Diagnostics({
+      includeIdentifiers: true,
+      liveSubscriptionTest: true,
+      requiredScopes: ['Mail.Read', 'Mail.Read.Shared'],
+      folderListTop: 100,
+    });
+
+    return { success: true, report };
+  } catch (error: any) {
+    return { success: false, error: error?.message || 'Failed to run diagnostics' };
   }
 }
 

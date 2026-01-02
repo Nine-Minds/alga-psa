@@ -168,8 +168,10 @@ export default function ManagerApprovalDashboard({ currentUser }: ManagerApprova
             title: 'Select',
             dataIndex: 'select',
             width: '10%',
+            sortable: false, // Non-data column, sorting disabled
             render: (_, record) => (
               <div className="[&>div]:mb-0" onClick={(e) => e.stopPropagation()}>
+                {/* Unique ID for UI reflection system */}
                 <Checkbox
                   id={`timesheet-select-${record.id}`}
                   checked={selectedTimeSheets.includes(record.id)}
@@ -189,7 +191,11 @@ export default function ManagerApprovalDashboard({ currentUser }: ManagerApprova
           },
           {
             title: 'Period',
-            dataIndex: 'time_period',
+            // Use dot notation to access nested start_date for proper date sorting.
+            // DataTable's getNestedValue() handles dot notation, and caseInsensitiveSort()
+            // parses ISO-8601 date strings for accurate chronological sorting.
+            // The render function displays both start and end dates from the full record.
+            dataIndex: 'time_period.start_date',
             width: '25%',
             render: (_, record) => (
               <>
@@ -218,8 +224,10 @@ export default function ManagerApprovalDashboard({ currentUser }: ManagerApprova
             title: 'Actions',
             dataIndex: 'actions',
             width: '10%',
+            sortable: false, // Non-data column, sorting disabled
             render: (_, record) => (
               <div className="flex gap-2">
+                {/* Unique IDs for UI reflection system */}
                 <Button
                   id={`view-timesheet-${record.id}-btn`}
                   onClick={() => handleViewTimeSheet(record)}

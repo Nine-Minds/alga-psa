@@ -242,7 +242,7 @@ export async function getLicensePricingAction(): Promise<{
 
     // Fetch pricing from Stripe API using the price ID
     const stripeService = getStripeService();
-    const stripe = (stripeService as any).stripe;
+    const stripe = await stripeService.getStripeClient();
 
     const price = await stripe.prices.retrieve(licensePriceId);
 
@@ -374,7 +374,7 @@ export async function getPaymentMethodInfoAction(): Promise<IGetPaymentMethodRes
     }
 
     // Fetch payment methods from Stripe
-    const stripe = (stripeService as any).stripe;
+    const stripe = await stripeService.getStripeClient();
     const paymentMethods = await stripe.paymentMethods.list({
       customer: customer.stripe_customer_external_id,
       type: 'card',
@@ -448,7 +448,7 @@ export async function getRecentInvoicesAction(limit: number = 10): Promise<IGetI
     }
 
     // Fetch invoices from Stripe
-    const stripe = (stripeService as any).stripe;
+    const stripe = await stripeService.getStripeClient();
     const invoices = await stripe.invoices.list({
       customer: customer.stripe_customer_external_id,
       limit,
@@ -519,7 +519,7 @@ export async function createCustomerPortalSessionAction(): Promise<IUpdatePaymen
     }
 
     // Create billing portal session
-    const stripe = (stripeService as any).stripe;
+    const stripe = await stripeService.getStripeClient();
     const portalSession = await stripe.billingPortal.sessions.create({
       customer: customer.stripe_customer_external_id,
       return_url: `${process.env.NEXT_PUBLIC_APP_URL}/msp/settings?tab=account`,
@@ -656,7 +656,7 @@ export async function cancelSubscriptionAction(): Promise<ICancelSubscriptionRes
     }
 
     // Cancel subscription at period end via Stripe
-    const stripe = (stripeService as any).stripe;
+    const stripe = await stripeService.getStripeClient();
     const updatedSubscription = await stripe.subscriptions.update(
       subscription.stripe_subscription_external_id,
       {

@@ -20,6 +20,7 @@ import {
   StorageServiceError,
   StorageValidationError,
 } from './errors';
+import { encodeJsonb } from './json';
 
 type NamespaceRecord = {
   tenant: string;
@@ -157,6 +158,7 @@ export class ExtensionStorageServiceV2 {
     return this.knex.transaction(async (trx) => {
       const ttlExpiresAt = computeTtl(request.ttlSeconds);
       const valueSize = byteLength(request.value);
+      const valueJson = encodeJsonb(request.value);
       const metadataValue = request.metadata ?? {};
       const metadataSize = byteLength(metadataValue);
 
@@ -216,7 +218,7 @@ export class ExtensionStorageServiceV2 {
         });
       }
 
-      const now = trx.fn.now();
+      const now = new Date();
       const revision = existing ? Number(existing.revision) + 1 : 1;
       const insertRow = {
         tenant: this.tenantId,
@@ -224,7 +226,7 @@ export class ExtensionStorageServiceV2 {
         namespace: request.namespace,
         key: request.key,
         revision,
-        value: request.value,
+        value: valueJson,
         metadata: metadataValue,
         ttl_expires_at: ttlExpiresAt,
         created_at: existing ? existing.created_at : now,
@@ -238,7 +240,7 @@ export class ExtensionStorageServiceV2 {
         .onConflict(['tenant', 'extension_install_id', 'namespace', 'key'])
         .merge({
           revision,
-          value: request.value,
+          value: valueJson,
           metadata: metadataValue,
           ttl_expires_at: ttlExpiresAt,
           updated_at: now,
@@ -369,7 +371,7 @@ export class ExtensionStorageServiceV2 {
         });
       }
 
-      const now = trx.fn.now();
+      const now = new Date();
       const rows = request.items.map((item) => {
         const existing = existingMap.get(item.key);
         const ttlExpiresAt = computeTtl(item.ttlSeconds);
@@ -379,7 +381,7 @@ export class ExtensionStorageServiceV2 {
           namespace: request.namespace,
           key: item.key,
           revision: existing ? Number(existing.revision) + 1 : 1,
-          value: item.value,
+          value: encodeJsonb(item.value),
           metadata: item.metadata ?? {},
           ttl_expires_at: ttlExpiresAt,
           created_at: existing ? existing.created_at : now,
@@ -582,6 +584,7 @@ export class ExtensionStorageServiceV2 {
     const bytesUsed = Number(row?.bytes_used ?? 0);
     const keysCount = Number(row?.keys_count ?? 0);
     const namespacesCount = Number(row?.namespaces_count ?? 0);
+    const now = new Date();
 
     await trx('ext_storage_usage')
       .insert({
@@ -590,19 +593,20 @@ export class ExtensionStorageServiceV2 {
         bytes_used: bytesUsed,
         keys_count: keysCount,
         namespaces_count: namespacesCount,
-        updated_at: trx.fn.now(),
+        updated_at: now,
       })
       .onConflict(['tenant', 'extension_install_id'])
       .merge({
         bytes_used: bytesUsed,
         keys_count: keysCount,
         namespaces_count: namespacesCount,
-        updated_at: trx.fn.now(),
+        updated_at: now,
       });
   }
 
   private async getUsageForUpdate(trx: Knex.Transaction) {
     // Ensure a usage row exists, then lock it
+    const now = new Date();
     await trx('ext_storage_usage')
       .insert({
         tenant: this.tenantId,
@@ -610,7 +614,7 @@ export class ExtensionStorageServiceV2 {
         bytes_used: 0,
         keys_count: 0,
         namespaces_count: 0,
-        updated_at: trx.fn.now(),
+        updated_at: now,
       })
       .onConflict(['tenant', 'extension_install_id'])
       .ignore();

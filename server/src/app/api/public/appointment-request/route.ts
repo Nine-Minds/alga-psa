@@ -11,7 +11,6 @@ import { getServicesForPublicBooking } from '@/lib/services/availabilityService'
 import { SystemEmailService } from '@/lib/email/system/SystemEmailService';
 import {
   getTenantSettings,
-  getScheduleApprovers,
   formatDate,
   formatTime
 } from '@/lib/actions/appointmentHelpers';
@@ -229,7 +228,7 @@ export async function POST(req: NextRequest) {
       requested_date: validatedData.requested_date,
       requested_time: validatedData.requested_time,
       requested_duration: requestedDuration,
-      preferred_assigned_user_id: null,
+      preferred_assigned_user_id: validatedData.preferred_assigned_user_id || null,
       status: 'pending',
       description: validatedData.message || null,
       ticket_id: null,
@@ -293,43 +292,90 @@ export async function POST(req: NextRequest) {
     }
 
     // Send notification email to MSP staff
+    // Only notify: preferred technician (if specified) + default approver
     try {
       const emailService = SystemEmailService.getInstance();
 
       // Get tenant settings
       const tenantSettings = await getTenantSettings(tenantId);
 
-      // Get staff users who can approve appointment requests
-      const staffUsers = await getScheduleApprovers(tenantId);
+      // Determine which staff should receive notifications
+      const notifyUserIds = new Set<string>();
 
-      for (const staffUser of staffUsers) {
-        await emailService.sendNewAppointmentRequest(staffUser.email, {
-          requesterName: validatedData.name,
-          requesterEmail: validatedData.email,
-          requesterPhone: validatedData.phone || undefined,
-          companyName: validatedData.company || undefined,
-          clientName: validatedData.company || 'Public Request',
-          serviceName: service.service_name,
-          requestedDate: await formatDate(validatedData.requested_date, 'en'),
-          requestedTime: await formatTime(validatedData.requested_time, 'en'),
-          duration: service.default_duration || 60,
-          preferredTechnician: 'Not specified',
-          description: validatedData.message || undefined,
-          referenceNumber: referenceNumber,
-          submittedAt: new Date().toISOString(),
-          isAuthenticated: false,
-          approvalLink: `${process.env.NEXT_PUBLIC_APP_URL}/msp/schedule`,
-          contactEmail: tenantSettings.contactEmail,
-          contactPhone: tenantSettings.contactPhone
-        }, {
-          tenantId: tenantId
-        });
+      // Add preferred technician if specified
+      if (validatedData.preferred_assigned_user_id) {
+        notifyUserIds.add(validatedData.preferred_assigned_user_id);
       }
 
-      logger.info('[public-appointment-request] MSP staff notifications sent', {
-        appointmentRequestId,
-        staffUsersCount: staffUsers.length
-      });
+      // Get the default approver from general settings
+      const generalSetting = await knex('availability_settings')
+        .where({
+          tenant: tenantId,
+          setting_type: 'general_settings'
+        })
+        .whereNotNull('config_json')
+        .first();
+
+      const defaultApproverId = generalSetting?.config_json?.default_approver_id;
+      if (defaultApproverId) {
+        notifyUserIds.add(defaultApproverId);
+      }
+
+      // Only notify specific users (preferred tech + default approver)
+      if (notifyUserIds.size > 0) {
+        const staffUsers = await knex('users')
+          .where({ tenant: tenantId, user_type: 'internal' })
+          .whereIn('user_id', Array.from(notifyUserIds))
+          .where(function() {
+            this.where('is_inactive', false).orWhereNull('is_inactive');
+          })
+          .select('user_id', 'email', 'first_name', 'last_name');
+
+        // Get preferred technician name for email
+        let preferredTechnicianName = 'Not specified';
+        if (validatedData.preferred_assigned_user_id) {
+          const techUser = staffUsers.find(u => u.user_id === validatedData.preferred_assigned_user_id);
+          if (techUser) {
+            preferredTechnicianName = `${techUser.first_name} ${techUser.last_name}`;
+          }
+        }
+
+        for (const staffUser of staffUsers) {
+          await emailService.sendNewAppointmentRequest(staffUser.email, {
+            requesterName: validatedData.name,
+            requesterEmail: validatedData.email,
+            requesterPhone: validatedData.phone || undefined,
+            companyName: validatedData.company || undefined,
+            clientName: validatedData.company || 'Public Request',
+            serviceName: service.service_name,
+            requestedDate: await formatDate(validatedData.requested_date, 'en'),
+            requestedTime: await formatTime(validatedData.requested_time, 'en'),
+            duration: service.default_duration || 60,
+            preferredTechnician: preferredTechnicianName,
+            description: validatedData.message || undefined,
+            referenceNumber: referenceNumber,
+            submittedAt: new Date().toISOString(),
+            isAuthenticated: false,
+            approvalLink: `${process.env.NEXT_PUBLIC_APP_URL}/msp/schedule`,
+            contactEmail: tenantSettings.contactEmail,
+            contactPhone: tenantSettings.contactPhone
+          }, {
+            tenantId: tenantId
+          });
+        }
+
+        logger.info('[public-appointment-request] MSP staff notifications sent', {
+          appointmentRequestId,
+          staffUsersCount: staffUsers.length,
+          userIds: staffUsers.map(u => u.user_id),
+          defaultApproverId,
+          preferredTechnicianId: validatedData.preferred_assigned_user_id
+        });
+      } else {
+        logger.warn('[public-appointment-request] No staff users to notify - no default approver configured', {
+          appointmentRequestId
+        });
+      }
     } catch (emailError) {
       // Log error but don't fail the request
       logger.error('[public-appointment-request] Failed to send MSP staff notifications', {

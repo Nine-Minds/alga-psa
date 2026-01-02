@@ -389,6 +389,7 @@ export default function TaskTicketLinks({
           initialComments={ticketData.comments}
           initialBoard={ticketData.board}
           initialClient={ticketData.client}
+          initialContacts={ticketData.contacts}
           initialContactInfo={ticketData.contactInfo}
           initialCreatedByUser={ticketData.createdByUser}
           initialAdditionalAgents={ticketData.additionalAgents}
@@ -398,6 +399,7 @@ export default function TaskTicketLinks({
           priorityOptions={ticketData.options.priority}
           initialCategories={ticketData.categories}
           initialClients={ticketData.clients}
+          initialLocations={ticketData.locations}
           initialAgentSchedules={ticketData.agentSchedules}
           initialUserMap={ticketData.userMap}
           initialAvailableAgents={ticketData.availableAgents}

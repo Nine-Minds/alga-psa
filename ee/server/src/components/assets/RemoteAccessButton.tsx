@@ -37,7 +37,7 @@ type ConnectionType = 'desktop' | 'shell';
 
 export function RemoteAccessButton({
   asset,
-  variant = 'secondary',
+  variant = 'default',
   size = 'sm',
   className = '',
 }: RemoteAccessButtonProps) {

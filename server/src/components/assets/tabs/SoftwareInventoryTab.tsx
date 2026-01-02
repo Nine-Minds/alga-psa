@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from 'server/src/components/ui/Card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../ui/Table';
-import { TextInput, Select, Group } from '@mantine/core';
+import { Input } from 'server/src/components/ui/Input';
+import CustomSelect from 'server/src/components/ui/CustomSelect';
 import { Search } from 'lucide-react';
 import { Asset } from '../../../interfaces/asset.interfaces';
 
@@ -16,21 +17,31 @@ export const SoftwareInventoryTab: React.FC<SoftwareInventoryTabProps> = ({ asse
   // In a real implementation, this would query the normalized asset_software table
   const softwareList = React.useMemo(() => {
     const rawList = asset.workstation?.installed_software || asset.server?.installed_software || [];
+    
+    // Ensure rawList is an array
+    if (!Array.isArray(rawList)) {
+      return [];
+    }
+    
     // NinjaOne typically returns array of objects with name, version, installDate, etc.
     // or just strings depending on mapping. Assuming objects based on plan.
-    return rawList.map((item: any, index) => ({
-      id: index,
-      name: item.name || item.softwareName || 'Unknown',
-      version: item.version || 'Unknown',
-      publisher: item.publisher || 'Unknown',
-      installDate: item.installDate || null,
-    }));
+    return rawList
+      .map((item: any, index) => ({
+        id: index,
+        name: item?.name || item?.softwareName || item?.displayName || item?.productName || 'Unknown',
+        version: item?.version || item?.displayVersion || 'Unknown',
+        publisher: item?.publisher || item?.vendor || 'Unknown',
+        installDate: item?.installDate || item?.installedOn || null,
+      }))
+      .filter(item => item.name && item.name !== 'Unknown');
   }, [asset]);
 
-  const filteredSoftware = softwareList.filter(sw => 
-    sw.name.toLowerCase().includes(search.toLowerCase()) || 
-    sw.publisher.toLowerCase().includes(search.toLowerCase())
-  );
+  const filteredSoftware = softwareList.filter(sw => {
+    const searchLower = search.toLowerCase();
+    const nameLower = (sw.name || '').toLowerCase();
+    const publisherLower = (sw.publisher || '').toLowerCase();
+    return nameLower.includes(searchLower) || publisherLower.includes(searchLower);
+  });
 
   return (
     <Card>
@@ -38,21 +49,30 @@ export const SoftwareInventoryTab: React.FC<SoftwareInventoryTabProps> = ({ asse
         <CardTitle>Software Inventory</CardTitle>
       </CardHeader>
       <CardContent>
-        <Group mb="md">
-          <TextInput 
-            placeholder="Search software..." 
-            leftSection={<Search size={16} />}
-            value={search}
-            onChange={(e) => setSearch(e.currentTarget.value)}
-            className="flex-1"
-          />
-          <Select 
+        <div className="flex items-center gap-4 mb-4">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <Input 
+              placeholder="Search software..." 
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="pl-9"
+            />
+          </div>
+          <CustomSelect 
             placeholder="Category" 
-            data={['All', 'Browser', 'Security', 'Productivity', 'Development']}
-            defaultValue="All"
+            options={[
+              { value: 'All', label: 'All' },
+              { value: 'Browser', label: 'Browser' },
+              { value: 'Security', label: 'Security' },
+              { value: 'Productivity', label: 'Productivity' },
+              { value: 'Development', label: 'Development' }
+            ]}
+            value="All"
+            onValueChange={() => {}}
             className="w-48"
           />
-        </Group>
+        </div>
 
         <div className="overflow-x-auto">
           <Table>
@@ -68,17 +88,17 @@ export const SoftwareInventoryTab: React.FC<SoftwareInventoryTabProps> = ({ asse
               {filteredSoftware.length > 0 ? (
                 filteredSoftware.map((sw) => (
                   <TableRow key={sw.id}>
-                    <TableCell className="font-medium">{sw.name}</TableCell>
-                    <TableCell className="text-muted-foreground">{sw.version}</TableCell>
-                    <TableCell className="text-muted-foreground">{sw.publisher}</TableCell>
-                    <TableCell className="text-muted-foreground">
+                    <TableCell className="font-medium text-gray-900">{sw.name}</TableCell>
+                    <TableCell className="text-gray-500">{sw.version}</TableCell>
+                    <TableCell className="text-gray-500">{sw.publisher}</TableCell>
+                    <TableCell className="text-gray-500">
                       {sw.installDate ? new Date(sw.installDate).toLocaleDateString() : '-'}
                     </TableCell>
                   </TableRow>
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={4} className="h-24 text-center">
+                  <TableCell colSpan={4} className="h-24 text-center text-gray-400">
                     No software found matching your search.
                   </TableCell>
                 </TableRow>

@@ -12,6 +12,7 @@ import { createTag } from 'server/src/lib/actions/tagActions';
 import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
 import { hasPermission } from 'server/src/lib/auth/rbac';
 import { ContactModel, CreateContactInput } from '@alga-psa/shared/models/contactModel';
+import { deleteEntityTags } from '../../utils/tagCleanup';
 
 // Shared column mapping for contact sorting
 const CONTACT_SORT_COLUMNS = {
@@ -87,7 +88,14 @@ export async function getContactByContactNameId(contactNameId: string): Promise<
   // Remove closing bracket for runWithTenant
 }
 
-export async function deleteContact(contactId: string) {
+export async function deleteContact(contactId: string): Promise<{
+  success: boolean;
+  code?: string;
+  message?: string;
+  dependencies?: string[];
+  counts?: Record<string, number>;
+  dependencyText?: string;
+}> {
   console.log('🔍 Starting deleteContact function with contactId:', contactId);
 
   const { knex: db, tenant } = await createTenantKnex();
@@ -121,8 +129,20 @@ export async function deleteContact(contactId: string) {
     const dependencies: string[] = [];
     const counts: Record<string, number> = {};
 
-    // Check for dependencies
+    // Check dependencies within transaction
     await withTransaction(db, async (trx: Knex.Transaction) => {
+      // Check if this is the billing contact for their client
+      if (contact.client_id) {
+        const clientInfo = await trx('clients')
+          .where({ client_id: contact.client_id, tenant })
+          .first();
+
+        if (clientInfo && clientInfo.billing_contact_id === contactId) {
+          dependencies.push('billing_contact');
+          counts['billing_contact'] = 1;
+        }
+      }
+
       // Check for tickets
       const ticketCount = await trx('tickets')
         .where({
@@ -181,21 +201,59 @@ export async function deleteContact(contactId: string) {
 
       // Note: Comments are not directly associated with contacts, so we skip this check
       // The comments table doesn't have a contact_name_id column (removed by migration 20250217202553_drop_contact_columns.cjs)
+
+      // Check for client portal user - a contact with an associated user account should not be deleted
+      const portalUserCount = await trx('users')
+        .where({
+          contact_id: contactId,
+          tenant,
+          user_type: 'client'
+        })
+        .count('* as count')
+        .first();
+      if (portalUserCount && Number(portalUserCount.count) > 0) {
+        dependencies.push('portal_user');
+        counts['portal_user'] = Number(portalUserCount.count);
+      }
     });
 
-    // If there are dependencies, throw a detailed error
+    // If there are dependencies, return error with details (similar to client deletion)
     if (dependencies.length > 0) {
-      const dependencyList = dependencies.map(dep => `${counts[dep]} ${dep}${counts[dep] > 1 ? 's' : ''}`).join(', ');
-      throw new Error(`VALIDATION_ERROR: Cannot delete contact because it has associated records: ${dependencyList}. Please remove or reassign these records first.`);
+      const readableTypes: Record<string, string> = {
+        'billing_contact': 'billing contact assignment',
+        'ticket': 'tickets',
+        'interaction': 'interactions',
+        'document': 'documents',
+        'project': 'projects',
+        'portal_user': 'client portal user account'
+      };
+
+      const dependencyText = dependencies.map(dep => {
+        const readableName = readableTypes[dep] || dep;
+        const count = counts[dep];
+        return count === 1 ? readableName : `${count} ${readableName}`;
+      }).join(', ');
+
+      return {
+        success: false,
+        code: 'CONTACT_HAS_DEPENDENCIES',
+        message: 'Cannot delete contact with active business records. Consider marking as inactive instead to preserve data integrity.',
+        dependencies: dependencies.map((dep: string): string => readableTypes[dep] || dep),
+        counts,
+        dependencyText
+      };
     }
 
-    // If no dependencies, proceed with simple deletion (only the contact record)
+    // If no dependencies, proceed with contact deletion
     console.log('🔍 Proceeding with contact deletion...');
     const result = await withTransaction(db, async (trx: Knex.Transaction) => {
       try {
         console.log('🔍 Inside transaction, attempting deletion with params:', { contact_name_id: contactId, tenant });
 
-        // Only delete the contact record itself - no associated data
+        // Clean up any tags associated with this contact
+        await deleteEntityTags(trx, contactId, 'contact');
+
+        // Delete the contact record itself
         const deleted = await trx('contacts')
           .where({ contact_name_id: contactId, tenant })
           .delete();
@@ -259,34 +317,39 @@ export async function deleteContact(contactId: string) {
     if (err instanceof Error) {
       const message = err.message;
 
-      // If it's already one of our formatted errors, rethrow it
-      if (message.includes('VALIDATION_ERROR:') ||
-        message.includes('SYSTEM_ERROR:')) {
-        console.error('Rethrowing formatted error:', message);
-        throw err;
-      }
-
       // Handle database-specific errors
       if (message.includes('violates foreign key constraint')) {
         console.error('Foreign key constraint violation detected');
-        throw new Error('VALIDATION_ERROR: Cannot delete contact because it has associated records');
+        return {
+          success: false,
+          message: 'Cannot delete contact because it has associated records'
+        };
       }
 
       // Handle connection/timeout issues
       if (message.includes('connection') || message.includes('timeout')) {
         console.error('Database connection issue detected:', message);
-        throw new Error(`SYSTEM_ERROR: Database connection issue - ${message}`);
+        return {
+          success: false,
+          message: `Database connection issue - ${message}`
+        };
       }
 
-      // Log and preserve the actual error for better debugging
-      console.error('Unhandled error type:', message);
+      // Log and return error info for better debugging
+      console.error('Contact deletion failed:', message);
       console.error('Error stack:', err.stack);
-      throw new Error(`SYSTEM_ERROR: Contact deletion failed - ${message}`);
+      return {
+        success: false,
+        message: `Contact deletion failed - ${message}`
+      };
     }
 
     // For non-Error objects, provide more debugging info
     console.error('Non-Error object thrown:', typeof err, err);
-    throw new Error('SYSTEM_ERROR: An unexpected error occurred while deleting the contact');
+    return {
+      success: false,
+      message: 'An unexpected error occurred while deleting the contact'
+    };
   }
 }
 

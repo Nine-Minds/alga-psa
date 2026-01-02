@@ -102,6 +102,7 @@ const _middleware = auth((request) => {
       '/api/webhooks/ninjaone',
       '/api/ext/',  // Extension API routes handle their own auth
       '/api/ext-proxy/',
+      '/api/ext-debug/',  // Extension debug stream uses session auth
       '/api/internal/ext-storage/',  // Runner storage API uses x-runner-auth token
     ];
 
@@ -117,6 +118,11 @@ const _middleware = auth((request) => {
     }
 
     if (skipPaths.some((path) => pathname.startsWith(path))) {
+      return applyCorsHeaders(response, origin);
+    }
+
+    // Document thumbnail/preview routes use session auth (path: /api/documents/[id]/thumbnail or /preview)
+    if (pathname.startsWith('/api/documents/') && (pathname.endsWith('/thumbnail') || pathname.endsWith('/preview'))) {
       return applyCorsHeaders(response, origin);
     }
 
