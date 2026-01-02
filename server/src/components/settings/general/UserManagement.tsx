@@ -25,7 +25,7 @@ import { validateContactName, validateEmailAddress, validatePassword, getPasswor
 import LoadingIndicator from 'server/src/components/ui/LoadingIndicator';
 import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 
-const UserManagement = (): JSX.Element => {
+const UserManagement = (): React.JSX.Element => {
   const [users, setUsers] = useState<IUser[]>([]);
   const [roles, setRoles] = useState<IRole[]>([]);
   const [clients, setClients] = useState<IClient[]>([]);

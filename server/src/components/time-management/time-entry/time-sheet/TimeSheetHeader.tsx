@@ -3,11 +3,13 @@
 import React from 'react';
 import { TimeSheetStatus } from 'server/src/interfaces/timeEntry.interfaces';
 import { Button } from 'server/src/components/ui/Button';
-import { ArrowLeftIcon } from '@radix-ui/react-icons';
 import { Switch } from 'server/src/components/ui/Switch';
 import { Label } from 'server/src/components/ui/Label';
-import { Calendar, ChevronLeft, ChevronRight, Clock } from 'lucide-react';
+import { ArrowLeft, Calendar, ChevronLeft, ChevronRight, Clock, LayoutGrid, List } from 'lucide-react';
 import { TimeSheetDateNavigatorState } from './types';
+import ViewSwitcher, { ViewSwitcherOption } from 'server/src/components/ui/ViewSwitcher';
+
+export type TimeSheetViewMode = 'grid' | 'list';
 
 interface TimeSheetHeaderProps {
     status: TimeSheetStatus;
@@ -17,7 +19,14 @@ interface TimeSheetHeaderProps {
     showIntervals?: boolean;
     onToggleIntervals?: () => void;
     dateNavigator?: TimeSheetDateNavigatorState | null;
+    viewMode?: TimeSheetViewMode;
+    onViewModeChange?: (mode: TimeSheetViewMode) => void;
 }
+
+const viewOptions: ViewSwitcherOption<TimeSheetViewMode>[] = [
+    { value: 'grid', label: 'Grid', icon: LayoutGrid },
+    { value: 'list', label: 'List', icon: List },
+];
 
 export function TimeSheetHeader({
     status,
@@ -26,8 +35,10 @@ export function TimeSheetHeader({
     onBack,
     showIntervals = false,
     onToggleIntervals,
-    dateNavigator
-}: TimeSheetHeaderProps): JSX.Element {
+    dateNavigator,
+    viewMode = 'grid',
+    onViewModeChange
+}: TimeSheetHeaderProps): React.JSX.Element {
     const getStatusDisplay = (status: TimeSheetStatus): { text: string; className: string } => {
         switch (status) {
             case 'DRAFT':
@@ -55,7 +66,7 @@ export function TimeSheetHeader({
                         variant="soft"
                         className="shrink-0"
                     >
-                        <ArrowLeftIcon className="mr-1" /> Back
+                        <ArrowLeft className="h-4 w-4 mr-1" /> Back
                     </Button>
                     <h2 className="text-2xl font-bold truncate">Time Sheet</h2>
                 </div>
@@ -64,18 +75,21 @@ export function TimeSheetHeader({
                     <div className="flex items-center justify-center flex-1 min-w-[280px]">
                         <div className="flex items-center">
                             <div className="inline-flex items-center bg-white border border-gray-200 rounded-lg px-2 py-1.5 shadow-sm">
-                                <button
-                                    onClick={dateNavigator.goToPreviousPage}
-                                    disabled={!dateNavigator.canGoBack || dateNavigator.isAnimating}
-                                    className={`p-1.5 rounded-md transition-colors ${
-                                        dateNavigator.canGoBack && !dateNavigator.isAnimating
-                                            ? 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
-                                            : 'text-gray-300 cursor-not-allowed'
-                                    }`}
-                                    aria-label="Previous week"
-                                >
-                                    <ChevronLeft className="w-5 h-5" />
-                                </button>
+                                {/* Only show pagination controls in grid view */}
+                                {viewMode === 'grid' && (
+                                    <button
+                                        onClick={dateNavigator.goToPreviousPage}
+                                        disabled={!dateNavigator.canGoBack || dateNavigator.isAnimating}
+                                        className={`p-1.5 rounded-md transition-colors ${
+                                            dateNavigator.canGoBack && !dateNavigator.isAnimating
+                                                ? 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+                                                : 'text-gray-300 cursor-not-allowed'
+                                        }`}
+                                        aria-label="Previous week"
+                                    >
+                                        <ChevronLeft className="w-5 h-5" />
+                                    </button>
+                                )}
 
                                 <div className="flex items-center px-3 min-w-[200px] justify-center">
                                     <Calendar className="w-4 h-4 text-gray-400 mr-2" />
@@ -84,21 +98,25 @@ export function TimeSheetHeader({
                                     </span>
                                 </div>
 
-                                <button
-                                    onClick={dateNavigator.goToNextPage}
-                                    disabled={!dateNavigator.canGoForward || dateNavigator.isAnimating}
-                                    className={`p-1.5 rounded-md transition-colors ${
-                                        dateNavigator.canGoForward && !dateNavigator.isAnimating
-                                            ? 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
-                                            : 'text-gray-300 cursor-not-allowed'
-                                    }`}
-                                    aria-label="Next week"
-                                >
-                                    <ChevronRight className="w-5 h-5" />
-                                </button>
+                                {/* Only show pagination controls in grid view */}
+                                {viewMode === 'grid' && (
+                                    <button
+                                        onClick={dateNavigator.goToNextPage}
+                                        disabled={!dateNavigator.canGoForward || dateNavigator.isAnimating}
+                                        className={`p-1.5 rounded-md transition-colors ${
+                                            dateNavigator.canGoForward && !dateNavigator.isAnimating
+                                                ? 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+                                                : 'text-gray-300 cursor-not-allowed'
+                                        }`}
+                                        aria-label="Next week"
+                                    >
+                                        <ChevronRight className="w-5 h-5" />
+                                    </button>
+                                )}
                             </div>
 
-                            {dateNavigator.hasMultiplePages && (
+                            {/* Only show page indicator in grid view */}
+                            {viewMode === 'grid' && dateNavigator.hasMultiplePages && (
                                 <div className="ml-3 text-xs text-gray-500 whitespace-nowrap">
                                     Page {dateNavigator.currentPage + 1} of {dateNavigator.totalPages}
                                 </div>
@@ -127,6 +145,14 @@ export function TimeSheetHeader({
                                 Show intervals
                             </Label>
                         </div>
+                    )}
+
+                    {onViewModeChange && (
+                        <ViewSwitcher
+                            currentView={viewMode}
+                            onChange={onViewModeChange}
+                            options={viewOptions}
+                        />
                     )}
 
                     {isEditable && (

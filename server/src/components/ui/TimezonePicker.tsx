@@ -122,10 +122,10 @@ export default function TimezonePicker({ value, onValueChange, className }: Time
           />
         </div>
         <Command.List className="max-h-[300px] overflow-y-auto p-2">
-          {groupedOptions.map(([region, options]): JSX.Element => (
+          {groupedOptions.map(([region, options]): React.JSX.Element => (
             <React.Fragment key={region}>
               <Command.Group heading={region} className="text-sm text-gray-500 px-2 py-1">
-                {options.map((option): JSX.Element => (
+                {options.map((option): React.JSX.Element => (
                   <Command.Item
                     key={option.value}
                     value={option.value}

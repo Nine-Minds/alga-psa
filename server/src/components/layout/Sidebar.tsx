@@ -42,7 +42,7 @@ const Sidebar: React.FC<SidebarProps> = ({
   disableTransition = false,
   mode = 'main',
   onBackToMain
-}): JSX.Element => {
+}): React.JSX.Element => {
   const appVersion = getAppVersion();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -142,7 +142,7 @@ const Sidebar: React.FC<SidebarProps> = ({
           />
           {item.subItems && openSubmenu === item.name && (
             <ul className="ml-4 mt-2 space-y-1">
-              {item.subItems.map((subItem: MenuItem):JSX.Element => (
+              {item.subItems.map((subItem: MenuItem): React.JSX.Element => (
                 <li key={subItem.name}>
                   <SidebarSubMenuItem
                     item={subItem}
@@ -172,7 +172,7 @@ const Sidebar: React.FC<SidebarProps> = ({
               />
               {item.subItems && openSubmenu === item.name && (
                 <ul className="ml-4 mt-2 space-y-1">
-                  {item.subItems.map((subItem: MenuItem):JSX.Element => (
+                  {item.subItems.map((subItem: MenuItem): React.JSX.Element => (
                     <li key={subItem.name}>
                       <SidebarSubMenuItem
                         item={subItem}
@@ -357,7 +357,7 @@ const Sidebar: React.FC<SidebarProps> = ({
           }`}
         >
           <ul className="space-y-1">
-            {bottomMenuItems.map((item):JSX.Element => (
+            {bottomMenuItems.map((item): React.JSX.Element => (
               <li key={item.name}>
                 <SidebarMenuItem
                   id={`bottom-menu-${item.name.toLowerCase().replace(/\s+/g, '-')}`}
@@ -369,7 +369,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                 />
                 {item.subItems && openSubmenu === item.name && (
                   <ul className="ml-4 mt-2 space-y-1">
-                    {item.subItems.map((subItem: MenuItem):JSX.Element => (
+                    {item.subItems.map((subItem: MenuItem): React.JSX.Element => (
                       <li key={subItem.name}>
                         <SidebarSubMenuItem
                           item={subItem}

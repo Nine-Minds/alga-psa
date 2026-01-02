@@ -8,7 +8,7 @@ const DnDFlow: React.FC = () => {
           Enterprise Feature
         </h2>
         <p className="text-gray-600">
-          The workflow system is only available in the Enterprise Edition. 
+          The workflow system is only available in the Enterprise Edition.
           Please upgrade your installation to access this feature.
         </p>
       </div>
@@ -16,4 +16,6 @@ const DnDFlow: React.FC = () => {
   );
 };
 
+// Named export for @product/workflows/entry compatibility
+export { DnDFlow };
 export default DnDFlow;

@@ -231,7 +231,7 @@ export const TagInput: React.FC<TagInputProps> = ({
               e.stopPropagation();
             }}
           >
-            {suggestions.map((suggestion, index): JSX.Element => {
+            {suggestions.map((suggestion, index): React.JSX.Element => {
               const colors = generateEntityColor(suggestion.tag_text);
               return (
                 <button

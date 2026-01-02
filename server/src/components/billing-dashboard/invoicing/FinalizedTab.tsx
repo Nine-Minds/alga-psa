@@ -57,8 +57,8 @@ const FinalizedTab: React.FC<FinalizedTabProps> = ({
   const [emailDialogOpen, setEmailDialogOpen] = useState(false);
   const [emailDialogInvoiceIds, setEmailDialogInvoiceIds] = useState<string[]>([]);
 
-  const selectedInvoiceId = searchParams?.get('invoiceId');
-  const selectedTemplateId = searchParams?.get('templateId');
+  const selectedInvoiceId = searchParams?.get('invoiceId') ?? null;
+  const selectedTemplateId = searchParams?.get('templateId') ?? null;
 
   // Handle page size change - reset to page 1
   const handlePageSizeChange = (newPageSize: number) => {

@@ -20,7 +20,7 @@ const FILTERS_PANE_COLLAPSED_SETTING = 'documents_filters_pane_collapsed';
 export default function DocumentsPage() {
   const searchParams = useSearchParams();
   const router = useRouter();
-  const currentFolder = searchParams.get('folder');
+  const currentFolder = searchParams?.get('folder') ?? null;
 
   // Use user preference for filters pane collapsed state
   const {
@@ -85,7 +85,7 @@ export default function DocumentsPage() {
   // Documents.tsx handles refresh internally via its own refreshDocuments callback
 
   const handleFolderNavigate = (folderPath: string | null, clearShowAll: boolean = true) => {
-    const params = new URLSearchParams(searchParams.toString());
+    const params = new URLSearchParams(searchParams?.toString() ?? '');
     if (folderPath) {
       params.set('folder', folderPath);
     } else {
@@ -106,7 +106,7 @@ export default function DocumentsPage() {
 
   const handleShowAllDocuments = () => {
     // Navigate to root folder (no folder parameter)
-    const params = new URLSearchParams(searchParams.toString());
+    const params = new URLSearchParams(searchParams?.toString() ?? '');
     params.delete('folder');
     const newUrl = window.location.pathname;
     router.replace(newUrl);

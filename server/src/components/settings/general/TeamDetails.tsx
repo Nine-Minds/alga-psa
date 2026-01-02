@@ -13,7 +13,7 @@ interface TeamDetailsProps {
   onUpdate: (updatedTeam: ITeam | null) => void;
 }
 
-const TeamDetails: React.FC<TeamDetailsProps> = ({ teamId, onUpdate }): JSX.Element => {
+const TeamDetails: React.FC<TeamDetailsProps> = ({ teamId, onUpdate }): React.JSX.Element => {
   const [team, setTeam] = useState<ITeam | null>(null);
   const [teamName, setTeamName] = useState('');
   const [allUsers, setAllUsers] = useState<IUserWithRoles[]>([]);
@@ -287,7 +287,7 @@ const TeamDetails: React.FC<TeamDetailsProps> = ({ teamId, onUpdate }): JSX.Elem
       <div>
         <label className="block text-sm font-medium text-text-700 mb-2">Team Members</label>
         <ul className="space-y-2">
-          {team.members.map((member): JSX.Element => (
+          {team.members.map((member): React.JSX.Element => (
             <li key={member.user_id} className="flex items-center justify-between p-3 rounded border border-border-200 hover:border-primary-200 transition-colors">
               <div className="flex items-center space-x-3">
                 <UserAvatar

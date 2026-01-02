@@ -63,7 +63,7 @@ export function SearchableSelect({
   autoFocusSearch = true,
   maxListHeight = '15rem',
   portalContainer,
-}: SearchableSelectProps & AutomationProps): JSX.Element {
+}: SearchableSelectProps & AutomationProps): React.JSX.Element {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
   const triggerRef = useRef<HTMLButtonElement>(null);

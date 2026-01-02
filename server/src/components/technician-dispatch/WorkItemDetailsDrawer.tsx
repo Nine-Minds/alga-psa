@@ -29,13 +29,13 @@ export function WorkItemDetailsDrawer({
     onClose,
     onTaskUpdate,
     onScheduleUpdate
-}: WorkItemDetailsDrawerProps): JSX.Element {
+}: WorkItemDetailsDrawerProps): React.JSX.Element {
     const tenant = useTenant();
     if (!tenant) {
         throw new Error('tenant is not defined');
     }
 
-    const [content, setContent] = React.useState<JSX.Element | null>(null);
+    const [content, setContent] = React.useState<React.JSX.Element | null>(null);
     const [isLoading, setIsLoading] = React.useState(true);
     const [users, setUsers] = React.useState<any[]>([]);
     const [isUsersLoading, setIsUsersLoading] = React.useState(true);

@@ -7,7 +7,7 @@ import { useAutomationIdAndRegister } from 'server/src/types/ui-reflection/useAu
 
 export interface SelectOption {
   value: string;
-  label: string | JSX.Element;
+  label: string | React.JSX.Element;
   className?: string;
   is_inactive?: boolean;
 }
@@ -60,7 +60,7 @@ const CustomSelect: React.FC<CustomSelectProps & AutomationProps> = ({
   modal,
   showPlaceholderInDropdown = true,
   ...props
-}): JSX.Element => {
+}): React.JSX.Element => {
   const { modal: parentModal } = useModality();
   
   // Generate a stable ID for this select instance
@@ -259,7 +259,7 @@ const CustomSelect: React.FC<CustomSelectProps & AutomationProps> = ({
                   <RadixSelect.ItemText>Clear Selection</RadixSelect.ItemText>
                 </RadixSelect.Item>
               )}
-              {normalizedOptions.map((option): JSX.Element => (
+              {normalizedOptions.map((option): React.JSX.Element => (
                 <RadixSelect.Item
                   key={option.radixValue}
                   value={option.radixValue}

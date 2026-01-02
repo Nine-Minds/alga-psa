@@ -89,7 +89,7 @@ const TimeEntryDetailPanel: React.FC<TimeEntryDetailPanelProps> = ({ entry, onUp
       <div className="mt-4">
         <strong className="text-[rgb(var(--color-text-700))]">Update Status:</strong>
         <div className="flex space-x-2 mt-2">
-          {statusButtons.map(({ status, icon: Icon, label, variant }):JSX.Element => (
+          {statusButtons.map(({ status, icon: Icon, label, variant }): React.JSX.Element => (
             <Button
               id={`update-status-${status}-btn`}
               key={status}
@@ -276,7 +276,7 @@ export function TimeSheetApproval({
           <CardTitle>Breakdown by Work Item Type</CardTitle>
         </CardHeader>
         <CardContent>
-          {Object.entries(entriesByType).map(([type, hours]):JSX.Element => (
+          {Object.entries(entriesByType).map(([type, hours]): React.JSX.Element => (
             <p key={type}>{type}: {hours.toFixed(2)} hours</p>
           ))}
         </CardContent>
@@ -287,7 +287,7 @@ export function TimeSheetApproval({
           <CardTitle>Daily Breakdown</CardTitle>
         </CardHeader>
         <CardContent>
-          {Object.entries(entriesByDate).map(([date, hours]):JSX.Element => (
+          {Object.entries(entriesByDate).map(([date, hours]): React.JSX.Element => (
             <p key={date}>{date}: {hours.toFixed(2)} hours</p>
           ))}
         </CardContent>
@@ -312,7 +312,7 @@ export function TimeSheetApproval({
               </tr>
             </thead>
             <tbody>
-              {entriesWithWorkItems.map((entry):JSX.Element => (
+              {entriesWithWorkItems.map((entry): React.JSX.Element => (
                 <React.Fragment key={entry.entry_id}>
                   <tr
                     className="cursor-pointer hover:bg-gray-50"
@@ -376,7 +376,7 @@ export function TimeSheetApproval({
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {timeSheet.comments?.map((comment):JSX.Element => (
+            {timeSheet.comments?.map((comment): React.JSX.Element => (
               <div 
                 key={comment.comment_id} 
                 className={`${comment.is_approver ? 'p-3 rounded shadow bg-orange-50 border border-orange-200' : 'p-3 rounded shadow bg-white'} mb-4`}

@@ -381,7 +381,7 @@ export default function AssociatedAssets({ id, entityId, entityType, clientId, d
                     <div className="text-gray-500">No assets associated</div>
                 ) : (
                     <div className="space-y-2">
-                        {visibleAssets.map((association): JSX.Element => (
+                        {visibleAssets.map((association): React.JSX.Element => (
                             <div
                                 key={`${association.asset_id}-${association.entity_id}`}
                                 className="p-3 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"

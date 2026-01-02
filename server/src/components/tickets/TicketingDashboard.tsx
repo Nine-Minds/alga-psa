@@ -155,6 +155,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   const [allUniqueTags, setAllUniqueTags] = useState<ITag[]>(
     initialTags.map(tagText => ({ tag_text: tagText } as ITag))
   );
+  const [tagsVersion, setTagsVersion] = useState(0); // Used to force re-render when tags are fetched
 
   const handleTableSortChange = useCallback((columnId: string, direction: 'asc' | 'desc') => {
     if (columnId === sortBy && direction === sortDirection) {
@@ -208,6 +209,8 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
         });
 
         ticketTagsRef.current = newTicketTags;
+        // Force re-render to show fetched tags
+        setTagsVersion(v => v + 1);
       } catch (error) {
         console.error('Error fetching tags:', error);
       }
@@ -680,12 +683,27 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
 
 
   const handleTicketAdded = useCallback((newTicket: ITicket) => {
+    // Store tags for the new ticket if provided
+    if (newTicket.ticket_id && newTicket.tags && newTicket.tags.length > 0) {
+      ticketTagsRef.current[newTicket.ticket_id] = newTicket.tags;
+
+      // Update unique tags list with any new tags
+      setAllUniqueTags(prevTags => {
+        const currentTagTexts = new Set(prevTags.map(t => t.tag_text));
+        const newUniqueTags = newTicket.tags!.filter(tag => !currentTagTexts.has(tag.tag_text));
+        if (newUniqueTags.length > 0) {
+          return [...prevTags, ...newUniqueTags];
+        }
+        return prevTags;
+      });
+    }
+
     // Add the new ticket to the local state
     setTickets(prevTickets => {
       const status = statusOptions.find(s => s.value === newTicket.status_id);
       const priority = priorityOptions.find(p => p.value === newTicket.priority_id);
       const board = boards.find(c => c.board_id === newTicket.board_id);
-      
+
       let categoryName = '';
       if (newTicket.category_id) {
         const category = categories.find(c => c.category_id === newTicket.category_id);
@@ -693,11 +711,11 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
           categoryName = category.category_name;
         }
       }
-      
+
       // Find the client name
       const client = initialClients.find(c => c.client_id === newTicket.client_id);
       const clientName = client ? client.client_name : 'Unknown';
-      
+
       // Convert the new ticket to match the ITicketListItem format
       const newTicketListItem: ITicketListItem = {
         ticket_id: newTicket.ticket_id,
@@ -726,12 +744,13 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
         updated_at: newTicket.updated_at,
         closed_at: newTicket.closed_at,
         attributes: newTicket.attributes,
-        tenant: newTicket.tenant
+        tenant: newTicket.tenant,
+        tags: newTicket.tags
       };
-      
+
       return [newTicketListItem, ...prevTickets];
     });
-    
+
     // Close the quick add dialog
     setIsQuickAddOpen(false);
   }, [statusOptions, priorityOptions, boards, categories, currentUser]);

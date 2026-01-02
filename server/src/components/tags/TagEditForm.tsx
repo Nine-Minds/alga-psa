@@ -166,7 +166,7 @@ export const TagEditForm: React.FC<TagEditFormProps> = ({
 
   return (
     <>
-      {React.cloneElement(trigger as React.ReactElement, {
+      {React.cloneElement(trigger as React.ReactElement<{ onClick?: (e: React.MouseEvent) => void }>, {
         onClick: (e: React.MouseEvent) => {
           e.stopPropagation();
           setIsOpen(true);
@@ -226,7 +226,7 @@ export const TagEditForm: React.FC<TagEditFormProps> = ({
               <div>
                 <Label className="text-xs text-gray-700 mb-2 block">Quick Select Colors</Label>
                 <div className="grid grid-cols-6 gap-2">
-                  {PRESET_COLORS.map((preset, index): JSX.Element => {
+                  {PRESET_COLORS.map((preset, index): React.JSX.Element => {
                     const isSelected = backgroundColor === preset.background && textColor === preset.text;
                     return (
                       <button

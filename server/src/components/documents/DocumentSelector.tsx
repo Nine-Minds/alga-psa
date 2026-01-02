@@ -42,7 +42,7 @@ export default function DocumentSelector({
     typeFilter,
     title,
     description
-}: DocumentSelectorProps): JSX.Element {
+}: DocumentSelectorProps): React.JSX.Element {
     const [documents, setDocuments] = useState<IDocument[]>([]);
     const [selectedDocuments, setSelectedDocuments] = useState<Set<string>>(new Set());
     const [searchTerm, setSearchTerm] = useState('');
@@ -281,7 +281,7 @@ export default function DocumentSelector({
                                     <>
                                         {/* Unified Compact Grid for all document types */}
                                         <div className="grid grid-cols-3 md:grid-cols-4 gap-3 max-h-[60vh] overflow-y-auto p-2">
-                                            {documents.map((document): JSX.Element => {
+                                            {documents.map((document): React.JSX.Element => {
                                                 const isImage = document.mime_type?.startsWith('image/');
                                                 const isVideo = document.mime_type?.startsWith('video/');
                                                 const isPdf = document.mime_type === 'application/pdf';

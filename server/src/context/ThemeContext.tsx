@@ -27,9 +27,9 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <ThemeContext.Provider value={{ themeStatus, setThemeStatus: handleThemeChange }}>
+    <ThemeContext value={{ themeStatus, setThemeStatus: handleThemeChange }}>
       {children}
-    </ThemeContext.Provider>
+    </ThemeContext>
   );
 }
 

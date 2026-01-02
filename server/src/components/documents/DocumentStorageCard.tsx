@@ -289,7 +289,7 @@ function DocumentStorageCardComponent({
     onClick,
     isContentDocument = false,
     forceRefresh
-}: DocumentStorageCardProps): JSX.Element {
+}: DocumentStorageCardProps): React.JSX.Element {
     const { t } = useTranslation('common');
     const [previewContent, setPreviewContent] = useState<{
         content?: string;

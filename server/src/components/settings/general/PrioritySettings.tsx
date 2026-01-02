@@ -28,7 +28,7 @@ interface PrioritySettingsProps {
   initialPriorityType?: string | null;
 }
 
-const PrioritySettings = ({ onShowConflictDialog, initialPriorityType }: PrioritySettingsProps): JSX.Element => {
+const PrioritySettings = ({ onShowConflictDialog, initialPriorityType }: PrioritySettingsProps): React.JSX.Element => {
   const [priorities, setPriorities] = useState<(IPriority | IStandardPriority)[]>([]);
   const [selectedPriorityType] = useState<'ticket' | 'project_task'>(() => {
     // Use initialPriorityType, default to 'ticket' if not provided

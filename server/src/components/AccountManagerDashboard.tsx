@@ -76,7 +76,7 @@ const AccountManagerDashboard: React.FC<AccountManagerDashboardProps> = ({ clien
               </TableRow>
             </TableHeader>
             <TableBody>
-              {clients.slice(0, 5).map((client):JSX.Element => (
+              {clients.slice(0, 5).map((client): React.JSX.Element => (
                 <TableRow key={client.client_id}>
                   <TableCell>{client.client_name}</TableCell>
                   <TableCell>{new Date(client.properties?.last_contact_date || '').toLocaleDateString()}</TableCell>

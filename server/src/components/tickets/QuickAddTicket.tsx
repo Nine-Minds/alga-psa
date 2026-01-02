@@ -28,6 +28,8 @@ import { DialogComponent, FormFieldComponent, ButtonComponent, ContainerComponen
 import { withDataAutomationId } from 'server/src/types/ui-reflection/withDataAutomationId';
 import { useRegisterUIComponent } from 'server/src/types/ui-reflection/useRegisterUIComponent';
 import { calculateItilPriority, ItilLabels } from '../../lib/utils/itilUtils';
+import { QuickAddTagPicker, PendingTag } from 'server/src/components/tags';
+import { createTagsForEntity } from 'server/src/lib/actions/tagActions';
 
 // Helper function to format location display
 const formatLocationDisplay = (location: IClientLocation): string => {
@@ -118,6 +120,7 @@ export function QuickAddTicket({
   const [locationId, setLocationId] = useState<string | null>(null);
   const [isPrefilledClient, setIsPrefilledClient] = useState(false);
   const [quickAddBoardFilterState, setQuickAddBoardFilterState] = useState<'active' | 'inactive' | 'all'>('active');
+  const [pendingTags, setPendingTags] = useState<PendingTag[]>([]);
 
   // ITIL-specific state
   const [itilImpact, setItilImpact] = useState<number | undefined>(undefined);
@@ -375,6 +378,7 @@ export function QuickAddTicket({
     setItilImpact(undefined);
     setItilUrgency(undefined);
     setShowPriorityMatrix(false);
+    setPendingTags([]);
     setError(null);
     setHasAttemptedSubmit(false);
   };
@@ -487,8 +491,21 @@ export function QuickAddTicket({
         throw new Error('Failed to create ticket');
       }
 
+      // Create tags for the new ticket
+      let createdTags: typeof newTicket.tags = [];
+      if (pendingTags.length > 0 && newTicket.ticket_id) {
+        try {
+          createdTags = await createTagsForEntity(newTicket.ticket_id, 'ticket', pendingTags);
+          if (createdTags.length < pendingTags.length) {
+            toast.error(`${pendingTags.length - createdTags.length} tag(s) could not be created`);
+          }
+        } catch (tagError) {
+          console.error("Error creating ticket tags:", tagError);
+        }
+      }
 
-      await onTicketAdded(newTicket);
+      // Pass ticket with tags to callback
+      await onTicketAdded({ ...newTicket, tags: createdTags });
       resetForm();
       onOpenChange(false);
     } catch (error) {
@@ -857,7 +874,13 @@ export function QuickAddTicket({
 
                   {/* ITIL Categories are now handled by the unified CategoryPicker above */}
 
-
+                  <QuickAddTagPicker
+                    id="quick-add-ticket-tags"
+                    entityType="ticket"
+                    pendingTags={pendingTags}
+                    onPendingTagsChange={setPendingTags}
+                    disabled={isSubmitting}
+                  />
 
                   <DialogFooter>
                     <Button

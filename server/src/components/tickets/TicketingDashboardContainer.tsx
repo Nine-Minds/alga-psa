@@ -73,6 +73,12 @@ export default function TicketingDashboardContainer({
     };
   });
 
+  // Sync state when consolidatedData changes (e.g., from router.refresh())
+  useEffect(() => {
+    setTickets(consolidatedData.tickets);
+    setTotalCount(consolidatedData.totalCount);
+  }, [consolidatedData.tickets, consolidatedData.totalCount]);
+
   const {
     value: storedPageSize,
     setValue: setStoredPageSize,
