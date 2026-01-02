@@ -11,10 +11,15 @@ import {
   ChevronRight,
   Ban,
   GitBranch,
+  CheckSquare,
+  Zap,
 } from 'lucide-react';
 import { Tooltip } from 'server/src/components/ui/Tooltip';
+import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 import TaskDocumentUpload from './TaskDocumentUpload';
 import Spinner from 'server/src/components/ui/Spinner';
+import UserAvatar from 'server/src/components/ui/UserAvatar';
+import { useResponsiveColumns, ColumnConfig } from 'server/src/hooks/useResponsiveColumns';
 
 interface Phase {
   phase_id: string;
@@ -33,12 +38,18 @@ interface Task {
   due_date?: Date | null;
   status_name?: string;
   status_color?: string | null;
+  assigned_to_id?: string;
   assigned_to_name?: string;
+  assigned_to_avatar?: string | null;
   estimated_hours?: number | null;
   actual_hours?: number | null;
-  additional_agents?: Array<{ user_id: string; user_name: string; role: string | null }>;
+  priority_id?: string | null;
+  priority_name?: string | null;
+  priority_color?: string | null;
+  additional_agents?: Array<{ user_id: string; user_name: string; role: string | null; avatar_url?: string | null }>;
   checklist_total?: number;
   checklist_completed?: number;
+  checklist_items?: Array<{ item_name: string; completed: boolean }>;
 }
 
 interface StatusGroup {
@@ -96,6 +107,85 @@ export default function ClientTaskListView({
   const visibleFields = config.visible_task_fields ?? ['task_name', 'due_date', 'status'];
   const allowUploads = visibleFields.includes('document_uploads');
   const showDependencies = visibleFields.includes('dependencies');
+
+  // Responsive column configuration - only name always shows in client portal
+  const responsiveColumnConfig: ColumnConfig[] = useMemo(() => [
+    { key: 'expand', minWidth: 40, priority: 0, alwaysShow: true },
+    { key: 'task_name', minWidth: 200, priority: 1, alwaysShow: true },
+    { key: 'assigned_to', minWidth: 220, priority: 2 },
+    { key: 'due_date', minWidth: 110, priority: 3 },
+    { key: 'checklist_progress', minWidth: 80, priority: 4 },
+    { key: 'dependencies', minWidth: 70, priority: 5 },
+    { key: 'estimated_hours', minWidth: 80, priority: 6 },
+    { key: 'actual_hours', minWidth: 80, priority: 7 },
+    { key: 'document_uploads', minWidth: 80, priority: 8 },
+  ], []);
+
+  const { containerRef, isColumnVisible: isResponsiveColumnVisible, hiddenColumnCount } = useResponsiveColumns({
+    columns: responsiveColumnConfig,
+    containerPadding: 80
+  });
+
+  // Check if column should be shown (both config-enabled AND fits in space)
+  const shouldShowColumn = (key: string) => {
+    // First check if it's enabled in config
+    const isEnabledInConfig = key === 'expand' || key === 'task_name' ||
+      (key === 'dependencies' && showDependencies) ||
+      (key === 'document_uploads' && allowUploads) ||
+      visibleFields.includes(key);
+
+    // Then check if there's space for it
+    return isEnabledInConfig && isResponsiveColumnVisible(key);
+  };
+
+  // Compute column configuration based on visible fields AND responsive visibility
+  const columnConfig = useMemo(() => {
+    const cols: Array<{ key: string; width: string }> = [
+      { key: 'expand', width: '40px' },
+    ];
+
+    // Base percentages that will be adjusted
+    const baseWidths: Record<string, number> = {
+      task_name: 28,
+      dependencies: 6,
+      checklist_progress: 7,
+      assigned_to: 18,
+      estimated_hours: 8,
+      actual_hours: 8,
+      due_date: 10,
+      document_uploads: 10,
+    };
+
+    // Calculate total percentage of visible columns (config + responsive)
+    let totalPercent = 0;
+    const visibleCols: string[] = [];
+
+    // Only include columns that pass both config AND responsive checks
+    const columnKeys = ['task_name', 'dependencies', 'checklist_progress', 'assigned_to', 'estimated_hours', 'actual_hours', 'due_date', 'document_uploads'];
+
+    columnKeys.forEach(key => {
+      // Check if enabled in config
+      const isEnabledInConfig = key === 'task_name' ||
+        (key === 'dependencies' && showDependencies) ||
+        (key === 'document_uploads' && allowUploads) ||
+        visibleFields.includes(key);
+
+      // Check responsive visibility
+      if (isEnabledInConfig && isResponsiveColumnVisible(key)) {
+        visibleCols.push(key);
+        totalPercent += baseWidths[key];
+      }
+    });
+
+    // Scale percentages to fill available space (accounting for 40px expand column)
+    const scale = totalPercent > 0 ? 94 / totalPercent : 1; // 94% available after 40px column
+
+    visibleCols.forEach(col => {
+      cols.push({ key: col, width: `${Math.round(baseWidths[col] * scale)}%` });
+    });
+
+    return cols;
+  }, [visibleFields, showDependencies, allowUploads, isResponsiveColumnVisible]);
 
   // Group tasks by phase and status
   const phaseGroups = useMemo(() => {
@@ -182,52 +272,68 @@ export default function ClientTaskListView({
     );
   }
 
+  // Helper to get column width from config
+  const getColWidth = (key: string) => columnConfig.find(c => c.key === key)?.width || 'auto';
+
   return (
-    <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+    <div ref={containerRef} className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+      {/* Hidden columns alert */}
+      {hiddenColumnCount > 0 && (
+        <Alert variant="info" className="rounded-none border-x-0 border-t-0">
+          <AlertDescription className="flex items-center text-sm">
+            <Zap className="h-4 w-4 mr-1" />
+            {hiddenColumnCount} {t('projects.columnsHidden', 'column(s) hidden due to limited space. Resize browser to see more.')}
+          </AlertDescription>
+        </Alert>
+      )}
       {/* Column headers */}
       {showTasks && (
-        <table className="min-w-full">
+        <table className="w-full table-fixed">
+          <colgroup>
+            {columnConfig.map(col => (
+              <col key={col.key} style={{ width: col.width }} />
+            ))}
+          </colgroup>
           <thead className="bg-white border-b border-gray-200">
             <tr>
-              {/* Expand icon space */}
-              <th className="w-10 px-3 py-3" />
-              {visibleFields.includes('task_name') && (
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500">
+              <th className="px-3 py-3" />
+              {shouldShowColumn('task_name') && (
+                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500">
                   {t('projects.tasks.taskName')}
                 </th>
               )}
-              {showDependencies && (
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 w-20">
+              {shouldShowColumn('dependencies') && (
+                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500">
                   {t('projects.tasks.dependencies')}
                 </th>
               )}
-              {visibleFields.includes('checklist_progress') && (
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 w-24">
+              {shouldShowColumn('checklist_progress') && (
+                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500">
                   {t('projects.tasks.checklist')}
                 </th>
               )}
-              {visibleFields.includes('assigned_to') && (
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 w-36">
+              {shouldShowColumn('assigned_to') && (
+                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500">
                   {t('projects.tasks.assignee')}
                 </th>
               )}
-              {visibleFields.includes('estimated_hours') && (
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 w-24">
+              {shouldShowColumn('estimated_hours') && (
+                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500">
                   {t('projects.tasks.estHours')}
                 </th>
               )}
-              {visibleFields.includes('actual_hours') && (
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 w-28">
+              {shouldShowColumn('actual_hours') && (
+                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500">
                   {t('projects.tasks.hoursLogged')}
                 </th>
               )}
-              {visibleFields.includes('due_date') && (
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 w-32">
+              {shouldShowColumn('due_date') && (
+                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500">
                   {t('projects.tasks.dueDate')}
                 </th>
               )}
-              {allowUploads && (
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 w-36">
+              {shouldShowColumn('document_uploads') && (
+                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500">
                   {t('projects.tasks.attachments')}
                 </th>
               )}
@@ -356,20 +462,35 @@ export default function ClientTaskListView({
 
                         {/* Task rows */}
                         {isStatusExpanded && (
-                          <table className="min-w-full">
+                          <table className="w-full table-fixed">
+                            <colgroup>
+                              {columnConfig.map(col => (
+                                <col key={col.key} style={{ width: col.width }} />
+                              ))}
+                            </colgroup>
                             <tbody className="divide-y divide-gray-100">
                               {statusGroup.tasks.map((task, index) => (
                                 <tr
                                   key={task.task_id}
                                   className={`${index % 2 === 0 ? 'bg-gray-50' : 'bg-white'} hover:bg-blue-50 transition-colors`}
                                 >
-                                  <td className="w-10 px-3 py-3" /> {/* Indent space */}
+                                  <td className="px-3 py-3" />
 
                                   {/* Task Name */}
-                                  {visibleFields.includes('task_name') && (
-                                    <td className="px-6 py-3 text-sm text-gray-700">
-                                      <div className="pl-6">
-                                        <span className="font-medium text-gray-900">{task.task_name}</span>
+                                  {shouldShowColumn('task_name') && (
+                                    <td className="px-3 py-3 text-sm text-gray-700">
+                                      <div className="pl-6 truncate">
+                                        <div className="flex items-center gap-2">
+                                          <span className="font-medium text-gray-900">{task.task_name}</span>
+                                          {visibleFields.includes('priority') && task.priority_name && (
+                                            <Tooltip content={`${t('projects.tasks.priorityLevel', 'Priority level')}: ${task.priority_name}`}>
+                                              <div
+                                                className="w-2.5 h-2.5 rounded-full shrink-0"
+                                                style={{ backgroundColor: task.priority_color || '#6B7280' }}
+                                              />
+                                            </Tooltip>
+                                          )}
+                                        </div>
                                         {visibleFields.includes('description') && task.description && (
                                           <p className="text-xs text-gray-500 mt-0.5 line-clamp-1">{task.description}</p>
                                         )}
@@ -378,8 +499,8 @@ export default function ClientTaskListView({
                                   )}
 
                                   {/* Dependencies */}
-                                  {showDependencies && (
-                                    <td className="px-6 py-3 text-sm text-gray-700 w-20">
+                                  {shouldShowColumn('dependencies') && (
+                                    <td className="px-3 py-3 text-sm text-gray-700">
                                       {(() => {
                                         const deps = taskDependencies?.[task.task_id];
                                         if (!deps || (deps.predecessors.length === 0 && deps.successors.length === 0)) {
@@ -438,54 +559,109 @@ export default function ClientTaskListView({
                                   )}
 
                                   {/* Checklist Progress */}
-                                  {visibleFields.includes('checklist_progress') && (
-                                    <td className="px-6 py-3 text-sm text-gray-700 w-24">
+                                  {shouldShowColumn('checklist_progress') && (
+                                    <td className="px-3 py-3 text-sm text-gray-700">
                                       {task.checklist_total != null && task.checklist_total > 0 && (
-                                        <span>{task.checklist_completed ?? 0}/{task.checklist_total}</span>
+                                        <Tooltip
+                                          content={
+                                            task.checklist_items && task.checklist_items.length > 0 ? (
+                                              <div className="text-xs space-y-1 max-w-xs">
+                                                <div className="font-medium text-gray-300 mb-1">{t('projects.tasks.checklistItems', 'Checklist Items')}:</div>
+                                                {task.checklist_items.map((item: { item_name: string; completed: boolean }, i: number) => (
+                                                  <div key={i} className="flex items-center gap-1.5">
+                                                    <CheckSquare className={`h-3 w-3 ${item.completed ? 'text-green-400' : 'text-gray-400'}`} />
+                                                    <span className={item.completed ? 'line-through text-gray-400' : ''}>{item.item_name}</span>
+                                                  </div>
+                                                ))}
+                                              </div>
+                                            ) : (
+                                              <span>{task.checklist_completed ?? 0} {t('projects.tasks.of', 'of')} {task.checklist_total} {t('projects.tasks.complete', 'complete')}</span>
+                                            )
+                                          }
+                                        >
+                                          <div className="flex items-center gap-1 cursor-help">
+                                            <CheckSquare className={`h-3.5 w-3.5 ${(task.checklist_completed ?? 0) === task.checklist_total ? 'text-green-500' : 'text-gray-400'}`} />
+                                            <span>{task.checklist_completed ?? 0}/{task.checklist_total}</span>
+                                          </div>
+                                        </Tooltip>
                                       )}
                                     </td>
                                   )}
 
                                   {/* Assignee */}
-                                  {visibleFields.includes('assigned_to') && (
-                                    <td className="px-6 py-3 text-sm text-gray-700 w-36">
-                                      {task.assigned_to_name && (
-                                        <span className="flex items-center gap-1">
-                                          {task.assigned_to_name}
-                                          {task.additional_agents && task.additional_agents.length > 0 && (
-                                            <span className="text-xs text-purple-600 font-medium">
-                                              +{task.additional_agents.length}
-                                            </span>
+                                  {shouldShowColumn('assigned_to') && (
+                                    <td className="px-3 py-3 text-sm text-gray-700">
+                                      <div className="flex items-center gap-2 min-w-0">
+                                        {task.assigned_to_name && task.assigned_to_id ? (
+                                          <UserAvatar
+                                            userId={task.assigned_to_id}
+                                            userName={task.assigned_to_name}
+                                            avatarUrl={task.assigned_to_avatar || null}
+                                            size="sm"
+                                          />
+                                        ) : (
+                                          <div className="h-8 w-8 shrink-0" />
+                                        )}
+                                        <span className="truncate">
+                                          {task.assigned_to_name || (
+                                            <span className="text-gray-400">{t('projects.tasks.unassigned', 'Unassigned')}</span>
                                           )}
                                         </span>
-                                      )}
+                                        {task.additional_agents && task.additional_agents.length > 0 && (
+                                          <Tooltip
+                                            content={
+                                              <div className="text-xs space-y-1.5">
+                                                <div className="font-medium text-gray-300 mb-1">{t('projects.tasks.additionalAgents', 'Additional Agents')}:</div>
+                                                {task.additional_agents.map((agent, i) => (
+                                                  <div key={i} className="flex items-center gap-2">
+                                                    <UserAvatar
+                                                      userId={agent.user_id}
+                                                      userName={agent.user_name}
+                                                      avatarUrl={agent.avatar_url || null}
+                                                      size="xs"
+                                                    />
+                                                    <span>
+                                                      {agent.user_name}
+                                                      {agent.role && <span className="text-gray-400"> ({agent.role})</span>}
+                                                    </span>
+                                                  </div>
+                                                ))}
+                                              </div>
+                                            }
+                                          >
+                                            <span className="text-xs text-purple-600 font-medium cursor-help bg-purple-50 px-1.5 py-0.5 rounded shrink-0">
+                                              +{task.additional_agents.length}
+                                            </span>
+                                          </Tooltip>
+                                        )}
+                                      </div>
                                     </td>
                                   )}
 
                                   {/* Estimated Hours */}
-                                  {visibleFields.includes('estimated_hours') && (
-                                    <td className="px-6 py-3 text-sm text-gray-700 w-24">
+                                  {shouldShowColumn('estimated_hours') && (
+                                    <td className="px-3 py-3 text-sm text-gray-700">
                                       {task.estimated_hours != null && (task.estimated_hours / 60).toFixed(1)}
                                     </td>
                                   )}
 
                                   {/* Actual Hours */}
-                                  {visibleFields.includes('actual_hours') && (
-                                    <td className="px-6 py-3 text-sm text-gray-700 w-28">
+                                  {shouldShowColumn('actual_hours') && (
+                                    <td className="px-3 py-3 text-sm text-gray-700">
                                       {task.actual_hours != null && (task.actual_hours / 60).toFixed(1)}
                                     </td>
                                   )}
 
                                   {/* Due Date */}
-                                  {visibleFields.includes('due_date') && (
-                                    <td className="px-6 py-3 text-sm text-gray-700 w-32">
+                                  {shouldShowColumn('due_date') && (
+                                    <td className="px-3 py-3 text-sm text-gray-700">
                                       {task.due_date && format(new Date(task.due_date), 'PP', { locale: dateLocale })}
                                     </td>
                                   )}
 
                                   {/* Document Upload */}
-                                  {allowUploads && (
-                                    <td className="px-6 py-3 text-sm text-gray-700 w-36">
+                                  {shouldShowColumn('document_uploads') && (
+                                    <td className="px-3 py-3 text-sm text-gray-700">
                                       <TaskDocumentUpload taskId={task.task_id} compact />
                                     </td>
                                   )}

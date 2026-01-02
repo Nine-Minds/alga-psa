@@ -7,6 +7,7 @@ import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions'
 import { DEFAULT_CLIENT_PORTAL_CONFIG, IClientPortalConfig } from 'server/src/interfaces/project.interfaces';
 import { StorageService } from 'server/src/lib/storage/StorageService';
 import { v4 as uuidv4 } from 'uuid';
+import { getEntityImageUrlsBatch } from 'server/src/lib/utils/avatarUtils';
 
 /**
  * Helper to verify client access and get config
@@ -111,7 +112,11 @@ export async function getClientProjectTasks(
   if (visibleFields.includes('due_date')) selectColumns.push('pt.due_date');
   if (visibleFields.includes('estimated_hours')) selectColumns.push('pt.estimated_hours');
   if (visibleFields.includes('actual_hours')) selectColumns.push('pt.actual_hours');
-  if (visibleFields.includes('priority')) selectColumns.push('pt.priority_id');
+  if (visibleFields.includes('priority')) {
+    selectColumns.push('pt.priority_id');
+    selectColumns.push('pri.priority_name');
+    selectColumns.push('pri.color as priority_color');
+  }
 
   let query = knex('project_tasks as pt')
     .join('project_phases as pp', function() {
@@ -124,6 +129,9 @@ export async function getClientProjectTasks(
     })
     .leftJoin('statuses as s', function() {
       this.on('psm.status_id', 's.status_id').andOn('psm.tenant', 's.tenant');
+    })
+    .leftJoin('priorities as pri', function() {
+      this.on('pt.priority_id', 'pri.priority_id').andOn('pt.tenant', 'pri.tenant');
     })
     .where({ 'pp.project_id': projectId, 'pt.tenant': tenant })
     // Only show tasks with visible status mappings
@@ -150,7 +158,10 @@ export async function getClientProjectTasks(
       .leftJoin('users as u', function() {
         this.on('pt.assigned_to', 'u.user_id').andOn('pt.tenant', 'u.tenant');
       })
-      .select(knex.raw("CONCAT(u.first_name, ' ', u.last_name) as assigned_to_name"));
+      .select(
+        'pt.assigned_to as assigned_to_id',
+        knex.raw("CONCAT(u.first_name, ' ', u.last_name) as assigned_to_name")
+      );
   }
 
   // Join service_catalog if services field is visible
@@ -185,9 +196,38 @@ export async function getClientProjectTasks(
     .orderByRaw('COALESCE(psm.display_order, 999)')
     .orderBy('pt.order_key');
 
+  // Fetch checklist items if checklist_progress is visible
+  let tasksWithChecklists = tasks;
+  if (visibleFields.includes('checklist_progress') && tasks.length > 0) {
+    const taskIds = tasks.map((t: { task_id: string }) => t.task_id);
+
+    // Get all checklist items for these tasks
+    const checklistItems = await knex('task_checklist_items')
+      .whereIn('task_id', taskIds)
+      .where('tenant', tenant)
+      .select('task_id', 'item_name', 'completed')
+      .orderBy('order_number');
+
+    // Group checklist items by task_id
+    const checklistsByTask = checklistItems.reduce((acc: Record<string, Array<{ item_name: string; completed: boolean }>>, item: { task_id: string; item_name: string; completed: boolean }) => {
+      if (!acc[item.task_id]) acc[item.task_id] = [];
+      acc[item.task_id].push({
+        item_name: item.item_name,
+        completed: item.completed
+      });
+      return acc;
+    }, {});
+
+    // Attach to tasks
+    tasksWithChecklists = tasks.map((task: { task_id: string }) => ({
+      ...task,
+      checklist_items: checklistsByTask[task.task_id] || []
+    }));
+  }
+
   // Fetch additional agents if assigned_to is visible
-  let tasksWithResources = tasks;
-  if (visibleFields.includes('assigned_to') && tasks.length > 0) {
+  let tasksWithResources = tasksWithChecklists;
+  if (visibleFields.includes('assigned_to') && tasksWithChecklists.length > 0) {
     const taskIds = tasks.map((t: { task_id: string }) => t.task_id);
 
     // Get all additional resources for these tasks
@@ -215,8 +255,8 @@ export async function getClientProjectTasks(
       return acc;
     }, {});
 
-    // Attach to tasks
-    tasksWithResources = tasks.map((task: { task_id: string }) => ({
+    // Attach to tasks (preserving checklist data from tasksWithChecklists)
+    tasksWithResources = tasksWithChecklists.map((task: { task_id: string }) => ({
       ...task,
       additional_agents: resourcesByTask[task.task_id] || []
     }));
@@ -295,7 +335,39 @@ export async function getClientProjectTasks(
     }
   }
 
-  return { tasks: tasksWithResources, phases, config: result.config, taskDependencies };
+  // Fetch avatar URLs for all users (assigned_to and additional agents)
+  let tasksWithAvatars = tasksWithResources;
+  if (visibleFields.includes('assigned_to') && tasksWithResources.length > 0) {
+    // Collect all user IDs that need avatars
+    const allUserIds = new Set<string>();
+    tasksWithResources.forEach((task: { assigned_to_id?: string; additional_agents?: Array<{ user_id: string }> }) => {
+      if (task.assigned_to_id) {
+        allUserIds.add(task.assigned_to_id);
+      }
+      task.additional_agents?.forEach(agent => {
+        if (agent.user_id) {
+          allUserIds.add(agent.user_id);
+        }
+      });
+    });
+
+    // Batch fetch all avatar URLs
+    const avatarUrls = allUserIds.size > 0 && tenant
+      ? await getEntityImageUrlsBatch('user', Array.from(allUserIds), tenant)
+      : new Map<string, string | null>();
+
+    // Attach avatar URLs to tasks
+    tasksWithAvatars = tasksWithResources.map((task: { assigned_to_id?: string; additional_agents?: Array<{ user_id: string; user_name: string; role: string | null }> }) => ({
+      ...task,
+      assigned_to_avatar: task.assigned_to_id ? avatarUrls.get(task.assigned_to_id) || null : null,
+      additional_agents: task.additional_agents?.map(agent => ({
+        ...agent,
+        avatar_url: avatarUrls.get(agent.user_id) || null
+      })) || []
+    }));
+  }
+
+  return { tasks: tasksWithAvatars, phases, config: result.config, taskDependencies };
 }
 
 /**

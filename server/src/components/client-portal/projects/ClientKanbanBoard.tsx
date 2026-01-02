@@ -2,13 +2,15 @@
 
 import React from 'react';
 import { useTranslation } from 'server/src/lib/i18n/client';
+import { useTruncationDetection } from 'server/src/hooks/useTruncationDetection';
 import { format, Locale } from 'date-fns';
 import { getDateFnsLocale } from 'server/src/lib/utils/dateFnsLocale';
 import { IClientPortalConfig } from 'server/src/interfaces/project.interfaces';
-import { Calendar, Clock, User, FolderOpen, CheckSquare, Ban, GitBranch } from 'lucide-react';
+import { Calendar, Clock, CheckSquare, Ban, GitBranch } from 'lucide-react';
 import { Tooltip } from 'server/src/components/ui/Tooltip';
 import TaskDocumentUpload from './TaskDocumentUpload';
 import Spinner from 'server/src/components/ui/Spinner';
+import UserAvatar from 'server/src/components/ui/UserAvatar';
 
 interface Phase {
   phase_id: string;
@@ -45,13 +47,19 @@ interface Task {
   due_date?: Date | null;
   status_name?: string;
   custom_name?: string;
+  assigned_to_id?: string;
   assigned_to_name?: string;
+  assigned_to_avatar?: string | null;
   estimated_hours?: number | null;
   actual_hours?: number | null;
   is_closed?: boolean;
-  additional_agents?: Array<{ user_id: string; user_name: string; role: string | null }>;
+  priority_id?: string | null;
+  priority_name?: string | null;
+  priority_color?: string | null;
+  additional_agents?: Array<{ user_id: string; user_name: string; role: string | null; avatar_url?: string | null }>;
   checklist_total?: number;
   checklist_completed?: number;
+  checklist_items?: Array<{ item_name: string; completed: boolean }>;
 }
 
 interface ClientKanbanBoardProps {
@@ -97,6 +105,8 @@ function TaskCard({
   dependencies?: { predecessors: TaskDependency[]; successors: TaskDependency[] };
 }) {
   const { t } = useTranslation('clientPortal');
+  const [isDescriptionExpanded, setIsDescriptionExpanded] = React.useState(false);
+  const [descriptionRef, isDescriptionTruncated] = useTruncationDetection(task.description, isDescriptionExpanded);
   const visibleFields = config.visible_task_fields ?? ['task_name', 'due_date', 'status'];
   const allowUploads = visibleFields.includes('document_uploads');
   const showDependencies = visibleFields.includes('dependencies');
@@ -109,14 +119,44 @@ function TaskCard({
 
   return (
     <div className="bg-white rounded-lg border border-gray-200 p-3 shadow-sm hover:shadow-md transition-shadow">
-      {/* Task Name */}
+      {/* Task Name with Priority */}
       {visibleFields.includes('task_name') && task.task_name && (
-        <h4 className="font-semibold text-gray-900 text-lg mb-2">{task.task_name}</h4>
+        <div className="flex items-start gap-2 mb-2">
+          <h4 className="font-semibold text-gray-900 text-lg flex-1">{task.task_name}</h4>
+          {visibleFields.includes('priority') && task.priority_name && (
+            <Tooltip content={`${t('projects.tasks.priorityLevel', 'Priority level')}: ${task.priority_name}`}>
+              <div
+                className="w-3 h-3 rounded-full shrink-0 mt-1.5"
+                style={{ backgroundColor: task.priority_color || '#6B7280' }}
+              />
+            </Tooltip>
+          )}
+        </div>
       )}
 
-      {/* Task Description */}
+      {/* Task Description - Expandable */}
       {visibleFields.includes('description') && task.description && (
-        <p className="text-sm text-gray-600 mb-2 line-clamp-2">{task.description}</p>
+        <div className="mb-2">
+          <p
+            ref={descriptionRef}
+            className={`text-sm text-gray-600 ${!isDescriptionExpanded ? 'line-clamp-2' : ''}`}
+          >
+            {task.description}
+          </p>
+          {(isDescriptionTruncated || isDescriptionExpanded) && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setIsDescriptionExpanded(!isDescriptionExpanded);
+              }}
+              className="text-xs text-purple-600 hover:text-purple-700 font-medium mt-1"
+            >
+              {isDescriptionExpanded
+                ? t('projects.tasks.seeLess', 'See less')
+                : t('projects.tasks.seeMore', 'See more')}
+            </button>
+          )}
+        </div>
       )}
 
       {/* Task Details */}
@@ -138,12 +178,30 @@ function TaskCard({
             <div className="flex items-center gap-1.5">
               {/* Checklist Progress Badge */}
               {visibleFields.includes('checklist_progress') && task.checklist_total != null && task.checklist_total > 0 && (
-                <div className={`flex items-center gap-1 px-1.5 py-0.5 rounded ${
-                  (task.checklist_completed ?? 0) === task.checklist_total ? 'bg-green-50 text-green-600' : 'bg-gray-50 text-gray-500'
-                }`}>
-                  <CheckSquare className="w-3 h-3" />
-                  <span>{task.checklist_completed ?? 0}/{task.checklist_total}</span>
-                </div>
+                <Tooltip
+                  content={
+                    task.checklist_items && task.checklist_items.length > 0 ? (
+                      <div className="text-xs space-y-1 max-w-xs">
+                        <div className="font-medium text-gray-300 mb-1">{t('projects.tasks.checklistItems', 'Checklist Items')}:</div>
+                        {task.checklist_items.map((item, i) => (
+                          <div key={i} className="flex items-center gap-1.5">
+                            <CheckSquare className={`h-3 w-3 ${item.completed ? 'text-green-400' : 'text-gray-400'}`} />
+                            <span className={item.completed ? 'line-through text-gray-400' : ''}>{item.item_name}</span>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <span>{task.checklist_completed ?? 0} {t('projects.tasks.of', 'of')} {task.checklist_total} {t('projects.tasks.complete', 'complete')}</span>
+                    )
+                  }
+                >
+                  <div className={`flex items-center gap-1 px-1.5 py-0.5 rounded cursor-help ${
+                    (task.checklist_completed ?? 0) === task.checklist_total ? 'bg-green-50 text-green-600' : 'bg-gray-50 text-gray-500'
+                  }`}>
+                    <CheckSquare className="w-3 h-3" />
+                    <span>{task.checklist_completed ?? 0}/{task.checklist_total}</span>
+                  </div>
+                </Tooltip>
               )}
 
               {/* Dependencies Badge */}
@@ -199,14 +257,41 @@ function TaskCard({
         )}
 
         {/* Assigned To */}
-        {visibleFields.includes('assigned_to') && task.assigned_to_name && (
-          <div className="flex items-center gap-1.5">
-            <User className="w-3 h-3 text-gray-400" />
+        {visibleFields.includes('assigned_to') && task.assigned_to_name && task.assigned_to_id && (
+          <div className="flex items-center gap-2">
+            <UserAvatar
+              userId={task.assigned_to_id}
+              userName={task.assigned_to_name}
+              avatarUrl={task.assigned_to_avatar || null}
+              size="sm"
+            />
             <span>{task.assigned_to_name}</span>
             {task.additional_agents && task.additional_agents.length > 0 && (
-              <span className="text-xs text-purple-600 font-medium">
-                +{task.additional_agents.length}
-              </span>
+              <Tooltip
+                content={
+                  <div className="text-xs space-y-1.5">
+                    <div className="font-medium text-gray-300 mb-1">{t('projects.tasks.additionalAgents', 'Additional Agents')}:</div>
+                    {task.additional_agents.map((agent, i) => (
+                      <div key={i} className="flex items-center gap-2">
+                        <UserAvatar
+                          userId={agent.user_id}
+                          userName={agent.user_name}
+                          avatarUrl={agent.avatar_url || null}
+                          size="xs"
+                        />
+                        <span>
+                          {agent.user_name}
+                          {agent.role && <span className="text-gray-400"> ({agent.role})</span>}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                }
+              >
+                <span className="text-xs text-purple-600 font-medium cursor-help bg-purple-50 px-1.5 py-0.5 rounded">
+                  +{task.additional_agents.length}
+                </span>
+              </Tooltip>
             )}
           </div>
         )}
@@ -242,14 +327,12 @@ function TaskCard({
 function PhaseCard({
   phase,
   isSelected,
-  taskCount,
   onClick,
   showCompletion,
   dateLocale
 }: {
   phase: Phase;
   isSelected: boolean;
-  taskCount: number;
   onClick: () => void;
   showCompletion: boolean;
   dateLocale: Locale;
@@ -266,13 +349,10 @@ function PhaseCard({
       }`}
     >
       <div className="flex flex-col gap-1">
-        {/* Phase name and task count */}
+        {/* Phase name */}
         <div className="flex items-start justify-between gap-2">
           <span className={`text-lg font-bold ${isSelected ? 'text-purple-900' : 'text-gray-900'}`}>
             {phase.phase_name}
-          </span>
-          <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-700 shrink-0">
-            {taskCount} {taskCount === 1 ? t('projects.task', 'task') : t('projects.tasks.title', 'tasks').toLowerCase()}
           </span>
         </div>
         {showCompletion && phase.completion_percentage !== undefined && (
@@ -332,15 +412,6 @@ export default function ClientKanbanBoard({
     return acc;
   }, {} as Record<string, Task[]>);
 
-  // Get task counts per phase
-  const getPhaseTaskCounts = (phaseId: string) => {
-    const phaseTasks = tasks.filter(t => t.phase_id === phaseId);
-    return {
-      total: phaseTasks.length,
-      completed: phaseTasks.filter(t => t.is_closed).length
-    };
-  };
-
   // Default fallback colors for columns without configured colors
   const fallbackColors = ['#6B7280', '#6366F1', '#10B981', '#F59E0B', '#EF4444'];
 
@@ -368,20 +439,16 @@ export default function ClientKanbanBoard({
           <h4 className="text-xs font-medium text-gray-500 px-1 mb-3">
             {t('projects.phases.title', 'Phases')}
           </h4>
-          {phases.map((phase) => {
-            const counts = getPhaseTaskCounts(phase.phase_id);
-            return (
+          {phases.map((phase) => (
               <PhaseCard
                 key={phase.phase_id}
                 phase={phase}
                 isSelected={selectedPhaseId === phase.phase_id}
-                taskCount={counts.total}
                 onClick={() => onPhaseSelect(phase.phase_id)}
                 showCompletion={showPhaseCompletion}
                 dateLocale={dateLocale}
               />
-            );
-          })}
+            ))}
         </div>
       )}
 
@@ -394,7 +461,7 @@ export default function ClientKanbanBoard({
           return (
             <div
               key={status.project_status_mapping_id}
-              className="flex-shrink-0 w-72 rounded-lg border-2"
+              className="flex-shrink-0 w-80 rounded-lg border-2"
               style={{
                 backgroundColor: lightenColor(statusColor, 0.90),
                 borderColor: lightenColor(statusColor, 0.70)

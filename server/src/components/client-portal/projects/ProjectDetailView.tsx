@@ -211,15 +211,6 @@ export default function ProjectDetailView({ project }: ProjectDetailViewProps) {
     { value: 'list' as ViewMode, label: t('projects.listView', 'List'), icon: List }
   ], [t]);
 
-  // Kanban stats
-  const kanbanStats = useMemo(() => {
-    const completedTasks = tasks.filter(t => t.is_closed).length;
-    return {
-      total: tasks.length,
-      completed: completedTasks
-    };
-  }, [tasks]);
-
   if (loading) {
     return (
       <div className="p-6 bg-white rounded-lg shadow">
@@ -341,13 +332,6 @@ export default function ProjectDetailView({ project }: ProjectDetailViewProps) {
                       ? t('projects.phases.title', 'Project Phases')
                       : t('projects.tasks.title', 'Tasks')}
                 </h3>
-
-                {/* Task count for Kanban */}
-                {showTasks && effectiveViewMode === 'kanban' && (
-                  <span className="text-sm text-gray-500">
-                    {kanbanStats.completed} / {kanbanStats.total} {t('projects.tasks.title', 'Tasks').toLowerCase()}
-                  </span>
-                )}
               </div>
 
               {/* View Switcher */}

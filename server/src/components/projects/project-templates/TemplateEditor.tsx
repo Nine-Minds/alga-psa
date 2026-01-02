@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
+import { useTruncationDetection } from 'server/src/hooks/useTruncationDetection';
 import { useRouter } from 'next/navigation';
 import { Button } from 'server/src/components/ui/Button';
 import { Dialog } from 'server/src/components/ui/Dialog';
@@ -73,6 +74,7 @@ import ViewSwitcher from 'server/src/components/ui/ViewSwitcher';
 import { LayoutGrid, List } from 'lucide-react';
 import styles from '../ProjectDetail.module.css';
 import UserPicker from 'server/src/components/ui/UserPicker';
+import UserAvatar from 'server/src/components/ui/UserAvatar';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -608,23 +610,38 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
   const handleTaskMove = async (
     taskId: string,
     newStatusMappingId: string,
-    _newPhaseId: string,
+    newPhaseId: string,
     beforeTaskId: string | null,
     afterTaskId: string | null
   ): Promise<void> => {
     const task = tasks.find((t) => t.template_task_id === taskId);
     if (!task) return;
 
+    const isPhaseChanging = newPhaseId && task.template_phase_id !== newPhaseId;
+    const isStatusChanging = task.template_status_mapping_id !== newStatusMappingId;
+
     // Skip if no change
-    if (task.template_status_mapping_id === newStatusMappingId && !beforeTaskId && !afterTaskId) {
+    if (!isPhaseChanging && !isStatusChanging && !beforeTaskId && !afterTaskId) {
       return;
     }
 
     try {
-      const updated = await updateTemplateTaskStatus(taskId, newStatusMappingId, beforeTaskId, afterTaskId);
-      setTasks((prev) =>
-        prev.map((t) => (t.template_task_id === taskId ? updated : t))
-      );
+      // If phase is changing, use updateTemplateTask which can update both phase and status
+      if (isPhaseChanging) {
+        const updated = await updateTemplateTask(taskId, {
+          template_phase_id: newPhaseId,
+          template_status_mapping_id: newStatusMappingId,
+        });
+        setTasks((prev) =>
+          prev.map((t) => (t.template_task_id === taskId ? updated : t))
+        );
+      } else {
+        // Just status/order change
+        const updated = await updateTemplateTaskStatus(taskId, newStatusMappingId, beforeTaskId, afterTaskId);
+        setTasks((prev) =>
+          prev.map((t) => (t.template_task_id === taskId ? updated : t))
+        );
+      }
     } catch (error) {
       toast.error('Failed to move task');
       console.error(error);
@@ -805,20 +822,15 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
           </div>
 
           {/* Template metadata */}
-          <div className="mt-4 flex gap-6 text-sm text-gray-600">
+          <div className="mt-2 flex items-center justify-between gap-4">
             {template.description && (
-              <div>
+              <p className="text-sm text-gray-600 flex-1 min-w-0">
                 <span className="font-medium">Description:</span> {template.description}
-              </div>
+              </p>
             )}
-            {template.category && (
-              <div>
-                <span className="font-medium">Category:</span> {template.category}
-              </div>
-            )}
-            <div>
-              <span className="font-medium">Used:</span> {template.use_count} times
-            </div>
+            <Badge variant="secondary" className="text-xs shrink-0">
+              Used {template.use_count} {template.use_count === 1 ? 'time' : 'times'}
+            </Badge>
           </div>
 
           {/* Client Portal Visibility Dialog */}
@@ -872,6 +884,7 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
                   handleAddTask(statusMappingId);
                 }}
                 onTaskMove={handleTaskMove}
+                onAssigneeChange={handleAssigneeChange}
               />
             </div>
           ) : (
@@ -1388,6 +1401,9 @@ function TaskCard({
   taskDependencies,
   allTasks,
 }: TaskCardProps) {
+  const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
+  const [descriptionRef, isDescriptionTruncated] = useTruncationDetection(task.description, isDescriptionExpanded);
+
   const handleDragStart = (e: React.DragEvent) => {
     document.body.classList.add('dragging-task');
     onDragStart(e, task.template_task_id);
@@ -1463,7 +1479,7 @@ function TaskCard({
             <div
               className="w-2.5 h-2.5 rounded-full"
               style={{ backgroundColor: priority.color || '#6B7280' }}
-              title={`${priority.priority_name} priority`}
+              title={`Priority level: ${priority.priority_name}`}
             />
           </div>
         )}
@@ -1471,7 +1487,25 @@ function TaskCard({
 
       {/* Description */}
       {task.description && (
-        <p className="text-sm text-gray-600 mb-1 line-clamp-2 px-1">{task.description}</p>
+        <div className="mb-1 px-1">
+          <p
+            ref={descriptionRef}
+            className={`text-sm text-gray-600 ${!isDescriptionExpanded ? 'line-clamp-2' : ''}`}
+          >
+            {task.description}
+          </p>
+          {(isDescriptionTruncated || isDescriptionExpanded) && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setIsDescriptionExpanded(!isDescriptionExpanded);
+              }}
+              className="text-xs text-purple-600 hover:text-purple-700 font-medium mt-1"
+            >
+              {isDescriptionExpanded ? 'See less' : 'See more'}
+            </button>
+          )}
+        </div>
       )}
 
       {/* Assignee picker */}
@@ -1485,13 +1519,32 @@ function TaskCard({
           users={users}
         />
         {additionalAgentsCount > 0 && (
-          <div
-            className="flex items-center gap-1 text-gray-500 bg-primary-100 px-1.5 py-0.5 rounded-md"
-            title={`${additionalAgentsCount} additional agent${additionalAgentsCount > 1 ? 's' : ''}`}
+          <Tooltip
+            content={
+              <div className="text-xs space-y-1.5">
+                <div className="font-medium text-gray-300 mb-1">Additional Agents:</div>
+                {taskAssignments.map((assignment, i) => {
+                  const assignmentUser = users.find(u => u.user_id === assignment.user_id);
+                  const userName = assignmentUser ? `${assignmentUser.first_name} ${assignmentUser.last_name}` : 'Unknown';
+                  return (
+                    <div key={i} className="flex items-center gap-2">
+                      <UserAvatar
+                        userId={assignment.user_id}
+                        userName={userName}
+                        avatarUrl={null}
+                        size="xs"
+                      />
+                      <span>{userName}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            }
           >
-            <Users className="w-3 h-3" />
-            <span className="text-xs">+{additionalAgentsCount}</span>
-          </div>
+            <span className="text-xs text-purple-600 font-medium cursor-help bg-purple-50 px-1.5 py-0.5 rounded">
+              +{additionalAgentsCount}
+            </span>
+          </Tooltip>
         )}
       </div>
 
@@ -1520,7 +1573,7 @@ function TaskCard({
           {taskDependencies && (taskDependencies.predecessors.length > 0 || taskDependencies.successors.length > 0) && (
             <Tooltip
               content={
-                <div className="text-xs space-y-2">
+                <div className="text-xs space-y-2 min-w-[220px]">
                   {taskDependencies.predecessors.length > 0 && (
                     <div>
                       <div className="font-medium text-gray-300 mb-1">Depends on:</div>

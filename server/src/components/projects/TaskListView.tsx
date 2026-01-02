@@ -4,11 +4,32 @@ import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { IProjectPhase, IProjectTask, ProjectStatus, IProjectTaskDependency } from 'server/src/interfaces/project.interfaces';
 import { ITag } from 'server/src/interfaces/tag.interfaces';
 import { ITaskResource } from 'server/src/interfaces/taskResource.interfaces';
-import { ChevronDown, ChevronRight, Pencil, Copy, Trash2, Link2, Ban, GitBranch, Calendar, GripVertical, Plus, CheckSquare, Paperclip } from 'lucide-react';
+import { ChevronDown, ChevronRight, Pencil, Copy, Trash2, Link2, Ban, GitBranch, Calendar, GripVertical, Plus, CheckSquare, Paperclip, Zap } from 'lucide-react';
 import { Tooltip } from 'server/src/components/ui/Tooltip';
 import { Button } from 'server/src/components/ui/Button';
+import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 import { format } from 'date-fns';
-import { TagList } from 'server/src/components/tags';
+import { TagList, TagManager } from 'server/src/components/tags';
+import UserAvatar from 'server/src/components/ui/UserAvatar';
+import UserPicker from 'server/src/components/ui/UserPicker';
+import { useResponsiveColumns, ColumnConfig } from 'server/src/hooks/useResponsiveColumns';
+
+// Column configuration for responsive hiding
+// Lower priority number = higher importance (shown first)
+// minWidth should be generous to prevent overflow before hiding
+const COLUMN_CONFIG: ColumnConfig[] = [
+  { key: 'drag', minWidth: 50, priority: 0, alwaysShow: true },
+  { key: 'name', minWidth: 250, priority: 1, alwaysShow: true },
+  { key: 'actions', minWidth: 110, priority: 2, alwaysShow: true },
+  { key: 'assignee', minWidth: 220, priority: 3 },
+  { key: 'due_date', minWidth: 120, priority: 4 },
+  { key: 'checklist', minWidth: 100, priority: 5 },
+  { key: 'deps', minWidth: 80, priority: 6 },
+  { key: 'tags', minWidth: 130, priority: 7 },
+  { key: 'est_hours', minWidth: 90, priority: 8 },
+  { key: 'actual_hours', minWidth: 100, priority: 9 },
+  { key: 'attachments', minWidth: 90, priority: 10 },
+];
 
 // Progress bar component
 function ProgressBar({ percentage }: { percentage: number }) {
@@ -29,7 +50,7 @@ interface TaskListViewProps {
   taskResources: Record<string, ITaskResource[]>;
   taskTags: Record<string, ITag[]>;
   taskDependencies?: Record<string, { predecessors: IProjectTaskDependency[]; successors: IProjectTaskDependency[] }>;
-  checklistItems: Record<string, { total: number; completed: number }>;
+  checklistItems: Record<string, { total: number; completed: number; items?: Array<{ item_name: string; completed: boolean }> }>;
   documentCounts?: Record<string, number>;
   onTaskClick: (task: IProjectTask) => void;
   onTaskDelete: (task: IProjectTask) => void;
@@ -37,6 +58,8 @@ interface TaskListViewProps {
   onTaskMove?: (taskId: string, newStatusMappingId: string, newPhaseId: string, beforeTaskId: string | null, afterTaskId: string | null) => Promise<void>;
   onAddPhase?: () => void;
   onAddTask?: (phaseId: string) => void;
+  onTaskTagsChange?: (taskId: string, tags: ITag[]) => void;
+  onAssigneeChange?: (taskId: string, newAssigneeId: string | null) => void;
   users: any[];
   // Filter props
   selectedPriorityFilter?: string;
@@ -66,12 +89,20 @@ export default function TaskListView({
   onTaskMove,
   onAddPhase,
   onAddTask,
+  onTaskTagsChange,
+  onAssigneeChange,
   users,
   selectedPriorityFilter = 'all',
   selectedTaskTags = []
 }: TaskListViewProps) {
   const [expandedPhases, setExpandedPhases] = useState<Set<string>>(new Set());
   const [expandedStatuses, setExpandedStatuses] = useState<Set<string>>(new Set());
+
+  // Responsive columns - add padding to account for scrollbars, cell padding, and borders
+  const { containerRef, isColumnVisible, hiddenColumnCount } = useResponsiveColumns({
+    columns: COLUMN_CONFIG,
+    containerPadding: 80
+  });
 
   // Drag and drop state
   const [draggedTask, setDraggedTask] = useState<IProjectTask | null>(null);
@@ -213,7 +244,7 @@ export default function TaskListView({
     }
 
     return (
-      <div className="text-xs space-y-2">
+      <div className="text-xs space-y-2 min-w-[220px]">
         {deps.predecessors.length > 0 && (
           <div>
             <div className="font-medium text-gray-300 mb-1">Depends on:</div>
@@ -365,54 +396,70 @@ export default function TaskListView({
     setDropIndicatorIndex(null);
   }, [draggedTask, onTaskMove]);
 
+  // Calculate visible column count for colSpan
+  const visibleColumnCount = COLUMN_CONFIG.filter(c => isColumnVisible(c.key)).length;
+
   return (
-    <div className="flex flex-col bg-white border border-gray-200 rounded-lg overflow-hidden h-[calc(100vh-220px)] min-h-[400px]">
+    <div ref={containerRef} className="flex flex-col bg-white border border-gray-200 rounded-lg overflow-hidden h-[calc(100vh-220px)] min-h-[400px]">
+      {/* Hidden columns alert */}
+      {hiddenColumnCount > 0 && (
+        <Alert variant="info" className="rounded-none border-x-0 border-t-0">
+          <AlertDescription className="flex items-center text-sm">
+            <Zap className="h-4 w-4 mr-1" />
+            {hiddenColumnCount} column{hiddenColumnCount > 1 ? 's' : ''} hidden due to limited space. Resize browser to see more.
+          </AlertDescription>
+        </Alert>
+      )}
       {/* Column headers - sticky */}
       <div className="bg-white border-b border-gray-200 flex-shrink-0">
         <table className="w-full table-fixed">
-          <colgroup>
-            <col style={{ width: '40px' }} />
-            <col style={{ width: '22%' }} />  {/* Name */}
-            <col style={{ width: '5%' }} />   {/* Deps */}
-            <col style={{ width: '6%' }} />   {/* Checklist */}
-            <col style={{ width: '12%' }} />  {/* Tags */}
-            <col style={{ width: '12%' }} />  {/* Assignee */}
-            <col style={{ width: '6%' }} />   {/* Est. Hours */}
-            <col style={{ width: '7%' }} />   {/* Actual Hours */}
-            <col style={{ width: '10%' }} />  {/* Due Date */}
-            <col style={{ width: '6%' }} />   {/* Attachments */}
-            <col style={{ width: '8%' }} />   {/* Actions */}
-          </colgroup>
+          <colgroup><col style={{ width: '40px' }} /><col />{isColumnVisible('deps') && <col style={{ width: '5%' }} />}{isColumnVisible('checklist') && <col style={{ width: '6%' }} />}{isColumnVisible('tags') && <col style={{ width: '10%' }} />}{isColumnVisible('assignee') && <col style={{ width: '17%' }} />}{isColumnVisible('est_hours') && <col style={{ width: '6%' }} />}{isColumnVisible('actual_hours') && <col style={{ width: '7%' }} />}{isColumnVisible('due_date') && <col style={{ width: '9%' }} />}{isColumnVisible('attachments') && <col style={{ width: '6%' }} />}<col style={{ width: '8%' }} /></colgroup>
           <thead>
             <tr>
               <th className="w-10 px-3 py-3" />
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500">
                 Name
               </th>
-              <th className="px-3 py-3 text-left text-xs font-medium text-gray-500">
-                Deps
-              </th>
-              <th className="px-3 py-3 text-left text-xs font-medium text-gray-500">
-                Checklist
-              </th>
-              <th className="px-3 py-3 text-left text-xs font-medium text-gray-500">
-                Tags
-              </th>
-              <th className="px-3 py-3 text-left text-xs font-medium text-gray-500">
-                Assignee
-              </th>
-              <th className="px-3 py-3 text-left text-xs font-medium text-gray-500">
-                Est. Hours
-              </th>
-              <th className="px-3 py-3 text-left text-xs font-medium text-gray-500">
-                Actual Hours
-              </th>
-              <th className="px-3 py-3 text-left text-xs font-medium text-gray-500">
-                Due Date
-              </th>
-              <th className="px-3 py-3 text-left text-xs font-medium text-gray-500">
-                Attachments
-              </th>
+              {isColumnVisible('deps') && (
+                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500">
+                  Deps
+                </th>
+              )}
+              {isColumnVisible('checklist') && (
+                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500">
+                  Checklist
+                </th>
+              )}
+              {isColumnVisible('tags') && (
+                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500">
+                  Tags
+                </th>
+              )}
+              {isColumnVisible('assignee') && (
+                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500">
+                  Assignee
+                </th>
+              )}
+              {isColumnVisible('est_hours') && (
+                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500">
+                  Est. Hours
+                </th>
+              )}
+              {isColumnVisible('actual_hours') && (
+                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500">
+                  Actual Hours
+                </th>
+              )}
+              {isColumnVisible('due_date') && (
+                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500">
+                  Due Date
+                </th>
+              )}
+              {isColumnVisible('attachments') && (
+                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500">
+                  Attachments
+                </th>
+              )}
               <th className="px-3 py-3 text-right text-xs font-medium text-gray-500">
                 Actions
               </th>
@@ -429,19 +476,7 @@ export default function TaskListView({
           return (
             <div key={phaseGroup.phase.phase_id}>
               <table className="w-full table-fixed">
-                <colgroup>
-                  <col style={{ width: '40px' }} />
-                  <col style={{ width: '22%' }} />  {/* Name */}
-                  <col style={{ width: '5%' }} />   {/* Deps */}
-                  <col style={{ width: '6%' }} />   {/* Checklist */}
-                  <col style={{ width: '12%' }} />  {/* Tags */}
-                  <col style={{ width: '12%' }} />  {/* Assignee */}
-                  <col style={{ width: '6%' }} />   {/* Est. Hours */}
-                  <col style={{ width: '7%' }} />   {/* Actual Hours */}
-                  <col style={{ width: '10%' }} />  {/* Due Date */}
-                  <col style={{ width: '6%' }} />   {/* Attachments */}
-                  <col style={{ width: '8%' }} />   {/* Actions */}
-                </colgroup>
+                <colgroup><col style={{ width: '40px' }} /><col />{isColumnVisible('deps') && <col style={{ width: '5%' }} />}{isColumnVisible('checklist') && <col style={{ width: '6%' }} />}{isColumnVisible('tags') && <col style={{ width: '10%' }} />}{isColumnVisible('assignee') && <col style={{ width: '17%' }} />}{isColumnVisible('est_hours') && <col style={{ width: '6%' }} />}{isColumnVisible('actual_hours') && <col style={{ width: '7%' }} />}{isColumnVisible('due_date') && <col style={{ width: '9%' }} />}{isColumnVisible('attachments') && <col style={{ width: '6%' }} />}<col style={{ width: '8%' }} /></colgroup>
 
                 {/* Phase header row */}
                 <thead>
@@ -449,7 +484,7 @@ export default function TaskListView({
                     className="bg-white hover:bg-gray-50 cursor-pointer transition-colors"
                     onClick={() => togglePhase(phaseGroup.phase.phase_id)}
                   >
-                    <td className="py-3" colSpan={11}>
+                    <td className="py-3" colSpan={visibleColumnCount}>
                       <div className="flex items-start gap-2 px-3">
                         <div className="pt-1 text-gray-400">
                           {isPhaseExpanded ? (
@@ -564,7 +599,7 @@ export default function TaskListView({
                               }
                             }}
                           >
-                            <td className="py-1.5" colSpan={11}>
+                            <td className="py-1.5" colSpan={visibleColumnCount}>
                               <div className="flex items-center gap-2 pl-8">
                                 {isStatusExpanded ? (
                                   <ChevronDown className="h-3.5 w-3.5 text-gray-400" />
@@ -607,7 +642,7 @@ export default function TaskListView({
                                 {/* Drop indicator line above task */}
                                 {showDropIndicator && (
                                   <tr className="h-0">
-                                    <td colSpan={11} className="p-0">
+                                    <td colSpan={visibleColumnCount} className="p-0">
                                       <div className="h-0.5 bg-primary-500 mx-2" />
                                     </td>
                                   </tr>
@@ -650,93 +685,194 @@ export default function TaskListView({
                                 </td>
 
                                 {/* Dependencies */}
-                                <td className="py-3 px-3">
-                                  {(() => {
-                                    const deps = taskDependencies[task.task_id];
-                                    const hasDependencies = deps && (deps.predecessors.length > 0 || deps.successors.length > 0);
-                                    const dependencyTooltipContent = renderDependenciesTooltipContent(task.task_id);
-                                    if (!hasDependencies || !dependencyTooltipContent) return null;
-                                    return (
-                                      <Tooltip content={dependencyTooltipContent}>
-                                        <div className="flex items-center gap-1 cursor-help">
-                                          {getDependencyIcon(task.task_id)}
-                                          <span className="text-xs text-gray-500">
-                                            {(deps?.predecessors.length || 0) + (deps?.successors.length || 0)}
+                                {isColumnVisible('deps') && (
+                                  <td className="py-3 px-3">
+                                    {(() => {
+                                      const deps = taskDependencies[task.task_id];
+                                      const hasDependencies = deps && (deps.predecessors.length > 0 || deps.successors.length > 0);
+                                      const dependencyTooltipContent = renderDependenciesTooltipContent(task.task_id);
+                                      if (!hasDependencies || !dependencyTooltipContent) return null;
+                                      return (
+                                        <Tooltip content={dependencyTooltipContent}>
+                                          <div className="flex items-center gap-1 cursor-help">
+                                            {getDependencyIcon(task.task_id)}
+                                            <span className="text-xs text-gray-500">
+                                              {(deps?.predecessors.length || 0) + (deps?.successors.length || 0)}
+                                            </span>
+                                          </div>
+                                        </Tooltip>
+                                      );
+                                    })()}
+                                  </td>
+                                )}
+
+                                {/* Checklist */}
+                                {isColumnVisible('checklist') && (
+                                  <td className="py-3 px-3">
+                                    {checklist && checklist.total > 0 && (
+                                      <Tooltip
+                                        content={
+                                          checklist.items && checklist.items.length > 0 ? (
+                                            <div className="text-xs space-y-1 max-w-xs">
+                                              <div className="font-medium text-gray-300 mb-1">Checklist Items:</div>
+                                              {checklist.items.map((item, i) => (
+                                                <div key={i} className="flex items-center gap-1.5">
+                                                  {item.completed ? (
+                                                    <CheckSquare className="h-3 w-3 text-green-400" />
+                                                  ) : (
+                                                    <CheckSquare className="h-3 w-3 text-gray-400" />
+                                                  )}
+                                                  <span className={item.completed ? 'line-through text-gray-400' : ''}>{item.item_name}</span>
+                                                </div>
+                                              ))}
+                                            </div>
+                                          ) : (
+                                            <span>{checklist.completed} of {checklist.total} complete</span>
+                                          )
+                                        }
+                                      >
+                                        <div className="flex items-center gap-1 text-gray-600 cursor-help">
+                                          <CheckSquare className="h-3.5 w-3.5" />
+                                          <span className="text-xs">
+                                            {checklist.completed}/{checklist.total}
                                           </span>
                                         </div>
                                       </Tooltip>
-                                    );
-                                  })()}
-                                </td>
-
-                                {/* Checklist */}
-                                <td className="py-3 px-3">
-                                  {checklist && checklist.total > 0 && (
-                                    <div className="flex items-center gap-1 text-gray-600">
-                                      <CheckSquare className="h-3.5 w-3.5" />
-                                      <span className="text-xs">
-                                        {checklist.completed}/{checklist.total}
-                                      </span>
-                                    </div>
-                                  )}
-                                </td>
+                                    )}
+                                  </td>
+                                )}
 
                                 {/* Tags */}
-                                <td className="py-3 px-3">
-                                  {tags.length > 0 && (
-                                    <TagList
-                                      tags={tags}
-                                      maxDisplay={2}
-                                    />
-                                  )}
-                                </td>
+                                {isColumnVisible('tags') && (
+                                  <td className="py-3 px-3" onClick={(e) => e.stopPropagation()}>
+                                    {onTaskTagsChange ? (
+                                      <TagManager
+                                        id={`task-tags-list-${task.task_id}`}
+                                        entityId={task.task_id}
+                                        entityType="project_task"
+                                        initialTags={tags}
+                                        onTagsChange={(newTags) => onTaskTagsChange(task.task_id, newTags)}
+                                      />
+                                    ) : tags.length > 0 ? (
+                                      <TagList
+                                        tags={tags}
+                                        maxDisplay={2}
+                                      />
+                                    ) : null}
+                                  </td>
+                                )}
 
                                 {/* Assignee */}
-                                <td className="py-3 px-3">
-                                  <div className="flex items-center gap-1">
-                                    <span className="text-sm text-gray-700 truncate">
-                                      {getAssigneeName(task.assigned_to)}
-                                    </span>
-                                    {additionalCount > 0 && (
-                                      <span className="text-xs text-gray-500">
-                                        +{additionalCount}
-                                      </span>
-                                    )}
-                                  </div>
-                                </td>
+                                {isColumnVisible('assignee') && (
+                                  <td className="py-3 px-3" onClick={(e) => e.stopPropagation()}>
+                                    <div className="flex items-center gap-1.5">
+                                      {onAssigneeChange ? (
+                                        <UserPicker
+                                          value={task.assigned_to || ''}
+                                          onValueChange={(newAssigneeId) => onAssigneeChange(task.task_id, newAssigneeId)}
+                                          size="sm"
+                                          users={users.filter(u =>
+                                            !resources.some(r => r.additional_user_id === u.user_id)
+                                          )}
+                                        />
+                                      ) : (
+                                        (() => {
+                                          const user = task.assigned_to ? users.find(u => u.user_id === task.assigned_to) : null;
+                                          if (user) {
+                                            return (
+                                              <>
+                                                <UserAvatar
+                                                  userId={user.user_id}
+                                                  userName={`${user.first_name} ${user.last_name}`}
+                                                  avatarUrl={null}
+                                                  size="xs"
+                                                />
+                                                <span className="text-sm text-gray-700 truncate">
+                                                  {user.first_name} {user.last_name}
+                                                </span>
+                                              </>
+                                            );
+                                          }
+                                          return (
+                                            <span className="text-sm text-gray-400">Unassigned</span>
+                                          );
+                                        })()
+                                      )}
+                                      {additionalCount > 0 && (
+                                        <Tooltip
+                                          content={
+                                            <div className="text-xs space-y-1.5">
+                                              <div className="font-medium text-gray-300 mb-1">Additional Agents:</div>
+                                              {resources.map((resource, i) => {
+                                                const resourceUser = users.find(u => u.user_id === resource.additional_user_id);
+                                                const userName = resourceUser ? `${resourceUser.first_name} ${resourceUser.last_name}` : 'Unknown';
+                                                return (
+                                                  <div key={i} className="flex items-center gap-2">
+                                                    <UserAvatar
+                                                      userId={resource.additional_user_id}
+                                                      userName={userName}
+                                                      avatarUrl={null}
+                                                      size="xs"
+                                                    />
+                                                    <span>
+                                                      {userName}
+                                                      {resource.role && <span className="text-gray-400"> ({resource.role})</span>}
+                                                    </span>
+                                                  </div>
+                                                );
+                                              })}
+                                            </div>
+                                          }
+                                        >
+                                          <span className="text-xs text-purple-600 font-medium cursor-help bg-purple-50 px-1.5 py-0.5 rounded">
+                                            +{additionalCount}
+                                          </span>
+                                        </Tooltip>
+                                      )}
+                                    </div>
+                                  </td>
+                                )}
 
                                 {/* Est. Hours */}
-                                <td className="py-3 px-3">
-                                  <span className="text-sm text-gray-700">
-                                    {task.estimated_hours != null ? (task.estimated_hours / 60).toFixed(1) : '-'}
-                                  </span>
-                                </td>
+                                {isColumnVisible('est_hours') && (
+                                  <td className="py-3 px-3">
+                                    <span className="text-sm text-gray-700">
+                                      {task.estimated_hours != null ? (task.estimated_hours / 60).toFixed(1) : '-'}
+                                    </span>
+                                  </td>
+                                )}
 
                                 {/* Actual Hours */}
-                                <td className="py-3 px-3">
-                                  <span className="text-sm text-gray-700">
-                                    {task.actual_hours != null ? (task.actual_hours / 60).toFixed(1) : '-'}
-                                  </span>
-                                </td>
+                                {isColumnVisible('actual_hours') && (
+                                  <td className="py-3 px-3">
+                                    <span className="text-sm text-gray-700">
+                                      {task.actual_hours != null ? (task.actual_hours / 60).toFixed(1) : '-'}
+                                    </span>
+                                  </td>
+                                )}
 
                                 {/* Due Date */}
-                                <td className="py-3 px-3">
-                                  {task.due_date && (
-                                    <span className="text-sm text-gray-700">
-                                      {format(new Date(task.due_date), 'MMM d, yyyy')}
-                                    </span>
-                                  )}
-                                </td>
+                                {isColumnVisible('due_date') && (
+                                  <td className="py-3 px-3">
+                                    {task.due_date && (
+                                      <span className="text-sm text-gray-700">
+                                        {format(new Date(task.due_date), 'MMM d, yyyy')}
+                                      </span>
+                                    )}
+                                  </td>
+                                )}
 
                                 {/* Attachments */}
-                                <td className="py-3 px-3">
-                                  {docCount > 0 && (
-                                    <div className="flex items-center gap-1 text-gray-600">
-                                      <Paperclip className="h-3.5 w-3.5" />
-                                      <span className="text-xs">{docCount}</span>
-                                    </div>
-                                  )}
-                                </td>
+                                {isColumnVisible('attachments') && (
+                                  <td className="py-3 px-3">
+                                    {docCount > 0 && (
+                                      <div className="flex items-center gap-1 text-gray-600">
+                                        <Paperclip className="h-3.5 w-3.5" />
+                                        <span className="text-xs">{docCount}</span>
+                                      </div>
+                                    )}
+                                  </td>
+                                )}
 
                                 {/* Actions */}
                                 <td className="py-2 px-3 text-right">
@@ -793,7 +929,7 @@ export default function TaskListView({
                               onDragOver={(e) => handleStatusDragOver(e, statusGroup.status.project_status_mapping_id, phaseGroup.phase.phase_id)}
                               onDrop={(e) => handleDrop(e, statusGroup.status.project_status_mapping_id, phaseGroup.phase.phase_id, statusGroup.tasks, -1)}
                             >
-                              <td colSpan={11} className="h-2">
+                              <td colSpan={visibleColumnCount} className="h-2">
                                 {isDropTarget && dropIndicatorIndex === -1 && (
                                   <div className="h-0.5 bg-primary-400 ml-10" />
                                 )}

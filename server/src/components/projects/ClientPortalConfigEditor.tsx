@@ -52,7 +52,7 @@ export default function ClientPortalConfigEditor({
       if (fields.includes('estimated_hours')) fieldLabels.push('estimated hours');
       if (fields.includes('actual_hours')) fieldLabels.push('actual hours');
       if (fields.includes('priority')) fieldLabels.push('priority');
-      if (fields.includes('checklist_progress')) fieldLabels.push('checklist progress');
+      if (fields.includes('checklist_progress')) fieldLabels.push('checklist item names and completion');
       if (fields.includes('dependencies')) fieldLabels.push('task dependencies');
       if (fields.includes('document_uploads')) fieldLabels.push('document uploads');
 
@@ -66,9 +66,6 @@ export default function ClientPortalConfigEditor({
 
   return (
     <div className="space-y-4">
-      <p className="text-sm text-gray-500">
-        Configure what clients can see about this project in their portal.
-      </p>
 
       {/* What clients will see summary */}
       <Alert variant="info">
@@ -166,21 +163,23 @@ export default function ClientPortalConfigEditor({
               </p>
               <div className="space-y-2">
                 {CONFIGURABLE_TASK_FIELDS.map(field => (
-                  <div key={field.key} className="flex items-center">
+                  <div key={field.key} className="flex items-start">
                     <Checkbox
                       id={`field-${field.key}`}
                       checked={(config.visible_task_fields ?? []).includes(field.key)}
                       onChange={() => toggleTaskField(field.key)}
                       disabled={disabled || field.required}
-                      containerClassName=""
+                      containerClassName="mt-0.5"
                     />
-                    <label
-                      htmlFor={`field-${field.key}`}
-                      className={`ml-2 text-sm ${field.required ? 'text-gray-500' : 'text-gray-700'}`}
-                    >
-                      {field.label}
-                      {field.required && <span className="text-xs ml-1">(required)</span>}
-                    </label>
+                    <div className="ml-2">
+                      <label
+                        htmlFor={`field-${field.key}`}
+                        className={`text-sm ${field.required ? 'text-gray-500' : 'text-gray-700'}`}
+                      >
+                        {field.label}
+                        {field.required && <span className="text-xs ml-1">(required)</span>}
+                      </label>
+                    </div>
                   </div>
                 ))}
               </div>

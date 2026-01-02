@@ -349,17 +349,29 @@ export default function ProjectDetail({
   
   // Handle task tag changes
   const handleTaskTagsChange = (taskId: string, tags: ITag[]) => {
+    // Update kanban view tags
     setTaskTags(prev => ({
       ...prev,
       [taskId]: tags
     }));
-    
+
     // Update all unique tags
     setAllTaskTags(current => {
       const currentTagTexts = new Set(current.map(t => t.tag_text));
       const newTags = tags.filter(tag => !currentTagTexts.has(tag.tag_text));
       return [...current, ...newTags];
     });
+
+    // Update list view data if it exists
+    if (listViewData) {
+      setListViewData(prev => prev ? {
+        ...prev,
+        taskTags: {
+          ...prev.taskTags,
+          [taskId]: tags
+        }
+      } : null);
+    }
   };
   
   // Fetch project completion metrics and project tree data
@@ -981,9 +993,14 @@ export default function ProjectDetail({
   const handleTaskUpdated = useCallback(async (updatedTask: IProjectTask | null) => {
     if (updatedTask) {
       try {
-        const checklistItems = await getTaskChecklistItems(updatedTask.task_id);
+        // Fetch checklist items and task resources in parallel
+        const [checklistItems, taskResources] = await Promise.all([
+          getTaskChecklistItems(updatedTask.task_id),
+          getTaskResourcesAction(updatedTask.task_id)
+        ]);
         const taskWithChecklist = { ...updatedTask, checklist_items: checklistItems };
 
+        // Update kanban view data
         setProjectTasks((prevTasks) => {
           const taskExists = prevTasks.some(task => task.task_id === updatedTask.task_id);
 
@@ -995,26 +1012,58 @@ export default function ProjectDetail({
             return [...prevTasks, taskWithChecklist];
           }
         });
+
+        // Update task resources for kanban view
+        setPhaseTaskResources(prev => ({
+          ...prev,
+          [updatedTask.task_id]: taskResources
+        }));
+
+        // Update list view data if it exists
+        setListViewData(prev => {
+          if (!prev) return null;
+          const taskExists = prev.tasks.some(t => t.task_id === updatedTask.task_id);
+          return {
+            ...prev,
+            tasks: taskExists
+              ? prev.tasks.map(t => t.task_id === updatedTask.task_id ? taskWithChecklist : t)
+              : [...prev.tasks, taskWithChecklist],
+            checklistItems: {
+              ...prev.checklistItems,
+              [updatedTask.task_id]: checklistItems
+            },
+            taskResources: {
+              ...prev.taskResources,
+              [updatedTask.task_id]: taskResources
+            }
+          };
+        });
+
         toast.success(taskWithChecklist.task_id ? 'Task updated successfully!' : 'Task added successfully!');
       } catch (error) {
         console.error('Error updating task:', error);
         toast.error('Failed to update task');
       }
     } else {
+      // Task deleted
       setProjectTasks((prevTasks) =>
         prevTasks.filter((task) => task.task_id !== selectedTask?.task_id)
       );
+
+      // Also remove from list view data
+      if (selectedTask) {
+        setListViewData(prev => prev ? {
+          ...prev,
+          tasks: prev.tasks.filter(t => t.task_id !== selectedTask.task_id)
+        } : null);
+      }
+
       toast.success('Task deleted successfully!');
     }
     setShowQuickAdd(false);
     setSelectedTask(null);
     setIsAddingTask(false);
-
-    // Refresh list view data if in list mode
-    if (viewMode === 'list') {
-      refreshListView();
-    }
-  }, [selectedTask, viewMode, refreshListView]);
+  }, [selectedTask]);
 
   const handleTaskSelected = useCallback((task: IProjectTask) => {
     // Log that we're using the cached project tree data for editing
@@ -1025,31 +1074,44 @@ export default function ProjectDetail({
     setShowQuickAdd(true);
   }, [phases]);
 
-  const handleAssigneeChange = async (taskId: string, newAssigneeId: string, newTaskName?: string) => {
+  const handleAssigneeChange = async (taskId: string, newAssigneeId: string | null, newTaskName?: string) => {
     try {
-      const task = projectTasks.find(t => t.task_id === taskId);
+      // Find task in either kanban data or list view data
+      const task = projectTasks.find(t => t.task_id === taskId) || listViewData?.tasks.find(t => t.task_id === taskId);
       if (!task) {
         throw new Error('Task not found');
       }
-  
+
       const updatedTask = await updateTaskWithChecklist(taskId, {
         ...task,
-        assigned_to: newAssigneeId === 'unassigned' || newAssigneeId === '' ? null : newAssigneeId,
+        assigned_to: !newAssigneeId || newAssigneeId === 'unassigned' || newAssigneeId === '' ? null : newAssigneeId,
         task_name: newTaskName || task.task_name,
         estimated_hours: Number(task.estimated_hours) || 0,
         actual_hours: Number(task.actual_hours) || 0,
         checklist_items: task.checklist_items
       });
-  
+
       if (updatedTask) {
         const checklistItems = await getTaskChecklistItems(taskId);
         const taskWithChecklist = { ...updatedTask, checklist_items: checklistItems };
-        
+
+        // Update kanban view data
         setProjectTasks(prevTasks =>
           prevTasks.map((task): IProjectTask =>
             task.task_id === taskId ? taskWithChecklist : task
           )
         );
+
+        // Update list view data if it exists
+        if (listViewData) {
+          setListViewData(prev => prev ? {
+            ...prev,
+            tasks: prev.tasks.map(t =>
+              t.task_id === taskId ? taskWithChecklist : t
+            )
+          } : null);
+        }
+
         toast.success('Task assignee updated successfully!');
       }
     } catch (error) {
@@ -1347,10 +1409,11 @@ export default function ProjectDetail({
             checklistItems={Object.entries(listViewData.checklistItems).reduce((acc, [taskId, items]) => {
               acc[taskId] = {
                 total: items.length,
-                completed: items.filter(item => item.completed).length
+                completed: items.filter(item => item.completed).length,
+                items: items.map(item => ({ item_name: item.item_name, completed: item.completed }))
               };
               return acc;
-            }, {} as Record<string, { total: number; completed: number }>)}
+            }, {} as Record<string, { total: number; completed: number; items?: Array<{ item_name: string; completed: boolean }> }>)}
             documentCounts={{}}
             onTaskClick={handleTaskSelected}
             onTaskDelete={handleDeleteTaskClick}
@@ -1364,6 +1427,8 @@ export default function ProjectDetail({
                 setShowQuickAdd(true);
               }
             }}
+            onTaskTagsChange={handleTaskTagsChange}
+            onAssigneeChange={(taskId, newAssigneeId) => handleAssigneeChange(taskId, newAssigneeId)}
             users={users}
             selectedPriorityFilter={selectedPriorityFilter}
             selectedTaskTags={selectedTaskTags}

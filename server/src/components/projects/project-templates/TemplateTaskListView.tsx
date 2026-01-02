@@ -23,9 +23,28 @@ import {
   CheckSquare,
   Plus,
   GripVertical,
+  Zap,
 } from 'lucide-react';
 import { Tooltip } from 'server/src/components/ui/Tooltip';
 import { Button } from 'server/src/components/ui/Button';
+import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
+import UserAvatar from 'server/src/components/ui/UserAvatar';
+import UserPicker from 'server/src/components/ui/UserPicker';
+import { useResponsiveColumns, ColumnConfig } from 'server/src/hooks/useResponsiveColumns';
+
+// Column configuration for responsive hiding
+// Lower priority number = higher importance (shown first)
+// minWidth should match roughly the actual display width for proper hiding
+const COLUMN_CONFIG: ColumnConfig[] = [
+  { key: 'drag', minWidth: 40, priority: 0, alwaysShow: true },
+  { key: 'name', minWidth: 200, priority: 1, alwaysShow: true },
+  { key: 'actions', minWidth: 100, priority: 2, alwaysShow: true },
+  { key: 'assignee', minWidth: 220, priority: 3 },
+  { key: 'checklist', minWidth: 100, priority: 4 },
+  { key: 'deps', minWidth: 70, priority: 5 },
+  { key: 'est_hours', minWidth: 80, priority: 6 },
+  { key: 'duration', minWidth: 80, priority: 7 },
+];
 
 interface TemplateTaskListViewProps {
   phases: IProjectTemplatePhase[];
@@ -42,6 +61,7 @@ interface TemplateTaskListViewProps {
   onAddPhase: () => void;
   onAddTask: (phaseId: string, statusMappingId?: string) => void;
   onTaskMove?: (taskId: string, newStatusMappingId: string, newPhaseId: string, beforeTaskId: string | null, afterTaskId: string | null) => Promise<void>;
+  onAssigneeChange?: (taskId: string, newAssigneeId: string | null) => void;
 }
 
 interface PhaseGroup {
@@ -65,9 +85,19 @@ export default function TemplateTaskListView({
   onAddPhase,
   onAddTask,
   onTaskMove,
+  onAssigneeChange,
 }: TemplateTaskListViewProps) {
   const [expandedPhases, setExpandedPhases] = useState<Set<string>>(new Set());
   const [expandedStatuses, setExpandedStatuses] = useState<Set<string>>(new Set());
+
+  // Responsive columns - add padding to account for scrollbars, cell padding, and borders
+  const { containerRef, isColumnVisible, hiddenColumnCount } = useResponsiveColumns({
+    columns: COLUMN_CONFIG,
+    containerPadding: 80
+  });
+
+  // Calculate visible column count for colSpan
+  const visibleColumnCount = COLUMN_CONFIG.filter(c => isColumnVisible(c.key)).length;
 
   // Drag and drop state
   const [draggedTask, setDraggedTask] = useState<IProjectTemplateTask | null>(null);
@@ -214,7 +244,7 @@ export default function TemplateTaskListView({
     }
 
     return (
-      <div className="text-xs space-y-2">
+      <div className="text-xs space-y-2 min-w-[220px]">
         {deps.predecessors.length > 0 && (
           <div>
             <div className="font-medium text-gray-300 mb-1">Depends on:</div>
@@ -361,41 +391,52 @@ export default function TemplateTaskListView({
   }, [draggedTask, onTaskMove]);
 
   return (
-    <div className="flex flex-col bg-white border border-gray-200 rounded-lg overflow-hidden h-full min-h-[400px]">
+    <div ref={containerRef} className="flex flex-col bg-white border border-gray-200 rounded-lg overflow-hidden h-full min-h-[400px]">
+      {/* Hidden columns alert */}
+      {hiddenColumnCount > 0 && (
+        <Alert variant="info" className="rounded-none border-x-0 border-t-0">
+          <AlertDescription className="flex items-center text-sm">
+            <Zap className="h-4 w-4 mr-1" />
+            {hiddenColumnCount} column{hiddenColumnCount > 1 ? 's' : ''} hidden due to limited space. Resize browser to see more.
+          </AlertDescription>
+        </Alert>
+      )}
       {/* Column headers - sticky */}
       <div className="bg-white border-b border-gray-200 flex-shrink-0">
         <table className="w-full table-fixed">
-          <colgroup>
-            <col style={{ width: '40px' }} />
-            <col style={{ width: '36%' }} />  {/* Name */}
-            <col style={{ width: '8%' }} />   {/* Deps */}
-            <col style={{ width: '8%' }} />   {/* Checklist */}
-            <col style={{ width: '16%' }} />  {/* Assignee */}
-            <col style={{ width: '9%' }} />   {/* Est. Hours */}
-            <col style={{ width: '9%' }} />   {/* Duration */}
-            <col style={{ width: '10%' }} />  {/* Actions */}
-          </colgroup>
+          {/* Column widths: Drag | Name | Deps | Checklist | Assignee | Est. Hours | Duration | Actions */}
+          <colgroup><col style={{ width: '40px' }} /><col />{isColumnVisible('deps') && <col style={{ width: '6%' }} />}{isColumnVisible('checklist') && <col style={{ width: '7%' }} />}{isColumnVisible('assignee') && <col style={{ width: '17%' }} />}{isColumnVisible('est_hours') && <col style={{ width: '8%' }} />}{isColumnVisible('duration') && <col style={{ width: '8%' }} />}<col style={{ width: '9%' }} /></colgroup>
           <thead>
             <tr>
               <th className="w-10 px-3 py-3" />
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500">
                 Name
               </th>
-              <th className="px-3 py-3 text-left text-xs font-medium text-gray-500">
-                Deps
-              </th>
-              <th className="px-3 py-3 text-left text-xs font-medium text-gray-500">
-                Checklist
-              </th>
-              <th className="px-3 py-3 text-left text-xs font-medium text-gray-500">
-                Assignee
-              </th>
-              <th className="px-3 py-3 text-left text-xs font-medium text-gray-500">
-                Est. Hours
-              </th>
-              <th className="px-3 py-3 text-left text-xs font-medium text-gray-500">
-                Duration
-              </th>
+              {isColumnVisible('deps') && (
+                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500">
+                  Deps
+                </th>
+              )}
+              {isColumnVisible('checklist') && (
+                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500">
+                  Checklist
+                </th>
+              )}
+              {isColumnVisible('assignee') && (
+                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500">
+                  Assignee
+                </th>
+              )}
+              {isColumnVisible('est_hours') && (
+                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500">
+                  Est. Hours
+                </th>
+              )}
+              {isColumnVisible('duration') && (
+                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500">
+                  Duration
+                </th>
+              )}
               <th className="px-3 py-3 text-right text-xs font-medium text-gray-500">
                 Actions
               </th>
@@ -412,16 +453,8 @@ export default function TemplateTaskListView({
           return (
             <div key={phaseGroup.phase.template_phase_id}>
               <table className="w-full table-fixed">
-                <colgroup>
-                  <col style={{ width: '40px' }} />
-                  <col style={{ width: '36%' }} />  {/* Name */}
-                  <col style={{ width: '8%' }} />   {/* Deps */}
-                  <col style={{ width: '8%' }} />   {/* Checklist */}
-                  <col style={{ width: '16%' }} />  {/* Assignee */}
-                  <col style={{ width: '9%' }} />   {/* Est. Hours */}
-                  <col style={{ width: '9%' }} />   {/* Duration */}
-                  <col style={{ width: '10%' }} />  {/* Actions */}
-                </colgroup>
+{/* Column widths: Drag | Name | Deps | Checklist | Assignee | Est. Hours | Duration | Actions */}
+                <colgroup><col style={{ width: '40px' }} /><col />{isColumnVisible('deps') && <col style={{ width: '6%' }} />}{isColumnVisible('checklist') && <col style={{ width: '7%' }} />}{isColumnVisible('assignee') && <col style={{ width: '17%' }} />}{isColumnVisible('est_hours') && <col style={{ width: '8%' }} />}{isColumnVisible('duration') && <col style={{ width: '8%' }} />}<col style={{ width: '9%' }} /></colgroup>
 
                 {/* Phase header row */}
                 <thead>
@@ -429,7 +462,7 @@ export default function TemplateTaskListView({
                     className="bg-white hover:bg-gray-50 cursor-pointer transition-colors"
                     onClick={() => togglePhase(phaseGroup.phase.template_phase_id)}
                   >
-                    <td className="py-3" colSpan={8}>
+                    <td className="py-3" colSpan={visibleColumnCount}>
                       <div className="flex items-start gap-2 px-3">
                         <div className="pt-1 text-gray-400">
                           {isPhaseExpanded ? (
@@ -538,7 +571,7 @@ export default function TemplateTaskListView({
                               }
                             }}
                           >
-                            <td className="py-1.5" colSpan={8}>
+                            <td className="py-1.5" colSpan={visibleColumnCount}>
                               <div className="flex items-center gap-2 pl-8">
                                 {isStatusExpanded ? (
                                   <ChevronDown className="h-3.5 w-3.5 text-gray-400" />
@@ -585,7 +618,7 @@ export default function TemplateTaskListView({
                                   {/* Drop indicator line above task */}
                                   {showDropIndicator && (
                                     <tr className="h-0">
-                                      <td colSpan={8} className="p-0">
+                                      <td colSpan={visibleColumnCount} className="p-0">
                                         <div className="h-0.5 bg-primary-500 mx-2" />
                                       </td>
                                     </tr>
@@ -634,58 +667,145 @@ export default function TemplateTaskListView({
                                   </td>
 
                                   {/* Dependencies */}
-                                  <td className="py-3 px-3">
-                                    {hasDependencies && dependencyTooltipContent && (
-                                      <Tooltip content={dependencyTooltipContent}>
-                                        <div className="flex items-center gap-1 cursor-help">
-                                          {getDependencyIcon(task.template_task_id)}
-                                          <span className="text-xs text-gray-500">
-                                            {deps.predecessors.length + deps.successors.length}
-                                          </span>
-                                        </div>
-                                      </Tooltip>
-                                    )}
-                                  </td>
+                                  {isColumnVisible('deps') && (
+                                    <td className="py-3 px-3">
+                                      {hasDependencies && dependencyTooltipContent && (
+                                        <Tooltip content={dependencyTooltipContent}>
+                                          <div className="flex items-center gap-1 cursor-help">
+                                            {getDependencyIcon(task.template_task_id)}
+                                            <span className="text-xs text-gray-500">
+                                              {deps.predecessors.length + deps.successors.length}
+                                            </span>
+                                          </div>
+                                        </Tooltip>
+                                      )}
+                                    </td>
+                                  )}
 
                                   {/* Checklist */}
-                                  <td className="py-3 px-3">
-                                    {checklistCount > 0 && (
-                                      <div className="flex items-center gap-1 text-gray-600">
-                                        <CheckSquare className="h-3.5 w-3.5" />
-                                        <span className="text-xs">{checklistCount}</span>
-                                      </div>
-                                    )}
-                                  </td>
+                                  {isColumnVisible('checklist') && (
+                                    <td className="py-3 px-3">
+                                      {checklistCount > 0 && (() => {
+                                        const taskChecklistItems = checklistItems.filter(c => c.template_task_id === task.template_task_id);
+                                        return (
+                                          <Tooltip
+                                            content={
+                                              <div className="text-xs space-y-1 max-w-xs">
+                                                <div className="font-medium text-gray-300 mb-1">Checklist Items:</div>
+                                                {taskChecklistItems.map((item, i) => (
+                                                  <div key={i} className="flex items-center gap-1.5">
+                                                    <CheckSquare className={`h-3 w-3 ${item.completed ? 'text-green-400' : 'text-gray-400'}`} />
+                                                    <span className={item.completed ? 'line-through text-gray-400' : ''}>{item.item_name}</span>
+                                                  </div>
+                                                ))}
+                                              </div>
+                                            }
+                                          >
+                                            <div className="flex items-center gap-1 text-gray-600 cursor-help">
+                                              <CheckSquare className="h-3.5 w-3.5" />
+                                              <span className="text-xs">{checklistCount}</span>
+                                            </div>
+                                          </Tooltip>
+                                        );
+                                      })()}
+                                    </td>
+                                  )}
 
                                   {/* Assignee */}
-                                  <td className="py-3 px-3">
-                                    <div className="flex items-center gap-1">
-                                      <span className="text-sm text-gray-700 truncate">
-                                        {getAssigneeName(task.assigned_to)}
-                                      </span>
-                                      {additionalAssigneesCount > 0 && (
-                                        <span className="text-xs text-gray-500">
-                                          +{additionalAssigneesCount}
-                                        </span>
-                                      )}
-                                    </div>
-                                  </td>
+                                  {isColumnVisible('assignee') && (
+                                    <td className="py-3 px-3" onClick={(e) => e.stopPropagation()}>
+                                      <div className="flex items-center gap-1.5">
+                                        {onAssigneeChange ? (
+                                          <UserPicker
+                                            value={task.assigned_to || ''}
+                                            onValueChange={(newAssigneeId) => onAssigneeChange(task.template_task_id, newAssigneeId || null)}
+                                            size="sm"
+                                            users={users.filter(u =>
+                                              !taskAssignments.some(a =>
+                                                a.template_task_id === task.template_task_id &&
+                                                !a.is_primary &&
+                                                a.user_id === u.user_id
+                                              )
+                                            )}
+                                          />
+                                        ) : (
+                                          (() => {
+                                            const user = task.assigned_to ? users.find(u => u.user_id === task.assigned_to) : null;
+                                            if (user) {
+                                              const userName = `${user.first_name} ${user.last_name}`;
+                                              return (
+                                                <>
+                                                  <UserAvatar
+                                                    userId={user.user_id}
+                                                    userName={userName}
+                                                    avatarUrl={null}
+                                                    size="xs"
+                                                  />
+                                                  <span className="text-sm text-gray-700 truncate">
+                                                    {userName}
+                                                  </span>
+                                                </>
+                                              );
+                                            }
+                                            return (
+                                              <span className="text-sm text-gray-400">Unassigned</span>
+                                            );
+                                          })()
+                                        )}
+                                        {additionalAssigneesCount > 0 && (() => {
+                                          const additionalAssignments = taskAssignments.filter(a => a.template_task_id === task.template_task_id && !a.is_primary);
+                                          return (
+                                            <Tooltip
+                                              content={
+                                                <div className="text-xs space-y-1.5">
+                                                  <div className="font-medium text-gray-300 mb-1">Additional Agents:</div>
+                                                  {additionalAssignments.map((assignment, i) => {
+                                                    const assignmentUser = users.find(u => u.user_id === assignment.user_id);
+                                                    const userName = assignmentUser ? `${assignmentUser.first_name} ${assignmentUser.last_name}` : 'Unknown';
+                                                    return (
+                                                      <div key={i} className="flex items-center gap-2">
+                                                        <UserAvatar
+                                                          userId={assignment.user_id}
+                                                          userName={userName}
+                                                          avatarUrl={null}
+                                                          size="xs"
+                                                        />
+                                                        <span>{userName}</span>
+                                                      </div>
+                                                    );
+                                                  })}
+                                                </div>
+                                              }
+                                            >
+                                              <span className="text-xs text-purple-600 font-medium cursor-help bg-purple-50 px-1.5 py-0.5 rounded">
+                                                +{additionalAssigneesCount}
+                                              </span>
+                                            </Tooltip>
+                                          );
+                                        })()}
+                                      </div>
+                                    </td>
+                                  )}
 
                                   {/* Est. Hours */}
-                                  <td className="py-3 px-3">
-                                    <span className="text-sm text-gray-700">
-                                      {task.estimated_hours != null
-                                        ? (Number(task.estimated_hours) / 60).toFixed(1)
-                                        : '-'}
-                                    </span>
-                                  </td>
+                                  {isColumnVisible('est_hours') && (
+                                    <td className="py-3 px-3">
+                                      <span className="text-sm text-gray-700">
+                                        {task.estimated_hours != null
+                                          ? (Number(task.estimated_hours) / 60).toFixed(1)
+                                          : '-'}
+                                      </span>
+                                    </td>
+                                  )}
 
                                   {/* Duration */}
-                                  <td className="py-3 px-3">
-                                    <span className="text-sm text-gray-700">
-                                      {task.duration_days != null ? `${task.duration_days}d` : '-'}
-                                    </span>
-                                  </td>
+                                  {isColumnVisible('duration') && (
+                                    <td className="py-3 px-3">
+                                      <span className="text-sm text-gray-700">
+                                        {task.duration_days != null ? `${task.duration_days}d` : '-'}
+                                      </span>
+                                    </td>
+                                  )}
 
                                   {/* Actions */}
                                   <td className="py-2 px-3 text-right">

@@ -88,6 +88,7 @@ export const projectTaskSchema = tenantSchema.extend({
   updated_at: z.date(),
   wbs_code: z.string(),
   due_date: z.date().nullable(),
+  priority_id: z.string().uuid().nullable().optional(),
   service_id: z.string().uuid().nullable().optional(),
   checklist_items: z.array(z.lazy(() => taskChecklistItemSchema)).optional()
 });

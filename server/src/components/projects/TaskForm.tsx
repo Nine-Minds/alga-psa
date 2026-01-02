@@ -5,7 +5,7 @@ import { IProjectPhase, IProjectTask, ITaskChecklistItem, ProjectStatus, IProjec
 import { IUser } from '@shared/interfaces/user.interfaces';
 import { IPriority } from 'server/src/interfaces/ticket.interfaces';
 import { ITag } from 'server/src/interfaces/tag.interfaces';
-import AvatarIcon from 'server/src/components/ui/AvatarIcon';
+import UserAvatar from 'server/src/components/ui/UserAvatar';
 import { getProjectTreeData, getProjectDetails } from 'server/src/lib/actions/project-actions/projectActions';
 import { getAllPriorities } from 'server/src/lib/actions/priorityActions';
 import { getServices } from 'server/src/lib/actions/serviceActions';
@@ -1200,10 +1200,10 @@ export default function TaskForm({
                 {(task?.task_id ? taskResources : tempTaskResources).map((resource): React.JSX.Element => (
                   <div key={resource.assignment_id} className="flex items-center justify-between bg-gray-50 p-2 rounded">
                     <div className="flex items-center gap-2">
-                      <AvatarIcon
+                      <UserAvatar
                         userId={resource.additional_user_id}
-                        firstName={resource.first_name}
-                        lastName={resource.last_name}
+                        userName={`${resource.first_name} ${resource.last_name}`}
+                        avatarUrl={null}
                         size="sm"
                       />
                       <span className="text-sm">{resource.first_name} {resource.last_name}</span>
@@ -1428,7 +1428,7 @@ export default function TaskForm({
         <Dialog
           isOpen={true}
           onClose={handleCancelClick}
-          className="max-w-3xl max-h-[90vh] overflow-y-auto"
+          className="max-w-3xl"
           title={mode === 'create' ? 'Add New Task' : 'Edit Task'}
         >
           <DialogContent>

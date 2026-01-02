@@ -28,7 +28,7 @@ export const CONFIGURABLE_TASK_FIELDS = [
   { key: 'estimated_hours', label: 'Estimated Hours', required: false },
   { key: 'actual_hours', label: 'Actual Hours', required: false },
   { key: 'priority', label: 'Priority', required: false },
-  { key: 'checklist_progress', label: 'Checklist Progress', required: false },
+  { key: 'checklist_progress', label: 'Checklist', required: false },
   { key: 'services', label: 'Services', required: false },
   { key: 'dependencies', label: 'Dependencies', required: false },
   { key: 'document_uploads', label: 'Document Uploads', required: false }
