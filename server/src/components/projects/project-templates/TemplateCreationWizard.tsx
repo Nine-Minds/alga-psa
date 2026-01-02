@@ -8,6 +8,7 @@ import { TemplateBasicsStep } from './wizard-steps/TemplateBasicsStep';
 import { TemplateStatusColumnsStep } from './wizard-steps/TemplateStatusColumnsStep';
 import { TemplatePhasesStep } from './wizard-steps/TemplatePhasesStep';
 import { TemplateTasksStep } from './wizard-steps/TemplateTasksStep';
+import { TemplateClientPortalStep } from './wizard-steps/TemplateClientPortalStep';
 import { TemplateReviewStep } from './wizard-steps/TemplateReviewStep';
 import { createTemplateFromWizard } from 'server/src/lib/actions/project-actions/projectTemplateWizardActions';
 import { getTenantProjectStatuses } from 'server/src/lib/actions/project-actions/projectTaskStatusActions';
@@ -18,16 +19,18 @@ import { getServices } from 'server/src/lib/actions/serviceActions';
 import { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
 import { IStatus } from 'server/src/interfaces/status.interface';
 import { IService } from 'server/src/interfaces/billing.interfaces';
+import { IClientPortalConfig, DEFAULT_CLIENT_PORTAL_CONFIG } from 'server/src/interfaces/project.interfaces';
 
 const STEPS = [
   'Template Basics',
   'Task Status Columns',
   'Phases',
   'Tasks',
+  'Client Portal',
   'Review & Create',
 ] as const;
 
-const REQUIRED_STEPS = [0, 4]; // Basics and Review are required
+const REQUIRED_STEPS = [0, 5]; // Basics and Review are required
 
 export interface TemplateStatusMapping {
   temp_id: string;
@@ -79,6 +82,7 @@ export interface TemplateWizardData {
   phases: TemplatePhase[];
   tasks: TemplateTask[];
   checklist_items: TemplateChecklistItem[];
+  client_portal_config?: IClientPortalConfig;
 }
 
 interface TemplateCreationWizardProps {
@@ -119,6 +123,7 @@ export function TemplateCreationWizard({
     phases: [],
     tasks: [],
     checklist_items: [],
+    client_portal_config: DEFAULT_CLIENT_PORTAL_CONFIG,
   });
 
   useEffect(() => {
@@ -182,6 +187,7 @@ export function TemplateCreationWizard({
       phases: [],
       tasks: [],
       checklist_items: [],
+      client_portal_config: DEFAULT_CLIENT_PORTAL_CONFIG,
     });
     setErrors({});
     setCompletedSteps(new Set());
@@ -230,7 +236,11 @@ export function TemplateCreationWizard({
         // Optional step - validation happens at save time (Done button)
         return true;
 
-      case 4: // Review
+      case 4: // Client Portal
+        // Optional step, always valid
+        return true;
+
+      case 5: // Review
         // Final validation
         if (!wizardData.template_name?.trim()) {
           setErrors((prev) => ({ ...prev, [stepIndex]: 'Template name is required' }));
@@ -326,6 +336,8 @@ export function TemplateCreationWizard({
           />
         );
       case 4:
+        return <TemplateClientPortalStep data={wizardData} updateData={updateData} />;
+      case 5:
         return <TemplateReviewStep data={wizardData} availableStatuses={availableStatuses} />;
       default:
         return null;

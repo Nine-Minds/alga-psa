@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import toast from 'react-hot-toast';
 import { useSearchParams, useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { DataTable } from 'server/src/components/ui/DataTable';
 import Spinner from 'server/src/components/ui/Spinner';
 import { format } from 'date-fns';
@@ -243,17 +244,13 @@ export function TicketList() {
       dataIndex: 'ticket_number',
       width: '75px',
       render: (value: string, record: ITicketListItem) => (
-        <div
-          className="font-medium cursor-pointer hover:text-[rgb(var(--color-secondary-600))]"
-          onClick={(e) => {
-            e.stopPropagation();
-            if (record.ticket_id) {
-              router.push(`/client-portal/tickets/${record.ticket_id}`);
-            }
-          }}
+        <Link
+          href={`/client-portal/tickets/${record.ticket_id}`}
+          className="font-medium hover:text-[rgb(var(--color-secondary-600))]"
+          onClick={(e) => e.stopPropagation()}
         >
           {value}
-        </div>
+        </Link>
       ),
     },
     {
@@ -261,17 +258,13 @@ export function TicketList() {
       dataIndex: 'title',
       width: '25%',
       render: (value: string, record: ITicketListItem) => (
-        <div
-          className="font-medium cursor-pointer hover:text-[rgb(var(--color-secondary-600))]"
-          onClick={(e) => {
-            e.stopPropagation();
-            if (record.ticket_id) {
-              router.push(`/client-portal/tickets/${record.ticket_id}`);
-            }
-          }}
+        <Link
+          href={`/client-portal/tickets/${record.ticket_id}`}
+          className="font-medium hover:text-[rgb(var(--color-secondary-600))]"
+          onClick={(e) => e.stopPropagation()}
         >
           {value}
-        </div>
+        </Link>
       ),
     },
     {

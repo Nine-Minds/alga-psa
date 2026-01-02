@@ -867,19 +867,23 @@ const Clients: React.FC = () => {
           <div className="flex items-center gap-4">
             {/* Actions */}
             <div className="flex gap-2">
-              <button
+              <Button
+                id="create-client-button"
                 onClick={() => setIsDialogOpen(true)}
-                className="px-4 py-2 text-sm font-medium text-white bg-primary-500 hover:bg-primary-600 rounded"
               >
                 + Create Client
-              </button>
+              </Button>
 
               <DropdownMenu.Root>
                 <DropdownMenu.Trigger asChild>
-                  <button className="border border-gray-300 rounded-md p-2 flex items-center gap-2">
+                  <Button
+                    id="clients-actions-button"
+                    variant="outline"
+                    className="flex items-center gap-2"
+                  >
                     <MoreVertical size={16} />
                     Actions
-                  </button>
+                  </Button>
                 </DropdownMenu.Trigger>
                 <DropdownMenu.Content className="bg-white rounded-md shadow-lg p-1">
                   <DropdownMenu.Item 
@@ -923,14 +927,17 @@ const Clients: React.FC = () => {
             {isSelectAllMode ? `All ${selectedClients.length} clients selected` : `${selectedClients.length} Selected`}
           </span>}
 
-        <button
-          className="flex gap-1 text-sm font-medium text-gray-500"
+        <Button
+          id="delete-selected-clients"
+          variant="ghost"
+          size="sm"
+          className="flex gap-1 text-gray-500"
           disabled={selectedClients.length === 0}
           onClick={handleMultiDelete}
         >
           Delete
           <TrashIcon className="h-5 w-5" />
-        </button>
+        </Button>
       </div>
 
       {/* Clients */}

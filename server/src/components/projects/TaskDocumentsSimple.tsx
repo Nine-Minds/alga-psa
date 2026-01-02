@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { Paperclip, Plus, Link, FileText, File, Image, Download, X, ChevronRight, ChevronDown } from 'lucide-react';
+import { Paperclip, Plus, Link, FileText, File, Image, Download, X, ChevronRight, ChevronDown, Eye, FileVideo } from 'lucide-react';
 import { IDocument } from 'server/src/interfaces/document.interface';
 import { 
   getDocumentsByEntity,
@@ -42,6 +42,16 @@ const DEFAULT_BLOCKS: PartialBlock[] = [{
     styles: {}
   }]
 }];
+
+// Check if file type can be previewed inline
+function isViewableType(mimeType: string | undefined): boolean {
+  if (!mimeType) return false;
+  return (
+    mimeType.startsWith('image/') ||
+    mimeType.startsWith('video/') ||
+    mimeType === 'application/pdf'
+  );
+}
 
 interface TaskDocumentsSimpleProps {
   taskId: string;
@@ -86,6 +96,10 @@ export default function TaskDocumentsSimple({
   const [documentToDelete, setDocumentToDelete] = useState<IDocument | null>(null);
   const [isExpanded, setIsExpanded] = useState(false);
   const [isClosing, setIsClosing] = useState(false);
+
+  // Preview modal for images/videos/PDFs
+  const [showPreviewModal, setShowPreviewModal] = useState(false);
+  const [previewDocument, setPreviewDocument] = useState<IDocument | null>(null);
 
   const fetchUser = async () => {
     if (currentUser) return currentUser;
@@ -144,12 +158,20 @@ export default function TaskDocumentsSimple({
     if (!document.file_id) return <FileText className="h-4 w-4 text-blue-600" />;
     if (!document.mime_type) return <File className="h-4 w-4" />;
     if (document.mime_type.includes('pdf')) return <FileText className="h-4 w-4 text-red-600" />;
-    if (document.mime_type.includes('image')) return <Image className="h-4 w-4 text-blue-600" />;
+    if (document.mime_type.startsWith('image/')) return <Image className="h-4 w-4 text-blue-600" />;
+    if (document.mime_type.startsWith('video/')) return <FileVideo className="h-4 w-4 text-purple-600" />;
     return <File className="h-4 w-4" />;
   };
 
   const handleDocumentClick = async (document: IDocument) => {
-    // For uploaded files, download directly
+    // For uploaded files that are viewable (images, videos, PDFs), open preview modal
+    if (document.file_id && isViewableType(document.mime_type)) {
+      setPreviewDocument(document);
+      setShowPreviewModal(true);
+      return;
+    }
+
+    // For other uploaded files, download directly
     if (document.file_id) {
       await handleDownload({ stopPropagation: () => {} } as React.MouseEvent, document);
       return;
@@ -489,10 +511,46 @@ export default function TaskDocumentsSimple({
                 onClick={() => handleDocumentClick(doc)}
               >
                 <div className="flex items-center gap-2 flex-1 min-w-0">
-                  {getFileIcon(doc)}
+                  {/* Show thumbnail for images, icon for others */}
+                  {doc.file_id && doc.mime_type?.startsWith('image/') ? (
+                    <div className="w-8 h-8 rounded overflow-hidden flex-shrink-0 bg-gray-100">
+                      <img
+                        src={`/api/documents/view/${doc.file_id}`}
+                        alt=""
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          // Hide broken image, show icon instead
+                          e.currentTarget.style.display = 'none';
+                          e.currentTarget.parentElement?.classList.add('flex', 'items-center', 'justify-center');
+                          const icon = document.createElement('span');
+                          icon.innerHTML = '<svg class="h-4 w-4 text-blue-600" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>';
+                          e.currentTarget.parentElement?.appendChild(icon);
+                        }}
+                      />
+                    </div>
+                  ) : (
+                    getFileIcon(doc)
+                  )}
                   <span className="text-sm truncate">{doc.document_name}</span>
                 </div>
                 <div className="flex items-center gap-1">
+                  {/* View button for viewable file types */}
+                  {doc.file_id && isViewableType(doc.mime_type) && (
+                    <Button
+                      id={`task-document-view-${doc.document_id}`}
+                      type="button"
+                      size="sm"
+                      variant="ghost"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setPreviewDocument(doc);
+                        setShowPreviewModal(true);
+                      }}
+                      title="View"
+                    >
+                      <Eye className="h-3 w-3" />
+                    </Button>
+                  )}
                   <Button
                     id={`task-document-download-${doc.document_id}`}
                     type="button"
@@ -684,6 +742,67 @@ export default function TaskDocumentsSimple({
           )}
         </div>
       </Drawer>
+
+      {/* Preview Modal for images/videos/PDFs */}
+      {showPreviewModal && previewDocument && previewDocument.file_id && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-75"
+          onClick={() => setShowPreviewModal(false)}
+        >
+          <div
+            className="relative max-w-7xl max-h-[90vh] w-full mx-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Close button */}
+            <button
+              className="absolute top-4 right-4 text-white hover:text-gray-300 z-10 bg-black bg-opacity-50 rounded-full p-2"
+              onClick={() => setShowPreviewModal(false)}
+            >
+              <X className="w-6 h-6" />
+            </button>
+
+            {/* Download button in modal */}
+            <button
+              className="absolute top-4 right-16 text-white hover:text-gray-300 z-10 bg-black bg-opacity-50 rounded-full p-2"
+              onClick={async (e) => {
+                e.stopPropagation();
+                await handleDownload(e, previewDocument);
+              }}
+              title="Download"
+            >
+              <Download className="w-6 h-6" />
+            </button>
+
+            {/* Content based on type */}
+            {previewDocument.mime_type?.startsWith('image/') && (
+              <img
+                src={`/api/documents/view/${previewDocument.file_id}`}
+                alt={previewDocument.document_name}
+                className="max-w-full max-h-[90vh] object-contain mx-auto"
+              />
+            )}
+            {previewDocument.mime_type?.startsWith('video/') && (
+              <video
+                src={`/api/documents/view/${previewDocument.file_id}`}
+                controls
+                className="max-w-full max-h-[90vh] mx-auto"
+              />
+            )}
+            {previewDocument.mime_type === 'application/pdf' && (
+              <iframe
+                src={`/api/documents/view/${previewDocument.file_id}`}
+                className="w-full h-[90vh] bg-white"
+                title={previewDocument.document_name}
+              />
+            )}
+
+            {/* Document name */}
+            <div className="mt-2 text-center text-white">
+              <p className="text-lg font-medium">{previewDocument.document_name}</p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Folder Selector Modal */}
       <FolderSelectorModal

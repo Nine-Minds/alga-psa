@@ -1,6 +1,14 @@
 import { z } from 'zod';
 import { tenantSchema } from '../utils/validation';
 
+// Client Portal Configuration Schema
+export const clientPortalConfigSchema = z.object({
+  show_phases: z.boolean().default(false),
+  show_phase_completion: z.boolean().default(false),
+  show_tasks: z.boolean().default(false),
+  visible_task_fields: z.array(z.string()).default(['task_name', 'due_date', 'status'])
+});
+
 // Project-related schemas
 export const itemTypeSchema = z.enum(['project', 'project_task', 'ticket']);
 
@@ -49,7 +57,8 @@ export const projectSchema = tenantSchema.extend({
   is_closed: z.boolean().optional(),
   assigned_to: z.string().nullable().optional(),
   contact_name_id: z.string().nullable().optional(),
-  budgeted_hours: z.number().nullable().optional()
+  budgeted_hours: z.number().nullable().optional(),
+  client_portal_config: clientPortalConfigSchema.optional()
 });
 
 export const projectPhaseSchema = tenantSchema.extend({
@@ -79,6 +88,7 @@ export const projectTaskSchema = tenantSchema.extend({
   updated_at: z.date(),
   wbs_code: z.string(),
   due_date: z.date().nullable(),
+  priority_id: z.string().uuid().nullable().optional(),
   service_id: z.string().uuid().nullable().optional(),
   checklist_items: z.array(z.lazy(() => taskChecklistItemSchema)).optional()
 });
