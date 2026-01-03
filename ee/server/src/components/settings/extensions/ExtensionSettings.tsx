@@ -895,6 +895,7 @@ export default function ExtensionSettings() {
                               />
                               <div className="flex gap-2">
                                 <Button
+                                  id={`save-schedule-${s.id}`}
                                   size="sm"
                                   variant="outline"
                                   onClick={async () => {
@@ -928,6 +929,7 @@ export default function ExtensionSettings() {
                                   Save
                                 </Button>
                                 <Button
+                                  id={`cancel-edit-schedule-${s.id}`}
                                   size="sm"
                                   variant="ghost"
                                   onClick={() => setEditingScheduleId(null)}
