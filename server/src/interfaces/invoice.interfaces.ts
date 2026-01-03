@@ -56,6 +56,9 @@ export interface IInvoiceCharge extends TenantEntity, NetAmountItem {
   item_id: string;
   invoice_id: string;
   service_id?: string;
+  service_item_kind?: 'service' | 'product';
+  service_sku?: string | null;
+  service_name?: string | null;
   contract_line_id?: string; // Added for consolidated fixed items
   description: string;
   quantity: number;

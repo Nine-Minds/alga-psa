@@ -98,6 +98,7 @@ export function ReviewContractStep({ data }: ReviewContractStepProps) {
   const calculateTotalMonthly = () => data.fixed_base_rate ?? 0;
 
   const hasFixedServices = data.fixed_services.length > 0;
+  const hasProducts = data.product_services.length > 0;
   const hasHourlyServices = data.hourly_services.length > 0;
   const hasUsageServices = !!(data.usage_services && data.usage_services.length > 0);
 
@@ -241,6 +242,35 @@ export function ReviewContractStep({ data }: ReviewContractStepProps) {
               )}
             </div>
           </div>
+        </Card>
+      )}
+
+      {hasProducts && (
+        <Card className="p-4">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <Package className="h-5 w-5 text-purple-600" />
+              <h4 className="font-semibold">Products</h4>
+            </div>
+            <Badge variant="default" className="bg-purple-100 text-purple-800">
+              {data.product_services.length} products
+            </Badge>
+          </div>
+          <ul className="list-disc list-inside space-y-1 ml-2 text-sm">
+            {data.product_services.map((product, idx) => (
+              <li key={idx}>
+                <span className="font-medium">
+                  {product.service_name || product.service_id} (Qty: {product.quantity})
+                </span>
+                {product.custom_rate !== undefined ? (
+                  <span className="text-xs text-muted-foreground">
+                    {' '}
+                    — override {formatCurrency(product.custom_rate)}/{data.currency_code}
+                  </span>
+                ) : null}
+              </li>
+            ))}
+          </ul>
         </Card>
       )}
 

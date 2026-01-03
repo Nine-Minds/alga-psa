@@ -68,7 +68,7 @@ const BillingConfiguration: React.FC<BillingConfigurationProps> = ({ client, onS
     const [editingContractLine, setEditingContractLine] = useState<ClientContractLineWithStringDates | null>(null);
     const [contractLineToDelete, setContractLineToDelete] = useState<string | null>(null);
     const [services, setServices] = useState<IService[]>([]);
-    const [serviceTypes, setServiceTypes] = useState<{ id: string; name: string; billing_method: 'fixed' | 'hourly' | 'usage'; is_standard: boolean }[]>([]);
+    const [serviceTypes, setServiceTypes] = useState<{ id: string; name: string; billing_method: 'fixed' | 'hourly' | 'usage' | 'per_unit'; is_standard: boolean }[]>([]);
     const [newService, setNewService] = useState<Partial<IService>>({
         unit_of_measure: 'hour',
         custom_service_type_id: '', // Will be set after fetching service types
@@ -137,7 +137,7 @@ const BillingConfiguration: React.FC<BillingConfigurationProps> = ({ client, onS
             const billingCycle = await getBillingCycle(client.client_id);
             setBillingConfig(prev => ({ ...prev, billing_cycle: billingCycle }));
 
-            const servicesResponse = await getServices();
+            const servicesResponse = await getServices(1, 999, { item_kind: 'any' });
             // Extract the services array from the paginated response
             setServices(Array.isArray(servicesResponse) ? servicesResponse : (servicesResponse.services || []));
 
@@ -370,7 +370,7 @@ const BillingConfiguration: React.FC<BillingConfigurationProps> = ({ client, onS
                 }));
             }
 
-            const servicesResponse = await getServices();
+            const servicesResponse = await getServices(1, 999, { item_kind: 'any' });
             // Extract the services array from the paginated response
             setServices(Array.isArray(servicesResponse) ? servicesResponse : (servicesResponse.services || []));
             setErrorMessage(null);
@@ -385,7 +385,7 @@ const BillingConfiguration: React.FC<BillingConfigurationProps> = ({ client, onS
     const handleUpdateService = async (service: IService) => {
         try {
             await updateService(service.service_id, service);
-            const servicesResponse = await getServices();
+            const servicesResponse = await getServices(1, 999, { item_kind: 'any' });
             // Extract the services array from the paginated response
             setServices(Array.isArray(servicesResponse) ? servicesResponse : (servicesResponse.services || []));
             toast.success('Service updated successfully');
@@ -398,7 +398,7 @@ const BillingConfiguration: React.FC<BillingConfigurationProps> = ({ client, onS
     const handleDeleteService = async (serviceId: string) => {
         try {
             await deleteService(serviceId);
-            const servicesResponse = await getServices();
+            const servicesResponse = await getServices(1, 999, { item_kind: 'any' });
             // Extract the services array from the paginated response
             setServices(Array.isArray(servicesResponse) ? servicesResponse : (servicesResponse.services || []));
             toast.success('Service deleted successfully');

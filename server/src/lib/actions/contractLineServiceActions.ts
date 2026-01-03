@@ -141,7 +141,7 @@ async function addServiceToTemplateLine(
     throw new Error(`Service ${serviceId} not found`);
   }
 
-  if (service.billing_method && service.billing_method !== 'fixed') {
+  if (service.item_kind === 'service' && service.billing_method && service.billing_method !== 'fixed') {
     throw new Error('Only fixed billing method services can be attached to this template line.');
   }
 
@@ -242,7 +242,7 @@ export async function addServiceToContractLine(
       'sc.tenant': tenant
     })
     .select('sc.*', 'st.billing_method as service_type_billing_method') // Select the billing_method from the type table
-    .first() as IService & { service_type_billing_method?: 'fixed' | 'hourly' | 'usage' }; // Add type info
+    .first() as IService & { service_type_billing_method?: 'fixed' | 'hourly' | 'usage' | 'per_unit' }; // Add type info
 
   if (!serviceWithType) {
     throw new Error(`Service ${serviceId} not found`);
@@ -263,6 +263,42 @@ export async function addServiceToContractLine(
   }
 
   // --- BEGIN SERVER-SIDE VALIDATION ---
+  // Prevent attaching inactive catalog items to new/updated contract lines.
+  if (service.is_active === false) {
+    throw new Error(`"${service.service_name}" is inactive and cannot be attached to contract lines.`);
+  }
+
+  // Products (per-unit items) are only supported on Fixed contract lines in V1.
+  if (service.item_kind === 'product') {
+    if (plan.contract_line_type !== 'Fixed') {
+      throw new Error(`Products can only be added to fixed-fee contract lines.`);
+    }
+
+    // Validate that the product has pricing in the contract currency unless an override is provided.
+    const contract = plan.contract_id
+      ? await trx('contracts').where({ tenant, contract_id: plan.contract_id }).select('currency_code').first()
+      : null;
+    const currencyCode = contract?.currency_code ?? 'USD';
+
+    const hasOverride = customRate !== undefined && customRate !== null;
+    if (!hasOverride) {
+      const priceRow = await trx('service_prices')
+        .where({
+          tenant,
+          service_id: serviceId,
+          currency_code: currencyCode
+        })
+        .select('price_id')
+        .first();
+
+      if (!priceRow) {
+        throw new Error(
+          `Product "${service.service_name}" does not have ${currencyCode} pricing. Add a price in the catalog or enter a custom rate.`
+        );
+      }
+    }
+  }
+
   if (plan.contract_line_type === 'Hourly' && service.billing_method === 'fixed') {
     throw new Error(`Cannot add a fixed-price service (${service.service_name}) to an hourly contract line.`);
   } else if (plan.contract_line_type === 'Usage' && service.billing_method === 'fixed') {
@@ -284,6 +320,9 @@ export async function addServiceToContractLine(
     determinedConfigType = 'Hourly';
   } else if (serviceWithType?.service_type_billing_method === 'usage') {
     determinedConfigType = 'Usage';
+  } else if (serviceWithType?.service_type_billing_method === 'per_unit') {
+    // Per-unit items are persisted with Fixed configuration metadata, but billed as product charges.
+    determinedConfigType = 'Fixed';
   } else {
     // Fallback for missing/unknown service billing method on non-Bucket plans
     console.warn(`Could not determine standard billing method for service type of ${serviceId} on a non-Bucket plan. Defaulting configuration type to 'Fixed'.`);
@@ -406,7 +445,7 @@ export async function updateContractLineService(
   serviceId: string,
   updates: {
     quantity?: number;
-    customRate?: number;
+    customRate?: number | null;
     typeConfig?: Partial<IContractLineServiceFixedConfig | IContractLineServiceHourlyConfig | IContractLineServiceUsageConfig | IContractLineServiceBucketConfig>;
   },
   rateTiers?: IContractLineServiceRateTier[] // Add rateTiers here

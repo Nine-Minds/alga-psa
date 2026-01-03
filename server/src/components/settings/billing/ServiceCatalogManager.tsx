@@ -53,12 +53,9 @@ const ServiceCatalogManager: React.FC = () => {
   const [categories, setCategories] = useState<IServiceCategory[]>([]);
   // Update state type to match what getServiceTypesForSelection returns
   const [allServiceTypes, setAllServiceTypes] = useState<{ id: string; name: string; billing_method: 'fixed' | 'hourly' | 'per_unit' | 'usage'; is_standard: boolean }[]>([]);
-  // Use IService directly, extended with optional UI fields
   const [editingService, setEditingService] = useState<(IService & {
-    sku?: string; // These might need to be added to IService if they are persisted
     inventory_count?: number;
     seat_limit?: number;
-    license_term?: string;
   }) | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
@@ -164,7 +161,7 @@ const ServiceCatalogManager: React.FC = () => {
       if (selectedServiceType !== 'all' || selectedBillingMethod !== 'all') {
         // When filtering, fetch all services (with a large page size)
         console.log("Using client-side filtering - fetching all services");
-        response = await getServices(1, 1000);
+        response = await getServices(1, 1000, { item_kind: 'service' });
         
         // Update total count based on filtered results
         const filteredCount = response.services.filter(service => {
@@ -177,7 +174,7 @@ const ServiceCatalogManager: React.FC = () => {
       } else {
         // No filtering, use server-side pagination
         console.log("Using server-side pagination");
-        response = await getServices(pageToFetch, pageSize);
+        response = await getServices(pageToFetch, pageSize, { item_kind: 'service' });
         setTotalCount(response.totalCount);
       }
       

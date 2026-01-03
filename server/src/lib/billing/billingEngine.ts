@@ -286,16 +286,23 @@ export class BillingEngine {
       
       console.log(`[BillingEngine] Resolved billing currency: ${billingCurrency}`);
 
+      // Ticket/Project materials are client-scoped and may exist even when there are no contract lines.
+      const materialCharges = await this.calculateMaterialCharges(clientId, billingPeriod, billingCurrency);
+
       if (clientContractLines.length === 0) {
-        return {
-          charges: [],
-          totalAmount: 0,
-          discounts: [],
-          adjustments: [],
-          finalAmount: 0,
-          currency_code: billingCurrency,
-          error: `No active contract lines found for client ${clientId} in the given period`
-        };
+        if (materialCharges.length === 0) {
+          return {
+            charges: [],
+            totalAmount: 0,
+            discounts: [],
+            adjustments: [],
+            finalAmount: 0,
+            currency_code: billingCurrency,
+            error: `No active contract lines found for client ${clientId} in the given period`
+          };
+        }
+
+        totalCharges = totalCharges.concat(materialCharges);
       }
 
       console.log(`Found ${clientContractLines.length} active contract line(s) for client ${clientId}`);
@@ -335,14 +342,34 @@ export class BillingEngine {
         const totalAfterProration = proratedFixedCharges.reduce((sum: number, charge: IBillingCharge) => sum + charge.total, 0);
         console.log(`Total fixed charges after proration: ${getCurrencySymbol(billingCurrency)}${(totalAfterProration / 100).toFixed(2)} (${totalAfterProration} cents)`);
 
-        // Combine all charges without prorating time-based or usage-based charges
+        const proratedProductCharges = clientContractLine.enable_proration
+          ? (this.applyProrationToPlan(
+              productCharges,
+              billingPeriod,
+              clientContractLine.start_date,
+              clientContractLine.end_date,
+              cycle
+            ) as IProductCharge[])
+          : productCharges;
+
+        const proratedLicenseCharges = clientContractLine.enable_proration
+          ? (this.applyProrationToPlan(
+              licenseCharges,
+              billingPeriod,
+              clientContractLine.start_date,
+              clientContractLine.end_date,
+              cycle
+            ) as ILicenseCharge[])
+          : licenseCharges;
+
+        // Combine all charges (time/usage are not prorated here)
         totalCharges = totalCharges.concat(
           proratedFixedCharges,
           timeBasedCharges,
           usageBasedCharges,
           bucketPlanCharges,
-          productCharges,
-          licenseCharges
+          proratedProductCharges,
+          proratedLicenseCharges
         );
 
         console.log('Total charges breakdown:');
@@ -367,6 +394,10 @@ export class BillingEngine {
         });
 
         console.log('Total charges:', totalCharges);
+      }
+
+      if (clientContractLines.length > 0 && materialCharges.length > 0) {
+        totalCharges = totalCharges.concat(materialCharges);
       }
 
       const totalAmount = totalCharges.reduce((sum: number, charge: IBillingCharge) => sum + charge.total, 0);
@@ -786,6 +817,7 @@ export class BillingEngine {
           'cls.tenant': tenant,
           'clsc.configuration_type': 'Fixed'
         })
+        .whereNot('sc.item_kind', 'product')
         .select(
           'sc.service_id',
           'sc.service_name',
@@ -1678,12 +1710,43 @@ export class BillingEngine {
     }
 
     const tenant = this.tenant; // Capture tenant value for joins
+    const db = this.knex;
 
-    // TODO: The service_catalog table doesn't have a service_type column.
-    // This requires further investigation to determine the correct way to filter for hardware products.
-    // For now, return an empty array to prevent errors.
-    // TODO: Update this query to fetch license services correctly and include tax_rate_id
-    const planServices: any[] = []; // Placeholder
+    const planServices = await db('contract_line_services as cls')
+      .join('contract_line_service_configuration as clsc', function () {
+        this.on('clsc.contract_line_id', '=', 'cls.contract_line_id')
+          .andOn('clsc.service_id', '=', 'cls.service_id')
+          .andOn('clsc.tenant', '=', 'cls.tenant');
+      })
+      .join('service_catalog as sc', function () {
+        this.on('sc.service_id', '=', 'cls.service_id')
+          .andOn('sc.tenant', '=', 'cls.tenant');
+      })
+      .leftJoin('service_prices as sp', function () {
+        this.on('sp.service_id', '=', 'sc.service_id')
+          .andOn('sp.tenant', '=', 'sc.tenant')
+          .andOn('sp.currency_code', '=', db.raw('?', [clientContractLine.currency_code || 'USD']));
+      })
+      .where({
+        'cls.contract_line_id': clientContractLine.client_contract_line_id,
+        'cls.tenant': tenant
+      })
+      .andWhere('sc.item_kind', '=', 'product')
+      .select(
+        'sc.service_id',
+        'sc.service_name',
+        'sc.default_rate',
+        'sc.tax_rate_id',
+        'cls.quantity as service_quantity',
+        'cls.custom_rate as service_line_custom_rate',
+        'clsc.quantity as configuration_quantity',
+        'clsc.custom_rate as configuration_custom_rate',
+        'sp.rate as price_rate'
+      );
+
+    if (planServices.length === 0) {
+      return [];
+    }
 
     const productChargesPromises = planServices.map(async (service: any): Promise<IProductCharge> => {
       // Determine tax info using the helper function
@@ -1692,8 +1755,28 @@ export class BillingEngine {
         tax_rate_id: service.tax_rate_id // Assuming tax_rate_id is fetched
       });
 
-      const rate = service.custom_rate || service.default_rate;
-      const quantity = service.quantity || 1;
+      const hasOverride =
+        service.configuration_custom_rate != null || service.service_line_custom_rate != null;
+      const hasCatalogPrice = service.price_rate != null;
+      if (!hasOverride && !hasCatalogPrice) {
+        const currency = clientContractLine.currency_code || 'USD';
+        throw new Error(
+          `Missing pricing for product "${service.service_name}" (${service.service_id}) in ${currency}. ` +
+            `Add a ${currency} price in the product catalog or set a custom rate on the contract line.`
+        );
+      }
+
+      const rateCandidate =
+        service.configuration_custom_rate ??
+        service.service_line_custom_rate ??
+        service.price_rate ??
+        service.default_rate ??
+        0;
+      const rate = Math.round(Number(rateCandidate) || 0);
+
+      const quantityCandidate = service.configuration_quantity ?? service.service_quantity ?? 1;
+      const quantity = Math.max(1, Math.round(Number(quantityCandidate) || 1));
+
       const total = rate * quantity;
 
       // Calculate tax amount (will be recalculated later)
@@ -1732,7 +1815,7 @@ export class BillingEngine {
         is_taxable: isTaxable,
         servicePeriodStart: billingPeriod.startDate,
         servicePeriodEnd: billingPeriod.endDate,
-        billingTiming: 'arrears',
+        billingTiming: (clientContractLine.billing_timing ?? 'arrears') as 'arrears' | 'advance',
         // Add contract association information when the plan is covered by a contract assignment
         client_contract_id: clientContractLine.client_contract_id || undefined,
         contract_name: clientContractLine.contract_name || undefined
@@ -1826,6 +1909,141 @@ export class BillingEngine {
     const licenseCharges = await Promise.all(licenseChargesPromises);
 
     return licenseCharges;
+  }
+
+  private async calculateMaterialCharges(clientId: string, billingPeriod: IBillingPeriod, currencyCode: string): Promise<IProductCharge[]> {
+    await this.initKnex();
+    if (!this.tenant) {
+      throw new Error("tenant context not found");
+    }
+
+    const client = await this.knex('clients')
+      .where({
+        client_id: clientId,
+        tenant: this.tenant
+      })
+      .first() as IClient;
+
+    if (!client) {
+      throw new Error(`Client ${clientId} not found in tenant ${this.tenant}`);
+    }
+
+    const tenant = this.tenant;
+
+    let materialRows: any[] = [];
+
+    try {
+      materialRows = await this.knex
+        .select([
+          this.knex.raw(`'ticket' as source_type`),
+          'tm.ticket_material_id as source_id',
+          'tm.service_id',
+          'tm.quantity',
+          'tm.rate',
+          'tm.currency_code',
+          'tm.description',
+          'tm.created_at',
+          'sc.service_name',
+          'sc.tax_rate_id'
+        ])
+        .from('ticket_materials as tm')
+        .join('service_catalog as sc', function () {
+          this.on('tm.service_id', '=', 'sc.service_id').andOn('tm.tenant', '=', 'sc.tenant');
+        })
+        .where({
+          'tm.tenant': tenant,
+          'tm.client_id': clientId,
+          'tm.is_billed': false,
+          'tm.currency_code': currencyCode
+        })
+        .where('tm.created_at', '>=', billingPeriod.startDate)
+        .andWhere('tm.created_at', '<', billingPeriod.endDate)
+        .unionAll([
+          this.knex
+            .select([
+              this.knex.raw(`'project' as source_type`),
+              'pm.project_material_id as source_id',
+              'pm.service_id',
+              'pm.quantity',
+              'pm.rate',
+              'pm.currency_code',
+              'pm.description',
+              'pm.created_at',
+              'sc.service_name',
+              'sc.tax_rate_id'
+            ])
+            .from('project_materials as pm')
+            .join('service_catalog as sc', function () {
+              this.on('pm.service_id', '=', 'sc.service_id').andOn('pm.tenant', '=', 'sc.tenant');
+            })
+            .where({
+              'pm.tenant': tenant,
+              'pm.client_id': clientId,
+              'pm.is_billed': false,
+              'pm.currency_code': currencyCode
+            })
+            .where('pm.created_at', '>=', billingPeriod.startDate)
+            .andWhere('pm.created_at', '<', billingPeriod.endDate)
+        ]);
+    } catch (err: any) {
+      if (err?.code === '42P01') {
+        return [];
+      }
+      throw err;
+    }
+
+    const chargesPromises = (materialRows as any[]).map(async (row): Promise<IProductCharge> => {
+      const quantity = Math.max(1, Number(row.quantity || 1));
+      const rate = Math.round(Number(row.rate || 0));
+      const total = rate * quantity;
+
+      const { taxRegion: serviceTaxRegion, isTaxable } = await this.getTaxInfoFromService({
+        service_id: row.service_id,
+        tax_rate_id: row.tax_rate_id
+      });
+
+      let taxAmount = 0;
+      let taxRate = 0;
+      const effectiveTaxRegion = serviceTaxRegion ?? await getClientDefaultTaxRegionCode(client.client_id) ?? undefined;
+
+      if (!client.is_tax_exempt && isTaxable && effectiveTaxRegion) {
+        try {
+          const taxServiceInstance = new TaxService();
+          const taxResult = await taxServiceInstance.calculateTax(
+            client.client_id,
+            total,
+            billingPeriod.endDate,
+            effectiveTaxRegion,
+            true,
+            currencyCode || 'USD'
+          );
+          taxRate = taxResult.taxRate;
+          taxAmount = taxResult.taxAmount;
+        } catch (error) {
+          console.error(`Error calculating initial tax for material ${row.source_type} ${row.source_id}:`, error);
+        }
+      }
+
+      const description = row.description || row.service_name || 'Material';
+
+      return {
+        type: 'product',
+        serviceId: row.service_id,
+        serviceName: description,
+        quantity,
+        rate,
+        total,
+        tax_amount: taxAmount,
+        tax_rate: taxRate,
+        tax_region: effectiveTaxRegion,
+        is_taxable: isTaxable,
+        servicePeriodStart: billingPeriod.startDate,
+        servicePeriodEnd: billingPeriod.endDate,
+        billingTiming: 'arrears'
+      };
+    });
+
+    return Promise.all(chargesPromises);
   }
 
   private async calculateBucketPlanCharges(clientId: string, billingPeriod: IBillingPeriod, contractLine: IClientContractLine): Promise<IBucketCharge[]> {
@@ -2200,6 +2418,24 @@ export class BillingEngine {
       if (charge.type === 'fixed') {
         console.log(`Skipping proration in applyProrationToPlan for fixed charge: ${charge.serviceName} (handled earlier)`);
         return charge; // Return charge as is
+      }
+
+      // Prorate products/licenses when enabled at the contract line level.
+      if (charge.type === 'product' || charge.type === 'license') {
+        const originalTotal = Math.ceil(charge.total ?? 0);
+        const originalTax = Math.ceil((charge as any).tax_amount ?? 0);
+        const proratedTotal = Math.ceil(originalTotal * prorationFactor);
+        const proratedTax = Math.ceil(originalTax * prorationFactor);
+
+        const quantity = Math.max(1, Math.round((charge as any).quantity ?? 1));
+        const derivedRate = quantity > 0 ? Math.ceil(proratedTotal / quantity) : 0;
+
+        return {
+          ...charge,
+          rate: derivedRate,
+          total: derivedRate * quantity,
+          tax_amount: proratedTax,
+        } as IBillingCharge;
       }
 
       // --- Example: Proration logic for other types (if needed in future) ---

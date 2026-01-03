@@ -185,6 +185,15 @@ const _middleware = auth((request) => {
   // Protect MSP app routes: validate user type
   if (pathname.startsWith(protectedPrefix)) {
     if (!request.auth) {
+      // Next.js Server Actions are POST requests that expect an RSC payload. If we redirect here,
+      // the client will follow the redirect and receive HTML, surfacing as:
+      // "An unexpected response was received from the server."
+      //
+      // Instead, allow the request through and let the server action throw/handle auth (401).
+      if (request.headers.has('next-action')) {
+        return applyCorsHeaders(response, origin);
+      }
+
       const loginUrl = request.nextUrl.clone();
       loginUrl.pathname = '/auth/signin';
       const callbackUrl = request.nextUrl.pathname + (request.nextUrl.search || '');

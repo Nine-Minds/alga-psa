@@ -98,7 +98,7 @@ export const taxTypeSchema = z.enum(['VAT', 'GST', 'Sales Tax']);
 
 export const planTypeSchema = z.enum(['Fixed', 'Hourly', 'Usage']);
 
-export const billingMethodSchema = z.enum(['fixed', 'hourly', 'usage']);
+export const billingMethodSchema = z.enum(['fixed', 'hourly', 'usage', 'per_unit']);
 
 export const billingCycleAlignmentSchema = z.enum(['start', 'end', 'prorated']);
 
@@ -804,6 +804,16 @@ export const serviceBaseSchema = z.object({
   default_rate: z.number(),
   category_id: uuidSchema.nullable().optional(),
   unit_of_measure: z.string(),
+  item_kind: z.enum(['service', 'product']).optional(),
+  is_active: z.boolean().optional(),
+  sku: z.string().nullable().optional(),
+  cost: z.number().nullable().optional(),
+  vendor: z.string().nullable().optional(),
+  manufacturer: z.string().nullable().optional(),
+  product_category: z.string().nullable().optional(),
+  is_license: z.boolean().optional(),
+  license_term: z.string().nullable().optional(),
+  license_billing_cadence: z.string().nullable().optional(),
   tax_rate_id: uuidSchema.nullable().optional(),
   description: z.string().nullable().optional(),
   service_type_name: z.string().optional()
