@@ -16,17 +16,20 @@ dotenv.config({ path: path.resolve(__dirname, '.env') });
 
 // If Postgres runs in Docker and is published to a different host/port,
 // override the Playwright DB connection to hit the direct Postgres port instead
-// of PgBouncer. Prefer explicit overrides, then DB_DIRECT_*, then exposed host/port,
-// and finally fallback to DB_HOST/DB_PORT.
+// of PgBouncer.
+//
+// IMPORTANT: Do not fall back to DB_HOST/DB_PORT from `ee/server/.env` here.
+// That file is a developer runtime env and may use non-default ports; Playwright
+// should be self-contained and only deviate from defaults when explicitly configured.
 const directDbHost =
   process.env.DB_DIRECT_HOST ||
+  process.env.PLAYWRIGHT_DB_HOST ||
   process.env.EXPOSE_DB_HOST ||
-  process.env.DB_HOST ||
   'localhost';
 const directDbPort =
   process.env.DB_DIRECT_PORT ||
+  process.env.PLAYWRIGHT_DB_PORT ||
   process.env.EXPOSE_DB_PORT ||
-  process.env.DB_PORT ||
   '5432';
 
 process.env.DB_DIRECT_HOST = process.env.DB_DIRECT_HOST || directDbHost;
@@ -83,16 +86,26 @@ tryPort(start, attempts);
 
 function resolveWebPortSync(): number {
   const preferred = Number(process.env.PLAYWRIGHT_APP_PORT || process.env.APP_PORT || 3300);
+  if (process.env.PLAYWRIGHT_APP_PORT_LOCKED === 'true' && process.env.PLAYWRIGHT_APP_PORT) {
+    if (!Number.isFinite(preferred)) {
+      throw new Error(`Invalid PLAYWRIGHT_APP_PORT value: ${process.env.PLAYWRIGHT_APP_PORT}`);
+    }
+    return preferred;
+  }
   if (process.env.PLAYWRIGHT_APP_PORT) {
     if (!Number.isFinite(preferred)) {
       throw new Error(`Invalid PLAYWRIGHT_APP_PORT value: ${process.env.PLAYWRIGHT_APP_PORT}`);
     }
-    if (process.env.PLAYWRIGHT_APP_PORT_LOCKED === 'true') {
-      return preferred;
-    }
     const check = runPortProbe(preferred, 0, true);
     if (!check.success || typeof check.port !== 'number') {
-      throw new Error(`PLAYWRIGHT_APP_PORT=${preferred} is unavailable (${check.error || 'unknown error'}).`);
+      // Even if a preferred port is provided, fall back to scanning for a nearby
+      // available port to avoid spurious failures when developers have multiple
+      // environments running locally.
+      const fallback = runPortProbe(preferred, 25, false);
+      if (!fallback.success || typeof fallback.port !== 'number') {
+        throw new Error(`PLAYWRIGHT_APP_PORT=${preferred} is unavailable (${check.error || 'unknown error'}).`);
+      }
+      return fallback.port;
     }
     return check.port;
   }

@@ -308,9 +308,15 @@ export class TemporalJobRunner implements IJobRunner {
 
       // Create a new schedule
       const scheduleSpec = this.parseScheduleSpec(interval);
+      const timezoneName = (options?.metadata as any)?.timezone;
+      const spec: any = { ...scheduleSpec };
+      if (timezoneName && typeof timezoneName === 'string') {
+        // Temporal supports schedule timezones via `timezoneName` on spec.
+        spec.timezoneName = timezoneName;
+      }
       await this.client.schedule.create({
         scheduleId,
-        spec: scheduleSpec,
+        spec,
         action: {
           type: 'startWorkflow',
           workflowType: 'genericJobWorkflow',

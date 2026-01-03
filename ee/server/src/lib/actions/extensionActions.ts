@@ -8,12 +8,16 @@ import { ExtensionStorageService } from '../extensions/storage/storageService'
 import logger from '@shared/core/logger'
 import { Extension, ExtensionManifest } from '../extensions/types'
 import { Knex } from 'knex'
+import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions'
+import { hasPermission } from 'server/src/lib/auth/rbac'
 import {
   deleteInstallSecretsRecord,
   getInstallConfig,
   upsertInstallConfigRecord,
   upsertInstallSecretsRecord,
 } from '../extensions/installConfig'
+import { listOrMaterializeEndpointsForVersion } from '../extensions/endpoints'
+import { toggleExtensionV2, uninstallExtensionV2 } from './extRegistryV2Actions'
 
 /**
  * Server actions for extension management
@@ -28,11 +32,73 @@ export async function fetchExtensions(): Promise<Extension[]> {
   if (!tenant) {
     throw new Error('Tenant not found')
   }
-  
-  return await withTransaction(knex, async (trx: Knex.Transaction) => {
-    const registry = new ExtensionRegistry(trx)
-    return await registry.getAllExtensions(tenant)
-  })
+
+  const user = await getCurrentUser()
+  if (!user) throw new Error('User not authenticated')
+  if (user.user_type === 'client') throw new Error('Insufficient permissions')
+  const allowed = await hasPermission(user, 'extension', 'read', knex)
+  if (!allowed) throw new Error('Insufficient permissions')
+
+  // Prefer Registry v2 installs (EE) when available, otherwise fall back to legacy extensions table.
+  try {
+    const rows = await knex('tenant_extension_install as ti')
+      .join('extension_registry as er', 'er.id', 'ti.registry_id')
+      .join('extension_version as ev', 'ev.id', 'ti.version_id')
+      .where('ti.tenant_id', tenant)
+      .select({
+        id: 'er.id',
+        tenant_id: 'ti.tenant_id',
+        name: 'er.name',
+        description: 'er.description',
+        version: 'ev.version',
+        publisher: 'er.publisher',
+        is_enabled: 'ti.is_enabled',
+        created_at: 'ti.created_at',
+        updated_at: 'ti.updated_at',
+        main_entry: 'ev.main_entry',
+        api_endpoints: 'ev.api_endpoints',
+      })
+
+    return rows.map((row: any) => ({
+      id: row.id,
+      tenant_id: row.tenant_id,
+      name: row.name,
+      description: row.description ?? null,
+      version: row.version,
+      manifest: {
+        id: row.id,
+        name: row.name,
+        description: row.description ?? undefined,
+        version: row.version,
+        main: row.main_entry ?? undefined,
+        author: row.publisher ?? undefined,
+        settings: [],
+        api: {
+          endpoints: Array.isArray(row.api_endpoints)
+            ? row.api_endpoints
+            : (() => {
+                try {
+                  return JSON.parse(row.api_endpoints || '[]')
+                } catch {
+                  return []
+                }
+              })(),
+        },
+      },
+      is_enabled: Boolean(row.is_enabled),
+      created_at: row.created_at instanceof Date ? row.created_at : new Date(row.created_at ?? Date.now()),
+      updated_at: row.updated_at instanceof Date ? row.updated_at : new Date(row.updated_at ?? row.created_at ?? Date.now()),
+    }))
+  } catch (error: any) {
+    const msg = error?.message ?? String(error)
+    if (msg.toLowerCase().includes('tenant_extension_install') && msg.toLowerCase().includes('does not exist')) {
+      return await withTransaction(knex, async (trx: Knex.Transaction) => {
+        const registry = new ExtensionRegistry(trx)
+        return await registry.getAllExtensions(tenant)
+      })
+    }
+    throw error
+  }
 }
 
 /**
@@ -44,7 +110,73 @@ export async function fetchExtensionById(extensionId: string): Promise<Extension
   if (!tenant) {
     throw new Error('Tenant not found')
   }
-  
+
+  const user = await getCurrentUser()
+  if (!user) throw new Error('User not authenticated')
+  if (user.user_type === 'client') throw new Error('Insufficient permissions')
+  const allowed = await hasPermission(user, 'extension', 'read', knex)
+  if (!allowed) throw new Error('Insufficient permissions')
+
+  // Prefer Registry v2 installs by registryId, fall back to legacy extensionId.
+  try {
+    const row = await knex('tenant_extension_install as ti')
+      .join('extension_registry as er', 'er.id', 'ti.registry_id')
+      .join('extension_version as ev', 'ev.id', 'ti.version_id')
+      .where('ti.tenant_id', tenant)
+      .andWhere('ti.registry_id', extensionId)
+      .first({
+        id: 'er.id',
+        tenant_id: 'ti.tenant_id',
+        name: 'er.name',
+        description: 'er.description',
+        version: 'ev.version',
+        publisher: 'er.publisher',
+        is_enabled: 'ti.is_enabled',
+        created_at: 'ti.created_at',
+        updated_at: 'ti.updated_at',
+        main_entry: 'ev.main_entry',
+        api_endpoints: 'ev.api_endpoints',
+      })
+
+    if (row) {
+      const endpoints = Array.isArray((row as any).api_endpoints)
+        ? (row as any).api_endpoints
+        : (() => {
+            try {
+              return JSON.parse((row as any).api_endpoints || '[]')
+            } catch {
+              return []
+            }
+          })()
+
+      return {
+        id: row.id,
+        tenant_id: row.tenant_id,
+        name: row.name,
+        description: row.description ?? null,
+        version: row.version,
+        manifest: {
+          id: row.id,
+          name: row.name,
+          description: row.description ?? undefined,
+          version: row.version,
+          main: row.main_entry ?? undefined,
+          author: row.publisher ?? undefined,
+          settings: [],
+          api: { endpoints },
+        },
+        is_enabled: Boolean(row.is_enabled),
+        created_at: row.created_at instanceof Date ? row.created_at : new Date(row.created_at ?? Date.now()),
+        updated_at: row.updated_at instanceof Date ? row.updated_at : new Date(row.updated_at ?? row.created_at ?? Date.now()),
+      }
+    }
+  } catch (error: any) {
+    const msg = error?.message ?? String(error)
+    if (!(msg.toLowerCase().includes('tenant_extension_install') && msg.toLowerCase().includes('does not exist'))) {
+      throw error
+    }
+  }
+
   return await withTransaction(knex, async (trx: Knex.Transaction) => {
     const registry = new ExtensionRegistry(trx)
     return await registry.getExtension(extensionId, { tenant_id: tenant })
@@ -55,82 +187,25 @@ export async function fetchExtensionById(extensionId: string): Promise<Extension
  * Enable or disable an extension
  */
 export async function toggleExtension(extensionId: string): Promise<{ success: boolean; message: string }> {
-  const { knex, tenant } = await createTenantKnex()
-  
-  if (!tenant) {
-    throw new Error('Tenant not found')
+  const out = await toggleExtensionV2(extensionId)
+  if (!out.success) {
+    return { success: false, message: out.message || 'Failed to toggle extension' }
   }
-  
-  try {
-    return await withTransaction(knex, async (trx: Knex.Transaction) => {
-      const registry = new ExtensionRegistry(trx)
-      const extension = await registry.getExtension(extensionId, { tenant_id: tenant })
-      
-      if (!extension) {
-        return { success: false, message: 'Extension not found' }
-      }
-      
-      if (extension.is_enabled) {
-        await registry.disableExtension(extensionId, { tenant_id: tenant })
-        logger.info('Extension disabled', { extensionId, name: extension.name })
-      } else {
-        await registry.enableExtension(extensionId, { tenant_id: tenant })
-        logger.info('Extension enabled', { extensionId, name: extension.name })
-      }
-      
-      // Revalidate the extensions page
-      revalidatePath('/msp/settings/extensions')
-      revalidatePath(`/msp/settings/extensions/${extensionId}`)
-      
-      return { 
-        success: true, 
-        message: `Extension ${extension.is_enabled ? 'disabled' : 'enabled'} successfully` 
-      }
-    })
-  } catch (error) {
-    logger.error('Failed to toggle extension', { extensionId, error })
-    return { success: false, message: 'Failed to toggle extension' }
-  }
+  revalidatePath('/msp/settings/extensions')
+  revalidatePath(`/msp/settings/extensions/${extensionId}`)
+  return { success: true, message: out.message || 'OK' }
 }
 
 /**
  * Uninstall an extension
  */
 export async function uninstallExtension(extensionId: string): Promise<{ success: boolean; message: string }> {
-  const { knex, tenant } = await createTenantKnex()
-  
-  if (!tenant) {
-    throw new Error('Tenant not found')
+  const out = await uninstallExtensionV2(extensionId)
+  if (!out.success) {
+    return { success: false, message: out.message || 'Failed to uninstall extension' }
   }
-  
-  try {
-    return await withTransaction(knex, async (trx: Knex.Transaction) => {
-      const registry = new ExtensionRegistry(trx)
-      const extension = await registry.getExtension(extensionId, { tenant_id: tenant })
-      
-      if (!extension) {
-        return { success: false, message: 'Extension not found' }
-      }
-      
-      // First disable the extension if it's enabled
-      if (extension.is_enabled) {
-        await registry.disableExtension(extensionId, { tenant_id: tenant })
-      }
-      
-      // Remove the extension
-      await registry.uninstallExtension(extensionId, { tenant_id: tenant })
-      
-      logger.info('Extension uninstalled', { extensionId, name: extension.name })
-      
-      // Revalidate the extensions page
-      revalidatePath('/msp/settings/extensions')
-      
-      return { success: true, message: 'Extension uninstalled successfully' }
-    })
-  } catch (error) {
-    logger.error('Failed to uninstall extension', { extensionId, error })
-    return { success: false, message: 'Failed to uninstall extension' }
-  }
+  revalidatePath('/msp/settings/extensions')
+  return { success: true, message: out.message || 'OK' }
 }
 
 /**
@@ -397,6 +472,56 @@ export async function updateExtensionSecrets(
     logger.error('Failed to update extension secrets', { extensionId, error })
     return { success: false, message: 'Failed to update secrets' }
   }
+}
+
+export interface ExtensionApiEndpointOption {
+  id: string
+  method: string
+  path: string
+  handler: string
+}
+
+/**
+ * Returns the manifest-declared API endpoints for the currently-installed version of an extension.
+ * Used for scheduled tasks endpoint selection.
+ */
+export async function getExtensionApiEndpoints(extensionId: string): Promise<ExtensionApiEndpointOption[]> {
+  const user = await getCurrentUser()
+  if (!user) throw new Error('User not authenticated')
+  if (user.user_type === 'client') throw new Error('Insufficient permissions')
+
+  const { knex, tenant } = await createTenantKnex()
+  if (!tenant) {
+    throw new Error('Tenant not found')
+  }
+  const allowed = await hasPermission(user, 'extension', 'read', knex)
+  if (!allowed) throw new Error('Insufficient permissions')
+
+  const installConfig = await lookupInstallConfig(tenant, extensionId)
+  if (!installConfig?.versionId) {
+    return []
+  }
+
+  const rows = await listOrMaterializeEndpointsForVersion(installConfig.versionId)
+
+  // v1: only expose schedulable endpoints (no path params).
+  const isSchedulablePath = (p: string) => {
+    const path = String(p || '')
+    return !(path.includes('/:') || path.includes(':') || path.includes('{') || path.includes('}'))
+  }
+  const isSchedulableMethod = (m: string) => {
+    const method = String(m || '').toUpperCase()
+    return method === 'GET' || method === 'POST'
+  }
+
+  return rows
+    .filter((row) => isSchedulablePath(row.path) && isSchedulableMethod(row.method))
+    .map((row) => ({
+      id: row.id,
+      method: row.method,
+      path: row.path,
+      handler: row.handler,
+    }))
 }
 
 async function lookupInstallConfig(tenantId: string, extensionId: string) {

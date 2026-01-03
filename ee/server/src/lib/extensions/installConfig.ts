@@ -19,6 +19,7 @@ export interface InstallConfigResult {
   extensionSlug?: string | null;
   installId: string;
   versionId: string;
+  registryId: string;
   contentHash: string | null;
   config: Record<string, string>;
   providers: string[];
@@ -202,6 +203,7 @@ async function hydrateInstallConfig(db: Knex, installRow: InstallRow): Promise<I
     extensionSlug: buildSlug(installRow.registry_publisher, installRow.registry_name),
     installId: installRow.install_id,
     versionId: installRow.version_id,
+    registryId: installRow.registry_id,
     contentHash: bundleHash,
     config: installationConfig.config,
     providers,

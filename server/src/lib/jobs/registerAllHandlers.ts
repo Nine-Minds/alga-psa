@@ -34,6 +34,10 @@ import {
   MicrosoftWebhookRenewalJobData,
   GooglePubSubVerificationJobData,
 } from './handlers/calendarWebhookMaintenanceHandler';
+import {
+  extensionScheduledInvocationHandler,
+  ExtensionScheduledInvocationJobData,
+} from './handlers/extensionScheduledInvocationHandler';
 
 /**
  * Options for registering handlers
@@ -213,6 +217,24 @@ export async function registerAllJobHandlers(
     },
     registerOpts
   );
+
+  // ============================================================================
+  // EXTENSION SCHEDULED TASKS (EE)
+  // ============================================================================
+
+  if (includeEnterprise) {
+    JobHandlerRegistry.register<ExtensionScheduledInvocationJobData & BaseJobData>(
+      {
+        name: 'extension-scheduled-invocation',
+        handler: async (jobId, data) => {
+          await extensionScheduledInvocationHandler(jobId, data as any);
+        },
+        retry: { maxAttempts: 3 },
+        timeoutMs: 300000, // 5 minutes
+      },
+      registerOpts
+    );
+  }
 
   // ============================================================================
   // CALENDAR INTEGRATION HANDLERS
