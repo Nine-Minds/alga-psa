@@ -189,6 +189,14 @@ export async function deleteUser(userId: string): Promise<void> {
         .where({ completed_by: userId, tenant: tenant || undefined })
         .update({ completed_by: null });
 
+      // Clear default_assigned_to on boards where this user is the default
+      if (!tenant) {
+        throw new Error('Tenant is required to clear board defaults');
+      }
+      await trx('boards')
+        .where({ default_assigned_to: userId, tenant })
+        .update({ default_assigned_to: null });
+
       // Delete user roles
       await trx('user_roles').where({ user_id: userId, tenant: tenant || undefined }).del();
 
@@ -497,12 +505,22 @@ export async function updateUser(userId: string, userData: Partial<IUser>): Prom
       throw new Error('No authenticated user found');
     }
 
-    const { knex } = await createTenantKnex();
+    const { knex, tenant } = await createTenantKnex();
     return await withTransaction(knex, async (trx) => {
       if (!await hasPermission(currentUser, 'user', 'update', trx)) {
         throw new Error('Permission denied: Cannot update user');
       }
-      
+
+      // If user is being deactivated, clear default_assigned_to on boards
+      if (userData.is_inactive === true) {
+        if (!tenant) {
+          throw new Error('Tenant is required to clear board defaults');
+        }
+        await trx('boards')
+          .where({ default_assigned_to: userId, tenant })
+          .update({ default_assigned_to: null });
+      }
+
       await User.update(trx, userId, userData);
       const updatedUser = await User.getUserWithRoles(trx, userId);
       return updatedUser || null;
