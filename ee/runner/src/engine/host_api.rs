@@ -4,8 +4,8 @@ use crate::models::{
     ExecuteRequest as ModelExecuteRequest, ExecuteResponse as ModelExecuteResponse, HttpPayload,
 };
 use crate::providers::{
-    CAP_CONTEXT_READ, CAP_HTTP_FETCH, CAP_LOG_EMIT, CAP_SECRETS_GET, CAP_STORAGE_KV, CAP_UI_PROXY,
-    CAP_USER_READ,
+    CAP_CONTEXT_READ, CAP_HTTP_FETCH, CAP_LOG_EMIT, CAP_SCHEDULER_MANAGE, CAP_SECRETS_GET,
+    CAP_STORAGE_KV, CAP_UI_PROXY, CAP_USER_READ,
 };
 use anyhow::{anyhow, Context};
 use base64::Engine as _;
@@ -23,6 +23,10 @@ use component::alga::extension::{
     context,
     http::{self, HttpError, HttpRequest, HttpResponse},
     logging,
+    scheduler::{
+        self, CreateScheduleInput, CreateScheduleResult, DeleteScheduleResult, EndpointInfo,
+        ScheduleInfo, SchedulerError, UpdateScheduleInput, UpdateScheduleResult,
+    },
     secrets::{self, SecretError},
     storage::{self, StorageEntry, StorageError},
     types::{
@@ -113,6 +117,13 @@ static STORAGE_BASE_URL: Lazy<Option<String>> = Lazy::new(|| {
 static RUNNER_STORAGE_API_TOKEN: Lazy<Option<String>> = Lazy::new(|| {
     std::env::var("RUNNER_STORAGE_API_TOKEN")
         .or_else(|_| std::env::var("RUNNER_SERVICE_TOKEN"))
+        .ok()
+});
+
+// Scheduler API uses the same base URL and token as storage
+static SCHEDULER_BASE_URL: Lazy<Option<String>> = Lazy::new(|| {
+    std::env::var("STORAGE_API_BASE_URL")
+        .or_else(|_| std::env::var("REGISTRY_BASE_URL"))
         .ok()
 });
 
@@ -1154,6 +1165,621 @@ fn map_proxy_status(status: StatusCode) -> ProxyError {
     }
 }
 
+async fn scheduler_request(
+    install_id: &str,
+    operation: &str,
+    mut payload: Map<String, Value>,
+) -> std::result::Result<Value, SchedulerError> {
+    let base = SCHEDULER_BASE_URL.as_ref().ok_or(SchedulerError::Internal)?;
+    let token = RUNNER_STORAGE_API_TOKEN
+        .as_ref()
+        .ok_or(SchedulerError::Internal)?;
+
+    payload.insert("operation".into(), Value::String(operation.to_string()));
+
+    let url = format!(
+        "{}/api/internal/ext-scheduler/install/{}",
+        base.trim_end_matches('/'),
+        install_id
+    );
+
+    tracing::debug!(
+        install_id=%install_id,
+        operation=%operation,
+        "scheduler request dispatch"
+    );
+
+    let response = HTTP_CLIENT
+        .post(url)
+        .header("content-type", "application/json")
+        .header("x-runner-auth", token)
+        .json(&payload)
+        .send()
+        .await
+        .map_err(|err| {
+            tracing::error!(error = %err, "scheduler_request transport failure");
+            SchedulerError::Internal
+        })?;
+
+    let status = response.status();
+    let text = response.text().await.unwrap_or_default();
+
+    if !status.is_success() {
+        tracing::warn!(status = status.as_u16(), body = %text, operation, "scheduler_request error");
+        return Err(map_scheduler_status(status));
+    }
+
+    if text.trim().is_empty() {
+        Ok(Value::Null)
+    } else {
+        serde_json::from_str(&text).map_err(|err| {
+            tracing::error!(error = %err, "scheduler_request invalid JSON response");
+            SchedulerError::Internal
+        })
+    }
+}
+
+fn map_scheduler_status(status: StatusCode) -> SchedulerError {
+    match status {
+        StatusCode::UNAUTHORIZED | StatusCode::FORBIDDEN => SchedulerError::Denied,
+        StatusCode::NOT_FOUND => SchedulerError::NotFound,
+        StatusCode::BAD_REQUEST => SchedulerError::ValidationFailed,
+        StatusCode::TOO_MANY_REQUESTS => SchedulerError::QuotaExceeded,
+        _ => SchedulerError::Internal,
+    }
+}
+
+fn parse_schedule_info(value: &Value) -> Option<ScheduleInfo> {
+    let obj = value.as_object()?;
+    Some(ScheduleInfo {
+        id: obj.get("id")?.as_str()?.to_string(),
+        endpoint_path: obj.get("endpointPath").or(obj.get("endpoint_path"))?.as_str()?.to_string(),
+        endpoint_method: obj.get("endpointMethod").or(obj.get("endpoint_method"))?.as_str()?.to_string(),
+        name: obj.get("name").and_then(|v| v.as_str()).map(|s| s.to_string()),
+        cron: obj.get("cron")?.as_str()?.to_string(),
+        timezone: obj.get("timezone")?.as_str()?.to_string(),
+        enabled: obj.get("enabled")?.as_bool()?,
+        payload: obj.get("payload").and_then(|v| {
+            if v.is_null() {
+                None
+            } else if v.is_string() {
+                v.as_str().map(|s| s.to_string())
+            } else {
+                serde_json::to_string(v).ok()
+            }
+        }),
+        last_run_at: obj.get("lastRunAt").or(obj.get("last_run_at")).and_then(|v| v.as_str()).map(|s| s.to_string()),
+        last_run_status: obj.get("lastRunStatus").or(obj.get("last_run_status")).and_then(|v| v.as_str()).map(|s| s.to_string()),
+        last_error: obj.get("lastError").or(obj.get("last_error")).and_then(|v| v.as_str()).map(|s| s.to_string()),
+        created_at: obj.get("createdAt").or(obj.get("created_at")).and_then(|v| v.as_str()).map(|s| s.to_string()),
+    })
+}
+
+fn parse_endpoint_info(value: &Value) -> Option<EndpointInfo> {
+    let obj = value.as_object()?;
+    Some(EndpointInfo {
+        id: obj.get("id")?.as_str()?.to_string(),
+        method: obj.get("method")?.as_str()?.to_string(),
+        path: obj.get("path")?.as_str()?.to_string(),
+        handler: obj.get("handler")?.as_str()?.to_string(),
+        schedulable: obj.get("schedulable")?.as_bool()?,
+    })
+}
+
+impl scheduler::HostWithStore for HasSelf<HostState> {
+    fn list_schedules<T>(
+        accessor: &Accessor<T, Self>,
+    ) -> impl std::future::Future<Output = Result<Vec<ScheduleInfo>, SchedulerError>> + Send {
+        let (providers, install_id, ctx) = accessor.with(|mut access| {
+            let state = access.get();
+            (
+                state.context.providers.clone(),
+                state.context.install_id.clone(),
+                state.context.clone(),
+            )
+        });
+
+        async move {
+            if !has_capability(&providers, CAP_SCHEDULER_MANAGE) {
+                tracing::error!(
+                    tenant = ?ctx.tenant_id,
+                    extension = ?ctx.extension_id,
+                    request_id = ?ctx.request_id,
+                    "scheduler capability denied - cap:scheduler.manage not granted"
+                );
+                return Err(SchedulerError::Denied);
+            }
+            let install_id = install_id.ok_or_else(|| {
+                tracing::error!(
+                    tenant = ?ctx.tenant_id,
+                    extension = ?ctx.extension_id,
+                    request_id = ?ctx.request_id,
+                    "scheduler capability denied - install_id missing"
+                );
+                SchedulerError::Denied
+            })?;
+
+            let tenant = ctx.tenant_id.unwrap_or_default();
+            let extension = ctx.extension_id.unwrap_or_default();
+            tracing::info!(
+                tenant=%tenant,
+                extension=%extension,
+                "scheduler capability list_schedules start"
+            );
+
+            let payload = Map::new();
+            let response = scheduler_request(&install_id, "list", payload).await?;
+
+            let schedules_arr = response
+                .get("schedules")
+                .and_then(|v| v.as_array())
+                .cloned()
+                .unwrap_or_default();
+
+            let schedules: Vec<ScheduleInfo> = schedules_arr
+                .iter()
+                .filter_map(parse_schedule_info)
+                .collect();
+
+            tracing::info!(
+                tenant=%tenant,
+                extension=%extension,
+                count=schedules.len(),
+                "scheduler capability list_schedules completed"
+            );
+
+            Ok(schedules)
+        }
+    }
+
+    fn get_schedule<T>(
+        accessor: &Accessor<T, Self>,
+        schedule_id: String,
+    ) -> impl std::future::Future<Output = Result<Option<ScheduleInfo>, SchedulerError>> + Send
+    {
+        let (providers, install_id, ctx) = accessor.with(|mut access| {
+            let state = access.get();
+            (
+                state.context.providers.clone(),
+                state.context.install_id.clone(),
+                state.context.clone(),
+            )
+        });
+
+        async move {
+            if !has_capability(&providers, CAP_SCHEDULER_MANAGE) {
+                tracing::error!(
+                    tenant = ?ctx.tenant_id,
+                    extension = ?ctx.extension_id,
+                    request_id = ?ctx.request_id,
+                    "scheduler capability denied - cap:scheduler.manage not granted"
+                );
+                return Err(SchedulerError::Denied);
+            }
+            let install_id = install_id.ok_or_else(|| {
+                tracing::error!(
+                    tenant = ?ctx.tenant_id,
+                    extension = ?ctx.extension_id,
+                    request_id = ?ctx.request_id,
+                    "scheduler capability denied - install_id missing"
+                );
+                SchedulerError::Denied
+            })?;
+
+            let tenant = ctx.tenant_id.unwrap_or_default();
+            let extension = ctx.extension_id.unwrap_or_default();
+            tracing::info!(
+                tenant=%tenant,
+                extension=%extension,
+                schedule_id=%schedule_id,
+                "scheduler capability get_schedule start"
+            );
+
+            let mut payload = Map::new();
+            payload.insert("scheduleId".into(), Value::String(schedule_id.clone()));
+
+            let response = scheduler_request(&install_id, "get", payload).await?;
+            let schedule = response.get("schedule").and_then(parse_schedule_info);
+
+            tracing::info!(
+                tenant=%tenant,
+                extension=%extension,
+                schedule_id=%schedule_id,
+                found=schedule.is_some(),
+                "scheduler capability get_schedule completed"
+            );
+
+            Ok(schedule)
+        }
+    }
+
+    fn create_schedule<T>(
+        accessor: &Accessor<T, Self>,
+        input: CreateScheduleInput,
+    ) -> impl std::future::Future<Output = CreateScheduleResult> + Send {
+        let (providers, install_id, ctx) = accessor.with(|mut access| {
+            let state = access.get();
+            (
+                state.context.providers.clone(),
+                state.context.install_id.clone(),
+                state.context.clone(),
+            )
+        });
+
+        async move {
+            if !has_capability(&providers, CAP_SCHEDULER_MANAGE) {
+                tracing::error!(
+                    tenant = ?ctx.tenant_id,
+                    extension = ?ctx.extension_id,
+                    request_id = ?ctx.request_id,
+                    "scheduler capability denied - cap:scheduler.manage not granted"
+                );
+                return CreateScheduleResult {
+                    success: false,
+                    schedule_id: None,
+                    error: Some("Permission denied: cap:scheduler.manage not granted".to_string()),
+                    field_errors: None,
+                };
+            }
+            let install_id = match install_id {
+                Some(id) => id,
+                None => {
+                    tracing::error!(
+                        tenant = ?ctx.tenant_id,
+                        extension = ?ctx.extension_id,
+                        request_id = ?ctx.request_id,
+                        "scheduler capability denied - install_id missing"
+                    );
+                    return CreateScheduleResult {
+                        success: false,
+                        schedule_id: None,
+                        error: Some("Install ID missing".to_string()),
+                        field_errors: None,
+                    };
+                }
+            };
+
+            let tenant = ctx.tenant_id.unwrap_or_default();
+            let extension = ctx.extension_id.unwrap_or_default();
+            tracing::info!(
+                tenant=%tenant,
+                extension=%extension,
+                endpoint=%input.endpoint,
+                cron=%input.cron,
+                "scheduler capability create_schedule start"
+            );
+
+            let mut payload = Map::new();
+            payload.insert("endpoint".into(), Value::String(input.endpoint.clone()));
+            payload.insert("cron".into(), Value::String(input.cron.clone()));
+            if let Some(tz) = &input.timezone {
+                payload.insert("timezone".into(), Value::String(tz.clone()));
+            }
+            if let Some(enabled) = input.enabled {
+                payload.insert("enabled".into(), Value::Bool(enabled));
+            }
+            if let Some(name) = &input.name {
+                payload.insert("name".into(), Value::String(name.clone()));
+            }
+            if let Some(p) = &input.payload {
+                // payload from extension is already JSON-encoded string
+                payload.insert("payload".into(), Value::String(p.clone()));
+            }
+
+            let response = match scheduler_request(&install_id, "create", payload).await {
+                Ok(r) => r,
+                Err(e) => {
+                    let error_msg = format!("{:?}", e);
+                    tracing::error!(
+                        tenant=%tenant,
+                        extension=%extension,
+                        error=%error_msg,
+                        "scheduler capability create_schedule failed"
+                    );
+                    return CreateScheduleResult {
+                        success: false,
+                        schedule_id: None,
+                        error: Some(error_msg),
+                        field_errors: None,
+                    };
+                }
+            };
+
+            let success = response.get("success").and_then(|v| v.as_bool()).unwrap_or(false);
+            let schedule_id = response.get("scheduleId").or(response.get("schedule_id")).and_then(|v| v.as_str()).map(|s| s.to_string());
+            let error = response.get("error").and_then(|v| v.as_str()).map(|s| s.to_string());
+            let field_errors = response
+                .get("fieldErrors")
+                .or(response.get("field_errors"))
+                .map(|v| serde_json::to_string(v).unwrap_or_default());
+
+            tracing::info!(
+                tenant=%tenant,
+                extension=%extension,
+                success,
+                schedule_id=?schedule_id,
+                "scheduler capability create_schedule completed"
+            );
+
+            CreateScheduleResult {
+                success,
+                schedule_id,
+                error,
+                field_errors,
+            }
+        }
+    }
+
+    fn update_schedule<T>(
+        accessor: &Accessor<T, Self>,
+        schedule_id: String,
+        input: UpdateScheduleInput,
+    ) -> impl std::future::Future<Output = UpdateScheduleResult> + Send {
+        let (providers, install_id, ctx) = accessor.with(|mut access| {
+            let state = access.get();
+            (
+                state.context.providers.clone(),
+                state.context.install_id.clone(),
+                state.context.clone(),
+            )
+        });
+
+        async move {
+            if !has_capability(&providers, CAP_SCHEDULER_MANAGE) {
+                tracing::error!(
+                    tenant = ?ctx.tenant_id,
+                    extension = ?ctx.extension_id,
+                    request_id = ?ctx.request_id,
+                    "scheduler capability denied - cap:scheduler.manage not granted"
+                );
+                return UpdateScheduleResult {
+                    success: false,
+                    error: Some("Permission denied: cap:scheduler.manage not granted".to_string()),
+                    field_errors: None,
+                };
+            }
+            let install_id = match install_id {
+                Some(id) => id,
+                None => {
+                    tracing::error!(
+                        tenant = ?ctx.tenant_id,
+                        extension = ?ctx.extension_id,
+                        request_id = ?ctx.request_id,
+                        "scheduler capability denied - install_id missing"
+                    );
+                    return UpdateScheduleResult {
+                        success: false,
+                        error: Some("Install ID missing".to_string()),
+                        field_errors: None,
+                    };
+                }
+            };
+
+            let tenant = ctx.tenant_id.unwrap_or_default();
+            let extension = ctx.extension_id.unwrap_or_default();
+            tracing::info!(
+                tenant=%tenant,
+                extension=%extension,
+                schedule_id=%schedule_id,
+                "scheduler capability update_schedule start"
+            );
+
+            let mut payload = Map::new();
+            payload.insert("scheduleId".into(), Value::String(schedule_id.clone()));
+            if let Some(endpoint) = &input.endpoint {
+                payload.insert("endpoint".into(), Value::String(endpoint.clone()));
+            }
+            if let Some(cron) = &input.cron {
+                payload.insert("cron".into(), Value::String(cron.clone()));
+            }
+            if let Some(tz) = &input.timezone {
+                payload.insert("timezone".into(), Value::String(tz.clone()));
+            }
+            if let Some(enabled) = input.enabled {
+                payload.insert("enabled".into(), Value::Bool(enabled));
+            }
+            if let Some(name) = &input.name {
+                payload.insert("name".into(), Value::String(name.clone()));
+            }
+            if let Some(p) = &input.payload {
+                payload.insert("payload".into(), Value::String(p.clone()));
+            }
+
+            let response = match scheduler_request(&install_id, "update", payload).await {
+                Ok(r) => r,
+                Err(e) => {
+                    let error_msg = format!("{:?}", e);
+                    tracing::error!(
+                        tenant=%tenant,
+                        extension=%extension,
+                        schedule_id=%schedule_id,
+                        error=%error_msg,
+                        "scheduler capability update_schedule failed"
+                    );
+                    return UpdateScheduleResult {
+                        success: false,
+                        error: Some(error_msg),
+                        field_errors: None,
+                    };
+                }
+            };
+
+            let success = response.get("success").and_then(|v| v.as_bool()).unwrap_or(false);
+            let error = response.get("error").and_then(|v| v.as_str()).map(|s| s.to_string());
+            let field_errors = response
+                .get("fieldErrors")
+                .or(response.get("field_errors"))
+                .map(|v| serde_json::to_string(v).unwrap_or_default());
+
+            tracing::info!(
+                tenant=%tenant,
+                extension=%extension,
+                schedule_id=%schedule_id,
+                success,
+                "scheduler capability update_schedule completed"
+            );
+
+            UpdateScheduleResult {
+                success,
+                error,
+                field_errors,
+            }
+        }
+    }
+
+    fn delete_schedule<T>(
+        accessor: &Accessor<T, Self>,
+        schedule_id: String,
+    ) -> impl std::future::Future<Output = DeleteScheduleResult> + Send {
+        let (providers, install_id, ctx) = accessor.with(|mut access| {
+            let state = access.get();
+            (
+                state.context.providers.clone(),
+                state.context.install_id.clone(),
+                state.context.clone(),
+            )
+        });
+
+        async move {
+            if !has_capability(&providers, CAP_SCHEDULER_MANAGE) {
+                tracing::error!(
+                    tenant = ?ctx.tenant_id,
+                    extension = ?ctx.extension_id,
+                    request_id = ?ctx.request_id,
+                    "scheduler capability denied - cap:scheduler.manage not granted"
+                );
+                return DeleteScheduleResult {
+                    success: false,
+                    error: Some("Permission denied: cap:scheduler.manage not granted".to_string()),
+                };
+            }
+            let install_id = match install_id {
+                Some(id) => id,
+                None => {
+                    tracing::error!(
+                        tenant = ?ctx.tenant_id,
+                        extension = ?ctx.extension_id,
+                        request_id = ?ctx.request_id,
+                        "scheduler capability denied - install_id missing"
+                    );
+                    return DeleteScheduleResult {
+                        success: false,
+                        error: Some("Install ID missing".to_string()),
+                    };
+                }
+            };
+
+            let tenant = ctx.tenant_id.unwrap_or_default();
+            let extension = ctx.extension_id.unwrap_or_default();
+            tracing::info!(
+                tenant=%tenant,
+                extension=%extension,
+                schedule_id=%schedule_id,
+                "scheduler capability delete_schedule start"
+            );
+
+            let mut payload = Map::new();
+            payload.insert("scheduleId".into(), Value::String(schedule_id.clone()));
+
+            let response = match scheduler_request(&install_id, "delete", payload).await {
+                Ok(r) => r,
+                Err(e) => {
+                    let error_msg = format!("{:?}", e);
+                    tracing::error!(
+                        tenant=%tenant,
+                        extension=%extension,
+                        schedule_id=%schedule_id,
+                        error=%error_msg,
+                        "scheduler capability delete_schedule failed"
+                    );
+                    return DeleteScheduleResult {
+                        success: false,
+                        error: Some(error_msg),
+                    };
+                }
+            };
+
+            let success = response.get("success").and_then(|v| v.as_bool()).unwrap_or(false);
+            let error = response.get("error").and_then(|v| v.as_str()).map(|s| s.to_string());
+
+            tracing::info!(
+                tenant=%tenant,
+                extension=%extension,
+                schedule_id=%schedule_id,
+                success,
+                "scheduler capability delete_schedule completed"
+            );
+
+            DeleteScheduleResult { success, error }
+        }
+    }
+
+    fn get_endpoints<T>(
+        accessor: &Accessor<T, Self>,
+    ) -> impl std::future::Future<Output = Result<Vec<EndpointInfo>, SchedulerError>> + Send {
+        let (providers, install_id, ctx) = accessor.with(|mut access| {
+            let state = access.get();
+            (
+                state.context.providers.clone(),
+                state.context.install_id.clone(),
+                state.context.clone(),
+            )
+        });
+
+        async move {
+            if !has_capability(&providers, CAP_SCHEDULER_MANAGE) {
+                tracing::error!(
+                    tenant = ?ctx.tenant_id,
+                    extension = ?ctx.extension_id,
+                    request_id = ?ctx.request_id,
+                    "scheduler capability denied - cap:scheduler.manage not granted"
+                );
+                return Err(SchedulerError::Denied);
+            }
+            let install_id = install_id.ok_or_else(|| {
+                tracing::error!(
+                    tenant = ?ctx.tenant_id,
+                    extension = ?ctx.extension_id,
+                    request_id = ?ctx.request_id,
+                    "scheduler capability denied - install_id missing"
+                );
+                SchedulerError::Denied
+            })?;
+
+            let tenant = ctx.tenant_id.unwrap_or_default();
+            let extension = ctx.extension_id.unwrap_or_default();
+            tracing::info!(
+                tenant=%tenant,
+                extension=%extension,
+                "scheduler capability get_endpoints start"
+            );
+
+            let payload = Map::new();
+            let response = scheduler_request(&install_id, "getEndpoints", payload).await?;
+
+            let endpoints_arr = response
+                .get("endpoints")
+                .and_then(|v| v.as_array())
+                .cloned()
+                .unwrap_or_default();
+
+            let endpoints: Vec<EndpointInfo> = endpoints_arr
+                .iter()
+                .filter_map(parse_endpoint_info)
+                .collect();
+
+            tracing::info!(
+                tenant=%tenant,
+                extension=%extension,
+                count=endpoints.len(),
+                "scheduler capability get_endpoints completed"
+            );
+
+            Ok(endpoints)
+        }
+    }
+}
+
 impl user::HostWithStore for HasSelf<HostState> {
     fn get_user<T>(
         accessor: &Accessor<T, Self>,
@@ -1214,6 +1840,7 @@ impl storage::Host for HostState {}
 impl logging::Host for HostState {}
 impl ui_proxy::Host for HostState {}
 impl user::Host for HostState {}
+impl scheduler::Host for HostState {}
 
 #[cfg(test)]
 mod tests {

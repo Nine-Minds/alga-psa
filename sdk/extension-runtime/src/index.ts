@@ -65,6 +65,128 @@ export interface UiProxyHost {
   call?(route: string, payload?: Uint8Array | null): Promise<Uint8Array>;
 }
 
+// Scheduler Host API types
+
+/** Information about a scheduled task */
+export interface ScheduleInfo {
+  /** Unique schedule identifier */
+  id: string;
+  /** API endpoint path (e.g., "/sync") */
+  endpointPath: string;
+  /** HTTP method (GET or POST) */
+  endpointMethod: string;
+  /** Optional human-readable name */
+  name?: string | null;
+  /** Cron expression (5-field standard) */
+  cron: string;
+  /** IANA timezone (e.g., "America/New_York") */
+  timezone: string;
+  /** Whether the schedule is active */
+  enabled: boolean;
+  /** Optional JSON payload sent with each invocation */
+  payload?: unknown;
+  /** ISO timestamp of last execution */
+  lastRunAt?: string | null;
+  /** Status of last execution (success, failure, etc.) */
+  lastRunStatus?: string | null;
+  /** Error message from last failed execution */
+  lastError?: string | null;
+  /** ISO timestamp when schedule was created */
+  createdAt?: string | null;
+}
+
+/** Information about an API endpoint that can be scheduled */
+export interface EndpointInfo {
+  /** Unique endpoint identifier */
+  id: string;
+  /** HTTP method (GET, POST, etc.) */
+  method: string;
+  /** Endpoint path (e.g., "/sync") */
+  path: string;
+  /** Handler function name */
+  handler: string;
+  /** Whether this endpoint can be scheduled (no path params, GET/POST only) */
+  schedulable: boolean;
+}
+
+/** Input for creating a new schedule */
+export interface CreateScheduleInput {
+  /** Endpoint path to invoke (e.g., "/sync") */
+  endpoint: string;
+  /** Cron expression (5-field: minute hour day-of-month month day-of-week) */
+  cron: string;
+  /** IANA timezone (defaults to UTC) */
+  timezone?: string;
+  /** Whether schedule is active (defaults to true) */
+  enabled?: boolean;
+  /** Optional human-readable name */
+  name?: string;
+  /** Optional JSON payload for each invocation */
+  payload?: unknown;
+}
+
+/** Result of creating a schedule */
+export interface CreateScheduleResult {
+  /** Whether the operation succeeded */
+  success: boolean;
+  /** Schedule ID if created successfully */
+  scheduleId?: string;
+  /** Error message if failed */
+  error?: string;
+  /** Field-level validation errors */
+  fieldErrors?: Record<string, string>;
+}
+
+/** Input for updating an existing schedule */
+export interface UpdateScheduleInput {
+  /** New endpoint path (optional) */
+  endpoint?: string;
+  /** New cron expression (optional) */
+  cron?: string;
+  /** New timezone (optional) */
+  timezone?: string;
+  /** New enabled state (optional) */
+  enabled?: boolean;
+  /** New name (optional, null to clear) */
+  name?: string | null;
+  /** New payload (optional, null to clear) */
+  payload?: unknown | null;
+}
+
+/** Result of updating a schedule */
+export interface UpdateScheduleResult {
+  /** Whether the operation succeeded */
+  success: boolean;
+  /** Error message if failed */
+  error?: string;
+  /** Field-level validation errors */
+  fieldErrors?: Record<string, string>;
+}
+
+/** Result of deleting a schedule */
+export interface DeleteScheduleResult {
+  /** Whether the operation succeeded */
+  success: boolean;
+  /** Error message if failed */
+  error?: string;
+}
+
+/** Host API for managing scheduled tasks */
+export interface SchedulerHost {
+  /** List all schedules for this extension install */
+  list(): Promise<ScheduleInfo[]>;
+  /** Get a specific schedule by ID */
+  get(scheduleId: string): Promise<ScheduleInfo | null>;
+  /** Create a new schedule */
+  create(input: CreateScheduleInput): Promise<CreateScheduleResult>;
+  /** Update an existing schedule */
+  update(scheduleId: string, input: UpdateScheduleInput): Promise<UpdateScheduleResult>;
+  /** Delete a schedule */
+  delete(scheduleId: string): Promise<DeleteScheduleResult>;
+  /** List available endpoints that can be scheduled */
+  getEndpoints(): Promise<EndpointInfo[]>;
+}
+
 export interface HostBindings {
   context: {
     get(): Promise<ContextData>;
@@ -74,6 +196,8 @@ export interface HostBindings {
   storage: StorageHost;
   logging: LoggingHost;
   uiProxy: UiProxyHost;
+  /** Scheduler API for managing scheduled tasks (requires cap:scheduler.manage) */
+  scheduler: SchedulerHost;
 }
 
 export type Handler = (request: ExecuteRequest, host: HostBindings) => Promise<ExecuteResponse> | ExecuteResponse;
@@ -135,6 +259,26 @@ export function createMockHostBindings(overrides: Partial<HostBindings> = {}): H
         throw new Error('mock uiProxy.call not implemented');
       },
     },
+    scheduler: {
+      async list() {
+        return [];
+      },
+      async get() {
+        return null;
+      },
+      async create() {
+        throw new Error('mock scheduler.create not implemented');
+      },
+      async update() {
+        throw new Error('mock scheduler.update not implemented');
+      },
+      async delete() {
+        throw new Error('mock scheduler.delete not implemented');
+      },
+      async getEndpoints() {
+        return [];
+      },
+    },
   };
 
   const mergedUiProxy: UiProxyHost = {
@@ -172,6 +316,10 @@ export function createMockHostBindings(overrides: Partial<HostBindings> = {}): H
       ...overrides.logging,
     },
     uiProxy: mergedUiProxy,
+    scheduler: {
+      ...defaultBindings.scheduler,
+      ...overrides.scheduler,
+    },
   };
 }
 

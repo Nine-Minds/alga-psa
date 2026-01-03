@@ -1,0 +1,692 @@
+[
+  {
+    "id": "T001",
+    "description": "cap:scheduler.manage appears in KNOWN_PROVIDER_CAPABILITIES",
+    "implemented": false,
+    "featureIds": ["F001"]
+  },
+  {
+    "id": "T002",
+    "description": "cap:scheduler.manage is NOT in DEFAULT_PROVIDER_CAPABILITIES",
+    "implemented": false,
+    "featureIds": ["F002"]
+  },
+  {
+    "id": "T003",
+    "description": "isKnownCapability('cap:scheduler.manage') returns true",
+    "implemented": false,
+    "featureIds": ["F001"]
+  },
+  {
+    "id": "T004",
+    "description": "Extension manifest with cap:scheduler.manage validates successfully",
+    "implemented": false,
+    "featureIds": ["F003"]
+  },
+  {
+    "id": "T005",
+    "description": "SchedulerHost interface exists in extension-runtime",
+    "implemented": false,
+    "featureIds": ["F004"]
+  },
+  {
+    "id": "T006",
+    "description": "SchedulerHost has list() method",
+    "implemented": false,
+    "featureIds": ["F011"]
+  },
+  {
+    "id": "T007",
+    "description": "SchedulerHost has get() method",
+    "implemented": false,
+    "featureIds": ["F012"]
+  },
+  {
+    "id": "T008",
+    "description": "SchedulerHost has create() method",
+    "implemented": false,
+    "featureIds": ["F013"]
+  },
+  {
+    "id": "T009",
+    "description": "SchedulerHost has update() method",
+    "implemented": false,
+    "featureIds": ["F014"]
+  },
+  {
+    "id": "T010",
+    "description": "SchedulerHost has delete() method",
+    "implemented": false,
+    "featureIds": ["F015"]
+  },
+  {
+    "id": "T011",
+    "description": "ScheduleInfo type includes id field",
+    "implemented": false,
+    "featureIds": ["F005"]
+  },
+  {
+    "id": "T012",
+    "description": "ScheduleInfo type includes endpointPath field",
+    "implemented": false,
+    "featureIds": ["F005", "F068"]
+  },
+  {
+    "id": "T013",
+    "description": "ScheduleInfo type includes endpointMethod field",
+    "implemented": false,
+    "featureIds": ["F005", "F068"]
+  },
+  {
+    "id": "T014",
+    "description": "ScheduleInfo type includes cron field",
+    "implemented": false,
+    "featureIds": ["F005"]
+  },
+  {
+    "id": "T015",
+    "description": "ScheduleInfo type includes timezone field",
+    "implemented": false,
+    "featureIds": ["F005"]
+  },
+  {
+    "id": "T016",
+    "description": "ScheduleInfo type includes enabled field",
+    "implemented": false,
+    "featureIds": ["F005"]
+  },
+  {
+    "id": "T017",
+    "description": "ScheduleInfo type includes optional lastRunAt field",
+    "implemented": false,
+    "featureIds": ["F005", "F069"]
+  },
+  {
+    "id": "T018",
+    "description": "ScheduleInfo type includes optional lastRunStatus field",
+    "implemented": false,
+    "featureIds": ["F005", "F069"]
+  },
+  {
+    "id": "T019",
+    "description": "ScheduleInfo type includes optional lastError field",
+    "implemented": false,
+    "featureIds": ["F005", "F069"]
+  },
+  {
+    "id": "T020",
+    "description": "CreateScheduleInput type includes endpoint field",
+    "implemented": false,
+    "featureIds": ["F006"]
+  },
+  {
+    "id": "T021",
+    "description": "CreateScheduleInput type includes cron field",
+    "implemented": false,
+    "featureIds": ["F006"]
+  },
+  {
+    "id": "T022",
+    "description": "CreateScheduleInput type includes optional timezone field",
+    "implemented": false,
+    "featureIds": ["F006"]
+  },
+  {
+    "id": "T023",
+    "description": "CreateScheduleResult type includes success field",
+    "implemented": false,
+    "featureIds": ["F007"]
+  },
+  {
+    "id": "T024",
+    "description": "CreateScheduleResult type includes optional scheduleId field",
+    "implemented": false,
+    "featureIds": ["F007"]
+  },
+  {
+    "id": "T025",
+    "description": "CreateScheduleResult type includes optional error field",
+    "implemented": false,
+    "featureIds": ["F007"]
+  },
+  {
+    "id": "T026",
+    "description": "Runner provides scheduler binding when cap:scheduler.manage granted",
+    "implemented": false,
+    "featureIds": ["F016", "F017"]
+  },
+  {
+    "id": "T027",
+    "description": "Runner does not provide scheduler binding when capability not granted",
+    "implemented": false,
+    "featureIds": ["F064"]
+  },
+  {
+    "id": "T028",
+    "description": "list() internal API endpoint returns 200 for valid install",
+    "implemented": false,
+    "featureIds": ["F019"]
+  },
+  {
+    "id": "T029",
+    "description": "list() returns schedules array for install with schedules",
+    "implemented": false,
+    "featureIds": ["F034"]
+  },
+  {
+    "id": "T030",
+    "description": "list() returns empty array for install without schedules",
+    "implemented": false,
+    "featureIds": ["F035"]
+  },
+  {
+    "id": "T031",
+    "description": "list() only returns schedules for the requesting install",
+    "implemented": false,
+    "featureIds": ["F028", "F034"]
+  },
+  {
+    "id": "T032",
+    "description": "list() does not return schedules from other installs",
+    "implemented": false,
+    "featureIds": ["F028"]
+  },
+  {
+    "id": "T033",
+    "description": "get() returns schedule for valid ID belonging to install",
+    "implemented": false,
+    "featureIds": ["F036"]
+  },
+  {
+    "id": "T034",
+    "description": "get() returns null for non-existent schedule ID",
+    "implemented": false,
+    "featureIds": ["F037"]
+  },
+  {
+    "id": "T035",
+    "description": "get() returns null for schedule belonging to different install",
+    "implemented": false,
+    "featureIds": ["F038"]
+  },
+  {
+    "id": "T036",
+    "description": "create() with valid input returns success=true",
+    "implemented": false,
+    "featureIds": ["F039"]
+  },
+  {
+    "id": "T037",
+    "description": "create() returns scheduleId in response",
+    "implemented": false,
+    "featureIds": ["F040"]
+  },
+  {
+    "id": "T038",
+    "description": "create() persists schedule to database",
+    "implemented": false,
+    "featureIds": ["F039"]
+  },
+  {
+    "id": "T039",
+    "description": "create() resolves endpoint path to endpoint_id",
+    "implemented": false,
+    "featureIds": ["F029"]
+  },
+  {
+    "id": "T040",
+    "description": "create() rejects non-existent endpoint path",
+    "implemented": false,
+    "featureIds": ["F031"]
+  },
+  {
+    "id": "T041",
+    "description": "create() rejects endpoint path with path parameters",
+    "implemented": false,
+    "featureIds": ["F033"]
+  },
+  {
+    "id": "T042",
+    "description": "create() rejects DELETE method endpoints",
+    "implemented": false,
+    "featureIds": ["F032"]
+  },
+  {
+    "id": "T043",
+    "description": "create() rejects PUT method endpoints",
+    "implemented": false,
+    "featureIds": ["F032"]
+  },
+  {
+    "id": "T044",
+    "description": "create() accepts GET method endpoints",
+    "implemented": false,
+    "featureIds": ["F032"]
+  },
+  {
+    "id": "T045",
+    "description": "create() accepts POST method endpoints",
+    "implemented": false,
+    "featureIds": ["F032"]
+  },
+  {
+    "id": "T046",
+    "description": "create() rejects invalid cron expression (wrong field count)",
+    "implemented": false,
+    "featureIds": ["F041"]
+  },
+  {
+    "id": "T047",
+    "description": "create() rejects invalid cron expression (bad characters)",
+    "implemented": false,
+    "featureIds": ["F041"]
+  },
+  {
+    "id": "T048",
+    "description": "create() rejects cron with both day-of-month and day-of-week",
+    "implemented": false,
+    "featureIds": ["F041"]
+  },
+  {
+    "id": "T049",
+    "description": "create() rejects every-minute cron (*/1 * * * *)",
+    "implemented": false,
+    "featureIds": ["F046"]
+  },
+  {
+    "id": "T050",
+    "description": "create() accepts every-5-minute cron (*/5 * * * *)",
+    "implemented": false,
+    "featureIds": ["F046"]
+  },
+  {
+    "id": "T051",
+    "description": "create() rejects invalid timezone",
+    "implemented": false,
+    "featureIds": ["F042"]
+  },
+  {
+    "id": "T052",
+    "description": "create() accepts valid IANA timezone",
+    "implemented": false,
+    "featureIds": ["F042"]
+  },
+  {
+    "id": "T053",
+    "description": "create() defaults timezone to UTC when not provided",
+    "implemented": false,
+    "featureIds": ["F050"]
+  },
+  {
+    "id": "T054",
+    "description": "create() defaults enabled to true when not provided",
+    "implemented": false,
+    "featureIds": ["F051"]
+  },
+  {
+    "id": "T055",
+    "description": "create() rejects payload larger than 100KB",
+    "implemented": false,
+    "featureIds": ["F043"]
+  },
+  {
+    "id": "T056",
+    "description": "create() rejects non-JSON-serializable payload",
+    "implemented": false,
+    "featureIds": ["F043"]
+  },
+  {
+    "id": "T057",
+    "description": "create() rejects name longer than 128 characters",
+    "implemented": false,
+    "featureIds": ["F044"]
+  },
+  {
+    "id": "T058",
+    "description": "create() enforces max 50 schedules per install",
+    "implemented": false,
+    "featureIds": ["F045"]
+  },
+  {
+    "id": "T059",
+    "description": "create() returns error when quota exceeded",
+    "implemented": false,
+    "featureIds": ["F045", "F047"]
+  },
+  {
+    "id": "T060",
+    "description": "create() returns field-level error for invalid cron",
+    "implemented": false,
+    "featureIds": ["F048"]
+  },
+  {
+    "id": "T061",
+    "description": "create() returns field-level error for invalid timezone",
+    "implemented": false,
+    "featureIds": ["F048"]
+  },
+  {
+    "id": "T062",
+    "description": "create() creates job runner schedule when enabled=true",
+    "implemented": false,
+    "featureIds": ["F049"]
+  },
+  {
+    "id": "T063",
+    "description": "create() does not create job runner schedule when enabled=false",
+    "implemented": false,
+    "featureIds": ["F049"]
+  },
+  {
+    "id": "T064",
+    "description": "create() handles duplicate name with descriptive error",
+    "implemented": false,
+    "featureIds": ["F077"]
+  },
+  {
+    "id": "T065",
+    "description": "create() rolls back if job runner schedule creation fails",
+    "implemented": false,
+    "featureIds": ["F078"]
+  },
+  {
+    "id": "T066",
+    "description": "create() cleans up job runner if DB insert fails",
+    "implemented": false,
+    "featureIds": ["F079"]
+  },
+  {
+    "id": "T067",
+    "description": "update() with valid input returns success=true",
+    "implemented": false,
+    "featureIds": ["F052"]
+  },
+  {
+    "id": "T068",
+    "description": "update() persists changes to database",
+    "implemented": false,
+    "featureIds": ["F052"]
+  },
+  {
+    "id": "T069",
+    "description": "update() validates new cron expression",
+    "implemented": false,
+    "featureIds": ["F053"]
+  },
+  {
+    "id": "T070",
+    "description": "update() validates new timezone",
+    "implemented": false,
+    "featureIds": ["F054"]
+  },
+  {
+    "id": "T071",
+    "description": "update() reschedules job when cron changes",
+    "implemented": false,
+    "featureIds": ["F055"]
+  },
+  {
+    "id": "T072",
+    "description": "update() reschedules job when timezone changes",
+    "implemented": false,
+    "featureIds": ["F055"]
+  },
+  {
+    "id": "T073",
+    "description": "update() cancels job when enabled changes to false",
+    "implemented": false,
+    "featureIds": ["F055"]
+  },
+  {
+    "id": "T074",
+    "description": "update() creates job when enabled changes to true",
+    "implemented": false,
+    "featureIds": ["F055"]
+  },
+  {
+    "id": "T075",
+    "description": "update() returns error for non-existent schedule",
+    "implemented": false,
+    "featureIds": ["F056"]
+  },
+  {
+    "id": "T076",
+    "description": "update() returns error for schedule from different install",
+    "implemented": false,
+    "featureIds": ["F057"]
+  },
+  {
+    "id": "T077",
+    "description": "update() can change endpoint by path",
+    "implemented": false,
+    "featureIds": ["F058"]
+  },
+  {
+    "id": "T078",
+    "description": "update() rejects invalid endpoint path",
+    "implemented": false,
+    "featureIds": ["F058", "F031"]
+  },
+  {
+    "id": "T079",
+    "description": "delete() removes schedule from database",
+    "implemented": false,
+    "featureIds": ["F059"]
+  },
+  {
+    "id": "T080",
+    "description": "delete() cancels underlying job runner schedule",
+    "implemented": false,
+    "featureIds": ["F060"]
+  },
+  {
+    "id": "T081",
+    "description": "delete() returns success for valid schedule",
+    "implemented": false,
+    "featureIds": ["F061"]
+  },
+  {
+    "id": "T082",
+    "description": "delete() returns error for non-existent schedule",
+    "implemented": false,
+    "featureIds": ["F062"]
+  },
+  {
+    "id": "T083",
+    "description": "delete() returns error for schedule from different install",
+    "implemented": false,
+    "featureIds": ["F063"]
+  },
+  {
+    "id": "T084",
+    "description": "delete() succeeds even if job runner schedule already cancelled",
+    "implemented": false,
+    "featureIds": ["F060"]
+  },
+  {
+    "id": "T085",
+    "description": "Calling scheduler.list() without capability throws/rejects",
+    "implemented": false,
+    "featureIds": ["F064"]
+  },
+  {
+    "id": "T086",
+    "description": "Calling scheduler.create() without capability throws/rejects",
+    "implemented": false,
+    "featureIds": ["F064"]
+  },
+  {
+    "id": "T087",
+    "description": "Scheduler API calls are logged with operation name",
+    "implemented": false,
+    "featureIds": ["F065"]
+  },
+  {
+    "id": "T088",
+    "description": "Scheduler API calls are logged with install_id",
+    "implemented": false,
+    "featureIds": ["F065"]
+  },
+  {
+    "id": "T089",
+    "description": "Scheduler API calls are logged with tenant_id",
+    "implemented": false,
+    "featureIds": ["F065"]
+  },
+  {
+    "id": "T090",
+    "description": "Created schedules have trigger=host_api in metadata",
+    "implemented": false,
+    "featureIds": ["F066"]
+  },
+  {
+    "id": "T091",
+    "description": "Metrics counter increments on scheduler.list() call",
+    "implemented": false,
+    "featureIds": ["F067"]
+  },
+  {
+    "id": "T092",
+    "description": "Metrics counter increments on scheduler.create() call",
+    "implemented": false,
+    "featureIds": ["F067"]
+  },
+  {
+    "id": "T093",
+    "description": "SDK exports SchedulerHost type",
+    "implemented": false,
+    "featureIds": ["F070"]
+  },
+  {
+    "id": "T094",
+    "description": "SDK exports ScheduleInfo type",
+    "implemented": false,
+    "featureIds": ["F070"]
+  },
+  {
+    "id": "T095",
+    "description": "SDK exports CreateScheduleInput type",
+    "implemented": false,
+    "featureIds": ["F070"]
+  },
+  {
+    "id": "T096",
+    "description": "SDK exports CreateScheduleResult type",
+    "implemented": false,
+    "featureIds": ["F070"]
+  },
+  {
+    "id": "T097",
+    "description": "Sample extension has manifest declaring cap:scheduler.manage",
+    "implemented": false,
+    "featureIds": ["F072"]
+  },
+  {
+    "id": "T098",
+    "description": "Sample extension has /setup endpoint",
+    "implemented": false,
+    "featureIds": ["F073"]
+  },
+  {
+    "id": "T099",
+    "description": "Sample extension /setup checks existing schedules before creating",
+    "implemented": false,
+    "featureIds": ["F074"]
+  },
+  {
+    "id": "T100",
+    "description": "Sample extension /setup creates schedule idempotently",
+    "implemented": false,
+    "featureIds": ["F073", "F074"]
+  },
+  {
+    "id": "T101",
+    "description": "Internal API rejects request without valid install context",
+    "implemented": false,
+    "featureIds": ["F024", "F076"]
+  },
+  {
+    "id": "T102",
+    "description": "Internal API rejects request with mismatched tenant",
+    "implemented": false,
+    "featureIds": ["F024", "F076"]
+  },
+  {
+    "id": "T103",
+    "description": "Runner passes tenant_id in callback request",
+    "implemented": false,
+    "featureIds": ["F075"]
+  },
+  {
+    "id": "T104",
+    "description": "Runner passes install_id in callback request",
+    "implemented": false,
+    "featureIds": ["F075"]
+  },
+  {
+    "id": "T105",
+    "description": "End-to-end: extension creates schedule via host API",
+    "implemented": false,
+    "featureIds": ["F039", "F017", "F018"]
+  },
+  {
+    "id": "T106",
+    "description": "End-to-end: extension lists schedules via host API",
+    "implemented": false,
+    "featureIds": ["F034", "F017", "F018"]
+  },
+  {
+    "id": "T107",
+    "description": "End-to-end: extension updates schedule via host API",
+    "implemented": false,
+    "featureIds": ["F052", "F017", "F018"]
+  },
+  {
+    "id": "T108",
+    "description": "End-to-end: extension deletes schedule via host API",
+    "implemented": false,
+    "featureIds": ["F059", "F017", "F018"]
+  },
+  {
+    "id": "T109",
+    "description": "list() returns schedules sorted by created_at ascending",
+    "implemented": false,
+    "featureIds": ["F034"]
+  },
+  {
+    "id": "T110",
+    "description": "create() with enabled=false still persists schedule",
+    "implemented": false,
+    "featureIds": ["F039"]
+  },
+  {
+    "id": "T111",
+    "description": "Rate limiting blocks excessive create calls",
+    "implemented": false,
+    "featureIds": ["F080"]
+  },
+  {
+    "id": "T112",
+    "description": "Rate limiting blocks excessive update calls",
+    "implemented": false,
+    "featureIds": ["F080"]
+  },
+  {
+    "id": "T113",
+    "description": "list() response format matches ScheduleInfo type",
+    "implemented": false,
+    "featureIds": ["F034", "F005"]
+  },
+  {
+    "id": "T114",
+    "description": "create() associates schedule with correct install_id",
+    "implemented": false,
+    "featureIds": ["F028"]
+  },
+  {
+    "id": "T115",
+    "description": "Endpoint resolution uses version_id from install config",
+    "implemented": false,
+    "featureIds": ["F030"]
+  }
+]
