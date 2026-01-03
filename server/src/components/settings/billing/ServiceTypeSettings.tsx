@@ -36,7 +36,7 @@ import { toast } from 'react-hot-toast';
 type ServiceTypeSelectionItem = {
   id: string;
   name: string;
-  billing_method: 'fixed' | 'hourly' | 'usage';
+  billing_method: 'fixed' | 'hourly' | 'usage' | 'per_unit';
   is_standard: boolean;
 };
 

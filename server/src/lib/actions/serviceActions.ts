@@ -8,6 +8,8 @@ import { createTenantKnex } from 'server/src/lib/db';
 import { Knex } from 'knex';
 import { validateArray } from 'server/src/lib/utils/validation';
 import { ServiceTypeModel } from '../models/serviceType'; // Import ServiceTypeModel
+import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
+import { hasPermission } from 'server/src/lib/auth/rbac';
 
 // Interface for paginated service response
 export interface PaginatedServicesResponse {
@@ -19,11 +21,98 @@ export interface PaginatedServicesResponse {
 
 export interface ServiceListOptions {
   search?: string;
+  /**
+   * Catalog kind filter.
+   * - Omit to preserve legacy behavior (services only).
+   * - Use 'product' for product-only lists.
+   * - Use 'any' to include both services and products.
+   */
+  item_kind?: 'service' | 'product' | 'any';
+  is_active?: boolean;
   billing_method?: 'fixed' | 'hourly' | 'usage' | 'per_unit';
   category_id?: string | null;
   custom_service_type_id?: string;
   sort?: 'service_name' | 'billing_method' | 'default_rate';
   order?: 'asc' | 'desc';
+}
+
+export interface CatalogPickerSearchOptions {
+  search?: string;
+  page?: number;
+  limit?: number;
+  is_active?: boolean;
+  item_kinds?: Array<'service' | 'product'>;
+  billing_methods?: Array<'fixed' | 'hourly' | 'usage' | 'per_unit'>;
+}
+
+export type CatalogPickerItem = Pick<
+  IService,
+  'service_id' | 'service_name' | 'billing_method' | 'unit_of_measure' | 'item_kind' | 'sku'
+> & {
+  default_rate: number;
+};
+
+export async function searchServiceCatalogForPicker(
+  options: CatalogPickerSearchOptions = {}
+): Promise<{ items: CatalogPickerItem[]; totalCount: number }> {
+  const { knex: db, tenant } = await createTenantKnex();
+
+  const page = options.page ?? 1;
+  const limit = options.limit ?? 10;
+  const offset = (page - 1) * limit;
+
+  const searchTerm = options.search?.trim() ? `%${options.search.trim()}%` : null;
+
+  return withTransaction(db, async (trx: Knex.Transaction) => {
+    const base = trx('service_catalog as sc').where({ 'sc.tenant': tenant });
+
+    if (options.is_active !== undefined) {
+      base.andWhere('sc.is_active', options.is_active);
+    }
+
+    if (options.item_kinds?.length) {
+      base.andWhere((qb) => qb.whereIn('sc.item_kind', options.item_kinds!));
+    }
+
+    if (options.billing_methods?.length) {
+      base.andWhere((qb) => qb.whereIn('sc.billing_method', options.billing_methods!));
+    }
+
+    if (searchTerm) {
+      base.andWhere((qb) => {
+        qb.whereILike('sc.service_name', searchTerm)
+          .orWhereILike('sc.description', searchTerm)
+          .orWhereILike('sc.sku', searchTerm);
+      });
+    }
+
+    const countResult = await base
+      .clone()
+      .count('sc.service_id as count')
+      .first();
+
+    const totalCount = parseInt(countResult?.count as string) || 0;
+
+    const rows = await base
+      .clone()
+      .select(
+        'sc.service_id',
+        'sc.service_name',
+        'sc.billing_method',
+        'sc.unit_of_measure',
+        'sc.item_kind',
+        'sc.sku',
+        trx.raw('CAST(sc.default_rate AS FLOAT) as default_rate')
+      )
+      .orderBy('sc.service_name', 'asc')
+      .limit(limit)
+      .offset(offset);
+
+    return {
+      items: rows as CatalogPickerItem[],
+      totalCount,
+    };
+  });
 }
 
 export async function getServices(
@@ -57,6 +146,9 @@ export async function getServices(
 
         const sanitizedOptions: ServiceListOptions & { sort: SortField; order: 'asc' | 'desc' } = {
           search: options.search?.trim() ? options.search.trim() : undefined,
+          // Preserve legacy behavior: callers historically expect services only.
+          item_kind: options.item_kind ?? 'service',
+          is_active: options.is_active,
           billing_method: options.billing_method,
           category_id: options.category_id,
           custom_service_type_id: options.custom_service_type_id,
@@ -65,6 +157,14 @@ export async function getServices(
         };
 
         const applyFilters = (query: Knex.QueryBuilder) => {
+          if (sanitizedOptions.item_kind && sanitizedOptions.item_kind !== 'any') {
+            query.where('sc.item_kind', sanitizedOptions.item_kind);
+          }
+
+          if (sanitizedOptions.is_active !== undefined) {
+            query.where('sc.is_active', sanitizedOptions.is_active);
+          }
+
           if (sanitizedOptions.billing_method) {
             query.where('sc.billing_method', sanitizedOptions.billing_method);
           }
@@ -86,7 +186,8 @@ export async function getServices(
             query.andWhere((builder) => {
               builder
                 .whereILike('sc.service_name', term)
-                .orWhereILike('sc.description', term);
+                .orWhereILike('sc.description', term)
+                .orWhereILike('sc.sku', term);
             });
           }
 
@@ -127,6 +228,16 @@ export async function getServices(
               'sc.category_id',
               'sc.tenant',
               'sc.description',
+              'sc.item_kind',
+              'sc.is_active',
+              'sc.sku',
+              trx.raw('CAST(sc.cost AS FLOAT) as cost'),
+              'sc.vendor',
+              'sc.manufacturer',
+              'sc.product_category',
+              'sc.is_license',
+              'sc.license_term',
+              'sc.license_billing_cadence',
               'sc.tax_rate_id', // Corrected: Use tax_rate_id based on schema
               'st.name as service_type_name' // Add service type name
             )
@@ -136,6 +247,8 @@ export async function getServices(
             if (sanitizedOptions.sort !== 'service_name') {
               queryBuilder.orderBy('sc.service_name', 'asc');
             }
+            // Ensure stable pagination ordering for deterministic page boundaries.
+            queryBuilder.orderBy('sc.service_id', 'asc');
           })
           .limit(pageSize)
           .offset(offset);
@@ -212,6 +325,10 @@ export async function createService(
 ): Promise<IService> {
     try {
         console.log('[serviceActions] createService called with data:', serviceData);
+        const currentUser = await getCurrentUser();
+        if (!currentUser) {
+          throw new Error('Unauthorized');
+        }
         const { custom_service_type_id } = serviceData;
 
         if (!custom_service_type_id) {
@@ -220,6 +337,10 @@ export async function createService(
 
         const { knex: db, tenant } = await createTenantKnex();
         return withTransaction(db, async (trx: Knex.Transaction) => {
+        const canCreate = await hasPermission(currentUser, 'service', 'create', trx);
+        if (!canCreate) {
+          throw new Error('Permission denied: Cannot create services/products');
+        }
 
         // 1. Verify the custom service type exists
         const customServiceType = await trx<IServiceType>('service_types')
@@ -266,9 +387,17 @@ export async function updateService(
     serviceId: string,
     serviceData: Partial<IService>
 ): Promise<IService> {
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+      throw new Error('Unauthorized');
+    }
     const { knex: db } = await createTenantKnex();
     try {
         return await withTransaction(db, async (trx: Knex.Transaction) => {
+            const canUpdate = await hasPermission(currentUser, 'service', 'update', trx);
+            if (!canUpdate) {
+              throw new Error('Permission denied: Cannot update services/products');
+            }
             const updatedService = await Service.update(trx, serviceId, serviceData);
             safeRevalidate('/msp/billing'); // Revalidate the billing page
 
@@ -285,9 +414,17 @@ export async function updateService(
 }
 
 export async function deleteService(serviceId: string): Promise<void> {
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+      throw new Error('Unauthorized');
+    }
     const { knex: db } = await createTenantKnex();
     try {
         await withTransaction(db, async (trx: Knex.Transaction) => {
+            const canDelete = await hasPermission(currentUser, 'service', 'delete', trx);
+            if (!canDelete) {
+              throw new Error('Permission denied: Cannot delete services/products');
+            }
             await Service.delete(trx, serviceId)
             safeRevalidate('/msp/billing') // Revalidate the billing page
         });
@@ -311,7 +448,7 @@ export async function getServicesByCategory(categoryId: string): Promise<IServic
 }
 
 // New action to get combined service types for UI selection
-export async function getServiceTypesForSelection(): Promise<{ id: string; name: string; billing_method: 'fixed' | 'hourly' | 'usage'; is_standard: boolean }[]> {
+export async function getServiceTypesForSelection(): Promise<{ id: string; name: string; billing_method: 'fixed' | 'hourly' | 'per_unit' | 'usage'; is_standard: boolean }[]> {
    try {
        // Assuming ServiceTypeModel is imported or available
        // Need to import ServiceTypeModel from '../models/serviceType'
@@ -544,9 +681,17 @@ export async function setServicePrice(
   currencyCode: string,
   rate: number
 ): Promise<IServicePrice> {
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
+    throw new Error('Unauthorized');
+  }
   const { knex: db } = await createTenantKnex();
   try {
     return await withTransaction(db, async (trx: Knex.Transaction) => {
+      const canUpdate = await hasPermission(currentUser, 'service', 'update', trx);
+      if (!canUpdate) {
+        throw new Error('Permission denied: Cannot update service pricing');
+      }
       const result = await Service.setPrice(trx, serviceId, currencyCode, rate);
       safeRevalidate('/msp/billing');
       return result;
@@ -564,9 +709,17 @@ export async function setServicePrices(
   serviceId: string,
   prices: Array<{ currency_code: string; rate: number }>
 ): Promise<IServicePrice[]> {
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
+    throw new Error('Unauthorized');
+  }
   const { knex: db } = await createTenantKnex();
   try {
     return await withTransaction(db, async (trx: Knex.Transaction) => {
+      const canUpdate = await hasPermission(currentUser, 'service', 'update', trx);
+      if (!canUpdate) {
+        throw new Error('Permission denied: Cannot update service pricing');
+      }
       const result = await Service.setPrices(trx, serviceId, prices);
       safeRevalidate('/msp/billing');
       return result;
@@ -581,9 +734,17 @@ export async function setServicePrices(
  * Remove a specific price for a service
  */
 export async function removeServicePrice(serviceId: string, currencyCode: string): Promise<boolean> {
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
+    throw new Error('Unauthorized');
+  }
   const { knex: db } = await createTenantKnex();
   try {
     return await withTransaction(db, async (trx: Knex.Transaction) => {
+      const canUpdate = await hasPermission(currentUser, 'service', 'update', trx);
+      if (!canUpdate) {
+        throw new Error('Permission denied: Cannot update service pricing');
+      }
       const result = await Service.removePrice(trx, serviceId, currencyCode);
       safeRevalidate('/msp/billing');
       return result;

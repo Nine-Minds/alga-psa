@@ -261,6 +261,7 @@ export const billingNavigationSections: NavigationSection[] = [
     title: 'Pricing',
     items: [
       { name: 'Service Catalog', icon: Package, href: '/msp/billing?tab=service-catalog' },
+      { name: 'Products', icon: Package, href: '/msp/billing?tab=products' },
       { name: 'Tax Rates', icon: Percent, href: '/msp/billing?tab=tax-rates' },
     ]
   },

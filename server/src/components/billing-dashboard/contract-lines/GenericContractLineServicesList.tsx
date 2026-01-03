@@ -97,7 +97,7 @@ const GenericPlanServicesList: React.FC<GenericPlanServicesListProps> = ({ contr
       // Fetch plan details, services, and configurations
       const [planDetails, servicesResponse, servicesWithConfigurations] = await Promise.all([
         getContractLineById(contractLineId), // Fetch the plan details
-        getServices(),
+        getServices(1, 999, { item_kind: 'any' }),
         getContractLineServicesWithConfigurations(contractLineId),
       ]);
       
@@ -346,10 +346,19 @@ const GenericPlanServicesList: React.FC<GenericPlanServicesListProps> = ({ contr
 
   // Filter available services based on plan type and already added services
   const servicesAvailableToAdd = availableServices.filter(availService => {
+    if (availService.is_active === false) {
+      return false;
+    }
+
     // Check if service is already added
     const isAlreadyAdded = planServices.some(ps => ps.service_id === availService.service_id);
     if (isAlreadyAdded) {
       return false;
+    }
+
+    // Products are only supported on Fixed contract lines in V1.
+    if (availService.item_kind === 'product') {
+      return planType === 'Fixed';
     }
 
     // Apply filtering logic based on plan type and the service's own billing_method

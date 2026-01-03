@@ -72,7 +72,7 @@ const UsageContractLinePresetServicesList: React.FC<UsageContractLinePresetServi
       }
 
       const presetServicesData = await getContractLinePresetServices(presetId);
-      const servicesResponse = await getServices();
+      const servicesResponse = await getServices(1, 999, { item_kind: 'any' });
       const allAvailableServices = Array.isArray(servicesResponse)
         ? servicesResponse
         : (servicesResponse.services || []);
@@ -394,15 +394,15 @@ const UsageContractLinePresetServicesList: React.FC<UsageContractLinePresetServi
                       <div className="flex items-center gap-2">
                         <label className="text-sm font-medium">Rate per Unit:</label>
                         <span className="text-gray-500">$</span>
-                        <Input
-                          type="text"
-                          inputMode="decimal"
-                          value={service.custom_rate !== undefined ? (service.custom_rate / 100).toFixed(2) : ''}
-                          onChange={(e) => {
-                            const dollars = parseFloat(e.target.value) || 0;
-                            const cents = Math.round(dollars * 100);
-                            handleRateChange(service.service_id, cents);
-                          }}
+                      <Input
+                        type="text"
+                        inputMode="decimal"
+                        value={service.custom_rate != null ? (service.custom_rate / 100).toFixed(2) : ''}
+                        onChange={(e) => {
+                          const dollars = parseFloat(e.target.value) || 0;
+                          const cents = Math.round(dollars * 100);
+                          handleRateChange(service.service_id, cents);
+                        }}
                           className="w-24"
                         />
                       </div>

@@ -30,7 +30,7 @@ export function FixedFeeServicesStep({ data, updateData }: FixedFeeServicesStepP
   useEffect(() => {
     const loadServices = async () => {
       try {
-        const result = await getServices();
+        const result = await getServices(1, 999, { item_kind: 'service' });
         if (result && Array.isArray(result.services)) {
           const fixedServices = result.services.filter(
             (service) => service.billing_method === 'fixed'

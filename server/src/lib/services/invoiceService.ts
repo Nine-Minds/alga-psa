@@ -207,6 +207,10 @@ export async function persistManualInvoiceCharges(
     }
     // --- End Determine Tax Info ---
 
+    if ((requestItem.quantity ?? 0) <= 0) {
+      throw new Error('Quantity must be greater than 0');
+    }
+
     const netAmount = calculateNetAmount(requestItem, subtotal); // No applicable amount needed here
 
     // Detect manual credits (negative rate, not explicitly marked as discount)
@@ -652,6 +656,12 @@ export async function persistInvoiceCharges(
   for (const charge of otherCharges) {
     // Add specific handling for each type if needed, otherwise use generic approach
     const netAmount = charge.total; // Assuming 'total' is the net amount
+    const description =
+      charge.type === 'product'
+        ? `Product: ${charge.serviceName}`
+        : charge.type === 'license'
+          ? `License: ${charge.serviceName}`
+          : charge.serviceName;
     const invoiceItem = {
       item_id: uuidv4(),
       invoice_id: invoiceId,
@@ -661,7 +671,7 @@ export async function persistInvoiceCharges(
       // contract_line_id: ('planId' in charge ? (charge as any).planId : null), // Removed - planId not part of IFixedPriceCharge
       // Use client_contract_line_id if the schema requires it
       // client_contract_line_id: charge.client_contract_line_id ?? null,
-      description: charge.serviceName,
+      description,
       quantity: charge.quantity ?? 1,
       unit_price: charge.rate ?? 0,
       net_amount: netAmount,

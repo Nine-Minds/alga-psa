@@ -5,6 +5,7 @@ import { Button } from 'server/src/components/ui/Button';
 import { Dialog, DialogContent, DialogFooter } from 'server/src/components/ui/Dialog';
 import type { InvoiceViewModel, IInvoiceTemplate } from 'server/src/interfaces/invoice.interfaces';
 import { Skeleton } from 'server/src/components/ui/Skeleton';
+import { Badge } from 'server/src/components/ui/Badge';
 import { Download, X, Mail } from 'lucide-react';
 import { getClientInvoiceById, downloadClientInvoicePdf, sendClientInvoiceEmail } from 'server/src/lib/actions/client-portal-actions/client-billing';
 import { useTranslation } from '@/lib/i18n/client';
@@ -163,7 +164,17 @@ const InvoiceDetailsDialog: React.FC<InvoiceDetailsDialogProps> = React.memo(({
                 {invoice.invoice_charges && invoice.invoice_charges.length > 0 ? (
                   invoice.invoice_charges.map((item, idx) => (
                     <tr key={idx}>
-                      <td className="px-3 py-2">{item.description}</td>
+                      <td className="px-3 py-2">
+                        <div className="flex items-center gap-2">
+                          <span>{item.description}</span>
+                          {item.service_item_kind === 'product' ? (
+                            <Badge variant="secondary">Product</Badge>
+                          ) : null}
+                          {item.service_item_kind === 'product' && item.service_sku ? (
+                            <span className="text-xs text-muted-foreground">{item.service_sku}</span>
+                          ) : null}
+                        </div>
+                      </td>
                       <td className="px-3 py-2">{item.quantity}</td>
                       <td className="px-3 py-2">{formatCurrency(item.unit_price, invoice.currencyCode)}</td>
                       <td className="px-3 py-2">{formatCurrency(item.total_price, invoice.currencyCode)}</td>

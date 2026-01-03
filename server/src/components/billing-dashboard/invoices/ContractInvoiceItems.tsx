@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { IInvoiceCharge } from 'server/src/interfaces/invoice.interfaces';
+import { Badge } from 'server/src/components/ui/Badge';
 
 interface ContractInvoiceItemsProps {
   items: IInvoiceCharge[];
@@ -57,7 +58,17 @@ const ContractInvoiceItems: React.FC<ContractInvoiceItemsProps> = ({ items }) =>
               <tbody className="text-sm">
                 {contract.items.map((item, i) => (
                   <tr key={i} className="border-t">
-                    <td className="py-2">{item.description}</td>
+                    <td className="py-2">
+                      <div className="flex items-center gap-2">
+                        <span>{item.description}</span>
+                        {item.service_item_kind === 'product' ? (
+                          <Badge variant="secondary">Product</Badge>
+                        ) : null}
+                        {item.service_item_kind === 'product' && item.service_sku ? (
+                          <span className="text-xs text-muted-foreground">{item.service_sku}</span>
+                        ) : null}
+                      </div>
+                    </td>
                     <td className="text-right">{item.quantity}</td>
                     <td className="text-right">${(item.unit_price / 100).toFixed(2)}</td>
                     <td className="text-right">${(item.total_price / 100).toFixed(2)}</td>
@@ -89,7 +100,17 @@ const ContractInvoiceItems: React.FC<ContractInvoiceItemsProps> = ({ items }) =>
             <tbody className="text-sm">
               {nonContractItems.map((item, i) => (
                 <tr key={i} className="border-t">
-                  <td className="py-2">{item.description}</td>
+                  <td className="py-2">
+                    <div className="flex items-center gap-2">
+                      <span>{item.description}</span>
+                      {item.service_item_kind === 'product' ? (
+                        <Badge variant="secondary">Product</Badge>
+                      ) : null}
+                      {item.service_item_kind === 'product' && item.service_sku ? (
+                        <span className="text-xs text-muted-foreground">{item.service_sku}</span>
+                      ) : null}
+                    </div>
+                  </td>
                   <td className="text-right">{item.quantity}</td>
                   <td className="text-right">${(item.unit_price / 100).toFixed(2)}</td>
                   <td className="text-right">${(item.total_price / 100).toFixed(2)}</td>

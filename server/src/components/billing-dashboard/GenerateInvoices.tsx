@@ -21,12 +21,6 @@ interface SelectOption {
   label: string;
 }
 
-interface Service {
-  service_id: string;
-  service_name: string;
-  rate: number;
-}
-
 const allInvoiceTypeOptions: SelectOption[] = [
   { value: 'automatic', label: 'Automatic Invoices' },
   { value: 'manual', label: 'Manual Invoices' },
@@ -50,7 +44,7 @@ const GenerateInvoices: React.FC = () => {
     is_early?: boolean;
   })[]>([]);
   const [clients, setClients] = useState<IClient[]>([]);
-  const [services, setServices] = useState<Service[]>([]);
+  const [services, setServices] = useState<IService[]>([]);
   const [showSuccessDialog, setShowSuccessDialog] = useState(false);
 
   useEffect(() => {
@@ -62,18 +56,13 @@ const GenerateInvoices: React.FC = () => {
       const [periodsData, clientsData, servicesData] = await Promise.all([
         getAvailableBillingPeriods(),
         getAllClients(),
-        getServices()
+        getServices(1, 999, { item_kind: 'any' })
       ]);
 
       setPeriods(periodsData);
       setClients(clientsData);
-      // Transform IService to Service, using default_rate as rate
       if (servicesData && Array.isArray(servicesData.services)) {
-        setServices(servicesData.services.map((service): Service => ({
-          service_id: service.service_id,
-          service_name: service.service_name,
-          rate: service.default_rate || 0
-        })));
+        setServices(servicesData.services);
       } else {
         console.warn('Services data is not in the expected format:', servicesData);
         setServices([]);

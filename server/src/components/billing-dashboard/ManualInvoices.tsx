@@ -22,11 +22,6 @@ import { formatCurrency } from 'server/src/lib/utils/formatters';
 const IS_DEVELOPMENT = typeof window !== 'undefined' &&
   globalThis.window.location.hostname === 'localhost';
 
-interface ServiceWithRate extends Pick<IService, 'service_id' | 'service_name'> {
-  rate: number;  // Maps to default_rate from IService
-  tax_rate_id?: string | null;  // Add tax_rate_id to determine taxability
-}
-
 interface SelectOption {
   value: string;
   label: string;
@@ -34,7 +29,7 @@ interface SelectOption {
 
 interface ManualInvoicesProps {
   clients: IClient[];
-  services: ServiceWithRate[];
+  services: IService[];
   onGenerateSuccess: () => void;
   invoice?: InvoiceViewModel;
 }
@@ -539,13 +534,6 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
     }
   };
 
-  const serviceOptions: ServiceOption[] = services.map((service): ServiceOption => ({
-    value: service.service_id,
-    label: service.service_name,
-    rate: service.rate, // Pass rate in cents
-    tax_rate_id: service.tax_rate_id // Pass tax_rate_id to determine taxability
-  }));
-
   const calculateManualItemsTotal = () => {
     const nonDiscountItems = items.filter(item => !item.isRemoved && !item.is_discount);
     const discountItems = items.filter(item => !item.isRemoved && item.is_discount);
@@ -597,6 +585,23 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
   // Get currency code from invoice data, selected client, or default to USD
   const selectedClientData = clients.find(c => c.client_id === (currentInvoiceData?.client_id || selectedClient));
   const currencyCode = currentInvoiceData?.currencyCode || selectedClientData?.default_currency_code || 'USD';
+
+  const serviceOptions: ServiceOption[] = services
+    .filter((service) => service.is_active !== false)
+    .map((service): ServiceOption => {
+      const currencyRate = service.prices?.find((p) => p.currency_code === currencyCode)?.rate;
+      const rate = currencyRate ?? service.default_rate ?? 0;
+      const label =
+        `${service.item_kind === 'product' ? '[Product] ' : ''}${service.service_name}` +
+        (service.sku ? ` (${service.sku})` : '');
+
+      return {
+        value: service.service_id,
+        label,
+        rate: Number(rate) || 0,
+        tax_rate_id: service.tax_rate_id ?? null,
+      };
+    });
 
   // Helper to prepare item prop for LineItem component
   const mapToLineItemEditable = (item: EditableInvoiceItem): LineItemEditableItem => ({

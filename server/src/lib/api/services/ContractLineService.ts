@@ -626,18 +626,20 @@ export class ContractLineService extends BaseService<IContractLine> {
     const { knex } = await this.getKnex();
     
     const services = await knex('contract_line_service_configuration as psc')
-      .join('services as s', function() {
-        this.on('psc.service_id', '=', 's.service_id')
-            .andOn('psc.tenant', '=', 's.tenant');
+      .join('service_catalog as sc', function() {
+        this.on('psc.service_id', '=', 'sc.service_id')
+            .andOn('psc.tenant', '=', 'sc.tenant');
       })
       .where('psc.contract_line_id', planId)
       .where('psc.tenant', context.tenant)
       .select(
         'psc.*',
-        's.service_name',
-        's.default_rate',
-        's.unit_of_measure',
-        's.billing_method'
+        'sc.service_name',
+        'sc.default_rate',
+        'sc.unit_of_measure',
+        'sc.billing_method',
+        'sc.item_kind',
+        'sc.is_license'
       );
     
     // Add configuration details for each service
@@ -651,7 +653,9 @@ export class ContractLineService extends BaseService<IContractLine> {
             service_name: service.service_name,
             default_rate: service.default_rate,
             unit_of_measure: service.unit_of_measure,
-            billing_method: service.billing_method
+            billing_method: service.billing_method,
+            item_kind: service.item_kind,
+            is_license: service.is_license
           },
           configuration: service,
           type_config: details.typeConfig,
@@ -1269,10 +1273,10 @@ export class ContractLineService extends BaseService<IContractLine> {
     
     // Get service usage stats
     const serviceStats = await knex('contract_line_service_configuration as psc')
-      .join('services as s', 'psc.service_id', 's.service_id')
+      .join('service_catalog as sc', 'psc.service_id', 'sc.service_id')
       .where('psc.contract_line_id', planId)
       .where('psc.tenant', context.tenant)
-      .select('s.service_name', 'psc.service_id')
+      .select('sc.service_name', 'psc.service_id')
       .count('* as usage_count');
     
     return {
@@ -1712,7 +1716,7 @@ export class ContractLineService extends BaseService<IContractLine> {
     context: ServiceContext,
     trx: Knex.Transaction
   ): Promise<IService | null> {
-    const service = await trx('services')
+    const service = await trx('service_catalog')
       .where('service_id', serviceId)
       .where('tenant', context.tenant)
       .first();

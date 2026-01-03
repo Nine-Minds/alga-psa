@@ -39,7 +39,9 @@ const ContractLines: React.FC<ContractLinesProps> = ({ initialServices }) => {
   const [error, setError] = useState<string | null>(null);
   const [editingPlan, setEditingPlan] = useState<IContractLine | null>(null);
   // Add state for all service types (standard + tenant-specific)
-  const [allServiceTypes, setAllServiceTypes] = useState<{ id: string; name: string; billing_method: 'fixed' | 'hourly' | 'usage'; is_standard: boolean }[]>([]);
+  const [allServiceTypes, setAllServiceTypes] = useState<
+    { id: string; name: string; billing_method: IServiceType['billing_method']; is_standard: boolean }[]
+  >([]);
   const tenant = useTenant();
 
   useEffect(() => {
@@ -251,12 +253,14 @@ const ContractLines: React.FC<ContractLinesProps> = ({ initialServices }) => {
       title: 'Quantity',
       dataIndex: 'quantity',
       render: (value, record) => (
-        <Input
-          type="number"
-          value={value?.toString() || ''}
-          onChange={(e) => handleUpdatePlanService(record.service_id, Number(e.target.value), record.custom_rate)}
-          className="w-24 px-2 py-1 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
-        />
+          <Input
+            type="number"
+            value={value?.toString() || ''}
+            onChange={(e) =>
+              handleUpdatePlanService(record.service_id, Number(e.target.value), record.custom_rate ?? undefined)
+            }
+            className="w-24 px-2 py-1 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+          />
       ),
     },
     {
