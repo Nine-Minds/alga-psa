@@ -13,7 +13,7 @@ export interface FindBoardByNameOutput {
   name: string;
   description: string;
   is_default: boolean;
-  is_active: boolean;
+  is_inactive: boolean;
 }
 
 export async function findBoardById(id: string): Promise<IBoard | undefined> {
@@ -226,7 +226,7 @@ export async function findBoardByName(name: string): Promise<FindBoardByNameOutp
 
   return await withTransaction(db, async (trx: Knex.Transaction) => {
     const board = await trx('boards')
-      .select('board_id as id', 'board_name as name', 'description', 'is_default', 'is_active')
+      .select('board_id as id', 'board_name as name', 'description', 'is_default', 'is_inactive')
       .where('tenant', tenant)
       .whereRaw('LOWER(board_name) = LOWER(?)', [name])
       .first();

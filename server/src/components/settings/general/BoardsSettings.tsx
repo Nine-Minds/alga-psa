@@ -317,13 +317,7 @@ const BoardsSettings: React.FC = () => {
                   return;
                 }
 
-                if (checked) {
-                  // First unset any existing default boards
-                  const currentDefault = boards.find(b => b.is_default && b.board_id !== record.board_id);
-                  if (currentDefault) {
-                    await updateBoard(currentDefault.board_id!, { is_default: false });
-                  }
-                }
+                // Backend handles unsetting other defaults atomically when setting a new one
                 await updateBoard(record.board_id!, {
                   is_default: checked
                 });
