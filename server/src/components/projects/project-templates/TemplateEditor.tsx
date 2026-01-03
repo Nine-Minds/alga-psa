@@ -1,8 +1,10 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useMemo } from 'react';
+import { useTruncationDetection } from 'server/src/hooks/useTruncationDetection';
 import { useRouter } from 'next/navigation';
 import { Button } from 'server/src/components/ui/Button';
+import { Dialog } from 'server/src/components/ui/Dialog';
 import { Card } from 'server/src/components/ui/Card';
 import { Badge } from 'server/src/components/ui/Badge';
 import { Input } from 'server/src/components/ui/Input';
@@ -16,8 +18,6 @@ import {
   Plus,
   Pencil,
   GripVertical,
-  Save,
-  X,
   Settings,
   CheckSquare,
   Bug,
@@ -28,7 +28,10 @@ import {
   Users,
   MoreVertical,
   Clock,
+  Ban,
+  GitBranch,
 } from 'lucide-react';
+import { Tooltip } from 'server/src/components/ui/Tooltip';
 import {
   IProjectTemplateWithDetails,
   IProjectTemplateTask,
@@ -36,6 +39,7 @@ import {
   IProjectTemplateStatusMapping,
   IProjectTemplateTaskAssignment,
   IProjectTemplateChecklistItem,
+  IProjectTemplateDependency,
 } from 'server/src/interfaces/projectTemplate.interfaces';
 import {
   deleteTemplate,
@@ -48,12 +52,13 @@ import {
   updateTemplateTask,
   deleteTemplateTask,
   updateTemplateTaskStatus,
-  addTemplateStatusMapping,
-  removeTemplateStatusMapping,
-  reorderTemplateStatusMappings,
   setTaskAdditionalAgents,
   saveTemplateChecklistItems,
+  addTemplateDependency,
+  removeTemplateDependency,
 } from 'server/src/lib/actions/project-actions/projectTemplateActions';
+import { DependencyType, IClientPortalConfig, DEFAULT_CLIENT_PORTAL_CONFIG } from 'server/src/interfaces/project.interfaces';
+import ClientPortalConfigEditor from 'server/src/components/projects/ClientPortalConfigEditor';
 import { getTenantProjectStatuses } from 'server/src/lib/actions/project-actions/projectTaskStatusActions';
 import { getTaskTypes } from 'server/src/lib/actions/project-actions/projectTaskActions';
 import { getAllPriorities } from 'server/src/lib/actions/priorityActions';
@@ -64,9 +69,12 @@ import { toast } from 'react-hot-toast';
 import { ApplyTemplateDialog } from './ApplyTemplateDialog';
 import { TemplateTaskForm } from './TemplateTaskForm';
 import { TemplateStatusManager } from './TemplateStatusManager';
+import TemplateTaskListView from './TemplateTaskListView';
+import ViewSwitcher from 'server/src/components/ui/ViewSwitcher';
+import { LayoutGrid, List } from 'lucide-react';
 import styles from '../ProjectDetail.module.css';
-import { generateKeyBetween } from 'fractional-indexing';
 import UserPicker from 'server/src/components/ui/UserPicker';
+import UserAvatar from 'server/src/components/ui/UserAvatar';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -107,6 +115,9 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
   const [checklistItems, setChecklistItems] = useState<IProjectTemplateChecklistItem[]>(
     initialTemplate.checklist_items || []
   );
+  const [dependencies, setDependencies] = useState<IProjectTemplateDependency[]>(
+    initialTemplate.dependencies || []
+  );
 
   // Selection state
   const [selectedPhase, setSelectedPhase] = useState<IProjectTemplatePhase | null>(
@@ -117,6 +128,32 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
   const [isDeleting, setIsDeleting] = useState(false);
   const [showApplyDialog, setShowApplyDialog] = useState(false);
   const [showStatusManager, setShowStatusManager] = useState(false);
+  const [showClientPortalConfig, setShowClientPortalConfig] = useState(false);
+  const [clientPortalConfig, setClientPortalConfig] = useState<IClientPortalConfig>(
+    initialTemplate.client_portal_config || DEFAULT_CLIENT_PORTAL_CONFIG
+  );
+
+  // View mode state
+  type TemplateViewMode = 'kanban' | 'list';
+  const [viewMode, setViewMode] = useState<TemplateViewMode>(() => {
+    if (typeof window !== 'undefined') {
+      return (localStorage.getItem('template_editor_view_mode') as TemplateViewMode) || 'kanban';
+    }
+    return 'kanban';
+  });
+
+  // Persist view mode to localStorage
+  const handleViewModeChange = (mode: TemplateViewMode) => {
+    setViewMode(mode);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('template_editor_view_mode', mode);
+    }
+  };
+
+  const viewOptions = [
+    { value: 'kanban' as const, label: 'Kanban', icon: LayoutGrid },
+    { value: 'list' as const, label: 'List', icon: List },
+  ];
 
   // Phase editing state
   const [editingPhaseId, setEditingPhaseId] = useState<string | null>(null);
@@ -207,6 +244,17 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
       setIsDeleting(false);
     }
   }
+
+  const handleClientPortalConfigChange = async (config: IClientPortalConfig) => {
+    try {
+      setClientPortalConfig(config);
+      await updateTemplate(template.template_id, { client_portal_config: config });
+      toast.success('Client portal settings saved');
+    } catch (error) {
+      toast.error('Failed to save client portal settings');
+      console.error('Error saving client portal config:', error);
+    }
+  };
 
   // ============================================================
   // PHASE ACTIONS
@@ -401,7 +449,11 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
   const handleSaveTask = async (
     taskData: Partial<IProjectTemplateTask>,
     additionalAgents?: string[],
-    localChecklistItems?: Array<{ id: string; item_name: string; description?: string; completed: boolean; order_number: number; isNew?: boolean }>
+    localChecklistItems?: Array<{ id: string; item_name: string; description?: string; completed: boolean; order_number: number; isNew?: boolean }>,
+    dependencyChanges?: {
+      added: Array<{ predecessorTaskId: string; dependencyType: DependencyType }>;
+      removed: string[];
+    }
   ) => {
     try {
       let taskId: string;
@@ -464,6 +516,26 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
           const otherTaskItems = prev.filter(c => c.template_task_id !== taskId);
           return [...otherTaskItems, ...savedItems];
         });
+      }
+
+      // Handle dependency changes
+      if (dependencyChanges) {
+        // Remove dependencies
+        for (const depId of dependencyChanges.removed) {
+          await removeTemplateDependency(depId);
+          setDependencies((prev) => prev.filter((d) => d.template_dependency_id !== depId));
+        }
+
+        // Add new dependencies (current task is the successor)
+        for (const dep of dependencyChanges.added) {
+          const newDep = await addTemplateDependency(
+            template.template_id,
+            dep.predecessorTaskId,
+            taskId,
+            dep.dependencyType
+          );
+          setDependencies((prev) => [...prev, newDep]);
+        }
       }
 
       setShowTaskForm(false);
@@ -534,6 +606,48 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
     }
   };
 
+  // Handler for list view drag and drop
+  const handleTaskMove = async (
+    taskId: string,
+    newStatusMappingId: string,
+    newPhaseId: string,
+    beforeTaskId: string | null,
+    afterTaskId: string | null
+  ): Promise<void> => {
+    const task = tasks.find((t) => t.template_task_id === taskId);
+    if (!task) return;
+
+    const isPhaseChanging = newPhaseId && task.template_phase_id !== newPhaseId;
+    const isStatusChanging = task.template_status_mapping_id !== newStatusMappingId;
+
+    // Skip if no change
+    if (!isPhaseChanging && !isStatusChanging && !beforeTaskId && !afterTaskId) {
+      return;
+    }
+
+    try {
+      // If phase is changing, use updateTemplateTask which can update both phase and status
+      if (isPhaseChanging) {
+        const updated = await updateTemplateTask(taskId, {
+          template_phase_id: newPhaseId,
+          template_status_mapping_id: newStatusMappingId,
+        });
+        setTasks((prev) =>
+          prev.map((t) => (t.template_task_id === taskId ? updated : t))
+        );
+      } else {
+        // Just status/order change
+        const updated = await updateTemplateTaskStatus(taskId, newStatusMappingId, beforeTaskId, afterTaskId);
+        setTasks((prev) =>
+          prev.map((t) => (t.template_task_id === taskId ? updated : t))
+        );
+      }
+    } catch (error) {
+      toast.error('Failed to move task');
+      console.error(error);
+    }
+  };
+
   const handleAssigneeChange = async (taskId: string, assigneeId: string | null) => {
     try {
       const updated = await updateTemplateTask(taskId, { assigned_to: assigneeId });
@@ -581,6 +695,17 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
   const sortedPhases = [...phases].sort((a, b) => (a.order_key || '').localeCompare(b.order_key || ''));
   const sortedStatusMappings = [...statusMappings].sort((a, b) => a.display_order - b.display_order);
 
+  // Compute task counts per phase
+  const phaseTaskCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    phases.forEach(phase => {
+      counts[phase.template_phase_id] = tasks.filter(
+        task => task.template_phase_id === phase.template_phase_id
+      ).length;
+    });
+    return counts;
+  }, [phases, tasks]);
+
   const phaseTasks = selectedPhase
     ? tasks.filter((task) => task.template_phase_id === selectedPhase.template_phase_id)
     : [];
@@ -614,6 +739,8 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
           taskTypes={taskTypes}
           initialStatusMappingId={newTaskStatusMappingId}
           checklistItems={editingTask ? checklistItems.filter(c => c.template_task_id === editingTask.template_task_id) : []}
+          allTasks={tasks}
+          dependencies={editingTask ? dependencies.filter(d => d.successor_task_id === editingTask.template_task_id) : []}
         />
       )}
 
@@ -651,287 +778,374 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
                 <h1 className="text-2xl font-bold">{template.template_name}</h1>
               </div>
             </div>
-            <div className="flex gap-2">
-              <Button
-                id="manage-statuses"
-                variant="outline"
-                onClick={() => setShowStatusManager(true)}
-              >
-                <Settings className="h-4 w-4 mr-2" />
-                Status Columns
-              </Button>
+            <div className="flex gap-2 items-center">
+              <ViewSwitcher
+                currentView={viewMode}
+                onChange={handleViewModeChange}
+                options={viewOptions}
+              />
               <Button id="use-template" onClick={() => setShowApplyDialog(true)}>
                 <Rocket className="h-4 w-4 mr-2" />
                 Use Template
               </Button>
-              <Button
-                id="delete-template"
-                variant="outline"
-                onClick={handleDeleteTemplate}
-                disabled={isDeleting}
-              >
-                <Trash className="h-4 w-4 mr-2" />
-                Delete
-              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    id="template-actions-button"
+                    variant="outline"
+                    className="flex items-center gap-2"
+                  >
+                    <MoreVertical className="h-4 w-4" />
+                    Actions
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onSelect={() => setShowStatusManager(true)}>
+                    <Settings className="h-4 w-4 mr-2" />
+                    Status Columns
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onSelect={() => setShowClientPortalConfig(true)}>
+                    <Users className="h-4 w-4 mr-2" />
+                    Client Portal Visibility
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onSelect={handleDeleteTemplate}
+                    disabled={isDeleting}
+                    className="text-red-600 focus:text-red-700 focus:bg-red-50"
+                  >
+                    <Trash className="h-4 w-4 mr-2" />
+                    Delete Template
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </div>
 
           {/* Template metadata */}
-          <div className="mt-4 flex gap-6 text-sm text-gray-600">
+          <div className="mt-2 flex items-center justify-between gap-4">
             {template.description && (
-              <div>
+              <p className="text-sm text-gray-600 flex-1 min-w-0">
                 <span className="font-medium">Description:</span> {template.description}
-              </div>
+              </p>
             )}
-            {template.category && (
-              <div>
-                <span className="font-medium">Category:</span> {template.category}
-              </div>
-            )}
-            <div>
-              <span className="font-medium">Used:</span> {template.use_count} times
-            </div>
+            <Badge variant="secondary" className="text-xs shrink-0">
+              Used {template.use_count} {template.use_count === 1 ? 'time' : 'times'}
+            </Badge>
           </div>
+
+          {/* Client Portal Visibility Dialog */}
+          <Dialog
+            isOpen={showClientPortalConfig}
+            onClose={() => setShowClientPortalConfig(false)}
+            title="Client Portal Visibility"
+            id="template-client-portal-config-dialog"
+            className="max-w-lg"
+          >
+            <div className="p-4">
+              <ClientPortalConfigEditor
+                config={clientPortalConfig}
+                onChange={handleClientPortalConfigChange}
+              />
+              <div className="flex justify-end mt-4">
+                <Button
+                  id="close-template-client-portal-config"
+                  type="button"
+                  onClick={() => setShowClientPortalConfig(false)}
+                >
+                  Done
+                </Button>
+              </div>
+            </div>
+          </Dialog>
         </div>
 
         <div className={styles.mainContent}>
-          <div className={styles.contentWrapper}>
-            {/* Phases List - Left Side */}
-            <div className={styles.phasesList}>
-              <Card className="p-4">
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-sm font-semibold text-gray-700">Project Phases</h3>
-                  <Button id="add-phase" variant="ghost" size="sm" onClick={handleAddPhase}>
-                    <Plus className="h-4 w-4" />
-                  </Button>
-                </div>
-                <div className="space-y-1">
-                  {sortedPhases.length === 0 ? (
-                    <div className="text-sm text-gray-500 text-center py-4">
-                      No phases yet.
-                      <br />
-                      <button
-                        className="text-purple-600 hover:underline mt-1"
-                        onClick={handleAddPhase}
-                      >
-                        Add your first phase
-                      </button>
-                    </div>
-                  ) : (
-                    sortedPhases.map((phase) => {
-                      const isDropTarget = phaseDropTarget === phase.template_phase_id;
-                      const isTaskDrop = isDropTarget && draggedTaskId;
-                      const isPhaseDrop = isDropTarget && draggedPhaseId;
-                      const isCurrentPhaseForTask = draggedTaskId &&
-                        tasks.find((t) => t.template_task_id === draggedTaskId)?.template_phase_id === phase.template_phase_id;
-
-                      return (
-                      <div
-                        key={phase.template_phase_id}
-                        draggable={editingPhaseId !== phase.template_phase_id}
-                        onDragStart={(e) => handlePhaseDragStart(e, phase.template_phase_id)}
-                        onDragOver={(e) => handlePhaseDragOver(e, phase.template_phase_id)}
-                        onDragLeave={handlePhaseDragLeave}
-                        onDrop={(e) => handlePhaseDrop(e, phase)}
-                        onDragEnd={handlePhaseDragEnd}
-                        className={`${styles.phaseItem} group relative px-3 py-2 rounded-lg transition-all cursor-pointer ${
-                          selectedPhase?.template_phase_id === phase.template_phase_id
-                            ? 'bg-purple-100 text-purple-900'
-                            : 'hover:bg-gray-100 text-gray-700'
-                        } ${draggedPhaseId === phase.template_phase_id ? 'opacity-50' : ''} ${
-                          isPhaseDrop ? styles.dragOver + ' ring-2 ring-purple-400' : ''
-                        } ${
-                          isTaskDrop && !isCurrentPhaseForTask
-                            ? 'ring-2 ring-blue-400 bg-blue-50 scale-[1.02]'
-                            : ''
-                        }`}
-                        onClick={() => {
-                          if (editingPhaseId !== phase.template_phase_id) {
-                            setSelectedPhase(phase);
-                          }
-                        }}
-                      >
-                        {editingPhaseId === phase.template_phase_id ? (
-                          <div className="space-y-2" onClick={(e) => e.stopPropagation()}>
-                            <Input
-                              value={editingPhaseName}
-                              onChange={(e) => setEditingPhaseName(e.target.value)}
-                              placeholder="Phase name"
-                              autoFocus
-                            />
-                            <TextArea
-                              value={editingPhaseDescription}
-                              onChange={(e) => setEditingPhaseDescription(e.target.value)}
-                              placeholder="Description (optional)"
-                              rows={2}
-                            />
-                            <div className="grid grid-cols-2 gap-2">
-                              <div>
-                                <label className="text-xs text-gray-500">Duration (days)</label>
-                                <Input
-                                  type="number"
-                                  value={editingPhaseDuration || ''}
-                                  onChange={(e) =>
-                                    setEditingPhaseDuration(e.target.value ? parseInt(e.target.value) : undefined)
-                                  }
-                                  placeholder="Days"
-                                />
-                              </div>
-                              <div>
-                                <label className="text-xs text-gray-500">Start offset</label>
-                                <Input
-                                  type="number"
-                                  value={editingPhaseOffset}
-                                  onChange={(e) => setEditingPhaseOffset(parseInt(e.target.value) || 0)}
-                                  placeholder="Days"
-                                />
-                              </div>
-                            </div>
-                            <div className="flex justify-end gap-2">
-                              <Button
-                                id="cancel-edit-phase"
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => setEditingPhaseId(null)}
-                              >
-                                Cancel
-                              </Button>
-                              <Button id="save-edit-phase" size="sm" onClick={() => handleSavePhase(phase)}>
-                                Save
-                              </Button>
-                            </div>
-                          </div>
-                        ) : (
-                          <div className="flex items-center gap-2">
-                            <GripVertical className="w-4 h-4 text-gray-400 opacity-0 group-hover:opacity-100 cursor-grab" />
-                            <div className="flex-1 min-w-0">
-                              <div className="text-sm font-medium truncate">{phase.phase_name}</div>
-                              {phase.duration_days && (
-                                <div className="text-xs text-gray-500">{phase.duration_days} days</div>
-                              )}
-                            </div>
-                            <div className="flex gap-1 opacity-0 group-hover:opacity-100">
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleEditPhase(phase);
-                                }}
-                                className="p-1 rounded hover:bg-gray-200"
-                              >
-                                <Pencil className="w-3 h-3" />
-                              </button>
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleDeletePhase(phase);
-                                }}
-                                className="p-1 rounded hover:bg-red-100 text-red-600"
-                              >
-                                <Trash className="w-3 h-3" />
-                              </button>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                      );
-                    })
-                  )}
-                </div>
-              </Card>
+          {viewMode === 'list' ? (
+            /* List View - Full Width */
+            <div className="p-4 h-full">
+              <TemplateTaskListView
+                phases={sortedPhases}
+                tasks={tasks}
+                statusMappings={sortedStatusMappings}
+                checklistItems={checklistItems}
+                dependencies={dependencies}
+                taskAssignments={taskAssignments}
+                users={users}
+                taskTypes={taskTypes}
+                priorities={priorities}
+                onTaskClick={handleEditTask}
+                onTaskDelete={handleDeleteTask}
+                onAddPhase={handleAddPhase}
+                onAddTask={(phaseId, statusMappingId) => {
+                  const phase = phases.find((p) => p.template_phase_id === phaseId);
+                  if (phase) {
+                    setSelectedPhase(phase);
+                  }
+                  handleAddTask(statusMappingId);
+                }}
+                onTaskMove={handleTaskMove}
+                onAssigneeChange={handleAssigneeChange}
+              />
             </div>
-
-            {/* Kanban Board - Right Side */}
-            <div className={styles.kanbanContainer}>
-              {!selectedPhase ? (
-                <div className="flex items-center justify-center h-64 bg-gray-100 rounded-lg">
-                  <div className="text-center">
-                    <p className="text-xl text-gray-600">
-                      {phases.length === 0
-                        ? 'Add a phase to get started'
-                        : 'Select a phase to view tasks'}
-                    </p>
+          ) : (
+            /* Kanban View - Phases sidebar + Kanban board */
+            <div className={styles.contentWrapper}>
+              {/* Phases List - Left Side */}
+              <div className={styles.phasesList}>
+                <Card className="p-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="text-sm font-semibold text-gray-700">Project Phases</h3>
+                    <Button id="add-phase" variant="default" size="sm" onClick={handleAddPhase}>
+                      <Plus className="h-4 w-4" />
+                    </Button>
                   </div>
-                </div>
-              ) : (
-                <div className="flex flex-col h-full">
-                  {/* Phase Header */}
-                  <div className="mb-4">
-                    <div className="flex justify-between items-center gap-4">
-                      <div>
-                        <h2 className="text-xl font-bold mb-1">Phase: {selectedPhase.phase_name}</h2>
-                        {selectedPhase.description && (
-                          <p className="text-sm text-gray-600">{selectedPhase.description}</p>
-                        )}
-                        <div className="text-sm text-gray-500 mt-1">
-                          {selectedPhase.duration_days && `Duration: ${selectedPhase.duration_days} days`}
-                          {selectedPhase.start_offset_days > 0 &&
-                            ` | Start: +${selectedPhase.start_offset_days} days`}
+                  <div className="space-y-1">
+                    {sortedPhases.length === 0 ? (
+                      <div className="text-sm text-gray-500 text-center py-4">
+                        No phases yet.
+                        <br />
+                        <button
+                          className="text-purple-600 hover:underline mt-1"
+                          onClick={handleAddPhase}
+                        >
+                          Add your first phase
+                        </button>
+                      </div>
+                    ) : (
+                      sortedPhases.map((phase) => {
+                        const isDropTarget = phaseDropTarget === phase.template_phase_id;
+                        const isTaskDrop = isDropTarget && draggedTaskId;
+                        const isPhaseDrop = isDropTarget && draggedPhaseId;
+                        const isCurrentPhaseForTask = draggedTaskId &&
+                          tasks.find((t) => t.template_task_id === draggedTaskId)?.template_phase_id === phase.template_phase_id;
+
+                        return (
+                        <div
+                          key={phase.template_phase_id}
+                          draggable={editingPhaseId !== phase.template_phase_id}
+                          onDragStart={(e) => handlePhaseDragStart(e, phase.template_phase_id)}
+                          onDragOver={(e) => handlePhaseDragOver(e, phase.template_phase_id)}
+                          onDragLeave={handlePhaseDragLeave}
+                          onDrop={(e) => handlePhaseDrop(e, phase)}
+                          onDragEnd={handlePhaseDragEnd}
+                          className={`${styles.phaseItem} group relative px-3 py-2 rounded-lg transition-all cursor-pointer ${
+                            selectedPhase?.template_phase_id === phase.template_phase_id
+                              ? 'bg-purple-100 text-purple-900'
+                              : 'hover:bg-gray-100 text-gray-700'
+                          } ${draggedPhaseId === phase.template_phase_id ? 'opacity-50' : ''} ${
+                            isPhaseDrop ? styles.dragOver + ' ring-2 ring-purple-400' : ''
+                          } ${
+                            isTaskDrop && !isCurrentPhaseForTask
+                              ? 'ring-2 ring-blue-400 bg-blue-50 scale-[1.02]'
+                              : ''
+                          }`}
+                          onClick={() => {
+                            if (editingPhaseId !== phase.template_phase_id) {
+                              setSelectedPhase(phase);
+                            }
+                          }}
+                        >
+                          {editingPhaseId === phase.template_phase_id ? (
+                            <div className="space-y-2" onClick={(e) => e.stopPropagation()}>
+                              <Input
+                                value={editingPhaseName}
+                                onChange={(e) => setEditingPhaseName(e.target.value)}
+                                placeholder="Phase name"
+                                autoFocus
+                              />
+                              <TextArea
+                                value={editingPhaseDescription}
+                                onChange={(e) => setEditingPhaseDescription(e.target.value)}
+                                placeholder="Description (optional)"
+                                rows={2}
+                              />
+                              <div className="grid grid-cols-2 gap-2">
+                                <div>
+                                  <label className="text-xs text-gray-500">Duration (days)</label>
+                                  <Input
+                                    type="number"
+                                    value={editingPhaseDuration || ''}
+                                    onChange={(e) =>
+                                      setEditingPhaseDuration(e.target.value ? parseInt(e.target.value) : undefined)
+                                    }
+                                    placeholder="Days"
+                                  />
+                                </div>
+                                <div>
+                                  <label className="text-xs text-gray-500">Start offset</label>
+                                  <Input
+                                    type="number"
+                                    value={editingPhaseOffset}
+                                    onChange={(e) => setEditingPhaseOffset(parseInt(e.target.value) || 0)}
+                                    placeholder="Days"
+                                  />
+                                </div>
+                              </div>
+                              <div className="flex justify-end gap-2">
+                                <Button
+                                  id="cancel-edit-phase"
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => setEditingPhaseId(null)}
+                                >
+                                  Cancel
+                                </Button>
+                                <Button id="save-edit-phase" size="sm" onClick={() => handleSavePhase(phase)}>
+                                  Save
+                                </Button>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="flex items-start gap-2">
+                              <GripVertical className="w-4 h-4 text-gray-400 opacity-0 group-hover:opacity-100 cursor-grab mt-0.5 shrink-0" />
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-start justify-between gap-2">
+                                  <span className="text-lg font-bold text-gray-900">{phase.phase_name}</span>
+                                  {phaseTaskCounts[phase.template_phase_id] !== undefined && (
+                                    <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-700 shrink-0">
+                                      {phaseTaskCounts[phase.template_phase_id]} {phaseTaskCounts[phase.template_phase_id] === 1 ? 'task' : 'tasks'}
+                                    </span>
+                                  )}
+                                </div>
+                                {phase.description && (
+                                  <div className="text-sm text-gray-600 mt-1">
+                                    {phase.description}
+                                  </div>
+                                )}
+                                <div className="flex items-center gap-2 mt-1 text-xs text-gray-400">
+                                  {phase.duration_days !== undefined && phase.duration_days !== null && (
+                                    <span>{phase.duration_days}d</span>
+                                  )}
+                                  {phase.start_offset_days !== undefined && phase.start_offset_days > 0 && (
+                                    <span>+{phase.start_offset_days}d offset</span>
+                                  )}
+                                </div>
+                              </div>
+                              <div className="flex gap-1 opacity-0 group-hover:opacity-100 shrink-0">
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleEditPhase(phase);
+                                  }}
+                                  className="p-1 rounded hover:bg-gray-200"
+                                >
+                                  <Pencil className="w-3 h-3" />
+                                </button>
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleDeletePhase(phase);
+                                  }}
+                                  className="p-1 rounded hover:bg-red-100 text-red-600"
+                                >
+                                  <Trash className="w-3 h-3" />
+                                </button>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                        );
+                      })
+                    )}
+                  </div>
+                </Card>
+              </div>
+
+              {/* Kanban Board - Right Side */}
+              <div className={styles.kanbanContainer}>
+                {!selectedPhase ? (
+                  <div className="flex items-center justify-center h-64 bg-gray-100 rounded-lg">
+                    <div className="text-center">
+                      <p className="text-xl text-gray-600">
+                        {phases.length === 0
+                          ? 'Add a phase to get started'
+                          : 'Select a phase to view tasks'}
+                      </p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex flex-col h-full">
+                    {/* Phase Header */}
+                    <div className="mb-4">
+                      <div className="flex justify-between items-center gap-4">
+                        <div>
+                          <h2 className="text-xl font-bold mb-1">Phase: {selectedPhase.phase_name}</h2>
+                          {selectedPhase.description && (
+                            <p className="text-sm text-gray-600">{selectedPhase.description}</p>
+                          )}
+                          <div className="text-sm text-gray-500 mt-1">
+                            {selectedPhase.duration_days && `Duration: ${selectedPhase.duration_days} days`}
+                            {selectedPhase.start_offset_days > 0 &&
+                              ` | Start: +${selectedPhase.start_offset_days} days`}
+                          </div>
                         </div>
                       </div>
                     </div>
+
+                    {/* Kanban Board */}
+                    <div className={styles.kanbanWrapper}>
+                      {sortedStatusMappings.length === 0 ? (
+                        <div className="text-center py-8 text-gray-500">
+                          <p>No status columns defined</p>
+                          <Button
+                            id="add-status-columns-empty"
+                            variant="outline"
+                            className="mt-4"
+                            onClick={() => setShowStatusManager(true)}
+                          >
+                            <Settings className="h-4 w-4 mr-2" />
+                            Add Status Columns
+                          </Button>
+                        </div>
+                      ) : (
+                        <div className={styles.kanbanBoard}>
+                          {sortedStatusMappings.map((statusMapping, index) => {
+                            const isFirstColumn = index === 0;
+                            const statusTasks = phaseTasks.filter(
+                              (task) =>
+                                task.template_status_mapping_id ===
+                                  statusMapping.template_status_mapping_id ||
+                                (isFirstColumn && !task.template_status_mapping_id)
+                            );
+
+                            const displayName =
+                              statusMapping.status_name || statusMapping.custom_status_name || 'Status';
+                            const statusColor = statusMapping.color || '#6B7280';
+
+                            return (
+                              <StatusColumn
+                                key={statusMapping.template_status_mapping_id}
+                                statusMapping={statusMapping}
+                                displayName={displayName}
+                                statusColor={statusColor}
+                                tasks={statusTasks}
+                                lightenColor={lightenColor}
+                                onTaskDragStart={handleTaskDragStart}
+                                onTaskDragEnd={handleTaskDragEnd}
+                                onTaskDrop={handleTaskDrop}
+                                onEditTask={handleEditTask}
+                                onDeleteTask={handleDeleteTask}
+                                onAddTask={handleAddTask}
+                                onAssigneeChange={handleAssigneeChange}
+                                draggedTaskId={draggedTaskId}
+                                users={users}
+                                priorities={priorities}
+                                taskAssignments={taskAssignments}
+                                taskTypes={taskTypes}
+                                checklistItems={checklistItems}
+                                dependencies={dependencies}
+                                allTasks={tasks}
+                              />
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
                   </div>
-
-                  {/* Kanban Board */}
-                  <div className={styles.kanbanWrapper}>
-                    {sortedStatusMappings.length === 0 ? (
-                      <div className="text-center py-8 text-gray-500">
-                        <p>No status columns defined</p>
-                        <Button
-                          id="add-status-columns-empty"
-                          variant="outline"
-                          className="mt-4"
-                          onClick={() => setShowStatusManager(true)}
-                        >
-                          <Settings className="h-4 w-4 mr-2" />
-                          Add Status Columns
-                        </Button>
-                      </div>
-                    ) : (
-                      <div className={styles.kanbanBoard}>
-                        {sortedStatusMappings.map((statusMapping, index) => {
-                          const isFirstColumn = index === 0;
-                          const statusTasks = phaseTasks.filter(
-                            (task) =>
-                              task.template_status_mapping_id ===
-                                statusMapping.template_status_mapping_id ||
-                              (isFirstColumn && !task.template_status_mapping_id)
-                          );
-
-                          const displayName =
-                            statusMapping.status_name || statusMapping.custom_status_name || 'Status';
-                          const statusColor = statusMapping.color || '#6B7280';
-
-                          return (
-                            <StatusColumn
-                              key={statusMapping.template_status_mapping_id}
-                              statusMapping={statusMapping}
-                              displayName={displayName}
-                              statusColor={statusColor}
-                              tasks={statusTasks}
-                              lightenColor={lightenColor}
-                              onTaskDragStart={handleTaskDragStart}
-                              onTaskDragEnd={handleTaskDragEnd}
-                              onTaskDrop={handleTaskDrop}
-                              onEditTask={handleEditTask}
-                              onDeleteTask={handleDeleteTask}
-                              onAddTask={handleAddTask}
-                              onAssigneeChange={handleAssigneeChange}
-                              draggedTaskId={draggedTaskId}
-                              users={users}
-                              priorities={priorities}
-                              taskAssignments={taskAssignments}
-                              taskTypes={taskTypes}
-                              checklistItems={checklistItems}
-                            />
-                          );
-                        })}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
+                )}
+              </div>
             </div>
-          </div>
+          )}
         </div>
       </div>
     </>
@@ -966,6 +1180,8 @@ interface StatusColumnProps {
   taskAssignments: IProjectTemplateTaskAssignment[];
   taskTypes: ITaskType[];
   checklistItems: IProjectTemplateChecklistItem[];
+  dependencies: IProjectTemplateDependency[];
+  allTasks: IProjectTemplateTask[];
 }
 
 function StatusColumn({
@@ -987,6 +1203,8 @@ function StatusColumn({
   taskAssignments,
   taskTypes,
   checklistItems,
+  dependencies,
+  allTasks,
 }: StatusColumnProps) {
   const [dropIndicatorPosition, setDropIndicatorPosition] = useState<number | null>(null);
   const [isDraggedOver, setIsDraggedOver] = useState(false);
@@ -1052,10 +1270,13 @@ function StatusColumn({
 
   return (
     <div
-      className={`${styles.kanbanColumn} rounded-lg transition-all duration-200 border-2 ${
-        isDraggedOver && draggedTaskId ? 'border-purple-500 ' + styles.dragOver : 'border-transparent'
+      className={`${styles.kanbanColumn} rounded-lg transition-all duration-200 border-2 border-solid ${
+        isDraggedOver && draggedTaskId ? 'border-purple-500 ' + styles.dragOver : ''
       }`}
-      style={{ backgroundColor: lightenColor(statusColor, 0.85) }}
+      style={{
+        backgroundColor: lightenColor(statusColor, 0.85),
+        borderColor: isDraggedOver && draggedTaskId ? undefined : lightenColor(statusColor, 0.70)
+      }}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
@@ -1083,7 +1304,15 @@ function StatusColumn({
           >
             <Plus className="w-4 h-4 text-white" />
           </Button>
-          <div className={styles.taskCount}>{sortedTasks.length}</div>
+          <span
+            className="text-xs font-medium px-2 py-0.5 rounded-full"
+            style={{
+              backgroundColor: lightenColor(statusColor, 0.70),
+              color: statusColor
+            }}
+          >
+            {sortedTasks.length}
+          </span>
         </div>
       </div>
 
@@ -1115,6 +1344,11 @@ function StatusColumn({
                 checklistItemsCount={checklistItems.filter(
                   (c) => c.template_task_id === task.template_task_id
                 ).length}
+                taskDependencies={{
+                  predecessors: dependencies.filter(d => d.successor_task_id === task.template_task_id),
+                  successors: dependencies.filter(d => d.predecessor_task_id === task.template_task_id)
+                }}
+                allTasks={allTasks}
               />
             </div>
           ))}
@@ -1147,6 +1381,8 @@ interface TaskCardProps {
   taskAssignments: IProjectTemplateTaskAssignment[];
   taskType?: ITaskType;
   checklistItemsCount: number;
+  taskDependencies?: { predecessors: IProjectTemplateDependency[]; successors: IProjectTemplateDependency[] };
+  allTasks: IProjectTemplateTask[]; // To get task names for dependencies
 }
 
 function TaskCard({
@@ -1162,7 +1398,12 @@ function TaskCard({
   taskAssignments,
   taskType,
   checklistItemsCount,
+  taskDependencies,
+  allTasks,
 }: TaskCardProps) {
+  const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
+  const [descriptionRef, isDescriptionTruncated] = useTruncationDetection(task.description, isDescriptionExpanded);
+
   const handleDragStart = (e: React.DragEvent) => {
     document.body.classList.add('dragging-task');
     onDragStart(e, task.template_task_id);
@@ -1232,13 +1473,13 @@ function TaskCard({
 
       {/* Task name and priority */}
       <div className="flex items-center gap-2 mb-1 w-full px-1 mt-5">
-        <div className="font-semibold text-sm flex-1 truncate">{task.task_name}</div>
+        <div className="font-semibold text-lg flex-1">{task.task_name}</div>
         {priority && (
           <div className="flex items-center gap-1 shrink-0">
             <div
               className="w-2.5 h-2.5 rounded-full"
               style={{ backgroundColor: priority.color || '#6B7280' }}
-              title={`${priority.priority_name} priority`}
+              title={`Priority level: ${priority.priority_name}`}
             />
           </div>
         )}
@@ -1246,7 +1487,25 @@ function TaskCard({
 
       {/* Description */}
       {task.description && (
-        <p className="text-xs text-gray-600 mb-1 line-clamp-2 px-1">{task.description}</p>
+        <div className="mb-1 px-1">
+          <p
+            ref={descriptionRef}
+            className={`text-sm text-gray-600 ${!isDescriptionExpanded ? 'line-clamp-2' : ''}`}
+          >
+            {task.description}
+          </p>
+          {(isDescriptionTruncated || isDescriptionExpanded) && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setIsDescriptionExpanded(!isDescriptionExpanded);
+              }}
+              className="text-xs text-purple-600 hover:text-purple-700 font-medium mt-1"
+            >
+              {isDescriptionExpanded ? 'See less' : 'See more'}
+            </button>
+          )}
+        </div>
       )}
 
       {/* Assignee picker */}
@@ -1260,17 +1519,36 @@ function TaskCard({
           users={users}
         />
         {additionalAgentsCount > 0 && (
-          <div
-            className="flex items-center gap-1 text-gray-500 bg-primary-100 px-1.5 py-0.5 rounded-md"
-            title={`${additionalAgentsCount} additional agent${additionalAgentsCount > 1 ? 's' : ''}`}
+          <Tooltip
+            content={
+              <div className="text-xs space-y-1.5">
+                <div className="font-medium text-gray-300 mb-1">Additional Agents:</div>
+                {taskAssignments.map((assignment, i) => {
+                  const assignmentUser = users.find(u => u.user_id === assignment.user_id);
+                  const userName = assignmentUser ? `${assignmentUser.first_name} ${assignmentUser.last_name}` : 'Unknown';
+                  return (
+                    <div key={i} className="flex items-center gap-2">
+                      <UserAvatar
+                        userId={assignment.user_id}
+                        userName={userName}
+                        avatarUrl={null}
+                        size="xs"
+                      />
+                      <span>{userName}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            }
           >
-            <Users className="w-3 h-3" />
-            <span className="text-xs">+{additionalAgentsCount}</span>
-          </div>
+            <span className="text-xs text-purple-600 font-medium cursor-help bg-purple-50 px-1.5 py-0.5 rounded">
+              +{additionalAgentsCount}
+            </span>
+          </Tooltip>
         )}
       </div>
 
-      {/* Bottom row: estimated hours, duration, checklist */}
+      {/* Bottom row: estimated hours, duration, checklist, dependencies */}
       <div className="flex items-center justify-between text-xs text-gray-500 px-1 mt-1">
         <div className="flex items-center gap-2">
           {task.estimated_hours && (
@@ -1290,6 +1568,63 @@ function TaskCard({
               <CheckSquare className="w-3 h-3" />
               {checklistItemsCount}
             </span>
+          )}
+          {/* Dependencies indicator */}
+          {taskDependencies && (taskDependencies.predecessors.length > 0 || taskDependencies.successors.length > 0) && (
+            <Tooltip
+              content={
+                <div className="text-xs space-y-2 min-w-[220px]">
+                  {taskDependencies.predecessors.length > 0 && (
+                    <div>
+                      <div className="font-medium text-gray-300 mb-1">Depends on:</div>
+                      {taskDependencies.predecessors.map((d, i) => {
+                        const isBlocking = d.dependency_type === 'blocks' || d.dependency_type === 'blocked_by';
+                        const predecessorTask = allTasks.find(t => t.template_task_id === d.predecessor_task_id);
+                        return (
+                          <div key={i} className="flex items-center gap-1.5 ml-2">
+                            <span className={isBlocking ? 'text-orange-400' : 'text-blue-400'}>
+                              {isBlocking ? <Ban className="h-3 w-3" /> : <GitBranch className="h-3 w-3" />}
+                            </span>
+                            <span>{predecessorTask?.task_name || 'Unknown task'}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                  {taskDependencies.successors.length > 0 && (
+                    <div>
+                      <div className="font-medium text-gray-300 mb-1">Blocks:</div>
+                      {taskDependencies.successors.map((d, i) => {
+                        const isBlocking = d.dependency_type === 'blocks' || d.dependency_type === 'blocked_by';
+                        const successorTask = allTasks.find(t => t.template_task_id === d.successor_task_id);
+                        return (
+                          <div key={i} className="flex items-center gap-1.5 ml-2">
+                            <span className={isBlocking ? 'text-red-400' : 'text-blue-400'}>
+                              {isBlocking ? <Ban className="h-3 w-3" /> : <GitBranch className="h-3 w-3" />}
+                            </span>
+                            <span>{successorTask?.task_name || 'Unknown task'}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              }
+            >
+              <span className={`flex items-center gap-1 px-1.5 py-0.5 rounded ${
+                taskDependencies.predecessors.some(d => d.dependency_type === 'blocks' || d.dependency_type === 'blocked_by') ||
+                taskDependencies.successors.some(d => d.dependency_type === 'blocks' || d.dependency_type === 'blocked_by')
+                  ? 'bg-red-50 text-red-500'
+                  : 'bg-blue-50 text-blue-500'
+              }`}>
+                {taskDependencies.predecessors.some(d => d.dependency_type === 'blocks' || d.dependency_type === 'blocked_by') ||
+                 taskDependencies.successors.some(d => d.dependency_type === 'blocks' || d.dependency_type === 'blocked_by')
+                  ? <Ban className="w-3 h-3" />
+                  : <GitBranch className="w-3 h-3" />
+                }
+                <span>{taskDependencies.predecessors.length + taskDependencies.successors.length}</span>
+              </span>
+            </Tooltip>
           )}
         </div>
       </div>

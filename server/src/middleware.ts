@@ -102,6 +102,7 @@ const _middleware = auth((request) => {
       '/api/webhooks/ninjaone',
       '/api/ext/',  // Extension API routes handle their own auth
       '/api/ext-proxy/',
+      '/api/ext-debug/',  // Extension debug stream uses session auth
       '/api/internal/ext-storage/',  // Runner storage API uses x-runner-auth token
     ];
 
@@ -117,6 +118,11 @@ const _middleware = auth((request) => {
     }
 
     if (skipPaths.some((path) => pathname.startsWith(path))) {
+      return applyCorsHeaders(response, origin);
+    }
+
+    // Document thumbnail/preview routes use session auth (path: /api/documents/[id]/thumbnail or /preview)
+    if (pathname.startsWith('/api/documents/') && (pathname.endsWith('/thumbnail') || pathname.endsWith('/preview'))) {
       return applyCorsHeaders(response, origin);
     }
 
@@ -179,6 +185,15 @@ const _middleware = auth((request) => {
   // Protect MSP app routes: validate user type
   if (pathname.startsWith(protectedPrefix)) {
     if (!request.auth) {
+      // Next.js Server Actions are POST requests that expect an RSC payload. If we redirect here,
+      // the client will follow the redirect and receive HTML, surfacing as:
+      // "An unexpected response was received from the server."
+      //
+      // Instead, allow the request through and let the server action throw/handle auth (401).
+      if (request.headers.has('next-action')) {
+        return applyCorsHeaders(response, origin);
+      }
+
       const loginUrl = request.nextUrl.clone();
       loginUrl.pathname = '/auth/signin';
       const callbackUrl = request.nextUrl.pathname + (request.nextUrl.search || '');

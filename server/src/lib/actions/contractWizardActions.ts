@@ -35,6 +35,12 @@ type TemplateFixedServiceInput = {
   quantity?: number;
 };
 
+type TemplateProductServiceInput = {
+  service_id: string;
+  service_name?: string;
+  quantity?: number;
+};
+
 type TemplateHourlyServiceInput = {
   service_id: string;
   service_name?: string;
@@ -57,6 +63,7 @@ export type ContractTemplateWizardSubmission = {
   // currency_code removed - templates are now currency-neutral
   // Currency is inherited from the client when a contract is created from this template
   fixed_services: TemplateFixedServiceInput[];
+  product_services?: TemplateProductServiceInput[];
   hourly_services?: TemplateHourlyServiceInput[];
   usage_services?: TemplateUsageServiceInput[];
   minimum_billable_time?: number;
@@ -80,6 +87,14 @@ type ClientFixedServiceInput = {
   service_name?: string;
   quantity: number;
   bucket_overlay?: BucketOverlayInput | null;
+};
+
+type ClientProductServiceInput = {
+  service_id: string;
+  service_name?: string;
+  quantity: number;
+  /** Optional per-unit override in cents (contract currency). */
+  custom_rate?: number;
 };
 
 type ClientHourlyServiceInput = {
@@ -112,6 +127,7 @@ export type ClientContractWizardSubmission = {
   fixed_billing_frequency?: string;
   enable_proration: boolean;
   fixed_services: ClientFixedServiceInput[];
+  product_services?: ClientProductServiceInput[];
   hourly_services?: ClientHourlyServiceInput[];
   hourly_billing_frequency?: string;
   usage_services?: ClientUsageServiceInput[];
@@ -128,6 +144,7 @@ export type ClientTemplateSnapshot = {
   // currency_code removed - templates are now currency-neutral
   // Currency is inherited from the client when a contract is created from this template
   fixed_services?: ClientFixedServiceInput[];
+  product_services?: ClientProductServiceInput[];
   fixed_base_rate?: number;
   enable_proration?: boolean;
   hourly_services?: ClientHourlyServiceInput[];
@@ -219,11 +236,13 @@ export async function createContractTemplateFromWizard(
     });
 
     const filteredFixedServices = (submission.fixed_services || []).filter((service) => service?.service_id);
+    const filteredProductServices = (submission.product_services || []).filter((service) => service?.service_id);
     const filteredHourlyServices = (submission.hourly_services || []).filter((service) => service?.service_id);
     const filteredUsageServices = (submission.usage_services || []).filter((service) => service?.service_id);
 
     const allServiceIds = [
       ...filteredFixedServices.map((s) => s.service_id),
+      ...filteredProductServices.map((s) => s.service_id),
       ...filteredHourlyServices.map((s) => s.service_id),
       ...filteredUsageServices.map((s) => s.service_id),
     ];
@@ -231,25 +250,48 @@ export async function createContractTemplateFromWizard(
     if (allServiceIds.length > 0) {
       const services = await trx('service_catalog')
         .whereIn('service_id', allServiceIds)
-        .select('service_id', 'service_name', 'billing_method');
+        .select('service_id', 'service_name', 'billing_method', 'item_kind', 'is_active');
 
-      const validateBillingMethod = (
-        expected: 'fixed' | 'hourly' | 'usage',
-        items: Array<{ service_id: string }>
-      ) => {
-        for (const item of items) {
-          const match = services.find((s) => s.service_id === item.service_id);
-          if (match && match.billing_method !== expected) {
-            throw new Error(
-              `Service "${match.service_name}" has billing method "${match.billing_method}" but can only be added to ${expected} contract lines`
-            );
-          }
+      for (const item of filteredFixedServices) {
+        const match = services.find((s) => s.service_id === item.service_id);
+        if (!match) continue;
+        if (match.item_kind !== 'service' || match.billing_method !== 'fixed') {
+          throw new Error(
+            `Catalog item "${match.service_name}" must be a fixed-billing service to be added to fixed fee template lines.`
+          );
         }
-      };
+      }
 
-      validateBillingMethod('fixed', filteredFixedServices);
-      validateBillingMethod('hourly', filteredHourlyServices);
-      validateBillingMethod('usage', filteredUsageServices);
+      for (const item of filteredProductServices) {
+        const match = services.find((s) => s.service_id === item.service_id);
+        if (!match) continue;
+        if (match.item_kind !== 'product') {
+          throw new Error(`Catalog item "${match.service_name}" must be a product to be added to product lines.`);
+        }
+        if (match.is_active === false) {
+          throw new Error(`Product "${match.service_name}" is inactive and cannot be attached to new templates.`);
+        }
+      }
+
+      for (const item of filteredHourlyServices) {
+        const match = services.find((s) => s.service_id === item.service_id);
+        if (!match) continue;
+        if (match.item_kind !== 'service' || match.billing_method !== 'hourly') {
+          throw new Error(
+            `Catalog item "${match.service_name}" must be an hourly-billing service to be added to hourly template lines.`
+          );
+        }
+      }
+
+      for (const item of filteredUsageServices) {
+        const match = services.find((s) => s.service_id === item.service_id);
+        if (!match) continue;
+        if (match.item_kind !== 'service' || match.billing_method !== 'usage') {
+          throw new Error(
+            `Catalog item "${match.service_name}" must be a usage-billing service to be added to usage template lines.`
+          );
+        }
+      }
     }
 
     const createdContractLineIds: string[] = [];
@@ -362,6 +404,61 @@ export async function createContractTemplateFromWizard(
           configuration_type: 'Fixed',
           quantity,
           custom_rate: serviceBaseRate > 0 ? serviceBaseRate : null,  // Already in cents
+          created_at: nowIso,
+          updated_at: nowIso,
+        });
+      }
+    }
+
+    if (filteredProductServices.length > 0) {
+      const createdProductsLine = await ContractLine.create(trx, {
+        contract_line_name: `${submission.contract_name} - Products`,
+        billing_frequency: submission.billing_frequency ?? 'monthly',
+        is_custom: true,
+        service_category: null as any,
+        contract_line_type: 'Fixed',
+        is_template: true,
+        minimum_billable_time: null,
+        round_up_to_nearest: null,
+      } as any);
+      const productsLineId = createdProductsLine.contract_line_id!;
+      createdContractLineIds.push(productsLineId);
+      if (!primaryContractLineId) {
+        primaryContractLineId = productsLineId;
+      }
+
+      const templateLineId = await recordTemplateMapping(productsLineId, null);
+      await trx('contract_template_line_fixed_config').insert({
+        tenant,
+        template_line_id: templateLineId,
+        base_rate: 0,
+        enable_proration: false,
+        billing_cycle_alignment: 'start',
+        created_at: nowIso,
+        updated_at: nowIso,
+      });
+
+      for (const product of filteredProductServices) {
+        const quantity = product.quantity ?? 1;
+        await trx('contract_template_line_services').insert({
+          tenant,
+          template_line_id: templateLineId,
+          service_id: product.service_id,
+          quantity,
+          custom_rate: null,
+          created_at: nowIso,
+          updated_at: nowIso,
+        });
+
+        const configId = uuidv4();
+        await trx('contract_template_line_service_configuration').insert({
+          tenant,
+          config_id: configId,
+          template_line_id: templateLineId,
+          service_id: product.service_id,
+          configuration_type: 'Fixed',
+          quantity,
+          custom_rate: null,
           created_at: nowIso,
           updated_at: nowIso,
         });
@@ -606,15 +703,18 @@ export async function createClientContractFromWizard(
     });
 
     const fixedServiceInputs = Array.isArray(submission.fixed_services) ? submission.fixed_services : [];
+    const productServiceInputs = Array.isArray(submission.product_services) ? submission.product_services : [];
     const hourlyServiceInputs = Array.isArray(submission.hourly_services) ? submission.hourly_services : [];
     const usageServiceInputs = Array.isArray(submission.usage_services) ? submission.usage_services : [];
 
     const filteredFixedServices = fixedServiceInputs.filter((service) => service?.service_id);
+    const filteredProductServices = productServiceInputs.filter((service) => service?.service_id);
     const filteredHourlyServices = hourlyServiceInputs.filter((service) => service?.service_id);
     const filteredUsageServices = usageServiceInputs.filter((service) => service?.service_id);
 
     const allServiceIds = [
       ...filteredFixedServices.map((s) => s.service_id),
+      ...filteredProductServices.map((s) => s.service_id),
       ...filteredHourlyServices.map((s) => s.service_id),
       ...filteredUsageServices.map((s) => s.service_id),
     ];
@@ -622,21 +722,9 @@ export async function createClientContractFromWizard(
     if (allServiceIds.length > 0) {
       const services = await trx('service_catalog')
         .whereIn('service_id', allServiceIds)
-        .select('service_id', 'service_name', 'billing_method');
+        .select('service_id', 'service_name', 'billing_method', 'item_kind', 'is_active');
 
-      const validateBillingMethod = (
-        expected: 'fixed' | 'hourly' | 'usage',
-        items: Array<{ service_id: string }>
-      ) => {
-        for (const item of items) {
-          const match = services.find((s) => s.service_id === item.service_id);
-          if (match && match.billing_method !== expected) {
-            throw new Error(
-              `Service "${match.service_name}" has billing method "${match.billing_method}" but can only be added to ${expected} contract lines`
-            );
-          }
-        }
-      };
+      const servicesById = new Map<string, any>(services.map((s: any) => [s.service_id, s]));
 
       // Validate services have prices in the contract's currency OR have custom rates specified
       const contractCurrency = submission.currency_code || 'USD';
@@ -646,14 +734,21 @@ export async function createClientContractFromWizard(
 
       // Hourly services with hourly_rate specified
       filteredHourlyServices.forEach(s => {
-        if (s.hourly_rate !== undefined && s.hourly_rate > 0) {
+        if (s.hourly_rate !== undefined && s.hourly_rate !== null) {
           servicesWithCustomRates.add(s.service_id);
         }
       });
 
       // Usage services with unit_rate specified
       filteredUsageServices.forEach(s => {
-        if (s.unit_rate !== undefined && s.unit_rate > 0) {
+        if (s.unit_rate !== undefined && s.unit_rate !== null) {
+          servicesWithCustomRates.add(s.service_id);
+        }
+      });
+
+      // Product services with custom_rate specified
+      filteredProductServices.forEach((s: any) => {
+        if (s.custom_rate !== undefined && s.custom_rate !== null) {
           servicesWithCustomRates.add(s.service_id);
         }
       });
@@ -706,9 +801,46 @@ export async function createClientContractFromWizard(
         }
       }
 
-      validateBillingMethod('fixed', filteredFixedServices);
-      validateBillingMethod('hourly', filteredHourlyServices);
-      validateBillingMethod('usage', filteredUsageServices);
+      for (const item of filteredFixedServices) {
+        const match = servicesById.get(item.service_id);
+        if (!match) continue;
+        if (match.item_kind !== 'service' || match.billing_method !== 'fixed') {
+          throw new Error(
+            `Catalog item "${match.service_name}" must be a fixed-billing service to be added to fixed fee contract lines.`
+          );
+        }
+      }
+
+      for (const item of filteredProductServices) {
+        const match = servicesById.get(item.service_id);
+        if (!match) continue;
+        if (match.item_kind !== 'product') {
+          throw new Error(`Catalog item "${match.service_name}" must be a product to be added to product lines.`);
+        }
+        if (match.is_active === false) {
+          throw new Error(`Product "${match.service_name}" is inactive and cannot be attached to new contracts.`);
+        }
+      }
+
+      for (const item of filteredHourlyServices) {
+        const match = servicesById.get(item.service_id);
+        if (!match) continue;
+        if (match.item_kind !== 'service' || match.billing_method !== 'hourly') {
+          throw new Error(
+            `Catalog item "${match.service_name}" must be an hourly-billing service to be added to hourly contract lines.`
+          );
+        }
+      }
+
+      for (const item of filteredUsageServices) {
+        const match = servicesById.get(item.service_id);
+        if (!match) continue;
+        if (match.item_kind !== 'service' || match.billing_method !== 'usage') {
+          throw new Error(
+            `Catalog item "${match.service_name}" must be a usage-billing service to be added to usage contract lines.`
+          );
+        }
+      }
     }
 
     const createdContractLineIds: string[] = [];
@@ -784,6 +916,60 @@ export async function createClientContractFromWizard(
       await fixedConfigModel.upsert({
         contract_line_id: planId,
         base_rate: submission.fixed_base_rate ?? 0,  // Already in cents from frontend
+        enable_proration: submission.enable_proration,
+        billing_cycle_alignment: submission.enable_proration ? 'prorated' : 'start',
+        tenant,
+      });
+
+      nextDisplayOrder += 1;
+    }
+
+    if (filteredProductServices.length > 0) {
+      const createdProductsLine = await ContractLine.create(trx, {
+        contract_line_name: `${submission.contract_name} - Products`,
+        billing_frequency: submission.billing_frequency ?? 'monthly',
+        is_custom: true,
+        service_category: null as any,
+        contract_line_type: 'Fixed',
+        contract_id: contractId,
+        display_order: nextDisplayOrder,
+        custom_rate: null,
+        billing_timing: 'arrears',
+        is_template: false,
+      } as any);
+      const productsLineId = createdProductsLine.contract_line_id!;
+      createdContractLineIds.push(productsLineId);
+      if (!primaryContractLineId) {
+        primaryContractLineId = productsLineId;
+      }
+
+      for (const product of filteredProductServices as any[]) {
+        const quantity = product.quantity ?? 1;
+        const customRate = product.custom_rate !== undefined ? Math.round(Number(product.custom_rate) || 0) : undefined;
+
+        await trx('contract_line_services').insert({
+          tenant,
+          contract_line_id: productsLineId,
+          service_id: product.service_id,
+        });
+
+        await planServiceConfigService.createConfiguration(
+          {
+            contract_line_id: productsLineId,
+            service_id: product.service_id,
+            configuration_type: 'Fixed',
+            quantity,
+            tenant,
+            custom_rate: customRate,
+          },
+          { base_rate: 0 }
+        );
+      }
+
+      const fixedConfigModel = new ContractLineFixedConfig(trx, tenant);
+      await fixedConfigModel.upsert({
+        contract_line_id: productsLineId,
+        base_rate: 0,
         enable_proration: submission.enable_proration,
         billing_cycle_alignment: submission.enable_proration ? 'prorated' : 'start',
         tenant,
@@ -1005,6 +1191,7 @@ export async function getContractTemplateSnapshotForClientWizard(
   const detailedLines = await fetchDetailedContractLines(knex, tenant, templateId);
 
   const fixedServices: ClientTemplateSnapshot['fixed_services'] = [];
+  const productServices: ClientTemplateSnapshot['product_services'] = [];
   const hourlyServices: ClientTemplateSnapshot['hourly_services'] = [];
   const usageServices: ClientTemplateSnapshot['usage_services'] = [];
   let minimumBillableTime: number | undefined;
@@ -1016,19 +1203,27 @@ export async function getContractTemplateSnapshotForClientWizard(
     const servicesWithConfig = await getTemplateLineServicesWithConfigurations(line.contract_line_id);
 
     if (line.contract_line_type === 'Fixed') {
-      const baseRateValue =
-        line.rate != null ? Number(line.rate) : undefined;
-      fixedBaseRateCents = baseRateValue != null ? Math.round(baseRateValue * 100) : undefined;
-      enableProration = line.enable_proration ?? false;
-
       servicesWithConfig.forEach(({ service, configuration, typeConfig, bucketConfig }) => {
         const quantity =
           configuration?.quantity != null ? Number(configuration.quantity) : 1;
 
-        fixedServices?.push({
+        const baseEntry = {
           service_id: service.service_id,
           service_name: service.service_name,
           quantity,
+        };
+
+        if (service.item_kind === 'product') {
+          productServices?.push({
+            ...baseEntry,
+            custom_rate:
+              configuration?.custom_rate != null ? Math.round(Number(configuration.custom_rate)) : undefined,
+          });
+          return;
+        }
+
+        fixedServices?.push({
+          ...baseEntry,
           bucket_overlay:
             bucketConfig && isBucketConfig(bucketConfig)
               ? {
@@ -1041,6 +1236,13 @@ export async function getContractTemplateSnapshotForClientWizard(
               : undefined,
         });
       });
+
+      // Only treat this as the "fixed fee services" line if it has non-product items.
+      if (servicesWithConfig.some(({ service }) => service.item_kind !== 'product')) {
+        const baseRateValue = line.rate != null ? Number(line.rate) : undefined;
+        fixedBaseRateCents = baseRateValue != null ? Math.round(baseRateValue * 100) : undefined;
+        enableProration = line.enable_proration ?? false;
+      }
     } else if (line.contract_line_type === 'Hourly') {
       servicesWithConfig.forEach(({ service, configuration, typeConfig, bucketConfig }) => {
         const hourlyConfig = isHourlyConfig(typeConfig) ? typeConfig : null;
@@ -1114,6 +1316,7 @@ export async function getContractTemplateSnapshotForClientWizard(
     billing_frequency: template.default_billing_frequency,
     // currency_code removed - templates are now currency-neutral
     fixed_services: fixedServices,
+    product_services: productServices,
     fixed_base_rate: fixedBaseRateCents,
     enable_proration: enableProration,
     hourly_services: hourlyServices,

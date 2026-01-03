@@ -25,6 +25,7 @@ export type BillingTabValue =
   | 'invoicing'
   | 'invoice-templates'
   | 'billing-cycles'
+  | 'products'
   | 'service-catalog'
   | 'tax-rates'
   | 'usage-tracking'
@@ -90,6 +91,12 @@ export const billingTabDefinitions: BillingTabDefinition[] = [
     value: 'service-catalog',
     label: 'Service Catalog',
     href: '/msp/billing?tab=service-catalog',
+    icon: Package
+  },
+  {
+    value: 'products',
+    label: 'Products',
+    href: '/msp/billing?tab=products',
     icon: Package
   },
   {

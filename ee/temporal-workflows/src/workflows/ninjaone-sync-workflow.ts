@@ -51,6 +51,7 @@ const activities = proxyActivities<{
 }>(
   {
     startToCloseTimeout: '1h',
+    heartbeatTimeout: '2m', // If worker dies, activity will be retried within 2 minutes
     retry: {
       maximumAttempts: 2,
       backoffCoefficient: 2.0,

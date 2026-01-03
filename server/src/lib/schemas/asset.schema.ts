@@ -6,7 +6,7 @@ const assetClientInfoSchema = z.object({
   client_name: z.string()
 });
 
-const assetRelationshipSchema = z.object({
+export const assetRelationshipSchema = z.object({
   tenant: z.string().uuid(),
   parent_asset_id: z.string().uuid(),
   child_asset_id: z.string().uuid(),
@@ -14,6 +14,12 @@ const assetRelationshipSchema = z.object({
   created_at: z.string(),
   updated_at: z.string(),
   name: z.string()
+});
+
+export const createAssetRelationshipSchema = z.object({
+  parent_asset_id: z.string().uuid(),
+  child_asset_id: z.string().uuid(),
+  relationship_type: z.string().min(1)
 });
 
 // Extension table schemas
@@ -243,6 +249,8 @@ export const assetQuerySchema = z.object({
   asset_type: z.enum(['workstation', 'network_device', 'server', 'mobile_device', 'printer', 'unknown']).optional(),
   status: z.string().optional(),
   search: z.string().optional(),
+  agent_status: z.enum(['online', 'offline', 'unknown']).optional(),
+  rmm_managed: z.boolean().optional(),
   maintenance_status: z.enum(['due', 'overdue', 'upcoming', 'completed']).optional(),
   maintenance_type: maintenanceTypeSchema.optional(),
   page: z.number().optional(),

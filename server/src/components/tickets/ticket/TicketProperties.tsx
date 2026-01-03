@@ -30,6 +30,7 @@ import { getTicketingDisplaySettings } from 'server/src/lib/actions/ticket-actio
 import TicketSurveySummaryCard from 'server/src/components/surveys/TicketSurveySummaryCard';
 import type { SurveyTicketSatisfactionSummary } from 'server/src/interfaces/survey.interface';
 import { getAppointmentRequestsByTicketId } from 'server/src/lib/actions/appointmentRequestManagementActions';
+import TicketMaterialsCard from './TicketMaterialsCard';
 
 interface TicketPropertiesProps {
   id?: string;
@@ -852,6 +853,14 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
         </div>
       </div>
 
+
+      {ticket.ticket_id && ticket.client_id && (
+        <TicketMaterialsCard
+          ticketId={ticket.ticket_id}
+          clientId={ticket.client_id}
+          currencyCode={client?.default_currency_code || 'USD'}
+        />
+      )}
 
     </div>
   );

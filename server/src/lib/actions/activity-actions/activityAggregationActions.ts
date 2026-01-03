@@ -91,7 +91,10 @@ export async function fetchUserActivities(
   const promises: Promise<Activity[]>[] = [];
 
   // Only fetch requested activity types or all if not specified
-  const typesToFetch = filters.types || Object.values(ActivityType);
+  // Note: An empty array is truthy, so we need to check length explicitly
+  const typesToFetch = filters.types && filters.types.length > 0
+    ? filters.types
+    : Object.values(ActivityType);
 
   if (typesToFetch.includes(ActivityType.SCHEDULE)) {
     promises.push(fetchScheduleActivities(user.user_id, filters));
@@ -336,11 +339,8 @@ export async function fetchProjectActivities(
           queryBuilder.where("project_tasks.phase_id", filters.phaseId);
         }
         
-        // Apply priority filter if provided
-        if (filters.priority && filters.priority.length > 0) {
-          // Map priority values to database values if needed
-          queryBuilder.whereIn("project_tasks.priority", filters.priority);
-        }
+        // Priority filter for project tasks is handled by processActivities
+        // We don't filter at DB level because tasks without priority_id default to Medium
         
         // Apply search filter if provided
         if (filters.search) {
@@ -354,7 +354,6 @@ export async function fetchProjectActivities(
     });
 
     // Convert to activities
-    // Convert to activities
     const activities = tasks.map((task: any) => {
       return {
         id: task.task_id,
@@ -363,7 +362,7 @@ export async function fetchProjectActivities(
         type: ActivityType.PROJECT_TASK,
         status: task.status_name || 'To Do', // Use the status name from standard_statuses
         statusColor: task.status_color || '#3b82f6', // Use the blue color for consistency
-        priority: ActivityPriority.MEDIUM, // Default priority if not specified
+        priority: ActivityPriority.MEDIUM, // Default priority for project tasks
         dueDate: task.due_date ? new Date(task.due_date).toISOString() : undefined,
         assignedTo: task.assigned_to ? [task.assigned_to] : [],
         sourceId: task.task_id,
@@ -461,12 +460,8 @@ export async function fetchTicketActivities(
           queryBuilder.whereIn("tickets.status_id", filters.status);
         }
 
-        // Priority filter (existing)
-        if (filters.priority && filters.priority.length > 0) {
-          queryBuilder.whereIn("priorities.priority_name",
-            filters.priority.map(p => p.charAt(0).toUpperCase() + p.slice(1))
-          );
-        }
+        // Priority filter for tickets is handled by processActivities
+        // We don't filter at DB level because tickets without priority_id default to Medium
 
         // Due date filter (existing)
         if (filters.dueDateStart) {
@@ -832,8 +827,10 @@ function processActivities(
   
   // Apply priority filter if provided
   if (filters.priority && filters.priority.length > 0) {
-    filteredActivities = filteredActivities.filter(activity => 
-      filters.priority!.includes(activity.priority)
+    // Normalize to lowercase for case-insensitive comparison
+    const normalizedFilterPriorities = filters.priority.map(p => p.toLowerCase());
+    filteredActivities = filteredActivities.filter(activity =>
+      normalizedFilterPriorities.includes(activity.priority.toLowerCase())
     );
   }
   

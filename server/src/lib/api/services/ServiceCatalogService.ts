@@ -18,6 +18,8 @@ type FilterOptions = {
   billing_method?: IService['billing_method'];
   category_id?: string | null;
   custom_service_type_id?: string;
+  item_kind?: 'service' | 'product' | 'any';
+  is_active?: boolean;
 };
 
 export class ServiceCatalogService implements ControllerBaseService {
@@ -51,6 +53,14 @@ export class ServiceCatalogService implements ControllerBaseService {
 
     if (filters.custom_service_type_id) {
       listOptions.custom_service_type_id = filters.custom_service_type_id;
+    }
+
+    if (filters.item_kind) {
+      listOptions.item_kind = filters.item_kind;
+    }
+
+    if (filters.is_active !== undefined) {
+      listOptions.is_active = filters.is_active;
     }
 
     const response = await getServices(page, limit, listOptions);

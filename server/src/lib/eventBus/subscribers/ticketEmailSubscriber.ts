@@ -2058,8 +2058,10 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
       await sendNotificationIfEnabled(emailParams, 'Ticket Comment Added');
     }
 
-    // Send to assigned user if different from primary email
-    if (assignedEmail && assignedEmail !== primaryEmail) {
+    // Send to assigned user if different from primary email AND not the comment author
+    // The person who made the comment should not receive a notification about their own comment
+    const isAssignedUserTheCommentAuthor = ticket.assigned_to === payload.userId;
+    if (assignedEmail && assignedEmail !== primaryEmail && !isAssignedUserTheCommentAuthor) {
       await sendNotificationIfEnabled({
         tenantId,
         to: assignedEmail,
@@ -2075,9 +2077,11 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
       }, 'Ticket Comment Added', ticket.assigned_to);
     }
 
-    // Send to all additional resources
+    // Send to all additional resources, excluding the comment author
     for (const resource of additionalResources) {
-      if (isValidEmail(resource.email)) {
+      // Skip if this resource is the comment author - they shouldn't be notified about their own comment
+      const isResourceTheCommentAuthor = resource.user_id === payload.userId;
+      if (isValidEmail(resource.email) && !isResourceTheCommentAuthor) {
         await sendNotificationIfEnabled({
           tenantId,
           to: resource.email,

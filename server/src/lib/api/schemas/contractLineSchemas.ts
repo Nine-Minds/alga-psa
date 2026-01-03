@@ -24,7 +24,7 @@ export const planTypeSchema = z.enum(['Fixed', 'Hourly', 'Usage']);
 export const billingFrequencySchema = z.enum(['weekly', 'bi-weekly', 'monthly', 'quarterly', 'semi-annually', 'annually']);
 export const configurationTypeSchema = z.enum(['Fixed', 'Hourly', 'Usage', 'Bucket']);
 export const billingCycleAlignmentSchema = z.enum(['start', 'end', 'prorated']);
-export const billingMethodSchema = z.enum(['fixed', 'hourly', 'usage']);
+export const billingMethodSchema = z.enum(['fixed', 'hourly', 'usage', 'per_unit']);
 
 // ============================================================================
 // CORE CONTRACT LINE SCHEMAS
@@ -297,7 +297,9 @@ export const planServiceWithConfigResponseSchema = z.object({
     default_rate: z.number(),
     unit_of_measure: z.string(),
     billing_method: billingMethodSchema,
-    service_type_name: z.string().optional()
+    service_type_name: z.string().optional(),
+    item_kind: z.enum(['service', 'product']).optional(),
+    is_license: z.boolean().optional()
   }),
   configuration: planServiceConfigurationSchema,
   type_config: z.union([

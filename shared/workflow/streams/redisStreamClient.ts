@@ -253,6 +253,40 @@ export class RedisStreamClient {
   }
 
   /**
+   * Publish a raw message to a specific stream (for notification channels)
+   * @param streamName The stream name to publish to
+   * @param messageFields The message fields to publish
+   * @returns The ID of the message in the stream
+   */
+  public async publishToStream(
+    streamName: string,
+    messageFields: Record<string, string>
+  ): Promise<string> {
+    try {
+      const client = await this.getClient();
+
+      const messageId = await client.xAdd(
+        streamName,
+        '*', // Auto-generate ID
+        messageFields,
+        {
+          TRIM: {
+            strategy: 'MAXLEN',
+            threshold: this.config.maxStreamLength,
+            strategyModifier: '~'
+          }
+        }
+      );
+
+      logger.debug(`[RedisStreamClient] Published message to stream ${streamName} with ID ${messageId}`);
+      return messageId;
+    } catch (error) {
+      logger.error(`[RedisStreamClient] Failed to publish to stream ${streamName}:`, error);
+      throw error;
+    }
+  }
+
+  /**
    * Read new messages from a stream using a consumer group
    * @param executionId The workflow execution ID
    * @param options Options for consuming messages

@@ -84,8 +84,8 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
   private async buildFolderResourcePath(desiredFolder: string): Promise<{ resource: string; resolvedFolder: string }> {
     const mailboxBase = this.getMailboxBasePath();
     const fallbackResult = {
-      resource: `${mailboxBase}/mailFolders('Inbox')/messages`,
-      resolvedFolder: 'Inbox',
+      resource: `${mailboxBase}/mailFolders/inbox/messages`,
+      resolvedFolder: 'Inbox (well-known)',
     };
 
     const requested = (desiredFolder || 'Inbox').trim();
@@ -94,26 +94,26 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
     }
 
     const wellKnownMap: Record<string, string> = {
-      inbox: 'Inbox',
-      archive: 'Archive',
-      drafts: 'Drafts',
-      deleteditems: 'DeletedItems',
-      junkemail: 'JunkEmail',
-      sentitems: 'SentItems',
-      outbox: 'Outbox',
-      conversationhistory: 'ConversationHistory',
-      clutter: 'Clutter',
-      conflicts: 'Conflicts',
-      localfailures: 'LocalFailures',
-      serverfailures: 'ServerFailures',
-      syncissues: 'SyncIssues',
+      inbox: 'inbox',
+      archive: 'archive',
+      drafts: 'drafts',
+      deleteditems: 'deleteditems',
+      junkemail: 'junkemail',
+      sentitems: 'sentitems',
+      outbox: 'outbox',
+      conversationhistory: 'conversationhistory',
+      clutter: 'clutter',
+      conflicts: 'conflicts',
+      localfailures: 'localfailures',
+      serverfailures: 'serverfailures',
+      syncissues: 'syncissues',
     };
 
     const normalizedKey = requested.toLowerCase().replace(/\s+/g, '');
     if (wellKnownMap[normalizedKey]) {
       return {
-        resource: `${mailboxBase}/mailFolders('${wellKnownMap[normalizedKey]}')/messages`,
-        resolvedFolder: requested,
+        resource: `${mailboxBase}/mailFolders/${wellKnownMap[normalizedKey]}/messages`,
+        resolvedFolder: `${requested} (well-known)`,
       };
     }
 
@@ -125,9 +125,8 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
         (f: any) => (f.displayName || '').toLowerCase() === requested.toLowerCase()
       );
       if (match?.id) {
-        const folderId = String(match.id).replace(/'/g, "''");
         return {
-          resource: `${mailboxBase}/mailFolders('${folderId}')/messages`,
+          resource: `${mailboxBase}/mailFolders/${encodeURIComponent(String(match.id))}/messages`,
           resolvedFolder: match.displayName || requested,
         };
       }
@@ -263,7 +262,7 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
         client_secret: clientSecret,
         refresh_token: this.refreshToken,
         grant_type: 'refresh_token',
-        scope: 'https://graph.microsoft.com/Mail.Read offline_access',
+        scope: 'https://graph.microsoft.com/Mail.Read https://graph.microsoft.com/Mail.Read.Shared offline_access',
       });
 
       const response = await axios.post(tokenUrl, params.toString(), {

@@ -29,6 +29,7 @@ test-results/
 scripts/minio-test.sh
 scripts/start-playwright-minio.sh
 scripts/stop-playwright-minio.sh
+scripts/dev-install-extension.mjs
 
 # Next.js
 *.next/

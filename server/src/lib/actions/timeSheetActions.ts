@@ -179,11 +179,24 @@ export async function addCommentToTimeSheet(
       throw new Error('No authenticated user found');
     }
 
-    if (!await hasPermission(currentUser, 'timesheet', 'comment')) {
-      throw new Error('Permission denied: Cannot add comments to timesheets');
+    const {knex: db, tenant} = await createTenantKnex();
+
+    // Fetch the timesheet to check ownership
+    const timeSheet = await db('time_sheets')
+      .where({ id: timeSheetId, tenant })
+      .first();
+
+    if (!timeSheet) {
+      throw new Error('Time sheet not found');
     }
 
-    const {knex: db, tenant} = await createTenantKnex();
+    // Allow if user owns the timesheet OR has approve permission
+    const isOwner = timeSheet.user_id === currentUser.user_id;
+    const canApprove = await hasPermission(currentUser, 'timesheet', 'approve');
+
+    if (!isOwner && !canApprove) {
+      throw new Error('Permission denied: Cannot add comments to timesheets');
+    }
     const [newComment] = await db('time_sheet_comments')
       .insert({
         time_sheet_id: timeSheetId,

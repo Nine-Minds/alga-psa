@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronDown } from 'lucide-react';
+import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronDown, X } from 'lucide-react';
 import { DayPicker } from 'react-day-picker';
 import { cn } from 'server/src/lib/utils';
 import { format } from 'date-fns';
@@ -11,6 +11,8 @@ interface CalendarProps extends Omit<React.ComponentProps<typeof DayPicker>, 'mo
   mode?: 'single';
   selected?: Date;
   onSelect?: (date: Date | undefined) => void;
+  /** Callback when clear button is clicked. If provided, shows a Clear button. */
+  onClear?: () => void;
 }
 
 interface MonthYearSelectProps {
@@ -90,6 +92,7 @@ function Calendar({
   showOutsideDays = true,
   selected,
   onSelect,
+  onClear,
   mode = 'single',
   ...props
 }: CalendarProps) {
@@ -154,7 +157,18 @@ function Calendar({
         modifiers={{ today: new Date() }}
         hideNavigation
         footer={
-          <div className="flex justify-center">
+          <div className="flex justify-center gap-2">
+            {onClear && (
+              <button
+                onClick={onClear}
+                className="calendar-today-button"
+                aria-label="Clear date"
+                type="button"
+              >
+                <X className="w-4 h-4" />
+                Clear
+              </button>
+            )}
             <button
               onClick={handleTodayClick}
               className="calendar-today-button"

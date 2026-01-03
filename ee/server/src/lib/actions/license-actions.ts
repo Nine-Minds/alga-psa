@@ -207,11 +207,37 @@ export async function createLicenseCheckoutSessionAction(
         publishableKey: await stripeService.getPublishableKey(),
       },
     };
-  } catch (error) {
+  } catch (error: any) {
     logger.error('[createLicenseCheckoutSessionAction] Error processing license update:', error);
+
+    // Handle Stripe payment errors with user-friendly messages
+    let errorMessage = 'Failed to process license update';
+
+    if (error instanceof Error) {
+      // Check for Stripe-specific payment failure errors
+      if (error.message.includes('payment') || error.message.includes('PaymentIntent')) {
+        errorMessage = 'Payment failed. Please check your payment method and try again.';
+      } else if (error.message.includes('card')) {
+        errorMessage = 'Your card was declined. Please update your payment method and try again.';
+      } else if (error.message.includes('insufficient')) {
+        errorMessage = 'Payment failed due to insufficient funds. Please try a different payment method.';
+      } else {
+        errorMessage = error.message;
+      }
+    }
+
+    // Also check Stripe error codes if available
+    if (error?.code === 'card_declined' || error?.decline_code) {
+      errorMessage = 'Your card was declined. Please update your payment method and try again.';
+    } else if (error?.code === 'insufficient_funds') {
+      errorMessage = 'Payment failed due to insufficient funds. Please try a different payment method.';
+    } else if (error?.code === 'expired_card') {
+      errorMessage = 'Your card has expired. Please update your payment method and try again.';
+    }
+
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to process license update',
+      error: errorMessage,
     };
   }
 }
@@ -242,7 +268,7 @@ export async function getLicensePricingAction(): Promise<{
 
     // Fetch pricing from Stripe API using the price ID
     const stripeService = getStripeService();
-    const stripe = (stripeService as any).stripe;
+    const stripe = await stripeService.getStripeClient();
 
     const price = await stripe.prices.retrieve(licensePriceId);
 
@@ -374,7 +400,7 @@ export async function getPaymentMethodInfoAction(): Promise<IGetPaymentMethodRes
     }
 
     // Fetch payment methods from Stripe
-    const stripe = (stripeService as any).stripe;
+    const stripe = await stripeService.getStripeClient();
     const paymentMethods = await stripe.paymentMethods.list({
       customer: customer.stripe_customer_external_id,
       type: 'card',
@@ -448,7 +474,7 @@ export async function getRecentInvoicesAction(limit: number = 10): Promise<IGetI
     }
 
     // Fetch invoices from Stripe
-    const stripe = (stripeService as any).stripe;
+    const stripe = await stripeService.getStripeClient();
     const invoices = await stripe.invoices.list({
       customer: customer.stripe_customer_external_id,
       limit,
@@ -519,7 +545,7 @@ export async function createCustomerPortalSessionAction(): Promise<IUpdatePaymen
     }
 
     // Create billing portal session
-    const stripe = (stripeService as any).stripe;
+    const stripe = await stripeService.getStripeClient();
     const portalSession = await stripe.billingPortal.sessions.create({
       customer: customer.stripe_customer_external_id,
       return_url: `${process.env.NEXT_PUBLIC_APP_URL}/msp/settings?tab=account`,
@@ -656,7 +682,7 @@ export async function cancelSubscriptionAction(): Promise<ICancelSubscriptionRes
     }
 
     // Cancel subscription at period end via Stripe
-    const stripe = (stripeService as any).stripe;
+    const stripe = await stripeService.getStripeClient();
     const updatedSubscription = await stripe.subscriptions.update(
       subscription.stripe_subscription_external_id,
       {

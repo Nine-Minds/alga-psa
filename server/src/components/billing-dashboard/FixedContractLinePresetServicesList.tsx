@@ -71,7 +71,7 @@ const FixedContractLinePresetServicesList: React.FC<FixedContractLinePresetServi
       const presetServicesData = await getContractLinePresetServices(planId);
 
       // Fetch all available services
-      const servicesResponse = await getServices();
+      const servicesResponse = await getServices(1, 999, { item_kind: 'any' });
       const allAvailableServices = Array.isArray(servicesResponse)
         ? servicesResponse
         : (servicesResponse.services || []);

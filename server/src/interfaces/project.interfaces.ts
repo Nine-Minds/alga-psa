@@ -4,6 +4,36 @@ import { IUserWithRoles } from "./auth.interfaces";
 import { ItemType, IStatus, IStandardStatus } from "./status.interface";
 import { ITaggable } from './tag.interfaces';
 
+// Client Portal Configuration
+export interface IClientPortalConfig {
+  show_phases?: boolean;                // Show phase breakdown
+  show_phase_completion?: boolean;      // Show task completion % per phase
+  show_tasks?: boolean;                 // Show individual tasks
+  visible_task_fields?: string[];       // Which task fields/features to show
+}
+
+export const DEFAULT_CLIENT_PORTAL_CONFIG: IClientPortalConfig = {
+  show_phases: false,
+  show_phase_completion: false,
+  show_tasks: false,
+  visible_task_fields: ['task_name', 'due_date', 'status']
+};
+
+export const CONFIGURABLE_TASK_FIELDS = [
+  { key: 'task_name', label: 'Task Name', required: true },
+  { key: 'description', label: 'Description', required: false },
+  { key: 'due_date', label: 'Due Date', required: false },
+  { key: 'status', label: 'Status', required: false },
+  { key: 'assigned_to', label: 'Assigned To', required: false },
+  { key: 'estimated_hours', label: 'Estimated Hours', required: false },
+  { key: 'actual_hours', label: 'Actual Hours', required: false },
+  { key: 'priority', label: 'Priority', required: false },
+  { key: 'checklist_progress', label: 'Checklist', required: false },
+  { key: 'services', label: 'Services', required: false },
+  { key: 'dependencies', label: 'Dependencies', required: false },
+  { key: 'document_uploads', label: 'Document Uploads', required: false }
+];
+
 export interface IProjectStatusMapping extends TenantEntity {
   project_status_mapping_id: string;
   project_id: string;
@@ -41,6 +71,7 @@ export interface IProject extends TenantEntity, ITaggable {
   contact_name_id?: string | null;
   budgeted_hours?: number | null;
   project_number: string; // e.g., "PRJ-0001"
+  client_portal_config?: IClientPortalConfig;
 }
 
 export interface IProjectPhase extends TenantEntity {

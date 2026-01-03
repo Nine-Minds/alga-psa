@@ -15,6 +15,7 @@ interface ProjectPhasesProps {
   editingPhaseDescription: string | null;
   editingStartDate?: Date;
   editingEndDate?: Date;
+  phaseTaskCounts?: Record<string, number>;
   phaseDropTarget: {
     phaseId: string;
     position: 'before' | 'after';
@@ -48,6 +49,7 @@ export const ProjectPhases: React.FC<ProjectPhasesProps> = ({
   editingPhaseDescription,
   editingStartDate,
   editingEndDate,
+  phaseTaskCounts = {},
   phaseDropTarget,
   taskDraggingOverPhaseId, // Destructure new prop
   animatingPhases,
@@ -209,6 +211,7 @@ export const ProjectPhases: React.FC<ProjectPhasesProps> = ({
               editingDescription={editingPhaseDescription}
               editingStartDate={editingStartDate}
               editingEndDate={editingEndDate}
+              taskCount={phaseTaskCounts[phase.phase_id]}
               taskDraggingOverPhaseId={taskDraggingOverPhaseId} // Pass prop to PhaseListItem
               onSelect={onPhaseSelect}
               onEdit={onEditPhase}

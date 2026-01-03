@@ -1,5 +1,7 @@
 import React from 'react';
-import { Progress, Text, Group, Tooltip } from '@mantine/core';
+import { Progress } from 'server/src/components/ui/Progress';
+import { Tooltip } from 'server/src/components/ui/Tooltip';
+import { cn } from 'server/src/lib/utils';
 
 interface UtilizationBarProps {
   value: number | null; // 0-100
@@ -19,38 +21,46 @@ export const UtilizationBar: React.FC<UtilizationBarProps> = ({
   size = 'md',
 }) => {
   if (value === null || value === undefined) {
-    return <Text size="sm" c="dimmed">N/A</Text>;
+    return <span className="text-sm text-gray-400">N/A</span>;
   }
 
-  let color = 'green';
+  let indicatorColor = 'bg-emerald-500';
   if (value >= colorThresholds.critical) {
-    color = 'red';
+    indicatorColor = 'bg-red-500';
   } else if (value >= colorThresholds.warning) {
-    color = 'yellow';
+    indicatorColor = 'bg-amber-500';
   }
+
+  const sizeClasses = {
+    xs: 'h-1',
+    sm: 'h-1.5',
+    md: 'h-2',
+    lg: 'h-3',
+    xl: 'h-4',
+  };
 
   const content = (
-    <div style={{ width: '100%' }}>
+    <div className="w-full">
       {showLabel && (
-        <Group justify="space-between" mb={4}>
-          <Text size="xs" c="dimmed">{label}</Text>
-          <Text size="xs" fw={500}>{Math.round(value)}%</Text>
-        </Group>
+        <div className="flex justify-between items-center mb-1">
+          <span className="text-xs text-gray-500">{label}</span>
+          <span className="text-xs font-medium text-gray-700">{Math.round(value)}%</span>
+        </div>
       )}
       <Progress 
         value={value} 
-        color={color} 
-        size={size} 
-        radius="xl" 
-        striped={value > 90}
-        animated={value > 90}
+        className={cn(sizeClasses[size])}
+        indicatorClassName={cn(
+          indicatorColor,
+          value > 90 && 'animate-pulse'
+        )}
       />
     </div>
   );
 
   if (tooltip) {
     return (
-      <Tooltip label={tooltip}>
+      <Tooltip content={tooltip}>
         {content}
       </Tooltip>
     );

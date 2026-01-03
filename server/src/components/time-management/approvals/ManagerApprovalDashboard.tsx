@@ -8,6 +8,7 @@ import { Button } from 'server/src/components/ui/Button';
 import { Checkbox } from 'server/src/components/ui/Checkbox';
 import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle } from 'server/src/components/ui/Card';
+import { ConfirmationDialog } from 'server/src/components/ui/ConfirmationDialog';
 import { Users } from 'lucide-react';
 import {
   fetchTimeSheetsForApproval,
@@ -32,6 +33,8 @@ export default function ManagerApprovalDashboard({ currentUser }: ManagerApprova
   const [timeSheets, setTimeSheets] = useState<ITimeSheetApprovalView[]>([]);
   const [selectedTimeSheets, setSelectedTimeSheets] = useState<string[]>([]);
   const [showApproved, setShowApproved] = useState(false);
+  const [reverseConfirmOpen, setReverseConfirmOpen] = useState(false);
+  const [timeSheetToReverse, setTimeSheetToReverse] = useState<ITimeSheetApprovalView | null>(null);
   const { isManager, managedTeams } = useTeamAuth(currentUser);
   const { openDrawer, closeDrawer } = useDrawer();
 
@@ -49,18 +52,24 @@ export default function ManagerApprovalDashboard({ currentUser }: ManagerApprova
     setTimeSheets(sheets);
   };
 
-  const handleReverseApproval = async (timeSheet: ITimeSheetApprovalView) => {
-    if (!confirm('Are you sure you want to reverse the approval of this time sheet?')) {
-      return;
-    }
+  const handleReverseApproval = (timeSheet: ITimeSheetApprovalView) => {
+    setTimeSheetToReverse(timeSheet);
+    setReverseConfirmOpen(true);
+  };
+
+  const confirmReverseApproval = async () => {
+    if (!timeSheetToReverse) return;
 
     try {
       await reverseTimeSheetApproval(
-        timeSheet.id,
+        timeSheetToReverse.id,
         currentUser.user_id,
         'Approval reversed by manager'
       );
       await loadTimeSheets();
+      setReverseConfirmOpen(false);
+      setTimeSheetToReverse(null);
+      closeDrawer();
     } catch (error) {
       console.error('Failed to reverse approval:', error);
       alert('Failed to reverse approval: ' + (error instanceof Error ? error.message : 'Unknown error'));
@@ -106,10 +115,7 @@ export default function ManagerApprovalDashboard({ currentUser }: ManagerApprova
            await loadTimeSheets();
            closeDrawer();
           }}
-          onReverseApproval={async () => {
-           await handleReverseApproval(timeSheet); // This already calls loadTimeSheets
-           closeDrawer();
-         }}
+          onReverseApproval={() => handleReverseApproval(timeSheet)}
         />
       );
     } catch (error) {
@@ -168,8 +174,10 @@ export default function ManagerApprovalDashboard({ currentUser }: ManagerApprova
             title: 'Select',
             dataIndex: 'select',
             width: '10%',
+            sortable: false, // Non-data column, sorting disabled
             render: (_, record) => (
               <div className="[&>div]:mb-0" onClick={(e) => e.stopPropagation()}>
+                {/* Unique ID for UI reflection system */}
                 <Checkbox
                   id={`timesheet-select-${record.id}`}
                   checked={selectedTimeSheets.includes(record.id)}
@@ -185,11 +193,15 @@ export default function ManagerApprovalDashboard({ currentUser }: ManagerApprova
           {
             title: 'Employee',
             dataIndex: 'employee_name',
-            width: '25%'
+            width: '20%'
           },
           {
             title: 'Period',
-            dataIndex: 'time_period',
+            // Use dot notation to access nested start_date for proper date sorting.
+            // DataTable's getNestedValue() handles dot notation, and caseInsensitiveSort()
+            // parses ISO-8601 date strings for accurate chronological sorting.
+            // The render function displays both start and end dates from the full record.
+            dataIndex: 'time_period.start_date',
             width: '25%',
             render: (_, record) => (
               <>
@@ -217,12 +229,17 @@ export default function ManagerApprovalDashboard({ currentUser }: ManagerApprova
           {
             title: 'Actions',
             dataIndex: 'actions',
-            width: '10%',
+            width: '15%',
+            sortable: false, // Non-data column, sorting disabled
             render: (_, record) => (
               <div className="flex gap-2">
+                {/* Unique IDs for UI reflection system */}
                 <Button
                   id={`view-timesheet-${record.id}-btn`}
-                  onClick={() => handleViewTimeSheet(record)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleViewTimeSheet(record);
+                  }}
                   variant="soft"
                 >
                   View
@@ -230,7 +247,10 @@ export default function ManagerApprovalDashboard({ currentUser }: ManagerApprova
                 {record.approval_status === 'APPROVED' && (
                   <Button
                     id={`reverse-approval-${record.id}-btn`}
-                    onClick={() => handleReverseApproval(record)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleReverseApproval(record);
+                    }}
                     variant="destructive"
                   >
                     Reverse
@@ -249,6 +269,20 @@ export default function ManagerApprovalDashboard({ currentUser }: ManagerApprova
               : ''
         }
         pagination={false}
+      />
+
+      <ConfirmationDialog
+        id="reverse-approval-confirmation"
+        isOpen={reverseConfirmOpen}
+        onClose={() => {
+          setReverseConfirmOpen(false);
+          setTimeSheetToReverse(null);
+        }}
+        onConfirm={confirmReverseApproval}
+        title="Reverse Approval"
+        message={`Are you sure you want to reverse the approval of this time sheet${timeSheetToReverse?.employee_name ? ` for ${timeSheetToReverse.employee_name}` : ''}?`}
+        confirmLabel="Reverse Approval"
+        cancelLabel="Cancel"
       />
     </div>
   );

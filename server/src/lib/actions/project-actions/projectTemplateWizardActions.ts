@@ -55,6 +55,7 @@ export async function createTemplateFromWizard(data: TemplateWizardData): Promis
         category: data.category?.trim() || null,
         created_by: currentUser.user_id,
         use_count: 0,
+        client_portal_config: data.client_portal_config ? JSON.stringify(data.client_portal_config) : null,
       })
       .returning('*');
 
@@ -235,6 +236,7 @@ export async function updateTemplateFromEditor(
         template_name: data.template_name.trim(),
         description: data.description?.trim() || null,
         category: data.category?.trim() || null,
+        client_portal_config: data.client_portal_config ? JSON.stringify(data.client_portal_config) : null,
         updated_at: trx.fn.now(),
       });
 
@@ -417,6 +419,7 @@ export async function saveTemplateAsNew(
         category: sourceTemplate.category,
         created_by: currentUser.user_id,
         use_count: 0,
+        client_portal_config: sourceTemplate.client_portal_config,
       })
       .returning('*');
 

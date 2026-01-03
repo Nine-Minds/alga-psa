@@ -90,6 +90,7 @@ export async function GET(
     let associatedContactId: string | null = null;
     let associatedUserId: string | null = null;
     let associatedTenantId: string | null = null;
+    let associatedProjectTaskId: string | null = null;
 
     // 0. If it's a tenant logo, grant public access
     if (isTenantLogo) {
@@ -125,6 +126,8 @@ export async function GET(
               associatedUserId = assoc.entity_id;
             } else if (assoc.entity_type === 'tenant') {
               associatedTenantId = assoc.entity_id;
+            } else if (assoc.entity_type === 'project_task') {
+              associatedProjectTaskId = assoc.entity_id;
             }
           }
 
@@ -172,6 +175,40 @@ export async function GET(
                   console.log(`User ${user.user_id} granted access to user avatar ${fileId} within the same tenant`);
               }
           }
+
+          // Check project_task association - verify client owns the project
+          if (!hasPermission && associatedProjectTaskId && user.contact_id) {
+              // Get user's client_id if not already fetched
+              if (!userClientId) {
+                  const contactRecord = await knex('contacts')
+                      .select('client_id')
+                      .where({ contact_name_id: user.contact_id, tenant })
+                      .first();
+                  userClientId = contactRecord?.client_id ?? null;
+              }
+
+              if (userClientId) {
+                  // Check if this task belongs to a project owned by the user's client
+                  const projectCheck = await knex('project_tasks as pt')
+                      .join('project_phases as pp', function() {
+                          this.on('pt.phase_id', 'pp.phase_id').andOn('pt.tenant', 'pp.tenant');
+                      })
+                      .join('projects as p', function() {
+                          this.on('pp.project_id', 'p.project_id').andOn('pp.tenant', 'p.tenant');
+                      })
+                      .where({
+                          'pt.task_id': associatedProjectTaskId,
+                          'pt.tenant': tenant,
+                          'p.client_id': userClientId
+                      })
+                      .first();
+
+                  if (projectCheck) {
+                      hasPermission = true;
+                      console.log(`User ${user.user_id} granted access to project task document ${fileId} (client ${userClientId})`);
+                  }
+              }
+          }
         }
     }
 
@@ -181,6 +218,7 @@ export async function GET(
         console.warn(`AssociatedClient: ${associatedClientId}, UserClient: ${userClientId}`);
         console.warn(`AssociatedContact: ${associatedContactId}, UserContact: ${user.contact_id}`);
         console.warn(`AssociatedUser: ${associatedUserId}, UserId: ${user.user_id}`);
+        console.warn(`AssociatedProjectTask: ${associatedProjectTaskId}`);
       } else {
         console.warn(`Unauthenticated user does not have permission to view file ${fileId}.`);
       }

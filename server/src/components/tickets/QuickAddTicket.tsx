@@ -350,6 +350,14 @@ export function QuickAddTicket({
     setSelectedCategories([]);
     setShowPriorityMatrix(false);
     clearErrorIfSubmitted();
+
+    // Pre-fill assigned agent from board's default if current assignedTo is empty
+    if (!assignedTo && newBoardId) {
+      const selectedBoard = boards.find(b => b.board_id === newBoardId);
+      if (selectedBoard?.default_assigned_to) {
+        setAssignedTo(selectedBoard.default_assigned_to);
+      }
+    }
   };
 
 
@@ -641,14 +649,18 @@ export function QuickAddTicket({
                       id={`${id}-location`}
                       value={locationId || ''}
                       onValueChange={(value) => {
-                        setLocationId(value || null);
+                        setLocationId(value === 'none' ? null : value || null);
                         clearErrorIfSubmitted();
                       }}
-                      options={locations.map(location => ({
-                        value: location.location_id,
-                        label: formatLocationDisplay(location) + (location.is_default ? ' (Default)' : '')
-                      }))}
-                      placeholder={locations.length === 0 ? "No locations for selected client" : "No specific location"}
+                      options={[
+                        ...(locations.length > 0 ? [{ value: 'none', label: 'None' }] : []),
+                        ...locations.map(location => ({
+                          value: location.location_id,
+                          label: formatLocationDisplay(location) + (location.is_default ? ' (Default)' : '')
+                        }))
+                      ]}
+                      placeholder={locations.length === 0 ? "No locations for selected client" : "Select location"}
+                      showPlaceholderInDropdown={false}
                     />
                   )}
                   <div className={hasAttemptedSubmit && !assignedTo ? 'ring-1 ring-red-500 rounded-lg' : ''}>

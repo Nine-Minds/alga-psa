@@ -149,17 +149,21 @@ function createServiceModule(): AccountingMappingModule {
         context,
         algaEntityType: 'service',
         loadAlgaEntities: async () => {
-          const response = await getServices();
+          const response = await getServices(1, 999, { item_kind: 'any' });
           return response.services.map(
             (service): IServicesResult => ({
               service_id: service.service_id,
-              service_name: service.service_name
+              service_name: service.service_name,
+              item_kind: service.item_kind,
+              sku: service.sku ?? null
             })
           );
         },
         mapAlga: (service) => ({
           id: service.service_id,
-          name: service.service_name
+          name:
+            `${service.item_kind === 'product' ? '[Product] ' : ''}${service.service_name}` +
+            (service.sku ? ` (${service.sku})` : '')
         })
       });
     },
@@ -317,4 +321,7 @@ function updateMapping(
   return updateExternalEntityMapping(mappingId, payload);
 }
 
-type IServicesResult = Pick<IService, 'service_id' | 'service_name'>;
+type IServicesResult = Pick<IService, 'service_id' | 'service_name'> & {
+  item_kind?: IService['item_kind'];
+  sku?: string | null;
+};

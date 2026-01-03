@@ -9,7 +9,7 @@ export interface IContractLineServiceConfiguration extends TenantEntity {
   contract_line_id: string;
   service_id: string;
   configuration_type: 'Fixed' | 'Hourly' | 'Usage' | 'Bucket';
-  custom_rate?: number;
+  custom_rate?: number | null;
   quantity?: number;
   instance_name?: string;
   tenant: string;

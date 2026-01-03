@@ -208,7 +208,7 @@ export function ContractDialog({ onContractSaved, editingContract, onClose, trig
         const services = await getContractLinePresetServices(presetId);
 
         // Load all service details to get names and rates
-        const allServices = await getServices(1, 999);
+        const allServices = await getServices(1, 999, { item_kind: 'any' });
         const serviceMap = new Map(allServices.services.map((s) => [s.service_id, s]));
 
         // Enhance services with names and default rates

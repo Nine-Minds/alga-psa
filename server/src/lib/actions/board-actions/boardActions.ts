@@ -13,7 +13,7 @@ export interface FindBoardByNameOutput {
   name: string;
   description: string;
   is_default: boolean;
-  is_active: boolean;
+  is_inactive: boolean;
 }
 
 export async function findBoardById(id: string): Promise<IBoard | undefined> {
@@ -96,6 +96,7 @@ export async function createBoard(boardData: Omit<IBoard, 'board_id' | 'tenant'>
           priority_type: boardData.priority_type || 'custom',
           display_itil_impact: boardData.display_itil_impact || false,
           display_itil_urgency: boardData.display_itil_urgency || false,
+          default_assigned_to: boardData.default_assigned_to || null,
           tenant
         })
         .returning('*');
@@ -167,9 +168,15 @@ export async function updateBoard(boardId: string, boardData: Partial<Omit<IBoar
           .update({ is_default: false });
       }
 
+      // Sanitize default_assigned_to: convert empty string to null
+      const sanitizedData = { ...boardData };
+      if ('default_assigned_to' in sanitizedData) {
+        sanitizedData.default_assigned_to = sanitizedData.default_assigned_to || null;
+      }
+
       const [updatedBoard] = await trx('boards')
         .where({ board_id: boardId, tenant })
-        .update(boardData)
+        .update(sanitizedData)
         .returning('*');
 
       // Handle ITIL type changes
@@ -219,7 +226,7 @@ export async function findBoardByName(name: string): Promise<FindBoardByNameOutp
 
   return await withTransaction(db, async (trx: Knex.Transaction) => {
     const board = await trx('boards')
-      .select('board_id as id', 'board_name as name', 'description', 'is_default', 'is_active')
+      .select('board_id as id', 'board_name as name', 'description', 'is_default', 'is_inactive')
       .where('tenant', tenant)
       .whereRaw('LOWER(board_name) = LOWER(?)', [name])
       .first();

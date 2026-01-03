@@ -102,6 +102,8 @@ export interface IClientContractLine extends TenantEntity {
   is_active: boolean;
   currency_code?: string;
   custom_rate?: number;
+  enable_proration?: boolean;
+  billing_cycle_alignment?: 'start' | 'end' | 'prorated';
   client_contract_id?: string; // Reference to the client contract assignment
   template_contract_id?: string;
   contract_id?: string; // Reference to the contract (for pricing schedule lookups)
@@ -178,6 +180,16 @@ export interface IService extends TenantEntity {
   default_rate: number; // Convenience field: primary rate (typically first/USD price)
   category_id: string | null;
   unit_of_measure: string;
+  item_kind?: 'service' | 'product'; // Catalog kind (Products are a filtered subset)
+  is_active?: boolean;
+  sku?: string | null;
+  cost?: number | null; // cents
+  vendor?: string | null;
+  manufacturer?: string | null;
+  product_category?: string | null;
+  is_license?: boolean;
+  license_term?: 'monthly' | 'annual' | 'perpetual' | string | null;
+  license_billing_cadence?: 'monthly' | 'annual' | string | null;
   tax_rate_id?: string | null; // Added: FK to tax_rates table
   description?: string | null; // Added: Description field from the database
   service_type_name?: string; // Added: Name of the service type (from custom)
@@ -279,7 +291,7 @@ export interface IContractLineService extends TenantEntity {
   contract_line_id: string;
   service_id: string;
   quantity?: number;
-  custom_rate?: number;
+  custom_rate?: number | null;
 }
 
 /**
@@ -290,7 +302,7 @@ export interface IContractLinePresetService extends TenantEntity {
   preset_id: string;
   service_id: string;
   quantity?: number;
-  custom_rate?: number;
+  custom_rate?: number | null;
   unit_of_measure?: string;
   // Bucket overlay fields - recommended bucket configuration
   bucket_total_minutes?: number;

@@ -199,6 +199,12 @@ exports.seed = async function(knex) {
         { resource: 'document', action: 'read', msp: false, client: true, description: 'View documents in client portal' },
         { resource: 'document', action: 'create', msp: false, client: true, description: 'Create documents in client portal' },
         { resource: 'document', action: 'update', msp: false, client: true, description: 'Update documents in client portal' }
+        ,
+        // Service Catalog (includes Products as a subset of the catalog)
+        { resource: 'service', action: 'create', msp: true, client: false, description: 'Create services/products in the service catalog' },
+        { resource: 'service', action: 'read', msp: true, client: false, description: 'View services/products in the service catalog' },
+        { resource: 'service', action: 'update', msp: true, client: false, description: 'Update services/products in the service catalog' },
+        { resource: 'service', action: 'delete', msp: true, client: false, description: 'Archive/delete services/products in the service catalog' }
     ];
 
     // Process each tenant

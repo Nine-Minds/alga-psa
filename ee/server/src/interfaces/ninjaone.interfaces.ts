@@ -432,6 +432,11 @@ export interface NinjaOneApiError {
 }
 
 // API Query Parameters
+export interface NinjaOneOrganizationQueryParams {
+  pageSize?: number;
+  after?: string; // Cursor
+}
+
 export interface NinjaOneDeviceQueryParams {
   df?: string; // Device filter
   pageSize?: number;

@@ -13,6 +13,7 @@ import ProjectDetailsEdit from './ProjectDetailsEdit';
 import { TagManager } from 'server/src/components/tags';
 import { toast } from 'react-hot-toast';
 import CreateTemplateDialog from './project-templates/CreateTemplateDialog';
+import ProjectMaterialsDrawer from './ProjectMaterialsDrawer';
 
 interface ProjectInfoProps {
   project: IProject;
@@ -98,6 +99,24 @@ export default function ProjectInfo({
     );
   };
 
+  const handleMaterialsClick = () => {
+    const clientId = currentProject.client_id;
+    if (!clientId) {
+      toast.error('Project has no client assigned');
+      return;
+    }
+    const client = clients.find((c) => c.client_id === clientId);
+    const currencyCode = (client as any)?.default_currency_code || 'USD';
+    openDrawer(
+      <ProjectMaterialsDrawer
+        projectId={currentProject.project_id}
+        clientId={clientId}
+        currencyCode={currencyCode}
+        onClose={() => closeDrawer()}
+      />
+    );
+  };
+
   return (
     <div className="space-y-2 mb-4">
       {/* First line: Back nav, project number, title, tags, and edit button */}
@@ -132,6 +151,14 @@ export default function ProjectInfo({
             Save as Template
           </Button>
           <Button
+            id="project-materials-button"
+            variant="outline"
+            size="sm"
+            onClick={handleMaterialsClick}
+          >
+            Materials
+          </Button>
+          <Button
             id="edit-project-button"
             variant="outline"
             size="sm"
@@ -143,6 +170,11 @@ export default function ProjectInfo({
         </div>
       </div>
       
+      {/* Project description */}
+      {currentProject.description && (
+        <p className="text-sm text-gray-600">{currentProject.description}</p>
+      )}
+
       {/* Second line: Project metadata */}
       <div className="flex items-center space-x-8">
         {/* Client Section */}

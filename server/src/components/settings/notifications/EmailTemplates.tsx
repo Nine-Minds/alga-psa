@@ -211,7 +211,7 @@ export function EmailTemplates() {
   // Group templates by category (filtered by selected languages)
   const templatesByCategory = templates.systemTemplates.reduce((acc, systemTemplate) => {
     const tenantTemplate = templates.tenantTemplates.find(
-      t => t.name === systemTemplate.name
+      t => t.name === systemTemplate.name && t.language_code === systemTemplate.language_code
     );
     const activeTemplate = tenantTemplate || systemTemplate;
 
