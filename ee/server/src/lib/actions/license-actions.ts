@@ -207,11 +207,37 @@ export async function createLicenseCheckoutSessionAction(
         publishableKey: await stripeService.getPublishableKey(),
       },
     };
-  } catch (error) {
+  } catch (error: any) {
     logger.error('[createLicenseCheckoutSessionAction] Error processing license update:', error);
+
+    // Handle Stripe payment errors with user-friendly messages
+    let errorMessage = 'Failed to process license update';
+
+    if (error instanceof Error) {
+      // Check for Stripe-specific payment failure errors
+      if (error.message.includes('payment') || error.message.includes('PaymentIntent')) {
+        errorMessage = 'Payment failed. Please check your payment method and try again.';
+      } else if (error.message.includes('card')) {
+        errorMessage = 'Your card was declined. Please update your payment method and try again.';
+      } else if (error.message.includes('insufficient')) {
+        errorMessage = 'Payment failed due to insufficient funds. Please try a different payment method.';
+      } else {
+        errorMessage = error.message;
+      }
+    }
+
+    // Also check Stripe error codes if available
+    if (error?.code === 'card_declined' || error?.decline_code) {
+      errorMessage = 'Your card was declined. Please update your payment method and try again.';
+    } else if (error?.code === 'insufficient_funds') {
+      errorMessage = 'Payment failed due to insufficient funds. Please try a different payment method.';
+    } else if (error?.code === 'expired_card') {
+      errorMessage = 'Your card has expired. Please update your payment method and try again.';
+    }
+
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to process license update',
+      error: errorMessage,
     };
   }
 }

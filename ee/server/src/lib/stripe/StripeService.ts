@@ -515,6 +515,9 @@ export class StripeService {
 
       if (isIncrease) {
         // INCREASE: Immediate change with prorated charge
+        // IMPORTANT: payment_behavior: 'error_if_incomplete' ensures the API call fails
+        // if payment cannot be collected immediately, preventing license count updates
+        // when payment fails (e.g., insufficient funds, expired card)
         const updatedSubscription = await this.stripe.subscriptions.update(
           existingSubscription.stripe_subscription_external_id,
           {
@@ -525,6 +528,7 @@ export class StripeService {
               },
             ],
             proration_behavior: 'always_invoice', // Charge prorated amount now
+            payment_behavior: 'error_if_incomplete', // Fail if payment cannot be collected
             metadata: {
               tenant_id: tenantId,
             },
