@@ -1,7 +1,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
-import { ITicketListItem, ITicketCategory } from 'server/src/interfaces/ticket.interfaces';
+import { ITicketListItem, ITicketCategory, TicketResponseState } from 'server/src/interfaces/ticket.interfaces';
 import { TicketingDisplaySettings } from 'server/src/lib/actions/ticket-actions/ticketDisplaySettings';
 import { TagManager } from 'server/src/components/tags';
 import { ITag } from 'server/src/interfaces/tag.interfaces';
@@ -10,6 +10,7 @@ import { Button } from 'server/src/components/ui/Button';
 import { MoreVertical, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { IBoard } from 'server/src/interfaces/board.interface';
+import { ResponseStateBadge } from 'server/src/components/tickets/ResponseStateBadge';
 
 interface CreateTicketColumnsOptions {
   categories: ITicketCategory[];
@@ -120,14 +121,30 @@ export function createTicketColumns(options: CreateTicketColumnsOptions): Column
     }
   });
 
-  // Status
+  // Status (with response state badge)
   if (columnVisibility.status) {
     columns.push({
       key: 'status',
       col: {
         title: 'Status',
         dataIndex: 'status_name',
-        width: '10%',
+        width: '12%',
+        render: (value: string, record: ITicketListItem) => {
+          // Get response_state from the record - it may be on the record if fetched
+          const responseState = (record as any).response_state as TicketResponseState | undefined;
+          return (
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <span>{value || 'No Status'}</span>
+              {responseState && (
+                <ResponseStateBadge
+                  responseState={responseState}
+                  variant="badge"
+                  size="sm"
+                />
+              )}
+            </div>
+          );
+        },
       }
     });
   }

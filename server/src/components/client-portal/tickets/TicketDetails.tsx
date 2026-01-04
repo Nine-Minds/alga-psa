@@ -18,7 +18,8 @@ import {
 } from 'server/src/lib/actions/client-portal-actions/client-tickets';
 import { formatDistanceToNow, format } from 'date-fns';
 import { getDateFnsLocale } from 'server/src/lib/utils/dateFnsLocale';
-import { ITicketWithDetails } from 'server/src/interfaces/ticket.interfaces';
+import { ITicketWithDetails, TicketResponseState } from 'server/src/interfaces/ticket.interfaces';
+import { ResponseStateBadge } from 'server/src/components/tickets/ResponseStateBadge';
 import { IComment } from 'server/src/interfaces/comment.interface';
 import { IDocument } from 'server/src/interfaces/document.interface';
 import TicketConversation from 'server/src/components/tickets/ticket/TicketConversation';
@@ -393,27 +394,37 @@ export function TicketDetails({
               <label className="font-bold text-gray-900 block mb-2">
                 {t('tickets.fields.status', 'Status')}
               </label>
-              <CustomSelect
-                value={ticket.status_id || ''}
-                options={statusOptions.map((status) => ({
-                  value: status.status_id || '',
-                  label: status.name || ''
-                }))}
-                onValueChange={(value) => {
-                  if (ticket.status_id !== value) {
-                    const selectedStatus = statusOptions.find(s => s.status_id === value);
-                    if (selectedStatus) {
-                      setTicketToUpdateStatus({
-                        ticketId: ticket.ticket_id!,
-                        newStatusId: selectedStatus.status_id!,
-                        currentStatusName: ticket.status_name || '',
-                        newStatusName: selectedStatus.name || ''
-                      });
+              <div className="flex items-center gap-3">
+                <CustomSelect
+                  value={ticket.status_id || ''}
+                  options={statusOptions.map((status) => ({
+                    value: status.status_id || '',
+                    label: status.name || ''
+                  }))}
+                  onValueChange={(value) => {
+                    if (ticket.status_id !== value) {
+                      const selectedStatus = statusOptions.find(s => s.status_id === value);
+                      if (selectedStatus) {
+                        setTicketToUpdateStatus({
+                          ticketId: ticket.ticket_id!,
+                          newStatusId: selectedStatus.status_id!,
+                          currentStatusName: ticket.status_name || '',
+                          newStatusName: selectedStatus.name || ''
+                        });
+                      }
                     }
-                  }
-                }}
-                className="!w-fit"
-              />
+                  }}
+                  className="!w-fit"
+                />
+                {/* Response State Badge - client-friendly wording (F026-F030) */}
+                {(ticket as any).response_state && (
+                  <ResponseStateBadge
+                    responseState={(ticket as any).response_state as TicketResponseState}
+                    isClientPortal={true}
+                    size="md"
+                  />
+                )}
+              </div>
             </div>
 
             {/* Assigned To */}
