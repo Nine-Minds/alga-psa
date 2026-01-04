@@ -1,13 +1,13 @@
-# Refresh Pub/Sub – Admin Guide
+# Refresh Watch (Pub/Sub + Gmail Watch) – Admin Guide
 
-If a Gmail provider stops receiving webhook notifications (e.g. after 7-day Gmail watch expiry or if the push endpoint URL changed) run a **Refresh Pub/Sub**.  This will:
+If a Gmail provider stops receiving webhook notifications (e.g. after 7-day Gmail watch expiry or if the push endpoint URL changed) run a **Refresh Watch**. This will:
 
 1. Re-initialise the Pub/Sub topic & subscription (bypassing the 24-hour guard).
 2. Register a fresh Gmail `users.watch` subscription.
 
 ## Using the UI
 
-Settings → Email Providers → ••• → **Refresh Pub/Sub**
+Settings → Email Providers → ••• → **Refresh Watch**
 
 The action shows a spinner and writes an audit log entry on completion.
 
@@ -16,7 +16,9 @@ The action shows a spinner and writes an audit log entry on completion.
 ```bash
 curl -X POST \
      -H "Authorization: Bearer <admin-token>" \
-     https://<host>/api/email-providers/<providerId>/refresh-pubsub
+     -H "Content-Type: application/json" \
+     -d '{"providerId":"<providerId>"}' \
+     https://<host>/api/email/refresh-watch
 ```
 
 `200 OK` signals success.
@@ -28,4 +30,3 @@ curl -X POST \
 * After changing the application base URL in production.
 
 > Running the refresh multiple times in a row is safe; the operation is idempotent.
-

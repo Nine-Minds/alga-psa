@@ -48,7 +48,7 @@ Key points:
 Admins can explicitly refresh the topic/subscription:
 
 ```http
-POST /api/email-providers/:id/refresh-pubsub
+POST /api/email/refresh-watch
 ```
 
 Internally this calls `configureGmailProvider({ force: true })` and therefore bypasses the 24-hour guard.
@@ -56,4 +56,3 @@ Internally this calls `configureGmailProvider({ force: true })` and therefore by
 ## Migration Notes
 
 Details of the implementation phases, testing matrix and roll-out strategy are preserved in the original engineering plan (git history of this file).
-

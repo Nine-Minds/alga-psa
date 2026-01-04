@@ -13,6 +13,7 @@ import type { EmailProvider } from '../../components/EmailProviderConfiguration'
 import { TestContext } from '../../../test-utils/testContext';
 import * as tenantActions from '../../lib/actions/tenantActions';
 import * as userActions from '../../lib/actions/user-actions/userActions';
+import { getSecretProviderInstance } from '@shared/core';
 
 const localStorageProviderMock = vi.hoisted(() => ({
   LocalStorageProvider: class {
@@ -45,6 +46,21 @@ vi.mock('../../lib/actions/email-actions/inboundTicketDefaultsActions', () => ({
 
 vi.mock('../../lib/actions/email-actions/configureGmailProvider', () => ({
   configureGmailProvider: vi.fn().mockResolvedValue(undefined)
+}));
+
+vi.mock('@/lib/actions/integrations/googleActions', () => ({
+  getGoogleIntegrationStatus: vi.fn().mockResolvedValue({
+    success: true,
+    config: {
+      projectId: 'test-project',
+      gmailClientId: 'test-client.apps.googleusercontent.com',
+      gmailClientSecretMasked: '••••cret',
+      calendarClientId: 'test-client.apps.googleusercontent.com',
+      calendarClientSecretMasked: '••••cret',
+      hasServiceAccountKey: true,
+      usingSharedOAuthApp: true,
+    },
+  }),
 }));
 
 vi.mock('@shared/core', () => {
@@ -116,6 +132,16 @@ describe('Email Provider UI Integration', () => {
       ...ctx.user,
       tenant: tenantId
     } as any);
+
+    const secretProvider = await getSecretProviderInstance();
+    await secretProvider.setTenantSecret(tenantId, 'google_project_id', 'test-project');
+    await secretProvider.setTenantSecret(tenantId, 'google_client_id', 'test-client.apps.googleusercontent.com');
+    await secretProvider.setTenantSecret(tenantId, 'google_client_secret', 'test-client-secret');
+    await secretProvider.setTenantSecret(
+      tenantId,
+      'google_service_account_key',
+      JSON.stringify({ type: 'service_account', project_id: 'test-project' })
+    );
   });
 
   afterEach(async () => {
@@ -141,14 +167,6 @@ describe('Email Provider UI Integration', () => {
 
     await user.type(screen.getByPlaceholderText('e.g., Support Gmail'), 'Production Gmail');
     await user.type(screen.getByPlaceholderText('support@client.com'), 'production@client.com');
-    const projectIdField = screen.getByPlaceholderText('my-project-id');
-    await user.clear(projectIdField);
-    await user.type(projectIdField, 'production-project');
-    await user.type(screen.getByPlaceholderText('xxxxxxxxx.apps.googleusercontent.com'), 'prod-client-id.apps.googleusercontent.com');
-    await user.type(screen.getByPlaceholderText('Enter client secret'), 'prod-client-secret');
-    const redirectField = screen.getByPlaceholderText('https://yourapp.com/api/auth/google/callback');
-    await user.clear(redirectField);
-    await user.type(redirectField, 'http://localhost:3000/api/auth/google/callback');
     const labelsField = screen.getByPlaceholderText('INBOX, Support, Custom Label');
     await user.clear(labelsField);
     await user.type(labelsField, 'INBOX, Escalations');
@@ -171,8 +189,9 @@ describe('Email Provider UI Integration', () => {
       .first();
 
     expect(googleConfig).toBeDefined();
-    expect(googleConfig?.client_id).toBe('prod-client-id.apps.googleusercontent.com');
-    expect(googleConfig?.project_id).toBe('production-project');
+    expect(googleConfig?.client_id).toBeNull();
+    expect(googleConfig?.client_secret).toBeNull();
+    expect(googleConfig?.project_id).toBe('test-project');
 
     const labelFilters = Array.isArray(googleConfig?.label_filters)
       ? googleConfig?.label_filters
@@ -234,20 +253,18 @@ describe('Email Provider UI Integration', () => {
       createdAt: baseRow.created_at.toISOString(),
       updatedAt: baseRow.updated_at.toISOString(),
       inboundTicketDefaultsId: baseRow.inbound_ticket_defaults_id ?? undefined,
-      googleConfig: {
-        email_provider_id: configRow.email_provider_id,
-        tenant: configRow.tenant,
-        client_id: configRow.client_id,
-        client_secret: configRow.client_secret,
-        project_id: configRow.project_id,
-        redirect_uri: configRow.redirect_uri,
-        pubsub_topic_name: configRow.pubsub_topic_name,
-        pubsub_subscription_name: configRow.pubsub_subscription_name,
-        auto_process_emails: configRow.auto_process_emails,
-        max_emails_per_sync: configRow.max_emails_per_sync,
-        label_filters: Array.isArray(configRow.label_filters)
-          ? configRow.label_filters
-          : JSON.parse(configRow.label_filters ?? '[]'),
+	      googleConfig: {
+	        email_provider_id: configRow.email_provider_id,
+	        tenant: configRow.tenant,
+	        client_id: configRow.client_id,
+	        client_secret: configRow.client_secret,
+	        project_id: configRow.project_id,
+	        redirect_uri: configRow.redirect_uri,
+	        auto_process_emails: configRow.auto_process_emails,
+	        max_emails_per_sync: configRow.max_emails_per_sync,
+	        label_filters: Array.isArray(configRow.label_filters)
+	          ? configRow.label_filters
+	          : JSON.parse(configRow.label_filters ?? '[]'),
         access_token: configRow.access_token ?? undefined,
         refresh_token: configRow.refresh_token ?? undefined,
         token_expires_at: configRow.token_expires_at ?? undefined,
@@ -297,6 +314,9 @@ describe('Email Provider UI Integration', () => {
       : JSON.parse(updatedConfig?.label_filters ?? '[]');
 
     expect(updatedFilters).toEqual(['INBOX', 'Escalations']);
+    expect(updatedConfig?.client_id).toBeNull();
+    expect(updatedConfig?.client_secret).toBeNull();
+    expect(updatedConfig?.project_id).toBe('test-project');
   });
 
   it('surfaces validation errors when required fields are missing', async () => {

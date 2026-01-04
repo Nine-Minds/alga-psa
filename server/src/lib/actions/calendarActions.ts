@@ -55,10 +55,6 @@ export async function initiateCalendarOAuth(params: {
     const secretProvider = await getSecretProviderInstance();
     const tenant = user.tenant;
 
-    // Hosted detection
-    const nextauthUrl = process.env.NEXTAUTH_URL || (await secretProvider.getAppSecret('NEXTAUTH_URL')) || '';
-    const isHostedFlow = nextauthUrl.startsWith('https://algapsa.com');
-
     let existingRedirectUri: string | undefined;
     let existingProviderConfig: CalendarProviderConfig['provider_config'] | undefined;
     if (calendarProviderId) {
@@ -73,24 +69,17 @@ export async function initiateCalendarOAuth(params: {
 
     let clientId: string | null = null;
 
-    if (isHostedFlow) {
-      if (provider === 'google') {
-        clientId = (await secretProvider.getAppSecret('GOOGLE_CALENDAR_CLIENT_ID')) || null;
-      } else {
-        clientId = (await secretProvider.getAppSecret('MICROSOFT_CLIENT_ID')) || null;
-      }
+    if (provider === 'google') {
+      // Google is always tenant-owned (CE and EE): do not fall back to app-level secrets.
+      clientId =
+        (await secretProvider.getTenantSecret(tenant, 'google_calendar_client_id')) ||
+        (await secretProvider.getTenantSecret(tenant, 'google_client_id')) ||
+        null;
     } else {
-      if (provider === 'google') {
-        clientId = process.env.GOOGLE_CALENDAR_CLIENT_ID
-          || (await secretProvider.getTenantSecret(tenant, 'google_calendar_client_id'))
-          || (await secretProvider.getAppSecret('GOOGLE_CALENDAR_CLIENT_ID'))
-          || null;
-      } else {
-        clientId = process.env.MICROSOFT_CLIENT_ID
-          || (await secretProvider.getTenantSecret(tenant, 'microsoft_client_id'))
-          || (await secretProvider.getAppSecret('MICROSOFT_CLIENT_ID'))
-          || null;
-      }
+      clientId = process.env.MICROSOFT_CLIENT_ID
+        || (await secretProvider.getTenantSecret(tenant, 'microsoft_client_id'))
+        || (await secretProvider.getAppSecret('MICROSOFT_CLIENT_ID'))
+        || null;
     }
 
     if (!clientId && existingProviderConfig && provider === 'microsoft') {
@@ -105,7 +94,7 @@ export async function initiateCalendarOAuth(params: {
       tenant,
       provider,
       secretProvider,
-      hosted: isHostedFlow,
+      hosted: false,
       requestedRedirectUri,
       existingRedirectUri
     });
@@ -117,7 +106,7 @@ export async function initiateCalendarOAuth(params: {
       nonce: generateCalendarNonce(),
       redirectUri,
       timestamp: Date.now(),
-      hosted: isHostedFlow,
+      hosted: false,
       isPopup
     };
     const encodedState = encodeCalendarState(state);

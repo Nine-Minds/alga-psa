@@ -1,0 +1,54 @@
+[
+  { "id": "F001", "description": "Add a new Settings → Integrations → Providers → Google settings panel entry.", "implemented": false },
+  { "id": "F002", "description": "Design Google settings panel UX with inline, step-by-step Google Cloud setup guidance (same flow/config for CE and EE).", "implemented": false },
+  { "id": "F003", "description": "Show required redirect URIs for Gmail and Calendar callbacks with copy-to-clipboard actions.", "implemented": false },
+  { "id": "F004", "description": "Show required OAuth scopes for Gmail and Calendar with copy-to-clipboard actions.", "implemented": false },
+  { "id": "F005", "description": "Add a server action to fetch Google integration configuration status for the current tenant (masked/boolean only).", "implemented": false },
+  { "id": "F006", "description": "Add a server action to save/update tenant Google OAuth credentials via Secrets Provider (tenant secrets).", "implemented": false },
+  { "id": "F007", "description": "Add a server action to save/update tenant Google Pub/Sub service account JSON via Secrets Provider (tenant secret).", "implemented": false },
+  { "id": "F008", "description": "Validate client ID format and require client secret non-empty before saving.", "implemented": false },
+  { "id": "F009", "description": "Validate Google Cloud project ID is present before saving Gmail/PubSub-dependent settings.", "implemented": false },
+  { "id": "F010", "description": "Validate uploaded service account key JSON is valid JSON and contains required fields (client_email, private_key).", "implemented": false },
+
+  { "id": "F011", "description": "Support a toggle to reuse the same OAuth app credentials for Gmail and Calendar (write both secret key sets when enabled).", "implemented": false },
+  { "id": "F012", "description": "Persist Google OAuth credentials exclusively in tenant secrets (no app-secret fallback for Google).", "implemented": false },
+  { "id": "F013", "description": "Ensure secret read APIs never return raw secrets to the browser (mask or boolean only).", "implemented": false },
+
+  { "id": "F014", "description": "Update Gmail OAuth initiation (`server/src/lib/actions/email-actions/oauthActions.ts`) to always use tenant secrets for Google.", "implemented": false },
+  { "id": "F015", "description": "Update Gmail OAuth callback (`server/src/app/api/auth/google/callback/route.ts`) to always use tenant secrets for Google.", "implemented": false },
+  { "id": "F016", "description": "Update calendar OAuth initiation (`server/src/lib/actions/calendarActions.ts`) to always use tenant secrets for Google.", "implemented": false },
+  { "id": "F017", "description": "Update calendar OAuth callback (`server/src/app/api/auth/google/calendar/callback/route.ts`) to always use tenant secrets for Google.", "implemented": false },
+
+  { "id": "F018", "description": "Update Gmail provider persistence to stop overriding with hosted Gmail config (`getHostedGmailConfig`) for Google.", "implemented": false },
+  { "id": "F019", "description": "Update Gmail provider persistence to stop storing client secret in `google_email_provider_config` (prefer tenant secrets).", "implemented": false },
+  { "id": "F020", "description": "Update GmailProviderForm UI to remove per-provider Client ID/Secret inputs and rely on tenant Google setup.", "implemented": false },
+  { "id": "F021", "description": "Update GmailProviderForm UI to show a blocking 'Google not configured' state with link to Google settings panel when missing required secrets.", "implemented": false },
+  { "id": "F022", "description": "Update GmailProviderForm flow to still complete OAuth and Pub/Sub setup using tenant configuration.", "implemented": false },
+
+  { "id": "F023", "description": "Update GoogleCalendarProviderForm UI to show which tenant Google configuration it uses and missing-config CTA when needed.", "implemented": false },
+  { "id": "F024", "description": "Update calendar provider persistence to avoid storing client secrets in provider config where possible (prefer tenant secrets).", "implemented": false },
+
+  { "id": "F025", "description": "Update Pub/Sub provisioning (`server/src/lib/actions/email-actions/setupPubSub.ts`) to read `google_service_account_key` from tenant secrets, not app secrets.", "implemented": false },
+  { "id": "F026", "description": "Update any other Google Pub/Sub flows that read app secrets to prefer tenant secrets.", "implemented": false },
+
+  { "id": "F027", "description": "Add UI status indicators in Google settings panel (configured, partially configured, missing).", "implemented": false },
+  { "id": "F028", "description": "Add an in-UI 'Test configuration' action that verifies required secrets exist and that displayed redirect URIs use the current deployment base URL.", "implemented": false },
+
+  { "id": "F029", "description": "Update Settings navigation so the Provider → Google panel is discoverable from Gmail/Calendar screens (deep link).", "implemented": false },
+  { "id": "F030", "description": "Add a deprecation notice for legacy Alga-owned Google app flows (fresh cutover messaging).", "implemented": false },
+
+  { "id": "F031", "description": "Update docs: Gmail provider setup guide to reference new Google settings panel and tenant secrets.", "implemented": false },
+  { "id": "F032", "description": "Update docs: Calendar sync operations runbook to reference new Google settings panel.", "implemented": false },
+
+  { "id": "F033", "description": "Add logging (server-side) for which credential source is used (tenant secrets only) without leaking sensitive values.", "implemented": false },
+  { "id": "F034", "description": "Add feature-flag or configuration guard so Google integrations fail fast with a clear error when tenant secrets are missing.", "implemented": false },
+
+  { "id": "F035", "description": "Ensure RBAC enforcement: only system settings admins can modify Google tenant secrets.", "implemented": false },
+  { "id": "F036", "description": "Ensure tenant isolation: saving and reading Google secrets always scopes to the current tenant.", "implemented": false },
+
+  { "id": "F037", "description": "Implement Google Calendar notification provisioning so Alga receives callbacks for calendar updates (Pub/Sub push or native Calendar channels, whichever is feasible).", "implemented": false },
+  { "id": "F038", "description": "Implement calendar notification verification/repair job so Google Calendar callbacks remain healthy over time (wired through the job runner abstraction: PG Boss in CE, Temporal in EE).", "implemented": false },
+  { "id": "F039", "description": "Implement Gmail watch renewal maintenance job to refresh watch subscriptions before expiration (wired through the job runner abstraction: PG Boss in CE, Temporal in EE).", "implemented": false },
+  { "id": "F040", "description": "Implement Google token preflight refresh maintenance job (email + calendar) to refresh near-expiry tokens and surface invalid refresh tokens as provider errors.", "implemented": false },
+  { "id": "F041", "description": "Add an admin action to reset existing Google providers to an initial/disconnected state (clear tokens, mark status disconnected) to support fresh cutover.", "implemented": false }
+]

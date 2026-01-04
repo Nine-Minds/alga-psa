@@ -84,6 +84,7 @@ export async function configureGmailProvider({
       
       // Step 1: Set up Pub/Sub topic and subscription
       await setupPubSub({
+        tenantId: tenant,
         projectId,
         topicName: pubsubNames.topicName,
         subscriptionName: pubsubNames.subscriptionName,
@@ -151,7 +152,7 @@ export async function configureGmailProvider({
           created_at: baseProvider.created_at,
           updated_at: baseProvider.updated_at,
           provider_config: {
-            project_id: googleConfig.project_id,
+            project_id: googleConfig.project_id ?? undefined,
             pubsub_topic_name: pubsubNames.topicName,
             pubsub_subscription_name: pubsubNames.subscriptionName,
             client_id: googleConfig.client_id || undefined,

@@ -1,4 +1,4 @@
-import { initializeScheduler, scheduleExpiredCreditsJob, scheduleExpiringCreditsNotificationJob, scheduleCreditReconciliationJob, scheduleReconcileBucketUsageJob, scheduleCleanupTemporaryFormsJob, scheduleCleanupAiSessionKeysJob, scheduleMicrosoftWebhookRenewalJob, scheduleGooglePubSubVerificationJob, scheduleEmailWebhookMaintenanceJob } from './index';
+import { initializeScheduler, scheduleExpiredCreditsJob, scheduleExpiringCreditsNotificationJob, scheduleCreditReconciliationJob, scheduleReconcileBucketUsageJob, scheduleCleanupTemporaryFormsJob, scheduleCleanupAiSessionKeysJob, scheduleMicrosoftWebhookRenewalJob, scheduleGooglePubSubVerificationJob, scheduleGoogleGmailWatchRenewalJob, scheduleEmailWebhookMaintenanceJob } from './index';
 import logger from '@shared/core/logger';
 import { getConnection } from 'server/src/lib/db/db';
 
@@ -126,6 +126,23 @@ export async function initializeScheduledJobs(): Promise<void> {
         }
       } catch (error) {
         logger.error(`Failed to schedule Google Pub/Sub verification job for tenant ${tenantId}`, error);
+      }
+
+      // Schedule Gmail watch renewal (every 30 minutes)
+      try {
+        const cron = '*/30 * * * *';
+        const renewalJobId = await scheduleGoogleGmailWatchRenewalJob(tenantId, cron);
+        if (renewalJobId) {
+          logger.info(`Scheduled Gmail watch renewal job for tenant ${tenantId} with job ID ${renewalJobId}`);
+        } else {
+          logger.info('Gmail watch renewal job already scheduled (singleton active)', {
+            tenantId,
+            cron,
+            returnedJobId: renewalJobId
+          });
+        }
+      } catch (error) {
+        logger.error(`Failed to schedule Gmail watch renewal job for tenant ${tenantId}`, error);
       }
 
       // Schedule Email Webhook Maintenance (daily at 4:00 AM)

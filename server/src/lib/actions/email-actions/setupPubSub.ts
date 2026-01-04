@@ -1,11 +1,10 @@
 'use server';
 
-import { OAuth2Client } from 'google-auth-library';
 import { google } from 'googleapis';
 import { getSecretProviderInstance } from '@shared/core';
-import { getCurrentUser } from '../user-actions/userActions';
 
 export interface SetupPubSubRequest {
+  tenantId: string;
   projectId: string;
   topicName: string;
   subscriptionName: string;
@@ -20,21 +19,13 @@ export async function setupPubSub(request: SetupPubSubRequest) {
   });
 
   try {
-    const user = await getCurrentUser();
-    if (!user) {
-      console.error('❌ Pub/Sub setup failed: User not authenticated');
-      throw new Error('Unauthorized');
-    }
-
-    console.log(`👤 Authenticated user: ${user.email || 'unknown'}`);
-
     // Get Google service account credentials
     const secretProvider = await getSecretProviderInstance();
-    const serviceAccountKey = await secretProvider.getAppSecret('google_service_account_key');
+    const serviceAccountKey = await secretProvider.getTenantSecret(request.tenantId, 'google_service_account_key');
     
     if (!serviceAccountKey) {
       console.error('❌ Google service account credentials not found');
-      throw new Error('Google service account credentials not configured. Please contact your administrator.');
+      throw new Error('Google service account credentials not configured for this tenant.');
     }
 
     console.log('🔑 Google service account credentials loaded successfully');
