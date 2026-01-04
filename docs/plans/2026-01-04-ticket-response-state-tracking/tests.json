@@ -2,121 +2,121 @@
   {
     "id": "T001",
     "description": "Migration creates ticket_response_state enum type with correct values",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F001"]
   },
   {
     "id": "T002",
     "description": "Migration adds response_state column to tickets table as nullable",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F002"]
   },
   {
     "id": "T003",
     "description": "Migration creates index on (tenant, response_state)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F003"]
   },
   {
     "id": "T004",
     "description": "Existing tickets have null response_state after migration",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F002"]
   },
   {
     "id": "T005",
     "description": "ITicket type includes response_state: TicketResponseState",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F004"]
   },
   {
     "id": "T006",
     "description": "TicketResponseState type allows 'awaiting_client' | 'awaiting_internal' | null",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F004"]
   },
   {
     "id": "T007",
     "description": "Staff creates client-visible comment → response_state becomes awaiting_client",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F005"]
   },
   {
     "id": "T008",
     "description": "Staff creates client-visible comment on ticket already awaiting_client → state unchanged",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F005"]
   },
   {
     "id": "T009",
     "description": "Staff creates client-visible comment on ticket awaiting_internal → state becomes awaiting_client",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F005"]
   },
   {
     "id": "T010",
     "description": "Client creates comment → response_state becomes awaiting_internal",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F006"]
   },
   {
     "id": "T011",
     "description": "Client creates comment on ticket already awaiting_internal → state unchanged",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F006"]
   },
   {
     "id": "T012",
     "description": "Client creates comment on ticket awaiting_client → state becomes awaiting_internal",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F006"]
   },
   {
     "id": "T013",
     "description": "Staff creates internal note → response_state does not change from null",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F007"]
   },
   {
     "id": "T014",
     "description": "Staff creates internal note on awaiting_client ticket → state remains awaiting_client",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F007"]
   },
   {
     "id": "T015",
     "description": "Staff creates internal note on awaiting_internal ticket → state remains awaiting_internal",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F007"]
   },
   {
     "id": "T016",
     "description": "Comment creation and response state update occur in same transaction",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F008"]
   },
   {
     "id": "T017",
     "description": "If comment creation fails, response_state is not updated",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F008"]
   },
   {
     "id": "T018",
     "description": "updateTicket with response_state='awaiting_client' updates ticket",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F009"]
   },
   {
     "id": "T019",
     "description": "updateTicket with response_state='awaiting_internal' updates ticket",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F009"]
   },
   {
     "id": "T020",
     "description": "updateTicket with response_state=null clears response state",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F009"]
   },
   {
@@ -128,331 +128,331 @@
   {
     "id": "T022",
     "description": "Closing ticket via is_closed=true sets response_state to null",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F011"]
   },
   {
     "id": "T023",
     "description": "Closing ticket that was awaiting_client clears response_state",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F011"]
   },
   {
     "id": "T024",
     "description": "Closing ticket that was awaiting_internal clears response_state",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F011"]
   },
   {
     "id": "T025",
     "description": "Closing ticket with null response_state keeps response_state null",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F011"]
   },
   {
     "id": "T026",
     "description": "Reopening closed ticket does not set response_state",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F012"]
   },
   {
     "id": "T027",
     "description": "Ticket list renders awaiting_client badge on status pill",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F013"]
   },
   {
     "id": "T028",
     "description": "Ticket list renders awaiting_internal badge on status pill",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F014"]
   },
   {
     "id": "T029",
     "description": "awaiting_client badge has correct icon",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F013"]
   },
   {
     "id": "T030",
     "description": "awaiting_internal badge has correct icon",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F014"]
   },
   {
     "id": "T031",
     "description": "Response state badge shows tooltip on hover with full description",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F015"]
   },
   {
     "id": "T032",
     "description": "Tickets with null response_state render status without badge",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F016"]
   },
   {
     "id": "T033",
     "description": "Ticket list filter dropdown includes Response State option",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F017"]
   },
   {
     "id": "T034",
     "description": "Filtering by 'Awaiting Client Response' shows only awaiting_client tickets",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F018"]
   },
   {
     "id": "T035",
     "description": "Filtering by 'Awaiting Internal Response' shows only awaiting_internal tickets",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F019"]
   },
   {
     "id": "T036",
     "description": "Filtering by 'No Response State' shows only null response_state tickets",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F020"]
   },
   {
     "id": "T037",
     "description": "Response State filter combined with status filter returns intersection",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F021"]
   },
   {
     "id": "T038",
     "description": "Response State filter combined with assignee filter returns intersection",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F021"]
   },
   {
     "id": "T039",
     "description": "Ticket detail view shows awaiting_client response state",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F022"]
   },
   {
     "id": "T040",
     "description": "Ticket detail view shows awaiting_internal response state",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F022"]
   },
   {
     "id": "T041",
     "description": "Ticket detail view shows no response state indicator when null",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F022"]
   },
   {
     "id": "T042",
     "description": "Ticket detail view has manual override dropdown/button",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F023"]
   },
   {
     "id": "T043",
     "description": "Manual override dropdown shows 'Awaiting Client' option",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F024"]
   },
   {
     "id": "T044",
     "description": "Manual override dropdown shows 'Awaiting Internal' option",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F024"]
   },
   {
     "id": "T045",
     "description": "Manual override dropdown shows 'Clear' option",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F024"]
   },
   {
     "id": "T046",
     "description": "Selecting manual override option updates ticket response_state",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F023"]
   },
   {
     "id": "T047",
     "description": "Posting comment updates response state badge without page reload",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F025"]
   },
   {
     "id": "T048",
     "description": "Client portal ticket list displays response_state",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F026"]
   },
   {
     "id": "T049",
     "description": "Client portal shows 'Awaiting Your Response' for awaiting_client",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F027"]
   },
   {
     "id": "T050",
     "description": "Client portal shows 'Awaiting Support Response' for awaiting_internal",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F028"]
   },
   {
     "id": "T051",
     "description": "Client portal ticket detail shows response state",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F029"]
   },
   {
     "id": "T052",
     "description": "Client portal does not render manual override controls",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F030"]
   },
   {
     "id": "T053",
     "description": "Client API requests to update response_state are rejected",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F030"]
   },
   {
     "id": "T054",
     "description": "TICKET_RESPONSE_STATE_CHANGED event type exists in EventTypeEnum",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F031"]
   },
   {
     "id": "T055",
     "description": "Event schema validates tenantId, ticketId, userId, previousState, newState, trigger",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F035"]
   },
   {
     "id": "T056",
     "description": "Creating client-visible comment fires TICKET_RESPONSE_STATE_CHANGED event",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F032"]
   },
   {
     "id": "T057",
     "description": "Comment-triggered event has trigger='comment'",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F036"]
   },
   {
     "id": "T058",
     "description": "Manual override fires TICKET_RESPONSE_STATE_CHANGED event",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F033"]
   },
   {
     "id": "T059",
     "description": "Manual override event has trigger='manual'",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F036"]
   },
   {
     "id": "T060",
     "description": "Closing ticket fires TICKET_RESPONSE_STATE_CHANGED event when state was not null",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F034"]
   },
   {
     "id": "T061",
     "description": "Close event has trigger='close'",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F036"]
   },
   {
     "id": "T062",
     "description": "Closing ticket with null response_state does not fire event",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F034"]
   },
   {
     "id": "T063",
     "description": "Event includes correct previousState value",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F035"]
   },
   {
     "id": "T064",
     "description": "Event includes correct newState value",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F035"]
   },
   {
     "id": "T065",
     "description": "Event userId is null for client-triggered events in client portal",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F035"]
   },
   {
     "id": "T066",
     "description": "Automation Hub shows TICKET_RESPONSE_STATE_CHANGED in event type dropdown",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F037"]
   },
   {
     "id": "T067",
     "description": "Workflow trigger can be created for TICKET_RESPONSE_STATE_CHANGED event",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F037"]
   },
   {
     "id": "T068",
     "description": "Workflow trigger fires when response state changes",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F037"]
   },
   {
     "id": "T069",
     "description": "Event mappings can access previousState field",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F038"]
   },
   {
     "id": "T070",
     "description": "Event mappings can access newState field",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F038"]
   },
   {
     "id": "T071",
     "description": "Event mappings can access trigger field",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F038"]
   },
   {
     "id": "T072",
     "description": "TICKET_COMMENT_ADDED event payload includes author_type",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F039"]
   },
   {
     "id": "T073",
     "description": "User in tenant A cannot see response_state of ticket in tenant B",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F040"]
   },
   {
     "id": "T074",
     "description": "User in tenant A cannot update response_state of ticket in tenant B",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F040"]
   },
   {
     "id": "T075",
     "description": "Events for tenant A are not delivered to tenant B workflows",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F040"]
   },
   {
     "id": "T076",
     "description": "Internal note does not fire TICKET_RESPONSE_STATE_CHANGED event",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F007", "F032"]
   }
 ]

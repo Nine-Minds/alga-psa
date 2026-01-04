@@ -4,12 +4,7 @@ import React from 'react';
 import { cn } from 'server/src/lib/utils';
 import { Clock, ArrowRightFromLine, ArrowLeftToLine } from 'lucide-react';
 import { TicketResponseState } from 'server/src/interfaces/ticket.interfaces';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from 'server/src/components/ui/Tooltip';
+import { Tooltip } from 'server/src/components/ui/Tooltip';
 
 interface ResponseStateBadgeProps {
   responseState: TicketResponseState;
@@ -149,16 +144,9 @@ export function ResponseStateBadge({
 
   if (showTooltip) {
     return (
-      <TooltipProvider>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            {badgeContent}
-          </TooltipTrigger>
-          <TooltipContent>
-            <p>{tooltip}</p>
-          </TooltipContent>
-        </Tooltip>
-      </TooltipProvider>
+      <Tooltip content={<p>{tooltip}</p>}>
+        {badgeContent}
+      </Tooltip>
     );
   }
 

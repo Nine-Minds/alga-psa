@@ -51,7 +51,9 @@ export const ticketSchema = z.object({
     // ITIL-specific fields (for priority calculation)
     itil_impact: z.number().int().min(1).max(5).nullable().optional(),
     itil_urgency: z.number().int().min(1).max(5).nullable().optional(),
-    itil_priority_level: z.number().int().min(1).max(5).nullable().optional()
+    itil_priority_level: z.number().int().min(1).max(5).nullable().optional(),
+    // Response state tracking
+    response_state: z.enum(['awaiting_client', 'awaiting_internal']).nullable().optional()
 });
 
 export const ticketUpdateSchema = ticketSchema.partial().omit({
@@ -122,6 +124,7 @@ export const ticketListFiltersSchema = z.object({
     boardFilterState: z.enum(['active', 'inactive', 'all']),
     showOpenOnly: z.boolean().optional(),
     tags: z.array(z.string()).optional(),
+    responseState: z.enum(['awaiting_client', 'awaiting_internal', 'none', 'all']).optional(),
     sortBy: z.enum([
         'ticket_number',
         'title',

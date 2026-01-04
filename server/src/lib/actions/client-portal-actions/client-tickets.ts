@@ -114,6 +114,7 @@ export async function getClientTickets(status: string): Promise<ITicketListItem[
         't.attributes',
         't.priority_id',
         't.tenant',
+        't.response_state',
         's.name as status_name',
         'p.priority_name',
         'p.color as priority_color',
