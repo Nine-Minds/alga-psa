@@ -173,6 +173,10 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     const [isAddChildMultiClientConfirmOpen, setIsAddChildMultiClientConfirmOpen] = useState(false);
     const [pendingChildToAdd, setPendingChildToAdd] = useState<{ ticket_id: string; ticket_number?: string | null; client_id?: string | null } | null>(null);
 
+    useEffect(() => {
+        setBundle(initialBundle);
+    }, [initialBundle]);
+
     // Use pre-fetched options directly
     const [userMap, setUserMap] = useState<Record<string, { user_id: string; first_name: string; last_name: string; email?: string, user_type: string, avatarUrl: string | null }>>(initialUserMap);
 
@@ -227,26 +231,18 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     // Timer logic
     const tick = useCallback(() => {
         setElapsedTime(prevTime => {
-            const next = prevTime + 1;
-            try {
-                console.log('[TicketDetails][tick] +1s ->', next, 'isRunning=', isRunning);
-            } catch {}
-            return next;
+            return prevTime + 1;
         });
     }, [isRunning]);
 
     useEffect(() => {
         let intervalId: NodeJS.Timeout | undefined;
         if (isRunning) {
-            console.log('[TicketDetails] starting 1s UI timer');
             intervalId = setInterval(tick, 1000);
-        } else {
-            console.log('[TicketDetails] not running; UI timer not started');
         }
         return () => {
             if (intervalId) {
                 clearInterval(intervalId);
-                console.log('[TicketDetails] cleared 1s UI timer');
             }
         };
     }, [isRunning, tick]);
@@ -355,7 +351,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
                     autoStartedRef.current = true;
                 }
             } catch (e) {
-                console.log('[TicketDetails] auto-start error', e);
+                // Ignore auto-start failures; time tracking is best-effort here.
             }
         };
         auto();
@@ -363,21 +359,6 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     }, [initialTicket.ticket_id, userId, isTracking]);
 
     // New screens start from zero; no seeding from existing intervals
-
-    // Log holder id creation
-    useEffect(() => {
-        if (holderId) {
-            console.log('[TicketDetails] holderId for this tab:', holderId);
-        }
-    }, [holderId]);
-
-    // Log UI button handlers
-    useEffect(() => {
-        console.log('[TicketDetails] mounted; ticket=', initialTicket.ticket_id, 'user=', userId);
-        return () => {
-            console.log('[TicketDetails] unmounting; will call stopTracking in cleanup below');
-        };
-    }, [initialTicket.ticket_id, userId]);
 
     // Poll lock state periodically to update UI lock indicator
     useEffect(() => {
@@ -464,7 +445,6 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     }, [initialTicket.ticket_id, userId, startTracking]);
 
     const handleStartClick = useCallback(() => {
-        console.log('[TicketDetails] Start button clicked');
         doStart(false);
     }, [doStart]);
 
@@ -475,7 +455,6 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
 
     const handlePauseClick = useCallback(async () => {
         try {
-            console.log('[TicketDetails] Pause button clicked');
             await stopTracking();
         } catch {}
         setIsRunning(false);
@@ -483,7 +462,6 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
 
     const handleStopClick = useCallback(async () => {
         try {
-            console.log('[TicketDetails] Stop/Reset button clicked');
             await stopTracking();
         } catch {}
         setIsRunning(false);
@@ -497,7 +475,6 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     }, [stopTracking]);
     useEffect(() => {
         return () => {
-            console.log('[TicketDetails] unmount cleanup -> stopTracking');
             stopTrackingRef.current?.().catch(() => {});
         };
     }, []);
@@ -511,8 +488,6 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
                     quickView={true}
                 />
             );
-        } else {
-            console.log('No client associated with this ticket');
         }
     };
 
@@ -529,8 +504,6 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
                     clientReadOnly={true}
                 />
             );
-        } else {
-            console.log('No contact information or client information available');
         }
     };
 

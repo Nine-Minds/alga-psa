@@ -23,8 +23,14 @@ async function waitForUIState(page: Page): Promise<void> {
 async function waitForTicketsTableIdle(page: Page): Promise<void> {
   // Ticket list data is server-driven; filter changes temporarily replace the DataTable with a Spinner.
   // Wait for the loading spinner to clear and the DataTable to be visible again.
-  await expect(page.getByRole('status', { name: 'Loading' })).toHaveCount(0, { timeout: 60_000 });
-  await page.locator('[data-automation-id="ticketing-dashboard-tickets-table"]:visible').waitFor({ timeout: 60_000 });
+  const table = page.locator('[data-automation-id="ticketing-dashboard-tickets-table"]:visible');
+  await expect(table).toBeVisible({ timeout: 60_000 });
+
+  const loading = page.getByRole('status', { name: 'Loading' });
+  // In some UI states the loading element can remain mounted but hidden; accept either hidden or removed.
+  await expect(loading).toHaveCount(0, { timeout: 60_000 }).catch(async () => {
+    await expect(loading).toBeHidden({ timeout: 60_000 });
+  });
 }
 
 async function waitForDialogOverlaysToClear(page: Page): Promise<void> {
@@ -220,6 +226,8 @@ test('Ticket bundling: list toggle, bundling, grouping, and child banners', asyn
         {
           roleName: 'Admin',
           permissions: [
+            { resource: 'asset', action: 'read' },
+            { resource: 'document', action: 'read' },
             { resource: 'user', action: 'read' },
             { resource: 'ticket', action: 'read' },
             { resource: 'ticket', action: 'update' },
@@ -335,6 +343,8 @@ test('Ticket bundling: multi-client confirmation, add-child confirmation, promot
         {
           roleName: 'Admin',
           permissions: [
+            { resource: 'asset', action: 'read' },
+            { resource: 'document', action: 'read' },
             { resource: 'user', action: 'read' },
             { resource: 'ticket', action: 'read' },
             { resource: 'ticket', action: 'update' },
@@ -402,29 +412,37 @@ test('Ticket bundling: multi-client confirmation, add-child confirmation, promot
     await expect(page.locator('[data-automation-id="ticketing-dashboard-bundle-dialog-dialog"]')).toBeHidden({ timeout: 15_000 });
     await page.waitForLoadState('networkidle', { timeout: 30_000 });
     await waitForDialogOverlaysToClear(page);
-    await waitForTicketsTableIdle(page);
 
-    // Open master details and verify multi-client badge.
-    await page.getByRole('link', { name: masterNumber }).first().click();
+    // Navigate directly to master details (the list can still be refetching after bundling).
+    await page.goto(`${TEST_CONFIG.baseUrl}/msp/tickets/${masterId}`, { waitUntil: 'domcontentloaded', timeout: 60_000 });
+    await page.waitForLoadState('networkidle', { timeout: 30_000 });
     await expect(page.locator('#ticket-bundle-master-banner')).toBeVisible({ timeout: 15_000 });
     await expect(page.getByText('Multiple clients')).toBeVisible();
 
     // Add child by number from different client requires confirmation.
     await page.locator('[data-automation-id="ticket-bundle-add-child-input"]').fill(otherClientNumber2);
     await page.locator('[data-automation-id="ticket-bundle-add-child-button"]').click();
-    await page.locator('[data-automation-id="ticket-details-bundle-add-child-multi-client-confirm-dialog"]').waitFor({ timeout: 10_000 });
-    await page.getByRole('button', { name: 'Proceed' }).click();
-    await expect(page.getByText(otherClientNumber2)).toBeVisible({ timeout: 15_000 });
+    const addChildConfirmDialog = page.getByRole('dialog').filter({ hasText: 'Bundle spans multiple clients' });
+    await addChildConfirmDialog.waitFor({ state: 'visible', timeout: 10_000 });
+    await addChildConfirmDialog.getByRole('button', { name: 'Proceed' }).click();
+    await expect(addChildConfirmDialog).toBeHidden({ timeout: 15_000 });
+    await waitForDialogOverlaysToClear(page);
+    await expect(page.locator('#ticket-bundle-master-banner')).toContainText('(2 children)', { timeout: 30_000 });
+    await expect(page.locator('#ticket-bundle-master-panel').getByRole('link', { name: otherClientNumber2 })).toBeVisible({ timeout: 15_000 });
+    const otherClient2Record = await db('tickets')
+      .where({ tenant: tenantId, ticket_id: otherClientTicket2Id })
+      .first('master_ticket_id');
+    expect(otherClient2Record?.master_ticket_id).toBe(masterId);
 
     // Add same-client ticket without confirmation.
     await page.locator('[data-automation-id="ticket-bundle-add-child-input"]').fill(childANumber);
     await page.locator('[data-automation-id="ticket-bundle-add-child-button"]').click();
-    await expect(page.getByText(childANumber)).toBeVisible({ timeout: 15_000 });
+    await expect(page.locator('#ticket-bundle-master-panel').getByRole('link', { name: childANumber })).toBeVisible({ timeout: 15_000 });
 
     // Remove a child.
     await page.locator(`#ticket-bundle-remove-child-${childAId}`).click();
     await page.waitForLoadState('networkidle', { timeout: 30_000 });
-    await expect(page.getByText(childANumber)).toBeHidden({ timeout: 15_000 });
+    await expect(page.locator('#ticket-bundle-master-panel').getByRole('link', { name: childANumber })).toBeHidden({ timeout: 15_000 });
 
     // Promote other-client ticket to master.
     await page.locator(`#ticket-bundle-promote-child-${otherClientTicketId}`).click();
