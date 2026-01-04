@@ -18,10 +18,12 @@ import {
   Mail,
   Calendar,
   CreditCard,
+  Cloud,
 } from 'lucide-react';
 import AccountingIntegrationsSetup from './AccountingIntegrationsSetup';
 import { EmailProviderConfiguration } from '../../EmailProviderConfiguration';
 import { CalendarIntegrationsSettings } from '../../calendar/CalendarIntegrationsSettings';
+import { GoogleIntegrationSettings } from './GoogleIntegrationSettings';
 import dynamic from 'next/dynamic';
 import Spinner from '../../ui/Spinner';
 
@@ -101,14 +103,14 @@ const IntegrationsSettingsPage: React.FC = () => {
   
   // Initialize selected category from URL param or default to 'accounting'
   const [selectedCategory, setSelectedCategory] = useState<string>(
-    categoryParam && ['accounting', 'rmm', 'communication', 'calendar', 'payments'].includes(categoryParam)
+    categoryParam && ['accounting', 'rmm', 'communication', 'providers', 'payments'].includes(categoryParam)
       ? categoryParam
       : 'accounting'
   );
   
   // Update selected category when URL param changes
   useEffect(() => {
-    if (categoryParam && ['accounting', 'rmm', 'communication', 'calendar', 'payments'].includes(categoryParam)) {
+    if (categoryParam && ['accounting', 'rmm', 'communication', 'providers', 'payments'].includes(categoryParam)) {
       setSelectedCategory(categoryParam);
     }
   }, [categoryParam]);
@@ -184,6 +186,32 @@ const IntegrationsSettingsPage: React.FC = () => {
                 <CalendarIntegrationsSettings />
               </CardContent>
             </Card>
+          ),
+        },
+      ],
+    },
+    {
+      id: 'providers',
+      label: 'Providers',
+      description: 'Configure shared provider credentials used by integrations.',
+      icon: Cloud,
+      integrations: [
+        {
+          id: 'google',
+          name: 'Google',
+          description: 'Tenant-owned Google Cloud credentials for Gmail and Calendar',
+          component: () => (
+            <div className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Provider Credentials</CardTitle>
+                  <CardDescription>
+                    Configure Google first, then connect Google accounts from the Inbound Email and Calendar integration screens.
+                  </CardDescription>
+                </CardHeader>
+              </Card>
+              <GoogleIntegrationSettings />
+            </div>
           ),
         },
       ],

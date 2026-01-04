@@ -69,8 +69,8 @@ export interface GoogleEmailProviderConfig {
   tenant: string;
   client_id: string | null;
   client_secret: string | null;
-  project_id: string;
-  redirect_uri: string;
+  project_id?: string | null;
+  redirect_uri?: string | null;
   auto_process_emails: boolean;
   max_emails_per_sync: number;
   label_filters: string[];

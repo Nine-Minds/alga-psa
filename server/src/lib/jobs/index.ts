@@ -11,6 +11,7 @@ import { creditReconciliationHandler, CreditReconciliationJobData } from './hand
 import { handleReconcileBucketUsage, ReconcileBucketUsageJobData } from './handlers/reconcileBucketUsageHandler';
 import { handleAssetImportJob, AssetImportJobData } from './handlers/assetImportHandler';
 import { emailWebhookMaintenanceHandler, EmailWebhookMaintenanceJobData } from './handlers/emailWebhookMaintenanceHandler';
+import { renewGoogleGmailWatchSubscriptions, GoogleGmailWatchRenewalJobData } from './handlers/googleGmailWatchRenewalHandler';
 import { cleanupTemporaryFormsJob } from '../../services/cleanupTemporaryFormsJob';
 import { cleanupAiSessionKeysHandler, CleanupAiSessionKeysJobData } from './handlers/cleanupAiSessionKeysHandler';
 import {
@@ -120,6 +121,10 @@ export const initializeScheduler = async (storageService?: StorageService) => {
       await emailWebhookMaintenanceHandler(job);
     });
 
+    jobScheduler.registerJobHandler<GoogleGmailWatchRenewalJobData>('renew-google-gmail-watch', async (job: Job<GoogleGmailWatchRenewalJobData>) => {
+      await renewGoogleGmailWatchSubscriptions(job.data);
+    });
+
     // Register cleanup temporary forms handler
     jobScheduler.registerJobHandler('cleanup-temporary-workflow-forms', async (job: Job<{ tenantId: string }>) => {
       await cleanupTemporaryFormsJob();
@@ -164,6 +169,7 @@ export type {
   CleanupAiSessionKeysJobData,
   MicrosoftWebhookRenewalJobData,
   GooglePubSubVerificationJobData, 
+  GoogleGmailWatchRenewalJobData,
   AssetImportJobData,
   EmailWebhookMaintenanceJobData
 };
@@ -296,6 +302,18 @@ export const scheduleGooglePubSubVerificationJob = async (
   );
 };
 
+export const scheduleGoogleGmailWatchRenewalJob = async (
+  tenantId: string,
+  cronExpression: string = '*/30 * * * *'
+): Promise<string | null> => {
+  const scheduler = await initializeScheduler();
+  return await scheduler.scheduleRecurringJob<GoogleGmailWatchRenewalJobData>(
+    'renew-google-gmail-watch',
+    cronExpression,
+    { tenantId }
+  );
+};
+
 export const scheduleCleanupAiSessionKeysJob = async (
   cronExpression: string = '*/10 * * * *'
 ): Promise<string | null> => {
@@ -349,4 +367,3 @@ export const scheduleEmailWebhookMaintenanceJob = async (
     { tenantId }
   );
 };
-

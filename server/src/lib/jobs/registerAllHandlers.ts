@@ -34,6 +34,10 @@ import {
   MicrosoftWebhookRenewalJobData,
   GooglePubSubVerificationJobData,
 } from './handlers/calendarWebhookMaintenanceHandler';
+import {
+  renewGoogleGmailWatchSubscriptions,
+  GoogleGmailWatchRenewalJobData,
+} from './handlers/googleGmailWatchRenewalHandler';
 
 /**
  * Options for registering handlers
@@ -242,6 +246,18 @@ export async function registerAllJobHandlers(
     registerOpts
   );
 
+  // Google Gmail watch renewal handler
+  JobHandlerRegistry.register<GoogleGmailWatchRenewalJobData & BaseJobData>(
+    {
+      name: 'renew-google-gmail-watch',
+      handler: async (_jobId, data) => {
+        await renewGoogleGmailWatchSubscriptions(data);
+      },
+      retry: { maxAttempts: 3 },
+    },
+    registerOpts
+  );
+
   // ============================================================================
   // ENTERPRISE-ONLY HANDLERS
   // ============================================================================
@@ -291,6 +307,7 @@ export function getAvailableJobHandlers(): string[] {
     // Calendar
     'renew-microsoft-calendar-webhooks',
     'verify-google-calendar-pubsub',
+    'renew-google-gmail-watch',
     // Enterprise-only
     ...(process.env.EDITION === 'enterprise' ? ['cleanup-ai-session-keys'] : []),
   ];

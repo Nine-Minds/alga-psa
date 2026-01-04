@@ -4,7 +4,6 @@ import { createTenantKnex } from '../../db';
 import { getCurrentUser } from '../user-actions/userActions';
 import type { EmailProvider, MicrosoftEmailProviderConfig, GoogleEmailProviderConfig } from '../../../components/EmailProviderConfiguration';
 import { getSecretProviderInstance } from '@shared/core';
-import { setupPubSub } from './setupPubSub';
 import { EmailProviderService } from '../../../services/email/EmailProviderService';
 import { configureGmailProvider } from './configureGmailProvider';
 import { EmailWebhookMaintenanceService } from '@alga-psa/shared/services/email/EmailWebhookMaintenanceService';
@@ -30,20 +29,6 @@ async function generatePubSubNames(tenantId: string) {
     topicName: `gmail-notifications-${tenantId}`,
     subscriptionName: `gmail-webhook-${tenantId}`,
     webhookUrl: `${baseUrl}/api/email/webhooks/google`
-  };
-}
-
-/**
- * Get hosted Gmail configuration for Enterprise Edition
- */
-export async function getHostedGmailConfig() {
-  const secretProvider = await getSecretProviderInstance();
-  
-  return {
-    client_id: await secretProvider.getAppSecret('GOOGLE_CLIENT_ID'),
-    client_secret: await secretProvider.getAppSecret('GOOGLE_CLIENT_SECRET'),
-    project_id: await secretProvider.getAppSecret('GOOGLE_PROJECT_ID'),
-    redirect_uri: await secretProvider.getAppSecret('GOOGLE_REDIRECT_URI') || 'https://api.algapsa.com/api/auth/google/callback'
   };
 }
 
@@ -270,34 +255,44 @@ async function persistGoogleConfig(
   if (!config) return null;
   if (!tenant) throw new Error('Tenant is required');
 
-  // Check if we should use hosted configuration for Enterprise Edition
-  const hostedConfig = await getHostedGmailConfig();
-
-  // Save secrets to tenant-specific secret store
+  // Google is always tenant-owned (CE and EE): credentials must come from tenant secrets.
+  // We will not store OAuth client credentials in the DB.
   const secretProvider = await getSecretProviderInstance();
-  
-  // Use hosted credentials if available, otherwise use user-provided credentials
-  const effectiveClientId = hostedConfig?.client_id || config.client_id;
-  const effectiveClientSecret = hostedConfig?.client_secret || config.client_secret;
-  const effectiveProjectId = hostedConfig?.project_id || config.project_id;
-  const effectiveRedirectUri = hostedConfig?.redirect_uri || config.redirect_uri;
-  
-  // Ensure required fields are not undefined
+
+  // Allow a transitional path where config includes creds, but immediately persist them into tenant secrets.
+  const tenantClientId = await secretProvider.getTenantSecret(tenant, 'google_client_id');
+  const tenantClientSecret = await secretProvider.getTenantSecret(tenant, 'google_client_secret');
+
+  const effectiveClientId = tenantClientId || config.client_id || null;
+  const effectiveClientSecret = tenantClientSecret || config.client_secret || null;
+
+  if (config.client_id && !tenantClientId) {
+    await secretProvider.setTenantSecret(tenant, 'google_client_id', String(config.client_id).trim());
+  }
+  if (config.client_secret && !tenantClientSecret) {
+    await secretProvider.setTenantSecret(tenant, 'google_client_secret', String(config.client_secret).trim());
+  }
+
+  const tenantProjectId = await secretProvider.getTenantSecret(tenant, 'google_project_id');
+  const effectiveProjectId = tenantProjectId || config.project_id || null;
+  if (config.project_id && !tenantProjectId) {
+    await secretProvider.setTenantSecret(tenant, 'google_project_id', String(config.project_id).trim());
+  }
+
+  if (!effectiveClientId || !effectiveClientSecret) {
+    throw new Error('Google OAuth is not configured for this tenant. Configure Google settings first.');
+  }
   if (!effectiveProjectId) {
-    throw new Error('Project ID is required for Gmail configuration');
+    throw new Error('Google Cloud project ID is not configured for this tenant. Configure Google settings first.');
   }
-  if (!effectiveRedirectUri) {
-    throw new Error('Redirect URI is required for Gmail configuration');
-  }
-  
-  if (effectiveClientId && typeof effectiveClientId === 'string' && !hostedConfig) {
-    // Only store user-provided secrets, not hosted ones
-    await secretProvider.setTenantSecret(tenant, 'google_client_id', effectiveClientId);
-  }
-  if (effectiveClientSecret && typeof effectiveClientSecret === 'string' && !hostedConfig) {
-    // Only store user-provided secrets, not hosted ones
-    await secretProvider.setTenantSecret(tenant, 'google_client_secret', effectiveClientSecret);
-  }
+
+  const baseUrl =
+    process.env.NEXT_PUBLIC_BASE_URL ||
+    (await secretProvider.getAppSecret('NEXT_PUBLIC_BASE_URL')) ||
+    process.env.NEXTAUTH_URL ||
+    (await secretProvider.getAppSecret('NEXTAUTH_URL')) ||
+    'http://localhost:3000';
+  const effectiveRedirectUri = `${baseUrl}/api/auth/google/callback`;
   
   // Generate standardized Pub/Sub names
   const pubsubNames = await generatePubSubNames(tenant);
@@ -307,8 +302,8 @@ async function persistGoogleConfig(
   const configPayload = {
     email_provider_id: providerId,
     tenant,
-    client_id: effectiveClientId || null,
-    client_secret: effectiveClientSecret || null,
+    client_id: null,
+    client_secret: null,
     project_id: effectiveProjectId,
     redirect_uri: effectiveRedirectUri,
     pubsub_topic_name: pubsubNames.topicName,
@@ -491,9 +486,10 @@ export async function upsertEmailProvider(data: {
     });
     
     if (!skipAutomation && data.providerType === 'google' && provider.googleConfig) {
-      // Use hosted project ID if in EE mode, otherwise use provided project ID
-      const hostedConfig = await getHostedGmailConfig();
-      const effectiveProjectId = hostedConfig?.project_id || data.googleConfig?.project_id;
+      const secretProvider = await getSecretProviderInstance();
+      const effectiveProjectId =
+        (await secretProvider.getTenantSecret(tenant, 'google_project_id')) ||
+        data.googleConfig?.project_id;
       
       if (effectiveProjectId) {
         await configureGmailProvider({
@@ -573,9 +569,10 @@ export async function updateEmailProvider(
     });
     
     if (!skipAutomation && data.providerType === 'google' && provider.googleConfig) {
-      // Use hosted project ID if in EE mode, otherwise use provided project ID
-      const hostedConfig = await getHostedGmailConfig();
-      const effectiveProjectId = hostedConfig?.project_id || data.googleConfig?.project_id;
+      const secretProvider = await getSecretProviderInstance();
+      const effectiveProjectId =
+        (await secretProvider.getTenantSecret(tenant, 'google_project_id')) ||
+        data.googleConfig?.project_id;
       
       if (effectiveProjectId) {
         await configureGmailProvider({

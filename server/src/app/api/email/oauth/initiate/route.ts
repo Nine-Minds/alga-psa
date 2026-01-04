@@ -27,24 +27,22 @@ export async function POST(request: NextRequest) {
     let clientId: string | null = null;
     let effectiveRedirectUri = redirectUri;
 
-    // Prefer server-side NEXTAUTH_URL for hosted detection
-    const nextauthUrl = process.env.NEXTAUTH_URL || (await secretProvider.getAppSecret('NEXTAUTH_URL')) || '';
-    const isHosted = nextauthUrl.startsWith('https://algapsa.com');
-
-    if (isHosted) {
-      // Use app-level configuration
-      if (provider === 'google') {
-        clientId = await secretProvider.getAppSecret('GOOGLE_CLIENT_ID') || null;
-        effectiveRedirectUri = await secretProvider.getAppSecret('GOOGLE_REDIRECT_URI') || 'https://api.algapsa.com/api/auth/google/callback';
-      } else if (provider === 'microsoft') {
-        clientId = await secretProvider.getAppSecret('MICROSOFT_CLIENT_ID') || null;
-        effectiveRedirectUri = await secretProvider.getAppSecret('MICROSOFT_REDIRECT_URI') || 'https://api.algapsa.com/api/auth/microsoft/callback';
-      }
+    if (provider === 'google') {
+      // Google is always tenant-owned (CE and EE): do not fall back to app-level secrets.
+      clientId = await secretProvider.getTenantSecret(user.tenant, 'google_client_id') || null;
     } else {
-      // Use tenant-specific or fallback credentials
-      clientId = provider === 'microsoft'
-        ? await secretProvider.getAppSecret('MICROSOFT_CLIENT_ID') || await secretProvider.getTenantSecret(user.tenant, 'microsoft_client_id') || null
-        : await secretProvider.getAppSecret('GOOGLE_CLIENT_ID') || await secretProvider.getTenantSecret(user.tenant, 'google_client_id') || null;
+      // Microsoft remains as-is.
+      clientId = await secretProvider.getAppSecret('MICROSOFT_CLIENT_ID') || await secretProvider.getTenantSecret(user.tenant, 'microsoft_client_id') || null;
+    }
+
+    if (!effectiveRedirectUri) {
+      const base =
+        process.env.NEXT_PUBLIC_BASE_URL ||
+        (await secretProvider.getAppSecret('NEXT_PUBLIC_BASE_URL')) ||
+        process.env.NEXTAUTH_URL ||
+        (await secretProvider.getAppSecret('NEXTAUTH_URL')) ||
+        'http://localhost:3000';
+      effectiveRedirectUri = `${base}/api/auth/${provider}/callback`;
     }
 
     if (!clientId) {
@@ -61,7 +59,7 @@ export async function POST(request: NextRequest) {
       redirectUri: effectiveRedirectUri || `${await secretProvider.getAppSecret('NEXT_PUBLIC_BASE_URL')}/api/auth/${provider}/callback`,
       timestamp: Date.now(),
       nonce: generateNonce(),
-      hosted: true
+      hosted: false
     };
 
     // Generate authorization URL

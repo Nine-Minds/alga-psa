@@ -10,6 +10,7 @@ import { GoogleCalendarAdapter } from './providers/GoogleCalendarAdapter';
 import { MicrosoftCalendarAdapter } from './providers/MicrosoftCalendarAdapter';
 import { BaseCalendarAdapter } from './providers/base/BaseCalendarAdapter';
 import { runWithTenant, createTenantKnex } from '../../lib/db';
+import { getAdminConnection } from '@alga-psa/shared/db/admin';
 
 export class CalendarWebhookProcessor {
   private syncService: CalendarSyncService;
@@ -180,6 +181,175 @@ export class CalendarWebhookProcessor {
       });
     } catch (error: any) {
       console.error('❌ Error processing Google Calendar webhook:', error?.message || error);
+      return { success: 0, failed: 1 };
+    }
+  }
+
+  /**
+   * Process Google Calendar webhook notification (Calendar push channel web_hook).
+   */
+  async processGoogleChannelWebhook(params: {
+    channelId: string;
+    resourceId?: string | null;
+    token?: string | null;
+    resourceState?: string | null;
+  }): Promise<{ success: number; failed: number }> {
+    const { channelId, resourceId, token } = params;
+
+    const provider = await this.getProviderByGoogleChannelId(channelId);
+    if (!provider) {
+      console.error(`❌ Provider not found for Google channel: ${channelId}`);
+      return { success: 0, failed: 1 };
+    }
+
+    const expectedToken = provider.provider_config?.webhookVerificationToken;
+    if (expectedToken && token && expectedToken !== token) {
+      console.warn('⚠️ Google Calendar webhook token mismatch', {
+        providerId: provider.id,
+        channelId
+      });
+      return { success: 0, failed: 1 };
+    }
+
+    const expectedResourceId = provider.provider_config?.webhookResourceId;
+    if (expectedResourceId && resourceId && expectedResourceId !== resourceId) {
+      console.warn('⚠️ Google Calendar webhook resourceId mismatch', {
+        providerId: provider.id,
+        channelId
+      });
+      return { success: 0, failed: 1 };
+    }
+
+    // Reuse the same delta-sync pipeline used by Pub/Sub flow.
+    try {
+      return await runWithTenant(provider.tenant, async () => {
+        const adapter = (await this.createAdapter(provider)) as GoogleCalendarAdapter;
+        await adapter.connect();
+
+        const { knex } = await createTenantKnex();
+
+        // Update health table to track webhook receipt
+        try {
+          const now = new Date().toISOString();
+          const existing = await knex('calendar_provider_health')
+            .where('calendar_provider_id', provider.id)
+            .andWhere('tenant', provider.tenant)
+            .first();
+
+          if (existing) {
+            await knex('calendar_provider_health')
+              .where('calendar_provider_id', provider.id)
+              .andWhere('tenant', provider.tenant)
+              .update({
+                last_webhook_received_at: now,
+                updated_at: now
+              });
+          } else {
+            await knex('calendar_provider_health').insert({
+              calendar_provider_id: provider.id,
+              tenant: provider.tenant,
+              last_webhook_received_at: now,
+              created_at: now,
+              updated_at: now
+            });
+          }
+        } catch (healthError: any) {
+          console.warn('[CalendarWebhookProcessor] Failed to update Google health table', { error: healthError.message });
+        }
+
+        const fallbackStart = provider.last_sync_at ? new Date(provider.last_sync_at) : undefined;
+        let syncToken = provider.provider_config?.syncToken || undefined;
+
+        let changesResult = await adapter.fetchEventChanges({
+          syncToken,
+          timeMin: fallbackStart
+        });
+
+        if (changesResult.resetRequired) {
+          console.warn('[CalendarWebhookProcessor] Google sync token invalid, resetting window', {
+            providerId: provider.id
+          });
+
+          await this.providerService.updateProvider(provider.id, provider.tenant, {
+            vendorConfig: { syncToken: null }
+          });
+
+          const resetStart = fallbackStart ?? new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+          changesResult = await adapter.fetchEventChanges({
+            timeMin: resetStart
+          });
+        }
+
+        if (changesResult.nextSyncToken && changesResult.nextSyncToken !== syncToken) {
+          await this.providerService.updateProvider(provider.id, provider.tenant, {
+            vendorConfig: { syncToken: changesResult.nextSyncToken }
+          });
+        }
+
+        let successCount = 0;
+        let failedCount = 0;
+
+        for (const change of changesResult.changes) {
+          if (!change?.id) {
+            continue;
+          }
+
+          if (change.changeType === 'deleted') {
+            try {
+              const mapping = await knex('calendar_event_mappings')
+                .where('external_event_id', change.id)
+                .andWhere('calendar_provider_id', provider.id)
+                .andWhere('tenant', provider.tenant)
+                .first();
+
+              if (!mapping) {
+                console.warn('[CalendarWebhookProcessor] No mapping found for deleted Google event', {
+                  eventId: change.id,
+                  providerId: provider.id
+                });
+                continue;
+              }
+
+              await this.executeWithRetry(async () => {
+                const result = await this.syncService.deleteScheduleEntry(
+                  mapping.schedule_entry_id,
+                  provider.id,
+                  'all',
+                  true
+                );
+                if (!result.success) {
+                  throw new Error(result.error || 'Failed to delete schedule entry');
+                }
+                return result;
+              }, `google-delete-${change.id}`);
+
+              successCount++;
+            } catch (error: any) {
+              failedCount++;
+              console.error(`❌ Failed to process Google deletion for event ${change.id}:`, error?.message || error);
+            }
+          } else {
+            try {
+              await this.executeWithRetry(async () => {
+                const result = await this.syncService.syncExternalEventToSchedule(change.id, provider.id);
+                if (!result.success) {
+                  throw new Error(result.error || 'Failed to sync schedule entry');
+                }
+                return result;
+              }, `google-sync-${change.id}`);
+
+              successCount++;
+            } catch (error: any) {
+              failedCount++;
+              console.error(`❌ Failed to sync Google event ${change.id}:`, error?.message || error);
+            }
+          }
+        }
+
+        return { success: successCount, failed: failedCount };
+      });
+    } catch (error: any) {
+      console.error('❌ Error processing Google Calendar channel webhook:', error?.message || error);
       return { success: 0, failed: 1 };
     }
   }
@@ -378,8 +548,7 @@ export class CalendarWebhookProcessor {
    */
   private async getProviderByGoogleSubscription(subscriptionName: string): Promise<CalendarProviderConfig | null> {
     try {
-      const { knex, tenant } = await import('../../lib/db').then(m => m.createTenantKnex());
-      
+      const knex = await getAdminConnection();
       const row = await knex('google_calendar_provider_config as gc')
         .join('calendar_providers as cp', function() {
           this.on('gc.calendar_provider_id', '=', 'cp.id')
@@ -403,13 +572,38 @@ export class CalendarWebhookProcessor {
     }
   }
 
+  private async getProviderByGoogleChannelId(channelId: string): Promise<CalendarProviderConfig | null> {
+    try {
+      const knex = await getAdminConnection();
+      const row = await knex('google_calendar_provider_config as gc')
+        .join('calendar_providers as cp', function() {
+          this.on('gc.calendar_provider_id', '=', 'cp.id')
+            .andOn('gc.tenant', '=', 'cp.tenant');
+        })
+        .where('gc.webhook_subscription_id', channelId)
+        .andWhere('cp.is_active', true)
+        .first({
+          provider_id: 'cp.id',
+          provider_tenant: 'cp.tenant',
+        });
+
+      if (!row) {
+        return null;
+      }
+
+      return this.providerService.getProvider(row.provider_id, row.provider_tenant, { includeSecrets: true });
+    } catch (error: any) {
+      console.error('Failed to get provider by Google channel ID:', error);
+      return null;
+    }
+  }
+
   /**
    * Get provider by Microsoft subscription ID
    */
   private async getProviderByMicrosoftSubscription(subscriptionId: string): Promise<CalendarProviderConfig | null> {
     try {
-      const { knex, tenant } = await import('../../lib/db').then(m => m.createTenantKnex());
-      
+      const knex = await getAdminConnection();
       const row = await knex('microsoft_calendar_provider_config as mc')
         .join('calendar_providers as cp', function() {
           this.on('mc.calendar_provider_id', '=', 'cp.id')

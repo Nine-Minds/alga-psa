@@ -6,6 +6,7 @@ import { google } from 'googleapis';
 import { OAuth2Client } from 'google-auth-library';
 import { CalendarProviderService } from '../CalendarProviderService';
 import { getWebhookBaseUrl } from '../../../utils/email/webhookHelpers';
+import { randomUUID } from 'crypto';
 
 /**
  * Google Calendar API adapter for calendar synchronization
@@ -432,6 +433,7 @@ export class GoogleCalendarAdapter extends BaseCalendarAdapter {
       await this.ensureValidToken();
 
       const vendorConfig = this.config.provider_config || {};
+
       // Use dynamic URL resolution (checks ngrok file in development mode)
       const baseUrl = getWebhookBaseUrl([
         'CALENDAR_WEBHOOK_BASE_URL',
@@ -440,14 +442,84 @@ export class GoogleCalendarAdapter extends BaseCalendarAdapter {
         'NEXT_PUBLIC_BASE_URL',
         'NEXTAUTH_URL'
       ]);
-      const webhookUrl = vendorConfig.webhookNotificationUrl || 
-        `${baseUrl}/api/calendar/webhooks/google`;
+      const webhookUrl = vendorConfig.webhookNotificationUrl || `${baseUrl}/api/calendar/webhooks/google`;
 
-      // Google Calendar uses push notifications via Pub/Sub
-      // The Pub/Sub setup should be done separately (similar to Gmail)
-      // This method just ensures the calendar is ready to receive notifications
-      
-      this.log('info', 'Webhook subscription registration completed (Pub/Sub setup required separately)');
+      const existingChannelId = vendorConfig.webhookSubscriptionId;
+      const existingResourceId = vendorConfig.webhookResourceId;
+      const existingExpiresAt = vendorConfig.webhookExpiresAt ? new Date(vendorConfig.webhookExpiresAt) : null;
+
+      const refreshWindowMs = 6 * 60 * 60 * 1000; // 6 hours
+      if (existingChannelId && existingResourceId && existingExpiresAt) {
+        if (existingExpiresAt.getTime() > Date.now() + refreshWindowMs) {
+          this.log('info', 'Google Calendar webhook channel is still valid, skipping renewal', {
+            providerId: this.config.id,
+            expiresAt: existingExpiresAt.toISOString()
+          });
+          return;
+        }
+      }
+
+      // Stop the old channel if we have one.
+      if (existingChannelId && existingResourceId) {
+        try {
+          await this.calendar.channels.stop({
+            requestBody: {
+              id: existingChannelId,
+              resourceId: existingResourceId
+            }
+          });
+        } catch (stopErr: any) {
+          // Best-effort; channel may already be gone.
+          this.log('warn', 'Failed to stop existing Google Calendar webhook channel (continuing)', {
+            providerId: this.config.id,
+            error: stopErr?.message || stopErr
+          });
+        }
+      }
+
+      const channelId = randomUUID();
+      const verificationToken = vendorConfig.webhookVerificationToken || randomUUID();
+
+      const response = await this.calendar.events.watch({
+        calendarId: this.calendarId,
+        requestBody: {
+          id: channelId,
+          type: 'web_hook',
+          address: webhookUrl,
+          token: verificationToken,
+          params: {
+            // Google expects TTL in seconds as a string. (Best-effort; Google enforces max anyway.)
+            ttl: String(7 * 24 * 60 * 60)
+          }
+        }
+      });
+
+      const resourceId = response?.data?.resourceId as string | undefined;
+      const expirationMs = response?.data?.expiration ? Number(response.data.expiration) : undefined;
+      const expiresAtIso = expirationMs ? new Date(expirationMs).toISOString() : undefined;
+
+      if (!resourceId) {
+        throw new Error('Google Calendar watch() did not return resourceId');
+      }
+
+      // Persist webhook channel identifiers (and webhook URL/token if missing).
+      const providerService = new CalendarProviderService();
+      await providerService.updateProvider(this.config.id, this.config.tenant, {
+        vendorConfig: {
+          webhookNotificationUrl: webhookUrl,
+          webhookVerificationToken: verificationToken,
+          webhookSubscriptionId: channelId,
+          webhookResourceId: resourceId,
+          webhookExpiresAt: expiresAtIso || null
+        }
+      });
+
+      this.log('info', 'Google Calendar webhook channel created/renewed', {
+        providerId: this.config.id,
+        channelId,
+        resourceId,
+        expiresAt: expiresAtIso
+      });
     } catch (error) {
       throw this.handleError(error, 'registerWebhookSubscription');
     }

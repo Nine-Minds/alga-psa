@@ -59,6 +59,8 @@ x-environment: &shared-environment
 
   # ---- AUTH ----
   NEXTAUTH_URL: ${NEXTAUTH_URL:-http://localhost:3000}
+  # Required by edge-auth (read from env, not Docker secret file)
+  NEXTAUTH_SECRET: ${NEXTAUTH_SECRET}
   NEXTAUTH_SESSION_EXPIRES: ${NEXTAUTH_SESSION_EXPIRES:-86400}
 
   # ---- DEPLOY INFO  ----

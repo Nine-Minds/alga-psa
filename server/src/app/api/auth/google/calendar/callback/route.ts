@@ -170,34 +170,29 @@ export async function GET(request: NextRequest) {
 
     // Get OAuth client credentials
     const secretProvider = await getSecretProviderInstance();
-    const nextauthUrl = process.env.NEXTAUTH_URL || (await secretProvider.getAppSecret('NEXTAUTH_URL')) || '';
-    const isHostedFlow = nextauthUrl.startsWith('https://algapsa.com') || decodedState.hosted === true;
-    
     let clientId: string | null = null;
     let clientSecret: string | null = null;
     let projectId: string | null = null;
-    
-    if (isHostedFlow) {
-      clientId = await secretProvider.getAppSecret('GOOGLE_CALENDAR_CLIENT_ID') || null;
-      clientSecret = await secretProvider.getAppSecret('GOOGLE_CALENDAR_CLIENT_SECRET') || null;
-      projectId = await secretProvider.getAppSecret('GOOGLE_CALENDAR_PROJECT_ID') || null;
-    } else {
-      const envClientId = process.env.GOOGLE_CALENDAR_CLIENT_ID || null;
-      const envClientSecret = process.env.GOOGLE_CALENDAR_CLIENT_SECRET || null;
-      const envProjectId = process.env.GOOGLE_CALENDAR_PROJECT_ID || null;
-      const tenantClientId = await secretProvider.getTenantSecret(stateData.tenant, 'google_calendar_client_id');
-      const tenantClientSecret = await secretProvider.getTenantSecret(stateData.tenant, 'google_calendar_client_secret');
-      const tenantProjectId = await secretProvider.getTenantSecret(stateData.tenant, 'google_calendar_project_id');
-      clientId = envClientId || tenantClientId || null;
-      clientSecret = envClientSecret || tenantClientSecret || null;
-      projectId = envProjectId || tenantProjectId || null;
-    }
+
+    // Google is always tenant-owned (CE and EE): do not fall back to app-level secrets.
+    clientId =
+      (await secretProvider.getTenantSecret(stateData.tenant, 'google_calendar_client_id')) ||
+      (await secretProvider.getTenantSecret(stateData.tenant, 'google_client_id')) ||
+      null;
+    clientSecret =
+      (await secretProvider.getTenantSecret(stateData.tenant, 'google_calendar_client_secret')) ||
+      (await secretProvider.getTenantSecret(stateData.tenant, 'google_client_secret')) ||
+      null;
+    projectId =
+      (await secretProvider.getTenantSecret(stateData.tenant, 'google_project_id')) ||
+      (await secretProvider.getTenantSecret(stateData.tenant, 'google_calendar_project_id')) ||
+      null;
     
     const redirectUri = await resolveCalendarRedirectUri({
       tenant: stateData.tenant,
       provider: 'google',
       secretProvider,
-      hosted: isHostedFlow,
+      hosted: false,
       requestedRedirectUri: stateData.redirectUri
     });
 
@@ -280,10 +275,9 @@ export async function GET(request: NextRequest) {
 
             // Update provider with tokens and calendar ID
             await providerService.updateProvider(stateData.calendarProviderId!, stateData.tenant, {
+              calendarId: primaryCalendar.id,
               vendorConfig: {
-                client_id: clientId,
-                client_secret: clientSecret,
-                project_id: projectId || '',
+                project_id: projectId || null,
                 redirect_uri: redirectUri,
                 access_token: access_token,
                 refresh_token: refresh_token || null,
@@ -298,13 +292,11 @@ export async function GET(request: NextRequest) {
               errorMessage: null
             });
 
-            // Register webhook subscription if Pub/Sub is configured
-            if (projectId) {
-              try {
-                await adapter.registerWebhookSubscription();
-              } catch (webhookError: any) {
-                console.warn('⚠️ Failed to register webhook subscription:', webhookError.message);
-              }
+            // Register webhook subscription for calendar change callbacks (best-effort)
+            try {
+              await adapter.registerWebhookSubscription();
+            } catch (webhookError: any) {
+              console.warn('⚠️ Failed to register Google Calendar webhook subscription:', webhookError.message);
             }
 
             console.log(`✅ Google Calendar provider configured successfully: ${stateData.calendarProviderId}`);

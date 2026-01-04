@@ -257,7 +257,8 @@ const SettingsPageContent = (): JSX.Element =>  {
         </Card>
       ),
     },
-    { // Integrations tab with category-based organization
+    {
+      // Integrations tab with category-based organization
       label: "Integrations",
       icon: Plug,
       content: <IntegrationsSettingsPage />,

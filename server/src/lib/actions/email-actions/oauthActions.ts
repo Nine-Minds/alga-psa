@@ -38,31 +38,25 @@ export async function initiateEmailOAuth(params: {
     const { provider, providerId, redirectUri } = params;
     const secretProvider = await getSecretProviderInstance();
 
-    // Hosted detection via NEXTAUTH_URL
-    const nextauthUrl = process.env.NEXTAUTH_URL || (await secretProvider.getAppSecret('NEXTAUTH_URL')) || '';
-    const isHosted = nextauthUrl.startsWith('https://algapsa.com');
-
     let clientId: string | null = null;
     let effectiveRedirectUri = redirectUri || '';
 
-    if (isHosted) {
-      if (provider === 'google') {
-        clientId = (await secretProvider.getAppSecret('GOOGLE_CLIENT_ID')) || null;
-        effectiveRedirectUri = effectiveRedirectUri || (await secretProvider.getAppSecret('GOOGLE_REDIRECT_URI')) || 'https://api.algapsa.com/api/auth/google/callback';
-      } else {
-        clientId = (await secretProvider.getAppSecret('MICROSOFT_CLIENT_ID')) || null;
-        effectiveRedirectUri = effectiveRedirectUri || (await secretProvider.getAppSecret('MICROSOFT_REDIRECT_URI')) || 'https://api.algapsa.com/api/auth/microsoft/callback';
-      }
+    if (provider === 'google') {
+      // Google is always tenant-owned (CE and EE): do not fall back to app-level secrets.
+      clientId = (await secretProvider.getTenantSecret(user.tenant, 'google_client_id')) || null;
     } else {
-      if (provider === 'google') {
-        clientId = process.env.GOOGLE_CLIENT_ID || (await secretProvider.getTenantSecret(user.tenant, 'google_client_id')) || null;
-      } else {
-        clientId = process.env.MICROSOFT_CLIENT_ID || (await secretProvider.getTenantSecret(user.tenant, 'microsoft_client_id')) || null;
-      }
-      if (!effectiveRedirectUri) {
-        const base = process.env.NEXT_PUBLIC_BASE_URL || (await secretProvider.getAppSecret('NEXT_PUBLIC_BASE_URL')) || 'http://localhost:3000';
-        effectiveRedirectUri = `${base}/api/auth/${provider}/callback`;
-      }
+      // Microsoft remains as-is (tenant secret with optional env fallback).
+      clientId = process.env.MICROSOFT_CLIENT_ID || (await secretProvider.getTenantSecret(user.tenant, 'microsoft_client_id')) || null;
+    }
+
+    if (!effectiveRedirectUri) {
+      const base =
+        process.env.NEXT_PUBLIC_BASE_URL ||
+        (await secretProvider.getAppSecret('NEXT_PUBLIC_BASE_URL')) ||
+        process.env.NEXTAUTH_URL ||
+        (await secretProvider.getAppSecret('NEXTAUTH_URL')) ||
+        'http://localhost:3000';
+      effectiveRedirectUri = `${base}/api/auth/${provider}/callback`;
     }
 
     if (!clientId) {
@@ -76,7 +70,7 @@ export async function initiateEmailOAuth(params: {
       redirectUri: effectiveRedirectUri,
       timestamp: Date.now(),
       nonce: generateNonce(),
-      hosted: isHosted
+      hosted: false
     };
 
     // For multi-tenant Azure AD apps, always use 'common' for the authorization URL

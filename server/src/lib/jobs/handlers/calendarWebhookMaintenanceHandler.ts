@@ -75,21 +75,11 @@ export async function verifyGoogleCalendarProvisioning(
         continue;
       }
 
-      const { pubsubSubscriptionName } = fullProvider.provider_config;
-      if (!pubsubSubscriptionName) {
-        logger.warn('[CalendarWebhookMaintenance] Google provider missing Pub/Sub subscription', {
-          tenantId,
-          providerId: provider.id,
-          providerName: provider.name
-        });
-        continue;
-      }
-
       const adapter = new GoogleCalendarAdapter(fullProvider);
       try {
         await adapter.registerWebhookSubscription();
       } catch (error: any) {
-        logger.error('[CalendarWebhookMaintenance] Failed to verify Google Pub/Sub subscription', {
+        logger.error('[CalendarWebhookMaintenance] Failed to verify Google Calendar webhook subscription', {
           tenantId,
           providerId: provider.id,
           error: error?.message || error
