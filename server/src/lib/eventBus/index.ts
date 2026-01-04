@@ -29,7 +29,7 @@ const createRedisClient = async () => {
 
   const client = createClient({
     url: config.url,
-    password,
+    password: password || undefined,
     socket: {
       reconnectStrategy: (retries) => {
         if (retries > config.eventBus.reconnectStrategy.retries) {

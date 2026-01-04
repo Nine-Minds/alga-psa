@@ -85,6 +85,7 @@ const CommentItem: React.FC<CommentItemProps> = ({
   );
 
   const getAuthorName = () => {
+    if (conversation.is_system_generated) return 'Bundled update';
     if (!conversation.user_id) return 'Unknown User';
     const commentUser = userMap[conversation.user_id];
     if (!commentUser) return 'Unknown User';
@@ -99,6 +100,7 @@ const CommentItem: React.FC<CommentItemProps> = ({
 
   // Only allow users to edit their own comments
   const canEdit = useMemo(() => {
+    if (conversation.is_system_generated) return false;
     return currentUserId === conversation.user_id;
   }, [conversation.user_id, currentUserId]);
 

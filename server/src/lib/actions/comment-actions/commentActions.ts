@@ -7,6 +7,7 @@ import { withTransaction } from '@shared/db';
 import { Knex } from 'knex';
 import { convertBlockNoteToMarkdown } from 'server/src/lib/utils/blocknoteUtils';
 import { publishEvent } from 'server/src/lib/eventBus/publishers';
+import { maybeReopenBundleMasterFromChildReply } from 'server/src/lib/actions/ticket-actions/ticketBundleUtils';
 
 export async function findCommentsByTicketId(ticketId: string) {
   const { knex: db, tenant } = await createTenantKnex();
@@ -152,6 +153,10 @@ export async function createComment(comment: Omit<IComment, 'tenant'>): Promise<
         }
       }
 
+      if (!comment.is_internal && commentTenant) {
+        await maybeReopenBundleMasterFromChildReply(trx, commentTenant, comment.ticket_id!, comment.user_id ?? null);
+      }
+
       return commentId;
     });
   } catch (error) {
@@ -176,6 +181,9 @@ export async function updateComment(id: string, comment: Partial<IComment>) {
       if (!existingComment) {
         console.error(`[updateComment] Comment with ID ${id} not found`);
         throw new Error(`Comment with id ${id} not found`);
+      }
+      if (existingComment.is_system_generated) {
+        throw new Error('This comment is system-generated and cannot be edited.');
       }
       console.log(`[updateComment] Found existing comment:`, existingComment);
 
@@ -326,6 +334,10 @@ export async function deleteComment(id: string) {
   const { knex: db, tenant } = await createTenantKnex();
   try {
     await withTransaction(db, async (trx: Knex.Transaction) => {
+      const existingComment = await Comment.get(trx, id);
+      if (existingComment?.is_system_generated) {
+        throw new Error('This comment is system-generated and cannot be deleted.');
+      }
       await Comment.delete(trx, id);
     });
   } catch (error) {

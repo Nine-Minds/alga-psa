@@ -7,6 +7,7 @@ import { Knex } from 'knex';
 import { BaseService, ServiceContext, ListResult } from './BaseService';
 import { ITicket } from 'server/src/interfaces/ticket.interfaces';
 import { withTransaction } from '@shared/db';
+import { maybeReopenBundleMasterFromChildReply } from 'server/src/lib/actions/ticket-actions/ticketBundleUtils';
 import { NumberingService } from 'server/src/lib/services/numberingService';
 import { getEventBus } from 'server/src/lib/eventBus';
 import { getEmailEventChannel } from '../../notifications/emailChannel';
@@ -509,6 +510,10 @@ export class TicketService extends BaseService<ITicket> {
       };
 
       const [comment] = await trx('comments').insert(commentData).returning('*');
+
+      if (!comment.is_internal) {
+        await maybeReopenBundleMasterFromChildReply(trx, context.tenant, ticketId, context.userId);
+      }
 
       // Update ticket updated_at
       await trx('tickets')

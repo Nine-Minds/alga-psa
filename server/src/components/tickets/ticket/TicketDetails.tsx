@@ -51,6 +51,7 @@ import ClientDetails from "server/src/components/clients/ClientDetails";
 import { addTicketResource, getTicketResources, removeTicketResource } from "server/src/lib/actions/ticketResourceActions";
 import AgentScheduleDrawer from "server/src/components/tickets/ticket/AgentScheduleDrawer";
 import { Button } from "server/src/components/ui/Button";
+import { Input } from "server/src/components/ui/Input";
 import { ExternalLink } from 'lucide-react';
 import { WorkItemType } from "server/src/interfaces/workItem.interfaces";
 import { ReflectionContainer } from "server/src/types/ui-reflection/ReflectionContainer";
@@ -62,10 +63,20 @@ import { IntervalManagement } from "server/src/components/time-management/interv
 import { convertBlockNoteToMarkdown } from "server/src/lib/utils/blocknoteUtils";
 import BackNav from 'server/src/components/ui/BackNav';
 import type { SurveyTicketSatisfactionSummary } from 'server/src/interfaces/survey.interface';
+import {
+    addChildrenToBundleAction,
+    findTicketByNumberAction,
+    promoteBundleMasterAction,
+    removeChildFromBundleAction,
+    unbundleMasterTicketAction,
+    updateBundleSettingsAction
+} from 'server/src/lib/actions/ticket-actions/ticketBundleActions';
 
 interface TicketDetailsProps {
     id?: string; // Made optional to maintain backward compatibility
     initialTicket: ITicket & { tenant: string | undefined };
+    initialBundle?: any;
+    aggregatedChildClientComments?: any[];
     onClose?: () => void; // Callback when user wants to close the ticket screen
     isInDrawer?: boolean;
 
@@ -103,6 +114,8 @@ interface TicketDetailsProps {
 const TicketDetails: React.FC<TicketDetailsProps> = ({
     id = 'ticket-details',
     initialTicket,
+    initialBundle = null,
+    aggregatedChildClientComments = [],
     onClose,
     isInDrawer = false,
     // Pre-fetched data with defaults
@@ -142,6 +155,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     }
 
     const [ticket, setTicket] = useState(initialTicket);
+    const [bundle, setBundle] = useState<any>(initialBundle);
     const [conversations, setConversations] = useState<IComment[]>(initialComments);
     const [documents, setDocuments] = useState<any[]>(initialDocuments);
     const [client, setClient] = useState<IClient | null>(initialClient);
@@ -154,6 +168,10 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     const [dateTimeFormat, setDateTimeFormat] = useState<string>('MMM d, yyyy h:mm a');
     const [createdRelativeTime, setCreatedRelativeTime] = useState<string>('');
     const [updatedRelativeTime, setUpdatedRelativeTime] = useState<string>('');
+    const [addChildTicketNumber, setAddChildTicketNumber] = useState<string>('');
+    const [isUpdatingBundleSettings, setIsUpdatingBundleSettings] = useState(false);
+    const [isAddChildMultiClientConfirmOpen, setIsAddChildMultiClientConfirmOpen] = useState(false);
+    const [pendingChildToAdd, setPendingChildToAdd] = useState<{ ticket_id: string; ticket_number?: string | null; client_id?: string | null } | null>(null);
 
     // Use pre-fetched options directly
     const [userMap, setUserMap] = useState<Record<string, { user_id: string; first_name: string; last_name: string; email?: string, user_type: string, avatarUrl: string | null }>>(initialUserMap);
@@ -1195,6 +1213,122 @@ const handleClose = () => {
         }
     }, [ticket.ticket_id]);
 
+    const getBundlingUser = useCallback(async () => {
+        if (currentUser) return currentUser;
+        const user = await getCurrentUser();
+        if (!user) throw new Error('User not authenticated');
+        return user;
+    }, [currentUser]);
+
+    const handleRemoveChildFromBundle = useCallback(async (childTicketId: string) => {
+        try {
+            const user = await getBundlingUser();
+            await removeChildFromBundleAction({ childTicketId }, user);
+            toast.success('Removed ticket from bundle');
+            router.refresh();
+        } catch (error) {
+            console.error('Failed to remove child from bundle:', error);
+            toast.error(error instanceof Error ? error.message : 'Failed to remove ticket from bundle');
+        }
+    }, [getBundlingUser, router]);
+
+    const handleUnbundleMaster = useCallback(async () => {
+        if (!ticket.ticket_id) return;
+        try {
+            const user = await getBundlingUser();
+            await unbundleMasterTicketAction({ masterTicketId: ticket.ticket_id }, user);
+            toast.success('Bundle removed');
+            router.refresh();
+        } catch (error) {
+            console.error('Failed to unbundle master ticket:', error);
+            toast.error(error instanceof Error ? error.message : 'Failed to unbundle ticket');
+        }
+    }, [ticket.ticket_id, getBundlingUser, router]);
+
+    const performAddChildToBundle = useCallback(async (childTicketId: string) => {
+        if (!ticket.ticket_id) return;
+        const user = await getBundlingUser();
+        await addChildrenToBundleAction({ masterTicketId: ticket.ticket_id, childTicketIds: [childTicketId] }, user);
+        toast.success('Added ticket to bundle');
+        setAddChildTicketNumber('');
+        router.refresh();
+    }, [ticket.ticket_id, getBundlingUser, router]);
+
+    const handleAddChildToBundle = useCallback(async () => {
+        if (!ticket.ticket_id) return;
+        const normalized = addChildTicketNumber.trim();
+        if (!normalized) return;
+
+        try {
+            const user = await getBundlingUser();
+            const found = await findTicketByNumberAction({ ticketNumber: normalized }, user);
+            if (!found) {
+                toast.error('Ticket not found');
+                return;
+            }
+            if (found.ticket_id === ticket.ticket_id) {
+                toast.error('Cannot add the master ticket as a child');
+                return;
+            }
+            if (found.master_ticket_id) {
+                toast.error('That ticket is already bundled');
+                return;
+            }
+
+            if (ticket.client_id && found.client_id && found.client_id !== ticket.client_id) {
+                setPendingChildToAdd(found);
+                setIsAddChildMultiClientConfirmOpen(true);
+                return;
+            }
+
+            await performAddChildToBundle(found.ticket_id);
+        } catch (error) {
+            console.error('Failed to add child to bundle:', error);
+            toast.error(error instanceof Error ? error.message : 'Failed to add ticket to bundle');
+        }
+    }, [ticket.ticket_id, ticket.client_id, addChildTicketNumber, getBundlingUser, performAddChildToBundle]);
+
+    const bundleHasMultipleClients = useMemo(() => {
+        if (!bundle?.isBundleMaster || !Array.isArray(bundle.children)) return false;
+        const ids = new Set<string>();
+        if (ticket.client_id) ids.add(ticket.client_id);
+        for (const child of bundle.children) {
+            if (child?.client_id) ids.add(child.client_id);
+        }
+        return ids.size > 1;
+    }, [bundle?.isBundleMaster, bundle?.children, ticket.client_id]);
+
+    const handlePromoteChildToMaster = useCallback(async (childTicketId: string) => {
+        if (!ticket.ticket_id) return;
+        try {
+            const user = await getBundlingUser();
+            await promoteBundleMasterAction({ oldMasterTicketId: ticket.ticket_id, newMasterTicketId: childTicketId }, user);
+            toast.success('Promoted new master');
+            router.push(`/msp/tickets/${childTicketId}`);
+            router.refresh();
+        } catch (error) {
+            console.error('Failed to promote master:', error);
+            toast.error(error instanceof Error ? error.message : 'Failed to promote master');
+        }
+    }, [ticket.ticket_id, getBundlingUser, router]);
+
+    const handleToggleBundleMode = useCallback(async () => {
+        if (!ticket.ticket_id || !bundle?.isBundleMaster) return;
+        try {
+            setIsUpdatingBundleSettings(true);
+            const user = await getBundlingUser();
+            const nextMode = bundle.mode === 'link_only' ? 'sync_updates' : 'link_only';
+            await updateBundleSettingsAction({ masterTicketId: ticket.ticket_id, mode: nextMode }, user);
+            toast.success('Bundle settings updated');
+            router.refresh();
+        } catch (error) {
+            console.error('Failed to update bundle settings:', error);
+            toast.error(error instanceof Error ? error.message : 'Failed to update bundle settings');
+        } finally {
+            setIsUpdatingBundleSettings(false);
+        }
+    }, [ticket.ticket_id, bundle?.isBundleMaster, bundle?.mode, getBundlingUser, router]);
+
     return (
         <ReflectionContainer id={id} label={`Ticket Details - ${ticket.ticket_number}`}>
             <div className="bg-gray-100">
@@ -1272,6 +1406,34 @@ const handleClose = () => {
                 />
 
                 <ConfirmationDialog
+                    id={`${id}-bundle-add-child-multi-client-confirm`}
+                    isOpen={isAddChildMultiClientConfirmOpen}
+                    onClose={() => {
+                        setIsAddChildMultiClientConfirmOpen(false);
+                        setPendingChildToAdd(null);
+                    }}
+                    onConfirm={async () => {
+                        if (!pendingChildToAdd?.ticket_id) {
+                            setIsAddChildMultiClientConfirmOpen(false);
+                            return;
+                        }
+                        try {
+                            await performAddChildToBundle(pendingChildToAdd.ticket_id);
+                        } catch (error) {
+                            console.error('Failed to add child to bundle after confirmation:', error);
+                            toast.error(error instanceof Error ? error.message : 'Failed to add ticket to bundle');
+                        } finally {
+                            setIsAddChildMultiClientConfirmOpen(false);
+                            setPendingChildToAdd(null);
+                        }
+                    }}
+                    title="Bundle spans multiple clients"
+                    message={`This will add ${pendingChildToAdd?.ticket_number || 'this ticket'} from a different client into the bundle. Confirm you want to proceed.`}
+                    confirmLabel="Proceed"
+                    cancelLabel="Cancel"
+                />
+
+                <ConfirmationDialog
                     id={`${id}-time-period-dialog`}
                     isOpen={isTimeEntryPeriodDialogOpen}
                     onClose={() => setIsTimeEntryPeriodDialogOpen(false)}
@@ -1289,6 +1451,114 @@ const handleClose = () => {
                     <div className="flex-grow col-span-2 min-w-0" id="ticket-main-content">
                         <Suspense fallback={<div id="ticket-info-skeleton" className="animate-pulse bg-gray-200 h-64 rounded-lg mb-6"></div>}>
                             <div className="mb-6">
+                                {bundle?.isBundleChild && bundle?.masterTicket ? (
+                                    <div className="mb-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-2 text-sm text-amber-900" id="ticket-bundle-child-banner">
+                                        This ticket is bundled under{' '}
+                                        <a className="font-medium underline" href={`/msp/tickets/${bundle.masterTicket.ticket_id}`}>
+                                            {bundle.masterTicket.ticket_number}
+                                        </a>
+                                        . Workflow fields are locked; work from the master ticket.
+                                    </div>
+                                ) : null}
+
+                                {bundle?.isBundleMaster ? (
+                                    <div className="mb-3 rounded-lg border border-indigo-200 bg-indigo-50 px-4 py-2 text-sm text-indigo-900" id="ticket-bundle-master-banner">
+                                        This ticket is the master of a bundle ({Array.isArray(bundle.children) ? bundle.children.length : 0} children). Mode:{' '}
+                                        {bundle.mode || 'sync_updates'}.
+                                        {bundleHasMultipleClients ? (
+                                            <span className="ml-2 inline-flex items-center rounded bg-amber-100 px-2 py-0.5 text-[11px] font-medium text-amber-900">
+                                                Multiple clients
+                                            </span>
+                                        ) : null}
+                                    </div>
+                                ) : null}
+
+                                {bundle?.isBundleMaster ? (
+                                    <div className="mb-4 rounded-lg border border-gray-200 bg-white p-3" id="ticket-bundle-master-panel">
+                                        <div className="flex items-center justify-between mb-2">
+                                            <div className="text-sm font-semibold text-gray-900">Bundle</div>
+                                            <div className="flex items-center gap-2">
+                                                <Button
+                                                    id="ticket-bundle-toggle-mode-button"
+                                                    variant="outline"
+                                                    size="sm"
+                                                    onClick={handleToggleBundleMode}
+                                                    disabled={isUpdatingBundleSettings}
+                                                >
+                                                    Mode: {bundle.mode || 'sync_updates'}
+                                                </Button>
+                                                <Button
+                                                    id="ticket-bundle-unbundle-button"
+                                                    variant="outline"
+                                                    size="sm"
+                                                    onClick={handleUnbundleMaster}
+                                                >
+                                                    Unbundle
+                                                </Button>
+                                            </div>
+                                        </div>
+                                        <div className="text-xs text-gray-500 mb-2">
+                                            Children keep their current status; workflow fields are locked on children. Inbound child replies are surfaced below as view-only.
+                                        </div>
+                                        <div className="flex items-center gap-2 mb-3">
+                                            <Input
+                                                id="ticket-bundle-add-child-input"
+                                                value={addChildTicketNumber}
+                                                onChange={(e) => setAddChildTicketNumber(e.target.value)}
+                                                placeholder="Add child by ticket number…"
+                                                className="h-8"
+                                                containerClassName="mb-0 flex-1"
+                                            />
+                                            <Button
+                                                id="ticket-bundle-add-child-button"
+                                                size="sm"
+                                                onClick={handleAddChildToBundle}
+                                                disabled={!addChildTicketNumber.trim()}
+                                            >
+                                                Add
+                                            </Button>
+                                        </div>
+                                        <div className="max-h-56 overflow-y-auto rounded border border-gray-100">
+                                            {Array.isArray(bundle.children) && bundle.children.length > 0 ? (
+                                                <ul>
+                                                    {bundle.children.map((child: any) => (
+                                                        <li key={child.ticket_id} className="flex items-center justify-between gap-3 px-3 py-2 border-b border-gray-100 last:border-b-0">
+                                                            <div className="min-w-0">
+                                                                <a className="text-sm text-blue-600 hover:underline" href={`/msp/tickets/${child.ticket_id}`}>
+                                                                    {child.ticket_number}
+                                                                </a>
+                                                                <div className="text-xs text-gray-500 truncate">
+                                                                    {(child.client_name ? `${child.client_name} · ` : '')}{child.title}
+                                                                </div>
+                                                            </div>
+                                                            <div className="flex items-center gap-2">
+                                                                <Button
+                                                                    id={`ticket-bundle-promote-child-${child.ticket_id}`}
+                                                                    variant="outline"
+                                                                    size="sm"
+                                                                    onClick={() => handlePromoteChildToMaster(child.ticket_id)}
+                                                                >
+                                                                    Promote
+                                                                </Button>
+                                                                <Button
+                                                                    id={`ticket-bundle-remove-child-${child.ticket_id}`}
+                                                                    variant="outline"
+                                                                    size="sm"
+                                                                    onClick={() => handleRemoveChildFromBundle(child.ticket_id)}
+                                                                >
+                                                                    Remove
+                                                                </Button>
+                                                            </div>
+                                                        </li>
+                                                    ))}
+                                                </ul>
+                                            ) : (
+                                                <div className="px-3 py-2 text-sm text-gray-500">No children in this bundle.</div>
+                                            )}
+                                        </div>
+                                    </div>
+                                ) : null}
+
                                 <TicketInfo
                                     id={`${id}-info`}
                                     ticket={ticket}
@@ -1308,6 +1578,7 @@ const handleClose = () => {
                                     onItilFieldChange={handleItilFieldChange}
                                     itilImpact={itilImpact}
                                     itilUrgency={itilUrgency}
+                                    isBundledChild={Boolean(bundle?.isBundleChild)}
                                 />
                             </div>
                         </Suspense>
@@ -1339,6 +1610,7 @@ const handleClose = () => {
                                     onContentChange={handleContentChange}
                                     isSubmitting={isSubmitting}
                                     hideInternalTab={false}
+                                    externalComments={bundle?.isBundleMaster ? aggregatedChildClientComments : []}
                                 />
                             </div>
                         </Suspense>

@@ -7,7 +7,7 @@ import { TagManager } from 'server/src/components/tags';
 import { ITag } from 'server/src/interfaces/tag.interfaces';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from 'server/src/components/ui/DropdownMenu';
 import { Button } from 'server/src/components/ui/Button';
-import { MoreVertical, Trash2 } from 'lucide-react';
+import { MoreVertical, Trash2, ChevronDown, ChevronRight } from 'lucide-react';
 import { format } from 'date-fns';
 import { IBoard } from 'server/src/interfaces/board.interface';
 
@@ -23,6 +23,8 @@ interface CreateTicketColumnsOptions {
   showTags?: boolean;
   showClient?: boolean;
   onClientClick?: (clientId: string) => void;
+  isBundleExpanded?: (masterTicketId: string) => boolean;
+  onToggleBundleExpanded?: (masterTicketId: string) => void;
 }
 
 export function createTicketColumns(options: CreateTicketColumnsOptions): ColumnDefinition<ITicketListItem>[] {
@@ -38,6 +40,8 @@ export function createTicketColumns(options: CreateTicketColumnsOptions): Column
     showTags = true,
     showClient = true,
     onClientClick,
+    isBundleExpanded,
+    onToggleBundleExpanded,
   } = options;
 
   const columnVisibility = displaySettings?.list?.columnVisibility || {
@@ -78,7 +82,37 @@ export function createTicketColumns(options: CreateTicketColumnsOptions): Column
             className="text-blue-600 hover:text-blue-800 block break-all whitespace-normal text-left"
             style={{ wordBreak: 'break-all', overflowWrap: 'anywhere' }}
           >
-            {value}
+            <span className="flex items-center gap-2">
+              {!record.master_ticket_id && (record.bundle_child_count ?? 0) > 0 && onToggleBundleExpanded ? (
+                <button
+                  type="button"
+                  className="inline-flex items-center justify-center rounded hover:bg-gray-100"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    onToggleBundleExpanded(record.ticket_id as string);
+                  }}
+                  aria-label="Toggle bundle children"
+                >
+                  {isBundleExpanded && isBundleExpanded(record.ticket_id as string) ? (
+                    <ChevronDown className="h-4 w-4 text-gray-600" />
+                  ) : (
+                    <ChevronRight className="h-4 w-4 text-gray-600" />
+                  )}
+                </button>
+              ) : null}
+              <span>{value}</span>
+              {record.master_ticket_id ? (
+                <span className="rounded bg-amber-100 px-2 py-0.5 text-[11px] font-medium text-amber-900">
+                  Bundled → {record.bundle_master_ticket_number || 'Master'}
+                </span>
+              ) : null}
+              {!record.master_ticket_id && (record.bundle_child_count ?? 0) > 0 ? (
+                <span className="rounded bg-indigo-100 px-2 py-0.5 text-[11px] font-medium text-indigo-900">
+                  Bundle · {record.bundle_child_count}
+                </span>
+              ) : null}
+            </span>
           </Link>
         ),
       }
@@ -216,7 +250,14 @@ export function createTicketColumns(options: CreateTicketColumnsOptions): Column
             }}
             className="text-blue-500 hover:underline text-left whitespace-normal break-words bg-transparent border-none p-0"
           >
-            {value || 'No Client'}
+            <span className="inline-flex items-center gap-2">
+              <span>{value || 'No Client'}</span>
+              {!record.master_ticket_id && (record.bundle_child_count ?? 0) > 0 && (record.bundle_distinct_client_count ?? 0) > 1 ? (
+                <span className="rounded bg-amber-100 px-2 py-0.5 text-[11px] font-medium text-amber-900">
+                  Multiple clients
+                </span>
+              ) : null}
+            </span>
           </button>
         ) : undefined,
       }

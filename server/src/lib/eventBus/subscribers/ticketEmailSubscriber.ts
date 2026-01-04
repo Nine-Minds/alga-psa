@@ -2015,11 +2015,18 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
       ? { email: ticketingFromAddress.email, name: senderName }
       : undefined;
 
-    // Only notify external contacts (primaryEmail) if the comment is public and NOT from a contact
-    const isPublicComment = !payload.comment?.is_internal;
-    // Check author_type if available, otherwise fallback to checking if user is an agent (internal user)
-    // Assuming payload.userId is present for agents
-    const isFromAgent = payload.comment?.author_type ? payload.comment.author_type !== 'contact' : !!payload.userId;
+    // Only notify external contacts (primaryEmail) if the comment is public and from an internal agent.
+    // Event schema uses `isInternal` (camelCase); legacy payloads may omit it.
+    const isPublicComment = !payload.comment?.isInternal;
+
+    let isFromAgent = false;
+    if (payload.userId) {
+      const author = await db('users')
+        .select('user_type')
+        .where({ tenant: tenantId, user_id: payload.userId })
+        .first();
+      isFromAgent = author?.user_type === 'internal';
+    }
 
     // Send to primary email if available - external user, no userId
     if (primaryEmail && isPublicComment && isFromAgent) {
@@ -2056,6 +2063,89 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
       }
 
       await sendNotificationIfEnabled(emailParams, 'Ticket Comment Added');
+    }
+
+    // If this ticket is a bundle master, default behavior is to notify all child requesters for public comments.
+    if (isPublicComment && isFromAgent) {
+      const bundleChildren = await db('tickets as t')
+        .select(
+          't.ticket_id',
+          't.ticket_number',
+          't.client_id',
+          't.email_metadata',
+          'dcl.email as client_email',
+          'c.client_name',
+          'co.email as contact_email',
+          'co.full_name as contact_name',
+          'co.phone_number as contact_phone'
+        )
+        .leftJoin('clients as c', function() {
+          this.on('t.client_id', 'c.client_id')
+            .andOn('t.tenant', 'c.tenant');
+        })
+        .leftJoin('client_locations as dcl', function() {
+          this.on('dcl.client_id', '=', 't.client_id')
+            .andOn('dcl.tenant', '=', 't.tenant')
+            .andOn('dcl.is_default', '=', db.raw('true'))
+            .andOn('dcl.is_active', '=', db.raw('true'));
+        })
+        .leftJoin('contacts as co', function() {
+          this.on('t.contact_name_id', 'co.contact_name_id')
+            .andOn('t.tenant', 'co.tenant');
+        })
+        .where({ 't.tenant': tenantId, 't.master_ticket_id': payload.ticketId });
+
+      if (bundleChildren.length > 0) {
+        const sentTo = new Set<string>();
+        if (primaryEmail) sentTo.add(primaryEmail.toLowerCase());
+
+        for (const child of bundleChildren) {
+          const childPrimaryEmail = safeString(child.contact_email) || safeString(child.client_email);
+          if (!childPrimaryEmail) continue;
+
+          const normalizedEmail = childPrimaryEmail.toLowerCase();
+          if (sentTo.has(normalizedEmail)) continue;
+          sentTo.add(normalizedEmail);
+
+          const childMeta = child.email_metadata || {};
+          const childMessageId = childMeta.messageId;
+          const headers: Record<string, string> = {};
+          if (childMessageId) {
+            headers['In-Reply-To'] = childMessageId;
+            const refs = Array.isArray(childMeta.references) ? childMeta.references : [];
+            headers['References'] = [...refs, childMessageId].join(' ');
+          }
+
+          const { portalUrl: childPortalUrl } = await resolveTicketLinks(db, tenantId, child.ticket_id, child.ticket_number);
+
+          await sendNotificationIfEnabled({
+            tenantId,
+            to: childPrimaryEmail,
+            subject: `New Comment on Ticket: ${ticket.title}`,
+            template: 'ticket-comment-added',
+            context: {
+              ticket: {
+                ...baseTicketContext,
+                id: child.ticket_number,
+                clientName: safeString(child.client_name) || baseTicketContext.clientName,
+                requesterName: safeString(child.contact_name) || baseTicketContext.requesterName,
+                requesterEmail: safeString(child.contact_email) || safeString(child.client_email) || baseTicketContext.requesterEmail,
+                requesterPhone: safeString(child.contact_phone) || baseTicketContext.requesterPhone,
+                url: childPortalUrl
+              },
+              comment: commentContext
+            },
+            replyContext: {
+              ticketId: child.ticket_id,
+              commentId: payload.comment?.id,
+              threadId: childMeta.threadId
+            },
+            headers: Object.keys(headers).length > 0 ? headers : undefined,
+            from: fromAddress as any,
+            recipientClientId: child.client_id || undefined
+          }, 'Ticket Comment Added (Bundled Child)');
+        }
+      }
     }
 
     // Send to assigned user if different from primary email AND not the comment author
@@ -2377,6 +2467,85 @@ async function handleTicketClosed(event: TicketClosedEvent): Promise<void> {
         },
         from: fromAddress
       }, 'Ticket Closed');
+    }
+
+    // If this ticket is a bundle master, default behavior is to notify all child requesters on closure.
+    const bundleChildren = await db('tickets as t')
+      .select(
+        't.ticket_id',
+        't.ticket_number',
+        't.client_id',
+        't.email_metadata',
+        'dcl.email as client_email',
+        'c.client_name',
+        'co.email as contact_email',
+        'co.full_name as contact_name',
+        'co.phone_number as contact_phone'
+      )
+      .leftJoin('clients as c', function() {
+        this.on('t.client_id', 'c.client_id')
+          .andOn('t.tenant', 'c.tenant');
+      })
+      .leftJoin('client_locations as dcl', function() {
+        this.on('dcl.client_id', '=', 't.client_id')
+          .andOn('dcl.tenant', '=', 't.tenant')
+          .andOn('dcl.is_default', '=', db.raw('true'))
+          .andOn('dcl.is_active', '=', db.raw('true'));
+      })
+      .leftJoin('contacts as co', function() {
+        this.on('t.contact_name_id', 'co.contact_name_id')
+          .andOn('t.tenant', 'co.tenant');
+      })
+      .where({ 't.tenant': tenantId, 't.master_ticket_id': payload.ticketId });
+
+    if (bundleChildren.length > 0) {
+      const sentTo = new Set<string>();
+      if (primaryEmail) sentTo.add(primaryEmail.toLowerCase());
+
+      for (const child of bundleChildren) {
+        const childPrimaryEmail = safeString(child.contact_email) || safeString(child.client_email);
+        if (!childPrimaryEmail) continue;
+
+        const normalizedEmail = childPrimaryEmail.toLowerCase();
+        if (sentTo.has(normalizedEmail)) continue;
+        sentTo.add(normalizedEmail);
+
+        const childMeta = child.email_metadata || {};
+        const childMessageId = childMeta.messageId;
+        const headers: Record<string, string> = {};
+        if (childMessageId) {
+          headers['In-Reply-To'] = childMessageId;
+          const refs = Array.isArray(childMeta.references) ? childMeta.references : [];
+          headers['References'] = [...refs, childMessageId].join(' ');
+        }
+
+        const { portalUrl: childPortalUrl } = await resolveTicketLinks(db, tenantId, child.ticket_id, child.ticket_number);
+
+        await sendNotificationIfEnabled({
+          tenantId,
+          to: childPrimaryEmail,
+          subject: `Ticket Closed: ${ticket.title}`,
+          template: 'ticket-closed',
+          context: {
+            ticket: {
+              ...baseTicketContext,
+              id: child.ticket_number,
+              clientName: safeString(child.client_name) || baseTicketContext.clientName,
+              requesterName: safeString(child.contact_name) || baseTicketContext.requesterName,
+              requesterEmail: safeString(child.contact_email) || safeString(child.client_email) || baseTicketContext.requesterEmail,
+              requesterPhone: safeString(child.contact_phone) || baseTicketContext.requesterPhone,
+              url: childPortalUrl
+            }
+          },
+          replyContext: {
+            ticketId: child.ticket_id,
+            threadId: childMeta.threadId
+          },
+          headers: Object.keys(headers).length > 0 ? headers : undefined,
+          from: fromAddress,
+          recipientClientId: child.client_id || undefined
+        }, 'Ticket Closed (Bundled Child)');
+      }
     }
 
     // Send to assigned user if different from primary email
