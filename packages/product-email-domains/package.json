@@ -4,7 +4,8 @@
   "type": "module",
   "exports": {
     "./ee/entry": "./ee/entry.ts",
-    "./oss/entry": "./oss/entry.ts"
+    "./oss/entry": "./oss/entry.ts",
+    "./providers/ResendEmailProvider": "./providers/ResendEmailProvider.ts"
   },
   "dependencies": {
     "axios": "^1.7.4",

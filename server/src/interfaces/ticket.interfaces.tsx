@@ -7,6 +7,7 @@ import { IDocument } from './document.interface';
 
 export interface ITicket extends TenantEntity, ITaggable {
   ticket_id?: string;
+  master_ticket_id?: string | null;
   ticket_number: string;
   title: string;
   url: string | null;
@@ -49,6 +50,9 @@ export interface ITicketListItem extends Omit<ITicket, 'status_id' | 'priority_i
   client_name: string;
   entered_by_name: string;
   assigned_to_name: string | null;
+  bundle_child_count?: number;
+  bundle_master_ticket_number?: string | null;
+  bundle_distinct_client_count?: number;
 }
 
 export interface ITicketListFilters {
@@ -64,6 +68,7 @@ export interface ITicketListFilters {
   tags?: string[];
   sortBy?: string;
   sortDirection?: 'asc' | 'desc';
+  bundleView?: 'bundled' | 'individual';
 }
 
 export interface IPriority extends TenantEntity {

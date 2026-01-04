@@ -235,6 +235,16 @@ export async function saveTimeEntry(timeEntry: Omit<ITimeEntry, 'tenant'>): Prom
   }
 
   try {
+    if (validatedTimeEntry.work_item_type === 'ticket') {
+      const ticket = await db('tickets')
+        .select('ticket_id', 'master_ticket_id')
+        .where({ tenant, ticket_id: validatedTimeEntry.work_item_id })
+        .first();
+      if (ticket?.master_ticket_id) {
+        throw new Error('This ticket is bundled; time entries must be added on the master ticket.');
+      }
+    }
+
     // Extract only the fields that exist in the database schema
     const {
       entry_id,

@@ -11,7 +11,9 @@ import { PrioritySelect } from './PrioritySelect';
 import { Button } from 'server/src/components/ui/Button';
 import { Checkbox } from 'server/src/components/ui/Checkbox';
 import { Input } from 'server/src/components/ui/Input';
-import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
+import { Switch } from 'server/src/components/ui/Switch';
+import { Label } from 'server/src/components/ui/Label';
+import { getCurrentUser, getCurrentUserPermissions } from 'server/src/lib/actions/user-actions/userActions';
 import { BoardPicker } from 'server/src/components/settings/general/BoardPicker';
 import { ClientPicker } from 'server/src/components/clients/ClientPicker';
 import { findTagsByEntityIds } from 'server/src/lib/actions/tagActions';
@@ -23,6 +25,7 @@ import { Dialog, DialogContent, DialogFooter } from 'server/src/components/ui/Di
 import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
 import { deleteTicket, deleteTickets } from 'server/src/lib/actions/ticket-actions/ticketActions';
+import { bundleTicketsAction } from 'server/src/lib/actions/ticket-actions/ticketBundleActions';
 import { XCircle, Clock } from 'lucide-react';
 import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionContainer';
 import { withDataAutomationId } from 'server/src/types/ui-reflection/withDataAutomationId';
@@ -96,6 +99,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   sortDirection = 'desc',
   onSortChange
 }) => {
+  const BUNDLE_VIEW_STORAGE_KEY = 'tickets_bundle_view';
   // Pre-fetch tag permissions to prevent individual API calls
   useTagPermissions(['ticket']);
   
@@ -110,6 +114,12 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   const [isBulkDeleteDialogOpen, setIsBulkDeleteDialogOpen] = useState(false);
   const [isBulkDeleting, setIsBulkDeleting] = useState(false);
   const [bulkDeleteErrors, setBulkDeleteErrors] = useState<Array<{ ticketId: string; message: string }>>([]);
+  const [isBundleDialogOpen, setIsBundleDialogOpen] = useState(false);
+  const [bundleMasterTicketId, setBundleMasterTicketId] = useState<string | null>(null);
+  const [bundleSyncUpdates, setBundleSyncUpdates] = useState(true);
+  const [bundleError, setBundleError] = useState<string | null>(null);
+  const [isMultiClientBundleConfirmOpen, setIsMultiClientBundleConfirmOpen] = useState(false);
+  const [canUpdateTickets, setCanUpdateTickets] = useState(true);
 
   const [boards] = useState<IBoard[]>(initialBoards);
   const [clients] = useState<IClient[]>(initialClients);
@@ -127,6 +137,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   const [excludedCategories, setExcludedCategories] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState<string>(initialFilterValues.searchQuery ?? '');
   const [boardFilterState, setBoardFilterState] = useState<'active' | 'inactive' | 'all'>(initialFilterValues.boardFilterState ?? 'active');
+  const [bundleView, setBundleView] = useState<'bundled' | 'individual'>(initialFilterValues.bundleView ?? 'bundled');
   
   const [clientFilterState, setClientFilterState] = useState<'active' | 'inactive' | 'all'>('active');
   const [clientTypeFilter, setClientTypeFilter] = useState<'all' | 'company' | 'individual'>('all');
@@ -222,6 +233,23 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
 
   const debouncedSearchQuery = useDebounce(searchQuery, 500);
 
+  // Persist bundle view preference locally (URL params still take precedence when present)
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    if (initialFilterValues.bundleView) return;
+
+    const stored = window.localStorage.getItem(BUNDLE_VIEW_STORAGE_KEY);
+    if (stored === 'bundled' || stored === 'individual') {
+      setBundleView(stored);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    window.localStorage.setItem(BUNDLE_VIEW_STORAGE_KEY, bundleView);
+  }, [bundleView]);
+
   // Helper function to generate URL with current filter state
   const getCurrentFiltersQuery = useCallback(() => {
     const params = new URLSearchParams();
@@ -236,9 +264,12 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     if (boardFilterState && boardFilterState !== 'active') {
       params.set('boardFilterState', boardFilterState);
     }
+    if (bundleView && bundleView !== 'bundled') {
+      params.set('bundleView', bundleView);
+    }
 
     return params.toString();
-  }, [selectedBoard, selectedClient, selectedStatus, selectedPriority, selectedCategories, debouncedSearchQuery, boardFilterState]);
+  }, [selectedBoard, selectedClient, selectedStatus, selectedPriority, selectedCategories, debouncedSearchQuery, boardFilterState, bundleView]);
 
   const isFirstRender = useRef(true);
 
@@ -261,6 +292,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
       boardFilterState: boardFilterState,
       showOpenOnly: selectedStatus === 'open',
       tags: selectedTags.length > 0 ? selectedTags : undefined,
+      bundleView,
     };
 
     console.log('[Dashboard] Calling onFiltersChanged with:', currentFilters);
@@ -274,6 +306,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     selectedClient,
     debouncedSearchQuery,
     boardFilterState,
+    bundleView,
     selectedTags,
     // onFiltersChanged intentionally omitted - we want to trigger only when filter values change, not when the callback changes
     filtersHaveInitialValues
@@ -316,6 +349,19 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
       fetchUser();
     }
   }, [user]);
+
+  useEffect(() => {
+    const load = async () => {
+      if (!currentUser) return;
+      try {
+        const permissions = await getCurrentUserPermissions();
+        setCanUpdateTickets(permissions.includes('ticket:update'));
+      } catch {
+        setCanUpdateTickets(true);
+      }
+    };
+    load();
+  }, [currentUser]);
   
   // Use interval tracking hook to get interval count
   const { intervalCount, isLoading: isLoadingIntervals } = useIntervalTracking(currentUser?.id);
@@ -373,12 +419,84 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     }
   };
 
+  const [expandedBundleMasters, setExpandedBundleMasters] = useState<Set<string>>(new Set());
+  const isBundleExpanded = useCallback((masterTicketId: string) => expandedBundleMasters.has(masterTicketId), [expandedBundleMasters]);
+  const toggleBundleExpanded = useCallback((masterTicketId: string) => {
+    setExpandedBundleMasters(prev => {
+      const next = new Set(prev);
+      if (next.has(masterTicketId)) next.delete(masterTicketId);
+      else next.add(masterTicketId);
+      return next;
+    });
+  }, []);
+
+  const displayedTickets = useMemo(() => {
+    if (bundleView !== 'individual') {
+      return tickets;
+    }
+
+    const childrenByMaster = new Map<string, ITicketListItem[]>();
+    const mastersOrStandalone: ITicketListItem[] = [];
+    const orphans: ITicketListItem[] = [];
+
+    const presentIds = new Set(tickets.map(t => t.ticket_id).filter((id): id is string => !!id));
+
+    for (const t of tickets) {
+      if (!t.ticket_id) continue;
+      if (t.master_ticket_id) {
+        // Child ticket
+        if (presentIds.has(t.master_ticket_id)) {
+          const list = childrenByMaster.get(t.master_ticket_id) || [];
+          list.push(t);
+          childrenByMaster.set(t.master_ticket_id, list);
+        } else {
+          orphans.push(t);
+        }
+      } else {
+        mastersOrStandalone.push(t);
+      }
+    }
+
+    // Stable ordering of children per master
+    for (const [mid, list] of childrenByMaster.entries()) {
+      list.sort((a, b) => {
+        const au = a.updated_at ? new Date(a.updated_at).getTime() : 0;
+        const bu = b.updated_at ? new Date(b.updated_at).getTime() : 0;
+        return bu - au;
+      });
+      childrenByMaster.set(mid, list);
+    }
+
+    const result: ITicketListItem[] = [];
+    for (const t of mastersOrStandalone) {
+      result.push(t);
+      if ((t.bundle_child_count ?? 0) > 0 && t.ticket_id) {
+        if (expandedBundleMasters.has(t.ticket_id)) {
+          const kids = childrenByMaster.get(t.ticket_id) || [];
+          result.push(...kids);
+        }
+      }
+    }
+
+    // Append children whose masters aren't on this page
+    if (orphans.length > 0) {
+      orphans.sort((a, b) => {
+        const au = a.updated_at ? new Date(a.updated_at).getTime() : 0;
+        const bu = b.updated_at ? new Date(b.updated_at).getTime() : 0;
+        return bu - au;
+      });
+      result.push(...orphans);
+    }
+
+    return result;
+  }, [tickets, bundleView, expandedBundleMasters]);
+
   // Add id to each ticket for DataTable keys (no client-side filtering needed)
   const ticketsWithIds = useMemo(() =>
-    tickets.map((ticket): any => ({
+    displayedTickets.map((ticket): any => ({
       ...ticket,
       id: ticket.ticket_id
-    })), [tickets]);
+    })), [displayedTickets]);
 
   const selectableTicketIds = useMemo(
     () => {
@@ -496,7 +614,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   const isSelectionIndeterminate = selectedTicketIds.size > 0 && !allVisibleTicketsSelected;
   const selectedTicketDetails = useMemo(() => {
     if (selectedTicketIds.size === 0) {
-      return [] as Array<{ ticket_id: string; ticket_number?: string; title?: string; client_name?: string }>;
+      return [] as Array<{ ticket_id: string; ticket_number?: string; title?: string; client_id?: string | null; client_name?: string }>;
     }
 
     const selectedSet = new Set(selectedTicketIds);
@@ -507,6 +625,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
         ticket_id: ticket.ticket_id as string,
         ticket_number: ticket.ticket_number,
         title: ticket.title,
+        client_id: ticket.client_id ?? null,
         client_name: ticket.client_name,
       }))
       .sort((a, b) => {
@@ -519,6 +638,15 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
         return 0;
       });
   }, [tickets, selectedTicketIds]);
+
+  const isSelectedBundleMultiClient = useMemo(() => {
+    const uniqueClientIds = new Set(
+      selectedTicketDetails
+        .map(detail => detail.client_id)
+        .filter((id): id is string => typeof id === 'string' && id.length > 0)
+    );
+    return uniqueClientIds.size > 1;
+  }, [selectedTicketDetails]);
 
   const hasSelection = selectedTicketIds.size > 0;
   const showSelectAllBanner = allVisibleTicketsSelected && !hasHiddenSelections && totalCount > visibleTicketIds.length && visibleTicketIds.length > 0;
@@ -548,6 +676,8 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
       onTagsChange: handleTagsChange,
       showClient: true,
       onClientClick: onQuickViewClient,
+      isBundleExpanded,
+      onToggleBundleExpanded: toggleBundleExpanded,
     });
 
     const selectionColumn: ColumnDefinition<ITicketListItem> = {
@@ -622,6 +752,8 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     handleSelectAllVisibleTickets,
     handleTicketSelectionChange,
     selectedTicketIds,
+    isBundleExpanded,
+    toggleBundleExpanded,
   ]);
 
   const handleBulkDeleteClose = useCallback(() => {
@@ -680,6 +812,78 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
       setIsBulkDeleting(false);
     }
   }, [selectedTicketIdsArray, currentUser, clearSelection]);
+
+  const performBundleTickets = useCallback(async () => {
+    if (selectedTicketIdsArray.length < 2) {
+      setBundleError('Select at least two tickets to bundle.');
+      return;
+    }
+    if (!bundleMasterTicketId) {
+      setBundleError('Select a master ticket.');
+      return;
+    }
+    if (!currentUser) {
+      toast.error('You must be logged in to bundle tickets');
+      return;
+    }
+
+    setBundleError(null);
+    try {
+      await bundleTicketsAction(
+        {
+          masterTicketId: bundleMasterTicketId,
+          childTicketIds: selectedTicketIdsArray.filter((id) => id !== bundleMasterTicketId),
+          mode: bundleSyncUpdates ? 'sync_updates' : 'link_only',
+        },
+        currentUser
+      );
+
+      toast.success('Tickets bundled');
+      setIsBundleDialogOpen(false);
+      clearSelection();
+
+      onFiltersChanged({
+        boardId: selectedBoard ?? undefined,
+        statusId: selectedStatus,
+        priorityId: selectedPriority,
+        categoryId: selectedCategories.length > 0 ? selectedCategories[0] : undefined,
+        clientId: selectedClient ?? undefined,
+        searchQuery: debouncedSearchQuery,
+        boardFilterState: boardFilterState,
+        showOpenOnly: selectedStatus === 'open',
+        tags: selectedTags.length > 0 ? selectedTags : undefined,
+        bundleView,
+      });
+    } catch (error) {
+      console.error('Failed to bundle tickets:', error);
+      setBundleError(error instanceof Error ? error.message : 'Failed to bundle tickets');
+      toast.error('Failed to bundle tickets');
+    }
+  }, [
+    selectedTicketIdsArray,
+    bundleMasterTicketId,
+    bundleSyncUpdates,
+    currentUser,
+    clearSelection,
+    onFiltersChanged,
+    selectedBoard,
+    selectedStatus,
+    selectedPriority,
+    selectedCategories,
+    selectedClient,
+    debouncedSearchQuery,
+    boardFilterState,
+    selectedTags,
+    bundleView,
+  ]);
+
+  const handleConfirmBundleTickets = useCallback(() => {
+    if (isSelectedBundleMultiClient) {
+      setIsMultiClientBundleConfirmOpen(true);
+      return;
+    }
+    void performBundleTickets();
+  }, [isSelectedBundleMultiClient, performBundleTickets]);
 
 
   const handleTicketAdded = useCallback((newTicket: ITicket) => {
@@ -785,6 +989,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     const defaultCategories: string[] = [];
     const defaultSearchQuery: string = '';
     const defaultBoardFilterState: 'active' | 'inactive' | 'all' = 'active';
+    const defaultBundleView: 'bundled' | 'individual' = 'bundled';
 
     setSelectedBoard(defaultBoard);
     setSelectedClient(defaultClient);
@@ -794,6 +999,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     setExcludedCategories([]);
     setSearchQuery(defaultSearchQuery);
     setBoardFilterState(defaultBoardFilterState);
+    setBundleView(defaultBundleView);
     setSelectedTags([]);
     
     setClientFilterState('active'); 
@@ -810,6 +1016,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
       searchQuery: defaultSearchQuery,
       boardFilterState: defaultBoardFilterState,
       showOpenOnly: defaultStatus === 'open',
+      bundleView: defaultBundleView,
     });
   }, [onFiltersChanged, clearSelection]);
 
@@ -843,6 +1050,22 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
               className="flex items-center gap-2"
             >
               Delete Selected ({selectedTicketIds.size})
+            </Button>
+          )}
+          {selectedTicketIds.size >= 2 && (
+            <Button
+              id={`${id}-bundle-tickets-button`}
+              onClick={() => {
+                setBundleError(null);
+                const first = Array.from(selectedTicketIds)[0] || null;
+                setBundleMasterTicketId(first);
+                setBundleSyncUpdates(true);
+                setIsBundleDialogOpen(true);
+              }}
+              className="flex items-center gap-2"
+              disabled={!canUpdateTickets}
+            >
+              Bundle Tickets
             </Button>
           )}
           <Button id="add-ticket-button" onClick={() => setIsQuickAddOpen(true)}>Add Ticket</Button>
@@ -918,15 +1141,27 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
               }}
               onClear={() => setSelectedTags([])}
             />
-            <Button
-              variant="outline"
-              onClick={handleResetFilters}
-              className="whitespace-nowrap flex items-center gap-2 ml-auto"
-              id='reset-filters'
-            >
-              <XCircle className="h-4 w-4" />
-              Reset Filters
-            </Button>
+            <div className="flex items-center gap-4 ml-auto">
+              <div className="flex items-center gap-2 whitespace-nowrap">
+                <Label htmlFor={`${id}-bundle-view-toggle`} className="text-sm text-gray-700">
+                  Bundled view
+                </Label>
+                <Switch
+                  id={`${id}-bundle-view-toggle`}
+                  checked={bundleView === 'bundled'}
+                  onCheckedChange={(checked) => setBundleView(checked ? 'bundled' : 'individual')}
+                />
+              </div>
+              <Button
+                variant="outline"
+                onClick={handleResetFilters}
+                className="whitespace-nowrap flex items-center gap-2"
+                id='reset-filters'
+              >
+                <XCircle className="h-4 w-4" />
+                Reset Filters
+              </Button>
+            </div>
           </div>
         </ReflectionContainer>
         <h2 className="text-xl font-semibold mt-6 mb-2">
@@ -1014,6 +1249,19 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
         confirmLabel={deleteError ? undefined : "Delete"}
         cancelLabel={deleteError ? "Close" : "Cancel"}
       />
+      <ConfirmationDialog
+        id={`${id}-bundle-multi-client-confirm`}
+        isOpen={isMultiClientBundleConfirmOpen}
+        onClose={() => setIsMultiClientBundleConfirmOpen(false)}
+        onConfirm={async () => {
+          setIsMultiClientBundleConfirmOpen(false);
+          await performBundleTickets();
+        }}
+        title="Bundle spans multiple clients"
+        message="This bundle includes tickets from multiple clients. Confirm that you want to proceed."
+        confirmLabel="Proceed"
+        cancelLabel="Cancel"
+      />
       <Dialog
         isOpen={isBulkDeleteDialogOpen && hasSelection}
         onClose={handleBulkDeleteClose}
@@ -1084,6 +1332,83 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
             {isBulkDeleting
               ? 'Deleting...'
               : `Delete ${selectedTicketIdsArray.length} Ticket${selectedTicketIdsArray.length === 1 ? '' : 's'}`}
+          </Button>
+        </DialogFooter>
+      </Dialog>
+
+      <Dialog
+        isOpen={isBundleDialogOpen && selectedTicketIds.size >= 2}
+        onClose={() => {
+          setIsBundleDialogOpen(false);
+          setBundleError(null);
+        }}
+        id={`${id}-bundle-dialog`}
+        title="Bundle Tickets"
+      >
+        <DialogContent>
+          {bundleError && (
+            <div className="mb-3 rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+              {bundleError}
+            </div>
+          )}
+          {(() => {
+            if (!isSelectedBundleMultiClient) return null;
+            return (
+              <div className="mb-3 rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+                This bundle spans multiple clients. You'll be asked to confirm before bundling.
+              </div>
+            );
+          })()}
+          <div className="space-y-4">
+            <div>
+              <div className="text-sm font-medium text-gray-700 mb-1">Select Master Ticket</div>
+              <CustomSelect
+                id={`${id}-bundle-master-select`}
+                value={bundleMasterTicketId || ''}
+                options={selectedTicketDetails.map(detail => ({
+                  value: detail.ticket_id,
+                  label: detail.ticket_number || detail.title || detail.ticket_id
+                }))}
+                onValueChange={(value) => setBundleMasterTicketId(value)}
+                placeholder="Select master ticket..."
+              />
+            </div>
+
+            <div className="flex items-center gap-2">
+              <Checkbox
+                id={`${id}-bundle-sync-updates`}
+                checked={bundleSyncUpdates}
+                onChange={(event: React.ChangeEvent<HTMLInputElement>) => setBundleSyncUpdates(event.target.checked)}
+                containerClassName="mb-0"
+                skipRegistration
+              />
+              <label htmlFor={`${id}-bundle-sync-updates`} className="text-sm text-gray-700">
+                Sync updates from master to children (public replies + workflow changes)
+              </label>
+            </div>
+
+            <div className="text-xs text-gray-500">
+              Child tickets keep their current status when bundled. Workflow fields are locked on children by default. Internal notes stay on the master.
+            </div>
+          </div>
+        </DialogContent>
+        <DialogFooter>
+          <Button
+            id={`${id}-bundle-cancel`}
+            variant="outline"
+            onClick={() => {
+              setIsBundleDialogOpen(false);
+              setBundleError(null);
+            }}
+          >
+            Cancel
+          </Button>
+          <Button
+            id={`${id}-bundle-confirm`}
+            onClick={handleConfirmBundleTickets}
+            disabled={selectedTicketIdsArray.length < 2 || !bundleMasterTicketId}
+          >
+            Bundle Tickets
           </Button>
         </DialogFooter>
       </Dialog>

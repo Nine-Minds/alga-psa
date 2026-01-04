@@ -64,6 +64,7 @@ interface TicketConversationProps {
   hideInternalTab?: boolean; // Optional prop to hide the Internal tab
   isSubmitting?: boolean; // Flag to indicate if a submission is in progress
   overrides?: Record<string, { note?: string; updated_at?: string }>; // Optional local overrides by comment_id
+  externalComments?: Array<IComment & { child_ticket_id?: string; child_ticket_number?: string; child_ticket_title?: string; child_client_name?: string }>;
 }
 
 const TicketConversation: React.FC<TicketConversationProps> = ({
@@ -88,6 +89,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
   hideInternalTab = false,
   isSubmitting = false,
   overrides = {},
+  externalComments = [],
 }) => {
   const { t } = useTranslation('clientPortal');
   // Ensure we have a stable id for interactive element ids
@@ -244,6 +246,49 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
     });
   };
 
+  const renderExternalComments = (): React.JSX.Element | null => {
+    if (!externalComments || externalComments.length === 0) {
+      return null;
+    }
+
+    const commentsToRender = reverseOrder ? [...externalComments].reverse() : externalComments;
+    return (
+      <div className="mt-4" id={`${compId}-external-comments`}>
+        <div className="text-xs text-gray-500 mb-2">
+          Inbound replies on child tickets (view-only)
+        </div>
+        {commentsToRender.map((conversation) => {
+          const key = `ext-${conversation.child_ticket_id || 'unknown'}-${conversation.comment_id || conversation.created_at || ''}`;
+          return (
+            <div key={key} className="mb-2">
+              <div className="text-xs text-gray-600 mb-1">
+                {conversation.child_client_name ? `${conversation.child_client_name} • ` : ''}
+                {conversation.child_ticket_number ? `Ticket ${conversation.child_ticket_number}` : 'Child ticket'}
+                {conversation.child_ticket_title ? ` • ${conversation.child_ticket_title}` : ''}
+              </div>
+              <CommentItem
+                key={key}
+                id={`${compId}-external-comment-${conversation.comment_id}`}
+                conversation={conversation}
+                user={getAuthorInfo(conversation)}
+                currentUserId={null}
+                isEditing={false}
+                currentComment={null}
+                ticketId={ticket.ticket_id || ''}
+                userMap={userMap}
+                onContentChange={() => {}}
+                onSave={() => {}}
+                onClose={() => {}}
+                onEdit={() => {}}
+                onDelete={() => {}}
+              />
+            </div>
+          );
+        })}
+      </div>
+    );
+  };
+
   // Build tab content array based on hideInternalTab
   const baseTabs = [
     {
@@ -251,6 +296,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
       content: (
         <ReflectionContainer id={`${id}-client-visible-comments`} label="Client Comments">
           {renderComments(conversations.filter(conversation => !conversation.is_internal))}
+          {renderExternalComments()}
         </ReflectionContainer>
       )
     },

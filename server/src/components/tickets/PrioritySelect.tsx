@@ -18,6 +18,7 @@ interface PrioritySelectProps {
   customStyles?: any;
   id?: string;
   isItilBoard?: boolean;
+  disabled?: boolean;
 }
 
 export const PrioritySelect: React.FC<PrioritySelectProps> = ({
@@ -28,7 +29,8 @@ export const PrioritySelect: React.FC<PrioritySelectProps> = ({
   className,
   customStyles,
   id,
-  isItilBoard = false
+  isItilBoard = false,
+  disabled = false
 }) => {
   // Transform options to include color in the label
   const transformedOptions: SelectOption[] = options.map((option) => ({
@@ -61,6 +63,7 @@ export const PrioritySelect: React.FC<PrioritySelectProps> = ({
       placeholder={placeholder}
       className={className}
       customStyles={customStyles}
+      disabled={disabled}
     />
   );
 };

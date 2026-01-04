@@ -64,6 +64,7 @@ export default function TicketingDashboardContainer({
       searchQuery: '',
       boardFilterState: 'active',
       showOpenOnly: true,
+      bundleView: initialFilters?.bundleView ?? 'bundled',
       boardId: undefined,
       categoryId: undefined,
       clientId: undefined,
@@ -121,6 +122,9 @@ export default function TicketingDashboardContainer({
     if (filters.sortDirection && filters.sortDirection !== 'desc') {
       params.set('sortDirection', filters.sortDirection);
     }
+    if (filters.bundleView && filters.bundleView !== 'bundled') {
+      params.set('bundleView', filters.bundleView);
+    }
 
     // Update URL without causing a page refresh
     const newURL = params.toString() ? `/msp/tickets?${params.toString()}` : '/msp/tickets';
@@ -155,7 +159,8 @@ export default function TicketingDashboardContainer({
         showOpenOnly: (filters.statusId === 'open') || (filters.showOpenOnly === true),
         tags: filters.tags && filters.tags.length > 0 ? Array.from(new Set(filters.tags)) : undefined,
         sortBy: effectiveSortBy,
-        sortDirection: effectiveSortDirection
+        sortDirection: effectiveSortDirection,
+        bundleView: filters.bundleView || 'bundled'
       };
 
       console.log('[Container] Fetching with defaults:', currentFiltersWithDefaults);

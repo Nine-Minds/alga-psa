@@ -87,12 +87,19 @@ export default async function TicketsPage({ searchParams }: TicketsPageProps) {
         filtersFromURL.sortDirection = sortDirection;
       }
     }
+    if (params?.bundleView && typeof params.bundleView === 'string') {
+      const bundleView = params.bundleView;
+      if (bundleView === 'bundled' || bundleView === 'individual') {
+        filtersFromURL.bundleView = bundleView;
+      }
+    }
 
     // Apply defaults for missing parameters
     const initialFilters: Partial<ITicketListFilters> = {
       boardFilterState: 'active',
       statusId: 'open',
       priorityId: 'all',
+      bundleView: 'bundled',
       sortBy: filtersFromURL.sortBy ?? 'entered_at',
       sortDirection: filtersFromURL.sortDirection ?? 'desc',
       ...filtersFromURL
@@ -110,7 +117,8 @@ export default async function TicketsPage({ searchParams }: TicketsPageProps) {
       showOpenOnly: (initialFilters.statusId === 'open') || false,
       tags: initialFilters.tags || undefined,
       sortBy: initialFilters.sortBy || 'entered_at',
-      sortDirection: initialFilters.sortDirection || 'desc'
+      sortDirection: initialFilters.sortDirection || 'desc',
+      bundleView: initialFilters.bundleView || 'bundled'
     };
 
     // Fetch consolidated data for the ticket list with initial filters and pagination
