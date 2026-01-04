@@ -270,6 +270,7 @@ export function GmailProviderForm({
               </div>
               <div>
                 <Button
+                  id="open-google-settings-btn"
                   type="button"
                   variant="outline"
                   onClick={() => {
