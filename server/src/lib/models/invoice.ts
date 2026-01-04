@@ -150,23 +150,29 @@ export default class Invoice {
     try {
       console.log(`Getting invoice items for invoice ${invoiceId} in tenant ${tenant}`);
       
-      const query = knexOrTrx('invoice_charges')
+      const query = knexOrTrx('invoice_charges as ic')
+        .leftJoin('service_catalog as sc', function () {
+          this.on('ic.service_id', '=', 'sc.service_id').andOn('ic.tenant', '=', 'sc.tenant');
+        })
         .select(
-          'item_id',
-          'invoice_id',
-          'service_id',
-          'description as name',
-          'description',
-          'is_discount',
-          knexOrTrx.raw('CAST(quantity AS INTEGER) as quantity'),
-          knexOrTrx.raw('CAST(unit_price AS BIGINT) as unit_price'),
-          knexOrTrx.raw('CAST(total_price AS BIGINT) as total_price'),
-          knexOrTrx.raw('CAST(tax_amount AS BIGINT) as tax_amount'),
-          knexOrTrx.raw('CAST(net_amount AS BIGINT) as net_amount'),
-          'is_manual')
+          'ic.item_id',
+          'ic.invoice_id',
+          'ic.service_id',
+          'sc.item_kind as service_item_kind',
+          'sc.sku as service_sku',
+          'sc.service_name as service_name',
+          'ic.description as name',
+          'ic.description',
+          'ic.is_discount',
+          knexOrTrx.raw('CAST(ic.quantity AS INTEGER) as quantity'),
+          knexOrTrx.raw('CAST(ic.unit_price AS BIGINT) as unit_price'),
+          knexOrTrx.raw('CAST(ic.total_price AS BIGINT) as total_price'),
+          knexOrTrx.raw('CAST(ic.tax_amount AS BIGINT) as tax_amount'),
+          knexOrTrx.raw('CAST(ic.net_amount AS BIGINT) as net_amount'),
+          'ic.is_manual')
         .where({
-          invoice_id: invoiceId,
-          tenant
+          'ic.invoice_id': invoiceId,
+          'ic.tenant': tenant
         });
 
       const items = await query;

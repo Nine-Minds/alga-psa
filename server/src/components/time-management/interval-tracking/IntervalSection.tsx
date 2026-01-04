@@ -30,7 +30,7 @@ export function IntervalSection({
   userId,
   timePeriod,
   onCreateTimeEntry
-}: IntervalSectionProps): JSX.Element {
+}: IntervalSectionProps): React.JSX.Element {
   const [intervals, setIntervals] = useState<TicketInterval[]>([]);
   const [selectedIntervalIds, setSelectedIntervalIds] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);

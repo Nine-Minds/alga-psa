@@ -14,7 +14,7 @@ import { ActivitiesTableFilters, ActivitiesTableFiltersRef } from './filters/Act
 import { useActivityDrawer } from './ActivityDrawerProvider';
 import { useActivitiesCache } from 'server/src/hooks/useActivitiesCache';
 import { ScheduleActivity } from 'server/src/interfaces/activity.interfaces';
-import LoadingIndicator from 'server/src/components/ui/LoadingIndicator';
+import { ActivitiesTableSkeleton } from './ActivitiesTableSkeleton';
 
 interface ActivitiesDataTableSectionProps {
   title?: string;
@@ -206,10 +206,8 @@ export function ActivitiesDataTableSection({
           filters={filters}
           onChange={handleFilterChange}
         />
-        {isLoading ? (
-          <div className="flex justify-center items-center h-40">
-            <LoadingIndicator text="Loading activities..." spinnerProps={{ size: "sm" }} layout="stacked" />
-          </div>
+        {isInitialLoad || (isLoading && activities.length === 0) ? (
+          <ActivitiesTableSkeleton rowCount={pageSize} />
         ) : error ? (
           <div className="flex justify-center items-center h-40">
             <p className="text-red-500">{error}</p>

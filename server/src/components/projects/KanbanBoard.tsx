@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { IProjectTask, ProjectStatus, IProjectTicketLinkWithDetails, ITaskType } from 'server/src/interfaces/project.interfaces';
+import { IProjectTask, ProjectStatus, IProjectTicketLinkWithDetails, ITaskType, IProjectTaskDependency } from 'server/src/interfaces/project.interfaces';
 import { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
 import { ITag } from 'server/src/interfaces/tag.interfaces';
 import { getTaskTypes } from 'server/src/lib/actions/project-actions/projectTaskActions';
@@ -20,6 +20,7 @@ interface KanbanBoardProps {
   selectedPhase: boolean;
   ticketLinks: { [taskId: string]: IProjectTicketLinkWithDetails[] };
   taskResources: { [taskId: string]: any[] };
+  taskDependencies?: { [taskId: string]: { predecessors: IProjectTaskDependency[]; successors: IProjectTaskDependency[] } };
   taskTags?: Record<string, ITag[]>;
   taskDocumentCounts?: Map<string, number>;
   allTaskTags?: ITag[];
@@ -88,6 +89,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
   selectedPhase,
   ticketLinks,
   taskResources,
+  taskDependencies = {},
   taskTags = {},
   taskDocumentCounts = {},
   allTaskTags = [],
@@ -145,7 +147,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
   
   return (
     <div className={styles.kanbanBoard}>
-      {statuses.filter(status => status.is_visible).map((status, index): JSX.Element => {
+      {statuses.filter(status => status.is_visible).map((status, index): React.JSX.Element => {
         // Use configured color or fallback to cycling colors
         const configuredColor = status.color;
         const backgroundColor = configuredColor ? '' : cycleColors[index % cycleColors.length];
@@ -166,6 +168,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
             taskTypes={taskTypes}
             ticketLinks={ticketLinks}
             taskResources={taskResources}
+            taskDependencies={taskDependencies}
             taskTags={taskTags}
             taskDocumentCounts={taskDocumentCounts instanceof Map ? Object.fromEntries(taskDocumentCounts.entries()) : {}}
             statusIcon={statusIcon}

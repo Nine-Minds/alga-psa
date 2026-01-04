@@ -356,9 +356,17 @@ const UserPicker: React.FC<UserPickerProps & AutomationProps> = ({
         </div>
 
         {/* User List */}
-        <div className="overflow-y-auto p-1" style={{
-          maxHeight: dropdownPosition === 'bottom' ? '200px' : '250px'
-        }}>
+        <div
+          className="overflow-y-auto p-1"
+          style={{
+            maxHeight: dropdownPosition === 'bottom' ? '200px' : '250px',
+            overscrollBehavior: 'contain'
+          }}
+          onWheel={(e) => {
+            // Prevent scroll from propagating to parent elements
+            e.stopPropagation();
+          }}
+        >
           {/* Not assigned option */}
           <OptionButton
             id={`${pickerId}-option-unassigned`}
@@ -371,7 +379,7 @@ const UserPicker: React.FC<UserPickerProps & AutomationProps> = ({
           </OptionButton>
 
           {/* User options */}
-          {filteredUsers.map((user): JSX.Element => {
+          {filteredUsers.map((user): React.JSX.Element => {
             const userName = `${user.first_name || ''} ${user.last_name || ''}`.trim() || 'Unnamed User';
             return (
               <OptionButton

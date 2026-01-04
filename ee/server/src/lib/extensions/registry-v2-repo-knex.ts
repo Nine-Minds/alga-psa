@@ -133,6 +133,7 @@ export function registerRegistryV2KnexRepo(knex: Knex) {
 
     async create(input: Omit<ExtensionVersionRecord, 'id' | 'createdAt'>): Promise<ExtensionVersionRecord> {
       const id = uuid();
+      const now = knex.fn.now();
       const vRow: any = {
         id: id || undefined,
         registry_id: input.extensionId,
@@ -158,6 +159,41 @@ export function registerRegistryV2KnexRepo(knex: Knex) {
           size_bytes: null,
         };
         await knex('extension_bundle').insert(bRow);
+      }
+
+      // Materialize endpoints into normalized table for strong references (best-effort / idempotent).
+      try {
+        const endpoints = Array.isArray(input.endpoints) ? input.endpoints : [];
+        if (endpoints.length > 0) {
+          const normalizePath = (p: string) => {
+            const raw = String(p || '').trim();
+            if (!raw) return '/';
+            const withSlash = raw.startsWith('/') ? raw : `/${raw}`;
+            return withSlash.replace(/\/{2,}/g, '/');
+          };
+          const rows = endpoints
+            .map((e) => ({
+              version_id: v.id,
+              method: String((e as any).method || '').toUpperCase(),
+              path: normalizePath(String((e as any).path || '')),
+              handler: String((e as any).handler || ''),
+              updated_at: now,
+            }))
+            .filter((row) => row.method && row.path && row.handler);
+          if (rows.length > 0) {
+            await knex('extension_api_endpoint')
+              .insert(rows)
+              .onConflict(['version_id', 'method', 'path'])
+              .merge({ handler: knex.raw('excluded.handler'), updated_at: now });
+          }
+        }
+      } catch (error: any) {
+        // eslint-disable-next-line no-console
+        console.warn('[registry-v2-repo-knex] failed to materialize extension_api_endpoint rows', {
+          versionId: v.id,
+          extensionId: input.extensionId,
+          error: error?.message ?? String(error),
+        });
       }
 
       return {

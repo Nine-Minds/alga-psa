@@ -9,7 +9,9 @@ import { ITimeEntryWithWorkItemString } from 'server/src/interfaces/timeEntry.in
 import { IExtendedWorkItem } from 'server/src/interfaces/workItem.interfaces';
 import { formatISO, parseISO, format, isToday } from 'date-fns';
 import { useAutomationIdAndRegister } from 'server/src/types/ui-reflection/useAutomationIdAndRegister';
-import { ButtonComponent, ContainerComponent } from 'server/src/types/ui-reflection/types';
+import { BillabilityPercentage, billabilityColorScheme, formatDuration, formatWorkItemType } from './utils';
+import { BillableLegend } from './BillableLegend';
+import { ContainerComponent } from 'server/src/types/ui-reflection/types';
 import { CommonActions } from 'server/src/types/ui-reflection/actionBuilders';
 import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionContainer';
 import { TimeSheetDateNavigatorState } from './types';
@@ -45,47 +47,6 @@ const DAY_COLUMN_WIDTH = 120; // Width of each day column
 const MIN_DAYS_PER_PAGE = 3; // Minimum days to show
 const MAX_DAYS_PER_PAGE = 14; // Maximum days to show
 
-type BillabilityPercentage = 0 | 25 | 50 | 75 | 100;
-
-const billabilityColorScheme: Record<BillabilityPercentage, {
-    background: string;
-    border: string;
-}> = {
-    0: {
-        background: "rgb(var(--color-border-50))",
-        border: "rgb(var(--color-border-300))"
-    },
-    25: {
-        background: "rgb(var(--color-accent-50))",
-        border: "rgb(var(--color-accent-300))"
-    },
-    50: {
-        background: "rgb(var(--color-accent-100))",
-        border: "rgb(var(--color-accent-300))"
-    },
-    75: {
-        background: "rgb(var(--color-secondary-100))",
-        border: "rgb(var(--color-secondary-300))"
-    },
-    100: {
-        background: "rgb(var(--color-primary-100))",
-        border: "rgb(var(--color-primary-300))"
-    }
-} as const;
-
-function formatWorkItemType(type: string): string {
-    const words = type.split(/[_\s]+/);
-    return words.map((word): string =>
-        word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
-    ).join(' ');
-}
-
-function formatDuration(minutes: number): string {
-    const hours = Math.floor(minutes / 60);
-    const remainingMinutes = Math.round(minutes % 60);
-    return `${hours.toString().padStart(2, '0')}:${remainingMinutes.toString().padStart(2, '0')}`;
-}
-
 export function TimeSheetTable({
     dates,
     workItemsByType,
@@ -98,7 +59,7 @@ export function TimeSheetTable({
     onDeleteWorkItem,
     onQuickAddTimeEntry,
     onDateNavigatorChange
-}: TimeSheetTableProps): JSX.Element {
+}: TimeSheetTableProps): React.JSX.Element {
     const [selectedWorkItemToDelete, setSelectedWorkItemToDelete] = useState<string | null>(null);
     const [hoveredCell, setHoveredCell] = useState<{ workItemId: string; date: string } | null>(null);
     const [quickInputValues, setQuickInputValues] = useState<{ [key: string]: string }>({});
@@ -228,17 +189,6 @@ export function TimeSheetTable({
     const hasWorkItems = Object.values(workItemsByType).some(items => items.length > 0);
     const lastWorkItemId = Object.values(workItemsByType).flat().at(-1)?.work_item_id;
 
-    // Register add work item button for automation
-    const { automationIdProps: addWorkItemProps } = useAutomationIdAndRegister<ButtonComponent>({
-        type: 'button',
-        id: 'add-work-item-button',
-        label: 'Add Item',
-        disabled: !isEditable,
-    }, () => [
-        CommonActions.click('Add new work item to timesheet'),
-        CommonActions.focus('Focus on add work item button')
-    ]);
-
     // Register the timesheet table container
     const { automationIdProps: tableProps } = useAutomationIdAndRegister<ContainerComponent>({
         type: 'container',
@@ -298,16 +248,17 @@ export function TimeSheetTable({
                             className="px-4 py-3 sticky left-0 z-20 bg-gray-50 min-w-[160px]"
                             style={{ boxShadow: 'inset -1px 0 0 #e5e7eb, inset 0 -1px 0 #e5e7eb' }}
                         >
-                            <button
-                                {...addWorkItemProps}
+                            <Button
+                                id="add-work-item-button"
+                                variant="dashed"
+                                size="sm"
                                 onClick={onAddWorkItem}
-                                className="inline-flex items-center px-4 py-2 text-sm font-medium text-[rgb(var(--color-primary-500))] bg-white border-2 border-dashed border-[rgb(var(--color-primary-300))] rounded-lg hover:bg-[rgb(var(--color-primary-50))] hover:border-[rgb(var(--color-primary-400))] transition-colors"
                             >
                                 <Plus className="h-4 w-4 mr-1.5" />
                                 Add Item
-                            </button>
+                            </Button>
                         </th>
-                        {visibleDates.map((date, index): JSX.Element => {
+                        {visibleDates.map((date, index): React.JSX.Element => {
                             const isTodayDate = isToday(date);
                             const isLastHeaderCell = index === visibleDates.length - 1;
                             return (
@@ -349,7 +300,7 @@ export function TimeSheetTable({
                                         <div className="h-4 w-14 bg-gray-200 rounded-full" />
                                     </div>
                                 </td>
-                                {visibleDates.map((date): JSX.Element => (
+                                {visibleDates.map((date): React.JSX.Element => (
                                     <td
                                         key={`skeleton-${rowIndex}-${date.toISOString()}`}
                                         className="px-3 py-3 border-b border-r border-gray-200 last:border-r-0 h-20"
@@ -378,21 +329,22 @@ export function TimeSheetTable({
                                         <p className="text-gray-500 text-sm mb-4">
                                             Add a new work item to get started tracking your time for this week.
                                         </p>
-                                        <button
+                                        <Button
+                                            id="get-started-button"
+                                            variant="link"
                                             onClick={onAddWorkItem}
-                                            className="inline-flex items-center text-[rgb(var(--color-primary-500))] hover:text-[rgb(var(--color-primary-600))] font-medium text-sm"
                                         >
                                             Get Started
                                             <ArrowRight className="w-4 h-4 ml-1" />
-                                        </button>
+                                        </Button>
                                     </div>
                                 </div>
                             </td>
                         </tr>
                     ) : (
-                        Object.entries(workItemsByType).map(([type, workItems]): JSX.Element => (
+                        Object.entries(workItemsByType).map(([type, workItems]): React.JSX.Element => (
                             <React.Fragment key={type}>
-                                {workItems.map((workItem): JSX.Element => {
+                                {workItems.map((workItem): React.JSX.Element => {
                                     const isLastWorkItemRow = !!lastWorkItemId && workItem.work_item_id === lastWorkItemId;
                                     const entries = groupedTimeEntries[workItem.work_item_id] || [];
                                     return (
@@ -454,7 +406,7 @@ export function TimeSheetTable({
                                             </Button>
                                         )}
                                     </td>
-                                        {visibleDates.map((date): JSX.Element => {
+                                        {visibleDates.map((date): React.JSX.Element => {
                                             const dayEntries = entries.filter(entry =>
                                                 parseISO(entry.start_time).toDateString() === date.toDateString()
                                             );
@@ -772,7 +724,7 @@ export function TimeSheetTable({
                         <td className="px-4 py-3 text-sm font-semibold text-gray-900 border-t border-r border-gray-200 sticky left-0 z-10 bg-gray-100">
                             Weekly Total
                         </td>
-                        {visibleDates.map((date): JSX.Element => {
+                        {visibleDates.map((date): React.JSX.Element => {
                             const entriesForDate = Object.values(groupedTimeEntries).flat()
                                 .filter((entry) => parseISO(entry.start_time).toDateString() === date.toDateString());
 
@@ -804,32 +756,7 @@ export function TimeSheetTable({
             </div>
         </div>
 
-        {/* Billable Legend */}
-        <div className="mt-6 p-4 bg-white border border-gray-200 rounded-lg shadow-sm">
-            <div className="flex items-center justify-between">
-                <div>
-                    <h3 className="text-sm font-semibold text-gray-900">Billable Legend</h3>
-                    <p className="text-xs text-gray-500">Color indicators for billable time ratios</p>
-                </div>
-                <div className="flex items-center gap-4">
-                    {([0, 25, 50, 75, 100] as BillabilityPercentage[]).map((percentage) => {
-                        const colors = billabilityColorScheme[percentage];
-                        return (
-                            <div key={percentage} className="flex items-center gap-1.5">
-                                <div
-                                    className="w-5 h-5 rounded border"
-                                    style={{
-                                        backgroundColor: colors.background,
-                                        borderColor: colors.border
-                                    }}
-                                />
-                                <span className="text-xs text-gray-600">{percentage}%</span>
-                            </div>
-                        );
-                    })}
-                </div>
-            </div>
-        </div>
+        <BillableLegend className="mt-6" />
             </React.Fragment>
         </ReflectionContainer>
         </div>

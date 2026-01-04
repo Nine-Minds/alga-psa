@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { ChevronLeft, Plus, Trash2, Lock, Eye, EyeOff } from 'lucide-react';
 import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionContainer';
@@ -14,12 +14,21 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/Tabs';
 import {
   fetchExtensionById,
+  getExtensionApiEndpoints,
   getExtensionSecretsMetadata,
   getExtensionSettings,
   resetExtensionSettings,
   updateExtensionSecrets,
   updateExtensionSettings,
 } from '../../../lib/actions/extensionActions';
+import {
+  createExtensionSchedule,
+  deleteExtensionSchedule,
+  getDefaultScheduleTimezone,
+  listExtensionSchedules,
+  runExtensionScheduleNow,
+  updateExtensionSchedule,
+} from '../../../lib/actions/extensionScheduleActions';
 import { Extension, ExtensionSettingDefinition, ExtensionSettingType } from '../../../lib/extensions/types';
 
 const STORED_SECRET_PLACEHOLDER = '__STORED_SECRET_DO_NOT_CHANGE__';
@@ -41,6 +50,20 @@ export default function ExtensionSettings() {
   const [hasStoredSecrets, setHasStoredSecrets] = useState(false);
   const [secretsVersion, setSecretsVersion] = useState<string | null>(null);
   const [customSettings, setCustomSettings] = useState<Array<{ id: string; key: string; value: string; isSensitive: boolean }>>([]);
+  const [apiEndpoints, setApiEndpoints] = useState<Array<{ id: string; method: string; path: string; handler: string }>>([]);
+  const [schedules, setSchedules] = useState<Array<any>>([]);
+  const [schedulesLoading, setSchedulesLoading] = useState(false);
+  const [schedulesError, setSchedulesError] = useState<string | null>(null);
+  const [newScheduleEndpointId, setNewScheduleEndpointId] = useState<string>('');
+  const [newScheduleCron, setNewScheduleCron] = useState<string>('0 0 * * *');
+  const [newScheduleTimezone, setNewScheduleTimezone] = useState<string>('UTC');
+  const [newSchedulePayload, setNewSchedulePayload] = useState<string>('');
+  const didTouchScheduleTimezoneRef = useRef(false);
+  const [editingScheduleId, setEditingScheduleId] = useState<string | null>(null);
+  const [editEndpointId, setEditEndpointId] = useState<string>('');
+  const [editCron, setEditCron] = useState<string>('');
+  const [editTimezone, setEditTimezone] = useState<string>('UTC');
+  const [editPayload, setEditPayload] = useState<string>('');
 
   const allSettingDefinitions = useMemo(() => {
     return extension?.manifest?.settings || [];
@@ -170,6 +193,34 @@ export default function ExtensionSettings() {
         setSecretChanged(false);
         setHasStoredSecrets(Boolean(metadata?.hasEnvelope));
         setSecretsVersion(metadata?.secretsVersion ?? null);
+
+        // Load endpoints + schedules for scheduled tasks UI (best-effort; do not block settings load).
+        try {
+          setSchedulesLoading(true);
+          setSchedulesError(null);
+          const [endpoints, scheduleRows] = await Promise.all([
+            getExtensionApiEndpoints(extensionId),
+            listExtensionSchedules(extensionId),
+          ]);
+          setApiEndpoints(endpoints);
+          setSchedules(scheduleRows);
+
+          // Best-effort: default timezone to the current user's timezone (fallback UTC).
+          try {
+            const tz = await getDefaultScheduleTimezone();
+            if (!didTouchScheduleTimezoneRef.current && tz && tz !== 'UTC') {
+              setNewScheduleTimezone(tz);
+            }
+          } catch {
+            // Ignore; keep UTC default.
+          }
+        } catch (scheduleErr) {
+          console.warn('Failed to load extension schedules', scheduleErr);
+          const msg = scheduleErr instanceof Error ? scheduleErr.message : String(scheduleErr);
+          setSchedulesError(msg || 'Failed to load schedules');
+        } finally {
+          setSchedulesLoading(false);
+        }
       } catch (error) {
         console.error('Failed to load extension settings', error);
         toast.error('Failed to load extension settings.');
@@ -180,6 +231,26 @@ export default function ExtensionSettings() {
 
     loadExtensionAndSettings();
   }, [extensionId]);
+
+  const refreshSchedules = async () => {
+    try {
+      setSchedulesLoading(true);
+      setSchedulesError(null);
+      const [endpoints, scheduleRows] = await Promise.all([
+        getExtensionApiEndpoints(extensionId),
+        listExtensionSchedules(extensionId),
+      ]);
+      setApiEndpoints(endpoints);
+      setSchedules(scheduleRows);
+    } catch (e) {
+      console.error('Failed to refresh schedules', e);
+      const msg = e instanceof Error ? e.message : String(e);
+      setSchedulesError(msg || 'Failed to refresh schedules');
+      toast.error(msg || 'Failed to refresh schedules.');
+    } finally {
+      setSchedulesLoading(false);
+    }
+  };
 
   // Handle settings change
   const handleSettingChange = (key: string, value: any) => {
@@ -674,6 +745,275 @@ export default function ExtensionSettings() {
                     Add Entry
                   </Button>
                 </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card className="mt-6">
+          <CardHeader>
+            <CardTitle>Schedules</CardTitle>
+            <CardDescription>
+              Configure scheduled tasks for this extension by invoking a manifest-declared API endpoint on a cron schedule.
+              On extension updates, schedules are remapped by endpoint method/path; updates may be blocked if a scheduled endpoint is removed.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {schedulesError ? (
+              <div className="text-sm text-red-600">{schedulesError}</div>
+            ) : schedulesLoading ? (
+              <div className="text-sm text-gray-500">Loading schedules…</div>
+            ) : (
+              <div className="space-y-6">
+                {apiEndpoints.length === 0 ? (
+                  <div className="text-sm text-gray-500">
+                    This extension does not declare any API endpoints, so there is nothing to schedule.
+                  </div>
+                ) : (
+                  <div className="grid gap-3 max-w-2xl">
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-3 items-end">
+                      <div className="md:col-span-2">
+                        <label className="text-sm font-medium">Endpoint</label>
+                        <CustomSelect
+                          options={apiEndpoints.map((e) => ({
+                            value: e.id,
+                            label: `${e.method} ${e.path}`,
+                          }))}
+                          value={newScheduleEndpointId}
+                          onValueChange={(val) => setNewScheduleEndpointId(val)}
+                          placeholder="Select an endpoint"
+                          {...automationId('extension-schedule-endpoint')}
+                        />
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium">Cron</label>
+                        <Input
+                          value={newScheduleCron}
+                          onChange={(e) => setNewScheduleCron(e.target.value)}
+                          placeholder="0 0 * * *"
+                          {...automationId('extension-schedule-cron')}
+                        />
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium">Timezone</label>
+                        <Input
+                          value={newScheduleTimezone}
+                          onChange={(e) => {
+                            didTouchScheduleTimezoneRef.current = true;
+                            setNewScheduleTimezone(e.target.value);
+                          }}
+                          placeholder="UTC"
+                          {...automationId('extension-schedule-timezone')}
+                        />
+                      </div>
+                    </div>
+                    <div className="grid gap-2 max-w-2xl">
+                      <label className="text-sm font-medium">Payload (JSON, optional)</label>
+                      <TextArea
+                        value={newSchedulePayload}
+                        onChange={(e) => setNewSchedulePayload(e.target.value)}
+                        placeholder='{"example":"value"}'
+                        {...automationId('extension-schedule-payload')}
+                      />
+                      <div className="text-xs text-gray-500">
+                        For GET endpoints, payload is ignored. For POST endpoints, payload becomes the request body.
+                        Avoid including secrets in payloads; use the extension's config/secrets instead.
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button
+                        id="create-schedule-button"
+                        variant="outline"
+                        disabled={!newScheduleEndpointId || schedulesLoading}
+                        onClick={async () => {
+                          let payloadJson: any = undefined;
+                          const trimmed = newSchedulePayload.trim();
+                          if (trimmed.length > 0) {
+                            try {
+                              payloadJson = JSON.parse(trimmed);
+                            } catch {
+                              toast.error('Payload must be valid JSON.');
+                              return;
+                            }
+                          }
+                          const result = await createExtensionSchedule(extensionId, {
+                            endpointId: newScheduleEndpointId,
+                            cron: newScheduleCron,
+                            timezone: newScheduleTimezone,
+                            enabled: true,
+                            payloadJson,
+                          });
+                          if (!result.success) {
+                            toast.error(result.message || 'Failed to create schedule.');
+                            return;
+                          }
+                          toast.success('Schedule created.');
+                          setNewSchedulePayload('');
+                          await refreshSchedules();
+                        }}
+                      >
+                        Create schedule
+                      </Button>
+                      <Button
+                        id="refresh-schedules-button"
+                        variant="ghost"
+                        disabled={schedulesLoading}
+                        onClick={refreshSchedules}
+                      >
+                        Refresh
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
+                {schedules.length === 0 ? (
+                  <div className="text-sm text-gray-500">No schedules configured.</div>
+                ) : (
+                  <div className="space-y-3">
+                    {schedules.map((s: any) => (
+                      <div key={s.id} className="flex items-center justify-between gap-4 border rounded-md p-3">
+                        <div className="min-w-0">
+                          {editingScheduleId === s.id ? (
+                            <div className="grid gap-2 max-w-xl">
+                              <CustomSelect
+                                options={apiEndpoints.map((e) => ({
+                                  value: e.id,
+                                  label: `${e.method} ${e.path}`,
+                                }))}
+                                value={editEndpointId}
+                                onValueChange={(val) => setEditEndpointId(val)}
+                                placeholder="Select an endpoint"
+                              />
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                                <Input value={editCron} onChange={(e) => setEditCron(e.target.value)} placeholder="0 0 * * *" />
+                                <Input value={editTimezone} onChange={(e) => setEditTimezone(e.target.value)} placeholder="UTC" />
+                              </div>
+                              <TextArea
+                                value={editPayload}
+                                onChange={(e) => setEditPayload(e.target.value)}
+                                placeholder='{"example":"value"}'
+                              />
+                              <div className="flex gap-2">
+                                <Button
+                                  id={`save-schedule-${s.id}`}
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={async () => {
+                                    let payloadJson: any = null;
+                                    const trimmed = editPayload.trim();
+                                    if (trimmed.length > 0) {
+                                      try {
+                                        payloadJson = JSON.parse(trimmed);
+                                      } catch {
+                                        toast.error('Payload must be valid JSON.');
+                                        return;
+                                      }
+                                    } else {
+                                      payloadJson = null;
+                                    }
+                                    const out = await updateExtensionSchedule(extensionId, s.id, {
+                                      endpointId: editEndpointId,
+                                      cron: editCron,
+                                      timezone: editTimezone,
+                                      payloadJson,
+                                    });
+                                    if (!out.success) {
+                                      toast.error(out.message || 'Failed to update schedule.');
+                                      return;
+                                    }
+                                    toast.success('Schedule updated.');
+                                    setEditingScheduleId(null);
+                                    await refreshSchedules();
+                                  }}
+                                >
+                                  Save
+                                </Button>
+                                <Button
+                                  id={`cancel-edit-schedule-${s.id}`}
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={() => setEditingScheduleId(null)}
+                                >
+                                  Cancel
+                                </Button>
+                              </div>
+                            </div>
+                          ) : (
+                            <>
+                              <div className="text-sm font-medium truncate">
+                                {s.endpoint_method} {s.endpoint_path}
+                              </div>
+                              <div className="text-xs text-gray-500 truncate">
+                                {s.cron} ({s.timezone}){s.last_run_status ? ` • last: ${s.last_run_status}` : ''}
+                              </div>
+                            </>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-3 shrink-0">
+                          <Switch
+                            checked={Boolean(s.enabled)}
+                            onCheckedChange={async (checked) => {
+                              const out = await updateExtensionSchedule(extensionId, s.id, { enabled: checked });
+                              if (!out.success) {
+                                toast.error(out.message || 'Failed to update schedule.');
+                                return;
+                              }
+                              await refreshSchedules();
+                            }}
+                          />
+                          <Button
+                            id={`edit-schedule-${s.id}`}
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              setEditingScheduleId(s.id);
+                              setEditCron(String(s.cron || ''));
+                              setEditTimezone(String(s.timezone || 'UTC'));
+                              setEditEndpointId(String(s.endpoint_id || ''));
+                              setEditPayload(s.payload_json ? JSON.stringify(s.payload_json, null, 2) : '');
+                            }}
+                            disabled={editingScheduleId === s.id}
+                          >
+                            Edit
+                          </Button>
+                          <Button
+                            id={`run-schedule-now-${s.id}`}
+                            variant="outline"
+                            size="sm"
+                            onClick={async () => {
+                              const out = await runExtensionScheduleNow(extensionId, s.id);
+                              if (!out.success) {
+                                toast.error(out.message || 'Failed to run schedule.');
+                                return;
+                              }
+                              toast.success('Schedule run enqueued.');
+                            }}
+                          >
+                            Run now
+                          </Button>
+                          <Button
+                            id={`delete-schedule-${s.id}`}
+                            variant="ghost"
+                            size="sm"
+                            className="text-red-600 hover:text-red-700"
+                            onClick={async () => {
+                              if (!confirm('Delete this schedule?')) return;
+                              const out = await deleteExtensionSchedule(extensionId, s.id);
+                              if (!out.success) {
+                                toast.error(out.message || 'Failed to delete schedule.');
+                                return;
+                              }
+                              toast.success('Schedule deleted.');
+                              await refreshSchedules();
+                            }}
+                          >
+                            Delete
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
           </CardContent>

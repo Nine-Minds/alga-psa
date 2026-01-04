@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
+import dynamic from 'next/dynamic';
 import { useSearchParams } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from 'server/src/components/ui/Card';
 import { Input } from 'server/src/components/ui/Input';
@@ -29,6 +30,21 @@ import { toast } from 'react-hot-toast';
 import { getUserAvatarUrlAction } from '@/lib/actions/avatar-actions';
 import { validateContactName, validateEmailAddress, validatePhoneNumber } from 'server/src/lib/utils/clientFormValidation';
 import { CalendarIntegrationsSettings } from 'server/src/components/calendar/CalendarIntegrationsSettings';
+import SettingsTabSkeleton from 'server/src/components/ui/skeletons/SettingsTabSkeleton';
+
+// Dynamic import for EE SSO wrapper component
+const ConnectSsoWrapper = dynamic(
+  () => import('@ee/components/settings/profile/ConnectSsoWrapper'),
+  {
+    loading: () => (
+      <SettingsTabSkeleton
+        title="Single Sign-On"
+        description="Loading SSO settings..."
+      />
+    ),
+    ssr: false,
+  },
+);
 
 type NotificationView = 'email' | 'internal';
 
@@ -54,7 +70,7 @@ export default function UserProfile({ userId }: UserProfileProps) {
   
   // Determine initial tab from URL or default to "Profile"
   const initialTab = useMemo(() => {
-    const validTabs = ['Profile', 'Security', 'API Keys', 'Notifications', 'Calendar'];
+    const validTabs = ['Profile', 'Security', 'Single Sign-On', 'API Keys', 'Notifications', 'Calendar'];
     return tabParam && validTabs.includes(tabParam) ? tabParam : 'Profile';
   }, [tabParam]);
 
@@ -62,7 +78,7 @@ export default function UserProfile({ userId }: UserProfileProps) {
 
   // Update active tab when URL parameter changes
   useEffect(() => {
-    const validTabs = ['Profile', 'Security', 'API Keys', 'Notifications', 'Calendar'];
+    const validTabs = ['Profile', 'Security', 'Single Sign-On', 'API Keys', 'Notifications', 'Calendar'];
     const targetTab = tabParam && validTabs.includes(tabParam) ? tabParam : 'Profile';
     if (targetTab !== activeTab) {
       setActiveTab(targetTab);
@@ -407,6 +423,10 @@ export default function UserProfile({ userId }: UserProfileProps) {
       ),
     },
     {
+      label: "Single Sign-On",
+      content: <ConnectSsoWrapper />,
+    },
+    {
       label: "API Keys",
       content: <ApiKeysSetup />,
     },
@@ -430,7 +450,7 @@ export default function UserProfile({ userId }: UserProfileProps) {
           <CardContent>
             {notificationView === 'email' ? (
               <div className="space-y-6">
-                {categories.map((category: NotificationCategory): JSX.Element => (
+                {categories.map((category: NotificationCategory): React.JSX.Element => (
                   <div key={category.id} className="space-y-2">
                     <div className="flex items-center justify-between">
                       <Label>{category.name}</Label>
@@ -440,7 +460,7 @@ export default function UserProfile({ userId }: UserProfileProps) {
                       />
                     </div>
                     <div className="ml-6 space-y-2">
-                      {subtypesByCategory[category.id]?.map((subtype: NotificationSubtype): JSX.Element => (
+                      {subtypesByCategory[category.id]?.map((subtype: NotificationSubtype): React.JSX.Element => (
                         <div key={subtype.id} className="flex items-center justify-between">
                           <Label className="text-sm">{subtype.name}</Label>
                           <Switch

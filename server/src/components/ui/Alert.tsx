@@ -26,12 +26,17 @@ const alertVariants = cva(
   }
 )
 
-const Alert = React.forwardRef<
-  HTMLDivElement,
-  React.HTMLAttributes<HTMLDivElement> & VariantProps<typeof alertVariants> & AutomationProps & {
-    showIcon?: boolean
-  }
->(({ className, variant, showIcon = true, children, ...props }, ref) => {
+function Alert({
+  className,
+  variant,
+  showIcon = true,
+  children,
+  ref,
+  ...props
+}: React.HTMLAttributes<HTMLDivElement> & VariantProps<typeof alertVariants> & AutomationProps & {
+  showIcon?: boolean;
+  ref?: React.Ref<HTMLDivElement>;
+}) {
   const Icon = variant === 'destructive' ? AlertCircle
     : variant === 'success' ? CheckCircle2
     : variant === 'warning' ? AlertTriangle
@@ -49,31 +54,34 @@ const Alert = React.forwardRef<
       {children}
     </div>
   )
-})
-Alert.displayName = "Alert"
+}
 
-const AlertDescription = React.forwardRef<
-  HTMLParagraphElement,
-  React.HTMLAttributes<HTMLParagraphElement>
->(({ className, ...props }, ref) => (
-  <div
-    ref={ref}
-    className={cn("text-sm [&_p]:leading-relaxed", className)}
-    {...props}
-  />
-))
-AlertDescription.displayName = "AlertDescription"
+function AlertDescription({
+  className,
+  ref,
+  ...props
+}: React.HTMLAttributes<HTMLParagraphElement> & { ref?: React.Ref<HTMLParagraphElement> }) {
+  return (
+    <div
+      ref={ref}
+      className={cn("text-sm [&_p]:leading-relaxed", className)}
+      {...props}
+    />
+  )
+}
 
-const AlertTitle = React.forwardRef<
-  HTMLParagraphElement,
-  React.HTMLAttributes<HTMLParagraphElement>
->(({ className, ...props }, ref) => (
-  <h5
-    ref={ref}
-    className={cn("mb-1 font-medium leading-none tracking-tight", className)}
-    {...props}
-  />
-))
-AlertTitle.displayName = "AlertTitle"
+function AlertTitle({
+  className,
+  ref,
+  ...props
+}: React.HTMLAttributes<HTMLParagraphElement> & { ref?: React.Ref<HTMLParagraphElement> }) {
+  return (
+    <h5
+      ref={ref}
+      className={cn("mb-1 font-medium leading-none tracking-tight", className)}
+      {...props}
+    />
+  )
+}
 
 export { Alert, AlertDescription, AlertTitle }

@@ -29,7 +29,7 @@ export function ServicePicker({
   disabled = false,
   label,
   id,
-}: ServicePickerProps): JSX.Element {
+}: ServicePickerProps): React.JSX.Element {
   const autoId = React.useId();
   const pickerId = id ?? `service-picker-${autoId}`;
 

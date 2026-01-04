@@ -72,7 +72,7 @@ const HourlyContractLinePresetServicesList: React.FC<HourlyContractLinePresetSer
       }
 
       const presetServicesData = await getContractLinePresetServices(presetId);
-      const servicesResponse = await getServices();
+      const servicesResponse = await getServices(1, 999, { item_kind: 'any' });
       const allAvailableServices = Array.isArray(servicesResponse)
         ? servicesResponse
         : (servicesResponse.services || []);
@@ -388,7 +388,7 @@ const HourlyContractLinePresetServicesList: React.FC<HourlyContractLinePresetSer
                       <Input
                         type="text"
                         inputMode="decimal"
-                        value={service.custom_rate !== undefined ? (service.custom_rate / 100).toFixed(2) : ''}
+                        value={service.custom_rate != null ? (service.custom_rate / 100).toFixed(2) : ''}
                         onChange={(e) => {
                           const dollars = parseFloat(e.target.value) || 0;
                           const cents = Math.round(dollars * 100);

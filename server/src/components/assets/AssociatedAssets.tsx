@@ -381,104 +381,83 @@ export default function AssociatedAssets({ id, entityId, entityType, clientId, d
                     <div className="text-gray-500">No assets associated</div>
                 ) : (
                     <div className="space-y-2">
-                        {visibleAssets.map((association): JSX.Element => (
+                        {visibleAssets.map((association): React.JSX.Element => (
                             <div
                                 key={`${association.asset_id}-${association.entity_id}`}
-                                className="flex justify-between items-center p-4 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+                                className="p-3 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
                             >
-                                <div className="flex-1 min-w-0 flex items-center gap-4">
-                                    {/* Asset Tag */}
-                                    <div className="flex-shrink-0">
-                                        <span className="font-mono text-sm text-gray-600">
-                                            {association.asset?.asset_tag || 'N/A'}
-                                        </span>
-                                    </div>
-                                    
-                                    {/* Asset Type with Icon */}
-                                    {association.asset && (
-                                        <div className="flex items-center gap-2 flex-shrink-0">
-                                            <div className="p-1.5 bg-gray-50 rounded-lg border border-gray-100">
-                                                {getAssetTypeIcon(association.asset.asset_type)}
-                                            </div>
-                                            <span className="text-sm font-medium text-gray-700">
-                                                {association.asset.asset_type.split('_').map((word) => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}
-                                            </span>
-                                        </div>
-                                    )}
-                                    
-                                    {/* Status Badge */}
-                                    {association.asset && (
-                                        <div className="flex-shrink-0">
-                                            <span
-                                                className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold ${
-                                                    association.asset.status === 'active'
-                                                        ? 'bg-emerald-100 text-emerald-700 ring-1 ring-emerald-600/20'
-                                                        : association.asset.status === 'inactive'
-                                                        ? 'bg-gray-100 text-gray-700 ring-1 ring-gray-600/20'
-                                                        : 'bg-amber-100 text-amber-700 ring-1 ring-amber-600/20'
-                                                }`}
+                                {/* Row 1: Name + Status + Remove */}
+                                <div className="flex items-center justify-between gap-2">
+                                    <div className="flex items-center gap-2 min-w-0">
+                                        {association.asset ? (
+                                            <Button
+                                                id={`asset-name-${association.asset_id}`}
+                                                variant="link"
+                                                size="sm"
+                                                onClick={() => openDrawerForAsset(association.asset!)}
+                                                className="h-auto p-0 text-sm font-medium truncate text-left justify-start"
                                             >
-                                                <span
-                                                    className={`w-1.5 h-1.5 rounded-full mr-1.5 ${
-                                                        association.asset.status === 'active' ? 'bg-emerald-500' : association.asset.status === 'inactive' ? 'bg-gray-500' : 'bg-amber-500'
-                                                    }`}
-                                                ></span>
-                                                {association.asset.status.charAt(0).toUpperCase() + association.asset.status.slice(1)}
+                                                {association.asset.name}
+                                            </Button>
+                                        ) : (
+                                            <span className="text-sm font-medium text-gray-900 truncate">
+                                                Unknown Asset
                                             </span>
-                                        </div>
-                                    )}
-                                    
-                                    {/* Asset Name and Relationship */}
-                                    <div className="flex-1 min-w-0">
-                                        <div className="flex items-center gap-2">
-                                            {association.asset ? (
-                                                <button
-                                                    type="button"
-                                                    onClick={() => openDrawerForAsset(association.asset!)}
-                                                    className="text-sm font-medium text-primary-600 hover:text-primary-700 hover:underline truncate transition-colors text-left"
-                                                >
-                                                    {association.asset.name}
-                                                </button>
-                                            ) : (
-                                                <span className="text-sm font-medium text-gray-900 truncate">
-                                                    Unknown Asset
-                                                </span>
-                                            )}
-                                            {association.asset && (
-                                                <RmmStatusIndicator asset={association.asset} size="sm" />
-                                            )}
-                                        </div>
-                                        <div className="text-xs text-gray-500 mt-0.5 capitalize">
-                                            {association.relationship_type}
-                                        </div>
+                                        )}
+                                        {association.asset && (
+                                            <RmmStatusIndicator asset={association.asset} size="sm" />
+                                        )}
+                                    </div>
+                                    <div className="flex items-center gap-2 flex-shrink-0">
+                                        {association.asset && (
+                                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                                                association.asset.status === 'active' ? 'bg-purple-100 text-purple-800' :
+                                                association.asset.status === 'inactive' ? 'bg-gray-100 text-gray-800' :
+                                                association.asset.status === 'maintenance' ? 'bg-yellow-100 text-yellow-800' :
+                                                'bg-gray-100 text-gray-800'
+                                            }`}>
+                                                {association.asset.status}
+                                            </span>
+                                        )}
+                                        {association.asset && association.asset.rmm_provider && association.asset.rmm_device_id && (
+                                            <RemoteAccessButton
+                                                asset={association.asset}
+                                                variant="ghost"
+                                                size="sm"
+                                            />
+                                        )}
+                                        <Button
+                                            id={`remove-asset-${association.asset_id}`}
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() => handleRemoveAsset(association.asset_id)}
+                                            className="text-gray-600 hover:text-gray-900"
+                                        >
+                                            <span className="mr-1">×</span> Remove
+                                        </Button>
                                     </div>
                                 </div>
-                                <div className="flex items-center gap-2 ml-4 flex-shrink-0">
-                                    {association.asset && association.asset.rmm_provider && association.asset.rmm_device_id && (
-                                        <RemoteAccessButton
-                                            asset={association.asset}
-                                            variant="ghost"
-                                            size="sm"
-                                        />
+                                {/* Row 2: Icon + Tag + Type + Relationship */}
+                                <div className="flex items-center gap-2 mt-1.5 text-xs text-gray-500">
+                                    {association.asset && (
+                                        <span className="flex-shrink-0">{getAssetTypeIcon(association.asset.asset_type)}</span>
                                     )}
-                                    <Button
-                                        id={`remove-asset-${association.asset_id}`}
-                                        variant="outline"
-                                        size="sm"
-                                        onClick={() => handleRemoveAsset(association.asset_id)}
-                                        className="text-gray-600 hover:text-gray-900"
-                                    >
-                                        <span className="mr-1">×</span> Remove
-                                    </Button>
+                                    <span className="font-mono">{association.asset?.asset_tag || 'N/A'}</span>
+                                    <span>•</span>
+                                    <span>{association.asset?.asset_type.split('_').map((word) => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}</span>
+                                    <span>•</span>
+                                    <span className="capitalize">{association.relationship_type}</span>
                                 </div>
                             </div>
                         ))}
 
                         {/* Expandable section for additional assets */}
                         {hiddenCount > 0 && (
-                            <button
+                            <Button
+                                id="expand-assets-button"
+                                variant="outline"
                                 onClick={() => setIsExpanded(!isExpanded)}
-                                className="flex items-center gap-1 px-4 py-3 w-full text-left text-primary-600 hover:text-primary-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+                                className="flex items-center gap-1 px-4 py-3 w-full text-left text-primary-600 hover:text-primary-700 justify-start"
                             >
                                 <span className="text-lg">+</span>
                                 <span className="underline">
@@ -492,7 +471,7 @@ export default function AssociatedAssets({ id, entityId, entityType, clientId, d
                                 >
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                                 </svg>
-                            </button>
+                            </Button>
                         )}
                     </div>
                 )}

@@ -3,20 +3,15 @@
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { Button } from "server/src/components/ui/Button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "server/src/components/ui/Card";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "server/src/components/ui/Table";
+import { DataTable } from "server/src/components/ui/DataTable";
+import { ColumnDefinition } from "server/src/interfaces/dataTable.interfaces";
 import { Alert, AlertDescription } from "server/src/components/ui/Alert";
 import { Badge } from "server/src/components/ui/Badge";
 import { Input } from "server/src/components/ui/Input";
 import { Label } from "server/src/components/ui/Label";
 import { Checkbox } from "server/src/components/ui/Checkbox";
-import { Loader2, Search, ShieldCheck } from "lucide-react";
+import Spinner from "server/src/components/ui/Spinner";
+import { Loader2, Search } from "lucide-react";
 import { useToast } from "server/src/hooks/use-toast";
 import { ToggleGroup, ToggleGroupItem } from "server/src/components/ui/ToggleGroup";
 import {
@@ -26,7 +21,6 @@ import {
   type ListSsoAssignableUsersResponse,
   type SsoAssignableUser,
   type SsoBulkAssignmentActionResponse,
-  type SsoBulkAssignmentDetail,
   type SsoBulkAssignmentProviderSummary,
   type SsoBulkAssignmentRequest,
   type SsoBulkAssignmentResult,
@@ -46,15 +40,7 @@ interface SsoBulkAssignmentFormProps {
 type LinkProvider = "google" | "microsoft";
 type AssignmentMode = "link" | "unlink";
 
-const PAGE_SIZE = 25;
 const SEARCH_DEBOUNCE_MS = 350;
-
-type TablePagination = {
-  page: number;
-  pageSize: number;
-  totalItems: number;
-  totalPages: number;
-};
 
 function normalizeProvider(id: string): LinkProvider | null {
   if (id === "google") return "google";
@@ -191,16 +177,12 @@ export default function SsoBulkAssignmentForm({ providerOptions }: SsoBulkAssign
   const [searchInput, setSearchInput] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  const [totalItems, setTotalItems] = useState(0);
   const [tableLoading, setTableLoading] = useState(true);
   const [tableError, setTableError] = useState<string | null>(null);
   const [users, setUsers] = useState<SsoAssignableUser[]>([]);
   const [tableRefreshKey, setTableRefreshKey] = useState(0);
-  const [pagination, setPagination] = useState<TablePagination>({
-    page: 1,
-    pageSize: PAGE_SIZE,
-    totalItems: 0,
-    totalPages: 1,
-  });
 
   useEffect(() => {
     if (!selectedProvider) {
@@ -228,7 +210,7 @@ export default function SsoBulkAssignmentForm({ providerOptions }: SsoBulkAssign
         const response: ListSsoAssignableUsersResponse = await listSsoAssignableUsersAction({
           search: searchQuery,
           page,
-          pageSize: PAGE_SIZE,
+          pageSize,
         });
 
         if (cancelled) {
@@ -237,23 +219,17 @@ export default function SsoBulkAssignmentForm({ providerOptions }: SsoBulkAssign
 
         if (!response.success || !response.users) {
           setUsers([]);
-          setPagination((prev) => ({ ...prev, page }));
+          setTotalItems(0);
           setTableError(response.error ?? "Unable to load assignable users.");
           return;
         }
 
         setUsers(response.users);
-        setPagination(
-          response.pagination ?? {
-            page,
-            pageSize: PAGE_SIZE,
-            totalItems: response.users.length,
-            totalPages: 1,
-          },
-        );
+        setTotalItems(response.pagination?.totalItems ?? response.users.length);
       } catch (error: any) {
         if (!cancelled) {
           setUsers([]);
+          setTotalItems(0);
           setTableError(error?.message ?? "Unable to load assignable users.");
         }
       } finally {
@@ -268,12 +244,13 @@ export default function SsoBulkAssignmentForm({ providerOptions }: SsoBulkAssign
     return () => {
       cancelled = true;
     };
-  }, [searchQuery, page, tableRefreshKey]);
+  }, [searchQuery, page, pageSize, tableRefreshKey]);
 
   const selectedProviderConfigured =
     selectedProvider !== null ? providerMetadata.get(selectedProvider)?.configured ?? false : false;
 
   const selectionCount = selectedUserIds.size;
+  // With server-side pagination, users array already contains only current page items
   const currentPageIds = users.map((user) => user.userId);
   const selectedOnPage = currentPageIds.filter((id) => selectedUserIds.has(id));
   const isAllOnPageSelected = currentPageIds.length > 0 && selectedOnPage.length === currentPageIds.length;
@@ -386,19 +363,97 @@ export default function SsoBulkAssignmentForm({ providerOptions }: SsoBulkAssign
   const disableActions =
     isPending || !selectedProvider || !selectedProviderConfigured || selectedUserIds.size === 0;
 
-  const handlePreviousPage = () => setPage((current) => Math.max(1, current - 1));
-  const handleNextPage = () =>
-    setPage((current) => Math.min(current + 1, pagination.totalPages || 1));
+  const handlePageChange = (newPage: number) => setPage(newPage);
+  const handlePageSizeChange = (newSize: number) => {
+    setPageSize(newSize);
+    setPage(1);
+  };
 
-  const tableStatusMessage = useMemo(() => {
-    if (tableLoading) {
-      return "Loading users...";
-    }
-    if (users.length === 0) {
-      return searchQuery ? "No users match this search." : "No internal users found.";
-    }
-    return null;
-  }, [tableLoading, users.length, searchQuery]);
+  const userTableColumns: ColumnDefinition<SsoAssignableUser>[] = [
+    {
+      title: (
+        <Checkbox
+          skipRegistration
+          checked={isAllOnPageSelected}
+          indeterminate={isSomeOnPageSelected}
+          onChange={(event) => toggleCurrentPage(event.target.checked)}
+          disabled={users.length === 0}
+        />
+      ),
+      dataIndex: "checkbox",
+      width: "5%",
+      sortable: false,
+      render: (_: unknown, record: SsoAssignableUser) => {
+        const isChecked = selectedUserIds.has(record.userId);
+        return (
+          <div onClick={(e) => e.stopPropagation()} className="flex justify-center">
+            <Checkbox
+              skipRegistration
+              checked={isChecked}
+              onChange={(event) => toggleUserSelection(record.userId, event.target.checked)}
+            />
+          </div>
+        );
+      },
+    },
+    {
+      title: "Email",
+      dataIndex: "email",
+      width: "30%",
+      render: (email: string | null, record: SsoAssignableUser) => (
+        <div className="flex flex-col">
+          <span className="font-medium text-foreground">{email || "—"}</span>
+          <span className="text-xs text-muted-foreground">ID: {record.userId}</span>
+        </div>
+      ),
+    },
+    {
+      title: "Name",
+      dataIndex: "displayName",
+      width: "20%",
+      render: (displayName: string | null) => displayName || "—",
+    },
+    {
+      title: "Status",
+      dataIndex: "inactive",
+      width: "12%",
+      render: (inactive: boolean) => (
+        <div className="flex flex-wrap gap-2">
+          {inactive ? (
+            <Badge variant="error">Inactive</Badge>
+          ) : (
+            <Badge variant="secondary">Active</Badge>
+          )}
+        </div>
+      ),
+    },
+    {
+      title: "Linked providers",
+      dataIndex: "linkedProviders",
+      width: "18%",
+      sortable: false,
+      render: (linkedProviders: string[], record: SsoAssignableUser) => {
+        if (linkedProviders.length === 0) {
+          return <Badge variant="outline">Unlinked</Badge>;
+        }
+        return (
+          <div className="flex flex-wrap gap-2">
+            {linkedProviders.map((provider) => (
+              <Badge key={`${record.userId}-${provider}`} variant="secondary">
+                {formatProviderName(provider as LinkProvider)}
+              </Badge>
+            ))}
+          </div>
+        );
+      },
+    },
+    {
+      title: "Last login",
+      dataIndex: "lastLoginAt",
+      width: "15%",
+      render: (lastLoginAt: string | null) => formatDate(lastLoginAt),
+    },
+  ];
 
   return (
     <div className="space-y-8">
@@ -520,109 +575,29 @@ export default function SsoBulkAssignmentForm({ providerOptions }: SsoBulkAssign
               </Alert>
             )}
 
-            <div className="rounded-lg border">
-              {tableStatusMessage ? (
-                <div className="flex items-center gap-2 p-4 text-sm text-muted-foreground">
-                  {tableLoading && <Loader2 className="h-4 w-4 animate-spin" />}
-                  {tableStatusMessage}
-                </div>
-              ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="w-12">
-                        <Checkbox
-                          skipRegistration
-                          checked={isAllOnPageSelected}
-                          indeterminate={isSomeOnPageSelected}
-                          onChange={(event) => toggleCurrentPage(event.target.checked)}
-                          disabled={users.length === 0}
-                        />
-                      </TableHead>
-                      <TableHead>Email</TableHead>
-                      <TableHead>Name</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Linked providers</TableHead>
-                      <TableHead>Last login</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {users.map((user) => {
-                      const isChecked = selectedUserIds.has(user.userId);
-                      return (
-                        <TableRow key={user.userId}>
-                          <TableCell className="w-12">
-                            <Checkbox
-                              skipRegistration
-                              checked={isChecked}
-                              onChange={(event) => toggleUserSelection(user.userId, event.target.checked)}
-                            />
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex flex-col">
-                              <span className="font-medium text-foreground">{user.email || '—'}</span>
-                              <span className="text-xs text-muted-foreground">ID: {user.userId}</span>
-                            </div>
-                          </TableCell>
-                          <TableCell>{user.displayName || '—'}</TableCell>
-                          <TableCell>
-                            <div className="flex flex-wrap gap-2">
-                              {user.inactive ? (
-                                <Badge variant="error">Inactive</Badge>
-                              ) : (
-                                <Badge variant="secondary">Active</Badge>
-                              )}
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            {user.linkedProviders.length === 0 ? (
-                              <Badge variant="outline">Unlinked</Badge>
-                            ) : (
-                              <div className="flex flex-wrap gap-2">
-                                {user.linkedProviders.map((provider) => (
-                                  <Badge key={`${user.userId}-${provider}`} variant="secondary">
-                                    {formatProviderName(provider as LinkProvider)}
-                                  </Badge>
-                                ))}
-                              </div>
-                            )}
-                          </TableCell>
-                          <TableCell>{formatDate(user.lastLoginAt)}</TableCell>
-                        </TableRow>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
-              )}
-            </div>
-
-            <div className="flex flex-wrap items-center justify-between gap-3 text-sm text-muted-foreground">
-              <span>
-                Page {pagination.page} of {pagination.totalPages} · {pagination.totalItems} total users
-              </span>
-              <div className="flex gap-2">
-                <Button
-                  type="button"
-                  id="bulk-sso-pagination-previous-button"
-                  variant="outline"
-                  size="sm"
-                  onClick={handlePreviousPage}
-                  disabled={pagination.page <= 1 || tableLoading}
-                >
-                  Previous
-                </Button>
-                <Button
-                  type="button"
-                  id="bulk-sso-pagination-next-button"
-                  variant="outline"
-                  size="sm"
-                  onClick={handleNextPage}
-                  disabled={pagination.page >= pagination.totalPages || tableLoading}
-                >
-                  Next
-                </Button>
+            {tableLoading ? (
+              <div className="flex flex-col items-center justify-center py-12">
+                <Spinner size="sm" />
+                <p className="mt-4 text-sm text-muted-foreground">Loading users...</p>
               </div>
-            </div>
+            ) : users.length === 0 ? (
+              <div className="flex items-center justify-center py-12 text-sm text-muted-foreground">
+                {searchQuery ? "No users match this search." : "No internal users found."}
+              </div>
+            ) : (
+              <DataTable
+                key={`${page}-${pageSize}`}
+                id="sso-bulk-users-table"
+                data={users}
+                columns={userTableColumns}
+                pagination={true}
+                currentPage={page}
+                pageSize={pageSize}
+                totalItems={totalItems}
+                onPageChange={handlePageChange}
+                onItemsPerPageChange={handlePageSizeChange}
+              />
+            )}
           </div>
 
           <Alert variant="info">

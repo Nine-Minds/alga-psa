@@ -4,8 +4,59 @@ import { createTenantKnex } from 'server/src/lib/db';
 import { withTransaction } from '@shared/db';
 import { Knex } from 'knex';
 import { getCurrentUser, getUserClientId } from 'server/src/lib/actions/user-actions/userActions';
-import { IProject } from 'server/src/interfaces/project.interfaces';
+import { IProject, DEFAULT_CLIENT_PORTAL_CONFIG } from 'server/src/interfaces/project.interfaces';
 import ProjectModel from 'server/src/lib/models/project';
+
+/**
+ * Fetch a single project by ID for the client portal
+ * Verifies client access and returns project with client_portal_config
+ */
+export async function getClientProjectDetails(projectId: string): Promise<IProject | null> {
+  const { knex, tenant } = await createTenantKnex();
+  if (!tenant) {
+    throw new Error('Tenant not found');
+  }
+
+  // Get current user and verify they are a client
+  const user = await getCurrentUser();
+  if (!user) {
+    throw new Error('User not authenticated');
+  }
+
+  const clientId = await getUserClientId(user.user_id);
+  if (!clientId) {
+    throw new Error('Client not found');
+  }
+
+  // Fetch project with client access verification
+  const project = await knex('projects')
+    .select([
+      'projects.project_id',
+      'projects.project_name',
+      'projects.project_number',
+      'projects.wbs_code',
+      'projects.description',
+      'projects.start_date',
+      'projects.end_date',
+      'projects.status',
+      'statuses.name as status_name',
+      'statuses.is_closed',
+      'projects.created_at',
+      'projects.updated_at',
+      'projects.client_portal_config'
+    ])
+    .leftJoin('statuses', function() {
+      this.on('projects.status', '=', 'statuses.status_id')
+         .andOn('projects.tenant', '=', 'statuses.tenant');
+    })
+    .where('projects.project_id', projectId)
+    .where('projects.client_id', clientId)
+    .where('projects.tenant', tenant)
+    .where('projects.is_inactive', false)
+    .first();
+
+  return project || null;
+}
 
 /**
  * Fetch all projects for a client client with basic details
@@ -44,6 +95,7 @@ export async function getClientProjects(options: {
     .select([
       'projects.project_id',
       'projects.project_name',
+      'projects.project_number',
       'projects.wbs_code',
       'projects.description',
       'projects.start_date',
@@ -51,7 +103,8 @@ export async function getClientProjects(options: {
       'statuses.name as status_name',
       'statuses.is_closed',
       'projects.created_at',
-      'projects.updated_at'
+      'projects.updated_at',
+      'projects.client_portal_config'
     ])
     .leftJoin('statuses', function() {
       this.on('projects.status', '=', 'statuses.status_id')
@@ -138,40 +191,47 @@ export async function getClientProjects(options: {
 
 /**
  * Calculate project progress without exposing internal details
+ * Respects client_portal_config.show_tasks visibility setting
  */
 export async function getProjectProgress(projectId: string): Promise<{
   completionPercentage: number;
   timelineStatus: 'on_track' | 'delayed' | 'at_risk';
   daysRemaining: number;
-}> {
+} | null> {
   const { knex, tenant } = await createTenantKnex();
   if (!tenant) {
     throw new Error('Tenant not found');
   }
-  
+
   // Get current user and client
   const user = await getCurrentUser();
   if (!user) {
     throw new Error('User not authenticated');
   }
-  
-  // Get project to verify access
+
+  // Get project to verify access and check visibility config
   const project = await withTransaction(knex, async (trx: Knex.Transaction) => {
     return await trx('projects')
-      .select('client_id', 'start_date', 'end_date')
+      .select('client_id', 'start_date', 'end_date', 'client_portal_config')
       .where('project_id', projectId)
       .where('tenant', tenant)
       .first();
   });
-  
+
   if (!project) {
     throw new Error('Project not found');
   }
-  
+
   // Verify user has access to this project's client
   const userClientId = await getUserClientId(user.user_id);
   if (userClientId !== project.client_id) {
     throw new Error('Access denied');
+  }
+
+  // Check visibility config - progress is task-based, so respect show_tasks
+  const config = project.client_portal_config ?? DEFAULT_CLIENT_PORTAL_CONFIG;
+  if (!config.show_tasks) {
+    return null;
   }
   
   // Calculate completion percentage based on tasks with closed status

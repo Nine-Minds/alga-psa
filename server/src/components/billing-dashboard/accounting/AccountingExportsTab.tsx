@@ -25,6 +25,8 @@ import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 import { CSVExportLockResetPanel } from 'server/src/components/integrations/csv/CSVExportLockResetPanel';
 import { UnifiedCsvTaxImportPanel } from 'server/src/components/integrations/csv/UnifiedCsvTaxImportPanel';
 import { formatCurrency, formatDate } from 'server/src/lib/utils/formatters';
+import { DatePicker } from 'server/src/components/ui/DatePicker';
+import { format as formatDateFns } from 'date-fns';
 import {
   listAccountingExportBatches,
   getAccountingExportBatch,
@@ -880,20 +882,24 @@ const AccountingExportsTab: React.FC = () => {
         </div>
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">Start Date</label>
-          <input
-            type="date"
-            value={filters.startDate}
-            onChange={(e) => setFilters((prev) => ({ ...prev, startDate: e.target.value }))}
-            className="border rounded-md px-3 py-2 text-sm"
+          <DatePicker
+            id="filter-start-date"
+            value={filters.startDate ? new Date(filters.startDate + 'T00:00:00') : undefined}
+            onChange={(date) => setFilters((prev) => ({ ...prev, startDate: date ? formatDateFns(date, 'yyyy-MM-dd') : '' }))}
+            placeholder="Start date"
+            clearable
+            className="min-w-[160px]"
           />
         </div>
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">End Date</label>
-          <input
-            type="date"
-            value={filters.endDate}
-            onChange={(e) => setFilters((prev) => ({ ...prev, endDate: e.target.value }))}
-            className="border rounded-md px-3 py-2 text-sm"
+          <DatePicker
+            id="filter-end-date"
+            value={filters.endDate ? new Date(filters.endDate + 'T00:00:00') : undefined}
+            onChange={(date) => setFilters((prev) => ({ ...prev, endDate: date ? formatDateFns(date, 'yyyy-MM-dd') : '' }))}
+            placeholder="End date"
+            clearable
+            className="min-w-[160px]"
           />
         </div>
         <div>
@@ -1362,20 +1368,22 @@ const AccountingExportsTab: React.FC = () => {
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Start Date</label>
-              <input
-                type="date"
-                value={createForm.startDate}
-                onChange={(e) => updateCreateFormField('startDate', e.target.value)}
-                className="border rounded-md w-full px-3 py-2 text-sm"
+              <DatePicker
+                id="create-export-start-date"
+                value={createForm.startDate ? new Date(createForm.startDate + 'T00:00:00') : undefined}
+                onChange={(date) => updateCreateFormField('startDate', date ? formatDateFns(date, 'yyyy-MM-dd') : '')}
+                placeholder="Select start date"
+                clearable
               />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">End Date</label>
-              <input
-                type="date"
-                value={createForm.endDate}
-                onChange={(e) => updateCreateFormField('endDate', e.target.value)}
-                className="border rounded-md w-full px-3 py-2 text-sm"
+              <DatePicker
+                id="create-export-end-date"
+                value={createForm.endDate ? new Date(createForm.endDate + 'T00:00:00') : undefined}
+                onChange={(date) => updateCreateFormField('endDate', date ? formatDateFns(date, 'yyyy-MM-dd') : '')}
+                placeholder="Select end date"
+                clearable
               />
             </div>
             <div className="md:col-span-2">

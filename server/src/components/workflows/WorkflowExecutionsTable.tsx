@@ -39,7 +39,7 @@ export default function WorkflowExecutionsTable({
     status: '',
   });
   const router = useRouter();
-  const intervalRef = useRef<NodeJS.Timeout>();
+  const intervalRef = useRef<NodeJS.Timeout | undefined>(undefined);
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);

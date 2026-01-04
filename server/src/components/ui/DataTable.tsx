@@ -69,8 +69,9 @@ const getDisplayText = (columnDef: ColumnDefinition<any> | undefined, cellValue:
   // For JSX elements, try to extract text content based on common patterns
   if (React.isValidElement(renderResult)) {
     // Handle common patterns in the codebase
-    if (renderResult.props && renderResult.props.children) {
-      const children = renderResult.props.children;
+    const resultProps = renderResult.props as { children?: React.ReactNode };
+    if (resultProps && resultProps.children) {
+      const children = resultProps.children;
       if (typeof children === 'string') {
         return children;
       }
@@ -553,11 +554,11 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
           </Alert>
         )}
         <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
+          <table className="w-full divide-y divide-gray-200">
             <thead className="bg-white">
-              {table.getHeaderGroups().map((headerGroup): JSX.Element => (
+              {table.getHeaderGroups().map((headerGroup): React.JSX.Element => (
                 <tr key={`headergroup_${headerGroup.id}`}>
-                  {headerGroup.headers.map((header, headerIndex): JSX.Element => {
+                  {headerGroup.headers.map((header, headerIndex): React.JSX.Element => {
                     const columnId = header.column.columnDef.id || header.id;
                   const colDef = columns.find(col => {
                     const colId = Array.isArray(col.dataIndex) ? col.dataIndex.join('_') : col.dataIndex;
@@ -590,7 +591,7 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
               ))}
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {table.getPaginationRowModel().rows.map((row, rowIndex): JSX.Element => {
+              {table.getPaginationRowModel().rows.map((row, rowIndex): React.JSX.Element => {
                 // Use the id property if it exists in the data, otherwise use row.id
                 const rowId = ('id' in row.original) ? (row.original as { id: string }).id : row.id;
                 const extraRowClass = typeof rowClassName === 'function' ? rowClassName(row.original as any) : '';
@@ -605,7 +606,7 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
                     ${extraRowClass}
                   `}
                   >
-                    {row.getVisibleCells().map((cell, cellIndex): JSX.Element => {
+                    {row.getVisibleCells().map((cell, cellIndex): React.JSX.Element => {
                       const columnId = cell.column.columnDef.id || cell.column.id;
                       const cellValue = cell.getValue();
                       
@@ -628,7 +629,9 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
                           className={`px-6 py-3 text-[14px] leading-relaxed text-[rgb(var(--color-text-700))] max-w-0 align-top ${columnDef?.cellClassName ?? ''}`}
                           style={{ width: columns.find(col => col.dataIndex === cell.column.id)?.width }}
                         >
-                          {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                          <div className="min-w-0">
+                            {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                          </div>
                         </ReflectedTableCell>
                       );
                     })}

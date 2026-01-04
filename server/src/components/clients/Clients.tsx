@@ -444,6 +444,24 @@ const Clients: React.FC = () => {
 
 
   const handleClientAdded = (newClient: IClient) => {
+    // Store tags for the new client if provided (for immediate display)
+    if (newClient.client_id && newClient.tags && newClient.tags.length > 0) {
+      setClientTags(current => ({
+        ...current,
+        [newClient.client_id]: newClient.tags!
+      }));
+
+      // Update unique tags list with any new tags
+      setAllUniqueTags(prevTags => {
+        const currentTagTexts = new Set(prevTags.map(t => t.tag_text));
+        const newUniqueTags = newClient.tags!.filter(tag => !currentTagTexts.has(tag.tag_text));
+        if (newUniqueTags.length > 0) {
+          return [...prevTags, ...newUniqueTags];
+        }
+        return prevTags;
+      });
+    }
+
     // Refresh the list after a client is added
     setRefreshKey(prev => prev + 1);
     toast.success(`${newClient.client_name} has been created successfully.`);
@@ -1044,19 +1062,23 @@ const Clients: React.FC = () => {
           <div className="flex items-center gap-4">
             {/* Actions */}
             <div className="flex gap-2">
-              <button
+              <Button
+                id="create-client-button"
                 onClick={() => setIsDialogOpen(true)}
-                className="px-4 py-2 text-sm font-medium text-white bg-primary-500 hover:bg-primary-600 rounded"
               >
                 + Create Client
-              </button>
+              </Button>
 
               <DropdownMenu.Root>
                 <DropdownMenu.Trigger asChild>
-                  <button className="border border-gray-300 rounded-md p-2 flex items-center gap-2">
+                  <Button
+                    id="clients-actions-button"
+                    variant="outline"
+                    className="flex items-center gap-2"
+                  >
                     <MoreVertical size={16} />
                     Actions
-                  </button>
+                  </Button>
                 </DropdownMenu.Trigger>
                 <DropdownMenu.Content className="bg-white rounded-md shadow-lg p-1">
                   <DropdownMenu.Item
@@ -1118,15 +1140,17 @@ const Clients: React.FC = () => {
           </span>
         )}
 
-        <button
-          id="bulk-delete-clients-btn"
-          className="flex gap-1 text-sm font-medium text-gray-500"
+        <Button
+          id="delete-selected-clients"
+          variant="ghost"
+          size="sm"
+          className="flex gap-1 text-gray-500"
           disabled={selectedClients.length === 0}
           onClick={handleMultiDelete}
         >
           Delete
           <TrashIcon className="h-5 w-5" />
-        </button>
+        </Button>
       </div>
 
       {/* Clients */}

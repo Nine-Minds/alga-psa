@@ -289,7 +289,7 @@ function DocumentStorageCardComponent({
     onClick,
     isContentDocument = false,
     forceRefresh
-}: DocumentStorageCardProps): JSX.Element {
+}: DocumentStorageCardProps): React.JSX.Element {
     const { t } = useTranslation('common');
     const [previewContent, setPreviewContent] = useState<{
         content?: string;
@@ -307,28 +307,28 @@ function DocumentStorageCardComponent({
     const documentName = document.document_name || t('documents.unnamed', 'Untitled');
     const isVideoDocument = Boolean(document.mime_type && document.mime_type.startsWith('video/'));
     const deleteTitle = isVideoDocument
-        ? t('documents.deleteVideoTitle', 'Delete Video')
-        : t('documents.deleteTitle', 'Delete Document');
+        ? t('documents.deleteVideoTitle', 'Permanently Delete Video')
+        : t('documents.deleteTitle', 'Permanently Delete Document');
     const deleteMessage = isVideoDocument
         ? t('documents.deleteVideoMessage', {
             name: documentName,
-            defaultValue: `Are you sure you want to delete the video "${documentName}"? This action cannot be undone.`
+            defaultValue: `Are you sure you want to permanently delete the video "${documentName}" from the system?\n\nThis will remove the file entirely and it will no longer be available anywhere. This action cannot be undone.`
         })
         : t('documents.deleteMessage', {
             name: documentName,
-            defaultValue: `Are you sure you want to delete "${documentName}"? This action cannot be undone.`
+            defaultValue: `Are you sure you want to permanently delete "${documentName}" from the system?\n\nThis will remove the file entirely and it will no longer be available anywhere. This action cannot be undone.`
         });
     const removeTitle = isVideoDocument
-        ? t('documents.removeVideoTitle', 'Remove Video')
-        : t('documents.removeTitle', 'Remove Document');
+        ? t('documents.removeVideoTitle', 'Detach Video')
+        : t('documents.removeTitle', 'Detach Document');
     const removeMessage = isVideoDocument
         ? t('documents.removeVideoMessage', {
             name: documentName,
-            defaultValue: `Are you sure you want to remove the video "${documentName}" from this item? The file will remain available in the document library.`
+            defaultValue: `Are you sure you want to detach the video "${documentName}" from this item?\n\nThis only removes the link — the file will remain in the document library and can be attached to other items.`
         })
         : t('documents.removeMessage', {
             name: documentName,
-            defaultValue: `Are you sure you want to remove "${documentName}" from this item? The document will still be available in the document library.`
+            defaultValue: `Are you sure you want to detach "${documentName}" from this item?\n\nThis only removes the link — the document will remain in the document library and can be attached to other items.`
         });
 
 
@@ -690,7 +690,7 @@ function DocumentStorageCardComponent({
                                 className="text-[rgb(var(--color-text-600))] hover:text-orange-600 hover:bg-orange-50 inline-flex items-center"
                             >
                                 <Unlink className="w-4 h-4 mr-2" />
-                                {isLoading ? t('common.loading', 'Loading...') : t('documents.remove', 'Remove')}
+                                {isLoading ? t('common.loading', 'Loading...') : t('documents.detach', 'Detach')}
                             </Button>
                         )}
                         {showMove && onMove && (
@@ -722,7 +722,7 @@ function DocumentStorageCardComponent({
                                 className="text-[rgb(var(--color-text-600))] hover:text-red-600 hover:bg-red-50 inline-flex items-center"
                             >
                                 <Trash2 className="w-4 h-4 mr-2" />
-                                {isLoading ? t('common.loading', 'Loading...') : t('documents.delete', 'Delete')}
+                                {isLoading ? t('common.loading', 'Loading...') : t('documents.deletePermanently', 'Delete Permanently')}
                             </Button>
                         )}
                     </div>
@@ -737,7 +737,7 @@ function DocumentStorageCardComponent({
             onConfirm={confirmDelete}
             title={deleteTitle}
             message={deleteMessage}
-            confirmLabel={t('documents.delete', 'Delete')}
+            confirmLabel={t('documents.deletePermanently', 'Delete Permanently')}
             cancelLabel={t('common.cancel', 'Cancel')}
             isConfirming={isLoading}
         />
@@ -752,7 +752,7 @@ function DocumentStorageCardComponent({
                     onConfirm={confirmDisassociate}
                     title={removeTitle}
                     message={removeMessage}
-                    confirmLabel={t('documents.remove', 'Remove')}
+                    confirmLabel={t('documents.detach', 'Detach')}
                     cancelLabel={t('common.cancel', 'Cancel')}
                     isConfirming={isLoading}
                 />

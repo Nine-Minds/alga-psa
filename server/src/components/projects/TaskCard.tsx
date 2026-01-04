@@ -1,13 +1,16 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { IProjectTask, IProjectTicketLinkWithDetails, ITaskType } from 'server/src/interfaces/project.interfaces';
+import { useTruncationDetection } from 'server/src/hooks/useTruncationDetection';
+import { IProjectTask, IProjectTicketLinkWithDetails, ITaskType, IProjectTaskDependency } from 'server/src/interfaces/project.interfaces';
 import { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
 import { IPriority, IStandardPriority } from 'server/src/interfaces/ticket.interfaces';
 import { ITag } from 'server/src/interfaces/tag.interfaces';
-import { CheckSquare, Square, Ticket, Users, MoreVertical, Move, Copy, Edit, Trash2, Bug, Sparkles, TrendingUp, Flag, BookOpen, Paperclip } from 'lucide-react';
+import { CheckSquare, Square, Ticket, MoreVertical, Move, Copy, Edit, Trash2, Bug, Sparkles, TrendingUp, Flag, BookOpen, Paperclip, Ban, GitBranch, Link2 } from 'lucide-react';
+import { Tooltip } from 'server/src/components/ui/Tooltip';
 import { findPriorityById } from 'server/src/lib/actions/priorityActions';
 import UserPicker from 'server/src/components/ui/UserPicker';
+import UserAvatar from 'server/src/components/ui/UserAvatar';
 import { getTaskTicketLinksAction, getTaskResourcesAction } from 'server/src/lib/actions/project-actions/projectTaskActions';
 import { TagList, TagManager } from 'server/src/components/tags';
 import { Button } from 'server/src/components/ui/Button';
@@ -26,6 +29,7 @@ interface TaskCardProps {
   hasCriticalPath?: boolean;
   ticketLinks?: IProjectTicketLinkWithDetails[];
   taskResources?: any[];
+  taskDependencies?: { predecessors: IProjectTaskDependency[]; successors: IProjectTaskDependency[] };
   taskTags?: ITag[];
   documentCount?: number;
   isAnimating?: boolean;
@@ -57,6 +61,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({
   hasCriticalPath = false,
   ticketLinks,
   taskResources: providedTaskResources,
+  taskDependencies,
   taskTags: providedTaskTags = [],
   documentCount: providedDocumentCount,
   isAnimating = false,
@@ -85,13 +90,16 @@ export const TaskCard: React.FC<TaskCardProps> = ({
   const [isDragging, setIsDragging] = useState(false);
   const [priority, setPriority] = useState<IPriority | IStandardPriority | null>(null);
   const [documentCount, setDocumentCount] = useState<number>(providedDocumentCount ?? 0);
-  
+  const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
+  const [descriptionRef, isDescriptionTruncated] = useTruncationDetection(task.description, isDescriptionExpanded);
+
   // Update documentCount when providedDocumentCount changes
   useEffect(() => {
     if (providedDocumentCount !== undefined) {
       setDocumentCount(providedDocumentCount);
     }
   }, [providedDocumentCount]);
+
   const Icon = taskTypeIcons[task.task_type_key || 'task'] || CheckSquare;
 
   useEffect(() => {
@@ -234,7 +242,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({
         console.log('Using cached project tree data when selecting task for editing');
         onTaskSelected(task);
       }}
-      className={`${styles.taskCard} relative bg-white p-3 mb-2 rounded shadow-sm cursor-pointer hover:shadow-md transition-all duration-200 border border-gray-200 flex flex-col gap-1 ${
+      className={`${styles.taskCard} relative bg-white p-3 mb-2 rounded-lg shadow-sm cursor-pointer hover:shadow-md transition-all duration-200 border border-gray-200 flex flex-col gap-1 ${
         isDragging ? styles.dragging : ''
       } ${isAnimating ? styles.entering : ''}`}
       aria-grabbed={isDragging}
@@ -280,7 +288,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({
       </div>
 
       <div className="flex items-center gap-2 mb-1 w-full px-1 mt-6">
-        <div className="font-semibold text-2xl flex-1">
+        <div className="font-semibold text-lg flex-1">
           {task.task_name}
         </div>
         {priority && (
@@ -288,16 +296,32 @@ export const TaskCard: React.FC<TaskCardProps> = ({
             <div 
               className="w-3 h-3 rounded-full" 
               style={{ backgroundColor: priority.color || '#6B7280' }}
-              title={`${priority.priority_name} priority`}
+              title={`Priority level: ${priority.priority_name}`}
             />
             <span className="text-xs text-gray-600">{priority.priority_name}</span>
           </div>
         )}
       </div>
       {task.description && (
-        <p className="text-sm text-gray-600 mb-2 line-clamp-2">
-          {task.description}
-        </p>
+        <div className="mb-2">
+          <p
+            ref={descriptionRef}
+            className={`text-sm text-gray-600 ${!isDescriptionExpanded ? 'line-clamp-2' : ''}`}
+          >
+            {task.description}
+          </p>
+          {(isDescriptionTruncated || isDescriptionExpanded) && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setIsDescriptionExpanded(!isDescriptionExpanded);
+              }}
+              className="text-xs text-purple-600 hover:text-purple-700 font-medium mt-1"
+            >
+              {isDescriptionExpanded ? 'See less' : 'See more'}
+            </button>
+          )}
+        </div>
       )}
       <div className="flex items-center gap-2">
         <div onClick={(e) => e.stopPropagation()}>
@@ -311,10 +335,35 @@ export const TaskCard: React.FC<TaskCardProps> = ({
           />
         </div>
         {displayResources.length > 0 && (
-          <div className="flex items-center gap-1 text-gray-500 bg-primary-100 p-1 rounded-md">
-            <Users className="w-3 h-3" />
-            <span className="text-xs">+{displayResources.length}</span>
-          </div>
+          <Tooltip
+            content={
+              <div className="text-xs space-y-1.5">
+                <div className="font-medium text-gray-300 mb-1">Additional Agents:</div>
+                {displayResources.map((resource, i) => {
+                  const resourceUser = users.find(u => u.user_id === resource.additional_user_id);
+                  const userName = resourceUser ? `${resourceUser.first_name} ${resourceUser.last_name}` : 'Unknown';
+                  return (
+                    <div key={i} className="flex items-center gap-2">
+                      <UserAvatar
+                        userId={resource.additional_user_id}
+                        userName={userName}
+                        avatarUrl={null}
+                        size="xs"
+                      />
+                      <span>
+                        {userName}
+                        {resource.role && <span className="text-gray-400"> ({resource.role})</span>}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            }
+          >
+            <span className="text-xs text-purple-600 font-medium cursor-help bg-purple-50 px-1.5 py-0.5 rounded">
+              +{displayResources.length}
+            </span>
+          </Tooltip>
         )}
       </div>
       <div className="flex items-center justify-between text-xs text-gray-500">
@@ -327,14 +376,28 @@ export const TaskCard: React.FC<TaskCardProps> = ({
         </div>
         <div className="flex items-center gap-2">
           {hasChecklist && (
-            <div className={`flex items-center gap-1 ${allCompleted ? 'bg-green-50 text-green-600' : 'text-gray-500'} px-2 py-1 rounded`}>
-              {allCompleted ? (
-                <CheckSquare className="w-3 h-3" />
-              ) : (
-                <Square className="w-3 h-3" />
-              )}
-              <span>{completedItems}/{checklistItems.length}</span>
-            </div>
+            <Tooltip
+              content={
+                <div className="text-xs space-y-1 max-w-xs">
+                  <div className="font-medium text-gray-300 mb-1">Checklist Items:</div>
+                  {checklistItems.map((item, i) => (
+                    <div key={i} className="flex items-center gap-1.5">
+                      <CheckSquare className={`h-3 w-3 ${item.completed ? 'text-green-400' : 'text-gray-400'}`} />
+                      <span className={item.completed ? 'line-through text-gray-400' : ''}>{item.item_name}</span>
+                    </div>
+                  ))}
+                </div>
+              }
+            >
+              <div className={`flex items-center gap-1 cursor-help ${allCompleted ? 'bg-green-50 text-green-600' : 'text-gray-500'} px-2 py-1 rounded`}>
+                {allCompleted ? (
+                  <CheckSquare className="w-3 h-3" />
+                ) : (
+                  <Square className="w-3 h-3" />
+                )}
+                <span>{completedItems}/{checklistItems.length}</span>
+              </div>
+            </Tooltip>
           )}
           {taskTickets !== null && displayTickets.length > 0 && (
             <div className="flex items-center gap-1 text-gray-500 px-2 py-1 rounded bg-gray-50">
@@ -347,6 +410,61 @@ export const TaskCard: React.FC<TaskCardProps> = ({
               <Paperclip className="w-3 h-3" />
               <span>{documentCount}</span>
             </div>
+          )}
+          {/* Dependencies indicator */}
+          {taskDependencies && (taskDependencies.predecessors.length > 0 || taskDependencies.successors.length > 0) && (
+            <Tooltip
+              content={
+                <div className="text-xs space-y-2 min-w-[220px]">
+                  {taskDependencies.predecessors.length > 0 && (
+                    <div>
+                      <div className="font-medium text-gray-300 mb-1">Depends on:</div>
+                      {taskDependencies.predecessors.map((d, i) => {
+                        const isBlocking = d.dependency_type === 'blocks' || d.dependency_type === 'blocked_by';
+                        return (
+                          <div key={i} className="flex items-center gap-1.5 ml-2">
+                            <span className={isBlocking ? 'text-orange-400' : 'text-blue-400'}>
+                              {isBlocking ? <Ban className="h-3 w-3" /> : <GitBranch className="h-3 w-3" />}
+                            </span>
+                            <span>{d.predecessor_task?.task_name || 'Unknown task'}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                  {taskDependencies.successors.length > 0 && (
+                    <div>
+                      <div className="font-medium text-gray-300 mb-1">Blocks:</div>
+                      {taskDependencies.successors.map((d, i) => {
+                        const isBlocking = d.dependency_type === 'blocks' || d.dependency_type === 'blocked_by';
+                        return (
+                          <div key={i} className="flex items-center gap-1.5 ml-2">
+                            <span className={isBlocking ? 'text-red-400' : 'text-blue-400'}>
+                              {isBlocking ? <Ban className="h-3 w-3" /> : <GitBranch className="h-3 w-3" />}
+                            </span>
+                            <span>{d.successor_task?.task_name || 'Unknown task'}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              }
+            >
+              <div className={`flex items-center gap-1 px-2 py-1 rounded ${
+                taskDependencies.predecessors.some(d => d.dependency_type === 'blocks' || d.dependency_type === 'blocked_by') ||
+                taskDependencies.successors.some(d => d.dependency_type === 'blocks' || d.dependency_type === 'blocked_by')
+                  ? 'bg-red-50 text-red-500'
+                  : 'bg-blue-50 text-blue-500'
+              }`}>
+                {taskDependencies.predecessors.some(d => d.dependency_type === 'blocks' || d.dependency_type === 'blocked_by') ||
+                 taskDependencies.successors.some(d => d.dependency_type === 'blocks' || d.dependency_type === 'blocked_by')
+                  ? <Ban className="w-3 h-3" />
+                  : <GitBranch className="w-3 h-3" />
+                }
+                <span>{taskDependencies.predecessors.length + taskDependencies.successors.length}</span>
+              </div>
+            </Tooltip>
           )}
         </div>
       </div>

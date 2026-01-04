@@ -13,7 +13,7 @@ import Spinner from 'server/src/components/ui/Spinner';
 import type { ImportJobDetails, ImportJobItemRecord, ImportJobRecord } from '@/types/imports.types';
 import { useImportActions } from './hooks/useImportActions';
 
-const ImportExportSettings = (): JSX.Element => {
+const ImportExportSettings = (): React.JSX.Element => {
 
   const {
     isLoading,

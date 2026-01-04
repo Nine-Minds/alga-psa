@@ -24,6 +24,9 @@ import { toast } from 'react-hot-toast';
 import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 import { ProjectTaskStatusEditor } from './ProjectTaskStatusEditor';
 import { Dialog } from 'server/src/components/ui/Dialog';
+import ClientPortalConfigEditor from './ClientPortalConfigEditor';
+import { DEFAULT_CLIENT_PORTAL_CONFIG } from 'server/src/interfaces/project.interfaces';
+import { ChevronDown, ChevronRight, Settings } from 'lucide-react';
 
 interface ProjectDetailsEditProps {
   initialProject: IProject;
@@ -62,6 +65,7 @@ const ProjectDetailsEdit: React.FC<ProjectDetailsEditProps> = ({
   const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
   const [projectTags, setProjectTags] = useState<ITag[]>([]);
+  const [showClientPortalConfig, setShowClientPortalConfig] = useState(false);
   
   // TagContext is available if needed for tag-related features in the future
   // const { tags } = useTags();
@@ -147,6 +151,7 @@ const ProjectDetailsEdit: React.FC<ProjectDetailsEditProps> = ({
         is_inactive: project.is_inactive,
         status: project.status,
         budgeted_hours: budgetedHours,
+        client_portal_config: project.client_portal_config,
       });
       
       // Log for debugging
@@ -217,6 +222,21 @@ const ProjectDetailsEdit: React.FC<ProjectDetailsEditProps> = ({
               }`}
               rows={1}
               required
+            />
+          </div>
+
+          <div>
+            <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-1">
+              Description
+            </label>
+            <TextArea
+              id="description"
+              name="description"
+              value={project.description || ''}
+              onChange={handleInputChange}
+              placeholder="Enter project description..."
+              className="w-full text-sm p-2 border border-gray-300 rounded-md resize-none focus:outline-none focus:ring-2 focus:ring-purple-500"
+              rows={3}
             />
           </div>
 
@@ -400,6 +420,35 @@ const ProjectDetailsEdit: React.FC<ProjectDetailsEditProps> = ({
               projectId={project.project_id}
               onChange={() => setHasChanges(true)}
             />
+          </div>
+
+          {/* Client Portal Visibility - Expandable Section */}
+          <div className="border-t pt-4 mt-4">
+            <button
+              type="button"
+              onClick={() => setShowClientPortalConfig(!showClientPortalConfig)}
+              className="flex items-center gap-2 text-sm font-medium text-gray-700 hover:text-gray-900"
+            >
+              {showClientPortalConfig ? (
+                <ChevronDown className="h-4 w-4" />
+              ) : (
+                <ChevronRight className="h-4 w-4" />
+              )}
+              <Settings className="h-4 w-4" />
+              <span>Client Portal Visibility</span>
+            </button>
+            {showClientPortalConfig && (
+              <div className="mt-3">
+                <ClientPortalConfigEditor
+                  config={project.client_portal_config || DEFAULT_CLIENT_PORTAL_CONFIG}
+                  onChange={(config) => {
+                    setProject(prev => ({ ...prev, client_portal_config: config }));
+                    setHasChanges(true);
+                  }}
+                  disabled={isSubmitting}
+                />
+              </div>
+            )}
           </div>
         </div>
 

@@ -1,5 +1,5 @@
 import { TenantEntity } from "./index";
-import { DependencyType } from "./project.interfaces";
+import { DependencyType, IClientPortalConfig } from "./project.interfaces";
 
 export interface IProjectTemplate extends TenantEntity {
   template_id: string;
@@ -13,6 +13,7 @@ export interface IProjectTemplate extends TenantEntity {
 
   use_count: number;
   last_used_at?: Date;
+  client_portal_config?: IClientPortalConfig;
 }
 
 export interface IProjectTemplatePhase extends TenantEntity {

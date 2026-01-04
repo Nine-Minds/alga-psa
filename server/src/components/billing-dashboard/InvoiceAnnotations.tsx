@@ -37,7 +37,7 @@ const InvoiceAnnotations: React.FC<InvoiceAnnotationsProps> = ({ invoiceId }) =>
     <div>
       <h3>Invoice Annotations</h3>
       <ul>
-        {annotations.map((annotation):JSX.Element => (
+        {annotations.map((annotation): React.JSX.Element => (
           <li key={annotation.annotation_id}>
             {annotation.content} - {annotation.is_internal ? 'Internal' : 'External'}
           </li>

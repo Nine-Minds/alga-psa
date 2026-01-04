@@ -1,6 +1,6 @@
 'use client';
 
-import { IProjectTask, ProjectStatus, IProjectTicketLinkWithDetails, ITaskType } from 'server/src/interfaces/project.interfaces';
+import { IProjectTask, ProjectStatus, IProjectTicketLinkWithDetails, ITaskType, IProjectTaskDependency } from 'server/src/interfaces/project.interfaces';
 import { ITag } from 'server/src/interfaces/tag.interfaces';
 import { Button } from 'server/src/components/ui/Button';
 import { Circle, Plus } from 'lucide-react';
@@ -17,6 +17,7 @@ interface StatusColumnProps {
   taskTypes: ITaskType[];
   ticketLinks: { [taskId: string]: IProjectTicketLinkWithDetails[] };
   taskResources: { [taskId: string]: any[] };
+  taskDependencies?: { [taskId: string]: { predecessors: IProjectTaskDependency[]; successors: IProjectTaskDependency[] } };
   taskTags?: Record<string, ITag[]>;
   taskDocumentCounts?: Record<string, number>;
   allTaskTagTexts?: string[];
@@ -51,6 +52,7 @@ export const StatusColumn: React.FC<StatusColumnProps> = ({
   users,
   ticketLinks,
   taskResources,
+  taskDependencies = {},
   taskTags = {},
   taskDocumentCounts = {},
   allTaskTagTexts = [],
@@ -285,16 +287,19 @@ export const StatusColumn: React.FC<StatusColumnProps> = ({
   return (
     <div
       className={`${styles.kanbanColumn} ${configuredColor ? '' : backgroundColor} rounded-lg border-2 border-solid transition-all duration-200 ${
-        isDraggedOver ? 'border-purple-500 ' + styles.dragOver : 'border-gray-200'
+        isDraggedOver ? 'border-purple-500 ' + styles.dragOver : (configuredColor ? '' : borderColor)
       }`}
-      style={configuredColor ? { backgroundColor: lightenColor(configuredColor, 0.85) } : undefined}
+      style={configuredColor ? {
+        backgroundColor: lightenColor(configuredColor, 0.85),
+        borderColor: isDraggedOver ? undefined : lightenColor(configuredColor, 0.70)
+      } : undefined}
       onDrop={handleDrop}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
     >
       <div className="font-bold text-sm p-3 rounded-t-lg flex items-center justify-between relative">
         <div
-          className={`flex ${configuredColor ? '' : darkBackgroundColor} rounded-[20px] border-2 ${configuredColor ? '' : borderColor} shadow-sm items-center ps-3 py-3 pe-4`}
+          className={`flex ${configuredColor ? '' : darkBackgroundColor} rounded-2xl border-2 ${configuredColor ? '' : borderColor} shadow-sm items-center ps-3 py-3 pe-4`}
           style={configuredColor ? {
             backgroundColor: lightenColor(configuredColor, 0.70),
             borderColor: lightenColor(configuredColor, 0.40)
@@ -317,13 +322,19 @@ export const StatusColumn: React.FC<StatusColumnProps> = ({
           >
             <Plus className="w-4 h-4 text-white" />
           </Button>
-          <div className={styles.taskCount}>
+          <span
+            className="text-xs font-medium px-2 py-0.5 rounded-full"
+            style={configuredColor ? {
+              backgroundColor: lightenColor(configuredColor, 0.70),
+              color: configuredColor
+            } : undefined}
+          >
             {displayTasks.length}
-          </div>
+          </span>
         </div>
       </div>
       <div className={`${styles.kanbanTasks} ${styles.taskList}`} ref={tasksRef}>
-        {sortedTasks.map((task): JSX.Element => {
+        {sortedTasks.map((task): React.JSX.Element => {
           const taskType = taskTypes.find(t => t.type_key === task.task_type_key);
           return (
           <div key={task.task_id} data-task-id={task.task_id} className="relative">
@@ -337,6 +348,7 @@ export const StatusColumn: React.FC<StatusColumnProps> = ({
               users={users}
               ticketLinks={ticketLinks[task.task_id]}
               taskResources={taskResources[task.task_id]}
+              taskDependencies={taskDependencies[task.task_id]}
               taskTags={taskTags[task.task_id] || []}
               documentCount={taskDocumentCounts[task.task_id]}
               isAnimating={animatingTasks.has(task.task_id)}

@@ -76,7 +76,7 @@ export function useInternalNotifications(
   const reconnectDelayRef = useRef<number>(INITIAL_RECONNECT_DELAY);
 
   // Use refs to store latest callbacks without triggering effect re-runs
-  const fetchNotificationsRef = useRef<() => Promise<void>>();
+  const fetchNotificationsRef = useRef<(() => Promise<void>) | undefined>(undefined);
   const enablePollingRef = useRef<boolean>(enablePolling);
 
   // Fetch notifications from REST API

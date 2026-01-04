@@ -1,0 +1,24 @@
+{
+  "name": "com.alga.sample.scheduler-demo",
+  "publisher": "Alga",
+  "version": "0.1.0",
+  "runtime": "wasm-js@1",
+  "capabilities": ["cap:scheduler.manage", "cap:log.emit", "cap:context.read"],
+  "ui": {
+    "type": "iframe",
+    "entry": "ui/index.html",
+    "hooks": {
+      "appMenu": { "label": "Scheduler Demo" }
+    }
+  },
+  "api": {
+    "endpoints": [
+      { "method": "GET", "path": "/api/status", "handler": "dist/main", "schedulable": true },
+      { "method": "POST", "path": "/api/setup", "handler": "dist/main" },
+      { "method": "GET", "path": "/api/schedules", "handler": "dist/main" },
+      { "method": "DELETE", "path": "/api/schedules/:id", "handler": "dist/main" },
+      { "method": "POST", "path": "/api/heartbeat", "handler": "dist/main", "schedulable": true }
+    ]
+  },
+  "assets": ["ui/**/*"]
+}

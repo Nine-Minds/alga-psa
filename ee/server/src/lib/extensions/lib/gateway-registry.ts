@@ -57,10 +57,28 @@ class DbRegistryFacade implements RegistryFacade {
 
   async getManifest(versionId: string): Promise<ManifestV2 | null> {
     const db = await getAdminConnection();
-    const row = await db('extension_version').where({ id: versionId }).first(['api']);
+    const row = await db('extension_version').where({ id: versionId }).first(['api_endpoints', 'api']);
     if (!row) return null;
-    const apiValue = typeof row.api === 'string' ? JSON.parse(row.api) : row.api ?? {};
-    const rawEndpoints = Array.isArray(apiValue?.endpoints) ? apiValue.endpoints : [];
+
+    // Prefer v2 `api_endpoints` (array) and fall back to legacy `api.endpoints` when present.
+    let rawEndpoints: any[] = [];
+    try {
+      const v2 = (row as any).api_endpoints;
+      rawEndpoints = Array.isArray(v2) ? v2 : JSON.parse(v2 || '[]');
+    } catch {
+      rawEndpoints = [];
+    }
+
+    if (rawEndpoints.length === 0) {
+      try {
+        const apiValue = typeof (row as any).api === 'string' ? JSON.parse((row as any).api) : (row as any).api ?? {};
+        const maybe = Array.isArray(apiValue?.endpoints) ? apiValue.endpoints : (Array.isArray(apiValue) ? apiValue : []);
+        rawEndpoints = maybe;
+      } catch {
+        rawEndpoints = [];
+      }
+    }
+
     const endpoints: ApiEndpointDef[] = rawEndpoints.map((endpoint: any) => ({
       method: endpoint.method,
       path: endpoint.path,

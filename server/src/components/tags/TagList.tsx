@@ -73,7 +73,7 @@ export const TagList: React.FC<TagListProps> = ({
 
   return (
     <div className="flex flex-wrap gap-1">
-      {displayTags.map((tag): JSX.Element => {
+      {displayTags.map((tag): React.JSX.Element => {
         const colors = generateEntityColor(tag.tag_text);
 
         return (

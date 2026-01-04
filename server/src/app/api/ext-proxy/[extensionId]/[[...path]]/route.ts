@@ -5,7 +5,8 @@ import path from 'node:path';
 
 // Force EE handler for extension proxy to fix 404s in dev environment
 import * as handler from '@product/ext-proxy/ee/handler';
-export { dynamic } from '@product/ext-proxy/ee/handler';
+
+export const dynamic = 'force-dynamic';
 
 const LOG_PATH = path.resolve('/tmp/ext-proxy.log');
 

@@ -43,7 +43,7 @@ interface TimeEntryDialogProps {
 }
 
 // Main dialog content component
-const TimeEntryDialogContent = memo(function TimeEntryDialogContent(props: TimeEntryDialogProps): JSX.Element {
+const TimeEntryDialogContent = memo(function TimeEntryDialogContent(props: TimeEntryDialogProps): React.JSX.Element {
   const {
     id = 'time-entry-dialog',
     isOpen,

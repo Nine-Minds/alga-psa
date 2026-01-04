@@ -5,7 +5,7 @@ import { IProjectPhase, IProjectTask, ITaskChecklistItem, ProjectStatus, IProjec
 import { IUser } from '@shared/interfaces/user.interfaces';
 import { IPriority } from 'server/src/interfaces/ticket.interfaces';
 import { ITag } from 'server/src/interfaces/tag.interfaces';
-import AvatarIcon from 'server/src/components/ui/AvatarIcon';
+import UserAvatar from 'server/src/components/ui/UserAvatar';
 import { getProjectTreeData, getProjectDetails } from 'server/src/lib/actions/project-actions/projectActions';
 import { getAllPriorities } from 'server/src/lib/actions/priorityActions';
 import { getServices } from 'server/src/lib/actions/serviceActions';
@@ -24,8 +24,8 @@ import {
   getTaskDependencies
 } from 'server/src/lib/actions/project-actions/projectTaskActions';
 import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
-import { findTagsByEntityId } from 'server/src/lib/actions/tagActions';
-import { TagManager } from 'server/src/components/tags';
+import { findTagsByEntityId, createTagsForEntity } from 'server/src/lib/actions/tagActions';
+import { TagManager, QuickAddTagPicker, PendingTag } from 'server/src/components/tags';
 import { Dialog, DialogContent } from 'server/src/components/ui/Dialog';
 import { Button } from 'server/src/components/ui/Button';
 import { TextArea } from 'server/src/components/ui/TextArea';
@@ -84,7 +84,7 @@ export default function TaskForm({
   onPhaseChange,
   inDrawer = false,
   projectTreeData = []
-}: TaskFormProps): JSX.Element {
+}: TaskFormProps): React.JSX.Element {
   const dependenciesRef = useRef<TaskDependenciesRef>(null);
   const [showDependencyConfirmation, setShowDependencyConfirmation] = useState(false);
   const [pendingSubmit, setPendingSubmit] = useState<React.FormEvent | null>(null);
@@ -109,6 +109,7 @@ export default function TaskForm({
   const [taskResources, setTaskResources] = useState<any[]>(task?.task_id ? [] : []);
   const [tempTaskResources, setTempTaskResources] = useState<any[]>([]);
   const [taskTags, setTaskTags] = useState<ITag[]>([]);
+  const [pendingTags, setPendingTags] = useState<PendingTag[]>([]);
   const [pendingTicketLinks, setPendingTicketLinks] = useState<IProjectTicketLinkWithDetails[]>(task?.ticket_links || []);
   const [editingChecklistItemId, setEditingChecklistItemId] = useState<string | null>(null);
   const [isCrossProjectMove, setIsCrossProjectMove] = useState<boolean>(false);
@@ -137,7 +138,7 @@ export default function TaskForm({
     predecessors: IProjectTaskDependency[];
     successors: IProjectTaskDependency[];
   }>({ predecessors: [], successors: [] });
-  
+
   const { openDrawer, closeDrawer } = useDrawer();
 
   const [selectedStatusId, setSelectedStatusId] = useState<string>(
@@ -167,7 +168,7 @@ export default function TaskForm({
         // Fetch services for time entry prefill
         const servicesResponse = await getServices(1, 999);
         setAvailableServices(servicesResponse.services);
-        
+
         // Fetch all tasks in the project
         if (phase.project_id) {
           try {
@@ -275,7 +276,7 @@ export default function TaskForm({
       console.error('Phase ID is missing from path');
       return;
     }
-    
+
     // Find the selected phase from tree options
     const findPhaseInTree = (options: TreeSelectOption<ProjectTreeTypes>[]): TreeSelectOption<ProjectTreeTypes> | undefined => {
       for (const opt of options) {
@@ -330,7 +331,7 @@ export default function TaskForm({
       // Same project move - try to keep current status if valid
       const currentStatusId = task?.project_status_mapping_id;
       const currentStatusValid = currentStatusId && projectStatuses.some(s => s.project_status_mapping_id === currentStatusId);
-      
+
       if (currentStatusValid) {
         setSelectedStatusId(currentStatusId);
       } else if (defaultStatus?.project_status_mapping_id) {
@@ -343,29 +344,29 @@ export default function TaskForm({
       // Keep the current status ID until moveTaskToPhase determines the new one
       setSelectedStatusId(task?.project_status_mapping_id || projectStatuses[0]?.project_status_mapping_id);
     }
-    
+
     // Show move confirmation if it's a different phase
     if (phaseId !== phase.phase_id) {
       setSelectedPhase({ ...phase, phase_id: phaseId });
       setShowMoveConfirmation(true);
     }
-    
+
     handlePhaseChange(phaseId);
     onPhaseChange(phaseId);
   };
 
   const handleMoveConfirm = async () => {
     if (!task) return;
-    
+
     setIsSubmitting(true);
     try {
       // For cross-project moves, let moveTaskToPhase handle status mapping
       const movedTask = await moveTaskToPhase(
-        task.task_id, 
-        selectedPhaseId, 
+        task.task_id,
+        selectedPhaseId,
         isCrossProjectMove ? undefined : selectedStatusId // Only pass status ID for same-project moves
       );
-      
+
       if (movedTask) {
         // For cross-project moves, use the status mapping that moveTaskToPhase determined
         // Update our local state to match the new status
@@ -389,7 +390,7 @@ export default function TaskForm({
         const updatedTask = await updateTaskWithChecklist(movedTask.task_id, taskData);
         onSubmit(updatedTask);
       }
-      
+
       toast.success('Task moved successfully');
       onClose();
     } catch (error) {
@@ -410,15 +411,15 @@ export default function TaskForm({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setHasAttemptedSubmit(true);
-    
+
     const errors: string[] = [];
     if (!taskName.trim()) errors.push('Task name');
-    
+
     if (errors.length > 0) {
       setValidationErrors(errors);
       return;
     }
-    
+
     setValidationErrors([]);
 
     // Check for unsaved dependencies
@@ -444,18 +445,18 @@ export default function TaskForm({
         // Check if phase or status actually changed
         const phaseChanged = task.phase_id !== selectedPhaseId;
         const statusChanged = task.project_status_mapping_id !== selectedStatusId;
-        
+
         let taskToUpdate = task;
-        
+
         // Only call moveTaskToPhase if phase or status actually changed
         if (phaseChanged || statusChanged) {
           // Phase or status changed - handle the move
           const movedTask = await moveTaskToPhase(
-            task.task_id, 
-            selectedPhaseId, 
+            task.task_id,
+            selectedPhaseId,
             isCrossProjectMove ? undefined : selectedStatusId
           );
-          
+
           if (movedTask) {
             taskToUpdate = movedTask;
             // For cross-project moves, use the status mapping that moveTaskToPhase determined
@@ -504,28 +505,39 @@ export default function TaskForm({
         resultTask = await addTaskToPhase(phase.phase_id, taskData, checklistItems);
 
         if (resultTask) {
+          let linkingFailed = false;
           try {
             // Add task resources
             for (const resource of tempTaskResources) {
               await addTaskResourceAction(resultTask.task_id, resource.additional_user_id);
             }
-            
+
             // Add ticket links using the actual task ID and phase ID
             for (const link of pendingTicketLinks) {
               await addTicketLinkAction(phase.project_id, resultTask.task_id, link.ticket_id, phase.phase_id);
             }
-
-
-            // Only submit and close after everything is done
-            onSubmit(resultTask);
-            onClose();
           } catch (error) {
             console.error('Error adding resources or linking tickets:', error);
             toast.error('Task created but failed to link some items');
-            // Still submit the task even if linking fails
-            onSubmit(resultTask);
-            onClose();
+            linkingFailed = true;
           }
+
+          // Create tags for the new task (always attempt, even if linking failed)
+          let createdTags: typeof resultTask.tags = [];
+          if (pendingTags.length > 0) {
+            try {
+              createdTags = await createTagsForEntity(resultTask.task_id, 'project_task', pendingTags);
+              if (createdTags.length < pendingTags.length) {
+                toast.error(`${pendingTags.length - createdTags.length} tag(s) could not be created`);
+              }
+            } catch (tagError) {
+              console.error("Error creating task tags:", tagError);
+            }
+          }
+
+          // Submit task with tags
+          onSubmit({ ...resultTask, tags: createdTags });
+          onClose();
         }
       }
     } catch (error) {
@@ -553,7 +565,7 @@ export default function TaskForm({
 
   const handlePhaseChange = (phaseId: string) => {
     if (!phases) return;
-    
+
     const newPhase = phases.find(p => p.phase_id === phaseId);
     if (newPhase && newPhase.phase_id !== phase.phase_id) {
       setSelectedPhase(newPhase);
@@ -576,21 +588,26 @@ export default function TaskForm({
       if (selectedPriorityId !== null) return true; // User explicitly selected a priority
       if (selectedTaskType !== initialTaskType) return true; // Only if changed from initial value
       if (selectedServiceId !== null) return true; // User explicitly selected a service
+      if (pendingTags.length > 0) return true;
       return false; // No changes detected
     }
-    
+
     // Compare all form fields with their original values for edit mode
     if (!task) return false;
 
-    if (taskName !== task.task_name) return true;
-    if (description !== task.description) return true;
+    // Helper to normalize null/undefined/empty string for comparison
+    const normalizeString = (val: string | null | undefined): string => val || '';
+    const normalizeNullable = <T,>(val: T | null | undefined): T | null => val ?? null;
+
+    if (taskName !== (task.task_name || '')) return true;
+    if (normalizeString(description) !== normalizeString(task.description)) return true;
     if (selectedPhaseId !== task.phase_id) return true;
     if (selectedStatusId !== task.project_status_mapping_id) return true;
     if (estimatedHours !== Number(task.estimated_hours) / 60) return true;
     if (actualHours !== Number(task.actual_hours) / 60) return true;
-    if (assignedUser !== task.assigned_to) return true;
-    if (selectedPriorityId !== task.priority_id) return true;
-    if (selectedServiceId !== (task.service_id ?? null)) return true;
+    if (normalizeNullable(assignedUser) !== normalizeNullable(task.assigned_to)) return true;
+    if (normalizeNullable(selectedPriorityId) !== normalizeNullable(task.priority_id)) return true;
+    if (normalizeNullable(selectedServiceId) !== normalizeNullable(task.service_id)) return true;
 
     // Compare checklist items
     if (checklistItems.length !== task.checklist_items?.length) return true;
@@ -622,7 +639,7 @@ export default function TaskForm({
     // Compare ticket links - only compare ticket IDs since other fields might differ in format
     const currentTicketIds = new Set(pendingTicketLinks.map((link): string => link.ticket_id));
     const originalTicketIds = new Set(task.ticket_links?.map((link): string => link.ticket_id) || []);
-    
+
     if (currentTicketIds.size !== originalTicketIds.size) return true;
     for (const id of currentTicketIds) {
       if (!originalTicketIds.has(id)) return true;
@@ -641,12 +658,12 @@ export default function TaskForm({
       }
       return;
     }
-    
+
     // Original mouse event handling
     if (e && typeof e !== 'boolean') {
       e.preventDefault();
     }
-    
+
     if (hasChanges()) {
       setShowCancelConfirm(true);
     } else {
@@ -715,7 +732,7 @@ export default function TaskForm({
 
   const handleDeleteConfirm = async () => {
     if (!task?.task_id) return;
-    
+
     setIsSubmitting(true);
     try {
       await deleteTask(task.task_id);
@@ -730,7 +747,7 @@ export default function TaskForm({
       setShowDeleteConfirm(false);
     }
   };
-  
+
   const handleDeleteDismiss = () => {
     setShowDeleteConfirm(false);
   };
@@ -819,7 +836,7 @@ export default function TaskForm({
         toast.error('Please assign a primary agent first');
         return;
       }
-      
+
       if (task?.task_id) {
         await addTaskResourceAction(task.task_id, userId);
         const updatedResources = await getTaskResourcesAction(task.task_id);
@@ -873,7 +890,7 @@ export default function TaskForm({
     if (!path || !task) return; // Need the original task in edit mode
     const targetPhaseId = path['phase'];
     const targetStatusId = path['status'] || null;
- 
+
     if (targetPhaseId) {
       console.log("Duplicate destination selected:", targetPhaseId, "Status:", targetStatusId);
       setSelectedDuplicatePhaseId(targetPhaseId);
@@ -885,9 +902,9 @@ export default function TaskForm({
             // Handle both string and ReactNode labels
             if (typeof opt.label === 'string') {
               return opt.label;
-            } else if (React.isValidElement(opt.label) && opt.label.props.children) {
+            } else if (React.isValidElement(opt.label) && (opt.label.props as { children?: React.ReactNode }).children) {
               // Extract text from JSX element
-              const children = opt.label.props.children;
+              const children = (opt.label.props as { children?: React.ReactNode }).children;
               if (typeof children === 'string') {
                 return children;
               } else if (Array.isArray(children)) {
@@ -1180,13 +1197,13 @@ export default function TaskForm({
               {/* Show list of additional agents below the pickers */}
               {(task?.task_id ? taskResources : tempTaskResources).length > 0 && (
                 <div className="mt-2 space-y-2 max-h-32 overflow-y-auto">
-                {(task?.task_id ? taskResources : tempTaskResources).map((resource): JSX.Element => (
+                {(task?.task_id ? taskResources : tempTaskResources).map((resource): React.JSX.Element => (
                   <div key={resource.assignment_id} className="flex items-center justify-between bg-gray-50 p-2 rounded">
                     <div className="flex items-center gap-2">
-                      <AvatarIcon
+                      <UserAvatar
                         userId={resource.additional_user_id}
-                        firstName={resource.first_name}
-                        lastName={resource.last_name}
+                        userName={`${resource.first_name} ${resource.last_name}`}
+                        avatarUrl={null}
                         size="sm"
                       />
                       <span className="text-sm">{resource.first_name} {resource.last_name}</span>
@@ -1208,7 +1225,7 @@ export default function TaskForm({
           </div>
 
           {/* Full width Tags section */}
-          {mode === 'edit' && task?.task_id && (
+          {mode === 'edit' && task?.task_id ? (
             <div>
               <h3 className="font-semibold mb-2">Tags</h3>
               <TagManager
@@ -1220,14 +1237,25 @@ export default function TaskForm({
                 useInlineInput={true}
               />
             </div>
+          ) : mode === 'create' && (
+            <div>
+              <h3 className="font-semibold mb-2">Tags</h3>
+              <QuickAddTagPicker
+                id="task-tags-create"
+                entityType="project_task"
+                pendingTags={pendingTags}
+                onPendingTagsChange={setPendingTags}
+                disabled={isSubmitting}
+              />
+            </div>
           )}
 
           {/* Full width Checklist section */}
           <div>
             <div className="flex items-center gap-2 mb-2">
               <h3 className='font-semibold'>Checklist</h3>
-              <button 
-                onClick={toggleEditChecklist} 
+              <button
+                onClick={toggleEditChecklist}
                 className="text-gray-500 hover:text-gray-700"
                 type="button"
                 title={isEditingChecklist ? "Done editing" : "Edit checklist"}
@@ -1237,7 +1265,7 @@ export default function TaskForm({
             </div>
 
                 <div className="flex flex-col space-y-2">
-                  {checklistItems.map((item, index): JSX.Element => (
+                  {checklistItems.map((item, index): React.JSX.Element => (
                     <div key={index} className="flex items-center gap-2 w-full">
                       {isEditingChecklist || editingChecklistItemId === item.checklist_item_id ? (
                         <>
@@ -1397,10 +1425,10 @@ export default function TaskForm({
       {inDrawer ? (
         renderContent()
       ) : (
-        <Dialog 
-          isOpen={true} 
+        <Dialog
+          isOpen={true}
           onClose={handleCancelClick}
-          className="max-w-3xl max-h-[90vh] overflow-y-auto"
+          className="max-w-3xl"
           title={mode === 'create' ? 'Add New Task' : 'Edit Task'}
         >
           <DialogContent>

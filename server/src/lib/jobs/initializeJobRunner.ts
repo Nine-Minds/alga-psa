@@ -4,6 +4,7 @@ import { IJobRunner } from './interfaces';
 import { StorageService } from '../storage/StorageService';
 import { JobService } from '../../services/job.service';
 import { registerAllJobHandlers } from './registerAllHandlers';
+import { isEnterprise } from '../features';
 
 /**
  * Initialize the job runner and register all job handlers
@@ -29,7 +30,7 @@ export async function initializeJobRunner(): Promise<IJobRunner> {
   await registerAllJobHandlers({
     jobService,
     storageService,
-    includeEnterprise: process.env.EDITION === 'enterprise',
+    includeEnterprise: isEnterprise,
   });
 
   // Also register handlers directly with the runner for PG Boss compatibility

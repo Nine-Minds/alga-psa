@@ -35,7 +35,7 @@ export default function TaskEdit({
   users,
   inDrawer = false,
   projectTreeData = []
-}: TaskEditProps): JSX.Element {
+}: TaskEditProps): React.JSX.Element {
   const [statuses, setStatuses] = useState<ProjectStatus[]>(initialStatuses || []);
   const [selectedPhaseStatuses, setSelectedPhaseStatuses] = useState<ProjectStatus[]>(initialStatuses || []);
 

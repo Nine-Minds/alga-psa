@@ -138,7 +138,7 @@ export async function getTenantLocaleByDomain(domain: string): Promise<Supported
 
 export async function invalidateDomainBrandingCache(_domain: string): Promise<void> {
   const { revalidateTag } = await import('next/cache');
-  revalidateTag('tenant-portal-config');
+  revalidateTag('tenant-portal-config', 'max');
 }
 
 /**

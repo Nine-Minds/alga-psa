@@ -31,7 +31,7 @@ const TicketSelect: React.FC<TicketSelectProps> = ({
   label,
   searchValue = '',
   onSearchChange,
-}): JSX.Element => {
+}): React.JSX.Element => {
   const selectedOption = options.find(option => option.value === value);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
@@ -108,7 +108,7 @@ const TicketSelect: React.FC<TicketSelectProps> = ({
                   No tickets found
                 </div>
               ) : (
-                options.map((option): JSX.Element => (
+                options.map((option): React.JSX.Element => (
                   <RadixSelect.Item
                     key={option.value}
                     value={option.value}

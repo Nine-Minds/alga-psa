@@ -51,7 +51,7 @@ const AdminSessionManagement = dynamic(() => import('./AdminSessionManagement'),
   ssr: false
 });
 
-const SecuritySettingsPage = (): JSX.Element => {
+const SecuritySettingsPage = (): React.JSX.Element => {
   const searchParams = useSearchParams();
   const tabParam = searchParams?.get('tab');
 

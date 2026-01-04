@@ -259,7 +259,7 @@ const InteractionsFeed: React.FC<InteractionsFeedProps> = ({
         </div>
         <CardContent>
           <ul className="space-y-2">
-            {filteredInteractions.map((interaction): JSX.Element => (
+            {filteredInteractions.map((interaction): React.JSX.Element => (
               <li 
                 key={interaction.interaction_id} 
                 data-automation-id={`${id}-interaction-${interaction.interaction_id}`}

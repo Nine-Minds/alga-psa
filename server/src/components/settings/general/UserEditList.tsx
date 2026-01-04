@@ -27,7 +27,7 @@ const UserEditList: React.FC<UserListProps> = ({ users }) => {
                     </tr>
                 </thead>
                 <tbody>
-                    {users.map((user: IUser | IUserWithRoles): JSX.Element => (
+                    {users.map((user: IUser | IUserWithRoles): React.JSX.Element => (
                         <tr key={user.user_id} className="hover:bg-gray-50">
                             <td className="py-2 px-4 border-b">
                                 <div className="w-8 h-8 bg-gray-300 rounded-full"></div>

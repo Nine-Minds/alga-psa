@@ -119,7 +119,7 @@ export default function ServicesSection() {
                 </td>
               </tr>
             ) : (
-              services.map((service): JSX.Element => (
+              services.map((service): React.JSX.Element => (
                 <tr key={service.id}>
                   <td className="font-medium">{service.name}</td>
                   <td className="text-sm text-gray-600">{service.description}</td>
@@ -188,7 +188,7 @@ export default function ServicesSection() {
             <div>
               <h4 className="text-sm font-medium mb-4">{t('account.services.availableContractLines', 'Available Contract Lines')}</h4>
               <div className="space-y-4">
-                {availableContractLines.map((contractLine):JSX.Element => (
+                {availableContractLines.map((contractLine): React.JSX.Element => (
                   <Card key={contractLine.id} className="p-4">
                     <div className="flex justify-between items-start">
                       <div>

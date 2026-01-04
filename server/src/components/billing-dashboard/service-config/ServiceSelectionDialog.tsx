@@ -43,7 +43,7 @@ export function ServiceSelectionDialog({
         setLoading(true);
         setError(null);
         
-        const servicesResponse = await getServices();
+        const servicesResponse = await getServices(1, 999, { item_kind: 'any' });
         
         // Extract the services array from the paginated response
         const servicesData = Array.isArray(servicesResponse)
@@ -161,7 +161,7 @@ export function ServiceSelectionDialog({
       isOpen={isOpen} 
       onClose={onClose} 
       id="service-selection-dialog" 
-      title="Add Services to Plan"
+      title="Add Services & Products to Plan"
     >
       <DialogContent className="max-w-4xl max-h-[80vh] flex flex-col">
 
@@ -172,7 +172,7 @@ export function ServiceSelectionDialog({
               <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
               <Input
                 id="service-search-input"
-                placeholder="Search services..."
+                placeholder="Search services/products..."
                 className="pl-10"
                 value={searchQuery}
                 onChange={handleSearchChange}
@@ -213,7 +213,7 @@ export function ServiceSelectionDialog({
                 <TableHeader>
                   <TableRow>
                     <TableHead className="w-[40px]"></TableHead>
-                    <TableHead>Service Name</TableHead>
+                    <TableHead>Item Name</TableHead>
                     <TableHead>Type</TableHead>
                     <TableHead>Unit</TableHead>
                     <TableHead>Rate</TableHead>

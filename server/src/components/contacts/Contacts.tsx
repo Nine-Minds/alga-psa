@@ -59,6 +59,12 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, clientId, preSelec
   );
   
   const [contacts, setContacts] = useState<IContact[]>(initialContacts);
+
+  // Sync state when initialContacts changes (e.g., from router.refresh())
+  useEffect(() => {
+    setContacts(initialContacts);
+  }, [initialContacts]);
+
   const [clients, setClients] = useState<IClient[]>([]);
   const [documents, setDocuments] = useState<Record<string, IDocument[]>>({});
   const [documentLoading, setDocumentLoading] = useState<Record<string, boolean>>({});
@@ -76,6 +82,7 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, clientId, preSelec
   const router = useRouter();
   const contactTagsRef = useRef<Record<string, ITag[]>>({});
   const [allUniqueTags, setAllUniqueTags] = useState<ITag[]>([]);
+  const [tagsVersion, setTagsVersion] = useState(0); // Used to force re-render when tags are fetched
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [contactToDelete, setContactToDelete] = useState<IContact | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
@@ -195,6 +202,8 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, clientId, preSelec
         });
 
         contactTagsRef.current = newContactTags;
+        // Force re-render to show fetched tags
+        setTagsVersion(v => v + 1);
       } catch (error) {
         console.error('Error fetching tags:', error);
       }
@@ -234,6 +243,21 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, clientId, preSelec
   };
 
   const handleContactAdded = (newContact: IContact) => {
+    // Store tags for the new contact if provided
+    if (newContact.contact_name_id && newContact.tags && newContact.tags.length > 0) {
+      contactTagsRef.current[newContact.contact_name_id] = newContact.tags;
+
+      // Update unique tags list with any new tags
+      setAllUniqueTags(prevTags => {
+        const currentTagTexts = new Set(prevTags.map(t => t.tag_text));
+        const newUniqueTags = newContact.tags!.filter(tag => !currentTagTexts.has(tag.tag_text));
+        if (newUniqueTags.length > 0) {
+          return [...prevTags, ...newUniqueTags];
+        }
+        return prevTags;
+      });
+    }
+
     setContacts(prevContacts => [...prevContacts, newContact]);
   };
 

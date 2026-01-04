@@ -119,7 +119,7 @@ export function UIStateProvider({ children, initialPageState }: {
   const socketRef = useRef<Socket | null>(null);
   const reconnectAttemptsRef = useRef(0);
   const maxReconnectAttempts = 5;
-  const timerRef = useRef<number>();
+  const timerRef = useRef<number | undefined>(undefined);
 
   // Initialize and manage Socket.IO connection
   useEffect(() => {
@@ -421,9 +421,9 @@ export function UIStateProvider({ children, initialPageState }: {
   };
 
   return (
-    <UIStateContext.Provider value={value}>
+    <UIStateContext value={value}>
       {children}
-    </UIStateContext.Provider>
+    </UIStateContext>
   );
 }
 

@@ -68,6 +68,20 @@ export class ServerEventPublisher implements IEventPublisher {
     });
   }
 
+  async publishTicketAssigned(data: {
+    tenantId: string;
+    ticketId: string;
+    userId: string;
+    assignedByUserId?: string;
+  }): Promise<void> {
+    await this.safePublishEvent('TICKET_ASSIGNED', {
+      tenantId: data.tenantId,
+      ticketId: data.ticketId,
+      userId: data.userId,
+      assignedByUserId: data.assignedByUserId
+    });
+  }
+
   private async safePublishEvent(eventType: string, payload: any): Promise<void> {
     try {
       // Publish to email channel

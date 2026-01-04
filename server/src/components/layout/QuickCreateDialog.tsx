@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { QuickAddAsset } from 'server/src/components/assets/QuickAddAsset';
 import { QuickAddTicket } from 'server/src/components/tickets/QuickAddTicket';
 import QuickAddClient from 'server/src/components/clients/QuickAddClient';
@@ -22,9 +23,10 @@ interface QuickCreateDialogProps {
 }
 
 export function QuickCreateDialog({ type, onClose }: QuickCreateDialogProps) {
+  const router = useRouter();
   const [clients, setClients] = useState<IClient[]>([]);
   const [isLoadingClients, setIsLoadingClients] = useState(false);
-  const [serviceTypes, setServiceTypes] = useState<{ id: string; name: string; billing_method: 'fixed' | 'hourly' | 'usage' }[]>([]);
+  const [serviceTypes, setServiceTypes] = useState<{ id: string; name: string; billing_method: 'fixed' | 'hourly' | 'usage' | 'per_unit'; is_standard?: boolean }[]>([]);
   const [isLoadingServiceTypes, setIsLoadingServiceTypes] = useState(false);
 
   // Load clients when needed for projects and contacts
@@ -58,32 +60,44 @@ export function QuickCreateDialog({ type, onClose }: QuickCreateDialogProps) {
   const handleAssetAdded = () => {
     toast.success('Asset created successfully');
     onClose();
+    // Refresh the page to update any list that might be showing assets
+    router.refresh();
   };
 
   const handleTicketAdded = (ticket: ITicket) => {
     toast.success(`Ticket #${ticket.ticket_number} created successfully`);
     onClose();
+    // Refresh the page to update any list that might be showing tickets
+    router.refresh();
   };
 
   const handleClientAdded = (client: IClient) => {
     toast.success(`Client "${client.client_name}" created successfully`);
     onClose();
+    // Refresh the page to update any list that might be showing clients
+    router.refresh();
   };
 
   const handleContactAdded = (contact: IContact) => {
     const contactName = `${contact.first_name || ''} ${contact.last_name || ''}`.trim() || 'Contact';
     toast.success(`${contactName} added successfully`);
     onClose();
+    // Refresh the page to update any list that might be showing contacts
+    router.refresh();
   };
 
   const handleProjectAdded = (project: IProject) => {
     toast.success(`Project "${project.project_name}" created successfully`);
     onClose();
+    // Refresh the page to update any list that might be showing projects
+    router.refresh();
   };
 
   const handleServiceAdded = () => {
     toast.success('Service created successfully');
     onClose();
+    // Refresh the page to update any list that might be showing services
+    router.refresh();
   };
 
   const handleServiceTypesChange = () => {

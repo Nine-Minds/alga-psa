@@ -27,7 +27,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from 'serve
  * ProjectStatusSettings - Manages project-level statuses
  * This is for project statuses (not project task statuses)
  */
-export function ProjectStatusSettings(): JSX.Element {
+export function ProjectStatusSettings(): React.JSX.Element {
   const STATUS_TYPE = 'project'; // Fixed to project type
 
   const [statuses, setStatuses] = useState<IStatus[]>([]);

@@ -952,7 +952,9 @@ export async function createClientTicket(data: FormData): Promise<ITicket> {
         entered_by: session.user.id,
         source: 'client_portal',
         board_id: defaultBoard.board_id,
-        status_id: defaultStatus.status_id
+        status_id: defaultStatus.status_id,
+        // Auto-assign to board's default agent if configured
+        assigned_to: defaultBoard.default_assigned_to || undefined
       };
 
       // Create adapters for client portal context
@@ -970,6 +972,19 @@ export async function createClientTicket(data: FormData): Promise<ITicket> {
         session.user.id,
         3 // max retries
       );
+
+      // Publish TICKET_ASSIGNED event if a default agent was set
+      if (createTicketInput.assigned_to) {
+        await publishEvent({
+          eventType: 'TICKET_ASSIGNED',
+          payload: {
+            tenantId: tenant,
+            ticketId: ticketResult.ticket_id,
+            userId: createTicketInput.assigned_to,
+            assignedByUserId: session.user.id
+          }
+        });
+      }
 
       // Get the full ticket data for return
       const fullTicket = await trx('tickets')

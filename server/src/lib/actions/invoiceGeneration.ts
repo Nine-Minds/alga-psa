@@ -13,7 +13,7 @@ import {
   InvoiceViewModel
 } from 'server/src/interfaces/invoice.interfaces';
 import { WasmInvoiceViewModel } from '../invoice-renderer/types';
-import { IBillingResult, IBillingCharge, IBucketCharge, IUsageBasedCharge, ITimeBasedCharge, IFixedPriceCharge, BillingCycleType } from 'server/src/interfaces/billing.interfaces';
+import { IBillingResult, IBillingCharge, IBucketCharge, IUsageBasedCharge, ITimeBasedCharge, IFixedPriceCharge, IProductCharge, ILicenseCharge, BillingCycleType } from 'server/src/interfaces/billing.interfaces';
 import { IClient, IClientWithLocation } from 'server/src/interfaces/client.interfaces';
 import Invoice from 'server/src/lib/models/invoice';
 import { createTenantKnex } from 'server/src/lib/db';
@@ -66,12 +66,21 @@ function isBucketCharge(charge: IBillingCharge): charge is IBucketCharge {
   return charge.type === 'bucket';
 }
 
+function isProductCharge(charge: IBillingCharge): charge is IProductCharge {
+  return charge.type === 'product';
+}
+
+function isLicenseCharge(charge: IBillingCharge): charge is ILicenseCharge {
+  return charge.type === 'license';
+}
+
 // TODO: Move to billingAndTax.ts or a shared utility file
 // Uses local type guards now
 function getChargeQuantity(charge: IBillingCharge): number {
   if (isBucketCharge(charge)) return charge.overageHours;
   if (isFixedPriceCharge(charge) || isUsageBasedCharge(charge)) return charge.quantity;
   if (isTimeBasedCharge(charge)) return charge.duration;
+  if (isProductCharge(charge) || isLicenseCharge(charge)) return charge.quantity;
   return 1;
 }
 
@@ -892,6 +901,39 @@ export async function createInvoiceFromBillingResult(
       sessionObject,
       tenant
     );
+
+    // Mark ticket/project materials in this billing window as billed by this invoice.
+    // These materials were included by BillingEngine as non-contract charges (like usage/time).
+    try {
+      const billedAt = Temporal.Now.instant().toString();
+      await trx('ticket_materials')
+        .where({ tenant, client_id: client.client_id, is_billed: false })
+        .andWhere('currency_code', '=', billingResult.currency_code || 'USD')
+        .andWhere('created_at', '>=', cycleStart)
+        .andWhere('created_at', '<', cycleEnd)
+        .update({
+          is_billed: true,
+          billed_invoice_id: newInvoice!.invoice_id,
+          billed_at: billedAt,
+          updated_at: billedAt
+        });
+
+      await trx('project_materials')
+        .where({ tenant, client_id: client.client_id, is_billed: false })
+        .andWhere('currency_code', '=', billingResult.currency_code || 'USD')
+        .andWhere('created_at', '>=', cycleStart)
+        .andWhere('created_at', '<', cycleEnd)
+        .update({
+          is_billed: true,
+          billed_invoice_id: newInvoice!.invoice_id,
+          billed_at: billedAt,
+          updated_at: billedAt
+        });
+    } catch (err) {
+      if (!isMissingRelationError(err)) {
+        throw err;
+      }
+    }
 
     // Process discounts (if any) - This might need adjustment if persistInvoiceCharges handles them
     // For now, assume discounts are separate and need processing here.

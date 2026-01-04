@@ -461,6 +461,7 @@ export class MetadataService {
       'invoices': 'Financial',
       'contract-lines': 'Financial',
       'financial': 'Financial',
+      'products': 'Configuration',
       'users': 'Users & Teams',
       'teams': 'Users & Teams',
       'roles': 'Security',
@@ -498,7 +499,9 @@ export class MetadataService {
 
   private async discoverSchemas(): Promise<ApiSchemaInfo[]> {
     const schemas: ApiSchemaInfo[] = [];
-    const schemasPath = path.join(process.cwd(), 'server/src/lib/api/schemas');
+    // When running the Next.js app, `process.cwd()` is the Next.js project root (`server/`).
+    // Keep all paths relative to that root.
+    const schemasPath = path.join(process.cwd(), 'src/lib/api/schemas');
 
     try {
       const schemaFiles = await fs.readdir(schemasPath);
@@ -663,7 +666,56 @@ export class MetadataService {
           }
         }
       }
+
+      // Fall back to extracting keys even if we can't infer types
+      if (Object.keys(properties).length === 0) {
+        const keyMatches = schemaBody.match(/^\s*(\w+)\s*:/gm) || [];
+        keyMatches.forEach((match) => {
+          const fieldName = match.replace(':', '').trim();
+          if (!fieldName) return;
+          properties[fieldName] = {
+            type: 'string',
+            description: `${fieldName} field`
+          };
+        });
+      }
+
+      return properties;
     }
+
+    // Support schema definitions that reference a shared shape object, e.g.:
+    // const thingShape = { ... } as const;
+    // export const createThingSchema = z.object(thingShape);
+    const shapeRefMatch = content.match(new RegExp(`${schemaName} = z\\.object\\((\\w+)\\)`));
+    if (!shapeRefMatch) return properties;
+
+    const shapeName = shapeRefMatch[1];
+    if (!shapeName) return properties;
+
+    const shapeMatch = content.match(new RegExp(`const\\s+${shapeName}\\s*=\\s*\\{([\\s\\S]*?)\\}\\s*(?:as\\s+const)?\\s*;`));
+    if (!shapeMatch) return properties;
+
+    const shapeBody = shapeMatch[1];
+    const keyLines = shapeBody.match(/^\s*(\w+)\s*:\s*([^\n,]+)[,\n]/gm) || [];
+
+    keyLines.forEach((line) => {
+      const fieldMatch = line.match(/^\s*(\w+)\s*:\s*([^\n,]+)[,\n]/m);
+      if (!fieldMatch) return;
+
+      const fieldName = fieldMatch[1];
+      const valueExpr = fieldMatch[2] ?? '';
+
+      let inferredType = 'string';
+      if (valueExpr.includes('z.number')) inferredType = 'number';
+      else if (valueExpr.includes('z.boolean')) inferredType = 'boolean';
+      else if (valueExpr.includes('z.array')) inferredType = 'array';
+      else if (valueExpr.includes('z.object')) inferredType = 'object';
+
+      properties[fieldName] = {
+        type: inferredType,
+        description: `${fieldName} field`
+      };
+    });
 
     return properties;
   }
@@ -687,7 +739,33 @@ export class MetadataService {
           }
         }
       }
+
+      return required;
     }
+
+    // Support z.object(shapeName) patterns
+    const shapeRefMatch = content.match(new RegExp(`${schemaName} = z\\.object\\((\\w+)\\)`));
+    if (!shapeRefMatch) return required;
+
+    const shapeName = shapeRefMatch[1];
+    if (!shapeName) return required;
+
+    const shapeMatch = content.match(new RegExp(`const\\s+${shapeName}\\s*=\\s*\\{([\\s\\S]*?)\\}\\s*(?:as\\s+const)?\\s*;`));
+    if (!shapeMatch) return required;
+
+    const shapeBody = shapeMatch[1];
+    const keyLines = shapeBody.match(/^\s*(\w+)\s*:\s*([^\n,]+)[,\n]/gm) || [];
+
+    keyLines.forEach((line) => {
+      const fieldMatch = line.match(/^\s*(\w+)\s*:\s*([^\n,]+)[,\n]/m);
+      if (!fieldMatch) return;
+
+      const fieldName = fieldMatch[1];
+      const valueExpr = fieldMatch[2] ?? '';
+
+      if (valueExpr.includes('.optional(') || valueExpr.includes('.optional()')) return;
+      required.push(fieldName);
+    });
 
     return required;
   }
