@@ -4,13 +4,13 @@ import React, { useEffect } from 'react';
 import Link from 'next/link';
 import toast from 'react-hot-toast';
 import { usePostHog } from 'posthog-js/react';
+import { cn } from '../../lib/utils';
 import { ReflectionContainer } from '../../types/ui-reflection/ReflectionContainer';
 import { useAutomationIdAndRegister } from '../../types/ui-reflection/useAutomationIdAndRegister';
 import type { ButtonComponent } from '../../types/ui-reflection/types';
 import { usePerformanceTracking } from '../../lib/analytics/client';
 import { Alert, AlertDescription } from '../ui/Alert';
 import { Badge } from '../ui/Badge';
-import { OnboardingChecklist } from './OnboardingChecklist';
 import { useOnboardingProgress, type OnboardingStep } from './hooks/useOnboardingProgress';
 import {
   Ticket,
@@ -19,7 +19,7 @@ import {
   HeartPulse,
   ClipboardList,
   Calendar,
-  ChevronRight,
+  ArrowRight,
 } from 'lucide-react';
 
 const FeatureCard = ({ icon: Icon, title, description }: { icon: any; title: string; description: string }) => {
@@ -59,12 +59,80 @@ interface QuickStartCardProps {
   onNavigate?: (step: OnboardingStep) => void;
 }
 
-const quickStartStatus: Record<OnboardingStep['status'], { label: string; badgeVariant: 'secondary' | 'primary' | 'success' | 'error' }> = {
-  not_started: { label: 'Not started', badgeVariant: 'secondary' },
-  in_progress: { label: 'In progress', badgeVariant: 'primary' },
-  complete: { label: 'Complete', badgeVariant: 'success' },
-  blocked: { label: 'Blocked', badgeVariant: 'error' },
+const quickStartStatus: Record<OnboardingStep['status'], { label: string; className: string }> = {
+  not_started: { label: 'Not started', className: 'border-transparent bg-slate-100 text-slate-600' },
+  in_progress: { label: 'In progress', className: 'border-transparent bg-slate-100 text-slate-600' },
+  complete: { label: 'Complete', className: 'border-transparent bg-slate-100 text-slate-600' },
+  blocked: { label: 'Blocked', className: 'border-transparent bg-red-100 text-red-700' },
 };
+
+function ProgressRing({ value }: { value: number }) {
+  const clamped = Math.max(0, Math.min(100, value));
+  const size = 40;
+  const stroke = 4;
+  const radius = (size - stroke) / 2;
+  const circumference = 2 * Math.PI * radius;
+  const dashOffset = circumference - (clamped / 100) * circumference;
+
+  return (
+    <div className="relative h-10 w-10 shrink-0">
+      <svg width={size} height={size} className="rotate-[-90deg]">
+        <circle
+          cx={size / 2}
+          cy={size / 2}
+          r={radius}
+          strokeWidth={stroke}
+          className="fill-none stroke-slate-200"
+        />
+        <circle
+          cx={size / 2}
+          cy={size / 2}
+          r={radius}
+          strokeWidth={stroke}
+          strokeLinecap="round"
+          className="fill-none stroke-violet-500"
+          strokeDasharray={circumference}
+          strokeDashoffset={dashOffset}
+        />
+      </svg>
+      <div className="absolute inset-0 flex items-center justify-center text-[11px] font-semibold text-violet-600">
+        {Math.round(clamped)}%
+      </div>
+    </div>
+  );
+}
+
+function ProgressSummaryCard({ completed, total }: { completed: number; total: number }) {
+  const safeTotal = Math.max(1, total);
+  const percent = (completed / safeTotal) * 100;
+  const message =
+    completed === 0
+      ? 'Just getting started! 🚀'
+      : completed === total
+        ? 'All set — great job! 🎉'
+        : 'Keep going — you’ve got this! 💪';
+
+  return (
+    <div className="flex w-full max-w-[360px] items-center gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
+      <ProgressRing value={percent} />
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center justify-between gap-3">
+          <p className="text-[11px] font-semibold tracking-widest text-slate-500">PROGRESS</p>
+          <p className="text-xs font-semibold text-slate-700">
+            {completed} of {total} Steps
+          </p>
+        </div>
+        <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-slate-100">
+          <div
+            className="h-full rounded-full bg-violet-500"
+            style={{ width: `${Math.max(2, Math.min(100, percent))}%` }}
+          />
+        </div>
+        <p className="mt-1 text-xs font-medium text-orange-600">{message}</p>
+      </div>
+    </div>
+  );
+}
 
 const QuickStartCard = ({ step, index, onNavigate }: QuickStartCardProps) => {
   const { automationIdProps } = useAutomationIdAndRegister<ButtonComponent>({
@@ -79,26 +147,45 @@ const QuickStartCard = ({ step, index, onNavigate }: QuickStartCardProps) => {
   const isDisabled = !step.isActionable;
 
   const cardBody = (
-    <div className="flex flex-col gap-4">
-      <div className="flex items-center justify-between text-xs uppercase tracking-wide text-muted-foreground">
-        <span>Step {index}</span>
-        <Badge variant={status.badgeVariant}>{status.label}</Badge>
+    <div className="flex h-full flex-col">
+      <div className="flex items-center justify-between gap-3">
+        <p className="text-[11px] font-semibold tracking-widest text-slate-500">STEP {index}</p>
+        <Badge className={cn('uppercase tracking-wide', status.className)}>{status.label}</Badge>
       </div>
-      <div className="flex items-start gap-3">
-        <div className="rounded-full bg-primary-50 p-3">
-          <Icon className="h-5 w-5 text-primary-700" />
+
+      <div className="mt-4 flex items-start gap-4">
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-violet-50">
+          <Icon className="h-5 w-5 text-violet-600" />
         </div>
-        <div>
-          <h3 className="text-base font-semibold text-foreground">{step.title}</h3>
-          <p className="text-sm text-muted-foreground">{step.description}</p>
-          {step.blocker && (
-            <p className="mt-2 text-xs text-amber-600">{step.blocker}</p>
+        <div className="min-w-0">
+          <h3 className="text-base font-semibold leading-6 text-slate-900">{step.title}</h3>
+          <p className="mt-1 text-sm leading-5 text-slate-600">{step.description}</p>
+        </div>
+      </div>
+
+      {step.blocker ? (
+        <div
+          className={cn(
+            'mt-4 rounded-md px-3 py-2 text-xs font-medium leading-5',
+            step.status === 'blocked'
+              ? 'bg-red-50 text-red-700'
+              : 'bg-orange-50 text-orange-700'
           )}
+        >
+          {step.blocker}
         </div>
-      </div>
-      <div className="flex items-center justify-between text-sm font-medium text-primary-600">
-        <span>{isDisabled ? 'Complete' : step.ctaLabel}</span>
-        <ChevronRight className="h-4 w-4" />
+      ) : null}
+
+      <div className="mt-4 h-px w-full bg-slate-200" />
+
+      <div
+        className={cn(
+          'mt-4 flex items-center justify-between text-sm font-semibold text-violet-600',
+          isDisabled && 'text-slate-400'
+        )}
+      >
+        <span>{isDisabled ? 'Completed' : step.ctaLabel}</span>
+        <ArrowRight className="h-4 w-4" />
       </div>
     </div>
   );
@@ -107,7 +194,7 @@ const QuickStartCard = ({ step, index, onNavigate }: QuickStartCardProps) => {
     return (
       <div
         {...automationIdProps}
-        className="rounded-lg border border-border bg-white/80 p-4 opacity-60"
+        className="rounded-xl border border-slate-200 bg-white p-6 opacity-60"
         aria-disabled="true"
       >
         {cardBody}
@@ -119,7 +206,7 @@ const QuickStartCard = ({ step, index, onNavigate }: QuickStartCardProps) => {
     <Link
       {...automationIdProps}
       href={step.ctaHref}
-      className="rounded-lg border border-border bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-lg"
+      className="group rounded-xl border border-slate-200 bg-white p-6 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
       onClick={() => onNavigate?.(step)}
     >
       {cardBody}
@@ -153,33 +240,20 @@ const WelcomeDashboard = () => {
 
   return (
     <ReflectionContainer id="dashboard-main" label="MSP Dashboard">
-      <div className="p-6 min-h-screen" style={{ background: 'rgb(var(--background))' }}>
+      <div className="min-h-screen bg-slate-100 p-6">
         <div className="max-w-7xl mx-auto">
-          <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
-            <div className="order-2 xl:order-1 space-y-8">
-              <div
-                className="rounded-lg p-6"
-                style={{ background: 'linear-gradient(to right, rgb(var(--color-primary-500)), rgb(var(--color-secondary-500)))' }}
-              >
-                <div className="max-w-4xl">
-                  <h1 className="text-3xl font-bold mb-2 text-white">Welcome to Your MSP Command Center</h1>
-                  <p className="text-lg text-white opacity-90">
-                    Track onboarding progress, configure critical services, and keep every client experience consistent.
-                  </p>
-                </div>
-              </div>
-
+          <div className="space-y-8">
               <div>
-                <div className="mb-4 flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+                <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
                   <div>
-                    <h2 className="text-xl font-semibold" style={{ color: 'rgb(var(--color-text-900))' }}>
+                    <h2 className="text-2xl font-semibold tracking-tight text-slate-900">
                       Complete your setup
                     </h2>
-                    <p className="text-sm" style={{ color: 'rgb(var(--color-text-500))' }}>
+                    <p className="mt-1 text-sm text-slate-600">
                       Work through each step to unlock the full MSP dashboard experience.
                     </p>
                   </div>
-                  <Badge variant="outline">{summary.completed} / {summary.total} done</Badge>
+                  <ProgressSummaryCard completed={summary.completed} total={summary.total} />
                 </div>
                 {error && (
                   <Alert variant="destructive" className="mb-4">
@@ -281,16 +355,6 @@ const WelcomeDashboard = () => {
                   </Link>
                 </div>
               </div>
-            </div>
-
-            <div className="order-1 xl:order-2 xl:pl-4">
-              <OnboardingChecklist
-                steps={steps}
-                summary={summary}
-                isLoading={!hasResolved && isLoading}
-                onStepCta={(step) => handleOnboardingNavigate(step, 'checklist')}
-              />
-            </div>
           </div>
         </div>
       </div>
