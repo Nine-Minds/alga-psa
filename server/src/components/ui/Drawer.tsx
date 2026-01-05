@@ -58,7 +58,11 @@ const Drawer: React.FC<DrawerProps & AutomationProps> = ({
       <Dialog.Portal>
         <Dialog.Overlay
           className={`fixed inset-0 bg-black/50 transition-opacity duration-300 data-[state=closed]:opacity-0 data-[state=open]:opacity-100 ${isInDrawer ? 'z-[60]' : 'z-50'}`}
-          onClick={() => onClose()} // Explicitly handle overlay clicks
+          // Note: Radix Dialog handles overlay clicks via onOpenChange on Root.
+          // We removed explicit onClick here because it conflicts with Portal-based dropdowns
+          // (CustomSelect, UserPicker, etc.) which render outside Dialog.Content but visually
+          // above the overlay. The explicit onClick was causing the drawer to close or
+          // navigation to occur when clicking on these dropdown portals.
         />
         <Dialog.Content 
           className={`fixed inset-y-0 right-0 ${widthClasses} bg-white shadow-lg focus:outline-none overflow-y-auto transform transition-all duration-300 ease-in-out will-change-transform data-[state=open]:translate-x-0 data-[state=closed]:translate-x-full data-[state=closed]:opacity-0 data-[state=open]:opacity-100 ${drawerVariant === 'document' ? 'ticket-document-drawer' : ''} ${isInDrawer ? 'z-[61]' : 'z-50'}`}

@@ -304,11 +304,17 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     }
   };
 
-  const onQuickViewTicket = async (ticketId: string) => {
+  // Ref to track if Quick View drawer is still open (for async state updates)
+  const quickViewOpenRef = useRef(false);
+
+  const onQuickViewTicket = useCallback(async (ticketId: string) => {
     if (!currentUser) {
       toast.error('Please wait while user is loading');
       return;
     }
+
+    // Mark the drawer as open
+    quickViewOpenRef.current = true;
 
     setQuickViewTicketId(ticketId);
     setIsLoadingTicketQuickView(true);
@@ -316,18 +322,25 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
 
     try {
       const data = await getConsolidatedTicketData(ticketId, currentUser);
-      setQuickViewTicketData(data);
+      // Only update state if drawer is still open
+      if (quickViewOpenRef.current) {
+        setQuickViewTicketData(data);
+      }
     } catch (error) {
       console.error('Error fetching ticket data for quick view:', error);
-      toast.error('Failed to load ticket details');
-      // Reset all quick view state to prevent stale data
-      setIsTicketQuickViewOpen(false);
-      setQuickViewTicketId(null);
-      setQuickViewTicketData(null);
+      if (quickViewOpenRef.current) {
+        toast.error('Failed to load ticket details');
+        // Reset all quick view state to prevent stale data
+        setIsTicketQuickViewOpen(false);
+        setQuickViewTicketId(null);
+        setQuickViewTicketData(null);
+      }
     } finally {
-      setIsLoadingTicketQuickView(false);
+      if (quickViewOpenRef.current) {
+        setIsLoadingTicketQuickView(false);
+      }
     }
-  };
+  }, [currentUser]);
 
   // Initialize currentUser state from props if available
   useEffect(() => {
@@ -1118,6 +1131,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
       
       {/* Client Quick View Drawer */}
       <Drawer
+        id="client-quick-view-drawer"
         isOpen={isClientQuickViewOpen}
         onClose={() => {
           setIsClientQuickViewOpen(false);
@@ -1136,6 +1150,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
 
       {/* Ticket Quick View Drawer */}
       <Drawer
+        id="ticket-quick-view-drawer"
         isOpen={isTicketQuickViewOpen}
         onClose={() => {
           // Block close if there are unsaved changes - show confirmation first
@@ -1143,6 +1158,8 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
             setShowQuickViewCloseConfirm(true);
             return;
           }
+          // Mark as closed to prevent stale async state updates
+          quickViewOpenRef.current = false;
           setIsTicketQuickViewOpen(false);
           setQuickViewTicketId(null);
           setQuickViewTicketData(null);
@@ -1195,6 +1212,8 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
         onClose={() => setShowQuickViewCloseConfirm(false)}
         onConfirm={() => {
           // Discard changes and close
+          // Mark as closed to prevent stale async state updates
+          quickViewOpenRef.current = false;
           setShowQuickViewCloseConfirm(false);
           setIsTicketQuickViewOpen(false);
           setQuickViewTicketId(null);
