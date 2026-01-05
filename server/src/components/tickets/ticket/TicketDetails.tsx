@@ -1242,6 +1242,7 @@ const handleClose = () => {
                 status_id: ticket.status_id,
                 priority_id: ticket.priority_id,
                 assigned_to: ticket.assigned_to,
+                board_id: ticket.board_id,
                 client_id: ticket.client_id,
                 contact_name_id: ticket.contact_name_id,
                 location_id: ticket.location_id,
