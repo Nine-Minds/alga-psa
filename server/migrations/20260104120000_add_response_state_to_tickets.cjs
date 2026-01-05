@@ -8,6 +8,9 @@
  *
  * The field is automatically updated when comments are posted and
  * cleared when tickets are closed.
+ *
+ * NOTE: This migration modifies a distributed table (tickets) and must run
+ * outside a transaction to work with Citus.
  */
 exports.up = async function(knex) {
   // Create the enum type
@@ -23,11 +26,12 @@ exports.up = async function(knex) {
   });
 
   // Add index for filtering queries
+  // Note: Citus does not support partial indexes on distributed tables,
+  // so we use a plain multi-column index instead
   console.log('Creating index on (tenant, response_state)...');
   await knex.raw(`
     CREATE INDEX idx_tickets_response_state
-    ON tickets(tenant, response_state)
-    WHERE response_state IS NOT NULL;
+    ON tickets(tenant, response_state);
   `);
 
   console.log('Migration complete: response_state added to tickets');
@@ -50,3 +54,6 @@ exports.down = async function(knex) {
 
   console.log('Migration rollback complete');
 };
+
+// Required for Citus: ALTER TABLE on distributed tables must run outside a transaction
+exports.config = { transaction: false };
