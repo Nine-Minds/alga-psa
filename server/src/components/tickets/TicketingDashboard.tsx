@@ -35,6 +35,7 @@ import Drawer from 'server/src/components/ui/Drawer';
 import ClientDetails from 'server/src/components/clients/ClientDetails';
 import { createTicketColumns } from 'server/src/lib/utils/ticket-columns';
 import Spinner from 'server/src/components/ui/Spinner';
+import MultiUserPicker from 'server/src/components/ui/MultiUserPicker';
 
 interface TicketingDashboardProps {
   id?: string;
@@ -45,6 +46,7 @@ interface TicketingDashboardProps {
   initialCategories: ITicketCategory[];
   initialClients: IClient[];
   initialTags?: string[];
+  initialUsers?: IUser[];
   totalCount: number;
   currentPage: number;
   pageSize: number;
@@ -82,6 +84,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   initialCategories,
   initialClients,
   initialTags = [],
+  initialUsers = [],
   totalCount,
   currentPage,
   pageSize,
@@ -127,7 +130,11 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   const [excludedCategories, setExcludedCategories] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState<string>(initialFilterValues.searchQuery ?? '');
   const [boardFilterState, setBoardFilterState] = useState<'active' | 'inactive' | 'all'>(initialFilterValues.boardFilterState ?? 'active');
-  
+
+  // Assignee filter state
+  const [selectedAssignees, setSelectedAssignees] = useState<string[]>(initialFilterValues.assignedToIds ?? []);
+  const [includeUnassigned, setIncludeUnassigned] = useState<boolean>(initialFilterValues.includeUnassigned ?? false);
+
   const [clientFilterState, setClientFilterState] = useState<'active' | 'inactive' | 'all'>('active');
   const [clientTypeFilter, setClientTypeFilter] = useState<'all' | 'company' | 'individual'>('all');
 
@@ -138,9 +145,11 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
       (initialFilterValues.statusId && initialFilterValues.statusId !== 'open') ||
       (initialFilterValues.priorityId && initialFilterValues.priorityId !== 'all') ||
       initialFilterValues.categoryId ||
-      (initialFilterValues.tags && initialFilterValues.tags.length > 0)
+      (initialFilterValues.tags && initialFilterValues.tags.length > 0) ||
+      (initialFilterValues.assignedToIds && initialFilterValues.assignedToIds.length > 0) ||
+      initialFilterValues.includeUnassigned
     );
-  }, [initialFilterValues.boardId, initialFilterValues.clientId, initialFilterValues.statusId, initialFilterValues.priorityId, initialFilterValues.categoryId, initialFilterValues.tags]);
+  }, [initialFilterValues.boardId, initialFilterValues.clientId, initialFilterValues.statusId, initialFilterValues.priorityId, initialFilterValues.categoryId, initialFilterValues.tags, initialFilterValues.assignedToIds, initialFilterValues.includeUnassigned]);
 
   const [isQuickAddOpen, setIsQuickAddOpen] = useState(false);
   const [isLoadingSelf, setIsLoadingSelf] = useState(false);
@@ -225,7 +234,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   // Helper function to generate URL with current filter state
   const getCurrentFiltersQuery = useCallback(() => {
     const params = new URLSearchParams();
-    
+
     // Only add non-default/non-empty values to URL
     if (selectedBoard) params.set('boardId', selectedBoard);
     if (selectedClient) params.set('clientId', selectedClient);
@@ -236,9 +245,16 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     if (boardFilterState && boardFilterState !== 'active') {
       params.set('boardFilterState', boardFilterState);
     }
+    // Include assignee filters in returnFilters for consistent back-navigation
+    if (selectedAssignees.length > 0) {
+      params.set('assignedToIds', selectedAssignees.join(','));
+    }
+    if (includeUnassigned) {
+      params.set('includeUnassigned', 'true');
+    }
 
     return params.toString();
-  }, [selectedBoard, selectedClient, selectedStatus, selectedPriority, selectedCategories, debouncedSearchQuery, boardFilterState]);
+  }, [selectedBoard, selectedClient, selectedStatus, selectedPriority, selectedCategories, debouncedSearchQuery, boardFilterState, selectedAssignees, includeUnassigned]);
 
   const isFirstRender = useRef(true);
 
@@ -261,6 +277,8 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
       boardFilterState: boardFilterState,
       showOpenOnly: selectedStatus === 'open',
       tags: selectedTags.length > 0 ? selectedTags : undefined,
+      assignedToIds: selectedAssignees.length > 0 ? selectedAssignees : undefined,
+      includeUnassigned: includeUnassigned || undefined,
     };
 
     console.log('[Dashboard] Calling onFiltersChanged with:', currentFilters);
@@ -275,6 +293,8 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     debouncedSearchQuery,
     boardFilterState,
     selectedTags,
+    selectedAssignees,
+    includeUnassigned,
     // onFiltersChanged intentionally omitted - we want to trigger only when filter values change, not when the callback changes
     filtersHaveInitialValues
   ]);
@@ -795,8 +815,10 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     setSearchQuery(defaultSearchQuery);
     setBoardFilterState(defaultBoardFilterState);
     setSelectedTags([]);
-    
-    setClientFilterState('active'); 
+    setSelectedAssignees([]);
+    setIncludeUnassigned(false);
+
+    setClientFilterState('active');
     setClientTypeFilter('all');
 
     clearSelection();
@@ -810,6 +832,8 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
       searchQuery: defaultSearchQuery,
       boardFilterState: defaultBoardFilterState,
       showOpenOnly: defaultStatus === 'open',
+      assignedToIds: undefined,
+      includeUnassigned: undefined,
     });
   }, [onFiltersChanged, clearSelection]);
 
@@ -870,6 +894,18 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
               clientTypeFilter={clientTypeFilter}
               onClientTypeFilterChange={handleClientTypeFilterChange}
               fitContent={true}
+            />
+            <MultiUserPicker
+              id={`${id}-assignee-filter`}
+              users={initialUsers}
+              values={selectedAssignees}
+              onValuesChange={setSelectedAssignees}
+              filterMode={true}
+              includeUnassigned={includeUnassigned}
+              onUnassignedChange={setIncludeUnassigned}
+              placeholder="All Assignees"
+              showSearch={true}
+              compactDisplay={true}
             />
             <CustomSelect
               data-automation-id={`${id}-status-select`}

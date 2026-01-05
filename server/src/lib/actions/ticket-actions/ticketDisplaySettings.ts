@@ -14,6 +14,7 @@ export type TicketListColumnKey =
   | 'board'
   | 'category'
   | 'client'
+  | 'assigned_to'
   | 'created'
   | 'created_by'
   | 'tags'
@@ -53,6 +54,7 @@ export async function getTicketingDisplaySettings(): Promise<TicketingDisplaySet
           board: display?.list?.columnVisibility?.board ?? true,
           category: display?.list?.columnVisibility?.category ?? true,
           client: display?.list?.columnVisibility?.client ?? true,
+          assigned_to: display?.list?.columnVisibility?.assigned_to ?? true,
           created: display?.list?.columnVisibility?.created ?? true,
           created_by: display?.list?.columnVisibility?.created_by ?? true,
           tags: display?.list?.columnVisibility?.tags ?? true,
@@ -74,6 +76,7 @@ export async function getTicketingDisplaySettings(): Promise<TicketingDisplaySet
           board: true,
           category: true,
           client: true,
+          assigned_to: true,
           created: true,
           created_by: true,
           tags: true,

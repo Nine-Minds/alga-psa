@@ -82,6 +82,7 @@ export default function ProjectDetail({
 
   // Kanban view state (existing - phase-scoped)
   const [selectedTask, setSelectedTask] = useState<IProjectTask | null>(null);
+  const selectedTaskIdRef = useRef<string | null>(null); // Ref for reliable access in callbacks
   const [showQuickAdd, setShowQuickAdd] = useState(false);
   const [showPhaseQuickAdd, setShowPhaseQuickAdd] = useState(false);
   const [currentPhase, setCurrentPhase] = useState<IProjectPhase | null>(null);
@@ -288,6 +289,11 @@ export default function ProjectDetail({
       loadListViewData();
     }
   }, [viewMode, loadListViewData]);
+
+  // Keep selectedTaskIdRef in sync with selectedTask for reliable access in callbacks
+  useEffect(() => {
+    selectedTaskIdRef.current = selectedTask?.task_id ?? null;
+  }, [selectedTask]);
 
   // Refresh list view after task mutations
   const refreshListView = useCallback(() => {
@@ -939,11 +945,39 @@ export default function ProjectDetail({
 
     setIsAddingTask(true);
     try {
-      if (selectedPhase && newTask.wbs_code.startsWith(selectedPhase.wbs_code)) {
+      // Use currentPhase as fallback for list view where selectedPhase might be null
+      const activePhase = selectedPhase || currentPhase;
+
+      if (activePhase && newTask.wbs_code.startsWith(activePhase.wbs_code)) {
         const checklistItems = await getTaskChecklistItems(newTask.task_id);
         const taskWithChecklist = { ...newTask, checklist_items: checklistItems };
 
         setProjectTasks((prevTasks) => [...prevTasks, taskWithChecklist]);
+
+        // Also update list view data if it exists
+        if (listViewData) {
+          setListViewData(prev => prev ? {
+            ...prev,
+            tasks: [...prev.tasks, taskWithChecklist],
+            checklistItems: {
+              ...prev.checklistItems,
+              [newTask.task_id]: checklistItems
+            },
+            taskTags: {
+              ...prev.taskTags,
+              [newTask.task_id]: newTask.tags || []
+            },
+            taskResources: {
+              ...prev.taskResources,
+              [newTask.task_id]: []
+            },
+            taskDependencies: {
+              ...prev.taskDependencies,
+              [newTask.task_id]: { predecessors: [], successors: [] }
+            }
+          } : null);
+        }
+
         // Update task count for the phase
         setPhaseTaskCounts(prev => ({
           ...prev,
@@ -961,7 +995,7 @@ export default function ProjectDetail({
     } finally {
       setIsAddingTask(false);
     }
-  }, [selectedPhase]);
+  }, [selectedPhase, currentPhase, listViewData]);
 
   const handleCloseQuickAdd = useCallback(() => {
     setShowQuickAdd(false);
@@ -1045,25 +1079,26 @@ export default function ProjectDetail({
         toast.error('Failed to update task');
       }
     } else {
-      // Task deleted
-      setProjectTasks((prevTasks) =>
-        prevTasks.filter((task) => task.task_id !== selectedTask?.task_id)
-      );
+      // Task deleted - use ref for reliable access
+      const deletedTaskId = selectedTaskIdRef.current;
+      if (deletedTaskId) {
+        setProjectTasks((prevTasks) =>
+          prevTasks.filter((task) => task.task_id !== deletedTaskId)
+        );
 
-      // Also remove from list view data
-      if (selectedTask) {
+        // Also remove from list view data
         setListViewData(prev => prev ? {
           ...prev,
-          tasks: prev.tasks.filter(t => t.task_id !== selectedTask.task_id)
+          tasks: prev.tasks.filter(t => t.task_id !== deletedTaskId)
         } : null);
-      }
 
-      toast.success('Task deleted successfully!');
+        toast.success('Task deleted successfully!');
+      }
     }
     setShowQuickAdd(false);
     setSelectedTask(null);
     setIsAddingTask(false);
-  }, [selectedTask]);
+  }, []);
 
   const handleTaskSelected = useCallback((task: IProjectTask) => {
     // Log that we're using the cached project tree data for editing

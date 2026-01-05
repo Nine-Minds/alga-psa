@@ -48,6 +48,7 @@ export function createTicketColumns(options: CreateTicketColumnsOptions): Column
     board: true,
     category: true,
     client: true,
+    assigned_to: true,
     created: true,
     created_by: true,
     tags: true,
@@ -219,6 +220,29 @@ export function createTicketColumns(options: CreateTicketColumnsOptions): Column
             {value || 'No Client'}
           </button>
         ) : undefined,
+      }
+    });
+  }
+
+  // Assigned To
+  if (columnVisibility.assigned_to) {
+    columns.push({
+      key: 'assigned_to',
+      col: {
+        title: 'Assigned To',
+        dataIndex: 'assigned_to_name',
+        width: '12%',
+        render: (value: string | null, record: ITicketListItem) => {
+          const additionalCount = record.additional_agent_count || 0;
+          return (
+            <span className="text-gray-700">
+              {value || 'Unassigned'}
+              {additionalCount > 0 && (
+                <span className="ml-1 text-xs text-gray-500">+{additionalCount}</span>
+              )}
+            </span>
+          );
+        },
       }
     });
   }

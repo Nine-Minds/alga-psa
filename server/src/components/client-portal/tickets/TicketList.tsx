@@ -327,9 +327,17 @@ export function TicketList() {
       title: t('tickets.fields.assignedTo'),
       dataIndex: 'assigned_to_name',
       width: '15%',
-      render: (value: string) => (
-        <div className="text-sm">{value || '-'}</div>
-      ),
+      render: (value: string | null, record: ITicketListItem) => {
+        const additionalCount = record.additional_agent_count || 0;
+        return (
+          <div className="text-sm">
+            {value || '-'}
+            {additionalCount > 0 && (
+              <span className="ml-1 text-xs text-gray-500">+{additionalCount}</span>
+            )}
+          </div>
+        );
+      },
     },
     {
       title: t('tickets.fields.createdAt'),

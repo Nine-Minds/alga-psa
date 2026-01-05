@@ -49,6 +49,7 @@ export interface ITicketListItem extends Omit<ITicket, 'status_id' | 'priority_i
   client_name: string;
   entered_by_name: string;
   assigned_to_name: string | null;
+  additional_agent_count?: number;
 }
 
 export interface ITicketListFilters {
@@ -62,6 +63,8 @@ export interface ITicketListFilters {
   boardFilterState: 'active' | 'inactive' | 'all';
   showOpenOnly?: boolean;
   tags?: string[];
+  assignedToIds?: string[];        // Array of user IDs to filter by
+  includeUnassigned?: boolean;     // Include tickets with no assignee
   sortBy?: string;
   sortDirection?: 'asc' | 'desc';
 }

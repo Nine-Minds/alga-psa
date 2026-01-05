@@ -120,7 +120,8 @@ export async function getClientTickets(status: string): Promise<ITicketListItem[
         'c.board_name',
         'cat.category_name',
         db.raw("CONCAT(u.first_name, ' ', u.last_name) as entered_by_name"),
-        db.raw("CONCAT(au.first_name, ' ', au.last_name) as assigned_to_name")
+        db.raw("CONCAT(au.first_name, ' ', au.last_name) as assigned_to_name"),
+        db.raw("(SELECT COUNT(*) FROM ticket_resources tr WHERE tr.ticket_id = t.ticket_id AND tr.tenant = t.tenant)::int as additional_agent_count")
       )
       .leftJoin('statuses as s', function() {
         this.on('t.status_id', '=', 's.status_id')
