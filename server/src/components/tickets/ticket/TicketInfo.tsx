@@ -40,6 +40,7 @@ interface TicketInfoProps {
   onTagsChange?: (tags: ITag[]) => void;
   isInDrawer?: boolean;
   onItilFieldChange?: (field: string, value: any) => void;
+  isBundledChild?: boolean;
   // Local ITIL state values
   itilImpact?: number;
   itilUrgency?: number;
@@ -63,6 +64,7 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
   onTagsChange,
   isInDrawer = false,
   onItilFieldChange,
+  isBundledChild = false,
   itilImpact,
   itilUrgency,
   itilCategory,
@@ -79,6 +81,7 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
   const [titleValue, setTitleValue] = useState(ticket.title);
   const [showPriorityMatrix, setShowPriorityMatrix] = useState(false);
   const [isEditingDescription, setIsEditingDescription] = useState(false);
+  const workflowLocked = isBundledChild;
 
   // Calculate ITIL priority when impact and urgency are available
   const calculatedItilPriority = React.useMemo(() => {
@@ -343,6 +346,7 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
                 onValueChange={(value) => onSelectChange('status_id', value)}
                 customStyles={customStyles}
                 className="!w-fit"
+                disabled={workflowLocked}
               />
             </div>
             <div>
@@ -363,6 +367,7 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
                 size="sm"
                 className="!w-fit"
                 placeholder="Not assigned"
+                disabled={workflowLocked}
               />
             </div>
             <div>
@@ -431,6 +436,7 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
                   onValueChange={(value) => onSelectChange('priority_id', value)}
                   customStyles={customStyles}
                   className="!w-fit"
+                  disabled={workflowLocked}
                 />
               )}
             </div>
