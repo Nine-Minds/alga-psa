@@ -18,7 +18,6 @@ import styles from './TicketDetails.module.css';
 import { getTicketCategories, getTicketCategoriesByBoard, BoardCategoryData } from 'server/src/lib/actions/ticketCategoryActions';
 import { ItilLabels, calculateItilPriority } from 'server/src/lib/utils/itilUtils';
 import { Pencil, HelpCircle, X, Save } from 'lucide-react';
-import { ConfirmationDialog } from 'server/src/components/ui/ConfirmationDialog';
 import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionContainer';
 import { Input } from 'server/src/components/ui/Input';
 import UserAvatar from 'server/src/components/ui/UserAvatar';
@@ -44,8 +43,6 @@ interface TicketInfoProps {
   // Local ITIL state values
   itilImpact?: number;
   itilUrgency?: number;
-  itilCategory?: string;
-  itilSubcategory?: string;
   // Sectional save props (like contracts pattern)
   onSaveSection?: () => Promise<void>;
   onCancelSection?: () => void;
@@ -80,8 +77,6 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
   onItilFieldChange,
   itilImpact,
   itilUrgency,
-  itilCategory,
-  itilSubcategory,
   // Sectional save props
   onSaveSection,
   onCancelSection,
@@ -118,9 +113,6 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
   const [tempImpact, setTempImpact] = useState(itilImpact?.toString() || '');
   const [tempUrgency, setTempUrgency] = useState(itilUrgency?.toString() || '');
 
-  // Track field-level confirmation dialog state
-  const [showFieldConfirmDialog, setShowFieldConfirmDialog] = useState(false);
-  const [pendingFieldAction, setPendingFieldAction] = useState<(() => void) | null>(null);
 
   // Calculate ITIL priority when impact and urgency are available
   const calculatedItilPriority = React.useMemo(() => {
@@ -286,93 +278,9 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
     }
   }, [tempStatus, tempAssignedTo, tempBoard, tempPriority, tempCategory, tempSubcategory, tempImpact, tempUrgency, isEditingTitle, titleValue, ticket.title, ticket.status_id, ticket.assigned_to, ticket.board_id, ticket.priority_id, ticket.category_id, ticket.subcategory_id, itilImpact, itilUrgency, onTempChangesUpdate]);
 
-  // Check if title has unsaved changes
-  const hasTitleUnsavedChanges = () => {
-    return isEditingTitle && titleValue !== ticket.title;
-  };
-
-  // Check for unsaved changes before changing to a different field
-  const checkAndPromptUnsavedChanges = (nextAction: () => void) => {
-    if (hasUnsavedTempChanges() || hasTitleUnsavedChanges()) {
-      setPendingFieldAction(() => nextAction);
-      setShowFieldConfirmDialog(true);
-      return false;
-    }
-    return true;
-  };
-
-  // Handle confirmation dialog actions
-  const handleFieldConfirmSave = () => {
-    // Save title changes if editing
-    if (hasTitleUnsavedChanges()) {
-      onSelectChange('title', titleValue.trim());
-      setIsEditingTitle(false);
-    }
-    // Save all pending dropdown temp changes
-    if (tempStatus !== (ticket.status_id || '')) {
-      onSelectChange('status_id', tempStatus || null);
-    }
-    if (tempAssignedTo !== (ticket.assigned_to || '')) {
-      onSelectChange('assigned_to', tempAssignedTo || null);
-    }
-    if (tempBoard !== (ticket.board_id || '')) {
-      onSelectChange('board_id', tempBoard || null);
-    }
-    if (tempPriority !== (ticket.priority_id || '')) {
-      onSelectChange('priority_id', tempPriority || null);
-    }
-    if (tempCategory !== (ticket.category_id || '') || tempSubcategory !== (ticket.subcategory_id || '')) {
-      onSelectChange('category_id', tempCategory || null);
-      onSelectChange('subcategory_id', tempSubcategory || null);
-    }
-    if (tempImpact !== (itilImpact?.toString() || '') && onItilFieldChange) {
-      onItilFieldChange('itil_impact', tempImpact ? Number(tempImpact) : null);
-    }
-    if (tempUrgency !== (itilUrgency?.toString() || '') && onItilFieldChange) {
-      onItilFieldChange('itil_urgency', tempUrgency ? Number(tempUrgency) : null);
-    }
-    setShowFieldConfirmDialog(false);
-    if (pendingFieldAction) {
-      pendingFieldAction();
-      setPendingFieldAction(null);
-    }
-  };
-
-  const handleFieldConfirmDiscard = () => {
-    // Discard title changes if editing
-    if (isEditingTitle) {
-      setTitleValue(ticket.title);
-      setIsEditingTitle(false);
-    }
-    // Reset all dropdown temp values to ticket values
-    setTempStatus(ticket.status_id || '');
-    setTempAssignedTo(ticket.assigned_to || '');
-    setTempBoard(ticket.board_id || '');
-    setTempPriority(ticket.priority_id || '');
-    setTempCategory(ticket.category_id || '');
-    setTempSubcategory(ticket.subcategory_id || '');
-    setTempImpact(itilImpact?.toString() || '');
-    setTempUrgency(itilUrgency?.toString() || '');
-    setShowFieldConfirmDialog(false);
-    if (pendingFieldAction) {
-      pendingFieldAction();
-      setPendingFieldAction(null);
-    }
-  };
-
-  const handleFieldConfirmCancel = () => {
-    setShowFieldConfirmDialog(false);
-    setPendingFieldAction(null);
-  };
-
-  // Handle clicking on title edit - check for unsaved dropdown changes first
+  // Handle clicking on title edit
   const handleTitleEditClick = () => {
-    if (hasUnsavedTempChanges()) {
-      setPendingFieldAction(() => () => setIsEditingTitle(true));
-      setShowFieldConfirmDialog(true);
-    } else {
-      setIsEditingTitle(true);
-    }
+    setIsEditingTitle(true);
   };
 
   const handleTitleSubmit = () => {
@@ -546,7 +454,8 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
                   <Button
                     id="save-status-btn"
                     size="sm"
-                    onClick={() => {
+                    onClick={(e) => {
+                      e.stopPropagation();
                       onSelectChange('status_id', tempStatus || null);
                     }}
                   >
@@ -556,7 +465,8 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
                     id="cancel-status-btn"
                     size="sm"
                     variant="outline"
-                    onClick={() => {
+                    onClick={(e) => {
+                      e.stopPropagation();
                       setTempStatus(ticket.status_id || '');
                     }}
                   >
@@ -584,7 +494,8 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
                   <Button
                     id="save-assigned-to-btn"
                     size="sm"
-                    onClick={() => {
+                    onClick={(e) => {
+                      e.stopPropagation();
                       onSelectChange('assigned_to', tempAssignedTo || null);
                     }}
                   >
@@ -594,7 +505,8 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
                     id="cancel-assigned-to-btn"
                     size="sm"
                     variant="outline"
-                    onClick={() => {
+                    onClick={(e) => {
+                      e.stopPropagation();
                       setTempAssignedTo(ticket.assigned_to || '');
                     }}
                   >
@@ -627,7 +539,8 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
                   <Button
                     id="save-board-btn"
                     size="sm"
-                    onClick={() => {
+                    onClick={(e) => {
+                      e.stopPropagation();
                       onSelectChange('board_id', tempBoard || null);
                       // Clear categories when board changes
                       onSelectChange('category_id', null);
@@ -646,7 +559,8 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
                     id="cancel-board-btn"
                     size="sm"
                     variant="outline"
-                    onClick={() => {
+                    onClick={(e) => {
+                      e.stopPropagation();
                       setTempBoard(ticket.board_id || '');
                       // Also restore temp category and priority when canceling board change
                       setTempCategory(ticket.category_id || '');
@@ -684,7 +598,10 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
                     </span>
                     <button
                       type="button"
-                      onClick={() => setShowPriorityMatrix(!showPriorityMatrix)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setShowPriorityMatrix(!showPriorityMatrix);
+                      }}
                       className="text-gray-400 hover:text-gray-600 transition-colors"
                       title="Show ITIL Priority Matrix"
                     >
@@ -710,9 +627,10 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
                       <Button
                         id="save-priority-btn"
                         size="sm"
-                        onClick={() => {
+                        onClick={(e) => {
+                          e.stopPropagation();
                           onSelectChange('priority_id', tempPriority || null);
-                        }}
+                            }}
                       >
                         Save
                       </Button>
@@ -720,9 +638,10 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
                         id="cancel-priority-btn"
                         size="sm"
                         variant="outline"
-                        onClick={() => {
+                        onClick={(e) => {
+                          e.stopPropagation();
                           setTempPriority(ticket.priority_id || '');
-                        }}
+                            }}
                       >
                         Cancel
                       </Button>
@@ -748,7 +667,10 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
                     <Button
                       id="save-category-btn"
                       size="sm"
-                      onClick={saveCategoryChanges}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        saveCategoryChanges();
+                        }}
                     >
                       Save
                     </Button>
@@ -756,7 +678,10 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
                       id="cancel-category-btn"
                       size="sm"
                       variant="outline"
-                      onClick={cancelCategoryChanges}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        cancelCategoryChanges();
+                        }}
                     >
                       Cancel
                     </Button>
@@ -788,9 +713,10 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
                       <Button
                         id="save-impact-btn"
                         size="sm"
-                        onClick={() => {
+                        onClick={(e) => {
+                          e.stopPropagation();
                           handleItilFieldChange('itil_impact', tempImpact ? Number(tempImpact) : null);
-                        }}
+                            }}
                       >
                         Save
                       </Button>
@@ -798,9 +724,10 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
                         id="cancel-impact-btn"
                         size="sm"
                         variant="outline"
-                        onClick={() => {
+                        onClick={(e) => {
+                          e.stopPropagation();
                           setTempImpact(itilImpact?.toString() || '');
-                        }}
+                            }}
                       >
                         Cancel
                       </Button>
@@ -828,9 +755,10 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
                       <Button
                         id="save-urgency-btn"
                         size="sm"
-                        onClick={() => {
+                        onClick={(e) => {
+                          e.stopPropagation();
                           handleItilFieldChange('itil_urgency', tempUrgency ? Number(tempUrgency) : null);
-                        }}
+                            }}
                       >
                         Save
                       </Button>
@@ -838,9 +766,10 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
                         id="cancel-urgency-btn"
                         size="sm"
                         variant="outline"
-                        onClick={() => {
+                        onClick={(e) => {
+                          e.stopPropagation();
                           setTempUrgency(itilUrgency?.toString() || '');
-                        }}
+                            }}
                       >
                         Cancel
                       </Button>
@@ -1073,7 +1002,12 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
 
           {/* Sectional Save Changes button - like contracts pattern */}
           {onSaveSection && (
-            <div className="flex justify-end gap-2 pt-4 mt-4 border-t border-gray-200">
+            <div className="pt-4 mt-4 border-t border-gray-200">
+              {/* Section-level unsaved changes warning - shows when any field has unsaved changes */}
+              {(hasUnsavedTempChanges() || (isEditingTitle && titleValue !== ticket.title)) && (
+                <p className="text-amber-600 text-sm mb-3">You have unsaved changes</p>
+              )}
+              <div className="flex justify-end gap-2">
               {onCancelSection && (
                 <Button
                   id="cancel-ticket-info-changes"
@@ -1096,24 +1030,12 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
                 </span>
                 {!isSavingSection && <Save className="ml-2 h-4 w-4" />}
               </Button>
+              </div>
             </div>
           )}
         </div>
       </div>
 
-      {/* Confirmation dialog when clicking out of field with unsaved changes */}
-      <ConfirmationDialog
-        id="field-unsaved-changes-dialog"
-        isOpen={showFieldConfirmDialog}
-        onClose={handleFieldConfirmCancel}
-        onConfirm={handleFieldConfirmSave}
-        onCancel={handleFieldConfirmDiscard}
-        title="Unsaved Changes"
-        message="You have unsaved changes in this field. What would you like to do?"
-        confirmLabel="Save"
-        cancelLabel="Discard"
-        thirdButtonLabel="Go Back"
-      />
     </ReflectionContainer>
   );
 };
