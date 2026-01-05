@@ -269,6 +269,8 @@
     "previewUnavailable": "Podgląd niedostępny",
     "newDocument": "Nowy dokument",
     "uploadFile": "Prześlij plik",
+    "detach": "Odłącz",
+    "deletePermanently": "Usuń na stałe",
     "deleteTitle": "Usuń dokument",
     "deleteMessage": "Czy na pewno chcesz usunąć \"{{name}}\"? Tej operacji nie można cofnąć.",
     "deleteVideoTitle": "Usuń wideo",
@@ -750,10 +752,6 @@
     "loading": "Ładowanie",
     "move_up": "Przenieś w górę",
     "move_down": "Przenieś w dół"
-  },
-  "projects": {
-    "settings": {
-    }
   },
   "sessionManagement": {
     "title": "Aktywne sesje",

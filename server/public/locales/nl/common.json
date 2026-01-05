@@ -817,5 +817,21 @@
       "searchPlaceholder": "Zoeken op gebruikersnaam, e-mail, apparaat of IP-adres...",
       "noResults": "Geen sessies komen overeen met uw zoekopdracht"
     }
+  },
+  "projects": {
+    "task": {
+      "comments": {
+        "title": "Opmerkingen",
+        "internal_only": "Alleen intern",
+        "placeholder": "Voeg een opmerking toe... Gebruik @ om teamleden te vermelden",
+        "add_comment": "Opmerking toevoegen",
+        "no_comments": "Nog geen opmerkingen. Wees de eerste om te reageren!",
+        "edited": "Bewerkt",
+        "error_creating": "Kan opmerking niet maken. Probeer het opnieuw.",
+        "error_updating": "Kan opmerking niet bijwerken. Probeer het opnieuw.",
+        "error_deleting": "Kan opmerking niet verwijderen. Probeer het opnieuw.",
+        "confirm_delete": "Weet u zeker dat u deze opmerking wilt verwijderen?"
+      }
+    }
   }
 }

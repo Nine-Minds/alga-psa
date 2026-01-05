@@ -753,10 +753,6 @@
     "move_up": "Move up",
     "move_down": "Move down"
   },
-  "projects": {
-    "settings": {
-    }
-  },
   "sessionManagement": {
     "title": "Active Sessions",
     "description": "Manage your active login sessions across all devices (max 5 sessions)",

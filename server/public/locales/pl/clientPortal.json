@@ -310,16 +310,25 @@
     "timeline": "Harmonogram",
     "milestones": "Kamienie milowe",
     "phasesAndTasks": "Fazy i zadania",
+    "kanbanView": "Kanban",
+    "listView": "Lista",
     "task": "zadanie",
     "tasks": {
       "title": "Zadania",
       "noTasks": "Brak zadań do wyświetlenia",
+      "taskName": "Nazwa",
       "dueDate": "Termin",
       "status": "Status",
       "assignedTo": "Przypisane do",
+      "assignee": "Osoba przypisana",
       "estimatedHours": "Szacowane godziny",
+      "estHours": "Szac. godziny",
+      "hoursLogged": "Zarejestrowane godziny",
+      "checklist": "Lista kontrolna",
+      "dependencies": "Zależności",
       "priority": "Priorytet",
-      "services": "Usługi"
+      "services": "Usługi",
+      "attachments": "Załączniki"
     },
     "phases": {
       "title": "Fazy projektu",
@@ -327,13 +336,19 @@
       "noPhases": "Brak faz do wyświetlenia"
     },
     "documents": {
-      "title": "Dokumenty",
-      "upload": "Prześlij dokument",
+      "title": "Załączniki",
+      "upload": "Prześlij",
       "noDocuments": "Brak dołączonych dokumentów",
       "uploadSuccess": "Dokument przesłany pomyślnie",
       "uploadError": "Nie udało się przesłać dokumentu",
+      "downloadError": "Nie udało się pobrać dokumentu",
       "dragDrop": "Przeciągnij i upuść plik tutaj lub kliknij, aby wybrać",
-      "maxSize": "Maksymalny rozmiar pliku: {{size}}MB"
+      "maxSize": "Maksymalny rozmiar pliku: {{size}}MB",
+      "file": "plik",
+      "files": "pliki",
+      "uploadHint": "Prześlij pliki, aby udostępnić je w tym zadaniu",
+      "download": "Pobierz",
+      "view": "Wyświetl"
     },
     "team": "Członkowie zespołu",
     "budget": "Budżet",
@@ -365,6 +380,8 @@
       "noPhasesOrTasks": "Brak faz lub zadań do wyświetlenia",
       "loadError": "Nie udało się wczytać szczegółów projektu"
     },
+    "backToProjects": "Wróć do projektów",
+    "invalidProjectData": "Nieprawidłowe dane projektu",
     "viewDetails": "Zobacz szczegóły →",
     "details": "Szczegóły",
     "startDate": "Data rozpoczęcia",
@@ -865,6 +882,7 @@
     "active": "Aktywne",
     "inactive": "Nieaktywne",
     "loading": "Ładowanie...",
+    "uploading": "Przesyłanie...",
     "error": "Wystąpił błąd",
     "save": "Zapisz",
     "cancel": "Anuluj",

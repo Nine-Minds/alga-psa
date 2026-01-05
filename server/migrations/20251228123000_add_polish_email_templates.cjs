@@ -1,7 +1,7 @@
 /**
  * Add Polish translations for client-facing email templates
  *
- * Translates authentication, ticketing, and billing email templates to Polish
+ * Translates authentication, ticketing, billing, and appointment email templates to Polish
  * for client portal users.
  */
 
@@ -24,7 +24,12 @@ exports.up = async function(knex) {
       'Ticket Comment Added',
       'Invoice Generated',
       'Payment Received',
-      'Payment Overdue'
+      'Payment Overdue',
+      'appointment-request-received',
+      'appointment-request-approved',
+      'appointment-request-declined',
+      'new-appointment-request',
+      'survey-ticket-closed'
     ]);
 
   const getSubtypeId = (name) => {
@@ -1125,6 +1130,497 @@ Dni po terminie: {{invoice.daysOverdue}}
 
 Zobacz fakturę: {{invoice.url}}
       `
+    },
+
+    // Portal Invitation
+    {
+      name: 'portal-invitation',
+      language_code: 'pl',
+      subject: 'Zaproszenie do portalu klienta{{#if clientName}} - {{clientName}}{{/if}}',
+      notification_subtype_id: getSubtypeId('portal-invitation'),
+      html_content: `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Zaproszenie do portalu</title>
+  <style>
+    body { font-family: Inter, system-ui, sans-serif; line-height: 1.6; color: #0f172a; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f8fafc; }
+    .header { background: linear-gradient(135deg, #8a4dea 0%, #7c3aed 100%); color: white; padding: 32px 24px; border-radius: 12px 12px 0 0; text-align: center; }
+    .header h1 { font-family: Poppins, system-ui, sans-serif; font-weight: 700; font-size: 28px; margin: 0 0 8px 0; color: white; }
+    .header p { margin: 0; opacity: 1; font-size: 16px; color: rgba(255, 255, 255, 0.95); }
+    .content { background: #ffffff; padding: 32px; border: 1px solid #e2e8f0; border-top: none; border-bottom: none; }
+    .footer { background: #1e293b; color: #cbd5e1; padding: 24px; border-radius: 0 0 12px 12px; text-align: center; font-size: 14px; }
+    .footer p { margin: 6px 0; color: #cbd5e1; }
+    .info-box { background: #faf8ff; padding: 24px; border-radius: 8px; border: 1px solid #e9e5f5; border-left: 4px solid #8a4dea; margin: 24px 0; }
+    .info-box h3 { color: #0f172a; margin: 0 0 16px 0; font-size: 18px; font-weight: 600; }
+    .info-box p { margin: 8px 0; color: #475569; font-size: 15px; }
+    .action-button { display: inline-block; background: linear-gradient(135deg, #8a4dea 0%, #7c3aed 100%); color: white; text-decoration: none; padding: 14px 32px; border-radius: 8px; font-weight: 600; font-size: 16px; margin: 20px 0; }
+    .warning { background: #fffbeb; border: 1px solid #fcd34d; border-radius: 8px; padding: 16px; margin: 24px 0; }
+    .warning h4 { color: #b45309; margin: 0 0 8px 0; font-size: 15px; }
+    .warning p { color: #92400e; margin: 0; font-size: 14px; }
+    .link-text { background: #f1f5f9; padding: 12px 16px; border-radius: 6px; font-family: monospace; font-size: 13px; word-break: break-all; color: #475569; margin: 16px 0; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>Witamy w portalu klienta</h1>
+    <p>Twój dostęp do zarządzania usługami jest gotowy</p>
+  </div>
+  <div class="content">
+    <h2>Witaj {{contactName}},</h2>
+    <p>Zostałeś(aś) zaproszony(a) do portalu klienta {{clientName}}. Ten bezpieczny portal daje Ci natychmiastowy dostęp do:</p>
+    <div class="info-box">
+      <h3>Twój dostęp obejmuje:</h3>
+      <p>✓ Przeglądanie i śledzenie Twoich zgłoszeń serwisowych</p>
+      <p>✓ Przegląd aktualizacji projektów i dokumentacji</p>
+      <p>✓ Bezpośrednia komunikacja z zespołem wsparcia</p>
+    </div>
+    <div style="text-align: center;">
+      <a href="{{portalLink}}" class="action-button">Skonfiguruj dostęp do portalu</a>
+    </div>
+    <p style="text-align: center; color: #64748b; font-size: 14px;">Lub skopiuj i wklej ten link do przeglądarki:</p>
+    <div class="link-text">{{portalLink}}</div>
+    <div class="warning">
+      <h4>⏰ Zaproszenie ograniczone czasowo</h4>
+      <p>Ten link zaproszeniowy wygaśnie za {{expirationTime}}. Dokończ konfigurację konta przed tym terminem, aby zapewnić nieprzerwany dostęp.</p>
+    </div>
+    <div class="contact-info">
+      <h4>Potrzebujesz pomocy?</h4>
+      <p><strong>Email:</strong> {{clientLocationEmail}}</p>
+      <p><strong>Telefon:</strong> {{clientLocationPhone}}</p>
+      <p style="margin-top: 12px; font-size: 13px; color: #64748b;">Nasz zespół wsparcia jest gotowy, aby pomóc Ci rozpocząć.</p>
+    </div>
+  </div>
+  <div class="footer">
+    <p>Ta wiadomość została wysłana do {{contactName}} w ramach konfiguracji dostępu do portalu.</p>
+    <p>Jeśli nie spodziewałeś(aś) się tego zaproszenia, skontaktuj się z nami pod adresem {{clientLocationEmail}}.</p>
+    <p>© {{currentYear}} {{clientName}}. Wszelkie prawa zastrzeżone.</p>
+  </div>
+</body>
+</html>`,
+      text_content: `Witamy w portalu klienta
+
+Witaj {{contactName}},
+
+Zostałeś(aś) zaproszony(a) do portalu klienta {{clientName}}. Ten bezpieczny portal daje Ci natychmiastowy dostęp do:
+
+✓ Przeglądanie i śledzenie Twoich zgłoszeń serwisowych
+✓ Przegląd aktualizacji projektów i dokumentacji
+✓ Bezpośrednia komunikacja z zespołem wsparcia
+
+Skonfiguruj dostęp do portalu: {{portalLink}}
+
+⏰ Zaproszenie ograniczone czasowo
+Ten link zaproszeniowy wygaśnie za {{expirationTime}}. Dokończ konfigurację konta przed tym terminem, aby zapewnić nieprzerwany dostęp.
+
+Potrzebujesz pomocy?
+Email: {{clientLocationEmail}}
+Telefon: {{clientLocationPhone}}
+Nasz zespół wsparcia jest gotowy, aby pomóc Ci rozpocząć.
+
+---
+Ta wiadomość została wysłana do {{contactName}} w ramach konfiguracji dostępu do portalu.
+Jeśli nie spodziewałeś(aś) się tego zaproszenia, skontaktuj się z nami pod adresem {{clientLocationEmail}}.
+© {{currentYear}} {{clientName}}. Wszelkie prawa zastrzeżone.`
+    },
+
+    // Email Verification
+    {
+      name: 'email-verification',
+      language_code: 'pl',
+      subject: 'Zweryfikuj swój adres email{{#if registrationClientName}} dla {{registrationClientName}}{{/if}}',
+      notification_subtype_id: getSubtypeId('email-verification'),
+      html_content: `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Weryfikacja adresu email</title>
+  <style>
+    body { font-family: Inter, system-ui, sans-serif; line-height: 1.6; color: #0f172a; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f8fafc; }
+    .header { background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); color: white; padding: 32px 24px; border-radius: 12px 12px 0 0; text-align: center; }
+    .header h1 { font-family: Poppins, system-ui, sans-serif; font-weight: 700; font-size: 28px; margin: 0 0 8px 0; color: white; }
+    .content { background: #ffffff; padding: 32px; border: 1px solid #e2e8f0; border-top: none; border-bottom: none; }
+    .footer { background: #1e293b; color: #cbd5e1; padding: 24px; border-radius: 0 0 12px 12px; text-align: center; font-size: 14px; }
+    .action-button { display: inline-block; background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); color: white; text-decoration: none; padding: 14px 32px; border-radius: 8px; font-weight: 600; font-size: 16px; margin: 20px 0; }
+    .warning { background: #fffbeb; border: 1px solid #fcd34d; border-radius: 8px; padding: 16px; margin: 24px 0; }
+    .link-text { background: #f1f5f9; padding: 12px 16px; border-radius: 6px; font-family: monospace; font-size: 13px; word-break: break-all; color: #475569; margin: 16px 0; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>Zweryfikuj swój adres email</h1>
+    <p>Jeszcze jeden krok do ukończenia rejestracji</p>
+  </div>
+  <div class="content">
+    <h2>Witaj{{#if contactName}} {{contactName}}{{/if}},</h2>
+    <p>Dziękujemy za rejestrację! Proszę zweryfikować swój adres email, klikając poniższy przycisk:</p>
+    <div style="text-align: center;">
+      <a href="{{verificationLink}}" class="action-button">Zweryfikuj adres email</a>
+    </div>
+    <p style="text-align: center; color: #64748b; font-size: 14px;">Lub skopiuj i wklej ten link do przeglądarki:</p>
+    <div class="link-text">{{verificationLink}}</div>
+    <div class="warning">
+      <h4>⏰ Link ograniczony czasowo</h4>
+      <p>Ten link weryfikacyjny wygaśnie za {{expirationTime}}. Jeśli link wygaśnie, możesz poprosić o nowy na stronie logowania.</p>
+    </div>
+    <p style="color: #64748b; font-size: 14px;">Jeśli nie zakładałeś(aś) konta, możesz bezpiecznie zignorować tę wiadomość.</p>
+  </div>
+  <div class="footer">
+    <p>Ta wiadomość została wysłana automatycznie. Prosimy nie odpowiadać na nią.</p>
+  </div>
+</body>
+</html>`,
+      text_content: `Zweryfikuj swój adres email
+
+Witaj{{#if contactName}} {{contactName}}{{/if}},
+
+Dziękujemy za rejestrację! Proszę zweryfikować swój adres email, klikając poniższy link:
+
+{{verificationLink}}
+
+⏰ Link ograniczony czasowo
+Ten link weryfikacyjny wygaśnie za {{expirationTime}}. Jeśli link wygaśnie, możesz poprosić o nowy na stronie logowania.
+
+Jeśli nie zakładałeś(aś) konta, możesz bezpiecznie zignorować tę wiadomość.`
+    },
+
+    // Appointment Request Received
+    {
+      name: 'appointment-request-received',
+      language_code: 'pl',
+      subject: 'Wniosek o wizytę otrzymany - {{serviceName}}',
+      notification_subtype_id: getSubtypeId('appointment-request-received'),
+      html_content: `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Wniosek otrzymany</title>
+  <style>
+    body { font-family: Inter, system-ui, sans-serif; line-height: 1.6; color: #0f172a; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f8fafc; }
+    .container { background-color: white; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.07); }
+    .header { background: linear-gradient(135deg, #8a4dea 0%, #7c3aed 100%); color: white; padding: 32px 24px; text-align: center; }
+    .header h1 { font-family: Poppins, system-ui, sans-serif; font-weight: 700; font-size: 28px; margin: 0 0 8px 0; color: white; }
+    .content { padding: 32px 24px; }
+    .details-box { background-color: #f8fafc; border-left: 4px solid #8a4dea; padding: 20px; margin: 24px 0; border-radius: 6px; }
+    .reference-number { background-color: #ede9fe; color: #6d28d9; padding: 8px 16px; border-radius: 6px; font-weight: 600; display: inline-block; margin: 16px 0; }
+    .info-box { background-color: #eff6ff; border-left: 4px solid #3b82f6; padding: 16px; margin: 24px 0; border-radius: 6px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>Wniosek otrzymany</h1>
+      <p>Otrzymaliśmy Twój wniosek o wizytę</p>
+    </div>
+    <div class="content">
+      <p>Witaj{{#if requesterName}} {{requesterName}}{{/if}},</p>
+      <p>Dziękujemy za złożenie wniosku o wizytę. Otrzymaliśmy Twój wniosek i nasz zespół wkrótce go rozpatrzy.</p>
+      <div class="reference-number">Numer referencyjny: {{referenceNumber}}</div>
+      <div class="details-box">
+        <h3>Szczegóły wniosku</h3>
+        <p><strong>Usługa:</strong> {{serviceName}}</p>
+        <p><strong>Żądana data:</strong> {{requestedDate}}</p>
+        <p><strong>Żądana godzina:</strong> {{requestedTime}}</p>
+        <p><strong>Czas trwania:</strong> {{duration}} minut</p>
+        {{#if preferredTechnician}}<p><strong>Preferowany technik:</strong> {{preferredTechnician}}</p>{{/if}}
+      </div>
+      <div class="info-box">
+        <p><strong>Co dalej?</strong></p>
+        <p>Nasz zespół rozpatrzy Twój wniosek i potwierdzi dostępność. Otrzymasz powiadomienie email, gdy wizyta zostanie zatwierdzona lub jeśli będą potrzebne zmiany. Zazwyczaj odpowiadamy w ciągu {{responseTime}}.</p>
+      </div>
+      <p>Jeśli masz pytania lub chcesz wprowadzić zmiany do wniosku, skontaktuj się z nami pod adresem {{contactEmail}}{{#if contactPhone}} lub zadzwoń pod {{contactPhone}}{{/if}}.</p>
+    </div>
+  </div>
+</body>
+</html>`,
+      text_content: `Wniosek o wizytę otrzymany
+
+Witaj{{#if requesterName}} {{requesterName}}{{/if}},
+
+Dziękujemy za złożenie wniosku o wizytę. Otrzymaliśmy Twój wniosek i nasz zespół wkrótce go rozpatrzy.
+
+Numer referencyjny: {{referenceNumber}}
+
+SZCZEGÓŁY WNIOSKU:
+Usługa: {{serviceName}}
+Żądana data: {{requestedDate}}
+Żądana godzina: {{requestedTime}}
+Czas trwania: {{duration}} minut
+{{#if preferredTechnician}}Preferowany technik: {{preferredTechnician}}{{/if}}
+
+CO DALEJ?
+Nasz zespół rozpatrzy Twój wniosek i potwierdzi dostępność. Otrzymasz powiadomienie email, gdy wizyta zostanie zatwierdzona lub jeśli będą potrzebne zmiany. Zazwyczaj odpowiadamy w ciągu {{responseTime}}.
+
+Jeśli masz pytania lub chcesz wprowadzić zmiany do wniosku, skontaktuj się z nami pod adresem {{contactEmail}}{{#if contactPhone}} lub zadzwoń pod {{contactPhone}}{{/if}}.`
+    },
+
+    // Appointment Request Approved
+    {
+      name: 'appointment-request-approved',
+      language_code: 'pl',
+      subject: 'Wizyta potwierdzona - {{serviceName}} dnia {{appointmentDate}}',
+      notification_subtype_id: getSubtypeId('appointment-request-approved'),
+      html_content: `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Wizyta potwierdzona</title>
+  <style>
+    body { font-family: Inter, system-ui, sans-serif; line-height: 1.6; color: #0f172a; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f8fafc; }
+    .container { background-color: white; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.07); }
+    .header { background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; padding: 32px 24px; text-align: center; }
+    .header h1 { font-family: Poppins, system-ui, sans-serif; font-weight: 700; font-size: 28px; margin: 0 0 8px 0; color: white; }
+    .content { padding: 32px 24px; }
+    .details-box { background-color: #f0fdf4; border-left: 4px solid #10b981; padding: 20px; margin: 24px 0; border-radius: 6px; }
+    .technician-box { background-color: #f8fafc; padding: 16px; border-radius: 8px; margin: 16px 0; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>✓ Wizyta potwierdzona</h1>
+      <p>Twój wniosek o wizytę został zatwierdzony</p>
+    </div>
+    <div class="content">
+      <p>Witaj{{#if requesterName}} {{requesterName}}{{/if}},</p>
+      <p>Świetna wiadomość! Twój wniosek o wizytę został zatwierdzony i zaplanowany.</p>
+      <div class="details-box">
+        <h3>Szczegóły wizyty</h3>
+        <p><strong>Usługa:</strong> {{serviceName}}</p>
+        <p><strong>Data:</strong> {{appointmentDate}}</p>
+        <p><strong>Godzina:</strong> {{appointmentTime}}</p>
+        <p><strong>Czas trwania:</strong> {{duration}} minut</p>
+        {{#if location}}<p><strong>Lokalizacja:</strong> {{location}}</p>{{/if}}
+      </div>
+      {{#if technicianName}}
+      <div class="technician-box">
+        <h4>Twój przypisany technik</h4>
+        <p><strong>{{technicianName}}</strong></p>
+        {{#if technicianEmail}}<p>{{technicianEmail}}</p>{{/if}}
+        {{#if technicianPhone}}<p>{{technicianPhone}}</p>{{/if}}
+      </div>
+      {{/if}}
+      <p>Jeśli potrzebujesz przełożyć lub anulować wizytę, skontaktuj się z nami pod adresem {{contactEmail}}{{#if contactPhone}} lub zadzwoń pod {{contactPhone}}{{/if}}.</p>
+    </div>
+  </div>
+</body>
+</html>`,
+      text_content: `Wizyta potwierdzona
+
+Witaj{{#if requesterName}} {{requesterName}}{{/if}},
+
+Świetna wiadomość! Twój wniosek o wizytę został zatwierdzony i zaplanowany.
+
+SZCZEGÓŁY WIZYTY:
+Usługa: {{serviceName}}
+Data: {{appointmentDate}}
+Godzina: {{appointmentTime}}
+Czas trwania: {{duration}} minut
+{{#if location}}Lokalizacja: {{location}}{{/if}}
+
+{{#if technicianName}}
+TWÓJ PRZYPISANY TECHNIK:
+{{technicianName}}
+{{#if technicianEmail}}{{technicianEmail}}{{/if}}
+{{#if technicianPhone}}{{technicianPhone}}{{/if}}
+{{/if}}
+
+Jeśli potrzebujesz przełożyć lub anulować wizytę, skontaktuj się z nami pod adresem {{contactEmail}}{{#if contactPhone}} lub zadzwoń pod {{contactPhone}}{{/if}}.`
+    },
+
+    // Appointment Request Declined
+    {
+      name: 'appointment-request-declined',
+      language_code: 'pl',
+      subject: 'Aktualizacja wniosku o wizytę - {{serviceName}}',
+      notification_subtype_id: getSubtypeId('appointment-request-declined'),
+      html_content: `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Aktualizacja wniosku</title>
+  <style>
+    body { font-family: Inter, system-ui, sans-serif; line-height: 1.6; color: #0f172a; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f8fafc; }
+    .container { background-color: white; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.07); }
+    .header { background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: white; padding: 32px 24px; text-align: center; }
+    .header h1 { font-family: Poppins, system-ui, sans-serif; font-weight: 700; font-size: 28px; margin: 0 0 8px 0; color: white; }
+    .content { padding: 32px 24px; }
+    .reason-box { background-color: #fffbeb; border-left: 4px solid #f59e0b; padding: 20px; margin: 24px 0; border-radius: 6px; }
+    .help-box { background-color: #f0f9ff; border-left: 4px solid #3b82f6; padding: 16px; margin: 24px 0; border-radius: 6px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>Aktualizacja wniosku o wizytę</h1>
+      <p>Ważne informacje o Twoim wniosku</p>
+    </div>
+    <div class="content">
+      <p>Witaj{{#if requesterName}} {{requesterName}}{{/if}},</p>
+      <p>Dziękujemy za zainteresowanie umówieniem wizyty u nas. Niestety, nie możemy zrealizować Twojego wniosku w żądanym terminie.</p>
+      {{#if declineReason}}
+      <div class="reason-box">
+        <h4>Powód:</h4>
+        <p>{{declineReason}}</p>
+      </div>
+      {{/if}}
+      <div class="help-box">
+        <h4>Chętnie pomożemy</h4>
+        <p>Przepraszamy za niedogodności. Zachęcamy do złożenia nowego wniosku na inny termin.</p>
+      </div>
+      <p>Jeśli masz pytania lub potrzebujesz pomocy w znalezieniu dostępnego terminu, skontaktuj się z nami pod adresem {{contactEmail}}{{#if contactPhone}} lub zadzwoń pod {{contactPhone}}{{/if}}.</p>
+    </div>
+  </div>
+</body>
+</html>`,
+      text_content: `Aktualizacja wniosku o wizytę
+
+Witaj{{#if requesterName}} {{requesterName}}{{/if}},
+
+Dziękujemy za zainteresowanie umówieniem wizyty u nas. Niestety, nie możemy zrealizować Twojego wniosku w żądanym terminie.
+
+{{#if declineReason}}
+POWÓD:
+{{declineReason}}
+{{/if}}
+
+CHĘTNIE POMOŻEMY
+Przepraszamy za niedogodności. Zachęcamy do złożenia nowego wniosku na inny termin.
+
+Jeśli masz pytania lub potrzebujesz pomocy w znalezieniu dostępnego terminu, skontaktuj się z nami pod adresem {{contactEmail}}{{#if contactPhone}} lub zadzwoń pod {{contactPhone}}{{/if}}.`
+    },
+
+    // New Appointment Request (for MSP staff)
+    {
+      name: 'new-appointment-request',
+      language_code: 'pl',
+      subject: 'Nowy wniosek o wizytę - {{clientName}}{{#if serviceName}} - {{serviceName}}{{/if}}',
+      notification_subtype_id: getSubtypeId('new-appointment-request'),
+      html_content: `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Nowy wniosek o wizytę</title>
+  <style>
+    body { font-family: Inter, system-ui, sans-serif; line-height: 1.6; color: #0f172a; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f8fafc; }
+    .container { background-color: white; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.07); }
+    .header { background: linear-gradient(135deg, #8A4DEA, #40CFF9); color: white; padding: 32px 24px; text-align: center; }
+    .header h1 { font-family: Poppins, system-ui, sans-serif; font-weight: 700; font-size: 28px; margin: 0 0 8px 0; color: white; }
+    .content { padding: 32px 24px; }
+    .request-details { background-color: #fef3c7; border-left: 4px solid #f59e0b; padding: 20px; margin: 24px 0; border-radius: 6px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>Nowy wniosek o wizytę</h1>
+      <p>Wymagana akcja</p>
+    </div>
+    <div class="content">
+      <p>Zespole,</p>
+      <p>Wpłynął nowy wniosek o wizytę wymagający przeglądu i zatwierdzenia.</p>
+      <div class="request-details">
+        <h3>Szczegóły wizyty</h3>
+        <p><strong>Usługa:</strong> {{serviceName}}</p>
+        <p><strong>Żądana data:</strong> {{requestedDate}}</p>
+        <p><strong>Żądana godzina:</strong> {{requestedTime}}</p>
+        <p><strong>Czas trwania:</strong> {{duration}} minut</p>
+      </div>
+      <p>Proszę przejrzeć ten wniosek i podjąć odpowiednie działania. Wnioskodawca czeka na potwierdzenie.</p>
+    </div>
+  </div>
+</body>
+</html>`,
+      text_content: `Nowy wniosek o wizytę - Wymagana akcja
+
+Zespole,
+
+Wpłynął nowy wniosek o wizytę wymagający przeglądu i zatwierdzenia.
+
+INFORMACJE O WNIOSKODAWCY:
+Imię: {{requesterName}}
+Email: {{requesterEmail}}
+{{#if requesterPhone}}Telefon: {{requesterPhone}}{{/if}}
+{{#if clientName}}Klient: {{clientName}}{{/if}}
+
+SZCZEGÓŁY WIZYTY:
+Usługa: {{serviceName}}
+Żądana data: {{requestedDate}}
+Żądana godzina: {{requestedTime}}
+Czas trwania: {{duration}} minut
+
+Proszę przejrzeć ten wniosek i podjąć odpowiednie działania.`
+    },
+
+    // Survey - Ticket Closed
+    {
+      name: 'SURVEY_TICKET_CLOSED',
+      language_code: 'pl',
+      subject: 'Chętnie poznamy Twoją opinię o zgłoszeniu {{ticket_number}}',
+      notification_subtype_id: getSubtypeId('survey-ticket-closed'),
+      html_content: `<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Chętnie poznamy Twoją opinię o zgłoszeniu {{ticket_number}}</title>
+</head>
+<body style="margin:0;padding:0;background-color:#f8fafc;font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:#0f172a;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f8fafc;padding:24px 0;">
+    <tr>
+      <td align="center">
+        <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="background-color:#ffffff;border-radius:12px;box-shadow:0 10px 30px rgba(15,23,42,0.08);overflow:hidden;">
+          <tr>
+            <td style="background:linear-gradient(135deg,#6366f1,#8b5cf6);padding:28px 32px;color:#ffffff;">
+              <h1 style="margin:0;font-size:24px;font-weight:600;">Chętnie poznamy Twoją opinię o zgłoszeniu {{ticket_number}}</h1>
+              <p style="margin:8px 0 0 0;font-size:14px;opacity:0.85;">Zgłoszenie #{{ticket_number}} · {{ticket_subject}}</p>
+              <p style="margin:8px 0 0 0;font-size:14px;opacity:0.85;">Technik: {{technician_name}}</p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:32px;">
+              <p style="margin:0 0 16px 0;font-size:16px;">Cześć {{contact_name}},</p>
+              <p style="margin:0 0 16px 0;font-size:16px;line-height:1.6;">{{prompt_text}}</p>
+              <p style="margin:0 0 20px 0;font-size:15px;color:#475569;">Wybierz ocenę poniżej, aby dać nam znać, jak nam poszło:</p>
+              <div style="text-align:center;margin:24px 0;">
+                {{rating_buttons_html}}
+              </div>
+              <div style="background-color:#f1f5f9;border-radius:10px;padding:16px 20px;margin:24px 0;">
+                <p style="margin:0;font-size:14px;color:#475569;">Jeśli przyciski się nie załadują, otwórz ten bezpieczny link do ankiety:</p>
+                <p style="margin:12px 0 0 0;font-size:14px;color:#2563eb;word-break:break-all;">
+                  <a href="{{survey_url}}" style="color:#2563eb;text-decoration:none;">{{survey_url}}</a>
+                </p>
+              </div>
+              <p style="margin:0 0 20px 0;font-size:14px;color:#475569;white-space:pre-line;">{{rating_links_text}}</p>
+              <p style="margin:0;font-size:16px;line-height:1.6;">{{thank_you_text}}</p>
+              <p style="margin:20px 0 0 0;font-size:12px;color:#94a3b8;">
+                {{tenant_name}} · Zgłoszenie #{{ticket_number}} · {{ticket_closed_at}}
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`,
+      text_content: `Chętnie poznamy Twoją opinię o zgłoszeniu {{ticket_number}}
+
+Cześć {{contact_name}},
+Zgłoszenie #{{ticket_number}} · {{ticket_subject}}
+Technik: {{technician_name}}
+
+{{prompt_text}}
+Wybierz ocenę poniżej, aby dać nam znać, jak nam poszło:
+
+Jeśli przyciski się nie załadują, otwórz ten bezpieczny link do ankiety:
+{{rating_links_text}}
+
+{{thank_you_text}}
+
+{{tenant_name}} · Zgłoszenie #{{ticket_number}} · {{ticket_closed_at}}`
     }
   ]).onConflict(['name', 'language_code']).merge({
     subject: knex.raw('excluded.subject'),
@@ -1138,7 +1634,6 @@ Zobacz fakturę: {{invoice.url}}
 
 exports.down = async function(knex) {
   // Remove Polish email templates
-  // NOTE: email-verification and portal-invitation are NOT removed as they're managed by migration 20251029100000
   await knex('system_email_templates')
     .where({ language_code: 'pl' })
     .whereIn('name', [
@@ -1152,7 +1647,14 @@ exports.down = async function(knex) {
       'ticket-comment-added',
       'invoice-generated',
       'payment-received',
-      'payment-overdue'
+      'payment-overdue',
+      'portal-invitation',
+      'email-verification',
+      'appointment-request-received',
+      'appointment-request-approved',
+      'appointment-request-declined',
+      'new-appointment-request',
+      'SURVEY_TICKET_CLOSED'
     ])
     .del();
 
