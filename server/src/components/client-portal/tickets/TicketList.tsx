@@ -317,6 +317,12 @@ export function TicketList() {
                 responseState={responseState}
                 isClientPortal={true}
                 size="sm"
+                labels={{
+                  awaitingClient: t('tickets.responseState.awaitingYourResponse', 'Awaiting Your Response'),
+                  awaitingInternal: t('tickets.responseState.awaitingSupportResponse', 'Awaiting Support Response'),
+                  awaitingClientTooltip: t('tickets.responseState.awaitingYourResponseTooltip', 'Support is waiting for your response'),
+                  awaitingInternalTooltip: t('tickets.responseState.awaitingSupportResponseTooltip', 'Your response has been received. Support will respond soon.'),
+                }}
               />
             )}
           </div>

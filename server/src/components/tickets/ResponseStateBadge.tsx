@@ -6,6 +6,13 @@ import { Clock, ArrowRightFromLine, ArrowLeftToLine } from 'lucide-react';
 import { TicketResponseState } from 'server/src/interfaces/ticket.interfaces';
 import { Tooltip } from 'server/src/components/ui/Tooltip';
 
+export interface ResponseStateLabels {
+  awaitingClient: string;
+  awaitingInternal: string;
+  awaitingClientTooltip: string;
+  awaitingInternalTooltip: string;
+}
+
 interface ResponseStateBadgeProps {
   responseState: TicketResponseState;
   variant?: 'badge' | 'text';
@@ -13,6 +20,8 @@ interface ResponseStateBadgeProps {
   showTooltip?: boolean;
   /** Use client-friendly wording for client portal */
   isClientPortal?: boolean;
+  /** Override labels with i18n translated strings */
+  labels?: ResponseStateLabels;
   className?: string;
 }
 
@@ -20,13 +29,27 @@ interface ResponseStateBadgeProps {
  * Get the display text for a response state.
  * @param state - The response state
  * @param isClientPortal - Whether to use client-friendly wording
+ * @param labels - Optional i18n translated labels
  * @returns Display text
  */
 export function getResponseStateLabel(
   state: TicketResponseState,
-  isClientPortal: boolean = false
+  isClientPortal: boolean = false,
+  labels?: ResponseStateLabels
 ): string {
   if (!state) return '';
+
+  // Use provided labels if available
+  if (labels) {
+    switch (state) {
+      case 'awaiting_client':
+        return labels.awaitingClient;
+      case 'awaiting_internal':
+        return labels.awaitingInternal;
+      default:
+        return '';
+    }
+  }
 
   if (isClientPortal) {
     switch (state) {
@@ -54,9 +77,22 @@ export function getResponseStateLabel(
  */
 function getResponseStateTooltip(
   state: TicketResponseState,
-  isClientPortal: boolean = false
+  isClientPortal: boolean = false,
+  labels?: ResponseStateLabels
 ): string {
   if (!state) return '';
+
+  // Use provided labels if available
+  if (labels) {
+    switch (state) {
+      case 'awaiting_client':
+        return labels.awaitingClientTooltip;
+      case 'awaiting_internal':
+        return labels.awaitingInternalTooltip;
+      default:
+        return '';
+    }
+  }
 
   if (isClientPortal) {
     switch (state) {
@@ -107,6 +143,7 @@ export function ResponseStateBadge({
   size = 'sm',
   showTooltip = true,
   isClientPortal = false,
+  labels,
   className,
 }: ResponseStateBadgeProps) {
   // Don't render anything if no response state
@@ -114,8 +151,8 @@ export function ResponseStateBadge({
     return null;
   }
 
-  const label = getResponseStateLabel(responseState, isClientPortal);
-  const tooltip = getResponseStateTooltip(responseState, isClientPortal);
+  const label = getResponseStateLabel(responseState, isClientPortal, labels);
+  const tooltip = getResponseStateTooltip(responseState, isClientPortal, labels);
 
   const sizeClasses = {
     sm: 'px-1.5 py-0.5 text-xs',
