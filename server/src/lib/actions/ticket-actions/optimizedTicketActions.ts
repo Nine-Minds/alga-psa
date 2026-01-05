@@ -22,6 +22,7 @@ import { getEmailEventChannel } from '../../../lib/notifications/emailChannel';
 import { convertBlockNoteToMarkdown } from 'server/src/lib/utils/blocknoteUtils';
 import { getImageUrl } from 'server/src/lib/actions/document-actions/documentActions';
 import { getClientLogoUrl, getUserAvatarUrl, getClientLogoUrlsBatch } from 'server/src/lib/utils/avatarUtils';
+import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
 import {
   ticketFormSchema,
   ticketSchema,
@@ -59,7 +60,13 @@ async function safePublishEvent(eventType: string, payload: any) {
  * Consolidated function to get all ticket data for the ticket details page
  * This reduces multiple network calls by fetching all related data in a single server action
  */
-export async function getConsolidatedTicketData(ticketId: string, user: IUser) {
+export async function getConsolidatedTicketData(ticketId: string) {
+  // Get current user from session (server-side) for security
+  const user = await getCurrentUser();
+  if (!user) {
+    throw new Error('No authenticated user found');
+  }
+
   const {knex: db, tenant} = await createTenantKnex();
   if (!tenant) {
     throw new Error('Tenant not found');
@@ -114,7 +121,7 @@ export async function getConsolidatedTicketData(ticketId: string, user: IUser) {
       throw new Error('Ticket not found');
     }
 
-    // Fetch all related data in parallel
+    // Fetch all related data in parallel (including tags for immediate display)
     const [
       comments,
       documents,
@@ -124,7 +131,8 @@ export async function getConsolidatedTicketData(ticketId: string, user: IUser) {
       statuses,
       boards,
       priorities,
-      categories
+      categories,
+      tags
     ] = await Promise.all([
       // Comments
       trx('comments')
@@ -194,7 +202,28 @@ export async function getConsolidatedTicketData(ticketId: string, user: IUser) {
       // Categories
       trx('categories')
         .where({ tenant })
-        .orderBy('category_name', 'asc')
+        .orderBy('category_name', 'asc'),
+
+      // Tags for this ticket (pre-fetched for immediate display)
+      trx('tag_mappings as tm')
+        .select(
+          'td.tag_id',
+          'td.tag_text',
+          'td.tagged_type',
+          'td.background_color',
+          'td.text_color',
+          'tm.mapping_id',
+          'tm.tagged_id'
+        )
+        .join('tag_definitions as td', function() {
+          this.on('tm.tag_id', 'td.tag_id')
+              .andOn('tm.tenant', 'td.tenant')
+        })
+        .where({
+          'tm.tagged_id': ticketId,
+          'tm.tagged_type': 'ticket',
+          'tm.tenant': tenant
+        })
     ]);
 
     // --- Add Logo URL Processing for the fetched 'clients' list ---
@@ -505,7 +534,15 @@ export async function getConsolidatedTicketData(ticketId: string, user: IUser) {
       categories,
       clients: clientsWithLogos,
       locations,
-      agentSchedules: agentSchedulesList
+      agentSchedules: agentSchedulesList,
+      tags: tags.map((tag: any) => ({
+        tag_id: tag.tag_id,
+        tag_text: tag.tag_text,
+        tagged_id: tag.tagged_id,
+        tagged_type: tag.tagged_type,
+        background_color: tag.background_color,
+        text_color: tag.text_color
+      }))
     };
     } catch (error) {
       console.error('Failed to fetch consolidated ticket data:', error);
@@ -929,6 +966,20 @@ export async function updateTicketWithCache(id: string, data: Partial<ITicket>, 
     }
     if ('subcategory_id' in updateData && !updateData.subcategory_id) {
       updateData.subcategory_id = null;
+    }
+
+    // Validate board_id belongs to the same tenant if being updated
+    if ('board_id' in updateData && updateData.board_id) {
+      const board = await trx('boards')
+        .where({
+          board_id: updateData.board_id,
+          tenant: tenant
+        })
+        .first();
+
+      if (!board) {
+        throw new Error('Invalid board_id: Board does not exist or does not belong to this tenant');
+      }
     }
 
     // Handle ITIL priority calculation if impact or urgency is being updated

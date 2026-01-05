@@ -54,7 +54,7 @@ const schema = BlockNoteSchema.create({
   },
 });
 
-export default function TextEditor({ 
+export default function TextEditor({
   id = 'text-editor',
   roomName,
   initialContent: propInitialContent,
@@ -240,7 +240,7 @@ export default function TextEditor({
     if (editorRef) {
       editorRef.current = editor;
     }
-    
+
     // Cleanup editorRef when component unmounts
     return () => {
       if (editorRef) {
@@ -248,6 +248,7 @@ export default function TextEditor({
       }
     };
   }, [editor, editorRef]);
+
 
   // Handle content changes
   useEffect(() => {
@@ -269,7 +270,16 @@ export default function TextEditor({
     <div className="w-full h-full min-w-0">
       {children}
       <div
-        className="min-h-[100px] h-full w-full bg-white border border-gray-200 rounded-lg p-4 overflow-auto min-w-0"
+        className="min-h-[100px] h-full w-full bg-white border border-gray-200 rounded-lg p-4 overflow-auto min-w-0 cursor-text"
+        onClick={(e) => {
+          // When clicking on the container whitespace, focus the editor
+          // This makes the entire container clickable like professional editors
+          const target = e.target as HTMLElement;
+          // Only focus if clicking on the container itself, not on editor content
+          if (target.classList.contains('cursor-text') || target.closest('.bn-container')) {
+            editor.focus();
+          }
+        }}
         onDragStart={(e) => {
           // Only prevent drag from elements with draggable="true" attribute (the drag handle)
           const target = e.target as HTMLElement;
@@ -282,11 +292,12 @@ export default function TextEditor({
         <BlockNoteView
           editor={editor}
           theme="light"
-          className="w-full min-w-0 [&_.ProseMirror]:break-words [&_.ProseMirror]:max-w-full [&_.ProseMirror]:min-w-0 [&_.bn-block-outer_[data-drag-handle]]:!hidden [&_[draggable='true']]:!hidden"
+          className="w-full h-full min-w-0 min-h-full [&_.ProseMirror]:break-words [&_.ProseMirror]:max-w-full [&_.ProseMirror]:min-w-0 [&_.ProseMirror]:min-h-full [&_.ProseMirror]:cursor-text [&_.bn-block-outer_[data-drag-handle]]:!hidden [&_[draggable='true']]:!hidden [&_.bn-editor]:min-h-full"
           editable={true}
           style={{
             overflowWrap: 'break-word',
-            minWidth: 0
+            minWidth: 0,
+            minHeight: '100%'
           }}
         >
           <SuggestionMenuController

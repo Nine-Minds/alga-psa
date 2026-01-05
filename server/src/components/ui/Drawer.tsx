@@ -58,12 +58,58 @@ const Drawer: React.FC<DrawerProps & AutomationProps> = ({
       <Dialog.Portal>
         <Dialog.Overlay
           className={`fixed inset-0 bg-black/50 transition-opacity duration-300 data-[state=closed]:opacity-0 data-[state=open]:opacity-100 ${isInDrawer ? 'z-[60]' : 'z-50'}`}
-          onClick={() => onClose()} // Explicitly handle overlay clicks
+          // Note: Radix Dialog handles overlay clicks via onOpenChange on Root.
+          // We removed explicit onClick here because it conflicts with Portal-based dropdowns
+          // (CustomSelect, UserPicker, etc.) which render outside Dialog.Content but visually
+          // above the overlay. The explicit onClick was causing the drawer to close or
+          // navigation to occur when clicking on these dropdown portals.
         />
-        <Dialog.Content 
+        <Dialog.Content
           className={`fixed inset-y-0 right-0 ${widthClasses} bg-white shadow-lg focus:outline-none overflow-y-auto transform transition-all duration-300 ease-in-out will-change-transform data-[state=open]:translate-x-0 data-[state=closed]:translate-x-full data-[state=closed]:opacity-0 data-[state=open]:opacity-100 ${drawerVariant === 'document' ? 'ticket-document-drawer' : ''} ${isInDrawer ? 'z-[61]' : 'z-50'}`}
           style={widthStyle}
           onCloseAutoFocus={(e) => e.preventDefault()}
+          onPointerDownOutside={(e) => {
+            // Prevent drawer from closing when clicking on portaled elements
+            // (dropdowns, pickers, etc.) that render outside the drawer content
+            const target = e.target as HTMLElement;
+            // Check if click is on a Radix portal content (select, popover, etc.)
+            // or any high z-index fixed positioned element (UserPicker, CustomSelect portals)
+            const isPortalContent =
+              target.closest('[data-radix-popper-content-wrapper]') ||
+              target.closest('[data-radix-select-content]') ||
+              target.closest('[data-radix-popover-content]') ||
+              target.closest('[role="listbox"]') ||
+              target.closest('[role="menu"]') ||
+              target.closest('[role="dialog"]');
+
+            // Also check if clicking on a high z-index fixed element
+            const style = window.getComputedStyle(target);
+            const zIndex = parseInt(style.zIndex || '0', 10);
+            const isHighZIndex = style.position === 'fixed' && zIndex >= 10000;
+
+            if (isPortalContent || isHighZIndex) {
+              e.preventDefault();
+            }
+          }}
+          onInteractOutside={(e) => {
+            // Same prevention for general interactions outside
+            const target = e.target as HTMLElement;
+            const isPortalContent =
+              target.closest('[data-radix-popper-content-wrapper]') ||
+              target.closest('[data-radix-select-content]') ||
+              target.closest('[data-radix-popover-content]') ||
+              target.closest('[role="listbox"]') ||
+              target.closest('[role="menu"]') ||
+              target.closest('[role="dialog"]');
+
+            const style = window.getComputedStyle(target);
+            const zIndex = parseInt(style.zIndex || '0', 10);
+            const isHighZIndex = style.position === 'fixed' && zIndex >= 10000;
+
+            if (isPortalContent || isHighZIndex) {
+              e.preventDefault();
+            }
+          }}
         >
           {/* Visually hidden title for accessibility */}
           <Dialog.Title className="sr-only">

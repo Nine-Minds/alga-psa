@@ -376,7 +376,7 @@ export default function TaskTicketLinks({
         return;
       }
       
-      const ticketData = await getConsolidatedTicketData(ticketId, user);
+      const ticketData = await getConsolidatedTicketData(ticketId);
       if (!ticketData) {
         toast.error('Failed to load ticket');
         return;
