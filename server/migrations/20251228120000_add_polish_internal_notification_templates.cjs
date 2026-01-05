@@ -122,7 +122,11 @@ const TEMPLATE_TO_SUBTYPE = {
   'message-sent': 'message-sent',
   'user-mentioned-in-comment': 'user-mentioned',
   'user-mentioned-in-document': 'user-mentioned',
-  'ticket-additional-agent-added-client': 'ticket-additional-agent-added'
+  'ticket-additional-agent-added-client': 'ticket-additional-agent-added',
+  'appointment-request-created-client': 'appointment-request-created',
+  'appointment-request-created-staff': 'appointment-request-created',
+  'appointment-request-cancelled-client': 'appointment-request-cancelled',
+  'appointment-request-cancelled-staff': 'appointment-request-cancelled'
 };
 
 exports.up = async function(knex) {

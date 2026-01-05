@@ -35,13 +35,14 @@ exports.up = async function(knex) {
   const getSubtypeId = (name) => {
     const subtype = subtypes.find(s => s.name === name);
     if (!subtype) {
-      throw new Error(`Notification subtype '${name}' not found`);
+      console.warn(`Notification subtype '${name}' not found, skipping template`);
+      return null;
     }
     return subtype.id;
   };
 
-  // Insert Polish templates
-  await knex('system_email_templates').insert([
+  // Build Polish templates array
+  const allTemplates = [
     // Authentication templates
     // NOTE: email-verification template is managed in migration 20251029100000
     {
@@ -1622,14 +1623,24 @@ Jeśli przyciski się nie załadują, otwórz ten bezpieczny link do ankiety:
 
 {{tenant_name}} · Zgłoszenie #{{ticket_number}} · {{ticket_closed_at}}`
     }
-  ]).onConflict(['name', 'language_code']).merge({
+  ];
+
+  // Filter out templates with null subtype_ids (those whose subtypes don't exist yet)
+  const validTemplates = allTemplates.filter(t => t.notification_subtype_id !== null);
+
+  if (validTemplates.length === 0) {
+    console.warn('No valid Polish email templates to insert (all subtypes missing)');
+    return;
+  }
+
+  await knex('system_email_templates').insert(validTemplates).onConflict(['name', 'language_code']).merge({
     subject: knex.raw('excluded.subject'),
     html_content: knex.raw('excluded.html_content'),
     text_content: knex.raw('excluded.text_content'),
     notification_subtype_id: knex.raw('excluded.notification_subtype_id')
   });
 
-  console.log('✓ Polish email templates added (auth + notifications)');
+  console.log(`✓ Polish email templates added (${validTemplates.length} of ${allTemplates.length} templates)`);
 };
 
 exports.down = async function(knex) {
