@@ -167,6 +167,8 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   const [quickViewTicketData, setQuickViewTicketData] = useState<any>(null);
   const [isTicketQuickViewOpen, setIsTicketQuickViewOpen] = useState(false);
   const [isLoadingTicketQuickView, setIsLoadingTicketQuickView] = useState(false);
+  const [quickViewHasUnsavedChanges, setQuickViewHasUnsavedChanges] = useState(false);
+  const [showQuickViewCloseConfirm, setShowQuickViewCloseConfirm] = useState(false);
 
   // Tag-related state
   const [selectedTags, setSelectedTags] = useState<string[]>(initialFilterValues.tags || []);
@@ -1228,16 +1230,27 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
       <Drawer
         isOpen={isTicketQuickViewOpen}
         onClose={() => {
+          // Block close if there are unsaved changes - show confirmation first
+          if (quickViewHasUnsavedChanges) {
+            setShowQuickViewCloseConfirm(true);
+            return;
+          }
           setIsTicketQuickViewOpen(false);
           setQuickViewTicketId(null);
           setQuickViewTicketData(null);
+          setQuickViewHasUnsavedChanges(false);
         }}
+        width="60vw"
       >
         {isLoadingTicketQuickView ? (
           <div className="flex items-center justify-center h-64">
             <Spinner />
           </div>
-        ) : quickViewTicketData && (
+        ) : !quickViewTicketData ? (
+          <div className="flex items-center justify-center h-64 text-gray-500">
+            No ticket data available
+          </div>
+        ) : (
           <TicketDetails
             id="ticket-quick-view"
             initialTicket={quickViewTicketData.ticket}
@@ -1262,9 +1275,29 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
             initialAgentSchedules={quickViewTicketData.agentSchedules}
             initialTags={quickViewTicketData.tags}
             currentUser={currentUser}
+            onHasUnsavedChangesChange={setQuickViewHasUnsavedChanges}
           />
         )}
       </Drawer>
+
+      {/* Quick View Close Confirmation Dialog */}
+      <ConfirmationDialog
+        id="quick-view-close-confirm"
+        isOpen={showQuickViewCloseConfirm}
+        onClose={() => setShowQuickViewCloseConfirm(false)}
+        onConfirm={() => {
+          // Discard changes and close
+          setShowQuickViewCloseConfirm(false);
+          setIsTicketQuickViewOpen(false);
+          setQuickViewTicketId(null);
+          setQuickViewTicketData(null);
+          setQuickViewHasUnsavedChanges(false);
+        }}
+        title="Unsaved Changes"
+        message="You have unsaved changes. Are you sure you want to close? Your changes will be lost."
+        confirmLabel="Discard changes"
+        cancelLabel="Continue editing"
+      />
     </ReflectionContainer>
   );
 };

@@ -95,6 +95,9 @@ interface TicketDetailsProps {
     // Current user (for drawer usage)
     currentUser?: IUser | null;
 
+    // Callback when unsaved changes state changes (for drawer close blocking)
+    onHasUnsavedChangesChange?: (hasUnsaved: boolean) => void;
+
     // Optimized handlers
     onTicketUpdate?: (field: string, value: any) => Promise<void>;
     onAddComment?: (content: string, isInternal: boolean, isResolution: boolean) => Promise<void>;
@@ -130,6 +133,8 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     initialTags = [],
     // Current user (for drawer usage)
     currentUser,
+    // Callback when unsaved changes state changes (for drawer close blocking)
+    onHasUnsavedChangesChange,
     // Optimized handlers
     onTicketUpdate,
     onAddComment,
@@ -231,6 +236,13 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     // Check if there are any unsaved changes (either saved to local state or temp field changes)
     const hasAnyUnsavedChanges = hasUnsavedChanges || hasTempChanges;
 
+    // Notify parent of unsaved changes state (for drawer close blocking)
+    useEffect(() => {
+        if (onHasUnsavedChangesChange) {
+            onHasUnsavedChangesChange(hasAnyUnsavedChanges);
+        }
+    }, [hasAnyUnsavedChanges, onHasUnsavedChangesChange]);
+
     // Warn before leaving page with unsaved changes (browser navigation)
     useEffect(() => {
         const handleBeforeUnload = (e: BeforeUnloadEvent) => {
@@ -245,7 +257,12 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     }, [hasAnyUnsavedChanges]);
 
     // Intercept internal navigation (clicking links) when there are unsaved changes
+    // Skip this when in drawer mode to avoid interfering with drawer interactions
     useEffect(() => {
+        // Don't add document-level click handler when in drawer mode
+        // This prevents interference with dropdown menus and other UI elements in the drawer
+        if (isInDrawer) return;
+
         const handleClick = (e: MouseEvent) => {
             if (!hasAnyUnsavedChanges) return;
 
@@ -266,7 +283,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
 
         document.addEventListener('click', handleClick, true);
         return () => document.removeEventListener('click', handleClick, true);
-    }, [hasAnyUnsavedChanges]);
+    }, [hasAnyUnsavedChanges, isInDrawer]);
 
     // Timer logic
     const tick = useCallback(() => {
@@ -408,8 +425,12 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     }, [isTracking]);
 
     // Proactive auto-start on mount when userId/ticketId ready (no dialog on lock)
+    // Skip auto-start when in drawer mode (Quick View) - user is just previewing
     const autoStartedRef = React.useRef(false);
     useEffect(() => {
+        // Don't auto-start tracking in drawer mode
+        if (isInDrawer) return;
+
         const auto = async () => {
             if (autoStartedRef.current) return;
             if (!initialTicket.ticket_id || !userId) return;
@@ -428,7 +449,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
         };
         auto();
         // only attempt once when ids are ready and not already tracking
-    }, [initialTicket.ticket_id, userId, isTracking]);
+    }, [initialTicket.ticket_id, userId, isTracking, isInDrawer]);
 
     // New screens start from zero; no seeding from existing intervals
 
@@ -1303,16 +1324,32 @@ const handleClose = () => {
         toast.success('Changes discarded');
     }, [hasUnsavedChanges, originalTicket]);
 
-    // Handle navigation away confirmation (for internal links when unsaved changes exist)
+    // Handle navigation away - discard changes and navigate
     const handleNavigateAwayConfirm = useCallback(() => {
         setShowNavigateAwayDialog(false);
         if (pendingNavigationUrl) {
             // Reset unsaved changes flag before navigating to prevent re-trigger
             setHasUnsavedChanges(false);
+            setHasTempChanges(false);
             router.push(pendingNavigationUrl);
         }
     }, [pendingNavigationUrl, router]);
 
+    // Handle navigation away - save changes first, then navigate
+    const handleNavigateAwaySave = useCallback(async () => {
+        setShowNavigateAwayDialog(false);
+        try {
+            await handleSaveTicket();
+            if (pendingNavigationUrl) {
+                router.push(pendingNavigationUrl);
+            }
+        } catch (error) {
+            console.error('Failed to save ticket before navigation:', error);
+            toast.error('Failed to save changes');
+        }
+    }, [handleSaveTicket, pendingNavigationUrl, router]);
+
+    // Handle navigation away - continue editing (dismiss dialog)
     const handleNavigateAwayDismiss = useCallback(() => {
         setShowNavigateAwayDialog(false);
         setPendingNavigationUrl(null);
@@ -1449,11 +1486,13 @@ const handleClose = () => {
                     id={`${id}-navigate-away-dialog`}
                     isOpen={showNavigateAwayDialog}
                     onClose={handleNavigateAwayDismiss}
-                    onConfirm={handleNavigateAwayConfirm}
+                    onConfirm={handleNavigateAwaySave}
+                    onCancel={handleNavigateAwayConfirm}
                     title="Unsaved Changes"
-                    message="You have unsaved changes. Are you sure you want to leave? Your changes will be lost."
-                    confirmLabel="Leave Without Saving"
-                    cancelLabel="Stay on Page"
+                    message="Are you sure you want to leave? Any unsaved changes will be lost."
+                    confirmLabel="Save changes"
+                    cancelLabel="Continue editing"
+                    thirdButtonLabel="Discard changes"
                 />
 
                 <div className="flex gap-6 min-w-0">
