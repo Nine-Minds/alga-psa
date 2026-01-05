@@ -23,6 +23,7 @@ import {
   AlertCircle,
   Clock,
   Repeat,
+  Stethoscope,
 } from 'lucide-react';
 import type { EmailProvider } from './EmailProviderConfiguration';
 import { INBOUND_DEFAULTS_WARNING, providerNeedsInboundDefaults } from './emailProviderDefaults';
@@ -36,6 +37,7 @@ interface EmailProviderCardProps {
   onTestConnection: (provider: EmailProvider) => void;
   onRefreshWatchSubscription: (provider: EmailProvider) => void;
   onRetryRenewal: (provider: EmailProvider) => void;
+  onRunDiagnostics: (provider: EmailProvider) => void;
   onChangeDefaults: (provider: EmailProvider, defaultsId?: string) => void | Promise<void>;
 }
 
@@ -125,6 +127,7 @@ export function EmailProviderCard({
   onTestConnection,
   onRefreshWatchSubscription,
   onRetryRenewal,
+  onRunDiagnostics,
   onChangeDefaults,
 }: EmailProviderCardProps) {
   const expirationStatus = getExpirationStatus(provider);
@@ -170,10 +173,16 @@ export function EmailProviderCard({
                   </DropdownMenuItem>
                 )}
                 {provider.providerType === 'microsoft' && (
-                  <DropdownMenuItem onClick={() => onRetryRenewal(provider)}>
-                    <RefreshCw className="h-4 w-4 mr-2" />
-                    Retry Renewal
-                  </DropdownMenuItem>
+                  <>
+                    <DropdownMenuItem onClick={() => onRetryRenewal(provider)}>
+                      <RefreshCw className="h-4 w-4 mr-2" />
+                      Retry Renewal
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => onRunDiagnostics(provider)}>
+                      <Stethoscope className="h-4 w-4 mr-2" />
+                      Run Microsoft 365 Diagnostics
+                    </DropdownMenuItem>
+                  </>
                 )}
                 <DropdownMenuSeparator />
                 <DropdownMenuItem

@@ -288,7 +288,6 @@ export function QuickAddAsset({ clientId, onAssetAdded, onClose, defaultOpen = f
                   workstation: { ...prev.workstation, os_type: e.target.value }
                 }))}
                 placeholder="e.g., Windows, macOS, Linux"
-                required
               />
             </div>
             <div {...withDataAutomationId({ id: 'workstation-os-version-container' })}>
@@ -301,7 +300,6 @@ export function QuickAddAsset({ clientId, onAssetAdded, onClose, defaultOpen = f
                   workstation: { ...prev.workstation, os_version: e.target.value }
                 }))}
                 placeholder="e.g., 11, Monterey, Ubuntu 22.04"
-                required
               />
             </div>
           </>
@@ -339,7 +337,6 @@ export function QuickAddAsset({ clientId, onAssetAdded, onClose, defaultOpen = f
                   network_device: { ...prev.network_device, management_ip: e.target.value }
                 }))}
                 placeholder="e.g., 192.168.1.1"
-                required
               />
             </div>
           </>
@@ -358,7 +355,6 @@ export function QuickAddAsset({ clientId, onAssetAdded, onClose, defaultOpen = f
                   server: { ...prev.server, os_type: e.target.value }
                 }))}
                 placeholder="e.g., Windows Server, Ubuntu Server"
-                required
               />
             </div>
             <div {...withDataAutomationId({ id: 'server-os-version-container' })}>
@@ -371,7 +367,6 @@ export function QuickAddAsset({ clientId, onAssetAdded, onClose, defaultOpen = f
                   server: { ...prev.server, os_version: e.target.value }
                 }))}
                 placeholder="e.g., 2022, 22.04 LTS"
-                required
               />
             </div>
           </>
@@ -406,7 +401,6 @@ export function QuickAddAsset({ clientId, onAssetAdded, onClose, defaultOpen = f
                   mobile_device: { ...prev.mobile_device, model: e.target.value }
                 }))}
                 placeholder="e.g., iPhone 14 Pro, Galaxy S23"
-                required
               />
             </div>
           </>
@@ -424,7 +418,6 @@ export function QuickAddAsset({ clientId, onAssetAdded, onClose, defaultOpen = f
                 printer: { ...prev.printer, model: e.target.value }
               }))}
               placeholder="e.g., HP LaserJet Pro M404n"
-              required
             />
           </div>
         );
