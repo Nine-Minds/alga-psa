@@ -209,6 +209,8 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     // This matches the pattern used in ClientDetails and ContactDetails components.
     const [originalTicket, setOriginalTicket] = useState<ITicket & { tenant: string | undefined }>(initialTicket);
     const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+    // Track unsaved temp changes from TicketInfo (dropdown field changes before Save is clicked)
+    const [hasTempChanges, setHasTempChanges] = useState(false);
     const [isSavingTicket, setIsSavingTicket] = useState(false);
     const [hasAttemptedSave, setHasAttemptedSave] = useState(false);
     const [validationErrors, setValidationErrors] = useState<string[]>([]);
@@ -226,10 +228,13 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     // Create a single instance of the service
     const intervalService = useMemo(() => new IntervalTrackingService(), []);
 
+    // Check if there are any unsaved changes (either saved to local state or temp field changes)
+    const hasAnyUnsavedChanges = hasUnsavedChanges || hasTempChanges;
+
     // Warn before leaving page with unsaved changes (browser navigation)
     useEffect(() => {
         const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-            if (hasUnsavedChanges) {
+            if (hasAnyUnsavedChanges) {
                 e.preventDefault();
                 e.returnValue = ''; // Required for Chrome
             }
@@ -237,12 +242,12 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
 
         window.addEventListener('beforeunload', handleBeforeUnload);
         return () => window.removeEventListener('beforeunload', handleBeforeUnload);
-    }, [hasUnsavedChanges]);
+    }, [hasAnyUnsavedChanges]);
 
     // Intercept internal navigation (clicking links) when there are unsaved changes
     useEffect(() => {
         const handleClick = (e: MouseEvent) => {
-            if (!hasUnsavedChanges) return;
+            if (!hasAnyUnsavedChanges) return;
 
             const target = e.target as HTMLElement;
             const link = target.closest('a[href]') as HTMLAnchorElement;
@@ -261,7 +266,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
 
         document.addEventListener('click', handleClick, true);
         return () => document.removeEventListener('click', handleClick, true);
-    }, [hasUnsavedChanges]);
+    }, [hasAnyUnsavedChanges]);
 
     // Timer logic
     const tick = useCallback(() => {
@@ -1315,14 +1320,14 @@ const handleClose = () => {
 
     // Callback for BackNav to check unsaved changes before navigation
     const handleBeforeNavigate = useCallback(() => {
-        if (hasUnsavedChanges) {
+        if (hasAnyUnsavedChanges) {
             // Set pending URL and show dialog
             setPendingNavigationUrl('/msp/tickets');
             setShowNavigateAwayDialog(true);
             return false; // Prevent immediate navigation
         }
         return true; // Allow navigation
-    }, [hasUnsavedChanges]);
+    }, [hasAnyUnsavedChanges]);
 
     return (
         <ReflectionContainer id={id} label={`Ticket Details - ${ticket.ticket_number}`}>
@@ -1369,7 +1374,7 @@ const handleClose = () => {
                 )}
 
                 {/* Unsaved changes warning banner */}
-                {hasUnsavedChanges && (
+                {hasAnyUnsavedChanges && (
                     <Alert variant="warning" className="mb-4">
                         <AlertCircle className="h-4 w-4" />
                         <AlertDescription>
@@ -1479,6 +1484,7 @@ const handleClose = () => {
                                     onCancelSection={handleCancelChanges}
                                     hasUnsavedChanges={hasUnsavedChanges}
                                     isSavingSection={isSavingTicket}
+                                    onTempChangesUpdate={setHasTempChanges}
                                     // Additional agents props (badge display in TicketInfo)
                                     additionalAgents={additionalAgents}
                                     availableAgents={availableAgents}
