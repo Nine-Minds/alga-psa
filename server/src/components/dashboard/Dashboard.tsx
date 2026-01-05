@@ -60,10 +60,10 @@ interface QuickStartCardProps {
 }
 
 const quickStartStatus: Record<OnboardingStep['status'], { label: string; className: string }> = {
-  not_started: { label: 'Not started', className: 'border-transparent bg-slate-100 text-slate-600' },
-  in_progress: { label: 'In progress', className: 'border-transparent bg-slate-100 text-slate-600' },
-  complete: { label: 'Complete', className: 'border-transparent bg-slate-100 text-slate-600' },
-  blocked: { label: 'Blocked', className: 'border-transparent bg-red-100 text-red-700' },
+  not_started: { label: 'NOT STARTED', className: 'border-transparent bg-slate-100 text-slate-600' },
+  in_progress: { label: 'IN PROGRESS', className: 'border-transparent bg-slate-100 text-slate-600' },
+  complete: { label: 'COMPLETE', className: 'border-transparent bg-slate-100 text-slate-600' },
+  blocked: { label: 'BLOCKED', className: 'border-transparent bg-red-100 text-red-700' },
 };
 
 function ProgressRing({ value }: { value: number }) {
@@ -158,7 +158,7 @@ const QuickStartCard = ({ step, index, onNavigate }: QuickStartCardProps) => {
           <Icon className="h-5 w-5 text-violet-600" />
         </div>
         <div className="min-w-0">
-          <h3 className="text-base font-semibold leading-6 text-slate-900">{step.title}</h3>
+          <h3 className="text-[15px] font-semibold leading-6 text-slate-900">{step.title}</h3>
           <p className="mt-1 text-sm leading-5 text-slate-600">{step.description}</p>
         </div>
       </div>
@@ -176,16 +176,16 @@ const QuickStartCard = ({ step, index, onNavigate }: QuickStartCardProps) => {
         </div>
       ) : null}
 
-      <div className="mt-4 h-px w-full bg-slate-200" />
+      <div className="mt-5 h-px w-full bg-slate-200" />
 
       <div
         className={cn(
-          'mt-4 flex items-center justify-between text-sm font-semibold text-violet-600',
+          'mt-4 inline-flex items-center gap-1 text-sm font-semibold text-violet-600',
           isDisabled && 'text-slate-400'
         )}
       >
-        <span>{isDisabled ? 'Completed' : step.ctaLabel}</span>
-        <ArrowRight className="h-4 w-4" />
+        <span className={cn(!isDisabled && 'group-hover:text-violet-700')}>{isDisabled ? 'Completed' : step.ctaLabel}</span>
+        <ArrowRight className={cn('h-4 w-4', !isDisabled && 'transition-transform group-hover:translate-x-0.5')} />
       </div>
     </div>
   );
