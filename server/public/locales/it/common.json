@@ -817,5 +817,21 @@
       "searchPlaceholder": "Cerca per nome utente, email, dispositivo o indirizzo IP...",
       "noResults": "Nessuna sessione corrisponde alla tua ricerca"
     }
+  },
+  "projects": {
+    "task": {
+      "comments": {
+        "title": "Commenti",
+        "internal_only": "Solo interno",
+        "placeholder": "Aggiungi un commento... Usa @ per menzionare i colleghi",
+        "add_comment": "Aggiungi commento",
+        "no_comments": "Nessun commento ancora. Sii il primo a commentare!",
+        "edited": "Modificato",
+        "error_creating": "Impossibile creare il commento. Riprova.",
+        "error_updating": "Impossibile aggiornare il commento. Riprova.",
+        "error_deleting": "Impossibile eliminare il commento. Riprova.",
+        "confirm_delete": "Sei sicuro di voler eliminare questo commento?"
+      }
+    }
   }
 }

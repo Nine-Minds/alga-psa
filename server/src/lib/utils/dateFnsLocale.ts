@@ -5,6 +5,7 @@ import { es } from 'date-fns/locale/es';
 import { de } from 'date-fns/locale/de';
 import { nl } from 'date-fns/locale/nl';
 import { it } from 'date-fns/locale/it';
+import { pl } from 'date-fns/locale/pl';
 import type { SupportedLocale } from 'server/src/lib/i18n/config';
 
 const DATE_FNS_LOCALES: Record<SupportedLocale, Locale> = {
@@ -14,6 +15,7 @@ const DATE_FNS_LOCALES: Record<SupportedLocale, Locale> = {
   de,
   nl,
   it,
+  pl,
 };
 
 export function getDateFnsLocale(language?: string): Locale {

@@ -259,6 +259,10 @@ exports.seed = async function(knex) {
       it: {
         title: 'Ticket assegnato',
         message: 'Il ticket #{{ticketId}} "{{ticketTitle}}" le è stato assegnato'
+      },
+      pl: {
+        title: 'Zgłoszenie przypisane',
+        message: 'Zgłoszenie #{{ticketId}} "{{ticketTitle}}" zostało do Ciebie przypisane'
       }
     },
     'ticket-created': {
@@ -285,6 +289,10 @@ exports.seed = async function(knex) {
       it: {
         title: 'Nuovo ticket creato',
         message: 'Il ticket #{{ticketId}} "{{ticketTitle}}" è stato creato per {{clientName}}'
+      },
+      pl: {
+        title: 'Nowe zgłoszenie utworzone',
+        message: 'Zgłoszenie #{{ticketId}} "{{ticketTitle}}" zostało utworzone dla {{clientName}}'
       }
     },
     'ticket-updated': {
@@ -311,6 +319,10 @@ exports.seed = async function(knex) {
       it: {
         title: 'Ticket aggiornato',
         message: 'Il ticket #{{ticketId}} "{{ticketTitle}}" è stato aggiornato'
+      },
+      pl: {
+        title: 'Zgłoszenie zaktualizowane',
+        message: 'Zgłoszenie #{{ticketId}} "{{ticketTitle}}" zostało zaktualizowane'
       }
     },
     'ticket-closed': {
@@ -337,6 +349,10 @@ exports.seed = async function(knex) {
       it: {
         title: 'Ticket chiuso',
         message: 'Il ticket #{{ticketId}} "{{ticketTitle}}" è stato chiuso'
+      },
+      pl: {
+        title: 'Zgłoszenie zamknięte',
+        message: 'Zgłoszenie #{{ticketId}} "{{ticketTitle}}" zostało zamknięte'
       }
     },
     'ticket-comment-added': {
@@ -363,6 +379,10 @@ exports.seed = async function(knex) {
       it: {
         title: 'Nuovo commento',
         message: '{{authorName}} ha aggiunto un commento al ticket #{{ticketId}}'
+      },
+      pl: {
+        title: 'Nowy komentarz',
+        message: '{{authorName}} dodał(a) komentarz do zgłoszenia #{{ticketId}}'
       }
     },
     'project-assigned': {
@@ -389,6 +409,10 @@ exports.seed = async function(knex) {
       it: {
         title: 'Progetto assegnato',
         message: 'Il progetto "{{projectName}}" le è stato assegnato'
+      },
+      pl: {
+        title: 'Projekt przypisany',
+        message: 'Projekt "{{projectName}}" został do Ciebie przypisany'
       }
     },
     'project-created': {
@@ -415,6 +439,10 @@ exports.seed = async function(knex) {
       it: {
         title: 'Nuovo progetto creato',
         message: 'Il progetto "{{projectName}}" è stato creato per {{clientName}}'
+      },
+      pl: {
+        title: 'Nowy projekt utworzony',
+        message: 'Projekt "{{projectName}}" został utworzony dla {{clientName}}'
       }
     },
     'task-assigned': {
@@ -441,12 +469,20 @@ exports.seed = async function(knex) {
       it: {
         title: 'Attività assegnata',
         message: 'L\'attività "{{taskName}}" del progetto "{{projectName}}" le è stata assegnata'
+      },
+      pl: {
+        title: 'Zadanie przypisane',
+        message: 'Zadanie "{{taskName}}" w projekcie "{{projectName}}" zostało do Ciebie przypisane'
       }
     },
     'task-comment-added': {
       en: {
         title: 'New Task Comment',
         message: '{{authorName}} added a comment to task "{{taskName}}"'
+      },
+      pl: {
+        title: 'Nowy komentarz do zadania',
+        message: '{{authorName}} dodał(a) komentarz do zadania "{{taskName}}"'
       }
     },
     'milestone-completed': {
@@ -473,6 +509,10 @@ exports.seed = async function(knex) {
       it: {
         title: 'Traguardo completato',
         message: 'La milestone "{{milestoneName}}" del progetto "{{projectName}}" è stata completata'
+      },
+      pl: {
+        title: 'Kamień milowy ukończony',
+        message: 'Kamień milowy "{{milestoneName}}" w projekcie "{{projectName}}" został ukończony'
       }
     },
     'invoice-generated': {
@@ -499,6 +539,10 @@ exports.seed = async function(knex) {
       it: {
         title: 'Fattura generata',
         message: 'La fattura #{{invoiceNumber}} per {{clientName}} è stata generata'
+      },
+      pl: {
+        title: 'Nowa faktura utworzona',
+        message: 'Faktura #{{invoiceNumber}} dla {{clientName}} została utworzona'
       }
     },
     'payment-received': {
@@ -525,6 +569,10 @@ exports.seed = async function(knex) {
       it: {
         title: 'Pagamento ricevuto',
         message: 'Pagamento di {{amount}} ricevuto per la fattura #{{invoiceNumber}}'
+      },
+      pl: {
+        title: 'Otrzymano płatność',
+        message: 'Otrzymano płatność {{amount}} za fakturę #{{invoiceNumber}}'
       }
     },
     'payment-overdue': {
@@ -551,6 +599,10 @@ exports.seed = async function(knex) {
       it: {
         title: 'Pagamento in ritardo',
         message: 'La fattura #{{invoiceNumber}} è in ritardo di {{daysOverdue}} giorni'
+      },
+      pl: {
+        title: 'Płatność po terminie',
+        message: 'Faktura #{{invoiceNumber}} jest przeterminowana o {{daysOverdue}} dni'
       }
     },
     'system-announcement': {
@@ -576,6 +628,10 @@ exports.seed = async function(knex) {
       },
       it: {
         title: 'Annuncio di sistema',
+        message: '{{announcementTitle}}'
+      },
+      pl: {
+        title: 'Ogłoszenie systemowe',
         message: '{{announcementTitle}}'
       }
     },
@@ -603,6 +659,10 @@ exports.seed = async function(knex) {
       it: {
         title: 'È stato menzionato',
         message: '{{authorName}} l\'ha menzionato in {{entityType}} {{entityName}}'
+      },
+      pl: {
+        title: 'Wspomniano o Tobie',
+        message: '{{authorName}} wspomniał(a) o Tobie w {{entityType}} {{entityName}}'
       }
     },
     'appointment-request-created-client': {
@@ -629,6 +689,10 @@ exports.seed = async function(knex) {
       it: {
         title: 'Richiesta di appuntamento inviata',
         message: 'La tua richiesta di appuntamento per {{serviceName}} il {{requestedDate}} è stata inviata ed è in attesa di approvazione.'
+      },
+      pl: {
+        title: 'Wniosek o wizytę wysłany',
+        message: 'Twój wniosek o wizytę na {{serviceName}} w dniu {{requestedDate}} został wysłany i oczekuje na zatwierdzenie.'
       }
     },
     'appointment-request-created-staff': {
@@ -655,6 +719,10 @@ exports.seed = async function(knex) {
       it: {
         title: 'Nuova richiesta di appuntamento da {{clientName}}',
         message: '{{requesterName}} ha richiesto un appuntamento per {{serviceName}} il {{requestedDate}} alle {{requestedTime}}.'
+      },
+      pl: {
+        title: 'Nowy wniosek o wizytę od {{clientName}}',
+        message: '{{requesterName}} poprosił(a) o wizytę na {{serviceName}} w dniu {{requestedDate}} o {{requestedTime}}.'
       }
     },
     'appointment-request-approved': {
@@ -681,6 +749,10 @@ exports.seed = async function(knex) {
       it: {
         title: 'Appuntamento confermato!',
         message: 'Il tuo appuntamento per {{serviceName}} il {{appointmentDate}} alle {{appointmentTime}} è stato confermato. Tecnico assegnato: {{technicianName}}.'
+      },
+      pl: {
+        title: 'Wizyta potwierdzona!',
+        message: 'Twoja wizyta na {{serviceName}} w dniu {{appointmentDate}} o {{appointmentTime}} została potwierdzona. Przypisany technik: {{technicianName}}.'
       }
     },
     'appointment-request-declined': {
@@ -707,6 +779,10 @@ exports.seed = async function(knex) {
       it: {
         title: 'Aggiornamento richiesta di appuntamento',
         message: 'La tua richiesta di appuntamento per {{serviceName}} non ha potuto essere accolta. {{declineReason}}'
+      },
+      pl: {
+        title: 'Aktualizacja wniosku o wizytę',
+        message: 'Nie udało się zrealizować wniosku o wizytę na {{serviceName}}. {{declineReason}}'
       }
     },
     'appointment-request-cancelled-client': {
@@ -733,6 +809,10 @@ exports.seed = async function(knex) {
       it: {
         title: 'Richiesta di appuntamento cancellata',
         message: 'La tua richiesta di appuntamento per {{serviceName}} il {{requestedDate}} è stata cancellata con successo.'
+      },
+      pl: {
+        title: 'Wniosek o wizytę anulowany',
+        message: 'Twój wniosek o wizytę na {{serviceName}} w dniu {{requestedDate}} został pomyślnie anulowany.'
       }
     },
     'appointment-request-cancelled-staff': {
@@ -759,11 +839,15 @@ exports.seed = async function(knex) {
       it: {
         title: 'Richiesta di appuntamento cancellata',
         message: '{{requesterName}} ha cancellato la sua richiesta di appuntamento per {{serviceName}} il {{requestedDate}}.'
+      },
+      pl: {
+        title: 'Wniosek o wizytę anulowany',
+        message: '{{requesterName}} anulował(a) wniosek o wizytę na {{serviceName}} w dniu {{requestedDate}}.'
       }
     }
   };
 
-  const languageCodes = ['en', 'fr', 'es', 'de', 'nl', 'it'];
+  const languageCodes = ['en', 'fr', 'es', 'de', 'nl', 'it', 'pl'];
   const templateRows = [];
 
   for (const [name, translations] of Object.entries(templates)) {
