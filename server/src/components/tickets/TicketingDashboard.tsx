@@ -318,7 +318,10 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     } catch (error) {
       console.error('Error fetching ticket data for quick view:', error);
       toast.error('Failed to load ticket details');
+      // Reset all quick view state to prevent stale data
       setIsTicketQuickViewOpen(false);
+      setQuickViewTicketId(null);
+      setQuickViewTicketData(null);
     } finally {
       setIsLoadingTicketQuickView(false);
     }
