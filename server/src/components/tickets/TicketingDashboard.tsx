@@ -321,7 +321,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     setIsTicketQuickViewOpen(true);
 
     try {
-      const data = await getConsolidatedTicketData(ticketId, currentUser);
+      const data = await getConsolidatedTicketData(ticketId);
       // Only update state if drawer is still open
       if (quickViewOpenRef.current) {
         setQuickViewTicketData(data);

@@ -198,7 +198,7 @@ export function ActivityDetailViewerDrawer({
       switch(activityType) {
         case ActivityType.TICKET: {
           // Use the consolidated function to get all ticket data in a single call
-          const ticketData = await getConsolidatedTicketData(activityId, currentUser);
+          const ticketData = await getConsolidatedTicketData(activityId);
           
           setContent(
             <div className="h-full">
@@ -588,7 +588,7 @@ export function ActivityDetailViewerDrawer({
                   // Load ticket data and render
                   try {
                     setIsLoading(true);
-                    const ticketData = await getConsolidatedTicketData(ticketId, currentUser);
+                    const ticketData = await getConsolidatedTicketData(ticketId);
 
                     setContent(
                       <div className="h-full flex flex-col">

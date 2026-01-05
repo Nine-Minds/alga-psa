@@ -84,7 +84,7 @@ export function WorkItemDetailsDrawer({
 
             switch(workItem.type) {
                 case 'ticket': {
-                    const ticketData = await getConsolidatedTicketData(workItem.work_item_id, currentUser);
+                    const ticketData = await getConsolidatedTicketData(workItem.work_item_id);
                     return (
                         <div className="h-full">
                             <TicketDetails

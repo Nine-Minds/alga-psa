@@ -182,7 +182,7 @@ const ContactTickets: React.FC<ContactTicketsProps> = ({
     }
 
     try {
-      const ticketData = await getConsolidatedTicketData(ticketId, currentUser);
+      const ticketData = await getConsolidatedTicketData(ticketId);
       
       if (!ticketData) {
         toast.error('Failed to load ticket');

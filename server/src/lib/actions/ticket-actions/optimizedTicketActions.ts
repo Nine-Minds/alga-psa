@@ -22,6 +22,7 @@ import { getEmailEventChannel } from '../../../lib/notifications/emailChannel';
 import { convertBlockNoteToMarkdown } from 'server/src/lib/utils/blocknoteUtils';
 import { getImageUrl } from 'server/src/lib/actions/document-actions/documentActions';
 import { getClientLogoUrl, getUserAvatarUrl, getClientLogoUrlsBatch } from 'server/src/lib/utils/avatarUtils';
+import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
 import {
   ticketFormSchema,
   ticketSchema,
@@ -59,7 +60,13 @@ async function safePublishEvent(eventType: string, payload: any) {
  * Consolidated function to get all ticket data for the ticket details page
  * This reduces multiple network calls by fetching all related data in a single server action
  */
-export async function getConsolidatedTicketData(ticketId: string, user: IUser) {
+export async function getConsolidatedTicketData(ticketId: string) {
+  // Get current user from session (server-side) for security
+  const user = await getCurrentUser();
+  if (!user) {
+    throw new Error('No authenticated user found');
+  }
+
   const {knex: db, tenant} = await createTenantKnex();
   if (!tenant) {
     throw new Error('Tenant not found');
