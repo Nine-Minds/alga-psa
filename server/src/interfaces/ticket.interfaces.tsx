@@ -50,6 +50,7 @@ export interface ITicketListItem extends Omit<ITicket, 'status_id' | 'priority_i
   entered_by_name: string;
   assigned_to_name: string | null;
   additional_agent_count?: number;
+  additional_agents?: { user_id: string; name: string }[];  // Additional agents for tooltip display with avatars
 }
 
 export interface ITicketListFilters {

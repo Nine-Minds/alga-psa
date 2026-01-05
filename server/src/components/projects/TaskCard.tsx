@@ -43,6 +43,7 @@ interface TaskCardProps {
   onEditTaskClick: (task: IProjectTask) => void;
   onDeleteTaskClick: (task: IProjectTask) => void;
   onTaskTagsChange?: (taskId: string, tags: ITag[]) => void;
+  avatarUrls?: Record<string, string | null>;
 }
 
 const taskTypeIcons: Record<string, React.ComponentType<any>> = {
@@ -75,6 +76,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({
   onEditTaskClick,
   onDeleteTaskClick,
   onTaskTagsChange,
+  avatarUrls = {},
 }) => {
   // Initialize states based on whether data is already available (empty array) or not yet loaded (null)
   const [taskTickets, setTaskTickets] = useState<IProjectTicketLinkWithDetails[] | null>(
@@ -347,7 +349,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({
                       <UserAvatar
                         userId={resource.additional_user_id}
                         userName={userName}
-                        avatarUrl={null}
+                        avatarUrl={avatarUrls[resource.additional_user_id] ?? null}
                         size="xs"
                       />
                       <span>
@@ -360,7 +362,13 @@ export const TaskCard: React.FC<TaskCardProps> = ({
               </div>
             }
           >
-            <span className="text-xs text-purple-600 font-medium cursor-help bg-purple-50 px-1.5 py-0.5 rounded">
+            <span
+              className="text-xs font-medium cursor-help px-1.5 py-0.5 rounded"
+              style={{
+                color: 'rgb(var(--color-primary-500))',
+                backgroundColor: 'rgb(var(--color-primary-50))'
+              }}
+            >
               +{displayResources.length}
             </span>
           </Tooltip>

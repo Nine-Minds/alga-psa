@@ -37,6 +37,7 @@ import { Tooltip } from 'server/src/components/ui/Tooltip';
 import { generateKeyBetween } from 'fractional-indexing';
 import KanbanBoardSkeleton from 'server/src/components/ui/skeletons/KanbanBoardSkeleton';
 import { useUserPreference } from 'server/src/hooks/useUserPreference';
+import { getUserAvatarUrlsBatchAction } from 'server/src/lib/actions/avatar-actions';
 
 const PROJECT_VIEW_MODE_SETTING = 'project_detail_view_mode';
 
@@ -105,6 +106,7 @@ export default function ProjectDetail({
   const [phaseTicketLinks, setPhaseTicketLinks] = useState<{ [taskId: string]: IProjectTicketLinkWithDetails[] }>({});
   const [phaseTaskResources, setPhaseTaskResources] = useState<{ [taskId: string]: any[] }>({});
   const [phaseTaskDependencies, setPhaseTaskDependencies] = useState<{ [taskId: string]: { predecessors: IProjectTaskDependency[]; successors: IProjectTaskDependency[] } }>({});
+  const [avatarUrls, setAvatarUrls] = useState<Record<string, string | null>>({});
   const [projectPhases, setProjectPhases] = useState<IProjectPhase[]>(phases);
   const [projectStatuses, setProjectStatuses] = useState<ProjectStatus[]>(initialStatuses);
   const [isLoadingTasks, setIsLoadingTasks] = useState(false);
@@ -517,6 +519,41 @@ export default function ProjectDetail({
 
     fetchPhaseTasks();
   }, [selectedPhase]);
+
+  // Fetch avatar URLs for task resources (additional agents)
+  useEffect(() => {
+    const fetchAvatarUrls = async () => {
+      const userIds = new Set<string>();
+
+      // Collect user IDs from task resources
+      Object.values(phaseTaskResources).forEach(resources => {
+        resources.forEach(resource => {
+          if (resource.additional_user_id) {
+            userIds.add(resource.additional_user_id);
+          }
+        });
+      });
+
+      if (userIds.size === 0) return;
+
+      // Get tenant from project
+      const tenant = project.tenant;
+      if (!tenant) return;
+
+      try {
+        const avatarUrlsMap = await getUserAvatarUrlsBatchAction(Array.from(userIds), tenant);
+        const urlsRecord: Record<string, string | null> = {};
+        avatarUrlsMap.forEach((url, id) => {
+          urlsRecord[id] = url;
+        });
+        setAvatarUrls(urlsRecord);
+      } catch (error) {
+        console.error('Failed to fetch avatar URLs:', error);
+      }
+    };
+
+    fetchAvatarUrls();
+  }, [phaseTaskResources, project.tenant]);
 
   // Handle opening task from URL parameter (e.g., from notifications)
   // First effect: Fetch task and select its phase
@@ -1583,6 +1620,7 @@ export default function ProjectDetail({
               allTaskTags={allTaskTags}
               projectTreeData={projectTreeData} // Pass project tree data
               animatingTasks={animatingTasks}
+              avatarUrls={avatarUrls}
               onDrop={handleDrop}
               onDragOver={handleDragOver}
               onAddCard={handleAddCard}

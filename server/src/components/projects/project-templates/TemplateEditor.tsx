@@ -81,6 +81,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from 'server/src/components/ui/DropdownMenu';
+import { getUserAvatarUrlsBatchAction } from 'server/src/lib/actions/avatar-actions';
 
 // Task type icons mapping (fallback icons when database doesn't specify)
 const taskTypeIcons: Record<string, React.ComponentType<{ className?: string; style?: React.CSSProperties }>> = {
@@ -179,6 +180,7 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
   const [priorities, setPriorities] = useState<Array<{ priority_id: string; priority_name: string; color?: string }>>([]);
   const [users, setUsers] = useState<IUserWithRoles[]>([]);
   const [taskTypes, setTaskTypes] = useState<ITaskType[]>([]);
+  const [avatarUrls, setAvatarUrls] = useState<Record<string, string | null>>({});
 
   // Load reference data
   useEffect(() => {
@@ -213,6 +215,32 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
     };
     loadReferenceData();
   }, []);
+
+  // Fetch avatar URLs for task assignees
+  useEffect(() => {
+    const fetchAvatarUrls = async () => {
+      const userIds = new Set<string>();
+      taskAssignments.forEach(assignment => {
+        if (assignment.user_id) {
+          userIds.add(assignment.user_id);
+        }
+      });
+      if (userIds.size === 0) return;
+      if (!template.tenant) return;
+
+      try {
+        const avatarUrlsMap = await getUserAvatarUrlsBatchAction(Array.from(userIds), template.tenant);
+        const urlsRecord: Record<string, string | null> = {};
+        avatarUrlsMap.forEach((url, id) => {
+          urlsRecord[id] = url;
+        });
+        setAvatarUrls(urlsRecord);
+      } catch (error) {
+        console.error('Failed to fetch avatar URLs:', error);
+      }
+    };
+    fetchAvatarUrls();
+  }, [taskAssignments, template.tenant]);
 
   // Helper to lighten hex color (for background)
   const lightenColor = (hex: string, percent: number) => {
@@ -1135,6 +1163,7 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
                                 checklistItems={checklistItems}
                                 dependencies={dependencies}
                                 allTasks={tasks}
+                                avatarUrls={avatarUrls}
                               />
                             );
                           })}
@@ -1182,6 +1211,7 @@ interface StatusColumnProps {
   checklistItems: IProjectTemplateChecklistItem[];
   dependencies: IProjectTemplateDependency[];
   allTasks: IProjectTemplateTask[];
+  avatarUrls: Record<string, string | null>;
 }
 
 function StatusColumn({
@@ -1205,6 +1235,7 @@ function StatusColumn({
   checklistItems,
   dependencies,
   allTasks,
+  avatarUrls,
 }: StatusColumnProps) {
   const [dropIndicatorPosition, setDropIndicatorPosition] = useState<number | null>(null);
   const [isDraggedOver, setIsDraggedOver] = useState(false);
@@ -1349,6 +1380,7 @@ function StatusColumn({
                   successors: dependencies.filter(d => d.predecessor_task_id === task.template_task_id)
                 }}
                 allTasks={allTasks}
+                avatarUrls={avatarUrls}
               />
             </div>
           ))}
@@ -1383,6 +1415,7 @@ interface TaskCardProps {
   checklistItemsCount: number;
   taskDependencies?: { predecessors: IProjectTemplateDependency[]; successors: IProjectTemplateDependency[] };
   allTasks: IProjectTemplateTask[]; // To get task names for dependencies
+  avatarUrls: Record<string, string | null>;
 }
 
 function TaskCard({
@@ -1400,6 +1433,7 @@ function TaskCard({
   checklistItemsCount,
   taskDependencies,
   allTasks,
+  avatarUrls,
 }: TaskCardProps) {
   const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
   const [descriptionRef, isDescriptionTruncated] = useTruncationDetection(task.description, isDescriptionExpanded);
@@ -1531,7 +1565,7 @@ function TaskCard({
                       <UserAvatar
                         userId={assignment.user_id}
                         userName={userName}
-                        avatarUrl={null}
+                        avatarUrl={avatarUrls[assignment.user_id] ?? null}
                         size="xs"
                       />
                       <span>{userName}</span>
@@ -1541,7 +1575,13 @@ function TaskCard({
               </div>
             }
           >
-            <span className="text-xs text-purple-600 font-medium cursor-help bg-purple-50 px-1.5 py-0.5 rounded">
+            <span
+              className="text-xs font-medium cursor-help px-1.5 py-0.5 rounded"
+              style={{
+                color: 'rgb(var(--color-primary-500))',
+                backgroundColor: 'rgb(var(--color-primary-50))'
+              }}
+            >
               +{additionalAgentsCount}
             </span>
           </Tooltip>

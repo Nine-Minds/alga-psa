@@ -36,6 +36,7 @@ import ClientDetails from 'server/src/components/clients/ClientDetails';
 import { createTicketColumns } from 'server/src/lib/utils/ticket-columns';
 import Spinner from 'server/src/components/ui/Spinner';
 import MultiUserPicker from 'server/src/components/ui/MultiUserPicker';
+import { getUserAvatarUrlsBatchAction } from 'server/src/lib/actions/avatar-actions';
 
 interface TicketingDashboardProps {
   id?: string;
@@ -113,6 +114,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   const [isBulkDeleteDialogOpen, setIsBulkDeleteDialogOpen] = useState(false);
   const [isBulkDeleting, setIsBulkDeleting] = useState(false);
   const [bulkDeleteErrors, setBulkDeleteErrors] = useState<Array<{ ticketId: string; message: string }>>([]);
+  const [additionalAgentAvatarUrls, setAdditionalAgentAvatarUrls] = useState<Record<string, string | null>>({});
 
   const [boards] = useState<IBoard[]>(initialBoards);
   const [clients] = useState<IClient[]>(initialClients);
@@ -187,6 +189,39 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   useEffect(() => {
     setTickets(initialTickets);
   }, [initialTickets]);
+
+  // Fetch avatar URLs for additional agents when tickets change
+  useEffect(() => {
+    const fetchAvatarUrls = async () => {
+      // Collect all unique user IDs from additional agents
+      const userIds = new Set<string>();
+      tickets.forEach(ticket => {
+        ticket.additional_agents?.forEach(agent => {
+          userIds.add(agent.user_id);
+        });
+      });
+
+      if (userIds.size === 0) return;
+
+      // Get tenant from first ticket
+      const tenant = tickets[0]?.tenant;
+      if (!tenant) return;
+
+      try {
+        const avatarUrlsMap = await getUserAvatarUrlsBatchAction(Array.from(userIds), tenant);
+        // Convert Map to Record
+        const urlsRecord: Record<string, string | null> = {};
+        avatarUrlsMap.forEach((url, id) => {
+          urlsRecord[id] = url;
+        });
+        setAdditionalAgentAvatarUrls(urlsRecord);
+      } catch (error) {
+        console.error('Failed to fetch avatar URLs:', error);
+      }
+    };
+
+    fetchAvatarUrls();
+  }, [tickets]);
 
   useEffect(() => {
     const nextTags = initialFilterValues.tags || [];
@@ -568,6 +603,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
       onTagsChange: handleTagsChange,
       showClient: true,
       onClientClick: onQuickViewClient,
+      additionalAgentAvatarUrls,
     });
 
     const selectionColumn: ColumnDefinition<ITicketListItem> = {
@@ -642,6 +678,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     handleSelectAllVisibleTickets,
     handleTicketSelectionChange,
     selectedTicketIds,
+    additionalAgentAvatarUrls,
   ]);
 
   const handleBulkDeleteClose = useCallback(() => {

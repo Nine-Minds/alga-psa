@@ -121,7 +121,8 @@ export async function getClientTickets(status: string): Promise<ITicketListItem[
         'cat.category_name',
         db.raw("CONCAT(u.first_name, ' ', u.last_name) as entered_by_name"),
         db.raw("CONCAT(au.first_name, ' ', au.last_name) as assigned_to_name"),
-        db.raw("(SELECT COUNT(*) FROM ticket_resources tr WHERE tr.ticket_id = t.ticket_id AND tr.tenant = t.tenant)::int as additional_agent_count")
+        db.raw("(SELECT COUNT(*) FROM ticket_resources tr WHERE tr.ticket_id = t.ticket_id AND tr.tenant = t.tenant)::int as additional_agent_count"),
+        db.raw(`(SELECT COALESCE(json_agg(json_build_object('user_id', uu.user_id, 'name', CONCAT(uu.first_name, ' ', uu.last_name))), '[]'::json) FROM ticket_resources tr2 JOIN users uu ON tr2.additional_user_id = uu.user_id AND tr2.tenant = uu.tenant WHERE tr2.ticket_id = t.ticket_id AND tr2.tenant = t.tenant) as additional_agents`)
       )
       .leftJoin('statuses as s', function() {
         this.on('t.status_id', '=', 's.status_id')

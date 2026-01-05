@@ -26,6 +26,7 @@ interface KanbanBoardProps {
   allTaskTags?: ITag[];
   projectTreeData?: any[]; // Add projectTreeData prop
   animatingTasks: Set<string>;
+  avatarUrls?: Record<string, string | null>;
   onDrop: (e: React.DragEvent, statusId: string, draggedTaskId: string, beforeTaskId: string | null, afterTaskId: string | null) => void;
   onDragOver: (e: React.DragEvent) => void;
   onAddCard: (status: ProjectStatus) => void;
@@ -95,6 +96,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
   allTaskTags = [],
   projectTreeData,
   animatingTasks,
+  avatarUrls = {},
   onDrop,
   onDragOver,
   onAddCard,
@@ -178,6 +180,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
             configuredColor={configuredColor}
             isAddingTask={isAddingTask}
             selectedPhase={selectedPhase}
+            avatarUrls={avatarUrls}
             onDrop={onDrop}
             onDragOver={onDragOver}
             onAddCard={onAddCard}
