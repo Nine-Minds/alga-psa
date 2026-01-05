@@ -24,7 +24,7 @@ export default async function TicketDetailsPage({ params }: TicketDetailsPagePro
 
   try {
     const [ticketData, surveySummary] = await Promise.all([
-      getConsolidatedTicketData(id, user),
+      getConsolidatedTicketData(id),
       getSurveyTicketSummary(id).catch((error) => {
         console.error('[TicketDetailsPage] Failed to load survey summary', error);
         return null;
