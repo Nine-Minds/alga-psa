@@ -64,10 +64,38 @@ const Drawer: React.FC<DrawerProps & AutomationProps> = ({
           // above the overlay. The explicit onClick was causing the drawer to close or
           // navigation to occur when clicking on these dropdown portals.
         />
-        <Dialog.Content 
+        <Dialog.Content
           className={`fixed inset-y-0 right-0 ${widthClasses} bg-white shadow-lg focus:outline-none overflow-y-auto transform transition-all duration-300 ease-in-out will-change-transform data-[state=open]:translate-x-0 data-[state=closed]:translate-x-full data-[state=closed]:opacity-0 data-[state=open]:opacity-100 ${drawerVariant === 'document' ? 'ticket-document-drawer' : ''} ${isInDrawer ? 'z-[61]' : 'z-50'}`}
           style={widthStyle}
           onCloseAutoFocus={(e) => e.preventDefault()}
+          onPointerDownOutside={(e) => {
+            // Prevent drawer from closing when clicking on portaled elements
+            // (dropdowns, pickers, etc.) that render outside the drawer content
+            const target = e.target as HTMLElement;
+            // Check if click is on a Radix portal content (select, popover, etc.)
+            if (target.closest('[data-radix-popper-content-wrapper]') ||
+                target.closest('[data-radix-select-content]') ||
+                target.closest('[data-radix-popover-content]') ||
+                target.closest('[role="listbox"]') ||
+                target.closest('[role="dialog"]') ||
+                target.closest('.fixed.z-\\[10000\\]') || // UserPicker portal
+                target.closest('.fixed.z-\\[10001\\]')) { // CustomSelect portal
+              e.preventDefault();
+            }
+          }}
+          onInteractOutside={(e) => {
+            // Same prevention for general interactions outside
+            const target = e.target as HTMLElement;
+            if (target.closest('[data-radix-popper-content-wrapper]') ||
+                target.closest('[data-radix-select-content]') ||
+                target.closest('[data-radix-popover-content]') ||
+                target.closest('[role="listbox"]') ||
+                target.closest('[role="dialog"]') ||
+                target.closest('.fixed.z-\\[10000\\]') ||
+                target.closest('.fixed.z-\\[10001\\]')) {
+              e.preventDefault();
+            }
+          }}
         >
           {/* Visually hidden title for accessibility */}
           <Dialog.Title className="sr-only">

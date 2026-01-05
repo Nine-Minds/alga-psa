@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import RichTextViewer from 'server/src/components/editor/RichTextViewer';
 import TextEditor from 'server/src/components/editor/TextEditor';
 import { PartialBlock } from '@blocknote/core';
@@ -102,6 +102,9 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
   const [titleValue, setTitleValue] = useState(ticket.title);
   const [showPriorityMatrix, setShowPriorityMatrix] = useState(false);
   const [isEditingDescription, setIsEditingDescription] = useState(false);
+
+  // Ref for title input to position cursor at end when editing starts
+  const titleInputRef = useRef<HTMLInputElement>(null);
 
   // Temp states for dropdown fields - holds UI value before saving
   const [tempStatus, setTempStatus] = useState(ticket.status_id || '');
@@ -278,6 +281,17 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
     }
   }, [tempStatus, tempAssignedTo, tempBoard, tempPriority, tempCategory, tempSubcategory, tempImpact, tempUrgency, isEditingTitle, titleValue, ticket.title, ticket.status_id, ticket.assigned_to, ticket.board_id, ticket.priority_id, ticket.category_id, ticket.subcategory_id, itilImpact, itilUrgency, onTempChangesUpdate]);
 
+  // Position cursor at end of title input when editing starts
+  useEffect(() => {
+    if (isEditingTitle && titleInputRef.current) {
+      const input = titleInputRef.current;
+      // Focus and move cursor to end
+      input.focus();
+      const length = input.value.length;
+      input.setSelectionRange(length, length);
+    }
+  }, [isEditingTitle]);
+
   // Handle clicking on title edit
   const handleTitleEditClick = () => {
     setIsEditingTitle(true);
@@ -391,11 +405,11 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
             {isEditingTitle ? (
               <div className="flex flex-col gap-2 flex-1 min-w-0">
                 <Input
+                  ref={titleInputRef}
                   type="text"
                   value={titleValue}
                   onChange={(e) => setTitleValue(e.target.value)}
                   onKeyDown={handleTitleKeyDown}
-                  autoFocus
                   className="text-2xl font-bold flex-1 px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                   containerClassName="flex-1"
                   style={{minWidth: '300px', width: '100%'}}
