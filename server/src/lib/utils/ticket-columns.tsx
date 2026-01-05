@@ -292,13 +292,14 @@ export function createTicketColumns(options: CreateTicketColumnsOptions): Column
         width: '3%',
         sortable: false,
         render: (_value: string, record: ITicketListItem) => (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button id={`ticket-actions-${record.ticket_id}`} variant="ghost" size="sm" className="h-8 w-8 p-0">
-                <span className="sr-only">Open menu</span>
-                <MoreVertical className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
+          <div onClick={(e) => e.stopPropagation()}>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button id={`ticket-actions-${record.ticket_id}`} variant="ghost" size="sm" className="h-8 w-8 p-0">
+                  <span className="sr-only">Open menu</span>
+                  <MoreVertical className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="bg-white z-50">
               {/* Quick View option - opens ticket in drawer without entering edit mode */}
               {onQuickViewClick && (
@@ -332,6 +333,7 @@ export function createTicketColumns(options: CreateTicketColumnsOptions): Column
               )}
             </DropdownMenuContent>
           </DropdownMenu>
+          </div>
         ),
       }
     });
