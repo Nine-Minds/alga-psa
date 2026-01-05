@@ -450,28 +450,31 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
                 className="!w-fit"
               />
               {tempStatus !== (ticket.status_id || '') && (
-                <div className="flex gap-2 mt-2">
-                  <Button
-                    id="save-status-btn"
-                    size="sm"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onSelectChange('status_id', tempStatus || null);
-                    }}
-                  >
-                    Save
-                  </Button>
-                  <Button
-                    id="cancel-status-btn"
-                    size="sm"
-                    variant="outline"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setTempStatus(ticket.status_id || '');
-                    }}
-                  >
-                    Cancel
-                  </Button>
+                <div className="mt-2">
+                  <p className="text-amber-600 text-sm mb-2">Unsaved changes</p>
+                  <div className="flex gap-2">
+                    <Button
+                      id="save-status-btn"
+                      size="sm"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onSelectChange('status_id', tempStatus || null);
+                      }}
+                    >
+                      Save
+                    </Button>
+                    <Button
+                      id="cancel-status-btn"
+                      size="sm"
+                      variant="outline"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setTempStatus(ticket.status_id || '');
+                      }}
+                    >
+                      Cancel
+                    </Button>
+                  </div>
                 </div>
               )}
             </div>
@@ -490,28 +493,31 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
                 placeholder="Not assigned"
               />
               {tempAssignedTo !== (ticket.assigned_to || '') && (
-                <div className="flex gap-2 mt-2">
-                  <Button
-                    id="save-assigned-to-btn"
-                    size="sm"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onSelectChange('assigned_to', tempAssignedTo || null);
-                    }}
-                  >
-                    Save
-                  </Button>
-                  <Button
-                    id="cancel-assigned-to-btn"
-                    size="sm"
-                    variant="outline"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setTempAssignedTo(ticket.assigned_to || '');
-                    }}
-                  >
-                    Cancel
-                  </Button>
+                <div className="mt-2">
+                  <p className="text-amber-600 text-sm mb-2">Unsaved changes</p>
+                  <div className="flex gap-2">
+                    <Button
+                      id="save-assigned-to-btn"
+                      size="sm"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onSelectChange('assigned_to', tempAssignedTo || null);
+                      }}
+                    >
+                      Save
+                    </Button>
+                    <Button
+                      id="cancel-assigned-to-btn"
+                      size="sm"
+                      variant="outline"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setTempAssignedTo(ticket.assigned_to || '');
+                      }}
+                    >
+                      Cancel
+                    </Button>
+                  </div>
                 </div>
               )}
             </div>
@@ -535,43 +541,46 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
                 className="!w-fit"
               />
               {tempBoard !== (ticket.board_id || '') && (
-                <div className="flex gap-2 mt-2">
-                  <Button
-                    id="save-board-btn"
-                    size="sm"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onSelectChange('board_id', tempBoard || null);
-                      // Clear categories when board changes
-                      onSelectChange('category_id', null);
-                      onSelectChange('subcategory_id', null);
-                      // Clear priority fields when board changes
-                      onSelectChange('priority_id', null);
-                      if (onItilFieldChange) {
-                        onItilFieldChange('itil_impact', null);
-                        onItilFieldChange('itil_urgency', null);
-                      }
-                    }}
-                  >
-                    Save
-                  </Button>
-                  <Button
-                    id="cancel-board-btn"
-                    size="sm"
-                    variant="outline"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setTempBoard(ticket.board_id || '');
-                      // Also restore temp category and priority when canceling board change
-                      setTempCategory(ticket.category_id || '');
-                      setTempSubcategory(ticket.subcategory_id || '');
-                      setTempPriority(ticket.priority_id || '');
-                      setTempImpact(itilImpact?.toString() || '');
-                      setTempUrgency(itilUrgency?.toString() || '');
-                    }}
-                  >
-                    Cancel
-                  </Button>
+                <div className="mt-2">
+                  <p className="text-amber-600 text-sm mb-2">Unsaved changes</p>
+                  <div className="flex gap-2">
+                    <Button
+                      id="save-board-btn"
+                      size="sm"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onSelectChange('board_id', tempBoard || null);
+                        // Clear categories when board changes
+                        onSelectChange('category_id', null);
+                        onSelectChange('subcategory_id', null);
+                        // Clear priority fields when board changes
+                        onSelectChange('priority_id', null);
+                        if (onItilFieldChange) {
+                          onItilFieldChange('itil_impact', null);
+                          onItilFieldChange('itil_urgency', null);
+                        }
+                      }}
+                    >
+                      Save
+                    </Button>
+                    <Button
+                      id="cancel-board-btn"
+                      size="sm"
+                      variant="outline"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setTempBoard(ticket.board_id || '');
+                        // Also restore temp category and priority when canceling board change
+                        setTempCategory(ticket.category_id || '');
+                        setTempSubcategory(ticket.subcategory_id || '');
+                        setTempPriority(ticket.priority_id || '');
+                        setTempImpact(itilImpact?.toString() || '');
+                        setTempUrgency(itilUrgency?.toString() || '');
+                      }}
+                    >
+                      Cancel
+                    </Button>
+                  </div>
                 </div>
               )}
             </div>
@@ -623,28 +632,31 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
                     className="!w-fit"
                   />
                   {tempPriority !== (ticket.priority_id || '') && (
-                    <div className="flex gap-2 mt-2">
-                      <Button
-                        id="save-priority-btn"
-                        size="sm"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onSelectChange('priority_id', tempPriority || null);
-                            }}
-                      >
-                        Save
-                      </Button>
-                      <Button
-                        id="cancel-priority-btn"
-                        size="sm"
-                        variant="outline"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setTempPriority(ticket.priority_id || '');
-                            }}
-                      >
-                        Cancel
-                      </Button>
+                    <div className="mt-2">
+                      <p className="text-amber-600 text-sm mb-2">Unsaved changes</p>
+                      <div className="flex gap-2">
+                        <Button
+                          id="save-priority-btn"
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onSelectChange('priority_id', tempPriority || null);
+                          }}
+                        >
+                          Save
+                        </Button>
+                        <Button
+                          id="cancel-priority-btn"
+                          size="sm"
+                          variant="outline"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setTempPriority(ticket.priority_id || '');
+                          }}
+                        >
+                          Cancel
+                        </Button>
+                      </div>
                     </div>
                   )}
                 </>
@@ -663,28 +675,31 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
                   />
                 </div>
                 {hasCategoryChanged() && (
-                  <div className="flex gap-2 mt-2">
-                    <Button
-                      id="save-category-btn"
-                      size="sm"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        saveCategoryChanges();
+                  <div className="mt-2">
+                    <p className="text-amber-600 text-sm mb-2">Unsaved changes</p>
+                    <div className="flex gap-2">
+                      <Button
+                        id="save-category-btn"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          saveCategoryChanges();
                         }}
-                    >
-                      Save
-                    </Button>
-                    <Button
-                      id="cancel-category-btn"
-                      size="sm"
-                      variant="outline"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        cancelCategoryChanges();
+                      >
+                        Save
+                      </Button>
+                      <Button
+                        id="cancel-category-btn"
+                        size="sm"
+                        variant="outline"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          cancelCategoryChanges();
                         }}
-                    >
-                      Cancel
-                    </Button>
+                      >
+                        Cancel
+                      </Button>
+                    </div>
                   </div>
                 )}
               </div>
@@ -709,28 +724,31 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
                     />
                   </div>
                   {tempImpact !== (itilImpact?.toString() || '') && (
-                    <div className="flex gap-2 mt-2">
-                      <Button
-                        id="save-impact-btn"
-                        size="sm"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleItilFieldChange('itil_impact', tempImpact ? Number(tempImpact) : null);
-                            }}
-                      >
-                        Save
-                      </Button>
-                      <Button
-                        id="cancel-impact-btn"
-                        size="sm"
-                        variant="outline"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setTempImpact(itilImpact?.toString() || '');
-                            }}
-                      >
-                        Cancel
-                      </Button>
+                    <div className="mt-2">
+                      <p className="text-amber-600 text-sm mb-2">Unsaved changes</p>
+                      <div className="flex gap-2">
+                        <Button
+                          id="save-impact-btn"
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleItilFieldChange('itil_impact', tempImpact ? Number(tempImpact) : null);
+                          }}
+                        >
+                          Save
+                        </Button>
+                        <Button
+                          id="cancel-impact-btn"
+                          size="sm"
+                          variant="outline"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setTempImpact(itilImpact?.toString() || '');
+                          }}
+                        >
+                          Cancel
+                        </Button>
+                      </div>
                     </div>
                   )}
                 </div>
@@ -751,28 +769,31 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
                     />
                   </div>
                   {tempUrgency !== (itilUrgency?.toString() || '') && (
-                    <div className="flex gap-2 mt-2">
-                      <Button
-                        id="save-urgency-btn"
-                        size="sm"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleItilFieldChange('itil_urgency', tempUrgency ? Number(tempUrgency) : null);
-                            }}
-                      >
-                        Save
-                      </Button>
-                      <Button
-                        id="cancel-urgency-btn"
-                        size="sm"
-                        variant="outline"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setTempUrgency(itilUrgency?.toString() || '');
-                            }}
-                      >
-                        Cancel
-                      </Button>
+                    <div className="mt-2">
+                      <p className="text-amber-600 text-sm mb-2">Unsaved changes</p>
+                      <div className="flex gap-2">
+                        <Button
+                          id="save-urgency-btn"
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleItilFieldChange('itil_urgency', tempUrgency ? Number(tempUrgency) : null);
+                          }}
+                        >
+                          Save
+                        </Button>
+                        <Button
+                          id="cancel-urgency-btn"
+                          size="sm"
+                          variant="outline"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setTempUrgency(itilUrgency?.toString() || '');
+                          }}
+                        >
+                          Cancel
+                        </Button>
+                      </div>
                     </div>
                   )}
                 </div>
@@ -1003,10 +1024,6 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
           {/* Sectional Save Changes button - like contracts pattern */}
           {onSaveSection && (
             <div className="pt-4 mt-4 border-t border-gray-200">
-              {/* Section-level unsaved changes warning - shows when any field has unsaved changes */}
-              {(hasUnsavedTempChanges() || (isEditingTitle && titleValue !== ticket.title)) && (
-                <p className="text-amber-600 text-sm mb-3">You have unsaved changes</p>
-              )}
               <div className="flex justify-end gap-2">
               {onCancelSection && (
                 <Button
