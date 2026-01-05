@@ -986,6 +986,20 @@ export async function updateTicketWithCache(id: string, data: Partial<ITicket>, 
       updateData.subcategory_id = null;
     }
 
+    // Validate board_id belongs to the same tenant if being updated
+    if ('board_id' in updateData && updateData.board_id) {
+      const board = await trx('boards')
+        .where({
+          board_id: updateData.board_id,
+          tenant: tenant
+        })
+        .first();
+
+      if (!board) {
+        throw new Error('Invalid board_id: Board does not exist or does not belong to this tenant');
+      }
+    }
+
     // Handle ITIL priority calculation if impact or urgency is being updated
     if (('itil_impact' in updateData || 'itil_urgency' in updateData)) {
       const newImpact = 'itil_impact' in updateData ? updateData.itil_impact : currentTicket.itil_impact;

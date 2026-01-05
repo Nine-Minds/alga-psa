@@ -371,9 +371,23 @@ export async function updateTicket(id: string, data: Partial<ITicket>, user: IUs
             tenant: tenant
           })
           .first();
-        
+
         if (!location) {
           throw new Error('Invalid location: Location does not belong to the selected client');
+        }
+      }
+
+      // Validate board_id belongs to the same tenant if being updated
+      if ('board_id' in updateData && updateData.board_id) {
+        const board = await trx('boards')
+          .where({
+            board_id: updateData.board_id,
+            tenant: tenant
+          })
+          .first();
+
+        if (!board) {
+          throw new Error('Invalid board_id: Board does not exist or does not belong to this tenant');
         }
       }
 
