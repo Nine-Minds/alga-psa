@@ -20,6 +20,7 @@ import {
   ClipboardList,
   Calendar,
   ArrowRight,
+  Sparkles,
 } from 'lucide-react';
 
 const FeatureCard = ({ icon: Icon, title, description }: { icon: any; title: string; description: string }) => {
@@ -232,6 +233,26 @@ const QuickStartCard = ({ step, index, onNavigate, className }: QuickStartCardPr
   );
 };
 
+function WelcomeBanner() {
+  return (
+    <div className="overflow-hidden rounded-2xl border border-slate-200 bg-gradient-to-r from-violet-600 to-cyan-500 px-6 py-5 shadow-[0_10px_30px_rgba(2,6,23,0.12)]">
+      <div className="flex items-start gap-4">
+        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/15 ring-1 ring-white/20">
+          <Sparkles className="h-5 w-5 text-white" />
+        </div>
+        <div className="min-w-0">
+          <h1 className="text-xl font-semibold tracking-tight text-white sm:text-2xl">
+            Welcome to Your MSP Command Center
+          </h1>
+          <p className="mt-1 text-sm text-white/80">
+            Track onboarding progress, configure critical services, and keep every client experience consistent.
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 const WelcomeDashboard = () => {
   const posthog = usePostHog();
   const { steps, summary, isLoading, hasResolved, error, refresh } = useOnboardingProgress();
@@ -261,6 +282,8 @@ const WelcomeDashboard = () => {
       <div className="min-h-screen bg-slate-200/70 p-6">
         <div className="max-w-7xl mx-auto">
           <div className="space-y-8">
+              <WelcomeBanner />
+
               <div>
                 <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
                   <div>
