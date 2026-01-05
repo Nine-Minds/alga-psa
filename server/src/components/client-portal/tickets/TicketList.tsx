@@ -15,6 +15,8 @@ import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
 import { ITicketListItem, ITicketCategory } from 'server/src/interfaces/ticket.interfaces';
 import { Button } from 'server/src/components/ui/Button';
 import { Input } from 'server/src/components/ui/Input';
+import { Tooltip } from 'server/src/components/ui/Tooltip';
+import UserAvatar from 'server/src/components/ui/UserAvatar';
 import CustomSelect, { SelectOption } from 'server/src/components/ui/CustomSelect';
 import { CategoryPicker } from 'server/src/components/tickets/CategoryPicker';
 import { ChevronDown, XCircle } from 'lucide-react';
@@ -22,6 +24,7 @@ import { ConfirmationDialog } from 'server/src/components/ui/ConfirmationDialog'
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import { ClientAddTicket } from 'server/src/components/client-portal/tickets/ClientAddTicket';
 import { useTranslation } from 'server/src/lib/i18n/client';
+import { getUserAvatarUrlsBatchAction } from 'server/src/lib/actions/avatar-actions';
 
 const useDebounce = <T,>(value: T, delay: number): T => {
   const [debouncedValue, setDebouncedValue] = useState<T>(value);
@@ -61,9 +64,43 @@ export function TicketList() {
     currentStatus: string;
   } | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [additionalAgentAvatarUrls, setAdditionalAgentAvatarUrls] = useState<Record<string, string | null>>({});
 
   // Debounce search query to avoid triggering loadTickets on every keystroke
   const debouncedSearchQuery = useDebounce(searchQuery, 500);
+
+  // Fetch avatar URLs for additional agents when tickets change
+  useEffect(() => {
+    const fetchAvatarUrls = async () => {
+      // Collect all unique user IDs from additional agents
+      const userIds = new Set<string>();
+      tickets.forEach(ticket => {
+        ticket.additional_agents?.forEach(agent => {
+          userIds.add(agent.user_id);
+        });
+      });
+
+      if (userIds.size === 0) return;
+
+      // Get tenant from first ticket
+      const tenant = tickets[0]?.tenant;
+      if (!tenant) return;
+
+      try {
+        const avatarUrlsMap = await getUserAvatarUrlsBatchAction(Array.from(userIds), tenant);
+        // Convert Map to Record
+        const urlsRecord: Record<string, string | null> = {};
+        avatarUrlsMap.forEach((url, id) => {
+          urlsRecord[id] = url;
+        });
+        setAdditionalAgentAvatarUrls(urlsRecord);
+      } catch (error) {
+        console.error('Failed to fetch avatar URLs:', error);
+      }
+    };
+
+    fetchAvatarUrls();
+  }, [tickets]);
 
   // Load statuses, priorities, and categories
   useEffect(() => {
@@ -327,9 +364,45 @@ export function TicketList() {
       title: t('tickets.fields.assignedTo'),
       dataIndex: 'assigned_to_name',
       width: '15%',
-      render: (value: string) => (
-        <div className="text-sm">{value || '-'}</div>
-      ),
+      render: (value: string | null, record: ITicketListItem) => {
+        const additionalCount = record.additional_agent_count || 0;
+        const additionalAgents = record.additional_agents || [];
+        return (
+          <div className="text-sm flex items-center gap-1.5">
+            {value || '-'}
+            {additionalCount > 0 && (
+              <Tooltip
+                content={
+                  <div className="text-xs space-y-1.5">
+                    <div className="font-medium text-gray-300 mb-1">Additional Agents:</div>
+                    {additionalAgents.map((agent, i) => (
+                      <div key={i} className="flex items-center gap-2">
+                        <UserAvatar
+                          userId={agent.user_id}
+                          userName={agent.name}
+                          avatarUrl={additionalAgentAvatarUrls[agent.user_id] ?? null}
+                          size="xs"
+                        />
+                        <span>{agent.name}</span>
+                      </div>
+                    ))}
+                  </div>
+                }
+              >
+                <span
+                  className="px-1.5 py-0.5 text-xs font-medium rounded-full cursor-help"
+                  style={{
+                    color: 'rgb(var(--color-primary-500))',
+                    backgroundColor: 'rgb(var(--color-primary-50))'
+                  }}
+                >
+                  +{additionalCount}
+                </span>
+              </Tooltip>
+            )}
+          </div>
+        );
+      },
     },
     {
       title: t('tickets.fields.createdAt'),

@@ -122,6 +122,8 @@ export const ticketListFiltersSchema = z.object({
     boardFilterState: z.enum(['active', 'inactive', 'all']),
     showOpenOnly: z.boolean().optional(),
     tags: z.array(z.string()).optional(),
+    assignedToIds: z.array(z.string().uuid()).optional(),
+    includeUnassigned: z.boolean().optional(),
     sortBy: z.enum([
         'ticket_number',
         'title',

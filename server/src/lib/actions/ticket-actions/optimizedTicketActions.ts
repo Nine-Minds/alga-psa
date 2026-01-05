@@ -654,6 +654,25 @@ export async function getTicketsForList(
       });
     }
 
+    // Apply assignee filter if provided
+    if (validatedFilters.assignedToIds?.length || validatedFilters.includeUnassigned) {
+      baseQuery = baseQuery.where(function(this: any) {
+        // Handle specific assignee IDs
+        if (validatedFilters.assignedToIds?.length) {
+          this.whereIn('t.assigned_to', validatedFilters.assignedToIds);
+        }
+
+        // Handle unassigned (OR condition if both specified)
+        if (validatedFilters.includeUnassigned) {
+          if (validatedFilters.assignedToIds?.length) {
+            this.orWhereNull('t.assigned_to');
+          } else {
+            this.whereNull('t.assigned_to');
+          }
+        }
+      });
+    }
+
     const sortBy = validatedFilters.sortBy ?? 'entered_at';
     const sortDirection: 'asc' | 'desc' = validatedFilters.sortDirection ?? 'desc';
     const sortColumnMap: Record<string, { column?: string; rawExpression?: string }> = {
@@ -686,7 +705,9 @@ export async function getTicketsForList(
         'cat.category_name',
         'comp.client_name',
         trx.raw("CONCAT(u.first_name, ' ', u.last_name) as entered_by_name"),
-        trx.raw("CONCAT(au.first_name, ' ', au.last_name) as assigned_to_name")
+        trx.raw("CONCAT(au.first_name, ' ', au.last_name) as assigned_to_name"),
+        trx.raw("(SELECT COUNT(*) FROM ticket_resources tr WHERE tr.ticket_id = t.ticket_id AND tr.tenant = t.tenant)::int as additional_agent_count"),
+        trx.raw(`(SELECT COALESCE(json_agg(json_build_object('user_id', uu.user_id, 'name', CONCAT(uu.first_name, ' ', uu.last_name))), '[]'::json) FROM ticket_resources tr2 JOIN users uu ON tr2.additional_user_id = uu.user_id AND tr2.tenant = uu.tenant WHERE tr2.ticket_id = t.ticket_id AND tr2.tenant = t.tenant) as additional_agents`)
       )
       .modify(queryBuilder => {
         if (selectedSort.rawExpression) {
@@ -719,6 +740,8 @@ export async function getTicketsForList(
         client_name,
         entered_by_name,
         assigned_to_name,
+        additional_agent_count,
+        additional_agents,
         // NOTE: Legacy ITIL fields removed - now using unified system
         ...rest
       } = ticket;
@@ -748,7 +771,9 @@ export async function getTicketsForList(
         category_name: category_name || 'Unknown',
         client_name: client_name || 'Unknown',
         entered_by_name: entered_by_name || 'Unknown',
-        assigned_to_name: assigned_to_name || 'Unknown'
+        assigned_to_name: assigned_to_name || null,
+        additional_agent_count: additional_agent_count || 0,
+        additional_agents: additional_agents || []
       };
     });
 

@@ -30,6 +30,7 @@ interface StatusColumnProps {
   selectedPhase: boolean;
   projectTreeData?: any[]; // Add projectTreeData prop
   animatingTasks: Set<string>;
+  avatarUrls?: Record<string, string | null>;
   onDrop: (e: React.DragEvent, statusId: string, draggedTaskId: string, beforeTaskId: string | null, afterTaskId: string | null) => void;
   onDragOver: (e: React.DragEvent) => void;
   onAddCard: (status: ProjectStatus) => void;
@@ -65,6 +66,7 @@ export const StatusColumn: React.FC<StatusColumnProps> = ({
   selectedPhase,
   projectTreeData,
   animatingTasks,
+  avatarUrls = {},
   onDrop,
   onDragOver,
   onAddCard,
@@ -362,6 +364,7 @@ export const StatusColumn: React.FC<StatusColumnProps> = ({
               onEditTaskClick={onEditTaskClick}
               onDeleteTaskClick={onDeleteTaskClick}
               onTaskTagsChange={onTaskTagsChange}
+              avatarUrls={avatarUrls}
             />
             {/* Animated drop placeholder after task */}
             {dragOverTaskId === task.task_id && dropPosition === 'after' && (

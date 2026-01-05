@@ -64,6 +64,15 @@ export default async function TicketsPage({ searchParams }: TicketsPageProps) {
 
       filtersFromURL.tags = normalizeTags(params.tags);
     }
+    if (params?.assignedToIds && typeof params.assignedToIds === 'string') {
+      const assignedToIds = params.assignedToIds.split(',').filter(id => id.trim().length > 0);
+      if (assignedToIds.length > 0) {
+        filtersFromURL.assignedToIds = assignedToIds;
+      }
+    }
+    if (params?.includeUnassigned === 'true') {
+      filtersFromURL.includeUnassigned = true;
+    }
     const allowedSortKeys = [
       'ticket_number',
       'title',
@@ -109,6 +118,8 @@ export default async function TicketsPage({ searchParams }: TicketsPageProps) {
       boardFilterState: initialFilters.boardFilterState || 'active',
       showOpenOnly: (initialFilters.statusId === 'open') || false,
       tags: initialFilters.tags || undefined,
+      assignedToIds: initialFilters.assignedToIds || undefined,
+      includeUnassigned: initialFilters.includeUnassigned || undefined,
       sortBy: initialFilters.sortBy || 'entered_at',
       sortDirection: initialFilters.sortDirection || 'desc'
     };
