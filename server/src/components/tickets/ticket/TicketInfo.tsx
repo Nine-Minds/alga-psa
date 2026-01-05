@@ -767,19 +767,28 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
                         { value: '4', label: '4 - Medium-Low (Minimal impact)' },
                         { value: '5', label: '5 - Low (No business impact)' }
                       ]}
-                      value={itilImpact?.toString() || null}
-                      onValueChange={(value) => handleItilFieldChange('itil_impact', value ? Number(value) : null)}
+                      value={tempImpact || null}
+                      onValueChange={(value) => setTempImpact(value || '')}
                       placeholder="Select Impact"
                     />
                   </div>
-                  {(itilImpact?.toString() || '') !== originalImpact && (
+                  {tempImpact !== (itilImpact?.toString() || '') && (
                     <div className="flex gap-2 mt-2">
+                      <Button
+                        id="save-impact-btn"
+                        size="sm"
+                        onClick={() => {
+                          handleItilFieldChange('itil_impact', tempImpact ? Number(tempImpact) : null);
+                        }}
+                      >
+                        Save
+                      </Button>
                       <Button
                         id="cancel-impact-btn"
                         size="sm"
                         variant="outline"
                         onClick={() => {
-                          handleItilFieldChange('itil_impact', originalImpact ? Number(originalImpact) : null);
+                          setTempImpact(itilImpact?.toString() || '');
                         }}
                       >
                         Cancel
@@ -798,19 +807,28 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
                         { value: '4', label: '4 - Medium-Low (Minor inconvenience)' },
                         { value: '5', label: '5 - Low (Work continues normally)' }
                       ]}
-                      value={itilUrgency?.toString() || null}
-                      onValueChange={(value) => handleItilFieldChange('itil_urgency', value ? Number(value) : null)}
+                      value={tempUrgency || null}
+                      onValueChange={(value) => setTempUrgency(value || '')}
                       placeholder="Select Urgency"
                     />
                   </div>
-                  {(itilUrgency?.toString() || '') !== originalUrgency && (
+                  {tempUrgency !== (itilUrgency?.toString() || '') && (
                     <div className="flex gap-2 mt-2">
+                      <Button
+                        id="save-urgency-btn"
+                        size="sm"
+                        onClick={() => {
+                          handleItilFieldChange('itil_urgency', tempUrgency ? Number(tempUrgency) : null);
+                        }}
+                      >
+                        Save
+                      </Button>
                       <Button
                         id="cancel-urgency-btn"
                         size="sm"
                         variant="outline"
                         onClick={() => {
-                          handleItilFieldChange('itil_urgency', originalUrgency ? Number(originalUrgency) : null);
+                          setTempUrgency(itilUrgency?.toString() || '');
                         }}
                       >
                         Cancel
