@@ -1576,6 +1576,116 @@ export async function fetchTicketsWithPagination(
 }
 
 /**
+ * Fetch bundle children for a given master ticket.
+ * Used by the ticket list when in "bundled" view and expanding a master inline.
+ */
+export async function fetchBundleChildrenForMaster(
+  user: IUser,
+  masterTicketId: string
+): Promise<ITicketListItem[]> {
+  const { knex: db, tenant } = await createTenantKnex();
+  if (!tenant) {
+    throw new Error('Tenant not found');
+  }
+
+  return withTransaction(db, async (trx) => {
+    if (!await hasPermission(user, 'ticket', 'read', trx)) {
+      throw new Error('Permission denied: Cannot view tickets');
+    }
+
+    const rows = await trx('tickets as t')
+      .leftJoin('tickets as mt', function () {
+        this.on('t.master_ticket_id', 'mt.ticket_id')
+          .andOn('t.tenant', 'mt.tenant');
+      })
+      .leftJoin('statuses as s', function () {
+        this.on('t.status_id', 's.status_id')
+          .andOn('t.tenant', 's.tenant');
+      })
+      .leftJoin('priorities as p', function () {
+        this.on('t.priority_id', 'p.priority_id')
+          .andOn('t.tenant', 'p.tenant')
+          .andOnVal('p.item_type', '=', 'ticket');
+      })
+      .leftJoin('boards as c', function () {
+        this.on('t.board_id', 'c.board_id')
+          .andOn('t.tenant', 'c.tenant');
+      })
+      .leftJoin('categories as cat', function () {
+        this.on('t.category_id', 'cat.category_id')
+          .andOn('t.tenant', 'cat.tenant');
+      })
+      .leftJoin('clients as comp', function () {
+        this.on('t.client_id', 'comp.client_id')
+          .andOn('t.tenant', 'comp.tenant');
+      })
+      .leftJoin('users as u', function () {
+        this.on('t.entered_by', 'u.user_id')
+          .andOn('t.tenant', 'u.tenant');
+      })
+      .leftJoin('users as au', function () {
+        this.on('t.assigned_to', 'au.user_id')
+          .andOn('t.tenant', 'au.tenant');
+      })
+      .select(
+        't.*',
+        's.name as status_name',
+        'p.priority_name',
+        'p.color as priority_color',
+        'c.board_name',
+        'cat.category_name',
+        'comp.client_name as client_name',
+        trx.raw("CONCAT(u.first_name, ' ', u.last_name) as entered_by_name"),
+        trx.raw("CONCAT(au.first_name, ' ', au.last_name) as assigned_to_name"),
+        'mt.ticket_number as bundle_master_ticket_number'
+      )
+      .where({ 't.tenant': tenant, 't.master_ticket_id': masterTicketId })
+      .orderBy('t.updated_at', 'desc');
+
+    return rows.map((ticket: any): ITicketListItem => {
+      const {
+        status_id,
+        priority_id,
+        board_id,
+        category_id,
+        entered_by,
+        status_name,
+        priority_name,
+        priority_color,
+        board_name,
+        category_name,
+        client_name,
+        entered_by_name,
+        assigned_to_name,
+        bundle_master_ticket_number,
+        ...rest
+      } = ticket;
+
+      return {
+        ...rest,
+        status_id: status_id || null,
+        priority_id: priority_id || null,
+        board_id: board_id || null,
+        category_id: category_id || null,
+        entered_by: entered_by || null,
+        status_name: status_name || 'Unknown',
+        priority_name: priority_name || 'Unknown',
+        priority_color: priority_color || '#6B7280',
+        board_name: board_name || 'Unknown',
+        category_name: category_name || 'Unknown',
+        client_name: client_name || 'Unknown',
+        entered_by_name: entered_by_name || 'Unknown',
+        assigned_to_name: assigned_to_name || 'Unknown',
+        // Children are not masters; keep these fields stable for the list UI.
+        bundle_child_count: 0,
+        bundle_distinct_client_count: 0,
+        bundle_master_ticket_number: bundle_master_ticket_number ?? null,
+      };
+    });
+  });
+}
+
+/**
  * Legacy wrapper for cursor-based pagination - kept for backward compatibility
  * @deprecated Use getTicketsForList with page-based pagination instead
  */

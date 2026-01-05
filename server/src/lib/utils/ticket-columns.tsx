@@ -72,21 +72,12 @@ export function createTicketColumns(options: CreateTicketColumnsOptions): Column
         dataIndex: 'ticket_number',
         width: '10%',
         render: (value: string, record: ITicketListItem) => (
-          <Link
-            href={`/msp/tickets/${record.ticket_id}`}
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              onTicketClick(record.ticket_id as string);
-            }}
-            className="text-blue-600 hover:text-blue-800 block break-all whitespace-normal text-left"
-            style={{ wordBreak: 'break-all', overflowWrap: 'anywhere' }}
-          >
+          <div className="flex flex-col gap-1">
             <span className="flex items-center gap-2">
               {!record.master_ticket_id && (record.bundle_child_count ?? 0) > 0 && onToggleBundleExpanded ? (
                 <button
                   type="button"
-                  className="inline-flex items-center justify-center rounded hover:bg-gray-100"
+                  className="inline-flex items-center justify-center rounded hover:bg-gray-100 relative z-10"
                   onClick={(e) => {
                     e.preventDefault();
                     e.stopPropagation();
@@ -101,19 +92,34 @@ export function createTicketColumns(options: CreateTicketColumnsOptions): Column
                   )}
                 </button>
               ) : null}
-              <span>{value}</span>
-              {record.master_ticket_id ? (
-                <span className="rounded bg-amber-100 px-2 py-0.5 text-[11px] font-medium text-amber-900">
-                  Bundled → {record.bundle_master_ticket_number || 'Master'}
-                </span>
-              ) : null}
-              {!record.master_ticket_id && (record.bundle_child_count ?? 0) > 0 ? (
-                <span className="rounded bg-indigo-100 px-2 py-0.5 text-[11px] font-medium text-indigo-900">
-                  Bundle · {record.bundle_child_count}
-                </span>
-              ) : null}
+              <Link
+                href={`/msp/tickets/${record.ticket_id}`}
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  onTicketClick(record.ticket_id as string);
+                }}
+                className="text-blue-600 hover:text-blue-800 break-all whitespace-normal text-left"
+                style={{ wordBreak: 'break-all', overflowWrap: 'anywhere' }}
+              >
+                {value}
+              </Link>
             </span>
-          </Link>
+            {(record.master_ticket_id || (!record.master_ticket_id && (record.bundle_child_count ?? 0) > 0)) && (
+              <div className="flex items-center gap-1">
+                {record.master_ticket_id ? (
+                  <span className="rounded bg-amber-100 px-2 py-0.5 text-[11px] font-medium text-amber-900">
+                    Bundled → {record.bundle_master_ticket_number || 'Master'}
+                  </span>
+                ) : null}
+                {!record.master_ticket_id && (record.bundle_child_count ?? 0) > 0 ? (
+                  <span className="rounded bg-indigo-100 px-2 py-0.5 text-[11px] font-medium text-indigo-900">
+                    Bundle · {record.bundle_child_count}
+                  </span>
+                ) : null}
+              </div>
+            )}
+          </div>
         ),
       }
     });
@@ -250,14 +256,14 @@ export function createTicketColumns(options: CreateTicketColumnsOptions): Column
             }}
             className="text-blue-500 hover:underline text-left whitespace-normal break-words bg-transparent border-none p-0"
           >
-            <span className="inline-flex items-center gap-2">
+            <div className="flex flex-col gap-1">
               <span>{value || 'No Client'}</span>
               {!record.master_ticket_id && (record.bundle_child_count ?? 0) > 0 && (record.bundle_distinct_client_count ?? 0) > 1 ? (
                 <span className="rounded bg-amber-100 px-2 py-0.5 text-[11px] font-medium text-amber-900">
                   Multiple clients
                 </span>
               ) : null}
-            </span>
+            </div>
           </button>
         ) : undefined,
       }
