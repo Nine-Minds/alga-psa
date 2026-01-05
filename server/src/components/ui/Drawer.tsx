@@ -73,26 +73,40 @@ const Drawer: React.FC<DrawerProps & AutomationProps> = ({
             // (dropdowns, pickers, etc.) that render outside the drawer content
             const target = e.target as HTMLElement;
             // Check if click is on a Radix portal content (select, popover, etc.)
-            if (target.closest('[data-radix-popper-content-wrapper]') ||
-                target.closest('[data-radix-select-content]') ||
-                target.closest('[data-radix-popover-content]') ||
-                target.closest('[role="listbox"]') ||
-                target.closest('[role="dialog"]') ||
-                target.closest('.fixed.z-\\[10000\\]') || // UserPicker portal
-                target.closest('.fixed.z-\\[10001\\]')) { // CustomSelect portal
+            // or any high z-index fixed positioned element (UserPicker, CustomSelect portals)
+            const isPortalContent =
+              target.closest('[data-radix-popper-content-wrapper]') ||
+              target.closest('[data-radix-select-content]') ||
+              target.closest('[data-radix-popover-content]') ||
+              target.closest('[role="listbox"]') ||
+              target.closest('[role="menu"]') ||
+              target.closest('[role="dialog"]');
+
+            // Also check if clicking on a high z-index fixed element
+            const style = window.getComputedStyle(target);
+            const zIndex = parseInt(style.zIndex || '0', 10);
+            const isHighZIndex = style.position === 'fixed' && zIndex >= 10000;
+
+            if (isPortalContent || isHighZIndex) {
               e.preventDefault();
             }
           }}
           onInteractOutside={(e) => {
             // Same prevention for general interactions outside
             const target = e.target as HTMLElement;
-            if (target.closest('[data-radix-popper-content-wrapper]') ||
-                target.closest('[data-radix-select-content]') ||
-                target.closest('[data-radix-popover-content]') ||
-                target.closest('[role="listbox"]') ||
-                target.closest('[role="dialog"]') ||
-                target.closest('.fixed.z-\\[10000\\]') ||
-                target.closest('.fixed.z-\\[10001\\]')) {
+            const isPortalContent =
+              target.closest('[data-radix-popper-content-wrapper]') ||
+              target.closest('[data-radix-select-content]') ||
+              target.closest('[data-radix-popover-content]') ||
+              target.closest('[role="listbox"]') ||
+              target.closest('[role="menu"]') ||
+              target.closest('[role="dialog"]');
+
+            const style = window.getComputedStyle(target);
+            const zIndex = parseInt(style.zIndex || '0', 10);
+            const isHighZIndex = style.position === 'fixed' && zIndex >= 10000;
+
+            if (isPortalContent || isHighZIndex) {
               e.preventDefault();
             }
           }}
