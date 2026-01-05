@@ -17,15 +17,26 @@ export interface EntityAvatarProps {
 }
 
 // Default helper function to get initials
+// Uses Array.from() to properly handle Unicode characters like emojis
 export const getDefaultInitials = (name: string): string => {
   if (!name) return '?';
   const words = name.trim().split(/\s+/);
+
+  // Use Array.from to properly handle multi-byte Unicode characters (emojis, etc.)
+  const getFirstChar = (str: string) => {
+    const chars = Array.from(str);
+    return chars[0] || '';
+  };
+
   if (words.length === 1) {
-    // Take first two letters if single word is long enough, otherwise just the first
-    return words[0].length > 1 ? words[0].substring(0, 2).toUpperCase() : words[0].charAt(0).toUpperCase();
+    // Take first two characters if single word is long enough, otherwise just the first
+    const chars = Array.from(words[0]);
+    return chars.length > 1
+      ? (chars[0] + chars[1]).toUpperCase()
+      : (chars[0] || '?').toUpperCase();
   }
-  // Take first letter of first and last word
-  return (words[0].charAt(0) + words[words.length - 1].charAt(0)).toUpperCase();
+  // Take first character of first and last word
+  return (getFirstChar(words[0]) + getFirstChar(words[words.length - 1])).toUpperCase();
 };
 
 // Helper function to map size prop to Tailwind classes or style object
