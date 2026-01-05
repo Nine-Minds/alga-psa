@@ -5,7 +5,7 @@ import path from 'node:path';
 import { filterRequestHeaders, getTimeoutMs, pathnameFromParts } from '../shared/gateway-utils';
 import { loadInstallConfigCached } from './install-config-cache';
 import { getRunnerBackend, RunnerConfigError, RunnerRequestError } from './runner-backend';
-import { getTenantFromAuth, assertAccess } from 'server/src/lib/extensions/gateway/auth';
+import { getTenantFromAuth, getUserInfoFromAuth, assertAccess } from 'server/src/lib/extensions/gateway/auth';
 
 type Method = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE' | 'OPTIONS';
 
@@ -145,7 +145,8 @@ async function handle(
     const url = new URL(req.url);
 
     const tenantId = await getTenantFromAuth(req);
-    logDebug('ext-proxy:start', { tenantId, extensionId, method });
+    const userInfo = await getUserInfoFromAuth(req);
+    logDebug('ext-proxy:start', { tenantId, extensionId, method, hasUserInfo: !!userInfo });
     if (!tenantId) return applyCorsHeaders(json(401, { error: 'Unauthorized' }), corsOrigin);
 
     await wrapAssertAccess(tenantId, extensionId, method, pathname);
@@ -186,6 +187,7 @@ async function handle(
       },
       http: {
         method,
+        url: pathname,
         path: pathname,
         query: Object.fromEntries(url.searchParams.entries()),
         headers: filterRequestHeaders(req.headers, tenantId, extensionId, requestId, method),
@@ -195,6 +197,14 @@ async function handle(
       providers: installConfig.providers,
       secret_envelope: installConfig.secretEnvelope ?? undefined,
       endpoint: `ui-proxy:${pathname}`,
+      // Pass user info from session to runner for activity logging
+      user: userInfo ? {
+        user_id: userInfo.user_id,
+        user_email: userInfo.user_email,
+        user_name: userInfo.user_name,
+        user_type: userInfo.user_type,
+        client_name: userInfo.client_name,
+      } : undefined,
     };
 
     const backend = getRunnerBackend();
