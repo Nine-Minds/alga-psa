@@ -51,6 +51,8 @@ interface TicketInfoProps {
   onCancelSection?: () => void;
   hasUnsavedChanges?: boolean;
   isSavingSection?: boolean;
+  // Callback to notify parent of temp (unsaved) changes for navigation confirmation
+  onTempChangesUpdate?: (hasTempChanges: boolean) => void;
   // Additional agents props (moved from TicketProperties)
   additionalAgents?: ITicketResource[];
   availableAgents?: IUserWithRoles[];
@@ -85,6 +87,7 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
   onCancelSection,
   hasUnsavedChanges = false,
   isSavingSection = false,
+  onTempChangesUpdate,
   // Additional agents props
   additionalAgents = [],
   availableAgents = [],
@@ -115,8 +118,7 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
   const [tempImpact, setTempImpact] = useState(itilImpact?.toString() || '');
   const [tempUrgency, setTempUrgency] = useState(itilUrgency?.toString() || '');
 
-  // Track which field is currently being edited (for blur confirmation)
-  const [editingField, setEditingField] = useState<string | null>(null);
+  // Track field-level confirmation dialog state
   const [showFieldConfirmDialog, setShowFieldConfirmDialog] = useState(false);
   const [pendingFieldAction, setPendingFieldAction] = useState<(() => void) | null>(null);
 
@@ -275,21 +277,27 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
            tempUrgency !== (itilUrgency?.toString() || '');
   };
 
+  // Notify parent component when temp changes status updates
+  // This allows TicketDetails to show navigation confirmation even for unsaved temp changes
+  useEffect(() => {
+    if (onTempChangesUpdate) {
+      const hasTempChanges = hasUnsavedTempChanges() || (isEditingTitle && titleValue !== ticket.title);
+      onTempChangesUpdate(hasTempChanges);
+    }
+  }, [tempStatus, tempAssignedTo, tempBoard, tempPriority, tempCategory, tempSubcategory, tempImpact, tempUrgency, isEditingTitle, titleValue, ticket.title, ticket.status_id, ticket.assigned_to, ticket.board_id, ticket.priority_id, ticket.category_id, ticket.subcategory_id, itilImpact, itilUrgency, onTempChangesUpdate]);
+
   // Check if title has unsaved changes
   const hasTitleUnsavedChanges = () => {
     return isEditingTitle && titleValue !== ticket.title;
   };
 
-  // Wrapper for dropdown changes - check if title has unsaved changes first
-  const handleDropdownFocus = (fieldName: string) => {
-    if (hasTitleUnsavedChanges()) {
-      // Title has unsaved changes - prompt user
-      setEditingField(fieldName);
-      setPendingFieldAction(null); // No action pending, just focus
+  // Check for unsaved changes before changing to a different field
+  const checkAndPromptUnsavedChanges = (nextAction: () => void) => {
+    if (hasUnsavedTempChanges() || hasTitleUnsavedChanges()) {
+      setPendingFieldAction(() => nextAction);
       setShowFieldConfirmDialog(true);
       return false;
     }
-    setEditingField(fieldName);
     return true;
   };
 
@@ -324,7 +332,6 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
       onItilFieldChange('itil_urgency', tempUrgency ? Number(tempUrgency) : null);
     }
     setShowFieldConfirmDialog(false);
-    setEditingField(null);
     if (pendingFieldAction) {
       pendingFieldAction();
       setPendingFieldAction(null);
@@ -347,7 +354,6 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
     setTempImpact(itilImpact?.toString() || '');
     setTempUrgency(itilUrgency?.toString() || '');
     setShowFieldConfirmDialog(false);
-    setEditingField(null);
     if (pendingFieldAction) {
       pendingFieldAction();
       setPendingFieldAction(null);
@@ -366,7 +372,6 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
       setShowFieldConfirmDialog(true);
     } else {
       setIsEditingTitle(true);
-      setEditingField('title');
     }
   };
 
@@ -374,14 +379,12 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
     if (titleValue.trim() !== '') {
       onSelectChange('title', titleValue.trim());
       setIsEditingTitle(false);
-      setEditingField(null);
     }
   };
 
   const handleTitleCancel = () => {
     setTitleValue(ticket.title);
     setIsEditingTitle(false);
-    setEditingField(null);
   };
 
   const handleTitleKeyDown = (e: React.KeyboardEvent) => {
