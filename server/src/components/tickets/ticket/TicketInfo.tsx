@@ -18,6 +18,7 @@ import styles from './TicketDetails.module.css';
 import { getTicketCategories, getTicketCategoriesByBoard, BoardCategoryData } from 'server/src/lib/actions/ticketCategoryActions';
 import { ItilLabels, calculateItilPriority } from 'server/src/lib/utils/itilUtils';
 import { Pencil, HelpCircle, X, Save } from 'lucide-react';
+import { ConfirmationDialog } from 'server/src/components/ui/ConfirmationDialog';
 import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionContainer';
 import { Input } from 'server/src/components/ui/Input';
 import UserAvatar from 'server/src/components/ui/UserAvatar';
@@ -262,7 +263,7 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
     }
   }, [hasUnsavedChanges, ticket.status_id, ticket.assigned_to, ticket.board_id, ticket.priority_id, ticket.category_id, ticket.subcategory_id, itilImpact, itilUrgency]);
 
-  // Check if any field has unsaved temp changes
+  // Check if any dropdown field has unsaved temp changes
   const hasUnsavedTempChanges = () => {
     return tempStatus !== (ticket.status_id || '') ||
            tempAssignedTo !== (ticket.assigned_to || '') ||
@@ -274,9 +275,32 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
            tempUrgency !== (itilUrgency?.toString() || '');
   };
 
+  // Check if title has unsaved changes
+  const hasTitleUnsavedChanges = () => {
+    return isEditingTitle && titleValue !== ticket.title;
+  };
+
+  // Wrapper for dropdown changes - check if title has unsaved changes first
+  const handleDropdownFocus = (fieldName: string) => {
+    if (hasTitleUnsavedChanges()) {
+      // Title has unsaved changes - prompt user
+      setEditingField(fieldName);
+      setPendingFieldAction(null); // No action pending, just focus
+      setShowFieldConfirmDialog(true);
+      return false;
+    }
+    setEditingField(fieldName);
+    return true;
+  };
+
   // Handle confirmation dialog actions
   const handleFieldConfirmSave = () => {
-    // Save all pending temp changes
+    // Save title changes if editing
+    if (hasTitleUnsavedChanges()) {
+      onSelectChange('title', titleValue.trim());
+      setIsEditingTitle(false);
+    }
+    // Save all pending dropdown temp changes
     if (tempStatus !== (ticket.status_id || '')) {
       onSelectChange('status_id', tempStatus || null);
     }
@@ -308,7 +332,12 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
   };
 
   const handleFieldConfirmDiscard = () => {
-    // Reset all temp values to ticket values
+    // Discard title changes if editing
+    if (isEditingTitle) {
+      setTitleValue(ticket.title);
+      setIsEditingTitle(false);
+    }
+    // Reset all dropdown temp values to ticket values
     setTempStatus(ticket.status_id || '');
     setTempAssignedTo(ticket.assigned_to || '');
     setTempBoard(ticket.board_id || '');
@@ -330,16 +359,29 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
     setPendingFieldAction(null);
   };
 
+  // Handle clicking on title edit - check for unsaved dropdown changes first
+  const handleTitleEditClick = () => {
+    if (hasUnsavedTempChanges()) {
+      setPendingFieldAction(() => () => setIsEditingTitle(true));
+      setShowFieldConfirmDialog(true);
+    } else {
+      setIsEditingTitle(true);
+      setEditingField('title');
+    }
+  };
+
   const handleTitleSubmit = () => {
     if (titleValue.trim() !== '') {
       onSelectChange('title', titleValue.trim());
       setIsEditingTitle(false);
+      setEditingField(null);
     }
   };
 
   const handleTitleCancel = () => {
     setTitleValue(ticket.title);
     setIsEditingTitle(false);
+    setEditingField(null);
   };
 
   const handleTitleKeyDown = (e: React.KeyboardEvent) => {
@@ -349,40 +391,6 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
       e.preventDefault();
       handleTitleSubmit();
     }
-  };
-
-  const handleCategoryChange = (categoryIds: string[]) => {
-    if (categoryIds.length === 0) {
-      onSelectChange('category_id', null);
-      onSelectChange('subcategory_id', null);
-      return;
-    }
-
-    const selectedCategoryId = categoryIds[0];
-    const selectedCategory = categories.find(c => c.category_id === selectedCategoryId);
-    
-    if (!selectedCategory) {
-      console.error('Selected category not found');
-      return;
-    }
-
-    if (selectedCategory.parent_category) {
-      onSelectChange('category_id', selectedCategory.parent_category);
-      onSelectChange('subcategory_id', selectedCategoryId);
-    } else {
-      onSelectChange('category_id', selectedCategoryId);
-      onSelectChange('subcategory_id', null);
-    }
-
-    // Don't automatically change the board - categories are now filtered by current board
-    // This prevents unwanted board switches when selecting categories
-  };
-
-  const getSelectedCategoryId = () => {
-    if (ticket.subcategory_id) {
-      return ticket.subcategory_id;
-    }
-    return ticket.category_id || '';
   };
 
   // Temp category handler for Save/Cancel pattern
@@ -510,7 +518,7 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
                   {ticket.title}
                 </h1>
                 <button
-                  onClick={() => setIsEditingTitle(true)}
+                  onClick={handleTitleEditClick}
                   className="p-1 hover:bg-gray-100 rounded-full transition-colors duration-200 flex-shrink-0"
                   title="Edit title"
                 >
@@ -1089,6 +1097,20 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
           )}
         </div>
       </div>
+
+      {/* Confirmation dialog when clicking out of field with unsaved changes */}
+      <ConfirmationDialog
+        id="field-unsaved-changes-dialog"
+        isOpen={showFieldConfirmDialog}
+        onClose={handleFieldConfirmCancel}
+        onConfirm={handleFieldConfirmSave}
+        onCancel={handleFieldConfirmDiscard}
+        title="Unsaved Changes"
+        message="You have unsaved changes in this field. What would you like to do?"
+        confirmLabel="Save"
+        cancelLabel="Discard"
+        thirdButtonLabel="Go Back"
+      />
     </ReflectionContainer>
   );
 };
