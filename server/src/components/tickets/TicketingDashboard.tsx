@@ -26,6 +26,7 @@ import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
 import { deleteTicket, deleteTickets } from 'server/src/lib/actions/ticket-actions/ticketActions';
 import { bundleTicketsAction } from 'server/src/lib/actions/ticket-actions/ticketBundleActions';
+import { fetchBundleChildrenForMaster } from 'server/src/lib/actions/ticket-actions/optimizedTicketActions';
 import { XCircle, Clock } from 'lucide-react';
 import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionContainer';
 import { withDataAutomationId } from 'server/src/types/ui-reflection/withDataAutomationId';
@@ -191,6 +192,9 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
 
   useEffect(() => {
     setTickets(initialTickets);
+    // New list payload means pagination/filters changed; reset any inline expansion state.
+    setExpandedBundleMasters(new Set());
+    setLoadedBundleChildrenMasters(new Set());
   }, [initialTickets]);
 
   useEffect(() => {
@@ -425,18 +429,62 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   };
 
   const [expandedBundleMasters, setExpandedBundleMasters] = useState<Set<string>>(new Set());
-  const isBundleExpanded = useCallback((masterTicketId: string) => expandedBundleMasters.has(masterTicketId), [expandedBundleMasters]);
-  const toggleBundleExpanded = useCallback((masterTicketId: string) => {
+  const [loadedBundleChildrenMasters, setLoadedBundleChildrenMasters] = useState<Set<string>>(new Set());
+
+  const isBundleExpanded = useCallback(
+    (masterTicketId: string) => expandedBundleMasters.has(masterTicketId),
+    [expandedBundleMasters]
+  );
+
+  const toggleBundleExpanded = useCallback(async (masterTicketId: string) => {
+    const willExpand = !expandedBundleMasters.has(masterTicketId);
+
+    // Toggle immediately for responsive UI.
     setExpandedBundleMasters(prev => {
       const next = new Set(prev);
       if (next.has(masterTicketId)) next.delete(masterTicketId);
       else next.add(masterTicketId);
       return next;
     });
-  }, []);
+
+    // In bundled view, the list API intentionally omits children. Load them on first expand.
+    if (
+      willExpand &&
+      bundleView === 'bundled' &&
+      currentUser &&
+      !loadedBundleChildrenMasters.has(masterTicketId)
+    ) {
+      try {
+        const children = await fetchBundleChildrenForMaster(currentUser, masterTicketId);
+        if (children.length > 0) {
+          setTickets(prev => {
+            const existing = new Set(prev.map(t => t.ticket_id).filter((id): id is string => !!id));
+            const next = [...prev];
+            for (const child of children) {
+              if (child.ticket_id && !existing.has(child.ticket_id)) {
+                next.push(child);
+                existing.add(child.ticket_id);
+              }
+            }
+            return next;
+          });
+        }
+        setLoadedBundleChildrenMasters(prev => {
+          const next = new Set(prev);
+          next.add(masterTicketId);
+          return next;
+        });
+      } catch (error) {
+        console.error('Failed to load bundle children:', error);
+        toast.error('Failed to load bundled tickets');
+      }
+    }
+  }, [bundleView, currentUser, expandedBundleMasters, loadedBundleChildrenMasters]);
 
   const displayedTickets = useMemo(() => {
-    if (bundleView !== 'individual') {
+    // In bundled view we collapse children under masters and allow expanding inline.
+    // In individual view we show tickets as returned (flat list).
+    if (bundleView === 'individual') {
       return tickets;
     }
 
@@ -681,8 +729,8 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
       onTagsChange: handleTagsChange,
       showClient: true,
       onClientClick: onQuickViewClient,
-      isBundleExpanded,
-      onToggleBundleExpanded: toggleBundleExpanded,
+      isBundleExpanded: bundleView === 'bundled' ? isBundleExpanded : undefined,
+      onToggleBundleExpanded: bundleView === 'bundled' ? toggleBundleExpanded : undefined,
     });
 
     const selectionColumn: ColumnDefinition<ITicketListItem> = {
@@ -759,6 +807,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     selectedTicketIds,
     isBundleExpanded,
     toggleBundleExpanded,
+    bundleView,
   ]);
 
   const handleBulkDeleteClose = useCallback(() => {
