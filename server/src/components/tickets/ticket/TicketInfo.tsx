@@ -7,12 +7,14 @@ import { PartialBlock } from '@blocknote/core';
 import { ITicket, IComment, ITicketCategory } from 'server/src/interfaces';
 import { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
 import { ITag } from 'server/src/interfaces/tag.interfaces';
+import { TicketResponseState } from 'server/src/interfaces/ticket.interfaces';
 import { Button } from 'server/src/components/ui/Button';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
 import { PrioritySelect } from '@/components/tickets/PrioritySelect';
 import UserPicker from 'server/src/components/ui/UserPicker';
 import { CategoryPicker } from 'server/src/components/tickets/CategoryPicker';
 import { TagManager } from 'server/src/components/tags';
+import { ResponseStateDisplay } from 'server/src/components/tickets/ResponseStateSelect';
 import styles from './TicketDetails.module.css';
 import { getTicketCategories, getTicketCategoriesByBoard, BoardCategoryData } from 'server/src/lib/actions/ticketCategoryActions';
 import { ItilLabels, calculateItilPriority } from 'server/src/lib/utils/itilUtils';
@@ -345,6 +347,13 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
                 customStyles={customStyles}
                 className="!w-fit"
                 disabled={workflowLocked}
+              />
+            </div>
+            <div>
+              <ResponseStateDisplay
+                value={(ticket.response_state || null) as TicketResponseState}
+                onValueChange={(value) => onSelectChange('response_state', value)}
+                editable={true}
               />
             </div>
             <div>

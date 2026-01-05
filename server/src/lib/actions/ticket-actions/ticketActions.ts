@@ -28,8 +28,10 @@ import { getEmailEventChannel } from '../../../lib/notifications/emailChannel';
 import {
   TicketCreatedEvent,
   TicketUpdatedEvent,
-  TicketClosedEvent
+  TicketClosedEvent,
+  TicketResponseStateChangedEvent
 } from '../../../lib/eventBus/events';
+import { TicketResponseState } from 'server/src/interfaces/ticket.interfaces';
 import { analytics } from '../../analytics/posthog';
 import { AnalyticsEvents } from '../../analytics/events';
 import { TicketModel, CreateTicketInput } from '@alga-psa/shared/models/ticketModel';
@@ -55,6 +57,39 @@ async function safePublishEvent(eventType: string, payload: any) {
     await getEventBus().publish(event, { channel: getEmailEventChannel() });
   } catch (error) {
     console.error(`Failed to publish ${eventType} event:`, error);
+  }
+}
+
+// Helper function to publish response state change events
+async function publishResponseStateChangedEvent(
+  tenantId: string,
+  ticketId: string,
+  userId: string | null,
+  previousState: TicketResponseState,
+  newState: TicketResponseState,
+  trigger: 'comment' | 'manual' | 'close'
+) {
+  // Only publish if there's an actual change
+  if (previousState === newState) {
+    return;
+  }
+
+  try {
+    await publishEvent({
+      eventType: 'TICKET_RESPONSE_STATE_CHANGED',
+      payload: {
+        tenantId,
+        ticketId,
+        userId,
+        previousState,
+        newState,
+        trigger
+      }
+    });
+    console.log(`[publishResponseStateChangedEvent] Published event: ${previousState} -> ${newState} (trigger: ${trigger})`);
+  } catch (error) {
+    console.error(`[publishResponseStateChangedEvent] Failed to publish event:`, error);
+    // Don't throw - allow the operation to succeed even if event publishing fails
   }
 }
 interface CreateTicketFromAssetData {
@@ -533,6 +568,41 @@ export async function updateTicket(id: string, data: Partial<ITicket>, user: IUs
           old: currentTicket.subcategory_id,
           new: updateData.subcategory_id
         };
+      }
+
+      // Handle response_state changes
+      const previousResponseState = currentTicket.response_state as TicketResponseState;
+      let responseStateChanged = false;
+      let responseTrigger: 'manual' | 'close' = 'manual';
+
+      // If ticket is being closed and has a response state, clear it
+      if (newStatus?.is_closed && !oldStatus?.is_closed && currentTicket.response_state) {
+        // Clear response_state on close
+        await trx('tickets')
+          .where({ ticket_id: id, tenant: tenant })
+          .update({ response_state: null });
+        updatedTicket.response_state = null;
+        responseStateChanged = true;
+        responseTrigger = 'close';
+      }
+
+      // Check if response_state was explicitly changed in the update
+      if ('response_state' in updateData && updateData.response_state !== currentTicket.response_state) {
+        responseStateChanged = true;
+        responseTrigger = 'manual';
+      }
+
+      // Publish response state change event if needed
+      if (responseStateChanged) {
+        const newResponseState = updatedTicket.response_state as TicketResponseState;
+        await publishResponseStateChangedEvent(
+          tenant,
+          id,
+          user.user_id,
+          previousResponseState,
+          newResponseState,
+          responseTrigger
+        );
       }
 
       // Publish appropriate event based on the update

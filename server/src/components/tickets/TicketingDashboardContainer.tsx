@@ -158,6 +158,7 @@ export default function TicketingDashboardContainer({
         boardFilterState: filters.boardFilterState || 'active',
         showOpenOnly: (filters.statusId === 'open') || (filters.showOpenOnly === true),
         tags: filters.tags && filters.tags.length > 0 ? Array.from(new Set(filters.tags)) : undefined,
+        responseState: filters.responseState || undefined,
         sortBy: effectiveSortBy,
         sortDirection: effectiveSortDirection,
         bundleView: filters.bundleView || 'bundled'

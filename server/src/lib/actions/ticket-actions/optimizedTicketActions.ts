@@ -787,6 +787,17 @@ export async function getTicketsForList(
       });
     }
 
+    // Apply response state filter if provided (F017-F021)
+    if (validatedFilters.responseState && validatedFilters.responseState !== 'all') {
+      if (validatedFilters.responseState === 'none') {
+        // Filter for tickets with no response state set
+        baseQuery = baseQuery.whereNull('t.response_state');
+      } else {
+        // Filter for specific response state
+        baseQuery = baseQuery.where('t.response_state', validatedFilters.responseState);
+      }
+    }
+
     const sortBy = validatedFilters.sortBy ?? 'entered_at';
     const sortDirection: 'asc' | 'desc' = validatedFilters.sortDirection ?? 'desc';
     const sortColumnMap: Record<string, { column?: string; rawExpression?: string }> = {

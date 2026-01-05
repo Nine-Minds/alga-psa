@@ -138,6 +138,9 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   const [excludedCategories, setExcludedCategories] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState<string>(initialFilterValues.searchQuery ?? '');
   const [boardFilterState, setBoardFilterState] = useState<'active' | 'inactive' | 'all'>(initialFilterValues.boardFilterState ?? 'active');
+  const [selectedResponseState, setSelectedResponseState] = useState<'awaiting_client' | 'awaiting_internal' | 'none' | 'all'>(
+    initialFilterValues.responseState ?? 'all'
+  );
   const [bundleView, setBundleView] = useState<'bundled' | 'individual'>(initialFilterValues.bundleView ?? 'bundled');
   
   const [clientFilterState, setClientFilterState] = useState<'active' | 'inactive' | 'all'>('active');
@@ -296,6 +299,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
       boardFilterState: boardFilterState,
       showOpenOnly: selectedStatus === 'open',
       tags: selectedTags.length > 0 ? selectedTags : undefined,
+      responseState: selectedResponseState !== 'all' ? selectedResponseState : undefined,
       bundleView,
     };
 
@@ -312,6 +316,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     boardFilterState,
     bundleView,
     selectedTags,
+    selectedResponseState,
     // onFiltersChanged intentionally omitted - we want to trigger only when filter values change, not when the callback changes
     filtersHaveInitialValues
   ]);
@@ -1038,6 +1043,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     const defaultCategories: string[] = [];
     const defaultSearchQuery: string = '';
     const defaultBoardFilterState: 'active' | 'inactive' | 'all' = 'active';
+    const defaultResponseState: 'awaiting_client' | 'awaiting_internal' | 'none' | 'all' = 'all';
     const defaultBundleView: 'bundled' | 'individual' = 'bundled';
 
     setSelectedBoard(defaultBoard);
@@ -1050,8 +1056,9 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     setBoardFilterState(defaultBoardFilterState);
     setBundleView(defaultBundleView);
     setSelectedTags([]);
-    
-    setClientFilterState('active'); 
+    setSelectedResponseState(defaultResponseState);
+
+    setClientFilterState('active');
     setClientTypeFilter('all');
 
     clearSelection();
@@ -1065,6 +1072,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
       searchQuery: defaultSearchQuery,
       boardFilterState: defaultBoardFilterState,
       showOpenOnly: defaultStatus === 'open',
+      responseState: undefined,
       bundleView: defaultBundleView,
     });
   }, [onFiltersChanged, clearSelection]);
@@ -1149,6 +1157,18 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
               value={selectedStatus}
               onValueChange={(value) => setSelectedStatus(value)}
               placeholder="Select Status"
+            />
+            <CustomSelect
+              data-automation-id={`${id}-response-state-select`}
+              options={[
+                { value: 'all', label: 'All Response States' },
+                { value: 'awaiting_client', label: 'Awaiting Client' },
+                { value: 'awaiting_internal', label: 'Awaiting Internal' },
+                { value: 'none', label: 'No Response State' },
+              ]}
+              value={selectedResponseState}
+              onValueChange={(value) => setSelectedResponseState(value as 'awaiting_client' | 'awaiting_internal' | 'none' | 'all')}
+              placeholder="Response State"
             />
             <PrioritySelect
               id={`${id}-priority-select`}

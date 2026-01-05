@@ -5,6 +5,15 @@ import { IClientLocation } from "./client.interfaces";
 import { IComment } from './comment.interface';
 import { IDocument } from './document.interface';
 
+/**
+ * Response state tracking for tickets.
+ * Tracks who needs to respond next on a ticket:
+ * - 'awaiting_client': Support has responded, waiting for client
+ * - 'awaiting_internal': Client has responded, waiting for support
+ * - null: No response state tracking needed
+ */
+export type TicketResponseState = 'awaiting_client' | 'awaiting_internal' | null;
+
 export interface ITicket extends TenantEntity, ITaggable {
   ticket_id?: string;
   master_ticket_id?: string | null;
@@ -33,6 +42,8 @@ export interface ITicket extends TenantEntity, ITaggable {
   itil_impact?: number; // 1-5 scale (1 = High, 5 = Low) - used for ITIL priority calculation
   itil_urgency?: number; // 1-5 scale (1 = High, 5 = Low) - used for ITIL priority calculation
   itil_priority_level?: number; // 1-5 calculated ITIL priority based on impact × urgency matrix
+  // Response state tracking (who needs to respond next)
+  response_state?: TicketResponseState;
 }
 
 export interface ITicketListItem extends Omit<ITicket, 'status_id' | 'priority_id' | 'board_id' | 'entered_by' | 'category_id' | 'subcategory_id'> {
@@ -68,6 +79,7 @@ export interface ITicketListFilters {
   tags?: string[];
   sortBy?: string;
   sortDirection?: 'asc' | 'desc';
+  responseState?: 'awaiting_client' | 'awaiting_internal' | 'none' | 'all';
   bundleView?: 'bundled' | 'individual';
 }
 

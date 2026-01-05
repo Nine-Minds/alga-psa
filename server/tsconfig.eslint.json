@@ -13,6 +13,7 @@
     "index.ts",
     "tailwind.config.ts",
     "vitest.config.ts",
+    "playwright.config.ts",
     "test-utils/**/*.ts"
   ],
   "exclude": [

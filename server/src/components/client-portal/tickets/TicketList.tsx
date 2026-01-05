@@ -12,7 +12,8 @@ import { getTicketStatuses } from 'server/src/lib/actions/status-actions/statusA
 import { getAllPriorities } from 'server/src/lib/actions/priorityActions';
 import { getTicketCategories } from 'server/src/lib/actions/ticketCategoryActions';
 import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
-import { ITicketListItem, ITicketCategory } from 'server/src/interfaces/ticket.interfaces';
+import { ITicketListItem, ITicketCategory, TicketResponseState } from 'server/src/interfaces/ticket.interfaces';
+import { ResponseStateBadge } from 'server/src/components/tickets/ResponseStateBadge';
 import { Button } from 'server/src/components/ui/Button';
 import { Input } from 'server/src/components/ui/Input';
 import CustomSelect, { SelectOption } from 'server/src/components/ui/CustomSelect';
@@ -271,43 +272,62 @@ export function TicketList() {
       title: t('tickets.fields.status'),
       dataIndex: 'status_name',
       width: '20%',
-      render: (value: string, record: ITicketListItem) => (
-        <DropdownMenu.Root>
-          <DropdownMenu.Trigger asChild>
-            <div
-              id="change-ticket-category-button"
-              className="text-sm cursor-pointer flex items-center gap-2"
-            >
-              {value}
-              <ChevronDown className="h-3 w-3 text-gray-400" />
-            </div>
-          </DropdownMenu.Trigger>
-
-          <DropdownMenu.Content
-            className="w-48 rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none z-50"
-          >
-            {statusOptions
-              .filter(option => !['all', 'open', 'closed'].includes(option.value))
-              .map((status) => (
-                <DropdownMenu.Item
-                  key={status.value}
-                  className="px-4 py-2 text-sm hover:bg-gray-100 cursor-pointer outline-none"
-                  onSelect={() => {
-                    if (record.status_id !== status.value) {
-                      setTicketToUpdateStatus({
-                        ticketId: record.ticket_id!,
-                        newStatus: status.value,
-                        currentStatus: record.status_name || ''
-                      });
-                    }
-                  }}
+      render: (value: string, record: ITicketListItem) => {
+        // Get response_state from the record (F026-F030)
+        const responseState = (record as any).response_state as TicketResponseState | undefined;
+        return (
+          <div className="flex items-center gap-2 flex-wrap">
+            <DropdownMenu.Root>
+              <DropdownMenu.Trigger asChild>
+                <div
+                  id="change-ticket-category-button"
+                  className="text-sm cursor-pointer flex items-center gap-2"
                 >
-                  {status.label}
-                </DropdownMenu.Item>
-              ))}
-          </DropdownMenu.Content>
-        </DropdownMenu.Root>
-      ),
+                  {value}
+                  <ChevronDown className="h-3 w-3 text-gray-400" />
+                </div>
+              </DropdownMenu.Trigger>
+
+              <DropdownMenu.Content
+                className="w-48 rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none z-50"
+              >
+                {statusOptions
+                  .filter(option => !['all', 'open', 'closed'].includes(option.value))
+                  .map((status) => (
+                    <DropdownMenu.Item
+                      key={status.value}
+                      className="px-4 py-2 text-sm hover:bg-gray-100 cursor-pointer outline-none"
+                      onSelect={() => {
+                        if (record.status_id !== status.value) {
+                          setTicketToUpdateStatus({
+                            ticketId: record.ticket_id!,
+                            newStatus: status.value,
+                            currentStatus: record.status_name || ''
+                          });
+                        }
+                      }}
+                    >
+                      {status.label}
+                    </DropdownMenu.Item>
+                  ))}
+              </DropdownMenu.Content>
+            </DropdownMenu.Root>
+            {responseState && (
+              <ResponseStateBadge
+                responseState={responseState}
+                isClientPortal={true}
+                size="sm"
+                labels={{
+                  awaitingClient: t('tickets.responseState.awaitingYourResponse', 'Awaiting Your Response'),
+                  awaitingInternal: t('tickets.responseState.awaitingSupportResponse', 'Awaiting Support Response'),
+                  awaitingClientTooltip: t('tickets.responseState.awaitingYourResponseTooltip', 'Support is waiting for your response'),
+                  awaitingInternalTooltip: t('tickets.responseState.awaitingSupportResponseTooltip', 'Your response has been received. Support will respond soon.'),
+                }}
+              />
+            )}
+          </div>
+        );
+      },
     },
     {
       title: t('tickets.fields.priority'),
