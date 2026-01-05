@@ -1556,8 +1556,6 @@ const handleClose = () => {
                                 additionalAgents={additionalAgents}
                                 availableAgents={availableAgents}
                                 onAgentClick={handleAgentClick}
-                                onAddAgent={handleAddAgent}
-                                onRemoveAgent={handleRemoveAgent}
                                 currentTimeSheet={currentTimeSheet}
                                 currentTimePeriod={currentTimePeriod}
                                 userId={userId || ''}
