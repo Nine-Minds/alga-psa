@@ -352,7 +352,7 @@ export function createTicketColumns(options: CreateTicketColumnsOptions): Column
           <div onClick={(e) => e.stopPropagation()}>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button id={`ticket-actions-row-${index}`} variant="ghost" size="sm" className="h-8 w-8 p-0">
+                <Button id={`ticket-actions-menu-row-${index}`} variant="ghost" size="sm" className="h-8 w-8 p-0">
                   <span className="sr-only">Open menu</span>
                   <MoreVertical className="h-4 w-4" />
                 </Button>
