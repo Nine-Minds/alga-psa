@@ -279,6 +279,59 @@ const WelcomeDashboard = () => {
     });
   };
 
+  const onboardingSection = (
+    <div>
+      <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+        <div>
+          <div className="flex flex-wrap items-center gap-3">
+            <h2 className="text-2xl font-bold tracking-tight text-slate-900">
+              {isOnboardingComplete ? 'Onboarding complete' : 'Complete your setup'}
+            </h2>
+            {isOnboardingComplete ? (
+              <Badge className="border-emerald-200 bg-emerald-50 text-emerald-700">
+                <CheckCircle2 className="mr-1 h-3.5 w-3.5" />
+                Complete
+              </Badge>
+            ) : null}
+          </div>
+          <p className="mt-1 text-sm text-slate-600">
+            {isOnboardingComplete
+              ? "You're ready to use the full MSP dashboard experience."
+              : 'Work through each step to unlock the full MSP dashboard experience.'}
+          </p>
+        </div>
+        <ProgressSummaryCard completed={summary.completed} total={summary.total} />
+      </div>
+      {error && (
+        <Alert variant="destructive" className="mb-4">
+          <AlertDescription>
+            Unable to refresh onboarding status right now. {error.message}.{' '}
+            <button className="underline" onClick={() => refresh()}>
+              Try again
+            </button>
+          </AlertDescription>
+        </Alert>
+      )}
+      {!isOnboardingComplete ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {steps.map((step, index) => (
+            <QuickStartCard
+              key={step.id}
+              step={step}
+              index={index + 1}
+              onNavigate={(s) => handleOnboardingNavigate(s, 'quick_start')}
+              className={
+                steps.length % 2 === 1 && index === steps.length - 1
+                  ? 'md:col-span-2 md:justify-self-center md:w-[560px]'
+                  : undefined
+              }
+            />
+          ))}
+        </div>
+      ) : null}
+    </div>
+  );
+
   return (
     <ReflectionContainer id="dashboard-main" label="MSP Dashboard">
       <div className="min-h-screen p-6">
@@ -286,56 +339,7 @@ const WelcomeDashboard = () => {
           <div className="space-y-8">
               <WelcomeBanner />
 
-              <div>
-                <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-                  <div>
-                    <div className="flex flex-wrap items-center gap-3">
-                      <h2 className="text-2xl font-bold tracking-tight text-slate-900">
-                        {isOnboardingComplete ? 'Onboarding complete' : 'Complete your setup'}
-                      </h2>
-                      {isOnboardingComplete ? (
-                        <Badge className="border-emerald-200 bg-emerald-50 text-emerald-700">
-                          <CheckCircle2 className="mr-1 h-3.5 w-3.5" />
-                          Complete
-                        </Badge>
-                      ) : null}
-                    </div>
-                    <p className="mt-1 text-sm text-slate-600">
-                      {isOnboardingComplete
-                        ? 'You’re ready to use the full MSP dashboard experience.'
-                        : 'Work through each step to unlock the full MSP dashboard experience.'}
-                    </p>
-                  </div>
-                  <ProgressSummaryCard completed={summary.completed} total={summary.total} />
-                </div>
-                {error && (
-                  <Alert variant="destructive" className="mb-4">
-                    <AlertDescription>
-                      Unable to refresh onboarding status right now. {error.message}.{' '}
-                      <button className="underline" onClick={() => refresh()}>
-                        Try again
-                      </button>
-                    </AlertDescription>
-                  </Alert>
-                )}
-                {!isOnboardingComplete ? (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {steps.map((step, index) => (
-                      <QuickStartCard
-                        key={step.id}
-                        step={step}
-                        index={index + 1}
-                        onNavigate={(s) => handleOnboardingNavigate(s, 'quick_start')}
-                        className={
-                          steps.length % 2 === 1 && index === steps.length - 1
-                            ? 'md:col-span-2 md:justify-self-center md:w-[560px]'
-                            : undefined
-                        }
-                      />
-                    ))}
-                  </div>
-                ) : null}
-              </div>
+              {!isOnboardingComplete && onboardingSection}
 
               <div>
                 <h2 className="text-xl font-semibold mb-4" style={{ color: 'rgb(var(--color-text-900))' }}>
@@ -415,6 +419,8 @@ const WelcomeDashboard = () => {
                   </Link>
                 </div>
               </div>
+
+              {isOnboardingComplete && onboardingSection}
           </div>
         </div>
       </div>
