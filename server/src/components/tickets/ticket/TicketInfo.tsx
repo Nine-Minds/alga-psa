@@ -362,10 +362,10 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
   };
 
   const customStyles = {
-    trigger: "w-fit !inline-flex items-center justify-between rounded px-3 py-2 text-sm font-medium bg-white border border-gray-300 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500",
+    trigger: "w-fit !inline-flex items-center justify-between rounded px-3 py-2 text-sm font-medium bg-white border border-gray-300 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[rgb(var(--color-primary-500))]",
     content: "bg-white rounded-md shadow-lg ring-1 ring-black ring-opacity-5 overflow-auto",
-    item: "text-gray-900 cursor-default select-none relative py-2 pl-3 pr-9 hover:bg-indigo-600 hover:text-white",
-    itemIndicator: "absolute inset-y-0 right-0 flex items-center pr-4 text-indigo-600",
+    item: "text-gray-900 cursor-default select-none relative py-2 pl-3 pr-9 hover:bg-[rgb(var(--color-primary-600))] hover:text-white",
+    itemIndicator: "absolute inset-y-0 right-0 flex items-center pr-4 text-[rgb(var(--color-primary-600))]",
   };
 
   // If we don't have users data but have agentOptions, convert agentOptions to users format
@@ -397,7 +397,7 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
                   onChange={(e) => setTitleValue(e.target.value)}
                   onKeyDown={handleTitleKeyDown}
                   autoFocus
-                  className="text-2xl font-bold flex-1 px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                  className="text-2xl font-bold flex-1 px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-[rgb(var(--color-primary-500))] focus:border-transparent"
                   containerClassName="flex-1"
                   style={{minWidth: '300px', width: '100%'}}
                 />
@@ -434,7 +434,7 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
                   className="p-1 hover:bg-gray-100 rounded-full transition-colors duration-200 flex-shrink-0"
                   title="Edit title"
                 >
-                  <Pencil className="w-4 h-4 text-gray-500" />
+                  <Pencil className="w-4 h-4 text-gray-400 hover:text-gray-600" />
                 </button>
               </div>
             )}
@@ -880,7 +880,7 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
                   className="p-1 hover:bg-gray-100 rounded-full transition-colors duration-200"
                   title="Edit description"
                 >
-                  <Pencil className="w-4 h-4 text-gray-500" />
+                  <Pencil className="w-4 h-4 text-gray-400 hover:text-gray-600" />
                 </button>
               )}
             </div>

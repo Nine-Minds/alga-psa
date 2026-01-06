@@ -219,6 +219,8 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     const [isSavingTicket, setIsSavingTicket] = useState(false);
     const [hasAttemptedSave, setHasAttemptedSave] = useState(false);
     const [validationErrors, setValidationErrors] = useState<string[]>([]);
+    // Ref to prevent race conditions from rapid double-clicks on save button
+    const isSavingRef = React.useRef(false);
     // Navigation away confirmation dialog state
     const [showNavigateAwayDialog, setShowNavigateAwayDialog] = useState(false);
     const [pendingNavigationUrl, setPendingNavigationUrl] = useState<string | null>(null);
@@ -242,6 +244,42 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
             onHasUnsavedChangesChange(hasAnyUnsavedChanges);
         }
     }, [hasAnyUnsavedChanges, onHasUnsavedChangesChange]);
+
+    // Reset all state when switching to a different ticket (e.g., in drawer mode)
+    // This ensures unsaved changes from one ticket don't persist when viewing another
+    useEffect(() => {
+        // Reset ticket-related state to new initial values
+        setTicket(initialTicket);
+        setOriginalTicket(initialTicket);
+        setConversations(initialComments);
+        setDocuments(initialDocuments);
+        setClient(initialClient);
+        setContactInfo(initialContactInfo);
+        setCreatedByUser(initialCreatedByUser);
+        setBoard(initialBoard);
+        setClients(initialClients);
+        setContacts(initialContacts);
+        setLocations(initialLocations);
+        setAdditionalAgents(initialAdditionalAgents);
+        setAvailableAgents(initialAvailableAgents);
+        setTags(initialTags);
+
+        // Reset editing/unsaved changes state
+        setHasUnsavedChanges(false);
+        setHasTempChanges(false);
+        setHasAttemptedSave(false);
+        setValidationErrors([]);
+        isSavingRef.current = false;
+        setIsSavingTicket(false);
+
+        // Reset ITIL state
+        setItilImpact(initialTicket.itil_impact || undefined);
+        setItilUrgency(initialTicket.itil_urgency || undefined);
+
+        // Reset navigation state
+        setShowNavigateAwayDialog(false);
+        setPendingNavigationUrl(null);
+    }, [initialTicket.ticket_id]); // Only reset when ticket ID changes
 
     // Warn before leaving page with unsaved changes (browser navigation)
     useEffect(() => {
@@ -1238,6 +1276,12 @@ const handleClose = () => {
     // Note: Permission checks (hasPermission(user, 'ticket', 'update')) are handled
     // server-side in the updateTicket action (ticketActions.ts:309)
     const handleSaveTicket = useCallback(async () => {
+        // Prevent race conditions from rapid double-clicks
+        // Ref check is synchronous and prevents duplicate submissions even before state updates
+        if (isSavingRef.current) {
+            return;
+        }
+
         setHasAttemptedSave(true);
 
         // Validate before saving
@@ -1249,6 +1293,8 @@ const handleClose = () => {
             return;
         }
 
+        // Set both ref (immediate) and state (for UI)
+        isSavingRef.current = true;
         setIsSavingTicket(true);
         try {
             const user = await getCurrentUser();
@@ -1298,6 +1344,8 @@ const handleClose = () => {
             console.error('Error saving ticket:', error);
             toast.error('Failed to save ticket');
         } finally {
+            // Reset both ref and state
+            isSavingRef.current = false;
             setIsSavingTicket(false);
         }
     }, [validateTicket, ticket]);
