@@ -5,7 +5,10 @@ import Image from 'next/image';
 
 import { Message, type FunctionCallMeta } from '../../components/message/Message';
 import { IChat } from '../../interfaces/chat.interface';
-import { createNewChatAction, addMessageToChatAction } from '../../lib/chat-actions/chatActions';
+import {
+  createNewChatAction,
+  addMessageToChatAction,
+} from '../../lib/chat-actions/chatActions';
 import { HfInference } from '@huggingface/inference';
 import { Dialog, DialogContent, DialogFooter } from 'server/src/components/ui/Dialog';
 import { Button } from 'server/src/components/ui/Button';
@@ -171,7 +174,10 @@ type ChatProps = {
   setChatTitle: any;
   isTitleLocked: boolean;
   onUserInput: () => void;
-  hf: HfInference;
+  hf: HfInference | null;
+  initialChatId?: string | null;
+  autoSendPrompt?: string | null;
+  onChatIdChange?: (chatId: string | null) => void;
 };
 
 const AUTO_APPROVED_METHODS_STORAGE_KEY = 'chat:autoApprovedHttpMethods';
@@ -198,6 +204,9 @@ export const Chat: React.FC<ChatProps> = ({
   isTitleLocked,
   onUserInput,
   hf,
+  initialChatId,
+  autoSendPrompt,
+  onChatIdChange,
 }) => {
   const textareaId = useId();
   const [messageText, setMessageText] = useState('');
@@ -215,7 +224,7 @@ export const Chat: React.FC<ChatProps> = ({
   >([]);
   const [fullMessage, setFullMessage] = useState('');
   const [fullReasoning, setFullReasoning] = useState<string | null>(null);
-  const [chatId, setChatId] = useState<string | null>(null);
+  const [chatId, setChatId] = useState<string | null>(initialChatId ?? null);
   const [userMessageId, setUserMessageId] = useState<string | null>(null);
   const [botMessageId, setBotMessageId] = useState<string | null>(null);
   const [conversation, setConversation] = useState<ChatCompletionMessage[]>(() =>
@@ -232,6 +241,10 @@ export const Chat: React.FC<ChatProps> = ({
   const inputRef = useRef<HTMLTextAreaElement | null>(null);
   const [showValidationDialog, setShowValidationDialog] = useState(false);
   const [validationMessage, setValidationMessage] = useState('');
+  const autoSendRef = useRef(false);
+  const typingControllerRef = useRef<AbortController | null>(null);
+  const messageOrderRef = useRef<number>(0);
+  const streamingTextRef = useRef<string | null>(null);
 
   const resolveMessageId = (candidate?: string | null) =>
     candidate ?? (typeof crypto !== 'undefined' && 'randomUUID' in crypto
@@ -281,6 +294,28 @@ export const Chat: React.FC<ChatProps> = ({
       }
     }
   }, []);
+
+  useEffect(() => {
+    return () => {
+      typingControllerRef.current?.abort();
+    };
+  }, []);
+
+  useEffect(() => {
+    const maxOrderFromRecords = Array.isArray(messages)
+      ? Math.max(
+          0,
+          ...messages.map((record: any) =>
+            typeof record?.message_order === 'number' ? record.message_order : 0,
+          ),
+        )
+      : 0;
+    messageOrderRef.current = Math.max(maxOrderFromRecords, Array.isArray(messages) ? messages.length : 0);
+  }, [messages]);
+
+  useEffect(() => {
+    onChatIdChange?.(chatId);
+  }, [chatId, onChatIdChange]);
 
   useEffect(() => {
     if (!generatingResponse && inputRef.current) {
@@ -342,6 +377,7 @@ export const Chat: React.FC<ChatProps> = ({
   const addAssistantMessageToPersistence = useCallback(async (
     chatIdentifier: string | null,
     content: string,
+    messageOrder?: number,
   ) => {
     if (!content || !chatIdentifier) {
       return;
@@ -354,6 +390,7 @@ export const Chat: React.FC<ChatProps> = ({
         content,
         thumb: null,
         feedback: null,
+        message_order: messageOrder,
       };
       const saved = await addMessageToChatAction(messageInfo);
       setBotMessageId(saved._id || null);
@@ -416,14 +453,19 @@ export const Chat: React.FC<ChatProps> = ({
   };
 
   const handleStop = () => {
+    typingControllerRef.current?.abort();
+    if (streamingTextRef.current) {
+      setIncomingMessage('');
+      setFullMessage(streamingTextRef.current);
+      streamingTextRef.current = null;
+    }
     setGeneratingResponse(false);
     setIsFunction(false);
-    setIncomingMessage('');
     setPendingFunction(null);
     setIsExecutingFunction(false);
   };
 
-  const handleSend = async (trimmedMessage: string) => {
+  const handleSend = useCallback(async (trimmedMessage: string) => {
     setFunctionError(null);
     setGeneratingResponse(true);
     setIsFunction(true);
@@ -462,12 +504,15 @@ export const Chat: React.FC<ChatProps> = ({
       }
 
       if (createdChatId) {
+        const order = messageOrderRef.current + 1;
+        messageOrderRef.current = order;
         const messageInfo = {
           chat_id: createdChatId,
           chat_role: 'user' as const,
           content: trimmedMessage,
           thumb: null,
           feedback: null,
+          message_order: order,
         };
         const saved = await addMessageToChatAction(messageInfo);
         setUserMessageId(saved._id || null);
@@ -519,9 +564,12 @@ export const Chat: React.FC<ChatProps> = ({
             ? assistantContentRaw
             : (assistantReasoning ?? '').trim();
 
+        const assistantOrder = messageOrderRef.current + 1;
+        messageOrderRef.current = assistantOrder;
         await addAssistantMessageToPersistence(
           createdChatId ?? chatId,
           finalAssistantContent,
+          assistantOrder,
         );
         setConversation(
           modelMessages ?? [
@@ -533,11 +581,49 @@ export const Chat: React.FC<ChatProps> = ({
             },
           ],
         );
-        setFullMessage(finalAssistantContent);
+
+        typingControllerRef.current?.abort();
+        const controller = new AbortController();
+        typingControllerRef.current = controller;
+
         setFullReasoning(assistantReasoning);
-        setIncomingMessage('');
         setIsFunction(false);
-        setGeneratingResponse(false);
+        setIncomingMessage('');
+        streamingTextRef.current = finalAssistantContent;
+
+        const fullText = finalAssistantContent;
+        const totalSteps = Math.max(12, Math.min(140, Math.ceil(fullText.length / 14)));
+        const stepSize = Math.max(1, Math.ceil(fullText.length / totalSteps));
+
+        if (fullText.length === 0) {
+          setIncomingMessage('');
+          setFullMessage('');
+          setGeneratingResponse(false);
+          streamingTextRef.current = null;
+        } else {
+          let revealed = 0;
+          const streamStep = () => {
+            if (controller.signal.aborted) {
+              return;
+            }
+
+            revealed = Math.min(fullText.length, revealed + stepSize);
+            const next = fullText.slice(0, revealed);
+            setIncomingMessage(next);
+
+            if (revealed >= fullText.length) {
+              setIncomingMessage('');
+              setFullMessage(fullText);
+              setGeneratingResponse(false);
+              streamingTextRef.current = null;
+              return;
+            }
+
+            requestAnimationFrame(streamStep);
+          };
+
+          requestAnimationFrame(streamStep);
+        }
         setPendingFunctionStatus('idle');
         setPendingFunctionAction('none');
         setPendingFunction(null);
@@ -566,7 +652,29 @@ export const Chat: React.FC<ChatProps> = ({
       setIsFunction(false);
       setGeneratingResponse(false);
     }
-  };
+  }, [
+    chatId,
+    conversation,
+    userId,
+    userMessageId,
+    autoResizeTextarea,
+    addAssistantMessageToPersistence,
+  ]);
+
+  useEffect(() => {
+    if (!autoSendPrompt) {
+      return;
+    }
+    if (autoSendRef.current) {
+      return;
+    }
+    const prompt = autoSendPrompt.trim();
+    if (!prompt.length) {
+      return;
+    }
+    autoSendRef.current = true;
+    void handleSend(prompt);
+  }, [autoSendPrompt, handleSend]);
 
   const handleFunctionAction = useCallback(async (action: 'approve' | 'decline') => {
     if (!pendingFunction) {
@@ -621,9 +729,12 @@ export const Chat: React.FC<ChatProps> = ({
           finalAssistantContent =
             preview.length > 0 ? preview : 'The action completed without additional details.';
         }
+        const assistantOrder = messageOrderRef.current + 1;
+        messageOrderRef.current = assistantOrder;
         await addAssistantMessageToPersistence(
           pendingFunction.chatId ?? chatId,
           finalAssistantContent,
+          assistantOrder,
         );
 
         setConversation(
@@ -999,6 +1110,7 @@ export const Chat: React.FC<ChatProps> = ({
               disabled={generatingResponse || isFunction}
               aria-label="Message Alga"
               aria-busy={generatingResponse || isFunction}
+              data-automation-id="chat-input"
             />
             <p className="chat-input__hint">
               Press Ctrl+Enter or ⌘+Enter to send.

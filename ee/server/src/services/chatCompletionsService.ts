@@ -8,9 +8,9 @@ import {
   ChatApiRegistryEntry,
 } from '../chat/registry/apiRegistry.schema';
 import { TemporaryApiKeyService } from './temporaryApiKeyService';
-import { getSecretProviderInstance } from '@alga-psa/shared/core/secretProvider';
 import { parseAssistantContent, ParsedAssistantContent } from '../utils/chatContent';
 import { reprovisionExtension } from '../lib/actions/extensionDomainActions';
+import { getOpenRouterApiKey } from '../utils/openRouterApiKey';
 
 const isEnterpriseEdition = () =>
   process.env.NEXT_PUBLIC_EDITION === 'enterprise' ||
@@ -852,7 +852,7 @@ export class ChatCompletionsService {
   ) {
     for (let attempt = 0; attempt < MAX_MODEL_RETRIES; attempt += 1) {
       const completion = await client.chat.completions.create({
-        model: process.env.OPENROUTER_CHAT_MODEL ?? 'minimax/minimax-m2:free',
+        model: process.env.OPENROUTER_CHAT_MODEL ?? 'minimax/minimax-m2',
         messages: this.buildOpenAiMessages(conversation),
         tools: this.buildToolDefinitions(),
         tool_choice: 'auto',
@@ -1218,11 +1218,7 @@ export class ChatCompletionsService {
   }
 
   private static async getOpenRouterClient() {
-    const secretProvider = await getSecretProviderInstance();
-    const apiKey =
-      (await secretProvider.getAppSecret('OPENROUTER_API_KEY')) ||
-      process.env.OPENROUTER_API_KEY;
-
+    const apiKey = await getOpenRouterApiKey();
     if (!apiKey) {
       throw new Error('OpenRouter API key is not configured');
     }

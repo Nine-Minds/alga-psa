@@ -10,6 +10,7 @@ import Drawer from 'server/src/components/ui/Drawer';
 import { DrawerProvider } from "server/src/context/DrawerContext";
 import { ActivityDrawerProvider } from "server/src/components/user-activities/ActivityDrawerProvider";
 import { savePreference } from 'server/src/lib/utils/cookies';
+import QuickAskOverlay from 'server/src/components/chat/QuickAskOverlay';
 
 interface DefaultLayoutProps {
   children: React.ReactNode;
@@ -78,6 +79,11 @@ export default function DefaultLayout({ children, initialSidebarCollapsed = fals
   };
 
   const [rightSidebarOpen, setRightSidebarOpen] = useState(false);
+  const [quickAskOpen, setQuickAskOpen] = useState(false);
+  const [sidebarHandoff, setSidebarHandoff] = useState<{ chatId: string | null; nonce: number }>({
+    chatId: null,
+    nonce: 0,
+  });
 
   // Add state for Chat component props
   const [clientUrl, setClientUrl] = useState('');
@@ -94,6 +100,18 @@ export default function DefaultLayout({ children, initialSidebarCollapsed = fals
       if ((event.metaKey || event.ctrlKey) && event.key === 'l') {
         event.preventDefault();
         setRightSidebarOpen(prev => !prev);
+      }
+
+      if ((event.metaKey || event.ctrlKey) && event.key === 'ArrowUp') {
+        event.preventDefault();
+
+        if (rightSidebarOpen) {
+          const input = document.querySelector('[data-automation-id="chat-input"]') as HTMLElement | null;
+          input?.focus();
+          return;
+        }
+
+        setQuickAskOpen(prev => !prev);
       }
     };
 
@@ -134,7 +152,21 @@ export default function DefaultLayout({ children, initialSidebarCollapsed = fals
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, []);
+  }, [rightSidebarOpen]);
+
+  const handleQuickAskClose = () => {
+    setQuickAskOpen(false);
+  };
+
+  const handleOpenQuickAskInSidebar = (chatId: string) => {
+    setQuickAskOpen(false);
+    setRightSidebarOpen(true);
+    setSidebarHandoff({ chatId, nonce: Date.now() });
+    setTimeout(() => {
+      const input = document.querySelector('[data-automation-id="chat-input"]') as HTMLElement | null;
+      input?.focus();
+    }, 0);
+  };
 
 
   const handleSelectAccount = (account: string) => {
@@ -183,8 +215,26 @@ export default function DefaultLayout({ children, initialSidebarCollapsed = fals
                 auth_token={auth_token}
                 setChatTitle={setChatTitle}
                 isTitleLocked={isTitleLocked}
+                handoffChatId={sidebarHandoff.chatId}
+                handoffNonce={sidebarHandoff.nonce}
               />
             </main>
+            <QuickAskOverlay
+              isOpen={quickAskOpen}
+              onClose={handleQuickAskClose}
+              onOpenInSidebar={handleOpenQuickAskInSidebar}
+              clientUrl={clientUrl}
+              accountId={accountId}
+              messages={messages}
+              userRole={userRole}
+              userId={userId}
+              selectedAccount={selectedAccount}
+              handleSelectAccount={handleSelectAccount}
+              auth_token={auth_token}
+              setChatTitle={setChatTitle}
+              isTitleLocked={isTitleLocked}
+              hf={null}
+            />
             <Drawer isOpen={isDrawerOpen} onClose={closeDrawer}>
               {drawerContent}
             </Drawer>

@@ -17,6 +17,8 @@ interface RightSidebarProps {
   auth_token: string;
   setChatTitle: any;
   isTitleLocked: boolean;
+  handoffChatId?: string | null;
+  handoffNonce?: number;
 }
 
 const resolvedEdition =

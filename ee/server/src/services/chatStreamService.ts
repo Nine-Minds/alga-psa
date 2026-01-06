@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server';
 import { OpenRouterChatModel } from '../models/OpenRouterChatModel';
-import { getSecretProviderInstance } from '@alga-psa/shared/core/secretProvider';
+import { getOpenRouterApiKey } from '../utils/openRouterApiKey';
 
 interface StreamRequestBody {
   inputs: any[];
@@ -13,10 +13,7 @@ interface StreamRequestBody {
 
 export class ChatStreamService {
   private static async getOpenRouterModel() {
-    const secretProvider = await getSecretProviderInstance();
-    const apiKey =
-      (await secretProvider.getAppSecret('OPENROUTER_API_KEY')) ||
-      process.env.OPENROUTER_API_KEY;
+    const apiKey = await getOpenRouterApiKey();
     if (!apiKey) {
       console.error('[ChatStreamService] Missing OpenRouter API key');
       throw new Error('OpenRouter API key is not configured');
