@@ -25,21 +25,24 @@ import { getClientLogoUrl, getUserAvatarUrl, getClientLogoUrlsBatch } from 'serv
 import {
   ticketFormSchema,
   ticketSchema,
-  ticketUpdateSchema, 
+  ticketUpdateSchema,
   ticketAttributesQuerySchema,
   ticketListItemSchema,
   ticketListFiltersSchema
 } from 'server/src/lib/schemas/ticket.schema';
 import { analytics } from '../../analytics/posthog';
 import { AnalyticsEvents } from '../../analytics/events';
+import { Temporal } from '@js-temporal/polyfill';
+import { resolveUserTimeZone, normalizeIanaTimeZone } from 'server/src/lib/utils/workDate';
 
 // Helper function to safely convert dates
-function convertDates<T extends { entered_at?: Date | string | null, updated_at?: Date | string | null, closed_at?: Date | string | null }>(record: T): T {
+function convertDates<T extends { entered_at?: Date | string | null, updated_at?: Date | string | null, closed_at?: Date | string | null, due_date?: Date | string | null }>(record: T): T {
   return {
     ...record,
     entered_at: record.entered_at instanceof Date ? record.entered_at.toISOString() : record.entered_at,
     updated_at: record.updated_at instanceof Date ? record.updated_at.toISOString() : record.updated_at,
     closed_at: record.closed_at instanceof Date ? record.closed_at.toISOString() : record.closed_at,
+    due_date: record.due_date instanceof Date ? record.due_date.toISOString() : record.due_date,
   };
 }
 
@@ -673,6 +676,61 @@ export async function getTicketsForList(
       });
     }
 
+    // Apply due date filters (timezone-aware for 'today' filter)
+    if (validatedFilters.dueDateFilter && validatedFilters.dueDateFilter !== 'all') {
+      const nowInstant = Temporal.Now.instant();
+      const nowIso = nowInstant.toString();
+
+      switch (validatedFilters.dueDateFilter) {
+        case 'overdue':
+          // Due date is in the past
+          baseQuery = baseQuery.where('t.due_date', '<', nowIso);
+          break;
+        case 'upcoming':
+          // Due date is within the next 7 days (not overdue)
+          const weekFromNow = nowInstant.add({ hours: 24 * 7 });
+          baseQuery = baseQuery
+            .where('t.due_date', '>=', nowIso)
+            .where('t.due_date', '<=', weekFromNow.toString());
+          break;
+        case 'today':
+          // Due date is today in user's timezone
+          const userTz = await resolveUserTimeZone(trx, tenant, user.user_id);
+          const zonedNow = nowInstant.toZonedDateTimeISO(userTz);
+          const startOfTodayZoned = zonedNow.startOfDay();
+          const endOfTodayZoned = startOfTodayZoned.add({ days: 1 });
+          baseQuery = baseQuery
+            .where('t.due_date', '>=', startOfTodayZoned.toInstant().toString())
+            .where('t.due_date', '<', endOfTodayZoned.toInstant().toString());
+          break;
+        case 'no_due_date':
+          // No due date set
+          baseQuery = baseQuery.whereNull('t.due_date');
+          break;
+        case 'before':
+          // Due date is before a specific date
+          if (validatedFilters.dueDateTo) {
+            baseQuery = baseQuery.where('t.due_date', '<', validatedFilters.dueDateTo);
+          }
+          break;
+        case 'after':
+          // Due date is after a specific date
+          if (validatedFilters.dueDateFrom) {
+            baseQuery = baseQuery.where('t.due_date', '>', validatedFilters.dueDateFrom);
+          }
+          break;
+        case 'custom':
+          // Custom date range
+          if (validatedFilters.dueDateFrom) {
+            baseQuery = baseQuery.where('t.due_date', '>=', validatedFilters.dueDateFrom);
+          }
+          if (validatedFilters.dueDateTo) {
+            baseQuery = baseQuery.where('t.due_date', '<=', validatedFilters.dueDateTo);
+          }
+          break;
+      }
+    }
+
     const sortBy = validatedFilters.sortBy ?? 'entered_at';
     const sortDirection: 'asc' | 'desc' = validatedFilters.sortDirection ?? 'desc';
     const sortColumnMap: Record<string, { column?: string; rawExpression?: string }> = {
@@ -684,7 +742,8 @@ export async function getTicketsForList(
       category_name: { column: 'cat.category_name' },
       client_name: { column: 'comp.client_name' },
       entered_at: { column: 't.entered_at' },
-      entered_by_name: { rawExpression: "COALESCE(CONCAT(u.first_name, ' ', u.last_name), '')" }
+      entered_by_name: { rawExpression: "COALESCE(CONCAT(u.first_name, ' ', u.last_name), '')" },
+      due_date: { column: 't.due_date' }
     };
     const selectedSort = sortColumnMap[sortBy] || sortColumnMap.entered_at;
 
@@ -747,7 +806,7 @@ export async function getTicketsForList(
       } = ticket;
 
       const convertedRest = convertDates(rest);
-      // Clean up null ITIL fields
+      // Clean up null optional fields to undefined for type compatibility
       if (convertedRest.itil_impact === null) {
         convertedRest.itil_impact = undefined;
       }
@@ -756,6 +815,9 @@ export async function getTicketsForList(
       }
       if (convertedRest.itil_priority_level === null) {
         convertedRest.itil_priority_level = undefined;
+      }
+      if (convertedRest.due_date === null) {
+        convertedRest.due_date = undefined;
       }
       return {
         ...convertedRest,

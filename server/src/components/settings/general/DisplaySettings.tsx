@@ -26,6 +26,7 @@ const DisplaySettings = (): React.JSX.Element => {
     assigned_to: true,
     created: true,
     created_by: true,
+    due_date: true,
     tags: true,
     actions: true,
   });
@@ -49,6 +50,7 @@ const DisplaySettings = (): React.JSX.Element => {
       assigned_to: true,
       created: true,
       created_by: true,
+      due_date: true,
       tags: true,
       actions: true,
     },
@@ -81,6 +83,7 @@ const DisplaySettings = (): React.JSX.Element => {
           assigned_to: true,
           created: true,
           created_by: true,
+          due_date: true,
           tags: true,
           actions: true,
         };
@@ -173,6 +176,7 @@ const DisplaySettings = (): React.JSX.Element => {
             { key: 'assigned_to', label: 'Assigned To', required: false },
             { key: 'created', label: 'Created', required: false },
             { key: 'created_by', label: 'Created By', required: false },
+            { key: 'due_date', label: 'Due Date', required: false },
             { key: 'actions', label: 'Actions', required: true },
           ].map(({ key, label, required }) => (
             <div key={key} className="[&>div]:mb-0">

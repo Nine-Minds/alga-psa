@@ -198,7 +198,7 @@ export function TicketList() {
             : bValue.localeCompare(aValue);
         }
 
-        if (sortField === 'entered_at' || sortField === 'updated_at') {
+        if (sortField === 'entered_at' || sortField === 'updated_at' || sortField === 'due_date') {
           const aDate = new Date(aValue as string);
           const bDate = new Date(bValue as string);
           return sortDirection === 'asc'
@@ -349,16 +349,54 @@ export function TicketList() {
     {
       title: t('tickets.fields.priority'),
       dataIndex: 'priority_name',
-      width: '15%',
+      width: '12%',
       render: (value: string, record: ITicketListItem) => (
         <div className="flex items-center gap-2">
-          <div 
+          <div
             className={`w-3 h-3 rounded-full border border-gray-300 ${!record.priority_color ? 'bg-gray-500' : ''}`}
             style={record.priority_color ? { backgroundColor: record.priority_color } : undefined}
           />
           <span className="capitalize">{value}</span>
         </div>
       ),
+    },
+    {
+      title: t('tickets.fields.dueDate', 'Due Date'),
+      dataIndex: 'due_date',
+      width: '12%',
+      render: (value: string | null) => {
+        if (!value) {
+          return <span className="text-sm text-gray-500">-</span>;
+        }
+
+        const dueDate = new Date(value);
+        const now = new Date();
+        const hoursUntilDue = (dueDate.getTime() - now.getTime()) / (1000 * 60 * 60);
+
+        // Check if time is midnight (00:00) - show date only
+        const isMidnight = dueDate.getHours() === 0 && dueDate.getMinutes() === 0;
+        const displayFormat = isMidnight ? 'MMM d, yyyy' : 'MMM d, yyyy h:mm a';
+
+        // Determine styling based on due date status
+        let textColorClass = 'text-gray-500';
+        let bgColorClass = '';
+
+        if (hoursUntilDue < 0) {
+          // Overdue - red/warning style
+          textColorClass = 'text-red-700';
+          bgColorClass = 'bg-red-50';
+        } else if (hoursUntilDue <= 24) {
+          // Approaching due date (within 24 hours) - orange/caution style
+          textColorClass = 'text-orange-700';
+          bgColorClass = 'bg-orange-50';
+        }
+
+        return (
+          <span className={`text-sm inline-block ${textColorClass} ${bgColorClass ? `${bgColorClass} px-2 py-0.5 rounded-full` : ''}`}>
+            {format(dueDate, displayFormat)}
+          </span>
+        );
+      },
     },
     {
       title: t('tickets.fields.assignedTo'),

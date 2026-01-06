@@ -37,6 +37,7 @@ import { createTicketColumns } from 'server/src/lib/utils/ticket-columns';
 import Spinner from 'server/src/components/ui/Spinner';
 import MultiUserPicker from 'server/src/components/ui/MultiUserPicker';
 import { getUserAvatarUrlsBatchAction } from 'server/src/lib/actions/avatar-actions';
+import { DatePicker } from 'server/src/components/ui/DatePicker';
 
 interface TicketingDashboardProps {
   id?: string;
@@ -137,6 +138,14 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   const [selectedAssignees, setSelectedAssignees] = useState<string[]>(initialFilterValues.assignedToIds ?? []);
   const [includeUnassigned, setIncludeUnassigned] = useState<boolean>(initialFilterValues.includeUnassigned ?? false);
 
+  // Due date filter state
+  const [selectedDueDateFilter, setSelectedDueDateFilter] = useState<string>(initialFilterValues.dueDateFilter ?? 'all');
+  const [dueDateFilterValue, setDueDateFilterValue] = useState<Date | undefined>(() => {
+    // Initialize from dueDateFrom (for 'after') or dueDateTo (for 'before') from URL
+    const dateStr = initialFilterValues.dueDateFrom || initialFilterValues.dueDateTo;
+    return dateStr ? new Date(dateStr) : undefined;
+  });
+
   const [clientFilterState, setClientFilterState] = useState<'active' | 'inactive' | 'all'>('active');
   const [clientTypeFilter, setClientTypeFilter] = useState<'all' | 'company' | 'individual'>('all');
 
@@ -149,9 +158,12 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
       initialFilterValues.categoryId ||
       (initialFilterValues.tags && initialFilterValues.tags.length > 0) ||
       (initialFilterValues.assignedToIds && initialFilterValues.assignedToIds.length > 0) ||
-      initialFilterValues.includeUnassigned
+      initialFilterValues.includeUnassigned ||
+      (initialFilterValues.dueDateFilter && initialFilterValues.dueDateFilter !== 'all') ||
+      initialFilterValues.dueDateFrom ||
+      initialFilterValues.dueDateTo
     );
-  }, [initialFilterValues.boardId, initialFilterValues.clientId, initialFilterValues.statusId, initialFilterValues.priorityId, initialFilterValues.categoryId, initialFilterValues.tags, initialFilterValues.assignedToIds, initialFilterValues.includeUnassigned]);
+  }, [initialFilterValues.boardId, initialFilterValues.clientId, initialFilterValues.statusId, initialFilterValues.priorityId, initialFilterValues.categoryId, initialFilterValues.tags, initialFilterValues.assignedToIds, initialFilterValues.includeUnassigned, initialFilterValues.dueDateFilter, initialFilterValues.dueDateFrom, initialFilterValues.dueDateTo]);
 
   const [isQuickAddOpen, setIsQuickAddOpen] = useState(false);
   const [isLoadingSelf, setIsLoadingSelf] = useState(false);
@@ -287,9 +299,21 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     if (includeUnassigned) {
       params.set('includeUnassigned', 'true');
     }
+    // Include due date filter in URL params
+    if (selectedDueDateFilter && selectedDueDateFilter !== 'all') {
+      params.set('dueDateFilter', selectedDueDateFilter);
+      // Add the date value for before/after filters
+      if (dueDateFilterValue) {
+        if (selectedDueDateFilter === 'before') {
+          params.set('dueDateTo', dueDateFilterValue.toISOString());
+        } else if (selectedDueDateFilter === 'after') {
+          params.set('dueDateFrom', dueDateFilterValue.toISOString());
+        }
+      }
+    }
 
     return params.toString();
-  }, [selectedBoard, selectedClient, selectedStatus, selectedPriority, selectedCategories, debouncedSearchQuery, boardFilterState, selectedAssignees, includeUnassigned]);
+  }, [selectedBoard, selectedClient, selectedStatus, selectedPriority, selectedCategories, debouncedSearchQuery, boardFilterState, selectedAssignees, includeUnassigned, selectedDueDateFilter, dueDateFilterValue]);
 
   const isFirstRender = useRef(true);
 
@@ -314,6 +338,9 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
       tags: selectedTags.length > 0 ? selectedTags : undefined,
       assignedToIds: selectedAssignees.length > 0 ? selectedAssignees : undefined,
       includeUnassigned: includeUnassigned || undefined,
+      dueDateFilter: selectedDueDateFilter !== 'all' ? selectedDueDateFilter as ITicketListFilters['dueDateFilter'] : undefined,
+      dueDateFrom: selectedDueDateFilter === 'after' && dueDateFilterValue ? dueDateFilterValue.toISOString() : undefined,
+      dueDateTo: selectedDueDateFilter === 'before' && dueDateFilterValue ? dueDateFilterValue.toISOString() : undefined,
     };
 
     console.log('[Dashboard] Calling onFiltersChanged with:', currentFilters);
@@ -330,6 +357,8 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     selectedTags,
     selectedAssignees,
     includeUnassigned,
+    selectedDueDateFilter,
+    dueDateFilterValue,
     // onFiltersChanged intentionally omitted - we want to trigger only when filter values change, not when the callback changes
     filtersHaveInitialValues
   ]);
@@ -842,6 +871,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     const defaultCategories: string[] = [];
     const defaultSearchQuery: string = '';
     const defaultBoardFilterState: 'active' | 'inactive' | 'all' = 'active';
+    const defaultDueDateFilter: string = 'all';
 
     setSelectedBoard(defaultBoard);
     setSelectedClient(defaultClient);
@@ -854,6 +884,8 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     setSelectedTags([]);
     setSelectedAssignees([]);
     setIncludeUnassigned(false);
+    setSelectedDueDateFilter(defaultDueDateFilter);
+    setDueDateFilterValue(undefined);
 
     setClientFilterState('active');
     setClientTypeFilter('all');
@@ -871,6 +903,9 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
       showOpenOnly: defaultStatus === 'open',
       assignedToIds: undefined,
       includeUnassigned: undefined,
+      dueDateFilter: undefined,
+      dueDateFrom: undefined,
+      dueDateTo: undefined,
     });
   }, [onFiltersChanged, clearSelection]);
 
@@ -958,6 +993,41 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
               onValueChange={(value) => setSelectedPriority(value)}
               placeholder="All Priorities"
             />
+            <div className="flex items-center gap-1">
+              <CustomSelect
+                data-automation-id={`${id}-due-date-filter`}
+                options={[
+                  { value: 'all', label: 'All Due Dates' },
+                  { value: 'overdue', label: 'Overdue' },
+                  { value: 'today', label: 'Due Today' },
+                  { value: 'upcoming', label: 'Due Next 7 Days' },
+                  { value: 'before', label: dueDateFilterValue && selectedDueDateFilter === 'before'
+                    ? `Before ${dueDateFilterValue.toLocaleDateString()}`
+                    : 'Before Date...' },
+                  { value: 'after', label: dueDateFilterValue && selectedDueDateFilter === 'after'
+                    ? `After ${dueDateFilterValue.toLocaleDateString()}`
+                    : 'After Date...' },
+                  { value: 'no_due_date', label: 'No Due Date' },
+                ]}
+                value={selectedDueDateFilter}
+                onValueChange={(value) => {
+                  setSelectedDueDateFilter(value);
+                  if (value !== 'before' && value !== 'after') {
+                    setDueDateFilterValue(undefined);
+                  }
+                }}
+                placeholder="Due Date"
+                className="w-fit min-w-[140px]"
+              />
+              {(selectedDueDateFilter === 'before' || selectedDueDateFilter === 'after') && (
+                <DatePicker
+                  id={`${id}-due-date-filter-value`}
+                  value={dueDateFilterValue}
+                  onChange={setDueDateFilterValue}
+                  placeholder="Pick date"
+                />
+              )}
+            </div>
             <CategoryPicker
               id={`${id}-category-picker`}
               categories={categories}

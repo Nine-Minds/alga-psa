@@ -54,6 +54,7 @@ export function createTicketColumns(options: CreateTicketColumnsOptions): Column
     category: true,
     client: true,
     assigned_to: true,
+    due_date: true,
     created: true,
     created_by: true,
     tags: true,
@@ -273,6 +274,51 @@ export function createTicketColumns(options: CreateTicketColumnsOptions): Column
                   </span>
                 </Tooltip>
               )}
+            </span>
+          );
+        },
+      }
+    });
+  }
+
+  // Due Date
+  if (columnVisibility.due_date) {
+    columns.push({
+      key: 'due_date',
+      col: {
+        title: 'Due Date',
+        dataIndex: 'due_date',
+        width: '12%',
+        render: (value: string | null) => {
+          if (!value) {
+            return <div className="text-sm text-gray-500">-</div>;
+          }
+
+          const dueDate = new Date(value);
+          const now = new Date();
+          const hoursUntilDue = (dueDate.getTime() - now.getTime()) / (1000 * 60 * 60);
+
+          // Check if time is midnight (00:00) - show date only
+          const isMidnight = dueDate.getHours() === 0 && dueDate.getMinutes() === 0;
+          const displayFormat = isMidnight ? 'MMM d, yyyy' : dateTimeFormat;
+
+          // Determine styling based on due date status
+          let textColorClass = 'text-gray-500';
+          let bgColorClass = '';
+
+          if (hoursUntilDue < 0) {
+            // Overdue - red/warning style
+            textColorClass = 'text-red-700';
+            bgColorClass = 'bg-red-50';
+          } else if (hoursUntilDue <= 24) {
+            // Approaching due date (within 24 hours) - orange/caution style
+            textColorClass = 'text-orange-700';
+            bgColorClass = 'bg-orange-50';
+          }
+
+          return (
+            <span className={`text-sm inline-block ${textColorClass} ${bgColorClass ? `${bgColorClass} px-2 py-0.5 rounded-full` : ''}`}>
+              {format(dueDate, displayFormat)}
             </span>
           );
         },

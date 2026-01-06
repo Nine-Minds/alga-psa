@@ -69,6 +69,7 @@ export default function TicketingDashboardContainer({
       clientId: undefined,
       assignedToIds: undefined,
       includeUnassigned: false,
+      dueDateFilter: undefined,
       sortBy: defaultSortBy,
       sortDirection: defaultSortDirection,
       ...initialFilters,
@@ -129,6 +130,15 @@ export default function TicketingDashboardContainer({
     if (filters.includeUnassigned) {
       params.set('includeUnassigned', 'true');
     }
+    if (filters.dueDateFilter && filters.dueDateFilter !== 'all') {
+      params.set('dueDateFilter', filters.dueDateFilter);
+    }
+    if (filters.dueDateFrom) {
+      params.set('dueDateFrom', filters.dueDateFrom);
+    }
+    if (filters.dueDateTo) {
+      params.set('dueDateTo', filters.dueDateTo);
+    }
 
     // Update URL without causing a page refresh
     const newURL = params.toString() ? `/msp/tickets?${params.toString()}` : '/msp/tickets';
@@ -164,6 +174,9 @@ export default function TicketingDashboardContainer({
         tags: filters.tags && filters.tags.length > 0 ? Array.from(new Set(filters.tags)) : undefined,
         assignedToIds: filters.assignedToIds && filters.assignedToIds.length > 0 ? filters.assignedToIds : undefined,
         includeUnassigned: filters.includeUnassigned || undefined,
+        dueDateFilter: filters.dueDateFilter || undefined,
+        dueDateFrom: filters.dueDateFrom || undefined,
+        dueDateTo: filters.dueDateTo || undefined,
         sortBy: effectiveSortBy,
         sortDirection: effectiveSortDirection
       };

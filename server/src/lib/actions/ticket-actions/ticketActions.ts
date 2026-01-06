@@ -37,12 +37,13 @@ import { ServerEventPublisher } from '../../adapters/serverEventPublisher';
 import { ServerAnalyticsTracker } from '../../adapters/serverAnalyticsTracker';
 
 // Helper function to safely convert dates
-function convertDates<T extends { entered_at?: Date | string | null, updated_at?: Date | string | null, closed_at?: Date | string | null }>(record: T): T {
+function convertDates<T extends { entered_at?: Date | string | null, updated_at?: Date | string | null, closed_at?: Date | string | null, due_date?: Date | string | null }>(record: T): T {
   return {
     ...record,
     entered_at: record.entered_at instanceof Date ? record.entered_at.toISOString() : record.entered_at,
     updated_at: record.updated_at instanceof Date ? record.updated_at.toISOString() : record.updated_at,
     closed_at: record.closed_at instanceof Date ? record.closed_at.toISOString() : record.closed_at,
+    due_date: record.due_date instanceof Date ? record.due_date.toISOString() : record.due_date,
   };
 }
 
@@ -146,6 +147,7 @@ export async function addTicket(data: FormData, user: IUser): Promise<ITicket|un
       const description = data.get('description');
       const location_id = data.get('location_id');
       const asset_id = data.get('asset_id');
+      const due_date = data.get('due_date');
 
       // ITIL-specific fields
       const itil_impact = data.get('itil_impact');
@@ -191,6 +193,7 @@ export async function addTicket(data: FormData, user: IUser): Promise<ITicket|un
         // ITIL-specific fields (kept for UI display)
         itil_impact: itil_impact ? parseInt(itil_impact as string) : undefined,
         itil_urgency: itil_urgency ? parseInt(itil_urgency as string) : undefined,
+        due_date: due_date === '' ? undefined : (due_date as string),
         entered_by: user.user_id,
         source: 'web_app'
       };
@@ -322,7 +325,7 @@ export async function updateTicket(id: string, data: Partial<ITicket>, user: IUs
       // Clean up the data before update
       const updateData = { ...validatedData };
 
-      // Handle null values for category, subcategory, and location
+      // Handle null values for category, subcategory, location, and due_date
       if ('category_id' in updateData && !updateData.category_id) {
         updateData.category_id = null;
       }
@@ -331,6 +334,9 @@ export async function updateTicket(id: string, data: Partial<ITicket>, user: IUs
       }
       if ('location_id' in updateData && !updateData.location_id) {
         updateData.location_id = null;
+      }
+      if ('due_date' in updateData && !updateData.due_date) {
+        updateData.due_date = null;
       }
 
       // Handle ITIL priority calculation if impact or urgency is being updated
@@ -535,6 +541,13 @@ export async function updateTicket(id: string, data: Partial<ITicket>, user: IUs
         };
       }
 
+      if (updateData.due_date !== undefined && updateData.due_date !== currentTicket.due_date) {
+        structuredChanges.due_date = {
+          old: currentTicket.due_date,
+          new: updateData.due_date
+        };
+      }
+
       // Publish appropriate event based on the update
       if (newStatus?.is_closed && !oldStatus?.is_closed) {
         // Ticket was closed
@@ -635,6 +648,9 @@ export async function getTickets(user: IUser): Promise<ITicket[]> {
         }
         if (converted.estimated_hours === null) {
           converted.estimated_hours = undefined;
+        }
+        if (converted.due_date === null) {
+          converted.due_date = undefined;
         }
         return converted;
       });
@@ -828,7 +844,10 @@ export async function getTicketsForList(user: IUser, filters: ITicketListFilters
           // Convert null ITIL fields to undefined for proper type compatibility
           itil_impact: rest.itil_impact === null || rest.itil_impact === undefined ? undefined : rest.itil_impact,
           itil_urgency: rest.itil_urgency === null || rest.itil_urgency === undefined ? undefined : rest.itil_urgency,
-          itil_priority_level: rest.itil_priority_level === null || rest.itil_priority_level === undefined ? undefined : rest.itil_priority_level
+          itil_priority_level: rest.itil_priority_level === null || rest.itil_priority_level === undefined ? undefined : rest.itil_priority_level,
+          // Convert null optional fields to undefined for proper type compatibility
+          estimated_hours: rest.estimated_hours === null || rest.estimated_hours === undefined ? undefined : rest.estimated_hours,
+          due_date: rest.due_date === null || rest.due_date === undefined ? undefined : rest.due_date
         };
       });
 
