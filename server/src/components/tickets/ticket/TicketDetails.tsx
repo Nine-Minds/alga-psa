@@ -19,8 +19,7 @@ import {
     IUser,
     IUserWithRoles,
     ITeam,
-    ITicketResource,
-    ITicketCategory
+    ITicketResource
 } from "server/src/interfaces";
 import { ITag } from "server/src/interfaces/tag.interfaces";
 import { TagManager } from "server/src/components/tags";
@@ -86,10 +85,8 @@ interface TicketDetailsProps {
     agentOptions?: { value: string; label: string }[];
     boardOptions?: { value: string; label: string }[];
     priorityOptions?: { value: string; label: string }[];
-    initialCategories?: ITicketCategory[];
     initialClients?: IClient[];
     initialLocations?: IClientLocation[];
-    initialAgentSchedules?: { userId: string; minutes: number }[];
     initialTags?: ITag[];
 
     // Current user (for drawer usage)
@@ -131,10 +128,8 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     agentOptions = [],
     boardOptions = [],
     priorityOptions = [],
-    initialCategories: _initialCategories = [],
     initialClients = [],
     initialLocations = [],
-    initialAgentSchedules: _initialAgentSchedules = [],
     initialTags = [],
     // Current user (for drawer usage)
     currentUser,
