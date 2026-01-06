@@ -1278,9 +1278,11 @@ const handleClose = () => {
     const handleSaveTicket = useCallback(async () => {
         // Prevent race conditions from rapid double-clicks
         // Ref check is synchronous and prevents duplicate submissions even before state updates
+        // Must be at the very top to guard during validation as well
         if (isSavingRef.current) {
             return;
         }
+        isSavingRef.current = true;
 
         setHasAttemptedSave(true);
 
@@ -1290,11 +1292,11 @@ const handleClose = () => {
 
         if (errors.length > 0) {
             toast.error('Please fix validation errors before saving');
+            isSavingRef.current = false; // Reset on validation failure
             return;
         }
 
-        // Set both ref (immediate) and state (for UI)
-        isSavingRef.current = true;
+        // Set state for UI (ref already set above)
         setIsSavingTicket(true);
         try {
             const user = await getCurrentUser();

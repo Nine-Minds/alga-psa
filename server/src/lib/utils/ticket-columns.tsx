@@ -348,11 +348,11 @@ export function createTicketColumns(options: CreateTicketColumnsOptions): Column
         dataIndex: 'actions',
         width: '3%',
         sortable: false,
-        render: (_value: string, record: ITicketListItem) => (
+        render: (_value: string, record: ITicketListItem, index: number) => (
           <div onClick={(e) => e.stopPropagation()}>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button id={`ticket-actions-${record.ticket_id}`} variant="ghost" size="sm" className="h-8 w-8 p-0">
+                <Button id={`ticket-actions-row-${index}`} variant="ghost" size="sm" className="h-8 w-8 p-0">
                   <span className="sr-only">Open menu</span>
                   <MoreVertical className="h-4 w-4" />
                 </Button>
@@ -361,7 +361,7 @@ export function createTicketColumns(options: CreateTicketColumnsOptions): Column
                 {/* Quick View option - opens ticket in drawer without entering edit mode */}
                 {onQuickViewClick && (
                   <DropdownMenuItem
-                    id="quick-view-ticket-menu-item"
+                    id={`quick-view-ticket-menu-item-row-${index}`}
                     data-ticket-id={record.ticket_id}
                     className="px-2 py-1 text-sm cursor-pointer hover:bg-gray-100 flex items-center"
                     onSelect={() => onQuickViewClick(record.ticket_id as string)}
@@ -373,7 +373,7 @@ export function createTicketColumns(options: CreateTicketColumnsOptions): Column
                 {/* Edit option - opens ticket in drawer (like Clients/Contacts pattern) */}
                 {onEditClick && (
                   <DropdownMenuItem
-                    id="edit-ticket-menu-item"
+                    id={`edit-ticket-menu-item-row-${index}`}
                     data-ticket-id={record.ticket_id}
                     className="px-2 py-1 text-sm cursor-pointer hover:bg-gray-100 flex items-center"
                     onSelect={() => onEditClick(record.ticket_id as string)}
@@ -385,7 +385,7 @@ export function createTicketColumns(options: CreateTicketColumnsOptions): Column
                 {/* Delete option */}
                 {onDeleteClick && (
                   <DropdownMenuItem
-                    id="delete-ticket-menu-item"
+                    id={`delete-ticket-menu-item-row-${index}`}
                     data-ticket-id={record.ticket_id}
                     className="px-2 py-1 text-sm cursor-pointer hover:bg-gray-100 text-red-600 flex items-center"
                     onSelect={() => onDeleteClick(record.ticket_id as string, record.title || record.ticket_number)}
