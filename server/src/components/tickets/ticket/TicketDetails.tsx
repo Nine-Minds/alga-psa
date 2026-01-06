@@ -98,6 +98,11 @@ interface TicketDetailsProps {
     // Callback when unsaved changes state changes (for drawer close blocking)
     onHasUnsavedChangesChange?: (hasUnsaved: boolean) => void;
 
+    // Trigger save from outside (for "Save changes" button in confirmation dialog)
+    // When this changes to true, TicketDetails will save and then call onSaveComplete
+    triggerSaveAndClose?: boolean;
+    onSaveComplete?: (success: boolean) => void;
+
     // Optimized handlers
     onTicketUpdate?: (field: string, value: any) => Promise<void>;
     onAddComment?: (content: string, isInternal: boolean, isResolution: boolean) => Promise<void>;
@@ -126,19 +131,22 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     agentOptions = [],
     boardOptions = [],
     priorityOptions = [],
-    initialCategories = [],
+    initialCategories: _initialCategories = [],
     initialClients = [],
     initialLocations = [],
-    initialAgentSchedules = [],
+    initialAgentSchedules: _initialAgentSchedules = [],
     initialTags = [],
     // Current user (for drawer usage)
     currentUser,
     // Callback when unsaved changes state changes (for drawer close blocking)
     onHasUnsavedChangesChange,
-    // Optimized handlers
-    onTicketUpdate,
+    // Trigger save from outside (for "Save changes" button in confirmation dialog)
+    triggerSaveAndClose = false,
+    onSaveComplete,
+    // Optimized handlers (kept for future use)
+    onTicketUpdate: _onTicketUpdate,
     onAddComment,
-    onUpdateDescription,
+    onUpdateDescription: _onUpdateDescription,
     isSubmitting = false,
     surveySummary = null
 }) => {
@@ -200,6 +208,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
 
     const [team, setTeam] = useState<ITeam | null>(null);
 
+    // Dialog states for contact/client change - controlled by inline pickers in TicketProperties
     const [isChangeContactDialogOpen, setIsChangeContactDialogOpen] = useState(false);
     const [isChangeClientDialogOpen, setIsChangeClientDialogOpen] = useState(false);
     const [clientFilterState, setClientFilterState] = useState<'all' | 'active' | 'inactive'>('all');
@@ -224,6 +233,12 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     // Navigation away confirmation dialog state
     const [showNavigateAwayDialog, setShowNavigateAwayDialog] = useState(false);
     const [pendingNavigationUrl, setPendingNavigationUrl] = useState<string | null>(null);
+
+    // Additional agents processing state - prevents rapid clicks and shows loading state
+    const [isProcessingAgents, setIsProcessingAgents] = useState(false);
+    // Cached current user to avoid repeated server calls during agent operations
+    // Note: Cast to IUserWithRoles since ticket resource actions need roles for permission checks
+    const cachedUserRef = React.useRef<IUserWithRoles | null>((currentUser as IUserWithRoles) || null);
 
     // ITIL-specific state for editing
     const [itilImpact, setItilImpact] = useState<number | undefined>(ticket.itil_impact || undefined);
@@ -271,6 +286,8 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
         setValidationErrors([]);
         isSavingRef.current = false;
         setIsSavingTicket(false);
+        setIsProcessingAgents(false);
+        cachedUserRef.current = (currentUser as IUserWithRoles) || null;
 
         // Reset ITIL state
         setItilImpact(initialTicket.itil_impact || undefined);
@@ -670,6 +687,11 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
   };
 
     const handleAddAgent = async (userId: string) => {
+        // Prevent operations while already processing
+        if (isProcessingAgents) {
+            return;
+        }
+
         try {
             // Prevent adding the primary agent as an additional agent
             if (userId === ticket.assigned_to) {
@@ -683,14 +705,19 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
                 return;
             }
 
+            setIsProcessingAgents(true);
+
             // Note: Agent changes are saved immediately (separate resource table)
             // They don't use the batch save pattern like other ticket fields
-            const currentUser = await getCurrentUser();
-            if (!currentUser) {
+            // Use cached user or fetch once if not available
+            if (!cachedUserRef.current) {
+                cachedUserRef.current = await getCurrentUser() as IUserWithRoles;
+            }
+            if (!cachedUserRef.current) {
                 toast.error('No user session found');
                 return;
             }
-            const result = await addTicketResource(ticket.ticket_id!, userId, 'support', currentUser);
+            const result = await addTicketResource(ticket.ticket_id!, userId, 'support', cachedUserRef.current);
 
             if (result) {
                 setAdditionalAgents(prev => [...prev, result]);
@@ -705,24 +732,38 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
         } catch (error) {
             console.error('Error adding agent:', error);
             toast.error('Failed to add agent');
+        } finally {
+            setIsProcessingAgents(false);
         }
-    };  
-    
+    };
+
     const handleRemoveAgent = async (assignmentId: string) => {
+        // Prevent operations while already processing
+        if (isProcessingAgents) {
+            return;
+        }
+
         try {
+            setIsProcessingAgents(true);
+
             // Note: Agent changes are saved immediately (separate resource table)
             // They don't use the batch save pattern like other ticket fields
-            const currentUser = await getCurrentUser();
-            if (!currentUser) {
+            // Use cached user or fetch once if not available
+            if (!cachedUserRef.current) {
+                cachedUserRef.current = await getCurrentUser() as IUserWithRoles;
+            }
+            if (!cachedUserRef.current) {
                 toast.error('No user session found');
                 return;
             }
-            await removeTicketResource(assignmentId, currentUser);
+            await removeTicketResource(assignmentId, cachedUserRef.current);
             setAdditionalAgents(prev => prev.filter(agent => agent.assignment_id !== assignmentId));
             toast.success('Agent removed successfully');
         } catch (error) {
             console.error('Error removing agent:', error);
             toast.error('Failed to remove agent');
+        } finally {
+            setIsProcessingAgents(false);
         }
     };
 
@@ -771,13 +812,14 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
         }]);
 
         if (!hasContent) {
-            console.log("Cannot add empty comment");
+            toast.error('Comment cannot be empty');
             return false;
         }
     
         try {
             if (!userId) {
                 console.error("No valid user ID found");
+                toast.error('Unable to add comment: User session not found');
                 return false;
             }
             
@@ -836,7 +878,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
                         // Refresh comments after adding
                         const updatedComments = await findCommentsByTicketId(ticket.ticket_id);
                         setConversations(updatedComments);
-                        
+
                         // Reset the comment input
                         setNewCommentContent([{
                             type: "paragraph",
@@ -852,18 +894,22 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
                             }]
                         }]);
                         console.log("New note added successfully");
+                        toast.success('Comment added successfully');
                         return true;
                     } else {
                         console.error('Failed to add comment');
+                        toast.error('Failed to add comment');
                         return false;
                     }
                 } else {
                     console.error('Ticket ID is missing');
+                    toast.error('Unable to add comment: Ticket not found');
                     return false;
                 }
             }
         } catch (error) {
             console.error("Error adding new note:", error);
+            toast.error('An error occurred while adding comment');
             return false;
         }
     };
@@ -942,7 +988,7 @@ const handleClose = () => {
 
     // This function is no longer used directly - we use handleDeleteRequest instead
     // Keeping it for backward compatibility with other components that might use it
-    const handleDelete = async (comment: IComment) => {
+    const _handleDelete = async (comment: IComment) => {
         if (!comment.comment_id) return;
         
         try {
@@ -1034,16 +1080,6 @@ const handleClose = () => {
                 timeDifferenceMinutes: (endTime.getTime() - startTime.getTime()) / 60000
             });
 
-            // Create initial time entry with description
-            const initialEntry = {
-                notes: timeDescription || '',
-                start_time: startTime.toISOString(),
-                end_time: endTime.toISOString(),
-                billable_duration: Math.round(elapsedTime / 60), // Convert seconds to minutes
-                work_item_type: 'ticket',
-                work_item_id: ticket.ticket_id!
-            };
-
             // Open drawer with TimeEntryDialog
             openDrawer(
                 <TimeEntryDialog
@@ -1091,11 +1127,13 @@ const handleClose = () => {
         }
     };
 
-    const handleChangeContact = () => {
+    // Note: These handlers are kept for potential future use but currently not used
+    // Contact and client pickers are now inline in TicketProperties
+    const _handleChangeContact = () => {
         setIsChangeContactDialogOpen(true);
     };
 
-    const handleChangeClient = () => {
+    const _handleChangeClient = () => {
         setIsChangeClientDialogOpen(true);
     };
 
@@ -1374,6 +1412,95 @@ const handleClose = () => {
         toast.success('Changes discarded');
     }, [hasUnsavedChanges, originalTicket]);
 
+    // Handle external trigger to save and close (from confirmation dialog "Save changes" button)
+    useEffect(() => {
+        if (!triggerSaveAndClose) return;
+
+        const saveAndClose = async () => {
+            try {
+                // Run the same save logic as handleSaveTicket
+                if (isSavingRef.current) {
+                    return;
+                }
+                isSavingRef.current = true;
+
+                setHasAttemptedSave(true);
+
+                // Validate before saving
+                const errors = validateTicket();
+                setValidationErrors(errors);
+
+                if (errors.length > 0) {
+                    toast.error('Please fix validation errors before saving');
+                    isSavingRef.current = false;
+                    onSaveComplete?.(false);
+                    return;
+                }
+
+                setIsSavingTicket(true);
+                const user = await getCurrentUser();
+                if (!user) {
+                    toast.error('No user session found');
+                    isSavingRef.current = false;
+                    setIsSavingTicket(false);
+                    onSaveComplete?.(false);
+                    return;
+                }
+
+                if (!ticket.ticket_id) {
+                    toast.error('Ticket ID is missing');
+                    isSavingRef.current = false;
+                    setIsSavingTicket(false);
+                    onSaveComplete?.(false);
+                    return;
+                }
+
+                const updateData: Partial<ITicket> = {
+                    title: ticket.title,
+                    status_id: ticket.status_id,
+                    priority_id: ticket.priority_id,
+                    assigned_to: ticket.assigned_to,
+                    board_id: ticket.board_id,
+                    client_id: ticket.client_id,
+                    contact_name_id: ticket.contact_name_id,
+                    location_id: ticket.location_id,
+                    category_id: ticket.category_id,
+                    subcategory_id: ticket.subcategory_id,
+                    attributes: ticket.attributes,
+                    itil_impact: ticket.itil_impact,
+                    itil_urgency: ticket.itil_urgency,
+                    updated_by: user.user_id,
+                    updated_at: new Date().toISOString()
+                };
+
+                const result = await updateTicket(ticket.ticket_id, updateData, user);
+
+                if (result === 'success') {
+                    setOriginalTicket(ticket);
+                    setHasUnsavedChanges(false);
+                    setHasAttemptedSave(false);
+                    setValidationErrors([]);
+                    toast.success('Ticket saved successfully');
+                    // Notify parent of success and close
+                    onSaveComplete?.(true);
+                    onClose?.();
+                } else {
+                    toast.error('Failed to save ticket');
+                    onSaveComplete?.(false);
+                }
+            } catch (error) {
+                console.error('Error saving ticket:', error);
+                toast.error('Failed to save ticket');
+                onSaveComplete?.(false);
+            } finally {
+                isSavingRef.current = false;
+                setIsSavingTicket(false);
+            }
+        };
+
+        void saveAndClose();
+    }, [triggerSaveAndClose, validateTicket, ticket, onSaveComplete, onClose]);
+
     // Handle navigation away - discard changes and navigate
     const handleNavigateAwayConfirm = useCallback(() => {
         setShowNavigateAwayDialog(false);
@@ -1581,6 +1708,7 @@ const handleClose = () => {
                                     onRemoveAgent={handleRemoveAgent}
                                     onAgentClick={handleAgentClick}
                                     agentAvatarUrls={additionalAgentAvatarUrls}
+                                    isProcessingAgents={isProcessingAgents}
                                 />
                             </div>
                         </Suspense>

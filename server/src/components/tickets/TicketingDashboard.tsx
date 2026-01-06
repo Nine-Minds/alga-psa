@@ -169,6 +169,8 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   const [isLoadingTicketQuickView, setIsLoadingTicketQuickView] = useState(false);
   const [quickViewHasUnsavedChanges, setQuickViewHasUnsavedChanges] = useState(false);
   const [showQuickViewCloseConfirm, setShowQuickViewCloseConfirm] = useState(false);
+  // Trigger to save changes from the confirmation dialog
+  const [triggerSaveAndClose, setTriggerSaveAndClose] = useState(false);
 
   // Tag-related state
   const [selectedTags, setSelectedTags] = useState<string[]>(initialFilterValues.tags || []);
@@ -1293,6 +1295,26 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
             initialTags={quickViewTicketData.tags}
             currentUser={currentUser}
             onHasUnsavedChangesChange={setQuickViewHasUnsavedChanges}
+            triggerSaveAndClose={triggerSaveAndClose}
+            onSaveComplete={(success) => {
+              setTriggerSaveAndClose(false);
+              if (success) {
+                // Close the drawer after successful save
+                quickViewOpenRef.current = false;
+                setIsTicketQuickViewOpen(false);
+                setQuickViewTicketId(null);
+                setQuickViewTicketData(null);
+                setQuickViewHasUnsavedChanges(false);
+              }
+            }}
+            onClose={() => {
+              // Close the drawer
+              quickViewOpenRef.current = false;
+              setIsTicketQuickViewOpen(false);
+              setQuickViewTicketId(null);
+              setQuickViewTicketData(null);
+              setQuickViewHasUnsavedChanges(false);
+            }}
           />
         )}
       </Drawer>
@@ -1312,10 +1334,16 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
           setQuickViewTicketData(null);
           setQuickViewHasUnsavedChanges(false);
         }}
+        onCancel={() => {
+          // Save changes and close - trigger save in TicketDetails
+          setShowQuickViewCloseConfirm(false);
+          setTriggerSaveAndClose(true);
+        }}
         title="Unsaved Changes"
-        message="You have unsaved changes. Are you sure you want to close? Your changes will be lost."
+        message="You have unsaved changes. What would you like to do?"
         confirmLabel="Discard changes"
         cancelLabel="Continue editing"
+        thirdButtonLabel="Save changes"
       />
     </ReflectionContainer>
   );

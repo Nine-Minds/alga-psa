@@ -58,6 +58,8 @@ interface TicketInfoProps {
   onRemoveAgent?: (assignmentId: string) => Promise<void>;
   onAgentClick?: (userId: string) => void;
   agentAvatarUrls?: Record<string, string | null>;
+  /** Whether agent operations are currently in progress (shows loading state) */
+  isProcessingAgents?: boolean;
 }
 
 const TicketInfo: React.FC<TicketInfoProps> = ({
@@ -91,6 +93,7 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
   onRemoveAgent,
   onAgentClick,
   agentAvatarUrls = {},
+  isProcessingAgents = false,
 }) => {
   const [categories, setCategories] = useState<ITicketCategory[]>([]);
   const [boardConfig, setBoardConfig] = useState<BoardCategoryData['boardConfig']>({
@@ -1007,30 +1010,26 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
                 <MultiUserPicker
                   id={`${id}-additional-agents-picker`}
                   values={additionalAgents.filter(a => a.additional_user_id).map(a => a.additional_user_id!)}
-                  onValuesChange={async (newUserIds) => {
+                  onValuesChange={(newUserIds) => {
                     const currentUserIds = additionalAgents
                       .filter(a => a.additional_user_id)
                       .map(a => a.additional_user_id!);
 
-                    // Find added users
+                    // Find added users (process one at a time to prevent race conditions)
                     const addedUserIds = newUserIds.filter(id => !currentUserIds.includes(id));
                     // Find removed users
                     const removedUserIds = currentUserIds.filter(id => !newUserIds.includes(id));
 
-                    // Process additions
-                    if (onAddAgent) {
-                      for (const userId of addedUserIds) {
-                        await onAddAgent(userId);
-                      }
+                    // Process first addition (subsequent ones will be handled after state updates)
+                    if (onAddAgent && addedUserIds.length > 0) {
+                      void onAddAgent(addedUserIds[0]);
                     }
 
-                    // Process removals
-                    if (onRemoveAgent) {
-                      for (const userId of removedUserIds) {
-                        const agent = additionalAgents.find(a => a.additional_user_id === userId);
-                        if (agent?.assignment_id) {
-                          await onRemoveAgent(agent.assignment_id);
-                        }
+                    // Process first removal (subsequent ones will be handled after state updates)
+                    if (onRemoveAgent && removedUserIds.length > 0) {
+                      const agent = additionalAgents.find(a => a.additional_user_id === removedUserIds[0]);
+                      if (agent?.assignment_id) {
+                        void onRemoveAgent(agent.assignment_id);
                       }
                     }
                   }}
@@ -1040,6 +1039,8 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
                   size="sm"
                   placeholder="Select additional agents..."
                   onUserClick={onAgentClick}
+                  disabled={isProcessingAgents}
+                  loading={isProcessingAgents}
                 />
               </div>
             )}

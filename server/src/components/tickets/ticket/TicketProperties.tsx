@@ -574,8 +574,8 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
             <div>
               <h5 className="font-bold">Location</h5>
               <div className="space-y-2">
-                <div className="flex items-center space-x-2">
-                  <p className="text-sm">
+                <div className="flex items-start space-x-2">
+                  <p className="text-sm flex-1 min-w-0 break-words">
                     {(() => {
                       // If ticket has a location, show it
                       if (ticket.location) {
@@ -615,6 +615,10 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
                       ]}
                       placeholder="Select location"
                       className="w-full"
+                      customStyles={{
+                        content: 'min-w-[280px] max-w-[400px]',
+                        item: 'whitespace-normal break-words'
+                      }}
                     />
                     <div className="flex justify-end space-x-2">
                       <Button
