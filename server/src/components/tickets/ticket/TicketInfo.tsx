@@ -12,6 +12,7 @@ import { Button } from 'server/src/components/ui/Button';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
 import { PrioritySelect } from '@/components/tickets/PrioritySelect';
 import UserPicker from 'server/src/components/ui/UserPicker';
+import MultiUserPicker from 'server/src/components/ui/MultiUserPicker';
 import { CategoryPicker } from 'server/src/components/tickets/CategoryPicker';
 import { TagManager } from 'server/src/components/tags';
 import styles from './TicketDetails.module.css';
@@ -1000,22 +1001,45 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
               )}
             </div>
 
-            {/* Inline Agent Picker - always visible for adding agents */}
-            {onAddAgent && (
-              <div className="max-w-xs">
-                <UserPicker
-                  label=""
-                  value=""
-                  onValueChange={(userId) => {
-                    onAddAgent(userId);
+            {/* Multi-select Agent Picker - allows adding/removing multiple agents */}
+            {(onAddAgent || onRemoveAgent) && (
+              <div className="mt-2">
+                <MultiUserPicker
+                  id={`${id}-additional-agents-picker`}
+                  values={additionalAgents.filter(a => a.additional_user_id).map(a => a.additional_user_id!)}
+                  onValuesChange={async (newUserIds) => {
+                    const currentUserIds = additionalAgents
+                      .filter(a => a.additional_user_id)
+                      .map(a => a.additional_user_id!);
+
+                    // Find added users
+                    const addedUserIds = newUserIds.filter(id => !currentUserIds.includes(id));
+                    // Find removed users
+                    const removedUserIds = currentUserIds.filter(id => !newUserIds.includes(id));
+
+                    // Process additions
+                    if (onAddAgent) {
+                      for (const userId of addedUserIds) {
+                        await onAddAgent(userId);
+                      }
+                    }
+
+                    // Process removals
+                    if (onRemoveAgent) {
+                      for (const userId of removedUserIds) {
+                        const agent = additionalAgents.find(a => a.additional_user_id === userId);
+                        if (agent?.assignment_id) {
+                          await onRemoveAgent(agent.assignment_id);
+                        }
+                      }
+                    }
                   }}
                   users={(availableAgents.length > 0 ? availableAgents : users).filter(
-                    agent =>
-                      agent.user_id !== ticket.assigned_to &&
-                      !additionalAgents.some(a => a.additional_user_id === agent.user_id)
+                    agent => agent.user_id !== ticket.assigned_to
                   )}
-                  placeholder="Add agent..."
                   size="sm"
+                  placeholder="Select additional agents..."
+                  onUserClick={onAgentClick}
                 />
               </div>
             )}
