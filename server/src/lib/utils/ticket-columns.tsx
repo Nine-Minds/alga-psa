@@ -361,6 +361,7 @@ export function createTicketColumns(options: CreateTicketColumnsOptions): Column
                 {/* Quick View option - opens ticket in drawer without entering edit mode */}
                 {onQuickViewClick && (
                   <DropdownMenuItem
+                    id={`ticket-quick-view-${record.ticket_id}`}
                     className="px-2 py-1 text-sm cursor-pointer hover:bg-gray-100 flex items-center"
                     onSelect={() => onQuickViewClick(record.ticket_id as string)}
                   >
@@ -371,6 +372,7 @@ export function createTicketColumns(options: CreateTicketColumnsOptions): Column
                 {/* Edit option - opens ticket in drawer (like Clients/Contacts pattern) */}
                 {onEditClick && (
                   <DropdownMenuItem
+                    id={`ticket-edit-${record.ticket_id}`}
                     className="px-2 py-1 text-sm cursor-pointer hover:bg-gray-100 flex items-center"
                     onSelect={() => onEditClick(record.ticket_id as string)}
                   >
@@ -381,6 +383,7 @@ export function createTicketColumns(options: CreateTicketColumnsOptions): Column
                 {/* Delete option */}
                 {onDeleteClick && (
                   <DropdownMenuItem
+                    id={`ticket-delete-${record.ticket_id}`}
                     className="px-2 py-1 text-sm cursor-pointer hover:bg-gray-100 text-red-600 flex items-center"
                     onSelect={() => onDeleteClick(record.ticket_id as string, record.title || record.ticket_number)}
                   >
