@@ -5,11 +5,13 @@
   "type": "module",
   "description": "Nine Minds Reporting Extension - Fetch and display reporting data",
   "scripts": {
-    "clean": "rm -rf dist ui/dist",
+    "clean": "rm -rf dist ui/dist precompiled",
     "build:backend": "esbuild src/index.ts --bundle --format=esm --outfile=dist/js/handler.js --platform=neutral --external:alga:extension/secrets --external:alga:extension/http --external:alga:extension/storage --external:alga:extension/logging --external:alga:extension/ui-proxy --external:alga:extension/context",
     "build:component": "npx jco componentize dist/js/handler.js --wit ./wit/extension-runner.wit --world-name runner --disable all --out dist/main.wasm",
     "build:ui": "vite build -c vite.iframe.config.ts",
+    "precompile": "mkdir -p precompiled && wasmtime compile --target x86_64-unknown-linux-gnu dist/main.wasm -o precompiled/x86_64-linux-gnu.cwasm && wasmtime compile --target aarch64-unknown-linux-gnu dist/main.wasm -o precompiled/aarch64-linux-gnu.cwasm",
     "build": "npm run clean && npm run build:backend && npm run build:component && npm run build:ui",
+    "build:full": "npm run build && npm run precompile",
     "pack": "alga pack",
     "dev": "vite",
     "type-check": "tsc --noEmit"

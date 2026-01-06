@@ -891,13 +891,19 @@ impl ui_proxy::HostWithStore for HasSelf<HostState> {
                 None => (trimmed_route, None),
             };
 
-            // Build URL: {UI_PROXY_BASE_URL}{route}
-            // Extension calls actual API routes directly (e.g., /api/v1/platform-reports)
+            // Build URL based on route type:
+            // - Routes starting with /api/ go directly to platform APIs (no extension prefix)
+            // - Other routes are prefixed with extension ID (backward compatible for self-proxying)
             // Authentication is via api_key from secret envelope
+            let is_platform_api = path_part.starts_with("/api/") || path_part.starts_with("api/");
             let mut url = base_url.clone();
             {
                 let mut segments = url.path_segments_mut().map_err(|_| ProxyError::Internal)?;
                 segments.pop_if_empty();
+                // Only prefix with extension ID for non-platform-api routes
+                if !is_platform_api {
+                    segments.push(&extension);
+                }
                 for segment in path_part.trim_start_matches('/').split('/') {
                     if segment.is_empty() {
                         continue;
@@ -968,6 +974,7 @@ impl ui_proxy::HostWithStore for HasSelf<HostState> {
                 route=%path_part,
                 url=%url,
                 has_body,
+                is_platform_api,
                 "ui proxy dispatch start"
             );
 
