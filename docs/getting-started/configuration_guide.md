@@ -198,6 +198,26 @@ Additional settings for production:
 - Persistence configuration
 - Memory settings
 - Security options
+
+## MSP Onboarding Checklist Signals
+
+The MSP dashboard surfaces a persistent onboarding drawer and quick-start cards so operators can see which critical services are configured. The data pipeline is intentionally lightweight and reuses existing server actions.
+
+| Step | Server signal | Completion logic |
+| --- | --- | --- |
+| Identity & SSO | `server/src/lib/actions/onboarding-progress.ts` pulls provider state from `@ee/lib/auth/providerConfig` and counts linked accounts via `user_auth_accounts` in the admin DB. | Complete when at least one OAuth provider is configured **and** any MSP user has a linked Google/Microsoft identity. |
+| Client portal domain | `getPortalDomainStatusAction` (`server/src/lib/actions/tenant-actions/portalDomainActions.ts`). | Complete when the returned status is `active`; DNS/certificate failures set the step to `blocked` with the upstream status message. |
+| Data import | `listImportJobs` (`server/src/lib/actions/import-actions/importActions.ts`). | Complete after any import job reaches `completed`. Preview/processing jobs surface `in_progress`, while failed/cancelled jobs populate the blocker message. |
+| Calendar sync | `getCalendarProviders` (`server/src/lib/actions/calendarActions.ts`). | Complete when any provider is `active` and `connection_status === 'connected'`. Errors bubble up via `provider.error_message`. |
+| Managed email domain | `@ee/lib/actions/email-actions/managedDomainActions.ts`. | Complete when at least one managed domain row is `verified`. Pending rows show `in_progress`; failures include the Resend workflow error message. |
+
+The aggregation action normalizes each upstream response into `OnboardingStepServerState` objects and is consumed by `useOnboardingProgress` (`server/src/components/dashboard/hooks/useOnboardingProgress.tsx`). The hook emits `posthog.capture('onboarding_step_completed')` when any step transitions into `complete`, and the dashboard CTA buttons fire `onboarding_step_cta_clicked` events with the `step_id` and UI surface (`quick_start` or `checklist`).
+
+To add a new onboarding step:
+
+1. Update `server/src/lib/actions/onboarding-progress.ts` to fetch the new signal and include it in the `steps` array.
+2. Extend `STEP_DEFINITIONS` inside `useOnboardingProgress` so both the quick-start grid and checklist can render the new metadata.
+3. Provide a stable settings route in the new definition so the CTA knows where to send admins.
 - Backup configuration
 
 ### Hocuspocus
