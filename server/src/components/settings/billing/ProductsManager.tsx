@@ -678,7 +678,7 @@ const ProductsManager: React.FC = () => {
                 onChange={(value) => setCreatingProduct({ ...creatingProduct, custom_service_type_id: value })}
                 serviceTypes={productServiceTypes}
                 onCreateType={async (name) => {
-                  await createServiceTypeInline(name);
+                  await createServiceTypeInline(name, 'per_unit');
                   await fetchServiceTypes();
                 }}
                 onUpdateType={async (id, name) => {
@@ -852,14 +852,14 @@ const ProductsManager: React.FC = () => {
                   label="Type *"
                   value={editingProduct.custom_service_type_id || ''}
                   onChange={(value) => setEditingProduct({ ...editingProduct, custom_service_type_id: value })}
-                  serviceTypes={productServiceTypes}
-                  onCreateType={async (name) => {
-                    await createServiceTypeInline(name);
-                    await fetchServiceTypes();
-                  }}
-                  onUpdateType={async (id, name) => {
-                    await updateServiceTypeInline(id, name);
-                    await fetchServiceTypes();
+                serviceTypes={productServiceTypes}
+                onCreateType={async (name) => {
+                  await createServiceTypeInline(name, 'per_unit');
+                  await fetchServiceTypes();
+                }}
+                onUpdateType={async (id, name) => {
+                  await updateServiceTypeInline(id, name);
+                  await fetchServiceTypes();
                   }}
                   onDeleteType={async (id) => {
                     await deleteServiceTypeInline(id);
