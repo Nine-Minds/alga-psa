@@ -3,6 +3,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Dialog } from 'server/src/components/ui/Dialog';
 import { Button } from 'server/src/components/ui/Button';
+import { Switch } from 'server/src/components/ui/Switch';
 import { Search } from 'lucide-react';
 import { Chat } from './Chat';
 
@@ -45,6 +46,7 @@ export const QuickAskOverlay: React.FC<QuickAskOverlayProps> = ({
   const [chatKey, setChatKey] = useState(0);
   const [autoSendPrompt, setAutoSendPrompt] = useState<string | null>(null);
   const [activeChatId, setActiveChatId] = useState<string | null>(null);
+  const [yoloEnabled, setYoloEnabled] = useState(false);
   const draftRef = useRef<HTMLTextAreaElement | null>(null);
 
   const canOpenInSidebar = expanded && !!activeChatId;
@@ -57,6 +59,7 @@ export const QuickAskOverlay: React.FC<QuickAskOverlayProps> = ({
     setExpanded(false);
     setAutoSendPrompt(null);
     setActiveChatId(null);
+    setYoloEnabled(false);
     setChatKey((prev) => prev + 1);
     const t = setTimeout(() => draftRef.current?.focus(), 0);
     return () => clearTimeout(t);
@@ -119,27 +122,50 @@ export const QuickAskOverlay: React.FC<QuickAskOverlayProps> = ({
             <Search className="h-4 w-4 text-gray-500" />
             Quick Ask
           </div>
-          {expanded && (
-            <div className="flex items-center gap-2">
-              <Button
-                id="quick-ask-open-in-sidebar"
-                size="sm"
-                variant="outline"
-                onClick={handleOpenInSidebar}
-                disabled={!canOpenInSidebar}
+          <div className="flex items-center gap-3">
+            <div
+              className={[
+                'flex items-center gap-2 rounded-md px-2 py-1',
+                yoloEnabled ? 'bg-red-50 ring-1 ring-red-200' : 'bg-gray-50 ring-1 ring-gray-200',
+              ].join(' ')}
+            >
+              <span
+                className={[
+                  'text-xs font-bold tracking-wide',
+                  yoloEnabled ? 'text-red-700' : 'text-gray-600',
+                ].join(' ')}
               >
-                Open in sidebar
-              </Button>
-              <Button
-                id="quick-ask-close"
-                size="sm"
-                variant="ghost"
-                onClick={onClose}
-              >
-                Close
-              </Button>
+                YOLO
+              </span>
+              <Switch
+                id="quick-ask-yolo"
+                checked={yoloEnabled}
+                onCheckedChange={(checked) => setYoloEnabled(Boolean(checked))}
+                aria-label="YOLO mode (auto-approve HTTP actions)"
+              />
             </div>
-          )}
+            {expanded ? (
+              <>
+                <Button
+                  id="quick-ask-open-in-sidebar"
+                  size="sm"
+                  variant="outline"
+                  onClick={handleOpenInSidebar}
+                  disabled={!canOpenInSidebar}
+                >
+                  Open in sidebar
+                </Button>
+                <Button
+                  id="quick-ask-close"
+                  size="sm"
+                  variant="ghost"
+                  onClick={onClose}
+                >
+                  Close
+                </Button>
+              </>
+            ) : null}
+          </div>
         </div>
 
         {!expanded ? (
@@ -196,6 +222,9 @@ export const QuickAskOverlay: React.FC<QuickAskOverlayProps> = ({
                 hf={hf}
                 autoSendPrompt={autoSendPrompt}
                 onChatIdChange={setActiveChatId}
+                autoApprovedHttpMethods={
+                  yoloEnabled ? ['GET', 'POST', 'PUT', 'DELETE'] : undefined
+                }
               />
             </div>
           </div>
@@ -206,4 +235,3 @@ export const QuickAskOverlay: React.FC<QuickAskOverlayProps> = ({
 };
 
 export default QuickAskOverlay;
-

@@ -178,6 +178,7 @@ type ChatProps = {
   initialChatId?: string | null;
   autoSendPrompt?: string | null;
   onChatIdChange?: (chatId: string | null) => void;
+  autoApprovedHttpMethods?: string[];
 };
 
 const AUTO_APPROVED_METHODS_STORAGE_KEY = 'chat:autoApprovedHttpMethods';
@@ -207,6 +208,7 @@ export const Chat: React.FC<ChatProps> = ({
   initialChatId,
   autoSendPrompt,
   onChatIdChange,
+  autoApprovedHttpMethods,
 }) => {
   const textareaId = useId();
   const [messageText, setMessageText] = useState('');
@@ -285,7 +287,10 @@ export const Chat: React.FC<ChatProps> = ({
       inputRef.current.focus();
     }
     // Reset auto-approval preferences on component mount (new chat)
-    setAutoApprovedMethods([]);
+    const forcedMethods = (autoApprovedHttpMethods ?? [])
+      .map((method) => method.trim().toUpperCase())
+      .filter((method) => STANDARD_HTTP_METHOD_SET.has(method));
+    setAutoApprovedMethods(forcedMethods);
     if (typeof window !== 'undefined') {
       try {
         window.localStorage.removeItem(AUTO_APPROVED_METHODS_STORAGE_KEY);
