@@ -272,6 +272,7 @@ export default function TextEditor({
       <div
         className="min-h-[100px] h-full w-full bg-white border border-gray-200 rounded-lg p-4 overflow-auto min-w-0 cursor-text"
         onClick={(e) => {
+          e.stopPropagation(); // Prevent triggering parent click handlers
           // When clicking on the container whitespace, focus the editor
           // This makes the entire container clickable like professional editors
           const target = e.target as HTMLElement;
