@@ -240,6 +240,13 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     // Note: Cast to IUserWithRoles since ticket resource actions need roles for permission checks
     const cachedUserRef = React.useRef<IUserWithRoles | null>((currentUser as IUserWithRoles) || null);
 
+    // Keep cachedUserRef in sync with currentUser prop to avoid stale role data
+    useEffect(() => {
+        if (currentUser) {
+            cachedUserRef.current = currentUser as IUserWithRoles;
+        }
+    }, [currentUser]);
+
     // ITIL-specific state for editing
     const [itilImpact, setItilImpact] = useState<number | undefined>(ticket.itil_impact || undefined);
     const [itilUrgency, setItilUrgency] = useState<number | undefined>(ticket.itil_urgency || undefined);
@@ -692,27 +699,25 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
             return;
         }
 
+        // Prevent adding the primary agent as an additional agent
+        if (userId === ticket.assigned_to) {
+            toast.error('This user is already the primary agent. Remove them as primary agent first.');
+            return;
+        }
+
+        // Prevent adding duplicate additional agents
+        if (additionalAgents.some(agent => agent.additional_user_id === userId)) {
+            toast.error('This user is already an additional agent.');
+            return;
+        }
+
+        // Set processing state before any async operations to prevent race conditions
+        setIsProcessingAgents(true);
+
         try {
-            // Prevent adding the primary agent as an additional agent
-            if (userId === ticket.assigned_to) {
-                toast.error('This user is already the primary agent. Remove them as primary agent first.');
-                return;
-            }
-
-            // Prevent adding duplicate additional agents
-            if (additionalAgents.some(agent => agent.additional_user_id === userId)) {
-                toast.error('This user is already an additional agent.');
-                return;
-            }
-
-            setIsProcessingAgents(true);
-
             // Note: Agent changes are saved immediately (separate resource table)
             // They don't use the batch save pattern like other ticket fields
-            // Use cached user or fetch once if not available
-            if (!cachedUserRef.current) {
-                cachedUserRef.current = await getCurrentUser() as IUserWithRoles;
-            }
+            // cachedUserRef is kept in sync with currentUser prop via useEffect
             if (!cachedUserRef.current) {
                 toast.error('No user session found');
                 return;
@@ -743,15 +748,13 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
             return;
         }
 
-        try {
-            setIsProcessingAgents(true);
+        // Set processing state before any async operations to prevent race conditions
+        setIsProcessingAgents(true);
 
+        try {
             // Note: Agent changes are saved immediately (separate resource table)
             // They don't use the batch save pattern like other ticket fields
-            // Use cached user or fetch once if not available
-            if (!cachedUserRef.current) {
-                cachedUserRef.current = await getCurrentUser() as IUserWithRoles;
-            }
+            // cachedUserRef is kept in sync with currentUser prop via useEffect
             if (!cachedUserRef.current) {
                 toast.error('No user session found');
                 return;
