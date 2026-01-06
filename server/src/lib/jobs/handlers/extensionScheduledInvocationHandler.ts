@@ -186,7 +186,7 @@ export async function extensionScheduledInvocationHandler(
       }
 
       const runnerUrl = process.env.RUNNER_BASE_URL || 'http://localhost:8080';
-      const timeoutMs = Number(process.env.EXT_GATEWAY_TIMEOUT_MS || '5000');
+      const timeoutMs = Number(process.env.EXT_GATEWAY_TIMEOUT_MS || '30000');
       const maxResponseBytes = Number(process.env.EXT_RUNNER_MAX_RESPONSE_BYTES || '262144');
       const requestId = crypto.randomUUID();
 

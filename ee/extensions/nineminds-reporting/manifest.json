@@ -4,12 +4,17 @@
   "version": "0.1.0",
   "runtime": "wasm-js@1",
   "capabilities": ["cap:context.read", "cap:log.emit", "cap:ui.proxy"],
+  "entry": "dist/main.wasm",
   "ui": {
     "type": "iframe",
     "entry": "ui/index.html",
     "hooks": {
       "appMenu": { "label": "Nine Minds Reporting" }
     }
+  },
+  "precompiled": {
+    "x86_64-linux-gnu": "precompiled/x86_64-linux-gnu.cwasm",
+    "aarch64-linux-gnu": "precompiled/aarch64-linux-gnu.cwasm"
   },
   "assets": ["ui/**/*"]
 }

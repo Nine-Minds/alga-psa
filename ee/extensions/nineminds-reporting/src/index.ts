@@ -6,18 +6,7 @@ import type {
   ContextData
 } from '@alga-psa/extension-runtime';
 
-// Raw imports from the WIT world
-// @ts-ignore
-import { get as getSecret, listKeys as listSecrets } from 'alga:extension/secrets';
-// @ts-ignore
-import { fetch as httpFetch } from 'alga:extension/http';
-// @ts-ignore
-import {
-  get as storageGet,
-  put as storagePut,
-  delete as storageDelete,
-  listEntries as storageList
-} from 'alga:extension/storage';
+// Raw imports from the WIT world - only import what we actually use
 // @ts-ignore
 import {
   logInfo,
@@ -30,24 +19,30 @@ import { callRoute as uiProxyCall } from 'alga:extension/ui-proxy';
 import { getContext } from 'alga:extension/context';
 
 // Construct the HostBindings object that the SDK expects
+// Only wire up capabilities that this extension actually uses:
+// - cap:context.read
+// - cap:log.emit
+// - cap:ui.proxy
 const host: HostBindings = {
   context: {
     get: async () => {
       return getContext() as unknown as ContextData;
     }
   },
+  // Note: secrets, http, and storage are not used by this extension
+  // and are not declared in manifest capabilities
   secrets: {
-    get: async (key: string) => getSecret(key),
-    list: async () => listSecrets()
+    get: async (_key: string) => { throw new Error('secrets not available - cap:secrets.get not granted'); },
+    list: async () => { throw new Error('secrets not available - cap:secrets.get not granted'); }
   },
   http: {
-    fetch: async (req: Parameters<HostBindings['http']['fetch']>[0]) => httpFetch(req)
+    fetch: async (_req: Parameters<HostBindings['http']['fetch']>[0]) => { throw new Error('http not available - cap:http.fetch not granted'); }
   },
   storage: {
-    get: async (ns: string, key: string) => storageGet(ns, key),
-    put: async (entry: Parameters<HostBindings['storage']['put']>[0]) => storagePut(entry),
-    delete: async (ns: string, key: string) => storageDelete(ns, key),
-    list: async (ns: string) => storageList(ns, null)
+    get: async (_ns: string, _key: string) => { throw new Error('storage not available - cap:storage.kv not granted'); },
+    put: async (_entry: Parameters<HostBindings['storage']['put']>[0]) => { throw new Error('storage not available - cap:storage.kv not granted'); },
+    delete: async (_ns: string, _key: string) => { throw new Error('storage not available - cap:storage.kv not granted'); },
+    list: async (_ns: string) => { throw new Error('storage not available - cap:storage.kv not granted'); }
   },
   logging: {
     info: async (msg: string) => logInfo(msg),

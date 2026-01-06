@@ -248,7 +248,7 @@ async function handle(req: NextRequest, ctx: { params: Promise<{ extensionId: st
     const idempotencyKey = req.method === 'GET' ? undefined : (req.headers.get('x-idempotency-key') || requestId);
 
     const runnerUrl = process.env.RUNNER_BASE_URL || 'http://localhost:8080';
-    const timeoutMs = Number(process.env.EXT_GATEWAY_TIMEOUT_MS || '5000');
+    const timeoutMs = Number(process.env.EXT_GATEWAY_TIMEOUT_MS || '30000');
 
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), timeoutMs);
