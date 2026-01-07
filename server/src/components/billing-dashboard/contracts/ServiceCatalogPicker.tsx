@@ -58,10 +58,12 @@ export function ServiceCatalogPicker({
 
       const options: SelectOption[] = result.items.map((item) => ({
         value: item.service_id,
-        label:
-          item.item_kind === 'product'
-            ? `Product: ${item.service_name}${item.sku ? ` (${item.sku})` : ''}`
-            : item.service_name,
+        label: item.item_kind === 'product' && item.sku
+          ? `${item.service_name} (${item.sku})`
+          : item.service_name,
+        badge: item.item_kind === 'product'
+          ? { text: 'Product', variant: 'primary' as const }
+          : { text: 'Service', variant: 'default' as const },
       }));
 
       return { options, total: result.totalCount };
