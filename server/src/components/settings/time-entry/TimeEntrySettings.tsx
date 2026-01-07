@@ -9,14 +9,56 @@ import TimePeriodList from './TimePeriodList';
 
 const TimeEntrySettings: React.FC = () => {
   const searchParams = useSearchParams();
-  const [defaultTab, setDefaultTab] = useState("Time Period Settings");
 
+  // Map URL slugs to tab labels
+  const subtabToLabelMap: Record<string, string> = {
+    'time-period-settings': 'Time Period Settings',
+    'time-periods': 'Time Periods'
+  };
+
+  // Determine initial active tab based on URL parameter
+  const [activeTab, setActiveTab] = useState<string>(() => {
+    const subtab = searchParams?.get('subtab');
+    const initialLabel = subtab ? subtabToLabelMap[subtab.toLowerCase()] : undefined;
+    return initialLabel || 'Time Period Settings';
+  });
+
+  // Update active tab when URL parameter changes
   useEffect(() => {
     const subtab = searchParams?.get('subtab');
-    if (subtab === 'time-periods') {
-      setDefaultTab("Time Periods");
+    const currentLabel = subtab ? subtabToLabelMap[subtab.toLowerCase()] : undefined;
+    const targetTab = currentLabel || 'Time Period Settings';
+    if (targetTab !== activeTab) {
+      setActiveTab(targetTab);
     }
-  }, [searchParams]);
+  }, [searchParams, activeTab]);
+
+  const updateURL = (tabLabel: string) => {
+    // Map tab labels back to URL slugs
+    const labelToSlugMap: Record<string, string> = Object.entries(subtabToLabelMap).reduce((acc, [slug, label]) => {
+      acc[label] = slug;
+      return acc;
+    }, {} as Record<string, string>);
+
+    const urlSlug = labelToSlugMap[tabLabel];
+
+    // Build new URL with tab and subtab parameters
+    const currentSearchParams = new URLSearchParams(window.location.search);
+
+    if (urlSlug && urlSlug !== 'time-period-settings') {
+      currentSearchParams.set('subtab', urlSlug);
+    } else {
+      currentSearchParams.delete('subtab');
+    }
+
+    // Ensure the tab parameter is preserved
+    if (!currentSearchParams.has('tab')) {
+      currentSearchParams.set('tab', 'time-entry');
+    }
+
+    const newUrl = `/msp/settings?${currentSearchParams.toString()}`;
+    window.history.pushState({}, '', newUrl);
+  };
 
   const tabContent: TabContent[] = [
     {
@@ -33,7 +75,14 @@ const TimeEntrySettings: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <CustomTabs tabs={tabContent} defaultTab={defaultTab} />
+      <CustomTabs
+        tabs={tabContent}
+        defaultTab={activeTab}
+        onTabChange={(tab) => {
+          setActiveTab(tab);
+          updateURL(tab);
+        }}
+      />
     </div>
   );
 };

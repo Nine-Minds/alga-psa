@@ -1,4 +1,5 @@
-import { type ReactNode, useCallback, useMemo, useState } from 'react';
+import { type ReactNode, useCallback, useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from 'server/src/components/ui/Card';
 import { Button } from 'server/src/components/ui/Button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from 'server/src/components/ui/Table';
@@ -13,7 +14,23 @@ import Spinner from 'server/src/components/ui/Spinner';
 import type { ImportJobDetails, ImportJobItemRecord, ImportJobRecord } from '@/types/imports.types';
 import { useImportActions } from './hooks/useImportActions';
 
+// Map URL slugs to tab labels
+const sectionToLabelMap: Record<string, string> = {
+  'asset-import': 'Asset Import',
+  'asset-export': 'Asset Export',
+  'templates-automation': 'Templates & Automation',
+};
+
+// Map tab labels back to URL slugs
+const labelToSlugMap: Record<string, string> = {
+  'Asset Import': 'asset-import',
+  'Asset Export': 'asset-export',
+  'Templates & Automation': 'templates-automation',
+};
+
 const ImportExportSettings = (): React.JSX.Element => {
+  const searchParams = useSearchParams();
+  const sectionParam = searchParams?.get('section');
 
   const {
     isLoading,
@@ -37,6 +54,47 @@ const ImportExportSettings = (): React.JSX.Element => {
     clearSelectedJobDetails,
     refreshHistory,
   } = useImportActions();
+
+  // Determine initial active tab based on URL parameter
+  const [activeTab, setActiveTab] = useState<string>(() => {
+    const initialLabel = sectionParam ? sectionToLabelMap[sectionParam.toLowerCase()] : undefined;
+    return initialLabel || 'Asset Import'; // Default to 'Asset Import'
+  });
+
+  // Update active tab when URL parameter changes
+  useEffect(() => {
+    const currentLabel = sectionParam ? sectionToLabelMap[sectionParam.toLowerCase()] : undefined;
+    const targetTab = currentLabel || 'Asset Import';
+    if (targetTab !== activeTab) {
+      setActiveTab(targetTab);
+    }
+  }, [sectionParam, activeTab]);
+
+  const updateURL = useCallback((tabLabel: string) => {
+    const urlSlug = labelToSlugMap[tabLabel];
+
+    // Build new URL preserving existing parameters
+    const currentSearchParams = new URLSearchParams(window.location.search);
+
+    if (urlSlug && urlSlug !== 'asset-import') {
+      currentSearchParams.set('section', urlSlug);
+    } else {
+      currentSearchParams.delete('section');
+    }
+
+    // Preserve the tab parameter for import-export
+    if (!currentSearchParams.has('tab')) {
+      currentSearchParams.set('tab', 'import-export');
+    }
+
+    const newUrl = `/msp/settings?${currentSearchParams.toString()}`;
+    window.history.pushState({}, '', newUrl);
+  }, []);
+
+  const handleTabChange = useCallback((tab: string) => {
+    setActiveTab(tab);
+    updateURL(tab);
+  }, [updateURL]);
 
   const [file, setFile] = useState<File | null>(null);
   const [persistTemplate, setPersistTemplate] = useState(true);
@@ -365,6 +423,8 @@ const ImportExportSettings = (): React.JSX.Element => {
         <CardContent>
           <CustomTabs
             tabs={tabs}
+            defaultTab={activeTab}
+            onTabChange={handleTabChange}
             orientation="vertical"
             tabStyles={{
               list: 'border-border/40 dark:border-border/50',
