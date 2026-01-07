@@ -22,6 +22,7 @@ import {
   ArrowRight,
   Sparkles,
   CheckCircle2,
+  Circle,
 } from 'lucide-react';
 
 const FeatureCard = ({ icon: Icon, title, description }: { icon: any; title: string; description: string }) => {
@@ -170,6 +171,22 @@ const QuickStartCard = ({ step, index, onNavigate, className }: QuickStartCardPr
         <div className="min-w-0">
           <h3 className="text-base font-semibold leading-6 text-slate-900">{step.title}</h3>
           <p className="mt-1 text-sm leading-5 text-slate-600">{step.description}</p>
+          {Array.isArray(step.substeps) && step.substeps.length > 0 ? (
+            <ul className="mt-3 space-y-1.5">
+              {step.substeps.map((substep) => (
+                <li key={substep.id} className="flex items-center gap-2 text-xs text-slate-600">
+                  {substep.status === 'complete' ? (
+                    <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                  ) : (
+                    <Circle className="h-4 w-4 text-slate-300" />
+                  )}
+                  <span className={substep.status === 'complete' ? 'text-slate-700' : undefined}>
+                    {substep.title}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          ) : null}
         </div>
       </div>
 
