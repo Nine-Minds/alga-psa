@@ -3,11 +3,17 @@
 import logger from '@alga-psa/shared/core/logger';
 import { getAdminConnection } from '@shared/db/admin';
 import { getCurrentTenantId } from '@/lib/db';
+import { getConnection } from '@/lib/db/db';
 import { getPortalDomainStatusAction } from '@/lib/actions/tenant-actions/portalDomainActions';
 import { listImportJobs } from '@/lib/actions/import-actions/importActions';
 import { getCalendarProviders } from '@/lib/actions/calendarActions';
 import type { ImportJobRecord } from '@/types/imports.types';
 import type { PortalDomainStatusResponse } from '@/lib/actions/tenant-actions/portalDomain.types';
+import {
+  deriveParentStepFromSubsteps,
+  type OnboardingProgressSubstep,
+  type OnboardingProgressStatus,
+} from '@/lib/onboarding/deriveParentStepFromSubsteps';
 
 export type OnboardingStepId =
   | 'identity_sso'
@@ -18,6 +24,8 @@ export type OnboardingStepId =
 
 export type OnboardingStepStatus = 'not_started' | 'in_progress' | 'blocked' | 'complete';
 
+export interface OnboardingSubstepServerState extends OnboardingProgressSubstep {}
+
 export interface OnboardingStepServerState {
   id: OnboardingStepId;
   status: OnboardingStepStatus;
@@ -25,6 +33,7 @@ export interface OnboardingStepServerState {
   blocker?: string | null;
   progressValue?: number | null;
   meta?: Record<string, unknown>;
+  substeps?: OnboardingSubstepServerState[];
 }
 
 export interface OnboardingProgressResponse {
@@ -68,17 +77,17 @@ export async function getOnboardingProgressAction(): Promise<OnboardingProgressR
     throw new Error('Tenant context is required to load onboarding progress');
   }
 
-  const [identity, portalDomain, importStep, calendar, managedEmail] = await Promise.all([
+  const [identity, customerPortal, importStep, calendar, email] = await Promise.all([
     resolveIdentityStep(tenantId),
-    resolvePortalDomainStep(),
+    resolveCustomerPortalStep(tenantId),
     resolveImportStep(),
     resolveCalendarStep(),
-    resolveManagedEmailStep(),
+    resolveEmailStep(tenantId),
   ]);
 
   return {
     generatedAt: new Date().toISOString(),
-    steps: [identity, portalDomain, importStep, calendar, managedEmail],
+    steps: [identity, customerPortal, importStep, calendar, email],
   };
 }
 
@@ -128,52 +137,123 @@ async function resolveIdentityStep(tenantId: string): Promise<OnboardingStepServ
   }
 }
 
-async function resolvePortalDomainStep(): Promise<OnboardingStepServerState> {
+async function resolveCustomerPortalStep(tenantId: string): Promise<OnboardingStepServerState> {
   try {
-    const status = await getPortalDomainStatusAction();
-    const lastUpdated = dateToIso(status.updatedAt ?? status.lastCheckedAt);
+    const [domainSubstep, brandingSubstep, inviteSubstep] = await Promise.all([
+      resolvePortalCustomDomainSubstep(),
+      resolvePortalBrandingSubstep(tenantId),
+      resolvePortalInviteSubstep(tenantId),
+    ]);
 
-    if (!status.domain || status.status === 'disabled') {
-      return {
-        id: 'client_portal_domain',
-        status: 'not_started',
-        lastUpdated,
-        meta: {
-          canonicalHost: status.canonicalHost,
-        },
-      };
-    }
-
-    if (status.status === 'active') {
-      return {
-        id: 'client_portal_domain',
-        status: 'complete',
-        lastUpdated,
-        meta: {
-          domain: status.domain,
-          canonicalHost: status.canonicalHost,
-          status: status.status,
-        },
-      };
-    }
-
-    const failedStates = new Set(['dns_failed', 'certificate_failed']);
-    const isFailed = failedStates.has(status.status);
+    const substeps: OnboardingSubstepServerState[] = [domainSubstep, brandingSubstep, inviteSubstep];
+    const derived = deriveParentStepFromSubsteps(substeps as OnboardingProgressSubstep[]);
 
     return {
       id: 'client_portal_domain',
-      status: isFailed ? 'blocked' : 'in_progress',
-      lastUpdated,
-      blocker: isFailed ? status.statusMessage : null,
+      status: derived.status as OnboardingStepStatus,
+      blocker: derived.blocker,
+      lastUpdated: derived.lastUpdated,
+      progressValue: derived.progressValue,
+      substeps,
       meta: {
-        domain: status.domain,
-        status: status.status,
-        statusMessage: status.statusMessage,
+        completedSubsteps: substeps.filter((substep) => substep.status === 'complete').length,
+        totalSubsteps: substeps.length,
       },
     };
   } catch (error) {
     return buildErrorStep('client_portal_domain', 'Unable to load client portal domain status.', error);
   }
+}
+
+async function resolvePortalCustomDomainSubstep(): Promise<OnboardingSubstepServerState> {
+  const status = await getPortalDomainStatusAction();
+  const lastUpdated = dateToIso(status.updatedAt ?? status.lastCheckedAt);
+
+  if (!status.domain || status.status === 'disabled') {
+    return {
+      id: 'portal_custom_domain',
+      title: 'Portal custom domain',
+      status: 'not_started',
+      lastUpdated,
+      meta: {
+        canonicalHost: status.canonicalHost,
+      },
+    };
+  }
+
+  if (status.status === 'active') {
+    return {
+      id: 'portal_custom_domain',
+      title: 'Portal custom domain',
+      status: 'complete',
+      lastUpdated,
+      meta: {
+        domain: status.domain,
+        canonicalHost: status.canonicalHost,
+        status: status.status,
+      },
+    };
+  }
+
+  const failedStates = new Set(['dns_failed', 'certificate_failed']);
+  const isFailed = failedStates.has(status.status);
+
+  return {
+    id: 'portal_custom_domain',
+    title: 'Portal custom domain',
+    status: isFailed ? 'blocked' : 'in_progress',
+    lastUpdated,
+    blocker: isFailed ? status.statusMessage : null,
+    meta: {
+      domain: status.domain,
+      status: status.status,
+      statusMessage: status.statusMessage,
+    },
+  };
+}
+
+async function resolvePortalBrandingSubstep(tenantId: string): Promise<OnboardingSubstepServerState> {
+  const knex = await getConnection(tenantId);
+  const row = await knex('tenant_settings')
+    .where({ tenant: tenantId })
+    .select('settings', 'updated_at', 'created_at')
+    .first();
+
+  const lastUpdated = dateToIso(row?.updated_at ?? row?.created_at ?? null);
+  const settings = row?.settings ?? {};
+
+  const hasPortalConfig = Boolean(settings?.branding) || Boolean(settings?.clientPortal) || settings?.defaultLocale || settings?.enabledLocales;
+
+  return {
+    id: 'portal_branding',
+    title: 'Portal color and logo customizations',
+    status: hasPortalConfig ? 'complete' : 'not_started',
+    lastUpdated,
+  };
+}
+
+async function resolvePortalInviteSubstep(tenantId: string): Promise<OnboardingSubstepServerState> {
+  const knex = await getConnection(tenantId);
+
+  type InviteAggregateRow = { total?: string | number | null; latest_created?: Date | string | null };
+  const aggregate = (await knex('portal_invitations')
+    .where({ tenant: tenantId })
+    .count('* as total')
+    .max({ latest_created: 'created_at' })
+    .first()) as InviteAggregateRow | undefined;
+
+  const total = aggregate?.total ? Number(aggregate.total) : 0;
+  const lastUpdated = dateToIso(aggregate?.latest_created ?? null);
+
+  return {
+    id: 'portal_invite_first_contact',
+    title: 'Invite your first contact to the portal',
+    status: total > 0 ? 'complete' : 'not_started',
+    lastUpdated,
+    meta: {
+      invites: total,
+    },
+  };
 }
 
 async function resolveImportStep(): Promise<OnboardingStepServerState> {
@@ -301,55 +381,33 @@ async function resolveCalendarStep(): Promise<OnboardingStepServerState> {
 }
 
 async function resolveManagedEmailStep(): Promise<OnboardingStepServerState> {
+  const tenantId = await getCurrentTenantId();
+  if (!tenantId) {
+    return buildErrorStep('managed_email', 'Tenant context is required to load email onboarding status.');
+  }
+  return resolveEmailStep(tenantId);
+}
+
+async function resolveEmailStep(tenantId: string): Promise<OnboardingStepServerState> {
   try {
-    const { getManagedEmailDomains } = await import('@ee/lib/actions/email-actions/managedDomainActions');
-    const domains = await getManagedEmailDomains();
+    const [inboundSubstep, outboundDomainSubstep] = await Promise.all([
+      resolveInboundEmailProviderSubstep(tenantId),
+      resolveOutboundCustomEmailDomainSubstep(),
+    ]);
 
-    if (domains.length === 0) {
-      return {
-        id: 'managed_email',
-        status: 'not_started',
-        lastUpdated: null,
-      };
-    }
-
-    const verified = domains.filter((domain) => domain.status === 'verified');
-    const failed = domains.find((domain) => domain.status === 'failed');
-    const pending = domains.find((domain) => domain.status === 'pending' || domain.status === 'pending_dns' || domain.status === 'verifying');
-
-    const lastUpdated = dateToIso(
-      verified[0]?.updatedAt || failed?.updatedAt || pending?.updatedAt || domains[0]?.updatedAt
-    );
-
-    if (verified.length > 0) {
-      return {
-        id: 'managed_email',
-        status: 'complete',
-        lastUpdated,
-        meta: {
-          domains: verified.map((domain) => domain.domain),
-        },
-      };
-    }
-
-    if (failed) {
-      return {
-        id: 'managed_email',
-        status: 'blocked',
-        lastUpdated,
-        blocker: failed.failureReason || `Verification for ${failed.domain} failed.`,
-        meta: {
-          domains: domains.map((domain) => ({ domain: domain.domain, status: domain.status })),
-        },
-      };
-    }
+    const substeps: OnboardingSubstepServerState[] = [inboundSubstep, outboundDomainSubstep];
+    const derived = deriveParentStepFromSubsteps(substeps as OnboardingProgressSubstep[]);
 
     return {
       id: 'managed_email',
-      status: 'in_progress',
-      lastUpdated,
+      status: derived.status as OnboardingStepStatus,
+      blocker: derived.blocker,
+      lastUpdated: derived.lastUpdated,
+      progressValue: derived.progressValue,
+      substeps,
       meta: {
-        domains: domains.map((domain) => ({ domain: domain.domain, status: domain.status })),
+        completedSubsteps: substeps.filter((substep) => substep.status === 'complete').length,
+        totalSubsteps: substeps.length,
       },
     };
   } catch (error: any) {
@@ -364,4 +422,85 @@ async function resolveManagedEmailStep(): Promise<OnboardingStepServerState> {
 
     return buildErrorStep('managed_email', 'Unable to load managed email domains.', error);
   }
+}
+
+async function resolveInboundEmailProviderSubstep(tenantId: string): Promise<OnboardingSubstepServerState> {
+  const knex = await getConnection(tenantId);
+
+  type ProviderAggregateRow = { total?: string | number | null; latest_updated?: Date | string | null };
+  const aggregate = (await knex('email_providers')
+    .where({ tenant: tenantId })
+    .count('* as total')
+    .max({ latest_updated: 'updated_at' })
+    .first()) as ProviderAggregateRow | undefined;
+
+  const total = aggregate?.total ? Number(aggregate.total) : 0;
+  const lastUpdated = dateToIso(aggregate?.latest_updated ?? null);
+
+  return {
+    id: 'email_inbound_provider',
+    title: 'Configure inbound email',
+    status: total > 0 ? 'complete' : 'not_started',
+    lastUpdated,
+    meta: {
+      providers: total,
+    },
+  };
+}
+
+async function resolveOutboundCustomEmailDomainSubstep(): Promise<OnboardingSubstepServerState> {
+  const { getManagedEmailDomains } = await import('@ee/lib/actions/email-actions/managedDomainActions');
+  const domains = await getManagedEmailDomains();
+
+  if (domains.length === 0) {
+    return {
+      id: 'email_outbound_custom_domain',
+      title: 'Configure outbound custom email domain',
+      status: 'not_started',
+      lastUpdated: null,
+    };
+  }
+
+  const verified = domains.filter((domain) => domain.status === 'verified');
+  const failed = domains.find((domain) => domain.status === 'failed');
+  const pending = domains.find((domain) => domain.status === 'pending' || domain.status === 'pending_dns' || domain.status === 'verifying');
+
+  const lastUpdated = dateToIso(
+    verified[0]?.updatedAt || failed?.updatedAt || pending?.updatedAt || domains[0]?.updatedAt
+  );
+
+  if (verified.length > 0) {
+    return {
+      id: 'email_outbound_custom_domain',
+      title: 'Configure outbound custom email domain',
+      status: 'complete',
+      lastUpdated,
+      meta: {
+        domains: verified.map((domain) => domain.domain),
+      },
+    };
+  }
+
+  if (failed) {
+    return {
+      id: 'email_outbound_custom_domain',
+      title: 'Configure outbound custom email domain',
+      status: 'blocked',
+      lastUpdated,
+      blocker: failed.failureReason || `Verification for ${failed.domain} failed.`,
+      meta: {
+        domains: domains.map((domain) => ({ domain: domain.domain, status: domain.status })),
+      },
+    };
+  }
+
+  return {
+    id: 'email_outbound_custom_domain',
+    title: 'Configure outbound custom email domain',
+    status: 'in_progress',
+    lastUpdated,
+    meta: {
+      domains: domains.map((domain) => ({ domain: domain.domain, status: domain.status })),
+    },
+  };
 }

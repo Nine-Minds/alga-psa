@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
-import { Sparkles } from 'lucide-react';
+import { CheckCircle2, Circle, AlertCircle, Sparkles } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/Card';
 import { Button } from '../ui/Button';
 import { Badge, type BadgeVariant } from '../ui/Badge';
@@ -114,6 +114,9 @@ function StepItem({ step, onCtaClick }: StepItemProps) {
           {showProgress ? (
             <Progress value={step.progressValue ?? 0} className="h-1.5" />
           ) : null}
+          {Array.isArray(step.substeps) && step.substeps.length > 0 ? (
+            <SubstepList substeps={step.substeps} />
+          ) : null}
           {step.blocker ? (
             <Alert variant="destructive" className="text-xs">
               <AlertDescription>{step.blocker}</AlertDescription>
@@ -138,6 +141,32 @@ function StepItem({ step, onCtaClick }: StepItemProps) {
         </div>
       </div>
     </div>
+  );
+}
+
+function SubstepList({ substeps }: { substeps: Array<{ id: string; title: string; status: string }> }) {
+  return (
+    <ul className="space-y-1.5 pt-1">
+      {substeps.map((substep) => {
+        const Icon = substep.status === 'complete'
+          ? CheckCircle2
+          : substep.status === 'blocked'
+            ? AlertCircle
+            : Circle;
+        const color = substep.status === 'complete'
+          ? 'text-emerald-600'
+          : substep.status === 'blocked'
+            ? 'text-red-600'
+            : 'text-slate-400';
+
+        return (
+          <li key={substep.id} className="flex items-center gap-2 text-xs text-muted-foreground">
+            <Icon className={`h-4 w-4 ${color}`} />
+            <span className={substep.status === 'complete' ? 'text-slate-700' : undefined}>{substep.title}</span>
+          </li>
+        );
+      })}
+    </ul>
   );
 }
 
