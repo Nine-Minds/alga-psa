@@ -5,9 +5,8 @@ import { getAdminConnection } from '@shared/db/admin';
 import { getCurrentTenantId } from '@/lib/db';
 import { getConnection } from '@/lib/db/db';
 import { getPortalDomainStatusAction } from '@/lib/actions/tenant-actions/portalDomainActions';
-import { listImportJobs } from '@/lib/actions/import-actions/importActions';
-import { getCalendarProviders } from '@/lib/actions/calendarActions';
 import type { ImportJobRecord } from '@/types/imports.types';
+import type { CalendarProviderConfig } from '@/interfaces/calendar.interfaces';
 import type { PortalDomainStatusResponse } from '@/lib/actions/tenant-actions/portalDomain.types';
 import {
   deriveParentStepFromSubsteps,
@@ -60,7 +59,9 @@ const buildErrorStep = (
   error?: unknown
 ): OnboardingStepServerState => {
   if (error) {
-    logger.error('[onboarding-progress] Step resolution failed', { id, error });
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    const errorStack = error instanceof Error ? error.stack : undefined;
+    logger.error('[onboarding-progress] Step resolution failed', { id, errorMessage, errorStack });
   }
 
   return {
@@ -80,8 +81,8 @@ export async function getOnboardingProgressAction(): Promise<OnboardingProgressR
   const [identity, customerPortal, importStep, calendar, email] = await Promise.all([
     resolveIdentityStep(tenantId),
     resolveCustomerPortalStep(tenantId),
-    resolveImportStep(),
-    resolveCalendarStep(),
+    resolveImportStep(tenantId),
+    resolveCalendarStep(tenantId),
     resolveEmailStep(tenantId),
   ]);
 
@@ -256,10 +257,16 @@ async function resolvePortalInviteSubstep(tenantId: string): Promise<OnboardingS
   };
 }
 
-async function resolveImportStep(): Promise<OnboardingStepServerState> {
+async function resolveImportStep(tenantId: string): Promise<OnboardingStepServerState> {
   try {
-    const history = await listImportJobs();
-    const latestJob = history.at(0);
+    const knex = await getConnection(tenantId);
+
+    // Query the most recent import job directly to avoid permission checks
+    // The onboarding progress should be visible regardless of import_export permission
+    const latestJob = await knex('import_jobs')
+      .where({ tenant: tenantId })
+      .orderBy('created_at', 'desc')
+      .first() as ImportJobRecord | undefined;
 
     if (!latestJob) {
       return {
@@ -320,14 +327,16 @@ function computeImportProgress(job: ImportJobRecord): number | null {
   return null;
 }
 
-async function resolveCalendarStep(): Promise<OnboardingStepServerState> {
+async function resolveCalendarStep(tenantId: string): Promise<OnboardingStepServerState> {
   try {
-    const result = await getCalendarProviders();
-    if (!result.success || !result.providers) {
-      throw new Error(result.error || 'Unknown calendar provider error');
-    }
+    const knex = await getConnection(tenantId);
 
-    const providers = result.providers;
+    // Query calendar providers directly to avoid permission checks
+    // The onboarding progress should be visible regardless of specific permissions
+    const providers = await knex('calendar_providers')
+      .where({ tenant: tenantId })
+      .orderBy('created_at', 'desc') as CalendarProviderConfig[];
+
     if (providers.length === 0) {
       return {
         id: 'calendar_sync',
