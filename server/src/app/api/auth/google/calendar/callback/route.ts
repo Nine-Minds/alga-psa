@@ -277,6 +277,8 @@ export async function GET(request: NextRequest) {
             await providerService.updateProvider(stateData.calendarProviderId!, stateData.tenant, {
               calendarId: primaryCalendar.id,
               vendorConfig: {
+                client_id: clientId,
+                client_secret: clientSecret,
                 project_id: projectId || null,
                 redirect_uri: redirectUri,
                 access_token: access_token,
