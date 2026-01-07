@@ -184,6 +184,7 @@ export interface IService extends TenantEntity {
   is_active?: boolean;
   sku?: string | null;
   cost?: number | null; // cents
+  cost_currency?: string | null; // ISO 4217 currency code
   vendor?: string | null;
   manufacturer?: string | null;
   product_category?: string | null;

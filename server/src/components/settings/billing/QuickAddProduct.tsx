@@ -60,6 +60,7 @@ export function QuickAddProduct({ isOpen, onClose, onProductAdded, product }: Qu
     is_active: true,
     billing_method: 'per_unit',
     unit_of_measure: '',
+    cost_currency: 'USD',
     is_license: false,
     license_term: 'monthly',
     license_billing_cadence: 'monthly'
@@ -181,6 +182,10 @@ export function QuickAddProduct({ isOpen, onClose, onProductAdded, product }: Qu
       setError('Service type is required');
       return;
     }
+    if (!formProduct.unit_of_measure?.trim()) {
+      setError('Unit of measure is required');
+      return;
+    }
     const priceError = validatePrices(formPrices);
     if (priceError) {
       setError(priceError);
@@ -204,7 +209,7 @@ export function QuickAddProduct({ isOpen, onClose, onProductAdded, product }: Qu
           custom_service_type_id: formProduct.custom_service_type_id!,
           billing_method: (formProduct.billing_method || 'per_unit') as any,
           default_rate: primary.rate,
-          unit_of_measure: formProduct.unit_of_measure || null,
+          unit_of_measure: formProduct.unit_of_measure!.trim(),
           description: formProduct.description ?? null,
           category_id: formProduct.category_id ?? null,
           tax_rate_id: formProduct.tax_rate_id ?? null,
@@ -212,6 +217,7 @@ export function QuickAddProduct({ isOpen, onClose, onProductAdded, product }: Qu
           is_active: formProduct.is_active ?? true,
           sku: formProduct.sku ?? null,
           cost: formProduct.cost ?? null,
+          cost_currency: formProduct.cost_currency ?? 'USD',
           vendor: formProduct.vendor ?? null,
           manufacturer: formProduct.manufacturer ?? null,
           product_category: formProduct.product_category ?? null,
@@ -437,14 +443,38 @@ export function QuickAddProduct({ isOpen, onClose, onProductAdded, product }: Qu
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Cost (cents)</label>
-              <Input
-                id="quick-add-product-cost"
-                type="number"
-                value={formProduct.cost ?? ''}
-                onChange={(e) => setFormProduct({ ...formProduct, cost: e.target.value === '' ? null : Number(e.target.value) })}
-                placeholder="Optional"
-              />
+              <label className="block text-sm font-medium text-gray-700 mb-1">Cost</label>
+              <div className="flex gap-2">
+                <div className="w-24">
+                  <CustomSelect
+                    id="quick-add-product-cost-currency"
+                    options={CURRENCY_OPTIONS.map(c => ({ value: c.value, label: c.label }))}
+                    value={formProduct.cost_currency || 'USD'}
+                    onValueChange={(v) => setFormProduct({ ...formProduct, cost_currency: v })}
+                  />
+                </div>
+                <div className="relative flex-1">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">
+                    {getCurrencySymbol(formProduct.cost_currency || 'USD')}
+                  </span>
+                  <Input
+                    id="quick-add-product-cost"
+                    type="text"
+                    inputMode="decimal"
+                    value={formProduct.cost != null ? (formProduct.cost / 100).toFixed(2) : ''}
+                    onChange={(e) => {
+                      const value = e.target.value.replace(/[^0-9.]/g, '');
+                      const decimalCount = (value.match(/\./g) || []).length;
+                      if (decimalCount > 1) return;
+                      const dollars = parseFloat(value) || 0;
+                      const cents = Math.round(dollars * 100);
+                      setFormProduct({ ...formProduct, cost: value === '' ? null : cents });
+                    }}
+                    placeholder="0.00"
+                    className="pl-8"
+                  />
+                </div>
+              </div>
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Billing Method</label>
@@ -483,12 +513,12 @@ export function QuickAddProduct({ isOpen, onClose, onProductAdded, product }: Qu
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Unit of Measure</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Unit of Measure *</label>
               <Input
                 id="quick-add-product-unit-of-measure"
                 value={formProduct.unit_of_measure || ''}
                 onChange={(e) => setFormProduct({ ...formProduct, unit_of_measure: e.target.value })}
-                placeholder="Each"
+                placeholder="e.g., each, item, license"
               />
             </div>
           </div>
