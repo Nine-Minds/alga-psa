@@ -226,5 +226,8 @@
   "type": "module",
   "resolutions": {
     "prosemirror-view": "1.30.2"
+  },
+  "overrides": {
+    "preact": "^10.25.4"
   }
 }
