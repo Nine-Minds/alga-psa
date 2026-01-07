@@ -4,6 +4,7 @@ import { getSecretProviderInstance } from '@shared/core/secretProvider';
 import { getCurrentUser } from '@/lib/actions/user-actions/userActions';
 import { hasPermission } from '@/lib/auth/rbac';
 import { createTenantKnex } from '@/db';
+import { randomUUID } from 'node:crypto';
 
 const GOOGLE_CLIENT_ID_SECRET = 'google_client_id';
 const GOOGLE_CLIENT_SECRET_SECRET = 'google_client_secret';
@@ -19,9 +20,58 @@ function maskSecret(value: string): string {
   return `${'•'.repeat(Math.max(0, value.length - 4))}${value.slice(-4)}`;
 }
 
+function normalizeGoogleClientId(value: string): string {
+  // Copy/paste from admin consoles can include zero-width characters that `trim()` does not remove.
+  return value
+    .normalize('NFKC')
+    .replace(/[\u200B-\u200D\uFEFF]/g, '')
+    .trim();
+}
+
+function describeGoogleClientId(rawValue: unknown): {
+  raw: string | null;
+  normalized: string | null;
+  rawLength: number | null;
+  normalizedLength: number | null;
+  changedByNormalize: boolean | null;
+  hasZeroWidthChars: boolean | null;
+  hasNonAsciiChars: boolean | null;
+  hasWhitespaceChars: boolean | null;
+  codepointsHex: string[] | null;
+} {
+  if (typeof rawValue !== 'string') {
+    return {
+      raw: rawValue == null ? null : String(rawValue),
+      normalized: null,
+      rawLength: rawValue == null ? null : String(rawValue).length,
+      normalizedLength: null,
+      changedByNormalize: null,
+      hasZeroWidthChars: null,
+      hasNonAsciiChars: null,
+      hasWhitespaceChars: null,
+      codepointsHex: null,
+    };
+  }
+
+  const normalized = normalizeGoogleClientId(rawValue);
+  const codepointsHex = Array.from(rawValue).map((ch) => (ch.codePointAt(0) ?? 0).toString(16));
+
+  return {
+    raw: rawValue,
+    normalized,
+    rawLength: rawValue.length,
+    normalizedLength: normalized.length,
+    changedByNormalize: rawValue !== normalized,
+    hasZeroWidthChars: /[\u200B-\u200D\uFEFF]/.test(rawValue),
+    hasNonAsciiChars: /[^\x20-\x7E]/.test(rawValue),
+    hasWhitespaceChars: /\s/.test(rawValue),
+    codepointsHex,
+  };
+}
+
 function isLikelyGoogleClientId(value: string): boolean {
   // Typical format: <digits>-<alnum>.apps.googleusercontent.com
-  return /^[0-9]+-[a-zA-Z0-9_\\-]+\\.apps\\.googleusercontent\\.com$/.test(value.trim());
+  return /^[0-9]+-[a-zA-Z0-9_\\-]+\\.apps\\.googleusercontent\\.com$/.test(normalizeGoogleClientId(value));
 }
 
 function computeBaseUrl(envValue?: string | null): string {
@@ -138,6 +188,7 @@ export async function saveGoogleIntegrationSettings(input: {
   calendarClientId?: string;
   calendarClientSecret?: string;
 }): Promise<{ success: boolean; error?: string }> {
+  const traceId = randomUUID();
   try {
     const user = await getCurrentUser();
     if (!user?.tenant) return { success: false, error: 'Unauthorized' };
@@ -148,12 +199,33 @@ export async function saveGoogleIntegrationSettings(input: {
     const { tenant } = await createTenantKnex();
     if (!tenant) return { success: false, error: 'Tenant not found' };
 
+    console.info('[google] saveGoogleIntegrationSettings start', {
+      traceId,
+      tenant,
+      useSameOAuthAppForCalendar: input.useSameOAuthAppForCalendar,
+      projectId: input.projectId?.trim?.() ?? input.projectId,
+      gmailClientId: describeGoogleClientId(input.gmailClientId),
+      calendarClientId: describeGoogleClientId(input.calendarClientId),
+      gmailClientSecretLength:
+        typeof input.gmailClientSecret === 'string' ? input.gmailClientSecret.length : null,
+      calendarClientSecretLength:
+        typeof input.calendarClientSecret === 'string' ? input.calendarClientSecret.length : null,
+      serviceAccountKeyJsonLength:
+        typeof input.serviceAccountKeyJson === 'string' ? input.serviceAccountKeyJson.length : null,
+    });
+
     const projectId = input.projectId?.trim();
     if (!projectId) return { success: false, error: 'Google Cloud project ID is required' };
 
-    const gmailClientId = input.gmailClientId?.trim();
+    const gmailClientId = normalizeGoogleClientId(input.gmailClientId ?? '');
     if (!gmailClientId) return { success: false, error: 'Gmail OAuth Client ID is required' };
     if (!isLikelyGoogleClientId(gmailClientId)) {
+      console.warn('[google] invalid gmailClientId', {
+        traceId,
+        tenant,
+        pattern: '^[0-9]+-[a-zA-Z0-9_\\-]+\\.apps\\.googleusercontent\\.com$',
+        gmailClientId: describeGoogleClientId(input.gmailClientId),
+      });
       return { success: false, error: 'Gmail OAuth Client ID does not look valid' };
     }
 
@@ -169,9 +241,21 @@ export async function saveGoogleIntegrationSettings(input: {
     try {
       parsedKey = JSON.parse(serviceAccountKeyJson);
     } catch {
+      console.warn('[google] service account key JSON parse failed', {
+        traceId,
+        tenant,
+        length: typeof input.serviceAccountKeyJson === 'string' ? input.serviceAccountKeyJson.length : null,
+      });
       return { success: false, error: 'Service account key is not valid JSON' };
     }
     if (!parsedKey?.client_email || !parsedKey?.private_key) {
+      console.warn('[google] service account key JSON missing required fields', {
+        traceId,
+        tenant,
+        hasClientEmail: Boolean(parsedKey?.client_email),
+        hasPrivateKey: Boolean(parsedKey?.private_key),
+        projectId: parsedKey?.project_id,
+      });
       return { success: false, error: 'Service account key JSON is missing required fields (client_email, private_key)' };
     }
 
@@ -185,11 +269,17 @@ export async function saveGoogleIntegrationSettings(input: {
       await secretProvider.setTenantSecret(tenant, GOOGLE_CALENDAR_CLIENT_ID_SECRET, gmailClientId);
       await secretProvider.setTenantSecret(tenant, GOOGLE_CALENDAR_CLIENT_SECRET_SECRET, gmailClientSecret);
     } else {
-      const calendarClientId = input.calendarClientId?.trim();
+      const calendarClientId = normalizeGoogleClientId(input.calendarClientId ?? '');
       const calendarClientSecret = input.calendarClientSecret?.trim();
 
       if (!calendarClientId) return { success: false, error: 'Calendar OAuth Client ID is required' };
       if (!isLikelyGoogleClientId(calendarClientId)) {
+        console.warn('[google] invalid calendarClientId', {
+          traceId,
+          tenant,
+          pattern: '^[0-9]+-[a-zA-Z0-9_\\-]+\\.apps\\.googleusercontent\\.com$',
+          calendarClientId: describeGoogleClientId(input.calendarClientId),
+        });
         return { success: false, error: 'Calendar OAuth Client ID does not look valid' };
       }
       if (!calendarClientSecret) return { success: false, error: 'Calendar OAuth Client Secret is required' };
@@ -198,8 +288,13 @@ export async function saveGoogleIntegrationSettings(input: {
       await secretProvider.setTenantSecret(tenant, GOOGLE_CALENDAR_CLIENT_SECRET_SECRET, calendarClientSecret);
     }
 
+    console.info('[google] saveGoogleIntegrationSettings success', { traceId, tenant });
     return { success: true };
   } catch (err: any) {
+    console.error('[google] saveGoogleIntegrationSettings failed', {
+      traceId,
+      message: err?.message || 'unknown',
+    });
     return { success: false, error: err?.message || 'Failed to save Google integration settings' };
   }
 }
