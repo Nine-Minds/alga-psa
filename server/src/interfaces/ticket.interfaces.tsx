@@ -24,6 +24,7 @@ export interface ITicket extends TenantEntity, ITaggable {
   entered_at: string | null; // Changed from Date to string
   updated_at: string | null; // Changed from Date to string
   closed_at: string | null;  // Changed from Date to string
+  due_date?: string;         // Optional due date for the ticket
   attributes: Record<string, unknown> | null; // Changed from any to unknown
   priority_id?: string; // Used for both custom and ITIL priorities (unified system)
   estimated_hours?: number;
@@ -66,6 +67,10 @@ export interface ITicketListFilters {
   tags?: string[];
   assignedToIds?: string[];        // Array of user IDs to filter by
   includeUnassigned?: boolean;     // Include tickets with no assignee
+  // Due date filters
+  dueDateFilter?: 'all' | 'overdue' | 'upcoming' | 'today' | 'no_due_date' | 'before' | 'after' | 'custom';
+  dueDateFrom?: string;            // ISO date string for custom range start
+  dueDateTo?: string;              // ISO date string for custom range end
   sortBy?: string;
   sortDirection?: 'asc' | 'desc';
 }

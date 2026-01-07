@@ -456,6 +456,42 @@ export function TicketDetails({
               </div>
             </div>
 
+            {/* Due Date */}
+            <div>
+              <label className="font-bold text-gray-900 block mb-2">
+                {t('tickets.fields.dueDate', 'Due Date')}
+              </label>
+              {ticket.due_date ? (() => {
+                const dueDate = new Date(ticket.due_date);
+                const now = new Date();
+                const hoursUntilDue = (dueDate.getTime() - now.getTime()) / (1000 * 60 * 60);
+
+                // Check if time is midnight (00:00) - show date only
+                const isMidnight = dueDate.getHours() === 0 && dueDate.getMinutes() === 0;
+                const displayFormat = isMidnight ? 'MMM d, yyyy' : 'MMM d, yyyy h:mm a';
+
+                // Determine styling based on due date status
+                let textColorClass = 'text-gray-700';
+                let bgColorClass = '';
+
+                if (hoursUntilDue < 0) {
+                  textColorClass = 'text-red-700';
+                  bgColorClass = 'bg-red-50';
+                } else if (hoursUntilDue <= 24) {
+                  textColorClass = 'text-orange-700';
+                  bgColorClass = 'bg-orange-50';
+                }
+
+                return (
+                  <span className={`text-sm inline-block ${textColorClass} ${bgColorClass ? `${bgColorClass} px-2 py-0.5 rounded-full` : ''}`}>
+                    {format(dueDate, displayFormat)}
+                  </span>
+                );
+              })() : (
+                <span className="text-sm text-gray-500">-</span>
+              )}
+            </div>
+
             {/* Description */}
             <div>
               <label className="font-bold text-gray-900 block mb-2">

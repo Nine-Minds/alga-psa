@@ -359,6 +359,34 @@ async function resolveValue(db: any, field: string, value: unknown, tenantId: st
       return standardCategory?.category_name || String(value);
     }
 
+    case 'due_date': {
+      // Format due date in a user-friendly way
+      if (typeof value === 'string') {
+        const date = new Date(value);
+        if (!isNaN(date.getTime())) {
+          // Check if time is midnight (no time specified)
+          const isMidnight = date.getUTCHours() === 0 && date.getUTCMinutes() === 0;
+          if (isMidnight) {
+            return date.toLocaleDateString('en-US', {
+              year: 'numeric',
+              month: 'short',
+              day: 'numeric',
+              timeZone: 'UTC'
+            });
+          }
+          return date.toLocaleString('en-US', {
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric',
+            hour: 'numeric',
+            minute: '2-digit',
+            timeZone: 'UTC'
+          });
+        }
+      }
+      return String(value);
+    }
+
     default:
       if (value instanceof Date) {
         return value.toISOString();
