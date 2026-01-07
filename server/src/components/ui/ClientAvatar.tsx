@@ -9,15 +9,26 @@ interface ClientAvatarProps {
   className?: string;
 }
 
-// Client-specific initials function that takes first letter of first two words
+// Client-specific initials function that takes first character of first two words
+// Uses Array.from() to properly handle Unicode characters like emojis
 const getClientInitials = (name: string): string => {
   if (!name) return '?';
   const words = name.trim().split(/\s+/);
+
+  // Use Array.from to properly handle multi-byte Unicode characters (emojis, etc.)
+  const getFirstChar = (str: string) => {
+    const chars = Array.from(str);
+    return chars[0] || '';
+  };
+
   if (words.length === 1) {
-    return words[0].length > 1 ? words[0].substring(0, 2).toUpperCase() : words[0].charAt(0).toUpperCase();
+    const chars = Array.from(words[0]);
+    return chars.length > 1
+      ? (chars[0] + chars[1]).toUpperCase()
+      : (chars[0] || '?').toUpperCase();
   }
-  // Take first letter of first two words
-  return (words[0].charAt(0) + words[1].charAt(0)).toUpperCase();
+  // Take first character of first two words
+  return (getFirstChar(words[0]) + getFirstChar(words[1])).toUpperCase();
 };
 
 const ClientAvatar: React.FC<ClientAvatarProps> = ({

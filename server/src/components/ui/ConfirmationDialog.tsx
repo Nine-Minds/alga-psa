@@ -95,7 +95,7 @@ export const ConfirmationDialog: React.FC<ConfirmationDialogProps & AutomationPr
                   value={opt.value}
                   checked={selectedValue === opt.value}
                   onChange={(e) => setSelectedValue(e.target.value)}
-                  className="focus:ring-indigo-500 h-4 w-4 text-indigo-600 border-gray-300"
+                  className="focus:ring-[rgb(var(--color-primary-500))] h-4 w-4 text-[rgb(var(--color-primary-600))] border-gray-300"
                   id={`${id}-option-${opt.value}`}
                 />
                 {opt.label}

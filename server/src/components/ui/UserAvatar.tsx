@@ -9,14 +9,25 @@ interface UserAvatarProps {
   className?: string;
 }
 
+// Uses Array.from() to properly handle Unicode characters like emojis
 const getUserInitials = (name: string): string => {
   if (!name) return '?';
   const words = name.trim().split(/\s+/);
+
+  // Use Array.from to properly handle multi-byte Unicode characters (emojis, etc.)
+  const getFirstChar = (str: string) => {
+    const chars = Array.from(str);
+    return chars[0] || '';
+  };
+
   if (words.length === 1) {
-    return words[0].length > 1 ? words[0].substring(0, 2).toUpperCase() : words[0].charAt(0).toUpperCase();
+    const chars = Array.from(words[0]);
+    return chars.length > 1
+      ? (chars[0] + chars[1]).toUpperCase()
+      : (chars[0] || '?').toUpperCase();
   }
-  // Take first letter of first and last word
-  return (words[0].charAt(0) + words[words.length - 1].charAt(0)).toUpperCase();
+  // Take first character of first and last word
+  return (getFirstChar(words[0]) + getFirstChar(words[words.length - 1])).toUpperCase();
 };
 
 const UserAvatar: React.FC<UserAvatarProps> = ({

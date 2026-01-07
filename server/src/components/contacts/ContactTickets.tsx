@@ -182,7 +182,7 @@ const ContactTickets: React.FC<ContactTicketsProps> = ({
     }
 
     try {
-      const ticketData = await getConsolidatedTicketData(ticketId, currentUser);
+      const ticketData = await getConsolidatedTicketData(ticketId);
       
       if (!ticketData) {
         toast.error('Failed to load ticket');
@@ -293,6 +293,7 @@ const ContactTickets: React.FC<ContactTicketsProps> = ({
       boards: initialBoards,
       displaySettings: displaySettings || undefined,
       onTicketClick: handleTicketClick,
+      onEditClick: handleTicketClick, // Edit opens ticket in drawer (like Clients/Contacts pattern)
       onDeleteClick: handleDeleteTicket,
       ticketTagsRef,
       onTagsChange: handleTagsChange,
