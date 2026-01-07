@@ -64,7 +64,7 @@ const STEP_DEFINITIONS: Record<OnboardingStepId, StepDefinition> = {
     title: 'Calendar Sync',
     description: 'Connect Google or Outlook calendars to keep dispatch and client appointments aligned.',
     icon: CalendarCheck2,
-    ctaHref: '/msp/settings?tab=integrations',
+    ctaHref: '/msp/settings?tab=integrations&category=calendar',
     ctaLabel: 'Configure Calendar',
     analyticsTarget: 'calendar_sync',
   },
