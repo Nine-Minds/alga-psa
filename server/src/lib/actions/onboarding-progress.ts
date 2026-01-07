@@ -259,11 +259,11 @@ async function resolvePortalInviteSubstep(tenantId: string): Promise<OnboardingS
 
 async function resolveImportStep(tenantId: string): Promise<OnboardingStepServerState> {
   try {
-    const knex = await getConnection(tenantId);
+    const adminDb = await getAdminConnection();
 
     // Query the most recent import job directly to avoid permission checks
     // The onboarding progress should be visible regardless of import_export permission
-    const latestJob = await knex('import_jobs')
+    const latestJob = await adminDb('import_jobs')
       .where({ tenant: tenantId })
       .orderBy('created_at', 'desc')
       .first() as ImportJobRecord | undefined;
