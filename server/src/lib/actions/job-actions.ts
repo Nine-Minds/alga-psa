@@ -39,7 +39,15 @@ export async function getQueueMetricsAction(): Promise<JobMetrics> {
   const { knex, tenant } = await createTenantKnex();
 
   if (!tenant) {
-    throw new Error('TENANT environment variable not set');
+    return {
+      total: 0,
+      completed: 0,
+      failed: 0,
+      pending: 0,
+      active: 0,
+      queued: 0,
+      byRunner: { pgboss: 0, temporal: 0 },
+    };
   }
 
   // Get all counts in a single query using conditional aggregation

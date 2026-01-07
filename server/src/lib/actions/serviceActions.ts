@@ -576,35 +576,78 @@ export async function deleteServiceType(id: string): Promise<void> {
 
 /**
  * Create a new service type with just a name (inline creation)
- * Automatically assigns billing_method as 'usage' and generates next order number
+ * Creates with the provided billing_method and generates next order number
  */
-export async function createServiceTypeInline(name: string): Promise<IServiceType> {
+export async function createServiceTypeInline(
+  name: string,
+  billing_method: 'fixed' | 'hourly' | 'per_unit' | 'usage' = 'usage'
+): Promise<IServiceType> {
   try {
-    const { ServiceTypeModel } = await import('../models/serviceType');
     const { knex: db } = await createTenantKnex();
 
     return withTransaction(db, async (trx: Knex.Transaction) => {
+      const normalizedName = name.trim();
+      if (!normalizedName) {
+        throw new Error('Service type name is required');
+      }
+
+      // If it already exists for this tenant, return it (avoid 23505 on repeated clicks)
+      const { getCurrentTenantId } = await import('../db');
+      const tenant = await getCurrentTenantId();
+      if (!tenant) {
+        throw new Error('Tenant not found for request');
+      }
+
+      const existing = await trx<IServiceType>('service_types').where({ tenant, name: normalizedName }).first();
+      if (existing) {
+        return existing;
+      }
+
       // Get the highest order number to calculate next order
       const maxOrderResult = await trx('service_types')
+        .where({ tenant })
         .max('order_number as max_order')
         .first();
 
       const nextOrder = (maxOrderResult?.max_order || 0) + 1;
 
-      // Create service type with default billing method and next order
-      const newServiceType = await ServiceTypeModel.create(trx, {
-        name: name.trim(),
-        billing_method: 'usage', // Default to usage for inline creation
-        description: null,
-        is_active: true,
-        order_number: nextOrder,
-      });
+      // Create service type with default billing method and next order.
+      // Use ON CONFLICT DO NOTHING to make the action idempotent under concurrency.
+      const inserted = await trx<IServiceType>('service_types')
+        .insert({
+          tenant,
+          name: normalizedName,
+          billing_method,
+          description: null,
+          is_active: true,
+          order_number: nextOrder,
+        })
+        .onConflict(['tenant', 'name'])
+        .ignore()
+        .returning('*');
+
+      if (inserted.length > 0) {
+        safeRevalidate('/msp/settings/billing');
+        return inserted[0];
+      }
+
+      // Insert was skipped due to conflict; fetch and return the existing row.
+      const afterConflict = await trx<IServiceType>('service_types').where({ tenant, name: normalizedName }).first();
+      if (!afterConflict) {
+        throw new Error('Failed to create service type');
+      }
 
       safeRevalidate('/msp/settings/billing');
-      return newServiceType;
+      return afterConflict;
     });
   } catch (error) {
     console.error('Error creating service type inline:', error);
+
+    // If we somehow still hit a unique constraint, surface a friendlier message
+    if ((error as any)?.code === '23505') {
+      throw new Error('Service type already exists');
+    }
+
     throw new Error('Failed to create service type');
   }
 }

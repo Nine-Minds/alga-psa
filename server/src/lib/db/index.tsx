@@ -28,6 +28,8 @@ interface DbConnection {
  */
 export async function getCurrentTenantId(): Promise<string | null> {
     let tenant: string | null = null;
+    const fallbackTenant =
+        process.env.NODE_ENV !== 'production' && process.env.TENANT ? process.env.TENANT : undefined;
 
     // Try to get tenant from context first
     tenant = tenantContext.getStore() || null;
@@ -35,7 +37,7 @@ export async function getCurrentTenantId(): Promise<string | null> {
     // If no tenant in context, try session
     if (!tenant) {
         try {
-            tenant = await getTenantForCurrentRequest();
+            tenant = await getTenantForCurrentRequest(fallbackTenant);
         } catch (e) {
             // console.warn('Failed to get tenant from session:', e); // Reduce noise
         }
@@ -48,6 +50,17 @@ export async function getCurrentTenantId(): Promise<string | null> {
             tenant = getTenantFromHeaders(headersList);
         } catch (e) {
             // console.warn('Failed to get tenant from headers:', e); // Reduce noise
+        }
+    }
+
+    // Dev convenience: if tenant resolution fails (e.g. stale auth cookies), fall back to the only/first tenant in the DB.
+    if (!tenant && process.env.NODE_ENV !== 'production') {
+        try {
+            const knex = await getConnection(null);
+            const row = await knex<{ tenant: string }>('tenants').select('tenant').first();
+            tenant = row?.tenant ?? null;
+        } catch (e) {
+            // ignore
         }
     }
     return tenant;

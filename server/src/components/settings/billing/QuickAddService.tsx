@@ -347,7 +347,10 @@ if (createdService?.service_id) {
                 }}
                 serviceTypes={allServiceTypes}
                 onCreateType={async (name) => {
-                  await createServiceTypeInline(name);
+                  await createServiceTypeInline(
+                    name,
+                    (serviceData.billing_method || 'fixed') as 'fixed' | 'hourly' | 'per_unit' | 'usage'
+                  );
                   onServiceTypesChange(); // Refresh the service types list
                 }}
                 onUpdateType={async (id, name) => {
