@@ -28,8 +28,15 @@ const getPostgresPassword = async () => await getSecret('postgres_password', 'DB
 
 // Special connection config for postgres user (needed for job scheduler)
 export const getPostgresConnection = async () => ({
-  host: (typeof process !== 'undefined' && process.env?.DB_HOST) || 'localhost',
-  port: Number((typeof process !== 'undefined' && process.env?.DB_PORT) || 5432),
+  host:
+    (typeof process !== 'undefined' &&
+      (process.env?.DB_HOST_ADMIN || process.env?.DB_HOST)) ||
+    'localhost',
+  port: Number(
+    (typeof process !== 'undefined' &&
+      (process.env?.DB_PORT_ADMIN || process.env?.DB_PORT)) ||
+      5432
+  ),
   user: (typeof process !== 'undefined' && process.env?.DB_USER_ADMIN) || 'postgres',
   password: await getPostgresPassword(),
   database: (typeof process !== 'undefined' && process.env?.DB_NAME_SERVER) || 'server'

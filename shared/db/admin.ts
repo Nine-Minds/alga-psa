@@ -28,8 +28,9 @@ export async function getAdminConnection(): Promise<Knex> {
     const base = (knexfile as any)[environment] ?? {};
     const baseConn = (base as any).connection ?? {};
 
-    const resolvedHost = process.env.DB_HOST || baseConn.host;
-    const resolvedPort = Number(process.env.DB_PORT ?? baseConn.port);
+    // Prefer direct Postgres connection vars for admin operations (avoid read-only/replica pools).
+    const resolvedHost = process.env.DB_HOST_ADMIN || process.env.DB_HOST || baseConn.host;
+    const resolvedPort = Number(process.env.DB_PORT_ADMIN ?? process.env.DB_PORT ?? baseConn.port);
     const resolvedUser = process.env.DB_USER_ADMIN || baseConn.user || 'postgres';
     const resolvedDatabase = process.env.DB_NAME_SERVER || baseConn.database || 'server';
 
