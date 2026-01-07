@@ -43,6 +43,7 @@ import { getClientById } from 'server/src/lib/actions/client-actions/clientActio
 import { getAllCountries, ICountry } from 'server/src/lib/actions/client-actions/countryActions';
 import ClientDetails from 'server/src/components/clients/ClientDetails';
 import { ContactPortalTab } from './ContactPortalTab';
+import { ContactNotesPanel } from './panels/ContactNotesPanel';
 
 const SwitchDetailItem: React.FC<{
   value: boolean;
@@ -799,6 +800,17 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
             clientId={editedContact.client_id!}
             interactions={interactions}
             setInteractions={setInteractions}
+          />
+        </div>
+      )
+    },
+    {
+      label: "Notes",
+      content: (
+        <div className="bg-white p-6 rounded-lg shadow-sm">
+          <ContactNotesPanel
+            contactId={editedContact.contact_name_id}
+            legacyNotes={editedContact.notes}
           />
         </div>
       )

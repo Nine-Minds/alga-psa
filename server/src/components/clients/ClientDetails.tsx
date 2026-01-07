@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { IDocument } from 'server/src/interfaces/document.interface';
-import { PartialBlock } from '@blocknote/core';
 import { IContact } from 'server/src/interfaces/contact.interfaces';
 import { IClient } from 'server/src/interfaces/client.interfaces';
 import { ITag } from 'server/src/interfaces/tag.interfaces';
@@ -38,7 +37,6 @@ import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import ClientAssets from './ClientAssets';
 import ClientTickets from './ClientTickets';
 import ClientLocations from './ClientLocations';
-import TextEditor, { DEFAULT_BLOCK } from '../editor/TextEditor';
 import { IBoard, ITicket, ITicketCategory } from 'server/src/interfaces';
 import CustomSelect, { SelectOption } from 'server/src/components/ui/CustomSelect';
 import { Card } from 'server/src/components/ui/Card';
@@ -47,9 +45,9 @@ import { withDataAutomationId } from 'server/src/types/ui-reflection/withDataAut
 import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionContainer';
 import { useAutomationIdAndRegister } from 'server/src/types/ui-reflection/useAutomationIdAndRegister';
 import { FormFieldComponent } from 'server/src/types/ui-reflection/types';
-import { createBlockDocument, updateBlockContent, getBlockContent } from 'server/src/lib/actions/document-actions/documentBlockContentActions';
-import { getDocument, getImageUrl } from 'server/src/lib/actions/document-actions/documentActions';
+import { getImageUrl } from 'server/src/lib/actions/document-actions/documentActions';
 import ClientContractLineDashboard from '../billing-dashboard/ClientContractLineDashboard';
+import { ClientNotesPanel } from './panels/ClientNotesPanel';
 import { toast } from 'react-hot-toast';
 import { handleError } from 'server/src/lib/utils/errorHandling';
 import EntityImageUpload from 'server/src/components/ui/EntityImageUpload';
@@ -196,7 +194,6 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
   const [internalUsers, setInternalUsers] = useState<IUser[]>([]);
   const [isLoadingUsers, setIsLoadingUsers] = useState(false);
   const [isDocumentSelectorOpen, setIsDocumentSelectorOpen] = useState(false);
-  const [hasUnsavedNoteChanges, setHasUnsavedNoteChanges] = useState(false);
   const [isUploadingLogo, setIsUploadingLogo] = useState(false);
   const [isDeletingLogo, setIsDeletingLogo] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -219,8 +216,6 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
   const [activeContactsToDeactivate, setActiveContactsToDeactivate] = useState<IContact[]>([]);
   const [isEditingLogo, setIsEditingLogo] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const [currentContent, setCurrentContent] = useState<PartialBlock[]>(DEFAULT_BLOCK);
-  const [noteDocument, setNoteDocument] = useState<IDocument | null>(null);
   const [ticketFormOptions, setTicketFormOptions] = useState<{
     statusOptions: SelectOption[];
     priorityOptions: SelectOption[];
@@ -577,36 +572,6 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
     fetchTags();
   }, [client.client_id]);
 
-  // Load note content and document metadata when component mounts
-  useEffect(() => {
-    const loadNoteContent = async () => {
-      if (editedClient.notes_document_id) {
-        try {
-          const document = await getDocument(editedClient.notes_document_id);
-          setNoteDocument(document);
-          const content = await getBlockContent(editedClient.notes_document_id);
-          if (content && content.block_data) {
-            const blockData = typeof content.block_data === 'string'
-              ? JSON.parse(content.block_data)
-              : content.block_data;
-            setCurrentContent(blockData);
-          } else {
-             setCurrentContent(DEFAULT_BLOCK);
-          }
-        } catch (error) {
-          console.error('Error loading note content:', error);
-           setCurrentContent(DEFAULT_BLOCK);
-        }
-      } else {
-         setCurrentContent(DEFAULT_BLOCK);
-         setNoteDocument(null);
-      }
-    };
-
-    loadNoteContent();
-  }, [editedClient.notes_document_id]);
-
-
   const handleFieldChange = async (field: string, value: string | boolean) => {
     // Check if client is being deactivated (is_inactive changing from false to true)
     if (field === 'is_inactive' && editedClient.is_inactive === false && value === true) {
@@ -790,66 +755,6 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
   const handleTagsChange = (updatedTags: ITag[]) => {
     setTags(updatedTags);
   };
-
-  const handleContentChange = (blocks: PartialBlock[]) => {
-    setCurrentContent(blocks);
-    setHasUnsavedNoteChanges(true);
-  };
-
-  const handleSaveNote = async () => {
-    try {
-      if (!currentUser) {
-        console.error('Cannot save note: No current user');
-        return;
-      }
-
-      // Convert blocks to JSON string
-      const blockData = JSON.stringify(currentContent);
-      
-      if (editedClient.notes_document_id) {
-        // Update existing note document
-        await updateBlockContent(editedClient.notes_document_id, {
-          block_data: blockData,
-          user_id: currentUser.user_id
-        });
-        
-        // Refresh document metadata to show updated timestamp
-        const updatedDocument = await getDocument(editedClient.notes_document_id);
-        setNoteDocument(updatedDocument);
-      } else {
-        // Create new note document
-        const { document_id } = await createBlockDocument({
-          document_name: `${editedClient.client_name} Notes`,
-          user_id: currentUser.user_id,
-          block_data: blockData,
-          entityId: editedClient.client_id,
-          entityType: 'client'
-        });
-        
-        // Update client with the new notes_document_id
-        await updateClient(editedClient.client_id, {
-          notes_document_id: document_id
-        });
-        
-        // Update local state
-        setEditedClient(prev => ({
-          ...prev,
-          notes_document_id: document_id
-        }));
-        
-        // Get the newly created document metadata
-        const newDocument = await getDocument(document_id);
-        setNoteDocument(newDocument);
-      }
-      
-      setHasUnsavedNoteChanges(false);
-      toast.success("Note saved successfully.");
-    } catch (error) {
-      console.error('Error saving note:', error);
-      toast.error("Failed to save note. Please try again.");
-    }
-  };
-  
 
   const handleTabChange = useCallback(async (tabValue: string) => {
     const params = new URLSearchParams(searchParams?.toString() || '');
@@ -1181,47 +1086,11 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
     {
       label: "Notes",
       content: (
-        <div className="space-y-6 bg-white p-6 rounded-lg shadow-sm">
-          {editedClient.notes && editedClient.notes.trim() !== '' && (
-            <div className="bg-gray-100 border border-gray-200 rounded-md p-4">
-              <h4 className="text-sm font-semibold text-gray-700 mb-2">Initial Note</h4>
-              <p className="text-sm text-gray-700 whitespace-pre-wrap">{editedClient.notes}</p>
-            </div>
-          )}
-
-          {/* Rich Text Editor Section Label */}
-          <h4 className="text-md font-semibold text-gray-800 pt-2">Formatted Notes</h4>
-
-          {/* Note metadata */}
-          {noteDocument && noteDocument.updated_at && (
-            <div className="bg-gray-50 p-3 rounded-md border border-gray-200 text-xs text-gray-600">
-              <div className="flex justify-between items-center flex-wrap gap-2"> 
-                <div>
-                  <span className="font-medium">Last updated:</span> {new Date(noteDocument.updated_at).toLocaleDateString()} at {new Date(noteDocument.updated_at).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}
-                </div>
-              </div>
-            </div>
-          )}
-
-          <TextEditor
-            id={`${id}-editor`}
-            initialContent={currentContent}
-            onContentChange={handleContentChange}
+        <div className="bg-white p-6 rounded-lg shadow-sm">
+          <ClientNotesPanel
+            clientId={editedClient.client_id}
+            legacyNotes={editedClient.notes}
           />
-          <div className="flex justify-end space-x-2">
-            <Button
-              id={`${id}-save-note-btn`}
-              onClick={handleSaveNote}
-              disabled={!hasUnsavedNoteChanges}
-              className={`text-white transition-colors ${
-                hasUnsavedNoteChanges
-                  ? "bg-[rgb(var(--color-primary-500))] hover:bg-[rgb(var(--color-primary-600))]"
-                  : "bg-[rgb(var(--color-border-400))] cursor-not-allowed"
-              }`}
-            >
-              Save Note
-            </Button>
-          </div>
         </div>
       )
     },
@@ -1262,12 +1131,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
     isBillingEnabled, 
     currentUser, 
     documents, 
-    memoizedRouter, 
-    handleSaveNote, 
-    noteDocument, 
-    currentContent, 
-    handleContentChange, 
-    hasUnsavedNoteChanges, 
+    memoizedRouter,
     interactions
   ]);
 

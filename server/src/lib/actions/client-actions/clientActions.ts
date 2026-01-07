@@ -785,6 +785,31 @@ export async function deleteClient(clientId: string): Promise<{
         console.log(`Deleted ${deletedLocations} client location records`);
       }
 
+      // Clean up notes document if it exists
+      const clientRecord = await trx('clients')
+        .where({ client_id: clientId, tenant })
+        .select('notes_document_id')
+        .first();
+
+      if (clientRecord?.notes_document_id) {
+        console.log(`Cleaning up notes document: ${clientRecord.notes_document_id}`);
+
+        // Delete block content first (due to FK)
+        await trx('document_block_content')
+          .where({ tenant, document_id: clientRecord.notes_document_id })
+          .delete();
+
+        // Delete document associations
+        await trx('document_associations')
+          .where({ tenant, document_id: clientRecord.notes_document_id })
+          .delete();
+
+        // Delete the document
+        await trx('documents')
+          .where({ tenant, document_id: clientRecord.notes_document_id })
+          .delete();
+      }
+
       // Clean up any tags associated with this client
       await deleteEntityTags(trx, clientId, 'client');
 
