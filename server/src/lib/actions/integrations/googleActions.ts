@@ -19,9 +19,17 @@ function maskSecret(value: string): string {
   return `${'•'.repeat(Math.max(0, value.length - 4))}${value.slice(-4)}`;
 }
 
+function normalizeGoogleClientId(value: string): string {
+  // Copy/paste from admin consoles can include zero-width characters that `trim()` does not remove.
+  return value
+    .normalize('NFKC')
+    .replace(/[\u200B-\u200D\uFEFF]/g, '')
+    .trim();
+}
+
 function isLikelyGoogleClientId(value: string): boolean {
   // Typical format: <digits>-<alnum>.apps.googleusercontent.com
-  return /^[0-9]+-[a-zA-Z0-9_\\-]+\\.apps\\.googleusercontent\\.com$/.test(value.trim());
+  return /^[0-9]+-[a-zA-Z0-9_-]+\.apps\.googleusercontent\.com$/.test(normalizeGoogleClientId(value));
 }
 
 function computeBaseUrl(envValue?: string | null): string {
@@ -151,7 +159,7 @@ export async function saveGoogleIntegrationSettings(input: {
     const projectId = input.projectId?.trim();
     if (!projectId) return { success: false, error: 'Google Cloud project ID is required' };
 
-    const gmailClientId = input.gmailClientId?.trim();
+    const gmailClientId = normalizeGoogleClientId(input.gmailClientId ?? '');
     if (!gmailClientId) return { success: false, error: 'Gmail OAuth Client ID is required' };
     if (!isLikelyGoogleClientId(gmailClientId)) {
       return { success: false, error: 'Gmail OAuth Client ID does not look valid' };
@@ -185,7 +193,7 @@ export async function saveGoogleIntegrationSettings(input: {
       await secretProvider.setTenantSecret(tenant, GOOGLE_CALENDAR_CLIENT_ID_SECRET, gmailClientId);
       await secretProvider.setTenantSecret(tenant, GOOGLE_CALENDAR_CLIENT_SECRET_SECRET, gmailClientSecret);
     } else {
-      const calendarClientId = input.calendarClientId?.trim();
+      const calendarClientId = normalizeGoogleClientId(input.calendarClientId ?? '');
       const calendarClientSecret = input.calendarClientSecret?.trim();
 
       if (!calendarClientId) return { success: false, error: 'Calendar OAuth Client ID is required' };
