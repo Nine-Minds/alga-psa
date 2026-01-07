@@ -96,6 +96,7 @@ interface UserInfo {
   user_email: string;
   user_name: string;
   company_name: string;
+  user_type: string;
 }
 
 async function getUserInfo(tenantId: string): Promise<UserInfo | null> {
@@ -125,6 +126,7 @@ async function getUserInfo(tenantId: string): Promise<UserInfo | null> {
       user_email: currentUser.email || '',
       user_name: `${currentUser.first_name || ''} ${currentUser.last_name || ''}`.trim(),
       company_name: companyName,
+      user_type: currentUser.user_type,
     };
     console.log('[api/ext] getUserInfo completed', { elapsed: Date.now() - start });
     return info;
