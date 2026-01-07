@@ -40,7 +40,7 @@ const ProductsManager: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
 
   const [search, setSearch] = useState('');
-  const [activeFilter, setActiveFilter] = useState<'all' | 'active' | 'inactive'>('all');
+  const [activeFilter, setActiveFilter] = useState<'all' | 'active' | 'inactive'>('active');
   const [selectedServiceType, setSelectedServiceType] = useState<string>('all');
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>('all');
 

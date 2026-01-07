@@ -232,6 +232,7 @@ export async function getServices(
               'sc.is_active',
               'sc.sku',
               trx.raw('CAST(sc.cost AS FLOAT) as cost'),
+              'sc.cost_currency',
               'sc.vendor',
               'sc.manufacturer',
               'sc.product_category',
