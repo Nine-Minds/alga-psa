@@ -924,6 +924,7 @@ export function QuickAddTicket({
                       </div>
                       {(dueDateDate || dueDateTime) && (
                         <Button
+                          id={`${id}-clear-due-date`}
                           type="button"
                           variant="ghost"
                           size="sm"
