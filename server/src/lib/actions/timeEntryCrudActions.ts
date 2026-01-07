@@ -516,7 +516,9 @@ export async function saveTimeEntry(timeEntry: Omit<ITimeEntry, 'tenant'>): Prom
                   tenant,
                 });
               } else if (!ticket.assigned_to) {
-                // If ticket has no assignee, update the ticket and add user as assigned_to
+                // If ticket has no assignee, update the ticket to set user as assigned_to
+                // Note: We do NOT create a ticket_resources record here because that table
+                // is only for additional agents, not the primary assignee
                 await trx('tickets')
                   .where({
                     ticket_id: work_item_id,
@@ -527,13 +529,6 @@ export async function saveTimeEntry(timeEntry: Omit<ITimeEntry, 'tenant'>): Prom
                     updated_at: new Date().toISOString(),
                     updated_by: session.user.id,
                   });
-
-                await trx('ticket_resources').insert({
-                  ticket_id: work_item_id,
-                  assigned_to: session.user.id,
-                  assigned_at: new Date(),
-                  tenant,
-                });
               }
             }
           }
