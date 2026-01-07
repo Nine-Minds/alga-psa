@@ -8,7 +8,7 @@
  */
 
 import React, { useState, useMemo, useEffect } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../ui/Card';
 import { Alert, AlertDescription } from '../../ui/Alert';
 import CustomTabs, { TabContent } from '../../ui/CustomTabs';
@@ -99,18 +99,19 @@ interface IntegrationItem {
 const IntegrationsSettingsPage: React.FC = () => {
   const isEEAvailable = process.env.NEXT_PUBLIC_EDITION === 'enterprise';
   const searchParams = useSearchParams();
+  const router = useRouter();
   const categoryParam = searchParams?.get('category');
   
   // Initialize selected category from URL param or default to 'accounting'
   const [selectedCategory, setSelectedCategory] = useState<string>(
-    categoryParam && ['accounting', 'rmm', 'communication', 'providers', 'payments'].includes(categoryParam)
+    categoryParam && ['accounting', 'rmm', 'communication', 'calendar', 'providers', 'payments'].includes(categoryParam)
       ? categoryParam
       : 'accounting'
   );
-  
+
   // Update selected category when URL param changes
   useEffect(() => {
-    if (categoryParam && ['accounting', 'rmm', 'communication', 'providers', 'payments'].includes(categoryParam)) {
+    if (categoryParam && ['accounting', 'rmm', 'communication', 'calendar', 'providers', 'payments'].includes(categoryParam)) {
       setSelectedCategory(categoryParam);
     }
   }, [categoryParam]);
@@ -149,7 +150,7 @@ const IntegrationsSettingsPage: React.FC = () => {
     {
       id: 'communication',
       label: 'Communication',
-      description: 'Connect email and calendar services',
+      description: 'Connect email services for ticket processing',
       icon: Mail,
       integrations: [
         {
@@ -170,9 +171,17 @@ const IntegrationsSettingsPage: React.FC = () => {
             </Card>
           ),
         },
+      ],
+    },
+    {
+      id: 'calendar',
+      label: 'Calendar',
+      description: 'Connect Google or Outlook calendars to keep dispatch and client appointments aligned',
+      icon: Calendar,
+      integrations: [
         {
-          id: 'calendar',
-          name: 'Calendar',
+          id: 'calendar-sync',
+          name: 'Calendar Sync',
           description: 'Sync schedule entries with Google or Microsoft calendars',
           component: () => (
             <Card>
@@ -299,6 +308,7 @@ const IntegrationsSettingsPage: React.FC = () => {
           const category = visibleCategories.find(cat => cat.label === tabLabel);
           if (category) {
             setSelectedCategory(category.id);
+            router.push(`/msp/settings?tab=integrations&category=${category.id}`);
           }
         }}
       />
