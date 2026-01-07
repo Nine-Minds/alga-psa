@@ -507,7 +507,12 @@ export async function updateUser(userId: string, userData: Partial<IUser>): Prom
 
     const { knex, tenant } = await createTenantKnex();
     return await withTransaction(knex, async (trx) => {
-      if (!await hasPermission(currentUser, 'user', 'update', trx)) {
+      // Permission Check: User can update their own profile OR have user:update permission
+      const isOwnProfile = currentUser.user_id === userId;
+
+      if (isOwnProfile) {
+        logger.debug(`[updateUser] User ${currentUser.user_id} updating their own profile`);
+      } else if (!await hasPermission(currentUser, 'user', 'update', trx)) {
         throw new Error('Permission denied: Cannot update user');
       }
 
