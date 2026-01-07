@@ -12,6 +12,10 @@
  * - 20251124120000: external_tax_imports
  */
 
+// Disable implicit transaction - Citus rejects ALTER TABLE ... DISABLE ROW LEVEL SECURITY
+// and DROP POLICY on distributed tables when wrapped in a transaction.
+exports.config = { transaction: false };
+
 const TABLES = [
   // From 20250627123000_add_telemetry_settings.cjs
   'tenant_telemetry_settings',
