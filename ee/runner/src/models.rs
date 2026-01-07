@@ -39,6 +39,7 @@ pub struct UserInfo {
     pub user_email: String,
     pub user_name: String,
     pub company_name: String,
+    pub user_type: String,
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]

@@ -1191,6 +1191,7 @@ impl user::HostWithStore for HasSelf<HostState> {
                         user_id: user_info.user_id.clone(),
                         user_email: user_info.user_email.clone(),
                         user_name: user_info.user_name.clone(),
+                        user_type: user_info.user_type.clone(),
                     })
                 }
                 None => {
