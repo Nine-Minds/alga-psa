@@ -8,7 +8,7 @@
  */
 
 import React, { useState, useMemo, useEffect } from 'react';
-import { useSearchParams, useRouter } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../ui/Card';
 import { Alert, AlertDescription } from '../../ui/Alert';
 import CustomTabs, { TabContent } from '../../ui/CustomTabs';
@@ -308,7 +308,11 @@ const IntegrationsSettingsPage: React.FC = () => {
           const category = visibleCategories.find(cat => cat.label === tabLabel);
           if (category) {
             setSelectedCategory(category.id);
-            router.push(`/msp/settings?tab=integrations&category=${category.id}`);
+            const currentSearchParams = new URLSearchParams(window.location.search);
+            currentSearchParams.set('tab', 'integrations');
+            currentSearchParams.set('category', category.id);
+            const newUrl = `${window.location.pathname}?${currentSearchParams.toString()}`;
+            window.history.pushState({}, '', newUrl);
           }
         }}
       />

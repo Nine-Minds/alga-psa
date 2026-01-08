@@ -80,7 +80,7 @@ function NotificationsTabContent() {
     } else if (newTab !== currentTab) {
       setCurrentTab(newTab);
     }
-  }, [viewParam, sectionParam]);
+  }, [viewParam, sectionParam, currentView, currentTab]);
 
   // Update URL when view or tab changes
   const updateURL = useCallback((view: NotificationView, tabLabel: string) => {
