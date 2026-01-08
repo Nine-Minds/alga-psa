@@ -124,7 +124,7 @@ export const RadioGroup: React.FC<RadioGroupProps & AutomationProps> = ({
               <label
                 htmlFor={optionId}
                 className={cn(
-                  'flex items-center gap-2 font-medium cursor-pointer',
+                  'flex items-center gap-2 text-sm text-gray-900 cursor-pointer',
                   isDisabled && 'cursor-not-allowed opacity-50'
                 )}
               >

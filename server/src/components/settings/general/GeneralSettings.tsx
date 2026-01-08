@@ -149,7 +149,11 @@ const GeneralSettings = () => {
             <TableBody>
               {clients.map((client) => (
                 <TableRow key={client.id}>
-                  <TableCell>{client.name}</TableCell>
+                  <TableCell>
+                    <label htmlFor={`default-client-radio-${client.id}`} className="cursor-pointer">
+                      {client.name}
+                    </label>
+                  </TableCell>
                   <TableCell>
                     <input
                       type="radio"
@@ -157,7 +161,7 @@ const GeneralSettings = () => {
                       id={`default-client-radio-${client.id}`}
                       checked={client.isDefault}
                       onChange={() => handleSetDefaultClient(client.id)}
-                      className="h-4 w-4 border-gray-300 text-primary-500 focus:ring-2 focus:ring-primary-500 focus:ring-offset-0 focus-visible:outline-none focus:outline-none"
+                      className="h-4 w-4 border-gray-300 text-primary-500 focus:ring-2 focus:ring-primary-500 focus:ring-offset-0 focus-visible:outline-none focus:outline-none cursor-pointer"
                       style={{
                         accentColor: 'rgb(var(--color-primary-500))',
                       }}
