@@ -12,6 +12,7 @@ function jsonResponse(body: unknown, init: Partial<ExecuteResponse> = {}): Execu
 }
 
 const BUILD_STAMP = new Date().toISOString();
+const VERSION = 'v2.1.0-wit-wrapper';
 
 export async function handler(request: ExecuteRequest, host: HostBindings): Promise<ExecuteResponse> {
   try {
@@ -46,10 +47,22 @@ async function processRequest(request: ExecuteRequest, host: HostBindings): Prom
     `[client-portal-test] request received tenant=${tenantId} extensionId=${extensionId} requestId=${requestId} method=${method} url=${url} configKeys=${configKeys.length} build=${BUILD_STAMP}`
   );
 
+  // Try to get user information
+  let user: { tenantId: string; clientName: string; userId: string; userEmail: string; userName: string; userType: string } | null = null;
+  let userError: string | null = null;
+  try {
+    user = await host.user.getUser();
+    await safeLog(host, 'info', `[client-portal-test] user retrieved userId=${user.userId} userType=${user.userType}`);
+  } catch (err) {
+    const reason = err instanceof Error ? err.message : String(err);
+    userError = reason;
+    await safeLog(host, 'error', `[client-portal-test] failed to get user: ${reason}`);
+  }
+
   // Return information about the request context
   const response = jsonResponse({
     ok: true,
-    message: 'Hello from the Client Portal Test Extension WASM handler!',
+    message: `Hello from the Client Portal Test Extension WASM handler! (${VERSION})`,
     context: {
       tenantId,
       extensionId,
@@ -62,6 +75,15 @@ async function processRequest(request: ExecuteRequest, host: HostBindings): Prom
       path: url,
     },
     config: request.context.config ?? {},
+    user: user ? {
+      userId: user.userId,
+      userName: user.userName,
+      userEmail: user.userEmail,
+      userType: user.userType,
+      clientName: user.clientName,
+    } : null,
+    userError: userError,
+    version: VERSION,
     build: BUILD_STAMP,
     timestamp: new Date().toISOString(),
   });

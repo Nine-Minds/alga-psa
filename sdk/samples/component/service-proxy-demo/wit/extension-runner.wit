@@ -62,6 +62,20 @@ interface types {
         internal,
     }
 
+    record user-data {
+        tenant-id: string,
+        client-name: string,
+        user-id: string,
+        user-email: string,
+        user-name: string,
+        user-type: string,
+    }
+
+    enum user-error {
+        not-available,
+        not-allowed,
+    }
+
     record execute-request {
         context: context-data,
         http: http-request,
@@ -109,6 +123,11 @@ interface ui-proxy {
     call-route: func(route: string, payload: option<list<u8>>) -> result<list<u8>, proxy-error>;
 }
 
+interface user {
+    use types.{user-data, user-error};
+    get-user: func() -> result<user-data, user-error>;
+}
+
 world runner {
     use types.{execute-request, execute-response};
 
@@ -118,6 +137,7 @@ world runner {
     import storage;
     import logging;
     import ui-proxy;
+    import user;
 
     export handler: func(request: execute-request) -> execute-response;
 }

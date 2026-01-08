@@ -39,7 +39,7 @@ pub struct UserInfo {
     pub user_email: String,
     pub user_name: String,
     pub user_type: String,
-    #[serde(default)]
+    #[serde(default, alias = "company_name")]
     pub client_name: String,
 }
 
