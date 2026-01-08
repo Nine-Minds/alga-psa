@@ -25,7 +25,7 @@ import { scheduleInvoiceZipAction } from '../../../lib/actions/job-actions/sched
 import { downloadInvoicePDF } from '../../../lib/actions/invoiceGeneration';
 import { SendInvoiceEmailDialog } from './SendInvoiceEmailDialog';
 import { toPlainDate } from '../../../lib/utils/dateTimeUtils';
-import { formatCurrency } from '../../../lib/utils/formatters';
+import { formatCurrencyFromMinorUnits } from '../../../lib/utils/formatters';
 import InvoicePreviewPanel from './InvoicePreviewPanel';
 import LoadingIndicator from '../../ui/LoadingIndicator';
 
@@ -266,11 +266,11 @@ const FinalizedTab: React.FC<FinalizedTabProps> = ({
       title: 'Client',
       dataIndex: ['client', 'name'],
     },
-    {
-      title: 'Amount',
-      dataIndex: 'total_amount',
-      render: (value, record) => formatCurrency(Number(value) / 100, 'en-US', record.currencyCode || 'USD'),
-    },
+	    {
+	      title: 'Amount',
+	      dataIndex: 'total_amount',
+	      render: (value, record) => formatCurrencyFromMinorUnits(Number(value), 'en-US', record.currencyCode || 'USD'),
+	    },
     {
       title: 'Finalized Date',
       dataIndex: 'finalized_at',

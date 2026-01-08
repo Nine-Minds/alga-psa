@@ -44,6 +44,7 @@ import { toPlainDate, toISODate } from 'server/src/lib/utils/dateTimeUtils';
 import LoadingIndicator from 'server/src/components/ui/LoadingIndicator';
 import { Skeleton } from 'server/src/components/ui/Skeleton';
 import { cn } from 'server/src/lib/utils';
+import { formatCurrencyFromMinorUnits } from 'server/src/lib/utils/formatters';
 
 const formatDate = (value?: string | Date | null): string => {
   if (!value) {
@@ -126,6 +127,21 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
 
   // PO Amount input state for formatting (stores display value while editing)
   const [poAmountInputs, setPoAmountInputs] = useState<Record<string, string>>({});
+
+  const currencyMeta = useMemo(() => {
+    const currencyCode = contract?.currency_code ?? 'USD';
+    const formatter = new Intl.NumberFormat('en-US', { style: 'currency', currency: currencyCode });
+    const fractionDigits = formatter.resolvedOptions().maximumFractionDigits;
+    const symbol =
+      formatter.formatToParts(0).find((part) => part.type === 'currency')?.value ?? currencyCode;
+
+    return {
+      currencyCode,
+      fractionDigits,
+      minorUnitFactor: Math.pow(10, fractionDigits),
+      symbol,
+    };
+  }, [contract?.currency_code]);
   // Sync tab state FROM URL changes (e.g., browser back/forward)
   // Don't include activeTab in deps - handleTabChange handles state → URL direction
   useEffect(() => {
@@ -510,11 +526,13 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
       [assignment.client_contract_id]: { ...normalizedData }
     }));
 
-    // Initialize PO amount input with formatted value (convert from cents to dollars)
+    // Initialize PO amount input with formatted value (convert from minor units to major units)
     if (normalizedData.po_amount != null) {
       setPoAmountInputs(prev => ({
         ...prev,
-        [assignment.client_contract_id]: (Number(normalizedData.po_amount) / 100).toFixed(2)
+        [assignment.client_contract_id]: (Number(normalizedData.po_amount) / currencyMeta.minorUnitFactor).toFixed(
+          currencyMeta.fractionDigits
+        )
       }));
     }
   };
@@ -537,7 +555,9 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
       if (preEditSnapshot.po_amount != null) {
         setPoAmountInputs(prev => ({
           ...prev,
-          [assignmentId]: (Number(preEditSnapshot.po_amount) / 100).toFixed(2)
+          [assignmentId]: (Number(preEditSnapshot.po_amount) / currencyMeta.minorUnitFactor).toFixed(
+            currencyMeta.fractionDigits
+          )
         }));
       } else {
         setPoAmountInputs(prev => {
@@ -1031,14 +1051,18 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
                                 {assignments[0].po_number || <span className="text-orange-600">Required</span>}
                               </span>
                             </div>
-                            {assignments[0].po_amount != null && (
-                              <div className="flex items-center justify-between">
-                                <span>PO Amount</span>
-                                <span className="font-medium">
-                                  ${(Number(assignments[0].po_amount) / 100).toFixed(2)}
-                                </span>
-                              </div>
-                            )}
+	                            {assignments[0].po_amount != null && (
+	                              <div className="flex items-center justify-between">
+	                                <span>PO Amount</span>
+	                                <span className="font-medium">
+	                                  {formatCurrencyFromMinorUnits(
+	                                    Number(assignments[0].po_amount),
+	                                    'en-US',
+	                                    currencyMeta.currencyCode
+	                                  )}
+	                                </span>
+	                              </div>
+	                            )}
                           </>
                         )}
                       </>
@@ -1254,14 +1278,14 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
                                   PO Amount
                                 </Label>
                                 {isEditing ? (
-                                  <div className="relative mt-1 w-full max-w-xs">
-                                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">
-                                      $
-                                    </span>
-                                    <Input
-                                      type="text"
-                                      inputMode="decimal"
-                                      value={poAmountInputs[assignment.client_contract_id] || ''}
+	                                  <div className="relative mt-1 w-full max-w-xs">
+	                                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">
+	                                      {currencyMeta.symbol}
+	                                    </span>
+	                                    <Input
+	                                      type="text"
+	                                      inputMode="decimal"
+	                                      value={poAmountInputs[assignment.client_contract_id] || ''}
                                       onChange={(e) => {
                                         const value = e.target.value.replace(/[^0-9.]/g, '');
                                         const decimalCount = (value.match(/\./g) || []).length;
@@ -1285,32 +1309,40 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
                                             'po_amount',
                                             null
                                           );
-                                        } else {
-                                          const dollars = parseFloat(input) || 0;
-                                          const cents = Math.round(dollars * 100);
-                                          handleAssignmentFieldChange(
-                                            assignment.client_contract_id,
-                                            'po_amount',
-                                            cents
-                                          );
-                                          setPoAmountInputs((prev) => ({
-                                            ...prev,
-                                            [assignment.client_contract_id]: dollars.toFixed(2),
-                                          }));
-                                        }
-                                      }}
-                                      placeholder="0.00"
-                                      className="pl-10"
-                                      disabled={!editData.po_required}
-                                    />
-                                  </div>
-                                ) : (
-                                  <p className="mt-1 text-sm text-gray-800">
-                                    {editData.po_amount != null
-                                      ? `$${(Number(editData.po_amount) / 100).toFixed(2)}`
-                                      : '—'}
-                                  </p>
-                                )}
+	                                        } else {
+	                                          const majorUnits = parseFloat(input) || 0;
+	                                          const minorUnits = Math.round(majorUnits * currencyMeta.minorUnitFactor);
+	                                          handleAssignmentFieldChange(
+	                                            assignment.client_contract_id,
+	                                            'po_amount',
+	                                            minorUnits
+	                                          );
+	                                          setPoAmountInputs((prev) => ({
+	                                            ...prev,
+	                                            [assignment.client_contract_id]: majorUnits.toFixed(currencyMeta.fractionDigits),
+	                                          }));
+	                                        }
+	                                      }}
+	                                      placeholder={
+	                                        currencyMeta.fractionDigits === 0
+	                                          ? '0'
+	                                          : `0.${'0'.repeat(currencyMeta.fractionDigits)}`
+	                                      }
+	                                      className="pl-10"
+	                                      disabled={!editData.po_required}
+	                                    />
+	                                  </div>
+	                                ) : (
+	                                  <p className="mt-1 text-sm text-gray-800">
+	                                    {editData.po_amount != null
+	                                      ? formatCurrencyFromMinorUnits(
+	                                          Number(editData.po_amount),
+	                                          'en-US',
+	                                          currencyMeta.currencyCode
+	                                        )
+	                                      : '—'}
+	                                  </p>
+	                                )}
                               </div>
                             </div>
                           )}
