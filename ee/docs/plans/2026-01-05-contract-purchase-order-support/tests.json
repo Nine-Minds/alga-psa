@@ -1,0 +1,17 @@
+[
+  { "id": "T001", "description": "DB migration applies cleanly and invoices table includes `po_number` + `client_contract_id`", "implemented": true, "featureIds": ["F001", "F002"] },
+  { "id": "T002", "description": "Unit: invoice creation snapshots PO number from client_contracts onto invoice", "implemented": true, "featureIds": ["F003", "F004"] },
+  { "id": "T003", "description": "Unit: invoice generation blocks when po_required=true and po_number missing", "implemented": true, "featureIds": ["F005"] },
+  { "id": "T004", "description": "Unit: PO consumption sums finalized invoices and unconsumes when status changes away from finalized", "implemented": true, "featureIds": ["F006"] },
+  { "id": "T005", "description": "Unit: overage calculation uses invoice total_amount and contract po_amount (authorized total spend)", "implemented": true, "featureIds": ["F007"] },
+  { "id": "T006", "description": "UI: single invoice shows overage warning and requires explicit override", "implemented": true, "featureIds": ["F008", "F009"] },
+  { "id": "T007", "description": "UI: batch invoicing does not prompt when no invoice can overrun PO limits", "implemented": true, "featureIds": ["F010", "F011"] },
+  { "id": "T008", "description": "UI: batch invoicing prompts upfront when overage possible and can skip overage invoices", "implemented": true, "featureIds": ["F011", "F012"] },
+  { "id": "T009", "description": "UI: invoice metadata displays invoice-level PO number and PO summary (authorized/consumed/remaining)", "implemented": true, "featureIds": ["F013", "F014"] },
+  { "id": "T010", "description": "PDF: default invoice template renders PO number in header only when invoice has po_number", "implemented": true, "featureIds": ["F015"] },
+  { "id": "T011", "description": "Accounting export: QBO API export includes PO number in memo field", "implemented": true, "featureIds": ["F016"] },
+  { "id": "T012", "description": "Accounting export: QuickBooks CSV export includes PO number in Memo column", "implemented": true, "featureIds": ["F017"] },
+  { "id": "T013", "description": "Accounting export: Xero API export includes PO number in Reference", "implemented": true, "featureIds": ["F018"] },
+  { "id": "T014", "description": "Accounting export: Xero CSV export includes PO number in Reference", "implemented": true, "featureIds": ["F019"] },
+  { "id": "T015", "description": "Docs updated for PO snapshot + advisory PO limits + batch overage prompt", "implemented": true, "featureIds": ["F020", "F021"] }
+]

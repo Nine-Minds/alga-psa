@@ -28,6 +28,7 @@ import { KnexInvoiceMappingRepository } from '../../repositories/invoiceMappingR
 type DbInvoice = {
   invoice_id: string;
   invoice_number: string;
+  po_number?: string | null;
   invoice_date: string | Date;
   due_date?: string | Date | null;
   total_amount: number;
@@ -89,6 +90,10 @@ interface InvoiceDocumentPayload {
   totals: {
     amountCents: number;
   };
+}
+
+export function buildQboPrivateNoteForPurchaseOrder(poNumber: string): string {
+  return `PO: ${poNumber}`;
 }
 
 export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
@@ -284,6 +289,10 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
         Line: qboLines
       };
 
+      if (invoice.po_number) {
+        qboInvoice.PrivateNote = buildQboPrivateNoteForPurchaseOrder(invoice.po_number);
+      }
+
       if (clientRow?.payment_terms) {
         let termRef = paymentTermCache.get(clientRow.payment_terms);
         if (termRef === undefined) {
@@ -476,6 +485,7 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
       .select(
         'invoice_id',
         'invoice_number',
+        'po_number',
         'invoice_date',
         'due_date',
         'total_amount',

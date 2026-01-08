@@ -5,7 +5,7 @@ import { Knex } from 'knex';
 import { exec } from 'child_process';
 import fs from 'fs/promises';
 import path from 'path';
-import util from 'util';
+import { promisify } from 'node:util';
 import { createTenantKnex } from 'server/src/lib/db';
 import Invoice from 'server/src/lib/models/invoice'; // Assuming Invoice model has template methods
 import {
@@ -318,7 +318,7 @@ export async function getInvoiceAnnotations(invoiceId: string): Promise<IInvoice
     return [];
 }
 // Promisify exec for easier async/await usage
-const execPromise = util.promisify(exec);
+const execPromise = promisify(exec);
 
 // Define the structure for the input metadata (excluding source and wasm binary)
 type CompileTemplateMetadata = Omit<IInvoiceTemplate, 'tenant' | 'template_id' | 'assemblyScriptSource' | 'wasmBinary' | 'isStandard'> & {

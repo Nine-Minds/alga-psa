@@ -177,6 +177,7 @@ export class PDFGenerationService {
       invoiceNumber: dbData.invoice_number,
       issueDate: this.formatDateValue(dbData.invoice_date),
       dueDate: this.formatDateValue(dbData.due_date),
+      poNumber: dbData.po_number ?? null,
       customer: {
         name: dbData.client?.name || 'N/A',
         address: dbData.contact?.address || dbData.client?.address || 'N/A',
