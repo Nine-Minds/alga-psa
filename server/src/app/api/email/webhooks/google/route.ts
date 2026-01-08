@@ -5,6 +5,7 @@ import { publishEvent } from '@alga-psa/shared/events/publisher';
 import { GmailAdapter } from '@/services/email/providers/GmailAdapter';
 import type { EmailProviderConfig } from '@alga-psa/shared/interfaces/inbound-email.interfaces';
 import { OAuth2Client } from 'google-auth-library';
+import { getSecretProviderInstance } from '@shared/core';
 
 interface GooglePubSubMessage {
   message: {
@@ -50,23 +51,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: true, message: 'No data to process' });
     }
 
-    // Verify JWT token (required for security)
+    // Require JWT token (required for security)
     const authHeader = request.headers.get('authorization');
-    if (authHeader && authHeader.startsWith('Bearer ')) {
-      const token = authHeader.substring(7);
-      console.log('🔐 Verifying JWT token from Pub/Sub');
-      try {
-        const webhookUrl = `${request.nextUrl.origin}${request.nextUrl.pathname}`;
-        await verifyGoogleToken(token, webhookUrl);
-        console.log('✅ JWT token verified successfully');
-      } catch (error) {
-        console.error('❌ JWT verification failed:', error);
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-      }
-    } else {
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
       console.error('❌ No JWT token provided - Pub/Sub notifications must include JWT tokens');
       return NextResponse.json({ error: 'Unauthorized - JWT token required' }, { status: 401 });
     }
+    const token = authHeader.substring(7);
 
     // Decode base64 message data
     console.log('🔓 Decoding base64 message data');
@@ -90,65 +81,96 @@ export async function POST(request: NextRequest) {
     
     console.log('🔍 Payload data extracted for processing:', payloadData);
 
-    await withTransaction(knex, async (trx) => {
-      // Prefer mapping by Pub/Sub subscription name (robust for aliases)
-      const subscriptionName = payloadData.subscription?.split('/').pop();
-      console.log(`🔔 Subscription name extracted: ${subscriptionName}`);
+    // Resolve provider + google config BEFORE doing any side effects, so we can validate JWT issuer
+    const subscriptionName = payloadData.subscription?.split('/').pop();
+    console.log(`🔔 Subscription name extracted: ${subscriptionName}`);
 
-      let provider = null as any;
-      if (subscriptionName) {
-        try {
-          const cfg = await trx('google_email_provider_config')
-            .select('email_provider_id')
-            .where('pubsub_subscription_name', subscriptionName)
+    let provider = null as any;
+    let googleConfig = null as any;
+
+    if (subscriptionName) {
+      try {
+        const cfg = await knex('google_email_provider_config')
+          .select('email_provider_id')
+          .where('pubsub_subscription_name', subscriptionName)
+          .first();
+        if (cfg?.email_provider_id) {
+          provider = await knex('email_providers')
+            .where('id', cfg.email_provider_id)
+            .andWhere('provider_type', 'google')
+            .andWhere('is_active', true)
             .first();
-          if (cfg?.email_provider_id) {
-            provider = await trx('email_providers')
-              .where('id', cfg.email_provider_id)
-              .andWhere('provider_type', 'google')
-              .andWhere('is_active', true)
-              .first();
-            if (provider) {
-              console.log(`✅ Mapped provider via subscription ${subscriptionName}: ${provider.id}`);
-            }
+          if (provider) {
+            console.log(`✅ Mapped provider via subscription ${subscriptionName}: ${provider.id}`);
           }
-        } catch (mapErr: any) {
-          console.warn('⚠️ Failed subscription→provider mapping, will fallback to email lookup:', mapErr?.message || mapErr);
+        }
+      } catch (mapErr: any) {
+        console.warn('⚠️ Failed subscription→provider mapping, will fallback to email lookup:', mapErr?.message || mapErr);
+      }
+    }
+
+    if (!provider) {
+      console.log(`🔍 Looking up Gmail provider by address: ${notification.emailAddress}`);
+      provider = await knex('email_providers')
+        .where('mailbox', notification.emailAddress)
+        .andWhere('provider_type', 'google')
+        .andWhere('is_active', true)
+        .first();
+    }
+
+    if (!provider) {
+      console.error(`❌ Active Gmail provider not found (subscription=${subscriptionName} email=${notification.emailAddress})`);
+      return NextResponse.json({ success: true, message: 'No provider found' });
+    }
+
+    console.log(`✅ Found Gmail provider: ${provider.id} for ${notification.emailAddress}`);
+
+    googleConfig = await knex('google_email_provider_config')
+      .where('email_provider_id', provider.id)
+      .first();
+
+    if (!googleConfig) {
+      console.error(`❌ Google config not found for provider: ${provider.id}`);
+      return NextResponse.json({ success: true, message: 'No google config found' });
+    }
+
+    // Verify JWT token (audience + issuer), now that we know which tenant/provider this webhook maps to
+    const webhookUrl = `${request.nextUrl.origin}${request.nextUrl.pathname}`;
+    console.log('🔐 Verifying JWT token from Pub/Sub', {
+      webhookUrl,
+      providerId: provider.id,
+      tenant: provider.tenant,
+      projectId: googleConfig.project_id,
+    });
+
+    try {
+      const secretProvider = await getSecretProviderInstance();
+      const serviceAccountKey = await secretProvider.getTenantSecret(provider.tenant, 'google_service_account_key');
+      let allowedServiceAccountEmail: string | undefined;
+
+      if (serviceAccountKey) {
+        try {
+          const parsed = JSON.parse(serviceAccountKey);
+          if (parsed?.client_email && typeof parsed.client_email === 'string') {
+            allowedServiceAccountEmail = parsed.client_email;
+          }
+        } catch {
+          // Ignore parse errors; we can still fall back to project_id-based suffix check below
         }
       }
 
-      // Fallback: look up provider by email address (owner address in Gmail notification)
-      if (!provider) {
-        console.log(`🔍 Looking up Gmail provider by address: ${notification.emailAddress}`);
-        provider = await trx('email_providers')
-          .where('mailbox', notification.emailAddress)
-          .andWhere('provider_type', 'google')
-          .andWhere('is_active', true)
-          .first();
-      }
-
-      if (!provider) {
-        console.error(`❌ Active Gmail provider not found (subscription=${subscriptionName} email=${notification.emailAddress})`);
-        return;
-      }
-
-      console.log(`✅ Found Gmail provider: ${provider.id} for ${notification.emailAddress}`);
-
-      // Load Google-specific vendor configuration
-      const googleConfig = await trx('google_email_provider_config')
-        .where('email_provider_id', provider.id)
-        .first();
-
-      if (!googleConfig) {
-        console.error(`❌ Google config not found for provider: ${provider.id}`);
-        return;
-      }
-
-      console.log(`✅ Loaded Google config for provider: ${provider.id}`, {
-        hasConfig: !!googleConfig,
-        pubsubSubscriptionName: googleConfig.pubsub_subscription_name
+      await verifyGoogleToken(token, webhookUrl, {
+        allowedServiceAccountEmail,
+        allowedProjectId: googleConfig.project_id,
       });
+      console.log('✅ JWT token verified successfully');
+    } catch (error) {
+      console.error('❌ JWT verification failed:', error);
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
 
+    await withTransaction(knex, async (trx) => {
+      // Ensure we use the transactional connection for writes from here on
       // Validate subscription (optional but recommended)
       if (subscriptionName && googleConfig.pubsub_subscription_name !== subscriptionName) {
         console.warn(`⚠️  Subscription mismatch for provider ${provider.id}:`, {
@@ -160,6 +182,11 @@ export async function POST(request: NextRequest) {
       } else {
         console.log(`✅ Subscription validated: ${subscriptionName} matches provider ${provider.id}`);
       }
+
+      console.log(`✅ Loaded Google config for provider: ${provider.id}`, {
+        hasConfig: !!googleConfig,
+        pubsubSubscriptionName: googleConfig.pubsub_subscription_name
+      });
 
       // Check if this historyId has already been processed to prevent duplicates
       const existingProcessed = await trx('gmail_processed_history')
@@ -368,7 +395,11 @@ export async function OPTIONS(request: NextRequest) {
 }
 
 // Verify Google JWT token
-async function verifyGoogleToken(token: string, expectedAudience: string): Promise<void> {
+async function verifyGoogleToken(
+  token: string,
+  expectedAudience: string,
+  opts: { allowedServiceAccountEmail?: string; allowedProjectId?: string } = {}
+): Promise<void> {
   const client = new OAuth2Client();
   
   try {
@@ -381,19 +412,33 @@ async function verifyGoogleToken(token: string, expectedAudience: string): Promi
       email: decodedToken.email
     });
     
-    // Verify the token with the actual audience from the token
+    // Verify the token with the expected audience (do NOT trust the token's own aud)
     const ticket = await client.verifyIdToken({
       idToken: token,
-      audience: decodedToken.aud, // Use the audience from the token itself
+      audience: expectedAudience,
     });
     
     const payload = await ticket.getPayload();
     
-    // Verify it's from Google Pub/Sub or our configured service account
-    if (payload?.email !== 'pubsub-publishing@system.gserviceaccount.com' &&
-        !payload?.email?.endsWith('@system.gserviceaccount.com') &&
-        !payload?.email?.endsWith('@alga-psa-466214.iam.gserviceaccount.com')) {
-      throw new Error('Invalid token issuer');
+    const email = payload?.email;
+    const allowedExact = new Set(
+      [opts.allowedServiceAccountEmail, 'pubsub-publishing@system.gserviceaccount.com'].filter(Boolean) as string[]
+    );
+    const allowedSuffix =
+      opts.allowedProjectId && typeof opts.allowedProjectId === 'string'
+        ? `@${opts.allowedProjectId}.iam.gserviceaccount.com`
+        : undefined;
+
+    const isAllowed =
+      !!email &&
+      (allowedExact.has(email) || (allowedSuffix ? email.endsWith(allowedSuffix) : false));
+
+    if (!isAllowed) {
+      throw new Error(
+        `Invalid token issuer: ${email || 'unknown'} (allowed=${
+          Array.from(allowedExact).join(',') || 'none'
+        }${allowedSuffix ? ` suffix=${allowedSuffix}` : ''})`
+      );
     }
 
     console.log('🔐 JWT token verified successfully:', {
