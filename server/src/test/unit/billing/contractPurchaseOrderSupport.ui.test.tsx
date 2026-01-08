@@ -248,7 +248,14 @@ describe('Contract PO UI flows', () => {
     fireEvent.click(screen.getByRole('button', { name: /Proceed Anyway/i }));
 
     await waitFor(() => {
-      expect(generateInvoiceMock).toHaveBeenCalledWith('cycle-1', { allowPoOverage: true });
+      expect(getPurchaseOrderOverageForBillingCycleMock).toHaveBeenCalledTimes(1);
+    });
+
+    const [billingCycleId] = getPurchaseOrderOverageForBillingCycleMock.mock.calls[0] ?? [];
+    expect(typeof billingCycleId).toBe('string');
+
+    await waitFor(() => {
+      expect(generateInvoiceMock).toHaveBeenCalledWith(billingCycleId, { allowPoOverage: true });
     });
   });
 });
