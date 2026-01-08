@@ -11,12 +11,10 @@ const TAB_SLUG_TO_LABEL: Record<string, string> = {
   'expired': 'Expired Credits',
 };
 
-// Map tab labels to URL slugs
-const TAB_LABEL_TO_SLUG: Record<string, string> = {
-  'Active Credits': 'active',
-  'All Credits': 'all',
-  'Expired Credits': 'expired',
-};
+// Derive reverse map to avoid divergence
+const TAB_LABEL_TO_SLUG: Record<string, string> = Object.fromEntries(
+  Object.entries(TAB_SLUG_TO_LABEL).map(([slug, label]) => [label, slug])
+);
 
 const DEFAULT_TAB = 'Active Credits';
 
@@ -39,17 +37,17 @@ export function CreditsTabs({ tabs }: CreditsTabsProps) {
     return DEFAULT_TAB;
   });
 
-  // Sync tab state when URL changes
+  // Sync tab state when URL changes - only depends on tabParam
   useEffect(() => {
     if (tabParam) {
       const label = TAB_SLUG_TO_LABEL[tabParam.toLowerCase()];
-      if (label && tabs.some(t => t.label === label) && label !== activeTab) {
+      if (label && label !== activeTab) {
         setActiveTab(label);
       }
     } else if (activeTab !== DEFAULT_TAB) {
       setActiveTab(DEFAULT_TAB);
     }
-  }, [tabParam, tabs, activeTab]);
+  }, [tabParam, activeTab]);
 
   const handleTabChange = (tabLabel: string) => {
     setActiveTab(tabLabel);
