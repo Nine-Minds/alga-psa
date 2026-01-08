@@ -354,7 +354,7 @@ function renderListItem(element: TemplateElement, item: any, key: string): strin
 function renderConditional(conditional: Conditional, index: number, invoiceData: InvoiceViewModel, template: IInvoiceTemplate): string {
   const { condition, content } = conditional;
   const fieldValue = invoiceData[condition.field as keyof InvoiceViewModel];
-  if (fieldValue === undefined) return '';
+  if (fieldValue === undefined || fieldValue === null) return '';
 
   let shouldRender = false;
   switch (condition.op) {
