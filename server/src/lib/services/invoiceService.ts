@@ -13,26 +13,6 @@ import { ISO8601String } from 'server/src/types/types.d';
 import { getClientDefaultTaxRegionCode } from 'server/src/lib/actions/client-actions/clientTaxRateActions'; // Import the new lookup function
 import { getSession } from 'server/src/lib/auth/getSession';
 
-let invoiceChargesHasContractNameColumnCache: boolean | null = null;
-async function invoiceChargesHasContractNameColumn(
-  knexOrTrx: Knex | Knex.Transaction
-): Promise<boolean> {
-  if (invoiceChargesHasContractNameColumnCache != null) {
-    return invoiceChargesHasContractNameColumnCache;
-  }
-
-  try {
-    invoiceChargesHasContractNameColumnCache = await knexOrTrx.schema.hasColumn(
-      'invoice_charges',
-      'contract_name'
-    );
-  } catch {
-    invoiceChargesHasContractNameColumnCache = false;
-  }
-
-  return invoiceChargesHasContractNameColumnCache;
-}
-
 // Helper interface for tax calculation
 interface ITaxableEntity {
   id: string; // item_id or item_detail_id
@@ -364,7 +344,6 @@ async function persistFixedInvoiceCharges(
   session: Session,
   tenant: string
 ): Promise<number> {
-  const supportsContractName = await invoiceChargesHasContractNameColumn(tx);
   let fixedSubtotal = 0;
   const now = Temporal.Now.instant().toString();
   const fixedPlanDetailsMap = new Map<string, { consolidatedItem: any; details: IFixedPriceCharge[] }>();
@@ -441,7 +420,6 @@ async function persistFixedInvoiceCharges(
                   applies_to_item_id: null,
                   applies_to_service_id: null,
                   client_contract_id: planClientContractId,
-                  ...(supportsContractName ? { contract_name: charge.contract_name ?? null } : {}),
                   created_by: session.user.id,
                   created_at: now,
                   tenant
@@ -479,7 +457,6 @@ async function persistFixedInvoiceCharges(
         applies_to_item_id: null,
         applies_to_service_id: null,
         client_contract_id: charge.client_contract_id ?? null,
-        ...(supportsContractName ? { contract_name: charge.contract_name ?? null } : {}),
         created_by: session.user.id,
         created_at: now,
         tenant
@@ -653,7 +630,6 @@ export async function persistInvoiceCharges(
   session: Session,
   tenant: string
 ): Promise<number> {
-  const supportsContractName = await invoiceChargesHasContractNameColumn(tx);
   let otherSubtotal = 0;
   const now = Temporal.Now.instant().toString();
 
@@ -716,7 +692,6 @@ export async function persistInvoiceCharges(
       applies_to_item_id: null,
       applies_to_service_id: null,
       client_contract_id: charge.client_contract_id ?? null,
-      ...(supportsContractName ? { contract_name: charge.contract_name ?? null } : {}),
       created_by: session.user.id,
       created_at: now,
       tenant
