@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Button } from 'server/src/components/ui/Button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from 'server/src/components/ui/Card';
+import { Checkbox } from 'server/src/components/ui/Checkbox';
 import { Input } from 'server/src/components/ui/Input';
 import {
   getTenantProjectStatuses,
@@ -568,21 +569,22 @@ export function TenantProjectTaskStatusSettings() {
 
               {/* Is Closed Checkbox */}
               <div className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg border border-gray-200">
-                <input
-                  type="checkbox"
+                <Checkbox
                   id="is-closed"
                   checked={formData.is_closed}
                   onChange={(e) => setFormData({ ...formData, is_closed: e.target.checked })}
-                  className="mt-0.5 rounded border-gray-300 text-primary-500 focus:ring-primary-500"
+                  containerClassName="mb-0 mt-0.5"
+                  label={
+                    <div className="flex-1">
+                      <span className="text-sm font-medium text-gray-700 cursor-pointer block">
+                        Mark as closed status
+                      </span>
+                      <p className="text-xs text-gray-500 mt-0.5">
+                        Tasks with this status will be considered complete
+                      </p>
+                    </div>
+                  }
                 />
-                <div className="flex-1">
-                  <label htmlFor="is-closed" className="text-sm font-medium text-gray-700 cursor-pointer block">
-                    Mark as closed status
-                  </label>
-                  <p className="text-xs text-gray-500 mt-0.5">
-                    Tasks with this status will be considered complete
-                  </p>
-                </div>
               </div>
 
               {/* Action Buttons */}
