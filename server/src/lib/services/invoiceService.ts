@@ -420,7 +420,6 @@ async function persistFixedInvoiceCharges(
                   applies_to_item_id: null,
                   applies_to_service_id: null,
                   client_contract_id: planClientContractId,
-                  contract_name: charge.contract_name ?? null,
                   created_by: session.user.id,
                   created_at: now,
                   tenant
@@ -458,7 +457,6 @@ async function persistFixedInvoiceCharges(
         applies_to_item_id: null,
         applies_to_service_id: null,
         client_contract_id: charge.client_contract_id ?? null,
-        contract_name: charge.contract_name ?? null,
         created_by: session.user.id,
         created_at: now,
         tenant
@@ -694,7 +692,6 @@ export async function persistInvoiceCharges(
       applies_to_item_id: null,
       applies_to_service_id: null,
       client_contract_id: charge.client_contract_id ?? null,
-      contract_name: charge.contract_name ?? null,
       created_by: session.user.id,
       created_at: now,
       tenant
