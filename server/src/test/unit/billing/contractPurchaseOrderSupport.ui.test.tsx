@@ -2,8 +2,8 @@
  * @vitest-environment jsdom
  */
 import React from 'react';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 
 (globalThis as unknown as { React?: typeof React }).React = React;
 
@@ -135,13 +135,17 @@ describe('Contract PO UI flows', () => {
     generateInvoiceMock.mockResolvedValue(undefined);
   });
 
+  afterEach(() => {
+    cleanup();
+  });
+
   it('T007: batch invoicing does not prompt when no invoice can overrun PO limits', async () => {
     getPurchaseOrderOverageForBillingCycleMock.mockResolvedValue(null);
 
     const periods = createPeriods();
     render(<AutomaticInvoices periods={periods} onGenerateSuccess={vi.fn()} />);
 
-    const readyTable = screen.getAllByTestId('automatic-invoices-table')[0]!;
+    const readyTable = screen.getAllByTestId('automatic-invoices-table').at(-1)!;
     const checkboxes = within(readyTable).getAllByRole('checkbox');
     expect(checkboxes.length).toBeGreaterThanOrEqual(2);
     fireEvent.click(checkboxes[0]!);
@@ -173,7 +177,7 @@ describe('Contract PO UI flows', () => {
     const periods = createPeriods();
     render(<AutomaticInvoices periods={periods} onGenerateSuccess={vi.fn()} />);
 
-    const readyTable = screen.getAllByTestId('automatic-invoices-table')[0]!;
+    const readyTable = screen.getAllByTestId('automatic-invoices-table').at(-1)!;
     const checkboxes = within(readyTable).getAllByRole('checkbox');
     expect(checkboxes.length).toBeGreaterThanOrEqual(2);
     fireEvent.click(checkboxes[0]!);
@@ -225,7 +229,7 @@ describe('Contract PO UI flows', () => {
     const periods = createPeriods();
     render(<AutomaticInvoices periods={periods} onGenerateSuccess={vi.fn()} />);
 
-    const readyTable = screen.getAllByTestId('automatic-invoices-table')[0]!;
+    const readyTable = screen.getAllByTestId('automatic-invoices-table').at(-1)!;
     const checkbox = within(readyTable).getAllByRole('checkbox')[0];
     fireEvent.click(checkbox!);
 
