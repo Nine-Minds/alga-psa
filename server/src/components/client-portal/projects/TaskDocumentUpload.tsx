@@ -474,15 +474,6 @@ export default function TaskDocumentUpload({ taskId, compact = false }: TaskDocu
             setPendingFile(null);
           }}
           onSelectFolder={handleFolderSelected}
-          title={t('projects.documents.selectFolder', 'Select Destination Folder')}
-          description={
-            pendingFile
-              ? t('projects.documents.selectFolderDescription', {
-                  fileName: pendingFile.name,
-                  defaultValue: `Where would you like to save "${pendingFile.name}"?`
-                })
-              : t('projects.documents.selectFolderDefault', 'Choose where to save this document')
-          }
         />
       </>
     );
@@ -575,15 +566,6 @@ export default function TaskDocumentUpload({ taskId, compact = false }: TaskDocu
           setPendingFile(null);
         }}
         onSelectFolder={handleFolderSelected}
-        title={t('projects.documents.selectFolder', 'Select Destination Folder')}
-        description={
-          pendingFile
-            ? t('projects.documents.selectFolderDescription', {
-                fileName: pendingFile.name,
-                defaultValue: `Where would you like to save "${pendingFile.name}"?`
-              })
-            : t('projects.documents.selectFolderDefault', 'Choose where to save this document')
-        }
       />
     </>
   );
