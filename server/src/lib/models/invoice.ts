@@ -8,6 +8,27 @@ import { Temporal } from '@js-temporal/polyfill';
 import { getClientLogoUrl } from '../utils/avatarUtils';
 
 export default class Invoice {
+  private static invoiceChargesHasContractNameColumnCache: boolean | null = null;
+
+  private static async invoiceChargesHasContractNameColumn(
+    knexOrTrx: Knex | Knex.Transaction
+  ): Promise<boolean> {
+    if (Invoice.invoiceChargesHasContractNameColumnCache != null) {
+      return Invoice.invoiceChargesHasContractNameColumnCache;
+    }
+
+    try {
+      Invoice.invoiceChargesHasContractNameColumnCache = await knexOrTrx.schema.hasColumn(
+        'invoice_charges',
+        'contract_name'
+      );
+    } catch {
+      Invoice.invoiceChargesHasContractNameColumnCache = false;
+    }
+
+    return Invoice.invoiceChargesHasContractNameColumnCache;
+  }
+
   static async create(knexOrTrx: Knex | Knex.Transaction, invoice: Omit<IInvoice, 'invoice_id' | 'tenant'>): Promise<IInvoice> {
     const tenant = await getCurrentTenantId();
 
@@ -134,6 +155,9 @@ export default class Invoice {
     const itemToInsert = { ...invoiceItem, tenant };
     if (!itemToInsert.service_id) {
       delete itemToInsert.service_id;
+    }
+    if (!(await Invoice.invoiceChargesHasContractNameColumn(knexOrTrx))) {
+      delete (itemToInsert as any).contract_name;
     }
 
     const [createdItem] = await knexOrTrx('invoice_charges').insert(itemToInsert).returning('*');
