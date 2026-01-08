@@ -193,7 +193,7 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
           </div>
         ) : detailedInvoiceData && selectedTemplate ? (
           <>
-            <PurchaseOrderSummaryBanner poSummary={poSummary} />
+            <PurchaseOrderSummaryBanner poSummary={poSummary} currencyCode={detailedInvoiceData.currencyCode} />
 
             <div className="flex flex-wrap gap-2 mb-4">
               {!isFinalized && onFinalize && (

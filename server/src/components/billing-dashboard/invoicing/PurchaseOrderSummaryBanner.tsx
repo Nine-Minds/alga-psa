@@ -1,11 +1,14 @@
 'use client';
 
 import React from 'react';
-import { formatCurrency } from '../../../lib/utils/formatters';
+import { formatCurrencyFromMinorUnits } from '../../../lib/utils/formatters';
 import type { InvoicePurchaseOrderSummary } from '../../../lib/actions/invoiceQueries';
 
-export function PurchaseOrderSummaryBanner(props: { poSummary: InvoicePurchaseOrderSummary | null }): React.ReactElement | null {
-  const { poSummary } = props;
+export function PurchaseOrderSummaryBanner(props: {
+  poSummary: InvoicePurchaseOrderSummary | null;
+  currencyCode?: string;
+}): React.ReactElement | null {
+  const { poSummary, currencyCode = 'USD' } = props;
   if (!poSummary?.po_number && poSummary?.po_amount_cents == null) {
     return null;
   }
@@ -22,19 +25,18 @@ export function PurchaseOrderSummaryBanner(props: { poSummary: InvoicePurchaseOr
         <div className="mt-2 space-y-1">
           <div className="flex items-center justify-between">
             <span className="font-medium">PO Authorized</span>
-            <span>{formatCurrency(poSummary.po_amount_cents)}</span>
+            <span>{formatCurrencyFromMinorUnits(poSummary.po_amount_cents, 'en-US', currencyCode)}</span>
           </div>
           <div className="flex items-center justify-between">
             <span className="font-medium">PO Consumed (Finalized)</span>
-            <span>{formatCurrency(poSummary.consumed_cents ?? 0)}</span>
+            <span>{formatCurrencyFromMinorUnits(poSummary.consumed_cents ?? 0, 'en-US', currencyCode)}</span>
           </div>
           <div className="flex items-center justify-between">
             <span className="font-medium">PO Remaining</span>
-            <span>{formatCurrency(poSummary.remaining_cents ?? 0)}</span>
+            <span>{formatCurrencyFromMinorUnits(poSummary.remaining_cents ?? 0, 'en-US', currencyCode)}</span>
           </div>
         </div>
       )}
     </div>
   );
 }
-

@@ -13,6 +13,7 @@ describe('PurchaseOrderSummaryBanner', () => {
   it('T009: invoice metadata displays invoice-level PO number and PO summary (authorized/consumed/remaining)', () => {
     render(
       <PurchaseOrderSummaryBanner
+        currencyCode="USD"
         poSummary={{
           po_number: 'PO-123',
           po_amount_cents: 10000,
@@ -28,8 +29,8 @@ describe('PurchaseOrderSummaryBanner', () => {
     expect(screen.getByText('PO Consumed (Finalized)')).toBeInTheDocument();
     expect(screen.getByText('PO Remaining')).toBeInTheDocument();
 
-    expect(screen.getByText('$10,000.00')).toBeInTheDocument();
-    expect(screen.getByText('$4,000.00')).toBeInTheDocument();
-    expect(screen.getByText('$6,000.00')).toBeInTheDocument();
+    expect(screen.getByText('$100.00')).toBeInTheDocument();
+    expect(screen.getByText('$40.00')).toBeInTheDocument();
+    expect(screen.getByText('$60.00')).toBeInTheDocument();
   });
 });
