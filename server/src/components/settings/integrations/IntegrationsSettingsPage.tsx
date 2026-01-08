@@ -99,7 +99,6 @@ interface IntegrationItem {
 const IntegrationsSettingsPage: React.FC = () => {
   const isEEAvailable = process.env.NEXT_PUBLIC_EDITION === 'enterprise';
   const searchParams = useSearchParams();
-  const router = useRouter();
   const categoryParam = searchParams?.get('category');
   
   // Initialize selected category from URL param or default to 'accounting'
