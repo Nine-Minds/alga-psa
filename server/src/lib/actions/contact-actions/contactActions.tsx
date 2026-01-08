@@ -785,7 +785,12 @@ export async function updateContact(contactData: Partial<IContact>): Promise<ICo
             value = value.toLowerCase();
           }
         }
-        (updateData as any)[key] = value;
+        // Convert empty strings to null for UUID fields (PostgreSQL cannot cast '' to UUID)
+        if (key === 'client_id' && value === '') {
+          (updateData as any)[key] = null;
+        } else {
+          (updateData as any)[key] = value;
+        }
       }
     }
 
