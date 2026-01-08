@@ -38,6 +38,7 @@ import { getClientDefaultTaxRegionCode } from './client-actions/clientTaxRateAct
 import { applyCreditToInvoice } from 'server/src/lib/actions/creditActions';
 import { getCurrencySymbol } from 'server/src/constants/currency';
 import { getInitialInvoiceTaxSource, shouldUseTaxDelegation } from 'server/src/lib/actions/taxSourceActions';
+import { formatCurrencyFromMinorUnits } from 'server/src/lib/utils/formatters';
 import {
   computePurchaseOrderOverage,
   getClientContractPurchaseOrderContext,
@@ -712,9 +713,10 @@ export async function generateInvoice(
       });
 
       if (computed.overageCents > 0 && !options.allowPoOverage) {
+        const currencyCode = billingResult.currency_code || 'USD';
         console.warn(
           `[generateInvoice] PO overage detected (client_contract_id=${clientContractId}). ` +
-            `Over by $${(computed.overageCents / 100).toFixed(2)}; continuing because PO limits are advisory.`
+            `Over by ${formatCurrencyFromMinorUnits(computed.overageCents, 'en-US', currencyCode)}; continuing because PO limits are advisory.`
         );
       }
     }
