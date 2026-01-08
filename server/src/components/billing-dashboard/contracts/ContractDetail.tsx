@@ -63,7 +63,7 @@ const formatDate = (value?: string | Date | null): string => {
 
 function getCurrencyMeta(currencyCode: string): { fractionDigits: number; symbol: string } {
   const formatter = new Intl.NumberFormat(undefined, { style: 'currency', currency: currencyCode });
-  const fractionDigits = formatter.resolvedOptions().maximumFractionDigits;
+  const fractionDigits = formatter.resolvedOptions().maximumFractionDigits ?? 2;
   const symbol = formatter.formatToParts(0).find((part) => part.type === 'currency')?.value ?? currencyCode;
   return { fractionDigits, symbol };
 }
@@ -102,9 +102,6 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
   // Use server-provided userId if available
   const [currentUserId, setCurrentUserId] = useState<string>(serverUserId || '');
 
-  const contractCurrencyCode = contract?.currency_code || 'USD';
-  const currencyMeta = useMemo(() => getCurrencyMeta(contractCurrencyCode), [contractCurrencyCode]);
-
   // Client drawer state
   const [quickViewClient, setQuickViewClient] = useState<IClient | null>(null);
   const [isQuickViewOpen, setIsQuickViewOpen] = useState(false);
@@ -141,7 +138,7 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
   const currencyMeta = useMemo(() => {
     const currencyCode = contract?.currency_code ?? 'USD';
     const formatter = new Intl.NumberFormat('en-US', { style: 'currency', currency: currencyCode });
-    const fractionDigits = formatter.resolvedOptions().maximumFractionDigits;
+    const fractionDigits = formatter.resolvedOptions().maximumFractionDigits ?? 2;
     const symbol =
       formatter.formatToParts(0).find((part) => part.type === 'currency')?.value ?? currencyCode;
 

@@ -77,7 +77,7 @@ export function ContractBasicsStep({
   const currencyMeta = useMemo(() => {
     const currencyCode = data.currency_code || 'USD';
     const formatter = new Intl.NumberFormat('en-US', { style: 'currency', currency: currencyCode });
-    const fractionDigits = formatter.resolvedOptions().maximumFractionDigits;
+    const fractionDigits = formatter.resolvedOptions().maximumFractionDigits ?? 2;
     return { currencyCode, fractionDigits, minorUnitFactor: Math.pow(10, fractionDigits) };
   }, [data.currency_code]);
 
