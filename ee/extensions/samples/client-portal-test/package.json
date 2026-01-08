@@ -4,13 +4,18 @@
   "type": "module",
   "scripts": {
     "clean": "rm -rf dist",
-    "build": "alga build",
+    "build:backend": "esbuild src/index.ts --bundle --format=esm --platform=neutral --outfile=dist/js/index.js --external:alga:extension/secrets --external:alga:extension/http --external:alga:extension/storage --external:alga:extension/logging --external:alga:extension/ui-proxy --external:alga:extension/context --external:alga:extension/user",
+    "build:component": "jco componentize dist/js/index.js --wit ./wit/extension-runner.wit --world-name runner --disable all --out dist/main.wasm",
+    "build:ui": "cp -r ui dist/ui",
+    "build": "npm run clean && npm run build:backend && npm run build:component && npm run build:ui",
     "pack": "alga pack"
   },
   "dependencies": {
     "@alga-psa/extension-runtime": "^0.2.0"
   },
   "devDependencies": {
-    "@alga-psa/cli": "^0.2.0"
+    "@alga-psa/cli": "^0.2.0",
+    "@bytecodealliance/jco": "^1.8.0",
+    "esbuild": "^0.20.0"
   }
 }
