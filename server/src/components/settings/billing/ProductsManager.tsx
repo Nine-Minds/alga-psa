@@ -15,12 +15,15 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from 'server/src/components/ui/DropdownMenu';
-import { MoreVertical, Pen, Archive, RotateCcw } from 'lucide-react';
+import { MoreVertical, Pen, Archive, RotateCcw, Trash2 } from 'lucide-react';
 
 import {
   getServiceTypesForSelection,
   getServices,
-  updateService
+  updateService,
+  checkProductCanBeDeleted,
+  deleteProductPermanently,
+  ProductAssociationCheck
 } from 'server/src/lib/actions/serviceActions';
 import { QuickAddProduct } from './QuickAddProduct';
 
@@ -58,6 +61,11 @@ const ProductsManager: React.FC = () => {
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [productToDelete, setProductToDelete] = useState<IService | null>(null);
+
+  const [isPermanentDeleteOpen, setIsPermanentDeleteOpen] = useState(false);
+  const [productToPermanentDelete, setProductToPermanentDelete] = useState<IService | null>(null);
+  const [permanentDeleteCheck, setPermanentDeleteCheck] = useState<ProductAssociationCheck | null>(null);
+  const [isCheckingDelete, setIsCheckingDelete] = useState(false);
 
   const [editingProduct, setEditingProduct] = useState<IService | null>(null);
 
@@ -295,6 +303,17 @@ const ProductsManager: React.FC = () => {
                 </>
               )}
             </DropdownMenuItem>
+            <DropdownMenuItem
+              id={`products-delete-${record.service_id}`}
+              className="flex items-center text-red-600 focus:text-red-600"
+              onClick={(e) => {
+                e.stopPropagation();
+                handlePermanentDeleteClick(record);
+              }}
+            >
+              <Trash2 size={14} className="mr-2" />
+              Delete
+            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       )
@@ -319,6 +338,50 @@ const ProductsManager: React.FC = () => {
       setIsDeleteOpen(false);
       setProductToDelete(null);
     }
+  };
+
+  const handlePermanentDeleteClick = async (product: IService) => {
+    setProductToPermanentDelete(product);
+    setIsCheckingDelete(true);
+    setPermanentDeleteCheck(null);
+    setIsPermanentDeleteOpen(true);
+
+    try {
+      const check = await checkProductCanBeDeleted(product.service_id);
+      setPermanentDeleteCheck(check);
+    } catch (e) {
+      console.error('[ProductsManager] Failed to check product associations:', e);
+      setPermanentDeleteCheck({
+        canDelete: false,
+        associations: [{ type: 'error', count: 0, description: 'Failed to check associations' }]
+      });
+    } finally {
+      setIsCheckingDelete(false);
+    }
+  };
+
+  const confirmPermanentDelete = async () => {
+    if (!productToPermanentDelete || !permanentDeleteCheck?.canDelete) return;
+
+    try {
+      await deleteProductPermanently(productToPermanentDelete.service_id);
+      setIsPermanentDeleteOpen(false);
+      setProductToPermanentDelete(null);
+      setPermanentDeleteCheck(null);
+      await fetchProducts();
+    } catch (e) {
+      console.error('[ProductsManager] Failed to permanently delete product:', e);
+      setError(e instanceof Error ? e.message : 'Failed to delete product');
+      setIsPermanentDeleteOpen(false);
+      setProductToPermanentDelete(null);
+      setPermanentDeleteCheck(null);
+    }
+  };
+
+  const closePermanentDeleteDialog = () => {
+    setIsPermanentDeleteOpen(false);
+    setProductToPermanentDelete(null);
+    setPermanentDeleteCheck(null);
   };
 
   return (
@@ -443,6 +506,36 @@ const ProductsManager: React.FC = () => {
         onConfirm={confirmArchive}
         title="Archive Product"
         message={`Archive ${productToDelete?.service_name || 'this product'}? It will be hidden from pickers by default and cannot be attached to new contracts/invoices until restored.`}
+      />
+
+      <ConfirmationDialog
+        isOpen={isPermanentDeleteOpen}
+        onClose={closePermanentDeleteDialog}
+        onConfirm={confirmPermanentDelete}
+        title="Delete Product Permanently"
+        confirmLabel="Delete"
+        isConfirming={!permanentDeleteCheck?.canDelete || isCheckingDelete}
+        cancelLabel="Cancel"
+        message={
+          isCheckingDelete ? (
+            <span>Checking if product can be deleted...</span>
+          ) : permanentDeleteCheck?.canDelete ? (
+            <span>
+              Are you sure you want to permanently delete &quot;{productToPermanentDelete?.service_name}&quot;?
+              This action cannot be undone.
+            </span>
+          ) : (
+            <div className="space-y-2">
+              <p>Cannot delete &quot;{productToPermanentDelete?.service_name}&quot; because it is associated with existing data:</p>
+              <ul className="list-disc list-inside text-sm">
+                {permanentDeleteCheck?.associations.map((a, i) => (
+                  <li key={i}>{a.description}</li>
+                ))}
+              </ul>
+              <p className="text-sm mt-2">To remove this product, first remove it from all associated records, or use Archive instead.</p>
+            </div>
+          )
+        }
       />
     </>
   );

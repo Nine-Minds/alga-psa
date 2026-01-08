@@ -435,6 +435,208 @@ export async function deleteService(serviceId: string): Promise<void> {
     }
 }
 
+export interface ProductAssociationCheck {
+  canDelete: boolean;
+  associations: {
+    type: string;
+    count: number;
+    description: string;
+  }[];
+}
+
+/**
+ * Check if a product/service can be permanently deleted.
+ * Returns information about any associations that would block deletion.
+ */
+export async function checkProductCanBeDeleted(serviceId: string): Promise<ProductAssociationCheck> {
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+      throw new Error('Unauthorized');
+    }
+    const { knex: db, tenant } = await createTenantKnex();
+
+    try {
+        return await withTransaction(db, async (trx: Knex.Transaction) => {
+            const associations: ProductAssociationCheck['associations'] = [];
+
+            // Check invoice_items
+            const invoiceItemsResult = await trx('invoice_items')
+                .where({ service_id: serviceId, tenant })
+                .count('* as count')
+                .first();
+            const invoiceItemsCount = parseInt(String(invoiceItemsResult?.count ?? 0));
+            if (invoiceItemsCount > 0) {
+                associations.push({
+                    type: 'invoice_items',
+                    count: invoiceItemsCount,
+                    description: `Used in ${invoiceItemsCount} invoice line item(s)`
+                });
+            }
+
+            // Check time_entries
+            const timeEntriesResult = await trx('time_entries')
+                .where({ service_id: serviceId, tenant })
+                .count('* as count')
+                .first();
+            const timeEntriesCount = parseInt(String(timeEntriesResult?.count ?? 0));
+            if (timeEntriesCount > 0) {
+                associations.push({
+                    type: 'time_entries',
+                    count: timeEntriesCount,
+                    description: `Associated with ${timeEntriesCount} time entr${timeEntriesCount === 1 ? 'y' : 'ies'}`
+                });
+            }
+
+            // Check ticket_materials
+            const ticketMaterialsResult = await trx('ticket_materials')
+                .where({ service_id: serviceId, tenant })
+                .count('* as count')
+                .first();
+            const ticketMaterialsCount = parseInt(String(ticketMaterialsResult?.count ?? 0));
+            if (ticketMaterialsCount > 0) {
+                associations.push({
+                    type: 'ticket_materials',
+                    count: ticketMaterialsCount,
+                    description: `Used in ${ticketMaterialsCount} ticket material(s)`
+                });
+            }
+
+            // Check project_materials
+            const projectMaterialsResult = await trx('project_materials')
+                .where({ service_id: serviceId, tenant })
+                .count('* as count')
+                .first();
+            const projectMaterialsCount = parseInt(String(projectMaterialsResult?.count ?? 0));
+            if (projectMaterialsCount > 0) {
+                associations.push({
+                    type: 'project_materials',
+                    count: projectMaterialsCount,
+                    description: `Used in ${projectMaterialsCount} project material(s)`
+                });
+            }
+
+            // Check contract_line_services
+            const contractLineServicesResult = await trx('contract_line_services')
+                .where({ service_id: serviceId, tenant })
+                .count('* as count')
+                .first();
+            const contractLineServicesCount = parseInt(String(contractLineServicesResult?.count ?? 0));
+            if (contractLineServicesCount > 0) {
+                associations.push({
+                    type: 'contract_line_services',
+                    count: contractLineServicesCount,
+                    description: `Used in ${contractLineServicesCount} contract line(s)`
+                });
+            }
+
+            // Check contract_line_service_configuration
+            const contractLineServiceConfigResult = await trx('contract_line_service_configuration')
+                .where({ service_id: serviceId, tenant })
+                .count('* as count')
+                .first();
+            const contractLineServiceConfigCount = parseInt(String(contractLineServiceConfigResult?.count ?? 0));
+            if (contractLineServiceConfigCount > 0) {
+                associations.push({
+                    type: 'contract_line_service_configuration',
+                    count: contractLineServiceConfigCount,
+                    description: `Configured in ${contractLineServiceConfigCount} contract line(s)`
+                });
+            }
+
+            // Check bucket_usage
+            const bucketUsageResult = await trx('bucket_usage')
+                .where({ service_catalog_id: serviceId, tenant })
+                .count('* as count')
+                .first();
+            const bucketUsageCount = parseInt(String(bucketUsageResult?.count ?? 0));
+            if (bucketUsageCount > 0) {
+                associations.push({
+                    type: 'bucket_usage',
+                    count: bucketUsageCount,
+                    description: `Has ${bucketUsageCount} usage record(s)`
+                });
+            }
+
+            return {
+                canDelete: associations.length === 0,
+                associations
+            };
+        });
+    } catch (error) {
+        console.error(`Error checking product associations for ${serviceId}:`, error);
+        throw new Error('Failed to check product associations');
+    }
+}
+
+/**
+ * Permanently delete a product/service.
+ * Will fail if the product has any associations (invoices, contracts, etc.)
+ */
+export async function deleteProductPermanently(serviceId: string): Promise<void> {
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+      throw new Error('Unauthorized');
+    }
+    const { knex: db, tenant } = await createTenantKnex();
+
+    try {
+        await withTransaction(db, async (trx: Knex.Transaction) => {
+            const canDelete = await hasPermission(currentUser, 'service', 'delete', trx);
+            if (!canDelete) {
+              throw new Error('Permission denied: Cannot delete services/products');
+            }
+
+            // Re-check associations within the transaction to prevent race conditions
+            const check = await checkProductCanBeDeleted(serviceId);
+            if (!check.canDelete) {
+                const reasons = check.associations.map(a => a.description).join(', ');
+                throw new Error(`Cannot delete product: ${reasons}`);
+            }
+
+            // Delete related records that are safe to remove (pricing, config records)
+            // These have CASCADE on delete but we do it explicitly for clarity
+            await trx('service_prices')
+                .where({ service_id: serviceId, tenant })
+                .del();
+
+            await trx('service_rate_tiers')
+                .where({ service_id: serviceId, tenant })
+                .del();
+
+            // Clear nullable references
+            await trx('project_tasks')
+                .where({ service_id: serviceId, tenant })
+                .update({ service_id: null });
+
+            await trx('project_template_tasks')
+                .where({ service_id: serviceId, tenant })
+                .update({ service_id: null });
+
+            await trx('invoice_charge_details')
+                .where({ service_id: serviceId, tenant })
+                .update({ service_id: null });
+
+            // Delete the product
+            const deletedCount = await trx('service_catalog')
+                .where({ service_id: serviceId, tenant })
+                .del();
+
+            if (deletedCount === 0) {
+                throw new Error('Product not found');
+            }
+
+            safeRevalidate('/msp/billing');
+            safeRevalidate('/msp/settings/billing');
+        });
+    } catch (error) {
+        console.error(`Error permanently deleting product ${serviceId}:`, error);
+        if (error instanceof Error) {
+            throw error;
+        }
+        throw new Error('Failed to delete product');
+    }
+}
+
 export async function getServicesByCategory(categoryId: string): Promise<IService[]> {
     const { knex: db } = await createTenantKnex();
     try {
