@@ -2,6 +2,7 @@ import { beforeAll, describe, it, expect } from 'vitest';
 import { spawnSync } from 'node:child_process';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 import { executeWasmTemplate } from 'server/src/lib/invoice-renderer/wasm-executor';
 import type { LayoutElement, WasmInvoiceViewModel } from 'server/src/lib/invoice-renderer/types';
@@ -24,9 +25,12 @@ function collectText(layout: LayoutElement): string[] {
 }
 
 describe('Standard invoice template PO header', () => {
-  const templateDir = path.resolve(process.cwd(), 'server', 'src', 'invoice-templates', 'assemblyscript');
+  const testDir = path.dirname(fileURLToPath(import.meta.url));
+  const serverRoot = path.resolve(testDir, '../../../..');
+  const repoRoot = path.resolve(serverRoot, '..');
+  const templateDir = path.resolve(serverRoot, 'src', 'invoice-templates', 'assemblyscript');
   const wasmPath = path.resolve(
-    process.cwd(),
+    repoRoot,
     'dist',
     'server',
     'src',

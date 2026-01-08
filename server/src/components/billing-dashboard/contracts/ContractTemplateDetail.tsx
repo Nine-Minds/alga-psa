@@ -29,6 +29,7 @@ import { getContractLineServicesWithConfigurations, getTemplateLineServicesWithC
 import { toPlainDate } from 'server/src/lib/utils/dateTimeUtils';
 import { BILLING_FREQUENCY_OPTIONS } from 'server/src/constants/billing';
 import { CURRENCY_OPTIONS } from 'server/src/constants/currency';
+import { formatCurrencyFromMinorUnits } from 'server/src/lib/utils/formatters';
 import GenericPlanServicesList from '../contract-lines/GenericContractLineServicesList';
 import { ContractLineEditDialog } from './ContractLineEditDialog';
 
@@ -975,13 +976,14 @@ const ContractTemplateDetail: React.FC = () => {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100">
-                    {assignments.map((assignment) => {
-                      const poAmount =
-                        assignment.po_required && assignment.po_amount != null
-                          ? `$${(Number(assignment.po_amount) / 100).toFixed(2)}`
-                          : '—';
+	                    {assignments.map((assignment) => {
+	                      const currencyCode = contract?.currency_code ?? 'USD';
+	                      const poAmount =
+	                        assignment.po_required && assignment.po_amount != null
+	                          ? formatCurrencyFromMinorUnits(Number(assignment.po_amount), 'en-US', currencyCode)
+	                          : '—';
 
-                      return (
+	                      return (
                         <tr key={assignment.client_contract_id} className="bg-white hover:bg-gray-50">
                           <td className="whitespace-nowrap px-4 py-3">
                             <div className="flex flex-col">

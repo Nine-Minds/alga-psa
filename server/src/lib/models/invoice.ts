@@ -135,6 +135,7 @@ export default class Invoice {
     if (!itemToInsert.service_id) {
       delete itemToInsert.service_id;
     }
+    delete (itemToInsert as any).contract_name;
 
     const [createdItem] = await knexOrTrx('invoice_charges').insert(itemToInsert).returning('*');
     return createdItem;
