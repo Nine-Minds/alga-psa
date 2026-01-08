@@ -12,7 +12,7 @@ function jsonResponse(body: unknown, init: Partial<ExecuteResponse> = {}): Execu
 }
 
 const BUILD_STAMP = new Date().toISOString();
-const VERSION = 'v2.0.1-user-debug';
+const VERSION = 'v2.1.0-wit-wrapper';
 
 export async function handler(request: ExecuteRequest, host: HostBindings): Promise<ExecuteResponse> {
   try {
