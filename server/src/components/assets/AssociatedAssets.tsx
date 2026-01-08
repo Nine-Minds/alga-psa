@@ -5,6 +5,7 @@ import { Asset, AssetAssociation, AssetListResponse } from '../../interfaces/ass
 import { listEntityAssets, createAssetAssociation, removeAssetAssociation, listAssets } from '../../lib/actions/asset-actions/assetActions';
 import { loadAssetDetailDrawerData } from 'server/src/lib/actions/asset-actions/assetDrawerActions';
 import { Button } from '../../components/ui/Button';
+import { Checkbox } from '../../components/ui/Checkbox';
 import { Dialog } from '../../components/ui/Dialog';
 import CustomSelect, { SelectOption } from '../../components/ui/CustomSelect';
 import { toast } from 'react-hot-toast';
@@ -512,14 +513,12 @@ export default function AssociatedAssets({ id, entityId, entityType, clientId, d
                                     <thead className="bg-gray-50">
                                         <tr>
                                             <th className="px-4 py-3 text-left w-10">
-                                                <input
-                                                    type="checkbox"
+                                                <Checkbox
+                                                    id="select-all-assets"
                                                     checked={areAllCurrentPageSelected()}
-                                                    ref={(el) => {
-                                                        if (el) el.indeterminate = areSomeCurrentPageSelected();
-                                                    }}
+                                                    indeterminate={areSomeCurrentPageSelected()}
                                                     onChange={handleSelectAll}
-                                                    className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                                                    containerClassName="mb-0"
                                                 />
                                             </th>
                                             <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -547,11 +546,11 @@ export default function AssociatedAssets({ id, entityId, entityType, clientId, d
                                                     onClick={() => handleAssetToggle(asset)}
                                                 >
                                                     <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
-                                                        <input
-                                                            type="checkbox"
+                                                        <Checkbox
+                                                            id={`select-asset-${asset.asset_id}`}
                                                             checked={isSelected}
                                                             onChange={() => handleAssetToggle(asset)}
-                                                            className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                                                            containerClassName="mb-0"
                                                         />
                                                     </td>
                                                     <td className="px-4 py-3">
