@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from 'server/src/components/ui/Card';
 import { Button } from 'server/src/components/ui/Button';
 import { CustomTabs } from 'server/src/components/ui/CustomTabs';
@@ -196,6 +196,22 @@ const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042'];
 
 const CreditManagement: React.FC = () => {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const tabParam = searchParams?.get('creditTab');
+
+  // Map URL slugs to tab labels
+  const tabToLabelMap: Record<string, string> = {
+    'active-credits': 'Active Credits',
+    'expired-credits': 'Expired Credits',
+    'all-credits': 'All Credits'
+  };
+
+  // Determine initial active tab based on URL parameter
+  const [activeTab, setActiveTab] = useState<string>(() => {
+    const initialLabel = tabParam ? tabToLabelMap[tabParam.toLowerCase()] : undefined;
+    return initialLabel || 'Active Credits'; // Default to 'Active Credits'
+  });
+
   const [loading, setLoading] = useState(true);
   const [activeCredits, setActiveCredits] = useState<ICreditTracking[]>([]);
   const [expiredCredits, setExpiredCredits] = useState<ICreditTracking[]>([]);
@@ -290,6 +306,40 @@ const CreditManagement: React.FC = () => {
     
     fetchData();
   }, []);
+
+  // Update active tab when URL parameter changes
+  useEffect(() => {
+    const currentLabel = tabParam ? tabToLabelMap[tabParam.toLowerCase()] : undefined;
+    const targetTab = currentLabel || 'Active Credits';
+    if (targetTab !== activeTab) {
+      setActiveTab(targetTab);
+    }
+  }, [tabParam, activeTab, tabToLabelMap]);
+
+  const updateURL = (tabLabel: string) => {
+    // Map tab labels back to URL slugs
+    const labelToSlugMap: Record<string, string> = Object.entries(tabToLabelMap).reduce((acc, [slug, label]) => {
+      acc[label] = slug;
+      return acc;
+    }, {} as Record<string, string>);
+
+    const urlSlug = labelToSlugMap[tabLabel];
+
+    // Build new URL preserving existing parameters
+    const currentSearchParams = new URLSearchParams(window.location.search);
+
+    if (urlSlug && urlSlug !== 'active-credits') {
+      currentSearchParams.set('creditTab', urlSlug);
+    } else {
+      currentSearchParams.delete('creditTab');
+    }
+
+    const newUrl = currentSearchParams.toString()
+      ? `${window.location.pathname}?${currentSearchParams.toString()}`
+      : window.location.pathname;
+
+    window.history.pushState({}, '', newUrl);
+  };
 
   const handleViewAllCredits = () => {
     router.push('/msp/billing/credits');
@@ -485,7 +535,11 @@ const CreditManagement: React.FC = () => {
                 )
               }
             ]}
-            defaultTab="Active Credits"
+            defaultTab={activeTab}
+            onTabChange={(tab) => {
+              setActiveTab(tab);
+              updateURL(tab);
+            }}
           />
           
           <div className="mt-4 flex justify-end">
