@@ -351,13 +351,13 @@ function renderListItem(element: TemplateElement, item: any, key: string): strin
   return '';
 }
 
-function renderConditional(conditional: Conditional, index: number, invoiceData: InvoiceViewModel, template: IInvoiceTemplate): string {
-  const { condition, content } = conditional;
-  const fieldValue = invoiceData[condition.field as keyof InvoiceViewModel];
-  if (fieldValue === undefined) return '';
+  function renderConditional(conditional: Conditional, index: number, invoiceData: InvoiceViewModel, template: IInvoiceTemplate): string {
+    const { condition, content } = conditional;
+    const fieldValue = invoiceData[condition.field as keyof InvoiceViewModel];
+    if (fieldValue === undefined || fieldValue === null) return '';
 
-  let shouldRender = false;
-  switch (condition.op) {
+    let shouldRender = false;
+    switch (condition.op) {
     case '==': shouldRender = fieldValue == condition.value; break;
     case '!=': shouldRender = fieldValue != condition.value; break;
     case '>': shouldRender = fieldValue > condition.value; break;
