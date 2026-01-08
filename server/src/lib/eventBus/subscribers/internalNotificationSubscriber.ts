@@ -612,25 +612,25 @@ async function handleTicketUpdated(event: TicketUpdatedEvent): Promise<void> {
       // Handle priority change
       if (changes.priority_id && typeof changes.priority_id === 'object') {
         const oldPriority = await db('priorities')
-          .select('priority_name', 'priority_color')
+          .select('priority_name', 'color')
           .where({ priority_id: changes.priority_id.old, tenant: tenantId })
           .first();
         const newPriority = await db('priorities')
-          .select('priority_name', 'priority_color')
+          .select('priority_name', 'color')
           .where({ priority_id: changes.priority_id.new, tenant: tenantId })
           .first();
 
         if (oldPriority || newPriority) {
           changeDetails.priority = {
             old: oldPriority?.priority_name || 'None',
-            oldColor: oldPriority?.priority_color,
+            oldColor: oldPriority?.color,
             new: newPriority?.priority_name || 'None',
-            newColor: newPriority?.priority_color
+            newColor: newPriority?.color
           };
           metadata.oldPriority = oldPriority?.priority_name || 'None';
-          metadata.oldPriorityColor = oldPriority?.priority_color;
+          metadata.oldPriorityColor = oldPriority?.color;
           metadata.newPriority = newPriority?.priority_name || 'None';
-          metadata.newPriorityColor = newPriority?.priority_color;
+          metadata.newPriorityColor = newPriority?.color;
         }
       }
 
