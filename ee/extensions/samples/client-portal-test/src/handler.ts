@@ -12,7 +12,7 @@ function jsonResponse(body: unknown, init: Partial<ExecuteResponse> = {}): Execu
 }
 
 const BUILD_STAMP = new Date().toISOString();
-const VERSION = 'v2.0.0-user-api';
+const VERSION = 'v2.0.1-user-debug';
 
 export async function handler(request: ExecuteRequest, host: HostBindings): Promise<ExecuteResponse> {
   try {
@@ -49,12 +49,14 @@ async function processRequest(request: ExecuteRequest, host: HostBindings): Prom
 
   // Try to get user information
   let user: { tenantId: string; clientName: string; userId: string; userEmail: string; userName: string; userType: string } | null = null;
+  let userError: string | null = null;
   try {
     user = await host.user.getUser();
     await safeLog(host, 'info', `[client-portal-test] user retrieved userId=${user.userId} userType=${user.userType}`);
   } catch (err) {
     const reason = err instanceof Error ? err.message : String(err);
-    await safeLog(host, 'warn', `[client-portal-test] failed to get user: ${reason}`);
+    userError = reason;
+    await safeLog(host, 'error', `[client-portal-test] failed to get user: ${reason}`);
   }
 
   // Return information about the request context
@@ -80,6 +82,7 @@ async function processRequest(request: ExecuteRequest, host: HostBindings): Prom
       userType: user.userType,
       clientName: user.clientName,
     } : null,
+    userError: userError,
     version: VERSION,
     build: BUILD_STAMP,
     timestamp: new Date().toISOString(),

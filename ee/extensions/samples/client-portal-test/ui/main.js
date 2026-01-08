@@ -248,7 +248,7 @@
       // Format user info for display
       const userDisplay = data.user
         ? `${data.user.userName} (${data.user.userEmail})`
-        : 'N/A';
+        : (data.userError ? `Error: ${data.userError}` : 'N/A');
       const userTypeDisplay = data.user?.userType || 'N/A';
 
       if (handlerEl) {
