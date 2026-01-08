@@ -12,6 +12,7 @@ function jsonResponse(body: unknown, init: Partial<ExecuteResponse> = {}): Execu
 }
 
 const BUILD_STAMP = new Date().toISOString();
+const VERSION = 'v2.0.0-user-api';
 
 export async function handler(request: ExecuteRequest, host: HostBindings): Promise<ExecuteResponse> {
   try {
@@ -59,7 +60,7 @@ async function processRequest(request: ExecuteRequest, host: HostBindings): Prom
   // Return information about the request context
   const response = jsonResponse({
     ok: true,
-    message: 'Hello from the Client Portal Test Extension WASM handler!',
+    message: `Hello from the Client Portal Test Extension WASM handler! (${VERSION})`,
     context: {
       tenantId,
       extensionId,
@@ -79,6 +80,7 @@ async function processRequest(request: ExecuteRequest, host: HostBindings): Prom
       userType: user.userType,
       clientName: user.clientName,
     } : null,
+    version: VERSION,
     build: BUILD_STAMP,
     timestamp: new Date().toISOString(),
   });

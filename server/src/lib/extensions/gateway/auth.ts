@@ -36,11 +36,19 @@ export async function getUserInfoFromAuth(req: NextRequest): Promise<ExtProxyUse
   const headerTenant = req.headers.get('x-alga-tenant');
   if (headerTenant) {
     // When using header-based auth, we don't have user info
+    console.log('[ext-proxy auth] Skipping user info - x-alga-tenant header present');
     return null;
   }
 
   const session = await getSession();
   const user = session?.user as any;
+
+  console.log('[ext-proxy auth] Session check', {
+    hasSession: !!session,
+    hasUser: !!user,
+    userId: user?.user_id || user?.id,
+    userEmail: user?.email,
+  });
 
   if (!user) {
     return null;
@@ -50,13 +58,22 @@ export async function getUserInfoFromAuth(req: NextRequest): Promise<ExtProxyUse
   const tenantId = user.tenant || '';
   const clientName = tenantId ? await getTenantClientName(tenantId) : '';
 
-  return {
+  const userInfo = {
     user_id: user.user_id || user.id || '',
     user_email: user.email || '',
     user_name: user.name || user.username || '',
     user_type: user.user_type || 'internal',
     client_name: clientName,
   };
+
+  console.log('[ext-proxy auth] Returning user info', {
+    userId: userInfo.user_id,
+    userEmail: userInfo.user_email,
+    userName: userInfo.user_name,
+    userType: userInfo.user_type,
+  });
+
+  return userInfo;
 }
 
 export async function getTenantFromAuth(req: NextRequest): Promise<string> {

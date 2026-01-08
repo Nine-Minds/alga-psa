@@ -292,6 +292,10 @@
               <span class="result-label">Timestamp</span>
               <span class="result-value"><code>${data.timestamp || 'N/A'}</code></span>
             </div>
+            <div class="result-row">
+              <span class="result-label">Version</span>
+              <span class="result-value"><code>${data.version || 'N/A'}</code></span>
+            </div>
           </div>
         `;
       }
