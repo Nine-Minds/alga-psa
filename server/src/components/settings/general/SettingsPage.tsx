@@ -67,8 +67,8 @@ const SettingsPageContent = (): React.JSX.Element =>  {
     {
       loading: () => (
         <div className="flex items-center justify-center py-8">
-          <LoadingIndicator 
-            layout="stacked" 
+          <LoadingIndicator
+            layout="stacked"
             text="Loading extensions..."
             spinnerProps={{ size: 'md' }}
           />
@@ -84,8 +84,8 @@ const SettingsPageContent = (): React.JSX.Element =>  {
     {
       loading: () => (
         <div className="flex items-center justify-center py-8">
-          <LoadingIndicator 
-            layout="stacked" 
+          <LoadingIndicator
+            layout="stacked"
             text="Loading installer..."
             spinnerProps={{ size: 'md' }}
           />
@@ -113,6 +113,14 @@ const SettingsPageContent = (): React.JSX.Element =>  {
     ...(isEEAvailable && { extensions: 'Extensions' }) // Only add if EE is available
   }), [isEEAvailable]);
 
+  // Map Tab Labels back to URL slugs (kebab-case)
+  const labelToSlugMap = useMemo<Record<string, string>>(() => {
+    return Object.entries(slugToLabelMap).reduce((acc, [slug, label]) => {
+      acc[label] = slug;
+      return acc;
+    }, {} as Record<string, string>);
+  }, [slugToLabelMap]);
+
   const initialTabLabel = useMemo(() => {
     const mappedLabel = tabParam
       ? slugToLabelMap[tabParam.toLowerCase()]
@@ -125,6 +133,28 @@ const SettingsPageContent = (): React.JSX.Element =>  {
   const [activeTab, setActiveTab] = useState<string>(initialTabLabel);
   const hydrationReadyRef = useRef(false);
 
+  // Update URL when tab changes (after hydration)
+  const updateURL = useCallback((tabLabel: string) => {
+    if (!hydrationReadyRef.current) return;
+
+    const urlSlug = labelToSlugMap[tabLabel];
+
+    // Build new URL preserving existing parameters
+    const currentSearchParams = new URLSearchParams(window.location.search);
+
+    if (urlSlug && urlSlug !== 'general') {
+      currentSearchParams.set('tab', urlSlug);
+    } else {
+      currentSearchParams.delete('tab');
+    }
+
+    const newUrl = currentSearchParams.toString()
+      ? `/msp/settings?${currentSearchParams.toString()}`
+      : '/msp/settings';
+
+    window.history.pushState({}, '', newUrl);
+  }, [labelToSlugMap]);
+
   // Handle client-side initialization and URL changes
   useEffect(() => {
     hydrationReadyRef.current = true;
@@ -133,6 +163,12 @@ const SettingsPageContent = (): React.JSX.Element =>  {
 
     setActiveTab((prev) => (prev === targetLabel ? prev : targetLabel));
   }, [initialTabLabel]);
+
+  // Handle tab change with URL synchronization
+  const handleTabChange = useCallback((tabLabel: string) => {
+    setActiveTab(tabLabel);
+    updateURL(tabLabel);
+  }, [updateURL]);
 
   const baseTabContent: TabContent[] = [
     {
