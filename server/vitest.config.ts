@@ -39,6 +39,8 @@ export default defineConfig({
       '@ee': path.resolve(__dirname, '../ee/server/src'),
       '@shared': path.resolve(__dirname, '../shared'),
       '@alga-psa/shared': path.resolve(__dirname, '../shared'),
+      fs: 'node:fs',
+      'fs/promises': 'node:fs/promises',
       'next/server': path.resolve(__dirname, './src/test/stubs/next-server.ts'),
       'pdf-lib': 'empty-module',
     },

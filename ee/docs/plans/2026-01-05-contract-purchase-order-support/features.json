@@ -1,0 +1,23 @@
+[
+  { "id": "F001", "description": "DB: add `invoices.po_number` column (nullable)", "implemented": true },
+  { "id": "F002", "description": "DB: add `invoices.client_contract_id` column (nullable) + index", "implemented": true },
+  { "id": "F003", "description": "Invoice creation: determine invoice client_contract_id from billing charges (single contract)", "implemented": true },
+  { "id": "F004", "description": "Invoice creation: snapshot PO number onto invoice (`invoices.po_number`) when contract has PO", "implemented": true },
+  { "id": "F005", "description": "Invoice creation: keep blocking when PO is required but missing PO number", "implemented": true },
+  { "id": "F006", "description": "Billing: compute PO consumption from finalized invoices for a client_contract_id", "implemented": true },
+  { "id": "F007", "description": "Billing: compute PO remaining and overage using total_amount (authorized total spend)", "implemented": true },
+  { "id": "F008", "description": "Single invoice flow: show PO limit warning when overage > 0", "implemented": true },
+  { "id": "F009", "description": "Single invoice flow: require explicit override confirmation to proceed on overage", "implemented": true },
+  { "id": "F010", "description": "Batch invoicing: precompute which invoices could overrun PO limits", "implemented": true },
+  { "id": "F011", "description": "Batch invoicing: prompt upfront (allow overages vs skip overages) only when needed", "implemented": true },
+  { "id": "F012", "description": "Batch invoicing: implement skip behavior and summarize skipped invoices + reasons", "implemented": true },
+  { "id": "F013", "description": "Invoice UI: display invoice-level PO number in invoice metadata", "implemented": true },
+  { "id": "F014", "description": "Invoice UI: display PO authorized/consumed/remaining summary when po_amount exists", "implemented": true },
+  { "id": "F015", "description": "PDF: add PO number to default invoice template header when present", "implemented": true },
+  { "id": "F016", "description": "Accounting export: include invoice PO number in QBO API payload memo field", "implemented": true },
+  { "id": "F017", "description": "Accounting export: include invoice PO number in QuickBooks CSV `Memo`", "implemented": true },
+  { "id": "F018", "description": "Accounting export: include invoice PO number in Xero API `reference` without losing invoice identifier", "implemented": true },
+  { "id": "F019", "description": "Accounting export: include invoice PO number in Xero CSV `Reference` without breaking matching", "implemented": true },
+  { "id": "F020", "description": "Docs: update `docs/billing/billing.md` describing invoice PO snapshot + advisory PO limits", "implemented": true },
+  { "id": "F021", "description": "Docs: update root `README.md` with PO support note (if applicable)", "implemented": true }
+]

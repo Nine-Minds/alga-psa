@@ -38,6 +38,11 @@ import { getClientDefaultTaxRegionCode } from './client-actions/clientTaxRateAct
 import { applyCreditToInvoice } from 'server/src/lib/actions/creditActions';
 import { getCurrencySymbol } from 'server/src/constants/currency';
 import { getInitialInvoiceTaxSource, shouldUseTaxDelegation } from 'server/src/lib/actions/taxSourceActions';
+import {
+  computePurchaseOrderOverage,
+  getClientContractPurchaseOrderContext,
+  getPurchaseOrderConsumedCents
+} from 'server/src/lib/services/purchaseOrderService';
 // TODO: Move these type guards to billingAndTax.ts or a shared utility file
 const POSTGRES_UNDEFINED_TABLE = '42P01';
 
@@ -72,6 +77,26 @@ function isProductCharge(charge: IBillingCharge): charge is IProductCharge {
 
 function isLicenseCharge(charge: IBillingCharge): charge is ILicenseCharge {
   return charge.type === 'license';
+}
+
+function getSingleClientContractIdFromCharges(charges: IBillingCharge[]): string | null {
+  const ids = Array.from(
+    new Set(
+      charges
+        .map((c) => c.client_contract_id)
+        .filter((value): value is string => Boolean(value && value.trim().length > 0))
+    )
+  );
+
+  if (ids.length === 0) {
+    return null;
+  }
+  if (ids.length > 1) {
+    throw new Error(
+      `Invoice spans multiple client contracts (${ids.join(', ')}). Only one client contract per invoice is supported.`
+    );
+  }
+  return ids[0];
 }
 
 // TODO: Move to billingAndTax.ts or a shared utility file
@@ -111,6 +136,105 @@ async function calculatePreviewTax(
   console.log(`[calculatePreviewTax] Summed pre-calculated tax: ${totalTax}`);
 
   return totalTax;
+}
+
+export type PurchaseOrderOverageDecision = 'allow' | 'skip';
+
+export type PurchaseOrderOverageResult = {
+  client_contract_id: string;
+  po_number: string | null;
+  authorized_cents: number;
+  consumed_cents: number;
+  remaining_cents: number;
+  invoice_total_cents: number;
+  overage_cents: number;
+};
+
+export async function getPurchaseOrderOverageForBillingCycle(
+  billing_cycle_id: string
+): Promise<PurchaseOrderOverageResult | null> {
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
+    throw new Error('Unauthorized: No authenticated user found');
+  }
+
+  const { knex, tenant } = await createTenantKnex();
+  if (!tenant) {
+    throw new Error('No tenant found');
+  }
+
+  const billingCycle = await withTransaction(knex, async (trx: Knex.Transaction) => {
+    if (!await hasPermission(currentUser, 'invoice', 'create', trx) && !await hasPermission(currentUser, 'invoice', 'generate', trx)) {
+      throw new Error('Permission denied: Cannot generate invoices');
+    }
+
+    return await trx('client_billing_cycles')
+      .where({ billing_cycle_id, tenant })
+      .first();
+  });
+
+  if (!billingCycle) {
+    throw new Error('Billing cycle not found');
+  }
+
+  const { client_id, period_start_date, period_end_date, effective_date } = billingCycle;
+
+  let cycleStart: ISO8601String;
+  let cycleEnd: ISO8601String;
+
+  if (period_start_date && period_end_date) {
+    cycleStart = toISOTimestamp(toPlainDate(period_start_date));
+    cycleEnd = toISOTimestamp(toPlainDate(period_end_date));
+  } else if (effective_date) {
+    const effectiveDateUTC = toISOTimestamp(toPlainDate(effective_date));
+    cycleStart = effectiveDateUTC;
+    cycleEnd = await getNextBillingDate(client_id, effectiveDateUTC);
+  } else {
+    throw new Error('Invalid billing cycle dates');
+  }
+
+  const billingEngine = new BillingEngine();
+  const billingResult = await billingEngine.calculateBilling(client_id, cycleStart, cycleEnd, billing_cycle_id);
+  if (billingResult.error) {
+    throw new Error(billingResult.error);
+  }
+
+  const clientContractId = getSingleClientContractIdFromCharges(billingResult.charges);
+  if (!clientContractId) {
+    return null;
+  }
+
+  const poContext = await getClientContractPurchaseOrderContext({
+    knex,
+    tenant,
+    clientContractId,
+  });
+
+  if (poContext.po_amount == null) {
+    return null;
+  }
+
+  const client = await getClientDetails(knex, tenant, client_id);
+  const defaultRegion = await getClientDefaultTaxRegionCode(client_id);
+  const previewTax = await calculatePreviewTax(billingResult.charges, client_id, cycleEnd, defaultRegion || client?.tax_region || '');
+  const invoiceTotal = Math.trunc(billingResult.totalAmount + previewTax);
+
+  const consumed = await getPurchaseOrderConsumedCents({ knex, tenant, clientContractId });
+  const computed = computePurchaseOrderOverage({
+    authorizedCents: poContext.po_amount,
+    consumedCents: consumed,
+    invoiceTotalCents: invoiceTotal,
+  });
+
+  return {
+    client_contract_id: clientContractId,
+    po_number: poContext.po_number,
+    authorized_cents: computed.authorizedCents,
+    consumed_cents: computed.consumedCents,
+    remaining_cents: computed.remainingCents,
+    invoice_total_cents: computed.invoiceTotalCents,
+    overage_cents: computed.overageCents,
+  };
 }
 
 // TODO: Move to billingAndTax.ts
@@ -178,6 +302,7 @@ async function adaptToWasmViewModel(
 ): Promise<WasmInvoiceViewModel> {
   // Fetch Tenant Client Info (similar logic to getFullInvoiceById)
   let tenantClientInfo: { name: any; address: any; logoUrl: string | null } | null = null;
+  let poNumber: string | null = null;
   if (tenant) {
     const { knex } = await createTenantKnex(); // Get knex instance again if needed
     const tenantClientLink = await withTransaction(knex, async (trx: Knex.Transaction) => {
@@ -217,6 +342,11 @@ async function adaptToWasmViewModel(
         };
       }
     }
+
+    const clientContractId = getSingleClientContractIdFromCharges(billingResult.charges);
+    if (clientContractId) {
+      poNumber = (await getClientContractPurchaseOrderContext({ knex, tenant, clientContractId })).po_number;
+    }
   }
 
 
@@ -233,6 +363,7 @@ async function adaptToWasmViewModel(
     issueDate: toISODate(Temporal.Now.plainDateISO()),
     dueDate: dueDate,
     currencyCode: billingResult.currency_code || 'USD',
+    poNumber,
     customer: {
       name: client?.client_name || 'N/A',
       address: client?.location_address || 'N/A',
@@ -462,7 +593,10 @@ export async function previewInvoice(billing_cycle_id: string): Promise<PreviewI
 }
 
 // Update return type to the interface InvoiceViewModel
-export async function generateInvoice(billing_cycle_id: string): Promise<InvoiceViewModel | null> {
+export async function generateInvoice(
+  billing_cycle_id: string,
+  options: { allowPoOverage?: boolean } = {}
+): Promise<InvoiceViewModel | null> {
   const currentUser = await getCurrentUser();
   if (!currentUser) {
     throw new Error('Unauthorized: No authenticated user found');
@@ -539,42 +673,51 @@ export async function generateInvoice(billing_cycle_id: string): Promise<Invoice
     throw new Error('No active contract lines for this period');
   }
 
-  // Check for Purchase Order requirements
-  let clientContracts: Array<{ po_required?: boolean; po_number?: string }> = [];
-  try {
-    clientContracts = await withTransaction(knex, async (trx: Knex.Transaction) => {
-      return await trx('client_plan_bundles')
-        .where({
-          client_id,
-          tenant,
-          is_active: true
-        })
-        .where(function() {
-          this.where('start_date', '<=', cycleEnd)
-            .where(function() {
-              this.whereNull('end_date')
-                .orWhere('end_date', '>=', cycleStart);
-            });
-        });
-    });
-  } catch (error) {
-    if (!isMissingRelationError(error)) {
-      throw error;
-    }
-  }
-
-  // Validate PO requirements for active contracts
-  for (const contract of clientContracts) {
-    if (contract.po_required && !contract.po_number) {
-      throw new Error(`Purchase Order is required for this contract but has not been provided. Please add a PO number to the contract before generating invoices.`);
-    }
-  }
-
   const billingEngine = new BillingEngine();
   const billingResult = await billingEngine.calculateBilling(client_id, cycleStart, cycleEnd, billing_cycle_id);
 
   if (billingResult.error) {
     throw new Error(billingResult.error);
+  }
+
+  const clientContractId = getSingleClientContractIdFromCharges(billingResult.charges);
+  if (clientContractId) {
+    const poContext = await getClientContractPurchaseOrderContext({
+      knex,
+      tenant,
+      clientContractId
+    });
+
+    if (poContext.po_required && !poContext.po_number) {
+      throw new Error(
+        'Purchase Order is required for this contract but has not been provided. Please add a PO number to the contract before generating invoices.'
+      );
+    }
+
+    if (poContext.po_amount != null) {
+      const defaultRegion = await getClientDefaultTaxRegionCode(client_id);
+      const previewTax = await calculatePreviewTax(
+        billingResult.charges,
+        client_id,
+        cycleEnd,
+        defaultRegion || ''
+      );
+      const invoiceTotal = Math.trunc(billingResult.totalAmount + previewTax);
+
+      const consumed = await getPurchaseOrderConsumedCents({ knex, tenant, clientContractId });
+      const computed = computePurchaseOrderOverage({
+        authorizedCents: poContext.po_amount,
+        consumedCents: consumed,
+        invoiceTotalCents: invoiceTotal,
+      });
+
+      if (computed.overageCents > 0 && !options.allowPoOverage) {
+        console.warn(
+          `[generateInvoice] PO overage detected (client_contract_id=${clientContractId}). ` +
+            `Over by $${(computed.overageCents / 100).toFixed(2)}; continuing because PO limits are advisory.`
+        );
+      }
+    }
   }
 
   // Get zero-dollar invoice settings
@@ -813,9 +956,16 @@ export async function createInvoiceFromBillingResult(
   const taxSource = await getInitialInvoiceTaxSource(clientId);
   const useTaxDelegation = await shouldUseTaxDelegation(clientId);
 
+  const clientContractId = getSingleClientContractIdFromCharges(billingResult.charges);
+  const invoicePoNumber = clientContractId
+    ? (await getClientContractPurchaseOrderContext({ knex, tenant, clientContractId })).po_number
+    : null;
+
   // Create base invoice object
   const invoiceData = {
     client_id: clientId,
+    client_contract_id: clientContractId,
+    po_number: invoicePoNumber,
     invoice_date: toISODate(Temporal.PlainDate.from(currentDate)),
     due_date,
     subtotal: 0,
