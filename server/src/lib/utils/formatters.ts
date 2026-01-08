@@ -32,7 +32,7 @@ export function formatCurrencyFromMinorUnits(
   currency: string = 'USD'
 ): string {
   const resolved = new Intl.NumberFormat(locale, { style: 'currency', currency }).resolvedOptions();
-  const fractionDigits = resolved.maximumFractionDigits;
+  const fractionDigits = resolved.maximumFractionDigits ?? 2;
   const value = minorUnits / Math.pow(10, fractionDigits);
   return new Intl.NumberFormat(locale, {
     style: 'currency',
