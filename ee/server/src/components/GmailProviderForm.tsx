@@ -41,6 +41,7 @@ export function GmailProviderForm({
 }: EEGmailProviderFormProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [setupWarnings, setSetupWarnings] = useState<string[]>([]);
   const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
   const { oauthStatus, oauthData, autoSubmitCountdown, openOAuthPopup, cancelAutoSubmit, setOauthStatus } = useOAuthPopup<any>({ provider: 'google', countdownSeconds: 0 });
   const [defaultsOptions, setDefaultsOptions] = useState<{ value: string; label: string }[]>([]);
@@ -144,10 +145,20 @@ export function GmailProviderForm({
       };
 
       // After OAuth, run automation once to set up Pub/Sub + watch
-      const result = isEditing 
+      const result = isEditing
         ? await updateEmailProvider(provider.id, payload, false) // skipAutomation: false
         : await createEmailProvider(payload, false); // skipAutomation: false
 
+      // Check for setup errors or warnings
+      if (result.setupError) {
+        setError(`Provider saved but setup incomplete: ${result.setupError}`);
+      }
+      if (result.setupWarnings && result.setupWarnings.length > 0) {
+        setSetupWarnings(result.setupWarnings);
+      }
+
+      // Still call onSuccess so the provider appears in the list
+      // The user can see the error/warning state in the UI
       onSuccess(result.provider);
 
     } catch (err: any) {
@@ -257,6 +268,19 @@ export function GmailProviderForm({
       {error && (
         <Alert variant="destructive">
           <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
+
+      {setupWarnings.length > 0 && (
+        <Alert className="border-yellow-500 bg-yellow-50">
+          <AlertDescription>
+            <p className="font-medium text-yellow-800 mb-2">Setup completed with warnings:</p>
+            <ul className="list-disc list-inside space-y-1 text-yellow-700">
+              {setupWarnings.map((warning, idx) => (
+                <li key={idx}>{warning}</li>
+              ))}
+            </ul>
+          </AlertDescription>
         </Alert>
       )}
 
