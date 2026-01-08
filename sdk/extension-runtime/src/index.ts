@@ -187,6 +187,33 @@ export interface SchedulerHost {
   getEndpoints(): Promise<EndpointInfo[]>;
 }
 
+// User Host API types
+
+/** Information about the current user */
+export interface UserData {
+  /** Tenant ID the user belongs to */
+  tenantId: string;
+  /** Client/company name */
+  clientName: string;
+  /** Unique user identifier */
+  userId: string;
+  /** User's email address */
+  userEmail: string;
+  /** User's display name */
+  userName: string;
+  /** User type (e.g., "msp", "client") */
+  userType: string;
+}
+
+/** Errors that can occur when fetching user data */
+export type UserError = 'not-available' | 'not-allowed';
+
+/** Host API for accessing current user information */
+export interface UserHost {
+  /** Get the current user's information (requires cap:user.read) */
+  getUser(): Promise<UserData>;
+}
+
 export interface HostBindings {
   context: {
     get(): Promise<ContextData>;
@@ -198,6 +225,8 @@ export interface HostBindings {
   uiProxy: UiProxyHost;
   /** Scheduler API for managing scheduled tasks (requires cap:scheduler.manage) */
   scheduler: SchedulerHost;
+  /** User API for accessing current user information (requires cap:user.read) */
+  user: UserHost;
 }
 
 export type Handler = (request: ExecuteRequest, host: HostBindings) => Promise<ExecuteResponse> | ExecuteResponse;
@@ -279,6 +308,18 @@ export function createMockHostBindings(overrides: Partial<HostBindings> = {}): H
         return [];
       },
     },
+    user: {
+      async getUser() {
+        return {
+          tenantId: 'tenant-mock',
+          clientName: 'Mock Client',
+          userId: 'user-mock',
+          userEmail: 'mock@example.com',
+          userName: 'Mock User',
+          userType: 'client',
+        };
+      },
+    },
   };
 
   const mergedUiProxy: UiProxyHost = {
@@ -319,6 +360,10 @@ export function createMockHostBindings(overrides: Partial<HostBindings> = {}): H
     scheduler: {
       ...defaultBindings.scheduler,
       ...overrides.scheduler,
+    },
+    user: {
+      ...defaultBindings.user,
+      ...overrides.user,
     },
   };
 }

@@ -245,6 +245,12 @@
       }
 
       // Success - display handler response
+      // Format user info for display
+      const userDisplay = data.user
+        ? `${data.user.userName} (${data.user.userEmail})`
+        : 'N/A';
+      const userTypeDisplay = data.user?.userType || 'N/A';
+
       if (handlerEl) {
         handlerEl.innerHTML = `
           <div class="result-box">
@@ -257,6 +263,14 @@
             <div class="result-row">
               <span class="result-label">Message</span>
               <span class="result-value">${data.message || 'N/A'}</span>
+            </div>
+            <div class="result-row">
+              <span class="result-label">Current User</span>
+              <span class="result-value">${userDisplay}</span>
+            </div>
+            <div class="result-row">
+              <span class="result-label">User Type</span>
+              <span class="result-value"><code>${userTypeDisplay}</code></span>
             </div>
             <div class="result-row">
               <span class="result-label">Portal Type</span>

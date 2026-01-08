@@ -46,6 +46,16 @@ async function processRequest(request: ExecuteRequest, host: HostBindings): Prom
     `[client-portal-test] request received tenant=${tenantId} extensionId=${extensionId} requestId=${requestId} method=${method} url=${url} configKeys=${configKeys.length} build=${BUILD_STAMP}`
   );
 
+  // Try to get user information
+  let user: { tenantId: string; clientName: string; userId: string; userEmail: string; userName: string; userType: string } | null = null;
+  try {
+    user = await host.user.getUser();
+    await safeLog(host, 'info', `[client-portal-test] user retrieved userId=${user.userId} userType=${user.userType}`);
+  } catch (err) {
+    const reason = err instanceof Error ? err.message : String(err);
+    await safeLog(host, 'warn', `[client-portal-test] failed to get user: ${reason}`);
+  }
+
   // Return information about the request context
   const response = jsonResponse({
     ok: true,
@@ -62,6 +72,13 @@ async function processRequest(request: ExecuteRequest, host: HostBindings): Prom
       path: url,
     },
     config: request.context.config ?? {},
+    user: user ? {
+      userId: user.userId,
+      userName: user.userName,
+      userEmail: user.userEmail,
+      userType: user.userType,
+      clientName: user.clientName,
+    } : null,
     build: BUILD_STAMP,
     timestamp: new Date().toISOString(),
   });
