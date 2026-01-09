@@ -47,7 +47,7 @@ export function GoogleIntegrationSettings() {
     } else if (res.config) {
       setProjectId(res.config.projectId || '');
       setGmailClientId(res.config.gmailClientId || '');
-      setUseSameForCalendar(res.config.usingSharedOAuthApp ?? true);
+      setUseSameForCalendar(res.config.usingSharedOAuthApp !== false);
       setCalendarClientId(res.config.calendarClientId || '');
     }
     setLoading(false);
