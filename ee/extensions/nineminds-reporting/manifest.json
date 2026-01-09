@@ -1,10 +1,19 @@
 {
   "name": "com.alga.ninemindsreporting",
   "publisher": "Nine Minds",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "runtime": "wasm-js@1",
   "capabilities": ["cap:context.read", "cap:log.emit", "cap:ui.proxy"],
-  "entry": "dist/main.wasm",
+  "settings": [
+    {
+      "key": "api_key",
+      "label": "API Key",
+      "description": "API key from the master billing tenant for accessing platform reports",
+      "type": "string",
+      "encrypted": true,
+      "required": true
+    }
+  ],
   "ui": {
     "type": "iframe",
     "entry": "ui/index.html",

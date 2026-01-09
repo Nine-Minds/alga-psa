@@ -1,6 +1,6 @@
 {
   "name": "@alga/nineminds-reporting",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "private": true,
   "type": "module",
   "description": "Nine Minds Reporting Extension - Fetch and display reporting data",
