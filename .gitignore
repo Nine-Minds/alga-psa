@@ -121,6 +121,9 @@ temp-values-*.yaml
 test-values-*.yaml
 *-temp.*
 *.temp.*
+*.backup
+*.db
+*_log.txt
 fix-*.sh
 fix-*.nu
 build.log
