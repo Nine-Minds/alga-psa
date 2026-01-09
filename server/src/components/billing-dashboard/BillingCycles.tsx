@@ -10,16 +10,18 @@ import { Info, Search } from 'lucide-react';
 import {
   getAllBillingCycles,
   updateBillingCycle,
-  canCreateNextBillingCycle,
+  getNextBillingCycleStatusForClients,
   createNextBillingCycle
 } from 'server/src/lib/actions/billingCycleActions';
-import { getAllClientsPaginated } from 'server/src/lib/actions/client-actions/clientActions';
-import { getClientContracts } from 'server/src/lib/actions/client-actions/clientContractActions';
+import { getAllClientsPaginated, getClientsWithBillingCycleRangePaginated } from 'server/src/lib/actions/client-actions/clientActions';
+import type { BillingCycleDateRange } from 'server/src/lib/actions/client-actions/clientActions';
+import { getActiveClientContractsByClientIds } from 'server/src/lib/actions/client-actions/clientContractActions';
 import { getContracts } from 'server/src/lib/actions/contractActions';
 import { BillingCycleType, IClient } from 'server/src/interfaces';
 import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
-import { IClientContract, IContract } from 'server/src/interfaces/contract.interfaces';
+import { IContract } from 'server/src/interfaces/contract.interfaces';
 import LoadingIndicator from 'server/src/components/ui/LoadingIndicator';
+import { DateRangePicker, type DateRange } from 'server/src/components/ui/DateRangePicker';
 
 const BILLING_CYCLE_OPTIONS: { value: BillingCycleType; label: string }[] = [
   { value: 'weekly', label: 'Weekly' },
@@ -29,6 +31,28 @@ const BILLING_CYCLE_OPTIONS: { value: BillingCycleType; label: string }[] = [
   { value: 'semi-annually', label: 'Semi-Annually' },
   { value: 'annually', label: 'Annually' },
 ];
+
+const getDefaultStartDate = () => {
+  const date = new Date();
+  date.setDate(date.getDate() - 7);
+  date.setHours(0, 0, 0, 0);
+  return date;
+};
+
+const buildDateRangeFilter = (range: DateRange): BillingCycleDateRange | undefined => {
+  if (!range.from && !range.to) {
+    return undefined;
+  }
+
+  const from = range.from
+    ? new Date(range.from.getFullYear(), range.from.getMonth(), range.from.getDate(), 0, 0, 0, 0).toISOString()
+    : undefined;
+  const to = range.to
+    ? new Date(range.to.getFullYear(), range.to.getMonth(), range.to.getDate(), 23, 59, 59, 999).toISOString()
+    : undefined;
+
+  return { from, to };
+};
 
 const BillingCycles: React.FC = () => {
   const [billingCycles, setBillingCycles] = useState<{ [clientId: string]: BillingCycleType }>({});
@@ -42,6 +66,14 @@ const BillingCycles: React.FC = () => {
   const [totalCount, setTotalCount] = useState<number>(0);
   const [sortBy, setSortBy] = useState<string>('client_name');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
+  const [pendingDateRange, setPendingDateRange] = useState<DateRange>(() => ({
+    from: getDefaultStartDate(),
+    to: undefined,
+  }));
+  const [appliedDateRange, setAppliedDateRange] = useState<DateRange>(() => ({
+    from: getDefaultStartDate(),
+    to: undefined,
+  }));
   const [cycleStatus, setCycleStatus] = useState<{
     [clientId: string]: {
       canCreate: boolean;
@@ -72,21 +104,34 @@ const BillingCycles: React.FC = () => {
 
   useEffect(() => {
     fetchData();
-  }, [currentPage, debouncedSearchTerm, sortBy, sortDirection]);
+  }, [currentPage, debouncedSearchTerm, sortBy, sortDirection, appliedDateRange]);
 
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [cycles, clientsResponse, allContracts] = await Promise.all([
-        getAllBillingCycles(),
-        getAllClientsPaginated({
+      const rangeFilter = buildDateRangeFilter(appliedDateRange);
+      const clientsPromise = rangeFilter
+        ? getClientsWithBillingCycleRangePaginated({
+          page: currentPage,
+          pageSize,
+          searchTerm: debouncedSearchTerm,
+          includeInactive: true,
+          sortBy,
+          sortDirection,
+          dateRange: rangeFilter
+        })
+        : getAllClientsPaginated({
           page: currentPage,
           pageSize,
           searchTerm: debouncedSearchTerm,
           includeInactive: true,
           sortBy,
           sortDirection
-        }),
+        });
+
+      const [cycles, clientsResponse, allContracts] = await Promise.all([
+        getAllBillingCycles(),
+        clientsPromise,
         getContracts()
       ]);
 
@@ -103,38 +148,37 @@ const BillingCycles: React.FC = () => {
       });
       setContracts(contractsMap);
 
-      // Fetch contracts for each client and check cycle creation status
-      const cycleCreationStatus: {
-        [clientId: string]: {
-          canCreate: boolean;
-          isEarly: boolean;
-          periodEndDate?: string;
-        }
-      } = {};
-      const clientContractsMap: { [clientId: string]: string } = {};
+      const clientIds = clientsResponse.clients
+        .map(client => client.client_id)
+        .filter((clientId): clientId is string => Boolean(clientId));
 
-      for (const client of clientsResponse.clients) {
-        if (client.client_id) {
-          // Fetch contract info
-          try {
-            const clientAssignedContracts = await getClientContracts(client.client_id);
-            // Get the active contract (if any)
-            const active = (clientAssignedContracts as unknown as IClientContract[]).find(c => c.is_active);
-            if (active && active.contract_id) {
-              clientContractsMap[client.client_id] = active.contract_id;
-            }
-          } catch (error) {
-            console.error(`Error fetching contracts for client ${client.client_id}:`, error);
-          }
-
-          // Check cycle creation status
-          const status = await canCreateNextBillingCycle(client.client_id);
-          cycleCreationStatus[client.client_id] = status;
-        }
+      if (clientIds.length === 0) {
+        setClientContracts({});
+        setCycleStatus({});
+        setError(null);
+        return;
       }
+
+      const [clientAssignedContracts, cycleCreationStatus] = await Promise.all([
+        getActiveClientContractsByClientIds(clientIds),
+        getNextBillingCycleStatusForClients(clientIds)
+      ]);
+
+      // Build active contract map per client (first by latest start date).
+      const clientContractsMap: { [clientId: string]: string } = {};
+      clientAssignedContracts.forEach(contract => {
+        if (!contract.client_id || !contract.contract_id) {
+          return;
+        }
+
+        if (!clientContractsMap[contract.client_id]) {
+          clientContractsMap[contract.client_id] = contract.contract_id;
+        }
+      });
 
       setClientContracts(clientContractsMap);
       setCycleStatus(cycleCreationStatus);
+
       setError(null);
     } catch (error) {
       console.error('Error fetching data:', error);
@@ -280,18 +324,37 @@ const BillingCycles: React.FC = () => {
 
       <Card>
         <CardHeader className="flex flex-col gap-4">
-          <div className="relative flex-1 max-w-md">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-            <Input
-              type="text"
-              placeholder="Search clients..."
-              value={searchTerm}
-              onChange={(e) => {
-                setSearchTerm(e.target.value);
-                setCurrentPage(1); // Reset to first page on new search
+          <div className="flex flex-wrap items-end gap-4">
+            <div className="relative flex-1 min-w-[240px] max-w-md">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <Input
+                type="text"
+                placeholder="Search clients..."
+                value={searchTerm}
+                onChange={(e) => {
+                  setSearchTerm(e.target.value);
+                  setCurrentPage(1);
+                }}
+                className="pl-10"
+              />
+            </div>
+            <DateRangePicker
+              label="Billing cycle date range"
+              value={pendingDateRange}
+              onChange={(range) => {
+                setPendingDateRange(range);
               }}
-              className="pl-10"
             />
+            <Button
+              id="apply-billing-cycle-date-filter"
+              variant="outline"
+              onClick={() => {
+                setAppliedDateRange(pendingDateRange);
+                setCurrentPage(1);
+              }}
+            >
+              Search
+            </Button>
           </div>
         </CardHeader>
         <CardContent>
