@@ -147,7 +147,7 @@ export default function ExtensionIframe({ domain, extensionId }: Props) {
   }, [isLoading]);
 
   return (
-    <div className="relative flex-1 w-full min-h-0 overflow-hidden" aria-busy={isLoading}>
+    <div className="relative flex-1 h-full w-full min-h-0 overflow-hidden" aria-busy={isLoading}>
       {isLoading && !hasError && (
         <div className="extension-loading-overlay" role="status">
           <LoadingIndicator
@@ -173,7 +173,7 @@ export default function ExtensionIframe({ domain, extensionId }: Props) {
         key={src}
         src={src}
         title="Extension App"
-        className={`absolute inset-0 border-0 transition-opacity duration-300 ${
+        className={`absolute inset-0 h-full w-full border-0 transition-opacity duration-300 ${
           isLoading ? 'opacity-0' : 'opacity-100'
         }`}
         sandbox="allow-scripts allow-forms allow-popups allow-same-origin"
