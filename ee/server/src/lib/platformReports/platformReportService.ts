@@ -315,7 +315,10 @@ export class PlatformReportService {
 
       // Build and execute the query
       const query = QueryBuilder.build(trx, metric.query, parameters);
-      const result = await query;
+      const rawResult = await query;
+
+      // Normalize result - raw SQL queries return { rows: [...] }, normal queries return [...]
+      const result = Array.isArray(rawResult) ? rawResult : (rawResult?.rows ?? []);
 
       // Handle different result types
       if (metric.query.aggregation) {
