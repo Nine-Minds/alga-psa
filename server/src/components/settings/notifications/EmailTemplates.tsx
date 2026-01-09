@@ -95,10 +95,11 @@ export function EmailTemplates() {
     setCurrentPage(1);
   };
 
-  // Reset to page 1 when categories expand/collapse or filters change
+  // Adjust page if current page is out of bounds after data changes (e.g., filtering)
+  // Only adjust when filters change, not when expanding/collapsing categories
   useEffect(() => {
     setCurrentPage(1);
-  }, [expandedCategories.size, selectedLanguages.size]);
+  }, [selectedLanguages.size]);
 
   // Get available languages from templates
   const availableLanguages = useMemo(() => {

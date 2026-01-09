@@ -97,7 +97,7 @@ function buildSurveyHtmlTemplate(copy) {
       <td align="center">
         <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="background-color:#ffffff;border-radius:12px;box-shadow:0 10px 30px rgba(15,23,42,0.08);overflow:hidden;">
           <tr>
-            <td style="background:linear-gradient(135deg,#6366f1,#8b5cf6);padding:28px 32px;color:#ffffff;">
+            <td style="background:linear-gradient(135deg,#8A4DEA,#40CFF9);padding:28px 32px;color:#ffffff;">
               <h1 style="margin:0;font-size:24px;font-weight:600;">${copy.subject}</h1>
               <p style="margin:8px 0 0 0;font-size:14px;opacity:0.85;">${copy.summary}</p>
               <p style="margin:8px 0 0 0;font-size:14px;opacity:0.85;">${copy.technicianLine}</p>

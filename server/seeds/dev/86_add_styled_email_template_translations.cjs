@@ -145,7 +145,7 @@ Si vous n'avez pas demandé cet email, veuillez l'ignorer.
       background-color: #f8fafc;
     }
     .header {
-      background: linear-gradient(135deg, #8a4dea 0%, #7c3aed 100%);
+      background: linear-gradient(135deg,#8A4DEA,#40CFF9);
       color: white;
       padding: 32px 24px;
       border-radius: 12px 12px 0 0;
@@ -453,7 +453,7 @@ Téléphone : {{clientLocationPhone}}
       notification_subtype_id: getSubtypeId('tenant-recovery'),
       html_content: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <h2 style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; text-align: center; margin: 0;">
+          <h2 style="background: linear-gradient(135deg,#8A4DEA,#40CFF9); color: white; padding: 30px; text-align: center; margin: 0;">
             {{platformName}}
           </h2>
           <div style="padding: 40px 30px;">
@@ -515,7 +515,7 @@ Ceci est un message automatisé. Veuillez ne pas répondre à cet e-mail.`
       notification_subtype_id: getSubtypeId('no-account-found'),
       html_content: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <h2 style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; text-align: center; margin: 0;">
+          <h2 style="background: linear-gradient(135deg,#8A4DEA,#40CFF9); color: white; padding: 30px; text-align: center; margin: 0;">
             {{platformName}}
           </h2>
           <div style="padding: 40px 30px;">
@@ -896,7 +896,7 @@ Voir le ticket: {{ticket.url}}
         <td align="center">
           <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="width:100%;max-width:600px;background:#ffffff;border-radius:16px;overflow:hidden;border:1px solid #e4ddff;box-shadow:0 12px 32px rgba(138,77,234,0.12);">
             <tr>
-              <td style="padding:32px;background:linear-gradient(135deg,#10b981,#059669);color:#ffffff;">
+              <td style="padding:32px;background:linear-gradient(135deg,#8A4DEA,#40CFF9);color:#ffffff;">
                 <div style="text-transform:uppercase;letter-spacing:0.08em;font-size:12px;font-weight:600;opacity:0.85;">Ticket Fermé</div>
                 <div style="font-size:22px;font-weight:600;margin-top:8px;">{{ticket.title}}</div>
                 <div style="margin-top:12px;font-size:14px;opacity:0.85;">{{ticket.metaLine}}</div>
@@ -906,13 +906,13 @@ Voir le ticket: {{ticket.url}}
               <td style="padding:28px 32px 20px 32px;">
                 <p style="margin:0 0 16px 0;font-size:15px;color:#1f2933;line-height:1.5;">Un ticket a été résolu et fermé pour <strong>{{ticket.clientName}}</strong>. Consultez les détails de la résolution ci-dessous.</p>
                 <div style="margin-bottom:24px;">
-                  <div style="display:inline-block;padding:6px 12px;border-radius:999px;background:rgba(16,185,129,0.12);color:#047857;font-size:12px;font-weight:600;letter-spacing:0.02em;">Ticket #{{ticket.id}}</div>
+                  <div style="display:inline-block;padding:6px 12px;border-radius:999px;background:rgba(138,77,234,0.12);color:#5b38b0;font-size:12px;font-weight:600;letter-spacing:0.02em;">Ticket #{{ticket.id}}</div>
                 </div>
                 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;font-size:14px;color:#1f2933;">
                   <tr>
                     <td style="padding:12px 0;border-bottom:1px solid #eef2ff;width:160px;font-weight:600;color:#475467;">Statut</td>
                     <td style="padding:12px 0;border-bottom:1px solid #eef2ff;">
-                      <span style="display:inline-block;padding:6px 12px;border-radius:999px;background-color:#10b981;color:#ffffff;font-weight:600;">Fermé</span>
+                      <span style="display:inline-block;padding:6px 12px;border-radius:999px;background-color:#8A4DEA;color:#ffffff;font-weight:600;">Fermé</span>
                     </td>
                   </tr>
                   <tr>
@@ -946,15 +946,15 @@ Voir le ticket: {{ticket.url}}
                     <td style="padding:12px 0;">{{ticket.locationSummary}}</td>
                   </tr>
                 </table>
-                <div style="margin:28px 0 16px 0;padding:18px 20px;border-radius:12px;background:#f0fdf4;border:1px solid #bbf7d0;">
-                  <div style="font-weight:600;color:#047857;margin-bottom:8px;">Résolution</div>
+                <div style="margin:28px 0 16px 0;padding:18px 20px;border-radius:12px;background:#f8f5ff;border:1px solid #e6deff;">
+                  <div style="font-weight:600;color:#5b38b0;margin-bottom:8px;">Résolution</div>
                   <div style="color:#475467;line-height:1.5;">{{ticket.resolution}}</div>
                 </div>
-                <a href="{{ticket.url}}" style="display:inline-block;background:#10b981;color:#ffffff;text-decoration:none;padding:12px 24px;border-radius:10px;font-weight:600;">Voir le Ticket</a>
+                <a href="{{ticket.url}}" style="display:inline-block;background:#8A4DEA;color:#ffffff;text-decoration:none;padding:12px 24px;border-radius:10px;font-weight:600;">Voir le Ticket</a>
               </td>
             </tr>
             <tr>
-              <td style="padding:18px 32px;background:#f0fdf4;color:#047857;font-size:12px;text-align:center;">Powered by Alga PSA • Gardons les équipes alignées</td>
+              <td style="padding:18px 32px;background:#f8f5ff;color:#5b38b0;font-size:12px;text-align:center;">Powered by Alga PSA • Gardons les équipes alignées</td>
             </tr>
           </table>
         </td>
@@ -1233,7 +1233,7 @@ Si no solicitaste este correo, por favor ignóralo.
       background-color: #f8fafc;
     }
     .header {
-      background: linear-gradient(135deg, #8a4dea 0%, #7c3aed 100%);
+      background: linear-gradient(135deg,#8A4DEA,#40CFF9);
       color: white;
       padding: 32px 24px;
       border-radius: 12px 12px 0 0;
@@ -1541,7 +1541,7 @@ Teléfono: {{clientLocationPhone}}
       notification_subtype_id: getSubtypeId('tenant-recovery'),
       html_content: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <h2 style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; text-align: center; margin: 0;">
+          <h2 style="background: linear-gradient(135deg,#8A4DEA,#40CFF9); color: white; padding: 30px; text-align: center; margin: 0;">
             {{platformName}}
           </h2>
           <div style="padding: 40px 30px;">
@@ -1603,7 +1603,7 @@ Este es un mensaje automático. Por favor no respondas a este correo.`
       notification_subtype_id: getSubtypeId('no-account-found'),
       html_content: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <h2 style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; text-align: center; margin: 0;">
+          <h2 style="background: linear-gradient(135deg,#8A4DEA,#40CFF9); color: white; padding: 30px; text-align: center; margin: 0;">
             {{platformName}}
           </h2>
           <div style="padding: 40px 30px;">
@@ -1984,7 +1984,7 @@ Ver ticket: {{ticket.url}}
         <td align="center">
           <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="width:100%;max-width:600px;background:#ffffff;border-radius:16px;overflow:hidden;border:1px solid #e4ddff;box-shadow:0 12px 32px rgba(138,77,234,0.12);">
             <tr>
-              <td style="padding:32px;background:linear-gradient(135deg,#10b981,#059669);color:#ffffff;">
+              <td style="padding:32px;background:linear-gradient(135deg,#8A4DEA,#40CFF9);color:#ffffff;">
                 <div style="text-transform:uppercase;letter-spacing:0.08em;font-size:12px;font-weight:600;opacity:0.85;">Ticket Cerrado</div>
                 <div style="font-size:22px;font-weight:600;margin-top:8px;">{{ticket.title}}</div>
                 <div style="margin-top:12px;font-size:14px;opacity:0.85;">{{ticket.metaLine}}</div>
@@ -1994,13 +1994,13 @@ Ver ticket: {{ticket.url}}
               <td style="padding:28px 32px 20px 32px;">
                 <p style="margin:0 0 16px 0;font-size:15px;color:#1f2933;line-height:1.5;">Se ha resuelto y cerrado un ticket para <strong>{{ticket.clientName}}</strong>. Revisa los detalles de la resolución a continuación.</p>
                 <div style="margin-bottom:24px;">
-                  <div style="display:inline-block;padding:6px 12px;border-radius:999px;background:rgba(16,185,129,0.12);color:#047857;font-size:12px;font-weight:600;letter-spacing:0.02em;">Ticket #{{ticket.id}}</div>
+                  <div style="display:inline-block;padding:6px 12px;border-radius:999px;background:rgba(138,77,234,0.12);color:#5b38b0;font-size:12px;font-weight:600;letter-spacing:0.02em;">Ticket #{{ticket.id}}</div>
                 </div>
                 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;font-size:14px;color:#1f2933;">
                   <tr>
                     <td style="padding:12px 0;border-bottom:1px solid #eef2ff;width:160px;font-weight:600;color:#475467;">Estado</td>
                     <td style="padding:12px 0;border-bottom:1px solid #eef2ff;">
-                      <span style="display:inline-block;padding:6px 12px;border-radius:999px;background-color:#10b981;color:#ffffff;font-weight:600;">Cerrado</span>
+                      <span style="display:inline-block;padding:6px 12px;border-radius:999px;background-color:#8A4DEA;color:#ffffff;font-weight:600;">Cerrado</span>
                     </td>
                   </tr>
                   <tr>
@@ -2034,15 +2034,15 @@ Ver ticket: {{ticket.url}}
                     <td style="padding:12px 0;">{{ticket.locationSummary}}</td>
                   </tr>
                 </table>
-                <div style="margin:28px 0 16px 0;padding:18px 20px;border-radius:12px;background:#f0fdf4;border:1px solid #bbf7d0;">
-                  <div style="font-weight:600;color:#047857;margin-bottom:8px;">Resolución</div>
+                <div style="margin:28px 0 16px 0;padding:18px 20px;border-radius:12px;background:#f8f5ff;border:1px solid #e6deff;">
+                  <div style="font-weight:600;color:#5b38b0;margin-bottom:8px;">Resolución</div>
                   <div style="color:#475467;line-height:1.5;">{{ticket.resolution}}</div>
                 </div>
-                <a href="{{ticket.url}}" style="display:inline-block;background:#10b981;color:#ffffff;text-decoration:none;padding:12px 24px;border-radius:10px;font-weight:600;">Ver Ticket</a>
+                <a href="{{ticket.url}}" style="display:inline-block;background:#8A4DEA;color:#ffffff;text-decoration:none;padding:12px 24px;border-radius:10px;font-weight:600;">Ver Ticket</a>
               </td>
             </tr>
             <tr>
-              <td style="padding:18px 32px;background:#f0fdf4;color:#047857;font-size:12px;text-align:center;">Powered by Alga PSA • Manteniendo a los equipos alineados</td>
+              <td style="padding:18px 32px;background:#f8f5ff;color:#5b38b0;font-size:12px;text-align:center;">Powered by Alga PSA • Manteniendo a los equipos alineados</td>
             </tr>
           </table>
         </td>
@@ -2321,7 +2321,7 @@ Wenn Sie diese E-Mail nicht angefordert haben, ignorieren Sie sie bitte.
       background-color: #f8fafc;
     }
     .header {
-      background: linear-gradient(135deg, #8a4dea 0%, #7c3aed 100%);
+      background: linear-gradient(135deg,#8A4DEA,#40CFF9);
       color: white;
       padding: 32px 24px;
       border-radius: 12px 12px 0 0;
@@ -2629,7 +2629,7 @@ Telefon: {{clientLocationPhone}}
       notification_subtype_id: getSubtypeId('tenant-recovery'),
       html_content: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <h2 style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; text-align: center; margin: 0;">
+          <h2 style="background: linear-gradient(135deg,#8A4DEA,#40CFF9); color: white; padding: 30px; text-align: center; margin: 0;">
             {{platformName}}
           </h2>
           <div style="padding: 40px 30px;">
@@ -2691,7 +2691,7 @@ Dies ist eine automatisierte Nachricht. Bitte antworten Sie nicht auf diese E-Ma
       notification_subtype_id: getSubtypeId('no-account-found'),
       html_content: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <h2 style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; text-align: center; margin: 0;">
+          <h2 style="background: linear-gradient(135deg,#8A4DEA,#40CFF9); color: white; padding: 30px; text-align: center; margin: 0;">
             {{platformName}}
           </h2>
           <div style="padding: 40px 30px;">
@@ -3072,7 +3072,7 @@ Ticket anzeigen: {{ticket.url}}
         <td align="center">
           <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="width:100%;max-width:600px;background:#ffffff;border-radius:16px;overflow:hidden;border:1px solid #e4ddff;box-shadow:0 12px 32px rgba(138,77,234,0.12);">
             <tr>
-              <td style="padding:32px;background:linear-gradient(135deg,#10b981,#059669);color:#ffffff;">
+              <td style="padding:32px;background:linear-gradient(135deg,#8A4DEA,#40CFF9);color:#ffffff;">
                 <div style="text-transform:uppercase;letter-spacing:0.08em;font-size:12px;font-weight:600;opacity:0.85;">Ticket Geschlossen</div>
                 <div style="font-size:22px;font-weight:600;margin-top:8px;">{{ticket.title}}</div>
                 <div style="margin-top:12px;font-size:14px;opacity:0.85;">{{ticket.metaLine}}</div>
@@ -3082,13 +3082,13 @@ Ticket anzeigen: {{ticket.url}}
               <td style="padding:28px 32px 20px 32px;">
                 <p style="margin:0 0 16px 0;font-size:15px;color:#1f2933;line-height:1.5;">Ein Ticket wurde für <strong>{{ticket.clientName}}</strong> gelöst und geschlossen. Überprüfen Sie die Lösungsdetails unten.</p>
                 <div style="margin-bottom:24px;">
-                  <div style="display:inline-block;padding:6px 12px;border-radius:999px;background:rgba(16,185,129,0.12);color:#047857;font-size:12px;font-weight:600;letter-spacing:0.02em;">Ticket #{{ticket.id}}</div>
+                  <div style="display:inline-block;padding:6px 12px;border-radius:999px;background:rgba(138,77,234,0.12);color:#5b38b0;font-size:12px;font-weight:600;letter-spacing:0.02em;">Ticket #{{ticket.id}}</div>
                 </div>
                 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;font-size:14px;color:#1f2933;">
                   <tr>
                     <td style="padding:12px 0;border-bottom:1px solid #eef2ff;width:160px;font-weight:600;color:#475467;">Status</td>
                     <td style="padding:12px 0;border-bottom:1px solid #eef2ff;">
-                      <span style="display:inline-block;padding:6px 12px;border-radius:999px;background-color:#10b981;color:#ffffff;font-weight:600;">Geschlossen</span>
+                      <span style="display:inline-block;padding:6px 12px;border-radius:999px;background-color:#8A4DEA;color:#ffffff;font-weight:600;">Geschlossen</span>
                     </td>
                   </tr>
                   <tr>
@@ -3122,15 +3122,15 @@ Ticket anzeigen: {{ticket.url}}
                     <td style="padding:12px 0;">{{ticket.locationSummary}}</td>
                   </tr>
                 </table>
-                <div style="margin:28px 0 16px 0;padding:18px 20px;border-radius:12px;background:#f0fdf4;border:1px solid #bbf7d0;">
-                  <div style="font-weight:600;color:#047857;margin-bottom:8px;">Lösung</div>
+                <div style="margin:28px 0 16px 0;padding:18px 20px;border-radius:12px;background:#f8f5ff;border:1px solid #e6deff;">
+                  <div style="font-weight:600;color:#5b38b0;margin-bottom:8px;">Lösung</div>
                   <div style="color:#475467;line-height:1.5;">{{ticket.resolution}}</div>
                 </div>
-                <a href="{{ticket.url}}" style="display:inline-block;background:#10b981;color:#ffffff;text-decoration:none;padding:12px 24px;border-radius:10px;font-weight:600;">Ticket Anzeigen</a>
+                <a href="{{ticket.url}}" style="display:inline-block;background:#8A4DEA;color:#ffffff;text-decoration:none;padding:12px 24px;border-radius:10px;font-weight:600;">Ticket Anzeigen</a>
               </td>
             </tr>
             <tr>
-              <td style="padding:18px 32px;background:#f0fdf4;color:#047857;font-size:12px;text-align:center;">Powered by Alga PSA • Teams auf Kurs halten</td>
+              <td style="padding:18px 32px;background:#f8f5ff;color:#5b38b0;font-size:12px;text-align:center;">Powered by Alga PSA • Teams auf Kurs halten</td>
             </tr>
           </table>
         </td>
@@ -3409,7 +3409,7 @@ Als u deze e-mail niet heeft aangevraagd, kunt u deze negeren.
       background-color: #f8fafc;
     }
     .header {
-      background: linear-gradient(135deg, #8a4dea 0%, #7c3aed 100%);
+      background: linear-gradient(135deg,#8A4DEA,#40CFF9);
       color: white;
       padding: 32px 24px;
       border-radius: 12px 12px 0 0;
@@ -3717,7 +3717,7 @@ Telefoon: {{clientLocationPhone}}
       notification_subtype_id: getSubtypeId('tenant-recovery'),
       html_content: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <h2 style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; text-align: center; margin: 0;">
+          <h2 style="background: linear-gradient(135deg,#8A4DEA,#40CFF9); color: white; padding: 30px; text-align: center; margin: 0;">
             {{platformName}}
           </h2>
           <div style="padding: 40px 30px;">
@@ -3779,7 +3779,7 @@ Dit is een geautomatiseerd bericht. Reageer alstublieft niet op deze e-mail.`
       notification_subtype_id: getSubtypeId('no-account-found'),
       html_content: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <h2 style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; text-align: center; margin: 0;">
+          <h2 style="background: linear-gradient(135deg,#8A4DEA,#40CFF9); color: white; padding: 30px; text-align: center; margin: 0;">
             {{platformName}}
           </h2>
           <div style="padding: 40px 30px;">
@@ -4160,7 +4160,7 @@ Ticket bekijken: {{ticket.url}}
         <td align="center">
           <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="width:100%;max-width:600px;background:#ffffff;border-radius:16px;overflow:hidden;border:1px solid #e4ddff;box-shadow:0 12px 32px rgba(138,77,234,0.12);">
             <tr>
-              <td style="padding:32px;background:linear-gradient(135deg,#10b981,#059669);color:#ffffff;">
+              <td style="padding:32px;background:linear-gradient(135deg,#8A4DEA,#40CFF9);color:#ffffff;">
                 <div style="text-transform:uppercase;letter-spacing:0.08em;font-size:12px;font-weight:600;opacity:0.85;">Ticket Gesloten</div>
                 <div style="font-size:22px;font-weight:600;margin-top:8px;">{{ticket.title}}</div>
                 <div style="margin-top:12px;font-size:14px;opacity:0.85;">{{ticket.metaLine}}</div>
@@ -4170,13 +4170,13 @@ Ticket bekijken: {{ticket.url}}
               <td style="padding:28px 32px 20px 32px;">
                 <p style="margin:0 0 16px 0;font-size:15px;color:#1f2933;line-height:1.5;">Een ticket is opgelost en gesloten voor <strong>{{ticket.clientName}}</strong>. Bekijk de oplossingsdetails hieronder.</p>
                 <div style="margin-bottom:24px;">
-                  <div style="display:inline-block;padding:6px 12px;border-radius:999px;background:rgba(16,185,129,0.12);color:#047857;font-size:12px;font-weight:600;letter-spacing:0.02em;">Ticket #{{ticket.id}}</div>
+                  <div style="display:inline-block;padding:6px 12px;border-radius:999px;background:rgba(138,77,234,0.12);color:#5b38b0;font-size:12px;font-weight:600;letter-spacing:0.02em;">Ticket #{{ticket.id}}</div>
                 </div>
                 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;font-size:14px;color:#1f2933;">
                   <tr>
                     <td style="padding:12px 0;border-bottom:1px solid #eef2ff;width:160px;font-weight:600;color:#475467;">Status</td>
                     <td style="padding:12px 0;border-bottom:1px solid #eef2ff;">
-                      <span style="display:inline-block;padding:6px 12px;border-radius:999px;background-color:#10b981;color:#ffffff;font-weight:600;">Gesloten</span>
+                      <span style="display:inline-block;padding:6px 12px;border-radius:999px;background-color:#8A4DEA;color:#ffffff;font-weight:600;">Gesloten</span>
                     </td>
                   </tr>
                   <tr>
@@ -4210,15 +4210,15 @@ Ticket bekijken: {{ticket.url}}
                     <td style="padding:12px 0;">{{ticket.locationSummary}}</td>
                   </tr>
                 </table>
-                <div style="margin:28px 0 16px 0;padding:18px 20px;border-radius:12px;background:#f0fdf4;border:1px solid #bbf7d0;">
-                  <div style="font-weight:600;color:#047857;margin-bottom:8px;">Oplossing</div>
+                <div style="margin:28px 0 16px 0;padding:18px 20px;border-radius:12px;background:#f8f5ff;border:1px solid #e6deff;">
+                  <div style="font-weight:600;color:#5b38b0;margin-bottom:8px;">Oplossing</div>
                   <div style="color:#475467;line-height:1.5;">{{ticket.resolution}}</div>
                 </div>
-                <a href="{{ticket.url}}" style="display:inline-block;background:#10b981;color:#ffffff;text-decoration:none;padding:12px 24px;border-radius:10px;font-weight:600;">Ticket Bekijken</a>
+                <a href="{{ticket.url}}" style="display:inline-block;background:#8A4DEA;color:#ffffff;text-decoration:none;padding:12px 24px;border-radius:10px;font-weight:600;">Ticket Bekijken</a>
               </td>
             </tr>
             <tr>
-              <td style="padding:18px 32px;background:#f0fdf4;color:#047857;font-size:12px;text-align:center;">Powered by Alga PSA • Teams op één lijn houden</td>
+              <td style="padding:18px 32px;background:#f8f5ff;color:#5b38b0;font-size:12px;text-align:center;">Powered by Alga PSA • Teams op één lijn houden</td>
             </tr>
           </table>
         </td>
@@ -4497,7 +4497,7 @@ Se non hai richiesto questa email, ignorala pure.
       background-color: #f8fafc;
     }
     .header {
-      background: linear-gradient(135deg, #8a4dea 0%, #7c3aed 100%);
+      background: linear-gradient(135deg,#8A4DEA,#40CFF9);
       color: white;
       padding: 32px 24px;
       border-radius: 12px 12px 0 0;
@@ -4805,7 +4805,7 @@ Telefono: {{clientLocationPhone}}
       notification_subtype_id: getSubtypeId('tenant-recovery'),
       html_content: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <h2 style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; text-align: center; margin: 0;">
+          <h2 style="background: linear-gradient(135deg,#8A4DEA,#40CFF9); color: white; padding: 30px; text-align: center; margin: 0;">
             {{platformName}}
           </h2>
           <div style="padding: 40px 30px;">
@@ -4867,7 +4867,7 @@ Questo è un messaggio automatico. Non rispondere a questa email.`
       notification_subtype_id: getSubtypeId('no-account-found'),
       html_content: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <h2 style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; text-align: center; margin: 0;">
+          <h2 style="background: linear-gradient(135deg,#8A4DEA,#40CFF9); color: white; padding: 30px; text-align: center; margin: 0;">
             {{platformName}}
           </h2>
           <div style="padding: 40px 30px;">
@@ -5248,7 +5248,7 @@ Apri ticket: {{ticket.url}}
         <td align="center">
           <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="width:100%;max-width:600px;background:#ffffff;border-radius:16px;overflow:hidden;border:1px solid #e4ddff;box-shadow:0 12px 32px rgba(138,77,234,0.12);">
             <tr>
-              <td style="padding:32px;background:linear-gradient(135deg,#10b981,#059669);color:#ffffff;">
+              <td style="padding:32px;background:linear-gradient(135deg,#8A4DEA,#40CFF9);color:#ffffff;">
                 <div style="text-transform:uppercase;letter-spacing:0.08em;font-size:12px;font-weight:600;opacity:0.85;">Ticket chiuso</div>
                 <div style="font-size:22px;font-weight:600;margin-top:8px;">{{ticket.title}}</div>
                 <div style="margin-top:12px;font-size:14px;opacity:0.85;">{{ticket.metaLine}}</div>
@@ -5258,13 +5258,13 @@ Apri ticket: {{ticket.url}}
               <td style="padding:28px 32px 20px 32px;">
                 <p style="margin:0 0 16px 0;font-size:15px;color:#1f2933;line-height:1.5;">È stato risolto e chiuso un ticket per <strong>{{ticket.clientName}}</strong>. Consulta i dettagli della risoluzione di seguito.</p>
                 <div style="margin-bottom:24px;">
-                  <div style="display:inline-block;padding:6px 12px;border-radius:999px;background:rgba(16,185,129,0.12);color:#047857;font-size:12px;font-weight:600;letter-spacing:0.02em;">Ticket #{{ticket.id}}</div>
+                  <div style="display:inline-block;padding:6px 12px;border-radius:999px;background:rgba(138,77,234,0.12);color:#5b38b0;font-size:12px;font-weight:600;letter-spacing:0.02em;">Ticket #{{ticket.id}}</div>
                 </div>
                 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;font-size:14px;color:#1f2933;">
                   <tr>
                     <td style="padding:12px 0;border-bottom:1px solid #eef2ff;width:160px;font-weight:600;color:#475467;">Stato</td>
                     <td style="padding:12px 0;border-bottom:1px solid #eef2ff;">
-                      <span style="display:inline-block;padding:6px 12px;border-radius:999px;background-color:#10b981;color:#ffffff;font-weight:600;">Chiuso</span>
+                      <span style="display:inline-block;padding:6px 12px;border-radius:999px;background-color:#8A4DEA;color:#ffffff;font-weight:600;">Chiuso</span>
                     </td>
                   </tr>
                   <tr>
@@ -5298,15 +5298,15 @@ Apri ticket: {{ticket.url}}
                     <td style="padding:12px 0;">{{ticket.locationSummary}}</td>
                   </tr>
                 </table>
-                <div style="margin:28px 0 16px 0;padding:18px 20px;border-radius:12px;background:#f0fdf4;border:1px solid #bbf7d0;">
-                  <div style="font-weight:600;color:#047857;margin-bottom:8px;">Risoluzione</div>
+                <div style="margin:28px 0 16px 0;padding:18px 20px;border-radius:12px;background:#f8f5ff;border:1px solid #e6deff;">
+                  <div style="font-weight:600;color:#5b38b0;margin-bottom:8px;">Risoluzione</div>
                   <div style="color:#475467;line-height:1.5;">{{ticket.resolution}}</div>
                 </div>
-                <a href="{{ticket.url}}" style="display:inline-block;background:#10b981;color:#ffffff;text-decoration:none;padding:12px 24px;border-radius:10px;font-weight:600;">Apri ticket</a>
+                <a href="{{ticket.url}}" style="display:inline-block;background:#8A4DEA;color:#ffffff;text-decoration:none;padding:12px 24px;border-radius:10px;font-weight:600;">Apri ticket</a>
               </td>
             </tr>
             <tr>
-              <td style="padding:18px 32px;background:#f0fdf4;color:#047857;font-size:12px;text-align:center;">Powered by Alga PSA • Manteniamo i team allineati</td>
+              <td style="padding:18px 32px;background:#f8f5ff;color:#5b38b0;font-size:12px;text-align:center;">Powered by Alga PSA • Manteniamo i team allineati</td>
             </tr>
           </table>
         </td>
@@ -5563,7 +5563,7 @@ Apri la fattura: {{invoice.url}}
       box-shadow: 0 4px 6px rgba(0, 0, 0, 0.07);
     }
     .header {
-      background: linear-gradient(135deg, #8a4dea 0%, #7c3aed 100%);
+      background: linear-gradient(135deg,#8A4DEA,#40CFF9);
       color: white;
       padding: 32px 24px;
       text-align: center;
@@ -5913,7 +5913,7 @@ Si vous avez des questions ou si vous devez apporter des modifications à votre 
       box-shadow: 0 4px 6px rgba(0, 0, 0, 0.07);
     }
     .header {
-      background: linear-gradient(135deg, #8a4dea 0%, #7c3aed 100%);
+      background: linear-gradient(135deg,#8A4DEA,#40CFF9);
       color: white;
       padding: 32px 24px;
       text-align: center;
@@ -6287,7 +6287,7 @@ Nous vous enverrons un rappel avant votre rendez-vous. À bientôt !`
       box-shadow: 0 4px 6px rgba(0, 0, 0, 0.07);
     }
     .header {
-      background: linear-gradient(135deg, #8a4dea 0%, #7c3aed 100%);
+      background: linear-gradient(135deg,#8A4DEA,#40CFF9);
       color: white;
       padding: 32px 24px;
       text-align: center;
@@ -6643,7 +6643,7 @@ Si vous avez des questions ou si vous souhaitez de l'aide pour trouver un créne
       box-shadow: 0 4px 6px rgba(0, 0, 0, 0.07);
     }
     .header {
-      background: linear-gradient(135deg, #8a4dea 0%, #7c3aed 100%);
+      background: linear-gradient(135deg,#8A4DEA,#40CFF9);
       color: white;
       padding: 32px 24px;
       text-align: center;
@@ -7031,7 +7031,7 @@ Examiner et répondre : {{reviewLink}}`
       box-shadow: 0 4px 6px rgba(0, 0, 0, 0.07);
     }
     .header {
-      background: linear-gradient(135deg, #8a4dea 0%, #7c3aed 100%);
+      background: linear-gradient(135deg,#8A4DEA,#40CFF9);
       color: white;
       padding: 32px 24px;
       text-align: center;
@@ -7381,7 +7381,7 @@ Si tiene alguna pregunta o necesita realizar cambios en su solicitud, por favor 
       box-shadow: 0 4px 6px rgba(0, 0, 0, 0.07);
     }
     .header {
-      background: linear-gradient(135deg, #8a4dea 0%, #7c3aed 100%);
+      background: linear-gradient(135deg,#8A4DEA,#40CFF9);
       color: white;
       padding: 32px 24px;
       text-align: center;
@@ -7755,7 +7755,7 @@ Le enviaremos un recordatorio antes de su cita. ¡Hasta pronto!`
       box-shadow: 0 4px 6px rgba(0, 0, 0, 0.07);
     }
     .header {
-      background: linear-gradient(135deg, #8a4dea 0%, #7c3aed 100%);
+      background: linear-gradient(135deg,#8A4DEA,#40CFF9);
       color: white;
       padding: 32px 24px;
       text-align: center;
@@ -8111,7 +8111,7 @@ Si tiene alguna pregunta o desea ayuda para encontrar un horario disponible, no 
       box-shadow: 0 4px 6px rgba(0, 0, 0, 0.07);
     }
     .header {
-      background: linear-gradient(135deg, #8a4dea 0%, #7c3aed 100%);
+      background: linear-gradient(135deg,#8A4DEA,#40CFF9);
       color: white;
       padding: 32px 24px;
       text-align: center;
@@ -8499,7 +8499,7 @@ Revisar y responder: {{reviewLink}}`
       box-shadow: 0 4px 6px rgba(0, 0, 0, 0.07);
     }
     .header {
-      background: linear-gradient(135deg, #8a4dea 0%, #7c3aed 100%);
+      background: linear-gradient(135deg,#8A4DEA,#40CFF9);
       color: white;
       padding: 32px 24px;
       text-align: center;
@@ -8849,7 +8849,7 @@ Wenn Sie Fragen haben oder Änderungen an Ihrer Anfrage vornehmen möchten, kont
       box-shadow: 0 4px 6px rgba(0, 0, 0, 0.07);
     }
     .header {
-      background: linear-gradient(135deg, #8a4dea 0%, #7c3aed 100%);
+      background: linear-gradient(135deg,#8A4DEA,#40CFF9);
       color: white;
       padding: 32px 24px;
       text-align: center;
@@ -9223,7 +9223,7 @@ Wir senden Ihnen vor Ihrem Termin eine Erinnerung. Bis bald!`
       box-shadow: 0 4px 6px rgba(0, 0, 0, 0.07);
     }
     .header {
-      background: linear-gradient(135deg, #8a4dea 0%, #7c3aed 100%);
+      background: linear-gradient(135deg,#8A4DEA,#40CFF9);
       color: white;
       padding: 32px 24px;
       text-align: center;
@@ -9579,7 +9579,7 @@ Wenn Sie Fragen haben oder Hilfe bei der Suche nach einem verfügbaren Zeitfenst
       box-shadow: 0 4px 6px rgba(0, 0, 0, 0.07);
     }
     .header {
-      background: linear-gradient(135deg, #8a4dea 0%, #7c3aed 100%);
+      background: linear-gradient(135deg,#8A4DEA,#40CFF9);
       color: white;
       padding: 32px 24px;
       text-align: center;
@@ -9967,7 +9967,7 @@ Prüfen und antworten: {{reviewLink}}`
       box-shadow: 0 4px 6px rgba(0, 0, 0, 0.07);
     }
     .header {
-      background: linear-gradient(135deg, #8a4dea 0%, #7c3aed 100%);
+      background: linear-gradient(135deg,#8A4DEA,#40CFF9);
       color: white;
       padding: 32px 24px;
       text-align: center;
@@ -10317,7 +10317,7 @@ Als u vragen heeft of wijzigingen in uw verzoek wilt aanbrengen, neem dan contac
       box-shadow: 0 4px 6px rgba(0, 0, 0, 0.07);
     }
     .header {
-      background: linear-gradient(135deg, #8a4dea 0%, #7c3aed 100%);
+      background: linear-gradient(135deg,#8A4DEA,#40CFF9);
       color: white;
       padding: 32px 24px;
       text-align: center;
@@ -10691,7 +10691,7 @@ We sturen u een herinnering voordat uw afspraak plaatsvindt. Tot snel!`
       box-shadow: 0 4px 6px rgba(0, 0, 0, 0.07);
     }
     .header {
-      background: linear-gradient(135deg, #8a4dea 0%, #7c3aed 100%);
+      background: linear-gradient(135deg,#8A4DEA,#40CFF9);
       color: white;
       padding: 32px 24px;
       text-align: center;
@@ -11047,7 +11047,7 @@ Als u vragen heeft of hulp nodig heeft bij het vinden van een beschikbaar tijdsl
       box-shadow: 0 4px 6px rgba(0, 0, 0, 0.07);
     }
     .header {
-      background: linear-gradient(135deg, #8a4dea 0%, #7c3aed 100%);
+      background: linear-gradient(135deg,#8A4DEA,#40CFF9);
       color: white;
       padding: 32px 24px;
       text-align: center;
@@ -11435,7 +11435,7 @@ Beoordelen en reageren: {{reviewLink}}`
       box-shadow: 0 4px 6px rgba(0, 0, 0, 0.07);
     }
     .header {
-      background: linear-gradient(135deg, #8a4dea 0%, #7c3aed 100%);
+      background: linear-gradient(135deg,#8A4DEA,#40CFF9);
       color: white;
       padding: 32px 24px;
       text-align: center;
@@ -11785,7 +11785,7 @@ Se hai domande o desideri apportare modifiche alla tua richiesta, contattaci all
       box-shadow: 0 4px 6px rgba(0, 0, 0, 0.07);
     }
     .header {
-      background: linear-gradient(135deg, #8a4dea 0%, #7c3aed 100%);
+      background: linear-gradient(135deg,#8A4DEA,#40CFF9);
       color: white;
       padding: 32px 24px;
       text-align: center;
@@ -12159,7 +12159,7 @@ Ti invieremo un promemoria prima del tuo appuntamento. A presto!`
       box-shadow: 0 4px 6px rgba(0, 0, 0, 0.07);
     }
     .header {
-      background: linear-gradient(135deg, #8a4dea 0%, #7c3aed 100%);
+      background: linear-gradient(135deg,#8A4DEA,#40CFF9);
       color: white;
       padding: 32px 24px;
       text-align: center;
@@ -12515,7 +12515,7 @@ Se hai domande o desideri assistenza per trovare una fascia oraria disponibile, 
       box-shadow: 0 4px 6px rgba(0, 0, 0, 0.07);
     }
     .header {
-      background: linear-gradient(135deg, #8a4dea 0%, #7c3aed 100%);
+      background: linear-gradient(135deg,#8A4DEA,#40CFF9);
       color: white;
       padding: 32px 24px;
       text-align: center;
