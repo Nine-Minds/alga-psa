@@ -118,6 +118,16 @@ export function GoogleIntegrationSettings() {
               <ExternalLink className="h-3 w-3 mr-1" />
               Google Cloud Console
             </Button>
+            <Button
+              id="google-cloud-docs-link"
+              type="button"
+              variant="link"
+              className="ml-3 p-0 h-auto"
+              onClick={() => window.open('https://nineminds.com/documentation?doc=1014-google-cloud-connector-settings', '_blank')}
+            >
+              <ExternalLink className="h-3 w-3 mr-1" />
+              Setup guide
+            </Button>
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
