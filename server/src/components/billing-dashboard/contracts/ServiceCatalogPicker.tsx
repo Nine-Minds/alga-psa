@@ -9,6 +9,67 @@ type ItemKind = 'service' | 'product';
 
 export type ServiceCatalogPickerItem = CatalogPickerItem;
 
+// Module-level cache for request deduplication across ServiceCatalogPicker instances.
+// This prevents N+1 API calls when multiple pickers with the same filters are rendered.
+// Cache entries expire after 30 seconds to ensure freshness.
+interface CacheEntry {
+  promise: Promise<{ items: CatalogPickerItem[]; totalCount: number }>;
+  timestamp: number;
+}
+const requestCache = new Map<string, CacheEntry>();
+const CACHE_TTL_MS = 30000; // 30 seconds
+
+function getCacheKey(params: {
+  search: string;
+  page: number;
+  limit: number;
+  is_active?: boolean;
+  billing_methods?: BillingMethod[];
+  item_kinds?: ItemKind[];
+}): string {
+  return JSON.stringify({
+    search: params.search,
+    page: params.page,
+    limit: params.limit,
+    is_active: params.is_active,
+    billing_methods: params.billing_methods?.sort(),
+    item_kinds: params.item_kinds?.sort(),
+  });
+}
+
+function getCachedOrFetch(params: {
+  search: string;
+  page: number;
+  limit: number;
+  is_active?: boolean;
+  billing_methods?: BillingMethod[];
+  item_kinds?: ItemKind[];
+}): Promise<{ items: CatalogPickerItem[]; totalCount: number }> {
+  const cacheKey = getCacheKey(params);
+  const now = Date.now();
+
+  // Check for valid cached entry
+  const cached = requestCache.get(cacheKey);
+  if (cached && now - cached.timestamp < CACHE_TTL_MS) {
+    return cached.promise;
+  }
+
+  // Create new request and cache it
+  const promise = searchServiceCatalogForPicker(params);
+  requestCache.set(cacheKey, { promise, timestamp: now });
+
+  // Clean up old cache entries periodically
+  if (requestCache.size > 50) {
+    for (const [key, entry] of requestCache) {
+      if (now - entry.timestamp >= CACHE_TTL_MS) {
+        requestCache.delete(key);
+      }
+    }
+  }
+
+  return promise;
+}
+
 interface ServiceCatalogPickerProps {
   value: string;
   selectedLabel?: string;
@@ -42,7 +103,8 @@ export function ServiceCatalogPicker({
 
   const loadOptions = useCallback(
     async ({ search, page, limit }: { search: string; page: number; limit: number }) => {
-      const result = await searchServiceCatalogForPicker({
+      // Use cached request to prevent N+1 API calls when multiple pickers have same filters
+      const result = await getCachedOrFetch({
         search,
         page,
         limit,
