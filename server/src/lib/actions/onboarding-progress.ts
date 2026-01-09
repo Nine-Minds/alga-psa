@@ -5,13 +5,10 @@ import { getAdminConnection } from '@shared/db/admin';
 import { getCurrentTenantId } from '@/lib/db';
 import { getConnection } from '@/lib/db/db';
 import { getPortalDomainStatusAction } from '@/lib/actions/tenant-actions/portalDomainActions';
-import type { ImportJobRecord } from '@/types/imports.types';
 import type { CalendarProviderConfig } from '@/interfaces/calendar.interfaces';
-import type { PortalDomainStatusResponse } from '@/lib/actions/tenant-actions/portalDomain.types';
 import {
   deriveParentStepFromSubsteps,
   type OnboardingProgressSubstep,
-  type OnboardingProgressStatus,
 } from '@/lib/onboarding/deriveParentStepFromSubsteps';
 
 export type OnboardingStepId =
@@ -98,18 +95,6 @@ async function resolveIdentityStep(tenantId: string): Promise<OnboardingStepServ
     const providerOptions = await getSsoProviderOptions();
     const configuredProviders = providerOptions.filter((option) => option.configured);
 
-    if (configuredProviders.length === 0) {
-      return {
-        id: 'identity_sso',
-        status: 'not_started',
-        blocker: 'Add Google Workspace or Microsoft 365 credentials to enable SSO for your team.',
-        lastUpdated: null,
-        meta: {
-          configuredProviders: [],
-        },
-      };
-    }
-
     const adminDb = await getAdminConnection();
     type LinkAggregateRow = { total?: string | number | null; latest_updated?: Date | string | null };
     const aggregate = (await adminDb('user_auth_accounts')
@@ -120,18 +105,41 @@ async function resolveIdentityStep(tenantId: string): Promise<OnboardingStepServ
 
     const linkedCount = aggregate?.total ? Number(aggregate.total) : 0;
     const lastUpdated = dateToIso(aggregate?.latest_updated ?? null);
+    const hasProvider = configuredProviders.length > 0;
+    const hasLinkedAccount = linkedCount > 0;
+
+    const substeps: OnboardingSubstepServerState[] = [
+      {
+        id: 'identity_provider_configured',
+        title: 'Add an SSO provider',
+        status: hasProvider ? 'complete' : 'not_started',
+        lastUpdated,
+      },
+      {
+        id: 'identity_user_linked',
+        title: 'Link the first team member',
+        status: hasLinkedAccount ? 'complete' : hasProvider ? 'in_progress' : 'not_started',
+        lastUpdated,
+      },
+    ];
+
+    const derived = deriveParentStepFromSubsteps(substeps as OnboardingProgressSubstep[], lastUpdated);
 
     return {
       id: 'identity_sso',
-      status: linkedCount > 0 ? 'complete' : 'in_progress',
-      lastUpdated,
+      status: derived.status as OnboardingStepStatus,
+      lastUpdated: derived.lastUpdated,
+      progressValue: derived.progressValue,
+      substeps,
       meta: {
         configuredProviders: configuredProviders.map((option) => option.id),
         linkedAccounts: linkedCount,
       },
-      blocker: linkedCount > 0
-        ? null
-        : 'No users are linked to an identity provider yet. Ask an MSP admin to connect Google or Microsoft.',
+      blocker: hasProvider
+        ? hasLinkedAccount
+          ? null
+          : 'No users are linked to an identity provider yet. Ask an MSP admin to connect Google or Microsoft.'
+        : 'Add Google Workspace or Microsoft 365 credentials to enable SSO for your team.',
     };
   } catch (error) {
     return buildErrorStep('identity_sso', 'Unable to load SSO configuration status.', error);
@@ -259,74 +267,50 @@ async function resolvePortalInviteSubstep(tenantId: string): Promise<OnboardingS
 
 async function resolveImportStep(tenantId: string): Promise<OnboardingStepServerState> {
   try {
-    const adminDb = await getAdminConnection();
+    const knex = await getConnection(tenantId);
 
-    // Query the most recent import job directly to avoid permission checks
-    // The onboarding progress should be visible regardless of import_export permission
-    const latestJob = await adminDb('import_jobs')
+    type ContactAggregateRow = { total?: string | number | null; latest_created?: Date | string | null };
+    const contactAggregate = (await knex('contacts')
       .where({ tenant: tenantId })
-      .orderBy('created_at', 'desc')
-      .first() as ImportJobRecord | undefined;
+      .count('* as total')
+      .max({ latest_created: 'created_at' })
+      .first()) as ContactAggregateRow | undefined;
 
-    if (!latestJob) {
-      return {
-        id: 'data_import',
-        status: 'not_started',
-        lastUpdated: null,
-      };
-    }
+    const contactTotal = contactAggregate?.total ? Number(contactAggregate.total) : 0;
+    const contactLastUpdated = dateToIso(contactAggregate?.latest_created ?? null);
 
-    const progressValue = computeImportProgress(latestJob);
-    const lastUpdated = dateToIso(latestJob.completed_at ?? latestJob.updated_at ?? latestJob.created_at);
-    const blocker = latestJob.status === 'failed'
-      ? latestJob.error_summary?.topErrors?.[0]?.sampleMessage || 'Most recent import failed. Review the error log in Import & Export settings.'
-      : latestJob.status === 'cancelled'
-        ? 'Last import was cancelled before completion.'
-        : null;
+    const contactStatus: OnboardingStepStatus =
+      contactTotal >= 5 ? 'complete' : contactTotal > 0 ? 'in_progress' : 'not_started';
 
-    const status = (() => {
-      if (latestJob.status === 'completed') {
-        return 'complete';
-      }
+    const substeps: OnboardingSubstepServerState[] = [
+      {
+        id: 'contacts_created',
+        title: 'Create your first 5 contacts',
+        status: contactStatus,
+        lastUpdated: contactLastUpdated,
+        meta: {
+          contactCount: contactTotal,
+        },
+      },
+    ];
 
-      if (latestJob.status === 'failed' || latestJob.status === 'cancelled') {
-        return 'blocked';
-      }
-
-      if (latestJob.status === 'preview' || latestJob.status === 'validating' || latestJob.status === 'processing') {
-        return 'in_progress';
-      }
-
-      return 'not_started';
-    })();
+    const derived = deriveParentStepFromSubsteps(substeps as OnboardingProgressSubstep[], contactLastUpdated);
 
     return {
       id: 'data_import',
-      status,
-      lastUpdated,
-      blocker,
-      progressValue,
+      status: derived.status as OnboardingStepStatus,
+      lastUpdated: derived.lastUpdated,
+      blocker: derived.blocker,
+      progressValue: derived.progressValue,
+      substeps,
       meta: {
-        importJobId: latestJob.import_job_id,
-        fileName: latestJob.file_name,
-        status: latestJob.status,
-        totalRows: latestJob.total_rows,
-        processedRows: latestJob.processed_rows,
+        contactCount: contactTotal,
       },
     };
   } catch (error) {
     return buildErrorStep('data_import', 'Unable to load import history.', error);
   }
 }
-
-function computeImportProgress(job: ImportJobRecord): number | null {
-  if (job.total_rows && job.total_rows > 0) {
-    const progress = Math.min(100, Math.round((job.processed_rows / job.total_rows) * 100));
-    return Number.isNaN(progress) ? null : progress;
-  }
-  return null;
-}
-
 async function resolveCalendarStep(tenantId: string): Promise<OnboardingStepServerState> {
   try {
     const knex = await getConnection(tenantId);
@@ -337,49 +321,46 @@ async function resolveCalendarStep(tenantId: string): Promise<OnboardingStepServ
       .where({ tenant: tenantId })
       .orderBy('created_at', 'desc') as CalendarProviderConfig[];
 
-    if (providers.length === 0) {
-      return {
-        id: 'calendar_sync',
-        status: 'not_started',
-        lastUpdated: null,
-      };
-    }
-
     const connected = providers.filter((provider) => provider.active && provider.connection_status === 'connected');
     const errored = providers.find((provider) => provider.connection_status === 'error');
-    const configuring = providers.find((provider) => provider.connection_status === 'configuring');
 
     const lastUpdated = dateToIso(
       connected[0]?.updated_at || providers[0]?.updated_at
     );
 
-    if (connected.length > 0) {
-      return {
-        id: 'calendar_sync',
-        status: 'complete',
-        lastUpdated,
-        meta: {
-          providers: connected.map((provider) => ({ id: provider.id, name: provider.name, type: provider.provider_type })),
-        },
-      };
-    }
+    const hasProvider = providers.length > 0;
 
-    if (errored) {
-      return {
-        id: 'calendar_sync',
-        status: 'blocked',
+    const substeps: OnboardingSubstepServerState[] = [
+      {
+        id: 'calendar_provider_added',
+        title: 'Add a calendar provider',
+        status: hasProvider ? 'complete' : 'not_started',
         lastUpdated,
-        blocker: errored.error_message || `${errored.name} requires attention before syncing can resume.`,
-        meta: {
-          providers: providers.map((provider) => ({ id: provider.id, name: provider.name, status: provider.connection_status })),
-        },
-      };
-    }
+      },
+      {
+        id: 'calendar_provider_connected',
+        title: 'Connect and authorize the provider',
+        status: connected.length > 0
+          ? 'complete'
+          : errored
+            ? 'blocked'
+            : hasProvider
+              ? 'in_progress'
+              : 'not_started',
+        lastUpdated,
+        blocker: errored?.error_message || (errored ? `${errored.name} requires attention before syncing can resume.` : null),
+      },
+    ];
+
+    const derived = deriveParentStepFromSubsteps(substeps as OnboardingProgressSubstep[], lastUpdated);
 
     return {
       id: 'calendar_sync',
-      status: configuring ? 'in_progress' : 'in_progress',
-      lastUpdated,
+      status: derived.status as OnboardingStepStatus,
+      lastUpdated: derived.lastUpdated,
+      blocker: derived.blocker,
+      progressValue: derived.progressValue,
+      substeps,
       meta: {
         providers: providers.map((provider) => ({ id: provider.id, name: provider.name, status: provider.connection_status })),
       },

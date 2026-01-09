@@ -53,7 +53,7 @@ const STEP_DEFINITIONS: Record<OnboardingStepId, StepDefinition> = {
   data_import: {
     id: 'data_import',
     title: 'Import Core Data',
-    description: 'Bring in assets, contacts, or reference data so workflows have something to run on.',
+    description: 'Add contacts so you can start working for clients and keep workflows moving.',
     icon: FileSpreadsheet,
     ctaHref: '/msp/settings?tab=import-export',
     ctaLabel: 'Open Import Tools',
