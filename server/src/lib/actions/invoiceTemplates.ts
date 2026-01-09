@@ -64,13 +64,15 @@ export async function getInvoiceTemplate(templateId: string): Promise<IInvoiceTe
 
 export async function getInvoiceTemplates(): Promise<IInvoiceTemplate[]> {
     const { knex } = await createTenantKnex();
-    // Assuming Invoice model has a static method getAllTemplates that now fetches
-    // assemblyScriptSource and wasmPath instead of dsl.
-    // It should return all standard templates and the templates for the current tenant.
-    const templates: IInvoiceTemplate[] = await Invoice.getAllTemplates(knex);
+    return withTransaction(knex, async (trx: Knex.Transaction) => {
+        // Assuming Invoice model has a static method getAllTemplates that now fetches
+        // assemblyScriptSource and wasmPath instead of dsl.
+        // It should return all standard templates and the templates for the current tenant.
+        const templates: IInvoiceTemplate[] = await Invoice.getAllTemplates(trx);
 
-    // No parsing needed here anymore as we are moving away from DSL
-    return templates;
+        // No parsing needed here anymore as we are moving away from DSL
+        return templates;
+    });
 }
 
 type SetDefaultTemplatePayload =
@@ -127,8 +129,10 @@ export async function setDefaultTemplate(payload: SetDefaultTemplatePayload): Pr
 
 export async function getDefaultTemplate(): Promise<IInvoiceTemplate | null> {
     const { knex } = await createTenantKnex();
-    const templates = await Invoice.getAllTemplates(knex);
-    return templates.find((template) => template.isTenantDefault) ?? null;
+    return withTransaction(knex, async (trx: Knex.Transaction) => {
+        const templates = await Invoice.getAllTemplates(trx);
+        return templates.find((template) => template.isTenantDefault) ?? null;
+    });
 }
 
 export async function setClientTemplate(clientId: string, templateId: string | null): Promise<void> {
