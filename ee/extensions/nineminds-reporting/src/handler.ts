@@ -132,7 +132,7 @@ async function processRequest(request: ExecuteRequest, host: HostBindings): Prom
   return jsonResponse({
     ok: true,
     message: 'Nine Minds Reporting Extension',
-    version: '0.3.0',
+    version: '0.2.1',
     build: BUILD_STAMP,
     endpoints: [
       'GET /reports - List all platform reports',

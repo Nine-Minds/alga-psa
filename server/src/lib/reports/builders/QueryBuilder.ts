@@ -168,9 +168,20 @@ export class QueryBuilder {
     filter: FilterDefinition,
     parameters: ReportParameters
   ): Knex.QueryBuilder {
-    
+
     const value = this.resolveFilterValue(filter.value, parameters);
-    
+
+    // Skip filters with empty/null/undefined values (except for is_null/is_not_null operators)
+    if (filter.operator !== 'is_null' && filter.operator !== 'is_not_null') {
+      if (value === null || value === undefined || value === '') {
+        return query; // Skip this filter
+      }
+      // Also skip empty arrays for in/not_in operators
+      if (Array.isArray(value) && value.length === 0) {
+        return query;
+      }
+    }
+
     switch (filter.operator) {
       case 'eq':
         return query.where(filter.field, value);

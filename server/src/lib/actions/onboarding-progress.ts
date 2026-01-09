@@ -122,7 +122,6 @@ async function resolveIdentityStep(tenantId: string): Promise<OnboardingStepServ
         lastUpdated,
       },
     ];
-
     const derived = deriveParentStepFromSubsteps(substeps as OnboardingProgressSubstep[], lastUpdated);
 
     return {
@@ -268,7 +267,6 @@ async function resolvePortalInviteSubstep(tenantId: string): Promise<OnboardingS
 async function resolveImportStep(tenantId: string): Promise<OnboardingStepServerState> {
   try {
     const knex = await getConnection(tenantId);
-
     type ContactAggregateRow = { total?: string | number | null; latest_created?: Date | string | null };
     const contactAggregate = (await knex('contacts')
       .where({ tenant: tenantId })
