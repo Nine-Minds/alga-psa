@@ -2,6 +2,14 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { FieldMappingTemplate, ImportJobDetails, ImportJobRecord } from '@/types/imports.types';
+import {
+  approveImport as approveImportAction,
+  createImportPreview as createImportPreviewAction,
+  getImportFieldMapping,
+  getImportJobDetails,
+  getImportSources,
+  listImportJobs,
+} from '@/lib/actions/import-actions/importActions';
 
 interface ImportSourceDTO {
   import_source_id: string;
@@ -24,14 +32,6 @@ interface PreviewResponse {
   };
   errorSummary: any;
 }
-
-const parseJson = async <T>(response: Response): Promise<T> => {
-  if (!response.ok) {
-    const message = await response.text();
-    throw new Error(message || 'Request failed');
-  }
-  return response.json();
-};
 
 const UI_FIELD_DEFINITIONS = [
   { field: 'name', label: 'Asset Name', required: true, example: 'NYC-WS-001' },
@@ -64,8 +64,8 @@ export const useImportActions = () => {
     setError(null);
     try {
       const [sourcesData, historyData] = await Promise.all([
-        parseJson<ImportSourceDTO[]>(await fetch('/api/import/sources')),
-        parseJson<ImportJobRecord[]>(await fetch('/api/import/history')),
+        getImportSources(),
+        listImportJobs(),
       ]);
 
       setSources(sourcesData);
@@ -84,9 +84,7 @@ export const useImportActions = () => {
 
   const loadMappingTemplate = useCallback(async (sourceId: string) => {
     try {
-      const template = await parseJson<FieldMappingTemplate>(
-        await fetch(`/api/import/mapping?importSourceId=${encodeURIComponent(sourceId)}`)
-      );
+      const template = await getImportFieldMapping(sourceId);
       setFieldMapping(template ?? {});
     } catch (error) {
       console.warn('[ImportActions] loadMappingTemplate error', error);
@@ -125,12 +123,7 @@ export const useImportActions = () => {
         formData.append('persistTemplate', String(data.persistTemplate));
         formData.append('file', data.file);
 
-        const result = await parseJson<PreviewResponse>(
-          await fetch('/api/import/preview', {
-            method: 'POST',
-            body: formData,
-          })
-        );
+        const result = await createImportPreviewAction(formData);
 
         setPreview(result);
         await fetchData();
@@ -154,15 +147,7 @@ export const useImportActions = () => {
       setIsApproving(true);
       setError(null);
       try {
-        await parseJson<{ status: string }>(
-          await fetch('/api/import/approve', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ importJobId })
-          })
-        );
+        await approveImportAction(importJobId);
         setPreview(null);
         await fetchData();
       } catch (error) {
@@ -180,9 +165,7 @@ export const useImportActions = () => {
       setIsLoadingDetails(true);
       setDetailsError(null);
       try {
-        const details = await parseJson<ImportJobDetails>(
-          await fetch(`/api/import/details?importJobId=${encodeURIComponent(importJobId)}`)
-        );
+        const details = await getImportJobDetails(importJobId);
         setSelectedJobDetails(details);
       } catch (error) {
         console.error('[ImportActions] getImportJobDetails error', error);
@@ -203,7 +186,7 @@ export const useImportActions = () => {
   const refreshHistory = useCallback(async () => {
     setIsRefreshingHistory(true);
     try {
-      const historyData = await parseJson<ImportJobRecord[]>(await fetch('/api/import/history'));
+      const historyData = await listImportJobs();
       setHistory(historyData);
 
       if (selectedJobDetails?.import_job_id) {

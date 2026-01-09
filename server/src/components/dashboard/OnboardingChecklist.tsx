@@ -111,7 +111,7 @@ function StepItem({ step, onCtaClick }: StepItemProps) {
               <p className="text-xs text-muted-foreground">{step.description}</p>
               {isImportStep ? (
                 <p className="mt-1 text-[11px] font-medium uppercase tracking-wide text-slate-500">
-                  Complete your first import OR create 5 contacts
+                  Create your first 5 contacts
                 </p>
               ) : null}
             </div>
