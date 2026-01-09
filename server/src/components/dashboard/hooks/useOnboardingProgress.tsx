@@ -3,14 +3,7 @@
 import { useEffect, useMemo, useRef } from 'react';
 import useSWR from 'swr';
 import { usePostHog } from 'posthog-js/react';
-import type { LucideIcon } from 'lucide-react';
-import {
-  ShieldCheck,
-  Globe,
-  FileSpreadsheet,
-  CalendarCheck2,
-  MailCheck,
-} from 'lucide-react';
+import { STEP_DEFINITIONS, type StepDefinition } from '@/lib/onboarding/stepDefinitions';
 import {
   getOnboardingProgressAction,
   type OnboardingProgressResponse,
@@ -20,64 +13,6 @@ import {
 } from '@/lib/actions/onboarding-progress';
 
 const REFRESH_INTERVAL_MS = 60_000;
-
-interface StepDefinition {
-  id: OnboardingStepId;
-  title: string;
-  description: string;
-  icon: LucideIcon;
-  ctaHref: string;
-  ctaLabel: string;
-  analyticsTarget: string;
-}
-
-const STEP_DEFINITIONS: Record<OnboardingStepId, StepDefinition> = {
-  identity_sso: {
-    id: 'identity_sso',
-    title: 'Secure Identity & SSO',
-    description: 'Connect Google Workspace or Microsoft 365 so admins sign in with managed identities.',
-    icon: ShieldCheck,
-    ctaHref: '/msp/profile?tab=Single+Sign-On',
-    ctaLabel: 'Connect SSO',
-    analyticsTarget: 'identity_sso',
-  },
-  client_portal_domain: {
-    id: 'client_portal_domain',
-    title: 'Set Up Customer Portal',
-    description: 'Configure your portal so customers can sign in on your domain with your branding.',
-    icon: Globe,
-    ctaHref: '/msp/settings?tab=client-portal',
-    ctaLabel: 'Open Portal Settings',
-    analyticsTarget: 'client_portal_domain',
-  },
-  data_import: {
-    id: 'data_import',
-    title: 'Import Core Data',
-    description: 'Bring in assets, contacts, or reference data so workflows have something to run on.',
-    icon: FileSpreadsheet,
-    ctaHref: '/msp/settings?tab=import-export',
-    ctaLabel: 'Open Import Tools',
-    analyticsTarget: 'data_import',
-  },
-  calendar_sync: {
-    id: 'calendar_sync',
-    title: 'Calendar Sync',
-    description: 'Connect Google or Outlook calendars to keep dispatch and client appointments aligned.',
-    icon: CalendarCheck2,
-    ctaHref: '/msp/settings?tab=integrations&category=calendar',
-    ctaLabel: 'Configure Calendar',
-    analyticsTarget: 'calendar_sync',
-  },
-  managed_email: {
-    id: 'managed_email',
-    title: 'Configure Email',
-    description: 'Set up inbound ticket email and verify an outbound sending domain for reliable delivery.',
-    icon: MailCheck,
-    ctaHref: '/msp/settings?tab=email',
-    ctaLabel: 'Configure Email',
-    analyticsTarget: 'managed_email',
-  },
-};
 
 export interface OnboardingStep extends StepDefinition, OnboardingStepServerState {
   blocker: string | null;
@@ -102,11 +37,15 @@ export interface UseOnboardingProgressResult {
   refresh: () => Promise<OnboardingProgressResponse | undefined>;
 }
 
+interface UseOnboardingProgressOptions {
+  initialData?: OnboardingProgressResponse;
+}
+
 const fetchOnboardingProgress = async (): Promise<OnboardingProgressResponse> => {
   return getOnboardingProgressAction();
 };
 
-export function useOnboardingProgress(): UseOnboardingProgressResult {
+export function useOnboardingProgress(options?: UseOnboardingProgressOptions): UseOnboardingProgressResult {
   const posthog = usePostHog();
   const previousStatuses = useRef<Record<OnboardingStepId, OnboardingStepStatus>>({
     identity_sso: 'not_started',
@@ -120,6 +59,7 @@ export function useOnboardingProgress(): UseOnboardingProgressResult {
     'onboarding-progress',
     fetchOnboardingProgress,
     {
+      fallbackData: options?.initialData,
       refreshInterval: REFRESH_INTERVAL_MS,
       revalidateOnFocus: true,
     },

@@ -93,6 +93,7 @@ function StepItem({ step, onCtaClick }: StepItemProps) {
   const status = statusConfig[step.status];
   const showProgress = typeof step.progressValue === 'number';
   const disabled = step.status === 'complete';
+  const isImportStep = step.id === 'data_import';
   const handleClick = () => {
     onCtaClick?.(step);
   };
@@ -108,6 +109,11 @@ function StepItem({ step, onCtaClick }: StepItemProps) {
             <div>
               <p className="text-sm font-semibold text-foreground">{step.title}</p>
               <p className="text-xs text-muted-foreground">{step.description}</p>
+              {isImportStep ? (
+                <p className="mt-1 text-[11px] font-medium uppercase tracking-wide text-slate-500">
+                  Complete your first import OR create 5 contacts
+                </p>
+              ) : null}
             </div>
             <Badge variant={status.badgeVariant}>{status.label}</Badge>
           </div>
@@ -115,7 +121,7 @@ function StepItem({ step, onCtaClick }: StepItemProps) {
             <Progress value={step.progressValue ?? 0} className="h-1.5" />
           ) : null}
           {Array.isArray(step.substeps) && step.substeps.length > 0 ? (
-            <SubstepList substeps={step.substeps} />
+            <SubstepList substeps={step.substeps} parentStatus={step.status} />
           ) : null}
           {step.blocker ? (
             <Alert variant="destructive" className="text-xs">
@@ -144,20 +150,27 @@ function StepItem({ step, onCtaClick }: StepItemProps) {
   );
 }
 
-function SubstepList({ substeps }: { substeps: Array<{ id: string; title: string; status: string }> }) {
+function SubstepList({
+  substeps,
+  parentStatus,
+}: {
+  substeps: Array<{ id: string; title: string; status: string }>;
+  parentStatus: OnboardingStep['status'];
+}) {
   return (
     <ul className="space-y-1.5 pt-1">
       {substeps.map((substep) => {
-        const Icon = substep.status === 'complete'
-          ? CheckCircle2
-          : substep.status === 'blocked'
-            ? AlertCircle
-            : Circle;
-        const color = substep.status === 'complete'
+        const showOnlyCompletion = parentStatus === 'in_progress' || parentStatus === 'not_started';
+        const isComplete = substep.status === 'complete';
+        const isBlocked = substep.status === 'blocked';
+        const Icon = isComplete ? CheckCircle2 : showOnlyCompletion ? Circle : isBlocked ? AlertCircle : Circle;
+        const color = isComplete
           ? 'text-emerald-600'
-          : substep.status === 'blocked'
-            ? 'text-red-600'
-            : 'text-slate-400';
+          : showOnlyCompletion
+            ? 'text-slate-400'
+            : isBlocked
+              ? 'text-red-600'
+              : 'text-slate-400';
 
         return (
           <li key={substep.id} className="flex items-center gap-2 text-xs text-muted-foreground">

@@ -1,60 +1,34 @@
 'use client';
 
-import React, { useEffect } from 'react';
+import { useMemo } from 'react';
 import Link from 'next/link';
-import toast from 'react-hot-toast';
 import { usePostHog } from 'posthog-js/react';
 import { cn } from '../../lib/utils';
-import { ReflectionContainer } from '../../types/ui-reflection/ReflectionContainer';
 import { useAutomationIdAndRegister } from '../../types/ui-reflection/useAutomationIdAndRegister';
 import type { ButtonComponent } from '../../types/ui-reflection/types';
-import { usePerformanceTracking } from '../../lib/analytics/client';
-import { Alert, AlertDescription } from '../ui/Alert';
 import { Badge } from '../ui/Badge';
-import { useOnboardingProgress, type OnboardingStep } from './hooks/useOnboardingProgress';
-import {
-  Ticket,
-  BarChart3,
-  Shield,
-  HeartPulse,
-  ClipboardList,
-  Calendar,
-  ArrowRight,
-  Sparkles,
-  CheckCircle2,
-  Circle,
-} from 'lucide-react';
+import { STEP_DEFINITIONS, type StepDefinition } from '@/lib/onboarding/stepDefinitions';
+import type { OnboardingStepId, OnboardingStepServerState } from '@/lib/actions/onboarding-progress';
+import { ArrowRight, CheckCircle2, Circle } from 'lucide-react';
 
-const FeatureCard = ({ icon: Icon, title, description }: { icon: any; title: string; description: string }) => {
-  const posthog = usePostHog();
+interface OnboardingProgressSummary {
+  completed: number;
+  total: number;
+  remaining: number;
+  allComplete: boolean;
+}
 
-  const handleHover = () => {
-    posthog?.capture('feature_card_hovered', {
-      feature_name: title.toLowerCase().replace(/\s+/g, '_'),
-    });
-  };
+interface DashboardOnboardingSectionProps {
+  steps: OnboardingStepServerState[];
+  summary: OnboardingProgressSummary;
+  className?: string;
+}
 
-  return (
-    <div
-      className="rounded-lg border border-[rgb(var(--color-border-200))] bg-white hover:shadow-lg transition-shadow p-4"
-      onMouseEnter={handleHover}
-    >
-      <div className="flex items-start space-x-4">
-        <div className="p-2 rounded-lg" style={{ background: 'rgb(var(--color-primary-50))' }}>
-          <Icon className="h-6 w-6" style={{ color: 'rgb(var(--color-primary-500))' }} />
-        </div>
-        <div>
-          <h3 className="font-semibold mb-1" style={{ color: 'rgb(var(--color-text-900))' }}>
-            {title}
-          </h3>
-          <p className="text-sm" style={{ color: 'rgb(var(--color-text-500))' }}>
-            {description}
-          </p>
-        </div>
-      </div>
-    </div>
-  );
-};
+interface OnboardingStep extends StepDefinition, OnboardingStepServerState {
+  blocker: string | null;
+  meta: Record<string, unknown>;
+  isActionable: boolean;
+}
 
 interface QuickStartCardProps {
   step: OnboardingStep;
@@ -111,10 +85,10 @@ function ProgressSummaryCard({ completed, total }: { completed: number; total: n
   const percent = (completed / safeTotal) * 100;
   const message =
     completed === 0
-      ? 'Just getting started! 🚀'
+      ? 'Just getting started!'
       : completed === total
-        ? 'All set — great job! 🎉'
-        : 'Keep going — you’ve got this! 💪';
+        ? 'All set - great job!'
+        : 'Keep going - you\'ve got this!';
 
   return (
     <div className="flex w-full max-w-[360px] items-center gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-[0_2px_10px_rgba(15,23,42,0.06)]">
@@ -149,6 +123,7 @@ const QuickStartCard = ({ step, index, onNavigate, className }: QuickStartCardPr
   const Icon = step.icon;
   const status = quickStartStatus[step.status];
   const isDisabled = !step.isActionable;
+  const isImportStep = step.id === 'data_import';
 
   const cardBody = (
     <div className="flex h-full flex-col">
@@ -171,6 +146,11 @@ const QuickStartCard = ({ step, index, onNavigate, className }: QuickStartCardPr
         <div className="min-w-0">
           <h3 className="text-base font-semibold leading-6 text-slate-900">{step.title}</h3>
           <p className="mt-1 text-sm leading-5 text-slate-600">{step.description}</p>
+          {isImportStep ? (
+            <p className="mt-2 text-xs font-medium uppercase tracking-wide text-slate-500">
+              Complete your first import OR create 5 contacts
+            </p>
+          ) : null}
           {Array.isArray(step.substeps) && step.substeps.length > 0 ? (
             <ul className="mt-3 space-y-1.5">
               {step.substeps.map((substep) => (
@@ -251,53 +231,29 @@ const QuickStartCard = ({ step, index, onNavigate, className }: QuickStartCardPr
   );
 };
 
-function WelcomeBanner() {
-  return (
-    <div className="overflow-hidden rounded-2xl border border-slate-200 bg-gradient-to-r from-violet-600 to-cyan-500 px-6 py-5 shadow-[0_10px_30px_rgba(2,6,23,0.12)]">
-      <div className="flex items-start gap-4">
-        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/15 ring-1 ring-white/20">
-          <Sparkles className="h-5 w-5 text-white" />
-        </div>
-        <div className="min-w-0">
-          <h1 className="text-xl font-semibold tracking-tight text-white sm:text-2xl">
-            Welcome to Your MSP Command Center
-          </h1>
-          <p className="mt-1 text-sm text-white/80">
-            Track onboarding progress, configure critical services, and keep every client experience consistent.
-          </p>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-const WelcomeDashboard = () => {
+export default function DashboardOnboardingSection({
+  steps: stepStates,
+  summary,
+  className,
+}: DashboardOnboardingSectionProps) {
   const posthog = usePostHog();
-  const { steps, summary, isLoading, hasResolved, error, refresh } = useOnboardingProgress();
-  const isOnboardingComplete = hasResolved && !isLoading && summary.allComplete;
+  const steps = useMemo(() => enrichSteps(stepStates), [stepStates]);
 
-  usePerformanceTracking('dashboard');
+  if (steps.length === 0) {
+    return null;
+  }
 
-  useEffect(() => {
-    posthog?.capture('dashboard_viewed', {
-      dashboard_type: 'welcome',
-      section_count: 3,
-    });
-    posthog?.capture('feature_discovered', {
-      feature_name: 'dashboard_overview',
-      discovery_method: 'navigation',
-    });
-  }, [posthog]);
+  const isOnboardingComplete = summary.allComplete;
 
-  const handleOnboardingNavigate = (step: OnboardingStep, surface: 'quick_start' | 'checklist') => {
+  const handleOnboardingNavigate = (step: OnboardingStep) => {
     posthog?.capture('onboarding_step_cta_clicked', {
       step_id: step.id,
-      surface,
+      surface: 'quick_start',
     });
   };
 
-  const onboardingSection = (
-    <div>
+  return (
+    <div className={className}>
       <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
         <div>
           <div className="flex flex-wrap items-center gap-3">
@@ -319,16 +275,6 @@ const WelcomeDashboard = () => {
         </div>
         <ProgressSummaryCard completed={summary.completed} total={summary.total} />
       </div>
-      {error && (
-        <Alert variant="destructive" className="mb-4">
-          <AlertDescription>
-            Unable to refresh onboarding status right now. {error.message}.{' '}
-            <button className="underline" onClick={() => refresh()}>
-              Try again
-            </button>
-          </AlertDescription>
-        </Alert>
-      )}
       {!isOnboardingComplete ? (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {steps.map((step, index) => (
@@ -336,7 +282,7 @@ const WelcomeDashboard = () => {
               key={step.id}
               step={step}
               index={index + 1}
-              onNavigate={(s) => handleOnboardingNavigate(s, 'quick_start')}
+              onNavigate={handleOnboardingNavigate}
               className={
                 steps.length % 2 === 1 && index === steps.length - 1
                   ? 'md:col-span-2 md:justify-self-center md:w-[560px]'
@@ -348,101 +294,25 @@ const WelcomeDashboard = () => {
       ) : null}
     </div>
   );
+}
 
-  return (
-    <ReflectionContainer id="dashboard-main" label="MSP Dashboard">
-      <div className="min-h-screen p-6">
-        <div className="max-w-7xl mx-auto">
-          <div className="space-y-8">
-              <WelcomeBanner />
-
-              {!isOnboardingComplete && onboardingSection}
-
-              <div>
-                <h2 className="text-xl font-semibold mb-4" style={{ color: 'rgb(var(--color-text-900))' }}>
-                  Platform Features
-                </h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  <Link
-                    href="/msp/tickets"
-                    onClick={() =>
-                      posthog?.capture('feature_accessed', {
-                        feature_name: 'ticket_management',
-                        access_method: 'dashboard_card',
-                      })
-                    }
-                  >
-                    <FeatureCard
-                      icon={Ticket}
-                      title="Ticket Management"
-                      description="Streamline support with routing, SLA tracking, and guided workflows."
-                    />
-                  </Link>
-                  <Link href="/msp/jobs">
-                    <FeatureCard
-                      icon={HeartPulse}
-                      title="System Monitoring"
-                      description="Watch critical signals across clients and trigger automation when needed."
-                    />
-                  </Link>
-                  <Link href="/msp/security-settings">
-                    <FeatureCard
-                      icon={Shield}
-                      title="Security Management"
-                      description="Manage policies, approvals, and audit responses in one place."
-                    />
-                  </Link>
-                  <Link href="/msp/projects">
-                    <FeatureCard
-                      icon={ClipboardList}
-                      title="Project Management"
-                      description="Organize delivery plans, tasks, and milestones for every engagement."
-                    />
-                  </Link>
-                  <div onClick={() => toast.success('Coming soon!')} className="cursor-pointer">
-                    <FeatureCard
-                      icon={BarChart3}
-                      title="Reporting & Analytics"
-                      description="Build rollups on utilization, SLA attainment, and profitability."
-                    />
-                  </div>
-                  <Link href="/msp/schedule">
-                    <FeatureCard
-                      icon={Calendar}
-                      title="Schedule Management"
-                      description="Coordinate onsite visits and remote sessions with bi-directional sync."
-                    />
-                  </Link>
-                </div>
-              </div>
-
-              <div className="rounded-lg border border-dashed border-[rgb(var(--color-border-200))] bg-white p-4">
-                <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-                  <div>
-                    <h3 className="font-semibold mb-1" style={{ color: 'rgb(var(--color-text-900))' }}>
-                      Need a deeper dive?
-                    </h3>
-                    <p className="text-sm" style={{ color: 'rgb(var(--color-text-500))' }}>
-                      Explore deployment runbooks and best practices in the knowledge base.
-                    </p>
-                  </div>
-                  <Link
-                    href="https://www.nineminds.com/documentation"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-block px-4 py-2 rounded-md text-sm font-medium text-white bg-[rgb(var(--color-primary-500))] hover:bg-[rgb(var(--color-primary-600))] transition-colors"
-                  >
-                    Visit resources
-                  </Link>
-                </div>
-              </div>
-
-              {isOnboardingComplete && onboardingSection}
-          </div>
-        </div>
-      </div>
-    </ReflectionContainer>
+function enrichSteps(stepStates: OnboardingStepServerState[]): OnboardingStep[] {
+  const stateById = new Map<OnboardingStepId, OnboardingStepServerState>(
+    stepStates.map((state) => [state.id, state])
   );
-};
 
-export default WelcomeDashboard;
+  return Object.values(STEP_DEFINITIONS).map((definition) => {
+    const state = stateById.get(definition.id);
+
+    return {
+      ...definition,
+      status: state?.status ?? 'not_started',
+      lastUpdated: state?.lastUpdated ?? null,
+      blocker: state?.blocker ?? null,
+      progressValue: state?.progressValue ?? null,
+      meta: state?.meta ?? {},
+      substeps: state?.substeps ?? [],
+      isActionable: state?.status !== 'complete',
+    } satisfies OnboardingStep;
+  });
+}
