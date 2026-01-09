@@ -227,11 +227,14 @@ const BillingCycles: React.FC = () => {
       }
 
       // Update the cycle status after successful creation
-      const status = await canCreateNextBillingCycle(clientId);
-      setCycleStatus(prev => ({
-        ...prev,
-        [clientId]: status
-      }));
+      const statusMap = await getNextBillingCycleStatusForClients([clientId]);
+      const status = statusMap[clientId];
+      if (status) {
+        setCycleStatus(prev => ({
+          ...prev,
+          [clientId]: status
+        }));
+      }
       setError(null);
     } catch (error) {
       console.error('Error creating next billing cycle:', error);

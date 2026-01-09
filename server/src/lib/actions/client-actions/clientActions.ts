@@ -571,9 +571,10 @@ export async function getClientsWithBillingCycleRangePaginated(
             .where('cbc.tenant', tenant);
 
           if (dateRange?.from) {
+            const rangeFrom = dateRange.from;
             this.andWhere(function() {
               this.whereNull('cbc.period_end_date')
-                .orWhere('cbc.period_end_date', '>=', dateRange.from);
+                .orWhereRaw('cbc.period_end_date >= ?', [rangeFrom]);
             });
           }
 
