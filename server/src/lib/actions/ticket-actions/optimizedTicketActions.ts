@@ -1005,7 +1005,7 @@ export async function getTicketsForList(
         entered_by_name: entered_by_name || 'Unknown',
         assigned_to_name: assigned_to_name || null,
         additional_agent_count: additional_agent_count || 0,
-        additional_agents: additional_agents || []
+        additional_agents: additional_agents || [],
         bundle_child_count: typeof bundle_child_count === 'number' ? bundle_child_count : Number.parseInt(String(bundle_child_count ?? '0'), 10) || 0,
         bundle_distinct_client_count: typeof bundle_distinct_client_count === 'number' ? bundle_distinct_client_count : Number.parseInt(String(bundle_distinct_client_count ?? '0'), 10) || 0,
         bundle_master_ticket_number: bundle_master_ticket_number ?? null
