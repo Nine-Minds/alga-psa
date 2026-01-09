@@ -1,11 +1,9 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
-import { IService } from 'server/src/interfaces';
-import { getServices } from 'server/src/lib/actions/serviceActions';
+import React from 'react';
 import { TemplateWizardData } from '../TemplateWizard';
 import { Label } from 'server/src/components/ui/Label';
-import CustomSelect from 'server/src/components/ui/CustomSelect';
+import { ServiceCatalogPicker, ServiceCatalogPickerItem } from '../../ServiceCatalogPicker';
 import { Button } from 'server/src/components/ui/Button';
 import { Input } from 'server/src/components/ui/Input';
 import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionContainer';
@@ -21,34 +19,6 @@ export function TemplateHourlyServicesStep({
   data,
   updateData,
 }: TemplateHourlyServicesStepProps) {
-  const [services, setServices] = useState<IService[]>([]);
-  const [isLoadingServices, setIsLoadingServices] = useState(true);
-
-  useEffect(() => {
-    const load = async () => {
-      try {
-        const result = await getServices();
-        if (result && Array.isArray(result.services)) {
-          const hourlyServices = result.services.filter(
-            (service) => service.billing_method === 'hourly'
-          );
-          setServices(hourlyServices);
-        }
-      } catch (error) {
-        console.error('Error loading services:', error);
-      } finally {
-        setIsLoadingServices(false);
-      }
-    };
-
-    void load();
-  }, []);
-
-  const serviceOptions = services.map((service) => ({
-    value: service.service_id,
-    label: service.service_name,
-  }));
-
   const handleAddService = () => {
     updateData({
       hourly_services: [
@@ -63,13 +33,12 @@ export function TemplateHourlyServicesStep({
     updateData({ hourly_services: next });
   };
 
-  const handleServiceChange = (index: number, serviceId: string) => {
-    const service = services.find((s) => s.service_id === serviceId);
+  const handleServiceChange = (index: number, item: ServiceCatalogPickerItem) => {
     const next = [...data.hourly_services];
     next[index] = {
       ...next[index],
-      service_id: serviceId,
-      service_name: service?.service_name ?? '',
+      service_id: item.service_id,
+      service_name: item.service_name,
     };
     updateData({ hourly_services: next });
   };
@@ -195,13 +164,14 @@ export function TemplateHourlyServicesStep({
                 <Label htmlFor={`template-hourly-service-${index}`} className="text-sm">
                   Service {index + 1}
                 </Label>
-                <CustomSelect
+                <ServiceCatalogPicker
                   id={`template-hourly-service-${index}`}
                   value={service.service_id}
-                  onValueChange={(value: string) => handleServiceChange(index, value)}
-                  options={serviceOptions}
-                  placeholder={isLoadingServices ? 'Loading…' : 'Select a service'}
-                  disabled={isLoadingServices}
+                  selectedLabel={service.service_name}
+                  onSelect={(item) => handleServiceChange(index, item)}
+                  billingMethods={['hourly']}
+                  itemKinds={['service']}
+                  placeholder="Select a service"
                 />
               </div>
 

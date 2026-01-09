@@ -1,11 +1,9 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
-import { IService } from 'server/src/interfaces';
-import { getServices } from 'server/src/lib/actions/serviceActions';
+import React from 'react';
 import { TemplateWizardData } from '../TemplateWizard';
 import { Label } from 'server/src/components/ui/Label';
-import CustomSelect from 'server/src/components/ui/CustomSelect';
+import { ServiceCatalogPicker, ServiceCatalogPickerItem } from '../../ServiceCatalogPicker';
 import { Button } from 'server/src/components/ui/Button';
 import { Input } from 'server/src/components/ui/Input';
 import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionContainer';
@@ -21,34 +19,6 @@ export function TemplateUsageBasedServicesStep({
   data,
   updateData,
 }: TemplateUsageBasedServicesStepProps) {
-  const [services, setServices] = useState<IService[]>([]);
-  const [isLoadingServices, setIsLoadingServices] = useState(true);
-
-  useEffect(() => {
-    const load = async () => {
-      try {
-        const result = await getServices();
-        if (result && Array.isArray(result.services)) {
-          const usageServices = result.services.filter(
-            (service) => service.billing_method === 'usage'
-          );
-          setServices(usageServices);
-        }
-      } catch (error) {
-        console.error('Error loading services:', error);
-      } finally {
-        setIsLoadingServices(false);
-      }
-    };
-
-    void load();
-  }, []);
-
-  const serviceOptions = services.map((service) => ({
-    value: service.service_id,
-    label: service.service_name,
-  }));
-
   const handleAddService = () => {
     updateData({
       usage_services: [
@@ -63,14 +33,13 @@ export function TemplateUsageBasedServicesStep({
     updateData({ usage_services: next });
   };
 
-  const handleServiceChange = (index: number, serviceId: string) => {
-    const service = services.find((s) => s.service_id === serviceId);
+  const handleServiceChange = (index: number, item: ServiceCatalogPickerItem) => {
     const next = [...(data.usage_services ?? [])];
     next[index] = {
       ...next[index],
-      service_id: serviceId,
-      service_name: service?.service_name ?? '',
-      unit_of_measure: service?.unit_of_measure ?? next[index].unit_of_measure ?? '',
+      service_id: item.service_id,
+      service_name: item.service_name,
+      unit_of_measure: item.unit_of_measure || next[index].unit_of_measure || '',
     };
     updateData({ usage_services: next });
   };
@@ -152,13 +121,14 @@ export function TemplateUsageBasedServicesStep({
                   <Label htmlFor={`template-usage-service-${index}`} className="text-sm">
                     Service {index + 1}
                   </Label>
-                  <CustomSelect
+                  <ServiceCatalogPicker
                     id={`template-usage-service-${index}`}
                     value={service.service_id}
-                    onValueChange={(value: string) => handleServiceChange(index, value)}
-                    options={serviceOptions}
-                    placeholder={isLoadingServices ? 'Loading…' : 'Select a service'}
-                    disabled={isLoadingServices}
+                    selectedLabel={service.service_name}
+                    onSelect={(item) => handleServiceChange(index, item)}
+                    billingMethods={['usage']}
+                    itemKinds={['service']}
+                    placeholder="Select a service"
                   />
                 </div>
 

@@ -1,15 +1,13 @@
 'use client';
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Label } from 'server/src/components/ui/Label';
 import { Input } from 'server/src/components/ui/Input';
 import { Button } from 'server/src/components/ui/Button';
-import CustomSelect from 'server/src/components/ui/CustomSelect';
 import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionContainer';
 import { getCurrencySymbol } from 'server/src/constants/currency';
-import { getServices } from 'server/src/lib/actions/serviceActions';
-import type { IService } from 'server/src/interfaces';
+import { ServiceCatalogPicker, ServiceCatalogPickerItem } from '../ServiceCatalogPicker';
 import type { ContractWizardData } from '../ContractWizard';
 import { Plus, X, Package } from 'lucide-react';
 
@@ -19,24 +17,9 @@ interface ProductsStepProps {
 }
 
 export function ProductsStep({ data, updateData }: ProductsStepProps) {
-  const [products, setProducts] = useState<IService[]>([]);
-  const [isLoadingProducts, setIsLoadingProducts] = useState(true);
   const [rateInputs, setRateInputs] = useState<Record<number, string>>({});
-
-  useEffect(() => {
-    const loadProducts = async () => {
-      try {
-        const result = await getServices(1, 999, { item_kind: 'product', is_active: true });
-        setProducts(Array.isArray(result.services) ? result.services : []);
-      } catch (error) {
-        console.error('Error loading products:', error);
-      } finally {
-        setIsLoadingProducts(false);
-      }
-    };
-
-    void loadProducts();
-  }, []);
+  // Track default rates from catalog for display
+  const [catalogRates, setCatalogRates] = useState<Record<number, number>>({});
 
   useEffect(() => {
     const next: Record<number, string> = {};
@@ -49,22 +32,6 @@ export function ProductsStep({ data, updateData }: ProductsStepProps) {
   }, [data.product_services]);
 
   const currencySymbol = getCurrencySymbol(data.currency_code);
-
-  const productOptions = useMemo(
-    () =>
-      products.map((product) => ({
-        value: product.service_id,
-        label: product.sku ? `${product.service_name} (${product.sku})` : product.service_name,
-      })),
-    [products]
-  );
-
-  const findCatalogRateCents = (serviceId: string): number | null => {
-    const product = products.find((p) => p.service_id === serviceId);
-    if (!product?.prices?.length) return null;
-    const match = product.prices.find((p) => p.currency_code === data.currency_code);
-    return match ? Number(match.rate) : null;
-  };
 
   const handleAddProduct = () => {
     updateData({
@@ -80,16 +47,21 @@ export function ProductsStep({ data, updateData }: ProductsStepProps) {
     updateData({ product_services: next });
   };
 
-  const handleProductChange = (index: number, serviceId: string) => {
-    const product = products.find((p) => p.service_id === serviceId);
+  const handleProductChange = (index: number, item: ServiceCatalogPickerItem) => {
     const next = [...data.product_services];
     next[index] = {
       ...next[index],
-      service_id: serviceId,
-      service_name: product?.service_name || '',
+      service_id: item.service_id,
+      service_name: item.service_name,
       custom_rate: undefined,
     };
     updateData({ product_services: next });
+
+    // Store the catalog rate for display
+    setCatalogRates((prev) => ({
+      ...prev,
+      [index]: item.default_rate,
+    }));
 
     setRateInputs((prev) => {
       const { [index]: _, ...rest } = prev;
@@ -156,7 +128,7 @@ export function ProductsStep({ data, updateData }: ProductsStepProps) {
           </Label>
 
           {data.product_services.map((line, index) => {
-            const catalogRate = line.service_id ? findCatalogRateCents(line.service_id) : null;
+            const catalogRate = catalogRates[index] ?? null;
             const isMissingPrice = Boolean(line.service_id && catalogRate === null && line.custom_rate == null);
 
             return (
@@ -169,13 +141,13 @@ export function ProductsStep({ data, updateData }: ProductsStepProps) {
                     <Label htmlFor={`product-${index}`} className="text-sm">
                       Product {index + 1}
                     </Label>
-                    <CustomSelect
+                    <ServiceCatalogPicker
                       id={`product-select-${index}`}
                       value={line.service_id}
-                      onValueChange={(value: string) => handleProductChange(index, value)}
-                      options={productOptions}
-                      placeholder={isLoadingProducts ? 'Loading…' : 'Select a product'}
-                      disabled={isLoadingProducts}
+                      selectedLabel={line.service_name}
+                      onSelect={(item) => handleProductChange(index, item)}
+                      itemKinds={['product']}
+                      placeholder="Select a product"
                     />
                   </div>
 
@@ -215,14 +187,14 @@ export function ProductsStep({ data, updateData }: ProductsStepProps) {
                           className="pl-10"
                         />
                       </div>
-                      {catalogRate !== null ? (
+                      {catalogRate !== null && catalogRate > 0 ? (
                         <div className="text-xs text-muted-foreground">
-                          Catalog price: {currencySymbol}
-                          {(catalogRate / 100).toFixed(2)} ({data.currency_code})
+                          Default catalog price: {currencySymbol}
+                          {(catalogRate / 100).toFixed(2)}
                         </div>
                       ) : line.service_id ? (
                         <div className="text-xs text-amber-700">
-                          No {data.currency_code} price found for this product. Enter an override.
+                          No default price set. Enter a unit price.
                         </div>
                       ) : null}
                     </div>
@@ -231,7 +203,7 @@ export function ProductsStep({ data, updateData }: ProductsStepProps) {
                   {isMissingPrice ? (
                     <Alert variant="destructive">
                       <AlertDescription>
-                        This product has no {data.currency_code} price and no override. It cannot be
+                        This product has no default price and no override. It cannot be
                         billed until you enter a unit price.
                       </AlertDescription>
                     </Alert>

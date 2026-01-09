@@ -1,13 +1,11 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Label } from 'server/src/components/ui/Label';
 import { Input } from 'server/src/components/ui/Input';
 import { Button } from 'server/src/components/ui/Button';
-import CustomSelect from 'server/src/components/ui/CustomSelect';
 import { BucketOverlayInput, ContractWizardData } from '../ContractWizard';
-import { IService } from 'server/src/interfaces';
-import { getServices } from 'server/src/lib/actions/serviceActions';
+import { ServiceCatalogPicker, ServiceCatalogPickerItem } from '../ServiceCatalogPicker';
 import { Plus, X, Clock, Coins } from 'lucide-react';
 import { getCurrencySymbol } from 'server/src/constants/currency';
 import { SwitchWithLabel } from 'server/src/components/ui/SwitchWithLabel';
@@ -21,29 +19,7 @@ interface HourlyServicesStepProps {
 }
 
 export function HourlyServicesStep({ data, updateData }: HourlyServicesStepProps) {
-  const [services, setServices] = useState<IService[]>([]);
-  const [isLoadingServices, setIsLoadingServices] = useState(true);
   const [rateInputs, setRateInputs] = useState<Record<number, string>>({});
-
-  useEffect(() => {
-    const loadServices = async () => {
-      try {
-        const result = await getServices();
-        if (result && Array.isArray(result.services)) {
-          const hourlyServices = result.services.filter(
-            (service) => service.billing_method === 'hourly'
-          );
-          setServices(hourlyServices);
-        }
-      } catch (error) {
-        console.error('Error loading services:', error);
-      } finally {
-        setIsLoadingServices(false);
-      }
-    };
-
-    void loadServices();
-  }, []);
 
   useEffect(() => {
     const inputs: Record<number, string> = {};
@@ -54,11 +30,6 @@ export function HourlyServicesStep({ data, updateData }: HourlyServicesStepProps
     });
     setRateInputs(inputs);
   }, [data.hourly_services]);
-
-  const serviceOptions = services.map((service) => ({
-    value: service.service_id,
-    label: service.service_name,
-  }));
 
   const handleAddService = () => {
     updateData({
@@ -74,24 +45,14 @@ export function HourlyServicesStep({ data, updateData }: HourlyServicesStepProps
     updateData({ hourly_services: next });
   };
 
-  const handleServiceChange = (index: number, serviceId: string) => {
-    const service = services.find((s) => s.service_id === serviceId);
+  const handleServiceChange = (index: number, item: ServiceCatalogPickerItem) => {
     const next = [...data.hourly_services];
-
-    // Only auto-fill the rate if the service has a price in the contract's currency
-    let autoFillRate: number | undefined = undefined;
-    if (service?.prices && service.prices.length > 0) {
-      const matchingPrice = service.prices.find(p => p.currency_code === data.currency_code);
-      if (matchingPrice) {
-        autoFillRate = matchingPrice.rate;
-      }
-    }
-
     next[index] = {
       ...next[index],
-      service_id: serviceId,
-      service_name: service?.service_name || '',
-      hourly_rate: autoFillRate,
+      service_id: item.service_id,
+      service_name: item.service_name,
+      // Use default_rate from catalog if available
+      hourly_rate: item.default_rate > 0 ? item.default_rate : undefined,
     };
     updateData({ hourly_services: next });
   };
@@ -219,13 +180,14 @@ export function HourlyServicesStep({ data, updateData }: HourlyServicesStepProps
                 <Label htmlFor={`hourly-service-${index}`} className="text-sm">
                   Service {index + 1}
                 </Label>
-                <CustomSelect
+                <ServiceCatalogPicker
                   id={`hourly-service-${index}`}
                   value={service.service_id}
-                  onValueChange={(value: string) => handleServiceChange(index, value)}
-                  options={serviceOptions}
-                  placeholder={isLoadingServices ? 'Loading…' : 'Select a service'}
-                  disabled={isLoadingServices}
+                  selectedLabel={service.service_name}
+                  onSelect={(item) => handleServiceChange(index, item)}
+                  billingMethods={['hourly']}
+                  itemKinds={['service']}
+                  placeholder="Select a service"
                 />
               </div>
 

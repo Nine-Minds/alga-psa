@@ -1,17 +1,15 @@
 'use client';
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Button } from 'server/src/components/ui/Button';
 import { Card, CardContent, CardHeader } from 'server/src/components/ui/Card';
 import { Input } from 'server/src/components/ui/Input';
-import CustomSelect from 'server/src/components/ui/CustomSelect';
 import { Dialog, DialogContent, DialogFooter } from 'server/src/components/ui/Dialog';
 import { ConfirmationDialog } from 'server/src/components/ui/ConfirmationDialog';
+import { ServiceCatalogPicker, ServiceCatalogPickerItem } from 'server/src/components/billing-dashboard/contracts/ServiceCatalogPicker';
 import { getCurrencySymbol } from 'server/src/constants/currency';
 import { addTicketMaterial, deleteTicketMaterial, listTicketMaterials } from 'server/src/lib/actions/materialActions';
-import { getServices } from 'server/src/lib/actions/serviceActions';
 import { resolveClientBillingCurrency } from 'server/src/lib/actions/billingCurrencyActions';
-import { IService } from 'server/src/interfaces/billing.interfaces';
 import { ITicketMaterial } from 'server/src/interfaces/material.interfaces';
 
 interface TicketMaterialsCardProps {
@@ -23,11 +21,11 @@ interface TicketMaterialsCardProps {
 const TicketMaterialsCard: React.FC<TicketMaterialsCardProps> = ({ ticketId, clientId, currencyCode }) => {
   const [resolvedCurrencyCode, setResolvedCurrencyCode] = useState(currencyCode || 'USD');
   const [materials, setMaterials] = useState<ITicketMaterial[]>([]);
-  const [products, setProducts] = useState<IService[]>([]);
   const [error, setError] = useState<string | null>(null);
 
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [selectedProductId, setSelectedProductId] = useState<string>('');
+  const [selectedProductName, setSelectedProductName] = useState<string>('');
   const [quantity, setQuantity] = useState<number>(1);
   const [rateInput, setRateInput] = useState<string>('');
   const [description, setDescription] = useState<string>('');
@@ -47,20 +45,9 @@ const TicketMaterialsCard: React.FC<TicketMaterialsCardProps> = ({ ticketId, cli
     }
   };
 
-  const fetchProducts = async () => {
-    try {
-      const response = await getServices(1, 1000, { item_kind: 'product', is_active: true });
-      setProducts(response.services);
-    } catch (e) {
-      console.error('[TicketMaterialsCard] Failed to fetch products:', e);
-      setError('Failed to load products');
-    }
-  };
-
   useEffect(() => {
     if (!ticketId || !clientId) return;
     fetchMaterials();
-    fetchProducts();
     resolveClientBillingCurrency(clientId)
       .then((code) => setResolvedCurrencyCode(code || 'USD'))
       .catch((e) => {
@@ -70,30 +57,17 @@ const TicketMaterialsCard: React.FC<TicketMaterialsCardProps> = ({ ticketId, cli
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ticketId, clientId]);
 
-  const productOptions = useMemo(() => {
-    return [
-      { value: '', label: 'Select product...' },
-      ...products.map((p) => ({
-        value: p.service_id,
-        label: p.sku ? `${p.service_name} (${p.sku})` : p.service_name
-      }))
-    ];
-  }, [products]);
-
-  const selectedProduct = useMemo(
-    () => products.find((p) => p.service_id === selectedProductId) || null,
-    [products, selectedProductId]
-  );
-
-  useEffect(() => {
-    if (!selectedProduct) return;
-    const currencyPrice = selectedProduct.prices?.find((p) => p.currency_code === resolvedCurrencyCode)?.rate;
-    const cents = currencyPrice ?? selectedProduct.default_rate ?? 0;
+  const handleProductSelect = (item: ServiceCatalogPickerItem) => {
+    setSelectedProductId(item.service_id);
+    setSelectedProductName(item.service_name);
+    // Use default_rate from the catalog
+    const cents = item.default_rate ?? 0;
     setRateInput((cents / 100).toFixed(2));
-  }, [selectedProduct, resolvedCurrencyCode]);
+  };
 
   const resetAddForm = () => {
     setSelectedProductId('');
+    setSelectedProductName('');
     setQuantity(1);
     setRateInput('');
     setDescription('');
@@ -155,8 +129,16 @@ const TicketMaterialsCard: React.FC<TicketMaterialsCardProps> = ({ ticketId, cli
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
-            <h3 className="text-sm font-semibold text-gray-800">Materials</h3>
-            <Button id="ticket-materials-open-add-button" size="sm" onClick={() => setIsAddOpen(true)}>Add</Button>
+            <h3 className="font-bold text-gray-800">Materials</h3>
+            <Button 
+              id="ticket-materials-open-add-button"
+              variant='outline'
+              size="sm" 
+              onClick={() => 
+                setIsAddOpen(true)}
+            >
+              Add
+            </Button>
           </div>
         </CardHeader>
         <CardContent>
@@ -212,11 +194,13 @@ const TicketMaterialsCard: React.FC<TicketMaterialsCardProps> = ({ ticketId, cli
       >
         <DialogContent>
           <div className="space-y-3">
-            <CustomSelect
+            <ServiceCatalogPicker
               label="Product"
-              options={productOptions}
               value={selectedProductId}
-              onValueChange={setSelectedProductId}
+              selectedLabel={selectedProductName}
+              onSelect={handleProductSelect}
+              itemKinds={['product']}
+              placeholder="Select a product"
             />
             <div className="grid grid-cols-2 gap-2">
               <div>
@@ -244,7 +228,7 @@ const TicketMaterialsCard: React.FC<TicketMaterialsCardProps> = ({ ticketId, cli
           </div>
         </DialogContent>
         <DialogFooter>
-          <Button id="ticket-materials-add-cancel-button" variant="secondary" onClick={() => setIsAddOpen(false)}>Cancel</Button>
+          <Button id="ticket-materials-add-cancel-button" variant="outline" onClick={() => setIsAddOpen(false)}>Cancel</Button>
           <Button id="ticket-materials-add-submit-button" onClick={handleAdd}>Add</Button>
         </DialogFooter>
       </Dialog>
