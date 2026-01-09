@@ -80,10 +80,8 @@ export default function UserProfile({ userId }: UserProfileProps) {
   useEffect(() => {
     const validTabs = ['Profile', 'Security', 'Single Sign-On', 'API Keys', 'Notifications', 'Calendar'];
     const targetTab = tabParam && validTabs.includes(tabParam) ? tabParam : 'Profile';
-    if (targetTab !== activeTab) {
-      setActiveTab(targetTab);
-    }
-  }, [tabParam, activeTab]);
+    setActiveTab(targetTab);
+  }, [tabParam]);
   
   // Handle tab change and update URL
   const handleTabChange = (tab: string) => {
