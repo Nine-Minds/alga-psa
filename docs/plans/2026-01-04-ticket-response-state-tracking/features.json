@@ -1,0 +1,242 @@
+[
+  {
+    "id": "F001",
+    "description": "Database migration adds response_state enum type (awaiting_client, awaiting_internal)",
+    "implemented": false,
+    "prdRefs": ["FR1"]
+  },
+  {
+    "id": "F002",
+    "description": "Database migration adds response_state nullable column to tickets table",
+    "implemented": false,
+    "prdRefs": ["FR1"]
+  },
+  {
+    "id": "F003",
+    "description": "Database migration adds index on (tenant, response_state) for filter queries",
+    "implemented": false,
+    "prdRefs": ["FR1"]
+  },
+  {
+    "id": "F004",
+    "description": "ITicket interface includes response_state field with proper typing",
+    "implemented": false,
+    "prdRefs": ["FR1"]
+  },
+  {
+    "id": "F005",
+    "description": "Comment creation by internal staff with is_internal=false sets response_state to awaiting_client",
+    "implemented": false,
+    "prdRefs": ["FR2"]
+  },
+  {
+    "id": "F006",
+    "description": "Comment creation by client (author_type=client) sets response_state to awaiting_internal",
+    "implemented": false,
+    "prdRefs": ["FR2"]
+  },
+  {
+    "id": "F007",
+    "description": "Internal note creation (is_internal=true) does not change response_state",
+    "implemented": false,
+    "prdRefs": ["FR2"]
+  },
+  {
+    "id": "F008",
+    "description": "Response state update happens atomically with comment creation",
+    "implemented": false,
+    "prdRefs": ["FR2"]
+  },
+  {
+    "id": "F009",
+    "description": "updateTicket action accepts response_state field for manual override",
+    "implemented": false,
+    "prdRefs": ["FR3"]
+  },
+  {
+    "id": "F010",
+    "description": "Manual response state change is logged in ticket history/audit trail",
+    "implemented": false,
+    "prdRefs": ["FR3"]
+  },
+  {
+    "id": "F011",
+    "description": "Closing a ticket (is_closed=true) sets response_state to null",
+    "implemented": false,
+    "prdRefs": ["FR4"]
+  },
+  {
+    "id": "F012",
+    "description": "Reopening a ticket does not automatically set a response_state",
+    "implemented": false,
+    "prdRefs": ["FR4"]
+  },
+  {
+    "id": "F013",
+    "description": "Ticket list displays response state badge on status pill for awaiting_client",
+    "implemented": false,
+    "prdRefs": ["FR5"]
+  },
+  {
+    "id": "F014",
+    "description": "Ticket list displays response state badge on status pill for awaiting_internal",
+    "implemented": false,
+    "prdRefs": ["FR5"]
+  },
+  {
+    "id": "F015",
+    "description": "Response state badge has tooltip with full text description",
+    "implemented": false,
+    "prdRefs": ["FR5"]
+  },
+  {
+    "id": "F016",
+    "description": "Tickets with null response_state show no badge",
+    "implemented": false,
+    "prdRefs": ["FR5"]
+  },
+  {
+    "id": "F017",
+    "description": "Ticket list filter includes Response State dropdown option",
+    "implemented": false,
+    "prdRefs": ["FR6"]
+  },
+  {
+    "id": "F018",
+    "description": "Response State filter supports 'Awaiting Client Response' option",
+    "implemented": false,
+    "prdRefs": ["FR6"]
+  },
+  {
+    "id": "F019",
+    "description": "Response State filter supports 'Awaiting Internal Response' option",
+    "implemented": false,
+    "prdRefs": ["FR6"]
+  },
+  {
+    "id": "F020",
+    "description": "Response State filter supports 'No Response State' option",
+    "implemented": false,
+    "prdRefs": ["FR6"]
+  },
+  {
+    "id": "F021",
+    "description": "Response State filter works in combination with other filters (status, assignee, etc.)",
+    "implemented": false,
+    "prdRefs": ["FR6"]
+  },
+  {
+    "id": "F022",
+    "description": "Ticket detail view displays current response state",
+    "implemented": false,
+    "prdRefs": ["FR3"]
+  },
+  {
+    "id": "F023",
+    "description": "Ticket detail view has manual override control for response state",
+    "implemented": false,
+    "prdRefs": ["FR3"]
+  },
+  {
+    "id": "F024",
+    "description": "Manual override control offers Awaiting Client, Awaiting Internal, and Clear options",
+    "implemented": false,
+    "prdRefs": ["FR3"]
+  },
+  {
+    "id": "F025",
+    "description": "Response state updates visually in ticket detail when comment is posted",
+    "implemented": false,
+    "prdRefs": ["FR2"]
+  },
+  {
+    "id": "F026",
+    "description": "Client portal ticket list displays response state",
+    "implemented": false,
+    "prdRefs": ["FR7"]
+  },
+  {
+    "id": "F027",
+    "description": "Client portal shows 'Awaiting Your Response' for awaiting_client state",
+    "implemented": false,
+    "prdRefs": ["FR7"]
+  },
+  {
+    "id": "F028",
+    "description": "Client portal shows 'Awaiting Support Response' for awaiting_internal state",
+    "implemented": false,
+    "prdRefs": ["FR7"]
+  },
+  {
+    "id": "F029",
+    "description": "Client portal ticket detail view displays response state",
+    "implemented": false,
+    "prdRefs": ["FR7"]
+  },
+  {
+    "id": "F030",
+    "description": "Client portal users cannot manually change response state",
+    "implemented": false,
+    "prdRefs": ["FR7"]
+  },
+  {
+    "id": "F031",
+    "description": "TICKET_RESPONSE_STATE_CHANGED event type defined in event catalog",
+    "implemented": false,
+    "prdRefs": ["FR8"]
+  },
+  {
+    "id": "F032",
+    "description": "Event fires when response state changes via comment creation",
+    "implemented": false,
+    "prdRefs": ["FR8"]
+  },
+  {
+    "id": "F033",
+    "description": "Event fires when response state changes via manual override",
+    "implemented": false,
+    "prdRefs": ["FR8"]
+  },
+  {
+    "id": "F034",
+    "description": "Event fires when response state is cleared on ticket close",
+    "implemented": false,
+    "prdRefs": ["FR8"]
+  },
+  {
+    "id": "F035",
+    "description": "Event payload includes tenantId, ticketId, userId, previousState, newState, trigger",
+    "implemented": false,
+    "prdRefs": ["FR8"]
+  },
+  {
+    "id": "F036",
+    "description": "Event trigger field indicates 'comment', 'manual', or 'close'",
+    "implemented": false,
+    "prdRefs": ["FR8"]
+  },
+  {
+    "id": "F037",
+    "description": "Automation Hub can create workflow triggers for TICKET_RESPONSE_STATE_CHANGED event",
+    "implemented": false,
+    "prdRefs": ["FR8"]
+  },
+  {
+    "id": "F038",
+    "description": "Workflow event mappings can access response state change payload fields",
+    "implemented": false,
+    "prdRefs": ["FR8"]
+  },
+  {
+    "id": "F039",
+    "description": "TICKET_COMMENT_ADDED event payload includes author_type field",
+    "implemented": false,
+    "prdRefs": ["FR2"]
+  },
+  {
+    "id": "F040",
+    "description": "Response state respects tenant isolation (cannot see/modify across tenants)",
+    "implemented": false,
+    "prdRefs": ["FR1"]
+  }
+]

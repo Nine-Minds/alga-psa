@@ -80,6 +80,7 @@ const Comment = {
           tenant: tenant,
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
+          is_system_generated: Boolean((comment as any).is_system_generated),
           markdown_content: comment.markdown_content || "[No markdown content]" // Explicitly include this field
         })
         .returning('comment_id');

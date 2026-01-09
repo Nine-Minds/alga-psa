@@ -176,6 +176,12 @@
       "edited": "Bewerkt",
       "noComments": "Nog geen reacties"
     },
+    "responseState": {
+      "awaitingYourResponse": "Wacht op uw reactie",
+      "awaitingSupportResponse": "Wacht op reactie van support",
+      "awaitingYourResponseTooltip": "Support wacht op uw reactie",
+      "awaitingSupportResponseTooltip": "Uw reactie is ontvangen. Support zal spoedig reageren."
+    },
     "documents": {
       "title": "Documenten",
       "noDocuments": "Geen documenten toegevoegd",

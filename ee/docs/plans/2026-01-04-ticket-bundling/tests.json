@@ -1,0 +1,164 @@
+[
+  {
+    "id": "T001",
+    "description": "DB: creating a bundle sets `master_ticket_id` on children and creates a `ticket_bundle_settings` row.",
+    "implemented": true,
+    "featureIds": ["F001", "F003", "F012"]
+  },
+  {
+    "id": "T002",
+    "description": "DB: mirrored bundle comments are marked `is_system_generated` and are immutable via API.",
+    "implemented": true,
+    "featureIds": ["F005", "F041"]
+  },
+  {
+    "id": "T003",
+    "description": "Invariant: cannot add a ticket to two bundles (already bundled error).",
+    "implemented": true,
+    "featureIds": ["F007"]
+  },
+  {
+    "id": "T004",
+    "description": "Invariant: cannot create cycles by promoting/adding tickets that would create an ancestor loop.",
+    "implemented": true,
+    "featureIds": ["F008", "F016"]
+  },
+  {
+    "id": "T005",
+    "description": "Security: bundling rejects cross-tenant ticket ids (same-tenant only).",
+    "implemented": true,
+    "featureIds": ["F009"]
+  },
+  {
+    "id": "T006",
+    "description": "Permissions: user without required ticket update permissions cannot bundle/add/remove/promote/unbundle.",
+    "implemented": true,
+    "featureIds": ["F010", "F011"]
+  },
+  {
+    "id": "T007",
+    "description": "UI: ticket list toggle switches between bundled and individual modes and persists preference.",
+    "implemented": true,
+    "featureIds": ["F019", "F020"]
+  },
+  {
+    "id": "T008",
+    "description": "UI: bundled view shows only masters/standalone and displays child count for masters.",
+    "implemented": true,
+    "featureIds": ["F021"]
+  },
+  {
+    "id": "T009",
+    "description": "Search: in bundled view, searching for a child returns the master in results.",
+    "implemented": true,
+    "featureIds": ["F022"]
+  },
+  {
+    "id": "T010",
+    "description": "Filters: status/priority/board/client filters behave correctly in bundled view and individual view.",
+    "implemented": true,
+    "featureIds": ["F023"]
+  },
+  {
+    "id": "T011",
+    "description": "UI: individual view groups children under master (when both appear in the page).",
+    "implemented": true,
+    "featureIds": ["F024"]
+  },
+  {
+    "id": "T012",
+    "description": "UI: bulk select 2+ tickets enables Bundle Tickets modal with master selection and sync toggle.",
+    "implemented": true,
+    "featureIds": ["F026", "F027"]
+  },
+  {
+    "id": "T013",
+    "description": "Actions: add child by ticket number adds the child to the bundle and updates the master panel list.",
+    "implemented": true,
+    "featureIds": ["F013", "F028", "F029"]
+  },
+  {
+    "id": "T014",
+    "description": "Actions: remove child unlinks the child and keeps the rest of the bundle intact.",
+    "implemented": true,
+    "featureIds": ["F014"]
+  },
+  {
+    "id": "T015",
+    "description": "Actions: unbundle master detaches all children and removes bundle settings.",
+    "implemented": true,
+    "featureIds": ["F015"]
+  },
+  {
+    "id": "T016",
+    "description": "Actions: promote child to master repoints all children to the new master and migrates settings.",
+    "implemented": true,
+    "featureIds": ["F016"]
+  },
+  {
+    "id": "T017",
+    "description": "UI: child ticket shows a banner linking to the master ticket.",
+    "implemented": true,
+    "featureIds": ["F030"]
+  },
+  {
+    "id": "T018",
+    "description": "Locking: child workflow controls are disabled in UI and rejected on server updates.",
+    "implemented": true,
+    "featureIds": ["F031", "F032"]
+  },
+  {
+    "id": "T019",
+    "description": "Bundling keeps child status unchanged immediately after bundling.",
+    "implemented": true,
+    "featureIds": ["F033"]
+  },
+  {
+    "id": "T020",
+    "description": "Conversation: inbound child replies appear on master as view-only aggregated items without creating a master comment row.",
+    "implemented": true,
+    "featureIds": ["F034"]
+  },
+  {
+    "id": "T021",
+    "description": "Sync updates: updating master status/assignment/priority propagates to all children when mode is sync_updates.",
+    "implemented": true,
+    "featureIds": ["F036"]
+  },
+  {
+    "id": "T022",
+    "description": "Sync updates: closing the master propagates closure fields to children when mode is sync_updates.",
+    "implemented": true,
+    "featureIds": ["F037"]
+  },
+  {
+    "id": "T023",
+    "description": "Sync updates: public master comment mirrors to children as immutable, system-generated comment; internal notes do not mirror.",
+    "implemented": true,
+    "featureIds": ["F038", "F040", "F041"]
+  },
+  {
+    "id": "T024",
+    "description": "Time: creating a time entry on a bundled child is blocked; master time entry succeeds.",
+    "implemented": true,
+    "featureIds": ["F042"]
+  },
+  {
+    "id": "T025",
+    "description": "Email: public master comment sends fanout emails to all child requesters with correct threading and portal links; dedupe by email.",
+    "implemented": true,
+    "featureIds": ["F043"]
+  },
+  {
+    "id": "T026",
+    "description": "Multi-client: bundles can include children across different clients within the same tenant (no rejection).",
+    "implemented": true,
+    "featureIds": ["F047"]
+  },
+  {
+    "id": "T027",
+    "description": "Reopen policy: if enabled, inbound child reply reopens master (and does not create duplicate notifications).",
+    "implemented": true,
+    "featureIds": ["F046"]
+  }
+]
