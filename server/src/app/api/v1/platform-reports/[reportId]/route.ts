@@ -17,6 +17,7 @@ type RouteContext = {
 
 type EeRouteModule = {
   GET: (req: Request, context: RouteContext) => Promise<Response>;
+  POST: (req: Request, context: RouteContext) => Promise<Response>;
   PUT: (req: Request, context: RouteContext) => Promise<Response>;
   DELETE: (req: Request, context: RouteContext) => Promise<Response>;
   OPTIONS?: (req: Request) => Promise<Response>;
@@ -65,6 +66,21 @@ export async function GET(
   return eeRoute.GET(request, context);
 }
 
+/**
+ * POST handler for __method override (uiProxy only supports GET/POST)
+ * Body should contain { __method: 'PUT' | 'DELETE', ...data }
+ */
+export async function POST(
+  request: Request,
+  context: RouteContext
+): Promise<Response> {
+  const eeRoute = await loadEeRoute();
+  if (!eeRoute?.POST) {
+    return eeUnavailable();
+  }
+  return eeRoute.POST(request, context);
+}
+
 export async function PUT(
   request: Request,
   context: RouteContext
@@ -94,7 +110,7 @@ export async function OPTIONS(request: Request): Promise<Response> {
       status: 204,
       headers: {
         'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Methods': 'GET, PUT, DELETE, OPTIONS',
+        'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
         'Access-Control-Allow-Headers': 'Content-Type, Authorization',
       },
     });
