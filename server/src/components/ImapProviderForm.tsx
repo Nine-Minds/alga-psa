@@ -23,7 +23,17 @@ import { getInboundTicketDefaults } from 'server/src/lib/actions/email-actions/i
 
 const imapProviderSchema = z.object({
   providerName: z.string().min(1, 'Provider name is required'),
-  mailbox: z.string().email('Valid email address is required'),
+  mailbox: z
+    .string()
+    .trim()
+    .min(1, 'Mailbox is required')
+    .refine((value) => {
+      const lower = value.toLowerCase();
+      const isLocalPartOnly = /^[^\s@]+$/.test(lower);
+      const isLocalhostEmail = /^[^\s@]+@localhost$/.test(lower);
+      const isStandardEmail = z.string().email().safeParse(lower).success;
+      return isLocalPartOnly || isLocalhostEmail || isStandardEmail;
+    }, 'Valid mailbox is required (e.g. user@domain.com, user@localhost, or user)'),
   host: z.string().min(1, 'IMAP host is required'),
   port: z.number().min(1).max(65535),
   secure: z.boolean(),
