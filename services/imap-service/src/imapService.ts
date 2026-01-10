@@ -368,6 +368,9 @@ class ImapFolderListener {
 
       for await (const message of client.fetch(uids, { uid: true, source: true })) {
         if (!message?.source) continue;
+        if (message.uid && message.uid > maxUid) {
+          maxUid = message.uid;
+        }
         const raw = message.source.toString('utf8');
         const parsed = await simpleParser(raw);
 
@@ -395,9 +398,6 @@ class ImapFolderListener {
         await this.recordLastProcessedMessageId(emailData.id);
 
         processed += 1;
-        if (message.uid && message.uid > maxUid) {
-          maxUid = message.uid;
-        }
 
         if (processed >= maxEmailsPerSync) {
           break;
