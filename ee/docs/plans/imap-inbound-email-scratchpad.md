@@ -11,6 +11,7 @@ Use this scratchpad to capture key findings, decisions, TODOs, and file referenc
 - IMAP provider must feed existing `INBOUND_EMAIL_RECEIVED` workflow event pipeline (same as Gmail/Microsoft).
 - IMAP v1 must include OAuth2 (XOAUTH2) support.
 - IMAP service should be resilient: IDLE, reconnect, backoff, dedupe, and per-folder monitoring.
+- `auto_process_emails` is not exposed in the UI (processing is gated by provider Active flag).
 
 ---
 

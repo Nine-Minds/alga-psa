@@ -47,7 +47,6 @@ const imapProviderSchema = z.object({
   oauthClientSecret: z.string().optional(),
   oauthScopes: z.string().optional(),
   isActive: z.boolean(),
-  autoProcessEmails: z.boolean(),
   folderFilters: z.string().optional(),
   inboundTicketDefaultsId: z.string().uuid().optional()
 });
@@ -95,7 +94,6 @@ export function ImapProviderForm({
       oauthClientSecret: provider.imapConfig.oauth_client_secret || '',
       oauthScopes: provider.imapConfig.oauth_scopes || '',
       isActive: provider.isActive,
-      autoProcessEmails: provider.imapConfig.auto_process_emails ?? true,
       folderFilters: provider.imapConfig.folder_filters?.join(', ') || '',
       inboundTicketDefaultsId: (provider as any).inboundTicketDefaultsId || undefined
     } : {
@@ -104,7 +102,6 @@ export function ImapProviderForm({
       allowStarttls: false,
       authType: 'password',
       isActive: true,
-      autoProcessEmails: true,
       folderFilters: '',
       inboundTicketDefaultsId: undefined
     }
@@ -156,7 +153,7 @@ export function ImapProviderForm({
           oauth_client_id: data.oauthClientId || undefined,
           oauth_client_secret: data.oauthClientSecret || undefined,
           oauth_scopes: data.oauthScopes || undefined,
-          auto_process_emails: data.autoProcessEmails,
+          auto_process_emails: true,
           folder_filters: data.folderFilters ? data.folderFilters.split(',').map(f => f.trim()).filter(Boolean) : [],
           // Not exposed in UI (configured via env / defaults)
           max_emails_per_sync: 5,
@@ -356,10 +353,6 @@ export function ImapProviderForm({
           <div>
             <Label htmlFor="folderFilters">Folder Filters</Label>
             <Input id="folderFilters" {...form.register('folderFilters')} placeholder="Inbox, Support, Tickets" />
-          </div>
-          <div className="flex items-center justify-between">
-            <Label htmlFor="autoProcessEmails">Auto-process emails</Label>
-            <Switch id="autoProcessEmails" checked={form.watch('autoProcessEmails')} onCheckedChange={(v) => form.setValue('autoProcessEmails', v)} />
           </div>
           <div className="flex items-center justify-between">
             <Label htmlFor="isActive">Active</Label>

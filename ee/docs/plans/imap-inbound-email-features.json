@@ -200,7 +200,7 @@
     "implemented": true
   },
   {
-    "description": "Collect IMAP auto_process_emails in IMAP provider form",
+    "description": "Do not expose IMAP auto_process_emails in provider UI; always on (processing gated by provider Active flag)",
     "implemented": true
   },
   {
