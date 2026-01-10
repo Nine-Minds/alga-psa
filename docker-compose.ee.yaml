@@ -276,6 +276,9 @@ services:
         target: /run/secrets/db_password_server
         read_only: true
       - type: bind
+        source: ./secrets/tenants
+        target: /run/secrets/tenants
+      - type: bind
         source: ./services/imap-service/entrypoint.sh
         target: /app/entrypoint.sh
         read_only: true
