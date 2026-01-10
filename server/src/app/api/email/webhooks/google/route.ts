@@ -198,20 +198,23 @@ export async function POST(request: NextRequest) {
         .where('history_id', notification.historyId)
         .first();
 
-      // if (existingProcessed) {
-      //   console.log(`⚠️  HistoryId ${notification.historyId} already processed for provider ${provider.id}, skipping duplicate`);
-      //   processed = true; // Mark as processed to avoid error
-      //   return; // Exit early - this is a duplicate
-      // }
+      if (existingProcessed) {
+        console.log(`⚠️  HistoryId ${notification.historyId} already processed for provider ${provider.id}, skipping duplicate`);
+        processed = true; // Mark as processed to acknowledge webhook
+        return; // Exit early - this is a duplicate
+      }
 
-      // Record this historyId as processed
-      await trx('gmail_processed_history').insert({
-        tenant: provider.tenant,
-        provider_id: provider.id,
-        history_id: notification.historyId,
-        message_id: payloadData.messageId,
-        processed_at: new Date().toISOString()
-      });
+      // Record this historyId as processed (use onConflict to handle race conditions)
+      await trx('gmail_processed_history')
+        .insert({
+          tenant: provider.tenant,
+          provider_id: provider.id,
+          history_id: notification.historyId,
+          message_id: payloadData.messageId,
+          processed_at: new Date().toISOString()
+        })
+        .onConflict(['tenant', 'provider_id', 'history_id'])
+        .ignore();
 
       console.log(`✅ Recorded historyId ${notification.historyId} as processed for provider ${provider.id}`);
     
