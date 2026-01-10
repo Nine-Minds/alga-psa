@@ -151,11 +151,11 @@ services:
       - type: bind
         source: /tmp/alga-migrations
         target: /app/server/migrations
-        read_only: true
+        read_only: false
       - type: bind
         source: /tmp/alga-seeds
         target: /app/server/seeds
-        read_only: true
+        read_only: false
     secrets:
       - postgres_password
       - db_password_server
