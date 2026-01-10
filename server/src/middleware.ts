@@ -93,6 +93,7 @@ const _middleware = auth((request) => {
       '/api/documents/download/',
       '/api/documents/view/',
       '/api/email/webhooks/',
+      '/api/calendar/webhooks/',
       '/api/email/oauth/',
       '/api/client-portal/domain-session',
       '/api/integrations/ninjaone/callback',
