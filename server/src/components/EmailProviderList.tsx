@@ -19,12 +19,12 @@ interface EmailProviderListProps {
   providers: EmailProvider[];
   onEdit: (provider: EmailProvider) => void;
   onDelete: (providerId: string) => void;
-  onTestConnection: (provider: EmailProvider) => void;
+  onTestConnection: (provider: EmailProvider) => Promise<void>;
   onRefresh: () => void;
   onRefreshWatchSubscription: (provider: EmailProvider) => void;
   onRetryRenewal: (provider: EmailProvider) => void;
   onReconnectOAuth?: (provider: EmailProvider) => void;
-  onResyncProvider?: (provider: EmailProvider) => void;
+  onResyncProvider?: (provider: EmailProvider) => Promise<void>;
   onRunDiagnostics: (provider: EmailProvider) => void;
   onAddClick?: () => void;
 }
@@ -44,6 +44,8 @@ export function EmailProviderList({
 }: EmailProviderListProps) {
   const [defaultsOptions, setDefaultsOptions] = React.useState<{ value: string; label: string }[]>([]);
   const [updatingProviderId, setUpdatingProviderId] = React.useState<string | null>(null);
+  const [busyProviderId, setBusyProviderId] = React.useState<string | null>(null);
+  const [busyAction, setBusyAction] = React.useState<'test' | 'resync' | null>(null);
   const [searchTerm, setSearchTerm] = React.useState('');
   const [providerFilter, setProviderFilter] = React.useState<'all' | 'google' | 'microsoft' | 'imap'>('all');
 
@@ -77,6 +79,29 @@ export function EmailProviderList({
       console.error('Failed to update provider defaults', e);
     } finally {
       setUpdatingProviderId(null);
+    }
+  };
+
+  const handleTestConnectionInternal = async (provider: EmailProvider) => {
+    try {
+      setBusyProviderId(provider.id);
+      setBusyAction('test');
+      await onTestConnection(provider);
+    } finally {
+      setBusyProviderId(null);
+      setBusyAction(null);
+    }
+  };
+
+  const handleResyncProviderInternal = async (provider: EmailProvider) => {
+    if (!onResyncProvider) return;
+    try {
+      setBusyProviderId(provider.id);
+      setBusyAction('resync');
+      await onResyncProvider(provider);
+    } finally {
+      setBusyProviderId(null);
+      setBusyAction(null);
     }
   };
 
@@ -130,13 +155,15 @@ export function EmailProviderList({
             provider={provider}
             defaultsOptions={defaultsOptions}
             updatingProviderId={updatingProviderId}
+            busy={busyProviderId === provider.id}
+            busyAction={busyProviderId === provider.id ? busyAction : null}
             onEdit={onEdit}
             onDelete={onDelete}
-            onTestConnection={onTestConnection}
+            onTestConnection={handleTestConnectionInternal}
             onRefreshWatchSubscription={onRefreshWatchSubscription}
             onRetryRenewal={onRetryRenewal}
             onReconnectOAuth={onReconnectOAuth}
-            onResyncProvider={onResyncProvider}
+            onResyncProvider={onResyncProvider ? handleResyncProviderInternal : undefined}
             onRunDiagnostics={onRunDiagnostics}
             onChangeDefaults={handleChangeDefaults}
           />

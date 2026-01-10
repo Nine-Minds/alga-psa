@@ -10,6 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/
 import { Button } from './ui/Button';
 import { Alert, AlertDescription } from './ui/Alert';
 import { Plus, Settings, Trash2, CheckCircle } from 'lucide-react';
+import toast from 'react-hot-toast';
 import { MicrosoftProviderForm, GmailProviderForm, ImapProviderForm } from '@product/email-providers/entry';
 import { EmailProviderList } from './EmailProviderList';
 import { ProviderSetupWizardDialog } from './ProviderSetupWizardDialog';
@@ -213,17 +214,22 @@ function EmailProviderConfigurationContent({
     try {
       setError(null);
 
+      const toastId = toast.loading(`Testing connection for ${provider.providerName}...`);
       const result = await testEmailProviderConnection(provider.id);
 
       if (result.success) {
         // Update provider status
         const updatedProvider = { ...provider, status: 'connected' as const };
         handleProviderUpdated(updatedProvider);
+        toast.success(`Connected to ${provider.providerName}.`, { id: toastId });
       } else {
-        setError(result.error || 'Connection test failed');
+        const message = result.error || 'Connection test failed';
+        setError(message);
+        toast.error(message, { id: toastId });
       }
     } catch (err: any) {
       setError(err.message);
+      toast.error(err.message);
     }
   };
 
@@ -287,13 +293,18 @@ function EmailProviderConfigurationContent({
   const handleResyncProvider = async (provider: EmailProvider) => {
     try {
       setError(null);
+      const toastId = toast.loading(`Resyncing ${provider.providerName}...`);
       const result = await resyncImapProvider(provider.id);
       if (!result.success) {
-        throw new Error(result.error || 'Failed to resync IMAP provider');
+        const message = result.error || 'Failed to resync IMAP provider';
+        toast.error(message, { id: toastId });
+        throw new Error(message);
       }
+      toast.success(`Resync started for ${provider.providerName}.`, { id: toastId });
       await loadProviders();
     } catch (err: any) {
       setError(err.message);
+      toast.error(err.message);
     }
   };
 
