@@ -10,6 +10,7 @@ WORKDIR /app
 RUN npm install -g typescript @types/node tsc-alias
 
 COPY tsconfig.base.json ./
+COPY types/ ./types/
 COPY package.json package-lock.json ./
 
 COPY shared/package.json ./shared/
