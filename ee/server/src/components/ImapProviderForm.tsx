@@ -22,7 +22,17 @@ import { getInboundTicketDefaults } from '@/lib/actions/email-actions/inboundTic
 
 const eeImapProviderSchema = z.object({
   providerName: z.string().min(1, 'Provider name is required'),
-  mailbox: z.string().email('Valid email address is required'),
+  mailbox: z
+    .string()
+    .trim()
+    .min(1, 'Mailbox is required')
+    .refine((value) => {
+      const lower = value.toLowerCase();
+      const isLocalPartOnly = /^[^\s@]+$/.test(lower);
+      const isLocalhostEmail = /^[^\s@]+@localhost$/.test(lower);
+      const isStandardEmail = z.string().email().safeParse(lower).success;
+      return isLocalPartOnly || isLocalhostEmail || isStandardEmail;
+    }, 'Valid mailbox is required (e.g. user@domain.com, user@localhost, or user)'),
   host: z.string().min(1, 'IMAP host is required'),
   port: z.number().min(1).max(65535),
   secure: z.boolean(),
@@ -266,6 +276,11 @@ export function ImapProviderForm({
           {authType === 'password' && (
             <div>
               <Label htmlFor="password">Password / App Password</Label>
+              {isEditing && (
+                <p className="text-xs text-muted-foreground mt-1">
+                  Passwords are stored securely and will not be displayed. Leave blank to keep the existing password.
+                </p>
+              )}
               <div className="relative">
                 <Input id="password" type={showPassword ? 'text' : 'password'} {...form.register('password')} />
                 <button

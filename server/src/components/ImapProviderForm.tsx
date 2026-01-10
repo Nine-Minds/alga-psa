@@ -282,6 +282,11 @@ export function ImapProviderForm({
           {authType === 'password' && (
             <div>
               <Label htmlFor="password">Password / App Password</Label>
+              {isEditing && (
+                <p className="text-xs text-muted-foreground mt-1">
+                  Passwords are stored securely and will not be displayed. Leave blank to keep the existing password.
+                </p>
+              )}
               <div className="relative">
                 <Input
                   id="password"
