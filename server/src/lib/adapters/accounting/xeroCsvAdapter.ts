@@ -22,9 +22,14 @@ const TRACKING_CATEGORY_SOURCE_SYSTEM = 'Source System';
 const TRACKING_CATEGORY_SOURCE_VALUE = 'AlgaPSA';
 const TRACKING_CATEGORY_INVOICE_ID = 'External Invoice ID';
 
+export function buildXeroCsvReference(invoiceId: string, poNumber?: string | null): string {
+  return poNumber ? `${invoiceId} | PO ${poNumber}` : invoiceId;
+}
+
 type DbInvoice = {
   invoice_id: string;
   invoice_number?: string | null;
+  po_number?: string | null;
   invoice_date?: string | Date | null;
   due_date?: string | Date | null;
   client_id?: string | null;
@@ -255,7 +260,9 @@ export class XeroCsvAdapter implements AccountingExportAdapter {
           'POPostalCode': '',
           'POCountry': '',
           '*InvoiceNumber': isFirstLine ? invoiceNumber : '',
-          'Reference': isFirstLine ? invoiceId : '', // Store Alga invoice ID in Reference
+          'Reference': isFirstLine
+            ? buildXeroCsvReference(invoiceId, invoice.po_number)
+            : '', // Store Alga invoice ID in Reference (plus PO when available)
           '*InvoiceDate': isFirstLine ? invoiceDate : '',
           '*DueDate': isFirstLine ? dueDate : '',
           'Total': '', // Xero calculates this
@@ -459,6 +466,7 @@ export class XeroCsvAdapter implements AccountingExportAdapter {
       .select(
         'invoice_id',
         'invoice_number',
+        'po_number',
         'invoice_date',
         'due_date',
         'client_id',

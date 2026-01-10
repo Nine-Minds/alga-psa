@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { useTranslation } from 'server/src/lib/i18n/client';
 import { Card, CardDescription, CardHeader, CardTitle } from 'server/src/components/ui/Card';
 import CustomTabs from 'server/src/components/ui/CustomTabs';
@@ -14,8 +15,21 @@ import {
 } from 'server/src/lib/actions/surveyActions';
 import type { SurveyTemplate, SurveyTrigger } from 'server/src/lib/actions/surveyActions';
 
+// Map URL slugs to tab labels
+const TAB_SLUG_TO_LABEL: Record<string, string> = {
+  'templates': 'Templates',
+  'triggers': 'Triggers',
+};
+
+// Map tab labels to URL slugs
+const TAB_LABEL_TO_SLUG: Record<string, string> = {
+  'Templates': 'templates',
+  'Triggers': 'triggers',
+};
+
 const SurveySettings = (): React.JSX.Element => {
   const { t } = useTranslation('common');
+  const searchParams = useSearchParams();
 
   const [templates, setTemplates] = useState<SurveyTemplate[]>([]);
   const [triggers, setTriggers] = useState<SurveyTrigger[]>([]);
@@ -23,6 +37,44 @@ const SurveySettings = (): React.JSX.Element => {
   const [isTriggersLoading, setTriggersLoading] = useState(true);
   const [templatesError, setTemplatesError] = useState<string | null>(null);
   const [triggersError, setTriggersError] = useState<string | null>(null);
+
+  // Determine initial active tab based on URL parameter
+  const [activeTab, setActiveTab] = useState<string>(() => {
+    const subtab = searchParams?.get('subtab');
+    const initialLabel = subtab ? TAB_SLUG_TO_LABEL[subtab.toLowerCase()] : undefined;
+    return initialLabel || 'Templates'; // Default to 'Templates'
+  });
+
+  // Update active tab when URL parameter changes
+  useEffect(() => {
+    const subtab = searchParams?.get('subtab');
+    const currentLabel = subtab ? TAB_SLUG_TO_LABEL[subtab.toLowerCase()] : undefined;
+    const targetTab = currentLabel || 'Templates';
+    if (targetTab !== activeTab) {
+      setActiveTab(targetTab);
+    }
+  }, [searchParams, activeTab]);
+
+  // Update URL when tab changes
+  const handleTabChange = useCallback((tabLabel: string) => {
+    setActiveTab(tabLabel);
+
+    const urlSlug = TAB_LABEL_TO_SLUG[tabLabel];
+    const currentSearchParams = new URLSearchParams(window.location.search);
+
+    if (urlSlug && urlSlug !== 'templates') {
+      currentSearchParams.set('subtab', urlSlug);
+    } else {
+      currentSearchParams.delete('subtab');
+    }
+
+    // Preserve existing tab parameter (for parent settings page)
+    const newUrl = currentSearchParams.toString()
+      ? `${window.location.pathname}?${currentSearchParams.toString()}`
+      : window.location.pathname;
+
+    window.history.pushState({}, '', newUrl);
+  }, []);
 
   const templateLoadErrorFallback = useMemo(
     () =>
@@ -146,7 +198,8 @@ const SurveySettings = (): React.JSX.Element => {
       <CustomTabs
         idPrefix="survey-settings"
         tabs={tabs}
-        defaultTab={templateTabLabel}
+        defaultTab={activeTab}
+        onTabChange={handleTabChange}
         tabStyles={{
           root: 'w-full',
           list: 'overflow-x-auto pb-2',

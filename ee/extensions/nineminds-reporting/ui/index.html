@@ -1,0 +1,397 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Nine Minds Reporting</title>
+    <style>
+      :root {
+        /* These are defaults that get overridden by host theme */
+        --alga-bg: #fff;
+        --alga-fg: #334155;               /* Matches --color-text-700 */
+        --alga-fg-muted: #64748b;         /* Matches --color-text-500 */
+        --alga-fg-light: #94a3b8;         /* Matches --color-text-400 */
+        --alga-muted-fg: #64748b;
+        --alga-muted: #f8fafc;            /* Matches --color-border-50 */
+        --alga-border: #e2e8f0;           /* Matches --color-border-200 */
+        --alga-border-light: #f1f5f9;     /* Matches --color-border-100 */
+        --alga-card-bg: #f8fafc;
+        --alga-radius: 6px;
+
+        /* Alga brand colors (defaults, overridden by host) */
+        --alga-primary: #8a4dea;           /* Purple */
+        --alga-primary-light: #a673f2;     /* Lighter purple for hover */
+        --alga-primary-dark: #7c45d3;
+        --alga-primary-50: #f6f0fe;
+        --alga-primary-100: #ede2fd;
+        --alga-primary-foreground: #ffffff;
+
+        /* Focus ring - purple to match brand, thicker ring */
+        --alga-ring: #8a4dea;
+        --alga-ring-width: 2px;
+        --alga-ring-opacity: 1;
+
+        --alga-secondary: #40cff9;         /* Blue */
+        --alga-secondary-light: #66dffb;
+        --alga-accent: #ff9c30;            /* Orange */
+
+        --alga-success: #16a34a;
+        --alga-warning: #d97706;
+        --alga-danger: #ff9c30;            /* Orange - brand destructive */
+        --alga-danger-dark: #e68a2a;
+
+        /* Row colors for alternating table rows */
+        --alga-row-even: #f9fafb;
+        --alga-row-odd: #ffffff;
+        --alga-row-hover: #eff6ff;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+        color: var(--alga-fg);
+        background: var(--alga-bg);
+        font-size: 14px;
+        line-height: 1.5;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+      }
+      header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 16px 20px;
+        border-bottom: 1px solid var(--alga-border);
+        position: sticky;
+        top: 0;
+        background: var(--alga-bg);
+        z-index: 10;
+      }
+      header h1 {
+        margin: 0;
+        font-size: 1.25rem;
+        font-weight: 600;
+        color: #0f172a;                   /* Darker title text */
+      }
+      /* Tab-style navigation matching main app Tabs component */
+      nav {
+        display: flex;
+        gap: 0;
+        border-bottom: 1px solid var(--alga-border);
+        margin-bottom: -1px;              /* Overlap with header border */
+      }
+      nav button {
+        padding: 8px 16px;
+        border: none;
+        border-bottom: 2px solid transparent;
+        background: transparent;
+        cursor: pointer;
+        font-size: 0.875rem;
+        font-weight: 500;
+        font-family: inherit;
+        transition: all 0.15s;
+        color: var(--alga-fg-muted);
+        position: relative;
+      }
+      nav button:hover {
+        color: var(--alga-fg);
+        background: transparent;
+      }
+      nav button:focus {
+        outline: none;
+      }
+      nav button.active {
+        color: #0f172a;
+        font-weight: 500;
+        border-bottom: 2px solid var(--alga-primary);
+        background: transparent;
+      }
+      main { padding: 20px; }
+      .loading {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 48px;
+        color: var(--alga-fg-muted);
+        flex-direction: column;
+        gap: 12px;
+      }
+      .loading-spinner {
+        width: 32px;
+        height: 32px;
+        border: 3px solid var(--alga-border);
+        border-top-color: var(--alga-primary);
+        border-radius: 50%;
+        animation: spin 0.8s linear infinite;
+      }
+      @keyframes spin {
+        to { transform: rotate(360deg); }
+      }
+      .error {
+        padding: 16px;
+        background: #fef2f2;
+        border: 1px solid #fecaca;
+        border-radius: var(--alga-radius);
+        color: #dc2626;
+        font-size: 0.875rem;
+      }
+      .success {
+        padding: 16px;
+        background: #f0fdf4;
+        border: 1px solid #bbf7d0;
+        border-radius: var(--alga-radius);
+        color: #166534;
+        font-size: 0.875rem;
+      }
+      .card {
+        background: var(--alga-bg);
+        border: 1px solid var(--alga-border);
+        border-radius: 8px;
+        padding: 20px;
+        margin-bottom: 16px;
+      }
+      .card-header {
+        font-weight: 600;
+        font-size: 1rem;
+        color: #0f172a;
+        margin-bottom: 16px;
+        padding-bottom: 12px;
+        border-bottom: 1px solid var(--alga-border-light);
+      }
+      /* Button styles matching main app Button component */
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 8px 16px;
+        background: var(--alga-primary);
+        color: white;
+        border: 1px solid transparent;
+        border-radius: var(--alga-radius);
+        cursor: pointer;
+        font-size: 0.875rem;
+        font-weight: 500;
+        font-family: inherit;
+        transition: all 0.15s ease;
+        gap: 8px;
+      }
+      .btn:hover { background: var(--alga-primary-light); }
+      .btn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+        pointer-events: none;
+      }
+      .btn-sm {
+        padding: 6px 12px;
+        font-size: 0.8125rem;
+      }
+      .btn-lg {
+        padding: 10px 20px;
+        font-size: 1rem;
+      }
+      .btn-secondary {
+        background: var(--alga-bg);
+        color: var(--alga-fg);
+        border-color: var(--alga-border);
+      }
+      .btn-secondary:hover {
+        background: var(--alga-primary-50);
+        border-color: var(--alga-primary);
+        color: var(--alga-primary);
+      }
+      .btn-ghost {
+        background: transparent;
+        color: var(--alga-fg-muted);
+        border-color: transparent;
+      }
+      .btn-ghost:hover {
+        background: var(--alga-card-bg);
+        color: var(--alga-primary);
+      }
+      .btn-outline {
+        background: transparent;
+        color: var(--alga-primary);
+        border-color: var(--alga-primary);
+      }
+      .btn-outline:hover {
+        background: var(--alga-primary-50);
+      }
+      .btn-danger {
+        background: #dc2626;
+        border-color: transparent;
+      }
+      .btn-danger:hover { background: #b91c1c; }
+      .input {
+        width: 100%;
+        padding: 8px 12px;
+        border: 1px solid var(--alga-border);
+        border-radius: var(--alga-radius);
+        font-size: 0.875rem;
+        font-family: inherit;
+        background: var(--alga-bg);
+        color: var(--alga-fg);
+        box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+      }
+      .input:focus {
+        outline: none;
+        border-color: transparent;
+        box-shadow: 0 0 0 var(--alga-ring-width) rgba(138, 77, 234, var(--alga-ring-opacity));
+      }
+      .input::placeholder {
+        color: var(--alga-fg-light);
+      }
+      /* Purple ring for text inputs and textareas - matches main app focus:ring-2 */
+      input[type="text"]:focus, input[type="text"]:focus-visible,
+      input[type="email"]:focus, input[type="email"]:focus-visible,
+      input[type="password"]:focus, input[type="password"]:focus-visible,
+      input[type="number"]:focus, input[type="number"]:focus-visible,
+      input[type="search"]:focus, input[type="search"]:focus-visible,
+      input:not([type]):focus, input:not([type]):focus-visible,
+      textarea:focus, textarea:focus-visible {
+        outline: none !important;
+        border-color: transparent !important;
+        box-shadow: 0 0 0 var(--alga-ring-width) rgba(138, 77, 234, var(--alga-ring-opacity)) !important;
+      }
+      /* Remove ring from buttons and selects/dropdowns */
+      button:focus, button:focus-visible,
+      select:focus, select:focus-visible,
+      [role="combobox"]:focus, [role="listbox"]:focus,
+      [data-radix-popper-content-wrapper] *:focus {
+        outline: none !important;
+        box-shadow: none !important;
+      }
+      /* Custom select styling to match main app */
+      select.input {
+        appearance: none;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+        background-repeat: no-repeat;
+        background-position: right 10px center;
+        padding-right: 36px;
+        cursor: pointer;
+      }
+      select.input:hover {
+        background-color: var(--alga-primary-50);
+        border-color: var(--alga-primary);
+      }
+      .label {
+        display: block;
+        margin-bottom: 6px;
+        font-weight: 500;
+        font-size: 0.875rem;
+        color: var(--alga-fg);
+      }
+      .label-muted {
+        color: var(--alga-fg-muted);
+        font-weight: 400;
+      }
+      .form-group { margin-bottom: 16px; }
+      .form-hint {
+        font-size: 0.8125rem;
+        color: var(--alga-fg-light);
+        margin-top: 4px;
+      }
+      .badge {
+        display: inline-flex;
+        align-items: center;
+        padding: 2px 8px;
+        border-radius: 9999px;
+        font-size: 0.75rem;
+        font-weight: 500;
+      }
+      .badge-success { background: #dcfce7; color: #166534; }
+      .badge-warning { background: #fef3c7; color: #92400e; }
+      .badge-info { background: var(--alga-primary-50); color: var(--alga-primary-dark); }
+      pre {
+        background: #1f2937;
+        color: #f9fafb;
+        padding: 16px;
+        border-radius: 8px;
+        overflow-x: auto;
+        font-size: 0.875rem;
+      }
+      /* DataTable styles matching main app */
+      .datatable-container {
+        overflow: hidden;
+        background: var(--alga-bg);
+        border-radius: 8px;
+        border: 1px solid var(--alga-border);
+      }
+      table {
+        width: 100%;
+        border-collapse: separate;
+        border-spacing: 0;
+      }
+      thead {
+        background: var(--alga-bg);
+      }
+      th {
+        text-align: left;
+        padding: 12px 24px;
+        font-size: 0.75rem;
+        font-weight: 500;
+        color: var(--alga-fg);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        border-bottom: 1px solid var(--alga-border);
+        white-space: nowrap;
+      }
+      th.sortable {
+        cursor: pointer;
+        transition: background-color 0.15s;
+      }
+      th.sortable:hover {
+        background: var(--alga-card-bg);
+      }
+      td {
+        text-align: left;
+        padding: 12px 24px;
+        font-size: 0.875rem;
+        line-height: 1.5;
+        color: var(--alga-fg);
+        border-bottom: 1px solid var(--alga-border-light);
+        vertical-align: top;
+      }
+      /* Alternating row colors matching main app DataTable */
+      tbody tr:nth-child(even) {
+        background: var(--alga-row-even);
+      }
+      tbody tr:nth-child(odd) {
+        background: var(--alga-row-odd);
+      }
+      tbody tr:hover {
+        background: var(--alga-row-hover);
+      }
+      tbody tr:last-child td {
+        border-bottom: none;
+      }
+      /* Sort indicator styling */
+      .sort-indicator {
+        color: var(--alga-fg-light);
+        margin-left: 4px;
+      }
+      /* Empty state */
+      .table-empty {
+        text-align: center;
+        padding: 48px 24px;
+        color: var(--alga-fg-muted);
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>Nine Minds Reporting</h1>
+      <nav id="nav">
+        <button class="active" data-view="reports">Reports</button>
+        <button data-view="create">Create Report</button>
+        <button data-view="execute">Execute</button>
+        <button data-view="tenants">Tenant Management</button>
+        <button data-view="audit">Audit Logs</button>
+      </nav>
+    </header>
+    <main>
+      <div id="root"></div>
+    </main>
+
+    <script type="module" src="./dist/iframe/main.js"></script>
+  </body>
+</html>

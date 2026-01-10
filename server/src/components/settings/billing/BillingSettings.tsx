@@ -1,6 +1,7 @@
 'use client'
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from 'server/src/components/ui/Card';
 import { Skeleton } from 'server/src/components/ui/Skeleton';
@@ -72,6 +73,57 @@ const PaymentSettingsConfig = dynamic(
 );
 
 const BillingSettings: React.FC = () => {
+  const searchParams = useSearchParams();
+  const sectionParam = searchParams?.get('section');
+
+  // Map URL slugs to tab labels
+  const sectionToLabelMap: Record<string, string> = {
+    'general': 'General',
+    'tax': 'Tax',
+    'payments': 'Payments'
+  };
+
+  // Determine initial active tab based on URL parameter
+  const [activeTab, setActiveTab] = useState<string>(() => {
+    const initialLabel = sectionParam ? sectionToLabelMap[sectionParam.toLowerCase()] : undefined;
+    return initialLabel || 'General'; // Default to 'General'
+  });
+
+  // Update active tab when URL parameter changes
+  useEffect(() => {
+    const currentLabel = sectionParam ? sectionToLabelMap[sectionParam.toLowerCase()] : undefined;
+    const targetTab = currentLabel || 'General';
+    if (targetTab !== activeTab) {
+      setActiveTab(targetTab);
+    }
+  }, [sectionParam, activeTab]);
+
+  const updateURL = (tabLabel: string) => {
+    // Map tab labels back to URL slugs
+    const labelToSlugMap: Record<string, string> = Object.entries(sectionToLabelMap).reduce((acc, [slug, label]) => {
+      acc[label] = slug;
+      return acc;
+    }, {} as Record<string, string>);
+
+    const urlSlug = labelToSlugMap[tabLabel];
+
+    // Build new URL with tab and section parameters
+    const currentSearchParams = new URLSearchParams(window.location.search);
+
+    if (urlSlug && urlSlug !== 'general') {
+      currentSearchParams.set('section', urlSlug);
+    } else {
+      currentSearchParams.delete('section');
+    }
+
+    // Keep existing tab parameter
+    const newUrl = currentSearchParams.toString()
+      ? `/msp/settings?${currentSearchParams.toString()}`
+      : '/msp/settings?tab=billing';
+
+    window.history.pushState({}, '', newUrl);
+  };
+
   const tabContent: TabContent[] = [
     {
       label: 'General',
@@ -133,8 +185,12 @@ const BillingSettings: React.FC = () => {
   return (
     <CustomTabs
       tabs={tabContent}
-      defaultTab="General"
+      defaultTab={activeTab}
       orientation="horizontal"
+      onTabChange={(tab) => {
+        setActiveTab(tab);
+        updateURL(tab);
+      }}
     />
   );
 };

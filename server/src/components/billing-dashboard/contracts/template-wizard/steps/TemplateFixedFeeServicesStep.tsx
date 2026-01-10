@@ -1,12 +1,10 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { Label } from 'server/src/components/ui/Label';
 import { Input } from 'server/src/components/ui/Input';
 import { Button } from 'server/src/components/ui/Button';
-import CustomSelect from 'server/src/components/ui/CustomSelect';
-import { IService } from 'server/src/interfaces';
-import { getServices } from 'server/src/lib/actions/serviceActions';
+import { ServiceCatalogPicker, ServiceCatalogPickerItem } from '../../ServiceCatalogPicker';
 import { Plus, X, Package } from 'lucide-react';
 import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionContainer';
 import { TemplateWizardData } from '../TemplateWizard';
@@ -21,34 +19,6 @@ export function TemplateFixedFeeServicesStep({
   data,
   updateData,
 }: TemplateFixedFeeServicesStepProps) {
-  const [services, setServices] = useState<IService[]>([]);
-  const [isLoadingServices, setIsLoadingServices] = useState(true);
-
-  useEffect(() => {
-    const load = async () => {
-      try {
-        const result = await getServices(1, 999, { item_kind: 'service' });
-        if (result && Array.isArray(result.services)) {
-          const fixedServices = result.services.filter(
-            (service) => service.billing_method === 'fixed'
-          );
-          setServices(fixedServices);
-        }
-      } catch (error) {
-        console.error('Error loading services:', error);
-      } finally {
-        setIsLoadingServices(false);
-      }
-    };
-
-    void load();
-  }, []);
-
-  const serviceOptions = services.map((service) => ({
-    value: service.service_id,
-    label: service.service_name,
-  }));
-
   const handleAddService = () => {
     updateData({
       fixed_services: [
@@ -63,13 +33,12 @@ export function TemplateFixedFeeServicesStep({
     updateData({ fixed_services: next });
   };
 
-  const handleServiceChange = (index: number, serviceId: string) => {
-    const service = services.find((s) => s.service_id === serviceId);
+  const handleServiceChange = (index: number, item: ServiceCatalogPickerItem) => {
     const next = [...data.fixed_services];
     next[index] = {
       ...next[index],
-      service_id: serviceId,
-      service_name: service?.service_name ?? '',
+      service_id: item.service_id,
+      service_name: item.service_name,
     };
     updateData({ fixed_services: next });
   };
@@ -164,13 +133,14 @@ export function TemplateFixedFeeServicesStep({
                   <Label htmlFor={`template-fixed-service-${index}`} className="text-sm">
                     Service {index + 1}
                   </Label>
-                  <CustomSelect
+                  <ServiceCatalogPicker
                     id={`template-fixed-service-${index}`}
                     value={service.service_id}
-                    onValueChange={(value: string) => handleServiceChange(index, value)}
-                    options={serviceOptions}
-                    placeholder={isLoadingServices ? 'Loading…' : 'Select a service'}
-                    disabled={isLoadingServices}
+                    selectedLabel={service.service_name}
+                    onSelect={(item) => handleServiceChange(index, item)}
+                    billingMethods={['fixed']}
+                    itemKinds={['service']}
+                    placeholder="Select a service"
                   />
                 </div>
 

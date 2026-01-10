@@ -152,7 +152,7 @@
     }
   },
   "include": [
-    "*.ts",
+    "index.ts",
     "migrations/*.cjs",
     "next-env.d.ts",
     "src/**/*.ts",

@@ -25,21 +25,24 @@ import { getClientLogoUrl, getUserAvatarUrl, getClientLogoUrlsBatch } from 'serv
 import {
   ticketFormSchema,
   ticketSchema,
-  ticketUpdateSchema, 
+  ticketUpdateSchema,
   ticketAttributesQuerySchema,
   ticketListItemSchema,
   ticketListFiltersSchema
 } from 'server/src/lib/schemas/ticket.schema';
 import { analytics } from '../../analytics/posthog';
 import { AnalyticsEvents } from '../../analytics/events';
+import { Temporal } from '@js-temporal/polyfill';
+import { resolveUserTimeZone, normalizeIanaTimeZone } from 'server/src/lib/utils/workDate';
 
 // Helper function to safely convert dates
-function convertDates<T extends { entered_at?: Date | string | null, updated_at?: Date | string | null, closed_at?: Date | string | null }>(record: T): T {
+function convertDates<T extends { entered_at?: Date | string | null, updated_at?: Date | string | null, closed_at?: Date | string | null, due_date?: Date | string | null }>(record: T): T {
   return {
     ...record,
     entered_at: record.entered_at instanceof Date ? record.entered_at.toISOString() : record.entered_at,
     updated_at: record.updated_at instanceof Date ? record.updated_at.toISOString() : record.updated_at,
     closed_at: record.closed_at instanceof Date ? record.closed_at.toISOString() : record.closed_at,
+    due_date: record.due_date instanceof Date ? record.due_date.toISOString() : record.due_date,
   };
 }
 
@@ -787,6 +790,80 @@ export async function getTicketsForList(
       });
     }
 
+    // Apply assignee filter if provided
+    if (validatedFilters.assignedToIds?.length || validatedFilters.includeUnassigned) {
+      baseQuery = baseQuery.where(function(this: any) {
+        // Handle specific assignee IDs
+        if (validatedFilters.assignedToIds?.length) {
+          this.whereIn('t.assigned_to', validatedFilters.assignedToIds);
+        }
+
+        // Handle unassigned (OR condition if both specified)
+        if (validatedFilters.includeUnassigned) {
+          if (validatedFilters.assignedToIds?.length) {
+            this.orWhereNull('t.assigned_to');
+          } else {
+            this.whereNull('t.assigned_to');
+          }
+        }
+      });
+    }
+
+    // Apply due date filters (timezone-aware for 'today' filter)
+    if (validatedFilters.dueDateFilter && validatedFilters.dueDateFilter !== 'all') {
+      const nowInstant = Temporal.Now.instant();
+      const nowIso = nowInstant.toString();
+
+      switch (validatedFilters.dueDateFilter) {
+        case 'overdue':
+          // Due date is in the past
+          baseQuery = baseQuery.where('t.due_date', '<', nowIso);
+          break;
+        case 'upcoming':
+          // Due date is within the next 7 days (not overdue)
+          const weekFromNow = nowInstant.add({ hours: 24 * 7 });
+          baseQuery = baseQuery
+            .where('t.due_date', '>=', nowIso)
+            .where('t.due_date', '<=', weekFromNow.toString());
+          break;
+        case 'today':
+          // Due date is today in user's timezone
+          const userTz = await resolveUserTimeZone(trx, tenant, user.user_id);
+          const zonedNow = nowInstant.toZonedDateTimeISO(userTz);
+          const startOfTodayZoned = zonedNow.startOfDay();
+          const endOfTodayZoned = startOfTodayZoned.add({ days: 1 });
+          baseQuery = baseQuery
+            .where('t.due_date', '>=', startOfTodayZoned.toInstant().toString())
+            .where('t.due_date', '<', endOfTodayZoned.toInstant().toString());
+          break;
+        case 'no_due_date':
+          // No due date set
+          baseQuery = baseQuery.whereNull('t.due_date');
+          break;
+        case 'before':
+          // Due date is before a specific date
+          if (validatedFilters.dueDateTo) {
+            baseQuery = baseQuery.where('t.due_date', '<', validatedFilters.dueDateTo);
+          }
+          break;
+        case 'after':
+          // Due date is after a specific date
+          if (validatedFilters.dueDateFrom) {
+            baseQuery = baseQuery.where('t.due_date', '>', validatedFilters.dueDateFrom);
+          }
+          break;
+        case 'custom':
+          // Custom date range
+          if (validatedFilters.dueDateFrom) {
+            baseQuery = baseQuery.where('t.due_date', '>=', validatedFilters.dueDateFrom);
+          }
+          if (validatedFilters.dueDateTo) {
+            baseQuery = baseQuery.where('t.due_date', '<=', validatedFilters.dueDateTo);
+          }
+          break;
+      }
+    }
+
     // Apply response state filter if provided (F017-F021)
     if (validatedFilters.responseState && validatedFilters.responseState !== 'all') {
       if (validatedFilters.responseState === 'none') {
@@ -809,7 +886,8 @@ export async function getTicketsForList(
       category_name: { column: 'cat.category_name' },
       client_name: { column: 'comp.client_name' },
       entered_at: { column: 't.entered_at' },
-      entered_by_name: { rawExpression: "COALESCE(CONCAT(u.first_name, ' ', u.last_name), '')" }
+      entered_by_name: { rawExpression: "COALESCE(CONCAT(u.first_name, ' ', u.last_name), '')" },
+      due_date: { column: 't.due_date' }
     };
     const selectedSort = sortColumnMap[sortBy] || sortColumnMap.entered_at;
 
@@ -853,7 +931,9 @@ export async function getTicketsForList(
         'cat.category_name',
         'comp.client_name',
         trx.raw("CONCAT(u.first_name, ' ', u.last_name) as entered_by_name"),
-        trx.raw("CONCAT(au.first_name, ' ', au.last_name) as assigned_to_name")
+        trx.raw("CONCAT(au.first_name, ' ', au.last_name) as assigned_to_name"),
+        trx.raw("(SELECT COUNT(*) FROM ticket_resources tr WHERE tr.ticket_id = t.ticket_id AND tr.tenant = t.tenant AND tr.additional_user_id IS NOT NULL)::int as additional_agent_count"),
+        trx.raw(`(SELECT COALESCE(json_agg(json_build_object('user_id', uu.user_id, 'name', CONCAT(uu.first_name, ' ', uu.last_name))), '[]'::json) FROM ticket_resources tr2 JOIN users uu ON tr2.additional_user_id = uu.user_id AND tr2.tenant = uu.tenant WHERE tr2.ticket_id = t.ticket_id AND tr2.tenant = t.tenant) as additional_agents`)
       )
       .modify(queryBuilder => {
         if (selectedSort.rawExpression) {
@@ -886,6 +966,8 @@ export async function getTicketsForList(
         client_name,
         entered_by_name,
         assigned_to_name,
+        additional_agent_count,
+        additional_agents,
         bundle_child_count,
         bundle_distinct_client_count,
         bundle_master_ticket_number,
@@ -894,7 +976,7 @@ export async function getTicketsForList(
       } = ticket;
 
       const convertedRest = convertDates(rest);
-      // Clean up null ITIL fields
+      // Clean up null optional fields to undefined for type compatibility
       if (convertedRest.itil_impact === null) {
         convertedRest.itil_impact = undefined;
       }
@@ -903,6 +985,9 @@ export async function getTicketsForList(
       }
       if (convertedRest.itil_priority_level === null) {
         convertedRest.itil_priority_level = undefined;
+      }
+      if (convertedRest.due_date === null) {
+        convertedRest.due_date = undefined;
       }
       return {
         ...convertedRest,
@@ -918,7 +1003,9 @@ export async function getTicketsForList(
         category_name: category_name || 'Unknown',
         client_name: client_name || 'Unknown',
         entered_by_name: entered_by_name || 'Unknown',
-        assigned_to_name: assigned_to_name || 'Unknown',
+        assigned_to_name: assigned_to_name || null,
+        additional_agent_count: additional_agent_count || 0,
+        additional_agents: additional_agents || [],
         bundle_child_count: typeof bundle_child_count === 'number' ? bundle_child_count : Number.parseInt(String(bundle_child_count ?? '0'), 10) || 0,
         bundle_distinct_client_count: typeof bundle_distinct_client_count === 'number' ? bundle_distinct_client_count : Number.parseInt(String(bundle_distinct_client_count ?? '0'), 10) || 0,
         bundle_master_ticket_number: bundle_master_ticket_number ?? null

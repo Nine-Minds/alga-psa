@@ -94,7 +94,7 @@ export const CreateCustomContractLineDialog: React.FC<CreateCustomContractLineDi
       }
       fixedServices.forEach((service, index) => {
         if (!service.service_id) {
-          errors.push(`Service ${index + 1}: Please select a service`);
+          errors.push(`Item ${index + 1}: Please select a service or product`);
         }
       });
     } else if (planType === 'Hourly') {
@@ -278,7 +278,7 @@ export const CreateCustomContractLineDialog: React.FC<CreateCustomContractLineDi
               <div className="flex-1 space-y-3">
                 <div className="space-y-2">
                   <Label htmlFor={`fixed-service-${index}`} className="text-sm">
-                    Service {index + 1}
+                    Item {index + 1}
                   </Label>
                   <ServiceCatalogPicker
                     value={service.service_id}
@@ -334,14 +334,14 @@ export const CreateCustomContractLineDialog: React.FC<CreateCustomContractLineDi
             className="w-full"
           >
             <Plus className="h-4 w-4 mr-2" />
-            Add Service
+            Add Item
           </Button>
         </div>
 
         {fixedServices.length === 0 && (
           <div className="p-4 bg-gray-50 border border-gray-200 rounded-md">
             <p className="text-sm text-gray-600 text-center">
-              No fixed fee services added yet. Click "Add Service" above to get started.
+              No fixed fee items added yet. Click "Add Item" above to get started.
             </p>
           </div>
         )}

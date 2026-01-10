@@ -7,6 +7,7 @@ export interface WasmInvoiceViewModel {
   issueDate: string; // Consider using ISO8601String or a specific date format
   dueDate: string;   // Consider using ISO8601String or a specific date format
   currencyCode: string; // Added for multi-currency support
+  poNumber?: string | null;
   customer: {
     name: string;
     address: string;

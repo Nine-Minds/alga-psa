@@ -57,6 +57,7 @@ export function mapDbInvoiceToWasmViewModel(inputData: DbInvoiceViewModel | Wasm
           name: String(dbData.client?.name ?? 'N/A'),
           address: String(dbData.client?.address ?? 'N/A'),
         },
+        poNumber: (dbData as any).po_number ?? null,
         // tenantClient does not exist directly in DbInvoiceViewModel, assuming it's not needed or handled elsewhere
         tenantClient: null,
 

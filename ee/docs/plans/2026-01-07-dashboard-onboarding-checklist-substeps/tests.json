@@ -1,0 +1,56 @@
+[
+  {
+    "id": "T001",
+    "description": "Unit: parent step status is `complete` only when all sub-steps are `complete`.",
+    "implemented": false,
+    "featureIds": ["F002"]
+  },
+  {
+    "id": "T002",
+    "description": "Unit: parent step status is `blocked` when any sub-step is `blocked` (and surfaces an appropriate blocker message).",
+    "implemented": false,
+    "featureIds": ["F002"]
+  },
+  {
+    "id": "T003",
+    "description": "Unit: parent step status is `not_started` when all sub-steps are `not_started`.",
+    "implemented": false,
+    "featureIds": ["F002"]
+  },
+  {
+    "id": "T004",
+    "description": "Unit: parent step status is `in_progress` when sub-steps are a mix of `not_started`/`in_progress`/`complete` (but not all complete).",
+    "implemented": false,
+    "featureIds": ["F002"]
+  },
+  {
+    "id": "T005",
+    "description": "Integration: onboarding progress payload includes Customer Portal sub-steps (domain, branding, invite) with stable IDs and expected ordering.",
+    "implemented": false,
+    "featureIds": ["F005", "F006", "F007", "F008"]
+  },
+  {
+    "id": "T006",
+    "description": "Integration: onboarding progress payload includes Email sub-steps (inbound provider present, outbound domain verified) with stable IDs and expected ordering.",
+    "implemented": false,
+    "featureIds": ["F010", "F011", "F012"]
+  },
+  {
+    "id": "T007",
+    "description": "UI: checklist card renders sub-step items with checked/unchecked affordances and updates parent status badge correctly.",
+    "implemented": false,
+    "featureIds": ["F015", "F017"]
+  },
+  {
+    "id": "T008",
+    "description": "UI: quick-start cards render sub-step completion summary (or checkmarks) for steps with sub-steps.",
+    "implemented": false,
+    "featureIds": ["F016", "F017"]
+  },
+  {
+    "id": "T009",
+    "description": "UI: Secure Identity & SSO card CTA points to `/msp/profile?tab=Single+Sign-On`.",
+    "implemented": false,
+    "featureIds": ["F003"]
+  }
+]

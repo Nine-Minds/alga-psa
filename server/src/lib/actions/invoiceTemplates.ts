@@ -5,7 +5,7 @@ import { Knex } from 'knex';
 import { exec } from 'child_process';
 import fs from 'fs/promises';
 import path from 'path';
-import util from 'util';
+import { promisify } from 'node:util';
 import { createTenantKnex } from 'server/src/lib/db';
 import Invoice from 'server/src/lib/models/invoice'; // Assuming Invoice model has template methods
 import {
@@ -64,13 +64,15 @@ export async function getInvoiceTemplate(templateId: string): Promise<IInvoiceTe
 
 export async function getInvoiceTemplates(): Promise<IInvoiceTemplate[]> {
     const { knex } = await createTenantKnex();
-    // Assuming Invoice model has a static method getAllTemplates that now fetches
-    // assemblyScriptSource and wasmPath instead of dsl.
-    // It should return all standard templates and the templates for the current tenant.
-    const templates: IInvoiceTemplate[] = await Invoice.getAllTemplates(knex);
+    return withTransaction(knex, async (trx: Knex.Transaction) => {
+        // Assuming Invoice model has a static method getAllTemplates that now fetches
+        // assemblyScriptSource and wasmPath instead of dsl.
+        // It should return all standard templates and the templates for the current tenant.
+        const templates: IInvoiceTemplate[] = await Invoice.getAllTemplates(trx);
 
-    // No parsing needed here anymore as we are moving away from DSL
-    return templates;
+        // No parsing needed here anymore as we are moving away from DSL
+        return templates;
+    });
 }
 
 type SetDefaultTemplatePayload =
@@ -127,8 +129,10 @@ export async function setDefaultTemplate(payload: SetDefaultTemplatePayload): Pr
 
 export async function getDefaultTemplate(): Promise<IInvoiceTemplate | null> {
     const { knex } = await createTenantKnex();
-    const templates = await Invoice.getAllTemplates(knex);
-    return templates.find((template) => template.isTenantDefault) ?? null;
+    return withTransaction(knex, async (trx: Knex.Transaction) => {
+        const templates = await Invoice.getAllTemplates(trx);
+        return templates.find((template) => template.isTenantDefault) ?? null;
+    });
 }
 
 export async function setClientTemplate(clientId: string, templateId: string | null): Promise<void> {
@@ -318,7 +322,7 @@ export async function getInvoiceAnnotations(invoiceId: string): Promise<IInvoice
     return [];
 }
 // Promisify exec for easier async/await usage
-const execPromise = util.promisify(exec);
+const execPromise = promisify(exec);
 
 // Define the structure for the input metadata (excluding source and wasm binary)
 type CompileTemplateMetadata = Omit<IInvoiceTemplate, 'tenant' | 'template_id' | 'assemblyScriptSource' | 'wasmBinary' | 'isStandard'> & {

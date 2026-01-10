@@ -27,6 +27,7 @@ import {
   X
 } from 'lucide-react';
 import Spinner from 'server/src/components/ui/Spinner';
+import FolderSelectorModal from 'server/src/components/documents/FolderSelectorModal';
 
 interface Document {
   document_id: string;
@@ -93,6 +94,10 @@ export default function TaskDocumentUpload({ taskId, compact = false }: TaskDocu
   const [showPreviewModal, setShowPreviewModal] = useState(false);
   const [previewDocument, setPreviewDocument] = useState<Document | null>(null);
 
+  // Folder selection state
+  const [showFolderModal, setShowFolderModal] = useState(false);
+  const [pendingFile, setPendingFile] = useState<File | null>(null);
+
   const fetchDocuments = async () => {
     try {
       const result = await getClientTaskDocuments(taskId);
@@ -117,22 +122,32 @@ export default function TaskDocumentUpload({ taskId, compact = false }: TaskDocu
     const file = e.target.files?.[0];
     if (!file) return;
 
+    // Show folder selector modal
+    setPendingFile(file);
+    setShowFolderModal(true);
+
+    // Reset file input so the same file can be selected again if needed
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
+  const handleFolderSelected = async (folderPath: string | null) => {
+    if (!pendingFile) return;
+
+    setShowFolderModal(false);
     setUploading(true);
     setError(null);
 
     try {
       const formData = new FormData();
-      formData.append('file', file);
+      formData.append('file', pendingFile);
 
-      const result = await uploadClientTaskDocument(taskId, formData);
+      const result = await uploadClientTaskDocument(taskId, formData, folderPath);
 
       if (result.success) {
         // Refresh documents list
         await fetchDocuments();
-        // Reset file input
-        if (fileInputRef.current) {
-          fileInputRef.current.value = '';
-        }
       } else {
         setError(result.error || t('projects.documents.uploadError', 'Failed to upload document'));
       }
@@ -141,6 +156,7 @@ export default function TaskDocumentUpload({ taskId, compact = false }: TaskDocu
       setError(t('projects.documents.uploadError', 'Failed to upload document'));
     } finally {
       setUploading(false);
+      setPendingFile(null);
     }
   };
 
@@ -449,6 +465,16 @@ export default function TaskDocumentUpload({ taskId, compact = false }: TaskDocu
 
         {/* Preview Modal */}
         <PreviewModal />
+
+        {/* Folder Selection Modal */}
+        <FolderSelectorModal
+          isOpen={showFolderModal}
+          onClose={() => {
+            setShowFolderModal(false);
+            setPendingFile(null);
+          }}
+          onSelectFolder={handleFolderSelected}
+        />
       </>
     );
   }
@@ -531,6 +557,16 @@ export default function TaskDocumentUpload({ taskId, compact = false }: TaskDocu
 
       {/* Preview Modal */}
       <PreviewModal />
+
+      {/* Folder Selection Modal */}
+      <FolderSelectorModal
+        isOpen={showFolderModal}
+        onClose={() => {
+          setShowFolderModal(false);
+          setPendingFile(null);
+        }}
+        onSelectFolder={handleFolderSelected}
+      />
     </>
   );
 }

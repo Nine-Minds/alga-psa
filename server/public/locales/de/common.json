@@ -815,5 +815,21 @@
       "searchPlaceholder": "Nach Benutzername, E-Mail, Gerät oder IP-Adresse suchen...",
       "noResults": "Keine Sitzungen entsprechen Ihrer Suche"
     }
+  },
+  "projects": {
+    "task": {
+      "comments": {
+        "title": "Kommentare",
+        "internal_only": "Nur intern",
+        "placeholder": "Kommentar hinzufügen... Verwenden Sie @ um Teammitglieder zu erwähnen",
+        "add_comment": "Kommentar hinzufügen",
+        "no_comments": "Noch keine Kommentare. Seien Sie der Erste!",
+        "edited": "Bearbeitet",
+        "error_creating": "Kommentar konnte nicht erstellt werden. Bitte versuchen Sie es erneut.",
+        "error_updating": "Kommentar konnte nicht aktualisiert werden. Bitte versuchen Sie es erneut.",
+        "error_deleting": "Kommentar konnte nicht gelöscht werden. Bitte versuchen Sie es erneut.",
+        "confirm_delete": "Sind Sie sicher, dass Sie diesen Kommentar löschen möchten?"
+      }
+    }
   }
 }

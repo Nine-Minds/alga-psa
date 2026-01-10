@@ -615,7 +615,10 @@ const ServiceCatalogManager: React.FC = () => {
                 }}
                 serviceTypes={allServiceTypes}
                 onCreateType={async (name) => {
-                  await createServiceTypeInline(name);
+                  await createServiceTypeInline(
+                    name,
+                    ((editingService?.billing_method as 'fixed' | 'hourly' | 'per_unit' | 'usage') ?? 'fixed')
+                  );
                   fetchAllServiceTypes(); // Refresh the service types list
                 }}
                 onUpdateType={async (id, name) => {

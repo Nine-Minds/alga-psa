@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from './Dialog';
 import { Button } from './Button';
+import { RadioGroup } from './RadioGroup';
 import { useRegisterUIComponent } from '../../types/ui-reflection/useRegisterUIComponent';
 import { DialogComponent, ButtonComponent, AutomationProps } from '../../types/ui-reflection/types';
 import { withDataAutomationId } from '../../types/ui-reflection/withDataAutomationId';
@@ -86,22 +87,14 @@ export const ConfirmationDialog: React.FC<ConfirmationDialogProps & AutomationPr
           <div className="text-gray-600">{message}</div>
         )}
         {options && (
-          <div className="space-y-2 mt-4">
-            {options.map((opt) => (
-              <label key={opt.value} className="flex items-center gap-2">
-                <input
-                  type="radio"
-                  name="dialog-option"
-                  value={opt.value}
-                  checked={selectedValue === opt.value}
-                  onChange={(e) => setSelectedValue(e.target.value)}
-                  className="focus:ring-indigo-500 h-4 w-4 text-indigo-600 border-gray-300"
-                  id={`${id}-option-${opt.value}`}
-                />
-                {opt.label}
-              </label>
-            ))}
-          </div>
+          <RadioGroup
+            id={`${id}-options`}
+            name="dialog-option"
+            options={options}
+            value={selectedValue}
+            onChange={setSelectedValue}
+            className="mt-4"
+          />
         )}
         <DialogFooter>
           <div className="mt-4 flex justify-end gap-2">

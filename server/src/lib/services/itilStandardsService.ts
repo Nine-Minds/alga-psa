@@ -1,4 +1,5 @@
 import { Knex } from 'knex';
+import { v4 as uuidv4 } from 'uuid';
 
 /**
  * Service to manage copying ITIL standards to tenant-specific tables
@@ -13,6 +14,13 @@ export class ItilStandardsService {
       .where('is_itil_standard', true)
       .select('*');
 
+    console.log(`[ItilStandardsService] Found ${itilPriorities.length} ITIL priorities in standard_priorities for tenant ${tenant}`);
+
+    if (itilPriorities.length === 0) {
+      console.warn('[ItilStandardsService] No ITIL priorities found in standard_priorities table. ITIL configuration may be incomplete.');
+      return;
+    }
+
     for (const stdPriority of itilPriorities) {
       // Check if already exists in tenant priorities
       const existing = await trx('priorities')
@@ -22,8 +30,10 @@ export class ItilStandardsService {
         .first();
 
       if (!existing) {
+        const newPriorityId = uuidv4();
+        console.log(`[ItilStandardsService] Inserting ITIL priority "${stdPriority.priority_name}" (${newPriorityId}) for tenant ${tenant}`);
         await trx('priorities').insert({
-          priority_id: trx.raw('gen_random_uuid()'),
+          priority_id: newPriorityId,
           tenant: tenant,
           priority_name: stdPriority.priority_name,
           color: stdPriority.color,
@@ -37,15 +47,21 @@ export class ItilStandardsService {
         });
       } else if (!existing.is_from_itil_standard) {
         // Update existing priority to mark as ITIL if it matches but wasn't marked
+        console.log(`[ItilStandardsService] Updating existing priority "${stdPriority.priority_name}" to mark as ITIL for tenant ${tenant}`);
         await trx('priorities')
           .where('priority_id', existing.priority_id)
+          .andWhere('tenant', tenant)
           .update({
             is_from_itil_standard: true,
             itil_priority_level: stdPriority.itil_priority_level,
             updated_at: trx.fn.now()
           });
+      } else {
+        console.log(`[ItilStandardsService] ITIL priority "${stdPriority.priority_name}" already exists for tenant ${tenant}`);
       }
     }
+
+    console.log(`[ItilStandardsService] Completed copying ITIL priorities for tenant ${tenant}`);
   }
 
   /**
@@ -57,6 +73,13 @@ export class ItilStandardsService {
       .where('is_itil_standard', true)
       .select('*')
       .orderBy('parent_category_uuid', 'asc'); // Parents first
+
+    console.log(`[ItilStandardsService] Found ${itilCategories.length} ITIL categories in standard_categories for tenant ${tenant}`);
+
+    if (itilCategories.length === 0) {
+      console.warn('[ItilStandardsService] No ITIL categories found in standard_categories table.');
+      return;
+    }
 
     // Create a mapping of standard IDs to tenant IDs
     const idMap: Record<string, string> = {};
@@ -73,9 +96,10 @@ export class ItilStandardsService {
         .first();
 
       if (!existing) {
-        const newId = trx.raw('gen_random_uuid()');
+        const newCategoryId = uuidv4();
+        console.log(`[ItilStandardsService] Inserting ITIL category "${stdCategory.category_name}" (${newCategoryId}) for tenant ${tenant}`);
         await trx('categories').insert({
-          category_id: newId,
+          category_id: newCategoryId,
           tenant: tenant,
           category_name: stdCategory.category_name,
           parent_category: null,
@@ -85,21 +109,16 @@ export class ItilStandardsService {
           created_at: trx.fn.now()
         });
 
-        // Get the inserted record to map the ID
-        const inserted = await trx('categories')
-          .where('tenant', tenant)
-          .where('category_name', stdCategory.category_name)
-          .whereNull('parent_category')
-          .first();
-
-        idMap[stdCategory.id] = inserted.category_id;
+        idMap[stdCategory.id] = newCategoryId;
       } else {
         idMap[stdCategory.id] = existing.category_id;
 
         // Update to mark as ITIL if not already marked
         if (!existing.is_from_itil_standard) {
+          console.log(`[ItilStandardsService] Updating existing category "${stdCategory.category_name}" to mark as ITIL for tenant ${tenant}`);
           await trx('categories')
             .where('category_id', existing.category_id)
+            .andWhere('tenant', tenant)
             .update({
               is_from_itil_standard: true
             });
@@ -114,7 +133,7 @@ export class ItilStandardsService {
       const parentId = idMap[stdCategory.parent_category_uuid];
 
       if (!parentId) {
-        console.warn(`Could not find parent mapping for subcategory ${stdCategory.category_name}`);
+        console.warn(`[ItilStandardsService] Could not find parent mapping for subcategory ${stdCategory.category_name}`);
         continue;
       }
 
@@ -126,8 +145,10 @@ export class ItilStandardsService {
         .first();
 
       if (!existing) {
+        const newSubcategoryId = uuidv4();
+        console.log(`[ItilStandardsService] Inserting ITIL subcategory "${stdCategory.category_name}" (${newSubcategoryId}) for tenant ${tenant}`);
         await trx('categories').insert({
-          category_id: trx.raw('gen_random_uuid()'),
+          category_id: newSubcategoryId,
           tenant: tenant,
           category_name: stdCategory.category_name,
           parent_category: parentId,
@@ -138,13 +159,17 @@ export class ItilStandardsService {
         });
       } else if (!existing.is_from_itil_standard) {
         // Update to mark as ITIL if not already marked
+        console.log(`[ItilStandardsService] Updating existing subcategory "${stdCategory.category_name}" to mark as ITIL for tenant ${tenant}`);
         await trx('categories')
           .where('category_id', existing.category_id)
+          .andWhere('tenant', tenant)
           .update({
             is_from_itil_standard: true
           });
       }
     }
+
+    console.log(`[ItilStandardsService] Completed copying ITIL categories for tenant ${tenant}`);
   }
 
   /**

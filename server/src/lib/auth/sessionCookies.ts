@@ -5,6 +5,33 @@ const DEFAULT_SESSION_MAX_AGE_SECONDS = 60 * 60 * 24; // 24 hours
 
 let cachedSecret: string | null = null;
 
+function getDevCookiePortSuffix(): string | null {
+  if (process.env.NODE_ENV === 'production') {
+    return null;
+  }
+
+  const urlCandidates = [
+    process.env.NEXTAUTH_URL,
+    process.env.APP_URL,
+    process.env.NEXT_PUBLIC_APP_URL,
+  ].filter(Boolean) as string[];
+
+  for (const candidate of urlCandidates) {
+    try {
+      const parsed = new URL(candidate);
+      if (parsed.port) {
+        return parsed.port;
+      }
+    } catch {
+      // Ignore invalid URLs and fall through to other candidates.
+    }
+  }
+
+  const portCandidate =
+    process.env.PORT ?? process.env.APP_PORT ?? process.env.EXPOSE_SERVER_PORT ?? null;
+  return portCandidate && portCandidate.length > 0 ? portCandidate : null;
+}
+
 export function getSessionMaxAge(): number {
   const raw = process.env.NEXTAUTH_SESSION_EXPIRES;
   if (!raw) {
@@ -16,9 +43,18 @@ export function getSessionMaxAge(): number {
 }
 
 export function getSessionCookieName(): string {
-  return process.env.NODE_ENV === 'production'
+  const baseName = process.env.NODE_ENV === 'production'
     ? '__Secure-authjs.session-token'
     : 'authjs.session-token';
+
+  const portSuffix = getDevCookiePortSuffix();
+  if (!portSuffix) {
+    return baseName;
+  }
+
+  // Cookies are shared across localhost ports; suffix the cookie name in dev so multiple worktrees
+  // (each with their own NEXTAUTH_SECRET) can coexist without clobbering each other.
+  return `${baseName}.${portSuffix}`;
 }
 
 export function getSessionCookieConfig(): CookieOption {

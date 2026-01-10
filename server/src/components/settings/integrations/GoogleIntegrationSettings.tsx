@@ -47,7 +47,7 @@ export function GoogleIntegrationSettings() {
     } else if (res.config) {
       setProjectId(res.config.projectId || '');
       setGmailClientId(res.config.gmailClientId || '');
-      setUseSameForCalendar(res.config.usingSharedOAuthApp ?? true);
+      setUseSameForCalendar(res.config.usingSharedOAuthApp !== false);
       setCalendarClientId(res.config.calendarClientId || '');
     }
     setLoading(false);
@@ -117,6 +117,16 @@ export function GoogleIntegrationSettings() {
             >
               <ExternalLink className="h-3 w-3 mr-1" />
               Google Cloud Console
+            </Button>
+            <Button
+              id="google-cloud-docs-link"
+              type="button"
+              variant="link"
+              className="ml-3 p-0 h-auto"
+              onClick={() => window.open('https://nineminds.com/documentation?doc=1014-google-cloud-connector-settings', '_blank')}
+            >
+              <ExternalLink className="h-3 w-3 mr-1" />
+              Setup guide
             </Button>
           </CardDescription>
         </CardHeader>

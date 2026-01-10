@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { getSessionWithRevocationCheck } from "server/src/lib/auth/getSession";
+import { getSession, getSessionWithRevocationCheck } from "server/src/lib/auth/getSession";
 import { ClientPortalLayoutClient } from "./ClientPortalLayoutClient";
 import { getTenantBrandingByTenantId } from "server/src/lib/actions/tenant-actions/getTenantBrandingByDomain";
 import { getHierarchicalLocaleAction } from "server/src/lib/actions/locale-actions/getHierarchicalLocale";
@@ -10,7 +10,9 @@ export default async function Layout({
   children: React.ReactNode;
 }>) {
   // Use full auth with revocation check so terminated sessions cannot keep browsing
-  const session = await getSessionWithRevocationCheck();
+  const session =
+    (await getSessionWithRevocationCheck()) ??
+    (process.env.NODE_ENV !== 'production' ? await getSession() : null);
 
   // If session is null, redirect to signin
   // Don't include error parameter to avoid redirect loops

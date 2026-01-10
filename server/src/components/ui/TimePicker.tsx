@@ -178,7 +178,7 @@ export function TimePicker({
           `}
         >
           <span className="flex-1 text-left">{displayValue}</span>
-          <Clock className="h-4 w-4 opacity-50" />
+          <Clock className="h-4 w-4 ml-2 opacity-50 shrink-0" />
         </Popover.Trigger>
 
         <Popover.Portal>
@@ -283,7 +283,7 @@ export function TimePicker({
             {/* Hidden input for native time support */}
             <input
               type="time"
-              value={value}
+              value={value || ''}
               onChange={handleInputChange}
               className="sr-only"
               tabIndex={-1}

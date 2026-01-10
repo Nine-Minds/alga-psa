@@ -568,7 +568,13 @@ spec:
 
           # Non-sensitive Stripe configuration
           {{- if .Values.stripe }}
-          {{- if .Values.stripe.master_billing_tenant_id }}
+          {{- if .Values.stripe.master_billing_tenant_id_secret }}
+          - name: MASTER_BILLING_TENANT_ID
+            valueFrom:
+              secretKeyRef:
+                name: {{ .Values.stripe.master_billing_tenant_id_secret.name | default "alga-psa-shared" }}
+                key: {{ .Values.stripe.master_billing_tenant_id_secret.key | default "MASTER_BILLING_TENANT_ID" }}
+          {{- else if .Values.stripe.master_billing_tenant_id }}
           - name: MASTER_BILLING_TENANT_ID
             value: "{{ .Values.stripe.master_billing_tenant_id }}"
           {{- end }}

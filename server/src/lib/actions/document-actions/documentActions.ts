@@ -178,6 +178,17 @@ export async function deleteDocument(documentId: string, userId: string) {
           notes_document_id: null
         });
 
+      // Update any contacts that reference this document as notes_document_id
+      // Citus doesn't support ON DELETE SET NULL when distribution key is in FK
+      await trx('contacts')
+        .where({
+          notes_document_id: documentId,
+          tenant
+        })
+        .update({
+          notes_document_id: null
+        });
+
       // Delete all associations
       await DocumentAssociation.deleteByDocument(trx, document.document_id);
 

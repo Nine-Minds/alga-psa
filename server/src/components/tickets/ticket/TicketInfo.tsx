@@ -13,6 +13,9 @@ import CustomSelect from 'server/src/components/ui/CustomSelect';
 import { PrioritySelect } from '@/components/tickets/PrioritySelect';
 import UserPicker from 'server/src/components/ui/UserPicker';
 import { CategoryPicker } from 'server/src/components/tickets/CategoryPicker';
+import { DatePicker } from 'server/src/components/ui/DatePicker';
+import { TimePicker } from 'server/src/components/ui/TimePicker';
+import { format, setHours, setMinutes } from 'date-fns';
 import { TagManager } from 'server/src/components/tags';
 import { ResponseStateDisplay } from 'server/src/components/tickets/ResponseStateSelect';
 import styles from './TicketDetails.module.css';
@@ -454,6 +457,98 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
                 </div>
               </div>
             )}
+            <div>
+              <h5 className="font-bold mb-2">Due Date</h5>
+              {(() => {
+                const existingDate = ticket.due_date ? new Date(ticket.due_date) : undefined;
+                const existingTime = existingDate ? format(existingDate, 'HH:mm') : undefined;
+                const isMidnight = existingTime === '00:00';
+
+                // Determine styling based on due date status
+                let containerClass = '';
+                if (existingDate) {
+                  const now = new Date();
+                  const hoursUntilDue = (existingDate.getTime() - now.getTime()) / (1000 * 60 * 60);
+                  if (hoursUntilDue < 0) {
+                    containerClass = '[&_button]:border-red-500 [&_button]:text-red-600 [&_button]:bg-red-50';
+                  } else if (hoursUntilDue <= 24) {
+                    containerClass = '[&_button]:border-orange-500 [&_button]:text-orange-600 [&_button]:bg-orange-50';
+                  }
+                }
+
+                const handleDateChange = (newDate: Date | undefined) => {
+                  if (!newDate) {
+                    onSelectChange('due_date', null);
+                    return;
+                  }
+                  // Preserve existing time or use midnight
+                  if (existingDate && !isMidnight) {
+                    newDate = setHours(newDate, existingDate.getHours());
+                    newDate = setMinutes(newDate, existingDate.getMinutes());
+                  } else {
+                    newDate = setHours(newDate, 0);
+                    newDate = setMinutes(newDate, 0);
+                  }
+                  onSelectChange('due_date', newDate.toISOString());
+                };
+
+                const handleTimeChange = (newTime: string) => {
+                  if (!existingDate) return;
+                  const [hours, minutes] = newTime.split(':').map(Number);
+                  let newDate = setHours(existingDate, hours);
+                  newDate = setMinutes(newDate, minutes);
+                  onSelectChange('due_date', newDate.toISOString());
+                };
+
+                const handleClearTime = () => {
+                  if (!existingDate) return;
+                  let newDate = setHours(existingDate, 0);
+                  newDate = setMinutes(newDate, 0);
+                  onSelectChange('due_date', newDate.toISOString());
+                };
+
+                return (
+                  <>
+                    <div className={`flex items-center gap-2 w-fit ${containerClass}`}>
+                      <div className="w-fit">
+                        <DatePicker
+                          id={`${id}-due-date-picker`}
+                          value={existingDate}
+                          onChange={handleDateChange}
+                          placeholder="Select date"
+                          label="Due Date"
+                        />
+                      </div>
+                      <div className="w-fit">
+                        <TimePicker
+                          id={`${id}-due-time-picker`}
+                          value={existingDate && !isMidnight ? existingTime : undefined}
+                          onChange={handleTimeChange}
+                          placeholder="Time"
+                          disabled={!existingDate}
+                        />
+                      </div>
+                      {existingDate && (
+                        <Button
+                          id={`${id}-clear-due-date`}
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => onSelectChange('due_date', null)}
+                          className="text-gray-400 hover:text-gray-600 px-2"
+                          title="Clear due date"
+                        >
+                          ✕
+                        </Button>
+                      )}
+                    </div>
+                    {existingDate && isMidnight && (
+                      <p className="text-xs text-gray-500 mt-1">No time set - defaults to 12:00 AM</p>
+                    )}
+                  </>
+                );
+              })()}
+            </div>
             {/* ITIL Fields for ITIL priority boards */}
             {boardConfig.priority_type === 'itil' && (
               <>

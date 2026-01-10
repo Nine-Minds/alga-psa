@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogFooter } from 'server/src/components/ui/Dialog';
 import { Button } from 'server/src/components/ui/Button';
+import { Badge } from 'server/src/components/ui/Badge';
 import { Input } from 'server/src/components/ui/Input';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from 'server/src/components/ui/Table';
 import { Search, Plus, Check } from 'lucide-react';
@@ -234,7 +235,14 @@ export function ServiceSelectionDialog({
                           )}
                         </div>
                       </TableCell>
-                      <TableCell>{service.service_name}</TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <span>{service.service_name}</span>
+                          <Badge variant={service.item_kind === 'product' ? 'default' : 'outline'}>
+                            {service.item_kind === 'product' ? 'Product' : 'Service'}
+                          </Badge>
+                        </div>
+                      </TableCell>
                       <TableCell>{service.service_type_name || 'Unknown'}</TableCell>
                       <TableCell>{service.unit_of_measure}</TableCell>
                       <TableCell>${service.default_rate}</TableCell>

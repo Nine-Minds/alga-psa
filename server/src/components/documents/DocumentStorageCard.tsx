@@ -25,9 +25,7 @@ import {
     Play,
     FolderInput
 } from 'lucide-react';
-import { useAutomationIdAndRegister } from 'server/src/types/ui-reflection/useAutomationIdAndRegister';
 import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionContainer';
-import { ContainerComponent, ButtonComponent } from 'server/src/types/ui-reflection/types';
 
 // Helper component for video previews with browser compatibility checking
 interface VideoPreviewProps {
@@ -603,28 +601,38 @@ function DocumentStorageCardComponent({
                                     onClick={handleFullSizeView}
                                 />
                             ) : previewContent.previewImage ? (
-                                <div className="relative group">
-                                    <img
-                                        src={previewContent.previewImage}
-                                        alt={document.document_name}
-                                        className="max-w-full h-auto rounded-md border border-[rgb(var(--color-border-200))] cursor-pointer transition-opacity group-hover:opacity-75"
-                                        style={{ maxHeight: '200px', objectFit: 'contain' }}
-                                        onClick={handleFullSizeView}
-                                        role="button"
-                                        tabIndex={0}
-                                    />
-                                    <div 
-                                        className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
-                                        onClick={handleFullSizeView}
-                                    >
-                                        <div className="bg-black bg-opacity-50 text-white p-2 rounded-full pointer-events-none">
-                                            <Eye className="w-6 h-6" />
+                                (() => {
+                                    // Only allow click-to-preview for files that can be displayed in a modal
+                                    const isPreviewableInModal = document.mime_type?.startsWith('image/') ||
+                                                                  document.mime_type?.startsWith('video/') ||
+                                                                  document.mime_type === 'application/pdf';
+                                    return (
+                                        <div className="relative group">
+                                            <img
+                                                src={previewContent.previewImage}
+                                                alt={document.document_name}
+                                                className={`max-w-full h-auto rounded-md border border-[rgb(var(--color-border-200))] ${isPreviewableInModal ? 'cursor-pointer transition-opacity group-hover:opacity-75' : ''}`}
+                                                style={{ maxHeight: '200px', objectFit: 'contain' }}
+                                                onClick={isPreviewableInModal ? handleFullSizeView : undefined}
+                                                role={isPreviewableInModal ? "button" : undefined}
+                                                tabIndex={isPreviewableInModal ? 0 : undefined}
+                                            />
+                                            {isPreviewableInModal && (
+                                                <div
+                                                    className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+                                                    onClick={handleFullSizeView}
+                                                >
+                                                    <div className="bg-black bg-opacity-50 text-white p-2 rounded-full pointer-events-none">
+                                                        <Eye className="w-6 h-6" />
+                                                    </div>
+                                                </div>
+                                            )}
                                         </div>
-                                    </div>
-                                </div>
+                                    );
+                                })()
                             ) : previewContent.content ? (
                                 <div
-                                    className={`text-sm text-[rgb(var(--color-text-700))] max-h-[200px] overflow-hidden p-3 rounded-md bg-[rgb(var(--color-border-50))] border border-[rgb(var(--color-border-200))] ${!document.file_id ? '' : 'cursor-pointer hover:bg-[rgb(var(--color-border-100))] transition-colors'}`}
+                                    className="text-sm text-[rgb(var(--color-text-700))] max-h-[200px] overflow-hidden p-3 rounded-md bg-[rgb(var(--color-border-50))] border border-[rgb(var(--color-border-200))]"
                                     style={{
                                         display: '-webkit-box',
                                         WebkitLineClamp: '8',
@@ -632,9 +640,6 @@ function DocumentStorageCardComponent({
                                         whiteSpace: 'pre-wrap'
                                     }}
                                     dangerouslySetInnerHTML={{ __html: previewContent.content || '' }}
-                                    onClick={!document.file_id ? undefined : handleFullSizeView}
-                                    role={!document.file_id ? undefined : "button"}
-                                    tabIndex={!document.file_id ? undefined : 0}
                                 />
                             ) : null}
                         </div>

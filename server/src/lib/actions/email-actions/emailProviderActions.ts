@@ -5,13 +5,19 @@ import { getCurrentUser } from '../user-actions/userActions';
 import type { EmailProvider, MicrosoftEmailProviderConfig, GoogleEmailProviderConfig } from '../../../components/EmailProviderConfiguration';
 import { getSecretProviderInstance } from '@shared/core';
 import { EmailProviderService } from '../../../services/email/EmailProviderService';
-import { configureGmailProvider } from './configureGmailProvider';
+import { configureGmailProvider, type ConfigureGmailProviderResult } from './configureGmailProvider';
 import { EmailWebhookMaintenanceService } from '@alga-psa/shared/services/email/EmailWebhookMaintenanceService';
 import { hasPermission } from 'server/src/lib/auth/rbac';
 import { throwPermissionError } from 'server/src/lib/utils/errorHandling';
 import { getWebhookBaseUrl } from 'server/src/utils/email/webhookHelpers';
 import { MicrosoftGraphAdapter } from '@alga-psa/shared/services/email/providers/MicrosoftGraphAdapter';
 import type { Microsoft365DiagnosticsReport } from '@alga-psa/shared/interfaces/microsoft365-diagnostics.interfaces';
+
+export interface EmailProviderSetupResult {
+  provider: EmailProvider;
+  setupError?: string;
+  setupWarnings?: string[];
+}
 
 
 /**
@@ -467,42 +473,61 @@ export async function upsertEmailProvider(data: {
   inboundTicketDefaultsId?: string;
   microsoftConfig?: Omit<MicrosoftEmailProviderConfig, 'email_provider_id' | 'tenant' | 'created_at' | 'updated_at'>;
   googleConfig?: Omit<GoogleEmailProviderConfig, 'email_provider_id' | 'tenant' | 'created_at' | 'updated_at'>;
-}, skipAutomation?: boolean): Promise<{ provider: EmailProvider }> {
+}, skipAutomation?: boolean): Promise<EmailProviderSetupResult> {
   await assertAuthenticated();
   const { knex, tenant } = await createTenantKnex();
   if (!tenant) throw new Error('Tenant is required');
-  
+
+  const result: EmailProviderSetupResult = {
+    provider: null as any,
+    setupWarnings: []
+  };
+
   try {
     const provider = await knex.transaction(async (trx) => {
       const base = await getOrCreateProvider(trx, tenant, data);
-      
+
       if (data.providerType === 'microsoft') {
         base.microsoftConfig = await persistMicrosoftConfig(trx, tenant, base.id, data.microsoftConfig);
       } else if (data.providerType === 'google') {
         base.googleConfig = await persistGoogleConfig(trx, tenant, base.id, data.googleConfig);
       }
-      
+
       return base;
     });
-    
+
+    result.provider = provider;
+
     if (!skipAutomation && data.providerType === 'google' && provider.googleConfig) {
       const secretProvider = await getSecretProviderInstance();
       const effectiveProjectId =
         (await secretProvider.getTenantSecret(tenant, 'google_project_id')) ||
         data.googleConfig?.project_id;
-      
+
       if (effectiveProjectId) {
-        await configureGmailProvider({
+        const gmailResult = await configureGmailProvider({
           tenant,
           providerId: provider.id,
           projectId: effectiveProjectId
         });
-        // Update returned provider state to reflect side-effects
-        provider.lastSyncAt = new Date().toISOString();
-        provider.status = 'connected';
+
+        if (gmailResult.success) {
+          // Update returned provider state to reflect side-effects
+          provider.lastSyncAt = new Date().toISOString();
+          provider.status = 'connected';
+        } else {
+          // Setup failed - record the error
+          result.setupError = gmailResult.error || 'Gmail setup failed';
+          provider.status = 'error';
+        }
+
+        // Add any warnings
+        if (gmailResult.warnings && gmailResult.warnings.length > 0) {
+          result.setupWarnings = [...(result.setupWarnings || []), ...gmailResult.warnings];
+        }
       }
     }
-    
+
     if (!skipAutomation && data.providerType === 'microsoft' && provider.microsoftConfig) {
       try {
         const service = new EmailProviderService();
@@ -511,12 +536,15 @@ export async function upsertEmailProvider(data: {
         provider.lastSyncAt = new Date().toISOString();
         provider.status = 'connected';
       } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
         console.error('Failed to initialize Microsoft webhook:', error);
-        // Don't throw here - provider is saved, but webhook failed
+        // Record the error so the UI can display it
+        result.setupError = `Failed to initialize Microsoft webhook: ${errorMessage}`;
+        provider.status = 'error';
       }
     }
-    
-    return { provider };
+
+    return result;
   } catch (error) {
     console.error('Failed to upsert email provider:', error);
     throw new Error('Failed to upsert email provider');
@@ -532,7 +560,7 @@ export async function createEmailProvider(data: {
   inboundTicketDefaultsId?: string;
   microsoftConfig?: Omit<MicrosoftEmailProviderConfig, 'email_provider_id' | 'tenant' | 'created_at' | 'updated_at'>;
   googleConfig?: Omit<GoogleEmailProviderConfig, 'email_provider_id' | 'tenant' | 'created_at' | 'updated_at'>;
-}, skipAutomation?: boolean): Promise<{ provider: EmailProvider }> {
+}, skipAutomation?: boolean): Promise<EmailProviderSetupResult> {
   // Delegate to upsertEmailProvider since they have identical logic
   return upsertEmailProvider(data, skipAutomation);
 }
@@ -550,42 +578,61 @@ export async function updateEmailProvider(
     googleConfig?: Omit<GoogleEmailProviderConfig, 'email_provider_id' | 'tenant' | 'created_at' | 'updated_at'>;
   },
   skipAutomation?: boolean
-): Promise<{ provider: EmailProvider }> {
+): Promise<EmailProviderSetupResult> {
   await assertAuthenticated();
   const { knex, tenant } = await createTenantKnex();
   if (!tenant) throw new Error('Tenant is required');
-  
+
+  const result: EmailProviderSetupResult = {
+    provider: null as any,
+    setupWarnings: []
+  };
+
   try {
     const provider = await knex.transaction(async (trx) => {
       const base = await getOrCreateProvider(trx, tenant, data, providerId);
-      
+
       if (data.providerType === 'microsoft') {
         base.microsoftConfig = await persistMicrosoftConfig(trx, tenant, base.id, data.microsoftConfig);
       } else if (data.providerType === 'google') {
         base.googleConfig = await persistGoogleConfig(trx, tenant, base.id, data.googleConfig);
       }
-      
+
       return base;
     });
-    
+
+    result.provider = provider;
+
     if (!skipAutomation && data.providerType === 'google' && provider.googleConfig) {
       const secretProvider = await getSecretProviderInstance();
       const effectiveProjectId =
         (await secretProvider.getTenantSecret(tenant, 'google_project_id')) ||
         data.googleConfig?.project_id;
-      
+
       if (effectiveProjectId) {
-        await configureGmailProvider({
+        const gmailResult = await configureGmailProvider({
           tenant,
           providerId: provider.id,
           projectId: effectiveProjectId
         });
-        // Update returned provider state to reflect side-effects
-        provider.lastSyncAt = new Date().toISOString();
-        provider.status = 'connected';
+
+        if (gmailResult.success) {
+          // Update returned provider state to reflect side-effects
+          provider.lastSyncAt = new Date().toISOString();
+          provider.status = 'connected';
+        } else {
+          // Setup failed - record the error
+          result.setupError = gmailResult.error || 'Gmail setup failed';
+          provider.status = 'error';
+        }
+
+        // Add any warnings
+        if (gmailResult.warnings && gmailResult.warnings.length > 0) {
+          result.setupWarnings = [...(result.setupWarnings || []), ...gmailResult.warnings];
+        }
       }
     }
-    
+
     if (!skipAutomation && data.providerType === 'microsoft' && provider.microsoftConfig) {
       try {
         const service = new EmailProviderService();
@@ -594,12 +641,15 @@ export async function updateEmailProvider(
         provider.lastSyncAt = new Date().toISOString();
         provider.status = 'connected';
       } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
         console.error('Failed to initialize Microsoft webhook:', error);
-        // Don't throw here - provider is saved, but webhook failed
+        // Record the error so the UI can display it
+        result.setupError = `Failed to initialize Microsoft webhook: ${errorMessage}`;
+        provider.status = 'error';
       }
     }
-    
-    return { provider };
+
+    return result;
   } catch (error) {
     console.error('Failed to update email provider:', error);
     throw new Error('Failed to update email provider');

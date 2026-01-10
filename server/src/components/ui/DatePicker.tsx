@@ -114,7 +114,7 @@ export function DatePicker({
               <X className="h-4 w-4" />
             </span>
           )}
-          <CalendarIcon className="h-4 w-4 opacity-50" />
+          <CalendarIcon className="h-4 w-4 ml-2 opacity-50 shrink-0" />
         </Popover.Trigger>
 
         <Popover.Portal>

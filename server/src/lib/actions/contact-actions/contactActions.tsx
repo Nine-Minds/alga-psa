@@ -250,6 +250,32 @@ export async function deleteContact(contactId: string): Promise<{
       try {
         console.log('🔍 Inside transaction, attempting deletion with params:', { contact_name_id: contactId, tenant });
 
+        // Get the contact's notes_document_id before deletion
+        const contactRecord = await trx('contacts')
+          .where({ contact_name_id: contactId, tenant })
+          .select('notes_document_id')
+          .first();
+
+        // Clean up notes document if it exists
+        if (contactRecord?.notes_document_id) {
+          console.log('🔍 Cleaning up notes document:', contactRecord.notes_document_id);
+
+          // Delete block content first (due to FK)
+          await trx('document_block_content')
+            .where({ tenant, document_id: contactRecord.notes_document_id })
+            .delete();
+
+          // Delete document associations
+          await trx('document_associations')
+            .where({ tenant, document_id: contactRecord.notes_document_id })
+            .delete();
+
+          // Delete the document
+          await trx('documents')
+            .where({ tenant, document_id: contactRecord.notes_document_id })
+            .delete();
+        }
+
         // Clean up any tags associated with this contact
         await deleteEntityTags(trx, contactId, 'contact');
 
@@ -759,7 +785,12 @@ export async function updateContact(contactData: Partial<IContact>): Promise<ICo
             value = value.toLowerCase();
           }
         }
-        (updateData as any)[key] = value;
+        // Convert empty strings to null for UUID fields (PostgreSQL cannot cast '' to UUID)
+        if (key === 'client_id' && value === '') {
+          (updateData as any)[key] = null;
+        } else {
+          (updateData as any)[key] = value;
+        }
       }
     }
 

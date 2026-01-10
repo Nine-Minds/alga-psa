@@ -13,6 +13,7 @@ import { TagList, TagManager } from 'server/src/components/tags';
 import UserAvatar from 'server/src/components/ui/UserAvatar';
 import UserPicker from 'server/src/components/ui/UserPicker';
 import { useResponsiveColumns, ColumnConfig } from 'server/src/hooks/useResponsiveColumns';
+import { getUserAvatarUrlsBatchAction } from 'server/src/lib/actions/avatar-actions';
 
 // Column configuration for responsive hiding
 // Lower priority number = higher importance (shown first)
@@ -97,6 +98,51 @@ export default function TaskListView({
 }: TaskListViewProps) {
   const [expandedPhases, setExpandedPhases] = useState<Set<string>>(new Set());
   const [expandedStatuses, setExpandedStatuses] = useState<Set<string>>(new Set());
+  const [avatarUrls, setAvatarUrls] = useState<Record<string, string | null>>({});
+
+  // Fetch avatar URLs for assignees and additional agents
+  useEffect(() => {
+    const fetchAvatarUrls = async () => {
+      // Collect all unique user IDs from tasks and task resources
+      const userIds = new Set<string>();
+
+      // Add assigned_to users
+      tasks.forEach(task => {
+        if (task.assigned_to) {
+          userIds.add(task.assigned_to);
+        }
+      });
+
+      // Add additional agents from task resources
+      Object.values(taskResources).forEach(resources => {
+        resources.forEach(resource => {
+          if (resource.additional_user_id) {
+            userIds.add(resource.additional_user_id);
+          }
+        });
+      });
+
+      if (userIds.size === 0) return;
+
+      // Get tenant from first task
+      const tenant = tasks[0]?.tenant;
+      if (!tenant) return;
+
+      try {
+        const avatarUrlsMap = await getUserAvatarUrlsBatchAction(Array.from(userIds), tenant);
+        // Convert Map to Record
+        const urlsRecord: Record<string, string | null> = {};
+        avatarUrlsMap.forEach((url, id) => {
+          urlsRecord[id] = url;
+        });
+        setAvatarUrls(urlsRecord);
+      } catch (error) {
+        console.error('Failed to fetch avatar URLs:', error);
+      }
+    };
+
+    fetchAvatarUrls();
+  }, [taskResources, tasks]);
 
   // Responsive columns - add padding to account for scrollbars, cell padding, and borders
   const { containerRef, isColumnVisible, hiddenColumnCount } = useResponsiveColumns({
@@ -784,7 +830,7 @@ export default function TaskListView({
                                                 <UserAvatar
                                                   userId={user.user_id}
                                                   userName={`${user.first_name} ${user.last_name}`}
-                                                  avatarUrl={null}
+                                                  avatarUrl={avatarUrls[user.user_id] ?? null}
                                                   size="xs"
                                                 />
                                                 <span className="text-sm text-gray-700 truncate">
@@ -811,7 +857,7 @@ export default function TaskListView({
                                                     <UserAvatar
                                                       userId={resource.additional_user_id}
                                                       userName={userName}
-                                                      avatarUrl={null}
+                                                      avatarUrl={avatarUrls[resource.additional_user_id] ?? null}
                                                       size="xs"
                                                     />
                                                     <span>
@@ -824,7 +870,13 @@ export default function TaskListView({
                                             </div>
                                           }
                                         >
-                                          <span className="text-xs text-purple-600 font-medium cursor-help bg-purple-50 px-1.5 py-0.5 rounded">
+                                          <span
+                                            className="text-xs font-medium cursor-help px-1.5 py-0.5 rounded"
+                                            style={{
+                                              color: 'rgb(var(--color-primary-500))',
+                                              backgroundColor: 'rgb(var(--color-primary-50))'
+                                            }}
+                                          >
                                             +{additionalCount}
                                           </span>
                                         </Tooltip>

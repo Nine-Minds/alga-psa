@@ -16,6 +16,7 @@ export const ticketFormSchema = z.object({
     itil_impact: z.number().int().min(1).max(5).optional(),
     itil_urgency: z.number().int().min(1).max(5).optional(),
     itil_priority_level: z.number().int().min(1).max(5).optional(),
+    due_date: z.string().datetime().nullable().optional(),
 });
 
 export const createTicketFromAssetSchema = z.object({
@@ -47,6 +48,7 @@ export const ticketSchema = z.object({
     entered_at: z.string().nullable(),
     updated_at: z.string().nullable(),
     closed_at: z.string().nullable(),
+    due_date: z.string().datetime().nullable().optional(),
     attributes: z.record(z.unknown()).nullable(),
     priority_id: z.string().uuid().nullable(), // Used for both custom and ITIL priorities
     // ITIL-specific fields (for priority calculation)
@@ -85,6 +87,7 @@ const baseTicketSchema = z.object({
     entered_at: z.string().nullable(),
     updated_at: z.string().nullable(),
     closed_at: z.string().nullable(),
+    due_date: z.string().datetime().nullable().optional(),
     attributes: z.record(z.unknown()).nullable(),
     updated_by: z.string().uuid().nullable()
 });
@@ -129,6 +132,12 @@ export const ticketListFiltersSchema = z.object({
     boardFilterState: z.enum(['active', 'inactive', 'all']),
     showOpenOnly: z.boolean().optional(),
     tags: z.array(z.string()).optional(),
+    assignedToIds: z.array(z.string().uuid()).optional(),
+    includeUnassigned: z.boolean().optional(),
+    // Due date filters
+    dueDateFilter: z.enum(['all', 'overdue', 'upcoming', 'today', 'no_due_date', 'before', 'after', 'custom']).optional(),
+    dueDateFrom: z.string().datetime().optional(),
+    dueDateTo: z.string().datetime().optional(),
     responseState: z.enum(['awaiting_client', 'awaiting_internal', 'none', 'all']).optional(),
     sortBy: z.enum([
         'ticket_number',
@@ -139,7 +148,8 @@ export const ticketListFiltersSchema = z.object({
         'category_name',
         'client_name',
         'entered_at',
-        'entered_by_name'
+        'entered_by_name',
+        'due_date'
     ]).optional(),
     sortDirection: z.enum(['asc', 'desc']).optional()
     ,

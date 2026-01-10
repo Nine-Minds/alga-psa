@@ -1,4 +1,5 @@
-import React, { useEffect, useState, useCallback, useRef } from 'react';
+import React, { useEffect, useState, useCallback, useRef, useMemo } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { ActivityFilters, NotificationActivity } from "server/src/interfaces/activity.interfaces";
 import { Button } from "server/src/components/ui/Button";
 import { Card, CardContent, CardHeader, CardTitle } from "server/src/components/ui/Card";
@@ -19,14 +20,41 @@ interface NotificationsSectionProps {
   noCard?: boolean;
 }
 
+// Map URL slugs to tab labels
+const tabSlugToLabelMap: Record<string, string> = {
+  'unread': 'Unread',
+  'all': 'All',
+  'read': 'Read'
+};
+
+// Map tab labels to URL slugs
+const tabLabelToSlugMap: Record<string, string> = {
+  'Unread': 'unread',
+  'All': 'all',
+  'Read': 'read'
+};
+
 export function NotificationsSection({ limit = 5, onViewAll, noCard = false }: NotificationsSectionProps) {
   const { data: session } = useSession();
+  const searchParams = useSearchParams();
+  const notificationTabParam = searchParams?.get('notificationTab');
+
   const [activities, setActivities] = useState<NotificationActivity[]>([]);
   const [loading, setLoading] = useState(true);
   const { openActivityDrawer } = useActivityDrawer();
   const [error, setError] = useState<string | null>(null);
   const [isFilterDialogOpen, setIsFilterDialogOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState<string>("Unread");
+
+  // Determine initial tab from URL or default to "Unread"
+  const initialTab = useMemo(() => {
+    if (notificationTabParam) {
+      const label = tabSlugToLabelMap[notificationTabParam.toLowerCase()];
+      if (label) return label;
+    }
+    return 'Unread';
+  }, [notificationTabParam]);
+
+  const [activeTab, setActiveTab] = useState<string>(initialTab);
   const [notificationFilters, setNotificationFilters] = useState<Partial<ActivityFilters>>({
     isClosed: false // Default: show unread only
   });
@@ -72,6 +100,27 @@ export function NotificationsSection({ limit = 5, onViewAll, noCard = false }: N
   useEffect(() => {
     loadActivities(notificationFilters);
   }, [notificationFilters, loadActivities]);
+
+  // Update active tab when URL parameter changes
+  useEffect(() => {
+    if (notificationTabParam) {
+      const label = tabSlugToLabelMap[notificationTabParam.toLowerCase()];
+      if (label && label !== activeTab) {
+        setActiveTab(label);
+        // Also update filters based on the new tab
+        if (label === "Unread") {
+          setNotificationFilters(prev => ({ ...prev, isClosed: false }));
+        } else if (label === "Read") {
+          setNotificationFilters(prev => ({ ...prev, isClosed: true }));
+        } else if (label === "All") {
+          setNotificationFilters(prev => {
+            const { isClosed, ...rest } = prev;
+            return rest;
+          });
+        }
+      }
+    }
+  }, [notificationTabParam, activeTab]);
 
   // Watch for changes in real-time notifications and auto-refresh
   useEffect(() => {
@@ -128,7 +177,7 @@ export function NotificationsSection({ limit = 5, onViewAll, noCard = false }: N
     setNotificationFilters({ isClosed: false }); // Reset to default filters
   };
 
-  // Handle tab change to update filters
+  // Handle tab change to update filters and URL
   const handleTabChange = (tab: string) => {
     setActiveTab(tab);
 
@@ -142,6 +191,21 @@ export function NotificationsSection({ limit = 5, onViewAll, noCard = false }: N
       // Show all notifications
       const { isClosed, ...rest } = notificationFilters;
       setNotificationFilters(rest);
+    }
+
+    // Update URL with the new tab
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const slug = tabLabelToSlugMap[tab];
+      if (slug && slug !== 'unread') {
+        params.set('notificationTab', slug);
+      } else {
+        params.delete('notificationTab');
+      }
+      const newUrl = params.toString()
+        ? `${window.location.pathname}?${params.toString()}`
+        : window.location.pathname;
+      window.history.pushState({}, '', newUrl);
     }
   };
 
@@ -266,7 +330,7 @@ export function NotificationsSection({ limit = 5, onViewAll, noCard = false }: N
     <div className="px-6 pb-6">
       <CustomTabs
         tabs={tabContent}
-        defaultTab="Unread"
+        defaultTab={activeTab}
         onTabChange={handleTabChange}
         tabStyles={tabStyles}
       />
@@ -349,7 +413,7 @@ export function NotificationsSection({ limit = 5, onViewAll, noCard = false }: N
       <CardContent>
         <CustomTabs
           tabs={tabContent}
-          defaultTab="Unread"
+          defaultTab={activeTab}
           onTabChange={handleTabChange}
           tabStyles={tabStyles}
         />

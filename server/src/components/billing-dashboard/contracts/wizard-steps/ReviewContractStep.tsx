@@ -16,7 +16,8 @@ import {
   FileCheck,
   Repeat,
 } from 'lucide-react';
-import { getCurrencySymbol, CURRENCY_OPTIONS } from 'server/src/constants/currency';
+import { CURRENCY_OPTIONS } from 'server/src/constants/currency';
+import { formatCurrencyFromMinorUnits } from 'server/src/lib/utils/formatters';
 import { parse } from 'date-fns';
 import { BILLING_FREQUENCY_OPTIONS, BILLING_FREQUENCY_DISPLAY } from 'server/src/constants/billing';
 import { getClients } from 'server/src/lib/actions/clientAction';
@@ -48,11 +49,13 @@ export function ReviewContractStep({ data }: ReviewContractStepProps) {
     void loadClientName();
   }, [data.client_id]);
 
-  const currencySymbol = getCurrencySymbol(data.currency_code);
+  const currencyCode = data.currency_code || 'USD';
 
-  const formatCurrency = (cents: number | undefined) => {
-    if (!cents) return `${currencySymbol}0.00`;
-    return `${currencySymbol}${(cents / 100).toFixed(2)}`;
+  const formatCurrency = (minorUnits: number | null | undefined) => {
+    if (minorUnits == null) {
+      return formatCurrencyFromMinorUnits(0, 'en-US', currencyCode);
+    }
+    return formatCurrencyFromMinorUnits(minorUnits, 'en-US', currencyCode);
   };
 
   const formatBucketSummary = (

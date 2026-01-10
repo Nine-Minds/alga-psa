@@ -135,6 +135,7 @@ export default class Invoice {
     if (!itemToInsert.service_id) {
       delete itemToInsert.service_id;
     }
+    delete (itemToInsert as any).contract_name;
 
     const [createdItem] = await knexOrTrx('invoice_charges').insert(itemToInsert).returning('*');
     return createdItem;
@@ -603,6 +604,8 @@ export default class Invoice {
         invoice_id: invoice.invoice_id,
         invoice_number: invoice.invoice_number,
         client_id: invoice.client_id,
+        po_number: invoice.po_number ?? null,
+        client_contract_id: invoice.client_contract_id ?? null,
         client: { // Populate client details
           name: client.client_name || '',
           address: client.location_address || '',

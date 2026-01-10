@@ -67,6 +67,20 @@ enum proxy-error {
     internal,
 }
 
+record user-data {
+    tenant-id: string,
+    client-name: string,
+    user-id: string,
+    user-email: string,
+    user-name: string,
+    user-type: string,
+}
+
+enum user-error {
+    not-available,
+    not-allowed,
+}
+
 /// Capability provider interfaces -------------------------------------------
 
 /// Access execution context metadata.
@@ -111,6 +125,12 @@ interface ui-proxy {
     call: func(route: string, payload: option<list<u8>>) -> result<list<u8>, proxy-error>;
 }
 
+/// Access current user information.
+/// @requires(cap:user.read)
+interface user {
+    get-user: func() -> result<user-data, user-error>;
+}
+
 /// Guest exported HTTP-style handler entrypoint (initial contract).
 record execute-request {
     context: context-data,
@@ -131,6 +151,7 @@ world runner {
     import storage: interface storage;
     import logging: interface logging;
     import ui-proxy: interface ui-proxy;
+    import user: interface user;
 
     export handler: func(request: execute-request) -> execute-response;
 }

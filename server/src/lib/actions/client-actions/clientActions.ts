@@ -294,6 +294,11 @@ export interface PaginatedClientsResponse {
   totalPages: number;
 }
 
+export interface BillingCycleDateRange {
+  from?: string;
+  to?: string;
+}
+
 export async function getAllClientsPaginated(params: ClientPaginationParams = {}): Promise<PaginatedClientsResponse> {
   const currentUser = await getCurrentUser();
   if (!currentUser) {
@@ -472,6 +477,194 @@ export async function getAllClientsPaginated(params: ClientPaginationParams = {}
     };
   } catch (error) {
     console.error('Error fetching paginated clients:', error);
+    throw error;
+  }
+}
+
+export async function getClientsWithBillingCycleRangePaginated(
+  params: ClientPaginationParams & { dateRange?: BillingCycleDateRange }
+): Promise<PaginatedClientsResponse> {
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
+    throw new Error('No authenticated user found');
+  }
+
+  if (!await hasPermission(currentUser, 'client', 'read')) {
+    throw new Error('Permission denied: Cannot read clients');
+  }
+
+  const {
+    page = 1,
+    pageSize = 10,
+    includeInactive = true,
+    searchTerm,
+    clientTypeFilter = 'all',
+    loadLogos = true,
+    statusFilter,
+    selectedTags,
+    sortBy = 'client_name',
+    sortDirection = 'asc',
+    dateRange
+  } = params;
+
+  const {knex: db, tenant} = await createTenantKnex();
+  if (!tenant) {
+    throw new Error('Tenant not found');
+  }
+
+  try {
+    const offset = (page - 1) * pageSize;
+
+    const result = await withTransaction(db, async (trx: Knex.Transaction) => {
+      let baseQuery = trx('clients as c')
+        .leftJoin('users as u', function() {
+          this.on('c.account_manager_id', '=', 'u.user_id')
+              .andOn('c.tenant', '=', 'u.tenant');
+        })
+        .leftJoin('client_locations as cl', function() {
+          this.on('c.client_id', '=', 'cl.client_id')
+              .andOn('c.tenant', '=', 'cl.tenant')
+              .andOn('cl.is_default', '=', trx.raw('true'));
+        })
+        .where({ 'c.tenant': tenant });
+
+      if (statusFilter === 'active') {
+        baseQuery = baseQuery.andWhere('c.is_inactive', false);
+      } else if (statusFilter === 'inactive') {
+        baseQuery = baseQuery.andWhere('c.is_inactive', true);
+      } else if (!statusFilter && !includeInactive) {
+        baseQuery = baseQuery.andWhere('c.is_inactive', false);
+      }
+
+      if (searchTerm) {
+        baseQuery = baseQuery.where(function() {
+          this.where('c.client_name', 'ilike', `%${searchTerm}%`)
+              .orWhere('cl.phone', 'ilike', `%${searchTerm}%`)
+              .orWhere('cl.address_line1', 'ilike', `%${searchTerm}%`)
+              .orWhere('cl.address_line2', 'ilike', `%${searchTerm}%`)
+              .orWhere('cl.city', 'ilike', `%${searchTerm}%`);
+        });
+      }
+
+      if (clientTypeFilter !== 'all') {
+        baseQuery = baseQuery.where('c.client_type', clientTypeFilter);
+      }
+
+      if (selectedTags && selectedTags.length > 0) {
+        baseQuery = baseQuery.whereIn('c.client_id', function() {
+          this.select('tm.tagged_id')
+            .from('tag_mappings as tm')
+            .join('tag_definitions as td', function() {
+              this.on('tm.tenant', '=', 'td.tenant')
+                  .andOn('tm.tag_id', '=', 'td.tag_id');
+            })
+            .where('tm.tagged_type', 'client')
+            .where('tm.tenant', tenant)
+            .whereIn('td.tag_text', selectedTags);
+        });
+      }
+
+      if (dateRange?.from || dateRange?.to) {
+        baseQuery = baseQuery.whereIn('c.client_id', function() {
+          this.select('cbc.client_id')
+            .from('client_billing_cycles as cbc')
+            .where('cbc.tenant', tenant);
+
+          if (dateRange?.from) {
+            const rangeFrom = dateRange.from;
+            this.andWhere(function() {
+              this.whereNull('cbc.period_end_date')
+                .orWhereRaw('cbc.period_end_date >= ?', [rangeFrom]);
+            });
+          }
+
+          if (dateRange?.to) {
+            this.andWhere('cbc.period_start_date', '<=', dateRange.to);
+          }
+        });
+      }
+
+      const countResult = await baseQuery.clone().countDistinct('c.client_id as count').first();
+      const totalCount = parseInt(countResult?.count as string || '0', 10);
+
+      let clientsQuery = baseQuery
+        .leftJoin('tenant_companies as tc', function() {
+          this.on('c.client_id', '=', 'tc.client_id')
+              .andOn('c.tenant', '=', 'tc.tenant');
+        })
+        .select(
+          'c.*',
+          'tc.is_default',
+          trx.raw(`CASE WHEN u.first_name IS NOT NULL AND u.last_name IS NOT NULL THEN CONCAT(u.first_name, ' ', u.last_name) ELSE NULL END as account_manager_full_name`),
+          'cl.phone as location_phone',
+          'cl.email as location_email',
+          'cl.address_line1',
+          'cl.address_line2',
+          'cl.city',
+          'cl.state_province',
+          'cl.postal_code',
+          'cl.country_name'
+        );
+
+      if (sortBy) {
+        const sortColumnMap: Record<string, string> = {
+          'client_name': 'c.client_name',
+          'client_type': 'c.client_type',
+          'phone_no': 'cl.phone',
+          'address': 'cl.address_line1',
+          'account_manager_full_name': 'account_manager_full_name',
+          'url': 'c.url',
+          'created_at': 'c.created_at'
+        };
+
+        const sortColumn = sortColumnMap[sortBy] || 'c.client_name';
+        const validSortDirection = sortDirection === 'desc' ? 'desc' : 'asc';
+
+        const textColumns = ['client_name', 'client_type', 'address', 'account_manager_full_name', 'url'];
+        if (textColumns.includes(sortBy)) {
+          clientsQuery = clientsQuery.orderByRaw(`LOWER(${sortColumn}) ${validSortDirection}`);
+        } else {
+          clientsQuery = clientsQuery.orderBy(sortColumn, validSortDirection);
+        }
+      } else {
+        clientsQuery = clientsQuery.orderByRaw('LOWER(c.client_name) asc');
+      }
+
+      const clients = await clientsQuery
+        .limit(pageSize)
+        .offset(offset);
+
+      return { clients, totalCount };
+    });
+
+    let clientsWithLogos = result.clients;
+
+    if (loadLogos && clientsWithLogos.length > 0) {
+      const clientIds = clientsWithLogos.map(c => c.client_id);
+      const logoUrlsMap = await getClientLogoUrlsBatch(clientIds, tenant);
+
+      clientsWithLogos = clientsWithLogos.map((client) => ({
+        ...client,
+        properties: client.properties || {},
+        logoUrl: logoUrlsMap.get(client.client_id) || null,
+      }));
+    } else {
+      clientsWithLogos = clientsWithLogos.map((client) => ({
+        ...client,
+        properties: client.properties || {},
+        logoUrl: null,
+      }));
+    }
+
+    return {
+      clients: clientsWithLogos as IClient[],
+      totalCount: result.totalCount,
+      page,
+      pageSize,
+      totalPages: Math.ceil(result.totalCount / pageSize)
+    };
+  } catch (error) {
+    console.error('Error fetching paginated clients with billing cycles:', error);
     throw error;
   }
 }
@@ -783,6 +976,31 @@ export async function deleteClient(clientId: string): Promise<{
 
       if (deletedLocations > 0) {
         console.log(`Deleted ${deletedLocations} client location records`);
+      }
+
+      // Clean up notes document if it exists
+      const clientRecord = await trx('clients')
+        .where({ client_id: clientId, tenant })
+        .select('notes_document_id')
+        .first();
+
+      if (clientRecord?.notes_document_id) {
+        console.log(`Cleaning up notes document: ${clientRecord.notes_document_id}`);
+
+        // Delete block content first (due to FK)
+        await trx('document_block_content')
+          .where({ tenant, document_id: clientRecord.notes_document_id })
+          .delete();
+
+        // Delete document associations
+        await trx('document_associations')
+          .where({ tenant, document_id: clientRecord.notes_document_id })
+          .delete();
+
+        // Delete the document
+        await trx('documents')
+          .where({ tenant, document_id: clientRecord.notes_document_id })
+          .delete();
       }
 
       // Clean up any tags associated with this client

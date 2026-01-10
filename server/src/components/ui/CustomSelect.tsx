@@ -175,7 +175,7 @@ const CustomSelect: React.FC<CustomSelectProps & AutomationProps> = ({
           }
         }}
       >
-        <RadixSelect.Trigger
+      <RadixSelect.Trigger
           {...finalAutomationProps}
           data-automation-type={dataAutomationType}
           className={`
@@ -186,7 +186,9 @@ const CustomSelect: React.FC<CustomSelectProps & AutomationProps> = ({
             border border-[rgb(var(--color-border-400))] text-[rgb(var(--color-text-700))]
             hover:bg-[rgb(var(--color-primary-50))] hover:text-[rgb(var(--color-primary-700))]
             focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2
-            disabled:pointer-events-none
+            disabled:pointer-events-none disabled:cursor-not-allowed
+            disabled:bg-gray-100 disabled:text-gray-400 disabled:border-gray-200
+            disabled:hover:bg-gray-100 disabled:hover:text-gray-400
             ${className}
             ${customStyles?.trigger || ''}
           `}
@@ -203,7 +205,7 @@ const CustomSelect: React.FC<CustomSelectProps & AutomationProps> = ({
             placeholder={placeholder}
             className="flex-1 text-left"
           >
-            <span className={!selectedOption ? 'text-gray-400' : ''}>
+            <span className={!selectedOption || disabled ? 'text-gray-400' : ''}>
               {selectedOption?.label || placeholder}
             </span>
           </RadixSelect.Value>

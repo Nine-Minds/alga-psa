@@ -39,6 +39,9 @@ import Drawer from 'server/src/components/ui/Drawer';
 import ClientDetails from 'server/src/components/clients/ClientDetails';
 import { createTicketColumns } from 'server/src/lib/utils/ticket-columns';
 import Spinner from 'server/src/components/ui/Spinner';
+import MultiUserPicker from 'server/src/components/ui/MultiUserPicker';
+import { getUserAvatarUrlsBatchAction } from 'server/src/lib/actions/avatar-actions';
+import { DatePicker } from 'server/src/components/ui/DatePicker';
 
 interface TicketingDashboardProps {
   id?: string;
@@ -49,6 +52,7 @@ interface TicketingDashboardProps {
   initialCategories: ITicketCategory[];
   initialClients: IClient[];
   initialTags?: string[];
+  initialUsers?: IUser[];
   totalCount: number;
   currentPage: number;
   pageSize: number;
@@ -86,6 +90,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   initialCategories,
   initialClients,
   initialTags = [],
+  initialUsers = [],
   totalCount,
   currentPage,
   pageSize,
@@ -115,6 +120,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   const [isBulkDeleteDialogOpen, setIsBulkDeleteDialogOpen] = useState(false);
   const [isBulkDeleting, setIsBulkDeleting] = useState(false);
   const [bulkDeleteErrors, setBulkDeleteErrors] = useState<Array<{ ticketId: string; message: string }>>([]);
+  const [additionalAgentAvatarUrls, setAdditionalAgentAvatarUrls] = useState<Record<string, string | null>>({});
   const [isBundleDialogOpen, setIsBundleDialogOpen] = useState(false);
   const [bundleMasterTicketId, setBundleMasterTicketId] = useState<string | null>(null);
   const [bundleSyncUpdates, setBundleSyncUpdates] = useState(true);
@@ -138,11 +144,23 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   const [excludedCategories, setExcludedCategories] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState<string>(initialFilterValues.searchQuery ?? '');
   const [boardFilterState, setBoardFilterState] = useState<'active' | 'inactive' | 'all'>(initialFilterValues.boardFilterState ?? 'active');
+
+  // Assignee filter state
+  const [selectedAssignees, setSelectedAssignees] = useState<string[]>(initialFilterValues.assignedToIds ?? []);
+  const [includeUnassigned, setIncludeUnassigned] = useState<boolean>(initialFilterValues.includeUnassigned ?? false);
+
+  // Due date filter state
+  const [selectedDueDateFilter, setSelectedDueDateFilter] = useState<string>(initialFilterValues.dueDateFilter ?? 'all');
+  const [dueDateFilterValue, setDueDateFilterValue] = useState<Date | undefined>(() => {
+    // Initialize from dueDateFrom (for 'after') or dueDateTo (for 'before') from URL
+    const dateStr = initialFilterValues.dueDateFrom || initialFilterValues.dueDateTo;
+    return dateStr ? new Date(dateStr) : undefined;
+  });
   const [selectedResponseState, setSelectedResponseState] = useState<'awaiting_client' | 'awaiting_internal' | 'none' | 'all'>(
     initialFilterValues.responseState ?? 'all'
   );
   const [bundleView, setBundleView] = useState<'bundled' | 'individual'>(initialFilterValues.bundleView ?? 'bundled');
-  
+
   const [clientFilterState, setClientFilterState] = useState<'active' | 'inactive' | 'all'>('active');
   const [clientTypeFilter, setClientTypeFilter] = useState<'all' | 'company' | 'individual'>('all');
 
@@ -153,9 +171,14 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
       (initialFilterValues.statusId && initialFilterValues.statusId !== 'open') ||
       (initialFilterValues.priorityId && initialFilterValues.priorityId !== 'all') ||
       initialFilterValues.categoryId ||
-      (initialFilterValues.tags && initialFilterValues.tags.length > 0)
+      (initialFilterValues.tags && initialFilterValues.tags.length > 0) ||
+      (initialFilterValues.assignedToIds && initialFilterValues.assignedToIds.length > 0) ||
+      initialFilterValues.includeUnassigned ||
+      (initialFilterValues.dueDateFilter && initialFilterValues.dueDateFilter !== 'all') ||
+      initialFilterValues.dueDateFrom ||
+      initialFilterValues.dueDateTo
     );
-  }, [initialFilterValues.boardId, initialFilterValues.clientId, initialFilterValues.statusId, initialFilterValues.priorityId, initialFilterValues.categoryId, initialFilterValues.tags]);
+  }, [initialFilterValues.boardId, initialFilterValues.clientId, initialFilterValues.statusId, initialFilterValues.priorityId, initialFilterValues.categoryId, initialFilterValues.tags, initialFilterValues.assignedToIds, initialFilterValues.includeUnassigned, initialFilterValues.dueDateFilter, initialFilterValues.dueDateFrom, initialFilterValues.dueDateTo]);
 
   const [isQuickAddOpen, setIsQuickAddOpen] = useState(false);
   const [isLoadingSelf, setIsLoadingSelf] = useState(false);
@@ -196,6 +219,39 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     setExpandedBundleMasters(new Set());
     setLoadedBundleChildrenMasters(new Set());
   }, [initialTickets]);
+
+  // Fetch avatar URLs for additional agents when tickets change
+  useEffect(() => {
+    const fetchAvatarUrls = async () => {
+      // Collect all unique user IDs from additional agents
+      const userIds = new Set<string>();
+      tickets.forEach(ticket => {
+        ticket.additional_agents?.forEach(agent => {
+          userIds.add(agent.user_id);
+        });
+      });
+
+      if (userIds.size === 0) return;
+
+      // Get tenant from first ticket
+      const tenant = tickets[0]?.tenant;
+      if (!tenant) return;
+
+      try {
+        const avatarUrlsMap = await getUserAvatarUrlsBatchAction(Array.from(userIds), tenant);
+        // Convert Map to Record
+        const urlsRecord: Record<string, string | null> = {};
+        avatarUrlsMap.forEach((url, id) => {
+          urlsRecord[id] = url;
+        });
+        setAdditionalAgentAvatarUrls(urlsRecord);
+      } catch (error) {
+        console.error('Failed to fetch avatar URLs:', error);
+      }
+    };
+
+    fetchAvatarUrls();
+  }, [tickets]);
 
   useEffect(() => {
     const nextTags = initialFilterValues.tags || [];
@@ -260,7 +316,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   // Helper function to generate URL with current filter state
   const getCurrentFiltersQuery = useCallback(() => {
     const params = new URLSearchParams();
-    
+
     // Only add non-default/non-empty values to URL
     if (selectedBoard) params.set('boardId', selectedBoard);
     if (selectedClient) params.set('clientId', selectedClient);
@@ -271,12 +327,31 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     if (boardFilterState && boardFilterState !== 'active') {
       params.set('boardFilterState', boardFilterState);
     }
+    // Include assignee filters in returnFilters for consistent back-navigation
+    if (selectedAssignees.length > 0) {
+      params.set('assignedToIds', selectedAssignees.join(','));
+    }
+    if (includeUnassigned) {
+      params.set('includeUnassigned', 'true');
+    }
+    // Include due date filter in URL params
+    if (selectedDueDateFilter && selectedDueDateFilter !== 'all') {
+      params.set('dueDateFilter', selectedDueDateFilter);
+      // Add the date value for before/after filters
+      if (dueDateFilterValue) {
+        if (selectedDueDateFilter === 'before') {
+          params.set('dueDateTo', dueDateFilterValue.toISOString());
+        } else if (selectedDueDateFilter === 'after') {
+          params.set('dueDateFrom', dueDateFilterValue.toISOString());
+        }
+      }
+    }
     if (bundleView && bundleView !== 'bundled') {
       params.set('bundleView', bundleView);
     }
 
     return params.toString();
-  }, [selectedBoard, selectedClient, selectedStatus, selectedPriority, selectedCategories, debouncedSearchQuery, boardFilterState, bundleView]);
+  }, [selectedBoard, selectedClient, selectedStatus, selectedPriority, selectedCategories, debouncedSearchQuery, boardFilterState, selectedAssignees, includeUnassigned, selectedDueDateFilter, dueDateFilterValue, bundleView]);
 
   const isFirstRender = useRef(true);
 
@@ -299,6 +374,11 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
       boardFilterState: boardFilterState,
       showOpenOnly: selectedStatus === 'open',
       tags: selectedTags.length > 0 ? selectedTags : undefined,
+      assignedToIds: selectedAssignees.length > 0 ? selectedAssignees : undefined,
+      includeUnassigned: includeUnassigned || undefined,
+      dueDateFilter: selectedDueDateFilter !== 'all' ? selectedDueDateFilter as ITicketListFilters['dueDateFilter'] : undefined,
+      dueDateFrom: selectedDueDateFilter === 'after' && dueDateFilterValue ? dueDateFilterValue.toISOString() : undefined,
+      dueDateTo: selectedDueDateFilter === 'before' && dueDateFilterValue ? dueDateFilterValue.toISOString() : undefined,
       responseState: selectedResponseState !== 'all' ? selectedResponseState : undefined,
       bundleView,
     };
@@ -316,6 +396,10 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     boardFilterState,
     bundleView,
     selectedTags,
+    selectedAssignees,
+    includeUnassigned,
+    selectedDueDateFilter,
+    dueDateFilterValue,
     selectedResponseState,
     // onFiltersChanged intentionally omitted - we want to trigger only when filter values change, not when the callback changes
     filtersHaveInitialValues
@@ -729,6 +813,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
       onTagsChange: handleTagsChange,
       showClient: true,
       onClientClick: onQuickViewClient,
+      additionalAgentAvatarUrls,
       isBundleExpanded: bundleView === 'bundled' ? isBundleExpanded : undefined,
       onToggleBundleExpanded: bundleView === 'bundled' ? toggleBundleExpanded : undefined,
     });
@@ -805,6 +890,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     handleSelectAllVisibleTickets,
     handleTicketSelectionChange,
     selectedTicketIds,
+    additionalAgentAvatarUrls,
     isBundleExpanded,
     toggleBundleExpanded,
     bundleView,
@@ -1043,6 +1129,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     const defaultCategories: string[] = [];
     const defaultSearchQuery: string = '';
     const defaultBoardFilterState: 'active' | 'inactive' | 'all' = 'active';
+    const defaultDueDateFilter: string = 'all';
     const defaultResponseState: 'awaiting_client' | 'awaiting_internal' | 'none' | 'all' = 'all';
     const defaultBundleView: 'bundled' | 'individual' = 'bundled';
 
@@ -1056,6 +1143,10 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     setBoardFilterState(defaultBoardFilterState);
     setBundleView(defaultBundleView);
     setSelectedTags([]);
+    setSelectedAssignees([]);
+    setIncludeUnassigned(false);
+    setSelectedDueDateFilter(defaultDueDateFilter);
+    setDueDateFilterValue(undefined);
     setSelectedResponseState(defaultResponseState);
 
     setClientFilterState('active');
@@ -1072,6 +1163,11 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
       searchQuery: defaultSearchQuery,
       boardFilterState: defaultBoardFilterState,
       showOpenOnly: defaultStatus === 'open',
+      assignedToIds: undefined,
+      includeUnassigned: undefined,
+      dueDateFilter: undefined,
+      dueDateFrom: undefined,
+      dueDateTo: undefined,
       responseState: undefined,
       bundleView: defaultBundleView,
     });
@@ -1151,6 +1247,18 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
               onClientTypeFilterChange={handleClientTypeFilterChange}
               fitContent={true}
             />
+            <MultiUserPicker
+              id={`${id}-assignee-filter`}
+              users={initialUsers}
+              values={selectedAssignees}
+              onValuesChange={setSelectedAssignees}
+              filterMode={true}
+              includeUnassigned={includeUnassigned}
+              onUnassignedChange={setIncludeUnassigned}
+              placeholder="All Assignees"
+              showSearch={true}
+              compactDisplay={true}
+            />
             <CustomSelect
               data-automation-id={`${id}-status-select`}
               options={statusOptions}
@@ -1177,6 +1285,41 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
               onValueChange={(value) => setSelectedPriority(value)}
               placeholder="All Priorities"
             />
+            <div className="flex items-center gap-1">
+              <CustomSelect
+                data-automation-id={`${id}-due-date-filter`}
+                options={[
+                  { value: 'all', label: 'All Due Dates' },
+                  { value: 'overdue', label: 'Overdue' },
+                  { value: 'today', label: 'Due Today' },
+                  { value: 'upcoming', label: 'Due Next 7 Days' },
+                  { value: 'before', label: dueDateFilterValue && selectedDueDateFilter === 'before'
+                    ? `Before ${dueDateFilterValue.toLocaleDateString()}`
+                    : 'Before Date...' },
+                  { value: 'after', label: dueDateFilterValue && selectedDueDateFilter === 'after'
+                    ? `After ${dueDateFilterValue.toLocaleDateString()}`
+                    : 'After Date...' },
+                  { value: 'no_due_date', label: 'No Due Date' },
+                ]}
+                value={selectedDueDateFilter}
+                onValueChange={(value) => {
+                  setSelectedDueDateFilter(value);
+                  if (value !== 'before' && value !== 'after') {
+                    setDueDateFilterValue(undefined);
+                  }
+                }}
+                placeholder="Due Date"
+                className="w-fit min-w-[140px]"
+              />
+              {(selectedDueDateFilter === 'before' || selectedDueDateFilter === 'after') && (
+                <DatePicker
+                  id={`${id}-due-date-filter-value`}
+                  value={dueDateFilterValue}
+                  onChange={setDueDateFilterValue}
+                  placeholder="Pick date"
+                />
+              )}
+            </div>
             <CategoryPicker
               id={`${id}-category-picker`}
               categories={categories}

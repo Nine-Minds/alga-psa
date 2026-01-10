@@ -1,13 +1,11 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Label } from 'server/src/components/ui/Label';
 import { Input } from 'server/src/components/ui/Input';
 import { Button } from 'server/src/components/ui/Button';
-import CustomSelect from 'server/src/components/ui/CustomSelect';
 import { BucketOverlayInput, ContractWizardData } from '../ContractWizard';
-import { IService } from 'server/src/interfaces';
-import { getServices } from 'server/src/lib/actions/serviceActions';
+import { ServiceCatalogPicker, ServiceCatalogPickerItem } from '../ServiceCatalogPicker';
 import { Plus, X, Activity, Coins } from 'lucide-react';
 import { getCurrencySymbol } from 'server/src/constants/currency';
 import { SwitchWithLabel } from 'server/src/components/ui/SwitchWithLabel';
@@ -21,29 +19,7 @@ interface UsageBasedServicesStepProps {
 }
 
 export function UsageBasedServicesStep({ data, updateData }: UsageBasedServicesStepProps) {
-  const [services, setServices] = useState<IService[]>([]);
-  const [isLoadingServices, setIsLoadingServices] = useState(true);
   const [rateInputs, setRateInputs] = useState<Record<number, string>>({});
-
-  useEffect(() => {
-    const loadServices = async () => {
-      try {
-        const result = await getServices();
-        if (result && Array.isArray(result.services)) {
-          const usageServices = result.services.filter(
-            (service) => service.billing_method === 'usage'
-          );
-          setServices(usageServices);
-        }
-      } catch (error) {
-        console.error('Error loading services:', error);
-      } finally {
-        setIsLoadingServices(false);
-      }
-    };
-
-    void loadServices();
-  }, []);
 
   useEffect(() => {
     const inputs: Record<number, string> = {};
@@ -54,11 +30,6 @@ export function UsageBasedServicesStep({ data, updateData }: UsageBasedServicesS
     });
     setRateInputs(inputs);
   }, [data.usage_services]);
-
-  const serviceOptions = services.map((service) => ({
-    value: service.service_id,
-    label: service.service_name,
-  }));
 
   const handleAddService = () => {
     updateData({
@@ -80,25 +51,15 @@ export function UsageBasedServicesStep({ data, updateData }: UsageBasedServicesS
     updateData({ usage_services: next });
   };
 
-  const handleServiceChange = (index: number, serviceId: string) => {
-    const service = services.find((s) => s.service_id === serviceId);
+  const handleServiceChange = (index: number, item: ServiceCatalogPickerItem) => {
     const next = [...(data.usage_services ?? [])];
-
-    // Only auto-fill the rate if the service has a price in the contract's currency
-    let autoFillRate: number | undefined = undefined;
-    if (service?.prices && service.prices.length > 0) {
-      const matchingPrice = service.prices.find(p => p.currency_code === data.currency_code);
-      if (matchingPrice) {
-        autoFillRate = matchingPrice.rate;
-      }
-    }
-
     next[index] = {
       ...next[index],
-      service_id: serviceId,
-      service_name: service?.service_name || '',
-      unit_rate: autoFillRate,
-      unit_of_measure: service?.unit_of_measure || next[index].unit_of_measure || 'unit',
+      service_id: item.service_id,
+      service_name: item.service_name,
+      // Use default_rate from catalog if available
+      unit_rate: item.default_rate > 0 ? item.default_rate : undefined,
+      unit_of_measure: item.unit_of_measure || next[index].unit_of_measure || 'unit',
     };
     updateData({ usage_services: next });
   };
@@ -181,13 +142,14 @@ export function UsageBasedServicesStep({ data, updateData }: UsageBasedServicesS
                 <Label htmlFor={`usage-service-${index}`} className="text-sm">
                   Service {index + 1}
                 </Label>
-                <CustomSelect
+                <ServiceCatalogPicker
                   id={`usage-service-${index}`}
                   value={service.service_id}
-                  onValueChange={(value: string) => handleServiceChange(index, value)}
-                  options={serviceOptions}
-                  placeholder={isLoadingServices ? 'Loading…' : 'Select a service'}
-                  disabled={isLoadingServices}
+                  selectedLabel={service.service_name}
+                  onSelect={(item) => handleServiceChange(index, item)}
+                  billingMethods={['usage']}
+                  itemKinds={['service']}
+                  placeholder="Select a service"
                 />
               </div>
 

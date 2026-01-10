@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { CustomTabs, TabContent } from 'server/src/components/ui/CustomTabs';
 import {
   getClientContractLine,
@@ -84,9 +85,36 @@ const BucketUsageHistoryChart = dynamic(() => import('./BucketUsageHistoryChart'
 
 // Flag to control visibility of advanced usage tabs and metrics
 const SHOW_USAGE_FEATURES = true;
+
 export default function BillingOverview() {
   const { t } = useTranslation('clientPortal');
-  const [currentTab, setCurrentTab] = useState<string | null>(null);
+  const searchParams = useSearchParams();
+  const tabParam = searchParams?.get('tab');
+
+  // Create mappings between slugs and translated labels
+  const slugToLabelMap = useMemo(() => ({
+    'overview': t('billing.tabs.overview'),
+    'invoices': t('billing.tabs.invoices'),
+    'hours-by-service': 'Hours by Service',
+    'usage-metrics': 'Usage Metrics'
+  }), [t]);
+
+  const labelToSlugMap = useMemo(() => ({
+    [t('billing.tabs.overview')]: 'overview',
+    [t('billing.tabs.invoices')]: 'invoices',
+    'Hours by Service': 'hours-by-service',
+    'Usage Metrics': 'usage-metrics'
+  }), [t]);
+
+  // Determine initial tab from URL parameter
+  const initialTab = useMemo(() => {
+    if (tabParam && slugToLabelMap[tabParam as keyof typeof slugToLabelMap]) {
+      return slugToLabelMap[tabParam as keyof typeof slugToLabelMap];
+    }
+    return t('billing.tabs.overview');
+  }, [tabParam, slugToLabelMap, t]);
+
+  const [currentTab, setCurrentTab] = useState<string | null>(initialTab);
   const [contractLine, setContractLine] = useState<IClientContractLine | null>(null);
   const [invoices, setInvoices] = useState<InvoiceViewModel[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
@@ -121,16 +149,24 @@ export default function BillingOverview() {
     endDate: ''
   });
 
-  // Set date range and initial tab after mount to avoid hydration issues
+  // Set date range after mount to avoid hydration issues
   useEffect(() => {
     const now = new Date();
     setDateRange({
       startDate: format(subDays(now, 30), 'yyyy-MM-dd'),
       endDate: format(now, 'yyyy-MM-dd')
     });
-    // Set the initial tab to the translated overview label
-    setCurrentTab(t('billing.tabs.overview'));
-  }, [t]);
+  }, []);
+
+  // Update active tab when URL parameter changes
+  useEffect(() => {
+    const targetTab = tabParam && slugToLabelMap[tabParam as keyof typeof slugToLabelMap]
+      ? slugToLabelMap[tabParam as keyof typeof slugToLabelMap]
+      : t('billing.tabs.overview');
+    if (targetTab !== currentTab) {
+      setCurrentTab(targetTab);
+    }
+  }, [tabParam, slugToLabelMap, t, currentTab]);
 
   // Load billing data
   useEffect(() => {
@@ -327,8 +363,16 @@ export default function BillingOverview() {
 
   // Create a function to switch to the Invoices tab
   const handleViewAllInvoices = useCallback(() => {
-    setCurrentTab('Invoices');
-  }, []);
+    const invoicesTabLabel = t('billing.tabs.invoices');
+    setCurrentTab(invoicesTabLabel);
+    // Update URL when navigating to Invoices tab
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      params.set('tab', 'invoices');
+      const newUrl = `${window.location.pathname}?${params.toString()}`;
+      window.history.pushState({}, '', newUrl);
+    }
+  }, [t]);
 
   // Memoize tabs to prevent unnecessary re-renders
   const tabs: TabContent[] = useMemo(() => {
@@ -425,10 +469,31 @@ export default function BillingOverview() {
     t
   ]);
 
+  // Helper function to update URL with tab parameter
+  const updateURL = useCallback((tabLabel: string) => {
+    if (typeof window === 'undefined') return;
+
+    const slug = labelToSlugMap[tabLabel as keyof typeof labelToSlugMap];
+    const params = new URLSearchParams(window.location.search);
+
+    if (slug && slug !== 'overview') {
+      params.set('tab', slug);
+    } else {
+      params.delete('tab');
+    }
+
+    const newUrl = params.toString()
+      ? `${window.location.pathname}?${params.toString()}`
+      : window.location.pathname;
+
+    window.history.pushState({}, '', newUrl);
+  }, [labelToSlugMap]);
+
   // Memoize the tab change handler
   const handleTabChange = useCallback((tabValue: string) => {
     setCurrentTab(tabValue);
-  }, []);
+    updateURL(tabValue);
+  }, [updateURL]);
 
   // Memoize the dialog close handler
   const handleDialogClose = useCallback(() => {

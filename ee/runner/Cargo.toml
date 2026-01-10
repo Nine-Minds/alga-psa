@@ -13,9 +13,9 @@ serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
-wasmtime = { version = "38", features = ["component-model", "component-model-async"] }
-wasmtime-wasi = "38"
-wasmtime-wasi-http = "38"
+wasmtime = { version = "39", features = ["component-model", "component-model-async"] }
+wasmtime-wasi = "39"
+wasmtime-wasi-http = "39"
 bytes = "1"
 base64 = "0.22"
 reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }

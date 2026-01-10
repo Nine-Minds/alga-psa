@@ -11,6 +11,7 @@ import {
 import { createTenantKnex } from 'server/src/lib/db';
 import { toPlainDate } from 'server/src/lib/utils/dateTimeUtils';
 import Invoice from 'server/src/lib/models/invoice';
+import { getClientContractPurchaseOrderContext, getPurchaseOrderConsumedCents } from 'server/src/lib/services/purchaseOrderService';
 
 // Helper function to create basic invoice view model
 async function getBasicInvoiceViewModel(invoice: IInvoice, client: any): Promise<InvoiceViewModel> {
@@ -33,6 +34,8 @@ async function getBasicInvoiceViewModel(invoice: IInvoice, client: any): Promise
     invoice_id: invoice.invoice_id,
     invoice_number: invoice.invoice_number,
     client_id: invoice.client_id,
+    po_number: invoice.po_number ?? null,
+    client_contract_id: invoice.client_contract_id ?? null,
     client: {
       name: client.client_name,
       logo: client.logo || '',
@@ -82,6 +85,8 @@ export async function fetchAllInvoices(): Promise<InvoiceViewModel[]> {
           'invoices.invoice_id',
           'invoices.client_id',
           'invoices.invoice_number',
+          'invoices.po_number',
+          'invoices.client_contract_id',
           'invoices.invoice_date',
           'invoices.due_date',
           'invoices.status',
@@ -242,6 +247,63 @@ export async function getInvoiceForRendering(invoiceId: string): Promise<Invoice
     console.error('Error fetching invoice for rendering:', error);
     throw new Error('Error fetching invoice for rendering');
   }
+}
+
+export type InvoicePurchaseOrderSummary = {
+  invoice_id: string;
+  client_contract_id: string;
+  po_number: string | null;
+  po_amount_cents: number | null;
+  consumed_cents: number | null;
+  remaining_cents: number | null;
+};
+
+export async function getInvoicePurchaseOrderSummary(
+  invoiceId: string
+): Promise<InvoicePurchaseOrderSummary | null> {
+  const { knex, tenant } = await createTenantKnex();
+  if (!tenant) {
+    throw new Error('Tenant not found');
+  }
+
+  const invoice = await knex('invoices')
+    .where({ tenant, invoice_id: invoiceId })
+    .select('invoice_id', 'client_contract_id', 'po_number')
+    .first();
+
+  const clientContractId = invoice?.client_contract_id ?? null;
+  if (!invoice || !clientContractId) {
+    return null;
+  }
+
+  const poContext = await getClientContractPurchaseOrderContext({
+    knex,
+    tenant,
+    clientContractId,
+  });
+
+  if (poContext.po_amount == null) {
+    return {
+      invoice_id: invoice.invoice_id,
+      client_contract_id: clientContractId,
+      po_number: invoice.po_number ?? poContext.po_number,
+      po_amount_cents: null,
+      consumed_cents: null,
+      remaining_cents: null,
+    };
+  }
+
+  const consumed = await getPurchaseOrderConsumedCents({ knex, tenant, clientContractId });
+  const remaining = poContext.po_amount - consumed;
+
+  return {
+    invoice_id: invoice.invoice_id,
+    client_contract_id: clientContractId,
+    po_number: invoice.po_number ?? poContext.po_number,
+    po_amount_cents: poContext.po_amount,
+    consumed_cents: consumed,
+    remaining_cents: remaining,
+  };
 }
 
 // New function to get invoice items on demand

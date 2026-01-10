@@ -1,12 +1,10 @@
 'use client';
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useMemo } from 'react';
 import { Label } from 'server/src/components/ui/Label';
 import { Input } from 'server/src/components/ui/Input';
 import { Button } from 'server/src/components/ui/Button';
-import CustomSelect from 'server/src/components/ui/CustomSelect';
-import { IService } from 'server/src/interfaces';
-import { getServices } from 'server/src/lib/actions/serviceActions';
+import { ServiceCatalogPicker, ServiceCatalogPickerItem } from '../../ServiceCatalogPicker';
 import { Plus, X, Package } from 'lucide-react';
 import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionContainer';
 import { TemplateWizardData } from '../TemplateWizard';
@@ -18,35 +16,6 @@ interface TemplateProductsStepProps {
 }
 
 export function TemplateProductsStep({ data, updateData }: TemplateProductsStepProps) {
-  const [products, setProducts] = useState<IService[]>([]);
-  const [isLoadingProducts, setIsLoadingProducts] = useState(true);
-
-  useEffect(() => {
-    const load = async () => {
-      try {
-        const result = await getServices(1, 999, { item_kind: 'product', is_active: true });
-        if (result && Array.isArray(result.services)) {
-          setProducts(result.services);
-        }
-      } catch (error) {
-        console.error('Error loading products:', error);
-      } finally {
-        setIsLoadingProducts(false);
-      }
-    };
-
-    void load();
-  }, []);
-
-  const productOptions = useMemo(
-    () =>
-      products.map((product) => ({
-        value: product.service_id,
-        label: product.sku ? `${product.service_name} (${product.sku})` : product.service_name,
-      })),
-    [products]
-  );
-
   const handleAddProduct = () => {
     updateData({
       product_services: [
@@ -61,13 +30,12 @@ export function TemplateProductsStep({ data, updateData }: TemplateProductsStepP
     updateData({ product_services: next });
   };
 
-  const handleProductChange = (index: number, serviceId: string) => {
-    const product = products.find((s) => s.service_id === serviceId);
+  const handleProductChange = (index: number, item: ServiceCatalogPickerItem) => {
     const next = [...data.product_services];
     next[index] = {
       ...next[index],
-      service_id: serviceId,
-      service_name: product?.service_name ?? '',
+      service_id: item.service_id,
+      service_name: item.service_name,
     };
     updateData({ product_services: next });
   };
@@ -141,13 +109,13 @@ export function TemplateProductsStep({ data, updateData }: TemplateProductsStepP
                   <Label htmlFor={`template-product-${index}`} className="text-sm">
                     Product {index + 1}
                   </Label>
-                  <CustomSelect
+                  <ServiceCatalogPicker
                     id={`template-product-${index}`}
                     value={product.service_id}
-                    onValueChange={(value: string) => handleProductChange(index, value)}
-                    options={productOptions}
-                    placeholder={isLoadingProducts ? 'Loading…' : 'Select a product'}
-                    disabled={isLoadingProducts}
+                    selectedLabel={product.service_name}
+                    onSelect={(item) => handleProductChange(index, item)}
+                    itemKinds={['product']}
+                    placeholder="Select a product"
                   />
                 </div>
 

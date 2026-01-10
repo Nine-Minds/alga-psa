@@ -396,6 +396,9 @@ async function persistFixedInvoiceCharges(
           // --- End Determine Consolidated Item Tax Region & Taxability ---
 
           console.log(`[INVOICE DEBUG] Setting fixedPlanDetailsMap for ${clientContractLineId}, charge.base_rate: ${charge.base_rate}`);
+          const planClientContractId =
+            chargesForThisPlan.find((c) => c.client_contract_id)?.client_contract_id ?? null;
+
           fixedPlanDetailsMap.set(clientContractLineId, {
               consolidatedItem: {
                   invoice_id: invoiceId,
@@ -416,6 +419,7 @@ async function persistFixedInvoiceCharges(
                   discount_percentage: undefined,
                   applies_to_item_id: null,
                   applies_to_service_id: null,
+                  client_contract_id: planClientContractId,
                   created_by: session.user.id,
                   created_at: now,
                   tenant
@@ -452,6 +456,7 @@ async function persistFixedInvoiceCharges(
         discount_percentage: undefined,
         applies_to_item_id: null,
         applies_to_service_id: null,
+        client_contract_id: charge.client_contract_id ?? null,
         created_by: session.user.id,
         created_at: now,
         tenant
@@ -686,6 +691,7 @@ export async function persistInvoiceCharges(
       discount_percentage: undefined,
       applies_to_item_id: null,
       applies_to_service_id: null,
+      client_contract_id: charge.client_contract_id ?? null,
       created_by: session.user.id,
       created_at: now,
       tenant

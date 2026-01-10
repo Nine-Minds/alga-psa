@@ -18,4 +18,4 @@ All third-party dependencies included in this project retain their original lice
 Except as otherwise noted above, all other content in this project is licensed under the GNU Affero General Public License Version 3 (AGPL-3.0). You should have received a copy of the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/agpl-3.0.html>.
 
 ---
-Copyright (c) 2025 Nine Minds LLC
+Copyright (c) 2026 Nine Minds LLC

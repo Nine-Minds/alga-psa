@@ -10,6 +10,7 @@ A comprehensive Professional Services Automation platform designed for Managed S
 - **Event Bus System**: Redis-based pub/sub messaging for asynchronous processing and system events
 - **Email Notifications**: Templated email notifications for tickets, invoices, and project updates, powered by the event bus
 - **Billing & Invoicing**: Flexible billing cycles, international tax support, and automated invoicing
+  - Supports contract purchase orders (PO number on invoices; advisory PO limits)
 - **Client Management**: Comprehensive client profiles and relationship tracking
 - **Document Management**: Centralized document repository with version control
 - **Project Management**: Project tracking, task management, and resource allocation
@@ -137,4 +138,4 @@ See [LICENSE.md](LICENSE.md) for details.
 We welcome contributions! Please see our [Contributing Guide](docs/contributing.md) for details on how to get started.
 
 ---
-Copyright (c) 2025 Nine Minds LLC
+Copyright (c) 2026 Nine Minds LLC

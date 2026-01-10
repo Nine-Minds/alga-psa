@@ -1,0 +1,8 @@
+# Generated build artifacts
+dist/
+precompiled/
+ui/dist/
+
+# Bundle output
+*.tar.zst
+bundle.tar.zst

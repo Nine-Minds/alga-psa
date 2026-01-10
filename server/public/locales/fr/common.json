@@ -817,5 +817,21 @@
       "searchPlaceholder": "Rechercher par nom d'utilisateur, email, appareil ou adresse IP...",
       "noResults": "Aucune session ne correspond à votre recherche"
     }
+  },
+  "projects": {
+    "task": {
+      "comments": {
+        "title": "Commentaires",
+        "internal_only": "Interne uniquement",
+        "placeholder": "Ajouter un commentaire... Utilisez @ pour mentionner des collègues",
+        "add_comment": "Ajouter un commentaire",
+        "no_comments": "Pas encore de commentaires. Soyez le premier à commenter !",
+        "edited": "Modifié",
+        "error_creating": "Échec de la création du commentaire. Veuillez réessayer.",
+        "error_updating": "Échec de la mise à jour du commentaire. Veuillez réessayer.",
+        "error_deleting": "Échec de la suppression du commentaire. Veuillez réessayer.",
+        "confirm_delete": "Êtes-vous sûr de vouloir supprimer ce commentaire ?"
+      }
+    }
   }
 }

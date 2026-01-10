@@ -131,10 +131,6 @@ function NotificationCategoriesContent({
     setCurrentPage(1);
   };
 
-  // Reset to page 1 when categories expand/collapse to avoid confusion
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [expandedCategories.size]);
 
   // Check if there are unsaved changes
   const hasUnsavedChanges = pendingCategoryChanges.size > 0 || pendingSubtypeChanges.size > 0;

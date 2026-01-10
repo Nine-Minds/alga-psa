@@ -410,7 +410,7 @@ export async function getClientProjectStatuses(projectId: string) {
  * Upload document to task (if 'document_uploads' is in visible_task_fields)
  * Client-safe path - does NOT use MSP RBAC
  */
-export async function uploadClientTaskDocument(taskId: string, formData: FormData) {
+export async function uploadClientTaskDocument(taskId: string, formData: FormData, folderPath?: string | null) {
   const { knex, tenant } = await createTenantKnex();
   if (!tenant) {
     return { success: false, error: 'Tenant not found' };
@@ -484,7 +484,8 @@ export async function uploadClientTaskDocument(taskId: string, formData: FormDat
         user_id: user.user_id,
         created_by: user.user_id,
         entered_at: new Date(),
-        updated_at: new Date()
+        updated_at: new Date(),
+        folder_path: folderPath ?? null
       });
 
       await trx('document_associations').insert({

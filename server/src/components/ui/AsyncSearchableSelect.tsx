@@ -12,6 +12,10 @@ import { useAutomationIdAndRegister } from 'server/src/types/ui-reflection/useAu
 export interface SelectOption {
   value: string;
   label: string;
+  badge?: {
+    text: string;
+    variant?: 'default' | 'primary' | 'secondary' | 'success' | 'warning' | 'danger';
+  };
 }
 
 type LoadOptionsResult = {
@@ -234,7 +238,7 @@ export function AsyncSearchableSelect({
           {loading && <Loader2 className="ml-2 h-4 w-4 animate-spin text-gray-400" />}
         </div>
 
-        <Command.List className="overflow-y-auto p-1" style={{ maxHeight: maxListHeight }}>
+        <Command.List className="overflow-y-auto overscroll-contain p-1" style={{ maxHeight: maxListHeight }}>
           {loadError ? (
             <div className="py-6 text-center text-sm text-red-600">{loadError}</div>
           ) : options.length > 0 ? (
@@ -254,7 +258,22 @@ export function AsyncSearchableSelect({
                     value === option.value && 'bg-gray-100'
                   )}
                 >
-                  <span className="flex-1">{option.label}</span>
+                  <span className="flex-1 flex items-center gap-2">
+                    {option.badge && (
+                      <span className={cn(
+                        'inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium',
+                        option.badge.variant === 'primary' && 'bg-primary-100 text-primary-700',
+                        option.badge.variant === 'secondary' && 'bg-gray-100 text-gray-700',
+                        option.badge.variant === 'success' && 'bg-green-100 text-green-700',
+                        option.badge.variant === 'warning' && 'bg-amber-100 text-amber-700',
+                        option.badge.variant === 'danger' && 'bg-red-100 text-red-700',
+                        (!option.badge.variant || option.badge.variant === 'default') && 'bg-blue-100 text-blue-700'
+                      )}>
+                        {option.badge.text}
+                      </span>
+                    )}
+                    {option.label}
+                  </span>
                   {value === option.value && <Check className="w-4 h-4 text-primary-600" />}
                 </Command.Item>
               ))}

@@ -30,19 +30,37 @@ interface ConfigureGmailProviderOptions {
   force?: boolean;
 }
 
+export interface ConfigureGmailProviderResult {
+  success: boolean;
+  pubsubConfigured: boolean;
+  watchRegistered: boolean;
+  error?: string;
+  warnings: string[];
+}
+
 /**
  * Configure Gmail provider with Pub/Sub and webhook registration.
  * This is the single orchestrator for Gmail provider setup that ensures
  * exactly one Pub/Sub initialization per logical trigger.
+ *
+ * Returns a result object indicating what succeeded/failed so the UI can inform the user.
  */
 export async function configureGmailProvider({
   tenant,
   providerId,
   projectId,
   force = false
-}: ConfigureGmailProviderOptions) {
+}: ConfigureGmailProviderOptions): Promise<ConfigureGmailProviderResult> {
+  const result: ConfigureGmailProviderResult = {
+    success: false,
+    pubsubConfigured: false,
+    watchRegistered: false,
+    warnings: []
+  };
+
   if (tenant == null || !tenant || !providerId || !projectId) {
-    throw new Error('Missing required parameters: tenant, providerId, and projectId are required');
+    result.error = 'Missing required parameters: tenant, providerId, and projectId are required';
+    return result;
   }
 
   try {
@@ -66,6 +84,9 @@ export async function configureGmailProvider({
               providerId,
               pubsub_initialised_at: config.pubsub_initialised_at
             });
+            result.success = true;
+            result.pubsubConfigured = true;
+            result.watchRegistered = true;
             return;
           }
         }
@@ -97,6 +118,7 @@ export async function configureGmailProvider({
         topicName: pubsubNames.topicName,
         subscriptionName: pubsubNames.subscriptionName
       });
+      result.pubsubConfigured = true;
 
       // Step 2: Update pubsub_initialised_at timestamp
       const { knex } = await createTenantKnex();
@@ -135,6 +157,8 @@ export async function configureGmailProvider({
             hasAccessToken: !!googleConfig.access_token,
             hasRefreshToken: !!googleConfig.refresh_token
           });
+          result.warnings.push('OAuth tokens missing - Gmail watch registration skipped');
+          result.success = result.pubsubConfigured; // Still considered success if pubsub was configured
           return;
         }
 
@@ -194,26 +218,35 @@ export async function configureGmailProvider({
           });
 
         console.log(`✅ Successfully registered Gmail watch subscription for provider ${providerId}`);
+        result.watchRegistered = true;
+        result.success = true;
       } catch (watchError) {
+        const errorMessage = watchError instanceof Error ? watchError.message : String(watchError);
         console.error(`❌ Failed to register Gmail watch subscription for provider ${providerId}:`, {
           tenant,
           providerId,
-          error: watchError instanceof Error ? watchError.message : String(watchError),
+          error: errorMessage,
           stack: watchError instanceof Error ? watchError.stack : undefined
         });
-        // Don't throw error here - provider is still functional without real-time notifications
-        // The watch subscription can be manually initialized later
+        // Record the error but don't throw - provider is saved, Pub/Sub may still work
+        result.warnings.push(`Failed to register Gmail watch: ${errorMessage}`);
+        // If Pub/Sub was configured, we're partially successful
+        result.success = result.pubsubConfigured;
       }
     });
   } catch (pubsubError) {
+    const errorMessage = pubsubError instanceof Error ? pubsubError.message : String(pubsubError);
     console.error(`❌ Failed to configure Gmail provider ${providerId}:`, {
       tenant,
       providerId,
       projectId,
-      error: pubsubError instanceof Error ? pubsubError.message : String(pubsubError),
+      error: errorMessage,
       stack: pubsubError instanceof Error ? pubsubError.stack : undefined
     });
-    // Don't throw error here - provider is still functional without Pub/Sub
-    // The error will be logged and can be addressed later
+    // This is a critical failure - Pub/Sub setup failed
+    result.error = `Failed to configure Gmail Pub/Sub: ${errorMessage}`;
+    result.success = false;
   }
+
+  return result;
 }

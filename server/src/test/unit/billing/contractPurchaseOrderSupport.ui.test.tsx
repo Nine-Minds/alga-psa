@@ -1,0 +1,265 @@
+/**
+ * @vitest-environment jsdom
+ */
+import React from 'react';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+
+(globalThis as unknown as { React?: typeof React }).React = React;
+
+import * as invoiceGeneration from 'server/src/lib/actions/invoiceGeneration';
+import * as billingCycleActions from 'server/src/lib/actions/billingCycleActions';
+
+vi.mock('server/src/components/ui/DataTable', () => ({
+  DataTable: ({ data, columns, id }: any) => {
+    const getValue = (row: any, dataIndex: any) => {
+      if (Array.isArray(dataIndex)) {
+        return dataIndex.reduce((acc, key) => acc?.[key], row);
+      }
+      return row?.[dataIndex];
+    };
+    return (
+      <table data-testid={id || 'data-table'}>
+        <tbody>
+          {data.map((row: any, rowIndex: number) => (
+            <tr key={row.billing_cycle_id ?? rowIndex}>
+              {columns.map((col: any, colIndex: number) => (
+                <td key={colIndex}>
+                  {col.render
+                    ? col.render(getValue(row, col.dataIndex), row, rowIndex)
+                    : String(getValue(row, col.dataIndex) ?? '')}
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    );
+  },
+}));
+
+vi.mock('server/src/components/ui/Dialog', () => ({
+  Dialog: ({ isOpen, children }: any) => (isOpen ? <div data-testid="dialog">{children}</div> : null),
+  DialogContent: ({ children }: any) => <div>{children}</div>,
+  DialogFooter: ({ children }: any) => <div>{children}</div>,
+  DialogDescription: ({ children }: any) => <div>{children}</div>,
+}));
+
+vi.mock('server/src/components/ui/ConfirmationDialog', () => ({
+  ConfirmationDialog: ({ isOpen, title, message, options, onConfirm, onClose, id, confirmLabel = 'Confirm' }: any) => {
+    const [selected, setSelected] = React.useState(options?.[0]?.value ?? '');
+    if (!isOpen) return null;
+    return (
+      <div>
+        <h2>{title}</h2>
+        <div>{message}</div>
+        {options?.length ? (
+          <div>
+            {options.map((opt: any) => (
+              <label key={opt.value}>
+                <input
+                  type="radio"
+                  name={`${id}-option`}
+                  value={opt.value}
+                  checked={selected === opt.value}
+                  onChange={() => setSelected(opt.value)}
+                />
+                {opt.label}
+              </label>
+            ))}
+          </div>
+        ) : null}
+        <button id={`${id}-close`} onClick={onClose}>
+          Close
+        </button>
+        <button
+          id={`${id}-confirm`}
+          onClick={() => onConfirm(options?.length ? selected : undefined)}
+        >
+          {confirmLabel}
+        </button>
+      </div>
+    );
+  },
+}));
+
+const { default: AutomaticInvoices } = await import('server/src/components/billing-dashboard/AutomaticInvoices');
+
+function createPeriods() {
+  return [
+    {
+      client_id: 'client-1',
+      client_name: 'Alpha Co',
+      billing_cycle_id: 'cycle-1',
+      billing_cycle: 'monthly',
+      period_start_date: '2025-01-01T00:00:00Z',
+      period_end_date: '2025-02-01T00:00:00Z',
+      effective_date: '2025-01-01T00:00:00Z',
+      tenant: 'tenant-1',
+      can_generate: true,
+    },
+    {
+      client_id: 'client-2',
+      client_name: 'Beta Co',
+      billing_cycle_id: 'cycle-2',
+      billing_cycle: 'monthly',
+      period_start_date: '2025-01-01T00:00:00Z',
+      period_end_date: '2025-02-01T00:00:00Z',
+      effective_date: '2025-01-01T00:00:00Z',
+      tenant: 'tenant-1',
+      can_generate: true,
+    },
+  ] as any;
+}
+
+describe('Contract PO UI flows', () => {
+  const previewInvoiceMock = vi.spyOn(invoiceGeneration, 'previewInvoice');
+  const generateInvoiceMock = vi.spyOn(invoiceGeneration, 'generateInvoice');
+  const getPurchaseOrderOverageForBillingCycleMock = vi.spyOn(
+    invoiceGeneration,
+    'getPurchaseOrderOverageForBillingCycle'
+  );
+  const getInvoicedBillingCyclesMock = vi.spyOn(billingCycleActions, 'getInvoicedBillingCycles');
+  const removeBillingCycleMock = vi.spyOn(billingCycleActions, 'removeBillingCycle');
+  const hardDeleteBillingCycleMock = vi.spyOn(billingCycleActions, 'hardDeleteBillingCycle');
+
+  beforeEach(() => {
+    previewInvoiceMock.mockReset();
+    generateInvoiceMock.mockReset();
+    getPurchaseOrderOverageForBillingCycleMock.mockReset();
+    getInvoicedBillingCyclesMock.mockReset();
+    removeBillingCycleMock.mockReset();
+    hardDeleteBillingCycleMock.mockReset();
+
+    getInvoicedBillingCyclesMock.mockResolvedValue([]);
+    generateInvoiceMock.mockResolvedValue(undefined);
+  });
+
+  afterEach(() => {
+    cleanup();
+  });
+
+  it('T007: batch invoicing does not prompt when no invoice can overrun PO limits', async () => {
+    getPurchaseOrderOverageForBillingCycleMock.mockResolvedValue(null);
+
+    const periods = createPeriods();
+    render(<AutomaticInvoices periods={periods} onGenerateSuccess={vi.fn()} />);
+
+    const readyTable = screen.getAllByTestId('automatic-invoices-table').at(-1)!;
+    const checkboxes = within(readyTable).getAllByRole('checkbox');
+    expect(checkboxes.length).toBeGreaterThanOrEqual(2);
+    fireEvent.click(checkboxes[0]!);
+    fireEvent.click(checkboxes[1]!);
+
+    const generateButtons = screen.getAllByRole('button', {
+      name: /Generate Invoices for Selected Periods/i,
+    });
+    const generateButton = generateButtons.find((b) => !(b as HTMLButtonElement).disabled);
+    expect(generateButton).toBeTruthy();
+    fireEvent.click(generateButton!);
+
+    await waitFor(() => {
+      expect(getPurchaseOrderOverageForBillingCycleMock).toHaveBeenCalledTimes(2);
+      expect(generateInvoiceMock).toHaveBeenCalledTimes(2);
+    });
+
+    expect(screen.queryByText('Purchase Order Limit Overages')).toBeNull();
+  });
+
+  it('T008: batch invoicing prompts upfront when overage possible and can skip overage invoices', async () => {
+    getPurchaseOrderOverageForBillingCycleMock.mockImplementation(async (billingCycleId: string) => {
+      if (billingCycleId === 'cycle-1') {
+        return { overage_cents: 500, po_number: 'PO-1' };
+      }
+      return null;
+    });
+
+    const periods = createPeriods();
+    render(<AutomaticInvoices periods={periods} onGenerateSuccess={vi.fn()} />);
+
+    const readyTable = screen.getAllByTestId('automatic-invoices-table').at(-1)!;
+    const checkboxes = within(readyTable).getAllByRole('checkbox');
+    expect(checkboxes.length).toBeGreaterThanOrEqual(2);
+    fireEvent.click(checkboxes[0]!);
+    fireEvent.click(checkboxes[1]!);
+
+    const generateButtons = screen.getAllByRole('button', {
+      name: /Generate Invoices for Selected Periods/i,
+    });
+    const generateButton = generateButtons.find((b) => !(b as HTMLButtonElement).disabled);
+    expect(generateButton).toBeTruthy();
+    fireEvent.click(generateButton!);
+
+    await waitFor(() => {
+      expect(screen.getByText('Purchase Order Limit Overages')).toBeInTheDocument();
+      expect(screen.getByText(/over by/i)).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByLabelText('Skip invoices that would overrun their PO'));
+    fireEvent.click(document.getElementById('po-overage-batch-decision-confirm')!);
+
+    await waitFor(() => {
+      expect(generateInvoiceMock).toHaveBeenCalledTimes(1);
+      expect(generateInvoiceMock).toHaveBeenCalledWith('cycle-2', { allowPoOverage: false });
+    });
+
+    await waitFor(() => {
+      expect(screen.getByText(/Skipped due to PO overage/i)).toBeInTheDocument();
+    });
+  });
+
+  it('T006: single invoice requires explicit override confirmation to proceed on overage', async () => {
+    getPurchaseOrderOverageForBillingCycleMock.mockResolvedValue({ overage_cents: 2500, po_number: 'PO-OVR' });
+    previewInvoiceMock.mockResolvedValue({
+      success: true,
+      data: {
+        invoiceNumber: 'INV-TEST',
+        issueDate: '2025-01-01',
+        dueDate: '2025-02-01',
+        currencyCode: 'USD',
+        customer: { name: 'Alpha Co', address: '1 Test St' },
+        tenantClient: { name: 'Tenant', address: 'Tenant Address', logoUrl: null },
+        items: [],
+        subtotal: 0,
+        tax: 0,
+        total: 0,
+      },
+    });
+
+    const periods = createPeriods();
+    render(<AutomaticInvoices periods={periods} onGenerateSuccess={vi.fn()} />);
+
+    const readyTable = screen.getAllByTestId('automatic-invoices-table').at(-1)!;
+    const checkbox = within(readyTable).getAllByRole('checkbox')[0];
+    fireEvent.click(checkbox!);
+
+    const previewButtons = screen.getAllByRole('button', { name: /Preview Selected/i });
+    const previewButton = previewButtons.find((b) => !(b as HTMLButtonElement).disabled);
+    expect(previewButton).toBeTruthy();
+    fireEvent.click(previewButton!);
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /^Generate Invoice$/i })).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /^Generate Invoice$/i }));
+
+    await waitFor(() => {
+      expect(getPurchaseOrderOverageForBillingCycleMock).toHaveBeenCalled();
+      expect(screen.getByRole('button', { name: /Proceed Anyway/i })).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /Proceed Anyway/i }));
+
+    await waitFor(() => {
+      expect(getPurchaseOrderOverageForBillingCycleMock).toHaveBeenCalledTimes(1);
+    });
+
+    const [billingCycleId] = getPurchaseOrderOverageForBillingCycleMock.mock.calls[0] ?? [];
+    expect(typeof billingCycleId).toBe('string');
+
+    await waitFor(() => {
+      expect(generateInvoiceMock).toHaveBeenCalledWith(billingCycleId, { allowPoOverage: true });
+    });
+  });
+});

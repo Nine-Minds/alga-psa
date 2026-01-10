@@ -29,6 +29,8 @@ import { withDataAutomationId } from 'server/src/types/ui-reflection/withDataAut
 import { useRegisterUIComponent } from 'server/src/types/ui-reflection/useRegisterUIComponent';
 import { calculateItilPriority, ItilLabels } from '../../lib/utils/itilUtils';
 import { QuickAddTagPicker, PendingTag } from 'server/src/components/tags';
+import { DatePicker } from 'server/src/components/ui/DatePicker';
+import { TimePicker } from 'server/src/components/ui/TimePicker';
 import { createTagsForEntity } from 'server/src/lib/actions/tagActions';
 
 // Helper function to format location display
@@ -121,6 +123,8 @@ export function QuickAddTicket({
   const [isPrefilledClient, setIsPrefilledClient] = useState(false);
   const [quickAddBoardFilterState, setQuickAddBoardFilterState] = useState<'active' | 'inactive' | 'all'>('active');
   const [pendingTags, setPendingTags] = useState<PendingTag[]>([]);
+  const [dueDateDate, setDueDateDate] = useState<Date | undefined>(undefined);
+  const [dueDateTime, setDueDateTime] = useState<string | undefined>(undefined);
 
   // ITIL-specific state
   const [itilImpact, setItilImpact] = useState<number | undefined>(undefined);
@@ -387,6 +391,8 @@ export function QuickAddTicket({
     setItilUrgency(undefined);
     setShowPriorityMatrix(false);
     setPendingTags([]);
+    setDueDateDate(undefined);
+    setDueDateTime(undefined);
     setError(null);
     setHasAttemptedSubmit(false);
   };
@@ -489,6 +495,19 @@ export function QuickAddTicket({
       }
       if (itilUrgency) {
         formData.append('itil_urgency', itilUrgency.toString());
+      }
+
+      // Add due date if provided (combine date and optional time)
+      if (dueDateDate) {
+        const combinedDate = new Date(dueDateDate);
+        if (dueDateTime) {
+          const [hours, minutes] = dueDateTime.split(':').map(Number);
+          combinedDate.setHours(hours, minutes, 0, 0);
+        } else {
+          // No time specified - use midnight (00:00)
+          combinedDate.setHours(0, 0, 0, 0);
+        }
+        formData.append('due_date', combinedDate.toISOString());
       }
 
       // ITIL categories now use the unified category system
@@ -881,6 +900,48 @@ export function QuickAddTicket({
                   )}
 
                   {/* ITIL Categories are now handled by the unified CategoryPicker above */}
+
+                  {/* Due Date */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Due Date</label>
+                    <div className="flex items-center gap-2 w-fit">
+                      <div className="w-fit">
+                        <DatePicker
+                          id={`${id}-due-date`}
+                          value={dueDateDate}
+                          onChange={(date) => setDueDateDate(date)}
+                          placeholder="Select date"
+                        />
+                      </div>
+                      <div className="w-fit">
+                        <TimePicker
+                          id={`${id}-due-time`}
+                          value={dueDateTime}
+                          onChange={(time) => setDueDateTime(time)}
+                          placeholder="Time"
+                          disabled={!dueDateDate}
+                        />
+                      </div>
+                      {(dueDateDate || dueDateTime) && (
+                        <Button
+                          id={`${id}-clear-due-date`}
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            setDueDateDate(undefined);
+                            setDueDateTime(undefined);
+                          }}
+                          className="text-gray-400 hover:text-gray-600 px-2"
+                        >
+                          ✕
+                        </Button>
+                      )}
+                    </div>
+                    {dueDateDate && !dueDateTime && (
+                      <p className="text-xs text-gray-500 mt-1">No time set - defaults to 12:00 AM</p>
+                    )}
+                  </div>
 
                   <QuickAddTagPicker
                     id="quick-add-ticket-tags"

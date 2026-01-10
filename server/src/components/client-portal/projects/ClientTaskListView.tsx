@@ -629,7 +629,13 @@ export default function ClientTaskListView({
                                               </div>
                                             }
                                           >
-                                            <span className="text-xs text-purple-600 font-medium cursor-help bg-purple-50 px-1.5 py-0.5 rounded shrink-0">
+                                            <span
+                                              className="text-xs font-medium cursor-help px-1.5 py-0.5 rounded shrink-0"
+                                              style={{
+                                                color: 'rgb(var(--color-primary-500))',
+                                                backgroundColor: 'rgb(var(--color-primary-50))'
+                                              }}
+                                            >
                                               +{task.additional_agents.length}
                                             </span>
                                           </Tooltip>

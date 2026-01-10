@@ -34,6 +34,7 @@ export interface ITicket extends TenantEntity, ITaggable {
   entered_at: string | null; // Changed from Date to string
   updated_at: string | null; // Changed from Date to string
   closed_at: string | null;  // Changed from Date to string
+  due_date?: string;         // Optional due date for the ticket
   attributes: Record<string, unknown> | null; // Changed from any to unknown
   priority_id?: string; // Used for both custom and ITIL priorities (unified system)
   estimated_hours?: number;
@@ -61,6 +62,8 @@ export interface ITicketListItem extends Omit<ITicket, 'status_id' | 'priority_i
   client_name: string;
   entered_by_name: string;
   assigned_to_name: string | null;
+  additional_agent_count?: number;
+  additional_agents?: { user_id: string; name: string }[];  // Additional agents for tooltip display with avatars
   bundle_child_count?: number;
   bundle_master_ticket_number?: string | null;
   bundle_distinct_client_count?: number;
@@ -77,6 +80,12 @@ export interface ITicketListFilters {
   boardFilterState: 'active' | 'inactive' | 'all';
   showOpenOnly?: boolean;
   tags?: string[];
+  assignedToIds?: string[];        // Array of user IDs to filter by
+  includeUnassigned?: boolean;     // Include tickets with no assignee
+  // Due date filters
+  dueDateFilter?: 'all' | 'overdue' | 'upcoming' | 'today' | 'no_due_date' | 'before' | 'after' | 'custom';
+  dueDateFrom?: string;            // ISO date string for custom range start
+  dueDateTo?: string;              // ISO date string for custom range end
   sortBy?: string;
   sortDirection?: 'asc' | 'desc';
   responseState?: 'awaiting_client' | 'awaiting_internal' | 'none' | 'all';

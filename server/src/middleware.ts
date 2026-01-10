@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { auth } from './app/api/auth/[...nextauth]/edge-auth';
+import { getSessionCookieName } from './lib/auth/sessionCookies';
 import { i18nMiddleware, shouldSkipI18n } from './middleware/i18n';
 
 // Minimal, Edge-safe middleware: API key header presence check for select API routes
@@ -185,6 +186,18 @@ const _middleware = auth((request) => {
   // Protect MSP app routes: validate user type
   if (pathname.startsWith(protectedPrefix)) {
     if (!request.auth) {
+      // In dev, Edge auth can occasionally fail to hydrate the session during HMR/middleware rebuilds.
+      // If the browser still has a session cookie, avoid redirecting to /auth/signin (which looks like "being logged out").
+      // Let the Node runtime handle auth in the page/server actions instead.
+      if (process.env.NODE_ENV === 'development') {
+        const sessionCookieName = getSessionCookieName();
+        const hasSessionCookie =
+          Boolean(request.cookies.get(sessionCookieName)?.value);
+        if (hasSessionCookie) {
+          return applyCorsHeaders(response, origin);
+        }
+      }
+
       // Next.js Server Actions are POST requests that expect an RSC payload. If we redirect here,
       // the client will follow the redirect and receive HTML, surfacing as:
       // "An unexpected response was received from the server."
@@ -216,6 +229,16 @@ const _middleware = auth((request) => {
   // Protect Client Portal routes: validate user type (but not auth pages)
   if (pathname.startsWith(clientPortalPrefix) && !isAuthPage) {
     if (!request.auth) {
+      // Same HMR-friendly behavior as /msp: avoid "logout-like" redirects when the session cookie exists.
+      if (process.env.NODE_ENV === 'development') {
+        const sessionCookieName = getSessionCookieName();
+        const hasSessionCookie =
+          Boolean(request.cookies.get(sessionCookieName)?.value);
+        if (hasSessionCookie) {
+          return applyCorsHeaders(response, origin);
+        }
+      }
+
       const callbackUrlAbsolute = new URL(request.nextUrl.pathname + (request.nextUrl.search || ''), request.nextUrl);
       const canonicalUrlEnv = getCanonicalUrl();
 

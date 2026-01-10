@@ -37,6 +37,7 @@ import { Tooltip } from 'server/src/components/ui/Tooltip';
 import { generateKeyBetween } from 'fractional-indexing';
 import KanbanBoardSkeleton from 'server/src/components/ui/skeletons/KanbanBoardSkeleton';
 import { useUserPreference } from 'server/src/hooks/useUserPreference';
+import { getUserAvatarUrlsBatchAction } from 'server/src/lib/actions/avatar-actions';
 
 const PROJECT_VIEW_MODE_SETTING = 'project_detail_view_mode';
 
@@ -82,6 +83,7 @@ export default function ProjectDetail({
 
   // Kanban view state (existing - phase-scoped)
   const [selectedTask, setSelectedTask] = useState<IProjectTask | null>(null);
+  const selectedTaskIdRef = useRef<string | null>(null); // Ref for reliable access in callbacks
   const [showQuickAdd, setShowQuickAdd] = useState(false);
   const [showPhaseQuickAdd, setShowPhaseQuickAdd] = useState(false);
   const [currentPhase, setCurrentPhase] = useState<IProjectPhase | null>(null);
@@ -104,6 +106,7 @@ export default function ProjectDetail({
   const [phaseTicketLinks, setPhaseTicketLinks] = useState<{ [taskId: string]: IProjectTicketLinkWithDetails[] }>({});
   const [phaseTaskResources, setPhaseTaskResources] = useState<{ [taskId: string]: any[] }>({});
   const [phaseTaskDependencies, setPhaseTaskDependencies] = useState<{ [taskId: string]: { predecessors: IProjectTaskDependency[]; successors: IProjectTaskDependency[] } }>({});
+  const [avatarUrls, setAvatarUrls] = useState<Record<string, string | null>>({});
   const [projectPhases, setProjectPhases] = useState<IProjectPhase[]>(phases);
   const [projectStatuses, setProjectStatuses] = useState<ProjectStatus[]>(initialStatuses);
   const [isLoadingTasks, setIsLoadingTasks] = useState(false);
@@ -288,6 +291,11 @@ export default function ProjectDetail({
       loadListViewData();
     }
   }, [viewMode, loadListViewData]);
+
+  // Keep selectedTaskIdRef in sync with selectedTask for reliable access in callbacks
+  useEffect(() => {
+    selectedTaskIdRef.current = selectedTask?.task_id ?? null;
+  }, [selectedTask]);
 
   // Refresh list view after task mutations
   const refreshListView = useCallback(() => {
@@ -511,6 +519,41 @@ export default function ProjectDetail({
 
     fetchPhaseTasks();
   }, [selectedPhase]);
+
+  // Fetch avatar URLs for task resources (additional agents)
+  useEffect(() => {
+    const fetchAvatarUrls = async () => {
+      const userIds = new Set<string>();
+
+      // Collect user IDs from task resources
+      Object.values(phaseTaskResources).forEach(resources => {
+        resources.forEach(resource => {
+          if (resource.additional_user_id) {
+            userIds.add(resource.additional_user_id);
+          }
+        });
+      });
+
+      if (userIds.size === 0) return;
+
+      // Get tenant from project
+      const tenant = project.tenant;
+      if (!tenant) return;
+
+      try {
+        const avatarUrlsMap = await getUserAvatarUrlsBatchAction(Array.from(userIds), tenant);
+        const urlsRecord: Record<string, string | null> = {};
+        avatarUrlsMap.forEach((url, id) => {
+          urlsRecord[id] = url;
+        });
+        setAvatarUrls(urlsRecord);
+      } catch (error) {
+        console.error('Failed to fetch avatar URLs:', error);
+      }
+    };
+
+    fetchAvatarUrls();
+  }, [phaseTaskResources, project.tenant]);
 
   // Handle opening task from URL parameter (e.g., from notifications)
   // First effect: Fetch task and select its phase
@@ -939,11 +982,39 @@ export default function ProjectDetail({
 
     setIsAddingTask(true);
     try {
-      if (selectedPhase && newTask.wbs_code.startsWith(selectedPhase.wbs_code)) {
+      // Use currentPhase as fallback for list view where selectedPhase might be null
+      const activePhase = selectedPhase || currentPhase;
+
+      if (activePhase && newTask.wbs_code.startsWith(activePhase.wbs_code)) {
         const checklistItems = await getTaskChecklistItems(newTask.task_id);
         const taskWithChecklist = { ...newTask, checklist_items: checklistItems };
 
         setProjectTasks((prevTasks) => [...prevTasks, taskWithChecklist]);
+
+        // Also update list view data if it exists
+        if (listViewData) {
+          setListViewData(prev => prev ? {
+            ...prev,
+            tasks: [...prev.tasks, taskWithChecklist],
+            checklistItems: {
+              ...prev.checklistItems,
+              [newTask.task_id]: checklistItems
+            },
+            taskTags: {
+              ...prev.taskTags,
+              [newTask.task_id]: newTask.tags || []
+            },
+            taskResources: {
+              ...prev.taskResources,
+              [newTask.task_id]: []
+            },
+            taskDependencies: {
+              ...prev.taskDependencies,
+              [newTask.task_id]: { predecessors: [], successors: [] }
+            }
+          } : null);
+        }
+
         // Update task count for the phase
         setPhaseTaskCounts(prev => ({
           ...prev,
@@ -961,7 +1032,7 @@ export default function ProjectDetail({
     } finally {
       setIsAddingTask(false);
     }
-  }, [selectedPhase]);
+  }, [selectedPhase, currentPhase, listViewData]);
 
   const handleCloseQuickAdd = useCallback(() => {
     setShowQuickAdd(false);
@@ -1045,25 +1116,26 @@ export default function ProjectDetail({
         toast.error('Failed to update task');
       }
     } else {
-      // Task deleted
-      setProjectTasks((prevTasks) =>
-        prevTasks.filter((task) => task.task_id !== selectedTask?.task_id)
-      );
+      // Task deleted - use ref for reliable access
+      const deletedTaskId = selectedTaskIdRef.current;
+      if (deletedTaskId) {
+        setProjectTasks((prevTasks) =>
+          prevTasks.filter((task) => task.task_id !== deletedTaskId)
+        );
 
-      // Also remove from list view data
-      if (selectedTask) {
+        // Also remove from list view data
         setListViewData(prev => prev ? {
           ...prev,
-          tasks: prev.tasks.filter(t => t.task_id !== selectedTask.task_id)
+          tasks: prev.tasks.filter(t => t.task_id !== deletedTaskId)
         } : null);
-      }
 
-      toast.success('Task deleted successfully!');
+        toast.success('Task deleted successfully!');
+      }
     }
     setShowQuickAdd(false);
     setSelectedTask(null);
     setIsAddingTask(false);
-  }, [selectedTask]);
+  }, []);
 
   const handleTaskSelected = useCallback((task: IProjectTask) => {
     // Log that we're using the cached project tree data for editing
@@ -1548,6 +1620,7 @@ export default function ProjectDetail({
               allTaskTags={allTaskTags}
               projectTreeData={projectTreeData} // Pass project tree data
               animatingTasks={animatingTasks}
+              avatarUrls={avatarUrls}
               onDrop={handleDrop}
               onDragOver={handleDragOver}
               onAddCard={handleAddCard}
