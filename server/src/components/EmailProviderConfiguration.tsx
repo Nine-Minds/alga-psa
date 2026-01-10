@@ -94,12 +94,14 @@ export interface ImapEmailProviderConfig {
   allow_starttls: boolean;
   auth_type: 'password' | 'oauth2';
   username: string;
+  password?: string;
   folder_filters: string[];
   auto_process_emails: boolean;
   max_emails_per_sync: number;
   oauth_authorize_url?: string | null;
   oauth_token_url?: string | null;
   oauth_client_id?: string | null;
+  oauth_client_secret?: string | null;
   oauth_scopes?: string | null;
   access_token?: string;
   refresh_token?: string;

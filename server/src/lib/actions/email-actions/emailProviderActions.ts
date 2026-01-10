@@ -863,7 +863,9 @@ export async function deleteEmailProvider(providerId: string): Promise<void> {
 
 export async function testEmailProviderConnection(providerId: string): Promise<{ success: boolean; error?: string }> {
   await assertAuthenticated();
-  const { knex, tenant } = await createTenantKnex();
+  const { knex: baseKnex, tenant: baseTenant } = await createTenantKnex();
+  const tenant = baseTenant as string;
+  const knex = baseKnex as any;
   
   try {
     const provider = await knex('email_providers')
@@ -891,21 +893,26 @@ export async function testEmailProviderConnection(providerId: string): Promise<{
           if (!config.oauth_token_url || !config.oauth_client_id) {
             throw new Error('IMAP OAuth token configuration missing');
           }
-          const refreshToken = await secretProvider.getTenantSecret(tenant, `imap_refresh_token_${providerId}`) || config.refresh_token;
+          const secretRefreshToken = await secretProvider.getTenantSecret(tenant, `imap_refresh_token_${providerId}` as string);
+          const refreshToken = secretRefreshToken || config.refresh_token;
           if (!refreshToken) {
             throw new Error('IMAP OAuth refresh token missing');
           }
 
-          const clientSecret = await secretProvider.getTenantSecret(tenant, `imap_oauth_client_secret_${providerId}`);
+          const clientSecret = await secretProvider.getTenantSecret(tenant, `imap_oauth_client_secret_${providerId}` as string);
           const params = new URLSearchParams();
           params.append('grant_type', 'refresh_token');
-          params.append('refresh_token', refreshToken);
-          params.append('client_id', config.oauth_client_id);
+          params.append('refresh_token', refreshToken as string);
+          
+          const oauthClientId = config.oauth_client_id || undefined;
+          if (oauthClientId) {
+            params.append('client_id', oauthClientId);
+          }
           if (clientSecret) {
-            params.append('client_secret', clientSecret);
+            params.append('client_secret', clientSecret as string);
           }
 
-          const response = await axios.post(config.oauth_token_url, params, {
+          const response = await axios.post(config.oauth_token_url, params as any, {
             headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
           });
 
@@ -927,7 +934,11 @@ export async function testEmailProviderConnection(providerId: string): Promise<{
       if (config.auth_type === 'oauth2') {
         auth.accessToken = accessToken;
       } else {
-        auth.pass = await secretProvider.getTenantSecret(tenant, `imap_password_${providerId}`);
+        const passwordSecret = await secretProvider.getTenantSecret(tenant, `imap_password_${providerId}` as string);
+        const password = passwordSecret || undefined;
+        if (password) {
+          auth.pass = password;
+        }
       }
 
       if (!auth.pass && !auth.accessToken) {

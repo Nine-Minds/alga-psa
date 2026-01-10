@@ -60,9 +60,7 @@ export interface EmailProviderConfig {
     oauth_client_id?: string;
     oauth_client_secret?: string;
     oauth_scopes?: string;
-    access_token?: string;
-    refresh_token?: string;
-    token_expires_at?: string;
+    // Note: access_token, refresh_token, token_expires_at are defined above (shared with Gmail OAuth)
     uid_validity?: string;
     last_uid?: string;
     folder_state?: Record<string, { uid_validity?: string; last_uid?: string; last_seen_at?: string }>;

@@ -297,7 +297,7 @@ export function ImapProviderForm({
                     <p className="font-medium">OAuth Status</p>
                     <p className="text-muted-foreground">{oauthConnected ? 'Connected' : 'Not connected'}</p>
                   </div>
-                  <Button type="button" variant="outline" onClick={handleOauthConnect} disabled={oauthStatus === 'authorizing'}>
+                  <Button id="imap-oauth-reconnect-btn" type="button" variant="outline" onClick={handleOauthConnect} disabled={oauthStatus === 'authorizing'}>
                     {oauthStatus === 'authorizing' ? 'Authorizing...' : 'Reconnect OAuth'}
                   </Button>
                 </div>
@@ -389,10 +389,10 @@ export function ImapProviderForm({
       )}
 
       <div className="flex justify-end space-x-3">
-        <Button type="button" variant="outline" onClick={onCancel} disabled={loading}>
+        <Button id="imap-provider-cancel-btn" type="button" variant="outline" onClick={onCancel} disabled={loading}>
           Cancel
         </Button>
-        <Button type="submit" disabled={loading}>
+        <Button id="imap-provider-submit-btn" type="submit" disabled={loading}>
           {loading ? 'Saving...' : isEditing ? 'Update Provider' : 'Create Provider'}
         </Button>
       </div>
