@@ -341,22 +341,13 @@ class ImapFolderListener {
         DEFAULT_MAX_EMAILS_PER_SYNC
       );
 
-      const uidNext: number | undefined = mailbox?.uidNext ? Number(mailbox.uidNext) : undefined;
-
       // When we have no cursor (initial connect or after manual resync), start from the most recent window
       // instead of replaying the entire mailbox from UID 1.
       const startUid = this.folderState.last_uid
         ? Number(this.folderState.last_uid) + 1
-        : uidNext && uidNext > 1
-          ? Math.max(1, uidNext - maxEmailsPerSync)
+        : mailbox?.uidNext && Number(mailbox.uidNext) > 1
+          ? Math.max(1, Number(mailbox.uidNext) - maxEmailsPerSync)
           : 1;
-
-      // Avoid "2:*" on empty/small mailboxes where "*" resolves below startUid and becomes a reversed range
-      // that would otherwise cause reprocessing of older messages.
-      if (uidNext && startUid >= uidNext) {
-        await this.updateLastSyncAt();
-        return;
-      }
 
       const range = `${startUid}:*`;
 
@@ -367,7 +358,16 @@ class ImapFolderListener {
       try {
         const searchResult = await client.search({ uid: range });
         if (Array.isArray(searchResult) && searchResult.length > 0) {
-          uids = searchResult;
+          const filtered = searchResult.filter((uid) => uid >= startUid);
+          if (filtered.length > 0) {
+            uids = filtered;
+          } else {
+            await this.updateLastSyncAt();
+            return;
+          }
+        } else {
+          await this.updateLastSyncAt();
+          return;
         }
       } catch {
         // fallback to fetch range
@@ -375,6 +375,7 @@ class ImapFolderListener {
 
       for await (const message of client.fetch(uids, { uid: true, source: true })) {
         if (!message?.source) continue;
+        if (message.uid && message.uid < startUid) continue;
         if (message.uid && message.uid > maxUid) {
           maxUid = message.uid;
         }
