@@ -46,12 +46,9 @@ const imapProviderSchema = z.object({
   oauthClientId: z.string().optional(),
   oauthClientSecret: z.string().optional(),
   oauthScopes: z.string().optional(),
-  connectionTimeoutMs: z.number().min(1000).max(120000).optional(),
-  socketKeepalive: z.boolean().optional(),
   isActive: z.boolean(),
   autoProcessEmails: z.boolean(),
   folderFilters: z.string().optional(),
-  maxEmailsPerSync: z.number().min(1).max(1000),
   inboundTicketDefaultsId: z.string().uuid().optional()
 });
 
@@ -97,12 +94,9 @@ export function ImapProviderForm({
       oauthClientId: provider.imapConfig.oauth_client_id || '',
       oauthClientSecret: provider.imapConfig.oauth_client_secret || '',
       oauthScopes: provider.imapConfig.oauth_scopes || '',
-      connectionTimeoutMs: provider.imapConfig.connection_timeout_ms || undefined,
-      socketKeepalive: provider.imapConfig.socket_keepalive ?? false,
       isActive: provider.isActive,
       autoProcessEmails: provider.imapConfig.auto_process_emails ?? true,
       folderFilters: provider.imapConfig.folder_filters?.join(', ') || '',
-      maxEmailsPerSync: provider.imapConfig.max_emails_per_sync ?? 50,
       inboundTicketDefaultsId: (provider as any).inboundTicketDefaultsId || undefined
     } : {
       port: 993,
@@ -112,9 +106,6 @@ export function ImapProviderForm({
       isActive: true,
       autoProcessEmails: true,
       folderFilters: '',
-      maxEmailsPerSync: 50,
-      connectionTimeoutMs: undefined,
-      socketKeepalive: false,
       inboundTicketDefaultsId: undefined
     }
   });
@@ -167,9 +158,10 @@ export function ImapProviderForm({
           oauth_scopes: data.oauthScopes || undefined,
           auto_process_emails: data.autoProcessEmails,
           folder_filters: data.folderFilters ? data.folderFilters.split(',').map(f => f.trim()).filter(Boolean) : [],
-          max_emails_per_sync: data.maxEmailsPerSync,
-          connection_timeout_ms: data.connectionTimeoutMs,
-          socket_keepalive: data.socketKeepalive
+          // Not exposed in UI (configured via env / defaults)
+          max_emails_per_sync: 5,
+          connection_timeout_ms: 10_000,
+          socket_keepalive: true,
         }
       };
 
@@ -368,18 +360,6 @@ export function ImapProviderForm({
           <div className="flex items-center justify-between">
             <Label htmlFor="autoProcessEmails">Auto-process emails</Label>
             <Switch id="autoProcessEmails" checked={form.watch('autoProcessEmails')} onCheckedChange={(v) => form.setValue('autoProcessEmails', v)} />
-          </div>
-          <div>
-            <Label htmlFor="maxEmailsPerSync">Max Emails Per Sync</Label>
-            <Input id="maxEmailsPerSync" type="number" {...form.register('maxEmailsPerSync', { valueAsNumber: true })} />
-          </div>
-          <div>
-            <Label htmlFor="connectionTimeoutMs">Connection Timeout (ms)</Label>
-            <Input id="connectionTimeoutMs" type="number" {...form.register('connectionTimeoutMs', { valueAsNumber: true })} />
-          </div>
-          <div className="flex items-center justify-between">
-            <Label htmlFor="socketKeepalive">Socket Keepalive</Label>
-            <Switch id="socketKeepalive" checked={form.watch('socketKeepalive')} onCheckedChange={(v) => form.setValue('socketKeepalive', v)} />
           </div>
           <div className="flex items-center justify-between">
             <Label htmlFor="isActive">Active</Label>

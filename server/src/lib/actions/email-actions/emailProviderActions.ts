@@ -395,6 +395,11 @@ async function persistImapConfig(
 
   const secretProvider = await getSecretProviderInstance();
 
+  // IMAP runtime tuning is configured via env (not exposed in UI).
+  const maxEmailsPerSync = Number(process.env.IMAP_MAX_EMAILS_PER_SYNC || 5);
+  const connectionTimeoutMs = Number(process.env.IMAP_CONNECTION_TIMEOUT_MS || 10_000);
+  const socketKeepalive = (process.env.IMAP_SOCKET_KEEPALIVE || 'true') !== 'false';
+
   if (config.password && typeof config.password === 'string') {
     await secretProvider.setTenantSecret(tenant, `imap_password_${providerId}`, config.password);
   }
@@ -457,7 +462,7 @@ async function persistImapConfig(
     config.auth_type,
     config.username,
     config.auto_process_emails ?? true,
-    config.max_emails_per_sync ?? 50,
+    maxEmailsPerSync,
     JSON.stringify(folderFiltersArray),
     config.oauth_authorize_url || null,
     config.oauth_token_url || null,
@@ -472,8 +477,8 @@ async function persistImapConfig(
     config.last_seen_at || null,
     config.last_sync_at || null,
     config.last_error || null,
-    config.connection_timeout_ms || null,
-    config.socket_keepalive ?? null
+    connectionTimeoutMs,
+    socketKeepalive
   ]).then((result: any) => result.rows[0]);
 
   if (imapConfig) {

@@ -204,7 +204,7 @@
     "implemented": true
   },
   {
-    "description": "Collect IMAP max_emails_per_sync in IMAP provider form",
+    "description": "Do not expose IMAP max_emails_per_sync in provider UI; enforce via env/default (default 5)",
     "implemented": true
   },
   {
@@ -724,11 +724,11 @@
     "implemented": true
   },
   {
-    "description": "Allow specifying IMAP connection timeout per provider",
+    "description": "Configure IMAP connection timeout via env/default (default 10s; not in UI)",
     "implemented": true
   },
   {
-    "description": "Allow specifying IMAP socket keepalive per provider",
+    "description": "Enable IMAP TCP socket keepalive by default (env override; not in UI)",
     "implemented": true
   },
   {

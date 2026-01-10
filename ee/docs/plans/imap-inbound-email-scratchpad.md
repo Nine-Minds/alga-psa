@@ -1,6 +1,6 @@
 # IMAP Inbound Email Scratchpad
 
-Last updated: 2025-12-26
+Last updated: 2026-01-10
 Owner: Email Platform
 
 Use this scratchpad to capture key findings, decisions, TODOs, and file references while implementing the IMAP inbound email service.
@@ -74,7 +74,9 @@ Use this scratchpad to capture key findings, decisions, TODOs, and file referenc
 - Determine if we must support generic OAuth2 endpoints per provider config (authorize/token URLs).
 - Decide how to store IMAP OAuth client secrets + refresh tokens (tenant secrets provider preferred).
   - Secret keys used by actions: `imap_password_<providerId>`, `imap_oauth_client_secret_<providerId>`, `imap_refresh_token_<providerId>`
-  - New OAuth endpoints:\n+    - `POST /api/email/oauth/imap/initiate`\n+    - `GET /api/email/oauth/imap/callback`
+  - OAuth endpoints:
+    - `POST /api/email/oauth/imap/initiate`
+    - `GET /api/email/oauth/imap/callback`
 
 ---
 
@@ -91,6 +93,10 @@ Use this scratchpad to capture key findings, decisions, TODOs, and file referenc
     - SMTP: host port `${EXPOSE_IMAP_TEST_SMTP_PORT:-3025}` → container 3025
     - IMAP: host port `${EXPOSE_IMAP_TEST_IMAP_PORT:-3143}` → container 3143
     - IMAPS: host port `${EXPOSE_IMAP_TEST_IMAPS_PORT:-3993}` → container 3993
+  - IMAP runtime tuning is intentionally not exposed in the provider UI:
+    - `IMAP_CONNECTION_TIMEOUT_MS` (default: `10000`)
+    - `IMAP_MAX_EMAILS_PER_SYNC` (default: `5`)
+    - `IMAP_SOCKET_KEEPALIVE` (default: `true`, set to `false` to disable)
 
 ---
 

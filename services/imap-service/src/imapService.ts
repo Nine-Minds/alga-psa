@@ -16,6 +16,8 @@ const DEFAULT_IDLE_POLL_MS = 30_000;
 const DEFAULT_POLL_INTERVAL_MS = 30_000;
 const DEFAULT_LEASE_TTL_MS = 120_000;
 const DEFAULT_MAX_CONNECTIONS_PER_TENANT = 5;
+const DEFAULT_CONNECTION_TIMEOUT_MS = 10_000;
+const DEFAULT_MAX_EMAILS_PER_SYNC = 5;
 
 function stateLog(event: string, fields: Record<string, unknown> = {}) {
   try {
@@ -288,7 +290,11 @@ class ImapFolderListener {
   }
 
   private async connectWithTimeout(client: ImapFlow) {
-    const timeoutMs = Number(this.provider.connection_timeout_ms || 15_000);
+    const timeoutMs = Number(
+      process.env.IMAP_CONNECTION_TIMEOUT_MS ||
+      this.provider.connection_timeout_ms ||
+      DEFAULT_CONNECTION_TIMEOUT_MS
+    );
     await Promise.race([
       client.connect(),
       new Promise((_, reject) => setTimeout(() => reject(new Error('IMAP connection timeout')), timeoutMs)),
@@ -334,6 +340,11 @@ class ImapFolderListener {
 
       let processed = 0;
       let maxUid = this.folderState.last_uid ? Number(this.folderState.last_uid) : 0;
+      const maxEmailsPerSync = Number(
+        process.env.IMAP_MAX_EMAILS_PER_SYNC ||
+        this.provider.max_emails_per_sync ||
+        DEFAULT_MAX_EMAILS_PER_SYNC
+      );
 
       let uids: number[] | string = range;
       try {
@@ -378,7 +389,7 @@ class ImapFolderListener {
           maxUid = message.uid;
         }
 
-        if (processed >= (this.provider.max_emails_per_sync || 50)) {
+        if (processed >= maxEmailsPerSync) {
           break;
         }
 
@@ -595,7 +606,8 @@ class ImapFolderListener {
           });
           this.folder = resolvedFolder;
         }
-        if (this.provider.socket_keepalive) {
+        const keepaliveEnabled = (process.env.IMAP_SOCKET_KEEPALIVE || 'true') !== 'false';
+        if (keepaliveEnabled) {
           const socket = (this.client as any).socket;
           if (socket?.setKeepAlive) {
             socket.setKeepAlive(true, 30000);
