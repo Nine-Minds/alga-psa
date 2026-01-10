@@ -97,6 +97,8 @@ Use this scratchpad to capture key findings, decisions, TODOs, and file referenc
     - `IMAP_CONNECTION_TIMEOUT_MS` (default: `10000`)
     - `IMAP_MAX_EMAILS_PER_SYNC` (default: `5`)
     - `IMAP_SOCKET_KEEPALIVE` (default: `true`, set to `false` to disable)
+  - Initial connect and manual resync behavior:
+    - When cursor state is empty, IMAP listener starts from the most recent `IMAP_MAX_EMAILS_PER_SYNC` window (based on mailbox `uidNext`) instead of replaying the whole mailbox from UID 1.
 
 ---
 

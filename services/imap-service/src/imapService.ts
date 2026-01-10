@@ -335,16 +335,26 @@ class ImapFolderListener {
         this.folderState.last_uid = undefined;
       }
 
-      const startUid = this.folderState.last_uid ? Number(this.folderState.last_uid) + 1 : 1;
-      const range = `${startUid}:*`;
-
-      let processed = 0;
-      let maxUid = this.folderState.last_uid ? Number(this.folderState.last_uid) : 0;
       const maxEmailsPerSync = Number(
         process.env.IMAP_MAX_EMAILS_PER_SYNC ||
         this.provider.max_emails_per_sync ||
         DEFAULT_MAX_EMAILS_PER_SYNC
       );
+
+      const uidNext: number | undefined = mailbox?.uidNext ? Number(mailbox.uidNext) : undefined;
+
+      // When we have no cursor (initial connect or after manual resync), start from the most recent window
+      // instead of replaying the entire mailbox from UID 1.
+      const startUid = this.folderState.last_uid
+        ? Number(this.folderState.last_uid) + 1
+        : uidNext && uidNext > 1
+          ? Math.max(1, uidNext - maxEmailsPerSync)
+          : 1;
+
+      const range = `${startUid}:*`;
+
+      let processed = 0;
+      let maxUid = this.folderState.last_uid ? Number(this.folderState.last_uid) : 0;
 
       let uids: number[] | string = range;
       try {
