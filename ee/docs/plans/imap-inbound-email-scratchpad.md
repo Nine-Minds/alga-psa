@@ -94,6 +94,7 @@ Use this scratchpad to capture key findings, decisions, TODOs, and file referenc
     - SMTP: host port `${EXPOSE_IMAP_TEST_SMTP_PORT:-3025}` → container 3025
     - IMAP: host port `${EXPOSE_IMAP_TEST_IMAP_PORT:-3143}` → container 3143
     - IMAPS: host port `${EXPOSE_IMAP_TEST_IMAPS_PORT:-3993}` → container 3993
+    - For SMTP injection, use recipient local-part `imap_user` (GreenMail stores `To: imap_user` in headers).
   - IMAP runtime tuning is intentionally not exposed in the provider UI:
     - `IMAP_CONNECTION_TIMEOUT_MS` (default: `10000`)
     - `IMAP_MAX_EMAILS_PER_SYNC` (default: `5`)
