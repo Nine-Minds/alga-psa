@@ -5,7 +5,34 @@
 import dotenv from 'dotenv';
 import path from 'path';
 import { execSync } from 'child_process';
+import fs from 'node:fs';
 import { applyPlaywrightDatabaseEnv, PLAYWRIGHT_DB_CONFIG } from './src/__tests__/integration/utils/playwrightDatabaseConfig';
+
+const MINIO_CONTAINER_NAME = 'alga-psa-minio-test';
+const MINIO_OWNERSHIP_MARKER = path.resolve(__dirname, '.playwright', 'minio-owned');
+
+function ensurePlaywrightStateDir() {
+  const dir = path.dirname(MINIO_OWNERSHIP_MARKER);
+  fs.mkdirSync(dir, { recursive: true });
+}
+
+function containerExists(name: string): boolean {
+  try {
+    execSync(`docker inspect ${name}`, { stdio: 'ignore' });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function containerRunning(name: string): boolean {
+  try {
+    const out = execSync(`docker inspect -f "{{.State.Running}}" ${name}`, { encoding: 'utf-8' }).trim();
+    return out === 'true';
+  } catch {
+    return false;
+  }
+}
 
 async function globalSetup() {
   console.log('🚀 Starting Playwright global setup...');
@@ -37,10 +64,43 @@ async function globalSetup() {
   console.log('🗄️  Starting test MinIO container on port 9002...');
   try {
     const projectRoot = path.resolve(__dirname, '../..');
-    execSync('docker compose -f docker-compose.playwright.yml up -d', {
-      cwd: projectRoot,
-      stdio: 'inherit',
-    });
+    ensurePlaywrightStateDir();
+
+    const existed = containerExists(MINIO_CONTAINER_NAME);
+    if (!existed) {
+      try {
+        execSync('docker compose -f docker-compose.playwright.yml up -d', {
+          cwd: projectRoot,
+          stdio: 'inherit',
+        });
+        fs.writeFileSync(MINIO_OWNERSHIP_MARKER, 'owned\n', { encoding: 'utf-8' });
+      } catch (e) {
+        // Race-safe: another process may have created the shared container after our check.
+        if (containerExists(MINIO_CONTAINER_NAME)) {
+          try {
+            fs.unlinkSync(MINIO_OWNERSHIP_MARKER);
+          } catch {
+            // ignore
+          }
+          if (!containerRunning(MINIO_CONTAINER_NAME)) {
+            execSync(`docker start ${MINIO_CONTAINER_NAME}`, { stdio: 'inherit' });
+          }
+        } else {
+          throw e;
+        }
+      }
+    } else {
+      // If another worktree already created the shared MinIO container, reuse it.
+      // Avoid docker compose here because docker-compose.playwright.yml uses fixed container_name.
+      if (!containerRunning(MINIO_CONTAINER_NAME)) {
+        execSync(`docker start ${MINIO_CONTAINER_NAME}`, { stdio: 'inherit' });
+      }
+      try {
+        fs.unlinkSync(MINIO_OWNERSHIP_MARKER);
+      } catch {
+        // ignore
+      }
+    }
 
     // Wait for MinIO to be ready
     console.log('⏳ Waiting for MinIO to be ready...');
@@ -48,8 +108,8 @@ async function globalSetup() {
 
     // Create test bucket
     execSync(
-      'docker exec alga-psa-minio-test mc alias set local http://localhost:9000 minioadmin minioadmin && ' +
-      'docker exec alga-psa-minio-test mc mb local/alga-test --ignore-existing',
+      `docker exec ${MINIO_CONTAINER_NAME} mc alias set local http://localhost:9000 minioadmin minioadmin && ` +
+      `docker exec ${MINIO_CONTAINER_NAME} mc mb local/alga-test --ignore-existing`,
       { stdio: 'inherit' }
     );
 

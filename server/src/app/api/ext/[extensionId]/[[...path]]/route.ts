@@ -96,6 +96,7 @@ interface UserInfo {
   user_email: string;
   user_name: string;
   company_name: string;
+  user_type: string;
 }
 
 async function getUserInfo(tenantId: string): Promise<UserInfo | null> {
@@ -125,6 +126,7 @@ async function getUserInfo(tenantId: string): Promise<UserInfo | null> {
       user_email: currentUser.email || '',
       user_name: `${currentUser.first_name || ''} ${currentUser.last_name || ''}`.trim(),
       company_name: companyName,
+      user_type: currentUser.user_type,
     };
     console.log('[api/ext] getUserInfo completed', { elapsed: Date.now() - start });
     return info;
@@ -248,7 +250,7 @@ async function handle(req: NextRequest, ctx: { params: Promise<{ extensionId: st
     const idempotencyKey = req.method === 'GET' ? undefined : (req.headers.get('x-idempotency-key') || requestId);
 
     const runnerUrl = process.env.RUNNER_BASE_URL || 'http://localhost:8080';
-    const timeoutMs = Number(process.env.EXT_GATEWAY_TIMEOUT_MS || '5000');
+    const timeoutMs = Number(process.env.EXT_GATEWAY_TIMEOUT_MS || '30000');
 
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), timeoutMs);

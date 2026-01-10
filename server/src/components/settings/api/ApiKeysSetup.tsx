@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Button } from 'server/src/components/ui/Button';
 import { Card } from 'server/src/components/ui/Card';
 import { Input } from 'server/src/components/ui/Input';
@@ -39,11 +39,7 @@ export default function ApiKeysSetup() {
     setCurrentPage(1);
   };
 
-  useEffect(() => {
-    loadApiKeys();
-  }, []);
-
-  const loadApiKeys = async () => {
+  const loadApiKeys = useCallback(async () => {
     try {
       const keysRaw = await listApiKeys();
       // Map string date fields to Date objects.
@@ -57,7 +53,11 @@ export default function ApiKeysSetup() {
     } catch (error) {
       console.error('Failed to load API keys:', error);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    loadApiKeys();
+  }, [loadApiKeys]);
 
   const handleCreateKey = async () => {
     try {
@@ -75,20 +75,20 @@ export default function ApiKeysSetup() {
     }
   };
 
-  const handleDeactivateKey = async (keyId: string) => {
+  const handleDeactivateKey = useCallback(async (keyId: string) => {
     try {
       await deactivateApiKey(keyId);
       await loadApiKeys();
     } catch (error) {
       console.error('Failed to deactivate API key:', error);
     }
-  };
+  }, [loadApiKeys]);
 
   const columns: ColumnDefinition<ApiKey>[] = useMemo(() => [
     {
       title: 'Description',
       dataIndex: 'description',
-      width: '25%',
+      width: '20%',
     },
     {
       title: 'Created',
@@ -111,7 +111,7 @@ export default function ApiKeysSetup() {
     {
       title: 'Status',
       dataIndex: 'active',
-      width: '15%',
+      width: '10%',
       render: (value: boolean) => (
         <span className={`px-2 py-1 rounded text-sm ${value ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
           {value ? 'Active' : 'Inactive'}

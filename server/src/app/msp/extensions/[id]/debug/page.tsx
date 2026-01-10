@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
+import { Checkbox } from 'server/src/components/ui/Checkbox';
 
 type DebugEvent = {
   ts?: string;
@@ -462,38 +463,34 @@ export default function ExtensionDebugPage({
         </div>
 
         <div className="flex items-center gap-3 ml-auto text-xs text-slate-600">
-          <label className="flex items-center gap-1">
-            <input
-              type="checkbox"
-              checked={showStdout}
-              onChange={(e) => setShowStdout(e.target.checked)}
-            />
-            stdout
-          </label>
-          <label className="flex items-center gap-1">
-            <input
-              type="checkbox"
-              checked={showStderr}
-              onChange={(e) => setShowStderr(e.target.checked)}
-            />
-            stderr
-          </label>
-          <label className="flex items-center gap-1">
-            <input
-              type="checkbox"
-              checked={showLogs}
-              onChange={(e) => setShowLogs(e.target.checked)}
-            />
-            logs
-          </label>
-          <label className="flex items-center gap-1">
-            <input
-              type="checkbox"
-              checked={autoScroll}
-              onChange={(e) => setAutoScroll(e.target.checked)}
-            />
-            auto-scroll
-          </label>
+          <Checkbox
+            id="show-stdout"
+            checked={showStdout}
+            onChange={(e) => setShowStdout(e.target.checked)}
+            label="stdout"
+            containerClassName="mb-0"
+          />
+          <Checkbox
+            id="show-stderr"
+            checked={showStderr}
+            onChange={(e) => setShowStderr(e.target.checked)}
+            label="stderr"
+            containerClassName="mb-0"
+          />
+          <Checkbox
+            id="show-logs"
+            checked={showLogs}
+            onChange={(e) => setShowLogs(e.target.checked)}
+            label="logs"
+            containerClassName="mb-0"
+          />
+          <Checkbox
+            id="auto-scroll"
+            checked={autoScroll}
+            onChange={(e) => setAutoScroll(e.target.checked)}
+            label="auto-scroll"
+            containerClassName="mb-0"
+          />
           <span
             className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] ${
               connected

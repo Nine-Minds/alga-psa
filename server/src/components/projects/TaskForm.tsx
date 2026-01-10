@@ -5,7 +5,7 @@ import { IProjectPhase, IProjectTask, ITaskChecklistItem, ProjectStatus, IProjec
 import { IUser } from '@shared/interfaces/user.interfaces';
 import { IPriority } from 'server/src/interfaces/ticket.interfaces';
 import { ITag } from 'server/src/interfaces/tag.interfaces';
-import AvatarIcon from 'server/src/components/ui/AvatarIcon';
+import UserAvatar from 'server/src/components/ui/UserAvatar';
 import { getProjectTreeData, getProjectDetails } from 'server/src/lib/actions/project-actions/projectActions';
 import { getAllPriorities } from 'server/src/lib/actions/priorityActions';
 import { getServices } from 'server/src/lib/actions/serviceActions';
@@ -32,6 +32,7 @@ import { TextArea } from 'server/src/components/ui/TextArea';
 import { ListChecks, Trash2, Clock } from 'lucide-react';
 import { DatePicker } from 'server/src/components/ui/DatePicker';
 import UserPicker from 'server/src/components/ui/UserPicker';
+import MultiUserPicker from 'server/src/components/ui/MultiUserPicker';
 import { ConfirmationDialog } from 'server/src/components/ui/ConfirmationDialog';
 import DuplicateTaskDialog, { DuplicateOptions } from './DuplicateTaskDialog';
 import { Input } from 'server/src/components/ui/Input';
@@ -107,7 +108,12 @@ export default function TaskForm({
   const [actualHours, setActualHours] = useState<number>(Number(task?.actual_hours) / 60 || 0);
   const [dueDate, setDueDate] = useState<Date | undefined>(task?.due_date ? new Date(task.due_date) : undefined);
   const [taskResources, setTaskResources] = useState<any[]>(task?.task_id ? [] : []);
+  const [initialTaskResources, setInitialTaskResources] = useState<any[]>([]);
+  const [resourcesLoaded, setResourcesLoaded] = useState(false); // Track if resources have been loaded
   const [tempTaskResources, setTempTaskResources] = useState<any[]>([]);
+
+  // Ref to prevent race conditions when rapidly adding/removing agents
+  const isProcessingAgentsRef = useRef(false);
   const [taskTags, setTaskTags] = useState<ITag[]>([]);
   const [pendingTags, setPendingTags] = useState<PendingTag[]>([]);
   const [pendingTicketLinks, setPendingTicketLinks] = useState<IProjectTicketLinkWithDetails[]>(task?.ticket_links || []);
@@ -192,10 +198,10 @@ export default function TaskForm({
           }
 
           // Always fetch resources to ensure we have the latest data
-          console.log('Fetching resources from API for task:', task.task_id);
           const resources = await getTaskResourcesAction(task.task_id);
-          console.log('Fetched resources:', resources);
           setTaskResources(resources);
+          setInitialTaskResources(resources); // Track initial state for hasChanges()
+          setResourcesLoaded(true); // Mark resources as loaded
 
           // Fetch tags
           const tags = await findTagsByEntityId(task.task_id, 'project_task');
@@ -595,18 +601,23 @@ export default function TaskForm({
     // Compare all form fields with their original values for edit mode
     if (!task) return false;
 
-    if (taskName !== task.task_name) return true;
-    if (description !== task.description) return true;
+    // Helper to normalize null/undefined/empty string for comparison
+    const normalizeString = (val: string | null | undefined): string => val || '';
+    const normalizeNullable = <T,>(val: T | null | undefined): T | null => val ?? null;
+
+    if (taskName !== (task.task_name || '')) return true;
+    if (normalizeString(description) !== normalizeString(task.description)) return true;
     if (selectedPhaseId !== task.phase_id) return true;
     if (selectedStatusId !== task.project_status_mapping_id) return true;
-    if (estimatedHours !== Number(task.estimated_hours) / 60) return true;
-    if (actualHours !== Number(task.actual_hours) / 60) return true;
-    if (assignedUser !== task.assigned_to) return true;
-    if (selectedPriorityId !== task.priority_id) return true;
-    if (selectedServiceId !== (task.service_id ?? null)) return true;
+    // Use || 0 to handle null/undefined consistently with initial state
+    if (estimatedHours !== (Number(task.estimated_hours) / 60 || 0)) return true;
+    if (actualHours !== (Number(task.actual_hours) / 60 || 0)) return true;
+    if (normalizeNullable(assignedUser) !== normalizeNullable(task.assigned_to)) return true;
+    if (normalizeNullable(selectedPriorityId) !== normalizeNullable(task.priority_id)) return true;
+    if (normalizeNullable(selectedServiceId) !== normalizeNullable(task.service_id)) return true;
 
-    // Compare checklist items
-    if (checklistItems.length !== task.checklist_items?.length) return true;
+    // Compare checklist items - use 0 as fallback for undefined length
+    if (checklistItems.length !== (task.checklist_items?.length ?? 0)) return true;
     for (let i = 0; i < checklistItems.length; i++) {
       const current = checklistItems[i];
       const original = task.checklist_items?.[i];
@@ -615,20 +626,18 @@ export default function TaskForm({
       if (current.completed !== original.completed) return true;
     }
 
-    // Compare resources
-    const currentResources = task.task_id ? taskResources : tempTaskResources;
-    const initialResourcesLength = task.task_id ? taskResources.length : 0;
-    if (currentResources.length !== initialResourcesLength) return true;
+    // Compare resources - use initialTaskResources to compare against the loaded state
+    // Only compare if resources have been loaded to avoid false positives during initial load
+    if (task.task_id && resourcesLoaded) {
+      // For existing tasks, compare current resources with initial resources
+      if (taskResources.length !== initialTaskResources.length) return true;
 
-    if (task.task_id && taskResources.length > 0) {
-      const sortedCurrentResources = [...taskResources].sort((a, b) =>
-        a.additional_user_id.localeCompare(b.additional_user_id)
-      );
-      const sortedInitialResources = [...taskResources].sort((a, b) =>
-        a.additional_user_id.localeCompare(b.additional_user_id)
-      );
-      for (let i = 0; i < sortedCurrentResources.length; i++) {
-        if (sortedCurrentResources[i].additional_user_id !== sortedInitialResources[i].additional_user_id) return true;
+      const currentUserIds = new Set(taskResources.map(r => r.additional_user_id));
+      const initialUserIds = new Set(initialTaskResources.map(r => r.additional_user_id));
+
+      if (currentUserIds.size !== initialUserIds.size) return true;
+      for (const id of currentUserIds) {
+        if (!initialUserIds.has(id)) return true;
       }
     }
 
@@ -1171,52 +1180,48 @@ export default function TaskForm({
                       Save task after changing primary agent.
                     </div>
                   ) : (
-                    <UserPicker
-                      key={`agent-picker-${(task?.task_id ? taskResources : tempTaskResources).length}`}
-                      value=""
-                      onValueChange={(userId) => {
-                        if (userId) {
-                          handleAddAgent(userId);
+                    <MultiUserPicker
+                      id="task-additional-agents"
+                      values={(task?.task_id ? taskResources : tempTaskResources).map(r => r.additional_user_id)}
+                      onValuesChange={async (newUserIds) => {
+                        // Prevent race conditions from rapid clicks
+                        if (isProcessingAgentsRef.current) {
+                          return;
+                        }
+                        isProcessingAgentsRef.current = true;
+
+                        try {
+                          const currentResources = task?.task_id ? taskResources : tempTaskResources;
+                          const currentUserIds = currentResources.map(r => r.additional_user_id);
+
+                          // Find added users
+                          const addedUserIds = newUserIds.filter(id => !currentUserIds.includes(id));
+                          // Find removed users
+                          const removedUserIds = currentUserIds.filter(id => !newUserIds.includes(id));
+
+                          // Process all additions sequentially
+                          for (const userId of addedUserIds) {
+                            await handleAddAgent(userId);
+                          }
+
+                          // Process all removals sequentially
+                          for (const userId of removedUserIds) {
+                            const resource = currentResources.find(r => r.additional_user_id === userId);
+                            if (resource) {
+                              await handleRemoveAgent(resource.assignment_id);
+                            }
+                          }
+                        } finally {
+                          isProcessingAgentsRef.current = false;
                         }
                       }}
-                      users={users.filter(u =>
-                        u.user_id !== assignedUser &&
-                        !(task?.task_id ? taskResources : tempTaskResources)
-                          .some(r => r.additional_user_id === u.user_id)
-                      )}
+                      users={users.filter(u => u.user_id !== assignedUser)}
                       size="sm"
-                      placeholder="Select additional agent..."
+                      placeholder="Select additional agents..."
                     />
                   )}
                 </div>
               </div>
-              {/* Show list of additional agents below the pickers */}
-              {(task?.task_id ? taskResources : tempTaskResources).length > 0 && (
-                <div className="mt-2 space-y-2 max-h-32 overflow-y-auto">
-                {(task?.task_id ? taskResources : tempTaskResources).map((resource): React.JSX.Element => (
-                  <div key={resource.assignment_id} className="flex items-center justify-between bg-gray-50 p-2 rounded">
-                    <div className="flex items-center gap-2">
-                      <AvatarIcon
-                        userId={resource.additional_user_id}
-                        firstName={resource.first_name}
-                        lastName={resource.last_name}
-                        size="sm"
-                      />
-                      <span className="text-sm">{resource.first_name} {resource.last_name}</span>
-                    </div>
-                    <Button
-                      id='remove-agent-button'
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleRemoveAgent(resource.assignment_id)}
-                      className="text-red-500 hover:text-red-700 h-6 w-6 p-0"
-                    >
-                      <Trash2 className="h-3 w-3" />
-                    </Button>
-                  </div>
-                ))}
-                </div>
-              )}
             </div>
           </div>
 
@@ -1424,7 +1429,7 @@ export default function TaskForm({
         <Dialog
           isOpen={true}
           onClose={handleCancelClick}
-          className="max-w-3xl max-h-[90vh] overflow-y-auto"
+          className="max-w-3xl"
           title={mode === 'create' ? 'Add New Task' : 'Edit Task'}
         >
           <DialogContent>

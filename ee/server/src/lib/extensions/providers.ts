@@ -6,6 +6,7 @@ export const KNOWN_PROVIDER_CAPABILITIES = [
   'cap:log.emit',
   'cap:ui.proxy',
   'cap:user.read',
+  'cap:scheduler.manage',
 ] as const;
 
 export const DEFAULT_PROVIDER_CAPABILITIES = ['cap:context.read', 'cap:log.emit', 'cap:user.read'] as const;

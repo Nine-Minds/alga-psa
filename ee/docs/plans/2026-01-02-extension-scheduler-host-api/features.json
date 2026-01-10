@@ -1,0 +1,506 @@
+[
+  {
+    "id": "F001",
+    "description": "Add cap:scheduler.manage to KNOWN_PROVIDER_CAPABILITIES",
+    "implemented": true,
+    "prdRefs": ["PRD#Capability registration"]
+  },
+  {
+    "id": "F002",
+    "description": "Capability is not in DEFAULT_PROVIDER_CAPABILITIES (must be explicitly granted)",
+    "implemented": true,
+    "prdRefs": ["PRD#Capability registration"]
+  },
+  {
+    "id": "F003",
+    "description": "Extensions can declare cap:scheduler.manage in manifest",
+    "implemented": true,
+    "prdRefs": ["PRD#Capability registration"]
+  },
+  {
+    "id": "F004",
+    "description": "Add SchedulerHost interface to HostBindings in extension-runtime SDK",
+    "implemented": true,
+    "prdRefs": ["PRD#Host API interface"]
+  },
+  {
+    "id": "F005",
+    "description": "Define ScheduleInfo type in SDK",
+    "implemented": true,
+    "prdRefs": ["PRD#Host API interface"]
+  },
+  {
+    "id": "F006",
+    "description": "Define CreateScheduleInput type in SDK",
+    "implemented": true,
+    "prdRefs": ["PRD#Host API interface"]
+  },
+  {
+    "id": "F007",
+    "description": "Define CreateScheduleResult type in SDK",
+    "implemented": true,
+    "prdRefs": ["PRD#Host API interface"]
+  },
+  {
+    "id": "F008",
+    "description": "Define UpdateScheduleInput type in SDK",
+    "implemented": true,
+    "prdRefs": ["PRD#Host API interface"]
+  },
+  {
+    "id": "F009",
+    "description": "Define UpdateScheduleResult type in SDK",
+    "implemented": true,
+    "prdRefs": ["PRD#Host API interface"]
+  },
+  {
+    "id": "F010",
+    "description": "Define DeleteScheduleResult type in SDK",
+    "implemented": true,
+    "prdRefs": ["PRD#Host API interface"]
+  },
+  {
+    "id": "F011",
+    "description": "SchedulerHost.list() method signature defined",
+    "implemented": true,
+    "prdRefs": ["PRD#Host API interface"]
+  },
+  {
+    "id": "F012",
+    "description": "SchedulerHost.get() method signature defined",
+    "implemented": true,
+    "prdRefs": ["PRD#Host API interface"]
+  },
+  {
+    "id": "F013",
+    "description": "SchedulerHost.create() method signature defined",
+    "implemented": true,
+    "prdRefs": ["PRD#Host API interface"]
+  },
+  {
+    "id": "F014",
+    "description": "SchedulerHost.update() method signature defined",
+    "implemented": true,
+    "prdRefs": ["PRD#Host API interface"]
+  },
+  {
+    "id": "F015",
+    "description": "SchedulerHost.delete() method signature defined",
+    "implemented": true,
+    "prdRefs": ["PRD#Host API interface"]
+  },
+  {
+    "id": "F016",
+    "description": "Runner checks for cap:scheduler.manage in providers array",
+    "implemented": true,
+    "prdRefs": ["PRD#Runner implementation"]
+  },
+  {
+    "id": "F017",
+    "description": "Runner implements SchedulerHost when capability is granted",
+    "implemented": true,
+    "prdRefs": ["PRD#Runner implementation"]
+  },
+  {
+    "id": "F018",
+    "description": "Runner host bindings call back to Alga server for scheduler operations",
+    "implemented": true,
+    "prdRefs": ["PRD#Runner implementation"]
+  },
+  {
+    "id": "F019",
+    "description": "Create internal API endpoint for scheduler list operation",
+    "implemented": true,
+    "prdRefs": ["PRD#Server-side handler"]
+  },
+  {
+    "id": "F020",
+    "description": "Create internal API endpoint for scheduler get operation",
+    "implemented": true,
+    "prdRefs": ["PRD#Server-side handler"]
+  },
+  {
+    "id": "F021",
+    "description": "Create internal API endpoint for scheduler create operation",
+    "implemented": true,
+    "prdRefs": ["PRD#Server-side handler"]
+  },
+  {
+    "id": "F022",
+    "description": "Create internal API endpoint for scheduler update operation",
+    "implemented": true,
+    "prdRefs": ["PRD#Server-side handler"]
+  },
+  {
+    "id": "F023",
+    "description": "Create internal API endpoint for scheduler delete operation",
+    "implemented": true,
+    "prdRefs": ["PRD#Server-side handler"]
+  },
+  {
+    "id": "F024",
+    "description": "Internal API validates install context (tenant_id, install_id)",
+    "implemented": true,
+    "prdRefs": ["PRD#Server-side handler"]
+  },
+  {
+    "id": "F025",
+    "description": "Internal API reuses validation from extensionScheduleActions",
+    "implemented": true,
+    "prdRefs": ["PRD#Server-side handler"]
+  },
+  {
+    "id": "F026",
+    "description": "Internal API reuses quota enforcement from extensionScheduleActions",
+    "implemented": true,
+    "prdRefs": ["PRD#Server-side handler"]
+  },
+  {
+    "id": "F027",
+    "description": "Internal API reuses job runner integration from extensionScheduleActions",
+    "implemented": true,
+    "prdRefs": ["PRD#Server-side handler"]
+  },
+  {
+    "id": "F028",
+    "description": "All operations scoped to calling extension's install_id",
+    "implemented": true,
+    "prdRefs": ["PRD#Server-side handler"]
+  },
+  {
+    "id": "F029",
+    "description": "Endpoint resolution: convert path string to endpoint_id",
+    "implemented": true,
+    "prdRefs": ["PRD#Endpoint resolution"]
+  },
+  {
+    "id": "F030",
+    "description": "Endpoint resolution uses installed version's endpoint table",
+    "implemented": true,
+    "prdRefs": ["PRD#Endpoint resolution"]
+  },
+  {
+    "id": "F031",
+    "description": "Endpoint resolution rejects paths not in extension manifest",
+    "implemented": true,
+    "prdRefs": ["PRD#Endpoint resolution"]
+  },
+  {
+    "id": "F032",
+    "description": "Endpoint resolution limits to GET/POST methods (v1 constraint)",
+    "implemented": true,
+    "prdRefs": ["PRD#Endpoint resolution"]
+  },
+  {
+    "id": "F033",
+    "description": "Endpoint resolution rejects paths with path parameters",
+    "implemented": true,
+    "prdRefs": ["PRD#Endpoint resolution"]
+  },
+  {
+    "id": "F034",
+    "description": "list() returns all schedules for the calling extension's install",
+    "implemented": true,
+    "prdRefs": ["PRD#Functional Requirements"]
+  },
+  {
+    "id": "F035",
+    "description": "list() returns empty array when no schedules exist",
+    "implemented": true,
+    "prdRefs": ["PRD#Functional Requirements"]
+  },
+  {
+    "id": "F036",
+    "description": "get() returns schedule by ID if it belongs to the install",
+    "implemented": true,
+    "prdRefs": ["PRD#Functional Requirements"]
+  },
+  {
+    "id": "F037",
+    "description": "get() returns null for non-existent schedule",
+    "implemented": true,
+    "prdRefs": ["PRD#Functional Requirements"]
+  },
+  {
+    "id": "F038",
+    "description": "get() returns null for schedule belonging to different install",
+    "implemented": true,
+    "prdRefs": ["PRD#Security"]
+  },
+  {
+    "id": "F039",
+    "description": "create() creates schedule with valid input",
+    "implemented": true,
+    "prdRefs": ["PRD#Functional Requirements"]
+  },
+  {
+    "id": "F040",
+    "description": "create() returns scheduleId on success",
+    "implemented": true,
+    "prdRefs": ["PRD#Functional Requirements"]
+  },
+  {
+    "id": "F041",
+    "description": "create() validates cron expression",
+    "implemented": true,
+    "prdRefs": ["PRD#Functional Requirements"]
+  },
+  {
+    "id": "F042",
+    "description": "create() validates timezone",
+    "implemented": true,
+    "prdRefs": ["PRD#Functional Requirements"]
+  },
+  {
+    "id": "F043",
+    "description": "create() validates payload JSON",
+    "implemented": true,
+    "prdRefs": ["PRD#Functional Requirements"]
+  },
+  {
+    "id": "F044",
+    "description": "create() validates schedule name length",
+    "implemented": true,
+    "prdRefs": ["PRD#Functional Requirements"]
+  },
+  {
+    "id": "F045",
+    "description": "create() enforces max 50 schedules per install",
+    "implemented": true,
+    "prdRefs": ["PRD#Security"]
+  },
+  {
+    "id": "F046",
+    "description": "create() enforces minimum 5-minute interval",
+    "implemented": true,
+    "prdRefs": ["PRD#Security"]
+  },
+  {
+    "id": "F047",
+    "description": "create() returns structured error on validation failure",
+    "implemented": true,
+    "prdRefs": ["PRD#Functional Requirements"]
+  },
+  {
+    "id": "F048",
+    "description": "create() returns field-level errors when applicable",
+    "implemented": true,
+    "prdRefs": ["PRD#Functional Requirements"]
+  },
+  {
+    "id": "F049",
+    "description": "create() creates underlying job runner schedule when enabled",
+    "implemented": true,
+    "prdRefs": ["PRD#Functional Requirements"]
+  },
+  {
+    "id": "F050",
+    "description": "create() defaults timezone to UTC if not provided",
+    "implemented": true,
+    "prdRefs": ["PRD#Functional Requirements"]
+  },
+  {
+    "id": "F051",
+    "description": "create() defaults enabled to true if not provided",
+    "implemented": true,
+    "prdRefs": ["PRD#Functional Requirements"]
+  },
+  {
+    "id": "F052",
+    "description": "update() updates schedule fields",
+    "implemented": true,
+    "prdRefs": ["PRD#Functional Requirements"]
+  },
+  {
+    "id": "F053",
+    "description": "update() validates new cron expression if provided",
+    "implemented": true,
+    "prdRefs": ["PRD#Functional Requirements"]
+  },
+  {
+    "id": "F054",
+    "description": "update() validates new timezone if provided",
+    "implemented": true,
+    "prdRefs": ["PRD#Functional Requirements"]
+  },
+  {
+    "id": "F055",
+    "description": "update() reschedules job runner when cron/timezone/enabled changes",
+    "implemented": true,
+    "prdRefs": ["PRD#Functional Requirements"]
+  },
+  {
+    "id": "F056",
+    "description": "update() returns error for non-existent schedule",
+    "implemented": true,
+    "prdRefs": ["PRD#Functional Requirements"]
+  },
+  {
+    "id": "F057",
+    "description": "update() returns error for schedule belonging to different install",
+    "implemented": true,
+    "prdRefs": ["PRD#Security"]
+  },
+  {
+    "id": "F058",
+    "description": "update() can change endpoint by path",
+    "implemented": true,
+    "prdRefs": ["PRD#Functional Requirements"]
+  },
+  {
+    "id": "F059",
+    "description": "delete() removes schedule from database",
+    "implemented": true,
+    "prdRefs": ["PRD#Functional Requirements"]
+  },
+  {
+    "id": "F060",
+    "description": "delete() cancels underlying job runner schedule",
+    "implemented": true,
+    "prdRefs": ["PRD#Functional Requirements"]
+  },
+  {
+    "id": "F061",
+    "description": "delete() returns success for valid schedule",
+    "implemented": true,
+    "prdRefs": ["PRD#Functional Requirements"]
+  },
+  {
+    "id": "F062",
+    "description": "delete() returns error for non-existent schedule",
+    "implemented": true,
+    "prdRefs": ["PRD#Functional Requirements"]
+  },
+  {
+    "id": "F063",
+    "description": "delete() returns error for schedule belonging to different install",
+    "implemented": true,
+    "prdRefs": ["PRD#Security"]
+  },
+  {
+    "id": "F064",
+    "description": "Extensions without cap:scheduler.manage cannot access scheduler host",
+    "implemented": true,
+    "prdRefs": ["PRD#Security"]
+  },
+  {
+    "id": "F065",
+    "description": "Log scheduler host API calls with operation and install context",
+    "implemented": true,
+    "prdRefs": ["PRD#Observability"]
+  },
+  {
+    "id": "F066",
+    "description": "Include trigger=host_api in schedule creation metadata",
+    "implemented": true,
+    "prdRefs": ["PRD#Observability"]
+  },
+  {
+    "id": "F067",
+    "description": "Expose metrics for scheduler API calls",
+    "implemented": true,
+    "prdRefs": ["PRD#Observability"]
+  },
+  {
+    "id": "F068",
+    "description": "ScheduleInfo includes endpointPath and endpointMethod",
+    "implemented": true,
+    "prdRefs": ["PRD#Host API interface"]
+  },
+  {
+    "id": "F069",
+    "description": "ScheduleInfo includes lastRunAt, lastRunStatus, lastError",
+    "implemented": true,
+    "prdRefs": ["PRD#Host API interface"]
+  },
+  {
+    "id": "F070",
+    "description": "SDK types are exported from extension-runtime package",
+    "implemented": true,
+    "prdRefs": ["PRD#Host API interface"]
+  },
+  {
+    "id": "F071",
+    "description": "Document scheduler host API in SDK documentation",
+    "implemented": true,
+    "prdRefs": ["PRD#Rollout / Migration"]
+  },
+  {
+    "id": "F072",
+    "description": "Create sample extension demonstrating schedule self-configuration",
+    "implemented": true,
+    "prdRefs": ["PRD#Acceptance Criteria"]
+  },
+  {
+    "id": "F073",
+    "description": "Sample extension creates schedule on /setup endpoint call",
+    "implemented": true,
+    "prdRefs": ["PRD#Flow: Set up schedules on extension install"]
+  },
+  {
+    "id": "F074",
+    "description": "Sample extension checks for existing schedules before creating",
+    "implemented": true,
+    "prdRefs": ["PRD#Flow: Set up schedules on extension install"]
+  },
+  {
+    "id": "F075",
+    "description": "Runner passes install context to server for auth",
+    "implemented": true,
+    "prdRefs": ["PRD#Runner implementation"]
+  },
+  {
+    "id": "F076",
+    "description": "Server authenticates Runner requests for internal API",
+    "implemented": true,
+    "prdRefs": ["PRD#Server-side handler"]
+  },
+  {
+    "id": "F077",
+    "description": "Handle name uniqueness violation with descriptive error",
+    "implemented": true,
+    "prdRefs": ["PRD#Functional Requirements"]
+  },
+  {
+    "id": "F078",
+    "description": "Transactional semantics: schedule not created if job runner fails",
+    "implemented": true,
+    "prdRefs": ["PRD#Reliability"]
+  },
+  {
+    "id": "F079",
+    "description": "Transactional semantics: job runner schedule cleaned up if DB insert fails",
+    "implemented": true,
+    "prdRefs": ["PRD#Reliability"]
+  },
+  {
+    "id": "F080",
+    "description": "Rate limiting on create/update operations via host API",
+    "implemented": true,
+    "prdRefs": ["PRD#Security"]
+  },
+  {
+    "id": "F081",
+    "description": "Add SchedulerHost.getEndpoints() to discover schedulable endpoints",
+    "implemented": true,
+    "prdRefs": ["PRD#Host API interface"]
+  },
+  {
+    "id": "F082",
+    "description": "Define EndpointInfo type in SDK",
+    "implemented": true,
+    "prdRefs": ["PRD#Host API interface"]
+  },
+  {
+    "id": "F083",
+    "description": "Create internal API endpoint for getEndpoints operation",
+    "implemented": true,
+    "prdRefs": ["PRD#Server-side handler"]
+  },
+  {
+    "id": "F084",
+    "description": "getEndpoints() returns list of endpoints with schedulable flag",
+    "implemented": true,
+    "prdRefs": ["PRD#Functional Requirements"]
+  }
+]

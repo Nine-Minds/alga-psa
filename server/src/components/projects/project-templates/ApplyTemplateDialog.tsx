@@ -7,6 +7,7 @@ import CustomSelect from 'server/src/components/ui/CustomSelect';
 import { Input } from 'server/src/components/ui/Input';
 import { Checkbox } from 'server/src/components/ui/Checkbox';
 import { Label } from 'server/src/components/ui/Label';
+import { RadioGroup } from 'server/src/components/ui/RadioGroup';
 import { DatePicker } from 'server/src/components/ui/DatePicker';
 import { IProjectTemplate } from 'server/src/interfaces/projectTemplate.interfaces';
 import { IClient } from 'server/src/interfaces/client.interfaces';
@@ -268,29 +269,17 @@ export function ApplyTemplateDialog({ open, onClose, onSuccess, initialTemplateI
               {/* Assignment Options */}
               <div>
                 <Label className="block text-sm font-medium mb-3">Task Assignments</Label>
-                <div className="space-y-2 ml-2">
-                  <Checkbox
-                    id="assignment-none-checkbox"
-                    label="Don't copy assignments"
-                    checked={options.assignmentOption === 'none'}
-                    onChange={() => setOptions({ ...options, assignmentOption: 'none' })}
-                    containerClassName="mb-2"
-                  />
-                  <Checkbox
-                    id="assignment-primary-checkbox"
-                    label="Copy primary agent only"
-                    checked={options.assignmentOption === 'primary'}
-                    onChange={() => setOptions({ ...options, assignmentOption: 'primary' })}
-                    containerClassName="mb-2"
-                  />
-                  <Checkbox
-                    id="assignment-all-checkbox"
-                    label="Copy all agents (primary + additional)"
-                    checked={options.assignmentOption === 'all'}
-                    onChange={() => setOptions({ ...options, assignmentOption: 'all' })}
-                    containerClassName="mb-2"
-                  />
-                </div>
+                <RadioGroup
+                  id="task-assignment-option"
+                  name="task-assignment-option"
+                  value={options.assignmentOption}
+                  onChange={(value) => setOptions({ ...options, assignmentOption: value as AssignmentOption })}
+                  options={[
+                    { value: 'none', label: "Don't copy assignments" },
+                    { value: 'primary', label: 'Copy primary agent only' },
+                    { value: 'all', label: 'Copy all agents (primary + additional)' },
+                  ]}
+                />
               </div>
             </div>
           </div>

@@ -48,6 +48,8 @@ export const PLAYWRIGHT_DB_CONFIG = DEFAULT_CONFIG;
 const truthy = (value: boolean) => (value ? 'true' : 'false');
 
 export function applyPlaywrightDatabaseEnv(): void {
+  process.env.DB_TYPE = process.env.DB_TYPE && process.env.DB_TYPE.trim().length > 0 ? process.env.DB_TYPE : 'postgres';
+  process.env.DB_TYPE_SERVER = process.env.DB_TYPE_SERVER && process.env.DB_TYPE_SERVER.trim().length > 0 ? process.env.DB_TYPE_SERVER : 'postgres';
   process.env.DB_HOST = PLAYWRIGHT_DB_CONFIG.host;
   process.env.DB_PORT = String(PLAYWRIGHT_DB_CONFIG.port);
   process.env.DB_NAME = PLAYWRIGHT_DB_CONFIG.database;

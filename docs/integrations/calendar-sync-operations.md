@@ -3,19 +3,20 @@
 This runbook covers the day-to-day operational tasks for the Google and Microsoft calendar integrations. It pairs with the UI updates delivered in Phase 4 so operators can onboard tenants, monitor sync health, and respond to incidents without engineering support.
 
 ## Prerequisites
-- Tenants must have OAuth apps configured and approved by the vendor (Client ID, Client Secret, redirect URI).
+- Tenants must configure vendor OAuth credentials via tenant secrets (same flow for hosted and on-prem deployments).
 - Background jobs MUST be running so webhook renewals and delta token updates proceed automatically.
 - Verify Redis and the `CALENDAR_OAUTH_ENCRYPTION_KEY`/`NEXTAUTH_SECRET` variables are present in the environment.
 
 ## Connecting A Provider
 1. Navigate to **Settings → Calendar Integrations**.
 2. Select either **Add Google Calendar** or **Add Outlook Calendar**.
-3. Complete the configuration form:
+3. For Google: ensure **Settings → Integrations → Providers** is configured first (tenant-owned OAuth client + redirect URI).
+4. Complete the configuration form:
    - Give the provider an operator-friendly name.
    - Supply the external calendar identifier (use `primary` for the default Google calendar or `calendar` for Outlook).
    - Choose the desired sync direction and enable the provider.
-4. Press **Authorize**. A vendor popup appears; complete the OAuth consent flow.
-5. After a successful callback you will see the `OAuth Complete` badge. Save the form to persist changes.
+5. Press **Authorize**. A vendor popup appears; complete the OAuth consent flow.
+6. After a successful callback you will see the `OAuth Complete` badge. Save the form to persist changes.
 
 ## Monitoring Sync Health
 - Each provider card now shows **Connection Status**, **OAuth badge**, **Last Sync**, and **Sync Direction** at a glance.
@@ -36,7 +37,7 @@ This runbook covers the day-to-day operational tasks for the Google and Microsof
 ## Troubleshooting Checklist
 - **Authorization failures**: ensure the OAuth popup is not blocked and that tenant secrets are valid.
 - **Stale last sync**: run a manual sync to force a pass; if the timestamp does not advance check webhook subscriptions.
-- **Webhook errors**: consult the `calendar-webhook-maintenance` job logs. Renew subscriptions via the job handler and re-queue any stuck messages.
+- **Webhook errors**: consult the `calendar-webhook-maintenance` job logs. Google uses Calendar “watch” channels (webhook) and Microsoft uses Graph subscriptions; both are renewed by maintenance jobs.
 - **Multi-tenant bleed**: confirm the provider belongs to the active tenant. All actions enforce tenant scoping; mismatches result in `Forbidden` errors.
 - **Conflicts stuck**: if repeated conflicts appear, reset the mapping’s `sync_status` through the conflict resolution workflow and retry.
 

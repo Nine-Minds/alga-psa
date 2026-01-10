@@ -7,6 +7,7 @@ import { Label } from 'server/src/components/ui/Label';
 import { Button } from 'server/src/components/ui/Button';
 import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 import { Tooltip } from 'server/src/components/ui/Tooltip';
+import { RadioGroup } from 'server/src/components/ui/RadioGroup';
 import { Info, Calculator, Cloud } from 'lucide-react';
 
 import { TaxSource } from 'server/src/interfaces/tax.interfaces';
@@ -112,50 +113,27 @@ export function TaxSourceSettings({ isReadOnly = false }: TaxSourceSettingsProps
       <CardContent className="space-y-6">
         <div className="space-y-4">
           <Label className="text-sm font-medium">Default Tax Calculation Method</Label>
-          <div className="space-y-3">
-            <div className="flex items-start space-x-3">
-              <input
-                type="radio"
-                id="tax-source-internal"
-                name="tax-source"
-                value="internal"
-                checked={settings.default_tax_source === 'internal'}
-                onChange={() => setSettings({ ...settings, default_tax_source: 'internal' })}
-                disabled={isReadOnly}
-                className="mt-1 h-4 w-4 border-gray-300 text-primary focus:ring-primary"
-              />
-              <div className="space-y-1">
-                <Label htmlFor="tax-source-internal" className="flex items-center gap-2 cursor-pointer font-medium">
-                  <Calculator className="h-4 w-4 text-green-600" />
-                  Internal (Alga PSA)
-                </Label>
-                <p className="text-sm text-muted-foreground">
-                  Taxes are calculated automatically based on tax rates configured in Alga PSA.
-                </p>
-              </div>
-            </div>
-            <div className="flex items-start space-x-3">
-              <input
-                type="radio"
-                id="tax-source-external"
-                name="tax-source"
-                value="external"
-                checked={settings.default_tax_source === 'external'}
-                onChange={() => setSettings({ ...settings, default_tax_source: 'external' })}
-                disabled={isReadOnly}
-                className="mt-1 h-4 w-4 border-gray-300 text-primary focus:ring-primary"
-              />
-              <div className="space-y-1">
-                <Label htmlFor="tax-source-external" className="flex items-center gap-2 cursor-pointer font-medium">
-                  <Cloud className="h-4 w-4 text-blue-600" />
-                  External (Accounting Package)
-                </Label>
-                <p className="text-sm text-muted-foreground">
-                  Invoices are exported without tax. Tax is calculated by your accounting system and imported back.
-                </p>
-              </div>
-            </div>
-          </div>
+          <RadioGroup
+            id="tax-source"
+            name="tax-source"
+            value={settings.default_tax_source}
+            onChange={(value) => setSettings({ ...settings, default_tax_source: value as TaxSource })}
+            disabled={isReadOnly}
+            options={[
+              {
+                value: 'internal',
+                label: 'Internal (Alga PSA)',
+                description: 'Taxes are calculated automatically based on tax rates configured in Alga PSA.',
+                icon: <Calculator className="h-4 w-4" />,
+              },
+              {
+                value: 'external',
+                label: 'External (Accounting Package)',
+                description: 'Invoices are exported without tax. Tax is calculated by your accounting system and imported back.',
+                icon: <Cloud className="h-4 w-4" />,
+              },
+            ]}
+          />
         </div>
 
         {settings.default_tax_source === 'external' && (

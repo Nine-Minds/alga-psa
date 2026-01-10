@@ -2,11 +2,14 @@ import { NextResponse } from 'next/server';
 import { createTenantKnex } from '@/lib/db';
 import { getAdminConnection } from '@alga-psa/shared/db/admin';
 import type { Knex } from 'knex';
+import { requireExtensionApiAccess } from '../_auth';
 // Classic extension lookups removed; this endpoint expects registryId
 
 export const dynamic = 'force-dynamic';
 
 export async function GET(request: Request) {
+  const auth = await requireExtensionApiAccess('read');
+  if (auth) return auth;
   const { searchParams } = new URL(request.url);
   const registryId = searchParams.get('registryId');
   if (!registryId) {

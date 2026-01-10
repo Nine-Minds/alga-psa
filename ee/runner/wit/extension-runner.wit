@@ -64,15 +64,85 @@ interface types {
 
     record user-data {
         tenant-id: string,
-        company-name: string,
+        client-name: string,
         user-id: string,
         user-email: string,
         user-name: string,
+        user-type: string,
     }
 
     enum user-error {
         not-available,
         not-allowed,
+    }
+
+    // Scheduler types for cap:scheduler.manage
+
+    enum scheduler-error {
+        not-found,
+        validation-failed,
+        quota-exceeded,
+        denied,
+        internal,
+    }
+
+    record schedule-info {
+        id: string,
+        endpoint-path: string,
+        endpoint-method: string,
+        name: option<string>,
+        cron: string,
+        timezone: string,
+        enabled: bool,
+        payload: option<string>,  // JSON-encoded
+        last-run-at: option<string>,
+        last-run-status: option<string>,
+        last-error: option<string>,
+        created-at: option<string>,
+    }
+
+    record endpoint-info {
+        id: string,
+        method: string,
+        path: string,
+        handler: string,
+        schedulable: bool,
+    }
+
+    record create-schedule-input {
+        endpoint: string,
+        cron: string,
+        timezone: option<string>,
+        enabled: option<bool>,
+        name: option<string>,
+        payload: option<string>,  // JSON-encoded
+    }
+
+    record create-schedule-result {
+        success: bool,
+        schedule-id: option<string>,
+        error: option<string>,
+        field-errors: option<string>,  // JSON-encoded map
+    }
+
+    record update-schedule-input {
+        endpoint: option<string>,
+        cron: option<string>,
+        timezone: option<string>,
+        enabled: option<bool>,
+        name: option<string>,
+        payload: option<string>,  // JSON-encoded, use empty string to clear
+    }
+
+    record update-schedule-result {
+        success: bool,
+        error: option<string>,
+        field-errors: option<string>,  // JSON-encoded map
+    }
+
+    record delete-schedule-result {
+        success: bool,
+        error: option<string>,
     }
 
     record execute-request {
@@ -127,6 +197,25 @@ interface user {
     get-user: func() -> result<user-data, user-error>;
 }
 
+interface scheduler {
+    use types.{
+        scheduler-error,
+        schedule-info,
+        endpoint-info,
+        create-schedule-input,
+        create-schedule-result,
+        update-schedule-input,
+        update-schedule-result,
+        delete-schedule-result
+    };
+    list-schedules: func() -> result<list<schedule-info>, scheduler-error>;
+    get-schedule: func(schedule-id: string) -> result<option<schedule-info>, scheduler-error>;
+    create-schedule: func(input: create-schedule-input) -> create-schedule-result;
+    update-schedule: func(schedule-id: string, input: update-schedule-input) -> update-schedule-result;
+    delete-schedule: func(schedule-id: string) -> delete-schedule-result;
+    get-endpoints: func() -> result<list<endpoint-info>, scheduler-error>;
+}
+
 world runner {
     use types.{execute-request, execute-response};
 
@@ -137,6 +226,7 @@ world runner {
     import logging;
     import ui-proxy;
     import user;
+    import scheduler;
 
     export handler: func(request: execute-request) -> execute-response;
 }

@@ -6,6 +6,7 @@ import { WizardProgress } from 'server/src/components/onboarding/WizardProgress'
 import { WizardNavigation } from 'server/src/components/onboarding/WizardNavigation';
 import { TemplateContractBasicsStep } from './steps/TemplateContractBasicsStep';
 import { TemplateFixedFeeServicesStep } from './steps/TemplateFixedFeeServicesStep';
+import { TemplateProductsStep } from './steps/TemplateProductsStep';
 import { TemplateHourlyServicesStep } from './steps/TemplateHourlyServicesStep';
 import { TemplateUsageBasedServicesStep } from './steps/TemplateUsageBasedServicesStep';
 import { TemplateReviewContractStep } from './steps/TemplateReviewContractStep';
@@ -14,12 +15,13 @@ import { createContractTemplateFromWizard, ContractTemplateWizardSubmission, che
 const TEMPLATE_STEPS = [
   'Template Basics',
   'Fixed Fee Blocks',
+  'Products',
   'Hourly Blocks',
   'Usage-Based Blocks',
   'Review & Publish'
 ] as const;
 
-const REQUIRED_TEMPLATE_STEPS = [0, 4];
+const REQUIRED_TEMPLATE_STEPS = [0, 5];
 
 export interface TemplateWizardData {
   contract_name: string;
@@ -29,6 +31,11 @@ export interface TemplateWizardData {
   // is created from this template - rates come from the service's prices in the client's currency.
   enable_proration?: boolean;
   fixed_services: Array<{
+    service_id: string;
+    service_name?: string;
+    quantity?: number;
+  }>;
+  product_services: Array<{
     service_id: string;
     service_name?: string;
     quantity?: number;
@@ -65,6 +72,7 @@ export function TemplateWizard({ open, onOpenChange, onComplete }: TemplateWizar
     billing_frequency: 'monthly',
     // currency_code removed - templates are now currency-neutral
     fixed_services: [],
+    product_services: [],
     hourly_services: [],
     usage_services: [],
   });
@@ -77,6 +85,7 @@ export function TemplateWizard({ open, onOpenChange, onComplete }: TemplateWizar
         billing_frequency: 'monthly',
         // currency_code removed - templates are now currency-neutral
         fixed_services: [],
+        product_services: [],
         hourly_services: [],
         usage_services: [],
       });
@@ -91,6 +100,7 @@ export function TemplateWizard({ open, onOpenChange, onComplete }: TemplateWizar
     contract_name: wizardData.contract_name.trim(),
     description: wizardData.description?.trim() || undefined,
     fixed_services: wizardData.fixed_services ?? [],
+    product_services: wizardData.product_services ?? [],
     hourly_services: wizardData.hourly_services ?? [],
     usage_services: wizardData.usage_services ?? [],
     minimum_billable_time: wizardData.minimum_billable_time,
@@ -141,9 +151,10 @@ export function TemplateWizard({ open, onOpenChange, onComplete }: TemplateWizar
           return false;
         }
         return true;
-      case 4: {
+      case 5: {
         const hasServices =
           wizardData.fixed_services.length > 0 ||
+          wizardData.product_services.length > 0 ||
           wizardData.hourly_services.length > 0 ||
           !!(wizardData.usage_services && wizardData.usage_services.length > 0);
 
@@ -214,6 +225,7 @@ export function TemplateWizard({ open, onOpenChange, onComplete }: TemplateWizar
         billing_frequency: 'monthly',
         // currency_code removed - templates are now currency-neutral
         fixed_services: [],
+        product_services: [],
         hourly_services: [],
         usage_services: [],
       });
@@ -263,12 +275,15 @@ export function TemplateWizard({ open, onOpenChange, onComplete }: TemplateWizar
             <TemplateFixedFeeServicesStep data={wizardData} updateData={updateData} />
           )}
           {currentStep === 2 && (
-            <TemplateHourlyServicesStep data={wizardData} updateData={updateData} />
+            <TemplateProductsStep data={wizardData} updateData={updateData} />
           )}
           {currentStep === 3 && (
-            <TemplateUsageBasedServicesStep data={wizardData} updateData={updateData} />
+            <TemplateHourlyServicesStep data={wizardData} updateData={updateData} />
           )}
           {currentStep === 4 && (
+            <TemplateUsageBasedServicesStep data={wizardData} updateData={updateData} />
+          )}
+          {currentStep === 5 && (
             <TemplateReviewContractStep data={wizardData} updateData={updateData} />
           )}
 

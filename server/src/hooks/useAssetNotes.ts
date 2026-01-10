@@ -2,7 +2,6 @@ import useSWR from 'swr';
 import { useState, useCallback } from 'react';
 import { getAssetNoteContent, saveAssetNote } from '../lib/actions/asset-actions/assetNoteActions';
 import { toast } from 'react-hot-toast';
-import { getCurrentUser } from '../lib/actions/user-actions/userActions';
 
 // Type for BlockNote content (simplified)
 type PartialBlock = unknown;
@@ -26,10 +25,14 @@ export function useAssetNotes(assetId: string) {
 
     try {
       setIsSaving(true);
-      // We don't need to pass userId here as the server action gets it from session
-      // but the plan mentioned passing it. The implemented action uses getCurrentUser internally.
-      // Checking saveAssetNote signature: it takes (assetId, blockData).
-      await saveAssetNote(assetId, blockData);
+      // Important: Send a JSON string across the server-action boundary to avoid any
+      // serialization quirks with BlockNote objects.
+      const payload =
+        typeof blockData === 'string'
+          ? blockData
+          : JSON.stringify(blockData);
+
+      await saveAssetNote(assetId, payload);
       
       // Revalidate
       await mutateNotes();
@@ -51,6 +54,7 @@ export function useAssetNotes(assetId: string) {
     isLoading,
     error,
     saveNote,
+    refresh: mutateNotes,
     isSaving
   };
 }

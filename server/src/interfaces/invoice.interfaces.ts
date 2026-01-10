@@ -23,6 +23,10 @@ export function getTaxImportState(taxSource?: TaxSource | null): TaxImportState 
 export interface IInvoice extends TenantEntity {
   invoice_id: string;
   client_id: string;
+  /** Snapshot of the purchase order number for this invoice (nullable). */
+  po_number?: string | null;
+  /** Client contract assignment that generated this invoice (nullable). */
+  client_contract_id?: string | null;
   invoice_date: DateValue;
   due_date: DateValue;
   subtotal: number;
@@ -56,6 +60,9 @@ export interface IInvoiceCharge extends TenantEntity, NetAmountItem {
   item_id: string;
   invoice_id: string;
   service_id?: string;
+  service_item_kind?: 'service' | 'product';
+  service_sku?: string | null;
+  service_name?: string | null;
   contract_line_id?: string; // Added for consolidated fixed items
   description: string;
   quantity: number;
@@ -371,6 +378,8 @@ export interface ICreditAllocation extends TenantEntity {
 export interface InvoiceViewModel {
   invoice_number: string;
   client_id: string;
+  po_number?: string | null;
+  client_contract_id?: string | null;
   client: {
     name: string;
     logo: string;

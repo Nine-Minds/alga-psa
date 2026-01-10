@@ -77,14 +77,14 @@ export const Checkbox: React.FC<CheckboxProps & AutomationProps> = ({
         disabled={disabled}
         required={required}
         ref={checkboxRef}
-        {...withDataAutomationId({ id })}
         onChange={(event) => {
           props.onChange?.(event);
         }}
         {...props}
+        {...withDataAutomationId({ id })}
       />
       {label && (
-        <label className="ml-2 block text-sm text-gray-900">
+        <label htmlFor={id} className="ml-2 block text-sm text-gray-900">
           {label}
         </label>
       )}

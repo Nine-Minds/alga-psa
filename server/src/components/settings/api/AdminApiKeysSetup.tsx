@@ -68,7 +68,7 @@ export default function AdminApiKeysSetup() {
     {
       title: 'User',
       dataIndex: 'username',
-      width: '20%',
+      width: '15%',
     },
     {
       title: 'Description',

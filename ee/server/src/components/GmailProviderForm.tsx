@@ -1,6 +1,6 @@
 /**
  * Enterprise Edition Gmail Provider Configuration Form
- * Simplified form for hosted environments without Google Cloud configuration
+ * Tenant-owned Google OAuth configuration (same model as CE)
  */
 
 'use client';
@@ -13,7 +13,7 @@ import { Alert, AlertDescription } from '@/components/ui/Alert';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Shield } from 'lucide-react';
 import type { EmailProvider } from '@/components/EmailProviderConfiguration';
-import { createEmailProvider, updateEmailProvider, upsertEmailProvider, getHostedGmailConfig } from '@/lib/actions/email-actions/emailProviderActions';
+import { createEmailProvider, updateEmailProvider, upsertEmailProvider } from '@/lib/actions/email-actions/emailProviderActions';
 import { initiateEmailOAuth } from '@/lib/actions/email-actions/oauthActions';
 import { useOAuthPopup } from '@/components/providers/gmail/useOAuthPopup';
 import { BasicConfigCard } from '@/components/providers/gmail/BasicConfigCard';
@@ -22,6 +22,7 @@ import { OAuthSection } from '@/components/providers/gmail/OAuthSection';
 import { baseGmailProviderSchema } from '@/components/providers/gmail/schemas';
 import CustomSelect from '@/components/ui/CustomSelect';
 import { getInboundTicketDefaults } from '@/lib/actions/email-actions/inboundTicketDefaultsActions';
+import { getGoogleIntegrationStatus } from 'server/src/lib/actions/integrations/googleActions';
 
 type EEGmailProviderFormData = import('server/src/components/providers/gmail/schemas').BaseGmailProviderFormData;
 
@@ -33,16 +34,18 @@ interface EEGmailProviderFormProps {
 }
 
 export function GmailProviderForm({ 
-  tenant, 
+  tenant,
   provider, 
   onSuccess, 
   onCancel 
 }: EEGmailProviderFormProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [setupWarnings, setSetupWarnings] = useState<string[]>([]);
   const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
   const { oauthStatus, oauthData, autoSubmitCountdown, openOAuthPopup, cancelAutoSubmit, setOauthStatus } = useOAuthPopup<any>({ provider: 'google', countdownSeconds: 0 });
   const [defaultsOptions, setDefaultsOptions] = useState<{ value: string; label: string }[]>([]);
+  const [googleConfigReady, setGoogleConfigReady] = useState(false);
 
   const isEditing = !!provider;
 
@@ -84,8 +87,27 @@ export function GmailProviderForm({
     return () => window.removeEventListener('inbound-defaults-updated', onUpdate as any);
   }, []);
 
-  
+  React.useEffect(() => {
+    const loadGoogleStatus = async () => {
+      try {
+        const res = await getGoogleIntegrationStatus();
+        if (!res.success) {
+          setGoogleConfigReady(false);
+          return;
+        }
+        const hasClient = Boolean(res.config?.gmailClientId);
+        const hasSecret = Boolean(res.config?.gmailClientSecretMasked);
+        const hasProject = Boolean(res.config?.projectId);
+        const hasSvc = Boolean(res.config?.hasServiceAccountKey);
+        setGoogleConfigReady(hasClient && hasSecret && hasProject && hasSvc);
+      } catch {
+        setGoogleConfigReady(false);
+      }
+    };
+    loadGoogleStatus();
+  }, []);
 
+  
   const onSubmit = async (data: EEGmailProviderFormData, providedOauthData?: any) => {
     setHasAttemptedSubmit(true);
     
@@ -102,7 +124,6 @@ export function GmailProviderForm({
       // Use provided OAuth data if available, otherwise fall back to state
       const activeOauthData = providedOauthData || oauthData;
 
-      // For EE, we use hosted Google Cloud project configuration
       const payload = {
         tenant,
         providerType: 'google',
@@ -111,7 +132,6 @@ export function GmailProviderForm({
         isActive: data.isActive,
         inboundTicketDefaultsId: (form.getValues() as any).inboundTicketDefaultsId || undefined,
         googleConfig: {
-          // EE hosted environment handles OAuth credentials automatically
           auto_process_emails: data.autoProcessEmails,
           label_filters: data.labelFilters ? data.labelFilters.split(',').map(l => l.trim()) : ['INBOX'],
           max_emails_per_sync: data.maxEmailsPerSync,
@@ -125,10 +145,20 @@ export function GmailProviderForm({
       };
 
       // After OAuth, run automation once to set up Pub/Sub + watch
-      const result = isEditing 
+      const result = isEditing
         ? await updateEmailProvider(provider.id, payload, false) // skipAutomation: false
         : await createEmailProvider(payload, false); // skipAutomation: false
 
+      // Check for setup errors or warnings
+      if (result.setupError) {
+        setError(`Provider saved but setup incomplete: ${result.setupError}`);
+      }
+      if (result.setupWarnings && result.setupWarnings.length > 0) {
+        setSetupWarnings(result.setupWarnings);
+      }
+
+      // Still call onSuccess so the provider appears in the list
+      // The user can see the error/warning state in the UI
       onSuccess(result.provider);
 
     } catch (err: any) {
@@ -137,6 +167,11 @@ export function GmailProviderForm({
       setLoading(false);
     }
   };
+
+  const handleFormSubmit = form.handleSubmit(
+    onSubmit as any,
+    () => setHasAttemptedSubmit(true)
+  );
 
   const handleOAuthAuthorization = async () => {
     try {
@@ -153,17 +188,15 @@ export function GmailProviderForm({
         return;
       }
 
+      if (!googleConfigReady) {
+        setOauthStatus('error');
+        setError('Google integration is not configured for this tenant. Configure Google first, then retry.');
+        return;
+      }
+
       // Save provider first so credentials are available for OAuth
       let providerId = provider?.id;
       if (!providerId) {
-        const hostedConfig = await getHostedGmailConfig();
-        if (!hostedConfig || !hostedConfig.project_id || !hostedConfig.redirect_uri) {
-          throw new Error('Hosted Gmail configuration not available or incomplete');
-        }
-        if (!hostedConfig.client_id || !hostedConfig.client_secret) {
-          throw new Error('Hosted Gmail client credentials not available');
-        }
-
         const payload = {
           tenant,
           providerType: 'google',
@@ -174,11 +207,7 @@ export function GmailProviderForm({
           googleConfig: {
             auto_process_emails: formData.autoProcessEmails,
             label_filters: formData.labelFilters ? formData.labelFilters.split(',').map(l => l.trim()) : ['INBOX'],
-            max_emails_per_sync: formData.maxEmailsPerSync ?? 50,
-            project_id: hostedConfig.project_id,
-            client_id: hostedConfig.client_id,
-            client_secret: hostedConfig.client_secret,
-            redirect_uri: hostedConfig.redirect_uri
+            max_emails_per_sync: formData.maxEmailsPerSync ?? 50
           }
         };
 
@@ -187,9 +216,11 @@ export function GmailProviderForm({
         providerId = result.provider.id;
       }
 
-      // Get OAuth URL from server action (hosted OAuth configuration)
+      // Get OAuth URL from server action (tenant-owned OAuth configuration)
+      const redirectUri = `${window.location.origin}/api/auth/google/callback`;
       const oauthResult = await initiateEmailOAuth({
         provider: 'google',
+        redirectUri,
         providerId,
       });
       if (!oauthResult.success) {
@@ -212,13 +243,12 @@ export function GmailProviderForm({
   };
 
   return (
-    <form onSubmit={form.handleSubmit(onSubmit as any)} className="space-y-6">
-      {/* Hosted Environment Header */}
+    <form noValidate onSubmit={handleFormSubmit} className="space-y-6">
+      {/* Header */}
       <Alert>
         <Shield className="h-4 w-4" />
         <AlertDescription>
-          <strong>Gmail Integration</strong> - Simply connect your Gmail account and configure 
-          your email processing preferences to get started.
+          <strong>Gmail Integration</strong> — Connect your Gmail account and configure your email processing preferences.
         </AlertDescription>
       </Alert>
 
@@ -238,6 +268,44 @@ export function GmailProviderForm({
       {error && (
         <Alert variant="destructive">
           <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
+
+      {setupWarnings.length > 0 && (
+        <Alert className="border-yellow-500 bg-yellow-50">
+          <AlertDescription>
+            <p className="font-medium text-yellow-800 mb-2">Setup completed with warnings:</p>
+            <ul className="list-disc list-inside space-y-1 text-yellow-700">
+              {setupWarnings.map((warning, idx) => (
+                <li key={idx}>{warning}</li>
+              ))}
+            </ul>
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {!googleConfigReady && (
+        <Alert variant="destructive">
+          <AlertDescription>
+            <div className="space-y-2">
+              <div className="font-medium">Google integration is not configured for this tenant.</div>
+              <div className="text-sm">
+                Configure tenant-owned Google OAuth + Pub/Sub first: <strong>Settings → Integrations → Providers</strong>.
+              </div>
+              <div>
+                <Button
+                  id="open-google-settings-btn"
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    window.location.href = '/msp/settings?tab=integrations&category=providers';
+                  }}
+                >
+                  Open Google Settings
+                </Button>
+              </div>
+            </div>
+          </AlertDescription>
         </Alert>
       )}
 
@@ -261,7 +329,7 @@ export function GmailProviderForm({
             oauthStatus={oauthStatus}
             onAuthorize={handleOAuthAuthorization}
             authorizeButtonId="gmail-oauth-btn"
-            buttonDisabled={!form.watch('mailbox')}
+            buttonDisabled={!form.watch('mailbox') || !googleConfigReady}
             isEditing={isEditing}
             labels={{
               title: 'Gmail Connection',

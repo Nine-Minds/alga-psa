@@ -49,6 +49,19 @@ const baseServiceSchema = z.object({
   ),
   unit_of_measure: z.string(),
   category_id: z.string().uuid().nullable(), // Matches DB FK (nullable) - IService allows string | null
+  item_kind: z.enum(['service', 'product']).default('service'),
+  is_active: z.union([z.boolean(), z.number()]).transform((val) => Boolean(val)).default(true),
+  sku: z.string().nullable().optional(),
+  cost: z.union([z.string(), z.number()]).transform(val =>
+    typeof val === 'string' ? parseFloat(val) || 0 : val
+  ).nullable().optional(),
+  cost_currency: z.string().length(3).nullable().optional().default('USD'),
+  vendor: z.string().nullable().optional(),
+  manufacturer: z.string().nullable().optional(),
+  product_category: z.string().nullable().optional(),
+  is_license: z.union([z.boolean(), z.number()]).transform((val) => Boolean(val)).default(false),
+  license_term: z.string().nullable().optional(),
+  license_billing_cadence: z.string().nullable().optional(),
   tax_rate_id: z.union([z.string().uuid(), z.null()]).optional(), // Accept string, null, or undefined
   description: z.string().nullable(), // Added: Description field from the database
   service_type_name: z.string().optional(), // Add service_type_name to the schema
@@ -132,6 +145,18 @@ const Service = {
           'sc.unit_of_measure',
           'sc.category_id',
           'sc.description',
+          'sc.tax_rate_id',
+          'sc.item_kind',
+          'sc.is_active',
+          'sc.sku',
+          knexOrTrx.raw('CAST(sc.cost AS FLOAT) as cost'),
+          'sc.cost_currency',
+          'sc.vendor',
+          'sc.manufacturer',
+          'sc.product_category',
+          'sc.is_license',
+          'sc.license_term',
+          'sc.license_billing_cadence',
           'sc.tenant',
           // Select the service type name from custom type
           'ct.name as service_type_name'
@@ -206,6 +231,18 @@ const Service = {
           'sc.unit_of_measure',
           'sc.category_id',
           'sc.description',
+          'sc.tax_rate_id',
+          'sc.item_kind',
+          'sc.is_active',
+          'sc.sku',
+          knexOrTrx.raw('CAST(sc.cost AS FLOAT) as cost'),
+          'sc.cost_currency',
+          'sc.vendor',
+          'sc.manufacturer',
+          'sc.product_category',
+          'sc.is_license',
+          'sc.license_term',
+          'sc.license_billing_cadence',
           'sc.tenant',
           // Select the service type name from custom type
           'ct.name as service_type_name'
@@ -278,17 +315,41 @@ const Service = {
 
     const validatedData = createServiceSchema.parse(dataToValidate);
 
+    const normalizedDefaultRate = Math.round(Number(validatedData.default_rate || 0));
+    if (!Number.isFinite(normalizedDefaultRate) || normalizedDefaultRate < 0) {
+      throw new Error('default_rate must be a non-negative number');
+    }
+
+    const normalizedCost =
+      validatedData.cost === null || validatedData.cost === undefined
+        ? null
+        : Math.round(Number(validatedData.cost));
+    if (normalizedCost !== null && (!Number.isFinite(normalizedCost) || normalizedCost < 0)) {
+      throw new Error('cost must be a non-negative number');
+    }
+
     const newService = {
       service_id: uuidv4(),
       tenant: effectiveTenant,
       service_name: validatedData.service_name,
       custom_service_type_id: validatedData.custom_service_type_id,
       billing_method: validatedData.billing_method,
-      default_rate: validatedData.default_rate,
+      default_rate: normalizedDefaultRate,
       unit_of_measure: validatedData.unit_of_measure,
       category_id: validatedData.category_id ?? null, // category_id is string | null in IService
       tax_rate_id: validatedData.tax_rate_id ?? null, // Corrected: Use tax_rate_id
       description: validatedData.description ?? '', // Add description field with default empty string
+      item_kind: validatedData.item_kind ?? 'service',
+      is_active: validatedData.is_active ?? true,
+      sku: validatedData.sku ?? null,
+      cost: normalizedCost,
+      cost_currency: validatedData.cost_currency ?? 'USD',
+      vendor: validatedData.vendor ?? null,
+      manufacturer: validatedData.manufacturer ?? null,
+      product_category: validatedData.product_category ?? null,
+      is_license: validatedData.is_license ?? false,
+      license_term: validatedData.license_term ?? null,
+      license_billing_cadence: validatedData.license_billing_cadence ?? null,
     };
 
     log.info('[Service.create] Constructed newService object:', newService);
@@ -320,6 +381,18 @@ const Service = {
           'sc.unit_of_measure',
           'sc.category_id',
           'sc.description',
+          'sc.tax_rate_id',
+          'sc.item_kind',
+          'sc.is_active',
+          'sc.sku',
+          knexOrTrx.raw('CAST(sc.cost AS FLOAT) as cost'),
+          'sc.cost_currency',
+          'sc.vendor',
+          'sc.manufacturer',
+          'sc.product_category',
+          'sc.is_license',
+          'sc.license_term',
+          'sc.license_billing_cadence',
           'sc.tenant',
           // Select the service type name from custom type
           'ct.name as service_type_name'
@@ -366,10 +439,33 @@ const Service = {
 
         if (Number.isNaN(numericRate)) {
           delete finalUpdateData.default_rate;
+        } else if (numericRate < 0) {
+          throw new Error('default_rate must be a non-negative number');
         } else {
           finalUpdateData.default_rate = Math.round(numericRate);
         }
       }
+
+      if (finalUpdateData.cost !== undefined && finalUpdateData.cost !== null) {
+        const numericCost =
+          typeof finalUpdateData.cost === 'string'
+            ? parseFloat(finalUpdateData.cost)
+            : finalUpdateData.cost;
+
+        if (Number.isNaN(numericCost)) {
+          delete finalUpdateData.cost;
+        } else if (numericCost < 0) {
+          throw new Error('cost must be a non-negative number');
+        } else {
+          finalUpdateData.cost = Math.round(numericCost);
+        }
+      }
+
+      // Knex `update()` does not reliably ignore `undefined` values; strip them so we don't
+      // generate invalid bindings (optional fields are allowed to be omitted entirely).
+      const cleanedUpdateData = Object.fromEntries(
+        Object.entries(finalUpdateData).filter(([, value]) => value !== undefined)
+      ) as Partial<IService>;
 
       // Ensure updateData conforms to Partial<IService> based on the *new* interface
       // Zod validation could be added here too if needed for partial updates.
@@ -378,7 +474,7 @@ const Service = {
           service_id,
           tenant
         })
-        .update(finalUpdateData) // Use finalUpdateData instead of updateData
+        .update(cleanedUpdateData)
         .returning('*'); // Return all fields to validate against the schema
 
       if (!updatedServiceData) {
@@ -405,6 +501,18 @@ const Service = {
           'sc.unit_of_measure',
           'sc.category_id',
           'sc.description',
+          'sc.tax_rate_id',
+          'sc.item_kind',
+          'sc.is_active',
+          'sc.sku',
+          knexOrTrx.raw('CAST(sc.cost AS FLOAT) as cost'),
+          'sc.cost_currency',
+          'sc.vendor',
+          'sc.manufacturer',
+          'sc.product_category',
+          'sc.is_license',
+          'sc.license_term',
+          'sc.license_billing_cadence',
           'sc.tenant',
           // Select the service type name from custom type
           'ct.name as service_type_name'
@@ -571,6 +679,18 @@ const Service = {
           'sc.unit_of_measure',
           'sc.category_id',
           'sc.description',
+          'sc.tax_rate_id',
+          'sc.item_kind',
+          'sc.is_active',
+          'sc.sku',
+          knexOrTrx.raw('CAST(sc.cost AS FLOAT) as cost'),
+          'sc.cost_currency',
+          'sc.vendor',
+          'sc.manufacturer',
+          'sc.product_category',
+          'sc.is_license',
+          'sc.license_term',
+          'sc.license_billing_cadence',
           'sc.tenant',
           // Select the service type name from custom type
           'ct.name as service_type_name'
@@ -665,6 +785,11 @@ const Service = {
       throw new Error('Tenant context is required for setting service price');
     }
 
+    const normalizedRate = Math.round(Number(rate || 0));
+    if (!Number.isFinite(normalizedRate) || normalizedRate < 0) {
+      throw new Error('rate must be a non-negative number');
+    }
+
     // Check if price already exists
     const existingPrice = await knexOrTrx('service_prices')
       .where({ service_id, currency_code, tenant })
@@ -675,12 +800,12 @@ const Service = {
       const [updatedPrice] = await knexOrTrx('service_prices')
         .where({ price_id: existingPrice.price_id, tenant })
         .update({
-          rate,
+          rate: normalizedRate,
           updated_at: knexOrTrx.fn.now()
         })
         .returning('*');
 
-      log.info(`[Service.setPrice] Updated price for service ${service_id} in ${currency_code}: ${rate}`);
+      log.info(`[Service.setPrice] Updated price for service ${service_id} in ${currency_code}: ${normalizedRate}`);
       return updatedPrice;
     } else {
       // Insert new price
@@ -690,11 +815,11 @@ const Service = {
           tenant,
           service_id,
           currency_code,
-          rate
+          rate: normalizedRate
         })
         .returning('*');
 
-      log.info(`[Service.setPrice] Created price for service ${service_id} in ${currency_code}: ${rate}`);
+      log.info(`[Service.setPrice] Created price for service ${service_id} in ${currency_code}: ${normalizedRate}`);
       return newPrice;
     }
   },
@@ -728,7 +853,13 @@ const Service = {
       tenant,
       service_id,
       currency_code: p.currency_code,
-      rate: p.rate
+      rate: (() => {
+        const normalizedRate = Math.round(Number(p.rate || 0));
+        if (!Number.isFinite(normalizedRate) || normalizedRate < 0) {
+          throw new Error('rate must be a non-negative number');
+        }
+        return normalizedRate;
+      })()
     }));
 
     const insertedPrices = await knexOrTrx('service_prices')

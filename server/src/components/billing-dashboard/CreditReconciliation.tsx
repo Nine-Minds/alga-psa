@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from 'server/src/components/ui/Card';
 import { DatePicker } from 'server/src/components/ui/DatePicker';import { Button } from 'server/src/components/ui/Button';
 import { CustomTabs } from 'server/src/components/ui/CustomTabs';
@@ -151,7 +151,62 @@ const CreditReconciliation: React.FC = () => {
     resolvedCount: 0
   });
   const router = useRouter();
-  
+  const searchParams = useSearchParams();
+  const subtabParam = searchParams?.get('subtab');
+
+  // Map URL slugs to tab base labels (without counts)
+  const subtabToLabelMap: Record<string, string> = {
+    'all': 'All',
+    'open': 'Open',
+    'in-review': 'In Review',
+    'resolved': 'Resolved'
+  };
+
+  // Map tab base labels to URL slugs
+  const labelToSubtabMap: Record<string, string> = {
+    'All': 'all',
+    'Open': 'open',
+    'In Review': 'in-review',
+    'Resolved': 'resolved'
+  };
+
+  // Extract base label from tab label (removes count like "All (5)" -> "All")
+  const extractBaseLabel = (tabLabel: string): string => {
+    const match = tabLabel.match(/^(.+?)\s*\(/);
+    return match ? match[1] : tabLabel;
+  };
+
+  // Find full tab label from base label
+  const getFullTabLabel = (baseLabel: string): string => {
+    switch (baseLabel) {
+      case 'All': return `All (${reports.length})`;
+      case 'Open': return `Open (${openReports.length})`;
+      case 'In Review': return `In Review (${inReviewReports.length})`;
+      case 'Resolved': return `Resolved (${resolvedReports.length})`;
+      default: return `All (${reports.length})`;
+    }
+  };
+
+  // Update URL when tab changes
+  const handleTabChange = (tabLabel: string): void => {
+    const baseLabel = extractBaseLabel(tabLabel);
+    const urlSlug = labelToSubtabMap[baseLabel];
+
+    const currentSearchParams = new URLSearchParams(window.location.search);
+
+    if (urlSlug && urlSlug !== 'all') {
+      currentSearchParams.set('subtab', urlSlug);
+    } else {
+      currentSearchParams.delete('subtab');
+    }
+
+    const newUrl = currentSearchParams.toString()
+      ? `${window.location.pathname}?${currentSearchParams.toString()}`
+      : window.location.pathname;
+
+    window.history.pushState({}, '', newUrl);
+  };
+
   // Create columns with router access
   const columns = createColumns(router);
 
@@ -559,7 +614,8 @@ const CreditReconciliation: React.FC = () => {
                 )
               }
             ]}
-            defaultTab={`All (${reports.length})`}
+            defaultTab={getFullTabLabel(subtabParam ? subtabToLabelMap[subtabParam.toLowerCase()] || 'All' : 'All')}
+            onTabChange={handleTabChange}
           />
         </CardContent>
       </Card>

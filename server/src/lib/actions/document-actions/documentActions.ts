@@ -1,7 +1,7 @@
 'use server'
 
 import { StorageService } from 'server/src/lib/storage/StorageService';
-import { createTenantKnex } from 'server/src/lib/db';
+import { createTenantKnex, runWithTenant } from 'server/src/lib/db';
 import { withTransaction } from '@shared/db';
 import { Knex } from 'knex';
 import { marked } from 'marked';
@@ -170,6 +170,17 @@ export async function deleteDocument(documentId: string, userId: string) {
       // Update any assets that reference this document as notes_document_id
       // Citus doesn't support ON DELETE SET NULL when distribution key is in FK
       await trx('assets')
+        .where({
+          notes_document_id: documentId,
+          tenant
+        })
+        .update({
+          notes_document_id: null
+        });
+
+      // Update any contacts that reference this document as notes_document_id
+      // Citus doesn't support ON DELETE SET NULL when distribution key is in FK
+      await trx('contacts')
         .where({
           notes_document_id: documentId,
           tenant
@@ -2048,29 +2059,28 @@ export async function uploadDocument(
       // Generate previews asynchronously (non-blocking)
       // This happens after the transaction completes and document is returned to user
       // Preview generation failures won't affect the upload success
-      generateDocumentPreviews(document, buffer)
-        .then(async (previewResult) => {
+      // Use runWithTenant to preserve tenant context for the async operation
+      runWithTenant(tenant!, async () => {
+        try {
+          const previewResult = await generateDocumentPreviews(document, buffer);
           if (previewResult.thumbnail_file_id || previewResult.preview_file_id) {
-            try {
-              // Update document with preview file IDs
-              await knex('documents')
-                .where({ document_id: document.document_id, tenant })
-                .update({
-                  thumbnail_file_id: previewResult.thumbnail_file_id,
-                  preview_file_id: previewResult.preview_file_id,
-                  preview_generated_at: previewResult.preview_generated_at,
-                  updated_at: new Date(),
-                });
-              console.log(`[uploadDocument] Preview generation completed for document ${document.document_id}`);
-            } catch (updateError) {
-              console.error(`[uploadDocument] Failed to update document with preview IDs:`, updateError);
-            }
+            // Update document with preview file IDs
+            const { knex: previewKnex } = await createTenantKnex();
+            await previewKnex('documents')
+              .where({ document_id: document.document_id, tenant })
+              .update({
+                thumbnail_file_id: previewResult.thumbnail_file_id,
+                preview_file_id: previewResult.preview_file_id,
+                preview_generated_at: previewResult.preview_generated_at,
+                updated_at: new Date(),
+              });
+            console.log(`[uploadDocument] Preview generation completed for document ${document.document_id}`);
           }
-        })
-        .catch((error) => {
+        } catch (error) {
           console.error(`[uploadDocument] Preview generation failed for document ${document.document_id}:`, error);
           // Don't fail the upload - just log the error
-        });
+        }
+      });
 
       return result;
   } catch (error) {

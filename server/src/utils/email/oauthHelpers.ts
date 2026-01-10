@@ -16,13 +16,13 @@ export interface OAuthState {
 
 /**
  * Generate OAuth authorization URL for Microsoft
- * Using read-only scope: Mail.Read for email access
+ * Using read-only scopes: Mail.Read for personal mailbox, Mail.Read.Shared for shared mailboxes
  */
 export function generateMicrosoftAuthUrl(
   clientId: string,
   redirectUri: string,
   state: OAuthState,
-  scopes: string[] = ['https://graph.microsoft.com/Mail.Read', 'offline_access'],
+  scopes: string[] = ['https://graph.microsoft.com/Mail.Read', 'https://graph.microsoft.com/Mail.Read.Shared', 'offline_access'],
   tenantAuthority: string = 'common'
 ): string {
   const baseUrl = `https://login.microsoftonline.com/common/oauth2/v2.0/authorize`;

@@ -1,11 +1,11 @@
 import React from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from 'server/src/components/ui/Card';
-import { Group, Text, Stack, Button } from '@mantine/core';
+import { Button } from 'server/src/components/ui/Button';
 import { RefreshCw, WifiOff } from 'lucide-react';
-import Spinner from 'server/src/components/ui/Spinner';
 import { RmmCachedData } from '../../../interfaces/asset.interfaces';
 import { StatusBadge } from '../shared/StatusBadge';
 import { formatRelativeDateTime } from '../../../lib/utils/dateTimeUtils';
+import { cn } from 'server/src/lib/utils';
 
 interface RmmVitalsPanelProps {
   data: RmmCachedData | null | undefined;
@@ -15,12 +15,12 @@ interface RmmVitalsPanelProps {
 }
 
 const VitalRow = ({ label, value }: { label: string, value: React.ReactNode }) => (
-  <Group gap="xs" align="flex-start" className="min-h-[24px]">
-    <Text size="sm" fw={700} className="w-32 shrink-0">{label}:</Text>
+  <div className="flex items-start gap-2 min-h-[24px]">
+    <span className="text-sm font-bold text-gray-700 w-32 shrink-0">{label}:</span>
     <div className="flex-1">
-      {typeof value === 'string' ? <Text size="sm">{value}</Text> : value}
+      {typeof value === 'string' ? <span className="text-sm text-gray-900">{value}</span> : value}
     </div>
-  </Group>
+  </div>
 );
 
 export const RmmVitalsPanel: React.FC<RmmVitalsPanelProps> = ({
@@ -50,7 +50,7 @@ export const RmmVitalsPanel: React.FC<RmmVitalsPanelProps> = ({
         <CardContent>
           <div className="flex flex-col items-center justify-center h-48 text-gray-400">
             <WifiOff size={48} className="mb-2" />
-            <Text>Not connected to RMM</Text>
+            <span className="text-sm">Not connected to RMM</span>
           </div>
         </CardContent>
       </Card>
@@ -64,29 +64,34 @@ export const RmmVitalsPanel: React.FC<RmmVitalsPanelProps> = ({
           <CardTitle>RMM Vitals & Connectivity</CardTitle>
           <Button 
             id="refresh-rmm-vitals-btn"
-            variant="subtle" 
-            size="xs" 
-            leftSection={isRefreshing ? <Spinner size="sm" className="scale-75" /> : <RefreshCw size={12} />}
+            variant="ghost" 
+            size="sm" 
+            className="h-8 gap-2 text-primary-600 hover:text-primary-700 hover:bg-primary-50"
             onClick={onRefresh}
             disabled={isRefreshing}
           >
+            {isRefreshing ? (
+              <RefreshCw size={14} className="animate-spin" />
+            ) : (
+              <RefreshCw size={14} />
+            )}
             Refresh
           </Button>
         </div>
       </CardHeader>
       <CardContent>
-        <Stack gap="xs">
+        <div className="flex flex-col gap-2">
           <VitalRow 
             label="Agent Status" 
             value={
-              <Group gap="xs">
-                <Text size="sm">{data.agent_status === 'online' ? 'Online' : 'Offline'}</Text>
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-gray-900">{data.agent_status === 'online' ? 'Online' : 'Offline'}</span>
                 {data.last_check_in && (
-                  <Text size="sm" c="dimmed">
+                  <span className="text-sm text-gray-500">
                     (Last check-in: {formatRelativeDateTime(new Date(data.last_check_in), Intl.DateTimeFormat().resolvedOptions().timeZone)})
-                  </Text>
+                  </span>
                 )}
-              </Group>
+              </div>
             } 
           />
 
@@ -106,7 +111,7 @@ export const RmmVitalsPanel: React.FC<RmmVitalsPanelProps> = ({
             label="Network" 
             value={`LAN IP: ${data.lan_ip || 'N/A'}  |  WAN IP: ${data.wan_ip || 'N/A'}`} 
           />
-        </Stack>
+        </div>
       </CardContent>
     </Card>
   );

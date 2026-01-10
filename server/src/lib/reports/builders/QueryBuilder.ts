@@ -20,8 +20,37 @@ export class QueryBuilder {
     queryDef: QueryDefinition,
     parameters: ReportParameters
   ): Knex.QueryBuilder {
-    
+
     try {
+      // Handle raw SQL mode - when table is 'raw_sql', the SQL is in fields[0]
+      if (queryDef.table === 'raw_sql') {
+        const rawSql = queryDef.fields?.[0];
+        if (!rawSql || typeof rawSql !== 'string') {
+          throw new ReportExecutionError('Raw SQL mode requires SQL query in fields[0]');
+        }
+
+        // Basic security check - only allow SELECT statements
+        const trimmedSql = rawSql.trim().toLowerCase();
+        if (!trimmedSql.startsWith('select')) {
+          throw new ReportExecutionError('Raw SQL mode only allows SELECT statements');
+        }
+
+        // Substitute parameters in the SQL
+        let processedSql = rawSql;
+        for (const [key, value] of Object.entries(parameters)) {
+          const placeholder = `{{${key}}}`;
+          if (processedSql.includes(placeholder)) {
+            // Escape the value to prevent SQL injection
+            const escapedValue = typeof value === 'string'
+              ? `'${value.replace(/'/g, "''")}'`
+              : String(value);
+            processedSql = processedSql.replace(new RegExp(placeholder.replace(/[{}]/g, '\\$&'), 'g'), escapedValue);
+          }
+        }
+
+        return trx.raw(processedSql) as unknown as Knex.QueryBuilder;
+      }
+
       let query = trx(queryDef.table);
       
       // Add joins
@@ -41,7 +70,14 @@ export class QueryBuilder {
           );
           query = query.select(trx.raw(aggregationField));
         } else {
-          query = query.select(queryDef.fields);
+          // Process fields - wrap SQL expressions with raw()
+          const selectFields = queryDef.fields.map(field => {
+            if (this.isSqlExpression(field)) {
+              return trx.raw(field);
+            }
+            return field;
+          });
+          query = query.select(selectFields);
         }
       } else if (queryDef.aggregation) {
         // Handle aggregation queries without specific fields
@@ -132,9 +168,20 @@ export class QueryBuilder {
     filter: FilterDefinition,
     parameters: ReportParameters
   ): Knex.QueryBuilder {
-    
+
     const value = this.resolveFilterValue(filter.value, parameters);
-    
+
+    // Skip filters with empty/null/undefined values (except for is_null/is_not_null operators)
+    if (filter.operator !== 'is_null' && filter.operator !== 'is_not_null') {
+      if (value === null || value === undefined || value === '') {
+        return query; // Skip this filter
+      }
+      // Also skip empty arrays for in/not_in operators
+      if (Array.isArray(value) && value.length === 0) {
+        return query;
+      }
+    }
+
     switch (filter.operator) {
       case 'eq':
         return query.where(filter.field, value);
@@ -207,19 +254,50 @@ export class QueryBuilder {
   private static resolveFilterValue(value: any, parameters: ReportParameters): any {
     if (typeof value === 'string' && value.startsWith('{{') && value.endsWith('}}')) {
       const paramName = value.slice(2, -2);
-      
+
       if (!(paramName in parameters)) {
         throw new ReportExecutionError(
           `Parameter placeholder '${paramName}' not found in parameters`
         );
       }
-      
+
       return parameters[paramName];
     }
-    
+
     return value;
   }
-  
+
+  /**
+   * Check if a field string contains SQL expressions that need raw() wrapping.
+   * Detects aggregate functions, arithmetic, and aliasing.
+   */
+  private static isSqlExpression(field: string): boolean {
+    const lowerField = field.toLowerCase();
+
+    // Contains SQL function calls (parentheses)
+    if (field.includes('(') && field.includes(')')) {
+      return true;
+    }
+
+    // Contains AS keyword for aliasing
+    if (lowerField.includes(' as ')) {
+      return true;
+    }
+
+    // Contains arithmetic operators
+    if (/[+\-*/]/.test(field)) {
+      return true;
+    }
+
+    // Contains common aggregate functions
+    const aggregates = ['count', 'sum', 'avg', 'min', 'max', 'coalesce', 'distinct'];
+    if (aggregates.some(agg => lowerField.includes(agg))) {
+      return true;
+    }
+
+    return false;
+  }
+
   /**
    * Validate query definition before building
    */

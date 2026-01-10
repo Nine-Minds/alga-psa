@@ -113,6 +113,77 @@ export async function canCreateNextBillingCycle(clientId: string): Promise<{
   };
 }
 
+export async function getNextBillingCycleStatusForClients(
+  clientIds: string[]
+): Promise<{
+  [clientId: string]: {
+    canCreate: boolean;
+    isEarly: boolean;
+    periodEndDate?: string;
+  };
+}> {
+  const session = await getSession();
+  if (!session?.user?.id) {
+    throw new Error('Unauthorized');
+  }
+
+  if (clientIds.length === 0) {
+    return {};
+  }
+
+  const { knex: conn, tenant } = await createTenantKnex();
+  const now = new Date().toISOString().split('T')[0] + 'T00:00:00Z';
+
+  const lastCycles = await withTransaction(conn, async (trx: Knex.Transaction) => {
+    return await trx('client_billing_cycles')
+      .whereIn('client_id', clientIds)
+      .andWhere({
+        tenant,
+        is_active: true
+      })
+      .orderBy([
+        { column: 'client_id', order: 'asc' },
+        { column: 'effective_date', order: 'desc' }
+      ])
+      .select('client_id', 'period_end_date');
+  });
+
+  const statusMap: {
+    [clientId: string]: {
+      canCreate: boolean;
+      isEarly: boolean;
+      periodEndDate?: string;
+    };
+  } = {};
+
+  clientIds.forEach(clientId => {
+    statusMap[clientId] = {
+      canCreate: true,
+      isEarly: false
+    };
+  });
+
+  for (const cycle of lastCycles) {
+    if (!cycle?.client_id || statusMap[cycle.client_id]?.periodEndDate) {
+      continue;
+    }
+
+    if (!cycle.period_end_date) {
+      statusMap[cycle.client_id] = { canCreate: true, isEarly: false };
+      continue;
+    }
+
+    const isEarly = new Date(cycle.period_end_date) > new Date(now);
+    statusMap[cycle.client_id] = {
+      canCreate: true,
+      isEarly,
+      periodEndDate: isEarly ? cycle.period_end_date : undefined
+    };
+  }
+
+  return statusMap;
+}
+
 export async function createNextBillingCycle(
   clientId: string,
   effectiveDate?: string

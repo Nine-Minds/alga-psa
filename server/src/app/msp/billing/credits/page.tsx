@@ -1,12 +1,12 @@
 import { Suspense } from 'react';
 import AddCreditButton from './AddCreditButton';
 import BackButton from './BackButton';
+import { CreditsTabs } from './CreditsTabs';
 import { listCredits } from './actions';
 import { getCreditExpirationSettings } from './settings';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from 'server/src/components/ui/Card';
 import { Button } from 'server/src/components/ui/Button';
 import { Skeleton } from 'server/src/components/ui/Skeleton';
-import { CustomTabs } from 'server/src/components/ui/CustomTabs';
 import { DataTable } from 'server/src/components/ui/DataTable';
 import { ICreditTracking, ICreditExpirationSettings } from 'server/src/interfaces/billing.interfaces';
 import { formatCurrency } from 'server/src/lib/utils/formatters';
@@ -267,7 +267,7 @@ export default async function CreditsPage({ params }: { params: Promise<{ client
         </CardHeader>
         <CardContent>
           <CreditExpirationSettings clientId={clientId} />
-          <CustomTabs tabs={tabs} defaultTab="Active Credits" />
+          <CreditsTabs tabs={tabs} />
         </CardContent>
       </Card>
       

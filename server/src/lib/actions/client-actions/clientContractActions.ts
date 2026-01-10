@@ -38,6 +38,31 @@ export async function getClientContracts(clientId: string): Promise<IClientContr
 }
 
 /**
+ * Get active contracts for a list of clients.
+ */
+export async function getActiveClientContractsByClientIds(clientIds: string[]): Promise<IClientContract[]> {
+  const session = await getSession();
+  if (!session?.user?.id) {
+    throw new Error('Unauthorized');
+  }
+
+  try {
+    const { tenant } = await createTenantKnex();
+    if (!tenant) {
+      throw new Error("tenant context not found");
+    }
+
+    return await ClientContract.getActiveByClientIds(clientIds);
+  } catch (error) {
+    console.error('Error fetching contracts for clients:', error);
+    if (error instanceof Error) {
+      throw error;
+    }
+    throw new Error(`Failed to fetch client contracts: ${error}`);
+  }
+}
+
+/**
  * Get a specific client contract by ID.
  */
 export async function getClientContractById(clientContractId: string): Promise<IClientContract | null> {

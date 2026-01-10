@@ -1,6 +1,5 @@
 import React from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from 'server/src/components/ui/Card';
-import { Stack, Group, Text } from '@mantine/core';
 import { AssetSummaryMetrics, Asset } from '../../../interfaces/asset.interfaces';
 
 interface SecurityPatchingPanelProps {
@@ -10,12 +9,12 @@ interface SecurityPatchingPanelProps {
 }
 
 const SecurityRow = ({ label, value }: { label: string, value: React.ReactNode }) => (
-  <Group gap="xs" align="flex-start" className="min-h-[24px]">
-    <Text size="sm" fw={700} className="w-32 shrink-0">{label}:</Text>
+  <div className="flex items-start gap-2 min-h-[24px]">
+    <span className="text-sm font-bold text-gray-700 w-32 shrink-0">{label}:</span>
     <div className="flex-1">
-      {typeof value === 'string' ? <Text size="sm">{value}</Text> : value}
+      {typeof value === 'string' ? <span className="text-sm text-gray-900">{value}</span> : value}
     </div>
-  </Group>
+  </div>
 );
 
 export const SecurityPatchingPanel: React.FC<SecurityPatchingPanelProps> = ({
@@ -40,7 +39,7 @@ export const SecurityPatchingPanel: React.FC<SecurityPatchingPanelProps> = ({
         <CardTitle>Security & Patching</CardTitle>
       </CardHeader>
       <CardContent>
-        <Stack gap="xs">
+        <div className="flex flex-col gap-2">
           <SecurityRow 
             label="OS Version" 
             value={osVersion} 
@@ -49,13 +48,13 @@ export const SecurityPatchingPanel: React.FC<SecurityPatchingPanelProps> = ({
           <SecurityRow 
             label="Antivirus" 
             value={
-              <Group gap="xs">
-                <Text size="sm">{antivirusProduct}</Text>
-                <Text size="sm" c={isAvActive ? 'green' : 'red'} fw={600}>
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-sm text-gray-900">{antivirusProduct}</span>
+                <span className={`text-sm font-semibold ${isAvActive ? 'text-emerald-600' : 'text-red-600'}`}>
                   [{isAvActive ? '✔ Installed & Running' : 'Inactive'}]
-                </Text>
-                <Text size="sm" c="dimmed">| Last Scan: Today, 3:00 AM</Text>
-              </Group>
+                </span>
+                <span className="text-sm text-gray-400">| Last Scan: Today, 3:00 AM</span>
+              </div>
             } 
           />
 
@@ -63,14 +62,14 @@ export const SecurityPatchingPanel: React.FC<SecurityPatchingPanelProps> = ({
             label="Patch Status" 
             value={
               metrics?.security_issues && metrics.security_issues.length > 0 ? (
-                <Group gap="xs">
-                   <Text size="sm" c={metrics.security_status === 'critical' ? 'red' : 'yellow'} fw={600}>
+                <div className="flex flex-wrap items-center gap-2">
+                   <span className={`text-sm font-semibold ${metrics.security_status === 'critical' ? 'text-red-600' : 'text-amber-600'}`}>
                      [{metrics.security_status === 'critical' ? 'Critical' : 'At Risk'}]
-                   </Text>
-                   <Text size="sm">- {metrics.security_issues.length} Critical OS Patches missing.</Text>
-                </Group>
+                   </span>
+                   <span className="text-sm text-gray-700">- {metrics.security_issues.length} Critical OS Patches missing.</span>
+                </div>
               ) : (
-                <Text size="sm" c="green" fw={600}>[✔ Up to Date]</Text>
+                <span className="text-sm text-emerald-600 font-semibold">[✔ Up to Date]</span>
               )
             } 
           />
@@ -78,10 +77,10 @@ export const SecurityPatchingPanel: React.FC<SecurityPatchingPanelProps> = ({
           <SecurityRow 
             label="Firewall" 
             value={
-              <Text size="sm" c="green" fw={600}>[✔ On]</Text>
+              <span className="text-sm text-emerald-600 font-semibold">[✔ On]</span>
             } 
           />
-        </Stack>
+        </div>
       </CardContent>
     </Card>
   );

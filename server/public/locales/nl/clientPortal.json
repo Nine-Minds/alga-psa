@@ -176,6 +176,12 @@
       "edited": "Bewerkt",
       "noComments": "Nog geen reacties"
     },
+    "responseState": {
+      "awaitingYourResponse": "Wacht op uw reactie",
+      "awaitingSupportResponse": "Wacht op reactie van support",
+      "awaitingYourResponseTooltip": "Support wacht op uw reactie",
+      "awaitingSupportResponseTooltip": "Uw reactie is ontvangen. Support zal spoedig reageren."
+    },
     "documents": {
       "title": "Documenten",
       "noDocuments": "Geen documenten toegevoegd",
@@ -303,11 +309,51 @@
     "onHold": "Gepauzeerd",
     "timeline": "Tijdlijn",
     "milestones": "Mijlpalen",
-    "tasks": "Taken",
-    "documents": "Documenten",
+    "phasesAndTasks": "Fasen & Taken",
+    "kanbanView": "Kanban",
+    "listView": "Lijst",
+    "task": "taak",
+    "tasks": {
+      "title": "Taken",
+      "noTasks": "Geen taken om weer te geven",
+      "taskName": "Naam",
+      "dueDate": "Vervaldatum",
+      "status": "Status",
+      "assignedTo": "Toegewezen aan",
+      "assignee": "Verantwoordelijke",
+      "estimatedHours": "Geschatte uren",
+      "estHours": "Gesch. uren",
+      "hoursLogged": "Geregistreerde uren",
+      "checklist": "Checklist",
+      "dependencies": "Afh.",
+      "priority": "Prioriteit",
+      "services": "Diensten",
+      "attachments": "Bijlagen"
+    },
+    "phases": {
+      "title": "Projectfasen",
+      "completion": "Voltooid",
+      "noPhases": "Geen fasen om weer te geven"
+    },
+    "documents": {
+      "title": "Bijlagen",
+      "upload": "Uploaden",
+      "noDocuments": "Geen documenten bijgevoegd",
+      "uploadSuccess": "Document succesvol geüpload",
+      "uploadError": "Kan document niet uploaden",
+      "downloadError": "Kan document niet downloaden",
+      "dragDrop": "Sleep een bestand hierheen of klik om te selecteren",
+      "maxSize": "Maximale bestandsgrootte: {{size}}MB",
+      "file": "bestand",
+      "files": "bestanden",
+      "uploadHint": "Upload bestanden om te delen met deze taak",
+      "download": "Downloaden",
+      "view": "Bekijken"
+    },
     "team": "Teamleden",
     "budget": "Budget",
     "fields": {
+      "projectNumber": "Project #",
       "projectName": "Projectnaam",
       "reference": "Referentie",
       "name": "Projectnaam",
@@ -330,8 +376,12 @@
     "messages": {
       "noProjects": "Geen projecten gevonden",
       "loadingProjects": "Projecten worden geladen...",
-      "noDescription": "Geen beschrijving opgegeven"
+      "noDescription": "Geen beschrijving opgegeven",
+      "noPhasesOrTasks": "Geen fasen of taken om weer te geven",
+      "loadError": "Kan projectdetails niet laden"
     },
+    "backToProjects": "Terug naar Projecten",
+    "invalidProjectData": "Ongeldige projectgegevens",
     "viewDetails": "Details bekijken →",
     "details": "Details",
     "startDate": "Startdatum",

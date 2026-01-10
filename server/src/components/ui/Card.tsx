@@ -17,7 +17,7 @@ export function Card({
   const cardContent = (
     <div
       ref={ref}
-      className={`rounded-lg border bg-card text-card-foreground shadow-sm ${className}`}
+      className={`rounded-lg border bg-card text-card-foreground shadow-sm ${className ?? ''}`}
       id={id}
       data-automation-id={dataAutomationId}
       data-automation-type={dataAutomationType}

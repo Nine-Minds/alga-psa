@@ -5,7 +5,7 @@ import { Label } from 'server/src/components/ui/Label';
 import { Input } from 'server/src/components/ui/Input';
 import { TextArea } from 'server/src/components/ui/TextArea';
 import { Alert, AlertDescription, AlertTitle } from 'server/src/components/ui/Alert';
-import { FileText, Tag, FolderTree } from 'lucide-react';
+import { FileText, FolderTree } from 'lucide-react';
 import { TemplateWizardData } from '../TemplateCreationWizard';
 
 interface TemplateBasicsStepProps {
@@ -73,7 +73,7 @@ export function TemplateBasicsStep({
         <AlertTitle>What's Next?</AlertTitle>
         <AlertDescription>
           After defining the basics, you'll set up status columns, add phases, create tasks,
-          and review your template before saving.
+          configure client portal visibility, and review your template before saving.
         </AlertDescription>
       </Alert>
     </div>

@@ -18,7 +18,8 @@ import {
 } from 'server/src/lib/actions/client-portal-actions/client-tickets';
 import { formatDistanceToNow, format } from 'date-fns';
 import { getDateFnsLocale } from 'server/src/lib/utils/dateFnsLocale';
-import { ITicketWithDetails } from 'server/src/interfaces/ticket.interfaces';
+import { ITicketWithDetails, TicketResponseState } from 'server/src/interfaces/ticket.interfaces';
+import { ResponseStateBadge } from 'server/src/components/tickets/ResponseStateBadge';
 import { IComment } from 'server/src/interfaces/comment.interface';
 import { IDocument } from 'server/src/interfaces/document.interface';
 import TicketConversation from 'server/src/components/tickets/ticket/TicketConversation';
@@ -393,27 +394,43 @@ export function TicketDetails({
               <label className="font-bold text-gray-900 block mb-2">
                 {t('tickets.fields.status', 'Status')}
               </label>
-              <CustomSelect
-                value={ticket.status_id || ''}
-                options={statusOptions.map((status) => ({
-                  value: status.status_id || '',
-                  label: status.name || ''
-                }))}
-                onValueChange={(value) => {
-                  if (ticket.status_id !== value) {
-                    const selectedStatus = statusOptions.find(s => s.status_id === value);
-                    if (selectedStatus) {
-                      setTicketToUpdateStatus({
-                        ticketId: ticket.ticket_id!,
-                        newStatusId: selectedStatus.status_id!,
-                        currentStatusName: ticket.status_name || '',
-                        newStatusName: selectedStatus.name || ''
-                      });
+              <div className="flex items-center gap-3">
+                <CustomSelect
+                  value={ticket.status_id || ''}
+                  options={statusOptions.map((status) => ({
+                    value: status.status_id || '',
+                    label: status.name || ''
+                  }))}
+                  onValueChange={(value) => {
+                    if (ticket.status_id !== value) {
+                      const selectedStatus = statusOptions.find(s => s.status_id === value);
+                      if (selectedStatus) {
+                        setTicketToUpdateStatus({
+                          ticketId: ticket.ticket_id!,
+                          newStatusId: selectedStatus.status_id!,
+                          currentStatusName: ticket.status_name || '',
+                          newStatusName: selectedStatus.name || ''
+                        });
+                      }
                     }
-                  }
-                }}
-                className="!w-fit"
-              />
+                  }}
+                  className="!w-fit"
+                />
+                {/* Response State Badge - client-friendly wording (F026-F030) */}
+                {(ticket as any).response_state && (
+                  <ResponseStateBadge
+                    responseState={(ticket as any).response_state as TicketResponseState}
+                    isClientPortal={true}
+                    size="md"
+                    labels={{
+                      awaitingClient: t('tickets.responseState.awaitingYourResponse', 'Awaiting Your Response'),
+                      awaitingInternal: t('tickets.responseState.awaitingSupportResponse', 'Awaiting Support Response'),
+                      awaitingClientTooltip: t('tickets.responseState.awaitingYourResponseTooltip', 'Support is waiting for your response'),
+                      awaitingInternalTooltip: t('tickets.responseState.awaitingSupportResponseTooltip', 'Your response has been received. Support will respond soon.'),
+                    }}
+                  />
+                )}
+              </div>
             </div>
 
             {/* Assigned To */}
@@ -454,6 +471,42 @@ export function TicketDetails({
                   {ticket.priority_name || t('tickets.priority.unknown', 'Unknown Priority')}
                 </span>
               </div>
+            </div>
+
+            {/* Due Date */}
+            <div>
+              <label className="font-bold text-gray-900 block mb-2">
+                {t('tickets.fields.dueDate', 'Due Date')}
+              </label>
+              {ticket.due_date ? (() => {
+                const dueDate = new Date(ticket.due_date);
+                const now = new Date();
+                const hoursUntilDue = (dueDate.getTime() - now.getTime()) / (1000 * 60 * 60);
+
+                // Check if time is midnight (00:00) - show date only
+                const isMidnight = dueDate.getHours() === 0 && dueDate.getMinutes() === 0;
+                const displayFormat = isMidnight ? 'MMM d, yyyy' : 'MMM d, yyyy h:mm a';
+
+                // Determine styling based on due date status
+                let textColorClass = 'text-gray-700';
+                let bgColorClass = '';
+
+                if (hoursUntilDue < 0) {
+                  textColorClass = 'text-red-700';
+                  bgColorClass = 'bg-red-50';
+                } else if (hoursUntilDue <= 24) {
+                  textColorClass = 'text-orange-700';
+                  bgColorClass = 'bg-orange-50';
+                }
+
+                return (
+                  <span className={`text-sm inline-block ${textColorClass} ${bgColorClass ? `${bgColorClass} px-2 py-0.5 rounded-full` : ''}`}>
+                    {format(dueDate, displayFormat)}
+                  </span>
+                );
+              })() : (
+                <span className="text-sm text-gray-500">-</span>
+              )}
             </div>
 
             {/* Description */}

@@ -10,6 +10,7 @@ export const EventTypeEnum = z.enum([
   'TICKET_COMMENT_ADDED',
   'TICKET_COMMENT_UPDATED',
   'TICKET_DELETED',
+  'TICKET_RESPONSE_STATE_CHANGED',
   'PROJECT_CREATED',
   'PROJECT_UPDATED',
   'PROJECT_CLOSED',
@@ -82,6 +83,7 @@ export const TicketEventPayloadSchema = BasePayloadSchema.extend({
     content: z.string(),
     author: z.string(),
     isInternal: z.boolean().optional(),
+    authorType: z.enum(['internal', 'client', 'unknown']).optional(), // F039: Added author_type to event payload
   }).optional(),
 });
 
@@ -276,6 +278,15 @@ export const MessageEventPayloadSchema = BasePayloadSchema.extend({
   senderName: z.string(),
 });
 
+// Ticket response state change event payload schema
+export const TicketResponseStateChangedPayloadSchema = BasePayloadSchema.extend({
+  ticketId: z.string().uuid(),
+  userId: z.string().uuid().nullable(), // May be null for client-triggered changes
+  previousState: z.enum(['awaiting_client', 'awaiting_internal']).nullable(),
+  newState: z.enum(['awaiting_client', 'awaiting_internal']).nullable(),
+  trigger: z.enum(['comment', 'manual', 'close']),
+});
+
 // Appointment request event payload schema
 export const AppointmentRequestEventPayloadSchema = BasePayloadSchema.extend({
   appointmentRequestId: z.string().uuid(),
@@ -313,6 +324,7 @@ export const EventPayloadSchemas = {
   TICKET_ADDITIONAL_AGENT_ASSIGNED: TicketAdditionalAgentPayloadSchema,
   TICKET_COMMENT_ADDED: TicketEventPayloadSchema,
   TICKET_COMMENT_UPDATED: TicketCommentUpdatedPayloadSchema,
+  TICKET_RESPONSE_STATE_CHANGED: TicketResponseStateChangedPayloadSchema,
   PROJECT_CREATED: ProjectEventPayloadSchema,
   PROJECT_UPDATED: ProjectEventPayloadSchema,
   PROJECT_CLOSED: ProjectClosedPayloadSchema,
@@ -374,6 +386,7 @@ export type TicketAssignedEvent = z.infer<typeof EventSchemas.TICKET_ASSIGNED>;
 export type TicketAdditionalAgentAssignedEvent = z.infer<typeof EventSchemas.TICKET_ADDITIONAL_AGENT_ASSIGNED>;
 export type TicketCommentAddedEvent = z.infer<typeof EventSchemas.TICKET_COMMENT_ADDED>;
 export type TicketCommentUpdatedEvent = z.infer<typeof EventSchemas.TICKET_COMMENT_UPDATED>;
+export type TicketResponseStateChangedEvent = z.infer<typeof EventSchemas.TICKET_RESPONSE_STATE_CHANGED>;
 export type ProjectAssignedEvent = z.infer<typeof EventSchemas.PROJECT_ASSIGNED>;
 export type ProjectTaskAssignedEvent = z.infer<typeof EventSchemas.PROJECT_TASK_ASSIGNED>;
 export type TaskCommentAddedEvent = z.infer<typeof EventSchemas.TASK_COMMENT_ADDED>;
@@ -406,6 +419,7 @@ export type Event =
   | TicketAdditionalAgentAssignedEvent
   | TicketCommentAddedEvent
   | TicketCommentUpdatedEvent
+  | TicketResponseStateChangedEvent
   | ProjectCreatedEvent
   | ProjectUpdatedEvent
   | ProjectClosedEvent

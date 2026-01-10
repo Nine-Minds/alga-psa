@@ -39,6 +39,18 @@ export function DatePicker({
 }: DatePickerProps) {
   const [open, setOpen] = React.useState(false);
 
+  const handleClear = React.useCallback(() => {
+    onChange(undefined);
+    setOpen(false);
+  }, [onChange]);
+
+  const handleKeyDown = React.useCallback((e: React.KeyboardEvent) => {
+    if ((e.key === 'Backspace' || e.key === 'Delete') && value && !disabled) {
+      e.preventDefault();
+      onChange(undefined);
+    }
+  }, [value, disabled, onChange]);
+
   // Register with UI reflection system if id is provided
   const { automationIdProps, updateMetadata } = useAutomationIdAndRegister<DatePickerComponent>({
     type: 'datePicker',
@@ -67,6 +79,7 @@ export function DatePicker({
           {...automationIdProps}
           disabled={disabled}
           aria-label={label || placeholder}
+          onKeyDown={handleKeyDown}
           className={`
             flex h-10 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm
             file:border-0 file:bg-transparent file:text-sm file:font-medium
@@ -81,19 +94,27 @@ export function DatePicker({
             {value ? format(value, 'MM/dd/yyyy') : placeholder}
           </span>
           {clearable && value && !disabled && (
-            <button
-              type="button"
+            <span
+              role="button"
+              tabIndex={0}
               onClick={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
                 onChange(undefined);
               }}
-              className="mr-2 text-gray-400 hover:text-gray-600"
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  onChange(undefined);
+                }
+              }}
+              className="mr-2 text-gray-400 hover:text-gray-600 cursor-pointer"
             >
               <X className="h-4 w-4" />
-            </button>
+            </span>
           )}
-          <CalendarIcon className="h-4 w-4 opacity-50" />
+          <CalendarIcon className="h-4 w-4 ml-2 opacity-50 shrink-0" />
         </Popover.Trigger>
 
         <Popover.Portal>
@@ -114,6 +135,7 @@ export function DatePicker({
                     onChange(undefined);
                   }
                 }}
+                onClear={clearable ? handleClear : undefined}
                 defaultMonth={value}
                 fromDate={new Date(new Date().getFullYear(), new Date().getMonth(), 1)}
               />

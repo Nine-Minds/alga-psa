@@ -1,0 +1,1847 @@
+[
+  {
+    "id": "T001",
+    "description": "PRD: Plan folder exists with PRD/features/tests/scratchpad",
+    "implemented": true,
+    "featureIds": [
+      "F001",
+      "F002"
+    ]
+  },
+  {
+    "id": "T002",
+    "description": "Docs: PRD describes synthetic HTTP execution payload and remap policy",
+    "implemented": true,
+    "featureIds": [
+      "F003",
+      "F004"
+    ]
+  },
+  {
+    "id": "T003",
+    "description": "DB: Migration creates extension_api_endpoint table",
+    "implemented": true,
+    "featureIds": [
+      "F006"
+    ]
+  },
+  {
+    "id": "T004",
+    "description": "DB: Unique constraint enforced for (version_id, method, path)",
+    "implemented": true,
+    "featureIds": [
+      "F006"
+    ]
+  },
+  {
+    "id": "T005",
+    "description": "DB: Migration creates tenant_extension_schedule table",
+    "implemented": true,
+    "featureIds": [
+      "F007"
+    ]
+  },
+  {
+    "id": "T006",
+    "description": "DB: Indexes exist for tenant_id/install_id schedule queries",
+    "implemented": true,
+    "featureIds": [
+      "F008"
+    ]
+  },
+  {
+    "id": "T007",
+    "description": "DB: Schedule last_run fields persist and are nullable",
+    "implemented": true,
+    "featureIds": [
+      "F009"
+    ]
+  },
+  {
+    "id": "T008",
+    "description": "Registry: Ingest endpoints writes rows into extension_api_endpoint",
+    "implemented": true,
+    "featureIds": [
+      "F016"
+    ]
+  },
+  {
+    "id": "T009",
+    "description": "Registry: Endpoint method normalization to uppercase",
+    "implemented": true,
+    "featureIds": [
+      "F017"
+    ]
+  },
+  {
+    "id": "T010",
+    "description": "Registry: Endpoint path normalization ensures leading /",
+    "implemented": true,
+    "featureIds": [
+      "F017"
+    ]
+  },
+  {
+    "id": "T011",
+    "description": "Registry: Duplicate endpoints by (method,path) are de-duped on ingest",
+    "implemented": true,
+    "featureIds": [
+      "F018"
+    ]
+  },
+  {
+    "id": "T012",
+    "description": "Registry: Backfill is idempotent (safe to re-run)",
+    "implemented": true,
+    "featureIds": [
+      "F019",
+      "F124"
+    ]
+  },
+  {
+    "id": "T013",
+    "description": "API: Endpoint list returns only endpoints for installed version",
+    "implemented": true,
+    "featureIds": [
+      "F023",
+      "F024"
+    ]
+  },
+  {
+    "id": "T014",
+    "description": "API: Endpoint list is tenant-scoped and rejects cross-tenant access",
+    "implemented": true,
+    "featureIds": [
+      "F024",
+      "F071"
+    ]
+  },
+  {
+    "id": "T015",
+    "description": "API: Create schedule with valid endpoint_id succeeds",
+    "implemented": true,
+    "featureIds": [
+      "F027"
+    ]
+  },
+  {
+    "id": "T016",
+    "description": "API: Create schedule rejects endpoint_id not belonging to installed version",
+    "implemented": true,
+    "featureIds": [
+      "F032"
+    ]
+  },
+  {
+    "id": "T017",
+    "description": "API: Create schedule rejects invalid cron string",
+    "implemented": true,
+    "featureIds": [
+      "F031",
+      "F095"
+    ]
+  },
+  {
+    "id": "T018",
+    "description": "API: Create schedule rejects invalid timezone",
+    "implemented": true,
+    "featureIds": [
+      "F031",
+      "F096"
+    ]
+  },
+  {
+    "id": "T019",
+    "description": "API: Create schedule enforces max schedules per install",
+    "implemented": true,
+    "featureIds": [
+      "F033"
+    ]
+  },
+  {
+    "id": "T020",
+    "description": "API: Create schedule enforces min frequency guardrails",
+    "implemented": true,
+    "featureIds": [
+      "F034"
+    ]
+  },
+  {
+    "id": "T021",
+    "description": "API: List schedules returns schedules for the extension install",
+    "implemented": true,
+    "featureIds": [
+      "F026"
+    ]
+  },
+  {
+    "id": "T022",
+    "description": "API: Update schedule cron/timezone persists changes",
+    "implemented": true,
+    "featureIds": [
+      "F028"
+    ]
+  },
+  {
+    "id": "T023",
+    "description": "API: Update schedule can change endpoint_id to another endpoint in same version",
+    "implemented": true,
+    "featureIds": [
+      "F028",
+      "F032"
+    ]
+  },
+  {
+    "id": "T024",
+    "description": "API: Delete schedule removes DB row and deletes underlying runner schedule",
+    "implemented": true,
+    "featureIds": [
+      "F029",
+      "F069"
+    ]
+  },
+  {
+    "id": "T025",
+    "description": "API: Delete schedule is idempotent when runner schedule handle missing",
+    "implemented": true,
+    "featureIds": [
+      "F135"
+    ]
+  },
+  {
+    "id": "T026",
+    "description": "API: Run-now triggers an immediate invocation",
+    "implemented": true,
+    "featureIds": [
+      "F030",
+      "F048"
+    ]
+  },
+  {
+    "id": "T027",
+    "description": "API: Run-now rate limit is enforced",
+    "implemented": true,
+    "featureIds": [
+      "F035"
+    ]
+  },
+  {
+    "id": "T028",
+    "description": "Jobs: scheduleRecurringJob creates Temporal schedule in EE",
+    "implemented": true,
+    "featureIds": [
+      "F044"
+    ]
+  },
+  {
+    "id": "T029",
+    "description": "Jobs: scheduleRecurringJob uses deterministic schedule id/singletonKey",
+    "implemented": true,
+    "featureIds": [
+      "F045",
+      "F154"
+    ]
+  },
+  {
+    "id": "T030",
+    "description": "Jobs: Enable/disable toggles schedule execution without losing config",
+    "implemented": true,
+    "featureIds": [
+      "F047",
+      "F067"
+    ]
+  },
+  {
+    "id": "T031",
+    "description": "Runner invoke: Loads install config by install_id and includes providers/secret envelope",
+    "implemented": true,
+    "featureIds": [
+      "F050"
+    ]
+  },
+  {
+    "id": "T032",
+    "description": "Runner invoke: Builds context with schedule_id and trigger metadata",
+    "implemented": true,
+    "featureIds": [
+      "F051",
+      "F112"
+    ]
+  },
+  {
+    "id": "T033",
+    "description": "Runner invoke: Serializes payload_json into http.body_b64 as JSON",
+    "implemented": true,
+    "featureIds": [
+      "F052"
+    ]
+  },
+  {
+    "id": "T034",
+    "description": "Runner invoke: Enforces timeout and size limits",
+    "implemented": true,
+    "featureIds": [
+      "F054",
+      "F150",
+      "F151"
+    ]
+  },
+  {
+    "id": "T035",
+    "description": "Execution: Default no-overlap prevents concurrent runs of same schedule",
+    "implemented": true,
+    "featureIds": [
+      "F056",
+      "F125"
+    ]
+  },
+  {
+    "id": "T036",
+    "description": "Execution: Run-now uses idempotency key to dedupe accidental repeats",
+    "implemented": true,
+    "featureIds": [
+      "F057"
+    ]
+  },
+  {
+    "id": "T037",
+    "description": "Execution: Retry policy applies and attempts are recorded",
+    "implemented": false,
+    "featureIds": [
+      "F058"
+    ]
+  },
+  {
+    "id": "T038",
+    "description": "Remap: Updating install to new version remaps schedules when endpoints exist",
+    "implemented": true,
+    "featureIds": [
+      "F060"
+    ]
+  },
+  {
+    "id": "T039",
+    "description": "Remap: Updating install to new version blocks when any endpoint missing",
+    "implemented": true,
+    "featureIds": [
+      "F061",
+      "F062"
+    ]
+  },
+  {
+    "id": "T040",
+    "description": "Remap: Override action disables affected schedules and proceeds (if enabled)",
+    "implemented": true,
+    "featureIds": [
+      "F063",
+      "F168"
+    ]
+  },
+  {
+    "id": "T041",
+    "description": "Remap: Remap is transactional with install update",
+    "implemented": true,
+    "featureIds": [
+      "F065"
+    ]
+  },
+  {
+    "id": "T042",
+    "description": "Cleanup: Uninstall deletes schedules and cancels underlying runner schedules",
+    "implemented": true,
+    "featureIds": [
+      "F066",
+      "F165"
+    ]
+  },
+  {
+    "id": "T043",
+    "description": "Cleanup: Install disable pauses schedules",
+    "implemented": true,
+    "featureIds": [
+      "F067",
+      "F116"
+    ]
+  },
+  {
+    "id": "T044",
+    "description": "Security: Schedule CRUD rejects user without extension admin permission",
+    "implemented": true,
+    "featureIds": [
+      "F071",
+      "F037"
+    ]
+  },
+  {
+    "id": "T045",
+    "description": "Security: Scheduled invocation does not include end-user user context by default",
+    "implemented": true,
+    "featureIds": [
+      "F111"
+    ]
+  },
+  {
+    "id": "T046",
+    "description": "Observability: Schedule run writes execution log with schedule_id",
+    "implemented": false,
+    "featureIds": [
+      "F076",
+      "F141"
+    ]
+  },
+  {
+    "id": "T047",
+    "description": "Observability: Schedule last_run fields update after success",
+    "implemented": true,
+    "featureIds": [
+      "F077"
+    ]
+  },
+  {
+    "id": "T048",
+    "description": "Observability: Schedule last_run fields update after failure with last_error",
+    "implemented": true,
+    "featureIds": [
+      "F077",
+      "F134"
+    ]
+  },
+  {
+    "id": "T049",
+    "description": "Observability: Metrics emitted for scheduled invocations",
+    "implemented": false,
+    "featureIds": [
+      "F078"
+    ]
+  },
+  {
+    "id": "T050",
+    "description": "UI: Schedules section renders and can load endpoints + schedules",
+    "implemented": true,
+    "featureIds": [
+      "F081",
+      "F100"
+    ]
+  },
+  {
+    "id": "T051",
+    "description": "UI: Endpoint dropdown lists current version endpoints",
+    "implemented": true,
+    "featureIds": [
+      "F083",
+      "F023"
+    ]
+  },
+  {
+    "id": "T052",
+    "description": "UI: Create schedule flow succeeds and schedule appears in list",
+    "implemented": true,
+    "featureIds": [
+      "F083",
+      "F027"
+    ]
+  },
+  {
+    "id": "T053",
+    "description": "UI: Edit schedule updates cron/timezone and persists",
+    "implemented": true,
+    "featureIds": [
+      "F084",
+      "F028"
+    ]
+  },
+  {
+    "id": "T054",
+    "description": "UI: Enable/disable toggle changes execution state",
+    "implemented": true,
+    "featureIds": [
+      "F085",
+      "F047"
+    ]
+  },
+  {
+    "id": "T055",
+    "description": "UI: Run-now triggers execution and shows toast",
+    "implemented": true,
+    "featureIds": [
+      "F087",
+      "F030"
+    ]
+  },
+  {
+    "id": "T056",
+    "description": "UI: Delete schedule removes it from list after confirmation",
+    "implemented": true,
+    "featureIds": [
+      "F086",
+      "F029"
+    ]
+  },
+  {
+    "id": "T057",
+    "description": "UI: Cron validation error is displayed on invalid input",
+    "implemented": true,
+    "featureIds": [
+      "F088",
+      "F095"
+    ]
+  },
+  {
+    "id": "T058",
+    "description": "UI: Timezone selection defaults to tenant timezone or UTC",
+    "implemented": true,
+    "featureIds": [
+      "F089"
+    ]
+  },
+  {
+    "id": "T059",
+    "description": "UI: JSON payload editor rejects invalid JSON and blocks save",
+    "implemented": true,
+    "featureIds": [
+      "F090"
+    ]
+  },
+  {
+    "id": "T060",
+    "description": "UI: Empty schedules state is shown when none exist",
+    "implemented": true,
+    "featureIds": [
+      "F136"
+    ]
+  },
+  {
+    "id": "T061",
+    "description": "UI: Loading and error states render for schedules list",
+    "implemented": false,
+    "featureIds": [
+      "F137"
+    ]
+  },
+  {
+    "id": "T062",
+    "description": "UI: Endpoint list empty state indicates no schedulable endpoints",
+    "implemented": true,
+    "featureIds": [
+      "F169"
+    ]
+  },
+  {
+    "id": "T063",
+    "description": "UI: Endpoint invalidation is displayed after upgrade failure",
+    "implemented": false,
+    "featureIds": [
+      "F091"
+    ]
+  },
+  {
+    "id": "T064",
+    "description": "Ops: Reconciliation job detects orphan schedules",
+    "implemented": false,
+    "featureIds": [
+      "F070"
+    ]
+  },
+  {
+    "id": "T065",
+    "description": "Ops: Kill switch disables all schedules for a tenant",
+    "implemented": false,
+    "featureIds": [
+      "F104"
+    ]
+  },
+  {
+    "id": "T066",
+    "description": "Plan validation: validate_plan.py passes for plan folder",
+    "implemented": true,
+    "featureIds": [
+      "F174"
+    ]
+  },
+  {
+    "id": "T067",
+    "description": "Smoke: Basic schedule triggers Runner invocation end-to-end in dev",
+    "implemented": false,
+    "featureIds": [
+      "F175"
+    ]
+  },
+  {
+    "id": "T068",
+    "description": "Compat: CE does not expose schedule APIs/ UI when Temporal not available (policy)",
+    "implemented": false,
+    "featureIds": [
+      "F101"
+    ]
+  },
+  {
+    "id": "T069",
+    "description": "Hardening: Concurrent schedule updates do not lose changes (optimistic locking)",
+    "implemented": false,
+    "featureIds": [
+      "F131",
+      "F132"
+    ]
+  },
+  {
+    "id": "T070",
+    "description": "Hardening: Create schedule is transactional with job runner schedule creation",
+    "implemented": true,
+    "featureIds": [
+      "F107"
+    ]
+  },
+  {
+    "id": "T071",
+    "description": "Hardening: Update schedule is transactional with rescheduling",
+    "implemented": true,
+    "featureIds": [
+      "F108"
+    ]
+  },
+  {
+    "id": "T072",
+    "description": "Hardening: Delete schedule is transactional with schedule deletion",
+    "implemented": true,
+    "featureIds": [
+      "F109"
+    ]
+  },
+  {
+    "id": "T073",
+    "description": "Policy: Min cron frequency guardrail blocks */1 * * * * (if prohibited)",
+    "implemented": true,
+    "featureIds": [
+      "F034"
+    ]
+  },
+  {
+    "id": "T074",
+    "description": "Policy: Payload size limit rejects oversized JSON payload",
+    "implemented": true,
+    "featureIds": [
+      "F097"
+    ]
+  },
+  {
+    "id": "T075",
+    "description": "Data integrity: Cannot delete endpoint row referenced by schedule (service enforcement)",
+    "implemented": false,
+    "featureIds": [
+      "F106"
+    ]
+  },
+  {
+    "id": "T076",
+    "description": "Execution: Scheduled invocation sets x-alga-tenant/x-alga-extension consistently",
+    "implemented": true,
+    "featureIds": [
+      "F110"
+    ]
+  },
+  {
+    "id": "T077",
+    "description": "Execution: Scheduled invocation uses current content_hash from install config",
+    "implemented": true,
+    "featureIds": [
+      "F117"
+    ]
+  },
+  {
+    "id": "T078",
+    "description": "Remap: Disabled schedules remain disabled after remap",
+    "implemented": false,
+    "featureIds": [
+      "F147"
+    ]
+  },
+  {
+    "id": "T079",
+    "description": "Scheduler: Health check reports missing schedule handles for enabled schedules",
+    "implemented": false,
+    "featureIds": [
+      "F148"
+    ]
+  },
+  {
+    "id": "T080",
+    "description": "Docs: Troubleshooting guide exists and references relevant file paths",
+    "implemented": false,
+    "featureIds": [
+      "F159"
+    ]
+  },
+  {
+    "id": "T081",
+    "description": "API: Create schedule rejects cron with seconds field (if unsupported)",
+    "implemented": true,
+    "featureIds": [
+      "F031",
+      "F095"
+    ]
+  },
+  {
+    "id": "T082",
+    "description": "API: Create schedule rejects cron with both day-of-month and day-of-week when policy forbids",
+    "implemented": true,
+    "featureIds": [
+      "F031",
+      "F095"
+    ]
+  },
+  {
+    "id": "T083",
+    "description": "API: Create schedule rejects empty cron string",
+    "implemented": true,
+    "featureIds": [
+      "F031"
+    ]
+  },
+  {
+    "id": "T084",
+    "description": "API: Update schedule rejects invalid cron",
+    "implemented": true,
+    "featureIds": [
+      "F031",
+      "F028"
+    ]
+  },
+  {
+    "id": "T085",
+    "description": "API: Update schedule rejects invalid timezone",
+    "implemented": true,
+    "featureIds": [
+      "F031",
+      "F028"
+    ]
+  },
+  {
+    "id": "T086",
+    "description": "API: Create schedule rejects unknown timezone (not IANA)",
+    "implemented": true,
+    "featureIds": [
+      "F096"
+    ]
+  },
+  {
+    "id": "T087",
+    "description": "API: Create schedule accepts UTC timezone",
+    "implemented": true,
+    "featureIds": [
+      "F096"
+    ]
+  },
+  {
+    "id": "T088",
+    "description": "API: Create schedule stores timezone exactly as provided (normalized if policy)",
+    "implemented": true,
+    "featureIds": [
+      "F031"
+    ]
+  },
+  {
+    "id": "T089",
+    "description": "API: Create schedule rejects payload_json that is not valid JSON object/array (policy)",
+    "implemented": true,
+    "featureIds": [
+      "F011",
+      "F097"
+    ]
+  },
+  {
+    "id": "T090",
+    "description": "API: Create schedule rejects payload_json larger than max",
+    "implemented": true,
+    "featureIds": [
+      "F097"
+    ]
+  },
+  {
+    "id": "T091",
+    "description": "API: Update schedule can clear payload_json",
+    "implemented": true,
+    "featureIds": [
+      "F028",
+      "F011"
+    ]
+  },
+  {
+    "id": "T092",
+    "description": "API: Create schedule rejects name longer than max length",
+    "implemented": true,
+    "featureIds": [
+      "F015"
+    ]
+  },
+  {
+    "id": "T093",
+    "description": "API: Create schedule enforces name uniqueness per install if enabled",
+    "implemented": true,
+    "featureIds": [
+      "F098"
+    ]
+  },
+  {
+    "id": "T094",
+    "description": "API: Update schedule to conflicting name fails if uniqueness enabled",
+    "implemented": true,
+    "featureIds": [
+      "F098"
+    ]
+  },
+  {
+    "id": "T095",
+    "description": "API: List schedules returns only schedules for the current tenant",
+    "implemented": true,
+    "featureIds": [
+      "F026",
+      "F071"
+    ]
+  },
+  {
+    "id": "T096",
+    "description": "API: Fetch single schedule by id returns 404 cross-tenant",
+    "implemented": true,
+    "featureIds": [
+      "F144",
+      "F071"
+    ]
+  },
+  {
+    "id": "T097",
+    "description": "API: Delete schedule returns 404 for unknown schedule id",
+    "implemented": true,
+    "featureIds": [
+      "F029"
+    ]
+  },
+  {
+    "id": "T098",
+    "description": "API: Update schedule returns 404 for unknown schedule id",
+    "implemented": true,
+    "featureIds": [
+      "F028"
+    ]
+  },
+  {
+    "id": "T099",
+    "description": "API: Create schedule fails when extension is not installed",
+    "implemented": true,
+    "featureIds": [
+      "F163"
+    ]
+  },
+  {
+    "id": "T100",
+    "description": "API: Create schedule fails when extension is installed but disabled (policy)",
+    "implemented": true,
+    "featureIds": [
+      "F163"
+    ]
+  },
+  {
+    "id": "T101",
+    "description": "API: Run-now fails when extension install disabled (policy)",
+    "implemented": true,
+    "featureIds": [
+      "F164"
+    ]
+  },
+  {
+    "id": "T102",
+    "description": "Endpoints: List endpoints excludes endpoints with invalid method/path (sanitized on ingest)",
+    "implemented": true,
+    "featureIds": [
+      "F017",
+      "F020"
+    ]
+  },
+  {
+    "id": "T103",
+    "description": "Endpoints: Endpoint list includes handler field (if needed for debugging)",
+    "implemented": true,
+    "featureIds": [
+      "F020"
+    ]
+  },
+  {
+    "id": "T104",
+    "description": "Endpoints: Endpoint list returns stable endpoint_id values",
+    "implemented": true,
+    "featureIds": [
+      "F006",
+      "F020"
+    ]
+  },
+  {
+    "id": "T105",
+    "description": "Jobs: Create schedule persists runner_schedule_id/external handle id in DB",
+    "implemented": true,
+    "featureIds": [
+      "F046",
+      "F010"
+    ]
+  },
+  {
+    "id": "T106",
+    "description": "Jobs: Update schedule cron reschedules underlying job runner schedule",
+    "implemented": true,
+    "featureIds": [
+      "F108",
+      "F047"
+    ]
+  },
+  {
+    "id": "T107",
+    "description": "Jobs: Disable schedule pauses execution by removing/pausing underlying schedule",
+    "implemented": true,
+    "featureIds": [
+      "F047"
+    ]
+  },
+  {
+    "id": "T108",
+    "description": "Jobs: Re-enable schedule recreates underlying schedule and retains schedule id determinism",
+    "implemented": true,
+    "featureIds": [
+      "F047",
+      "F154"
+    ]
+  },
+  {
+    "id": "T109",
+    "description": "Jobs: Schedule create is atomic when runner schedule creation fails (no DB row or marked failed)",
+    "implemented": true,
+    "featureIds": [
+      "F107"
+    ]
+  },
+  {
+    "id": "T110",
+    "description": "Jobs: Schedule update is atomic when reschedule operation fails (old schedule remains)",
+    "implemented": true,
+    "featureIds": [
+      "F108"
+    ]
+  },
+  {
+    "id": "T111",
+    "description": "Jobs: Schedule delete is atomic when runner schedule deletion fails (retryable)",
+    "implemented": true,
+    "featureIds": [
+      "F109",
+      "F135"
+    ]
+  },
+  {
+    "id": "T112",
+    "description": "Execution: Scheduled invocation uses selected method and path",
+    "implemented": true,
+    "featureIds": [
+      "F049"
+    ]
+  },
+  {
+    "id": "T113",
+    "description": "Execution: Scheduled invocation uses payload_json as request body for POST/PUT/PATCH",
+    "implemented": true,
+    "featureIds": [
+      "F052",
+      "F160"
+    ]
+  },
+  {
+    "id": "T114",
+    "description": "Execution: Scheduled invocation uses empty body for GET by default",
+    "implemented": true,
+    "featureIds": [
+      "F160"
+    ]
+  },
+  {
+    "id": "T115",
+    "description": "Execution: Scheduled invocation does not allow arbitrary header injection (default)",
+    "implemented": true,
+    "featureIds": [
+      "F053"
+    ]
+  },
+  {
+    "id": "T116",
+    "description": "Execution: Timeout aborts runner call and records failure",
+    "implemented": true,
+    "featureIds": [
+      "F054",
+      "F134"
+    ]
+  },
+  {
+    "id": "T117",
+    "description": "Execution: Runner non-JSON response is handled and recorded as failure",
+    "implemented": true,
+    "featureIds": [
+      "F055",
+      "F134"
+    ]
+  },
+  {
+    "id": "T118",
+    "description": "Execution: Runner returns empty body is handled and recorded as failure",
+    "implemented": true,
+    "featureIds": [
+      "F055",
+      "F134"
+    ]
+  },
+  {
+    "id": "T119",
+    "description": "Execution: Runner returns non-2xx status is recorded as schedule failure (policy)",
+    "implemented": true,
+    "featureIds": [
+      "F055"
+    ]
+  },
+  {
+    "id": "T120",
+    "description": "Execution: Success response updates last_run_status to success",
+    "implemented": true,
+    "featureIds": [
+      "F077"
+    ]
+  },
+  {
+    "id": "T121",
+    "description": "Execution: No-overlap lock prevents second execution starting while first is running",
+    "implemented": true,
+    "featureIds": [
+      "F056"
+    ]
+  },
+  {
+    "id": "T122",
+    "description": "Execution: No-overlap lock is released after failure",
+    "implemented": true,
+    "featureIds": [
+      "F056"
+    ]
+  },
+  {
+    "id": "T123",
+    "description": "Execution: No-overlap lock has TTL to avoid permanent deadlock",
+    "implemented": false,
+    "featureIds": [
+      "F056"
+    ]
+  },
+  {
+    "id": "T124",
+    "description": "Execution: Retry behavior respects maxAttempts and backoff defaults",
+    "implemented": false,
+    "featureIds": [
+      "F058",
+      "F126"
+    ]
+  },
+  {
+    "id": "T125",
+    "description": "Execution: Pause-on-failure policy disables schedule after N failures (if enabled)",
+    "implemented": false,
+    "featureIds": [
+      "F127"
+    ]
+  },
+  {
+    "id": "T126",
+    "description": "Remap: Remap matches endpoints case-insensitively on method and exactly on path",
+    "implemented": false,
+    "featureIds": [
+      "F060",
+      "F017"
+    ]
+  },
+  {
+    "id": "T127",
+    "description": "Remap: Remap updates endpoint_id references and (re)creates underlying runner schedules if needed",
+    "implemented": true,
+    "featureIds": [
+      "F060",
+      "F047"
+    ]
+  },
+  {
+    "id": "T128",
+    "description": "Remap: When blocked, error includes list of missing (method,path) pairs",
+    "implemented": true,
+    "featureIds": [
+      "F062"
+    ]
+  },
+  {
+    "id": "T129",
+    "description": "Remap: Blocking error is surfaced in UI on version update attempt",
+    "implemented": false,
+    "featureIds": [
+      "F092"
+    ]
+  },
+  {
+    "id": "T130",
+    "description": "Remap: Override disables only affected schedules, keeps others enabled",
+    "implemented": true,
+    "featureIds": [
+      "F063"
+    ]
+  },
+  {
+    "id": "T131",
+    "description": "Remap: Audit log records which schedules were remapped/disabled",
+    "implemented": false,
+    "featureIds": [
+      "F064",
+      "F080"
+    ]
+  },
+  {
+    "id": "T132",
+    "description": "Cleanup: Uninstall order deletes schedules before deleting tenant_extension_install row",
+    "implemented": true,
+    "featureIds": [
+      "F165"
+    ]
+  },
+  {
+    "id": "T133",
+    "description": "Cleanup: Schedule delete removes Temporal schedule handle",
+    "implemented": false,
+    "featureIds": [
+      "F069"
+    ]
+  },
+  {
+    "id": "T134",
+    "description": "Cleanup: Schedule delete removes PG Boss schedule name in CE mode (if enabled)",
+    "implemented": false,
+    "featureIds": [
+      "F101",
+      "F069"
+    ]
+  },
+  {
+    "id": "T135",
+    "description": "Cleanup: Bulk-disable schedules endpoint disables all schedules for install",
+    "implemented": false,
+    "featureIds": [
+      "F145"
+    ]
+  },
+  {
+    "id": "T136",
+    "description": "Citus constraints: No schema uses ON DELETE CASCADE for new tables",
+    "implemented": true,
+    "featureIds": [
+      "F066",
+      "F069"
+    ]
+  },
+  {
+    "id": "T137",
+    "description": "Security: endpoint_id cannot be used to reach endpoints from a different extension/version",
+    "implemented": false,
+    "featureIds": [
+      "F032",
+      "F072"
+    ]
+  },
+  {
+    "id": "T138",
+    "description": "Security: Create schedule fails when endpoint path has path params (if v1 disallowed)",
+    "implemented": true,
+    "featureIds": [
+      "F073",
+      "F162"
+    ]
+  },
+  {
+    "id": "T139",
+    "description": "Security: UI warns/disables selection for endpoints with path params",
+    "implemented": false,
+    "featureIds": [
+      "F115"
+    ]
+  },
+  {
+    "id": "T140",
+    "description": "Security: Schedule payload does not allow secrets storage; secrets must be via install secrets",
+    "implemented": false,
+    "featureIds": [
+      "F172",
+      "F075"
+    ]
+  },
+  {
+    "id": "T141",
+    "description": "Security: Scheduled invocation respects provider grants (providers array passed to runner)",
+    "implemented": false,
+    "featureIds": [
+      "F173",
+      "F050"
+    ]
+  },
+  {
+    "id": "T142",
+    "description": "Observability: last_error is truncated in UI but full error retrievable via logs (policy)",
+    "implemented": false,
+    "featureIds": [
+      "F166"
+    ]
+  },
+  {
+    "id": "T143",
+    "description": "Observability: schedule run links to debug stream when available",
+    "implemented": false,
+    "featureIds": [
+      "F167"
+    ]
+  },
+  {
+    "id": "T144",
+    "description": "Observability: Execution log includes schedule_id and invocation_id",
+    "implemented": false,
+    "featureIds": [
+      "F076",
+      "F112"
+    ]
+  },
+  {
+    "id": "T145",
+    "description": "Observability: Metric labels include schedule_id or schedule_name safely",
+    "implemented": false,
+    "featureIds": [
+      "F078",
+      "F141"
+    ]
+  },
+  {
+    "id": "T146",
+    "description": "Observability: last_success_at updates only on successful runs (if enabled)",
+    "implemented": false,
+    "featureIds": [
+      "F142"
+    ]
+  },
+  {
+    "id": "T147",
+    "description": "UX: Schedule list shows endpoint based on installed version",
+    "implemented": false,
+    "featureIds": [
+      "F152"
+    ]
+  },
+  {
+    "id": "T148",
+    "description": "UX: Changing endpoint shows confirmation/warning",
+    "implemented": false,
+    "featureIds": [
+      "F153"
+    ]
+  },
+  {
+    "id": "T149",
+    "description": "UX: Run-now button disabled while schedule execution in progress (optional)",
+    "implemented": false,
+    "featureIds": [
+      "F056",
+      "F087"
+    ]
+  },
+  {
+    "id": "T150",
+    "description": "UX: Invalid schedule shows call-to-action to edit endpoint",
+    "implemented": false,
+    "featureIds": [
+      "F091"
+    ]
+  },
+  {
+    "id": "T151",
+    "description": "UX: Schedules section hidden for users without permission",
+    "implemented": false,
+    "featureIds": [
+      "F138"
+    ]
+  },
+  {
+    "id": "T152",
+    "description": "Perf: Endpoint list + schedules load without N+1 queries in settings view",
+    "implemented": false,
+    "featureIds": [
+      "F100"
+    ]
+  },
+  {
+    "id": "T153",
+    "description": "Perf: Schedules list query uses tenant/install indexes",
+    "implemented": false,
+    "featureIds": [
+      "F099"
+    ]
+  },
+  {
+    "id": "T154",
+    "description": "Ops: Admin endpoint lists schedules across tenants (authorized)",
+    "implemented": false,
+    "featureIds": [
+      "F156"
+    ]
+  },
+  {
+    "id": "T155",
+    "description": "Ops: Admin endpoint deletes schedule by id",
+    "implemented": false,
+    "featureIds": [
+      "F157"
+    ]
+  },
+  {
+    "id": "T156",
+    "description": "Ops: Admin endpoint denies non-admin access",
+    "implemented": false,
+    "featureIds": [
+      "F156",
+      "F157",
+      "F071"
+    ]
+  },
+  {
+    "id": "T157",
+    "description": "Backfill: Backfill script populates endpoint table for existing versions",
+    "implemented": false,
+    "featureIds": [
+      "F123",
+      "F124"
+    ]
+  },
+  {
+    "id": "T158",
+    "description": "Backfill: Backfill handles malformed api_endpoints JSON safely",
+    "implemented": false,
+    "featureIds": [
+      "F123"
+    ]
+  },
+  {
+    "id": "T159",
+    "description": "Backfill: Backfill is tenant-agnostic and operates on registry tables only",
+    "implemented": false,
+    "featureIds": [
+      "F123"
+    ]
+  },
+  {
+    "id": "T160",
+    "description": "Feature flag: Schedules APIs/ UI gated behind feature flag",
+    "implemented": false,
+    "featureIds": [
+      "F102",
+      "F170"
+    ]
+  },
+  {
+    "id": "T161",
+    "description": "Feature flag: Feature flag can be enabled per tenant",
+    "implemented": false,
+    "featureIds": [
+      "F170"
+    ]
+  },
+  {
+    "id": "T162",
+    "description": "Next run: API can compute next run time for a schedule (if implemented)",
+    "implemented": false,
+    "featureIds": [
+      "F114",
+      "F129"
+    ]
+  },
+  {
+    "id": "T163",
+    "description": "Next run: Computation respects timezone and DST transitions",
+    "implemented": false,
+    "featureIds": [
+      "F114",
+      "F096"
+    ]
+  },
+  {
+    "id": "T164",
+    "description": "Validation: Cron preview endpoint returns helpful errors",
+    "implemented": false,
+    "featureIds": [
+      "F128",
+      "F129"
+    ]
+  },
+  {
+    "id": "T165",
+    "description": "Definition: Only allowed HTTP methods appear in endpoint dropdown (policy)",
+    "implemented": false,
+    "featureIds": [
+      "F160"
+    ]
+  },
+  {
+    "id": "T166",
+    "description": "Definition: Schedules cannot include query params in v1 (if policy)",
+    "implemented": false,
+    "featureIds": [
+      "F161"
+    ]
+  },
+  {
+    "id": "T167",
+    "description": "Scheduler health: Detect missing Temporal schedule handle for enabled schedule",
+    "implemented": false,
+    "featureIds": [
+      "F148"
+    ]
+  },
+  {
+    "id": "T168",
+    "description": "Scheduler health: Auto-repair recreates missing schedule handle (if enabled)",
+    "implemented": false,
+    "featureIds": [
+      "F149"
+    ]
+  },
+  {
+    "id": "T169",
+    "description": "Audit: Schedule create/update/delete writes audit log with actor",
+    "implemented": false,
+    "featureIds": [
+      "F014",
+      "F080"
+    ]
+  },
+  {
+    "id": "T170",
+    "description": "Audit: Override disable-on-update writes audit log entries",
+    "implemented": false,
+    "featureIds": [
+      "F064",
+      "F080"
+    ]
+  },
+  {
+    "id": "T171",
+    "description": "Docs: Developer docs describe scheduled invocation semantics for endpoint handlers",
+    "implemented": false,
+    "featureIds": [
+      "F139"
+    ]
+  },
+  {
+    "id": "T172",
+    "description": "Docs: Operator docs describe remap failure remediation",
+    "implemented": false,
+    "featureIds": [
+      "F140"
+    ]
+  },
+  {
+    "id": "T173",
+    "description": "Docs: Migration notes include endpoint backfill verification steps",
+    "implemented": false,
+    "featureIds": [
+      "F158"
+    ]
+  },
+  {
+    "id": "T174",
+    "description": "System identity: Scheduled invocations use system identity or omit user",
+    "implemented": false,
+    "featureIds": [
+      "F111"
+    ]
+  },
+  {
+    "id": "T175",
+    "description": "Data integrity: Schedule cannot reference endpoint row for a deleted version (service guards)",
+    "implemented": false,
+    "featureIds": [
+      "F106"
+    ]
+  },
+  {
+    "id": "T176",
+    "description": "Cleanup: Registry version delete prevents removal when endpoints referenced by schedules (policy)",
+    "implemented": false,
+    "featureIds": [
+      "F106"
+    ]
+  },
+  {
+    "id": "T177",
+    "description": "Ops: Reconciliation job cleans orphan schedules with missing install_id",
+    "implemented": false,
+    "featureIds": [
+      "F070"
+    ]
+  },
+  {
+    "id": "T178",
+    "description": "Ops: Reconciliation job cleans schedules whose endpoint_id no longer exists",
+    "implemented": false,
+    "featureIds": [
+      "F070"
+    ]
+  },
+  {
+    "id": "T179",
+    "description": "API: Bulk-disable schedules for install is idempotent",
+    "implemented": false,
+    "featureIds": [
+      "F145"
+    ]
+  },
+  {
+    "id": "T180",
+    "description": "UI: Upgrade-block modal lists affected schedules and missing endpoints",
+    "implemented": false,
+    "featureIds": [
+      "F092"
+    ]
+  },
+  {
+    "id": "T181",
+    "description": "UI: Override flow disables affected schedules and retries update",
+    "implemented": false,
+    "featureIds": [
+      "F168",
+      "F094"
+    ]
+  },
+  {
+    "id": "T182",
+    "description": "UI: Schedules list shows last_error and supports copy to clipboard",
+    "implemented": false,
+    "featureIds": [
+      "F166"
+    ]
+  },
+  {
+    "id": "T183",
+    "description": "Compat: If schedules disabled in CE, API returns clear error message",
+    "implemented": false,
+    "featureIds": [
+      "F101"
+    ]
+  },
+  {
+    "id": "T184",
+    "description": "Compat: If schedules enabled in CE mode, pgboss schedule is created and named per tenant/install",
+    "implemented": false,
+    "featureIds": [
+      "F155",
+      "F101"
+    ]
+  },
+  {
+    "id": "T185",
+    "description": "Concurrency: Two concurrent creates with same name/cron are deduped or both allowed per policy",
+    "implemented": false,
+    "featureIds": [
+      "F131",
+      "F098"
+    ]
+  },
+  {
+    "id": "T186",
+    "description": "Concurrency: Two concurrent updates do not clobber endpoint_id changes",
+    "implemented": false,
+    "featureIds": [
+      "F131",
+      "F132"
+    ]
+  },
+  {
+    "id": "T187",
+    "description": "Telemetry: Scheduled run logs include registry_id, version_id, content_hash",
+    "implemented": false,
+    "featureIds": [
+      "F141",
+      "F050",
+      "F051"
+    ]
+  },
+  {
+    "id": "T188",
+    "description": "Safety: Enforced max schedules per install prevents DB growth abuse",
+    "implemented": false,
+    "featureIds": [
+      "F033"
+    ]
+  },
+  {
+    "id": "T189",
+    "description": "Safety: Deny schedule cron that runs more often than min interval",
+    "implemented": true,
+    "featureIds": [
+      "F034"
+    ]
+  },
+  {
+    "id": "T190",
+    "description": "Run-now: Run-now rejects when schedule disabled if policy is to require enablement",
+    "implemented": false,
+    "featureIds": [
+      "F030"
+    ]
+  },
+  {
+    "id": "T191",
+    "description": "Run-now: Run-now can be executed even when schedule disabled if policy allows",
+    "implemented": false,
+    "featureIds": [
+      "F030"
+    ]
+  },
+  {
+    "id": "T192",
+    "description": "Endpoint selection: Dropdown shows method+path and maybe handler for disambiguation",
+    "implemented": false,
+    "featureIds": [
+      "F083"
+    ]
+  },
+  {
+    "id": "T193",
+    "description": "Feature flag: API returns 404/disabled for endpoints/schedules routes when flag off",
+    "implemented": false,
+    "featureIds": [
+      "F170"
+    ]
+  },
+  {
+    "id": "T194",
+    "description": "Policy: Schedules cannot target DELETE endpoints unless explicitly allowed",
+    "implemented": false,
+    "featureIds": [
+      "F160"
+    ]
+  },
+  {
+    "id": "T195",
+    "description": "Compliance: Scheduled invocation does not bypass capability gating in Runner",
+    "implemented": false,
+    "featureIds": [
+      "F173"
+    ]
+  },
+  {
+    "id": "T196",
+    "description": "Ops: Kill switch disables all schedules and deletes/pause runner schedules",
+    "implemented": false,
+    "featureIds": [
+      "F104"
+    ]
+  },
+  {
+    "id": "T197",
+    "description": "API: Preview remap endpoint reports which schedules will remap and which will block",
+    "implemented": false,
+    "featureIds": [
+      "F146"
+    ]
+  },
+  {
+    "id": "T198",
+    "description": "UI: Preview remap results shown before committing update (if implemented)",
+    "implemented": false,
+    "featureIds": [
+      "F146",
+      "F092"
+    ]
+  },
+  {
+    "id": "T199",
+    "description": "API: Schedules list includes next_run_at when available",
+    "implemented": false,
+    "featureIds": [
+      "F114"
+    ]
+  },
+  {
+    "id": "T200",
+    "description": "API: Schedules list includes runner_schedule_id/external_id for debugging (admin only)",
+    "implemented": false,
+    "featureIds": [
+      "F010",
+      "F103"
+    ]
+  },
+  {
+    "id": "T201",
+    "description": "UI: Shows warning when extension has no endpoints declared (cannot schedule)",
+    "implemented": true,
+    "featureIds": [
+      "F169"
+    ]
+  },
+  {
+    "id": "T202",
+    "description": "System: Background reconciliation does not affect disabled schedules",
+    "implemented": false,
+    "featureIds": [
+      "F070"
+    ]
+  },
+  {
+    "id": "T203",
+    "description": "System: Schedule create/update/delete writes structured logs for auditing",
+    "implemented": false,
+    "featureIds": [
+      "F080",
+      "F141"
+    ]
+  },
+  {
+    "id": "T204",
+    "description": "Plan: features.json contains >100 features",
+    "implemented": true,
+    "featureIds": [
+      "F001"
+    ]
+  },
+  {
+    "id": "T205",
+    "description": "Plan: tests.json contains >= features.json count (goal)",
+    "implemented": true,
+    "featureIds": [
+      "F001"
+    ]
+  },
+  {
+    "id": "T206",
+    "description": "UI: Schedule section can be navigated without impacting existing settings/save flows",
+    "implemented": false,
+    "featureIds": [
+      "F081"
+    ]
+  },
+  {
+    "id": "T207",
+    "description": "UI: Schedules section does not require saving via existing 'Save Changes' button for settings",
+    "implemented": false,
+    "featureIds": [
+      "F081"
+    ]
+  },
+  {
+    "id": "T208",
+    "description": "API: Schedule endpoints return field-level validation errors for UI",
+    "implemented": true,
+    "featureIds": [
+      "F036"
+    ]
+  },
+  {
+    "id": "T209",
+    "description": "API: Endpoint listing supports search filter (if implemented)",
+    "implemented": false,
+    "featureIds": [
+      "F025"
+    ]
+  },
+  {
+    "id": "T210",
+    "description": "API: Endpoints list supports pagination (if implemented)",
+    "implemented": false,
+    "featureIds": [
+      "F025"
+    ]
+  },
+  {
+    "id": "T211",
+    "description": "UI: Endpoint dropdown supports search typeahead (if implemented)",
+    "implemented": false,
+    "featureIds": [
+      "F083",
+      "F025"
+    ]
+  },
+  {
+    "id": "T212",
+    "description": "Observability: Failed schedule run includes truncated response preview for debugging (policy)",
+    "implemented": false,
+    "featureIds": [
+      "F055",
+      "F166"
+    ]
+  },
+  {
+    "id": "T213",
+    "description": "Execution: When install config cannot be loaded, schedule run records a failure and does not call Runner",
+    "implemented": true,
+    "featureIds": [
+      "F133"
+    ]
+  },
+  {
+    "id": "T214",
+    "description": "Execution: When endpoint_id not found, schedule run records a failure and disables schedule (policy)",
+    "implemented": true,
+    "featureIds": [
+      "F133",
+      "F127"
+    ]
+  },
+  {
+    "id": "T215",
+    "description": "UI: Schedule invalidation shown when endpoint row missing",
+    "implemented": false,
+    "featureIds": [
+      "F091"
+    ]
+  },
+  {
+    "id": "T216",
+    "description": "Rollback: After extension version rollback, schedules remap back and still run",
+    "implemented": false,
+    "featureIds": [
+      "F060"
+    ]
+  },
+  {
+    "id": "T217",
+    "description": "Ops: Admin tool can list schedules by install_id for support",
+    "implemented": false,
+    "featureIds": [
+      "F103"
+    ]
+  },
+  {
+    "id": "T218",
+    "description": "Ops: Admin tool can backfill endpoints for a version id",
+    "implemented": false,
+    "featureIds": [
+      "F105"
+    ]
+  },
+  {
+    "id": "T219",
+    "description": "Metrics: Per-schedule failure counter increments on failures",
+    "implemented": false,
+    "featureIds": [
+      "F078",
+      "F142"
+    ]
+  },
+  {
+    "id": "T220",
+    "description": "Metrics: Success counter increments on success",
+    "implemented": false,
+    "featureIds": [
+      "F078"
+    ]
+  }
+]

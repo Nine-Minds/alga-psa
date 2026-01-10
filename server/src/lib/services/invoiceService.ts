@@ -207,6 +207,10 @@ export async function persistManualInvoiceCharges(
     }
     // --- End Determine Tax Info ---
 
+    if ((requestItem.quantity ?? 0) <= 0) {
+      throw new Error('Quantity must be greater than 0');
+    }
+
     const netAmount = calculateNetAmount(requestItem, subtotal); // No applicable amount needed here
 
     // Detect manual credits (negative rate, not explicitly marked as discount)
@@ -392,6 +396,9 @@ async function persistFixedInvoiceCharges(
           // --- End Determine Consolidated Item Tax Region & Taxability ---
 
           console.log(`[INVOICE DEBUG] Setting fixedPlanDetailsMap for ${clientContractLineId}, charge.base_rate: ${charge.base_rate}`);
+          const planClientContractId =
+            chargesForThisPlan.find((c) => c.client_contract_id)?.client_contract_id ?? null;
+
           fixedPlanDetailsMap.set(clientContractLineId, {
               consolidatedItem: {
                   invoice_id: invoiceId,
@@ -412,6 +419,7 @@ async function persistFixedInvoiceCharges(
                   discount_percentage: undefined,
                   applies_to_item_id: null,
                   applies_to_service_id: null,
+                  client_contract_id: planClientContractId,
                   created_by: session.user.id,
                   created_at: now,
                   tenant
@@ -448,6 +456,7 @@ async function persistFixedInvoiceCharges(
         discount_percentage: undefined,
         applies_to_item_id: null,
         applies_to_service_id: null,
+        client_contract_id: charge.client_contract_id ?? null,
         created_by: session.user.id,
         created_at: now,
         tenant
@@ -652,6 +661,12 @@ export async function persistInvoiceCharges(
   for (const charge of otherCharges) {
     // Add specific handling for each type if needed, otherwise use generic approach
     const netAmount = charge.total; // Assuming 'total' is the net amount
+    const description =
+      charge.type === 'product'
+        ? `Product: ${charge.serviceName}`
+        : charge.type === 'license'
+          ? `License: ${charge.serviceName}`
+          : charge.serviceName;
     const invoiceItem = {
       item_id: uuidv4(),
       invoice_id: invoiceId,
@@ -661,7 +676,7 @@ export async function persistInvoiceCharges(
       // contract_line_id: ('planId' in charge ? (charge as any).planId : null), // Removed - planId not part of IFixedPriceCharge
       // Use client_contract_line_id if the schema requires it
       // client_contract_line_id: charge.client_contract_line_id ?? null,
-      description: charge.serviceName,
+      description,
       quantity: charge.quantity ?? 1,
       unit_price: charge.rate ?? 0,
       net_amount: netAmount,
@@ -676,6 +691,7 @@ export async function persistInvoiceCharges(
       discount_percentage: undefined,
       applies_to_item_id: null,
       applies_to_service_id: null,
+      client_contract_id: charge.client_contract_id ?? null,
       created_by: session.user.id,
       created_at: now,
       tenant

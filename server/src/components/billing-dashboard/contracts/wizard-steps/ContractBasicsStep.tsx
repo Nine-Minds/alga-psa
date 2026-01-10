@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Label } from 'server/src/components/ui/Label';
 import { Input } from 'server/src/components/ui/Input';
 import { TextArea } from 'server/src/components/ui/TextArea';
@@ -13,6 +13,7 @@ import { getAllClients } from 'server/src/lib/actions/client-actions/clientActio
 import { checkClientHasActiveContract } from 'server/src/lib/actions/contractActions';
 import { BILLING_FREQUENCY_OPTIONS } from 'server/src/constants/billing';
 import { CURRENCY_OPTIONS, getCurrencySymbol } from 'server/src/constants/currency';
+import { formatCurrencyFromMinorUnits } from 'server/src/lib/utils/formatters';
 import {
   Calendar,
   Building2,
@@ -73,6 +74,13 @@ export function ContractBasicsStep({
   const [startDate, setStartDate] = useState<Date | undefined>(parseLocalYMD(data.start_date));
   const [endDate, setEndDate] = useState<Date | undefined>(parseLocalYMD(data.end_date));
 
+  const currencyMeta = useMemo(() => {
+    const currencyCode = data.currency_code || 'USD';
+    const formatter = new Intl.NumberFormat('en-US', { style: 'currency', currency: currencyCode });
+    const fractionDigits = formatter.resolvedOptions().maximumFractionDigits ?? 2;
+    return { currencyCode, fractionDigits, minorUnitFactor: Math.pow(10, fractionDigits) };
+  }, [data.currency_code]);
+
   useEffect(() => {
     const loadClients = async () => {
       try {
@@ -90,9 +98,9 @@ export function ContractBasicsStep({
 
   useEffect(() => {
     if (data.po_amount !== undefined) {
-      setPoAmountInput((data.po_amount / 100).toFixed(2));
+      setPoAmountInput((data.po_amount / currencyMeta.minorUnitFactor).toFixed(currencyMeta.fractionDigits));
     }
-  }, [data.po_amount]);
+  }, [data.po_amount, currencyMeta.fractionDigits, currencyMeta.minorUnitFactor]);
 
   useEffect(() => {
     setStartDate(parseLocalYMD(data.start_date));
@@ -400,13 +408,15 @@ export function ContractBasicsStep({
                       setPoAmountInput('');
                       updateData({ po_amount: undefined });
                     } else {
-                      const dollars = parseFloat(poAmountInput) || 0;
-                      const cents = Math.round(dollars * 100);
-                      updateData({ po_amount: cents });
-                      setPoAmountInput((cents / 100).toFixed(2));
+                      const majorUnits = parseFloat(poAmountInput) || 0;
+                      const minorUnits = Math.round(majorUnits * currencyMeta.minorUnitFactor);
+                      updateData({ po_amount: minorUnits });
+                      setPoAmountInput((minorUnits / currencyMeta.minorUnitFactor).toFixed(currencyMeta.fractionDigits));
                     }
                   }}
-                  placeholder="0.00"
+                  placeholder={
+                    currencyMeta.fractionDigits === 0 ? '0' : `0.${'0'.repeat(currencyMeta.fractionDigits)}`
+                  }
                   className="pl-7"
                 />
               </div>
@@ -460,11 +470,11 @@ export function ContractBasicsStep({
                   {data.po_amount && (
                     <p>
                       <strong>PO Amount:</strong>{' '}
-                      {getCurrencySymbol(data.currency_code)}
-                      {(data.po_amount / 100).toLocaleString('en-US', {
-                        minimumFractionDigits: 2,
-                        maximumFractionDigits: 2,
-                      })}
+                      {formatCurrencyFromMinorUnits(
+                        data.po_amount,
+                        'en-US',
+                        currencyMeta.currencyCode
+                      )}
                     </p>
                   )}
                 </>

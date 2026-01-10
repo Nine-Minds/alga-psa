@@ -302,31 +302,44 @@ export class PgBossJobRunner implements IJobRunner {
     const singletonKey =
       options?.singletonKey ?? `${jobName}:${data.tenantId}`;
 
+    // Check if this is a cron expression (contains spaces or asterisks)
+    const isCronExpression = /\s/.test(interval) || interval.includes('*');
+
+    // For cron schedules, PG Boss uses `name` as the queue identifier, so we
+    // need a unique queue per schedule to support multiple schedules per job type.
+    const queueName = isCronExpression ? singletonKey : jobName;
+
     // Create job record in database
-    const jobRecord = await this.createJobRecord(jobName, data, {
+    const jobRecord = await this.createJobRecord(queueName, data, {
       ...options,
       singletonKey,
       metadata: {
         ...options?.metadata,
         recurring: true,
         interval,
+        jobName,
       },
     });
 
     // Ensure queue exists
-    await this.boss.createQueue(jobName);
-
-    // Check if this is a cron expression (contains spaces or asterisks)
-    const isCronExpression = /\s/.test(interval) || interval.includes('*');
+    await this.boss.createQueue(queueName);
 
     let externalId: string | null = null;
 
     if (isCronExpression) {
-      // Use PG Boss schedule() for cron-based recurring jobs
-      // The schedule name is the singletonKey to ensure uniqueness per tenant
+      // Ensure a handler exists for this per-schedule queue.
+      if (!this.handlers.has(queueName)) {
+        const base = this.handlers.get(jobName);
+        if (!base) {
+          throw new Error(`No handler registered for job type: ${jobName}. Register a handler before scheduling jobs.`);
+        }
+        this.registerHandler({ ...base, name: queueName });
+      }
+
+      // Use PG Boss schedule() for cron-based recurring jobs.
       try {
         await this.boss.schedule(
-          singletonKey,
+          queueName,
           interval,
           { ...data, jobServiceId: jobRecord.jobId },
           {
@@ -334,10 +347,10 @@ export class PgBossJobRunner implements IJobRunner {
             retryBackoff: true,
           }
         );
-        externalId = singletonKey;
+        externalId = queueName;
         logger.info('Created cron schedule for recurring job', {
           jobName,
-          singletonKey,
+          singletonKey: queueName,
           cronExpression: interval,
         });
       } catch (error) {
@@ -348,9 +361,9 @@ export class PgBossJobRunner implements IJobRunner {
         ) {
           logger.info('Recurring job schedule already exists', {
             jobName,
-            singletonKey,
+            singletonKey: queueName,
           });
-          externalId = singletonKey;
+          externalId = queueName;
         } else {
           throw error;
         }
@@ -359,7 +372,7 @@ export class PgBossJobRunner implements IJobRunner {
       // For interval strings like "24 hours", use send() with startAfter
       // This creates a one-time delayed job (handler should reschedule if needed)
       externalId = await this.boss.send(
-        jobName,
+        queueName,
         { ...data, jobServiceId: jobRecord.jobId },
         {
           startAfter: interval,
@@ -395,7 +408,7 @@ export class PgBossJobRunner implements IJobRunner {
       const job = await runWithTenant(tenantId, async () => {
         return knex('jobs')
           .where({ job_id: jobId, tenant: tenantId })
-          .first('external_id', 'status', 'type');
+          .first('external_id', 'status', 'type', 'metadata');
       });
 
       if (!job) {
@@ -412,10 +425,30 @@ export class PgBossJobRunner implements IJobRunner {
         return false;
       }
 
-      // Cancel in PG Boss if we have an external ID
-      // pg-boss cancel() requires both queue name (type) and job ID (external_id)
-      if (job.external_id && job.type) {
-        await this.boss.cancel(job.type, job.external_id);
+      const metadata = job.metadata
+        ? typeof job.metadata === 'string'
+          ? JSON.parse(job.metadata)
+          : job.metadata
+        : {};
+
+      // For cron schedules, external_id is the schedule name and must be removed via unschedule().
+      if (metadata?.recurring && typeof job.external_id === 'string' && job.external_id) {
+        try {
+          await this.boss.unschedule(job.external_id);
+          try {
+            await this.boss.deleteQueue(job.external_id);
+          } catch {
+            // Best-effort queue cleanup; ignore failures.
+          }
+        } catch (e) {
+          logger.warn('Failed to unschedule recurring job', { jobId, tenantId, error: e });
+        }
+      } else {
+        // Cancel in PG Boss if we have an external ID
+        // pg-boss cancel() requires both queue name (type) and job ID (external_id)
+        if (job.external_id && job.type) {
+          await this.boss.cancel(job.type, job.external_id);
+        }
       }
 
       // Update our database
@@ -546,6 +579,18 @@ export class PgBossJobRunner implements IJobRunner {
         priority: options?.priority,
       };
 
+      let userId: string | null = options?.userId ?? null;
+      if (!userId) {
+        const row = await knex('users')
+          .where({ tenant: data.tenantId })
+          .orderBy([{ column: 'created_at', order: 'asc' }])
+          .first(['user_id']);
+        userId = row?.user_id ? String(row.user_id) : null;
+      }
+      if (!userId) {
+        throw new Error(`Unable to attribute job to a user for tenant ${data.tenantId}`);
+      }
+
       const [inserted] = await knex('jobs')
         .insert({
           tenant: data.tenantId,
@@ -553,7 +598,7 @@ export class PgBossJobRunner implements IJobRunner {
           status: JobStatus.Pending,
           metadata: JSON.stringify(metadata),
           created_at: new Date(),
-          user_id: options?.userId || data.tenantId, // Use tenantId as fallback
+          user_id: userId,
           runner_type: 'pgboss',
         })
         .returning('job_id');

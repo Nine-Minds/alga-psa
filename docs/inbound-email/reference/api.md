@@ -27,11 +27,15 @@ Upon success the endpoint stores tokens, then calls
 | code  | OAuth grant code |
 | state | Encrypted JSON with tenant, user, nonce |
 
-## 2. Refresh Pub/Sub
+## 2. Refresh Watch (Pub/Sub + Gmail Watch)
 
-`POST /api/email-providers/:id/refresh-pubsub`
+`POST /api/email/refresh-watch`
 
-Triggers `configureGmailProvider({ force:true })`. No body required.
+Triggers `configureGmailProvider({ force:true })` for a specific Gmail provider.
+
+| Body       | Type   | Description |
+|------------|--------|-------------|
+| providerId | string | Gmail provider record ID |
 
 ## 3. skipAutomation Flag
 
@@ -44,4 +48,3 @@ Triggers `configureGmailProvider({ force:true })`. No body required.
 ```
 
 When true, Pub/Sub orchestration is skipped; used by UI **Save** button to avoid extra initialisations.
-

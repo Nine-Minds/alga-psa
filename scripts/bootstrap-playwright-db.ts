@@ -1,10 +1,46 @@
 import dotenv from 'dotenv';
+import fs from 'node:fs/promises';
+import { createRequire } from 'node:module';
 import path from 'node:path';
 import knex, { Knex } from 'knex';
 
 // Load EE and Server env files for local credentials
 dotenv.config({ path: path.resolve(process.cwd(), 'ee/server/.env') });
 dotenv.config({ path: path.resolve(process.cwd(), 'server/.env') });
+
+const require = createRequire(import.meta.url);
+
+class DirectoryMigrationSource {
+  private readonly directory: string;
+  private readonly filter?: (name: string) => boolean;
+
+  constructor(directory: string, filter?: (name: string) => boolean) {
+    this.directory = directory;
+    this.filter = filter;
+  }
+
+  async getMigrations(loadExtensions?: string[]) {
+    const exts = loadExtensions && loadExtensions.length > 0 ? loadExtensions : ['.cjs', '.js'];
+    const extensions = new Set(exts.map((e) => (e.startsWith('.') ? e : `.${e}`)));
+    const files = await fs.readdir(this.directory).catch(() => [] as string[]);
+
+    const entries = files
+      .filter((file) => extensions.has(path.extname(file)))
+      .filter((file) => (this.filter ? this.filter(file) : true))
+      .map((file) => path.join(this.directory, file))
+      .sort((a, b) => path.basename(a).localeCompare(path.basename(b)));
+
+    return entries;
+  }
+
+  getMigrationName(migration: string) {
+    return path.basename(migration);
+  }
+
+  getMigration(migration: string) {
+    return require(migration);
+  }
+}
 
 type DbCfg = {
   host: string;
@@ -111,12 +147,43 @@ async function migrateAndSeed(cfg: DbCfg): Promise<void> {
       `ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT USAGE, SELECT, UPDATE ON SEQUENCES TO "${safeRole}"`
     );
 
-    const migrationsDir = path.resolve(process.cwd(), 'server/migrations');
+    // Best-effort enable pgvector extension for migrations that use the `vector` type.
+    // No-op if the extension isn't available in the backing Postgres image.
+    try {
+      await db.raw(`CREATE EXTENSION IF NOT EXISTS vector`);
+    } catch {
+      // ignore
+    }
+
+    const serverMigrationsDir = path.resolve(process.cwd(), 'server/migrations');
+    const eeMigrationsDir = path.resolve(process.cwd(), 'ee/server/migrations');
     const seedsDir = path.resolve(process.cwd(), 'server/seeds/dev');
+
+    // 1) Apply core (CE) migrations.
     await db.migrate.latest({
-      directory: migrationsDir,
-      loadExtensions: ['.cjs', '.js'],
+      migrationSource: new DirectoryMigrationSource(serverMigrationsDir) as any,
     });
+
+    // 2) Apply only the EE migrations required for extension scheduled tasks.
+    // EE migrations directory contains some duplicates of CE migrations and some older AI migrations
+    // that are not needed for these tests and can fail after later CE schema changes.
+    const eeAllowlist = new Set<string>([
+      '2025080801_create_extension_registry.cjs',
+      '2025080802_create_extension_version.cjs',
+      '2025080803_create_extension_bundle.cjs',
+      '2025080804_create_tenant_extension_install.cjs',
+      '2025080805_create_extension_event_subscription.cjs',
+      '2025080806_create_extension_api_endpoint.cjs',
+      '20250810140000_align_registry_v2_schema.cjs',
+      '20251031130000_create_install_config_tables.cjs',
+      '20260101120000_create_extension_schedule_tables.cjs',
+    ]);
+
+    await db.migrate.latest({
+      migrationSource: new DirectoryMigrationSource(eeMigrationsDir, (name) => eeAllowlist.has(name)) as any,
+      tableName: 'knex_migrations_ee',
+    });
+
     await db.seed
       .run({ directory: seedsDir, loadExtensions: ['.cjs', '.js'] })
       .catch(() => undefined);

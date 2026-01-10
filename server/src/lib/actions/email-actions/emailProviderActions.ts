@@ -9,8 +9,19 @@ import { ImapFlow } from 'imapflow';
 import axios from 'axios';
 import { auditLog } from 'server/src/lib/logging/auditLog';
 import { EmailProviderService } from '../../../services/email/EmailProviderService';
-import { configureGmailProvider } from './configureGmailProvider';
+import { configureGmailProvider, type ConfigureGmailProviderResult } from './configureGmailProvider';
 import { EmailWebhookMaintenanceService } from '@alga-psa/shared/services/email/EmailWebhookMaintenanceService';
+import { hasPermission } from 'server/src/lib/auth/rbac';
+import { throwPermissionError } from 'server/src/lib/utils/errorHandling';
+import { getWebhookBaseUrl } from 'server/src/utils/email/webhookHelpers';
+import { MicrosoftGraphAdapter } from '@alga-psa/shared/services/email/providers/MicrosoftGraphAdapter';
+import type { Microsoft365DiagnosticsReport } from '@alga-psa/shared/interfaces/microsoft365-diagnostics.interfaces';
+
+export interface EmailProviderSetupResult {
+  provider: EmailProvider;
+  setupError?: string;
+  setupWarnings?: string[];
+}
 
 
 /**
@@ -28,20 +39,6 @@ async function generatePubSubNames(tenantId: string) {
     topicName: `gmail-notifications-${tenantId}`,
     subscriptionName: `gmail-webhook-${tenantId}`,
     webhookUrl: `${baseUrl}/api/email/webhooks/google`
-  };
-}
-
-/**
- * Get hosted Gmail configuration for Enterprise Edition
- */
-export async function getHostedGmailConfig() {
-  const secretProvider = await getSecretProviderInstance();
-  
-  return {
-    client_id: await secretProvider.getAppSecret('GOOGLE_CLIENT_ID'),
-    client_secret: await secretProvider.getAppSecret('GOOGLE_CLIENT_SECRET'),
-    project_id: await secretProvider.getAppSecret('GOOGLE_PROJECT_ID'),
-    redirect_uri: await secretProvider.getAppSecret('GOOGLE_REDIRECT_URI') || 'https://api.algapsa.com/api/auth/google/callback'
   };
 }
 
@@ -268,34 +265,44 @@ async function persistGoogleConfig(
   if (!config) return null;
   if (!tenant) throw new Error('Tenant is required');
 
-  // Check if we should use hosted configuration for Enterprise Edition
-  const hostedConfig = await getHostedGmailConfig();
-
-  // Save secrets to tenant-specific secret store
+  // Google is always tenant-owned (CE and EE): credentials must come from tenant secrets.
+  // We will not store OAuth client credentials in the DB.
   const secretProvider = await getSecretProviderInstance();
-  
-  // Use hosted credentials if available, otherwise use user-provided credentials
-  const effectiveClientId = hostedConfig?.client_id || config.client_id;
-  const effectiveClientSecret = hostedConfig?.client_secret || config.client_secret;
-  const effectiveProjectId = hostedConfig?.project_id || config.project_id;
-  const effectiveRedirectUri = hostedConfig?.redirect_uri || config.redirect_uri;
-  
-  // Ensure required fields are not undefined
+
+  // Allow a transitional path where config includes creds, but immediately persist them into tenant secrets.
+  const tenantClientId = await secretProvider.getTenantSecret(tenant, 'google_client_id');
+  const tenantClientSecret = await secretProvider.getTenantSecret(tenant, 'google_client_secret');
+
+  const effectiveClientId = tenantClientId || config.client_id || null;
+  const effectiveClientSecret = tenantClientSecret || config.client_secret || null;
+
+  if (config.client_id && !tenantClientId) {
+    await secretProvider.setTenantSecret(tenant, 'google_client_id', String(config.client_id).trim());
+  }
+  if (config.client_secret && !tenantClientSecret) {
+    await secretProvider.setTenantSecret(tenant, 'google_client_secret', String(config.client_secret).trim());
+  }
+
+  const tenantProjectId = await secretProvider.getTenantSecret(tenant, 'google_project_id');
+  const effectiveProjectId = tenantProjectId || config.project_id || null;
+  if (config.project_id && !tenantProjectId) {
+    await secretProvider.setTenantSecret(tenant, 'google_project_id', String(config.project_id).trim());
+  }
+
+  if (!effectiveClientId || !effectiveClientSecret) {
+    throw new Error('Google OAuth is not configured for this tenant. Configure Google settings first.');
+  }
   if (!effectiveProjectId) {
-    throw new Error('Project ID is required for Gmail configuration');
+    throw new Error('Google Cloud project ID is not configured for this tenant. Configure Google settings first.');
   }
-  if (!effectiveRedirectUri) {
-    throw new Error('Redirect URI is required for Gmail configuration');
-  }
-  
-  if (effectiveClientId && typeof effectiveClientId === 'string' && !hostedConfig) {
-    // Only store user-provided secrets, not hosted ones
-    await secretProvider.setTenantSecret(tenant, 'google_client_id', effectiveClientId);
-  }
-  if (effectiveClientSecret && typeof effectiveClientSecret === 'string' && !hostedConfig) {
-    // Only store user-provided secrets, not hosted ones
-    await secretProvider.setTenantSecret(tenant, 'google_client_secret', effectiveClientSecret);
-  }
+
+  const baseUrl =
+    process.env.NEXT_PUBLIC_BASE_URL ||
+    (await secretProvider.getAppSecret('NEXT_PUBLIC_BASE_URL')) ||
+    process.env.NEXTAUTH_URL ||
+    (await secretProvider.getAppSecret('NEXTAUTH_URL')) ||
+    'http://localhost:3000';
+  const effectiveRedirectUri = `${baseUrl}/api/auth/google/callback`;
   
   // Generate standardized Pub/Sub names
   const pubsubNames = await generatePubSubNames(tenant);
@@ -305,8 +312,8 @@ async function persistGoogleConfig(
   const configPayload = {
     email_provider_id: providerId,
     tenant,
-    client_id: effectiveClientId || null,
-    client_secret: effectiveClientSecret || null,
+    client_id: null,
+    client_secret: null,
     project_id: effectiveProjectId,
     redirect_uri: effectiveRedirectUri,
     pubsub_topic_name: pubsubNames.topicName,
@@ -617,15 +624,20 @@ export async function upsertEmailProvider(data: {
   microsoftConfig?: Omit<MicrosoftEmailProviderConfig, 'email_provider_id' | 'tenant' | 'created_at' | 'updated_at'>;
   googleConfig?: Omit<GoogleEmailProviderConfig, 'email_provider_id' | 'tenant' | 'created_at' | 'updated_at'>;
   imapConfig?: Omit<ImapEmailProviderConfig, 'email_provider_id' | 'tenant' | 'created_at' | 'updated_at'>;
-}, skipAutomation?: boolean): Promise<{ provider: EmailProvider }> {
+}, skipAutomation?: boolean): Promise<EmailProviderSetupResult> {
   const user = await assertAuthenticated();
   const { knex, tenant } = await createTenantKnex();
   if (!tenant) throw new Error('Tenant is required');
-  
+
+  const result: EmailProviderSetupResult = {
+    provider: null as any,
+    setupWarnings: []
+  };
+
   try {
     const provider = await knex.transaction(async (trx) => {
       const base = await getOrCreateProvider(trx, tenant, data);
-      
+
       if (data.providerType === 'microsoft') {
         base.microsoftConfig = await persistMicrosoftConfig(trx, tenant, base.id, data.microsoftConfig);
       } else if (data.providerType === 'google') {
@@ -648,27 +660,42 @@ export async function upsertEmailProvider(data: {
           }
         });
       }
-      
+
       return base;
     });
-    
+
+    result.provider = provider;
+
     if (!skipAutomation && data.providerType === 'google' && provider.googleConfig) {
-      // Use hosted project ID if in EE mode, otherwise use provided project ID
-      const hostedConfig = await getHostedGmailConfig();
-      const effectiveProjectId = hostedConfig?.project_id || data.googleConfig?.project_id;
-      
+      const secretProvider = await getSecretProviderInstance();
+      const effectiveProjectId =
+        (await secretProvider.getTenantSecret(tenant, 'google_project_id')) ||
+        data.googleConfig?.project_id;
+
       if (effectiveProjectId) {
-        await configureGmailProvider({
+        const gmailResult = await configureGmailProvider({
           tenant,
           providerId: provider.id,
           projectId: effectiveProjectId
         });
-        // Update returned provider state to reflect side-effects
-        provider.lastSyncAt = new Date().toISOString();
-        provider.status = 'connected';
+
+        if (gmailResult.success) {
+          // Update returned provider state to reflect side-effects
+          provider.lastSyncAt = new Date().toISOString();
+          provider.status = 'connected';
+        } else {
+          // Setup failed - record the error
+          result.setupError = gmailResult.error || 'Gmail setup failed';
+          provider.status = 'error';
+        }
+
+        // Add any warnings
+        if (gmailResult.warnings && gmailResult.warnings.length > 0) {
+          result.setupWarnings = [...(result.setupWarnings || []), ...gmailResult.warnings];
+        }
       }
     }
-    
+
     if (!skipAutomation && data.providerType === 'microsoft' && provider.microsoftConfig) {
       try {
         const service = new EmailProviderService();
@@ -677,12 +704,15 @@ export async function upsertEmailProvider(data: {
         provider.lastSyncAt = new Date().toISOString();
         provider.status = 'connected';
       } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
         console.error('Failed to initialize Microsoft webhook:', error);
-        // Don't throw here - provider is saved, but webhook failed
+        // Record the error so the UI can display it
+        result.setupError = `Failed to initialize Microsoft webhook: ${errorMessage}`;
+        provider.status = 'error';
       }
     }
-    
-    return { provider };
+
+    return result;
   } catch (error) {
     console.error('Failed to upsert email provider:', error);
     throw new Error('Failed to upsert email provider');
@@ -699,7 +729,7 @@ export async function createEmailProvider(data: {
   microsoftConfig?: Omit<MicrosoftEmailProviderConfig, 'email_provider_id' | 'tenant' | 'created_at' | 'updated_at'>;
   googleConfig?: Omit<GoogleEmailProviderConfig, 'email_provider_id' | 'tenant' | 'created_at' | 'updated_at'>;
   imapConfig?: Omit<ImapEmailProviderConfig, 'email_provider_id' | 'tenant' | 'created_at' | 'updated_at'>;
-}, skipAutomation?: boolean): Promise<{ provider: EmailProvider }> {
+}, skipAutomation?: boolean): Promise<EmailProviderSetupResult> {
   // Delegate to upsertEmailProvider since they have identical logic
   return upsertEmailProvider(data, skipAutomation);
 }
@@ -718,15 +748,20 @@ export async function updateEmailProvider(
     imapConfig?: Omit<ImapEmailProviderConfig, 'email_provider_id' | 'tenant' | 'created_at' | 'updated_at'>;
   },
   skipAutomation?: boolean
-): Promise<{ provider: EmailProvider }> {
+): Promise<EmailProviderSetupResult> {
   const user = await assertAuthenticated();
   const { knex, tenant } = await createTenantKnex();
   if (!tenant) throw new Error('Tenant is required');
-  
+
+  const result: EmailProviderSetupResult = {
+    provider: null as any,
+    setupWarnings: []
+  };
+
   try {
     const provider = await knex.transaction(async (trx) => {
       const base = await getOrCreateProvider(trx, tenant, data, providerId);
-      
+
       if (data.providerType === 'microsoft') {
         base.microsoftConfig = await persistMicrosoftConfig(trx, tenant, base.id, data.microsoftConfig);
       } else if (data.providerType === 'google') {
@@ -749,27 +784,42 @@ export async function updateEmailProvider(
           }
         });
       }
-      
+
       return base;
     });
-    
+
+    result.provider = provider;
+
     if (!skipAutomation && data.providerType === 'google' && provider.googleConfig) {
-      // Use hosted project ID if in EE mode, otherwise use provided project ID
-      const hostedConfig = await getHostedGmailConfig();
-      const effectiveProjectId = hostedConfig?.project_id || data.googleConfig?.project_id;
-      
+      const secretProvider = await getSecretProviderInstance();
+      const effectiveProjectId =
+        (await secretProvider.getTenantSecret(tenant, 'google_project_id')) ||
+        data.googleConfig?.project_id;
+
       if (effectiveProjectId) {
-        await configureGmailProvider({
+        const gmailResult = await configureGmailProvider({
           tenant,
           providerId: provider.id,
           projectId: effectiveProjectId
         });
-        // Update returned provider state to reflect side-effects
-        provider.lastSyncAt = new Date().toISOString();
-        provider.status = 'connected';
+
+        if (gmailResult.success) {
+          // Update returned provider state to reflect side-effects
+          provider.lastSyncAt = new Date().toISOString();
+          provider.status = 'connected';
+        } else {
+          // Setup failed - record the error
+          result.setupError = gmailResult.error || 'Gmail setup failed';
+          provider.status = 'error';
+        }
+
+        // Add any warnings
+        if (gmailResult.warnings && gmailResult.warnings.length > 0) {
+          result.setupWarnings = [...(result.setupWarnings || []), ...gmailResult.warnings];
+        }
       }
     }
-    
+
     if (!skipAutomation && data.providerType === 'microsoft' && provider.microsoftConfig) {
       try {
         const service = new EmailProviderService();
@@ -778,12 +828,15 @@ export async function updateEmailProvider(
         provider.lastSyncAt = new Date().toISOString();
         provider.status = 'connected';
       } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
         console.error('Failed to initialize Microsoft webhook:', error);
-        // Don't throw here - provider is saved, but webhook failed
+        // Record the error so the UI can display it
+        result.setupError = `Failed to initialize Microsoft webhook: ${errorMessage}`;
+        provider.status = 'error';
       }
     }
-    
-    return { provider };
+
+    return result;
   } catch (error) {
     console.error('Failed to update email provider:', error);
     throw new Error('Failed to update email provider');
@@ -939,6 +992,71 @@ export async function retryMicrosoftSubscriptionRenewal(providerId: string): Pro
   } catch (error: any) {
     console.error('Manual renewal failed:', error);
     return { success: false, message: error.message || 'Internal server error' };
+  }
+}
+
+export async function runMicrosoft365Diagnostics(providerId: string): Promise<{ success: boolean; report?: Microsoft365DiagnosticsReport; error?: string }> {
+  try {
+    const user = await assertAuthenticated();
+    const { knex, tenant } = await createTenantKnex();
+
+    const permitted = await hasPermission(user, 'ticket_settings', 'update', knex);
+    if (!permitted) {
+      throwPermissionError('run Microsoft 365 diagnostics');
+    }
+
+    const provider = await knex('email_providers')
+      .where({ id: providerId, tenant })
+      .first();
+
+    if (!provider) {
+      return { success: false, error: 'Provider not found' };
+    }
+
+    if (provider.provider_type !== 'microsoft') {
+      return { success: false, error: 'Diagnostics are only available for Microsoft 365 providers' };
+    }
+
+    const vendorConfig = await knex('microsoft_email_provider_config')
+      .where({ email_provider_id: providerId, tenant })
+      .first();
+
+    const baseUrl = getWebhookBaseUrl();
+    const webhookUrl = `${baseUrl}/api/email/webhooks/microsoft`;
+
+    const adapterConfig = {
+      id: provider.id,
+      tenant: provider.tenant,
+      name: provider.provider_name,
+      provider_type: 'microsoft' as const,
+      mailbox: provider.mailbox,
+      folder_to_monitor: 'Inbox',
+      active: provider.is_active,
+      webhook_notification_url: webhookUrl,
+      webhook_subscription_id: vendorConfig?.webhook_subscription_id || null,
+      webhook_verification_token: vendorConfig?.webhook_verification_token || null,
+      webhook_expires_at: vendorConfig?.webhook_expires_at || null,
+      last_subscription_renewal: vendorConfig?.last_subscription_renewal || null,
+      connection_status: provider.status || 'configuring',
+      last_connection_test: provider.last_sync_at || null,
+      connection_error_message: provider.error_message || null,
+      provider_config: vendorConfig || {},
+      created_at: provider.created_at,
+      updated_at: provider.updated_at,
+    };
+
+    const adapter = new MicrosoftGraphAdapter(adapterConfig as any);
+
+    const report = await adapter.runMicrosoft365Diagnostics({
+      includeIdentifiers: true,
+      liveSubscriptionTest: true,
+      requiredScopes: ['Mail.Read', 'Mail.Read.Shared'],
+      folderListTop: 100,
+    });
+
+    return { success: true, report };
+  } catch (error: any) {
+    return { success: false, error: error?.message || 'Failed to run diagnostics' };
   }
 }
 

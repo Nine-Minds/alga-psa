@@ -98,7 +98,7 @@ const updateInvoiceItemSchema = createUpdateSchema(createInvoiceItemSchema);
 // Manual invoice item schema (for manual invoice creation)
 const manualInvoiceItemSchema = z.object({
   service_id: uuidSchema,
-  quantity: z.number().min(0),
+  quantity: z.number().positive(),
   description: z.string().min(1).max(500),
   rate: z.number().min(0),
   is_discount: z.boolean().default(false),

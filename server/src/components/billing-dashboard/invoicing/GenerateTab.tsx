@@ -30,13 +30,6 @@ interface SelectOption {
   label: React.JSX.Element;
 }
 
-interface Service {
-  service_id: string;
-  service_name: string;
-  rate: number;
-  tax_rate_id?: string | null;
-}
-
 const GenerateTab: React.FC<GenerateTabProps> = ({
   initialServices,
   onGenerateSuccess,
@@ -52,7 +45,7 @@ const GenerateTab: React.FC<GenerateTabProps> = ({
     is_early?: boolean;
   })[]>([]);
   const [clients, setClients] = useState<IClient[]>([]);
-  const [services, setServices] = useState<Service[]>([]);
+  const [services, setServices] = useState<IService[]>([]);
   const [showSuccessDialog, setShowSuccessDialog] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
 
@@ -65,20 +58,14 @@ const GenerateTab: React.FC<GenerateTabProps> = ({
       const [periodsData, clientsData, servicesData] = await Promise.all([
         getAvailableBillingPeriods(),
         getAllClients(),
-        getServices()
+        getServices(1, 999, { item_kind: 'any' })
       ]);
 
       setPeriods(periodsData);
       setClients(clientsData);
 
-      // Transform IService to Service
       if (servicesData && Array.isArray(servicesData.services)) {
-        setServices(servicesData.services.map((service): Service => ({
-          service_id: service.service_id,
-          service_name: service.service_name,
-          rate: service.default_rate || 0,
-          tax_rate_id: service.tax_rate_id
-        })));
+        setServices(servicesData.services);
       } else {
         console.warn('Services data is not in the expected format:', servicesData);
         setServices([]);

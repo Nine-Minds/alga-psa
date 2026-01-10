@@ -64,6 +64,29 @@ export default async function TicketsPage({ searchParams }: TicketsPageProps) {
 
       filtersFromURL.tags = normalizeTags(params.tags);
     }
+    if (params?.assignedToIds && typeof params.assignedToIds === 'string') {
+      const assignedToIds = params.assignedToIds.split(',').filter(id => id.trim().length > 0);
+      if (assignedToIds.length > 0) {
+        filtersFromURL.assignedToIds = assignedToIds;
+      }
+    }
+    if (params?.includeUnassigned === 'true') {
+      filtersFromURL.includeUnassigned = true;
+    }
+    // Parse due date filter from URL
+    if (params?.dueDateFilter && typeof params.dueDateFilter === 'string') {
+      const allowedDueDateFilters = ['all', 'overdue', 'upcoming', 'today', 'no_due_date', 'before', 'after', 'custom'] as const;
+      if ((allowedDueDateFilters as readonly string[]).includes(params.dueDateFilter)) {
+        filtersFromURL.dueDateFilter = params.dueDateFilter as ITicketListFilters['dueDateFilter'];
+      }
+    }
+    // Parse due date range values from URL
+    if (params?.dueDateFrom && typeof params.dueDateFrom === 'string') {
+      filtersFromURL.dueDateFrom = params.dueDateFrom;
+    }
+    if (params?.dueDateTo && typeof params.dueDateTo === 'string') {
+      filtersFromURL.dueDateTo = params.dueDateTo;
+    }
     const allowedSortKeys = [
       'ticket_number',
       'title',
@@ -73,7 +96,8 @@ export default async function TicketsPage({ searchParams }: TicketsPageProps) {
       'category_name',
       'client_name',
       'entered_at',
-      'entered_by_name'
+      'entered_by_name',
+      'due_date'
     ] as const;
 
     if (params?.sortBy && typeof params.sortBy === 'string') {
@@ -87,12 +111,19 @@ export default async function TicketsPage({ searchParams }: TicketsPageProps) {
         filtersFromURL.sortDirection = sortDirection;
       }
     }
+    if (params?.bundleView && typeof params.bundleView === 'string') {
+      const bundleView = params.bundleView;
+      if (bundleView === 'bundled' || bundleView === 'individual') {
+        filtersFromURL.bundleView = bundleView;
+      }
+    }
 
     // Apply defaults for missing parameters
     const initialFilters: Partial<ITicketListFilters> = {
       boardFilterState: 'active',
       statusId: 'open',
       priorityId: 'all',
+      bundleView: 'bundled',
       sortBy: filtersFromURL.sortBy ?? 'entered_at',
       sortDirection: filtersFromURL.sortDirection ?? 'desc',
       ...filtersFromURL
@@ -109,8 +140,14 @@ export default async function TicketsPage({ searchParams }: TicketsPageProps) {
       boardFilterState: initialFilters.boardFilterState || 'active',
       showOpenOnly: (initialFilters.statusId === 'open') || false,
       tags: initialFilters.tags || undefined,
+      assignedToIds: initialFilters.assignedToIds || undefined,
+      includeUnassigned: initialFilters.includeUnassigned || undefined,
+      dueDateFilter: initialFilters.dueDateFilter || undefined,
+      dueDateFrom: initialFilters.dueDateFrom || undefined,
+      dueDateTo: initialFilters.dueDateTo || undefined,
       sortBy: initialFilters.sortBy || 'entered_at',
-      sortDirection: initialFilters.sortDirection || 'desc'
+      sortDirection: initialFilters.sortDirection || 'desc',
+      bundleView: initialFilters.bundleView || 'bundled'
     };
 
     // Fetch consolidated data for the ticket list with initial filters and pagination

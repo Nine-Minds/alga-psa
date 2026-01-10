@@ -21,7 +21,7 @@ export async function generateGoogleCalendarAuthUrl(params: {
     redirect_uri: params.redirectUri,
     state: params.state,
     access_type: 'offline',
-    prompt: 'select_account'
+    prompt: 'consent' // Force consent to ensure we get refresh token
   });
 
   return `https://accounts.google.com/o/oauth2/v2/auth?${queryParams.toString()}`;

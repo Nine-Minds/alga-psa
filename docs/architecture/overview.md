@@ -193,6 +193,11 @@ This document provides a high-level architectural overview of the open-source MS
     - Display order management and conflict resolution
 
 * **Support Ticketing:** Manages support tickets. See `server/src/lib/models/ticket.tsx` and components under `server/src/components/tickets`.
+  * **Ticket Bundling (Master/Child Tickets):** Groups duplicate/related tickets into a single “master” ticket with linked “child” tickets. Master updates can sync to children and customer notifications can fan out to child requesters.
+    - Data model: `tickets.master_ticket_id`, `ticket_bundle_settings`, `ticket_bundle_mirrors` (migrations: `server/migrations/20260104120000_create_ticket_bundles.cjs`, `server/migrations/20260104121000_add_system_generated_comments.cjs`)
+    - Server actions/queries: `server/src/lib/actions/ticket-actions/ticketBundleActions.ts`, `server/src/lib/actions/ticket-actions/optimizedTicketActions.ts`, `server/src/lib/actions/ticket-actions/ticketBundleUtils.ts`
+    - UI: `server/src/components/tickets/TicketingDashboard.tsx`, `server/src/components/tickets/ticket/TicketDetails.tsx`
+    - Notifications: `server/src/lib/eventBus/subscribers/ticketEmailSubscriber.ts` (comment + closure fanout for bundled children)
 
 * **Time Management:** Tracks time entries and manages timesheets with both manual entry and automatic interval tracking:
   * Core Components:

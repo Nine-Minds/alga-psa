@@ -1,0 +1,1402 @@
+[
+  {
+    "id": "F001",
+    "description": "Docs: Author PRD for scheduled tasks (endpoint-based)",
+    "implemented": true,
+    "prdRefs": [
+      "PRD#Summary"
+    ]
+  },
+  {
+    "id": "F002",
+    "description": "Docs: Add scratchpad decisions/constraints for scheduled tasks",
+    "implemented": true,
+    "prdRefs": [
+      "PRD#Summary"
+    ]
+  },
+  {
+    "id": "F003",
+    "description": "Docs: Document schedule execution contract (synthetic HTTP payload)",
+    "implemented": true,
+    "prdRefs": [
+      "PRD#Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F004",
+    "description": "Docs: Document remap-on-update policy and override UX",
+    "implemented": true,
+    "prdRefs": [
+      "PRD#Requirements"
+    ]
+  },
+  {
+    "id": "F005",
+    "description": "Docs: Add operator notes for cleanup/no-cascades constraints",
+    "implemented": true,
+    "prdRefs": [
+      "PRD#Rollout / Migration"
+    ]
+  },
+  {
+    "id": "F006",
+    "description": "DB: Create table `extension_api_endpoint` with unique (version_id, method, path)",
+    "implemented": true,
+    "prdRefs": [
+      "PRD#Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F007",
+    "description": "DB: Create table `tenant_extension_schedule` keyed by install_id + endpoint_id",
+    "implemented": true,
+    "prdRefs": [
+      "PRD#Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F008",
+    "description": "DB: Add indexes for tenant/install lookups on schedules",
+    "implemented": true,
+    "prdRefs": [
+      "PRD#Non-functional Requirements"
+    ]
+  },
+  {
+    "id": "F009",
+    "description": "DB: Add nullable fields for last_run_at/status/error on schedules",
+    "implemented": true,
+    "prdRefs": [
+      "PRD#Observability"
+    ]
+  },
+  {
+    "id": "F010",
+    "description": "DB: Add fields to store external schedule handle id (Temporal schedule id / pgboss schedule name)",
+    "implemented": true,
+    "prdRefs": [
+      "PRD#Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F011",
+    "description": "DB: Add optional payload_json to schedule definition",
+    "implemented": true,
+    "prdRefs": [
+      "PRD#Functional Requirements"
+    ]
+  },
+  {
+    "id": "F012",
+    "description": "DB: Add soft-delete support (deleted_at) for schedules (optional)",
+    "implemented": false,
+    "prdRefs": [
+      "PRD#Cleanup (no cascades)"
+    ]
+  },
+  {
+    "id": "F013",
+    "description": "DB: Add schedule_id to extension execution logs for correlation (new column or separate table)",
+    "implemented": false,
+    "prdRefs": [
+      "PRD#Observability"
+    ]
+  },
+  {
+    "id": "F014",
+    "description": "DB: Add audit log records for schedule CRUD actions",
+    "implemented": false,
+    "prdRefs": [
+      "PRD#Observability"
+    ]
+  },
+  {
+    "id": "F015",
+    "description": "DB: Add constraints/guards for max schedule name length and cron/timezone string lengths",
+    "implemented": true,
+    "prdRefs": [
+      "PRD#Non-functional Requirements"
+    ]
+  },
+  {
+    "id": "F016",
+    "description": "Registry: Normalize and persist manifest endpoints into `extension_api_endpoint` when creating a version",
+    "implemented": true,
+    "prdRefs": [
+      "PRD#Endpoint materialization"
+    ]
+  },
+  {
+    "id": "F017",
+    "description": "Registry: Ensure endpoint normalization (method uppercasing, path begins with /)",
+    "implemented": true,
+    "prdRefs": [
+      "PRD#Endpoint materialization"
+    ]
+  },
+  {
+    "id": "F018",
+    "description": "Registry: De-duplicate endpoints by (method,path) during ingest",
+    "implemented": true,
+    "prdRefs": [
+      "PRD#Endpoint materialization"
+    ]
+  },
+  {
+    "id": "F019",
+    "description": "Registry: Backfill endpoints for existing versions (one-time job or lazy materialization)",
+    "implemented": true,
+    "prdRefs": [
+      "PRD#Rollout / Migration"
+    ]
+  },
+  {
+    "id": "F020",
+    "description": "Registry: Provide query to list endpoints for a version_id",
+    "implemented": true,
+    "prdRefs": [
+      "PRD#APIs (EE)"
+    ]
+  },
+  {
+    "id": "F021",
+    "description": "Registry: Provide query to list endpoints for an install (resolve version_id -> endpoints)",
+    "implemented": true,
+    "prdRefs": [
+      "PRD#APIs (EE)"
+    ]
+  },
+  {
+    "id": "F022",
+    "description": "Registry: Standardize endpoint source of truth (avoid divergence between api vs api_endpoints)",
+    "implemented": true,
+    "prdRefs": [
+      "PRD#Discoveries / Constraints"
+    ]
+  },
+  {
+    "id": "F023",
+    "description": "API: Add endpoint listing API for extension settings dropdown (tenant-scoped)",
+    "implemented": true,
+    "prdRefs": [
+      "PRD#APIs (EE)"
+    ]
+  },
+  {
+    "id": "F024",
+    "description": "API: Validate that returned endpoints match the currently installed version for the tenant",
+    "implemented": true,
+    "prdRefs": [
+      "PRD#Security / Permissions"
+    ]
+  },
+  {
+    "id": "F025",
+    "description": "API: Add pagination/search for endpoints list (optional)",
+    "implemented": false,
+    "prdRefs": [
+      "PRD#UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F026",
+    "description": "Schedule API: List schedules for an extension install",
+    "implemented": true,
+    "prdRefs": [
+      "PRD#Schedule CRUD and execution"
+    ]
+  },
+  {
+    "id": "F027",
+    "description": "Schedule API: Create schedule (endpoint_id + cron + timezone + enabled)",
+    "implemented": true,
+    "prdRefs": [
+      "PRD#Schedule CRUD and execution"
+    ]
+  },
+  {
+    "id": "F028",
+    "description": "Schedule API: Update schedule fields (cron/timezone/enabled/name/payload/endpoint)",
+    "implemented": true,
+    "prdRefs": [
+      "PRD#Schedule CRUD and execution"
+    ]
+  },
+  {
+    "id": "F029",
+    "description": "Schedule API: Delete schedule and underlying job-runner schedule (no cascades)",
+    "implemented": true,
+    "prdRefs": [
+      "PRD#Cleanup (no cascades)"
+    ]
+  },
+  {
+    "id": "F030",
+    "description": "Schedule API: Run-now endpoint to trigger immediate execution",
+    "implemented": true,
+    "prdRefs": [
+      "PRD#Schedule CRUD and execution"
+    ]
+  },
+  {
+    "id": "F031",
+    "description": "Schedule API: Input validation for cron string and timezone",
+    "implemented": true,
+    "prdRefs": [
+      "PRD#Non-functional Requirements"
+    ]
+  },
+  {
+    "id": "F032",
+    "description": "Schedule API: Input validation that endpoint_id belongs to the install\u2019s version_id",
+    "implemented": true,
+    "prdRefs": [
+      "PRD#Security / Permissions"
+    ]
+  },
+  {
+    "id": "F033",
+    "description": "Schedule API: Enforce max schedules per install",
+    "implemented": true,
+    "prdRefs": [
+      "PRD#Non-functional Requirements"
+    ]
+  },
+  {
+    "id": "F034",
+    "description": "Schedule API: Enforce minimum frequency / deny too-frequent cron expressions",
+    "implemented": true,
+    "prdRefs": [
+      "PRD#Non-functional Requirements"
+    ]
+  },
+  {
+    "id": "F035",
+    "description": "Schedule API: Enforce rate limit for run-now calls",
+    "implemented": true,
+    "prdRefs": [
+      "PRD#Non-functional Requirements"
+    ]
+  },
+  {
+    "id": "F036",
+    "description": "Schedule API: Return structured errors suitable for UI display (field-level)",
+    "implemented": true,
+    "prdRefs": [
+      "PRD#UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F037",
+    "description": "Schedule API: Authorization checks aligned with extension settings access",
+    "implemented": true,
+    "prdRefs": [
+      "PRD#Security / Permissions"
+    ]
+  },
+  {
+    "id": "F038",
+    "description": "Server actions: Add getExtensionEndpoints action for UI (if not using route directly)",
+    "implemented": true,
+    "prdRefs": [
+      "PRD#UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F039",
+    "description": "Server actions: Add getExtensionSchedules action for settings UI",
+    "implemented": true,
+    "prdRefs": [
+      "PRD#UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F040",
+    "description": "Server actions: Add create/update/delete schedule actions",
+    "implemented": true,
+    "prdRefs": [
+      "PRD#Schedule CRUD and execution"
+    ]
+  },
+  {
+    "id": "F041",
+    "description": "Server actions: Add run-now action",
+    "implemented": true,
+    "prdRefs": [
+      "PRD#Schedule CRUD and execution"
+    ]
+  },
+  {
+    "id": "F042",
+    "description": "Jobs: Define schedule job type for 'scheduled extension invocation'",
+    "implemented": true,
+    "prdRefs": [
+      "PRD#Schedule CRUD and execution"
+    ]
+  },
+  {
+    "id": "F043",
+    "description": "Jobs: Register schedule job handler in job handler registry",
+    "implemented": true,
+    "prdRefs": [
+      "PRD#Schedule CRUD and execution"
+    ]
+  },
+  {
+    "id": "F044",
+    "description": "Jobs: Use IJobRunner.scheduleRecurringJob to create durable schedule (Temporal schedule in EE)",
+    "implemented": true,
+    "prdRefs": [
+      "PRD#Non-functional Requirements"
+    ]
+  },
+  {
+    "id": "F045",
+    "description": "Jobs: Choose stable singleton key naming for schedules (install_id + schedule_id)",
+    "implemented": true,
+    "prdRefs": [
+      "PRD#Schedule CRUD and execution"
+    ]
+  },
+  {
+    "id": "F046",
+    "description": "Jobs: Persist external schedule handle id on schedule record",
+    "implemented": true,
+    "prdRefs": [
+      "PRD#Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F047",
+    "description": "Jobs: Support enable/disable by pausing/deleting underlying schedule and recreating as needed",
+    "implemented": true,
+    "prdRefs": [
+      "PRD#Schedule CRUD and execution"
+    ]
+  },
+  {
+    "id": "F048",
+    "description": "Jobs: Implement run-now as immediate job trigger separate from recurring schedule",
+    "implemented": true,
+    "prdRefs": [
+      "PRD#Schedule CRUD and execution"
+    ]
+  },
+  {
+    "id": "F049",
+    "description": "Runner invoke: Implement internal helper to call Runner /v1/execute with synthetic http payload",
+    "implemented": true,
+    "prdRefs": [
+      "PRD#Execution payload to Runner"
+    ]
+  },
+  {
+    "id": "F050",
+    "description": "Runner invoke: Load install config by install_id (providers, secrets, config, content hash)",
+    "implemented": true,
+    "prdRefs": [
+      "PRD#Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F051",
+    "description": "Runner invoke: Build context that includes schedule_id + trigger type + invocation id",
+    "implemented": true,
+    "prdRefs": [
+      "PRD#Execution payload to Runner"
+    ]
+  },
+  {
+    "id": "F052",
+    "description": "Runner invoke: Serialize payload_json into request body_b64 (JSON)",
+    "implemented": true,
+    "prdRefs": [
+      "PRD#Execution payload to Runner"
+    ]
+  },
+  {
+    "id": "F053",
+    "description": "Runner invoke: Apply same header filtering rules as gateway (or define schedule-specific allowlist)",
+    "implemented": false,
+    "prdRefs": [
+      "PRD#Security / Permissions"
+    ]
+  },
+  {
+    "id": "F054",
+    "description": "Runner invoke: Enforce timeout and size limits for scheduled invocations",
+    "implemented": true,
+    "prdRefs": [
+      "PRD#Non-functional Requirements"
+    ]
+  },
+  {
+    "id": "F055",
+    "description": "Runner invoke: Capture response status/body for logs and schedule last_run fields",
+    "implemented": true,
+    "prdRefs": [
+      "PRD#Observability"
+    ]
+  },
+  {
+    "id": "F056",
+    "description": "Execution control: Default 'no overlap' per schedule (lock/lease)",
+    "implemented": true,
+    "prdRefs": [
+      "PRD#Non-functional Requirements"
+    ]
+  },
+  {
+    "id": "F057",
+    "description": "Execution control: Add idempotency key per run-now invocation",
+    "implemented": true,
+    "prdRefs": [
+      "PRD#Non-functional Requirements"
+    ]
+  },
+  {
+    "id": "F058",
+    "description": "Execution control: Retry policy for schedule runs (job runner retries + recorded attempts)",
+    "implemented": false,
+    "prdRefs": [
+      "PRD#Non-functional Requirements"
+    ]
+  },
+  {
+    "id": "F059",
+    "description": "Execution control: Decide catch-up semantics after downtime (skip/backfill/run-once)",
+    "implemented": false,
+    "prdRefs": [
+      "PRD#Open Questions"
+    ]
+  },
+  {
+    "id": "F060",
+    "description": "Remap: Implement remap procedure on extension install update by matching (method,path)",
+    "implemented": true,
+    "prdRefs": [
+      "PRD#Remap on extension update"
+    ]
+  },
+  {
+    "id": "F061",
+    "description": "Remap: Block extension version update if any schedule cannot be remapped",
+    "implemented": true,
+    "prdRefs": [
+      "PRD#Remap on extension update"
+    ]
+  },
+  {
+    "id": "F062",
+    "description": "Remap: Return structured error containing schedule ids and missing endpoints",
+    "implemented": true,
+    "prdRefs": [
+      "PRD#Remap on extension update"
+    ]
+  },
+  {
+    "id": "F063",
+    "description": "Remap: Add override action to disable affected schedules and proceed with update",
+    "implemented": true,
+    "prdRefs": [
+      "PRD#Open Questions"
+    ]
+  },
+  {
+    "id": "F064",
+    "description": "Remap: Record remap actions in audit log",
+    "implemented": false,
+    "prdRefs": [
+      "PRD#Observability"
+    ]
+  },
+  {
+    "id": "F065",
+    "description": "Remap: Ensure remap is transactional with the install update (all-or-nothing)",
+    "implemented": false,
+    "prdRefs": [
+      "PRD#Non-functional Requirements"
+    ]
+  },
+  {
+    "id": "F066",
+    "description": "Cleanup: On extension uninstall, delete all schedules and underlying runner schedules",
+    "implemented": true,
+    "prdRefs": [
+      "PRD#Cleanup (no cascades)"
+    ]
+  },
+  {
+    "id": "F067",
+    "description": "Cleanup: On install disable, disable schedules (policy: keep config, stop execution)",
+    "implemented": true,
+    "prdRefs": [
+      "PRD#Cleanup (no cascades)"
+    ]
+  },
+  {
+    "id": "F068",
+    "description": "Cleanup: On tenant delete, ensure schedules are cleaned up via admin tooling/jobs",
+    "implemented": false,
+    "prdRefs": [
+      "PRD#Rollout / Migration"
+    ]
+  },
+  {
+    "id": "F069",
+    "description": "Cleanup: On schedule delete, delete Temporal schedule/pgboss schedule and clear external id",
+    "implemented": true,
+    "prdRefs": [
+      "PRD#Cleanup (no cascades)"
+    ]
+  },
+  {
+    "id": "F070",
+    "description": "Cleanup: Add reconciliation job to detect orphan schedules and clean them",
+    "implemented": false,
+    "prdRefs": [
+      "PRD#Rollout / Migration"
+    ]
+  },
+  {
+    "id": "F071",
+    "description": "Security: Enforce permissions for schedule CRUD and run-now (tenant admin only)",
+    "implemented": true,
+    "prdRefs": [
+      "PRD#Security / Permissions"
+    ]
+  },
+  {
+    "id": "F072",
+    "description": "Security: Enforce that only endpoints from installed version are selectable",
+    "implemented": true,
+    "prdRefs": [
+      "PRD#Security / Permissions"
+    ]
+  },
+  {
+    "id": "F073",
+    "description": "Security: Validate path parameter endpoints are disallowed or require static substitution",
+    "implemented": true,
+    "prdRefs": [
+      "PRD#Open Questions"
+    ]
+  },
+  {
+    "id": "F074",
+    "description": "Security: Apply per-tenant caps for number of schedules and invocation rate",
+    "implemented": true,
+    "prdRefs": [
+      "PRD#Non-functional Requirements"
+    ]
+  },
+  {
+    "id": "F075",
+    "description": "Security: Store only non-sensitive schedule fields; encourage using install secrets for credentials",
+    "implemented": true,
+    "prdRefs": [
+      "PRD#Security / Permissions"
+    ]
+  },
+  {
+    "id": "F076",
+    "description": "Observability: Write execution logs for schedule runs with schedule_id correlation",
+    "implemented": false,
+    "prdRefs": [
+      "PRD#Observability"
+    ]
+  },
+  {
+    "id": "F077",
+    "description": "Observability: Update schedule last_run_at/status/error after each run",
+    "implemented": true,
+    "prdRefs": [
+      "PRD#Observability"
+    ]
+  },
+  {
+    "id": "F078",
+    "description": "Observability: Emit metrics (runs, failures, duration) for scheduled invocations",
+    "implemented": false,
+    "prdRefs": [
+      "PRD#Observability"
+    ]
+  },
+  {
+    "id": "F079",
+    "description": "Observability: Add UI surface for recent run history (optional v1)",
+    "implemented": false,
+    "prdRefs": [
+      "PRD#UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F080",
+    "description": "Observability: Add audit events for schedule CRUD and run-now",
+    "implemented": false,
+    "prdRefs": [
+      "PRD#Observability"
+    ]
+  },
+  {
+    "id": "F081",
+    "description": "UI: Add 'Schedules' section to ExtensionSettings screen",
+    "implemented": true,
+    "prdRefs": [
+      "PRD#UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F082",
+    "description": "UI: List schedules with endpoint, cron, timezone, enabled, last run",
+    "implemented": true,
+    "prdRefs": [
+      "PRD#UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F083",
+    "description": "UI: Add schedule creation UI with endpoint dropdown",
+    "implemented": true,
+    "prdRefs": [
+      "PRD#UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F084",
+    "description": "UI: Add schedule edit UI",
+    "implemented": true,
+    "prdRefs": [
+      "PRD#UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F085",
+    "description": "UI: Add enable/disable toggle and confirm flows",
+    "implemented": true,
+    "prdRefs": [
+      "PRD#UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F086",
+    "description": "UI: Add delete schedule confirm flow",
+    "implemented": true,
+    "prdRefs": [
+      "PRD#UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F087",
+    "description": "UI: Add run-now action and toast feedback",
+    "implemented": true,
+    "prdRefs": [
+      "PRD#Users and Primary Flows"
+    ]
+  },
+  {
+    "id": "F088",
+    "description": "UI: Cron validation feedback and help text",
+    "implemented": true,
+    "prdRefs": [
+      "PRD#UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F089",
+    "description": "UI: Timezone selector with tenant default fallback",
+    "implemented": false,
+    "prdRefs": [
+      "PRD#Open Questions"
+    ]
+  },
+  {
+    "id": "F090",
+    "description": "UI: Optional JSON payload editor with validation",
+    "implemented": true,
+    "prdRefs": [
+      "PRD#UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F091",
+    "description": "UI: Display endpoint invalidation after upgrade (schedule marked invalid)",
+    "implemented": false,
+    "prdRefs": [
+      "PRD#Remap on extension update"
+    ]
+  },
+  {
+    "id": "F092",
+    "description": "UI: Display upgrade-blocking error with affected schedules and remediation actions",
+    "implemented": false,
+    "prdRefs": [
+      "PRD#Users and Primary Flows"
+    ]
+  },
+  {
+    "id": "F093",
+    "description": "API: Add install update endpoint that triggers remap and can be blocked",
+    "implemented": true,
+    "prdRefs": [
+      "PRD#Remap on extension update"
+    ]
+  },
+  {
+    "id": "F094",
+    "description": "API: Add 'disable affected schedules and proceed' endpoint (override)",
+    "implemented": true,
+    "prdRefs": [
+      "PRD#Open Questions"
+    ]
+  },
+  {
+    "id": "F095",
+    "description": "Validation: Add cron parser/validator in backend (shared util)",
+    "implemented": true,
+    "prdRefs": [
+      "PRD#Non-functional Requirements"
+    ]
+  },
+  {
+    "id": "F096",
+    "description": "Validation: Add timezone validator against IANA tz database",
+    "implemented": true,
+    "prdRefs": [
+      "PRD#Non-functional Requirements"
+    ]
+  },
+  {
+    "id": "F097",
+    "description": "Validation: Ensure schedule payload_json size limit",
+    "implemented": true,
+    "prdRefs": [
+      "PRD#Non-functional Requirements"
+    ]
+  },
+  {
+    "id": "F098",
+    "description": "Validation: Ensure schedule names are unique per install (optional)",
+    "implemented": true,
+    "prdRefs": [
+      "PRD#Functional Requirements"
+    ]
+  },
+  {
+    "id": "F099",
+    "description": "Performance: Ensure schedule list queries are indexed and tenant-scoped",
+    "implemented": true,
+    "prdRefs": [
+      "PRD#Non-functional Requirements"
+    ]
+  },
+  {
+    "id": "F100",
+    "description": "Performance: Avoid N+1 queries when loading endpoints and schedules for settings UI",
+    "implemented": true,
+    "prdRefs": [
+      "PRD#Non-functional Requirements"
+    ]
+  },
+  {
+    "id": "F101",
+    "description": "Compat: Ensure CE behavior is safe (either disable schedules or use PgBossJobRunner when available)",
+    "implemented": false,
+    "prdRefs": [
+      "PRD#Non-goals"
+    ]
+  },
+  {
+    "id": "F102",
+    "description": "Compat: Feature flag scheduled tasks UI for staged rollout",
+    "implemented": false,
+    "prdRefs": [
+      "PRD#Rollout / Migration"
+    ]
+  },
+  {
+    "id": "F103",
+    "description": "Ops: Add admin tool to list schedules per tenant/extension for support",
+    "implemented": false,
+    "prdRefs": [
+      "PRD#Observability"
+    ]
+  },
+  {
+    "id": "F104",
+    "description": "Ops: Add admin tool to manually disable all schedules for a tenant (kill switch)",
+    "implemented": false,
+    "prdRefs": [
+      "PRD#Security / Permissions"
+    ]
+  },
+  {
+    "id": "F105",
+    "description": "Ops: Add admin tool to backfill endpoints for a version id",
+    "implemented": false,
+    "prdRefs": [
+      "PRD#Rollout / Migration"
+    ]
+  },
+  {
+    "id": "F106",
+    "description": "Data integrity: Prevent deleting an endpoint row that is referenced by an active schedule (enforced in service)",
+    "implemented": false,
+    "prdRefs": [
+      "PRD#Cleanup (no cascades)"
+    ]
+  },
+  {
+    "id": "F107",
+    "description": "Data integrity: Ensure schedule create uses a transaction to persist schedule + create durable runner schedule",
+    "implemented": false,
+    "prdRefs": [
+      "PRD#Non-functional Requirements"
+    ]
+  },
+  {
+    "id": "F108",
+    "description": "Data integrity: Ensure schedule update is transactional with rescheduling operations",
+    "implemented": false,
+    "prdRefs": [
+      "PRD#Non-functional Requirements"
+    ]
+  },
+  {
+    "id": "F109",
+    "description": "Data integrity: Ensure schedule delete is transactional with runner schedule deletion",
+    "implemented": false,
+    "prdRefs": [
+      "PRD#Cleanup (no cascades)"
+    ]
+  },
+  {
+    "id": "F110",
+    "description": "Execution: Enforce that scheduled invocations set x-alga-tenant/x-alga-extension context consistently",
+    "implemented": true,
+    "prdRefs": [
+      "PRD#Execution payload to Runner"
+    ]
+  },
+  {
+    "id": "F111",
+    "description": "Execution: Ensure scheduled invocations do not include a user context (or use a system user identity)",
+    "implemented": true,
+    "prdRefs": [
+      "PRD#Security / Permissions"
+    ]
+  },
+  {
+    "id": "F112",
+    "description": "Execution: Add schedule-specific request_id generation and correlation ids",
+    "implemented": true,
+    "prdRefs": [
+      "PRD#Observability"
+    ]
+  },
+  {
+    "id": "F113",
+    "description": "UX: Add copyable curl-like debug view of schedule invocation request (optional)",
+    "implemented": false,
+    "prdRefs": [
+      "PRD#UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F114",
+    "description": "UX: Show next-run time (best-effort) using cron parsing and timezone",
+    "implemented": false,
+    "prdRefs": [
+      "PRD#Open Questions"
+    ]
+  },
+  {
+    "id": "F115",
+    "description": "UX: Inline warning when endpoint contains path params (disallow or require input)",
+    "implemented": false,
+    "prdRefs": [
+      "PRD#Open Questions"
+    ]
+  },
+  {
+    "id": "F116",
+    "description": "Rollback: Ensure schedule execution is paused when extension install is disabled",
+    "implemented": true,
+    "prdRefs": [
+      "PRD#Cleanup (no cascades)"
+    ]
+  },
+  {
+    "id": "F117",
+    "description": "Rollback: Ensure schedule execution uses the currently installed content_hash (not cached stale)",
+    "implemented": true,
+    "prdRefs": [
+      "PRD#Problem"
+    ]
+  },
+  {
+    "id": "F118",
+    "description": "Testing: Add unit tests for endpoint materialization normalization",
+    "implemented": false,
+    "prdRefs": [
+      "PRD#Acceptance Criteria (Definition of Done)"
+    ]
+  },
+  {
+    "id": "F119",
+    "description": "Testing: Add unit tests for remap logic",
+    "implemented": false,
+    "prdRefs": [
+      "PRD#Remap on extension update"
+    ]
+  },
+  {
+    "id": "F120",
+    "description": "Testing: Add integration tests for schedule CRUD APIs",
+    "implemented": false,
+    "prdRefs": [
+      "PRD#Schedule CRUD and execution"
+    ]
+  },
+  {
+    "id": "F121",
+    "description": "Testing: Add integration tests for run-now invocation hitting Runner stub",
+    "implemented": false,
+    "prdRefs": [
+      "PRD#Execution payload to Runner"
+    ]
+  },
+  {
+    "id": "F122",
+    "description": "Testing: Add E2E tests for ExtensionSettings schedule UI",
+    "implemented": false,
+    "prdRefs": [
+      "PRD#Users and Primary Flows"
+    ]
+  },
+  {
+    "id": "F123",
+    "description": "Migration: Add data migration/backfill script to populate extension_api_endpoint from existing extension_version.api_endpoints",
+    "implemented": false,
+    "prdRefs": [
+      "PRD#Rollout / Migration"
+    ]
+  },
+  {
+    "id": "F124",
+    "description": "Migration: Add safe idempotent backfill behavior for repeated runs",
+    "implemented": false,
+    "prdRefs": [
+      "PRD#Rollout / Migration"
+    ]
+  },
+  {
+    "id": "F125",
+    "description": "Policy: Define schedule concurrency policy (forbid overlap) and implement locking",
+    "implemented": true,
+    "prdRefs": [
+      "PRD#Non-functional Requirements"
+    ]
+  },
+  {
+    "id": "F126",
+    "description": "Policy: Define retry/backoff defaults for schedule runs and expose in UI (optional)",
+    "implemented": false,
+    "prdRefs": [
+      "PRD#Non-functional Requirements"
+    ]
+  },
+  {
+    "id": "F127",
+    "description": "Policy: Define schedule pause behavior on repeated failures (optional)",
+    "implemented": false,
+    "prdRefs": [
+      "PRD#Non-functional Requirements"
+    ]
+  },
+  {
+    "id": "F128",
+    "description": "API: Add endpoint to validate cron/timezone before saving (optional)",
+    "implemented": false,
+    "prdRefs": [
+      "PRD#UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F129",
+    "description": "API: Add endpoint to preview next N run times for a schedule (optional)",
+    "implemented": false,
+    "prdRefs": [
+      "PRD#Open Questions"
+    ]
+  },
+  {
+    "id": "F130",
+    "description": "Support: Add schedule export/import for tenant migrations (optional)",
+    "implemented": false,
+    "prdRefs": [
+      "PRD#Rollout / Migration"
+    ]
+  },
+  {
+    "id": "F131",
+    "description": "Hardening: Ensure schedule create/update/delete are safe under concurrent requests (optimistic locking)",
+    "implemented": false,
+    "prdRefs": [
+      "PRD#Non-functional Requirements"
+    ]
+  },
+  {
+    "id": "F132",
+    "description": "Hardening: Add per-schedule revision/version field to prevent lost updates",
+    "implemented": false,
+    "prdRefs": [
+      "PRD#Non-functional Requirements"
+    ]
+  },
+  {
+    "id": "F133",
+    "description": "Hardening: Ensure schedule execution fails gracefully when install config cannot be loaded",
+    "implemented": true,
+    "prdRefs": [
+      "PRD#Reliability"
+    ]
+  },
+  {
+    "id": "F134",
+    "description": "Hardening: Ensure schedule execution handles Runner timeouts cleanly and records status",
+    "implemented": true,
+    "prdRefs": [
+      "PRD#Observability"
+    ]
+  },
+  {
+    "id": "F135",
+    "description": "Hardening: Ensure schedule deletion handles missing runner schedule handle (idempotent)",
+    "implemented": true,
+    "prdRefs": [
+      "PRD#Cleanup (no cascades)"
+    ]
+  },
+  {
+    "id": "F136",
+    "description": "UI: Add empty state for schedules when none exist",
+    "implemented": true,
+    "prdRefs": [
+      "PRD#UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F137",
+    "description": "UI: Add loading states and error states for schedules list",
+    "implemented": true,
+    "prdRefs": [
+      "PRD#UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F138",
+    "description": "UI: Add permissions-gated UI (hide schedules if user lacks rights)",
+    "implemented": false,
+    "prdRefs": [
+      "PRD#Security / Permissions"
+    ]
+  },
+  {
+    "id": "F139",
+    "description": "Docs: Add developer documentation for scheduling endpoint invocation semantics",
+    "implemented": true,
+    "prdRefs": [
+      "PRD#Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F140",
+    "description": "Docs: Add operator documentation for remap failures and override flow",
+    "implemented": true,
+    "prdRefs": [
+      "PRD#Remap on extension update"
+    ]
+  },
+  {
+    "id": "F141",
+    "description": "Telemetry: Tag schedule runs with schedule_id in logs and metrics consistently",
+    "implemented": false,
+    "prdRefs": [
+      "PRD#Observability"
+    ]
+  },
+  {
+    "id": "F142",
+    "description": "Telemetry: Add per-schedule failure count and last_success_at fields (optional)",
+    "implemented": false,
+    "prdRefs": [
+      "PRD#Observability"
+    ]
+  },
+  {
+    "id": "F143",
+    "description": "Compliance: Ensure schedule CRUD actions are auditable and retained",
+    "implemented": false,
+    "prdRefs": [
+      "PRD#Observability"
+    ]
+  },
+  {
+    "id": "F144",
+    "description": "API: Add endpoint to fetch a single schedule by id",
+    "implemented": true,
+    "prdRefs": [
+      "PRD#Schedule CRUD and execution"
+    ]
+  },
+  {
+    "id": "F145",
+    "description": "API: Add endpoint to bulk-disable schedules for an install",
+    "implemented": false,
+    "prdRefs": [
+      "PRD#Cleanup (no cascades)"
+    ]
+  },
+  {
+    "id": "F146",
+    "description": "Remap: Provide preview endpoint to show remap results before applying update",
+    "implemented": false,
+    "prdRefs": [
+      "PRD#Users and Primary Flows"
+    ]
+  },
+  {
+    "id": "F147",
+    "description": "Remap: Ensure schedules that were disabled remain disabled after remap",
+    "implemented": true,
+    "prdRefs": [
+      "PRD#Remap on extension update"
+    ]
+  },
+  {
+    "id": "F148",
+    "description": "Scheduler: Add periodic health check that underlying Temporal schedules exist for enabled DB schedules",
+    "implemented": false,
+    "prdRefs": [
+      "PRD#Reliability"
+    ]
+  },
+  {
+    "id": "F149",
+    "description": "Scheduler: Auto-repair missing schedule handles (optional)",
+    "implemented": false,
+    "prdRefs": [
+      "PRD#Reliability"
+    ]
+  },
+  {
+    "id": "F150",
+    "description": "Gateway parity: Reuse gateway header/body size limits for scheduled invocations",
+    "implemented": false,
+    "prdRefs": [
+      "PRD#Execution payload to Runner"
+    ]
+  },
+  {
+    "id": "F151",
+    "description": "Gateway parity: Reuse gateway timeout config for scheduled invocations (EXT_GATEWAY_TIMEOUT_MS)",
+    "implemented": true,
+    "prdRefs": [
+      "PRD#Non-functional Requirements"
+    ]
+  },
+  {
+    "id": "F152",
+    "description": "UX: Show which version the endpoint selection is based on (installed version)",
+    "implemented": false,
+    "prdRefs": [
+      "PRD#UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F153",
+    "description": "UX: Show warning when changing endpoint selection will affect schedule semantics",
+    "implemented": false,
+    "prdRefs": [
+      "PRD#UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F154",
+    "description": "Infra: Ensure Temporal schedule IDs are globally unique and deterministic",
+    "implemented": false,
+    "prdRefs": [
+      "PRD#Non-functional Requirements"
+    ]
+  },
+  {
+    "id": "F155",
+    "description": "Infra: Ensure CE/pgboss schedule naming avoids collisions per tenant",
+    "implemented": false,
+    "prdRefs": [
+      "PRD#Compat"
+    ]
+  },
+  {
+    "id": "F156",
+    "description": "API: Add admin-only endpoint to list schedules across tenants (support)",
+    "implemented": false,
+    "prdRefs": [
+      "PRD#Ops"
+    ]
+  },
+  {
+    "id": "F157",
+    "description": "API: Add admin-only endpoint to delete a schedule by id (support)",
+    "implemented": false,
+    "prdRefs": [
+      "PRD#Ops"
+    ]
+  },
+  {
+    "id": "F158",
+    "description": "Docs: Add migration notes for backfilling endpoints and verifying schedules",
+    "implemented": false,
+    "prdRefs": [
+      "PRD#Rollout / Migration"
+    ]
+  },
+  {
+    "id": "F159",
+    "description": "Docs: Add troubleshooting guide for schedule executions (common errors)",
+    "implemented": false,
+    "prdRefs": [
+      "PRD#Commands / Runbooks"
+    ]
+  },
+  {
+    "id": "F160",
+    "description": "Definition: Decide whether schedules can target only GET/POST or all methods",
+    "implemented": true,
+    "prdRefs": [
+      "PRD#Open Questions"
+    ]
+  },
+  {
+    "id": "F161",
+    "description": "Definition: Decide whether schedules can include query params (v1 likely no)",
+    "implemented": true,
+    "prdRefs": [
+      "PRD#Open Questions"
+    ]
+  },
+  {
+    "id": "F162",
+    "description": "Definition: Decide whether schedules can target endpoints with path params (v1 likely no)",
+    "implemented": true,
+    "prdRefs": [
+      "PRD#Open Questions"
+    ]
+  },
+  {
+    "id": "F163",
+    "description": "Hardening: Ensure schedule create/update validates extension is installed and enabled",
+    "implemented": true,
+    "prdRefs": [
+      "PRD#Security / Permissions"
+    ]
+  },
+  {
+    "id": "F164",
+    "description": "Hardening: Ensure schedule execution checks install is enabled before invoking",
+    "implemented": true,
+    "prdRefs": [
+      "PRD#Cleanup (no cascades)"
+    ]
+  },
+  {
+    "id": "F165",
+    "description": "Hardening: Ensure uninstall path cleans schedules before deleting tenant_extension_install row",
+    "implemented": true,
+    "prdRefs": [
+      "PRD#Cleanup (no cascades)"
+    ]
+  },
+  {
+    "id": "F166",
+    "description": "Observability: Surface last_error in UI with truncation and copy affordance",
+    "implemented": false,
+    "prdRefs": [
+      "PRD#UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F167",
+    "description": "Observability: Provide link from schedule row to extension debug stream (if available)",
+    "implemented": false,
+    "prdRefs": [
+      "PRD#Observability"
+    ]
+  },
+  {
+    "id": "F168",
+    "description": "UX: Add confirmation modal for extension update override that disables schedules",
+    "implemented": false,
+    "prdRefs": [
+      "PRD#Users and Primary Flows"
+    ]
+  },
+  {
+    "id": "F169",
+    "description": "UX: Add inline indicator when endpoint list is empty (no schedulable endpoints)",
+    "implemented": false,
+    "prdRefs": [
+      "PRD#UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F170",
+    "description": "Rollout: Add feature flag and staged enablement per tenant",
+    "implemented": false,
+    "prdRefs": [
+      "PRD#Rollout / Migration"
+    ]
+  },
+  {
+    "id": "F171",
+    "description": "Rollout: Add migration checklist for production (tables + backfill + permissions)",
+    "implemented": false,
+    "prdRefs": [
+      "PRD#Rollout / Migration"
+    ]
+  },
+  {
+    "id": "F172",
+    "description": "Compliance: Ensure schedule payload_json does not permit secrets injection beyond install secrets",
+    "implemented": false,
+    "prdRefs": [
+      "PRD#Security / Permissions"
+    ]
+  },
+  {
+    "id": "F173",
+    "description": "Compliance: Ensure schedule execution does not bypass capability/provider grants",
+    "implemented": false,
+    "prdRefs": [
+      "PRD#Security / Permissions"
+    ]
+  },
+  {
+    "id": "F174",
+    "description": "Quality: Add `validate_plan.py` checks to CI for plan folder (optional)",
+    "implemented": false,
+    "prdRefs": [
+      "PRD#Rollout / Migration"
+    ]
+  },
+  {
+    "id": "F175",
+    "description": "Quality: Add smoke test that a basic schedule triggers a runner invocation end-to-end in dev",
+    "implemented": false,
+    "prdRefs": [
+      "PRD#Acceptance Criteria (Definition of Done)"
+    ]
+  }
+]

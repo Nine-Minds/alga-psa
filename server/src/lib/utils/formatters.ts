@@ -23,6 +23,26 @@ export function formatCurrency(
 }
 
 /**
+ * Format an amount expressed in a currency's minor units (e.g. cents) using the
+ * currency's exponent (e.g. USD=2, JPY=0).
+ */
+export function formatCurrencyFromMinorUnits(
+  minorUnits: number,
+  locale: string = 'en-US',
+  currency: string = 'USD'
+): string {
+  const resolved = new Intl.NumberFormat(locale, { style: 'currency', currency }).resolvedOptions();
+  const fractionDigits = resolved.maximumFractionDigits ?? 2;
+  const value = minorUnits / Math.pow(10, fractionDigits);
+  return new Intl.NumberFormat(locale, {
+    style: 'currency',
+    currency,
+    minimumFractionDigits: fractionDigits,
+    maximumFractionDigits: fractionDigits,
+  }).format(value);
+}
+
+/**
  * Format a date as a string
  * @param date The date to format
  * @param locale The locale to use (default: 'en-US')

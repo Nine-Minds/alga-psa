@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { getScheduledHoursForTicket } from 'server/src/lib/actions/ticket-actions/ticketActions';
 import { ITicket, ITimeSheet, ITimePeriod, ITimePeriodView, ITimeEntry, IAgentSchedule, IClient, IClientLocation } from 'server/src/interfaces'; // Added IClient and IClientLocation
 import { IUserWithRoles, ITeam } from 'server/src/interfaces/auth.interfaces';
@@ -15,6 +15,7 @@ import { Clock, Edit2, Play, Pause, StopCircle, UserPlus, X, AlertCircle, Calend
 import { formatMinutesAsHoursAndMinutes } from 'server/src/lib/utils/dateTimeUtils';
 import styles from './TicketDetails.module.css';
 import UserPicker from 'server/src/components/ui/UserPicker';
+import MultiUserPicker from 'server/src/components/ui/MultiUserPicker';
 import UserAvatar from 'server/src/components/ui/UserAvatar';
 import { ClientPicker } from 'server/src/components/clients/ClientPicker';
 import { ContactPicker } from 'server/src/components/ui/ContactPicker';
@@ -30,6 +31,7 @@ import { getTicketingDisplaySettings } from 'server/src/lib/actions/ticket-actio
 import TicketSurveySummaryCard from 'server/src/components/surveys/TicketSurveySummaryCard';
 import type { SurveyTicketSatisfactionSummary } from 'server/src/interfaces/survey.interface';
 import { getAppointmentRequestsByTicketId } from 'server/src/lib/actions/appointmentRequestManagementActions';
+import TicketMaterialsCard from './TicketMaterialsCard';
 
 interface TicketPropertiesProps {
   id?: string;
@@ -147,10 +149,12 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
   onItilFieldChange,
   surveySummary = null,
 }) => {
-  const [showAgentPicker, setShowAgentPicker] = useState(false);
   const [showContactPicker, setShowContactPicker] = useState(false);
   const [showClientPicker, setShowClientPicker] = useState(false);
   const [showLocationPicker, setShowLocationPicker] = useState(false);
+
+  // Ref to prevent race conditions when rapidly adding/removing agents
+  const isProcessingAgentsRef = useRef(false);
   const [contactFilterState, setContactFilterState] = useState<'all' | 'active' | 'inactive'>('active');
   const [selectedContactId, setSelectedContactId] = useState<string | null>(null);
   const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
@@ -773,85 +777,60 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
 
           {/* Additional Agents */}
           <div>
-            <div className="flex items-center justify-between mb-2">
-              <h5 className="font-bold">Additional Agents</h5>
-              <Button
-                id={`${id}-toggle-agent-picker-btn`}
-                variant="ghost"
-                size="sm"
-                onClick={() => setShowAgentPicker(!showAgentPicker)}
-              >
-                <UserPlus className="h-4 w-4" />
-              </Button>
-            </div>
+            <h5 className="font-bold mb-2">Additional Agents</h5>
+            <MultiUserPicker
+              id={`${id}-additional-agents`}
+              values={additionalAgents.filter(a => a.additional_user_id).map(a => a.additional_user_id!)}
+              onValuesChange={async (newUserIds) => {
+                // Prevent race conditions from rapid clicks
+                if (isProcessingAgentsRef.current) {
+                  return;
+                }
+                isProcessingAgentsRef.current = true;
 
-            {showAgentPicker && (
-              <div className="mb-4">
-                <UserPicker
-                  {...withDataAutomationId({ id: `${id}-agent-picker` })}
-                  label="Add Agent"
-                  value=""
-                  onValueChange={(userId) => {
-                    onAddAgent(userId);
-                    setShowAgentPicker(false);
-                  }}
-                  users={availableAgents.filter(
-                    agent =>
-                      agent.user_id !== ticket.assigned_to &&
-                      !additionalAgents.some(a => a.additional_user_id === agent.user_id)
-                  )}
-                />
-              </div>
-            )}
+                try {
+                  const currentUserIds = additionalAgents
+                    .filter(a => a.additional_user_id)
+                    .map(a => a.additional_user_id!);
 
-            <div className="space-y-2">
-              {additionalAgents.map((agent): React.JSX.Element => {
-                const agentUser = availableAgents.find(u => u.user_id === agent.additional_user_id);
-                return (
-                  <div
-                    key={agent.assignment_id}
-                    className="flex items-center justify-between group hover:bg-gray-50 p-2 rounded"
-                  >
-                    <div
-                      className="flex items-center space-x-2 cursor-pointer hover:bg-gray-50 p-2 rounded"
-                      onClick={() => agent.additional_user_id && onAgentClick(agent.additional_user_id)}
-                    >
-                      <UserAvatar
-                        userId={agent.additional_user_id!}
-                        userName={`${agentUser?.first_name || ''} ${agentUser?.last_name || ''}`}
-                        avatarUrl={additionalAgentAvatarUrls[agent.additional_user_id!] || null}
-                        size="sm"
-                      />
-                      <div className="flex flex-col">
-                        <span className="text-sm">
-                          {agentUser?.first_name || 'Unknown'} {agentUser?.last_name || 'Agent'}
-                        </span>
-                        <div className="flex items-center text-xs text-gray-500 mt-1">
-                          <Clock className="w-3 h-3 mr-1" />
-                          <span>Scheduled: {formatMinutesAsHoursAndMinutes(getAgentScheduledHours(agent.additional_user_id!))}</span>
-                        </div>
-                      </div>
-                    </div>
-                    <Button
-                      {...withDataAutomationId({ id: `${id}-remove-agent-${agent.assignment_id}-btn` })}
-                      variant="ghost"
-                      size="sm"
-                      className="opacity-0 group-hover:opacity-100"
-                      onClick={() => onRemoveAgent(agent.assignment_id!)}
-                    >
-                      Remove
-                    </Button>
-                  </div>
-                );
-              })}
-              {additionalAgents.length === 0 && (
-                <p className="text-sm text-gray-500">No additional agents assigned</p>
-              )}
-            </div>
+                  // Find added users
+                  const addedUserIds = newUserIds.filter(id => !currentUserIds.includes(id));
+                  // Find removed users
+                  const removedUserIds = currentUserIds.filter(id => !newUserIds.includes(id));
+
+                  // Process all additions sequentially
+                  for (const userId of addedUserIds) {
+                    await onAddAgent(userId);
+                  }
+
+                  // Process all removals sequentially
+                  for (const userId of removedUserIds) {
+                    const agent = additionalAgents.find(a => a.additional_user_id === userId);
+                    if (agent?.assignment_id) {
+                      await onRemoveAgent(agent.assignment_id);
+                    }
+                  }
+                } finally {
+                  isProcessingAgentsRef.current = false;
+                }
+              }}
+              users={availableAgents.filter(agent => agent.user_id !== ticket.assigned_to)}
+              size="sm"
+              placeholder="Select additional agents..."
+              onUserClick={onAgentClick}
+            />
           </div>
         </div>
       </div>
 
+
+      {ticket.ticket_id && ticket.client_id && (
+        <TicketMaterialsCard
+          ticketId={ticket.ticket_id}
+          clientId={ticket.client_id}
+          currencyCode={client?.default_currency_code || 'USD'}
+        />
+      )}
 
     </div>
   );

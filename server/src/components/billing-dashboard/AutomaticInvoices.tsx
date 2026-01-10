@@ -15,7 +15,7 @@ import { IClientContractLineCycle } from '../../interfaces/billing.interfaces';
 // Import PreviewInvoiceResponse (which uses the correct VM internally)
 import { PreviewInvoiceResponse } from '../../interfaces/invoice.interfaces';
 // Import the InvoiceViewModel directly from the renderer types
-import { generateInvoice, previewInvoice } from '../../lib/actions/invoiceGeneration';
+import { generateInvoice, getPurchaseOrderOverageForBillingCycle, previewInvoice } from '../../lib/actions/invoiceGeneration';
 // Updated import for billing cycle actions
 import { WasmInvoiceViewModel } from 'server/src/lib/invoice-renderer/types';
 import { getInvoicedBillingCycles, removeBillingCycle, hardDeleteBillingCycle } from '../../lib/actions/billingCycleActions';
@@ -78,6 +78,26 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ periods, onGenera
   }>({ data: null, billingCycleId: null });
   const [isPreviewLoading, setIsPreviewLoading] = useState(false);
   const [isGeneratingFromPreview, setIsGeneratingFromPreview] = useState(false); // Loading state for generate from preview
+  const [poOverageDialogState, setPoOverageDialogState] = useState<{
+    isOpen: boolean;
+    billingCycleIds: string[];
+    overageByBillingCycleId: Record<string, { clientName: string; overageCents: number; poNumber: string | null }>;
+  }>({
+    isOpen: false,
+    billingCycleIds: [],
+    overageByBillingCycleId: {},
+  });
+  const [poOverageSingleConfirm, setPoOverageSingleConfirm] = useState<{
+    isOpen: boolean;
+    billingCycleId: string | null;
+    overageCents: number;
+    poNumber: string | null;
+  }>({
+    isOpen: false,
+    billingCycleId: null,
+    overageCents: 0,
+    poNumber: null,
+  });
   const [showPreviewDialog, setShowPreviewDialog] = useState(false);
   // State for delete confirmation
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
@@ -168,38 +188,138 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ periods, onGenera
   };
 
   const handleGenerateInvoices = async () => {
+    const billingCycleIds = Array.from(selectedPeriods);
+    if (billingCycleIds.length === 0) {
+      return;
+    }
+
     setIsGenerating(true);
     setErrors({});
-    const newErrors: {[key: string]: string} = {};
 
-    for (const billingCycleId of selectedPeriods) {
-      try {
-        await generateInvoice(billingCycleId);
-      } catch (err) {
-        // Get client name for the failed billing cycle
-        const period = periods.find(p => p.billing_cycle_id === billingCycleId);
-        const clientName = period?.client_name || billingCycleId;
+    try {
+      const overageResults = await Promise.all(
+        billingCycleIds.map(async (id) => {
+          try {
+            const overage = await getPurchaseOrderOverageForBillingCycle(id);
+            return { id, overage };
+          } catch (err) {
+            // If overage analysis fails, treat as "no overage warning" and let generation surface errors normally.
+            return { id, overage: null as any };
+          }
+        })
+      );
 
-        // Store error message for this client
-        newErrors[clientName] = err instanceof Error ? err.message : 'Unknown error occurred';
+      const overageByBillingCycleId: Record<string, { clientName: string; overageCents: number; poNumber: string | null }> = {};
+      for (const result of overageResults) {
+        const overage = result.overage;
+        if (!overage || overage.overage_cents <= 0) {
+          continue;
+        }
+
+        const period = periods.find((p) => p.billing_cycle_id === result.id);
+        const clientName = period?.client_name || result.id;
+        overageByBillingCycleId[result.id] = {
+          clientName,
+          overageCents: overage.overage_cents,
+          poNumber: overage.po_number ?? null,
+        };
       }
-    }
 
-    if (Object.keys(newErrors).length > 0) {
-      setErrors(newErrors);
-    } else {
+      const overageIds = Object.keys(overageByBillingCycleId);
+      if (overageIds.length > 0) {
+        setPoOverageDialogState({
+          isOpen: true,
+          billingCycleIds,
+          overageByBillingCycleId,
+        });
+        return;
+      }
+
+      const newErrors: { [key: string]: string } = {};
+      for (const billingCycleId of billingCycleIds) {
+        try {
+          await generateInvoice(billingCycleId);
+        } catch (err) {
+          const period = periods.find((p) => p.billing_cycle_id === billingCycleId);
+          const clientName = period?.client_name || billingCycleId;
+          newErrors[clientName] = err instanceof Error ? err.message : 'Unknown error occurred';
+        }
+      }
+
+      if (Object.keys(newErrors).length > 0) {
+        setErrors(newErrors);
+        return;
+      }
+
       setSelectedPeriods(new Set());
-      // Refresh the invoiced periods list
       const cycles = await getInvoicedBillingCycles();
-      setInvoicedPeriods(cycles.map((cycle):Period => ({
-        ...cycle,
-        can_generate: false, // Already invoiced periods can't be generated again
-        is_early: false // Already invoiced periods can't be early
-      })));
+      setInvoicedPeriods(
+        cycles.map(
+          (cycle): Period => ({
+            ...cycle,
+            can_generate: false,
+            is_early: false,
+          })
+        )
+      );
       onGenerateSuccess();
+    } finally {
+      setIsGenerating(false);
     }
+  };
 
-    setIsGenerating(false);
+  const handlePoOverageBatchDecision = async (decisionValue?: string) => {
+    const decision = (decisionValue ?? 'allow') as 'allow' | 'skip';
+    const { billingCycleIds, overageByBillingCycleId } = poOverageDialogState;
+
+    setPoOverageDialogState({ isOpen: false, billingCycleIds: [], overageByBillingCycleId: {} });
+    setIsGenerating(true);
+    setErrors({});
+
+    try {
+      const newErrors: { [key: string]: string } = {};
+      const overageIds = new Set(Object.keys(overageByBillingCycleId));
+      const toGenerate =
+        decision === 'skip' ? billingCycleIds.filter((id) => !overageIds.has(id)) : billingCycleIds;
+
+      if (decision === 'skip') {
+        for (const [billingCycleId, info] of Object.entries(overageByBillingCycleId)) {
+          newErrors[info.clientName] =
+            `Skipped due to PO overage (${info.poNumber ? `PO ${info.poNumber}` : 'PO'}): ` +
+            `over by ${formatCurrency(info.overageCents)}.`;
+        }
+      }
+
+      for (const billingCycleId of toGenerate) {
+        try {
+          await generateInvoice(billingCycleId, { allowPoOverage: decision === 'allow' });
+        } catch (err) {
+          const period = periods.find((p) => p.billing_cycle_id === billingCycleId);
+          const clientName = period?.client_name || billingCycleId;
+          newErrors[clientName] = err instanceof Error ? err.message : 'Unknown error occurred';
+        }
+      }
+
+      if (Object.keys(newErrors).length > 0) {
+        setErrors(newErrors);
+        return;
+      }
+
+      setSelectedPeriods(new Set());
+      const cycles = await getInvoicedBillingCycles();
+      setInvoicedPeriods(
+        cycles.map(
+          (cycle): Period => ({
+            ...cycle,
+            can_generate: false,
+            is_early: false,
+          })
+        )
+      );
+      onGenerateSuccess();
+    } finally {
+      setIsGenerating(false);
+    }
   };
 
   const handleReverseBillingCycle = async () => {
@@ -261,16 +381,49 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ periods, onGenera
     setErrors({}); // Clear previous errors
 
     try {
+      const overage = await getPurchaseOrderOverageForBillingCycle(previewState.billingCycleId);
+      if (overage && overage.overage_cents > 0) {
+        setPoOverageSingleConfirm({
+          isOpen: true,
+          billingCycleId: previewState.billingCycleId,
+          overageCents: overage.overage_cents,
+          poNumber: overage.po_number ?? null,
+        });
+        return;
+      }
+
       await generateInvoice(previewState.billingCycleId);
       setShowPreviewDialog(false); // Close dialog on success
       setPreviewState({ data: null, billingCycleId: null }); // Reset preview state
-      // TODO: Add success toast notification here if available
       onGenerateSuccess(); // Refresh data lists
     } catch (err) {
-      // TODO: Add error toast notification here if available
-      // Display error within the dialog for now, or could use main error display
       setErrors({
-        preview: err instanceof Error ? err.message : 'Failed to generate invoice from preview'
+        preview: err instanceof Error ? err.message : 'Failed to generate invoice from preview',
+      });
+    } finally {
+      setIsGeneratingFromPreview(false);
+    }
+  };
+
+  const handlePoOverageSingleConfirm = async () => {
+    if (!poOverageSingleConfirm.billingCycleId) {
+      return;
+    }
+
+    const billingCycleId = poOverageSingleConfirm.billingCycleId;
+    setPoOverageSingleConfirm({ isOpen: false, billingCycleId: null, overageCents: 0, poNumber: null });
+
+    setIsGeneratingFromPreview(true);
+    setErrors({});
+
+    try {
+      await generateInvoice(billingCycleId, { allowPoOverage: true });
+      setShowPreviewDialog(false);
+      setPreviewState({ data: null, billingCycleId: null });
+      onGenerateSuccess();
+    } catch (err) {
+      setErrors({
+        preview: err instanceof Error ? err.message : 'Failed to generate invoice from preview',
       });
     } finally {
       setIsGeneratingFromPreview(false);
@@ -748,6 +901,56 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ periods, onGenera
         isConfirming={isDeleting}
         // Removed unsupported props: confirmButtonVariant, icon
         id="delete-billing-cycle-confirmation" // Added an ID for consistency
+      />
+
+      <ConfirmationDialog
+        id="po-overage-batch-decision"
+        isOpen={poOverageDialogState.isOpen}
+        onClose={() =>
+          setPoOverageDialogState({ isOpen: false, billingCycleIds: [], overageByBillingCycleId: {} })
+        }
+        title="Purchase Order Limit Overages"
+        message={
+          <div className="space-y-2">
+            <p>
+              One or more invoices would exceed a Purchase Order authorized amount. What do you want to do?
+            </p>
+            <ul className="list-disc pl-5">
+              {Object.entries(poOverageDialogState.overageByBillingCycleId).map(([id, info]) => (
+                <li key={id}>
+                  {info.clientName}: over by {formatCurrency(info.overageCents)}
+                  {info.poNumber ? ` (PO ${info.poNumber})` : ''}
+                </li>
+              ))}
+            </ul>
+          </div>
+        }
+        confirmLabel="Continue"
+        cancelLabel="Cancel"
+        options={[
+          { value: 'allow', label: 'Allow overages (generate all invoices)' },
+          { value: 'skip', label: 'Skip invoices that would overrun their PO' },
+        ]}
+        onConfirm={handlePoOverageBatchDecision}
+      />
+
+      <ConfirmationDialog
+        id="po-overage-single-confirm"
+        isOpen={poOverageSingleConfirm.isOpen}
+        onClose={() => setPoOverageSingleConfirm({ isOpen: false, billingCycleId: null, overageCents: 0, poNumber: null })}
+        title="Purchase Order Limit Overages"
+        message={
+          <div className="space-y-2">
+            <p>
+              This invoice would exceed the Purchase Order authorized amount by {formatCurrency(poOverageSingleConfirm.overageCents)}.
+            </p>
+            {poOverageSingleConfirm.poNumber && <p>PO Number: {poOverageSingleConfirm.poNumber}</p>}
+            <p>Proceed anyway?</p>
+          </div>
+        }
+        confirmLabel="Proceed Anyway"
+        cancelLabel="Cancel"
+        onConfirm={handlePoOverageSingleConfirm}
       />
       </>
   // Removed TooltipProvider closing tag

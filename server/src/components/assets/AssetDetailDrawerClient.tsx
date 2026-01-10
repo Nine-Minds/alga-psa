@@ -245,13 +245,13 @@ function renderOverviewTab({ asset, maintenanceReport, history, router, statusBa
           {asset.client?.client_name && <p className="text-sm text-gray-500">Client: {asset.client.client_name}</p>}
         </div>
         <div className="flex flex-wrap gap-2">
-          <Button id="asset-drawer-open-record" variant="secondary" size="sm" className="gap-2" onClick={() => router.push(`/msp/assets/${asset.asset_id}`)}>
+          <Button id="asset-drawer-open-record" variant="default" size="sm" className="gap-2" onClick={() => router.push(`/msp/assets/${asset.asset_id}`)}>
             <FileText className="h-4 w-4" /> Open asset record
           </Button>
           {asset.rmm_provider && asset.rmm_device_id && (
-            <RemoteAccessButton asset={asset} variant="secondary" size="sm" />
+            <RemoteAccessButton asset={asset} variant="default" size="sm" />
           )}
-          <CreateTicketFromAssetButton asset={asset} defaultBoardId={defaultBoardId} variant="secondary" size="sm" />
+          <CreateTicketFromAssetButton asset={asset} defaultBoardId={defaultBoardId} variant="default" size="sm" />
           <DeleteAssetButton
             assetId={asset.asset_id}
             assetName={asset.name}

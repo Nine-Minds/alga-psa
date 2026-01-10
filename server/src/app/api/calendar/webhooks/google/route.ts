@@ -46,6 +46,42 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
   try {
+    // Google Calendar push notifications (web_hook) send headers and usually an empty body.
+    const channelId =
+      request.headers.get('x-goog-channel-id') ||
+      request.headers.get('X-Goog-Channel-Id');
+
+    if (channelId) {
+      const resourceId = request.headers.get('x-goog-resource-id') || request.headers.get('X-Goog-Resource-Id');
+      const resourceState = request.headers.get('x-goog-resource-state') || request.headers.get('X-Goog-Resource-State');
+      const token = request.headers.get('x-goog-channel-token') || request.headers.get('X-Goog-Channel-Token');
+
+      console.log('📅 Google Calendar channel webhook received:', {
+        channelId,
+        resourceId,
+        resourceState,
+        timestamp: new Date().toISOString()
+      });
+
+      const startTime = Date.now();
+      setImmediate(async () => {
+        try {
+          const processor = new CalendarWebhookProcessor();
+          const result = await processor.processGoogleChannelWebhook({
+            channelId,
+            resourceId,
+            resourceState,
+            token
+          });
+          console.log(`[Google Calendar Webhook] Channel processed in ${Date.now() - startTime}ms`, result);
+        } catch (error) {
+          console.error('[Google Calendar Webhook] Channel background processing error:', error);
+        }
+      });
+
+      return NextResponse.json({ success: true, accepted: true });
+    }
+
     // Handle subscription validation
     const url = request.nextUrl;
     const validationToken =
@@ -131,4 +167,3 @@ export async function OPTIONS(request: NextRequest) {
     },
   });
 }
-

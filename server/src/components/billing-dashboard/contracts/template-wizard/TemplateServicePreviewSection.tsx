@@ -20,7 +20,7 @@ interface ServiceItem {
 
 interface TemplateServicePreviewSectionProps {
   services: ServiceItem[];
-  serviceType: 'fixed' | 'hourly' | 'usage';
+  serviceType: 'fixed' | 'products' | 'hourly' | 'usage';
   onQuantityChange?: (serviceId: string, quantity: number) => void;
   onRemoveService: (serviceId: string, fromPresetId?: string) => void;
 }
@@ -43,6 +43,8 @@ export function TemplateServicePreviewSection({
     switch (serviceType) {
       case 'fixed':
         return Package;
+      case 'products':
+        return Package;
       case 'hourly':
         return Activity;
       case 'usage':
@@ -54,6 +56,8 @@ export function TemplateServicePreviewSection({
     switch (serviceType) {
       case 'fixed':
         return 'Fixed Fee';
+      case 'products':
+        return 'Products';
       case 'hourly':
         return 'Hourly';
       case 'usage':

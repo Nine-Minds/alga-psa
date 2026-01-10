@@ -17,6 +17,7 @@ interface DrawerHistoryEntry {
   onMount?: () => Promise<void>;
   onClose?: () => void;
   metadata?: Record<string, any>;
+  width?: string;
 }
 
 interface DrawerContentProps {
@@ -31,8 +32,8 @@ interface DrawerContentProps {
 
 interface DrawerContextType {
   // Original methods
-  openDrawer: (content: ReactNode, onMount?: () => Promise<void>, onClose?: () => void) => void;
-  replaceDrawer: (content: ReactNode, onMount?: () => Promise<void>) => void;
+  openDrawer: (content: ReactNode, onMount?: () => Promise<void>, onClose?: () => void, width?: string) => void;
+  replaceDrawer: (content: ReactNode, onMount?: () => Promise<void>, width?: string) => void;
   closeDrawer: () => void;
   goBack: () => void;
   
@@ -69,8 +70,8 @@ interface DrawerContextType {
 
 // Define the drawer actions
 type DrawerAction =
-  | { type: 'OPEN_DRAWER'; payload: { content: ReactNode; onMount?: () => Promise<void>; onClose?: () => void } }
-  | { type: 'REPLACE_DRAWER'; payload: { content: ReactNode; onMount?: () => Promise<void> } }
+  | { type: 'OPEN_DRAWER'; payload: { content: ReactNode; onMount?: () => Promise<void>; onClose?: () => void; width?: string } }
+  | { type: 'REPLACE_DRAWER'; payload: { content: ReactNode; onMount?: () => Promise<void>; width?: string } }
   | { type: 'OPEN_LIST_DRAWER'; payload: { activityType: ActivityType; title: string; content: ReactNode; onMount?: () => Promise<void>; metadata?: Record<string, any> } }
   | { type: 'OPEN_DETAIL_DRAWER'; payload: { activity: Activity; content: ReactNode; title?: string; onMount?: () => Promise<void> } }
   | { type: 'OPEN_FORM_DRAWER'; payload: { activity: Activity; formId: string; content: ReactNode; title?: string; onMount?: () => Promise<void> } }
@@ -96,7 +97,7 @@ const initialState: DrawerState = {
 function drawerReducer(state: DrawerState, action: DrawerAction): DrawerState {
   switch (action.type) {
     case 'OPEN_DRAWER': {
-      const { content, onMount, onClose } = action.payload;
+      const { content, onMount, onClose, width } = action.payload;
       const newEntry: DrawerHistoryEntry = {
         id: `drawer-${Date.now()}`,
         type: 'custom',
@@ -104,6 +105,7 @@ function drawerReducer(state: DrawerState, action: DrawerAction): DrawerState {
         content,
         onMount,
         onClose,
+        width,
       };
       
       // If we're not at the end of the history, truncate it
@@ -119,13 +121,14 @@ function drawerReducer(state: DrawerState, action: DrawerAction): DrawerState {
     }
     
     case 'REPLACE_DRAWER': {
-      const { content, onMount } = action.payload;
+      const { content, onMount, width } = action.payload;
       const newEntry: DrawerHistoryEntry = {
         id: `drawer-${Date.now()}`,
         type: 'custom',
         title: '',
         content,
         onMount,
+        width,
       };
       
       return {
@@ -250,12 +253,12 @@ export const DrawerProvider: React.FC<{ children: ReactNode }> = ({ children }) 
   const currentEntry = state.currentIndex >= 0 ? state.history[state.currentIndex] : null;
   
   // Original methods (for backward compatibility)
-  const openDrawer = useCallback((content: ReactNode, onMount?: () => Promise<void>, onClose?: () => void) => {
-    dispatch({ type: 'OPEN_DRAWER', payload: { content, onMount, onClose } });
+  const openDrawer = useCallback((content: ReactNode, onMount?: () => Promise<void>, onClose?: () => void, width?: string) => {
+    dispatch({ type: 'OPEN_DRAWER', payload: { content, onMount, onClose, width } });
   }, []);
 
-  const replaceDrawer = useCallback((content: ReactNode, onMount?: () => Promise<void>) => {
-    dispatch({ type: 'REPLACE_DRAWER', payload: { content, onMount } });
+  const replaceDrawer = useCallback((content: ReactNode, onMount?: () => Promise<void>, width?: string) => {
+    dispatch({ type: 'REPLACE_DRAWER', payload: { content, onMount, width } });
   }, []);
 
   const closeDrawer = useCallback(() => {
@@ -353,6 +356,7 @@ export const DrawerProvider: React.FC<{ children: ReactNode }> = ({ children }) 
         isInDrawer={state.history.length > 1}
         hideCloseButton={true}
         drawerVariant="nested"
+        width={currentEntry?.width}
       >
         {currentEntry && (
           <div className="flex flex-col h-full relative">

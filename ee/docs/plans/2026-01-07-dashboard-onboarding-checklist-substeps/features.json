@@ -1,0 +1,97 @@
+[
+  {
+    "id": "F001",
+    "description": "Define a sub-step data model for onboarding progress (server + client types).",
+    "implemented": true
+  },
+  {
+    "id": "F002",
+    "description": "Implement parent step status derivation rules from sub-steps (complete only when all complete).",
+    "implemented": true
+  },
+  {
+    "id": "F003",
+    "description": "Update onboarding step metadata for Secure Identity & SSO to use CTA href `/msp/profile?tab=Single+Sign-On`.",
+    "implemented": true
+  },
+  {
+    "id": "F004",
+    "description": "Replace the dashboard-visible step title/description for `client_portal_domain` to 'Set Up Customer Portal' and update CTA label copy accordingly.",
+    "implemented": true
+  },
+  {
+    "id": "F005",
+    "description": "Add Customer Portal sub-steps: (1) Portal custom domain, (2) Portal color/logo customizations, (3) Invite first contact to the portal.",
+    "implemented": true
+  },
+  {
+    "id": "F006",
+    "description": "Implement server resolver for 'Portal custom domain' sub-step using existing portal domain signal.",
+    "implemented": true
+  },
+  {
+    "id": "F007",
+    "description": "Implement server resolver for 'Portal color/logo customizations' sub-step (complete when any customer portal configuration exists).",
+    "implemented": true
+  },
+  {
+    "id": "F008",
+    "description": "Implement server resolver for 'Invite first contact' sub-step (complete when a portal invite exists).",
+    "implemented": true
+  },
+  {
+    "id": "F009",
+    "description": "Replace the dashboard-visible step title/description for `managed_email` to 'Configure Email' and update CTA label copy accordingly.",
+    "implemented": true
+  },
+  {
+    "id": "F010",
+    "description": "Add Email sub-steps: (1) Configure inbound email, (2) Configure outbound custom email domain.",
+    "implemented": true
+  },
+  {
+    "id": "F011",
+    "description": "Implement server resolver for 'Configure inbound email' sub-step (complete when any inbound email provider row exists).",
+    "implemented": true
+  },
+  {
+    "id": "F012",
+    "description": "Implement server resolver for 'Configure outbound custom email domain' sub-step using existing managed email domain verification signal.",
+    "implemented": true
+  },
+  {
+    "id": "F013",
+    "description": "Expose derived sub-step progress metadata to the client so existing progress UI (progress bar / ring) can reflect 0..100% completion for multi-substep steps.",
+    "implemented": true
+  },
+  {
+    "id": "F014",
+    "description": "Update `useOnboardingProgress` to enrich step definitions with sub-step display metadata and maintain analytics firing on parent step completion transitions.",
+    "implemented": true
+  },
+  {
+    "id": "F015",
+    "description": "Update onboarding checklist drawer UI to render sub-step checkmarks inside the step card.",
+    "implemented": true
+  },
+  {
+    "id": "F016",
+    "description": "Update dashboard quick-start cards to render sub-step checkmarks (or a compact 'X/Y complete' summary) for steps that have sub-steps.",
+    "implemented": true
+  },
+  {
+    "id": "F017",
+    "description": "Ensure UI remains backward-compatible when `substeps` is missing or empty in the progress payload.",
+    "implemented": true
+  },
+  {
+    "id": "F018",
+    "description": "Add basic unit tests for parent status derivation from sub-steps (not_started / in_progress / blocked / complete).",
+    "implemented": true
+  },
+  {
+    "id": "F019",
+    "description": "Add integration-level coverage verifying `getOnboardingProgressAction` returns the expected sub-step structure for portal/email steps.",
+    "implemented": true
+  }
+]

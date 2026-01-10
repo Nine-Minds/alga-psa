@@ -7,6 +7,7 @@
 import { NextResponse } from 'next/server';
 import type { Knex } from 'knex';
 import { createTenantKnex } from '@/lib/db';
+import { requireExtensionApiAccess } from '../_auth';
 
 function isAdmin(req: Request) {
   const v = req.headers.get('x-alga-admin');
@@ -16,6 +17,8 @@ function isAdmin(req: Request) {
 export const dynamic = 'force-dynamic';
 
 export async function GET(req: Request) {
+  const auth = await requireExtensionApiAccess('read');
+  if (auth) return auth;
   if (!isAdmin(req)) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
@@ -67,4 +70,3 @@ export async function GET(req: Request) {
     return NextResponse.json({ ok: false, error: e?.message || 'unexpected error' }, { status: 500 });
   }
 }
-

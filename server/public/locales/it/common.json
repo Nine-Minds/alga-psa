@@ -260,23 +260,25 @@
     "upload": "Carica documento",
     "download": "Scarica",
     "remove": "Rimuovi",
+    "detach": "Scollega",
     "preview": "Anteprima",
     "linkDocuments": "Collega documenti",
     "editDocument": "Modifica documento",
     "viewDocument": "Visualizza documento",
     "downloadToPlay": "Scarica per riprodurre",
     "delete": "Elimina",
+    "deletePermanently": "Elimina definitivamente",
     "previewUnavailable": "Anteprima non disponibile",
     "newDocument": "Nuovo documento",
     "uploadFile": "Carica file",
-    "deleteTitle": "Elimina documento",
-    "deleteMessage": "Sei sicuro di voler eliminare \"{{name}}\"? Questa azione non può essere annullata.",
-    "deleteVideoTitle": "Elimina video",
-    "deleteVideoMessage": "Sei sicuro di voler eliminare il video \"{{name}}\"? Questa azione non può essere annullata.",
-    "removeTitle": "Rimuovi documento",
-    "removeMessage": "Sei sicuro di voler rimuovere \"{{name}}\" da questo elemento? Il documento resterà disponibile nella libreria documenti.",
-    "removeVideoTitle": "Rimuovi video",
-    "removeVideoMessage": "Sei sicuro di voler rimuovere il video \"{{name}}\" da questo elemento? Il file resterà disponibile nella libreria documenti.",
+    "deleteTitle": "Elimina definitivamente documento",
+    "deleteMessage": "Sei sicuro di voler eliminare definitivamente \"{{name}}\" dal sistema?\\n\\nQuesto rimuoverà completamente il file e non sarà più disponibile da nessuna parte. Questa azione non può essere annullata.",
+    "deleteVideoTitle": "Elimina definitivamente video",
+    "deleteVideoMessage": "Sei sicuro di voler eliminare definitivamente il video \"{{name}}\" dal sistema?\\n\\nQuesto rimuoverà completamente il file e non sarà più disponibile da nessuna parte. Questa azione non può essere annullata.",
+    "removeTitle": "Scollega documento",
+    "removeMessage": "Sei sicuro di voler scollegare \"{{name}}\" da questo elemento?\\n\\nQuesto rimuove solo il collegamento — il documento resterà nella libreria documenti e potrà essere collegato ad altri elementi.",
+    "removeVideoTitle": "Scollega video",
+    "removeVideoMessage": "Sei sicuro di voler scollegare il video \"{{name}}\" da questo elemento?\\n\\nQuesto rimuove solo il collegamento — il file resterà nella libreria documenti e potrà essere collegato ad altri elementi.",
     "downloadFile": "Scarica file",
     "videoUnsupported": "Formato video ({{mimeType}}) non supportato per la riproduzione nel browser",
     "videoTagUnsupported": "Il tuo browser non supporta il tag video.",
@@ -814,6 +816,22 @@
       "description": "{{sessionCount}} sessioni attive di {{userCount}} utenti",
       "searchPlaceholder": "Cerca per nome utente, email, dispositivo o indirizzo IP...",
       "noResults": "Nessuna sessione corrisponde alla tua ricerca"
+    }
+  },
+  "projects": {
+    "task": {
+      "comments": {
+        "title": "Commenti",
+        "internal_only": "Solo interno",
+        "placeholder": "Aggiungi un commento... Usa @ per menzionare i colleghi",
+        "add_comment": "Aggiungi commento",
+        "no_comments": "Nessun commento ancora. Sii il primo a commentare!",
+        "edited": "Modificato",
+        "error_creating": "Impossibile creare il commento. Riprova.",
+        "error_updating": "Impossibile aggiornare il commento. Riprova.",
+        "error_deleting": "Impossibile eliminare il commento. Riprova.",
+        "confirm_delete": "Sei sicuro di voler eliminare questo commento?"
+      }
     }
   }
 }

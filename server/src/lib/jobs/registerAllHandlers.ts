@@ -34,6 +34,14 @@ import {
   MicrosoftWebhookRenewalJobData,
   GooglePubSubVerificationJobData,
 } from './handlers/calendarWebhookMaintenanceHandler';
+import {
+  renewGoogleGmailWatchSubscriptions,
+  GoogleGmailWatchRenewalJobData,
+} from './handlers/googleGmailWatchRenewalHandler';
+import {
+  extensionScheduledInvocationHandler,
+  ExtensionScheduledInvocationJobData,
+} from './handlers/extensionScheduledInvocationHandler';
 
 /**
  * Options for registering handlers
@@ -215,6 +223,24 @@ export async function registerAllJobHandlers(
   );
 
   // ============================================================================
+  // EXTENSION SCHEDULED TASKS (EE)
+  // ============================================================================
+
+  if (includeEnterprise) {
+    JobHandlerRegistry.register<ExtensionScheduledInvocationJobData & BaseJobData>(
+      {
+        name: 'extension-scheduled-invocation',
+        handler: async (jobId, data) => {
+          await extensionScheduledInvocationHandler(jobId, data as any);
+        },
+        retry: { maxAttempts: 3 },
+        timeoutMs: 300000, // 5 minutes
+      },
+      registerOpts
+    );
+  }
+
+  // ============================================================================
   // CALENDAR INTEGRATION HANDLERS
   // ============================================================================
 
@@ -236,6 +262,18 @@ export async function registerAllJobHandlers(
       name: 'verify-google-calendar-pubsub',
       handler: async (_jobId, data) => {
         await verifyGoogleCalendarProvisioning(data);
+      },
+      retry: { maxAttempts: 3 },
+    },
+    registerOpts
+  );
+
+  // Google Gmail watch renewal handler
+  JobHandlerRegistry.register<GoogleGmailWatchRenewalJobData & BaseJobData>(
+    {
+      name: 'renew-google-gmail-watch',
+      handler: async (_jobId, data) => {
+        await renewGoogleGmailWatchSubscriptions(data);
       },
       retry: { maxAttempts: 3 },
     },
@@ -291,6 +329,7 @@ export function getAvailableJobHandlers(): string[] {
     // Calendar
     'renew-microsoft-calendar-webhooks',
     'verify-google-calendar-pubsub',
+    'renew-google-gmail-watch',
     // Enterprise-only
     ...(process.env.EDITION === 'enterprise' ? ['cleanup-ai-session-keys'] : []),
   ];

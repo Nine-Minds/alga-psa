@@ -28,6 +28,35 @@ Supporting entities still in use:
 - `invoices`, `invoice_items`, `invoice_item_details`, `invoice_item_fixed_details` store rendered billing output.
 - `transactions`, `credit_tracking`, `credit_reconciliation_reports` maintain the financial ledger and credit balances.
 
+## Products (Catalog → Contracts → Invoices)
+
+Products are implemented as a **subset of the existing service catalog**:
+
+- Catalog rows live in `service_catalog` with `item_kind = 'product'`.
+- Products are quantity-based sellable items (`billing_method = 'per_unit'` in V1).
+- Multi-currency pricing is stored in `service_prices` (one row per currency). `service_catalog.default_rate` mirrors the “primary” price for convenience.
+- Tax behavior is driven by `service_catalog.tax_rate_id` (nullable = non-taxable).
+- Optional license metadata (term/cadence) is stored on the catalog row (`is_license`, `license_term`, `license_billing_cadence`) without start/end/proration in V1.
+
+### Attaching products to contracts
+
+- Contract templates and contract wizards allow attaching products as recommended/default items (with quantity) and cloning them into client snapshots.
+- When a contract is assigned to a client, the attached products are stored as `client_contract_services` for the relevant `client_contract_line_id`.
+- Rate selection follows the normal hierarchy (catalog price for the contract currency unless an override is explicitly entered at the client/contract level).
+
+### Billing and invoice output
+
+- During invoice generation, products are translated into `type = 'product'` charges in the billing engine and persisted as `invoice_items` + details rows.
+- Products appear on invoices as distinct line items (and should be visually distinguished from time/usage/services in templates and client portal views).
+- Currency correctness rules:
+  - The contract currency controls which `service_prices.currency_code` is used.
+  - If a product lacks a price in the contract currency, billing requires an explicit override (to avoid accidental $0 lines).
+
+### Taxes and accounting mapping
+
+- Tax calculation uses the same invoice persistence pipeline (`invoiceService.calculateAndDistributeTax`) and applies the product’s `tax_rate_id` (or falls back to client defaults depending on tenant tax configuration).
+- Accounting exports and mappings treat products as catalog items; they reuse the existing mapping resolution paths for `service` / `service_category` where applicable.
+
 ## Data Model Layers
 
 ### Template Layer (authoring reusable offers)
@@ -57,6 +86,10 @@ Contracts can be created manually or cloned from templates. When cloning, templa
 When a contract is assigned to a client, the system snapshots all relevant data:
 
 - `client_contracts` – assignment record with start/end dates, PO requirements, and current status. Managed by `clientContractActions` (`server/src/lib/actions/client-actions/clientContractActions.ts`).
+  - Purchase order fields:
+    - `po_required` (boolean) – blocks invoice generation when enabled and `po_number` is missing.
+    - `po_number` (text) – the customer’s PO reference used on invoices and accounting exports.
+    - `po_amount` (bigint cents, nullable) – advisory “authorized spend” amount for warning on overages.
 - `client_contract_lines` – individual lines the client receives. Each record may reference both the base contract line and the originating template line (for audits).
 - `client_contract_line_terms` – per-client billing rules (frequency, overtime, rounding) plus the `billing_timing` setting that determines whether a line bills in advance or arrears.
 - `client_contract_line_pricing` – the rate strategy used for the client instance. Stores template references and overrides applied either by templates, contracts, or pricing schedules.
@@ -65,6 +98,20 @@ When a contract is assigned to a client, the system snapshots all relevant data:
 - `client_contract_line_discounts` – optional mapping of discounts to client contract lines.
 
 The cloning helper ensures that future template edits do not retroactively change existing client contracts while still allowing the UI to surface “template vs client” differences.
+
+## Purchase Orders (PO)
+
+Alga stores PO context on the client contract assignment (`client_contracts`) and snapshots the PO number onto invoices generated from contract billing:
+
+- `invoices.po_number` – stored as a snapshot at invoice creation time.
+- `invoices.client_contract_id` – links an invoice back to the generating contract assignment for PO consumption tracking.
+
+### PO limits (advisory)
+
+If `client_contracts.po_amount` is set, billing computes warnings when a newly generated invoice would exceed the remaining authorized spend:
+
+- Remaining is calculated from finalized invoices for the same `client_contract_id`.
+- Overages are warnings (invoice generation is not blocked), but UI flows prompt users to allow or skip overages during batch invoicing.
 
 ### Activity & Reference Data
 

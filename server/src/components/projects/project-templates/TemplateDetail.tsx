@@ -220,11 +220,6 @@ export default function TemplateDetail({ template, onTemplateUpdated }: Template
                 <span className="font-medium">Description:</span> {template.description}
               </div>
             )}
-            {template.category && (
-              <div>
-                <span className="font-medium">Category:</span> {template.category}
-              </div>
-            )}
             <div>
               <span className="font-medium">Used:</span> {template.use_count} times
             </div>

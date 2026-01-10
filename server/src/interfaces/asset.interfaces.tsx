@@ -4,6 +4,7 @@ export interface AssetHistory {
   history_id: string;
   asset_id: string;
   changed_by: string;
+  changed_by_name?: string; // User's full name (first_name + last_name)
   change_type: string;
   changes: Record<string, unknown>;
   changed_at: string;
@@ -376,6 +377,12 @@ export interface CreateAssetAssociationRequest {
   relationship_type: string;
 }
 
+export interface CreateAssetRelationshipRequest {
+  parent_asset_id: string;
+  child_asset_id: string;
+  relationship_type: string;
+}
+
 export interface CreateAssetDocumentRequest {
   asset_id: string;
   document_id: string;
@@ -411,6 +418,8 @@ export interface AssetQueryParams {
   asset_type?: 'workstation' | 'network_device' | 'server' | 'mobile_device' | 'printer' | 'unknown';
   status?: string;
   search?: string;
+  agent_status?: RmmAgentStatus;
+  rmm_managed?: boolean;
   maintenance_status?: MaintenanceStatus;
   maintenance_type?: MaintenanceType;
   page?: number;

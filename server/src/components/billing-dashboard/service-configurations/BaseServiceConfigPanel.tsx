@@ -43,7 +43,7 @@ export function BaseServiceConfigPanel({
       quantity?: string;
     } = {};
 
-    if (configuration.custom_rate !== undefined && configuration.custom_rate < 0) {
+    if (configuration.custom_rate != null && configuration.custom_rate < 0) {
       errors.custom_rate = 'Rate cannot be negative';
     }
 
@@ -55,7 +55,7 @@ export function BaseServiceConfigPanel({
   }, [configuration.custom_rate, configuration.quantity]);
 
   const handleCustomRateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value === '' ? undefined : Number(e.target.value); // Handle as decimal
+    const value = e.target.value === '' ? null : Number(e.target.value); // Handle as decimal
     onConfigurationChange({ custom_rate: value });
   };
 
@@ -132,7 +132,7 @@ export function BaseServiceConfigPanel({
             <Input
               id="service-custom-rate"
               type="number"
-              value={(configuration.custom_rate !== undefined ? configuration.custom_rate : '').toString()} // Display as decimal
+              value={configuration.custom_rate == null ? '' : configuration.custom_rate.toString()} // Display as decimal
               onChange={handleCustomRateChange}
               placeholder={service?.default_rate !== undefined ? `Default: ${service.default_rate.toFixed(2)}` : 'Enter rate'} // Display default as decimal
               disabled={disabled}

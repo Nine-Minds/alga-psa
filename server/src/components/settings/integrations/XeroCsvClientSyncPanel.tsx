@@ -2,6 +2,7 @@
 
 import React, { useState, useRef, useTransition } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../ui/Card';
+import { Checkbox } from '../../ui/Checkbox';
 import { Users, Download, Upload, AlertCircle, CheckCircle2, FileUp } from 'lucide-react';
 import { Button } from '../../ui/Button';
 import { Alert, AlertDescription, AlertTitle } from '../../ui/Alert';
@@ -203,40 +204,30 @@ export function XeroCsvClientSyncPanel() {
           {importStep === 'idle' && (
             <div className="space-y-4">
               <div className="grid gap-4 sm:grid-cols-2">
-                <div className="flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    id="update-existing"
-                    checked={importOptions.updateExistingClients}
-                    onChange={(e) =>
-                      setImportOptions((prev) => ({
-                        ...prev,
-                        updateExistingClients: e.target.checked
-                      }))
-                    }
-                    className="h-4 w-4 rounded border-gray-300"
-                  />
-                  <label htmlFor="update-existing" className="text-sm text-muted-foreground">
-                    Update existing clients
-                  </label>
-                </div>
-                <div className="flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    id="create-new"
-                    checked={importOptions.createNewClients}
-                    onChange={(e) =>
-                      setImportOptions((prev) => ({
-                        ...prev,
-                        createNewClients: e.target.checked
-                      }))
-                    }
-                    className="h-4 w-4 rounded border-gray-300"
-                  />
-                  <label htmlFor="create-new" className="text-sm text-muted-foreground">
-                    Create new clients
-                  </label>
-                </div>
+                <Checkbox
+                  id="update-existing"
+                  checked={importOptions.updateExistingClients}
+                  onChange={(e) =>
+                    setImportOptions((prev) => ({
+                      ...prev,
+                      updateExistingClients: e.target.checked
+                    }))
+                  }
+                  label="Update existing clients"
+                  containerClassName="mb-0"
+                />
+                <Checkbox
+                  id="create-new"
+                  checked={importOptions.createNewClients}
+                  onChange={(e) =>
+                    setImportOptions((prev) => ({
+                      ...prev,
+                      createNewClients: e.target.checked
+                    }))
+                  }
+                  label="Create new clients"
+                  containerClassName="mb-0"
+                />
               </div>
 
               <div>

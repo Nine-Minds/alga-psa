@@ -20,6 +20,7 @@ import { initiateCalendarOAuth, createCalendarProvider, updateCalendarProvider }
 import CustomSelect from '../ui/CustomSelect';
 import { CalendarProviderConfig } from '../../interfaces/calendar.interfaces';
 import { Badge } from '../ui/Badge';
+import { getGoogleIntegrationStatus } from '@/lib/actions/integrations/googleActions';
 
 const googleCalendarProviderSchema = z.object({
   providerName: z.string().min(1, 'Provider name is required'),
@@ -47,6 +48,7 @@ export function GoogleCalendarProviderForm({
   const [oauthError, setOAuthError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [calendarProviderId, setCalendarProviderId] = useState<string | undefined>(provider?.id);
+  const [googleConfigReady, setGoogleConfigReady] = useState<boolean>(false);
 
   const form = useForm<GoogleCalendarProviderFormData>({
     resolver: zodResolver(googleCalendarProviderSchema),
@@ -96,10 +98,32 @@ export function GoogleCalendarProviderForm({
     return () => window.removeEventListener('message', handleMessage);
   }, [onSuccess]);
 
+  useEffect(() => {
+    const loadGoogleStatus = async () => {
+      try {
+        const res = await getGoogleIntegrationStatus();
+        if (!res.success) {
+          setGoogleConfigReady(false);
+          return;
+        }
+        const hasClient = Boolean(res.config?.calendarClientId);
+        const hasSecret = Boolean(res.config?.calendarClientSecretMasked);
+        setGoogleConfigReady(hasClient && hasSecret);
+      } catch {
+        setGoogleConfigReady(false);
+      }
+    };
+    loadGoogleStatus();
+  }, []);
+
   const handleAuthorize = async () => {
     try {
       setOAuthStatus('authorizing');
       setOAuthError(null);
+
+      if (!googleConfigReady) {
+        throw new Error('Google integration is not configured for this tenant. Configure Google first, then retry.');
+      }
 
       // Create or get provider ID
       let providerId = calendarProviderId;
@@ -112,12 +136,7 @@ export function GoogleCalendarProviderForm({
           providerName: formData.providerName,
           calendarId: formData.calendarId,
           syncDirection: formData.syncDirection,
-          vendorConfig: {
-            client_id: '', // Will be set during OAuth
-            client_secret: '',
-            project_id: '',
-            redirect_uri: ''
-          }
+          vendorConfig: {}
         });
 
         if (!result.success || !result.provider) {
@@ -181,12 +200,7 @@ export function GoogleCalendarProviderForm({
           providerName: data.providerName,
           calendarId: data.calendarId,
           syncDirection: data.syncDirection,
-          vendorConfig: {
-            client_id: '',
-            client_secret: '',
-            project_id: '',
-            redirect_uri: ''
-          }
+          vendorConfig: {}
         });
 
         if (!result.success) {
@@ -298,6 +312,30 @@ export function GoogleCalendarProviderForm({
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
+            {!googleConfigReady && (
+              <Alert variant="destructive">
+                <AlertDescription>
+                  <div className="space-y-2">
+                    <div className="font-medium">Google is not configured for this tenant.</div>
+                    <div className="text-sm">
+                      Configure tenant-owned Google OAuth first in <strong>Settings → Integrations → Providers</strong>.
+                    </div>
+                    <div>
+                      <Button
+                        id="google-calendar-open-google-settings"
+                        type="button"
+                        variant="outline"
+                        onClick={() => {
+                          window.location.href = '/msp/settings?tab=integrations&category=providers';
+                        }}
+                      >
+                        Open Google Settings
+                      </Button>
+                    </div>
+                  </div>
+                </AlertDescription>
+              </Alert>
+            )}
             <div className={`p-4 rounded-lg transition-colors ${
               oauthStatus === 'success' ? 'bg-green-50 border-2 border-green-200' : 'bg-blue-50'
             }`}>
@@ -322,7 +360,7 @@ export function GoogleCalendarProviderForm({
                   type="button"
                   variant="outline"
                   onClick={handleAuthorize}
-                  disabled={oauthStatus === 'authorizing'}
+                  disabled={oauthStatus === 'authorizing' || !googleConfigReady}
                 >
                   {oauthStatus === 'authorizing' && (
                     <>

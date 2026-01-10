@@ -8,6 +8,7 @@ vi.mock('@auth/core/jwt', () => ({
 
 const originalSecret = process.env.NEXTAUTH_SECRET;
 const originalNodeEnv = process.env.NODE_ENV;
+const originalNextAuthUrl = process.env.NEXTAUTH_URL;
 
 describe('encodePortalSessionToken', () => {
   beforeEach(() => {
@@ -29,10 +30,17 @@ describe('encodePortalSessionToken', () => {
     } else {
       (process.env as any).NODE_ENV = originalNodeEnv;
     }
+
+    if (originalNextAuthUrl === undefined) {
+      delete process.env.NEXTAUTH_URL;
+    } else {
+      process.env.NEXTAUTH_URL = originalNextAuthUrl;
+    }
   });
 
   it('passes the authjs cookie name as the salt in development', async () => {
     (process.env as any).NODE_ENV = 'development';
+    process.env.NEXTAUTH_URL = 'http://localhost:3003';
     const { encodePortalSessionToken } = await import('./sessionCookies');
 
     await encodePortalSessionToken({
@@ -43,7 +51,7 @@ describe('encodePortalSessionToken', () => {
 
     expect(encodeMock).toHaveBeenCalledWith(
       expect.objectContaining({
-        salt: 'authjs.session-token',
+        salt: 'authjs.session-token.3003',
       }),
     );
   });

@@ -1,6 +1,6 @@
 {
   "name": "server",
-  "version": "0.15.15",
+  "version": "0.16.1",
   "private": true,
   "type": "module",
   "engines": {
@@ -16,12 +16,12 @@
     "ngrok:tunnel": "ngrok http 3000",
     "test:webhook": "node scripts/test-webhook.js",
     "dev:with-ngrok": "echo 'Set NGROK_URL and run: NGROK_URL=https://your-url.ngrok.io npm run dev'",
-    "build": "next build",
+    "build": "next build --webpack",
     "build:turbo": "next build --turbo",
-    "build:enterprise": "LOG_MODULE_RESOLUTION=1 next build",
+    "build:enterprise": "LOG_MODULE_RESOLUTION=1 next build --webpack",
     "build:enterprise:turbo": "NEXT_PUBLIC_EDITION=enterprise next build --turbo",
     "build:enterprise-script": "../scripts/build-enterprise.sh",
-    "analyze": "ANALYZE=true next build",
+    "analyze": "ANALYZE=true next build --webpack",
     "start": "next start",
     "start:next": "next start",
     "start:express": "tsx index.ts",

@@ -68,6 +68,30 @@ export function TemplateReviewContractStep({
             </Card>
           )}
 
+          {data.product_services.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base flex items-center gap-2">
+                  Products
+                  <Badge variant="outline">{data.product_services.length}</Badge>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3 text-sm">
+                {data.product_services.map((product, index) => (
+                  <div
+                    key={`${product.service_id}-${index}`}
+                    className="border border-gray-200 rounded-md p-3 bg-gray-50"
+                  >
+                    <p className="font-medium text-gray-900">
+                      {product.service_name || 'Unnamed Product'}
+                    </p>
+                    <div className="text-xs text-gray-600 mt-1">Quantity: {product.quantity ?? 1}</div>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+          )}
+
           {data.hourly_services.length > 0 && (
             <Card>
               <CardHeader>

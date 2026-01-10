@@ -132,7 +132,6 @@ export async function findIntegrationForWebhook(
       provider: string;
       is_active: boolean;
       instance_url: string | null;
-      webhook_secret: string | null;
       settings: string | null;
       mapping_id: string;
       external_organization_id: string;
@@ -145,7 +144,6 @@ export async function findIntegrationForWebhook(
       'ri.provider',
       'ri.is_active',
       'ri.instance_url',
-      'ri.webhook_secret',
       'ri.settings',
       'rom.mapping_id',
       'rom.external_organization_id',
@@ -168,8 +166,8 @@ export async function findIntegrationForWebhook(
     }
   }
 
-  // Get webhook secret from settings (preferred) or legacy column
-  const webhookSecret = (parsedSettings.webhookSecret as string) || result.webhook_secret || undefined;
+  // Get webhook secret from settings
+  const webhookSecret = (parsedSettings.webhookSecret as string) || undefined;
 
   // Merge webhook secret into settings for consistent access
   const settings = {

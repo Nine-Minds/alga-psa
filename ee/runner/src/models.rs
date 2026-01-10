@@ -38,7 +38,9 @@ pub struct UserInfo {
     pub user_id: String,
     pub user_email: String,
     pub user_name: String,
-    pub company_name: String,
+    pub user_type: String,
+    #[serde(default, alias = "company_name")]
+    pub client_name: String,
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]

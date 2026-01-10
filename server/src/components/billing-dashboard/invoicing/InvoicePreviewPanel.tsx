@@ -9,6 +9,8 @@ import { IInvoiceTemplate } from '../../../interfaces/invoice.interfaces';
 import { WasmInvoiceViewModel } from '../../../lib/invoice-renderer/types';
 import { getInvoiceForRendering } from '../../../lib/actions/invoiceQueries';
 import { mapDbInvoiceToWasmViewModel } from '../../../lib/adapters/invoiceAdapters';
+import { getInvoicePurchaseOrderSummary, type InvoicePurchaseOrderSummary } from '../../../lib/actions/invoiceQueries';
+import { PurchaseOrderSummaryBanner } from './PurchaseOrderSummaryBanner';
 import { TemplateRenderer } from '../TemplateRenderer';
 import PaperInvoice from '../PaperInvoice';
 import CreditExpirationInfo from '../CreditExpirationInfo';
@@ -46,6 +48,7 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
   creditApplied = 0
 }) => {
   const [detailedInvoiceData, setDetailedInvoiceData] = useState<WasmInvoiceViewModel | null>(null);
+  const [poSummary, setPoSummary] = useState<InvoicePurchaseOrderSummary | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isActionLoading, setIsActionLoading] = useState(false);
@@ -81,6 +84,7 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
       setIsLoading(true);
       setError(null);
       setDetailedInvoiceData(null);
+      setPoSummary(null);
 
       try {
         const dbInvoiceData = await getInvoiceForRendering(invoiceId);
@@ -98,12 +102,16 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
           throw new Error(`Failed to map invoice data for ID ${invoiceId} to view model.`);
         }
 
+        const summary = await getInvoicePurchaseOrderSummary(invoiceId);
+        setPoSummary(summary);
+
         setDetailedInvoiceData(viewModel);
       } catch (err) {
         console.error(`Error fetching detailed data for invoice ${invoiceId}:`, err);
         const message = err instanceof Error ? err.message : 'An unknown error occurred.';
         setError(`Failed to load preview: ${message}`);
         setDetailedInvoiceData(null);
+        setPoSummary(null);
       } finally {
         setIsLoading(false);
       }
@@ -185,6 +193,8 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
           </div>
         ) : detailedInvoiceData && selectedTemplate ? (
           <>
+            <PurchaseOrderSummaryBanner poSummary={poSummary} currencyCode={detailedInvoiceData.currencyCode} />
+
             <div className="flex flex-wrap gap-2 mb-4">
               {!isFinalized && onFinalize && (
                 <Button

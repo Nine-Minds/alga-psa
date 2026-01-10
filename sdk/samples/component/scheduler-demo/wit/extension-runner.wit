@@ -1,0 +1,231 @@
+package alga:extension;
+
+interface types {
+    record context-data {
+        request-id: option<string>,
+        tenant-id: string,
+        extension-id: string,
+        install-id: option<string>,
+        version-id: option<string>,
+    }
+
+    enum secret-error {
+        missing,
+        denied,
+        expired,
+        internal,
+    }
+
+    record http-header {
+        name: string,
+        value: string,
+    }
+
+    record http-request {
+        method: string,
+        url: string,
+        headers: list<http-header>,
+        body: option<list<u8>>,
+    }
+
+    record http-response {
+        status: u16,
+        headers: list<http-header>,
+        body: option<list<u8>>,
+    }
+
+    enum http-error {
+        invalid-url,
+        not-allowed,
+        transport,
+        internal,
+    }
+
+    enum storage-error {
+        missing,
+        conflict,
+        denied,
+        internal,
+    }
+
+    record storage-entry {
+        namespace: string,
+        key: string,
+        value: list<u8>,
+        revision: option<u64>,
+    }
+
+    enum proxy-error {
+        route-not-found,
+        denied,
+        bad-request,
+        internal,
+    }
+
+    record user-data {
+        tenant-id: string,
+        company-name: string,
+        user-id: string,
+        user-email: string,
+        user-name: string,
+    }
+
+    enum user-error {
+        not-available,
+        not-allowed,
+    }
+
+    // Scheduler types for cap:scheduler.manage
+
+    enum scheduler-error {
+        not-found,
+        validation-failed,
+        quota-exceeded,
+        denied,
+        internal,
+    }
+
+    record schedule-info {
+        id: string,
+        endpoint-path: string,
+        endpoint-method: string,
+        name: option<string>,
+        cron: string,
+        timezone: string,
+        enabled: bool,
+        payload: option<string>,  // JSON-encoded
+        last-run-at: option<string>,
+        last-run-status: option<string>,
+        last-error: option<string>,
+        created-at: option<string>,
+    }
+
+    record endpoint-info {
+        id: string,
+        method: string,
+        path: string,
+        handler: string,
+        schedulable: bool,
+    }
+
+    record create-schedule-input {
+        endpoint: string,
+        cron: string,
+        timezone: option<string>,
+        enabled: option<bool>,
+        name: option<string>,
+        payload: option<string>,  // JSON-encoded
+    }
+
+    record create-schedule-result {
+        success: bool,
+        schedule-id: option<string>,
+        error: option<string>,
+        field-errors: option<string>,  // JSON-encoded map
+    }
+
+    record update-schedule-input {
+        endpoint: option<string>,
+        cron: option<string>,
+        timezone: option<string>,
+        enabled: option<bool>,
+        name: option<string>,
+        payload: option<string>,  // JSON-encoded, use empty string to clear
+    }
+
+    record update-schedule-result {
+        success: bool,
+        error: option<string>,
+        field-errors: option<string>,  // JSON-encoded map
+    }
+
+    record delete-schedule-result {
+        success: bool,
+        error: option<string>,
+    }
+
+    record execute-request {
+        context: context-data,
+        http: http-request,
+    }
+
+    record execute-response {
+        status: u16,
+        headers: list<http-header>,
+        body: option<list<u8>>,
+    }
+}
+
+interface context {
+    use types.{context-data};
+    get-context: func() -> context-data;
+}
+
+interface secrets {
+    use types.{secret-error};
+    get: func(key: string) -> result<string, secret-error>;
+    list-keys: func() -> list<string>;
+}
+
+interface http {
+    use types.{http-request, http-response, http-error};
+    fetch: func(request: http-request) -> result<http-response, http-error>;
+}
+
+interface storage {
+    use types.{storage-entry, storage-error};
+    get: func(namespace: string, key: string) -> result<storage-entry, storage-error>;
+    put: func(entry: storage-entry) -> result<storage-entry, storage-error>;
+    delete: func(namespace: string, key: string) -> result<_, storage-error>;
+    list-entries: func(namespace: string, cursor: option<string>) -> result<list<storage-entry>, storage-error>;
+}
+
+interface logging {
+    log-info: func(message: string);
+    log-warn: func(message: string);
+    log-error: func(message: string);
+}
+
+interface ui-proxy {
+    use types.{proxy-error};
+    call-route: func(route: string, payload: option<list<u8>>) -> result<list<u8>, proxy-error>;
+}
+
+interface user {
+    use types.{user-data, user-error};
+    get-user: func() -> result<user-data, user-error>;
+}
+
+interface scheduler {
+    use types.{
+        scheduler-error,
+        schedule-info,
+        endpoint-info,
+        create-schedule-input,
+        create-schedule-result,
+        update-schedule-input,
+        update-schedule-result,
+        delete-schedule-result
+    };
+    list-schedules: func() -> result<list<schedule-info>, scheduler-error>;
+    get-schedule: func(schedule-id: string) -> result<option<schedule-info>, scheduler-error>;
+    create-schedule: func(input: create-schedule-input) -> create-schedule-result;
+    update-schedule: func(schedule-id: string, input: update-schedule-input) -> update-schedule-result;
+    delete-schedule: func(schedule-id: string) -> delete-schedule-result;
+    get-endpoints: func() -> result<list<endpoint-info>, scheduler-error>;
+}
+
+world runner {
+    use types.{execute-request, execute-response};
+
+    import context;
+    import secrets;
+    import http;
+    import storage;
+    import logging;
+    import ui-proxy;
+    import user;
+    import scheduler;
+
+    export handler: func(request: execute-request) -> execute-response;
+}

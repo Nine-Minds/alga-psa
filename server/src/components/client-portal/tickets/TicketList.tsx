@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import toast from 'react-hot-toast';
 import { useSearchParams, useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { DataTable } from 'server/src/components/ui/DataTable';
 import Spinner from 'server/src/components/ui/Spinner';
 import { format } from 'date-fns';
@@ -11,9 +12,12 @@ import { getTicketStatuses } from 'server/src/lib/actions/status-actions/statusA
 import { getAllPriorities } from 'server/src/lib/actions/priorityActions';
 import { getTicketCategories } from 'server/src/lib/actions/ticketCategoryActions';
 import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
-import { ITicketListItem, ITicketCategory } from 'server/src/interfaces/ticket.interfaces';
+import { ITicketListItem, ITicketCategory, TicketResponseState } from 'server/src/interfaces/ticket.interfaces';
+import { ResponseStateBadge } from 'server/src/components/tickets/ResponseStateBadge';
 import { Button } from 'server/src/components/ui/Button';
 import { Input } from 'server/src/components/ui/Input';
+import { Tooltip } from 'server/src/components/ui/Tooltip';
+import UserAvatar from 'server/src/components/ui/UserAvatar';
 import CustomSelect, { SelectOption } from 'server/src/components/ui/CustomSelect';
 import { CategoryPicker } from 'server/src/components/tickets/CategoryPicker';
 import { ChevronDown, XCircle } from 'lucide-react';
@@ -21,6 +25,7 @@ import { ConfirmationDialog } from 'server/src/components/ui/ConfirmationDialog'
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import { ClientAddTicket } from 'server/src/components/client-portal/tickets/ClientAddTicket';
 import { useTranslation } from 'server/src/lib/i18n/client';
+import { getUserAvatarUrlsBatchAction } from 'server/src/lib/actions/avatar-actions';
 
 const useDebounce = <T,>(value: T, delay: number): T => {
   const [debouncedValue, setDebouncedValue] = useState<T>(value);
@@ -60,9 +65,43 @@ export function TicketList() {
     currentStatus: string;
   } | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [additionalAgentAvatarUrls, setAdditionalAgentAvatarUrls] = useState<Record<string, string | null>>({});
 
   // Debounce search query to avoid triggering loadTickets on every keystroke
   const debouncedSearchQuery = useDebounce(searchQuery, 500);
+
+  // Fetch avatar URLs for additional agents when tickets change
+  useEffect(() => {
+    const fetchAvatarUrls = async () => {
+      // Collect all unique user IDs from additional agents
+      const userIds = new Set<string>();
+      tickets.forEach(ticket => {
+        ticket.additional_agents?.forEach(agent => {
+          userIds.add(agent.user_id);
+        });
+      });
+
+      if (userIds.size === 0) return;
+
+      // Get tenant from first ticket
+      const tenant = tickets[0]?.tenant;
+      if (!tenant) return;
+
+      try {
+        const avatarUrlsMap = await getUserAvatarUrlsBatchAction(Array.from(userIds), tenant);
+        // Convert Map to Record
+        const urlsRecord: Record<string, string | null> = {};
+        avatarUrlsMap.forEach((url, id) => {
+          urlsRecord[id] = url;
+        });
+        setAdditionalAgentAvatarUrls(urlsRecord);
+      } catch (error) {
+        console.error('Failed to fetch avatar URLs:', error);
+      }
+    };
+
+    fetchAvatarUrls();
+  }, [tickets]);
 
   // Load statuses, priorities, and categories
   useEffect(() => {
@@ -160,7 +199,7 @@ export function TicketList() {
             : bValue.localeCompare(aValue);
         }
 
-        if (sortField === 'entered_at' || sortField === 'updated_at') {
+        if (sortField === 'entered_at' || sortField === 'updated_at' || sortField === 'due_date') {
           const aDate = new Date(aValue as string);
           const bDate = new Date(bValue as string);
           return sortDirection === 'asc'
@@ -243,17 +282,13 @@ export function TicketList() {
       dataIndex: 'ticket_number',
       width: '75px',
       render: (value: string, record: ITicketListItem) => (
-        <div
-          className="font-medium cursor-pointer hover:text-[rgb(var(--color-secondary-600))]"
-          onClick={(e) => {
-            e.stopPropagation();
-            if (record.ticket_id) {
-              router.push(`/client-portal/tickets/${record.ticket_id}`);
-            }
-          }}
+        <Link
+          href={`/client-portal/tickets/${record.ticket_id}`}
+          className="font-medium hover:text-[rgb(var(--color-secondary-600))]"
+          onClick={(e) => e.stopPropagation()}
         >
           {value}
-        </div>
+        </Link>
       ),
     },
     {
@@ -261,68 +296,83 @@ export function TicketList() {
       dataIndex: 'title',
       width: '25%',
       render: (value: string, record: ITicketListItem) => (
-        <div
-          className="font-medium cursor-pointer hover:text-[rgb(var(--color-secondary-600))]"
-          onClick={(e) => {
-            e.stopPropagation();
-            if (record.ticket_id) {
-              router.push(`/client-portal/tickets/${record.ticket_id}`);
-            }
-          }}
+        <Link
+          href={`/client-portal/tickets/${record.ticket_id}`}
+          className="font-medium hover:text-[rgb(var(--color-secondary-600))]"
+          onClick={(e) => e.stopPropagation()}
         >
           {value}
-        </div>
+        </Link>
       ),
     },
     {
       title: t('tickets.fields.status'),
       dataIndex: 'status_name',
       width: '20%',
-      render: (value: string, record: ITicketListItem) => (
-        <DropdownMenu.Root>
-          <DropdownMenu.Trigger asChild>
-            <div
-              id="change-ticket-category-button"
-              className="text-sm cursor-pointer flex items-center gap-2"
-            >
-              {value}
-              <ChevronDown className="h-3 w-3 text-gray-400" />
-            </div>
-          </DropdownMenu.Trigger>
-
-          <DropdownMenu.Content
-            className="w-48 rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none z-50"
-          >
-            {statusOptions
-              .filter(option => !['all', 'open', 'closed'].includes(option.value))
-              .map((status) => (
-                <DropdownMenu.Item
-                  key={status.value}
-                  className="px-4 py-2 text-sm hover:bg-gray-100 cursor-pointer outline-none"
-                  onSelect={() => {
-                    if (record.status_id !== status.value) {
-                      setTicketToUpdateStatus({
-                        ticketId: record.ticket_id!,
-                        newStatus: status.value,
-                        currentStatus: record.status_name || ''
-                      });
-                    }
-                  }}
+      render: (value: string, record: ITicketListItem) => {
+        // Get response_state from the record (F026-F030)
+        const responseState = (record as any).response_state as TicketResponseState | undefined;
+        return (
+          <div className="flex items-center gap-2 flex-wrap">
+            <DropdownMenu.Root>
+              <DropdownMenu.Trigger asChild>
+                <div
+                  id="change-ticket-category-button"
+                  className="text-sm cursor-pointer flex items-center gap-2"
                 >
-                  {status.label}
-                </DropdownMenu.Item>
-              ))}
-          </DropdownMenu.Content>
-        </DropdownMenu.Root>
-      ),
+                  {value}
+                  <ChevronDown className="h-3 w-3 text-gray-400" />
+                </div>
+              </DropdownMenu.Trigger>
+
+              <DropdownMenu.Content
+                className="w-48 rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none z-50"
+              >
+                {statusOptions
+                  .filter(option => !['all', 'open', 'closed'].includes(option.value))
+                  .map((status) => (
+                    <DropdownMenu.Item
+                      key={status.value}
+                      className="px-4 py-2 text-sm hover:bg-gray-100 cursor-pointer outline-none"
+                      onSelect={() => {
+                        if (record.status_id !== status.value) {
+                          setTicketToUpdateStatus({
+                            ticketId: record.ticket_id!,
+                            newStatus: status.value,
+                            currentStatus: record.status_name || ''
+                          });
+                        }
+                      }}
+                    >
+                      {status.label}
+                    </DropdownMenu.Item>
+                  ))}
+              </DropdownMenu.Content>
+            </DropdownMenu.Root>
+            {responseState && (
+              <ResponseStateBadge
+                responseState={responseState}
+                isClientPortal={true}
+                size="sm"
+                labels={{
+                  awaitingClient: t('tickets.responseState.awaitingYourResponse', 'Awaiting Your Response'),
+                  awaitingInternal: t('tickets.responseState.awaitingSupportResponse', 'Awaiting Support Response'),
+                  awaitingClientTooltip: t('tickets.responseState.awaitingYourResponseTooltip', 'Support is waiting for your response'),
+                  awaitingInternalTooltip: t('tickets.responseState.awaitingSupportResponseTooltip', 'Your response has been received. Support will respond soon.'),
+                }}
+              />
+            )}
+          </div>
+        );
+      },
     },
     {
       title: t('tickets.fields.priority'),
       dataIndex: 'priority_name',
-      width: '15%',
+      width: '12%',
       render: (value: string, record: ITicketListItem) => (
         <div className="flex items-center gap-2">
-          <div 
+          <div
             className={`w-3 h-3 rounded-full border border-gray-300 ${!record.priority_color ? 'bg-gray-500' : ''}`}
             style={record.priority_color ? { backgroundColor: record.priority_color } : undefined}
           />
@@ -331,12 +381,86 @@ export function TicketList() {
       ),
     },
     {
+      title: t('tickets.fields.dueDate', 'Due Date'),
+      dataIndex: 'due_date',
+      width: '12%',
+      render: (value: string | null) => {
+        if (!value) {
+          return <span className="text-sm text-gray-500">-</span>;
+        }
+
+        const dueDate = new Date(value);
+        const now = new Date();
+        const hoursUntilDue = (dueDate.getTime() - now.getTime()) / (1000 * 60 * 60);
+
+        // Check if time is midnight (00:00) - show date only
+        const isMidnight = dueDate.getHours() === 0 && dueDate.getMinutes() === 0;
+        const displayFormat = isMidnight ? 'MMM d, yyyy' : 'MMM d, yyyy h:mm a';
+
+        // Determine styling based on due date status
+        let textColorClass = 'text-gray-500';
+        let bgColorClass = '';
+
+        if (hoursUntilDue < 0) {
+          // Overdue - red/warning style
+          textColorClass = 'text-red-700';
+          bgColorClass = 'bg-red-50';
+        } else if (hoursUntilDue <= 24) {
+          // Approaching due date (within 24 hours) - orange/caution style
+          textColorClass = 'text-orange-700';
+          bgColorClass = 'bg-orange-50';
+        }
+
+        return (
+          <span className={`text-sm inline-block ${textColorClass} ${bgColorClass ? `${bgColorClass} px-2 py-0.5 rounded-full` : ''}`}>
+            {format(dueDate, displayFormat)}
+          </span>
+        );
+      },
+    },
+    {
       title: t('tickets.fields.assignedTo'),
       dataIndex: 'assigned_to_name',
       width: '15%',
-      render: (value: string) => (
-        <div className="text-sm">{value || '-'}</div>
-      ),
+      render: (value: string | null, record: ITicketListItem) => {
+        const additionalCount = record.additional_agent_count || 0;
+        const additionalAgents = record.additional_agents || [];
+        return (
+          <div className="text-sm flex items-center gap-1.5">
+            {value || '-'}
+            {additionalCount > 0 && (
+              <Tooltip
+                content={
+                  <div className="text-xs space-y-1.5">
+                    <div className="font-medium text-gray-300 mb-1">Additional Agents:</div>
+                    {additionalAgents.map((agent, i) => (
+                      <div key={i} className="flex items-center gap-2">
+                        <UserAvatar
+                          userId={agent.user_id}
+                          userName={agent.name}
+                          avatarUrl={additionalAgentAvatarUrls[agent.user_id] ?? null}
+                          size="xs"
+                        />
+                        <span>{agent.name}</span>
+                      </div>
+                    ))}
+                  </div>
+                }
+              >
+                <span
+                  className="px-1.5 py-0.5 text-xs font-medium rounded-full cursor-help"
+                  style={{
+                    color: 'rgb(var(--color-primary-500))',
+                    backgroundColor: 'rgb(var(--color-primary-50))'
+                  }}
+                >
+                  +{additionalCount}
+                </span>
+              </Tooltip>
+            )}
+          </div>
+        );
+      },
     },
     {
       title: t('tickets.fields.createdAt'),

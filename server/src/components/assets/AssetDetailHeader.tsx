@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { Group, Text } from '@mantine/core';
 import { useSWRConfig } from 'swr';
 import { 
   Laptop, 
@@ -12,9 +11,11 @@ import {
   Edit,
   Trash2,
   RefreshCw,
-  Power
+  Power,
+  ArrowLeft
 } from 'lucide-react';
 import { Button } from 'server/src/components/ui/Button';
+import BackNav from 'server/src/components/ui/BackNav';
 import { StatusBadge } from './shared/StatusBadge';
 import { Asset } from '../../interfaces/asset.interfaces';
 import { QuickAddTicket } from '../tickets/QuickAddTicket';
@@ -64,13 +65,20 @@ export const AssetDetailHeader: React.FC<AssetDetailHeaderProps> = ({
   return (
     <>
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 p-4 bg-white border-b border-gray-200">
-        <Group align="center">
+        <div className="flex items-center gap-4">
+          <BackNav href="/msp/assets">
+            <div className="flex items-center gap-2">
+              <ArrowLeft size={16} />
+              <span className="hidden sm:inline">Back to Assets</span>
+            </div>
+          </BackNav>
+          <div className="h-10 w-px bg-gray-200 mx-2 hidden md:block" />
           <Icon size={40} className="text-gray-700" />
           <div>
-            <Group gap="xs" align="center">
-              <Text size="xl" fw={700} className="leading-none text-gray-900">
+            <div className="flex items-center gap-2">
+              <h1 className="text-xl font-bold leading-none text-gray-900">
                 {asset.name}
-              </Text>
+              </h1>
               {asset.rmm_provider && (
                 <StatusBadge 
                   status={badgeStatus} 
@@ -78,19 +86,18 @@ export const AssetDetailHeader: React.FC<AssetDetailHeaderProps> = ({
                   size="md"
                 />
               )}
-            </Group>
-            <Text size="sm" c="dimmed" mt={2}>
+            </div>
+            <p className="text-sm text-gray-500 mt-1">
               Asset Tag: {asset.asset_tag}
-            </Text>
+            </p>
           </div>
-        </Group>
+        </div>
 
-        <Group>
+        <div className="flex items-center gap-3">
           {asset.rmm_provider && (
             <RemoteAccessButton
               asset={asset}
               variant="default"
-              className="bg-blue-600 hover:bg-blue-700 text-white border-0"
             />
           )}
           
@@ -115,7 +122,7 @@ export const AssetDetailHeader: React.FC<AssetDetailHeaderProps> = ({
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuLabel>Actions</DropdownMenuLabel>
+              <div className="px-2 py-1.5 text-sm font-semibold text-gray-900">Actions</div>
               {asset.rmm_provider && (
                 <>
                   <DropdownMenuItem onClick={onRefresh} disabled={isRefreshing}>
@@ -140,7 +147,7 @@ export const AssetDetailHeader: React.FC<AssetDetailHeaderProps> = ({
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
-        </Group>
+        </div>
       </div>
 
       <QuickAddTicket

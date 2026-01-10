@@ -15,9 +15,9 @@ export const ServiceForm: React.FC = () => {
   const [serviceTypeId, setServiceTypeId] = useState<string>('') // Store the selected service type ID
   const [defaultRate, setDefaultRate] = useState('')
   const [unitOfMeasure, setUnitOfMeasure] = useState('')
-  const [billingMethod, setBillingMethod] = useState<'fixed' | 'hourly' | 'usage'>('fixed')
+  const [billingMethod, setBillingMethod] = useState<'fixed' | 'hourly' | 'usage' | 'per_unit'>('fixed')
   const [description, setDescription] = useState('')
-  const [serviceTypes, setServiceTypes] = useState<{ id: string; name: string; billing_method: 'fixed' | 'hourly' | 'usage'; is_standard: boolean }[]>([])
+  const [serviceTypes, setServiceTypes] = useState<{ id: string; name: string; billing_method: 'fixed' | 'hourly' | 'usage' | 'per_unit'; is_standard: boolean }[]>([])
   const [error, setError] = useState<string | null>(null)
   // Removed regionCode state and related hooks
   // Assuming tax_rate_id is handled by a dedicated component or passed in props now

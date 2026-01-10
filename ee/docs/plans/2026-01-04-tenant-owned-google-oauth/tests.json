@@ -1,0 +1,50 @@
+[
+  { "id": "T001", "description": "Google settings panel renders under Integrations → Communication and is accessible to authorized admins.", "featureIds": ["F001", "F002", "F035"], "implemented": false },
+  { "id": "T002", "description": "Unauthorized users cannot access Google settings save actions (RBAC enforced).", "featureIds": ["F006", "F007", "F035"], "implemented": false },
+  { "id": "T003", "description": "Google settings panel displays required redirect URIs for both `/api/auth/google/callback` and `/api/auth/google/calendar/callback`.", "featureIds": ["F003"], "implemented": false },
+  { "id": "T004", "description": "Google settings panel displays required scopes for Gmail and Calendar and can copy them.", "featureIds": ["F004"], "implemented": false },
+
+  { "id": "T005", "description": "Saving invalid client ID format is rejected with a clear error.", "featureIds": ["F008"], "implemented": false },
+  { "id": "T006", "description": "Saving empty client secret is rejected with a clear error.", "featureIds": ["F008"], "implemented": false },
+  { "id": "T007", "description": "Saving without project ID is rejected when Gmail/PubSub settings are enabled.", "featureIds": ["F009"], "implemented": false },
+  { "id": "T008", "description": "Uploading malformed service account JSON is rejected with a clear error.", "featureIds": ["F010"], "implemented": false },
+  { "id": "T009", "description": "Uploading service account JSON missing required fields is rejected.", "featureIds": ["F010"], "implemented": false },
+
+  { "id": "T010", "description": "Google config status action returns masked client ID and never returns client secret or private key.", "featureIds": ["F005", "F013"], "implemented": false },
+  { "id": "T011", "description": "Google config status action correctly reports configured/partial/missing states based on tenant secrets presence.", "featureIds": ["F005", "F027"], "implemented": false },
+
+  { "id": "T012", "description": "Reuse-same-app toggle writes both Gmail and Calendar secret keys when enabled.", "featureIds": ["F011"], "implemented": false },
+  { "id": "T013", "description": "Disabling reuse-same-app toggle preserves separately-entered Calendar secrets.", "featureIds": ["F011"], "implemented": false },
+
+  { "id": "T014", "description": "Gmail OAuth initiation fails fast with a clear error when tenant Google client ID is missing.", "featureIds": ["F014", "F034"], "implemented": false },
+  { "id": "T015", "description": "Gmail OAuth initiation uses tenant secret client ID even when running with hosted NEXTAUTH_URL.", "featureIds": ["F014", "F012"], "implemented": false },
+  { "id": "T016", "description": "Gmail OAuth callback exchanges code using tenant secret client ID/secret and rejects if missing.", "featureIds": ["F015", "F012", "F034"], "implemented": false },
+
+  { "id": "T017", "description": "Calendar OAuth initiation uses tenant secret calendar client ID even when running with hosted NEXTAUTH_URL.", "featureIds": ["F016", "F012"], "implemented": false },
+  { "id": "T018", "description": "Calendar OAuth callback exchanges code using tenant secret calendar client ID/secret and rejects if missing.", "featureIds": ["F017", "F012", "F034"], "implemented": false },
+
+  { "id": "T019", "description": "GmailProviderForm does not render client ID/secret inputs after refactor.", "featureIds": ["F020"], "implemented": false },
+  { "id": "T020", "description": "GmailProviderForm shows 'Google not configured' blocking UI and links to Google settings when tenant secrets are missing.", "featureIds": ["F021", "F029"], "implemented": false },
+  { "id": "T021", "description": "GmailProviderForm still allows creating/updating provider metadata (mailbox, label filters, defaults).", "featureIds": ["F022"], "implemented": false },
+  { "id": "T022", "description": "GmailProviderForm OAuth flow completes and results in provider status = connected.", "featureIds": ["F022"], "implemented": false },
+
+  { "id": "T023", "description": "GoogleCalendarProviderForm shows missing-config CTA when calendar client ID/secret not set.", "featureIds": ["F023"], "implemented": false },
+  { "id": "T024", "description": "GoogleCalendarProviderForm can initiate OAuth and complete callback, resulting in connection_status = connected.", "featureIds": ["F023", "F017"], "implemented": false },
+
+  { "id": "T025", "description": "Gmail provider persistence no longer overrides tenant-provided creds with hosted Gmail config when app secrets exist.", "featureIds": ["F018"], "implemented": false },
+  { "id": "T026", "description": "Gmail provider persistence does not persist client secrets into `google_email_provider_config` after refactor.", "featureIds": ["F019"], "implemented": false },
+
+  { "id": "T027", "description": "Pub/Sub provisioning reads service account JSON from tenant secrets and fails with clear message if missing.", "featureIds": ["F025", "F034"], "implemented": false },
+  { "id": "T028", "description": "Pub/Sub provisioning uses tenant project ID and standardized topic/subscription names for the tenant.", "featureIds": ["F025"], "implemented": false },
+
+  { "id": "T029", "description": "Google settings 'Test configuration' validates required secrets and confirms displayed redirect URIs use the current deployment base URL.", "featureIds": ["F028"], "implemented": false },
+  { "id": "T030", "description": "Docs are updated to point to the new Google settings panel for Gmail setup.", "featureIds": ["F031"], "implemented": false },
+  { "id": "T031", "description": "Docs are updated to point to the new Google settings panel for Calendar setup.", "featureIds": ["F032"], "implemented": false },
+
+  { "id": "T032", "description": "Google Calendar notification provisioning results in Alga receiving callbacks at `/api/calendar/webhooks/google` for a configured provider.", "featureIds": ["F037"], "implemented": false },
+  { "id": "T033", "description": "Google Calendar notification verification/repair job runs via job runner abstraction (PG Boss/Temporal) and reports failures without leaking secrets.", "featureIds": ["F038"], "implemented": false },
+  { "id": "T034", "description": "Gmail watch renewal job refreshes providers nearing `watch_expiration` and updates `watch_expiration` in config.", "featureIds": ["F039"], "implemented": false },
+  { "id": "T035", "description": "Google token preflight refresh job refreshes near-expiry tokens and marks providers as error/disconnected when refresh fails.", "featureIds": ["F040"], "implemented": false },
+  { "id": "T036", "description": "Reset action marks existing Google email providers as disconnected and clears stored OAuth tokens.", "featureIds": ["F041"], "implemented": false },
+  { "id": "T037", "description": "Reset action marks existing Google calendar providers as disconnected and clears stored OAuth tokens.", "featureIds": ["F041"], "implemented": false }
+]

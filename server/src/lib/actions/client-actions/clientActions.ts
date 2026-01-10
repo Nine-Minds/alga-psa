@@ -75,7 +75,7 @@ export async function updateClient(clientId: string, updateData: Partial<Omit<IC
 
   // Check permission for client updating
   if (!await hasPermission(currentUser, 'client', 'update')) {
-    throw new Error('Permission denied: Cannot update clients');
+    throw new Error('Permission denied: Cannot update clients. Please contact your administrator if you need additional access.');
   }
 
   const {knex: db, tenant} = await createTenantKnex();
@@ -160,29 +160,6 @@ export async function updateClient(clientId: string, updateData: Partial<Omit<IC
       await trx('clients')
         .where({ client_id: clientId, tenant })
         .update(updateObject);
-
-      // If the client is being set to inactive, update all associated contacts and users
-      if (updateData.is_inactive === true) {
-        // Get all contact IDs for this client
-        const contacts = await trx('contacts')
-          .select('contact_name_id')
-          .where({ client_id: clientId, tenant });
-
-        const contactIds = contacts.map((c: { contact_name_id: string }) => c.contact_name_id);
-
-        // Deactivate all contacts
-        await trx('contacts')
-          .where({ client_id: clientId, tenant })
-          .update({ is_inactive: true });
-
-        // Deactivate all users associated with these contacts
-        if (contactIds.length > 0) {
-          await trx('users')
-            .whereIn('contact_id', contactIds)
-            .andWhere({ tenant, user_type: 'client' })
-            .update({ is_inactive: true });
-        }
-      }
     });
 
     // Email suffix functionality removed for security
@@ -315,6 +292,11 @@ export interface PaginatedClientsResponse {
   page: number;
   pageSize: number;
   totalPages: number;
+}
+
+export interface BillingCycleDateRange {
+  from?: string;
+  to?: string;
 }
 
 export async function getAllClientsPaginated(params: ClientPaginationParams = {}): Promise<PaginatedClientsResponse> {
@@ -499,6 +481,194 @@ export async function getAllClientsPaginated(params: ClientPaginationParams = {}
   }
 }
 
+export async function getClientsWithBillingCycleRangePaginated(
+  params: ClientPaginationParams & { dateRange?: BillingCycleDateRange }
+): Promise<PaginatedClientsResponse> {
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
+    throw new Error('No authenticated user found');
+  }
+
+  if (!await hasPermission(currentUser, 'client', 'read')) {
+    throw new Error('Permission denied: Cannot read clients');
+  }
+
+  const {
+    page = 1,
+    pageSize = 10,
+    includeInactive = true,
+    searchTerm,
+    clientTypeFilter = 'all',
+    loadLogos = true,
+    statusFilter,
+    selectedTags,
+    sortBy = 'client_name',
+    sortDirection = 'asc',
+    dateRange
+  } = params;
+
+  const {knex: db, tenant} = await createTenantKnex();
+  if (!tenant) {
+    throw new Error('Tenant not found');
+  }
+
+  try {
+    const offset = (page - 1) * pageSize;
+
+    const result = await withTransaction(db, async (trx: Knex.Transaction) => {
+      let baseQuery = trx('clients as c')
+        .leftJoin('users as u', function() {
+          this.on('c.account_manager_id', '=', 'u.user_id')
+              .andOn('c.tenant', '=', 'u.tenant');
+        })
+        .leftJoin('client_locations as cl', function() {
+          this.on('c.client_id', '=', 'cl.client_id')
+              .andOn('c.tenant', '=', 'cl.tenant')
+              .andOn('cl.is_default', '=', trx.raw('true'));
+        })
+        .where({ 'c.tenant': tenant });
+
+      if (statusFilter === 'active') {
+        baseQuery = baseQuery.andWhere('c.is_inactive', false);
+      } else if (statusFilter === 'inactive') {
+        baseQuery = baseQuery.andWhere('c.is_inactive', true);
+      } else if (!statusFilter && !includeInactive) {
+        baseQuery = baseQuery.andWhere('c.is_inactive', false);
+      }
+
+      if (searchTerm) {
+        baseQuery = baseQuery.where(function() {
+          this.where('c.client_name', 'ilike', `%${searchTerm}%`)
+              .orWhere('cl.phone', 'ilike', `%${searchTerm}%`)
+              .orWhere('cl.address_line1', 'ilike', `%${searchTerm}%`)
+              .orWhere('cl.address_line2', 'ilike', `%${searchTerm}%`)
+              .orWhere('cl.city', 'ilike', `%${searchTerm}%`);
+        });
+      }
+
+      if (clientTypeFilter !== 'all') {
+        baseQuery = baseQuery.where('c.client_type', clientTypeFilter);
+      }
+
+      if (selectedTags && selectedTags.length > 0) {
+        baseQuery = baseQuery.whereIn('c.client_id', function() {
+          this.select('tm.tagged_id')
+            .from('tag_mappings as tm')
+            .join('tag_definitions as td', function() {
+              this.on('tm.tenant', '=', 'td.tenant')
+                  .andOn('tm.tag_id', '=', 'td.tag_id');
+            })
+            .where('tm.tagged_type', 'client')
+            .where('tm.tenant', tenant)
+            .whereIn('td.tag_text', selectedTags);
+        });
+      }
+
+      if (dateRange?.from || dateRange?.to) {
+        baseQuery = baseQuery.whereIn('c.client_id', function() {
+          this.select('cbc.client_id')
+            .from('client_billing_cycles as cbc')
+            .where('cbc.tenant', tenant);
+
+          if (dateRange?.from) {
+            const rangeFrom = dateRange.from;
+            this.andWhere(function() {
+              this.whereNull('cbc.period_end_date')
+                .orWhereRaw('cbc.period_end_date >= ?', [rangeFrom]);
+            });
+          }
+
+          if (dateRange?.to) {
+            this.andWhere('cbc.period_start_date', '<=', dateRange.to);
+          }
+        });
+      }
+
+      const countResult = await baseQuery.clone().countDistinct('c.client_id as count').first();
+      const totalCount = parseInt(countResult?.count as string || '0', 10);
+
+      let clientsQuery = baseQuery
+        .leftJoin('tenant_companies as tc', function() {
+          this.on('c.client_id', '=', 'tc.client_id')
+              .andOn('c.tenant', '=', 'tc.tenant');
+        })
+        .select(
+          'c.*',
+          'tc.is_default',
+          trx.raw(`CASE WHEN u.first_name IS NOT NULL AND u.last_name IS NOT NULL THEN CONCAT(u.first_name, ' ', u.last_name) ELSE NULL END as account_manager_full_name`),
+          'cl.phone as location_phone',
+          'cl.email as location_email',
+          'cl.address_line1',
+          'cl.address_line2',
+          'cl.city',
+          'cl.state_province',
+          'cl.postal_code',
+          'cl.country_name'
+        );
+
+      if (sortBy) {
+        const sortColumnMap: Record<string, string> = {
+          'client_name': 'c.client_name',
+          'client_type': 'c.client_type',
+          'phone_no': 'cl.phone',
+          'address': 'cl.address_line1',
+          'account_manager_full_name': 'account_manager_full_name',
+          'url': 'c.url',
+          'created_at': 'c.created_at'
+        };
+
+        const sortColumn = sortColumnMap[sortBy] || 'c.client_name';
+        const validSortDirection = sortDirection === 'desc' ? 'desc' : 'asc';
+
+        const textColumns = ['client_name', 'client_type', 'address', 'account_manager_full_name', 'url'];
+        if (textColumns.includes(sortBy)) {
+          clientsQuery = clientsQuery.orderByRaw(`LOWER(${sortColumn}) ${validSortDirection}`);
+        } else {
+          clientsQuery = clientsQuery.orderBy(sortColumn, validSortDirection);
+        }
+      } else {
+        clientsQuery = clientsQuery.orderByRaw('LOWER(c.client_name) asc');
+      }
+
+      const clients = await clientsQuery
+        .limit(pageSize)
+        .offset(offset);
+
+      return { clients, totalCount };
+    });
+
+    let clientsWithLogos = result.clients;
+
+    if (loadLogos && clientsWithLogos.length > 0) {
+      const clientIds = clientsWithLogos.map(c => c.client_id);
+      const logoUrlsMap = await getClientLogoUrlsBatch(clientIds, tenant);
+
+      clientsWithLogos = clientsWithLogos.map((client) => ({
+        ...client,
+        properties: client.properties || {},
+        logoUrl: logoUrlsMap.get(client.client_id) || null,
+      }));
+    } else {
+      clientsWithLogos = clientsWithLogos.map((client) => ({
+        ...client,
+        properties: client.properties || {},
+        logoUrl: null,
+      }));
+    }
+
+    return {
+      clients: clientsWithLogos as IClient[],
+      totalCount: result.totalCount,
+      page,
+      pageSize,
+      totalPages: Math.ceil(result.totalCount / pageSize)
+    };
+  } catch (error) {
+    console.error('Error fetching paginated clients with billing cycles:', error);
+    throw error;
+  }
+}
+
 export async function getAllClients(includeInactive: boolean = true): Promise<IClient[]> {
   const currentUser = await getCurrentUser();
   if (!currentUser) {
@@ -603,7 +773,7 @@ export async function deleteClient(clientId: string): Promise<{
 
     console.log('Checking dependencies for client:', clientId, 'tenant:', tenant);
 
-    // Check for dependencies
+    // Check for dependencies within a single transaction
     const dependencies: string[] = [];
     const counts: Record<string, number> = {};
 
@@ -619,10 +789,17 @@ export async function deleteClient(clientId: string): Promise<{
         counts['contact'] = Number(contactCount.count);
       }
 
-      // Check for active tickets
+      // Check for open tickets - join with statuses to check is_closed flag
       const ticketCount = await trx('tickets')
-        .where({ client_id: clientId, tenant, is_closed: false })
-        .count('ticket_id as count')
+        .leftJoin('statuses', function() {
+          this.on('tickets.status_id', '=', 'statuses.status_id')
+              .andOn('tickets.tenant', '=', 'statuses.tenant');
+        })
+        .where({ 'tickets.client_id': clientId, 'tickets.tenant': tenant })
+        .andWhere(function() {
+          this.where('statuses.is_closed', false).orWhereNull('statuses.is_closed');
+        })
+        .count('tickets.ticket_id as count')
         .first();
       console.log('Ticket count result:', ticketCount);
       if (ticketCount && Number(ticketCount.count) > 0) {
@@ -643,10 +820,10 @@ export async function deleteClient(clientId: string): Promise<{
 
       // Check for documents using document_associations table
       const documentCount = await trx('document_associations')
-        .where({ 
-          entity_id: clientId, 
-          entity_type: 'client', 
-          tenant 
+        .where({
+          entity_id: clientId,
+          entity_type: 'client',
+          tenant
         })
         .count('document_id as count')
         .first();
@@ -678,19 +855,15 @@ export async function deleteClient(clientId: string): Promise<{
         counts['interaction'] = Number(interactionCount.count);
       }
 
-      // Check for locations
-      const locationCount = await trx('client_locations')
-        .join('clients', 'clients.client_id', 'client_locations.client_id')
-        .where({ 
-          'client_locations.client_id': clientId,
-          'clients.tenant': tenant 
-        })
-        .count('* as count')
+      // Check for assets/devices
+      const assetCount = await trx('assets')
+        .where({ client_id: clientId, tenant })
+        .count('asset_id as count')
         .first();
-      console.log('Location count result:', locationCount);
-      if (locationCount && Number(locationCount.count) > 0) {
-        dependencies.push('location');
-        counts['location'] = Number(locationCount.count);
+      console.log('Asset count result:', assetCount);
+      if (assetCount && Number(assetCount.count) > 0) {
+        dependencies.push('asset');
+        counts['asset'] = Number(assetCount.count);
       }
 
       // Check for service usage
@@ -702,17 +875,6 @@ export async function deleteClient(clientId: string): Promise<{
       if (usageCount && Number(usageCount.count) > 0) {
         dependencies.push('service_usage');
         counts['service_usage'] = Number(usageCount.count);
-      }
-
-      // Check for contract lines
-      const contractLineCount = await trx('client_contract_lines')
-        .where({ client_id: clientId, tenant })
-        .count('client_contract_line_id as count')
-        .first();
-      console.log('Contract Line count result:', contractLineCount);
-      if (contractLineCount && Number(contractLineCount.count) > 0) {
-        dependencies.push('contract_line');
-        counts['contract_line'] = Number(contractLineCount.count);
       }
 
       // Check for bucket usage
@@ -727,36 +889,124 @@ export async function deleteClient(clientId: string): Promise<{
       }
     });
 
-    // We're automatically deleting tax rates and settings when deleting the client,
-    // so we don't need to check them as dependencies
+    // Note: Locations/addresses and tax settings will be deleted automatically with the client
 
     // If there are dependencies, return error with details
     if (dependencies.length > 0) {
       const readableTypes: Record<string, string> = {
         'contact': 'contacts',
-        'ticket': 'active tickets',
-        'project': 'active projects',
+        'ticket': 'tickets',
+        'project': 'projects',
         'document': 'documents',
         'invoice': 'invoices',
         'interaction': 'interactions',
-        'location': 'locations',
+        'asset': 'assets',
         'service_usage': 'service usage records',
-        'bucket_usage': 'bucket usage records',
-        'contract_line': 'contract lines'
+        'bucket_usage': 'bucket usage records'
       };
 
       return {
         success: false,
         code: 'COMPANY_HAS_DEPENDENCIES',
-        message: 'Client has associated records and cannot be deleted',
+        message: 'Cannot delete client with active business records. Consider marking as inactive instead to preserve data integrity.',
         dependencies: dependencies.map((dep: string): string => readableTypes[dep] || dep),
         counts
       };
     }
 
-    // If no dependencies, proceed with simple deletion (only the client record)
+    // If no dependencies, proceed with deletion (client and associated tax settings)
     const result = await withTransaction(db, async (trx: Knex.Transaction) => {
-      // Only delete the client record itself - no associated data
+      // First delete client tax settings to avoid foreign key constraint violations
+      const deletedTaxSettings = await trx('client_tax_settings')
+        .where({ client_id: clientId, tenant })
+        .delete();
+
+      if (deletedTaxSettings > 0) {
+        console.log(`Deleted ${deletedTaxSettings} client tax settings records`);
+      }
+
+      // Delete client tax rate associations to avoid foreign key constraint violations
+      const deletedTaxRates = await trx('client_tax_rates')
+        .where({ client_id: clientId, tenant })
+        .delete();
+
+      if (deletedTaxRates > 0) {
+        console.log(`Deleted ${deletedTaxRates} client tax rate records`);
+      }
+
+      // Delete client contracts (empty contracts - clients with invoices are blocked earlier)
+      const deletedContracts = await trx('client_contracts')
+        .where({ client_id: clientId, tenant })
+        .delete();
+
+      if (deletedContracts > 0) {
+        console.log(`Deleted ${deletedContracts} client contract records`);
+      }
+
+      // Delete billing-related settings
+      const deletedBillingCycles = await trx('client_billing_cycles')
+        .where({ client_id: clientId, tenant })
+        .delete();
+
+      if (deletedBillingCycles > 0) {
+        console.log(`Deleted ${deletedBillingCycles} client billing cycle records`);
+      }
+
+      const deletedBillingSettings = await trx('client_billing_settings')
+        .where({ client_id: clientId, tenant })
+        .delete();
+
+      if (deletedBillingSettings > 0) {
+        console.log(`Deleted ${deletedBillingSettings} client billing settings records`);
+      }
+
+      // Delete payment customer records (Stripe/payment provider associations)
+      const deletedPaymentCustomers = await trx('client_payment_customers')
+        .where({ client_id: clientId, tenant })
+        .delete();
+
+      if (deletedPaymentCustomers > 0) {
+        console.log(`Deleted ${deletedPaymentCustomers} client payment customer records`);
+      }
+
+      // Clean up client locations (addresses don't block deletion per PSA best practices)
+      const deletedLocations = await trx('client_locations')
+        .where({ client_id: clientId, tenant })
+        .delete();
+
+      if (deletedLocations > 0) {
+        console.log(`Deleted ${deletedLocations} client location records`);
+      }
+
+      // Clean up notes document if it exists
+      const clientRecord = await trx('clients')
+        .where({ client_id: clientId, tenant })
+        .select('notes_document_id')
+        .first();
+
+      if (clientRecord?.notes_document_id) {
+        console.log(`Cleaning up notes document: ${clientRecord.notes_document_id}`);
+
+        // Delete block content first (due to FK)
+        await trx('document_block_content')
+          .where({ tenant, document_id: clientRecord.notes_document_id })
+          .delete();
+
+        // Delete document associations
+        await trx('document_associations')
+          .where({ tenant, document_id: clientRecord.notes_document_id })
+          .delete();
+
+        // Delete the document
+        await trx('documents')
+          .where({ tenant, document_id: clientRecord.notes_document_id })
+          .delete();
+      }
+
+      // Clean up any tags associated with this client
+      await deleteEntityTags(trx, clientId, 'client');
+
+      // Finally delete the client record itself
       const deleted = await trx('clients')
         .where({ client_id: clientId, tenant })
         .delete();
@@ -777,7 +1027,6 @@ export async function deleteClient(clientId: string): Promise<{
     };
   }
 }
-
 
 export async function exportClientsToCSV(clients: IClient[]): Promise<string> {
   const currentUser = await getCurrentUser();
@@ -1049,20 +1298,20 @@ export async function importClientsFromCSV(
     throw new Error('No authenticated user found');
   }
 
+  const results: ImportClientResult[] = [];
+  const {knex: db, tenant} = await createTenantKnex();
+
+  if (!tenant) {
+    throw new Error('Tenant not found');
+  }
+
   // Check permissions for both create and update operations since import can do both
   if (!await hasPermission(currentUser, 'client', 'create')) {
     throw new Error('Permission denied: Cannot create clients');
   }
-  
+
   if (updateExisting && !await hasPermission(currentUser, 'client', 'update')) {
     throw new Error('Permission denied: Cannot update clients');
-  }
-
-  const results: ImportClientResult[] = [];
-  const {knex: db, tenant} = await createTenantKnex();
-  
-  if (!tenant) {
-    throw new Error('Tenant not found');
   }
 
   // Start a transaction to ensure all operations succeed or fail together
@@ -1323,6 +1572,215 @@ export async function deleteClientLogo(
     console.error('Error deleting client logo:', error);
     const message = error instanceof Error ? error.message : 'Failed to delete client logo';
     return { success: false, message };
+  }
+}
+
+/**
+ * Deactivate all active contacts for a client
+ */
+export async function deactivateClientContacts(
+  clientId: string
+): Promise<{ success: boolean; contactsDeactivated: number; message?: string }> {
+  const { knex, tenant } = await createTenantKnex();
+  if (!tenant) {
+    return { success: false, contactsDeactivated: 0, message: 'Tenant not found' };
+  }
+
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
+    return { success: false, contactsDeactivated: 0, message: 'User not authenticated' };
+  }
+
+  // Check permission for contact updating
+  if (!await hasPermission(currentUser, 'contact', 'update')) {
+    return { success: false, contactsDeactivated: 0, message: 'Permission denied: Cannot update contacts. Please contact your administrator if you need additional access.' };
+  }
+
+  try {
+    const result = await withTransaction(knex, async (trx: Knex.Transaction) => {
+      // Get all active contact IDs for this client
+      const activeContacts = await trx('contacts')
+        .select('contact_name_id')
+        .where({ client_id: clientId, tenant, is_inactive: false });
+
+      const contactIds = activeContacts.map((c: { contact_name_id: string }) => c.contact_name_id);
+
+      if (contactIds.length === 0) {
+        return { contactsDeactivated: 0 };
+      }
+
+      // Deactivate all contacts
+      await trx('contacts')
+        .where({ client_id: clientId, tenant, is_inactive: false })
+        .update({ is_inactive: true });
+
+      // Deactivate all users associated with these contacts
+      await trx('users')
+        .whereIn('contact_id', contactIds)
+        .andWhere({ tenant, user_type: 'client' })
+        .update({ is_inactive: true });
+
+      return { contactsDeactivated: contactIds.length };
+    });
+
+    revalidatePath(`/msp/clients/${clientId}`);
+    revalidatePath(`/msp/contacts`);
+
+    return { success: true, contactsDeactivated: result.contactsDeactivated };
+  } catch (error) {
+    console.error('Error deactivating client contacts:', error);
+    const message = error instanceof Error ? error.message : 'Failed to deactivate client contacts';
+    return { success: false, contactsDeactivated: 0, message };
+  }
+}
+
+/**
+ * Mark a client as inactive and optionally deactivate all contacts atomically
+ * This ensures both operations succeed or fail together
+ */
+export async function markClientInactiveWithContacts(
+  clientId: string,
+  deactivateContacts: boolean = true
+): Promise<{ success: boolean; contactsDeactivated: number; message?: string }> {
+  const { knex, tenant } = await createTenantKnex();
+  if (!tenant) {
+    return { success: false, contactsDeactivated: 0, message: 'Tenant not found' };
+  }
+
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
+    return { success: false, contactsDeactivated: 0, message: 'User not authenticated' };
+  }
+
+  // Check permission for client updating
+  if (!await hasPermission(currentUser, 'client', 'update')) {
+    return { success: false, contactsDeactivated: 0, message: 'Permission denied: Cannot update clients. Please contact your administrator if you need additional access.' };
+  }
+
+  // If deactivating contacts, also check contact permission
+  if (deactivateContacts && !await hasPermission(currentUser, 'contact', 'update')) {
+    return { success: false, contactsDeactivated: 0, message: 'Permission denied: Cannot update contacts. Please contact your administrator if you need additional access.' };
+  }
+
+  try {
+    const result = await withTransaction(knex, async (trx: Knex.Transaction) => {
+      let contactsDeactivated = 0;
+
+      if (deactivateContacts) {
+        // Get all active contact IDs for this client
+        const activeContacts = await trx('contacts')
+          .select('contact_name_id')
+          .where({ client_id: clientId, tenant, is_inactive: false });
+
+        const contactIds = activeContacts.map((c: { contact_name_id: string }) => c.contact_name_id);
+
+        if (contactIds.length > 0) {
+          // Deactivate all contacts
+          await trx('contacts')
+            .where({ client_id: clientId, tenant, is_inactive: false })
+            .update({ is_inactive: true });
+
+          // Deactivate all users associated with these contacts
+          await trx('users')
+            .whereIn('contact_id', contactIds)
+            .andWhere({ tenant, user_type: 'client' })
+            .update({ is_inactive: true });
+
+          contactsDeactivated = contactIds.length;
+        }
+      }
+
+      // Mark the client as inactive
+      await trx('clients')
+        .where({ client_id: clientId, tenant })
+        .update({ is_inactive: true, updated_at: new Date().toISOString() });
+
+      return { contactsDeactivated };
+    });
+
+    revalidatePath(`/msp/clients/${clientId}`);
+    revalidatePath(`/msp/contacts`);
+
+    return { success: true, contactsDeactivated: result.contactsDeactivated };
+  } catch (error) {
+    console.error('Error marking client and contacts as inactive:', error);
+    const message = error instanceof Error ? error.message : 'Failed to mark client as inactive';
+    return { success: false, contactsDeactivated: 0, message };
+  }
+}
+
+/**
+ * Mark a client as active and optionally reactivate all contacts atomically
+ * This ensures both operations succeed or fail together
+ */
+export async function markClientActiveWithContacts(
+  clientId: string,
+  reactivateContacts: boolean = false
+): Promise<{ success: boolean; contactsReactivated: number; message?: string }> {
+  const { knex, tenant } = await createTenantKnex();
+  if (!tenant) {
+    return { success: false, contactsReactivated: 0, message: 'Tenant not found' };
+  }
+
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
+    return { success: false, contactsReactivated: 0, message: 'User not authenticated' };
+  }
+
+  // Check permission for client updating
+  if (!await hasPermission(currentUser, 'client', 'update')) {
+    return { success: false, contactsReactivated: 0, message: 'Permission denied: Cannot update clients. Please contact your administrator if you need additional access.' };
+  }
+
+  // If reactivating contacts, also check contact permission
+  if (reactivateContacts && !await hasPermission(currentUser, 'contact', 'update')) {
+    return { success: false, contactsReactivated: 0, message: 'Permission denied: Cannot update contacts. Please contact your administrator if you need additional access.' };
+  }
+
+  try {
+    const result = await withTransaction(knex, async (trx: Knex.Transaction) => {
+      let contactsReactivated = 0;
+
+      // Mark the client as active first
+      await trx('clients')
+        .where({ client_id: clientId, tenant })
+        .update({ is_inactive: false, updated_at: new Date().toISOString() });
+
+      if (reactivateContacts) {
+        // Get all inactive contact IDs for this client
+        const inactiveContacts = await trx('contacts')
+          .select('contact_name_id')
+          .where({ client_id: clientId, tenant, is_inactive: true });
+
+        const contactIds = inactiveContacts.map((c: { contact_name_id: string }) => c.contact_name_id);
+
+        if (contactIds.length > 0) {
+          // Reactivate all contacts
+          await trx('contacts')
+            .where({ client_id: clientId, tenant, is_inactive: true })
+            .update({ is_inactive: false });
+
+          // Reactivate all users associated with these contacts
+          await trx('users')
+            .whereIn('contact_id', contactIds)
+            .andWhere({ tenant, user_type: 'client' })
+            .update({ is_inactive: false });
+
+          contactsReactivated = contactIds.length;
+        }
+      }
+
+      return { contactsReactivated };
+    });
+
+    revalidatePath(`/msp/clients/${clientId}`);
+    revalidatePath(`/msp/contacts`);
+
+    return { success: true, contactsReactivated: result.contactsReactivated };
+  } catch (error) {
+    console.error('Error marking client and contacts as active:', error);
+    const message = error instanceof Error ? error.message : 'Failed to mark client as active';
+    return { success: false, contactsReactivated: 0, message };
   }
 }
 

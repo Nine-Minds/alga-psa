@@ -16,6 +16,7 @@ import { ServerEventPublisher } from '../../adapters/serverEventPublisher';
 import { ServerAnalyticsTracker } from '../../adapters/serverAnalyticsTracker';
 import { getSession } from 'server/src/lib/auth/getSession';
 import { publishEvent } from '../../eventBus/publishers';
+import { maybeReopenBundleMasterFromChildReply } from 'server/src/lib/actions/ticket-actions/ticketBundleUtils';
 
 const clientTicketSchema = z.object({
   title: z.string().min(1),
@@ -111,16 +112,20 @@ export async function getClientTickets(status: string): Promise<ITicketListItem[
         't.entered_at',
         't.updated_at',
         't.closed_at',
+        't.due_date',
         't.attributes',
         't.priority_id',
         't.tenant',
+        't.response_state',
         's.name as status_name',
         'p.priority_name',
         'p.color as priority_color',
         'c.board_name',
         'cat.category_name',
         db.raw("CONCAT(u.first_name, ' ', u.last_name) as entered_by_name"),
-        db.raw("CONCAT(au.first_name, ' ', au.last_name) as assigned_to_name")
+        db.raw("CONCAT(au.first_name, ' ', au.last_name) as assigned_to_name"),
+        db.raw("(SELECT COUNT(*) FROM ticket_resources tr WHERE tr.ticket_id = t.ticket_id AND tr.tenant = t.tenant AND tr.additional_user_id IS NOT NULL)::int as additional_agent_count"),
+        db.raw(`(SELECT COALESCE(json_agg(json_build_object('user_id', uu.user_id, 'name', CONCAT(uu.first_name, ' ', uu.last_name))), '[]'::json) FROM ticket_resources tr2 JOIN users uu ON tr2.additional_user_id = uu.user_id AND tr2.tenant = uu.tenant WHERE tr2.ticket_id = t.ticket_id AND tr2.tenant = t.tenant) as additional_agents`)
       )
       .leftJoin('statuses as s', function() {
         this.on('t.status_id', '=', 's.status_id')
@@ -464,6 +469,10 @@ export async function addClientTicketComment(ticketId: string, content: string, 
         user_id: session.user.id,
         markdown_content: markdownContent
       }).returning('*');
+
+      if (!isInternal) {
+        await maybeReopenBundleMasterFromChildReply(trx, tenant, ticketId, session.user.id);
+      }
 
       // Publish comment added event
       await publishEvent({
@@ -952,7 +961,9 @@ export async function createClientTicket(data: FormData): Promise<ITicket> {
         entered_by: session.user.id,
         source: 'client_portal',
         board_id: defaultBoard.board_id,
-        status_id: defaultStatus.status_id
+        status_id: defaultStatus.status_id,
+        // Auto-assign to board's default agent if configured
+        assigned_to: defaultBoard.default_assigned_to || undefined
       };
 
       // Create adapters for client portal context
@@ -970,6 +981,19 @@ export async function createClientTicket(data: FormData): Promise<ITicket> {
         session.user.id,
         3 // max retries
       );
+
+      // Publish TICKET_ASSIGNED event if a default agent was set
+      if (createTicketInput.assigned_to) {
+        await publishEvent({
+          eventType: 'TICKET_ASSIGNED',
+          payload: {
+            tenantId: tenant,
+            ticketId: ticketResult.ticket_id,
+            userId: createTicketInput.assigned_to,
+            assignedByUserId: session.user.id
+          }
+        });
+      }
 
       // Get the full ticket data for return
       const fullTicket = await trx('tickets')

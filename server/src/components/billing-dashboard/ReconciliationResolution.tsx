@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useEffect } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from 'server/src/components/ui/Card';
 import { Button } from 'server/src/components/ui/Button';
 import { Skeleton } from 'server/src/components/ui/Skeleton';
@@ -17,7 +17,6 @@ import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 import { AlertCircle, CheckCircle, XCircle, ArrowLeft, AlertTriangle, Info } from 'lucide-react';
 import { Input } from 'server/src/components/ui/Input';
 import { Label } from 'server/src/components/ui/Label';
-import { CustomTabs } from 'server/src/components/ui/CustomTabs';
 
 // Define the threshold for requiring four-eyes approval
 const FOUR_EYES_THRESHOLD = 1000; // $1000
@@ -28,6 +27,27 @@ const STEPS = [
   { id: 'approve', label: 'Approval' },
   { id: 'confirm', label: 'Confirmation' }
 ];
+
+// Map step IDs to URL-safe slugs
+const stepIdToSlugMap: Record<string, string> = {
+  'review': 'review-discrepancy',
+  'approve': 'approval',
+  'confirm': 'confirmation'
+};
+
+// Map URL slugs to step indices
+const slugToStepIndexMap: Record<string, number> = {
+  'review-discrepancy': 0,
+  'approval': 1,
+  'confirmation': 2
+};
+
+// Map step indices to URL slugs
+const stepIndexToSlugMap: Record<number, string> = {
+  0: 'review-discrepancy',
+  1: 'approval',
+  2: 'confirmation'
+};
 
 // Simple Stepper component
 interface StepperProps {
@@ -109,7 +129,17 @@ const ReconciliationResolution: React.FC<ReconciliationResolutionProps> = ({
 }) => {
   const params = useParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const stepParam = searchParams?.get('step');
   const reportId = propReportId || (params?.reportId as string);
+
+  // Determine initial step based on URL parameter
+  const getInitialStep = (): number => {
+    if (stepParam && slugToStepIndexMap[stepParam] !== undefined) {
+      return slugToStepIndexMap[stepParam];
+    }
+    return 0; // Default to first step (review-discrepancy)
+  };
 
   // State for data
   const [loading, setLoading] = useState(true);
@@ -117,15 +147,15 @@ const ReconciliationResolution: React.FC<ReconciliationResolutionProps> = ({
   const [client, setClient] = useState<{ id: string; name: string } | null>(null);
   const [transactionData, setTransactionData] = useState<ITransaction[]>([]);
   const [creditTrackingData, setCreditTrackingData] = useState<ICreditTracking[]>([]);
-  
+
   // State for the wizard
-  const [currentStep, setCurrentStep] = useState(0);
+  const [currentStep, setCurrentStep] = useState<number>(getInitialStep);
   const [resolutionType, setResolutionType] = useState<ResolutionType>('recommended');
   const [customAmount, setCustomAmount] = useState<string>('0');
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isConfirmationDialogOpen, setIsConfirmationDialogOpen] = useState(false);
-  
+
   // State for approval
   const [approval, setApproval] = useState<ApprovalState>({
     notes: '',
@@ -136,6 +166,37 @@ const ReconciliationResolution: React.FC<ReconciliationResolutionProps> = ({
     secondaryApprovalSent: false,
     secondaryApprovalVerified: false
   });
+
+  // Update URL when step changes
+  const updateStepURL = (stepIndex: number): void => {
+    const urlSlug = stepIndexToSlugMap[stepIndex];
+    const currentSearchParams = new URLSearchParams(window.location.search);
+
+    if (urlSlug && urlSlug !== 'review-discrepancy') {
+      currentSearchParams.set('step', urlSlug);
+    } else {
+      currentSearchParams.delete('step');
+    }
+
+    const newUrl = currentSearchParams.toString()
+      ? `${window.location.pathname}?${currentSearchParams.toString()}`
+      : window.location.pathname;
+
+    window.history.pushState({}, '', newUrl);
+  };
+
+  // Sync step from URL parameter when it changes externally
+  useEffect(() => {
+    if (stepParam) {
+      const stepIndex = slugToStepIndexMap[stepParam];
+      if (stepIndex !== undefined && stepIndex !== currentStep) {
+        setCurrentStep(stepIndex);
+      }
+    } else if (currentStep !== 0) {
+      // If no step param but we're not on first step, sync URL
+      updateStepURL(currentStep);
+    }
+  }, [stepParam]);
 
   // Fetch report data
   useEffect(() => {
@@ -197,7 +258,9 @@ const ReconciliationResolution: React.FC<ReconciliationResolutionProps> = ({
     }
 
     if (currentStep < STEPS.length - 1) {
-      setCurrentStep(currentStep + 1);
+      const newStep = currentStep + 1;
+      setCurrentStep(newStep);
+      updateStepURL(newStep);
       setError(null);
     }
   };
@@ -205,7 +268,9 @@ const ReconciliationResolution: React.FC<ReconciliationResolutionProps> = ({
   // Handle previous step
   const handlePreviousStep = () => {
     if (currentStep > 0) {
-      setCurrentStep(currentStep - 1);
+      const newStep = currentStep - 1;
+      setCurrentStep(newStep);
+      updateStepURL(newStep);
       setError(null);
     }
   };

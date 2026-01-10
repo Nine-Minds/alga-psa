@@ -14,6 +14,7 @@ import { MicrosoftProviderForm, GmailProviderForm, ImapProviderForm } from '@pro
 import { EmailProviderList } from './EmailProviderList';
 import { ProviderSetupWizardDialog } from './ProviderSetupWizardDialog';
 import { InboundTicketDefaultsManager } from './admin/InboundTicketDefaultsManager';
+import { Microsoft365DiagnosticsDialog } from './admin/Microsoft365DiagnosticsDialog';
 import { DrawerProvider, useDrawer } from 'server/src/context/DrawerContext';
 import LoadingIndicator from './ui/LoadingIndicator';
 import {
@@ -69,8 +70,8 @@ export interface GoogleEmailProviderConfig {
   tenant: string;
   client_id: string | null;
   client_secret: string | null;
-  project_id: string;
-  redirect_uri: string;
+  project_id?: string | null;
+  redirect_uri?: string | null;
   auto_process_emails: boolean;
   max_emails_per_sync: number;
   label_filters: string[];
@@ -137,6 +138,8 @@ function EmailProviderConfigurationContent({
   const [showDefaultsManager, setShowDefaultsManager] = useState(false);
   const [tenant, setTenant] = useState<string>('');
   const [activeSection, setActiveSection] = useState<'providers' | 'defaults'>('providers');
+  const [diagnosticsOpen, setDiagnosticsOpen] = useState(false);
+  const [diagnosticsProvider, setDiagnosticsProvider] = useState<EmailProvider | null>(null);
   const { openDrawer, closeDrawer } = useDrawer();
 
   // Load existing providers on component mount
@@ -296,6 +299,11 @@ function EmailProviderConfigurationContent({
     }
   };
 
+  const handleRunDiagnostics = (provider: EmailProvider) => {
+    setDiagnosticsProvider(provider);
+    setDiagnosticsOpen(true);
+  };
+
   // Inline add/setup flow removed in favor of wizard
 
   const handleEditCancel = () => {
@@ -398,6 +406,7 @@ function EmailProviderConfigurationContent({
           onRetryRenewal={handleRetryRenewal}
           onReconnectOAuth={handleReconnectOAuth}
           onResyncProvider={handleResyncProvider}
+          onRunDiagnostics={handleRunDiagnostics}
           onAddClick={() => setWizardOpen(true)}
         />
 
@@ -484,6 +493,11 @@ function EmailProviderConfigurationContent({
               onClose={() => setWizardOpen(false)}
               onComplete={async (provider) => { onProviderAdded?.(provider); setWizardOpen(false); await loadProviders(); }}
               tenant={tenant}
+            />
+            <Microsoft365DiagnosticsDialog
+              isOpen={diagnosticsOpen}
+              onClose={() => setDiagnosticsOpen(false)}
+              provider={diagnosticsProvider}
             />
           </>
         ) : (

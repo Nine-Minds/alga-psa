@@ -8,6 +8,7 @@ import QuickAddClient from 'server/src/components/clients/QuickAddClient';
 import QuickAddContact from 'server/src/components/contacts/QuickAddContact';
 import ProjectQuickAdd from 'server/src/components/projects/ProjectQuickAdd';
 import { QuickAddService } from 'server/src/components/settings/billing/QuickAddService';
+import { QuickAddProduct } from 'server/src/components/settings/billing/QuickAddProduct';
 import { Dialog, DialogContent } from 'server/src/components/ui/Dialog';
 import LoadingIndicator from 'server/src/components/ui/LoadingIndicator';
 import { ITicket, IClient, IContact, IProject } from 'server/src/interfaces';
@@ -15,7 +16,7 @@ import { getAllClients } from 'server/src/lib/actions/client-actions/clientActio
 import { getServiceTypesForSelection } from 'server/src/lib/actions/serviceActions';
 import { toast } from 'react-hot-toast';
 
-export type QuickCreateType = 'ticket' | 'client' | 'contact' | 'project' | 'asset' | 'service' | null;
+export type QuickCreateType = 'ticket' | 'client' | 'contact' | 'project' | 'asset' | 'service' | 'product' | null;
 
 interface QuickCreateDialogProps {
   type: QuickCreateType;
@@ -26,7 +27,7 @@ export function QuickCreateDialog({ type, onClose }: QuickCreateDialogProps) {
   const router = useRouter();
   const [clients, setClients] = useState<IClient[]>([]);
   const [isLoadingClients, setIsLoadingClients] = useState(false);
-  const [serviceTypes, setServiceTypes] = useState<{ id: string; name: string; billing_method: 'fixed' | 'hourly' | 'usage' }[]>([]);
+  const [serviceTypes, setServiceTypes] = useState<{ id: string; name: string; billing_method: 'fixed' | 'hourly' | 'usage' | 'per_unit'; is_standard?: boolean }[]>([]);
   const [isLoadingServiceTypes, setIsLoadingServiceTypes] = useState(false);
 
   // Load clients when needed for projects and contacts
@@ -97,6 +98,13 @@ export function QuickCreateDialog({ type, onClose }: QuickCreateDialogProps) {
     toast.success('Service created successfully');
     onClose();
     // Refresh the page to update any list that might be showing services
+    router.refresh();
+  };
+
+  const handleProductAdded = () => {
+    toast.success('Product created successfully');
+    onClose();
+    // Refresh the page to update any list that might be showing products
     router.refresh();
   };
 
@@ -214,6 +222,17 @@ export function QuickCreateDialog({ type, onClose }: QuickCreateDialogProps) {
         onServiceAdded={handleServiceAdded}
         allServiceTypes={serviceTypes}
         onServiceTypesChange={handleServiceTypesChange}
+      />
+    );
+  }
+
+  // Handle QuickAddProduct
+  if (type === 'product') {
+    return (
+      <QuickAddProduct
+        isOpen={true}
+        onClose={onClose}
+        onProductAdded={handleProductAdded}
       />
     );
   }

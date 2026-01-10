@@ -156,9 +156,13 @@ if (pathname.startsWith(clientPortalPrefix) && !isAuthPage) {
 - Usage metrics
 
 **Project Management:**
-- Project overview and status
-- Task tracking
-- Project documentation access
+- Project list with filtering (active, completed, on hold)
+- Project detail views with configurable visibility
+- Phase and task tracking (kanban and list views)
+- Task dependencies visualization
+- Document access and uploads (when enabled)
+
+See [Client Portal Projects](client_portal_projects.md) for detailed configuration options.
 
 ### Integration Points
 

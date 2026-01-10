@@ -152,12 +152,13 @@
     }
   },
   "include": [
-    "*.ts",
+    "index.ts",
     "migrations/*.cjs",
     "next-env.d.ts",
     "src/**/*.ts",
     "src/**/*.tsx",
-    "src/types/**/*.d.ts"
+    "src/types/**/*.d.ts",
+    ".next/types/**/*.ts"
   ],
   "exclude": [
     "node_modules",

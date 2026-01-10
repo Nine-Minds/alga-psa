@@ -14,6 +14,8 @@ import type { SurveyTicketSatisfactionSummary } from 'server/src/interfaces/surv
 interface TicketDetailsContainerProps {
   ticketData: {
     ticket: any;
+    bundle?: any;
+    aggregatedChildClientComments?: any[];
     comments: any[];
     documents: any[];
     client: any;
@@ -165,6 +167,8 @@ export default function TicketDetailsContainer({ ticketData, surveySummary = nul
         <TicketDetails
           id="ticket-details-component"
           initialTicket={ticketData.ticket}
+          initialBundle={ticketData.bundle}
+          aggregatedChildClientComments={ticketData.aggregatedChildClientComments || []}
           onClose={() => router.back()}
           // Pass pre-fetched data as props
           initialComments={ticketData.comments}

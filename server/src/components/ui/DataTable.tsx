@@ -554,7 +554,7 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
           </Alert>
         )}
         <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
+          <table className="w-full divide-y divide-gray-200">
             <thead className="bg-white">
               {table.getHeaderGroups().map((headerGroup): React.JSX.Element => (
                 <tr key={`headergroup_${headerGroup.id}`}>
@@ -629,7 +629,9 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
                           className={`px-6 py-3 text-[14px] leading-relaxed text-[rgb(var(--color-text-700))] max-w-0 align-top ${columnDef?.cellClassName ?? ''}`}
                           style={{ width: columns.find(col => col.dataIndex === cell.column.id)?.width }}
                         >
-                          {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                          <div className="min-w-0">
+                            {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                          </div>
                         </ReflectedTableCell>
                       );
                     })}

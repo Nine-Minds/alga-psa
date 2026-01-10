@@ -176,6 +176,12 @@
       "edited": "Bearbeitet",
       "noComments": "Noch keine Kommentare"
     },
+    "responseState": {
+      "awaitingYourResponse": "Warten auf Ihre Antwort",
+      "awaitingSupportResponse": "Warten auf Support-Antwort",
+      "awaitingYourResponseTooltip": "Der Support wartet auf Ihre Antwort",
+      "awaitingSupportResponseTooltip": "Ihre Antwort wurde erhalten. Der Support wird in Kürze antworten."
+    },
     "documents": {
       "title": "Dokumente",
       "noDocuments": "Keine Dokumente angehängt",
@@ -303,11 +309,51 @@
     "onHold": "Ausgesetzt",
     "timeline": "Zeitplan",
     "milestones": "Meilensteine",
-    "tasks": "Aufgaben",
-    "documents": "Dokumente",
+    "phasesAndTasks": "Phasen & Aufgaben",
+    "kanbanView": "Kanban",
+    "listView": "Liste",
+    "task": "Aufgabe",
+    "tasks": {
+      "title": "Aufgaben",
+      "noTasks": "Keine Aufgaben anzuzeigen",
+      "taskName": "Name",
+      "dueDate": "Fälligkeitsdatum",
+      "status": "Status",
+      "assignedTo": "Zugewiesen an",
+      "assignee": "Bearbeiter",
+      "estimatedHours": "Geschätzte Stunden",
+      "estHours": "Gesch. Std.",
+      "hoursLogged": "Erfasste Stunden",
+      "checklist": "Checkliste",
+      "dependencies": "Abh.",
+      "priority": "Priorität",
+      "services": "Dienstleistungen",
+      "attachments": "Anhänge"
+    },
+    "phases": {
+      "title": "Projektphasen",
+      "completion": "Abgeschlossen",
+      "noPhases": "Keine Phasen anzuzeigen"
+    },
+    "documents": {
+      "title": "Anhänge",
+      "upload": "Hochladen",
+      "noDocuments": "Keine Dokumente angehängt",
+      "uploadSuccess": "Dokument erfolgreich hochgeladen",
+      "uploadError": "Fehler beim Hochladen des Dokuments",
+      "downloadError": "Fehler beim Herunterladen des Dokuments",
+      "dragDrop": "Datei hier ablegen oder klicken zum Auswählen",
+      "maxSize": "Maximale Dateigröße: {{size}}MB",
+      "file": "Datei",
+      "files": "Dateien",
+      "uploadHint": "Dateien hochladen, um sie mit dieser Aufgabe zu teilen",
+      "download": "Herunterladen",
+      "view": "Anzeigen"
+    },
     "team": "Teammitglieder",
     "budget": "Budget",
     "fields": {
+      "projectNumber": "Projekt #",
       "projectName": "Projektname",
       "reference": "Referenz",
       "name": "Projektname",
@@ -330,8 +376,12 @@
     "messages": {
       "noProjects": "Keine Projekte gefunden",
       "loadingProjects": "Projekte werden geladen...",
-      "noDescription": "Keine Beschreibung vorhanden"
+      "noDescription": "Keine Beschreibung vorhanden",
+      "noPhasesOrTasks": "Keine Phasen oder Aufgaben anzuzeigen",
+      "loadError": "Projektdetails konnten nicht geladen werden"
     },
+    "backToProjects": "Zurück zu Projekten",
+    "invalidProjectData": "Ungültige Projektdaten",
     "viewDetails": "Details anzeigen →",
     "details": "Details",
     "startDate": "Startdatum",

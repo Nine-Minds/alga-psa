@@ -90,10 +90,13 @@ function createHeaderSection_StdDetailed(viewModel: InvoiceViewModel, children: 
   clientInfoCol.span = 5; // Keep existing span
 
   // --- Invoice Info (Remains the same) ---
-  const invoiceInfoCol = new ColumnElement([
-    new TextElement("Invoice #: " + viewModel.invoiceNumber),
-    new TextElement("Date: " + viewModel.issueDate)
-  ]);
+  const invoiceInfoChildren = new Array<LayoutElement>();
+  invoiceInfoChildren.push(new TextElement("Invoice #: " + viewModel.invoiceNumber));
+  invoiceInfoChildren.push(new TextElement("Date: " + viewModel.issueDate));
+  if (viewModel.poNumber != null && viewModel.poNumber!.length > 0) {
+    invoiceInfoChildren.push(new TextElement("PO #: " + viewModel.poNumber!));
+  }
+  const invoiceInfoCol = new ColumnElement(invoiceInfoChildren);
   invoiceInfoCol.span = 4;
   // Create PartialStyle separately for right alignment
   const rightAlignStyle = new PartialStyle();

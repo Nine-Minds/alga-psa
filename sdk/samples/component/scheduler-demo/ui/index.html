@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Scheduler Demo</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+      background: #f5f5f5;
+      color: #333;
+    }
+    h1 { color: #1a1a1a; margin-bottom: 8px; }
+    .subtitle { color: #666; margin-bottom: 24px; }
+    .card {
+      background: white;
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 16px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    .card h2 { margin-top: 0; font-size: 18px; }
+    button {
+      background: #0066cc;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+      margin-right: 8px;
+      margin-bottom: 8px;
+    }
+    button:hover { background: #0052a3; }
+    button:disabled { background: #ccc; cursor: not-allowed; }
+    button.danger { background: #cc3333; }
+    button.danger:hover { background: #aa2222; }
+    button.secondary { background: #666; }
+    button.secondary:hover { background: #555; }
+    .schedule-list { list-style: none; padding: 0; margin: 0; }
+    .schedule-item {
+      padding: 12px;
+      border: 1px solid #e0e0e0;
+      border-radius: 6px;
+      margin-bottom: 8px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .schedule-info { flex: 1; }
+    .schedule-name { font-weight: 600; margin-bottom: 4px; }
+    .schedule-details { font-size: 13px; color: #666; }
+    .schedule-status { font-size: 12px; margin-top: 4px; }
+    .enabled { color: #22aa22; }
+    .disabled { color: #888; }
+    .output {
+      background: #1a1a1a;
+      color: #0f0;
+      padding: 16px;
+      border-radius: 6px;
+      font-family: 'Monaco', 'Consolas', monospace;
+      font-size: 13px;
+      white-space: pre-wrap;
+      word-break: break-all;
+      max-height: 300px;
+      overflow-y: auto;
+    }
+    .loading { opacity: 0.6; }
+    .error { color: #cc3333; }
+    .success { color: #22aa22; }
+  </style>
+</head>
+<body>
+  <h1>Scheduler Demo</h1>
+  <p class="subtitle">Demonstrates the cap:scheduler.manage capability for extensions</p>
+
+  <div class="card">
+    <h2>Quick Actions</h2>
+    <button id="btn-setup" onclick="runSetup()">Setup Schedules</button>
+    <button id="btn-refresh" onclick="loadSchedules()" class="secondary">Refresh List</button>
+    <button id="btn-status" onclick="checkStatus()" class="secondary">Check Status</button>
+  </div>
+
+  <div class="card">
+    <h2>Current Schedules</h2>
+    <div id="schedules-container">
+      <p>Click "Refresh List" to load schedules</p>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Output</h2>
+    <div id="output" class="output">Ready.</div>
+  </div>
+
+  <script>
+    const output = document.getElementById('output');
+    const schedulesContainer = document.getElementById('schedules-container');
+
+    function log(message, type = 'info') {
+      const timestamp = new Date().toISOString().split('T')[1].split('.')[0];
+      const prefix = type === 'error' ? '✗' : type === 'success' ? '✓' : '→';
+      output.textContent = `[${timestamp}] ${prefix} ${message}\n` + output.textContent;
+    }
+
+    async function apiCall(method, path) {
+      try {
+        const res = await fetch(`/api/extensions/exec/${window.EXTENSION_ID || 'com.alga.sample.scheduler-demo'}${path}`, {
+          method,
+          headers: { 'Content-Type': 'application/json' },
+        });
+        const data = await res.json();
+        return { ok: res.ok, status: res.status, data };
+      } catch (err) {
+        return { ok: false, error: err.message };
+      }
+    }
+
+    async function runSetup() {
+      log('Running schedule setup...');
+      const btn = document.getElementById('btn-setup');
+      btn.disabled = true;
+      btn.textContent = 'Setting up...';
+
+      try {
+        const result = await apiCall('POST', '/api/setup');
+        if (result.ok) {
+          log('Setup completed: ' + JSON.stringify(result.data.results, null, 2), 'success');
+          loadSchedules();
+        } else {
+          log('Setup failed: ' + JSON.stringify(result.data || result.error), 'error');
+        }
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Setup Schedules';
+      }
+    }
+
+    async function loadSchedules() {
+      log('Loading schedules...');
+      schedulesContainer.innerHTML = '<p class="loading">Loading...</p>';
+
+      const result = await apiCall('GET', '/api/schedules');
+      if (result.ok && result.data.schedules) {
+        const schedules = result.data.schedules;
+        if (schedules.length === 0) {
+          schedulesContainer.innerHTML = '<p>No schedules found. Click "Setup Schedules" to create some.</p>';
+          log('No schedules found', 'info');
+        } else {
+          schedulesContainer.innerHTML = '<ul class="schedule-list">' +
+            schedules.map(s => `
+              <li class="schedule-item">
+                <div class="schedule-info">
+                  <div class="schedule-name">${s.name || 'Unnamed Schedule'}</div>
+                  <div class="schedule-details">
+                    ${s.endpointMethod} ${s.endpointPath} • ${s.cron} (${s.timezone})
+                  </div>
+                  <div class="schedule-status ${s.enabled ? 'enabled' : 'disabled'}">
+                    ${s.enabled ? '● Enabled' : '○ Disabled'}
+                    ${s.lastRunAt ? ` • Last run: ${s.lastRunAt}` : ''}
+                  </div>
+                </div>
+                <button class="danger" onclick="deleteSchedule('${s.id}')">Delete</button>
+              </li>
+            `).join('') +
+            '</ul>';
+          log(`Loaded ${schedules.length} schedule(s)`, 'success');
+        }
+      } else {
+        schedulesContainer.innerHTML = '<p class="error">Failed to load schedules</p>';
+        log('Failed to load schedules: ' + JSON.stringify(result.data || result.error), 'error');
+      }
+    }
+
+    async function deleteSchedule(id) {
+      if (!confirm('Delete this schedule?')) return;
+      log(`Deleting schedule ${id}...`);
+
+      const result = await apiCall('DELETE', `/api/schedules/${id}`);
+      if (result.ok) {
+        log('Schedule deleted', 'success');
+        loadSchedules();
+      } else {
+        log('Delete failed: ' + JSON.stringify(result.data || result.error), 'error');
+      }
+    }
+
+    async function checkStatus() {
+      log('Checking status...');
+      const result = await apiCall('GET', '/api/status');
+      if (result.ok) {
+        log('Status: ' + JSON.stringify(result.data, null, 2), 'success');
+      } else {
+        log('Status check failed: ' + JSON.stringify(result.data || result.error), 'error');
+      }
+    }
+
+    // Try to detect extension ID from URL or use default
+    try {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('extensionId')) {
+        window.EXTENSION_ID = params.get('extensionId');
+      }
+    } catch (e) {}
+  </script>
+</body>
+</html>

@@ -113,48 +113,23 @@ export async function GET(request: NextRequest) {
 
     // Get OAuth client credentials - check if this is a hosted EE flow
     const secretProvider = await getSecretProviderInstance();
-    // Prefer server-side NEXTAUTH_URL for hosted detection; allow state flag as backup
-    const nextauthUrl = process.env.NEXTAUTH_URL || (await secretProvider.getAppSecret('NEXTAUTH_URL')) || '';
-    const isHostedByEnv = nextauthUrl.startsWith('https://algapsa.com');
-    const isHostedFlow = isHostedByEnv || stateData.hosted === true;
-    
     let clientId: string | null = null;
     let clientSecret: string | null = null;
-    
-    let credentialSource = 'unknown';
-    if (isHostedFlow) {
-      // Use app-level configuration
-      clientId = await secretProvider.getAppSecret('GOOGLE_CLIENT_ID') || null;
-      clientSecret = await secretProvider.getAppSecret('GOOGLE_CLIENT_SECRET') || null;
-      credentialSource = 'app_secret';
-    } else {
-      // Use tenant-specific or fallback credentials
-      const envClientId = process.env.GOOGLE_CLIENT_ID || null;
-      const envClientSecret = process.env.GOOGLE_CLIENT_SECRET || null;
-      const tenantClientId = await secretProvider.getTenantSecret(stateData.tenant, 'google_client_id');
-      const tenantClientSecret = await secretProvider.getTenantSecret(stateData.tenant, 'google_client_secret');
-      clientId = envClientId || tenantClientId || null;
-      clientSecret = envClientSecret || tenantClientSecret || null;
-      credentialSource = envClientId && envClientSecret ? 'env' : 'tenant_secret';
-    }
+
+    // Google is always tenant-owned (CE and EE): do not fall back to app-level secrets.
+    clientId = (await secretProvider.getTenantSecret(stateData.tenant, 'google_client_id')) ?? null;
+    clientSecret = (await secretProvider.getTenantSecret(stateData.tenant, 'google_client_secret')) ?? null;
     clientId = clientId?.trim() || null;
     clientSecret = clientSecret?.trim() || null;
     
-    // Resolve redirect URI with priority similar to Microsoft
-    const hostedRedirect = await secretProvider.getAppSecret('GOOGLE_REDIRECT_URI');
-    const tenantRedirect = await secretProvider.getTenantSecret(stateData.tenant, 'google_redirect_uri');
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || (await secretProvider.getAppSecret('NEXT_PUBLIC_BASE_URL')) || 'http://localhost:3000';
-    const redirectUri = (isHostedFlow
-      ? hostedRedirect
-      : (process.env.GOOGLE_REDIRECT_URI || tenantRedirect)
-    ) || stateData.redirectUri || `${baseUrl}/api/auth/google/callback`;
-
-    const maskedClientId = clientId ? `${clientId.substring(0, 4)}...${clientId.substring(clientId.length - 4)}` : 'null';
-    console.log('[Google OAuth] Using credentials', {
-      source: credentialSource,
-      clientId: maskedClientId,
-      redirectUri
-    });
+    // Redirect URI is deployment-derived; stateData.redirectUri should already match the canonical callback.
+    const baseUrl =
+      process.env.NEXT_PUBLIC_BASE_URL ||
+      (await secretProvider.getAppSecret('NEXT_PUBLIC_BASE_URL')) ||
+      process.env.NEXTAUTH_URL ||
+      (await secretProvider.getAppSecret('NEXTAUTH_URL')) ||
+      'http://localhost:3000';
+    const redirectUri = stateData.redirectUri || `${baseUrl}/api/auth/google/callback`;
 
     if (!clientId || !clientSecret) {
       console.error('Google OAuth credentials not configured');

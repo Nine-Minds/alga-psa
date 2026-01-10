@@ -17,6 +17,7 @@ interface PhaseListItemProps {
   editingDescription: string | null;
   editingStartDate?: Date;
   editingEndDate?: Date;
+  taskCount?: number;
   onSelect: (phase: IProjectPhase) => void;
   onEdit: (phase: IProjectPhase) => void;
   onSave: (phase: IProjectPhase) => void;
@@ -44,6 +45,7 @@ export const PhaseListItem: React.FC<PhaseListItemProps> = ({
   editingDescription,
   editingStartDate,
   editingEndDate,
+  taskCount,
   onSelect,
   onEdit,
   onSave,
@@ -309,11 +311,16 @@ export const PhaseListItem: React.FC<PhaseListItemProps> = ({
         <>
           {/* Drag Handle */}
           <div className="opacity-0 group-hover:opacity-100 transition-opacity cursor-grab pr-2">
-            <GripVertical className="w-5 h-5 text-gray-400" />
+            <GripVertical className="w-4 h-4 text-gray-400" />
           </div>
           {/* Display View */}
-          <div className="flex flex-col flex-1">
-            <span className="text-lg font-bold text-gray-900">{phase.phase_name}</span>
+          <div className="flex flex-col flex-1 min-w-0">
+            <div className="flex items-start justify-between gap-2">
+              <span className="text-lg font-bold text-gray-900">{phase.phase_name}</span>
+              <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-700 shrink-0">
+                {taskCount ?? 0} {(taskCount ?? 0) === 1 ? 'task' : 'tasks'}
+              </span>
+            </div>
             {phase.description && (
               <span className="text-sm text-gray-600 mt-1">{phase.description}</span>
             )}
@@ -331,26 +338,26 @@ export const PhaseListItem: React.FC<PhaseListItemProps> = ({
             </div>
           </div>
           {/* Hover Action Buttons */}
-          <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+          <div className="flex gap-1 opacity-0 group-hover:opacity-100 shrink-0">
             <button
               onClick={(e) => {
                 e.stopPropagation();
                 onEdit(phase);
               }}
-              className="p-1 rounded-md hover:bg-gray-50 transition-colors"
+              className="p-1 rounded hover:bg-gray-200"
               title="Edit phase"
             >
-              <Pencil className="w-4 h-4 text-gray-500 hover:text-gray-700" />
+              <Pencil className="w-3 h-3" />
             </button>
             <button
               onClick={(e) => {
                 e.stopPropagation();
                 onDelete(phase);
               }}
-              className="p-1 rounded-md hover:bg-red-50 transition-colors"
+              className="p-1 rounded hover:bg-red-100 text-red-600"
               title="Delete phase"
             >
-              <Trash2 className="w-4 h-4 text-red-600 hover:text-red-800" />
+              <Trash2 className="w-3 h-3" />
             </button>
           </div>
         </>

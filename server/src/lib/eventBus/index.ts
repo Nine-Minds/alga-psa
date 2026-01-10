@@ -15,6 +15,10 @@ import { WorkflowEventBaseSchema } from '@shared/workflow/streams/workflowEventS
 
 type EventHandler = (event: Event) => Promise<void>;
 
+// Connection state tracking
+let isConnected = false;
+let isReconnecting = false;
+
 // Redis client configuration
 const createRedisClient = async () => {
   const config = getRedisConfig();
@@ -22,29 +26,54 @@ const createRedisClient = async () => {
   if (!password) {
     logger.warn('[EventBus] No Redis password configured - this is not recommended for production');
   }
-  
+
   const client = createClient({
     url: config.url,
-    password,
+    password: password || undefined,
     socket: {
       reconnectStrategy: (retries) => {
         if (retries > config.eventBus.reconnectStrategy.retries) {
+          logger.error('[EventBus] Max reconnection attempts reached, giving up');
           return new Error('Max reconnection attempts reached');
         }
-        return Math.min(
-          config.eventBus.reconnectStrategy.initialDelay,
+        // Use exponential backoff with jitter
+        const delay = Math.min(
+          config.eventBus.reconnectStrategy.initialDelay * Math.pow(2, retries),
           config.eventBus.reconnectStrategy.maxDelay
         );
+        logger.info(`[EventBus] Reconnecting in ${delay}ms (attempt ${retries + 1}/${config.eventBus.reconnectStrategy.retries})`);
+        return delay;
       }
     }
   });
 
   client.on('error', (err) => {
-    logger.error('Redis Client Error:', err);
+    logger.error('[EventBus] Redis Client Error:', err);
+    isConnected = false;
   });
 
   client.on('connect', () => {
-    logger.info('Redis Client Connected');
+    logger.info('[EventBus] Redis Client Connected');
+    isConnected = true;
+    isReconnecting = false;
+  });
+
+  client.on('reconnecting', () => {
+    logger.info('[EventBus] Redis Client Reconnecting...');
+    isConnected = false;
+    isReconnecting = true;
+  });
+
+  client.on('end', () => {
+    logger.warn('[EventBus] Redis Client Connection Ended');
+    isConnected = false;
+    isReconnecting = false;
+  });
+
+  client.on('ready', () => {
+    logger.info('[EventBus] Redis Client Ready');
+    isConnected = true;
+    isReconnecting = false;
   });
 
   return client;
@@ -56,11 +85,34 @@ let clientPromise: Promise<Awaited<ReturnType<typeof createRedisClient>>> | null
 let eventBusDisabled = false;
 let eventBusDisabledReason: string | null = null;
 
+async function resetClient(reason: string, details?: Record<string, unknown>) {
+  const currentClient = client;
+  client = null;
+  clientPromise = null;
+  isConnected = false;
+  isReconnecting = false;
+
+  try {
+    if (currentClient) {
+      // Prefer a forceful disconnect to avoid hanging on network issues.
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (currentClient as any).disconnect?.();
+    }
+  } catch (error) {
+    logger.debug('[EventBus] Error while disconnecting Redis client during reset', {
+      error: error instanceof Error ? error.message : String(error)
+    });
+  }
+
+  logger.warn('[EventBus] Redis client reset', { reason, ...details });
+}
+
 async function getClient() {
   if (eventBusDisabled) {
     throw new Error(eventBusDisabledReason ?? 'Event bus is disabled');
   }
 
+  // If client doesn't exist, create it
   if (!client) {
     // If another call is already creating the client, wait for it
     if (!clientPromise) {
@@ -69,12 +121,47 @@ async function getClient() {
         const newClient = await createRedisClient();
         await newClient.connect();
         client = newClient;
+        isConnected = true;
         return newClient;
       })();
     }
     return await clientPromise;
   }
+
+  // If the client exists but is not connected (and not actively reconnecting), force a fresh connection.
+  // This can happen after an `end` event, or when the underlying socket dies without emitting a reconnect cycle.
+  if (!isConnected && !isReconnecting) {
+    logger.warn('[EventBus] Redis client is not connected, attempting fresh connection');
+    await resetClient('not_connected_no_reconnect_cycle');
+    return getClient();
+  }
+
+  // If client exists but is disconnected/reconnecting, wait for reconnection
+  if (!isConnected && isReconnecting) {
+    logger.debug('[EventBus] Waiting for Redis reconnection...');
+    // Wait up to 5 seconds for reconnection
+    const maxWait = 5000;
+    const checkInterval = 100;
+    let waited = 0;
+    while (!isConnected && waited < maxWait) {
+      await new Promise(resolve => setTimeout(resolve, checkInterval));
+      waited += checkInterval;
+    }
+    if (!isConnected) {
+      logger.warn('[EventBus] Reconnection timeout, attempting fresh connection');
+      // Reset and create new client
+      client = null;
+      clientPromise = null;
+      return getClient();
+    }
+  }
+
   return client;
+}
+
+// Helper to check connection status (for external monitoring)
+export function isEventBusConnected(): boolean {
+  return isConnected && !eventBusDisabled;
 }
 
 export class EventBus {
@@ -218,6 +305,10 @@ export class EventBus {
     if (this.processingEvents) return;
     this.processingEvents = true;
 
+    // Track last log time to avoid spamming logs
+    let lastSubscriptionLogTime = 0;
+    const subscriptionLogInterval = 60000; // Log subscriptions every 60 seconds
+
     const processEvents = async () => {
       if (!this.processingEvents) return;
 
@@ -225,6 +316,22 @@ export class EventBus {
         const client = await getClient();
         const config = getRedisConfig();
         const subscriptions = this.getActiveSubscriptions();
+
+        // Periodically log active subscriptions for debugging
+        const now = Date.now();
+        if (now - lastSubscriptionLogTime > subscriptionLogInterval) {
+          lastSubscriptionLogTime = now;
+          if (subscriptions.length > 0) {
+            logger.info('[EventBus] Active subscriptions:', {
+              count: subscriptions.length,
+              streams: subscriptions.map(s => s.stream),
+              isConnected,
+              consumerName: this.consumerName
+            });
+          } else {
+            logger.debug('[EventBus] No active subscriptions, waiting for handlers to be registered');
+          }
+        }
 
         if (subscriptions.length === 0) {
           setTimeout(processEvents, 1000);
@@ -237,7 +344,8 @@ export class EventBus {
         }
 
         // xReadGroup expects flat stream descriptors; reuse the subscriptions list we built above.
-        const streamEntries = await client.xReadGroup(
+        const readStartedAt = Date.now();
+        const readPromise = client.xReadGroup(
           config.eventBus.consumerGroup,
           this.consumerName,
           subscriptions.map(({ stream }) => ({ key: stream, id: '>' })),
@@ -246,6 +354,48 @@ export class EventBus {
             BLOCK: config.eventBus.blockingTimeout
           }
         );
+
+        // In practice, a Redis socket drop while a blocking XREADGROUP is in-flight can leave the
+        // promise pending indefinitely even after the client reports "ready" again. That stalls
+        // the whole event loop and causes email notifications to back up in the stream until a process restart.
+        //
+        // Add a "hard" timeout as a safety net and force a client reset if we exceed it.
+        const hardTimeoutMs = Math.max(config.eventBus.blockingTimeout + 10000, 15000);
+        let didHardTimeout = false;
+        const hardTimeoutPromise = new Promise<null>((resolve) => {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const timeoutHandle: any = setTimeout(() => {
+            didHardTimeout = true;
+            resolve(null);
+          }, hardTimeoutMs);
+
+          if (typeof timeoutHandle?.unref === 'function') {
+            timeoutHandle.unref();
+          }
+        });
+
+        const streamEntries = await Promise.race([readPromise, hardTimeoutPromise]);
+
+        if (didHardTimeout) {
+          // Prevent an eventual rejection from becoming unhandled if we timed out first.
+          void readPromise.catch(() => undefined);
+
+          logger.warn('[EventBus] xReadGroup exceeded hard timeout; resetting Redis client', {
+            hardTimeoutMs,
+            blockingTimeoutMs: config.eventBus.blockingTimeout,
+            readAgeMs: Date.now() - readStartedAt,
+            isConnected,
+            isReconnecting
+          });
+
+          await resetClient('xreadgroup_hard_timeout', {
+            hardTimeoutMs,
+            blockingTimeoutMs: config.eventBus.blockingTimeout
+          });
+
+          setTimeout(processEvents, 0);
+          return;
+        }
 
         if (streamEntries) {
           logger.info('[EventBus] Received stream entries:', {
@@ -336,8 +486,25 @@ export class EventBus {
         await this.claimPendingMessages();
         setImmediate(processEvents);
       } catch (error) {
-        logger.error('[EventBus] Error in event processing loop:', error);
-        setTimeout(processEvents, 1000);
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        const isConnectionError = errorMessage.includes('ECONNREFUSED') ||
+                                  errorMessage.includes('ENOTCONN') ||
+                                  errorMessage.includes('Socket closed') ||
+                                  errorMessage.includes('Connection is closed') ||
+                                  !isConnected;
+
+        if (isConnectionError) {
+          logger.warn('[EventBus] Connection error in event processing loop, waiting for reconnection...', {
+            error: errorMessage,
+            isConnected,
+            isReconnecting
+          });
+          // Wait longer for connection errors to allow reconnection
+          setTimeout(processEvents, 2000);
+        } else {
+          logger.error('[EventBus] Error in event processing loop:', error);
+          setTimeout(processEvents, 1000);
+        }
       }
     };
 

@@ -11,12 +11,10 @@ import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 import { createCustomContractLine, CreateCustomContractLineInput, CustomContractLineServiceConfig } from 'server/src/lib/actions/contractLinePresetActions';
 import { Package, Clock, Activity, Plus, X, Coins } from 'lucide-react';
 import { BILLING_FREQUENCY_OPTIONS } from 'server/src/constants/billing';
-import { IService } from 'server/src/interfaces';
-import { getServices } from 'server/src/lib/actions/serviceActions';
 import { SwitchWithLabel } from 'server/src/components/ui/SwitchWithLabel';
-import { ServicePicker } from './ServicePicker';
 import { BucketOverlayFields } from './BucketOverlayFields';
 import { BucketOverlayInput } from './ContractWizard';
+import { ServiceCatalogPicker } from './ServiceCatalogPicker';
 
 type PlanType = 'Fixed' | 'Hourly' | 'Usage';
 
@@ -44,8 +42,6 @@ export const CreateCustomContractLineDialog: React.FC<CreateCustomContractLineDi
   const [enableProration, setEnableProration] = useState<boolean>(false);
 
   // Services state
-  const [services, setServices] = useState<IService[]>([]);
-  const [isLoadingServices, setIsLoadingServices] = useState(true);
   const [fixedServices, setFixedServices] = useState<Array<{ service_id: string; service_name: string; quantity: number }>>([]);
   const [hourlyServices, setHourlyServices] = useState<Array<{
     service_id: string;
@@ -74,25 +70,11 @@ export const CreateCustomContractLineDialog: React.FC<CreateCustomContractLineDi
   // Load services when dialog opens
   useEffect(() => {
     if (isOpen) {
-      loadServices();
+      // Catalog options are fetched server-side on demand via ServiceCatalogPicker.
     } else {
       resetForm();
     }
   }, [isOpen]);
-
-  const loadServices = async () => {
-    setIsLoadingServices(true);
-    try {
-      const result = await getServices();
-      if (result && Array.isArray(result.services)) {
-        setServices(result.services);
-      }
-    } catch (error) {
-      console.error('Error loading services:', error);
-    } finally {
-      setIsLoadingServices(false);
-    }
-  };
 
   const clearErrorIfSubmitted = () => {
     if (hasAttemptedSubmit) {
@@ -108,11 +90,11 @@ export const CreateCustomContractLineDialog: React.FC<CreateCustomContractLineDi
 
     if (planType === 'Fixed') {
       if (fixedServices.length === 0) {
-        errors.push('At least one fixed service is required');
+        errors.push('At least one fixed service or product is required');
       }
       fixedServices.forEach((service, index) => {
         if (!service.service_id) {
-          errors.push(`Service ${index + 1}: Please select a service`);
+          errors.push(`Item ${index + 1}: Please select a service or product`);
         }
       });
     } else if (planType === 'Hourly') {
@@ -260,30 +242,12 @@ export const CreateCustomContractLineDialog: React.FC<CreateCustomContractLineDi
   };
 
   const renderFixedConfig = () => {
-    const fixedServiceOptions = services
-      .filter(service => service.billing_method === 'fixed')
-      .map(service => ({
-        value: service.service_id,
-        label: service.service_name
-      }));
-
     const handleAddFixedService = () => {
       setFixedServices([...fixedServices, { service_id: '', service_name: '', quantity: 1 }]);
     };
 
     const handleRemoveFixedService = (index: number) => {
       const newServices = fixedServices.filter((_, i) => i !== index);
-      setFixedServices(newServices);
-    };
-
-    const handleFixedServiceChange = (index: number, serviceId: string) => {
-      const service = services.find(s => s.service_id === serviceId);
-      const newServices = [...fixedServices];
-      newServices[index] = {
-        ...newServices[index],
-        service_id: serviceId,
-        service_name: service?.service_name || ''
-      };
       setFixedServices(newServices);
     };
 
@@ -298,15 +262,15 @@ export const CreateCustomContractLineDialog: React.FC<CreateCustomContractLineDi
         <div className="p-4 bg-amber-50 border border-amber-200 rounded-md">
           <p className="text-sm text-amber-800">
             <strong>Fixed Fee Services:</strong> The contract line's base rate (set below) is the billed amount.
-            Service quantity is used for <em>tax allocation</em> — it determines how the fixed fee is proportionally
-            attributed across services for tax calculations.
+            You can also attach <strong>Products</strong> to this contract line; product quantities are billed as
+            units, while fixed-fee service quantities are used for <em>tax allocation</em> only.
           </p>
         </div>
 
         <div className="space-y-4">
           <Label className="flex items-center gap-2">
             <Package className="h-4 w-4" />
-            Services
+            Services & Products
           </Label>
 
           {fixedServices.map((service, index) => (
@@ -314,21 +278,29 @@ export const CreateCustomContractLineDialog: React.FC<CreateCustomContractLineDi
               <div className="flex-1 space-y-3">
                 <div className="space-y-2">
                   <Label htmlFor={`fixed-service-${index}`} className="text-sm">
-                    Service {index + 1}
+                    Item {index + 1}
                   </Label>
-                  <ServicePicker
+                  <ServiceCatalogPicker
                     value={service.service_id}
-                    onChange={(value: string) => handleFixedServiceChange(index, value)}
-                    options={fixedServiceOptions}
-                    placeholder={isLoadingServices ? "Loading..." : "Select a service"}
-                    disabled={isLoadingServices}
+                    selectedLabel={service.service_name}
+                    onSelect={(item) => {
+                      const next = [...fixedServices];
+                      next[index] = {
+                        ...next[index],
+                        service_id: item.service_id,
+                        service_name: item.service_name
+                      };
+                      setFixedServices(next);
+                    }}
+                    billingMethods={['fixed', 'per_unit']}
+                    placeholder="Select an item"
                     className="w-full"
                   />
                 </div>
 
                 <div className="space-y-2">
                   <Label htmlFor={`quantity-${index}`} className="text-sm">
-                    Quantity (for tax allocation)
+                    Quantity
                   </Label>
                   <Input
                     id={`quantity-${index}`}
@@ -362,14 +334,14 @@ export const CreateCustomContractLineDialog: React.FC<CreateCustomContractLineDi
             className="w-full"
           >
             <Plus className="h-4 w-4 mr-2" />
-            Add Service
+            Add Item
           </Button>
         </div>
 
         {fixedServices.length === 0 && (
           <div className="p-4 bg-gray-50 border border-gray-200 rounded-md">
             <p className="text-sm text-gray-600 text-center">
-              No fixed fee services added yet. Click "Add Service" above to get started.
+              No fixed fee items added yet. Click "Add Item" above to get started.
             </p>
           </div>
         )}
@@ -378,13 +350,6 @@ export const CreateCustomContractLineDialog: React.FC<CreateCustomContractLineDi
   };
 
   const renderHourlyConfig = () => {
-    const hourlyServiceOptions = services
-      .filter(service => service.billing_method === 'hourly')
-      .map(service => ({
-        value: service.service_id,
-        label: service.service_name
-      }));
-
     const handleAddHourlyService = () => {
       setHourlyServices([...hourlyServices, { service_id: '', service_name: '', hourly_rate: undefined }]);
     };
@@ -395,22 +360,6 @@ export const CreateCustomContractLineDialog: React.FC<CreateCustomContractLineDi
       const newInputs = { ...hourlyServiceRateInputs };
       delete newInputs[index];
       setHourlyServiceRateInputs(newInputs);
-    };
-
-    const handleHourlyServiceChange = (index: number, serviceId: string) => {
-      const service = services.find(s => s.service_id === serviceId);
-      const newServices = [...hourlyServices];
-      newServices[index] = {
-        ...newServices[index],
-        service_id: serviceId,
-        service_name: service?.service_name || '',
-        hourly_rate: service?.default_rate || undefined
-      };
-      setHourlyServices(newServices);
-
-      if (service?.default_rate) {
-        setHourlyServiceRateInputs(prev => ({ ...prev, [index]: (service.default_rate! / 100).toFixed(2) }));
-      }
     };
 
     const handleHourlyRateChange = (index: number, rate: number) => {
@@ -478,12 +427,27 @@ export const CreateCustomContractLineDialog: React.FC<CreateCustomContractLineDi
                   <Label htmlFor={`hourly-service-${index}`} className="text-sm">
                     Service {index + 1}
                   </Label>
-                  <ServicePicker
+                  <ServiceCatalogPicker
                     value={service.service_id}
-                    onChange={(value: string) => handleHourlyServiceChange(index, value)}
-                    options={hourlyServiceOptions}
-                    placeholder={isLoadingServices ? "Loading..." : "Select a service"}
-                    disabled={isLoadingServices}
+                    selectedLabel={service.service_name}
+                    onSelect={(item) => {
+                      const next = [...hourlyServices];
+                      next[index] = {
+                        ...next[index],
+                        service_id: item.service_id,
+                        service_name: item.service_name,
+                        hourly_rate: item.default_rate || undefined
+                      };
+                      setHourlyServices(next);
+                      if (item.default_rate) {
+                        setHourlyServiceRateInputs((prev) => ({
+                          ...prev,
+                          [index]: (item.default_rate / 100).toFixed(2)
+                        }));
+                      }
+                    }}
+                    billingMethods={['hourly']}
+                    placeholder="Select a service"
                     className="w-full"
                   />
                 </div>
@@ -610,13 +574,6 @@ export const CreateCustomContractLineDialog: React.FC<CreateCustomContractLineDi
   };
 
   const renderUsageConfig = () => {
-    const usageServiceOptions = services
-      .filter(service => service.billing_method === 'usage')
-      .map(service => ({
-        value: service.service_id,
-        label: service.service_name
-      }));
-
     const handleAddUsageService = () => {
       setUsageServices([...usageServices, { service_id: '', service_name: '', unit_rate: undefined, unit_of_measure: 'unit' }]);
     };
@@ -627,23 +584,6 @@ export const CreateCustomContractLineDialog: React.FC<CreateCustomContractLineDi
       const newInputs = { ...usageServiceRateInputs };
       delete newInputs[index];
       setUsageServiceRateInputs(newInputs);
-    };
-
-    const handleUsageServiceChange = (index: number, serviceId: string) => {
-      const service = services.find(s => s.service_id === serviceId);
-      const newServices = [...usageServices];
-      newServices[index] = {
-        ...newServices[index],
-        service_id: serviceId,
-        service_name: service?.service_name || '',
-        unit_rate: service?.default_rate || undefined,
-        unit_of_measure: service?.unit_of_measure || 'unit'
-      };
-      setUsageServices(newServices);
-
-      if (service?.default_rate) {
-        setUsageServiceRateInputs(prev => ({ ...prev, [index]: (service.default_rate! / 100).toFixed(2) }));
-      }
     };
 
     const handleUsageRateChange = (index: number, rate: number) => {
@@ -679,12 +619,28 @@ export const CreateCustomContractLineDialog: React.FC<CreateCustomContractLineDi
                   <Label htmlFor={`usage-service-${index}`} className="text-sm">
                     Service {index + 1}
                   </Label>
-                  <ServicePicker
+                  <ServiceCatalogPicker
                     value={service.service_id}
-                    onChange={(value: string) => handleUsageServiceChange(index, value)}
-                    options={usageServiceOptions}
-                    placeholder={isLoadingServices ? "Loading..." : "Select a service"}
-                    disabled={isLoadingServices}
+                    selectedLabel={service.service_name}
+                    onSelect={(item) => {
+                      const next = [...usageServices];
+                      next[index] = {
+                        ...next[index],
+                        service_id: item.service_id,
+                        service_name: item.service_name,
+                        unit_rate: item.default_rate || undefined,
+                        unit_of_measure: item.unit_of_measure || 'unit'
+                      };
+                      setUsageServices(next);
+                      if (item.default_rate) {
+                        setUsageServiceRateInputs((prev) => ({
+                          ...prev,
+                          [index]: (item.default_rate / 100).toFixed(2)
+                        }));
+                      }
+                    }}
+                    billingMethods={['usage']}
+                    placeholder="Select a service"
                     className="w-full"
                   />
                 </div>

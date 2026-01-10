@@ -21,11 +21,11 @@ import { useTenant } from '../TenantProvider';
 import { Package, Clock, Activity, Plus, X, Coins } from 'lucide-react';
 import { BILLING_FREQUENCY_OPTIONS } from 'server/src/constants/billing';
 import { getCurrencySymbol } from 'server/src/constants/currency';
-import { IService } from 'server/src/interfaces';
-import { getServices } from 'server/src/lib/actions/serviceActions';
+import { getServiceById } from 'server/src/lib/actions/serviceActions';
 import { SwitchWithLabel } from '../ui/SwitchWithLabel';
 import { BucketOverlayFields } from './contracts/BucketOverlayFields';
 import { BucketOverlayInput } from './contracts/ContractWizard';
+import { ServiceCatalogPicker } from './contracts/ServiceCatalogPicker';
 
 type PlanType = 'Fixed' | 'Hourly' | 'Usage';
 
@@ -45,7 +45,7 @@ interface ContractLineDialogProps {
   editingPlan?: IContractLinePreset | null;
   onClose?: () => void;
   triggerButton?: React.ReactNode;
-  allServiceTypes: { id: string; name: string; billing_method: 'fixed' | 'hourly' | 'usage'; is_standard: boolean }[];
+  allServiceTypes: { id: string; name: string; billing_method: 'fixed' | 'hourly' | 'usage' | 'per_unit'; is_standard: boolean }[];
 }
 
 export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerButton }: ContractLineDialogProps) {
@@ -62,8 +62,6 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
   const [billingCycleAlignment, setBillingCycleAlignment] = useState<'start' | 'end' | 'prorated'>('start');
 
   // Services state
-  const [services, setServices] = useState<IService[]>([]);
-  const [isLoadingServices, setIsLoadingServices] = useState(true);
   const [fixedServices, setFixedServices] = useState<Array<{ service_id: string; service_name: string; quantity: number }>>([]);
   const [hourlyServices, setHourlyServices] = useState<Array<{
     service_id: string;
@@ -93,23 +91,7 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
 
   const markDirty = () => setIsDirty(true);
 
-  // Load services
-  useEffect(() => {
-    loadServices();
-  }, []);
-
-  const loadServices = async () => {
-    try {
-      const result = await getServices();
-      if (result && Array.isArray(result.services)) {
-        setServices(result.services);
-      }
-    } catch (error) {
-      console.error('Error loading services:', error);
-    } finally {
-      setIsLoadingServices(false);
-    }
-  };
+  // Catalog options are fetched server-side on demand via ServiceCatalogPicker.
 
   // Open dialog when editingPlan is provided
   useEffect(() => {
@@ -133,42 +115,71 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
       // Load services for existing preset
       if (editingPlan.preset_id) {
         getContractLinePresetServices(editingPlan.preset_id)
-          .then((presetServices) => {
-            // Load services based on type
+          .then(async (presetServices) => {
+            const resolved = await Promise.all(
+              presetServices.map(async (s) => {
+                const svc = await getServiceById(s.service_id);
+                return { preset: s, serviceName: svc?.service_name ?? '' };
+              })
+            );
+
             if (editingPlan.contract_line_type === 'Fixed') {
-              const fixedSvcs = presetServices.map(s => ({
-                service_id: s.service_id,
-                service_name: services.find(svc => svc.service_id === s.service_id)?.service_name || '',
-                quantity: s.quantity || 1
-              }));
-              setFixedServices(fixedSvcs);
+              setFixedServices(
+                resolved.map(({ preset, serviceName }) => ({
+                  service_id: preset.service_id,
+                  service_name: serviceName,
+                  quantity: preset.quantity || 1,
+                }))
+              );
             } else if (editingPlan.contract_line_type === 'Hourly') {
-              const hourlySvcs = presetServices.map(s => ({
-                service_id: s.service_id,
-                service_name: services.find(svc => svc.service_id === s.service_id)?.service_name || '',
-                hourly_rate: s.custom_rate ? s.custom_rate / 100 : undefined,
-                bucket_overlay: (s.bucket_total_minutes != null || s.bucket_overage_rate != null || s.bucket_allow_rollover != null) ? {
-                  total_minutes: s.bucket_total_minutes ?? undefined,
-                  overage_rate: s.bucket_overage_rate ?? undefined,
-                  allow_rollover: s.bucket_allow_rollover ?? false,
-                  billing_period: editingPlan.billing_frequency as 'weekly' | 'monthly'
-                } : null
+              const next = resolved.map(({ preset, serviceName }) => ({
+                service_id: preset.service_id,
+                service_name: serviceName,
+                hourly_rate: preset.custom_rate ?? undefined,
+                bucket_overlay:
+                  preset.bucket_total_minutes != null ||
+                  preset.bucket_overage_rate != null ||
+                  preset.bucket_allow_rollover != null
+                    ? {
+                        total_minutes: preset.bucket_total_minutes ?? undefined,
+                        overage_rate: preset.bucket_overage_rate ?? undefined,
+                        allow_rollover: preset.bucket_allow_rollover ?? false,
+                        billing_period: editingPlan.billing_frequency as 'weekly' | 'monthly',
+                      }
+                    : null,
               }));
-              setHourlyServices(hourlySvcs);
+              setHourlyServices(next);
+              setHourlyServiceRateInputs(
+                next.reduce<Record<number, string>>((acc, s, idx) => {
+                  if (s.hourly_rate) acc[idx] = (s.hourly_rate / 100).toFixed(2);
+                  return acc;
+                }, {})
+              );
             } else if (editingPlan.contract_line_type === 'Usage') {
-              const usageSvcs = presetServices.map(s => ({
-                service_id: s.service_id,
-                service_name: services.find(svc => svc.service_id === s.service_id)?.service_name || '',
-                unit_rate: s.custom_rate ? s.custom_rate / 100 : undefined,
-                unit_of_measure: s.unit_of_measure || '',
-                bucket_overlay: (s.bucket_total_minutes != null || s.bucket_overage_rate != null || s.bucket_allow_rollover != null) ? {
-                  total_minutes: s.bucket_total_minutes ?? undefined,
-                  overage_rate: s.bucket_overage_rate ?? undefined,
-                  allow_rollover: s.bucket_allow_rollover ?? false,
-                  billing_period: editingPlan.billing_frequency as 'weekly' | 'monthly'
-                } : null
+              const next = resolved.map(({ preset, serviceName }) => ({
+                service_id: preset.service_id,
+                service_name: serviceName,
+                unit_rate: preset.custom_rate ?? undefined,
+                unit_of_measure: preset.unit_of_measure || '',
+                bucket_overlay:
+                  preset.bucket_total_minutes != null ||
+                  preset.bucket_overage_rate != null ||
+                  preset.bucket_allow_rollover != null
+                    ? {
+                        total_minutes: preset.bucket_total_minutes ?? undefined,
+                        overage_rate: preset.bucket_overage_rate ?? undefined,
+                        allow_rollover: preset.bucket_allow_rollover ?? false,
+                        billing_period: editingPlan.billing_frequency as 'weekly' | 'monthly',
+                      }
+                    : null,
               }));
-              setUsageServices(usageSvcs);
+              setUsageServices(next);
+              setUsageServiceRateInputs(
+                next.reduce<Record<number, string>>((acc, s, idx) => {
+                  if (s.unit_rate) acc[idx] = (s.unit_rate / 100).toFixed(2);
+                  return acc;
+                }, {})
+              );
             }
           })
           .catch(() => {});
@@ -206,7 +217,7 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
 
     if (planType === 'Fixed') {
       if (fixedServices.length === 0) {
-        errors.push('At least one fixed service is required');
+        errors.push('At least one fixed service or product is required');
       }
       // Base rate is now optional for presets - it can be set when creating actual contracts
       // Check that all services are selected
@@ -405,52 +416,38 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
   };
 
   const renderFixedConfig = () => {
-    // Filter to only show services with billing_method === 'fixed'
-    const fixedServiceOptions = services
-      .filter(service => service.billing_method === 'fixed')
-      .map(service => ({
-        value: service.service_id,
-        label: service.service_name
-      }));
     const handleAddFixedService = () => {
       setFixedServices([...fixedServices, { service_id: '', service_name: '', quantity: 1 }]);
+      markDirty();
     };
 
     const handleRemoveFixedService = (index: number) => {
       const newServices = fixedServices.filter((_, i) => i !== index);
       setFixedServices(newServices);
-    };
-
-    const handleFixedServiceChange = (index: number, serviceId: string) => {
-      const service = services.find(s => s.service_id === serviceId);
-      const newServices = [...fixedServices];
-      newServices[index] = {
-        ...newServices[index],
-        service_id: serviceId,
-        service_name: service?.service_name || ''
-      };
-      setFixedServices(newServices);
+      markDirty();
     };
 
     const handleQuantityChange = (index: number, quantity: number) => {
       const newServices = [...fixedServices];
       newServices[index] = { ...newServices[index], quantity };
       setFixedServices(newServices);
+      markDirty();
     };
 
     return (
       <div className="space-y-4">
         <div className="p-4 bg-amber-50 border border-amber-200 rounded-md">
           <p className="text-sm text-amber-800">
-            <strong>What are Fixed Fee Services?</strong> These services have a set recurring price. You'll still track time entries
-            for these services, but billing is based on the fixed rate, not hours worked.
+            <strong>Fixed Fee Services:</strong> The contract line's base rate is the billed amount.
+            You can also attach <strong>Products</strong> here; product quantities are billed as units, while fixed-fee service quantities are used for
+            <em> tax allocation</em> only.
           </p>
         </div>
 
         <div className="space-y-4">
           <Label className="flex items-center gap-2">
             <Package className="h-4 w-4" />
-            Services
+            Services & Products
           </Label>
 
           {fixedServices.map((service, index) => (
@@ -458,14 +455,23 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
               <div className="flex-1 space-y-3">
                 <div className="space-y-2">
                   <Label htmlFor={`fixed-service-${index}`} className="text-sm">
-                    Service {index + 1}
+                    Item {index + 1}
                   </Label>
-                  <CustomSelect
+                  <ServiceCatalogPicker
                     value={service.service_id}
-                    onValueChange={(value: string) => handleFixedServiceChange(index, value)}
-                    options={fixedServiceOptions}
-                    placeholder={isLoadingServices ? "Loading..." : "Select a service"}
-                    disabled={isLoadingServices}
+                    selectedLabel={service.service_name}
+                    onSelect={(item) => {
+                      const next = [...fixedServices];
+                      next[index] = {
+                        ...next[index],
+                        service_id: item.service_id,
+                        service_name: item.service_name
+                      };
+                      setFixedServices(next);
+                      markDirty();
+                    }}
+                    billingMethods={['fixed', 'per_unit']}
+                    placeholder="Select an item"
                     className="w-full"
                   />
                 </div>
@@ -506,14 +512,14 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
             className="w-full"
           >
             <Plus className="h-4 w-4 mr-2" />
-            Add Service
+            Add Item
           </Button>
         </div>
 
         {fixedServices.length === 0 && (
           <div className="p-4 bg-gray-50 border border-gray-200 rounded-md">
             <p className="text-sm text-gray-600 text-center">
-              No fixed fee services added yet. Click "Add Service" above to get started.
+              No fixed fee items added yet. Click "Add Item" above to get started.
             </p>
           </div>
         )}
@@ -522,15 +528,9 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
   };
 
   const renderHourlyConfig = () => {
-    // Filter to only show services with billing_method === 'hourly'
-    const hourlyServiceOptions = services
-      .filter(service => service.billing_method === 'hourly')
-      .map(service => ({
-        value: service.service_id,
-        label: service.service_name
-      }));
     const handleAddHourlyService = () => {
       setHourlyServices([...hourlyServices, { service_id: '', service_name: '', hourly_rate: undefined }]);
+      markDirty();
     };
 
     const handleRemoveHourlyService = (index: number) => {
@@ -539,28 +539,14 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
       const newInputs = { ...hourlyServiceRateInputs };
       delete newInputs[index];
       setHourlyServiceRateInputs(newInputs);
-    };
-
-    const handleHourlyServiceChange = (index: number, serviceId: string) => {
-      const service = services.find(s => s.service_id === serviceId);
-      const newServices = [...hourlyServices];
-      newServices[index] = {
-        ...newServices[index],
-        service_id: serviceId,
-        service_name: service?.service_name || '',
-        hourly_rate: service?.default_rate || undefined
-      };
-      setHourlyServices(newServices);
-
-      if (service?.default_rate) {
-        setHourlyServiceRateInputs(prev => ({ ...prev, [index]: (service.default_rate! / 100).toFixed(2) }));
-      }
+      markDirty();
     };
 
     const handleHourlyRateChange = (index: number, rate: number) => {
       const newServices = [...hourlyServices];
       newServices[index] = { ...newServices[index], hourly_rate: rate };
       setHourlyServices(newServices);
+      markDirty();
     };
 
     return (
@@ -625,12 +611,28 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
                   <Label htmlFor={`hourly-service-${index}`} className="text-sm">
                     Service {index + 1}
                   </Label>
-                  <CustomSelect
+                  <ServiceCatalogPicker
                     value={service.service_id}
-                    onValueChange={(value: string) => handleHourlyServiceChange(index, value)}
-                    options={hourlyServiceOptions}
-                    placeholder={isLoadingServices ? "Loading..." : "Select a service"}
-                    disabled={isLoadingServices}
+                    selectedLabel={service.service_name}
+                    onSelect={(item) => {
+                      const next = [...hourlyServices];
+                      next[index] = {
+                        ...next[index],
+                        service_id: item.service_id,
+                        service_name: item.service_name,
+                        hourly_rate: item.default_rate || undefined
+                      };
+                      setHourlyServices(next);
+                      if (item.default_rate) {
+                        setHourlyServiceRateInputs((prev) => ({
+                          ...prev,
+                          [index]: (item.default_rate / 100).toFixed(2)
+                        }));
+                      }
+                      markDirty();
+                    }}
+                    billingMethods={['hourly']}
+                    placeholder="Select a service"
                     className="w-full"
                   />
                 </div>
@@ -759,15 +761,12 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
   };
 
   const renderUsageConfig = () => {
-    // Filter to only show services with billing_method === 'usage'
-    const usageServiceOptions = services
-      .filter(service => service.billing_method === 'usage')
-      .map(service => ({
-        value: service.service_id,
-        label: service.service_name
-      }));
     const handleAddUsageService = () => {
-      setUsageServices([...usageServices, { service_id: '', service_name: '', unit_rate: undefined, unit_of_measure: 'unit' }]);
+      setUsageServices([
+        ...usageServices,
+        { service_id: '', service_name: '', unit_rate: undefined, unit_of_measure: 'unit' },
+      ]);
+      markDirty();
     };
 
     const handleRemoveUsageService = (index: number) => {
@@ -776,35 +775,38 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
       const newInputs = { ...usageServiceRateInputs };
       delete newInputs[index];
       setUsageServiceRateInputs(newInputs);
+      markDirty();
     };
 
-    const handleUsageServiceChange = (index: number, serviceId: string) => {
-      const service = services.find(s => s.service_id === serviceId);
+    const handleUsageItemSelect = (index: number, item: { service_id: string; service_name: string; default_rate: number; unit_of_measure: string }) => {
       const newServices = [...usageServices];
       newServices[index] = {
         ...newServices[index],
-        service_id: serviceId,
-        service_name: service?.service_name || '',
-        unit_rate: service?.default_rate || undefined,
-        unit_of_measure: service?.unit_of_measure || 'unit'
+        service_id: item.service_id,
+        service_name: item.service_name || '',
+        unit_rate: item.default_rate || undefined,
+        unit_of_measure: item.unit_of_measure || 'unit'
       };
       setUsageServices(newServices);
 
-      if (service?.default_rate) {
-        setUsageServiceRateInputs(prev => ({ ...prev, [index]: (service.default_rate! / 100).toFixed(2) }));
+      if (item.default_rate) {
+        setUsageServiceRateInputs(prev => ({ ...prev, [index]: (item.default_rate / 100).toFixed(2) }));
       }
+      markDirty();
     };
 
     const handleUsageRateChange = (index: number, rate: number) => {
       const newServices = [...usageServices];
       newServices[index] = { ...newServices[index], unit_rate: rate };
       setUsageServices(newServices);
+      markDirty();
     };
 
     const handleUnitChange = (index: number, unit: string) => {
       const newServices = [...usageServices];
       newServices[index] = { ...newServices[index], unit_of_measure: unit };
       setUsageServices(newServices);
+      markDirty();
     };
 
     return (
@@ -829,13 +831,23 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
                   <Label htmlFor={`usage-service-${index}`} className="text-sm">
                     Service {index + 1}
                   </Label>
-                  <CustomSelect
+                  <ServiceCatalogPicker
+                    id={`usage-service-${index}`}
+                    label={undefined}
                     value={service.service_id}
-                    onValueChange={(value: string) => handleUsageServiceChange(index, value)}
-                    options={usageServiceOptions}
-                    placeholder={isLoadingServices ? "Loading..." : "Select a service"}
-                    disabled={isLoadingServices}
-                    className="w-full"
+                    selectedLabel={service.service_name}
+                    onSelect={(item) =>
+                      handleUsageItemSelect(index, {
+                        service_id: item.service_id,
+                        service_name: item.service_name,
+                        default_rate: item.default_rate,
+                        unit_of_measure: item.unit_of_measure,
+                      })
+                    }
+                    billingMethods={['usage']}
+                    itemKinds={['service', 'product']}
+                    placeholder="Search services/products..."
+                    debounceMs={300}
                   />
                 </div>
 

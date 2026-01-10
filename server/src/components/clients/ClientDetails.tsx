@@ -1,8 +1,7 @@
 'use client';
 
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { IDocument } from 'server/src/interfaces/document.interface';
-import { PartialBlock } from '@blocknote/core';
 import { IContact } from 'server/src/interfaces/contact.interfaces';
 import { IClient } from 'server/src/interfaces/client.interfaces';
 import { ITag } from 'server/src/interfaces/tag.interfaces';
@@ -20,7 +19,7 @@ import ClientContactsList from 'server/src/components/contacts/ClientContactsLis
 import { Flex, Text, Heading } from '@radix-ui/themes';
 import { Switch } from 'server/src/components/ui/Switch';
 import BillingConfiguration from './BillingConfiguration';
-import { updateClient, uploadClientLogo, deleteClientLogo, getClientById, deleteClient, reactivateClientContacts } from 'server/src/lib/actions/client-actions/clientActions';
+import { updateClient, uploadClientLogo, deleteClientLogo, getClientById, deleteClient, reactivateClientContacts, deactivateClientContacts, markClientInactiveWithContacts, markClientActiveWithContacts } from 'server/src/lib/actions/client-actions/clientActions';
 import { ConfirmationDialog } from 'server/src/components/ui/ConfirmationDialog';
 import CustomTabs from 'server/src/components/ui/CustomTabs';
 import { QuickAddTicket } from '../tickets/QuickAddTicket';
@@ -38,7 +37,6 @@ import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import ClientAssets from './ClientAssets';
 import ClientTickets from './ClientTickets';
 import ClientLocations from './ClientLocations';
-import TextEditor, { DEFAULT_BLOCK } from '../editor/TextEditor';
 import { IBoard, ITicket, ITicketCategory } from 'server/src/interfaces';
 import CustomSelect, { SelectOption } from 'server/src/components/ui/CustomSelect';
 import { Card } from 'server/src/components/ui/Card';
@@ -47,10 +45,11 @@ import { withDataAutomationId } from 'server/src/types/ui-reflection/withDataAut
 import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionContainer';
 import { useAutomationIdAndRegister } from 'server/src/types/ui-reflection/useAutomationIdAndRegister';
 import { FormFieldComponent } from 'server/src/types/ui-reflection/types';
-import { createBlockDocument, updateBlockContent, getBlockContent } from 'server/src/lib/actions/document-actions/documentBlockContentActions';
-import { getDocument, getImageUrl } from 'server/src/lib/actions/document-actions/documentActions';
+import { getImageUrl } from 'server/src/lib/actions/document-actions/documentActions';
 import ClientContractLineDashboard from '../billing-dashboard/ClientContractLineDashboard';
+import { ClientNotesPanel } from './panels/ClientNotesPanel';
 import { toast } from 'react-hot-toast';
+import { handleError } from 'server/src/lib/utils/errorHandling';
 import EntityImageUpload from 'server/src/components/ui/EntityImageUpload';
 import { getTicketFormOptions } from 'server/src/lib/actions/ticket-actions/optimizedTicketActions';
 import { Dialog, DialogContent } from 'server/src/components/ui/Dialog';
@@ -58,6 +57,7 @@ import { ClientLanguagePreference } from './ClientLanguagePreference';
 import { useTranslation } from 'server/src/lib/i18n/client';
 import ClientSurveySummaryCard from 'server/src/components/surveys/ClientSurveySummaryCard';
 import type { SurveyClientSatisfactionSummary } from 'server/src/interfaces/survey.interface';
+import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 
 
 const SwitchDetailItem: React.FC<{
@@ -192,27 +192,30 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
   const [interactions, setInteractions] = useState<IInteraction[]>([]);
   const [currentUser, setCurrentUser] = useState<IUser | null>(null);
   const [internalUsers, setInternalUsers] = useState<IUser[]>([]);
-  
-  // Update editedClient when client prop changes
-  useEffect(() => {
-    setEditedClient(client);
-  }, [client]);
   const [isLoadingUsers, setIsLoadingUsers] = useState(false);
   const [isDocumentSelectorOpen, setIsDocumentSelectorOpen] = useState(false);
-  const [hasUnsavedNoteChanges, setHasUnsavedNoteChanges] = useState(false);
   const [isUploadingLogo, setIsUploadingLogo] = useState(false);
   const [isDeletingLogo, setIsDeletingLogo] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [showDeactivateOption, setShowDeactivateOption] = useState(false);
+  const [deleteDependencies, setDeleteDependencies] = useState<{
+    contacts?: number;
+    tickets?: number;
+    projects?: number;
+    invoices?: number;
+    documents?: number;
+    interactions?: number;
+    assets?: number;
+    service_usage?: number;
+    bucket_usage?: number;
+  } | null>(null);
   const [isReactivateDialogOpen, setIsReactivateDialogOpen] = useState(false);
   const [inactiveContactsToReactivate, setInactiveContactsToReactivate] = useState<IContact[]>([]);
   const [isDeactivateDialogOpen, setIsDeactivateDialogOpen] = useState(false);
   const [activeContactsToDeactivate, setActiveContactsToDeactivate] = useState<IContact[]>([]);
   const [isEditingLogo, setIsEditingLogo] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const [currentContent, setCurrentContent] = useState<PartialBlock[]>(DEFAULT_BLOCK);
-  const [noteDocument, setNoteDocument] = useState<IDocument | null>(null);
   const [ticketFormOptions, setTicketFormOptions] = useState<{
     statusOptions: SelectOption[];
     priorityOptions: SelectOption[];
@@ -221,11 +224,13 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
     tags?: string[];
   } | null>(null);
   const [isLocationsDialogOpen, setIsLocationsDialogOpen] = useState(false);
+  const [locationsRefreshKey, setLocationsRefreshKey] = useState(0);
   const [tags, setTags] = useState<ITag[]>([]);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
   const { tags: allTags } = useTags();
   const router = useRouter();
+  const memoizedRouter = useMemo(() => router, [router]);
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -244,7 +249,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
 
       if (!result.success) {
         if ('code' in result && result.code === 'COMPANY_HAS_DEPENDENCIES') {
-          handleDependencyError(result, setDeleteError);
+          handleDependencyError(result);
           setShowDeactivateOption(true);
           return;
         }
@@ -263,65 +268,150 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
       }
     } catch (error: any) {
       console.error('Failed to delete client:', error);
-      setDeleteError(error.message || 'Failed to delete client. Please try again.');
+      const errorMessage = error.message || 'Failed to delete client. Please try again.';
+      // Only set the error in state - dialog already displays it, avoid duplicate toast
+      setDeleteError(errorMessage);
     }
   };
 
-  const handleMarkClientInactive = async () => {
+  // Handler for deactivating client from the delete dialog (deactivates all contacts)
+  const handleMarkClientInactiveAll = async () => {
     try {
-      await updateClient(editedClient.client_id, { is_inactive: true });
+      // Use atomic action to deactivate client AND all contacts
+      const result = await markClientInactiveWithContacts(editedClient.client_id, true);
 
-      setIsDeleteDialogOpen(false);
+      if (!result.success) {
+        handleError(new Error(result.message || 'Failed to mark client as inactive'));
+        resetDeleteState();
+        return;
+      }
 
+      // Update local state immediately
+      setEditedClient(prev => ({ ...prev, is_inactive: true }));
+
+      if (result.contactsDeactivated > 0) {
+        toast.success(`Client and ${result.contactsDeactivated} contact${result.contactsDeactivated !== 1 ? 's' : ''} have been deactivated successfully.`);
+      } else {
+        toast.success("Client has been marked as inactive successfully.");
+      }
+
+      // Close dialog first, then refresh in background
+      resetDeleteState();
+      router.refresh();
+    } catch (error: any) {
+      handleError(error, 'An error occurred while marking the client as inactive. Please try again.');
+      resetDeleteState();
+    }
+  };
+
+  // Handler for deactivating client from the delete dialog (client only)
+  const handleMarkClientInactiveOnly = async () => {
+    try {
+      // Use atomic action to deactivate client only
+      const result = await markClientInactiveWithContacts(editedClient.client_id, false);
+
+      if (!result.success) {
+        handleError(new Error(result.message || 'Failed to mark client as inactive'));
+        resetDeleteState();
+        return;
+      }
+
+      // Update local state immediately
+      setEditedClient(prev => ({ ...prev, is_inactive: true }));
       toast.success("Client has been marked as inactive successfully.");
 
-      // Navigate back or close drawer depending on context
-      if (isInDrawer) {
-        drawer.closeDrawer();
+      // Close dialog first, then refresh in background
+      resetDeleteState();
+      router.refresh();
+    } catch (error: any) {
+      handleError(error, 'An error occurred while marking the client as inactive. Please try again.');
+      resetDeleteState();
+    }
+  };
+
+  // Handler for the direct "Mark as Inactive" button (not from delete dialog)
+  const handleDirectMarkInactive = async () => {
+    try {
+      // Fetch active contacts for this client
+      const { getContactsByClient } = await import('server/src/lib/actions/contact-actions/contactActions');
+      const activeContacts = await getContactsByClient(editedClient.client_id, 'active');
+
+      if (activeContacts.length > 0) {
+        setActiveContactsToDeactivate(activeContacts);
+        setIsDeactivateDialogOpen(true);
       } else {
-        router.push('/msp/clients');
+        // No contacts to warn about, use atomic action to deactivate the client
+        const result = await markClientInactiveWithContacts(editedClient.client_id, false);
+
+        if (!result.success) {
+          handleError(new Error(result.message || 'Failed to mark client as inactive'));
+          return;
+        }
+
+        // Update local state immediately
+        setEditedClient(prev => ({ ...prev, is_inactive: true }));
+        toast.success("Client has been marked as inactive successfully.");
+        router.refresh();
       }
     } catch (error: any) {
-      console.error('Error marking client as inactive:', error);
-      setDeleteError('An error occurred while marking the client as inactive. Please try again.');
+      handleError(error, 'An error occurred while marking the client as inactive. Please try again.');
+    }
+  };
+
+  // Handler for the direct "Reactivate" button
+  const handleDirectReactivate = async () => {
+    try {
+      // Fetch inactive contacts for this client
+      const { getContactsByClient } = await import('server/src/lib/actions/contact-actions/contactActions');
+      const inactiveContacts = await getContactsByClient(editedClient.client_id, 'inactive');
+
+      if (inactiveContacts.length > 0) {
+        setInactiveContactsToReactivate(inactiveContacts);
+        setIsReactivateDialogOpen(true);
+      } else {
+        // No contacts to ask about, use atomic action to reactivate the client
+        const result = await markClientActiveWithContacts(editedClient.client_id, false);
+
+        if (!result.success) {
+          handleError(new Error(result.message || 'Failed to reactivate client'));
+          return;
+        }
+
+        // Update local state immediately
+        setEditedClient(prev => ({ ...prev, is_inactive: false }));
+        toast.success("Client has been reactivated successfully.");
+        router.refresh();
+      }
+    } catch (error: any) {
+      handleError(error, 'An error occurred while reactivating the client. Please try again.');
     }
   };
 
   const handleReactivateClient = async (reactivateContacts: boolean) => {
     try {
-      if (reactivateContacts) {
-        // Reactivate all contacts and their associated users
-        const result = await reactivateClientContacts(editedClient.client_id);
+      // Use atomic server action to reactivate client and optionally contacts in a single transaction
+      const result = await markClientActiveWithContacts(editedClient.client_id, reactivateContacts);
 
-        if (!result.success) {
-          toast.error(result.message || 'Failed to reactivate contacts');
-          setIsReactivateDialogOpen(false);
-          return;
-        }
+      if (!result.success) {
+        handleError(new Error(result.message || 'Failed to reactivate client'));
+        setIsReactivateDialogOpen(false);
+        return;
+      }
 
-        // Update the client to be active and save
-        const updatedClient = await updateClient(editedClient.client_id, { is_inactive: false });
+      // Update local state immediately
+      setEditedClient(prev => ({ ...prev, is_inactive: false }));
+      setHasUnsavedChanges(false);
 
-        // Update local state immediately
-        setEditedClient(updatedClient);
-        setHasUnsavedChanges(false);
-
+      if (reactivateContacts && result.contactsReactivated > 0) {
         toast.success(`Client and ${result.contactsReactivated} contact(s) have been reactivated successfully.`);
       } else {
-        // Only reactivate the client (skip contacts)
-        const updatedClient = await updateClient(editedClient.client_id, { is_inactive: false });
-
-        // Update local state immediately
-        setEditedClient(updatedClient);
-        setHasUnsavedChanges(false);
-
         toast.success('Client has been reactivated successfully.');
       }
 
       setIsReactivateDialogOpen(false);
+      router.refresh();
     } catch (error: any) {
-      console.error('Error reactivating client:', error);
-      toast.error('An error occurred while reactivating the client. Please try again.');
+      handleError(error, 'An error occurred while reactivating the client. Please try again.');
     }
   };
 
@@ -330,20 +420,31 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
     // Keep the client inactive - no changes
   };
 
-  const handleDeactivateClient = async () => {
+  const handleDeactivateClient = async (deactivateContacts: boolean) => {
     try {
-      // Deactivate the client (contacts and users will be automatically deactivated by the server action)
-      const updatedClient = await updateClient(editedClient.client_id, { is_inactive: true });
+      // Use atomic server action to deactivate client and optionally contacts in a single transaction
+      const result = await markClientInactiveWithContacts(editedClient.client_id, deactivateContacts);
+
+      if (!result.success) {
+        handleError(new Error(result.message || 'Failed to deactivate client'));
+        setIsDeactivateDialogOpen(false);
+        return;
+      }
 
       // Update local state immediately
-      setEditedClient(updatedClient);
+      setEditedClient(prev => ({ ...prev, is_inactive: true }));
       setHasUnsavedChanges(false);
 
-      toast.success(`Client and ${activeContactsToDeactivate.length} contact(s) have been deactivated successfully.`);
+      if (deactivateContacts && result.contactsDeactivated > 0) {
+        toast.success(`Client and ${result.contactsDeactivated} contact(s) have been deactivated successfully.`);
+      } else {
+        toast.success('Client has been marked as inactive successfully.');
+      }
+
       setIsDeactivateDialogOpen(false);
+      router.refresh();
     } catch (error: any) {
-      console.error('Error deactivating client:', error);
-      toast.error('An error occurred while deactivating the client. Please try again.');
+      handleError(error, 'An error occurred while deactivating the client. Please try again.');
     }
   };
 
@@ -356,39 +457,39 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
     setIsDeleteDialogOpen(false);
     setDeleteError(null);
     setShowDeactivateOption(false);
+    setDeleteDependencies(null);
   };
 
   // Helper function to handle dependency errors (copied from main Clients page)
-  const handleDependencyError = (result: any, setError: (error: string) => void) => {
-    const dependencies = result.dependencies || {};
-    const dependencyMessages: string[] = [];
-
-    if (dependencies.tickets > 0) {
-      dependencyMessages.push(`${dependencies.tickets} ticket${dependencies.tickets !== 1 ? 's' : ''}`);
-    }
-    if (dependencies.contacts > 0) {
-      dependencyMessages.push(`${dependencies.contacts} contact${dependencies.contacts !== 1 ? 's' : ''}`);
-    }
-    if (dependencies.projects > 0) {
-      dependencyMessages.push(`${dependencies.projects} project${dependencies.projects !== 1 ? 's' : ''}`);
-    }
-
-    if (dependencyMessages.length > 0) {
-      const dependencyText = dependencyMessages.join(', ');
-      setError(`Cannot delete this client because it has associated ${dependencyText}. You can mark the client as inactive instead.`);
-    } else {
-      setError('Cannot delete this client because it has associated data. You can mark the client as inactive instead.');
-    }
+  const handleDependencyError = (result: any) => {
+    // Use counts from the result which contains: contact, ticket, project, invoice, etc.
+    // Only include counts that are > 0
+    const counts = result.counts || {};
+    setDeleteDependencies({
+      contacts: counts['contact'] > 0 ? counts['contact'] : undefined,
+      tickets: counts['ticket'] > 0 ? counts['ticket'] : undefined,
+      projects: counts['project'] > 0 ? counts['project'] : undefined,
+      invoices: counts['invoice'] > 0 ? counts['invoice'] : undefined,
+      documents: counts['document'] > 0 ? counts['document'] : undefined,
+      interactions: counts['interaction'] > 0 ? counts['interaction'] : undefined,
+      assets: counts['asset'] > 0 ? counts['asset'] : undefined,
+      service_usage: counts['service_usage'] > 0 ? counts['service_usage'] : undefined,
+      bucket_usage: counts['bucket_usage'] > 0 ? counts['bucket_usage'] : undefined,
+    });
   };
 
   // 1. Implement refreshClientData function
   const refreshClientData = useCallback(async () => {
-    if (!client?.client_id) return; // Ensure client_id is available
+    if (!client?.client_id) return;
 
     try {
       const latestClientData = await getClientById(client.client_id);
       if (latestClientData) {
-        setEditedClient(latestClientData);
+        setEditedClient({
+          ...latestClientData,
+          client_type: latestClientData.client_type || 'company'
+        });
+        setHasUnsavedChanges(false);
       }
     } catch (error) {
       console.error('Error refreshing client data:', error);
@@ -396,34 +497,32 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
     }
   }, [client?.client_id]);
 
-  // 2. Implement Initial Load Logic
+  // Combined Initial Load Logic
   useEffect(() => {
-    // Set initial state when the client prop changes
     setEditedClient({
       ...client,
-      // Ensure client_type has a value
       client_type: client.client_type || 'company'
     });
-    // Reset unsaved changes flag when client prop changes
     setHasUnsavedChanges(false);
-  }, [client]); // Dependency on the client prop
-  
-  useEffect(() => {
-    if (editedClient?.logoUrl !== client?.logoUrl) {
-      // Logo URL has changed
-    }
-  }, [editedClient?.logoUrl, client?.logoUrl]);
+  }, [client]);
 
-  // Existing useEffect for fetching user and users
+  // Fetch current user once on mount
   useEffect(() => {
     const fetchUser = async () => {
       try {
         const user = await getCurrentUser();
-        setCurrentUser(user);
+        if (user) {
+          setCurrentUser(prev => (prev?.user_id === user.user_id ? prev : user));
+        }
       } catch (error) {
         console.error('Error fetching current user:', error);
       }
     };
+    fetchUser();
+  }, []);
+
+  // Fetch MSP users once or when needed
+  useEffect(() => {
     const fetchAllUsers = async () => {
       if (internalUsers.length > 0) return;
       setIsLoadingUsers(true);
@@ -436,8 +535,6 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
         setIsLoadingUsers(false);
       }
     };
-
-    fetchUser();
     fetchAllUsers();
   }, [internalUsers.length]);
 
@@ -459,10 +556,8 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
       }
     };
 
-    if (currentUser) {
-      fetchTicketFormOptions();
-    }
-  }, [currentUser]);
+    fetchTicketFormOptions();
+  }, [currentUser?.user_id]);
 
   // Fetch tags when component mounts
   useEffect(() => {
@@ -476,36 +571,6 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
     };
     fetchTags();
   }, [client.client_id]);
-
-  // Load note content and document metadata when component mounts
-  useEffect(() => {
-    const loadNoteContent = async () => {
-      if (editedClient.notes_document_id) {
-        try {
-          const document = await getDocument(editedClient.notes_document_id);
-          setNoteDocument(document);
-          const content = await getBlockContent(editedClient.notes_document_id);
-          if (content && content.block_data) {
-            const blockData = typeof content.block_data === 'string'
-              ? JSON.parse(content.block_data)
-              : content.block_data;
-            setCurrentContent(blockData);
-          } else {
-             setCurrentContent(DEFAULT_BLOCK);
-          }
-        } catch (error) {
-          console.error('Error loading note content:', error);
-           setCurrentContent(DEFAULT_BLOCK);
-        }
-      } else {
-         setCurrentContent(DEFAULT_BLOCK);
-         setNoteDocument(null);
-      }
-    };
-
-    loadNoteContent();
-  }, [editedClient.notes_document_id]);
-
 
   const handleFieldChange = async (field: string, value: string | boolean) => {
     // Check if client is being deactivated (is_inactive changing from false to true)
@@ -691,73 +756,13 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
     setTags(updatedTags);
   };
 
-  const handleContentChange = (blocks: PartialBlock[]) => {
-    setCurrentContent(blocks);
-    setHasUnsavedNoteChanges(true);
-  };
-
-  const handleSaveNote = async () => {
-    try {
-      if (!currentUser) {
-        console.error('Cannot save note: No current user');
-        return;
-      }
-
-      // Convert blocks to JSON string
-      const blockData = JSON.stringify(currentContent);
-      
-      if (editedClient.notes_document_id) {
-        // Update existing note document
-        await updateBlockContent(editedClient.notes_document_id, {
-          block_data: blockData,
-          user_id: currentUser.user_id
-        });
-        
-        // Refresh document metadata to show updated timestamp
-        const updatedDocument = await getDocument(editedClient.notes_document_id);
-        setNoteDocument(updatedDocument);
-      } else {
-        // Create new note document
-        const { document_id } = await createBlockDocument({
-          document_name: `${editedClient.client_name} Notes`,
-          user_id: currentUser.user_id,
-          block_data: blockData,
-          entityId: editedClient.client_id,
-          entityType: 'client'
-        });
-        
-        // Update client with the new notes_document_id
-        await updateClient(editedClient.client_id, {
-          notes_document_id: document_id
-        });
-        
-        // Update local state
-        setEditedClient(prev => ({
-          ...prev,
-          notes_document_id: document_id
-        }));
-        
-        // Get the newly created document metadata
-        const newDocument = await getDocument(document_id);
-        setNoteDocument(newDocument);
-      }
-      
-      setHasUnsavedNoteChanges(false);
-      toast.success("Note saved successfully.");
-    } catch (error) {
-      console.error('Error saving note:', error);
-      toast.error("Failed to save note. Please try again.");
-    }
-  };
-  
-
-  const handleTabChange = async (tabValue: string) => {
+  const handleTabChange = useCallback(async (tabValue: string) => {
     const params = new URLSearchParams(searchParams?.toString() || '');
     params.set('tab', tabValue);
-    router.push(`${pathname}?${params.toString()}`);
-  };
+    memoizedRouter.push(`${pathname}?${params.toString()}`);
+  }, [pathname, memoizedRouter, searchParams]);
 
-  const tabContent = [
+  const tabContent = useMemo(() => [
     {
       label: "Details",
       content: (
@@ -888,8 +893,9 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
                 </Button>
               </div>
               <div>
-                <ClientLocations 
-                  clientId={editedClient.client_id} 
+                <ClientLocations
+                  key={locationsRefreshKey}
+                  clientId={editedClient.client_id}
                   isEditing={false}
                 />
               </div>
@@ -998,7 +1004,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
               entityId={client.client_id}
               entityType="client"
               onDocumentCreated={async () => {
-                router.refresh();
+                memoizedRouter.refresh();
               }}
             />
           ) : (
@@ -1080,47 +1086,11 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
     {
       label: "Notes",
       content: (
-        <div className="space-y-6 bg-white p-6 rounded-lg shadow-sm">
-          {editedClient.notes && editedClient.notes.trim() !== '' && (
-            <div className="bg-gray-100 border border-gray-200 rounded-md p-4">
-              <h4 className="text-sm font-semibold text-gray-700 mb-2">Initial Note</h4>
-              <p className="text-sm text-gray-700 whitespace-pre-wrap">{editedClient.notes}</p>
-            </div>
-          )}
-
-          {/* Rich Text Editor Section Label */}
-          <h4 className="text-md font-semibold text-gray-800 pt-2">Formatted Notes</h4>
-
-          {/* Note metadata */}
-          {noteDocument && noteDocument.updated_at && (
-            <div className="bg-gray-50 p-3 rounded-md border border-gray-200 text-xs text-gray-600">
-              <div className="flex justify-between items-center flex-wrap gap-2"> 
-                <div>
-                  <span className="font-medium">Last updated:</span> {new Date(noteDocument.updated_at).toLocaleDateString()} at {new Date(noteDocument.updated_at).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}
-                </div>
-              </div>
-            </div>
-          )}
-
-          <TextEditor
-            id={`${id}-editor`}
-            initialContent={currentContent}
-            onContentChange={handleContentChange}
+        <div className="bg-white p-6 rounded-lg shadow-sm">
+          <ClientNotesPanel
+            clientId={editedClient.client_id}
+            legacyNotes={editedClient.notes}
           />
-          <div className="flex justify-end space-x-2">
-            <Button
-              id={`${id}-save-note-btn`}
-              onClick={handleSaveNote}
-              disabled={!hasUnsavedNoteChanges}
-              className={`text-white transition-colors ${
-                hasUnsavedNoteChanges
-                  ? "bg-[rgb(var(--color-primary-500))] hover:bg-[rgb(var(--color-primary-600))]"
-                  : "bg-[rgb(var(--color-border-400))] cursor-not-allowed"
-              }`}
-            >
-              Save Note
-            </Button>
-          </div>
         </div>
       )
     },
@@ -1137,17 +1107,43 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
         </div>
       )
     }
-  ];
+  ], [
+    editedClient, 
+    internalUsers, 
+    isLoadingUsers, 
+    t, 
+    id, 
+    tags, 
+    handleTagsChange, 
+    isInDrawer, 
+    locationsRefreshKey, 
+    surveySummary, 
+    hasAttemptedSubmit, 
+    fieldErrors, 
+    handleSave, 
+    isSaving, 
+    setIsQuickAddTicketOpen, 
+    ticketFormOptions, 
+    client.client_id, 
+    client.client_name, 
+    handleBillingConfigSave, 
+    contacts, 
+    isBillingEnabled, 
+    currentUser, 
+    documents, 
+    memoizedRouter,
+    interactions
+  ]);
 
   // Find the matching tab label case-insensitively
-  const findTabLabel = (urlTab: string | null | undefined): string => {
+  const findTabLabel = useCallback((urlTab: string | null | undefined): string => {
     if (!urlTab) return 'Details';
     
     const matchingTab = tabContent.find(
       tab => tab.label.toLowerCase() === urlTab.toLowerCase()
     );
     return matchingTab?.label || 'Details';
-  };
+  }, [tabContent]);
 
   return (
     <ReflectionContainer id={id} label="Client Details">
@@ -1203,16 +1199,18 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
             </Button>
           )}
 
-          <Button
-            id={`${id}-delete-client-button`}
-            onClick={handleDeleteClient}
-            variant="destructive"
-            size="sm"
-            className="flex items-center mr-8"
-          >
-            <Trash2 className="h-4 w-4 mr-2" />
-            Delete
-          </Button>
+          <div className="flex items-center gap-2 mr-8">
+            <Button
+              id={`${id}-delete-client-button`}
+              onClick={handleDeleteClient}
+              variant="destructive"
+              size="sm"
+              className="flex items-center"
+            >
+              <Trash2 className="h-4 w-4 mr-2" />
+              Delete
+            </Button>
+          </div>
         </div>
       </div>
 
@@ -1237,9 +1235,12 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
           }}
         />
 
-        <Dialog 
-          isOpen={isLocationsDialogOpen} 
-          onClose={() => setIsLocationsDialogOpen(false)} 
+        <Dialog
+          isOpen={isLocationsDialogOpen}
+          onClose={() => {
+            setIsLocationsDialogOpen(false);
+            setLocationsRefreshKey(prev => prev + 1);
+          }}
           title={t('clients.locations.dialogTitle', 'Manage Locations', { client: editedClient.client_name })}
         >
           <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
@@ -1255,36 +1256,122 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
           id="delete-client-dialog"
           isOpen={isDeleteDialogOpen}
           onClose={resetDeleteState}
-          onConfirm={confirmDelete}
+          onConfirm={editedClient.is_inactive && showDeactivateOption ? resetDeleteState : showDeactivateOption ? handleMarkClientInactiveAll : confirmDelete}
           title="Delete Client"
           message={
-            deleteError
-              ? deleteError
-              : "Are you sure you want to delete this client? This action cannot be undone."
+            editedClient.is_inactive && showDeactivateOption && deleteDependencies ? (
+              <div className="space-y-4">
+                <div className="bg-amber-50 border border-amber-200 rounded-md p-4">
+                  <p className="text-amber-800">
+                    <span className="font-semibold">Note:</span> This client is already marked as inactive.
+                  </p>
+                </div>
+                <p className="text-gray-700">Unable to delete this client due to the following associated records:</p>
+                <ul className="list-disc list-inside space-y-1 text-gray-700">
+                  {deleteDependencies.contacts && deleteDependencies.contacts > 0 && (
+                    <li>{deleteDependencies.contacts} contact{deleteDependencies.contacts !== 1 ? 's' : ''}</li>
+                  )}
+                  {deleteDependencies.tickets && deleteDependencies.tickets > 0 && (
+                    <li>{deleteDependencies.tickets} ticket{deleteDependencies.tickets !== 1 ? 's' : ''}</li>
+                  )}
+                  {deleteDependencies.projects && deleteDependencies.projects > 0 && (
+                    <li>{deleteDependencies.projects} project{deleteDependencies.projects !== 1 ? 's' : ''}</li>
+                  )}
+                  {deleteDependencies.invoices && deleteDependencies.invoices > 0 && (
+                    <li>{deleteDependencies.invoices} invoice{deleteDependencies.invoices !== 1 ? 's' : ''}</li>
+                  )}
+                  {deleteDependencies.documents && deleteDependencies.documents > 0 && (
+                    <li>{deleteDependencies.documents} document{deleteDependencies.documents !== 1 ? 's' : ''}</li>
+                  )}
+                  {deleteDependencies.interactions && deleteDependencies.interactions > 0 && (
+                    <li>{deleteDependencies.interactions} interaction{deleteDependencies.interactions !== 1 ? 's' : ''}</li>
+                  )}
+                  {deleteDependencies.assets && deleteDependencies.assets > 0 && (
+                    <li>{deleteDependencies.assets} asset{deleteDependencies.assets !== 1 ? 's' : ''}</li>
+                  )}
+                  {deleteDependencies.service_usage && deleteDependencies.service_usage > 0 && (
+                    <li>{deleteDependencies.service_usage} service usage record{deleteDependencies.service_usage !== 1 ? 's' : ''}</li>
+                  )}
+                  {deleteDependencies.bucket_usage && deleteDependencies.bucket_usage > 0 && (
+                    <li>{deleteDependencies.bucket_usage} bucket usage record{deleteDependencies.bucket_usage !== 1 ? 's' : ''}</li>
+                  )}
+                </ul>
+                <p className="text-gray-700">Please remove or reassign these items before deleting the client.</p>
+              </div>
+            ) : showDeactivateOption && deleteDependencies ? (
+              <div className="space-y-4">
+                <p className="text-gray-700">Unable to delete this client.</p>
+                <div>
+                  <p className="text-gray-700 mb-2">This client has the following associated records:</p>
+                  <ul className="list-disc list-inside space-y-1 text-gray-700">
+                    {deleteDependencies.contacts && deleteDependencies.contacts > 0 && (
+                      <li>{deleteDependencies.contacts} contact{deleteDependencies.contacts !== 1 ? 's' : ''}</li>
+                    )}
+                    {deleteDependencies.tickets && deleteDependencies.tickets > 0 && (
+                      <li>{deleteDependencies.tickets} ticket{deleteDependencies.tickets !== 1 ? 's' : ''}</li>
+                    )}
+                    {deleteDependencies.projects && deleteDependencies.projects > 0 && (
+                      <li>{deleteDependencies.projects} project{deleteDependencies.projects !== 1 ? 's' : ''}</li>
+                    )}
+                    {deleteDependencies.invoices && deleteDependencies.invoices > 0 && (
+                      <li>{deleteDependencies.invoices} invoice{deleteDependencies.invoices !== 1 ? 's' : ''}</li>
+                    )}
+                    {deleteDependencies.documents && deleteDependencies.documents > 0 && (
+                      <li>{deleteDependencies.documents} document{deleteDependencies.documents !== 1 ? 's' : ''}</li>
+                    )}
+                    {deleteDependencies.interactions && deleteDependencies.interactions > 0 && (
+                      <li>{deleteDependencies.interactions} interaction{deleteDependencies.interactions !== 1 ? 's' : ''}</li>
+                    )}
+                    {deleteDependencies.assets && deleteDependencies.assets > 0 && (
+                      <li>{deleteDependencies.assets} asset{deleteDependencies.assets !== 1 ? 's' : ''}</li>
+                    )}
+                    {deleteDependencies.service_usage && deleteDependencies.service_usage > 0 && (
+                      <li>{deleteDependencies.service_usage} service usage record{deleteDependencies.service_usage !== 1 ? 's' : ''}</li>
+                    )}
+                    {deleteDependencies.bucket_usage && deleteDependencies.bucket_usage > 0 && (
+                      <li>{deleteDependencies.bucket_usage} bucket usage record{deleteDependencies.bucket_usage !== 1 ? 's' : ''}</li>
+                    )}
+                  </ul>
+                </div>
+                <Alert variant="info">
+                  <AlertDescription>
+                    <strong>Alternative Option:</strong> You can mark this client as inactive instead. Inactive clients are hidden from most views but retain all their data and can be marked as active later.
+                    {deleteDependencies.contacts && deleteDependencies.contacts > 0 && (
+                      <p className="mt-2">
+                        Would you like to also deactivate the {deleteDependencies.contacts} associated contact{deleteDependencies.contacts !== 1 ? 's' : ''}?
+                      </p>
+                    )}
+                  </AlertDescription>
+                </Alert>
+              </div>
+            ) : deleteError ? (
+              deleteError
+            ) : (
+              "Are you sure you want to delete this client? This action cannot be undone."
+            )
           }
-          confirmLabel={deleteError ? undefined : (showDeactivateOption ? undefined : "Delete")}
-          cancelLabel={deleteError ? "Close" : "Cancel"}
+          confirmLabel={editedClient.is_inactive && showDeactivateOption ? "Close" : showDeactivateOption ? (deleteDependencies?.contacts && deleteDependencies.contacts > 0 ? "Client & Contacts" : "Mark as Inactive") : "Delete"}
+          cancelLabel="Cancel"
+          onCancel={showDeactivateOption && deleteDependencies?.contacts && deleteDependencies.contacts > 0 ? handleMarkClientInactiveOnly : undefined}
+          thirdButtonLabel={showDeactivateOption && deleteDependencies?.contacts && deleteDependencies.contacts > 0 ? "Client Only" : undefined}
           isConfirming={false}
         />
 
-        {/* Deactivate Warning Dialog */}
+        {/* Deactivate Confirmation Dialog */}
         <ConfirmationDialog
           id="deactivate-client-dialog"
           isOpen={isDeactivateDialogOpen}
           onClose={handleCancelDeactivation}
-          onConfirm={handleDeactivateClient}
+          onConfirm={() => handleDeactivateClient(true)}
           title="Deactivate Client"
           message={
             <div className="space-y-3">
-              <p className="font-semibold text-orange-600">
-                ⚠️ Warning: This will deactivate the client and all associated contacts and users.
-              </p>
               <p>
-                This client has {activeContactsToDeactivate.length} active contact{activeContactsToDeactivate.length !== 1 ? 's' : ''}. Deactivating the client will also deactivate {activeContactsToDeactivate.length === 1 ? 'this contact and their user account' : 'all these contacts and their user accounts'}.
+                This client has {activeContactsToDeactivate.length} active contact{activeContactsToDeactivate.length !== 1 ? 's' : ''}. Would you like to deactivate {activeContactsToDeactivate.length === 1 ? 'this contact' : 'all these contacts'} as well?
               </p>
               {activeContactsToDeactivate.length > 0 && (
                 <div className="mt-3">
-                  <p className="text-sm font-medium text-gray-700 mb-2">Active contacts that will be deactivated:</p>
+                  <p className="text-sm font-medium text-gray-700 mb-2">Active contacts:</p>
                   <ul className="list-disc list-inside space-y-1 text-sm text-gray-600 max-h-40 overflow-y-auto">
                     {activeContactsToDeactivate.map((contact) => (
                       <li key={contact.contact_name_id}>
@@ -1300,8 +1387,10 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
               </p>
             </div>
           }
-          confirmLabel="Deactivate All"
+          confirmLabel="Client & Contacts"
           cancelLabel="Cancel"
+          onCancel={() => handleDeactivateClient(false)}
+          thirdButtonLabel="Client Only"
           isConfirming={false}
         />
 
@@ -1332,7 +1421,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
               )}
             </div>
           }
-          confirmLabel="Reactivate All"
+          confirmLabel="Client & Contacts"
           cancelLabel="Cancel"
           onCancel={() => handleReactivateClient(false)}
           thirdButtonLabel="Client Only"

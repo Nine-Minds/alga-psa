@@ -148,9 +148,17 @@ export function AssetAlertsSection({ asset, className = '' }: AssetAlertsSection
   return (
     <div className={`bg-white rounded-lg border border-gray-200 ${className}`}>
       {/* Header */}
-      <button
-        className="w-full flex items-center justify-between p-4 text-left hover:bg-gray-50"
+      <div
+        role="button"
+        tabIndex={0}
+        className="w-full flex items-center justify-between p-4 text-left hover:bg-gray-50 cursor-pointer"
         onClick={() => setIsExpanded(!isExpanded)}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            setIsExpanded(!isExpanded);
+          }
+        }}
       >
         <div className="flex items-center gap-2">
           <AlertTriangle className={`h-5 w-5 ${hasAlerts ? 'text-amber-500' : 'text-gray-400'}`} />
@@ -180,7 +188,7 @@ export function AssetAlertsSection({ asset, className = '' }: AssetAlertsSection
             <ChevronDown className="h-4 w-4 text-gray-400" />
           )}
         </div>
-      </button>
+      </div>
 
       {/* Content */}
       {isExpanded && (

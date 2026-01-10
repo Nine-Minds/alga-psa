@@ -36,6 +36,8 @@ interface CustomSelectProps {
   allowClear?: boolean;
   /** Whether the select should be modal (prevents interaction with outside elements) */
   modal?: boolean;
+  /** Whether to show the placeholder as a disabled option in the dropdown (default: true) */
+  showPlaceholderInDropdown?: boolean;
 }
 
 const PLACEHOLDER_VALUE = '__SELECT_PLACEHOLDER__';
@@ -54,8 +56,9 @@ const CustomSelect: React.FC<CustomSelectProps & AutomationProps> = ({
   "data-automation-type": dataAutomationType = 'select',
   "data-automation-id": dataAutomationId,
   required = false,
-  allowClear = false, // Added default value
+  allowClear = false,
   modal,
+  showPlaceholderInDropdown = true,
   ...props
 }): React.JSX.Element => {
   const { modal: parentModal } = useModality();
@@ -135,8 +138,10 @@ const CustomSelect: React.FC<CustomSelectProps & AutomationProps> = ({
   // Explicit prop overrides parent modality context
   const isModal = modal !== undefined ? modal : parentModal;
 
+  const containerId = finalAutomationProps.id ? `${finalAutomationProps.id}-container` : undefined;
+
   return (
-    <div className={label ? 'mb-4' : ''} id={`${id}`} data-automation-type={dataAutomationType} suppressHydrationWarning>
+    <div className={label ? 'mb-4' : ''} id={containerId} data-automation-type={dataAutomationType} suppressHydrationWarning>
       {label && (
         <label className="block text-sm font-medium text-gray-700 mb-1">
           {label}
@@ -170,7 +175,7 @@ const CustomSelect: React.FC<CustomSelectProps & AutomationProps> = ({
           }
         }}
       >
-        <RadixSelect.Trigger
+      <RadixSelect.Trigger
           {...finalAutomationProps}
           data-automation-type={dataAutomationType}
           className={`
@@ -181,7 +186,9 @@ const CustomSelect: React.FC<CustomSelectProps & AutomationProps> = ({
             border border-[rgb(var(--color-border-400))] text-[rgb(var(--color-text-700))]
             hover:bg-[rgb(var(--color-primary-50))] hover:text-[rgb(var(--color-primary-700))]
             focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2
-            disabled:pointer-events-none
+            disabled:pointer-events-none disabled:cursor-not-allowed
+            disabled:bg-gray-100 disabled:text-gray-400 disabled:border-gray-200
+            disabled:hover:bg-gray-100 disabled:hover:text-gray-400
             ${className}
             ${customStyles?.trigger || ''}
           `}
@@ -198,7 +205,7 @@ const CustomSelect: React.FC<CustomSelectProps & AutomationProps> = ({
             placeholder={placeholder}
             className="flex-1 text-left"
           >
-            <span className={!selectedOption ? 'text-gray-400' : ''}>
+            <span className={!selectedOption || disabled ? 'text-gray-400' : ''}>
               {selectedOption?.label || placeholder}
             </span>
           </RadixSelect.Value>
@@ -227,17 +234,19 @@ const CustomSelect: React.FC<CustomSelectProps & AutomationProps> = ({
             
             <RadixSelect.Viewport className="p-1 max-h-[300px] overflow-y-auto">
               {/* Add a placeholder option if needed */}
-              <RadixSelect.Item
-                value={PLACEHOLDER_VALUE}
-                className={`
-                  relative flex items-center px-3 py-2 text-sm rounded text-gray-500
-                  cursor-default bg-white select-none
-                  ${customStyles?.item || ''}
-                `}
-                disabled
-              >
-                <RadixSelect.ItemText>{placeholder}</RadixSelect.ItemText>
-              </RadixSelect.Item>
+              {showPlaceholderInDropdown && (
+                <RadixSelect.Item
+                  value={PLACEHOLDER_VALUE}
+                  className={`
+                    relative flex items-center px-3 py-2 text-sm rounded text-gray-500
+                    cursor-default bg-white select-none
+                    ${customStyles?.item || ''}
+                  `}
+                  disabled
+                >
+                  <RadixSelect.ItemText>{placeholder}</RadixSelect.ItemText>
+                </RadixSelect.Item>
+              )}
 
               {allowClear && value !== undefined && value !== null && value !== '' && (
                 <RadixSelect.Item

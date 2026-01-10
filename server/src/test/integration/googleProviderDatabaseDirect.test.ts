@@ -87,15 +87,15 @@ describe('Google Provider Database Direct Integration Tests', () => {
         mailbox: 'test@gmail.com',
         isActive: true,
         vendorConfig: {
-          clientId: 'test-client-id.apps.googleusercontent.com',
-          clientSecret: 'test-client-secret',
-          projectId: 'test-project-id',
-          redirectUri: 'http://localhost:3000/api/auth/google/callback',
-          pubSubTopic: 'gmail-notifications',
-          pubSubSubscription: 'gmail-webhook-subscription',
-          labelFilters: ['INBOX'],
-          autoProcessEmails: true,
-          maxEmailsPerSync: 50
+          client_id: null,
+          client_secret: null,
+          project_id: 'test-project-id',
+          redirect_uri: 'http://localhost:3000/api/auth/google/callback',
+          pubsub_topic_name: 'gmail-notifications',
+          pubsub_subscription_name: 'gmail-webhook-subscription',
+          label_filters: ['INBOX'],
+          auto_process_emails: true,
+          max_emails_per_sync: 50
         }
       };
 
@@ -112,16 +112,17 @@ describe('Google Provider Database Direct Integration Tests', () => {
       expect(createdProvider.active).toBe(true);
       expect(createdProvider.connection_status).toBe('disconnected');
       
-      // Parse and verify provider_config
-      const vendorConfig = typeof createdProvider.provider_config === 'string' 
-        ? JSON.parse(createdProvider.provider_config)
-        : createdProvider.provider_config;
-        
-      expect(vendorConfig.clientId).toBe('test-client-id.apps.googleusercontent.com');
-      expect(vendorConfig.clientSecret).toBe('test-client-secret');
-      expect(vendorConfig.projectId).toBe('test-project-id');
-      expect(vendorConfig.pubSubTopic).toBe('gmail-notifications');
-      expect(vendorConfig.labelFilters).toEqual(['INBOX']);
+      // Verify vendor config row values
+      const vendorConfig = createdProvider.provider_config as any;
+      expect(vendorConfig.client_id).toBeNull();
+      expect(vendorConfig.client_secret).toBeNull();
+      expect(vendorConfig.project_id).toBe('test-project-id');
+      expect(vendorConfig.pubsub_topic_name).toBe('gmail-notifications');
+
+      const labelFilters = Array.isArray(vendorConfig.label_filters)
+        ? vendorConfig.label_filters
+        : JSON.parse(vendorConfig.label_filters ?? '[]');
+      expect(labelFilters).toEqual(['INBOX']);
 
       // Verify directly in the database
       const dbRecord = await testDb('email_provider_configs')
@@ -147,15 +148,15 @@ describe('Google Provider Database Direct Integration Tests', () => {
         mailbox: 'support@client.com',
         isActive: true,
         vendorConfig: {
-          clientId: 'workspace-client-id.apps.googleusercontent.com',
-          clientSecret: 'workspace-secret',
-          projectId: 'client-project',
-          redirectUri: 'http://localhost:3000/api/auth/google/callback',
-          pubSubTopic: 'workspace-notifications',
-          pubSubSubscription: 'workspace-subscription',
-          labelFilters: ['INBOX', 'Support'],
-          autoProcessEmails: false,
-          maxEmailsPerSync: 100
+          client_id: null,
+          client_secret: null,
+          project_id: 'client-project',
+          redirect_uri: 'http://localhost:3000/api/auth/google/callback',
+          pubsub_topic_name: 'workspace-notifications',
+          pubsub_subscription_name: 'workspace-subscription',
+          label_filters: ['INBOX', 'Support'],
+          auto_process_emails: false,
+          max_emails_per_sync: 100
         }
       };
 
@@ -166,13 +167,14 @@ describe('Google Provider Database Direct Integration Tests', () => {
       expect(createdProvider.provider_type).toBe('google');
       
       // Verify vendor config
-      const vendorConfig = typeof createdProvider.provider_config === 'string' 
-        ? JSON.parse(createdProvider.provider_config)
-        : createdProvider.provider_config;
-        
-      expect(vendorConfig.labelFilters).toEqual(['INBOX', 'Support']);
-      expect(vendorConfig.autoProcessEmails).toBe(false);
-      expect(vendorConfig.maxEmailsPerSync).toBe(100);
+      const vendorConfig = createdProvider.provider_config as any;
+      const labelFilters = Array.isArray(vendorConfig.label_filters)
+        ? vendorConfig.label_filters
+        : JSON.parse(vendorConfig.label_filters ?? '[]');
+
+      expect(labelFilters).toEqual(['INBOX', 'Support']);
+      expect(vendorConfig.auto_process_emails).toBe(false);
+      expect(vendorConfig.max_emails_per_sync).toBe(100);
     });
 
     it('should store all Google-specific configuration fields', async () => {
@@ -185,18 +187,18 @@ describe('Google Provider Database Direct Integration Tests', () => {
         mailbox: 'fullconfig@gmail.com',
         isActive: true,
         vendorConfig: {
-          clientId: 'full-client-id.apps.googleusercontent.com',
-          clientSecret: 'full-secret',
-          projectId: 'full-project',
-          redirectUri: 'https://app.example.com/api/auth/google/callback',
-          pubSubTopic: 'custom-topic',
-          pubSubSubscription: 'custom-subscription',
-          labelFilters: ['INBOX', 'UNREAD', 'CATEGORY_PERSONAL', 'IMPORTANT'],
-          autoProcessEmails: true,
-          maxEmailsPerSync: 500,
-          refreshToken: 'stored-refresh-token',
-          accessToken: 'temp-access-token',
-          tokenExpiry: new Date(Date.now() + 3600000).toISOString(),
+          client_id: null,
+          client_secret: null,
+          project_id: 'full-project',
+          redirect_uri: 'https://app.example.com/api/auth/google/callback',
+          pubsub_topic_name: 'custom-topic',
+          pubsub_subscription_name: 'custom-subscription',
+          label_filters: ['INBOX', 'UNREAD', 'CATEGORY_PERSONAL', 'IMPORTANT'],
+          auto_process_emails: true,
+          max_emails_per_sync: 500,
+          refresh_token: 'stored-refresh-token',
+          access_token: 'temp-access-token',
+          token_expires_at: new Date(Date.now() + 3600000).toISOString(),
           scope: 'https://www.googleapis.com/auth/gmail.readonly https://www.googleapis.com/auth/gmail.modify'
         }
       };
@@ -209,14 +211,16 @@ describe('Google Provider Database Direct Integration Tests', () => {
         .where('tenant', testTenant)
         .first();
 
-      const providerConfig = typeof dbRecord.provider_config === 'string'
-        ? JSON.parse(dbRecord.provider_config)
-        : dbRecord.provider_config;
+      const providerConfig = createdProvider.provider_config as any;
 
       // Verify all fields were saved
-      expect(providerConfig.refreshToken).toBe('stored-refresh-token');
-      expect(providerConfig.labelFilters).toHaveLength(4);
-      expect(providerConfig.maxEmailsPerSync).toBe(500);
+      expect(providerConfig.refresh_token).toBe('stored-refresh-token');
+      expect(
+        Array.isArray(providerConfig.label_filters)
+          ? providerConfig.label_filters
+          : JSON.parse(providerConfig.label_filters ?? '[]')
+      ).toHaveLength(4);
+      expect(providerConfig.max_emails_per_sync).toBe(500);
       expect(providerConfig.scope).toContain('gmail.readonly');
     });
 
@@ -231,12 +235,13 @@ describe('Google Provider Database Direct Integration Tests', () => {
         mailbox: 'initial@gmail.com',
         isActive: true,
         vendorConfig: {
-          clientId: 'initial-client-id.apps.googleusercontent.com',
-          clientSecret: 'initial-secret',
-          projectId: 'initial-project',
-          pubSubTopic: 'initial-topic',
-          pubSubSubscription: 'initial-sub',
-          maxEmailsPerSync: 50
+          client_id: null,
+          client_secret: null,
+          project_id: 'initial-project',
+          redirect_uri: 'http://localhost:3000/api/auth/google/callback',
+          pubsub_topic_name: 'initial-topic',
+          pubsub_subscription_name: 'initial-sub',
+          max_emails_per_sync: 50
         }
       };
 
@@ -261,16 +266,17 @@ describe('Google Provider Database Direct Integration Tests', () => {
       expect(updatedProvider.name).toBe('Updated Gmail Provider');
       expect(updatedProvider.active).toBe(false);
       
-      const vendorConfig = typeof updatedProvider.provider_config === 'string'
-        ? JSON.parse(updatedProvider.provider_config)
-        : updatedProvider.provider_config;
+      const vendorConfig = updatedProvider.provider_config as any;
         
-      expect(vendorConfig.maxEmailsPerSync).toBe(200);
-      expect(vendorConfig.labelFilters).toEqual(['INBOX', 'IMPORTANT', 'SENT']);
+      expect(vendorConfig.max_emails_per_sync).toBe(200);
+      const labelFilters = Array.isArray(vendorConfig.label_filters)
+        ? vendorConfig.label_filters
+        : JSON.parse(vendorConfig.label_filters ?? '[]');
+      expect(labelFilters).toEqual(['INBOX', 'IMPORTANT', 'SENT']);
       
       // Original config should be preserved
-      expect(vendorConfig.clientId).toBe('initial-client-id.apps.googleusercontent.com');
-      expect(vendorConfig.projectId).toBe('initial-project');
+      expect(vendorConfig.project_id).toBe('initial-project');
+      expect(vendorConfig.pubsub_topic_name).toBe('initial-topic');
     });
 
     it('should list Google providers for a tenant', async () => {
@@ -283,7 +289,14 @@ describe('Google Provider Database Direct Integration Tests', () => {
         providerName: 'Gmail Provider 1',
         mailbox: 'provider1@gmail.com',
         isActive: true,
-        vendorConfig: { clientId: 'client1.apps.googleusercontent.com', clientSecret: 'secret1', projectId: 'project1', pubSubTopic: 'topic1', pubSubSubscription: 'sub1' }
+        vendorConfig: {
+          client_id: null,
+          client_secret: null,
+          project_id: 'project1',
+          redirect_uri: 'http://localhost:3000/api/auth/google/callback',
+          pubsub_topic_name: 'topic1',
+          pubsub_subscription_name: 'sub1'
+        }
       });
 
       await emailProviderService.createProvider({
@@ -292,7 +305,14 @@ describe('Google Provider Database Direct Integration Tests', () => {
         providerName: 'Gmail Provider 2',
         mailbox: 'provider2@client.com',
         isActive: true,
-        vendorConfig: { clientId: 'client2.apps.googleusercontent.com', clientSecret: 'secret2', projectId: 'project2', pubSubTopic: 'topic2', pubSubSubscription: 'sub2' }
+        vendorConfig: {
+          client_id: null,
+          client_secret: null,
+          project_id: 'project2',
+          redirect_uri: 'http://localhost:3000/api/auth/google/callback',
+          pubsub_topic_name: 'topic2',
+          pubsub_subscription_name: 'sub2'
+        }
       });
 
       // Also create a Microsoft provider to ensure filtering works
@@ -302,7 +322,7 @@ describe('Google Provider Database Direct Integration Tests', () => {
         providerName: 'Microsoft Provider',
         mailbox: 'microsoft@outlook.com',
         isActive: true,
-        vendorConfig: { clientId: 'ms-client', clientSecret: 'ms-secret' }
+        vendorConfig: { client_id: 'ms-client', client_secret: 'ms-secret', tenant_id: 'common', redirect_uri: 'http://localhost:3000/api/auth/microsoft/callback' }
       });
 
       // List only Google providers

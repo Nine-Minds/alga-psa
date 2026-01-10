@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { IProjectTask, ProjectStatus, IProjectTicketLinkWithDetails, ITaskType } from 'server/src/interfaces/project.interfaces';
+import { IProjectTask, ProjectStatus, IProjectTicketLinkWithDetails, ITaskType, IProjectTaskDependency } from 'server/src/interfaces/project.interfaces';
 import { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
 import { ITag } from 'server/src/interfaces/tag.interfaces';
 import { getTaskTypes } from 'server/src/lib/actions/project-actions/projectTaskActions';
@@ -20,11 +20,13 @@ interface KanbanBoardProps {
   selectedPhase: boolean;
   ticketLinks: { [taskId: string]: IProjectTicketLinkWithDetails[] };
   taskResources: { [taskId: string]: any[] };
+  taskDependencies?: { [taskId: string]: { predecessors: IProjectTaskDependency[]; successors: IProjectTaskDependency[] } };
   taskTags?: Record<string, ITag[]>;
   taskDocumentCounts?: Map<string, number>;
   allTaskTags?: ITag[];
   projectTreeData?: any[]; // Add projectTreeData prop
   animatingTasks: Set<string>;
+  avatarUrls?: Record<string, string | null>;
   onDrop: (e: React.DragEvent, statusId: string, draggedTaskId: string, beforeTaskId: string | null, afterTaskId: string | null) => void;
   onDragOver: (e: React.DragEvent) => void;
   onAddCard: (status: ProjectStatus) => void;
@@ -88,11 +90,13 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
   selectedPhase,
   ticketLinks,
   taskResources,
+  taskDependencies = {},
   taskTags = {},
   taskDocumentCounts = {},
   allTaskTags = [],
   projectTreeData,
   animatingTasks,
+  avatarUrls = {},
   onDrop,
   onDragOver,
   onAddCard,
@@ -166,6 +170,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
             taskTypes={taskTypes}
             ticketLinks={ticketLinks}
             taskResources={taskResources}
+            taskDependencies={taskDependencies}
             taskTags={taskTags}
             taskDocumentCounts={taskDocumentCounts instanceof Map ? Object.fromEntries(taskDocumentCounts.entries()) : {}}
             statusIcon={statusIcon}
@@ -175,6 +180,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
             configuredColor={configuredColor}
             isAddingTask={isAddingTask}
             selectedPhase={selectedPhase}
+            avatarUrls={avatarUrls}
             onDrop={onDrop}
             onDragOver={onDragOver}
             onAddCard={onAddCard}

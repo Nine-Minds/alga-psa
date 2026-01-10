@@ -25,6 +25,7 @@ interface EmailProviderListProps {
   onRetryRenewal: (provider: EmailProvider) => void;
   onReconnectOAuth?: (provider: EmailProvider) => void;
   onResyncProvider?: (provider: EmailProvider) => void;
+  onRunDiagnostics: (provider: EmailProvider) => void;
   onAddClick?: () => void;
 }
 
@@ -38,6 +39,7 @@ export function EmailProviderList({
   onRetryRenewal,
   onReconnectOAuth,
   onResyncProvider,
+  onRunDiagnostics,
   onAddClick
 }: EmailProviderListProps) {
   const [defaultsOptions, setDefaultsOptions] = React.useState<{ value: string; label: string }[]>([]);
@@ -135,6 +137,7 @@ export function EmailProviderList({
             onRetryRenewal={onRetryRenewal}
             onReconnectOAuth={onReconnectOAuth}
             onResyncProvider={onResyncProvider}
+            onRunDiagnostics={onRunDiagnostics}
             onChangeDefaults={handleChangeDefaults}
           />
         ))}

@@ -1,11 +1,9 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { getClientProjects } from 'server/src/lib/actions/client-portal-actions/client-projects';
-import { useDrawer } from "server/src/context/DrawerContext";
-import { DrawerProvider } from "server/src/context/DrawerContext";
-import ProjectDetailView from './ProjectDetailView';
-import { ProjectCard } from './ProjectCard';
 import { DataTable } from 'server/src/components/ui/DataTable';
 import { Input } from 'server/src/components/ui/Input';
 import { Button } from 'server/src/components/ui/Button';
@@ -15,8 +13,9 @@ import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
 import { formatDateOnly } from 'server/src/lib/utils/dateTimeUtils';
 import { useTranslation } from 'server/src/lib/i18n/client';
 
-export function ProjectsOverviewPage() {
+export default function ProjectsOverviewPage() {
   const { t } = useTranslation('clientPortal');
+  const router = useRouter();
   const [projects, setProjects] = useState<IProject[]>([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
@@ -24,22 +23,36 @@ export function ProjectsOverviewPage() {
   const [statusFilter, setStatusFilter] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
   const pageSize = 10;
-  const { openDrawer } = useDrawer();
   
   // Define columns for the DataTable
   const columns: ColumnDefinition<IProject>[] = [
     {
-      title: t('projects.fields.projectName'),
-      dataIndex: 'project_name',
-      width: '30%',
+      title: t('projects.fields.projectNumber'),
+      dataIndex: 'project_number',
+      width: '10%',
       render: (value, record) => (
-        <div className="font-medium">{value}</div>
+        <Link
+          href={`/client-portal/projects/${record.project_id}`}
+          className="font-mono text-sm hover:text-[rgb(var(--color-secondary-600))]"
+          onClick={(e) => e.stopPropagation()}
+        >
+          {value || '-'}
+        </Link>
       )
     },
     {
-      title: t('projects.fields.reference'),
-      dataIndex: 'wbs_code',
-      width: '15%'
+      title: t('projects.fields.projectName'),
+      dataIndex: 'project_name',
+      width: '35%',
+      render: (value, record) => (
+        <Link
+          href={`/client-portal/projects/${record.project_id}`}
+          className="font-medium hover:text-[rgb(var(--color-secondary-600))]"
+          onClick={(e) => e.stopPropagation()}
+        >
+          {value}
+        </Link>
+      )
     },
     {
       title: t('projects.fields.status'),
@@ -69,17 +82,14 @@ export function ProjectsOverviewPage() {
       width: '10%',
       render: (_, record) => {
         return (
-          <Button 
+          <Link
             id={`view-project-${record.project_id}`}
-            variant="ghost" 
-            size="sm"
-            onClick={(e) => {
-              e.stopPropagation();
-              handleViewProject(record);
-            }}
+            href={`/client-portal/projects/${record.project_id}`}
+            className="inline-flex items-center justify-center h-8 w-8 rounded-md hover:bg-gray-100"
+            onClick={(e) => e.stopPropagation()}
           >
             <ExternalLink className="h-4 w-4" />
-          </Button>
+          </Link>
         );
       }
     }
@@ -113,13 +123,9 @@ export function ProjectsOverviewPage() {
     setStatusFilter('all');
     setSearchQuery('');
   };
-  
+
   const handleViewProject = (project: IProject) => {
-    openDrawer(<ProjectDetailView project={project} />);
-  };
-  
-  const handleRowClick = (project: IProject) => {
-    handleViewProject(project);
+    router.push(`/client-portal/projects/${project.project_id}`);
   };
   
   return (
@@ -184,17 +190,8 @@ export function ProjectsOverviewPage() {
         onPageChange={setPage}
         pageSize={pageSize}
         totalItems={totalItems}
-        onRowClick={handleRowClick}
+        onRowClick={handleViewProject}
       />
     </div>
-  );
-}
-
-// Wrap the component with DrawerProvider in the parent component or page file
-export default function ProjectsOverviewPageWithDrawer() {
-  return (
-    <DrawerProvider>
-      <ProjectsOverviewPage />
-    </DrawerProvider>
   );
 }

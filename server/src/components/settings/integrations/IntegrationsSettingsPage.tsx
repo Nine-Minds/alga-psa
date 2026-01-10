@@ -18,10 +18,12 @@ import {
   Mail,
   Calendar,
   CreditCard,
+  Cloud,
 } from 'lucide-react';
 import AccountingIntegrationsSetup from './AccountingIntegrationsSetup';
 import { EmailProviderConfiguration } from '../../EmailProviderConfiguration';
 import { CalendarIntegrationsSettings } from '../../calendar/CalendarIntegrationsSettings';
+import { GoogleIntegrationSettings } from './GoogleIntegrationSettings';
 import dynamic from 'next/dynamic';
 import Spinner from '../../ui/Spinner';
 
@@ -101,14 +103,14 @@ const IntegrationsSettingsPage: React.FC = () => {
   
   // Initialize selected category from URL param or default to 'accounting'
   const [selectedCategory, setSelectedCategory] = useState<string>(
-    categoryParam && ['accounting', 'rmm', 'communication', 'calendar', 'payments'].includes(categoryParam)
+    categoryParam && ['accounting', 'rmm', 'communication', 'calendar', 'providers', 'payments'].includes(categoryParam)
       ? categoryParam
       : 'accounting'
   );
-  
+
   // Update selected category when URL param changes
   useEffect(() => {
-    if (categoryParam && ['accounting', 'rmm', 'communication', 'calendar', 'payments'].includes(categoryParam)) {
+    if (categoryParam && ['accounting', 'rmm', 'communication', 'calendar', 'providers', 'payments'].includes(categoryParam)) {
       setSelectedCategory(categoryParam);
     }
   }, [categoryParam]);
@@ -147,7 +149,7 @@ const IntegrationsSettingsPage: React.FC = () => {
     {
       id: 'communication',
       label: 'Communication',
-      description: 'Connect email and calendar services',
+      description: 'Connect email services for ticket processing',
       icon: Mail,
       integrations: [
         {
@@ -168,9 +170,17 @@ const IntegrationsSettingsPage: React.FC = () => {
             </Card>
           ),
         },
+      ],
+    },
+    {
+      id: 'calendar',
+      label: 'Calendar',
+      description: 'Connect Google or Outlook calendars to keep dispatch and client appointments aligned',
+      icon: Calendar,
+      integrations: [
         {
-          id: 'calendar',
-          name: 'Calendar',
+          id: 'calendar-sync',
+          name: 'Calendar Sync',
           description: 'Sync schedule entries with Google or Microsoft calendars',
           component: () => (
             <Card>
@@ -184,6 +194,32 @@ const IntegrationsSettingsPage: React.FC = () => {
                 <CalendarIntegrationsSettings />
               </CardContent>
             </Card>
+          ),
+        },
+      ],
+    },
+    {
+      id: 'providers',
+      label: 'Providers',
+      description: 'Configure shared provider credentials used by integrations.',
+      icon: Cloud,
+      integrations: [
+        {
+          id: 'google',
+          name: 'Google',
+          description: 'Tenant-owned Google Cloud credentials for Gmail and Calendar',
+          component: () => (
+            <div className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Provider Credentials</CardTitle>
+                  <CardDescription>
+                    Configure Google first, then connect Google accounts from the Inbound Email and Calendar integration screens.
+                  </CardDescription>
+                </CardHeader>
+              </Card>
+              <GoogleIntegrationSettings />
+            </div>
           ),
         },
       ],
@@ -271,6 +307,11 @@ const IntegrationsSettingsPage: React.FC = () => {
           const category = visibleCategories.find(cat => cat.label === tabLabel);
           if (category) {
             setSelectedCategory(category.id);
+            const currentSearchParams = new URLSearchParams(window.location.search);
+            currentSearchParams.set('tab', 'integrations');
+            currentSearchParams.set('category', category.id);
+            const newUrl = `${window.location.pathname}?${currentSearchParams.toString()}`;
+            window.history.pushState({}, '', newUrl);
           }
         }}
       />

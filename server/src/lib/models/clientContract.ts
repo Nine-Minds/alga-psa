@@ -35,6 +35,35 @@ const ClientContract = {
       throw error;
     }
   },
+  async getActiveByClientIds(clientIds: string[]): Promise<IClientContract[]> {
+    if (clientIds.length === 0) {
+      return [];
+    }
+
+    const { knex: db, tenant } = await createTenantKnex();
+    if (!tenant) {
+      throw new Error('Tenant context is required for fetching client contracts');
+    }
+
+    try {
+      const rows = await db('client_contracts as cc')
+        .leftJoin('contracts as c', function joinContracts() {
+          this.on('cc.contract_id', '=', 'c.contract_id').andOn('cc.tenant', '=', 'c.tenant');
+        })
+        .whereIn('cc.client_id', clientIds)
+        .andWhere({ 'cc.tenant': tenant, 'cc.is_active': true })
+        .orderBy([
+          { column: 'cc.client_id', order: 'asc' },
+          { column: 'cc.start_date', order: 'desc' }
+        ])
+        .select('cc.*', 'c.billing_frequency as contract_billing_frequency');
+
+      return rows.map(normalizeClientContract);
+    } catch (error) {
+      console.error('Error fetching contracts for clients:', error);
+      throw error;
+    }
+  },
 
   async getById(clientContractId: string): Promise<IClientContract | null> {
     const { knex: db, tenant } = await createTenantKnex();

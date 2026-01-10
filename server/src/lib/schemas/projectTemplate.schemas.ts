@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { tenantSchema } from '../utils/validation';
+import { clientPortalConfigSchema } from './project.schemas';
 
 export const projectTemplateSchema = tenantSchema.extend({
   template_id: z.string().uuid(),
@@ -10,7 +11,8 @@ export const projectTemplateSchema = tenantSchema.extend({
   created_at: z.date(),
   updated_at: z.date().nullable().optional(),
   use_count: z.number().int().min(0),
-  last_used_at: z.date().nullable().optional()
+  last_used_at: z.date().nullable().optional(),
+  client_portal_config: clientPortalConfigSchema.optional()
 });
 
 export const projectTemplatePhaseSchema = tenantSchema.extend({

@@ -128,20 +128,28 @@ const ProjectModel = {
     try {
       const tenant = await getCurrentTenantId();
       // Remove derived fields before insert
-      const { status_name, is_closed, ...insertData } = projectData as any;
-      
+      const { status_name, is_closed, client_portal_config, ...insertData } = projectData as any;
+
+      // Build insert data, serializing JSONB fields
+      const finalInsertData: Record<string, unknown> = {
+        ...insertData,
+        project_id: uuidv4(),
+        is_inactive: false,
+        tenant: tenant,
+        assigned_to: insertData.assigned_to || null,
+        contact_name_id: insertData.contact_name_id || null,
+        status: insertData.status || '',
+        budgeted_hours: insertData.budgeted_hours || null,
+        project_number: insertData.project_number
+      };
+
+      // Only include client_portal_config if it was provided
+      if (client_portal_config !== undefined) {
+        finalInsertData.client_portal_config = JSON.stringify(client_portal_config);
+      }
+
       const [newProject] = await knexOrTrx<IProject>('projects')
-        .insert({
-          ...insertData,
-          project_id: uuidv4(),
-          is_inactive: false,
-          tenant: tenant,
-          assigned_to: insertData.assigned_to || null,
-          contact_name_id: insertData.contact_name_id || null,
-          status: insertData.status || '',
-          budgeted_hours: insertData.budgeted_hours || null,
-          project_number: insertData.project_number
-        })
+        .insert(finalInsertData)
         .returning('*');
 
       // Fetch the full project details including status info
@@ -186,23 +194,32 @@ const ProjectModel = {
       const tenant = await getCurrentTenantId();
       // Remove derived and joined fields before update
       const {
-        status_name, 
-        is_closed, 
+        status_name,
+        is_closed,
         client_name,
         assigned_to_first_name,
         assigned_to_last_name,
         contact_name,
         tenant: _tenant, // Remove tenant from update data
-        ...updateData 
+        client_portal_config, // Handle JSONB serialization separately
+        ...updateData
       } = projectData;
-      
+
+      // Build final update object, serializing JSONB fields
+      const finalUpdateData: Record<string, unknown> = {
+        ...updateData,
+        updated_at: knexOrTrx.fn.now()
+      };
+
+      // Only include client_portal_config if it was provided
+      if (client_portal_config !== undefined) {
+        finalUpdateData.client_portal_config = JSON.stringify(client_portal_config);
+      }
+
       const [updatedProject] = await knexOrTrx<IProject>('projects')
         .where('project_id', projectId)
         .andWhere('tenant', tenant)
-        .update({
-          ...updateData,
-          updated_at: knexOrTrx.fn.now()
-        })
+        .update(finalUpdateData)
         .returning('*');
 
       // Fetch the full project details including status info

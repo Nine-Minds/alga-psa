@@ -298,6 +298,7 @@ async function handleApiProxy(
       method: 'POST',
       headers: { 'content-type': 'application/octet-stream' },
       body: bodyBytes ? new Blob([bodyBytes as any]) : undefined,
+      credentials: 'include',
     });
 
     if (!res.ok) {

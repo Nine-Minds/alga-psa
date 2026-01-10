@@ -15,11 +15,6 @@ export const baseGmailProviderSchema = z.object({
 export type BaseGmailProviderFormData = z.infer<typeof baseGmailProviderSchema>;
 
 // CE-specific schema extends base with Google Cloud config fields
-export const ceGmailProviderSchema = baseGmailProviderSchema.extend({
-  clientId: z.string().min(1, 'Client ID is required'),
-  clientSecret: z.string().min(1, 'Client Secret is required'),
-  projectId: z.string().min(1, 'Google Cloud Project ID is required'),
-  redirectUri: z.string().url('Valid redirect URI is required'),
-});
+export const ceGmailProviderSchema = baseGmailProviderSchema;
 
 export type CEGmailProviderFormData = z.infer<typeof ceGmailProviderSchema>;

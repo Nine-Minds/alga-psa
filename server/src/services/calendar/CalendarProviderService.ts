@@ -62,6 +62,12 @@ export class CalendarProviderService {
     webhook_notification_url: 'webhook_notification_url',
     webhookVerificationToken: 'webhook_verification_token',
     webhook_verification_token: 'webhook_verification_token',
+    webhookSubscriptionId: 'webhook_subscription_id',
+    webhook_subscription_id: 'webhook_subscription_id',
+    webhookExpiresAt: 'webhook_expires_at',
+    webhook_expires_at: 'webhook_expires_at',
+    webhookResourceId: 'webhook_resource_id',
+    webhook_resource_id: 'webhook_resource_id',
     calendarId: 'calendar_id',
     calendar_id: 'calendar_id',
     accessToken: 'access_token',
@@ -524,6 +530,9 @@ export class CalendarProviderService {
         pubsubInitialisedAt: this.toIsoString(decrypted.pubsub_initialised_at),
         webhookNotificationUrl: decrypted.webhook_notification_url,
         webhookVerificationToken: decrypted.webhook_verification_token,
+        webhookSubscriptionId: decrypted.webhook_subscription_id,
+        webhookExpiresAt: this.toIsoString(decrypted.webhook_expires_at),
+        webhookResourceId: decrypted.webhook_resource_id,
         calendarId: decrypted.calendar_id,
         syncToken: decrypted.sync_token,
       });
@@ -588,7 +597,7 @@ export class CalendarProviderService {
 
     const requiredFields =
       providerType === 'google'
-        ? ['client_id', 'client_secret', 'project_id', 'redirect_uri', 'calendar_id']
+        ? ['calendar_id']
         : ['client_id', 'client_secret', 'tenant_id', 'redirect_uri', 'calendar_id'];
 
     return requiredFields.every((field) => {

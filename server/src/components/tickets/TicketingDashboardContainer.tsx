@@ -64,9 +64,13 @@ export default function TicketingDashboardContainer({
       searchQuery: '',
       boardFilterState: 'active',
       showOpenOnly: true,
+      bundleView: initialFilters?.bundleView ?? 'bundled',
       boardId: undefined,
       categoryId: undefined,
       clientId: undefined,
+      assignedToIds: undefined,
+      includeUnassigned: false,
+      dueDateFilter: undefined,
       sortBy: defaultSortBy,
       sortDirection: defaultSortDirection,
       ...initialFilters,
@@ -121,6 +125,24 @@ export default function TicketingDashboardContainer({
     if (filters.sortDirection && filters.sortDirection !== 'desc') {
       params.set('sortDirection', filters.sortDirection);
     }
+    if (filters.assignedToIds && Array.isArray(filters.assignedToIds) && filters.assignedToIds.length > 0) {
+      params.set('assignedToIds', filters.assignedToIds.join(','));
+    }
+    if (filters.includeUnassigned) {
+      params.set('includeUnassigned', 'true');
+    }
+    if (filters.dueDateFilter && filters.dueDateFilter !== 'all') {
+      params.set('dueDateFilter', filters.dueDateFilter);
+    }
+    if (filters.dueDateFrom) {
+      params.set('dueDateFrom', filters.dueDateFrom);
+    }
+    if (filters.dueDateTo) {
+      params.set('dueDateTo', filters.dueDateTo);
+    }
+    if (filters.bundleView && filters.bundleView !== 'bundled') {
+      params.set('bundleView', filters.bundleView);
+    }
 
     // Update URL without causing a page refresh
     const newURL = params.toString() ? `/msp/tickets?${params.toString()}` : '/msp/tickets';
@@ -154,8 +176,15 @@ export default function TicketingDashboardContainer({
         boardFilterState: filters.boardFilterState || 'active',
         showOpenOnly: (filters.statusId === 'open') || (filters.showOpenOnly === true),
         tags: filters.tags && filters.tags.length > 0 ? Array.from(new Set(filters.tags)) : undefined,
+        assignedToIds: filters.assignedToIds && filters.assignedToIds.length > 0 ? filters.assignedToIds : undefined,
+        includeUnassigned: filters.includeUnassigned || undefined,
+        dueDateFilter: filters.dueDateFilter || undefined,
+        dueDateFrom: filters.dueDateFrom || undefined,
+        dueDateTo: filters.dueDateTo || undefined,
+        responseState: filters.responseState || undefined,
         sortBy: effectiveSortBy,
-        sortDirection: effectiveSortDirection
+        sortDirection: effectiveSortDirection,
+        bundleView: filters.bundleView || 'bundled'
       };
 
       console.log('[Container] Fetching with defaults:', currentFiltersWithDefaults);
@@ -269,6 +298,7 @@ export default function TicketingDashboardContainer({
       initialCategories={consolidatedData.options.categories}
       initialClients={consolidatedData.options.clients}
       initialTags={consolidatedData.options.tags || []}
+      initialUsers={consolidatedData.options.users}
       totalCount={totalCount}
       currentPage={currentPage}
       pageSize={pageSize}

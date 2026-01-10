@@ -67,7 +67,7 @@ interface ServiceConfiguration {
     service_id: string;
     contract_line_id: string;
     configuration_type: 'Fixed' | 'Hourly' | 'Usage' | 'Bucket';
-    custom_rate?: number;
+    custom_rate?: number | null;
     quantity?: number;
   };
   typeConfig: any;

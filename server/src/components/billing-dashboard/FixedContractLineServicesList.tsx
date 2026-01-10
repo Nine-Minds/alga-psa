@@ -5,6 +5,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Card, Box } from '@radix-ui/themes';
 import { Button } from 'server/src/components/ui/Button';
 import { Checkbox } from 'server/src/components/ui/Checkbox';
+import { Input } from 'server/src/components/ui/Input';
 import { Plus, MoreVertical, HelpCircle } from 'lucide-react';
 import {
   DropdownMenu,
@@ -29,13 +30,18 @@ import { getServiceCategories } from 'server/src/lib/actions/serviceCategoryActi
 import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 import { AlertCircle } from 'lucide-react';
 import EditPlanServiceQuantityDialog from './contract-lines/EditContractLineServiceQuantityDialog';
+import { getContractLineById } from 'server/src/lib/actions/contractLineAction';
+import { getContractById } from 'server/src/lib/actions/contractActions';
+import { getCurrencySymbol } from 'server/src/constants/currency';
+import { Badge } from 'server/src/components/ui/Badge';
 // Removed ContractLineServiceForm import as 'Configure' is removed
 
 // Define billing method options
-const BILLING_METHOD_OPTIONS: Array<{ value: 'fixed' | 'hourly' | 'usage'; label: string }> = [
+const BILLING_METHOD_OPTIONS: Array<{ value: 'fixed' | 'hourly' | 'usage' | 'per_unit'; label: string }> = [
   { value: 'fixed', label: 'Fixed Price' },
   { value: 'hourly', label: 'Hourly' },
-  { value: 'usage', label: 'Usage Based' }
+  { value: 'usage', label: 'Usage Based' },
+  { value: 'per_unit', label: 'Per Unit' }
 ];
 
 interface FixedPlanServicesListProps {
@@ -51,6 +57,8 @@ interface SimplePlanService extends IContractLineService {
   unit_of_measure?: string;
   default_rate?: number;
   quantity?: number; // Added quantity field
+  item_kind?: 'service' | 'product';
+  sku?: string | null;
 }
 
 // Define the structure returned by getPlanServicesWithConfigurations
@@ -64,6 +72,8 @@ const FixedPlanServicesList: React.FC<FixedPlanServicesListProps> = ({ planId, o
   const [availableServices, setAvailableServices] = useState<IService[]>([]);
   const [serviceCategories, setServiceCategories] = useState<IServiceCategory[]>([]); // Added state for categories
   const [selectedServicesToAdd, setSelectedServicesToAdd] = useState<string[]>([]);
+  const [customRates, setCustomRates] = useState<Record<string, string>>({}); // Per-unit overrides for products missing currency prices
+  const [contractCurrency, setContractCurrency] = useState<string>('USD');
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedService, setSelectedService] = useState<SimplePlanService | null>(null);
@@ -78,12 +88,22 @@ const FixedPlanServicesList: React.FC<FixedPlanServicesListProps> = ({ planId, o
 
     try {
       // Fetch services with configurations to get service_type_name directly
-      const servicesWithConfigs = await getContractLineServicesWithConfigurations(planId);
-      const servicesResponse = await getServices();
+      const [servicesWithConfigs, servicesResponse, planDetails] = await Promise.all([
+        getContractLineServicesWithConfigurations(planId),
+        getServices(1, 999, { item_kind: 'any' }),
+        getContractLineById(planId)
+      ]);
       // Extract the services array from the paginated response
       const allAvailableServices = Array.isArray(servicesResponse)
         ? servicesResponse
         : (servicesResponse.services || []);
+
+      if (planDetails?.contract_id) {
+        const contract = await getContractById(planDetails.contract_id);
+        if (contract?.currency_code) {
+          setContractCurrency(contract.currency_code);
+        }
+      }
       
       // No need to fetch categories separately as we get service_type_name directly
       
@@ -99,7 +119,10 @@ const FixedPlanServicesList: React.FC<FixedPlanServicesListProps> = ({ planId, o
           service_category: configInfo.service.service_type_name || 'N/A', // Now using service_type_name from IService
           billing_method: configInfo.service.billing_method,
           default_rate: configInfo.service.default_rate,
-          quantity: configInfo.configuration.quantity // Added quantity from configuration
+          quantity: configInfo.configuration.quantity, // Added quantity from configuration
+          custom_rate: configInfo.configuration.custom_rate,
+          item_kind: configInfo.service.item_kind,
+          sku: configInfo.service.sku
         };
       });
 
@@ -126,18 +149,31 @@ const FixedPlanServicesList: React.FC<FixedPlanServicesListProps> = ({ planId, o
       for (const serviceId of selectedServicesToAdd) {
         const serviceToAdd = availableServices.find(s => s.service_id === serviceId);
         if (serviceToAdd) {
-          // For fixed plans, all services share the same base rate configured at the plan level
-          // Here we just add the service with default values
-          await addServiceToContractLine(
-            planId,
-            serviceId,
-            1,
-            serviceToAdd.default_rate
-          );
+          if (serviceToAdd.item_kind === 'product') {
+            const catalogRate = serviceToAdd.prices?.find(p => p.currency_code === contractCurrency)?.rate ?? null;
+            if (catalogRate == null) {
+              const override = customRates[serviceId];
+              const parsed = override != null ? parseFloat(override) : NaN;
+              if (!override || !Number.isFinite(parsed)) {
+                throw new Error(
+                  `Product "${serviceToAdd.service_name}" has no ${contractCurrency} price. Enter a custom rate before adding.`
+                );
+              }
+              const cents = Math.round(parsed * 100);
+              await addServiceToContractLine(planId, serviceId, 1, cents);
+            } else {
+              // Let the billing engine pick up the catalog price for the contract currency.
+              await addServiceToContractLine(planId, serviceId, 1);
+            }
+          } else {
+            // Fixed-fee services are billed via the contract line's base rate.
+            await addServiceToContractLine(planId, serviceId, 1);
+          }
         }
       }
       fetchData();
       setSelectedServicesToAdd([]);
+      setCustomRates({});
       
       // Call the onServiceAdded callback if provided
       if (onServiceAdded) {
@@ -174,10 +210,15 @@ const FixedPlanServicesList: React.FC<FixedPlanServicesListProps> = ({ planId, o
     setQuantityDialogOpen(true);
   };
 
-  // Add handler for saving quantity
-  const handleSaveQuantity = async (planId: string, serviceId: string, newQuantity: number) => {
+  const handleSaveService = async (
+    serviceId: string,
+    updates: { quantity: number; unitRateCents?: number | null }
+  ) => {
     try {
-      await updateContractLineService(planId, serviceId, { quantity: newQuantity });
+      await updateContractLineService(planId, serviceId, {
+        quantity: updates.quantity,
+        customRate: updates.unitRateCents,
+      });
       fetchData(); // Refresh the data
     } catch (error) {
       console.error('Error updating quantity:', error);
@@ -185,10 +226,32 @@ const FixedPlanServicesList: React.FC<FixedPlanServicesListProps> = ({ planId, o
     }
   };
 
+  const currencySymbol = getCurrencySymbol(contractCurrency);
+
+  const getCatalogUnitPriceCents = (serviceId: string): number | null => {
+    const service = availableServices.find((s) => s.service_id === serviceId);
+    if (!service?.prices?.length) return null;
+    const price = service.prices.find((p) => p.currency_code === contractCurrency);
+    return price ? Number(price.rate) : null;
+  };
+
 const planServiceColumns: ColumnDefinition<SimplePlanService>[] = [
     {
       title: 'Service Name',
       dataIndex: 'service_name',
+      render: (_value, record) => (
+        <div className="flex items-center gap-2">
+          <span>{record.service_name}</span>
+          {record.item_kind === 'product' ? (
+            <Badge variant="secondary">Product</Badge>
+          ) : (
+            <Badge variant="secondary">Service</Badge>
+          )}
+          {record.item_kind === 'product' && record.sku ? (
+            <span className="text-xs text-muted-foreground">{record.sku}</span>
+          ) : null}
+        </div>
+      ),
     },
     {
       title: 'Category',
@@ -218,7 +281,24 @@ const planServiceColumns: ColumnDefinition<SimplePlanService>[] = [
         </Tooltip>
       ),
       dataIndex: 'default_rate',
-      render: (value) => value !== undefined ? `$${Number(value).toFixed(2)}` : 'N/A', // Display rate directly as dollars
+      render: (_value, record) => {
+        if (record.item_kind === 'product') {
+          const overrideCents =
+            record.custom_rate !== undefined && record.custom_rate !== null
+              ? Number(record.custom_rate)
+              : null;
+          const catalogCents = getCatalogUnitPriceCents(record.service_id);
+          const unitCents = overrideCents ?? catalogCents;
+          if (unitCents === null) {
+            return <span className="text-amber-700">Missing {contractCurrency} price</span>;
+          }
+          return `${currencySymbol}${(unitCents / 100).toFixed(2)}`;
+        }
+
+        return record.default_rate !== undefined
+          ? `$${Number(record.default_rate).toFixed(2)}`
+          : 'N/A';
+      },
     },
     {
       title: 'Actions',
@@ -264,13 +344,14 @@ const planServiceColumns: ColumnDefinition<SimplePlanService>[] = [
     },
   ];
 
-  // Filter out services already in the plan from the add list and only include services with 'fixed' billing method
+  // Filter out items already in the plan. For fixed contract lines, allow fixed services and products.
   const servicesAvailableToAdd = availableServices.filter(
     availService =>
       // Check if service is not already added to the plan
       !planServices.some(ps => ps.service_id === availService.service_id) &&
-      // Only include services with 'fixed' billing method for Fixed plans
-      availService.billing_method === 'fixed'
+      // Do not offer inactive catalog items for attachment
+      availService.is_active !== false &&
+      (availService.item_kind === 'product' || availService.billing_method === 'fixed')
   );
 
   return (
@@ -310,6 +391,11 @@ const planServiceColumns: ColumnDefinition<SimplePlanService>[] = [
                         {servicesAvailableToAdd.map(service => {
                             // Use service_type_name directly from the service object
                             const serviceTypeName = service.service_type_name || 'N/A';
+                            const isProduct = service.item_kind === 'product';
+                            const catalogRateCents =
+                              isProduct
+                                ? (service.prices?.find(p => p.currency_code === contractCurrency)?.rate ?? null)
+                                : null;
                             return (
                                 <div
                                 key={service.service_id}
@@ -330,10 +416,44 @@ const planServiceColumns: ColumnDefinition<SimplePlanService>[] = [
                                     />
                                 </div>
                                 <div className="flex-grow flex flex-col text-sm">
-                                    <span>{service.service_name}</span>
-                                    <span className="text-xs text-muted-foreground">
-                                    Service Type: {serviceTypeName} | Method: {BILLING_METHOD_OPTIONS.find(opt => opt.value === service.billing_method)?.label || service.billing_method} | Rate: ${ Number(service.default_rate).toFixed(2)}
+                                    <span className="flex items-center gap-2">
+                                      {service.service_name}
+                                      {isProduct ? <Badge variant="secondary">Product</Badge> : null}
                                     </span>
+                                    <span className="text-xs text-muted-foreground">
+                                    Type: {serviceTypeName} | Method: {BILLING_METHOD_OPTIONS.find(opt => opt.value === service.billing_method)?.label || service.billing_method}
+                                    {isProduct ? (
+                                      <> | {contractCurrency} price: {catalogRateCents == null ? 'missing' : `${currencySymbol}${(Number(catalogRateCents) / 100).toFixed(2)}`}</>
+                                    ) : (
+                                      <> | Rate: ${ Number(service.default_rate).toFixed(2)}</>
+                                    )}
+                                    </span>
+                                    {isProduct && catalogRateCents == null && selectedServicesToAdd.includes(service.service_id!) && (
+                                      <div className="mt-2 flex items-center gap-2">
+                                        <span className="text-xs text-muted-foreground">
+                                          Override ({contractCurrency}):
+                                        </span>
+                                        <div className="relative w-28">
+                                          <span className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-500 text-xs">
+                                            {currencySymbol}
+                                          </span>
+                                          <Input
+                                            id={`fixed-add-product-rate-${service.service_id}`}
+                                            type="text"
+                                            inputMode="decimal"
+                                            value={customRates[service.service_id] ?? ''}
+                                            onChange={(e) => {
+                                              const sanitized = e.target.value.replace(/[^0-9.]/g, '');
+                                              const decimalCount = (sanitized.match(/\\./g) || []).length;
+                                              if (decimalCount <= 1) {
+                                                setCustomRates((prev) => ({ ...prev, [service.service_id!]: sanitized }));
+                                              }
+                                            }}
+                                            className="pl-6 h-8 text-sm"
+                                          />
+                                        </div>
+                                      </div>
+                                    )}
                                 </div>
                                 </div>
                             );
@@ -365,7 +485,11 @@ const planServiceColumns: ColumnDefinition<SimplePlanService>[] = [
           serviceId={selectedService.service_id}
           serviceName={selectedService.service_name || 'Unknown Service'}
           currentQuantity={selectedService.quantity || 1}
-          onSave={(newQuantity) => handleSaveQuantity(planId, selectedService.service_id, newQuantity)}
+          currencySymbol={selectedService.item_kind === 'product' ? currencySymbol : undefined}
+          currentUnitRateCents={
+            selectedService.item_kind === 'product' ? (selectedService.custom_rate ?? null) : undefined
+          }
+          onSave={(updates) => handleSaveService(selectedService.service_id, updates)}
         />
       )}
     </div>

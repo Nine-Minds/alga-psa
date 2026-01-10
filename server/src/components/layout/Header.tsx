@@ -82,6 +82,12 @@ const quickCreateOptions: QuickCreateOption[] = [
     label: 'Service',
     description: 'Add a new billable service',
     type: 'service'
+  },
+  {
+    id: 'create-product',
+    label: 'Product',
+    description: 'Add a new product to your catalog',
+    type: 'product'
   }
 ];
 
