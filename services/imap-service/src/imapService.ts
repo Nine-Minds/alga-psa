@@ -270,7 +270,12 @@ class ImapFolderListener {
       throw new Error('IMAP credentials missing');
     }
 
-    const secure = this.provider.secure || !this.provider.allow_starttls;
+    const secure = Boolean(this.provider.secure);
+
+    const rejectUnauthorized = (process.env.IMAP_TLS_REJECT_UNAUTHORIZED || 'true') !== 'false';
+    const tlsOptions = (secure || this.provider.allow_starttls)
+      ? { rejectUnauthorized }
+      : undefined;
     return new ImapFlow({
       host: this.provider.host,
       port: Number(this.provider.port),
@@ -278,7 +283,7 @@ class ImapFolderListener {
       auth,
       disableAutoIdle: true,
       logger: false,
-      tls: this.provider.allow_starttls ? { rejectUnauthorized: false } : undefined,
+      tls: tlsOptions,
     });
   }
 
@@ -796,7 +801,6 @@ export class ImapService {
       })
       .where('ep.provider_type', 'imap')
       .andWhere('ep.is_active', true)
-      .andWhereNot('ep.status', 'error')
       .select(
         'ep.id',
         'ep.tenant',
