@@ -416,13 +416,13 @@ async function persistImapConfig(
       oauth_authorize_url, oauth_token_url, oauth_client_id, oauth_client_secret, oauth_scopes,
       access_token, refresh_token, token_expires_at,
       uid_validity, last_uid, last_seen_at, last_sync_at, last_error,
-      connection_timeout_ms, socket_keepalive,
-      created_at, updated_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-    ON CONFLICT (email_provider_id, tenant) DO UPDATE SET
-      host = EXCLUDED.host,
-      port = EXCLUDED.port,
-      secure = EXCLUDED.secure,
+	      connection_timeout_ms, socket_keepalive,
+	      created_at, updated_at
+	    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+	    ON CONFLICT (email_provider_id, tenant) DO UPDATE SET
+	      host = EXCLUDED.host,
+	      port = EXCLUDED.port,
+	      secure = EXCLUDED.secure,
       allow_starttls = EXCLUDED.allow_starttls,
       auth_type = EXCLUDED.auth_type,
       username = EXCLUDED.username,
