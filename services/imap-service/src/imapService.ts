@@ -351,6 +351,13 @@ class ImapFolderListener {
           ? Math.max(1, uidNext - maxEmailsPerSync)
           : 1;
 
+      // Avoid "2:*" on empty/small mailboxes where "*" resolves below startUid and becomes a reversed range
+      // that would otherwise cause reprocessing of older messages.
+      if (uidNext && startUid >= uidNext) {
+        await this.updateLastSyncAt();
+        return;
+      }
+
       const range = `${startUid}:*`;
 
       let processed = 0;
