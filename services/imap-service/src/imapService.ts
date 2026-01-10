@@ -17,6 +17,20 @@ const DEFAULT_POLL_INTERVAL_MS = 30_000;
 const DEFAULT_LEASE_TTL_MS = 120_000;
 const DEFAULT_MAX_CONNECTIONS_PER_TENANT = 5;
 
+function stateLog(event: string, fields: Record<string, unknown> = {}) {
+  try {
+    const payload = {
+      ts: new Date().toISOString(),
+      event,
+      ...fields,
+    };
+    // Simple console logging requested; keep a stable prefix for grepping.
+    console.log('[IMAP_SM]', JSON.stringify(payload));
+  } catch {
+    // Never let logging break the service.
+  }
+}
+
 interface ImapProviderRow {
   id: string;
   tenant: string;
@@ -69,6 +83,7 @@ class ImapFolderListener {
   private client: ImapFlow | null = null;
   private folderState: FolderState = {};
   private idleFailures = 0;
+  private listenerId = uuidv4();
 
   constructor(
     private provider: ImapProviderRow,
@@ -112,6 +127,8 @@ class ImapFolderListener {
   }
 
   private async updateProviderStatus(status: 'connected' | 'disconnected' | 'error', errorMessage?: string | null) {
+    const prevStatus = this.provider.status;
+    const prevError = this.provider.error_message;
     const db = await getAdminConnection();
     await db('email_providers')
       .where({ id: this.provider.id, tenant: this.provider.tenant })
@@ -126,6 +143,21 @@ class ImapFolderListener {
         last_error: errorMessage || null,
         updated_at: db.fn.now(),
       });
+
+    this.provider.status = status;
+    this.provider.error_message = errorMessage || null;
+
+    if (prevStatus !== status || prevError !== (errorMessage || null)) {
+      stateLog('provider_status', {
+        providerId: this.provider.id,
+        tenant: this.provider.tenant,
+        folder: this.folder,
+        listenerId: this.listenerId,
+        prevStatus,
+        nextStatus: status,
+        errorMessage: errorMessage || null,
+      });
+    }
   }
 
   private async updateLastSyncAt() {
@@ -140,13 +172,13 @@ class ImapFolderListener {
 
   private async getPasswordSecret(): Promise<string | null> {
     const secretProvider = await getSecretProviderInstance();
-    return await secretProvider.getTenantSecret(this.provider.tenant, `imap_password_${this.provider.id}`);
+    return (await secretProvider.getTenantSecret(this.provider.tenant, `imap_password_${this.provider.id}`)) ?? null;
   }
 
   private async getOauthSecrets(): Promise<{ clientSecret?: string | null; refreshToken?: string | null }> {
     const secretProvider = await getSecretProviderInstance();
-    const clientSecret = await secretProvider.getTenantSecret(this.provider.tenant, `imap_oauth_client_secret_${this.provider.id}`);
-    const refreshToken = await secretProvider.getTenantSecret(this.provider.tenant, `imap_refresh_token_${this.provider.id}`);
+    const clientSecret = (await secretProvider.getTenantSecret(this.provider.tenant, `imap_oauth_client_secret_${this.provider.id}`)) ?? null;
+    const refreshToken = (await secretProvider.getTenantSecret(this.provider.tenant, `imap_refresh_token_${this.provider.id}`)) ?? null;
     return { clientSecret, refreshToken };
   }
 
@@ -200,6 +232,13 @@ class ImapFolderListener {
       providerId: this.provider.id,
       tenant: this.provider.tenant,
       folder: this.folder,
+    });
+    stateLog('oauth_refresh', {
+      providerId: this.provider.id,
+      tenant: this.provider.tenant,
+      folder: this.folder,
+      listenerId: this.listenerId,
+      expiresAt,
     });
   }
 
@@ -264,12 +303,21 @@ class ImapFolderListener {
   private async syncNewMessages(client: ImapFlow) {
     const lock = await client.getMailboxLock(this.folder);
     try {
-      const mailbox = client.mailbox;
-      const uidValidity = mailbox?.uidValidity?.toString();
+      const mailbox: any = (client as any).mailbox;
+      const uidValidity: string | undefined = mailbox?.uidValidity?.toString();
       if (uidValidity && this.folderState.uid_validity && uidValidity !== this.folderState.uid_validity) {
         logger.warn('[IMAP] UIDVALIDITY changed; resetting last UID', {
           providerId: this.provider.id,
+          tenant: this.provider.tenant,
           folder: this.folder,
+          previous: this.folderState.uid_validity,
+          next: uidValidity,
+        });
+        stateLog('uidvalidity_changed', {
+          providerId: this.provider.id,
+          tenant: this.provider.tenant,
+          folder: this.folder,
+          listenerId: this.listenerId,
           previous: this.folderState.uid_validity,
           next: uidValidity,
         });
@@ -347,8 +395,17 @@ class ImapFolderListener {
       if (processed > 0) {
         logger.info('[IMAP] Sync complete', {
           providerId: this.provider.id,
+          tenant: this.provider.tenant,
           folder: this.folder,
           processed,
+        });
+        stateLog('sync_complete', {
+          providerId: this.provider.id,
+          tenant: this.provider.tenant,
+          folder: this.folder,
+          listenerId: this.listenerId,
+          processed,
+          lastUid: maxUid > 0 ? String(maxUid) : null,
         });
       }
     } finally {
@@ -447,11 +504,27 @@ class ImapFolderListener {
       } catch (error: any) {
         logger.warn('[IMAP] IDLE loop error', {
           providerId: this.provider.id,
+          tenant: this.provider.tenant,
           folder: this.folder,
           message: error?.message || error,
         });
+        stateLog('idle_error', {
+          providerId: this.provider.id,
+          tenant: this.provider.tenant,
+          folder: this.folder,
+          listenerId: this.listenerId,
+          message: error?.message || String(error),
+          idleFailures: this.idleFailures + 1,
+        });
         this.idleFailures += 1;
         if (this.idleFailures >= 3) {
+          stateLog('idle_fallback_to_poll', {
+            providerId: this.provider.id,
+            tenant: this.provider.tenant,
+            folder: this.folder,
+            listenerId: this.listenerId,
+            pollIntervalMs: Number(process.env.IMAP_POLL_INTERVAL_MS || DEFAULT_POLL_INTERVAL_MS),
+          });
           await this.pollLoop(client);
           this.idleFailures = 0;
         } else {
@@ -471,19 +544,52 @@ class ImapFolderListener {
 
   async start() {
     this.running = true;
+    stateLog('folder_listener_start', {
+      providerId: this.provider.id,
+      tenant: this.provider.tenant,
+      folder: this.folder,
+      listenerId: this.listenerId,
+      host: this.provider.host,
+      port: this.provider.port,
+      authType: this.provider.auth_type,
+      secure: this.provider.secure,
+      allowStartTls: this.provider.allow_starttls,
+    });
     while (this.running) {
       try {
         this.client = await this.buildClient();
         await this.connectWithTimeout(this.client);
-        logger.info('[IMAP] Connected', { providerId: this.provider.id, folder: this.folder });
-        this.client.on('expunge', (seq) => {
-          logger.info('[IMAP] Expunge received', { providerId: this.provider.id, folder: this.folder, seq });
+        logger.info('[IMAP] Connected', { providerId: this.provider.id, tenant: this.provider.tenant, folder: this.folder });
+        stateLog('connected', {
+          providerId: this.provider.id,
+          tenant: this.provider.tenant,
+          folder: this.folder,
+          listenerId: this.listenerId,
         });
-        this.client.on('bye', (message) => {
-          logger.warn('[IMAP] Server BYE received', { providerId: this.provider.id, folder: this.folder, message });
+        this.client.on('expunge', (seq) => {
+          logger.info('[IMAP] Expunge received', { providerId: this.provider.id, tenant: this.provider.tenant, folder: this.folder, seq });
+        });
+        (this.client as any).on('bye', (message: any) => {
+          logger.warn('[IMAP] Server BYE received', { providerId: this.provider.id, tenant: this.provider.tenant, folder: this.folder, message });
+          stateLog('server_bye', {
+            providerId: this.provider.id,
+            tenant: this.provider.tenant,
+            folder: this.folder,
+            listenerId: this.listenerId,
+            message,
+          });
         });
         const resolvedFolder = await this.resolveFolderName(this.client);
-        this.folder = resolvedFolder;
+        if (resolvedFolder !== this.folder) {
+          stateLog('folder_resolved', {
+            providerId: this.provider.id,
+            tenant: this.provider.tenant,
+            listenerId: this.listenerId,
+            previousFolder: this.folder,
+            resolvedFolder,
+          });
+          this.folder = resolvedFolder;
+        }
         if (this.provider.socket_keepalive) {
           const socket = (this.client as any).socket;
           if (socket?.setKeepAlive) {
@@ -500,8 +606,16 @@ class ImapFolderListener {
       } catch (error: any) {
         logger.error('[IMAP] Folder listener error', {
           providerId: this.provider.id,
+          tenant: this.provider.tenant,
           folder: this.folder,
           message: error?.message || error,
+        });
+        stateLog('folder_listener_error', {
+          providerId: this.provider.id,
+          tenant: this.provider.tenant,
+          folder: this.folder,
+          listenerId: this.listenerId,
+          message: error?.message || String(error),
         });
         await this.updateProviderStatus('error', error?.message || 'IMAP connection error');
         await this.persistFolderState({ last_seen_at: new Date().toISOString() });
@@ -520,6 +634,12 @@ class ImapFolderListener {
 
   async stop() {
     this.running = false;
+    stateLog('folder_listener_stop', {
+      providerId: this.provider.id,
+      tenant: this.provider.tenant,
+      folder: this.folder,
+      listenerId: this.listenerId,
+    });
     if (this.client) {
       try {
         await this.client.logout();
@@ -552,7 +672,8 @@ class ImapFolderListener {
 class ImapProviderWorker {
   private listeners: ImapFolderListener[] = [];
   private running = false;
-  private configSignature: string;
+  private configSignature = '';
+  private workerId = uuidv4();
 
   constructor(private provider: ImapProviderRow) {}
 
@@ -574,6 +695,16 @@ class ImapProviderWorker {
       ? this.provider.folder_filters
       : ['INBOX'];
 
+    stateLog('worker_start', {
+      providerId: this.provider.id,
+      tenant: this.provider.tenant,
+      workerId: this.workerId,
+      folders,
+      host: this.provider.host,
+      port: this.provider.port,
+      authType: this.provider.auth_type,
+    });
+
     this.listeners = folders.map(folder => new ImapFolderListener(this.provider, folder));
     for (const listener of this.listeners) {
       listener.start();
@@ -582,6 +713,11 @@ class ImapProviderWorker {
 
   async stop() {
     this.running = false;
+    stateLog('worker_stop', {
+      providerId: this.provider.id,
+      tenant: this.provider.tenant,
+      workerId: this.workerId,
+    });
     for (const listener of this.listeners) {
       await listener.stop();
     }
@@ -614,15 +750,23 @@ export class ImapService {
   private instanceId = uuidv4();
 
   async start() {
+    stateLog('service_start', {
+      instanceId: this.instanceId,
+      refreshMs: Number(process.env.IMAP_PROVIDER_REFRESH_MS || DEFAULT_REFRESH_MS),
+      leaseTtlMs: Number(process.env.IMAP_LEASE_TTL_MS || DEFAULT_LEASE_TTL_MS),
+      maxConnectionsPerTenant: Number(process.env.IMAP_MAX_CONNECTIONS_PER_TENANT || DEFAULT_MAX_CONNECTIONS_PER_TENANT),
+    });
     await this.refreshProviders();
     const refreshMs = Number(process.env.IMAP_PROVIDER_REFRESH_MS || DEFAULT_REFRESH_MS);
     this.refreshTimer = setInterval(() => {
       this.refreshProviders().catch((error) => {
         logger.error('[IMAP] Failed to refresh providers', error);
+        stateLog('refresh_error', { instanceId: this.instanceId, message: error?.message || String(error) });
       });
     }, refreshMs);
     this.heartbeatTimer = setInterval(() => {
       logger.info('[IMAP] Heartbeat', { activeProviders: this.workers.size });
+      stateLog('heartbeat', { instanceId: this.instanceId, activeProviders: this.workers.size });
     }, 60_000);
   }
 
@@ -643,9 +787,10 @@ export class ImapService {
   }
 
   private async refreshProviders() {
+    stateLog('refresh_start', { instanceId: this.instanceId, currentWorkers: this.workers.size });
     const db = await getAdminConnection();
     const rows = await db('email_providers as ep')
-      .join('imap_email_provider_config as ic', function () {
+      .join('imap_email_provider_config as ic', function (this: any) {
         this.on('ep.id', '=', 'ic.email_provider_id')
           .andOn('ep.tenant', '=', 'ic.tenant');
       })
@@ -692,11 +837,18 @@ export class ImapService {
         'ic.socket_keepalive'
       );
 
+    stateLog('refresh_loaded', {
+      instanceId: this.instanceId,
+      candidates: rows.length,
+      tenants: Array.from(new Set((rows as any[]).map((r) => r.tenant))).length,
+    });
+
     const activeIds = new Set(rows.map((row: any) => row.id));
     const tenantCounts = new Map<string, number>();
 
     for (const [providerId, worker] of this.workers.entries()) {
       if (!activeIds.has(providerId)) {
+        stateLog('worker_remove_inactive', { instanceId: this.instanceId, providerId });
         await worker.stop();
         this.workers.delete(providerId);
       }
@@ -730,26 +882,59 @@ export class ImapService {
       const maxConnectionsPerTenant = Number(process.env.IMAP_MAX_CONNECTIONS_PER_TENANT || DEFAULT_MAX_CONNECTIONS_PER_TENANT);
       const currentCount = tenantCounts.get(row.tenant) || 0;
       if (currentCount >= maxConnectionsPerTenant) {
+        stateLog('provider_skipped_tenant_cap', {
+          instanceId: this.instanceId,
+          providerId: row.id,
+          tenant: row.tenant,
+          currentCount,
+          maxConnectionsPerTenant,
+        });
         continue;
       }
 
       const existing = this.workers.get(row.id);
       if (!existing) {
         const leaseAcquired = await this.acquireLease(row.id, row.tenant);
-        if (!leaseAcquired) continue;
+        if (!leaseAcquired) {
+          stateLog('provider_skipped_lease', {
+            instanceId: this.instanceId,
+            providerId: row.id,
+            tenant: row.tenant,
+          });
+          continue;
+        }
         const worker = new ImapProviderWorker(row);
         this.workers.set(row.id, worker);
         tenantCounts.set(row.tenant, currentCount + 1);
+        stateLog('worker_created', {
+          instanceId: this.instanceId,
+          providerId: row.id,
+          tenant: row.tenant,
+        });
         await worker.start();
       } else if (existing.needsRestart(row)) {
+        stateLog('worker_restart', { instanceId: this.instanceId, providerId: row.id, tenant: row.tenant });
         await existing.stop();
         existing.updateProvider(row);
-        await this.renewLease(row.id, row.tenant);
+        const renewed = await this.renewLease(row.id, row.tenant);
+        if (!renewed) {
+          stateLog('lease_lost_on_restart', { instanceId: this.instanceId, providerId: row.id, tenant: row.tenant });
+          this.workers.delete(row.id);
+          continue;
+        }
         await existing.start();
       } else {
-        await this.renewLease(row.id, row.tenant);
+        const renewed = await this.renewLease(row.id, row.tenant);
+        if (!renewed) {
+          stateLog('lease_lost', { instanceId: this.instanceId, providerId: row.id, tenant: row.tenant });
+          await existing.stop();
+          this.workers.delete(row.id);
+          continue;
+        }
       }
     }
+
+    stateLog('refresh_end', { instanceId: this.instanceId, activeWorkers: this.workers.size });
   }
 
   private async acquireLease(providerId: string, tenant: string): Promise<boolean> {
@@ -758,7 +943,7 @@ export class ImapService {
     const expiresAt = new Date(now.getTime() + Number(process.env.IMAP_LEASE_TTL_MS || DEFAULT_LEASE_TTL_MS));
     const updated = await db('imap_email_provider_config')
       .where({ email_provider_id: providerId, tenant })
-      .andWhere(function () {
+      .andWhere(function (this: any) {
         this.whereNull('lease_expires_at').orWhere('lease_expires_at', '<', now.toISOString());
       })
       .update({
@@ -766,28 +951,41 @@ export class ImapService {
         lease_expires_at: expiresAt.toISOString(),
         updated_at: db.fn.now(),
       });
+    stateLog('lease_acquire', {
+      instanceId: this.instanceId,
+      providerId,
+      tenant,
+      acquired: updated > 0,
+      expiresAt: expiresAt.toISOString(),
+    });
     return updated > 0;
   }
 
-  private async renewLease(providerId: string, tenant: string) {
+  private async renewLease(providerId: string, tenant: string): Promise<boolean> {
     const db = await getAdminConnection();
     const expiresAt = new Date(Date.now() + Number(process.env.IMAP_LEASE_TTL_MS || DEFAULT_LEASE_TTL_MS));
-    await db('imap_email_provider_config')
+    const updated = await db('imap_email_provider_config')
       .where({ email_provider_id: providerId, tenant, lease_owner: this.instanceId })
       .update({
         lease_expires_at: expiresAt.toISOString(),
         updated_at: db.fn.now(),
       });
+    if (updated === 0) {
+      stateLog('lease_renew_failed', { instanceId: this.instanceId, providerId, tenant });
+      return false;
+    }
+    return true;
   }
 
   private async releaseLeases() {
     const db = await getAdminConnection();
-    await db('imap_email_provider_config')
+    const updated = await db('imap_email_provider_config')
       .where({ lease_owner: this.instanceId })
       .update({
         lease_owner: null,
         lease_expires_at: null,
         updated_at: db.fn.now(),
       });
+    stateLog('lease_release_all', { instanceId: this.instanceId, released: updated });
   }
 }
