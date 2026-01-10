@@ -21,6 +21,7 @@ import {
   getEmailProviders,
   deleteEmailProvider,
   testEmailProviderConnection,
+  resyncImapProvider,
   retryMicrosoftSubscriptionRenewal
 } from '../lib/actions/email-actions/emailProviderActions';
 import { getCurrentUser } from '../lib/actions/user-actions/userActions';
@@ -286,13 +287,8 @@ function EmailProviderConfigurationContent({
   const handleResyncProvider = async (provider: EmailProvider) => {
     try {
       setError(null);
-      const response = await fetch('/api/email/imap/resync', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ providerId: provider.id }),
-      });
-      const result = await response.json();
-      if (!response.ok || !result.success) {
+      const result = await resyncImapProvider(provider.id);
+      if (!result.success) {
         throw new Error(result.error || 'Failed to resync IMAP provider');
       }
       await loadProviders();

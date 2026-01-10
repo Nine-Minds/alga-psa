@@ -190,7 +190,7 @@ export function EmailProviderCard({
                     </DropdownMenuItem>
                   </>
                 )}
-                {provider.providerType === 'imap' && onReconnectOAuth && (
+                {provider.providerType === 'imap' && provider.imapConfig?.auth_type === 'oauth2' && onReconnectOAuth && (
                   <DropdownMenuItem onClick={() => onReconnectOAuth(provider)}>
                     <RefreshCw className="h-4 w-4 mr-2" />
                     Reconnect OAuth

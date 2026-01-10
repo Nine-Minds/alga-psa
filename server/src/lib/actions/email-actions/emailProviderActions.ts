@@ -861,6 +861,50 @@ export async function deleteEmailProvider(providerId: string): Promise<void> {
   }
 }
 
+export async function resyncImapProvider(providerId: string): Promise<{ success: boolean; error?: string }> {
+  await assertAuthenticated();
+  const { knex, tenant } = await createTenantKnex();
+
+  try {
+    const provider = await knex('email_providers')
+      .where({ id: providerId, tenant, provider_type: 'imap' })
+      .first();
+
+    if (!provider) {
+      throw new Error('IMAP provider not found');
+    }
+
+    await knex('imap_email_provider_config')
+      .where({ email_provider_id: providerId, tenant })
+      .update({
+        uid_validity: null,
+        last_uid: null,
+        last_processed_message_id: null,
+        folder_state: {},
+        last_error: null,
+        lease_owner: null,
+        lease_expires_at: null,
+        updated_at: knex.fn.now(),
+      });
+
+    await knex('email_providers')
+      .where({ id: providerId, tenant })
+      .update({
+        status: 'disconnected',
+        error_message: null,
+        updated_at: knex.fn.now(),
+      });
+
+    return { success: true };
+  } catch (error) {
+    console.error('IMAP resync failed:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to resync IMAP provider'
+    };
+  }
+}
+
 export async function testEmailProviderConnection(providerId: string): Promise<{ success: boolean; error?: string }> {
   await assertAuthenticated();
   const { knex: baseKnex, tenant: baseTenant } = await createTenantKnex();
