@@ -16,8 +16,9 @@ services:
       DB_USER_ADMIN: ${DB_USER_ADMIN:-postgres}
       VERSION: ${VERSION}
       APP_NAME: ${APP_NAME}
-      APP_ENV: ${APP_ENV:-production}
-      NODE_ENV: ${NODE_ENV:-${APP_ENV:-production}}
+      # Prebuilt stacks should run the server in production mode (use the baked `.next` output).
+      APP_ENV: production
+      NODE_ENV: production
       HOST: ${HOST}
       VERIFY_EMAIL_ENABLED: ${VERIFY_EMAIL_ENABLED:-false}
       REDIS_HOST: ${REDIS_HOST:-redis}
@@ -100,8 +101,8 @@ services:
       PGBOSS_DATABASE: server
       VERSION: ${VERSION}
       APP_NAME: ${APP_NAME}
-      APP_ENV: ${APP_ENV:-development}
-      NODE_ENV: ${APP_ENV:-development}
+      APP_ENV: production
+      NODE_ENV: production
       HOST: ${HOST}
       DB_TYPE: ${DB_TYPE:-postgres}
       DB_HOST: ${DB_HOST:-postgres}
@@ -173,8 +174,8 @@ services:
       DB_USER_ADMIN: ${DB_USER_ADMIN:-postgres}
       VERSION: ${VERSION}
       APP_NAME: ${APP_NAME}
-      APP_ENV: ${APP_ENV:-production}
-      NODE_ENV: ${NODE_ENV:-${APP_ENV:-production}}
+      APP_ENV: production
+      NODE_ENV: production
       HOST: ${HOST}
       REDIS_HOST: ${REDIS_HOST:-redis}
       REDIS_PORT: ${REDIS_PORT:-6379}
@@ -239,8 +240,8 @@ services:
       DB_USER_ADMIN: ${DB_USER_ADMIN:-postgres}
       VERSION: ${VERSION}
       APP_NAME: ${APP_NAME}
-      APP_ENV: ${APP_ENV:-production}
-      NODE_ENV: ${NODE_ENV:-${APP_ENV:-production}}
+      APP_ENV: production
+      NODE_ENV: production
       HOST: ${HOST}
       REDIS_HOST: ${REDIS_HOST:-redis}
       REDIS_PORT: ${REDIS_PORT:-6379}
