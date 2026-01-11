@@ -148,7 +148,11 @@ services:
     entrypoint: ["/app/setup/entrypoint.sh"]
 
   workflow-worker:
-    image: "ghcr.io/nine-minds/alga-psa-ee:${ALGA_IMAGE_TAG:-latest}"
+    # NOTE: The published EE server image does not currently ship the workflow-worker runtime bundle.
+    # For local prebuilt-stack testing, build the worker image from source.
+    build:
+      context: .
+      dockerfile: services/workflow-worker/Dockerfile
     platform: linux/amd64
     environment:
       EDITION: enterprise
@@ -215,7 +219,11 @@ services:
       replicas: ${WORKFLOW_WORKER_REPLICAS:-1}
 
   imap-service:
-    image: "ghcr.io/nine-minds/alga-psa-ee:${ALGA_IMAGE_TAG:-latest}"
+    # NOTE: The published EE server image does not currently ship the imap-service runtime bundle.
+    # For local prebuilt-stack testing, build the IMAP service image from source.
+    build:
+      context: .
+      dockerfile: services/imap-service/Dockerfile
     platform: linux/amd64
     environment:
       EDITION: enterprise
