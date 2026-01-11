@@ -340,6 +340,22 @@
     "implemented": true
   },
   {
+    "description": "Add /health HTTP endpoint to imap-service for Kubernetes probes",
+    "implemented": true
+  },
+  {
+    "description": "Add Helm chart ee/helm/imap-service for Kubernetes deployment",
+    "implemented": true
+  },
+  {
+    "description": "Add nm-kube-config values files for imap-service deployments",
+    "implemented": true
+  },
+  {
+    "description": "Add Argo workflow template to build and deploy imap-service",
+    "implemented": true
+  },
+  {
     "description": "Implement IMAP connection manager per provider",
     "implemented": true
   },
