@@ -45,6 +45,9 @@ services:
         target: /run/secrets/db_password_server
         read_only: true
       - type: bind
+        source: ./secrets/tenants
+        target: /run/secrets/tenants
+      - type: bind
         source: ./server/migrations
         target: /app/server/migrations
         read_only: true
@@ -216,6 +219,75 @@ services:
         condition: service_started
     deploy:
       replicas: ${WORKFLOW_WORKER_REPLICAS:-1}
+
+  imap-service:
+    image: "ghcr.io/nine-minds/alga-psa-ce:${ALGA_IMAGE_TAG:-latest}"
+    platform: linux/amd64
+    environment:
+      EDITION: community
+      DB_NAME: server
+      DB_NAME_SERVER: server
+      DB_USER_SERVER: app_user
+      DB_USER_ADMIN: ${DB_USER_ADMIN:-postgres}
+      VERSION: ${VERSION}
+      APP_NAME: ${APP_NAME}
+      APP_ENV: ${APP_ENV:-production}
+      NODE_ENV: ${NODE_ENV:-${APP_ENV:-production}}
+      HOST: ${HOST}
+      REDIS_HOST: ${REDIS_HOST:-redis}
+      REDIS_PORT: ${REDIS_PORT:-6379}
+      DB_TYPE: ${DB_TYPE:-postgres}
+      DB_HOST: ${PGBOUNCER_HOST:-pgbouncer}
+      DB_PORT: ${PGBOUNCER_PORT:-6432}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      LOG_IS_FORMAT_JSON: ${LOG_IS_FORMAT_JSON:-false}
+      LOG_IS_FULL_DETAILS: ${LOG_IS_FULL_DETAILS:-false}
+      # Secret provider configuration for imap-service (CE edition)
+      SECRET_READ_CHAIN: ${SECRET_READ_CHAIN:-env,filesystem}
+      SECRET_WRITE_PROVIDER: ${SECRET_WRITE_PROVIDER:-filesystem}
+      # IMAP service configuration
+      IMAP_PROVIDER_REFRESH_MS: ${IMAP_PROVIDER_REFRESH_MS:-60000}
+      IMAP_POLL_INTERVAL_MS: ${IMAP_POLL_INTERVAL_MS:-30000}
+      IMAP_LEASE_TTL_MS: ${IMAP_LEASE_TTL_MS:-120000}
+      IMAP_MAX_CONNECTIONS_PER_TENANT: ${IMAP_MAX_CONNECTIONS_PER_TENANT:-5}
+      IMAP_MAX_ATTACHMENT_BYTES: ${IMAP_MAX_ATTACHMENT_BYTES:-0}
+      IMAP_FETCH_DELAY_MS: ${IMAP_FETCH_DELAY_MS:-0}
+      IMAP_EVENT_CHANNEL_BY_TENANT: ${IMAP_EVENT_CHANNEL_BY_TENANT:-false}
+      IMAP_OAUTH_AUTH_MECHANISM: ${IMAP_OAUTH_AUTH_MECHANISM:-XOAUTH2}
+    volumes:
+      - type: bind
+        source: ./secrets/db_password_server
+        target: /run/secrets/db_password_server
+        read_only: true
+      - type: bind
+        source: ./secrets/tenants
+        target: /run/secrets/tenants
+      - type: bind
+        source: ./services/imap-service/entrypoint.sh
+        target: /app/entrypoint.sh
+        read_only: true
+    entrypoint: ["/app/entrypoint.sh"]
+    secrets:
+      - postgres_password
+      - db_password_server
+      - redis_password
+      - crypto_key
+      - token_secret_key
+      - nextauth_secret
+      - google_oauth_client_id
+      - google_oauth_client_secret
+      - alga_auth_key
+    networks:
+      - app-network
+    depends_on:
+      postgres:
+        condition: service_started
+      pgbouncer:
+        condition: service_started
+      redis:
+        condition: service_started
+      server:
+        condition: service_started
 
   hocuspocus:
     extends:
