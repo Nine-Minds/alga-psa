@@ -48,7 +48,7 @@ export default [
       // Mirror packages under ee/server that aren't primary sources (avoid duplicate lint targets)
       "ee/server/packages/extension-iframe-sdk/**/*",
       "ee/extensions/**/*", // Exclude extension bundles/examples from lint to reduce load and avoid false positives
-      "dist/**/*",
+      "**/dist/**/*",
       "**/.next/**/*",
       "**/out/**/*",
       "tools/**/*",
@@ -99,7 +99,7 @@ export default [
       // Mirror packages under ee/server that aren't primary sources (avoid duplicate lint targets)
       "ee/server/packages/extension-iframe-sdk/**/*",
       "ee/extensions/**/*",
-      "dist/**/*",
+      "**/dist/**/*",
       "**/.next/**/*",
       "**/out/**/*",
       "tools/**/*",
@@ -125,6 +125,7 @@ export default [
           path.join(__dirname, 'ee/server/tsconfig.eslint.json'),
           path.join(__dirname, 'shared/tsconfig.json'),
           path.join(__dirname, 'services/workflow-worker/tsconfig.eslint.json'),
+          path.join(__dirname, 'services/imap-service/tsconfig.eslint.json'),
           path.join(__dirname, 'packages/ui-kit/tsconfig.json'),
           path.join(__dirname, 'sdk/extension-iframe-sdk/tsconfig.json'),
           path.join(__dirname, 'sdk/extension-iframe-sdk/examples/vite-react/tsconfig.json'),
