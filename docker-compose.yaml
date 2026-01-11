@@ -160,6 +160,8 @@ services:
       args:
         SERVER_IMAGE_REPO: ${ALGA_SETUP_IMAGE_REPO:-ghcr.io/nine-minds/alga-psa-ce}
         ALGA_IMAGE_TAG: ${ALGA_IMAGE_TAG:-latest}
+    # The setup image uses a prebuilt base image that is published as amd64-only.
+    platform: linux/amd64
     networks:
       - app-network
     environment:
@@ -229,3 +231,7 @@ services:
 networks:
   app-network:
     driver: bridge
+
+volumes:
+  # Used by docker-compose.ngrok.yaml, but referenced in the base server definition.
+  ngrok-data:
