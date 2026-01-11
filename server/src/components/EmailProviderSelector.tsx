@@ -8,10 +8,10 @@
 import React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/Card';
 import { Button } from './ui/Button';
-import { Search, Building2 } from 'lucide-react';
+import { Search, Building2, Mail } from 'lucide-react';
 
 interface EmailProviderSelectorProps {
-  onProviderSelected: (providerType: 'google' | 'microsoft') => void;
+  onProviderSelected: (providerType: 'google' | 'microsoft' | 'imap') => void;
   onCancel?: () => void;
   hideHeader?: boolean;
 }
@@ -22,7 +22,7 @@ export function EmailProviderSelector({
   hideHeader = false,
 }: EmailProviderSelectorProps) {
   
-  const handleProviderClick = (providerType: 'google' | 'microsoft') => {
+  const handleProviderClick = (providerType: 'google' | 'microsoft' | 'imap') => {
     onProviderSelected(providerType);
   };
 
@@ -40,7 +40,7 @@ export function EmailProviderSelector({
       )}
 
       {/* Provider Selection Cards */}
-      <div id="email-provider-selector" className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto">
+      <div id="email-provider-selector" className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto">
         
         {/* Google Gmail Card */}
         <Card 
@@ -120,6 +120,45 @@ export function EmailProviderSelector({
               }}
             >
               Set up Microsoft 365
+            </Button>
+          </CardContent>
+        </Card>
+
+        {/* IMAP Card */}
+        <Card
+          id="imap-provider-selector-card"
+          className="cursor-pointer transition-all duration-200 hover:shadow-lg hover:-translate-y-1 border-2 hover:border-indigo-200 bg-gradient-to-br from-white to-indigo-50"
+          onClick={() => handleProviderClick('imap')}
+        >
+          <CardHeader className="text-center pb-4">
+            <div className="flex justify-center mb-4">
+              <div className="p-4 rounded-full bg-gradient-to-br from-indigo-500 to-indigo-600 shadow-lg">
+                <div className="flex items-center justify-center">
+                  <Mail className="h-8 w-8 text-white" />
+                </div>
+              </div>
+            </div>
+            <CardTitle className="text-xl font-bold text-gray-800">IMAP</CardTitle>
+            <CardDescription className="text-base text-gray-600">
+              Custom IMAP Server Integration
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="text-center space-y-4">
+            <div className="text-sm text-gray-600 space-y-2">
+              <p>✓ Any IMAP-compliant mailbox</p>
+              <p>✓ Folder-based email filtering</p>
+              <p>✓ OAuth2 or password authentication</p>
+              <p>✓ Real-time IDLE listener</p>
+            </div>
+            <Button
+              id="setup-imap-provider-button"
+              className="w-full bg-gradient-to-r from-indigo-500 to-indigo-600 hover:from-indigo-600 hover:to-indigo-700 text-white font-semibold shadow-md"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleProviderClick('imap');
+              }}
+            >
+              Set up IMAP
             </Button>
           </CardContent>
         </Card>

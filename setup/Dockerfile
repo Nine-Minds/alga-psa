@@ -15,10 +15,12 @@ WORKDIR /opt/setup
 COPY setup/entrypoint.sh ./entrypoint.sh
 COPY setup/config.ini ./config.ini
 COPY server/setup/create_database.js /app/server/setup/create_database.js
-RUN mkdir -p /app/scripts \
-    /app/server/migrations \
-    /app/server/seeds \
-    /app/ee/server/migrations
+# The base server image may contain old migrations/seeds; remove them so we don't accidentally run stale artifacts.
+RUN rm -rf /app/server/migrations /app/server/seeds /app/ee/server/migrations && \
+    mkdir -p /app/scripts \
+      /app/server/migrations \
+      /app/server/seeds \
+      /app/ee/server/migrations
 
 COPY scripts/ /app/scripts/
 COPY server/migrations/ /app/server/migrations/

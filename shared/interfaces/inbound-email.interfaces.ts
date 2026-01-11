@@ -4,7 +4,7 @@ export interface EmailProviderConfig {
   id: string;
   tenant: string;
   name: string;
-  provider_type: 'microsoft' | 'google';
+  provider_type: 'microsoft' | 'google' | 'imap';
   mailbox: string;
   folder_to_monitor: string; // Defaults to 'Inbox'
   active: boolean;
@@ -45,6 +45,34 @@ export interface EmailProviderConfig {
     label_filters?: string[]; // names of labels to include (user-defined)
     auto_process_emails?: boolean;
     max_emails_per_sync?: number;
+
+    // IMAP-specific configuration
+    host?: string;
+    port?: number;
+    secure?: boolean;
+    allow_starttls?: boolean;
+    auth_type?: 'password' | 'oauth2';
+    username?: string;
+    password?: string;
+    folder_filters?: string[];
+    oauth_authorize_url?: string;
+    oauth_token_url?: string;
+    oauth_client_id?: string;
+    oauth_client_secret?: string;
+    oauth_scopes?: string;
+    // Note: access_token, refresh_token, token_expires_at are defined above (shared with Gmail OAuth)
+    uid_validity?: string;
+    last_uid?: string;
+    folder_state?: Record<string, { uid_validity?: string; last_uid?: string; last_seen_at?: string }>;
+    last_processed_message_id?: string;
+    server_capabilities?: string;
+    lease_owner?: string;
+    lease_expires_at?: string;
+    connection_timeout_ms?: number;
+    socket_keepalive?: boolean;
+    last_seen_at?: string;
+    last_sync_at?: string;
+    last_error?: string;
   };
   created_at: string; // ISO date
   updated_at: string; // ISO date
@@ -52,7 +80,7 @@ export interface EmailProviderConfig {
 
 export interface EmailMessage {
   id: string;
-  provider: 'microsoft' | 'google';
+  provider: 'microsoft' | 'google' | 'imap';
   providerId: string;
   tenant: string;
   receivedAt: string;
@@ -123,7 +151,7 @@ export interface EmailConnectionStatus {
 export interface EmailQueueJob {
   id: string;
   tenant: string;
-  provider: 'microsoft' | 'google' | 'mailhog-test-provider';
+  provider: 'microsoft' | 'google' | 'imap' | 'mailhog-test-provider';
   messageId: string;
   providerId: string;
   webhookData: any;

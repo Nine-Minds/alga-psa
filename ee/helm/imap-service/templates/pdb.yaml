@@ -1,0 +1,17 @@
+{{- if and .Values.enabled .Values.podDisruptionBudget.enabled }}
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ include "imap-service.fullname" . }}
+  namespace: {{ include "imap-service.namespace" . }}
+  labels:
+    {{- include "imap-service.labels" . | nindent 4 }}
+    app.kubernetes.io/component: imap-service
+spec:
+  minAvailable: {{ .Values.podDisruptionBudget.minAvailable }}
+  selector:
+    matchLabels:
+      {{- include "imap-service.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: imap-service
+{{- end }}
+
