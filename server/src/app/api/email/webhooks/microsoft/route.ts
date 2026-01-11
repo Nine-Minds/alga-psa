@@ -248,10 +248,18 @@ export async function POST(request: NextRequest) {
             },
           } as any;
 
+          let details: any | null = null;
+          let detailsErrorMessage: string | null = null;
           try {
             const adapter = new MicrosoftGraphAdapter(providerConfig);
             await adapter.connect();
-            const details = await adapter.getMessageDetails(messageId);
+            details = await adapter.getMessageDetails(messageId);
+          } catch (detailErr: any) {
+            detailsErrorMessage = detailErr?.message || String(detailErr);
+            console.warn(`Failed to fetch Microsoft message details for ${messageId}: ${detailsErrorMessage}`);
+          }
+
+          if (details) {
             await publishEvent({
               eventType: 'INBOUND_EMAIL_RECEIVED',
               tenant: row.tenant,
@@ -262,31 +270,8 @@ export async function POST(request: NextRequest) {
                 emailData: details,
               },
             });
-
-            // Update last_sync_at after successful email processing
-            await trx('email_providers')
-              .where('id', row.id)
-              .update({
-                last_sync_at: trx.fn.now(),
-                updated_at: trx.fn.now()
-              });
-
-            // Update processing record with success status and email details
-            await trx('email_processed_messages')
-              .where({ message_id: messageId, provider_id: row.id, tenant: row.tenant })
-              .update({
-                processing_status: 'success',
-                from_email: details?.from?.email || null,
-                subject: details?.subject || notification.resourceData?.subject || null,
-                received_at: details?.receivedAt ? new Date(details.receivedAt) : null,
-                attachment_count: details?.attachments?.length || 0,
-              });
-
-            processedNotifications.push(messageId);
-            console.log(`Published enriched event for Microsoft email: ${messageId} from ${row.mailbox}`);
-          } catch (detailErr: any) {
-            console.warn(`Failed to fetch/publish Microsoft message ${messageId}: ${detailErr?.message || detailErr}`);
-            // Fallback: publish minimal event to acknowledge
+          } else {
+            // Fallback: publish minimal event (acknowledge receipt; workflow may decide how to handle missing fields)
             await publishEvent({
               eventType: 'INBOUND_EMAIL_RECEIVED',
               tenant: row.tenant,
@@ -307,18 +292,37 @@ export async function POST(request: NextRequest) {
                 } as any,
               },
             });
+          }
 
-            // Update processing record - still mark as partial since event was published
-            // (partial success - event published but with minimal data)
+          // Best-effort bookkeeping (do not publish a second event if this fails)
+          try {
+            await trx('email_providers')
+              .where('id', row.id)
+              .update({
+                last_sync_at: trx.fn.now(),
+                updated_at: trx.fn.now()
+              });
+          } catch (syncErr: any) {
+            console.warn(`Failed to update last_sync_at for provider ${row.id}: ${syncErr?.message || syncErr}`);
+          }
+
+          try {
             await trx('email_processed_messages')
               .where({ message_id: messageId, provider_id: row.id, tenant: row.tenant })
               .update({
-                processing_status: 'partial',
-                error_message: detailErr?.message || 'Failed to fetch full email details',
+                processing_status: details ? 'success' : 'partial',
+                from_email: details?.from?.email || null,
+                subject: details?.subject || notification.resourceData?.subject || null,
+                received_at: details?.receivedAt ? new Date(details.receivedAt) : null,
+                attachment_count: details?.attachments?.length || 0,
+                error_message: details ? null : (detailsErrorMessage || 'Failed to fetch full email details'),
               });
-
-            processedNotifications.push(messageId);
+          } catch (statusErr: any) {
+            console.warn(`Failed to update processing status for ${messageId}: ${statusErr?.message || statusErr}`);
           }
+
+          processedNotifications.push(messageId);
+          console.log(`Published ${details ? 'enriched' : 'minimal'} event for Microsoft email: ${messageId} from ${row.mailbox}`);
         });
       } catch (error) {
         console.error('Error processing Microsoft notification:', error);
