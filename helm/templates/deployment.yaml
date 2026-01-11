@@ -9,7 +9,10 @@ metadata:
 spec:
   replicas: {{ .Values.server.replicaCount }}
   strategy:
-    type: Recreate
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
   selector:
     matchLabels:
       {{- include "sebastian.selectorLabels" . | nindent 6 }}
