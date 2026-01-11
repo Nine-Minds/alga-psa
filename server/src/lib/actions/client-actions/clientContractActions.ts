@@ -204,13 +204,14 @@ export async function updateClientContract(
       // 4. Check for overlaps
       for (const cycle of invoicedCycles) {
         const cycleStartDate = toPlainDate(cycle.period_start_date);
-        const cycleEndDate = toPlainDate(cycle.period_end_date); // Invoiced cycles should always have an end date
+        const cycleEndDate = toPlainDate(cycle.period_end_date); // Period end is exclusive: [start, end)
 
-        // Overlap check: (StartA <= EndB) and (EndA >= StartB)
-        const startsBeforeCycleEnds = Temporal.PlainDate.compare(proposedStartDate, cycleEndDate) <= 0;
-        // If proposed end date is null (open-ended), it overlaps if it starts before the cycle ends.
-        // Otherwise, check if the proposed end date is after or on the cycle start date.
-        const endsAfterCycleStarts = proposedEndDate === null || Temporal.PlainDate.compare(proposedEndDate, cycleStartDate) >= 0;
+        // Overlap check using [start, end) semantics:
+        // Overlap if: startA < endB && endA > startB (touching boundaries do not overlap).
+        const proposedEndExclusive = proposedEndDate ? proposedEndDate.add({ days: 1 }) : null; // end_date is stored as inclusive date
+        const startsBeforeCycleEnds = Temporal.PlainDate.compare(proposedStartDate, cycleEndDate) < 0;
+        const endsAfterCycleStarts =
+          proposedEndExclusive === null || Temporal.PlainDate.compare(proposedEndExclusive, cycleStartDate) > 0;
 
         if (startsBeforeCycleEnds && endsAfterCycleStarts) {
           throw new Error("Cannot change assignment dates as they overlap with an already invoiced period.");

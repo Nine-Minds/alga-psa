@@ -199,8 +199,9 @@ export class BillingEngine {
         // Use the cycle's effective date to determine the relevant frequency
         const clientContractLineFrequency = await this.getBillingCycle(clientId, periodStartDate);
         const nextBillingDate = await getNextBillingDate(clientId, periodStartDate); // Pass the determined start date
-        // The end date is one day before the start of the next cycle
-        periodEndDate = toISODate(toPlainDate(nextBillingDate).subtract({ days: 1 }));
+        // Billing periods are treated as [start, end) (end exclusive).
+        // The end date is the start of the next cycle.
+        periodEndDate = toISODate(toPlainDate(nextBillingDate));
         console.log(`Calculated period: ${periodStartDate} to ${periodEndDate}`);
       } else {
         return {
@@ -475,7 +476,8 @@ export class BillingEngine {
         'cc.is_active': true,
         'cc.tenant': this.tenant
       })
-      .where('cc.start_date', '<=', billingPeriod.endDate)
+      // [start, end) semantics: a contract starting exactly on period end is not active within the period.
+      .where('cc.start_date', '<', billingPeriod.endDate)
       .where(function (this: any) {
         this.where('cc.end_date', '>=', billingPeriod.startDate).orWhereNull('cc.end_date');
       })
@@ -623,7 +625,8 @@ export class BillingEngine {
           client_id: clientId,
           tenant: this.tenant
         })
-        .where('effective_date', '<=', endDate)
+        // [start, end) semantics: a cycle starting exactly on endDate is not inside the period.
+        .where('effective_date', '<', endDate)
         .orderBy('effective_date', 'asc');
 
       let currentCycle = null;
@@ -705,7 +708,8 @@ export class BillingEngine {
             tenant: this.tenant,
             contract_id: clientContractLine.contract_id
           })
-          .where('effective_date', '<=', billingPeriod.endDate)
+          // [start, end) semantics: schedule starting exactly on period end does not apply.
+          .where('effective_date', '<', billingPeriod.endDate)
           .where(function(builder) {
             builder.whereNull('end_date')
               .orWhere('end_date', '>', billingPeriod.startDate);
@@ -1408,10 +1412,7 @@ export class BillingEngine {
         this.knex.raw('COALESCE(project_tasks.task_name, tickets.title) as work_item_name')
       );
 
-    console.log('Time entries query:', query.toString());
     const timeEntries = await query;
-
-    console.log('Time entries:', timeEntries);
 
     const timeBasedChargesPromises = timeEntries.map(async (entry: any): Promise<ITimeBasedCharge> => {
       const startDateTime = Temporal.PlainDateTime.from(entry.start_time.toISOString().replace('Z', ''));
@@ -1596,7 +1597,6 @@ export class BillingEngine {
       })
       .select('usage_tracking.*', 'service_catalog.service_name', 'service_catalog.default_rate', 'service_catalog.tax_rate_id'); // Fetch tax_rate_id
 
-    console.log('Usage record query:', usageRecordQuery.toQuery());
     const usageRecords = await usageRecordQuery;
 
     const usageBasedChargesPromises = usageRecords.map(async (record: any): Promise<IUsageBasedCharge> => {
@@ -2284,16 +2284,17 @@ export class BillingEngine {
       creditStart = billingStart;
     }
 
-    if (Temporal.PlainDate.compare(creditStart, periodEnd) > 0) {
+    if (Temporal.PlainDate.compare(creditStart, periodEnd) >= 0) {
       return [];
     }
 
-    const periodDays = this.calculateInclusiveDays(billingPeriod.startDate, billingPeriod.endDate);
+    // Billing periods are [start, end); end is exclusive.
+    const periodDays = this.calculatePeriodDaysExclusive(billingPeriod.startDate, billingPeriod.endDate);
     if (periodDays <= 0) {
       return [];
     }
 
-    const unusedDays = creditStart.until(periodEnd, { largestUnit: 'days' }).days + 1;
+    const unusedDays = creditStart.until(periodEnd, { largestUnit: 'days' }).days;
     if (unusedDays <= 0) {
       return [];
     }
@@ -2324,13 +2325,13 @@ export class BillingEngine {
       .filter((entry): entry is IFixedPriceCharge => entry !== null && Boolean(entry) && entry.servicePeriodStart !== undefined);
   }
 
-  private calculateInclusiveDays(start: ISO8601String, end: ISO8601String): number {
+  private calculatePeriodDaysExclusive(start: ISO8601String, end: ISO8601String): number {
     const startPlain = toPlainDate(start);
     const endPlain = toPlainDate(end);
-    if (Temporal.PlainDate.compare(endPlain, startPlain) < 0) {
+    if (Temporal.PlainDate.compare(endPlain, startPlain) <= 0) {
       return 0;
     }
-    return startPlain.until(endPlain, { largestUnit: 'days' }).days + 1;
+    return startPlain.until(endPlain, { largestUnit: 'days' }).days;
   }
 
   /**
@@ -2338,66 +2339,77 @@ export class BillingEngine {
    * @returns Proration factor (0.0 to 1.0)
    */
   private _calculateProrationFactor(billingPeriod: IBillingPeriod, planStartDate: ISO8601String, planEndDate: ISO8601String | null, billingCycle: string): number {
-    console.log('Billing period start:', billingPeriod.startDate);
-    console.log('Billing period end:', billingPeriod.endDate);
-    console.log('Plan start date:', planStartDate);
-    console.log('Plan end date:', planEndDate);
-
     // Use our date utilities to handle the conversion
     const planStart = toPlainDate(planStartDate);
     const periodStart = toPlainDate(billingPeriod.startDate);
     const effectiveStartDate = Temporal.PlainDate.compare(planStart, periodStart) > 0 ? planStart : periodStart;
-    console.log('Effective start:', toISODate(effectiveStartDate));
 
-    let cycleLength: number;
-    switch (billingCycle) {
-      case 'weekly':
-        cycleLength = 7;
-        break;
-      case 'bi-weekly':
-        cycleLength = 14;
-        break;
-      case 'monthly': {
-        const start = toPlainDate(billingPeriod.startDate);
-        cycleLength = start.daysInMonth;
+    // Billing periods are treated as [start, end) (end exclusive).
+    // Proration is computed against a *canonical* cycle length so transition periods prorate fixed charges.
+    const periodStartExclusive = periodStart;
+    const periodEndExclusive = toPlainDate(billingPeriod.endDate);
+
+    const expectedEndFromStart = (() => {
+      switch (billingCycle) {
+        case 'weekly':
+          return periodStartExclusive.add({ days: 7 });
+        case 'bi-weekly':
+          return periodStartExclusive.add({ days: 14 });
+        case 'monthly':
+          return periodStartExclusive.add({ months: 1 });
+        case 'quarterly':
+          return periodStartExclusive.add({ months: 3 });
+        case 'semi-annually':
+          return periodStartExclusive.add({ months: 6 });
+        case 'annually':
+          return periodStartExclusive.add({ years: 1 });
+        default:
+          return periodStartExclusive.add({ months: 1 });
       }
-        break;
-      case 'quarterly':
-        cycleLength = 91; // Approximation
-        break;
-      case 'semi-annually':
-        cycleLength = 182; // Approximation
-        break;
-      case 'annually':
-        cycleLength = 365; // Approximation
-        break;
-      default: {
-        const start = toPlainDate(billingPeriod.startDate);
-        cycleLength = start.daysInMonth;
+    })();
+
+    // A transition period is any period where end != (start + cycle length in calendar units).
+    // For transition periods, the canonical cycle is anchored at the transition end boundary.
+    const isTransitionPeriod = Temporal.PlainDate.compare(expectedEndFromStart, periodEndExclusive) !== 0;
+    const canonicalStart = isTransitionPeriod ? periodEndExclusive : periodStartExclusive;
+    const canonicalEnd = (() => {
+      switch (billingCycle) {
+        case 'weekly':
+          return canonicalStart.add({ days: 7 });
+        case 'bi-weekly':
+          return canonicalStart.add({ days: 14 });
+        case 'monthly':
+          return canonicalStart.add({ months: 1 });
+        case 'quarterly':
+          return canonicalStart.add({ months: 3 });
+        case 'semi-annually':
+          return canonicalStart.add({ months: 6 });
+        case 'annually':
+          return canonicalStart.add({ years: 1 });
+        default:
+          return canonicalStart.add({ months: 1 });
       }
-    }
+    })();
 
-    // Determine the effective end date for proration: the earlier of the plan end date and the period end date
-    const periodEnd = toPlainDate(billingPeriod.endDate);
-    const planEnd = planEndDate ? toPlainDate(planEndDate) : null;
-    const effectiveEndDate = planEnd && Temporal.PlainDate.compare(planEnd, periodEnd) < 0 ? planEnd : periodEnd;
-    console.log('Effective end:', toISODate(effectiveEndDate));
+    const canonicalCycleDays = this.calculatePeriodDaysExclusive(toISODate(canonicalStart), toISODate(canonicalEnd));
 
-    // Calculate the actual number of billable days INCLUSIVE of the end date
-    // Add 1 because .until is exclusive of the end date by default
-    const actualDays = effectiveStartDate.until(effectiveEndDate, { largestUnit: 'days' }).days + 1;
-    console.log(`Actual billable days (inclusive): ${actualDays}`);
-    console.log(`Cycle length: ${cycleLength}`);
+    // Determine the effective end boundary for plan activity (plan end_date is stored as an inclusive date).
+    const planEndInclusive = planEndDate ? toPlainDate(planEndDate) : null;
+    const planEndExclusive = planEndInclusive ? planEndInclusive.add({ days: 1 }) : null;
+    const effectiveEndExclusive =
+      planEndExclusive && Temporal.PlainDate.compare(planEndExclusive, periodEndExclusive) < 0
+        ? planEndExclusive
+        : periodEndExclusive;
 
-    // Ensure cycleLength is not zero to avoid division by zero
-    if (cycleLength === 0) {
+    const actualDaysRaw = effectiveStartDate.until(effectiveEndExclusive, { largestUnit: 'days' }).days;
+    const actualDays = Math.max(0, actualDaysRaw);
+
+    if (canonicalCycleDays === 0) {
       console.error("Error: Cycle length is zero. Cannot calculate proration factor.");
-      // Return 1.0 (no proration) if cycle length is zero to avoid division errors
       return 1.0;
     }
 
-    const prorationFactor = actualDays / cycleLength;
-    console.log(`Proration factor calculated: ${prorationFactor.toFixed(4)} (${actualDays} / ${cycleLength})`);
+    const prorationFactor = actualDays / canonicalCycleDays;
     return prorationFactor;
   }
 
@@ -2416,7 +2428,6 @@ export class BillingEngine {
     return charges.map((charge: IBillingCharge): IBillingCharge => {
       // Proration for 'fixed' type is now handled earlier in calculateFixedPriceCharges
       if (charge.type === 'fixed') {
-        console.log(`Skipping proration in applyProrationToPlan for fixed charge: ${charge.serviceName} (handled earlier)`);
         return charge; // Return charge as is
       }
 

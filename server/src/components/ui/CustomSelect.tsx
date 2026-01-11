@@ -112,7 +112,7 @@ const CustomSelect: React.FC<CustomSelectProps & AutomationProps> = ({
   }, true, dataAutomationId);
   
   // Always use the generated automation props (which include our override ID if provided)
-  const finalAutomationProps = { ...selectProps, ...props };
+  const finalAutomationProps = { id: selectId, ...selectProps, ...props };
 
   // Update metadata when field props change - intentionally omitting updateMetadata from deps
   useEffect(() => {

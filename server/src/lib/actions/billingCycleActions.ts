@@ -94,8 +94,6 @@ export async function canCreateNextBillingCycle(clientId: string): Promise<{
 
   const now = new Date().toISOString().split('T')[0] + 'T00:00:00Z';
 
-  console.log('Last cycle:', lastCycle);
-
   // If no cycles exist, we can create one
   if (!lastCycle) {
     return {
@@ -208,11 +206,14 @@ export async function createNextBillingCycle(
   }
 
   const canCreate = await canCreateNextBillingCycle(clientId);
-  if (!canCreate) {
+  if (!canCreate.canCreate) {
     throw new Error('Cannot create next billing cycle at this time');
   }
 
-  return await createClientContractLineCycles(conn, client, { manual: true });
+  return await createClientContractLineCycles(conn, client, {
+    manual: true,
+    effectiveDate
+  });
 }
 
 // function for rollback (deactivate cycle, delete invoice)
