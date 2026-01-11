@@ -529,6 +529,7 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
           contentType: attachment.contentType,
           size: attachment.size,
           contentId: attachment.contentId,
+          isInline: attachment.isInline,
         })),
         threadId: message.conversationId,
         references: message.internetMessageHeaders?.find((h: any) => h.name === 'References')?.value?.split(' '),
@@ -544,6 +545,53 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
       };
     } catch (error) {
       throw this.handleError(error, 'getMessageDetails');
+    }
+  }
+
+  /**
+   * Download a file attachment's bytes.
+   *
+   * Notes:
+   * - Graph's attachment payload commonly includes base64 `contentBytes` for fileAttachment.
+   * - We intentionally skip item/reference attachments here; callers can treat them as unsupported.
+   */
+  async downloadAttachmentBytes(messageId: string, attachmentId: string): Promise<{
+    fileName: string;
+    contentType: string;
+    size: number;
+    contentId?: string;
+    isInline?: boolean;
+    buffer: Buffer;
+  }> {
+    try {
+      const mailboxBase = this.getMailboxBasePath();
+      const response = await this.httpClient.get(
+        `${mailboxBase}/messages/${messageId}/attachments/${attachmentId}`
+      );
+
+      const att = response.data;
+      const odataType: string | undefined = att?.['@odata.type'];
+      const isFileAttachment = !odataType || String(odataType).toLowerCase().includes('fileattachment');
+      if (!isFileAttachment) {
+        throw new Error(`Unsupported attachment type: ${odataType || 'unknown'}`);
+      }
+
+      const contentBytes: string | undefined = att?.contentBytes;
+      if (!contentBytes) {
+        throw new Error('Attachment contentBytes missing');
+      }
+
+      const buffer = Buffer.from(contentBytes, 'base64');
+      return {
+        fileName: att?.name || attachmentId,
+        contentType: att?.contentType || 'application/octet-stream',
+        size: typeof att?.size === 'number' ? att.size : buffer.length,
+        contentId: att?.contentId || undefined,
+        isInline: typeof att?.isInline === 'boolean' ? att.isInline : undefined,
+        buffer,
+      };
+    } catch (error) {
+      throw this.handleError(error, 'downloadAttachmentBytes');
     }
   }
 

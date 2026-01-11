@@ -79,6 +79,7 @@ export interface EmailMessage {
     contentType: string;
     size: number;
     contentId?: string;
+    isInline?: boolean;
   }>;
   threadId?: string;
   references?: string[];

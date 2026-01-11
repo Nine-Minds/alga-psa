@@ -154,7 +154,7 @@ export class GmailAdapter extends BaseEmailAdapter {
       try {
         const knex = await getAdminConnection();
         await knex('google_email_provider_config')
-          .where('email_provider_id', this.config.id)
+          .where({ tenant: this.config.tenant, email_provider_id: this.config.id })
           .update({
             access_token: this.accessToken,
             refresh_token: this.refreshToken,
@@ -231,7 +231,7 @@ This indicates a problem with the OAuth token saving process.`;
           const knex = await getAdminConnection();
           const rec: any = await knex('google_email_provider_config')
             .select('label_filters')
-            .where('email_provider_id', this.config.id)
+            .where({ tenant: this.config.tenant, email_provider_id: this.config.id })
             .first();
           const fromDb = Array.isArray(rec?.label_filters)
             ? rec.label_filters
@@ -304,7 +304,7 @@ This indicates a problem with the OAuth token saving process.`;
       try {
         const knex = await getAdminConnection();
         await knex('google_email_provider_config')
-          .where('email_provider_id', this.config.id)
+          .where({ tenant: this.config.tenant, email_provider_id: this.config.id })
           .update({
             history_id: response.data.historyId,
             watch_expiration: expirationISO,
@@ -550,11 +550,23 @@ This indicates a problem with the OAuth token saving process.`;
       const extractAttachments = (parts: any[]): void => {
         for (const part of parts) {
           if (part.filename && part.body?.attachmentId) {
+            const partHeaders = part.headers || [];
+            const getPartHeader = (name: string) =>
+              partHeaders.find((h: any) => String(h.name || '').toLowerCase() === name.toLowerCase())?.value || '';
+
+            const contentDisposition = String(getPartHeader('Content-Disposition') || '').toLowerCase();
+            const isInline = contentDisposition.includes('inline');
+
+            const rawContentId = String(getPartHeader('Content-ID') || '').trim();
+            const contentId = rawContentId ? rawContentId.replace(/^<|>$/g, '') : undefined;
+
             attachments.push({
               filename: part.filename,
               mimeType: part.mimeType,
               size: part.body.size,
-              attachmentId: part.body.attachmentId
+              attachmentId: part.body.attachmentId,
+              contentId,
+              isInline
             });
           } else if (part.parts) {
             extractAttachments(part.parts);
@@ -597,7 +609,9 @@ This indicates a problem with the OAuth token saving process.`;
           id: att.attachmentId,
           name: att.filename,
           size: att.size,
-          contentType: att.mimeType
+          contentType: att.mimeType,
+          contentId: att.contentId,
+          isInline: att.isInline
         })),
         headers: headers.reduce((acc: any, header: any) => {
           acc[header.name] = header.value;
@@ -606,6 +620,32 @@ This indicates a problem with the OAuth token saving process.`;
       };
     } catch (error) {
       throw this.handleError(error, 'getMessageDetails');
+    }
+  }
+
+  /**
+   * Download attachment bytes for a Gmail message.
+   *
+   * Gmail returns attachment payload as base64url in `data`.
+   */
+  async downloadAttachmentBytes(messageId: string, attachmentId: string): Promise<Buffer> {
+    try {
+      await this.ensureValidToken();
+      const res = await this.gmail.users.messages.attachments.get({
+        userId: 'me',
+        messageId,
+        id: attachmentId,
+      });
+
+      const raw: string | undefined = res?.data?.data;
+      if (!raw) {
+        throw new Error('Attachment data missing');
+      }
+
+      const base64 = raw.replace(/-/g, '+').replace(/_/g, '/').padEnd(Math.ceil(raw.length / 4) * 4, '=');
+      return Buffer.from(base64, 'base64');
+    } catch (error) {
+      throw this.handleError(error, 'downloadAttachmentBytes');
     }
   }
 
