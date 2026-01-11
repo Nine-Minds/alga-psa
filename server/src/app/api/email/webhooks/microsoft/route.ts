@@ -298,6 +298,7 @@ export async function POST(request: NextRequest) {
           try {
             await trx('email_providers')
               .where('id', row.id)
+              .andWhere('tenant', row.tenant)
               .update({
                 last_sync_at: trx.fn.now(),
                 updated_at: trx.fn.now()
