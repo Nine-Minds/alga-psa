@@ -20,6 +20,9 @@ services:
       # Prebuilt stacks should run the server in production mode (use the baked `.next` output).
       APP_ENV: production
       NODE_ENV: production
+      # The prebuilt server image listens on port 3000 inside the container.
+      APP_PORT: "3000"
+      PORT: "3000"
       HOST: ${HOST}
       VERIFY_EMAIL_ENABLED: ${VERIFY_EMAIL_ENABLED:-false}
       REDIS_HOST: ${REDIS_HOST:-redis}
