@@ -225,7 +225,7 @@ export async function POST(request: NextRequest) {
 
             // Update last_sync_at after successful email processing
             await trx('email_providers')
-              .where('id', row.id)
+              .where({ id: row.id, tenant: row.tenant })
               .update({
                 last_sync_at: trx.fn.now(),
                 updated_at: trx.fn.now()
