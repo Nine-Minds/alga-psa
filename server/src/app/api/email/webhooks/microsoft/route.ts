@@ -105,18 +105,17 @@ export async function POST(request: NextRequest) {
     // Process each notification
     for (const notification of payload.value) {
       try {
-        // Validate client state
-        const providerId = notification.subscriptionId;
-        console.log(`🔍 Processing notification for subscription: ${providerId}`);
+        const subscriptionId = notification.subscriptionId;
+        console.log(`🔍 Processing notification for subscription: ${subscriptionId}`);
 
         await withTransaction(knex, async (trx) => {
         // Look up provider by subscription ID via microsoft vendor config (consistent with Google design)
-        const row = await trx('microsoft_email_provider_config as mc')
+        let row = await trx('microsoft_email_provider_config as mc')
           .join('email_providers as ep', function() {
             this.on('mc.email_provider_id', '=', 'ep.id')
                 .andOn('mc.tenant', '=', 'ep.tenant');
           })
-          .where('mc.webhook_subscription_id', providerId)
+          .where('mc.webhook_subscription_id', subscriptionId)
           .andWhere('ep.provider_type', 'microsoft')
           .first(
             'ep.*',
@@ -132,15 +131,56 @@ export async function POST(request: NextRequest) {
             trx.raw('mc.folder_filters as mc_folder_filters')
           );
 
+        // Fallback: if subscription id lookup fails, attempt lookup by verification token (clientState).
+        // This helps recover if a subscription was recreated and the stored subscription id is stale.
+        if (!row && notification.clientState) {
+          row = await trx('microsoft_email_provider_config as mc')
+            .join('email_providers as ep', function() {
+              this.on('mc.email_provider_id', '=', 'ep.id')
+                  .andOn('mc.tenant', '=', 'ep.tenant');
+            })
+            .where('mc.webhook_verification_token', notification.clientState)
+            .andWhere('ep.provider_type', 'microsoft')
+            .first(
+              'ep.*',
+              trx.raw('mc.client_id as mc_client_id'),
+              trx.raw('mc.client_secret as mc_client_secret'),
+              trx.raw('mc.tenant_id as mc_tenant_id'),
+              trx.raw('mc.access_token as mc_access_token'),
+              trx.raw('mc.refresh_token as mc_refresh_token'),
+              trx.raw('mc.token_expires_at as mc_token_expires_at'),
+              trx.raw('mc.webhook_subscription_id as mc_webhook_subscription_id'),
+              trx.raw('mc.webhook_expires_at as mc_webhook_expires_at'),
+              trx.raw('mc.webhook_verification_token as mc_webhook_verification_token'),
+              trx.raw('mc.folder_filters as mc_folder_filters')
+            );
+
+          if (row) {
+            console.warn(`⚠️ Subscription id ${subscriptionId} not found; matched provider via clientState token. Updating stored subscription id.`);
+            try {
+              await trx('microsoft_email_provider_config')
+                .where({ email_provider_id: row.id, tenant: row.tenant })
+                .update({
+                  webhook_subscription_id: subscriptionId,
+                  webhook_expires_at: notification.subscriptionExpirationDateTime ? new Date(notification.subscriptionExpirationDateTime) : trx.fn.now(),
+                  last_subscription_renewal: trx.fn.now(),
+                  updated_at: trx.fn.now(),
+                });
+            } catch (e: any) {
+              console.warn(`Failed to update stored subscription id for provider ${row.id}: ${e?.message || e}`);
+            }
+          }
+        }
+
         if (!row) {
-          console.error(`❌ Provider not found for subscription: ${providerId}`);
+          console.error(`❌ Provider not found for subscription: ${subscriptionId}`);
           console.error('This subscription may not exist in the database. Check:');
-          console.error(`  1. Is webhook_subscription_id="${providerId}" in microsoft_email_provider_config?`);
+          console.error(`  1. Is webhook_subscription_id="${subscriptionId}" in microsoft_email_provider_config?`);
           console.error(`  2. Has the email_provider been created?`);
           return;
         }
 
-        console.log(`✅ Found provider for subscription ${providerId}:`, {
+        console.log(`✅ Found provider for subscription ${subscriptionId}:`, {
           providerId: row.id,
           mailbox: row.mailbox,
           tenant: row.tenant,
@@ -175,7 +215,7 @@ export async function POST(request: NextRequest) {
           // Check if this email has already been processed (deduplication)
           // Microsoft may send duplicate webhook notifications for reliability
           const existingProcessed = await trx('email_processed_messages')
-            .where({ message_id: messageId, tenant: row.tenant })
+            .where({ message_id: messageId, provider_id: row.id, tenant: row.tenant })
             .first();
 
           if (existingProcessed) {
@@ -186,6 +226,7 @@ export async function POST(request: NextRequest) {
           // Insert processing record BEFORE publishing event to prevent race conditions
           // This ensures that if Microsoft sends duplicate webhooks simultaneously,
           // only one will proceed past this point
+          let insertedProcessingRecord = false;
           try {
             await trx('email_processed_messages').insert({
               message_id: messageId,
@@ -203,13 +244,20 @@ export async function POST(request: NextRequest) {
                 webhookReceivedAt: new Date().toISOString(),
               }),
             });
+            insertedProcessingRecord = true;
           } catch (insertErr: any) {
             // If insert fails due to unique constraint, another webhook is processing this email
             if (insertErr.code === '23505' || insertErr.message?.includes('duplicate') || insertErr.message?.includes('unique')) {
               console.log(`⚠️ Email ${messageId} is being processed by another webhook, skipping`);
               return;
             }
+            // If insert fails due to FK constraint (older schema), proceed without dedupe rather than dropping the email entirely.
+            if (insertErr.code === '23503') {
+              console.warn(`⚠️ Failed to insert dedupe record for ${messageId} due to FK constraint; continuing without dedupe.`);
+              insertedProcessingRecord = false;
+            } else {
             throw insertErr;
+            }
           }
 
           // Build provider config to fetch full email details
@@ -319,7 +367,9 @@ export async function POST(request: NextRequest) {
                 error_message: details ? null : (detailsErrorMessage || 'Failed to fetch full email details'),
               });
           } catch (statusErr: any) {
-            console.warn(`Failed to update processing status for ${messageId}: ${statusErr?.message || statusErr}`);
+            if (insertedProcessingRecord) {
+              console.warn(`Failed to update processing status for ${messageId}: ${statusErr?.message || statusErr}`);
+            }
           }
 
           processedNotifications.push(messageId);
