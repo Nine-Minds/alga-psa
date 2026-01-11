@@ -1,6 +1,6 @@
 # IMAP Inbound Email Scratchpad
 
-Last updated: 2026-01-10
+Last updated: 2026-01-11
 Owner: Email Platform
 
 Use this scratchpad to capture key findings, decisions, TODOs, and file references while implementing the IMAP inbound email service.
@@ -99,6 +99,10 @@ Use this scratchpad to capture key findings, decisions, TODOs, and file referenc
     - `IMAP_CONNECTION_TIMEOUT_MS` (default: `10000`)
     - `IMAP_MAX_EMAILS_PER_SYNC` (default: `5`)
     - `IMAP_SOCKET_KEEPALIVE` (default: `true`, set to `false` to disable)
+  - To avoid thundering herd across instances/providers, IMAP service uses jittered timers:
+    - `IMAP_TIMER_JITTER_PCT` (default: `0.1`) applies to provider refresh, heartbeat, poll sleep, and IDLE NOOP interval.
+    - `IMAP_STARTUP_STAGGER_MS` (default: `2000`) staggers folder listener startup per provider/folder.
+    - `IMAP_RECONNECT_JITTER_PCT` (default: `0.5`) randomizes reconnect delay within `[baseDelay*(1-jitterPct), baseDelay]`.
   - Initial connect and manual resync behavior:
     - When cursor state is empty, IMAP listener starts from the most recent `IMAP_MAX_EMAILS_PER_SYNC` window (based on mailbox `uidNext`) instead of replaying the whole mailbox from UID 1.
     - `last_uid` advances to the highest UID observed even when a message is skipped/deduped, to avoid repeatedly re-scanning the same window.

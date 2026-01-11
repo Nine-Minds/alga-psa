@@ -18,6 +18,32 @@ const DEFAULT_LEASE_TTL_MS = 120_000;
 const DEFAULT_MAX_CONNECTIONS_PER_TENANT = 5;
 const DEFAULT_CONNECTION_TIMEOUT_MS = 10_000;
 const DEFAULT_MAX_EMAILS_PER_SYNC = 5;
+const DEFAULT_TIMER_JITTER_PCT = 0.1;
+const DEFAULT_STARTUP_STAGGER_MS = 2_000;
+
+function clampNumber(value: number, min: number, max: number): number {
+  return Math.max(min, Math.min(max, value));
+}
+
+function getTimerJitterPct(): number {
+  const raw = process.env.IMAP_TIMER_JITTER_PCT;
+  if (!raw) return DEFAULT_TIMER_JITTER_PCT;
+  const parsed = Number(raw);
+  if (!Number.isFinite(parsed)) return DEFAULT_TIMER_JITTER_PCT;
+  return clampNumber(parsed, 0, 0.5);
+}
+
+function jitterMs(baseMs: number, jitterPct: number): number {
+  if (!Number.isFinite(baseMs) || baseMs <= 0) return 0;
+  if (!Number.isFinite(jitterPct) || jitterPct <= 0) return Math.floor(baseMs);
+  const delta = baseMs * jitterPct;
+  const offset = (Math.random() * 2 - 1) * delta;
+  return Math.max(50, Math.floor(baseMs + offset));
+}
+
+async function sleep(ms: number): Promise<void> {
+  await new Promise((resolve) => setTimeout(resolve, ms));
+}
 
 function stateLog(event: string, fields: Record<string, unknown> = {}) {
   try {
@@ -86,6 +112,7 @@ class ImapFolderListener {
   private folderState: FolderState = {};
   private idleFailures = 0;
   private listenerId = uuidv4();
+  private jitterPct = getTimerJitterPct();
 
   constructor(
     private provider: ImapProviderRow,
@@ -524,7 +551,7 @@ class ImapFolderListener {
       try {
         await Promise.race([
           client.idle(),
-          new Promise((resolve) => setTimeout(resolve, DEFAULT_IDLE_POLL_MS)).then(async () => {
+          new Promise((resolve) => setTimeout(resolve, jitterMs(DEFAULT_IDLE_POLL_MS, this.jitterPct))).then(async () => {
             try {
               await client.noop();
             } catch {
@@ -572,12 +599,24 @@ class ImapFolderListener {
     const intervalMs = Number(process.env.IMAP_POLL_INTERVAL_MS || DEFAULT_POLL_INTERVAL_MS);
     while (this.running) {
       await this.syncNewMessages(client);
-      await new Promise((resolve) => setTimeout(resolve, intervalMs));
+      await sleep(jitterMs(intervalMs, this.jitterPct));
     }
   }
 
   async start() {
     this.running = true;
+    const startupStaggerMs = Number(process.env.IMAP_STARTUP_STAGGER_MS || DEFAULT_STARTUP_STAGGER_MS);
+    if (startupStaggerMs > 0) {
+      const delay = Math.floor(Math.random() * startupStaggerMs);
+      stateLog('listener_start_stagger', {
+        providerId: this.provider.id,
+        tenant: this.provider.tenant,
+        folder: this.folder,
+        listenerId: this.listenerId,
+        delayMs: delay,
+      });
+      await sleep(delay);
+    }
     stateLog('folder_listener_start', {
       providerId: this.provider.id,
       tenant: this.provider.tenant,
@@ -687,9 +726,17 @@ class ImapFolderListener {
 
   private async delayWithBackoff() {
     const baseDelay = Math.min(this.reconnectDelay, DEFAULT_RECONNECT_MAX_MS);
-    const jitter = Math.floor(Math.random() * 500);
-    const delay = baseDelay + jitter;
-    await new Promise((resolve) => setTimeout(resolve, delay));
+    const backoffJitterPct = clampNumber(
+      Number(process.env.IMAP_RECONNECT_JITTER_PCT || 0.5),
+      0,
+      1
+    );
+    const minDelay = Math.floor(baseDelay * (1 - backoffJitterPct));
+    const delay =
+      minDelay >= baseDelay
+        ? baseDelay
+        : minDelay + Math.floor(Math.random() * Math.max(1, baseDelay - minDelay + 1));
+    await sleep(delay);
     this.reconnectDelay = Math.min(this.reconnectDelay * 2, DEFAULT_RECONNECT_MAX_MS);
   }
 
@@ -783,35 +830,54 @@ export class ImapService {
   private refreshTimer: NodeJS.Timeout | null = null;
   private heartbeatTimer: NodeJS.Timeout | null = null;
   private instanceId = uuidv4();
+  private shuttingDown = false;
+  private jitterPct = getTimerJitterPct();
 
   async start() {
+    this.shuttingDown = false;
     stateLog('service_start', {
       instanceId: this.instanceId,
       refreshMs: Number(process.env.IMAP_PROVIDER_REFRESH_MS || DEFAULT_REFRESH_MS),
       leaseTtlMs: Number(process.env.IMAP_LEASE_TTL_MS || DEFAULT_LEASE_TTL_MS),
       maxConnectionsPerTenant: Number(process.env.IMAP_MAX_CONNECTIONS_PER_TENANT || DEFAULT_MAX_CONNECTIONS_PER_TENANT),
+      timerJitterPct: this.jitterPct,
     });
     await this.refreshProviders();
     const refreshMs = Number(process.env.IMAP_PROVIDER_REFRESH_MS || DEFAULT_REFRESH_MS);
-    this.refreshTimer = setInterval(() => {
-      this.refreshProviders().catch((error) => {
+
+    const scheduleRefresh = async () => {
+      if (this.shuttingDown) return;
+      try {
+        await this.refreshProviders();
+      } catch (error: any) {
         logger.error('[IMAP] Failed to refresh providers', error);
         stateLog('refresh_error', { instanceId: this.instanceId, message: error?.message || String(error) });
-      });
-    }, refreshMs);
-    this.heartbeatTimer = setInterval(() => {
+      } finally {
+        if (this.shuttingDown) return;
+        this.refreshTimer = setTimeout(scheduleRefresh, jitterMs(refreshMs, this.jitterPct));
+      }
+    };
+
+    const scheduleHeartbeat = async () => {
+      if (this.shuttingDown) return;
       logger.info('[IMAP] Heartbeat', { activeProviders: this.workers.size });
       stateLog('heartbeat', { instanceId: this.instanceId, activeProviders: this.workers.size });
-    }, 60_000);
+      if (this.shuttingDown) return;
+      this.heartbeatTimer = setTimeout(scheduleHeartbeat, jitterMs(60_000, this.jitterPct));
+    };
+
+    this.refreshTimer = setTimeout(scheduleRefresh, jitterMs(refreshMs, this.jitterPct));
+    this.heartbeatTimer = setTimeout(scheduleHeartbeat, jitterMs(60_000, this.jitterPct));
   }
 
   async stop() {
+    this.shuttingDown = true;
     if (this.refreshTimer) {
-      clearInterval(this.refreshTimer);
+      clearTimeout(this.refreshTimer);
       this.refreshTimer = null;
     }
     if (this.heartbeatTimer) {
-      clearInterval(this.heartbeatTimer);
+      clearTimeout(this.heartbeatTimer);
       this.heartbeatTimer = null;
     }
     for (const worker of this.workers.values()) {

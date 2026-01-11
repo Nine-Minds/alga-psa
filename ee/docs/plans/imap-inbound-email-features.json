@@ -392,6 +392,14 @@
     "implemented": true
   },
   {
+    "description": "Add jitter to IMAP timers (refresh/poll/idle-noop/heartbeat) to avoid thundering herd",
+    "implemented": true
+  },
+  {
+    "description": "Stagger IMAP folder listener startup to avoid connection spikes on service restart",
+    "implemented": true
+  },
+  {
     "description": "Cap IMAP reconnect backoff to configurable max",
     "implemented": true
   },
