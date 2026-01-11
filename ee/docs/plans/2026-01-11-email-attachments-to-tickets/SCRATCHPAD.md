@@ -1,40 +1,51 @@
 # Scratchpad — Email Attachments → Ticket Documents
 
-## Context / Current State
+## Summary (Implemented)
 
-- The email workflow already attempts attachment handling:
-  - `services/workflow-worker/src/workflows/system-email-processing-workflow.ts` calls `actions.process_email_attachment` for both new tickets and replies.
-- The registered action `process_email_attachment` resolves to:
-  - `shared/workflow/init/registerWorkflowActions.ts` → `@alga-psa/shared/workflow/actions/emailWorkflowActions#processEmailAttachment`
-- Current `processEmailAttachment` implementation creates a `documents` row and a `document_associations` row, but does **not** download/store attachment bytes in `file_stores`.
+- Implemented a workflow-worker override for `process_email_attachment` that:
+  - Enforces eligibility rules: skip inline/CID, max 100MB, require filename, allow all file types.
+  - Downloads attachment bytes from provider (Microsoft Graph or Gmail).
+  - Uploads bytes via `StorageProviderFactory` and creates `external_files`, `documents`, and `document_associations` rows.
+  - Attributes `uploaded_by_id`, `created_by`, `user_id` to the configured inbound email “system user” (`inbound_ticket_defaults.entered_by`).
+  - Uses strict idempotency via `email_processed_attachments` (stable PK: `{tenant, provider_id, email_id, attachment_id}`) with status + error recording.
+  - Treats unsupported Microsoft attachment shapes as `skipped` (not a workflow failure).
+
+- Citus compatibility:
+  - Added tenant predicates to `UPDATE email_providers ...` in webhook routes to avoid scatter/gather updates and RLS issues.
+  - Added a Citus distribution migration for `email_processed_attachments` (distributed by `tenant`, colocated with `tenants`).
 
 ## Key Files
 
-- Workflow (worker): `services/workflow-worker/src/workflows/system-email-processing-workflow.ts`
-- Action registration: `shared/workflow/init/registerWorkflowActions.ts`
-- Email workflow actions: `shared/workflow/actions/emailWorkflowActions.ts`
-- Email message interface includes `attachments[]` metadata only: `shared/interfaces/inbound-email.interfaces.ts`
-- Microsoft message details expands attachment metadata: `shared/services/email/providers/MicrosoftGraphAdapter.ts`
-- Gmail adapter exists in server (not shared): `server/src/services/email/providers/GmailAdapter.ts`
-- Storage layer (server): `server/src/lib/storage/StorageService.ts`, `server/src/models/storage/FileStoreModel`
+- Worker action override: `services/workflow-worker/src/actions/registerEmailAttachmentActions.ts`
+- Worker wiring: `services/workflow-worker/src/index.ts`
+- Schema:
+  - `server/migrations/20260111121500_create_email_processed_attachments.cjs`
+  - `ee/server/migrations/citus/20260111123000_distribute_email_processed_attachments.cjs`
+- Provider downloads:
+  - Microsoft: `shared/services/email/providers/MicrosoftGraphAdapter.ts` (`downloadAttachmentBytes`, `isInline`)
+  - Gmail: `server/src/services/email/providers/GmailAdapter.ts` (`downloadAttachmentBytes`, `isInline`/`contentId` parsing)
+- Citus webhook fixes:
+  - `server/src/app/api/email/webhooks/microsoft/route.ts`
+  - `server/src/app/api/email/webhooks/google/route.ts`
 
-## Notes / Decisions (draft)
+## Test Coverage
 
-- Policy decisions (confirmed):
-  - Inline/CID attachments: skip by default
-  - Max attachment size: 100 MB (100 * 1024 * 1024 bytes)
-  - File types: allow all (no blocklist)
-  - Attribution: system user
-  - Idempotency: strict, via `email_processed_attachments`
+- Vitest integration tests (business logic + DB assertions):
+  - `server/src/test/integration/emailAttachmentIngestion.integration.test.ts`
+  - `server/src/test/integration/systemEmailProcessingWorkflowAttachments.integration.test.ts`
+  - `server/src/test/integration/citusTenantFilterEmailProviders.integration.test.ts`
 
-- Likely need to implement provider-specific “download attachment bytes” methods for Microsoft and Gmail.
-- Need attachment-granularity idempotency (not just message idempotency), because workflows can retry per-event.
-- Citus: treat any writes/updates to distributed tables as requiring `tenant` in the predicate to avoid scatter/gather and tenant RLS issues.
+- Playwright UI verification (documents visible on ticket):
+  - `ee/server/src/__tests__/integration/email-attachments-to-ticket-documents.playwright.test.ts`
 
-- Implementation gotcha: `server/src/lib/storage/StorageService.ts` currently requires an authenticated user (`getCurrentUser`) even when an explicit `uploaded_by_id` is provided. For system-ingested email attachments, we likely need a system-upload path that bypasses interactive auth and writes `external_files` directly (similar to `server/src/services/zip-generation.service.ts`).
+## Playwright Notes ($playwright-testing)
 
-## Open Questions to Resolve
+- Cookie naming: the app suffixes the dev session cookie by port (`authjs.session-token.<port>`). Updated Playwright auth helpers to mint cookies using the suffixed cookie name/salt so sessions work on non-3000 ports.
+- Secret providers: Playwright runs force secret provider read/write to `env` (avoid developer filesystem secrets clobbering test DB creds).
 
-- Remaining:
-  - Exact schema for `email_processed_attachments` (status enum, document/file ids, error storage).
-  - Microsoft: handling of non-file attachments (item/reference); likely skip initially.
+## Isolated Local Test Env Notes ($alga-test-env-setup)
+
+- For side-by-side worktrees/environments, use the `alga-test-env-setup` scripts to generate unique ports + secrets and avoid collisions:
+  - Port detection: `~/.claude/skills/alga-test-env-setup/scripts/detect_ports.py --env-num <N> --json`
+  - Secrets generation: `~/.claude/skills/alga-test-env-setup/scripts/generate_secrets.py --secrets-dir <worktree>/secrets`
+  - Then wire `server/.env` using the detected ports (unified port model: internal + exposed ports match).

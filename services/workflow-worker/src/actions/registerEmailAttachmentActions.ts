@@ -3,6 +3,7 @@ import type { ActionRegistry, ActionExecutionContext } from '@shared/workflow/co
 import type { EmailProviderConfig } from '@alga-psa/shared/interfaces/inbound-email.interfaces';
 
 const MAX_ATTACHMENT_BYTES = 100 * 1024 * 1024;
+const STALE_PROCESSING_MS = 30 * 60 * 1000; // 30 minutes
 
 function isUniqueViolation(error: any): boolean {
   return error?.code === '23505' || String(error?.message || '').toLowerCase().includes('duplicate');
@@ -138,9 +139,16 @@ export function registerEmailAttachmentActions(actionRegistry: ActionRegistry): 
       const declaredSize: number | null = typeof attachment.size === 'number' ? attachment.size : null;
       const contentId: string | null = attachment.contentId ? String(attachment.contentId) : null;
       const isInline: boolean = Boolean(attachment.isInline);
+      const providedContentBase64: string | null =
+        typeof attachment.content === 'string' && attachment.content.trim().length > 0
+          ? attachment.content.trim()
+          : null;
 
-      const { getAdminConnection } = await import('@alga-psa/shared/db/admin');
-      const knex = (context.knex as any) || (await getAdminConnection());
+      let knex = (context.knex as any) || null;
+      if (!knex) {
+        const { getAdminConnection } = await import('@alga-psa/shared/db/admin');
+        knex = await getAdminConnection();
+      }
 
       // Claim attachment (strict idempotency)
       try {
@@ -169,6 +177,87 @@ export function registerEmailAttachmentActions(actionRegistry: ActionRegistry): 
           })
           .first();
 
+        const status = String(existing?.processing_status || '').toLowerCase();
+
+        // If a previous attempt failed, allow a safe retry (still idempotent due to stable PK).
+        if (status === 'failed') {
+          const updated = await knex('email_processed_attachments')
+            .where({
+              tenant,
+              provider_id: providerId,
+              email_id: emailId,
+              attachment_id: attachmentId,
+            })
+            .andWhere('processing_status', 'failed')
+            .update({
+              processing_status: 'processing',
+              error_message: null,
+              file_name: fileName || existing?.file_name || null,
+              content_type: contentType || existing?.content_type || null,
+              file_size: declaredSize ?? existing?.file_size ?? null,
+              content_id: contentId ?? existing?.content_id ?? null,
+              updated_at: new Date(),
+            });
+
+          if (updated === 1) {
+            // We "claimed" the retry; continue processing below.
+          } else {
+            return {
+              success: true,
+              duplicate: true,
+              processing_status: existing?.processing_status,
+              documentId: existing?.document_id ?? null,
+              fileId: existing?.file_id ?? null,
+            };
+          }
+        } else if (status === 'processing') {
+          // Stale processing guard: if a worker died mid-processing, allow a takeover after a TTL.
+          const updatedAt = existing?.updated_at ? new Date(existing.updated_at) : null;
+          const isStale =
+            updatedAt instanceof Date &&
+            Number.isFinite(updatedAt.getTime()) &&
+            Date.now() - updatedAt.getTime() > STALE_PROCESSING_MS;
+
+          if (isStale) {
+            const takeover = await knex('email_processed_attachments')
+              .where({
+                tenant,
+                provider_id: providerId,
+                email_id: emailId,
+                attachment_id: attachmentId,
+              })
+              .andWhere('processing_status', 'processing')
+              .andWhere('updated_at', '<', new Date(Date.now() - STALE_PROCESSING_MS))
+              .update({
+                error_message: null,
+                file_name: fileName || existing?.file_name || null,
+                content_type: contentType || existing?.content_type || null,
+                file_size: declaredSize ?? existing?.file_size ?? null,
+                content_id: contentId ?? existing?.content_id ?? null,
+                updated_at: new Date(),
+              });
+
+            if (takeover === 1) {
+              // Claimed stale record; continue processing below.
+            } else {
+              return {
+                success: true,
+                duplicate: true,
+                processing_status: existing?.processing_status,
+                documentId: existing?.document_id ?? null,
+                fileId: existing?.file_id ?? null,
+              };
+            }
+          } else {
+            return {
+              success: true,
+              duplicate: true,
+              processing_status: existing?.processing_status,
+              documentId: existing?.document_id ?? null,
+              fileId: existing?.file_id ?? null,
+            };
+          }
+        } else {
         return {
           success: true,
           duplicate: true,
@@ -176,6 +265,7 @@ export function registerEmailAttachmentActions(actionRegistry: ActionRegistry): 
           documentId: existing?.document_id ?? null,
           fileId: existing?.file_id ?? null,
         };
+        }
       }
 
       // Policy: skip inline/CID attachments
@@ -214,18 +304,6 @@ export function registerEmailAttachmentActions(actionRegistry: ActionRegistry): 
         return { success: true, skipped: true, reason: 'too_large' };
       }
 
-      const providerRow = await loadProviderRow(knex, tenant, providerId);
-      if (!providerRow) {
-        await knex('email_processed_attachments')
-          .where({ tenant, provider_id: providerId, email_id: emailId, attachment_id: attachmentId })
-          .update({
-            processing_status: 'failed',
-            error_message: 'Email provider not found',
-            updated_at: new Date(),
-          });
-        return { success: false, message: 'Email provider not found' };
-      }
-
       const systemUserId = await resolveSystemUserId(knex, tenant);
       if (!systemUserId) {
         await knex('email_processed_attachments')
@@ -243,35 +321,56 @@ export function registerEmailAttachmentActions(actionRegistry: ActionRegistry): 
       let resolvedFileName = fileName;
 
       try {
-        if (providerRow.provider_type === 'microsoft') {
-          const { MicrosoftGraphAdapter } = await import(
-            '@alga-psa/shared/services/email/providers/MicrosoftGraphAdapter'
-          );
-          const providerConfig = await buildMicrosoftProviderConfig(knex, tenant, providerRow);
-          const adapter = new MicrosoftGraphAdapter(providerConfig);
-          await adapter.connect();
-          const downloaded = await adapter.downloadAttachmentBytes(emailId, attachmentId);
-          buffer = downloaded.buffer;
-          resolvedMimeType = downloaded.contentType || resolvedMimeType;
-          resolvedFileName = downloaded.fileName || resolvedFileName;
-        } else if (providerRow.provider_type === 'google') {
-          const { GmailAdapter } = await import('@/services/email/providers/GmailAdapter');
-          const providerConfig = await buildGoogleProviderConfig(knex, tenant, providerRow);
-          const adapter = new GmailAdapter(providerConfig);
-          await adapter.connect();
-          buffer = await adapter.downloadAttachmentBytes(emailId, attachmentId);
+        const allowInlineContent =
+          process.env.NODE_ENV === 'test' || process.env.E2E_EMAIL_ATTACHMENT_INLINE_CONTENT === 'true';
+
+        if (providedContentBase64 && allowInlineContent) {
+          buffer = Buffer.from(providedContentBase64, 'base64');
         } else {
-          throw new Error(`Unsupported provider_type: ${providerRow.provider_type}`);
+          const providerRow = await loadProviderRow(knex, tenant, providerId);
+          if (!providerRow) {
+            throw new Error('Email provider not found');
+          }
+
+          if (providerRow.provider_type === 'microsoft') {
+            const { MicrosoftGraphAdapter } = await import(
+              '@alga-psa/shared/services/email/providers/MicrosoftGraphAdapter'
+            );
+            const providerConfig = await buildMicrosoftProviderConfig(knex, tenant, providerRow);
+            const adapter = new MicrosoftGraphAdapter(providerConfig);
+            await adapter.connect();
+            const downloaded = await adapter.downloadAttachmentBytes(emailId, attachmentId);
+            buffer = downloaded.buffer;
+            resolvedMimeType = downloaded.contentType || resolvedMimeType;
+            resolvedFileName = downloaded.fileName || resolvedFileName;
+          } else if (providerRow.provider_type === 'google') {
+            const { GmailAdapter } = await import('@/services/email/providers/GmailAdapter');
+            const providerConfig = await buildGoogleProviderConfig(knex, tenant, providerRow);
+            const adapter = new GmailAdapter(providerConfig);
+            await adapter.connect();
+            buffer = await adapter.downloadAttachmentBytes(emailId, attachmentId);
+          } else {
+            throw new Error(`Unsupported provider_type: ${providerRow.provider_type}`);
+          }
         }
       } catch (downloadErr: any) {
+        const message = downloadErr?.message || String(downloadErr);
+        const lower = String(message).toLowerCase();
+
+        // Treat unsupported/undownloadable attachment shapes as "skipped" (not a workflow failure).
+        const isUnsupported =
+          lower.includes('unsupported attachment type') || lower.includes('contentbytes missing');
+
         await knex('email_processed_attachments')
           .where({ tenant, provider_id: providerId, email_id: emailId, attachment_id: attachmentId })
           .update({
-            processing_status: 'failed',
-            error_message: downloadErr?.message || String(downloadErr),
+            processing_status: isUnsupported ? 'skipped' : 'failed',
+            error_message: message,
             updated_at: new Date(),
           });
-        return { success: false, message: downloadErr?.message || String(downloadErr) };
+        return isUnsupported
+          ? { success: true, skipped: true, reason: 'unsupported_attachment' }
+          : { success: false, message };
       }
 
       if (buffer.length > MAX_ATTACHMENT_BYTES) {

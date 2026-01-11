@@ -38,6 +38,22 @@ export async function setInternalSessionCookie(
     throw new Error('NEXTAUTH_SECRET must be defined to mint session cookie.');
   }
 
+  const portSuffix = (() => {
+    if (process.env.NODE_ENV === 'production') return null;
+    try {
+      const parsed = new URL(baseUrl);
+      return parsed.port || null;
+    } catch {
+      return process.env.PORT ?? process.env.APP_PORT ?? process.env.EXPOSE_SERVER_PORT ?? null;
+    }
+  })();
+
+  const cookieBaseName = process.env.NODE_ENV === 'production'
+    ? '__Secure-authjs.session-token'
+    : 'authjs.session-token';
+
+  const cookieName = portSuffix ? `${cookieBaseName}.${portSuffix}` : cookieBaseName;
+
   const token = await encode({
     token: {
       sub: user.user_id,
@@ -48,10 +64,9 @@ export async function setInternalSessionCookie(
     },
     secret: process.env.NEXTAUTH_SECRET,
     maxAge: 60 * 60,
-    salt: 'authjs.session-token',
+    salt: cookieName,
   });
 
-  const cookieName = process.env.NODE_ENV === 'production' ? '__Secure-authjs.session-token' : 'authjs.session-token';
   const base = new URL(baseUrl);
 
   try {

@@ -1,24 +1,24 @@
 [
-  { "id": "F001", "description": "Define attachment eligibility rules (max 100MB, allow all types, skip inline/CID)", "implemented": false },
-  { "id": "F002", "description": "Add email_processed_attachments table for strict idempotency/audit (unique tenant+providerId+emailId+attachmentId)", "implemented": false },
-  { "id": "F003", "description": "Add storage-backed attachment ingestion (store bytes in file storage)", "implemented": false },
-  { "id": "F004", "description": "Create documents linked to stored files for email attachments", "implemented": false },
-  { "id": "F005", "description": "Associate created documents to tickets via document_associations", "implemented": false },
-  { "id": "F006", "description": "Attribute attachment uploads/created_by to system user (and avoid requiring an authenticated user)", "implemented": false },
+  { "id": "F001", "description": "Define attachment eligibility rules (max 100MB, allow all types, skip inline/CID)", "implemented": true },
+  { "id": "F002", "description": "Add email_processed_attachments table for strict idempotency/audit (unique tenant+providerId+emailId+attachmentId)", "implemented": true },
+  { "id": "F003", "description": "Add storage-backed attachment ingestion (store bytes in file storage)", "implemented": true },
+  { "id": "F004", "description": "Create documents linked to stored files for email attachments", "implemented": true },
+  { "id": "F005", "description": "Associate created documents to tickets via document_associations", "implemented": true },
+  { "id": "F006", "description": "Attribute attachment uploads/created_by to system user (and avoid requiring an authenticated user)", "implemented": true },
 
-  { "id": "F010", "description": "Microsoft: download attachment content by messageId+attachmentId", "implemented": false },
-  { "id": "F011", "description": "Microsoft: skip unsupported attachment types safely", "implemented": false },
+  { "id": "F010", "description": "Microsoft: download attachment content by messageId+attachmentId", "implemented": true },
+  { "id": "F011", "description": "Microsoft: skip unsupported attachment types safely", "implemented": true },
 
-  { "id": "F020", "description": "Gmail: download attachment content by messageId+attachmentId", "implemented": false },
+  { "id": "F020", "description": "Gmail: download attachment content by messageId+attachmentId", "implemented": true },
 
-  { "id": "F030", "description": "Workflow: for new tickets, process attachments after ticket creation", "implemented": false },
-  { "id": "F031", "description": "Workflow: for replies, process attachments after comment creation", "implemented": false },
-  { "id": "F032", "description": "Ensure attachment failures do not fail ticket/comment creation", "implemented": false },
+  { "id": "F030", "description": "Workflow: for new tickets, process attachments after ticket creation", "implemented": true },
+  { "id": "F031", "description": "Workflow: for replies, process attachments after comment creation", "implemented": true },
+  { "id": "F032", "description": "Ensure attachment failures do not fail ticket/comment creation", "implemented": true },
 
-  { "id": "F040", "description": "Record attachment processing results (success/failure + error message)", "implemented": false },
-  { "id": "F041", "description": "Ensure all Citus distributed-table writes include tenant filter", "implemented": false },
-  { "id": "F042", "description": "Ensure email_processed_attachments is distributed/compatible with Citus (tenant distribution key)", "implemented": false },
+  { "id": "F040", "description": "Record attachment processing results (success/failure + error message)", "implemented": true },
+  { "id": "F041", "description": "Ensure all Citus distributed-table writes include tenant filter", "implemented": true },
+  { "id": "F042", "description": "Ensure email_processed_attachments is distributed/compatible with Citus (tenant distribution key)", "implemented": true },
 
-  { "id": "F050", "description": "E2E: verify ticket documents are created for inbound email attachments", "implemented": false },
-  { "id": "F051", "description": "E2E: verify ticket documents are created for reply email attachments", "implemented": false }
+  { "id": "F050", "description": "E2E: verify ticket documents are created for inbound email attachments", "implemented": true },
+  { "id": "F051", "description": "E2E: verify ticket documents are created for reply email attachments", "implemented": true }
 ]

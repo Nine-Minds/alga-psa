@@ -80,6 +80,7 @@ export interface EmailMessage {
     size: number;
     contentId?: string;
     isInline?: boolean;
+    content?: string;
   }>;
   threadId?: string;
   references?: string[];
