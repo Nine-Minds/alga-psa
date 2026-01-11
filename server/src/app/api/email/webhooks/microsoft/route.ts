@@ -172,6 +172,46 @@ export async function POST(request: NextRequest) {
             return;
           }
 
+          // Check if this email has already been processed (deduplication)
+          // Microsoft may send duplicate webhook notifications for reliability
+          const existingProcessed = await trx('email_processed_messages')
+            .where({ message_id: messageId, tenant: row.tenant })
+            .first();
+
+          if (existingProcessed) {
+            console.log(`⚠️ Email ${messageId} already processed (status: ${existingProcessed.processing_status}), skipping duplicate webhook`);
+            return;
+          }
+
+          // Insert processing record BEFORE publishing event to prevent race conditions
+          // This ensures that if Microsoft sends duplicate webhooks simultaneously,
+          // only one will proceed past this point
+          try {
+            await trx('email_processed_messages').insert({
+              message_id: messageId,
+              provider_id: row.id,
+              tenant: row.tenant,
+              processed_at: new Date(),
+              processing_status: 'processing',
+              from_email: null, // Will be updated after fetching details
+              subject: notification.resourceData?.subject || null,
+              received_at: null,
+              attachment_count: 0,
+              metadata: JSON.stringify({
+                subscriptionId: notification.subscriptionId,
+                changeType: notification.changeType,
+                webhookReceivedAt: new Date().toISOString(),
+              }),
+            });
+          } catch (insertErr: any) {
+            // If insert fails due to unique constraint, another webhook is processing this email
+            if (insertErr.code === '23505' || insertErr.message?.includes('duplicate') || insertErr.message?.includes('unique')) {
+              console.log(`⚠️ Email ${messageId} is being processed by another webhook, skipping`);
+              return;
+            }
+            throw insertErr;
+          }
+
           // Build provider config to fetch full email details
           // Derive webhook URL from environment (provider row doesn't store it in prod schema)
           const baseUrl = process.env.NGROK_URL || process.env.NEXT_PUBLIC_BASE_URL || process.env.NEXTAUTH_URL || 'http://localhost:3000';
@@ -231,6 +271,17 @@ export async function POST(request: NextRequest) {
                 updated_at: trx.fn.now()
               });
 
+            // Update processing record with success status and email details
+            await trx('email_processed_messages')
+              .where({ message_id: messageId, provider_id: row.id, tenant: row.tenant })
+              .update({
+                processing_status: 'success',
+                from_email: details?.from?.email || null,
+                subject: details?.subject || notification.resourceData?.subject || null,
+                received_at: details?.receivedAt ? new Date(details.receivedAt) : null,
+                attachment_count: details?.attachments?.length || 0,
+              });
+
             processedNotifications.push(messageId);
             console.log(`Published enriched event for Microsoft email: ${messageId} from ${row.mailbox}`);
           } catch (detailErr: any) {
@@ -256,6 +307,16 @@ export async function POST(request: NextRequest) {
                 } as any,
               },
             });
+
+            // Update processing record - still mark as partial since event was published
+            // (partial success - event published but with minimal data)
+            await trx('email_processed_messages')
+              .where({ message_id: messageId, provider_id: row.id, tenant: row.tenant })
+              .update({
+                processing_status: 'partial',
+                error_message: detailErr?.message || 'Failed to fetch full email details',
+              });
+
             processedNotifications.push(messageId);
           }
         });
