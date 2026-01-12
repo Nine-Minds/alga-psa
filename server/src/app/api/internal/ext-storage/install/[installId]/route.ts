@@ -8,7 +8,7 @@ const isEnterpriseEdition =
   (process.env.NEXT_PUBLIC_EDITION ?? '').toLowerCase() === 'enterprise';
 
 type EeRouteModule = {
-  POST: (req: NextRequest, ctx: { params: { installId: string } }) => Promise<Response> | Response;
+  POST: (req: NextRequest, ctx: { params: Promise<{ installId: string }> }) => Promise<Response> | Response;
 };
 
 let eeRouteModulePromise: Promise<EeRouteModule | null> | null = null;
@@ -45,7 +45,7 @@ function eeUnavailable(): Response {
 
 export async function POST(
   request: NextRequest,
-  ctx: { params: { installId: string } }
+  ctx: { params: Promise<{ installId: string }> }
 ): Promise<Response> {
   const eeRoute = await loadEeRoute();
   if (!eeRoute?.POST) {
