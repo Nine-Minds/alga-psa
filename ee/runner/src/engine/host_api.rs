@@ -875,6 +875,16 @@ impl ui_proxy::HostWithStore for HasSelf<HostState> {
                 .request_id
                 .clone()
                 .unwrap_or_else(|| "ui-proxy-call".to_string());
+            let install_id = ctx.install_id.clone();
+            let version_id = ctx.version_id.clone();
+            if install_id.is_none() {
+                tracing::warn!(
+                    tenant=%tenant,
+                    extension=%extension,
+                    request_id=%request_id,
+                    "ui_proxy call missing install id in host context"
+                );
+            }
 
             let trimmed_route = route.trim();
             if trimmed_route.is_empty() {
@@ -941,10 +951,10 @@ impl ui_proxy::HostWithStore for HasSelf<HostState> {
                 .header("x-request-id", &request_id)
                 .header("x-alga-tenant", &tenant)
                 .header("x-alga-extension", &extension);
-            if let Some(install) = ctx.install_id.clone() {
+            if let Some(install) = install_id.clone() {
                 request = request.header("x-ext-install-id", install);
             }
-            if let Some(version) = ctx.version_id.clone() {
+            if let Some(version) = version_id.clone() {
                 request = request.header("x-ext-version-id", version);
             }
             // Get API key from extension's secret envelope for authentication
@@ -975,6 +985,8 @@ impl ui_proxy::HostWithStore for HasSelf<HostState> {
                 url=%url,
                 has_body,
                 is_platform_api,
+                install_id=?install_id,
+                version_id=?version_id,
                 "ui proxy dispatch start"
             );
 

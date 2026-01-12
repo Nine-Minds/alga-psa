@@ -59,6 +59,14 @@ async function resolveInstallContext(tenantId: string, extensionId: string): Pro
   if (eeModule?.getInstallConfig) {
     try {
       const config = await eeModule.getInstallConfig({ tenantId, extensionId });
+      console.log('[api/ext] EE install config fetched', {
+        tenantId,
+        extensionId,
+        hasConfig: !!config,
+        installId: config?.installId,
+        versionId: config?.versionId,
+        contentHash: config?.contentHash,
+      });
       if (config?.contentHash) {
         return {
           installId: config.installId,
@@ -68,6 +76,14 @@ async function resolveInstallContext(tenantId: string, extensionId: string): Pro
           secretEnvelope: config.secretEnvelope,
           config: config.config ?? {},
         };
+      }
+      if (config && !config.contentHash) {
+        console.warn('[api/ext] EE install config missing content hash', {
+          tenantId,
+          extensionId,
+          installId: config.installId,
+          versionId: config.versionId,
+        });
       }
     } catch (error) {
       console.error('[api/ext] failed to read install config via EE module', error);
@@ -79,6 +95,13 @@ async function resolveInstallContext(tenantId: string, extensionId: string): Pro
     return null;
   }
   const { content_hash, version_id, install_id } = await resolveVersion(install);
+  console.log('[api/ext] resolved install via registry', {
+    tenantId,
+    extensionId,
+    installId: install_id,
+    versionId: version_id,
+    contentHash: content_hash,
+  });
   if (!content_hash) {
     return null;
   }
@@ -222,7 +245,9 @@ async function handle(req: NextRequest, ctx: { params: Promise<{ extensionId: st
     const install = await resolveInstallContext(tenantId, extensionId);
     console.log('[api/ext] install context resolved', {
       hasInstall: !!install,
+      installId: install?.installId,
       versionId: install?.versionId,
+      contentHash: install?.contentHash,
       providers: install?.providers,
       elapsed: Date.now() - start
     });

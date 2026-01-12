@@ -175,7 +175,13 @@ function combineConfigRow(configRow: any, installRow: InstallRow) {
 export async function getInstallConfig(params: InstallLookupParams): Promise<InstallConfigResult | null> {
   const db = await getDb();
   const installRow = await loadInstallRow(db, params);
-  if (!installRow) return null;
+  if (!installRow) {
+    console.warn('[installConfig] install not found', {
+      tenantId: params.tenantId,
+      extensionId: params.extensionId,
+    });
+    return null;
+  }
   return hydrateInstallConfig(db, installRow);
 }
 
@@ -192,6 +198,13 @@ async function hydrateInstallConfig(db: Knex, installRow: InstallRow): Promise<I
     loadConfigRow(db, installRow.install_id),
     loadSecretsRow(db, installRow.install_id),
   ]);
+  if (!bundleHash) {
+    console.warn('[installConfig] missing bundle content hash', {
+      installId: installRow.install_id,
+      versionId: installRow.version_id,
+      tenantId: installRow.tenant_id,
+    });
+  }
 
   const installationConfig = combineConfigRow(configRow, installRow);
 
