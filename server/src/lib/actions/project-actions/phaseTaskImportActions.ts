@@ -287,9 +287,30 @@ export async function getProjectStatusMappingsForImport(
   if (!currentUser) {
     throw new Error('No authenticated user found');
   }
+  if (!currentUser.tenant) {
+    throw new Error('Tenant context not found');
+  }
 
   const { knex: db } = await createTenantKnex();
-  return ProjectModel.getProjectStatusMappings(db, projectId);
+
+  // Query with joins to get actual status names
+  return await db('project_status_mappings as psm')
+    .where({ 'psm.project_id': projectId, 'psm.tenant': currentUser.tenant })
+    .leftJoin('statuses as s', function(this: any) {
+      this.on('psm.status_id', 's.status_id')
+        .andOn('psm.tenant', 's.tenant');
+    })
+    .leftJoin('standard_statuses as ss', function(this: any) {
+      this.on('psm.standard_status_id', 'ss.standard_status_id')
+        .andOn('psm.tenant', 'ss.tenant');
+    })
+    .select(
+      'psm.*',
+      db.raw('COALESCE(psm.custom_name, s.name, ss.name) as status_name'),
+      db.raw('COALESCE(psm.custom_name, s.name, ss.name) as name'),
+      db.raw('COALESCE(s.is_closed, ss.is_closed, false) as is_closed')
+    )
+    .orderBy('psm.display_order');
 }
 
 /**
