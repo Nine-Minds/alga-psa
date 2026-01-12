@@ -9,6 +9,7 @@ import { ITag } from 'server/src/interfaces/tag.interfaces';
 import { TagManager } from 'server/src/components/tags';
 import { Button } from 'server/src/components/ui/Button';
 import { Label } from 'server/src/components/ui/Label';
+import { Input } from 'server/src/components/ui/Input';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
 import { Clock, Edit2, Play, Pause, StopCircle, X, AlertCircle, Calendar as CalendarIcon } from 'lucide-react';
 // formatMinutesAsHoursAndMinutes removed - agent team block moved to TicketInfo

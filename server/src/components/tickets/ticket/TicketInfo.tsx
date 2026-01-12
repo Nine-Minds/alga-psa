@@ -18,7 +18,7 @@ import { TagManager } from 'server/src/components/tags';
 import styles from './TicketDetails.module.css';
 import { getTicketCategories, getTicketCategoriesByBoard, BoardCategoryData } from 'server/src/lib/actions/ticketCategoryActions';
 import { ItilLabels, calculateItilPriority } from 'server/src/lib/utils/itilUtils';
-import { Pencil, HelpCircle, X, Save } from 'lucide-react';
+import { Pencil, HelpCircle, Save } from 'lucide-react';
 import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionContainer';
 import { Input } from 'server/src/components/ui/Input';
 import UserAvatar from 'server/src/components/ui/UserAvatar';
@@ -962,6 +962,35 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
             {/* No additional agents message - shown only when no picker available */}
             {additionalAgents.length === 0 && !onAddAgent && !onRemoveAgent && (
               <p className="text-sm text-gray-500">No additional agents assigned</p>
+            )}
+
+            {/* Read-only additional agents display (when handlers not provided but agents exist) */}
+            {additionalAgents.length > 0 && !onAddAgent && !onRemoveAgent && (
+              <div className="flex flex-wrap gap-2 mt-2">
+                {additionalAgents.map((agent) => {
+                  const agentUser = (availableAgents.length > 0 ? availableAgents : users).find(
+                    u => u.user_id === agent.additional_user_id
+                  );
+                  const agentName = agentUser
+                    ? `${agentUser.first_name} ${agentUser.last_name}`
+                    : 'Unknown Agent';
+                  return (
+                    <div
+                      key={agent.assignment_id || agent.additional_user_id}
+                      className="flex items-center gap-2 px-3 py-1.5 bg-gray-100 rounded-full text-sm cursor-pointer hover:bg-gray-200"
+                      onClick={() => onAgentClick?.(agent.additional_user_id!)}
+                    >
+                      <UserAvatar
+                        userId={agent.additional_user_id || ''}
+                        userName={agentName}
+                        avatarUrl={agentAvatarUrls[agent.additional_user_id || ''] || null}
+                        size="xs"
+                      />
+                      <span>{agentName}</span>
+                    </div>
+                  );
+                })}
+              </div>
             )}
 
             {/* Multi-select Agent Picker - shows selected agents and allows adding/removing */}
