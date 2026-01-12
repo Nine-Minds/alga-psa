@@ -117,75 +117,22 @@ export async function createTicketCategory(categoryName: string, boardId: string
   });
 }
 
-export async function deleteTicketCategory(categoryId: string) {
-  const user = await getCurrentUser();
-  if (!user) {
-    throw new Error('Unauthorized');
-  }
-
+/**
+ * Legacy delete function - throws errors for backward compatibility.
+ * Use deleteCategory() for new code (returns result object).
+ */
+export async function deleteTicketCategory(categoryId: string): Promise<boolean> {
   if (!categoryId) {
     throw new Error('Category ID is required');
   }
 
-  const { knex: db, tenant } = await createTenantKnex();
-  return withTransaction(db, async (trx: Knex.Transaction) => {
-    try {
-    // Check if this is an ITIL standard category (immutable)
-    const category = await trx('categories')
-      .where({
-        tenant,
-        category_id: categoryId
-      })
-      .first();
+  const result = await deleteCategory(categoryId, false);
 
-    if (category?.is_from_itil_standard) {
-      throw new Error('ITIL standard categories cannot be deleted');
-    }
+  if (!result.success) {
+    throw new Error(result.message || 'Failed to delete category');
+  }
 
-    // Check if category has subcategories
-    const hasSubcategories = await trx('categories')
-      .where({
-        tenant,
-        parent_category: categoryId
-      })
-      .first();
-
-    if (hasSubcategories) {
-      throw new Error('Cannot delete category that has subcategories');
-    }
-
-    // Check if category is in use by tickets
-    const inUseCount = await trx('tickets')
-      .where({
-        tenant,
-        category_id: categoryId
-      })
-      .orWhere({
-        tenant,
-        subcategory_id: categoryId
-      })
-      .count('ticket_id as count')
-      .first();
-
-    if (inUseCount && Number(inUseCount.count) > 0) {
-      throw new Error('Cannot delete category that is in use by tickets');
-    }
-
-    await trx('categories')
-      .where({
-        tenant,
-        category_id: categoryId
-      })
-      .del();
-      return true;
-    } catch (error) {
-      console.error('Error deleting ticket category:', error);
-      if (error instanceof Error) {
-        throw error;
-      }
-      throw new Error('Failed to delete ticket category');
-    }
-  });
+  return true;
 }
 
 export async function updateTicketCategory(categoryId: string, categoryData: Partial<ITicketCategory>) {
@@ -205,17 +152,6 @@ export async function updateTicketCategory(categoryId: string, categoryData: Par
   const { knex: db, tenant } = await createTenantKnex();
   return withTransaction(db, async (trx: Knex.Transaction) => {
     try {
-    // Check if this is an ITIL standard category (immutable)
-    const existingCategory = await trx('categories')
-      .where({
-        tenant,
-        category_id: categoryId
-      })
-      .first();
-
-    if (existingCategory?.is_from_itil_standard) {
-      throw new Error('ITIL standard categories cannot be edited');
-    }
     // Check if new name conflicts with existing category in the same board
     if (categoryData.category_name) {
       const existingCategory = await trx('categories')
@@ -458,52 +394,148 @@ export async function updateCategory(
   });
 }
 
-export async function deleteCategory(categoryId: string): Promise<void> {
+/**
+ * Helper to recursively collect all subcategory IDs.
+ * Returns IDs in deletion order (deepest children first).
+ */
+async function collectAllSubcategoryIds(
+  trx: Knex.Transaction,
+  parentId: string,
+  tenant: string
+): Promise<string[]> {
+  const directChildren = await trx('categories')
+    .where({ tenant, parent_category: parentId })
+    .select('category_id');
+
+  const childIds = directChildren.map((c: { category_id: string }) => c.category_id);
+
+  // Recursively collect grandchildren
+  const allDescendantIds: string[] = [];
+  for (const childId of childIds) {
+    const descendants = await collectAllSubcategoryIds(trx, childId, tenant);
+    allDescendantIds.push(...descendants);
+  }
+
+  // Return deepest first, then direct children
+  return [...allDescendantIds, ...childIds];
+}
+
+/**
+ * Delete a category with hasDependencies pattern (like deleteClient).
+ *
+ * - If tickets exist in category or any subcategory → BLOCK
+ * - If subcategories exist and force=false → return info, prompt user
+ * - If subcategories exist and force=true → delete them too
+ *
+ * @param categoryId - The category to delete
+ * @param force - If true, delete subcategories too (still blocks on tickets)
+ */
+interface DeleteCategoryResult {
+  success: boolean;
+  code?: string;
+  message?: string;
+  dependencies?: string[];
+  counts?: Record<string, number>;
+}
+
+export async function deleteCategory(
+  categoryId: string,
+  force = false
+): Promise<DeleteCategoryResult> {
   const user = await getCurrentUser();
   if (!user) {
-    throw new Error('Unauthorized');
+    return { success: false, code: 'UNAUTHORIZED', message: 'Unauthorized' };
   }
 
   const { knex: db, tenant } = await createTenantKnex();
-  return withTransaction(db, async (trx: Knex.Transaction) => {
-    try {
-      // Check if category has subcategories
-      const hasSubcategories = await trx('categories')
-        .where({
-          tenant,
-          parent_category: categoryId
-        })
-        .first();
+  if (!tenant) {
+    return { success: false, code: 'NO_TENANT', message: 'No tenant context' };
+  }
 
-      if (hasSubcategories) {
-        throw new Error('Cannot delete category that has subcategories');
-      }
+  return withTransaction(db, async (trx: Knex.Transaction): Promise<DeleteCategoryResult> => {
+    // 1. Get the category
+    const category = await trx('categories')
+      .where({ tenant, category_id: categoryId })
+      .first();
 
-      // Check if category is in use by tickets (both as category_id and subcategory_id)
-      const ticketsCount = await trx('tickets')
+    if (!category) {
+      return { success: false, code: 'NOT_FOUND', message: 'Category not found' };
+    }
+
+    // 2. Check if ITIL standard category - protected while ITIL boards exist
+    if (category.is_from_itil_standard) {
+      const itilBoardsResult = await trx('boards')
         .where({ tenant })
-        .where(function() {
-          this.where('category_id', categoryId)
-              .orWhere('subcategory_id', categoryId);
-        })
+        .where('category_type', 'itil')
         .count('* as count')
         .first();
-      
-      if (ticketsCount && Number(ticketsCount.count) > 0) {
-        const count = Number(ticketsCount.count);
-        throw new Error(`Cannot delete category: ${count} ticket${count === 1 ? ' is' : 's are'} using this category`);
-      }
 
-      const deletedCount = await trx('categories')
-        .where({ category_id: categoryId, tenant })
-        .delete();
-      
-      if (deletedCount === 0) {
-        throw new Error('Category not found');
+      const itilBoardCount = Number(itilBoardsResult?.count || 0);
+
+      if (itilBoardCount > 0) {
+        return {
+          success: false,
+          code: 'ITIL_CATEGORY_PROTECTED',
+          message: `Cannot delete ITIL category while ${itilBoardCount} ITIL board${itilBoardCount === 1 ? ' exists' : 's exist'}. Delete the ITIL board${itilBoardCount === 1 ? '' : 's'} first.`
+        };
       }
-    } catch (error) {
-      console.error('Error deleting category:', error);
-      throw new Error(error instanceof Error ? error.message : 'Failed to delete category');
     }
+
+    // 3. Collect all subcategory IDs
+    const allSubcategoryIds = await collectAllSubcategoryIds(trx, categoryId, tenant);
+    const allCategoryIds = [categoryId, ...allSubcategoryIds];
+
+    // 4. Check for tickets using ANY of these categories (BLOCKER)
+    const ticketCount = await trx('tickets')
+      .where({ tenant })
+      .where(function() {
+        this.whereIn('category_id', allCategoryIds)
+          .orWhereIn('subcategory_id', allCategoryIds);
+      })
+      .count('ticket_id as count')
+      .first();
+
+    const ticketNum = Number(ticketCount?.count || 0);
+
+    if (ticketNum > 0) {
+      return {
+        success: false,
+        code: 'CATEGORY_HAS_TICKETS',
+        message: `Cannot delete category: ${ticketNum} ticket${ticketNum === 1 ? ' is' : 's are'} using this category${allSubcategoryIds.length > 0 ? ' or its subcategories' : ''}`,
+        dependencies: ['tickets'],
+        counts: { tickets: ticketNum }
+      };
+    }
+
+    // 5. If subcategories exist and force=false, prompt for confirmation
+    if (allSubcategoryIds.length > 0 && !force) {
+      return {
+        success: false,
+        code: 'CATEGORY_HAS_SUBCATEGORIES',
+        message: `Category has ${allSubcategoryIds.length} subcategor${allSubcategoryIds.length === 1 ? 'y' : 'ies'}. Delete them too?`,
+        dependencies: ['subcategories'],
+        counts: { subcategories: allSubcategoryIds.length }
+      };
+    }
+
+    // 6. Delete subcategories first (if any)
+    if (allSubcategoryIds.length > 0) {
+      await trx('categories')
+        .where({ tenant })
+        .whereIn('category_id', allSubcategoryIds)
+        .delete();
+    }
+
+    // 7. Delete the category
+    await trx('categories')
+      .where({ tenant, category_id: categoryId })
+      .delete();
+
+    return {
+      success: true,
+      message: allSubcategoryIds.length > 0
+        ? `Category and ${allSubcategoryIds.length} subcategor${allSubcategoryIds.length === 1 ? 'y' : 'ies'} deleted`
+        : 'Category deleted'
+    };
   });
 }

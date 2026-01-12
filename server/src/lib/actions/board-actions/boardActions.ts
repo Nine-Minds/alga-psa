@@ -119,23 +119,214 @@ export async function createBoard(boardData: Omit<IBoard, 'board_id' | 'tenant'>
   }
 }
 
-export async function deleteBoard(boardId: string): Promise<boolean> {
-  const { knex: db } = await createTenantKnex();
-  try {
-    return await withTransaction(db, async (trx: Knex.Transaction) => {
-      await Board.delete(trx, boardId);
-      return true;
-    });
-  } catch (error) {
-    console.error('Error deleting board:', error);
-    if (error instanceof Error) {
-      if (error.message.includes('violates foreign key constraint') && error.message.includes('on table "tickets"')) {
-        throw new Error('Cannot delete board: It currently has one or more tickets.');
-      }
-      throw error;
-    }
-    throw new Error('Failed to delete board due to an unexpected error.');
+/**
+ * Delete a board with hasDependencies pattern (like deleteClient).
+ *
+ * - If board is default → BLOCK
+ * - If board is used in inbound_ticket_defaults → BLOCK
+ * - If tickets exist directly on board or in any category/subcategory → BLOCK
+ * - If categories exist and no tickets → offer to delete them with force=true
+ * - If last ITIL board → offer to cleanup unused ITIL data with cleanupItil=true
+ *
+ * @param boardId - The board to delete
+ * @param force - If true, delete categories and subcategories too (still blocks on tickets)
+ * @param cleanupItil - If true and this is the last ITIL board, cleanup unused ITIL priorities/categories
+ */
+interface DeleteBoardResult {
+  success: boolean;
+  code?: string;
+  message?: string;
+  dependencies?: string[];
+  counts?: Record<string, number>;
+}
+
+export async function deleteBoard(
+  boardId: string,
+  force = false,
+  cleanupItil = false
+): Promise<DeleteBoardResult> {
+  const { knex: db, tenant } = await createTenantKnex();
+  if (!tenant) {
+    return { success: false, code: 'NO_TENANT', message: 'No tenant context' };
   }
+
+  return withTransaction(db, async (trx: Knex.Transaction): Promise<DeleteBoardResult> => {
+    // 1. Get the board
+    const board = await trx('boards')
+      .where({ tenant, board_id: boardId })
+      .first();
+
+    if (!board) {
+      return { success: false, code: 'NOT_FOUND', message: 'Board not found' };
+    }
+
+    // 2. Check if default board (protected)
+    if (board.is_default) {
+      return {
+        success: false,
+        code: 'BOARD_IS_DEFAULT',
+        message: 'Cannot delete the default board. Please set another board as default first.'
+      };
+    }
+
+    // 3. Check if board is used in inbound_ticket_defaults (email routing)
+    const inboundDefaultsResult = await trx('inbound_ticket_defaults')
+      .where({ tenant, board_id: boardId })
+      .count('* as count')
+      .first();
+
+    const inboundDefaultsCount = Number(inboundDefaultsResult?.count || 0);
+
+    if (inboundDefaultsCount > 0) {
+      return {
+        success: false,
+        code: 'BOARD_USED_IN_EMAIL_ROUTING',
+        message: 'Cannot delete board: it is configured as the default board for inbound email tickets. Please update your email routing settings first.',
+        dependencies: ['inbound_ticket_defaults'],
+        counts: { inbound_ticket_defaults: inboundDefaultsCount }
+      };
+    }
+
+    // 4. Check if this is an ITIL board (categories are shared across ITIL boards)
+    const isItilCategoryBoard = board.category_type === 'itil';
+
+    // 5. Get categories for this board (only for custom boards)
+    // ITIL categories are shared and shouldn't block individual board deletion
+    let allCategoryIds: string[] = [];
+    if (!isItilCategoryBoard) {
+      const allCategories = await trx('categories')
+        .where({ tenant, board_id: boardId })
+        .select('category_id');
+      allCategoryIds = allCategories.map((c: { category_id: string }) => c.category_id);
+    }
+
+    // 6. Check for tickets directly on this board
+    // For custom boards, also check tickets in board's categories
+    const ticketCountResult = await trx('tickets')
+      .where({ tenant })
+      .where(function() {
+        this.where('board_id', boardId);
+        // Only check category-based tickets for custom boards
+        if (!isItilCategoryBoard && allCategoryIds.length > 0) {
+          this.orWhereIn('category_id', allCategoryIds)
+            .orWhereIn('subcategory_id', allCategoryIds);
+        }
+      })
+      .count('ticket_id as count')
+      .first();
+
+    const ticketCount = Number(ticketCountResult?.count || 0);
+
+    if (ticketCount > 0) {
+      return {
+        success: false,
+        code: 'BOARD_HAS_TICKETS',
+        message: `Cannot delete board: ${ticketCount} ticket${ticketCount === 1 ? ' is' : 's are'} directly on this board`,
+        dependencies: ['tickets'],
+        counts: { tickets: ticketCount }
+      };
+    }
+
+    // 7. If custom board has categories and force=false, prompt for confirmation
+    // ITIL categories are shared and handled separately via ITIL cleanup
+    if (!isItilCategoryBoard && allCategoryIds.length > 0 && !force) {
+      return {
+        success: false,
+        code: 'BOARD_HAS_CATEGORIES',
+        message: `Board has ${allCategoryIds.length} categor${allCategoryIds.length === 1 ? 'y' : 'ies'}. Delete them too?`,
+        dependencies: ['categories'],
+        counts: { categories: allCategoryIds.length }
+      };
+    }
+
+    // 8. Check if this is the last ITIL board
+    const isItilBoard = board.category_type === 'itil' || board.priority_type === 'itil';
+    let isLastItilBoard = false;
+
+    if (isItilBoard) {
+      const otherItilBoardsResult = await trx('boards')
+        .where({ tenant })
+        .whereNot('board_id', boardId)
+        .where(function() {
+          this.where('category_type', 'itil').orWhere('priority_type', 'itil');
+        })
+        .count('* as count')
+        .first();
+
+      isLastItilBoard = Number(otherItilBoardsResult?.count || 0) === 0;
+
+      // If last ITIL board and cleanupItil not confirmed, prompt for confirmation
+      if (isLastItilBoard && !cleanupItil) {
+        return {
+          success: false,
+          code: 'LAST_ITIL_BOARD',
+          message: 'This is the last ITIL board. Do you want to also remove unused ITIL priorities and categories?',
+          dependencies: ['itil_data']
+        };
+      }
+    }
+
+    // 9. Delete custom categories (ITIL categories are shared and cleaned up separately)
+    if (!isItilCategoryBoard && allCategoryIds.length > 0) {
+      await trx('categories')
+        .where({ tenant, board_id: boardId })
+        .delete();
+    }
+
+    // 10. Delete the board
+    await trx('boards')
+      .where({ tenant, board_id: boardId })
+      .delete();
+
+    // 11. If last ITIL board and cleanup confirmed, remove unused ITIL data
+    let itilCleanupMessage = '';
+    if (isLastItilBoard && cleanupItil) {
+      const cleanupResult = await ItilStandardsService.cleanupUnusedItilStandards(trx, tenant);
+
+      // Build informative message about what was cleaned up
+      const cleanedParts: string[] = [];
+      const skippedParts: string[] = [];
+
+      if (cleanupResult.categoriesDeleted > 0) {
+        cleanedParts.push(`${cleanupResult.categoriesDeleted} ITIL categor${cleanupResult.categoriesDeleted === 1 ? 'y' : 'ies'}`);
+      }
+      if (cleanupResult.prioritiesDeleted > 0) {
+        cleanedParts.push(`${cleanupResult.prioritiesDeleted} ITIL priorit${cleanupResult.prioritiesDeleted === 1 ? 'y' : 'ies'}`);
+      }
+      if (cleanupResult.categoriesSkippedReason) {
+        skippedParts.push(`categories (${cleanupResult.categoriesSkippedReason})`);
+      }
+      if (cleanupResult.prioritiesSkippedReason) {
+        skippedParts.push(`priorities (${cleanupResult.prioritiesSkippedReason})`);
+      }
+
+      if (cleanedParts.length > 0) {
+        itilCleanupMessage = ` Cleaned up: ${cleanedParts.join(', ')}.`;
+      }
+      if (skippedParts.length > 0) {
+        itilCleanupMessage += ` Could not clean up: ${skippedParts.join(', ')}.`;
+      }
+    }
+
+    return {
+      success: true,
+      message: !isItilCategoryBoard && allCategoryIds.length > 0
+        ? `Board and ${allCategoryIds.length} categor${allCategoryIds.length === 1 ? 'y' : 'ies'} deleted.${itilCleanupMessage}`
+        : `Board deleted.${itilCleanupMessage}`
+    };
+  });
+}
+
+/**
+ * Legacy delete function - throws errors for backward compatibility.
+ * Use deleteBoard() with force parameter for new code.
+ */
+export async function deleteBoardLegacy(boardId: string): Promise<boolean> {
+  const result = await deleteBoard(boardId, false);
+  if (!result.success) {
+    throw new Error(result.message || 'Failed to delete board');
+  }
+  return true;
 }
 
 export async function updateBoard(boardId: string, boardData: Partial<Omit<IBoard, 'tenant'>>): Promise<IBoard> {
