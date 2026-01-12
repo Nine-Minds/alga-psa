@@ -110,14 +110,20 @@ function ensureRunnerAuth(req: NextRequest): void {
 
 export async function POST(
   req: NextRequest,
-  { params }: { params: { installId: string } }
+  ctx: { params: Promise<{ installId: string }> }
 ) {
   try {
+    const { installId } = await ctx.params;
+    console.log('[ext-storage-internal] request received', {
+      installId,
+      installIdLen: installId ? installId.length : 0,
+      path: req.nextUrl.pathname,
+    });
     ensureRunnerAuth(req);
 
     const raw = await req.json();
     const base = baseSchema.parse(raw);
-    const { service } = await getStorageServiceForInstall(params.installId);
+    const { service } = await getStorageServiceForInstall(installId);
 
     switch (base.operation) {
       case 'put': {
