@@ -712,7 +712,13 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
         try {
             // Note: Agent changes are saved immediately (separate resource table)
             // They don't use the batch save pattern like other ticket fields
-            // cachedUserRef is kept in sync with currentUser prop via useEffect
+            // Use cached user, or fetch if not available (handles case where currentUser prop is null initially)
+            if (!cachedUserRef.current) {
+                const fetchedUser = await getCurrentUser();
+                if (fetchedUser) {
+                    cachedUserRef.current = fetchedUser as IUserWithRoles;
+                }
+            }
             if (!cachedUserRef.current) {
                 toast.error('No user session found');
                 return;
@@ -749,7 +755,13 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
         try {
             // Note: Agent changes are saved immediately (separate resource table)
             // They don't use the batch save pattern like other ticket fields
-            // cachedUserRef is kept in sync with currentUser prop via useEffect
+            // Use cached user, or fetch if not available (handles case where currentUser prop is null initially)
+            if (!cachedUserRef.current) {
+                const fetchedUser = await getCurrentUser();
+                if (fetchedUser) {
+                    cachedUserRef.current = fetchedUser as IUserWithRoles;
+                }
+            }
             if (!cachedUserRef.current) {
                 toast.error('No user session found');
                 return;
@@ -772,14 +784,15 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
                 ? (newValue && newValue !== 'unassigned' ? newValue : null)
                 : newValue;
 
-        // Prevent setting a user as primary agent if they're already an additional agent
+        // If setting a user as primary agent who is already an additional agent,
+        // automatically remove them from additional agents (old behavior)
         if (field === 'assigned_to' && normalizedValue) {
-            const isAlreadyAdditionalAgent = additionalAgents.some(
+            const additionalAgentEntry = additionalAgents.find(
                 agent => agent.additional_user_id === normalizedValue
             );
-            if (isAlreadyAdditionalAgent) {
-                toast.error('This user is already an additional agent. Remove them from additional agents first.');
-                return;
+            if (additionalAgentEntry && additionalAgentEntry.assignment_id) {
+                // Remove from additional agents when assigning as primary
+                handleRemoveAgent(additionalAgentEntry.assignment_id);
             }
         }
 
@@ -1390,7 +1403,8 @@ const handleClose = () => {
 
     // Handle cancel button click - resets to original state (ContractDialog pattern)
     const handleCancelChanges = useCallback(() => {
-        if (!hasUnsavedChanges) {
+        // Check both saved and temp changes
+        if (!hasUnsavedChanges && !hasTempChanges) {
             toast('No changes to discard');
             return;
         }
@@ -1404,11 +1418,12 @@ const handleClose = () => {
 
         // Clear tracking states
         setHasUnsavedChanges(false);
+        setHasTempChanges(false);  // Also reset temp changes flag
         setHasAttemptedSave(false);
         setValidationErrors([]);
 
         toast.success('Changes discarded');
-    }, [hasUnsavedChanges, originalTicket]);
+    }, [hasUnsavedChanges, hasTempChanges, originalTicket]);
 
     // Handle external trigger to save and close (from confirmation dialog "Save changes" button)
     useEffect(() => {

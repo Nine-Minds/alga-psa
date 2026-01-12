@@ -955,56 +955,16 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
             )}
           </div>
 
-          {/* Additional Agents Section - badge-style display with horizontal wrap */}
+          {/* Additional Agents Section */}
           <div className="mt-6">
             <h2 className="text-lg font-semibold mb-2">Additional Agents</h2>
 
-            {/* Additional Agent badges - horizontal wrap like tags (3-4 per line) */}
-            <div className="flex flex-wrap gap-2 mb-3">
-              {additionalAgents.map((agent) => {
-                const agentUser = (availableAgents.length > 0 ? availableAgents : users).find(u => u.user_id === agent.additional_user_id);
-                return (
-                  <div
-                    key={agent.assignment_id}
-                    className="inline-flex items-center gap-2 px-3 py-1.5 bg-blue-100 text-blue-800 rounded-full text-sm group"
-                  >
-                    <div
-                      className="flex items-center gap-2 cursor-pointer hover:text-blue-900"
-                      onClick={() => agent.additional_user_id && onAgentClick && onAgentClick(agent.additional_user_id)}
-                    >
-                      <UserAvatar
-                        userId={agent.additional_user_id!}
-                        userName={`${agentUser?.first_name || ''} ${agentUser?.last_name || ''}`}
-                        avatarUrl={agentAvatarUrls[agent.additional_user_id!] || null}
-                        size="xs"
-                      />
-                      <span>
-                        {agentUser?.first_name || 'Unknown'} {agentUser?.last_name || 'Agent'}
-                      </span>
-                    </div>
-                    {onRemoveAgent && (
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onRemoveAgent(agent.assignment_id!);
-                        }}
-                        className="ml-1 p-0.5 rounded-full hover:bg-blue-200 transition-colors"
-                        title="Remove agent"
-                      >
-                        <X className="h-3 w-3" />
-                      </button>
-                    )}
-                  </div>
-                );
-              })}
+            {/* No additional agents message - shown only when no picker available */}
+            {additionalAgents.length === 0 && !onAddAgent && !onRemoveAgent && (
+              <p className="text-sm text-gray-500">No additional agents assigned</p>
+            )}
 
-              {/* No additional agents message */}
-              {additionalAgents.length === 0 && !onAddAgent && (
-                <p className="text-sm text-gray-500">No additional agents assigned</p>
-              )}
-            </div>
-
-            {/* Multi-select Agent Picker - allows adding/removing multiple agents */}
+            {/* Multi-select Agent Picker - shows selected agents and allows adding/removing */}
             {(onAddAgent || onRemoveAgent) && (
               <div className="mt-2">
                 <MultiUserPicker

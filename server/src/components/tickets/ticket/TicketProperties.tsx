@@ -9,9 +9,8 @@ import { ITag } from 'server/src/interfaces/tag.interfaces';
 import { TagManager } from 'server/src/components/tags';
 import { Button } from 'server/src/components/ui/Button';
 import { Label } from 'server/src/components/ui/Label';
-import { Input } from 'server/src/components/ui/Input';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
-import { Clock, Edit2, Play, Pause, StopCircle, X, AlertCircle, Calendar as CalendarIcon, Pencil } from 'lucide-react';
+import { Clock, Edit2, Play, Pause, StopCircle, X, AlertCircle, Calendar as CalendarIcon } from 'lucide-react';
 // formatMinutesAsHoursAndMinutes removed - agent team block moved to TicketInfo
 import styles from './TicketDetails.module.css';
 import UserPicker from 'server/src/components/ui/UserPicker';
@@ -73,7 +72,6 @@ interface TicketPropertiesProps {
   onTagsChange?: (tags: ITag[]) => void;
   onItilFieldChange?: (field: string, value: any) => void;
   surveySummary?: SurveyTicketSatisfactionSummary | null;
-  onUpdateContactInfo?: (field: 'phone_number' | 'email', value: string) => Promise<void>;
 }
 
 // Helper function to format location display
@@ -145,7 +143,6 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
   onTagsChange,
   onItilFieldChange,
   surveySummary = null,
-  onUpdateContactInfo,
 }) => {
   // showAgentPicker removed - agent team moved to TicketInfo
   const [showContactPicker, setShowContactPicker] = useState(false);
@@ -153,60 +150,6 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
   const [showLocationPicker, setShowLocationPicker] = useState(false);
   const [contactFilterState, setContactFilterState] = useState<'all' | 'active' | 'inactive'>('active');
   const [selectedContactId, setSelectedContactId] = useState<string | null>(null);
-
-  // Contact phone/email editing state
-  const [isEditingPhone, setIsEditingPhone] = useState(false);
-  const [isEditingEmail, setIsEditingEmail] = useState(false);
-  const [tempPhone, setTempPhone] = useState(contactInfo?.phone_number || '');
-  const [tempEmail, setTempEmail] = useState(contactInfo?.email || '');
-  const [isSavingPhone, setIsSavingPhone] = useState(false);
-  const [isSavingEmail, setIsSavingEmail] = useState(false);
-
-  // Sync temp values when contactInfo changes
-  useEffect(() => {
-    setTempPhone(contactInfo?.phone_number || '');
-    setTempEmail(contactInfo?.email || '');
-  }, [contactInfo?.phone_number, contactInfo?.email]);
-
-  // Handlers for saving phone/email
-  const handleSavePhone = async () => {
-    if (!onUpdateContactInfo || !contactInfo) return;
-    setIsSavingPhone(true);
-    try {
-      await onUpdateContactInfo('phone_number', tempPhone);
-      setIsEditingPhone(false);
-    } catch (error) {
-      console.error('Error saving phone:', error);
-      toast.error('Failed to save phone number');
-    } finally {
-      setIsSavingPhone(false);
-    }
-  };
-
-  const handleCancelPhone = () => {
-    setTempPhone(contactInfo?.phone_number || '');
-    setIsEditingPhone(false);
-  };
-
-  const handleSaveEmail = async () => {
-    if (!onUpdateContactInfo || !contactInfo) return;
-    setIsSavingEmail(true);
-    try {
-      await onUpdateContactInfo('email', tempEmail);
-      setIsEditingEmail(false);
-    } catch (error) {
-      console.error('Error saving email:', error);
-      toast.error('Failed to save email');
-    } finally {
-      setIsSavingEmail(false);
-    }
-  };
-
-  const handleCancelEmail = () => {
-    setTempEmail(contactInfo?.email || '');
-    setIsEditingEmail(false);
-  };
-
   const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
   const [selectedLocationId, setSelectedLocationId] = useState<string | null>(null);
   const [agentSchedules, setAgentSchedules] = useState<IAgentSchedule[]>([]);
@@ -652,104 +595,16 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
             </div>
           )}
           <div>
-            <div className="flex items-center gap-2">
-              <h5 className="font-bold">{contactInfo ? 'Contact Phone' : 'Client Phone'}</h5>
-              {contactInfo && onUpdateContactInfo && !isEditingPhone && (
-                <button
-                  type="button"
-                  onClick={() => setIsEditingPhone(true)}
-                  className="text-gray-400 hover:text-gray-600 transition-colors"
-                  title="Edit phone number"
-                >
-                  <Pencil className="w-3 h-3" />
-                </button>
-              )}
-            </div>
-            {isEditingPhone && contactInfo ? (
-              <div className="mt-1">
-                <Input
-                  id="edit-contact-phone"
-                  type="tel"
-                  value={tempPhone}
-                  onChange={(e) => setTempPhone(e.target.value)}
-                  className="text-sm"
-                  placeholder="Enter phone number"
-                />
-                <div className="flex gap-2 mt-2">
-                  <Button
-                    id="save-phone-btn"
-                    size="sm"
-                    onClick={handleSavePhone}
-                    disabled={isSavingPhone}
-                  >
-                    {isSavingPhone ? 'Saving...' : 'Save'}
-                  </Button>
-                  <Button
-                    id="cancel-phone-btn"
-                    size="sm"
-                    variant="outline"
-                    onClick={handleCancelPhone}
-                    disabled={isSavingPhone}
-                  >
-                    Cancel
-                  </Button>
-                </div>
-              </div>
-            ) : (
-              <p className="text-sm">
-                {contactInfo?.phone_number || client?.phone_no || 'N/A'}
-              </p>
-            )}
+            <h5 className="font-bold">{contactInfo ? 'Contact Phone' : 'Client Phone'}</h5>
+            <p className="text-sm">
+              {contactInfo?.phone_number || client?.phone_no || 'N/A'}
+            </p>
           </div>
           <div>
-            <div className="flex items-center gap-2">
-              <h5 className="font-bold">{contactInfo ? 'Contact Email' : 'Client Email'}</h5>
-              {contactInfo && onUpdateContactInfo && !isEditingEmail && (
-                <button
-                  type="button"
-                  onClick={() => setIsEditingEmail(true)}
-                  className="text-gray-400 hover:text-gray-600 transition-colors"
-                  title="Edit email"
-                >
-                  <Pencil className="w-3 h-3" />
-                </button>
-              )}
-            </div>
-            {isEditingEmail && contactInfo ? (
-              <div className="mt-1">
-                <Input
-                  id="edit-contact-email"
-                  type="email"
-                  value={tempEmail}
-                  onChange={(e) => setTempEmail(e.target.value)}
-                  className="text-sm"
-                  placeholder="Enter email address"
-                />
-                <div className="flex gap-2 mt-2">
-                  <Button
-                    id="save-email-btn"
-                    size="sm"
-                    onClick={handleSaveEmail}
-                    disabled={isSavingEmail}
-                  >
-                    {isSavingEmail ? 'Saving...' : 'Save'}
-                  </Button>
-                  <Button
-                    id="cancel-email-btn"
-                    size="sm"
-                    variant="outline"
-                    onClick={handleCancelEmail}
-                    disabled={isSavingEmail}
-                  >
-                    Cancel
-                  </Button>
-                </div>
-              </div>
-            ) : (
-              <p className="text-sm">
-                {contactInfo?.email || client?.email || 'N/A'}
-              </p>
-            )}
+            <h5 className="font-bold">{contactInfo ? 'Contact Email' : 'Client Email'}</h5>
+            <p className="text-sm">
+              {contactInfo?.email || client?.email || 'N/A'}
+            </p>
           </div>
         </div>
       </div>
