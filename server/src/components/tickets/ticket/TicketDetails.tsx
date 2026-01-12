@@ -37,7 +37,7 @@ import { findUserById, getCurrentUser } from "server/src/lib/actions/user-action
 import { findBoardById, getAllBoards } from "server/src/lib/actions/board-actions/boardActions";
 import { findCommentsByTicketId, deleteComment, createComment, updateComment, findCommentById } from "server/src/lib/actions/comment-actions/commentActions";
 import { getDocumentByTicketId } from "server/src/lib/actions/document-actions/documentActions";
-import { getContactByContactNameId, getContactsByClient, updateContact } from "server/src/lib/actions/contact-actions/contactActions";
+import { getContactByContactNameId, getContactsByClient } from "server/src/lib/actions/contact-actions/contactActions";
 import { getClientById, getAllClients } from "server/src/lib/actions/client-actions/clientActions";
 import { updateTicketWithCache } from "server/src/lib/actions/ticket-actions/optimizedTicketActions";
 import { updateTicket } from "server/src/lib/actions/ticket-actions/ticketActions";
@@ -721,6 +721,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
             }
             if (!cachedUserRef.current) {
                 toast.error('No user session found');
+                setIsProcessingAgents(false);
                 return;
             }
             const result = await addTicketResource(ticket.ticket_id!, userId, 'support', cachedUserRef.current);
@@ -764,6 +765,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
             }
             if (!cachedUserRef.current) {
                 toast.error('No user session found');
+                setIsProcessingAgents(false);
                 return;
             }
             await removeTicketResource(assignmentId, cachedUserRef.current);
@@ -778,21 +780,22 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     };
 
     // Update local state only - save happens when Save button is clicked (like Clients/Contacts pattern)
-    const handleSelectChange = (field: keyof ITicket, newValue: string | null) => {
+    const handleSelectChange = async (field: keyof ITicket, newValue: string | null) => {
         const normalizedValue =
             field === 'assigned_to'
                 ? (newValue && newValue !== 'unassigned' ? newValue : null)
                 : newValue;
 
         // If setting a user as primary agent who is already an additional agent,
-        // automatically remove them from additional agents (old behavior)
+        // automatically remove them from additional agents first (old behavior)
         if (field === 'assigned_to' && normalizedValue) {
             const additionalAgentEntry = additionalAgents.find(
                 agent => agent.additional_user_id === normalizedValue
             );
             if (additionalAgentEntry && additionalAgentEntry.assignment_id) {
-                // Remove from additional agents when assigning as primary
-                handleRemoveAgent(additionalAgentEntry.assignment_id);
+                // Await removal to avoid race condition with server constraints
+                await handleRemoveAgent(additionalAgentEntry.assignment_id);
+                toast('Moved to primary agent');
             }
         }
 
@@ -1175,28 +1178,6 @@ const handleClose = () => {
         } catch (error) {
             console.error('Error fetching contact data:', error);
             toast.error('Failed to load contact data');
-        }
-    };
-
-    // Handler for updating contact phone/email
-    const handleUpdateContactInfo = async (field: 'phone_number' | 'email', value: string) => {
-        if (!contactInfo?.contact_name_id) {
-            toast.error('No contact selected');
-            return;
-        }
-
-        try {
-            const updatedContact = await updateContact({
-                contact_name_id: contactInfo.contact_name_id,
-                [field]: value
-            });
-
-            // Update local state with new contact info
-            setContactInfo(updatedContact);
-            toast.success(`Contact ${field === 'phone_number' ? 'phone' : 'email'} updated successfully`);
-        } catch (error) {
-            console.error('Error updating contact info:', error);
-            throw error; // Re-throw so TicketProperties can handle it
         }
     };
 
@@ -1811,7 +1792,6 @@ const handleClose = () => {
                                 onTagsChange={handleTagsChange}
                                 onItilFieldChange={handleItilFieldChange}
                                 surveySummary={surveySummary}
-                                onUpdateContactInfo={handleUpdateContactInfo}
                             />
                         </Suspense>
                         
