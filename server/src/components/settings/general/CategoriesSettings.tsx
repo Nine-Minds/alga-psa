@@ -37,6 +37,8 @@ const CategoriesSettings: React.FC = () => {
     isOpen: boolean;
     categoryId: string;
     categoryName: string;
+    confirmForce?: boolean;
+    message?: string;
   }>({
     isOpen: false,
     categoryId: '',
@@ -125,38 +127,52 @@ const CategoriesSettings: React.FC = () => {
     setError(null);
   };
 
-  const handleDeleteCategory = async () => {
+  const handleDeleteCategory = async (force = false) => {
     try {
-      await deleteCategory(deleteDialog.categoryId);
-      toast.success('Category deleted successfully');
-      await fetchCategories();
-    } catch (error: any) {
+      const result = await deleteCategory(deleteDialog.categoryId, force);
+
+      if (result.success) {
+        toast.success(result.message || 'Category deleted successfully');
+        setDeleteDialog({ isOpen: false, categoryId: '', categoryName: '' });
+        await fetchCategories();
+        return;
+      }
+
+      // Handle different error codes
+      switch (result.code) {
+        case 'CATEGORY_HAS_SUBCATEGORIES':
+          // Show confirmation dialog to force delete subcategories
+          setDeleteDialog({
+            ...deleteDialog,
+            confirmForce: true,
+            message: result.message
+          });
+          break;
+        case 'CATEGORY_HAS_TICKETS':
+          // Blocking error - show toast with helpful message
+          const ticketCount = result.counts?.tickets || 0;
+          const ticketMessage = ticketCount > 0
+            ? `Cannot delete this category because ${ticketCount} ticket${ticketCount === 1 ? ' is' : 's are'} currently using it. Please reassign or delete ${ticketCount === 1 ? 'that ticket' : 'those tickets'} first.`
+            : result.message || 'Cannot delete category with associated tickets';
+          toast.error(ticketMessage);
+          setDeleteDialog({ isOpen: false, categoryId: '', categoryName: '' });
+          break;
+        case 'ITIL_CATEGORY_PROTECTED':
+          // ITIL category is protected while ITIL boards exist
+          toast.error(result.message || 'Cannot delete ITIL category while ITIL boards exist');
+          setDeleteDialog({ isOpen: false, categoryId: '', categoryName: '' });
+          break;
+        case 'NOT_FOUND':
+        case 'NO_TENANT':
+        case 'UNAUTHORIZED':
+        default:
+          toast.error(result.message || 'Failed to delete category');
+          setDeleteDialog({ isOpen: false, categoryId: '', categoryName: '' });
+          break;
+      }
+    } catch (error) {
       console.error('Error deleting category:', error);
-      // Extract the actual error message from Next.js server action error
-      let errorMessage = 'Failed to delete category';
-      
-      if (error?.message) {
-        errorMessage = error.message;
-      } else if (typeof error === 'string') {
-        errorMessage = error;
-      }
-      
-      // Make the message more user-friendly
-      if (errorMessage.includes('ticket') && errorMessage.includes('using this category')) {
-        // Extract the ticket count from the message if present
-        const match = errorMessage.match(/(\d+) ticket/);
-        if (match) {
-          const count = parseInt(match[1]);
-          errorMessage = `Cannot delete this category because ${count} ticket${count === 1 ? ' is' : 's are'} currently using it. Please reassign or delete ${count === 1 ? 'that ticket' : 'those tickets'} first.`;
-        } else {
-          errorMessage = 'Cannot delete this category because it is currently assigned to one or more tickets. Please reassign or delete those tickets first.';
-        }
-      } else if (errorMessage.includes('has subcategories')) {
-        errorMessage = 'Cannot delete this category because it has subcategories. Please delete all subcategories first.';
-      }
-      
-      toast.error(errorMessage);
-    } finally {
+      toast.error(error instanceof Error ? error.message : 'Failed to delete category');
       setDeleteDialog({ isOpen: false, categoryId: '', categoryName: '' });
     }
   };
@@ -355,42 +371,33 @@ const CategoriesSettings: React.FC = () => {
       title: 'Actions',
       dataIndex: 'category_id',
       width: '10%',
-      render: (value: string, record: ITicketCategory) => {
-        // ITIL imported categories cannot be edited or deleted
-        if (record.is_from_itil_standard) {
-          return (
-            <span className="text-xs text-gray-400">Protected</span>
-          );
-        }
-
-        return (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button id={`category-${value}-actions-button`} variant="ghost" className="h-8 w-8 p-0">
-                <MoreVertical className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem
-                id={`edit-category-${value}-button`}
-                onClick={() => startEditing(record)}>
-                Edit
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                id={`delete-category-${value}-button`}
-                onClick={() => setDeleteDialog({
-                  isOpen: true,
-                  categoryId: value,
-                  categoryName: record.category_name
-                })}
-                className="text-red-600"
-              >
-                Delete
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        );
-      },
+      render: (value: string, record: ITicketCategory) => (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button id={`category-${value}-actions-button`} variant="ghost" className="h-8 w-8 p-0">
+              <MoreVertical className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem
+              id={`edit-category-${value}-button`}
+              onClick={() => startEditing(record)}>
+              Edit
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              id={`delete-category-${value}-button`}
+              onClick={() => setDeleteDialog({
+                isOpen: true,
+                categoryId: value,
+                categoryName: record.category_name
+              })}
+              className="text-red-600"
+            >
+              Delete
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      ),
     },
   ];
 
@@ -465,10 +472,14 @@ const CategoriesSettings: React.FC = () => {
       <ConfirmationDialog
         isOpen={deleteDialog.isOpen}
         onClose={() => setDeleteDialog({ isOpen: false, categoryId: '', categoryName: '' })}
-        onConfirm={handleDeleteCategory}
-        title="Delete Category"
-        message={`Are you sure you want to delete "${deleteDialog.categoryName}"? This action cannot be undone.`}
-        confirmLabel="Delete"
+        onConfirm={() => handleDeleteCategory(deleteDialog.confirmForce || false)}
+        title={deleteDialog.confirmForce ? "Delete Category and Subcategories" : "Delete Category"}
+        message={
+          deleteDialog.confirmForce
+            ? `${deleteDialog.message} This will permanently delete the category and all its subcategories.`
+            : `Are you sure you want to delete "${deleteDialog.categoryName}"? This action cannot be undone.`
+        }
+        confirmLabel={deleteDialog.confirmForce ? "Delete All" : "Delete"}
       />
 
       {/* Add/Edit Dialog */}

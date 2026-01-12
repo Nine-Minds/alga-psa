@@ -39,6 +39,9 @@ const BoardsSettings: React.FC = () => {
     isOpen: boolean;
     boardId: string;
     boardName: string;
+    confirmForce?: boolean;
+    confirmCleanupItil?: boolean;
+    message?: string;
   }>({
     isOpen: false,
     boardId: '',
@@ -121,15 +124,51 @@ const BoardsSettings: React.FC = () => {
     setError(null);
   };
 
-  const handleDeleteBoard = async () => {
+  const handleDeleteBoard = async (force = false, cleanupItil = false) => {
     try {
-      await deleteBoard(deleteDialog.boardId);
-      toast.success('Board deleted successfully');
-      await fetchBoards();
+      const result = await deleteBoard(deleteDialog.boardId, force, cleanupItil);
+
+      if (result.success) {
+        toast.success(result.message || 'Board deleted successfully');
+        setDeleteDialog({ isOpen: false, boardId: '', boardName: '' });
+        await fetchBoards();
+        return;
+      }
+
+      // Handle different error codes
+      switch (result.code) {
+        case 'BOARD_HAS_CATEGORIES':
+          // Show confirmation dialog to force delete categories
+          setDeleteDialog({
+            ...deleteDialog,
+            confirmForce: true,
+            confirmCleanupItil: false,
+            message: result.message
+          });
+          break;
+        case 'LAST_ITIL_BOARD':
+          // Show confirmation dialog for ITIL cleanup
+          setDeleteDialog({
+            ...deleteDialog,
+            confirmForce: deleteDialog.confirmForce || false, // Keep force if already set
+            confirmCleanupItil: true,
+            message: result.message
+          });
+          break;
+        case 'BOARD_HAS_TICKETS':
+        case 'BOARD_IS_DEFAULT':
+        case 'BOARD_USED_IN_EMAIL_ROUTING':
+        case 'NOT_FOUND':
+        case 'NO_TENANT':
+        default:
+          // Blocking errors - show toast and close dialog
+          toast.error(result.message || 'Failed to delete board');
+          setDeleteDialog({ isOpen: false, boardId: '', boardName: '' });
+          break;
+      }
     } catch (error) {
       console.error('Error deleting board:', error);
       toast.error(error instanceof Error ? error.message : 'Failed to delete board');
-    } finally {
       setDeleteDialog({ isOpen: false, boardId: '', boardName: '' });
     }
   };
@@ -464,10 +503,40 @@ const BoardsSettings: React.FC = () => {
       <ConfirmationDialog
         isOpen={deleteDialog.isOpen}
         onClose={() => setDeleteDialog({ isOpen: false, boardId: '', boardName: '' })}
-        onConfirm={handleDeleteBoard}
-        title="Delete Board"
-        message={`Are you sure you want to delete "${deleteDialog.boardName}"? This action cannot be undone.`}
-        confirmLabel="Delete"
+        onConfirm={() => {
+          if (deleteDialog.confirmCleanupItil) {
+            // User confirmed ITIL cleanup
+            handleDeleteBoard(deleteDialog.confirmForce || false, true);
+          } else {
+            handleDeleteBoard(deleteDialog.confirmForce || false, false);
+          }
+        }}
+        title={
+          deleteDialog.confirmCleanupItil
+            ? "Cleanup ITIL Data?"
+            : deleteDialog.confirmForce
+              ? "Delete Board and Categories"
+              : "Delete Board"
+        }
+        message={
+          deleteDialog.confirmCleanupItil
+            ? `${deleteDialog.message}\n\nClick "Delete & Cleanup" to remove unused ITIL data, or "Delete Only" to keep ITIL priorities/categories for other boards.`
+            : deleteDialog.confirmForce
+              ? `${deleteDialog.message} This will permanently delete the board and all its categories.`
+              : `Are you sure you want to delete "${deleteDialog.boardName}"? This action cannot be undone.`
+        }
+        confirmLabel={
+          deleteDialog.confirmCleanupItil
+            ? "Delete & Cleanup"
+            : deleteDialog.confirmForce
+              ? "Delete All"
+              : "Delete"
+        }
+        thirdButtonLabel={deleteDialog.confirmCleanupItil ? "Delete Only" : undefined}
+        onCancel={deleteDialog.confirmCleanupItil ? () => {
+          // Skip ITIL cleanup but still delete the board
+          handleDeleteBoard(deleteDialog.confirmForce || false, false);
+        } : undefined}
       />
 
       {/* Add/Edit Dialog */}
