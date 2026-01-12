@@ -76,6 +76,12 @@ const BADGE_REPLACEMENTS = [
 const INFO_BOX_REPLACEMENTS = [
   { from: 'background:#f0fdf4;border:1px solid #bbf7d0', to: 'background:#f8f5ff;border:1px solid #e6deff' },
   { from: 'background: #f0fdf4; border: 1px solid #bbf7d0', to: 'background: #f8f5ff; border: 1px solid #e6deff' },
+  // Standalone border replacements (catch any remaining green borders)
+  { from: 'border:1px solid #bbf7d0', to: 'border:1px solid #e6deff' },
+  { from: 'border: 1px solid #bbf7d0', to: 'border: 1px solid #e6deff' },
+  // Standalone background replacements
+  { from: 'background:#f0fdf4', to: 'background:#f8f5ff' },
+  { from: 'background: #f0fdf4', to: 'background: #f8f5ff' },
 ];
 
 // Templates that need gradient fixes (have gradients but wrong colors)
