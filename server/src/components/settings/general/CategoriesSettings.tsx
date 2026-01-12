@@ -39,6 +39,11 @@ const CategoriesSettings: React.FC = () => {
     categoryName: string;
     confirmForce?: boolean;
     message?: string;
+    blockingError?: {
+      code: string;
+      message: string;
+      counts?: Record<string, number>;
+    };
   }>({
     isOpen: false,
     categoryId: '',
@@ -145,27 +150,27 @@ const CategoriesSettings: React.FC = () => {
           setDeleteDialog({
             ...deleteDialog,
             confirmForce: true,
-            message: result.message
+            message: result.message,
+            blockingError: undefined
           });
           break;
         case 'CATEGORY_HAS_TICKETS':
-          // Blocking error - show toast with helpful message
-          const ticketCount = result.counts?.tickets || 0;
-          const ticketMessage = ticketCount > 0
-            ? `Cannot delete this category because ${ticketCount} ticket${ticketCount === 1 ? ' is' : 's are'} currently using it. Please reassign or delete ${ticketCount === 1 ? 'that ticket' : 'those tickets'} first.`
-            : result.message || 'Cannot delete category with associated tickets';
-          toast.error(ticketMessage);
-          setDeleteDialog({ isOpen: false, categoryId: '', categoryName: '' });
-          break;
         case 'ITIL_CATEGORY_PROTECTED':
-          // ITIL category is protected while ITIL boards exist
-          toast.error(result.message || 'Cannot delete ITIL category while ITIL boards exist');
-          setDeleteDialog({ isOpen: false, categoryId: '', categoryName: '' });
+          // Blocking errors - show in dialog, not toast
+          setDeleteDialog({
+            ...deleteDialog,
+            blockingError: {
+              code: result.code || 'UNKNOWN',
+              message: result.message || 'Cannot delete category',
+              counts: result.counts
+            }
+          });
           break;
         case 'NOT_FOUND':
         case 'NO_TENANT':
         case 'UNAUTHORIZED':
         default:
+          // Fatal errors - show toast and close dialog
           toast.error(result.message || 'Failed to delete category');
           setDeleteDialog({ isOpen: false, categoryId: '', categoryName: '' });
           break;
@@ -472,14 +477,53 @@ const CategoriesSettings: React.FC = () => {
       <ConfirmationDialog
         isOpen={deleteDialog.isOpen}
         onClose={() => setDeleteDialog({ isOpen: false, categoryId: '', categoryName: '' })}
-        onConfirm={() => handleDeleteCategory(deleteDialog.confirmForce || false)}
-        title={deleteDialog.confirmForce ? "Delete Category and Subcategories" : "Delete Category"}
+        onConfirm={() => {
+          if (deleteDialog.blockingError) {
+            // Just close the dialog when there's a blocking error
+            setDeleteDialog({ isOpen: false, categoryId: '', categoryName: '' });
+          } else {
+            handleDeleteCategory(deleteDialog.confirmForce || false);
+          }
+        }}
+        title={
+          deleteDialog.blockingError
+            ? "Cannot Delete Category"
+            : deleteDialog.confirmForce
+              ? "Delete Category and Subcategories"
+              : "Delete Category"
+        }
         message={
-          deleteDialog.confirmForce
+          deleteDialog.blockingError ? (
+            <div className="space-y-4">
+              <p className="text-gray-700">Unable to delete this category.</p>
+              <div className="bg-amber-50 border border-amber-200 rounded-md p-4">
+                <p className="text-amber-800">{deleteDialog.blockingError.message}</p>
+                {deleteDialog.blockingError.counts && Object.keys(deleteDialog.blockingError.counts).length > 0 && (
+                  <ul className="list-disc list-inside mt-2 text-amber-700">
+                    {Object.entries(deleteDialog.blockingError.counts).map(([key, count]) => {
+                      const label = key.replace(/_/g, ' ');
+                      // Don't add 's' if label already ends in 's' or for count of 1
+                      const pluralLabel = count === 1
+                        ? label.replace(/s$/, '') // Remove trailing 's' for singular
+                        : label.endsWith('s') ? label : label + 's';
+                      return <li key={key}>{count} {pluralLabel}</li>;
+                    })}
+                  </ul>
+                )}
+              </div>
+              <p className="text-gray-600 text-sm">
+                {deleteDialog.blockingError.code === 'CATEGORY_HAS_TICKETS'
+                  ? 'Please reassign or delete the tickets before deleting this category.'
+                  : deleteDialog.blockingError.code === 'ITIL_CATEGORY_PROTECTED'
+                    ? 'Delete the ITIL boards first to remove ITIL categories.'
+                    : 'Please resolve the above issues before deleting this category.'}
+              </p>
+            </div>
+          ) : deleteDialog.confirmForce
             ? `${deleteDialog.message} This will permanently delete the category and all its subcategories.`
             : `Are you sure you want to delete "${deleteDialog.categoryName}"? This action cannot be undone.`
         }
-        confirmLabel={deleteDialog.confirmForce ? "Delete All" : "Delete"}
+        confirmLabel={deleteDialog.blockingError ? "Close" : deleteDialog.confirmForce ? "Delete All" : "Delete"}
       />
 
       {/* Add/Edit Dialog */}
@@ -509,32 +553,6 @@ const CategoriesSettings: React.FC = () => {
                 placeholder="Enter category name"
               />
             </div>
-            {!editingCategory && (
-              <div>
-                <Label htmlFor="parent_category">Parent Category (Optional)</Label>
-                <CustomSelect
-                  value={formData.parent_category || 'none'}
-                  onValueChange={(value) => {
-                    const actualValue = value === 'none' ? '' : value;
-                    setFormData({ ...formData, parent_category: actualValue });
-                  }}
-                  options={[
-                    { value: 'none', label: 'None (Top-level category)' },
-                    ...categories
-                      .filter(cat => !cat.parent_category)
-                      .map(cat => ({
-                        value: cat.category_id,
-                        label: cat.category_name
-                      }))
-                  ]}
-                  placeholder="Select parent category"
-                  className="w-full"
-                />
-                <p className="text-xs text-muted-foreground mt-1">
-                  Leave empty to create a top-level category
-                </p>
-              </div>
-            )}
             {!editingCategory && !formData.parent_category && (
               <div>
                 <Label htmlFor="board_id">Board *</Label>
@@ -552,6 +570,37 @@ const CategoriesSettings: React.FC = () => {
                 />
                 <p className="text-xs text-muted-foreground mt-1">
                   Required for top-level categories
+                </p>
+              </div>
+            )}
+            {!editingCategory && (
+              <div>
+                <Label htmlFor="parent_category">Parent Category (Optional)</Label>
+                <CustomSelect
+                  value={formData.parent_category || 'none'}
+                  onValueChange={(value) => {
+                    const actualValue = value === 'none' ? '' : value;
+                    setFormData({ ...formData, parent_category: actualValue });
+                  }}
+                  options={[
+                    { value: 'none', label: 'None (Top-level category)' },
+                    ...categories
+                      .filter(cat => !cat.parent_category)
+                      .filter(cat => !formData.board_id || cat.board_id === formData.board_id)
+                      .map(cat => ({
+                        value: cat.category_id,
+                        label: formData.board_id
+                          ? cat.category_name
+                          : `${cat.category_name} (${boards.find(b => b.board_id === cat.board_id)?.board_name || 'No board'})`
+                      }))
+                  ]}
+                  placeholder="Select parent category"
+                  className="w-full"
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  {formData.board_id
+                    ? 'Select a parent to create a subcategory, or leave empty for top-level'
+                    : 'Select a board first, or pick a parent category to inherit its board'}
                 </p>
               </div>
             )}
