@@ -168,8 +168,24 @@ export async function validatePhaseTaskImportData(
   const statusLookup: Record<string, string> = {};
   const unmatchedStatuses: string[] = [];
 
-  if (projectId) {
-    const statusMappings = await ProjectModel.getProjectStatusMappings(db, projectId);
+  if (projectId && currentUser.tenant) {
+    // Query with joins to get actual status names
+    const statusMappings = await db('project_status_mappings as psm')
+      .where({ 'psm.project_id': projectId, 'psm.tenant': currentUser.tenant })
+      .leftJoin('statuses as s', function(this: any) {
+        this.on('psm.status_id', 's.status_id')
+          .andOn('psm.tenant', 's.tenant');
+      })
+      .leftJoin('standard_statuses as ss', function(this: any) {
+        this.on('psm.standard_status_id', 'ss.standard_status_id')
+          .andOn('psm.tenant', 'ss.tenant');
+      })
+      .select(
+        'psm.*',
+        db.raw('COALESCE(psm.custom_name, s.name, ss.name) as status_name'),
+        db.raw('COALESCE(psm.custom_name, s.name, ss.name) as name')
+      );
+
     statusMappings.forEach((mapping: IProjectStatusMapping) => {
       // Use custom_name if available, otherwise use status_name
       const statusName = mapping.custom_name || mapping.status_name || mapping.name;
