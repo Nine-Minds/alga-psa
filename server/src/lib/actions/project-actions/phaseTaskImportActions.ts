@@ -506,7 +506,11 @@ export async function importPhasesAndTasks(
 }
 
 /**
- * Create a new status mapping for a project
+ * Create a new status mapping for a project by first creating a tenant-level status,
+ * then adding it to the project.
+ *
+ * This follows the same pattern as the template wizard's QuickAddStatus component
+ * which uses createTenantProjectStatus.
  */
 async function createNewStatusMapping(
   trx: Knex.Transaction,
@@ -515,22 +519,50 @@ async function createNewStatusMapping(
   existingCount: number,
   tenant: string
 ): Promise<IProjectStatusMapping> {
-  // Get the first standard status to use as a base (typically "open" or similar)
-  const standardStatus = await trx('standard_statuses')
-    .where('item_type', 'project_task')
-    .orderBy('display_order', 'asc')
+  // Use advisory lock to serialize status creation for this tenant/type combination
+  // This matches the logic in createTenantProjectStatus
+  const lockKey = `${tenant}:project_task:project_task`;
+
+  // Create a stable 32-bit integer hash
+  let hash = 0;
+  for (let i = 0; i < lockKey.length; i++) {
+    const char = lockKey.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash; // Convert to 32-bit integer
+  }
+  const lockHash = Math.abs(hash) % 2147483647; // Ensure it fits in PostgreSQL integer range
+
+  // Acquire advisory lock
+  await trx.raw('SELECT pg_advisory_xact_lock(?)', [lockHash]);
+
+  // Get next order number for the tenant's status library
+  const maxOrder = await trx('statuses')
+    .where({ tenant, status_type: 'project_task' })
+    .max('order_number as max')
     .first();
 
-  if (!standardStatus) {
-    throw new Error('No standard statuses found for project tasks');
-  }
+  const orderNumber = (maxOrder?.max ?? 0) + 1;
 
+  // Create a new status in the tenant's status library
+  const [newStatus] = await trx('statuses')
+    .insert({
+      tenant,
+      item_type: 'project_task',
+      status_type: 'project_task',
+      name: statusName,
+      is_closed: false,
+      order_number: orderNumber,
+      color: '#6B7280', // Default gray color
+      created_at: new Date().toISOString()
+    })
+    .returning('*');
+
+  // Now create the project status mapping pointing to the new status
   const [newMapping] = await trx('project_status_mappings')
     .insert({
       tenant,
       project_id: projectId,
-      standard_status_id: standardStatus.standard_status_id,
-      custom_name: statusName,
+      status_id: newStatus.status_id,
       display_order: existingCount + 1,
       is_visible: true,
       is_standard: false,
