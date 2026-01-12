@@ -24,7 +24,20 @@ import { ProjectTaskStatusSelector } from './ProjectTaskStatusSelector';
 import { QuickAddTagPicker, PendingTag } from 'server/src/components/tags';
 import { createTagsForEntity } from 'server/src/lib/actions/tagActions';
 import ClientPortalConfigEditor from './ClientPortalConfigEditor';
-import { ChevronDown, ChevronRight, Settings } from 'lucide-react';
+import { ChevronDown, ChevronRight, Settings, Upload, FileSpreadsheet, X } from 'lucide-react';
+import { parseCSV } from 'server/src/lib/utils/csvParser';
+import {
+  generatePhaseTaskCSVTemplate,
+  validatePhaseTaskImportData,
+  importPhasesAndTasks,
+} from 'server/src/lib/actions/project-actions/phaseTaskImportActions';
+import {
+  ITaskImportRow,
+  IGroupedPhaseData,
+  TASK_IMPORT_FIELDS,
+  MappableTaskField,
+  groupRowsIntoPhases,
+} from 'server/src/interfaces/phaseTaskImport.interfaces';
 
 interface ProjectQuickAddProps {
   onClose: () => void;
@@ -55,6 +68,13 @@ const ProjectQuickAdd: React.FC<ProjectQuickAddProps> = ({ onClose, onProjectAdd
   const [pendingTags, setPendingTags] = useState<PendingTag[]>([]);
   const [clientPortalConfig, setClientPortalConfig] = useState<IClientPortalConfig>(DEFAULT_CLIENT_PORTAL_CONFIG);
   const [showClientPortalConfig, setShowClientPortalConfig] = useState(false);
+
+  // Phase/Task import state
+  const [showImportSection, setShowImportSection] = useState(false);
+  const [importFile, setImportFile] = useState<File | null>(null);
+  const [importParsedRows, setImportParsedRows] = useState<ITaskImportRow[]>([]);
+  const [importGroupedPhases, setImportGroupedPhases] = useState<IGroupedPhaseData[]>([]);
+  const [importError, setImportError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -89,6 +109,81 @@ const ProjectQuickAdd: React.FC<ProjectQuickAddProps> = ({ onClose, onProjectAdd
     };
     fetchContacts();
   }, [selectedClientId]);
+
+  // Handle CSV file upload for phase/task import
+  const handleImportFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const uploadedFile = event.target.files?.[0];
+    if (!uploadedFile) return;
+
+    setImportError(null);
+    setImportFile(uploadedFile);
+
+    try {
+      const text = await uploadedFile.text();
+      const rows = parseCSV(text) as string[][];
+
+      if (rows.length < 2) {
+        throw new Error('CSV file is empty or has no data rows');
+      }
+
+      const headers = rows[0];
+      const dataRows = rows.slice(1);
+
+      // Auto-map columns to fields
+      const headerToFieldMap: Record<number, MappableTaskField> = {};
+      headers.forEach((header, index) => {
+        const headerLower = header.toLowerCase().replace(/[_\s-]/g, '');
+        Object.entries(TASK_IMPORT_FIELDS).forEach(([field]) => {
+          const fieldLower = field.toLowerCase().replace(/[_\s-]/g, '');
+          if (headerLower === fieldLower || headerLower.includes(fieldLower)) {
+            headerToFieldMap[index] = field as MappableTaskField;
+          }
+        });
+      });
+
+      // Map CSV data to ITaskImportRow objects
+      const mappedRows: ITaskImportRow[] = dataRows.map((row) => {
+        const mappedData: ITaskImportRow = {};
+        Object.entries(headerToFieldMap).forEach(([indexStr, field]) => {
+          const index = parseInt(indexStr, 10);
+          (mappedData as Record<string, string>)[field] = row[index] || '';
+        });
+        return mappedData;
+      }).filter(row => row.task_name?.trim()); // Filter out rows without task names
+
+      if (mappedRows.length === 0) {
+        throw new Error('No valid tasks found in CSV. Make sure "task_name" column is mapped.');
+      }
+
+      // Validate and group the data
+      const validationResponse = await validatePhaseTaskImportData(mappedRows);
+      const validRows = validationResponse.validationResults
+        .filter(r => r.isValid)
+        .map(r => r.data);
+
+      const grouped = groupRowsIntoPhases(
+        validRows,
+        validationResponse.userLookup,
+        validationResponse.priorityLookup,
+        validationResponse.serviceLookup
+      );
+
+      setImportParsedRows(mappedRows);
+      setImportGroupedPhases(grouped);
+    } catch (error) {
+      setImportError(error instanceof Error ? error.message : 'Error reading CSV file');
+      setImportFile(null);
+      setImportParsedRows([]);
+      setImportGroupedPhases([]);
+    }
+  };
+
+  const clearImportFile = () => {
+    setImportFile(null);
+    setImportParsedRows([]);
+    setImportGroupedPhases([]);
+    setImportError(null);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -157,13 +252,30 @@ const ProjectQuickAdd: React.FC<ProjectQuickAddProps> = ({ onClose, onProjectAdd
         }
       }
 
+      // Import phases/tasks if file was uploaded
+      let importMessage = '';
+      if (importGroupedPhases.length > 0) {
+        try {
+          const importResult = await importPhasesAndTasks(newProject.project_id, importGroupedPhases);
+          if (importResult.success || importResult.tasksCreated > 0) {
+            importMessage = ` with ${importResult.phasesCreated} phases and ${importResult.tasksCreated} tasks imported`;
+          }
+          if (importResult.errors.length > 0) {
+            toast.error(`Some items could not be imported: ${importResult.errors[0]}`);
+          }
+        } catch (importError) {
+          console.error("Error importing phases/tasks:", importError);
+          toast.error('Project created, but phase/task import failed');
+        }
+      }
+
       // Pass project with tags to callback
       onProjectAdded({ ...newProject, tags: createdTags });
 
       onClose();
 
       // Show success toast *after* potential state updates in parent
-      toast.success('Project created successfully');
+      toast.success(`Project created successfully${importMessage}`);
     } catch (error) {
       console.error('Error creating project:', error);
       // Show an error toast to the user
@@ -350,6 +462,107 @@ const ProjectQuickAdd: React.FC<ProjectQuickAddProps> = ({ onClose, onProjectAdd
                       onChange={setClientPortalConfig}
                       disabled={isSubmitting}
                     />
+                  </div>
+                )}
+              </div>
+
+              {/* Import Phases/Tasks - Expandable Section */}
+              <div className="border-t pt-4 mt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowImportSection(!showImportSection)}
+                  className="flex items-center gap-2 text-sm font-medium text-gray-700 hover:text-gray-900"
+                >
+                  {showImportSection ? (
+                    <ChevronDown className="h-4 w-4" />
+                  ) : (
+                    <ChevronRight className="h-4 w-4" />
+                  )}
+                  <Upload className="h-4 w-4" />
+                  <span>Import Phases/Tasks (Optional)</span>
+                </button>
+                {showImportSection && (
+                  <div className="mt-3 space-y-3">
+                    <p className="text-xs text-gray-500">
+                      Upload a CSV file to pre-populate phases and tasks when creating this project.
+                    </p>
+
+                    {importError && (
+                      <div className="p-2 text-sm text-red-600 bg-red-50 rounded border border-red-200">
+                        {importError}
+                      </div>
+                    )}
+
+                    {!importFile ? (
+                      <div className="space-y-2">
+                        <Input
+                          id="import-csv-file"
+                          type="file"
+                          accept=".csv"
+                          onChange={handleImportFileUpload}
+                          disabled={isSubmitting}
+                        />
+                        <Button
+                          id="download-import-template-btn"
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={async () => {
+                            const template = await generatePhaseTaskCSVTemplate();
+                            const blob = new Blob([template], { type: 'text/csv;charset=utf-8;' });
+                            const link = document.createElement('a');
+                            const url = URL.createObjectURL(blob);
+                            link.setAttribute('href', url);
+                            link.setAttribute('download', 'phase_task_import_template.csv');
+                            link.style.visibility = 'hidden';
+                            document.body.appendChild(link);
+                            link.click();
+                            document.body.removeChild(link);
+                          }}
+                          className="w-full"
+                        >
+                          Download CSV Template
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <FileSpreadsheet className="h-5 w-5 text-green-600" />
+                            <div>
+                              <p className="text-sm font-medium text-green-800">{importFile.name}</p>
+                              <p className="text-xs text-green-600">
+                                {importGroupedPhases.length} phase{importGroupedPhases.length !== 1 ? 's' : ''},{' '}
+                                {importGroupedPhases.reduce((sum, p) => sum + p.tasks.length, 0)} task{importGroupedPhases.reduce((sum, p) => sum + p.tasks.length, 0) !== 1 ? 's' : ''} ready to import
+                              </p>
+                            </div>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={clearImportFile}
+                            className="p-1 text-gray-400 hover:text-gray-600"
+                            disabled={isSubmitting}
+                          >
+                            <X className="h-4 w-4" />
+                          </button>
+                        </div>
+                        {importGroupedPhases.length > 0 && (
+                          <div className="mt-2 pt-2 border-t border-green-200">
+                            <p className="text-xs text-green-700 mb-1">Phases to create:</p>
+                            <ul className="text-xs text-green-600 list-disc list-inside">
+                              {importGroupedPhases.slice(0, 3).map((phase, index) => (
+                                <li key={index}>
+                                  {phase.phase_name} ({phase.tasks.length} task{phase.tasks.length !== 1 ? 's' : ''})
+                                </li>
+                              ))}
+                              {importGroupedPhases.length > 3 && (
+                                <li>...and {importGroupedPhases.length - 3} more phase{importGroupedPhases.length - 3 !== 1 ? 's' : ''}</li>
+                              )}
+                            </ul>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
