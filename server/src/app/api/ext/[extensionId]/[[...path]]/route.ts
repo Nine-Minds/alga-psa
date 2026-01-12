@@ -280,7 +280,16 @@ async function handle(req: NextRequest, ctx: { params: Promise<{ extensionId: st
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), timeoutMs);
     try {
-      console.log('[api/ext] fetching from runner', { runnerUrl, requestId, elapsed: Date.now() - start });
+      console.log('[api/ext] fetching from runner', {
+        runnerUrl,
+        requestId,
+        method,
+        path,
+        idempotencyPresent: Boolean(idempotencyKey),
+        installId: install_id,
+        installIdLen: install_id ? install_id.length : 0,
+        elapsed: Date.now() - start,
+      });
       const resp = await fetch(`${runnerUrl}/v1/execute`, {
         method: 'POST',
         headers: {
