@@ -110,14 +110,15 @@ function ensureRunnerAuth(req: NextRequest): void {
 
 export async function POST(
   req: NextRequest,
-  { params }: { params: { installId: string } }
+  ctx: { params: Promise<{ installId: string }> }
 ) {
   try {
     ensureRunnerAuth(req);
 
+    const { installId } = await ctx.params;
     const raw = await req.json();
     const base = baseSchema.parse(raw);
-    const { service } = await getStorageServiceForInstall(params.installId);
+    const { service } = await getStorageServiceForInstall(installId);
 
     switch (base.operation) {
       case 'put': {
