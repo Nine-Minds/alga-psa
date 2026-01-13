@@ -105,6 +105,7 @@ interface TicketDetailsProps {
 
     // Optimized handlers
     onTicketUpdate?: (field: string, value: any) => Promise<void>;
+    onBatchTicketUpdate?: (changes: Record<string, any>) => Promise<boolean>;
     onAddComment?: (content: string, isInternal: boolean, isResolution: boolean) => Promise<void>;
     onUpdateDescription?: (content: string) => Promise<boolean>;
     isSubmitting?: boolean;
@@ -141,6 +142,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     currentUser,
     // Optimized handlers
     onTicketUpdate,
+    onBatchTicketUpdate,
     onAddComment,
     onUpdateDescription,
     isSubmitting = false,
@@ -615,13 +617,14 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     };
 
     // Batch save handler for saving multiple fields at once (used by TicketInfo Save Changes button)
-    const handleBatchSaveChanges = async (changes: Partial<ITicket>): Promise<boolean> => {
-        if (Object.keys(changes).length === 0) {
+    const handleBatchSaveChanges = async (changes: Record<string, unknown>): Promise<boolean> => {
+        // Early return if no changes
+        if (!changes || Object.keys(changes).length === 0) {
             return true;
         }
 
         // Normalize assigned_to value
-        const normalizedChanges = { ...changes };
+        const normalizedChanges: Record<string, unknown> = { ...changes };
         if ('assigned_to' in normalizedChanges) {
             normalizedChanges.assigned_to =
                 normalizedChanges.assigned_to && normalizedChanges.assigned_to !== 'unassigned'
@@ -630,39 +633,47 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
         }
 
         // Store previous values for potential rollback
-        const previousValues: Partial<ITicket> = {};
-        for (const field of Object.keys(normalizedChanges) as (keyof ITicket)[]) {
-            previousValues[field] = ticket[field] as any;
+        const previousValues: Record<string, unknown> = {};
+        for (const field of Object.keys(normalizedChanges)) {
+            previousValues[field] = ticket[field as keyof ITicket];
         }
 
         // Optimistically update the UI
         setTicket(prevTicket => ({ ...prevTicket, ...normalizedChanges }));
 
-        // Handle ITIL fields separately
-        const itilChanges: { itil_impact?: number; itil_urgency?: number } = {};
-        const ticketChanges: Partial<ITicket> = {};
-
-        for (const [field, value] of Object.entries(normalizedChanges)) {
-            if (field === 'itil_impact') {
-                itilChanges.itil_impact = value as number;
-            } else if (field === 'itil_urgency') {
-                itilChanges.itil_urgency = value as number;
-            } else {
-                (ticketChanges as any)[field] = value;
-            }
+        // Track ITIL changes for local state update after save
+        // Using Pick<ITicket, ...> for better type-safety
+        const itilChanges: Pick<ITicket, 'itil_impact' | 'itil_urgency'> = {};
+        if ('itil_impact' in normalizedChanges) {
+            itilChanges.itil_impact = normalizedChanges.itil_impact as number;
+        }
+        if ('itil_urgency' in normalizedChanges) {
+            itilChanges.itil_urgency = normalizedChanges.itil_urgency as number;
         }
 
         try {
-            // Use the optimized handler if provided
-            if (onTicketUpdate) {
-                // Save all ticket changes
-                for (const [field, value] of Object.entries(ticketChanges)) {
-                    await onTicketUpdate(field, value);
+            // Prefer batch handler for atomic updates (all-or-nothing)
+            if (onBatchTicketUpdate) {
+                const success = await onBatchTicketUpdate(normalizedChanges);
+                if (!success) {
+                    // Rollback on failure
+                    setTicket(prevTicket => ({ ...prevTicket, ...previousValues }));
+                    return false;
                 }
-                // Save ITIL changes
-                for (const [field, value] of Object.entries(itilChanges)) {
-                    await onTicketUpdate(field, value);
+            } else if (onTicketUpdate) {
+                // TODO: This fallback path may cause partial updates if one request fails.
+                // The preferred path is onBatchTicketUpdate which makes a single atomic API call.
+                // If this fallback is still being used, consider:
+                // 1. Ensuring the container provides onBatchTicketUpdate, or
+                // 2. Implementing server-side transaction support for batch field updates
+                // See: https://github.com/Nine-Minds/alga-psa/issues/XXX (create tracking issue)
+                console.warn('[handleBatchSaveChanges] Using per-field fallback - may cause partial updates');
+                const updatePromises: Promise<void>[] = [];
+                for (const [field, value] of Object.entries(normalizedChanges)) {
+                    updatePromises.push(onTicketUpdate(field, value));
                 }
+                // Wait for all updates - if any fail, we'll catch and rollback UI state
+                await Promise.all(updatePromises);
             } else {
                 // Fallback to the original implementation
                 const user = await getCurrentUser();
@@ -672,9 +683,8 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
                     return false;
                 }
 
-                // Combine all changes into a single update
-                const allChanges = { ...ticketChanges, ...itilChanges };
-                const result = await updateTicket(ticket.ticket_id || '', allChanges, user);
+                // Save all changes in a single update call
+                const result = await updateTicket(ticket.ticket_id || '', normalizedChanges, user);
 
                 if (result !== 'success') {
                     console.error('Failed to update ticket');
@@ -701,7 +711,10 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
                 setItilUrgency(itilChanges.itil_urgency);
             }
 
-            toast.success('Changes saved successfully');
+            // Success toast is handled by the batch handler
+            if (!onBatchTicketUpdate) {
+                toast.success('Changes saved successfully');
+            }
             return true;
         } catch (error) {
             console.error('Error saving changes:', error);

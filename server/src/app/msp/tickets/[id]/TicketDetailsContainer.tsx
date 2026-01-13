@@ -47,7 +47,7 @@ export default function TicketDetailsContainer({ ticketData, surveySummary = nul
   const { data: session } = useSession();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Handle ticket updates using the optimized server action
+  // Handle single field ticket updates using the optimized server action
   const handleTicketUpdate = async (field: string, value: any) => {
     if (!session?.user) {
       toast.error('You must be logged in to update tickets');
@@ -56,14 +56,14 @@ export default function TicketDetailsContainer({ ticketData, surveySummary = nul
 
     try {
       setIsSubmitting(true);
-      
+
       // Get the current user from the database
       const currentUser = await getCurrentUser();
       if (!currentUser) {
         toast.error('Failed to get current user');
         return;
       }
-      
+
       await updateTicketWithCache(
         ticketData.ticket.ticket_id,
         { [field]: value },
@@ -73,6 +73,46 @@ export default function TicketDetailsContainer({ ticketData, surveySummary = nul
     } catch (error) {
       console.error(`Error updating ${field}:`, error);
       toast.error(`Failed to update ${field}`);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // Handle batch ticket updates - saves all changes atomically to avoid partial updates
+  const handleBatchTicketUpdate = async (changes: Record<string, any>): Promise<boolean> => {
+    // Early return if no changes
+    if (!changes || Object.keys(changes).length === 0) {
+      return true;
+    }
+
+    if (!session?.user) {
+      toast.error('You must be logged in to update tickets');
+      return false;
+    }
+
+    try {
+      setIsSubmitting(true);
+
+      // Get the current user from the database
+      const currentUser = await getCurrentUser();
+      if (!currentUser) {
+        toast.error('Failed to get current user');
+        return false;
+      }
+
+      // Save all changes in a single API call - this ensures atomicity
+      await updateTicketWithCache(
+        ticketData.ticket.ticket_id,
+        changes,
+        currentUser
+      );
+
+      toast.success('Changes saved successfully');
+      return true;
+    } catch (error) {
+      console.error('Error saving changes:', error);
+      toast.error('Failed to save changes');
+      return false;
     } finally {
       setIsSubmitting(false);
     }
@@ -196,6 +236,7 @@ export default function TicketDetailsContainer({ ticketData, surveySummary = nul
             initialAgentSchedules={ticketData.agentSchedules}
             // Pass optimized handlers
             onTicketUpdate={handleTicketUpdate}
+            onBatchTicketUpdate={handleBatchTicketUpdate}
             onAddComment={handleAddComment}
             onUpdateDescription={handleUpdateDescription}
             isSubmitting={isSubmitting}

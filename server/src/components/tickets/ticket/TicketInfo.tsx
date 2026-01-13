@@ -37,7 +37,7 @@ interface TicketInfoProps {
   boardOptions: { value: string; label: string }[];
   priorityOptions: { value: string; label: string }[];
   onSelectChange: (field: keyof ITicket, newValue: string | null) => void;
-  onSaveChanges?: (changes: Partial<ITicket>) => Promise<boolean>;
+  onSaveChanges?: (changes: Record<string, unknown>) => Promise<boolean>;
   onUpdateDescription?: (content: string) => Promise<boolean>;
   isSubmitting?: boolean;
   users?: IUserWithRoles[];
@@ -355,8 +355,8 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
 
     setIsSaving(true);
     try {
-      // Collect all changes to save
-      const allChanges: Partial<ITicket> = { ...pendingChanges };
+      // Collect all changes to save using Record for flexibility
+      const allChanges: Record<string, unknown> = { ...pendingChanges };
 
       // Add title if changed
       if (titleValue !== ticket.title) {
@@ -365,18 +365,18 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
 
       // If there's a board change, clear categories and priority
       if (pendingChanges.board_id && pendingChanges.board_id !== ticket.board_id) {
-        (allChanges as any).category_id = null;
-        (allChanges as any).subcategory_id = null;
-        (allChanges as any).priority_id = null;
+        allChanges.category_id = null;
+        allChanges.subcategory_id = null;
+        allChanges.priority_id = null;
       }
 
       // Save ITIL changes if any
       if (Object.keys(pendingItilChanges).length > 0) {
         if (pendingItilChanges.itil_impact !== undefined) {
-          (allChanges as any).itil_impact = pendingItilChanges.itil_impact;
+          allChanges.itil_impact = pendingItilChanges.itil_impact;
         }
         if (pendingItilChanges.itil_urgency !== undefined) {
-          (allChanges as any).itil_urgency = pendingItilChanges.itil_urgency;
+          allChanges.itil_urgency = pendingItilChanges.itil_urgency;
         }
       }
 
@@ -911,7 +911,7 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
                 </div>
                 <div className="flex justify-end space-x-2 mt-2">
                   <Button
-                    id="save-description-button"
+                    id={`${id}-save-description-btn`}
                     onClick={async () => {
                       if (onUpdateDescription) {
                         const success = await onUpdateDescription(JSON.stringify(descriptionContent));
@@ -925,7 +925,7 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
                     {isSubmitting ? 'Saving...' : 'Save'}
                   </Button>
                   <Button
-                    id="cancel-description-button"
+                    id={`${id}-cancel-description-btn`}
                     disabled={isSubmitting}
                     variant="outline"
                     onClick={() => {
