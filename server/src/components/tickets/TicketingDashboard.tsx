@@ -37,6 +37,8 @@ import { saveTimeEntry } from 'server/src/lib/actions/timeEntryActions';
 import { toast } from 'react-hot-toast';
 import Drawer from 'server/src/components/ui/Drawer';
 import ClientDetails from 'server/src/components/clients/ClientDetails';
+import TicketQuickView from 'server/src/components/tickets/TicketQuickView';
+import { useDrawer } from 'server/src/context/DrawerContext';
 import { createTicketColumns } from 'server/src/lib/utils/ticket-columns';
 import Spinner from 'server/src/components/ui/Spinner';
 import MultiUserPicker from 'server/src/components/ui/MultiUserPicker';
@@ -183,9 +185,12 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   const [isQuickAddOpen, setIsQuickAddOpen] = useState(false);
   const [isLoadingSelf, setIsLoadingSelf] = useState(false);
 
-  // Quick View state
+  // Quick View state for clients
   const [quickViewClientId, setQuickViewClientId] = useState<string | null>(null);
   const [isQuickViewOpen, setIsQuickViewOpen] = useState(false);
+
+  // Drawer context for ticket quick view (enables back navigation when opening nested drawers)
+  const { openDrawer, closeDrawer } = useDrawer();
 
   // Tag-related state
   const [selectedTags, setSelectedTags] = useState<string[]>(initialFilterValues.tags || []);
@@ -422,6 +427,15 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
       setIsQuickViewOpen(true);
     }
   };
+
+  const onQuickViewTicket = useCallback((ticketId: string) => {
+    openDrawer(
+      <TicketQuickView
+        ticketId={ticketId}
+        onClose={closeDrawer}
+      />
+    );
+  }, [openDrawer, closeDrawer]);
   
   // Initialize currentUser state from props if available
   useEffect(() => {
@@ -809,6 +823,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
       displaySettings: displaySettings || undefined,
       onTicketClick: handleTicketClick,
       onDeleteClick: handleDeleteTicket,
+      onQuickView: onQuickViewTicket,
       ticketTagsRef,
       onTagsChange: handleTagsChange,
       showClient: true,
@@ -881,6 +896,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     displaySettings,
     handleTicketClick,
     handleDeleteTicket,
+    onQuickViewTicket,
     handleTagsChange,
     ticketTagsRef,
     onQuickViewClient,

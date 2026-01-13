@@ -5,11 +5,11 @@ import { ITicketListItem, ITicketCategory, TicketResponseState } from 'server/sr
 import { TicketingDisplaySettings } from 'server/src/lib/actions/ticket-actions/ticketDisplaySettings';
 import { TagManager } from 'server/src/components/tags';
 import { ITag } from 'server/src/interfaces/tag.interfaces';
-import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from 'server/src/components/ui/DropdownMenu';
+import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import { Button } from 'server/src/components/ui/Button';
 import { Tooltip } from 'server/src/components/ui/Tooltip';
 import UserAvatar from 'server/src/components/ui/UserAvatar';
-import { MoreVertical, Trash2, ChevronDown, ChevronRight } from 'lucide-react';
+import { MoreVertical, Trash2, ChevronDown, ChevronRight, ExternalLink } from 'lucide-react';
 import { format } from 'date-fns';
 import { IBoard } from 'server/src/interfaces/board.interface';
 import { ResponseStateBadge } from 'server/src/components/tickets/ResponseStateBadge';
@@ -20,6 +20,7 @@ interface CreateTicketColumnsOptions {
   displaySettings?: TicketingDisplaySettings;
   onTicketClick: (ticketId: string) => void;
   onDeleteClick?: (ticketId: string, ticketName: string) => void;
+  onQuickView?: (ticketId: string) => void;
   ticketTagsRef?: React.MutableRefObject<Record<string, ITag[]>>;
   onTagsChange?: (ticketId: string, tags: ITag[]) => void;
   showActions?: boolean;
@@ -39,6 +40,7 @@ export function createTicketColumns(options: CreateTicketColumnsOptions): Column
     displaySettings,
     onTicketClick,
     onDeleteClick,
+    onQuickView,
     ticketTagsRef,
     onTagsChange,
     showActions = true,
@@ -446,7 +448,7 @@ export function createTicketColumns(options: CreateTicketColumnsOptions): Column
   }
 
   // Actions
-  if (columnVisibility.actions && showActions && onDeleteClick) {
+  if (columnVisibility.actions && showActions && (onDeleteClick || onQuickView)) {
     columns.push({
       key: 'actions',
       col: {
@@ -455,23 +457,39 @@ export function createTicketColumns(options: CreateTicketColumnsOptions): Column
         width: '3%',
         sortable: false,
         render: (_value: string, record: ITicketListItem) => (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button id={`ticket-actions-${record.ticket_id}`} variant="ghost" size="sm" className="h-8 w-8 p-0">
-                <span className="sr-only">Open menu</span>
-                <MoreVertical className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="bg-white z-50">
-              <DropdownMenuItem
-                className="px-2 py-1 text-sm cursor-pointer hover:bg-gray-100 text-red-600 flex items-center"
-                onSelect={() => onDeleteClick(record.ticket_id as string, record.title || record.ticket_number)}
+          <div onClick={(e) => e.stopPropagation()}>
+            <DropdownMenu.Root>
+              <DropdownMenu.Trigger asChild>
+                <Button id={`ticket-actions-${record.ticket_id}`} variant="ghost" size="sm" className="h-8 w-8 p-0">
+                  <span className="sr-only">Open menu</span>
+                  <MoreVertical className="h-4 w-4" />
+                </Button>
+              </DropdownMenu.Trigger>
+              <DropdownMenu.Content
+                align="end"
+                className="bg-white rounded-md shadow-lg p-1 border border-gray-200 min-w-[120px] z-50"
               >
-                <Trash2 className="mr-2 h-4 w-4" />
-                Delete
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+                {onQuickView && (
+                  <DropdownMenu.Item
+                    className="px-2 py-1 text-sm cursor-pointer hover:bg-gray-100 flex items-center rounded"
+                    onSelect={() => onQuickView(record.ticket_id as string)}
+                  >
+                    <ExternalLink className="mr-2 h-4 w-4" />
+                    Quick View
+                  </DropdownMenu.Item>
+                )}
+                {onDeleteClick && (
+                  <DropdownMenu.Item
+                    className="px-2 py-1 text-sm cursor-pointer hover:bg-red-100 text-red-600 flex items-center rounded"
+                    onSelect={() => onDeleteClick(record.ticket_id as string, record.title || record.ticket_number)}
+                  >
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    Delete
+                  </DropdownMenu.Item>
+                )}
+              </DropdownMenu.Content>
+            </DropdownMenu.Root>
+          </div>
         ),
       }
     });

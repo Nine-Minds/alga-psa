@@ -46,13 +46,14 @@ import { getTicketStatuses } from "server/src/lib/actions/status-actions/statusA
 import { getAllPriorities } from "server/src/lib/actions/priorityActions";
 import { fetchTimeSheets, fetchOrCreateTimeSheet, saveTimeEntry } from "server/src/lib/actions/timeEntryActions";
 import { getCurrentTimePeriod } from "server/src/lib/actions/timePeriodsActions";
-import ContactDetailsView from "server/src/components/contacts/ContactDetailsView";
+import ContactDetails from "server/src/components/contacts/ContactDetails";
 import ClientDetails from "server/src/components/clients/ClientDetails";
 import { addTicketResource, getTicketResources, removeTicketResource } from "server/src/lib/actions/ticketResourceActions";
 import AgentScheduleDrawer from "server/src/components/tickets/ticket/AgentScheduleDrawer";
 import { Button } from "server/src/components/ui/Button";
 import { Input } from "server/src/components/ui/Input";
-import { ExternalLink } from 'lucide-react';
+import { ExternalLink, Check, X, Pencil } from 'lucide-react';
+import { Dialog } from "server/src/components/ui/Dialog";
 import { WorkItemType } from "server/src/interfaces/workItem.interfaces";
 import { ReflectionContainer } from "server/src/types/ui-reflection/ReflectionContainer";
 import TimeEntryDialog from "server/src/components/time-management/time-entry/time-sheet/TimeEntryDialog";
@@ -79,6 +80,8 @@ interface TicketDetailsProps {
     aggregatedChildClientComments?: any[];
     onClose?: () => void; // Callback when user wants to close the ticket screen
     isInDrawer?: boolean;
+    quickView?: boolean; // When true, shows simplified view for drawer quick view
+    onHasUnsavedChanges?: (hasChanges: boolean) => void; // Callback to notify parent about unsaved changes
 
     // Pre-fetched data props
     initialComments?: IComment[];
@@ -118,6 +121,8 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     aggregatedChildClientComments = [],
     onClose,
     isInDrawer = false,
+    quickView = false,
+    onHasUnsavedChanges,
     // Pre-fetched data with defaults
     initialComments = [],
     initialDocuments = [],
@@ -197,6 +202,56 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
         }]
     }]);
     const [activeTab, setActiveTab] = useState('Comments');
+
+    // Title editing state (for quickView mode)
+    const [isEditingTitle, setIsEditingTitle] = useState(false);
+    const [editTitle, setEditTitle] = useState(initialTicket.title || '');
+    const [showUnsavedChangesDialog, setShowUnsavedChangesDialog] = useState(false);
+    const [isSaving, setIsSaving] = useState(false);
+
+    // QuickView edit states - these track pending changes that haven't been saved yet
+    const [editStatus, setEditStatus] = useState(initialTicket.status_id || '');
+    const [editPriority, setEditPriority] = useState(initialTicket.priority_id || '');
+    const [editBoard, setEditBoard] = useState(initialTicket.board_id || '');
+    const [editAssignedTo, setEditAssignedTo] = useState(initialTicket.assigned_to || '');
+    const [editCategory, setEditCategory] = useState(initialTicket.category_id || '');
+    const [editSubcategory, setEditSubcategory] = useState(initialTicket.subcategory_id || '');
+    const [editDueDate, setEditDueDate] = useState(initialTicket.due_date || null);
+
+    // Track if there are unsaved changes (for quickView mode)
+    const hasUnsavedChanges = useMemo(() => {
+        if (!quickView) return false;
+
+        const titleChanged = editTitle !== (initialTicket.title || '');
+        const statusChanged = editStatus !== (initialTicket.status_id || '');
+        const priorityChanged = editPriority !== (initialTicket.priority_id || '');
+        const boardChanged = editBoard !== (initialTicket.board_id || '');
+        const assignedChanged = editAssignedTo !== (initialTicket.assigned_to || '');
+        const categoryChanged = editCategory !== (initialTicket.category_id || '');
+        const subcategoryChanged = editSubcategory !== (initialTicket.subcategory_id || '');
+        const dueDateChanged = editDueDate !== (initialTicket.due_date || null);
+
+        return titleChanged || statusChanged || priorityChanged || boardChanged ||
+               assignedChanged || categoryChanged || subcategoryChanged || dueDateChanged;
+    }, [quickView, editTitle, editStatus, editPriority, editBoard, editAssignedTo,
+        editCategory, editSubcategory, editDueDate, initialTicket]);
+
+    // In quickView mode, create a display ticket that uses edit values (for ITIL field visibility etc.)
+    const displayTicket = useMemo(() => {
+        if (!quickView) return ticket;
+        return {
+            ...ticket,
+            title: editTitle,
+            status_id: editStatus || ticket.status_id,
+            priority_id: editPriority || ticket.priority_id,
+            board_id: editBoard || ticket.board_id,
+            assigned_to: editAssignedTo || ticket.assigned_to,
+            category_id: editCategory || ticket.category_id,
+            subcategory_id: editSubcategory || ticket.subcategory_id,
+            due_date: editDueDate || ticket.due_date,
+        };
+    }, [quickView, ticket, editTitle, editStatus, editPriority, editBoard, editAssignedTo, editCategory, editSubcategory, editDueDate]);
+
     const [isEditing, setIsEditing] = useState(false);
     const [currentComment, setCurrentComment] = useState<IComment | null>(null);
 
@@ -494,14 +549,14 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     const handleContactClick = () => {
         if (contactInfo && client) {
             openDrawer(
-                <ContactDetailsView
-                    initialContact={{
+                <ContactDetails
+                    contact={{
                         ...contactInfo,
                         client_id: client.client_id
                     }}
                     clients={[client]}
                     isInDrawer={true}
-                    clientReadOnly={true}
+                    quickView={true}
                 />
             );
         }
@@ -556,15 +611,159 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
         }
     };
 
+    // Title editing handlers - saves immediately when check button clicked
+    const handleSaveTitle = async () => {
+        if (!editTitle.trim()) {
+            toast.error('Title cannot be empty');
+            return;
+        }
+
+        try {
+            const user = await getCurrentUser();
+            if (!user) {
+                toast.error('No user session found');
+                return;
+            }
+
+            await updateTicket(ticket.ticket_id || '', { title: editTitle.trim() }, user);
+            setTicket(prev => ({ ...prev, title: editTitle.trim() }));
+            setIsEditingTitle(false);
+            toast.success('Title updated successfully');
+        } catch (error) {
+            console.error('Error updating title:', error);
+            toast.error('Failed to update title');
+        }
+    };
+
+    const handleCancelTitleEdit = () => {
+        setEditTitle(ticket.title || '');
+        setIsEditingTitle(false);
+    };
+
+    const handleTitleChange = (value: string) => {
+        setEditTitle(value);
+    };
+
+    // QuickView mode: handle dropdown changes by updating local edit state only
+    const handleQuickViewFieldChange = useCallback((field: string, value: string | null) => {
+        switch (field) {
+            case 'status_id':
+                setEditStatus(value || '');
+                break;
+            case 'priority_id':
+                setEditPriority(value || '');
+                break;
+            case 'board_id':
+                setEditBoard(value || '');
+                break;
+            case 'assigned_to':
+                setEditAssignedTo(value || '');
+                break;
+            case 'category_id':
+                setEditCategory(value || '');
+                break;
+            case 'subcategory_id':
+                setEditSubcategory(value || '');
+                break;
+            case 'due_date':
+                setEditDueDate(value);
+                break;
+        }
+    }, []);
+
+    // Save all changes (for quickView mode Save Changes button)
+    const handleSaveAllChanges = async () => {
+        setIsSaving(true);
+        try {
+            const user = await getCurrentUser();
+            if (!user) {
+                toast.error('No user session found');
+                return;
+            }
+
+            const updates: Partial<ITicket> = {};
+
+            // Check and include changed fields
+            if (editTitle !== (initialTicket.title || '')) {
+                updates.title = editTitle.trim();
+            }
+            if (editStatus !== (initialTicket.status_id || '')) {
+                updates.status_id = editStatus || null;
+            }
+            if (editPriority !== (initialTicket.priority_id || '')) {
+                updates.priority_id = editPriority || null;
+            }
+            if (editBoard !== (initialTicket.board_id || '')) {
+                updates.board_id = editBoard || null;
+            }
+            if (editAssignedTo !== (initialTicket.assigned_to || '')) {
+                updates.assigned_to = editAssignedTo || null;
+            }
+            if (editCategory !== (initialTicket.category_id || '')) {
+                updates.category_id = editCategory || null;
+            }
+            if (editSubcategory !== (initialTicket.subcategory_id || '')) {
+                updates.subcategory_id = editSubcategory || null;
+            }
+            if (editDueDate !== (initialTicket.due_date || null)) {
+                updates.due_date = editDueDate;
+            }
+
+            if (Object.keys(updates).length === 0) {
+                toast.success('No changes to save');
+                return;
+            }
+
+            const result = await updateTicket(ticket.ticket_id || '', updates, user);
+
+            if (result === 'success') {
+                // Update local ticket state with all changes
+                setTicket(prev => ({ ...prev, ...updates }));
+                setIsEditingTitle(false);
+                toast.success('Changes saved successfully');
+                onClose?.();
+            } else {
+                toast.error('Failed to save changes');
+            }
+        } catch (error) {
+            console.error('Error saving changes:', error);
+            toast.error('Failed to save changes');
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
+    // Notify parent of unsaved changes
+    useEffect(() => {
+        if (onHasUnsavedChanges) {
+            onHasUnsavedChanges(hasUnsavedChanges);
+        }
+    }, [hasUnsavedChanges, onHasUnsavedChanges]);
+
+    // Handle close with unsaved changes check
+    const handleCloseWithCheck = useCallback(() => {
+        if (hasUnsavedChanges) {
+            setShowUnsavedChangesDialog(true);
+        } else {
+            onClose?.();
+        }
+    }, [hasUnsavedChanges, onClose]);
+
     const handleSelectChange = async (field: keyof ITicket, newValue: string | null) => {
         const normalizedValue =
             field === 'assigned_to'
                 ? (newValue && newValue !== 'unassigned' ? newValue : null)
                 : newValue;
 
+        // In quickView mode, only update local edit state - don't save to API
+        if (quickView) {
+            handleQuickViewFieldChange(field as string, normalizedValue as string | null);
+            return;
+        }
+
         // Store the previous value before updating
         const previousValue = ticket[field];
-        
+
         // Optimistically update the UI
         setTicket(prevTicket => ({ ...prevTicket, [field]: normalizedValue }));
 
@@ -1307,12 +1506,63 @@ const handleClose = () => {
             <div className="bg-gray-100">
                 <div className="flex items-center justify-between mb-4">
                     <div className="flex items-center space-x-5 min-w-0 flex-1">
-                        {/* Only show the Back button if NOT in a drawer, using BackNav */}
-                        {!isInDrawer && (
+                        {/* Only show the Back button if NOT in a drawer and NOT in quick view, using BackNav */}
+                        {!isInDrawer && !quickView && (
                             <BackNav href="/msp/tickets">← Back to Tickets</BackNav>
                         )}
                         <h6 className="text-sm font-medium whitespace-nowrap">#{ticket.ticket_number}</h6>
-                        <h1 className="text-xl font-bold break-words max-w-full min-w-0 flex-1" style={{overflowWrap: 'break-word', wordBreak: 'break-word', whiteSpace: 'pre-wrap'}}>{ticket.title}</h1>
+                        {quickView ? (
+                            <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2">
+                                    <span className="text-sm text-gray-500">Title</span>
+                                    {!isEditingTitle && (
+                                        <Button
+                                            id="edit-ticket-title-btn"
+                                            type="button"
+                                            size="sm"
+                                            variant="ghost"
+                                            onClick={() => setIsEditingTitle(true)}
+                                            className="h-5 w-5 p-0"
+                                        >
+                                            <Pencil className="h-3 w-3" />
+                                        </Button>
+                                    )}
+                                </div>
+                                {isEditingTitle ? (
+                                    <div className="flex items-center gap-2">
+                                        <Input
+                                            id="edit-ticket-title"
+                                            value={editTitle}
+                                            onChange={(e) => handleTitleChange(e.target.value)}
+                                            placeholder="Enter ticket title"
+                                            className="flex-1"
+                                            autoFocus
+                                        />
+                                        <Button
+                                            id="save-ticket-title"
+                                            type="button"
+                                            size="sm"
+                                            onClick={handleSaveTitle}
+                                        >
+                                            <Check className="h-4 w-4" />
+                                        </Button>
+                                        <Button
+                                            id="cancel-ticket-title"
+                                            type="button"
+                                            size="sm"
+                                            variant="outline"
+                                            onClick={handleCancelTitleEdit}
+                                        >
+                                            <X className="h-4 w-4" />
+                                        </Button>
+                                    </div>
+                                ) : (
+                                    <h1 className="text-xl font-bold break-words" style={{overflowWrap: 'break-word', wordBreak: 'break-word', whiteSpace: 'pre-wrap'}}>{ticket.title}</h1>
+                                )}
+                            </div>
+                        ) : (
+                            <h1 className="text-xl font-bold break-words max-w-full min-w-0 flex-1" style={{overflowWrap: 'break-word', wordBreak: 'break-word', whiteSpace: 'pre-wrap'}}>{ticket.title}</h1>
+                        )}
                     </div>
                     
                     {/* Add popout button only when in drawer */}
@@ -1534,7 +1784,7 @@ const handleClose = () => {
 
                                 <TicketInfo
                                     id={`${id}-info`}
-                                    ticket={ticket}
+                                    ticket={displayTicket}
                                     conversations={conversations}
                                     statusOptions={statusOptions}
                                     agentOptions={agentOptions}
@@ -1663,7 +1913,61 @@ const handleClose = () => {
                         )}
                     </div>
                 </div>
+
+                {/* Quick View Footer with Save Changes */}
+                {quickView && (
+                    <div className="sticky bottom-0 bg-white border-t border-gray-200 p-4 mt-4 flex justify-end gap-3">
+                        <Button
+                            id="ticket-quickview-cancel"
+                            type="button"
+                            variant="outline"
+                            onClick={handleCloseWithCheck}
+                        >
+                            Cancel
+                        </Button>
+                        <Button
+                            id="ticket-quickview-save"
+                            type="button"
+                            onClick={handleSaveAllChanges}
+                            disabled={!hasUnsavedChanges || isSaving}
+                            className="bg-[rgb(var(--color-primary-500))] hover:bg-[rgb(var(--color-primary-600))] text-white disabled:opacity-50"
+                        >
+                            {isSaving ? 'Saving...' : 'Save Changes'}
+                        </Button>
+                    </div>
+                )}
             </div>
+
+            {/* Unsaved Changes Dialog */}
+            <Dialog
+                isOpen={showUnsavedChangesDialog}
+                onClose={() => setShowUnsavedChangesDialog(false)}
+                title="Unsaved Changes"
+                id="ticket-unsaved-changes-dialog"
+                className="max-w-md"
+            >
+                <p className="mb-4 text-gray-600">You have unsaved changes. Are you sure you want to leave? Your changes will be lost.</p>
+                <div className="flex justify-end gap-3">
+                    <Button
+                        id="ticket-unsaved-stay"
+                        type="button"
+                        variant="outline"
+                        onClick={() => setShowUnsavedChangesDialog(false)}
+                    >
+                        Continue Editing
+                    </Button>
+                    <Button
+                        id="ticket-unsaved-leave"
+                        type="button"
+                        onClick={() => {
+                            setShowUnsavedChangesDialog(false);
+                            onClose?.();
+                        }}
+                    >
+                        Leave Without Saving
+                    </Button>
+                </div>
+            </Dialog>
         </ReflectionContainer>
     );
 };
