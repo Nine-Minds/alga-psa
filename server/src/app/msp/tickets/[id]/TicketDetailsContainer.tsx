@@ -47,6 +47,17 @@ export default function TicketDetailsContainer({ ticketData, surveySummary = nul
   const { data: session } = useSession();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Helper to wrap async operations with isSubmitting state management
+  // This avoids duplicating setIsSubmitting(true)/finally/setIsSubmitting(false) logic
+  const withSubmitting = async <T,>(operation: () => Promise<T>): Promise<T> => {
+    setIsSubmitting(true);
+    try {
+      return await operation();
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   // Handle single field ticket updates using the optimized server action
   const handleTicketUpdate = async (field: string, value: any) => {
     if (!session?.user) {
@@ -54,9 +65,7 @@ export default function TicketDetailsContainer({ ticketData, surveySummary = nul
       return;
     }
 
-    try {
-      setIsSubmitting(true);
-
+    await withSubmitting(async () => {
       // Get the current user from the database
       const currentUser = await getCurrentUser();
       if (!currentUser) {
@@ -64,35 +73,34 @@ export default function TicketDetailsContainer({ ticketData, surveySummary = nul
         return;
       }
 
-      await updateTicketWithCache(
-        ticketData.ticket.ticket_id,
-        { [field]: value },
-        currentUser
-      );
-      toast.success(`${field} updated successfully`);
-    } catch (error) {
-      console.error(`Error updating ${field}:`, error);
-      toast.error(`Failed to update ${field}`);
-    } finally {
-      setIsSubmitting(false);
-    }
+      try {
+        await updateTicketWithCache(
+          ticketData.ticket.ticket_id,
+          { [field]: value },
+          currentUser
+        );
+        toast.success(`${field} updated successfully`);
+      } catch (error) {
+        console.error(`Error updating ${field}:`, error);
+        toast.error(`Failed to update ${field}`);
+      }
+    });
   };
 
   // Handle batch ticket updates - saves all changes atomically to avoid partial updates
   const handleBatchTicketUpdate = async (changes: Record<string, any>): Promise<boolean> => {
-    // Early return if no changes
-    if (!changes || Object.keys(changes).length === 0) {
-      return true;
-    }
-
+    // Check login first before any other logic
     if (!session?.user) {
       toast.error('You must be logged in to update tickets');
       return false;
     }
 
-    try {
-      setIsSubmitting(true);
+    // Early return if no changes - this is after login check so we know user is authenticated
+    if (!changes || Object.keys(changes).length === 0) {
+      return true;
+    }
 
+    return withSubmitting(async () => {
       // Get the current user from the database
       const currentUser = await getCurrentUser();
       if (!currentUser) {
@@ -100,22 +108,22 @@ export default function TicketDetailsContainer({ ticketData, surveySummary = nul
         return false;
       }
 
-      // Save all changes in a single API call - this ensures atomicity
-      await updateTicketWithCache(
-        ticketData.ticket.ticket_id,
-        changes,
-        currentUser
-      );
+      try {
+        // Save all changes in a single API call - this ensures atomicity
+        await updateTicketWithCache(
+          ticketData.ticket.ticket_id,
+          changes,
+          currentUser
+        );
 
-      toast.success('Changes saved successfully');
-      return true;
-    } catch (error) {
-      console.error('Error saving changes:', error);
-      toast.error('Failed to save changes');
-      return false;
-    } finally {
-      setIsSubmitting(false);
-    }
+        toast.success('Changes saved successfully');
+        return true;
+      } catch (error) {
+        console.error('Error saving changes:', error);
+        toast.error('Failed to save changes');
+        return false;
+      }
+    });
   };
 
   // Handle adding comments using the optimized server action
@@ -125,34 +133,32 @@ export default function TicketDetailsContainer({ ticketData, surveySummary = nul
       return;
     }
 
-    try {
-      setIsSubmitting(true);
-      
+    await withSubmitting(async () => {
       // Get the current user from the database
       const currentUser = await getCurrentUser();
       if (!currentUser) {
         toast.error('Failed to get current user');
         return;
       }
-      
-      const newComment = await addTicketCommentWithCache(
-        ticketData.ticket.ticket_id,
-        content,
-        isInternal,
-        isResolution,
-        currentUser
-      );
 
-      // Update the local state with the new comment
-      ticketData.comments.push(newComment);
-      
-      toast.success('Comment added successfully');
-    } catch (error) {
-      console.error('Error adding comment:', error);
-      toast.error('Failed to add comment');
-    } finally {
-      setIsSubmitting(false);
-    }
+      try {
+        const newComment = await addTicketCommentWithCache(
+          ticketData.ticket.ticket_id,
+          content,
+          isInternal,
+          isResolution,
+          currentUser
+        );
+
+        // Update the local state with the new comment
+        ticketData.comments.push(newComment);
+
+        toast.success('Comment added successfully');
+      } catch (error) {
+        console.error('Error adding comment:', error);
+        toast.error('Failed to add comment');
+      }
+    });
   };
 
   // Handle updating description using the optimized server action
@@ -162,9 +168,7 @@ export default function TicketDetailsContainer({ ticketData, surveySummary = nul
       return false;
     }
 
-    try {
-      setIsSubmitting(true);
-      
+    return withSubmitting(async () => {
       // Update the ticket's attributes.description field
       const currentAttributes = ticketData.ticket.attributes || {};
       const updatedAttributes = {
@@ -178,26 +182,26 @@ export default function TicketDetailsContainer({ ticketData, surveySummary = nul
         toast.error('Failed to get current user');
         return false;
       }
-      
-      await updateTicketWithCache(
-        ticketData.ticket.ticket_id,
-        {
-          attributes: updatedAttributes,
-          updated_by: currentUser.user_id,
-          updated_at: new Date().toISOString()
-        },
-        currentUser
-      );
 
-      toast.success('Description updated successfully');
-      return true;
-    } catch (error) {
-      console.error('Error updating description:', error);
-      toast.error('Failed to update description');
-      return false;
-    } finally {
-      setIsSubmitting(false);
-    }
+      try {
+        await updateTicketWithCache(
+          ticketData.ticket.ticket_id,
+          {
+            attributes: updatedAttributes,
+            updated_by: currentUser.user_id,
+            updated_at: new Date().toISOString()
+          },
+          currentUser
+        );
+
+        toast.success('Description updated successfully');
+        return true;
+      } catch (error) {
+        console.error('Error updating description:', error);
+        toast.error('Failed to update description');
+        return false;
+      }
+    });
   };
 
   // Render directly to avoid redefining a component each render,
