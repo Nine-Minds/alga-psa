@@ -220,7 +220,7 @@ describe('Billing Invoice Generation – Error Handling', () => {
     await expectError(
       () => generateInvoice(billingCycleId),
       {
-        messagePattern: new RegExp(`No active contract lines found for client ${newClientId} in the given period`)
+        messagePattern: /No active contract lines found for this client in the selected billing period\./
       }
     );
   });

@@ -1,18 +1,16 @@
 // BillingCycles.tsx
 import React, { useState, useEffect, useCallback } from 'react';
+import Link from 'next/link';
 import { Card, CardHeader, CardContent } from 'server/src/components/ui/Card';
 import { DataTable } from 'server/src/components/ui/DataTable';
-import CustomSelect from 'server/src/components/ui/CustomSelect';
 import { Tooltip } from 'server/src/components/ui/Tooltip';
 import { Button } from 'server/src/components/ui/Button';
 import { Input } from 'server/src/components/ui/Input';
 import { Info, Search } from 'lucide-react';
 import {
-  getAllBillingCycles,
-  updateBillingCycle,
-  getNextBillingCycleStatusForClients,
-  createNextBillingCycle
+  getAllBillingCycles
 } from 'server/src/lib/actions/billingCycleActions';
+import { getClientBillingScheduleSummaries } from 'server/src/lib/actions/billingScheduleActions';
 import { getAllClientsPaginated, getClientsWithBillingCycleRangePaginated } from 'server/src/lib/actions/client-actions/clientActions';
 import type { BillingCycleDateRange } from 'server/src/lib/actions/client-actions/clientActions';
 import { getActiveClientContractsByClientIds } from 'server/src/lib/actions/client-actions/clientContractActions';
@@ -22,15 +20,6 @@ import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
 import { IContract } from 'server/src/interfaces/contract.interfaces';
 import LoadingIndicator from 'server/src/components/ui/LoadingIndicator';
 import { DateRangePicker, type DateRange } from 'server/src/components/ui/DateRangePicker';
-
-const BILLING_CYCLE_OPTIONS: { value: BillingCycleType; label: string }[] = [
-  { value: 'weekly', label: 'Weekly' },
-  { value: 'bi-weekly', label: 'Bi-Weekly' },
-  { value: 'monthly', label: 'Monthly' },
-  { value: 'quarterly', label: 'Quarterly' },
-  { value: 'semi-annually', label: 'Semi-Annually' },
-  { value: 'annually', label: 'Annually' },
-];
 
 const getDefaultStartDate = () => {
   const date = new Date();
@@ -54,8 +43,26 @@ const buildDateRangeFilter = (range: DateRange): BillingCycleDateRange | undefin
   return { from, to };
 };
 
+const MONTH_OPTIONS = [
+  { value: 1, label: 'January' },
+  { value: 2, label: 'February' },
+  { value: 3, label: 'March' },
+  { value: 4, label: 'April' },
+  { value: 5, label: 'May' },
+  { value: 6, label: 'June' },
+  { value: 7, label: 'July' },
+  { value: 8, label: 'August' },
+  { value: 9, label: 'September' },
+  { value: 10, label: 'October' },
+  { value: 11, label: 'November' },
+  { value: 12, label: 'December' },
+] as const;
+
 const BillingCycles: React.FC = () => {
   const [billingCycles, setBillingCycles] = useState<{ [clientId: string]: BillingCycleType }>({});
+  const [billingSchedules, setBillingSchedules] = useState<{
+    [clientId: string]: { billingCycle: BillingCycleType; anchor: { dayOfMonth: number | null; monthOfYear: number | null; dayOfWeek: number | null; referenceDate: string | null } }
+  }>({});
   const [clients, setClients] = useState<Partial<IClient>[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -74,20 +81,6 @@ const BillingCycles: React.FC = () => {
     from: getDefaultStartDate(),
     to: undefined,
   }));
-  const [cycleStatus, setCycleStatus] = useState<{
-    [clientId: string]: {
-      canCreate: boolean;
-      isEarly: boolean;
-      periodEndDate?: string;
-    }
-  }>({});
-  const [creatingCycle, setCreatingCycle] = useState<{ [clientId: string]: boolean }>({});
-  const [dateConflict, setDateConflict] = useState<{
-    clientId: string;
-    suggestedDate: Date;
-    show: boolean;
-    error?: string;
-  } | null>(null);
   const [clientContracts, setClientContracts] = useState<{ [clientId: string]: string }>({});
   const [contracts, setContracts] = useState<{ [contractId: string]: IContract }>({});
 
@@ -154,14 +147,14 @@ const BillingCycles: React.FC = () => {
 
       if (clientIds.length === 0) {
         setClientContracts({});
-        setCycleStatus({});
+        setBillingSchedules({});
         setError(null);
         return;
       }
 
-      const [clientAssignedContracts, cycleCreationStatus] = await Promise.all([
+      const [clientAssignedContracts, scheduleSummaries] = await Promise.all([
         getActiveClientContractsByClientIds(clientIds),
-        getNextBillingCycleStatusForClients(clientIds)
+        getClientBillingScheduleSummaries(clientIds)
       ]);
 
       // Build active contract map per client (first by latest start date).
@@ -177,7 +170,20 @@ const BillingCycles: React.FC = () => {
       });
 
       setClientContracts(clientContractsMap);
-      setCycleStatus(cycleCreationStatus);
+
+      const scheduleMap: typeof billingSchedules = {};
+      for (const [id, summary] of Object.entries(scheduleSummaries)) {
+        scheduleMap[id] = {
+          billingCycle: summary.billingCycle,
+          anchor: {
+            dayOfMonth: summary.anchor.dayOfMonth ?? null,
+            monthOfYear: summary.anchor.monthOfYear ?? null,
+            dayOfWeek: summary.anchor.dayOfWeek ?? null,
+            referenceDate: summary.anchor.referenceDate ? summary.anchor.referenceDate.slice(0, 10) : null
+          }
+        };
+      }
+      setBillingSchedules(scheduleMap);
 
       setError(null);
     } catch (error) {
@@ -188,59 +194,27 @@ const BillingCycles: React.FC = () => {
     }
   };
 
-  const handleBillingCycleChange = async (clientId: string, cycle: BillingCycleType) => {
-    if (!cycle) return;
-    
-    // Optimistic update
-    setBillingCycles(prev => ({ ...prev, [clientId]: cycle }));
+  const formatAnchorSummary = (clientId: string): string => {
+    const schedule = billingSchedules[clientId];
+    if (!schedule) return '—';
+    const cycle = schedule.billingCycle;
+    const anchor = schedule.anchor;
 
-    try {
-      await updateBillingCycle(clientId, cycle);
-      setError(null);
-    } catch (error) {
-      console.error('Error updating billing cycle:', error);
-      // Revert the optimistic update
-      setBillingCycles(prev => ({ ...prev, [clientId]: prev[clientId] }));
-      setError('Failed to update billing cycle. Please try again.');
-    }
-  };
-
-  const handleCreateNextCycle = async (clientId: string, selectedDate?: Date) => {
-    setCreatingCycle(prev => ({ ...prev, [clientId]: true }));
-    try {
-      const result = await createNextBillingCycle(
-        clientId,
-        selectedDate?.toISOString()
-      );
-      if (!result.success && result.error === 'duplicate') {
-        // Show user-friendly error message from backend
-        setError(result.message || 'A billing period for this date already exists. Please select a different date.');
-        // Optionally, also show the date conflict dialog if a suggestion is present
-        if (result.suggestedDate) {
-          setDateConflict({
-            clientId,
-            suggestedDate: new Date(result.suggestedDate),
-            show: true
-          });
-        }
-        return;
+    switch (cycle) {
+      case 'weekly':
+        return anchor.dayOfWeek ? `Weekday ${anchor.dayOfWeek}` : 'Rolling';
+      case 'bi-weekly':
+        return anchor.referenceDate ? `Starts ${anchor.referenceDate}` : 'Rolling';
+      case 'monthly':
+        return `Day ${anchor.dayOfMonth ?? 1}`;
+      case 'quarterly':
+      case 'semi-annually':
+      case 'annually': {
+        const monthLabel = MONTH_OPTIONS.find(m => m.value === (anchor.monthOfYear ?? 1))?.label ?? String(anchor.monthOfYear ?? 1);
+        return `${monthLabel} ${anchor.dayOfMonth ?? 1}`;
       }
-
-      // Update the cycle status after successful creation
-      const statusMap = await getNextBillingCycleStatusForClients([clientId]);
-      const status = statusMap[clientId];
-      if (status) {
-        setCycleStatus(prev => ({
-          ...prev,
-          [clientId]: status
-        }));
-      }
-      setError(null);
-    } catch (error) {
-      console.error('Error creating next billing cycle:', error);
-      setError('Failed to create next billing cycle. Please try again.');
-    } finally {
-      setCreatingCycle(prev => ({ ...prev, [clientId]: false }));
+      default:
+        return '—';
     }
   };
 
@@ -263,7 +237,7 @@ const BillingCycles: React.FC = () => {
       title: 'Current Billing Cycle',
       dataIndex: 'client_id',
       render: (value: string, record: Partial<IClient>) => {
-        const cycle = billingCycles[value];
+        const cycle = billingSchedules[value]?.billingCycle ?? billingCycles[value];
         if (!cycle) return 'Not set';
 
         // Convert to title case for display
@@ -273,31 +247,17 @@ const BillingCycles: React.FC = () => {
       },
     },
     {
+      title: 'Anchor',
+      dataIndex: 'client_id',
+      render: (value: string) => formatAnchorSummary(value),
+    },
+    {
       title: 'Actions',
       dataIndex: 'client_id',
       render: (value: string) => (
         <div className="flex items-center gap-2">
-          <CustomSelect
-            options={BILLING_CYCLE_OPTIONS}
-            onValueChange={(selectedValue: string) => handleBillingCycleChange(value, selectedValue as BillingCycleType)}
-            value={billingCycles[value] || ''}
-            placeholder="Select billing cycle..."
-          />
-          <Button
-            id='create-next-billing-cycle-button'
-            variant="outline"
-            size="sm"
-            onClick={() => handleCreateNextCycle(value)}
-            disabled={!cycleStatus[value]?.canCreate || creatingCycle[value]}
-          >
-            <span className="flex items-center">
-              {creatingCycle[value] ? 'Creating...' : 'Create Next Cycle'}
-              {cycleStatus[value]?.isEarly && (
-                <Tooltip content={`Warning: Current billing cycle doesn't end until ${new Date(cycleStatus[value].periodEndDate!).toLocaleDateString()}`}>
-                  <Info className="ml-2 h-4 w-4 text-yellow-500" />
-                </Tooltip>
-              )}
-            </span>
+          <Button id="billing-cycles-view-client" asChild variant="outline" size="sm">
+            <Link href={`/msp/clients/${value}?tab=Billing`}>View Client Billing</Link>
           </Button>
         </div>
       ),

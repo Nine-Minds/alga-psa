@@ -5,7 +5,6 @@ import { createTenantKnex } from '../../db';
 import { withTransaction } from '@shared/db';
 // Import interfaces from correct files
 import {
-  IClientContractLine,
   IContractLine,
   IBucketUsage,
   IContractLineService,
@@ -68,10 +67,16 @@ export async function getRemainingBucketUnits(
 
   try {
     const results: RemainingBucketUnitsResult[] = await withTransaction(knex, async (trx: Knex.Transaction) => {
-      const query = trx<IClientContractLine>('client_contract_lines as ccl')
+      // Query contract lines via client_contracts -> contracts -> contract_lines
+      // This replaces the old client_contract_lines-based query
+      const query = trx('client_contracts as cc')
+      .join('contracts as c', function() {
+        this.on('c.contract_id', '=', trx.raw('coalesce(cc.template_contract_id, cc.contract_id)'))
+            .andOn('c.tenant', '=', 'cc.tenant');
+      })
       .join<IContractLine>('contract_lines as cl', function() {
-        this.on('ccl.contract_line_id', '=', 'cl.contract_line_id')
-            .andOn('ccl.tenant', '=', 'cl.tenant');
+        this.on('cl.contract_id', '=', 'c.contract_id')
+            .andOn('cl.tenant', '=', 'c.tenant');
       })
       // Add joins for configuration structure
       .join<IContractLineService>('contract_line_services as ps', function() {
@@ -94,19 +99,19 @@ export async function getRemainingBucketUnits(
       })
       .leftJoin<IBucketUsage>('bucket_usage as bu', function() {
         this.on('cl.contract_line_id', '=', 'bu.contract_line_id')
-            .andOn('ccl.client_id', '=', 'bu.client_id')
-            .andOn('ccl.tenant', '=', 'bu.tenant')
+            .andOn('cc.client_id', '=', 'bu.client_id')
+            .andOn('cc.tenant', '=', 'bu.tenant')
             // Filter bucket_usage for the period containing currentDate
-            .andOn('bu.period_start', '<=', knex.raw('?', [currentDate]))
-            .andOn('bu.period_end', '>', knex.raw('?', [currentDate]));
+            .andOn('bu.period_start', '<=', trx.raw('?', [currentDate]))
+            .andOn('bu.period_end', '>', trx.raw('?', [currentDate]));
       })
-      .where('ccl.client_id', clientId)
-      .andWhere('ccl.tenant', tenant)
-      .andWhere('ccl.is_active', true)
-      .andWhere('ccl.start_date', '<=', knex.raw('?', [currentDate]))
+      .where('cc.client_id', clientId)
+      .andWhere('cc.tenant', tenant)
+      .andWhere('cc.is_active', true)
+      .andWhere('cc.start_date', '<=', trx.raw('?', [currentDate]))
       .andWhere(function() {
-        this.whereNull('ccl.end_date')
-            .orWhere('ccl.end_date', '>', knex.raw('?', [currentDate]));
+        this.whereNull('cc.end_date')
+            .orWhere('cc.end_date', '>', trx.raw('?', [currentDate]));
       })
       .select(
         'cl.contract_line_id',
@@ -114,8 +119,8 @@ export async function getRemainingBucketUnits(
         'ps.service_id',
         'sc.service_name',
         'psbc.total_minutes',
-        knex.raw('COALESCE(bu.minutes_used, 0) as minutes_used'),
-        knex.raw('COALESCE(bu.rolled_over_minutes, 0) as rolled_over_minutes'),
+        trx.raw('COALESCE(bu.minutes_used, 0) as minutes_used'),
+        trx.raw('COALESCE(bu.rolled_over_minutes, 0) as rolled_over_minutes'),
         'bu.period_start',
         'bu.period_end'
       );

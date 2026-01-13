@@ -242,7 +242,7 @@ describe('BillingEngine', () => {
         charges: [],
         totalAmount: 0,
         finalAmount: 0,
-        error: 'No active contract lines found for client test_client_id in the given period'
+        error: 'No active contract lines found for this client in the selected billing period.'
       });
     });
 
