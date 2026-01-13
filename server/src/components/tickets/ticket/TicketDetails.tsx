@@ -79,7 +79,7 @@ interface TicketDetailsProps {
     initialCreatedByUser?: IUser | null;
     initialBoard?: any;
     initialAdditionalAgents?: ITicketResource[];
-    initialAvailableAgents?: IUserWithRoles[];
+    initialAvailableAgents?: IUser[];
     initialUserMap?: Record<string, { user_id: string; first_name: string; last_name: string; email?: string, user_type: string, avatarUrl: string | null }>;
     statusOptions?: { value: string; label: string }[];
     agentOptions?: { value: string; label: string }[];
@@ -170,7 +170,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     // Use pre-fetched options directly
     const [userMap, setUserMap] = useState<Record<string, { user_id: string; first_name: string; last_name: string; email?: string, user_type: string, avatarUrl: string | null }>>(initialUserMap);
 
-    const [availableAgents, setAvailableAgents] = useState<IUserWithRoles[]>(initialAvailableAgents);
+    const [availableAgents, setAvailableAgents] = useState<IUser[]>(initialAvailableAgents);
     const [additionalAgents, setAdditionalAgents] = useState<ITicketResource[]>(initialAdditionalAgents);
 
     // Agent avatar URLs (for TicketInfo badge display)
@@ -231,6 +231,8 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
 
     // Additional agents processing state - prevents rapid clicks and shows loading state
     const [isProcessingAgents, setIsProcessingAgents] = useState(false);
+    // Counter to signal TicketInfo to reset its temp values (incremented on Cancel)
+    const [resetTempValuesCounter, setResetTempValuesCounter] = useState(0);
     // Cached current user to avoid repeated server calls during agent operations
     // Note: Cast to IUserWithRoles since ticket resource actions need roles for permission checks
     const cachedUserRef = React.useRef<IUserWithRoles | null>((currentUser as IUserWithRoles) || null);
@@ -772,6 +774,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
         } catch (error) {
             console.error('Error removing agent:', error);
             toast.error('Failed to remove agent');
+            throw error; // Re-throw so callers can handle the error
         } finally {
             setIsProcessingAgents(false);
         }
@@ -1407,6 +1410,9 @@ const handleClose = () => {
         setHasAttemptedSave(false);
         setValidationErrors([]);
 
+        // Signal TicketInfo to reset its temp values (for dropdown fields)
+        setResetTempValuesCounter(prev => prev + 1);
+
         toast.success('Changes discarded');
     }, [hasUnsavedChanges, hasTempChanges, originalTicket]);
 
@@ -1699,6 +1705,7 @@ const handleClose = () => {
                                     hasUnsavedChanges={hasUnsavedChanges}
                                     isSavingSection={isSavingTicket}
                                     onTempChangesUpdate={setHasTempChanges}
+                                    resetTempValuesKey={resetTempValuesCounter}
                                     // Additional agents props (badge display in TicketInfo)
                                     additionalAgents={additionalAgents}
                                     availableAgents={availableAgents}
@@ -1774,8 +1781,6 @@ const handleClose = () => {
                                 onClientClick={handleClientClick}
                                 onContactClick={handleContactClick}
                                 team={team}
-                                additionalAgents={additionalAgents}
-                                availableAgents={availableAgents}
                                 onAgentClick={handleAgentClick}
                                 currentTimeSheet={currentTimeSheet}
                                 currentTimePeriod={currentTimePeriod}

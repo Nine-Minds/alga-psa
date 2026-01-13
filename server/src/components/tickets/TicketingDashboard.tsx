@@ -38,7 +38,7 @@ import { createTicketColumns } from 'server/src/lib/utils/ticket-columns';
 import Spinner from 'server/src/components/ui/Spinner';
 import MultiUserPicker from 'server/src/components/ui/MultiUserPicker';
 import { getUserAvatarUrlsBatchAction } from 'server/src/lib/actions/avatar-actions';
-import { getConsolidatedTicketData } from 'server/src/lib/actions/ticket-actions/optimizedTicketActions';
+import { getConsolidatedTicketData, IConsolidatedTicketData } from 'server/src/lib/actions/ticket-actions/optimizedTicketActions';
 
 interface TicketingDashboardProps {
   id?: string;
@@ -164,7 +164,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
 
   // Ticket Quick View state
   const [quickViewTicketId, setQuickViewTicketId] = useState<string | null>(null);
-  const [quickViewTicketData, setQuickViewTicketData] = useState<any>(null);
+  const [quickViewTicketData, setQuickViewTicketData] = useState<IConsolidatedTicketData | null>(null);
   const [isTicketQuickViewOpen, setIsTicketQuickViewOpen] = useState(false);
   const [isLoadingTicketQuickView, setIsLoadingTicketQuickView] = useState(false);
   const [quickViewHasUnsavedChanges, setQuickViewHasUnsavedChanges] = useState(false);

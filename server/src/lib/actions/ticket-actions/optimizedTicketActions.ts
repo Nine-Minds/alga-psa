@@ -3,12 +3,13 @@
 import { ITicket, ITicketListItem, ITicketListFilters, IAgentSchedule } from 'server/src/interfaces/ticket.interfaces';
 import { IUser } from 'server/src/interfaces/auth.interfaces';
 import { IComment } from 'server/src/interfaces/comment.interface';
-import { IClient } from 'server/src/interfaces/client.interfaces';
+import { IClient, IClientLocation } from 'server/src/interfaces/client.interfaces';
 import { IContact } from 'server/src/interfaces/contact.interfaces';
 import { IBoard } from 'server/src/interfaces/board.interface';
 import { ITicketCategory } from 'server/src/interfaces/ticket.interfaces';
 import { ITicketResource } from 'server/src/interfaces/ticketResource.interfaces';
 import { IDocument } from 'server/src/interfaces/document.interface';
+import { ITag } from 'server/src/interfaces/tag.interfaces';
 import { createTenantKnex } from 'server/src/lib/db';
 import { withTransaction } from '@alga-psa/shared/db';
 import { Knex } from 'knex';
@@ -57,10 +58,46 @@ async function safePublishEvent(eventType: string, payload: any) {
 }
 
 /**
+ * Return type for getConsolidatedTicketData
+ * Provides type safety for all consolidated ticket data
+ */
+export interface IConsolidatedTicketData {
+  ticket: ITicket & { tenant: string; location: IClientLocation | null };
+  comments: IComment[];
+  documents: IDocument[];
+  client: IClient | null;
+  contacts: IContact[];
+  contactInfo: IContact | null;
+  createdByUser: (IUser & { avatarUrl: string | null }) | null;
+  board: IBoard | null;
+  additionalAgents: ITicketResource[];
+  availableAgents: IUser[];
+  userMap: Record<string, {
+    user_id: string;
+    first_name: string;
+    last_name: string;
+    email?: string;
+    user_type: string;
+    avatarUrl: string | null
+  }>;
+  options: {
+    status: { value: string; label: string }[];
+    agent: { value: string; label: string }[];
+    board: { value: string; label: string }[];
+    priority: { value: string; label: string }[];
+  };
+  categories: ITicketCategory[];
+  clients: (IClient & { logoUrl: string | null })[];
+  locations: IClientLocation[];
+  agentSchedules: IAgentSchedule[];
+  tags: Pick<ITag, 'tag_id' | 'tag_text' | 'tagged_id' | 'tagged_type' | 'background_color' | 'text_color'>[];
+}
+
+/**
  * Consolidated function to get all ticket data for the ticket details page
  * This reduces multiple network calls by fetching all related data in a single server action
  */
-export async function getConsolidatedTicketData(ticketId: string) {
+export async function getConsolidatedTicketData(ticketId: string): Promise<IConsolidatedTicketData> {
   // Get current user from session (server-side) for security
   const user = await getCurrentUser();
   if (!user) {

@@ -3,8 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { getScheduledHoursForTicket } from 'server/src/lib/actions/ticket-actions/ticketActions';
 import { ITicket, ITimeSheet, ITimePeriod, ITimePeriodView, ITimeEntry, IAgentSchedule, IClient, IClientLocation } from 'server/src/interfaces'; // Added IClient and IClientLocation
-import { IUserWithRoles, ITeam } from 'server/src/interfaces/auth.interfaces';
-import { ITicketResource } from 'server/src/interfaces/ticketResource.interfaces';
+import { ITeam } from 'server/src/interfaces/auth.interfaces';
 import { ITag } from 'server/src/interfaces/tag.interfaces';
 import { TagManager } from 'server/src/components/tags';
 import { Button } from 'server/src/components/ui/Button';
@@ -43,8 +42,6 @@ interface TicketPropertiesProps {
   isTimerLocked?: boolean;
   timeDescription: string;
   team: ITeam | null;
-  additionalAgents: ITicketResource[];
-  availableAgents: IUserWithRoles[];
   currentTimeSheet: ITimeSheet | null;
   currentTimePeriod: ITimePeriodView | null;
   userId: string;
@@ -108,16 +105,14 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
   client,
   contactInfo,
   createdByUser,
-  board,
+  board: _board, // Kept for potential future use
   elapsedTime,
   isRunning,
   isTimerLocked = false,
   timeDescription,
-  team,
-  additionalAgents,
-  availableAgents,
-  currentTimeSheet,
-  currentTimePeriod,
+  team: _team, // Kept for potential future use
+  currentTimeSheet: _currentTimeSheet, // Kept for potential future use
+  currentTimePeriod: _currentTimePeriod, // Kept for potential future use
   userId,
   tenant,
   contacts,
@@ -132,28 +127,30 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
   onAddTimeEntry,
   onClientClick,
   onContactClick,
-  onAgentClick,
+  onAgentClick: _onAgentClick, // Kept for potential future use
   // onAddAgent and onRemoveAgent removed - agent team moved to TicketInfo
   onChangeContact,
   onChangeClient,
   onChangeLocation,
   onClientFilterStateChange,
   onClientTypeFilterChange,
-  tags = [],
-  allTagTexts = [],
-  onTagsChange,
-  onItilFieldChange,
+  tags: _tags = [], // Moved to TicketInfo, kept for backwards compatibility
+  allTagTexts: _allTagTexts = [], // Moved to TicketInfo, kept for backwards compatibility
+  onTagsChange: _onTagsChange, // Moved to TicketInfo, kept for backwards compatibility
+  onItilFieldChange: _onItilFieldChange, // Moved to TicketInfo, kept for backwards compatibility
   surveySummary = null,
 }) => {
   // showAgentPicker removed - agent team moved to TicketInfo
   const [showContactPicker, setShowContactPicker] = useState(false);
   const [showClientPicker, setShowClientPicker] = useState(false);
   const [showLocationPicker, setShowLocationPicker] = useState(false);
-  const [contactFilterState, setContactFilterState] = useState<'all' | 'active' | 'inactive'>('active');
+  // contactFilterState kept for potential future use with ContactPicker
+  const [_contactFilterState, _setContactFilterState] = useState<'all' | 'active' | 'inactive'>('active');
   const [selectedContactId, setSelectedContactId] = useState<string | null>(null);
   const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
   const [selectedLocationId, setSelectedLocationId] = useState<string | null>(null);
-  const [agentSchedules, setAgentSchedules] = useState<IAgentSchedule[]>([]);
+  // agentSchedules kept for potential future use - agent team moved to TicketInfo
+  const [_agentSchedules, _setAgentSchedules] = useState<IAgentSchedule[]>([]);
   // Agent avatar URLs removed - agent team moved to TicketInfo
   const [contactAvatarUrl, setContactAvatarUrl] = useState<string | null>(null);
   const [dateTimeFormat, setDateTimeFormat] = useState<string>('MMM d, yyyy h:mm a');
@@ -177,20 +174,21 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
     });
   }, [clients]);
 
-  // Fetch scheduled hours from schedule entries
+  // Fetch scheduled hours from schedule entries - kept for potential future use
+  // Agent team display was moved to TicketInfo
   useEffect(() => {
     const fetchScheduledHours = async () => {
       if (!ticket.ticket_id) return;
-      
+
       try {
         // Use the server action to get scheduled hours
         const schedules = await getScheduledHoursForTicket(ticket.ticket_id);
-        setAgentSchedules(schedules);
+        _setAgentSchedules(schedules);
       } catch (error) {
         console.error('Error fetching scheduled hours:', error);
       }
     };
-    
+
     fetchScheduledHours();
   }, [ticket.ticket_id, userId]);
 

@@ -5,7 +5,7 @@ import RichTextViewer from 'server/src/components/editor/RichTextViewer';
 import TextEditor from 'server/src/components/editor/TextEditor';
 import { PartialBlock } from '@blocknote/core';
 import { ITicket, IComment, ITicketCategory } from 'server/src/interfaces';
-import { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
+import { IUser } from 'server/src/interfaces/auth.interfaces';
 import { ITicketResource } from 'server/src/interfaces/ticketResource.interfaces';
 import { ITag } from 'server/src/interfaces/tag.interfaces';
 import { Button } from 'server/src/components/ui/Button';
@@ -32,10 +32,10 @@ interface TicketInfoProps {
   agentOptions: { value: string; label: string }[];
   boardOptions: { value: string; label: string }[];
   priorityOptions: { value: string; label: string }[];
-  onSelectChange: (field: keyof ITicket, newValue: string | null) => void;
+  onSelectChange: (field: keyof ITicket, newValue: string | null) => void | Promise<void>;
   onUpdateDescription?: (content: string) => Promise<boolean>;
   isSubmitting?: boolean;
-  users?: IUserWithRoles[];
+  users?: IUser[];
   tags?: ITag[];
   allTagTexts?: string[];
   onTagsChange?: (tags: ITag[]) => void;
@@ -51,9 +51,11 @@ interface TicketInfoProps {
   isSavingSection?: boolean;
   // Callback to notify parent of temp (unsaved) changes for navigation confirmation
   onTempChangesUpdate?: (hasTempChanges: boolean) => void;
+  // Key that changes when Cancel is clicked to force reset of temp values
+  resetTempValuesKey?: number;
   // Additional agents props (moved from TicketProperties)
   additionalAgents?: ITicketResource[];
-  availableAgents?: IUserWithRoles[];
+  availableAgents?: IUser[];
   onAddAgent?: (userId: string) => Promise<void>;
   onRemoveAgent?: (assignmentId: string) => Promise<void>;
   onAgentClick?: (userId: string) => void;
@@ -86,6 +88,7 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
   hasUnsavedChanges = false,
   isSavingSection = false,
   onTempChangesUpdate,
+  resetTempValuesKey = 0,
   // Additional agents props
   additionalAgents = [],
   availableAgents = [],
@@ -282,6 +285,27 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
     }
   }, [tempStatus, tempAssignedTo, tempBoard, tempPriority, tempCategory, tempSubcategory, tempImpact, tempUrgency, isEditingTitle, titleValue, ticket.title, ticket.status_id, ticket.assigned_to, ticket.board_id, ticket.priority_id, ticket.category_id, ticket.subcategory_id, itilImpact, itilUrgency, onTempChangesUpdate]);
 
+  // Reset temp values when Cancel is clicked (resetTempValuesKey changes)
+  // This effect is separate from the sync effect to handle the case where hasUnsavedChanges was already false
+  useEffect(() => {
+    if (resetTempValuesKey === 0) return; // Skip initial render
+
+    // Reset all temp values to match ticket values
+    setTempStatus(ticket.status_id || '');
+    setTempAssignedTo(ticket.assigned_to || '');
+    setTempBoard(ticket.board_id || '');
+    setTempPriority(ticket.priority_id || '');
+    setTempCategory(ticket.category_id || '');
+    setTempSubcategory(ticket.subcategory_id || '');
+    setTempImpact(itilImpact?.toString() || '');
+    setTempUrgency(itilUrgency?.toString() || '');
+
+    // Also reset editing states
+    setIsEditingTitle(false);
+    setTitleValue(ticket.title);
+    setIsEditingDescription(false);
+  }, [resetTempValuesKey]); // Only trigger when the key changes
+
   // Handle clicking on title edit
   const handleTitleEditClick = () => {
     setIsEditingTitle(true);
@@ -372,9 +396,9 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
   };
 
   // If we don't have users data but have agentOptions, convert agentOptions to users format
-  const usersList: IUserWithRoles[] = users.length > 0
+  const usersList: IUser[] = users.length > 0
     ? users
-    : agentOptions.map((agent): IUserWithRoles => ({
+    : agentOptions.map((agent): IUser => ({
         user_id: agent.value,
         username: agent.value,
         first_name: agent.label.split(' ')[0] || '',
@@ -383,8 +407,7 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
         hashed_password: '',
         is_inactive: false,
         tenant: '',
-        user_type: 'internal',
-        roles: []
+        user_type: 'internal'
       }));
 
   return (
@@ -967,18 +990,19 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
             {/* Read-only additional agents display (when handlers not provided but agents exist) */}
             {additionalAgents.length > 0 && !onAddAgent && !onRemoveAgent && (
               <div className="flex flex-wrap gap-2 mt-2">
-                {additionalAgents.map((agent) => {
+                {additionalAgents.map((agent, index) => {
                   const agentUser = (availableAgents.length > 0 ? availableAgents : users).find(
                     u => u.user_id === agent.additional_user_id
                   );
                   const agentName = agentUser
                     ? `${agentUser.first_name} ${agentUser.last_name}`
                     : 'Unknown Agent';
-                  const badgeId = agent.assignment_id || agent.additional_user_id || 'unknown';
+                  // Use stable ID if available, fall back to index for uniqueness
+                  const badgeId = agent.assignment_id || agent.additional_user_id || `index-${index}`;
                   return (
                     <div
                       id={`${id}-additional-agent-badge-${badgeId}`}
-                      key={agent.assignment_id || agent.additional_user_id}
+                      key={agent.assignment_id || agent.additional_user_id || `fallback-${index}`}
                       className="flex items-center gap-2 px-3 py-1.5 bg-gray-100 rounded-full text-sm cursor-pointer hover:bg-gray-200"
                       onClick={() => onAgentClick?.(agent.additional_user_id!)}
                     >
@@ -1000,7 +1024,7 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
               <div className="mt-2">
                 <MultiUserPicker
                   id={`${id}-additional-agents-picker`}
-                  values={additionalAgents.filter(a => a.additional_user_id).map(a => a.additional_user_id!)}
+                  values={[...new Set(additionalAgents.filter(a => a.additional_user_id).map(a => a.additional_user_id!))]}
                   onValuesChange={(newUserIds) => {
                     const currentUserIds = additionalAgents
                       .filter(a => a.additional_user_id)
