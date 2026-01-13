@@ -120,17 +120,18 @@ async function ensureExtensionPermission(requiredAction: 'read' | 'write', tenan
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: { installId: string; namespace: string; key: string } },
+  ctx: { params: Promise<{ installId: string; namespace: string; key: string }> },
 ) {
   try {
     const ifRevisionHeader = req.headers.get('if-revision-match');
-    const { service, tenantId, knex } = await getStorageServiceForInstall(params.installId);
+    const { installId, namespace, key } = await ctx.params;
+    const { service, tenantId, knex } = await getStorageServiceForInstall(installId);
     await ensureTenantAccess(req, tenantId);
     await ensureExtensionPermission('read', tenantId, knex);
 
     const request: StorageGetRequest = {
-      namespace: params.namespace,
-      key: params.key,
+      namespace,
+      key,
       ifRevision: ifRevisionHeader ? Number(ifRevisionHeader) : undefined,
     };
 
@@ -143,17 +144,18 @@ export async function GET(
 
 export async function PUT(
   req: NextRequest,
-  { params }: { params: { installId: string; namespace: string; key: string } },
+  ctx: { params: Promise<{ installId: string; namespace: string; key: string }> },
 ) {
   try {
     const body = putSchema.parse(await req.json());
-    const { service, tenantId, knex } = await getStorageServiceForInstall(params.installId);
+    const { installId, namespace, key } = await ctx.params;
+    const { service, tenantId, knex } = await getStorageServiceForInstall(installId);
     await ensureTenantAccess(req, tenantId);
     await ensureExtensionPermission('write', tenantId, knex);
 
     const request: StoragePutRequest = {
-      namespace: params.namespace,
-      key: params.key,
+      namespace,
+      key,
       value: body.value,
       metadata: body.metadata,
       ttlSeconds: body.ttlSeconds,
@@ -170,19 +172,20 @@ export async function PUT(
 
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: { installId: string; namespace: string; key: string } },
+  ctx: { params: Promise<{ installId: string; namespace: string; key: string }> },
 ) {
   try {
     const search = deleteQuerySchema.parse(
       Object.fromEntries(new URL(req.url).searchParams.entries()),
     );
-    const { service, tenantId, knex } = await getStorageServiceForInstall(params.installId);
+    const { installId, namespace, key } = await ctx.params;
+    const { service, tenantId, knex } = await getStorageServiceForInstall(installId);
     await ensureTenantAccess(req, tenantId);
     await ensureExtensionPermission('write', tenantId, knex);
 
     const request: StorageDeleteRequest = {
-      namespace: params.namespace,
-      key: params.key,
+      namespace,
+      key,
       ifRevision: search.ifRevision,
     };
 

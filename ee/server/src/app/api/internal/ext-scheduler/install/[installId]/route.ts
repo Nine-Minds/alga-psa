@@ -166,20 +166,21 @@ async function getInstallContext(installId: string): Promise<InstallContext> {
 
 export async function POST(
   req: NextRequest,
-  { params }: { params: { installId: string } }
+  ctx: { params: Promise<{ installId: string }> }
 ) {
   try {
     ensureRunnerAuth(req);
+    const { installId } = await ctx.params;
 
     const raw = await req.json();
     const base = baseSchema.parse(raw);
 
     // Apply rate limiting for mutating operations
-    if (!checkRateLimit(params.installId, base.operation)) {
+    if (!checkRateLimit(installId, base.operation)) {
       throw new SchedulerApiError('RATE_LIMITED', 'Too many requests, please try again later');
     }
 
-    const ctx = await getInstallContext(params.installId);
+    const ctx = await getInstallContext(installId);
 
     switch (base.operation) {
       case 'list': {
