@@ -21,32 +21,68 @@ exports.up = async function up(knex) {
   });
 
   // Add lightweight DB-level validation for new rows/updates.
-  // (Idempotent-ish: Postgres doesn't support IF NOT EXISTS for CHECK constraints.)
-  // If constraints already exist, ignore errors.
-  try {
-    await knex.raw(`
-      ALTER TABLE client_billing_settings
-        ADD CONSTRAINT client_billing_settings_anchor_day_of_month_range
-          CHECK (billing_cycle_anchor_day_of_month IS NULL OR (billing_cycle_anchor_day_of_month >= 1 AND billing_cycle_anchor_day_of_month <= 28)),
-        ADD CONSTRAINT client_billing_settings_anchor_month_of_year_range
-          CHECK (billing_cycle_anchor_month_of_year IS NULL OR (billing_cycle_anchor_month_of_year >= 1 AND billing_cycle_anchor_month_of_year <= 12)),
-        ADD CONSTRAINT client_billing_settings_anchor_day_of_week_range
-          CHECK (billing_cycle_anchor_day_of_week IS NULL OR (billing_cycle_anchor_day_of_week >= 1 AND billing_cycle_anchor_day_of_week <= 7))
-    `);
-  } catch (error) {
-    // Ignore (likely already applied in a prior run).
-  }
+  // IMPORTANT: migrations run in a transaction; catching JS errors doesn't reset a failed PG transaction.
+  // Use conditional DDL to avoid aborting the transaction if constraints already exist.
+  await knex.raw(`
+    DO $$
+    BEGIN
+      IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint WHERE conname = 'client_billing_settings_anchor_day_of_month_range'
+      ) THEN
+        ALTER TABLE client_billing_settings
+          ADD CONSTRAINT client_billing_settings_anchor_day_of_month_range
+            CHECK (
+              billing_cycle_anchor_day_of_month IS NULL OR
+              (billing_cycle_anchor_day_of_month >= 1 AND billing_cycle_anchor_day_of_month <= 28)
+            );
+      END IF;
+
+      IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint WHERE conname = 'client_billing_settings_anchor_month_of_year_range'
+      ) THEN
+        ALTER TABLE client_billing_settings
+          ADD CONSTRAINT client_billing_settings_anchor_month_of_year_range
+            CHECK (
+              billing_cycle_anchor_month_of_year IS NULL OR
+              (billing_cycle_anchor_month_of_year >= 1 AND billing_cycle_anchor_month_of_year <= 12)
+            );
+      END IF;
+
+      IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint WHERE conname = 'client_billing_settings_anchor_day_of_week_range'
+      ) THEN
+        ALTER TABLE client_billing_settings
+          ADD CONSTRAINT client_billing_settings_anchor_day_of_week_range
+            CHECK (
+              billing_cycle_anchor_day_of_week IS NULL OR
+              (billing_cycle_anchor_day_of_week >= 1 AND billing_cycle_anchor_day_of_week <= 7)
+            );
+      END IF;
+    END $$;
+  `);
 
   // Backfill defaults for monthly+ so behavior stays calendar-aligned by default.
   // Weekly/bi-weekly remain "rolling" unless explicitly anchored by an admin.
   await knex.raw(`
     UPDATE client_billing_settings cbs
-    SET billing_cycle_anchor_day_of_month = COALESCE(cbs.billing_cycle_anchor_day_of_month, 1),
-        billing_cycle_anchor_month_of_year = CASE
-          WHEN c.billing_cycle IN ('quarterly', 'semi-annually', 'annually')
-            THEN COALESCE(cbs.billing_cycle_anchor_month_of_year, 1)
-          ELSE cbs.billing_cycle_anchor_month_of_year
+    SET billing_cycle_anchor_day_of_month = CASE
+          WHEN cbs.billing_cycle_anchor_day_of_month IS NULL THEN 1
+          WHEN cbs.billing_cycle_anchor_day_of_month < 1 THEN 1
+          WHEN cbs.billing_cycle_anchor_day_of_month > 28 THEN 28
+          ELSE cbs.billing_cycle_anchor_day_of_month
         END,
+        billing_cycle_anchor_month_of_year = CASE
+          WHEN c.billing_cycle IN ('quarterly', 'semi-annually', 'annually') THEN
+            CASE
+              WHEN cbs.billing_cycle_anchor_month_of_year IS NULL THEN 1
+              WHEN cbs.billing_cycle_anchor_month_of_year < 1 THEN 1
+              WHEN cbs.billing_cycle_anchor_month_of_year > 12 THEN 12
+              ELSE cbs.billing_cycle_anchor_month_of_year
+            END
+          ELSE NULL
+        END,
+        billing_cycle_anchor_day_of_week = NULL,
+        billing_cycle_anchor_reference_date = NULL,
         updated_at = NOW()
     FROM clients c
     WHERE c.tenant = cbs.tenant
@@ -76,4 +112,3 @@ exports.down = async function down(knex) {
     table.dropColumn('billing_cycle_anchor_day_of_month');
   });
 };
-
