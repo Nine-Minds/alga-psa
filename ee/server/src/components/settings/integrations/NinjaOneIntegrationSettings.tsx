@@ -373,8 +373,9 @@ const NinjaOneIntegrationSettings: React.FC = () => {
                     <ol className="list-decimal list-inside space-y-1 text-sm text-primary-800">
                       <li>Log into your NinjaOne dashboard</li>
                       <li>Navigate to Administration → Apps → API</li>
-                      <li>Click &quot;Add&quot; to create a new API application</li>
-                      <li>Set Application Platform to &quot;Web (Authorization Code Grant)&quot;</li>
+                      <li>Click &quot;+ Add client app&quot; to create a new API application</li>
+                      <li>Set Application Platform to &quot;Web (PHP, Java, .Net Core, etc.)&quot;</li>
+                      <li>Enter a Name (e.g., &quot;Alga PSA&quot;)</li>
                       <li>
                         Add the redirect URI:{' '}
                         <code className="bg-primary-100 px-1 py-0.5 rounded text-xs break-all">
@@ -383,15 +384,19 @@ const NinjaOneIntegrationSettings: React.FC = () => {
                             : '/api/integrations/ninjaone/callback'}
                         </code>
                       </li>
-                      <li>Under &quot;Allowed grant types&quot;, ensure &quot;Refresh token&quot; is checked</li>
-                      <li>Copy the Client ID and Client Secret below</li>
+                      <li>Under &quot;Scopes&quot;, check &quot;Monitoring&quot; and &quot;Management&quot;</li>
+                      <li>Under &quot;Allowed grant types&quot;, check &quot;Authorization code&quot;, &quot;Client credentials&quot;, and &quot;Refresh token&quot;</li>
+                      <li>Click &quot;Add&quot; and copy the Client ID and Client Secret below</li>
                     </ol>
+                    <p className="text-xs text-primary-700 mt-2">
+                      For detailed setup instructions, see Section 10.15 in the documentation.
+                    </p>
                     <Button
                       id="ninjaone-open-api-settings"
                       variant="link"
                       size="sm"
                       className="h-auto p-0 text-primary-700"
-                      onClick={() => window.open('https://app.ninjarmm.com/#/administration/apps/api/client', '_blank')}
+                      onClick={() => window.open('https://www.ninjaone.com/login/', '_blank')}
                     >
                       <ExternalLink className="mr-1 h-3 w-3" />
                       Open NinjaOne API Settings
