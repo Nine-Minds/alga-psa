@@ -17,6 +17,7 @@ import {
 } from 'server/src/interfaces/billing.interfaces';
 import { TaxService } from 'server/src/lib/services/taxService';
 import { ITaxCalculationResult } from 'server/src/interfaces/tax.interfaces';
+import { getSession } from 'server/src/lib/auth/getSession';
 // Types for paginated billing periods
 export interface BillingPeriodWithMeta extends IClientContractLineCycle {
     client_name: string;
@@ -110,6 +111,11 @@ export async function getClientTaxRate(taxRegion: string, date: ISO8601String): 
 export async function getAvailableBillingPeriods(
     options: FetchBillingPeriodsOptions = {}
 ): Promise<PaginatedBillingPeriodsResult> {
+    const session = await getSession();
+    if (!session?.user?.id) {
+        throw new Error('Unauthorized');
+    }
+
     const {
         page = 1,
         pageSize = 10,

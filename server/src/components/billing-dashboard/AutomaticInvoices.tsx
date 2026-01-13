@@ -94,6 +94,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
   const [currentReadyPage, setCurrentReadyPage] = useState(1);
   const [isInvoicedLoading, setIsInvoicedLoading] = useState(false);
   const [isPeriodsLoading, setIsPeriodsLoading] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [showReverseDialog, setShowReverseDialog] = useState(false);
   const [selectedCycleToReverse, setSelectedCycleToReverse] = useState<{
     id: string;
@@ -178,8 +179,11 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
 
   // Load available billing periods with server-side pagination
   useEffect(() => {
+    let isMounted = true;
+
     const loadPeriods = async () => {
       setIsPeriodsLoading(true);
+      setLoadError(null);
       try {
         const dateRangeFilter = buildDateRangeFilter(appliedDateRange);
         const result = await getAvailableBillingPeriods({
@@ -188,22 +192,34 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
           searchTerm: debouncedClientFilter,
           dateRange: dateRangeFilter
         });
+
+        if (!isMounted) return;
+
         setPeriods(result.periods as Period[]);
         setTotalPeriods(result.total);
         initialLoadDone.current = true;
 
         // Clamp page if current page is beyond available pages (e.g., after delete/filter)
         const maxPage = Math.max(1, Math.ceil(result.total / pageSize));
-        if (currentReadyPage > maxPage) {
+        if (currentReadyPage > maxPage && currentReadyPage !== maxPage) {
           setCurrentReadyPage(maxPage);
           setSelectedPeriods(new Set()); // Clear selection since visible rows changed
         }
       } catch (error) {
         console.error('Error loading billing periods:', error);
+        if (isMounted) {
+          setLoadError('Failed to load billing periods. Please try again.');
+        }
       }
-      setIsPeriodsLoading(false);
+      if (isMounted) {
+        setIsPeriodsLoading(false);
+      }
     };
     loadPeriods();
+
+    return () => {
+      isMounted = false;
+    };
   }, [currentReadyPage, pageSize, debouncedClientFilter, appliedDateRange, refreshTrigger]);
 
   // For server-side pagination, filteredPeriods is just periods
@@ -228,6 +244,8 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
 
   // Load invoiced billing periods with server-side pagination
   useEffect(() => {
+    let isMounted = true;
+
     const loadInvoicedPeriods = async () => {
       setIsInvoicedLoading(true);
       try {
@@ -236,6 +254,9 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
           pageSize: invoicedPageSize,
           searchTerm: debouncedInvoicedSearchTerm
         });
+
+        if (!isMounted) return;
+
         setInvoicedPeriods(result.cycles.map((cycle): Period => ({
           ...cycle,
           can_generate: false // Already invoiced periods can't be generated again
@@ -244,16 +265,25 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
 
         // Clamp page if current page is beyond available pages
         const maxPage = Math.max(1, Math.ceil(result.total / invoicedPageSize));
-        if (invoicedCurrentPage > maxPage) {
+        if (invoicedCurrentPage > maxPage && invoicedCurrentPage !== maxPage) {
           setInvoicedCurrentPage(maxPage);
         }
       } catch (error) {
         console.error('Error loading invoiced periods:', error);
+        if (isMounted) {
+          setLoadError('Failed to load invoiced periods. Please try again.');
+        }
       }
-      setIsInvoicedLoading(false);
+      if (isMounted) {
+        setIsInvoicedLoading(false);
+      }
     };
 
     loadInvoicedPeriods();
+
+    return () => {
+      isMounted = false;
+    };
   }, [invoicedCurrentPage, invoicedPageSize, debouncedInvoicedSearchTerm, refreshTrigger]);
 
   // Debug effect to log preview data
@@ -536,6 +566,31 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
           spinnerProps={{ size: 'md' }}
           text="Loading billing data"
         />
+      ) : loadError ? (
+        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4">
+          <button
+            id="dismiss-load-error-button"
+            className="absolute top-2 right-2"
+            onClick={() => setLoadError(null)}
+          >
+            <X className="h-4 w-4" />
+          </button>
+          <p>{loadError}</p>
+          <Button
+            id="retry-load-button"
+            variant="outline"
+            size="sm"
+            className="mt-2"
+            onClick={() => {
+              setLoadError(null);
+              // Reset to page 1 to trigger a fresh load
+              setCurrentReadyPage(1);
+              setInvoicedCurrentPage(1);
+            }}
+          >
+            Retry
+          </Button>
+        </div>
       ) : (
       <div className="space-y-8">
         <div>
@@ -569,6 +624,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
           {/* Filters row */}
           <div className="flex items-end gap-4 mb-4">
             <DateRangePicker
+              id="billing-period-date-range"
               label="Period end date range"
               value={pendingDateRange}
               onChange={(range) => setPendingDateRange(range)}

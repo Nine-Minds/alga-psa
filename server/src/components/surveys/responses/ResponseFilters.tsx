@@ -116,7 +116,7 @@ export default function ResponseFilters({ options, initialFilters, onApply, onRe
       </div>
       <div className={`${FIELD_CLASS} min-w-[250px]`}>
         <span className="text-sm font-medium text-gray-700">Date Range</span>
-        <DateRangePicker value={dateRange} onChange={setDateRange} />
+        <DateRangePicker id="survey-response-date-range" value={dateRange} onChange={setDateRange} />
       </div>
       <div className="flex items-center gap-2 flex-shrink-0 ml-auto">
         <Button id="survey-response-reset-filters" variant="outline" onClick={handleReset}>

@@ -241,6 +241,7 @@ export function CSVTaxImportPanel({ onImportComplete }: CSVTaxImportPanelProps) 
         {/* Date Range (Required) */}
         <div>
           <StringDateRangePicker
+            id="csv-tax-import-date-range"
             label="Date Range (required)"
             value={dateRange}
             onChange={setDateRange}
