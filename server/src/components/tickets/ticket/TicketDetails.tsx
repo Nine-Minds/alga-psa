@@ -796,9 +796,9 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
                     await handleRemoveAgent(additionalAgentEntry.assignment_id);
                     toast('Moved to primary agent');
                 } catch (error) {
-                    // Removal failed - don't show success toast, error already shown by handleRemoveAgent
-                    console.error('Failed to remove agent before promoting to primary:', error);
-                    return; // Don't proceed with assignment change if removal failed
+                    // Removal failed - show specific error and don't proceed
+                    toast.error('Failed to promote agent: could not remove from additional agents');
+                    return;
                 }
             }
         }
