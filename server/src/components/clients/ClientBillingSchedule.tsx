@@ -245,27 +245,29 @@ export function ClientBillingSchedule(props: { clientId: string }): React.JSX.El
             <Info className="h-4 w-4 text-gray-500" />
           </Tooltip>
         </div>
-        <div className="flex items-center gap-2">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={createNextCycle}
-            disabled={creatingCycle}
-            data-automation-id="client-billing-create-next-cycle"
+	        <div className="flex items-center gap-2">
+	          <Button
+	            id="client-billing-create-next-cycle"
+	            type="button"
+	            variant="outline"
+	            onClick={createNextCycle}
+	            disabled={creatingCycle}
+	            data-automation-id="client-billing-create-next-cycle"
           >
             {creatingCycle ? 'Creating...' : 'Create Next Cycle'}
-          </Button>
-          <Button
-            type="button"
-            variant="default"
-            onClick={openDialog}
-            disabled={loading}
-            data-automation-id="client-billing-edit-schedule"
+	          </Button>
+	          <Button
+	            id="client-billing-edit-schedule"
+	            type="button"
+	            variant="default"
+	            onClick={openDialog}
+	            disabled={loading}
+	            data-automation-id="client-billing-edit-schedule"
           >
             {loading ? 'Loading…' : 'Edit Schedule'}
-          </Button>
-        </div>
-      </div>
+	          </Button>
+	        </div>
+	      </div>
 
       <div className="mt-2 text-sm text-gray-600">
         {loading ? 'Loading current schedule…' : scheduleSummary}
@@ -358,15 +360,22 @@ export function ClientBillingSchedule(props: { clientId: string }): React.JSX.El
             </div>
           )}
 
-          <div className="flex items-center justify-end gap-2 pt-2">
-            <Button type="button" variant="outline" onClick={() => setDialogOpen(false)} disabled={saving}>
-              Close
-            </Button>
-            <Button
-              type="button"
-              onClick={saveSchedule}
-              disabled={saving}
-              data-automation-id="client-billing-save-schedule"
+	          <div className="flex items-center justify-end gap-2 pt-2">
+	            <Button
+	              id="client-billing-schedule-close"
+	              type="button"
+	              variant="outline"
+	              onClick={() => setDialogOpen(false)}
+	              disabled={saving}
+	            >
+	              Close
+	            </Button>
+	            <Button
+	              id="client-billing-save-schedule"
+	              type="button"
+	              onClick={saveSchedule}
+	              disabled={saving}
+	              data-automation-id="client-billing-save-schedule"
             >
               {saving ? 'Saving...' : 'Save Schedule'}
             </Button>
