@@ -190,6 +190,7 @@ export function WorkflowTasksSectionFiltersDialog({
           <div className="space-y-1">
             <Label htmlFor="workflow-task-due-date-range" className="text-base font-semibold">Due Date Range</Label>
             <StringDateRangePicker
+              id="workflow-task-due-date-range"
               value={{
                 from: localFilters.dueDateStart ? localFilters.dueDateStart.split('T')[0] : '',
                 to: localFilters.dueDateEnd ? localFilters.dueDateEnd.split('T')[0] : '',

@@ -302,6 +302,7 @@ const BillingCycles: React.FC = () => {
               />
             </div>
             <DateRangePicker
+              id="billing-cycle-date-range"
               label="Billing cycle date range"
               value={pendingDateRange}
               onChange={(range) => {

@@ -239,6 +239,7 @@ export function TicketSectionFiltersDialog({
           <div className="space-y-1">
              <Label htmlFor="ticket-due-date-range" className="text-base font-semibold">Due Date Range</Label>
              <StringDateRangePicker
+                id="ticket-due-date-range"
                 value={{
                     from: localFilters.dueDateStart ? localFilters.dueDateStart.split('T')[0] : '',
                     to: localFilters.dueDateEnd ? localFilters.dueDateEnd.split('T')[0] : '',

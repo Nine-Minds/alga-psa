@@ -350,6 +350,7 @@ export function UnifiedCsvTaxImportPanel({ onImportComplete }: UnifiedCsvTaxImpo
         {source === 'quickbooks' && (
           <div>
             <StringDateRangePicker
+              id="unified-tax-import-date-range"
               label="Date Range (required)"
               value={dateRange}
               onChange={setDateRange}

@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { PanelGroup, Panel, PanelResizeHandle } from 'react-resizable-panels';
 import { Card } from '../../ui/Card';
@@ -18,7 +18,7 @@ import {
 } from '../../ui/DropdownMenu';
 import { ColumnDefinition } from '../../../interfaces/dataTable.interfaces';
 import { InvoiceViewModel as DbInvoiceViewModel, IInvoiceTemplate } from '../../../interfaces/invoice.interfaces';
-import { fetchAllInvoices } from '../../../lib/actions/invoiceQueries';
+import { fetchInvoicesPaginated } from '../../../lib/actions/invoiceQueries';
 import { getInvoiceTemplates } from '../../../lib/actions/invoiceTemplates';
 import { finalizeInvoice, hardDeleteInvoice } from '../../../lib/actions/invoiceModification';
 import { downloadInvoicePDF } from '../../../lib/actions/invoiceGeneration';
@@ -40,44 +40,87 @@ const DraftsTab: React.FC<DraftsTabProps> = ({
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  const [allInvoices, setAllInvoices] = useState<DbInvoiceViewModel[]>([]);
+  const [invoices, setInvoices] = useState<DbInvoiceViewModel[]>([]);
   const [templates, setTemplates] = useState<IInvoiceTemplate[]>([]);
   const [selectedInvoices, setSelectedInvoices] = useState<Set<string>>(new Set());
   const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [tableKey, setTableKey] = useState(0);
   const [reverseDialogState, setReverseDialogState] = useState<{ isOpen: boolean; invoiceIds: string[] }>({ isOpen: false, invoiceIds: [] });
   const [isReverseConfirming, setIsReverseConfirming] = useState(false);
 
-  // Pagination state
+  // Pagination state - server-side
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
+  const [totalInvoices, setTotalInvoices] = useState(0);
+
+  // Ref to track if initial load has happened
+  const initialLoadDone = useRef(false);
 
   const selectedInvoiceId = searchParams?.get('invoiceId') ?? null;
   const selectedTemplateId = searchParams?.get('templateId') ?? null;
 
-  // Handle page size change - reset to page 1
+  // Debounce search term
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm);
+      // Reset to page 1 and clear selection when search changes
+      if (initialLoadDone.current) {
+        setCurrentPage(1);
+        setSelectedInvoices(new Set());
+      }
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+
+  // Handle page size change - reset to page 1 and clear selection
   const handlePageSizeChange = (newPageSize: number) => {
     setPageSize(newPageSize);
     setCurrentPage(1);
+    setSelectedInvoices(new Set());
   };
 
+  // Handle page change - clear selection (server-side pagination means selected items may not be visible)
+  const handlePageChange = (newPage: number) => {
+    setCurrentPage(newPage);
+    setSelectedInvoices(new Set());
+  };
+
+  // Load data when pagination, search, or refresh changes
   useEffect(() => {
     loadData();
-  }, [refreshTrigger]);
+  }, [currentPage, pageSize, debouncedSearchTerm, refreshTrigger]);
 
   const loadData = async () => {
     setIsLoading(true);
     setError(null);
     try {
-      const [fetchedInvoices, fetchedTemplates] = await Promise.all([
-        fetchAllInvoices(),
+      const [paginatedResult, fetchedTemplates] = await Promise.all([
+        fetchInvoicesPaginated({
+          page: currentPage,
+          pageSize: pageSize,
+          searchTerm: debouncedSearchTerm,
+          status: 'draft',
+          sortBy: 'invoice_date',
+          sortOrder: 'desc'
+        }),
         getInvoiceTemplates()
       ]);
 
-      setAllInvoices(fetchedInvoices);
+      setInvoices(paginatedResult.invoices);
+      setTotalInvoices(paginatedResult.total);
       setTemplates(fetchedTemplates);
+      initialLoadDone.current = true;
+
+      // Clamp page if current page is beyond available pages (e.g., after delete/filter)
+      const maxPage = Math.max(1, Math.ceil(paginatedResult.total / pageSize));
+      if (currentPage > maxPage) {
+        setCurrentPage(maxPage);
+        setSelectedInvoices(new Set()); // Clear selection since visible rows changed
+      }
     } catch (err) {
       console.error('Error fetching draft invoices data:', err);
       setError('Failed to load draft invoices. Please try again.');
@@ -86,14 +129,8 @@ const DraftsTab: React.FC<DraftsTabProps> = ({
     }
   };
 
-  const normalizeStatus = (status?: string | null) => (status || 'draft').toLowerCase();
-
-  const invoices = allInvoices.filter(inv => !inv.finalized_at && normalizeStatus(inv.status) === 'draft');
-
-  const filteredInvoices = invoices.filter(inv =>
-    inv.invoice_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    inv.client?.name?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  // For server-side pagination, filteredInvoices is just invoices (already filtered server-side)
+  const filteredInvoices = invoices;
 
   const selectedInvoice = selectedInvoiceId ? invoices.find(inv => inv.invoice_id === selectedInvoiceId) || null : null;
 
@@ -422,14 +459,14 @@ const DraftsTab: React.FC<DraftsTabProps> = ({
                 columns={columns}
                 pagination={true}
                 currentPage={currentPage}
-                onPageChange={setCurrentPage}
+                onPageChange={handlePageChange}
                 pageSize={pageSize}
                 onItemsPerPageChange={handlePageSizeChange}
+                totalItems={totalInvoices}
                 onRowClick={handleInvoiceSelect}
                 rowClassName={(record) =>
                   selectedInvoiceId === record.invoice_id ? 'bg-blue-50' : 'cursor-pointer hover:bg-gray-50'
                 }
-                initialSorting={[{ id: 'invoice_date', desc: true }]}
               />
             </div>
           </Panel>

@@ -385,6 +385,115 @@ export async function getInvoicedBillingCycles(): Promise<(IClientContractLineCy
   return invoicedCycles;
 }
 
+// Types for paginated invoiced billing cycles
+export interface FetchInvoicedCyclesOptions {
+  page?: number;
+  pageSize?: number;
+  searchTerm?: string;
+}
+
+export interface PaginatedInvoicedCyclesResult {
+  cycles: (IClientContractLineCycle & {
+    client_name: string;
+    period_start_date: ISO8601String;
+    period_end_date: ISO8601String;
+  })[];
+  total: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+}
+
+/**
+ * Fetch invoiced billing cycles with server-side pagination and search
+ */
+export async function getInvoicedBillingCyclesPaginated(
+  options: FetchInvoicedCyclesOptions = {}
+): Promise<PaginatedInvoicedCyclesResult> {
+  const {
+    page = 1,
+    pageSize = 10,
+    searchTerm = ''
+  } = options;
+
+  const session = await getSession();
+  if (!session?.user?.id) {
+    throw new Error('Unauthorized');
+  }
+  const { knex: conn, tenant } = await createTenantKnex();
+
+  const result = await withTransaction(conn, async (trx: Knex.Transaction) => {
+    // Build base query
+    const buildBaseQuery = () => {
+      const query = trx('client_billing_cycles as cbc')
+        .join('clients as c', function () {
+          this.on('c.client_id', '=', 'cbc.client_id')
+            .andOn('c.tenant', '=', 'cbc.tenant');
+        })
+        .join('invoices as i', function () {
+          this.on('i.billing_cycle_id', '=', 'cbc.billing_cycle_id')
+            .andOn('i.tenant', '=', 'cbc.tenant');
+        })
+        .where('cbc.tenant', tenant)
+        .whereNotNull('cbc.period_end_date');
+
+      // Apply search filter
+      if (searchTerm.trim()) {
+        const searchPattern = `%${searchTerm.trim().toLowerCase()}%`;
+        query.whereRaw('LOWER(c.client_name) LIKE ?', [searchPattern]);
+      }
+
+      return query;
+    };
+
+    // Get total count
+    const countResult = await buildBaseQuery()
+      .countDistinct('cbc.billing_cycle_id as count')
+      .first();
+    const total = parseInt(String(countResult?.count || '0'), 10);
+
+    if (total === 0) {
+      return {
+        cycles: [],
+        total: 0,
+        page,
+        pageSize,
+        totalPages: 0
+      };
+    }
+
+    // Calculate pagination
+    const offset = (page - 1) * pageSize;
+    const totalPages = Math.ceil(total / pageSize);
+
+    // Fetch paginated data
+    const cycles = await buildBaseQuery()
+      .select(
+        'cbc.billing_cycle_id',
+        'cbc.client_id',
+        'c.client_name',
+        'cbc.billing_cycle',
+        'cbc.period_start_date',
+        'cbc.period_end_date',
+        'cbc.effective_date',
+        'cbc.tenant'
+      )
+      .orderBy('cbc.period_end_date', 'desc')
+      .limit(pageSize)
+      .offset(offset);
+
+    return {
+      cycles,
+      total,
+      page,
+      pageSize,
+      totalPages
+    };
+  });
+
+  return result;
+}
+
 export async function getAllBillingCycles(): Promise<{ [clientId: string]: BillingCycleType }> {
   const session = await getSession();
   if (!session?.user?.id) {
