@@ -564,7 +564,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
 
         // Store the previous value before updating
         const previousValue = ticket[field];
-        
+
         // Optimistically update the UI
         setTicket(prevTicket => ({ ...prevTicket, [field]: normalizedValue }));
 
@@ -572,7 +572,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
             // Use the optimized handler if provided
             if (onTicketUpdate) {
                 await onTicketUpdate(field, normalizedValue);
-                
+
                 // If we're changing the assigned_to field, we need to handle additional resources
                 // This will be handled by the container component and passed back in props
             } else {
@@ -584,12 +584,12 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
                     setTicket(prevTicket => ({ ...prevTicket, [field]: previousValue }));
                     return;
                 }
-                
+
                 const result = await updateTicket(ticket.ticket_id || '', { [field]: normalizedValue }, user);
-                
+
                 if (result === 'success') {
                     console.log(`${field} changed to: ${normalizedValue}`);
-                    
+
                     // If we're changing the assigned_to field, refresh the additional resources
                     if (field === 'assigned_to') {
                         try {
@@ -611,6 +611,103 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
             console.error(`Error updating ticket ${field}:`, error);
             // Revert to previous value on error
             setTicket(prevTicket => ({ ...prevTicket, [field]: previousValue }));
+        }
+    };
+
+    // Batch save handler for saving multiple fields at once (used by TicketInfo Save Changes button)
+    const handleBatchSaveChanges = async (changes: Partial<ITicket>): Promise<boolean> => {
+        if (Object.keys(changes).length === 0) {
+            return true;
+        }
+
+        // Normalize assigned_to value
+        const normalizedChanges = { ...changes };
+        if ('assigned_to' in normalizedChanges) {
+            normalizedChanges.assigned_to =
+                normalizedChanges.assigned_to && normalizedChanges.assigned_to !== 'unassigned'
+                    ? normalizedChanges.assigned_to
+                    : null;
+        }
+
+        // Store previous values for potential rollback
+        const previousValues: Partial<ITicket> = {};
+        for (const field of Object.keys(normalizedChanges) as (keyof ITicket)[]) {
+            previousValues[field] = ticket[field] as any;
+        }
+
+        // Optimistically update the UI
+        setTicket(prevTicket => ({ ...prevTicket, ...normalizedChanges }));
+
+        // Handle ITIL fields separately
+        const itilChanges: { itil_impact?: number; itil_urgency?: number } = {};
+        const ticketChanges: Partial<ITicket> = {};
+
+        for (const [field, value] of Object.entries(normalizedChanges)) {
+            if (field === 'itil_impact') {
+                itilChanges.itil_impact = value as number;
+            } else if (field === 'itil_urgency') {
+                itilChanges.itil_urgency = value as number;
+            } else {
+                (ticketChanges as any)[field] = value;
+            }
+        }
+
+        try {
+            // Use the optimized handler if provided
+            if (onTicketUpdate) {
+                // Save all ticket changes
+                for (const [field, value] of Object.entries(ticketChanges)) {
+                    await onTicketUpdate(field, value);
+                }
+                // Save ITIL changes
+                for (const [field, value] of Object.entries(itilChanges)) {
+                    await onTicketUpdate(field, value);
+                }
+            } else {
+                // Fallback to the original implementation
+                const user = await getCurrentUser();
+                if (!user) {
+                    console.error('Failed to get user');
+                    setTicket(prevTicket => ({ ...prevTicket, ...previousValues }));
+                    return false;
+                }
+
+                // Combine all changes into a single update
+                const allChanges = { ...ticketChanges, ...itilChanges };
+                const result = await updateTicket(ticket.ticket_id || '', allChanges, user);
+
+                if (result !== 'success') {
+                    console.error('Failed to update ticket');
+                    setTicket(prevTicket => ({ ...prevTicket, ...previousValues }));
+                    return false;
+                }
+
+                // If we're changing the assigned_to field, refresh the additional resources
+                if ('assigned_to' in normalizedChanges) {
+                    try {
+                        const resources = await getTicketResources(ticket.ticket_id!, user);
+                        setAdditionalAgents(resources);
+                    } catch (resourceError) {
+                        console.error('Error refreshing additional resources:', resourceError);
+                    }
+                }
+            }
+
+            // Update ITIL state if those fields were changed
+            if (itilChanges.itil_impact !== undefined) {
+                setItilImpact(itilChanges.itil_impact);
+            }
+            if (itilChanges.itil_urgency !== undefined) {
+                setItilUrgency(itilChanges.itil_urgency);
+            }
+
+            toast.success('Changes saved successfully');
+            return true;
+        } catch (error) {
+            console.error('Error saving changes:', error);
+            setTicket(prevTicket => ({ ...prevTicket, ...previousValues }));
+            toast.error('Failed to save changes');
+            return false;
         }
     };
 
@@ -1541,6 +1638,7 @@ const handleClose = () => {
                                     boardOptions={boardOptions}
                                     priorityOptions={priorityOptions}
                                     onSelectChange={handleSelectChange}
+                                    onSaveChanges={handleBatchSaveChanges}
                                     onUpdateDescription={handleUpdateDescription}
                                     isSubmitting={isSubmitting}
                                     users={availableAgents}

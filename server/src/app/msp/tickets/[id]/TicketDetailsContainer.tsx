@@ -9,6 +9,7 @@ import { toast } from 'react-hot-toast';
 import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
 import { TicketDetailsSkeleton } from 'server/src/components/tickets/ticket/TicketDetailsSkeleton';
 import type { SurveyTicketSatisfactionSummary } from 'server/src/interfaces/survey.interface';
+import { UnsavedChangesProvider } from 'server/src/contexts/UnsavedChangesContext';
 
 // Define the props interface based on the consolidated data structure
 interface TicketDetailsContainerProps {
@@ -162,41 +163,46 @@ export default function TicketDetailsContainer({ ticketData, surveySummary = nul
   // Render directly to avoid redefining a component each render,
   // which can cause unmount/mount cycles and side-effects
   return (
-    <div id="ticket-details-container-wrapper">
-      <Suspense fallback={<div id="ticket-info-loading-skeleton" className="animate-pulse bg-gray-200 h-64 rounded-lg mb-6"></div>}>
-        <TicketDetails
-          id="ticket-details-component"
-          initialTicket={ticketData.ticket}
-          initialBundle={ticketData.bundle}
-          aggregatedChildClientComments={ticketData.aggregatedChildClientComments || []}
-          onClose={() => router.back()}
-          // Pass pre-fetched data as props
-          initialComments={ticketData.comments}
-          initialDocuments={ticketData.documents}
-          initialClient={ticketData.client}
-          initialContacts={ticketData.contacts}
-          initialContactInfo={ticketData.contactInfo}
-          initialCreatedByUser={ticketData.createdByUser}
-          initialBoard={ticketData.board}
-          initialAdditionalAgents={ticketData.additionalAgents}
-          initialAvailableAgents={ticketData.availableAgents}
-          initialUserMap={ticketData.userMap}
-          statusOptions={ticketData.options.status}
-          agentOptions={ticketData.options.agent}
-          boardOptions={ticketData.options.board}
-          priorityOptions={ticketData.options.priority}
-          initialCategories={ticketData.categories}
-          initialClients={ticketData.clients}
-          initialLocations={ticketData.locations}
-          initialAgentSchedules={ticketData.agentSchedules}
-          // Pass optimized handlers
-          onTicketUpdate={handleTicketUpdate}
-          onAddComment={handleAddComment}
-          onUpdateDescription={handleUpdateDescription}
-          isSubmitting={isSubmitting}
-          surveySummary={surveySummary}
-        />
-      </Suspense>
-    </div>
+    <UnsavedChangesProvider
+      dialogTitle="Unsaved Changes"
+      dialogMessage="You have unsaved changes to this ticket. Are you sure you want to leave? Your changes will be lost."
+    >
+      <div id="ticket-details-container-wrapper">
+        <Suspense fallback={<div id="ticket-info-loading-skeleton" className="animate-pulse bg-gray-200 h-64 rounded-lg mb-6"></div>}>
+          <TicketDetails
+            id="ticket-details-component"
+            initialTicket={ticketData.ticket}
+            initialBundle={ticketData.bundle}
+            aggregatedChildClientComments={ticketData.aggregatedChildClientComments || []}
+            onClose={() => router.back()}
+            // Pass pre-fetched data as props
+            initialComments={ticketData.comments}
+            initialDocuments={ticketData.documents}
+            initialClient={ticketData.client}
+            initialContacts={ticketData.contacts}
+            initialContactInfo={ticketData.contactInfo}
+            initialCreatedByUser={ticketData.createdByUser}
+            initialBoard={ticketData.board}
+            initialAdditionalAgents={ticketData.additionalAgents}
+            initialAvailableAgents={ticketData.availableAgents}
+            initialUserMap={ticketData.userMap}
+            statusOptions={ticketData.options.status}
+            agentOptions={ticketData.options.agent}
+            boardOptions={ticketData.options.board}
+            priorityOptions={ticketData.options.priority}
+            initialCategories={ticketData.categories}
+            initialClients={ticketData.clients}
+            initialLocations={ticketData.locations}
+            initialAgentSchedules={ticketData.agentSchedules}
+            // Pass optimized handlers
+            onTicketUpdate={handleTicketUpdate}
+            onAddComment={handleAddComment}
+            onUpdateDescription={handleUpdateDescription}
+            isSubmitting={isSubmitting}
+            surveySummary={surveySummary}
+          />
+        </Suspense>
+      </div>
+    </UnsavedChangesProvider>
   );
 }

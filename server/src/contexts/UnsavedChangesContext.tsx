@@ -43,12 +43,22 @@ interface UnsavedChangesProviderProps {
    * Custom message for the confirmation dialog
    */
   dialogMessage?: string;
+  /**
+   * Custom label for the confirm button (default: "Discard changes")
+   */
+  confirmLabel?: string;
+  /**
+   * Custom label for the cancel button (default: "Continue editing")
+   */
+  cancelLabel?: string;
 }
 
 export function UnsavedChangesProvider({
   children,
   dialogTitle = 'Unsaved Changes',
   dialogMessage = 'You have unsaved changes. Are you sure you want to leave? Your changes will be lost.',
+  confirmLabel = 'Discard changes',
+  cancelLabel = 'Continue editing',
 }: UnsavedChangesProviderProps) {
   // Use ref to track unsaved components without causing re-renders
   const unsavedComponentsRef = useRef<Set<string>>(new Set());
@@ -179,7 +189,7 @@ export function UnsavedChangesProvider({
   }), [setHasUnsavedChanges, hasAnyUnsavedChanges, confirmNavigation, unregister]);
 
   return (
-    <UnsavedChangesContext value={contextValue}>
+    <UnsavedChangesContext.Provider value={contextValue}>
       {children}
       <ConfirmationDialog
         id="unsaved-changes-dialog"
@@ -188,10 +198,10 @@ export function UnsavedChangesProvider({
         onConfirm={handleConfirm}
         title={dialogTitle}
         message={dialogMessage}
-        confirmLabel="Leave Without Saving"
-        cancelLabel="Stay"
+        confirmLabel={confirmLabel}
+        cancelLabel={cancelLabel}
       />
-    </UnsavedChangesContext>
+    </UnsavedChangesContext.Provider>
   );
 }
 
