@@ -17,7 +17,34 @@ import {
 } from 'server/src/interfaces/billing.interfaces';
 import { TaxService } from 'server/src/lib/services/taxService';
 import { ITaxCalculationResult } from 'server/src/interfaces/tax.interfaces';
-import { BillingEngine } from 'server/src/lib/billing/billingEngine'; // Needed for getAvailableBillingPeriods
+// Types for paginated billing periods
+export interface BillingPeriodWithMeta extends IClientContractLineCycle {
+    client_name: string;
+    period_start_date: ISO8601String;
+    period_end_date: ISO8601String;
+    can_generate: boolean;
+    is_early: boolean;
+}
+
+export interface BillingPeriodDateRange {
+    from?: ISO8601String;
+    to?: ISO8601String;
+}
+
+export interface FetchBillingPeriodsOptions {
+    page?: number;
+    pageSize?: number;
+    searchTerm?: string;
+    dateRange?: BillingPeriodDateRange;
+}
+
+export interface PaginatedBillingPeriodsResult {
+    periods: BillingPeriodWithMeta[];
+    total: number;
+    page: number;
+    pageSize: number;
+    totalPages: number;
+}
 
 // Type Guards
 export async function isFixedPriceCharge(charge: IBillingCharge): Promise<boolean> {
@@ -80,35 +107,77 @@ export async function getClientTaxRate(taxRegion: string, date: ISO8601String): 
     return totalTaxRate;
 }
 
-export async function getAvailableBillingPeriods(): Promise<(IClientContractLineCycle & {
-    client_name: string;
-    total_unbilled: number;
-    period_start_date: ISO8601String;
-    period_end_date: ISO8601String;
-    can_generate: boolean;
-    is_early: boolean;
-})[]> {
-    console.log('Starting getAvailableBillingPeriods');
+export async function getAvailableBillingPeriods(
+    options: FetchBillingPeriodsOptions = {}
+): Promise<PaginatedBillingPeriodsResult> {
+    const {
+        page = 1,
+        pageSize = 10,
+        searchTerm = '',
+        dateRange
+    } = options;
+
+    console.log(`Starting getAvailableBillingPeriods: page=${page}, pageSize=${pageSize}, search="${searchTerm}", dateRange=${JSON.stringify(dateRange)}`);
     const { knex, tenant } = await createTenantKnex();
     const currentDate = toISODate(Temporal.Now.plainDateISO());
-    console.log(`Current date: ${currentDate}`);
 
     try {
-        // Get all billing cycles that don't have invoices
-        console.log('Querying for available billing periods');
-        const availablePeriods = await withTransaction(knex, async (trx: Knex.Transaction) => {
-            return await trx('client_billing_cycles as cbc')
-                .join('clients as c', function () {
-                    this.on('c.client_id', '=', 'cbc.client_id')
-                        .andOn('c.tenant', '=', 'cbc.tenant');
-                })
-                .leftJoin('invoices as i', function () {
-                    this.on('i.billing_cycle_id', '=', 'cbc.billing_cycle_id')
-                        .andOn('i.tenant', '=', 'cbc.tenant');
-                })
-                .where('cbc.tenant', tenant)
-                .whereNotNull('cbc.period_end_date')
-                .whereNull('i.invoice_id')
+        const result = await withTransaction(knex, async (trx: Knex.Transaction) => {
+            // Build base query
+            const buildBaseQuery = () => {
+                const query = trx('client_billing_cycles as cbc')
+                    .join('clients as c', function () {
+                        this.on('c.client_id', '=', 'cbc.client_id')
+                            .andOn('c.tenant', '=', 'cbc.tenant');
+                    })
+                    .leftJoin('invoices as i', function () {
+                        this.on('i.billing_cycle_id', '=', 'cbc.billing_cycle_id')
+                            .andOn('i.tenant', '=', 'cbc.tenant');
+                    })
+                    .where('cbc.tenant', tenant)
+                    .whereNotNull('cbc.period_end_date')
+                    .whereNull('i.invoice_id');
+
+                // Apply search filter
+                if (searchTerm.trim()) {
+                    const searchPattern = `%${searchTerm.trim().toLowerCase()}%`;
+                    query.whereRaw('LOWER(c.client_name) LIKE ?', [searchPattern]);
+                }
+
+                // Apply date range filter (filter by period_end_date range)
+                // Cast to DATE to ensure proper date-only comparison if column is timestamp
+                if (dateRange?.from) {
+                    query.whereRaw('DATE(cbc.period_end_date) >= ?', [dateRange.from]);
+                }
+                if (dateRange?.to) {
+                    query.whereRaw('DATE(cbc.period_end_date) <= ?', [dateRange.to]);
+                }
+
+                return query;
+            };
+
+            // Get total count
+            const countResult = await buildBaseQuery()
+                .count('cbc.billing_cycle_id as count')
+                .first();
+            const total = parseInt(String(countResult?.count || '0'), 10);
+
+            if (total === 0) {
+                return {
+                    periods: [],
+                    total: 0,
+                    page,
+                    pageSize,
+                    totalPages: 0
+                };
+            }
+
+            // Calculate pagination
+            const offset = (page - 1) * pageSize;
+            const totalPages = Math.ceil(total / pageSize);
+
+            // Fetch paginated data
+            const periods = await buildBaseQuery()
                 .select(
                     'cbc.client_id',
                     'c.client_name',
@@ -118,92 +187,54 @@ export async function getAvailableBillingPeriods(): Promise<(IClientContractLine
                     'cbc.period_end_date',
                     'cbc.effective_date',
                     'cbc.tenant'
-                );
-        });
+                )
+                .orderBy('cbc.period_end_date', 'desc')
+                .limit(pageSize)
+                .offset(offset);
 
-        console.log(`Found ${availablePeriods.length} available billing periods`);
-
-        // For each period, calculate the total unbilled amount
-        console.log('Calculating unbilled amounts for each period');
-        const periodsWithTotals = await Promise.all(availablePeriods.map(async (period): Promise<IClientContractLineCycle & {
-            client_name: string;
-            total_unbilled: number;
-            period_start_date: ISO8601String;
-            period_end_date: ISO8601String;
-            can_generate: boolean;
-            is_early: boolean;
-        }> => {
-            try {
-                console.log(`Processing period for client: ${period.client_name} (${period.client_id})`);
-                console.log(`Period dates: ${period.period_start_date} to ${period.period_end_date}`);
-
-                // Ensure we have valid dates before proceeding
+            // Process periods with flags
+            const currentPlainDate = toPlainDate(currentDate);
+            const periodsWithFlags: BillingPeriodWithMeta[] = periods.map((period) => {
                 if (!period.period_start_date || !period.period_end_date) {
-                    console.error(`Invalid dates for client ${period.client_name}: start=${period.period_start_date}, end=${period.period_end_date}`);
                     return {
                         ...period,
-                        total_unbilled: 0,
                         can_generate: false,
                         is_early: false
                     };
                 }
 
-                const billingEngine = new BillingEngine();
-                let total_unbilled = 0;
-
-                try {
-                    const billingResult = await billingEngine.calculateBilling(
-                        period.client_id,
-                        period.period_start_date,
-                        period.period_end_date,
-                        period.billing_cycle_id
-                    );
-                    total_unbilled = billingResult.charges.reduce((sum, charge) => sum + charge.total, 0);
-                } catch (_error) {
-                    console.log(`No billable charges for client ${period.client_name} (${period.client_id})`);
-                }
-
-                console.log(`Total unbilled amount for ${period.client_name}: ${total_unbilled}`);
-
-                // Allow generation of invoices even if period hasn't ended
                 const can_generate = true;
+                let is_early = false;
 
-                // Convert dates using our utility functions with error handling
-                let periodEndDate;
                 try {
-                    periodEndDate = toPlainDate(period.period_end_date);
+                    const periodEndDate = toPlainDate(period.period_end_date);
+                    is_early = Temporal.PlainDate.compare(periodEndDate, currentPlainDate) > 0;
                 } catch (error) {
-                    console.error(`Error converting period_end_date for client ${period.client_name}:`, error);
                     return {
                         ...period,
-                        total_unbilled: 0,
                         can_generate: false,
                         is_early: false
                     };
                 }
-
-                const currentPlainDate = toPlainDate(currentDate);
-                const is_early = Temporal.PlainDate.compare(periodEndDate, currentPlainDate) > 0;
 
                 return {
                     ...period,
-                    total_unbilled,
                     can_generate,
                     is_early
                 };
-            } catch (error) {
-                console.error(`Error processing period for client ${period.client_name}:`, error);
-                return {
-                    ...period,
-                    total_unbilled: 0,
-                    can_generate: false,
-                    is_early: false
-                };
-            }
-        }));
+            });
 
-        console.log(`Successfully processed ${periodsWithTotals.length} billing periods`);
-        return periodsWithTotals;
+            return {
+                periods: periodsWithFlags,
+                total,
+                page,
+                pageSize,
+                totalPages
+            };
+        });
+
+        console.log(`Fetched ${result.periods.length} periods (page ${page}/${result.totalPages}, total: ${result.total})`);
+        return result;
 
     } catch (_error) {
         console.error('Error in getAvailableBillingPeriods:', _error);

@@ -1,24 +1,21 @@
 'use client'
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { toPlainDate } from '../../lib/utils/dateTimeUtils';
 import { Button } from '../ui/Button';
 import { Badge } from '../ui/Badge';
 import { Input } from '../ui/Input';
 import { DataTable } from '../ui/DataTable';
 import { Checkbox } from '../ui/Checkbox';
-import { Tooltip } from '../ui/Tooltip'; // Use the refactored custom Tooltip
-// Removed direct Radix imports:
-// TooltipTrigger,
-import { Info, AlertTriangle, X, MoreVertical, Eye } from 'lucide-react'; // Changed to MoreVertical and added Eye icon
+import { Tooltip } from '../ui/Tooltip';
+import { DateRangePicker, DateRange } from '../ui/DateRangePicker';
+import { Search, Info, AlertTriangle, X, MoreVertical, Eye } from 'lucide-react';
 import { IClientContractLineCycle } from '../../interfaces/billing.interfaces';
-// Import PreviewInvoiceResponse (which uses the correct VM internally)
 import { PreviewInvoiceResponse } from '../../interfaces/invoice.interfaces';
-// Import the InvoiceViewModel directly from the renderer types
 import { generateInvoice, getPurchaseOrderOverageForBillingCycle, previewInvoice } from '../../lib/actions/invoiceGeneration';
-// Updated import for billing cycle actions
 import { WasmInvoiceViewModel } from 'server/src/lib/invoice-renderer/types';
-import { getInvoicedBillingCycles, removeBillingCycle, hardDeleteBillingCycle } from '../../lib/actions/billingCycleActions';
+import { getInvoicedBillingCyclesPaginated, removeBillingCycle, hardDeleteBillingCycle } from '../../lib/actions/billingCycleActions';
+import { getAvailableBillingPeriods, BillingPeriodDateRange } from '../../lib/actions/billingAndTax';
 import { ISO8601String } from '../../types/types.d';
 import { Dialog, DialogContent, DialogFooter, DialogDescription } from '../ui/Dialog';
 import { formatCurrency } from '../../lib/utils/formatters';
@@ -34,14 +31,10 @@ import {
 // Use ConfirmationDialog instead of AlertDialog
 import { ConfirmationDialog } from '../ui/ConfirmationDialog'; // Corrected import
 import LoadingIndicator from '../ui/LoadingIndicator';
+
 interface AutomaticInvoicesProps {
-  periods: (IClientContractLineCycle & {
-    client_name: string;
-    can_generate: boolean;
-    period_start_date: ISO8601String;
-    period_end_date: ISO8601String;
-  })[];
   onGenerateSuccess: () => void;
+  refreshTrigger?: number;
 }
 
 interface Period extends IClientContractLineCycle {
@@ -54,17 +47,53 @@ interface Period extends IClientContractLineCycle {
   contract_name?: string; // Added for Phase 4
 }
 
-const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ periods, onGenerateSuccess }) => {
+// Convert DateRange to API format using YYYY-MM-DD to avoid timezone drift
+const buildDateRangeFilter = (range: DateRange): BillingPeriodDateRange | undefined => {
+  if (!range.from && !range.to) {
+    return undefined;
+  }
+
+  // Use YYYY-MM-DD format for date-only comparisons (avoids timezone issues)
+  const formatDate = (date: Date): string => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  const from = range.from ? formatDate(range.from) : undefined;
+  const to = range.to ? formatDate(range.to) : undefined;
+
+  return { from, to };
+};
+
+const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess, refreshTrigger = 0 }) => {
   // Drawer removed: client details quick view no longer used here
   const [selectedPeriods, setSelectedPeriods] = useState<Set<string>>(new Set());
   const [isGenerating, setIsGenerating] = useState(false);
   const [isReversing, setIsReversing] = useState(false);
   const [errors, setErrors] = useState<{[key: string]: string}>({});
   const [clientFilter, setClientFilter] = useState<string>('');
+  const [debouncedClientFilter, setDebouncedClientFilter] = useState<string>('');
+
+  // Date range filter state (pending = user selection, applied = active filter)
+  const [pendingDateRange, setPendingDateRange] = useState<DateRange>(() => ({
+    from: undefined,
+    to: undefined,
+  }));
+  const [appliedDateRange, setAppliedDateRange] = useState<DateRange>(() => ({
+    from: undefined,
+    to: undefined,
+  }));
   const [invoicedPeriods, setInvoicedPeriods] = useState<Period[]>([]);
-  const [currentPage, setCurrentPage] = useState(1);
+  const [invoicedCurrentPage, setInvoicedCurrentPage] = useState(1);
+  const [invoicedPageSize, setInvoicedPageSize] = useState(10);
+  const [totalInvoicedPeriods, setTotalInvoicedPeriods] = useState(0);
+  const [invoicedSearchTerm, setInvoicedSearchTerm] = useState('');
+  const [debouncedInvoicedSearchTerm, setDebouncedInvoicedSearchTerm] = useState('');
   const [currentReadyPage, setCurrentReadyPage] = useState(1);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isInvoicedLoading, setIsInvoicedLoading] = useState(false);
+  const [isPeriodsLoading, setIsPeriodsLoading] = useState(false);
   const [showReverseDialog, setShowReverseDialog] = useState(false);
   const [selectedCycleToReverse, setSelectedCycleToReverse] = useState<{
     id: string;
@@ -107,33 +136,125 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ periods, onGenera
     client: string;
     period: string;
   } | null>(null);
-  const itemsPerPage = 10;
 
-  const filteredPeriods = periods.filter(period =>
-    period.client_name.toLowerCase().includes(clientFilter.toLowerCase())
-  );
+  // Server-side pagination state for "Ready to Invoice"
+  const [periods, setPeriods] = useState<Period[]>([]);
+  const [totalPeriods, setTotalPeriods] = useState(0);
+  const [pageSize, setPageSize] = useState(10);
 
-  const filteredInvoicedPeriods = invoicedPeriods.filter(period =>
-    period.client_name.toLowerCase().includes(clientFilter.toLowerCase())
-  );
+  const initialLoadDone = useRef(false);
 
+  // Debounce client filter for server-side search
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedClientFilter(clientFilter);
+      if (initialLoadDone.current) {
+        setCurrentReadyPage(1);
+        setSelectedPeriods(new Set()); // Clear selection when filter changes
+      }
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [clientFilter]);
+
+  // Handle page size change - reset to page 1 and clear selection
+  const handlePageSizeChange = (newPageSize: number) => {
+    setPageSize(newPageSize);
+    setCurrentReadyPage(1);
+    setSelectedPeriods(new Set());
+  };
+
+  // Handle page change - clear selection (server-side pagination means selected items may not be visible)
+  const handleReadyPageChange = (newPage: number) => {
+    setCurrentReadyPage(newPage);
+    setSelectedPeriods(new Set());
+  };
+
+  // Handle date range search - apply filter, reset page, and clear selection
+  const handleDateRangeSearch = () => {
+    setAppliedDateRange(pendingDateRange);
+    setCurrentReadyPage(1);
+    setSelectedPeriods(new Set());
+  };
+
+  // Load available billing periods with server-side pagination
+  useEffect(() => {
+    const loadPeriods = async () => {
+      setIsPeriodsLoading(true);
+      try {
+        const dateRangeFilter = buildDateRangeFilter(appliedDateRange);
+        const result = await getAvailableBillingPeriods({
+          page: currentReadyPage,
+          pageSize: pageSize,
+          searchTerm: debouncedClientFilter,
+          dateRange: dateRangeFilter
+        });
+        setPeriods(result.periods as Period[]);
+        setTotalPeriods(result.total);
+        initialLoadDone.current = true;
+
+        // Clamp page if current page is beyond available pages (e.g., after delete/filter)
+        const maxPage = Math.max(1, Math.ceil(result.total / pageSize));
+        if (currentReadyPage > maxPage) {
+          setCurrentReadyPage(maxPage);
+          setSelectedPeriods(new Set()); // Clear selection since visible rows changed
+        }
+      } catch (error) {
+        console.error('Error loading billing periods:', error);
+      }
+      setIsPeriodsLoading(false);
+    };
+    loadPeriods();
+  }, [currentReadyPage, pageSize, debouncedClientFilter, appliedDateRange, refreshTrigger]);
+
+  // For server-side pagination, filteredPeriods is just periods
+  const filteredPeriods = periods;
+
+  // Debounce invoiced search term
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedInvoicedSearchTerm(invoicedSearchTerm);
+      if (initialLoadDone.current) {
+        setInvoicedCurrentPage(1);
+      }
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [invoicedSearchTerm]);
+
+  // Handle invoiced page size change
+  const handleInvoicedPageSizeChange = (newPageSize: number) => {
+    setInvoicedPageSize(newPageSize);
+    setInvoicedCurrentPage(1);
+  };
+
+  // Load invoiced billing periods with server-side pagination
   useEffect(() => {
     const loadInvoicedPeriods = async () => {
-      setIsLoading(true);
+      setIsInvoicedLoading(true);
       try {
-        const cycles = await getInvoicedBillingCycles();
-        setInvoicedPeriods(cycles.map((cycle):Period => ({
+        const result = await getInvoicedBillingCyclesPaginated({
+          page: invoicedCurrentPage,
+          pageSize: invoicedPageSize,
+          searchTerm: debouncedInvoicedSearchTerm
+        });
+        setInvoicedPeriods(result.cycles.map((cycle): Period => ({
           ...cycle,
           can_generate: false // Already invoiced periods can't be generated again
         })));
+        setTotalInvoicedPeriods(result.total);
+
+        // Clamp page if current page is beyond available pages
+        const maxPage = Math.max(1, Math.ceil(result.total / invoicedPageSize));
+        if (invoicedCurrentPage > maxPage) {
+          setInvoicedCurrentPage(maxPage);
+        }
       } catch (error) {
         console.error('Error loading invoiced periods:', error);
       }
-      setIsLoading(false);
+      setIsInvoicedLoading(false);
     };
 
     loadInvoicedPeriods();
-  }, []);
+  }, [invoicedCurrentPage, invoicedPageSize, debouncedInvoicedSearchTerm, refreshTrigger]);
 
   // Debug effect to log preview data
   useEffect(() => {
@@ -235,6 +356,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ periods, onGenera
         return;
       }
 
+      // Generate invoices sequentially (they're already sequential, but we could batch if needed)
       const newErrors: { [key: string]: string } = {};
       for (const billingCycleId of billingCycleIds) {
         try {
@@ -252,16 +374,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ periods, onGenera
       }
 
       setSelectedPeriods(new Set());
-      const cycles = await getInvoicedBillingCycles();
-      setInvoicedPeriods(
-        cycles.map(
-          (cycle): Period => ({
-            ...cycle,
-            can_generate: false,
-            is_early: false,
-          })
-        )
-      );
+      // Let onGenerateSuccess trigger refresh via refreshTrigger - no need to manually reload
       onGenerateSuccess();
     } finally {
       setIsGenerating(false);
@@ -283,7 +396,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ periods, onGenera
         decision === 'skip' ? billingCycleIds.filter((id) => !overageIds.has(id)) : billingCycleIds;
 
       if (decision === 'skip') {
-        for (const [billingCycleId, info] of Object.entries(overageByBillingCycleId)) {
+        for (const [, info] of Object.entries(overageByBillingCycleId)) {
           newErrors[info.clientName] =
             `Skipped due to PO overage (${info.poNumber ? `PO ${info.poNumber}` : 'PO'}): ` +
             `over by ${formatCurrency(info.overageCents)}.`;
@@ -306,16 +419,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ periods, onGenera
       }
 
       setSelectedPeriods(new Set());
-      const cycles = await getInvoicedBillingCycles();
-      setInvoicedPeriods(
-        cycles.map(
-          (cycle): Period => ({
-            ...cycle,
-            can_generate: false,
-            is_early: false,
-          })
-        )
-      );
+      // Let onGenerateSuccess trigger refresh via refreshTrigger - no need to manually reload
       onGenerateSuccess();
     } finally {
       setIsGenerating(false);
@@ -328,16 +432,10 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ periods, onGenera
     setIsReversing(true);
     try {
       await removeBillingCycle(selectedCycleToReverse.id);
-      // Refresh both lists after successful reversal
-      const cycles = await getInvoicedBillingCycles();
-      setInvoicedPeriods(cycles.map((cycle):Period => ({
-        ...cycle,
-        can_generate: false, // Already invoiced periods can't be generated again
-        is_early: false // Already invoiced periods can't be early
-      })));
       setShowReverseDialog(false);
       setSelectedCycleToReverse(null);
-      onGenerateSuccess(); // This will refresh the available periods list
+      // Let onGenerateSuccess trigger refresh via refreshTrigger
+      onGenerateSuccess();
     } catch (error) {
       setErrors({
         [selectedCycleToReverse.client]: error instanceof Error ? error.message : 'Failed to reverse billing cycle'
@@ -353,16 +451,9 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ periods, onGenera
     setErrors({}); // Clear previous errors
     try {
       await hardDeleteBillingCycle(selectedCycleToDelete.id);
-      // Refresh invoiced periods list after successful deletion
-      const cycles = await getInvoicedBillingCycles();
-      setInvoicedPeriods(cycles.map((cycle):Period => ({
-        ...cycle,
-        can_generate: false,
-        is_early: false
-      })));
       setShowDeleteDialog(false);
       setSelectedCycleToDelete(null);
-      // Refresh the 'Ready to Invoice' list by calling the prop function
+      // Let onGenerateSuccess trigger refresh via refreshTrigger
       onGenerateSuccess();
     } catch (error) {
       setErrors({
@@ -432,22 +523,25 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ periods, onGenera
 
   // Removed company drawer handler (migrated to client-only flow)
 
+  // Show combined loading state only during initial load (before any data has loaded)
+  const isInitialLoading = !initialLoadDone.current && (isPeriodsLoading || isInvoicedLoading);
+
   return (
   // Removed TooltipProvider wrapper
       <>
+      {isInitialLoading ? (
+        <LoadingIndicator
+          layout="stacked"
+          className="py-10 text-gray-600"
+          spinnerProps={{ size: 'md' }}
+          text="Loading billing data"
+        />
+      ) : (
       <div className="space-y-8">
         <div>
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-lg font-semibold">Ready to Invoice</h2>
-            <div className="flex gap-4">
-              <Input
-                id="filter-clients-input"
-                type="text"
-                placeholder="Filter clients..."
-                containerClassName=""
-                value={clientFilter}
-                onChange={(e) => setClientFilter(e.target.value)}
-              />
+            <div className="flex gap-2 items-end">
               <Button
                 id='preview-selected-button'
                 variant="outline"
@@ -472,6 +566,32 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ periods, onGenera
             </div>
           </div>
 
+          {/* Filters row */}
+          <div className="flex items-end gap-4 mb-4">
+            <DateRangePicker
+              label="Period end date range"
+              value={pendingDateRange}
+              onChange={(range) => setPendingDateRange(range)}
+            />
+            <Button
+              id="apply-billing-period-date-filter"
+              variant="outline"
+              onClick={handleDateRangeSearch}
+            >
+              <Search className="h-4 w-4 mr-2" />
+              Search
+            </Button>
+            <Input
+              id="filter-clients-input"
+              type="text"
+              placeholder="Filter clients..."
+              containerClassName=""
+              value={clientFilter}
+              onChange={(e) => setClientFilter(e.target.value)}
+              className="w-64"
+            />
+          </div>
+
           {Object.keys(errors).length > 0 && (
             <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4">
               <button
@@ -494,6 +614,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ periods, onGenera
 
           <DataTable
             id="automatic-invoices-table"
+            key={`${currentReadyPage}-${pageSize}`}
             data={filteredPeriods}
             // Add onRowClick prop - implementation depends on DataTable component
             // Assuming it takes a function like this:
@@ -609,90 +730,88 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ periods, onGenera
             ]}
             pagination={true}
             currentPage={currentReadyPage}
-            onPageChange={setCurrentReadyPage}
-            pageSize={itemsPerPage}
-            totalItems={filteredPeriods.length}
+            onPageChange={handleReadyPageChange}
+            pageSize={pageSize}
+            onItemsPerPageChange={handlePageSizeChange}
+            totalItems={totalPeriods}
             // Fixed rowClassName prop - removed cursor-pointer since row click is disabled
             rowClassName={() => "hover:bg-muted/50"}
-            initialSorting={[{ id: 'period_end_date', desc: true }]}
           />
         </div>
 
         <div>
-          <h2 className="text-lg font-semibold mb-4">Already Invoiced</h2>
-          {isLoading ? (
-            <LoadingIndicator
-              layout="stacked"
-              className="py-10 text-gray-600"
-              spinnerProps={{ size: 'md' }}
-              text="Loading generated invoices"
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-lg font-semibold">Already Invoiced</h2>
+            <Input
+              id="filter-invoiced-clients-input"
+              type="text"
+              placeholder="Filter clients..."
+              value={invoicedSearchTerm}
+              onChange={(e) => setInvoicedSearchTerm(e.target.value)}
+              className="w-64"
             />
-          ) : (
-            <>
-              <DataTable
-                id="already-invoiced-table"
-                data={filteredInvoicedPeriods}
-                columns={[
-                  { title: 'Client', dataIndex: 'client_name' },
-                  {
-                    title: 'Billing Cycle',
-                    dataIndex: 'billing_cycle'
-                  },
-                  {
-                    title: 'Period Start',
-                    dataIndex: 'period_start_date',
-                    render: (date: ISO8601String) => toPlainDate(date).toLocaleString()
-                  },
-                  {
-                    title: 'Period End',
-                    dataIndex: 'period_end_date',
-                    render: (date: ISO8601String) => toPlainDate(date).toLocaleString()
-                  },
-                  {
-                    title: 'Actions',
-                    dataIndex: 'billing_cycle_id',
-                    render: (_: unknown, record: Period) => (
-                      // Centered the content horizontally
-                      <div className="flex justify-center">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button id={`actions-trigger-invoiced-${record.billing_cycle_id}`} variant="ghost" className="h-8 w-8 p-0">
-                              <span className="sr-only">Open menu</span>
-                              <MoreVertical className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem
-                              id={`reverse-billing-cycle-${record.billing_cycle_id}`}
-                              onClick={() => {
-                                setSelectedCycleToReverse({
-                                  id: record.billing_cycle_id || '',
-                                  client: record.client_name,
-                                  period: `${toPlainDate(record.period_start_date).toLocaleString()} - ${toPlainDate(record.period_end_date).toLocaleString()}`
-                                });
-                                setShowReverseDialog(true);
-                              }}
-                            >
-                              Reverse Invoice
-                            </DropdownMenuItem>
-                            {/* Delete option removed from this table */}
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </div>
-                    )
-                  }
-                ]}
-                pagination={true}
-                currentPage={currentPage}
-                onPageChange={setCurrentPage}
-                pageSize={itemsPerPage}
-                totalItems={filteredInvoicedPeriods.length}
-                initialSorting={[{ id: 'period_end_date', desc: true }]}
-              />
-            </>
-          )}
+          </div>
+          <DataTable
+            id="already-invoiced-table"
+            data={invoicedPeriods}
+            columns={[
+              { title: 'Client', dataIndex: 'client_name' },
+              {
+                title: 'Billing Cycle',
+                dataIndex: 'billing_cycle'
+              },
+              {
+                title: 'Period Start',
+                dataIndex: 'period_start_date',
+                render: (date: ISO8601String) => toPlainDate(date).toLocaleString()
+              },
+              {
+                title: 'Period End',
+                dataIndex: 'period_end_date',
+                render: (date: ISO8601String) => toPlainDate(date).toLocaleString()
+              },
+              {
+                title: 'Actions',
+                dataIndex: 'billing_cycle_id',
+                render: (_: unknown, record: Period) => (
+                  <div className="flex justify-center">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button id={`actions-trigger-invoiced-${record.billing_cycle_id}`} variant="ghost" className="h-8 w-8 p-0">
+                          <span className="sr-only">Open menu</span>
+                          <MoreVertical className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem
+                          id={`reverse-billing-cycle-${record.billing_cycle_id}`}
+                          onClick={() => {
+                            setSelectedCycleToReverse({
+                              id: record.billing_cycle_id || '',
+                              client: record.client_name,
+                              period: `${toPlainDate(record.period_start_date).toLocaleString()} - ${toPlainDate(record.period_end_date).toLocaleString()}`
+                            });
+                            setShowReverseDialog(true);
+                          }}
+                        >
+                          Reverse Invoice
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+                )
+              }
+            ]}
+            pagination={true}
+            currentPage={invoicedCurrentPage}
+            onPageChange={setInvoicedCurrentPage}
+            pageSize={invoicedPageSize}
+            onItemsPerPageChange={handleInvoicedPageSizeChange}
+            totalItems={totalInvoicedPeriods}
+          />
         </div>
       </div>
+      )}
 
       <Dialog
         isOpen={showReverseDialog}

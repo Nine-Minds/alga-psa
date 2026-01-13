@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
 import { Card } from '../../ui/Card';
@@ -18,7 +18,7 @@ import {
 } from '../../ui/DropdownMenu';
 import { ColumnDefinition } from '../../../interfaces/dataTable.interfaces';
 import { InvoiceViewModel as DbInvoiceViewModel, IInvoiceTemplate } from '../../../interfaces/invoice.interfaces';
-import { fetchAllInvoices } from '../../../lib/actions/invoiceQueries';
+import { fetchInvoicesPaginated } from '../../../lib/actions/invoiceQueries';
 import { getInvoiceTemplates } from '../../../lib/actions/invoiceTemplates';
 import { unfinalizeInvoice } from '../../../lib/actions/invoiceModification';
 import { scheduleInvoiceZipAction } from '../../../lib/actions/job-actions/scheduleInvoiceZipAction';
@@ -41,57 +41,94 @@ const FinalizedTab: React.FC<FinalizedTabProps> = ({
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  const [allInvoices, setAllInvoices] = useState<DbInvoiceViewModel[]>([]);
+  const [invoices, setInvoices] = useState<DbInvoiceViewModel[]>([]);
   const [templates, setTemplates] = useState<IInvoiceTemplate[]>([]);
   const [selectedInvoices, setSelectedInvoices] = useState<Set<string>>(new Set());
   const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [tableKey, setTableKey] = useState(0);
 
-  // Pagination state
+  // Pagination state - server-side
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
+  const [totalInvoices, setTotalInvoices] = useState(0);
 
   // Email dialog state
   const [emailDialogOpen, setEmailDialogOpen] = useState(false);
   const [emailDialogInvoiceIds, setEmailDialogInvoiceIds] = useState<string[]>([]);
 
+  // Ref to track if initial load has happened
+  const initialLoadDone = useRef(false);
+
   const selectedInvoiceId = searchParams?.get('invoiceId') ?? null;
   const selectedTemplateId = searchParams?.get('templateId') ?? null;
 
-  // Handle page size change - reset to page 1
+  // Debounce search term
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm);
+      // Reset to page 1 and clear selection when search changes
+      if (initialLoadDone.current) {
+        setCurrentPage(1);
+        setSelectedInvoices(new Set());
+      }
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+
+  // Handle page size change - reset to page 1 and clear selection
   const handlePageSizeChange = (newPageSize: number) => {
     setPageSize(newPageSize);
     setCurrentPage(1);
+    setSelectedInvoices(new Set());
   };
 
-  // Filter for finalized only. Some environments mark finalization via status, not finalized_at.
-  const invoices = allInvoices.filter(inv => inv.finalized_at || inv.status !== 'draft');
+  // Handle page change - clear selection (server-side pagination means selected items may not be visible)
+  const handlePageChange = (newPage: number) => {
+    setCurrentPage(newPage);
+    setSelectedInvoices(new Set());
+  };
 
-  // Apply search filter
-  const filteredInvoices = invoices.filter(inv =>
-    inv.invoice_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    inv.client?.name?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  // For server-side pagination, filteredInvoices is just invoices (already filtered server-side)
+  const filteredInvoices = invoices;
 
   const selectedInvoice = selectedInvoiceId ? invoices.find(inv => inv.invoice_id === selectedInvoiceId) || null : null;
 
+  // Load data when pagination, search, or refresh changes
   useEffect(() => {
     loadData();
-  }, [refreshTrigger]);
+  }, [currentPage, pageSize, debouncedSearchTerm, refreshTrigger]);
 
   const loadData = async () => {
     setIsLoading(true);
     setError(null);
     try {
-      const [fetchedInvoices, fetchedTemplates] = await Promise.all([
-        fetchAllInvoices(),
+      const [paginatedResult, fetchedTemplates] = await Promise.all([
+        fetchInvoicesPaginated({
+          page: currentPage,
+          pageSize: pageSize,
+          searchTerm: debouncedSearchTerm,
+          status: 'finalized',
+          sortBy: 'finalized_at',
+          sortOrder: 'desc'
+        }),
         getInvoiceTemplates()
       ]);
 
-      setAllInvoices(fetchedInvoices);
+      setInvoices(paginatedResult.invoices);
+      setTotalInvoices(paginatedResult.total);
       setTemplates(fetchedTemplates);
+      initialLoadDone.current = true;
+
+      // Clamp page if current page is beyond available pages (e.g., after delete/filter)
+      const maxPage = Math.max(1, Math.ceil(paginatedResult.total / pageSize));
+      if (currentPage > maxPage) {
+        setCurrentPage(maxPage);
+        setSelectedInvoices(new Set()); // Clear selection since visible rows changed
+      }
     } catch (error) {
       console.error('Error fetching data:', error);
       setError('Failed to load invoices. Please try again.');
@@ -421,9 +458,10 @@ const FinalizedTab: React.FC<FinalizedTabProps> = ({
                 columns={columns}
                 pagination={true}
                 currentPage={currentPage}
-                onPageChange={setCurrentPage}
+                onPageChange={handlePageChange}
                 pageSize={pageSize}
                 onItemsPerPageChange={handlePageSizeChange}
+                totalItems={totalInvoices}
                 onRowClick={handleInvoiceSelect}
                 rowClassName={(record) =>
                   selectedInvoiceId === record.invoice_id ? "bg-blue-50" : "cursor-pointer hover:bg-gray-50"
