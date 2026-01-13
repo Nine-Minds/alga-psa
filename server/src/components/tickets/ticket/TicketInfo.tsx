@@ -967,7 +967,7 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
             {/* Read-only additional agents display (when handlers not provided but agents exist) */}
             {additionalAgents.length > 0 && !onAddAgent && !onRemoveAgent && (
               <div className="flex flex-wrap gap-2 mt-2">
-                {additionalAgents.map((agent) => {
+                {additionalAgents.map((agent, index) => {
                   const agentUser = (availableAgents.length > 0 ? availableAgents : users).find(
                     u => u.user_id === agent.additional_user_id
                   );
@@ -976,6 +976,7 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
                     : 'Unknown Agent';
                   return (
                     <div
+                      id={`${id}-additional-agent-badge-${index}`}
                       key={agent.assignment_id || agent.additional_user_id}
                       className="flex items-center gap-2 px-3 py-1.5 bg-gray-100 rounded-full text-sm cursor-pointer hover:bg-gray-200"
                       onClick={() => onAgentClick?.(agent.additional_user_id!)}

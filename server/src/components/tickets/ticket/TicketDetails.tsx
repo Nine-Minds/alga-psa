@@ -721,8 +721,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
             }
             if (!cachedUserRef.current) {
                 toast.error('No user session found');
-                setIsProcessingAgents(false);
-                return;
+                return; // finally will reset isProcessingAgents
             }
             const result = await addTicketResource(ticket.ticket_id!, userId, 'support', cachedUserRef.current);
 
@@ -765,8 +764,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
             }
             if (!cachedUserRef.current) {
                 toast.error('No user session found');
-                setIsProcessingAgents(false);
-                return;
+                return; // finally will reset isProcessingAgents
             }
             await removeTicketResource(assignmentId, cachedUserRef.current);
             setAdditionalAgents(prev => prev.filter(agent => agent.assignment_id !== assignmentId));
@@ -794,8 +792,14 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
             );
             if (additionalAgentEntry && additionalAgentEntry.assignment_id) {
                 // Await removal to avoid race condition with server constraints
-                await handleRemoveAgent(additionalAgentEntry.assignment_id);
-                toast('Moved to primary agent');
+                try {
+                    await handleRemoveAgent(additionalAgentEntry.assignment_id);
+                    toast('Moved to primary agent');
+                } catch (error) {
+                    // Removal failed - don't show success toast, error already shown by handleRemoveAgent
+                    console.error('Failed to remove agent before promoting to primary:', error);
+                    return; // Don't proceed with assignment change if removal failed
+                }
             }
         }
 
