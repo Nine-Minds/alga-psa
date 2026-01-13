@@ -299,7 +299,7 @@ export class BillingEngine {
             adjustments: [],
             finalAmount: 0,
             currency_code: billingCurrency,
-            error: `No active contract lines found for client ${clientId} in the given period`
+            error: 'No active contract lines found for this client in the selected billing period.'
           };
         }
 

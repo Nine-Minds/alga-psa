@@ -176,6 +176,17 @@ export async function getInstallConfig(params: InstallLookupParams): Promise<Ins
   const db = await getDb();
   const installRow = await loadInstallRow(db, params);
   if (!installRow) return null;
+  if (!installRow.install_id || !String(installRow.install_id).trim()) {
+    // Should be impossible unless DB row is corrupt; log loudly so we can track it down.
+    console.error('[installConfig] invalid install_id on install row', {
+      tenantId: params.tenantId,
+      extensionId: params.extensionId,
+      install_id: installRow.install_id,
+      registry_id: installRow.registry_id,
+      version_id: installRow.version_id,
+    });
+    return null;
+  }
   return hydrateInstallConfig(db, installRow);
 }
 
@@ -183,6 +194,16 @@ export async function getInstallConfigByInstallId(installId: string): Promise<In
   const db = await getDb();
   const installRow = await loadInstallRowById(db, installId);
   if (!installRow) return null;
+  if (!installRow.install_id || !String(installRow.install_id).trim()) {
+    console.error('[installConfig] invalid install_id on install row (lookup by id)', {
+      installId,
+      install_id: installRow.install_id,
+      tenant_id: installRow.tenant_id,
+      registry_id: installRow.registry_id,
+      version_id: installRow.version_id,
+    });
+    return null;
+  }
   return hydrateInstallConfig(db, installRow);
 }
 

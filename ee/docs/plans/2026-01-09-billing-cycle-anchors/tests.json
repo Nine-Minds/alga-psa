@@ -136,21 +136,45 @@
   },
   {
     "id": "T030",
-    "description": "E2E: billing admin sets monthly anchor day=10 for a client and sees the correct upcoming periods preview in UI",
+    "description": "Unit/UI: Client → Billing schedule editor renders upcoming periods preview and saving schedule calls the unified update action",
     "implemented": true,
     "featureIds": [
       "F020",
-      "F021",
       "F060"
     ]
   },
   {
     "id": "T031",
-    "description": "E2E: after setting monthly anchor day=10, creating the next billing cycle produces a period starting on the 10th",
+    "description": "UI: Client → Billing “Create Next Cycle” triggers createNextBillingCycle for that client",
     "implemented": true,
     "featureIds": [
-      "F031",
-      "F040"
+      "F027"
+    ]
+  },
+  {
+    "id": "T033",
+    "description": "UI: Billing → Billing Cycles is summary-only (no schedule editing controls) and links to Client → Billing for schedule changes",
+    "implemented": true,
+    "featureIds": [
+      "F026"
+    ]
+  },
+  {
+    "id": "T034",
+    "description": "Unit: updateClientBillingSchedule applies cutover after last invoiced cycle and deactivates future non-invoiced cycles; if no invoiced cycles exist, deactivates all non-invoiced cycles",
+    "implemented": true,
+    "featureIds": [
+      "F044"
+    ]
+  },
+  {
+    "id": "T035",
+    "description": "Unit: updateClientBillingSchedule atomically updates billing cycle + anchor and uses cutover semantics identical to anchor-only changes",
+    "implemented": true,
+    "featureIds": [
+      "F045",
+      "F042",
+      "F044"
     ]
   },
   {

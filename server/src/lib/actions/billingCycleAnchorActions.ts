@@ -177,6 +177,39 @@ export type BillingCyclePeriodPreview = {
   periodEndDate: ISO8601String;
 };
 
+export async function previewBillingPeriodsForSchedule(
+  billingCycle: BillingCycleType,
+  anchor: BillingCycleAnchorSettingsInput,
+  options: { count?: number; referenceDate?: ISO8601String } = {}
+): Promise<BillingCyclePeriodPreview[]> {
+  const session = await getSession();
+  if (!session?.user?.id) {
+    throw new Error('Unauthorized');
+  }
+
+  validateAnchorSettingsForCycle(billingCycle, anchor);
+  const normalized = normalizeAnchorSettingsForCycle(billingCycle, anchor);
+
+  const count = Math.max(1, Math.min(options.count ?? 3, 12));
+  const referenceDate = ensureUtcMidnightIsoDate(
+    options.referenceDate ?? (new Date().toISOString().split('T')[0] + 'T00:00:00Z')
+  );
+
+  const firstPeriod = getBillingPeriodForDate(referenceDate, billingCycle, normalized);
+  const periods: BillingCyclePeriodPreview[] = [
+    { periodStartDate: firstPeriod.periodStartDate, periodEndDate: firstPeriod.periodEndDate }
+  ];
+
+  for (let i = 1; i < count; i++) {
+    const previous = periods[periods.length - 1];
+    const nextEnd = getNextBillingBoundaryAfter(previous.periodStartDate, billingCycle, normalized);
+    const nextNext = getNextBillingBoundaryAfter(nextEnd, billingCycle, normalized);
+    periods.push({ periodStartDate: nextEnd, periodEndDate: nextNext });
+  }
+
+  return periods;
+}
+
 export async function previewClientBillingPeriods(
   clientId: string,
   options: { count?: number; referenceDate?: ISO8601String } = {}
@@ -277,3 +310,5 @@ async function ensureClientBillingSettingsRow(
     updated_at: trx.fn.now()
   });
 }
+
+export { ensureClientBillingSettingsRow };

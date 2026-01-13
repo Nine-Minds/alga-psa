@@ -23,10 +23,20 @@ const secretsDbPassword = (
   'postpass123'
 );
 
-const secretsAdminPassword = (
+function isLikelySecretFilePath(value: string | undefined): boolean {
+  if (!value) return false;
+  const trimmed = value.trim();
+  if (trimmed.length === 0) return false;
+  return trimmed.startsWith('/') || trimmed.includes('/run/secrets/');
+}
+
+const envAdminPassword =
   process.env.PLAYWRIGHT_DB_ADMIN_PASSWORD ??
-  process.env.DB_PASSWORD_ADMIN ??
-  process.env.DB_PASSWORD ??
+  (isLikelySecretFilePath(process.env.DB_PASSWORD_ADMIN) ? undefined : process.env.DB_PASSWORD_ADMIN) ??
+  (isLikelySecretFilePath(process.env.DB_PASSWORD) ? undefined : process.env.DB_PASSWORD);
+
+const secretsAdminPassword = (
+  envAdminPassword ??
   'postpass123'
 );
 

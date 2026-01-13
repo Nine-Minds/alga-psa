@@ -3,6 +3,7 @@ import '../../../../../test-utils/nextApiMock';
 import { createClientContractLineCycles } from 'server/src/lib/billing/createBillingCycles';
 import { createNextBillingCycle } from 'server/src/lib/actions/billingCycleActions';
 import { updateClientBillingCycleAnchor } from 'server/src/lib/actions/billingCycleAnchorActions';
+import { updateClientBillingSchedule } from 'server/src/lib/actions/billingScheduleActions';
 import { TestContext } from 'server/test-utils/testContext';
 import { Temporal } from '@js-temporal/polyfill';
 import { TextEncoder as NodeTextEncoder } from 'util';
@@ -435,5 +436,153 @@ describe('Client Billing Cycle Anchors', () => {
     // Sanity-check: the transition period is shorter than a canonical month and ends on the anchor boundary.
     const transitionDays = Temporal.PlainDate.from('2026-01-01').until(Temporal.PlainDate.from('2026-01-10'), { largestUnit: 'days' }).days;
     expect(transitionDays).toBe(9);
+  });
+
+  it('changing billing cycle type applies after last invoiced cycle and creates a transition period under the new schedule', async () => {
+    const { db, clientId, tenantId } = context;
+
+    await db('clients')
+      .where({ tenant: tenantId, client_id: clientId })
+      .update({ billing_cycle: 'monthly' });
+
+    await db('client_billing_settings')
+      .insert({
+        tenant: tenantId,
+        client_id: clientId,
+        zero_dollar_invoice_handling: 'normal',
+        suppress_zero_dollar_invoices: false,
+        enable_credit_expiration: true,
+        credit_expiration_days: 365,
+        credit_expiration_notification_days: [30, 7, 1],
+        billing_cycle_anchor_day_of_month: 1,
+        created_at: new Date(),
+        updated_at: new Date()
+      })
+      .onConflict(['tenant', 'client_id'])
+      .merge({
+        billing_cycle_anchor_day_of_month: 1,
+        updated_at: new Date()
+      });
+
+    const invoicedCycleId = uuidv4();
+    const futureCycleId = uuidv4();
+
+    await db('client_billing_cycles').insert([
+      {
+        billing_cycle_id: invoicedCycleId,
+        tenant: tenantId,
+        client_id: clientId,
+        billing_cycle: 'monthly',
+        effective_date: '2025-12-01T00:00:00Z',
+        period_start_date: '2025-12-01T00:00:00Z',
+        period_end_date: '2026-01-01T00:00:00Z',
+        is_active: true,
+        created_at: new Date(),
+        updated_at: new Date()
+      },
+      {
+        billing_cycle_id: futureCycleId,
+        tenant: tenantId,
+        client_id: clientId,
+        billing_cycle: 'monthly',
+        effective_date: '2026-01-01T00:00:00Z',
+        period_start_date: '2026-01-01T00:00:00Z',
+        period_end_date: '2026-02-01T00:00:00Z',
+        is_active: true,
+        created_at: new Date(),
+        updated_at: new Date()
+      }
+    ]);
+
+    await db('invoices').insert({
+      tenant: tenantId,
+      client_id: clientId,
+      billing_cycle_id: invoicedCycleId,
+      invoice_number: `INV-${uuidv4().slice(0, 8)}`,
+      invoice_date: new Date('2026-01-02T00:00:00Z'),
+      due_date: new Date('2026-01-16T00:00:00Z'),
+      total_amount: 0,
+      status: 'finalized',
+      subtotal: 0,
+      tax: 0,
+      is_manual: false,
+      is_prepayment: false,
+      currency_code: 'USD',
+      tax_source: 'internal'
+    });
+
+    await updateClientBillingSchedule({
+      clientId,
+      billingCycle: 'quarterly',
+      anchor: { monthOfYear: 1, dayOfMonth: 10 }
+    });
+
+    const updatedClient = await db('clients').where({ tenant: tenantId, client_id: clientId }).first();
+    expect(updatedClient?.billing_cycle).toBe('quarterly');
+
+    const futureCycle = await db('client_billing_cycles')
+      .where({ tenant: tenantId, billing_cycle_id: futureCycleId })
+      .first();
+    expect(futureCycle?.is_active).toBe(false);
+
+    // Generate cycles after cutover; first post-invoice cycle becomes a transition period to the next quarterly boundary (Jan 10).
+    await createClientContractLineCycles(db, updatedClient as any);
+
+    const activeCycles = await db('client_billing_cycles')
+      .where({ client_id: clientId, tenant: tenantId, is_active: true })
+      .orderBy('period_start_date', 'asc');
+
+    expect(activeCycles).toHaveLength(2);
+
+    const lastInvoiced = activeCycles[0];
+    const transition = activeCycles[1];
+
+    expect(new Date(lastInvoiced.period_end_date).toISOString()).toBe(new Date(transition.period_start_date).toISOString());
+    expect(new Date(transition.period_start_date).toISOString().slice(0, 10)).toBe('2026-01-01');
+    expect(new Date(transition.period_end_date).toISOString().slice(0, 10)).toBe('2026-01-10');
+  });
+
+  it('unified billing schedule update is atomic (updates cycle type + anchor) and uses cutover semantics', async () => {
+    const { db, clientId, tenantId } = context;
+
+    await db('clients')
+      .where({ tenant: tenantId, client_id: clientId })
+      .update({ billing_cycle: 'monthly' });
+
+    await db('client_billing_settings')
+      .where({ tenant: tenantId, client_id: clientId })
+      .del();
+
+    // Seed a future non-invoiced cycle that should be invalidated by schedule changes.
+    const futureCycleId = uuidv4();
+    await db('client_billing_cycles').insert({
+      billing_cycle_id: futureCycleId,
+      tenant: tenantId,
+      client_id: clientId,
+      billing_cycle: 'monthly',
+      effective_date: '2026-02-01T00:00:00Z',
+      period_start_date: '2026-02-01T00:00:00Z',
+      period_end_date: '2026-03-01T00:00:00Z',
+      is_active: true,
+      created_at: new Date(),
+      updated_at: new Date()
+    });
+
+    await updateClientBillingSchedule({
+      clientId,
+      billingCycle: 'monthly',
+      anchor: { dayOfMonth: 10 }
+    });
+
+    const updatedClient = await db('clients').where({ tenant: tenantId, client_id: clientId }).first();
+    expect(updatedClient?.billing_cycle).toBe('monthly');
+
+    const settings = await db('client_billing_settings').where({ tenant: tenantId, client_id: clientId }).first();
+    expect(settings?.billing_cycle_anchor_day_of_month).toBe(10);
+
+    const futureCycle = await db('client_billing_cycles')
+      .where({ tenant: tenantId, billing_cycle_id: futureCycleId })
+      .first();
+    expect(futureCycle?.is_active).toBe(false);
   });
 });

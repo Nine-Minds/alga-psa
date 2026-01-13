@@ -17,6 +17,8 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - (2026-01-09) Quarterly/semi-annual/annual anchors include **start month selection** (plus day-of-month 1–28). Rationale: supports common anniversary/fiscal cycles.
 - (2026-01-09) Bi-weekly anchor uses a concrete **first cycle start date** to establish stable parity. Rationale: simplest deterministic model.
 - (2026-01-09) Anchor changes apply **after the last invoiced cycle** and may create a transition period to reach the next anchor boundary; transition periods require fixed-charge proration by period length.
+- (2026-01-11) Billing schedule configuration UX lives on **Client → Billing**; Billing → Billing Cycles becomes a summary-only view that links to the client for edits. Rationale: aligns with mental model “edit per client” and avoids bulk edits that can unintentionally affect multiple clients.
+- (2026-01-11) Billing cycle type changes should follow the same cutover behavior as anchor changes (no retroactive edits; deactivate future non-invoiced cycles so regeneration uses the new schedule).
 
 ## Discoveries / Constraints
 

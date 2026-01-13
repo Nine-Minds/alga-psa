@@ -32,13 +32,21 @@ Today Alga supports picking a billing cycle type per client (weekly/bi-weekly/mo
 - **Ops/Admin:** adjusts client billing settings during onboarding/renewal.
 
 ### Primary flows
-1. Billing admin opens a client’s billing settings.
-2. Chooses billing cycle type (existing) and selects an anchor (new).
-3. System uses the anchor to generate upcoming billing cycles (automated nightly + manual “create next cycle”).
-4. Billing admin generates invoices from billing cycles (existing).
+1. Billing admin selects a client from the Clients menu.
+2. In the client detail view, navigates to the client’s **Billing** tab.
+3. Chooses the billing cycle type and configures the anchor (cycle-type-aware).
+4. System uses the configured schedule to generate upcoming billing cycles (automated nightly + manual “create next cycle”).
+5. Billing admin generates invoices from billing cycles (existing).
+
+Secondary flow:
+- Billing admin opens Billing → Billing Cycles to review a cross-client summary and click through to a specific client’s Billing tab.
 
 ## UX / UI Notes
-Anchor UX should be cycle-type aware:
+**UI placement**
+- Billing schedule configuration (cycle type + anchor + preview) lives on the **Client → Billing** tab.
+- The Billing → Billing Cycles tab is **summary-only** (no schedule editing); it links to the client’s Billing tab for changes.
+
+**Anchor UX** should be cycle-type aware:
 
 - **Weekly:** choose “weekday” (Mon–Sun). Optionally show the computed “next start date” preview.
 - **Bi-weekly:** choose a concrete “first cycle start date” (UTC date) so parity is stable.
@@ -52,17 +60,17 @@ UI should make the date semantics explicit in copy/tooltips: “Billing periods 
 ## Requirements
 
 ### Functional Requirements
-**Anchors**
+**Billing schedule configuration (cycle type + anchor)**
 - Store a per-client anchor configuration.
 - Validate anchor values (ranges, required fields per cycle type).
 - Use anchor configuration when generating *new* `client_billing_cycles` rows.
-- Allow updating anchor configuration, with guardrails to avoid breaking already-invoiced periods.
+- Allow updating schedule configuration (cycle type and/or anchor), with guardrails to avoid breaking already-invoiced periods.
 
 **Cycle generation**
 - Initial cycle creation uses anchor logic to pick the correct current cycle start.
 - Subsequent cycle creation advances deterministically by cycle type from the last cycle’s boundary.
 - Manual “Create Next Cycle” uses the same logic as the scheduled job and respects anchor configuration.
-- Anchor updates take effect **after the last invoiced cycle**:
+- Schedule updates (cycle type and/or anchor) take effect **after the last invoiced cycle**:
   - Compute `cutoverStart = lastInvoiced.period_end_date` (exclusive end = next start).
   - Create a *transition period* `[cutoverStart, nextAnchorBoundary)` (if `cutoverStart` is not already aligned).
   - Create subsequent full periods aligned to the configured anchor.
@@ -89,6 +97,7 @@ Proposed shape (final schema is a design decision in implementation):
 
 ### API / server actions
 - Add server actions for reading/updating the anchor configuration.
+- Add a server action for updating a client’s billing schedule (cycle type + anchor) that applies the same cutover behavior as anchor updates.
 - Ensure invoice generation continues to rely on `client_billing_cycles.period_start_date/period_end_date` (no anchor logic in invoice generation).
 
 ## Security / Permissions
@@ -107,12 +116,13 @@ Proposed shape (final schema is a design decision in implementation):
 5. Document the semantics and migration notes in billing docs.
 
 ## Open Questions
-1. Should the UI allow setting an anchor without changing billing cycle type, or should anchor be edited only when selecting the cycle type?
-2. For weekly: do we also want a “first cycle start date” option (like bi-weekly) to make weekday-only anchors less ambiguous for initial creation?
+1. For weekly: do we also want a “first cycle start date” option (like bi-weekly) to make weekday-only anchors less ambiguous for initial creation?
+2. When changing schedule (cycle type and/or anchor), should the UI show an explicit warning that future non-invoiced billing cycles will be regenerated under the new schedule?
 
 ## Acceptance Criteria (Definition of Done)
 - A billing admin can set a monthly anchor day (e.g., 10) for a client and the system generates monthly billing cycles starting/ending on the 10th.
 - Weekly, bi-weekly, quarterly, semi-annual, and annual cycle generation continues to work and respects anchors when configured.
 - Billing, proration, and overlap validation treat billing periods as `[start, end)` with end exclusive.
 - Manual “Create Next Cycle” respects anchor configuration and no longer ignores provided anchor/effective date inputs.
+- Billing cycle type changes follow the same cutover behavior as anchor changes (no retroactive modification of invoiced cycles; future non-invoiced cycles are regenerated under the new schedule).
 - Existing clients without anchors are not behaviorally broken; already-invoiced cycles are not modified.

@@ -1,25 +1,16 @@
 // BillingCycles.tsx
 import React, { useState, useEffect, useCallback } from 'react';
+import Link from 'next/link';
 import { Card, CardHeader, CardContent } from 'server/src/components/ui/Card';
 import { DataTable } from 'server/src/components/ui/DataTable';
-import CustomSelect from 'server/src/components/ui/CustomSelect';
 import { Tooltip } from 'server/src/components/ui/Tooltip';
 import { Button } from 'server/src/components/ui/Button';
 import { Input } from 'server/src/components/ui/Input';
-import { Dialog } from 'server/src/components/ui/Dialog';
 import { Info, Search } from 'lucide-react';
 import {
-  getAllBillingCycles,
-  updateBillingCycle,
-  getNextBillingCycleStatusForClients,
-  createNextBillingCycle
+  getAllBillingCycles
 } from 'server/src/lib/actions/billingCycleActions';
-import {
-  getClientBillingCycleAnchor,
-  previewClientBillingPeriods,
-  updateClientBillingCycleAnchor,
-  type BillingCyclePeriodPreview
-} from 'server/src/lib/actions/billingCycleAnchorActions';
+import { getClientBillingScheduleSummaries } from 'server/src/lib/actions/billingScheduleActions';
 import { getAllClientsPaginated, getClientsWithBillingCycleRangePaginated } from 'server/src/lib/actions/client-actions/clientActions';
 import type { BillingCycleDateRange } from 'server/src/lib/actions/client-actions/clientActions';
 import { getActiveClientContractsByClientIds } from 'server/src/lib/actions/client-actions/clientContractActions';
@@ -29,15 +20,6 @@ import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
 import { IContract } from 'server/src/interfaces/contract.interfaces';
 import LoadingIndicator from 'server/src/components/ui/LoadingIndicator';
 import { DateRangePicker, type DateRange } from 'server/src/components/ui/DateRangePicker';
-
-const BILLING_CYCLE_OPTIONS: { value: BillingCycleType; label: string }[] = [
-  { value: 'weekly', label: 'Weekly' },
-  { value: 'bi-weekly', label: 'Bi-Weekly' },
-  { value: 'monthly', label: 'Monthly' },
-  { value: 'quarterly', label: 'Quarterly' },
-  { value: 'semi-annually', label: 'Semi-Annually' },
-  { value: 'annually', label: 'Annually' },
-];
 
 const getDefaultStartDate = () => {
   const date = new Date();
@@ -76,25 +58,11 @@ const MONTH_OPTIONS = [
   { value: 12, label: 'December' },
 ] as const;
 
-const WEEKDAY_OPTIONS = [
-  { value: 1, label: 'Monday' },
-  { value: 2, label: 'Tuesday' },
-  { value: 3, label: 'Wednesday' },
-  { value: 4, label: 'Thursday' },
-  { value: 5, label: 'Friday' },
-  { value: 6, label: 'Saturday' },
-  { value: 7, label: 'Sunday' },
-] as const;
-
-type AnchorDraft = {
-  dayOfMonth: number | null;
-  monthOfYear: number | null;
-  dayOfWeek: number | null;
-  referenceDate: string | null; // YYYY-MM-DD
-};
-
 const BillingCycles: React.FC = () => {
   const [billingCycles, setBillingCycles] = useState<{ [clientId: string]: BillingCycleType }>({});
+  const [billingSchedules, setBillingSchedules] = useState<{
+    [clientId: string]: { billingCycle: BillingCycleType; anchor: { dayOfMonth: number | null; monthOfYear: number | null; dayOfWeek: number | null; referenceDate: string | null } }
+  }>({});
   const [clients, setClients] = useState<Partial<IClient>[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -113,34 +81,8 @@ const BillingCycles: React.FC = () => {
     from: getDefaultStartDate(),
     to: undefined,
   }));
-  const [cycleStatus, setCycleStatus] = useState<{
-    [clientId: string]: {
-      canCreate: boolean;
-      isEarly: boolean;
-      periodEndDate?: string;
-    }
-  }>({});
-  const [creatingCycle, setCreatingCycle] = useState<{ [clientId: string]: boolean }>({});
-  const [dateConflict, setDateConflict] = useState<{
-    clientId: string;
-    suggestedDate: Date;
-    show: boolean;
-    error?: string;
-  } | null>(null);
   const [clientContracts, setClientContracts] = useState<{ [clientId: string]: string }>({});
   const [contracts, setContracts] = useState<{ [contractId: string]: IContract }>({});
-  const [anchorDialog, setAnchorDialog] = useState<{
-    open: boolean;
-    clientId: string | null;
-  }>({ open: false, clientId: null });
-  const [anchorDraft, setAnchorDraft] = useState<AnchorDraft>({
-    dayOfMonth: 1,
-    monthOfYear: 1,
-    dayOfWeek: null,
-    referenceDate: null
-  });
-  const [anchorPreview, setAnchorPreview] = useState<BillingCyclePeriodPreview[] | null>(null);
-  const [anchorSaving, setAnchorSaving] = useState(false);
 
   // Debounce search term
   useEffect(() => {
@@ -205,14 +147,14 @@ const BillingCycles: React.FC = () => {
 
       if (clientIds.length === 0) {
         setClientContracts({});
-        setCycleStatus({});
+        setBillingSchedules({});
         setError(null);
         return;
       }
 
-      const [clientAssignedContracts, cycleCreationStatus] = await Promise.all([
+      const [clientAssignedContracts, scheduleSummaries] = await Promise.all([
         getActiveClientContractsByClientIds(clientIds),
-        getNextBillingCycleStatusForClients(clientIds)
+        getClientBillingScheduleSummaries(clientIds)
       ]);
 
       // Build active contract map per client (first by latest start date).
@@ -228,7 +170,20 @@ const BillingCycles: React.FC = () => {
       });
 
       setClientContracts(clientContractsMap);
-      setCycleStatus(cycleCreationStatus);
+
+      const scheduleMap: typeof billingSchedules = {};
+      for (const [id, summary] of Object.entries(scheduleSummaries)) {
+        scheduleMap[id] = {
+          billingCycle: summary.billingCycle,
+          anchor: {
+            dayOfMonth: summary.anchor.dayOfMonth ?? null,
+            monthOfYear: summary.anchor.monthOfYear ?? null,
+            dayOfWeek: summary.anchor.dayOfWeek ?? null,
+            referenceDate: summary.anchor.referenceDate ? summary.anchor.referenceDate.slice(0, 10) : null
+          }
+        };
+      }
+      setBillingSchedules(scheduleMap);
 
       setError(null);
     } catch (error) {
@@ -239,125 +194,27 @@ const BillingCycles: React.FC = () => {
     }
   };
 
-  const handleBillingCycleChange = async (clientId: string, cycle: BillingCycleType) => {
-    if (!cycle) return;
-    
-    // Optimistic update
-    setBillingCycles(prev => ({ ...prev, [clientId]: cycle }));
+  const formatAnchorSummary = (clientId: string): string => {
+    const schedule = billingSchedules[clientId];
+    if (!schedule) return '—';
+    const cycle = schedule.billingCycle;
+    const anchor = schedule.anchor;
 
-    try {
-      await updateBillingCycle(clientId, cycle);
-      setError(null);
-    } catch (error) {
-      console.error('Error updating billing cycle:', error);
-      // Revert the optimistic update
-      setBillingCycles(prev => ({ ...prev, [clientId]: prev[clientId] }));
-      setError('Failed to update billing cycle. Please try again.');
-    }
-  };
-
-  const openAnchorEditor = async (clientId: string) => {
-    setAnchorDialog({ open: true, clientId });
-    setAnchorPreview(null);
-    setAnchorSaving(false);
-    setError(null);
-
-    try {
-      const [config, preview] = await Promise.all([
-        getClientBillingCycleAnchor(clientId),
-        previewClientBillingPeriods(clientId, { count: 3 }),
-      ]);
-
-      setAnchorDraft({
-        dayOfMonth: config.anchor.dayOfMonth ?? 1,
-        monthOfYear: config.anchor.monthOfYear ?? 1,
-        dayOfWeek: config.anchor.dayOfWeek ?? null,
-        referenceDate: config.anchor.referenceDate ? config.anchor.referenceDate.slice(0, 10) : null
-      });
-      setAnchorPreview(preview);
-    } catch (e) {
-      console.error('Error loading anchor config:', e);
-      setError('Failed to load billing anchor settings.');
-    }
-  };
-
-  const closeAnchorEditor = () => {
-    setAnchorDialog({ open: false, clientId: null });
-    setAnchorPreview(null);
-    setAnchorSaving(false);
-  };
-
-  const saveAnchor = async () => {
-    if (!anchorDialog.clientId) return;
-    const clientId = anchorDialog.clientId;
-    const billingCycle = billingCycles[clientId] || 'monthly';
-
-    setAnchorSaving(true);
-    setError(null);
-
-    try {
-      await updateClientBillingCycleAnchor({
-        clientId,
-        billingCycle,
-        anchor: {
-          dayOfMonth: anchorDraft.dayOfMonth,
-          monthOfYear: anchorDraft.monthOfYear,
-          dayOfWeek: anchorDraft.dayOfWeek,
-          referenceDate: anchorDraft.referenceDate ? `${anchorDraft.referenceDate}T00:00:00Z` : null
-        }
-      });
-
-      const preview = await previewClientBillingPeriods(clientId, { count: 3 });
-      setAnchorPreview(preview);
-    } catch (e) {
-      console.error('Error saving anchor config:', e);
-      setError(e instanceof Error ? e.message : 'Failed to save billing anchor settings.');
-    } finally {
-      setAnchorSaving(false);
-    }
-  };
-
-  const handleCreateNextCycle = async (clientId: string, selectedDate?: Date) => {
-    setCreatingCycle(prev => ({ ...prev, [clientId]: true }));
-    try {
-      const result = await createNextBillingCycle(
-        clientId,
-        selectedDate?.toISOString()
-      );
-      if (!result.success && result.error === 'duplicate') {
-        // Show user-friendly error message from backend
-        setError(result.message || 'A billing period for this date already exists. Please select a different date.');
-        // Optionally, also show the date conflict dialog if a suggestion is present
-        if (result.suggestedDate) {
-          setDateConflict({
-            clientId,
-            suggestedDate: new Date(result.suggestedDate),
-            show: true
-          });
-        }
-        return;
+    switch (cycle) {
+      case 'weekly':
+        return anchor.dayOfWeek ? `Weekday ${anchor.dayOfWeek}` : 'Rolling';
+      case 'bi-weekly':
+        return anchor.referenceDate ? `Starts ${anchor.referenceDate}` : 'Rolling';
+      case 'monthly':
+        return `Day ${anchor.dayOfMonth ?? 1}`;
+      case 'quarterly':
+      case 'semi-annually':
+      case 'annually': {
+        const monthLabel = MONTH_OPTIONS.find(m => m.value === (anchor.monthOfYear ?? 1))?.label ?? String(anchor.monthOfYear ?? 1);
+        return `${monthLabel} ${anchor.dayOfMonth ?? 1}`;
       }
-
-      if (!result.success) {
-        setError(result.message || 'Failed to create next billing cycle. Please try again.');
-        return;
-      }
-
-      // Update the cycle status after successful creation
-      const statusMap = await getNextBillingCycleStatusForClients([clientId]);
-      const status = statusMap[clientId];
-      if (status) {
-        setCycleStatus(prev => ({
-          ...prev,
-          [clientId]: status
-        }));
-      }
-      setError(null);
-    } catch (error) {
-      console.error('Error creating next billing cycle:', error);
-      setError('Failed to create next billing cycle. Please try again.');
-    } finally {
-      setCreatingCycle(prev => ({ ...prev, [clientId]: false }));
+      default:
+        return '—';
     }
   };
 
@@ -380,7 +237,7 @@ const BillingCycles: React.FC = () => {
       title: 'Current Billing Cycle',
       dataIndex: 'client_id',
       render: (value: string, record: Partial<IClient>) => {
-        const cycle = billingCycles[value];
+        const cycle = billingSchedules[value]?.billingCycle ?? billingCycles[value];
         if (!cycle) return 'Not set';
 
         // Convert to title case for display
@@ -390,39 +247,17 @@ const BillingCycles: React.FC = () => {
       },
     },
     {
+      title: 'Anchor',
+      dataIndex: 'client_id',
+      render: (value: string) => formatAnchorSummary(value),
+    },
+    {
       title: 'Actions',
       dataIndex: 'client_id',
       render: (value: string) => (
         <div className="flex items-center gap-2">
-          <CustomSelect
-            options={BILLING_CYCLE_OPTIONS}
-            onValueChange={(selectedValue: string) => handleBillingCycleChange(value, selectedValue as BillingCycleType)}
-            value={billingCycles[value] || ''}
-            placeholder="Select billing cycle..."
-          />
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => openAnchorEditor(value)}
-            disabled={!billingCycles[value]}
-          >
-            Edit Anchor
-          </Button>
-          <Button
-            id='create-next-billing-cycle-button'
-            variant="outline"
-            size="sm"
-            onClick={() => handleCreateNextCycle(value)}
-            disabled={!cycleStatus[value]?.canCreate || creatingCycle[value]}
-          >
-            <span className="flex items-center">
-              {creatingCycle[value] ? 'Creating...' : 'Create Next Cycle'}
-              {cycleStatus[value]?.isEarly && (
-                <Tooltip content={`Warning: Current billing cycle doesn't end until ${new Date(cycleStatus[value].periodEndDate!).toLocaleDateString()}`}>
-                  <Info className="ml-2 h-4 w-4 text-yellow-500" />
-                </Tooltip>
-              )}
-            </span>
+          <Button id="billing-cycles-view-client" asChild variant="outline" size="sm">
+            <Link href={`/msp/clients/${value}?tab=Billing`}>View Client Billing</Link>
           </Button>
         </div>
       ),
@@ -516,119 +351,6 @@ const BillingCycles: React.FC = () => {
           )}
         </CardContent>
       </Card>
-
-      <Dialog
-        isOpen={anchorDialog.open}
-        onClose={closeAnchorEditor}
-        title="Billing Cycle Anchor"
-        id="billing-cycle-anchor"
-        disableFocusTrap
-      >
-        <div className="space-y-4 p-1">
-          <div className="text-sm text-gray-600">
-            Billing periods use <span className="font-mono">[start, end)</span> semantics. The end date is the start of the next period.
-          </div>
-
-          {anchorDialog.clientId && (
-            <div className="space-y-3">
-              <div className="text-sm">
-                <div className="font-medium">Cycle Type</div>
-                <div className="text-gray-600">{billingCycles[anchorDialog.clientId] ?? 'Not set'}</div>
-              </div>
-
-              {(billingCycles[anchorDialog.clientId] === 'monthly') && (
-                <div className="space-y-2">
-                  <div className="text-sm font-medium">Day of month (1–28)</div>
-                  <CustomSelect
-                    id="billing-anchor-day-of-month"
-                    options={Array.from({ length: 28 }, (_, i) => ({ value: String(i + 1), label: String(i + 1) }))}
-                    value={String(anchorDraft.dayOfMonth ?? 1)}
-                    onValueChange={(v) => setAnchorDraft(d => ({ ...d, dayOfMonth: Number(v) }))}
-                    placeholder="Select day..."
-                  />
-                </div>
-              )}
-
-              {(billingCycles[anchorDialog.clientId] === 'weekly') && (
-                <div className="space-y-2">
-                  <div className="text-sm font-medium">Weekday</div>
-                  <CustomSelect
-                    id="billing-anchor-weekday"
-                    options={[{ value: '', label: 'Rolling (no anchor)' }, ...WEEKDAY_OPTIONS.map(o => ({ value: String(o.value), label: o.label }))]}
-                    value={anchorDraft.dayOfWeek ? String(anchorDraft.dayOfWeek) : ''}
-                    onValueChange={(v) => setAnchorDraft(d => ({ ...d, dayOfWeek: v ? Number(v) : null }))}
-                    placeholder="Select weekday..."
-                  />
-                </div>
-              )}
-
-              {(billingCycles[anchorDialog.clientId] === 'bi-weekly') && (
-                <div className="space-y-2">
-                  <div className="text-sm font-medium">First cycle start date (UTC)</div>
-                  <Input
-                    id="billing-anchor-reference-date"
-                    type="date"
-                    value={anchorDraft.referenceDate ?? ''}
-                    onChange={(e) => setAnchorDraft(d => ({ ...d, referenceDate: e.target.value || null }))}
-                  />
-                  <div className="text-xs text-gray-500">Used to establish stable parity; leave blank for rolling bi-weekly cycles.</div>
-                </div>
-              )}
-
-              {(billingCycles[anchorDialog.clientId] === 'quarterly' ||
-                billingCycles[anchorDialog.clientId] === 'semi-annually' ||
-                billingCycles[anchorDialog.clientId] === 'annually') && (
-                <div className="space-y-3">
-                  <div className="space-y-2">
-                    <div className="text-sm font-medium">Start month</div>
-                    <CustomSelect
-                      id="billing-anchor-start-month"
-                      options={MONTH_OPTIONS.map(m => ({ value: String(m.value), label: m.label }))}
-                      value={String(anchorDraft.monthOfYear ?? 1)}
-                      onValueChange={(v) => setAnchorDraft(d => ({ ...d, monthOfYear: Number(v) }))}
-                      placeholder="Select month..."
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <div className="text-sm font-medium">Day of month (1–28)</div>
-                    <CustomSelect
-                      id="billing-anchor-day-of-month"
-                      options={Array.from({ length: 28 }, (_, i) => ({ value: String(i + 1), label: String(i + 1) }))}
-                      value={String(anchorDraft.dayOfMonth ?? 1)}
-                      onValueChange={(v) => setAnchorDraft(d => ({ ...d, dayOfMonth: Number(v) }))}
-                      placeholder="Select day..."
-                    />
-                  </div>
-                </div>
-              )}
-
-              <div className="flex items-center justify-end gap-2 pt-2">
-                <Button variant="outline" onClick={closeAnchorEditor} disabled={anchorSaving}>
-                  Close
-                </Button>
-                <Button onClick={saveAnchor} disabled={anchorSaving || !billingCycles[anchorDialog.clientId]}>
-                  {anchorSaving ? 'Saving...' : 'Save Anchor'}
-                </Button>
-              </div>
-
-              <div className="pt-2 border-t">
-                <div className="text-sm font-medium mb-2">Upcoming periods (preview)</div>
-                {anchorPreview ? (
-                  <div className="space-y-1 text-sm text-gray-700">
-                    {anchorPreview.map((p, idx) => (
-                      <div key={idx} className="font-mono">
-                        {p.periodStartDate.slice(0, 10)} → {p.periodEndDate.slice(0, 10)}
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="text-sm text-gray-500">Loading preview…</div>
-                )}
-              </div>
-            </div>
-          )}
-        </div>
-      </Dialog>
     </div>
   );
 };

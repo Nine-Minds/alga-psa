@@ -7,8 +7,6 @@ import { IClient } from 'server/src/interfaces/client.interfaces';
 import { ITag } from 'server/src/interfaces/tag.interfaces';
 import UserPicker from 'server/src/components/ui/UserPicker';
 import { TagManager } from 'server/src/components/tags';
-import { useFeatureFlag } from 'server/src/hooks/useFeatureFlag';
-import { FeaturePlaceholder } from '../FeaturePlaceholder';
 import { findTagsByEntityId } from 'server/src/lib/actions/tagActions';
 import { useTags } from 'server/src/context/TagContext';
 import { getAllUsersBasic } from 'server/src/lib/actions/user-actions/userActions';
@@ -184,8 +182,6 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
   surveySummary = null
 }) => {
   const { t } = useTranslation('common');
-  const featureFlag = useFeatureFlag('billing-enabled');
-  const isBillingEnabled = typeof featureFlag === 'boolean' ? featureFlag : featureFlag?.enabled;
   const [editedClient, setEditedClient] = useState<IClient>(client);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [isQuickAddTicketOpen, setIsQuickAddTicketOpen] = useState(false);
@@ -970,13 +966,9 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
     },
     {
       label: "Billing Dashboard",
-      content: isBillingEnabled ? (
+      content: (
         <div className="bg-white p-6 rounded-lg shadow-sm">
           <ClientContractLineDashboard clientId={client.client_id} />
-        </div>
-      ) : (
-        <div className="bg-white rounded-lg shadow-sm overflow-hidden h-full">
-          <FeaturePlaceholder />
         </div>
       )
     },
@@ -1128,7 +1120,6 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
     client.client_name, 
     handleBillingConfigSave, 
     contacts, 
-    isBillingEnabled, 
     currentUser, 
     documents, 
     memoizedRouter,
