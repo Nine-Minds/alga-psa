@@ -102,6 +102,9 @@ export async function getDashboardMetrics(): Promise<DashboardMetrics> {
 
     return result;
   } catch (error) {
+    if (error instanceof Error && error.message.startsWith('Unauthorized')) {
+      throw error;
+    }
     console.error('Error fetching dashboard metrics:', error);
     throw new Error('Failed to fetch dashboard metrics');
   }
@@ -220,6 +223,9 @@ export async function getRecentActivity(): Promise<RecentActivity[]> {
 
     return activities;
   } catch (error) {
+    if (error instanceof Error && error.message.startsWith('Unauthorized')) {
+      throw error;
+    }
     console.error('Error fetching recent activity:', error);
     throw new Error('Failed to fetch recent activity');
   }
