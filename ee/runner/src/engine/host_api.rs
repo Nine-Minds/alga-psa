@@ -1159,7 +1159,13 @@ async fn storage_request(
     let text = response.text().await.unwrap_or_default();
 
     if !status.is_success() {
-        tracing::warn!(status = status.as_u16(), body = %text, operation, "storage_request error");
+        tracing::warn!(
+            status = status.as_u16(),
+            body = %text,
+            operation,
+            install_id = %install_id,
+            "storage_request error"
+        );
         return Err(map_storage_status(status));
     }
 

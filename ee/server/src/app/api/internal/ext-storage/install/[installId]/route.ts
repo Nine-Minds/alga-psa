@@ -6,6 +6,7 @@ import {
   StorageServiceError,
   StorageValidationError,
 } from '@ee/lib/extensions/storage/v2/errors';
+import { resolveInstallIdFromParamsOrUrl } from '@ee/lib/next/routeParams';
 
 export const dynamic = 'force-dynamic';
 
@@ -110,15 +111,15 @@ function ensureRunnerAuth(req: NextRequest): void {
 
 export async function POST(
   req: NextRequest,
-  ctx: { params: Promise<{ installId: string }> }
+  ctx: { params?: unknown }
 ) {
   try {
     ensureRunnerAuth(req);
 
-    const { installId } = await ctx.params;
+    const installId = await resolveInstallIdFromParamsOrUrl(ctx.params, req.url);
     const raw = await req.json();
     const base = baseSchema.parse(raw);
-    const { service } = await getStorageServiceForInstall(installId);
+    const { service } = await getStorageServiceForInstall(installId ?? '');
 
     switch (base.operation) {
       case 'put': {
