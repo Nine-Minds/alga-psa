@@ -6,7 +6,7 @@ import type { NextRequest } from 'next/server';
 
 export async function POST(
   _req: NextRequest,
-  _ctx: { params: { installId: string } }
+  _ctx: { params: Promise<{ installId: string }> }
 ): Promise<NextResponse> {
   return NextResponse.json(
     { error: 'Extension storage is only available in the Enterprise Edition.', code: 'EE_REQUIRED' },
