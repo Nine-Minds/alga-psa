@@ -5,6 +5,7 @@ import React, { createContext, useContext, useEffect, useState, ReactNode, useCa
 import { Activity, ActivityType } from "server/src/interfaces/activity.interfaces";
 import { ChevronLeft, ChevronRight, X } from 'lucide-react';
 import { Button } from "server/src/components/ui/Button";
+import { UnsavedChangesContext } from "server/src/contexts/UnsavedChangesContext";
 
 // Define the drawer history entry type
 interface DrawerHistoryEntry {
@@ -246,12 +247,15 @@ const DrawerContext = createContext<DrawerContextType | undefined>(undefined);
 
 export const DrawerProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [state, dispatch] = useReducer(drawerReducer, initialState);
-  
+
+  // Access UnsavedChangesContext (may be null if not wrapped in provider)
+  const unsavedChangesContext = useContext(UnsavedChangesContext);
+
   // Compute derived state
   const canGoBack = state.currentIndex > 0;
   const canGoForward = state.currentIndex < state.history.length - 1;
   const currentEntry = state.currentIndex >= 0 ? state.history[state.currentIndex] : null;
-  
+
   // Original methods (for backward compatibility)
   const openDrawer = useCallback((content: ReactNode, onMount?: () => Promise<void>, onClose?: () => void, width?: string) => {
     dispatch({ type: 'OPEN_DRAWER', payload: { content, onMount, onClose, width } });
@@ -261,13 +265,23 @@ export const DrawerProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     dispatch({ type: 'REPLACE_DRAWER', payload: { content, onMount, width } });
   }, []);
 
-  const closeDrawer = useCallback(() => {
-    // Call onClose callback for the current entry before closing
+  // Internal close function that actually closes the drawer
+  const performClose = useCallback(() => {
     if (currentEntry?.onClose) {
       currentEntry.onClose();
     }
     dispatch({ type: 'CLOSE_DRAWER' });
   }, [currentEntry]);
+
+  // Public closeDrawer that checks for unsaved changes
+  const closeDrawer = useCallback(() => {
+    if (unsavedChangesContext) {
+      // Use confirmNavigation which will show dialog if there are unsaved changes
+      unsavedChangesContext.confirmNavigation(performClose);
+    } else {
+      performClose();
+    }
+  }, [unsavedChangesContext, performClose]);
 
   const goBack = useCallback(() => {
     dispatch({ type: 'GO_BACK' });

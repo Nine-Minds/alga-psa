@@ -34,6 +34,7 @@ import AssociatedAssets from "server/src/components/assets/AssociatedAssets";
 import { useSession } from 'next-auth/react';
 import { toast } from 'react-hot-toast';
 import { useDrawer } from "server/src/context/DrawerContext";
+import { useRegisterUnsavedChanges } from "server/src/contexts/UnsavedChangesContext";
 import { findUserById, getCurrentUser } from "server/src/lib/actions/user-actions/userActions";
 import { findBoardById, getAllBoards } from "server/src/lib/actions/board-actions/boardActions";
 import { findCommentsByTicketId, deleteComment, createComment, updateComment, findCommentById } from "server/src/lib/actions/comment-actions/commentActions";
@@ -251,6 +252,9 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
             due_date: editDueDate || ticket.due_date,
         };
     }, [quickView, ticket, editTitle, editStatus, editPriority, editBoard, editAssignedTo, editCategory, editSubcategory, editDueDate]);
+
+    // Register unsaved changes with the UnsavedChangesContext for navigation interception
+    useRegisterUnsavedChanges(`ticket-details-${ticket.ticket_id}`, hasUnsavedChanges);
 
     const [isEditing, setIsEditing] = useState(false);
     const [currentComment, setCurrentComment] = useState<IComment | null>(null);
@@ -1945,11 +1949,12 @@ const handleClose = () => {
                 title="Unsaved Changes"
                 id="ticket-unsaved-changes-dialog"
                 className="max-w-md"
+                draggable={false}
             >
-                <p className="mb-4 text-gray-600">You have unsaved changes. Are you sure you want to leave? Your changes will be lost.</p>
-                <div className="flex justify-end gap-3">
+                <p className="mb-4">You have unsaved changes. Are you sure you want to cancel?</p>
+                <div className="flex justify-end space-x-3">
                     <Button
-                        id="ticket-unsaved-stay"
+                        id="ticket-unsaved-continue"
                         type="button"
                         variant="outline"
                         onClick={() => setShowUnsavedChangesDialog(false)}
@@ -1957,14 +1962,14 @@ const handleClose = () => {
                         Continue Editing
                     </Button>
                     <Button
-                        id="ticket-unsaved-leave"
+                        id="ticket-unsaved-discard"
                         type="button"
                         onClick={() => {
                             setShowUnsavedChangesDialog(false);
                             onClose?.();
                         }}
                     >
-                        Leave Without Saving
+                        Discard Changes
                     </Button>
                 </div>
             </Dialog>
