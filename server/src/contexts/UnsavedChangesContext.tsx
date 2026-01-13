@@ -31,7 +31,9 @@ interface UnsavedChangesContextType {
   unregister: (componentId: string) => void;
 }
 
-const UnsavedChangesContext = createContext<UnsavedChangesContextType | null>(null);
+// Export the context so components like BackNav can use useContext directly
+// This allows optional usage without throwing if not in provider
+export const UnsavedChangesContext = createContext<UnsavedChangesContextType | null>(null);
 
 interface UnsavedChangesProviderProps {
   children: React.ReactNode;
