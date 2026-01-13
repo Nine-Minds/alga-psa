@@ -37,26 +37,24 @@ export async function getDashboardMetrics(): Promise<DashboardMetrics> {
 
   const { knex, tenant } = await createTenantKnex();
 
-  // Get client_id from contact
-  const contact = await withTransaction(knex, async (trx: Knex.Transaction) => {
-    return await trx('contacts')
-      .where({
-        'contact_name_id': user.contact_id,
-        'tenant': tenant
-      })
-      .select('client_id')
-      .first();
-  });
-
-  if (!contact) {
-    throw new Error('Unauthorized: Client information not found');
-  }
-
-  const clientId = contact.client_id;
-
   try {
-    const [[ticketCount], [projectCount], [invoiceCount], [assetCount]] = await withTransaction(knex, async (trx: Knex.Transaction) => {
-      return Promise.all([
+    const result = await withTransaction(knex, async (trx: Knex.Transaction) => {
+      // Get client_id from contact
+      const contact = await trx('contacts')
+        .where({
+          'contact_name_id': user.contact_id,
+          'tenant': tenant
+        })
+        .select('client_id')
+        .first();
+
+      if (!contact) {
+        throw new Error('Unauthorized: Client information not found');
+      }
+
+      const clientId = contact.client_id;
+
+      const [[ticketCount], [projectCount], [invoiceCount], [assetCount]] = await Promise.all([
         // Get open tickets count
         trx('tickets')
           .where({
@@ -65,7 +63,7 @@ export async function getDashboardMetrics(): Promise<DashboardMetrics> {
             'is_closed': false
           })
           .count('ticket_id as count'),
-        
+
         // Get active projects count
         trx('projects')
           .where({
@@ -93,15 +91,20 @@ export async function getDashboardMetrics(): Promise<DashboardMetrics> {
           .andWhere('status', '!=', 'inactive')
           .count('* as count')
       ]);
+
+      return {
+        openTickets: Number(ticketCount.count || 0),
+        activeProjects: Number(projectCount.count || 0),
+        pendingInvoices: Number(invoiceCount.count || 0),
+        activeAssets: Number(assetCount.count || 0),
+      };
     });
 
-    return {
-      openTickets: Number(ticketCount.count || 0),
-      activeProjects: Number(projectCount.count || 0),
-      pendingInvoices: Number(invoiceCount.count || 0),
-      activeAssets: Number(assetCount.count || 0),
-    };
+    return result;
   } catch (error) {
+    if (error instanceof Error && error.message.startsWith('Unauthorized')) {
+      throw error;
+    }
     console.error('Error fetching dashboard metrics:', error);
     throw new Error('Failed to fetch dashboard metrics');
   }
@@ -124,74 +127,72 @@ export async function getRecentActivity(): Promise<RecentActivity[]> {
 
   const { knex, tenant } = await createTenantKnex();
 
-  // Get client_id from contact
-  const contact = await withTransaction(knex, async (trx: Knex.Transaction) => {
-    return await trx('contacts')
-      .where({
-        'contact_name_id': user.contact_id,
-        'tenant': tenant
-      })
-      .select('client_id')
-      .first();
-  });
-
-  if (!contact) {
-    throw new Error('Unauthorized: Client information not found');
-  }
-
-  const clientId = contact.client_id;
-
   try {
     const result = await withTransaction(knex, async (trx: Knex.Transaction) => {
+      // Get client_id from contact
+      const contact = await trx('contacts')
+        .where({
+          'contact_name_id': user.contact_id,
+          'tenant': tenant
+        })
+        .select('client_id')
+        .first();
+
+      if (!contact) {
+        throw new Error('Unauthorized: Client information not found');
+      }
+
+      const clientId = contact.client_id;
+
       // Get recent tickets with their initial descriptions
       const tickets = await trx('tickets')
-      .select([
-        'tickets.title',
-        'tickets.updated_at as timestamp',
-        'comments.note as description'
-      ])
-      .leftJoin('comments', function() {
-        this.on('tickets.ticket_id', '=', 'comments.ticket_id')
-            .andOn('tickets.tenant', '=', 'comments.tenant');
-      })
-      .where({
-        'tickets.tenant': tenant,
-        'tickets.client_id': clientId
-      })
-      .orderBy('tickets.updated_at', 'desc')
-      .limit(3);
+        .select([
+          'tickets.title',
+          'tickets.updated_at as timestamp',
+          'comments.note as description'
+        ])
+        .leftJoin('comments', function() {
+          this.on('tickets.ticket_id', '=', 'comments.ticket_id')
+              .andOn('tickets.tenant', '=', 'comments.tenant');
+        })
+        .where({
+          'tickets.tenant': tenant,
+          'tickets.client_id': clientId
+        })
+        .orderBy('tickets.updated_at', 'desc')
+        .limit(3);
 
       // Get recent invoices
       const invoices = await trx('invoices')
-      .select([
-        'invoice_number',
-        'total_amount as total',
-        'updated_at as timestamp'
-      ])
-      .where({
-        'invoices.tenant': tenant,
-        'invoices.client_id': clientId
-      })
-      .orderBy('updated_at', 'desc')
-      .limit(3);
+        .select([
+          'invoice_number',
+          'total_amount as total',
+          'updated_at as timestamp'
+        ])
+        .where({
+          'invoices.tenant': tenant,
+          'invoices.client_id': clientId
+        })
+        .orderBy('updated_at', 'desc')
+        .limit(3);
 
       // Get recent asset maintenance activities
       const assetActivities = await trx('asset_maintenance_history')
-      .select([
-        'asset_maintenance_history.description',
-        'asset_maintenance_history.performed_at as timestamp',
-        'assets.name as asset_name'
-      ])
-      .join('assets', function() {
-        this.on('assets.asset_id', '=', 'asset_maintenance_history.asset_id')
-            .andOn('assets.tenant', '=', 'asset_maintenance_history.tenant');
-      })
-      .where({
-        'asset_maintenance_history.tenant': tenant,
-        'assets.client_id': clientId
-      })
-      .orderBy('asset_maintenance_history.performed_at', 'desc')
-      .limit(3);
+        .select([
+          'asset_maintenance_history.description',
+          'asset_maintenance_history.performed_at as timestamp',
+          'assets.name as asset_name'
+        ])
+        .join('assets', function() {
+          this.on('assets.asset_id', '=', 'asset_maintenance_history.asset_id')
+              .andOn('assets.tenant', '=', 'asset_maintenance_history.tenant');
+        })
+        .where({
+          'asset_maintenance_history.tenant': tenant,
+          'assets.client_id': clientId
+        })
+        .orderBy('asset_maintenance_history.performed_at', 'desc')
+        .limit(3);
 
       return { tickets, invoices, assetActivities };
     });
@@ -222,6 +223,9 @@ export async function getRecentActivity(): Promise<RecentActivity[]> {
 
     return activities;
   } catch (error) {
+    if (error instanceof Error && error.message.startsWith('Unauthorized')) {
+      throw error;
+    }
     console.error('Error fetching recent activity:', error);
     throw new Error('Failed to fetch recent activity');
   }
