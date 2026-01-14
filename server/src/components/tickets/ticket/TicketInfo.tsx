@@ -26,6 +26,7 @@ import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionCo
 import { Input } from 'server/src/components/ui/Input';
 import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 import { useRegisterUnsavedChanges } from 'server/src/contexts/UnsavedChangesContext';
+import { ConfirmationDialog } from 'server/src/components/ui/ConfirmationDialog';
 
 
 interface TicketInfoProps {
@@ -95,6 +96,8 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
   const [pendingItilChanges, setPendingItilChanges] = useState<{ itil_impact?: number; itil_urgency?: number }>({});
   const [isSaving, setIsSaving] = useState(false);
   const [isFormInitialized, setIsFormInitialized] = useState(false);
+  const [saveSuccess, setSaveSuccess] = useState(false);
+  const [showCancelConfirm, setShowCancelConfirm] = useState(false);
 
   // Local state for board config based on selected (pending) board
   const [pendingBoardConfig, setPendingBoardConfig] = useState<BoardCategoryData['boardConfig'] | null>(null);
@@ -135,9 +138,11 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
     const hasPendingTicketChanges = Object.keys(pendingChanges).length > 0;
     const hasPendingItilChanges = Object.keys(pendingItilChanges).length > 0;
     const hasTitleChange = titleValue !== ticket.title;
+    // Check if description is being edited (any changes in the editor are unsaved)
+    const hasDescriptionChange = isEditingDescription;
 
-    return hasPendingTicketChanges || hasPendingItilChanges || hasTitleChange;
-  }, [isFormInitialized, pendingChanges, pendingItilChanges, titleValue, ticket.title]);
+    return hasPendingTicketChanges || hasPendingItilChanges || hasTitleChange || hasDescriptionChange;
+  }, [isFormInitialized, pendingChanges, pendingItilChanges, titleValue, ticket.title, isEditingDescription]);
 
   // Register unsaved changes with the context
   // This hook will throw if used outside of UnsavedChangesProvider,
@@ -380,6 +385,11 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
         }
       }
 
+      // Save description if it's being edited
+      if (isEditingDescription && onUpdateDescription) {
+        await onUpdateDescription(JSON.stringify(descriptionContent));
+      }
+
       // Use the onSaveChanges prop if available, otherwise fall back to individual updates
       if (onSaveChanges) {
         const success = await onSaveChanges(allChanges);
@@ -389,8 +399,12 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
           setPendingItilChanges({});
           setPendingBoardConfig(null);
           setPendingCategories(null);
-          // Close title editor if open
+          // Close all edit modes
           setIsEditingTitle(false);
+          setIsEditingDescription(false);
+          // Show success message for 3 seconds (like contracts)
+          setSaveSuccess(true);
+          setTimeout(() => setSaveSuccess(false), 3000);
         }
       } else {
         // Fallback: save each field individually using onSelectChange
@@ -408,15 +422,19 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
         setPendingItilChanges({});
         setPendingBoardConfig(null);
         setPendingCategories(null);
-        // Close title editor if open
+        // Close all edit modes
         setIsEditingTitle(false);
+        setIsEditingDescription(false);
+        // Show success message for 3 seconds (like contracts)
+        setSaveSuccess(true);
+        setTimeout(() => setSaveSuccess(false), 3000);
       }
     } catch (error) {
       console.error('Error saving changes:', error);
     } finally {
       setIsSaving(false);
     }
-  }, [hasUnsavedChanges, pendingChanges, pendingItilChanges, titleValue, ticket.title, ticket.board_id, onSaveChanges, onSelectChange, onItilFieldChange]);
+  }, [hasUnsavedChanges, pendingChanges, pendingItilChanges, titleValue, ticket.title, ticket.board_id, onSaveChanges, onSelectChange, onItilFieldChange, isEditingDescription, onUpdateDescription, descriptionContent]);
 
   // Handler for discarding all pending changes
   const handleDiscardChanges = useCallback(() => {
@@ -425,7 +443,24 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
     setPendingItilChanges({});
     setPendingBoardConfig(null);
     setPendingCategories(null);
+    // Close all edit modes
+    setIsEditingTitle(false);
+    setIsEditingDescription(false);
   }, [ticket.title]);
+
+  // Handler for Cancel button click (like contracts)
+  const handleCancelClick = useCallback(() => {
+    if (hasUnsavedChanges) {
+      setShowCancelConfirm(true);
+    }
+    // If no unsaved changes, Cancel does nothing (already in clean state)
+  }, [hasUnsavedChanges]);
+
+  // Handler for confirming cancel (discard changes)
+  const handleCancelConfirm = useCallback(() => {
+    handleDiscardChanges();
+    setShowCancelConfirm(false);
+  }, [handleDiscardChanges]);
 
   const handleCategoryChange = (categoryIds: string[]) => {
     if (categoryIds.length === 0) {
@@ -569,6 +604,15 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
               <AlertDescription className="text-amber-800 flex items-center gap-2">
                 <AlertCircle className="h-4 w-4" />
                 <span>You have unsaved changes. Click &quot;Save Changes&quot; to apply them.</span>
+              </AlertDescription>
+            </Alert>
+          )}
+
+          {/* Success alert after saving (like contracts) */}
+          {saveSuccess && (
+            <Alert className="bg-green-50 border-green-200 mb-4">
+              <AlertDescription className="text-green-800">
+                Changes saved successfully!
               </AlertDescription>
             </Alert>
           )}
@@ -967,25 +1011,22 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
             )}
           </div>
 
-          {/* Save Changes Button - identical to contracts */}
+          {/* Save Changes Button - matching contracts behavior */}
           <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-gray-200">
-            {hasUnsavedChanges && (
-              <Button
-                id={`${id}-discard-changes-btn`}
-                type="button"
-                variant="outline"
-                onClick={handleDiscardChanges}
-                disabled={isSaving}
-              >
-                Discard Changes
-              </Button>
-            )}
+            <Button
+              id={`${id}-cancel-btn`}
+              type="button"
+              variant="outline"
+              onClick={handleCancelClick}
+              disabled={isSaving}
+            >
+              Cancel
+            </Button>
             <Button
               id={`${id}-save-changes-btn`}
               type="button"
               onClick={handleSaveChanges}
-              disabled={isSaving || !hasUnsavedChanges}
-              className={!hasUnsavedChanges ? 'opacity-50' : ''}
+              disabled={isSaving}
             >
               <span className={hasUnsavedChanges ? 'font-bold' : ''}>
                 {isSaving ? 'Saving...' : hasUnsavedChanges ? 'Save Changes *' : 'Save Changes'}
@@ -993,6 +1034,18 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
               {!isSaving && <Save className="ml-2 h-4 w-4" />}
             </Button>
           </div>
+
+          {/* Cancel confirmation dialog (like contracts) */}
+          <ConfirmationDialog
+            id={`${id}-cancel-confirm-dialog`}
+            isOpen={showCancelConfirm}
+            onClose={() => setShowCancelConfirm(false)}
+            onConfirm={handleCancelConfirm}
+            title="Discard Changes"
+            message="You have unsaved changes. Are you sure you want to discard them?"
+            confirmLabel="Discard"
+            cancelLabel="Keep Editing"
+          />
         </div>
       </div>
     </ReflectionContainer>

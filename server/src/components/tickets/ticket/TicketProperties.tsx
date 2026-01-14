@@ -32,6 +32,7 @@ import TicketSurveySummaryCard from 'server/src/components/surveys/TicketSurveyS
 import type { SurveyTicketSatisfactionSummary } from 'server/src/interfaces/survey.interface';
 import { getAppointmentRequestsByTicketId } from 'server/src/lib/actions/appointmentRequestManagementActions';
 import TicketMaterialsCard from './TicketMaterialsCard';
+import { useRegisterUnsavedChanges } from 'server/src/contexts/UnsavedChangesContext';
 
 interface TicketPropertiesProps {
   id?: string;
@@ -167,6 +168,16 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
   const [appointmentRequestsCount, setAppointmentRequestsCount] = useState<number>(0);
   const [appointmentRequests, setAppointmentRequests] = useState<any[]>([]);
   const [showAppointmentTooltip, setShowAppointmentTooltip] = useState(false);
+
+  // Register unsaved changes for contact, client, and location pickers
+  // Popup triggers if picker is open AND a different selection is made (but not yet saved)
+  const hasUnsavedContactChanges = showContactPicker && selectedContactId !== null && selectedContactId !== (contactInfo?.contact_name_id ?? '');
+  const hasUnsavedClientChanges = showClientPicker && selectedClientId !== null && selectedClientId !== ticket.company_id;
+  const hasUnsavedLocationChanges = showLocationPicker && selectedLocationId !== null && selectedLocationId !== ticket.location_id;
+
+  useRegisterUnsavedChanges(`ticket-properties-contact-${id}`, hasUnsavedContactChanges);
+  useRegisterUnsavedChanges(`ticket-properties-client-${id}`, hasUnsavedClientChanges);
+  useRegisterUnsavedChanges(`ticket-properties-location-${id}`, hasUnsavedLocationChanges);
 
   const uniqueClientsForPicker = React.useMemo(() => {
     if (!clients) return [];

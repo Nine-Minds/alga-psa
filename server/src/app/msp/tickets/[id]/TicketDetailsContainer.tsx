@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, Suspense } from 'react';
+import React, { useState, useRef, useCallback, Suspense, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import TicketDetails from 'server/src/components/tickets/ticket/TicketDetails';
 import { updateTicketWithCache, addTicketCommentWithCache } from 'server/src/lib/actions/ticket-actions/optimizedTicketActions';
@@ -10,6 +10,8 @@ import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions'
 import { TicketDetailsSkeleton } from 'server/src/components/tickets/ticket/TicketDetailsSkeleton';
 import type { SurveyTicketSatisfactionSummary } from 'server/src/interfaces/survey.interface';
 import { UnsavedChangesProvider } from 'server/src/contexts/UnsavedChangesContext';
+import type { IComment } from 'server/src/interfaces/comment.interface';
+import type { IUser } from 'server/src/interfaces/auth.interfaces';
 
 // Define the props interface based on the consolidated data structure
 interface TicketDetailsContainerProps {
@@ -42,33 +44,77 @@ interface TicketDetailsContainerProps {
 }
 
 
+// Helper to extract error message from unknown error
+const getErrorMessage = (error: unknown): string => {
+  if (error instanceof Error) return error.message;
+  return String(error);
+};
+
 export default function TicketDetailsContainer({ ticketData, surveySummary = null }: TicketDetailsContainerProps) {
   const router = useRouter();
   const { data: session } = useSession();
+
+  // Use a counter to track concurrent requests - prevents race condition
+  // where isSubmitting could be set to false while another request is still pending
+  const pendingRequestsRef = useRef(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Local state for comments to avoid mutating props (which doesn't trigger re-renders)
+  const [comments, setComments] = useState<IComment[]>(ticketData.comments);
+
+  // Cache current user to avoid fetching on every save operation
+  const cachedUserRef = useRef<IUser | null>(null);
+
+  // Fetch and cache current user on mount
+  useEffect(() => {
+    const fetchCurrentUser = async () => {
+      if (session?.user && !cachedUserRef.current) {
+        const user = await getCurrentUser();
+        cachedUserRef.current = user;
+      }
+    };
+    fetchCurrentUser();
+  }, [session?.user]);
+
+  // Helper to get current user - uses cache if available, otherwise fetches
+  const getUser = useCallback(async (): Promise<IUser | null> => {
+    if (cachedUserRef.current) {
+      return cachedUserRef.current;
+    }
+    // Fallback: fetch and cache if not yet available
+    const user = await getCurrentUser();
+    if (user) {
+      cachedUserRef.current = user;
+    }
+    return user;
+  }, []);
+
   // Helper to wrap async operations with isSubmitting state management
-  // This avoids duplicating setIsSubmitting(true)/finally/setIsSubmitting(false) logic
-  const withSubmitting = async <T,>(operation: () => Promise<T>): Promise<T> => {
+  // Uses a counter to handle concurrent requests properly
+  const withSubmitting = useCallback(async <T,>(operation: () => Promise<T>): Promise<T> => {
+    pendingRequestsRef.current++;
     setIsSubmitting(true);
     try {
       return await operation();
     } finally {
-      setIsSubmitting(false);
+      pendingRequestsRef.current--;
+      // Only set to false when ALL pending requests are complete
+      if (pendingRequestsRef.current === 0) {
+        setIsSubmitting(false);
+      }
     }
-  };
+  }, []);
 
   // Handle single field ticket updates using the optimized server action
-  const handleTicketUpdate = async (field: string, value: any) => {
+  const handleTicketUpdate = async (field: string, value: any): Promise<void> => {
     if (!session?.user) {
       toast.error('You must be logged in to update tickets');
       return;
     }
 
-    await withSubmitting(async () => {
-      // Get the current user from the database
-      const currentUser = await getCurrentUser();
-      if (!currentUser) {
+    return withSubmitting(async () => {
+      const user = await getUser();
+      if (!user) {
         toast.error('Failed to get current user');
         return;
       }
@@ -77,12 +123,12 @@ export default function TicketDetailsContainer({ ticketData, surveySummary = nul
         await updateTicketWithCache(
           ticketData.ticket.ticket_id,
           { [field]: value },
-          currentUser
+          user
         );
         toast.success(`${field} updated successfully`);
       } catch (error) {
         console.error(`Error updating ${field}:`, error);
-        toast.error(`Failed to update ${field}`);
+        toast.error(`Failed to update ${field}: ${getErrorMessage(error)}`);
       }
     });
   };
@@ -101,9 +147,8 @@ export default function TicketDetailsContainer({ ticketData, surveySummary = nul
     }
 
     return withSubmitting(async () => {
-      // Get the current user from the database
-      const currentUser = await getCurrentUser();
-      if (!currentUser) {
+      const user = await getUser();
+      if (!user) {
         toast.error('Failed to get current user');
         return false;
       }
@@ -113,30 +158,29 @@ export default function TicketDetailsContainer({ ticketData, surveySummary = nul
         await updateTicketWithCache(
           ticketData.ticket.ticket_id,
           changes,
-          currentUser
+          user
         );
 
         toast.success('Changes saved successfully');
         return true;
       } catch (error) {
         console.error('Error saving changes:', error);
-        toast.error('Failed to save changes');
+        toast.error(`Failed to save changes: ${getErrorMessage(error)}`);
         return false;
       }
     });
   };
 
   // Handle adding comments using the optimized server action
-  const handleAddComment = async (content: string, isInternal: boolean, isResolution: boolean) => {
+  const handleAddComment = async (content: string, isInternal: boolean, isResolution: boolean): Promise<void> => {
     if (!session?.user) {
       toast.error('You must be logged in to add comments');
       return;
     }
 
-    await withSubmitting(async () => {
-      // Get the current user from the database
-      const currentUser = await getCurrentUser();
-      if (!currentUser) {
+    return withSubmitting(async () => {
+      const user = await getUser();
+      if (!user) {
         toast.error('Failed to get current user');
         return;
       }
@@ -147,28 +191,34 @@ export default function TicketDetailsContainer({ ticketData, surveySummary = nul
           content,
           isInternal,
           isResolution,
-          currentUser
+          user
         );
 
-        // Update the local state with the new comment
-        ticketData.comments.push(newComment);
+        // Update local state to trigger re-render (not mutating props)
+        setComments(prev => [...prev, newComment]);
 
         toast.success('Comment added successfully');
       } catch (error) {
         console.error('Error adding comment:', error);
-        toast.error('Failed to add comment');
+        toast.error(`Failed to add comment: ${getErrorMessage(error)}`);
       }
     });
   };
 
   // Handle updating description using the optimized server action
-  const handleUpdateDescription = async (content: string) => {
+  const handleUpdateDescription = async (content: string): Promise<boolean> => {
     if (!session?.user) {
       toast.error('You must be logged in to update the description');
       return false;
     }
 
     return withSubmitting(async () => {
+      const user = await getUser();
+      if (!user) {
+        toast.error('Failed to get current user');
+        return false;
+      }
+
       // Update the ticket's attributes.description field
       const currentAttributes = ticketData.ticket.attributes || {};
       const updatedAttributes = {
@@ -176,29 +226,22 @@ export default function TicketDetailsContainer({ ticketData, surveySummary = nul
         description: content
       };
 
-      // Get the current user from the database
-      const currentUser = await getCurrentUser();
-      if (!currentUser) {
-        toast.error('Failed to get current user');
-        return false;
-      }
-
       try {
         await updateTicketWithCache(
           ticketData.ticket.ticket_id,
           {
             attributes: updatedAttributes,
-            updated_by: currentUser.user_id,
+            updated_by: user.user_id,
             updated_at: new Date().toISOString()
           },
-          currentUser
+          user
         );
 
         toast.success('Description updated successfully');
         return true;
       } catch (error) {
         console.error('Error updating description:', error);
-        toast.error('Failed to update description');
+        toast.error(`Failed to update description: ${getErrorMessage(error)}`);
         return false;
       }
     });
@@ -220,7 +263,7 @@ export default function TicketDetailsContainer({ ticketData, surveySummary = nul
             aggregatedChildClientComments={ticketData.aggregatedChildClientComments || []}
             onClose={() => router.back()}
             // Pass pre-fetched data as props
-            initialComments={ticketData.comments}
+            initialComments={comments}
             initialDocuments={ticketData.documents}
             initialClient={ticketData.client}
             initialContacts={ticketData.contacts}

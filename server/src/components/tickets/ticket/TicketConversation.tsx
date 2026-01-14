@@ -10,6 +10,7 @@ import { IComment, ITicket } from 'server/src/interfaces';
 import { IDocument } from 'server/src/interfaces/document.interface';
 import { PartialBlock } from '@blocknote/core';
 import RichTextEditorSkeleton from 'server/src/components/ui/skeletons/RichTextEditorSkeleton';
+import { useRegisterUnsavedChanges } from 'server/src/contexts/UnsavedChangesContext';
 
 // Dynamic import for TextEditor
 const TextEditor = dynamic(() => import('server/src/components/editor/TextEditor'), {
@@ -99,6 +100,10 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
   const [isInternalToggle, setIsInternalToggle] = useState(false);
   const [isResolutionToggle, setIsResolutionToggle] = useState(false);
   const [contactAvatarUrls, setContactAvatarUrls] = useState<Record<string, string | null>>({});
+
+  // Register unsaved changes when adding or editing a comment
+  const hasUnsavedCommentChanges = showEditor || isEditing;
+  useRegisterUnsavedChanges(`ticket-conversation-${compId}`, hasUnsavedCommentChanges);
 
   const handleAddCommentClick = () => {
     setShowEditor(true);
