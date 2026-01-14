@@ -59,22 +59,45 @@ export default function TicketDetailsContainer({ ticketData, surveySummary = nul
   const pendingRequestsRef = useRef(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Track mounted state to prevent state updates after unmount
+  const isMountedRef = useRef(true);
+
   // Local state for comments to avoid mutating props (which doesn't trigger re-renders)
   const [comments, setComments] = useState<IComment[]>(ticketData.comments);
 
   // Cache current user to avoid fetching on every save operation
   const cachedUserRef = useRef<IUser | null>(null);
+  // Track which user the cache is for, to invalidate on session change
+  const cachedUserIdRef = useRef<string | null>(null);
 
-  // Fetch and cache current user on mount
+  // Cleanup on unmount
   useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
+
+  // Fetch and cache current user on mount, invalidate cache on session change
+  useEffect(() => {
+    const currentUserId = session?.user?.id ?? null;
+
+    // Invalidate cache if session user changed
+    if (cachedUserIdRef.current !== currentUserId) {
+      cachedUserRef.current = null;
+      cachedUserIdRef.current = currentUserId;
+    }
+
     const fetchCurrentUser = async () => {
-      if (session?.user && !cachedUserRef.current) {
+      if (session?.user && !cachedUserRef.current && isMountedRef.current) {
         const user = await getCurrentUser();
-        cachedUserRef.current = user;
+        if (isMountedRef.current) {
+          cachedUserRef.current = user;
+        }
       }
     };
     fetchCurrentUser();
-  }, [session?.user]);
+  }, [session?.user?.id]);
 
   // Helper to get current user - uses cache if available, otherwise fetches
   const getUser = useCallback(async (): Promise<IUser | null> => {
@@ -91,22 +114,25 @@ export default function TicketDetailsContainer({ ticketData, surveySummary = nul
 
   // Helper to wrap async operations with isSubmitting state management
   // Uses a counter to handle concurrent requests properly
+  // Checks isMountedRef to prevent state updates after unmount
   const withSubmitting = useCallback(async <T,>(operation: () => Promise<T>): Promise<T> => {
     pendingRequestsRef.current++;
-    setIsSubmitting(true);
+    if (isMountedRef.current) {
+      setIsSubmitting(true);
+    }
     try {
       return await operation();
     } finally {
       pendingRequestsRef.current--;
-      // Only set to false when ALL pending requests are complete
-      if (pendingRequestsRef.current === 0) {
+      // Only set to false when ALL pending requests are complete and still mounted
+      if (pendingRequestsRef.current === 0 && isMountedRef.current) {
         setIsSubmitting(false);
       }
     }
   }, []);
 
   // Handle single field ticket updates using the optimized server action
-  const handleTicketUpdate = async (field: string, value: any): Promise<void> => {
+  const handleTicketUpdate = useCallback(async (field: string, value: any): Promise<void> => {
     if (!session?.user) {
       toast.error('You must be logged in to update tickets');
       return;
@@ -131,10 +157,10 @@ export default function TicketDetailsContainer({ ticketData, surveySummary = nul
         toast.error(`Failed to update ${field}: ${getErrorMessage(error)}`);
       }
     });
-  };
+  }, [session?.user, withSubmitting, getUser, ticketData.ticket.ticket_id]);
 
   // Handle batch ticket updates - saves all changes atomically to avoid partial updates
-  const handleBatchTicketUpdate = async (changes: Record<string, any>): Promise<boolean> => {
+  const handleBatchTicketUpdate = useCallback(async (changes: Record<string, any>): Promise<boolean> => {
     // Check login first before any other logic
     if (!session?.user) {
       toast.error('You must be logged in to update tickets');
@@ -169,10 +195,10 @@ export default function TicketDetailsContainer({ ticketData, surveySummary = nul
         return false;
       }
     });
-  };
+  }, [session?.user, withSubmitting, getUser, ticketData.ticket.ticket_id]);
 
   // Handle adding comments using the optimized server action
-  const handleAddComment = async (content: string, isInternal: boolean, isResolution: boolean): Promise<void> => {
+  const handleAddComment = useCallback(async (content: string, isInternal: boolean, isResolution: boolean): Promise<void> => {
     if (!session?.user) {
       toast.error('You must be logged in to add comments');
       return;
@@ -195,7 +221,9 @@ export default function TicketDetailsContainer({ ticketData, surveySummary = nul
         );
 
         // Update local state to trigger re-render (not mutating props)
-        setComments(prev => [...prev, newComment]);
+        if (isMountedRef.current) {
+          setComments(prev => [...prev, newComment]);
+        }
 
         toast.success('Comment added successfully');
       } catch (error) {
@@ -203,10 +231,10 @@ export default function TicketDetailsContainer({ ticketData, surveySummary = nul
         toast.error(`Failed to add comment: ${getErrorMessage(error)}`);
       }
     });
-  };
+  }, [session?.user, withSubmitting, getUser, ticketData.ticket.ticket_id]);
 
   // Handle updating description using the optimized server action
-  const handleUpdateDescription = async (content: string): Promise<boolean> => {
+  const handleUpdateDescription = useCallback(async (content: string): Promise<boolean> => {
     if (!session?.user) {
       toast.error('You must be logged in to update the description');
       return false;
@@ -245,7 +273,7 @@ export default function TicketDetailsContainer({ ticketData, surveySummary = nul
         return false;
       }
     });
-  };
+  }, [session?.user, withSubmitting, getUser, ticketData.ticket.ticket_id, ticketData.ticket.attributes]);
 
   // Render directly to avoid redefining a component each render,
   // which can cause unmount/mount cycles and side-effects
