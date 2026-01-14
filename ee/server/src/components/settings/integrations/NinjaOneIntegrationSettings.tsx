@@ -389,7 +389,16 @@ const NinjaOneIntegrationSettings: React.FC = () => {
                       <li>Click &quot;Add&quot; and copy the Client ID and Client Secret below</li>
                     </ol>
                     <p className="text-xs text-primary-700 mt-2">
-                      For detailed setup instructions, see Section 10.15 in the documentation.
+                      For detailed setup instructions, see{' '}
+                      <a
+                        href="https://nineminds.com/documentation?doc=1015-setting-up-ninjaone-integration-in-alga-psa"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="underline hover:text-primary-800"
+                      >
+                        Section 10.15
+                      </a>{' '}
+                      in the documentation.
                     </p>
                     <Button
                       id="ninjaone-open-api-settings"
