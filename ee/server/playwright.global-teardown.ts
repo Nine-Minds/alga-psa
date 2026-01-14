@@ -7,7 +7,30 @@ import path from 'path';
 import fs from 'node:fs';
 
 async function globalTeardown() {
+  const keepDeps =
+    process.env.PW_KEEP_DEPS === 'true' ||
+    process.env.PW_SKIP_TEARDOWN === 'true';
+
+  if (keepDeps) {
+    console.log('🧹 Skipping Playwright global teardown (PW_KEEP_DEPS/PW_SKIP_TEARDOWN enabled).');
+    return;
+  }
+
   console.log('🧹 Starting Playwright global teardown...');
+
+  // Stop and remove workflow deps (postgres/redis/worker) used by Playwright runs.
+  console.log('🗑️  Stopping Playwright workflow deps...');
+  try {
+    const projectRoot = path.resolve(__dirname, '../..');
+    execSync(
+      'docker compose -f docker-compose.playwright-workflow-deps.yml -p alga-psa-playwright-workflow --env-file ee/server/.env down -v',
+      { cwd: projectRoot, stdio: 'inherit' }
+    );
+    console.log('✅ Playwright workflow deps stopped and removed');
+  } catch (error) {
+    console.error('❌ Failed to stop Playwright workflow deps:', error);
+    // Don't throw - allow teardown to continue
+  }
 
   // Stop and remove test MinIO container
   console.log('🗑️  Stopping test MinIO container...');

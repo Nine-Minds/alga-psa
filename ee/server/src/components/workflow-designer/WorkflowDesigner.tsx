@@ -568,8 +568,15 @@ const buildDefaultValueFromSchema = (schema: JsonSchema, root: JsonSchema): unkn
   if (type === 'array') return [];
   if (type === 'object') {
     if (resolved.properties) {
+      // Only materialize required fields (and any fields with an explicit default).
+      // This prevents generating invalid defaults for optional enum fields (e.g. onError.policy = ""),
+      // which can break strict Zod schemas used by node config validation.
+      const required = new Set(resolved.required ?? []);
       return Object.keys(resolved.properties).reduce<Record<string, unknown>>((acc, key) => {
-        acc[key] = buildDefaultValueFromSchema(resolved.properties?.[key] ?? {}, root);
+        const child = resolved.properties?.[key];
+        if (!child) return acc;
+        if (!required.has(key) && child.default === undefined) return acc;
+        acc[key] = buildDefaultValueFromSchema(child, root);
         return acc;
       }, {});
     }
@@ -1158,9 +1165,12 @@ const ensureExpr = (value: Expr | undefined): Expr => ({ $expr: value?.$expr ?? 
  *       "create_ticket_from_email" → "ticketFromEmailResult"
  */
 const generateSaveAsName = (actionId: string): string => {
+  // Normalize namespaces like "tickets.add_comment" → "tickets_add_comment"
+  const normalizedId = actionId.replace(/\./g, '_');
+
   // Remove common prefixes like "get_", "create_", "update_", "delete_", "find_", "lookup_", "resolve_"
   const prefixPattern = /^(get_|create_|update_|delete_|find_|lookup_|resolve_|fetch_|load_|process_|send_|call_)/i;
-  let cleaned = actionId.replace(prefixPattern, '');
+  let cleaned = normalizedId.replace(prefixPattern, '');
 
   // If cleaning removed everything, use the original
   if (!cleaned) cleaned = actionId;
@@ -1700,17 +1710,12 @@ const WorkflowDesigner: React.FC = () => {
 	      const data = await listWorkflowDefinitionsAction();
 	      const nextDefinitions = (data ?? []) as unknown as WorkflowDefinitionRecord[];
 	      setDefinitions(nextDefinitions);
-	      if (!newWorkflowFromQuery && !workflowIdFromQuery && nextDefinitions.length > 0 && !activeDefinition && !activeWorkflowId) {
-          const record = nextDefinitions[0];
-          setActiveDefinition(record.draft_definition);
-          setActiveWorkflowId(record.workflow_id);
-        }
 	    } catch (error) {
 	      toast.error(error instanceof Error ? error.message : 'Failed to load workflows');
 	    } finally {
       setIsLoading(false);
     }
-  }, [activeDefinition, activeWorkflowId, newWorkflowFromQuery, workflowIdFromQuery]);
+  }, [newWorkflowFromQuery, workflowIdFromQuery]);
 
   const loadRunSummary = useCallback(async () => {
     try {
@@ -2224,6 +2229,13 @@ const WorkflowDesigner: React.FC = () => {
         });
         setActiveWorkflowId(data.workflowId);
         setActiveDefinition({ ...activeDefinition, id: data.workflowId });
+
+        // Keep the URL in sync with the newly created workflow so downstream effects (and tab navigation)
+        // don't immediately clear the active workflow when `workflowId` is missing from the query string.
+        const nextParams = new URLSearchParams(searchParams.toString());
+        nextParams.set('workflowId', data.workflowId);
+        nextParams.delete('new');
+        router.replace(`?${nextParams.toString()}`, { scroll: false });
         toast.success('Workflow created');
       } else {
         await updateWorkflowDefinitionDraftAction({
@@ -2234,7 +2246,8 @@ const WorkflowDesigner: React.FC = () => {
         });
         toast.success('Workflow saved');
       }
-      await loadDefinitions();
+      // Refresh list in the background; do not block the UI on it (it can be slow during dev + Playwright).
+      void loadDefinitions();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Failed to save workflow');
     } finally {
@@ -2265,7 +2278,7 @@ const WorkflowDesigner: React.FC = () => {
         failureRateMinRuns: metadataDraft.failureRateMinRuns ? Number(metadataDraft.failureRateMinRuns) : null
       });
       toast.success('Workflow settings updated');
-      await loadDefinitions();
+      void loadDefinitions();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Failed to update workflow settings');
     } finally {
@@ -2316,7 +2329,7 @@ const WorkflowDesigner: React.FC = () => {
         });
       } catch {}
       toast.success('Workflow published');
-      await loadDefinitions();
+      void loadDefinitions();
     } catch (error) {
       toast.error('Failed to publish workflow');
     } finally {
@@ -5213,7 +5226,7 @@ const FIELD_METADATA: Record<string, { label: string; description?: string; adva
   actionId: { label: 'Action', description: 'The action to invoke' },
   version: { label: 'Version', description: 'Action version number' },
   inputMapping: { label: 'Input Mapping', description: 'Map data to action inputs' },
-  saveAs: { label: 'Save Result As', description: 'Variable path to store the result (e.g., payload.result)' },
+  saveAs: { label: 'Save Result As', description: 'Variable name or assignment path (e.g., result, vars.result, payload.result)' },
   idempotencyKey: {
     label: 'Idempotency Key',
     description: 'Expression that produces a unique key to prevent duplicate executions. If the same key is seen twice, the cached result is returned.',

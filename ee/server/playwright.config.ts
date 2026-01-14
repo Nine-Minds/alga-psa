@@ -42,9 +42,6 @@ process.env.DB_DIRECT_PORT = process.env.DB_DIRECT_PORT || directDbPort;
 process.env.PLAYWRIGHT_DB_HOST = process.env.PLAYWRIGHT_DB_HOST || directDbHost;
 process.env.PLAYWRIGHT_DB_PORT = process.env.PLAYWRIGHT_DB_PORT || directDbPort;
 
-// Apply Playwright-specific database configuration
-applyPlaywrightDatabaseEnv();
-
 process.env.NODE_ENV = process.env.NODE_ENV || 'test';
 
 function runPortProbe(start: number, span: number, strict: boolean): { success: boolean; port?: number; error?: string } {
@@ -136,6 +133,30 @@ function resolveWebPortSync(): number {
   return probe.port;
 }
 
+function resolveServicePortSync(envVarName: string, fallbackPort: number): number {
+  const preferred = Number(process.env[envVarName] || fallbackPort);
+  if (!Number.isFinite(preferred)) {
+    throw new Error(`Invalid ${envVarName} value: ${process.env[envVarName]}`);
+  }
+
+  const lockedVarName = `${envVarName}_LOCKED`;
+  if (process.env[lockedVarName] === 'true') {
+    return preferred;
+  }
+
+  // If the preferred port is taken, scan forward for an available one (up to 25).
+  const probe = runPortProbe(preferred, 25, false);
+  if (!probe.success || typeof probe.port !== 'number') {
+    if (isPortProbePermissionError(probe.error)) {
+      console.warn(`[Playwright] Port probe blocked (${probe.error}); using ${envVarName}=${preferred} without validation.`);
+      return preferred;
+    }
+    throw new Error(`Unable to find an available port for ${envVarName} starting at ${preferred} (${probe.error || 'probe failed'}).`);
+  }
+
+  return probe.port;
+}
+
 const PORT_CACHE_KEY = Symbol.for('__ALGA_PLAYWRIGHT_PORT__');
 
 function getCachedWebPort(): number {
@@ -172,6 +193,20 @@ process.env.HOST = process.env.HOST || resolvedHostForEnv;
 process.env.APP_PORT = process.env.APP_PORT || String(resolvedWebPort);
 process.env.EXPOSE_SERVER_PORT = process.env.EXPOSE_SERVER_PORT || String(resolvedWebPort);
 process.env.PORT = process.env.PORT || String(resolvedWebPort);
+
+// Reserve ports for dockerized Playwright deps (postgres/redis/worker).
+const resolvedPlaywrightDbPort = resolveServicePortSync('PLAYWRIGHT_DB_PORT', Number(directDbPort || 5439));
+process.env.PLAYWRIGHT_DB_PORT = String(resolvedPlaywrightDbPort);
+process.env.PLAYWRIGHT_DB_PORT_LOCKED = 'true';
+process.env.DB_DIRECT_PORT = String(resolvedPlaywrightDbPort);
+process.env.PLAYWRIGHT_DB_PORT = String(resolvedPlaywrightDbPort);
+
+const resolvedPlaywrightRedisPort = resolveServicePortSync('REDIS_PORT', Number(process.env.REDIS_PORT || 16379));
+process.env.REDIS_PORT = String(resolvedPlaywrightRedisPort);
+process.env.REDIS_PORT_LOCKED = 'true';
+
+// Apply Playwright-specific database configuration (after port resolution).
+applyPlaywrightDatabaseEnv();
 
 function parseTruthyEnv(value?: string): boolean {
   if (!value) return false;
@@ -308,15 +343,25 @@ export default defineConfig({
   /* Run your local dev server before starting the tests */
   webServer: shouldRunWebServer ? {
     // Reset DB once per session before starting the dev server.
-    command: 'cd ../../ && node --import tsx/esm scripts/bootstrap-playwright-db.ts && NEXT_PUBLIC_EDITION=enterprise npm run dev',
+    command:
+      'cd ../../' +
+      ` && PLAYWRIGHT_DB_PORT=${resolvedPlaywrightDbPort} REDIS_PORT=${resolvedPlaywrightRedisPort} docker compose -f docker-compose.playwright-workflow-deps.yml -p alga-psa-playwright-workflow --env-file ee/server/.env up -d --wait --wait-timeout 60 postgres-playwright redis-playwright` +
+      ' && node --import tsx/esm scripts/bootstrap-playwright-db.ts' +
+      ` && PLAYWRIGHT_DB_PORT=${resolvedPlaywrightDbPort} REDIS_PORT=${resolvedPlaywrightRedisPort} docker compose -f docker-compose.playwright-workflow-deps.yml -p alga-psa-playwright-workflow --env-file ee/server/.env up -d --build workflow-worker-playwright` +
+      ' && NEXT_PUBLIC_EDITION=enterprise npm run dev',
     url: resolvedBaseUrl,
-    // Reuse existing server by default for local development; set PW_REUSE=false to start fresh
-    reuseExistingServer: process.env.PW_REUSE !== 'false',
-    timeout: 120000,
+    // Default to starting a fresh server (we also need to bring up dockerized deps + reset the DB).
+    // Opt-in reuse with PW_REUSE=true for local iteration.
+    reuseExistingServer: process.env.PW_REUSE === 'true',
+    timeout: 300000,
     stdout: 'pipe',
     stderr: 'pipe',
     env: {
       ...process.env,
+      // Use env-only secrets for Playwright runs so local `../secrets/*` (e.g. redis_password) doesn't
+      // conflict with the dockerized Playwright deps (which intentionally run without auth).
+      SECRET_READ_CHAIN: 'env',
+      SECRET_WRITE_PROVIDER: 'env',
       NEXT_PUBLIC_EDITION: 'enterprise',
       E2E_AUTH_BYPASS: 'true',
       EE_BASE_URL: resolvedBaseUrl,

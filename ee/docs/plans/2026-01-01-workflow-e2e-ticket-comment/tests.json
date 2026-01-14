@@ -1,0 +1,38 @@
+[
+  {
+    "id": "T001",
+    "description": "E2E: Create workflow (TICKET_CREATED → Add Ticket Comment) via UI, publish/activate it",
+    "implemented": true,
+    "featureIds": ["F005"]
+  },
+  {
+    "id": "T002",
+    "description": "E2E: Create ticket via UI and verify \"hello from workflow\" comment appears",
+    "implemented": false,
+    "featureIds": ["F006", "F007"]
+  },
+  {
+    "id": "T003",
+    "description": "E2E: Verify workflow runtime recorded the event and completed a run successfully (DB assertions)",
+    "implemented": true,
+    "featureIds": ["F008", "F009", "F010"]
+  },
+  {
+    "id": "T004",
+    "description": "Infra: Playwright boot process starts Postgres + Redis and can connect (no manual prerequisites beyond Docker)",
+    "implemented": true,
+    "featureIds": ["F002"]
+  },
+  {
+    "id": "T005",
+    "description": "Infra: Workflow worker is running during the test and reports healthy / processes events",
+    "implemented": true,
+    "featureIds": ["F003", "F010"]
+  },
+  {
+    "id": "T006",
+    "description": "Infra: Creating a ticket publishes TICKET_CREATED to workflow:events:global and results in a workflow_runtime_events record (v2 ingestion)",
+    "implemented": true,
+    "featureIds": ["F009", "F010"]
+  }
+]

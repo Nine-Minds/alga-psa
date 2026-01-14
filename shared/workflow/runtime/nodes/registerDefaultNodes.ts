@@ -8,6 +8,21 @@ import type { Envelope, InputMapping } from '../types';
 import { parseEmailBodyWithFallback, renderCommentBlocksWithFallback } from './utils/emailNodes';
 import { getFormValidationService } from '../../core/formValidationService';
 
+function normalizeAssignmentPath(path: string): string {
+  const trimmed = path.trim();
+  if (!trimmed) return trimmed;
+
+  const scoped = trimmed.startsWith('payload.')
+    || trimmed.startsWith('vars.')
+    || trimmed.startsWith('meta.')
+    || trimmed.startsWith('error.')
+    || trimmed.startsWith('/');
+
+  // For backwards compatibility with the Workflow Designer, treat unscoped values
+  // as a variable name under `vars.*`.
+  return scoped ? trimmed : `vars.${trimmed}`;
+}
+
 const stateSetSchema = z.object({
   state: z.string().min(1)
 }).strict();
@@ -176,7 +191,7 @@ export function registerDefaultNodes(): void {
       const output = await ctx.actions.call(config.actionId, config.version, resolvedArgs, { idempotencyKey });
       if (config.saveAs) {
         return applyAssignments(env, {
-          [config.saveAs]: output
+          [normalizeAssignmentPath(config.saveAs)]: output
         });
       }
       return env;
@@ -198,7 +213,7 @@ export function registerDefaultNodes(): void {
       const html = htmlValue === null || htmlValue === undefined ? undefined : String(htmlValue);
       const parsed = await parseEmailBodyWithFallback(ctx.actions.call, { text, html });
       return applyAssignments(env, {
-        [config.saveAs ?? 'payload.parsedEmail']: parsed
+        [config.saveAs ? normalizeAssignmentPath(config.saveAs) : 'payload.parsedEmail']: parsed
       });
     },
     ui: {
@@ -218,7 +233,7 @@ export function registerDefaultNodes(): void {
       const html = htmlValue === null || htmlValue === undefined ? undefined : String(htmlValue);
       const blocks = await renderCommentBlocksWithFallback(ctx.actions.call, { html, text });
       return applyAssignments(env, {
-        [config.saveAs ?? 'payload.commentBlocks']: blocks
+        [config.saveAs ? normalizeAssignmentPath(config.saveAs) : 'payload.commentBlocks']: blocks
       });
     },
     ui: {

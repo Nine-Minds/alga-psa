@@ -42,74 +42,82 @@ type RawConfig = {
   ssl: boolean;
 };
 
-const secretsDbPassword = (
-  resolveSecretValue(process.env.PLAYWRIGHT_DB_APP_PASSWORD) ??
-  'postpass123'
-);
+function resolveAdminPassword(): string {
+  return (
+    resolveSecretValue(process.env.PLAYWRIGHT_DB_ADMIN_PASSWORD) ??
+    resolveSecretValue(process.env.DB_PASSWORD_ADMIN) ??
+    resolveSecretValue(process.env.DB_PASSWORD) ??
+    'postpass123'
+  );
+}
 
-const secretsAdminPassword = (
-  resolveSecretValue(process.env.PLAYWRIGHT_DB_ADMIN_PASSWORD) ??
-  resolveSecretValue(process.env.DB_PASSWORD_ADMIN) ??
-  resolveSecretValue(process.env.DB_PASSWORD) ??
-  'postpass123'
-);
+function resolveAppPassword(): string {
+  return resolveSecretValue(process.env.PLAYWRIGHT_DB_APP_PASSWORD) ?? 'postpass123';
+}
 
-const DEFAULT_CONFIG: RawConfig = {
-  host: process.env.PLAYWRIGHT_DB_HOST ?? process.env.DB_HOST ?? 'localhost',
-  port: Number(process.env.PLAYWRIGHT_DB_PORT ?? process.env.DB_PORT ?? 5432),
-  // Always use a dedicated Playwright test database unless explicitly overridden
-  database: process.env.PLAYWRIGHT_DB_NAME ?? 'alga_contract_wizard_test',
-  adminUser: process.env.PLAYWRIGHT_DB_ADMIN_USER ?? process.env.DB_USER_ADMIN ?? 'postgres',
-  adminPassword: secretsAdminPassword,
-  // Keep app user independent of DB_USER_SERVER to avoid accidental override
-  appUser: process.env.PLAYWRIGHT_DB_APP_USER ?? 'app_user',
-  appPassword: secretsDbPassword,
-  ssl: (process.env.PLAYWRIGHT_DB_SSL ?? process.env.DB_SSL ?? '').toLowerCase() === 'true',
-};
+export function getPlaywrightDbConfig(): RawConfig {
+  return {
+    host: process.env.PLAYWRIGHT_DB_HOST ?? process.env.DB_HOST ?? 'localhost',
+    port: Number(process.env.PLAYWRIGHT_DB_PORT ?? process.env.DB_PORT ?? 5432),
+    // Always use a dedicated Playwright test database unless explicitly overridden
+    database: process.env.PLAYWRIGHT_DB_NAME ?? 'alga_contract_wizard_test',
+    adminUser: process.env.PLAYWRIGHT_DB_ADMIN_USER ?? process.env.DB_USER_ADMIN ?? 'postgres',
+    adminPassword: resolveAdminPassword(),
+    // Keep app user independent of DB_USER_SERVER to avoid accidental override
+    appUser: process.env.PLAYWRIGHT_DB_APP_USER ?? 'app_user',
+    appPassword: resolveAppPassword(),
+    ssl: (process.env.PLAYWRIGHT_DB_SSL ?? process.env.DB_SSL ?? '').toLowerCase() === 'true',
+  };
+}
 
-export const PLAYWRIGHT_DB_CONFIG = DEFAULT_CONFIG;
+export const PLAYWRIGHT_DB_CONFIG: RawConfig = new Proxy({} as RawConfig, {
+  get: (_target, prop) => (getPlaywrightDbConfig() as any)[prop],
+}) as RawConfig;
 
 const truthy = (value: boolean) => (value ? 'true' : 'false');
 
 export function applyPlaywrightDatabaseEnv(): void {
+  const cfg = getPlaywrightDbConfig();
+
   process.env.DB_TYPE = process.env.DB_TYPE && process.env.DB_TYPE.trim().length > 0 ? process.env.DB_TYPE : 'postgres';
   process.env.DB_TYPE_SERVER = process.env.DB_TYPE_SERVER && process.env.DB_TYPE_SERVER.trim().length > 0 ? process.env.DB_TYPE_SERVER : 'postgres';
-  process.env.DB_HOST = PLAYWRIGHT_DB_CONFIG.host;
-  process.env.DB_PORT = String(PLAYWRIGHT_DB_CONFIG.port);
-  process.env.DB_NAME = PLAYWRIGHT_DB_CONFIG.database;
-  process.env.DB_NAME_SERVER = PLAYWRIGHT_DB_CONFIG.database;
-  process.env.DB_SSL = truthy(PLAYWRIGHT_DB_CONFIG.ssl);
+  process.env.DB_HOST = cfg.host;
+  process.env.DB_PORT = String(cfg.port);
+  process.env.DB_NAME = cfg.database;
+  process.env.DB_NAME_SERVER = cfg.database;
+  process.env.DB_SSL = truthy(cfg.ssl);
 
   // For local Playwright runs, prefer using admin credentials for app connectivity
   // to avoid issues when the app user is not yet provisioned.
-  process.env.DB_USER = PLAYWRIGHT_DB_CONFIG.adminUser;
-  process.env.DB_PASSWORD = PLAYWRIGHT_DB_CONFIG.adminPassword;
-  process.env.DB_USER_SERVER = PLAYWRIGHT_DB_CONFIG.adminUser;
-  process.env.DB_PASSWORD_SERVER = PLAYWRIGHT_DB_CONFIG.adminPassword;
-  process.env.DB_USER_HOCUSPOCUS = PLAYWRIGHT_DB_CONFIG.adminUser;
-  process.env.DB_PASSWORD_HOCUSPOCUS = PLAYWRIGHT_DB_CONFIG.adminPassword;
+  process.env.DB_USER = cfg.adminUser;
+  process.env.DB_PASSWORD = cfg.adminPassword;
+  process.env.DB_USER_SERVER = cfg.adminUser;
+  process.env.DB_PASSWORD_SERVER = cfg.adminPassword;
+  process.env.DB_USER_HOCUSPOCUS = cfg.adminUser;
+  process.env.DB_PASSWORD_HOCUSPOCUS = cfg.adminPassword;
 
   // Admin creds
-  process.env.DB_USER_ADMIN = PLAYWRIGHT_DB_CONFIG.adminUser;
-  process.env.DB_PASSWORD_ADMIN = PLAYWRIGHT_DB_CONFIG.adminPassword;
-  process.env.DB_PASSWORD_SUPERUSER = process.env.DB_PASSWORD_SUPERUSER ?? PLAYWRIGHT_DB_CONFIG.adminPassword;
-  process.env.DB_USER_READONLY = process.env.DB_USER_READONLY ?? PLAYWRIGHT_DB_CONFIG.appUser;
-  process.env.DB_PASSWORD_READONLY = process.env.DB_PASSWORD_READONLY ?? PLAYWRIGHT_DB_CONFIG.appPassword;
+  process.env.DB_USER_ADMIN = cfg.adminUser;
+  process.env.DB_PASSWORD_ADMIN = cfg.adminPassword;
+  process.env.DB_PASSWORD_SUPERUSER = process.env.DB_PASSWORD_SUPERUSER ?? cfg.adminPassword;
+  process.env.DB_USER_READONLY = process.env.DB_USER_READONLY ?? cfg.appUser;
+  process.env.DB_PASSWORD_READONLY = process.env.DB_PASSWORD_READONLY ?? cfg.appPassword;
 
-  process.env.DB_DIRECT_HOST = PLAYWRIGHT_DB_CONFIG.host;
-  process.env.DB_DIRECT_PORT = String(PLAYWRIGHT_DB_CONFIG.port);
+  process.env.DB_DIRECT_HOST = cfg.host;
+  process.env.DB_DIRECT_PORT = String(cfg.port);
 
-  process.env.TEST_DATABASE_URL = `postgresql://${PLAYWRIGHT_DB_CONFIG.adminUser}:${PLAYWRIGHT_DB_CONFIG.adminPassword}@${PLAYWRIGHT_DB_CONFIG.host}:${PLAYWRIGHT_DB_CONFIG.port}/${PLAYWRIGHT_DB_CONFIG.database}`;
+  process.env.TEST_DATABASE_URL = `postgresql://${cfg.adminUser}:${cfg.adminPassword}@${cfg.host}:${cfg.port}/${cfg.database}`;
 }
 
 export async function ensurePlaywrightDatabase(): Promise<void> {
-  const adminUser = process.env.DB_USER_ADMIN ?? PLAYWRIGHT_DB_CONFIG.adminUser;
-  const adminPassword = process.env.DB_PASSWORD_ADMIN ?? PLAYWRIGHT_DB_CONFIG.adminPassword;
-  const databaseName = PLAYWRIGHT_DB_CONFIG.database;
+  const cfg = getPlaywrightDbConfig();
+  const adminUser = process.env.DB_USER_ADMIN ?? cfg.adminUser;
+  const adminPassword = process.env.DB_PASSWORD_ADMIN ?? cfg.adminPassword;
+  const databaseName = cfg.database;
 
   const adminConnection = {
-    host: PLAYWRIGHT_DB_CONFIG.host,
-    port: PLAYWRIGHT_DB_CONFIG.port,
+    host: cfg.host,
+    port: cfg.port,
     user: adminUser,
     password: adminPassword,
     database: 'postgres',
@@ -118,8 +126,8 @@ export async function ensurePlaywrightDatabase(): Promise<void> {
   // Debug info for connectivity
   // eslint-disable-next-line no-console
   console.log('[Playwright DB] Admin connect params', {
-    host: PLAYWRIGHT_DB_CONFIG.host,
-    port: PLAYWRIGHT_DB_CONFIG.port,
+    host: cfg.host,
+    port: cfg.port,
     adminUser,
     databaseName,
   });
@@ -153,8 +161,8 @@ export async function ensurePlaywrightDatabase(): Promise<void> {
   }
 
   const migrationConnection = {
-    host: PLAYWRIGHT_DB_CONFIG.host,
-    port: PLAYWRIGHT_DB_CONFIG.port,
+    host: cfg.host,
+    port: cfg.port,
     user: adminUser,
     password: adminPassword,
     database: databaseName,
@@ -165,8 +173,8 @@ export async function ensurePlaywrightDatabase(): Promise<void> {
 
   try {
     // Ensure application user exists with correct password and privileges
-    const appUser = PLAYWRIGHT_DB_CONFIG.appUser;
-    const appPassword = PLAYWRIGHT_DB_CONFIG.appPassword;
+    const appUser = cfg.appUser;
+    const appPassword = cfg.appPassword;
 
     const roleCheck = await migrationDb.raw('SELECT 1 FROM pg_roles WHERE rolname = ?', [appUser]);
     const safeRole = appUser.replace(/"/g, '""');

@@ -26,7 +26,8 @@ get_secret() {
 wait_for_postgres() {
     log "Waiting for PostgreSQL to be ready..."
     local db_password_server=$(get_secret "db_password_server" "DB_PASSWORD_SERVER")
-    until pg_isready -h ${DB_HOST:-postgres} -p ${DB_PORT:-5432} -U ${DB_USER_SERVER:-postgres} 2>/dev/null; do
+    local readiness_user=${DB_USER_ADMIN:-${DB_USER_SERVER:-postgres}}
+    until pg_isready -h ${DB_HOST:-postgres} -p ${DB_PORT:-5432} -U "$readiness_user" 2>/dev/null; do
         log "PostgreSQL is unavailable - sleeping"
         sleep 1
     done
@@ -37,10 +38,17 @@ wait_for_postgres() {
 wait_for_redis() {
     log "Waiting for Redis to be ready..."
     local redis_password=$(get_secret "redis_password" "REDIS_PASSWORD")
-    until redis-cli -h ${REDIS_HOST:-redis} -p ${REDIS_PORT:-6379} -a "$redis_password" ping 2>/dev/null; do
-        log "Redis is unavailable - sleeping"
-        sleep 1
-    done
+    if [ -n "$redis_password" ]; then
+        until redis-cli -h ${REDIS_HOST:-redis} -p ${REDIS_PORT:-6379} -a "$redis_password" ping 2>/dev/null; do
+            log "Redis is unavailable - sleeping"
+            sleep 1
+        done
+    else
+        until redis-cli -h ${REDIS_HOST:-redis} -p ${REDIS_PORT:-6379} ping 2>/dev/null; do
+            log "Redis is unavailable - sleeping"
+            sleep 1
+        done
+    fi
     log "Redis is up and running!"
 }
 

@@ -1,0 +1,78 @@
+services:
+  postgres-playwright:
+    image: ankane/pgvector:latest
+    environment:
+      POSTGRES_USER: ${PLAYWRIGHT_DB_ADMIN_USER:-postgres}
+      POSTGRES_PASSWORD: ${PLAYWRIGHT_DB_ADMIN_PASSWORD:-postpass123}
+      POSTGRES_DB: postgres
+    ports:
+      - "${PLAYWRIGHT_DB_PORT:-5439}:5432"
+    volumes:
+      - playwright-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${PLAYWRIGHT_DB_ADMIN_USER:-postgres} -d postgres"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  redis-playwright:
+    image: redis:7-alpine
+    ports:
+      - "${REDIS_PORT:-16379}:6379"
+    volumes:
+      - playwright-redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  workflow-worker-playwright:
+    build:
+      context: .
+      dockerfile: services/workflow-worker/Dockerfile
+    environment:
+      EDITION: enterprise
+      APP_ENV: test
+      NODE_ENV: production
+      LOG_LEVEL: debug
+      WORKFLOW_WORKER_VERBOSE: "true"
+      WORKFLOW_WORKER_MODE: v2
+      WORKFLOW_RUNTIME_V2_EVENT_CONSUMER_GROUP: workflow-runtime-v2
+
+      # DB (internal docker network)
+      DB_TYPE: postgres
+      DB_HOST: postgres-playwright
+      DB_PORT: 5432
+      DB_NAME_SERVER: ${PLAYWRIGHT_DB_NAME:-alga_contract_wizard_test}
+      DB_USER_ADMIN: ${PLAYWRIGHT_DB_ADMIN_USER:-postgres}
+      DB_PASSWORD_ADMIN: ${PLAYWRIGHT_DB_ADMIN_PASSWORD:-postpass123}
+      DB_USER_SERVER: ${PLAYWRIGHT_DB_APP_USER:-app_user}
+      DB_PASSWORD_SERVER: ${PLAYWRIGHT_DB_APP_PASSWORD:-postpass123}
+
+      # Redis (internal docker network)
+      REDIS_HOST: redis-playwright
+      REDIS_PORT: 6379
+
+      # App/runtime
+      NEXTAUTH_SECRET: ${NEXTAUTH_SECRET:-test-nextauth-secret}
+      SECRET_READ_CHAIN: env
+      SECRET_WRITE_PROVIDER: filesystem
+
+      # Workflow runtime v2 streams
+      WORKFLOW_DISTRIBUTED_MODE: "true"
+      WORKFLOW_REDIS_STREAM_PREFIX: "workflow:events:"
+      WORKFLOW_REDIS_CONSUMER_GROUP: "workflow-workers"
+      WORKFLOW_REDIS_BATCH_SIZE: "10"
+      WORKFLOW_REDIS_IDLE_TIMEOUT_MS: "60000"
+    depends_on:
+      postgres-playwright:
+        condition: service_healthy
+      redis-playwright:
+        condition: service_healthy
+    ports:
+      - "4000"
+
+volumes:
+  playwright-postgres-data:
+  playwright-redis-data:

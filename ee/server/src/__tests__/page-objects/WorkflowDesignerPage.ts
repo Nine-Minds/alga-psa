@@ -24,6 +24,7 @@ export class WorkflowDesignerPage {
   readonly pinToPublishedButton: Locator;
   readonly schemaClearButton: Locator;
   readonly triggerMappingJumpToContract: Locator;
+  readonly emptyPipeline: Locator;
 
   constructor(page: Page) {
     this.page = page;
@@ -50,16 +51,51 @@ export class WorkflowDesignerPage {
     this.pinToPublishedButton = page.locator('#workflow-designer-pin-to-published-contract');
     this.schemaClearButton = page.locator('#workflow-designer-schema-clear');
     this.triggerMappingJumpToContract = page.locator('#workflow-designer-trigger-mapping-jump-to-contract');
+
+    this.emptyPipeline = page.locator('[data-testid="empty-pipeline"]');
   }
 
   async goto(baseUrl?: string): Promise<void> {
     const targetBaseUrl = baseUrl ?? resolvePlaywrightBaseUrl();
-    await this.page.goto(`${targetBaseUrl}/msp/workflows`, { waitUntil: 'domcontentloaded', timeout: 60_000 });
-    await this.waitForLoaded();
+    const url = `${targetBaseUrl}/msp/workflows`;
+
+    const startedAt = Date.now();
+    let lastError: unknown = null;
+
+    // The Playwright webServer helper sometimes reports "ready" a beat before the dev server
+    // stabilizes (especially after a cold boot + heavy DB migrations). Retry on connection errors.
+    while (Date.now() - startedAt < 90_000) {
+      try {
+        await this.page.goto(url, { waitUntil: 'domcontentloaded', timeout: 30_000 });
+        await this.waitForLoaded();
+        return;
+      } catch (error) {
+        lastError = error;
+        const message = error instanceof Error ? error.message : String(error);
+        const isConnectionRefused = message.includes('ERR_CONNECTION_REFUSED') || message.includes('ECONNREFUSED');
+        if (!isConnectionRefused) throw error;
+        await this.page.waitForTimeout(1000);
+      }
+    }
+
+    throw lastError instanceof Error ? lastError : new Error(String(lastError ?? 'Failed to load workflow designer'));
   }
 
   async waitForLoaded(): Promise<void> {
     await expect(this.header).toBeVisible({ timeout: 30_000 });
+  }
+
+  async waitForReady(): Promise<void> {
+    await this.waitForLoaded();
+    await expect(this.newWorkflowButton).toBeVisible({ timeout: 30_000 });
+    await expect(this.newWorkflowButton).toBeEnabled({ timeout: 30_000 });
+    await expect(this.nameInput).toBeVisible({ timeout: 30_000 });
+  }
+
+  async waitForPipelineReady(): Promise<void> {
+    // The designer can render a skeleton while `activeDefinition` is null/loading. Steps can't be added until the pipeline is ready.
+    const firstStepCard = this.page.locator('[data-testid^="step-card-"]').first();
+    await expect(this.emptyPipeline.or(firstStepCard)).toBeVisible({ timeout: 60_000 });
   }
 
   addButtonFor(stepType: string): Locator {
@@ -69,11 +105,26 @@ export class WorkflowDesignerPage {
   async clickNewWorkflow(): Promise<void> {
     await expect(this.newWorkflowButton).toBeVisible({ timeout: 20_000 });
     await this.newWorkflowButton.click();
+    await expect(this.nameInput).toBeVisible({ timeout: 30_000 });
+    await this.waitForPipelineReady();
   }
 
   async saveDraft(): Promise<void> {
+    const beforeUrl = this.page.url();
+    const beforeParams = new URL(beforeUrl).searchParams;
+    const hadWorkflowId = Boolean(beforeParams.get('workflowId'));
+
     await this.saveDraftButton.click();
-    await expect(this.saveDraftButton).toBeEnabled({ timeout: 20_000 });
+
+    // Saving can be slow on a cold dev server; rely on button state/text (EE layout doesn't always render toasts).
+    await expect(this.saveDraftButton).toHaveText(/Saving\.\.\./, { timeout: 30_000 });
+    await expect(this.saveDraftButton).toHaveText(/Save Draft/, { timeout: 90_000 });
+    await expect(this.saveDraftButton).toBeEnabled({ timeout: 90_000 });
+
+    // New workflow creation should push workflowId into the URL.
+    if (!hadWorkflowId) {
+      await expect(this.page).toHaveURL(/workflowId=[0-9a-fA-F-]{36}/, { timeout: 90_000 });
+    }
   }
 
   async clickSaveDraft(): Promise<void> {
@@ -85,6 +136,7 @@ export class WorkflowDesignerPage {
   }
 
   async selectPayloadSchemaRef(schemaRef: string): Promise<void> {
+    await expect(this.payloadSchemaSelectButton).toBeVisible({ timeout: 60_000 });
     await this.payloadSchemaSelectButton.click();
     const searchInput = this.page
       .locator('#workflow-designer-schema-ref-select-search')
@@ -92,7 +144,14 @@ export class WorkflowDesignerPage {
     // SearchableSelect uses `id="<select-id>-search"`; in overlay mode, the input is portalled.
     await expect(searchInput.first()).toBeVisible({ timeout: 30_000 });
     await searchInput.fill(schemaRef);
-    await this.page.getByRole('option', { name: new RegExp(schemaRef.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')) }).first().click();
+
+    // Prefer keyboard selection to avoid occasional "option is outside viewport" issues with portalled overlays.
+    const option = this.page.getByRole('option', {
+      name: new RegExp(schemaRef.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
+    }).first();
+    await expect(option).toBeVisible({ timeout: 30_000 });
+    await searchInput.first().focus();
+    await this.page.keyboard.press('Enter');
   }
 
   async setPayloadSchemaRefAdvanced(schemaRef: string): Promise<void> {
@@ -142,11 +201,13 @@ export class WorkflowDesignerPage {
   }
 
   dropStepsHereText(): Locator {
+    // Kept for backward compatibility with older pipeline UI, but prefer `emptyPipeline`.
     return this.page.getByText('Drop steps here');
   }
 
   // Trigger event helpers
   async selectTriggerEvent(eventName: string): Promise<void> {
+    await expect(this.triggerInput).toBeVisible({ timeout: 60_000 });
     await this.triggerInput.click();
     const searchInput = this.page.locator('#workflow-designer-trigger-event-search');
     if (await searchInput.isVisible()) {
@@ -173,6 +234,7 @@ export class WorkflowDesignerPage {
   }
 
   async setContractModePinned(): Promise<void> {
+    await expect(this.contractModeToggle).toBeVisible({ timeout: 30_000 });
     const isInferred = await this.isContractModeInferred();
     if (isInferred) {
       await this.contractModeToggle.click();

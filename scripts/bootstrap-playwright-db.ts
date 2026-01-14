@@ -20,7 +20,9 @@ function resolveSecretValue(raw?: string): string | undefined {
 
   // If running locally, a docker-style secret path often corresponds to ./secrets/<name>
   if (trimmed.startsWith('/run/secrets/')) {
-    candidates.push(path.resolve(process.cwd(), 'secrets', path.basename(trimmed)));
+    const secretBasename = path.basename(trimmed);
+    candidates.push(path.resolve(process.cwd(), 'secrets', secretBasename));
+    candidates.push(path.resolve(process.cwd(), 'secrets-playwright', secretBasename));
   }
 
   for (const candidate of candidates) {
