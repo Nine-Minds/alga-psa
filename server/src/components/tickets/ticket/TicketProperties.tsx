@@ -32,6 +32,7 @@ import TicketSurveySummaryCard from 'server/src/components/surveys/TicketSurveyS
 import type { SurveyTicketSatisfactionSummary } from 'server/src/interfaces/survey.interface';
 import { getAppointmentRequestsByTicketId } from 'server/src/lib/actions/appointmentRequestManagementActions';
 import TicketMaterialsCard from './TicketMaterialsCard';
+import { CustomFieldsCard } from 'server/src/components/ui/CustomFieldsCard';
 
 interface TicketPropertiesProps {
   id?: string;
@@ -823,6 +824,16 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
         </div>
       </div>
 
+
+      {/* Custom Fields */}
+      {ticket.ticket_id && (
+        <CustomFieldsCard
+          entityType="ticket"
+          entityId={ticket.ticket_id}
+          title="Custom Fields"
+          className="mb-6"
+        />
+      )}
 
       {ticket.ticket_id && ticket.client_id && (
         <TicketMaterialsCard

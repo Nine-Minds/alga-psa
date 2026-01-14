@@ -35,6 +35,7 @@ import { IBoard } from 'server/src/interfaces/board.interface';
 import { SelectOption } from 'server/src/components/ui/CustomSelect';
 import { ClientPicker } from 'server/src/components/clients/ClientPicker';
 import { TagManager } from 'server/src/components/tags';
+import { CustomFieldsCard } from 'server/src/components/ui/CustomFieldsCard';
 import { findTagsByEntityIds } from 'server/src/lib/actions/tagActions';
 import { useTags } from 'server/src/context/TagContext';
 import ContactAvatarUpload from 'server/src/components/client-portal/contacts/ContactAvatarUpload';
@@ -719,6 +720,15 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
               useInlineInput={isInDrawer}
             />
           </div>
+
+          {/* Custom Fields */}
+          {editedContact.contact_name_id && (
+            <CustomFieldsCard
+              entityType="contact"
+              entityId={editedContact.contact_name_id}
+              title="Custom Fields"
+            />
+          )}
 
           {editedContact.notes && (
             <div className="space-y-2">

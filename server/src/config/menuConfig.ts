@@ -213,6 +213,7 @@ export const settingsNavigationSections: NavigationSection[] = [
       { name: 'Ticketing', icon: MessageSquare, href: '/msp/settings?tab=ticketing' },
       { name: 'Projects', icon: Layers, href: '/msp/settings?tab=projects' },
       { name: 'Interactions', icon: Handshake, href: '/msp/settings?tab=interactions' },
+      { name: 'Custom Fields', icon: ListTree, href: '/msp/settings/custom-fields' },
     ]
   },
   {

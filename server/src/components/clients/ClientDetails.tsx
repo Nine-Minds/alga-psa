@@ -48,6 +48,7 @@ import { FormFieldComponent } from 'server/src/types/ui-reflection/types';
 import { getImageUrl } from 'server/src/lib/actions/document-actions/documentActions';
 import ClientContractLineDashboard from '../billing-dashboard/ClientContractLineDashboard';
 import { ClientNotesPanel } from './panels/ClientNotesPanel';
+import { CustomFieldsCard } from 'server/src/components/ui/CustomFieldsCard';
 import { toast } from 'react-hot-toast';
 import { handleError } from 'server/src/lib/utils/errorHandling';
 import EntityImageUpload from 'server/src/components/ui/EntityImageUpload';
@@ -876,6 +877,15 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
                   useInlineInput={isInDrawer}
                 />
               </div>
+
+              {/* Custom Fields */}
+              {editedClient.client_id && (
+                <CustomFieldsCard
+                  entityType="company"
+                  entityId={editedClient.client_id}
+                  title="Custom Fields"
+                />
+              )}
             </div>
             
             {/* Right Column - Client Locations Only */}
