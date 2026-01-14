@@ -5,61 +5,43 @@
  * is not installed (e.g., in CI type checking).
  */
 
+// Import all tenant workflow types from EE interfaces
+import type {
+  TenantCreationInput,
+  TenantCreationResult,
+  TenantWorkflowClientResult,
+  ResendWelcomeEmailInput,
+  ResendWelcomeEmailResult,
+  ResendWelcomeEmailClientResult,
+  TenantDeletionInput,
+  TenantDeletionResult,
+  TenantDeletionWorkflowState,
+  TenantDeletionClientResult,
+  ConfirmationType,
+  SignalResult,
+  QueryResult,
+} from '@ee/interfaces/tenant.interfaces';
+
+// Re-export for consumers
+export type {
+  TenantCreationInput,
+  TenantCreationResult,
+  TenantWorkflowClientResult,
+  ResendWelcomeEmailInput,
+  ResendWelcomeEmailResult,
+  ResendWelcomeEmailClientResult,
+  TenantDeletionInput,
+  TenantDeletionResult,
+  TenantDeletionWorkflowState,
+  TenantDeletionClientResult,
+  ConfirmationType,
+  SignalResult,
+  QueryResult,
+};
+
 const DEFAULT_TEMPORAL_ADDRESS = 'temporal-frontend.temporal.svc.cluster.local:7233';
 const DEFAULT_TEMPORAL_NAMESPACE = 'default';
 const DEFAULT_TEMPORAL_TASK_QUEUE = 'tenant-workflows';
-
-// Inline type definitions to avoid importing from ee/temporal-workflows
-export interface TenantCreationInput {
-  tenantName: string;
-  adminUser: {
-    firstName: string;
-    lastName: string;
-    email: string;
-  };
-  companyName: string;
-  clientName: string;
-  licenseCount?: number;
-  contractLine?: string;
-  checkoutSessionId?: string;
-}
-
-export interface TenantCreationResult {
-  success?: boolean;
-  tenantId?: string;
-  adminUserId?: string;
-  error?: string;
-}
-
-export interface ResendWelcomeEmailInput {
-  tenantId: string;
-  userId?: string;
-  triggeredBy: string;
-  triggeredByEmail: string;
-}
-
-export interface ResendWelcomeEmailResult {
-  success: boolean;
-  email?: string;
-  tenantName?: string;
-  error?: string;
-}
-
-export interface TenantWorkflowClientResult {
-  available: boolean;
-  workflowId?: string;
-  runId?: string;
-  result?: Promise<TenantCreationResult>;
-  error?: string;
-}
-
-export interface ResendWelcomeEmailClientResult {
-  available: boolean;
-  workflowId?: string;
-  runId?: string;
-  result?: Promise<ResendWelcomeEmailResult>;
-  error?: string;
-}
 
 /**
  * Start a tenant creation workflow via Temporal.
@@ -159,6 +141,182 @@ export async function startResendWelcomeEmailWorkflow(
       runId: handle.firstExecutionRunId,
       result: resultPromise,
     };
+  } catch (error) {
+    return {
+      available: false,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    };
+  }
+}
+
+/**
+ * Start a tenant deletion workflow via Temporal.
+ * Returns { available: false } if Temporal client is not available.
+ */
+export async function startTenantDeletionWorkflow(
+  input: TenantDeletionInput
+): Promise<TenantDeletionClientResult> {
+  try {
+    const mod: any = await import('@temporalio/client').catch(() => null);
+    if (!mod) {
+      return { available: false, error: 'Temporal client not available' };
+    }
+
+    const address = process.env.TEMPORAL_ADDRESS || DEFAULT_TEMPORAL_ADDRESS;
+    const namespace = process.env.TEMPORAL_NAMESPACE || DEFAULT_TEMPORAL_NAMESPACE;
+    const taskQueue = process.env.TEMPORAL_TASK_QUEUE || DEFAULT_TEMPORAL_TASK_QUEUE;
+
+    const connection = await mod.Connection.connect({ address });
+    const client = new mod.Client({ connection, namespace });
+
+    const workflowId = `tenant-deletion-${input.tenantId}-${Date.now()}`;
+
+    const handle = await client.workflow.start('tenantDeletionWorkflow', {
+      args: [input],
+      taskQueue,
+      workflowId,
+      // Long timeout for 90-day potential wait
+      workflowExecutionTimeout: '100d',
+      workflowRunTimeout: '100d',
+      workflowTaskTimeout: '1m',
+    });
+
+    // Note: We don't wait for result here since this is a long-running workflow
+    // The connection stays open but we don't block
+
+    return {
+      available: true,
+      workflowId: handle.workflowId,
+      runId: handle.firstExecutionRunId,
+      // Don't return result promise for long-running workflows
+    };
+  } catch (error) {
+    return {
+      available: false,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    };
+  }
+}
+
+/**
+ * Get the state of a tenant deletion workflow.
+ */
+export async function getTenantDeletionState(
+  workflowId: string
+): Promise<QueryResult<TenantDeletionWorkflowState>> {
+  try {
+    const mod: any = await import('@temporalio/client').catch(() => null);
+    if (!mod) {
+      return { available: false, error: 'Temporal client not available' };
+    }
+
+    const address = process.env.TEMPORAL_ADDRESS || DEFAULT_TEMPORAL_ADDRESS;
+    const namespace = process.env.TEMPORAL_NAMESPACE || DEFAULT_TEMPORAL_NAMESPACE;
+
+    const connection = await mod.Connection.connect({ address });
+    const client = new mod.Client({ connection, namespace });
+
+    try {
+      const handle = client.workflow.getHandle(workflowId);
+      const state = await handle.query('getState');
+
+      return {
+        available: true,
+        data: state as TenantDeletionWorkflowState,
+      };
+    } finally {
+      try {
+        await connection.close();
+      } catch {
+        // Ignore close errors
+      }
+    }
+  } catch (error) {
+    return {
+      available: false,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    };
+  }
+}
+
+/**
+ * Send confirmation signal to a tenant deletion workflow.
+ */
+export async function confirmTenantDeletion(
+  workflowId: string,
+  type: ConfirmationType,
+  confirmedBy: string
+): Promise<SignalResult> {
+  try {
+    const mod: any = await import('@temporalio/client').catch(() => null);
+    if (!mod) {
+      return { available: false, error: 'Temporal client not available' };
+    }
+
+    const address = process.env.TEMPORAL_ADDRESS || DEFAULT_TEMPORAL_ADDRESS;
+    const namespace = process.env.TEMPORAL_NAMESPACE || DEFAULT_TEMPORAL_NAMESPACE;
+
+    const connection = await mod.Connection.connect({ address });
+    const client = new mod.Client({ connection, namespace });
+
+    try {
+      const handle = client.workflow.getHandle(workflowId);
+      await handle.signal('confirmDeletion', { type, confirmedBy });
+
+      return {
+        available: true,
+        success: true,
+      };
+    } finally {
+      try {
+        await connection.close();
+      } catch {
+        // Ignore close errors
+      }
+    }
+  } catch (error) {
+    return {
+      available: false,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    };
+  }
+}
+
+/**
+ * Send rollback signal to a tenant deletion workflow.
+ */
+export async function rollbackTenantDeletion(
+  workflowId: string,
+  reason: string,
+  rolledBackBy: string
+): Promise<SignalResult> {
+  try {
+    const mod: any = await import('@temporalio/client').catch(() => null);
+    if (!mod) {
+      return { available: false, error: 'Temporal client not available' };
+    }
+
+    const address = process.env.TEMPORAL_ADDRESS || DEFAULT_TEMPORAL_ADDRESS;
+    const namespace = process.env.TEMPORAL_NAMESPACE || DEFAULT_TEMPORAL_NAMESPACE;
+
+    const connection = await mod.Connection.connect({ address });
+    const client = new mod.Client({ connection, namespace });
+
+    try {
+      const handle = client.workflow.getHandle(workflowId);
+      await handle.signal('rollbackDeletion', { reason, rolledBackBy });
+
+      return {
+        available: true,
+        success: true,
+      };
+    } finally {
+      try {
+        await connection.close();
+      } catch {
+        // Ignore close errors
+      }
+    }
   } catch (error) {
     return {
       available: false,

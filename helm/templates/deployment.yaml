@@ -107,6 +107,8 @@ spec:
             value: "{{ include "sebastian.resolveHost" . }}"
           - name: VERIFY_EMAIL_ENABLED
             value: "{{ .Values.server.verify_email}}"
+          - name: SERVER_ACTIONS_BODY_LIMIT
+            value: "{{ .Values.server.serverActionsBodyLimit | default "200mb" }}"
 
           # ----------- TEMPORAL ----------------
           - name: TEMPORAL_ADDRESS
