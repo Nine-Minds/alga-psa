@@ -58,6 +58,7 @@
     "@assemblyscript/loader": "^0.27.36",
     "@asteasolutions/zod-to-openapi": "^6.3.1",
     "@aws-sdk/client-s3": "^3.744.0",
+    "@aws-sdk/s3-request-presigner": "^3.864.0",
     "@blocknote/core": "^0.22.0",
     "@blocknote/mantine": "^0.22.0",
     "@blocknote/react": "^0.22.0",
