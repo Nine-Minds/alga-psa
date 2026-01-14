@@ -25,6 +25,8 @@
   },
   "dependencies": {
     "@alga-psa/shared": "file:../../shared",
+    "@aws-sdk/client-s3": "^3.682.0",
+    "@aws-sdk/s3-request-presigner": "^3.864.0",
     "@kubernetes/client-node": "^0.21.0",
     "@temporalio/activity": "^1.8.0",
     "@temporalio/client": "^1.8.0",
