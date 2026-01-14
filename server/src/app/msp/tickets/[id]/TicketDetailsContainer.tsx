@@ -72,7 +72,6 @@ export default function TicketDetailsContainer({ ticketData, surveySummary = nul
 
   // Cleanup on unmount
   useEffect(() => {
-    isMountedRef.current = true;
     return () => {
       isMountedRef.current = false;
     };
@@ -273,7 +272,7 @@ export default function TicketDetailsContainer({ ticketData, surveySummary = nul
         return false;
       }
     });
-  }, [session?.user, withSubmitting, getUser, ticketData.ticket.ticket_id, ticketData.ticket.attributes]);
+  }, [session?.user, withSubmitting, getUser, ticketData.ticket.ticket_id]);
 
   // Render directly to avoid redefining a component each render,
   // which can cause unmount/mount cycles and side-effects

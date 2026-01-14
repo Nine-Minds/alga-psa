@@ -172,7 +172,7 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
   // Register unsaved changes for contact, client, and location pickers
   // Popup triggers if picker is open AND a different selection is made (but not yet saved)
   const hasUnsavedContactChanges = showContactPicker && selectedContactId !== null && selectedContactId !== (contactInfo?.contact_name_id ?? '');
-  const hasUnsavedClientChanges = showClientPicker && selectedClientId !== null && selectedClientId !== ticket.company_id;
+  const hasUnsavedClientChanges = showClientPicker && selectedClientId !== null && selectedClientId !== ticket.client_id;
   const hasUnsavedLocationChanges = showLocationPicker && selectedLocationId !== null && selectedLocationId !== ticket.location_id;
 
   useRegisterUnsavedChanges(`ticket-properties-contact-${id}`, hasUnsavedContactChanges);
