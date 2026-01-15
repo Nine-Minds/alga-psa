@@ -102,7 +102,8 @@ export interface IGroupedPhaseData {
 export interface IGroupedTaskData {
   task_name: string;
   description: string | null;
-  assigned_to: string | null;  // User ID after lookup
+  assigned_to: string | null;  // User ID after lookup (first agent in comma-separated list)
+  additional_agent_ids: string[];  // Additional agent User IDs (remaining agents in comma-separated list)
   estimated_hours: number | null;
   actual_hours: number | null;
   due_date: Date | null;
@@ -134,6 +135,7 @@ export interface IPhaseTaskValidationResponse {
   serviceLookup: Record<string, string>;   // name -> service_id
   statusLookup: Record<string, string>;    // name -> project_status_mapping_id
   unmatchedStatuses: string[];             // List of status names that don't match
+  unmatchedAgents: string[];               // List of agent names that don't match
 }
 
 /**
@@ -154,6 +156,28 @@ export interface IStatusResolution {
   originalStatusName: string;
   action: StatusResolutionAction;
   mappedStatusId?: string;  // If action is 'map_to_existing', the target status ID
+}
+
+/**
+ * Information about an unmatched agent and affected tasks
+ */
+export interface IUnmatchedAgentInfo {
+  agentName: string;
+  taskCount: number;
+  taskNames: string[];  // First few task names for display
+  isPrimaryAgent: boolean;  // Whether this agent appears as primary (first in list) for any task
+}
+
+/**
+ * Resolution option for an unmatched agent
+ * Note: Unlike statuses, we cannot create new users, so options are limited to skip or map
+ */
+export type AgentResolutionAction = 'skip' | 'map_to_existing';
+
+export interface IAgentResolution {
+  originalAgentName: string;
+  action: AgentResolutionAction;
+  mappedUserId?: string;  // If action is 'map_to_existing', the target user ID
 }
 
 /**
@@ -222,9 +246,16 @@ export function groupRowsIntoPhases(
   userLookup: Record<string, string>,
   priorityLookup: Record<string, string>,
   serviceLookup: Record<string, string>,
-  statusLookup: Record<string, string> = {}
+  statusLookup: Record<string, string> = {},
+  agentResolutions: IAgentResolution[] = []
 ): IGroupedPhaseData[] {
   const phaseMap = new Map<string, IGroupedPhaseData>();
+
+  // Build a map of agent resolutions for quick lookup
+  const agentResolutionMap = new Map<string, IAgentResolution>();
+  agentResolutions.forEach(resolution => {
+    agentResolutionMap.set(resolution.originalAgentName.toLowerCase().trim(), resolution);
+  });
 
   for (const row of rows) {
     if (!row.task_name?.trim()) continue;
@@ -239,7 +270,40 @@ export function groupRowsIntoPhases(
       });
     }
 
-    const assignedToName = row.assigned_to?.toLowerCase().trim() || '';
+    // Parse comma-separated agents: first = primary assigned_to, rest = additional agents
+    const agentNames = row.assigned_to
+      ? row.assigned_to.split(',').map(name => name.trim()).filter(name => name)
+      : [];
+
+    // Resolve agent IDs using userLookup and agentResolutions
+    const resolveAgentId = (agentName: string): string | null => {
+      const normalizedName = agentName.toLowerCase().trim();
+
+      // First check if there's a direct match in userLookup
+      if (userLookup[normalizedName]) {
+        return userLookup[normalizedName];
+      }
+
+      // Check if there's a resolution for this agent
+      const resolution = agentResolutionMap.get(normalizedName);
+      if (resolution) {
+        if (resolution.action === 'map_to_existing' && resolution.mappedUserId) {
+          return resolution.mappedUserId;
+        }
+        // If action is 'skip', return null
+        return null;
+      }
+
+      // No match found
+      return null;
+    };
+
+    const primaryAgentId = agentNames.length > 0 ? resolveAgentId(agentNames[0]) : null;
+    // Filter out additional agents that match the primary agent to avoid constraint violations
+    const additionalAgentIds = agentNames.slice(1)
+      .map(name => resolveAgentId(name))
+      .filter((id): id is string => id !== null && id !== primaryAgentId);
+
     const priorityName = row.priority?.toLowerCase().trim() || '';
     const serviceName = row.service?.toLowerCase().trim() || '';
     const statusName = row.status?.trim() || '';
@@ -248,7 +312,8 @@ export function groupRowsIntoPhases(
     phaseMap.get(phaseName)!.tasks.push({
       task_name: row.task_name.trim(),
       description: row.task_description?.trim() || null,
-      assigned_to: userLookup[assignedToName] || null,
+      assigned_to: primaryAgentId,
+      additional_agent_ids: additionalAgentIds,
       estimated_hours: parseImportNumber(row.estimated_hours),
       actual_hours: parseImportNumber(row.actual_hours),
       due_date: parseImportDate(row.due_date),

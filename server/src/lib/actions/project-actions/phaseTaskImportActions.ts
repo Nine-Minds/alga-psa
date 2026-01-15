@@ -66,7 +66,7 @@ export async function generatePhaseTaskCSVTemplate(): Promise<string> {
       phase_name: 'Development',
       task_name: 'Build API',
       task_description: 'Implement REST API endpoints',
-      assigned_to: 'Mike Wilson',
+      assigned_to: 'Mike Wilson, Sarah Johnson',  // First = primary, rest = additional agents
       estimated_hours: '40',
       actual_hours: '',
       due_date: '2024-03-15',
@@ -210,6 +210,25 @@ export async function validatePhaseTaskImportData(
     }
   });
 
+  // Collect unique agent names from CSV that don't match existing users
+  const unmatchedAgents: string[] = [];
+  const csvAgentNames = new Set<string>();
+  rows.forEach(row => {
+    if (row.assigned_to?.trim()) {
+      const agentNames = row.assigned_to.split(',').map(name => name.trim()).filter(name => name);
+      agentNames.forEach(agentName => {
+        csvAgentNames.add(agentName);
+      });
+    }
+  });
+
+  csvAgentNames.forEach(agentName => {
+    const normalizedName = agentName.toLowerCase();
+    if (!userLookup[normalizedName]) {
+      unmatchedAgents.push(agentName);
+    }
+  });
+
   // Validate each row
   const validationResults: ITaskImportValidationResult[] = rows.map((row, index) => {
     const errors: string[] = [];
@@ -221,11 +240,26 @@ export async function validatePhaseTaskImportData(
       errors.push('Task name is required');
     }
 
-    // Name matching validation
+    // Name matching validation - supports comma-separated agents (first = primary, rest = additional)
     if (row.assigned_to?.trim()) {
-      const normalizedName = row.assigned_to.toLowerCase().trim();
-      if (!userLookup[normalizedName]) {
-        warnings.push(`User "${row.assigned_to}" not found - task will be unassigned`);
+      const agentNames = row.assigned_to.split(',').map(name => name.trim()).filter(name => name);
+      const notFoundAgents: string[] = [];
+
+      agentNames.forEach(agentName => {
+        const normalizedName = agentName.toLowerCase();
+        if (!userLookup[normalizedName]) {
+          notFoundAgents.push(agentName);
+        }
+      });
+
+      if (notFoundAgents.length > 0) {
+        if (notFoundAgents.length === agentNames.length) {
+          // All agents not found
+          warnings.push(`User(s) "${notFoundAgents.join(', ')}" not found - task will be unassigned`);
+        } else {
+          // Some agents not found
+          warnings.push(`User(s) "${notFoundAgents.join(', ')}" not found - will be skipped`);
+        }
       }
     }
 
@@ -290,6 +324,7 @@ export async function validatePhaseTaskImportData(
     serviceLookup,
     statusLookup,
     unmatchedStatuses,
+    unmatchedAgents,
   };
 }
 
@@ -519,6 +554,17 @@ export async function importPhasesAndTasks(
                 isNew: true,
               }));
               await createTagsForEntity(newTask.task_id, 'project_task', pendingTags);
+            }
+
+            // Add additional agents as task resources (only if primary agent is assigned)
+            // Filter out any agents that match the primary assigned_to to avoid constraint violation
+            if (taskData.assigned_to && taskData.additional_agent_ids && taskData.additional_agent_ids.length > 0) {
+              const uniqueAdditionalAgents = taskData.additional_agent_ids.filter(
+                agentId => agentId !== taskData.assigned_to
+              );
+              for (const additionalAgentId of uniqueAdditionalAgents) {
+                await ProjectTaskModel.addTaskResource(trx, newTask.task_id, additionalAgentId);
+              }
             }
 
             tasksCreated++;

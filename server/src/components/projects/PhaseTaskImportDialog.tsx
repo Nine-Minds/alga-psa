@@ -29,11 +29,16 @@ import {
   IStatusResolution,
   IUnmatchedStatusInfo,
   StatusResolutionAction,
+  IAgentResolution,
+  IUnmatchedAgentInfo,
+  AgentResolutionAction,
   TASK_IMPORT_FIELDS,
   DEFAULT_PHASE_NAME,
   groupRowsIntoPhases,
 } from 'server/src/interfaces/phaseTaskImport.interfaces';
 import { IProjectStatusMapping } from 'server/src/interfaces/project.interfaces';
+import { IUser } from '@shared/interfaces/user.interfaces';
+import { getAllUsersBasic } from 'server/src/lib/actions/user-actions/userActions';
 
 interface PhaseTaskImportDialogProps {
   isOpen: boolean;
@@ -42,7 +47,7 @@ interface PhaseTaskImportDialogProps {
   onImportComplete: (result: IPhaseTaskImportResult) => void;
 }
 
-type ImportStep = 'upload' | 'mapping' | 'preview' | 'status_resolution' | 'importing' | 'complete';
+type ImportStep = 'upload' | 'mapping' | 'preview' | 'agent_resolution' | 'status_resolution' | 'importing' | 'complete';
 
 interface ImportOptions {
   skipInvalidRows: boolean;
@@ -85,6 +90,12 @@ const PhaseTaskImportDialog: React.FC<PhaseTaskImportDialogProps> = ({
   const [statusResolutions, setStatusResolutions] = useState<IStatusResolution[]>([]);
   const [projectStatusMappings, setProjectStatusMappings] = useState<IProjectStatusMapping[]>([]);
 
+  // Agent resolution state
+  const [unmatchedAgents, setUnmatchedAgents] = useState<string[]>([]);
+  const [unmatchedAgentInfo, setUnmatchedAgentInfo] = useState<IUnmatchedAgentInfo[]>([]);
+  const [agentResolutions, setAgentResolutions] = useState<IAgentResolution[]>([]);
+  const [availableUsers, setAvailableUsers] = useState<IUser[]>([]);
+
   // Handle page size change - reset to page 1
   const handlePageSizeChange = (newPageSize: number) => {
     setPageSize(newPageSize);
@@ -116,6 +127,10 @@ const PhaseTaskImportDialog: React.FC<PhaseTaskImportDialogProps> = ({
       setUnmatchedStatusInfo([]);
       setStatusResolutions([]);
       setProjectStatusMappings([]);
+      setUnmatchedAgents([]);
+      setUnmatchedAgentInfo([]);
+      setAgentResolutions([]);
+      setAvailableUsers([]);
     }
   }, [isOpen]);
 
@@ -231,10 +246,15 @@ const PhaseTaskImportDialog: React.FC<PhaseTaskImportDialogProps> = ({
       setServiceLookup(validationResponse.serviceLookup);
       setStatusLookup(validationResponse.statusLookup);
       setUnmatchedStatuses(validationResponse.unmatchedStatuses);
+      setUnmatchedAgents(validationResponse.unmatchedAgents);
 
       // Fetch project status mappings for resolution dropdown
       const statusMappings = await getProjectStatusMappingsForImport(projectId);
       setProjectStatusMappings(statusMappings);
+
+      // Fetch available users for agent resolution dropdown
+      const users = await getAllUsersBasic(true);
+      setAvailableUsers(users);
 
       // Compute unmatched status info (which tasks have each unmatched status)
       const statusInfoMap = new Map<string, IUnmatchedStatusInfo>();
@@ -262,6 +282,44 @@ const PhaseTaskImportDialog: React.FC<PhaseTaskImportDialogProps> = ({
         validationResponse.unmatchedStatuses.map(statusName => ({
           originalStatusName: statusName,
           action: 'use_default' as StatusResolutionAction,
+        }))
+      );
+
+      // Compute unmatched agent info (which tasks have each unmatched agent)
+      const agentInfoMap = new Map<string, IUnmatchedAgentInfo>();
+      validationResponse.validationResults.forEach(result => {
+        if (result.data.assigned_to?.trim()) {
+          const agentNames = result.data.assigned_to.split(',').map(name => name.trim()).filter(name => name);
+          agentNames.forEach((agentName, index) => {
+            if (validationResponse.unmatchedAgents.includes(agentName)) {
+              if (!agentInfoMap.has(agentName)) {
+                agentInfoMap.set(agentName, {
+                  agentName,
+                  taskCount: 0,
+                  taskNames: [],
+                  isPrimaryAgent: false,
+                });
+              }
+              const info = agentInfoMap.get(agentName)!;
+              info.taskCount++;
+              if (info.taskNames.length < 3) {
+                info.taskNames.push(result.data.task_name || 'Unnamed task');
+              }
+              // Mark as primary if this agent is first in the list
+              if (index === 0) {
+                info.isPrimaryAgent = true;
+              }
+            }
+          });
+        }
+      });
+      setUnmatchedAgentInfo(Array.from(agentInfoMap.values()));
+
+      // Initialize agent resolutions with default action (skip)
+      setAgentResolutions(
+        validationResponse.unmatchedAgents.map(agentName => ({
+          originalAgentName: agentName,
+          action: 'skip' as AgentResolutionAction,
         }))
       );
 
@@ -325,14 +383,55 @@ const PhaseTaskImportDialog: React.FC<PhaseTaskImportDialogProps> = ({
     );
   }, []);
 
-  // Proceed from preview to next step (status resolution if needed, or import)
+  // Handle agent resolution changes
+  const handleAgentResolutionChange = useCallback((
+    agentName: string,
+    action: AgentResolutionAction,
+    mappedUserId?: string
+  ) => {
+    setAgentResolutions(prev =>
+      prev.map(resolution =>
+        resolution.originalAgentName === agentName
+          ? { ...resolution, action, mappedUserId }
+          : resolution
+      )
+    );
+  }, []);
+
+  // Proceed from preview to next step (agent resolution -> status resolution -> import)
   const handleProceedFromPreview = useCallback(() => {
+    if (unmatchedAgents.length > 0) {
+      setStep('agent_resolution');
+    } else if (unmatchedStatuses.length > 0) {
+      setStep('status_resolution');
+    } else {
+      handleImport();
+    }
+  }, [unmatchedAgents, unmatchedStatuses, handleImport]);
+
+  // Proceed from agent resolution to next step (status resolution if needed, or import)
+  const handleProceedFromAgentResolution = useCallback(() => {
+    // Re-group phases with agent resolutions applied
+    const validRows = validationResults
+      .filter(r => r.isValid)
+      .map(r => r.data);
+
+    const grouped = groupRowsIntoPhases(
+      validRows,
+      userLookup,
+      priorityLookup,
+      serviceLookup,
+      statusLookup,
+      agentResolutions
+    );
+    setGroupedPhases(grouped);
+
     if (unmatchedStatuses.length > 0) {
       setStep('status_resolution');
     } else {
       handleImport();
     }
-  }, [unmatchedStatuses, handleImport]);
+  }, [validationResults, userLookup, priorityLookup, serviceLookup, statusLookup, agentResolutions, unmatchedStatuses, handleImport]);
 
   const handleClose = useCallback(() => {
     if (!isProcessing) {
@@ -350,6 +449,10 @@ const PhaseTaskImportDialog: React.FC<PhaseTaskImportDialogProps> = ({
       setUnmatchedStatusInfo([]);
       setStatusResolutions([]);
       setProjectStatusMappings([]);
+      setUnmatchedAgents([]);
+      setUnmatchedAgentInfo([]);
+      setAgentResolutions([]);
+      setAvailableUsers([]);
       onClose();
     }
   }, [isProcessing, onClose]);
@@ -683,12 +786,22 @@ const PhaseTaskImportDialog: React.FC<PhaseTaskImportDialogProps> = ({
                 ] as ColumnDefinition<Record<string, unknown>>[]}
               />
             </div>
+            {/* Show warning if there are unmatched agents */}
+            {unmatchedAgents.length > 0 && (
+              <Alert variant="info" className="mt-4">
+                <AlertDescription>
+                  <strong>{unmatchedAgents.length} agent(s)</strong> from your CSV don't match existing users.
+                  You'll be asked to map these in the next step.
+                </AlertDescription>
+              </Alert>
+            )}
+
             {/* Show warning if there are unmatched statuses */}
             {unmatchedStatuses.length > 0 && (
               <Alert variant="info" className="mt-4">
                 <AlertDescription>
                   <strong>{unmatchedStatuses.length} status(es)</strong> from your CSV don't match existing project statuses.
-                  You'll be asked to resolve these in the next step.
+                  You'll be asked to resolve these {unmatchedAgents.length > 0 ? 'after mapping agents' : 'in the next step'}.
                 </AlertDescription>
               </Alert>
             )}
@@ -710,6 +823,122 @@ const PhaseTaskImportDialog: React.FC<PhaseTaskImportDialogProps> = ({
                 >
                   {isProcessing
                     ? 'Processing...'
+                    : unmatchedAgents.length > 0
+                      ? 'Next: Map Agents'
+                      : unmatchedStatuses.length > 0
+                        ? 'Next: Resolve Statuses'
+                        : `Import ${totalTasks} Tasks`}
+                </Button>
+              </DialogFooter>
+            </div>
+          </div>
+        )}
+
+        {/* Step 4: Agent Resolution */}
+        {step === 'agent_resolution' && unmatchedAgentInfo.length > 0 && (
+          <div>
+            <h3 className="text-lg font-medium mb-4">Map Unmatched Agents</h3>
+            <Alert variant="info" className="mb-4">
+              <AlertDescription>
+                The following agent names from your CSV don't match any existing users.
+                Choose how to handle each one. The first agent in a comma-separated list becomes the primary assignee,
+                and additional agents become task resources.
+              </AlertDescription>
+            </Alert>
+
+            <div className="space-y-4 max-h-96 overflow-y-auto">
+              {unmatchedAgentInfo.map((agentInfo) => {
+                const resolution = agentResolutions.find(
+                  r => r.originalAgentName === agentInfo.agentName
+                );
+
+                return (
+                  <div
+                    key={agentInfo.agentName}
+                    className="border rounded-lg p-4 bg-gray-50"
+                  >
+                    <div className="flex items-start justify-between mb-3">
+                      <div>
+                        <span className="font-medium text-gray-900">"{agentInfo.agentName}"</span>
+                        <span className="ml-2 text-sm text-gray-500">
+                          ({agentInfo.taskCount} task{agentInfo.taskCount !== 1 ? 's' : ''})
+                        </span>
+                        {agentInfo.isPrimaryAgent && (
+                          <span className="ml-2 text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded">
+                            Primary agent
+                          </span>
+                        )}
+                        <div className="text-sm text-gray-500 mt-1">
+                          Tasks: {agentInfo.taskNames.join(', ')}
+                          {agentInfo.taskCount > 3 && ` and ${agentInfo.taskCount - 3} more...`}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="radio"
+                          name={`agent-${agentInfo.agentName}`}
+                          checked={resolution?.action === 'skip'}
+                          onChange={() => handleAgentResolutionChange(agentInfo.agentName, 'skip')}
+                          className="text-primary-500"
+                        />
+                        <span className="text-sm">
+                          Skip (leave unassigned)
+                        </span>
+                      </label>
+
+                      <div className="flex items-center gap-2">
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <input
+                            type="radio"
+                            name={`agent-${agentInfo.agentName}`}
+                            checked={resolution?.action === 'map_to_existing'}
+                            onChange={() => {
+                              const firstUser = availableUsers[0]?.user_id;
+                              handleAgentResolutionChange(agentInfo.agentName, 'map_to_existing', firstUser);
+                            }}
+                            className="text-primary-500"
+                          />
+                          <span className="text-sm">Map to existing user:</span>
+                        </label>
+                        <CustomSelect
+                          options={availableUsers.map(user => ({
+                            value: user.user_id,
+                            label: `${user.first_name} ${user.last_name}`.trim() || 'Unnamed User',
+                          }))}
+                          value={resolution?.mappedUserId || ''}
+                          onValueChange={(value) =>
+                            handleAgentResolutionChange(agentInfo.agentName, 'map_to_existing', value)
+                          }
+                          disabled={resolution?.action !== 'map_to_existing'}
+                          className="w-48"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            <div className="mt-4">
+              <DialogFooter>
+                <Button
+                  id="agent-resolution-back-btn"
+                  variant="outline"
+                  onClick={() => setStep('preview')}
+                  disabled={isProcessing}
+                >
+                  Back
+                </Button>
+                <Button
+                  id="agent-resolution-next-btn"
+                  onClick={handleProceedFromAgentResolution}
+                  disabled={isProcessing}
+                >
+                  {isProcessing
+                    ? 'Processing...'
                     : unmatchedStatuses.length > 0
                       ? 'Next: Resolve Statuses'
                       : `Import ${totalTasks} Tasks`}
@@ -719,7 +948,7 @@ const PhaseTaskImportDialog: React.FC<PhaseTaskImportDialogProps> = ({
           </div>
         )}
 
-        {/* Step 4: Status Resolution */}
+        {/* Step 5: Status Resolution */}
         {step === 'status_resolution' && unmatchedStatusInfo.length > 0 && (
           <div>
             <h3 className="text-lg font-medium mb-4">Resolve Unmatched Statuses</h3>
@@ -819,7 +1048,7 @@ const PhaseTaskImportDialog: React.FC<PhaseTaskImportDialogProps> = ({
                 <Button
                   id="status-resolution-back-btn"
                   variant="outline"
-                  onClick={() => setStep('preview')}
+                  onClick={() => setStep(unmatchedAgents.length > 0 ? 'agent_resolution' : 'preview')}
                   disabled={isProcessing}
                 >
                   Back
@@ -836,7 +1065,7 @@ const PhaseTaskImportDialog: React.FC<PhaseTaskImportDialogProps> = ({
           </div>
         )}
 
-        {/* Step 5: Importing (spinner) */}
+        {/* Step 6: Importing (spinner) */}
         {step === 'importing' && (
           <div className="text-center py-12">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-500 mx-auto mb-4"></div>
@@ -844,7 +1073,7 @@ const PhaseTaskImportDialog: React.FC<PhaseTaskImportDialogProps> = ({
           </div>
         )}
 
-        {/* Step 6: Complete */}
+        {/* Step 7: Complete */}
         {step === 'complete' && importResult && (
           <div className="text-center">
             {importResult.success ? (
