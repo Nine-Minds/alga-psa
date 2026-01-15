@@ -3,10 +3,41 @@ import type { TenantTestData } from '../../lib/testing/tenant-test-factory';
 
 const DEFAULT_SESSION_MAX_AGE_SECONDS = 60 * 60 * 24;
 
-function getSessionCookieName(): string {
-  return process.env.NODE_ENV === 'production'
+function getDevCookiePortSuffix(baseUrl: string): string | null {
+  if (process.env.NODE_ENV === 'production') {
+    return null;
+  }
+
+  const urlCandidates = [
+    process.env.NEXTAUTH_URL,
+    process.env.APP_URL,
+    process.env.NEXT_PUBLIC_APP_URL,
+    baseUrl,
+  ].filter(Boolean) as string[];
+
+  for (const candidate of urlCandidates) {
+    try {
+      const parsed = new URL(candidate);
+      if (parsed.port) {
+        return parsed.port;
+      }
+    } catch {
+      // Ignore invalid URLs and fall through to other candidates.
+    }
+  }
+
+  const portCandidate =
+    process.env.PORT ?? process.env.APP_PORT ?? process.env.EXPOSE_SERVER_PORT ?? null;
+  return portCandidate && portCandidate.length > 0 ? portCandidate : null;
+}
+
+function getSessionCookieName(baseUrl: string): string {
+  const baseName = process.env.NODE_ENV === 'production'
     ? '__Secure-authjs.session-token'
     : 'authjs.session-token';
+
+  const portSuffix = getDevCookiePortSuffix(baseUrl);
+  return portSuffix ? `${baseName}.${portSuffix}` : baseName;
 }
 
 function getSessionMaxAgeSeconds(): number {
@@ -25,7 +56,7 @@ export async function establishTenantSession(page: Page, tenantData: TenantTestD
   }
 
   const { encode } = await import('@auth/core/jwt');
-  const cookieName = getSessionCookieName();
+  const cookieName = getSessionCookieName(baseUrl);
   const isHttps = baseUrl.startsWith('https://');
   const sessionUser = {
     id: tenantData.adminUser.userId,

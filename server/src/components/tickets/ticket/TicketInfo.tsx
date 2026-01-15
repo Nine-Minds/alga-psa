@@ -7,6 +7,7 @@ import { PartialBlock } from '@blocknote/core';
 import { ITicket, IComment, ITicketCategory } from 'server/src/interfaces';
 import { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
 import { ITag } from 'server/src/interfaces/tag.interfaces';
+import { TicketResponseState } from 'server/src/interfaces/ticket.interfaces';
 import { Button } from 'server/src/components/ui/Button';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
 import { PrioritySelect } from '@/components/tickets/PrioritySelect';
@@ -16,6 +17,7 @@ import { DatePicker } from 'server/src/components/ui/DatePicker';
 import { TimePicker } from 'server/src/components/ui/TimePicker';
 import { format, setHours, setMinutes } from 'date-fns';
 import { TagManager } from 'server/src/components/tags';
+import { ResponseStateDisplay } from 'server/src/components/tickets/ResponseStateSelect';
 import styles from './TicketDetails.module.css';
 import { getTicketCategories, getTicketCategoriesByBoard, BoardCategoryData } from 'server/src/lib/actions/ticketCategoryActions';
 import { ItilLabels, calculateItilPriority } from 'server/src/lib/utils/itilUtils';
@@ -41,6 +43,7 @@ interface TicketInfoProps {
   onTagsChange?: (tags: ITag[]) => void;
   isInDrawer?: boolean;
   onItilFieldChange?: (field: string, value: any) => void;
+  isBundledChild?: boolean;
   // Local ITIL state values
   itilImpact?: number;
   itilUrgency?: number;
@@ -64,6 +67,7 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
   onTagsChange,
   isInDrawer = false,
   onItilFieldChange,
+  isBundledChild = false,
   itilImpact,
   itilUrgency,
   itilCategory,
@@ -80,6 +84,7 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
   const [titleValue, setTitleValue] = useState(ticket.title);
   const [showPriorityMatrix, setShowPriorityMatrix] = useState(false);
   const [isEditingDescription, setIsEditingDescription] = useState(false);
+  const workflowLocked = isBundledChild;
 
   // Calculate ITIL priority when impact and urgency are available
   const calculatedItilPriority = React.useMemo(() => {
@@ -344,6 +349,14 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
                 onValueChange={(value) => onSelectChange('status_id', value)}
                 customStyles={customStyles}
                 className="!w-fit"
+                disabled={workflowLocked}
+              />
+            </div>
+            <div>
+              <ResponseStateDisplay
+                value={(ticket.response_state || null) as TicketResponseState}
+                onValueChange={(value) => onSelectChange('response_state', value)}
+                editable={true}
               />
             </div>
             <div>
@@ -357,6 +370,7 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
                 size="sm"
                 className="!w-fit"
                 placeholder="Not assigned"
+                disabled={workflowLocked}
               />
             </div>
             <div>
@@ -425,6 +439,7 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
                   onValueChange={(value) => onSelectChange('priority_id', value)}
                   customStyles={customStyles}
                   className="!w-fit"
+                  disabled={workflowLocked}
                 />
               )}
             </div>

@@ -28,12 +28,12 @@ COPY shared /app/shared
 COPY packages /app/packages
 COPY server/setup/create_database.js /app/server/setup/
 COPY server/knexfile.cjs /app/server/
-COPY server/migrations /app/server/migrations
-COPY server/seeds /app/server/seeds
+COPY server/migrations /app/server/migrations-ce
+COPY server/seeds /app/server/seeds-ce
 
-# Copy EE-specific migrations/seeds on top
-COPY ee/server/migrations /app/server/migrations
-COPY ee/server/seeds /app/server/seeds
+# Copy EE-specific migrations/seeds
+COPY ee/server/migrations /app/server/migrations-ee
+COPY ee/server/seeds /app/server/seeds-ee
 
 # Make entrypoint scripts executable
 RUN chmod +x ./entrypoint.sh

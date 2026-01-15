@@ -64,6 +64,7 @@ export default function TicketingDashboardContainer({
       searchQuery: '',
       boardFilterState: 'active',
       showOpenOnly: true,
+      bundleView: initialFilters?.bundleView ?? 'bundled',
       boardId: undefined,
       categoryId: undefined,
       clientId: undefined,
@@ -139,6 +140,9 @@ export default function TicketingDashboardContainer({
     if (filters.dueDateTo) {
       params.set('dueDateTo', filters.dueDateTo);
     }
+    if (filters.bundleView && filters.bundleView !== 'bundled') {
+      params.set('bundleView', filters.bundleView);
+    }
 
     // Update URL without causing a page refresh
     const newURL = params.toString() ? `/msp/tickets?${params.toString()}` : '/msp/tickets';
@@ -177,8 +181,10 @@ export default function TicketingDashboardContainer({
         dueDateFilter: filters.dueDateFilter || undefined,
         dueDateFrom: filters.dueDateFrom || undefined,
         dueDateTo: filters.dueDateTo || undefined,
+        responseState: filters.responseState || undefined,
         sortBy: effectiveSortBy,
-        sortDirection: effectiveSortDirection
+        sortDirection: effectiveSortDirection,
+        bundleView: filters.bundleView || 'bundled'
       };
 
       console.log('[Container] Fetching with defaults:', currentFiltersWithDefaults);

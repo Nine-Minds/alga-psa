@@ -319,6 +319,25 @@ export class EventCatalogModel extends BaseModel {
           required: ['tenantId', 'invoiceId', 'clientId', 'userId', 'amount']
         },
         tenant: tenantId
+      },
+      {
+        event_type: 'TICKET_RESPONSE_STATE_CHANGED',
+        name: 'Ticket Response State Changed',
+        description: 'Triggered when a ticket\'s response state changes (e.g., from awaiting client to awaiting internal)',
+        category: 'Tickets',
+        payload_schema: {
+          type: 'object',
+          properties: {
+            tenantId: { type: 'string', format: 'uuid' },
+            ticketId: { type: 'string', format: 'uuid' },
+            userId: { type: 'string', format: 'uuid', nullable: true },
+            previousState: { type: 'string', enum: ['awaiting_client', 'awaiting_internal'], nullable: true },
+            newState: { type: 'string', enum: ['awaiting_client', 'awaiting_internal'], nullable: true },
+            trigger: { type: 'string', enum: ['comment', 'manual', 'close'] }
+          },
+          required: ['tenantId', 'ticketId', 'trigger']
+        },
+        tenant: tenantId
       }
     ];
 

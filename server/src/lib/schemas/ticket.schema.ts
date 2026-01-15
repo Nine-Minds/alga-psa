@@ -30,6 +30,7 @@ export const createTicketFromAssetSchema = z.object({
 export const ticketSchema = z.object({
     tenant: z.string().uuid().optional(),
     ticket_id: z.string().uuid(),
+    master_ticket_id: z.string().uuid().nullable().optional(),
     ticket_number: z.string(),
     title: z.string(),
     url: z.string().nullable(),
@@ -53,7 +54,9 @@ export const ticketSchema = z.object({
     // ITIL-specific fields (for priority calculation)
     itil_impact: z.number().int().min(1).max(5).nullable().optional(),
     itil_urgency: z.number().int().min(1).max(5).nullable().optional(),
-    itil_priority_level: z.number().int().min(1).max(5).nullable().optional()
+    itil_priority_level: z.number().int().min(1).max(5).nullable().optional(),
+    // Response state tracking
+    response_state: z.enum(['awaiting_client', 'awaiting_internal']).nullable().optional()
 });
 
 export const ticketUpdateSchema = ticketSchema.partial().omit({
@@ -72,6 +75,7 @@ export const ticketAttributesQuerySchema = z.object({
 const baseTicketSchema = z.object({
     tenant: z.string().uuid().optional(),
     ticket_id: z.string().uuid(),
+    master_ticket_id: z.string().uuid().nullable().optional(),
     ticket_number: z.string(),
     title: z.string(),
     url: z.string().nullable(),
@@ -104,6 +108,9 @@ export const ticketListItemSchema = baseTicketSchema.extend({
     client_name: z.string(),
     entered_by_name: z.string(),
     assigned_to_name: z.string().nullable(),
+    bundle_child_count: z.number().int().nonnegative().optional(),
+    bundle_master_ticket_number: z.string().nullable().optional(),
+    bundle_distinct_client_count: z.number().int().nonnegative().optional(),
     // ITIL-specific fields for list items (for priority calculation)
     itil_impact: z.number().int().min(1).max(5).nullable().optional(),
     itil_urgency: z.number().int().min(1).max(5).nullable().optional(),
@@ -131,6 +138,7 @@ export const ticketListFiltersSchema = z.object({
     dueDateFilter: z.enum(['all', 'overdue', 'upcoming', 'today', 'no_due_date', 'before', 'after', 'custom']).optional(),
     dueDateFrom: z.string().datetime().optional(),
     dueDateTo: z.string().datetime().optional(),
+    responseState: z.enum(['awaiting_client', 'awaiting_internal', 'none', 'all']).optional(),
     sortBy: z.enum([
         'ticket_number',
         'title',
@@ -144,4 +152,6 @@ export const ticketListFiltersSchema = z.object({
         'due_date'
     ]).optional(),
     sortDirection: z.enum(['asc', 'desc']).optional()
+    ,
+    bundleView: z.enum(['bundled', 'individual']).optional()
 });

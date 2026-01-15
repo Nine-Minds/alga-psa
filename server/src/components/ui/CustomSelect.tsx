@@ -140,8 +140,10 @@ const CustomSelect: React.FC<CustomSelectProps & AutomationProps> = ({
   // Explicit prop overrides parent modality context
   const isModal = modal !== undefined ? modal : parentModal;
 
+  const containerId = finalAutomationProps.id ? `${finalAutomationProps.id}-container` : undefined;
+
   return (
-    <div className={label ? 'mb-4' : ''} id={`${id}`} data-automation-type={dataAutomationType} suppressHydrationWarning>
+    <div className={label ? 'mb-4' : ''} id={containerId} data-automation-type={dataAutomationType} suppressHydrationWarning>
       {label && (
         <label className="block text-sm font-medium text-gray-700 mb-1">
           {label}

@@ -7,6 +7,77 @@ import { withTransaction } from '@shared/db';
 import { Knex } from 'knex';
 import { convertBlockNoteToMarkdown } from 'server/src/lib/utils/blocknoteUtils';
 import { publishEvent } from 'server/src/lib/eventBus/publishers';
+import { TicketResponseState } from 'server/src/interfaces/ticket.interfaces';
+import { maybeReopenBundleMasterFromChildReply } from 'server/src/lib/actions/ticket-actions/ticketBundleUtils';
+
+/**
+ * Helper function to determine the new response state based on comment properties
+ * and update the ticket's response_state accordingly.
+ *
+ * Logic:
+ * - Internal note (is_internal=true): No change to response state
+ * - Client-visible comment from internal user: Set to 'awaiting_client'
+ * - Comment from client: Set to 'awaiting_internal'
+ */
+async function updateTicketResponseState(
+  trx: Knex.Transaction,
+  tenant: string,
+  ticketId: string,
+  authorType: 'internal' | 'client' | 'unknown',
+  isInternal: boolean,
+  userId: string | null
+): Promise<{ previousState: TicketResponseState; newState: TicketResponseState }> {
+  // Get current ticket response state
+  const ticket = await trx('tickets')
+    .select('response_state')
+    .where({ ticket_id: ticketId, tenant })
+    .first();
+
+  const previousState = (ticket?.response_state || null) as TicketResponseState;
+  let newState: TicketResponseState = previousState;
+
+  // Internal notes don't change response state
+  if (isInternal) {
+    return { previousState, newState };
+  }
+
+  // Determine new state based on author type
+  if (authorType === 'internal') {
+    // Internal staff posting client-visible comment -> awaiting client response
+    newState = 'awaiting_client';
+  } else if (authorType === 'client') {
+    // Client posting comment -> awaiting internal response
+    newState = 'awaiting_internal';
+  }
+
+  // Only update if state actually changed
+  if (newState !== previousState) {
+    await trx('tickets')
+      .where({ ticket_id: ticketId, tenant })
+      .update({ response_state: newState });
+
+    // Publish response state change event
+    try {
+      await publishEvent({
+        eventType: 'TICKET_RESPONSE_STATE_CHANGED',
+        payload: {
+          tenantId: tenant,
+          ticketId,
+          userId,
+          previousState,
+          newState,
+          trigger: 'comment'
+        }
+      });
+      console.log(`[updateTicketResponseState] Published event: ${previousState} -> ${newState}`);
+    } catch (eventError) {
+      console.error(`[updateTicketResponseState] Failed to publish event:`, eventError);
+      // Don't throw - allow comment creation to succeed even if event publishing fails
+    }
+  }
+
+  return { previousState, newState };
+}
 
 export async function findCommentsByTicketId(ticketId: string) {
   const { knex: db, tenant } = await createTenantKnex();
@@ -119,6 +190,19 @@ export async function createComment(comment: Omit<IComment, 'tenant'>): Promise<
         });
       }
 
+      // Update ticket response state based on comment (F005-F008)
+      if (comment.ticket_id && commentTenant) {
+        const { previousState, newState } = await updateTicketResponseState(
+          trx,
+          commentTenant,
+          comment.ticket_id,
+          comment.author_type as 'internal' | 'client' | 'unknown',
+          comment.is_internal || false,
+          comment.user_id || null
+        );
+        console.log(`[createComment] Response state updated: ${previousState} -> ${newState}`);
+      }
+
       // Get user details for event
       if (comment.user_id && commentTenant) {
         const user = await trx('users')
@@ -141,7 +225,8 @@ export async function createComment(comment: Omit<IComment, 'tenant'>): Promise<
                 id: commentId,
                 content: comment.note!,
                 author: authorName,
-                isInternal: comment.is_internal || false
+                isInternal: comment.is_internal || false,
+                authorType: comment.author_type // F039: Include author_type in event payload
               }
             }
           });
@@ -150,6 +235,10 @@ export async function createComment(comment: Omit<IComment, 'tenant'>): Promise<
           console.error(`[createComment] Failed to publish TICKET_COMMENT_ADDED event:`, eventError);
           // Don't throw - allow comment creation to succeed even if event publishing fails
         }
+      }
+
+      if (!comment.is_internal && commentTenant) {
+        await maybeReopenBundleMasterFromChildReply(trx, commentTenant, comment.ticket_id!, comment.user_id ?? null);
       }
 
       return commentId;
@@ -176,6 +265,9 @@ export async function updateComment(id: string, comment: Partial<IComment>) {
       if (!existingComment) {
         console.error(`[updateComment] Comment with ID ${id} not found`);
         throw new Error(`Comment with id ${id} not found`);
+      }
+      if (existingComment.is_system_generated) {
+        throw new Error('This comment is system-generated and cannot be edited.');
       }
       console.log(`[updateComment] Found existing comment:`, existingComment);
 
@@ -326,6 +418,10 @@ export async function deleteComment(id: string) {
   const { knex: db, tenant } = await createTenantKnex();
   try {
     await withTransaction(db, async (trx: Knex.Transaction) => {
+      const existingComment = await Comment.get(trx, id);
+      if (existingComment?.is_system_generated) {
+        throw new Error('This comment is system-generated and cannot be deleted.');
+      }
       await Comment.delete(trx, id);
     });
   } catch (error) {
