@@ -441,6 +441,22 @@ class NinjaOneSyncWorker {
     for (const device of devices) {
       try {
         const deviceDetail = await this.client!.getDevice(device.id);
+        
+        // Look up the correct mapping based on the device's actual organization ID
+        // This ensures devices are assigned to the correct company even if they were
+        // returned from a different organization's device list
+        const deviceMapping = await this.getOrganizationMappingByExternalId(deviceDetail.organizationId);
+        
+        if (!deviceMapping || !deviceMapping.client_id) {
+          results.push({
+            deviceId: device.id,
+            deviceName: device.displayName || device.systemName || `Device-${device.id}`,
+            action: 'failed',
+            error: `No client mapping found for organization ${deviceDetail.organizationId}`,
+          });
+          continue;
+        }
+
         const existingMapping = await this.findAssetByDeviceId(device.id);
 
         if (existingMapping) {
@@ -449,7 +465,8 @@ class NinjaOneSyncWorker {
             const changes = calculateAssetChanges(existingAsset, deviceDetail);
 
             if (Object.keys(changes).length > 0) {
-              await this.updateExistingAsset(existingMapping.alga_entity_id, deviceDetail, mapping);
+              // Use the device's actual organization mapping, not the one passed to processBatch
+              await this.updateExistingAsset(existingMapping.alga_entity_id, deviceDetail, deviceMapping);
               results.push({
                 deviceId: device.id,
                 deviceName: device.displayName || device.systemName || `Device-${device.id}`,
@@ -468,17 +485,8 @@ class NinjaOneSyncWorker {
             }
           }
         } else {
-          if (!mapping.client_id) {
-            results.push({
-              deviceId: device.id,
-              deviceName: device.displayName || device.systemName || `Device-${device.id}`,
-              action: 'failed',
-              error: 'Organization not mapped to a client',
-            });
-            continue;
-          }
-
-          const newAsset = await this.createNewAsset(deviceDetail, mapping);
+          // Use the device's actual organization mapping for new assets
+          const newAsset = await this.createNewAsset(deviceDetail, deviceMapping);
           results.push({
             deviceId: device.id,
             deviceName: device.displayName || device.systemName || `Device-${device.id}`,
@@ -616,18 +624,38 @@ class NinjaOneSyncWorker {
     return await withTransaction(this.knex!, async (trx: Knex.Transaction) => {
       const now = new Date().toISOString();
 
+      // Get current asset to check if client_id needs updating
+      const currentAsset = await trx('assets')
+        .where({ tenant: this.tenantId, asset_id: assetId })
+        .first();
+
+      const updateData: Record<string, unknown> = {
+        name: baseFields.name,
+        serial_number: baseFields.serial_number || '',
+        location: baseFields.location || '',
+        status: baseFields.status,
+        agent_status: baseFields.agent_status,
+        last_seen_at: baseFields.last_seen_at,
+        last_rmm_sync_at: now,
+        updated_at: now,
+      };
+
+      // Update client_id if it has changed (corrects misassigned assets)
+      if (baseFields.client_id && currentAsset?.client_id !== baseFields.client_id) {
+        updateData.client_id = baseFields.client_id;
+        logger.info('Correcting asset client_id assignment (Temporal worker)', {
+          tenantId: this.tenantId,
+          assetId,
+          deviceId: device.id,
+          oldClientId: currentAsset?.client_id,
+          newClientId: baseFields.client_id,
+          deviceOrganizationId: device.organizationId,
+        });
+      }
+
       const [asset] = await trx('assets')
         .where({ tenant: this.tenantId, asset_id: assetId })
-        .update({
-          name: baseFields.name,
-          serial_number: baseFields.serial_number || '',
-          location: baseFields.location || '',
-          status: baseFields.status,
-          agent_status: baseFields.agent_status,
-          last_seen_at: baseFields.last_seen_at,
-          last_rmm_sync_at: now,
-          updated_at: now,
-        })
+        .update(updateData)
         .returning('*');
 
       if (extensionFields && assetType !== 'unknown') {
@@ -667,16 +695,26 @@ class NinjaOneSyncWorker {
         });
 
       if (this.auditUserId) {
+        const historyChanges: Record<string, unknown> = {
+          source: 'ninjaone_sync',
+          device_id: device.id,
+          integration_id: this.integrationId,
+        };
+
+        // Include client_id change in audit trail if it was corrected
+        if (baseFields.client_id && currentAsset?.client_id !== baseFields.client_id) {
+          historyChanges.client_id_corrected = true;
+          historyChanges.old_client_id = currentAsset?.client_id;
+          historyChanges.new_client_id = baseFields.client_id;
+          historyChanges.reason = 'Device organization mapping correction';
+        }
+
         await trx('asset_history').insert({
           tenant: this.tenantId,
           asset_id: assetId,
           changed_by: this.auditUserId,
           change_type: 'updated',
-          changes: {
-            source: 'ninjaone_sync',
-            device_id: device.id,
-            integration_id: this.integrationId,
-          },
+          changes: historyChanges,
           changed_at: now,
         });
       }
@@ -833,6 +871,21 @@ class NinjaOneSyncWorker {
     }
 
     return await query;
+  }
+
+  private async getOrganizationMappingByExternalId(
+    externalOrganizationId: number
+  ): Promise<RmmOrganizationMapping | null> {
+    const mapping = await this.knex!('rmm_organization_mappings')
+      .where({
+        tenant: this.tenantId,
+        integration_id: this.integrationId,
+        external_organization_id: String(externalOrganizationId),
+      })
+      .whereNotNull('client_id')
+      .first<RmmOrganizationMapping>();
+
+    return mapping || null;
   }
 
   private async updateOrganizationMappingLastSynced(mappingId: string): Promise<void> {
