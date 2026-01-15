@@ -127,16 +127,17 @@ async function ensureExtensionPermission(requiredAction: 'read' | 'write', tenan
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: { installId: string; namespace: string } },
+  ctx: { params: Promise<{ installId: string; namespace: string }> },
 ) {
   try {
+    const { installId, namespace } = await ctx.params;
     const search = listQuerySchema.parse(Object.fromEntries(new URL(req.url).searchParams.entries()));
-    const { service, tenantId, knex } = await getStorageServiceForInstall(params.installId);
+    const { service, tenantId, knex } = await getStorageServiceForInstall(installId);
     await ensureTenantAccess(req, tenantId);
     await ensureExtensionPermission('read', tenantId, knex);
 
     const request: StorageListRequest = {
-      namespace: params.namespace,
+      namespace,
       limit: search.limit,
       cursor: search.cursor,
       keyPrefix: search.keyPrefix,
@@ -153,16 +154,17 @@ export async function GET(
 
 export async function POST(
   req: NextRequest,
-  { params }: { params: { installId: string; namespace: string } },
+  ctx: { params: Promise<{ installId: string; namespace: string }> },
 ) {
   try {
+    const { installId, namespace } = await ctx.params;
     const body = bulkPutSchema.parse(await req.json());
-    const { service, tenantId, knex } = await getStorageServiceForInstall(params.installId);
+    const { service, tenantId, knex } = await getStorageServiceForInstall(installId);
     await ensureTenantAccess(req, tenantId);
     await ensureExtensionPermission('write', tenantId, knex);
 
     const request: StorageBulkPutRequest = {
-      namespace: params.namespace,
+      namespace,
       items: body.items,
     };
 

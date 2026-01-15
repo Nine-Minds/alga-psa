@@ -10,6 +10,8 @@ import {
   Text,
   Alert,
   ConfirmDialog,
+  Spinner,
+  LoadingIndicator,
   type Column,
   type SelectOption,
 } from '@alga-psa/ui-kit';
@@ -586,7 +588,7 @@ function CategorySelect({
   };
 
   if (loading) {
-    return <Input type="text" disabled placeholder="Loading categories..." />;
+    return <LoadingIndicator size="sm" text="Loading categories..." />;
   }
 
   if (isAddingNew) {
@@ -947,7 +949,7 @@ function ReportsList() {
   }
 
   if (loading) {
-    return <Text tone="muted">Loading reports...</Text>;
+    return <LoadingIndicator size="sm" text="Loading reports..." />;
   }
 
   if (error) {
@@ -1665,9 +1667,7 @@ function CreateReport() {
                       disabled={schemaLoading}
                     />
                     {schemaLoading && (
-                      <Text tone="muted" style={{ display: 'block', fontSize: '0.75rem', marginTop: '4px' }}>
-                        Loading available tables...
-                      </Text>
+                      <LoadingIndicator size="xs" text="Loading available tables..." style={{ marginTop: '4px' }} />
                     )}
                     {!schemaLoading && filteredTableOptions.length === 0 && tableSearch && (
                       <Text tone="muted" style={{ display: 'block', fontSize: '0.75rem', marginTop: '4px' }}>
@@ -2084,7 +2084,7 @@ function ExecuteReport() {
   };
 
   if (loading) {
-    return <Text tone="muted">Loading reports...</Text>;
+    return <LoadingIndicator size="sm" text="Loading reports..." />;
   }
 
   return (
@@ -2257,6 +2257,114 @@ const AUDIT_EVENT_TYPE_OPTIONS: SelectOption[] = [
 ];
 
 // ============================================================================
+// Action Menu Component
+// ============================================================================
+
+interface ActionMenuItem {
+  label: string;
+  onClick: () => void;
+  disabled?: boolean;
+  danger?: boolean;
+  icon?: React.ReactNode;
+}
+
+interface ActionMenuProps {
+  items: ActionMenuItem[];
+  disabled?: boolean;
+  loading?: boolean;
+}
+
+function ActionMenu({ items, disabled, loading }: ActionMenuProps) {
+  const [isOpen, setIsOpen] = useState(false);
+  const menuRef = React.useRef<HTMLDivElement>(null);
+
+  // Close menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+
+    if (isOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [isOpen]);
+
+  return (
+    <div ref={menuRef} style={{ position: 'relative', display: 'inline-block' }}>
+      <Button
+        variant="secondary"
+        size="sm"
+        onClick={() => setIsOpen(!isOpen)}
+        disabled={disabled || loading}
+        style={{ minWidth: '80px' }}
+      >
+        {loading ? (
+          <><Spinner size="xs" style={{ marginRight: '4px' }} /> Working...</>
+        ) : (
+          <>Actions ▾</>
+        )}
+      </Button>
+      {isOpen && (
+        <div
+          style={{
+            position: 'absolute',
+            top: '100%',
+            right: 0,
+            marginTop: '4px',
+            backgroundColor: 'var(--alga-bg, #fff)',
+            border: '1px solid var(--alga-border)',
+            borderRadius: 'var(--alga-radius, 6px)',
+            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+            zIndex: 1000,
+            minWidth: '160px',
+            overflow: 'hidden',
+          }}
+        >
+          {items.map((item, index) => (
+            <button
+              key={index}
+              onClick={() => {
+                setIsOpen(false);
+                item.onClick();
+              }}
+              disabled={item.disabled}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                width: '100%',
+                padding: '8px 12px',
+                border: 'none',
+                backgroundColor: 'transparent',
+                color: item.danger ? 'var(--alga-danger, #dc2626)' : 'var(--alga-fg)',
+                fontSize: '0.875rem',
+                textAlign: 'left',
+                cursor: item.disabled ? 'not-allowed' : 'pointer',
+                opacity: item.disabled ? 0.5 : 1,
+              }}
+              onMouseEnter={(e) => {
+                if (!item.disabled) {
+                  e.currentTarget.style.backgroundColor = 'var(--alga-hover, #f3f4f6)';
+                }
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = 'transparent';
+              }}
+            >
+              {item.icon && <span style={{ width: '16px', display: 'flex', alignItems: 'center' }}>{item.icon}</span>}
+              {item.label}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ============================================================================
 // Tenant Management Types and API
 // ============================================================================
 
@@ -2268,6 +2376,41 @@ interface Tenant {
   subscription_status: string | null;
   created_at: string;
 }
+
+interface PendingDeletion {
+  deletion_id: string;
+  tenant: string;
+  tenant_name: string | null;
+  trigger_source: string;
+  status: string;
+  workflow_id: string;
+  stats_snapshot: {
+    userCount: number;
+    activeUserCount: number;
+    licenseCount: number;
+    ticketCount: number;
+    openTicketCount: number;
+    invoiceCount: number;
+    projectCount: number;
+    documentCount: number;
+    companyCount: number;
+    contactCount: number;
+    collectedAt: string;
+  } | null;
+  confirmation_type: string | null;
+  confirmed_by: string | null;
+  confirmed_at: string | null;
+  deletion_scheduled_for: string | null;
+  days_remaining: number | null;
+  live_state: {
+    step: string;
+    status: string;
+  } | null;
+  created_at: string;
+  updated_at: string;
+}
+
+type ConfirmationType = 'immediate' | '30_days' | '90_days';
 
 interface TenantManagementResponse<T> {
   success: boolean;
@@ -2335,6 +2478,7 @@ interface ConfirmAction {
 function TenantManagementView() {
   const [tenants, setTenants] = useState<Tenant[]>([]);
   const [auditLogs, setAuditLogs] = useState<AuditLogEntry[]>([]);
+  const [pendingDeletions, setPendingDeletions] = useState<PendingDeletion[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [actionInProgress, setActionInProgress] = useState<string | null>(null);
@@ -2349,6 +2493,27 @@ function TenantManagementView() {
     email: '',
     licenseCount: 5,
   });
+  // Deletion dialog state
+  const [showDeletionDialog, setShowDeletionDialog] = useState(false);
+  const [selectedTenantForDeletion, setSelectedTenantForDeletion] = useState<Tenant | null>(null);
+  const [deletionReason, setDeletionReason] = useState('');
+  // Confirm deletion dialog state
+  const [showConfirmDeletionDialog, setShowConfirmDeletionDialog] = useState(false);
+  const [selectedPendingDeletion, setSelectedPendingDeletion] = useState<PendingDeletion | null>(null);
+  const [confirmationType, setConfirmationType] = useState<ConfirmationType>('90_days');
+  // Rollback dialog state
+  const [showRollbackDialog, setShowRollbackDialog] = useState(false);
+  const [rollbackReason, setRollbackReason] = useState('');
+  // Export dialog state
+  const [showExportResultDialog, setShowExportResultDialog] = useState(false);
+  const [exportResult, setExportResult] = useState<{
+    tenantName: string;
+    downloadUrl: string;
+    urlExpiresAt: string;
+    tableCount: number;
+    recordCount: number;
+    fileSizeBytes: number;
+  } | null>(null);
 
   // Fetch tenants
   const fetchTenants = useCallback(async () => {
@@ -2382,10 +2547,23 @@ function TenantManagementView() {
     }
   }, []);
 
+  // Fetch pending deletions
+  const fetchPendingDeletions = useCallback(async () => {
+    try {
+      const result = await callTenantManagementApi<PendingDeletion[]>('/pending-deletions');
+      if (result.success && result.data) {
+        setPendingDeletions(result.data);
+      }
+    } catch (err) {
+      console.error('Failed to fetch pending deletions:', err);
+    }
+  }, []);
+
   useEffect(() => {
     fetchTenants();
     fetchAuditLogs();
-  }, [fetchTenants, fetchAuditLogs]);
+    fetchPendingDeletions();
+  }, [fetchTenants, fetchAuditLogs, fetchPendingDeletions]);
 
   // Handle resend welcome email
   const handleResendWelcomeEmail = (tenantId: string, tenantName: string) => {
@@ -2472,11 +2650,174 @@ function TenantManagementView() {
     });
   };
 
+  // Handle start tenant deletion
+  const handleStartDeletion = async () => {
+    if (!selectedTenantForDeletion) return;
+
+    setActionInProgress(selectedTenantForDeletion.tenant);
+    try {
+      const result = await callTenantManagementApi<void>('/start-deletion', {
+        method: 'POST',
+        body: JSON.stringify({
+          tenantId: selectedTenantForDeletion.tenant,
+          reason: deletionReason.trim() || 'Manual deletion from extension',
+          triggerSource: 'admin_extension',
+        }),
+      });
+
+      if (result.success) {
+        setStatusMessage({
+          type: 'success',
+          text: `Deletion workflow started for "${selectedTenantForDeletion.client_name}". Workflow ID: ${result.workflowId}`,
+        });
+        setShowDeletionDialog(false);
+        setSelectedTenantForDeletion(null);
+        setDeletionReason('');
+        fetchTenants();
+        fetchAuditLogs();
+        fetchPendingDeletions();
+      } else {
+        setStatusMessage({ type: 'error', text: `Failed to start deletion: ${result.error}` });
+      }
+    } catch (err) {
+      setStatusMessage({ type: 'error', text: `Error: ${err}` });
+    } finally {
+      setActionInProgress(null);
+    }
+  };
+
+  // Handle confirm tenant deletion
+  const handleConfirmDeletion = async () => {
+    if (!selectedPendingDeletion) return;
+
+    setActionInProgress(selectedPendingDeletion.deletion_id);
+    try {
+      const result = await callTenantManagementApi<void>('/confirm-deletion', {
+        method: 'POST',
+        body: JSON.stringify({
+          workflowId: selectedPendingDeletion.workflow_id,
+          confirmationType: confirmationType,
+        }),
+      });
+
+      if (result.success) {
+        const delayText = confirmationType === 'immediate' ? 'immediately' :
+          confirmationType === '30_days' ? 'in 30 days' : 'in 90 days';
+        setStatusMessage({
+          type: 'success',
+          text: `Deletion confirmed for "${selectedPendingDeletion.tenant_name}". Data will be deleted ${delayText}.`,
+        });
+        setShowConfirmDeletionDialog(false);
+        setSelectedPendingDeletion(null);
+        setConfirmationType('90_days');
+        fetchPendingDeletions();
+        fetchAuditLogs();
+      } else {
+        setStatusMessage({ type: 'error', text: `Failed to confirm deletion: ${result.error}` });
+      }
+    } catch (err) {
+      setStatusMessage({ type: 'error', text: `Error: ${err}` });
+    } finally {
+      setActionInProgress(null);
+    }
+  };
+
+  // Handle rollback tenant deletion
+  const handleRollbackDeletion = async () => {
+    if (!selectedPendingDeletion) return;
+
+    setActionInProgress(selectedPendingDeletion.deletion_id);
+    try {
+      const result = await callTenantManagementApi<void>('/rollback-deletion', {
+        method: 'POST',
+        body: JSON.stringify({
+          workflowId: selectedPendingDeletion.workflow_id,
+          reason: rollbackReason.trim() || 'Rolled back from extension',
+        }),
+      });
+
+      if (result.success) {
+        setStatusMessage({
+          type: 'success',
+          text: `Deletion rolled back for "${selectedPendingDeletion.tenant_name}". Users have been reactivated.`,
+        });
+        setShowRollbackDialog(false);
+        setSelectedPendingDeletion(null);
+        setRollbackReason('');
+        fetchTenants();
+        fetchPendingDeletions();
+        fetchAuditLogs();
+      } else {
+        setStatusMessage({ type: 'error', text: `Failed to rollback deletion: ${result.error}` });
+      }
+    } catch (err) {
+      setStatusMessage({ type: 'error', text: `Error: ${err}` });
+    } finally {
+      setActionInProgress(null);
+    }
+  };
+
+  // Handle export tenant data
+  const handleExportTenant = async (tenant: Tenant) => {
+    setActionInProgress(tenant.tenant);
+    try {
+      const result = await callTenantManagementApi<{
+        exportId: string;
+        tenantName: string;
+        downloadUrl: string;
+        urlExpiresAt: string;
+        tableCount: number;
+        recordCount: number;
+        fileSizeBytes: number;
+      }>('/export-tenant', {
+        method: 'POST',
+        body: JSON.stringify({
+          tenantId: tenant.tenant,
+          reason: 'Manual export from extension',
+        }),
+      });
+
+      if (result.success && result.data) {
+        setExportResult({
+          tenantName: result.data.tenantName || tenant.client_name,
+          downloadUrl: result.data.downloadUrl,
+          urlExpiresAt: result.data.urlExpiresAt,
+          tableCount: result.data.tableCount,
+          recordCount: result.data.recordCount,
+          fileSizeBytes: result.data.fileSizeBytes,
+        });
+        setShowExportResultDialog(true);
+        fetchAuditLogs();
+      } else {
+        setStatusMessage({ type: 'error', text: `Export failed: ${result.error}` });
+      }
+    } catch (err) {
+      setStatusMessage({ type: 'error', text: `Error: ${err}` });
+    } finally {
+      setActionInProgress(null);
+    }
+  };
+
+  // Check if tenant has a pending deletion
+  const hasPendingDeletion = (tenantId: string): boolean => {
+    return pendingDeletions.some(
+      d => d.tenant === tenantId && !['completed', 'rolled_back'].includes(d.status)
+    );
+  };
+
   const getStatusBadgeTone = (status: string | null): 'success' | 'warning' | 'info' | 'danger' => {
     if (!status) return 'info';
     if (status === 'active') return 'success';
     if (status === 'canceled' || status === 'cancelled') return 'danger';
     if (status === 'past_due' || status === 'unpaid') return 'warning';
+    return 'info';
+  };
+
+  const getDeletionStatusBadgeTone = (status: string): 'success' | 'warning' | 'info' | 'danger' => {
+    if (status === 'completed') return 'success';
+    if (status === 'rolled_back') return 'info';
+    if (status === 'awaiting_confirmation' || status === 'pending_deletion') return 'warning';
+    if (status === 'deleting') return 'danger';
     return 'info';
   };
 
@@ -2532,16 +2873,42 @@ function TenantManagementView() {
       key: 'tenant',
       header: 'Actions',
       sortable: false,
-      render: (row) => (
-        <Button
-          variant="secondary"
-          size="sm"
-          onClick={() => handleResendWelcomeEmail(row.tenant, row.client_name)}
-          disabled={actionInProgress === row.tenant}
-        >
-          {actionInProgress === row.tenant ? 'Sending...' : 'Resend Email'}
-        </Button>
-      ),
+      render: (row) => {
+        const isPending = hasPendingDeletion(row.tenant);
+        const menuItems: ActionMenuItem[] = [
+          {
+            label: 'Resend Welcome Email',
+            onClick: () => handleResendWelcomeEmail(row.tenant, row.client_name),
+          },
+          {
+            label: 'Export Data',
+            onClick: () => handleExportTenant(row),
+          },
+          {
+            label: isPending ? 'Deletion in Progress...' : 'Delete Tenant',
+            onClick: () => {
+              setSelectedTenantForDeletion(row);
+              setShowDeletionDialog(true);
+            },
+            disabled: isPending,
+            danger: !isPending,
+          },
+        ];
+
+        return (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <ActionMenu
+              items={menuItems}
+              loading={actionInProgress === row.tenant}
+            />
+            {isPending && (
+              <Badge tone="warning" style={{ fontSize: '0.7rem' }}>
+                Deleting
+              </Badge>
+            )}
+          </div>
+        );
+      },
     },
   ];
 
@@ -2610,8 +2977,8 @@ function TenantManagementView() {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
         <h2 style={{ margin: 0 }}>Tenant Management</h2>
         <div style={{ display: 'flex', gap: '8px' }}>
-          <Button variant="secondary" onClick={() => { fetchTenants(); fetchAuditLogs(); }} disabled={loading}>
-            {loading ? 'Loading...' : 'Refresh'}
+          <Button variant="secondary" onClick={() => { fetchTenants(); fetchAuditLogs(); fetchPendingDeletions(); }} disabled={loading}>
+            {loading ? <><Spinner size="xs" style={{ marginRight: '6px' }} /> Loading...</> : 'Refresh'}
           </Button>
           <Button onClick={() => setShowCreateForm(true)}>
             Create Tenant
@@ -2735,7 +3102,7 @@ function TenantManagementView() {
           </div>
         </div>
         {loading ? (
-          <Text tone="muted">Loading tenants...</Text>
+          <LoadingIndicator size="sm" text="Loading tenants..." />
         ) : tenants.length === 0 ? (
           <Text tone="muted">No tenants found.</Text>
         ) : (
@@ -2765,6 +3132,255 @@ function TenantManagementView() {
           </>
         )}
       </Card>
+
+      {/* Pending Deletions Section */}
+      {pendingDeletions.length > 0 && (
+        <Card style={{ marginBottom: '20px' }}>
+          <h3 style={{ marginTop: 0, marginBottom: '16px', color: 'var(--alga-warning)' }}>
+            Pending Deletions ({pendingDeletions.filter(d => !['completed', 'rolled_back'].includes(d.status)).length})
+          </h3>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            {pendingDeletions
+              .filter(d => !['completed', 'rolled_back'].includes(d.status))
+              .map((deletion) => (
+                <div
+                  key={deletion.deletion_id}
+                  style={{
+                    padding: '12px',
+                    border: '1px solid var(--alga-border)',
+                    borderRadius: '8px',
+                    backgroundColor: 'var(--alga-surface)',
+                  }}
+                >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
+                    <div>
+                      <Text style={{ fontWeight: 600 }}>{deletion.tenant_name || deletion.tenant}</Text>
+                      <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
+                        <Badge tone={getDeletionStatusBadgeTone(deletion.status)}>
+                          {deletion.status.replace(/_/g, ' ')}
+                        </Badge>
+                        <Badge tone="info">
+                          {deletion.trigger_source === 'stripe_webhook' ? 'Stripe' : 'Manual'}
+                        </Badge>
+                        {deletion.days_remaining !== null && (
+                          <Badge tone={deletion.days_remaining <= 7 ? 'danger' : 'warning'}>
+                            {deletion.days_remaining} days remaining
+                          </Badge>
+                        )}
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      {deletion.status === 'awaiting_confirmation' && (
+                        <Button
+                          variant="primary"
+                          size="sm"
+                          onClick={() => {
+                            setSelectedPendingDeletion(deletion);
+                            setShowConfirmDeletionDialog(true);
+                          }}
+                          disabled={actionInProgress === deletion.deletion_id}
+                        >
+                          Confirm
+                        </Button>
+                      )}
+                      {['awaiting_confirmation', 'pending_deletion'].includes(deletion.status) && (
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          onClick={() => {
+                            setSelectedPendingDeletion(deletion);
+                            setShowRollbackDialog(true);
+                          }}
+                          disabled={actionInProgress === deletion.deletion_id}
+                        >
+                          Rollback
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                  {deletion.stats_snapshot && (
+                    <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', fontSize: '0.8125rem', color: 'var(--alga-muted-fg)' }}>
+                      <span>Users: {deletion.stats_snapshot.userCount} ({deletion.stats_snapshot.activeUserCount} active)</span>
+                      <span>Tickets: {deletion.stats_snapshot.ticketCount} ({deletion.stats_snapshot.openTicketCount} open)</span>
+                      <span>Invoices: {deletion.stats_snapshot.invoiceCount}</span>
+                      <span>Projects: {deletion.stats_snapshot.projectCount}</span>
+                    </div>
+                  )}
+                  <Text tone="muted" style={{ fontSize: '0.75rem', marginTop: '8px' }}>
+                    Started: {new Date(deletion.created_at).toLocaleString()}
+                    {deletion.confirmed_at && ` | Confirmed: ${new Date(deletion.confirmed_at).toLocaleString()}`}
+                  </Text>
+                </div>
+              ))}
+          </div>
+        </Card>
+      )}
+
+      {/* Start Deletion Dialog */}
+      <ConfirmDialog
+        isOpen={showDeletionDialog}
+        title="Start Tenant Deletion"
+        message={`Are you sure you want to start the deletion process for "${selectedTenantForDeletion?.client_name}"? This will:\n\n• Deactivate all users\n• Cancel Stripe subscription (if active)\n• Tag the client as "Canceled"\n\nThe tenant will not be deleted immediately - you'll need to confirm the deletion timing.`}
+        onConfirm={handleStartDeletion}
+        onCancel={() => {
+          setShowDeletionDialog(false);
+          setSelectedTenantForDeletion(null);
+          setDeletionReason('');
+        }}
+        confirmText={actionInProgress === selectedTenantForDeletion?.tenant ? 'Starting...' : 'Start Deletion'}
+        confirmDisabled={actionInProgress === selectedTenantForDeletion?.tenant}
+      >
+        <div style={{ marginTop: '12px' }}>
+          <Text style={{ display: 'block', marginBottom: '6px', fontWeight: 500 }}>Reason (optional)</Text>
+          <Input
+            type="text"
+            value={deletionReason}
+            onChange={(e) => setDeletionReason(e.target.value)}
+            placeholder="e.g., Customer requested cancellation"
+          />
+        </div>
+      </ConfirmDialog>
+
+      {/* Confirm Deletion Timing Dialog */}
+      <ConfirmDialog
+        isOpen={showConfirmDeletionDialog}
+        title="Confirm Deletion Timing"
+        message={`Choose when to permanently delete all data for "${selectedPendingDeletion?.tenant_name}".`}
+        onConfirm={handleConfirmDeletion}
+        onCancel={() => {
+          setShowConfirmDeletionDialog(false);
+          setSelectedPendingDeletion(null);
+          setConfirmationType('90_days');
+        }}
+        confirmText={actionInProgress === selectedPendingDeletion?.deletion_id ? 'Confirming...' : 'Confirm Deletion'}
+        confirmDisabled={actionInProgress === selectedPendingDeletion?.deletion_id}
+      >
+        <div style={{ marginTop: '12px' }}>
+          <Text style={{ display: 'block', marginBottom: '6px', fontWeight: 500 }}>Deletion Timing</Text>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+              <input
+                type="radio"
+                name="confirmationType"
+                value="90_days"
+                checked={confirmationType === '90_days'}
+                onChange={() => setConfirmationType('90_days')}
+              />
+              <span>90 days (recommended for data retention compliance)</span>
+            </label>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+              <input
+                type="radio"
+                name="confirmationType"
+                value="30_days"
+                checked={confirmationType === '30_days'}
+                onChange={() => setConfirmationType('30_days')}
+              />
+              <span>30 days</span>
+            </label>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', color: 'var(--alga-danger)' }}>
+              <input
+                type="radio"
+                name="confirmationType"
+                value="immediate"
+                checked={confirmationType === 'immediate'}
+                onChange={() => setConfirmationType('immediate')}
+              />
+              <span>Immediately (irreversible!)</span>
+            </label>
+          </div>
+          {selectedPendingDeletion?.stats_snapshot && (
+            <Alert tone="warning" style={{ marginTop: '12px' }}>
+              <Text style={{ fontWeight: 500 }}>Data to be deleted:</Text>
+              <ul style={{ margin: '8px 0 0', paddingLeft: '20px' }}>
+                <li>{selectedPendingDeletion.stats_snapshot.userCount} users</li>
+                <li>{selectedPendingDeletion.stats_snapshot.ticketCount} tickets</li>
+                <li>{selectedPendingDeletion.stats_snapshot.invoiceCount} invoices</li>
+                <li>{selectedPendingDeletion.stats_snapshot.projectCount} projects</li>
+                <li>{selectedPendingDeletion.stats_snapshot.documentCount} documents</li>
+              </ul>
+            </Alert>
+          )}
+        </div>
+      </ConfirmDialog>
+
+      {/* Rollback Deletion Dialog */}
+      <ConfirmDialog
+        isOpen={showRollbackDialog}
+        title="Rollback Deletion"
+        message={`Are you sure you want to rollback the deletion for "${selectedPendingDeletion?.tenant_name}"? This will:\n\n• Reactivate all users\n• Remove the "Canceled" tag\n• Cancel the scheduled deletion`}
+        onConfirm={handleRollbackDeletion}
+        onCancel={() => {
+          setShowRollbackDialog(false);
+          setSelectedPendingDeletion(null);
+          setRollbackReason('');
+        }}
+        confirmText={actionInProgress === selectedPendingDeletion?.deletion_id ? 'Rolling back...' : 'Rollback'}
+        confirmDisabled={actionInProgress === selectedPendingDeletion?.deletion_id}
+      >
+        <div style={{ marginTop: '12px' }}>
+          <Text style={{ display: 'block', marginBottom: '6px', fontWeight: 500 }}>Reason (optional)</Text>
+          <Input
+            type="text"
+            value={rollbackReason}
+            onChange={(e) => setRollbackReason(e.target.value)}
+            placeholder="e.g., Customer renewed subscription"
+          />
+        </div>
+      </ConfirmDialog>
+
+      {/* Export Result Dialog */}
+      <ConfirmDialog
+        isOpen={showExportResultDialog}
+        title="Export Complete"
+        message={exportResult ? `Successfully exported data for "${exportResult.tenantName}".` : ''}
+        onConfirm={() => {
+          if (exportResult?.downloadUrl) {
+            window.open(exportResult.downloadUrl, '_blank');
+          }
+          setShowExportResultDialog(false);
+          setExportResult(null);
+        }}
+        onCancel={() => {
+          setShowExportResultDialog(false);
+          setExportResult(null);
+        }}
+        confirmText="Download"
+        cancelLabel="Close"
+      >
+        {exportResult && (
+          <div style={{ marginTop: '12px' }}>
+            <div style={{
+              backgroundColor: 'var(--alga-surface)',
+              border: '1px solid var(--alga-border)',
+              borderRadius: '8px',
+              padding: '12px',
+            }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', fontSize: '0.875rem' }}>
+                <div>
+                  <Text tone="muted">Tables:</Text>
+                  <Text style={{ fontWeight: 500 }}>{exportResult.tableCount}</Text>
+                </div>
+                <div>
+                  <Text tone="muted">Records:</Text>
+                  <Text style={{ fontWeight: 500 }}>{exportResult.recordCount.toLocaleString()}</Text>
+                </div>
+                <div>
+                  <Text tone="muted">File Size:</Text>
+                  <Text style={{ fontWeight: 500 }}>{(exportResult.fileSizeBytes / 1024 / 1024).toFixed(2)} MB</Text>
+                </div>
+                <div>
+                  <Text tone="muted">Expires:</Text>
+                  <Text style={{ fontWeight: 500 }}>{new Date(exportResult.urlExpiresAt).toLocaleTimeString()}</Text>
+                </div>
+              </div>
+            </div>
+            <Alert tone="info" style={{ marginTop: '12px' }}>
+              The download link expires in 1 hour. Click "Download" to save the export file.
+            </Alert>
+          </div>
+        )}
+      </ConfirmDialog>
 
       {/* Recent Actions (Audit Log) */}
       <Card>
@@ -2948,7 +3564,7 @@ function AuditLogs() {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
         <h2 style={{ margin: 0 }}>Audit Logs</h2>
         <Button variant="secondary" onClick={fetchLogs} disabled={loading}>
-          {loading ? 'Loading...' : 'Refresh'}
+          {loading ? <><Spinner size="xs" style={{ marginRight: '6px' }} /> Loading...</> : 'Refresh'}
         </Button>
       </div>
 
@@ -2977,7 +3593,7 @@ function AuditLogs() {
       {error && <Alert tone="danger" style={{ marginBottom: '16px' }}>{error}</Alert>}
 
       {loading ? (
-        <Text tone="muted">Loading audit logs...</Text>
+        <LoadingIndicator size="sm" text="Loading audit logs..." />
       ) : logs.length === 0 ? (
         <Card>
           <Text tone="muted">
@@ -3458,9 +4074,7 @@ function EditReport({
                     disabled={schemaLoading}
                   />
                   {schemaLoading && (
-                    <Text tone="muted" style={{ display: 'block', fontSize: '0.75rem', marginTop: '4px' }}>
-                      Loading available tables...
-                    </Text>
+                    <LoadingIndicator size="xs" text="Loading available tables..." style={{ marginTop: '4px' }} />
                   )}
                   {!schemaLoading && filteredTableOptions.length === 0 && tableSearch && (
                     <Text tone="muted" style={{ display: 'block', fontSize: '0.75rem', marginTop: '4px' }}>

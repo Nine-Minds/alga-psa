@@ -79,9 +79,9 @@ export async function extensionScheduledInvocationHandler(
   _jobId: string,
   data: ExtensionScheduledInvocationJobData
 ): Promise<void> {
-  const tenantId = safeString(data.tenantId);
-  const installId = safeString(data.installId);
-  const scheduleId = safeString(data.scheduleId);
+  const tenantId = safeString(data.tenantId).trim();
+  const installId = safeString(data.installId).trim();
+  const scheduleId = safeString(data.scheduleId).trim();
 
   if (!tenantId || !installId || !scheduleId) {
     throw new Error('Missing required job data (tenantId, installId, scheduleId)');

@@ -172,6 +172,46 @@ export async function POST(request: NextRequest) {
             return;
           }
 
+          // Check if this email has already been processed (deduplication)
+          // Microsoft may send duplicate webhook notifications for reliability
+          const existingProcessed = await trx('email_processed_messages')
+            .where({ message_id: messageId, tenant: row.tenant })
+            .first();
+
+          if (existingProcessed) {
+            console.log(`⚠️ Email ${messageId} already processed (status: ${existingProcessed.processing_status}), skipping duplicate webhook`);
+            return;
+          }
+
+          // Insert processing record BEFORE publishing event to prevent race conditions
+          // This ensures that if Microsoft sends duplicate webhooks simultaneously,
+          // only one will proceed past this point
+          try {
+            await trx('email_processed_messages').insert({
+              message_id: messageId,
+              provider_id: row.id,
+              tenant: row.tenant,
+              processed_at: new Date(),
+              processing_status: 'processing',
+              from_email: null, // Will be updated after fetching details
+              subject: notification.resourceData?.subject || null,
+              received_at: null,
+              attachment_count: 0,
+              metadata: JSON.stringify({
+                subscriptionId: notification.subscriptionId,
+                changeType: notification.changeType,
+                webhookReceivedAt: new Date().toISOString(),
+              }),
+            });
+          } catch (insertErr: any) {
+            // If insert fails due to unique constraint, another webhook is processing this email
+            if (insertErr.code === '23505' || insertErr.message?.includes('duplicate') || insertErr.message?.includes('unique')) {
+              console.log(`⚠️ Email ${messageId} is being processed by another webhook, skipping`);
+              return;
+            }
+            throw insertErr;
+          }
+
           // Build provider config to fetch full email details
           // Derive webhook URL from environment (provider row doesn't store it in prod schema)
           const baseUrl = process.env.NGROK_URL || process.env.NEXT_PUBLIC_BASE_URL || process.env.NEXTAUTH_URL || 'http://localhost:3000';
@@ -208,10 +248,18 @@ export async function POST(request: NextRequest) {
             },
           } as any;
 
+          let details: any | null = null;
+          let detailsErrorMessage: string | null = null;
           try {
             const adapter = new MicrosoftGraphAdapter(providerConfig);
             await adapter.connect();
-            const details = await adapter.getMessageDetails(messageId);
+            details = await adapter.getMessageDetails(messageId);
+          } catch (detailErr: any) {
+            detailsErrorMessage = detailErr?.message || String(detailErr);
+            console.warn(`Failed to fetch Microsoft message details for ${messageId}: ${detailsErrorMessage}`);
+          }
+
+          if (details) {
             await publishEvent({
               eventType: 'INBOUND_EMAIL_RECEIVED',
               tenant: row.tenant,
@@ -222,20 +270,8 @@ export async function POST(request: NextRequest) {
                 emailData: details,
               },
             });
-
-            // Update last_sync_at after successful email processing
-            await trx('email_providers')
-              .where({ id: row.id, tenant: row.tenant })
-              .update({
-                last_sync_at: trx.fn.now(),
-                updated_at: trx.fn.now()
-              });
-
-            processedNotifications.push(messageId);
-            console.log(`Published enriched event for Microsoft email: ${messageId} from ${row.mailbox}`);
-          } catch (detailErr: any) {
-            console.warn(`Failed to fetch/publish Microsoft message ${messageId}: ${detailErr?.message || detailErr}`);
-            // Fallback: publish minimal event to acknowledge
+          } else {
+            // Fallback: publish minimal event (acknowledge receipt; workflow may decide how to handle missing fields)
             await publishEvent({
               eventType: 'INBOUND_EMAIL_RECEIVED',
               tenant: row.tenant,
@@ -256,8 +292,38 @@ export async function POST(request: NextRequest) {
                 } as any,
               },
             });
-            processedNotifications.push(messageId);
           }
+
+          // Best-effort bookkeeping (do not publish a second event if this fails)
+          try {
+            await trx('email_providers')
+              .where('id', row.id)
+              .andWhere('tenant', row.tenant)
+              .update({
+                last_sync_at: trx.fn.now(),
+                updated_at: trx.fn.now()
+              });
+          } catch (syncErr: any) {
+            console.warn(`Failed to update last_sync_at for provider ${row.id}: ${syncErr?.message || syncErr}`);
+          }
+
+          try {
+            await trx('email_processed_messages')
+              .where({ message_id: messageId, provider_id: row.id, tenant: row.tenant })
+              .update({
+                processing_status: details ? 'success' : 'partial',
+                from_email: details?.from?.email || null,
+                subject: details?.subject || notification.resourceData?.subject || null,
+                received_at: details?.receivedAt ? new Date(details.receivedAt) : null,
+                attachment_count: details?.attachments?.length || 0,
+                error_message: details ? null : (detailsErrorMessage || 'Failed to fetch full email details'),
+              });
+          } catch (statusErr: any) {
+            console.warn(`Failed to update processing status for ${messageId}: ${statusErr?.message || statusErr}`);
+          }
+
+          processedNotifications.push(messageId);
+          console.log(`Published ${details ? 'enriched' : 'minimal'} event for Microsoft email: ${messageId} from ${row.mailbox}`);
         });
       } catch (error) {
         console.error('Error processing Microsoft notification:', error);

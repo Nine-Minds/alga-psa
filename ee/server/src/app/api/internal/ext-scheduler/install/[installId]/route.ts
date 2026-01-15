@@ -11,6 +11,7 @@ import {
   InstallContext,
 } from '@ee/lib/extensions/schedulerHostApi';
 import { getInstallConfigByInstallId } from '@ee/lib/extensions/installConfig';
+import { resolveInstallIdFromParamsOrUrl } from '@ee/lib/next/routeParams';
 
 export const dynamic = 'force-dynamic';
 
@@ -166,20 +167,21 @@ async function getInstallContext(installId: string): Promise<InstallContext> {
 
 export async function POST(
   req: NextRequest,
-  { params }: { params: { installId: string } }
+  ctx: { params?: unknown }
 ) {
   try {
     ensureRunnerAuth(req);
+    const installId = await resolveInstallIdFromParamsOrUrl(ctx.params, req.url);
 
     const raw = await req.json();
     const base = baseSchema.parse(raw);
 
     // Apply rate limiting for mutating operations
-    if (!checkRateLimit(params.installId, base.operation)) {
+    if (!checkRateLimit(installId ?? '', base.operation)) {
       throw new SchedulerApiError('RATE_LIMITED', 'Too many requests, please try again later');
     }
 
-    const ctx = await getInstallContext(params.installId);
+    const ctx = await getInstallContext(installId ?? '');
 
     switch (base.operation) {
       case 'list': {

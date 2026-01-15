@@ -15,7 +15,6 @@ import { CURRENCY_OPTIONS } from 'server/src/constants/currency';
 interface BillingConfigFormProps {
     billingConfig: {
         payment_terms: string;
-        billing_cycle: string;
         preferred_payment_method: string;
         invoice_delivery_method: string;
         invoice_template_id?: string;
@@ -105,12 +104,6 @@ const BillingConfigForm: React.FC<BillingConfigFormProps> = ({
         { value: 'net_30', label: 'Net 30' },
         { value: 'net_15', label: 'Net 15' },
         { value: 'due_on_receipt', label: 'Due on Receipt' }
-    ];
-
-    const billingCycleOptions = [
-        { value: 'monthly', label: 'Monthly' },
-        { value: 'quarterly', label: 'Quarterly' },
-        { value: 'annually', label: 'Annually' }
     ];
 
     const paymentMethodOptions = [
@@ -205,15 +198,6 @@ const BillingConfigForm: React.FC<BillingConfigFormProps> = ({
                     value={billingConfig.payment_terms}
                     onValueChange={handleSelectChange('payment_terms')}
                     options={paymentTermsOptions}
-                />
-            </div>
-
-            <div className="space-y-2">
-                <CustomSelect
-                    label="Billing Cycle"
-                    value={billingConfig.billing_cycle}
-                    onValueChange={handleSelectChange('billing_cycle')}
-                    options={billingCycleOptions}
                 />
             </div>
 

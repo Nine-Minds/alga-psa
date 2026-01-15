@@ -155,6 +155,15 @@ async function handle(
     if (!installConfig) {
       return applyCorsHeaders(json(404, { error: 'Extension not installed' }), corsOrigin);
     }
+    const installId = String(installConfig.installId ?? '').trim();
+    if (!installId) {
+      console.error('[ext-proxy] Missing installId in install config', {
+        tenantId,
+        extensionId,
+        installId: installConfig.installId,
+      });
+      return applyCorsHeaders(json(502, { error: 'Extension install context missing (installId)' }), corsOrigin);
+    }
     if (!installConfig.contentHash) {
       console.error('[ext-proxy] Missing content hash', { tenantId, extensionId });
       return applyCorsHeaders(json(502, { error: 'Extension bundle unavailable' }), corsOrigin);
@@ -180,7 +189,7 @@ async function handle(
         request_id: requestId,
         tenant_id: tenantId,
         extension_id: extensionId,
-        install_id: installConfig.installId,
+        install_id: installId,
         version_id: installConfig.versionId,
         content_hash: installConfig.contentHash,
         config: installConfig.config,

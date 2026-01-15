@@ -135,7 +135,10 @@ export async function POST(request: NextRequest) {
     }
 
     // Verify JWT token (audience + issuer), now that we know which tenant/provider this webhook maps to
-    const webhookUrl = `${request.nextUrl.origin}${request.nextUrl.pathname}`;
+    // Use NEXTAUTH_URL or NEXT_PUBLIC_BASE_URL for the expected audience since request.nextUrl.origin
+    // returns the container's internal URL (e.g., https://localhost:3000) instead of the public URL
+    const baseUrl = (process.env.NEXTAUTH_URL || process.env.NEXT_PUBLIC_BASE_URL || '').replace(/\/$/, '');
+    const webhookUrl = baseUrl ? `${baseUrl}${request.nextUrl.pathname}` : `${request.nextUrl.origin}${request.nextUrl.pathname}`;
     console.log('🔐 Verifying JWT token from Pub/Sub', {
       webhookUrl,
       providerId: provider.id,

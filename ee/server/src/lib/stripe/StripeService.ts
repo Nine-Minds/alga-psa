@@ -17,6 +17,7 @@ import { Knex } from 'knex';
 import { getConnection } from '@/lib/db/db';
 import logger from '@alga-psa/shared/core/logger';
 import { getSecretProviderInstance } from '@alga-psa/shared/core';
+import { startTenantDeletionWorkflow } from '@ee/lib/tenant-management/workflowClient';
 
 // Stripe configuration with secret provider support
 async function getStripeConfig() {
@@ -983,6 +984,10 @@ export class StripeService {
 
   /**
    * Handle customer.subscription.deleted event
+   *
+   * When a subscription is canceled/deleted:
+   * 1. Mark subscription as canceled in database
+   * 2. Start tenant deletion workflow (deactivates users, collects stats, awaits confirmation)
    */
   private async handleSubscriptionDeleted(
     event: Stripe.Event,
@@ -1005,9 +1010,41 @@ export class StripeService {
         updated_at: knex.fn.now(),
       });
 
-    // Optionally update tenant licensed_user_count to 0 or minimum
-    // This depends on business logic - do we allow grace period?
     logger.warn(`[StripeService] Subscription ${subscription.id} canceled for tenant ${tenantId}`);
+
+    // Start tenant deletion workflow
+    // This will:
+    // 1. Deactivate all users
+    // 2. Tag client as 'Canceled' in master tenant
+    // 3. Collect tenant statistics
+    // 4. Wait for confirmation signal (manual or from Alga workflow)
+    // 5. Delete tenant data after confirmation (immediate/30/90 days)
+    try {
+      const workflowResult = await startTenantDeletionWorkflow({
+        tenantId,
+        triggerSource: 'stripe_webhook',
+        subscriptionExternalId: subscription.id,
+        reason: `Stripe subscription ${subscription.id} canceled`,
+      });
+
+      if (workflowResult.available && workflowResult.workflowId) {
+        logger.info(
+          `[StripeService] Started tenant deletion workflow ${workflowResult.workflowId} for tenant ${tenantId}`
+        );
+      } else {
+        logger.warn(
+          `[StripeService] Tenant deletion workflow not available: ${workflowResult.error || 'Unknown error'}. ` +
+          `Tenant ${tenantId} will need manual cleanup.`
+        );
+      }
+    } catch (error) {
+      // Don't fail the webhook if workflow fails - the subscription is already canceled
+      // The tenant can be cleaned up manually later
+      logger.error(
+        `[StripeService] Failed to start tenant deletion workflow for tenant ${tenantId}:`,
+        error
+      );
+    }
   }
 
   /**

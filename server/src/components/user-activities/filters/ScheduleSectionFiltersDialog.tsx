@@ -124,6 +124,7 @@ export function ScheduleSectionFiltersDialog({
           <div className="space-y-1">
             <Label htmlFor="schedule-date-range" className="text-base font-semibold">Date Range</Label>
             <StringDateRangePicker
+              id="schedule-date-range"
               value={{
                 from: localFilters.dateRangeStart ? localFilters.dateRangeStart.split('T')[0] : '',
                 to: localFilters.dateRangeEnd ? localFilters.dateRangeEnd.split('T')[0] : '',

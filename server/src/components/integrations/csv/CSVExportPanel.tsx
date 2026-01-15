@@ -157,6 +157,7 @@ export function CSVExportPanel({ onExportComplete }: CSVExportPanelProps) {
         {/* Date Range */}
         <div>
           <StringDateRangePicker
+            id="csv-export-date-range"
             label="Date Range (optional)"
             value={dateRange}
             onChange={setDateRange}

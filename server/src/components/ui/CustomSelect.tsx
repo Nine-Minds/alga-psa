@@ -77,7 +77,7 @@ const CustomSelect: React.FC<CustomSelectProps & AutomationProps> = ({
       seen.add(option.value);
       return true;
     });
-  }, [options]);
+	  }, [options]);
 
   const normalizedOptions = useMemo(
     () =>
@@ -111,8 +111,10 @@ const CustomSelect: React.FC<CustomSelectProps & AutomationProps> = ({
     options: mappedOptions
   }, true, dataAutomationId);
   
-  // Always use the generated automation props (which include our override ID if provided)
-  const finalAutomationProps = { ...selectProps, ...props };
+	  // Always use the generated automation props (which include our override ID if provided)
+	  const { id: _selectPropsId, ...selectPropsWithoutId } = selectProps as any;
+	  const { id: _propsId, ...propsWithoutId } = props as any;
+	  const finalAutomationProps = { ...selectPropsWithoutId, ...propsWithoutId, id: selectId };
 
   // Update metadata when field props change - intentionally omitting updateMetadata from deps
   useEffect(() => {

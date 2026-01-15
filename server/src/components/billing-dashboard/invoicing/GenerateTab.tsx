@@ -6,9 +6,8 @@ import { Card } from '../../ui/Card';
 import { Button } from '../../ui/Button';
 import CustomSelect from '../../ui/CustomSelect';
 import { Coins, FileText, Receipt } from 'lucide-react';
-import { IService, IClientContractLineCycle } from '../../../interfaces/billing.interfaces';
+import { IService } from '../../../interfaces/billing.interfaces';
 import { IClient } from '../../../interfaces';
-import { getAvailableBillingPeriods } from '../../../lib/actions/billingAndTax';
 import { getAllClients } from '../../../lib/actions/client-actions/clientActions';
 import { getServices } from '../../../lib/actions/serviceActions';
 import AutomaticInvoices from '../AutomaticInvoices';
@@ -39,29 +38,26 @@ const GenerateTab: React.FC<GenerateTabProps> = ({
   const { enabled: billingEnabled } = useFeatureFlag('billing-enabled');
   const [invoiceType, setInvoiceType] = useState<InvoiceType>('automatic');
   const [error, setError] = useState<string | null>(null);
-  const [periods, setPeriods] = useState<(IClientContractLineCycle & {
-    client_name: string;
-    can_generate: boolean;
-    is_early?: boolean;
-  })[]>([]);
   const [clients, setClients] = useState<IClient[]>([]);
   const [services, setServices] = useState<IService[]>([]);
   const [showSuccessDialog, setShowSuccessDialog] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
+  const [internalRefreshTrigger, setInternalRefreshTrigger] = useState(0);
 
+  // Only load clients and services for manual/prepayment invoices
   useEffect(() => {
-    loadData();
-  }, [refreshTrigger]);
+    if (invoiceType !== 'automatic') {
+      loadManualInvoiceData();
+    }
+  }, [invoiceType, refreshTrigger]);
 
-  const loadData = async () => {
+  const loadManualInvoiceData = async () => {
     try {
-      const [periodsData, clientsData, servicesData] = await Promise.all([
-        getAvailableBillingPeriods(),
+      const [clientsData, servicesData] = await Promise.all([
         getAllClients(),
         getServices(1, 999, { item_kind: 'any' })
       ]);
 
-      setPeriods(periodsData);
       setClients(clientsData);
 
       if (servicesData && Array.isArray(servicesData.services)) {
@@ -77,7 +73,7 @@ const GenerateTab: React.FC<GenerateTabProps> = ({
   };
 
   const handleGenerateSuccess = () => {
-    loadData();
+    setInternalRefreshTrigger(prev => prev + 1);
     setSuccessMessage('Invoice generated successfully!');
     setShowSuccessDialog(true);
     onGenerateSuccess();
@@ -130,8 +126,8 @@ const GenerateTab: React.FC<GenerateTabProps> = ({
       case 'automatic':
         return (
           <AutomaticInvoices
-            periods={periods}
             onGenerateSuccess={handleGenerateSuccess}
+            refreshTrigger={refreshTrigger + internalRefreshTrigger}
           />
         );
       case 'manual':

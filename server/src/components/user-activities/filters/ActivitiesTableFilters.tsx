@@ -151,6 +151,7 @@ export const ActivitiesTableFilters = forwardRef<ActivitiesTableFiltersRef, Acti
             <div className="mt-4">
               <Label className="text-lg font-semibold">Due Date Range</Label>
               <StringDateRangePicker
+                id="activities-due-date-range"
                 value={{
                   from: localFilters.dueDateStart ? new Date(localFilters.dueDateStart).toISOString().split('T')[0] : '',
                   to: localFilters.dueDateEnd ? new Date(localFilters.dueDateEnd).toISOString().split('T')[0] : ''

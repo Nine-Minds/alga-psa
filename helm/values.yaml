@@ -48,14 +48,16 @@ setup:
   runSeeds: true
 
 server:
-  image: 
+  image:
     name: harbor.nineminds.com/nineminds/alga-psa
     is_private: true
     credentials: harbor-credentials
     tag: "4023e8f"
   verify_email: true
+  # Maximum body size for Next.js server actions (e.g., extension uploads)
+  serverActionsBodyLimit: "200mb"
   pullPolicy: Always
-  replicaCount: 1
+  replicaCount: 2
   service:
     type: "ClusterIP"
     port: 3000

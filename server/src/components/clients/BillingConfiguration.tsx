@@ -12,13 +12,12 @@ import ContactModel from 'server/src/lib/models/contact';
 import { getClientContractLine, updateClientContractLine, addClientContractLine, removeClientContractLine, editClientContractLine } from '../../lib/actions/client-actions/clientContractLineActions';
 import { getContractLines } from '../../lib/actions/contractLineAction';
 import { getServiceCategories } from '../../lib/actions/serviceCategoryActions';
-import { IClientContractLine, IContractLine, IServiceCategory, BillingCycleType } from '../../interfaces/billing.interfaces';
+import { IClientContractLine, IContractLine, IServiceCategory } from '../../interfaces/billing.interfaces';
 import { getServices, createService, updateService, deleteService } from '../../lib/actions/serviceActions';
 import { IService } from '../../interfaces/billing.interfaces';
 import { getTaxRates } from '../../lib/actions/taxRateActions';
 import { getClientTaxRates, addClientTaxRate, removeClientTaxRate, updateDefaultClientTaxRate } from '../../lib/actions/client-actions/clientTaxRateActions'; // Added updateDefaultClientTaxRate
 import { ITaxRate, IClientTaxRate } from '../../interfaces/billing.interfaces';
-import { getBillingCycle, updateBillingCycle } from '../../lib/actions/billingCycleActions';
 import { setClientTemplate } from '../../lib/actions/invoiceTemplates';
 import BillingConfigForm from './BillingConfigForm';
 import ClientTaxRates from './ClientTaxRates';
@@ -31,6 +30,7 @@ import ClientContractAssignment from './ClientContractAssignment'; // Added impo
 import { IClientTaxRateAssociation } from 'server/src/interfaces/tax.interfaces';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/Tabs';
 import { toast } from 'react-hot-toast';
+import { ClientBillingSchedule } from './ClientBillingSchedule';
 
 interface BillingConfigurationProps {
     client: IClient;
@@ -49,7 +49,6 @@ const BillingConfiguration: React.FC<BillingConfigurationProps> = ({ client, onS
     const [activeTab, setActiveTab] = useState('general');
     const [billingConfig, setBillingConfig] = useState({
         payment_terms: client.payment_terms || 'net_30',
-        billing_cycle: '',
         credit_limit: client.credit_limit || 0,
         preferred_payment_method: client.preferred_payment_method || '',
         auto_invoice: client.auto_invoice || false,
@@ -134,9 +133,6 @@ const BillingConfiguration: React.FC<BillingConfigurationProps> = ({ client, onS
             const categories = await getServiceCategories();
             setServiceCategories(categories);
 
-            const billingCycle = await getBillingCycle(client.client_id);
-            setBillingConfig(prev => ({ ...prev, billing_cycle: billingCycle }));
-
             const servicesResponse = await getServices(1, 999, { item_kind: 'any' });
             // Extract the services array from the paginated response
             setServices(Array.isArray(servicesResponse) ? servicesResponse : (servicesResponse.services || []));
@@ -168,9 +164,6 @@ const BillingConfiguration: React.FC<BillingConfigurationProps> = ({ client, onS
     };
 
     const handleSelectChange = (name: string) => async (value: string) => {
-        if (name === 'billing_cycle') {
-            await updateBillingCycle(client.client_id, value as BillingCycleType);
-        }
         setBillingConfig(prev => ({ ...prev, [name]: value }));
     };
 
@@ -189,7 +182,6 @@ const BillingConfiguration: React.FC<BillingConfigurationProps> = ({ client, onS
                 invoice_delivery_method,
                 billing_contact_id,
                 billing_email,
-                billing_cycle,
                 invoice_template_id,
                 region_code, // Added region_code
                 default_currency_code, // Added default_currency_code
@@ -536,6 +528,8 @@ const BillingConfiguration: React.FC<BillingConfigurationProps> = ({ client, onS
                         contacts={contacts}
                         clientId={client.client_id}
                     />
+
+                    <ClientBillingSchedule clientId={client.client_id} />
 
                     <ClientZeroDollarInvoiceSettings
                         clientId={client.client_id}
