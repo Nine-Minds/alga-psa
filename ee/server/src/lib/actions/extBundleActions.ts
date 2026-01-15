@@ -9,8 +9,7 @@
 import { CopyObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
 import { createS3BundleStore } from "../storage/bundles/s3-bundle-store";
 import { isValidSha256Hash, objectKeyFor, normalizeBasePrefix } from "../storage/bundles/types";
-import { Readable, PassThrough } from "node:stream";
-import { pipeline } from "node:stream/promises";
+import { Readable } from "node:stream";
 import * as fzstd from "fzstd";
 import * as tarStream from "tar-stream";
 import { getS3Client, getBundleBucket } from "../storage/s3-client";
@@ -91,20 +90,27 @@ async function extractManifestFromBundle(key: string): Promise<string | null> {
   const decompressed = fzstd.decompress(new Uint8Array(compressedData));
   const tarData = Buffer.from(decompressed);
 
-  // Parse tar and find manifest.json
+  // Parse tar and find manifest.json (at root or nested one level)
   return new Promise<string | null>((resolve, reject) => {
     const extract = tarStream.extract();
     let manifestContent: string | null = null;
+    let resolved = false;
 
     extract.on('entry', (header, stream, next) => {
-      // Look for manifest.json at the root of the archive
-      const name = header.name.replace(/^\.\//, '');
-      if (name === 'manifest.json') {
+      // Normalize path: remove leading ./ and trailing slashes
+      const name = header.name.replace(/^\.\//, '').replace(/\/$/, '');
+      // Match manifest.json at root or one level deep (e.g., "package/manifest.json")
+      const isManifest = name === 'manifest.json' || /^[^/]+\/manifest\.json$/.test(name);
+
+      if (isManifest && !manifestContent) {
         const chunks: Buffer[] = [];
         stream.on('data', (chunk: Buffer) => chunks.push(chunk));
         stream.on('end', () => {
           manifestContent = Buffer.concat(chunks).toString('utf-8');
-          next();
+          resolved = true;
+          // Stop processing further entries
+          extract.destroy();
+          resolve(manifestContent);
         });
         stream.on('error', next);
       } else {
@@ -114,8 +120,13 @@ async function extractManifestFromBundle(key: string): Promise<string | null> {
       }
     });
 
-    extract.on('finish', () => resolve(manifestContent));
-    extract.on('error', reject);
+    extract.on('finish', () => {
+      if (!resolved) resolve(manifestContent);
+    });
+    extract.on('error', (err) => {
+      // Ignore errors after we've resolved (from destroy())
+      if (!resolved) reject(err);
+    });
 
     // Feed tar data to extractor
     const readable = Readable.from(tarData);

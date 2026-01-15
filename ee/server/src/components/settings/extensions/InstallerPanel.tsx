@@ -143,12 +143,13 @@ export default function InstallerPanel() {
 
         if (!finalizeResponse.success) {
           const { code, message, details } = finalizeResponse.error;
-          const manifestIssue = code === 'MANIFEST_REQUIRED' || code === 'INVALID_MANIFEST';
+          // Show manual manifest input if extraction failed or manifest is invalid
+          const manifestIssue = code === 'MANIFEST_NOT_FOUND' || code === 'MANIFEST_EXTRACTION_FAILED' || code === 'INVALID_MANIFEST';
           if (manifestIssue) {
             setNeedsManifest(true);
           }
           setError({
-            error: message || (manifestIssue ? 'Manifest JSON is required to finalize this bundle.' : 'Unexpected error finalizing installation'),
+            error: message || (manifestIssue ? 'Could not extract valid manifest from bundle.' : 'Unexpected error finalizing installation'),
             code,
             details,
           });
@@ -292,22 +293,79 @@ export default function InstallerPanel() {
                 id="installer-bundle-input"
                 type="file"
                 accept=".tar.zst,.zst"
-                disabled={installing || needsManifest}
+                disabled={installing}
                 onChange={handleFileChange}
               />
+              <p className="text-xs text-gray-500">
+                The manifest will be extracted automatically from the bundle.
+              </p>
             </div>
 
+            {/* Optional manifest override - collapsible */}
+            {!needsManifest && (
+              <div className="border-t border-gray-200 pt-4">
+                <button
+                  type="button"
+                  className="flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900"
+                  onClick={() => setShowAdvanced(!showAdvanced)}
+                  disabled={installing}
+                >
+                  <span className={`transform transition-transform ${showAdvanced ? 'rotate-90' : ''}`}>▶</span>
+                  Advanced Options
+                </button>
+                {showAdvanced && (
+                  <div className="mt-3 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="installer-manifest-json" className="text-sm">
+                        Custom Manifest (optional override)
+                      </Label>
+                      <div>
+                        <Input
+                          id="installer-manifest-file"
+                          type="file"
+                          accept=".json"
+                          ref={manifestFileInputRef}
+                          className="hidden"
+                          onChange={handleManifestFileChange}
+                          disabled={installing}
+                        />
+                        <Button
+                          id="installer-manifest-browse-btn"
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => manifestFileInputRef.current?.click()}
+                          disabled={installing}
+                        >
+                          Browse
+                        </Button>
+                      </div>
+                    </div>
+                    <TextArea
+                      id="installer-manifest-json"
+                      placeholder="Leave empty to use manifest from bundle, or paste custom manifest.json here"
+                      rows={8}
+                      value={manifestJson}
+                      onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setManifestJson(e.target.value)}
+                      disabled={installing}
+                    />
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Fallback: shown only if manifest extraction failed */}
             {needsManifest && (
               <div className="space-y-3">
                 <div className="text-sm text-amber-700">
-                  The server requested the manifest.json for this bundle to complete installation.
+                  Could not extract manifest from bundle. Please provide it manually.
                 </div>
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
                     <Label htmlFor="installer-manifest-json">Manifest JSON</Label>
                     <div>
                       <Input
-                        id="installer-manifest-file"
+                        id="installer-manifest-file-fallback"
                         type="file"
                         accept=".json"
                         ref={manifestFileInputRef}
@@ -316,7 +374,7 @@ export default function InstallerPanel() {
                         disabled={installing}
                       />
                       <Button
-                        id="installer-manifest-browse-btn"
+                        id="installer-manifest-browse-btn-fallback"
                         type="button"
                         variant="outline"
                         onClick={() => manifestFileInputRef.current?.click()}
@@ -327,7 +385,7 @@ export default function InstallerPanel() {
                     </div>
                   </div>
                   <TextArea
-                    id="installer-manifest-json"
+                    id="installer-manifest-json-fallback"
                     placeholder='Paste the manifest.json content here'
                     rows={10}
                     value={manifestJson}
