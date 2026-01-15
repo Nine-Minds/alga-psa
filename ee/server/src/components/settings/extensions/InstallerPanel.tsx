@@ -50,9 +50,12 @@ export default function InstallerPanel() {
   const [error, setError] = useState<ApiError | null>(null);
   const [success, setSuccess] = useState<FinalizeSuccess | null>(null);
 
-  // Optional manifest prompt (only shown if server requires it)
-  const [needsManifest, setNeedsManifest] = useState(false);
+  // Optional manifest override (collapsed by default, user can expand to customize)
+  const [showAdvanced, setShowAdvanced] = useState(false);
   const [manifestJson, setManifestJson] = useState('');
+
+  // Legacy: only shown if extraction fails
+  const [needsManifest, setNeedsManifest] = useState(false);
 
   const handleManifestFileChange = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0];
@@ -82,6 +85,7 @@ export default function InstallerPanel() {
     setError(null);
     setSuccess(null);
     setNeedsManifest(false);
+    setShowAdvanced(false);
     setManifestJson('');
     if (manifestFileInputRef.current) {
       manifestFileInputRef.current.value = '';
@@ -126,11 +130,14 @@ export default function InstallerPanel() {
       }
       uploadKeyRef.current = key;
 
-      // 2) Finalize (no manifest or signature by default)
+      // 2) Finalize - manifest is auto-extracted from bundle, but user can override
       try {
+        const trimmedManifest = manifestJson.trim();
         const finalizeResponse = await extFinalizeUpload({
           key,
           size: file.size,
+          // Only pass manifestJson if user provided an override
+          ...(trimmedManifest ? { manifestJson: trimmedManifest } : {}),
           responseMode: 'result' as const,
         });
 
@@ -165,7 +172,7 @@ export default function InstallerPanel() {
       setError({ error: err?.message ?? 'Unexpected error during installation', details: err });
       setInstalling(false);
     }
-  }, [file]);
+  }, [file, manifestJson]);
 
   // Secondary finalize step if manifest is required
   const handleFinalizeWithManifest = useCallback(async () => {

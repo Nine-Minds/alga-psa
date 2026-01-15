@@ -7,10 +7,10 @@ export interface SpinnerProps {
 }
 
 const sizeMap = {
-  xs: { size: 24, border: 2 },
-  sm: { size: 40, border: 2 },
-  md: { size: 48, border: 6 },
-  lg: { size: 64, border: 8 },
+  xs: { size: 16, border: 2 },  // For inline/button use
+  sm: { size: 24, border: 2 },
+  md: { size: 40, border: 4 },
+  lg: { size: 48, border: 6 },
 };
 
 const keyframesId = 'alga-spinner-keyframes';
@@ -65,7 +65,8 @@ export function Spinner({ size = 'md', className, style }: SpinnerProps) {
     position: 'absolute',
     inset: '28%',
     borderRadius: 'inherit',
-    backgroundColor: 'color-mix(in srgb, var(--alga-primary, #9855ee) 20%, transparent)',
+    backgroundColor: 'var(--alga-primary, #9855ee)',
+    opacity: 0.2,
   };
 
   return (
@@ -98,6 +99,13 @@ export interface LoadingIndicatorProps {
   style?: React.CSSProperties;
 }
 
+const gapMap = {
+  xs: { inline: 4, stacked: 4 },
+  sm: { inline: 6, stacked: 6 },
+  md: { inline: 8, stacked: 8 },
+  lg: { inline: 12, stacked: 10 },
+};
+
 export function LoadingIndicator({
   size = 'md',
   text,
@@ -105,17 +113,19 @@ export function LoadingIndicator({
   className,
   style,
 }: LoadingIndicatorProps) {
+  const gap = gapMap[size][layout];
   const containerStyle: React.CSSProperties = {
     display: 'flex',
     flexDirection: layout === 'stacked' ? 'column' : 'row',
     alignItems: 'center',
-    gap: layout === 'stacked' ? 8 : 12,
+    gap,
     ...style,
   };
 
+  const fontSizeMap = { xs: '0.75rem', sm: '0.8125rem', md: '0.875rem', lg: '1rem' };
   const textStyle: React.CSSProperties = {
     color: 'var(--alga-muted-fg, #4b5563)',
-    fontSize: '0.875rem',
+    fontSize: fontSizeMap[size],
   };
 
   return (
