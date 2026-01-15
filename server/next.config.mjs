@@ -670,7 +670,9 @@ const nextConfig = {
   experimental: {
     serverActions: {
       bodySizeLimit: serverActionsBodyLimit,
-    }
+    },
+    // Increase middleware body size limit for extension installs
+    middlewareClientMaxBodySize: '100mb',
   },
   // Note: output: 'standalone' was removed due to static page generation issues
   generateBuildId: async () => {
