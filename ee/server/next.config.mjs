@@ -57,6 +57,8 @@ const nextConfig = {
   experimental: {
     // Allow importing code from outside this directory (monorepo OSS server code)
     externalDir: true,
+    // Increase middleware body size limit for extension installs
+    middlewareClientMaxBodySize: '100mb',
   },
   images: {
     // Avoid requiring the native `sharp` binary locally

@@ -1125,6 +1125,7 @@ async fn storage_request(
         base.trim_end_matches('/'),
         install_id
     );
+    tracing::info!(url = %url, operation = %operation, "storage request dispatch");
     let namespace_log = payload
         .get("namespace")
         .and_then(|v| v.as_str())
@@ -1144,7 +1145,7 @@ async fn storage_request(
     );
 
     let response = HTTP_CLIENT
-        .post(url)
+        .post(url.as_str())
         .header("content-type", "application/json")
         .header("x-runner-auth", token)
         .json(&payload)

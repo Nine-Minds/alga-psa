@@ -1,6 +1,6 @@
 import { Client, Connection } from '@temporalio/client';
 import { createLogger, format, transports } from 'winston';
-import { tenantCreationWorkflow, healthCheckWorkflow, emailWebhookMaintenanceWorkflow, calendarWebhookMaintenanceWorkflow, resendWelcomeEmailWorkflow, tenantDeletionWorkflow } from './workflows/index';
+import { tenantCreationWorkflow, healthCheckWorkflow, emailWebhookMaintenanceWorkflow, calendarWebhookMaintenanceWorkflow, resendWelcomeEmailWorkflow, tenantDeletionWorkflow, tenantExportWorkflow } from './workflows/index';
 import type {
   TenantCreationInput,
   TenantCreationResult,
@@ -13,6 +13,11 @@ import type {
   TenantDeletionWorkflowState,
   ConfirmationType,
 } from './types/tenant-deletion-types.js';
+import type {
+  TenantExportWorkflowInput,
+  TenantExportWorkflowResult,
+  TenantExportWorkflowState,
+} from './types/tenant-export-types.js';
 import * as dotenv from 'dotenv';
 
 // Load environment variables
@@ -512,6 +517,93 @@ export class TenantWorkflowClient {
       return results;
     } catch (error) {
       logger.error('Failed to list tenant deletion workflows', {
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+      throw error;
+    }
+  }
+
+  // ============================================
+  // Tenant Export Workflow Methods
+  // ============================================
+
+  /**
+   * Start a tenant export workflow
+   */
+  async startTenantExport(
+    input: TenantExportWorkflowInput,
+    workflowId?: string
+  ): Promise<{
+    workflowId: string;
+    runId: string;
+    result: Promise<TenantExportWorkflowResult>;
+  }> {
+    const finalWorkflowId = workflowId || `tenant-export-${input.tenantId}-${Date.now()}`;
+
+    logger.info('Starting tenant export workflow', {
+      workflowId: finalWorkflowId,
+      tenantId: input.tenantId,
+      requestedBy: input.requestedBy,
+    });
+
+    const handle = await this.client.workflow.start(tenantExportWorkflow, {
+      args: [input],
+      taskQueue: this.config.taskQueue,
+      workflowId: finalWorkflowId,
+      // Export should complete within 1 hour
+      workflowExecutionTimeout: '1h',
+      workflowRunTimeout: '45m',
+      workflowTaskTimeout: '1m',
+    });
+
+    logger.info('Tenant export workflow started', {
+      workflowId: handle.workflowId,
+      runId: handle.firstExecutionRunId,
+    });
+
+    return {
+      workflowId: handle.workflowId,
+      runId: handle.firstExecutionRunId,
+      result: handle.result(),
+    };
+  }
+
+  /**
+   * Get the current state of a tenant export workflow
+   */
+  async getTenantExportState(workflowId: string): Promise<TenantExportWorkflowState> {
+    logger.info('Getting tenant export workflow state', { workflowId });
+
+    const handle = this.client.workflow.getHandle(workflowId);
+
+    try {
+      const state = await handle.query('getExportState');
+      logger.info('Retrieved tenant export workflow state', { workflowId, state });
+      return state as TenantExportWorkflowState;
+    } catch (error) {
+      logger.error('Failed to get tenant export workflow state', {
+        workflowId,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+      throw error;
+    }
+  }
+
+  /**
+   * Wait for a tenant export workflow to complete and return result
+   */
+  async waitForTenantExport(workflowId: string): Promise<TenantExportWorkflowResult> {
+    logger.info('Waiting for tenant export workflow to complete', { workflowId });
+
+    const handle = this.client.workflow.getHandle(workflowId);
+
+    try {
+      const result = await handle.result();
+      logger.info('Tenant export workflow completed', { workflowId, result });
+      return result as TenantExportWorkflowResult;
+    } catch (error) {
+      logger.error('Tenant export workflow failed', {
+        workflowId,
         error: error instanceof Error ? error.message : 'Unknown error',
       });
       throw error;

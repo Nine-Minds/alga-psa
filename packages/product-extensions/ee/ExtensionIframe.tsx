@@ -7,6 +7,7 @@ import LoadingIndicator from 'server/src/components/ui/LoadingIndicator';
 type Props = {
   domain: string;
   extensionId: string;
+  contentHash?: string | null;
 };
 
 /**
@@ -71,7 +72,7 @@ function extractThemeVariables(): Record<string, string> {
   };
 }
 
-export default function ExtensionIframe({ domain, extensionId }: Props) {
+export default function ExtensionIframe({ domain, extensionId, contentHash }: Props) {
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
@@ -80,9 +81,12 @@ export default function ExtensionIframe({ domain, extensionId }: Props) {
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const parentOrigin = window.location.origin;
-      setSrc(`https://${domain}?parentOrigin=${encodeURIComponent(parentOrigin)}`);
+      // Add content hash to bust redirect cache - browser may cache 302 redirects
+      // Hash changes when bundle is updated, so cached redirects are invalidated
+      const cacheBuster = contentHash ? `&_h=${encodeURIComponent(contentHash)}` : '';
+      setSrc(`https://${domain}?parentOrigin=${encodeURIComponent(parentOrigin)}${cacheBuster}`);
     }
-  }, [domain]);
+  }, [domain, contentHash]);
 
   useEffect(() => {
     const iframe = iframeRef.current;
@@ -155,7 +159,7 @@ export default function ExtensionIframe({ domain, extensionId }: Props) {
             className="extension-loading-indicator"
             text="Starting extension"
             textClassName="extension-loading-text"
-            spinnerProps={{ size: 'sm', color: 'border-primary-400' }}
+            spinnerProps={{ size: 'sm' }}
           />
           <p className="extension-loading-subtext">Connecting to the runtime workspace&hellip;</p>
         </div>

@@ -88,16 +88,19 @@ function Example() {
 ### Spinner / Loading
 
 ```tsx
-import { Spinner, LoadingIndicator } from '@alga/ui-kit';
+import { Spinner, LoadingIndicator, Button } from '@alga/ui-kit';
 
-// Basic spinner (sizes: 'xs' | 'sm' | 'md' | 'lg')
+// Spinner sizes: xs (16px), sm (24px), md (40px), lg (48px)
 <Spinner size="md" />
 
+// xs size is ideal for inline button use
+<Button>{loading ? <><Spinner size="xs" /> Loading...</> : 'Submit'}</Button>
+
 // With text, inline layout (default)
-<LoadingIndicator text="Loading..." />
+<LoadingIndicator size="sm" text="Loading..." />
 
 // Stacked layout (spinner above text)
-<LoadingIndicator text="Please wait..." layout="stacked" size="lg" />
+<LoadingIndicator text="Please wait..." layout="stacked" size="md" />
 ```
 
 ### Confirmation Dialog

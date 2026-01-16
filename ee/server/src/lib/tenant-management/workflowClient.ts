@@ -20,6 +20,10 @@ import type {
   ConfirmationType,
   SignalResult,
   QueryResult,
+  TenantExportInput,
+  TenantExportResult,
+  TenantExportWorkflowState,
+  TenantExportClientResult,
 } from '@ee/interfaces/tenant.interfaces';
 
 // Re-export for consumers
@@ -37,6 +41,10 @@ export type {
   ConfirmationType,
   SignalResult,
   QueryResult,
+  TenantExportInput,
+  TenantExportResult,
+  TenantExportWorkflowState,
+  TenantExportClientResult,
 };
 
 const DEFAULT_TEMPORAL_ADDRESS = 'temporal-frontend.temporal.svc.cluster.local:7233';
@@ -309,6 +317,106 @@ export async function rollbackTenantDeletion(
       return {
         available: true,
         success: true,
+      };
+    } finally {
+      try {
+        await connection.close();
+      } catch {
+        // Ignore close errors
+      }
+    }
+  } catch (error) {
+    return {
+      available: false,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    };
+  }
+}
+
+// ============================================================================
+// Tenant Export Workflow Functions
+// ============================================================================
+
+/**
+ * Start a tenant export workflow via Temporal.
+ * Returns { available: false } if Temporal client is not available.
+ */
+export async function startTenantExportWorkflow(
+  input: TenantExportInput
+): Promise<TenantExportClientResult> {
+  try {
+    const mod: any = await import('@temporalio/client').catch(() => null);
+    if (!mod) {
+      return { available: false, error: 'Temporal client not available' };
+    }
+
+    const address = process.env.TEMPORAL_ADDRESS || DEFAULT_TEMPORAL_ADDRESS;
+    const namespace = process.env.TEMPORAL_NAMESPACE || DEFAULT_TEMPORAL_NAMESPACE;
+    const taskQueue = process.env.TEMPORAL_TASK_QUEUE || DEFAULT_TEMPORAL_TASK_QUEUE;
+
+    const connection = await mod.Connection.connect({ address });
+    const client = new mod.Client({ connection, namespace });
+
+    const workflowId = `tenant-export-${input.tenantId}-${Date.now()}`;
+
+    const handle = await client.workflow.start('tenantExportWorkflow', {
+      args: [input],
+      taskQueue,
+      workflowId,
+      // Export should complete within 1 hour
+      workflowExecutionTimeout: '1h',
+      workflowRunTimeout: '45m',
+      workflowTaskTimeout: '1m',
+    });
+
+    // Create a result promise that also closes the connection
+    const resultPromise = handle.result().finally(async () => {
+      try {
+        await connection.close();
+      } catch {
+        // Ignore close errors
+      }
+    });
+
+    return {
+      available: true,
+      workflowId: handle.workflowId,
+      runId: handle.firstExecutionRunId,
+      result: resultPromise,
+    };
+  } catch (error) {
+    return {
+      available: false,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    };
+  }
+}
+
+/**
+ * Get the state of a tenant export workflow.
+ */
+export async function getTenantExportState(
+  workflowId: string
+): Promise<QueryResult<TenantExportWorkflowState>> {
+  try {
+    const mod: any = await import('@temporalio/client').catch(() => null);
+    if (!mod) {
+      return { available: false, error: 'Temporal client not available' };
+    }
+
+    const address = process.env.TEMPORAL_ADDRESS || DEFAULT_TEMPORAL_ADDRESS;
+    const namespace = process.env.TEMPORAL_NAMESPACE || DEFAULT_TEMPORAL_NAMESPACE;
+
+    const connection = await mod.Connection.connect({ address });
+    const client = new mod.Client({ connection, namespace });
+
+    try {
+      const handle = client.workflow.getHandle(workflowId);
+      const state = await handle.query('getExportState');
+
+      return {
+        available: true,
+        data: state as TenantExportWorkflowState,
       };
     } finally {
       try {
