@@ -615,23 +615,20 @@ const PhaseTaskImportDialog: React.FC<PhaseTaskImportDialogProps> = ({
                         ]}
                         value={csvHeader}
                         onValueChange={(value) => {
-                          // Clear any existing mapping for this CSV column
-                          if (value !== 'unassigned') {
-                            setColumnMappings(prev =>
-                              prev.map(m =>
-                                m.csvHeader === value ? { ...m, taskField: null } : m
-                              )
-                            );
-                          }
-                          // Update the mapping for this field
-                          if (currentMapping) {
-                            handleMapColumn(currentMapping.csvHeader, value !== 'unassigned' ? fieldKey : 'unassigned');
-                          } else if (value !== 'unassigned') {
-                            const targetMapping = columnMappings.find(m => m.csvHeader === value);
-                            if (targetMapping) {
-                              handleMapColumn(value, fieldKey);
-                            }
-                          }
+                          // Handle all mapping updates in a single state update
+                          setColumnMappings(prev =>
+                            prev.map((m): ICSVTaskColumnMapping => {
+                              // Clear the existing mapping for this field (if any)
+                              if (currentMapping && m.csvHeader === currentMapping.csvHeader) {
+                                return { ...m, taskField: null };
+                              }
+                              // Set the new column to this field (if not unassigned)
+                              if (value !== 'unassigned' && m.csvHeader === value) {
+                                return { ...m, taskField: fieldKey as MappableTaskField };
+                              }
+                              return m;
+                            })
+                          );
                         }}
                         className="w-2/3"
                       />
