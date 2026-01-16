@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth/getSession';
 import { ApiKeyServiceForApi } from '@/lib/services/apiKeyServiceForApi';
-import { TenantWorkflowClient } from '@ee/temporal-workflows/client';
+import { getTenantExportState } from '@ee/lib/tenant-management/workflowClient';
 
 const MASTER_BILLING_TENANT_ID = process.env.MASTER_BILLING_TENANT_ID;
 
@@ -83,36 +83,18 @@ export async function GET(req: NextRequest) {
     }
 
     // Query the workflow state
-    const client = await TenantWorkflowClient.create();
+    const stateResult = await getTenantExportState(workflowId);
 
-    try {
-      const state = await client.getTenantExportState(workflowId);
-
+    if (!stateResult.available) {
       return NextResponse.json({
-        success: true,
-        data: {
-          workflowId,
-          status: state.status,
-          step: state.step,
-          exportId: state.exportId,
-          tenantId: state.tenantId,
-          tenantName: state.tenantName,
-          progress: state.progress,
-          currentTable: state.currentTable,
-          s3Key: state.s3Key,
-          downloadUrl: state.downloadUrl,
-          urlExpiresAt: state.urlExpiresAt,
-          fileSizeBytes: state.fileSizeBytes,
-          tableCount: state.tableCount,
-          recordCount: state.recordCount,
-          error: state.error,
-          startedAt: state.startedAt,
-          completedAt: state.completedAt,
-        },
-      });
-    } catch (error) {
+        success: false,
+        error: stateResult.error || 'Temporal workflow client not available',
+      }, { status: 503 });
+    }
+
+    if (!stateResult.data) {
       // Check if workflow doesn't exist or completed
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      const errorMessage = stateResult.error || '';
 
       // If the workflow is not found, it might have completed - try to get the result
       if (errorMessage.includes('not found') || errorMessage.includes('workflow not found')) {
@@ -122,10 +104,36 @@ export async function GET(req: NextRequest) {
         }, { status: 404 });
       }
 
-      throw error;
-    } finally {
-      await client.close();
+      return NextResponse.json({
+        success: false,
+        error: stateResult.error || 'Failed to get workflow state',
+      }, { status: 500 });
     }
+
+    const state = stateResult.data;
+
+    return NextResponse.json({
+      success: true,
+      data: {
+        workflowId,
+        status: state.status,
+        step: state.step,
+        exportId: state.exportId,
+        tenantId: state.tenantId,
+        tenantName: state.tenantName,
+        progress: state.progress,
+        currentTable: state.currentTable,
+        s3Key: state.s3Key,
+        downloadUrl: state.downloadUrl,
+        urlExpiresAt: state.urlExpiresAt,
+        fileSizeBytes: state.fileSizeBytes,
+        tableCount: state.tableCount,
+        recordCount: state.recordCount,
+        error: state.error,
+        startedAt: state.startedAt,
+        completedAt: state.completedAt,
+      },
+    });
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
 
