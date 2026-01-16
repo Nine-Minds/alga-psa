@@ -3,7 +3,10 @@ import { getSession } from '@/lib/auth/getSession';
 import { getAdminConnection } from '@alga-psa/shared/db/admin';
 import { observabilityLogger } from '@/lib/observability/logging';
 import { ApiKeyServiceForApi } from '@/lib/services/apiKeyServiceForApi';
-import { TenantWorkflowClient } from '@ee/temporal-workflows/client';
+import {
+  startTenantExportWorkflow,
+  type TenantExportInput,
+} from '@ee/lib/tenant-management/workflowClient';
 
 const MASTER_BILLING_TENANT_ID = process.env.MASTER_BILLING_TENANT_ID;
 
@@ -133,124 +136,137 @@ export async function POST(req: NextRequest) {
       .returning('log_id');
 
     // Start the Temporal workflow
-    const client = await TenantWorkflowClient.create();
+    const exportInput: TenantExportInput = {
+      tenantId,
+      requestedBy: userId,
+      reason,
+    };
 
-    try {
-      const { workflowId, result } = await client.startTenantExport({
-        tenantId,
-        requestedBy: userId,
-        reason,
-      });
+    const workflowResult = await startTenantExportWorkflow(exportInput);
 
-      observabilityLogger.info('Export workflow started', {
-        event_type: 'tenant_management_workflow_started',
-        action: 'export_tenant_data',
-        tenant_id: tenantId,
-        workflow_id: workflowId,
-      });
-
-      // Wait for the workflow to complete (with timeout)
-      // Most exports complete in seconds, so we wait up to 2 minutes
-      const WAIT_TIMEOUT_MS = 120000;
-
-      const timeoutPromise = new Promise<null>((resolve) => {
-        setTimeout(() => resolve(null), WAIT_TIMEOUT_MS);
-      });
-
-      const exportResult = await Promise.race([result, timeoutPromise]);
-
-      if (exportResult === null) {
-        // Workflow is still running, return workflowId for polling
-        observabilityLogger.info('Export workflow still in progress, returning workflowId for polling', {
-          workflow_id: workflowId,
-          tenant_id: tenantId,
-        });
-
-        // Update audit record to show workflow is in progress
-        await knex('extension_audit_logs')
-          .where({ tenant: MASTER_BILLING_TENANT_ID, log_id: auditRecord.log_id })
-          .update({
-            status: 'in_progress',
-            details: JSON.stringify({
-              source: 'ninemindsreporting_extension',
-              reason,
-              workflowId,
-            }),
-          });
-
-        return NextResponse.json({
-          success: true,
-          data: {
-            status: 'in_progress',
-            workflowId,
-            tenantName: targetTenant.client_name,
-            message: 'Export started. Poll /export-status for progress.',
-          },
-        });
-      }
-
-      // Workflow completed
-      if (!exportResult.success) {
-        // Update audit record with failure
-        await knex('extension_audit_logs')
-          .where({ tenant: MASTER_BILLING_TENANT_ID, log_id: auditRecord.log_id })
-          .update({
-            status: 'failed',
-            error_message: exportResult.error || 'Export failed',
-          });
-
-        return NextResponse.json({
-          success: false,
-          error: exportResult.error || 'Export failed',
-        }, { status: 500 });
-      }
-
-      // Update audit record with success
+    if (!workflowResult.available || !workflowResult.result) {
+      // Update audit record with failure
       await knex('extension_audit_logs')
         .where({ tenant: MASTER_BILLING_TENANT_ID, log_id: auditRecord.log_id })
         .update({
-          status: 'completed',
+          status: 'failed',
+          error_message: workflowResult.error || 'Temporal workflow client not available',
+        });
+
+      return NextResponse.json({
+        success: false,
+        error: workflowResult.error || 'Temporal workflow client not available',
+      }, { status: 503 });
+    }
+
+    const { workflowId, result } = workflowResult;
+
+    observabilityLogger.info('Export workflow started', {
+      event_type: 'tenant_management_workflow_started',
+      action: 'export_tenant_data',
+      tenant_id: tenantId,
+      workflow_id: workflowId,
+    });
+
+    // Wait for the workflow to complete (with timeout)
+    // Most exports complete in seconds, so we wait up to 2 minutes
+    const WAIT_TIMEOUT_MS = 120000;
+
+    const timeoutPromise = new Promise<null>((resolve) => {
+      setTimeout(() => resolve(null), WAIT_TIMEOUT_MS);
+    });
+
+    const exportResult = await Promise.race([result, timeoutPromise]);
+
+    if (exportResult === null) {
+      // Workflow is still running, return workflowId for polling
+      observabilityLogger.info('Export workflow still in progress, returning workflowId for polling', {
+        workflow_id: workflowId,
+        tenant_id: tenantId,
+      });
+
+      // Update audit record to show workflow is in progress
+      await knex('extension_audit_logs')
+        .where({ tenant: MASTER_BILLING_TENANT_ID, log_id: auditRecord.log_id })
+        .update({
+          status: 'in_progress',
           details: JSON.stringify({
             source: 'ninemindsreporting_extension',
             reason,
             workflowId,
-            exportId: exportResult.exportId,
-            tableCount: exportResult.tableCount,
-            recordCount: exportResult.recordCount,
-            fileSizeBytes: exportResult.fileSizeBytes,
-            duration_ms: Date.now() - startTime,
           }),
         });
-
-      // LOG: Action completed
-      observabilityLogger.info('Export tenant data completed', {
-        event_type: 'tenant_management_action_completed',
-        action: 'export_tenant_data',
-        tenant_id: tenantId,
-        workflow_id: workflowId,
-        export_id: exportResult.exportId,
-        table_count: exportResult.tableCount,
-        record_count: exportResult.recordCount,
-        duration_ms: Date.now() - startTime,
-      });
 
       return NextResponse.json({
         success: true,
         data: {
-          status: 'completed',
+          status: 'in_progress',
+          workflowId,
+          tenantName: targetTenant.client_name,
+          message: 'Export started. Poll /export-status for progress.',
+        },
+      });
+    }
+
+    // Workflow completed
+    if (!exportResult.success) {
+      // Update audit record with failure
+      await knex('extension_audit_logs')
+        .where({ tenant: MASTER_BILLING_TENANT_ID, log_id: auditRecord.log_id })
+        .update({
+          status: 'failed',
+          error_message: exportResult.error || 'Export failed',
+        });
+
+      return NextResponse.json({
+        success: false,
+        error: exportResult.error || 'Export failed',
+      }, { status: 500 });
+    }
+
+    // Update audit record with success
+    await knex('extension_audit_logs')
+      .where({ tenant: MASTER_BILLING_TENANT_ID, log_id: auditRecord.log_id })
+      .update({
+        status: 'completed',
+        details: JSON.stringify({
+          source: 'ninemindsreporting_extension',
+          reason,
           workflowId,
           exportId: exportResult.exportId,
-          tenantName: targetTenant.client_name,
-          downloadUrl: exportResult.downloadUrl,
-          urlExpiresAt: exportResult.urlExpiresAt,
           tableCount: exportResult.tableCount,
           recordCount: exportResult.recordCount,
           fileSizeBytes: exportResult.fileSizeBytes,
-        },
+          duration_ms: Date.now() - startTime,
+        }),
       });
-    } finally {
-      await client.close();
-    }
+
+    // LOG: Action completed
+    observabilityLogger.info('Export tenant data completed', {
+      event_type: 'tenant_management_action_completed',
+      action: 'export_tenant_data',
+      tenant_id: tenantId,
+      workflow_id: workflowId,
+      export_id: exportResult.exportId,
+      table_count: exportResult.tableCount,
+      record_count: exportResult.recordCount,
+      duration_ms: Date.now() - startTime,
+    });
+
+    return NextResponse.json({
+      success: true,
+      data: {
+        status: 'completed',
+        workflowId,
+        exportId: exportResult.exportId,
+        tenantName: targetTenant.client_name,
+        downloadUrl: exportResult.downloadUrl,
+        urlExpiresAt: exportResult.urlExpiresAt,
+        tableCount: exportResult.tableCount,
+        recordCount: exportResult.recordCount,
+        fileSizeBytes: exportResult.fileSizeBytes,
+      },
+    });
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
 
