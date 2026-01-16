@@ -139,6 +139,24 @@ export interface IPhaseTaskValidationResponse {
 }
 
 /**
+ * Reference data for import operations.
+ * Contains both full objects (for dropdowns) and lookup maps (for validation).
+ * Fetched in a single transaction to reduce DB connection usage.
+ */
+export interface IImportReferenceData {
+  // Full objects for dropdowns
+  users: Array<{ user_id: string; first_name: string; last_name: string }>;
+  priorities: Array<{ priority_id: string; priority_name: string }>;
+  services: Array<{ service_id: string; service_name: string }>;
+  statusMappings: Array<{ project_status_mapping_id: string; status_name: string; name: string; custom_name?: string; is_closed?: boolean }>;
+  // Lookup maps for validation (case-insensitive name -> id)
+  userLookup: Record<string, string>;
+  priorityLookup: Record<string, string>;
+  serviceLookup: Record<string, string>;
+  statusLookup: Record<string, string>;
+}
+
+/**
  * Information about an unmatched status and affected tasks
  */
 export interface IUnmatchedStatusInfo {
@@ -196,149 +214,4 @@ export const DEFAULT_STATUS_COLOR = '#6B7280';
  */
 export interface IPhaseTaskImportOptions {
   skipInvalidRows: boolean;
-}
-
-/**
- * Parse a date string to Date object
- * Supports: YYYY-MM-DD, MM/DD/YYYY, DD/MM/YYYY
- */
-export function parseImportDate(dateStr: string | undefined): Date | null {
-  if (!dateStr?.trim()) return null;
-
-  const trimmed = dateStr.trim();
-
-  // Try YYYY-MM-DD format
-  const isoMatch = trimmed.match(/^(\d{4})-(\d{2})-(\d{2})$/);
-  if (isoMatch) {
-    const date = new Date(trimmed);
-    return isNaN(date.getTime()) ? null : date;
-  }
-
-  // Try MM/DD/YYYY or DD/MM/YYYY format
-  const slashMatch = trimmed.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
-  if (slashMatch) {
-    // Assume MM/DD/YYYY (US format)
-    const month = parseInt(slashMatch[1], 10);
-    const day = parseInt(slashMatch[2], 10);
-    const year = parseInt(slashMatch[3], 10);
-
-    // Basic validation
-    if (month >= 1 && month <= 12 && day >= 1 && day <= 31) {
-      const date = new Date(year, month - 1, day);
-      return isNaN(date.getTime()) ? null : date;
-    }
-  }
-
-  // Try parsing as generic date string
-  const parsed = new Date(trimmed);
-  return isNaN(parsed.getTime()) ? null : parsed;
-}
-
-/**
- * Parse a number string to number
- */
-export function parseImportNumber(numStr: string | undefined): number | null {
-  if (!numStr?.trim()) return null;
-
-  const parsed = parseFloat(numStr.trim());
-  return isNaN(parsed) ? null : parsed;
-}
-
-/**
- * Group CSV rows into phases and tasks structure
- */
-export function groupRowsIntoPhases(
-  rows: ITaskImportRow[],
-  userLookup: Record<string, string>,
-  priorityLookup: Record<string, string>,
-  serviceLookup: Record<string, string>,
-  statusLookup: Record<string, string> = {},
-  agentResolutions: IAgentResolution[] = []
-): IGroupedPhaseData[] {
-  const phaseMap = new Map<string, IGroupedPhaseData>();
-
-  // Build a map of agent resolutions for quick lookup
-  const agentResolutionMap = new Map<string, IAgentResolution>();
-  agentResolutions.forEach(resolution => {
-    agentResolutionMap.set(resolution.originalAgentName.toLowerCase().trim(), resolution);
-  });
-
-  for (const row of rows) {
-    if (!row.task_name?.trim()) continue;
-
-    const phaseName = row.phase_name?.trim() || DEFAULT_PHASE_NAME;
-
-    if (!phaseMap.has(phaseName)) {
-      phaseMap.set(phaseName, {
-        phase_name: phaseName,
-        description: null,
-        tasks: [],
-      });
-    }
-
-    // Parse comma-separated agents: first = primary assigned_to, rest = additional agents
-    const agentNames = row.assigned_to
-      ? row.assigned_to.split(',').map(name => name.trim()).filter(name => name)
-      : [];
-
-    // Resolve agent IDs using userLookup and agentResolutions
-    const resolveAgentId = (agentName: string): string | null => {
-      const normalizedName = agentName.toLowerCase().trim();
-
-      // First check if there's a direct match in userLookup
-      if (userLookup[normalizedName]) {
-        return userLookup[normalizedName];
-      }
-
-      // Check if there's a resolution for this agent
-      const resolution = agentResolutionMap.get(normalizedName);
-      if (resolution) {
-        if (resolution.action === 'map_to_existing' && resolution.mappedUserId) {
-          return resolution.mappedUserId;
-        }
-        // If action is 'skip', return null
-        return null;
-      }
-
-      // No match found
-      return null;
-    };
-
-    const primaryAgentId = agentNames.length > 0 ? resolveAgentId(agentNames[0]) : null;
-    // Filter out additional agents that match the primary agent to avoid constraint violations
-    const additionalAgentIds = agentNames.slice(1)
-      .map(name => resolveAgentId(name))
-      .filter((id): id is string => id !== null && id !== primaryAgentId);
-
-    const priorityName = row.priority?.toLowerCase().trim() || '';
-    const serviceName = row.service?.toLowerCase().trim() || '';
-    const statusName = row.status?.trim() || '';
-    const statusNameLower = statusName.toLowerCase();
-
-    phaseMap.get(phaseName)!.tasks.push({
-      task_name: row.task_name.trim(),
-      description: row.task_description?.trim() || null,
-      assigned_to: primaryAgentId,
-      additional_agent_ids: additionalAgentIds,
-      estimated_hours: parseImportNumber(row.estimated_hours),
-      actual_hours: parseImportNumber(row.actual_hours),
-      due_date: parseImportDate(row.due_date),
-      priority_id: priorityLookup[priorityName] || null,
-      service_id: serviceLookup[serviceName] || null,
-      task_type_key: row.task_type?.trim() || 'task',
-      status_name: statusName || null,
-      status_mapping_id: statusLookup[statusNameLower] || null,
-      tags: row.tags ? row.tags.split(',').map(t => t.trim()).filter(t => t) : [],
-    });
-  }
-
-  // Sort phases: named phases in order of appearance, then "Unsorted Tasks" last
-  const phases = Array.from(phaseMap.values());
-  phases.sort((a, b) => {
-    if (a.phase_name === DEFAULT_PHASE_NAME) return 1;
-    if (b.phase_name === DEFAULT_PHASE_NAME) return -1;
-    return 0;
-  });
-
-  return phases;
 }

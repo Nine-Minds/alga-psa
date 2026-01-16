@@ -9,10 +9,10 @@ import { unparseCSV } from 'server/src/lib/utils/csvParser';
 import { getAllUsersBasic } from 'server/src/lib/actions/user-actions/userActions';
 import { getAllPriorities } from 'server/src/lib/actions/priorityActions';
 import { getServices } from 'server/src/lib/actions/serviceActions';
-import { createTagsForEntity } from 'server/src/lib/actions/tagActions';
+import { createTagsForEntityWithTransaction } from 'server/src/lib/actions/tagActions';
 import ProjectModel from 'server/src/lib/models/project';
 import ProjectTaskModel from 'server/src/lib/models/projectTask';
-import { IProjectPhase, IProjectTask } from 'server/src/interfaces/project.interfaces';
+import { IProjectPhase } from 'server/src/interfaces/project.interfaces';
 import { IPriority } from 'server/src/interfaces';
 import { IService } from 'server/src/interfaces/billing.interfaces';
 import { IUser } from '@shared/interfaces/user.interfaces';
@@ -20,17 +20,162 @@ import {
   ITaskImportRow,
   ITaskImportValidationResult,
   IGroupedPhaseData,
-  IGroupedTaskData,
   IPhaseTaskImportResult,
   IPhaseTaskValidationResponse,
+  IImportReferenceData,
   IStatusResolution,
+  IAgentResolution,
   DEFAULT_PHASE_NAME,
   DEFAULT_STATUS_COLOR,
   MappableTaskField,
-  parseImportDate,
-  parseImportNumber,
 } from 'server/src/interfaces/phaseTaskImport.interfaces';
 import { IProjectStatusMapping } from 'server/src/interfaces/project.interfaces';
+
+/**
+ * Parse a date string to Date object
+ * Supports: YYYY-MM-DD, MM/DD/YYYY, DD/MM/YYYY
+ */
+function parseImportDate(dateStr: string | undefined): Date | null {
+  if (!dateStr?.trim()) return null;
+
+  const trimmed = dateStr.trim();
+
+  // Try YYYY-MM-DD format
+  const isoMatch = trimmed.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (isoMatch) {
+    const date = new Date(trimmed);
+    return isNaN(date.getTime()) ? null : date;
+  }
+
+  // Try MM/DD/YYYY or DD/MM/YYYY format
+  const slashMatch = trimmed.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (slashMatch) {
+    // Assume MM/DD/YYYY (US format)
+    const month = parseInt(slashMatch[1], 10);
+    const day = parseInt(slashMatch[2], 10);
+    const year = parseInt(slashMatch[3], 10);
+
+    // Basic validation
+    if (month >= 1 && month <= 12 && day >= 1 && day <= 31) {
+      const date = new Date(year, month - 1, day);
+      return isNaN(date.getTime()) ? null : date;
+    }
+  }
+
+  // Try parsing as generic date string
+  const parsed = new Date(trimmed);
+  return isNaN(parsed.getTime()) ? null : parsed;
+}
+
+/**
+ * Parse a number string to number
+ */
+function parseImportNumber(numStr: string | undefined): number | null {
+  if (!numStr?.trim()) return null;
+
+  const parsed = parseFloat(numStr.trim());
+  return isNaN(parsed) ? null : parsed;
+}
+
+/**
+ * Group CSV rows into phases and tasks structure
+ * Note: Made async to satisfy Next.js server action requirements.
+ */
+export async function groupRowsIntoPhases(
+  rows: ITaskImportRow[],
+  userLookup: Record<string, string>,
+  priorityLookup: Record<string, string>,
+  serviceLookup: Record<string, string>,
+  statusLookup: Record<string, string> = {},
+  agentResolutions: IAgentResolution[] = []
+): Promise<IGroupedPhaseData[]> {
+  const phaseMap = new Map<string, IGroupedPhaseData>();
+
+  // Build a map of agent resolutions for quick lookup
+  const agentResolutionMap = new Map<string, IAgentResolution>();
+  agentResolutions.forEach(resolution => {
+    agentResolutionMap.set(resolution.originalAgentName.toLowerCase().trim(), resolution);
+  });
+
+  for (const row of rows) {
+    if (!row.task_name?.trim()) continue;
+
+    const phaseName = row.phase_name?.trim() || DEFAULT_PHASE_NAME;
+
+    if (!phaseMap.has(phaseName)) {
+      phaseMap.set(phaseName, {
+        phase_name: phaseName,
+        description: null,
+        tasks: [],
+      });
+    }
+
+    // Parse comma-separated agents: first = primary assigned_to, rest = additional agents
+    const agentNames = row.assigned_to
+      ? row.assigned_to.split(',').map(name => name.trim()).filter(name => name)
+      : [];
+
+    // Resolve agent IDs using userLookup and agentResolutions
+    const resolveAgentId = (agentName: string): string | null => {
+      const normalizedName = agentName.toLowerCase().trim();
+
+      // First check if there's a direct match in userLookup
+      if (userLookup[normalizedName]) {
+        return userLookup[normalizedName];
+      }
+
+      // Check if there's a resolution for this agent
+      const resolution = agentResolutionMap.get(normalizedName);
+      if (resolution) {
+        if (resolution.action === 'map_to_existing' && resolution.mappedUserId) {
+          return resolution.mappedUserId;
+        }
+        // If action is 'skip', return null
+        return null;
+      }
+
+      // No match found
+      return null;
+    };
+
+    const primaryAgentId = agentNames.length > 0 ? resolveAgentId(agentNames[0]) : null;
+    // Filter out additional agents that match the primary agent to avoid constraint violations
+    const additionalAgentIds = agentNames.slice(1)
+      .map(name => resolveAgentId(name))
+      .filter((id): id is string => id !== null && id !== primaryAgentId);
+
+    const priorityName = row.priority?.toLowerCase().trim() || '';
+    const serviceName = row.service?.toLowerCase().trim() || '';
+    const statusName = row.status?.trim() || '';
+    const statusNameLower = statusName.toLowerCase();
+
+    phaseMap.get(phaseName)!.tasks.push({
+      task_name: row.task_name.trim(),
+      description: row.task_description?.trim() || null,
+      assigned_to: primaryAgentId,
+      additional_agent_ids: additionalAgentIds,
+      estimated_hours: parseImportNumber(row.estimated_hours),
+      actual_hours: parseImportNumber(row.actual_hours),
+      due_date: parseImportDate(row.due_date),
+      priority_id: priorityLookup[priorityName] || null,
+      service_id: serviceLookup[serviceName] || null,
+      task_type_key: row.task_type?.trim() || 'task',
+      status_name: statusName || null,
+      status_mapping_id: statusLookup[statusNameLower] || null,
+      tags: row.tags ? row.tags.split(',').map(t => t.trim()).filter(t => t) : [],
+    });
+  }
+
+  // Sort phases: named phases in order of appearance, then "Unsorted Tasks" last
+  const phases = Array.from(phaseMap.values());
+  phases.sort((a, b) => {
+    if (a.phase_name === DEFAULT_PHASE_NAME) return 1;
+    if (b.phase_name === DEFAULT_PHASE_NAME) return -1;
+    return 0;
+  });
+
+  return phases;
+}
 
 /**
  * Generate a CSV template for phase/task import with sample data
@@ -128,7 +273,245 @@ export async function generatePhaseTaskCSVTemplate(): Promise<string> {
 }
 
 /**
+ * Fetch all reference data needed for import in a single transaction.
+ * Returns both full objects (for dropdowns) and lookup maps (for validation).
+ * This eliminates multiple connection acquisitions during import.
+ */
+export async function getImportReferenceData(
+  projectId?: string
+): Promise<IImportReferenceData> {
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
+    throw new Error('No authenticated user found');
+  }
+
+  const { knex: db } = await createTenantKnex();
+
+  return await withTransaction(db, async (trx: Knex.Transaction) => {
+    const tenant = currentUser.tenant;
+
+    // Fetch all reference data in parallel within the same transaction
+    const [users, priorities, services, statusMappings] = await Promise.all([
+      // Users (exclude inactive - only show active users for assignment)
+      trx('users')
+        .select('user_id', 'first_name', 'last_name')
+        .where('tenant', tenant)
+        .where('is_inactive', false)
+        .orderBy(['first_name', 'last_name']),
+
+      // Priorities for project_task
+      trx('priorities')
+        .select('priority_id', 'priority_name')
+        .where('tenant', tenant)
+        .where('item_type', 'project_task')
+        .orderBy('order_number'),
+
+      // Active services
+      trx('service_catalog')
+        .select('service_id', 'service_name')
+        .where('tenant', tenant)
+        .where('is_active', true)
+        .orderBy('service_name'),
+
+      // Status mappings (only if projectId provided)
+      projectId && tenant
+        ? trx('project_status_mappings as psm')
+            .where({ 'psm.project_id': projectId, 'psm.tenant': tenant })
+            .leftJoin('statuses as s', function(this: Knex.JoinClause) {
+              this.on('psm.status_id', 's.status_id')
+                .andOn('psm.tenant', 's.tenant');
+            })
+            .leftJoin('standard_statuses as ss', function(this: Knex.JoinClause) {
+              this.on('psm.standard_status_id', 'ss.standard_status_id')
+                .andOn('psm.tenant', 'ss.tenant');
+            })
+            .select(
+              'psm.project_status_mapping_id',
+              'psm.custom_name',
+              trx.raw('COALESCE(psm.custom_name, s.name, ss.name) as status_name'),
+              trx.raw('COALESCE(psm.custom_name, s.name, ss.name) as name'),
+              trx.raw('COALESCE(s.is_closed, ss.is_closed, false) as is_closed')
+            )
+            .orderBy('psm.display_order')
+        : Promise.resolve([]),
+    ]);
+
+    // Build lookup maps (case-insensitive)
+    const userLookup: Record<string, string> = {};
+    users.forEach((user: { user_id: string; first_name: string; last_name: string }) => {
+      const fullName = `${user.first_name} ${user.last_name}`.toLowerCase().trim();
+      userLookup[fullName] = user.user_id;
+    });
+
+    const priorityLookup: Record<string, string> = {};
+    priorities.forEach((priority: { priority_id: string; priority_name: string }) => {
+      priorityLookup[priority.priority_name.toLowerCase().trim()] = priority.priority_id;
+    });
+
+    const serviceLookup: Record<string, string> = {};
+    services.forEach((service: { service_id: string; service_name: string }) => {
+      serviceLookup[service.service_name.toLowerCase().trim()] = service.service_id;
+    });
+
+    const statusLookup: Record<string, string> = {};
+    statusMappings.forEach((mapping: { project_status_mapping_id: string; status_name?: string; name?: string; custom_name?: string }) => {
+      const statusName = mapping.custom_name || mapping.status_name || mapping.name;
+      if (statusName) {
+        statusLookup[statusName.toLowerCase().trim()] = mapping.project_status_mapping_id;
+      }
+    });
+
+    return {
+      users,
+      priorities,
+      services,
+      statusMappings,
+      userLookup,
+      priorityLookup,
+      serviceLookup,
+      statusLookup,
+    };
+  });
+}
+
+/**
+ * Validate phase/task import data using pre-fetched reference data.
+ * This is a pure validation function that doesn't fetch any data.
+ * Note: Made async to satisfy Next.js server action requirements.
+ */
+export async function validatePhaseTaskImportDataWithReferenceData(
+  rows: ITaskImportRow[],
+  referenceData: IImportReferenceData
+): Promise<IPhaseTaskValidationResponse> {
+  const { userLookup, priorityLookup, serviceLookup, statusLookup } = referenceData;
+
+  // Collect unique status names from CSV that don't match existing statuses
+  const csvStatusNames = new Set<string>();
+  rows.forEach(row => {
+    const statusName = row.status?.trim();
+    if (statusName) {
+      csvStatusNames.add(statusName);
+    }
+  });
+
+  const unmatchedStatuses: string[] = [];
+  csvStatusNames.forEach(statusName => {
+    if (!statusLookup[statusName.toLowerCase()]) {
+      unmatchedStatuses.push(statusName);
+    }
+  });
+
+  // Collect unique agent names from CSV that don't match existing users
+  const unmatchedAgents: string[] = [];
+  const csvAgentNames = new Set<string>();
+  rows.forEach(row => {
+    if (row.assigned_to?.trim()) {
+      const agentNames = row.assigned_to.split(',').map(name => name.trim()).filter(name => name);
+      agentNames.forEach(agentName => {
+        csvAgentNames.add(agentName);
+      });
+    }
+  });
+
+  csvAgentNames.forEach(agentName => {
+    const normalizedName = agentName.toLowerCase();
+    if (!userLookup[normalizedName]) {
+      unmatchedAgents.push(agentName);
+    }
+  });
+
+  // Validate each row
+  const validationResults: ITaskImportValidationResult[] = rows.map((row, index) => {
+    const errors: string[] = [];
+    const warnings: string[] = [];
+    const rowNumber = index + 2; // +2 for 1-based indexing and header row
+
+    // Required field validation
+    if (!row.task_name?.trim()) {
+      errors.push('Task name is required');
+    }
+
+    // Name matching validation - supports comma-separated agents
+    if (row.assigned_to?.trim()) {
+      const agentNames = row.assigned_to.split(',').map(name => name.trim()).filter(name => name);
+      const notFoundAgents: string[] = [];
+
+      agentNames.forEach(agentName => {
+        const normalizedName = agentName.toLowerCase();
+        if (!userLookup[normalizedName]) {
+          notFoundAgents.push(agentName);
+        }
+      });
+
+      if (notFoundAgents.length > 0) {
+        if (notFoundAgents.length === agentNames.length) {
+          warnings.push(`User(s) "${notFoundAgents.join(', ')}" not found - task will be unassigned`);
+        } else {
+          warnings.push(`User(s) "${notFoundAgents.join(', ')}" not found - will be skipped`);
+        }
+      }
+    }
+
+    if (row.priority?.trim()) {
+      const normalizedPriority = row.priority.toLowerCase().trim();
+      if (!priorityLookup[normalizedPriority]) {
+        warnings.push(`Priority "${row.priority}" not found - will be skipped`);
+      }
+    }
+
+    if (row.service?.trim()) {
+      const normalizedService = row.service.toLowerCase().trim();
+      if (!serviceLookup[normalizedService]) {
+        warnings.push(`Service "${row.service}" not found - will be skipped`);
+      }
+    }
+
+    // Date validation
+    if (row.due_date?.trim()) {
+      const parsedDate = parseImportDate(row.due_date);
+      if (!parsedDate) {
+        warnings.push(`Invalid date format for due_date: "${row.due_date}" - will be skipped`);
+      }
+    }
+
+    // Number validation
+    if (row.estimated_hours?.trim()) {
+      const parsed = parseImportNumber(row.estimated_hours);
+      if (parsed === null || parsed < 0) {
+        warnings.push(`Invalid estimated_hours: "${row.estimated_hours}" - will be skipped`);
+      }
+    }
+
+    if (row.actual_hours?.trim()) {
+      const parsed = parseImportNumber(row.actual_hours);
+      if (parsed === null || parsed < 0) {
+        warnings.push(`Invalid actual_hours: "${row.actual_hours}" - will be skipped`);
+      }
+    }
+
+    return {
+      isValid: errors.length === 0,
+      errors,
+      warnings,
+      rowNumber,
+      data: row,
+    };
+  });
+
+  return {
+    validationResults,
+    userLookup,
+    priorityLookup,
+    serviceLookup,
+    statusLookup,
+    unmatchedStatuses,
+    unmatchedAgents,
+  };
+}
+
+/**
  * Validate phase/task import data and build lookup maps
+ * @deprecated Use getImportReferenceData + validatePhaseTaskImportDataWithReferenceData for better performance
  */
 export async function validatePhaseTaskImportData(
   rows: ITaskImportRow[],
@@ -332,42 +715,6 @@ export async function validatePhaseTaskImportData(
 }
 
 /**
- * Get project status mappings for the import dialog
- */
-export async function getProjectStatusMappingsForImport(
-  projectId: string
-): Promise<IProjectStatusMapping[]> {
-  const currentUser = await getCurrentUser();
-  if (!currentUser) {
-    throw new Error('No authenticated user found');
-  }
-  if (!currentUser.tenant) {
-    throw new Error('Tenant context not found');
-  }
-
-  const { knex: db } = await createTenantKnex();
-
-  // Query with joins to get actual status names
-  return await db('project_status_mappings as psm')
-    .where({ 'psm.project_id': projectId, 'psm.tenant': currentUser.tenant })
-    .leftJoin('statuses as s', function(this: Knex.JoinClause) {
-      this.on('psm.status_id', 's.status_id')
-        .andOn('psm.tenant', 's.tenant');
-    })
-    .leftJoin('standard_statuses as ss', function(this: Knex.JoinClause) {
-      this.on('psm.standard_status_id', 'ss.standard_status_id')
-        .andOn('psm.tenant', 'ss.tenant');
-    })
-    .select(
-      'psm.*',
-      db.raw('COALESCE(psm.custom_name, s.name, ss.name) as status_name'),
-      db.raw('COALESCE(psm.custom_name, s.name, ss.name) as name'),
-      db.raw('COALESCE(s.is_closed, ss.is_closed, false) as is_closed')
-    )
-    .orderBy('psm.display_order');
-}
-
-/**
  * Default status column name for tasks without a matching status
  */
 const DEFAULT_UNSPECIFIED_STATUS_NAME = 'No Status Specified';
@@ -548,7 +895,7 @@ export async function importPhasesAndTasks(
               project_status_mapping_id: taskStatusMappingId,
             });
 
-            // Apply tags if present
+            // Apply tags if present (using transaction for atomicity)
             if (taskData.tags.length > 0) {
               const pendingTags = taskData.tags.map(tagText => ({
                 tag_text: tagText,
@@ -556,7 +903,7 @@ export async function importPhasesAndTasks(
                 text_color: null,
                 isNew: true,
               }));
-              await createTagsForEntity(newTask.task_id, 'project_task', pendingTags);
+              await createTagsForEntityWithTransaction(trx, newTask.task_id, 'project_task', pendingTags);
             }
 
             // Add additional agents as task resources (only if primary agent is assigned)
@@ -592,7 +939,7 @@ export async function importPhasesAndTasks(
 }
 
 /**
- * Create a new status mapping for a project by first creating a tenant-level status,
+ * Create a new status mapping for a project by first finding or creating a tenant-level status,
  * then adding it to the project.
  *
  * This follows the same pattern as the template wizard's QuickAddStatus component
@@ -621,34 +968,54 @@ async function createNewStatusMapping(
   // Acquire advisory lock
   await trx.raw('SELECT pg_advisory_xact_lock(?)', [lockHash]);
 
-  // Get next order number for the tenant's status library
-  const maxOrder = await trx('statuses')
-    .where({ tenant, status_type: 'project_task' })
-    .max('order_number as max')
+  // Check if status already exists in tenant's status library
+  let status = await trx('statuses')
+    .where({ tenant, name: statusName, status_type: 'project_task' })
     .first();
 
-  const orderNumber = (maxOrder?.max ?? 0) + 1;
+  if (!status) {
+    // Get next order number for the tenant's status library
+    const maxOrder = await trx('statuses')
+      .where({ tenant, status_type: 'project_task' })
+      .max('order_number as max')
+      .first();
 
-  // Create a new status in the tenant's status library
-  const [newStatus] = await trx('statuses')
-    .insert({
-      tenant,
-      item_type: 'project_task',
-      status_type: 'project_task',
+    const orderNumber = (maxOrder?.max ?? 0) + 1;
+
+    // Create a new status in the tenant's status library
+    [status] = await trx('statuses')
+      .insert({
+        tenant,
+        item_type: 'project_task',
+        status_type: 'project_task',
+        name: statusName,
+        is_closed: false,
+        order_number: orderNumber,
+        color: DEFAULT_STATUS_COLOR,
+        created_at: new Date().toISOString()
+      })
+      .returning('*');
+  }
+
+  // Check if a mapping already exists for this status in this project
+  const existingMapping = await trx('project_status_mappings')
+    .where({ tenant, project_id: projectId, status_id: status.status_id })
+    .first();
+
+  if (existingMapping) {
+    return {
+      ...existingMapping,
+      status_name: statusName,
       name: statusName,
-      is_closed: false,
-      order_number: orderNumber,
-      color: DEFAULT_STATUS_COLOR,
-      created_at: new Date().toISOString()
-    })
-    .returning('*');
+    };
+  }
 
-  // Now create the project status mapping pointing to the new status
+  // Create the project status mapping pointing to the status
   const [newMapping] = await trx('project_status_mappings')
     .insert({
       tenant,
       project_id: projectId,
-      status_id: newStatus.status_id,
+      status_id: status.status_id,
       display_order: existingCount + 1,
       is_visible: true,
       is_standard: false,

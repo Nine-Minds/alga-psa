@@ -14,9 +14,10 @@ import { Tooltip } from 'server/src/components/ui/Tooltip';
 import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 import {
   generatePhaseTaskCSVTemplate,
-  validatePhaseTaskImportData,
+  getImportReferenceData,
+  validatePhaseTaskImportDataWithReferenceData,
   importPhasesAndTasks,
-  getProjectStatusMappingsForImport,
+  groupRowsIntoPhases,
 } from 'server/src/lib/actions/project-actions/phaseTaskImportActions';
 import {
   MappableTaskField,
@@ -26,6 +27,7 @@ import {
   ITaskImportValidationResult,
   IGroupedPhaseData,
   IPhaseTaskImportResult,
+  IImportReferenceData,
   IStatusResolution,
   IUnmatchedStatusInfo,
   StatusResolutionAction,
@@ -34,11 +36,8 @@ import {
   AgentResolutionAction,
   TASK_IMPORT_FIELDS,
   DEFAULT_PHASE_NAME,
-  groupRowsIntoPhases,
 } from 'server/src/interfaces/phaseTaskImport.interfaces';
 import { IProjectStatusMapping } from 'server/src/interfaces/project.interfaces';
-import { IUser } from '@shared/interfaces/user.interfaces';
-import { getAllUsersBasic } from 'server/src/lib/actions/user-actions/userActions';
 
 interface PhaseTaskImportDialogProps {
   isOpen: boolean;
@@ -100,7 +99,7 @@ const PhaseTaskImportDialog: React.FC<PhaseTaskImportDialogProps> = ({
   const [unmatchedAgents, setUnmatchedAgents] = useState<string[]>([]);
   const [unmatchedAgentInfo, setUnmatchedAgentInfo] = useState<IUnmatchedAgentInfo[]>([]);
   const [agentResolutions, setAgentResolutions] = useState<IAgentResolution[]>([]);
-  const [availableUsers, setAvailableUsers] = useState<IUser[]>([]);
+  const [availableUsers, setAvailableUsers] = useState<IImportReferenceData['users']>([]);
 
   // Track if rows were truncated due to limit
   const [rowsTruncated, setRowsTruncated] = useState<{ original: number; kept: number } | null>(null);
@@ -260,8 +259,11 @@ const PhaseTaskImportDialog: React.FC<PhaseTaskImportDialogProps> = ({
         return mappedData;
       });
 
-      // Validate the data (with projectId to check status mappings)
-      const validationResponse = await validatePhaseTaskImportData(mappedRows, projectId);
+      // Fetch all reference data in a single transaction
+      const referenceData = await getImportReferenceData(projectId);
+
+      // Validate the data using the pre-fetched reference data (pure function)
+      const validationResponse = await validatePhaseTaskImportDataWithReferenceData(mappedRows, referenceData);
 
       setValidationResults(validationResponse.validationResults);
       setUserLookup(validationResponse.userLookup);
@@ -271,13 +273,9 @@ const PhaseTaskImportDialog: React.FC<PhaseTaskImportDialogProps> = ({
       setUnmatchedStatuses(validationResponse.unmatchedStatuses);
       setUnmatchedAgents(validationResponse.unmatchedAgents);
 
-      // Fetch project status mappings for resolution dropdown
-      const statusMappings = await getProjectStatusMappingsForImport(projectId);
-      setProjectStatusMappings(statusMappings);
-
-      // Fetch available users for agent resolution dropdown
-      const users = await getAllUsersBasic(true);
-      setAvailableUsers(users);
+      // Use reference data for dropdowns (no additional fetches needed)
+      setProjectStatusMappings(referenceData.statusMappings as IProjectStatusMapping[]);
+      setAvailableUsers(referenceData.users);
 
       // Compute unmatched status info (which tasks have each unmatched status)
       const statusInfoMap = new Map<string, IUnmatchedStatusInfo>();
@@ -351,7 +349,7 @@ const PhaseTaskImportDialog: React.FC<PhaseTaskImportDialogProps> = ({
         .filter(r => r.isValid)
         .map(r => r.data);
 
-      const grouped = groupRowsIntoPhases(
+      const grouped = await groupRowsIntoPhases(
         validRows,
         validationResponse.userLookup,
         validationResponse.priorityLookup,
@@ -433,13 +431,13 @@ const PhaseTaskImportDialog: React.FC<PhaseTaskImportDialogProps> = ({
   }, [unmatchedAgents, unmatchedStatuses, handleImport]);
 
   // Proceed from agent resolution to next step (status resolution if needed, or import)
-  const handleProceedFromAgentResolution = useCallback(() => {
+  const handleProceedFromAgentResolution = useCallback(async () => {
     // Re-group phases with agent resolutions applied
     const validRows = validationResults
       .filter(r => r.isValid)
       .map(r => r.data);
 
-    const grouped = groupRowsIntoPhases(
+    const grouped = await groupRowsIntoPhases(
       validRows,
       userLookup,
       priorityLookup,
