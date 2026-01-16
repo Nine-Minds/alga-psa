@@ -30,7 +30,6 @@ const TENANT_TABLES_EXPORT_ORDER: string[] = [
   // Core business data
   'users',
   'contacts',
-  'companies',
   'clients',
 
   // Tickets and support
@@ -165,7 +164,7 @@ export async function exportTenantData(
       _metadata: {
         exportId,
         tenantId,
-        tenantName: tenant.company_name || tenant.client_name,
+        tenantName: tenant.client_name,
         exportedAt: new Date().toISOString(),
         requestedBy,
         reason,

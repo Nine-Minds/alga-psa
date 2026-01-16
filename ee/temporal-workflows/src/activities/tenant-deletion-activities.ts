@@ -27,7 +27,7 @@ import type {
  * Most dependent tables first, then progressively less dependent.
  * This order is critical due to foreign key constraints.
  *
- * Ported from cli/cleanup-tenant.nu
+ * Synced from cli/cleanup-tenant.nu
  */
 const TENANT_TABLES_DELETION_ORDER: string[] = [
   // === LEVEL 0: Sessions (CRITICAL - must be deleted before users/tenants) ===
@@ -78,7 +78,7 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   'google_calendar_provider_config', 'microsoft_calendar_provider_config', 'calendar_providers',
 
   // Tags and resources
-  'tag_mappings', 'ticket_resources', 'ticket_materials',
+  'tag_mappings', 'ticket_resources',
 
   // Logs and notifications
   'job_details', 'jobs', 'audit_logs', 'notification_logs', 'internal_notifications',
@@ -150,16 +150,16 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   'document_associations',
 
   // Assets must come after asset details
-  'asset_maintenance_schedules', 'assets', 'asset_types',
+  'asset_maintenance_schedules', 'assets',
 
   // Contract Lines
-  'payment_methods',
+  'contract_lines', 'payment_methods',
 
   // Interactions must come BEFORE tickets (tickets reference interactions in some cases)
   'interactions', 'interaction_types',
 
   // Schedule entries
-  'schedule_entries', 'schedules',
+  'schedule_entries',
 
   // Service catalog
   'service_catalog', 'service_types', 'service_categories',
@@ -178,7 +178,7 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   'invoices',
 
   // Projects
-  'projects', 'project_materials',
+  'projects',
 
   // External files and documents
   'external_files', 'documents', 'document_types',
@@ -202,8 +202,8 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   'priorities', 'severities', 'urgencies', 'impacts',
 
   // === LEVEL 7: Boards (referenced by categories) ===
-  // Boards must be deleted AFTER categories (renamed from channels)
-  'boards', 'channels',
+  // Boards must be deleted AFTER categories
+  'boards',
 
   // === LEVEL 8: Breaking circular dependencies ===
   // There's a complex circular dependency:
@@ -212,42 +212,23 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   // - clients.account_manager → users
 
   // Tax configuration (no dependencies on core entities)
-  'composite_tax_mappings', 'tax_components', 'tax_rate_thresholds', 'tax_holidays',
-  'tax_rates', 'tax_regions',
-
-  // Bundles and billing plans
-  'company_plan_bundles', 'client_plan_bundles', 'plan_bundles',
-  'plan_service_rate_tiers', 'plan_service_bucket_config', 'plan_service_configuration',
-  'plan_service_fixed_config', 'plan_service_hourly_config', 'plan_service_hourly_configs',
-  'plan_service_usage_config', 'plan_services', 'plan_discounts',
-  'bucket_plans', 'billing_plan_fixed_config', 'billing_plans', 'bundle_billing_plans',
-
-  // Company billing settings
-  'company_billing_cycles', 'company_billing_settings', 'company_tax_rates', 'company_tax_settings',
-  'company_email_settings', 'company_locations',
-
-  // Pending deletions (our own tracking table - skip the current deletion record)
-  // 'pending_tenant_deletions', -- handled separately
+  'tax_components', 'tax_rates', 'tax_regions',
 
   // Permissions and roles (must be deleted before users)
   'permissions', 'roles', 'teams',
 
-  // Tags
-  'tags', 'tag_definitions',
-
   // The correct order to avoid constraint violations:
-  // 1. Delete companies first (after NULLing account_manager)
+  // 1. Delete clients first (after NULLing account_manager)
   // 2. Delete contacts second (after NULLing client_id, before users that reference them)
   // 3. Delete users last (they have NOT NULL contact_id that references contacts)
 
-  'companies',  // Delete companies FIRST (after NULLing account_manager references)
-  'clients',    // Delete clients (legacy table if exists)
-  'contacts',   // Delete contacts SECOND (after companies, before users that have NOT NULL contact_id)
+  'clients',    // Delete clients FIRST (after NULLing account_manager references)
+  'contacts',   // Delete contacts SECOND (after clients, before users that have NOT NULL contact_id)
   'users',      // Delete users LAST (they have NOT NULL contact_id → contacts)
 
   // === LEVEL 9: Configuration and settings ===
   // API and auth
-  'api_keys', 'portal_invitations', 'password_reset_tokens', 'verification_tokens',
+  'api_keys', 'portal_invitations', 'password_reset_tokens',
   'portal_domain_session_otts', 'portal_domains',
 
   // Policies and resources
@@ -260,9 +241,8 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
 
   // Storage configuration
   'storage_records', 'storage_schemas', 'storage_usage',
-  'storage_configurations', 'storage_providers', 'storage_buckets',
+  'storage_configurations', 'storage_providers',
   'ext_storage_records', 'ext_storage_schemas', 'ext_storage_usage',
-  'file_references', 'file_stores',
 
   // Templates and layouts
   'tenant_email_templates', 'template_sections',
@@ -270,7 +250,7 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
 
   // Custom fields and attributes
   'attribute_definitions', 'custom_fields',
-  'layout_blocks', 'custom_task_types',
+  'layout_blocks', 'tag_definitions', 'custom_task_types',
 
   // Time period settings (tenant_time_period_settings must come BEFORE time_period_types)
   'tenant_time_period_settings',
@@ -278,17 +258,14 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
 
   // External entity mappings and tax
   'external_entity_mappings', 'external_tax_imports',
-  'tenant_external_entity_mappings',
 
   // Tenant notification settings
   'tenant_internal_notification_category_settings', 'tenant_internal_notification_subtype_settings',
   'tenant_notification_category_settings', 'tenant_notification_subtype_settings',
 
-  // Extension schedules
-  'tenant_extension_schedule',
-
   // Other tenant settings
-  'tenant_telemetry_settings', 'telemetry_consent_log',
+  'tenant_telemetry_settings',
+  'tenant_external_entity_mappings', 'telemetry_consent_log',
   'default_billing_settings', 'notification_settings',
   'inbound_ticket_defaults', 'user_type_rates', 'next_number',
   'event_catalog', 'provider_events',
@@ -389,7 +366,7 @@ export async function tagClientAsCanceled(
 
     // Find the customer client in management tenant that represents this tenant
     // Look for client with tenant_id in properties matching the tenantId
-    const customerClient = await adminKnex('companies')
+    const customerClient = await adminKnex('clients')
       .where({ tenant: managementTenantId })
       .whereRaw("properties->>'tenant_id' = ?", [tenantId])
       .first();
@@ -398,8 +375,8 @@ export async function tagClientAsCanceled(
       // Try alternate lookup - by client name matching tenant name
       const tenant = await adminKnex('tenants').where({ tenant: tenantId }).first();
       if (tenant) {
-        const clientByName = await adminKnex('companies')
-          .where({ tenant: managementTenantId, company_name: tenant.client_name })
+        const clientByName = await adminKnex('clients')
+          .where({ tenant: managementTenantId, client_name: tenant.client_name })
           .first();
 
         if (clientByName) {
@@ -408,7 +385,7 @@ export async function tagClientAsCanceled(
             return await TagModel.createTag(
               {
                 tag_text: 'Canceled',
-                tagged_id: clientByName.company_id,
+                tagged_id: clientByName.client_id,
                 tagged_type: 'client',
                 created_by: 'system',
               },
@@ -418,7 +395,7 @@ export async function tagClientAsCanceled(
           });
           log.info('Client tagged as Canceled (by name lookup)', {
             tenantId,
-            clientId: clientByName.company_id,
+            clientId: clientByName.client_id,
             tagId: tagResult.tag_id,
           });
           return { tagId: tagResult.tag_id };
@@ -434,7 +411,7 @@ export async function tagClientAsCanceled(
       return await TagModel.createTag(
         {
           tag_text: 'Canceled',
-          tagged_id: customerClient.company_id,
+          tagged_id: customerClient.client_id,
           tagged_type: 'client',
           created_by: 'system',
         },
@@ -445,7 +422,7 @@ export async function tagClientAsCanceled(
 
     log.info('Client tagged as Canceled', {
       tenantId,
-      clientId: customerClient.company_id,
+      clientId: customerClient.client_id,
       tagId: tagResult.tag_id,
     });
 
@@ -477,7 +454,7 @@ export async function removeClientCanceledTag(tenantId: string): Promise<void> {
     }
 
     // Find customer client
-    const customerClient = await adminKnex('companies')
+    const customerClient = await adminKnex('clients')
       .where({ tenant: managementTenantId })
       .whereRaw("properties->>'tenant_id' = ?", [tenantId])
       .first();
@@ -486,14 +463,14 @@ export async function removeClientCanceledTag(tenantId: string): Promise<void> {
       // Try by name
       const tenant = await adminKnex('tenants').where({ tenant: tenantId }).first();
       if (tenant) {
-        const clientByName = await adminKnex('companies')
-          .where({ tenant: managementTenantId, company_name: tenant.client_name })
+        const clientByName = await adminKnex('clients')
+          .where({ tenant: managementTenantId, client_name: tenant.client_name })
           .first();
         if (clientByName) {
           await adminKnex('tag_mappings')
-            .where({ tenant: managementTenantId, tagged_id: clientByName.company_id })
+            .where({ tenant: managementTenantId, tagged_id: clientByName.client_id })
             .whereIn('tag_id', function() {
-              this.select('tag_id').from('tags').where({ tenant: managementTenantId, tag_text: 'Canceled' });
+              this.select('tag_id').from('tag_definitions').where({ tenant: managementTenantId, tag_text: 'Canceled' });
             })
             .del();
           log.info('Canceled tag removed from client (by name lookup)');
@@ -506,15 +483,15 @@ export async function removeClientCanceledTag(tenantId: string): Promise<void> {
 
     // Remove the 'Canceled' tag mapping
     await adminKnex('tag_mappings')
-      .where({ tenant: managementTenantId, tagged_id: customerClient.company_id })
+      .where({ tenant: managementTenantId, tagged_id: customerClient.client_id })
       .whereIn('tag_id', function() {
-        this.select('tag_id').from('tags').where({ tenant: managementTenantId, tag_text: 'Canceled' });
+        this.select('tag_id').from('tag_definitions').where({ tenant: managementTenantId, tag_text: 'Canceled' });
       })
       .del();
 
     log.info('Canceled tag removed from client', {
       tenantId,
-      clientId: customerClient.company_id,
+      clientId: customerClient.client_id,
     });
   } catch (error) {
     log.error('Failed to remove Canceled tag', {
@@ -544,7 +521,7 @@ export async function collectTenantStats(tenantId: string): Promise<TenantStats>
       invoiceCountResult,
       projectCountResult,
       documentCountResult,
-      companyCountResult,
+      clientCountResult,
       contactCountResult,
       tenantInfo,
     ] = await Promise.all([
@@ -563,7 +540,7 @@ export async function collectTenantStats(tenantId: string): Promise<TenantStats>
       adminKnex('invoices').where({ tenant: tenantId }).count('* as count').first().catch(() => ({ count: 0 })),
       adminKnex('projects').where({ tenant: tenantId }).count('* as count').first().catch(() => ({ count: 0 })),
       adminKnex('documents').where({ tenant: tenantId }).count('* as count').first().catch(() => ({ count: 0 })),
-      adminKnex('companies').where({ tenant: tenantId }).count('* as count').first().catch(() => ({ count: 0 })),
+      adminKnex('clients').where({ tenant: tenantId }).count('* as count').first().catch(() => ({ count: 0 })),
       adminKnex('contacts').where({ tenant: tenantId }).count('* as count').first().catch(() => ({ count: 0 })),
       adminKnex('tenants').where({ tenant: tenantId }).select('licensed_user_count').first(),
     ]);
@@ -577,7 +554,7 @@ export async function collectTenantStats(tenantId: string): Promise<TenantStats>
       invoiceCount: Number(invoiceCountResult?.count || 0),
       projectCount: Number(projectCountResult?.count || 0),
       documentCount: Number(documentCountResult?.count || 0),
-      companyCount: Number(companyCountResult?.count || 0),
+      clientCount: Number(clientCountResult?.count || 0),
       contactCount: Number(contactCountResult?.count || 0),
       collectedAt: new Date().toISOString(),
     };
@@ -602,7 +579,7 @@ export async function getTenantName(tenantId: string): Promise<string> {
   try {
     const adminKnex = await getAdminConnection();
     const tenant = await adminKnex('tenants').where({ tenant: tenantId }).first();
-    return tenant?.company_name || tenant?.client_name || tenantId;
+    return tenant?.client_name || tenantId;
   } catch (error) {
     log.error('Failed to get tenant name', {
       error: error instanceof Error ? error.message : 'Unknown error',
@@ -731,9 +708,9 @@ async function getTableTenantColumn(
  * This must be done before deleting records to avoid FK constraint violations.
  *
  * The circular dependency chain:
- * - companies.account_manager_id → users.user_id
+ * - clients.account_manager_id → users.user_id
  * - users.contact_id → contacts.contact_id (NOT NULL constraint!)
- * - contacts.company_id → companies.company_id
+ * - contacts.client_id → clients.client_id
  */
 async function breakCircularDependencies(
   knex: Knex,
@@ -742,66 +719,34 @@ async function breakCircularDependencies(
 ): Promise<void> {
   log.info('Breaking circular dependencies for tenant', { tenantId });
 
-  // Step 1: NULL out account_manager_id in companies to break companies → users dependency
+  // Step 1: NULL out account_manager_id in clients to break clients → users dependency
   try {
-    const result1 = await knex('companies')
+    const result1 = await knex('clients')
       .where({ tenant: tenantId })
       .whereNotNull('account_manager_id')
       .update({ account_manager_id: null });
     if (result1 > 0) {
-      log.info('Cleared account_manager_id references in companies', { count: result1 });
+      log.info('Cleared account_manager_id references in clients', { count: result1 });
     }
   } catch (error) {
     // Ignore if column doesn't exist
-    log.debug('Could not clear account_manager_id (column may not exist)', {
+    log.debug('Could not clear account_manager_id in clients (column may not exist)', {
       error: error instanceof Error ? error.message : 'Unknown',
     });
   }
 
-  // Step 2: NULL out company_id in contacts to break contacts → companies dependency
+  // Step 2: NULL out client_id in contacts to break contacts → clients dependency
   try {
     const result2 = await knex('contacts')
       .where({ tenant: tenantId })
-      .whereNotNull('company_id')
-      .update({ company_id: null });
-    if (result2 > 0) {
-      log.info('Cleared company_id references in contacts', { count: result2 });
-    }
-  } catch (error) {
-    // Ignore if column doesn't exist
-    log.debug('Could not clear company_id in contacts (column may not exist)', {
-      error: error instanceof Error ? error.message : 'Unknown',
-    });
-  }
-
-  // Also try client_id for legacy support
-  try {
-    const result3 = await knex('contacts')
-      .where({ tenant: tenantId })
       .whereNotNull('client_id')
       .update({ client_id: null });
-    if (result3 > 0) {
-      log.info('Cleared client_id references in contacts', { count: result3 });
+    if (result2 > 0) {
+      log.info('Cleared client_id references in contacts', { count: result2 });
     }
   } catch (error) {
     // Ignore if column doesn't exist
     log.debug('Could not clear client_id in contacts (column may not exist)', {
-      error: error instanceof Error ? error.message : 'Unknown',
-    });
-  }
-
-  // Step 3: NULL out account_manager in clients table (if it exists - legacy)
-  try {
-    const result4 = await knex('clients')
-      .where({ tenant: tenantId })
-      .whereNotNull('account_manager_id')
-      .update({ account_manager_id: null });
-    if (result4 > 0) {
-      log.info('Cleared account_manager_id references in clients', { count: result4 });
-    }
-  } catch (error) {
-    // Ignore if table/column doesn't exist
-    log.debug('Could not clear account_manager_id in clients (table/column may not exist)', {
       error: error instanceof Error ? error.message : 'Unknown',
     });
   }

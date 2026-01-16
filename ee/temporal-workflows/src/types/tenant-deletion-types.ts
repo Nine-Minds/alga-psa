@@ -79,7 +79,7 @@ export interface TenantStats {
   invoiceCount: number;
   projectCount: number;
   documentCount: number;
-  companyCount: number;
+  clientCount: number;
   contactCount: number;
   collectedAt: ISO8601String;
 }
