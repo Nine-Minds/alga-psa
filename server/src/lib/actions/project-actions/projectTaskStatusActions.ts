@@ -1,5 +1,6 @@
 'use server';
 
+import { Knex } from 'knex';
 import { createTenantKnex } from 'server/src/lib/db';
 import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
 import { withTransaction } from '@shared/db';
@@ -82,23 +83,25 @@ export async function getProjectStatusMappings(
   const tenant = currentUser.tenant;
   const { knex } = await createTenantKnex();
 
-  return await knex('project_status_mappings as psm')
-    .where({ 'psm.project_id': projectId, 'psm.tenant': tenant })
-    .leftJoin('statuses as s', function(this: any) {
-      this.on('psm.status_id', 's.status_id')
-        .andOn('psm.tenant', 's.tenant');
-    })
-    .leftJoin('standard_statuses as ss', function(this: any) {
-      this.on('psm.standard_status_id', 'ss.standard_status_id')
-        .andOn('psm.tenant', 'ss.tenant');
-    })
-    .select(
-      'psm.*',
-      knex.raw('COALESCE(psm.custom_name, s.name, ss.name) as status_name'),
-      knex.raw('COALESCE(psm.custom_name, s.name, ss.name) as name'),
-      knex.raw('COALESCE(s.is_closed, ss.is_closed, false) as is_closed')
-    )
-    .orderBy('psm.display_order');
+  return await withTransaction(knex, async (trx) => {
+    return await trx('project_status_mappings as psm')
+      .where({ 'psm.project_id': projectId, 'psm.tenant': tenant })
+      .leftJoin('statuses as s', function(this: Knex.JoinClause) {
+        this.on('psm.status_id', 's.status_id')
+          .andOn('psm.tenant', 's.tenant');
+      })
+      .leftJoin('standard_statuses as ss', function(this: Knex.JoinClause) {
+        this.on('psm.standard_status_id', 'ss.standard_status_id')
+          .andOn('psm.tenant', 'ss.tenant');
+      })
+      .select(
+        'psm.*',
+        trx.raw('COALESCE(psm.custom_name, s.name, ss.name) as status_name'),
+        trx.raw('COALESCE(psm.custom_name, s.name, ss.name) as name'),
+        trx.raw('COALESCE(s.is_closed, ss.is_closed, false) as is_closed')
+      )
+      .orderBy('psm.display_order');
+  });
 }
 
 /**
