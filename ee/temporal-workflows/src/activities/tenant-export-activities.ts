@@ -141,8 +141,9 @@ export async function exportTenantData(
   input: ExportTenantDataInput
 ): Promise<ExportTenantDataResult> {
   const log = logger();
-  const { tenantId, requestedBy, reason, urlExpiresIn = 3600 } = input; // 1 hour default for initial URL
-  const exportId = crypto.randomUUID();
+  const { tenantId, requestedBy, reason, urlExpiresIn = 3600, exportId: providedExportId } = input; // 1 hour default for initial URL
+  // Use provided exportId (from workflow) or generate a new one
+  const exportId = providedExportId || crypto.randomUUID();
 
   log.info('Starting tenant data export', {
     tenantId,

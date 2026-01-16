@@ -1,16 +1,20 @@
 import React from 'react';
 
 export interface SpinnerProps {
-  size?: 'xs' | 'sm' | 'md' | 'lg';
+  size?: 'button' | 'xs' | 'sm' | 'md' | 'lg';
+  /** Use 'inverted' for spinners on colored backgrounds (e.g., primary buttons) */
+  variant?: 'default' | 'inverted';
   className?: string;
   style?: React.CSSProperties;
 }
 
+// Match main app spinner sizes from server/src/components/ui/Spinner.tsx
 const sizeMap = {
-  xs: { size: 16, border: 2 },  // For inline/button use
-  sm: { size: 24, border: 2 },
-  md: { size: 40, border: 4 },
-  lg: { size: 48, border: 6 },
+  button: { size: 16, border: 2 },  // For inline button use - prevents wrapping
+  xs: { size: 24, border: 2 },      // h-6 w-6 border-2
+  sm: { size: 40, border: 2 },      // h-10 w-10 border-2
+  md: { size: 48, border: 6 },      // h-12 w-12 border-[6px]
+  lg: { size: 64, border: 8 },      // h-16 w-16 border-[8px]
 };
 
 const keyframesId = 'alga-spinner-keyframes';
@@ -30,12 +34,13 @@ function ensureKeyframes() {
   document.head.appendChild(style);
 }
 
-export function Spinner({ size = 'md', className, style }: SpinnerProps) {
+export function Spinner({ size = 'md', variant = 'default', className, style }: SpinnerProps) {
   React.useEffect(() => {
     ensureKeyframes();
   }, []);
 
   const dims = sizeMap[size];
+  const isInverted = variant === 'inverted';
 
   const containerStyle: React.CSSProperties = {
     display: 'flex',
@@ -54,25 +59,16 @@ export function Spinner({ size = 'md', className, style }: SpinnerProps) {
     borderStyle: 'solid',
     borderWidth: dims.border,
     borderRadius: '9999px',
-    borderColor: 'var(--alga-primary, #9855ee)',
-    borderTopColor: 'var(--alga-secondary, #53d7fa)',
+    borderColor: isInverted ? 'rgba(255, 255, 255, 0.3)' : 'var(--alga-primary, #9855ee)',
+    borderTopColor: isInverted ? 'white' : 'var(--alga-secondary, #53d7fa)',
     animation: 'alga-spinner-spin 0.9s linear infinite',
     backgroundColor: 'transparent',
     boxSizing: 'border-box',
   };
 
-  const innerStyle: React.CSSProperties = {
-    position: 'absolute',
-    inset: '28%',
-    borderRadius: 'inherit',
-    backgroundColor: 'var(--alga-primary, #9855ee)',
-    opacity: 0.2,
-  };
-
   return (
     <div style={containerStyle} className={className}>
       <div style={spinnerStyle} role="status" aria-label="Loading">
-        <div style={innerStyle} />
         <span style={{
           position: 'absolute',
           width: 1,
@@ -100,6 +96,7 @@ export interface LoadingIndicatorProps {
 }
 
 const gapMap = {
+  button: { inline: 4, stacked: 4 },
   xs: { inline: 4, stacked: 4 },
   sm: { inline: 6, stacked: 6 },
   md: { inline: 8, stacked: 8 },
@@ -122,7 +119,7 @@ export function LoadingIndicator({
     ...style,
   };
 
-  const fontSizeMap = { xs: '0.75rem', sm: '0.8125rem', md: '0.875rem', lg: '1rem' };
+  const fontSizeMap = { button: '0.75rem', xs: '0.75rem', sm: '0.8125rem', md: '0.875rem', lg: '1rem' };
   const textStyle: React.CSSProperties = {
     color: 'var(--alga-muted-fg, #4b5563)',
     fontSize: fontSizeMap[size],
