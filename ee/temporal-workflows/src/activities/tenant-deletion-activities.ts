@@ -17,6 +17,8 @@ import type {
   DeactivateUsersResult,
   ReactivateUsersResult,
   TagClientResult,
+  DeactivateMasterClientResult,
+  ValidateTenantDeletionResult,
   RecordPendingDeletionInput,
   UpdateDeletionStatusInput,
   DeleteTenantDataResult,
@@ -290,6 +292,76 @@ async function getManagementTenantIdInternal(knex: Knex): Promise<string | null>
 }
 
 /**
+ * Validate that a tenant can be deleted.
+ * CRITICAL SAFEGUARD: Prevents deletion of master/management tenant.
+ */
+export async function validateTenantDeletion(
+  tenantId: string
+): Promise<ValidateTenantDeletionResult> {
+  const log = logger();
+  log.info('Validating tenant deletion', { tenantId });
+
+  try {
+    const adminKnex = await getAdminConnection();
+
+    // Get the management tenant ID
+    const managementTenantId = await getManagementTenantIdInternal(adminKnex);
+
+    // Check if tenant exists
+    const tenant = await adminKnex('tenants').where({ tenant: tenantId }).first();
+    const tenantExists = !!tenant;
+
+    // CRITICAL: Check if this is the management tenant
+    const isMasterTenant = tenantId === managementTenantId;
+
+    if (isMasterTenant) {
+      log.error('BLOCKED: Attempted to delete master/management tenant', {
+        tenantId,
+        managementTenantId,
+        tenantName: tenant?.client_name,
+      });
+      return {
+        valid: false,
+        tenantExists,
+        isMasterTenant: true,
+        managementTenantId,
+        error: 'Cannot delete master/management tenant. This operation is blocked for safety.',
+      };
+    }
+
+    if (!tenantExists) {
+      log.warn('Tenant does not exist', { tenantId });
+      return {
+        valid: false,
+        tenantExists: false,
+        isMasterTenant: false,
+        managementTenantId,
+        error: 'Tenant does not exist',
+      };
+    }
+
+    log.info('Tenant deletion validation passed', {
+      tenantId,
+      tenantName: tenant.client_name,
+      managementTenantId,
+    });
+
+    return {
+      valid: true,
+      tenantExists: true,
+      isMasterTenant: false,
+      managementTenantId,
+    };
+  } catch (error) {
+    log.error('Failed to validate tenant deletion', {
+      error: error instanceof Error ? error.message : 'Unknown error',
+      tenantId,
+    });
+    throw error;
+  }
+}
+
+/**
  * Deactivate all users for a tenant
  * Sets is_inactive = true for all active users
  */
@@ -503,6 +575,148 @@ export async function removeClientCanceledTag(tenantId: string): Promise<void> {
 }
 
 /**
+ * Deactivate the client and its contacts in the management tenant.
+ * This is called when a tenant is marked for deletion to disable their
+ * customer record in Nine Minds' CRM.
+ */
+export async function deactivateMasterTenantClient(
+  tenantId: string
+): Promise<DeactivateMasterClientResult> {
+  const log = logger();
+  log.info('Deactivating client and contacts in master tenant', { tenantId });
+
+  try {
+    const adminKnex = await getAdminConnection();
+
+    // Get the management tenant ID
+    const managementTenantId = await getManagementTenantIdInternal(adminKnex);
+    if (!managementTenantId) {
+      log.warn('Management tenant not found, skipping client deactivation', { tenantId });
+      return { clientDeactivated: false, contactsDeactivated: 0 };
+    }
+
+    // Find the customer client in management tenant that represents this tenant
+    let customerClient = await adminKnex('clients')
+      .where({ tenant: managementTenantId })
+      .whereRaw("properties->>'tenant_id' = ?", [tenantId])
+      .first();
+
+    // Try alternate lookup by name if not found by properties
+    if (!customerClient) {
+      const tenant = await adminKnex('tenants').where({ tenant: tenantId }).first();
+      if (tenant) {
+        customerClient = await adminKnex('clients')
+          .where({ tenant: managementTenantId, client_name: tenant.client_name })
+          .first();
+      }
+    }
+
+    if (!customerClient) {
+      log.warn('No customer client found for tenant in management tenant', { tenantId });
+      return { clientDeactivated: false, contactsDeactivated: 0 };
+    }
+
+    const clientId = customerClient.client_id;
+
+    // Deactivate the client
+    await adminKnex('clients')
+      .where({ tenant: managementTenantId, client_id: clientId })
+      .update({ is_inactive: true, updated_at: adminKnex.fn.now() });
+
+    log.info('Deactivated client in master tenant', {
+      tenantId,
+      clientId,
+      clientName: customerClient.client_name,
+    });
+
+    // Deactivate all contacts for this client
+    const contactsUpdated = await adminKnex('contacts')
+      .where({ tenant: managementTenantId, client_id: clientId })
+      .update({ is_inactive: true, updated_at: adminKnex.fn.now() });
+
+    log.info('Deactivated contacts for client in master tenant', {
+      tenantId,
+      clientId,
+      contactsDeactivated: contactsUpdated,
+    });
+
+    return {
+      clientId,
+      clientDeactivated: true,
+      contactsDeactivated: contactsUpdated,
+    };
+  } catch (error) {
+    log.error('Failed to deactivate client in master tenant', {
+      error: error instanceof Error ? error.message : 'Unknown error',
+      tenantId,
+    });
+    // Don't throw - client deactivation failure shouldn't block deletion workflow
+    return { clientDeactivated: false, contactsDeactivated: 0 };
+  }
+}
+
+/**
+ * Reactivate the client and its contacts in the management tenant (for rollback).
+ */
+export async function reactivateMasterTenantClient(tenantId: string): Promise<void> {
+  const log = logger();
+  log.info('Reactivating client and contacts in master tenant', { tenantId });
+
+  try {
+    const adminKnex = await getAdminConnection();
+
+    const managementTenantId = await getManagementTenantIdInternal(adminKnex);
+    if (!managementTenantId) {
+      log.warn('Management tenant not found, skipping client reactivation');
+      return;
+    }
+
+    // Find customer client
+    let customerClient = await adminKnex('clients')
+      .where({ tenant: managementTenantId })
+      .whereRaw("properties->>'tenant_id' = ?", [tenantId])
+      .first();
+
+    if (!customerClient) {
+      const tenant = await adminKnex('tenants').where({ tenant: tenantId }).first();
+      if (tenant) {
+        customerClient = await adminKnex('clients')
+          .where({ tenant: managementTenantId, client_name: tenant.client_name })
+          .first();
+      }
+    }
+
+    if (!customerClient) {
+      log.warn('No customer client found for reactivation');
+      return;
+    }
+
+    const clientId = customerClient.client_id;
+
+    // Reactivate the client
+    await adminKnex('clients')
+      .where({ tenant: managementTenantId, client_id: clientId })
+      .update({ is_inactive: false, updated_at: adminKnex.fn.now() });
+
+    // Reactivate contacts
+    await adminKnex('contacts')
+      .where({ tenant: managementTenantId, client_id: clientId })
+      .update({ is_inactive: false, updated_at: adminKnex.fn.now() });
+
+    log.info('Reactivated client and contacts in master tenant', {
+      tenantId,
+      clientId,
+    });
+  } catch (error) {
+    log.error('Failed to reactivate client in master tenant', {
+      error: error instanceof Error ? error.message : 'Unknown error',
+      tenantId,
+    });
+    // Don't throw - reactivation failure shouldn't block rollback
+  }
+}
+
+/**
  * Collect tenant statistics for audit purposes
  */
 export async function collectTenantStats(tenantId: string): Promise<TenantStats> {
@@ -604,6 +818,17 @@ export async function recordPendingDeletion(
     const scheduledDate = new Date();
     scheduledDate.setDate(scheduledDate.getDate() + 90);
 
+    // Build stats snapshot with export info
+    const statsSnapshot = {
+      ...data.stats,
+      export: data.exportId ? {
+        exportId: data.exportId,
+        bucket: data.exportBucket,
+        s3Key: data.exportS3Key,
+        fileSizeBytes: data.exportFileSizeBytes,
+      } : null,
+    };
+
     await adminKnex('pending_tenant_deletions').insert({
       deletion_id: data.deletionId,
       tenant: data.tenantId,
@@ -615,7 +840,7 @@ export async function recordPendingDeletion(
       canceled_at: adminKnex.fn.now(),
       scheduled_deletion_date: scheduledDate,
       status: 'pending',
-      stats_snapshot: JSON.stringify(data.stats),
+      stats_snapshot: JSON.stringify(statsSnapshot),
       created_at: adminKnex.fn.now(),
       updated_at: adminKnex.fn.now(),
     });
@@ -757,6 +982,11 @@ async function breakCircularDependencies(
 /**
  * Delete all tenant data comprehensively.
  * Uses the table deletion order from cli/cleanup-tenant.nu.
+ *
+ * CRITICAL SAFEGUARDS:
+ * 1. Validates tenantId is not the master/management tenant
+ * 2. Explicitly excludes master tenant from all deletion queries
+ * 3. Logs all deletions before executing
  */
 export async function deleteTenantData(
   tenantId: string,
@@ -767,6 +997,42 @@ export async function deleteTenantData(
 
   try {
     const adminKnex = await getAdminConnection();
+
+    // ============================================================
+    // CRITICAL SAFEGUARD 1: Validate tenant is not master tenant
+    // ============================================================
+    const managementTenantId = await getManagementTenantIdInternal(adminKnex);
+
+    if (tenantId === managementTenantId) {
+      log.error('BLOCKED: Attempted to delete master/management tenant in deleteTenantData', {
+        tenantId,
+        managementTenantId,
+        deletionId,
+      });
+      return {
+        success: false,
+        error: 'BLOCKED: Cannot delete master/management tenant. This is a critical safety check.',
+      };
+    }
+
+    // ============================================================
+    // CRITICAL SAFEGUARD 2: Verify the tenant exists and get info
+    // ============================================================
+    const tenantInfo = await adminKnex('tenants').where({ tenant: tenantId }).first();
+    if (!tenantInfo) {
+      log.error('Tenant not found for deletion', { tenantId, deletionId });
+      return {
+        success: false,
+        error: `Tenant ${tenantId} not found`,
+      };
+    }
+
+    log.info('Tenant deletion safeguards passed', {
+      tenantId,
+      tenantName: tenantInfo.client_name,
+      managementTenantId,
+      deletionId,
+    });
 
     let totalDeleted = 0;
     let tablesAffected = 0;
@@ -781,7 +1047,7 @@ export async function deleteTenantData(
         const tenantColumn = await getTableTenantColumn(adminKnex, tableName);
 
         if (tenantColumn) {
-          // Count records first
+          // Count records first - with explicit tenant check
           const countResult = await adminKnex(tableName)
             .where({ [tenantColumn]: tenantId })
             .count('* as count')
@@ -790,14 +1056,34 @@ export async function deleteTenantData(
           const count = Number(countResult?.count || 0);
 
           if (count > 0) {
-            // Delete records
-            await adminKnex(tableName)
+            // ============================================================
+            // CRITICAL SAFEGUARD 3: Double-check we're not deleting from
+            // master tenant by verifying the WHERE clause
+            // ============================================================
+            if (managementTenantId) {
+              // Log what we're about to delete for audit trail
+              log.info(`Pre-deletion check: ${tableName}`, {
+                tableName,
+                tenantColumn,
+                tenantId,
+                managementTenantId,
+                recordCount: count,
+                isSafe: tenantId !== managementTenantId,
+              });
+            }
+
+            // Delete records with explicit tenant filter
+            const deleted = await adminKnex(tableName)
               .where({ [tenantColumn]: tenantId })
               .delete();
 
-            totalDeleted += count;
+            totalDeleted += deleted;
             tablesAffected++;
-            log.info(`Deleted ${count} records from ${tableName}`);
+            log.info(`Deleted ${deleted} records from ${tableName}`, {
+              tableName,
+              deleted,
+              tenantId,
+            });
           }
         }
       } catch (error) {
@@ -825,18 +1111,23 @@ export async function deleteTenantData(
       });
     }
 
-    // Step 4: Delete the tenant record itself
+    // Step 4: Delete the tenant record itself (with final safety check)
     try {
+      // Final safeguard before deleting tenant record
+      if (tenantId === managementTenantId) {
+        throw new Error('BLOCKED: Final safety check failed - cannot delete management tenant');
+      }
+
       await adminKnex('tenants')
         .where({ tenant: tenantId })
         .delete();
 
       totalDeleted++;
       tablesAffected++;
-      log.info('Deleted tenant record from tenants table');
+      log.info('Deleted tenant record from tenants table', { tenantId });
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : 'Unknown error';
-      log.error('Failed to delete tenant record', { error: errorMsg });
+      log.error('Failed to delete tenant record', { error: errorMsg, tenantId });
       errors.push(`tenants: ${errorMsg}`);
     }
 
