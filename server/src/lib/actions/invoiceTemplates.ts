@@ -152,7 +152,7 @@ export async function setClientTemplate(clientId: string, templateId: string | n
 export async function saveInvoiceTemplate(
     template: Omit<IInvoiceTemplate, 'tenant'> & { isClone?: boolean }
 ): Promise<{ success: boolean; template?: IInvoiceTemplate; compilationError?: { error: string; details?: string } }> {
-    const { knex } = await createTenantKnex();
+    const { knex, tenant } = await createTenantKnex();
     // The original function had `isStandard` check, assuming it's handled before calling or within Invoice.saveTemplate
     // if (template.isStandard) {
     //   throw new Error('Cannot modify standard templates');
@@ -160,22 +160,53 @@ export async function saveInvoiceTemplate(
 
     // Explicitly remove wasmBinary if sent from client to rely on server compilation
     if ('wasmBinary' in template) {
-        delete (template as any).wasmBinary; // Use 'any' cast to allow deletion
-        console.log('Removed wasmBinary received from client.');
+        delete (template as any).wasmBinary;
     }
 
-    console.log('saveInvoiceTemplate called with template:', {
-        id: template.template_id,
-        name: template.name,
-        isClone: template.isClone,
-        hasAssemblyScriptSource: 'assemblyScriptSource' in template,
-        hasWasmBinary: 'wasmBinary' in template
-    });
+    // When cloning, fetch the assemblyScriptSource from the database
+    // because large strings may not serialize properly through Next.js server actions
+    let assemblyScriptSourceToUse = template.assemblyScriptSource;
+    if (template.isClone && template.standard_invoice_template_code && !assemblyScriptSourceToUse) {
+        const standardTemplate = await withTransaction(knex, async (trx: Knex.Transaction) => {
+            return trx('standard_invoice_templates')
+                .select('assemblyScriptSource')
+                .where({ standard_invoice_template_code: template.standard_invoice_template_code })
+                .first();
+        });
+        if (standardTemplate?.assemblyScriptSource) {
+            assemblyScriptSourceToUse = standardTemplate.assemblyScriptSource;
+        }
+    }
+    // Also handle cloning from tenant templates where source might not have been passed
+    if (template.isClone && !template.standard_invoice_template_code && !assemblyScriptSourceToUse && template.template_id) {
+        const tenantTemplate = await withTransaction(knex, async (trx: Knex.Transaction) => {
+            return trx('invoice_templates')
+                .select('assemblyScriptSource')
+                .where({ template_id: template.template_id, tenant })
+                .first();
+        });
+        if (tenantTemplate?.assemblyScriptSource) {
+            assemblyScriptSourceToUse = tenantTemplate.assemblyScriptSource;
+        }
+    }
+
+    // Fail fast if cloning but no source is available - prevents creating broken templates
+    if (template.isClone && !assemblyScriptSourceToUse) {
+        const sourceIdentifier = template.standard_invoice_template_code || template.template_id || 'unknown';
+        return {
+            success: false,
+            compilationError: {
+                error: 'Cannot clone template: source template has no AssemblyScript source code.',
+                details: `Source template identifier: ${sourceIdentifier}`
+            }
+        };
+    }
 
     // When cloning, create a new template object with a new template_id
     const templateToSave = template.isClone ? {
         ...template,                // Keep all existing fields
         template_id: uuidv4(),      // Generate new ID for clone
+        assemblyScriptSource: assemblyScriptSourceToUse, // Use the fetched or passed source
         // Don't include isStandard as it's not a column in the database
         is_default: false,         // Cloned templates shouldn't be default initially
     } : template;
@@ -192,32 +223,12 @@ export async function saveInvoiceTemplate(
         ...templateToSaveWithoutFlags
     } = templateToSave;
 
-    console.log('Calling Invoice.saveTemplate with:', {
-        id: templateToSaveWithoutFlags.template_id,
-        name: templateToSaveWithoutFlags.name,
-        version: templateToSaveWithoutFlags.version
-    });
-
-    // Make sure we're passing assemblyScriptSource and wasmBinary to saveTemplate
-    console.log('Template data before saving:', {
-        id: templateToSaveWithoutFlags.template_id,
-        name: templateToSaveWithoutFlags.name,
-        version: templateToSaveWithoutFlags.version,
-        hasAssemblyScriptSource: 'assemblyScriptSource' in templateToSaveWithoutFlags,
-        assemblyScriptSourceLength: templateToSaveWithoutFlags.assemblyScriptSource ? templateToSaveWithoutFlags.assemblyScriptSource.length : 0,
-        hasWasmBinary: 'wasmBinary' in templateToSaveWithoutFlags,
-        wasmBinaryIsNull: templateToSaveWithoutFlags.wasmBinary === null,
-        wasmBinaryLength: templateToSaveWithoutFlags.wasmBinary ? templateToSaveWithoutFlags.wasmBinary.length : 0
-    });
-
     // If we have AssemblyScript source but no WASM binary (or it's null), compile it
     if (templateToSaveWithoutFlags.assemblyScriptSource &&
         (!templateToSaveWithoutFlags.wasmBinary || templateToSaveWithoutFlags.wasmBinary === null)) {
-        console.log('Template has AssemblyScript source but no WASM binary, attempting compilation...');
-
         // Use compileAndSaveTemplate to compile the AssemblyScript source AND save/update the template
         const compileResult = await compileAndSaveTemplate(
-            { // Pass existing template_id if available
+            {
                 template_id: templateToSaveWithoutFlags.template_id,
                 name: templateToSaveWithoutFlags.name,
                 version: templateToSaveWithoutFlags.version,
@@ -227,11 +238,9 @@ export async function saveInvoiceTemplate(
         );
 
         if (compileResult.success) {
-            console.log('Successfully compiled and saved AssemblyScript source to WASM binary');
-            // Return the successful result including the saved template
             return { success: true, template: compileResult.template };
         } else {
-            console.error('Failed to compile AssemblyScript source:', compileResult.error, compileResult.details);
+            console.error('[saveInvoiceTemplate] Compilation failed:', compileResult.error);
             // Return the compilation error directly
             return {
                 success: false,
@@ -244,28 +253,12 @@ export async function saveInvoiceTemplate(
         // No need for a separate catch block here, compileAndSaveTemplate handles its internal errors
         // and returns a structured error response.
     } else {
-        // If no compilation was needed (e.g., source didn't change or no source provided),
-        // proceed to save the template metadata using Invoice.saveTemplate.
-        console.log('No compilation needed, saving template metadata directly...');
+        // No compilation needed - save template metadata directly
         try {
-            // Pass the template to saveTemplate
             const savedTemplate = await Invoice.saveTemplate(knex, templateToSaveWithoutFlags);
-
-            console.log('Template metadata saved successfully (no compilation):', {
-                id: savedTemplate.template_id,
-                name: savedTemplate.name,
-                version: savedTemplate.version,
-                hasAssemblyScriptSource: 'assemblyScriptSource' in savedTemplate,
-                hasWasmBinary: 'wasmBinary' in savedTemplate
-            });
-
-            // Return success with the saved template (might lack wasmBinary if not compiled)
-            // Casting to IInvoiceTemplate, acknowledging wasmBinary might be missing if not compiled/fetched
             return { success: true, template: savedTemplate as IInvoiceTemplate };
-
         } catch (saveError: any) {
-            console.error('Error saving template metadata (no compilation):', saveError);
-            // Return a generic save failure
+            console.error('[saveInvoiceTemplate] Failed to save template:', saveError.message);
             return { success: false };
         }
     }

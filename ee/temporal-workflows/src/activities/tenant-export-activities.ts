@@ -30,7 +30,6 @@ const TENANT_TABLES_EXPORT_ORDER: string[] = [
   // Core business data
   'users',
   'contacts',
-  'companies',
   'clients',
 
   // Tickets and support
@@ -141,8 +140,9 @@ export async function exportTenantData(
   input: ExportTenantDataInput
 ): Promise<ExportTenantDataResult> {
   const log = logger();
-  const { tenantId, requestedBy, reason, urlExpiresIn = 3600 } = input; // 1 hour default for initial URL
-  const exportId = crypto.randomUUID();
+  const { tenantId, requestedBy, reason, urlExpiresIn = 3600, exportId: providedExportId } = input; // 1 hour default for initial URL
+  // Use provided exportId (from workflow) or generate a new one
+  const exportId = providedExportId || crypto.randomUUID();
 
   log.info('Starting tenant data export', {
     tenantId,
@@ -164,7 +164,7 @@ export async function exportTenantData(
       _metadata: {
         exportId,
         tenantId,
-        tenantName: tenant.company_name || tenant.client_name,
+        tenantName: tenant.client_name,
         exportedAt: new Date().toISOString(),
         requestedBy,
         reason,

@@ -7,6 +7,7 @@ import {
   condition,
   sleep,
   workflowInfo,
+  uuid4,
 } from '@temporalio/workflow';
 import type * as activities from '../activities/tenant-deletion-activities';
 import type {
@@ -69,8 +70,8 @@ const DAYS_30_MS = 30 * 24 * 60 * 60 * 1000;
 export async function tenantDeletionWorkflow(
   input: TenantDeletionInput
 ): Promise<TenantDeletionResult> {
-  // Generate unique deletion ID
-  const deletionId = crypto.randomUUID();
+  // Generate unique deletion ID using Temporal's deterministic UUID
+  const deletionId = uuid4();
   const { workflowId, firstExecutionRunId } = workflowInfo();
 
   // Initialize workflow state

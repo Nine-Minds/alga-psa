@@ -9,6 +9,7 @@ Key principles:
 
 Directory structure (v2):
 - /lib/extensions/
+  - /bundles/manifest.ts — Manifest parsing; supports wildcard versions (e.g., `"1.2.*"` auto-increments on install).
   - /types.ts — Core extension system types used by registry/storage/validation.
   - /registry-v2.ts — v2 registry.
   - /lib/gateway-* — Gateway helpers to communicate with Runner.
