@@ -2684,7 +2684,7 @@ function TenantManagementView() {
         method: 'POST',
         body: JSON.stringify({
           workflowId: selectedPendingDeletion.workflow_id,
-          confirmationType: confirmationType,
+          type: confirmationType,
         }),
       });
 

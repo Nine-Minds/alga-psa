@@ -118,7 +118,8 @@ export function resolveWildcardVersion(wildcardVersion: string, existingVersions
   }
 
   // Filter versions that match the prefix (e.g., "1.2.0", "1.2.1", etc.)
-  const prefixPattern = new RegExp(`^${prefix.replace('.', '\\.')}\\.(\\d+)$`);
+  // Note: Only stable versions are matched; pre-release (e.g., "1.2.4-beta") are intentionally skipped
+  const prefixPattern = new RegExp(`^${prefix.replace(/\./g, '\\.')}\\.(\\d+)$`);
   let maxPatch = -1;
 
   for (const v of existingVersions) {
