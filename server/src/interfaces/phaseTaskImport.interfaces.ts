@@ -186,6 +186,12 @@ export interface IAgentResolution {
 export const DEFAULT_PHASE_NAME = 'Unsorted Tasks';
 
 /**
+ * Default color for new status columns
+ * Gray color matching the application's color palette
+ */
+export const DEFAULT_STATUS_COLOR = '#6B7280';
+
+/**
  * Import options for the dialog
  */
 export interface IPhaseTaskImportOptions {

@@ -1,5 +1,6 @@
 'use server';
 
+import { Knex } from 'knex';
 import { createTenantKnex } from 'server/src/lib/db';
 import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
 import { withTransaction } from '@shared/db';
@@ -84,11 +85,11 @@ export async function getProjectStatusMappings(
 
   return await knex('project_status_mappings as psm')
     .where({ 'psm.project_id': projectId, 'psm.tenant': tenant })
-    .leftJoin('statuses as s', function(this: any) {
+    .leftJoin('statuses as s', function(this: Knex.JoinClause) {
       this.on('psm.status_id', 's.status_id')
         .andOn('psm.tenant', 's.tenant');
     })
-    .leftJoin('standard_statuses as ss', function(this: any) {
+    .leftJoin('standard_statuses as ss', function(this: Knex.JoinClause) {
       this.on('psm.standard_status_id', 'ss.standard_status_id')
         .andOn('psm.tenant', 'ss.tenant');
     })

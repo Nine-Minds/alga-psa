@@ -53,6 +53,12 @@ interface ImportOptions {
   skipInvalidRows: boolean;
 }
 
+// Maximum number of rows to import at once to prevent memory issues
+const MAX_IMPORT_ROWS = 5000;
+
+// Threshold for showing confirmation before import
+const LARGE_IMPORT_THRESHOLD = 100;
+
 const PhaseTaskImportDialog: React.FC<PhaseTaskImportDialogProps> = ({
   isOpen,
   onClose,
@@ -96,6 +102,12 @@ const PhaseTaskImportDialog: React.FC<PhaseTaskImportDialogProps> = ({
   const [agentResolutions, setAgentResolutions] = useState<IAgentResolution[]>([]);
   const [availableUsers, setAvailableUsers] = useState<IUser[]>([]);
 
+  // Track if rows were truncated due to limit
+  const [rowsTruncated, setRowsTruncated] = useState<{ original: number; kept: number } | null>(null);
+
+  // Confirmation state for large imports
+  const [importConfirmed, setImportConfirmed] = useState(false);
+
   // Handle page size change - reset to page 1
   const handlePageSizeChange = (newPageSize: number) => {
     setPageSize(newPageSize);
@@ -131,6 +143,8 @@ const PhaseTaskImportDialog: React.FC<PhaseTaskImportDialogProps> = ({
       setUnmatchedAgentInfo([]);
       setAgentResolutions([]);
       setAvailableUsers([]);
+      setRowsTruncated(null);
+      setImportConfirmed(false);
     }
   }, [isOpen]);
 
@@ -151,7 +165,15 @@ const PhaseTaskImportDialog: React.FC<PhaseTaskImportDialogProps> = ({
       }
 
       const headers = rows[0];
-      const dataRows = rows.slice(1);
+      let dataRows = rows.slice(1);
+
+      // Check if we need to truncate for memory safety
+      if (dataRows.length > MAX_IMPORT_ROWS) {
+        setRowsTruncated({ original: dataRows.length, kept: MAX_IMPORT_ROWS });
+        dataRows = dataRows.slice(0, MAX_IMPORT_ROWS);
+      } else {
+        setRowsTruncated(null);
+      }
 
       setFullCSVData(dataRows);
       setPreviewData({
@@ -184,6 +206,7 @@ const PhaseTaskImportDialog: React.FC<PhaseTaskImportDialogProps> = ({
       setColumnMappings(autoMappings);
       setStep('mapping');
     } catch (error) {
+      setFile(null);
       setErrors([error instanceof Error ? error.message : 'Error reading CSV file']);
     } finally {
       setIsProcessing(false);
@@ -469,10 +492,29 @@ const PhaseTaskImportDialog: React.FC<PhaseTaskImportDialogProps> = ({
     });
   };
 
-  // Calculate summary stats
-  const validCount = validationResults.filter(r => r.isValid).length;
-  const invalidCount = validationResults.filter(r => !r.isValid).length;
-  const totalTasks = groupedPhases.reduce((sum, phase) => sum + phase.tasks.length, 0);
+  // Calculate summary stats using useMemo to avoid recalculation on every render
+  const { validCount, invalidCount, totalTasks } = useMemo(() => ({
+    validCount: validationResults.filter(r => r.isValid).length,
+    invalidCount: validationResults.filter(r => !r.isValid).length,
+    totalTasks: groupedPhases.reduce((sum, phase) => sum + phase.tasks.length, 0),
+  }), [validationResults, groupedPhases]);
+
+  // Check if all map_to_existing resolutions have a valid selection
+  const hasIncompleteStatusMappings = useMemo(() => {
+    return statusResolutions.some(
+      r => r.action === 'map_to_existing' && !r.mappedStatusId
+    );
+  }, [statusResolutions]);
+
+  const hasIncompleteAgentMappings = useMemo(() => {
+    return agentResolutions.some(
+      r => r.action === 'map_to_existing' && !r.mappedUserId
+    );
+  }, [agentResolutions]);
+
+  // Check if this is a large import requiring confirmation
+  const requiresConfirmation = totalTasks >= LARGE_IMPORT_THRESHOLD;
+  const canProceedWithImport = !requiresConfirmation || importConfirmed;
 
   return (
     <Dialog
@@ -598,7 +640,16 @@ const PhaseTaskImportDialog: React.FC<PhaseTaskImportDialogProps> = ({
                 })}
               </div>
             </div>
-            {fullCSVData && fullCSVData.length > 100 && (
+            {rowsTruncated && (
+              <Alert variant="destructive" className="mt-4">
+                <AlertDescription>
+                  <strong>Row limit exceeded:</strong> Your CSV has {rowsTruncated.original.toLocaleString()} rows,
+                  but only the first {rowsTruncated.kept.toLocaleString()} rows will be imported.
+                  Please split your file into smaller batches for the remaining rows.
+                </AlertDescription>
+              </Alert>
+            )}
+            {fullCSVData && fullCSVData.length > 100 && !rowsTruncated && (
               <Alert variant="info" className="mt-4">
                 <AlertDescription>
                   You are importing {fullCSVData.length} tasks. Processing may take a moment.
@@ -806,6 +857,39 @@ const PhaseTaskImportDialog: React.FC<PhaseTaskImportDialogProps> = ({
               </Alert>
             )}
 
+            {/* Show error if there are invalid rows and skip is disabled */}
+            {invalidCount > 0 && !importOptions.skipInvalidRows && (
+              <Alert variant="destructive" className="mt-4">
+                <AlertDescription>
+                  <strong>{invalidCount} row(s)</strong> have validation errors.
+                  Enable "Skip invalid rows" to proceed with only the valid rows, or go back and fix your CSV.
+                </AlertDescription>
+              </Alert>
+            )}
+
+            {/* Show confirmation for large imports when going directly to import (no agent or status resolution) */}
+            {unmatchedAgents.length === 0 && unmatchedStatuses.length === 0 && requiresConfirmation && (
+              <div className="mt-4 p-4 border rounded-lg bg-amber-50 border-amber-200">
+                <label className="flex items-start gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={importConfirmed}
+                    onChange={(e) => setImportConfirmed(e.target.checked)}
+                    className="mt-1 text-primary-500"
+                  />
+                  <div>
+                    <span className="font-medium text-amber-800">
+                      Confirm large import ({totalTasks} tasks)
+                    </span>
+                    <p className="text-sm text-amber-700 mt-1">
+                      I understand this will create {groupedPhases.length} phase(s) and {totalTasks} task(s).
+                      This action may take a while to complete.
+                    </p>
+                  </div>
+                </label>
+              </div>
+            )}
+
             <div className="mt-4">
               <DialogFooter>
                 <Button
@@ -819,7 +903,12 @@ const PhaseTaskImportDialog: React.FC<PhaseTaskImportDialogProps> = ({
                 <Button
                   id="preview-import-btn"
                   onClick={handleProceedFromPreview}
-                  disabled={groupedPhases.length === 0 || isProcessing}
+                  disabled={
+                    groupedPhases.length === 0 ||
+                    isProcessing ||
+                    (invalidCount > 0 && !importOptions.skipInvalidRows) ||
+                    (unmatchedAgents.length === 0 && unmatchedStatuses.length === 0 && !canProceedWithImport)
+                  }
                 >
                   {isProcessing
                     ? 'Processing...'
@@ -876,18 +965,27 @@ const PhaseTaskImportDialog: React.FC<PhaseTaskImportDialogProps> = ({
                     </div>
 
                     <div className="space-y-2">
-                      <label className="flex items-center gap-2 cursor-pointer">
-                        <input
-                          type="radio"
-                          name={`agent-${agentInfo.agentName}`}
-                          checked={resolution?.action === 'skip'}
-                          onChange={() => handleAgentResolutionChange(agentInfo.agentName, 'skip')}
-                          className="text-primary-500"
-                        />
-                        <span className="text-sm">
-                          Skip (leave unassigned)
-                        </span>
-                      </label>
+                      <div>
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <input
+                            type="radio"
+                            name={`agent-${agentInfo.agentName}`}
+                            checked={resolution?.action === 'skip'}
+                            onChange={() => handleAgentResolutionChange(agentInfo.agentName, 'skip')}
+                            className="text-primary-500"
+                          />
+                          <span className="text-sm">
+                            Skip this agent
+                          </span>
+                        </label>
+                        {resolution?.action === 'skip' && (
+                          <p className="ml-6 text-xs text-gray-500 mt-1">
+                            {agentInfo.isPrimaryAgent
+                              ? 'Tasks where this is the primary agent will be imported without an assignee.'
+                              : 'This additional agent will not be added to the affected tasks.'}
+                          </p>
+                        )}
+                      </div>
 
                       <div className="flex items-center gap-2">
                         <label className="flex items-center gap-2 cursor-pointer">
@@ -922,6 +1020,37 @@ const PhaseTaskImportDialog: React.FC<PhaseTaskImportDialogProps> = ({
               })}
             </div>
 
+            {hasIncompleteAgentMappings && (
+              <Alert variant="destructive" className="mt-4">
+                <AlertDescription>
+                  Please select a target user for all "Map to existing user" resolutions before proceeding.
+                </AlertDescription>
+              </Alert>
+            )}
+
+            {/* Show confirmation for large imports when going directly to import (no status resolution) */}
+            {unmatchedStatuses.length === 0 && requiresConfirmation && (
+              <div className="mt-4 p-4 border rounded-lg bg-amber-50 border-amber-200">
+                <label className="flex items-start gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={importConfirmed}
+                    onChange={(e) => setImportConfirmed(e.target.checked)}
+                    className="mt-1 text-primary-500"
+                  />
+                  <div>
+                    <span className="font-medium text-amber-800">
+                      Confirm large import ({totalTasks} tasks)
+                    </span>
+                    <p className="text-sm text-amber-700 mt-1">
+                      I understand this will create {groupedPhases.length} phase(s) and {totalTasks} task(s).
+                      This action may take a while to complete.
+                    </p>
+                  </div>
+                </label>
+              </div>
+            )}
+
             <div className="mt-4">
               <DialogFooter>
                 <Button
@@ -935,7 +1064,7 @@ const PhaseTaskImportDialog: React.FC<PhaseTaskImportDialogProps> = ({
                 <Button
                   id="agent-resolution-next-btn"
                   onClick={handleProceedFromAgentResolution}
-                  disabled={isProcessing}
+                  disabled={isProcessing || hasIncompleteAgentMappings || (unmatchedStatuses.length === 0 && !canProceedWithImport)}
                 >
                   {isProcessing
                     ? 'Processing...'
@@ -1043,6 +1172,36 @@ const PhaseTaskImportDialog: React.FC<PhaseTaskImportDialogProps> = ({
               })}
             </div>
 
+            {hasIncompleteStatusMappings && (
+              <Alert variant="destructive" className="mt-4">
+                <AlertDescription>
+                  Please select a target status for all "Map to existing" resolutions before importing.
+                </AlertDescription>
+              </Alert>
+            )}
+
+            {requiresConfirmation && (
+              <div className="mt-4 p-4 border rounded-lg bg-amber-50 border-amber-200">
+                <label className="flex items-start gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={importConfirmed}
+                    onChange={(e) => setImportConfirmed(e.target.checked)}
+                    className="mt-1 text-primary-500"
+                  />
+                  <div>
+                    <span className="font-medium text-amber-800">
+                      Confirm large import ({totalTasks} tasks)
+                    </span>
+                    <p className="text-sm text-amber-700 mt-1">
+                      I understand this will create {groupedPhases.length} phase(s) and {totalTasks} task(s).
+                      This action may take a while to complete.
+                    </p>
+                  </div>
+                </label>
+              </div>
+            )}
+
             <div className="mt-4">
               <DialogFooter>
                 <Button
@@ -1056,7 +1215,7 @@ const PhaseTaskImportDialog: React.FC<PhaseTaskImportDialogProps> = ({
                 <Button
                   id="status-resolution-import-btn"
                   onClick={handleImport}
-                  disabled={isProcessing}
+                  disabled={isProcessing || hasIncompleteStatusMappings || !canProceedWithImport}
                 >
                   {isProcessing ? 'Importing...' : `Import ${totalTasks} Tasks`}
                 </Button>

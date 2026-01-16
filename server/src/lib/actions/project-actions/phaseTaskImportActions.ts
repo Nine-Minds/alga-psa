@@ -25,7 +25,10 @@ import {
   IPhaseTaskValidationResponse,
   IStatusResolution,
   DEFAULT_PHASE_NAME,
+  DEFAULT_STATUS_COLOR,
   MappableTaskField,
+  parseImportDate,
+  parseImportNumber,
 } from 'server/src/interfaces/phaseTaskImport.interfaces';
 import { IProjectStatusMapping } from 'server/src/interfaces/project.interfaces';
 
@@ -172,11 +175,11 @@ export async function validatePhaseTaskImportData(
     // Query with joins to get actual status names
     const statusMappings = await db('project_status_mappings as psm')
       .where({ 'psm.project_id': projectId, 'psm.tenant': currentUser.tenant })
-      .leftJoin('statuses as s', function(this: any) {
+      .leftJoin('statuses as s', function(this: Knex.JoinClause) {
         this.on('psm.status_id', 's.status_id')
           .andOn('psm.tenant', 's.tenant');
       })
-      .leftJoin('standard_statuses as ss', function(this: any) {
+      .leftJoin('standard_statuses as ss', function(this: Knex.JoinClause) {
         this.on('psm.standard_status_id', 'ss.standard_status_id')
           .andOn('psm.tenant', 'ss.tenant');
       })
@@ -287,7 +290,7 @@ export async function validatePhaseTaskImportData(
 
     // Date validation
     if (row.due_date?.trim()) {
-      const parsedDate = parseDate(row.due_date);
+      const parsedDate = parseImportDate(row.due_date);
       if (!parsedDate) {
         warnings.push(`Invalid date format for due_date: "${row.due_date}" - will be skipped`);
       }
@@ -295,14 +298,14 @@ export async function validatePhaseTaskImportData(
 
     // Number validation
     if (row.estimated_hours?.trim()) {
-      const parsed = parseNumber(row.estimated_hours);
+      const parsed = parseImportNumber(row.estimated_hours);
       if (parsed === null || parsed < 0) {
         warnings.push(`Invalid estimated_hours: "${row.estimated_hours}" - will be skipped`);
       }
     }
 
     if (row.actual_hours?.trim()) {
-      const parsed = parseNumber(row.actual_hours);
+      const parsed = parseImportNumber(row.actual_hours);
       if (parsed === null || parsed < 0) {
         warnings.push(`Invalid actual_hours: "${row.actual_hours}" - will be skipped`);
       }
@@ -347,11 +350,11 @@ export async function getProjectStatusMappingsForImport(
   // Query with joins to get actual status names
   return await db('project_status_mappings as psm')
     .where({ 'psm.project_id': projectId, 'psm.tenant': currentUser.tenant })
-    .leftJoin('statuses as s', function(this: any) {
+    .leftJoin('statuses as s', function(this: Knex.JoinClause) {
       this.on('psm.status_id', 's.status_id')
         .andOn('psm.tenant', 's.tenant');
     })
-    .leftJoin('standard_statuses as ss', function(this: any) {
+    .leftJoin('standard_statuses as ss', function(this: Knex.JoinClause) {
       this.on('psm.standard_status_id', 'ss.standard_status_id')
         .andOn('psm.tenant', 'ss.tenant');
     })
@@ -635,7 +638,7 @@ async function createNewStatusMapping(
       name: statusName,
       is_closed: false,
       order_number: orderNumber,
-      color: '#6B7280', // Default gray color
+      color: DEFAULT_STATUS_COLOR,
       created_at: new Date().toISOString()
     })
     .returning('*');
@@ -657,50 +660,4 @@ async function createNewStatusMapping(
     status_name: statusName,
     name: statusName,
   };
-}
-
-/**
- * Parse a date string to Date object
- * Supports: YYYY-MM-DD, MM/DD/YYYY, DD/MM/YYYY
- */
-function parseDate(dateStr: string | undefined): Date | null {
-  if (!dateStr?.trim()) return null;
-
-  const trimmed = dateStr.trim();
-
-  // Try YYYY-MM-DD format
-  const isoMatch = trimmed.match(/^(\d{4})-(\d{2})-(\d{2})$/);
-  if (isoMatch) {
-    const date = new Date(trimmed);
-    return isNaN(date.getTime()) ? null : date;
-  }
-
-  // Try MM/DD/YYYY or DD/MM/YYYY format
-  const slashMatch = trimmed.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
-  if (slashMatch) {
-    // Assume MM/DD/YYYY (US format)
-    const month = parseInt(slashMatch[1], 10);
-    const day = parseInt(slashMatch[2], 10);
-    const year = parseInt(slashMatch[3], 10);
-
-    // Basic validation
-    if (month >= 1 && month <= 12 && day >= 1 && day <= 31) {
-      const date = new Date(year, month - 1, day);
-      return isNaN(date.getTime()) ? null : date;
-    }
-  }
-
-  // Try parsing as generic date string
-  const parsed = new Date(trimmed);
-  return isNaN(parsed.getTime()) ? null : parsed;
-}
-
-/**
- * Parse a number string to number
- */
-function parseNumber(numStr: string | undefined): number | null {
-  if (!numStr?.trim()) return null;
-
-  const parsed = parseFloat(numStr.trim());
-  return isNaN(parsed) ? null : parsed;
 }
