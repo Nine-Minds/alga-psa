@@ -53,6 +53,7 @@ export interface ParseResult {
 }
 
 const SEMVER_LIKE_RE = /^\d+\.\d+\.\d+(-[A-Za-z0-9.-]+)?(\+[A-Za-z0-9.-]+)?$/;
+const SEMVER_WILDCARD_RE = /^\d+\.\d+\.\*$/; // e.g., "1.2.*" for auto-increment
 const HTTP_METHODS = new Set([
   "GET",
   "POST",
@@ -80,10 +81,58 @@ const KNOWN_TOP_LEVEL_FIELDS = new Set<string>([
  * - Format: X.Y.Z
  * - Optional pre-release: -[A-Za-z0-9.-]+
  * - Optional build metadata: +[A-Za-z0-9.-]+
+ * - Also accepts X.Y.* for auto-increment (wildcard)
  */
 export function isValidSemverLike(version: string): boolean {
   if (typeof version !== "string" || version.trim() === "") return false;
-  return SEMVER_LIKE_RE.test(version.trim());
+  const v = version.trim();
+  return SEMVER_LIKE_RE.test(v) || SEMVER_WILDCARD_RE.test(v);
+}
+
+/**
+ * Check if version uses wildcard suffix (e.g., "1.2.*")
+ */
+export function isWildcardVersion(version: string): boolean {
+  if (typeof version !== "string" || version.trim() === "") return false;
+  return SEMVER_WILDCARD_RE.test(version.trim());
+}
+
+/**
+ * Extract the version prefix from a wildcard version (e.g., "1.2.*" -> "1.2")
+ */
+export function getWildcardPrefix(version: string): string | null {
+  if (!isWildcardVersion(version)) return null;
+  return version.trim().replace(/\.\*$/, '');
+}
+
+/**
+ * Resolve a wildcard version to the next increment based on existing versions.
+ * @param wildcardVersion - Version with wildcard suffix (e.g., "1.2.*")
+ * @param existingVersions - Array of existing version strings for the extension
+ * @returns The resolved version (e.g., "1.2.0" if no existing, "1.2.5" if "1.2.4" exists)
+ */
+export function resolveWildcardVersion(wildcardVersion: string, existingVersions: string[]): string {
+  const prefix = getWildcardPrefix(wildcardVersion);
+  if (!prefix) {
+    throw new Error(`Invalid wildcard version: ${wildcardVersion}`);
+  }
+
+  // Filter versions that match the prefix (e.g., "1.2.0", "1.2.1", etc.)
+  const prefixPattern = new RegExp(`^${prefix.replace('.', '\\.')}\\.(\\d+)$`);
+  let maxPatch = -1;
+
+  for (const v of existingVersions) {
+    const match = v.match(prefixPattern);
+    if (match) {
+      const patch = parseInt(match[1], 10);
+      if (patch > maxPatch) {
+        maxPatch = patch;
+      }
+    }
+  }
+
+  // Next version is maxPatch + 1 (starts at 0 if no existing)
+  return `${prefix}.${maxPatch + 1}`;
 }
 
 /**
