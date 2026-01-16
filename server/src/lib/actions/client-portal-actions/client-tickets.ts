@@ -16,6 +16,7 @@ import { ServerEventPublisher } from '../../adapters/serverEventPublisher';
 import { ServerAnalyticsTracker } from '../../adapters/serverAnalyticsTracker';
 import { getSession } from 'server/src/lib/auth/getSession';
 import { publishEvent } from '../../eventBus/publishers';
+import { maybeReopenBundleMasterFromChildReply } from 'server/src/lib/actions/ticket-actions/ticketBundleUtils';
 
 const clientTicketSchema = z.object({
   title: z.string().min(1),
@@ -115,6 +116,7 @@ export async function getClientTickets(status: string): Promise<ITicketListItem[
         't.attributes',
         't.priority_id',
         't.tenant',
+        't.response_state',
         's.name as status_name',
         'p.priority_name',
         'p.color as priority_color',
@@ -467,6 +469,10 @@ export async function addClientTicketComment(ticketId: string, content: string, 
         user_id: session.user.id,
         markdown_content: markdownContent
       }).returning('*');
+
+      if (!isInternal) {
+        await maybeReopenBundleMasterFromChildReply(trx, tenant, ticketId, session.user.id);
+      }
 
       // Publish comment added event
       await publishEvent({

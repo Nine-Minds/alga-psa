@@ -176,6 +176,12 @@
       "edited": "Bearbeitet",
       "noComments": "Noch keine Kommentare"
     },
+    "responseState": {
+      "awaitingYourResponse": "Warten auf Ihre Antwort",
+      "awaitingSupportResponse": "Warten auf Support-Antwort",
+      "awaitingYourResponseTooltip": "Der Support wartet auf Ihre Antwort",
+      "awaitingSupportResponseTooltip": "Ihre Antwort wurde erhalten. Der Support wird in Kürze antworten."
+    },
     "documents": {
       "title": "Dokumente",
       "noDocuments": "Keine Dokumente angehängt",

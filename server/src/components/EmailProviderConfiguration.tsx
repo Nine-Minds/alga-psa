@@ -10,7 +10,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/
 import { Button } from './ui/Button';
 import { Alert, AlertDescription } from './ui/Alert';
 import { Plus, Settings, Trash2, CheckCircle } from 'lucide-react';
-import { MicrosoftProviderForm, GmailProviderForm } from '@product/email-providers/entry';
+import toast from 'react-hot-toast';
+import { MicrosoftProviderForm, GmailProviderForm, ImapProviderForm } from '@product/email-providers/entry';
 import { EmailProviderList } from './EmailProviderList';
 import { ProviderSetupWizardDialog } from './ProviderSetupWizardDialog';
 import { InboundTicketDefaultsManager } from './admin/InboundTicketDefaultsManager';
@@ -21,6 +22,7 @@ import {
   getEmailProviders,
   deleteEmailProvider,
   testEmailProviderConnection,
+  resyncImapProvider,
   retryMicrosoftSubscriptionRenewal
 } from '../lib/actions/email-actions/emailProviderActions';
 import { getCurrentUser } from '../lib/actions/user-actions/userActions';
@@ -28,7 +30,7 @@ import { getCurrentUser } from '../lib/actions/user-actions/userActions';
 export interface EmailProvider {
   id: string;
   tenant: string;
-  providerType: 'microsoft' | 'google';
+  providerType: 'microsoft' | 'google' | 'imap';
   providerName: string;
   mailbox: string;
   isActive: boolean;
@@ -41,6 +43,7 @@ export interface EmailProvider {
   // Vendor-specific config will be loaded separately
   microsoftConfig?: MicrosoftEmailProviderConfig;
   googleConfig?: GoogleEmailProviderConfig;
+  imapConfig?: ImapEmailProviderConfig;
 }
 
 export interface MicrosoftEmailProviderConfig {
@@ -80,6 +83,43 @@ export interface GoogleEmailProviderConfig {
   history_id?: string;
   watch_expiration?: string;
   pubsub_initialised_at?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ImapEmailProviderConfig {
+  email_provider_id: string;
+  tenant: string;
+  host: string;
+  port: number;
+  secure: boolean;
+  allow_starttls: boolean;
+  auth_type: 'password' | 'oauth2';
+  username: string;
+  password?: string;
+  folder_filters: string[];
+  auto_process_emails: boolean;
+  max_emails_per_sync: number;
+  oauth_authorize_url?: string | null;
+  oauth_token_url?: string | null;
+  oauth_client_id?: string | null;
+  oauth_client_secret?: string | null;
+  oauth_scopes?: string | null;
+  access_token?: string;
+  refresh_token?: string;
+  token_expires_at?: string;
+  uid_validity?: string;
+  last_uid?: string;
+  folder_state?: Record<string, { uid_validity?: string; last_uid?: string; last_seen_at?: string }>;
+  last_processed_message_id?: string;
+  server_capabilities?: string | null;
+  lease_owner?: string | null;
+  lease_expires_at?: string | null;
+  connection_timeout_ms?: number | null;
+  socket_keepalive?: boolean | null;
+  last_seen_at?: string;
+  last_sync_at?: string;
+  last_error?: string;
   created_at: string;
   updated_at: string;
 }
@@ -174,17 +214,22 @@ function EmailProviderConfigurationContent({
     try {
       setError(null);
 
+      const toastId = toast.loading(`Testing connection for ${provider.providerName}...`);
       const result = await testEmailProviderConnection(provider.id);
 
       if (result.success) {
         // Update provider status
         const updatedProvider = { ...provider, status: 'connected' as const };
         handleProviderUpdated(updatedProvider);
+        toast.success(`Connected to ${provider.providerName}.`, { id: toastId });
       } else {
-        setError(result.error || 'Connection test failed');
+        const message = result.error || 'Connection test failed';
+        setError(message);
+        toast.error(message, { id: toastId });
       }
     } catch (err: any) {
       setError(err.message);
+      toast.error(err.message);
     }
   };
 
@@ -227,6 +272,42 @@ function EmailProviderConfigurationContent({
     }
   };
 
+  const handleReconnectOAuth = async (provider: EmailProvider) => {
+    try {
+      setError(null);
+      const response = await fetch('/api/email/oauth/imap/initiate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ providerId: provider.id }),
+      });
+      const result = await response.json();
+      if (!response.ok || !result.authUrl) {
+        throw new Error(result.error || 'Failed to initiate IMAP OAuth');
+      }
+      window.open(result.authUrl, '_blank', 'width=600,height=700');
+    } catch (err: any) {
+      setError(err.message);
+    }
+  };
+
+  const handleResyncProvider = async (provider: EmailProvider) => {
+    try {
+      setError(null);
+      const toastId = toast.loading(`Resyncing ${provider.providerName}...`);
+      const result = await resyncImapProvider(provider.id);
+      if (!result.success) {
+        const message = result.error || 'Failed to resync IMAP provider';
+        toast.error(message, { id: toastId });
+        throw new Error(message);
+      }
+      toast.success(`Resync started for ${provider.providerName}.`, { id: toastId });
+      await loadProviders();
+    } catch (err: any) {
+      setError(err.message);
+      toast.error(err.message);
+    }
+  };
+
   const handleRunDiagnostics = (provider: EmailProvider) => {
     setDiagnosticsProvider(provider);
     setDiagnosticsOpen(true);
@@ -246,15 +327,24 @@ function EmailProviderConfigurationContent({
             <h2 className="text-xl font-semibold">Edit Email Provider</h2>
             <p className="text-sm text-muted-foreground">Update configuration for {provider.providerName}</p>
           </div>
-          {provider.providerType === 'microsoft' ? (
+          {provider.providerType === 'microsoft' && (
             <MicrosoftProviderForm
               tenant={tenant}
               provider={provider}
               onSuccess={(p) => { handleProviderUpdated(p); closeDrawer(); }}
               onCancel={handleEditCancel}
             />
-          ) : (
+          )}
+          {provider.providerType === 'google' && (
             <GmailProviderForm
+              tenant={tenant}
+              provider={provider}
+              onSuccess={(p) => { handleProviderUpdated(p); closeDrawer(); }}
+              onCancel={handleEditCancel}
+            />
+          )}
+          {provider.providerType === 'imap' && (
+            <ImapProviderForm
               tenant={tenant}
               provider={provider}
               onSuccess={(p) => { handleProviderUpdated(p); closeDrawer(); }}
@@ -280,6 +370,13 @@ function EmailProviderConfigurationContent({
 
   // Build right-hand content for Providers section
   const renderProvidersContent = () => {
+    const providerCounts = providers.reduce(
+      (acc, provider) => {
+        acc[provider.providerType] = (acc[provider.providerType] || 0) + 1;
+        return acc;
+      },
+      {} as Record<string, number>
+    );
     // Standard providers view with wizard-based add flow
     return (
       <div className="space-y-6">
@@ -287,7 +384,10 @@ function EmailProviderConfigurationContent({
           <div>
             <h2 className="text-2xl font-bold tracking-tight">Email Provider Configuration</h2>
             <p className="text-muted-foreground">
-              Configure email providers to receive and process inbound emails as tickets
+              Configure Gmail, Microsoft 365, or IMAP providers to receive and process inbound emails as tickets
+            </p>
+            <p className="text-xs text-muted-foreground mt-1">
+              Gmail: {providerCounts.google || 0} · Microsoft: {providerCounts.microsoft || 0} · IMAP: {providerCounts.imap || 0}
             </p>
           </div>
           <Button
@@ -313,6 +413,8 @@ function EmailProviderConfigurationContent({
           onRefresh={loadProviders}
           onRefreshWatchSubscription={handleRefreshWatchSubscription}
           onRetryRenewal={handleRetryRenewal}
+          onReconnectOAuth={handleReconnectOAuth}
+          onResyncProvider={handleResyncProvider}
           onRunDiagnostics={handleRunDiagnostics}
           onAddClick={() => setWizardOpen(true)}
         />

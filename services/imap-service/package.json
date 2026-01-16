@@ -1,0 +1,31 @@
+{
+  "name": "imap-service",
+  "version": "1.0.0",
+  "description": "IMAP inbound email listener service",
+  "main": "dist/services/imap-service/src/index.js",
+  "type": "module",
+  "scripts": {
+    "build": "tsc -p tsconfig.json && tsc-alias -p tsconfig.json -f --resolve-full-paths",
+    "start": "node .",
+    "dev": "tsx watch src/index.ts /app/shared",
+    "test": "echo 'no tests'"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "dependencies": {
+    "@alga-psa/shared": "^1.0.0",
+    "axios": "^1.7.4",
+    "dotenv": "^16.4.5",
+    "imapflow": "^1.0.174",
+    "mailparser": "^3.6.9",
+    "uuid": "10.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "20.11.24",
+    "ts-node": "^10.9.2",
+    "tsc-alias": "^1.8.11",
+    "tsx": "^4.19.3",
+    "typescript": "5.3.3"
+  }
+}

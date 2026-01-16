@@ -1,7 +1,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
-import { ITicketListItem, ITicketCategory } from 'server/src/interfaces/ticket.interfaces';
+import { ITicketListItem, ITicketCategory, TicketResponseState } from 'server/src/interfaces/ticket.interfaces';
 import { TicketingDisplaySettings } from 'server/src/lib/actions/ticket-actions/ticketDisplaySettings';
 import { TagManager } from 'server/src/components/tags';
 import { ITag } from 'server/src/interfaces/tag.interfaces';
@@ -9,9 +9,10 @@ import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuIte
 import { Button } from 'server/src/components/ui/Button';
 import { Tooltip } from 'server/src/components/ui/Tooltip';
 import UserAvatar from 'server/src/components/ui/UserAvatar';
-import { MoreVertical, Trash2 } from 'lucide-react';
+import { MoreVertical, Trash2, ChevronDown, ChevronRight } from 'lucide-react';
 import { format } from 'date-fns';
 import { IBoard } from 'server/src/interfaces/board.interface';
+import { ResponseStateBadge } from 'server/src/components/tickets/ResponseStateBadge';
 
 interface CreateTicketColumnsOptions {
   categories: ITicketCategory[];
@@ -27,6 +28,8 @@ interface CreateTicketColumnsOptions {
   onClientClick?: (clientId: string) => void;
   /** Map of user IDs to avatar URLs for displaying in additional agents tooltip */
   additionalAgentAvatarUrls?: Record<string, string | null>;
+  isBundleExpanded?: (masterTicketId: string) => boolean;
+  onToggleBundleExpanded?: (masterTicketId: string) => void;
 }
 
 export function createTicketColumns(options: CreateTicketColumnsOptions): ColumnDefinition<ITicketListItem>[] {
@@ -43,6 +46,8 @@ export function createTicketColumns(options: CreateTicketColumnsOptions): Column
     showClient = true,
     onClientClick,
     additionalAgentAvatarUrls = {},
+    isBundleExpanded,
+    onToggleBundleExpanded,
   } = options;
 
   const columnVisibility = displaySettings?.list?.columnVisibility || {
@@ -75,18 +80,54 @@ export function createTicketColumns(options: CreateTicketColumnsOptions): Column
         dataIndex: 'ticket_number',
         width: '10%',
         render: (value: string, record: ITicketListItem) => (
-          <Link
-            href={`/msp/tickets/${record.ticket_id}`}
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              onTicketClick(record.ticket_id as string);
-            }}
-            className="text-blue-600 hover:text-blue-800 block break-all whitespace-normal text-left"
-            style={{ wordBreak: 'break-all', overflowWrap: 'anywhere' }}
-          >
-            {value}
-          </Link>
+          <div className="flex flex-col gap-1">
+            <span className="flex items-center gap-2">
+              {!record.master_ticket_id && (record.bundle_child_count ?? 0) > 0 && onToggleBundleExpanded ? (
+                <button
+                  type="button"
+                  className="inline-flex items-center justify-center rounded hover:bg-gray-100 relative z-10"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    onToggleBundleExpanded(record.ticket_id as string);
+                  }}
+                  aria-label="Toggle bundle children"
+                >
+                  {isBundleExpanded && isBundleExpanded(record.ticket_id as string) ? (
+                    <ChevronDown className="h-4 w-4 text-gray-600" />
+                  ) : (
+                    <ChevronRight className="h-4 w-4 text-gray-600" />
+                  )}
+                </button>
+              ) : null}
+              <Link
+                href={`/msp/tickets/${record.ticket_id}`}
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  onTicketClick(record.ticket_id as string);
+                }}
+                className="text-blue-600 hover:text-blue-800 break-all whitespace-normal text-left"
+                style={{ wordBreak: 'break-all', overflowWrap: 'anywhere' }}
+              >
+                {value}
+              </Link>
+            </span>
+            {(record.master_ticket_id || (!record.master_ticket_id && (record.bundle_child_count ?? 0) > 0)) && (
+              <div className="flex items-center gap-1">
+                {record.master_ticket_id ? (
+                  <span className="rounded bg-amber-100 px-2 py-0.5 text-[11px] font-medium text-amber-900">
+                    Bundled → {record.bundle_master_ticket_number || 'Master'}
+                  </span>
+                ) : null}
+                {!record.master_ticket_id && (record.bundle_child_count ?? 0) > 0 ? (
+                  <span className="rounded bg-indigo-100 px-2 py-0.5 text-[11px] font-medium text-indigo-900">
+                    Bundle · {record.bundle_child_count}
+                  </span>
+                ) : null}
+              </div>
+            )}
+          </div>
         ),
       }
     });
@@ -127,14 +168,30 @@ export function createTicketColumns(options: CreateTicketColumnsOptions): Column
     }
   });
 
-  // Status
+  // Status (with response state badge)
   if (columnVisibility.status) {
     columns.push({
       key: 'status',
       col: {
         title: 'Status',
         dataIndex: 'status_name',
-        width: '10%',
+        width: '12%',
+        render: (value: string, record: ITicketListItem) => {
+          // Get response_state from the record - it may be on the record if fetched
+          const responseState = (record as any).response_state as TicketResponseState | undefined;
+          return (
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <span>{value || 'No Status'}</span>
+              {responseState && (
+                <ResponseStateBadge
+                  responseState={responseState}
+                  variant="badge"
+                  size="sm"
+                />
+              )}
+            </div>
+          );
+        },
       }
     });
   }
@@ -223,7 +280,14 @@ export function createTicketColumns(options: CreateTicketColumnsOptions): Column
             }}
             className="text-blue-500 hover:underline text-left whitespace-normal break-words bg-transparent border-none p-0"
           >
-            {value || 'No Client'}
+            <div className="flex flex-col gap-1">
+              <span>{value || 'No Client'}</span>
+              {!record.master_ticket_id && (record.bundle_child_count ?? 0) > 0 && (record.bundle_distinct_client_count ?? 0) > 1 ? (
+                <span className="rounded bg-amber-100 px-2 py-0.5 text-[11px] font-medium text-amber-900">
+                  Multiple clients
+                </span>
+              ) : null}
+            </div>
           </button>
         ) : undefined,
       }

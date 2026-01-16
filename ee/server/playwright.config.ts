@@ -7,6 +7,10 @@ import { applyPlaywrightDatabaseEnv } from './src/__tests__/integration/utils/pl
 // Load environment variables from the correct path
 dotenv.config({ path: path.resolve(__dirname, '.env') });
 
+// Playwright runs should be self-contained and must not depend on developer filesystem secrets.
+process.env.SECRET_READ_CHAIN = process.env.SECRET_READ_CHAIN || 'env';
+process.env.SECRET_WRITE_PROVIDER = process.env.SECRET_WRITE_PROVIDER || 'env';
+
 // Don't set STORAGE_LOCAL_BASE_PATH - we want to use MinIO for tests
 // const storageBasePath = path.resolve(__dirname, 'playwright-storage');
 // if (!fs.existsSync(storageBasePath)) {

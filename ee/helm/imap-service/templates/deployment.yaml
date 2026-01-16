@@ -1,0 +1,244 @@
+{{- if .Values.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "imap-service.fullname" . }}
+  namespace: {{ include "imap-service.namespace" . }}
+  labels:
+    {{- include "imap-service.labels" . | nindent 4 }}
+    app.kubernetes.io/component: imap-service
+spec:
+  replicas: {{ .Values.replicaCount }}
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: {{ .Values.rollingUpdate.maxSurge | default 1 }}
+      maxUnavailable: {{ .Values.rollingUpdate.maxUnavailable | default 0 }}
+  selector:
+    matchLabels:
+      {{- include "imap-service.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: imap-service
+  template:
+    metadata:
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+        {{- if .Values.vaultAgent.enabled }}
+        vault.hashicorp.com/agent-inject: "true"
+        vault.hashicorp.com/role: "{{ .Values.vaultAgent.role }}"
+        vault.hashicorp.com/agent-inject-secret-service: "{{ .Values.vaultAgent.secretPath }}"
+        vault.hashicorp.com/agent-inject-secret-shared: "{{ .Values.vaultAgent.sharedSecretPath }}"
+        vault.hashicorp.com/agent-inject-template-service: |
+          {{`{{- with secret "`}}{{ .Values.vaultAgent.secretPath }}{{`" -}}
+          export NEXTAUTH_SECRET="{{ .Data.data.nextauth_secret }}"
+          export TOKEN_SECRET_KEY="{{ .Data.data.token_secret_key }}"
+          export CRYPTO_KEY="{{ .Data.data.crypto_key }}"
+          {{- end }}`}}
+        {{- end }}
+      labels:
+        {{- include "imap-service.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: imap-service
+        {{- with .Values.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      serviceAccountName: {{ include "imap-service.serviceAccountName" . }}
+      {{- with .Values.podSecurityContext }}
+      securityContext:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: imap-service
+          {{- with .Values.securityContext }}
+          securityContext:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          {{- if .Values.vaultAgent.enabled }}
+          command: ["/bin/sh"]
+          args:
+            - -c
+            - |
+              . /vault/secrets/service
+              exec node .
+          {{- end }}
+          env:
+            - name: NODE_ENV
+              value: "production"
+            - name: LOG_LEVEL
+              value: "{{ .Values.logLevel }}"
+            - name: PORT
+              value: "{{ .Values.service.port }}"
+
+            - name: EDITION
+              value: "{{ .Values.app.edition }}"
+            - name: APP_ENV
+              value: "{{ .Values.app.env }}"
+            - name: APP_NAME
+              value: "{{ .Values.app.name }}"
+
+            # DB configuration
+            - name: DB_TYPE
+              value: "{{ .Values.db.type | default "postgres" }}"
+            - name: DB_HOST
+              value: "{{ .Values.db.host }}"
+            - name: DB_PORT
+              value: "{{ .Values.db.port }}"
+            - name: DB_NAME_SERVER
+              value: "{{ .Values.db.serverDatabase }}"
+            - name: DB_USER_SERVER
+              value: "{{ .Values.db.user }}"
+            - name: DB_PASSWORD_SERVER
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.db.serverPasswordSecret.name }}
+                  key: {{ .Values.db.serverPasswordSecret.key }}
+
+            {{- if and .Values.db.adminPasswordSecret.name .Values.db.adminPasswordSecret.key }}
+            - name: DB_USER_ADMIN
+              value: "{{ .Values.db.adminUser | default "postgres" }}"
+            - name: DB_PASSWORD_ADMIN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.db.adminPasswordSecret.name }}
+                  key: {{ .Values.db.adminPasswordSecret.key }}
+            {{- end }}
+
+            # Redis (for event publisher)
+            - name: REDIS_HOST
+              value: "{{ .Values.redis.host }}"
+            - name: REDIS_PORT
+              value: "{{ .Values.redis.port }}"
+            - name: REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.redis.passwordSecret.name }}
+                  key: {{ .Values.redis.passwordSecret.key }}
+
+            # Secrets provider configuration
+            - name: SECRET_READ_CHAIN
+              value: "{{ .Values.secretsProvider.readChain }}"
+            - name: SECRET_WRITE_PROVIDER
+              value: "{{ .Values.secretsProvider.writeProvider }}"
+            {{- if .Values.secretsProvider.vault.addr }}
+            - name: VAULT_ADDR
+              value: "{{ .Values.secretsProvider.vault.addr }}"
+            {{- end }}
+            {{- if and .Values.secretsProvider.vault.tokenSecret.name .Values.secretsProvider.vault.tokenSecret.key }}
+            - name: VAULT_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.secretsProvider.vault.tokenSecret.name }}
+                  key: {{ .Values.secretsProvider.vault.tokenSecret.key }}
+            {{- end }}
+            - name: VAULT_APP_SECRET_PATH
+              value: "{{ .Values.secretsProvider.vault.appSecretPath }}"
+            - name: VAULT_TENANT_SECRET_PATH_TEMPLATE
+              value: "{{ .Values.secretsProvider.vault.tenantSecretPathTemplate }}"
+
+            # IMAP tuning
+            - name: IMAP_PROVIDER_REFRESH_MS
+              value: "{{ .Values.imap.providerRefreshMs }}"
+            - name: IMAP_POLL_INTERVAL_MS
+              value: "{{ .Values.imap.pollIntervalMs }}"
+            - name: IMAP_LEASE_TTL_MS
+              value: "{{ .Values.imap.leaseTtlMs }}"
+            - name: IMAP_MAX_CONNECTIONS_PER_TENANT
+              value: "{{ .Values.imap.maxConnectionsPerTenant }}"
+            - name: IMAP_MAX_ATTACHMENT_BYTES
+              value: "{{ .Values.imap.maxAttachmentBytes }}"
+            - name: IMAP_FETCH_DELAY_MS
+              value: "{{ .Values.imap.fetchDelayMs }}"
+            - name: IMAP_EVENT_CHANNEL_BY_TENANT
+              value: {{ ternary "\"true\"" "\"false\"" .Values.imap.eventChannelByTenant | quote }}
+            - name: IMAP_OAUTH_AUTH_MECHANISM
+              value: "{{ .Values.imap.oauthAuthMechanism }}"
+            - name: IMAP_TLS_REJECT_UNAUTHORIZED
+              value: {{ ternary "\"true\"" "\"false\"" .Values.imap.tlsRejectUnauthorized | quote }}
+            - name: IMAP_CONNECTION_TIMEOUT_MS
+              value: "{{ .Values.imap.connectionTimeoutMs }}"
+            - name: IMAP_MAX_EMAILS_PER_SYNC
+              value: "{{ .Values.imap.maxEmailsPerSync }}"
+            - name: IMAP_SOCKET_KEEPALIVE
+              value: {{ ternary "\"true\"" "\"false\"" .Values.imap.socketKeepalive | quote }}
+            - name: IMAP_TIMER_JITTER_PCT
+              value: "{{ .Values.imap.timerJitterPct }}"
+            - name: IMAP_STARTUP_STAGGER_MS
+              value: "{{ .Values.imap.startupStaggerMs }}"
+            - name: IMAP_RECONNECT_JITTER_PCT
+              value: "{{ .Values.imap.reconnectJitterPct }}"
+
+            {{- if not .Values.vaultAgent.enabled }}
+            - name: NEXTAUTH_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "imap-service.fullname" . }}-secrets
+                  key: NEXTAUTH_SECRET
+            - name: TOKEN_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "imap-service.fullname" . }}-secrets
+                  key: TOKEN_SECRET_KEY
+            - name: CRYPTO_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "imap-service.fullname" . }}-secrets
+                  key: CRYPTO_KEY
+            {{- end }}
+
+            {{- range .Values.extraEnv }}
+            - name: {{ .name }}
+              value: {{ .value | quote }}
+            {{- end }}
+
+          ports:
+            - name: http
+              containerPort: {{ .Values.service.port }}
+              protocol: TCP
+
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: {{ .Values.livenessProbe.initialDelaySeconds }}
+            periodSeconds: {{ .Values.livenessProbe.periodSeconds }}
+            timeoutSeconds: {{ .Values.livenessProbe.timeoutSeconds }}
+            successThreshold: {{ .Values.livenessProbe.successThreshold | default 1 }}
+            failureThreshold: {{ .Values.livenessProbe.failureThreshold | default 3 }}
+
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: {{ .Values.readinessProbe.initialDelaySeconds }}
+            periodSeconds: {{ .Values.readinessProbe.periodSeconds }}
+            timeoutSeconds: {{ .Values.readinessProbe.timeoutSeconds }}
+            successThreshold: {{ .Values.readinessProbe.successThreshold | default 1 }}
+            failureThreshold: {{ .Values.readinessProbe.failureThreshold | default 3 }}
+
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+
+          volumeMounts:
+            {{- with .Values.extraVolumeMounts }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+
+      volumes:
+        {{- with .Values.extraVolumes }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+{{- end }}
+

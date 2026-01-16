@@ -7,6 +7,7 @@ This folder hosts everything related to converting inbound emails into Tickets. 
 | Need to… | Go to |
 |----------|-------|
 Set up Gmail with OAuth | `setup/gmail.md` |
+Set up IMAP with OAuth2 | *(coming soon)* |
 Refresh an expired Pub/Sub subscription | `setup/refresh-pubsub.md` |
 Understand the overall architecture | `architecture/overall.md` *(coming soon)* |
 See the email-to-ticket workflow diagram | `architecture/workflow.md` |
@@ -16,4 +17,3 @@ Run tests | `development/testing.md` |
 Call backend APIs | `reference/api.md` |
 
 For a high-level product overview see the main project README.
-

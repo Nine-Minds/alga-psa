@@ -96,15 +96,53 @@ export class PlaywrightAuthSessionHelper {
     return this.baseUrl.startsWith('https://');
   }
 
+  private get devCookiePortSuffix(): string | null {
+    if (process.env.NODE_ENV === 'production') {
+      return null;
+    }
+
+    // Match server/src/lib/auth/sessionCookies#getDevCookiePortSuffix behavior:
+    // prefer NEXTAUTH_URL (and friends), then fall back to PORT/APP_PORT.
+    const urlCandidates = [
+      process.env.NEXTAUTH_URL,
+      process.env.APP_URL,
+      process.env.NEXT_PUBLIC_APP_URL,
+      this.baseUrl,
+    ].filter(Boolean) as string[];
+
+    for (const candidate of urlCandidates) {
+      try {
+        const parsed = new URL(candidate);
+        if (parsed.port) {
+          return parsed.port;
+        }
+      } catch {
+        // Ignore invalid URLs and fall through to other candidates.
+      }
+    }
+
+    const portCandidate =
+      process.env.PORT ?? process.env.APP_PORT ?? process.env.EXPOSE_SERVER_PORT ?? null;
+    return portCandidate && portCandidate.length > 0 ? portCandidate : null;
+  }
+
   private get primaryCookieName(): string {
-    return process.env.NODE_ENV === 'production'
+    const baseName = process.env.NODE_ENV === 'production'
       ? '__Secure-authjs.session-token'
       : 'authjs.session-token';
+
+    const portSuffix = this.devCookiePortSuffix;
+    if (!portSuffix) {
+      return baseName;
+    }
+
+    return `${baseName}.${portSuffix}`;
   }
 
   private get cookieNames(): string[] {
     const cookieNames = new Set<string>([
       this.primaryCookieName,
+      // Back-compat / additional lookups (some parts of the app/tests still check these)
       'authjs.session-token',
       'next-auth.session-token',
       ...(this.options.additionalCookieNames ?? []),

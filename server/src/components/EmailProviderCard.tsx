@@ -32,11 +32,15 @@ interface EmailProviderCardProps {
   provider: EmailProvider;
   defaultsOptions: { value: string; label: string }[];
   updatingProviderId: string | null;
+  busy?: boolean;
+  busyAction?: 'test' | 'resync' | null;
   onEdit: (provider: EmailProvider) => void;
   onDelete: (providerId: string) => void;
-  onTestConnection: (provider: EmailProvider) => void;
+  onTestConnection: (provider: EmailProvider) => void | Promise<void>;
   onRefreshWatchSubscription: (provider: EmailProvider) => void;
   onRetryRenewal: (provider: EmailProvider) => void;
+  onReconnectOAuth?: (provider: EmailProvider) => void;
+  onResyncProvider?: (provider: EmailProvider) => void | Promise<void>;
   onRunDiagnostics: (provider: EmailProvider) => void;
   onChangeDefaults: (provider: EmailProvider, defaultsId?: string) => void | Promise<void>;
 }
@@ -99,6 +103,8 @@ const getProviderIcon = (providerType: string) => {
       return '🟦';
     case 'google':
       return '🟩';
+    case 'imap':
+      return '🟪';
     default:
       return '📧';
   }
@@ -122,11 +128,15 @@ export function EmailProviderCard({
   provider,
   defaultsOptions,
   updatingProviderId,
+  busy = false,
+  busyAction = null,
   onEdit,
   onDelete,
   onTestConnection,
   onRefreshWatchSubscription,
   onRetryRenewal,
+  onReconnectOAuth,
+  onResyncProvider,
   onRunDiagnostics,
   onChangeDefaults,
 }: EmailProviderCardProps) {
@@ -153,41 +163,54 @@ export function EmailProviderCard({
 
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button id={`provider-menu-${provider.id}`} variant="ghost" size="sm">
+                <Button id={`provider-menu-${provider.id}`} variant="ghost" size="sm" disabled={busy}>
                   <MoreVertical className="h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => onEdit(provider)}>
+                <DropdownMenuItem onClick={() => onEdit(provider)} disabled={busy}>
                   <Settings className="h-4 w-4 mr-2" />
                   Edit Configuration
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => onTestConnection(provider)}>
+                <DropdownMenuItem onClick={() => onTestConnection(provider)} disabled={busy}>
                   <TestTube className="h-4 w-4 mr-2" />
-                  Test Connection
+                  {busy && busyAction === 'test' ? 'Testing…' : 'Test Connection'}
                 </DropdownMenuItem>
                 {provider.providerType === 'google' && (
-                  <DropdownMenuItem onClick={() => onRefreshWatchSubscription(provider)}>
+                  <DropdownMenuItem onClick={() => onRefreshWatchSubscription(provider)} disabled={busy}>
                     <Repeat className="h-4 w-4 mr-2" />
                     Refresh Pub/Sub & Watch
                   </DropdownMenuItem>
                 )}
                 {provider.providerType === 'microsoft' && (
                   <>
-                    <DropdownMenuItem onClick={() => onRetryRenewal(provider)}>
+                    <DropdownMenuItem onClick={() => onRetryRenewal(provider)} disabled={busy}>
                       <RefreshCw className="h-4 w-4 mr-2" />
                       Retry Renewal
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => onRunDiagnostics(provider)}>
+                    <DropdownMenuItem onClick={() => onRunDiagnostics(provider)} disabled={busy}>
                       <Stethoscope className="h-4 w-4 mr-2" />
                       Run Microsoft 365 Diagnostics
                     </DropdownMenuItem>
                   </>
                 )}
+                {provider.providerType === 'imap' && provider.imapConfig?.auth_type === 'oauth2' && onReconnectOAuth && (
+                  <DropdownMenuItem onClick={() => onReconnectOAuth(provider)} disabled={busy}>
+                    <RefreshCw className="h-4 w-4 mr-2" />
+                    Reconnect OAuth
+                  </DropdownMenuItem>
+                )}
+                {provider.providerType === 'imap' && onResyncProvider && (
+                  <DropdownMenuItem onClick={() => onResyncProvider(provider)} disabled={busy}>
+                    <Repeat className="h-4 w-4 mr-2" />
+                    {busy && busyAction === 'resync' ? 'Resyncing…' : 'Resync Mailbox'}
+                  </DropdownMenuItem>
+                )}
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
                   onClick={() => onDelete(provider.id)}
                   className="text-red-600"
+                  disabled={busy}
                 >
                   <Trash2 className="h-4 w-4 mr-2" />
                   Delete Provider
@@ -263,6 +286,13 @@ export function EmailProviderCard({
               <>
                 {provider.googleConfig.label_filters && provider.googleConfig.label_filters.length > 0 && (
                   <span>Labels: {provider.googleConfig.label_filters.join(', ')}</span>
+                )}
+              </>
+            )}
+            {provider.providerType === 'imap' && provider.imapConfig && (
+              <>
+                {provider.imapConfig.folder_filters && provider.imapConfig.folder_filters.length > 0 && (
+                  <span>Folders: {provider.imapConfig.folder_filters.join(', ')}</span>
                 )}
               </>
             )}

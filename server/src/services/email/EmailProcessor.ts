@@ -120,6 +120,8 @@ export class EmailProcessor {
       case 'google':
         // TODO: Implement GmailAdapter
         throw new Error('Gmail adapter not implemented yet');
+      case 'imap':
+        throw new Error('IMAP adapter not implemented for queue processing');
       default:
         throw new Error(`Unsupported provider type: ${config.provider_type}`);
     }

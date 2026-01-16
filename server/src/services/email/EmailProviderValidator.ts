@@ -21,8 +21,8 @@ export class EmailProviderValidator {
     // Validate provider type
     if (!data.providerType) {
       errors.push({ field: 'providerType', message: 'Provider type is required' });
-    } else if (!['google', 'microsoft'].includes(data.providerType)) {
-      errors.push({ field: 'providerType', message: 'Provider type must be either "google" or "microsoft"' });
+    } else if (!['google', 'microsoft', 'imap'].includes(data.providerType)) {
+      errors.push({ field: 'providerType', message: 'Provider type must be either "google", "microsoft", or "imap"' });
     }
 
     // Validate provider name
@@ -44,6 +44,8 @@ export class EmailProviderValidator {
       this.validateGoogleConfig(data.vendorConfig, errors);
     } else if (data.providerType === 'microsoft') {
       this.validateMicrosoftConfig(data.vendorConfig, errors);
+    } else if (data.providerType === 'imap') {
+      this.validateImapConfig(data.vendorConfig, errors);
     }
 
     return errors;
@@ -133,6 +135,62 @@ export class EmailProviderValidator {
         errors.push({ 
           field: 'vendorConfig.maxEmailsPerSync', 
           message: 'Max emails per sync must be between 1 and 1000' 
+        });
+      }
+    }
+  }
+
+  /**
+   * Validates IMAP provider configuration
+   */
+  private static validateImapConfig(config: any, errors: ValidationError[]): void {
+    if (!config) {
+      errors.push({ field: 'vendorConfig', message: 'IMAP provider configuration is required' });
+      return;
+    }
+
+    if (!config.host || (typeof config.host === 'string' && config.host.trim() === '')) {
+      errors.push({ field: 'vendorConfig.host', message: 'IMAP host is required' });
+    }
+
+    const port = Number(config.port);
+    if (!Number.isFinite(port) || port < 1 || port > 65535) {
+      errors.push({ field: 'vendorConfig.port', message: 'IMAP port must be between 1 and 65535' });
+    }
+
+    if (!config.auth_type || !['password', 'oauth2'].includes(config.auth_type)) {
+      errors.push({ field: 'vendorConfig.auth_type', message: 'IMAP auth_type must be "password" or "oauth2"' });
+    }
+
+    if (!config.username || (typeof config.username === 'string' && config.username.trim() === '')) {
+      errors.push({ field: 'vendorConfig.username', message: 'IMAP username is required' });
+    }
+
+    if (config.auth_type === 'password') {
+      if (!config.password || (typeof config.password === 'string' && config.password.trim() === '')) {
+        errors.push({ field: 'vendorConfig.password', message: 'IMAP password is required for password auth' });
+      }
+    }
+
+    if (config.auth_type === 'oauth2') {
+      const requiredFields = [
+        { field: 'oauth_authorize_url', message: 'IMAP OAuth authorize URL is required' },
+        { field: 'oauth_token_url', message: 'IMAP OAuth token URL is required' },
+        { field: 'oauth_client_id', message: 'IMAP OAuth client ID is required' },
+      ];
+      for (const { field, message } of requiredFields) {
+        if (!config[field] || (typeof config[field] === 'string' && config[field].trim() === '')) {
+          errors.push({ field: `vendorConfig.${field}`, message });
+        }
+      }
+    }
+
+    if (config.max_emails_per_sync !== undefined) {
+      const max = Number(config.max_emails_per_sync);
+      if (isNaN(max) || max < 1 || max > 1000) {
+        errors.push({
+          field: 'vendorConfig.max_emails_per_sync',
+          message: 'Max emails per sync must be between 1 and 1000'
         });
       }
     }

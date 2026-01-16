@@ -5,6 +5,7 @@
     "server",
     "ee/server",
     "services/workflow-worker",
+    "services/imap-service",
     "shared",
     "packages/*",
     "sdk/*",

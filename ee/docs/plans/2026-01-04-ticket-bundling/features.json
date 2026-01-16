@@ -1,0 +1,252 @@
+[
+  {
+    "id": "F001",
+    "description": "Add `tickets.master_ticket_id` to represent master/child bundle linkage.",
+    "implemented": true
+  },
+  {
+    "id": "F002",
+    "description": "Index child lookups by `(tenant, master_ticket_id)`.",
+    "implemented": true
+  },
+  {
+    "id": "F003",
+    "description": "Persist per-master bundle settings: `mode` and `reopen_on_child_reply`.",
+    "implemented": true
+  },
+  {
+    "id": "F004",
+    "description": "Persist idempotency keys for mirrored bundle updates to avoid duplicate mirrors.",
+    "implemented": true
+  },
+  {
+    "id": "F005",
+    "description": "Mark mirrored bundle comments as `is_system_generated`.",
+    "implemented": true
+  },
+  {
+    "id": "F006",
+    "description": "Expose bundle fields on ticket and comment API types (master linkage, rollups, system-generated flag).",
+    "implemented": true
+  },
+  {
+    "id": "F007",
+    "description": "Enforce: a ticket can belong to at most one bundle at a time.",
+    "implemented": true
+  },
+  {
+    "id": "F008",
+    "description": "Enforce: prevent cycles in bundle linkage (no ticket can be its own ancestor).",
+    "implemented": true
+  },
+  {
+    "id": "F009",
+    "description": "Enforce: bundling is same-tenant only (tenant-isolated under existing RLS patterns).",
+    "implemented": true
+  },
+  {
+    "id": "F010",
+    "description": "Permission-gate bundle management operations (create/add/remove/promote/unbundle).",
+    "implemented": true
+  },
+  {
+    "id": "F011",
+    "description": "Restrict bundling operations to users who can update all involved tickets.",
+    "implemented": true
+  },
+  {
+    "id": "F012",
+    "description": "Create a bundle from 2+ selected tickets by selecting a master and mode (default: sync updates).",
+    "implemented": true
+  },
+  {
+    "id": "F013",
+    "description": "Add a child ticket to an existing bundle.",
+    "implemented": true
+  },
+  {
+    "id": "F014",
+    "description": "Remove a child ticket from a bundle (unlink only that ticket).",
+    "implemented": true
+  },
+  {
+    "id": "F015",
+    "description": "Unbundle a master ticket (detach all children and remove settings).",
+    "implemented": true
+  },
+  {
+    "id": "F016",
+    "description": "Promote a child ticket to become the new master while retaining bundle membership.",
+    "implemented": true
+  },
+  {
+    "id": "F017",
+    "description": "Fetch bundle membership (master + children) and bundle settings for ticket detail views.",
+    "implemented": true
+  },
+  {
+    "id": "F018",
+    "description": "Update per-bundle settings (mode, reopen-on-reply) from the master ticket UI.",
+    "implemented": true
+  },
+  {
+    "id": "F019",
+    "description": "Ticket list supports a toggle between “Bundled view” (collapsed bundles) and “Individual view” (grouped tickets).",
+    "implemented": true
+  },
+  {
+    "id": "F020",
+    "description": "Persist the user's bundle view preference (local storage is acceptable).",
+    "implemented": true
+  },
+  {
+    "id": "F021",
+    "description": "Bundled view hides child rows and shows only master/standalone tickets.",
+    "implemented": true
+  },
+  {
+    "id": "F022",
+    "description": "Bundled view searching can match against child ticket identifiers/titles and returns the master.",
+    "implemented": true
+  },
+  {
+    "id": "F023",
+    "description": "Bundled view filtering (status/priority/board/client) remains correct for bundle-aware results.",
+    "implemented": true
+  },
+  {
+    "id": "F024",
+    "description": "Individual view groups children under their master when both appear in the result set.",
+    "implemented": true
+  },
+  {
+    "id": "F025",
+    "description": "Child rows show a “Bundled” indicator that references the master ticket number when shown outside an expanded group.",
+    "implemented": true
+  },
+  {
+    "id": "F026",
+    "description": "Bulk selection enables “Bundle Tickets” when 2+ tickets are selected.",
+    "implemented": true
+  },
+  {
+    "id": "F027",
+    "description": "Bundle modal allows selecting a master from the selection and choosing whether to sync updates.",
+    "implemented": true
+  },
+  {
+    "id": "F028",
+    "description": "Master ticket shows a bundle panel with child list and navigation links.",
+    "implemented": true
+  },
+  {
+    "id": "F029",
+    "description": "Master bundle panel supports add child, remove child, promote child to master, and unbundle actions.",
+    "implemented": true
+  },
+  {
+    "id": "F030",
+    "description": "Child tickets display a banner linking to their master ticket.",
+    "implemented": true
+  },
+  {
+    "id": "F031",
+    "description": "Child workflow fields (status/assignment/priority) are locked in the UI by default.",
+    "implemented": true
+  },
+  {
+    "id": "F032",
+    "description": "Server enforces locked workflow fields for bundled children (cannot change status/assignment/priority directly).",
+    "implemented": true
+  },
+  {
+    "id": "F033",
+    "description": "Child tickets keep their current status when bundled (no automatic closure/transition).",
+    "implemented": true
+  },
+  {
+    "id": "F034",
+    "description": "Master conversation surfaces inbound child public replies as view-only, child-attributed items (not duplicated onto the master).",
+    "implemented": true
+  },
+  {
+    "id": "F035",
+    "description": "Aggregated child replies do not create additional outbound emails by themselves.",
+    "implemented": true
+  },
+  {
+    "id": "F036",
+    "description": "In sync-updates mode, master status/assignment/priority updates propagate to all children.",
+    "implemented": true
+  },
+  {
+    "id": "F037",
+    "description": "In sync-updates mode, master closure fields propagate to children (closed_at/closed_by).",
+    "implemented": true
+  },
+  {
+    "id": "F038",
+    "description": "In sync-updates mode, master public comments are mirrored onto children as system-generated comments.",
+    "implemented": true
+  },
+  {
+    "id": "F039",
+    "description": "Mirrored comments are idempotent and do not duplicate on retries.",
+    "implemented": true
+  },
+  {
+    "id": "F040",
+    "description": "Internal notes on the master are not mirrored to children by default.",
+    "implemented": true
+  },
+  {
+    "id": "F041",
+    "description": "System-generated mirrored comments cannot be edited or deleted (UI + server enforcement).",
+    "implemented": true
+  },
+  {
+    "id": "F042",
+    "description": "Prevent creating time entries on bundled children (time is logged on the master).",
+    "implemented": true
+  },
+  {
+    "id": "F043",
+    "description": "Public master updates notify all child requesters by default (email fanout to child requesters; dedupe by email).",
+    "implemented": true
+  },
+  {
+    "id": "F044",
+    "description": "When a child is removed from a bundle, future updates/notifications follow normal rules for that child.",
+    "implemented": true
+  },
+  {
+    "id": "F045",
+    "description": "Optionally notify all child requesters when the master is closed (closure fanout policy).",
+    "implemented": true
+  },
+  {
+    "id": "F046",
+    "description": "Reopen-on-reply: if enabled, an inbound child reply can reopen the master ticket.",
+    "implemented": true
+  },
+  {
+    "id": "F047",
+    "description": "Bundles may span multiple clients/companies within the same tenant (no same-client constraint).",
+    "implemented": true
+  },
+  {
+    "id": "F048",
+    "description": "UI clearly indicates when a bundle spans multiple clients/companies and surfaces per-child client context.",
+    "implemented": true
+  },
+  {
+    "id": "F049",
+    "description": "Bundling across multiple clients shows a warning/confirmation step before completing the bundle/add-child action.",
+    "implemented": true
+  },
+  {
+    "id": "F050",
+    "description": "Bundle operations surface clear validation errors in the UI (e.g., already bundled, same-tenant requirement).",
+    "implemented": true
+  }
+]

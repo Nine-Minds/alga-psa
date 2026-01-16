@@ -1,0 +1,22 @@
+[
+  { "id": "T001", "featureIds": ["F001"], "description": "Reject attachments >100MB (does not create document/file)", "implemented": true },
+  { "id": "T002", "featureIds": ["F001"], "description": "No file-type blocklist: attachments with arbitrary mime/ext are accepted (e.g. .zip)", "implemented": true },
+  { "id": "T003", "featureIds": ["F001"], "description": "Inline/CID attachments are skipped by default (no document/file created)", "implemented": true },
+
+  { "id": "T010", "featureIds": ["F002"], "description": "Idempotency: duplicate processing of same attachment does not create duplicate docs/files", "implemented": true },
+  { "id": "T011", "featureIds": ["F002", "F040"], "description": "Idempotency: failures are recorded and do not duplicate on retry", "implemented": true },
+
+  { "id": "T020", "featureIds": ["F003", "F004", "F005"], "description": "Attachment ingestion creates file_stores + documents + document_associations rows", "implemented": true },
+  { "id": "T021", "featureIds": ["F006"], "description": "System attribution: stored file uploaded_by_id and document created_by/user_id use system user", "implemented": true },
+
+  { "id": "T030", "featureIds": ["F010", "F011"], "description": "Microsoft: file attachment downloads and stores correct bytes and metadata", "implemented": true },
+  { "id": "T031", "featureIds": ["F011"], "description": "Microsoft: unsupported attachment types are skipped and recorded", "implemented": true },
+
+  { "id": "T040", "featureIds": ["F020"], "description": "Gmail: attachment downloads and stores correct bytes and metadata", "implemented": true },
+
+  { "id": "T050", "featureIds": ["F030", "F050"], "description": "New ticket: inbound email w/ attachments results in ticket documents", "implemented": true },
+  { "id": "T051", "featureIds": ["F031", "F051"], "description": "Reply: threaded reply w/ attachments results in ticket documents on same ticket", "implemented": true },
+  { "id": "T052", "featureIds": ["F032"], "description": "Attachment failure does not block ticket/comment creation", "implemented": true },
+
+  { "id": "T060", "featureIds": ["F041"], "description": "All distributed-table updates include tenant filter; no scatter/gather updates", "implemented": true }
+]

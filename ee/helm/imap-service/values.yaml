@@ -1,0 +1,141 @@
+# Default values for imap-service.
+
+enabled: true
+
+image:
+  repository: imap-service
+  tag: latest
+  pullPolicy: IfNotPresent
+  is_private: false
+  credentials: ""
+
+replicaCount: 1
+
+rollingUpdate:
+  maxSurge: 1
+  maxUnavailable: 0
+
+service:
+  type: ClusterIP
+  port: 8080
+
+logLevel: info
+
+app:
+  edition: enterprise
+  env: production
+  name: alga-psa
+
+secretsProvider:
+  readChain: "env,filesystem"
+  writeProvider: "filesystem"
+  vault:
+    addr: ""
+    tokenSecret:
+      name: ""
+      key: ""
+    appSecretPath: "kv/data/app/secrets"
+    tenantSecretPathTemplate: "kv/data/tenants/{tenantId}/secrets"
+
+imap:
+  providerRefreshMs: 60000
+  pollIntervalMs: 30000
+  leaseTtlMs: 120000
+  maxConnectionsPerTenant: 5
+  maxAttachmentBytes: 0
+  fetchDelayMs: 0
+  eventChannelByTenant: false
+  oauthAuthMechanism: XOAUTH2
+  tlsRejectUnauthorized: true
+  connectionTimeoutMs: 10000
+  maxEmailsPerSync: 5
+  socketKeepalive: true
+  timerJitterPct: 0.1
+  startupStaggerMs: 2000
+  reconnectJitterPct: 0.5
+
+redis:
+  host: "redis.default.svc.cluster.local"
+  port: "6379"
+  passwordSecret:
+    name: "redis-credentials"
+    key: "REDIS_PASSWORD"
+
+db:
+  type: postgres
+  host: "pgbouncer.default.svc.cluster.local"
+  port: "6432"
+  serverDatabase: "server"
+  user: "app_user"
+  serverPasswordSecret:
+    name: "db-secrets"
+    key: "server-password"
+  adminUser: "postgres"
+  adminPasswordSecret:
+    name: ""
+    key: ""
+
+secrets:
+  nextauthSecret: "change-me-in-prod"
+  tokenSecretKey: "change-me-in-prod"
+  cryptoKey: "change-me-in-prod"
+
+vaultAgent:
+  enabled: false
+  role: imap-service
+  secretPath: secret/data/alga-psa/imap-service
+  sharedSecretPath: secret/data/alga-psa/shared
+
+livenessProbe:
+  initialDelaySeconds: 20
+  periodSeconds: 30
+  timeoutSeconds: 10
+  failureThreshold: 3
+  successThreshold: 1
+
+readinessProbe:
+  initialDelaySeconds: 10
+  periodSeconds: 10
+  timeoutSeconds: 5
+  failureThreshold: 3
+  successThreshold: 1
+
+resources:
+  limits:
+    cpu: 500m
+    memory: 512Mi
+  requests:
+    cpu: 100m
+    memory: 256Mi
+
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 3
+  targetCPUUtilizationPercentage: 70
+  targetMemoryUtilizationPercentage: 80
+
+podDisruptionBudget:
+  enabled: false
+  minAvailable: 1
+
+podAnnotations: {}
+podLabels: {}
+podSecurityContext: {}
+securityContext: {}
+nodeSelector: {}
+tolerations: []
+affinity: {}
+
+extraEnv: []
+extraVolumes: []
+extraVolumeMounts: []
+
+namespace: ""
+
+serviceAccount:
+  create: true
+  name: ""
+  annotations: {}
+  automountServiceAccountToken: true
+

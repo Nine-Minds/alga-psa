@@ -460,17 +460,92 @@ export async function getConsolidatedTicketData(ticketId: string, user: IUser) {
       ...ticketData
     } = ticket;
 
+    const normalizedTicketData = convertDates(ticketData);
+
+    // Bundle context (master/child + settings + children list)
+    const masterTicketId = normalizedTicketData.master_ticket_id ?? null;
+    const bundleRootId = masterTicketId ?? ticketId;
+    const bundleSettings = await trx('ticket_bundle_settings')
+      .where({ tenant, master_ticket_id: bundleRootId })
+      .first();
+
+    const bundleChildren = await trx('tickets as ct')
+      .select(
+        'ct.ticket_id',
+        'ct.ticket_number',
+        'ct.title',
+        'ct.client_id',
+        'comp.client_name',
+        'ct.status_id',
+        'ct.entered_at',
+        'ct.updated_at'
+      )
+      .leftJoin('clients as comp', function() {
+        this.on('ct.client_id', 'comp.client_id')
+          .andOn('ct.tenant', 'comp.tenant');
+      })
+      .where({ 'ct.tenant': tenant, 'ct.master_ticket_id': bundleRootId })
+      .orderBy('ct.updated_at', 'desc');
+
+    const bundleMaster = masterTicketId
+      ? await trx('tickets as mt')
+        .select(
+          'mt.ticket_id',
+          'mt.ticket_number',
+          'mt.title',
+          'mt.client_id',
+          'comp.client_name',
+          'mt.status_id',
+          'mt.entered_at',
+          'mt.updated_at'
+        )
+        .leftJoin('clients as comp', function() {
+          this.on('mt.client_id', 'comp.client_id')
+            .andOn('mt.tenant', 'comp.tenant');
+        })
+        .where({ 'mt.tenant': tenant, 'mt.ticket_id': masterTicketId })
+        .first()
+      : null;
+
+    const isBundleChild = Boolean(masterTicketId);
+    const isBundleMaster = !isBundleChild && bundleChildren.length > 0;
+
+    // Aggregated child inbound replies surfaced on master (view-only; not duplicated onto master)
+    const aggregatedChildClientComments = isBundleMaster
+      ? await trx('comments as c')
+        .select(
+          'c.*',
+          'ct.ticket_id as child_ticket_id',
+          'ct.ticket_number as child_ticket_number',
+          'ct.title as child_ticket_title',
+          'comp.client_name as child_client_name'
+        )
+        .leftJoin('tickets as ct', function() {
+          this.on('c.ticket_id', 'ct.ticket_id')
+            .andOn('c.tenant', 'ct.tenant');
+        })
+        .leftJoin('clients as comp', function() {
+          this.on('ct.client_id', 'comp.client_id')
+            .andOn('ct.tenant', 'comp.tenant');
+        })
+        .where({ 'c.tenant': tenant })
+        .andWhere('c.is_internal', false)
+        .andWhere('ct.master_ticket_id', ticketId)
+        .orderBy('c.created_at', 'desc')
+        .limit(200)
+      : [];
+
     // Track ticket view analytics
     analytics.capture('ticket_viewed', {
       ticket_id: ticketId,
-      status_id: ticketData.status_id,
-      status_name: ticketData.status_name,
-      is_closed: ticketData.is_closed,
-      priority_id: ticketData.priority_id,
-      category_id: ticketData.category_id,
-      board_id: ticketData.board_id,
-      assigned_to: ticketData.assigned_to,
-      client_id: ticketData.client_id,
+      status_id: normalizedTicketData.status_id,
+      status_name: normalizedTicketData.status_name,
+      is_closed: normalizedTicketData.is_closed,
+      priority_id: normalizedTicketData.priority_id,
+      category_id: normalizedTicketData.category_id,
+      board_id: normalizedTicketData.board_id,
+      assigned_to: normalizedTicketData.assigned_to,
+      client_id: normalizedTicketData.client_id,
       has_comments: comments.length > 0,
       comment_count: comments.length,
       has_documents: documents.length > 0,
@@ -485,10 +560,20 @@ export async function getConsolidatedTicketData(ticketId: string, user: IUser) {
     // Return all data in a single consolidated object
     return {
       ticket: {
-        ...convertDates(ticketData),
+        ...normalizedTicketData,
         tenant,
         location
       },
+      bundle: {
+        isBundleChild,
+        isBundleMaster,
+        masterTicketId: bundleRootId,
+        mode: bundleSettings?.mode ?? null,
+        reopenOnChildReply: Boolean(bundleSettings?.reopen_on_child_reply),
+        masterTicket: bundleMaster,
+        children: bundleChildren
+      },
+      aggregatedChildClientComments,
       comments,
       documents,
       client,
@@ -557,6 +642,10 @@ export async function getTicketsForList(
 
     // Build base query for filtering
     let baseQuery = trx('tickets as t')
+      .leftJoin('tickets as mt', function() {
+        this.on('t.master_ticket_id', 'mt.ticket_id')
+          .andOn('t.tenant', 'mt.tenant');
+      })
       .leftJoin('statuses as s', function() {
         this.on('t.status_id', 's.status_id')
            .andOn('t.tenant', 's.tenant')
@@ -589,6 +678,11 @@ export async function getTicketsForList(
       .where({
         't.tenant': tenant
       });
+
+    // Bundle view filter: hide children in bundled view
+    if (validatedFilters.bundleView === 'bundled') {
+      baseQuery = baseQuery.whereNull('t.master_ticket_id');
+    }
 
     // Apply filters to base query
     if (validatedFilters.boardId) {
@@ -627,18 +721,57 @@ export async function getTicketsForList(
     }
 
     if (validatedFilters.clientId) {
-      baseQuery = baseQuery.where('t.client_id', validatedFilters.clientId);
+      if (validatedFilters.bundleView === 'bundled') {
+        baseQuery = baseQuery.where(function(this: any) {
+          this.where('t.client_id', validatedFilters.clientId)
+            .orWhereExists(function(this: any) {
+              this.select('*')
+                .from('tickets as tc')
+                .whereRaw('tc.tenant = t.tenant')
+                .andWhereRaw('tc.master_ticket_id = t.ticket_id')
+                .andWhere('tc.client_id', validatedFilters.clientId);
+            });
+        });
+      } else {
+        baseQuery = baseQuery.where('t.client_id', validatedFilters.clientId);
+      }
     }
 
     if (validatedFilters.contactId) {
-      baseQuery = baseQuery.where('t.contact_name_id', validatedFilters.contactId);
+      if (validatedFilters.bundleView === 'bundled') {
+        baseQuery = baseQuery.where(function(this: any) {
+          this.where('t.contact_name_id', validatedFilters.contactId)
+            .orWhereExists(function(this: any) {
+              this.select('*')
+                .from('tickets as tc')
+                .whereRaw('tc.tenant = t.tenant')
+                .andWhereRaw('tc.master_ticket_id = t.ticket_id')
+                .andWhere('tc.contact_name_id', validatedFilters.contactId);
+            });
+        });
+      } else {
+        baseQuery = baseQuery.where('t.contact_name_id', validatedFilters.contactId);
+      }
     }
 
     if (validatedFilters.searchQuery) {
       const searchTerm = `%${validatedFilters.searchQuery}%`;
       baseQuery = baseQuery.where(function(this: any) {
         this.where('t.title', 'ilike', searchTerm)
-            .orWhere('t.ticket_number', 'ilike', searchTerm);
+          .orWhere('t.ticket_number', 'ilike', searchTerm);
+
+        if (validatedFilters.bundleView === 'bundled') {
+          this.orWhereExists(function(this: any) {
+            this.select('*')
+              .from('tickets as tc')
+              .whereRaw('tc.tenant = t.tenant')
+              .andWhereRaw('tc.master_ticket_id = t.ticket_id')
+              .andWhere(function(this: any) {
+                this.where('tc.title', 'ilike', searchTerm)
+                  .orWhere('tc.ticket_number', 'ilike', searchTerm);
+              });
+          });
+        }
       });
     }
 
@@ -731,6 +864,17 @@ export async function getTicketsForList(
       }
     }
 
+    // Apply response state filter if provided (F017-F021)
+    if (validatedFilters.responseState && validatedFilters.responseState !== 'all') {
+      if (validatedFilters.responseState === 'none') {
+        // Filter for tickets with no response state set
+        baseQuery = baseQuery.whereNull('t.response_state');
+      } else {
+        // Filter for specific response state
+        baseQuery = baseQuery.where('t.response_state', validatedFilters.responseState);
+      }
+    }
+
     const sortBy = validatedFilters.sortBy ?? 'entered_at';
     const sortDirection: 'asc' | 'desc' = validatedFilters.sortDirection ?? 'desc';
     const sortColumnMap: Record<string, { column?: string; rawExpression?: string }> = {
@@ -757,6 +901,29 @@ export async function getTicketsForList(
       .clone()
       .select(
         't.*',
+        trx.raw(
+          `(
+            SELECT COUNT(*)::int
+            FROM tickets as tc
+            WHERE tc.tenant = t.tenant
+              AND tc.master_ticket_id = t.ticket_id
+          ) as bundle_child_count`
+        ),
+        trx.raw(
+          `(
+            SELECT COUNT(DISTINCT x.client_id)::int
+            FROM (
+              SELECT t.client_id as client_id
+              UNION ALL
+              SELECT tc.client_id
+              FROM tickets as tc
+              WHERE tc.tenant = t.tenant
+                AND tc.master_ticket_id = t.ticket_id
+            ) as x
+            WHERE x.client_id IS NOT NULL
+          ) as bundle_distinct_client_count`
+        ),
+        'mt.ticket_number as bundle_master_ticket_number',
         's.name as status_name',
         'p.priority_name',
         'p.color as priority_color',
@@ -801,6 +968,9 @@ export async function getTicketsForList(
         assigned_to_name,
         additional_agent_count,
         additional_agents,
+        bundle_child_count,
+        bundle_distinct_client_count,
+        bundle_master_ticket_number,
         // NOTE: Legacy ITIL fields removed - now using unified system
         ...rest
       } = ticket;
@@ -835,7 +1005,10 @@ export async function getTicketsForList(
         entered_by_name: entered_by_name || 'Unknown',
         assigned_to_name: assigned_to_name || null,
         additional_agent_count: additional_agent_count || 0,
-        additional_agents: additional_agents || []
+        additional_agents: additional_agents || [],
+        bundle_child_count: typeof bundle_child_count === 'number' ? bundle_child_count : Number.parseInt(String(bundle_child_count ?? '0'), 10) || 0,
+        bundle_distinct_client_count: typeof bundle_distinct_client_count === 'number' ? bundle_distinct_client_count : Number.parseInt(String(bundle_distinct_client_count ?? '0'), 10) || 0,
+        bundle_master_ticket_number: bundle_master_ticket_number ?? null
       };
     });
 
@@ -1005,6 +1178,16 @@ export async function updateTicketWithCache(id: string, data: Partial<ITicket>, 
 
     if (!currentTicket) {
       throw new Error('Ticket not found');
+    }
+
+    // Bundled child tickets lock workflow fields by default
+    const isBundledChild = Boolean(currentTicket.master_ticket_id);
+    const lockedFields = new Set(['status_id', 'assigned_to', 'priority_id']);
+    if (isBundledChild) {
+      const attempted = Object.keys(validatedData).filter((k) => lockedFields.has(k));
+      if (attempted.length > 0) {
+        throw new Error(`This ticket is bundled; workflow fields are locked (${attempted.join(', ')}). Update the master ticket instead.`);
+      }
     }
 
     // Clean up the data before update
@@ -1239,6 +1422,28 @@ export async function updateTicketWithCache(id: string, data: Partial<ITicket>, 
       });
     }
 
+    // If this is a bundle master in sync_updates mode, propagate selected workflow updates to children.
+    const bundleSettings = await trx('ticket_bundle_settings')
+      .where({ tenant, master_ticket_id: id })
+      .first();
+
+    if (bundleSettings?.mode === 'sync_updates') {
+      const propagate: Record<string, any> = {};
+      for (const key of ['status_id', 'assigned_to', 'priority_id', 'closed_by', 'closed_at']) {
+        if (Object.prototype.hasOwnProperty.call(updateData, key)) {
+          propagate[key] = (updateData as any)[key];
+        }
+      }
+
+      if (Object.keys(propagate).length > 0) {
+        propagate.updated_by = user.user_id;
+        propagate.updated_at = new Date().toISOString();
+        await trx('tickets')
+          .where({ tenant, master_ticket_id: id })
+          .update(propagate);
+      }
+    }
+
     // Revalidate paths to update UI
     revalidatePath(`/msp/tickets/${id}`);
     revalidatePath('/msp/tickets');
@@ -1308,6 +1513,61 @@ export async function addTicketCommentWithCache(
       markdown_content: markdownContent, // Add markdown content
       created_at: new Date().toISOString()
     }).returning('*');
+
+    // If this is a bundle master in sync_updates mode, mirror public comments to children (idempotent).
+    if (!isInternal) {
+      const bundleSettings = await trx('ticket_bundle_settings')
+        .where({ tenant, master_ticket_id: ticketId })
+        .first();
+
+      if (bundleSettings?.mode === 'sync_updates') {
+        const children = await trx('tickets')
+          .select('ticket_id')
+          .where({ tenant, master_ticket_id: ticketId });
+
+        const now = new Date().toISOString();
+        for (const child of children) {
+          await trx.raw(
+            `
+            WITH existing AS (
+              SELECT 1
+              FROM ticket_bundle_mirrors
+              WHERE tenant = ?
+                AND source_comment_id = ?
+                AND child_ticket_id = ?
+              LIMIT 1
+            ),
+            ins_comment AS (
+              INSERT INTO comments (
+                tenant,
+                ticket_id,
+                user_id,
+                author_type,
+                note,
+                is_internal,
+                is_resolution,
+                is_system_generated,
+                markdown_content,
+                created_at
+              )
+              SELECT ?, ?, NULL, 'unknown', ?, false, ?, true, ?, ?
+              WHERE NOT EXISTS (SELECT 1 FROM existing)
+              RETURNING comment_id
+            )
+            INSERT INTO ticket_bundle_mirrors (tenant, source_comment_id, child_ticket_id, child_comment_id)
+            SELECT ?, ?, ?, comment_id
+            FROM ins_comment
+            ON CONFLICT DO NOTHING;
+            `,
+            [
+              tenant, newComment.comment_id, child.ticket_id,
+              tenant, child.ticket_id, content, isResolution, markdownContent, now,
+              tenant, newComment.comment_id, child.ticket_id
+            ]
+          );
+        }
+      }
+    }
 
     // Publish comment added event
     await publishEvent({
@@ -1410,6 +1670,116 @@ export async function fetchTicketsWithPagination(
       console.error('Failed to fetch tickets:', error);
       throw new Error('Failed to fetch tickets');
     }
+  });
+}
+
+/**
+ * Fetch bundle children for a given master ticket.
+ * Used by the ticket list when in "bundled" view and expanding a master inline.
+ */
+export async function fetchBundleChildrenForMaster(
+  user: IUser,
+  masterTicketId: string
+): Promise<ITicketListItem[]> {
+  const { knex: db, tenant } = await createTenantKnex();
+  if (!tenant) {
+    throw new Error('Tenant not found');
+  }
+
+  return withTransaction(db, async (trx) => {
+    if (!await hasPermission(user, 'ticket', 'read', trx)) {
+      throw new Error('Permission denied: Cannot view tickets');
+    }
+
+    const rows = await trx('tickets as t')
+      .leftJoin('tickets as mt', function () {
+        this.on('t.master_ticket_id', 'mt.ticket_id')
+          .andOn('t.tenant', 'mt.tenant');
+      })
+      .leftJoin('statuses as s', function () {
+        this.on('t.status_id', 's.status_id')
+          .andOn('t.tenant', 's.tenant');
+      })
+      .leftJoin('priorities as p', function () {
+        this.on('t.priority_id', 'p.priority_id')
+          .andOn('t.tenant', 'p.tenant')
+          .andOnVal('p.item_type', '=', 'ticket');
+      })
+      .leftJoin('boards as c', function () {
+        this.on('t.board_id', 'c.board_id')
+          .andOn('t.tenant', 'c.tenant');
+      })
+      .leftJoin('categories as cat', function () {
+        this.on('t.category_id', 'cat.category_id')
+          .andOn('t.tenant', 'cat.tenant');
+      })
+      .leftJoin('clients as comp', function () {
+        this.on('t.client_id', 'comp.client_id')
+          .andOn('t.tenant', 'comp.tenant');
+      })
+      .leftJoin('users as u', function () {
+        this.on('t.entered_by', 'u.user_id')
+          .andOn('t.tenant', 'u.tenant');
+      })
+      .leftJoin('users as au', function () {
+        this.on('t.assigned_to', 'au.user_id')
+          .andOn('t.tenant', 'au.tenant');
+      })
+      .select(
+        't.*',
+        's.name as status_name',
+        'p.priority_name',
+        'p.color as priority_color',
+        'c.board_name',
+        'cat.category_name',
+        'comp.client_name as client_name',
+        trx.raw("CONCAT(u.first_name, ' ', u.last_name) as entered_by_name"),
+        trx.raw("CONCAT(au.first_name, ' ', au.last_name) as assigned_to_name"),
+        'mt.ticket_number as bundle_master_ticket_number'
+      )
+      .where({ 't.tenant': tenant, 't.master_ticket_id': masterTicketId })
+      .orderBy('t.updated_at', 'desc');
+
+    return rows.map((ticket: any): ITicketListItem => {
+      const {
+        status_id,
+        priority_id,
+        board_id,
+        category_id,
+        entered_by,
+        status_name,
+        priority_name,
+        priority_color,
+        board_name,
+        category_name,
+        client_name,
+        entered_by_name,
+        assigned_to_name,
+        bundle_master_ticket_number,
+        ...rest
+      } = ticket;
+
+      return {
+        ...rest,
+        status_id: status_id || null,
+        priority_id: priority_id || null,
+        board_id: board_id || null,
+        category_id: category_id || null,
+        entered_by: entered_by || null,
+        status_name: status_name || 'Unknown',
+        priority_name: priority_name || 'Unknown',
+        priority_color: priority_color || '#6B7280',
+        board_name: board_name || 'Unknown',
+        category_name: category_name || 'Unknown',
+        client_name: client_name || 'Unknown',
+        entered_by_name: entered_by_name || 'Unknown',
+        assigned_to_name: assigned_to_name || 'Unknown',
+        // Children are not masters; keep these fields stable for the list UI.
+        bundle_child_count: 0,
+        bundle_distinct_client_count: 0,
+        bundle_master_ticket_number: bundle_master_ticket_number ?? null,
+      };
+    });
   });
 }
 

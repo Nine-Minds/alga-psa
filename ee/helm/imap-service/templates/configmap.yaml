@@ -1,0 +1,24 @@
+{{- if .Values.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "imap-service.fullname" . }}
+  namespace: {{ include "imap-service.namespace" . }}
+  labels:
+    {{- include "imap-service.labels" . | nindent 4 }}
+    app.kubernetes.io/component: imap-service
+data:
+  imap-service-config.json: |
+    {
+      "logging": {
+        "level": "{{ .Values.logLevel }}"
+      },
+      "imap": {
+        "providerRefreshMs": {{ .Values.imap.providerRefreshMs | int }},
+        "pollIntervalMs": {{ .Values.imap.pollIntervalMs | int }},
+        "leaseTtlMs": {{ .Values.imap.leaseTtlMs | int }},
+        "maxConnectionsPerTenant": {{ .Values.imap.maxConnectionsPerTenant | int }}
+      }
+    }
+{{- end }}
+
