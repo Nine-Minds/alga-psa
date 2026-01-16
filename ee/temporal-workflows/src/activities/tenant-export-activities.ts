@@ -140,7 +140,7 @@ export async function exportTenantData(
   input: ExportTenantDataInput
 ): Promise<ExportTenantDataResult> {
   const log = logger();
-  const { tenantId, requestedBy, reason, urlExpiresIn = 3600, exportId: providedExportId } = input; // 1 hour default for initial URL
+  const { tenantId, requestedBy, reason, exportId: providedExportId } = input;
   // Use provided exportId (from workflow) or generate a new one
   const exportId = providedExportId || crypto.randomUUID();
 
@@ -223,33 +223,28 @@ export async function exportTenantData(
     try {
       // Dynamically import S3 client to avoid issues in non-EE environments
       const s3Module = await import('@ee/lib/storage/s3-client.js');
-      const { putObject, getPresignedGetUrl } = s3Module;
+      const { putObject, getBucket } = s3Module;
 
       await putObject(s3Key, jsonBuffer, {
         contentType: 'application/json',
       });
 
-      log.info('Export uploaded to S3', { s3Key });
-
-      // Generate initial presigned download URL
-      const downloadUrl = await getPresignedGetUrl(s3Key, urlExpiresIn);
-      const urlExpiresAt = new Date(Date.now() + urlExpiresIn * 1000).toISOString();
+      const bucket = getBucket();
 
       log.info('Tenant data export completed', {
         tenantId,
         exportId,
+        bucket,
         s3Key,
         tableCount,
         totalRecords,
-        urlExpiresAt,
       });
 
       return {
         success: true,
         exportId,
+        bucket,
         s3Key,
-        downloadUrl,
-        urlExpiresAt,
         fileSizeBytes: jsonBuffer.length,
         tableCount,
         recordCount: totalRecords,

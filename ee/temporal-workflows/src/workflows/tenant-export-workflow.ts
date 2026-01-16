@@ -75,13 +75,12 @@ export async function tenantExportWorkflow(
     state.step = 'collecting_data';
 
     // Execute the export activity
-    // This handles: validation, data collection, S3 upload, and URL generation
+    // This handles: validation, data collection, and S3 upload
     // Pass the workflow-generated exportId to ensure consistency
     const exportResult = await exportTenantData({
       tenantId: input.tenantId,
       requestedBy: input.requestedBy,
       reason: input.reason,
-      urlExpiresIn: input.urlExpiresIn,
       exportId,
     });
 
@@ -109,9 +108,8 @@ export async function tenantExportWorkflow(
     // Update state with results
     state.step = 'completed';
     state.status = 'completed';
+    state.bucket = exportResult.bucket;
     state.s3Key = exportResult.s3Key;
-    state.downloadUrl = exportResult.downloadUrl;
-    state.urlExpiresAt = exportResult.urlExpiresAt;
     state.fileSizeBytes = exportResult.fileSizeBytes;
     state.tableCount = exportResult.tableCount;
     state.recordCount = exportResult.recordCount;
@@ -120,6 +118,8 @@ export async function tenantExportWorkflow(
     log.info('Tenant export completed successfully', {
       tenantId: input.tenantId,
       exportId,
+      bucket: exportResult.bucket,
+      s3Key: exportResult.s3Key,
       tableCount: exportResult.tableCount,
       recordCount: exportResult.recordCount,
       fileSizeBytes: exportResult.fileSizeBytes,
@@ -131,9 +131,8 @@ export async function tenantExportWorkflow(
       tenantId: input.tenantId,
       tenantName: state.tenantName,
       status: 'completed',
+      bucket: exportResult.bucket,
       s3Key: exportResult.s3Key,
-      downloadUrl: exportResult.downloadUrl,
-      urlExpiresAt: exportResult.urlExpiresAt,
       fileSizeBytes: exportResult.fileSizeBytes,
       tableCount: exportResult.tableCount,
       recordCount: exportResult.recordCount,

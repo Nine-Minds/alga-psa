@@ -17,36 +17,18 @@ export interface ExportTenantDataInput {
   tenantId: string;
   requestedBy: string;
   reason?: string;
-  /** URL expiration in seconds (default: 1 hour = 3600) */
-  urlExpiresIn?: number;
 }
 
 export interface ExportTenantDataResult {
   success: boolean;
   exportId?: string;
+  /** S3 bucket where the export is stored */
+  bucket?: string;
   /** S3 key where the export is stored (permanent) */
   s3Key?: string;
-  /** Presigned download URL (time-limited) */
-  downloadUrl?: string;
-  /** When the download URL expires */
-  urlExpiresAt?: ISO8601String;
   fileSizeBytes?: number;
   tableCount?: number;
   recordCount?: number;
-  error?: string;
-}
-
-export interface GetExportDownloadUrlInput {
-  tenantId: string;
-  exportId: string;
-  /** URL expiration in seconds (default: 1 hour = 3600) */
-  expiresIn?: number;
-}
-
-export interface GetExportDownloadUrlResult {
-  success: boolean;
-  downloadUrl?: string;
-  expiresAt?: ISO8601String;
   error?: string;
 }
 
@@ -168,7 +150,7 @@ async function getTableTenantColumn(
 export async function exportTenantData(
   input: ExportTenantDataInput
 ): Promise<ExportTenantDataResult> {
-  const { tenantId, requestedBy, reason, urlExpiresIn = 3600 } = input; // 1 hour default for initial URL
+  const { tenantId, requestedBy, reason } = input;
   const exportId = crypto.randomUUID();
 
   observabilityLogger.info('Starting tenant data export', {
@@ -250,33 +232,28 @@ export async function exportTenantData(
     try {
       // Dynamically import S3 client to avoid issues in non-EE environments
       const s3Module = await import('@ee/lib/storage/s3-client');
-      const { putObject, getPresignedGetUrl } = s3Module;
+      const { putObject, getBucket } = s3Module;
 
       await putObject(s3Key, jsonBuffer, {
         contentType: 'application/json',
       });
 
-      observabilityLogger.info('Export uploaded to S3', { s3Key });
-
-      // Generate initial presigned download URL
-      const downloadUrl = await getPresignedGetUrl(s3Key, urlExpiresIn);
-      const urlExpiresAt = new Date(Date.now() + urlExpiresIn * 1000).toISOString();
+      const bucket = getBucket();
 
       observabilityLogger.info('Tenant data export completed', {
         tenantId,
         exportId,
+        bucket,
         s3Key,
         tableCount,
         totalRecords,
-        urlExpiresAt,
       });
 
       return {
         success: true,
         exportId,
+        bucket,
         s3Key,
-        downloadUrl,
-        urlExpiresAt,
         fileSizeBytes: jsonBuffer.length,
         tableCount,
         recordCount: totalRecords,
@@ -298,65 +275,6 @@ export async function exportTenantData(
   } catch (error) {
     const errorMsg = error instanceof Error ? error.message : 'Unknown error';
     observabilityLogger.error('Failed to export tenant data', error, {
-      tenantId,
-      exportId,
-    });
-    return { success: false, error: errorMsg };
-  }
-}
-
-/**
- * Generate a new presigned download URL for an existing export.
- * Use this to get a fresh download link for a previously created export.
- *
- * @param input - Parameters including tenantId and exportId
- * @returns New presigned download URL
- */
-export async function getExportDownloadUrl(
-  input: GetExportDownloadUrlInput
-): Promise<GetExportDownloadUrlResult> {
-  const { tenantId, exportId, expiresIn = 3600 } = input; // 1 hour default
-
-  observabilityLogger.info('Generating download URL for export', {
-    tenantId,
-    exportId,
-    expiresIn,
-  });
-
-  try {
-    const s3Key = `tenant-exports/${tenantId}/${exportId}.json`;
-
-    // Dynamically import S3 client
-    const s3Module = await import('@ee/lib/storage/s3-client');
-    const { headObject, getPresignedGetUrl } = s3Module;
-
-    // Verify the export exists
-    const exists = await headObject(s3Key);
-    if (!exists.exists) {
-      return {
-        success: false,
-        error: `Export not found: ${exportId}`,
-      };
-    }
-
-    // Generate new presigned URL
-    const downloadUrl = await getPresignedGetUrl(s3Key, expiresIn);
-    const expiresAt = new Date(Date.now() + expiresIn * 1000).toISOString();
-
-    observabilityLogger.info('Download URL generated', {
-      tenantId,
-      exportId,
-      expiresAt,
-    });
-
-    return {
-      success: true,
-      downloadUrl,
-      expiresAt,
-    };
-  } catch (error) {
-    const errorMsg = error instanceof Error ? error.message : 'Unknown error';
-    observabilityLogger.error('Failed to generate download URL', error, {
       tenantId,
       exportId,
     });
