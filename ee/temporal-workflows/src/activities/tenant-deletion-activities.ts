@@ -64,7 +64,7 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
 
   // Messages and comments
   'comments',
-  'gmail_processed_history', 'email_processed_messages',
+  'gmail_processed_history', 'email_processed_attachments', 'email_processed_messages',
   'email_reply_tokens', 'email_sending_logs', 'email_rate_limits',
 
   // User related details
@@ -84,6 +84,14 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
 
   // Logs and notifications
   'job_details', 'jobs', 'audit_logs', 'notification_logs', 'internal_notifications',
+
+  // Extension logs and execution
+  'extension_execution_log', 'extension_execution_log_old',
+  'extension_quota_usage', 'extension_quota_usage_old',
+  'extension_audit_logs', 'extension_event_subscription',
+
+  // Custom reports
+  'custom_reports',
 
   // Import/export
   'import_job_items', 'import_jobs', 'import_sources',
@@ -154,8 +162,8 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   // Assets must come after asset details
   'asset_maintenance_schedules', 'assets',
 
-  // Contract Lines
-  'contract_lines', 'payment_methods',
+  // Payment methods
+  'payment_methods',
 
   // Interactions must come BEFORE tickets (tickets reference interactions in some cases)
   'interactions', 'interaction_types',
@@ -237,7 +245,7 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   'policies', 'resources',
 
   // Email configuration
-  'google_email_provider_config', 'microsoft_email_provider_config',
+  'google_email_provider_config', 'microsoft_email_provider_config', 'imap_email_provider_config',
   'email_provider_health', 'email_provider_configs', 'email_providers',
   'email_templates', 'email_domains', 'tenant_email_settings',
 
@@ -271,6 +279,10 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   'default_billing_settings', 'notification_settings',
   'inbound_ticket_defaults', 'user_type_rates', 'next_number',
   'event_catalog', 'provider_events',
+
+  // Extension installation (must come before tenant_settings)
+  'tenant_extension_schedule', 'tenant_extension_install_secrets',
+  'tenant_extension_install_config', 'tenant_extension_install',
 
   // Tenant settings last (before tenant itself)
   'tenant_settings',
