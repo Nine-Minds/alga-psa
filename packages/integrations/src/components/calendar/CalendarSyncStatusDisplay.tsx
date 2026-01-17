@@ -9,8 +9,8 @@ import React, { useState, useEffect, useId } from 'react';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { CheckCircle, Clock, XCircle, RefreshCw, AlertTriangle } from 'lucide-react';
-import { getScheduleEntrySyncStatus } from '../../lib/actions/calendarActions';
-import { CalendarSyncStatus } from '../../interfaces/calendar.interfaces';
+import { getScheduleEntrySyncStatus } from 'server/src/lib/actions/calendarActions';
+import { CalendarSyncStatus } from 'server/src/interfaces/calendar.interfaces';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 
 interface CalendarSyncStatusDisplayProps {
@@ -241,4 +241,3 @@ export function CalendarSyncStatusDisplay({ entryId, compact = false }: Calendar
     </div>
   );
 }
-

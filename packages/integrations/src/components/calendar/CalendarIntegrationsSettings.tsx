@@ -12,13 +12,13 @@ import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Plus, Settings, Trash2, CheckCircle, Clock, XCircle, RefreshCw, AlertTriangle } from 'lucide-react';
 import { GoogleCalendarProviderForm } from './GoogleCalendarProviderForm';
 import { MicrosoftCalendarProviderForm } from './MicrosoftCalendarProviderForm';
-import { getCalendarProviders, deleteCalendarProvider, syncCalendarProvider } from '../../lib/actions/calendarActions';
-import { CalendarProviderConfig } from '../../interfaces/calendar.interfaces';
+import { getCalendarProviders, deleteCalendarProvider, syncCalendarProvider } from 'server/src/lib/actions/calendarActions';
+import { CalendarProviderConfig } from 'server/src/interfaces/calendar.interfaces';
 import { useTenant } from '@alga-psa/ui/components/providers/TenantProvider';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { Dialog, DialogContent, DialogDescription } from '@alga-psa/ui/components/Dialog';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
-import { useToast } from '../../hooks/use-toast';
+import { useToast } from 'server/src/hooks/use-toast';
 import { Skeleton } from '@alga-psa/ui/components/Skeleton';
 
 type SyncFeedbackMap = Record<string, { variant: 'success' | 'error'; message: string }>;

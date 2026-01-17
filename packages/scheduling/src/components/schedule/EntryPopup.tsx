@@ -23,7 +23,7 @@ import SelectedWorkItem from '@alga-psa/scheduling/components/time-management/ti
 import { DateTimePicker } from '@alga-psa/ui/components/DateTimePicker';
 import { IUser } from '@shared/interfaces/user.interfaces';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
-import { CalendarSyncStatusDisplay } from 'server/src/components/calendar/CalendarSyncStatusDisplay';
+import { CalendarSyncStatusDisplay } from '@alga-psa/integrations/components';
 import {
   approveAppointmentRequest as approveRequest,
   declineAppointmentRequest as declineRequest,

@@ -16,11 +16,11 @@ import { Switch } from '@alga-psa/ui/components/Switch';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import { CheckCircle, Clock, ExternalLink, XCircle } from 'lucide-react';
-import { initiateCalendarOAuth, createCalendarProvider, updateCalendarProvider } from '../../lib/actions/calendarActions';
+import { initiateCalendarOAuth, createCalendarProvider, updateCalendarProvider } from 'server/src/lib/actions/calendarActions';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
-import { CalendarProviderConfig } from '../../interfaces/calendar.interfaces';
+import { CalendarProviderConfig } from 'server/src/interfaces/calendar.interfaces';
 import { Badge } from '@alga-psa/ui/components/Badge';
-import { getGoogleIntegrationStatus } from '@/lib/actions/integrations/googleActions';
+import { getGoogleIntegrationStatus } from 'server/src/lib/actions/integrations/googleActions';
 
 const googleCalendarProviderSchema = z.object({
   providerName: z.string().min(1, 'Provider name is required'),

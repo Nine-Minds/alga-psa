@@ -29,7 +29,7 @@ import SessionManagement from 'server/src/components/settings/security/SessionMa
 import { toast } from 'react-hot-toast';
 import { getUserAvatarUrlAction } from '@/lib/actions/avatar-actions';
 import { validateContactName, validateEmailAddress, validatePhoneNumber } from 'server/src/lib/utils/clientFormValidation';
-import { CalendarIntegrationsSettings } from 'server/src/components/calendar/CalendarIntegrationsSettings';
+import { CalendarIntegrationsSettings } from '@alga-psa/integrations/components';
 import SettingsTabSkeleton from '@alga-psa/ui/components/skeletons/SettingsTabSkeleton';
 
 // Dynamic import for EE SSO wrapper component
