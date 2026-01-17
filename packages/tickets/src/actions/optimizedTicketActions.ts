@@ -40,6 +40,7 @@ import { AnalyticsEvents } from 'server/src/lib/analytics/events';
 import { Temporal } from '@js-temporal/polyfill';
 import { resolveUserTimeZone, normalizeIanaTimeZone } from 'server/src/lib/utils/workDate';
 import { calculateItilPriority } from 'server/src/lib/utils/itilUtils';
+import { getCurrentUser } from '@alga-psa/auth/getCurrentUser';
 
 // Helper function to safely convert dates
 function convertDates<T extends { entered_at?: Date | string | null, updated_at?: Date | string | null, closed_at?: Date | string | null, due_date?: Date | string | null }>(record: T): T {
@@ -1462,6 +1463,18 @@ export async function updateTicketWithCache(id: string, data: Partial<ITicket>, 
 }
 
 /**
+ * Client-safe wrapper: resolves current user on the server.
+ * Use this from Client Components to avoid importing server-only auth modules into the browser bundle.
+ */
+export async function updateTicketWithCacheForCurrentUser(id: string, data: Partial<ITicket>) {
+  const user = await getCurrentUser();
+  if (!user) {
+    throw new Error('User not authenticated');
+  }
+  return updateTicketWithCache(id, data, user);
+}
+
+/**
  * Add comment to ticket with proper caching
  */
 export async function addTicketCommentWithCache(
@@ -1607,6 +1620,23 @@ export async function addTicketCommentWithCache(
       throw new Error('Failed to add ticket comment');
     }
   });
+}
+
+/**
+ * Client-safe wrapper: resolves current user on the server.
+ * Use this from Client Components to avoid importing server-only auth modules into the browser bundle.
+ */
+export async function addTicketCommentWithCacheForCurrentUser(
+  ticketId: string,
+  content: string,
+  isInternal: boolean,
+  isResolution: boolean
+): Promise<IComment> {
+  const user = await getCurrentUser();
+  if (!user) {
+    throw new Error('User not authenticated');
+  }
+  return addTicketCommentWithCache(ticketId, content, isInternal, isResolution, user);
 }
 
 /**

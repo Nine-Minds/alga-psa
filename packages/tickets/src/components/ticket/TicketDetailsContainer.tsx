@@ -4,10 +4,12 @@ import React, { Suspense, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { toast } from 'react-hot-toast';
-import { addTicketCommentWithCache, updateTicketWithCache } from '../../actions/optimizedTicketActions';
+import {
+  addTicketCommentWithCacheForCurrentUser,
+  updateTicketWithCacheForCurrentUser,
+} from '../../actions/optimizedTicketActions';
 import TicketDetails from './TicketDetails';
 import { TicketDetailsSkeleton } from './TicketDetailsSkeleton';
-import { getCurrentUser } from '@alga-psa/auth/getCurrentUser';
 import type { SurveyTicketSatisfactionSummary } from '@alga-psa/types';
 
 interface TicketDetailsContainerProps {
@@ -62,14 +64,7 @@ export default function TicketDetailsContainer({ ticketData, surveySummary = nul
 
     try {
       setIsSubmitting(true);
-
-      const currentUser = await getCurrentUser();
-      if (!currentUser) {
-        toast.error('Failed to get current user');
-        return;
-      }
-
-      await updateTicketWithCache(ticketData.ticket.ticket_id, { [field]: value }, currentUser);
+      await updateTicketWithCacheForCurrentUser(ticketData.ticket.ticket_id, { [field]: value });
       toast.success(`${field} updated successfully`);
     } catch (error) {
       console.error(`Error updating ${field}:`, error);
@@ -87,19 +82,11 @@ export default function TicketDetailsContainer({ ticketData, surveySummary = nul
 
     try {
       setIsSubmitting(true);
-
-      const currentUser = await getCurrentUser();
-      if (!currentUser) {
-        toast.error('Failed to get current user');
-        return;
-      }
-
-      const newComment = await addTicketCommentWithCache(
+      const newComment = await addTicketCommentWithCacheForCurrentUser(
         ticketData.ticket.ticket_id,
         content,
         isInternal,
-        isResolution,
-        currentUser
+        isResolution
       );
 
       ticketData.comments.push(newComment);
@@ -126,22 +113,10 @@ export default function TicketDetailsContainer({ ticketData, surveySummary = nul
         ...currentAttributes,
         description: content,
       };
-
-      const currentUser = await getCurrentUser();
-      if (!currentUser) {
-        toast.error('Failed to get current user');
-        return false;
-      }
-
-      await updateTicketWithCache(
-        ticketData.ticket.ticket_id,
-        {
-          attributes: updatedAttributes,
-          updated_by: currentUser.user_id,
-          updated_at: new Date().toISOString(),
-        },
-        currentUser
-      );
+      await updateTicketWithCacheForCurrentUser(ticketData.ticket.ticket_id, {
+        attributes: updatedAttributes,
+        updated_at: new Date().toISOString(),
+      });
 
       toast.success('Description updated successfully');
       return true;
@@ -191,4 +166,3 @@ export default function TicketDetailsContainer({ ticketData, surveySummary = nul
     </div>
   );
 }
-
