@@ -1,0 +1,97 @@
+name: Validate Tenant Management Schema
+
+on:
+  workflow_dispatch: # Allows manual triggering
+  pull_request:
+    branches:
+      - '**'
+    paths:
+      - 'server/migrations/**'
+      - 'ee/server/migrations/**'
+      - 'ee/temporal-workflows/src/activities/tenant-deletion-activities.ts'
+      - '.github/workflows/validate-tenant-management.yaml'
+      - 'scripts/validate-tenant-management.ts'
+
+  push:
+    branches:
+      - main
+    paths:
+      - 'server/migrations/**'
+      - 'ee/server/migrations/**'
+      - 'ee/temporal-workflows/src/activities/tenant-deletion-activities.ts'
+      - '.github/workflows/validate-tenant-management.yaml'
+      - 'scripts/validate-tenant-management.ts'
+
+jobs:
+  validate-tenant-management:
+    name: Validate Tenant Management Schema
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: test_password
+          POSTGRES_DB: alga_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Wait for Postgres to be ready
+        run: |
+          until pg_isready -h localhost -p 5432 -U postgres; do
+            echo "Waiting for postgres..."
+            sleep 2
+          done
+          echo "Postgres is ready!"
+
+      - name: Run CE migrations
+        working-directory: ./server
+        env:
+          DB_HOST: localhost
+          DB_PORT: 5432
+          DB_USER_ADMIN: postgres
+          DB_PASSWORD_ADMIN: test_password
+          DB_NAME_SERVER: alga_test
+          DB_TYPE: postgres
+        run: npx knex migrate:latest --knexfile knexfile.cjs --env migration
+
+      - name: Run EE migrations
+        working-directory: ./ee/server
+        env:
+          DB_HOST: localhost
+          DB_PORT: 5432
+          DB_USER_ADMIN: postgres
+          DB_PASSWORD_ADMIN: test_password
+          DB_NAME_SERVER: alga_test
+          DB_TYPE: postgres
+        run: npx knex migrate:latest --knexfile knexfile.cjs --env migration
+        continue-on-error: true # EE migrations may not exist or may have dependencies
+
+      - name: Validate tenant management schema
+        env:
+          DB_HOST: localhost
+          DB_PORT: 5432
+          DB_USER: postgres
+          DB_PASSWORD: test_password
+          DB_NAME: alga_test
+        run: npx tsx scripts/validate-tenant-management.ts
