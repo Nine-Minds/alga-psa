@@ -24,7 +24,7 @@ import { getContractLinePresetById, updateContractLinePreset } from '@alga-psa/b
 import { ServiceUsageConfigForm, ServiceUsageConfig, ServiceValidationErrors } from './ServiceUsageConfigForm'; // Import the new form component and types
 import { TierConfig } from './ServiceTierEditor'; // Import TierConfig type
 import { BILLING_FREQUENCY_OPTIONS } from 'server/src/constants/billing';
-import { useTenant } from 'server/src/components/TenantProvider';
+import { useTenant } from '@alga-psa/ui/components/providers/TenantProvider';
 
 import UsageContractLinePresetServicesList from './UsageContractLinePresetServicesList';
 interface UsagePresetConfigurationProps {

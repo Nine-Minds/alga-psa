@@ -17,7 +17,7 @@ import * as Tooltip from '@radix-ui/react-tooltip'; // Correct Radix UI import
 // Removed incorrect import: import { TooltipContent, TooltipProvider, TooltipTrigger } from '@alga-psa/ui/components/Tooltip';
 import { getContractLineById, updateContractLine } from '@alga-psa/billing/actions/contractLineAction';
 import { BILLING_FREQUENCY_OPTIONS } from 'server/src/constants/billing';
-import { useTenant } from 'server/src/components/TenantProvider';
+import { useTenant } from '@alga-psa/ui/components/providers/TenantProvider';
 import { getContractLineServicesWithConfigurations } from '@alga-psa/billing/actions/contractLineServiceActions'; // Corrected import path
 import GenericPlanServicesList from './GenericContractLineServicesList';
 import { IContractLine, IService as IBillingService } from 'server/src/interfaces/billing.interfaces'; // Use IService from billing.interfaces

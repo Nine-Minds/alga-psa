@@ -14,7 +14,7 @@ import { GoogleCalendarProviderForm } from './GoogleCalendarProviderForm';
 import { MicrosoftCalendarProviderForm } from './MicrosoftCalendarProviderForm';
 import { getCalendarProviders, deleteCalendarProvider, syncCalendarProvider } from '../../lib/actions/calendarActions';
 import { CalendarProviderConfig } from '../../interfaces/calendar.interfaces';
-import { useTenant } from '../TenantProvider';
+import { useTenant } from '@alga-psa/ui/components/providers/TenantProvider';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { Dialog, DialogContent, DialogDescription } from '@alga-psa/ui/components/Dialog';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';

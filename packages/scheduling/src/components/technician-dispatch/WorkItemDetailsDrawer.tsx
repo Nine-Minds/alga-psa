@@ -15,7 +15,7 @@ import TicketDetails from '@alga-psa/tickets/components/ticket/TicketDetails';
 import TaskEdit from '@alga-psa/projects/components/TaskEdit';
 import EntryPopup from '@alga-psa/scheduling/components/schedule/EntryPopup';
 import InteractionDetails from 'server/src/components/interactions/InteractionDetails';
-import { useTenant } from 'server/src/components/TenantProvider';
+import { useTenant } from '@alga-psa/ui/components/providers/TenantProvider';
 
 interface WorkItemDetailsDrawerProps {
     workItem: IExtendedWorkItem;

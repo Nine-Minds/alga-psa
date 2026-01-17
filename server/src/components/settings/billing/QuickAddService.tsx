@@ -16,7 +16,7 @@ import { ITaxRate } from 'server/src/interfaces/tax.interfaces'; // Removed ITax
 // Note: getServiceCategories might be removable if categories are fully replaced by service types
 import { getServiceCategories } from 'server/src/lib/actions/categoryActions'
 import { IService, IServiceCategory, IServiceType } from 'server/src/interfaces/billing.interfaces' // Added IServiceType
-import { useTenant } from 'server/src/components/TenantProvider'
+import { useTenant } from '@alga-psa/ui/components/providers/TenantProvider'
 
 interface QuickAddServiceProps {
   onServiceAdded: () => void;

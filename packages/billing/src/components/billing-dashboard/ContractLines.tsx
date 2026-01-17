@@ -20,7 +20,7 @@ import { getContractLineServices, addServiceToContractLine, updateContractLineSe
 // Import new action and type
 import { getServiceTypesForSelection } from 'server/src/lib/actions/serviceActions';
 import { IContractLine, IContractLineService, IService, IServiceType } from 'server/src/interfaces/billing.interfaces';
-import { useTenant } from 'server/src/components/TenantProvider';
+import { useTenant } from '@alga-psa/ui/components/providers/TenantProvider';
 import { toast } from 'react-hot-toast';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';

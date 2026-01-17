@@ -31,7 +31,7 @@ import { updateClientContract, getClientById } from '@alga-psa/clients/actions';
 import { getDocumentsByContractId } from '@alga-psa/documents/actions/documentActions';
 import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
 import { BILLING_FREQUENCY_OPTIONS } from 'server/src/constants/billing';
-import { useTenant } from 'server/src/components/TenantProvider';
+import { useTenant } from '@alga-psa/ui/components/providers/TenantProvider';
 import ContractHeader from './ContractHeader';
 import ContractLines from './ContractLines';
 import ContractOverview from './ContractOverview';

@@ -8,7 +8,7 @@ import { NotificationItem } from './NotificationItem';
 import type { InternalNotification } from 'server/src/lib/models/internalNotification';
 import { useActivityDrawer } from '@alga-psa/ui/components/user-activities/ActivityDrawerProvider';
 import { ActivityType, NotificationActivity } from 'server/src/interfaces/activity.interfaces';
-import { useTenant } from 'server/src/components/TenantProvider';
+import { useTenant } from '@alga-psa/ui/components/providers/TenantProvider';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
 

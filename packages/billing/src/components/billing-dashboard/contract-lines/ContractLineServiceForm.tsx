@@ -21,7 +21,7 @@ import {
   getConfigurationForService,
   getConfigurationWithDetails
 } from '@alga-psa/billing/actions/contractLineServiceConfigurationActions';
-import { useTenant } from 'server/src/components/TenantProvider';
+import { useTenant } from '@alga-psa/ui/components/providers/TenantProvider';
 import { ServiceConfigurationPanel } from '../service-configurations/ServiceConfigurationPanel';
 import {
   BucketOverlayInput,

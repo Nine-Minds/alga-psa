@@ -21,7 +21,7 @@ import InteractionIcon from '@alga-psa/ui/components/InteractionIcon';
 import { addInteraction, updateInteraction, getInteractionById, getInteractionStatuses } from 'server/src/lib/actions/interactionActions';
 import { getAllInteractionTypes } from 'server/src/lib/actions/interactionTypeActions';
 import { IInteraction, IInteractionType } from 'server/src/interfaces/interaction.interfaces';
-import { useTenant } from 'server/src/components/TenantProvider';
+import { useTenant } from '@alga-psa/ui/components/providers/TenantProvider';
 import { useSession } from 'next-auth/react';
 import UserPicker from '@alga-psa/ui/components/UserPicker';
 import { ClientPicker } from '@alga-psa/clients/components/clients/ClientPicker';

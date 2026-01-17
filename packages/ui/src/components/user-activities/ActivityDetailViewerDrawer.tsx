@@ -7,7 +7,7 @@ import { processTemplateVariables } from "server/src/utils/templateUtils";
 import { useDrawer } from "server/src/context/DrawerContext";
 import { useActivitiesCache } from "server/src/hooks/useActivitiesCache";
 import { getConsolidatedTicketData } from "@alga-psa/tickets/actions/optimizedTicketActions";
-import { useTenant } from "server/src/components/TenantProvider";
+import { useTenant } from "@alga-psa/ui/components/providers/TenantProvider";
 import { AlertCircle, ArrowLeft } from 'lucide-react';
 import { Button } from '@alga-psa/ui/components/Button';
 import Spinner from '@alga-psa/ui/components/Spinner';

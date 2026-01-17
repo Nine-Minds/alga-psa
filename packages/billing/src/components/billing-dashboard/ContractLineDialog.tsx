@@ -17,7 +17,7 @@ import {
   getContractLinePresetServices,
 } from '@alga-psa/billing/actions/contractLinePresetActions';
 import { IContractLinePreset } from 'server/src/interfaces/billing.interfaces';
-import { useTenant } from 'server/src/components/TenantProvider';
+import { useTenant } from '@alga-psa/ui/components/providers/TenantProvider';
 import { Package, Clock, Activity, Plus, X, Coins } from 'lucide-react';
 import { BILLING_FREQUENCY_OPTIONS } from 'server/src/constants/billing';
 import { getCurrencySymbol } from 'server/src/constants/currency';

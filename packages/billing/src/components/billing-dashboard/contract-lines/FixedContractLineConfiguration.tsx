@@ -22,7 +22,7 @@ import {
 import { IService, IContractLine } from 'server/src/interfaces/billing.interfaces';
 import FixedPlanServicesList from '../FixedContractLineServicesList'; // Import the actual component
 import { BILLING_FREQUENCY_OPTIONS } from 'server/src/constants/billing';
-import { useTenant } from 'server/src/components/TenantProvider';
+import { useTenant } from '@alga-psa/ui/components/providers/TenantProvider';
 
 interface FixedPlanConfigurationProps {
   contractLineId: string;

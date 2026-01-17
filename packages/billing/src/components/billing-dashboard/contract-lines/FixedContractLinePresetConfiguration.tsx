@@ -21,7 +21,7 @@ import {
 import { IService, IContractLinePreset } from 'server/src/interfaces/billing.interfaces';
 import FixedContractLinePresetServicesList from '../FixedContractLinePresetServicesList'; // Import the preset-specific component
 import { BILLING_FREQUENCY_OPTIONS } from 'server/src/constants/billing';
-import { useTenant } from 'server/src/components/TenantProvider';
+import { useTenant } from '@alga-psa/ui/components/providers/TenantProvider';
 
 interface FixedPresetConfigurationProps {
   presetId: string;
