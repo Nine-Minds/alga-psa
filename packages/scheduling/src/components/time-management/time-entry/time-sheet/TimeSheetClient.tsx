@@ -1,12 +1,10 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { TimeSheet } from '@alga-psa/scheduling/components/time-management/time-entry/time-sheet/TimeSheet';
-import { ITimeSheetView, ITimeEntry } from 'server/src/interfaces/timeEntry.interfaces';
-import { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
-import { saveTimeEntry } from '@alga-psa/scheduling/actions/timeEntryActions';
-import { fetchOrCreateTimeSheet } from '@alga-psa/scheduling/actions/timeEntryActions';
 import { useState } from 'react';
+import type { ITimeEntry, ITimeSheetView, IUserWithRoles } from '@alga-psa/types';
+import { saveTimeEntry, fetchOrCreateTimeSheet } from '@alga-psa/scheduling/actions/timeEntryActions';
+import { TimeSheet } from './TimeSheet';
 
 interface TimeSheetClientProps {
   timeSheet: ITimeSheetView;
@@ -14,11 +12,7 @@ interface TimeSheetClientProps {
   isManager: boolean;
 }
 
-export default function TimeSheetClient({ 
-  timeSheet: initialTimeSheet, 
-  currentUser, 
-  isManager 
-}: TimeSheetClientProps) {
+export default function TimeSheetClient({ timeSheet: initialTimeSheet, currentUser, isManager }: TimeSheetClientProps) {
   const router = useRouter();
   const [timeSheet, setTimeSheet] = useState<ITimeSheetView>(initialTimeSheet);
 
@@ -29,7 +23,6 @@ export default function TimeSheetClient({
       const savedTimeEntry = await saveTimeEntry(timeEntry);
       console.log('Time entry saved successfully:', savedTimeEntry);
 
-      // Refresh the time sheet
       const updatedTimeSheet = await fetchOrCreateTimeSheet(currentUser.user_id, timeSheet.period_id);
       setTimeSheet(updatedTimeSheet);
     } catch (error) {
@@ -39,7 +32,6 @@ export default function TimeSheetClient({
   };
 
   const handleSubmitTimeSheet = async () => {
-    // Implement submit logic
     router.refresh();
   };
 
@@ -57,3 +49,4 @@ export default function TimeSheetClient({
     />
   );
 }
+

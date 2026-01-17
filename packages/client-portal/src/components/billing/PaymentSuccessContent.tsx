@@ -1,11 +1,11 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { CheckCircle, Clock, XCircle, ArrowLeft, FileText } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { ArrowLeft, CheckCircle, Clock, FileText, XCircle } from 'lucide-react';
+import Link from 'next/link';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Card, CardContent } from '@alga-psa/ui/components/Card';
-import Link from 'next/link';
-import { verifyClientPortalPayment } from 'server/src/lib/actions/client-portal-actions/client-payment';
+import { verifyClientPortalPayment } from '@alga-psa/client-portal/actions/clientPaymentActions';
 
 interface PaymentSuccessContentProps {
   invoiceId: string;
@@ -14,10 +14,7 @@ interface PaymentSuccessContentProps {
 
 type PaymentStatus = 'verifying' | 'success' | 'pending' | 'failed';
 
-export default function PaymentSuccessContent({
-  invoiceId,
-  sessionId,
-}: PaymentSuccessContentProps) {
+export default function PaymentSuccessContent({ invoiceId, sessionId }: PaymentSuccessContentProps) {
   const [status, setStatus] = useState<PaymentStatus>('verifying');
   const [invoiceNumber, setInvoiceNumber] = useState<string>('');
   const [amount, setAmount] = useState<number>(0);
@@ -79,12 +76,8 @@ export default function PaymentSuccessContent({
                   <Clock className="h-8 w-8 text-blue-600 animate-pulse" />
                 </div>
               </div>
-              <h1 className="text-2xl font-semibold text-gray-900 mb-2">
-                Verifying Payment
-              </h1>
-              <p className="text-gray-600">
-                Please wait while we confirm your payment...
-              </p>
+              <h1 className="text-2xl font-semibold text-gray-900 mb-2">Verifying Payment</h1>
+              <p className="text-gray-600">Please wait while we confirm your payment...</p>
             </>
           )}
 
@@ -95,9 +88,7 @@ export default function PaymentSuccessContent({
                   <CheckCircle className="h-8 w-8 text-green-600" />
                 </div>
               </div>
-              <h1 className="text-2xl font-semibold text-gray-900 mb-2">
-                Payment Successful!
-              </h1>
+              <h1 className="text-2xl font-semibold text-gray-900 mb-2">Payment Successful!</h1>
               <p className="text-gray-600 mb-6">
                 Thank you for your payment
                 {invoiceNumber && ` for Invoice #${invoiceNumber}`}.
@@ -116,12 +107,10 @@ export default function PaymentSuccessContent({
                   <Clock className="h-8 w-8 text-yellow-600" />
                 </div>
               </div>
-              <h1 className="text-2xl font-semibold text-gray-900 mb-2">
-                Payment Processing
-              </h1>
+              <h1 className="text-2xl font-semibold text-gray-900 mb-2">Payment Processing</h1>
               <p className="text-gray-600 mb-6">
-                Your payment is being processed. This may take a few moments.
-                You will receive a confirmation email once the payment is complete.
+                Your payment is being processed. This may take a few moments. You will receive a
+                confirmation email once the payment is complete.
               </p>
             </>
           )}
@@ -133,42 +122,31 @@ export default function PaymentSuccessContent({
                   <XCircle className="h-8 w-8 text-red-600" />
                 </div>
               </div>
-              <h1 className="text-2xl font-semibold text-gray-900 mb-2">
-                Payment Issue
-              </h1>
-              <p className="text-gray-600 mb-2">
-                We encountered an issue with your payment.
-              </p>
-              {error && (
-                <p className="text-sm text-red-600 mb-6">{error}</p>
-              )}
-              <p className="text-sm text-gray-500 mb-6">
-                Please try again or contact support if the issue persists.
+              <h1 className="text-2xl font-semibold text-gray-900 mb-2">Payment Verification Failed</h1>
+              <p className="text-gray-600 mb-6">
+                {error || 'We could not confirm your payment. Please contact support.'}
               </p>
             </>
           )}
 
-          <div className="flex flex-col sm:flex-row gap-3 justify-center">
-            <Link href="/client-portal/billing">
-              <Button variant="outline" id="payment-success-back-button">
+          <div className="mt-8 flex flex-col gap-3">
+            <Button variant="soft" asChild>
+              <Link href="/client-portal/billing" id="back-to-billing-button">
                 <ArrowLeft className="h-4 w-4 mr-2" />
                 Back to Billing
-              </Button>
-            </Link>
+              </Link>
+            </Button>
+
             {status === 'success' && (
-              <Link href={`/client-portal/billing`}>
-                <Button id="payment-success-view-invoices-button">
+              <Button variant="solid" asChild>
+                <Link
+                  href={`/client-portal/billing/invoices/${invoiceId}`}
+                  id="view-invoice-button"
+                >
                   <FileText className="h-4 w-4 mr-2" />
-                  View Invoices
-                </Button>
-              </Link>
-            )}
-            {status === 'failed' && (
-              <Link href={`/client-portal/billing/invoices/${invoiceId}/pay`}>
-                <Button id="payment-success-try-again-button">
-                  Try Again
-                </Button>
-              </Link>
+                  View Invoice
+                </Link>
+              </Button>
             )}
           </div>
         </CardContent>
@@ -176,3 +154,4 @@ export default function PaymentSuccessContent({
     </div>
   );
 }
+

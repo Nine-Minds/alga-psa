@@ -2,7 +2,7 @@ import { notFound } from 'next/navigation';
 import { getCurrentUser } from "server/src/lib/actions/user-actions/userActions";
 import { getTeams } from 'server/src/lib/actions/team-actions/teamActions';
 import { fetchTimeSheet } from '@alga-psa/scheduling/actions/timeSheetActions';
-import TimeSheetClient from './TimeSheetClient';
+import TimeSheetClient from '@alga-psa/scheduling/components/time-management/time-entry/time-sheet/TimeSheetClient';
 
 export default async function TimeSheetPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;

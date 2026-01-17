@@ -4,9 +4,9 @@ import React from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft } from 'lucide-react';
 import { Button } from '@alga-psa/ui/components/Button';
-import { ProjectDetailView } from '@alga-psa/client-portal/components';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
-import { IProject } from 'server/src/interfaces/project.interfaces';
+import type { IProject } from '@alga-psa/types';
+import ProjectDetailView from './ProjectDetailView';
 
 interface ProjectDetailsContainerProps {
   project: IProject;
@@ -20,7 +20,6 @@ export default function ProjectDetailsContainer({ project }: ProjectDetailsConta
     router.push('/client-portal/projects');
   };
 
-  // Validate required project data
   if (!project || !project.project_id) {
     return (
       <div id="project-invalid-data" className="p-4 bg-red-50 border border-red-200 rounded-lg">
@@ -31,12 +30,7 @@ export default function ProjectDetailsContainer({ project }: ProjectDetailsConta
 
   return (
     <div className="w-full">
-      <Button
-        id="back-to-projects-button"
-        variant="soft"
-        onClick={handleBack}
-        className="mb-4"
-      >
+      <Button id="back-to-projects-button" variant="soft" onClick={handleBack} className="mb-4">
         <ArrowLeft className="h-4 w-4 mr-2" />
         {t('projects.backToProjects', 'Back to Projects')}
       </Button>
@@ -45,3 +39,4 @@ export default function ProjectDetailsContainer({ project }: ProjectDetailsConta
     </div>
   );
 }
+

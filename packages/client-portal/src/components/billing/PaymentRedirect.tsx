@@ -12,8 +12,6 @@ interface PaymentRedirectProps {
  */
 export function PaymentRedirect({ url }: PaymentRedirectProps) {
   useEffect(() => {
-    // Use window.location.href for external redirects
-    // This properly handles URLs with fragments (#) that Next.js redirect() may not handle correctly
     window.location.href = url;
   }, [url]);
 
@@ -26,3 +24,4 @@ export function PaymentRedirect({ url }: PaymentRedirectProps) {
     </div>
   );
 }
+

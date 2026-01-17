@@ -1,16 +1,15 @@
 'use client';
 
-import React, { useState, Suspense } from 'react';
+import React, { Suspense, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import TicketDetails from '@alga-psa/tickets/components/ticket/TicketDetails';
-import { updateTicketWithCache, addTicketCommentWithCache } from '@alga-psa/tickets/actions/optimizedTicketActions';
 import { useSession } from 'next-auth/react';
 import { toast } from 'react-hot-toast';
-import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
-import { TicketDetailsSkeleton } from '@alga-psa/tickets/components/ticket/TicketDetailsSkeleton';
-import type { SurveyTicketSatisfactionSummary } from 'server/src/interfaces/survey.interface';
+import { addTicketCommentWithCache, updateTicketWithCache } from '../../actions/optimizedTicketActions';
+import TicketDetails from './TicketDetails';
+import { TicketDetailsSkeleton } from './TicketDetailsSkeleton';
+import { getCurrentUser } from '@alga-psa/auth/getCurrentUser';
+import type { SurveyTicketSatisfactionSummary } from '@alga-psa/types';
 
-// Define the props interface based on the consolidated data structure
 interface TicketDetailsContainerProps {
   ticketData: {
     ticket: any;
@@ -25,7 +24,17 @@ interface TicketDetailsContainerProps {
     board: any;
     additionalAgents: any[];
     availableAgents: any[];
-    userMap: Record<string, { user_id: string; first_name: string; last_name: string; email?: string, user_type: string, avatarUrl: string | null }>;
+    userMap: Record<
+      string,
+      {
+        user_id: string;
+        first_name: string;
+        last_name: string;
+        email?: string;
+        user_type: string;
+        avatarUrl: string | null;
+      }
+    >;
     options: {
       status: { value: string; label: string }[];
       agent: { value: string; label: string }[];
@@ -40,13 +49,11 @@ interface TicketDetailsContainerProps {
   surveySummary?: SurveyTicketSatisfactionSummary | null;
 }
 
-
 export default function TicketDetailsContainer({ ticketData, surveySummary = null }: TicketDetailsContainerProps) {
   const router = useRouter();
   const { data: session } = useSession();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Handle ticket updates using the optimized server action
   const handleTicketUpdate = async (field: string, value: any) => {
     if (!session?.user) {
       toast.error('You must be logged in to update tickets');
@@ -55,19 +62,14 @@ export default function TicketDetailsContainer({ ticketData, surveySummary = nul
 
     try {
       setIsSubmitting(true);
-      
-      // Get the current user from the database
+
       const currentUser = await getCurrentUser();
       if (!currentUser) {
         toast.error('Failed to get current user');
         return;
       }
-      
-      await updateTicketWithCache(
-        ticketData.ticket.ticket_id,
-        { [field]: value },
-        currentUser
-      );
+
+      await updateTicketWithCache(ticketData.ticket.ticket_id, { [field]: value }, currentUser);
       toast.success(`${field} updated successfully`);
     } catch (error) {
       console.error(`Error updating ${field}:`, error);
@@ -77,7 +79,6 @@ export default function TicketDetailsContainer({ ticketData, surveySummary = nul
     }
   };
 
-  // Handle adding comments using the optimized server action
   const handleAddComment = async (content: string, isInternal: boolean, isResolution: boolean) => {
     if (!session?.user) {
       toast.error('You must be logged in to add comments');
@@ -86,14 +87,13 @@ export default function TicketDetailsContainer({ ticketData, surveySummary = nul
 
     try {
       setIsSubmitting(true);
-      
-      // Get the current user from the database
+
       const currentUser = await getCurrentUser();
       if (!currentUser) {
         toast.error('Failed to get current user');
         return;
       }
-      
+
       const newComment = await addTicketCommentWithCache(
         ticketData.ticket.ticket_id,
         content,
@@ -102,9 +102,7 @@ export default function TicketDetailsContainer({ ticketData, surveySummary = nul
         currentUser
       );
 
-      // Update the local state with the new comment
       ticketData.comments.push(newComment);
-      
       toast.success('Comment added successfully');
     } catch (error) {
       console.error('Error adding comment:', error);
@@ -114,7 +112,6 @@ export default function TicketDetailsContainer({ ticketData, surveySummary = nul
     }
   };
 
-  // Handle updating description using the optimized server action
   const handleUpdateDescription = async (content: string) => {
     if (!session?.user) {
       toast.error('You must be logged in to update the description');
@@ -123,27 +120,25 @@ export default function TicketDetailsContainer({ ticketData, surveySummary = nul
 
     try {
       setIsSubmitting(true);
-      
-      // Update the ticket's attributes.description field
+
       const currentAttributes = ticketData.ticket.attributes || {};
       const updatedAttributes = {
         ...currentAttributes,
-        description: content
+        description: content,
       };
 
-      // Get the current user from the database
       const currentUser = await getCurrentUser();
       if (!currentUser) {
         toast.error('Failed to get current user');
         return false;
       }
-      
+
       await updateTicketWithCache(
         ticketData.ticket.ticket_id,
         {
           attributes: updatedAttributes,
           updated_by: currentUser.user_id,
-          updated_at: new Date().toISOString()
+          updated_at: new Date().toISOString(),
         },
         currentUser
       );
@@ -159,18 +154,15 @@ export default function TicketDetailsContainer({ ticketData, surveySummary = nul
     }
   };
 
-  // Render directly to avoid redefining a component each render,
-  // which can cause unmount/mount cycles and side-effects
   return (
-    <div id="ticket-details-container-wrapper">
-      <Suspense fallback={<div id="ticket-info-loading-skeleton" className="animate-pulse bg-gray-200 h-64 rounded-lg mb-6"></div>}>
+    <div className="bg-gray-100 min-h-screen p-4">
+      <Suspense fallback={<TicketDetailsSkeleton />}>
         <TicketDetails
-          id="ticket-details-component"
-          initialTicket={ticketData.ticket}
+          ticketId={ticketData.ticket.ticket_id}
+          isOpen={true}
           initialBundle={ticketData.bundle}
           aggregatedChildClientComments={ticketData.aggregatedChildClientComments || []}
           onClose={() => router.back()}
-          // Pass pre-fetched data as props
           initialComments={ticketData.comments}
           initialDocuments={ticketData.documents}
           initialClient={ticketData.client}
@@ -189,7 +181,6 @@ export default function TicketDetailsContainer({ ticketData, surveySummary = nul
           initialClients={ticketData.clients}
           initialLocations={ticketData.locations}
           initialAgentSchedules={ticketData.agentSchedules}
-          // Pass optimized handlers
           onTicketUpdate={handleTicketUpdate}
           onAddComment={handleAddComment}
           onUpdateDescription={handleUpdateDescription}
@@ -200,3 +191,4 @@ export default function TicketDetailsContainer({ ticketData, surveySummary = nul
     </div>
   );
 }
+

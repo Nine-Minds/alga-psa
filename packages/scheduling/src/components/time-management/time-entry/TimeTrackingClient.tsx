@@ -1,8 +1,8 @@
 'use client';
 
 import { Profiler } from 'react';
-import TimeTracking from '@alga-psa/scheduling/components/time-management/time-entry/TimeTracking';
-import { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
+import TimeTracking from './TimeTracking';
+import type { IUserWithRoles } from '@alga-psa/types';
 
 interface Props {
   initialUser: IUserWithRoles | null;
@@ -16,13 +16,13 @@ export default function TimeTrackingClient({ initialUser, initialIsManager }: Pr
 
   const onRender = (
     id: string,
-    phase: "mount" | "update" | "nested-update",
+    phase: 'mount' | 'update' | 'nested-update',
     actualDuration: number,
     baseDuration: number,
     startTime: number,
     commitTime: number
   ) => {
-    console.log("Profiler Data:", {
+    console.log('Profiler Data:', {
       id,
       phase,
       actualDuration,
@@ -38,3 +38,4 @@ export default function TimeTrackingClient({ initialUser, initialIsManager }: Pr
     </Profiler>
   );
 }
+

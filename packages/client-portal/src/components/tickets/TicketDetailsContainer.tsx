@@ -4,10 +4,9 @@ import React from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft } from 'lucide-react';
 import { Button } from '@alga-psa/ui/components/Button';
-import { TicketDetails } from '@alga-psa/client-portal/components';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
-import { ITicketWithDetails } from 'server/src/interfaces/ticket.interfaces';
-import { IStatus } from 'server/src/interfaces/status.interface';
+import type { IStatus, ITicketWithDetails } from '@alga-psa/types';
+import { TicketDetails } from './TicketDetails';
 
 interface TicketDetailsContainerProps {
   ticketId: string;
@@ -23,7 +22,6 @@ export default function TicketDetailsContainer({ ticketId, ticketData, statuses 
     router.push('/client-portal/tickets');
   };
 
-  // Validate required ticket data
   if (!ticketData || (!ticketData.ticket_id && !ticketId)) {
     return (
       <div id="ticket-invalid-data" className="p-4 bg-red-50 border border-red-200 rounded-lg">
@@ -34,12 +32,7 @@ export default function TicketDetailsContainer({ ticketId, ticketData, statuses 
 
   return (
     <div className="w-full">
-      <Button
-        id="back-to-tickets-button"
-        variant="soft"
-        onClick={handleClose}
-        className="mb-2"
-      >
+      <Button id="back-to-tickets-button" variant="soft" onClick={handleClose} className="mb-2">
         <ArrowLeft className="h-4 w-4 mr-2" />
         {t('tickets.backToTickets', 'Back to Tickets')}
       </Button>
@@ -56,3 +49,4 @@ export default function TicketDetailsContainer({ ticketId, ticketData, statuses 
     </div>
   );
 }
+

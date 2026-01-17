@@ -10,12 +10,16 @@ export { AppointmentRequestDetailsPage } from './appointments/AppointmentRequest
 export { RequestAppointmentModal } from './appointments/RequestAppointmentModal';
 
 export { default as BillingOverview } from './billing/BillingOverview';
+export { PaymentRedirect } from './billing/PaymentRedirect';
+export { default as PaymentSuccessContent } from './billing/PaymentSuccessContent';
 
 export { default as ProjectsOverviewPage } from './projects/ProjectsOverviewPage';
 export { default as ProjectDetailView } from './projects/ProjectDetailView';
+export { default as ProjectDetailsContainer } from './projects/ProjectDetailsContainer';
 
 export { TicketDetails } from './tickets/TicketDetails';
 export { TicketList } from './tickets/TicketList';
+export { default as TicketDetailsContainer } from './tickets/TicketDetailsContainer';
 
 export { ClientProfile } from './profile/ClientProfile';
 

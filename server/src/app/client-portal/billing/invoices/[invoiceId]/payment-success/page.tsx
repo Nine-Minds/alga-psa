@@ -1,5 +1,5 @@
 import { Suspense } from 'react';
-import PaymentSuccessContent from './PaymentSuccessContent';
+import { PaymentSuccessContent } from '@alga-psa/client-portal/components';
 
 interface PaymentSuccessPageProps {
   params: {

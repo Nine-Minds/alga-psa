@@ -1,6 +1,6 @@
 import { getCurrentUser } from "server/src/lib/actions/user-actions/userActions";
 import { getTeams } from 'server/src/lib/actions/team-actions/teamActions';
-import TimeTrackingClient from './TimeTrackingClient';
+import TimeTrackingClient from '@alga-psa/scheduling/components/time-management/time-entry/TimeTrackingClient';
 
 export default async function TimeTrackingPage() {
   const currentUser = await getCurrentUser();
