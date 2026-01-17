@@ -29,7 +29,7 @@ import {
   verifyEmailDomain
 } from '../../lib/actions/email-actions/emailDomainActions';
 import { EmailProviderConfiguration } from '../EmailProviderConfiguration';
-import { useTenant } from '../TenantProvider';
+import { useTenant } from '@alga-psa/ui/components/providers/TenantProvider';
 
 interface EmailSettingsProps {
   // Remove tenantId prop since we'll use the tenant context
