@@ -22,7 +22,7 @@ import {
 import { Button } from '@alga-psa/ui/components/Button';
 import UserAvatar from '@alga-psa/ui/components/UserAvatar';
 import ContactAvatar from '@alga-psa/ui/components/ContactAvatar';
-import { NotificationBell } from 'server/src/components/notifications/NotificationBell';
+import { NotificationBell } from '@alga-psa/ui/components/notifications/NotificationBell';
 import type { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
 import { menuItems, bottomMenuItems, MenuItem } from 'server/src/config/menuConfig';
 import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';

@@ -5,7 +5,7 @@ import { Bell } from 'lucide-react';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import { NotificationDropdown } from './NotificationDropdown';
 import { useSession } from 'next-auth/react';
-import { useInternalNotifications } from '../../hooks/useInternalNotifications';
+import { useInternalNotifications } from 'server/src/hooks/useInternalNotifications';
 
 interface NotificationBellProps {
   className?: string;

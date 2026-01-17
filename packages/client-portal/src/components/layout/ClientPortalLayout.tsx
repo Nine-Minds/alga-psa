@@ -16,7 +16,7 @@ import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { useBranding } from '@alga-psa/ui/components/providers/BrandingProvider';
 import { getTenantSlugForTenant } from 'server/src/lib/actions/tenant-actions/tenantSlugActions';
 import { ClientExtensionsMenu } from '@alga-psa/client-portal/components';
-import { NotificationBell } from 'server/src/components/notifications/NotificationBell';
+import { NotificationBell } from '@alga-psa/ui/components/notifications/NotificationBell';
 import { ActivityDrawerProvider } from '@alga-psa/ui/components/user-activities/ActivityDrawerProvider';
 import { DrawerProvider } from 'server/src/context/DrawerContext';
 

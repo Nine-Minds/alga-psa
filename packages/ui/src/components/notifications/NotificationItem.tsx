@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { Info, CheckCircle, AlertTriangle, AlertCircle, ExternalLink, ArrowRight } from 'lucide-react';
-import type { InternalNotification } from '../../lib/models/internalNotification';
+import type { InternalNotification } from 'server/src/lib/models/internalNotification';
 
 interface NotificationItemProps {
   notification: InternalNotification;

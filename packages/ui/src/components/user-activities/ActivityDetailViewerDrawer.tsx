@@ -26,7 +26,7 @@ import { toast } from 'react-hot-toast';
 import { formatISO } from 'date-fns';
 import { IWorkItem } from "server/src/interfaces/workItem.interfaces";
 import { TimeSheetStatus, ITimePeriodWithStatusView } from "server/src/interfaces/timeEntry.interfaces";
-import { NotificationDetailView } from "server/src/components/notifications/NotificationDetailView";
+import { NotificationDetailView } from "@alga-psa/ui/components/notifications/NotificationDetailView";
 import { NotificationActivity } from "server/src/interfaces/activity.interfaces";
 import { getNotificationByIdAction } from "server/src/lib/actions/internal-notification-actions/internalNotificationActions";
 import { getBlockContent, updateBlockContent } from "@alga-psa/documents/actions/documentBlockContentActions";
