@@ -30,6 +30,7 @@ import {
   MapPin,
   MessageSquare,
   Monitor,
+  Network,
   Package,
   Percent,
   Plug,
@@ -37,9 +38,12 @@ import {
   Receipt,
   ReceiptText,
   Rocket,
+  ScanSearch,
   Settings,
   Shield,
+  ShieldAlert,
   SlidersHorizontal,
+  Target,
   User,
   UserCog,
   Users,
@@ -171,6 +175,19 @@ export const navigationSections: NavigationSection[] = [
         name: 'System Monitor',
         icon: LayoutDashboard,
         href: '/msp/jobs'
+      },
+      {
+        name: 'Alga Guard',
+        icon: ShieldAlert,
+        href: '/msp/guard',
+        subItems: [
+          { name: 'Dashboard', icon: LayoutDashboard, href: '/msp/guard' },
+          { name: 'PII Scanner', icon: ScanSearch, href: '/msp/guard/pii' },
+          { name: 'Attack Surface', icon: Network, href: '/msp/guard/asm' },
+          { name: 'Security Scores', icon: Target, href: '/msp/guard/scores' },
+          { name: 'Reports', icon: FileBarChart, href: '/msp/guard/reports' },
+          { name: 'Schedules', icon: Calendar, href: '/msp/guard/schedules' }
+        ]
       }
     ]
   }

@@ -1,0 +1,2584 @@
+[
+  {
+    "id": "F001",
+    "description": "Database migration: Create guard_pii_profiles table with tenant isolation",
+    "implemented": true,
+    "prdRefs": [
+      "Database Schema",
+      "FR1.1"
+    ]
+  },
+  {
+    "id": "F002",
+    "description": "Database migration: Create guard_pii_jobs table with status tracking",
+    "implemented": true,
+    "prdRefs": [
+      "Database Schema",
+      "FR1.9"
+    ]
+  },
+  {
+    "id": "F003",
+    "description": "Database migration: Create guard_pii_results table (no actual PII storage)",
+    "implemented": true,
+    "prdRefs": [
+      "Database Schema",
+      "FR1.10",
+      "FR1.11"
+    ]
+  },
+  {
+    "id": "F004",
+    "description": "Database migration: Create guard_asm_domains table",
+    "implemented": true,
+    "prdRefs": [
+      "Database Schema",
+      "FR3.1"
+    ]
+  },
+  {
+    "id": "F005",
+    "description": "Database migration: Create guard_asm_jobs table",
+    "implemented": true,
+    "prdRefs": [
+      "Database Schema"
+    ]
+  },
+  {
+    "id": "F006",
+    "description": "Database migration: Create guard_asm_results table with JSONB data column",
+    "implemented": true,
+    "prdRefs": [
+      "Database Schema"
+    ]
+  },
+  {
+    "id": "F007",
+    "description": "Database migration: Create guard_schedules table for PII and ASM",
+    "implemented": true,
+    "prdRefs": [
+      "Database Schema",
+      "FR5"
+    ]
+  },
+  {
+    "id": "F008",
+    "description": "Database migration: Create guard_security_scores table",
+    "implemented": true,
+    "prdRefs": [
+      "Database Schema",
+      "FR9.1"
+    ]
+  },
+  {
+    "id": "F009",
+    "description": "Database migration: Create guard_security_score_history table",
+    "implemented": true,
+    "prdRefs": [
+      "Database Schema",
+      "FR9.5"
+    ]
+  },
+  {
+    "id": "F010",
+    "description": "Database migration: Create guard_report_jobs table",
+    "implemented": true,
+    "prdRefs": [
+      "Database Schema",
+      "FR7.5"
+    ]
+  },
+  {
+    "id": "F011",
+    "description": "Database migration: Create guard_audit_log table",
+    "implemented": true,
+    "prdRefs": [
+      "Database Schema"
+    ]
+  },
+  {
+    "id": "F012",
+    "description": "Database migration: Create all PostgreSQL ENUM types (guard_pii_type, guard_job_status, etc.)",
+    "implemented": true,
+    "prdRefs": [
+      "Database Schema"
+    ]
+  },
+  {
+    "id": "F013",
+    "description": "Database migration: Add all indexes for tenant filtering and performance",
+    "implemented": true,
+    "prdRefs": [
+      "Database Schema"
+    ]
+  },
+  {
+    "id": "F014",
+    "description": "Feature Flags: Add enable_alga_guard flag to DEFAULT_BOOLEAN_FLAGS",
+    "implemented": true,
+    "prdRefs": [
+      "Module Integration"
+    ]
+  },
+  {
+    "id": "F015",
+    "description": "Feature Flags: Add enable_alga_guard_pii sub-module flag",
+    "implemented": true,
+    "prdRefs": [
+      "Module Integration"
+    ]
+  },
+  {
+    "id": "F016",
+    "description": "Feature Flags: Add enable_alga_guard_asm sub-module flag",
+    "implemented": true,
+    "prdRefs": [
+      "Module Integration"
+    ]
+  },
+  {
+    "id": "F017",
+    "description": "Feature Flags: Add enable_alga_guard_score sub-module flag",
+    "implemented": true,
+    "prdRefs": [
+      "Module Integration"
+    ]
+  },
+  {
+    "id": "F018",
+    "description": "RBAC: Define GUARD_PERMISSIONS constant with all guard permissions",
+    "implemented": true,
+    "prdRefs": [
+      "Module Integration",
+      "FR8"
+    ]
+  },
+  {
+    "id": "F019",
+    "description": "RBAC: Define GUARD_ROLE_MAPPINGS for tenant_admin, msp_admin, msp_tech, msp_viewer",
+    "implemented": true,
+    "prdRefs": [
+      "Module Integration",
+      "FR8"
+    ]
+  },
+  {
+    "id": "F020",
+    "description": "RBAC: Create permission middleware for guard:pii:* permissions",
+    "implemented": true,
+    "prdRefs": [
+      "Module Integration",
+      "FR8"
+    ]
+  },
+  {
+    "id": "F021",
+    "description": "RBAC: Create permission middleware for guard:asm:* permissions",
+    "implemented": true,
+    "prdRefs": [
+      "Module Integration",
+      "FR8"
+    ]
+  },
+  {
+    "id": "F022",
+    "description": "RBAC: Create permission middleware for guard:score:* permissions",
+    "implemented": true,
+    "prdRefs": [
+      "Module Integration",
+      "FR8"
+    ]
+  },
+  {
+    "id": "F023",
+    "description": "RBAC: Create permission middleware for guard:schedules:manage",
+    "implemented": true,
+    "prdRefs": [
+      "Module Integration",
+      "FR8"
+    ]
+  },
+  {
+    "id": "F024",
+    "description": "API: PII profile - Create endpoint (POST /api/guard/pii/profiles)",
+    "implemented": true,
+    "prdRefs": [
+      "API Endpoints",
+      "FR1.1"
+    ]
+  },
+  {
+    "id": "F025",
+    "description": "API: PII profile - List endpoint with pagination (GET /api/guard/pii/profiles)",
+    "implemented": true,
+    "prdRefs": [
+      "API Endpoints",
+      "FR1.1"
+    ]
+  },
+  {
+    "id": "F026",
+    "description": "API: PII profile - Get single (GET /api/guard/pii/profiles/:id)",
+    "implemented": true,
+    "prdRefs": [
+      "API Endpoints"
+    ]
+  },
+  {
+    "id": "F027",
+    "description": "API: PII profile - Update (PUT /api/guard/pii/profiles/:id)",
+    "implemented": true,
+    "prdRefs": [
+      "API Endpoints"
+    ]
+  },
+  {
+    "id": "F028",
+    "description": "API: PII profile - Delete (DELETE /api/guard/pii/profiles/:id)",
+    "implemented": true,
+    "prdRefs": [
+      "API Endpoints"
+    ]
+  },
+  {
+    "id": "F029",
+    "description": "API: PII profile - Validate PII type selection (at least one required)",
+    "implemented": true,
+    "prdRefs": [
+      "FR1.2"
+    ]
+  },
+  {
+    "id": "F030",
+    "description": "API: PII profile - Validate file extension configuration",
+    "implemented": true,
+    "prdRefs": [
+      "FR1.3",
+      "FR1.4"
+    ]
+  },
+  {
+    "id": "F031",
+    "description": "API: PII profile - Validate target agent/company selection",
+    "implemented": true,
+    "prdRefs": [
+      "FR1.5"
+    ]
+  },
+  {
+    "id": "F032",
+    "description": "API: PII profile - Validate include/exclude path configuration",
+    "implemented": true,
+    "prdRefs": [
+      "FR1.6",
+      "FR1.7"
+    ]
+  },
+  {
+    "id": "F033",
+    "description": "API: Trigger PII scan (POST /api/guard/pii/profiles/:id/scan)",
+    "implemented": true,
+    "prdRefs": [
+      "API Endpoints",
+      "FR1.8"
+    ]
+  },
+  {
+    "id": "F034",
+    "description": "API: List PII jobs with status filtering (GET /api/guard/pii/jobs)",
+    "implemented": true,
+    "prdRefs": [
+      "API Endpoints",
+      "FR1.9"
+    ]
+  },
+  {
+    "id": "F035",
+    "description": "API: Get PII job details (GET /api/guard/pii/jobs/:id)",
+    "implemented": true,
+    "prdRefs": [
+      "API Endpoints"
+    ]
+  },
+  {
+    "id": "F036",
+    "description": "API: Download PII job logs (GET /api/guard/pii/jobs/:id/logs)",
+    "implemented": true,
+    "prdRefs": [
+      "API Endpoints"
+    ]
+  },
+  {
+    "id": "F037",
+    "description": "API: List PII results with filtering (GET /api/guard/pii/results)",
+    "implemented": true,
+    "prdRefs": [
+      "API Endpoints",
+      "FR1.10"
+    ]
+  },
+  {
+    "id": "F038",
+    "description": "API: Get PII result details (GET /api/guard/pii/results/:id)",
+    "implemented": true,
+    "prdRefs": [
+      "API Endpoints"
+    ]
+  },
+  {
+    "id": "F039",
+    "description": "API: Purge individual PII result (DELETE /api/guard/pii/results/:id)",
+    "implemented": true,
+    "prdRefs": [
+      "API Endpoints",
+      "FR1.12"
+    ]
+  },
+  {
+    "id": "F040",
+    "description": "API: Bulk purge PII results (POST /api/guard/pii/results/purge)",
+    "implemented": true,
+    "prdRefs": [
+      "API Endpoints",
+      "FR1.12"
+    ]
+  },
+  {
+    "id": "F041",
+    "description": "API: Purge all PII results - admin only (DELETE /api/guard/pii/results)",
+    "implemented": true,
+    "prdRefs": [
+      "API Endpoints",
+      "FR1.12",
+      "FR8.3"
+    ]
+  },
+  {
+    "id": "F042",
+    "description": "API: PII Dashboard data (GET /api/guard/pii/dashboard)",
+    "implemented": true,
+    "prdRefs": [
+      "API Endpoints",
+      "FR6"
+    ]
+  },
+  {
+    "id": "F043",
+    "description": "PII Detection: Implement SSN regex pattern with area/group/serial validation",
+    "implemented": true,
+    "prdRefs": [
+      "PII Detection Engine",
+      "FR2.1"
+    ]
+  },
+  {
+    "id": "F044",
+    "description": "PII Detection: Implement Visa credit card regex pattern",
+    "implemented": true,
+    "prdRefs": [
+      "PII Detection Engine",
+      "FR2.1"
+    ]
+  },
+  {
+    "id": "F045",
+    "description": "PII Detection: Implement Mastercard credit card regex pattern",
+    "implemented": true,
+    "prdRefs": [
+      "PII Detection Engine",
+      "FR2.1"
+    ]
+  },
+  {
+    "id": "F046",
+    "description": "PII Detection: Implement Amex credit card regex pattern",
+    "implemented": true,
+    "prdRefs": [
+      "PII Detection Engine",
+      "FR2.1"
+    ]
+  },
+  {
+    "id": "F047",
+    "description": "PII Detection: Implement Discover credit card regex pattern",
+    "implemented": true,
+    "prdRefs": [
+      "PII Detection Engine",
+      "FR2.1"
+    ]
+  },
+  {
+    "id": "F048",
+    "description": "PII Detection: Implement Luhn algorithm for credit card validation",
+    "implemented": true,
+    "prdRefs": [
+      "PII Detection Engine",
+      "FR2.1"
+    ]
+  },
+  {
+    "id": "F049",
+    "description": "PII Detection: Implement Bank Account pattern with context matching",
+    "implemented": true,
+    "prdRefs": [
+      "PII Detection Engine",
+      "FR2.1"
+    ]
+  },
+  {
+    "id": "F050",
+    "description": "PII Detection: Implement DOB patterns (MM/DD/YYYY and ISO formats)",
+    "implemented": true,
+    "prdRefs": [
+      "PII Detection Engine",
+      "FR2.1"
+    ]
+  },
+  {
+    "id": "F051",
+    "description": "PII Detection: Implement Driver's License patterns for CA",
+    "implemented": true,
+    "prdRefs": [
+      "PII Detection Engine",
+      "FR2.1"
+    ]
+  },
+  {
+    "id": "F052",
+    "description": "PII Detection: Implement Driver's License patterns for NY",
+    "implemented": true,
+    "prdRefs": [
+      "PII Detection Engine",
+      "FR2.1"
+    ]
+  },
+  {
+    "id": "F053",
+    "description": "PII Detection: Implement Driver's License patterns for TX",
+    "implemented": true,
+    "prdRefs": [
+      "PII Detection Engine",
+      "FR2.1"
+    ]
+  },
+  {
+    "id": "F054",
+    "description": "PII Detection: Implement Driver's License patterns for remaining states",
+    "implemented": true,
+    "prdRefs": [
+      "PII Detection Engine",
+      "FR2.1"
+    ]
+  },
+  {
+    "id": "F055",
+    "description": "PII Detection: Implement Passport pattern with context matching",
+    "implemented": true,
+    "prdRefs": [
+      "PII Detection Engine",
+      "FR2.1"
+    ]
+  },
+  {
+    "id": "F056",
+    "description": "PII Detection: Implement Email address regex",
+    "implemented": true,
+    "prdRefs": [
+      "PII Detection Engine",
+      "FR2.1"
+    ]
+  },
+  {
+    "id": "F057",
+    "description": "PII Detection: Implement US Phone number pattern",
+    "implemented": true,
+    "prdRefs": [
+      "PII Detection Engine",
+      "FR2.1"
+    ]
+  },
+  {
+    "id": "F058",
+    "description": "PII Detection: Implement International Phone pattern (E.164)",
+    "implemented": true,
+    "prdRefs": [
+      "PII Detection Engine",
+      "FR2.1"
+    ]
+  },
+  {
+    "id": "F059",
+    "description": "PII Detection: Implement IPv4 address regex",
+    "implemented": true,
+    "prdRefs": [
+      "PII Detection Engine",
+      "FR2.1"
+    ]
+  },
+  {
+    "id": "F060",
+    "description": "PII Detection: Implement IPv6 address regex",
+    "implemented": true,
+    "prdRefs": [
+      "PII Detection Engine",
+      "FR2.1"
+    ]
+  },
+  {
+    "id": "F061",
+    "description": "PII Detection: Implement MAC Address regex",
+    "implemented": true,
+    "prdRefs": [
+      "PII Detection Engine",
+      "FR2.1"
+    ]
+  },
+  {
+    "id": "F062",
+    "description": "PII Detection: Name detection via local LLM NER (replaced spaCy)",
+    "implemented": true,
+    "prdRefs": [
+      "PII Detection Engine",
+      "FR2.2"
+    ]
+  },
+  {
+    "id": "F063",
+    "description": "PII Detection: Address detection via local LLM NER (replaced spaCy)",
+    "implemented": true,
+    "prdRefs": [
+      "PII Detection Engine",
+      "FR2.2"
+    ]
+  },
+  {
+    "id": "F064",
+    "description": "File Processing: Extract text from TXT/CSV/JSON/YAML/XML files",
+    "implemented": true,
+    "prdRefs": [
+      "File Processing Libraries"
+    ]
+  },
+  {
+    "id": "F065",
+    "description": "File Processing: Extract text from PDF files with page tracking",
+    "implemented": true,
+    "prdRefs": [
+      "File Processing Libraries",
+      "FR2.3"
+    ]
+  },
+  {
+    "id": "F066",
+    "description": "File Processing: Extract text from DOC files using antiword",
+    "implemented": true,
+    "prdRefs": [
+      "File Processing Libraries",
+      "FR2.4"
+    ]
+  },
+  {
+    "id": "F067",
+    "description": "File Processing: Extract text from DOCX files",
+    "implemented": true,
+    "prdRefs": [
+      "File Processing Libraries",
+      "FR2.4"
+    ]
+  },
+  {
+    "id": "F068",
+    "description": "File Processing: Extract text from XLS files",
+    "implemented": true,
+    "prdRefs": [
+      "File Processing Libraries",
+      "FR2.4"
+    ]
+  },
+  {
+    "id": "F069",
+    "description": "File Processing: Extract text from XLSX files",
+    "implemented": true,
+    "prdRefs": [
+      "File Processing Libraries",
+      "FR2.4"
+    ]
+  },
+  {
+    "id": "F070",
+    "description": "File Processing: Recursively extract and scan ZIP archives (max 3 levels)",
+    "implemented": true,
+    "prdRefs": [
+      "File Processing Libraries",
+      "FR2.5"
+    ]
+  },
+  {
+    "id": "F071",
+    "description": "File Processing: Record line numbers for text-based matches",
+    "implemented": true,
+    "prdRefs": [
+      "FR2.6"
+    ]
+  },
+  {
+    "id": "F072",
+    "description": "File Processing: Record page numbers for PDF matches",
+    "implemented": true,
+    "prdRefs": [
+      "FR2.7"
+    ]
+  },
+  {
+    "id": "F073",
+    "description": "File Processing: Character encoding detection (UTF-8, UTF-16, Latin-1)",
+    "implemented": true,
+    "prdRefs": [
+      "File Processing Libraries"
+    ]
+  },
+  {
+    "id": "F074",
+    "description": "File Processing: Skip binary files gracefully",
+    "implemented": true,
+    "prdRefs": [
+      "File Processing Libraries"
+    ]
+  },
+  {
+    "id": "F075",
+    "description": "File Processing: Respect max file size limit (configurable, default 50MB)",
+    "implemented": true,
+    "prdRefs": [
+      "File Size Limits"
+    ]
+  },
+  {
+    "id": "F076",
+    "description": "File Processing: Respect max files per scan limit (default 100,000)",
+    "implemented": true,
+    "prdRefs": [
+      "File Size Limits"
+    ]
+  },
+  {
+    "id": "F077",
+    "description": "Extension Runner: Define ExtensionExecuteRequest schema for PII scans",
+    "implemented": true,
+    "prdRefs": [
+      "Extension Runner Architecture"
+    ]
+  },
+  {
+    "id": "F078",
+    "description": "Extension Runner: Define ExtensionExecuteResponse schema for PII scans",
+    "implemented": true,
+    "prdRefs": [
+      "Extension Runner Architecture"
+    ]
+  },
+  {
+    "id": "F079",
+    "description": "Extension Runner: Define PiiScanRequest payload schema (body_b64 content)",
+    "implemented": true,
+    "prdRefs": [
+      "Extension Runner Architecture"
+    ]
+  },
+  {
+    "id": "F080",
+    "description": "Extension Runner: Define PiiScanResponse payload schema (body_b64 content)",
+    "implemented": true,
+    "prdRefs": [
+      "Extension Runner Architecture"
+    ]
+  },
+  {
+    "id": "F081",
+    "description": "Extension Runner: Register alga-guard-pii-scanner extension in tenant_extension_install",
+    "implemented": false,
+    "prdRefs": [
+      "Extension Runner Architecture"
+    ]
+  },
+  {
+    "id": "F082",
+    "description": "Extension Runner: Implement executeExtension() call for PII scan dispatch",
+    "implemented": true,
+    "prdRefs": [
+      "Extension Runner Architecture",
+      "FR4.1"
+    ]
+  },
+  {
+    "id": "F083",
+    "description": "Extension Runner: Parse and persist scan results from response body_b64",
+    "implemented": true,
+    "prdRefs": [
+      "Extension Runner Architecture",
+      "FR4.1"
+    ]
+  },
+  {
+    "id": "F084",
+    "description": "Extension Runner: Handle scan completion and update guard_pii_jobs status",
+    "implemented": true,
+    "prdRefs": [
+      "Extension Runner Architecture",
+      "FR4.1"
+    ]
+  },
+  {
+    "id": "F085",
+    "description": "Extension Runner: Handle AGENT_OFFLINE error with retry logic",
+    "implemented": true,
+    "prdRefs": [
+      "Extension Runner Architecture",
+      "FR4.1"
+    ]
+  },
+  {
+    "id": "F086",
+    "description": "Extension Runner: Handle TIMEOUT error (mark as partial completion)",
+    "implemented": true,
+    "prdRefs": [
+      "Extension Runner Architecture",
+      "FR4.1"
+    ]
+  },
+  {
+    "id": "F087",
+    "description": "WASM Extension: File system walker with include/exclude path logic",
+    "implemented": true,
+    "prdRefs": [
+      "FR1.6",
+      "FR1.7"
+    ]
+  },
+  {
+    "id": "F088",
+    "description": "WASM Extension: File extension filtering",
+    "implemented": true,
+    "prdRefs": [
+      "FR1.3",
+      "FR1.4"
+    ]
+  },
+  {
+    "id": "F089",
+    "description": "WASM Extension: Wildcard path matching for include/exclude",
+    "implemented": true,
+    "prdRefs": [
+      "FR1.6"
+    ]
+  },
+  {
+    "id": "F090",
+    "description": "WASM Extension: Build response with all results in single PiiScanResponse",
+    "implemented": true,
+    "prdRefs": [
+      "Extension Runner Architecture",
+      "FR4.1"
+    ]
+  },
+  {
+    "id": "F091",
+    "description": "API: ASM domain - Create (POST /api/guard/asm/domains)",
+    "implemented": true,
+    "prdRefs": [
+      "API Endpoints",
+      "FR3.1"
+    ]
+  },
+  {
+    "id": "F092",
+    "description": "API: ASM domain - List with pagination (GET /api/guard/asm/domains)",
+    "implemented": true,
+    "prdRefs": [
+      "API Endpoints"
+    ]
+  },
+  {
+    "id": "F093",
+    "description": "API: ASM domain - Get single (GET /api/guard/asm/domains/:id)",
+    "implemented": true,
+    "prdRefs": [
+      "API Endpoints"
+    ]
+  },
+  {
+    "id": "F094",
+    "description": "API: ASM domain - Update (PUT /api/guard/asm/domains/:id)",
+    "implemented": true,
+    "prdRefs": [
+      "API Endpoints",
+      "FR3.12"
+    ]
+  },
+  {
+    "id": "F095",
+    "description": "API: ASM domain - Delete (DELETE /api/guard/asm/domains/:id)",
+    "implemented": true,
+    "prdRefs": [
+      "API Endpoints",
+      "FR3.12"
+    ]
+  },
+  {
+    "id": "F096",
+    "description": "API: ASM domain - Validate domain format",
+    "implemented": true,
+    "prdRefs": [
+      "FR3.1"
+    ]
+  },
+  {
+    "id": "F097",
+    "description": "API: Trigger ASM scan (POST /api/guard/asm/domains/:id/scan)",
+    "implemented": true,
+    "prdRefs": [
+      "API Endpoints",
+      "FR3.2"
+    ]
+  },
+  {
+    "id": "F098",
+    "description": "API: List ASM jobs (GET /api/guard/asm/jobs)",
+    "implemented": true,
+    "prdRefs": [
+      "API Endpoints"
+    ]
+  },
+  {
+    "id": "F099",
+    "description": "API: Get ASM job details (GET /api/guard/asm/jobs/:id)",
+    "implemented": true,
+    "prdRefs": [
+      "API Endpoints"
+    ]
+  },
+  {
+    "id": "F100",
+    "description": "API: Get ASM subdomains (GET /api/guard/asm/domains/:id/subdomains)",
+    "implemented": true,
+    "prdRefs": [
+      "API Endpoints",
+      "FR3.3"
+    ]
+  },
+  {
+    "id": "F101",
+    "description": "API: Get ASM IPs (GET /api/guard/asm/domains/:id/ips)",
+    "implemented": true,
+    "prdRefs": [
+      "API Endpoints",
+      "FR3.4"
+    ]
+  },
+  {
+    "id": "F102",
+    "description": "API: Get ASM open ports (GET /api/guard/asm/domains/:id/ports)",
+    "implemented": true,
+    "prdRefs": [
+      "API Endpoints",
+      "FR3.5"
+    ]
+  },
+  {
+    "id": "F103",
+    "description": "API: Get ASM CVEs (GET /api/guard/asm/domains/:id/cves)",
+    "implemented": true,
+    "prdRefs": [
+      "API Endpoints",
+      "FR3.10"
+    ]
+  },
+  {
+    "id": "F104",
+    "description": "API: Get ASM DNS records (GET /api/guard/asm/domains/:id/dns)",
+    "implemented": true,
+    "prdRefs": [
+      "API Endpoints",
+      "FR3.8"
+    ]
+  },
+  {
+    "id": "F105",
+    "description": "API: Get ASM HTTP headers (GET /api/guard/asm/domains/:id/headers)",
+    "implemented": true,
+    "prdRefs": [
+      "API Endpoints",
+      "FR3.9"
+    ]
+  },
+  {
+    "id": "F106",
+    "description": "API: Get ASM cloud storage (GET /api/guard/asm/domains/:id/cloud-storage)",
+    "implemented": true,
+    "prdRefs": [
+      "API Endpoints",
+      "FR3.7"
+    ]
+  },
+  {
+    "id": "F107",
+    "description": "API: Get scanner pod IPs (GET /api/guard/asm/scanner-ips)",
+    "implemented": true,
+    "prdRefs": [
+      "API Endpoints",
+      "FR4.4"
+    ]
+  },
+  {
+    "id": "F108",
+    "description": "API: ASM Dashboard data (GET /api/guard/asm/dashboard)",
+    "implemented": true,
+    "prdRefs": [
+      "API Endpoints",
+      "FR6.4",
+      "FR6.5"
+    ]
+  },
+  {
+    "id": "F109",
+    "description": "ASM Scanner: Subdomain discovery via DNS brute force (top 5000 wordlist)",
+    "implemented": true,
+    "prdRefs": [
+      "ASM Reconnaissance Techniques",
+      "FR3.3"
+    ]
+  },
+  {
+    "id": "F110",
+    "description": "ASM Scanner: Subdomain discovery via Certificate Transparency logs (crt.sh)",
+    "implemented": true,
+    "prdRefs": [
+      "ASM Reconnaissance Techniques",
+      "FR3.3"
+    ]
+  },
+  {
+    "id": "F111",
+    "description": "ASM Scanner: Attempt DNS zone transfer (AXFR)",
+    "implemented": true,
+    "prdRefs": [
+      "ASM Reconnaissance Techniques"
+    ]
+  },
+  {
+    "id": "F112",
+    "description": "ASM Scanner: Resolve hostnames to IP addresses",
+    "implemented": true,
+    "prdRefs": [
+      "FR3.4"
+    ]
+  },
+  {
+    "id": "F113",
+    "description": "ASM Scanner: TCP port scan on common ports (as defined in COMMON_PORTS)",
+    "implemented": false,
+    "prdRefs": [
+      "ASM Reconnaissance Techniques",
+      "FR3.5"
+    ]
+  },
+  {
+    "id": "F114",
+    "description": "ASM Scanner: Service banner grabbing with nmap -sV",
+    "implemented": false,
+    "prdRefs": [
+      "ASM Reconnaissance Techniques",
+      "FR3.6"
+    ]
+  },
+  {
+    "id": "F115",
+    "description": "ASM Scanner: S3 bucket detection using naming patterns",
+    "implemented": true,
+    "prdRefs": [
+      "ASM Reconnaissance Techniques",
+      "FR3.7"
+    ]
+  },
+  {
+    "id": "F116",
+    "description": "ASM Scanner: Azure Blob detection using naming patterns",
+    "implemented": true,
+    "prdRefs": [
+      "ASM Reconnaissance Techniques",
+      "FR3.7"
+    ]
+  },
+  {
+    "id": "F117",
+    "description": "ASM Scanner: Google Cloud Storage detection using naming patterns",
+    "implemented": true,
+    "prdRefs": [
+      "ASM Reconnaissance Techniques",
+      "FR3.7"
+    ]
+  },
+  {
+    "id": "F118",
+    "description": "ASM Scanner: Retrieve A records",
+    "implemented": true,
+    "prdRefs": [
+      "FR3.8"
+    ]
+  },
+  {
+    "id": "F119",
+    "description": "ASM Scanner: Retrieve AAAA records",
+    "implemented": true,
+    "prdRefs": [
+      "FR3.8"
+    ]
+  },
+  {
+    "id": "F120",
+    "description": "ASM Scanner: Retrieve NS records",
+    "implemented": true,
+    "prdRefs": [
+      "FR3.8"
+    ]
+  },
+  {
+    "id": "F121",
+    "description": "ASM Scanner: Retrieve MX records with priority",
+    "implemented": true,
+    "prdRefs": [
+      "FR3.8"
+    ]
+  },
+  {
+    "id": "F122",
+    "description": "ASM Scanner: Retrieve TXT records",
+    "implemented": true,
+    "prdRefs": [
+      "FR3.8"
+    ]
+  },
+  {
+    "id": "F123",
+    "description": "ASM Scanner: Retrieve SOA records",
+    "implemented": true,
+    "prdRefs": [
+      "FR3.8"
+    ]
+  },
+  {
+    "id": "F124",
+    "description": "ASM Scanner: Retrieve CNAME records",
+    "implemented": true,
+    "prdRefs": [
+      "FR3.8"
+    ]
+  },
+  {
+    "id": "F125",
+    "description": "ASM Scanner: Capture HTTP response headers",
+    "implemented": true,
+    "prdRefs": [
+      "FR3.9"
+    ]
+  },
+  {
+    "id": "F126",
+    "description": "ASM Scanner: Check security headers (CSP, X-Frame-Options, HSTS, etc.)",
+    "implemented": true,
+    "prdRefs": [
+      "ASM Result Data Schemas"
+    ]
+  },
+  {
+    "id": "F127",
+    "description": "ASM Scanner: Check SPF record presence and policy",
+    "implemented": true,
+    "prdRefs": [
+      "ASM Reconnaissance Techniques"
+    ]
+  },
+  {
+    "id": "F128",
+    "description": "ASM Scanner: Check DMARC record presence and policy",
+    "implemented": true,
+    "prdRefs": [
+      "ASM Reconnaissance Techniques"
+    ]
+  },
+  {
+    "id": "F129",
+    "description": "ASM Scanner: Check DKIM record presence (common selectors)",
+    "implemented": true,
+    "prdRefs": [
+      "ASM Reconnaissance Techniques"
+    ]
+  },
+  {
+    "id": "F130",
+    "description": "ASM Scanner: NVD API integration for CVE lookup by CPE",
+    "implemented": true,
+    "prdRefs": [
+      "CVE Correlation",
+      "FR3.10"
+    ]
+  },
+  {
+    "id": "F131",
+    "description": "ASM Scanner: Service-to-CPE mapping for vulnerability correlation",
+    "implemented": true,
+    "prdRefs": [
+      "CVE Correlation"
+    ]
+  },
+  {
+    "id": "F132",
+    "description": "ASM Scanner: Retrieve CVSS v3 scores for CVEs",
+    "implemented": true,
+    "prdRefs": [
+      "CVE Correlation",
+      "FR3.11"
+    ]
+  },
+  {
+    "id": "F133",
+    "description": "ASM Scanner: FIRST.org EPSS API integration for exploit probability",
+    "implemented": true,
+    "prdRefs": [
+      "CVE Correlation",
+      "FR3.11"
+    ]
+  },
+  {
+    "id": "F134",
+    "description": "ASM Scanner: MaxMind GeoIP lookup for discovered IPs",
+    "implemented": false,
+    "prdRefs": [
+      "ASM Result Data Schemas"
+    ]
+  },
+  {
+    "id": "F135",
+    "description": "ASM Infrastructure: Deploy scanning pods in Kubernetes",
+    "implemented": false,
+    "prdRefs": [
+      "FR4.2"
+    ]
+  },
+  {
+    "id": "F136",
+    "description": "ASM Infrastructure: Job queue for scan distribution to pods",
+    "implemented": false,
+    "prdRefs": [
+      "FR4.5"
+    ]
+  },
+  {
+    "id": "F137",
+    "description": "ASM Infrastructure: Scan result aggregation from pods",
+    "implemented": false,
+    "prdRefs": [
+      "FR4.2"
+    ]
+  },
+  {
+    "id": "F138",
+    "description": "ASM Infrastructure: Support customer-deployed scanner nodes",
+    "implemented": false,
+    "prdRefs": [
+      "FR4.3"
+    ]
+  },
+  {
+    "id": "F139",
+    "description": "API: Create schedule (POST /api/guard/schedules)",
+    "implemented": true,
+    "prdRefs": [
+      "API Endpoints"
+    ]
+  },
+  {
+    "id": "F140",
+    "description": "API: List schedules (GET /api/guard/schedules)",
+    "implemented": true,
+    "prdRefs": [
+      "API Endpoints"
+    ]
+  },
+  {
+    "id": "F141",
+    "description": "API: Get schedule (GET /api/guard/schedules/:id)",
+    "implemented": true,
+    "prdRefs": [
+      "API Endpoints"
+    ]
+  },
+  {
+    "id": "F142",
+    "description": "API: Update schedule (PUT /api/guard/schedules/:id)",
+    "implemented": true,
+    "prdRefs": [
+      "API Endpoints",
+      "FR5.4"
+    ]
+  },
+  {
+    "id": "F143",
+    "description": "API: Delete schedule (DELETE /api/guard/schedules/:id)",
+    "implemented": true,
+    "prdRefs": [
+      "API Endpoints",
+      "FR5.4"
+    ]
+  },
+  {
+    "id": "F144",
+    "description": "PG Boss: Register guard:pii:scan job handler",
+    "implemented": true,
+    "prdRefs": [
+      "Job Queue Integration"
+    ]
+  },
+  {
+    "id": "F145",
+    "description": "PG Boss: Register guard:asm:scan job handler",
+    "implemented": true,
+    "prdRefs": [
+      "Job Queue Integration"
+    ]
+  },
+  {
+    "id": "F146",
+    "description": "PG Boss: Register guard:score:recalc job handler",
+    "implemented": true,
+    "prdRefs": [
+      "Job Queue Integration"
+    ]
+  },
+  {
+    "id": "F147",
+    "description": "PG Boss: Register guard:report:generate job handler",
+    "implemented": true,
+    "prdRefs": [
+      "Job Queue Integration"
+    ]
+  },
+  {
+    "id": "F148",
+    "description": "PG Boss: Register guard:schedules:process cron job (every minute)",
+    "implemented": true,
+    "prdRefs": [
+      "Job Queue Integration",
+      "Cron Schedule Registration"
+    ]
+  },
+  {
+    "id": "F149",
+    "description": "PG Boss: Register guard:cve:sync cron job (daily at 3 AM)",
+    "implemented": true,
+    "prdRefs": [
+      "Cron Schedule Registration"
+    ]
+  },
+  {
+    "id": "F150",
+    "description": "PG Boss: Register guard:cleanup:expired cron job (weekly)",
+    "implemented": true,
+    "prdRefs": [
+      "Cron Schedule Registration"
+    ]
+  },
+  {
+    "id": "F151",
+    "description": "Scheduler: Support daily frequency",
+    "implemented": true,
+    "prdRefs": [
+      "FR5.1",
+      "FR5.2"
+    ]
+  },
+  {
+    "id": "F152",
+    "description": "Scheduler: Support weekly frequency with day-of-week",
+    "implemented": true,
+    "prdRefs": [
+      "FR5.1",
+      "FR5.2"
+    ]
+  },
+  {
+    "id": "F153",
+    "description": "Scheduler: Support monthly frequency with day-of-month",
+    "implemented": true,
+    "prdRefs": [
+      "FR5.1",
+      "FR5.2"
+    ]
+  },
+  {
+    "id": "F154",
+    "description": "Scheduler: Track and update next_run_at after execution",
+    "implemented": true,
+    "prdRefs": [
+      "FR5"
+    ]
+  },
+  {
+    "id": "F155",
+    "description": "Scheduler: Timezone support for schedule times",
+    "implemented": true,
+    "prdRefs": [
+      "Database Schema"
+    ]
+  },
+  {
+    "id": "F156",
+    "description": "Event Bus: Add GUARD_EVENTS constant with all event types",
+    "implemented": true,
+    "prdRefs": [
+      "Event Bus Integration"
+    ]
+  },
+  {
+    "id": "F157",
+    "description": "Event Bus: Emit PII_SCAN_STARTED event",
+    "implemented": true,
+    "prdRefs": [
+      "Event Bus Integration"
+    ]
+  },
+  {
+    "id": "F158",
+    "description": "Event Bus: Emit PII_SCAN_COMPLETED event",
+    "implemented": true,
+    "prdRefs": [
+      "Event Bus Integration"
+    ]
+  },
+  {
+    "id": "F159",
+    "description": "Event Bus: Emit PII_HIGH_SEVERITY_FOUND event",
+    "implemented": true,
+    "prdRefs": [
+      "Event Bus Integration"
+    ]
+  },
+  {
+    "id": "F160",
+    "description": "Event Bus: Emit ASM_SCAN_STARTED event",
+    "implemented": true,
+    "prdRefs": [
+      "Event Bus Integration"
+    ]
+  },
+  {
+    "id": "F161",
+    "description": "Event Bus: Emit ASM_SCAN_COMPLETED event",
+    "implemented": true,
+    "prdRefs": [
+      "Event Bus Integration"
+    ]
+  },
+  {
+    "id": "F162",
+    "description": "Event Bus: Emit ASM_CRITICAL_CVE_FOUND event",
+    "implemented": true,
+    "prdRefs": [
+      "Event Bus Integration"
+    ]
+  },
+  {
+    "id": "F163",
+    "description": "Event Bus: Emit SCORE_UPDATED event",
+    "implemented": true,
+    "prdRefs": [
+      "Event Bus Integration"
+    ]
+  },
+  {
+    "id": "F164",
+    "description": "Event Bus: Emit SCORE_CRITICAL_THRESHOLD event",
+    "implemented": true,
+    "prdRefs": [
+      "Event Bus Integration"
+    ]
+  },
+  {
+    "id": "F165",
+    "description": "Notifications: Email subscriber for PII_HIGH_SEVERITY_FOUND",
+    "implemented": true,
+    "prdRefs": [
+      "Event Bus Integration",
+      "Notification Subscribers"
+    ]
+  },
+  {
+    "id": "F166",
+    "description": "Notifications: Email subscriber for SCORE_CRITICAL_THRESHOLD",
+    "implemented": true,
+    "prdRefs": [
+      "Event Bus Integration",
+      "Notification Subscribers"
+    ]
+  },
+  {
+    "id": "F167",
+    "description": "Notifications: Email template for guard-pii-alert",
+    "implemented": true,
+    "prdRefs": [
+      "Notification Subscribers"
+    ]
+  },
+  {
+    "id": "F168",
+    "description": "Notifications: Email template for guard-score-critical",
+    "implemented": true,
+    "prdRefs": [
+      "Notification Subscribers"
+    ]
+  },
+  {
+    "id": "F169",
+    "description": "Security Score: Implement base score calculation algorithm (100 - penalties)",
+    "implemented": true,
+    "prdRefs": [
+      "Security Score Algorithm",
+      "FR9.1"
+    ]
+  },
+  {
+    "id": "F170",
+    "description": "Security Score: Calculate PII penalty with severity weights (SSN=10, CC=10, etc.)",
+    "implemented": true,
+    "prdRefs": [
+      "Security Score Algorithm",
+      "PII Severity Weights"
+    ]
+  },
+  {
+    "id": "F171",
+    "description": "Security Score: Implement decay factor for multiple instances",
+    "implemented": true,
+    "prdRefs": [
+      "Security Score Algorithm"
+    ]
+  },
+  {
+    "id": "F172",
+    "description": "Security Score: Calculate ASM penalty with severity weights",
+    "implemented": true,
+    "prdRefs": [
+      "Security Score Algorithm",
+      "ASM Severity Weights"
+    ]
+  },
+  {
+    "id": "F173",
+    "description": "Security Score: Weight CVEs by CVSS severity (Critical=15, High=10, etc.)",
+    "implemented": true,
+    "prdRefs": [
+      "ASM Severity Weights",
+      "FR9.3"
+    ]
+  },
+  {
+    "id": "F174",
+    "description": "Security Score: Weight open ports by risk (RDP=12, Telnet=12, SSH=5, etc.)",
+    "implemented": true,
+    "prdRefs": [
+      "ASM Severity Weights",
+      "FR9.3"
+    ]
+  },
+  {
+    "id": "F175",
+    "description": "Security Score: Factor cloud storage exposure (Public S3/Azure/GCS=10 each)",
+    "implemented": true,
+    "prdRefs": [
+      "ASM Severity Weights"
+    ]
+  },
+  {
+    "id": "F176",
+    "description": "Security Score: Factor email security (Missing SPF=3, DMARC=3, DKIM=2)",
+    "implemented": true,
+    "prdRefs": [
+      "ASM Severity Weights"
+    ]
+  },
+  {
+    "id": "F177",
+    "description": "Security Score: Trigger recalculation on PII scan completion",
+    "implemented": true,
+    "prdRefs": [
+      "FR9.4"
+    ]
+  },
+  {
+    "id": "F178",
+    "description": "Security Score: Trigger recalculation on ASM scan completion",
+    "implemented": true,
+    "prdRefs": [
+      "FR9.4"
+    ]
+  },
+  {
+    "id": "F179",
+    "description": "Security Score: Store historical score on each recalculation",
+    "implemented": true,
+    "prdRefs": [
+      "FR9.5"
+    ]
+  },
+  {
+    "id": "F180",
+    "description": "Security Score: Calculate and store score delta from previous",
+    "implemented": true,
+    "prdRefs": [
+      "FR9.12"
+    ]
+  },
+  {
+    "id": "F181",
+    "description": "Security Score: Generate breakdown by 4 categories (pii, vulnerabilities, exposure, email_security)",
+    "implemented": true,
+    "prdRefs": [
+      "Score Breakdown Categories",
+      "FR9.6"
+    ]
+  },
+  {
+    "id": "F182",
+    "description": "Security Score: Identify and rank top N issues by score impact",
+    "implemented": true,
+    "prdRefs": [
+      "FR9.7"
+    ]
+  },
+  {
+    "id": "F183",
+    "description": "Security Score: Determine risk level from score ranges (0-39=Critical, etc.)",
+    "implemented": true,
+    "prdRefs": [
+      "Risk Level Thresholds",
+      "FR9.11"
+    ]
+  },
+  {
+    "id": "F184",
+    "description": "Security Score: Implement what-if simulation logic",
+    "implemented": true,
+    "prdRefs": [
+      "What-If Simulation",
+      "FR9.8"
+    ]
+  },
+  {
+    "id": "F185",
+    "description": "API: Get current score (GET /api/guard/scores/:companyId)",
+    "implemented": true,
+    "prdRefs": [
+      "API Endpoints"
+    ]
+  },
+  {
+    "id": "F186",
+    "description": "API: Get score breakdown (GET /api/guard/scores/:companyId/breakdown)",
+    "implemented": true,
+    "prdRefs": [
+      "API Endpoints",
+      "FR9.6"
+    ]
+  },
+  {
+    "id": "F187",
+    "description": "API: Get score history (GET /api/guard/scores/:companyId/history)",
+    "implemented": true,
+    "prdRefs": [
+      "API Endpoints",
+      "FR9.5"
+    ]
+  },
+  {
+    "id": "F188",
+    "description": "API: Get top issues (GET /api/guard/scores/:companyId/issues)",
+    "implemented": true,
+    "prdRefs": [
+      "API Endpoints",
+      "FR9.7"
+    ]
+  },
+  {
+    "id": "F189",
+    "description": "API: What-if simulation (POST /api/guard/scores/:companyId/what-if)",
+    "implemented": true,
+    "prdRefs": [
+      "API Endpoints",
+      "FR9.8"
+    ]
+  },
+  {
+    "id": "F190",
+    "description": "API: List all company scores (GET /api/guard/scores)",
+    "implemented": true,
+    "prdRefs": [
+      "API Endpoints",
+      "FR9.9"
+    ]
+  },
+  {
+    "id": "F191",
+    "description": "API: Force score recalculation (POST /api/guard/scores/:companyId/recalculate)",
+    "implemented": true,
+    "prdRefs": [
+      "API Endpoints"
+    ]
+  },
+  {
+    "id": "F192",
+    "description": "API: Generate report (POST /api/guard/reports)",
+    "implemented": true,
+    "prdRefs": [
+      "API Endpoints"
+    ]
+  },
+  {
+    "id": "F193",
+    "description": "API: List report jobs (GET /api/guard/reports)",
+    "implemented": true,
+    "prdRefs": [
+      "API Endpoints"
+    ]
+  },
+  {
+    "id": "F194",
+    "description": "API: Get report job status (GET /api/guard/reports/:id)",
+    "implemented": true,
+    "prdRefs": [
+      "API Endpoints"
+    ]
+  },
+  {
+    "id": "F195",
+    "description": "API: Download report (GET /api/guard/reports/:id/download)",
+    "implemented": true,
+    "prdRefs": [
+      "API Endpoints"
+    ]
+  },
+  {
+    "id": "F196",
+    "description": "Reporting: Generate PII report in Word format using docx library",
+    "implemented": true,
+    "prdRefs": [
+      "FR7.1"
+    ]
+  },
+  {
+    "id": "F197",
+    "description": "Reporting: Generate PII report in Excel format using xlsx library",
+    "implemented": true,
+    "prdRefs": [
+      "FR7.2"
+    ]
+  },
+  {
+    "id": "F198",
+    "description": "Reporting: Generate ASM report in Word format",
+    "implemented": true,
+    "prdRefs": [
+      "FR7.3"
+    ]
+  },
+  {
+    "id": "F199",
+    "description": "Reporting: Generate ASM report in Excel format",
+    "implemented": true,
+    "prdRefs": [
+      "FR7.3"
+    ]
+  },
+  {
+    "id": "F200",
+    "description": "Reporting: Generate Security Score report in Word format",
+    "implemented": true,
+    "prdRefs": [
+      "FR9.10"
+    ]
+  },
+  {
+    "id": "F201",
+    "description": "Reporting: Generate Security Score report in PDF format using Puppeteer",
+    "implemented": true,
+    "prdRefs": [
+      "FR9.10"
+    ]
+  },
+  {
+    "id": "F202",
+    "description": "Reporting: Filter reports by date range",
+    "implemented": true,
+    "prdRefs": [
+      "FR7.4"
+    ]
+  },
+  {
+    "id": "F203",
+    "description": "Reporting: Filter reports by company",
+    "implemented": true,
+    "prdRefs": [
+      "FR7.4"
+    ]
+  },
+  {
+    "id": "F204",
+    "description": "Reporting: Async report generation with PG Boss job",
+    "implemented": true,
+    "prdRefs": [
+      "FR7.5"
+    ]
+  },
+  {
+    "id": "F205",
+    "description": "Reporting: Upload generated report to S3",
+    "implemented": true,
+    "prdRefs": [
+      "FR7.5"
+    ]
+  },
+  {
+    "id": "F206",
+    "description": "Reporting: Generate signed URL for report download with expiration",
+    "implemented": true,
+    "prdRefs": [
+      "FR7.5"
+    ]
+  },
+  {
+    "id": "F207",
+    "description": "Access Control: Tenant isolation on all guard queries",
+    "implemented": true,
+    "prdRefs": [
+      "Multi-Tenancy Integration",
+      "FR8.1"
+    ]
+  },
+  {
+    "id": "F208",
+    "description": "Access Control: Company-level access filtering based on user permissions",
+    "implemented": true,
+    "prdRefs": [
+      "FR8.2"
+    ]
+  },
+  {
+    "id": "F209",
+    "description": "Data Retention: Configurable retention period setting",
+    "implemented": true,
+    "prdRefs": [
+      "NFR4"
+    ]
+  },
+  {
+    "id": "F210",
+    "description": "Data Retention: Automated cleanup of expired results via cron job",
+    "implemented": true,
+    "prdRefs": [
+      "NFR4"
+    ]
+  },
+  {
+    "id": "F211",
+    "description": "UI: Add Alga Guard section to navigation sidebar",
+    "implemented": true,
+    "prdRefs": [
+      "Navigation Structure"
+    ]
+  },
+  {
+    "id": "F212",
+    "description": "UI: Wrap navigation with FeatureFlagWrapper for enable_alga_guard",
+    "implemented": true,
+    "prdRefs": [
+      "Module Integration"
+    ]
+  },
+  {
+    "id": "F213",
+    "description": "UI: PII Scanner - Profiles list page",
+    "implemented": true,
+    "prdRefs": [
+      "Navigation Structure"
+    ]
+  },
+  {
+    "id": "F214",
+    "description": "UI: PII Scanner - Profile create/edit form with all sections",
+    "implemented": true,
+    "prdRefs": [
+      "Key UI Patterns"
+    ]
+  },
+  {
+    "id": "F215",
+    "description": "UI: PII Scanner - PII type selection checkbox grid",
+    "implemented": true,
+    "prdRefs": [
+      "Key UI Patterns"
+    ]
+  },
+  {
+    "id": "F216",
+    "description": "UI: PII Scanner - File extension selection (default + optional)",
+    "implemented": true,
+    "prdRefs": [
+      "Key UI Patterns"
+    ]
+  },
+  {
+    "id": "F217",
+    "description": "UI: PII Scanner - Target agent/company tree selector",
+    "implemented": true,
+    "prdRefs": [
+      "Key UI Patterns"
+    ]
+  },
+  {
+    "id": "F218",
+    "description": "UI: PII Scanner - Include/exclude path configuration",
+    "implemented": true,
+    "prdRefs": [
+      "Key UI Patterns"
+    ]
+  },
+  {
+    "id": "F219",
+    "description": "UI: PII Scanner - Scan Now button",
+    "implemented": true,
+    "prdRefs": [
+      "FR1.8"
+    ]
+  },
+  {
+    "id": "F220",
+    "description": "UI: PII Scanner - Jobs list page with status badges",
+    "implemented": true,
+    "prdRefs": [
+      "Key UI Patterns"
+    ]
+  },
+  {
+    "id": "F221",
+    "description": "UI: PII Scanner - Job progress indicator for running jobs",
+    "implemented": true,
+    "prdRefs": [
+      "Key UI Patterns"
+    ]
+  },
+  {
+    "id": "F222",
+    "description": "UI: PII Scanner - Results list with sortable/filterable table",
+    "implemented": true,
+    "prdRefs": [
+      "Key UI Patterns"
+    ]
+  },
+  {
+    "id": "F223",
+    "description": "UI: PII Scanner - Result detail side panel",
+    "implemented": true,
+    "prdRefs": [
+      "Key UI Patterns"
+    ]
+  },
+  {
+    "id": "F224",
+    "description": "UI: PII Scanner - Bulk selection for purge",
+    "implemented": true,
+    "prdRefs": [
+      "Key UI Patterns"
+    ]
+  },
+  {
+    "id": "F225",
+    "description": "UI: PII Scanner - Export results to CSV",
+    "implemented": true,
+    "prdRefs": [
+      "Key UI Patterns"
+    ]
+  },
+  {
+    "id": "F226",
+    "description": "UI: PII Scanner - Dashboard with stat cards",
+    "implemented": true,
+    "prdRefs": [
+      "Key UI Patterns",
+      "FR6"
+    ]
+  },
+  {
+    "id": "F227",
+    "description": "UI: PII Scanner - Dashboard pie chart (PII by type)",
+    "implemented": true,
+    "prdRefs": [
+      "Key UI Patterns"
+    ]
+  },
+  {
+    "id": "F228",
+    "description": "UI: PII Scanner - Dashboard bar chart (by company)",
+    "implemented": true,
+    "prdRefs": [
+      "Key UI Patterns"
+    ]
+  },
+  {
+    "id": "F229",
+    "description": "UI: PII Scanner - Severity color coding (SSN/CC=red, email=yellow)",
+    "implemented": true,
+    "prdRefs": [
+      "PII-Specific UI Notes"
+    ]
+  },
+  {
+    "id": "F230",
+    "description": "UI: PII Scanner - Reports page with generation form",
+    "implemented": true,
+    "prdRefs": [
+      "Navigation Structure"
+    ]
+  },
+  {
+    "id": "F231",
+    "description": "UI: ASM - Domains list page",
+    "implemented": true,
+    "prdRefs": [
+      "Navigation Structure"
+    ]
+  },
+  {
+    "id": "F232",
+    "description": "UI: ASM - Domain add/edit form",
+    "implemented": true,
+    "prdRefs": [
+      "Key UI Patterns"
+    ]
+  },
+  {
+    "id": "F233",
+    "description": "UI: ASM - Scan now / schedule later option",
+    "implemented": true,
+    "prdRefs": [
+      "FR3.2"
+    ]
+  },
+  {
+    "id": "F234",
+    "description": "UI: ASM - Domain results page with summary counts",
+    "implemented": true,
+    "prdRefs": [
+      "Navigation Structure"
+    ]
+  },
+  {
+    "id": "F235",
+    "description": "UI: ASM - Subdomains list view",
+    "implemented": true,
+    "prdRefs": [
+      "FR3.3"
+    ]
+  },
+  {
+    "id": "F236",
+    "description": "UI: ASM - IP addresses list with geolocation flags",
+    "implemented": true,
+    "prdRefs": [
+      "ASM-Specific UI Notes"
+    ]
+  },
+  {
+    "id": "F237",
+    "description": "UI: ASM - Open ports list with risk-colored status",
+    "implemented": true,
+    "prdRefs": [
+      "ASM-Specific UI Notes"
+    ]
+  },
+  {
+    "id": "F238",
+    "description": "UI: ASM - Cloud storage findings display",
+    "implemented": true,
+    "prdRefs": [
+      "FR3.7"
+    ]
+  },
+  {
+    "id": "F239",
+    "description": "UI: ASM - DNS records collapsible view",
+    "implemented": true,
+    "prdRefs": [
+      "ASM-Specific UI Notes"
+    ]
+  },
+  {
+    "id": "F240",
+    "description": "UI: ASM - HTTP headers collapsible view",
+    "implemented": true,
+    "prdRefs": [
+      "ASM-Specific UI Notes"
+    ]
+  },
+  {
+    "id": "F241",
+    "description": "UI: ASM - CVE list with severity badges (Critical/High/Medium/Low)",
+    "implemented": true,
+    "prdRefs": [
+      "ASM-Specific UI Notes"
+    ]
+  },
+  {
+    "id": "F242",
+    "description": "UI: ASM - CVE detail with CVSS and EPSS scores",
+    "implemented": true,
+    "prdRefs": [
+      "FR3.11"
+    ]
+  },
+  {
+    "id": "F243",
+    "description": "UI: ASM - Dashboard page",
+    "implemented": true,
+    "prdRefs": [
+      "Navigation Structure"
+    ]
+  },
+  {
+    "id": "F244",
+    "description": "UI: ASM - Scheduler page for recurring scans",
+    "implemented": true,
+    "prdRefs": [
+      "Navigation Structure"
+    ]
+  },
+  {
+    "id": "F245",
+    "description": "UI: ASM - Schedule create/edit form",
+    "implemented": true,
+    "prdRefs": [
+      "FR5"
+    ]
+  },
+  {
+    "id": "F246",
+    "description": "UI: ASM - Scanning pod IPs display",
+    "implemented": true,
+    "prdRefs": [
+      "FR4.4"
+    ]
+  },
+  {
+    "id": "F247",
+    "description": "UI: ASM - Reports page with generation form",
+    "implemented": true,
+    "prdRefs": [
+      "Navigation Structure"
+    ]
+  },
+  {
+    "id": "F248",
+    "description": "UI: Security Scores - Portfolio list page showing all companies",
+    "implemented": true,
+    "prdRefs": [
+      "Navigation Structure",
+      "FR9.9"
+    ]
+  },
+  {
+    "id": "F249",
+    "description": "UI: Security Scores - Score card with large number and colored background",
+    "implemented": true,
+    "prdRefs": [
+      "Security Score UI Notes"
+    ]
+  },
+  {
+    "id": "F250",
+    "description": "UI: Security Scores - Score gauge/speedometer visualization",
+    "implemented": true,
+    "prdRefs": [
+      "Security Score UI Notes"
+    ]
+  },
+  {
+    "id": "F251",
+    "description": "UI: Security Scores - Risk level badge (Critical/High/Moderate/Low)",
+    "implemented": true,
+    "prdRefs": [
+      "Security Score UI Notes",
+      "FR9.11"
+    ]
+  },
+  {
+    "id": "F252",
+    "description": "UI: Security Scores - Trend indicator arrow (improving/declining)",
+    "implemented": true,
+    "prdRefs": [
+      "Security Score UI Notes",
+      "FR9.12"
+    ]
+  },
+  {
+    "id": "F253",
+    "description": "UI: Security Scores - Breakdown chart (stacked bar or pie)",
+    "implemented": true,
+    "prdRefs": [
+      "Security Score UI Notes",
+      "FR9.6"
+    ]
+  },
+  {
+    "id": "F254",
+    "description": "UI: Security Scores - Top issues list with score impact",
+    "implemented": true,
+    "prdRefs": [
+      "Security Score UI Notes",
+      "FR9.7"
+    ]
+  },
+  {
+    "id": "F255",
+    "description": "UI: Security Scores - Historical trend line chart",
+    "implemented": true,
+    "prdRefs": [
+      "Security Score UI Notes",
+      "FR9.5"
+    ]
+  },
+  {
+    "id": "F256",
+    "description": "UI: Security Scores - What-if simulator interface",
+    "implemented": true,
+    "prdRefs": [
+      "Security Score UI Notes",
+      "FR9.8"
+    ]
+  },
+  {
+    "id": "F257",
+    "description": "UI: Security Scores - Client-facing mode toggle (simplified view)",
+    "implemented": true,
+    "prdRefs": [
+      "Security Score UI Notes"
+    ]
+  },
+  {
+    "id": "F258",
+    "description": "UI: Security Scores - Report generation form",
+    "implemented": true,
+    "prdRefs": [
+      "FR9.10"
+    ]
+  },
+  {
+    "id": "F259",
+    "description": "UI: Unified Alga Guard dashboard overview",
+    "implemented": true,
+    "prdRefs": [
+      "Navigation Structure"
+    ]
+  },
+  {
+    "id": "F260",
+    "description": "Endpoint Agent: Wasmtime engine configuration with pooling allocation (512MB/instance, 4 concurrent)",
+    "implemented": true,
+    "prdRefs": [
+      "Endpoint Agent Implementation"
+    ]
+  },
+  {
+    "id": "F261",
+    "description": "Endpoint Agent: Epoch interruption for execution time limits",
+    "implemented": true,
+    "prdRefs": [
+      "Endpoint Agent Implementation"
+    ]
+  },
+  {
+    "id": "F262",
+    "description": "WIT Interface: Define filesystem.wit package (alga:endpoint)",
+    "implemented": true,
+    "prdRefs": [
+      "Endpoint Agent Implementation",
+      "File System Capability Interface"
+    ]
+  },
+  {
+    "id": "F263",
+    "description": "WIT Interface: Implement read-file capability (path, max-bytes -> bytes)",
+    "implemented": true,
+    "prdRefs": [
+      "Endpoint Agent Implementation",
+      "File System Capability Interface"
+    ]
+  },
+  {
+    "id": "F264",
+    "description": "WIT Interface: Implement read-text capability with encoding detection",
+    "implemented": true,
+    "prdRefs": [
+      "Endpoint Agent Implementation",
+      "File System Capability Interface"
+    ]
+  },
+  {
+    "id": "F265",
+    "description": "WIT Interface: Implement get-metadata capability",
+    "implemented": true,
+    "prdRefs": [
+      "Endpoint Agent Implementation",
+      "File System Capability Interface"
+    ]
+  },
+  {
+    "id": "F266",
+    "description": "WIT Interface: Implement walk-directory capability with include/exclude patterns",
+    "implemented": true,
+    "prdRefs": [
+      "Endpoint Agent Implementation",
+      "File System Capability Interface"
+    ]
+  },
+  {
+    "id": "F267",
+    "description": "WIT Interface: Implement matches-glob capability",
+    "implemented": true,
+    "prdRefs": [
+      "Endpoint Agent Implementation",
+      "File System Capability Interface"
+    ]
+  },
+  {
+    "id": "F268",
+    "description": "WIT Interface: Define fs-error variant types (not-found, permission-denied, etc.)",
+    "implemented": true,
+    "prdRefs": [
+      "Endpoint Agent Implementation",
+      "File System Capability Interface"
+    ]
+  },
+  {
+    "id": "F269",
+    "description": "Platform: Implement normalize_path() for Windows (UNC paths, drive letters, backslashes)",
+    "implemented": true,
+    "prdRefs": [
+      "Endpoint Agent Implementation",
+      "Platform-Specific Code Splitting"
+    ]
+  },
+  {
+    "id": "F270",
+    "description": "Platform: Implement normalize_path() for Unix (forward slashes)",
+    "implemented": true,
+    "prdRefs": [
+      "Endpoint Agent Implementation",
+      "Platform-Specific Code Splitting"
+    ]
+  },
+  {
+    "id": "F271",
+    "description": "Platform: Implement expand_home() for tilde expansion",
+    "implemented": true,
+    "prdRefs": [
+      "Endpoint Agent Implementation",
+      "Platform-Specific Code Splitting"
+    ]
+  },
+  {
+    "id": "F272",
+    "description": "Platform: Implement default_scan_paths() - Windows (C:\\Users, C:\\ProgramData)",
+    "implemented": true,
+    "prdRefs": [
+      "Endpoint Agent Implementation",
+      "Platform-Specific Code Splitting"
+    ]
+  },
+  {
+    "id": "F273",
+    "description": "Platform: Implement default_scan_paths() - macOS (/Users, /Volumes)",
+    "implemented": true,
+    "prdRefs": [
+      "Endpoint Agent Implementation",
+      "Platform-Specific Code Splitting"
+    ]
+  },
+  {
+    "id": "F274",
+    "description": "Platform: Implement default_scan_paths() - Linux (/home, /root)",
+    "implemented": true,
+    "prdRefs": [
+      "Endpoint Agent Implementation",
+      "Platform-Specific Code Splitting"
+    ]
+  },
+  {
+    "id": "F275",
+    "description": "Platform: Implement should_skip_file() - Windows (hidden/system attrs, skip Windows dir)",
+    "implemented": true,
+    "prdRefs": [
+      "Endpoint Agent Implementation",
+      "Platform-Specific Code Splitting"
+    ]
+  },
+  {
+    "id": "F276",
+    "description": "Platform: Implement should_skip_file() - Unix (dotfiles, proc/sys/dev dirs)",
+    "implemented": true,
+    "prdRefs": [
+      "Endpoint Agent Implementation",
+      "Platform-Specific Code Splitting"
+    ]
+  },
+  {
+    "id": "F277",
+    "description": "Extension Cache: Implement get_cache_dir() for Windows (C:\\ProgramData\\AlgaAgent\\cache)",
+    "implemented": true,
+    "prdRefs": [
+      "Endpoint Agent Implementation",
+      "Agent Bundle Cache"
+    ]
+  },
+  {
+    "id": "F278",
+    "description": "Extension Cache: Implement get_cache_dir() for macOS (/Library/Application Support/AlgaAgent/cache)",
+    "implemented": true,
+    "prdRefs": [
+      "Endpoint Agent Implementation",
+      "Agent Bundle Cache"
+    ]
+  },
+  {
+    "id": "F279",
+    "description": "Extension Cache: Implement get_cache_dir() for Linux (/var/lib/alga-agent/cache)",
+    "implemented": true,
+    "prdRefs": [
+      "Endpoint Agent Implementation",
+      "Agent Bundle Cache"
+    ]
+  },
+  {
+    "id": "F280",
+    "description": "Extension Cache: Fetch bundle from object storage on cache miss",
+    "implemented": true,
+    "prdRefs": [
+      "Endpoint Agent Implementation",
+      "Extension Deployment"
+    ]
+  },
+  {
+    "id": "F281",
+    "description": "Extension Cache: Verify bundle signature and content hash",
+    "implemented": true,
+    "prdRefs": [
+      "Endpoint Agent Implementation",
+      "Extension Deployment"
+    ]
+  },
+  {
+    "id": "F282",
+    "description": "Extension Cache: Invalidate cache on version_id change",
+    "implemented": true,
+    "prdRefs": [
+      "Endpoint Agent Implementation",
+      "Extension Deployment"
+    ]
+  },
+  {
+    "id": "F283",
+    "description": "Agent Installation: Windows MSI installer (C:\\Program Files\\AlgaAgent)",
+    "implemented": false,
+    "prdRefs": [
+      "Endpoint Agent Implementation",
+      "Endpoint Agent Installation"
+    ]
+  },
+  {
+    "id": "F284",
+    "description": "Agent Installation: Windows Service registration (AlgaAgentService)",
+    "implemented": false,
+    "prdRefs": [
+      "Endpoint Agent Implementation",
+      "Endpoint Agent Installation"
+    ]
+  },
+  {
+    "id": "F285",
+    "description": "Agent Installation: macOS PKG installer (/Library/AlgaAgent)",
+    "implemented": false,
+    "prdRefs": [
+      "Endpoint Agent Implementation",
+      "Endpoint Agent Installation"
+    ]
+  },
+  {
+    "id": "F286",
+    "description": "Agent Installation: macOS LaunchDaemon (com.algapsa.agent)",
+    "implemented": false,
+    "prdRefs": [
+      "Endpoint Agent Implementation",
+      "Endpoint Agent Installation"
+    ]
+  },
+  {
+    "id": "F287",
+    "description": "Agent Installation: macOS code signing and notarization for Gatekeeper",
+    "implemented": false,
+    "prdRefs": [
+      "Endpoint Agent Implementation",
+      "Endpoint Agent Installation"
+    ]
+  },
+  {
+    "id": "F288",
+    "description": "Agent Installation: Linux DEB package (/opt/alga-agent)",
+    "implemented": false,
+    "prdRefs": [
+      "Endpoint Agent Implementation",
+      "Endpoint Agent Installation"
+    ]
+  },
+  {
+    "id": "F289",
+    "description": "Agent Installation: Linux RPM package",
+    "implemented": false,
+    "prdRefs": [
+      "Endpoint Agent Implementation",
+      "Endpoint Agent Installation"
+    ]
+  },
+  {
+    "id": "F290",
+    "description": "Agent Installation: Linux systemd service (alga-agent.service)",
+    "implemented": false,
+    "prdRefs": [
+      "Endpoint Agent Implementation",
+      "Endpoint Agent Installation"
+    ]
+  },
+  {
+    "id": "F291",
+    "description": "Agent Installation: Support both x86_64 and aarch64 architectures",
+    "implemented": false,
+    "prdRefs": [
+      "Endpoint Agent Implementation",
+      "Endpoint Agent Installation"
+    ]
+  },
+  {
+    "id": "F292",
+    "description": "Agent Registration: AgentRegistration struct (agent_id, hostname, os, arch, capabilities)",
+    "implemented": true,
+    "prdRefs": [
+      "Endpoint Agent Implementation",
+      "Agent Registration"
+    ]
+  },
+  {
+    "id": "F293",
+    "description": "Agent Registration: get_or_create_agent_id() persistence",
+    "implemented": true,
+    "prdRefs": [
+      "Endpoint Agent Implementation",
+      "Agent Registration"
+    ]
+  },
+  {
+    "id": "F294",
+    "description": "Agent Registration: POST /api/agents/register endpoint",
+    "implemented": true,
+    "prdRefs": [
+      "Endpoint Agent Implementation",
+      "Agent Registration"
+    ]
+  },
+  {
+    "id": "F295",
+    "description": "Agent Registration: Return AgentConfig on successful registration",
+    "implemented": true,
+    "prdRefs": [
+      "Endpoint Agent Implementation",
+      "Agent Registration"
+    ]
+  },
+  {
+    "id": "F296",
+    "description": "Security: Define PII_SCANNER_CAPS allowed capabilities (fs.read, fs.walk, fs.metadata, context.read, log.emit)",
+    "implemented": true,
+    "prdRefs": [
+      "Endpoint Agent Implementation",
+      "Security Considerations"
+    ]
+  },
+  {
+    "id": "F297",
+    "description": "Security: Deny fs.write capability to extensions",
+    "implemented": true,
+    "prdRefs": [
+      "Endpoint Agent Implementation",
+      "Security Considerations"
+    ]
+  },
+  {
+    "id": "F298",
+    "description": "Security: Deny fs.delete capability to extensions",
+    "implemented": true,
+    "prdRefs": [
+      "Endpoint Agent Implementation",
+      "Security Considerations"
+    ]
+  },
+  {
+    "id": "F299",
+    "description": "Security: Deny http.fetch capability to extensions (no network exfiltration)",
+    "implemented": true,
+    "prdRefs": [
+      "Endpoint Agent Implementation",
+      "Security Considerations"
+    ]
+  },
+  {
+    "id": "F300",
+    "description": "Security: Deny process.exec capability to extensions",
+    "implemented": true,
+    "prdRefs": [
+      "Endpoint Agent Implementation",
+      "Security Considerations"
+    ]
+  },
+  {
+    "id": "F301",
+    "description": "Security: Enforce memory limits (512 MB per instance)",
+    "implemented": true,
+    "prdRefs": [
+      "Endpoint Agent Implementation",
+      "Security Considerations"
+    ]
+  },
+  {
+    "id": "F302",
+    "description": "Database: Create endpoint_agents table for agent registration",
+    "implemented": true,
+    "prdRefs": [
+      "Endpoint Agent Implementation",
+      "Database Schema"
+    ]
+  },
+  {
+    "id": "F303",
+    "description": "Database: Create agent_extension_cache table for tracking cached bundles",
+    "implemented": true,
+    "prdRefs": [
+      "Endpoint Agent Implementation",
+      "Database Schema"
+    ]
+  }
+]

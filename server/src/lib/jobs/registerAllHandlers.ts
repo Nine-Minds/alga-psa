@@ -42,6 +42,31 @@ import {
   extensionScheduledInvocationHandler,
   ExtensionScheduledInvocationJobData,
 } from './handlers/extensionScheduledInvocationHandler';
+import {
+  guardPiiScanHandler,
+  GuardPiiScanJobData,
+} from './handlers/guardPiiScanHandler';
+import {
+  guardAsmScanHandler,
+  GuardAsmScanJobData,
+} from './handlers/guardAsmScanHandler';
+import {
+  guardScoreRecalcHandler,
+  GuardScoreRecalcJobData,
+} from './handlers/guardScoreRecalcHandler';
+import {
+  guardReportGenerateHandler,
+  GuardReportGenerateJobData,
+} from './handlers/guardReportGenerateHandler';
+import { guardScheduleProcessHandler } from './handlers/guardScheduleProcessHandler';
+import {
+  guardCveSyncHandler,
+  GuardCveSyncJobData,
+} from './handlers/guardCveSyncHandler';
+import {
+  guardCleanupExpiredHandler,
+  GuardCleanupExpiredJobData,
+} from './handlers/guardCleanupExpiredHandler';
 
 /**
  * Options for registering handlers
@@ -296,6 +321,97 @@ export async function registerAllJobHandlers(
       },
       registerOpts
     );
+
+    // Guard PII scan handler (EE only)
+    JobHandlerRegistry.register<GuardPiiScanJobData & BaseJobData>(
+      {
+        name: 'guard:pii:scan',
+        handler: async (jobId, data) => {
+          await guardPiiScanHandler(jobId, data as GuardPiiScanJobData);
+        },
+        retry: { maxAttempts: 3 },
+        timeoutMs: 600000, // 10 minutes max (extension has its own timeout)
+      },
+      registerOpts
+    );
+
+    // Guard ASM scan handler (EE only)
+    JobHandlerRegistry.register<GuardAsmScanJobData & BaseJobData>(
+      {
+        name: 'guard:asm:scan',
+        handler: async (jobId, data) => {
+          await guardAsmScanHandler(jobId, data as GuardAsmScanJobData);
+        },
+        retry: { maxAttempts: 3 },
+        timeoutMs: 1800000, // 30 minutes max for ASM scans
+      },
+      registerOpts
+    );
+
+    // Guard score recalculation handler (EE only)
+    JobHandlerRegistry.register<GuardScoreRecalcJobData & BaseJobData>(
+      {
+        name: 'guard:score:recalc',
+        handler: async (jobId, data) => {
+          await guardScoreRecalcHandler(jobId, data as GuardScoreRecalcJobData);
+        },
+        retry: { maxAttempts: 2 },
+        timeoutMs: 60000, // 1 minute max
+      },
+      registerOpts
+    );
+
+    // Guard report generation handler (EE only)
+    JobHandlerRegistry.register<GuardReportGenerateJobData & BaseJobData>(
+      {
+        name: 'guard:report:generate',
+        handler: async (jobId, data) => {
+          await guardReportGenerateHandler(jobId, data as GuardReportGenerateJobData);
+        },
+        retry: { maxAttempts: 2 },
+        timeoutMs: 300000, // 5 minutes max
+      },
+      registerOpts
+    );
+
+    // Guard schedule processor (EE only - runs every minute)
+    JobHandlerRegistry.register<BaseJobData>(
+      {
+        name: 'guard:schedules:process',
+        handler: async () => {
+          await guardScheduleProcessHandler();
+        },
+        retry: { maxAttempts: 1 },
+        timeoutMs: 60000, // 1 minute max
+      },
+      registerOpts
+    );
+
+    // Guard CVE sync handler (EE only - runs daily at 3 AM)
+    JobHandlerRegistry.register<GuardCveSyncJobData & BaseJobData>(
+      {
+        name: 'guard:cve:sync',
+        handler: async (jobId, data) => {
+          await guardCveSyncHandler(jobId, data as GuardCveSyncJobData);
+        },
+        retry: { maxAttempts: 2 },
+        timeoutMs: 1800000, // 30 minutes max for full CVE sync
+      },
+      registerOpts
+    );
+
+    // Guard cleanup expired handler (EE only - runs weekly)
+    JobHandlerRegistry.register<GuardCleanupExpiredJobData & BaseJobData>(
+      {
+        name: 'guard:cleanup:expired',
+        handler: async (jobId, data) => {
+          await guardCleanupExpiredHandler(jobId, data as GuardCleanupExpiredJobData);
+        },
+        retry: { maxAttempts: 1 },
+        timeoutMs: 600000, // 10 minutes max
+      },
+      registerOpts
+    );
   }
 
   // Mark registry as initialized
@@ -331,6 +447,18 @@ export function getAvailableJobHandlers(): string[] {
     'verify-google-calendar-pubsub',
     'renew-google-gmail-watch',
     // Enterprise-only
-    ...(process.env.EDITION === 'enterprise' ? ['cleanup-ai-session-keys'] : []),
+    ...(process.env.EDITION === 'enterprise'
+      ? [
+          'cleanup-ai-session-keys',
+          'extension-scheduled-invocation',
+          'guard:pii:scan',
+          'guard:asm:scan',
+          'guard:score:recalc',
+          'guard:report:generate',
+          'guard:schedules:process',
+          'guard:cve:sync',
+          'guard:cleanup:expired',
+        ]
+      : []),
   ];
 }

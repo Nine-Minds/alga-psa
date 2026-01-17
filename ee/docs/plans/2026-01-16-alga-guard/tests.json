@@ -1,0 +1,2414 @@
+[
+  {
+    "id": "T001",
+    "description": "DB: guard_pii_profiles table exists with tenant_id in primary key",
+    "implemented": false,
+    "featureIds": ["F001"]
+  },
+  {
+    "id": "T002",
+    "description": "DB: guard_pii_profiles enforces tenant_id foreign key to tenants table",
+    "implemented": false,
+    "featureIds": ["F001"]
+  },
+  {
+    "id": "T003",
+    "description": "DB: guard_pii_jobs table exists with guard_job_status enum",
+    "implemented": false,
+    "featureIds": ["F002", "F012"]
+  },
+  {
+    "id": "T004",
+    "description": "DB: guard_pii_results table has no column for actual PII values (only metadata)",
+    "implemented": false,
+    "featureIds": ["F003"]
+  },
+  {
+    "id": "T005",
+    "description": "DB: guard_asm_domains table exists with correct columns",
+    "implemented": false,
+    "featureIds": ["F004"]
+  },
+  {
+    "id": "T006",
+    "description": "DB: guard_asm_jobs table exists with status tracking",
+    "implemented": false,
+    "featureIds": ["F005"]
+  },
+  {
+    "id": "T007",
+    "description": "DB: guard_asm_results JSONB data column accepts varied result types",
+    "implemented": false,
+    "featureIds": ["F006"]
+  },
+  {
+    "id": "T008",
+    "description": "DB: guard_schedules table supports both pii and asm schedule types",
+    "implemented": false,
+    "featureIds": ["F007"]
+  },
+  {
+    "id": "T009",
+    "description": "DB: guard_security_scores table exists with score and breakdown columns",
+    "implemented": false,
+    "featureIds": ["F008"]
+  },
+  {
+    "id": "T010",
+    "description": "DB: guard_security_score_history table exists for trend tracking",
+    "implemented": false,
+    "featureIds": ["F009"]
+  },
+  {
+    "id": "T011",
+    "description": "DB: guard_report_jobs table exists with status and download_url",
+    "implemented": false,
+    "featureIds": ["F010"]
+  },
+  {
+    "id": "T012",
+    "description": "DB: guard_audit_log table exists for compliance tracking",
+    "implemented": false,
+    "featureIds": ["F011"]
+  },
+  {
+    "id": "T013",
+    "description": "DB: All PostgreSQL ENUM types created (guard_pii_type, guard_job_status, etc.)",
+    "implemented": false,
+    "featureIds": ["F012"]
+  },
+  {
+    "id": "T014",
+    "description": "DB: All tables have tenant_id indexes for query performance",
+    "implemented": false,
+    "featureIds": ["F013"]
+  },
+  {
+    "id": "T015",
+    "description": "Feature Flags: enable_alga_guard flag added to DEFAULT_BOOLEAN_FLAGS",
+    "implemented": false,
+    "featureIds": ["F014"]
+  },
+  {
+    "id": "T016",
+    "description": "Feature Flags: Module hides when enable_alga_guard is false",
+    "implemented": false,
+    "featureIds": ["F014", "F212"]
+  },
+  {
+    "id": "T017",
+    "description": "Feature Flags: enable_alga_guard_pii sub-module flag controls PII features",
+    "implemented": false,
+    "featureIds": ["F015"]
+  },
+  {
+    "id": "T018",
+    "description": "Feature Flags: enable_alga_guard_asm sub-module flag controls ASM features",
+    "implemented": false,
+    "featureIds": ["F016"]
+  },
+  {
+    "id": "T019",
+    "description": "Feature Flags: enable_alga_guard_score sub-module flag controls score features",
+    "implemented": false,
+    "featureIds": ["F017"]
+  },
+  {
+    "id": "T020",
+    "description": "RBAC: GUARD_PERMISSIONS constant contains all guard:* permissions",
+    "implemented": false,
+    "featureIds": ["F018"]
+  },
+  {
+    "id": "T021",
+    "description": "RBAC: tenant_admin role has full guard permissions",
+    "implemented": false,
+    "featureIds": ["F019"]
+  },
+  {
+    "id": "T022",
+    "description": "RBAC: msp_viewer role has guard:*:read permissions only",
+    "implemented": false,
+    "featureIds": ["F019"]
+  },
+  {
+    "id": "T023",
+    "description": "RBAC: guard:pii:* permission middleware enforces access",
+    "implemented": false,
+    "featureIds": ["F020"]
+  },
+  {
+    "id": "T024",
+    "description": "RBAC: guard:asm:* permission middleware enforces access",
+    "implemented": false,
+    "featureIds": ["F021"]
+  },
+  {
+    "id": "T025",
+    "description": "RBAC: guard:score:* permission middleware enforces access",
+    "implemented": false,
+    "featureIds": ["F022"]
+  },
+  {
+    "id": "T026",
+    "description": "RBAC: guard:schedules:manage permission controls schedule CRUD",
+    "implemented": false,
+    "featureIds": ["F023"]
+  },
+  {
+    "id": "T027",
+    "description": "API: POST /api/guard/pii/profiles creates profile with valid data",
+    "implemented": false,
+    "featureIds": ["F024"]
+  },
+  {
+    "id": "T028",
+    "description": "API: POST /api/guard/pii/profiles rejects request without name",
+    "implemented": false,
+    "featureIds": ["F024"]
+  },
+  {
+    "id": "T029",
+    "description": "API: POST /api/guard/pii/profiles rejects request from unauthorized tenant",
+    "implemented": false,
+    "featureIds": ["F024", "F207"]
+  },
+  {
+    "id": "T030",
+    "description": "API: GET /api/guard/pii/profiles returns paginated list",
+    "implemented": false,
+    "featureIds": ["F025"]
+  },
+  {
+    "id": "T031",
+    "description": "API: GET /api/guard/pii/profiles only returns current tenant's profiles",
+    "implemented": false,
+    "featureIds": ["F025", "F207"]
+  },
+  {
+    "id": "T032",
+    "description": "API: GET /api/guard/pii/profiles/:id returns single profile",
+    "implemented": false,
+    "featureIds": ["F026"]
+  },
+  {
+    "id": "T033",
+    "description": "API: PUT /api/guard/pii/profiles/:id updates profile",
+    "implemented": false,
+    "featureIds": ["F027"]
+  },
+  {
+    "id": "T034",
+    "description": "API: PUT /api/guard/pii/profiles/:id rejects update to other tenant's profile",
+    "implemented": false,
+    "featureIds": ["F027", "F207"]
+  },
+  {
+    "id": "T035",
+    "description": "API: DELETE /api/guard/pii/profiles/:id removes profile",
+    "implemented": false,
+    "featureIds": ["F028"]
+  },
+  {
+    "id": "T036",
+    "description": "API: Profile validation rejects empty PII type selection",
+    "implemented": false,
+    "featureIds": ["F029"]
+  },
+  {
+    "id": "T037",
+    "description": "API: Profile validation accepts valid PII type array",
+    "implemented": false,
+    "featureIds": ["F029"]
+  },
+  {
+    "id": "T038",
+    "description": "API: Profile validation rejects invalid file extension",
+    "implemented": false,
+    "featureIds": ["F030"]
+  },
+  {
+    "id": "T039",
+    "description": "API: Profile validation accepts default extensions when none specified",
+    "implemented": false,
+    "featureIds": ["F030"]
+  },
+  {
+    "id": "T040",
+    "description": "API: Profile validation accepts valid agent/company targeting",
+    "implemented": false,
+    "featureIds": ["F031"]
+  },
+  {
+    "id": "T041",
+    "description": "API: Profile validation rejects targeting agents outside user's access",
+    "implemented": false,
+    "featureIds": ["F031", "F208"]
+  },
+  {
+    "id": "T042",
+    "description": "API: Profile validation accepts wildcard in include paths",
+    "implemented": false,
+    "featureIds": ["F032"]
+  },
+  {
+    "id": "T043",
+    "description": "API: Profile validation rejects invalid path syntax",
+    "implemented": false,
+    "featureIds": ["F032"]
+  },
+  {
+    "id": "T044",
+    "description": "API: POST /api/guard/pii/profiles/:id/scan triggers scan and returns job ID",
+    "implemented": false,
+    "featureIds": ["F033"]
+  },
+  {
+    "id": "T045",
+    "description": "API: Scan Now creates job with queued status",
+    "implemented": false,
+    "featureIds": ["F033"]
+  },
+  {
+    "id": "T046",
+    "description": "API: GET /api/guard/pii/jobs returns jobs list with status filter",
+    "implemented": false,
+    "featureIds": ["F034"]
+  },
+  {
+    "id": "T047",
+    "description": "API: GET /api/guard/pii/jobs/:id returns job details with progress",
+    "implemented": false,
+    "featureIds": ["F035"]
+  },
+  {
+    "id": "T048",
+    "description": "API: GET /api/guard/pii/jobs/:id/logs returns downloadable log file",
+    "implemented": false,
+    "featureIds": ["F036"]
+  },
+  {
+    "id": "T049",
+    "description": "API: GET /api/guard/pii/results returns paginated results",
+    "implemented": false,
+    "featureIds": ["F037"]
+  },
+  {
+    "id": "T050",
+    "description": "API: GET /api/guard/pii/results filters by profile_id",
+    "implemented": false,
+    "featureIds": ["F037"]
+  },
+  {
+    "id": "T051",
+    "description": "API: GET /api/guard/pii/results filters by company_id",
+    "implemented": false,
+    "featureIds": ["F037"]
+  },
+  {
+    "id": "T052",
+    "description": "API: GET /api/guard/pii/results filters by pii_type",
+    "implemented": false,
+    "featureIds": ["F037"]
+  },
+  {
+    "id": "T053",
+    "description": "API: GET /api/guard/pii/results/:id returns file path and line numbers",
+    "implemented": false,
+    "featureIds": ["F038"]
+  },
+  {
+    "id": "T054",
+    "description": "API: GET /api/guard/pii/results/:id does NOT return actual PII value",
+    "implemented": false,
+    "featureIds": ["F038", "F003"]
+  },
+  {
+    "id": "T055",
+    "description": "API: DELETE /api/guard/pii/results/:id purges single result",
+    "implemented": false,
+    "featureIds": ["F039"]
+  },
+  {
+    "id": "T056",
+    "description": "API: POST /api/guard/pii/results/purge with IDs array purges multiple",
+    "implemented": false,
+    "featureIds": ["F040"]
+  },
+  {
+    "id": "T057",
+    "description": "API: DELETE /api/guard/pii/results requires admin permission",
+    "implemented": false,
+    "featureIds": ["F041"]
+  },
+  {
+    "id": "T058",
+    "description": "API: DELETE /api/guard/pii/results rejected for non-admin",
+    "implemented": false,
+    "featureIds": ["F041"]
+  },
+  {
+    "id": "T059",
+    "description": "API: GET /api/guard/pii/dashboard returns counts by type",
+    "implemented": false,
+    "featureIds": ["F042"]
+  },
+  {
+    "id": "T060",
+    "description": "PII Detection: SSN pattern matches XXX-XX-XXXX format",
+    "implemented": true,
+    "featureIds": ["F043"]
+  },
+  {
+    "id": "T061",
+    "description": "PII Detection: SSN pattern matches XXXXXXXXX format",
+    "implemented": true,
+    "featureIds": ["F043"]
+  },
+  {
+    "id": "T062",
+    "description": "PII Detection: SSN pattern rejects invalid ranges (000, 666, 900-999)",
+    "implemented": true,
+    "featureIds": ["F043"]
+  },
+  {
+    "id": "T063",
+    "description": "PII Detection: Visa card pattern matches 4XXX-XXXX-XXXX-XXXX",
+    "implemented": true,
+    "featureIds": ["F044"]
+  },
+  {
+    "id": "T064",
+    "description": "PII Detection: Mastercard pattern matches 51-55XX-XXXX-XXXX-XXXX",
+    "implemented": true,
+    "featureIds": ["F045"]
+  },
+  {
+    "id": "T065",
+    "description": "PII Detection: Amex pattern matches 34/37XX-XXXXXX-XXXXX",
+    "implemented": true,
+    "featureIds": ["F046"]
+  },
+  {
+    "id": "T066",
+    "description": "PII Detection: Discover pattern matches 6011/65XX-XXXX-XXXX-XXXX",
+    "implemented": true,
+    "featureIds": ["F047"]
+  },
+  {
+    "id": "T067",
+    "description": "PII Detection: Luhn algorithm passes valid card numbers",
+    "implemented": true,
+    "featureIds": ["F048"]
+  },
+  {
+    "id": "T068",
+    "description": "PII Detection: Luhn algorithm rejects invalid checksums",
+    "implemented": true,
+    "featureIds": ["F048"]
+  },
+  {
+    "id": "T069",
+    "description": "PII Detection: Bank account pattern matches routing + account with context",
+    "implemented": true,
+    "featureIds": ["F049"]
+  },
+  {
+    "id": "T070",
+    "description": "PII Detection: DOB pattern matches MM/DD/YYYY format",
+    "implemented": true,
+    "featureIds": ["F050"]
+  },
+  {
+    "id": "T071",
+    "description": "PII Detection: DOB pattern matches YYYY-MM-DD ISO format",
+    "implemented": true,
+    "featureIds": ["F050"]
+  },
+  {
+    "id": "T072",
+    "description": "PII Detection: Driver's license matches CA format (1 letter + 7 digits)",
+    "implemented": true,
+    "featureIds": ["F051"]
+  },
+  {
+    "id": "T073",
+    "description": "PII Detection: Driver's license matches NY format (9 digits)",
+    "implemented": true,
+    "featureIds": ["F052"]
+  },
+  {
+    "id": "T074",
+    "description": "PII Detection: Driver's license matches TX format (7-8 digits)",
+    "implemented": true,
+    "featureIds": ["F053"]
+  },
+  {
+    "id": "T075",
+    "description": "PII Detection: Passport pattern matches with context keywords",
+    "implemented": true,
+    "featureIds": ["F055"]
+  },
+  {
+    "id": "T076",
+    "description": "PII Detection: Email pattern matches standard format",
+    "implemented": true,
+    "featureIds": ["F056"]
+  },
+  {
+    "id": "T077",
+    "description": "PII Detection: Email pattern handles subdomains",
+    "implemented": true,
+    "featureIds": ["F056"]
+  },
+  {
+    "id": "T078",
+    "description": "PII Detection: US Phone pattern matches (XXX) XXX-XXXX",
+    "implemented": true,
+    "featureIds": ["F057"]
+  },
+  {
+    "id": "T079",
+    "description": "PII Detection: International phone matches E.164 format",
+    "implemented": true,
+    "featureIds": ["F058"]
+  },
+  {
+    "id": "T080",
+    "description": "PII Detection: IPv4 pattern matches valid addresses",
+    "implemented": true,
+    "featureIds": ["F059"]
+  },
+  {
+    "id": "T081",
+    "description": "PII Detection: IPv4 pattern rejects invalid octets (>255)",
+    "implemented": true,
+    "featureIds": ["F059"]
+  },
+  {
+    "id": "T082",
+    "description": "PII Detection: IPv6 pattern matches full format",
+    "implemented": true,
+    "featureIds": ["F060"]
+  },
+  {
+    "id": "T083",
+    "description": "PII Detection: MAC address pattern matches colon format",
+    "implemented": true,
+    "featureIds": ["F061"]
+  },
+  {
+    "id": "T084",
+    "description": "PII Detection: MAC address pattern matches hyphen format",
+    "implemented": true,
+    "featureIds": ["F061"]
+  },
+  {
+    "id": "T085",
+    "description": "PII Detection: spaCy NER model detects person names in context",
+    "implemented": false,
+    "featureIds": ["F062"]
+  },
+  {
+    "id": "T086",
+    "description": "PII Detection: NER model does not flag common words as names",
+    "implemented": false,
+    "featureIds": ["F062"]
+  },
+  {
+    "id": "T087",
+    "description": "PII Detection: spaCy NER model detects street addresses",
+    "implemented": false,
+    "featureIds": ["F063"]
+  },
+  {
+    "id": "T088",
+    "description": "File Processing: Extracts text from TXT files",
+    "implemented": true,
+    "featureIds": ["F064"]
+  },
+  {
+    "id": "T089",
+    "description": "File Processing: Extracts text from CSV files",
+    "implemented": true,
+    "featureIds": ["F064"]
+  },
+  {
+    "id": "T090",
+    "description": "File Processing: Extracts text from JSON files",
+    "implemented": true,
+    "featureIds": ["F064"]
+  },
+  {
+    "id": "T091",
+    "description": "File Processing: Extracts text from simple PDF",
+    "implemented": true,
+    "featureIds": ["F065"]
+  },
+  {
+    "id": "T092",
+    "description": "File Processing: Extracts text from multi-page PDF with page tracking",
+    "implemented": true,
+    "featureIds": ["F065", "F072"]
+  },
+  {
+    "id": "T093",
+    "description": "File Processing: Handles password-protected PDF gracefully",
+    "implemented": true,
+    "featureIds": ["F065"]
+  },
+  {
+    "id": "T094",
+    "description": "File Processing: Extracts text from DOC file using antiword",
+    "implemented": true,
+    "featureIds": ["F066"]
+  },
+  {
+    "id": "T095",
+    "description": "File Processing: Extracts text from DOCX file",
+    "implemented": true,
+    "featureIds": ["F067"]
+  },
+  {
+    "id": "T096",
+    "description": "File Processing: Extracts text from DOCX with tables",
+    "implemented": true,
+    "featureIds": ["F067"]
+  },
+  {
+    "id": "T097",
+    "description": "File Processing: Extracts text from XLS file",
+    "implemented": true,
+    "featureIds": ["F068"]
+  },
+  {
+    "id": "T098",
+    "description": "File Processing: Extracts text from XLSX file",
+    "implemented": true,
+    "featureIds": ["F069"]
+  },
+  {
+    "id": "T099",
+    "description": "File Processing: Extracts text from multi-sheet Excel",
+    "implemented": true,
+    "featureIds": ["F069"]
+  },
+  {
+    "id": "T100",
+    "description": "File Processing: Scans files within ZIP archive",
+    "implemented": true,
+    "featureIds": ["F070"]
+  },
+  {
+    "id": "T101",
+    "description": "File Processing: Handles nested ZIP archives up to 3 levels",
+    "implemented": true,
+    "featureIds": ["F070"]
+  },
+  {
+    "id": "T102",
+    "description": "File Processing: Reports correct line numbers for text matches",
+    "implemented": true,
+    "featureIds": ["F071"]
+  },
+  {
+    "id": "T103",
+    "description": "File Processing: Reports correct page numbers for PDF matches",
+    "implemented": true,
+    "featureIds": ["F072"]
+  },
+  {
+    "id": "T104",
+    "description": "File Processing: Detects and handles UTF-8 encoding",
+    "implemented": true,
+    "featureIds": ["F073"]
+  },
+  {
+    "id": "T105",
+    "description": "File Processing: Detects and handles UTF-16 encoding",
+    "implemented": true,
+    "featureIds": ["F073"]
+  },
+  {
+    "id": "T106",
+    "description": "File Processing: Skips binary files without error",
+    "implemented": true,
+    "featureIds": ["F074"]
+  },
+  {
+    "id": "T107",
+    "description": "File Processing: Skips files exceeding 50MB size limit",
+    "implemented": true,
+    "featureIds": ["F075"]
+  },
+  {
+    "id": "T108",
+    "description": "File Processing: Respects 100,000 max files per scan limit",
+    "implemented": true,
+    "featureIds": ["F076"]
+  },
+  {
+    "id": "T109",
+    "description": "Extension Runner: ExtensionExecuteRequest contains context with tenant_id and extension_id",
+    "implemented": true,
+    "featureIds": ["F077"]
+  },
+  {
+    "id": "T110",
+    "description": "Extension Runner: ExtensionExecuteResponse returns status code and body_b64",
+    "implemented": true,
+    "featureIds": ["F078"]
+  },
+  {
+    "id": "T111",
+    "description": "Extension Runner: PiiScanRequest body_b64 decodes to valid JSON with profile",
+    "implemented": true,
+    "featureIds": ["F079"]
+  },
+  {
+    "id": "T112",
+    "description": "Extension Runner: PiiScanResponse body_b64 contains results without actual PII values",
+    "implemented": true,
+    "featureIds": ["F080"]
+  },
+  {
+    "id": "T113",
+    "description": "Extension Runner: Extension registered in tenant_extension_install table",
+    "implemented": false,
+    "featureIds": ["F081"]
+  },
+  {
+    "id": "T114",
+    "description": "Extension Runner: executeExtension() dispatches HTTP POST to runner /v1/execute",
+    "implemented": true,
+    "featureIds": ["F082"]
+  },
+  {
+    "id": "T115",
+    "description": "Extension Runner: Response body_b64 parsed and results persisted to guard_pii_results",
+    "implemented": true,
+    "featureIds": ["F083"]
+  },
+  {
+    "id": "T116",
+    "description": "Extension Runner: guard_pii_jobs status updates to completed on successful response",
+    "implemented": true,
+    "featureIds": ["F084"]
+  },
+  {
+    "id": "T117",
+    "description": "Extension Runner: AGENT_OFFLINE error triggers PG Boss retry",
+    "implemented": true,
+    "featureIds": ["F085"]
+  },
+  {
+    "id": "T118",
+    "description": "Extension Runner: TIMEOUT error marks job as partial completion",
+    "implemented": true,
+    "featureIds": ["F086"]
+  },
+  {
+    "id": "T119",
+    "description": "WASM Extension: File walker respects include_paths from profile",
+    "implemented": false,
+    "featureIds": ["F087"]
+  },
+  {
+    "id": "T120",
+    "description": "WASM Extension: File walker respects exclude_paths from profile",
+    "implemented": false,
+    "featureIds": ["F087"]
+  },
+  {
+    "id": "T121",
+    "description": "WASM Extension: Walker filters by configured file_extensions",
+    "implemented": false,
+    "featureIds": ["F088"]
+  },
+  {
+    "id": "T122",
+    "description": "WASM Extension: Wildcard C:\\Users\\* matches all user directories",
+    "implemented": false,
+    "featureIds": ["F089"]
+  },
+  {
+    "id": "T123",
+    "description": "WASM Extension: All results returned in single PiiScanResponse",
+    "implemented": false,
+    "featureIds": ["F090"]
+  },
+  {
+    "id": "T124",
+    "description": "API: POST /api/guard/asm/domains creates domain entry",
+    "implemented": true,
+    "featureIds": ["F091"]
+  },
+  {
+    "id": "T125",
+    "description": "API: POST /api/guard/asm/domains rejects invalid domain format",
+    "implemented": true,
+    "featureIds": ["F091", "F096"]
+  },
+  {
+    "id": "T126",
+    "description": "API: GET /api/guard/asm/domains returns paginated list",
+    "implemented": true,
+    "featureIds": ["F092"]
+  },
+  {
+    "id": "T127",
+    "description": "API: GET /api/guard/asm/domains/:id returns single domain",
+    "implemented": true,
+    "featureIds": ["F093"]
+  },
+  {
+    "id": "T128",
+    "description": "API: PUT /api/guard/asm/domains/:id updates domain config",
+    "implemented": true,
+    "featureIds": ["F094"]
+  },
+  {
+    "id": "T129",
+    "description": "API: DELETE /api/guard/asm/domains/:id removes domain",
+    "implemented": true,
+    "featureIds": ["F095"]
+  },
+  {
+    "id": "T130",
+    "description": "API: Domain validation rejects IP address as domain",
+    "implemented": true,
+    "featureIds": ["F096"]
+  },
+  {
+    "id": "T131",
+    "description": "API: POST /api/guard/asm/domains/:id/scan triggers ASM scan",
+    "implemented": true,
+    "featureIds": ["F097"]
+  },
+  {
+    "id": "T132",
+    "description": "API: GET /api/guard/asm/jobs returns jobs with status filter",
+    "implemented": true,
+    "featureIds": ["F098"]
+  },
+  {
+    "id": "T133",
+    "description": "API: GET /api/guard/asm/jobs/:id returns job details",
+    "implemented": true,
+    "featureIds": ["F099"]
+  },
+  {
+    "id": "T134",
+    "description": "API: GET /api/guard/asm/domains/:id/subdomains returns discovered subdomains",
+    "implemented": false,
+    "featureIds": ["F100"]
+  },
+  {
+    "id": "T135",
+    "description": "API: GET /api/guard/asm/domains/:id/ips returns discovered IPs with geo",
+    "implemented": false,
+    "featureIds": ["F101"]
+  },
+  {
+    "id": "T136",
+    "description": "API: GET /api/guard/asm/domains/:id/ports returns open ports",
+    "implemented": false,
+    "featureIds": ["F102"]
+  },
+  {
+    "id": "T137",
+    "description": "API: GET /api/guard/asm/domains/:id/cves returns vulnerability list",
+    "implemented": false,
+    "featureIds": ["F103"]
+  },
+  {
+    "id": "T138",
+    "description": "API: GET /api/guard/asm/domains/:id/dns returns DNS records",
+    "implemented": false,
+    "featureIds": ["F104"]
+  },
+  {
+    "id": "T139",
+    "description": "API: GET /api/guard/asm/domains/:id/headers returns HTTP headers",
+    "implemented": false,
+    "featureIds": ["F105"]
+  },
+  {
+    "id": "T140",
+    "description": "API: GET /api/guard/asm/domains/:id/cloud-storage returns S3/Azure/GCS findings",
+    "implemented": false,
+    "featureIds": ["F106"]
+  },
+  {
+    "id": "T141",
+    "description": "API: GET /api/guard/asm/scanner-ips returns list of pod IPs",
+    "implemented": true,
+    "featureIds": ["F107"]
+  },
+  {
+    "id": "T142",
+    "description": "API: GET /api/guard/asm/dashboard returns summary stats",
+    "implemented": true,
+    "featureIds": ["F108"]
+  },
+  {
+    "id": "T143",
+    "description": "ASM Scanner: Discovers subdomains via DNS brute force",
+    "implemented": false,
+    "featureIds": ["F109"]
+  },
+  {
+    "id": "T144",
+    "description": "ASM Scanner: Discovers subdomains via Certificate Transparency (crt.sh)",
+    "implemented": false,
+    "featureIds": ["F110"]
+  },
+  {
+    "id": "T145",
+    "description": "ASM Scanner: Attempts DNS zone transfer (AXFR)",
+    "implemented": false,
+    "featureIds": ["F111"]
+  },
+  {
+    "id": "T146",
+    "description": "ASM Scanner: Resolves hostnames to IP addresses",
+    "implemented": true,
+    "featureIds": ["F112"]
+  },
+  {
+    "id": "T147",
+    "description": "ASM Scanner: TCP port scan detects common open ports",
+    "implemented": false,
+    "featureIds": ["F113"]
+  },
+  {
+    "id": "T148",
+    "description": "ASM Scanner: Banner grabbing identifies service versions",
+    "implemented": false,
+    "featureIds": ["F114"]
+  },
+  {
+    "id": "T149",
+    "description": "ASM Scanner: Detects publicly accessible S3 bucket",
+    "implemented": true,
+    "featureIds": ["F115"]
+  },
+  {
+    "id": "T150",
+    "description": "ASM Scanner: Detects publicly accessible Azure blob",
+    "implemented": true,
+    "featureIds": ["F116"]
+  },
+  {
+    "id": "T151",
+    "description": "ASM Scanner: Detects publicly accessible GCS bucket",
+    "implemented": true,
+    "featureIds": ["F117"]
+  },
+  {
+    "id": "T152",
+    "description": "ASM Scanner: Retrieves A records correctly",
+    "implemented": true,
+    "featureIds": ["F118"]
+  },
+  {
+    "id": "T153",
+    "description": "ASM Scanner: Retrieves AAAA records correctly",
+    "implemented": true,
+    "featureIds": ["F119"]
+  },
+  {
+    "id": "T154",
+    "description": "ASM Scanner: Retrieves NS records correctly",
+    "implemented": true,
+    "featureIds": ["F120"]
+  },
+  {
+    "id": "T155",
+    "description": "ASM Scanner: Retrieves MX records with priority",
+    "implemented": true,
+    "featureIds": ["F121"]
+  },
+  {
+    "id": "T156",
+    "description": "ASM Scanner: Retrieves TXT records correctly",
+    "implemented": true,
+    "featureIds": ["F122"]
+  },
+  {
+    "id": "T157",
+    "description": "ASM Scanner: Retrieves SOA records correctly",
+    "implemented": true,
+    "featureIds": ["F123"]
+  },
+  {
+    "id": "T158",
+    "description": "ASM Scanner: Retrieves CNAME records correctly",
+    "implemented": true,
+    "featureIds": ["F124"]
+  },
+  {
+    "id": "T159",
+    "description": "ASM Scanner: Captures HTTP response headers",
+    "implemented": true,
+    "featureIds": ["F125"]
+  },
+  {
+    "id": "T160",
+    "description": "ASM Scanner: Checks security headers (CSP, X-Frame-Options, HSTS)",
+    "implemented": true,
+    "featureIds": ["F126"]
+  },
+  {
+    "id": "T161",
+    "description": "ASM Scanner: Checks SPF record presence and policy",
+    "implemented": true,
+    "featureIds": ["F127"]
+  },
+  {
+    "id": "T162",
+    "description": "ASM Scanner: Checks DMARC record presence and policy",
+    "implemented": true,
+    "featureIds": ["F128"]
+  },
+  {
+    "id": "T163",
+    "description": "ASM Scanner: Checks DKIM record presence (common selectors)",
+    "implemented": true,
+    "featureIds": ["F129"]
+  },
+  {
+    "id": "T164",
+    "description": "ASM Scanner: NVD API correlates service version to CVEs",
+    "implemented": true,
+    "featureIds": ["F130"]
+  },
+  {
+    "id": "T165",
+    "description": "ASM Scanner: Service-to-CPE mapping works correctly",
+    "implemented": true,
+    "featureIds": ["F131"]
+  },
+  {
+    "id": "T166",
+    "description": "ASM Scanner: Retrieves CVSS v3 scores for CVEs",
+    "implemented": true,
+    "featureIds": ["F132"]
+  },
+  {
+    "id": "T167",
+    "description": "ASM Scanner: FIRST.org EPSS API retrieves exploit probability",
+    "implemented": true,
+    "featureIds": ["F133"]
+  },
+  {
+    "id": "T168",
+    "description": "ASM Scanner: MaxMind GeoIP lookup returns country for IP",
+    "implemented": false,
+    "featureIds": ["F134"]
+  },
+  {
+    "id": "T169",
+    "description": "ASM Infrastructure: Scan job dispatched to available pod",
+    "implemented": false,
+    "featureIds": ["F135", "F136"]
+  },
+  {
+    "id": "T170",
+    "description": "ASM Infrastructure: Results aggregated from scanner pod",
+    "implemented": false,
+    "featureIds": ["F137"]
+  },
+  {
+    "id": "T171",
+    "description": "ASM Infrastructure: Customer scanner node registers successfully",
+    "implemented": false,
+    "featureIds": ["F138"]
+  },
+  {
+    "id": "T172",
+    "description": "API: POST /api/guard/schedules creates schedule",
+    "implemented": true,
+    "featureIds": ["F139"]
+  },
+  {
+    "id": "T173",
+    "description": "API: GET /api/guard/schedules returns list",
+    "implemented": true,
+    "featureIds": ["F140"]
+  },
+  {
+    "id": "T174",
+    "description": "API: GET /api/guard/schedules/:id returns single schedule",
+    "implemented": true,
+    "featureIds": ["F141"]
+  },
+  {
+    "id": "T175",
+    "description": "API: PUT /api/guard/schedules/:id updates schedule",
+    "implemented": true,
+    "featureIds": ["F142"]
+  },
+  {
+    "id": "T176",
+    "description": "API: DELETE /api/guard/schedules/:id removes schedule",
+    "implemented": true,
+    "featureIds": ["F143"]
+  },
+  {
+    "id": "T177",
+    "description": "PG Boss: guard:pii:scan job handler registered",
+    "implemented": true,
+    "featureIds": ["F144"]
+  },
+  {
+    "id": "T178",
+    "description": "PG Boss: guard:asm:scan job handler registered",
+    "implemented": true,
+    "featureIds": ["F145"]
+  },
+  {
+    "id": "T179",
+    "description": "PG Boss: guard:score:recalc job handler registered",
+    "implemented": true,
+    "featureIds": ["F146"]
+  },
+  {
+    "id": "T180",
+    "description": "PG Boss: guard:report:generate job handler registered",
+    "implemented": true,
+    "featureIds": ["F147"]
+  },
+  {
+    "id": "T181",
+    "description": "PG Boss: guard:schedules:process cron runs every minute",
+    "implemented": true,
+    "featureIds": ["F148"]
+  },
+  {
+    "id": "T182",
+    "description": "PG Boss: guard:cve:sync cron runs daily at 3 AM",
+    "implemented": false,
+    "featureIds": ["F149"]
+  },
+  {
+    "id": "T183",
+    "description": "PG Boss: guard:cleanup:expired cron runs weekly",
+    "implemented": false,
+    "featureIds": ["F150"]
+  },
+  {
+    "id": "T184",
+    "description": "Scheduler: Daily schedule triggers at configured time",
+    "implemented": true,
+    "featureIds": ["F151"]
+  },
+  {
+    "id": "T185",
+    "description": "Scheduler: Weekly schedule triggers on configured day",
+    "implemented": true,
+    "featureIds": ["F152"]
+  },
+  {
+    "id": "T186",
+    "description": "Scheduler: Monthly schedule triggers on configured date",
+    "implemented": true,
+    "featureIds": ["F153"]
+  },
+  {
+    "id": "T187",
+    "description": "Scheduler: next_run_at updated after execution",
+    "implemented": true,
+    "featureIds": ["F154"]
+  },
+  {
+    "id": "T188",
+    "description": "Scheduler: Timezone support correctly calculates execution time",
+    "implemented": true,
+    "featureIds": ["F155"]
+  },
+  {
+    "id": "T189",
+    "description": "Event Bus: GUARD_EVENTS constant contains all event types",
+    "implemented": false,
+    "featureIds": ["F156"]
+  },
+  {
+    "id": "T190",
+    "description": "Event Bus: PII_SCAN_STARTED event emitted on scan start",
+    "implemented": false,
+    "featureIds": ["F157"]
+  },
+  {
+    "id": "T191",
+    "description": "Event Bus: PII_SCAN_COMPLETED event emitted on scan completion",
+    "implemented": false,
+    "featureIds": ["F158"]
+  },
+  {
+    "id": "T192",
+    "description": "Event Bus: PII_HIGH_SEVERITY_FOUND event emitted for SSN/CC findings",
+    "implemented": false,
+    "featureIds": ["F159"]
+  },
+  {
+    "id": "T193",
+    "description": "Event Bus: ASM_SCAN_STARTED event emitted on scan start",
+    "implemented": false,
+    "featureIds": ["F160"]
+  },
+  {
+    "id": "T194",
+    "description": "Event Bus: ASM_SCAN_COMPLETED event emitted on scan completion",
+    "implemented": false,
+    "featureIds": ["F161"]
+  },
+  {
+    "id": "T195",
+    "description": "Event Bus: ASM_CRITICAL_CVE_FOUND event emitted for critical vulnerabilities",
+    "implemented": false,
+    "featureIds": ["F162"]
+  },
+  {
+    "id": "T196",
+    "description": "Event Bus: SCORE_UPDATED event emitted on score recalculation",
+    "implemented": false,
+    "featureIds": ["F163"]
+  },
+  {
+    "id": "T197",
+    "description": "Event Bus: SCORE_CRITICAL_THRESHOLD event emitted when score drops below 40",
+    "implemented": false,
+    "featureIds": ["F164"]
+  },
+  {
+    "id": "T198",
+    "description": "Notifications: Email sent on PII_HIGH_SEVERITY_FOUND event",
+    "implemented": false,
+    "featureIds": ["F165"]
+  },
+  {
+    "id": "T199",
+    "description": "Notifications: Email sent on SCORE_CRITICAL_THRESHOLD event",
+    "implemented": false,
+    "featureIds": ["F166"]
+  },
+  {
+    "id": "T200",
+    "description": "Notifications: guard-pii-alert email template renders correctly",
+    "implemented": false,
+    "featureIds": ["F167"]
+  },
+  {
+    "id": "T201",
+    "description": "Notifications: guard-score-critical email template renders correctly",
+    "implemented": false,
+    "featureIds": ["F168"]
+  },
+  {
+    "id": "T202",
+    "description": "Security Score: Score calculation returns value 0-100",
+    "implemented": true,
+    "featureIds": ["F169"]
+  },
+  {
+    "id": "T203",
+    "description": "Security Score: Company with no findings scores 100",
+    "implemented": true,
+    "featureIds": ["F169"]
+  },
+  {
+    "id": "T204",
+    "description": "Security Score: PII findings reduce score appropriately",
+    "implemented": true,
+    "featureIds": ["F170"]
+  },
+  {
+    "id": "T205",
+    "description": "Security Score: SSN finding (weight 10) reduces score more than email (weight 1)",
+    "implemented": true,
+    "featureIds": ["F170"]
+  },
+  {
+    "id": "T206",
+    "description": "Security Score: Credit card finding weighted as high severity (10)",
+    "implemented": true,
+    "featureIds": ["F170"]
+  },
+  {
+    "id": "T207",
+    "description": "Security Score: Decay factor reduces impact of duplicate findings",
+    "implemented": true,
+    "featureIds": ["F171"]
+  },
+  {
+    "id": "T208",
+    "description": "Security Score: ASM vulnerabilities reduce score appropriately",
+    "implemented": true,
+    "featureIds": ["F172"]
+  },
+  {
+    "id": "T209",
+    "description": "Security Score: Critical CVE (weight 15) reduces score more than Low (weight 2)",
+    "implemented": true,
+    "featureIds": ["F173"]
+  },
+  {
+    "id": "T210",
+    "description": "Security Score: Open RDP port (weight 12) heavily penalizes score",
+    "implemented": true,
+    "featureIds": ["F174"]
+  },
+  {
+    "id": "T211",
+    "description": "Security Score: Open SSH port (weight 5) penalizes less than RDP",
+    "implemented": true,
+    "featureIds": ["F174"]
+  },
+  {
+    "id": "T212",
+    "description": "Security Score: Exposed S3 bucket (weight 10) reduces score",
+    "implemented": true,
+    "featureIds": ["F175"]
+  },
+  {
+    "id": "T213",
+    "description": "Security Score: Missing SPF record (weight 3) reduces score",
+    "implemented": true,
+    "featureIds": ["F176"]
+  },
+  {
+    "id": "T214",
+    "description": "Security Score: Missing DMARC record (weight 3) reduces score",
+    "implemented": true,
+    "featureIds": ["F176"]
+  },
+  {
+    "id": "T215",
+    "description": "Security Score: Score recalculates after PII scan completes",
+    "implemented": true,
+    "featureIds": ["F177"]
+  },
+  {
+    "id": "T216",
+    "description": "Security Score: Score recalculates after ASM scan completes",
+    "implemented": true,
+    "featureIds": ["F178"]
+  },
+  {
+    "id": "T217",
+    "description": "Security Score: Historical score stored on each recalculation",
+    "implemented": true,
+    "featureIds": ["F179"]
+  },
+  {
+    "id": "T218",
+    "description": "Security Score: Score delta calculated correctly (current - previous)",
+    "implemented": true,
+    "featureIds": ["F180"]
+  },
+  {
+    "id": "T219",
+    "description": "Security Score: Breakdown shows PII category contribution",
+    "implemented": true,
+    "featureIds": ["F181"]
+  },
+  {
+    "id": "T220",
+    "description": "Security Score: Breakdown shows vulnerabilities category contribution",
+    "implemented": true,
+    "featureIds": ["F181"]
+  },
+  {
+    "id": "T221",
+    "description": "Security Score: Breakdown shows exposure category contribution",
+    "implemented": true,
+    "featureIds": ["F181"]
+  },
+  {
+    "id": "T222",
+    "description": "Security Score: Breakdown shows email_security category contribution",
+    "implemented": true,
+    "featureIds": ["F181"]
+  },
+  {
+    "id": "T223",
+    "description": "Security Score: Top issues ranked by score impact",
+    "implemented": true,
+    "featureIds": ["F182"]
+  },
+  {
+    "id": "T224",
+    "description": "Security Score: Risk level 'critical' for scores 0-39",
+    "implemented": true,
+    "featureIds": ["F183"]
+  },
+  {
+    "id": "T225",
+    "description": "Security Score: Risk level 'high' for scores 40-59",
+    "implemented": true,
+    "featureIds": ["F183"]
+  },
+  {
+    "id": "T226",
+    "description": "Security Score: Risk level 'moderate' for scores 60-79",
+    "implemented": true,
+    "featureIds": ["F183"]
+  },
+  {
+    "id": "T227",
+    "description": "Security Score: Risk level 'low' for scores 80-100",
+    "implemented": true,
+    "featureIds": ["F183"]
+  },
+  {
+    "id": "T228",
+    "description": "Security Score: What-if simulation returns projected score",
+    "implemented": true,
+    "featureIds": ["F184"]
+  },
+  {
+    "id": "T229",
+    "description": "API: GET /api/guard/scores/:companyId returns current score",
+    "implemented": true,
+    "featureIds": ["F185"]
+  },
+  {
+    "id": "T230",
+    "description": "API: GET /api/guard/scores/:companyId/breakdown returns factor breakdown",
+    "implemented": true,
+    "featureIds": ["F186"]
+  },
+  {
+    "id": "T231",
+    "description": "API: GET /api/guard/scores/:companyId/history returns time series",
+    "implemented": true,
+    "featureIds": ["F187"]
+  },
+  {
+    "id": "T232",
+    "description": "API: History endpoint supports date range filtering",
+    "implemented": true,
+    "featureIds": ["F187"]
+  },
+  {
+    "id": "T233",
+    "description": "API: GET /api/guard/scores/:companyId/issues returns top issues",
+    "implemented": true,
+    "featureIds": ["F188"]
+  },
+  {
+    "id": "T234",
+    "description": "API: POST /api/guard/scores/:companyId/what-if accepts issue IDs",
+    "implemented": true,
+    "featureIds": ["F189"]
+  },
+  {
+    "id": "T235",
+    "description": "API: What-if returns projected score if issues remediated",
+    "implemented": true,
+    "featureIds": ["F189"]
+  },
+  {
+    "id": "T236",
+    "description": "API: GET /api/guard/scores returns all companies with scores",
+    "implemented": true,
+    "featureIds": ["F190"]
+  },
+  {
+    "id": "T237",
+    "description": "API: Portfolio list sorted by score ascending (worst first)",
+    "implemented": true,
+    "featureIds": ["F190"]
+  },
+  {
+    "id": "T238",
+    "description": "API: POST /api/guard/scores/:companyId/recalculate forces recalculation",
+    "implemented": true,
+    "featureIds": ["F191"]
+  },
+  {
+    "id": "T239",
+    "description": "API: POST /api/guard/reports creates report job",
+    "implemented": true,
+    "featureIds": ["F192"]
+  },
+  {
+    "id": "T240",
+    "description": "API: GET /api/guard/reports returns report jobs list",
+    "implemented": true,
+    "featureIds": ["F193"]
+  },
+  {
+    "id": "T241",
+    "description": "API: GET /api/guard/reports/:id returns job status",
+    "implemented": true,
+    "featureIds": ["F194"]
+  },
+  {
+    "id": "T242",
+    "description": "API: GET /api/guard/reports/:id/download returns signed URL",
+    "implemented": true,
+    "featureIds": ["F195"]
+  },
+  {
+    "id": "T243",
+    "description": "Reporting: PII report generates in Word format using docx",
+    "implemented": false,
+    "featureIds": ["F196"]
+  },
+  {
+    "id": "T244",
+    "description": "Reporting: PII report generates in Excel format using xlsx",
+    "implemented": false,
+    "featureIds": ["F197"]
+  },
+  {
+    "id": "T245",
+    "description": "Reporting: ASM report generates in Word format",
+    "implemented": false,
+    "featureIds": ["F198"]
+  },
+  {
+    "id": "T246",
+    "description": "Reporting: ASM report generates in Excel format",
+    "implemented": false,
+    "featureIds": ["F199"]
+  },
+  {
+    "id": "T247",
+    "description": "Reporting: Security Score report generates in Word format",
+    "implemented": false,
+    "featureIds": ["F200"]
+  },
+  {
+    "id": "T248",
+    "description": "Reporting: Security Score report generates in PDF format using Puppeteer",
+    "implemented": false,
+    "featureIds": ["F201"]
+  },
+  {
+    "id": "T249",
+    "description": "Reporting: Report generation respects date_from/date_to filters",
+    "implemented": false,
+    "featureIds": ["F202"]
+  },
+  {
+    "id": "T250",
+    "description": "Reporting: Report generation respects company_id filter",
+    "implemented": false,
+    "featureIds": ["F203"]
+  },
+  {
+    "id": "T251",
+    "description": "Reporting: Async report job created with pending status",
+    "implemented": true,
+    "featureIds": ["F204"]
+  },
+  {
+    "id": "T252",
+    "description": "Reporting: Report job status updates to completed",
+    "implemented": true,
+    "featureIds": ["F204"]
+  },
+  {
+    "id": "T253",
+    "description": "Reporting: Generated report uploaded to S3",
+    "implemented": true,
+    "featureIds": ["F205"]
+  },
+  {
+    "id": "T254",
+    "description": "Reporting: Download URL is signed and time-limited",
+    "implemented": true,
+    "featureIds": ["F206"]
+  },
+  {
+    "id": "T255",
+    "description": "Access Control: Tenant isolation prevents cross-tenant access",
+    "implemented": false,
+    "featureIds": ["F207"]
+  },
+  {
+    "id": "T256",
+    "description": "Access Control: PII query rejects cross-tenant access",
+    "implemented": false,
+    "featureIds": ["F207"]
+  },
+  {
+    "id": "T257",
+    "description": "Access Control: ASM query rejects cross-tenant access",
+    "implemented": false,
+    "featureIds": ["F207"]
+  },
+  {
+    "id": "T258",
+    "description": "Access Control: Results filtered to user's accessible companies",
+    "implemented": false,
+    "featureIds": ["F208"]
+  },
+  {
+    "id": "T259",
+    "description": "Data Retention: Retention period setting configurable",
+    "implemented": false,
+    "featureIds": ["F209"]
+  },
+  {
+    "id": "T260",
+    "description": "Data Retention: Cleanup job deletes expired results",
+    "implemented": false,
+    "featureIds": ["F210"]
+  },
+  {
+    "id": "T261",
+    "description": "UI: Alga Guard section visible in sidebar",
+    "implemented": false,
+    "featureIds": ["F211"]
+  },
+  {
+    "id": "T262",
+    "description": "UI: Guard navigation wrapped with FeatureFlagWrapper",
+    "implemented": false,
+    "featureIds": ["F212"]
+  },
+  {
+    "id": "T263",
+    "description": "UI: PII profiles list displays all profiles",
+    "implemented": false,
+    "featureIds": ["F213"]
+  },
+  {
+    "id": "T264",
+    "description": "UI: PII profile form saves valid profile",
+    "implemented": false,
+    "featureIds": ["F214"]
+  },
+  {
+    "id": "T265",
+    "description": "UI: PII profile form shows validation errors",
+    "implemented": false,
+    "featureIds": ["F214"]
+  },
+  {
+    "id": "T266",
+    "description": "UI: PII type checkboxes update profile state",
+    "implemented": false,
+    "featureIds": ["F215"]
+  },
+  {
+    "id": "T267",
+    "description": "UI: File extension defaults pre-checked",
+    "implemented": false,
+    "featureIds": ["F216"]
+  },
+  {
+    "id": "T268",
+    "description": "UI: Agent tree selector shows company hierarchy",
+    "implemented": false,
+    "featureIds": ["F217"]
+  },
+  {
+    "id": "T269",
+    "description": "UI: Path config allows adding multiple paths",
+    "implemented": false,
+    "featureIds": ["F218"]
+  },
+  {
+    "id": "T270",
+    "description": "UI: Scan Now triggers scan and shows toast",
+    "implemented": false,
+    "featureIds": ["F219"]
+  },
+  {
+    "id": "T271",
+    "description": "UI: Jobs list shows status badges",
+    "implemented": false,
+    "featureIds": ["F220"]
+  },
+  {
+    "id": "T272",
+    "description": "UI: Running job shows progress bar",
+    "implemented": false,
+    "featureIds": ["F221"]
+  },
+  {
+    "id": "T273",
+    "description": "UI: Results table sorts by column",
+    "implemented": false,
+    "featureIds": ["F222"]
+  },
+  {
+    "id": "T274",
+    "description": "UI: Results table filters by PII type",
+    "implemented": false,
+    "featureIds": ["F222"]
+  },
+  {
+    "id": "T275",
+    "description": "UI: Result row click opens side panel",
+    "implemented": false,
+    "featureIds": ["F223"]
+  },
+  {
+    "id": "T276",
+    "description": "UI: Side panel shows file path and line numbers",
+    "implemented": false,
+    "featureIds": ["F223"]
+  },
+  {
+    "id": "T277",
+    "description": "UI: Bulk selection enables purge button",
+    "implemented": false,
+    "featureIds": ["F224"]
+  },
+  {
+    "id": "T278",
+    "description": "UI: CSV export downloads file",
+    "implemented": false,
+    "featureIds": ["F225"]
+  },
+  {
+    "id": "T279",
+    "description": "UI: PII dashboard shows stat cards",
+    "implemented": false,
+    "featureIds": ["F226"]
+  },
+  {
+    "id": "T280",
+    "description": "UI: PII dashboard pie chart renders",
+    "implemented": false,
+    "featureIds": ["F227"]
+  },
+  {
+    "id": "T281",
+    "description": "UI: PII dashboard bar chart renders",
+    "implemented": false,
+    "featureIds": ["F228"]
+  },
+  {
+    "id": "T282",
+    "description": "UI: SSN/CC results shown with red indicator",
+    "implemented": false,
+    "featureIds": ["F229"]
+  },
+  {
+    "id": "T283",
+    "description": "UI: Email results shown with yellow indicator",
+    "implemented": false,
+    "featureIds": ["F229"]
+  },
+  {
+    "id": "T284",
+    "description": "UI: PII reports page shows generation form",
+    "implemented": false,
+    "featureIds": ["F230"]
+  },
+  {
+    "id": "T285",
+    "description": "UI: ASM domains list displays all domains",
+    "implemented": false,
+    "featureIds": ["F231"]
+  },
+  {
+    "id": "T286",
+    "description": "UI: ASM domain form saves valid domain",
+    "implemented": false,
+    "featureIds": ["F232"]
+  },
+  {
+    "id": "T287",
+    "description": "UI: Scan now/schedule radio buttons work",
+    "implemented": false,
+    "featureIds": ["F233"]
+  },
+  {
+    "id": "T288",
+    "description": "UI: ASM domain results page shows summary counts",
+    "implemented": false,
+    "featureIds": ["F234"]
+  },
+  {
+    "id": "T289",
+    "description": "UI: Subdomains list renders all discovered",
+    "implemented": false,
+    "featureIds": ["F235"]
+  },
+  {
+    "id": "T290",
+    "description": "UI: IP list shows country flags",
+    "implemented": false,
+    "featureIds": ["F236"]
+  },
+  {
+    "id": "T291",
+    "description": "UI: Ports list shows risk-colored status",
+    "implemented": false,
+    "featureIds": ["F237"]
+  },
+  {
+    "id": "T292",
+    "description": "UI: Cloud storage findings displayed",
+    "implemented": false,
+    "featureIds": ["F238"]
+  },
+  {
+    "id": "T293",
+    "description": "UI: DNS records collapsible section works",
+    "implemented": false,
+    "featureIds": ["F239"]
+  },
+  {
+    "id": "T294",
+    "description": "UI: HTTP headers collapsible section works",
+    "implemented": false,
+    "featureIds": ["F240"]
+  },
+  {
+    "id": "T295",
+    "description": "UI: CVE list shows severity badges",
+    "implemented": true,
+    "featureIds": ["F241"]
+  },
+  {
+    "id": "T296",
+    "description": "UI: CVE detail shows CVSS and EPSS scores",
+    "implemented": true,
+    "featureIds": ["F242"]
+  },
+  {
+    "id": "T297",
+    "description": "UI: ASM dashboard page renders",
+    "implemented": false,
+    "featureIds": ["F243"]
+  },
+  {
+    "id": "T298",
+    "description": "UI: ASM scheduler page lists schedules",
+    "implemented": false,
+    "featureIds": ["F244"]
+  },
+  {
+    "id": "T299",
+    "description": "UI: Schedule form creates/edits schedule",
+    "implemented": false,
+    "featureIds": ["F245"]
+  },
+  {
+    "id": "T300",
+    "description": "UI: Scanner IPs documentation page renders",
+    "implemented": false,
+    "featureIds": ["F246"]
+  },
+  {
+    "id": "T301",
+    "description": "UI: ASM reports page shows generation form",
+    "implemented": false,
+    "featureIds": ["F247"]
+  },
+  {
+    "id": "T302",
+    "description": "UI: Security Scores portfolio list shows all companies",
+    "implemented": false,
+    "featureIds": ["F248"]
+  },
+  {
+    "id": "T303",
+    "description": "UI: Score card shows large number with colored background",
+    "implemented": false,
+    "featureIds": ["F249"]
+  },
+  {
+    "id": "T304",
+    "description": "UI: Score 35 displays with red background",
+    "implemented": false,
+    "featureIds": ["F249"]
+  },
+  {
+    "id": "T305",
+    "description": "UI: Score 85 displays with green background",
+    "implemented": false,
+    "featureIds": ["F249"]
+  },
+  {
+    "id": "T306",
+    "description": "UI: Score gauge/speedometer renders correctly",
+    "implemented": false,
+    "featureIds": ["F250"]
+  },
+  {
+    "id": "T307",
+    "description": "UI: Risk level badge shows correct label",
+    "implemented": false,
+    "featureIds": ["F251"]
+  },
+  {
+    "id": "T308",
+    "description": "UI: Positive delta shows green up arrow",
+    "implemented": false,
+    "featureIds": ["F252"]
+  },
+  {
+    "id": "T309",
+    "description": "UI: Negative delta shows red down arrow",
+    "implemented": false,
+    "featureIds": ["F252"]
+  },
+  {
+    "id": "T310",
+    "description": "UI: Breakdown chart renders with correct proportions",
+    "implemented": false,
+    "featureIds": ["F253"]
+  },
+  {
+    "id": "T311",
+    "description": "UI: Top issues list shows issue description and impact",
+    "implemented": false,
+    "featureIds": ["F254"]
+  },
+  {
+    "id": "T312",
+    "description": "UI: Historical trend chart renders with data points",
+    "implemented": false,
+    "featureIds": ["F255"]
+  },
+  {
+    "id": "T313",
+    "description": "UI: Trend chart shows 90-day history by default",
+    "implemented": false,
+    "featureIds": ["F255"]
+  },
+  {
+    "id": "T314",
+    "description": "UI: What-if simulator allows selecting issues",
+    "implemented": false,
+    "featureIds": ["F256"]
+  },
+  {
+    "id": "T315",
+    "description": "UI: What-if shows projected score after selection",
+    "implemented": false,
+    "featureIds": ["F256"]
+  },
+  {
+    "id": "T316",
+    "description": "UI: Client-facing mode toggle works",
+    "implemented": false,
+    "featureIds": ["F257"]
+  },
+  {
+    "id": "T317",
+    "description": "UI: Client-facing mode hides technical details",
+    "implemented": false,
+    "featureIds": ["F257"]
+  },
+  {
+    "id": "T318",
+    "description": "UI: Report generation form submits successfully",
+    "implemented": false,
+    "featureIds": ["F258"]
+  },
+  {
+    "id": "T319",
+    "description": "UI: Unified dashboard shows both PII and ASM modules",
+    "implemented": false,
+    "featureIds": ["F259"]
+  },
+  {
+    "id": "T320",
+    "description": "E2E: Full PII scan workflow - profile create to results",
+    "implemented": false,
+    "featureIds": ["F024", "F033", "F037"]
+  },
+  {
+    "id": "T321",
+    "description": "E2E: Full ASM scan workflow - domain add to results",
+    "implemented": false,
+    "featureIds": ["F091", "F097", "F100"]
+  },
+  {
+    "id": "T322",
+    "description": "E2E: PII report generation and download",
+    "implemented": false,
+    "featureIds": ["F196", "F204", "F206"]
+  },
+  {
+    "id": "T323",
+    "description": "E2E: ASM report generation and download",
+    "implemented": false,
+    "featureIds": ["F198", "F204", "F206"]
+  },
+  {
+    "id": "T324",
+    "description": "E2E: Scheduled PII scan executes automatically",
+    "implemented": false,
+    "featureIds": ["F139", "F148", "F151"]
+  },
+  {
+    "id": "T325",
+    "description": "E2E: Scheduled ASM scan executes automatically",
+    "implemented": false,
+    "featureIds": ["F139", "F148", "F151"]
+  },
+  {
+    "id": "T326",
+    "description": "E2E: PII scan triggers score recalculation",
+    "implemented": false,
+    "featureIds": ["F177", "F169"]
+  },
+  {
+    "id": "T327",
+    "description": "E2E: ASM scan triggers score recalculation",
+    "implemented": false,
+    "featureIds": ["F178", "F169"]
+  },
+  {
+    "id": "T328",
+    "description": "E2E: Score improves after PII findings remediated and rescanned",
+    "implemented": false,
+    "featureIds": ["F169", "F180"]
+  },
+  {
+    "id": "T329",
+    "description": "E2E: Security Score report generation and download",
+    "implemented": false,
+    "featureIds": ["F200", "F204", "F206"]
+  },
+  {
+    "id": "T330",
+    "description": "E2E: Full sales flow - view score, show breakdown, generate report",
+    "implemented": false,
+    "featureIds": ["F185", "F186", "F200"]
+  },
+  {
+    "id": "T331",
+    "description": "Performance: PII scan processes 100MB/min per agent",
+    "implemented": false,
+    "featureIds": ["F087"]
+  },
+  {
+    "id": "T332",
+    "description": "Performance: ASM scan completes in under 15 minutes",
+    "implemented": false,
+    "featureIds": ["F109", "F113"]
+  },
+  {
+    "id": "T333",
+    "description": "Performance: Dashboard loads in under 3 seconds",
+    "implemented": false,
+    "featureIds": ["F226", "F243"]
+  },
+  {
+    "id": "T334",
+    "description": "Security: No actual PII stored in database",
+    "implemented": false,
+    "featureIds": ["F003", "F079"]
+  },
+  {
+    "id": "T335",
+    "description": "Security: Cross-tenant query prevented at DB level",
+    "implemented": false,
+    "featureIds": ["F207"]
+  },
+  {
+    "id": "T336",
+    "description": "Unit: Wasmtime engine creates with pooling allocation config",
+    "implemented": false,
+    "featureIds": ["F260"]
+  },
+  {
+    "id": "T337",
+    "description": "Unit: Wasmtime respects 512MB memory limit per instance",
+    "implemented": false,
+    "featureIds": ["F260", "F301"]
+  },
+  {
+    "id": "T338",
+    "description": "Unit: Epoch interruption terminates long-running WASM execution",
+    "implemented": false,
+    "featureIds": ["F261"]
+  },
+  {
+    "id": "T339",
+    "description": "Unit: WIT read-file returns bytes for valid path",
+    "implemented": false,
+    "featureIds": ["F263"]
+  },
+  {
+    "id": "T340",
+    "description": "Unit: WIT read-file returns not-found error for missing path",
+    "implemented": false,
+    "featureIds": ["F263", "F268"]
+  },
+  {
+    "id": "T341",
+    "description": "Unit: WIT read-file respects max-bytes limit",
+    "implemented": false,
+    "featureIds": ["F263"]
+  },
+  {
+    "id": "T342",
+    "description": "Unit: WIT read-text detects UTF-8 encoding",
+    "implemented": false,
+    "featureIds": ["F264"]
+  },
+  {
+    "id": "T343",
+    "description": "Unit: WIT read-text detects UTF-16 encoding (Windows)",
+    "implemented": false,
+    "featureIds": ["F264"]
+  },
+  {
+    "id": "T344",
+    "description": "Unit: WIT read-text returns encoding-error for binary files",
+    "implemented": false,
+    "featureIds": ["F264", "F268"]
+  },
+  {
+    "id": "T345",
+    "description": "Unit: WIT get-metadata returns correct size, modified-ms, is-dir",
+    "implemented": false,
+    "featureIds": ["F265"]
+  },
+  {
+    "id": "T346",
+    "description": "Unit: WIT walk-directory respects include patterns",
+    "implemented": false,
+    "featureIds": ["F266"]
+  },
+  {
+    "id": "T347",
+    "description": "Unit: WIT walk-directory respects exclude patterns",
+    "implemented": false,
+    "featureIds": ["F266"]
+  },
+  {
+    "id": "T348",
+    "description": "Unit: WIT walk-directory respects max-depth limit",
+    "implemented": false,
+    "featureIds": ["F266"]
+  },
+  {
+    "id": "T349",
+    "description": "Unit: WIT walk-directory respects max-files limit",
+    "implemented": false,
+    "featureIds": ["F266"]
+  },
+  {
+    "id": "T350",
+    "description": "Unit: WIT matches-glob correctly matches **/*.xlsx pattern",
+    "implemented": false,
+    "featureIds": ["F267"]
+  },
+  {
+    "id": "T351",
+    "description": "Unit: normalize_path converts forward slashes on Windows",
+    "implemented": false,
+    "featureIds": ["F269"]
+  },
+  {
+    "id": "T352",
+    "description": "Unit: normalize_path handles UNC paths (\\\\server\\share)",
+    "implemented": false,
+    "featureIds": ["F269"]
+  },
+  {
+    "id": "T353",
+    "description": "Unit: normalize_path handles Windows drive letters (C:\\)",
+    "implemented": false,
+    "featureIds": ["F269"]
+  },
+  {
+    "id": "T354",
+    "description": "Unit: normalize_path passes through Unix paths unchanged",
+    "implemented": false,
+    "featureIds": ["F270"]
+  },
+  {
+    "id": "T355",
+    "description": "Unit: expand_home expands ~ to home directory",
+    "implemented": false,
+    "featureIds": ["F271"]
+  },
+  {
+    "id": "T356",
+    "description": "Unit: expand_home passes through paths without tilde",
+    "implemented": false,
+    "featureIds": ["F271"]
+  },
+  {
+    "id": "T357",
+    "description": "Unit: default_scan_paths returns C:\\Users on Windows",
+    "implemented": false,
+    "featureIds": ["F272"]
+  },
+  {
+    "id": "T358",
+    "description": "Unit: default_scan_paths returns /Users on macOS",
+    "implemented": false,
+    "featureIds": ["F273"]
+  },
+  {
+    "id": "T359",
+    "description": "Unit: default_scan_paths returns /home on Linux",
+    "implemented": false,
+    "featureIds": ["F274"]
+  },
+  {
+    "id": "T360",
+    "description": "Unit: should_skip_file returns true for hidden Windows files",
+    "implemented": false,
+    "featureIds": ["F275"]
+  },
+  {
+    "id": "T361",
+    "description": "Unit: should_skip_file returns true for system Windows files",
+    "implemented": false,
+    "featureIds": ["F275"]
+  },
+  {
+    "id": "T362",
+    "description": "Unit: should_skip_file returns true for $Recycle.Bin",
+    "implemented": false,
+    "featureIds": ["F275"]
+  },
+  {
+    "id": "T363",
+    "description": "Unit: should_skip_file returns true for Unix dotfiles",
+    "implemented": false,
+    "featureIds": ["F276"]
+  },
+  {
+    "id": "T364",
+    "description": "Unit: should_skip_file returns true for /proc, /sys, /dev",
+    "implemented": false,
+    "featureIds": ["F276"]
+  },
+  {
+    "id": "T365",
+    "description": "Unit: get_cache_dir returns correct path for Windows",
+    "implemented": false,
+    "featureIds": ["F277"]
+  },
+  {
+    "id": "T366",
+    "description": "Unit: get_cache_dir returns correct path for macOS",
+    "implemented": false,
+    "featureIds": ["F278"]
+  },
+  {
+    "id": "T367",
+    "description": "Unit: get_cache_dir returns correct path for Linux",
+    "implemented": false,
+    "featureIds": ["F279"]
+  },
+  {
+    "id": "T368",
+    "description": "Integration: Extension bundle fetched from S3 on cache miss",
+    "implemented": false,
+    "featureIds": ["F280"]
+  },
+  {
+    "id": "T369",
+    "description": "Integration: Extension bundle signature verification passes for valid bundle",
+    "implemented": false,
+    "featureIds": ["F281"]
+  },
+  {
+    "id": "T370",
+    "description": "Integration: Extension bundle signature verification fails for tampered bundle",
+    "implemented": false,
+    "featureIds": ["F281"]
+  },
+  {
+    "id": "T371",
+    "description": "Integration: Extension bundle content hash matches expected",
+    "implemented": false,
+    "featureIds": ["F281"]
+  },
+  {
+    "id": "T372",
+    "description": "Integration: Cache invalidated when version_id changes",
+    "implemented": false,
+    "featureIds": ["F282"]
+  },
+  {
+    "id": "T373",
+    "description": "Integration: Windows MSI installer completes successfully",
+    "implemented": false,
+    "featureIds": ["F283"]
+  },
+  {
+    "id": "T374",
+    "description": "Integration: Windows Service starts on boot",
+    "implemented": false,
+    "featureIds": ["F284"]
+  },
+  {
+    "id": "T375",
+    "description": "Integration: macOS PKG installer completes successfully",
+    "implemented": false,
+    "featureIds": ["F285"]
+  },
+  {
+    "id": "T376",
+    "description": "Integration: macOS LaunchDaemon starts on boot",
+    "implemented": false,
+    "featureIds": ["F286"]
+  },
+  {
+    "id": "T377",
+    "description": "Integration: macOS package passes Gatekeeper validation",
+    "implemented": false,
+    "featureIds": ["F287"]
+  },
+  {
+    "id": "T378",
+    "description": "Integration: Linux DEB package installs successfully",
+    "implemented": false,
+    "featureIds": ["F288"]
+  },
+  {
+    "id": "T379",
+    "description": "Integration: Linux RPM package installs successfully",
+    "implemented": false,
+    "featureIds": ["F289"]
+  },
+  {
+    "id": "T380",
+    "description": "Integration: Linux systemd service starts on boot",
+    "implemented": false,
+    "featureIds": ["F290"]
+  },
+  {
+    "id": "T381",
+    "description": "Integration: Agent binary works on x86_64 architecture",
+    "implemented": false,
+    "featureIds": ["F291"]
+  },
+  {
+    "id": "T382",
+    "description": "Integration: Agent binary works on aarch64 architecture",
+    "implemented": false,
+    "featureIds": ["F291"]
+  },
+  {
+    "id": "T383",
+    "description": "Unit: AgentRegistration struct serializes correctly",
+    "implemented": false,
+    "featureIds": ["F292"]
+  },
+  {
+    "id": "T384",
+    "description": "Unit: get_or_create_agent_id creates new ID on first run",
+    "implemented": false,
+    "featureIds": ["F293"]
+  },
+  {
+    "id": "T385",
+    "description": "Unit: get_or_create_agent_id returns existing ID on subsequent runs",
+    "implemented": false,
+    "featureIds": ["F293"]
+  },
+  {
+    "id": "T386",
+    "description": "API: POST /api/agents/register creates agent record",
+    "implemented": false,
+    "featureIds": ["F294", "F302"]
+  },
+  {
+    "id": "T387",
+    "description": "API: POST /api/agents/register returns AgentConfig",
+    "implemented": false,
+    "featureIds": ["F294", "F295"]
+  },
+  {
+    "id": "T388",
+    "description": "API: POST /api/agents/register validates tenant_id header",
+    "implemented": false,
+    "featureIds": ["F294"]
+  },
+  {
+    "id": "T389",
+    "description": "Security: PII Scanner extension has only allowed capabilities",
+    "implemented": false,
+    "featureIds": ["F296"]
+  },
+  {
+    "id": "T390",
+    "description": "Security: Extension cannot call fs.write capability",
+    "implemented": false,
+    "featureIds": ["F297"]
+  },
+  {
+    "id": "T391",
+    "description": "Security: Extension cannot call fs.delete capability",
+    "implemented": false,
+    "featureIds": ["F298"]
+  },
+  {
+    "id": "T392",
+    "description": "Security: Extension cannot call http.fetch capability",
+    "implemented": false,
+    "featureIds": ["F299"]
+  },
+  {
+    "id": "T393",
+    "description": "Security: Extension cannot call process.exec capability",
+    "implemented": false,
+    "featureIds": ["F300"]
+  },
+  {
+    "id": "T394",
+    "description": "Security: Extension terminated when exceeding memory limit",
+    "implemented": false,
+    "featureIds": ["F301"]
+  },
+  {
+    "id": "T395",
+    "description": "Database: endpoint_agents table created with correct schema",
+    "implemented": false,
+    "featureIds": ["F302"]
+  },
+  {
+    "id": "T396",
+    "description": "Database: endpoint_agents has tenant column in PK",
+    "implemented": false,
+    "featureIds": ["F302"]
+  },
+  {
+    "id": "T397",
+    "description": "Database: agent_extension_cache table created with correct schema",
+    "implemented": false,
+    "featureIds": ["F303"]
+  },
+  {
+    "id": "T398",
+    "description": "E2E: Agent installs, registers, receives scan job, and returns results",
+    "implemented": false,
+    "featureIds": ["F283", "F294", "F082", "F083"]
+  },
+  {
+    "id": "T399",
+    "description": "E2E: Agent caches extension bundle and reuses on subsequent scans",
+    "implemented": false,
+    "featureIds": ["F280", "F282"]
+  },
+  {
+    "id": "T400",
+    "description": "E2E: PII scan completes successfully on Windows endpoint",
+    "implemented": false,
+    "featureIds": ["F269", "F272", "F275", "F277"]
+  },
+  {
+    "id": "T401",
+    "description": "E2E: PII scan completes successfully on macOS endpoint",
+    "implemented": false,
+    "featureIds": ["F270", "F273", "F278"]
+  },
+  {
+    "id": "T402",
+    "description": "E2E: PII scan completes successfully on Linux endpoint",
+    "implemented": false,
+    "featureIds": ["F270", "F274", "F279"]
+  }
+]

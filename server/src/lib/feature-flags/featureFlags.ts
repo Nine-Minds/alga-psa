@@ -38,6 +38,12 @@ const DEFAULT_BOOLEAN_FLAGS: Record<string, boolean> = {
   
   // Migration features
   'enable_client_client_dual_write': true, // Dual-write to both clients and clients tables during migration
+
+  // Alga Guard features
+  'enable_alga_guard': false,              // Main Alga Guard module toggle
+  'enable_alga_guard_pii': false,          // PII Scanner sub-module
+  'enable_alga_guard_asm': false,          // Attack Surface Mapper sub-module
+  'enable_alga_guard_score': false,        // Security Score sub-module
 };
 
 const DEFAULT_VARIANT_FLAGS: Record<string, string> = {

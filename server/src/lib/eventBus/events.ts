@@ -55,6 +55,15 @@ export const EventTypeEnum = z.enum([
   'RMM_WEBHOOK_RECEIVED',
   // Generic unknown type for custom events
   'UNKNOWN',
+  // Alga Guard events
+  'GUARD_PII_SCAN_STARTED',
+  'GUARD_PII_SCAN_COMPLETED',
+  'GUARD_PII_HIGH_SEVERITY_FOUND',
+  'GUARD_ASM_SCAN_STARTED',
+  'GUARD_ASM_SCAN_COMPLETED',
+  'GUARD_ASM_CRITICAL_CVE_FOUND',
+  'GUARD_SCORE_UPDATED',
+  'GUARD_SCORE_CRITICAL_THRESHOLD',
 ]);
 
 export type EventType = z.infer<typeof EventTypeEnum>;
@@ -314,6 +323,99 @@ export const AppointmentRequestEventPayloadSchema = BasePayloadSchema.extend({
   declineReason: z.string().optional(),
 });
 
+// ============================================================================
+// ALGA GUARD EVENT PAYLOAD SCHEMAS
+// ============================================================================
+
+// Guard PII scan event payload schema
+export const GuardPiiScanEventPayloadSchema = BasePayloadSchema.extend({
+  jobId: z.string().uuid(),
+  profileId: z.string().uuid(),
+  profileName: z.string().optional(),
+  companyId: z.string().uuid().optional(),
+  companyName: z.string().optional(),
+});
+
+// Guard PII scan completed event payload schema (extends base)
+export const GuardPiiScanCompletedPayloadSchema = GuardPiiScanEventPayloadSchema.extend({
+  totalFilesScanned: z.number(),
+  totalMatches: z.number(),
+  highSeverityCount: z.number().optional(),
+  duration: z.number().optional(), // Duration in seconds
+});
+
+// Guard PII high severity found event payload schema
+export const GuardPiiHighSeverityFoundPayloadSchema = BasePayloadSchema.extend({
+  jobId: z.string().uuid(),
+  profileId: z.string().uuid(),
+  profileName: z.string().optional(),
+  companyId: z.string().uuid().optional(),
+  companyName: z.string().optional(),
+  piiType: z.string(), // Type of high severity PII found
+  count: z.number(), // Number of matches found
+  severity: z.enum(['high', 'critical']),
+  filePath: z.string().optional(), // Sample file path (may be redacted)
+});
+
+// Guard ASM scan event payload schema
+export const GuardAsmScanEventPayloadSchema = BasePayloadSchema.extend({
+  jobId: z.string().uuid(),
+  domainId: z.string().uuid(),
+  domainName: z.string().optional(),
+  companyId: z.string().uuid().optional(),
+  companyName: z.string().optional(),
+});
+
+// Guard ASM scan completed event payload schema
+export const GuardAsmScanCompletedPayloadSchema = GuardAsmScanEventPayloadSchema.extend({
+  totalFindings: z.number(),
+  criticalCveCount: z.number().optional(),
+  highCveCount: z.number().optional(),
+  openPortsCount: z.number().optional(),
+  duration: z.number().optional(), // Duration in seconds
+});
+
+// Guard ASM critical CVE found event payload schema
+export const GuardAsmCriticalCveFoundPayloadSchema = BasePayloadSchema.extend({
+  jobId: z.string().uuid(),
+  domainId: z.string().uuid(),
+  domainName: z.string().optional(),
+  companyId: z.string().uuid().optional(),
+  companyName: z.string().optional(),
+  cveId: z.string(), // CVE identifier (e.g., CVE-2021-44228)
+  cvssScore: z.number().optional(), // CVSS score 0-10
+  severity: z.enum(['critical', 'high']),
+  affectedAsset: z.string().optional(), // IP or hostname affected
+  description: z.string().optional(),
+});
+
+// Guard security score updated event payload schema
+export const GuardScoreUpdatedPayloadSchema = BasePayloadSchema.extend({
+  companyId: z.string().uuid(),
+  companyName: z.string().optional(),
+  previousScore: z.number().optional(),
+  newScore: z.number(),
+  previousRiskLevel: z.enum(['critical', 'high', 'moderate', 'low']).optional(),
+  newRiskLevel: z.enum(['critical', 'high', 'moderate', 'low']),
+  triggeredBy: z.enum(['pii_scan', 'asm_scan', 'manual', 'scheduled']),
+  triggeredJobId: z.string().uuid().optional(),
+});
+
+// Guard score critical threshold event payload schema
+export const GuardScoreCriticalThresholdPayloadSchema = BasePayloadSchema.extend({
+  companyId: z.string().uuid(),
+  companyName: z.string().optional(),
+  score: z.number(),
+  riskLevel: z.literal('critical'),
+  previousScore: z.number().optional(),
+  previousRiskLevel: z.enum(['critical', 'high', 'moderate', 'low']).optional(),
+  topIssues: z.array(z.object({
+    type: z.string(),
+    count: z.number(),
+    penalty: z.number(),
+  })).optional(),
+});
+
 // Map event types to their payload schemas
 export const EventPayloadSchemas = {
   TICKET_CREATED: TicketEventPayloadSchema,
@@ -355,6 +457,15 @@ export const EventPayloadSchemas = {
   APPOINTMENT_REQUEST_APPROVED: AppointmentRequestEventPayloadSchema,
   APPOINTMENT_REQUEST_DECLINED: AppointmentRequestEventPayloadSchema,
   APPOINTMENT_REQUEST_CANCELLED: AppointmentRequestEventPayloadSchema,
+  // Alga Guard events
+  GUARD_PII_SCAN_STARTED: GuardPiiScanEventPayloadSchema,
+  GUARD_PII_SCAN_COMPLETED: GuardPiiScanCompletedPayloadSchema,
+  GUARD_PII_HIGH_SEVERITY_FOUND: GuardPiiHighSeverityFoundPayloadSchema,
+  GUARD_ASM_SCAN_STARTED: GuardAsmScanEventPayloadSchema,
+  GUARD_ASM_SCAN_COMPLETED: GuardAsmScanCompletedPayloadSchema,
+  GUARD_ASM_CRITICAL_CVE_FOUND: GuardAsmCriticalCveFoundPayloadSchema,
+  GUARD_SCORE_UPDATED: GuardScoreUpdatedPayloadSchema,
+  GUARD_SCORE_CRITICAL_THRESHOLD: GuardScoreCriticalThresholdPayloadSchema,
 } as const;
 
 // Create specific event schemas by extending base schema with payload
@@ -410,6 +521,15 @@ export type AppointmentRequestCreatedEvent = z.infer<typeof EventSchemas.APPOINT
 export type AppointmentRequestApprovedEvent = z.infer<typeof EventSchemas.APPOINTMENT_REQUEST_APPROVED>;
 export type AppointmentRequestDeclinedEvent = z.infer<typeof EventSchemas.APPOINTMENT_REQUEST_DECLINED>;
 export type AppointmentRequestCancelledEvent = z.infer<typeof EventSchemas.APPOINTMENT_REQUEST_CANCELLED>;
+// Alga Guard event types
+export type GuardPiiScanStartedEvent = z.infer<typeof EventSchemas.GUARD_PII_SCAN_STARTED>;
+export type GuardPiiScanCompletedEvent = z.infer<typeof EventSchemas.GUARD_PII_SCAN_COMPLETED>;
+export type GuardPiiHighSeverityFoundEvent = z.infer<typeof EventSchemas.GUARD_PII_HIGH_SEVERITY_FOUND>;
+export type GuardAsmScanStartedEvent = z.infer<typeof EventSchemas.GUARD_ASM_SCAN_STARTED>;
+export type GuardAsmScanCompletedEvent = z.infer<typeof EventSchemas.GUARD_ASM_SCAN_COMPLETED>;
+export type GuardAsmCriticalCveFoundEvent = z.infer<typeof EventSchemas.GUARD_ASM_CRITICAL_CVE_FOUND>;
+export type GuardScoreUpdatedEvent = z.infer<typeof EventSchemas.GUARD_SCORE_UPDATED>;
+export type GuardScoreCriticalThresholdEvent = z.infer<typeof EventSchemas.GUARD_SCORE_CRITICAL_THRESHOLD>;
 
 export type Event =
   | TicketCreatedEvent
@@ -454,4 +574,13 @@ export type Event =
   | AppointmentRequestCreatedEvent
   | AppointmentRequestApprovedEvent
   | AppointmentRequestDeclinedEvent
-  | AppointmentRequestCancelledEvent;
+  | AppointmentRequestCancelledEvent
+  // Alga Guard events
+  | GuardPiiScanStartedEvent
+  | GuardPiiScanCompletedEvent
+  | GuardPiiHighSeverityFoundEvent
+  | GuardAsmScanStartedEvent
+  | GuardAsmScanCompletedEvent
+  | GuardAsmCriticalCveFoundEvent
+  | GuardScoreUpdatedEvent
+  | GuardScoreCriticalThresholdEvent;

@@ -134,6 +134,15 @@ export const initializeScheduler = async (storageService?: StorageService) => {
       jobScheduler.registerJobHandler<CleanupAiSessionKeysJobData>('cleanup-ai-session-keys', async () => {
         await cleanupAiSessionKeysHandler();
       });
+
+      // Guard PII scan handler
+      const { guardPiiScanHandler } = await import('./handlers/guardPiiScanHandler');
+      jobScheduler.registerJobHandler<import('./handlers/guardPiiScanHandler').GuardPiiScanJobData>(
+        'guard:pii:scan',
+        async (job: Job<import('./handlers/guardPiiScanHandler').GuardPiiScanJobData>) => {
+          await guardPiiScanHandler(job.id, job.data);
+        }
+      );
     }
 
     jobScheduler.registerJobHandler<MicrosoftWebhookRenewalJobData>(

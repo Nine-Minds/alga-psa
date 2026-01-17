@@ -1,0 +1,178 @@
+// WIT Interface Definitions for Alga Endpoint Agent
+// Package: alga:endpoint
+// Features: F262-F268
+
+package alga:endpoint;
+
+/// File system error types (F268)
+/// Defines all possible error conditions when interacting with the filesystem
+interface types {
+    /// Error variant for filesystem operations
+    variant fs-error {
+        /// File or directory not found
+        not-found,
+        /// Permission denied to access the file
+        permission-denied,
+        /// File is not a valid text file (binary content)
+        encoding-error,
+        /// File exceeds the maximum allowed size
+        file-too-large,
+        /// Operation timed out
+        timeout,
+        /// Generic I/O error with message
+        io-error(string),
+    }
+
+    /// File metadata information
+    record file-metadata {
+        /// File size in bytes
+        size: u64,
+        /// Last modified time in milliseconds since Unix epoch
+        modified-ms: u64,
+        /// True if this is a directory
+        is-dir: bool,
+        /// True if this is a regular file
+        is-file: bool,
+        /// True if this is a symbolic link
+        is-symlink: bool,
+        /// True if file is hidden (platform-specific)
+        is-hidden: bool,
+        /// True if file is a system file (Windows only)
+        is-system: bool,
+    }
+
+    /// Configuration for directory walking
+    record walk-config {
+        /// Glob patterns to include (e.g., "**/*.xlsx")
+        include-patterns: list<string>,
+        /// Glob patterns to exclude (e.g., "**/node_modules/**")
+        exclude-patterns: list<string>,
+        /// Maximum directory depth to traverse (0 = unlimited)
+        max-depth: u32,
+        /// Maximum number of files to return (0 = unlimited)
+        max-files: u32,
+        /// Whether to follow symbolic links
+        follow-symlinks: bool,
+        /// Whether to include hidden files
+        include-hidden: bool,
+    }
+
+    /// A file entry returned from directory walking
+    record file-entry {
+        /// Absolute path to the file
+        path: string,
+        /// File metadata
+        metadata: file-metadata,
+    }
+}
+
+/// File system read capabilities (F263-F267)
+/// Extensions can only READ from the filesystem - no write or delete operations
+interface filesystem {
+    use types.{fs-error, file-metadata, walk-config, file-entry};
+
+    /// Read raw bytes from a file (F263)
+    ///
+    /// # Arguments
+    /// * `path` - Absolute path to the file
+    /// * `max-bytes` - Maximum number of bytes to read (0 = read entire file)
+    ///
+    /// # Returns
+    /// The file contents as bytes, or an error
+    ///
+    /// # Errors
+    /// * `not-found` - File does not exist
+    /// * `permission-denied` - No read permission
+    /// * `file-too-large` - File exceeds max-bytes limit
+    read-file: func(path: string, max-bytes: u64) -> result<list<u8>, fs-error>;
+
+    /// Read text from a file with automatic encoding detection (F264)
+    ///
+    /// Supports UTF-8, UTF-16 LE, UTF-16 BE, and Latin-1 encodings.
+    /// Binary files will return an encoding-error.
+    ///
+    /// # Arguments
+    /// * `path` - Absolute path to the file
+    /// * `max-bytes` - Maximum number of bytes to read before decoding
+    ///
+    /// # Returns
+    /// The file contents as a UTF-8 string, or an error
+    read-text: func(path: string, max-bytes: u64) -> result<string, fs-error>;
+
+    /// Get metadata for a file or directory (F265)
+    ///
+    /// # Arguments
+    /// * `path` - Absolute path to the file or directory
+    ///
+    /// # Returns
+    /// File metadata including size, timestamps, and type flags
+    get-metadata: func(path: string) -> result<file-metadata, fs-error>;
+
+    /// Walk a directory tree with filtering (F266)
+    ///
+    /// Returns all files matching the include patterns while excluding
+    /// files matching exclude patterns. Respects depth and file count limits.
+    ///
+    /// # Arguments
+    /// * `root` - Root directory to start walking from
+    /// * `config` - Walk configuration with patterns and limits
+    ///
+    /// # Returns
+    /// List of file entries matching the criteria
+    walk-directory: func(root: string, config: walk-config) -> result<list<file-entry>, fs-error>;
+
+    /// Check if a path matches a glob pattern (F267)
+    ///
+    /// # Arguments
+    /// * `path` - Path to test
+    /// * `pattern` - Glob pattern (e.g., "**/*.xlsx", "C:\\Users\\*\\Documents")
+    ///
+    /// # Returns
+    /// True if the path matches the pattern
+    matches-glob: func(path: string, pattern: string) -> bool;
+}
+
+/// Context information provided to extensions
+interface context {
+    /// Get the current tenant ID
+    get-tenant-id: func() -> string;
+
+    /// Get the current agent ID
+    get-agent-id: func() -> string;
+
+    /// Get a configuration value by key
+    get-config: func(key: string) -> option<string>;
+
+    /// Get the request ID for correlation
+    get-request-id: func() -> string;
+}
+
+/// Logging capabilities for extensions
+interface logging {
+    /// Log level enum
+    enum log-level {
+        trace,
+        debug,
+        info,
+        warn,
+        error,
+    }
+
+    /// Emit a log message
+    log: func(level: log-level, message: string);
+}
+
+/// The world that PII Scanner extensions implement
+world pii-scanner {
+    /// Import filesystem capabilities (read-only)
+    import filesystem;
+
+    /// Import context information
+    import context;
+
+    /// Import logging
+    import logging;
+
+    /// Export the scan function that the host will call
+    export scan: func(config-json: string) -> string;
+}
