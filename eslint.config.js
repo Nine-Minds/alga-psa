@@ -11,6 +11,22 @@ import path from 'path';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 export default [
+    // Global ignores (apply to all config blocks)
+    {
+        ignores: [
+            "eslint-plugin-custom-rules/**/*",
+            ".ai/**/*",
+            "tools/**/*",
+            "ee/extensions/**/*",
+            "**/.next/**/*",
+            "**/dist/**/*",
+            "**/out/**/*",
+            "**/build/**/*",
+            "**/coverage/**/*",
+            "server/public/**/*",
+            "server/src/invoice-templates/assemblyscript/**/*"
+        ],
+    },
     // Configuration for migration files - enforce naming conventions
     // IMPORTANT: This must come first before other configs that might ignore these files
     {
@@ -23,7 +39,7 @@ export default [
             globals: {
                 ...globals.node
             },
-            ecmaVersion: 2020,
+            ecmaVersion: 2022,
             sourceType: "commonjs"
         },
         plugins: {
@@ -63,7 +79,7 @@ export default [
                 React: true,
                 JSX: true
             },
-            ecmaVersion: 2020,
+            ecmaVersion: 2022,
             sourceType: "module"
         },
         plugins: {
@@ -110,22 +126,11 @@ export default [
             },
             parser: tsParser,
             parserOptions: {
-                ecmaVersion: 2020,
+                ecmaVersion: 2022,
                 sourceType: "module",
-                project: [
-                    path.join(__dirname, 'server/tsconfig.eslint.json'),
-                    path.join(__dirname, 'ee/server/tsconfig.eslint.json'),
-                    path.join(__dirname, 'shared/tsconfig.json'),
-                    path.join(__dirname, 'services/workflow-worker/tsconfig.eslint.json'),
-                    path.join(__dirname, 'services/imap-service/tsconfig.eslint.json'),
-                    path.join(__dirname, 'packages/ui-kit/tsconfig.json'),
-                    path.join(__dirname, 'sdk/extension-iframe-sdk/tsconfig.json'),
-                    path.join(__dirname, 'sdk/extension-iframe-sdk/examples/vite-react/tsconfig.json'),
-                ],
                 ecmaFeatures: {
                     jsx: true
                 },
-                tsconfigRootDir: __dirname,
             },
         },
         // Add base rules and plugins
@@ -146,18 +151,20 @@ export default [
             ],
             "@typescript-eslint/no-explicit-any": "off",
             "@typescript-eslint/no-unused-vars": ["off", { argsIgnorePattern: "^_" }],
-            "@typescript-eslint/no-unsafe-assignment": "warn",
+            // NOTE: These rules require type information (parserOptions.project).
+            // This repo runs ESLint without typed linting to avoid OOM on large workspaces.
+            "@typescript-eslint/no-unsafe-assignment": "off",
             "@typescript-eslint/no-unsafe-member-access": "off",
-            "@typescript-eslint/no-unsafe-return": "warn",
-            "@typescript-eslint/no-unsafe-call": "warn",
-            "@typescript-eslint/no-unsafe-argument": "warn",
-            "@typescript-eslint/no-misused-promises": "warn",
-            "@typescript-eslint/await-thenable": "warn",
-            "@typescript-eslint/no-floating-promises": "warn",
-            "@typescript-eslint/no-unnecessary-type-assertion": "warn",
-            "@typescript-eslint/restrict-plus-operands": "warn",
-            "@typescript-eslint/restrict-template-expressions": "warn",
-            "@typescript-eslint/unbound-method": "warn",
+            "@typescript-eslint/no-unsafe-return": "off",
+            "@typescript-eslint/no-unsafe-call": "off",
+            "@typescript-eslint/no-unsafe-argument": "off",
+            "@typescript-eslint/no-misused-promises": "off",
+            "@typescript-eslint/await-thenable": "off",
+            "@typescript-eslint/no-floating-promises": "off",
+            "@typescript-eslint/no-unnecessary-type-assertion": "off",
+            "@typescript-eslint/restrict-plus-operands": "off",
+            "@typescript-eslint/restrict-template-expressions": "off",
+            "@typescript-eslint/unbound-method": "off",
             "@typescript-eslint/no-non-null-assertion": "warn",
             "@typescript-eslint/no-redundant-type-constituents": "off", // Disabled due to infinite recursion with complex types
             // React hooks rules
@@ -178,7 +185,6 @@ export default [
             ...Object.fromEntries(Object.entries({
                 ...tseslint.configs.recommended.rules,
                 // ...tseslint.configs["recommended-requiring-type-checking"].rules,  // DISABLED: Causes OOM
-                ...tseslint.configs.strict.rules,
             }).map(([key, value]) => [
                 key,
                 typeof value === 'string' ? 'warn' : ['warn', ...(Array.isArray(value) ? value.slice(1) : [])],
