@@ -2,17 +2,17 @@ import React from 'react';
 import Link from 'next/link';
 import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
 import { ITicketListItem, ITicketCategory, TicketResponseState } from 'server/src/interfaces/ticket.interfaces';
-import { TicketingDisplaySettings } from 'server/src/lib/actions/ticket-actions/ticketDisplaySettings';
+import type { TicketingDisplaySettings } from '@alga-psa/tickets/actions/ticketDisplaySettings';
 import { TagManager } from 'server/src/components/tags';
 import { ITag } from 'server/src/interfaces/tag.interfaces';
-import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from 'server/src/components/ui/DropdownMenu';
-import { Button } from 'server/src/components/ui/Button';
-import { Tooltip } from 'server/src/components/ui/Tooltip';
-import UserAvatar from 'server/src/components/ui/UserAvatar';
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@alga-psa/ui/components/DropdownMenu';
+import { Button } from '@alga-psa/ui/components/Button';
+import { Tooltip } from '@alga-psa/ui/components/Tooltip';
+import UserAvatar from '@alga-psa/ui/components/UserAvatar';
 import { MoreVertical, Trash2, ChevronDown, ChevronRight } from 'lucide-react';
 import { format } from 'date-fns';
 import { IBoard } from 'server/src/interfaces/board.interface';
-import { ResponseStateBadge } from 'server/src/components/tickets/ResponseStateBadge';
+import { ResponseStateBadge } from '@alga-psa/tickets/components';
 
 interface CreateTicketColumnsOptions {
   categories: ITicketCategory[];

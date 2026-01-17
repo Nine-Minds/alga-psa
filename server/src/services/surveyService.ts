@@ -1,12 +1,12 @@
 'use server';
 
-import { withTransaction } from '@alga-psa/shared/db';
+import { withTransaction } from '@alga-psa/db';
 import { appendFileSync } from 'node:fs';
 import type { Knex } from 'knex';
-import logger from '@alga-psa/shared/core/logger';
+import logger from '@alga-psa/core/logger';
 
 import { createTenantKnex, runWithTenant } from '../lib/db';
-import { issueSurveyToken } from '../lib/actions/surveyTokenService';
+import { issueSurveyToken } from '@alga-psa/surveys/actions/surveyTokenService';
 import { TenantEmailService } from '../lib/email';
 import { isValidEmail } from '../lib/utils/validation';
 import { DatabaseTemplateProcessor } from '../lib/email/tenant/templateProcessors';

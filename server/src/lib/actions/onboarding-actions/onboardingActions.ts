@@ -4,10 +4,10 @@ import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions'
 import { createTenantKnex } from 'server/src/lib/db';
 import { getTenantForCurrentRequest } from 'server/src/lib/tenant';
 import { revalidatePath } from 'next/cache';
-import { withTransaction } from '@alga-psa/shared/db';
+import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { hashPassword } from 'server/src/utils/encryption/encryption';
-import { createClient as createClientInternal } from 'server/src/lib/actions/client-actions/clientActions';
+import { createClient as createClientInternal } from '@alga-psa/clients/actions';
 import { createClientContact } from 'server/src/lib/actions/contact-actions/contactActions';
 import { updateTenantOnboardingStatus, saveTenantOnboardingProgress } from 'server/src/lib/actions/tenant-settings-actions/tenantSettingsActions';
 import { hasPermission } from 'server/src/lib/auth/rbac';

@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { BillingEngine } from 'server/src/lib/billing/billingEngine';
 
 vi.mock('@/lib/db/db');
-vi.mock('@alga-psa/shared/db', () => ({
+vi.mock('@alga-psa/db', () => ({
   withTransaction: vi.fn(async (_knex, callback) => callback(_knex)),
   withAdminTransaction: vi.fn(async (_callback, existing) => _callback(existing)),
 }));

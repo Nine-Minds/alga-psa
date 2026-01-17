@@ -1,15 +1,15 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { MoreVertical } from 'lucide-react';
 
-import { Button } from 'server/src/components/ui/Button';
-import { DataTable } from 'server/src/components/ui/DataTable';
+import { Button } from '@alga-psa/ui/components/Button';
+import { DataTable } from '@alga-psa/ui/components/DataTable';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger
-} from 'server/src/components/ui/DropdownMenu';
-import { ConfirmationDialog } from 'server/src/components/ui/ConfirmationDialog';
+} from '@alga-psa/ui/components/DropdownMenu';
+import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import type { ExternalEntityMapping } from 'server/src/lib/actions/externalMappingActions';
 import {
   AccountingMappingContext,

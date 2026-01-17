@@ -1,7 +1,7 @@
 "use server";
 
 import { getSsoProviderOptions, SsoProviderOption } from "@ee/lib/auth/providerConfig";
-import logger from "@alga-psa/shared/core/logger";
+import logger from "@alga-psa/core/logger";
 import { ensureSsoSettingsPermission } from "@ee/lib/actions/auth/ssoPermissions";
 
 export interface GetSsoProviderOptionsResult {

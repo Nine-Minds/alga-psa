@@ -8,15 +8,15 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import type { Knex } from 'knex';
 
 // Mock the database module
-vi.mock('server/src/lib/db', () => ({
+vi.mock('@alga-psa/db', () => ({
   createTenantKnex: vi.fn(),
 }));
 
-import { createTenantKnex } from 'server/src/lib/db';
+import { createTenantKnex } from '@alga-psa/db';
 import {
   getAssetSoftware,
   getAssetSoftwareSummary,
-} from 'server/src/lib/actions/asset-actions/softwareActions';
+} from '@alga-psa/assets/actions/softwareActions';
 
 // Test data
 const TEST_TENANT = 'test-tenant-123';

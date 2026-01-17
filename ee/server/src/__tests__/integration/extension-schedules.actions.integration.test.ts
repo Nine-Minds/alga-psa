@@ -39,7 +39,7 @@ vi.mock('@/lib/db', () => ({
   createTenantKnex: vi.fn(async () => ({ knex: db, tenant: tenantId })),
 }));
 
-vi.mock('@shared/db/admin', () => ({
+vi.mock('@alga-psa/db/admin', () => ({
   getAdminConnection: vi.fn(async () => db),
 }));
 

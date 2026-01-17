@@ -1,14 +1,11 @@
 'use client';
 
-import { getProjectMetadata, updateProject } from 'server/src/lib/actions/project-actions/projectActions';
-import ProjectInfo from 'server/src/components/projects/ProjectInfo';
-import ProjectDetail from 'server/src/components/projects/ProjectDetail';
+import { getProjectMetadata, updateProject } from '@alga-psa/projects/actions/projectActions';
+import ProjectInfo from '@alga-psa/projects/components/ProjectInfo';
+import ProjectDetail from '@alga-psa/projects/components/ProjectDetail';
 import { useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { IProject, IProjectPhase, IProjectTask, IProjectTicketLinkWithDetails, ProjectStatus } from 'server/src/interfaces/project.interfaces';
-import { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
-import { IClient } from 'server/src/interfaces/client.interfaces';
-import { ITag } from 'server/src/interfaces/tag.interfaces';
+import type { IClient, IProject, IProjectPhase, IProjectTask, IProjectTicketLinkWithDetails, ITag, IUserWithRoles, ProjectStatus } from '@alga-psa/types';
 
 interface ProjectMetadata {
   project: IProject;

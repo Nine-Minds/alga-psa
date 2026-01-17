@@ -4,7 +4,7 @@ vi.mock('server/src/lib/auth/getSession', () => ({
   getSession: vi.fn(async () => ({ user: { id: 'mock-user-id' } })),
 }));
 
-vi.mock('@shared/db', () => ({
+vi.mock('@alga-psa/db', () => ({
   withTransaction: vi.fn(async (_db: any, callback: any) => {
     const invoicedCycles = [
       {

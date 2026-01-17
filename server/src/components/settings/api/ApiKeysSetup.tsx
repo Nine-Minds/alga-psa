@@ -1,12 +1,12 @@
 'use client';
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { Button } from 'server/src/components/ui/Button';
-import { Card } from 'server/src/components/ui/Card';
-import { Input } from 'server/src/components/ui/Input';
-import { Label } from 'server/src/components/ui/Label';
-import { Dialog, DialogContent } from 'server/src/components/ui/Dialog';
-import { DataTable } from 'server/src/components/ui/DataTable';
+import { Button } from '@alga-psa/ui/components/Button';
+import { Card } from '@alga-psa/ui/components/Card';
+import { Input } from '@alga-psa/ui/components/Input';
+import { Label } from '@alga-psa/ui/components/Label';
+import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
+import { DataTable } from '@alga-psa/ui/components/DataTable';
 import type { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
 import { createApiKey, deactivateApiKey, listApiKeys } from 'server/src/lib/actions/apiKeyActions';
 import { useRouter } from 'next/navigation';

@@ -1,7 +1,7 @@
 import { Job } from 'pg-boss';
 import { createTenantKnex } from 'server/src/lib/db';
 import { reconcileBucketUsageRecord } from 'server/src/lib/services/bucketUsageService';
-import logger from '@shared/core/logger';
+import logger from '@alga-psa/core/logger';
 import { Temporal } from '@js-temporal/polyfill';
 import { toISODate } from 'server/src/lib/utils/dateTimeUtils';
 

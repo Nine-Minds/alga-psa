@@ -3,13 +3,13 @@
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { CheckCircle2, Circle, AlertCircle, Sparkles } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '../ui/Card';
-import { Button } from '../ui/Button';
-import { Badge, type BadgeVariant } from '../ui/Badge';
-import { Progress } from '../ui/Progress';
-import { Alert, AlertDescription } from '../ui/Alert';
-import { Skeleton } from '../ui/Skeleton';
-import Drawer from '../ui/Drawer';
+import { Card, CardContent, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
+import { Button } from '@alga-psa/ui/components/Button';
+import { Badge, type BadgeVariant } from '@alga-psa/ui/components/Badge';
+import { Progress } from '@alga-psa/ui/components/Progress';
+import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
+import { Skeleton } from '@alga-psa/ui/components/Skeleton';
+import Drawer from '@alga-psa/ui/components/Drawer';
 import type { OnboardingProgressSummary, OnboardingStep } from './hooks/useOnboardingProgress';
 
 interface OnboardingChecklistProps {

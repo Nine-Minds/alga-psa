@@ -2,7 +2,7 @@
 
 import { getEmailNotificationService } from "../../notifications/email";
 import { revalidatePath } from "next/cache";
-import { withTransaction } from '@shared/db';
+import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import {
   NotificationSettings,

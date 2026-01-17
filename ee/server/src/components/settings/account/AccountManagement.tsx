@@ -1,11 +1,11 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from 'server/src/components/ui/Card';
-import { Button } from 'server/src/components/ui/Button';
-import { Label } from 'server/src/components/ui/Label';
-import { Badge } from 'server/src/components/ui/Badge';
-import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@alga-psa/ui/components/Card';
+import { Button } from '@alga-psa/ui/components/Button';
+import { Label } from '@alga-psa/ui/components/Label';
+import { Badge } from '@alga-psa/ui/components/Badge';
+import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { toast } from 'react-hot-toast';
 import { CreditCard, User, Rocket, MinusCircle, Info, ChevronDown, ChevronUp, DollarSign, Calendar, CheckCircle } from 'lucide-react';
 import {

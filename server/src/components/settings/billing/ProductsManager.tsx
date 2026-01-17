@@ -1,20 +1,20 @@
 'use client';
 
 import React, { useEffect, useMemo, useState } from 'react';
-import { Button } from 'server/src/components/ui/Button';
-import { Input } from 'server/src/components/ui/Input';
-import CustomSelect from 'server/src/components/ui/CustomSelect';
-import { ConfirmationDialog } from 'server/src/components/ui/ConfirmationDialog';
-import { Card, CardContent, CardHeader } from 'server/src/components/ui/Card';
-import { DataTable } from 'server/src/components/ui/DataTable';
-import LoadingIndicator from 'server/src/components/ui/LoadingIndicator';
+import { Button } from '@alga-psa/ui/components/Button';
+import { Input } from '@alga-psa/ui/components/Input';
+import CustomSelect from '@alga-psa/ui/components/CustomSelect';
+import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
+import { Card, CardContent, CardHeader } from '@alga-psa/ui/components/Card';
+import { DataTable } from '@alga-psa/ui/components/DataTable';
+import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from 'server/src/components/ui/DropdownMenu';
+} from '@alga-psa/ui/components/DropdownMenu';
 import { MoreVertical, Pen, Archive, RotateCcw, Trash2 } from 'lucide-react';
 
 import {

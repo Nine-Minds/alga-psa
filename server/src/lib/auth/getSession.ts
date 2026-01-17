@@ -1,6 +1,6 @@
 import type { Session } from 'next-auth';
 
-import logger from '@alga-psa/shared/core/logger';
+import logger from '@alga-psa/core/logger';
 import { auth as edgeAuth } from 'server/src/app/api/auth/[...nextauth]/edge-auth';
 import { auth as fullAuth } from 'server/src/app/api/auth/[...nextauth]/auth';
 

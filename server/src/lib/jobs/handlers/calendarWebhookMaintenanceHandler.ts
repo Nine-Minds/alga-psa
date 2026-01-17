@@ -1,4 +1,4 @@
-import logger from '@shared/core/logger';
+import logger from '@alga-psa/core/logger';
 import { runWithTenant } from 'server/src/lib/db';
 import { CalendarWebhookMaintenanceService } from 'server/src/services/calendar/CalendarWebhookMaintenanceService';
 import { GoogleCalendarAdapter } from 'server/src/services/calendar/providers/GoogleCalendarAdapter';

@@ -1,7 +1,7 @@
 'use server'
 
 import { getConnection } from 'server/src/lib/db/db';
-import { withTransaction } from '@shared/db';
+import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { validateData } from 'server/src/lib/utils/validation';
 import { ITicket, ITicketListItem, ITicketWithDetails } from 'server/src/interfaces/ticket.interfaces';
@@ -16,7 +16,7 @@ import { ServerEventPublisher } from '../../adapters/serverEventPublisher';
 import { ServerAnalyticsTracker } from '../../adapters/serverAnalyticsTracker';
 import { getSession } from 'server/src/lib/auth/getSession';
 import { publishEvent } from '../../eventBus/publishers';
-import { maybeReopenBundleMasterFromChildReply } from 'server/src/lib/actions/ticket-actions/ticketBundleUtils';
+import { maybeReopenBundleMasterFromChildReply } from '@alga-psa/tickets/actions/ticketBundleUtils';
 
 const clientTicketSchema = z.object({
   title: z.string().min(1),

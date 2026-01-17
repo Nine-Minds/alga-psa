@@ -16,6 +16,6 @@ const DnDFlow: React.FC = () => {
   );
 };
 
-// Named export for @product/workflows/entry compatibility
+// Named export for @alga-psa/workflows/entry compatibility
 export { DnDFlow };
 export default DnDFlow;

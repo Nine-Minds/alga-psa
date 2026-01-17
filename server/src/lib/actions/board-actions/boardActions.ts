@@ -3,7 +3,7 @@
 import { IBoard } from '../../../interfaces';
 import Board from '../../models/board';
 import { createTenantKnex } from 'server/src/lib/db';
-import { withTransaction } from '@shared/db';
+import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { ItilStandardsService } from '../../services/itilStandardsService';
 import { getCurrentUser } from '../user-actions/userActions';

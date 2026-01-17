@@ -3,7 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import ServiceRateTier from '@/lib/models/serviceRateTier'
 import { IServiceRateTier, ICreateServiceRateTier, IUpdateServiceRateTier } from '@/interfaces/serviceTier.interfaces'
-import { withTransaction } from '@alga-psa/shared/db'
+import { withTransaction } from '@alga-psa/db'
 import { createTenantKnex } from '../db'
 import { Knex } from 'knex'
 

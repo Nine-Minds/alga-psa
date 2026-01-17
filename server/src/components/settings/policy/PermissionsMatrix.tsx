@@ -1,17 +1,17 @@
 'use client';
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { Card, CardHeader, CardContent, CardTitle, CardDescription } from 'server/src/components/ui/Card';
-import { SelectOption } from 'server/src/components/ui/CustomSelect';
+import { Card, CardHeader, CardContent, CardTitle, CardDescription } from '@alga-psa/ui/components/Card';
+import { SelectOption } from '@alga-psa/ui/components/CustomSelect';
 import { ChevronDown, ChevronRight } from 'lucide-react';
-import CustomSelect from 'server/src/components/ui/CustomSelect';
-import { Checkbox } from 'server/src/components/ui/Checkbox';
-import { Tooltip } from 'server/src/components/ui/Tooltip';
-import ViewSwitcher, { ViewSwitcherOption } from 'server/src/components/ui/ViewSwitcher';
-import { DataTable } from 'server/src/components/ui/DataTable';
+import CustomSelect from '@alga-psa/ui/components/CustomSelect';
+import { Checkbox } from '@alga-psa/ui/components/Checkbox';
+import { Tooltip } from '@alga-psa/ui/components/Tooltip';
+import ViewSwitcher, { ViewSwitcherOption } from '@alga-psa/ui/components/ViewSwitcher';
+import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
-import { Button } from 'server/src/components/ui/Button';
-import { ConfirmationDialog } from 'server/src/components/ui/ConfirmationDialog';
+import { Button } from '@alga-psa/ui/components/Button';
+import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { 
   getPermissions, 
   getRoles, 

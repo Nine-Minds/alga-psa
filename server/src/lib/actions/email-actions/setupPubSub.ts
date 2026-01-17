@@ -1,7 +1,7 @@
 'use server';
 
 import { google } from 'googleapis';
-import { getSecretProviderInstance } from '@shared/core';
+import { getSecretProviderInstance } from '@alga-psa/core';
 
 export interface SetupPubSubRequest {
   tenantId: string;

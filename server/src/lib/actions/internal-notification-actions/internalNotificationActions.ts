@@ -1,6 +1,6 @@
 "use server"
 
-import { withTransaction } from '@shared/db';
+import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { hasPermission } from 'server/src/lib/auth/rbac';
 import {

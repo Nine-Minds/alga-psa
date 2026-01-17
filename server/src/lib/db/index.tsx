@@ -4,10 +4,8 @@ import { Knex as KnexType } from 'knex';
 import { headers } from 'next/headers';
 import { getTenantForCurrentRequest, getTenantFromHeaders } from '../tenant';
 import { getConnection } from './db'; // Use the tenant-scoped connection function
-import { AsyncLocalStorage } from 'async_hooks';
-import logger from '@alga-psa/shared/core/logger';
-
-const tenantContext = new AsyncLocalStorage<string>();
+import logger from '@alga-psa/core/logger';
+import { getTenantContext as getTenantContextFromDb, runWithTenant as runWithTenantFromDb } from '@alga-psa/db';
 
 // Interface simplified as tenant identification is separate now
 interface DbConnection {
@@ -32,7 +30,7 @@ export async function getCurrentTenantId(): Promise<string | null> {
         process.env.NODE_ENV !== 'production' && process.env.TENANT ? process.env.TENANT : undefined;
 
     // Try to get tenant from context first
-    tenant = tenantContext.getStore() || null;
+    tenant = getTenantContextFromDb() || null;
 
     // If no tenant in context, try session
     if (!tenant) {
@@ -91,12 +89,12 @@ export async function createTenantKnex(): Promise<{ knex: KnexType; tenant: stri
  * All database operations within the callback will use this tenant
  */
 export async function runWithTenant<T>(tenant: string, fn: () => Promise<T>): Promise<T> {
-    return tenantContext.run(tenant, fn);
+    return runWithTenantFromDb(tenant, fn);
 }
 
 /**
  * Gets the tenant from the current async context
  */
 export async function getTenantContext(): Promise<string | undefined> {
-    return tenantContext.getStore();
+    return getTenantContextFromDb();
 }

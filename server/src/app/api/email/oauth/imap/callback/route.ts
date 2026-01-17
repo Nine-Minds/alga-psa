@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { decodeState, validateState } from '@/utils/email/oauthHelpers';
 import { createTenantKnex } from '@/lib/db';
-import { getSecretProviderInstance } from '@alga-psa/shared/core';
+import { getSecretProviderInstance } from '@alga-psa/core';
 import axios from 'axios';
 
 export async function GET(request: NextRequest) {

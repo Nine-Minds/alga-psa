@@ -27,7 +27,7 @@ vi.mock('@/lib/actions/calendarActions', () => ({
   getCalendarProviders: vi.fn().mockResolvedValue({ success: true, providers: [] }),
 }));
 
-vi.mock('@shared/db/admin', () => ({
+vi.mock('@alga-psa/db/admin', () => ({
   getAdminConnection: vi.fn().mockResolvedValue(() => {
     const qb: any = {
       where: vi.fn().mockReturnThis(),

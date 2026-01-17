@@ -1,12 +1,12 @@
 'use client';
 
 import React, { useState, useRef, useTransition } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../ui/Card';
-import { Checkbox } from '../../ui/Checkbox';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
+import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { Users, Download, Upload, AlertCircle, CheckCircle2, FileUp } from 'lucide-react';
-import { Button } from '../../ui/Button';
-import { Alert, AlertDescription, AlertTitle } from '../../ui/Alert';
-import LoadingIndicator from '../../ui/LoadingIndicator';
+import { Button } from '@alga-psa/ui/components/Button';
+import { Alert, AlertDescription, AlertTitle } from '@alga-psa/ui/components/Alert';
+import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 import {
   exportClientsToXeroCsv,
   previewXeroCsvClientImport,

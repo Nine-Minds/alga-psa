@@ -1,13 +1,13 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Input } from 'server/src/components/ui/Input';
-import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
-import { Button } from 'server/src/components/ui/Button';
-import { Label } from 'server/src/components/ui/Label';
+import { Input } from '@alga-psa/ui/components/Input';
+import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
+import { Button } from '@alga-psa/ui/components/Button';
+import { Label } from '@alga-psa/ui/components/Label';
 import { toast } from 'react-hot-toast';
 import { Edit2, Info } from 'lucide-react';
-import { ConfirmationDialog } from 'server/src/components/ui/ConfirmationDialog';
+import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
 import type { EntityType } from 'server/src/lib/services/numberingService';
 import { getNumberSettings, updateNumberSettings, type NumberSettings } from 'server/src/lib/actions/number-actions/numberingActions';

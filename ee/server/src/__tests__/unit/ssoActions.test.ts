@@ -10,7 +10,7 @@ vi.mock("../../../../shared/db/admin", () => ({
   getAdminConnection: getAdminConnectionMock,
 }));
 
-vi.mock("@shared/db/admin", () => ({
+vi.mock("@alga-psa/db/admin", () => ({
   getAdminConnection: getAdminConnectionMock,
 }));
 

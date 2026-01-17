@@ -2,7 +2,7 @@
 
 import { Temporal } from '@js-temporal/polyfill';
 import { v4 as uuidv4 } from 'uuid';
-import { generateInvoiceNumber } from './invoiceGeneration';
+import { generateInvoiceNumber } from '@alga-psa/billing/actions/invoiceGeneration';
 import { IInvoiceCharge, InvoiceViewModel, DiscountType } from 'server/src/interfaces/invoice.interfaces';
 import { TaxService } from 'server/src/lib/services/taxService';
 import { BillingEngine } from 'server/src/lib/billing/billingEngine';

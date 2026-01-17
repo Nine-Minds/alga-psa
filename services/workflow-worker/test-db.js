@@ -1,4 +1,4 @@
-import { getAdminConnection } from '@shared/db/admin';
+import { getAdminConnection } from '@alga-psa/db/admin';
 
 async function testConnection() {
   console.log('Environment variables:');

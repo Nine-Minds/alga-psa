@@ -1,6 +1,6 @@
 'use server'
 
-import { withTransaction } from '@alga-psa/shared/db';
+import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import ClientContractLine from 'server/src/lib/models/clientContractLine';
 import { IClientContractLine } from 'server/src/interfaces/billing.interfaces';

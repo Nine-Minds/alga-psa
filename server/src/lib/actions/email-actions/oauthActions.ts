@@ -1,7 +1,7 @@
 'use server'
 
 import { getCurrentUser } from '../user-actions/userActions';
-import { getSecretProviderInstance } from '@alga-psa/shared/core';
+import { getSecretProviderInstance } from '@alga-psa/core';
 import { hasPermission } from '../../auth/rbac';
 import { createTenantKnex } from '../../db';
 import { generateMicrosoftAuthUrl, generateGoogleAuthUrl, generateNonce, type OAuthState } from '@/utils/email/oauthHelpers';

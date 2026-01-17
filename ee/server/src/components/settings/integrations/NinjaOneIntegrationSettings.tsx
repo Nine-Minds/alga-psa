@@ -8,10 +8,10 @@
  */
 
 import React, { useCallback, useEffect, useState, useTransition } from 'react';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/Card';
-import { Button } from '@/components/ui/Button';
-import { Alert, AlertDescription } from '@/components/ui/Alert';
-import LoadingIndicator from '@/components/ui/LoadingIndicator';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
+import { Button } from '@alga-psa/ui/components/Button';
+import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
+import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 import {
   CheckCircle,
   AlertCircle,
@@ -27,8 +27,8 @@ import {
   Save,
   Info,
 } from 'lucide-react';
-import { Input } from '@/components/ui/Input';
-import SettingsTabSkeleton from 'server/src/components/ui/skeletons/SettingsTabSkeleton';
+import { Input } from '@alga-psa/ui/components/Input';
+import SettingsTabSkeleton from '@alga-psa/ui/components/skeletons/SettingsTabSkeleton';
 import NinjaOneComplianceDashboard from './NinjaOneComplianceDashboard';
 import OrganizationMappingManager from './ninjaone/OrganizationMappingManager';
 import {

@@ -1,17 +1,16 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Dialog, DialogContent, DialogFooter } from 'server/src/components/ui/Dialog';
-import { Button } from 'server/src/components/ui/Button';
-import { Label } from 'server/src/components/ui/Label';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from 'server/src/components/ui/Tabs';
+import { Dialog, DialogContent, DialogFooter } from '@alga-psa/ui/components/Dialog';
+import { Button } from '@alga-psa/ui/components/Button';
+import { Label } from '@alga-psa/ui/components/Label';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@alga-psa/ui/components/Tabs';
 import { toast } from 'react-hot-toast';
-import CustomSelect, { SelectOption } from 'server/src/components/ui/CustomSelect';
+import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect';
 import { getEventCatalogEntries, getEventCatalogEntryByEventType } from 'server/src/lib/actions/event-catalog-actions';
 import { IEventCatalogEntry } from '@alga-psa/shared/workflow';
-import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
-import *  as workflowEditorActions from 'server/src/lib/actions/workflow-editor-actions';
-import LoadingIndicator from 'server/src/components/ui/LoadingIndicator';
+import *  as workflowEditorActions from '@alga-psa/workflows/actions/workflow-editor-actions';
+import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 
 // JSON Editor component
 const JsonEditor = ({ value, onChange, error, height = '200px' }: {
@@ -118,10 +117,7 @@ export default function TestWorkflowModal({ isOpen, onClose, workflowCode, workf
     const fetchEventCatalog = async () => {
       try {
         setIsLoadingCatalog(true);
-        const user = await getCurrentUser();
-        if (!user) return;
-        
-        const entries = await getEventCatalogEntries({ tenant: user.tenant });
+        const entries = await getEventCatalogEntries();
         setEventCatalogEntries(entries);
         
         // If we have entries and no event name is selected yet, select the first one
@@ -165,9 +161,6 @@ export default function TestWorkflowModal({ isOpen, onClose, workflowCode, workf
     setIsLoadingSchema(true);
     
     try {
-      const user = await getCurrentUser();
-      if (!user) return;
-      
       // Find the event catalog entry for this event type
       const entry = eventCatalogEntries.find(e => e.event_type === selectedEventType);
       
@@ -183,8 +176,7 @@ export default function TestWorkflowModal({ isOpen, onClose, workflowCode, workf
       } else {
         // Try to fetch the schema directly if not found in the cached entries
         const fetchedEntry = await getEventCatalogEntryByEventType({
-          eventType: selectedEventType,
-          tenant: user.tenant
+          eventType: selectedEventType
         });
         
         if (fetchedEntry && fetchedEntry.payload_schema) {

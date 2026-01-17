@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { TaskList } from './TaskList';
 import { TaskDetailsComponent } from './TaskDetails';
-import { Card } from '../ui/Card';
-import { Button } from '../ui/Button';
+import { Card } from '@alga-psa/ui/components/Card';
+import { Button } from '@alga-psa/ui/components/Button';
 import { WorkflowTaskStatus } from '@alga-psa/shared/workflow/persistence/workflowTaskModel';
 
 interface EmbeddedTaskInboxProps {

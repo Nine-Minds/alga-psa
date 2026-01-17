@@ -1,10 +1,10 @@
 'use server'
 
 import { getCurrentUser } from '../user-actions/userActions';
-import { getSecretProviderInstance } from '@alga-psa/shared/core';
+import { getSecretProviderInstance } from '@alga-psa/core';
 import { hasPermission } from '../../auth/rbac';
 import { createTenantKnex, runWithTenant } from '../../db';
-import { withTransaction } from '@shared/db';
+import { withTransaction } from '@alga-psa/db';
 import { generateGoogleCalendarAuthUrl, generateMicrosoftCalendarAuthUrl, generateCalendarNonce, encodeCalendarState } from '@/utils/calendar/oauthHelpers';
 import { resolveCalendarRedirectUri } from '@/utils/calendar/redirectUri';
 import { storeCalendarOAuthState } from '@/utils/calendar/oauthStateStore';

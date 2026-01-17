@@ -3,12 +3,12 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'react-hot-toast';
-import { Button } from '../../components/ui/Button'; // Corrected path
-import { Input } from '../../components/ui/Input'; // Corrected path
-import { Label } from '../../components/ui/Label'; // Corrected path
-import { Switch } from '../../components/ui/Switch'; // Corrected path
-import { TextArea } from '../../components/ui/TextArea'; // Corrected component name casing
-import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '../../components/ui/Card'; // Corrected path
+import { Button } from '@alga-psa/ui/components/Button'; // Corrected path
+import { Input } from '@alga-psa/ui/components/Input'; // Corrected path
+import { Label } from '@alga-psa/ui/components/Label'; // Corrected path
+import { Switch } from '@alga-psa/ui/components/Switch'; // Corrected path
+import { TextArea } from '@alga-psa/ui/components/TextArea'; // Corrected component name casing
+import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@alga-psa/ui/components/Card'; // Corrected path
 import AssemblyScriptEditor from './AssemblyScriptEditor';
 import { getInvoiceTemplate, compileAndSaveTemplate } from '../../lib/actions/invoiceTemplates'; // Corrected action path
 import { IInvoiceTemplate } from '../../interfaces'; // Keep assumed path

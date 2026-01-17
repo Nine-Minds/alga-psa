@@ -3,12 +3,12 @@
 import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import { FileX } from 'lucide-react';
-import { IProjectTemplateWithDetails } from 'server/src/interfaces/projectTemplate.interfaces';
-import { getTemplateWithDetails } from 'server/src/lib/actions/project-actions/projectTemplateActions';
-import TemplateEditor from 'server/src/components/projects/project-templates/TemplateEditor';
-import Spinner from 'server/src/components/ui/Spinner';
-import { Card } from 'server/src/components/ui/Card';
-import KanbanBoardSkeleton from 'server/src/components/ui/skeletons/KanbanBoardSkeleton';
+import type { IProjectTemplateWithDetails } from '@alga-psa/types';
+import { getTemplateWithDetails } from '@alga-psa/projects/actions/projectTemplateActions';
+import TemplateEditor from '@alga-psa/projects/components/project-templates/TemplateEditor';
+import Spinner from '@alga-psa/ui/components/Spinner';
+import { Card } from '@alga-psa/ui/components/Card';
+import KanbanBoardSkeleton from '@alga-psa/ui/components/skeletons/KanbanBoardSkeleton';
 
 function TemplateEditorSkeleton() {
   return (

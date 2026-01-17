@@ -4,7 +4,7 @@
 import React from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
-import BillingCycles from 'server/src/components/billing-dashboard/BillingCycles';
+import { BillingCycles } from '@alga-psa/billing';
 
 vi.mock('next/link', () => ({
   default: ({ href, children }: { href: string; children: React.ReactNode }) => (
@@ -12,36 +12,36 @@ vi.mock('next/link', () => ({
   )
 }));
 
-vi.mock('server/src/components/ui/Card', () => ({
+vi.mock('@alga-psa/ui/components/Card', () => ({
   Card: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   CardHeader: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   CardContent: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
 }));
 
-vi.mock('server/src/components/ui/Tooltip', () => ({
+vi.mock('@alga-psa/ui/components/Tooltip', () => ({
   Tooltip: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }));
 
-vi.mock('server/src/components/ui/DateRangePicker', () => ({
+vi.mock('@alga-psa/ui/components/DateRangePicker', () => ({
   DateRangePicker: () => null,
 }));
 
-vi.mock('server/src/components/ui/Input', () => ({
+vi.mock('@alga-psa/ui/components/Input', () => ({
   Input: (props: any) => <input {...props} />,
 }));
 
-vi.mock('server/src/components/ui/Button', () => ({
+vi.mock('@alga-psa/ui/components/Button', () => ({
   Button: ({ asChild, children, ...props }: any) => {
     if (asChild) return <span {...props}>{children}</span>;
     return <button {...props}>{children}</button>;
   },
 }));
 
-vi.mock('server/src/components/ui/LoadingIndicator', () => ({
+vi.mock('@alga-psa/ui/components/LoadingIndicator', () => ({
   default: () => <div>Loading…</div>,
 }));
 
-vi.mock('server/src/components/ui/DataTable', () => ({
+vi.mock('@alga-psa/ui/components/DataTable', () => ({
   DataTable: ({ id, data, columns }: any) => (
     <table data-automation-id={id}>
       <tbody>
@@ -59,11 +59,11 @@ vi.mock('server/src/components/ui/DataTable', () => ({
   ),
 }));
 
-vi.mock('server/src/lib/actions/billingCycleActions', () => ({
+vi.mock('@alga-psa/billing/actions/billingCycleActions', () => ({
   getAllBillingCycles: vi.fn(async () => ({ 'client-1': 'monthly' })),
 }));
 
-vi.mock('server/src/lib/actions/billingScheduleActions', () => ({
+vi.mock('@alga-psa/billing/actions/billingScheduleActions', () => ({
   getClientBillingScheduleSummaries: vi.fn(async () => ({
     'client-1': {
       billingCycle: 'monthly',
@@ -72,7 +72,11 @@ vi.mock('server/src/lib/actions/billingScheduleActions', () => ({
   })),
 }));
 
-vi.mock('server/src/lib/actions/client-actions/clientActions', () => ({
+vi.mock('@alga-psa/billing/actions/contractActions', () => ({
+  getContracts: vi.fn(async () => []),
+}));
+
+vi.mock('@alga-psa/clients/actions', () => ({
   getAllClientsPaginated: vi.fn(async () => ({
     clients: [{ client_id: 'client-1', client_name: 'Acme Co' }],
     totalCount: 1
@@ -81,14 +85,7 @@ vi.mock('server/src/lib/actions/client-actions/clientActions', () => ({
     clients: [{ client_id: 'client-1', client_name: 'Acme Co' }],
     totalCount: 1
   })),
-}));
-
-vi.mock('server/src/lib/actions/client-actions/clientContractActions', () => ({
   getActiveClientContractsByClientIds: vi.fn(async () => []),
-}));
-
-vi.mock('server/src/lib/actions/contractActions', () => ({
-  getContracts: vi.fn(async () => []),
 }));
 
 describe('Billing → Billing Cycles summary view', () => {

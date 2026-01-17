@@ -5,7 +5,7 @@
 import { createHmac } from 'crypto';
 import { OAuth2Client } from 'google-auth-library';
 import fs from 'fs';
-import logger from '@shared/core/logger';
+import logger from '@alga-psa/core/logger';
 
 // Path to ngrok URL file (written by ngrok-sync container)
 const NGROK_URL_FILE = '/app/ngrok/url';

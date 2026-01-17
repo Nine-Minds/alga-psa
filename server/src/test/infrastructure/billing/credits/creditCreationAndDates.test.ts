@@ -3,8 +3,8 @@ import '../../../../../test-utils/nextApiMock';
 import { TestContext } from '../../../../../test-utils/testContext';
 import { setupClientTaxConfiguration, assignServiceTaxRate } from '../../../../../test-utils/billingTestHelpers';
 import { setupCommonMocks } from '../../../../../test-utils/testMocks';
-import { createPrepaymentInvoice } from 'server/src/lib/actions/creditActions';
-import { finalizeInvoice } from 'server/src/lib/actions/invoiceModification';
+import { createPrepaymentInvoice } from '@alga-psa/billing/actions/creditActions';
+import { finalizeInvoice } from '@alga-psa/billing/actions/invoiceModification';
 import { v4 as uuidv4 } from 'uuid';
 import type { IClient } from '../../interfaces/client.interfaces';
 import { Temporal } from '@js-temporal/polyfill';
@@ -40,7 +40,7 @@ vi.mock('server/src/lib/analytics/posthog', () => ({
 }));
 
 async function mockSharedDb() {
-  const actual = await import('@alga-psa/shared/db');
+  const actual = await import('@alga-psa/db');
   return {
     ...actual,
     withTransaction: vi.fn(async (knex, callback) => callback(knex)),
@@ -48,10 +48,10 @@ async function mockSharedDb() {
   };
 }
 
-vi.mock('@alga-psa/shared/db', mockSharedDb);
-vi.mock('@shared/db', mockSharedDb);
+vi.mock('@alga-psa/db', mockSharedDb);
+vi.mock('@alga-psa/db', mockSharedDb);
 
-vi.mock('@shared/core/logger', () => ({
+vi.mock('@alga-psa/core/logger', () => ({
   default: {
     info: vi.fn(),
     error: vi.fn(),

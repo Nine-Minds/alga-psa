@@ -2,9 +2,9 @@
 
 import { useState } from 'react';
 import { TaskInbox, EmbeddedTaskInbox } from './TaskInbox';
-import { Button } from '../ui/Button';
-import { Card } from '../ui/Card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/Tabs';
+import { Button } from '@alga-psa/ui/components/Button';
+import { Card } from '@alga-psa/ui/components/Card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@alga-psa/ui/components/Tabs';
 
 /**
  * Task Inbox Example Page

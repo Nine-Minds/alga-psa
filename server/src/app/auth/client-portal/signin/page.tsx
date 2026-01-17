@@ -1,8 +1,6 @@
 import { redirect } from 'next/navigation';
-import ClientPortalSignIn from 'server/src/components/auth/ClientPortalSignIn';
-import ClientPortalTenantDiscovery from 'server/src/components/auth/ClientPortalTenantDiscovery';
-import PortalSwitchPrompt from 'server/src/components/auth/PortalSwitchPrompt';
-import { I18nWrapper } from 'server/src/components/i18n/I18nWrapper';
+import { ClientPortalSignIn, ClientPortalTenantDiscovery, PortalSwitchPrompt } from '@alga-psa/auth/client';
+import { I18nWrapper } from '@alga-psa/ui/lib/i18n/I18nWrapper';
 import { getTenantBrandingByDomain, getTenantLocaleByDomain } from 'server/src/lib/actions/tenant-actions/getTenantBrandingByDomain';
 import { getSession } from 'server/src/lib/auth/getSession';
 import { isValidTenantSlug } from '@shared/utils/tenantSlug';

@@ -9,17 +9,17 @@ import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { Button } from '@/components/ui/Button';
-import { Input } from '@/components/ui/Input';
-import { Label } from '@/components/ui/Label';
-import { Switch } from '@/components/ui/Switch';
-import { Alert, AlertDescription } from '@/components/ui/Alert';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
+import { Button } from '@alga-psa/ui/components/Button';
+import { Input } from '@alga-psa/ui/components/Input';
+import { Label } from '@alga-psa/ui/components/Label';
+import { Switch } from '@alga-psa/ui/components/Switch';
+import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import { CheckCircle, Clock, Shield } from 'lucide-react';
 import type { EmailProvider } from '@/components/EmailProviderConfiguration';
 import { createEmailProvider, updateEmailProvider, upsertEmailProvider, getHostedMicrosoftConfig } from '@/lib/actions/email-actions/emailProviderActions';
 import { initiateEmailOAuth } from '@/lib/actions/email-actions/oauthActions';
-import CustomSelect from '@/components/ui/CustomSelect';
+import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { getInboundTicketDefaults } from '@/lib/actions/email-actions/inboundTicketDefaultsActions';
 
 const eeMicrosoftProviderSchema = z.object({

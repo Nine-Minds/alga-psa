@@ -3,7 +3,7 @@
 import { createTenantKnex } from '../../db';
 import { getCurrentUser } from '../user-actions/userActions';
 import type { EmailProvider, MicrosoftEmailProviderConfig, GoogleEmailProviderConfig, ImapEmailProviderConfig } from '../../../components/EmailProviderConfiguration';
-import { getSecretProviderInstance } from '@shared/core';
+import { getSecretProviderInstance } from '@alga-psa/core';
 import { setupPubSub } from './setupPubSub';
 import { ImapFlow } from 'imapflow';
 import axios from 'axios';

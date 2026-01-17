@@ -1,4 +1,4 @@
-import ProjectsOverviewPage from 'server/src/components/client-portal/projects/ProjectsOverviewPage';
+import { ProjectsOverviewPage } from '@alga-psa/client-portal/components';
 
 export default function ProjectsPage() {
   return <ProjectsOverviewPage />;

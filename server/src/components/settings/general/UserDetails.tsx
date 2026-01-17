@@ -5,11 +5,11 @@ import { findUserById, updateUser, adminChangeUserPassword, getCurrentUser } fro
 import { getRoles, getUserRoles, assignRoleToUser, removeRoleFromUser } from 'server/src/lib/actions/policyActions';
 import { useDrawer } from "server/src/context/DrawerContext";
 import { Text, Flex } from '@radix-ui/themes';
-import { Input } from 'server/src/components/ui/Input';
-import { Button } from 'server/src/components/ui/Button';
-import { Switch } from 'server/src/components/ui/Switch';
-import { Card } from 'server/src/components/ui/Card';
-import CustomSelect from 'server/src/components/ui/CustomSelect';
+import { Input } from '@alga-psa/ui/components/Input';
+import { Button } from '@alga-psa/ui/components/Button';
+import { Switch } from '@alga-psa/ui/components/Switch';
+import { Card } from '@alga-psa/ui/components/Card';
+import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Eye, EyeOff, ChevronDown, ChevronUp } from 'lucide-react';
 import CollapsiblePasswordChangeForm from './CollapsiblePasswordChangeForm';
 import { getLicenseUsageAction } from 'server/src/lib/actions/license-actions';

@@ -1,6 +1,6 @@
 'use server';
 
-import { withTransaction } from '@alga-psa/shared/db';
+import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { createTenantKnex } from 'server/src/lib/db';
 import { ITicketMaterial, IProjectMaterial } from 'server/src/interfaces/material.interfaces';

@@ -4,7 +4,7 @@ import { IPermission, IRole, IPolicy, IUserRole, IUserWithRoles, ICondition } fr
 import { ITicket } from 'server/src/interfaces/ticket.interfaces';
 import { PolicyEngine } from '../policy/PolicyEngine';
 import { USER_ATTRIBUTES, TICKET_ATTRIBUTES } from '../attributes/EntityAttributes';
-import { withTransaction } from '@alga-psa/shared/db';
+import { withTransaction } from '@alga-psa/db';
 import { createTenantKnex } from 'server/src/lib/db';
 import { Knex } from 'knex';
 

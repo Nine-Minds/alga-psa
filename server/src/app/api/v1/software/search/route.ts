@@ -16,8 +16,8 @@
  */
 
 import { NextResponse } from 'next/server';
-import { searchSoftwareFleetWide } from 'server/src/lib/actions/asset-actions/softwareActions';
-import { SoftwareCategory, SoftwareType } from 'server/src/interfaces/software.interfaces';
+import { searchSoftwareFleetWide } from '@alga-psa/assets/actions/softwareActions';
+import type { SoftwareCategory, SoftwareType } from '@alga-psa/types';
 
 export async function GET(request: Request) {
   try {

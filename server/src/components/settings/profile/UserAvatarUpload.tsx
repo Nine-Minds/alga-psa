@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import EntityImageUpload from 'server/src/components/ui/EntityImageUpload';
+import EntityImageUpload from '@alga-psa/ui/components/EntityImageUpload';
 import { uploadUserAvatar, deleteUserAvatar } from 'server/src/lib/actions/user-actions/userActions';
 
 interface UserAvatarUploadProps {

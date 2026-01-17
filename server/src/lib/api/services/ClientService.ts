@@ -9,7 +9,7 @@
 import { Knex } from 'knex';
 import { BaseService, ServiceContext, ListResult } from './BaseService';
 import { IClient, IClientLocation } from 'server/src/interfaces/client.interfaces';
-import { withTransaction } from '@shared/db';
+import { withTransaction } from '@alga-psa/db';
 import { getClientLogoUrl } from 'server/src/lib/utils/avatarUtils';
 import { createDefaultTaxSettings } from 'server/src/lib/actions/taxSettingsActions';
 import { NotFoundError } from '../../api/middleware/apiMiddleware';

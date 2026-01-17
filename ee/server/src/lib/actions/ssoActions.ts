@@ -3,7 +3,7 @@
 import type { Knex } from 'knex';
 
 import { analytics } from '@/lib/analytics/posthog';
-import { getAdminConnection } from '@shared/db/admin';
+import { getAdminConnection } from '@alga-psa/db/admin';
 import { ensureSsoSettingsPermission } from '@ee/lib/actions/auth/ssoPermissions';
 import type { OAuthLinkProvider } from '@ee/lib/auth/oauthAccountLinks';
 

@@ -3,7 +3,7 @@
 import clsx from "clsx";
 import { signIn } from "next-auth/react";
 import { useEffect, useState } from "react";
-import { Button } from "server/src/components/ui/Button";
+import { Button } from "@alga-psa/ui/components/Button";
 import { Loader2 } from "lucide-react";
 import { SiGoogle } from "react-icons/si";
 import type { SsoProviderOption } from "@ee/lib/auth/providerConfig";

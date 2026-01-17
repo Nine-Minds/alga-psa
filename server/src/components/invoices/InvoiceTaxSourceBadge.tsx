@@ -1,8 +1,8 @@
 'use client';
 
 import React from 'react';
-import { Badge } from 'server/src/components/ui/Badge';
-import { Tooltip } from 'server/src/components/ui/Tooltip';
+import { Badge } from '@alga-psa/ui/components/Badge';
+import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import { Calculator, Cloud, Clock } from 'lucide-react';
 
 import { TaxSource } from 'server/src/interfaces/tax.interfaces';

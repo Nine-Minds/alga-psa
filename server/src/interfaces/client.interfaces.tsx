@@ -21,7 +21,7 @@ export interface IClient extends SharedIClient, TenantEntity, ITaggable {
   credit_balance: number;
   tax_id_number?: string;
   notes_document_id?: string | null;
-  properties?: {
+  properties?: ({ [key: string]: any } & {
     industry?: string;
     company_size?: string;
     annual_revenue?: string;
@@ -38,7 +38,7 @@ export interface IClient extends SharedIClient, TenantEntity, ITaggable {
     parent_client_name?: string;
     last_contact_date?: string;
     logo?: string;
-  };
+  }) | null;
   payment_terms?: string;
   billing_cycle: BillingCycleType;
   credit_limit?: number;

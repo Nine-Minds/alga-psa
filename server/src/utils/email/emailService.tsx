@@ -2,7 +2,7 @@ import nodemailer from 'nodemailer';
 import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
 import { StorageService } from 'server/src/lib/storage/StorageService';
 import { InvoiceViewModel } from 'server/src/interfaces/invoice.interfaces';
-import { getSecretProviderInstance } from '@alga-psa/shared/core/secretProvider';
+import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 
 interface EmailAttachment {
   filename: string;

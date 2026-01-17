@@ -1,4 +1,4 @@
-import SurveyDashboard from 'server/src/components/surveys/dashboard/SurveyDashboard';
+import SurveyDashboard from '@alga-psa/surveys/components/dashboard/SurveyDashboard';
 
 export default function SurveyDashboardPage() {
   return <SurveyDashboard />;

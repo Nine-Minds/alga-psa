@@ -1,7 +1,7 @@
 "use client";
 
 import React from 'react';
-import { Button } from 'server/src/components/ui/Button';
+import { Button } from '@alga-psa/ui/components/Button';
 import { CheckCircle, Clock } from 'lucide-react';
 
 export type OAuthStatus = 'idle' | 'authorizing' | 'success' | 'error';

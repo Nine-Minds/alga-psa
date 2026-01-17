@@ -1,5 +1,5 @@
 import { createTenantKnex } from "../../db";
-import { withTransaction } from '@shared/db';
+import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { 
   Activity,
@@ -15,7 +15,7 @@ import {
 } from "../../../interfaces/activity.interfaces";
 import ScheduleEntry from "../../models/scheduleEntry";
 import { getCurrentUser } from "../user-actions/userActions";
-import { ISO8601String } from "@alga-psa/shared/types/temporal";
+import { ISO8601String } from "@alga-psa/types";
 import { IWorkflowExecution } from "@alga-psa/shared/workflow/persistence/workflowInterfaces";
 import { IProjectTask } from "../../../interfaces/project.interfaces";
 

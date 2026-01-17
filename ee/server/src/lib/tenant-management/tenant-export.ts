@@ -7,7 +7,7 @@
  * This is an EE-only feature for Nine Minds internal use via the tenant management extension.
  */
 
-import { getAdminConnection } from '@alga-psa/shared/db/admin';
+import { getAdminConnection } from '@alga-psa/db/admin';
 import { Knex } from 'knex';
 import { observabilityLogger } from '@/lib/observability/logging';
 

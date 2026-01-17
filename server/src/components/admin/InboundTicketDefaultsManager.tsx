@@ -1,10 +1,10 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/Card';
-import { Button } from '../ui/Button';
-import { Alert, AlertDescription } from '../ui/Alert';
-import { Badge } from '../ui/Badge';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
+import { Button } from '@alga-psa/ui/components/Button';
+import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
+import { Badge } from '@alga-psa/ui/components/Badge';
 import { Plus, Settings, Trash2, Edit, CheckCircle, XCircle } from 'lucide-react';
 import { InboundTicketDefaultsForm } from '../forms/InboundTicketDefaultsForm';
 import { 
@@ -20,7 +20,7 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator
-} from 'server/src/components/ui/DropdownMenu';
+} from '@alga-psa/ui/components/DropdownMenu';
 
 export interface InboundTicketDefaultsManagerProps {
   onDefaultsChange?: () => void;

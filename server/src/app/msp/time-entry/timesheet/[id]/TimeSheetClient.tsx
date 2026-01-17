@@ -1,11 +1,11 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { TimeSheet } from 'server/src/components/time-management/time-entry/time-sheet/TimeSheet';
+import { TimeSheet } from '@alga-psa/scheduling/components/time-management/time-entry/time-sheet/TimeSheet';
 import { ITimeSheetView, ITimeEntry } from 'server/src/interfaces/timeEntry.interfaces';
 import { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
-import { saveTimeEntry } from 'server/src/lib/actions/timeEntryActions';
-import { fetchOrCreateTimeSheet } from 'server/src/lib/actions/timeEntryActions';
+import { saveTimeEntry } from '@alga-psa/scheduling/actions/timeEntryActions';
+import { fetchOrCreateTimeSheet } from '@alga-psa/scheduling/actions/timeEntryActions';
 import { useState } from 'react';
 
 interface TimeSheetClientProps {

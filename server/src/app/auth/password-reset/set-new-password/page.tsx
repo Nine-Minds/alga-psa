@@ -8,11 +8,11 @@ import { CheckCircledIcon, CrossCircledIcon } from '@radix-ui/react-icons';
 import * as Form from '@radix-ui/react-form';
 import { setNewPassword, getAccountInfoFromToken } from 'server/src/lib/actions/useRegister';
 import { AlertProps, TPasswordCriteria } from 'server/src/interfaces';
-import Alert from 'server/src/components/auth/Alert';
-import { Alert as UIAlert, AlertDescription } from 'server/src/components/ui/Alert';
-import { Label } from 'server/src/components/ui/Label';
-import { Input } from 'server/src/components/ui/Input';
-import { Button } from 'server/src/components/ui/Button';
+import { Alert } from '@alga-psa/auth/client';
+import { Alert as UIAlert, AlertDescription } from '@alga-psa/ui/components/Alert';
+import { Label } from '@alga-psa/ui/components/Label';
+import { Input } from '@alga-psa/ui/components/Input';
+import { Button } from '@alga-psa/ui/components/Button';
 import { User, Lock } from 'lucide-react';
 
 

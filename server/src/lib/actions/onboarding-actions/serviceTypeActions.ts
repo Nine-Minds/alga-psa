@@ -3,7 +3,7 @@
 import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
 import { createTenantKnex } from 'server/src/lib/db';
 import { getTenantForCurrentRequest } from 'server/src/lib/tenant';
-import { withTransaction } from '@shared/db';
+import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { importReferenceData } from 'server/src/lib/actions/referenceDataActions';
 

@@ -3,12 +3,12 @@ import React, { useState, useEffect } from 'react';
 import { IUser } from 'server/src/interfaces/auth.interfaces';
 import UserDetails from './UserDetails';
 import { useDrawer } from "server/src/context/DrawerContext";
-import { DataTable } from 'server/src/components/ui/DataTable';
-import UserAvatar from '../../ui/UserAvatar';
+import { DataTable } from '@alga-psa/ui/components/DataTable';
+import UserAvatar from '@alga-psa/ui/components/UserAvatar';
 import { getUserAvatarUrlAction } from 'server/src/lib/actions/avatar-actions';
 import { MoreVertical, Pen, Trash2 } from 'lucide-react';
 
-import ClientDetails from 'server/src/components/clients/ClientDetails';
+import ClientDetails from '@alga-psa/clients/components/clients/ClientDetails';
 
 import { getUsersClientInfo } from 'server/src/lib/actions/user-actions/userClientActions';
 import {
@@ -17,8 +17,8 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
   DropdownMenuSeparator,
-} from 'server/src/components/ui/DropdownMenu';
-import { Button } from 'server/src/components/ui/Button';
+} from '@alga-psa/ui/components/DropdownMenu';
+import { Button } from '@alga-psa/ui/components/Button';
 
 interface UserListProps {
   users: IUser[];
@@ -137,7 +137,7 @@ const UserList: React.FC<UserListProps> = ({ users, onDeleteUser, onUpdate, sele
   const handleClientClick = async (clientId: string) => {
     if (clientId) {
       // Fetch the client data first
-      const { getClientById } = await import('server/src/lib/actions/client-actions/clientActions');
+      const { getClientById } = await import('@alga-psa/clients/actions');
       const client = await getClientById(clientId);
       if (client) {
         openDrawer(

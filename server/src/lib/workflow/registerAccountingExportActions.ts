@@ -1,7 +1,7 @@
 'use server';
 
 import { getActionRegistry, type ActionParameterDefinition } from '@alga-psa/shared/workflow/core/actionRegistry';
-import { logger } from '@alga-psa/shared/core';
+import { logger } from '@alga-psa/core';
 
 let accountingActionsRegistered = false;
 

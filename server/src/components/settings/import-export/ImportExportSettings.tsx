@@ -1,16 +1,16 @@
 import { type ReactNode, useCallback, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from 'server/src/components/ui/Card';
-import { Button } from 'server/src/components/ui/Button';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from 'server/src/components/ui/Table';
-import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
-import { Input } from 'server/src/components/ui/Input';
-import { Label } from 'server/src/components/ui/Label';
-import { Checkbox } from 'server/src/components/ui/Checkbox';
-import CustomTabs, { TabContent } from 'server/src/components/ui/CustomTabs';
-import CustomSelect from 'server/src/components/ui/CustomSelect';
-import Drawer from 'server/src/components/ui/Drawer';
-import Spinner from 'server/src/components/ui/Spinner';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
+import { Button } from '@alga-psa/ui/components/Button';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@alga-psa/ui/components/Table';
+import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
+import { Input } from '@alga-psa/ui/components/Input';
+import { Label } from '@alga-psa/ui/components/Label';
+import { Checkbox } from '@alga-psa/ui/components/Checkbox';
+import CustomTabs, { TabContent } from '@alga-psa/ui/components/CustomTabs';
+import CustomSelect from '@alga-psa/ui/components/CustomSelect';
+import Drawer from '@alga-psa/ui/components/Drawer';
+import Spinner from '@alga-psa/ui/components/Spinner';
 import type { ImportJobDetails, ImportJobItemRecord, ImportJobRecord } from '@/types/imports.types';
 import { useImportActions } from './hooks/useImportActions';
 

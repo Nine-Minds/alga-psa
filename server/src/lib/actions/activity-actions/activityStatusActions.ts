@@ -7,7 +7,7 @@ import {
 import { createTenantKnex } from "../../db";
 import { getCurrentUser } from "../user-actions/userActions";
 import { revalidatePath } from "next/cache";
-import { withTransaction } from '@shared/db';
+import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 
 /**

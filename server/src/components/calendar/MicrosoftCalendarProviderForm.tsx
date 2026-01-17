@@ -9,17 +9,17 @@ import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { Button } from '../ui/Button';
-import { Input } from '../ui/Input';
-import { Label } from '../ui/Label';
-import { Switch } from '../ui/Switch';
-import { Alert, AlertDescription } from '../ui/Alert';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/Card';
+import { Button } from '@alga-psa/ui/components/Button';
+import { Input } from '@alga-psa/ui/components/Input';
+import { Label } from '@alga-psa/ui/components/Label';
+import { Switch } from '@alga-psa/ui/components/Switch';
+import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import { CheckCircle, Clock, ExternalLink, XCircle } from 'lucide-react';
 import { initiateCalendarOAuth, createCalendarProvider, updateCalendarProvider } from '../../lib/actions/calendarActions';
-import CustomSelect from '../ui/CustomSelect';
+import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { CalendarProviderConfig } from '../../interfaces/calendar.interfaces';
-import { Badge } from '../ui/Badge';
+import { Badge } from '@alga-psa/ui/components/Badge';
 
 const microsoftCalendarProviderSchema = z.object({
   providerName: z.string().min(1, 'Provider name is required'),

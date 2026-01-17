@@ -1,12 +1,12 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from 'server/src/components/ui/Card';
-import { Button } from 'server/src/components/ui/Button';
-import { Badge } from 'server/src/components/ui/Badge';
+import { Card, CardContent, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
+import { Button } from '@alga-psa/ui/components/Button';
+import { Badge } from '@alga-psa/ui/components/Badge';
 import { toast } from 'react-hot-toast';
 import { formatDistanceToNow } from 'date-fns';
-import { useTranslation } from 'server/src/lib/i18n/client';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import {
   getUserSessionsAction,
   revokeSessionAction,

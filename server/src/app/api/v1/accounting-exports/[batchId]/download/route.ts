@@ -17,7 +17,7 @@ import {
   TaxDelegationMode
 } from 'server/src/lib/adapters/accounting/accountingExportAdapter';
 import { getXeroCsvSettings } from 'server/src/lib/actions/integrations/xeroCsvActions';
-import logger from '@shared/core/logger';
+import logger from '@alga-psa/core/logger';
 
 export async function GET(
   request: NextRequest,

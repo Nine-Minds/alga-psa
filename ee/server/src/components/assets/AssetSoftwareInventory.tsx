@@ -9,7 +9,7 @@
 
 import React, { useState, useMemo } from 'react';
 import { Package, Search, ChevronDown, ChevronUp, ExternalLink } from 'lucide-react';
-import { Button } from '@/components/ui/Button';
+import { Button } from '@alga-psa/ui/components/Button';
 import type { Asset, WorkstationAsset, ServerAsset } from '@/interfaces/asset.interfaces';
 
 interface AssetSoftwareInventoryProps {

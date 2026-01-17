@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useEffect } from 'react';
-import { Button } from 'server/src/components/ui/Button';
+import { Button } from '@alga-psa/ui/components/Button';
 import { Plus, MoreVertical, HelpCircle } from "lucide-react";
 import { IBoard, CategoryType, PriorityType } from 'server/src/interfaces/board.interface';
 import {
@@ -12,24 +12,24 @@ import {
 } from 'server/src/lib/actions/board-actions/boardActions';
 import { getAvailableReferenceData, importReferenceData, checkImportConflicts, ImportConflict } from 'server/src/lib/actions/referenceDataActions';
 import { getAllUsers } from 'server/src/lib/actions/user-actions/userActions';
-import UserPicker from 'server/src/components/ui/UserPicker';
+import UserPicker from '@alga-psa/ui/components/UserPicker';
 import { IUser } from 'server/src/interfaces';
 import { toast } from 'react-hot-toast';
-import { Dialog, DialogContent, DialogFooter } from 'server/src/components/ui/Dialog';
-import { Input } from 'server/src/components/ui/Input';
-import { Checkbox } from 'server/src/components/ui/Checkbox';
-import { Label } from 'server/src/components/ui/Label';
-import { DataTable } from 'server/src/components/ui/DataTable';
+import { Dialog, DialogContent, DialogFooter } from '@alga-psa/ui/components/Dialog';
+import { Input } from '@alga-psa/ui/components/Input';
+import { Checkbox } from '@alga-psa/ui/components/Checkbox';
+import { Label } from '@alga-psa/ui/components/Label';
+import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
-import { ConfirmationDialog } from 'server/src/components/ui/ConfirmationDialog';
-import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
-import { Switch } from 'server/src/components/ui/Switch';
+import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
+import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
+import { Switch } from '@alga-psa/ui/components/Switch';
 import {
   DropdownMenu,
   DropdownMenuTrigger,
   DropdownMenuContent,
   DropdownMenuItem,
-} from 'server/src/components/ui/DropdownMenu';
+} from '@alga-psa/ui/components/DropdownMenu';
 
 const BoardsSettings: React.FC = () => {
   const [boards, setBoards] = useState<IBoard[]>([]);

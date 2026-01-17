@@ -1,0 +1,10 @@
+{
+  "name": "@alga-psa/generators",
+  "version": "0.0.1",
+  "private": true,
+  "generators": "./generators.json",
+  "dependencies": {
+    "@nx/devkit": "^22.0.0",
+    "tslib": "^2.6.0"
+  }
+}

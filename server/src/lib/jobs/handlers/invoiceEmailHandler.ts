@@ -4,30 +4,14 @@ import { getEmailService } from 'server/src/services/emailService';
 import { StorageService } from 'server/src/lib/storage/StorageService';
 import Invoice from 'server/src/lib/models/invoice';
 import { createTenantKnex } from 'server/src/lib/db';
-import { getClientById } from 'server/src/lib/actions/client-actions/clientActions';
+import { getClientById } from '@alga-psa/clients/actions';
 import ContactModel from 'server/src/lib/models/contact';
 import fs from 'fs/promises';
 import { getConnection } from 'server/src/lib/db/db';
 import { JobStatus } from 'server/src/types/job';
-import { getInvoiceForRendering } from 'server/src/lib/actions/invoiceQueries';
-import logger from '@alga-psa/shared/core/logger';
-
-/**
- * Dynamically imports the PaymentService (EE only).
- * Returns null if not available (CE edition).
- */
-async function getPaymentService(tenantId: string): Promise<any | null> {
-  const isEE = process.env.NEXT_PUBLIC_EDITION === 'enterprise';
-  if (!isEE) return null;
-
-  try {
-    const { PaymentService } = await import('@ee/lib/payments');
-    return PaymentService.create(tenantId);
-  } catch (error) {
-    logger.debug('[InvoiceEmailHandler] PaymentService not available', { error });
-    return null;
-  }
-}
+import { getInvoiceForRendering } from '@alga-psa/billing/actions/invoiceQueries';
+import { getInvoicePaymentLinkUrlForEmail } from '@alga-psa/billing/actions/paymentActions';
+import logger from '@alga-psa/core/logger';
 
 /**
  * Gets the tenant company name for email templates.
@@ -234,23 +218,13 @@ export class InvoiceEmailHandler {
             let paymentLinkUrl: string | undefined;
             if (invoice.status !== 'paid' && invoice.status !== 'cancelled') {
               try {
-                const paymentService = await getPaymentService(tenantId);
-                if (paymentService) {
-                  const hasProvider = await paymentService.hasEnabledProvider();
-                  if (hasProvider) {
-                    const settings = await paymentService.getPaymentSettings();
-                    if (settings.paymentLinksInEmails) {
-                      const paymentLink = await paymentService.getOrCreatePaymentLink(invoiceId);
-                      if (paymentLink) {
-                        paymentLinkUrl = paymentLink.url;
-                        logger.info('[InvoiceEmailHandler] Generated payment link', {
-                          tenantId,
-                          invoiceId,
-                          paymentLinkId: paymentLink.paymentLinkId,
-                        });
-                      }
-                    }
-                  }
+                const paymentUrl = await getInvoicePaymentLinkUrlForEmail(tenantId, invoiceId);
+                if (paymentUrl) {
+                  paymentLinkUrl = paymentUrl;
+                  logger.info('[InvoiceEmailHandler] Generated payment link', {
+                    tenantId,
+                    invoiceId,
+                  });
                 }
               } catch (paymentError) {
                 // Don't fail the email if payment link generation fails

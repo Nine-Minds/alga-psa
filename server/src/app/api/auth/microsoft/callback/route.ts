@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { headers } from 'next/headers';
-import { getSecretProviderInstance } from '@alga-psa/shared/core';
+import { getSecretProviderInstance } from '@alga-psa/core';
 import { createTenantKnex, runWithTenant } from '../../../../../lib/db';
 import { MicrosoftGraphAdapter } from '@alga-psa/shared/services/email/providers/MicrosoftGraphAdapter';
 import { getWebhookBaseUrl } from '../../../../../utils/email/webhookHelpers';

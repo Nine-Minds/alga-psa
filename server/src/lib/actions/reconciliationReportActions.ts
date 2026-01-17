@@ -2,7 +2,7 @@
 
 import CreditReconciliationReport from 'server/src/lib/models/creditReconciliationReport';
 import { ReconciliationStatus } from 'server/src/interfaces/billing.interfaces';
-import { withTransaction } from '@alga-psa/shared/db';
+import { withTransaction } from '@alga-psa/db';
 import { createTenantKnex } from 'server/src/lib/db';
 import { Knex } from 'knex';
 // Mock function for getting client by ID - in a real implementation, this would be imported from a client model

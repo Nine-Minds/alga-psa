@@ -1,7 +1,7 @@
 'use client';
 
 import { Profiler } from 'react';
-import TimeTracking from 'server/src/components/time-management/time-entry/TimeTracking';
+import TimeTracking from '@alga-psa/scheduling/components/time-management/time-entry/TimeTracking';
 import { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
 
 interface Props {

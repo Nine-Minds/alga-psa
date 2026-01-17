@@ -2,8 +2,8 @@
 
 import React from 'react';
 import { NotificationActivity } from "server/src/interfaces/activity.interfaces";
-import { Button } from "server/src/components/ui/Button";
-import { Badge } from "server/src/components/ui/Badge";
+import { Button } from "@alga-psa/ui/components/Button";
+import { Badge } from "@alga-psa/ui/components/Badge";
 import {
   Info,
   CheckCircle,

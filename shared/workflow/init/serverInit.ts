@@ -5,7 +5,7 @@
 
 import { getWorkflowRuntime } from '@alga-psa/shared/workflow/core/index';
 import { registerExampleWorkflows } from '@alga-psa/shared/workflow/index';
-import { logger } from '@alga-psa/shared/core';
+import { logger } from '@alga-psa/core';
 import { registerWorkflowActions } from '@alga-psa/shared/workflow/index';
 
 // Track initialization state

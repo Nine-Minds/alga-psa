@@ -5,9 +5,13 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 const redirectMock = vi.fn();
 const getSessionMock = vi.fn();
-const headersMock = vi.fn();
+const isRevokedMock = vi.fn();
 const getTenantBrandingByDomainMock = vi.fn();
 const getTenantLocaleByDomainMock = vi.fn();
+
+const ClientPortalSignInMock = () => null;
+const ClientPortalTenantDiscoveryMock = () => null;
+const PortalSwitchPromptMock = () => null;
 
 vi.mock('next/navigation', () => ({
   redirect: redirectMock,
@@ -17,8 +21,10 @@ vi.mock('server/src/lib/auth/getSession', () => ({
   getSession: getSessionMock,
 }));
 
-vi.mock('next/headers', () => ({
-  headers: headersMock,
+vi.mock('server/src/lib/models/UserSession', () => ({
+  UserSession: {
+    isRevoked: (...args: unknown[]) => isRevokedMock(...args),
+  },
 }));
 
 vi.mock('server/src/lib/actions/tenant-actions/getTenantBrandingByDomain', () => ({
@@ -26,13 +32,14 @@ vi.mock('server/src/lib/actions/tenant-actions/getTenantBrandingByDomain', () =>
   getTenantLocaleByDomain: getTenantLocaleByDomainMock,
 }));
 
-vi.mock('server/src/components/i18n/I18nWrapper', () => ({
+vi.mock('@alga-psa/ui/lib/i18n/I18nWrapper', () => ({
   I18nWrapper: ({ children }: { children: React.ReactNode }) => children,
 }));
 
-vi.mock('server/src/components/auth/ClientPortalSignIn', () => ({
-  __esModule: true,
-  default: () => null,
+vi.mock('@alga-psa/auth', () => ({
+  ClientPortalSignIn: ClientPortalSignInMock,
+  ClientPortalTenantDiscovery: ClientPortalTenantDiscoveryMock,
+  PortalSwitchPrompt: PortalSwitchPromptMock,
 }));
 
 const { default: ClientPortalSignInPage } = await import('server/src/app/auth/client-portal/signin/page');
@@ -44,7 +51,7 @@ describe('ClientPortalSignInPage', () => {
     vi.clearAllMocks();
     redirectMock.mockReset();
     getSessionMock.mockReset();
-    headersMock.mockReset();
+    isRevokedMock.mockReset();
     getTenantBrandingByDomainMock.mockReset();
     getTenantLocaleByDomainMock.mockReset();
 
@@ -54,9 +61,6 @@ describe('ClientPortalSignInPage', () => {
       process.env.NEXTAUTH_URL = originalNextAuthUrl;
     }
 
-    headersMock.mockResolvedValue({
-      get: (key: string) => (key === 'host' ? 'vanity.example.com' : null),
-    });
     getTenantBrandingByDomainMock.mockResolvedValue(null);
     getTenantLocaleByDomainMock.mockResolvedValue('es');
   });
@@ -69,42 +73,37 @@ describe('ClientPortalSignInPage', () => {
     }
   });
 
-  it('redirects MSP users to the canonical MSP dashboard when already authenticated', async () => {
-    process.env.NEXTAUTH_URL = 'https://auth.example.com';
-    getSessionMock.mockResolvedValue({ user: { id: 'user-1', user_type: 'internal' } });
+  it('renders tenant discovery when no tenant hint is present', async () => {
+    getSessionMock.mockResolvedValue(null);
 
-    await ClientPortalSignInPage({ searchParams: Promise.resolve({}) });
+    const result = await ClientPortalSignInPage({ searchParams: Promise.resolve({}) });
 
-    expect(redirectMock).toHaveBeenCalledWith('https://auth.example.com/msp/dashboard');
+    expect(redirectMock).not.toHaveBeenCalled();
+    expect((result as any)?.type).toBe(ClientPortalTenantDiscoveryMock);
   });
 
-  it('redirects client portal users to the provided callback when already authenticated', async () => {
-    getSessionMock.mockResolvedValue({ user: { id: 'user-2', user_type: 'client' } });
+  it('redirects authenticated client portal users to the provided callback when already authenticated', async () => {
+    isRevokedMock.mockResolvedValue(false);
+    getSessionMock.mockResolvedValue({
+      user: { id: 'user-2', user_type: 'client', tenant: 'tenant-1' },
+      session_id: 'session-1',
+    });
 
     await ClientPortalSignInPage({ searchParams: Promise.resolve({ callbackUrl: '/client-portal/tickets' }) });
 
     expect(redirectMock).toHaveBeenCalledWith('/client-portal/tickets');
   });
 
-  it('throws when NEXTAUTH_URL is missing for MSP users', async () => {
-    delete process.env.NEXTAUTH_URL;
-    getSessionMock.mockResolvedValue({ user: { id: 'user-3', user_type: 'internal' } });
+  it('renders a portal switch prompt for authenticated MSP users', async () => {
+    isRevokedMock.mockResolvedValue(false);
+    getSessionMock.mockResolvedValue({
+      user: { id: 'user-3', user_type: 'internal', tenant: 'tenant-1', email: 'user@example.com' },
+      session_id: 'session-1',
+    });
 
-    await expect(
-      ClientPortalSignInPage({ searchParams: Promise.resolve({}) })
-    ).rejects.toThrow('NEXTAUTH_URL must be set');
-
-    expect(redirectMock).not.toHaveBeenCalled();
-  });
-
-  it('throws when NEXTAUTH_URL is invalid for MSP users', async () => {
-    process.env.NEXTAUTH_URL = 'not-a-valid-url';
-    getSessionMock.mockResolvedValue({ user: { id: 'user-4', user_type: 'internal' } });
-
-    await expect(
-      ClientPortalSignInPage({ searchParams: Promise.resolve({}) })
-    ).rejects.toThrow('NEXTAUTH_URL is invalid');
+    const result = await ClientPortalSignInPage({ searchParams: Promise.resolve({}) });
 
     expect(redirectMock).not.toHaveBeenCalled();
+    expect((result as any)?.type).toBe(PortalSwitchPromptMock);
   });
 });

@@ -1,7 +1,7 @@
 'use server';
 
-import logger from '@alga-psa/shared/core/logger';
-import { getAdminConnection } from '@shared/db/admin';
+import logger from '@alga-psa/core/logger';
+import { getAdminConnection } from '@alga-psa/db/admin';
 import { getCurrentTenantId } from '@/lib/db';
 import { getConnection } from '@/lib/db/db';
 import { getPortalDomainStatusAction } from '@/lib/actions/tenant-actions/portalDomainActions';

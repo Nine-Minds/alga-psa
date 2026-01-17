@@ -5,7 +5,7 @@ import { buildFlowGraph, applyLayout } from '../ast/flowGraphBuilder';
 // Import from our new implementation instead of the service
 import { fetchRuntimeStatus, applyRuntimeStatus } from '../services/runtimeIntegrationService';
 import { FlowGraph, FlowNode, FlowEdge } from '../types/visualizationTypes';
-import { getWorkflowDefinition, getWorkflowDSLContent } from 'server/src/lib/actions/workflow-visualization-actions';
+import { getWorkflowDefinition, getWorkflowDSLContent } from '@alga-psa/workflows/actions/workflow-visualization-actions';
 
 /**
  * Parameters for the useWorkflowVisualization hook

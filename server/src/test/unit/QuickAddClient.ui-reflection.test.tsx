@@ -5,7 +5,7 @@ import React from 'react';
 import { render, screen } from '@testing-library/react';
 import { vi, describe, it, expect, beforeEach } from 'vitest';
 import QuickAddClient from '../../components/clients/QuickAddClient';
-import { UIStateProvider } from '../../types/ui-reflection/UIStateContext';
+import { UIStateProvider } from '@alga-psa/ui/ui-reflection/UIStateContext';
 
 // Mock the external dependencies
 vi.mock('../../lib/actions/user-actions/userActions', () => ({

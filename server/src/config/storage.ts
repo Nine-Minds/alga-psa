@@ -1,5 +1,5 @@
 import path from 'node:path';
-import { getSecretProviderInstance } from '@alga-psa/shared/core/secretProvider';
+import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 
 interface StorageProviderConfig {
     type: 'local' | 's3';

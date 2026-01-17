@@ -12,7 +12,7 @@ import { StorageService } from 'server/src/lib/storage/StorageService';
 import { AssetImportJobContext } from '@/lib/imports/importJobContext';
 import { JobService } from 'server/src/services/job.service';
 import { initializeScheduler } from 'server/src/lib/jobs';
-import { addDocument, associateDocumentWithClient, deleteDocument } from 'server/src/lib/actions/document-actions/documentActions';
+import { addDocument, associateDocumentWithClient, deleteDocument } from '@alga-psa/documents/actions/documentActions';
 import type {
   FieldMapping,
   FieldMappingTemplate,

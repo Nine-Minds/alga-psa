@@ -1,13 +1,13 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from 'server/src/components/ui/Card';
-import { Button } from 'server/src/components/ui/Button';
-import { Badge } from 'server/src/components/ui/Badge';
-import { Input } from 'server/src/components/ui/Input';
-import CustomSelect from 'server/src/components/ui/CustomSelect';
-import UserPicker from 'server/src/components/ui/UserPicker';
-import { DatePicker } from 'server/src/components/ui/DatePicker';
+import { Card, CardContent, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
+import { Button } from '@alga-psa/ui/components/Button';
+import { Badge } from '@alga-psa/ui/components/Badge';
+import { Input } from '@alga-psa/ui/components/Input';
+import CustomSelect from '@alga-psa/ui/components/CustomSelect';
+import UserPicker from '@alga-psa/ui/components/UserPicker';
+import { DatePicker } from '@alga-psa/ui/components/DatePicker';
 import { toast } from 'react-hot-toast';
 import { formatDistanceToNow } from 'date-fns';
 import {

@@ -2,8 +2,8 @@
 
 import { getCurrentUser } from '../user-actions/userActions';
 import { createTenantKnex } from 'server/src/lib/db';
-import { withAdminTransaction } from '@shared/db/index';
-import { withTransaction } from '@shared/db';
+import { withAdminTransaction } from '@alga-psa/db';
+import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 
 import { JobStatus } from 'server/src/types/job';

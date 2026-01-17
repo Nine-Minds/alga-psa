@@ -10,7 +10,7 @@ const require = createRequire(import.meta.url);
 
 let db: Knex;
 
-vi.mock('@shared/db/admin', () => ({
+vi.mock('@alga-psa/db/admin', () => ({
   getAdminConnection: vi.fn(async () => db),
 }));
 

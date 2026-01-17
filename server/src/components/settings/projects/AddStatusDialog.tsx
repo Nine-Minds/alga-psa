@@ -1,14 +1,14 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Dialog } from 'server/src/components/ui/Dialog';
-import { Button } from 'server/src/components/ui/Button';
+import { Dialog } from '@alga-psa/ui/components/Dialog';
+import { Button } from '@alga-psa/ui/components/Button';
 import {
   getTenantProjectStatuses,
   addStatusToProject
-} from 'server/src/lib/actions/project-actions/projectTaskStatusActions';
+} from '@alga-psa/projects/actions/projectTaskStatusActions';
 import { IStatus } from 'server/src/interfaces/status.interface';
-import CustomSelect from 'server/src/components/ui/CustomSelect';
+import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 
 interface AddStatusDialogProps {
   projectId: string;

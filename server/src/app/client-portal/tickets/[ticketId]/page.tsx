@@ -2,7 +2,7 @@ import React from 'react';
 import { getClientTicketDetails } from 'server/src/lib/actions/client-portal-actions/client-tickets';
 import { getTicketStatuses } from 'server/src/lib/actions/status-actions/statusActions';
 import TicketDetailsContainer from './TicketDetailsContainer';
-import logger from '@alga-psa/shared/core/logger';
+import logger from '@alga-psa/core/logger';
 
 interface TicketPageProps {
   params: Promise<{

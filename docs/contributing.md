@@ -30,6 +30,27 @@ Thank you for your interest in contributing to Alga PSA! We appreciate contribut
   npm run test
   ```
 
+## NX Modules (Monorepo)
+
+Alga PSA uses NX + npm workspaces. Shared infrastructure lives in **horizontal** packages (e.g. `@alga-psa/core`, `@alga-psa/db`, `@alga-psa/types`), while business domains live in **vertical** packages (e.g. `@alga-psa/clients`, `@alga-psa/billing`).
+
+### Create a New Module
+
+Use the generator (recommended):
+
+```bash
+NX_DAEMON=false npx nx g @alga-psa/generators:alga-module --name <module-name> --type vertical --directory packages
+```
+
+This creates `packages/<module-name>/` with `src/`, `package.json`, `tsconfig.json`, and `project.json`.
+
+### Dependency Rules
+
+- Vertical modules may import **horizontal** modules (`@alga-psa/*` infra packages).
+- Vertical modules should **not** import other vertical modules directly.
+- Next.js routes remain under `server/src/app/` but should be **thin shims** that import from feature packages.
+- Keep exports intentional: prefer a module `src/index.ts` barrel and avoid deep imports unless explicitly supported.
+
 ## Submitting Changes
 
 ### Pull Request Process

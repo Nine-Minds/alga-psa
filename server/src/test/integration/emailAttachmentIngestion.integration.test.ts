@@ -13,7 +13,7 @@ let microsoftDownloadShouldFail = false;
 let microsoftDownloadUnsupported = false;
 let gmailDownloadShouldFail = false;
 
-vi.mock('@alga-psa/shared/core/secretProvider', () => ({
+vi.mock('@alga-psa/core/secrets', () => ({
   getSecretProviderInstance: vi.fn(async () => ({
     getAppSecret: async () => '',
   })),
@@ -22,7 +22,7 @@ vi.mock('@alga-psa/shared/core/secretProvider', () => ({
   },
 }));
 
-vi.mock('@alga-psa/shared/core/logger', () => ({
+vi.mock('@alga-psa/core/logger', () => ({
   __esModule: true,
   default: {
     info: vi.fn(),
@@ -395,9 +395,9 @@ describe('Email attachment ingestion (workflow-worker action override)', () => {
 
 async function createAttachmentAction(): Promise<{ action: { execute: (params: any, context: any) => Promise<any> } }> {
   const { ActionRegistry } = await import('@shared/workflow/core/actionRegistry');
-  const { registerEmailAttachmentActions } = await import(
-    '../../../../services/workflow-worker/src/actions/registerEmailAttachmentActions'
-  );
+  const workflowWorkerModulePath =
+    '../../../../' + 'services/workflow-worker/src/actions/registerEmailAttachmentActions';
+  const { registerEmailAttachmentActions } = await import(workflowWorkerModulePath);
 
   const registry = new ActionRegistry();
   registerEmailAttachmentActions(registry);

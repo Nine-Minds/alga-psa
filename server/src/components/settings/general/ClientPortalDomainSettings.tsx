@@ -3,8 +3,8 @@
 import React, { useEffect, useState } from 'react';
 import { AtSign } from 'lucide-react';
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from 'server/src/components/ui/Card';
-import { Badge } from 'server/src/components/ui/Badge';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
+import { Badge } from '@alga-psa/ui/components/Badge';
 import { getPortalDomainStatusAction } from '@/lib/actions/tenant-actions/portalDomainActions';
 import type { PortalDomainStatusResponse } from '@/lib/actions/tenant-actions/portalDomain.types';
 

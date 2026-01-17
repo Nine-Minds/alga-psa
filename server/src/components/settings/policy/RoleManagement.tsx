@@ -2,18 +2,18 @@
 
 import { useState, useEffect } from 'react';
 import { Flex, Text } from '@radix-ui/themes';
-import { Button } from 'server/src/components/ui/Button';
+import { Button } from '@alga-psa/ui/components/Button';
 import { createRole, updateRole, deleteRole, getRoles } from 'server/src/lib/actions/policyActions';
 import { IRole } from 'server/src/interfaces/auth.interfaces';
-import { DataTable } from 'server/src/components/ui/DataTable';
+import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
-import GenericDialog from 'server/src/components/ui/GenericDialog';
-import { Card, CardHeader, CardContent, CardTitle, CardDescription } from 'server/src/components/ui/Card';
-import { Input } from 'server/src/components/ui/Input';
-import { Label } from 'server/src/components/ui/Label';
-import { TextArea } from 'server/src/components/ui/TextArea';
-import { Checkbox } from 'server/src/components/ui/Checkbox';
-import { Tooltip } from 'server/src/components/ui/Tooltip';
+import GenericDialog from '@alga-psa/ui/components/GenericDialog';
+import { Card, CardHeader, CardContent, CardTitle, CardDescription } from '@alga-psa/ui/components/Card';
+import { Input } from '@alga-psa/ui/components/Input';
+import { Label } from '@alga-psa/ui/components/Label';
+import { TextArea } from '@alga-psa/ui/components/TextArea';
+import { Checkbox } from '@alga-psa/ui/components/Checkbox';
+import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 
 export default function RoleManagement() {
   const [roles, setRoles] = useState<IRole[]>([]);

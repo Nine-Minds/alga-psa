@@ -1,4 +1,4 @@
-import logger from '@shared/core/logger';
+import logger from '@alga-psa/core/logger';
 
 export interface CleanupAiSessionKeysJobData {
   trigger?: 'cron' | 'manual';

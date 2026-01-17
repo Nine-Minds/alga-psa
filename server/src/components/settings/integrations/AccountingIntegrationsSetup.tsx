@@ -1,9 +1,9 @@
 'use client';
 
 import React, { useMemo, useState } from 'react';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '../../ui/Card';
-import { Button } from '../../ui/Button';
-import { Badge } from '../../ui/Badge';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
+import { Button } from '@alga-psa/ui/components/Button';
+import { Badge } from '@alga-psa/ui/components/Badge';
 import CSVIntegrationSettings from './CSVIntegrationSettings';
 import XeroCsvIntegrationSettings from './XeroCsvIntegrationSettings';
 import { cn } from 'server/src/lib/utils';

@@ -1,21 +1,21 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from 'server/src/components/ui/Card';
-import { Button } from 'server/src/components/ui/Button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
+import { Button } from '@alga-psa/ui/components/Button';
 import { ITimePeriodSettings, ITimePeriodView } from 'server/src/interfaces/timeEntry.interfaces';
 import TimePeriodForm from './TimePeriodForm';
-import { getTimePeriodSettings, fetchAllTimePeriods } from 'server/src/lib/actions/timePeriodsActions';
+import { getTimePeriodSettings, fetchAllTimePeriods } from '@alga-psa/scheduling/actions/timePeriodsActions';
 import { MoreVertical } from 'lucide-react';
-import { DataTable } from 'server/src/components/ui/DataTable';
+import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
 import {
   DropdownMenu,
   DropdownMenuTrigger,
   DropdownMenuContent,
   DropdownMenuItem,
-} from 'server/src/components/ui/DropdownMenu';
-import LoadingIndicator from 'server/src/components/ui/LoadingIndicator';
+} from '@alga-psa/ui/components/DropdownMenu';
+import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 import { Temporal } from '@js-temporal/polyfill';
 
 // Helper to get the last inclusive day from an exclusive end_date

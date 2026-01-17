@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getTenantIdBySlug } from '@/lib/actions/tenant-actions/tenantSlugActions';
 import { getAvailableTimeSlots } from '@/lib/services/availabilityService';
 import { createTenantKnex, runWithTenant } from '@/lib/db';
-import logger from '@alga-psa/shared/core/logger';
+import logger from '@alga-psa/core/logger';
 import { z } from 'zod';
 
 // Tenant slug pattern: 12-char lowercase hex

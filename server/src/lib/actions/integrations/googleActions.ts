@@ -1,6 +1,6 @@
 'use server';
 
-import { getSecretProviderInstance } from '@shared/core/secretProvider';
+import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { getCurrentUser } from '@/lib/actions/user-actions/userActions';
 import { hasPermission } from '@/lib/auth/rbac';
 import { createTenantKnex } from '@/db';

@@ -4,7 +4,7 @@
  */
 
 import React from 'react';
-import { Card } from 'server/src/components/ui/Card';
+import { Card } from '@alga-psa/ui/components/Card';
 import { AlertCircle } from 'lucide-react';
 
 export default function LicensePurchasePage() {

@@ -11,7 +11,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/actions/user-actions/userActions';
 import { ApiKeyServiceForApi } from '@/lib/services/apiKeyServiceForApi';
-import { getAdminConnection } from '@alga-psa/shared/db/admin';
+import { getAdminConnection } from '@alga-psa/db/admin';
 import {
   isTableAllowed,
   isColumnAllowed,

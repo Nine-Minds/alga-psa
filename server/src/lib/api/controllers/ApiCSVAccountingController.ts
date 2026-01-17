@@ -17,7 +17,7 @@ import { AccountingExportService } from '../../services/accountingExportService'
 import { QuickBooksCSVAdapter } from '../../adapters/accounting/quickBooksCSVAdapter';
 import { getSession } from '../../auth/getSession';
 import { findUserById } from '../../actions/user-actions/userActions';
-import logger from '@shared/core/logger';
+import logger from '@alga-psa/core/logger';
 import { AppError } from '../../errors';
 
 type CSVAccountingPermission = 'export' | 'import';

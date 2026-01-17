@@ -5,9 +5,9 @@ import { Flex, Text, TextArea } from '@radix-ui/themes';
 import { createPolicy, updatePolicy, deletePolicy, getPolicies } from '@/lib/actions/policyActions';
 import { IPolicy } from '@/interfaces/auth.interfaces';
 import { parsePolicy } from '@ee/lib/auth/policyParser';
-import { DataTable } from '@/components/ui/DataTable';
+import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { ColumnDefinition } from '@/interfaces/dataTable.interfaces';
-import { Button } from '@/components/ui/Button';
+import { Button } from '@alga-psa/ui/components/Button';
 
 export default function PolicyManagement() {
   const [policies, setPolicies] = useState<IPolicy[]>([]);

@@ -7,12 +7,12 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 // Mock the database module
-vi.mock('server/src/lib/db', () => ({
+vi.mock('@alga-psa/db', () => ({
   createTenantKnex: vi.fn(),
 }));
 
-import { createTenantKnex } from 'server/src/lib/db';
-import { getAssetSummaryMetrics } from 'server/src/lib/actions/asset-actions/assetActions';
+import { createTenantKnex } from '@alga-psa/db';
+import { getAssetSummaryMetrics } from '@alga-psa/assets/actions/assetActions';
 
 // Test data
 const TEST_TENANT = 'test-tenant-123';

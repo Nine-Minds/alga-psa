@@ -1,7 +1,7 @@
 import axios, { AxiosInstance } from 'axios';
 import { BaseCalendarAdapter } from './base/BaseCalendarAdapter';
 import { CalendarProviderConfig, ExternalCalendarEvent } from '../../../interfaces/calendar.interfaces';
-import { getSecretProviderInstance } from '@alga-psa/shared/core';
+import { getSecretProviderInstance } from '@alga-psa/core';
 import { google } from 'googleapis';
 import { OAuth2Client } from 'google-auth-library';
 import { CalendarProviderService } from '../CalendarProviderService';

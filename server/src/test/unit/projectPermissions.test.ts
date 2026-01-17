@@ -1,11 +1,10 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { IUser, IUserWithRoles, IRoleWithPermissions, IPermission, IRole } from '../../interfaces/auth.interfaces';
-import { IProject } from '../../interfaces/project.interfaces';
-import * as projectActions from '../../lib/actions/project-actions/projectActions';
-import ProjectModel from '../../lib/models/project';
+import type { IUser, IUserWithRoles, IRoleWithPermissions, IPermission, IRole, IProject } from '@alga-psa/types';
+import * as projectActions from '@alga-psa/projects/actions/projectActions';
+import ProjectModel from 'server/src/lib/models/project';
 
 // Mock the Project model methods
-vi.mock('../../lib/models/project', () => ({
+vi.mock('server/src/lib/models/project', () => ({
   default: {
     getAll: vi.fn(),
     getById: vi.fn(),
@@ -53,22 +52,22 @@ vi.mock('../../lib/models/project', () => ({
 }));
 
 // Mock the userActions with both required functions
-vi.mock('../../lib/actions/user-actions/userActions', () => ({
-  getCurrentUser: vi.fn(),
+vi.mock('server/src/lib/actions/user-actions/userActions', () => ({
   getAllUsers: vi.fn().mockResolvedValue([]),
+  findUserById: vi.fn().mockResolvedValue(null),
 }));
 
-// Mock the RBAC functions with proper permission checking that always returns a boolean
-vi.mock('../../lib/auth/rbac', () => ({
+vi.mock('@alga-psa/auth', () => ({
+  getCurrentUser: vi.fn(),
   hasPermission: vi.fn().mockImplementation(async (user: IUser, resource: string, action: string): Promise<boolean> => {
     if (!user || !('roles' in user)) return false;
     const userWithRoles = user as IUserWithRoles;
-    
-    return userWithRoles.roles.some(role => {
+
+    return userWithRoles.roles.some((role) => {
       if (!('permissions' in role)) return false;
       const roleWithPermissions = role as IRoleWithPermissions;
-      return roleWithPermissions.permissions.some(permission => 
-        permission.resource === resource && permission.action === action
+      return roleWithPermissions.permissions.some(
+        (permission) => permission.resource === resource && permission.action === action,
       );
     });
   }),
@@ -79,29 +78,23 @@ vi.mock('next/cache', () => ({
 }));
 
 // Mock the SharedNumberingService
-vi.mock('@alga-psa/shared/services/numberingService', () => ({
+vi.mock('@shared/services/numberingService', () => ({
   SharedNumberingService: {
     getNextNumber: vi.fn().mockResolvedValue('PRJ-0001'),
   },
 }));
 
-// Mock createTenantKnex
-vi.mock('../../lib/db', () => ({
+vi.mock('@alga-psa/db', () => ({
   createTenantKnex: vi.fn().mockResolvedValue({
     knex: {
-      transaction: vi.fn().mockImplementation((callback) => callback({})),
+      transaction: vi.fn().mockImplementation((callback: any) => callback({})),
     },
     tenant: '550e8400-e29b-41d4-a716-446655440000'
   }),
-}));
-
-// Mock withTransaction from shared
-vi.mock('@alga-psa/shared/db', () => ({
   withTransaction: vi.fn().mockImplementation(async (knex, callback) => callback({})),
 }));
 
-// Import getCurrentUser after mocking
-import { getCurrentUser } from '../../lib/actions/user-actions/userActions';
+import { getCurrentUser } from '@alga-psa/auth';
 
 describe('Project Permissions', () => {
   let viewProjectPermission: IPermission;

@@ -3,13 +3,13 @@
 
 import React, { useState, useEffect, useReducer } from 'react';
 import Link from 'next/link';
-import { Dialog } from 'server/src/components/ui/Dialog';
-import { DatePicker } from 'server/src/components/ui/DatePicker';
-import { Button } from 'server/src/components/ui/Button';
-import { Label } from 'server/src/components/ui/Label';
-import { createTimePeriod, updateTimePeriod, deleteTimePeriod } from 'server/src/lib/actions/timePeriodsActions';
+import { Dialog } from '@alga-psa/ui/components/Dialog';
+import { DatePicker } from '@alga-psa/ui/components/DatePicker';
+import { Button } from '@alga-psa/ui/components/Button';
+import { Label } from '@alga-psa/ui/components/Label';
+import { createTimePeriod, updateTimePeriod, deleteTimePeriod } from '@alga-psa/scheduling/actions/timePeriodsActions';
 import { ITimePeriodSettings, ITimePeriodView } from 'server/src/interfaces/timeEntry.interfaces';
-import { Checkbox } from 'server/src/components/ui/Checkbox';
+import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { toPlainDate } from 'server/src/lib/utils/dateTimeUtils';
 import { TimePeriodSuggester } from 'server/src/lib/timePeriodSuggester';
 import { Temporal } from '@js-temporal/polyfill';

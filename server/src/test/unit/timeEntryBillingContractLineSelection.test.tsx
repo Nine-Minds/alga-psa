@@ -3,7 +3,7 @@ import { WorkItemType } from '../../interfaces/workItem.interfaces';
 import { TimeSheetStatus } from '../../interfaces/timeEntry.interfaces';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { vi } from 'vitest';
-import TimeEntryEditForm from '../../components/time-management/time-entry/time-sheet/TimeEntryEditForm';
+import TimeEntryEditForm from '@alga-psa/scheduling/components/time-management/time-entry/time-sheet/TimeEntryEditForm';
 import * as planDisambiguation from '../../lib/utils/contractLineDisambiguation';
 
 // Mock the planDisambiguation module

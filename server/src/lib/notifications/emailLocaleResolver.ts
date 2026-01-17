@@ -23,8 +23,8 @@
  */
 
 import { getConnection } from '../db/db';
-import { SupportedLocale, isSupportedLocale, LOCALE_CONFIG } from '../i18n/config';
-import logger from '@alga-psa/shared/core/logger';
+import { SupportedLocale, isSupportedLocale, LOCALE_CONFIG } from '@alga-psa/ui/lib/i18n/config';
+import logger from '@alga-psa/core/logger';
 
 export interface EmailRecipient {
   email: string;

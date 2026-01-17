@@ -3,11 +3,11 @@
 import React, { useCallback, useRef, useState } from 'react';
 
 // Server UI components
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
-import { Button } from '@/components/ui/Button';
-import { Input } from '@/components/ui/Input';
-import { Label } from '@/components/ui/Label';
-import { TextArea } from '@/components/ui/TextArea';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
+import { Button } from '@alga-psa/ui/components/Button';
+import { Input } from '@alga-psa/ui/components/Input';
+import { Label } from '@alga-psa/ui/components/Label';
+import { TextArea } from '@alga-psa/ui/components/TextArea';
 import Link from 'next/link';
 import { toast } from 'react-hot-toast';
 

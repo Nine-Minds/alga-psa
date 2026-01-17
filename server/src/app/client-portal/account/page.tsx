@@ -3,13 +3,13 @@
 import { useEffect, useState } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
-import { Card } from 'server/src/components/ui/Card';
-import { Button } from 'server/src/components/ui/Button';
-import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
+import { Card } from '@alga-psa/ui/components/Card';
+import { Button } from '@alga-psa/ui/components/Button';
+import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { CreditCard, Info } from 'lucide-react';
 import Link from 'next/link';
-import { SwitchToMSPButton } from 'server/src/components/client-portal/account/SwitchToMSPButton';
-import { useTranslation } from 'server/src/lib/i18n/client';
+import { SwitchToMSPButton } from '@alga-psa/client-portal/components';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 export default function ClientPortalAccountPage() {
   const { data: session, status } = useSession();

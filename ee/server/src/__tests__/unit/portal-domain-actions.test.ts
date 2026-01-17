@@ -53,13 +53,13 @@ vi.mock('@ee/lib/portal-domains/workflowClient', () => ({
   enqueuePortalDomainWorkflow: vi.fn((args) => enqueueWorkflow(args)),
 }));
 
-vi.mock('@alga-psa/shared/core/secretProvider', () => ({
+vi.mock('@alga-psa/core/secrets', () => ({
   secretProvider: {
     getSecret: vi.fn(async () => null),
   },
 }));
 
-vi.mock('@alga-psa/shared/core', () => ({
+vi.mock('@alga-psa/core', () => ({
   logger: {
     info: vi.fn(),
     warn: vi.fn(),
@@ -67,7 +67,7 @@ vi.mock('@alga-psa/shared/core', () => ({
   },
 }));
 
-vi.mock('@alga-psa/shared/core/logger', () => ({
+vi.mock('@alga-psa/core/logger', () => ({
   logger: {
     info: vi.fn(),
     warn: vi.fn(),

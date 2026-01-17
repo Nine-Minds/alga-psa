@@ -3,9 +3,9 @@
 import React from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft } from 'lucide-react';
-import { Button } from 'server/src/components/ui/Button';
-import ProjectDetailView from 'server/src/components/client-portal/projects/ProjectDetailView';
-import { useTranslation } from 'server/src/lib/i18n/client';
+import { Button } from '@alga-psa/ui/components/Button';
+import { ProjectDetailView } from '@alga-psa/client-portal/components';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { IProject } from 'server/src/interfaces/project.interfaces';
 
 interface ProjectDetailsContainerProps {

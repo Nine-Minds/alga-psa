@@ -10,7 +10,7 @@ import {
   isSupportedLocale,
   getBestMatchingLocale,
   type SupportedLocale
-} from '@/lib/i18n/config';
+} from './i18nConfig';
 
 /**
  * Extract locale from URL path

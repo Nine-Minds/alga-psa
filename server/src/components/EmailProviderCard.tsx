@@ -1,16 +1,16 @@
 import React from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/Card';
-import { Button } from './ui/Button';
-import { Badge } from './ui/Badge';
-import { Alert, AlertDescription } from './ui/Alert';
-import CustomSelect from './ui/CustomSelect';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
+import { Button } from '@alga-psa/ui/components/Button';
+import { Badge } from '@alga-psa/ui/components/Badge';
+import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
+import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from './ui/DropdownMenu';
+} from '@alga-psa/ui/components/DropdownMenu';
 import {
   Settings,
   Trash2,

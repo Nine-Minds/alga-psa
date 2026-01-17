@@ -1,13 +1,13 @@
 import { Suspense } from 'react';
 import { notFound } from 'next/navigation';
-import { getWorkflowExecutionDetails } from 'server/src/lib/actions/workflow-actions';
-import ClientWorkflowVisualization from 'server/src/components/workflows/ClientWorkflowVisualization';
-import { Card } from 'server/src/components/ui/Card';
-import { Button } from 'server/src/components/ui/Button';
+import { getWorkflowExecutionDetails } from '@alga-psa/workflows/actions/workflow-actions';
+import ClientWorkflowVisualization from '@alga-psa/workflows/components/ClientWorkflowVisualization';
+import { Card } from '@alga-psa/ui/components/Card';
+import { Button } from '@alga-psa/ui/components/Button';
 import Link from 'next/link';
-import WorkflowEventTimeline from 'server/src/components/workflows/WorkflowEventTimeline';
-import WorkflowActionsList from 'server/src/components/workflows/WorkflowActionsList';
-import WorkflowControls from 'server/src/components/workflows/WorkflowControls';
+import WorkflowEventTimeline from '@alga-psa/workflows/components/WorkflowEventTimeline';
+import WorkflowActionsList from '@alga-psa/workflows/components/WorkflowActionsList';
+import WorkflowControls from '@alga-psa/workflows/components/WorkflowControls';
 
 export const dynamic = 'force-dynamic';
 

@@ -2,12 +2,12 @@
 
 import React, { useState, Suspense } from 'react';
 import { useRouter } from 'next/navigation';
-import TicketDetails from 'server/src/components/tickets/ticket/TicketDetails';
-import { updateTicketWithCache, addTicketCommentWithCache } from 'server/src/lib/actions/ticket-actions/optimizedTicketActions';
+import TicketDetails from '@alga-psa/tickets/components/ticket/TicketDetails';
+import { updateTicketWithCache, addTicketCommentWithCache } from '@alga-psa/tickets/actions/optimizedTicketActions';
 import { useSession } from 'next-auth/react';
 import { toast } from 'react-hot-toast';
 import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
-import { TicketDetailsSkeleton } from 'server/src/components/tickets/ticket/TicketDetailsSkeleton';
+import { TicketDetailsSkeleton } from '@alga-psa/tickets/components/ticket/TicketDetailsSkeleton';
 import type { SurveyTicketSatisfactionSummary } from 'server/src/interfaces/survey.interface';
 
 // Define the props interface based on the consolidated data structure

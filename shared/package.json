@@ -62,7 +62,6 @@
   },
   "devDependencies": {
     "@types/node": "^20.0.0",
-    "@types/react": "^18.0.0",
     "@types/turndown": "^5.0.6",
     "@types/uuid": "^9.0.7",
     "tsc-alias": "^1.8.16"

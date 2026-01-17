@@ -11,10 +11,10 @@
  */
 
 import { Knex } from 'knex';
-import logger from '@shared/core/logger';
+import logger from '@alga-psa/core/logger';
 import { createTenantKnex } from '../db';
 import { unparseCSV, parseCSV } from '../utils/csvParser';
-import { withTransaction } from '@shared/db';
+import { withTransaction } from '@alga-psa/db';
 import { IClient, IClientLocation } from 'server/src/interfaces/client.interfaces';
 
 const ADAPTER_TYPE = 'xero_csv';

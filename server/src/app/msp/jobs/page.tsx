@@ -1,8 +1,8 @@
 import { getQueueMetricsAction, getJobDetailsWithHistory } from 'server/src/lib/actions/job-actions';
-import JobMetricsDisplay from 'server/src/components/jobs/JobMetricsDisplay';
-import RecentJobsDataTable from 'server/src/components/jobs/RecentJobsDataTable';
-import SystemMonitoringWrapper from 'server/src/components/system-monitoring/SystemMonitoringWrapper';
-import { Card } from 'server/src/components/ui/Card';
+import JobMetricsDisplay from '@alga-psa/ui/components/jobs/JobMetricsDisplay';
+import RecentJobsDataTable from '@alga-psa/ui/components/jobs/RecentJobsDataTable';
+import SystemMonitoringWrapper from '@alga-psa/ui/components/system-monitoring/SystemMonitoringWrapper';
+import { Card } from '@alga-psa/ui/components/Card';
 
 export const dynamic = 'force-dynamic';
 

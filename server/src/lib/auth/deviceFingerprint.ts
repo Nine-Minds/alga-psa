@@ -20,25 +20,12 @@ export interface DeviceInfo {
   osVersion: string | undefined;
 }
 
-/**
- * Generate a stable device fingerprint from User-Agent
- *
- * NOTE: Does NOT include IP address to avoid flagging the same device as "new"
- * when changing networks (e.g., office WiFi → mobile hotspot)
- *
- * For better UX, this fingerprint remains stable across network changes.
- * IP address is still tracked separately for security/location purposes.
- *
- * @param userAgent - User-Agent string from HTTP headers
- * @returns SHA-256 hash of device characteristics
- */
 export function generateDeviceFingerprint(userAgent: string): string {
   const parser = new UAParser(userAgent);
   const browser = parser.getBrowser();
   const os = parser.getOS();
   const device = parser.getDevice();
 
-  // Create fingerprint from stable device characteristics only
   const fingerprintData = [
     browser.name || 'unknown',
     browser.version || '',
@@ -54,12 +41,6 @@ export function generateDeviceFingerprint(userAgent: string): string {
     .digest('hex');
 }
 
-/**
- * Parse User-Agent string into human-readable device information
- *
- * @param userAgent - User-Agent string from HTTP headers
- * @returns Parsed device information
- */
 export function getDeviceInfo(userAgent: string): DeviceInfo {
   const parser = new UAParser(userAgent);
   const browser = parser.getBrowser();

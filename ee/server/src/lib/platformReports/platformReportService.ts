@@ -8,8 +8,8 @@
  */
 
 import { Knex } from 'knex';
-import { getAdminConnection } from '@alga-psa/shared/db/admin';
-import { withTransaction } from '@alga-psa/shared/db';
+import { getAdminConnection } from '@alga-psa/db/admin';
+import { withTransaction } from '@alga-psa/db';
 import { QueryBuilder } from 'server/src/lib/reports/builders/QueryBuilder';
 import {
   ReportDefinition,

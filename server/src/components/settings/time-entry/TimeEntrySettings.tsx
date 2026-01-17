@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Settings, Calendar } from 'lucide-react';
-import CustomTabs, { TabContent } from "server/src/components/ui/CustomTabs";
+import CustomTabs, { TabContent } from "@alga-psa/ui/components/CustomTabs";
 import TimePeriodSettings from 'server/src/components/settings/time-entry/TimePeriodSettings';
 import TimePeriodList from './TimePeriodList';
 

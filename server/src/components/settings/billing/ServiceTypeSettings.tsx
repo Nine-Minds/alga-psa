@@ -1,25 +1,25 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Button } from 'server/src/components/ui/Button';
-import { DataTable } from 'server/src/components/ui/DataTable';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from 'server/src/components/ui/Card';
-import { Dialog, DialogContent, DialogFooter } from 'server/src/components/ui/Dialog';
-import { ConfirmationDialog } from 'server/src/components/ui/ConfirmationDialog';
-import { Input } from 'server/src/components/ui/Input';
-import { Checkbox } from 'server/src/components/ui/Checkbox';
-import { TextArea } from 'server/src/components/ui/TextArea';
-import { Switch } from 'server/src/components/ui/Switch';
-import CustomSelect from 'server/src/components/ui/CustomSelect';
-import { Label } from 'server/src/components/ui/Label';
+import { Button } from '@alga-psa/ui/components/Button';
+import { DataTable } from '@alga-psa/ui/components/DataTable';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@alga-psa/ui/components/Card';
+import { Dialog, DialogContent, DialogFooter } from '@alga-psa/ui/components/Dialog';
+import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
+import { Input } from '@alga-psa/ui/components/Input';
+import { Checkbox } from '@alga-psa/ui/components/Checkbox';
+import { TextArea } from '@alga-psa/ui/components/TextArea';
+import { Switch } from '@alga-psa/ui/components/Switch';
+import CustomSelect from '@alga-psa/ui/components/CustomSelect';
+import { Label } from '@alga-psa/ui/components/Label';
 import { MoreVertical, Plus } from 'lucide-react';
-import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
+import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import {
   DropdownMenu,
   DropdownMenuTrigger,
   DropdownMenuContent,
   DropdownMenuItem,
-} from 'server/src/components/ui/DropdownMenu';
+} from '@alga-psa/ui/components/DropdownMenu';
 import { IServiceType, IStandardServiceType } from 'server/src/interfaces/billing.interfaces';
 import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
 import { 

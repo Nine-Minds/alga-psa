@@ -2,10 +2,10 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { OnboardingWizard } from '@/components/onboarding/OnboardingWizard';
+import { OnboardingWizard } from '@alga-psa/ui/components/onboarding/OnboardingWizard';
 import { getTenantSettings } from '@/lib/actions/tenant-settings-actions/tenantSettingsActions';
 import { getOnboardingInitialData } from '@/lib/actions/onboarding-actions/onboardingActions';
-import { WizardData } from '@/components/onboarding/types';
+import type { WizardData } from '@alga-psa/ui/components/onboarding/types';
 
 export default function OnboardingPage() {
   const router = useRouter();

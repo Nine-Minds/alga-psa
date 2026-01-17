@@ -1,11 +1,11 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Dialog } from 'server/src/components/ui/Dialog';
-import { Button } from 'server/src/components/ui/Button';
-import { Input } from 'server/src/components/ui/Input';
-import { Label } from 'server/src/components/ui/Label';
-import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
+import { Dialog } from '@alga-psa/ui/components/Dialog';
+import { Button } from '@alga-psa/ui/components/Button';
+import { Input } from '@alga-psa/ui/components/Input';
+import { Label } from '@alga-psa/ui/components/Label';
+import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { toast } from 'react-hot-toast';
 import { AlertTriangle, Info } from 'lucide-react';
 import { useRouter } from 'next/navigation';

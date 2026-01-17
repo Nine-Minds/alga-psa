@@ -1,16 +1,16 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from 'react';
-import type { DocumentFilters as DocumentFilterType } from 'server/src/interfaces/document.interface';
-import Documents from 'server/src/components/documents/Documents';
-import { Card } from 'server/src/components/ui/Card';
-import { SelectOption } from 'server/src/components/ui/CustomSelect';
-import { getDistinctEntityTypes } from 'server/src/lib/actions/document-actions/documentActions';
+import type { DocumentFilters as DocumentFilterType } from '@alga-psa/types';
+import Documents from '@alga-psa/documents/components/Documents';
+import { Card } from '@alga-psa/ui/components/Card';
+import { SelectOption } from '@alga-psa/ui/components/CustomSelect';
+import { getDistinctEntityTypes } from '@alga-psa/documents/actions/documentActions';
 import { getCurrentUser, getAllUsersBasic } from 'server/src/lib/actions/user-actions/userActions';
 import { IUser } from '@shared/interfaces/user.interfaces';
 import { toast } from 'react-hot-toast';
-import DocumentFilters from 'server/src/components/documents/DocumentFilters';
-import DocumentsPageSkeleton from 'server/src/components/documents/DocumentsPageSkeleton';
+import DocumentFilters from '@alga-psa/documents/components/DocumentFilters';
+import DocumentsPageSkeleton from '@alga-psa/documents/components/DocumentsPageSkeleton';
 import { ChevronLeft, ChevronRight, Filter } from 'lucide-react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useUserPreference } from 'server/src/hooks/useUserPreference';

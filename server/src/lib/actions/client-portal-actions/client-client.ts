@@ -1,6 +1,6 @@
 "use server";
 
-import { withTransaction } from '@alga-psa/shared/db';
+import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { createTenantKnex } from 'server/src/lib/db';
 import { getCurrentUser, getUserClientId } from 'server/src/lib/actions/user-actions/userActions';

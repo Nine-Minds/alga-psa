@@ -10,7 +10,8 @@
     "packages/*",
     "sdk/*",
     "sdk/samples/*",
-    "sdk/samples/*/*"
+    "sdk/samples/*/*",
+    "tools/generators"
   ],
   "scripts": {
     "install:ignore": "npm ci --ignore-scripts",
@@ -38,7 +39,10 @@
     "rollback-tenant": "cd server && npm run rollback-tenant",
     "lint": "eslint \"{server,ee/server,shared,services}/**/*.{js,mjs,cjs,ts,jsx,tsx}\"",
     "guard:ext-v2": "git grep -nE \"ee/server/src/lib/extensions/ui/(descriptors|pages|tabs|navigation)|ee/server/src/lib/extensions/security/propWhitelist\\.ts|ee/server/src/lib/extensions/schemas/(manifest\\.schema|extension-points\\.schema)\\.ts|ee/server/src/lib/extensions/validator\\.ts|/api/extensions/\" -- 'server/**' 'ee/server/**' 'shared/**' 'services/**' ':!**/*.md' ':!**/node_modules/**' ':!**/dist/**' ':!**/build/**' ':!**/.next/**' ':!**/out/**' ':!**/apiRegistry.generated.ts' || true; test $(git grep -nE \"ee/server/src/lib/extensions/ui/(descriptors|pages|tabs|navigation)|ee/server/src/lib/extensions/security/propWhitelist\\.ts|ee/server/src/lib/extensions/schemas/(manifest\\.schema|extension-points\\.schema)\\.ts|ee/server/src/lib/extensions/validator\\.ts|/api/extensions/\" -- 'server/**' 'ee/server/**' 'shared/**' 'services/**' ':!**/*.md' ':!**/node_modules/**' ':!**/dist/**' ':!**/build/**' ':!**/.next/**' ':!**/out/**' ':!**/apiRegistry.generated.ts' | wc -l) -eq 0",
-    "playwright:bootstrap-db": "node --import tsx/esm scripts/bootstrap-playwright-db.ts"
+    "playwright:bootstrap-db": "node --import tsx/esm scripts/bootstrap-playwright-db.ts",
+    "test:nx": "vitest run --config tools/nx-tests/vitest.config.ts",
+    "affected:test": "NX_DAEMON=false nx affected -t test --output-style=static",
+    "affected:build": "NX_DAEMON=false nx affected -t build --output-style=static"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.30.1",
@@ -148,6 +152,7 @@
     "react-icons": "^5.2.1",
     "react-markdown": "^9.0.1",
     "react-resizable-panels": "^3.0.6",
+    "react-server-dom-webpack": "^19.2.3",
     "reactflow": "^11.11.4",
     "recharts": "^2.12.7",
     "redis": "^4.7.0",
@@ -174,6 +179,13 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.17.0",
+    "@nx/docker": "22.3.3",
+    "@nx/eslint": "22.3.3",
+    "@nx/next": "22.3.3",
+    "@nx/playwright": "22.3.3",
+    "@nx/vite": "22.3.3",
+    "@nx/vitest": "22.3.3",
+    "@playwright/test": "^1.36.0",
     "@testing-library/jest-dom": "^6.6.3",
     "@testing-library/user-event": "^14.6.1",
     "@types/dompurify": "^3.0.5",
@@ -207,6 +219,8 @@
     "eslint-plugin-react-hooks": "^5.0.0",
     "globals": "^15.14.0",
     "jsdom": "^25.0.1",
+    "nx": "22.3.3",
+    "nx-cloud": "^19.1.0",
     "postcss": "^8",
     "protobufjs": "^7.4.0",
     "tailwindcss": "^3.4.7",
@@ -214,6 +228,7 @@
     "ts-node": "^10.9.2",
     "ts-proto": "^2.6.0",
     "typescript": "^5.7.3",
+    "vite": "^7.0.0",
     "vitest": "^3.0.7"
   },
   "description": "This is a [Next.js](https://nextjs.org/) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).",

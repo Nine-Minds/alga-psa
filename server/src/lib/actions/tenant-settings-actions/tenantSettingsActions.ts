@@ -3,7 +3,7 @@
 import { getCurrentUser } from '@/lib/actions/user-actions/userActions';
 import { getTenantForCurrentRequest } from '@/lib/tenant';
 import { createTenantKnex } from '@/lib/db';
-import { WizardData } from '@/components/onboarding/types';
+import type { WizardData } from '@alga-psa/ui/components/onboarding/types';
 
 export interface TenantSettings {
   tenant: string;

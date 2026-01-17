@@ -4,7 +4,7 @@ import { getLicenseUsage, type LicenseUsage } from '../license/get-license-usage
 import { getSession } from '@/lib/auth/getSession';
 import { getStripeService } from '../stripe/StripeService';
 import { getConnection } from '@/lib/db/db';
-import logger from '@alga-psa/shared/core/logger';
+import logger from '@alga-psa/core/logger';
 import {
   IGetSubscriptionInfoResponse,
   IGetPaymentMethodResponse,

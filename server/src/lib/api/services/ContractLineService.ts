@@ -5,7 +5,7 @@
 
 import { Knex } from 'knex';
 import { BaseService, ServiceContext, ListResult } from './BaseService';
-import { withTransaction } from '@shared/db';
+import { withTransaction } from '@alga-psa/db';
 import { IContractLine, IContractLineFixedConfig, IBucketUsage } from 'server/src/interfaces/billing.interfaces';
 import { IContract, IContractLineMapping, IClientContract } from 'server/src/interfaces/contract.interfaces';
 import { IContractLineServiceConfiguration } from 'server/src/interfaces/contractLineServiceConfiguration.interfaces';

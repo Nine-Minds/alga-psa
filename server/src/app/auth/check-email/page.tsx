@@ -3,11 +3,11 @@
 import React, { useState, useEffect, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { recoverPassword } from 'server/src/lib/actions/useRegister';
-import { Button } from 'server/src/components/ui/Button';
-import { Input } from 'server/src/components/ui/Input';
-import { Label } from 'server/src/components/ui/Label';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from 'server/src/components/ui/Card';
-import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
+import { Button } from '@alga-psa/ui/components/Button';
+import { Input } from '@alga-psa/ui/components/Input';
+import { Label } from '@alga-psa/ui/components/Label';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
+import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { ArrowLeft, Mail, Shield } from 'lucide-react';
 import toast from 'react-hot-toast';
 

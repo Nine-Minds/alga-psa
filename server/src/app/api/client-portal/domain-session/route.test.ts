@@ -31,7 +31,7 @@ vi.mock('node:dns', () => ({
   },
 }));
 
-vi.mock('@shared/db/admin', () => ({
+vi.mock('@alga-psa/db/admin', () => ({
   getAdminConnection: getAdminConnectionMock,
 }));
 
@@ -55,7 +55,7 @@ vi.mock('server/src/lib/analytics/posthog', () => ({
   },
 }));
 
-vi.mock('@alga-psa/shared/core/logger', () => ({
+vi.mock('@alga-psa/core/logger', () => ({
   default: {
     info: vi.fn(),
     warn: vi.fn(),

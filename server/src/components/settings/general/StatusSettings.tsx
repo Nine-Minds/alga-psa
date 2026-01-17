@@ -1,15 +1,15 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Button } from 'server/src/components/ui/Button';
+import { Button } from '@alga-psa/ui/components/Button';
 import { Plus, MoreVertical } from "lucide-react";
-import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
+import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { getStatuses, deleteStatus, updateStatus } from 'server/src/lib/actions/status-actions/statusActions';
 import { importReferenceData, getAvailableReferenceData, checkImportConflicts, type ImportConflict } from 'server/src/lib/actions/referenceDataActions';
 import { IStatus, IStandardStatus, ItemType } from 'server/src/interfaces/status.interface';
 import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
-import { Switch } from 'server/src/components/ui/Switch';
-import { DataTable } from 'server/src/components/ui/DataTable';
+import { Switch } from '@alga-psa/ui/components/Switch';
+import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
 // CustomSelect removed - no longer needed as this component only manages ticket statuses
 import { toast } from 'react-hot-toast';
@@ -18,7 +18,7 @@ import {
   DropdownMenuTrigger,
   DropdownMenuContent,
   DropdownMenuItem,
-} from 'server/src/components/ui/DropdownMenu';
+} from '@alga-psa/ui/components/DropdownMenu';
 import { StatusDialog } from './dialogs/StatusDialog';
 import { StatusImportDialog } from './dialogs/StatusImportDialog';
 import { ConflictResolutionDialog } from './dialogs/ConflictResolutionDialog';

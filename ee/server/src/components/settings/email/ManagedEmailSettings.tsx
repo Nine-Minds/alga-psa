@@ -6,13 +6,13 @@
 
 import React, { useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from 'server/src/components/ui/Card';
-import { Button } from 'server/src/components/ui/Button';
-import { Input } from 'server/src/components/ui/Input';
-import { Label } from 'server/src/components/ui/Label';
-import { Alert, AlertDescription, AlertTitle } from 'server/src/components/ui/Alert';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from 'server/src/components/ui/Tabs';
-import CustomSelect from 'server/src/components/ui/CustomSelect';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@alga-psa/ui/components/Card';
+import { Button } from '@alga-psa/ui/components/Button';
+import { Input } from '@alga-psa/ui/components/Input';
+import { Label } from '@alga-psa/ui/components/Label';
+import { Alert, AlertDescription, AlertTitle } from '@alga-psa/ui/components/Alert';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@alga-psa/ui/components/Tabs';
+import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Globe, Send, Inbox } from 'lucide-react';
 import {
   getManagedEmailDomains,

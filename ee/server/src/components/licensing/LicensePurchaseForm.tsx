@@ -1,10 +1,10 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from 'server/src/components/ui/Card';
-import { Input } from 'server/src/components/ui/Input';
-import { Label } from 'server/src/components/ui/Label';
-import { Button } from 'server/src/components/ui/Button';
+import { Card, CardContent, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
+import { Input } from '@alga-psa/ui/components/Input';
+import { Label } from '@alga-psa/ui/components/Label';
+import { Button } from '@alga-psa/ui/components/Button';
 import {
   createLicenseCheckoutSessionAction,
   getLicensePricingAction,
@@ -19,7 +19,7 @@ import {
   EmbeddedCheckout,
 } from '@stripe/react-stripe-js';
 import { AlertCircle, ShoppingCart, CreditCard, Calendar } from 'lucide-react';
-import { Dialog } from 'server/src/components/ui/Dialog';
+import { Dialog } from '@alga-psa/ui/components/Dialog';
 
 interface LicensePurchaseFormProps {
   className?: string;

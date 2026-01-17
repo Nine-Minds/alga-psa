@@ -2,12 +2,12 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import toast from 'react-hot-toast';
-import { Card, CardHeader, CardTitle, CardContent, CardDescription } from 'server/src/components/ui/Card';
-import { Label } from 'server/src/components/ui/Label';
-import { Button } from 'server/src/components/ui/Button';
-import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
-import { Tooltip } from 'server/src/components/ui/Tooltip';
-import { RadioGroup } from 'server/src/components/ui/RadioGroup';
+import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@alga-psa/ui/components/Card';
+import { Label } from '@alga-psa/ui/components/Label';
+import { Button } from '@alga-psa/ui/components/Button';
+import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
+import { Tooltip } from '@alga-psa/ui/components/Tooltip';
+import { RadioGroup } from '@alga-psa/ui/components/RadioGroup';
 import { Info, Calculator, Cloud } from 'lucide-react';
 
 import { TaxSource } from 'server/src/interfaces/tax.interfaces';

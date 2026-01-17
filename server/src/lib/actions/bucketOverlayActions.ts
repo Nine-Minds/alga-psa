@@ -4,7 +4,7 @@ import { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 import { createTenantKnex } from 'server/src/lib/db';
 import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
-import { withTransaction } from '@alga-psa/shared/db';
+import { withTransaction } from '@alga-psa/db';
 import { hasPermission } from 'server/src/lib/auth/rbac';
 
 // Bucket overlay input type - matches the structure used in wizard

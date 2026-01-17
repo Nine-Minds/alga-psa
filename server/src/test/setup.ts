@@ -1,5 +1,15 @@
 import '@testing-library/jest-dom'
+import path from 'node:path';
+import { mkdirSync } from 'node:fs';
 import { vi } from 'vitest';
+
+// Vitest coverage (v8) uses a temp directory under the reports directory.
+// Some runs can error if the temp directory is missing; ensure it exists.
+try {
+  mkdirSync(path.resolve(process.cwd(), 'server/coverage/.tmp'), { recursive: true });
+} catch {
+  // ignore
+}
 
 // Add ResizeObserver polyfill
 global.ResizeObserver = class ResizeObserver {
@@ -9,25 +19,25 @@ global.ResizeObserver = class ResizeObserver {
 };
 
 // Mock UI reflection hooks
-vi.mock('../types/ui-reflection/useAutomationIdAndRegister', () => ({
+vi.mock('@alga-psa/ui/ui-reflection/useAutomationIdAndRegister', () => ({
   useAutomationIdAndRegister: () => ({
     automationIdProps: {},
     updateMetadata: vi.fn(),
   }),
 }));
 
-vi.mock('../types/ui-reflection/useRegisterUIComponent', () => ({
+vi.mock('@alga-psa/ui/ui-reflection/useRegisterUIComponent', () => ({
   useRegisterUIComponent: () => vi.fn(),
 }));
 
-vi.mock('../types/ui-reflection/useRegisterChild', () => ({
+vi.mock('@alga-psa/ui/ui-reflection/useRegisterChild', () => ({
   useRegisterChild: () => ({
     register: vi.fn(),
     unregister: vi.fn(),
   }),
 }));
 
-vi.mock('../types/ui-reflection/UIStateContext', () => ({
+vi.mock('@alga-psa/ui/ui-reflection/UIStateContext', () => ({
   useUIState: () => ({
     state: {},
     dispatch: vi.fn(),

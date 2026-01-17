@@ -21,7 +21,7 @@ COPY ee/server/src/ /app/ee/server/src/
 COPY ee/temporal-workflows/package*.json /app/ee/temporal-workflows/
 COPY tsconfig.base.json /app/tsconfig.base.json
 
-WORKDIR /app/packages/product-email-domains
+WORKDIR /app/packages/integrations
 RUN npm install --ignore-scripts
 
 WORKDIR /app/ee/temporal-workflows
@@ -47,7 +47,7 @@ COPY ee/temporal-workflows/ /app/ee/temporal-workflows/
 # Provide source files referenced via TS path aliases
 COPY packages/ /app/packages/
 
-WORKDIR /app/packages/product-email-domains
+WORKDIR /app/packages/integrations
 RUN npm install --ignore-scripts
 
 # Install server dependencies (needed for type-checking server source files via path aliases)
@@ -76,9 +76,9 @@ COPY --from=development /app/shared /app/shared
 # Copy built temporal-workflows
 COPY --from=development /app/ee/temporal-workflows/dist /app/ee/temporal-workflows/dist
 COPY --from=development /app/ee/temporal-workflows/node_modules /app/ee/temporal-workflows/node_modules
-# Copy product-email-domains node_modules to both locations for module resolution
-COPY --from=development /app/packages/product-email-domains/node_modules /app/packages/product-email-domains/node_modules
-COPY --from=development /app/packages/product-email-domains/node_modules /app/ee/temporal-workflows/dist/packages/product-email-domains/node_modules
+# Copy integrations node_modules to both locations for module resolution
+COPY --from=development /app/packages/integrations/node_modules /app/packages/integrations/node_modules
+COPY --from=development /app/packages/integrations/node_modules /app/ee/temporal-workflows/dist/packages/integrations/node_modules
 
 # Verify seeds are present in production stage
 RUN ls -la /app/ee/temporal-workflows/dist/seeds/onboarding || echo "Seeds directory not found in production stage"

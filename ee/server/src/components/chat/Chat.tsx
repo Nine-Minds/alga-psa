@@ -7,9 +7,9 @@ import { Message, type FunctionCallMeta } from '../../components/message/Message
 import { IChat } from '../../interfaces/chat.interface';
 import { createNewChatAction, addMessageToChatAction } from '../../lib/chat-actions/chatActions';
 import { HfInference } from '@huggingface/inference';
-import { Dialog, DialogContent, DialogFooter } from 'server/src/components/ui/Dialog';
-import { Button } from 'server/src/components/ui/Button';
-import { Switch } from 'server/src/components/ui/Switch';
+import { Dialog, DialogContent, DialogFooter } from '@alga-psa/ui/components/Dialog';
+import { Button } from '@alga-psa/ui/components/Button';
+import { Switch } from '@alga-psa/ui/components/Switch';
 
 import './chat.css';
 

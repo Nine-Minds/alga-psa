@@ -79,9 +79,9 @@ vi.mock('../../../components/companies/CompanyPicker', () => ({
   ),
 }));
 
-vi.mock('../../../components/tickets/CategoryPicker', () => ({
+vi.mock('@alga-psa/tickets/components/CategoryPicker', () => ({
   __esModule: true,
-  CategoryPicker: ({ id = 'category-picker', selectedCategories = [], onSelect, placeholder, disabled }: any) => (
+  default: ({ id = 'category-picker', selectedCategories = [], onSelect, placeholder, disabled }: any) => (
     <select
       id={id}
       data-testid="category-picker"
@@ -95,7 +95,7 @@ vi.mock('../../../components/tickets/CategoryPicker', () => ({
   ),
 }));
 
-vi.mock('../../../components/tickets/PrioritySelect', () => ({
+vi.mock('@alga-psa/tickets/components/PrioritySelect', () => ({
   __esModule: true,
   PrioritySelect: ({
     id,
@@ -120,7 +120,7 @@ vi.mock('../../../components/tickets/PrioritySelect', () => ({
   ),
 }));
 
-vi.mock('../../../components/ui/CustomSelect', () => ({
+vi.mock('@alga-psa/ui/components/CustomSelect', () => ({
   __esModule: true,
   default: ({
     id,
@@ -147,7 +147,7 @@ vi.mock('../../../components/ui/CustomSelect', () => ({
   ),
 }));
 
-vi.mock('../../../components/ui/UserPicker', () => ({
+vi.mock('@alga-psa/ui/components/UserPicker', () => ({
   __esModule: true,
   default: ({ id, value, onValueChange, placeholder, users = [], disabled }: any) => (
     <select

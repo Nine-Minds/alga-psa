@@ -1,7 +1,7 @@
 import type { Knex } from 'knex';
 import { getPortalDomain } from '../../models/PortalDomainModel';
 import { buildTenantPortalSlug } from '@shared/utils/tenantSlug';
-import logger from '@alga-psa/shared/core/logger';
+import logger from '@alga-psa/core/logger';
 
 /**
  * Entity types supported for notification link generation

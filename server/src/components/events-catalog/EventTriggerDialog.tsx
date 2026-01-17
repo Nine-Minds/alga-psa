@@ -1,18 +1,18 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "server/src/components/ui/Dialog";
-import { Button } from "server/src/components/ui/Button";
-import { Input } from "server/src/components/ui/Input";
-import { Label } from "server/src/components/ui/Label";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "server/src/components/ui/Tabs";
-import { Card } from "server/src/components/ui/Card";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@alga-psa/ui/components/Dialog";
+import { Button } from "@alga-psa/ui/components/Button";
+import { Input } from "@alga-psa/ui/components/Input";
+import { Label } from "@alga-psa/ui/components/Label";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@alga-psa/ui/components/Tabs";
+import { Card } from "@alga-psa/ui/components/Card";
 import { Trash2, Plus, ArrowRight } from "lucide-react";
 import { toast } from "react-hot-toast";
 import { IEventCatalogEntry, ICreateWorkflowEventAttachment, ICreateWorkflowTrigger, ICreateWorkflowEventMapping } from "@alga-psa/shared/workflow";
-import { createWorkflowTrigger, createWorkflowEventMappings } from "server/src/lib/actions/workflow-trigger-actions";
-import { createWorkflowEventAttachment } from "server/src/lib/actions/workflow-event-attachment-actions";
-import { getAllWorkflowRegistrations } from "server/src/lib/actions/workflow-runtime-actions";
+import { createWorkflowTrigger, createWorkflowEventMappings } from "@alga-psa/workflows/actions/workflow-trigger-actions";
+import { createWorkflowEventAttachment } from "@alga-psa/workflows/actions/workflow-event-attachment-actions";
+import { getAllWorkflowRegistrations } from "@alga-psa/workflows/actions/workflow-runtime-actions";
 import { getCurrentTenant } from "server/src/lib/actions/tenantActions";
 
 interface EventTriggerDialogProps {

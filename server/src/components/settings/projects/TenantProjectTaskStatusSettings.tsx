@@ -1,23 +1,23 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Button } from 'server/src/components/ui/Button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from 'server/src/components/ui/Card';
-import { Checkbox } from 'server/src/components/ui/Checkbox';
-import { Input } from 'server/src/components/ui/Input';
+import { Button } from '@alga-psa/ui/components/Button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
+import { Checkbox } from '@alga-psa/ui/components/Checkbox';
+import { Input } from '@alga-psa/ui/components/Input';
 import {
   getTenantProjectStatuses,
   createTenantProjectStatus,
   updateTenantProjectStatus,
   deleteTenantProjectStatus,
   reorderTenantProjectStatuses
-} from 'server/src/lib/actions/project-actions/projectTaskStatusActions';
+} from '@alga-psa/projects/actions/projectTaskStatusActions';
 import { importReferenceData, getAvailableReferenceData, checkImportConflicts, type ImportConflict } from 'server/src/lib/actions/referenceDataActions';
 import { IStatus, IStandardStatus } from 'server/src/interfaces/status.interface';
 import { ChevronUp, ChevronDown, Trash2, Edit2, Plus, Palette } from 'lucide-react';
 import * as LucideIcons from 'lucide-react';
-import { Dialog } from 'server/src/components/ui/Dialog';
-import ColorPicker from 'server/src/components/ui/ColorPicker';
+import { Dialog } from '@alga-psa/ui/components/Dialog';
+import ColorPicker from '@alga-psa/ui/components/ColorPicker';
 import { StatusImportDialog } from '../general/dialogs/StatusImportDialog';
 import { ConflictResolutionDialog } from '../general/dialogs/ConflictResolutionDialog';
 import { toast } from 'react-hot-toast';

@@ -1,11 +1,11 @@
 "use client";
 
 import React, { useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "server/src/components/ui/Dialog";
-import { Button } from "server/src/components/ui/Button";
-import { Label } from "server/src/components/ui/Label";
-import { Input } from "server/src/components/ui/Input";
-import { TextArea } from "server/src/components/ui/TextArea";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@alga-psa/ui/components/Dialog";
+import { Button } from "@alga-psa/ui/components/Button";
+import { Label } from "@alga-psa/ui/components/Label";
+import { Input } from "@alga-psa/ui/components/Input";
+import { TextArea } from "@alga-psa/ui/components/TextArea";
 import { createWorkflowFromTemplate } from "server/src/lib/actions/template-library-actions";
 import { toast } from "react-hot-toast";
 import { useRouter } from "next/navigation";

@@ -4,12 +4,12 @@ import { useEffect, useMemo, useState, useTransition, type ReactNode } from "rea
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { authorizeSsoLinkingAction } from "@ee/lib/actions/auth/connectSso";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "server/src/components/ui/Card";
-import { Input } from "server/src/components/ui/Input";
-import { Label } from "server/src/components/ui/Label";
-import { Button } from "server/src/components/ui/Button";
-import { Alert, AlertDescription } from "server/src/components/ui/Alert";
-import { Badge } from "server/src/components/ui/Badge";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@alga-psa/ui/components/Card";
+import { Input } from "@alga-psa/ui/components/Input";
+import { Label } from "@alga-psa/ui/components/Label";
+import { Button } from "@alga-psa/ui/components/Button";
+import { Alert, AlertDescription } from "@alga-psa/ui/components/Alert";
+import { Badge } from "@alga-psa/ui/components/Badge";
 import clsx from "clsx";
 import { Loader2, ShieldCheck, KeyRound, LogIn } from "lucide-react";
 import { SiGoogle } from "react-icons/si";

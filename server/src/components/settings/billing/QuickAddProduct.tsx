@@ -1,11 +1,11 @@
 'use client';
 
 import React, { useEffect, useMemo, useState } from 'react';
-import { Button } from 'server/src/components/ui/Button';
-import { Input } from 'server/src/components/ui/Input';
-import CustomSelect from 'server/src/components/ui/CustomSelect';
-import { Dialog, DialogContent, DialogFooter } from 'server/src/components/ui/Dialog';
-import { EditableServiceTypeSelect } from 'server/src/components/ui/EditableServiceTypeSelect';
+import { Button } from '@alga-psa/ui/components/Button';
+import { Input } from '@alga-psa/ui/components/Input';
+import CustomSelect from '@alga-psa/ui/components/CustomSelect';
+import { Dialog, DialogContent, DialogFooter } from '@alga-psa/ui/components/Dialog';
+import { EditableServiceTypeSelect } from '@alga-psa/ui/components/EditableServiceTypeSelect';
 import {
   createService,
   updateService,

@@ -1,7 +1,7 @@
 'use server';
 
 import { getConnection } from '@/lib/db/db';
-import { SupportedLocale, isSupportedLocale, LOCALE_CONFIG } from '@/lib/i18n/config';
+import { SupportedLocale, isSupportedLocale, LOCALE_CONFIG } from '@alga-psa/ui/lib/i18n/config';
 import { getCurrentUser } from '../user-actions/userActions';
 
 /**

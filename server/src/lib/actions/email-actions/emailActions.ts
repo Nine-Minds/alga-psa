@@ -2,7 +2,7 @@
 
 import { findContactByEmailAddress, createOrFindContactByEmail } from '../contact-actions/contactActions';
 import { createTenantKnex } from '../../db/index';
-import { withTransaction } from '@shared/db/index';
+import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 

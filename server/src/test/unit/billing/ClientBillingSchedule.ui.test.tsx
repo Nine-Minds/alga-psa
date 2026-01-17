@@ -13,11 +13,11 @@ vi.mock('react-hot-toast', () => ({
   },
 }));
 
-vi.mock('server/src/components/ui/Tooltip', () => ({
+vi.mock('@alga-psa/ui/components/Tooltip', () => ({
   Tooltip: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }));
 
-vi.mock('server/src/components/ui/Dialog', () => ({
+vi.mock('@alga-psa/ui/components/Dialog', () => ({
   Dialog: ({ isOpen, title, children }: any) => (
     isOpen ? (
       <div>
@@ -28,15 +28,15 @@ vi.mock('server/src/components/ui/Dialog', () => ({
   ),
 }));
 
-vi.mock('server/src/components/ui/Button', () => ({
+vi.mock('@alga-psa/ui/components/Button', () => ({
   Button: ({ children, ...props }: any) => <button {...props}>{children}</button>,
 }));
 
-vi.mock('server/src/components/ui/Input', () => ({
+vi.mock('@alga-psa/ui/components/Input', () => ({
   Input: (props: any) => <input {...props} />,
 }));
 
-vi.mock('server/src/components/ui/CustomSelect', () => ({
+vi.mock('@alga-psa/ui/components/CustomSelect', () => ({
   default: ({ id, value, options, onValueChange }: any) => (
     <select
       id={id}

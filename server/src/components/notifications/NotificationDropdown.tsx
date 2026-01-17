@@ -3,13 +3,13 @@
 import React, { useState } from 'react';
 import { CheckCheck, RefreshCw, WifiOff, AlertCircle } from 'lucide-react';
 import Link from 'next/link';
-import Spinner from 'server/src/components/ui/Spinner';
+import Spinner from '@alga-psa/ui/components/Spinner';
 import { NotificationItem } from './NotificationItem';
 import type { InternalNotification } from 'server/src/lib/models/internalNotification';
-import { useActivityDrawer } from 'server/src/components/user-activities/ActivityDrawerProvider';
+import { useActivityDrawer } from '@alga-psa/ui/components/user-activities/ActivityDrawerProvider';
 import { ActivityType, NotificationActivity } from 'server/src/interfaces/activity.interfaces';
 import { useTenant } from 'server/src/components/TenantProvider';
-import { useTranslation } from 'server/src/lib/i18n/client';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
 
 interface NotificationDropdownProps {

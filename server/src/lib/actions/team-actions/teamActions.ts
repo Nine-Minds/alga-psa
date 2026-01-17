@@ -3,7 +3,7 @@
 import Team from 'server/src/lib/models/team';
 import { ITeam, IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
 import { getMultipleUsersWithRoles } from 'server/src/lib/actions/user-actions/userActions';
-import { withTransaction } from '@alga-psa/shared/db';
+import { withTransaction } from '@alga-psa/db';
 import { createTenantKnex } from 'server/src/lib/db';
 import { Knex } from 'knex';
 

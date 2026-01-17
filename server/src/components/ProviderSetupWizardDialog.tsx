@@ -1,10 +1,10 @@
 "use client";
 
 import React, { useState } from 'react';
-import { Dialog, DialogContent, DialogFooter } from './ui/Dialog';
-import { Button } from './ui/Button';
+import { Dialog, DialogContent, DialogFooter } from '@alga-psa/ui/components/Dialog';
+import { Button } from '@alga-psa/ui/components/Button';
 import { EmailProviderSelector } from './EmailProviderSelector';
-import { MicrosoftProviderForm, GmailProviderForm, ImapProviderForm } from '@product/email-providers/entry';
+import { MicrosoftProviderForm, GmailProviderForm, ImapProviderForm } from '@alga-psa/integrations/email/providers/entry';
 import type { EmailProvider } from './EmailProviderConfiguration';
 
 interface ProviderSetupWizardDialogProps {

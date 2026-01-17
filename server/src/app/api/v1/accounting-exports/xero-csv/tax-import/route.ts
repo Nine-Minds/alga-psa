@@ -11,7 +11,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
 import { hasPermission } from 'server/src/lib/auth/rbac';
 import { getXeroCsvTaxImportService } from 'server/src/lib/services/xeroCsvTaxImportService';
-import logger from '@shared/core/logger';
+import logger from '@alga-psa/core/logger';
 
 export async function POST(request: NextRequest) {
   try {

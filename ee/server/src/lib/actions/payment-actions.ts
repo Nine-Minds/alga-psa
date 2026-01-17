@@ -10,8 +10,8 @@
 
 import { getConnection } from 'server/src/lib/db/db';
 import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
-import { getSecretProviderInstance } from '@alga-psa/shared/core';
-import logger from '@alga-psa/shared/core/logger';
+import { getSecretProviderInstance } from '@alga-psa/core';
+import logger from '@alga-psa/core/logger';
 import Stripe from 'stripe';
 import * as fs from 'fs';
 import {

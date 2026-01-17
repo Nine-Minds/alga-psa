@@ -6,8 +6,8 @@ import {
   assignServiceTaxRate
 } from '../../../../../test-utils/billingTestHelpers';
 import { setupCommonMocks } from '../../../../../test-utils/testMocks';
-import { createPrepaymentInvoice } from 'server/src/lib/actions/creditActions';
-import { finalizeInvoice } from 'server/src/lib/actions/invoiceModification';
+import { createPrepaymentInvoice } from '@alga-psa/billing/actions/creditActions';
+import { finalizeInvoice } from '@alga-psa/billing/actions/invoiceModification';
 import { v4 as uuidv4 } from 'uuid';
 import type { IClient } from '../../interfaces/client.interfaces';
 import { Temporal } from '@js-temporal/polyfill';
@@ -38,8 +38,8 @@ vi.mock('server/src/lib/analytics/posthog', () => ({
   }
 }));
 
-vi.mock('@alga-psa/shared/db', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@alga-psa/shared/db')>();
+vi.mock('@alga-psa/db', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@alga-psa/db')>();
   return {
     ...actual,
     withTransaction: vi.fn(async (knex, callback) => callback(knex)),
@@ -47,12 +47,12 @@ vi.mock('@alga-psa/shared/db', async (importOriginal) => {
   };
 });
 
-vi.mock('@shared/db', () => ({
+vi.mock('@alga-psa/db', () => ({
   withTransaction: vi.fn(async (knex, callback) => callback(knex)),
   withAdminTransaction: vi.fn(async (callback, existingConnection) => callback(existingConnection as any))
 }));
 
-vi.mock('@shared/core/logger', () => ({
+vi.mock('@alga-psa/core/logger', () => ({
   default: {
     info: vi.fn(),
     error: vi.fn(),

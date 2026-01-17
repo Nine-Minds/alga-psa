@@ -7,11 +7,11 @@ import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-li
 
 (globalThis as unknown as { React?: typeof React }).React = React;
 
-import * as invoiceGeneration from 'server/src/lib/actions/invoiceGeneration';
-import * as billingCycleActions from 'server/src/lib/actions/billingCycleActions';
-import * as billingAndTax from 'server/src/lib/actions/billingAndTax';
+import * as billingCycleActions from '@alga-psa/billing/actions/billingCycleActions';
+import * as billingAndTaxActions from '@alga-psa/billing/actions/billingAndTax';
+import * as invoiceGenerationActions from '@alga-psa/billing/actions/invoiceGeneration';
 
-vi.mock('server/src/components/ui/DataTable', () => ({
+vi.mock('@alga-psa/ui/components/DataTable', () => ({
   DataTable: ({ data, columns, id }: any) => {
     const getValue = (row: any, dataIndex: any) => {
       if (Array.isArray(dataIndex)) {
@@ -39,14 +39,14 @@ vi.mock('server/src/components/ui/DataTable', () => ({
   },
 }));
 
-vi.mock('server/src/components/ui/Dialog', () => ({
+vi.mock('@alga-psa/ui/components/Dialog', () => ({
   Dialog: ({ isOpen, children }: any) => (isOpen ? <div data-testid="dialog">{children}</div> : null),
   DialogContent: ({ children }: any) => <div>{children}</div>,
   DialogFooter: ({ children }: any) => <div>{children}</div>,
   DialogDescription: ({ children }: any) => <div>{children}</div>,
 }));
 
-vi.mock('server/src/components/ui/ConfirmationDialog', () => ({
+vi.mock('@alga-psa/ui/components/ConfirmationDialog', () => ({
   ConfirmationDialog: ({ isOpen, title, message, options, onConfirm, onClose, id, confirmLabel = 'Confirm' }: any) => {
     const [selected, setSelected] = React.useState(options?.[0]?.value ?? '');
     if (!isOpen) return null;
@@ -84,7 +84,7 @@ vi.mock('server/src/components/ui/ConfirmationDialog', () => ({
   },
 }));
 
-const { default: AutomaticInvoices } = await import('server/src/components/billing-dashboard/AutomaticInvoices');
+const { AutomaticInvoices } = await import('@alga-psa/billing');
 
 function createPeriods() {
   return [
@@ -116,16 +116,16 @@ function createPeriods() {
 }
 
 describe('Contract PO UI flows', () => {
-  const previewInvoiceMock = vi.spyOn(invoiceGeneration, 'previewInvoice');
-  const generateInvoiceMock = vi.spyOn(invoiceGeneration, 'generateInvoice');
+  const previewInvoiceMock = vi.spyOn(invoiceGenerationActions, 'previewInvoice');
+  const generateInvoiceMock = vi.spyOn(invoiceGenerationActions, 'generateInvoice');
   const getPurchaseOrderOverageForBillingCycleMock = vi.spyOn(
-    invoiceGeneration,
+    invoiceGenerationActions,
     'getPurchaseOrderOverageForBillingCycle'
   );
   const getInvoicedBillingCyclesPaginatedMock = vi.spyOn(billingCycleActions, 'getInvoicedBillingCyclesPaginated');
   const removeBillingCycleMock = vi.spyOn(billingCycleActions, 'removeBillingCycle');
   const hardDeleteBillingCycleMock = vi.spyOn(billingCycleActions, 'hardDeleteBillingCycle');
-  const getAvailableBillingPeriodsMock = vi.spyOn(billingAndTax, 'getAvailableBillingPeriods');
+  const getAvailableBillingPeriodsMock = vi.spyOn(billingAndTaxActions, 'getAvailableBillingPeriods');
 
   beforeEach(() => {
     previewInvoiceMock.mockReset();

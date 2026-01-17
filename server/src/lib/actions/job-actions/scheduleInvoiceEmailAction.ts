@@ -3,11 +3,11 @@
 import { JobService } from 'server/src/services/job.service';
 import { createTenantKnex } from 'server/src/lib/db';
 import { getCurrentUser } from '../user-actions/userActions';
-import { getInvoiceForRendering } from '../invoiceQueries';
-import { getClientById } from '../client-actions/clientActions';
+import { getInvoiceForRendering } from '@alga-psa/billing/actions/invoiceQueries';
+import { getClientById } from '@alga-psa/clients/actions';
 import { JobStatus } from 'server/src/types/job';
-import logger from '@shared/core/logger';
-import { withTransaction } from '@shared/db';
+import logger from '@alga-psa/core/logger';
+import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { analytics } from '../../analytics/posthog';
 import { AnalyticsEvents } from '../../analytics/events';

@@ -9,17 +9,17 @@ import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { Button } from './ui/Button';
-import { Input } from './ui/Input';
-import { Label } from './ui/Label';
-import { Switch } from './ui/Switch';
-import { Alert, AlertDescription } from './ui/Alert';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/Card';
+import { Button } from '@alga-psa/ui/components/Button';
+import { Input } from '@alga-psa/ui/components/Input';
+import { Label } from '@alga-psa/ui/components/Label';
+import { Switch } from '@alga-psa/ui/components/Switch';
+import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import { ExternalLink, Eye, EyeOff, CheckCircle } from 'lucide-react';
 import type { EmailProvider } from './EmailProviderConfiguration';
 import { createEmailProvider, updateEmailProvider, upsertEmailProvider } from '../lib/actions/email-actions/emailProviderActions';
 import { initiateEmailOAuth } from 'server/src/lib/actions/email-actions/oauthActions';
-import CustomSelect from 'server/src/components/ui/CustomSelect';
+import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { getInboundTicketDefaults } from 'server/src/lib/actions/email-actions/inboundTicketDefaultsActions';
 
 const microsoftProviderSchema = z.object({

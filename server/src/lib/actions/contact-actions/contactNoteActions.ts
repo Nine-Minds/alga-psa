@@ -8,15 +8,15 @@
  */
 
 import { createTenantKnex } from 'server/src/lib/db';
-import { withTransaction } from '@shared/db';
+import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
 import {
   createBlockDocument,
   getBlockContent,
   updateBlockContent,
-} from 'server/src/lib/actions/document-actions/documentBlockContentActions';
-import { IDocument } from 'server/src/interfaces/document.interface';
+} from '@alga-psa/documents/actions/documentBlockContentActions';
+import type { IDocument } from '@alga-psa/types';
 
 export interface ContactNoteContent {
   document: IDocument | null;

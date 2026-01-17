@@ -8,8 +8,8 @@
 import { Knex } from 'knex';
 import axios from 'axios';
 import { createTenantKnex } from '@/lib/db';
-import { withTransaction } from '@shared/db';
-import logger from '@shared/core/logger';
+import { withTransaction } from '@alga-psa/db';
+import logger from '@alga-psa/core/logger';
 
 /**
  * Extract safe error info for logging (avoids circular reference issues with axios errors)

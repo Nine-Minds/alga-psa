@@ -2,11 +2,11 @@ import React, { useState, useEffect, useRef, useLayoutEffect, useMemo } from 're
 import { createPortal } from 'react-dom';
 import { Plus } from 'lucide-react';
 import { generateEntityColor } from 'server/src/utils/colorUtils';
-// import { useAutomationIdAndRegister } from 'server/src/types/ui-reflection/useAutomationIdAndRegister';
-// import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionContainer';
-// import { ButtonComponent, FormFieldComponent } from 'server/src/types/ui-reflection/types';
-import { Input } from 'server/src/components/ui/Input';
-import { Button } from 'server/src/components/ui/Button';
+// import { useAutomationIdAndRegister } from '@alga-psa/ui/ui-reflection/useAutomationIdAndRegister';
+// import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContainer';
+// import { ButtonComponent, FormFieldComponent } from '@alga-psa/ui/ui-reflection/types';
+import { Input } from '@alga-psa/ui/components/Input';
+import { Button } from '@alga-psa/ui/components/Button';
 import { ITag } from 'server/src/interfaces/tag.interfaces';
 import { useTags } from 'server/src/context/TagContext';
 

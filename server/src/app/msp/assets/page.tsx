@@ -1,9 +1,9 @@
-import { listAssets } from 'server/src/lib/actions/asset-actions/assetActions';
+import { listAssets } from '@alga-psa/assets/actions/assetActions';
 import User from 'server/src/lib/models/user';
 import { redirect } from 'next/navigation';
 import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
-import { AssetListResponse } from 'server/src/interfaces/asset.interfaces';
-import AssetDashboard from 'server/src/components/assets/AssetDashboard';
+import type { AssetListResponse } from '@alga-psa/types';
+import AssetDashboard from '@alga-psa/assets/components/AssetDashboard';
 import { getConnection } from 'server/src/lib/db/db';
 import { getSession } from 'server/src/lib/auth/getSession';
 

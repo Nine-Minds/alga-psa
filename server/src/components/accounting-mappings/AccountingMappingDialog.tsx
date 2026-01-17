@@ -1,11 +1,11 @@
 import React, { useEffect, useMemo, useState } from 'react';
 
-import { Dialog, DialogContent, DialogFooter } from 'server/src/components/ui/Dialog';
-import { Button } from 'server/src/components/ui/Button';
-import { Label } from 'server/src/components/ui/Label';
-import CustomSelect from 'server/src/components/ui/CustomSelect';
-import { Input } from 'server/src/components/ui/Input';
-import { TextArea } from 'server/src/components/ui/TextArea';
+import { Dialog, DialogContent, DialogFooter } from '@alga-psa/ui/components/Dialog';
+import { Button } from '@alga-psa/ui/components/Button';
+import { Label } from '@alga-psa/ui/components/Label';
+import CustomSelect from '@alga-psa/ui/components/CustomSelect';
+import { Input } from '@alga-psa/ui/components/Input';
+import { TextArea } from '@alga-psa/ui/components/TextArea';
 import type { ExternalEntityMapping } from 'server/src/lib/actions/externalMappingActions';
 import type {
   AccountingMappingContext,

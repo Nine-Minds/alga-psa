@@ -208,7 +208,7 @@ Out of scope for this iteration: automatic payment imports, two-way sync of jour
 - Billing engine outputs (`server/src/lib/billing/billingEngine.ts`, `server/src/lib/services/invoiceService.ts`) for canonical data assembly.
 - Event bus + Automation Hub if exports are scheduled or triggered by workflows (`server/src/lib/eventBus`, `shared/workflow/init/registerWorkflowActions.ts`).
 - Event bus now exposes `ACCOUNTING_EXPORT_COMPLETED` / `ACCOUNTING_EXPORT_FAILED` types; downstream consumers must update catalogs (`shared/workflow/streams/eventBusSchema.ts`, `shared/workflow/types/eventCatalog.ts`).
-- Secret management (`@shared/core` secret provider) for QuickBooks/Xero credentials.
+- Secret management (`@alga-psa/core` secret provider) for QuickBooks/Xero credentials.
 - QuickBooks Online adapter now persists invoice-level mappings in `tenant_external_entity_mappings` (`alga_entity_type='invoice'`); ensure migrations/cleanup scripts account for the new entity type.
 
 ---

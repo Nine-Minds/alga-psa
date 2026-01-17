@@ -139,7 +139,7 @@ export class ActionRegistry {
       if (context.knex) {
         knex = context.knex;
       } else {
-        const { getAdminConnection } = await import('@alga-psa/shared/db/admin');
+        const { getAdminConnection } = await import('@alga-psa/db/admin');
         knex = await getAdminConnection();
       }
       

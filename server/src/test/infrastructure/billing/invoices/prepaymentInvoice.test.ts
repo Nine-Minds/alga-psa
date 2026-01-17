@@ -1,8 +1,8 @@
 import { describe, it, expect, beforeAll, beforeEach, afterEach, afterAll, vi } from 'vitest';
 import '../../../../../test-utils/nextApiMock';
-import { generateInvoice, createInvoiceFromBillingResult } from 'server/src/lib/actions/invoiceGeneration';
-import { finalizeInvoice } from 'server/src/lib/actions/invoiceModification';
-import { createPrepaymentInvoice, applyCreditToInvoice } from 'server/src/lib/actions/creditActions';
+import { generateInvoice, createInvoiceFromBillingResult } from '@alga-psa/billing/actions/invoiceGeneration';
+import { finalizeInvoice } from '@alga-psa/billing/actions/invoiceModification';
+import { createPrepaymentInvoice, applyCreditToInvoice } from '@alga-psa/billing/actions/creditActions';
 import { v4 as uuidv4 } from 'uuid';
 import { TextEncoder as NodeTextEncoder } from 'util';
 import { TestContext } from '../../../../../test-utils/testContext';
@@ -47,7 +47,7 @@ vi.mock('server/src/lib/analytics/posthog', () => ({
   }
 }));
 
-vi.mock('@alga-psa/shared/db', () => ({
+vi.mock('@alga-psa/db', () => ({
   withTransaction: vi.fn(async (knex, callback) => {
     try {
       return await callback(knex);
@@ -66,7 +66,7 @@ vi.mock('@alga-psa/shared/db', () => ({
   })
 }));
 
-vi.mock('@alga-psa/shared/core/logger', () => ({
+vi.mock('@alga-psa/core/logger', () => ({
   default: {
     info: vi.fn(),
     warn: vi.fn(),
@@ -91,7 +91,7 @@ vi.mock('server/src/lib/eventBus', () => ({
   })
 }));
 
-vi.mock('@alga-psa/shared/core/secretProvider', () => ({
+vi.mock('@alga-psa/core/secrets', () => ({
   getSecretProviderInstance: () => ({
     getSecret: async () => undefined,
     getAppSecret: async () => undefined,
@@ -101,7 +101,7 @@ vi.mock('@alga-psa/shared/core/secretProvider', () => ({
   }),
 }));
 
-vi.mock('@alga-psa/shared/core', () => ({
+vi.mock('@alga-psa/core', () => ({
   getSecretProviderInstance: () => ({
     getSecret: async () => undefined,
     getAppSecret: async () => undefined,

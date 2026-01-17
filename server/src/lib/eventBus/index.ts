@@ -1,6 +1,6 @@
 import { createClient } from 'redis';
 import { v4 as uuidv4 } from 'uuid';
-import logger from '@shared/core/logger';
+import logger from '@alga-psa/core/logger';
 import { getRedisConfig, getEventStream, getConsumerName, DEFAULT_EVENT_CHANNEL } from '../../config/redisConfig';
 import { getSecret } from '../utils/getSecret';
 import {

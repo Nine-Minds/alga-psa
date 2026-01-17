@@ -1,0 +1,26 @@
+{
+  "name": "@alga-psa/integrations",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "packages/integrations/src",
+  "projectType": "library",
+  "tags": ["scope:integrations", "type:vertical"],
+  "targets": {
+    "build": {
+      "executor": "nx:noop"
+    },
+    "test": {
+      "executor": "@nx/vite:test",
+      "outputs": ["{workspaceRoot}/coverage/packages/integrations"],
+      "options": {
+        "passWithNoTests": true
+      }
+    },
+    "lint": {
+      "executor": "@nx/eslint:lint",
+      "outputs": ["{options.outputFile}"],
+      "options": {
+        "lintFilePatterns": ["packages/integrations/**/*.{ts,tsx}"]
+      }
+    }
+  }
+}

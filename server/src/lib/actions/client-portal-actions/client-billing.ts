@@ -2,7 +2,7 @@
 
 import { getConnection } from 'server/src/lib/db/db';
 import { createTenantKnex } from 'server/src/lib/db';
-import { withTransaction } from '@shared/db';
+import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { getUserRolesWithPermissions } from 'server/src/lib/actions/user-actions/userActions';
 import {
@@ -15,9 +15,9 @@ import {
   fetchInvoicesByClient,
   getInvoiceLineItems,
   getInvoiceForRendering
-} from 'server/src/lib/actions/invoiceQueries';
-import { getInvoiceTemplates } from 'server/src/lib/actions/invoiceTemplates';
-import { finalizeInvoice, unfinalizeInvoice } from 'server/src/lib/actions/invoiceModification';
+} from '@alga-psa/billing/actions/invoiceQueries';
+import { getInvoiceTemplates } from '@alga-psa/billing/actions/invoiceTemplates';
+import { finalizeInvoice, unfinalizeInvoice } from '@alga-psa/billing/actions/invoiceModification';
 import { InvoiceViewModel, IInvoiceTemplate } from 'server/src/interfaces/invoice.interfaces';
 import Invoice from 'server/src/lib/models/invoice';
 import { getSession } from 'server/src/lib/auth/getSession';

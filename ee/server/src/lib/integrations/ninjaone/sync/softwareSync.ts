@@ -8,7 +8,7 @@
  * @see ee/docs/plans/asset-detail-view-enhancement.md §1.3.3
  */
 
-import logger from '@shared/core/logger';
+import logger from '@alga-psa/core/logger';
 import axios from 'axios';
 import { Knex } from 'knex';
 import { createTenantKnex } from '@/db';

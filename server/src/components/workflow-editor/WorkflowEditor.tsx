@@ -4,13 +4,13 @@ import React, { useEffect, useRef, useState, useCallback, Suspense } from "react
 import dynamic from "next/dynamic";
 import { Monaco } from "@monaco-editor/react";
 import type { editor, Uri } from "monaco-editor";
-import { Card } from "server/src/components/ui/Card";
-import { Button } from "server/src/components/ui/Button";
-import { ReflectionContainer } from "server/src/types/ui-reflection/ReflectionContainer";
+import { Card } from "@alga-psa/ui/components/Card";
+import { Button } from "@alga-psa/ui/components/Button";
+import { ReflectionContainer } from "@alga-psa/ui/ui-reflection/ReflectionContainer";
 import { Play, Code2, AlertTriangle } from "lucide-react";
-import { getRegisteredWorkflowActions } from "server/src/lib/actions/workflow-actions/workflowActionRegistry";
+import { getRegisteredWorkflowActions } from "@alga-psa/workflows/actions/workflow-actions/workflowActionRegistry";
 import { ActionParameterDefinition } from "@alga-psa/shared/workflow/core";
-import EditorSkeleton from "server/src/components/ui/skeletons/EditorSkeleton";
+import EditorSkeleton from "@alga-psa/ui/components/skeletons/EditorSkeleton";
 
 // Dynamic import for Monaco Editor
 const DynamicMonacoEditor = dynamic(() => import('./DynamicMonacoEditor'), {

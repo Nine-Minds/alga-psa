@@ -3,7 +3,7 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
-import { DynamicWorkflowComponent } from 'server/src/lib/workflow/visualization/WorkflowComponentLoader';
+import { DynamicWorkflowComponent } from '@alga-psa/workflows/components/WorkflowComponentLoader';
 
 export default function WorkflowsPage() {
   const router = useRouter();

@@ -21,18 +21,13 @@ export interface LocationData {
  * Options:
  * 1. ipinfo.io API (requires IPINFO_API_TOKEN env var, 50k requests/month free)
  * 2. ip-api.com (45 requests/minute free, no token required)
- *
- * @param ip - IP address to look up
- * @returns Location data or null if lookup fails
  */
 export async function getLocationFromIp(ip: string): Promise<LocationData | null> {
-  // Skip for invalid IPs
   if (ip === 'unknown' || ip === '127.0.0.1' || ip === '::1') {
     return null;
   }
 
   try {
-    // Option 1: Use ipinfo.io (requires API token)
     const token = process.env.IPINFO_API_TOKEN;
     if (token) {
       const response = await fetch(`https://ipinfo.io/${ip}?token=${token}`);
@@ -46,7 +41,6 @@ export async function getLocationFromIp(ip: string): Promise<LocationData | null
       };
     }
 
-    // Option 2: Use ip-api.com (free, no token)
     const response = await fetch(`http://ip-api.com/json/${ip}`);
     const data = await response.json();
 

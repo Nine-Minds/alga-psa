@@ -6,13 +6,13 @@
 'use client';
 
 import React from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../ui/Card';
-import { Alert, AlertDescription } from '../../ui/Alert';
-import { Button } from '../../ui/Button';
-import { Input } from '../../ui/Input';
-import { Label } from '../../ui/Label';
-import { Switch } from '../../ui/Switch';
-import { TextArea } from '../../ui/TextArea';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
+import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
+import { Button } from '@alga-psa/ui/components/Button';
+import { Input } from '@alga-psa/ui/components/Input';
+import { Label } from '@alga-psa/ui/components/Label';
+import { Switch } from '@alga-psa/ui/components/Switch';
+import { TextArea } from '@alga-psa/ui/components/TextArea';
 import { ExternalLink, RefreshCw } from 'lucide-react';
 import {
   getGoogleIntegrationStatus,

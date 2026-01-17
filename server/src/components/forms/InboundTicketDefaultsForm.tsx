@@ -1,13 +1,13 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Button } from '../ui/Button';
-import { Input } from '../ui/Input';
-import { Label } from '../ui/Label';
-import { TextArea } from '../ui/TextArea';
-import { Switch } from '../ui/Switch';
-import CustomSelect from '../ui/CustomSelect';
-import { Alert, AlertDescription } from '../ui/Alert';
+import { Button } from '@alga-psa/ui/components/Button';
+import { Input } from '@alga-psa/ui/components/Input';
+import { Label } from '@alga-psa/ui/components/Label';
+import { TextArea } from '@alga-psa/ui/components/TextArea';
+import { Switch } from '@alga-psa/ui/components/Switch';
+import CustomSelect from '@alga-psa/ui/components/CustomSelect';
+import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { 
   createInboundTicketDefaults, 
   updateInboundTicketDefaults 
@@ -16,13 +16,13 @@ import { getTicketFieldOptions, getCategoriesByBoard } from '../../lib/actions/e
 import type { InboundTicketDefaults, TicketFieldOptions } from '../../types/email.types';
 // Dedicated pickers used elsewhere in the app
 import { BoardPicker } from 'server/src/components/settings/general/BoardPicker';
-import { ClientPicker } from 'server/src/components/clients/ClientPicker';
-import { CategoryPicker } from 'server/src/components/tickets/CategoryPicker';
-import { PrioritySelect } from 'server/src/components/tickets/PrioritySelect';
-import UserPicker from 'server/src/components/ui/UserPicker';
+import { ClientPicker } from '@alga-psa/clients/components/clients/ClientPicker';
+import CategoryPicker from '@alga-psa/tickets/components/CategoryPicker';
+import { PrioritySelect } from '@alga-psa/tickets/components/PrioritySelect';
+import UserPicker from '@alga-psa/ui/components/UserPicker';
 // Loaders to hydrate pickers with full data
 import { getAllBoards } from 'server/src/lib/actions/board-actions/boardActions';
-import { getAllClients } from 'server/src/lib/actions/client-actions/clientActions';
+import { getAllClients } from '@alga-psa/clients/actions';
 import { getAllPriorities } from 'server/src/lib/actions/priorityActions';
 import { getAllUsersBasic } from 'server/src/lib/actions/user-actions/userActions';
 import type { IBoard, IPriority } from 'server/src/interfaces';

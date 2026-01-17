@@ -1,10 +1,10 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Dialog, DialogContent, DialogFooter } from 'server/src/components/ui/Dialog';
-import { Input } from 'server/src/components/ui/Input';
-import { Button } from 'server/src/components/ui/Button';
-import { Checkbox } from 'server/src/components/ui/Checkbox';
+import { Dialog, DialogContent, DialogFooter } from '@alga-psa/ui/components/Dialog';
+import { Input } from '@alga-psa/ui/components/Input';
+import { Button } from '@alga-psa/ui/components/Button';
+import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { IStatus, ItemType } from 'server/src/interfaces/status.interface';
 import { createStatus, updateStatus } from 'server/src/lib/actions/status-actions/statusActions';
 import { toast } from 'react-hot-toast';

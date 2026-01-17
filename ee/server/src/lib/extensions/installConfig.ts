@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 
-import { getAdminConnection } from '@shared/db/admin';
+import { getAdminConnection } from '@alga-psa/db/admin';
 import type { Knex } from 'knex';
 
 import { coerceProviders, normalizeCapability, withDefaultProviders } from './providers';

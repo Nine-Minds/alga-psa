@@ -3,7 +3,7 @@
 import { getConnection } from '@/lib/db/db';
 import { TenantBranding } from './tenantBrandingActions';
 import { unstable_cache } from 'next/cache';
-import { LOCALE_CONFIG, SupportedLocale, isSupportedLocale } from '@/lib/i18n/config';
+import { LOCALE_CONFIG, SupportedLocale, isSupportedLocale } from '@alga-psa/ui/lib/i18n/config';
 
 const DEV_HOSTS = new Set([
   '',

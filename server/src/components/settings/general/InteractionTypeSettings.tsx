@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useEffect } from 'react';
-import { Button } from 'server/src/components/ui/Button';
+import { Button } from '@alga-psa/ui/components/Button';
 import { Plus, Lock, MoreVertical } from "lucide-react";
 import { IInteractionType, ISystemInteractionType } from 'server/src/interfaces/interaction.interfaces';
 import {
@@ -11,22 +11,22 @@ import {
 } from 'server/src/lib/actions/interactionTypeActions';
 import { getAvailableReferenceData, importReferenceData, checkImportConflicts, ImportConflict } from 'server/src/lib/actions/referenceDataActions';
 import { toast } from 'react-hot-toast';
-import { Dialog, DialogContent, DialogFooter } from 'server/src/components/ui/Dialog';
-import { Input } from 'server/src/components/ui/Input';
-import { Checkbox } from 'server/src/components/ui/Checkbox';
-import { DataTable } from 'server/src/components/ui/DataTable';
+import { Dialog, DialogContent, DialogFooter } from '@alga-psa/ui/components/Dialog';
+import { Input } from '@alga-psa/ui/components/Input';
+import { Checkbox } from '@alga-psa/ui/components/Checkbox';
+import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
-import { ConfirmationDialog } from 'server/src/components/ui/ConfirmationDialog';
-import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
+import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
+import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { QuickAddInteractionType } from './QuickAddInteractionType';
-import InteractionIcon from 'server/src/components/ui/InteractionIcon';
-import LoadingIndicator from 'server/src/components/ui/LoadingIndicator';
+import InteractionIcon from '@alga-psa/ui/components/InteractionIcon';
+import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 import {
   DropdownMenu,
   DropdownMenuTrigger,
   DropdownMenuContent,
   DropdownMenuItem,
-} from 'server/src/components/ui/DropdownMenu';
+} from '@alga-psa/ui/components/DropdownMenu';
 const InteractionTypesSettings: React.FC = () => {
   const [interactionTypes, setInteractionTypes] = useState<IInteractionType[]>([]);
   const [loading, setLoading] = useState(true);

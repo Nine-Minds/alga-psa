@@ -1,7 +1,7 @@
 'use server';
 
 import { createTenantKnex } from '../db';
-import { withTransaction } from '@shared/db';
+import { withTransaction } from '@alga-psa/db';
 import { format, type Locale } from 'date-fns';
 import { de, es, fr, it, nl, enUS } from 'date-fns/locale';
 

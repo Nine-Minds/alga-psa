@@ -7,7 +7,7 @@ import { setupCommonMocks } from '../../../test-utils/testMocks';
 
 let db: Knex;
 let tenantId: string;
-let createClientContractFromWizard: typeof import('server/src/lib/actions/contractWizardActions').createClientContractFromWizard;
+let createClientContractFromWizard: typeof import('@alga-psa/billing/actions/contractWizardActions').createClientContractFromWizard;
 type CreatedIds = {
   serviceTypeId?: string;
   serviceId?: string;
@@ -51,7 +51,7 @@ describe('createClientContractFromWizard', () => {
     await db.migrate.latest();
     tenantId = await ensureTenant(db);
     setupCommonMocks({ tenantId, permissionCheck: () => true });
-    ({ createClientContractFromWizard } = await import('server/src/lib/actions/contractWizardActions'));
+    ({ createClientContractFromWizard } = await import('@alga-psa/billing/actions/contractWizardActions'));
   }, 120_000);
 
   afterAll(async () => {
