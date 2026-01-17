@@ -30,7 +30,7 @@ jobs:
 
     services:
       postgres:
-        image: postgres:16
+        image: ankane/pgvector:latest
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: test_password
