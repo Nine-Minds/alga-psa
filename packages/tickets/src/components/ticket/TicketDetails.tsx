@@ -148,6 +148,12 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     surveySummary = null
 }) => {
     const { data: session } = useSession();
+    const [hasHydrated, setHasHydrated] = useState(false);
+
+    useEffect(() => {
+        setHasHydrated(true);
+    }, []);
+
     // Use passed currentUser if available (for drawer), otherwise fallback to session
     const userId = currentUser?.user_id || session?.user?.id;
     const tenant = initialTicket.tenant;
@@ -1340,7 +1346,7 @@ const handleClose = () => {
                     {ticket.entered_at && (
                         <p>
                             Created {createdRelativeTime || (() => {
-                                const tz = getUserTimeZone();
+                                const tz = hasHydrated ? getUserTimeZone() : 'UTC';
                                 const localDate = utcToLocal(ticket.entered_at, tz);
                                 return formatDateTime(localDate, tz, dateTimeFormat);
                             })()}
@@ -1349,7 +1355,7 @@ const handleClose = () => {
                     {ticket.updated_at && (
                         <p>
                             Updated {updatedRelativeTime || (() => {
-                                const tz = getUserTimeZone();
+                                const tz = hasHydrated ? getUserTimeZone() : 'UTC';
                                 const localDate = utcToLocal(ticket.updated_at, tz);
                                 return formatDateTime(localDate, tz, dateTimeFormat);
                             })()}
