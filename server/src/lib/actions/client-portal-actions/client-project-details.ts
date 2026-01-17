@@ -1,7 +1,7 @@
 'use server';
 
 import { createTenantKnex } from 'server/src/lib/db';
-import { withTransaction } from '@shared/db';
+import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
 import { DEFAULT_CLIENT_PORTAL_CONFIG, IClientPortalConfig } from 'server/src/interfaces/project.interfaces';

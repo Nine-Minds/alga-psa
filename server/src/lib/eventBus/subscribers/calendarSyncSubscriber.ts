@@ -13,7 +13,7 @@ import {
 } from '../events';
 import { CalendarSyncService } from '@/services/calendar/CalendarSyncService';
 import { CalendarProviderService } from '@/services/calendar/CalendarProviderService';
-import logger from '@shared/core/logger';
+import logger from '@alga-psa/core/logger';
 import { createTenantKnex, runWithTenant } from 'server/src/lib/db';
 import { TenantEmailService } from 'server/src/lib/services/TenantEmailService';
 import { StaticTemplateProcessor } from 'server/src/lib/email/tenant/templateProcessors';

@@ -27,8 +27,8 @@
       "@ee/*": ["../server/src/*"],
       "@/*": ["../server/src/*"],
       "@/interfaces/*": ["../../server/src/interfaces/*"],
-      "@product/email-domains/entry": ["../../packages/product-email-domains/ee/entry"],
-      "@product/email-domains/*": ["../../packages/product-email-domains/*"]
+      "@alga-psa/integrations/email/domains/entry": ["../../packages/integrations/src/email/domains/ee/entry"],
+      "@alga-psa/integrations/*": ["../../packages/integrations/src/*"]
     }
   },
   "include": ["src/**/*"],

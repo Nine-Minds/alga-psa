@@ -1,13 +1,12 @@
-import NextAuth from "next-auth";
+import NextAuth from 'next-auth';
 import {
   getNextAuthSecretSync,
   getSessionCookieConfig,
   getSessionMaxAge,
-} from "server/src/lib/auth/sessionCookies";
+} from 'server/src/lib/auth/sessionCookies';
 
 const EDGE_SESSION_MAX_AGE = getSessionMaxAge();
 const EDGE_SESSION_COOKIE = getSessionCookieConfig();
-const EDGE_SECRET = getNextAuthSecretSync();
 
 // Minimal Edge-safe auth instance for middleware and server components
 // NOTE: Cannot check session revocation here because Edge Runtime doesn't support database access
@@ -18,7 +17,7 @@ export const { auth } = NextAuth({
     strategy: 'jwt',
     maxAge: EDGE_SESSION_MAX_AGE,
   },
-  secret: EDGE_SECRET,
+  secret: getNextAuthSecretSync(),
   cookies: {
     sessionToken: EDGE_SESSION_COOKIE,
   },

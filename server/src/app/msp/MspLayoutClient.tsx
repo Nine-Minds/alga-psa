@@ -1,10 +1,10 @@
 "use client";
 
-import { AppSessionProvider } from "server/src/components/providers/AppSessionProvider";
-import DefaultLayout from "server/src/components/layout/DefaultLayout";
+import { AppSessionProvider } from "@alga-psa/auth/client";
+import DefaultLayout from "@alga-psa/ui/layout/DefaultLayout";
 import { TagProvider } from "server/src/context/TagContext";
-import { PostHogUserIdentifier } from "server/src/components/PostHogUserIdentifier";
-import { ClientUIStateProvider } from "server/src/types/ui-reflection/ClientUIStateProvider";
+import { PostHogUserIdentifier } from "@alga-psa/ui/components/analytics/PostHogUserIdentifier";
+import { ClientUIStateProvider } from "@alga-psa/ui/ui-reflection/ClientUIStateProvider";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect } from "react";
 import type { Session } from "next-auth";

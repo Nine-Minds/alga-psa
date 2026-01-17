@@ -1,15 +1,15 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Button } from 'server/src/components/ui/Button';
+import { Button } from '@alga-psa/ui/components/Button';
 import { Plus, MoreVertical, Palette } from "lucide-react";
-import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
-import ColorPicker from 'server/src/components/ui/ColorPicker';
+import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
+import ColorPicker from '@alga-psa/ui/components/ColorPicker';
 import { getAllPriorities, createPriority, deletePriority, updatePriority } from 'server/src/lib/actions/priorityActions';
 import { importReferenceData, getAvailableReferenceData, checkImportConflicts, type ImportConflict } from 'server/src/lib/actions/referenceDataActions';
 import { IPriority, IStandardPriority } from 'server/src/interfaces/ticket.interfaces';
 import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
-import { DataTable } from 'server/src/components/ui/DataTable';
+import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
 import { toast } from 'react-hot-toast';
 import {
@@ -17,10 +17,10 @@ import {
   DropdownMenuTrigger,
   DropdownMenuContent,
   DropdownMenuItem,
-} from 'server/src/components/ui/DropdownMenu';
-import { Dialog, DialogContent, DialogFooter } from 'server/src/components/ui/Dialog';
-import { Input } from 'server/src/components/ui/Input';
-import { Checkbox } from 'server/src/components/ui/Checkbox';
+} from '@alga-psa/ui/components/DropdownMenu';
+import { Dialog, DialogContent, DialogFooter } from '@alga-psa/ui/components/Dialog';
+import { Input } from '@alga-psa/ui/components/Input';
+import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { DeleteConfirmationDialog } from './dialogs/DeleteConfirmationDialog';
 
 interface PrioritySettingsProps {

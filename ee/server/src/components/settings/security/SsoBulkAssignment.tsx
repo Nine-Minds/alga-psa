@@ -1,10 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "server/src/components/ui/Card";
-import { Alert, AlertDescription } from "server/src/components/ui/Alert";
-import { Switch } from "server/src/components/ui/Switch";
-import SettingsTabSkeleton from "server/src/components/ui/skeletons/SettingsTabSkeleton";
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@alga-psa/ui/components/Card";
+import { Alert, AlertDescription } from "@alga-psa/ui/components/Alert";
+import { Switch } from "@alga-psa/ui/components/Switch";
+import SettingsTabSkeleton from "@alga-psa/ui/components/skeletons/SettingsTabSkeleton";
 import type { SsoProviderOption } from "@ee/lib/auth/providerConfig";
 import { getSsoProviderOptionsAction } from "@ee/lib/actions/auth/getSsoProviderOptions";
 import { getSsoPreferencesAction, updateSsoPreferencesAction, type SsoPreferences } from "@ee/lib/actions/auth/ssoPreferences";

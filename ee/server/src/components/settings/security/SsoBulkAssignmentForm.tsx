@@ -1,19 +1,19 @@
 "use client";
 
 import { useEffect, useMemo, useState, useTransition } from "react";
-import { Button } from "server/src/components/ui/Button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "server/src/components/ui/Card";
-import { DataTable } from "server/src/components/ui/DataTable";
+import { Button } from "@alga-psa/ui/components/Button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@alga-psa/ui/components/Card";
+import { DataTable } from "@alga-psa/ui/components/DataTable";
 import { ColumnDefinition } from "server/src/interfaces/dataTable.interfaces";
-import { Alert, AlertDescription } from "server/src/components/ui/Alert";
-import { Badge } from "server/src/components/ui/Badge";
-import { Input } from "server/src/components/ui/Input";
-import { Label } from "server/src/components/ui/Label";
-import { Checkbox } from "server/src/components/ui/Checkbox";
-import Spinner from "server/src/components/ui/Spinner";
+import { Alert, AlertDescription } from "@alga-psa/ui/components/Alert";
+import { Badge } from "@alga-psa/ui/components/Badge";
+import { Input } from "@alga-psa/ui/components/Input";
+import { Label } from "@alga-psa/ui/components/Label";
+import { Checkbox } from "@alga-psa/ui/components/Checkbox";
+import Spinner from "@alga-psa/ui/components/Spinner";
 import { Loader2, Search } from "lucide-react";
 import { useToast } from "server/src/hooks/use-toast";
-import { ToggleGroup, ToggleGroupItem } from "server/src/components/ui/ToggleGroup";
+import { ToggleGroup, ToggleGroupItem } from "@alga-psa/ui/components/ToggleGroup";
 import {
   executeBulkSsoAssignmentAction,
   previewBulkSsoAssignmentAction,

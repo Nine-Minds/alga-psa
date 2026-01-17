@@ -1,4 +1,4 @@
-import logger from "@alga-psa/shared/core/logger";
+import logger from "@alga-psa/core/logger";
 
 export interface SsoProviderOption {
   id: "google" | "azure-ad";
@@ -9,7 +9,7 @@ export interface SsoProviderOption {
 
 async function loadSecret(name: string): Promise<string | undefined> {
   try {
-    const { getSecretProviderInstance } = await import("@alga-psa/shared/core/secretProvider");
+    const { getSecretProviderInstance } = await import("@alga-psa/core/secrets");
     const secretProvider = await getSecretProviderInstance();
     return await secretProvider.getAppSecret(name);
   } catch (error) {

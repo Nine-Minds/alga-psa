@@ -2,15 +2,15 @@
 
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import * as Popover from '@radix-ui/react-popover';
-import { Input } from 'server/src/components/ui/Input';
-import CustomSelect from 'server/src/components/ui/CustomSelect';
+import { Input } from '@alga-psa/ui/components/Input';
+import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { IBoard } from 'server/src/interfaces';
 import { ChevronDown } from 'lucide-react';
-import { useAutomationIdAndRegister } from 'server/src/types/ui-reflection/useAutomationIdAndRegister';
-import { ContainerComponent, AutomationProps, FormFieldComponent } from 'server/src/types/ui-reflection/types';
-import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionContainer';
-import { Button } from 'server/src/components/ui/Button';
-import { withDataAutomationId } from 'server/src/types/ui-reflection/withDataAutomationId';
+import { useAutomationIdAndRegister } from '@alga-psa/ui/ui-reflection/useAutomationIdAndRegister';
+import { ContainerComponent, AutomationProps, FormFieldComponent } from '@alga-psa/ui/ui-reflection/types';
+import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContainer';
+import { Button } from '@alga-psa/ui/components/Button';
+import { withDataAutomationId } from '@alga-psa/ui/ui-reflection/withDataAutomationId';
 
 interface BoardPickerProps {
   id?: string;

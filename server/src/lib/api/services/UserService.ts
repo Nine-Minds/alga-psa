@@ -6,7 +6,7 @@
 
 import { Knex } from 'knex';
 import { BaseService, ServiceContext, ListResult } from './BaseService';
-import { withTransaction } from '@shared/db';
+import { withTransaction } from '@alga-psa/db';
 import { IUser, IUserWithRoles, IRole, IRoleWithPermissions, ITeam } from 'server/src/interfaces/auth.interfaces';
 import { ListOptions } from '../controllers/types';
 import { 
@@ -33,7 +33,7 @@ import Team from 'server/src/lib/models/team';
 import UserPreferences from 'server/src/lib/models/userPreferences';
 import { generateResourceLinks, addHateoasLinks } from '../utils/responseHelpers';
 import { NotFoundError, ConflictError, ValidationError, ForbiddenError } from '../middleware/apiMiddleware';
-import logger from '@shared/core/logger';
+import logger from '@alga-psa/core/logger';
 import { validateSystemContext } from './SystemContext';
 
 // Extended interfaces for service operations

@@ -3,10 +3,10 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
 import dynamic from 'next/dynamic';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from 'server/src/components/ui/Card';
-import { Skeleton } from 'server/src/components/ui/Skeleton';
-import Spinner from 'server/src/components/ui/Spinner';
-import CustomTabs, { TabContent } from 'server/src/components/ui/CustomTabs';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
+import { Skeleton } from '@alga-psa/ui/components/Skeleton';
+import Spinner from '@alga-psa/ui/components/Spinner';
+import CustomTabs, { TabContent } from '@alga-psa/ui/components/CustomTabs';
 import NumberingSettings from 'server/src/components/settings/general/NumberingSettings';
 import ZeroDollarInvoiceSettings from './ZeroDollarInvoiceSettings';
 import CreditExpirationSettings from './CreditExpirationSettings';

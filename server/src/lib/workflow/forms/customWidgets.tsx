@@ -1,16 +1,16 @@
 import { WidgetProps } from '@rjsf/utils';
-import { Input } from '../../../components/ui/Input';
-import { TextArea } from '../../../components/ui/TextArea';
-import { Checkbox } from '../../../components/ui/Checkbox';
-import { DatePicker } from '../../../components/ui/DatePicker';
-import UserPicker from '../../../components/ui/UserPicker';
-import { ClientPicker } from 'server/src/components/clients/ClientPicker';
+import { Input } from '@alga-psa/ui/components/Input';
+import { TextArea } from '@alga-psa/ui/components/TextArea';
+import { Checkbox } from '@alga-psa/ui/components/Checkbox';
+import { DatePicker } from '@alga-psa/ui/components/DatePicker';
+import UserPicker from '@alga-psa/ui/components/UserPicker';
+import { ClientPicker } from '@alga-psa/clients/components/clients/ClientPicker';
 import { IClient } from '../../../interfaces/client.interfaces';
 import { IUserWithRoles } from '../../../interfaces/auth.interfaces';
-import AlertWidget from '../../../components/ui/widgets/AlertWidget';
-import HighlightWidget from '../../../components/ui/widgets/HighlightWidget';
-import ButtonLinkWidget from '../../../components/ui/widgets/ButtonLinkWidget';
-import RichTextViewerWidget from '../../../components/ui/widgets/RichTextViewerWidget';
+import AlertWidget from '@alga-psa/ui/components/widgets/AlertWidget';
+import HighlightWidget from '@alga-psa/ui/components/widgets/HighlightWidget';
+import ButtonLinkWidget from '@alga-psa/ui/components/widgets/ButtonLinkWidget';
+import RichTextViewerWidget from '@alga-psa/ui/components/widgets/RichTextViewerWidget';
 
 // Client Picker Widget
 export const ClientPickerWidget = (props: WidgetProps) => {

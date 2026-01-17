@@ -1,10 +1,8 @@
 'use server'
 
-import { IContact, MappableField, ImportContactResult } from 'server/src/interfaces/contact.interfaces';
-import { IClient } from 'server/src/interfaces/client.interfaces';
-import { ITag } from 'server/src/interfaces/tag.interfaces';
+import type { IClient, IContact, ImportContactResult, ITag, MappableField } from '@alga-psa/types';
 import { createTenantKnex } from 'server/src/lib/db';
-import { withTransaction } from '@shared/db';
+import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { unparseCSV } from 'server/src/lib/utils/csvParser';
 import { getContactAvatarUrl, getContactAvatarUrlsBatch } from 'server/src/lib/utils/avatarUtils';

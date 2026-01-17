@@ -2,7 +2,7 @@
 
 import { z } from 'zod';
 import { createTenantKnex } from '../../db';
-import { withTransaction } from '@shared/db';
+import { withTransaction } from '@alga-psa/db';
 // Import interfaces from correct files
 import {
   IContractLine,

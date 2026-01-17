@@ -2,11 +2,11 @@
 
 import React, { useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Button } from 'server/src/components/ui/Button';
-import { Input } from 'server/src/components/ui/Input';
-import { Label } from 'server/src/components/ui/Label';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from 'server/src/components/ui/Card';
-import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
+import { Button } from '@alga-psa/ui/components/Button';
+import { Input } from '@alga-psa/ui/components/Input';
+import { Label } from '@alga-psa/ui/components/Label';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
+import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Eye, EyeOff, Lock, User, Building } from 'lucide-react';
 import toast from 'react-hot-toast';
 import {
@@ -14,7 +14,7 @@ import {
   completePortalSetup
 } from 'server/src/lib/actions/portal-actions/portalInvitationActions';
 import { signIn } from 'next-auth/react';
-import { useTranslation } from 'server/src/lib/i18n/client';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 interface ContactInfo {
   contact_name_id: string;

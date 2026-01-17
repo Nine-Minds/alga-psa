@@ -15,7 +15,7 @@
  *  - ee/server/src/lib/extensions/registry-v2.ts
  */
 
-import { getAdminConnection } from '@shared/db/admin';
+import { getAdminConnection } from '@alga-psa/db/admin';
 import { getInstallConfig } from '../installConfig';
 import type { Method } from './gateway-utils';
 

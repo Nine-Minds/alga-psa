@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
-import { getUserTasks, claimTask, unclaimTask } from '../../lib/actions/workflow-actions/taskInboxActions';
+import { getUserTasks, claimTask, unclaimTask } from '@alga-psa/workflows/actions/workflow-actions/taskInboxActions';
 import { TaskDetails, TaskQueryParams } from '@alga-psa/shared/workflow/persistence/taskInboxInterfaces';
 import { WorkflowTaskStatus } from '@alga-psa/shared/workflow/persistence/workflowTaskModel';
-import { Button } from '../ui/Button';
-import { Badge, BadgeVariant } from '../ui/Badge';
-import { Card } from '../ui/Card';
+import { Button } from '@alga-psa/ui/components/Button';
+import { Badge, BadgeVariant } from '@alga-psa/ui/components/Badge';
+import { Card } from '@alga-psa/ui/components/Card';
 import { useRouter } from 'next/navigation';
 
 // Simple Spinner component

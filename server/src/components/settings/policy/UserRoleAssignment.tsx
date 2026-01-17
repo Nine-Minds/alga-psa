@@ -2,17 +2,17 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { Flex, Text } from '@radix-ui/themes';
-import { Button } from 'server/src/components/ui/Button';
-import { Card, CardHeader, CardContent, CardTitle, CardDescription } from 'server/src/components/ui/Card';
-import ViewSwitcher, { ViewSwitcherOption } from 'server/src/components/ui/ViewSwitcher';
-import { SwitchWithLabel } from 'server/src/components/ui/SwitchWithLabel';
+import { Button } from '@alga-psa/ui/components/Button';
+import { Card, CardHeader, CardContent, CardTitle, CardDescription } from '@alga-psa/ui/components/Card';
+import ViewSwitcher, { ViewSwitcherOption } from '@alga-psa/ui/components/ViewSwitcher';
+import { SwitchWithLabel } from '@alga-psa/ui/components/SwitchWithLabel';
 import { assignRoleToUser, removeRoleFromUser, getRoles, getUserRoles } from 'server/src/lib/actions/policyActions';
 import { getAllUsers } from 'server/src/lib/actions/user-actions/userActions';
 import { IRole, IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
-import { DataTable } from 'server/src/components/ui/DataTable';
+import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
-import CustomSelect, { SelectOption } from 'server/src/components/ui/CustomSelect';
-import UserPicker from 'server/src/components/ui/UserPicker';
+import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect';
+import UserPicker from '@alga-psa/ui/components/UserPicker';
 
 type ViewMode = 'msp' | 'client';
 

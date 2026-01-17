@@ -9,7 +9,7 @@
  */
 
 import { Context } from '@temporalio/activity';
-import { getAdminConnection } from '@alga-psa/shared/db/admin.js';
+import { getAdminConnection } from '@alga-psa/db/admin.js';
 import { TagModel } from '@alga-psa/shared/models/tagModel.js';
 import { Knex } from 'knex';
 import type {
@@ -961,7 +961,7 @@ export async function cancelTenantStripeSubscription(
 
     // Dynamically import Stripe to avoid issues in environments where it's not available
     const { default: Stripe } = await import('stripe');
-    const { getSecretProviderInstance } = await import('@alga-psa/shared/core');
+    const { getSecretProviderInstance } = await import('@alga-psa/core');
 
     const secretProvider = await getSecretProviderInstance();
     let secretKey = await secretProvider.getAppSecret('stripe_secret_key');

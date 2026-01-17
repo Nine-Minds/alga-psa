@@ -4,9 +4,9 @@ import ContactModel from 'server/src/lib/models/contact';
 import UserModel from 'server/src/lib/models/user';
 import { IContact } from 'server/src/interfaces';
 import { IUser } from '@shared/interfaces/user.interfaces';
-import { IClient } from 'server/src/interfaces/client.interfaces';
-import { getAllClients } from 'server/src/lib/actions/client-actions/clientActions';
-import ContactsLayout from 'server/src/components/contacts/ContactsLayout';
+import type { IClient } from '@alga-psa/types';
+import { getAllClients } from '@alga-psa/clients/actions';
+import { ContactsLayout } from '@alga-psa/clients';
 import { getConnection } from 'server/src/lib/db/db';
 
 export default async function ContactsPage() {

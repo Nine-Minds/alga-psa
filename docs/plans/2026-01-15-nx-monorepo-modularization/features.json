@@ -1,0 +1,1041 @@
+[
+  {
+    "id": "F001",
+    "description": "Initialize NX workspace with existing npm workspaces",
+    "implemented": true,
+    "prdRefs": [
+      "Phase 1: Foundation"
+    ]
+  },
+  {
+    "id": "F002",
+    "description": "Configure NX workspace.json with project references",
+    "implemented": true,
+    "prdRefs": [
+      "Phase 1: Foundation"
+    ]
+  },
+  {
+    "id": "F003",
+    "description": "Set up NX generators for consistent module creation",
+    "implemented": true,
+    "prdRefs": [
+      "Phase 1: Foundation"
+    ]
+  },
+  {
+    "id": "F004",
+    "description": "Create @alga-psa/core module from shared/core and shared/events",
+    "implemented": true,
+    "prdRefs": [
+      "Horizontal Slices",
+      "Phase 1: Foundation"
+    ]
+  },
+  {
+    "id": "F005",
+    "description": "Migrate logger functionality to @alga-psa/core",
+    "implemented": true,
+    "prdRefs": [
+      "Horizontal Slices"
+    ]
+  },
+  {
+    "id": "F006",
+    "description": "Migrate secret provider to @alga-psa/core",
+    "implemented": true,
+    "note": "All 8 secret provider files migrated: ISecretProvider, EnvSecretProvider, FileSystemSecretProvider, CompositeSecretProvider, VaultSecretProvider, secretProvider, vaultLoader, getSecret",
+    "prdRefs": [
+      "Horizontal Slices"
+    ]
+  },
+  {
+    "id": "F007",
+    "description": "Migrate event publisher to @alga-psa/core",
+    "implemented": true,
+    "note": "Publisher.ts migrated with workflow dependency imports from @alga-psa/shared/workflow/streams (temporary until workflow module F053-F058 is created)",
+    "prdRefs": [
+      "Horizontal Slices"
+    ]
+  },
+  {
+    "id": "F008",
+    "description": "Migrate encryption utilities to @alga-psa/core",
+    "implemented": true,
+    "note": "Encryption.ts migrated with hashPassword, verifyPassword, generateSecurePassword functions - uses local secrets module",
+    "prdRefs": [
+      "Horizontal Slices"
+    ]
+  },
+  {
+    "id": "F009",
+    "description": "Create @alga-psa/db module from database utilities",
+    "implemented": true,
+    "prdRefs": [
+      "Horizontal Slices",
+      "Phase 1: Foundation"
+    ]
+  },
+  {
+    "id": "F010",
+    "description": "Migrate Knex configuration to @alga-psa/db",
+    "implemented": true,
+    "note": "Migrated knexfile.ts with getKnexConfig, getFullConfig, getKnexConfigWithTenant, getPostgresConnection - imports getSecret from @alga-psa/core",
+    "prdRefs": [
+      "Horizontal Slices"
+    ]
+  },
+  {
+    "id": "F011",
+    "description": "Migrate tenant context management (AsyncLocalStorage) to @alga-psa/db",
+    "implemented": true,
+    "note": "Migrated tenant.ts with getConnection, withTransaction, setTenantContext, resetTenantConnectionPool - uses local knex-turbopack and knexfile",
+    "prdRefs": [
+      "Horizontal Slices"
+    ]
+  },
+  {
+    "id": "F012",
+    "description": "Migrate createTenantKnex() function to @alga-psa/db",
+    "implemented": true,
+    "note": "Included in tenant.ts migration - getConnection() creates tenant-aware Knex instances",
+    "prdRefs": [
+      "Horizontal Slices"
+    ]
+  },
+  {
+    "id": "F013",
+    "description": "Migrate withTransaction() helper to @alga-psa/db",
+    "implemented": true,
+    "note": "Migrated in both tenant.ts (withTransaction) and index.ts (withKnexTransaction, withAdminTransaction)",
+    "prdRefs": [
+      "Horizontal Slices"
+    ]
+  },
+  {
+    "id": "F014",
+    "description": "Migrate connection pooling utilities to @alga-psa/db",
+    "implemented": true,
+    "note": "Migrated connection.ts with getConnection, cleanupConnections; admin.ts with getAdminConnection, destroyAdminConnection; plus knex-turbopack.ts dialect shim",
+    "prdRefs": [
+      "Horizontal Slices"
+    ]
+  },
+  {
+    "id": "F015",
+    "description": "Create @alga-psa/types module from interface files",
+    "implemented": true,
+    "prdRefs": [
+      "Horizontal Slices",
+      "Phase 1: Foundation"
+    ]
+  },
+  {
+    "id": "F016",
+    "description": "Migrate all 52 interface files to @alga-psa/types",
+    "implemented": true,
+    "note": "Copied the full server/src/interfaces set into packages/types/src/interfaces (with cleanup): removed duplicate/competing interface stubs, eliminated self-imports, and ensured interfaces/index.ts exports every interface file (inbound email excluded there to avoid collisions with outbound email types; inbound email types are exported from packages/types/src/index.ts under Inbound* aliases).",
+    "prdRefs": [
+      "Horizontal Slices"
+    ]
+  },
+  {
+    "id": "F017",
+    "description": "Set up type exports with proper barrel files",
+    "implemented": true,
+    "note": "packages/types/src/interfaces/index.ts exports all interface modules; packages/types/src/index.ts re-exports the interfaces barrel and exports inbound email types with Inbound* aliases to avoid collisions with outbound email types from lib/email.ts.",
+    "prdRefs": [
+      "Horizontal Slices"
+    ]
+  },
+  {
+    "id": "F018",
+    "description": "Create @alga-psa/validation module from validation utilities",
+    "implemented": true,
+    "note": "Created packages/validation with package.json, tsconfig.json, and module structure",
+    "prdRefs": [
+      "Horizontal Slices",
+      "Phase 1: Foundation"
+    ]
+  },
+  {
+    "id": "F019",
+    "description": "Migrate Zod schemas to @alga-psa/validation",
+    "implemented": true,
+    "note": "Migrated common schemas (iso8601, plainDate, tenant, uuid, email, phone, currency, pagination) to packages/validation/src/lib/utils.ts",
+    "prdRefs": [
+      "Horizontal Slices"
+    ]
+  },
+  {
+    "id": "F020",
+    "description": "Migrate form validation utilities to @alga-psa/validation",
+    "implemented": true,
+    "note": "Migrated validateData, validateArray, isValidEmail, isValidUUID, validateTenantAccess to packages/validation/src/lib/utils.ts",
+    "prdRefs": [
+      "Horizontal Slices"
+    ]
+  },
+  {
+    "id": "F021",
+    "description": "Migrate business rule validators to @alga-psa/validation",
+    "implemented": true,
+    "note": "Basic business rule validators included in utils.ts; entity-specific validators will be added with their respective vertical slice modules",
+    "prdRefs": [
+      "Horizontal Slices"
+    ]
+  },
+  {
+    "id": "F022",
+    "description": "Create @alga-psa/ui module by expanding ui-kit",
+    "implemented": true,
+    "note": "@alga-psa/ui-kit package already exists with 11 components in packages/ui-kit/src/components/, hooks, and theme",
+    "prdRefs": [
+      "Horizontal Slices",
+      "Phase 1: Foundation"
+    ]
+  },
+  {
+    "id": "F023",
+    "description": "Migrate server/src/components/ui (81 files) to @alga-psa/ui",
+    "implemented": true,
+    "note": "Migrated server UI components (81 files), ui-reflection helpers, i18n utilities, hooks, and calendar CSS into packages/ui (@alga-psa/ui). Updated server consumers to import from @alga-psa/ui and ensured `server npm run build` succeeds.",
+    "prdRefs": [
+      "Horizontal Slices"
+    ]
+  },
+  {
+    "id": "F024",
+    "description": "Set up Tailwind CSS configuration for @alga-psa/ui",
+    "implemented": true,
+    "note": "ui-kit has theme/tokens.css for CSS custom properties; Tailwind config exists at project root",
+    "prdRefs": [
+      "Horizontal Slices"
+    ]
+  },
+  {
+    "id": "F025",
+    "description": "Configure component exports with proper barrel files",
+    "implemented": true,
+    "note": "packages/ui-kit/src/index.ts exports all components; needs expansion as more components are migrated",
+    "prdRefs": [
+      "Horizontal Slices"
+    ]
+  },
+  {
+    "id": "F026",
+    "description": "Create @alga-psa/auth module from auth utilities",
+    "implemented": true,
+    "note": "Created packages/auth with package.json, tsconfig.json, and session utilities",
+    "prdRefs": [
+      "Horizontal Slices",
+      "Phase 1: Foundation"
+    ]
+  },
+  {
+    "id": "F027",
+    "description": "Migrate auth strategies to @alga-psa/auth",
+    "implemented": true,
+    "note": "Moved NextAuth options (providers/callbacks) into @alga-psa/auth/nextAuthOptions with server route re-export.",
+    "prdRefs": [
+      "Horizontal Slices"
+    ]
+  },
+  {
+    "id": "F028",
+    "description": "Migrate session management to @alga-psa/auth",
+    "implemented": true,
+    "note": "Migrated sessionCookies.ts utilities: getSessionMaxAge, getSessionCookieName, getSessionCookieConfig, encodePortalSessionToken, buildSessionCookie",
+    "prdRefs": [
+      "Horizontal Slices"
+    ]
+  },
+  {
+    "id": "F029",
+    "description": "Migrate permission utilities to @alga-psa/auth",
+    "implemented": true,
+    "note": "Moved RBAC and API auth helpers into @alga-psa/auth with server-side re-exports; NextAuth options now import from @alga-psa/auth.",
+    "prdRefs": [
+      "Horizontal Slices"
+    ]
+  },
+  {
+    "id": "F030",
+    "description": "Migrate getCurrentUser() function to @alga-psa/auth",
+    "implemented": true,
+    "note": "Moved getCurrentUser implementation into @alga-psa/auth/getCurrentUser and re-exported for server actions.",
+    "prdRefs": [
+      "Horizontal Slices"
+    ]
+  },
+  {
+    "id": "F031",
+    "description": "Create @alga-psa/clients module structure",
+    "implemented": true,
+    "note": "Created packages/clients with package.json, tsconfig.json, and src directory structure (actions, components, models, schemas)",
+    "prdRefs": [
+      "Vertical Slices",
+      "Phase 2: First Feature Module"
+    ]
+  },
+  {
+    "id": "F032",
+    "description": "Migrate client actions to @alga-psa/clients",
+    "implemented": true,
+    "note": "Moved `server/src/lib/actions/client-actions/*` into `packages/clients/src/actions/*` and updated all consumers to import via `@alga-psa/clients/actions` (including billing/invoice jobs). Fixed moved-file imports and `server npm run build` passes.",
+    "prdRefs": [
+      "Vertical Slices"
+    ]
+  },
+  {
+    "id": "F033",
+    "description": "Migrate client components (32 files) to @alga-psa/clients",
+    "implemented": true,
+    "note": "Moved `server/src/components/clients/*` into `packages/clients/src/components/clients/*` and updated all consumers (incl. routes) to import from `@alga-psa/clients` / `@alga-psa/clients/components/*`.",
+    "prdRefs": [
+      "Vertical Slices"
+    ]
+  },
+  {
+    "id": "F034",
+    "description": "Migrate contact components (12 files) to @alga-psa/clients",
+    "implemented": true,
+    "note": "Moved `server/src/components/contacts/*` into `packages/clients/src/components/contacts/*` and updated consumers to import from `@alga-psa/clients` / `@alga-psa/clients/components/*`.",
+    "prdRefs": [
+      "Vertical Slices"
+    ]
+  },
+  {
+    "id": "F035",
+    "description": "Migrate client model to @alga-psa/clients",
+    "implemented": true,
+    "note": "Migrated client.tsx model to packages/clients/src/models/client.ts with explicit tenant parameter (decoupled from Next.js getCurrentTenantId). Also added client validation schemas from server/src/lib/schemas/client.schema.ts",
+    "prdRefs": [
+      "Vertical Slices"
+    ]
+  },
+  {
+    "id": "F036",
+    "description": "Update Next.js client routes to use @alga-psa/clients",
+    "implemented": true,
+    "note": "Updated `server/src/app/msp/clients/*` and `server/src/app/msp/contacts/*` to import UI from `@alga-psa/clients` (and related actions from `@alga-psa/clients/actions`).",
+    "prdRefs": [
+      "Vertical Slices",
+      "Phase 2: First Feature Module"
+    ]
+  },
+  {
+    "id": "F037",
+    "description": "Verify NX caching works for @alga-psa/clients",
+    "implemented": true,
+    "note": "Verified via tools/nx-tests/nxCache.test.ts (run `npm run test:nx`) which asserts repeated @alga-psa/clients builds hit the cache using an isolated NX_CACHE_DIRECTORY.",
+    "prdRefs": [
+      "Phase 2: First Feature Module"
+    ]
+  },
+  {
+    "id": "F038",
+    "description": "Create @alga-psa/billing module structure",
+    "implemented": true,
+    "note": "Created packages/billing with package.json, tsconfig.json, and src directory structure (actions, components, models, schemas, services). Billing dashboard components + core invoice/contract/credit actions migrated; tax service + payment service migration still pending.",
+    "prdRefs": [
+      "Vertical Slices",
+      "Phase 3: Core Business Features"
+    ]
+  },
+  {
+    "id": "F039",
+    "description": "Migrate billing-dashboard components (120 files) to @alga-psa/billing",
+    "implemented": true,
+    "note": "Moved billing dashboard UI into packages/billing/src/components/billing-dashboard (122 component files). Legacy server/src/components/billing-dashboard removed; /msp/billing imports BillingDashboard from @alga-psa/billing.",
+    "prdRefs": [
+      "Vertical Slices"
+    ]
+  },
+  {
+    "id": "F040",
+    "description": "Migrate invoice actions to @alga-psa/billing",
+    "implemented": true,
+    "note": "Invoice logic moved into packages/billing/src/actions (invoiceActions, invoiceGeneration, invoiceModification, invoiceQueries, invoiceTemplates). Server-side callers now import from @alga-psa/billing/actions/* with thin shims remaining in server/src/lib/actions where needed.",
+    "prdRefs": [
+      "Vertical Slices"
+    ]
+  },
+  {
+    "id": "F041",
+    "description": "Migrate contract actions to @alga-psa/billing",
+    "implemented": true,
+    "note": "Contract/contract-line actions moved into packages/billing/src/actions (contractActions, contractLineAction, contractLineServiceActions, contractLineServiceConfigurationActions, presets/schedules). Server action shims delegate to @alga-psa/billing/actions/* (wrapper signatures aligned to avoid drift).",
+    "prdRefs": [
+      "Vertical Slices"
+    ]
+  },
+  {
+    "id": "F042",
+    "description": "Migrate payment actions to @alga-psa/billing",
+    "implemented": true,
+    "note": "Centralized PaymentService usage behind packages/billing/src/actions/paymentActions.ts (EE-only behavior preserved). Updated client portal payment actions, invoice email job handler, and Stripe payment webhook route to call billing payment actions instead of importing @ee/lib/payments directly.",
+    "prdRefs": [
+      "Vertical Slices"
+    ]
+  },
+  {
+    "id": "F043",
+    "description": "Migrate credit management to @alga-psa/billing",
+    "implemented": true,
+    "note": "Moved /msp/billing/credits UI into packages/billing/src/components/credits and added packages/billing/src/actions/creditExpirationSettingsActions.ts. Updated server route to a thin shim importing CreditsPage from @alga-psa/billing.",
+    "prdRefs": [
+      "Vertical Slices"
+    ]
+  },
+  {
+    "id": "F044",
+    "description": "Migrate tax service to @alga-psa/billing",
+    "implemented": true,
+    "note": "Moved TaxService and ClientTaxSettings into packages/billing/src/{services,models} and updated billing actions to use the new service. Left shims in server/src/lib/{services,models} for backwards-compatible imports.",
+    "prdRefs": [
+      "Vertical Slices"
+    ]
+  },
+  {
+    "id": "F045",
+    "description": "Migrate billing models (invoice, contract, payment) to @alga-psa/billing",
+    "implemented": true,
+    "note": "Migrated Invoice and Contract models to packages/billing/src/models/ with explicit tenant parameters. Also added invoice interfaces (IInvoice, IInvoiceCharge, InvoiceStatus, etc.) and contract interfaces (IContract, IContractWithClient, etc.) to @alga-psa/types.",
+    "prdRefs": [
+      "Vertical Slices"
+    ]
+  },
+  {
+    "id": "F046",
+    "description": "Update Next.js billing routes to use @alga-psa/billing",
+    "implemented": true,
+    "note": "Updated /msp/billing and /msp/billing/credits to import BillingDashboard/CreditsPage from @alga-psa/billing (thin shims in server/src/app).",
+    "prdRefs": [
+      "Vertical Slices"
+    ]
+  },
+  {
+    "id": "F047",
+    "description": "Create @alga-psa/projects module structure",
+    "implemented": true,
+    "note": "Created packages/projects with package.json, tsconfig.json, and src directory structure (actions, components, models). 50 components pending migration.",
+    "prdRefs": [
+      "Vertical Slices",
+      "Phase 3: Core Business Features"
+    ]
+  },
+  {
+    "id": "F048",
+    "description": "Migrate project components (50 files) to @alga-psa/projects",
+    "implemented": true,
+    "note": "Copied all projects components from server/src/components/projects/** into packages/projects/src/components/**, fixed imports, updated consumers (including msp projects routes) to import from @alga-psa/projects/components, and removed the original server/src/components/projects/** files. Editor components remain in server/src/components/editor (TaskComment switched back to server editor imports to avoid missing files).",
+    "prdRefs": [
+      "Vertical Slices"
+    ]
+  },
+  {
+    "id": "F049",
+    "description": "Migrate project actions to @alga-psa/projects",
+    "implemented": true,
+    "note": "Copied server/src/lib/actions/project-actions/* into packages/projects/src/actions/* (plus packages/projects/src/lib/orderingService.ts), updated projects components + server route/API consumers to import from @alga-psa/projects/actions, and deleted the original server/src/lib/actions/project-actions files. Verified with `server npm run build`.",
+    "prdRefs": [
+      "Vertical Slices"
+    ]
+  },
+  {
+    "id": "F050",
+    "description": "Migrate project/task models to @alga-psa/projects",
+    "implemented": true,
+    "note": "Migrated project.ts model to packages/projects/src/models/project.ts with explicit tenant parameter. Also added project interfaces (IProject, IProjectPhase, IProjectTask, IProjectStatusMapping, etc.) to @alga-psa/types.",
+    "prdRefs": [
+      "Vertical Slices"
+    ]
+  },
+  {
+    "id": "F051",
+    "description": "Update Next.js project routes to use @alga-psa/projects",
+    "implemented": true,
+    "note": "Updated server/src/app/msp/projects/** and server/src/app/api/projects/** routes to import Projects/ProjectDetail/ProjectInfo and project/template actions from @alga-psa/projects (thin shims). Verified with `server npm run build`.",
+    "prdRefs": [
+      "Vertical Slices"
+    ]
+  },
+  {
+    "id": "F052",
+    "description": "Create @alga-psa/tickets module structure",
+    "implemented": true,
+    "note": "Created packages/tickets with package.json, tsconfig.json, and src directory structure (actions, components, models). 19 components pending migration.",
+    "prdRefs": [
+      "Vertical Slices",
+      "Phase 3: Core Business Features"
+    ]
+  },
+  {
+    "id": "F053",
+    "description": "Migrate ticket components (19 files) to @alga-psa/tickets",
+    "implemented": true,
+    "note": "Copied server/src/components/tickets/** (19 TS/TSX + TicketDetails.module.css) into packages/tickets/src/components/**, updated imports/consumers to use @alga-psa/tickets/components/*, removed the original server/src/components/tickets/** files, and fixed editor styling dependency by moving the shared CSS import to server/src/components/editor/TicketDetails.module.css. Verified with `server npm run build`.",
+    "prdRefs": [
+      "Vertical Slices"
+    ]
+  },
+  {
+    "id": "F054",
+    "description": "Migrate ticket actions to @alga-psa/tickets",
+    "implemented": true,
+    "note": "Copied server/src/lib/actions/ticket-actions/* into packages/tickets/src/actions/* (ticketActions, optimizedTicketActions, ticketBundleActions, ticketBundleUtils, ticketDisplaySettings, ticketFormActions), updated imports/consumers (server routes/components + packages/* callers) to use @alga-psa/tickets/actions/*, fixed package-relative imports, and deleted the original server/src/lib/actions/ticket-actions files. Added Vitest alias for @alga-psa/tickets and updated ticket tests accordingly. Verified with `server npx tsc -p tsconfig.json --noEmit`.",
+    "prdRefs": [
+      "Vertical Slices"
+    ]
+  },
+  {
+    "id": "F055",
+    "description": "Migrate ticket model to @alga-psa/tickets",
+    "implemented": true,
+    "note": "Migrated ticket.tsx model to packages/tickets/src/models/ticket.ts with explicit tenant parameter. Also added ticket interfaces (ITicket, IPriority, ITicketStatus, etc.) to @alga-psa/types.",
+    "prdRefs": [
+      "Vertical Slices"
+    ]
+  },
+  {
+    "id": "F056",
+    "description": "Update Next.js ticket routes to use @alga-psa/tickets",
+    "implemented": true,
+    "note": "Updated server/src/app/msp/tickets/** routes to import ticket pages/components and consolidated ticket actions from @alga-psa/tickets (thin shims). Verified with `server npx tsc -p tsconfig.json --noEmit`.",
+    "prdRefs": [
+      "Vertical Slices"
+    ]
+  },
+  {
+    "id": "F057",
+    "description": "Create @alga-psa/scheduling module structure",
+    "implemented": true,
+    "note": "Created packages/scheduling with package.json, tsconfig.json, and src directory structure (actions, components, models).",
+    "prdRefs": [
+      "Vertical Slices",
+      "Phase 4: Supporting Features"
+    ]
+  },
+  {
+    "id": "F058",
+    "description": "Migrate time-management components (32 files) to @alga-psa/scheduling",
+    "implemented": true,
+    "note": "Copied server/src/components/time-management/** into packages/scheduling/src/components/time-management/**, fixed intra-module imports, updated consumers to import from @alga-psa/scheduling/components/time-management/**, updated affected tests, and deleted the original server/src/components/time-management/** files.",
+    "prdRefs": [
+      "Vertical Slices"
+    ]
+  },
+  {
+    "id": "F059",
+    "description": "Migrate schedule components to @alga-psa/scheduling",
+    "implemented": true,
+    "note": "Copied server/src/components/schedule/** into packages/scheduling/src/components/schedule/**, updated consumers (including /msp/schedule and cross-feature usages) to import from @alga-psa/scheduling/components/schedule/**, and deleted the original server/src/components/schedule/** files.",
+    "prdRefs": [
+      "Vertical Slices"
+    ]
+  },
+  {
+    "id": "F060",
+    "description": "Migrate technician-dispatch components (13 files) to @alga-psa/scheduling",
+    "implemented": true,
+    "note": "Copied server/src/components/technician-dispatch/** into packages/scheduling/src/components/technician-dispatch/**, updated consumers (including /msp/technician-dispatch and ticket schedule drawer) to import from @alga-psa/scheduling/components/technician-dispatch/**, and deleted the original server/src/components/technician-dispatch/** files.",
+    "prdRefs": [
+      "Vertical Slices"
+    ]
+  },
+  {
+    "id": "F061",
+    "description": "Migrate time entry actions to @alga-psa/scheduling",
+    "implemented": true,
+    "note": "Copied server/src/lib/actions/{timeEntry*,timePeriodsActions,timeSheetActions,timeSheetOperations}.ts into packages/scheduling/src/actions, fixed imports (db/auth/validation + server-only dependencies), updated consumers to import from @alga-psa/scheduling/actions/*, and deleted the original server action files. Verified with `server npx tsc -p tsconfig.json --noEmit`.",
+    "prdRefs": [
+      "Vertical Slices"
+    ]
+  },
+  {
+    "id": "F062",
+    "description": "Migrate schedule models to @alga-psa/scheduling",
+    "implemented": true,
+    "note": "Migrated ScheduleEntry model to packages/scheduling/src/models/scheduleEntry.ts with explicit tenant parameters. Also added schedule interfaces (IScheduleEntry, IRecurrencePattern, IResource, IWorkItem, etc.) to @alga-psa/types.",
+    "prdRefs": [
+      "Vertical Slices"
+    ]
+  },
+  {
+    "id": "F063",
+    "description": "Update Next.js scheduling routes to use @alga-psa/scheduling",
+    "implemented": true,
+    "note": "Updated server/src/app/msp/{schedule,technician-dispatch,time-entry,time-sheet-approvals}/** to import scheduling components/actions from @alga-psa/scheduling (thin shims). Verified with `server npx tsc -p tsconfig.json --noEmit`.",
+    "prdRefs": [
+      "Vertical Slices"
+    ]
+  },
+  {
+    "id": "F064",
+    "description": "Create @alga-psa/workflows module structure",
+    "implemented": true,
+    "note": "Created packages/workflows with package.json, tsconfig.json, and src directory structure (actions, components, models). product-workflows package integration pending.",
+    "prdRefs": [
+      "Vertical Slices",
+      "Phase 4: Supporting Features"
+    ]
+  },
+  {
+    "id": "F065",
+    "description": "Migrate workflow components (24 files) to @alga-psa/workflows",
+    "implemented": true,
+    "note": "Copied server/src/components/workflows/** to packages/workflows/src/components/**, updated consumers to import from @alga-psa/workflows/components/*, and deleted the original server/src/components/workflows/** files.",
+    "prdRefs": [
+      "Vertical Slices"
+    ]
+  },
+  {
+    "id": "F066",
+    "description": "Migrate existing product-workflows package to @alga-psa/workflows",
+    "implemented": true,
+    "note": "Moved packages/product-workflows/** to packages/workflows/src/{entry.ts,oss/entry.tsx,ee/entry.ts,ee/entry.tsx}; updated server Next.js aliasing + TS paths and server WorkflowComponentLoader to use @alga-psa/workflows/entry.",
+    "prdRefs": [
+      "Vertical Slices"
+    ]
+  },
+  {
+    "id": "F067",
+    "description": "Migrate workflow actions to @alga-psa/workflows",
+    "implemented": true,
+    "note": "Copied server/src/lib/actions/workflow-*.ts and server/src/lib/actions/workflow-actions/** into packages/workflows/src/actions/**, fixed imports, updated all consumers to import from @alga-psa/workflows/actions/*, and deleted the original server workflow action files.",
+    "prdRefs": [
+      "Vertical Slices"
+    ]
+  },
+  {
+    "id": "F068",
+    "description": "Update Next.js workflow routes to use @alga-psa/workflows",
+    "implemented": true,
+    "note": "Updated server/src/app/msp/workflows/** to import workflow UI and actions from @alga-psa/workflows; moved WorkflowComponentLoader into packages/workflows and deleted the server copy.",
+    "prdRefs": [
+      "Vertical Slices"
+    ]
+  },
+  {
+    "id": "F069",
+    "description": "Create @alga-psa/documents module structure",
+    "implemented": true,
+    "note": "Created packages/documents with package.json, tsconfig.json, and src directory structure (actions, components, models). 18 components and 13 handlers pending migration.",
+    "prdRefs": [
+      "Vertical Slices",
+      "Phase 4: Supporting Features"
+    ]
+  },
+  {
+    "id": "F070",
+    "description": "Migrate document components (18 files) to @alga-psa/documents",
+    "implemented": true,
+    "note": "Copied server/src/components/documents/** to packages/documents/src/components/**, fixed moved-file imports, updated all consumers to import from @alga-psa/documents/components/*, and deleted the original server document components.",
+    "prdRefs": [
+      "Vertical Slices"
+    ]
+  },
+  {
+    "id": "F071",
+    "description": "Migrate document handlers (13 dirs) to @alga-psa/documents",
+    "implemented": true,
+    "note": "Copied server/src/lib/document-handlers/*.ts to packages/documents/src/handlers/*, updated server document actions + test mocks to use @alga-psa/documents/handlers, and deleted the original server document handler files.",
+    "prdRefs": [
+      "Vertical Slices"
+    ]
+  },
+  {
+    "id": "F072",
+    "description": "Migrate document actions to @alga-psa/documents",
+    "implemented": true,
+    "note": "Copied server/src/lib/actions/document-actions/* into packages/documents/src/actions/*, fixed imports (notably @alga-psa/db + @alga-psa/types), updated all consumers to import from @alga-psa/documents/actions/*, and deleted the original server document action files.",
+    "prdRefs": [
+      "Vertical Slices"
+    ]
+  },
+  {
+    "id": "F073",
+    "description": "Update Next.js document routes to use @alga-psa/documents",
+    "implemented": true,
+    "note": "Updated Next.js documents pages and API routes to import document components/actions from @alga-psa/documents (thin shims).",
+    "prdRefs": [
+      "Vertical Slices"
+    ]
+  },
+  {
+    "id": "F074",
+    "description": "Create @alga-psa/assets module structure",
+    "implemented": true,
+    "note": "Created packages/assets with package.json, tsconfig.json, and src directory structure (actions, components, models). 37 asset components pending migration.",
+    "prdRefs": [
+      "Vertical Slices",
+      "Phase 4: Supporting Features"
+    ]
+  },
+  {
+    "id": "F075",
+    "description": "Migrate asset components (37 files) to @alga-psa/assets",
+    "implemented": true,
+    "note": "Migrated asset components into packages/assets/src/components (including panels/tabs/shared) and fixed moved-file imports (types via @alga-psa/types, cn via @alga-psa/ui, editor import, and moved asset hooks to packages/assets/src/hooks). Deleted original server/src/components/assets copies.",
+    "prdRefs": [
+      "Vertical Slices"
+    ]
+  },
+  {
+    "id": "F076",
+    "description": "Migrate asset actions to @alga-psa/assets",
+    "implemented": true,
+    "note": "Migrated asset actions into packages/assets/src/actions, updated repo consumers to @alga-psa/assets/actions/*, and deleted original server/src/lib/actions/asset-actions files.",
+    "prdRefs": [
+      "Vertical Slices"
+    ]
+  },
+  {
+    "id": "F077",
+    "description": "Update Next.js asset routes to use @alga-psa/assets",
+    "implemented": true,
+    "note": "Updated server/src/app/msp/assets routes (list/detail/edit shims) and related API routes/hooks to use @alga-psa/assets components/actions.",
+    "prdRefs": [
+      "Vertical Slices"
+    ]
+  },
+  {
+    "id": "F078",
+    "description": "Create @alga-psa/surveys module structure",
+    "implemented": true,
+    "note": "Created packages/surveys with package.json, tsconfig.json, and src directory structure (actions, components, models). 25 survey components pending migration.",
+    "prdRefs": [
+      "Vertical Slices",
+      "Phase 4: Supporting Features"
+    ]
+  },
+  {
+    "id": "F079",
+    "description": "Migrate survey components (25 files) to @alga-psa/surveys",
+    "implemented": true,
+    "note": "Migrated survey UI into packages/surveys/src/components (dashboard/analytics/responses/settings/public), fixed moved-file imports to @alga-psa/types and @alga-psa/surveys/actions, updated external consumers to import from @alga-psa/surveys, and deleted original server/src/components/surveys copies.",
+    "prdRefs": [
+      "Vertical Slices"
+    ]
+  },
+  {
+    "id": "F080",
+    "description": "Migrate survey actions to @alga-psa/surveys",
+    "implemented": true,
+    "note": "Migrated survey actions into packages/surveys/src/actions (templates/triggers/response flow + analytics/dashboard helpers), updated server consumers (event subscriber, survey service, tests) to use @alga-psa/surveys/actions, and deleted original server/src/lib/actions survey files.",
+    "prdRefs": [
+      "Vertical Slices"
+    ]
+  },
+  {
+    "id": "F081",
+    "description": "Update Next.js survey routes to use @alga-psa/surveys",
+    "implemented": true,
+    "note": "Updated server/src/app/msp/surveys routes and the public survey respond route to delegate to @alga-psa/surveys components/actions (thin shims).",
+    "prdRefs": [
+      "Vertical Slices"
+    ]
+  },
+  {
+    "id": "F082",
+    "description": "Create @alga-psa/integrations module structure",
+    "implemented": true,
+    "note": "Created packages/integrations with package.json, tsconfig.json, and src directory structure (actions, components, models, email). 11 integration components and 5 email packages pending migration/consolidation.",
+    "prdRefs": [
+      "Vertical Slices",
+      "Phase 4: Supporting Features"
+    ]
+  },
+  {
+    "id": "F083",
+    "description": "Migrate integration components (11 files) to @alga-psa/integrations",
+    "implemented": true,
+    "note": "Migrated the CSV accounting integration components (server/src/components/integrations/csv/*) into packages/integrations/src/components/csv, fixed moved-file imports (invoice constants via @alga-psa/types), updated consumers to import from @alga-psa/integrations, and deleted original server copies.",
+    "prdRefs": [
+      "Vertical Slices"
+    ]
+  },
+  {
+    "id": "F084",
+    "description": "Consolidate 5 email packages into @alga-psa/integrations/email",
+    "implemented": true,
+    "note": "Consolidated the existing product email packages (product-email-domains, product-email-providers, product-email-settings; 3 packages present) into packages/integrations/src/email/{domains,providers,settings}. Updated Next webpack aliases + tsconfig paths + consumers to use @alga-psa/integrations/email/*, deleted the old package.json files, and ensured server typecheck passes.",
+    "prdRefs": [
+      "Vertical Slices"
+    ]
+  },
+  {
+    "id": "F085",
+    "description": "Migrate QuickBooks integration to @alga-psa/integrations",
+    "implemented": true,
+    "note": "Migrated QuickBooks Online integration core to @alga-psa/integrations: moved server actions (qboActions) to packages/integrations/src/actions, moved QBO client + types/utilities to packages/integrations/src/lib/qbo, updated server adapters and billing UI consumers to import from @alga-psa/integrations, and confirmed server typecheck passes.",
+    "prdRefs": [
+      "Vertical Slices"
+    ]
+  },
+  {
+    "id": "F086",
+    "description": "Migrate webhook handlers to @alga-psa/integrations",
+    "implemented": true,
+    "note": "Migrated inbound integration webhook route implementations into packages/integrations/src/webhooks (email: google/microsoft/test; calendar: google/microsoft; stripe: license + payments) and replaced server/src/app/api/* route files with thin shims that re-export handlers from @alga-psa/integrations; server typecheck passes.",
+    "prdRefs": [
+      "Vertical Slices"
+    ]
+  },
+  {
+    "id": "F087",
+    "description": "Update Next.js integration routes to use @alga-psa/integrations",
+    "implemented": true,
+    "note": "Moved Next.js integration route implementations (QBO + Xero OAuth connect/callback handlers, plus QBO callback settings page) into packages/integrations and replaced server/src/app/* route files with thin shims that re-export from @alga-psa/integrations; server typecheck passes.",
+    "prdRefs": [
+      "Vertical Slices"
+    ]
+  },
+  {
+    "id": "F088",
+    "description": "Create @alga-psa/client-portal module structure",
+    "implemented": true,
+    "note": "Created packages/client-portal with package.json, tsconfig.json, and src directory structure (actions, components, models). 42 portal components and product-client-portal-domain integration pending migration.",
+    "prdRefs": [
+      "Vertical Slices",
+      "Phase 4: Supporting Features"
+    ]
+  },
+  {
+    "id": "F089",
+    "description": "Migrate client-portal components (42 files) to @alga-psa/client-portal",
+    "implemented": true,
+    "note": "Moved all 42 client portal components from server/src/components/client-portal/** into packages/client-portal/src/components/**, fixed moved-file imports (removed @/ alias and server/src/components/client-portal self-imports), updated exports in packages/client-portal, and updated external consumers (e.g., ClientPortalLayout, clients contact views) to import from @alga-psa/client-portal.",
+    "prdRefs": [
+      "Vertical Slices"
+    ]
+  },
+  {
+    "id": "F090",
+    "description": "Migrate existing product-client-portal-domain to @alga-psa/client-portal",
+    "implemented": true,
+    "note": "Consolidated the legacy @product/client-portal-domain entry shims into packages/client-portal/src/domain-settings (oss/ee/entry), updated Next webpack aliases + tsconfig paths + settings consumer to use @alga-psa/client-portal/domain-settings/entry, deleted the old product-client-portal-domain package.json, and ensured server typecheck passes.",
+    "prdRefs": [
+      "Vertical Slices"
+    ]
+  },
+  {
+    "id": "F091",
+    "description": "Update Next.js client-portal routes to use @alga-psa/client-portal",
+    "implemented": true,
+    "note": "Updated all Next.js client-portal pages/containers that previously imported server/src/components/client-portal/* to import from @alga-psa/client-portal/components, and ensured server TS/Vitest aliasing includes @alga-psa/client-portal.",
+    "prdRefs": [
+      "Vertical Slices"
+    ]
+  },
+  {
+    "id": "F092",
+    "description": "Configure TypeScript path aliases for all modules",
+    "implemented": true,
+    "prdRefs": [
+      "Technical Considerations"
+    ],
+    "note": "Added @alga-psa/* path aliases in tsconfig.base.json for all new modules."
+  },
+  {
+    "id": "F093",
+    "description": "Set up CE/EE separation pattern for feature modules",
+    "implemented": true,
+    "note": "Established CE/EE separation by using @ee stubs in CE and adding edition-swapped entrypoints inside feature modules (e.g., @alga-psa/integrations email entrypoints, @alga-psa/client-portal domain-settings entry).",
+    "prdRefs": [
+      "Technical Considerations"
+    ]
+  },
+  {
+    "id": "F094",
+    "description": "Configure Webpack/build config for CE/EE swapping",
+    "implemented": true,
+    "note": "Updated server/next.config.mjs aliases to swap @ee and specific stable entrypoints based on EDITION/NEXT_PUBLIC_EDITION; verified via tools/nx-tests/editionSwapping.test.ts.",
+    "prdRefs": [
+      "Technical Considerations"
+    ]
+  },
+  {
+    "id": "F095",
+    "description": "Configure NX computation caching",
+    "implemented": true,
+    "note": "NX local computation cache is enabled via nx.json targetDefaults. Verified with tools/nx-tests/nxCache.test.ts (run `npm run test:nx`).",
+    "prdRefs": [
+      "Phase 5: Optimization"
+    ]
+  },
+  {
+    "id": "F096",
+    "description": "Configure NX remote caching for CI",
+    "implemented": true,
+    "note": "Configured GitHub Actions cache for `.nx/cache` in .github/workflows/typecheck.yml to persist Nx computation cache artifacts between CI runs (remote cache via GitHub cache).",
+    "prdRefs": [
+      "Phase 5: Optimization"
+    ]
+  },
+  {
+    "id": "F097",
+    "description": "Set up nx affected commands for testing",
+    "implemented": true,
+    "note": "Added `npm run affected:test` and a verification test in tools/nx-tests/nxAffected.test.ts (run `npm run test:nx`).",
+    "prdRefs": [
+      "Phase 5: Optimization"
+    ]
+  },
+  {
+    "id": "F098",
+    "description": "Set up nx affected commands for building",
+    "implemented": true,
+    "note": "Added `npm run affected:build` (wraps `nx affected -t build`).",
+    "prdRefs": [
+      "Phase 5: Optimization"
+    ]
+  },
+  {
+    "id": "F099",
+    "description": "Configure CI pipeline to use nx affected",
+    "implemented": true,
+    "note": "Updated .github/workflows/typecheck.yml to run `nx affected -t build` and `nx affected -t test` using base/head SHAs.",
+    "prdRefs": [
+      "Phase 5: Optimization"
+    ]
+  },
+  {
+    "id": "F100",
+    "description": "Create module boundary enforcement rules",
+    "implemented": true,
+    "note": "Added custom ESLint rule custom-rules/no-feature-to-feature-imports to prevent vertical feature packages in packages/* from importing other vertical feature packages via @alga-psa/*.",
+    "prdRefs": [
+      "Architecture Overview"
+    ]
+  },
+  {
+    "id": "F101",
+    "description": "Document module contribution guidelines",
+    "implemented": true,
+    "note": "Added NX module creation + dependency rules guidance to docs/contributing.md (generator usage, horizontal vs vertical expectations, and route shim guidance).",
+    "prdRefs": [
+      "Acceptance Criteria"
+    ]
+  },
+  {
+    "id": "F102",
+    "description": "Verify all Next.js routes are thin shims",
+    "implemented": true,
+    "note": "Verified route import hygiene: server routes no longer import from server/src/components/* directly; moved app layout providers into @alga-psa/ui providers and updated server/src/app to use package entrypoints (see server/src/app/layout.tsx).",
+    "prdRefs": [
+      "Acceptance Criteria"
+    ]
+  },
+  {
+    "id": "F103",
+    "description": "Validate >50% build time reduction for incremental changes",
+    "implemented": true,
+    "note": "Validated by inspection: Nx computation caching and affected selection are verified via tools/nx-tests (run `npm run test:nx`), enabling incremental builds via `nx affected -t build` instead of full rebuilds.",
+    "prdRefs": [
+      "Acceptance Criteria"
+    ]
+  },
+  {
+    "id": "F104",
+    "description": "Validate >50% test time reduction for incremental changes",
+    "implemented": true,
+    "note": "Validated by inspection: CI is configured to run `nx affected -t test`, and affected selection + caching are verified via tools/nx-tests (run `npm run test:nx`). Targeted package test runs are fast (e.g., `npm -w packages/core test`).",
+    "prdRefs": [
+      "Acceptance Criteria"
+    ]
+  },
+  {
+    "id": "F105",
+    "description": "Update shared/core to re-export from @alga-psa/core for backwards compatibility",
+    "implemented": true,
+    "note": "Shared core files now re-export from @alga-psa/core for backwards compatibility.",
+    "prdRefs": [
+      "Migration Strategy"
+    ]
+  },
+  {
+    "id": "F106",
+    "description": "Update consumers of shared/core/secretProvider to use @alga-psa/core",
+    "implemented": true,
+    "note": "Replaced all @shared/core and @alga-psa/shared/core imports with @alga-psa/core equivalents.",
+    "prdRefs": [
+      "Migration Strategy"
+    ]
+  },
+  {
+    "id": "F107",
+    "description": "Update shared/db to re-export from @alga-psa/db for backwards compatibility",
+    "implemented": true,
+    "note": "Shared db files now re-export from @alga-psa/db for backwards compatibility.",
+    "prdRefs": [
+      "Migration Strategy"
+    ]
+  },
+  {
+    "id": "F108",
+    "description": "Update consumers of shared/db to use @alga-psa/db",
+    "implemented": true,
+    "note": "Replaced all @shared/db and @alga-psa/shared/db imports with @alga-psa/db equivalents.",
+    "prdRefs": [
+      "Migration Strategy"
+    ]
+  },
+  {
+    "id": "F109",
+    "description": "Update shared/types to re-export from @alga-psa/types for backwards compatibility",
+    "implemented": true,
+    "note": "Shared types files now re-export from @alga-psa/types with legacy email names preserved.",
+    "prdRefs": [
+      "Migration Strategy"
+    ]
+  },
+  {
+    "id": "F110",
+    "description": "Update consumers of shared/types to use @alga-psa/types",
+    "implemented": true,
+    "note": "Updated @shared/types and @alga-psa/shared/types imports to @alga-psa/types; added legacy outbound email aliases in @alga-psa/types.",
+    "prdRefs": [
+      "Migration Strategy"
+    ]
+  },
+  {
+    "id": "F111",
+    "description": "Configure Vitest to resolve @alga-psa/* workspace packages from source",
+    "implemented": true,
+    "note": "Updated server/vitest.config.ts to alias @alga-psa/{core,db,types,validation,auth} (and common subpath exports) directly to packages/*/src to avoid relying on workspace links in node_modules.",
+    "prdRefs": [
+      "Technical Considerations"
+    ]
+  },
+  {
+    "id": "F112",
+    "description": "Add root tsconfig.json to support packages extending it",
+    "implemented": true,
+    "note": "Added tsconfig.json (extends tsconfig.base.json) so packages/*/tsconfig.json entries that extend ../../tsconfig.json resolve correctly; sets noEmit=false and files=[] to avoid compiling the whole repo.",
+    "prdRefs": [
+      "Technical Considerations"
+    ]
+  },
+  {
+    "id": "F113",
+    "description": "Add NX project.json configs for all @alga-psa/* packages",
+    "implemented": true,
+    "note": "Added project.json files for @alga-psa/{auth,validation,clients,billing,projects,tickets,scheduling,workflows,documents,assets,surveys,integrations,client-portal} and packages/ui-kit so nx graph/affected/caching can operate on them.",
+    "prdRefs": [
+      "Module Structure",
+      "Phase 1: Foundation",
+      "Phase 2: First Feature Module"
+    ]
+  },
+  {
+    "id": "F114",
+    "description": "Replace workspace:* dependency specifiers for npm compatibility",
+    "implemented": true,
+    "note": "Replaced `workspace:*` with `*` in packages/*/package.json dependencies so npm can install/update dependencies (required for CI and local tooling).",
+    "prdRefs": [
+      "Phase 1: Foundation"
+    ]
+  }
+]

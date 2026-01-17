@@ -1,14 +1,14 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from 'server/src/components/ui/Card';
-import { Input } from 'server/src/components/ui/Input';
-import { Label } from 'server/src/components/ui/Label';
-import { Button } from 'server/src/components/ui/Button';
+import { Card, CardContent, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
+import { Input } from '@alga-psa/ui/components/Input';
+import { Label } from '@alga-psa/ui/components/Label';
+import { Button } from '@alga-psa/ui/components/Button';
 import { Eye, EyeOff } from 'lucide-react';
 import { changeOwnPassword, checkPasswordResetStatus } from 'server/src/lib/actions/user-actions/userActions';
-import { PasswordResetWarning } from 'server/src/components/ui/PasswordResetWarning';
-import { useTranslation } from 'server/src/lib/i18n/client';
+import { PasswordResetWarning } from '@alga-psa/ui/components/PasswordResetWarning';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 interface PasswordChangeFormProps {
   onSuccess?: () => void;

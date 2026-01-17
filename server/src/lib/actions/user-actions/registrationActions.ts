@@ -1,7 +1,7 @@
 'use server'
 
-import { getAdminConnection } from '@shared/db/admin';
-import { withTransaction } from '@alga-psa/shared/db';
+import { getAdminConnection } from '@alga-psa/db/admin';
+import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { hashPassword } from 'server/src/utils/encryption/encryption';
 import { verifyContactEmail } from 'server/src/lib/actions/user-actions/userActions';

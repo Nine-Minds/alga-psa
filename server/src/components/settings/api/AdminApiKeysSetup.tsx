@@ -1,9 +1,9 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
-import { Button } from 'server/src/components/ui/Button';
-import { Card } from 'server/src/components/ui/Card';
-import { DataTable } from 'server/src/components/ui/DataTable';
+import { Button } from '@alga-psa/ui/components/Button';
+import { Card } from '@alga-psa/ui/components/Card';
+import { DataTable } from '@alga-psa/ui/components/DataTable';
 import type { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
 import { adminListApiKeys, adminDeactivateApiKey } from 'server/src/lib/actions/apiKeyActions';
 

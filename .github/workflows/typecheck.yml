@@ -10,7 +10,7 @@ on:
 
 jobs:
   typecheck:
-    name: Run tsc --noEmit
+    name: Nx affected build/test
     runs-on: ubuntu-latest
 
     steps:
@@ -23,6 +23,14 @@ jobs:
           node-version: '20'
           cache: 'npm'
 
+      - name: Cache Nx computation cache
+        uses: actions/cache@v4
+        with:
+          path: .nx/cache
+          key: nx-cache-${{ runner.os }}-${{ hashFiles('package-lock.json', 'nx.json', 'tsconfig.base.json', '**/project.json') }}
+          restore-keys: |
+            nx-cache-${{ runner.os }}-
+
       - name: Upgrade npm to version 11
         run: npm install -g npm@11
 
@@ -30,11 +38,28 @@ jobs:
         run: |
           if ! npm ci; then
             echo "npm ci failed; attempting npm install fallback to regenerate lock data"
-            npm install
+            npm install --legacy-peer-deps
           fi
 
-      - name: Run TypeScript type check
-        working-directory: ./server
-        run: npx tsc --noEmit
+      - name: Determine Nx base/head
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            echo "NX_BASE=${{ github.event.pull_request.base.sha }}" >> $GITHUB_ENV
+            echo "NX_HEAD=${{ github.event.pull_request.head.sha }}" >> $GITHUB_ENV
+          else
+            echo "NX_BASE=${{ github.event.before }}" >> $GITHUB_ENV
+            echo "NX_HEAD=${{ github.sha }}" >> $GITHUB_ENV
+          fi
+
+      - name: Nx affected build
+        run: npx nx affected -t build --base=$NX_BASE --head=$NX_HEAD --output-style=static
+        env:
+          NX_DAEMON: 'false'
+          NODE_OPTIONS: '--max-old-space-size=8192'
+
+      - name: Nx affected test
+        run: npx nx affected -t test --base=$NX_BASE --head=$NX_HEAD --output-style=static
         env:
           NODE_OPTIONS: '--max-old-space-size=8192'
+          NX_DAEMON: 'false'

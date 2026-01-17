@@ -4,7 +4,7 @@ import {
   hashSurveyToken,
   issueSurveyToken,
   resolveSurveyTenantFromToken,
-} from '../../lib/actions/surveyTokenService';
+} from '@alga-psa/surveys/actions/surveyTokenService';
 
 type MockedBuilder = {
   select: ReturnType<typeof vi.fn>;
@@ -19,12 +19,12 @@ const getAdminConnectionMock = vi.fn();
 const createTenantKnexMock = vi.fn();
 const runWithTenantMock = vi.fn(async (_tenant: string, fn: () => Promise<any>) => fn());
 
-vi.mock('@shared/db/admin', () => ({
+vi.mock('@alga-psa/db/admin', () => ({
   getAdminConnection: () => getAdminConnectionMock(),
 }));
 
-vi.mock('../../lib/db', () => ({
-  createTenantKnex: () => createTenantKnexMock(),
+vi.mock('@alga-psa/db', () => ({
+  createTenantKnex: (...args: unknown[]) => createTenantKnexMock(...args),
   runWithTenant: (tenant: string, fn: () => Promise<any>) => runWithTenantMock(tenant, fn),
 }));
 
@@ -83,7 +83,7 @@ describe('surveyTokenService', () => {
     const result = await resolveSurveyTenantFromToken(plainToken);
 
     expect(runWithTenantMock).toHaveBeenCalledWith(invitationRow.tenant, expect.any(Function));
-    expect(adminBuilder.where).toHaveBeenCalledWith({ survey_token_hash: hashed });
+    expect(adminBuilder.where).toHaveBeenCalledWith('survey_token_hash', hashed);
     expect(tenantBuilder.where).toHaveBeenCalledWith('survey_invitations.survey_token_hash', hashed);
 
     expect(result.tenant).toBe(invitationRow.tenant);

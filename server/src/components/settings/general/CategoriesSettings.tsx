@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useEffect } from 'react';
-import { Button } from 'server/src/components/ui/Button';
+import { Button } from '@alga-psa/ui/components/Button';
 import { Plus, MoreVertical, CornerDownRight } from "lucide-react";
 import { ITicketCategory } from 'server/src/interfaces/ticket.interfaces';
 import {
@@ -14,21 +14,21 @@ import { getAllBoards } from 'server/src/lib/actions/board-actions/boardActions'
 import { IBoard } from 'server/src/interfaces/board.interface';
 import { getAvailableReferenceData, importReferenceData, checkImportConflicts, ImportConflict } from 'server/src/lib/actions/referenceDataActions';
 import { toast } from 'react-hot-toast';
-import { Dialog, DialogContent, DialogFooter } from 'server/src/components/ui/Dialog';
-import { Input } from 'server/src/components/ui/Input';
-import { Checkbox } from 'server/src/components/ui/Checkbox';
-import { Label } from 'server/src/components/ui/Label';
-import { DataTable } from 'server/src/components/ui/DataTable';
+import { Dialog, DialogContent, DialogFooter } from '@alga-psa/ui/components/Dialog';
+import { Input } from '@alga-psa/ui/components/Input';
+import { Checkbox } from '@alga-psa/ui/components/Checkbox';
+import { Label } from '@alga-psa/ui/components/Label';
+import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
-import { ConfirmationDialog } from 'server/src/components/ui/ConfirmationDialog';
-import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
+import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
+import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import {
   DropdownMenu,
   DropdownMenuTrigger,
   DropdownMenuContent,
   DropdownMenuItem,
-} from 'server/src/components/ui/DropdownMenu';
-import CustomSelect from 'server/src/components/ui/CustomSelect';
+} from '@alga-psa/ui/components/DropdownMenu';
+import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 
 const CategoriesSettings: React.FC = () => {
   const [categories, setCategories] = useState<ITicketCategory[]>([]);

@@ -1,4 +1,4 @@
-import { getConnection } from '@alga-psa/shared/db/connection';
+import { getConnection } from '@alga-psa/db/connection';
 import type { Knex } from 'knex';
 
 export interface LicenseUsage {

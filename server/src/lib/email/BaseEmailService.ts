@@ -1,11 +1,11 @@
-import logger from '@alga-psa/shared/core/logger';
+import logger from '@alga-psa/core/logger';
 import {
   IEmailProvider,
   EmailMessage as ProviderEmailMessage,
   EmailSendResult as ProviderEmailSendResult,
   EmailAddress as ProviderEmailAddress
 } from '../../types/email.types';
-import { SupportedLocale } from '../i18n/config';
+import { SupportedLocale } from '@alga-psa/ui/lib/i18n/config';
 
 export interface EmailAddress {
   email: string;

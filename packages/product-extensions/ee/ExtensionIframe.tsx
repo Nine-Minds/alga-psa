@@ -2,7 +2,7 @@
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { bootstrapIframe } from '@ee/lib/extensions/ui/iframeBridge';
-import LoadingIndicator from 'server/src/components/ui/LoadingIndicator';
+import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 
 type Props = {
   domain: string;

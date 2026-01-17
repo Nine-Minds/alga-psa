@@ -2,7 +2,7 @@
 
 import { z } from 'zod';
 import { createTenantKnex } from '../../db';
-import { withTransaction } from '@shared/db';
+import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { ITimeEntry } from '../../../interfaces/timeEntry.interfaces';
 import { IService, IServiceType } from '../../../interfaces/billing.interfaces';

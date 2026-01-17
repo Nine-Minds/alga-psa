@@ -5,6 +5,15 @@ const config: Config = {
     "./src/pages/**/*.{js,ts,jsx,tsx,mdx}",
     "./src/components/**/*.{js,ts,jsx,tsx,mdx}",
     "./src/app/**/*.{js,ts,jsx,tsx,mdx}",
+
+    // Monorepo UI sources consumed by the Next.js app. Keep this list explicit to avoid
+    // accidentally scanning `node_modules` and to reduce Tailwind's file-watching workload.
+    "../packages/{ui,ui-kit,client-portal,clients,tickets,projects,scheduling,surveys,assets,documents,integrations,billing,auth,workflows}/src/**/*.{jsx,tsx,mdx}",
+
+    // A small number of `.ts` files contain Tailwind class strings (not JSX). Include them
+    // explicitly rather than enabling a broad `**/*.ts` glob.
+    "../packages/scheduling/src/components/technician-dispatch/utils.ts",
+    "../packages/tickets/src/actions/optimizedTicketActions.ts",
   ],
   theme: {
     extend: {

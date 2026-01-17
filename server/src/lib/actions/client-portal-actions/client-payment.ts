@@ -9,9 +9,14 @@
 
 import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
 import { getConnection } from 'server/src/lib/db/db';
-import { withTransaction } from '@shared/db';
+import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
-import logger from '@alga-psa/shared/core/logger';
+import logger from '@alga-psa/core/logger';
+import {
+  getActiveInvoicePaymentLinkUrl,
+  getInvoicePaymentStatus,
+  getOrCreateInvoicePaymentLinkUrl,
+} from '@alga-psa/billing/actions/paymentActions';
 
 /**
  * Result of a payment action.
@@ -90,32 +95,9 @@ export async function getClientPortalInvoicePaymentLink(
       return { success: false, error: 'Invoice is cancelled' };
     }
 
-    // Check if running Enterprise Edition
-    const isEE = process.env.NEXT_PUBLIC_EDITION === 'enterprise';
-    if (!isEE) {
+    const paymentUrl = await getOrCreateInvoicePaymentLinkUrl(user.tenant, invoiceId);
+    if (!paymentUrl) {
       return { success: false, error: 'payment_not_configured' };
-    }
-
-    // Dynamically import PaymentService (EE only)
-    let PaymentService: any;
-    try {
-      const eeModule = await import('@ee/lib/payments');
-      PaymentService = eeModule.PaymentService;
-    } catch (error) {
-      logger.debug('[ClientPayment] PaymentService not available');
-      return { success: false, error: 'payment_not_configured' };
-    }
-
-    // Create PaymentService and get/create payment link
-    const paymentService = await PaymentService.create(user.tenant);
-
-    if (!await paymentService.hasEnabledProvider()) {
-      return { success: false, error: 'payment_not_configured' };
-    }
-
-    const paymentLink = await paymentService.getOrCreatePaymentLink(invoiceId);
-    if (!paymentLink) {
-      return { success: false, error: 'Failed to create payment link' };
     }
 
     logger.info('[ClientPayment] Payment link retrieved', {
@@ -126,7 +108,7 @@ export async function getClientPortalInvoicePaymentLink(
 
     return {
       success: true,
-      data: { paymentUrl: paymentLink.url },
+      data: { paymentUrl },
     };
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
@@ -213,12 +195,6 @@ export async function verifyClientPortalPayment(
       };
     }
 
-    // Check if running Enterprise Edition
-    const isEE = process.env.NEXT_PUBLIC_EDITION === 'enterprise';
-    if (!isEE) {
-      return { success: false, error: 'Payment verification not available' };
-    }
-
     // Verify the sessionId matches a payment link for this invoice
     // This ensures we're verifying the specific checkout session, not just any payment
     if (sessionId) {
@@ -242,19 +218,7 @@ export async function verifyClientPortalPayment(
       }
     }
 
-    // Dynamically import PaymentService (EE only)
-    let PaymentService: any;
-    try {
-      const eeModule = await import('@ee/lib/payments');
-      PaymentService = eeModule.PaymentService;
-    } catch (error) {
-      logger.debug('[ClientPayment] PaymentService not available');
-      return { success: false, error: 'Payment verification not available' };
-    }
-
-    // Get payment status using the verified sessionId
-    const paymentService = await PaymentService.create(user.tenant);
-    const paymentDetails = await paymentService.getInvoicePaymentStatus(invoiceId);
+    const paymentDetails = await getInvoicePaymentStatus(user.tenant, invoiceId);
 
     if (!paymentDetails) {
       // Payment might still be processing
@@ -322,31 +286,10 @@ export async function getActivePaymentLinkUrl(
       return { success: false, error: 'Unauthorized' };
     }
 
-    // Check if running Enterprise Edition
-    const isEE = process.env.NEXT_PUBLIC_EDITION === 'enterprise';
-    if (!isEE) {
-      return { success: true, data: { paymentUrl: null } };
-    }
-
-    // Dynamically import PaymentService
-    let PaymentService: any;
-    try {
-      const eeModule = await import('@ee/lib/payments');
-      PaymentService = eeModule.PaymentService;
-    } catch (error) {
-      return { success: true, data: { paymentUrl: null } };
-    }
-
-    const paymentService = await PaymentService.create(user.tenant);
-
-    if (!await paymentService.hasEnabledProvider()) {
-      return { success: true, data: { paymentUrl: null } };
-    }
-
-    const link = await paymentService.getActivePaymentLink(invoiceId);
+    const paymentUrl = await getActiveInvoicePaymentLinkUrl(user.tenant, invoiceId);
     return {
       success: true,
-      data: { paymentUrl: link?.url || null },
+      data: { paymentUrl },
     };
   } catch (error) {
     logger.error('[ClientPayment] Failed to get active payment link', { error, invoiceId });

@@ -2,11 +2,11 @@
 
 import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
-import ScheduleCalendar from 'server/src/components/schedule/ScheduleCalendar';
-import AppointmentRequestsPanel from 'server/src/components/schedule/AppointmentRequestsPanel';
-import AvailabilitySettings from 'server/src/components/schedule/AvailabilitySettings';
-import { Button } from 'server/src/components/ui/Button';
-import { Badge } from 'server/src/components/ui/Badge';
+import ScheduleCalendar from '@alga-psa/scheduling/components/schedule/ScheduleCalendar';
+import AppointmentRequestsPanel from '@alga-psa/scheduling/components/schedule/AppointmentRequestsPanel';
+import AvailabilitySettings from '@alga-psa/scheduling/components/schedule/AvailabilitySettings';
+import { Button } from '@alga-psa/ui/components/Button';
+import { Badge } from '@alga-psa/ui/components/Badge';
 import { Calendar, Settings } from 'lucide-react';
 import { getAppointmentRequests } from 'server/src/lib/actions/appointmentRequestManagementActions';
 import { getCurrentUserPermissions, getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';

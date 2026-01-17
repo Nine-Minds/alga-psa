@@ -6,8 +6,8 @@
 import { Knex } from 'knex';
 import { BaseService, ServiceContext, ListResult } from './BaseService';
 import { ITicket } from 'server/src/interfaces/ticket.interfaces';
-import { withTransaction } from '@shared/db';
-import { maybeReopenBundleMasterFromChildReply } from 'server/src/lib/actions/ticket-actions/ticketBundleUtils';
+import { withTransaction } from '@alga-psa/db';
+import { maybeReopenBundleMasterFromChildReply } from '@alga-psa/tickets/actions/ticketBundleUtils';
 import { NumberingService } from 'server/src/lib/services/numberingService';
 import { getEventBus } from 'server/src/lib/eventBus';
 import { getEmailEventChannel } from '../../notifications/emailChannel';

@@ -1,16 +1,16 @@
 'use client'
 
 import React from 'react';
-import { Card, CardContent } from "server/src/components/ui/Card";
-import { Input } from "server/src/components/ui/Input";
-import { Button } from "server/src/components/ui/Button";
-import { Label } from "server/src/components/ui/Label";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "server/src/components/ui/Table";
+import { Card, CardContent } from "@alga-psa/ui/components/Card";
+import { Input } from "@alga-psa/ui/components/Input";
+import { Button } from "@alga-psa/ui/components/Button";
+import { Label } from "@alga-psa/ui/components/Label";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@alga-psa/ui/components/Table";
 import { Plus, Trash } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { getTenantDetails, updateTenantName, addClientToTenant, removeClientFromTenant, setDefaultClient } from "server/src/lib/actions/tenantActions";
-import { getAllClients } from "server/src/lib/actions/client-actions/clientActions";
-import { ClientPicker } from "server/src/components/clients/ClientPicker";
+import { getAllClients } from "@alga-psa/clients/actions";
+import { ClientPicker } from '@alga-psa/clients/components/clients/ClientPicker';
 import { IClient } from "server/src/interfaces/client.interfaces";
 
 const GeneralSettings = () => {

@@ -1,0 +1,26 @@
+{
+  "name": "@alga-psa/clients",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "packages/clients/src",
+  "projectType": "library",
+  "tags": ["scope:clients", "type:vertical"],
+  "targets": {
+    "build": {
+      "executor": "nx:noop"
+    },
+    "test": {
+      "executor": "@nx/vitest:test",
+      "outputs": ["{workspaceRoot}/coverage/packages/clients"],
+      "options": {
+        "configFile": "packages/clients/vitest.config.ts"
+      }
+    },
+    "lint": {
+      "executor": "@nx/eslint:lint",
+      "outputs": ["{options.outputFile}"],
+      "options": {
+        "lintFilePatterns": ["packages/clients/**/*.{ts,tsx}"]
+      }
+    }
+  }
+}

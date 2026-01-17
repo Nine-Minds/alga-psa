@@ -1,13 +1,13 @@
 "use client";
 
-import { AppSessionProvider } from "server/src/components/providers/AppSessionProvider";
-import ClientPortalLayout from "server/src/components/layout/ClientPortalLayout";
-import { I18nWrapper } from "server/src/components/i18n/I18nWrapper";
-import { PostHogUserIdentifier } from "server/src/components/PostHogUserIdentifier";
-import { BrandingProvider } from "server/src/components/providers/BrandingProvider";
+import { AppSessionProvider } from "@alga-psa/auth/client";
+import { ClientPortalLayout } from "@alga-psa/client-portal/components";
+import { I18nWrapper } from "@alga-psa/ui/lib/i18n/I18nWrapper";
+import { PostHogUserIdentifier } from "@alga-psa/ui/components/analytics/PostHogUserIdentifier";
+import { BrandingProvider } from "@alga-psa/ui/components/providers/BrandingProvider";
 import type { Session } from "next-auth";
 import type { TenantBranding } from "server/src/lib/actions/tenant-actions/tenantBrandingActions";
-import type { SupportedLocale } from "server/src/lib/i18n/config";
+import type { SupportedLocale } from "@alga-psa/ui/lib/i18n/config";
 
 interface Props {
   children: React.ReactNode;

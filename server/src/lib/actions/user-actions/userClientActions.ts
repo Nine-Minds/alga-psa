@@ -1,7 +1,7 @@
 'use server';
 
 import { createTenantKnex } from 'server/src/lib/db';
-import { withTransaction } from '@alga-psa/shared/db';
+import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
 import { hasPermission } from 'server/src/lib/auth/rbac';

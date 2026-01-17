@@ -1,7 +1,7 @@
 'use server'
 
 import { createTenantKnex } from '../../../lib/db';
-import { withTransaction } from '@shared/db';
+import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { StorageService } from '../../../lib/storage/StorageService';
 import { FileStoreModel } from '../../../models/storage';

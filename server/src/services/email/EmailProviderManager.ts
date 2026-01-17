@@ -2,7 +2,7 @@
  * Email Provider Manager - Handles email provider configuration and sending
  */
 
-import logger from '@alga-psa/shared/core/logger';
+import logger from '@alga-psa/core/logger';
 import {
   IEmailProvider,
   IEmailProviderManager,
@@ -11,7 +11,7 @@ import {
   TenantEmailSettings,
   EmailProviderError,
   EmailProviderConfig,
-} from '@shared/types/email';
+} from '@alga-psa/types';
 
 export class EmailProviderManager implements IEmailProviderManager {
   private providers: Map<string, IEmailProvider> = new Map(); // Key: tenantId (Active provider)
@@ -210,7 +210,9 @@ export class EmailProviderManager implements IEmailProviderManager {
       
       case 'resend':
         // Prevent Vite/Vitest from trying to resolve this optional EE-only deep import at build time.
-        const { ResendEmailProvider } = await import(/* @vite-ignore */ '@product/email-domains/providers/ResendEmailProvider');
+        const { ResendEmailProvider } = await import(
+          /* @vite-ignore */ '@alga-psa/integrations/email/domains/providers/ResendEmailProvider'
+        );
         return new ResendEmailProvider(config.providerId);
       
       default:

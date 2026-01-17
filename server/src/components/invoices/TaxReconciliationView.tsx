@@ -1,10 +1,10 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { Card, CardHeader, CardTitle, CardContent, CardDescription } from 'server/src/components/ui/Card';
-import { Button } from 'server/src/components/ui/Button';
-import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
-import { Tooltip } from 'server/src/components/ui/Tooltip';
+import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@alga-psa/ui/components/Card';
+import { Button } from '@alga-psa/ui/components/Button';
+import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
+import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import { Calculator, Cloud, ArrowRight, AlertTriangle, CheckCircle, Info } from 'lucide-react';
 
 import { getInvoiceTaxReconciliation } from 'server/src/lib/actions/externalTaxImportActions';

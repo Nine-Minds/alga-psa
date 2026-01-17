@@ -1,11 +1,11 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Dialog } from 'server/src/components/ui/Dialog';
-import { Button } from 'server/src/components/ui/Button';
-import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
-import { TextArea } from 'server/src/components/ui/TextArea';
-import CustomSelect from 'server/src/components/ui/CustomSelect';
+import { Dialog } from '@alga-psa/ui/components/Dialog';
+import { Button } from '@alga-psa/ui/components/Button';
+import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
+import { TextArea } from '@alga-psa/ui/components/TextArea';
+import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { toast } from 'react-hot-toast';
 
 interface CancellationFeedbackModalProps {

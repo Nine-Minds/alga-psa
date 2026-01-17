@@ -1,8 +1,8 @@
-import { getAssetDetailBundle } from 'server/src/lib/actions/asset-actions/assetActions';
+import { getAssetDetailBundle } from '@alga-psa/assets/actions/assetActions';
 import User from 'server/src/lib/models/user';
 import { redirect } from 'next/navigation';
 import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
-import { AssetDetailView } from 'server/src/components/assets/AssetDetailView';
+import { AssetDetailView } from '@alga-psa/assets/components/AssetDetailView';
 import { getConnection } from 'server/src/lib/db/db';
 import { getSession } from 'server/src/lib/auth/getSession';
 

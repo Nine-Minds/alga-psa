@@ -8,9 +8,9 @@
 import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Button } from './ui/Button';
-import { Alert, AlertDescription } from './ui/Alert';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/Card';
+import { Button } from '@alga-psa/ui/components/Button';
+import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import { ExternalLink } from 'lucide-react';
 import type { EmailProvider } from './EmailProviderConfiguration';
 import { createEmailProvider, updateEmailProvider, upsertEmailProvider } from '../lib/actions/email-actions/emailProviderActions';
@@ -20,7 +20,7 @@ import { BasicConfigCard } from './providers/gmail/BasicConfigCard';
 import { ProcessingSettingsCard } from './providers/gmail/ProcessingSettingsCard';
 import { OAuthSection } from './providers/gmail/OAuthSection';
 import { ceGmailProviderSchema } from './providers/gmail/schemas';
-import CustomSelect from 'server/src/components/ui/CustomSelect';
+import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { getInboundTicketDefaults } from 'server/src/lib/actions/email-actions/inboundTicketDefaultsActions';
 import { getGoogleIntegrationStatus } from '@/lib/actions/integrations/googleActions';
 

@@ -1,5 +1,5 @@
 import { createLogger, format, transports } from 'winston';
-import { getAdminConnection } from '@alga-psa/shared/db/admin.js';
+import { getAdminConnection } from '@alga-psa/db/admin.js';
 import type { Knex } from 'knex';
 import type { JobStatus } from '../types/job.js';
 

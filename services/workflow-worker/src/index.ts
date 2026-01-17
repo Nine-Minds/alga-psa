@@ -13,7 +13,7 @@ dotenv.config();
 import { getWorkflowRuntime, getActionRegistry } from '@shared/workflow/core/index.js';
 import { WorkflowWorker } from './WorkflowWorker.js';
 import { WorkerServer } from './server.js';
-import logger from '@shared/core/logger.js';
+import logger from '@alga-psa/core/logger';
 import { initializeServerWorkflows } from '@shared/workflow/index.js';
 import { registerAccountingExportWorkflowActions } from 'server/src/lib/workflow/registerAccountingExportActions';
 import { updateSystemWorkflowsFromAssets } from './init/updateWorkflows.js';

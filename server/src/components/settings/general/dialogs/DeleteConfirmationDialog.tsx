@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { ConfirmationDialog } from 'server/src/components/ui/ConfirmationDialog';
+import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 
 interface DeleteConfirmationDialogProps {
   isOpen: boolean;

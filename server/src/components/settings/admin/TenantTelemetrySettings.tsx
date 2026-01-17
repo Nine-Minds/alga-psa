@@ -1,12 +1,12 @@
 'use client';
 
 import { useState, useEffect } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "server/src/components/ui/Card";
-import { Switch } from "server/src/components/ui/Switch";
-import { Label } from "server/src/components/ui/Label";
-import { Button } from "server/src/components/ui/Button";
-import CustomSelect from "server/src/components/ui/CustomSelect";
-import { Alert, AlertDescription } from "server/src/components/ui/Alert";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@alga-psa/ui/components/Card";
+import { Switch } from "@alga-psa/ui/components/Switch";
+import { Label } from "@alga-psa/ui/components/Label";
+import { Button } from "@alga-psa/ui/components/Button";
+import CustomSelect from "@alga-psa/ui/components/CustomSelect";
+import { Alert, AlertDescription } from "@alga-psa/ui/components/Alert";
 import type { TenantTelemetrySettings, AnonymizationLevel } from "server/src/config/telemetry";
 
 interface TenantTelemetrySettingsProps {

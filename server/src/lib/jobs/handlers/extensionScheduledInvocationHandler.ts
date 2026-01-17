@@ -1,7 +1,7 @@
 import crypto from 'node:crypto';
 
-import logger from '@shared/core/logger';
-import { getAdminConnection } from '@shared/db/admin';
+import logger from '@alga-psa/core/logger';
+import { getAdminConnection } from '@alga-psa/db/admin';
 
 import type { BaseJobData } from 'server/src/lib/jobs/interfaces';
 

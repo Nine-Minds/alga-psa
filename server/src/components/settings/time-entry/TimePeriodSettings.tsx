@@ -1,17 +1,17 @@
 'use client';
 import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from 'server/src/components/ui/Card';
-import { Input } from 'server/src/components/ui/Input';
-import { Button } from 'server/src/components/ui/Button';
-import { Label } from 'server/src/components/ui/Label';
-import { Checkbox } from 'server/src/components/ui/Checkbox';
-import CustomSelect from 'server/src/components/ui/CustomSelect';
-import { Alert, AlertDescription, AlertTitle } from 'server/src/components/ui/Alert'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
+import { Input } from '@alga-psa/ui/components/Input';
+import { Button } from '@alga-psa/ui/components/Button';
+import { Label } from '@alga-psa/ui/components/Label';
+import { Checkbox } from '@alga-psa/ui/components/Checkbox';
+import CustomSelect from '@alga-psa/ui/components/CustomSelect';
+import { Alert, AlertDescription, AlertTitle } from '@alga-psa/ui/components/Alert'
 import { ITimePeriodSettings } from 'server/src/interfaces/timeEntry.interfaces';
 import { getActiveTimePeriodSettings, updateTimePeriodSettings, createTimePeriodSettings, deleteTimePeriodSettings } from 'server/src/lib/actions/time-period-settings-actions/timePeriodSettingsActions';
 import { ISO8601String } from 'server/src/types/types.d';
 import { formatISO, parseISO } from 'date-fns';
-import LoadingIndicator from 'server/src/components/ui/LoadingIndicator';
+import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 
 type FrequencyUnit = 'day' | 'week' | 'month' | 'year';
 

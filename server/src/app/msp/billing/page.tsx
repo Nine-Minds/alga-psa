@@ -1,9 +1,9 @@
 import React, { Suspense } from 'react';
-import BillingDashboard from '../../../components/billing-dashboard/BillingDashboard';
+import { BillingDashboard } from '@alga-psa/billing';
 import { getServices } from '../../../lib/actions/serviceActions';
-import { getDocumentsByContractId } from '../../../lib/actions/document-actions/documentActions';
+import { getDocumentsByContractId } from '@alga-psa/documents/actions/documentActions';
 import { getCurrentUser } from '../../../lib/actions/user-actions/userActions';
-import { IDocument } from 'server/src/interfaces/document.interface';
+import type { IDocument } from '@alga-psa/types';
 
 interface BillingPageProps {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;

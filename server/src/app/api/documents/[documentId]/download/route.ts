@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server';
-import { downloadDocument } from '@/lib/actions/document-actions/documentActions';
+import { downloadDocument } from '@alga-psa/documents/actions/documentActions';
 
 export async function GET(
   request: NextRequest,

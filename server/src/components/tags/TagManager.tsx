@@ -4,7 +4,7 @@ import { createTag, deleteTag, getAllTags, checkTagPermissions } from 'server/sr
 import { TagList } from './TagList';
 import { TagInput } from './TagInput';
 import { TagInputInline } from './TagInputInline';
-// import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionContainer';
+// import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContainer';
 import { toast } from 'react-hot-toast';
 import { useTags } from 'server/src/context/TagContext';
 import { handleError } from 'server/src/lib/utils/errorHandling';

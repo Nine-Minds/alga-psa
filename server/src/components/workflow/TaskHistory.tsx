@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Card } from '../ui/Card';
-import { Badge } from '../ui/Badge';
+import { Card } from '@alga-psa/ui/components/Card';
+import { Badge } from '@alga-psa/ui/components/Badge';
 import { WorkflowTaskStatus } from '@alga-psa/shared/workflow/persistence/workflowTaskModel';
 import { TaskHistoryEntry } from '@alga-psa/shared/workflow/persistence/taskInboxInterfaces';
 

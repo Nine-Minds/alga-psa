@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createTenantKnex } from '@/lib/db';
-import { getAdminConnection } from '@alga-psa/shared/db/admin';
+import { getAdminConnection } from '@alga-psa/db/admin';
 import type { Knex } from 'knex';
 import { requireExtensionApiAccess } from '../_auth';
 // Classic extension lookups removed; this endpoint expects registryId

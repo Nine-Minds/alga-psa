@@ -279,7 +279,7 @@ const documents = await knex('documents')
 
 **Transaction Pattern:**
 ```typescript
-import { withTransaction } from '@shared/db';
+import { withTransaction } from '@alga-psa/db';
 
 // CORRECT: Pass knex as first parameter
 const { knex } = await createTenantKnex();

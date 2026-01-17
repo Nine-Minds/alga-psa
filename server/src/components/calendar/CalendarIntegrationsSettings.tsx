@@ -6,20 +6,20 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/Card';
-import { Button } from '../ui/Button';
-import { Alert, AlertDescription } from '../ui/Alert';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
+import { Button } from '@alga-psa/ui/components/Button';
+import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Plus, Settings, Trash2, CheckCircle, Clock, XCircle, RefreshCw, AlertTriangle } from 'lucide-react';
 import { GoogleCalendarProviderForm } from './GoogleCalendarProviderForm';
 import { MicrosoftCalendarProviderForm } from './MicrosoftCalendarProviderForm';
 import { getCalendarProviders, deleteCalendarProvider, syncCalendarProvider } from '../../lib/actions/calendarActions';
 import { CalendarProviderConfig } from '../../interfaces/calendar.interfaces';
 import { useTenant } from '../TenantProvider';
-import { Badge } from '../ui/Badge';
-import { Dialog, DialogContent, DialogDescription } from '../ui/Dialog';
-import { ConfirmationDialog } from '../ui/ConfirmationDialog';
+import { Badge } from '@alga-psa/ui/components/Badge';
+import { Dialog, DialogContent, DialogDescription } from '@alga-psa/ui/components/Dialog';
+import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { useToast } from '../../hooks/use-toast';
-import { Skeleton } from '../ui/Skeleton';
+import { Skeleton } from '@alga-psa/ui/components/Skeleton';
 
 type SyncFeedbackMap = Record<string, { variant: 'success' | 'error'; message: string }>;
 

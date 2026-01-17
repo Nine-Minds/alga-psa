@@ -3,7 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import Service, { serviceSchema, refinedServiceSchema } from 'server/src/lib/models/service'; // Import both schemas
 import { IService, IServiceType, IServicePrice } from '../../interfaces/billing.interfaces';
-import { withTransaction } from '@alga-psa/shared/db';
+import { withTransaction } from '@alga-psa/db';
 import { createTenantKnex } from 'server/src/lib/db';
 import { Knex } from 'knex';
 import { validateArray } from 'server/src/lib/utils/validation';

@@ -1,6 +1,6 @@
-import logger from '@shared/core/logger';
-import { getAdminConnection } from '@alga-psa/shared/db/admin';
-import { getSecretProviderInstance } from '@shared/core/secretProvider';
+import logger from '@alga-psa/core/logger';
+import { getAdminConnection } from '@alga-psa/db/admin';
+import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { configureGmailProvider } from '@/lib/actions/email-actions/configureGmailProvider';
 
 export interface GoogleGmailWatchRenewalJobData extends Record<string, unknown> {

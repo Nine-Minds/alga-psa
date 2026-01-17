@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/actions/user-actions/userActions';
-import { getSecretProviderInstance } from '@alga-psa/shared/core';
+import { getSecretProviderInstance } from '@alga-psa/core';
 import { encodeState, generateNonce, type OAuthState } from '@/utils/email/oauthHelpers';
 import { createTenantKnex } from '@/lib/db';
 

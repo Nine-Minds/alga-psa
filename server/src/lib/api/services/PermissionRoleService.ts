@@ -18,7 +18,7 @@
 import { Knex } from 'knex';
 import { BaseService, ServiceContext, ListResult } from './BaseService';
 import { ListOptions } from '../controllers/types';
-import { withTransaction } from '@shared/db';
+import { withTransaction } from '@alga-psa/db';
 import { 
   IRole, 
   IPermission, 
@@ -59,7 +59,7 @@ import {
 } from '../schemas/permissionRoleSchemas';
 import User from '../../models/user';
 import { hasPermission, checkMultiplePermissions } from '../../auth/rbac';
-import logger from '@shared/core/logger';
+import logger from '@alga-psa/core/logger';
 
 export interface HateoasLink {
   rel: string;

@@ -8,7 +8,7 @@ vi.mock('server/src/lib/utils/getSecret', () => ({
   getSecret: vi.fn(async (_key: string, _envVar?: string, fallback?: string) => fallback ?? ''),
 }));
 
-vi.mock('@alga-psa/shared/core/secretProvider', () => ({
+vi.mock('@alga-psa/core/secrets', () => ({
   getSecretProviderInstance: vi.fn(async () => ({
     getAppSecret: async () => '',
   })),
@@ -17,7 +17,7 @@ vi.mock('@alga-psa/shared/core/secretProvider', () => ({
   },
 }));
 
-vi.mock('@alga-psa/shared/core/logger', () => {
+vi.mock('@alga-psa/core/logger', () => {
   const stub = {
     info: vi.fn(),
     warn: vi.fn(),
@@ -28,7 +28,7 @@ vi.mock('@alga-psa/shared/core/logger', () => {
   return { default: stub, logger: stub };
 });
 
-vi.mock('@shared/core/logger', () => {
+vi.mock('@alga-psa/core/logger', () => {
   const stub = {
     info: vi.fn(),
     warn: vi.fn(),

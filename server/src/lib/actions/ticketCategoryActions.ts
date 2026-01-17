@@ -1,6 +1,6 @@
 'use server'
 
-import { withTransaction } from '@alga-psa/shared/db';
+import { withTransaction } from '@alga-psa/db';
 import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
 import { ITicketCategory } from 'server/src/interfaces/ticket.interfaces';
 import { createTenantKnex } from 'server/src/lib/db';

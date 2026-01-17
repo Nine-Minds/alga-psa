@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
-import { getAdminConnection } from '@alga-psa/shared/db/admin';
-import logger from '@shared/core/logger';
+import { getAdminConnection } from '@alga-psa/db/admin';
+import logger from '@alga-psa/core/logger';
 import { v4 as uuidv4 } from 'uuid';
 
 export async function updateSystemWorkflowsFromAssets() {

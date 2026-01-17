@@ -1,5 +1,5 @@
 import { AppError } from '@/lib/errors';
-import logger from '@alga-psa/shared/core/logger';
+import logger from '@alga-psa/core/logger';
 
 export const IMPORT_VALIDATION_ERROR = 'IMPORT_VALIDATION_ERROR';
 export const DUPLICATE_DETECTION_ERROR = 'DUPLICATE_DETECTION_ERROR';

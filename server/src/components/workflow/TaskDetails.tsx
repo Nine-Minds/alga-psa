@@ -1,13 +1,13 @@
 import { useState, useEffect } from 'react';
-import { getTaskDetails, claimTask, unclaimTask } from '../../lib/actions/workflow-actions/taskInboxActions';
+import { getTaskDetails, claimTask, unclaimTask } from '@alga-psa/workflows/actions/workflow-actions/taskInboxActions';
 import { TaskDetails as TaskDetailsType } from '@alga-psa/shared/workflow/persistence';
 import { WorkflowTaskStatus } from '@alga-psa/shared/workflow/persistence';
-import { Button } from '../ui/Button';
-import { Badge } from '../ui/Badge';
-import { Card } from '../ui/Card';
+import { Button } from '@alga-psa/ui/components/Button';
+import { Badge } from '@alga-psa/ui/components/Badge';
+import { Card } from '@alga-psa/ui/components/Card';
 import { TaskForm } from './TaskForm';
 import { TaskHistory } from './TaskHistory';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/Tabs';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@alga-psa/ui/components/Tabs';
 
 // Simple Spinner component
 function Spinner({ size = "md" }: { size?: "sm" | "md" | "lg" }) {

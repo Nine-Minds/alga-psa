@@ -1,8 +1,8 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import type { Knex } from 'knex';
-import * as projectTemplateActions from '../../lib/actions/project-actions/projectTemplateActions';
-import { IUser } from '../../interfaces/auth.interfaces';
-import {
+import * as projectTemplateActions from '@alga-psa/projects/actions/projectTemplateActions';
+import type {
+  IUser,
   IProjectTemplate,
   IProjectTemplatePhase,
   IProjectTemplateTask,
@@ -10,44 +10,37 @@ import {
   IProjectTemplateChecklistItem,
   IProjectTemplateStatusMapping,
   IProjectTemplateWithDetails
-} from '../../interfaces/projectTemplate.interfaces';
+} from '@alga-psa/types';
 
 // Mock all external dependencies
-vi.mock('../../lib/db', () => ({
+vi.mock('@alga-psa/db', () => ({
   createTenantKnex: vi.fn(),
-}));
-
-vi.mock('@alga-psa/shared/db', () => ({
   withTransaction: vi.fn(),
 }));
 
-vi.mock('../../lib/actions/user-actions/userActions', () => ({
+vi.mock('@alga-psa/auth', () => ({
   getCurrentUser: vi.fn(),
-}));
-
-vi.mock('../../lib/auth/rbac', () => ({
   hasPermission: vi.fn(),
 }));
 
-vi.mock('../../lib/actions/project-actions/projectActions', () => ({
+vi.mock('@alga-psa/projects/actions/projectActions', () => ({
   createProject: vi.fn(),
+  getProjectStatuses: vi.fn().mockResolvedValue([]),
 }));
 
-vi.mock('../../lib/utils/validation', () => ({
-  validateData: vi.fn((schema, data) => data),
+vi.mock('@alga-psa/validation', () => ({
+  validateData: vi.fn((schema: unknown, data: unknown) => data),
 }));
 
-vi.mock('../../lib/eventBus/publishers', () => ({
+vi.mock('server/src/lib/eventBus/publishers', () => ({
   publishEvent: vi.fn(),
 }));
 
-import { createTenantKnex } from '../../lib/db';
-import { withTransaction } from '@alga-psa/shared/db';
-import { getCurrentUser } from '../../lib/actions/user-actions/userActions';
-import { hasPermission } from '../../lib/auth/rbac';
-import { createProject } from '../../lib/actions/project-actions/projectActions';
-import { validateData } from '../../lib/utils/validation';
-import { publishEvent } from '../../lib/eventBus/publishers';
+import { createTenantKnex, withTransaction } from '@alga-psa/db';
+import { getCurrentUser, hasPermission } from '@alga-psa/auth';
+import { createProject } from '@alga-psa/projects/actions/projectActions';
+import { validateData } from '@alga-psa/validation';
+import { publishEvent } from 'server/src/lib/eventBus/publishers';
 
 const cast = vi.mocked;
 

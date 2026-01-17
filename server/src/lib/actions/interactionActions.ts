@@ -2,7 +2,7 @@
 
 'use server'
 
-import { withTransaction } from '@alga-psa/shared/db';
+import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { revalidatePath } from 'next/cache'
 import InteractionModel from 'server/src/lib/models/interactions'

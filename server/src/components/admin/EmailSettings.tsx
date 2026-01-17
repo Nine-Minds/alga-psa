@@ -6,14 +6,14 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '../ui/Card';
-import { Button } from '../ui/Button';
-import { Input } from '../ui/Input';
-import { Label } from '../ui/Label';
-import CustomSelect from '../ui/CustomSelect';
-import { Switch } from '../ui/Switch';
-import { Badge } from '../ui/Badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/Tabs';
+import { Card, CardContent, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
+import { Button } from '@alga-psa/ui/components/Button';
+import { Input } from '@alga-psa/ui/components/Input';
+import { Label } from '@alga-psa/ui/components/Label';
+import CustomSelect from '@alga-psa/ui/components/CustomSelect';
+import { Switch } from '@alga-psa/ui/components/Switch';
+import { Badge } from '@alga-psa/ui/components/Badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@alga-psa/ui/components/Tabs';
 import { Mail, Globe, Settings, CheckCircle, XCircle, Clock, Eye, EyeOff, Send, Inbox } from 'lucide-react';
 import {
   TenantEmailSettings,

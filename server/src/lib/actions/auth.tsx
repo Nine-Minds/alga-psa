@@ -95,6 +95,15 @@ export async function authenticateUser(
         return null;
     }
 
+    if (!user.hashed_password) {
+        logger.warn(`[authenticateUser] Missing hashed_password for email ${email}`);
+        analytics.capture('login_failed', {
+            reason: 'missing_password_hash',
+            has_two_factor: user.two_factor_enabled,
+        });
+        return null;
+    }
+
     const isValid = await verifyPassword(password, user.hashed_password);
     if (!isValid) {
         logger.warn(`[authenticateUser] Invalid password for email ${email}`);

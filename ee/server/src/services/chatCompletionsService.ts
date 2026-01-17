@@ -8,7 +8,7 @@ import {
   ChatApiRegistryEntry,
 } from '../chat/registry/apiRegistry.schema';
 import { TemporaryApiKeyService } from './temporaryApiKeyService';
-import { getSecretProviderInstance } from '@alga-psa/shared/core/secretProvider';
+import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { parseAssistantContent, ParsedAssistantContent } from '../utils/chatContent';
 import { reprovisionExtension } from '../lib/actions/extensionDomainActions';
 

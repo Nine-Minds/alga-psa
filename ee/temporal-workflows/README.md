@@ -357,7 +357,7 @@ The workflow includes comprehensive error handling:
 
 The workflows integrate with the existing Alga PSA database schema:
 
-- Uses `@shared/db` utilities for database connections
+- Uses `@alga-psa/db` utilities for database connections
 - Follows CitusDB compatibility requirements
 - Maintains tenant isolation and security policies
 - Leverages existing action patterns from `server/src/lib/actions/`
@@ -439,7 +439,7 @@ The system supports horizontal scaling through:
 
 ### Database Operations
 
-- Always use transaction wrappers from `@shared/db`
+- Always use transaction wrappers from `@alga-psa/db`
 - Include tenant filtering in all queries
 - Follow CitusDB compatibility patterns
 - Implement proper rollback logic

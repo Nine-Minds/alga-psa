@@ -4,7 +4,7 @@ import TeamList from './TeamList';
 import TeamDetails from './TeamDetails';
 import { getTeams } from 'server/src/lib/actions/team-actions/teamActions';
 import { ITeam } from 'server/src/interfaces/auth.interfaces';
-import LoadingIndicator from 'server/src/components/ui/LoadingIndicator';
+import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 
 const TeamManagement: React.FC = () => {
   const [teams, setTeams] = useState<ITeam[]>([]);

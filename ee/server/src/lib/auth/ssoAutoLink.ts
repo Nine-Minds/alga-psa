@@ -1,4 +1,4 @@
-import { getAdminConnection } from "@shared/db/admin";
+import { getAdminConnection } from "@alga-psa/db/admin";
 
 function parseSettings(raw: any): any {
   if (!raw) return undefined;

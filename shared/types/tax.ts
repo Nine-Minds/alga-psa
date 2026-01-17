@@ -1,4 +1,1 @@
-export interface TaxRegion {
-  id: string;
-  name: string;
-}
+export * from '@alga-psa/types';

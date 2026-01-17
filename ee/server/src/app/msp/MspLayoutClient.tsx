@@ -3,7 +3,7 @@
 import { AppSessionProvider } from "server/src/components/providers/AppSessionProvider";
 import DefaultLayout from "@/components/layout/DefaultLayout";
 import { TenantProvider } from "@/components/TenantProvider";
-import { ClientUIStateProvider } from "server/src/types/ui-reflection/ClientUIStateProvider";
+import { ClientUIStateProvider } from "@alga-psa/ui/ui-reflection/ClientUIStateProvider";
 import type { Session } from "next-auth";
 
 interface Props {

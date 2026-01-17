@@ -6,18 +6,18 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/Card';
-import { Button } from './ui/Button';
-import { Alert, AlertDescription } from './ui/Alert';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
+import { Button } from '@alga-psa/ui/components/Button';
+import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Plus, Settings, Trash2, CheckCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { MicrosoftProviderForm, GmailProviderForm, ImapProviderForm } from '@product/email-providers/entry';
+import { MicrosoftProviderForm, GmailProviderForm, ImapProviderForm } from '@alga-psa/integrations/email/providers/entry';
 import { EmailProviderList } from './EmailProviderList';
 import { ProviderSetupWizardDialog } from './ProviderSetupWizardDialog';
 import { InboundTicketDefaultsManager } from './admin/InboundTicketDefaultsManager';
 import { Microsoft365DiagnosticsDialog } from './admin/Microsoft365DiagnosticsDialog';
 import { DrawerProvider, useDrawer } from 'server/src/context/DrawerContext';
-import LoadingIndicator from './ui/LoadingIndicator';
+import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 import {
   getEmailProviders,
   deleteEmailProvider,

@@ -6,8 +6,8 @@
  */
 
 import axios, { AxiosInstance, AxiosError, AxiosRequestConfig } from 'axios';
-import { getSecretProviderInstance } from '@alga-psa/shared/core/secretProvider';
-import logger from '@shared/core/logger';
+import { getSecretProviderInstance } from '@alga-psa/core/secrets';
+import logger from '@alga-psa/core/logger';
 import type {
   NinjaOneOAuthCredentials,
   NinjaOneOAuthTokenResponse,

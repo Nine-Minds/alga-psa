@@ -3,7 +3,7 @@ import { BillingEngine } from 'server/src/lib/billing/billingEngine';
 import type { IBillingPeriod } from 'server/src/interfaces/billing.interfaces';
 
 vi.mock('@/lib/db/db');
-vi.mock('@alga-psa/shared/db', () => ({
+vi.mock('@alga-psa/db', () => ({
   withTransaction: vi.fn(async (_knex, callback) => callback(_knex)),
   withAdminTransaction: vi.fn(async (_callback, existing) => _callback(existing)),
 }));

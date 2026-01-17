@@ -7,9 +7,9 @@ import { setupCommonMocks } from '../../../test-utils/testMocks';
 
 let db: Knex;
 let tenantId: string;
-let createContractTemplateFromWizard: typeof import('server/src/lib/actions/contractWizardActions').createContractTemplateFromWizard;
-let createClientContractFromWizard: typeof import('server/src/lib/actions/contractWizardActions').createClientContractFromWizard;
-let getContractTemplateSnapshotForClientWizard: typeof import('server/src/lib/actions/contractWizardActions').getContractTemplateSnapshotForClientWizard;
+let createContractTemplateFromWizard: typeof import('@alga-psa/billing/actions/contractWizardActions').createContractTemplateFromWizard;
+let createClientContractFromWizard: typeof import('@alga-psa/billing/actions/contractWizardActions').createClientContractFromWizard;
+let getContractTemplateSnapshotForClientWizard: typeof import('@alga-psa/billing/actions/contractWizardActions').getContractTemplateSnapshotForClientWizard;
 
 type CreatedIds = {
   serviceTypeId?: string;
@@ -52,7 +52,7 @@ describe('createContractTemplateFromWizard with Currency Support', () => {
     db = await createTestDbConnection();
     tenantId = await ensureTenant(db);
     setupCommonMocks({ tenantId, permissionCheck: () => true });
-    ({ createContractTemplateFromWizard, createClientContractFromWizard, getContractTemplateSnapshotForClientWizard } = await import('server/src/lib/actions/contractWizardActions'));
+    ({ createContractTemplateFromWizard, createClientContractFromWizard, getContractTemplateSnapshotForClientWizard } = await import('@alga-psa/billing/actions/contractWizardActions'));
   }, 120_000);
 
   afterAll(async () => {

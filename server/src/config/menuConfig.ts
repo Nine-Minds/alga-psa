@@ -46,7 +46,7 @@ import {
   Workflow,
   Star
 } from 'lucide-react';
-import { billingTabDefinitions } from '../components/billing-dashboard/billingTabsConfig';
+import { billingTabDefinitions } from '@alga-psa/billing/components/billing-dashboard/billingTabsConfig';
 
 // Navigation modes for the unified sidebar
 export type NavMode = 'main' | 'settings' | 'billing';

@@ -3,15 +3,15 @@ import Link from 'next/link';
 import { getClientTaxSettings, updateClientTaxSettings, getTaxRates, createDefaultTaxSettings, updateClientTaxExemptStatus, getClientTaxExemptStatus } from '../lib/actions/taxSettingsActions';
 import { canClientOverrideTaxSource, getEffectiveTaxSourceForClient } from '../lib/actions/taxSourceActions';
 import { IClientTaxSettings, ITaxRate, ITaxComponent, ITaxRateThreshold, ITaxHoliday, TaxSource } from '../interfaces/tax.interfaces';
-import CustomSelect from 'server/src/components/ui/CustomSelect';
-import { Button } from 'server/src/components/ui/Button';
-import { Input } from 'server/src/components/ui/Input';
-import { Switch } from 'server/src/components/ui/Switch';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from 'server/src/components/ui/Card';
-import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
+import CustomSelect from '@alga-psa/ui/components/CustomSelect';
+import { Button } from '@alga-psa/ui/components/Button';
+import { Input } from '@alga-psa/ui/components/Input';
+import { Switch } from '@alga-psa/ui/components/Switch';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@alga-psa/ui/components/Card';
+import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { ShieldOff, ShieldCheck, Info } from 'lucide-react';
-import { Tooltip } from 'server/src/components/ui/Tooltip';
-import LoadingIndicator from 'server/src/components/ui/LoadingIndicator';
+import { Tooltip } from '@alga-psa/ui/components/Tooltip';
+import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 
 interface TaxSettingsFormProps {
   clientId: string;

@@ -7,20 +7,20 @@ import * as z from 'zod';
 import toast from 'react-hot-toast';
 import { MoreVertical, PlusCircle, Info, AlertTriangle } from 'lucide-react';
 
-import { Button } from 'server/src/components/ui/Button';
-import { DataTable } from 'server/src/components/ui/DataTable';
-import { Input } from 'server/src/components/ui/Input';
-import { Label } from 'server/src/components/ui/Label';
-import GenericDialog from 'server/src/components/ui/GenericDialog';
-import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
+import { Button } from '@alga-psa/ui/components/Button';
+import { DataTable } from '@alga-psa/ui/components/DataTable';
+import { Input } from '@alga-psa/ui/components/Input';
+import { Label } from '@alga-psa/ui/components/Label';
+import GenericDialog from '@alga-psa/ui/components/GenericDialog';
+import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
   DropdownMenuSeparator,
-} from 'server/src/components/ui/DropdownMenu';
-import { Tooltip } from 'server/src/components/ui/Tooltip';
+} from '@alga-psa/ui/components/DropdownMenu';
+import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 
 import { ITaxRateThreshold } from 'server/src/interfaces/tax.interfaces';
 import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';

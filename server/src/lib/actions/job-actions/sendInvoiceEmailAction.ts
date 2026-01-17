@@ -2,8 +2,8 @@
 
 import { createTenantKnex } from 'server/src/lib/db';
 import { getCurrentUser } from '../user-actions/userActions';
-import { getInvoiceForRendering } from '../invoiceQueries';
-import { getClientById } from '../client-actions/clientActions';
+import { getInvoiceForRendering } from '@alga-psa/billing/actions/invoiceQueries';
+import { getClientById } from '@alga-psa/clients/actions';
 import ContactModel from 'server/src/lib/models/contact';
 import { SystemEmailProviderFactory } from 'server/src/lib/email/system/SystemEmailProviderFactory';
 import { createPDFGenerationService } from 'server/src/services/pdf-generation.service';
@@ -14,7 +14,7 @@ import { formatCurrency } from 'server/src/lib/utils/formatters';
 import { dateValueToDate } from 'server/src/lib/utils/dateTimeUtils';
 import Handlebars from 'handlebars';
 import fs from 'fs/promises';
-import logger from '@shared/core/logger';
+import logger from '@alga-psa/core/logger';
 import { isValidEmail } from '../../utils/validation';
 
 export interface SendInvoiceEmailResult {

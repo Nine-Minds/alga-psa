@@ -1,15 +1,15 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Button } from 'server/src/components/ui/Button';
-import { Switch } from 'server/src/components/ui/Switch';
-import { Checkbox } from 'server/src/components/ui/Checkbox';
-import CustomSelect from 'server/src/components/ui/CustomSelect';
+import { Button } from '@alga-psa/ui/components/Button';
+import { Switch } from '@alga-psa/ui/components/Switch';
+import { Checkbox } from '@alga-psa/ui/components/Checkbox';
+import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { toast } from 'react-hot-toast';
 import { 
   getTicketingDisplaySettings, 
   updateTicketingDisplaySettings 
-} from 'server/src/lib/actions/ticket-actions/ticketDisplaySettings';
+} from '@alga-psa/tickets/actions/ticketDisplaySettings';
 
 const DisplaySettings = (): React.JSX.Element => {
   // Ticket display preferences (tenant-wide)

@@ -11,13 +11,12 @@ import '@testing-library/jest-dom';
 const useAssetNotesMock = vi.fn();
 const textEditorMock = vi.fn(() => null);
 
-vi.mock('../../../hooks/useAssetNotes', () => ({
+vi.mock('@alga-psa/assets/hooks/useAssetNotes', () => ({
   useAssetNotes: (...args: unknown[]) => useAssetNotesMock(...args),
 }));
 
-vi.mock('../../../components/editor/TextEditor', () => ({
-  __esModule: true,
-  default: (props: unknown) => textEditorMock(props),
+vi.mock('@alga-psa/ui/editor', () => ({
+  TextEditor: (props: unknown) => textEditorMock(props),
   DEFAULT_BLOCK: [
     {
       type: 'paragraph',
@@ -37,9 +36,7 @@ vi.mock('../../../components/editor/TextEditor', () => ({
   ],
 }));
 
-const { AssetNotesPanel } = await import(
-  '../../../components/assets/panels/AssetNotesPanel'
-);
+const { AssetNotesPanel } = await import('@alga-psa/assets/components/panels/AssetNotesPanel');
 
 describe('AssetNotesPanel', () => {
   beforeEach(() => {
@@ -84,4 +81,3 @@ describe('AssetNotesPanel', () => {
     expect(lastCall?.initialContent).toBe(blocks);
   });
 });
-

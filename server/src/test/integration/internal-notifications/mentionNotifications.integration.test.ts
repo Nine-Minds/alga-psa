@@ -16,7 +16,7 @@ const loggerMock = {
   debug: vi.fn()
 };
 
-vi.mock('@alga-psa/shared/core/logger', () => ({
+vi.mock('@alga-psa/core/logger', () => ({
   __esModule: true,
   default: loggerMock,
   ...loggerMock

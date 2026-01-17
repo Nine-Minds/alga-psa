@@ -1,7 +1,7 @@
-import logger from '@shared/core/logger';
-import { getSecretProviderInstance } from '@shared/core/secretProvider';
-import { EnvSecretProvider } from '@shared/core/EnvSecretProvider';
-import { FileSystemSecretProvider } from '@shared/core/FileSystemSecretProvider';
+import logger from '@alga-psa/core/logger';
+import { getSecretProviderInstance } from '@alga-psa/core/secrets';
+import { EnvSecretProvider } from '@alga-psa/core/secrets';
+import { FileSystemSecretProvider } from '@alga-psa/core/secrets';
 import { DB_HOST } from '@/lib/init/serverInit';
 
 /**
@@ -167,7 +167,7 @@ export async function validateSecretUniqueness(): Promise<void> {
     // Check if Vault provider is configured
     if (process.env.VAULT_ADDR && process.env.VAULT_TOKEN) {
       try {
-        const { loadVaultSecretProvider } = await import('@alga-psa/shared/core/vaultLoader');
+        const { loadVaultSecretProvider } = await import('@alga-psa/core/secrets');
         const vaultProvider = await loadVaultSecretProvider();
         const vaultValue = await vaultProvider.getAppSecret(secretName);
         if (vaultValue && vaultValue.trim() !== '') {

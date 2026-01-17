@@ -1,11 +1,11 @@
 import React, { useState, useSyncExternalStore } from 'react';
 import { Tag as TagIcon } from 'lucide-react';
-import { Input } from 'server/src/components/ui/Input';
+import { Input } from '@alga-psa/ui/components/Input';
 import * as Popover from '@radix-ui/react-popover';
 import { TagGrid } from './TagGrid';
 import { filterTagsByText } from 'server/src/utils/colorUtils';
 import { ITag } from 'server/src/interfaces/tag.interfaces';
-import Spinner from 'server/src/components/ui/Spinner';
+import Spinner from '@alga-psa/ui/components/Spinner';
 
 // Hook to detect if we're on the client (after hydration)
 const emptySubscribe = () => () => {};

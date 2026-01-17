@@ -14,7 +14,7 @@ import {
   formatDate,
   formatTime
 } from '@/lib/actions/appointmentHelpers';
-import logger from '@alga-psa/shared/core/logger';
+import logger from '@alga-psa/core/logger';
 import { z } from 'zod';
 
 // Rate limiter for public appointment requests (IP-based)

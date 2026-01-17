@@ -1,24 +1,24 @@
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "server/src/components/ui/Card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@alga-psa/ui/components/Card";
 import { Globe, Palette, Eye, EyeOff } from 'lucide-react';
-import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
+import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 
-import { LOCALE_CONFIG, type SupportedLocale } from '@/lib/i18n/config';
+import { LOCALE_CONFIG, type SupportedLocale } from '@alga-psa/ui/lib/i18n/config';
 import { updateTenantDefaultLocaleAction, getTenantLocaleSettingsAction } from '@/lib/actions/tenant-actions/tenantLocaleActions';
 import { updateTenantBrandingAction, getTenantBrandingAction } from '@/lib/actions/tenant-actions/tenantBrandingActions';
 import { toast } from 'react-hot-toast';
-import CustomSelect, { SelectOption } from 'server/src/components/ui/CustomSelect';
-import { Button } from 'server/src/components/ui/Button';
-import { Input } from 'server/src/components/ui/Input';
-import { Checkbox } from 'server/src/components/ui/Checkbox';
-import EntityImageUpload from 'server/src/components/ui/EntityImageUpload';
-import ColorPicker from 'server/src/components/ui/ColorPicker';
+import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect';
+import { Button } from '@alga-psa/ui/components/Button';
+import { Input } from '@alga-psa/ui/components/Input';
+import { Checkbox } from '@alga-psa/ui/components/Checkbox';
+import EntityImageUpload from '@alga-psa/ui/components/EntityImageUpload';
+import ColorPicker from '@alga-psa/ui/components/ColorPicker';
 import { uploadTenantLogo, deleteTenantLogo } from '@/lib/actions/tenant-actions/tenantLogoActions';
 import { getCurrentUser } from '@/lib/actions/user-actions/userActions';
-import { useBranding } from 'server/src/components/providers/BrandingProvider';
-import ClientPortalDomainSettings from '@product/client-portal-domain/entry';
+import { useBranding } from '@alga-psa/ui/components/providers/BrandingProvider';
+import ClientPortalDomainSettings from '@alga-psa/client-portal/domain-settings/entry';
 import SignInPagePreview from './SignInPagePreview';
 import { getPortalDomainStatusAction } from '@/lib/actions/tenant-actions/portalDomainActions';
 

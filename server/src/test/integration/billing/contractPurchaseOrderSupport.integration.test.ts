@@ -13,8 +13,8 @@ import { setupCommonMocks } from '../../../../test-utils/testMocks';
 let db: Knex;
 let tenantId: string;
 
-let generateInvoice: typeof import('server/src/lib/actions/invoiceGeneration').generateInvoice;
-let createClientContractFromWizard: typeof import('server/src/lib/actions/contractWizardActions').createClientContractFromWizard;
+let generateInvoice: typeof import('@alga-psa/billing/actions/invoiceGeneration').generateInvoice;
+let createClientContractFromWizard: typeof import('@alga-psa/billing/actions/contractWizardActions').createClientContractFromWizard;
 let getPurchaseOrderConsumedCents: typeof import('server/src/lib/services/purchaseOrderService').getPurchaseOrderConsumedCents;
 let computePurchaseOrderOverage: typeof import('server/src/lib/services/purchaseOrderService').computePurchaseOrderOverage;
 
@@ -50,8 +50,8 @@ describe('Contract Purchase Order Support', () => {
     tenantId = await ensureTenant(db);
     setupCommonMocks({ tenantId, userId: 'po-test-user', permissionCheck: () => true });
 
-    ({ generateInvoice } = await import('server/src/lib/actions/invoiceGeneration'));
-    ({ createClientContractFromWizard } = await import('server/src/lib/actions/contractWizardActions'));
+    ({ generateInvoice } = await import('@alga-psa/billing/actions/invoiceGeneration'));
+    ({ createClientContractFromWizard } = await import('@alga-psa/billing/actions/contractWizardActions'));
     ({ getPurchaseOrderConsumedCents, computePurchaseOrderOverage } = await import(
       'server/src/lib/services/purchaseOrderService'
     ));

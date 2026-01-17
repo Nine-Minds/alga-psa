@@ -3,7 +3,7 @@
 import React, { useCallback } from 'react';
 import { useParams } from 'next/navigation';
 import UserDetails from './UserDetails';
-import { Card, CardContent, CardHeader, CardTitle } from "server/src/components/ui/Card";
+import { Card, CardContent, CardHeader, CardTitle } from "@alga-psa/ui/components/Card";
 
 const UserEditPage: React.FC = () => {
   const params = useParams();

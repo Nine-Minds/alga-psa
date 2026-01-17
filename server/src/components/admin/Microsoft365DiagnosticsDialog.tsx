@@ -6,11 +6,11 @@
 'use client';
 
 import React from 'react';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '../ui/Dialog';
-import { Button } from '../ui/Button';
-import { Alert, AlertDescription } from '../ui/Alert';
-import { Badge } from '../ui/Badge';
-import LoadingIndicator from '../ui/LoadingIndicator';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@alga-psa/ui/components/Dialog';
+import { Button } from '@alga-psa/ui/components/Button';
+import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
+import { Badge } from '@alga-psa/ui/components/Badge';
+import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 import { CheckCircle, AlertCircle, XCircle, Clock, Copy } from 'lucide-react';
 import type { EmailProvider } from '../EmailProviderConfiguration';
 import { runMicrosoft365Diagnostics } from 'server/src/lib/actions/email-actions/emailProviderActions';

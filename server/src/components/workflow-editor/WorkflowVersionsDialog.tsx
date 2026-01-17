@@ -1,11 +1,11 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "server/src/components/ui/Dialog";
-import { Button } from "server/src/components/ui/Button";
-import { Badge } from "server/src/components/ui/Badge";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@alga-psa/ui/components/Dialog";
+import { Button } from "@alga-psa/ui/components/Button";
+import { Badge } from "@alga-psa/ui/components/Badge";
 import { History, Check, AlertCircle } from "lucide-react";
-import { getWorkflowVersions, setActiveWorkflowVersion, WorkflowVersionData } from "server/src/lib/actions/workflow-editor-actions";
+import { getWorkflowVersions, setActiveWorkflowVersion, WorkflowVersionData } from "@alga-psa/workflows/actions/workflow-editor-actions";
 import { toast } from "react-hot-toast";
 
 interface WorkflowVersionsDialogProps {

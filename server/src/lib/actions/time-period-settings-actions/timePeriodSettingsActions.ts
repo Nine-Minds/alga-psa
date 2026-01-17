@@ -1,6 +1,6 @@
 'use server'
 import { createTenantKnex } from '../../../lib/db';
-import { withTransaction } from '@shared/db';
+import { withTransaction } from '@alga-psa/db';
 import { ITimePeriod, ITimePeriodSettings } from '../../../interfaces/timeEntry.interfaces';
 import { set, getDaysInMonth } from 'date-fns';
 import { formatISO } from 'date-fns';
@@ -11,7 +11,7 @@ import { Knex } from 'knex';
 import { JobScheduler } from '../../jobs/jobScheduler';
 import { JobService } from '../../../services/job.service';
 import { StorageService } from '../../storage/StorageService';
-import { logger } from '@shared/core';
+import { logger } from '@alga-psa/core';
 
 // Special value to indicate end of period
 const END_OF_PERIOD = 0;

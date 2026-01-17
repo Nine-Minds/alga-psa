@@ -9,9 +9,9 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../ui/Card';
-import { Alert, AlertDescription } from '../../ui/Alert';
-import CustomTabs, { TabContent } from '../../ui/CustomTabs';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
+import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
+import CustomTabs, { TabContent } from '@alga-psa/ui/components/CustomTabs';
 import {
   Building2,
   Monitor,
@@ -25,7 +25,7 @@ import { EmailProviderConfiguration } from '../../EmailProviderConfiguration';
 import { CalendarIntegrationsSettings } from '../../calendar/CalendarIntegrationsSettings';
 import { GoogleIntegrationSettings } from './GoogleIntegrationSettings';
 import dynamic from 'next/dynamic';
-import Spinner from '../../ui/Spinner';
+import Spinner from '@alga-psa/ui/components/Spinner';
 
 // Dynamic import for NinjaOne (EE feature)
 const NinjaOneIntegrationSettings = dynamic(

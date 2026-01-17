@@ -1,6 +1,6 @@
 'use server';
 
-import { getAdminConnection } from '@alga-psa/shared/db/admin';
+import { getAdminConnection } from '@alga-psa/db/admin';
 
 /**
  * Check if a tenant with the given email exists

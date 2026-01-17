@@ -1,8 +1,8 @@
 import { Metadata } from 'next';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from 'server/src/components/ui/Card';
-import SurveyResponsePage from 'server/src/components/surveys/public/SurveyResponsePage';
-import { getSurveyInvitationForToken } from 'server/src/lib/actions/surveyResponseActions';
-import { getServerTranslation } from 'server/src/lib/i18n/server';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
+import { SurveyResponsePage } from '@alga-psa/surveys/components/public/SurveyResponsePage';
+import { getSurveyInvitationForToken } from '@alga-psa/surveys/actions/surveyResponseActions';
+import { getServerTranslation } from '@alga-psa/ui/lib/i18n/server';
 
 type PageParams = {
   params: { token: string };

@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useSearchParams } from 'next/navigation';
 
-import CustomTabs, { TabContent } from 'server/src/components/ui/CustomTabs';
+import CustomTabs, { TabContent } from '@alga-psa/ui/components/CustomTabs';
 import { AccountingMappingContext, AccountingMappingModule } from './types';
 import { AccountingMappingModuleView } from './AccountingMappingModuleView';
 

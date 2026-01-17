@@ -1,13 +1,13 @@
 'use server';
 
-import logger from '@shared/core/logger';
+import logger from '@alga-psa/core/logger';
 import {
   getActionRegistry,
   type ActionParameterDefinition,
   type ActionExecutionContext
 } from '@alga-psa/shared/workflow/core';
 import { createTenantKnex } from 'server/src/lib/db';
-import { withTransaction } from '@alga-psa/shared/db';
+import { withTransaction } from '@alga-psa/db';
 import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
 import { Knex } from 'knex';
 import { hasPermission } from 'server/src/lib/auth/rbac';

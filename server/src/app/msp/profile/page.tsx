@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import UserProfile from 'server/src/components/settings/general/UserProfile';
+import UserProfile from '@alga-psa/ui/components/settings/general/UserProfile';
 
 export default function ProfilePage() {
   return (

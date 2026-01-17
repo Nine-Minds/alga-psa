@@ -1,4 +1,4 @@
-import TicketListSkeleton from 'server/src/components/tickets/TicketListSkeleton';
+import TicketListSkeleton from '@alga-psa/tickets/components/TicketListSkeleton';
 
 export default function TicketsLoading() {
   return (

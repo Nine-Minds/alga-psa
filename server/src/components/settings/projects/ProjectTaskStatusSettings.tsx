@@ -2,13 +2,13 @@
 
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Button } from 'server/src/components/ui/Button';
+import { Button } from '@alga-psa/ui/components/Button';
 import { AddStatusDialog } from './AddStatusDialog';
 import {
   getProjectStatusMappings,
   deleteProjectStatusMapping,
   reorderProjectStatuses
-} from 'server/src/lib/actions/project-actions/projectTaskStatusActions';
+} from '@alga-psa/projects/actions/projectTaskStatusActions';
 import { IProjectStatusMapping } from 'server/src/interfaces/project.interfaces';
 import { ChevronUp, ChevronDown, Trash2 } from 'lucide-react';
 

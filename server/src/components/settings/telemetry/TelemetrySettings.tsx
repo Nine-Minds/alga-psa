@@ -1,9 +1,9 @@
 'use client';
 
 import { useState, useEffect } from "react";
-import { Switch } from "server/src/components/ui/Switch";
-import { Label } from "server/src/components/ui/Label";
-import { Alert, AlertDescription } from "server/src/components/ui/Alert";
+import { Switch } from "@alga-psa/ui/components/Switch";
+import { Label } from "@alga-psa/ui/components/Label";
+import { Alert, AlertDescription } from "@alga-psa/ui/components/Alert";
 
 export function TelemetrySettings() {
   const [usageStatsEnabled, setUsageStatsEnabled] = useState(false);

@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach, afterEach, vi } from 'vitest';
 import { v4 as uuidv4 } from 'uuid';
-import { generateAndSaveTimePeriods, fetchAllTimePeriods } from 'server/src/lib/actions/timePeriodsActions';
+import { generateAndSaveTimePeriods, fetchAllTimePeriods } from '@alga-psa/scheduling/actions/timePeriodsActions';
 import { TimePeriodSettings } from 'server/src/lib/models/timePeriodSettings';
 import { TimePeriod } from 'server/src/lib/models/timePeriod';
 import { ITimePeriodSettings } from 'server/src/interfaces/timeEntry.interfaces';

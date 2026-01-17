@@ -15,8 +15,8 @@
 import Stripe from 'stripe';
 import { Knex } from 'knex';
 import { getConnection } from '@/lib/db/db';
-import logger from '@alga-psa/shared/core/logger';
-import { getSecretProviderInstance } from '@alga-psa/shared/core';
+import logger from '@alga-psa/core/logger';
+import { getSecretProviderInstance } from '@alga-psa/core';
 import { startTenantDeletionWorkflow } from '@ee/lib/tenant-management/workflowClient';
 
 // Stripe configuration with secret provider support

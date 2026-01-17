@@ -1,4 +1,4 @@
-import ClientPortalSettingsPage from 'server/src/components/client-portal/settings/ClientPortalSettingsPage';
+import { ClientPortalSettingsPage } from '@alga-psa/client-portal/components';
 
 export default function ClientSettingsPage() {
   return <ClientPortalSettingsPage />;

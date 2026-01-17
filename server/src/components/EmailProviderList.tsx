@@ -6,9 +6,9 @@
 'use client';
 
 import React from 'react';
-import { Button } from './ui/Button';
-import { Input } from './ui/Input';
-import CustomSelect from './ui/CustomSelect';
+import { Button } from '@alga-psa/ui/components/Button';
+import { Input } from '@alga-psa/ui/components/Input';
+import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { getInboundTicketDefaults } from 'server/src/lib/actions/email-actions/inboundTicketDefaultsActions';
 import { updateEmailProvider } from 'server/src/lib/actions/email-actions/emailProviderActions';
 import type { EmailProvider } from './EmailProviderConfiguration';

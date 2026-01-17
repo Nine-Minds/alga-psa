@@ -4,9 +4,9 @@ import { TaskHistory } from './TaskHistory';
 import { EmbeddedTaskInbox } from './EmbeddedTaskInbox';
 import { WorkflowTaskStatus } from '@alga-psa/shared/workflow/persistence';
 import { useState } from 'react';
-import { Card } from '../ui/Card';
-import { Button } from '../ui/Button';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/Tabs';
+import { Card } from '@alga-psa/ui/components/Card';
+import { Button } from '@alga-psa/ui/components/Button';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@alga-psa/ui/components/Tabs';
 
 interface TaskInboxProps {
   className?: string;

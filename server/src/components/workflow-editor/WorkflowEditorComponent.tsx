@@ -2,20 +2,20 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Card } from 'server/src/components/ui/Card';
-import { Button } from 'server/src/components/ui/Button';
-import { Input } from 'server/src/components/ui/Input';
-import { Label } from 'server/src/components/ui/Label';
-import { TextArea } from 'server/src/components/ui/TextArea';
-import { Switch } from 'server/src/components/ui/Switch';
+import { Card } from '@alga-psa/ui/components/Card';
+import { Button } from '@alga-psa/ui/components/Button';
+import { Input } from '@alga-psa/ui/components/Input';
+import { Label } from '@alga-psa/ui/components/Label';
+import { TextArea } from '@alga-psa/ui/components/TextArea';
+import { Switch } from '@alga-psa/ui/components/Switch';
 import { ArrowLeft, Save, BookTemplate, AlertTriangle, Tag } from 'lucide-react';
-import { Badge } from 'server/src/components/ui/Badge';
-import { createWorkflow, updateWorkflow, getWorkflow, testWorkflow } from 'server/src/lib/actions/workflow-editor-actions';
+import { Badge } from '@alga-psa/ui/components/Badge';
+import { createWorkflow, updateWorkflow, getWorkflow, testWorkflow } from '@alga-psa/workflows/actions/workflow-editor-actions';
 import WorkflowEditor from 'server/src/components/workflow-editor/WorkflowEditor';
 import WorkflowVersionsDialog from 'server/src/components/workflow-editor/WorkflowVersionsDialog';
 import TestWorkflowModal from 'server/src/components/workflow-editor/TestWorkflowModal';
 import { toast } from 'react-hot-toast';
-import LoadingIndicator from 'server/src/components/ui/LoadingIndicator';
+import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 
 // Default workflow template for new workflows
 const defaultWorkflowTemplate = `/**

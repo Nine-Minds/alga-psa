@@ -2,8 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { CheckCircle, Clock, XCircle, ArrowLeft, FileText } from 'lucide-react';
-import { Button } from 'server/src/components/ui/Button';
-import { Card, CardContent } from 'server/src/components/ui/Card';
+import { Button } from '@alga-psa/ui/components/Button';
+import { Card, CardContent } from '@alga-psa/ui/components/Card';
 import Link from 'next/link';
 import { verifyClientPortalPayment } from 'server/src/lib/actions/client-portal-actions/client-payment';
 

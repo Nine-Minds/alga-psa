@@ -3,7 +3,7 @@ import { v4 as uuidv4 } from 'uuid';
 
 import User from 'server/src/lib/models/user';
 import Tenant from 'server/src/lib/models/tenant';
-import { getAdminConnection } from '@shared/db/admin';
+import { getAdminConnection } from '@alga-psa/db/admin';
 
 import { IUserRegister, IUserWithRoles, IRoleWithPermissions } from 'server/src/interfaces/auth.interfaces';
 

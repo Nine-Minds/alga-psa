@@ -47,7 +47,7 @@ function makeFakeTransaction(responses: Record<string, any>): { trx: any; calls:
 
 let currentTrx: any | null = null;
 
-vi.mock('@alga-psa/shared/db', () => ({
+vi.mock('@alga-psa/db', () => ({
   withTransaction: async (_knex: any, fn: any) => {
     if (!currentTrx) throw new Error('No test transaction configured');
     return await fn(currentTrx);

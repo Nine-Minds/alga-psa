@@ -146,7 +146,7 @@ export function registerEmailAttachmentActions(actionRegistry: ActionRegistry): 
 
       let knex = (context.knex as any) || null;
       if (!knex) {
-        const { getAdminConnection } = await import('@alga-psa/shared/db/admin');
+        const { getAdminConnection } = await import('@alga-psa/db/admin');
         knex = await getAdminConnection();
       }
 

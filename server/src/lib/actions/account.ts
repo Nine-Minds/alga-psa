@@ -2,7 +2,7 @@
 
 import { createTenantKnex } from '../db';
 import { Knex } from 'knex';
-import { withTransaction } from '@alga-psa/shared/db';
+import { withTransaction } from '@alga-psa/db';
 import { getSession } from 'server/src/lib/auth/getSession';
 import { getCurrencySymbol } from 'server/src/constants/currency';
 

@@ -2,7 +2,7 @@
 
 import { getSystemEmailService } from '../SystemEmailService';
 import { EmailVerificationData } from '../types';
-import logger from '@alga-psa/shared/core/logger';
+import logger from '@alga-psa/core/logger';
 
 interface SendVerificationEmailParams {
   email: string;

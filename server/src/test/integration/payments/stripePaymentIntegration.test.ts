@@ -74,7 +74,7 @@ vi.mock('stripe', () => {
 });
 
 // Mock the secret provider
-vi.mock('@alga-psa/shared/core', () => ({
+vi.mock('@alga-psa/core', () => ({
   getSecretProviderInstance: vi.fn().mockResolvedValue({
     getTenantSecret: vi.fn().mockResolvedValue('sk_test_mock'),
     getAppSecret: vi.fn().mockResolvedValue('sk_test_mock'),
@@ -82,7 +82,7 @@ vi.mock('@alga-psa/shared/core', () => ({
 }));
 
 // Mock logger
-vi.mock('@alga-psa/shared/core/logger', () => ({
+vi.mock('@alga-psa/core/logger', () => ({
   default: {
     info: vi.fn(),
     warn: vi.fn(),

@@ -1,4 +1,4 @@
-import logger from '@shared/core/logger';
+import logger from '@alga-psa/core/logger';
 import { Knex } from 'knex';
 import {
   AccountingExportAdapter,
@@ -15,8 +15,8 @@ import {
 } from './accountingExportAdapter';
 import { createTenantKnex } from '../../db';
 import { AccountingMappingResolver, MappingResolution } from '../../services/accountingMappingResolver';
-import { QboClientService } from '../../qbo/qboClientService';
-import { QboInvoice, QboInvoiceLine, QboSalesItemLineDetail } from '../../actions/qbo/types';
+import { QboClientService } from '@alga-psa/integrations/lib/qbo/qboClientService';
+import { QboInvoice, QboInvoiceLine, QboSalesItemLineDetail } from '@alga-psa/integrations/lib/qbo/types';
 import {
   CompanyAccountingSyncService,
   KnexCompanyMappingRepository,

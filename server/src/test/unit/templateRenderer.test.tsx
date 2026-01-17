@@ -4,7 +4,7 @@ import React from 'react';
 import { Temporal } from '@js-temporal/polyfill';
 import { render, screen, cleanup } from '@testing-library/react';
 import { expect, afterEach } from 'vitest';
-import { TemplateRenderer } from 'server/src/components/billing-dashboard/TemplateRenderer';
+import { TemplateRenderer } from '@alga-psa/billing';
 import { IInvoiceTemplate, InvoiceViewModel } from 'server/src/interfaces/invoice.interfaces';
 import { describe, it, test, vi, beforeEach, beforeAll, afterAll } from 'vitest';
 

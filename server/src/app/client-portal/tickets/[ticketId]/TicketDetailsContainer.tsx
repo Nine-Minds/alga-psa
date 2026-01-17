@@ -3,9 +3,9 @@
 import React from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft } from 'lucide-react';
-import { Button } from 'server/src/components/ui/Button';
-import { TicketDetails } from 'server/src/components/client-portal/tickets/TicketDetails';
-import { useTranslation } from 'server/src/lib/i18n/client';
+import { Button } from '@alga-psa/ui/components/Button';
+import { TicketDetails } from '@alga-psa/client-portal/components';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { ITicketWithDetails } from 'server/src/interfaces/ticket.interfaces';
 import { IStatus } from 'server/src/interfaces/status.interface';
 

@@ -1,10 +1,10 @@
 import React from 'react';
-import { getConsolidatedTicketData } from 'server/src/lib/actions/ticket-actions/optimizedTicketActions';
+import { getConsolidatedTicketData } from '@alga-psa/tickets/actions/optimizedTicketActions';
 import TicketDetailsContainer from './TicketDetailsContainer';
 import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
 import { Suspense } from 'react';
-import { TicketDetailsSkeleton } from 'server/src/components/tickets/ticket/TicketDetailsSkeleton';
-import { getSurveyTicketSummary } from 'server/src/lib/actions/survey-actions/surveyDashboardActions';
+import { TicketDetailsSkeleton } from '@alga-psa/tickets/components/ticket/TicketDetailsSkeleton';
+import { getSurveyTicketSummary } from '@alga-psa/surveys/actions/survey-actions/surveyDashboardActions';
 
 interface TicketDetailsPageProps {
   params: Promise<{

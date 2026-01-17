@@ -11,7 +11,7 @@ import {
   ClientImportResult,
   ClientImportOptions
 } from 'server/src/lib/services/xeroCsvClientSyncService';
-import logger from '@shared/core/logger';
+import logger from '@alga-psa/core/logger';
 
 /**
  * Xero CSV integration settings stored in tenant_settings.settings.

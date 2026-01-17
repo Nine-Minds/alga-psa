@@ -10,7 +10,7 @@ import { createClient } from '../../../test-utils/testDataFactory';
 let db: Knex;
 let tenantId: string;
 
-vi.mock('@alga-psa/shared/core/secretProvider', () => ({
+vi.mock('@alga-psa/core/secrets', () => ({
   getSecretProviderInstance: vi.fn(async () => ({
     getAppSecret: async () => '',
   })),
@@ -19,7 +19,7 @@ vi.mock('@alga-psa/shared/core/secretProvider', () => ({
   },
 }));
 
-vi.mock('@alga-psa/shared/core', () => ({
+vi.mock('@alga-psa/core', () => ({
   logger: {
     info: vi.fn(),
     warn: vi.fn(),
@@ -28,7 +28,7 @@ vi.mock('@alga-psa/shared/core', () => ({
   },
 }));
 
-vi.mock('@alga-psa/shared/core/logger', () => ({
+vi.mock('@alga-psa/core/logger', () => ({
   logger: {
     info: vi.fn(),
     warn: vi.fn(),
@@ -37,7 +37,7 @@ vi.mock('@alga-psa/shared/core/logger', () => ({
   },
 }));
 
-vi.mock('@shared/core/logger', () => ({
+vi.mock('@alga-psa/core/logger', () => ({
   logger: {
     info: vi.fn(),
     warn: vi.fn(),
@@ -46,7 +46,7 @@ vi.mock('@shared/core/logger', () => ({
   },
 }));
 
-vi.mock('@shared/db/admin', () => ({
+vi.mock('@alga-psa/db/admin', () => ({
   getAdminConnection: vi.fn(async () => {
     if (!db) {
       throw new Error('Test database not initialized');
@@ -56,7 +56,7 @@ vi.mock('@shared/db/admin', () => ({
   destroyAdminConnection: vi.fn(async () => {}),
 }));
 
-const { systemEmailProcessingWorkflow } = await import('../../../../../services/workflow-worker/src/workflows/system-email-processing-workflow');
+const { systemEmailProcessingWorkflow } = await import('@shared/workflow/workflows/system-email-processing-workflow');
 const {
   createCommentFromEmail,
   findTicketByEmailThread,

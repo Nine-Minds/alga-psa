@@ -1,10 +1,10 @@
 "use client";
 
 import React from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from 'server/src/components/ui/Card';
-import { Input } from 'server/src/components/ui/Input';
-import { Label } from 'server/src/components/ui/Label';
-import { Switch } from 'server/src/components/ui/Switch';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
+import { Input } from '@alga-psa/ui/components/Input';
+import { Label } from '@alga-psa/ui/components/Label';
+import { Switch } from '@alga-psa/ui/components/Switch';
 
 interface Props {
   form: any; // react-hook-form UseFormReturn of either CE or EE types

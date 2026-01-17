@@ -8,7 +8,7 @@ import { ZodSchema, ZodError } from 'zod';
 import { ApiKeyService } from '../../services/apiKeyService';
 import { hasPermission } from '../../auth/rbac';
 import { findUserById } from '../../actions/user-actions/userActions';
-import { getSecretProviderInstance } from '@alga-psa/shared/core/secretProvider';
+import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { runAsSystem } from '../services/SystemContext';
 
 export interface ApiContext {

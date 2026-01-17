@@ -83,7 +83,7 @@ const { tables, mockKnex, getAdminConnectionMock, getTenantIdBySlugMock } = vi.h
   };
 });
 
-vi.mock('@shared/db/admin', () => ({
+vi.mock('@alga-psa/db/admin', () => ({
   getAdminConnection: getAdminConnectionMock,
 }));
 
@@ -91,7 +91,7 @@ vi.mock('server/src/lib/actions/tenant-actions/tenantSlugActions', () => ({
   getTenantIdBySlug: getTenantIdBySlugMock,
 }));
 
-vi.mock('@alga-psa/shared/core/logger', () => ({
+vi.mock('@alga-psa/core/logger', () => ({
   default: {
     warn: vi.fn(),
     info: vi.fn(),

@@ -1,6 +1,6 @@
 import React from 'react';
 import { generateEntityColor } from 'server/src/utils/colorUtils';
-import { Button } from 'server/src/components/ui/Button';
+import { Button } from '@alga-psa/ui/components/Button';
 import { ITag } from 'server/src/interfaces/tag.interfaces';
 
 interface TagGridProps {

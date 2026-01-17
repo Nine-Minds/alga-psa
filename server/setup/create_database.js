@@ -24,7 +24,7 @@ async function getSecret(secretName, envVar, defaultValue = '') {
   try {
     let spiFactory = null;
     try {
-      const mod = await import('@alga-psa/shared/core');
+      const mod = await import('@alga-psa/core');
       spiFactory = mod?.getSecretProviderInstance;
     } catch {}
     if (!spiFactory) {

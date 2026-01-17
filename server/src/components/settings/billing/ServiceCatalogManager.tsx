@@ -1,11 +1,11 @@
 'use client';
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { Button } from 'server/src/components/ui/Button';
-import { Input } from 'server/src/components/ui/Input';
-import CustomSelect from 'server/src/components/ui/CustomSelect';
-import { Dialog, DialogContent, DialogFooter } from 'server/src/components/ui/Dialog';
-import { ConfirmationDialog } from 'server/src/components/ui/ConfirmationDialog';
+import { Button } from '@alga-psa/ui/components/Button';
+import { Input } from '@alga-psa/ui/components/Input';
+import CustomSelect from '@alga-psa/ui/components/CustomSelect';
+import { Dialog, DialogContent, DialogFooter } from '@alga-psa/ui/components/Dialog';
+import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 // Import new action and types
 import { getServices, updateService, deleteService, getServiceTypesForSelection, PaginatedServicesResponse, createServiceTypeInline, updateServiceTypeInline, deleteServiceTypeInline, setServicePrices } from 'server/src/lib/actions/serviceActions';
 import { CURRENCY_OPTIONS, getCurrencySymbol } from 'server/src/constants/currency';
@@ -15,19 +15,19 @@ import { getTaxRates } from 'server/src/lib/actions/taxSettingsActions';
 import { IService, IServiceCategory, IServiceType, IServicePrice } from 'server/src/interfaces/billing.interfaces'; // Added IServiceType, IServicePrice
 // Import ITaxRate interface
 import { ITaxRate } from 'server/src/interfaces/tax.interfaces'; // Corrected import path if needed
-import { Card, CardContent, CardHeader } from 'server/src/components/ui/Card';
-import { DataTable } from 'server/src/components/ui/DataTable';
+import { Card, CardContent, CardHeader } from '@alga-psa/ui/components/Card';
+import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
 import { QuickAddService } from './QuickAddService';
-import { EditableServiceTypeSelect } from 'server/src/components/ui/EditableServiceTypeSelect';
+import { EditableServiceTypeSelect } from '@alga-psa/ui/components/EditableServiceTypeSelect';
 import { MoreVertical } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuTrigger,
   DropdownMenuContent,
   DropdownMenuItem,
-} from 'server/src/components/ui/DropdownMenu';
-import LoadingIndicator from 'server/src/components/ui/LoadingIndicator';
+} from '@alga-psa/ui/components/DropdownMenu';
+import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 
 // Removed old SERVICE_TYPE_OPTIONS
 

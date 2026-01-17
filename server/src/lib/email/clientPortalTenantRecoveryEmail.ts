@@ -1,10 +1,10 @@
 'use server';
 
 import { getSystemEmailService } from './system/SystemEmailService';
-import logger from '@alga-psa/shared/core/logger';
+import logger from '@alga-psa/core/logger';
 import { TenantLoginInfo } from '../actions/portal-actions/tenantRecoveryActions';
 import { getConnection } from '@/lib/db/db';
-import { SupportedLocale, LOCALE_CONFIG } from '@/lib/i18n/config';
+import { SupportedLocale, LOCALE_CONFIG } from '@alga-psa/ui/lib/i18n/config';
 import { resolveEmailLocale } from '@/lib/notifications/emailLocaleResolver';
 
 interface SendTenantRecoveryEmailParams {

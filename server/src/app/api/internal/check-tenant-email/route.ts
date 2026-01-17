@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getAdminConnection } from '@alga-psa/shared/db/admin';
+import { getAdminConnection } from '@alga-psa/db/admin';
 
 /**
  * POST /api/internal/check-tenant-email

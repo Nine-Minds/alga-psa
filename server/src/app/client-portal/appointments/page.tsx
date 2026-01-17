@@ -1,18 +1,18 @@
 'use client';
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { useTranslation } from 'server/src/lib/i18n/client';
-import { Button } from 'server/src/components/ui/Button';
-import { Badge } from 'server/src/components/ui/Badge';
-import { Card, CardContent } from 'server/src/components/ui/Card';
-import { Dialog, DialogContent, DialogFooter } from 'server/src/components/ui/Dialog';
-import { RequestAppointmentModal } from 'server/src/components/client-portal/appointments/RequestAppointmentModal';
-import Spinner from 'server/src/components/ui/Spinner';
-import { DataTable } from 'server/src/components/ui/DataTable';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { Button } from '@alga-psa/ui/components/Button';
+import { Badge } from '@alga-psa/ui/components/Badge';
+import { Card, CardContent } from '@alga-psa/ui/components/Card';
+import { Dialog, DialogContent, DialogFooter } from '@alga-psa/ui/components/Dialog';
+import { RequestAppointmentModal } from '@alga-psa/client-portal/components';
+import Spinner from '@alga-psa/ui/components/Spinner';
+import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
 import { Calendar, Clock, User, FileText, AlertCircle, X } from 'lucide-react';
 import { format } from 'date-fns';
-import { ConfirmationDialog } from 'server/src/components/ui/ConfirmationDialog';
+import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import toast from 'react-hot-toast';
 import { getMyAppointmentRequests, cancelAppointmentRequest } from 'server/src/lib/actions/client-portal-actions/appointmentRequestActions';
 

@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server';
 import { getSession } from 'server/src/lib/auth/getSession';
-import { getAdminConnection } from '@alga-psa/shared/db/admin';
+import { getAdminConnection } from '@alga-psa/db/admin';
 
 export interface ExtProxyUserInfo {
   user_id: string;

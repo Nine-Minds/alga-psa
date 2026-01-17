@@ -2,14 +2,14 @@
 
 import React, { useEffect, useState, useTransition } from 'react';
 import Link from 'next/link';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '../../ui/Card';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import { FileSpreadsheet, FileText, ExternalLink, Info, Download, Upload } from 'lucide-react';
-import { XeroCsvMappingManager } from '../../integrations/csv/XeroCsvMappingManager';
+import { XeroCsvMappingManager } from '@alga-psa/integrations/components/csv/XeroCsvMappingManager';
 import { XeroCsvClientSyncPanel } from './XeroCsvClientSyncPanel';
-import { Button } from '../../ui/Button';
-import { Alert, AlertDescription, AlertTitle } from '../../ui/Alert';
-import LoadingIndicator from '../../ui/LoadingIndicator';
-import CustomSelect from '../../ui/CustomSelect';
+import { Button } from '@alga-psa/ui/components/Button';
+import { Alert, AlertDescription, AlertTitle } from '@alga-psa/ui/components/Alert';
+import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
+import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import {
   getXeroCsvSettings,
   updateXeroCsvSettings,

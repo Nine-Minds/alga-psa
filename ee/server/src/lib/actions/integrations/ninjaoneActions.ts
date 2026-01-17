@@ -7,13 +7,13 @@
  * These actions handle connection status, organization sync, and integration settings.
  */
 
-import logger from '@shared/core/logger';
+import logger from '@alga-psa/core/logger';
 import axios from 'axios';
 import crypto from 'crypto';
 import fs from 'fs';
 import { getCurrentUser } from '@/lib/actions/user-actions/userActions';
 import { revalidatePath } from 'next/cache';
-import { getSecretProviderInstance } from '@shared/core/secretProvider';
+import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { hasPermission } from '@/lib/auth/rbac';
 import { createTenantKnex } from '@/db';
 import { auditLog } from '@/lib/logging/auditLog';

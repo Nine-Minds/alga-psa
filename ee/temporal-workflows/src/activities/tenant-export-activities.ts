@@ -11,7 +11,7 @@
  */
 
 import { Context } from '@temporalio/activity';
-import { getAdminConnection } from '@alga-psa/shared/db/admin.js';
+import { getAdminConnection } from '@alga-psa/db/admin.js';
 import { Knex } from 'knex';
 import type {
   ExportTenantDataInput,

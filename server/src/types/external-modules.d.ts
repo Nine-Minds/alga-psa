@@ -22,7 +22,7 @@ declare module '@product/extensions/entry' {
   export default _default;
 }
 
-declare module '@product/workflows/entry' {
+declare module '@alga-psa/workflows/entry' {
   export const DnDFlow: any;
 }
 

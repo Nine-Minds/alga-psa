@@ -1,7 +1,7 @@
 import { createClient } from 'redis';
 import type { RedisClientType, RedisClientOptions } from 'redis';
 import { v4 as uuidv4 } from 'uuid';
-import { logger } from '@alga-psa/shared/core';
+import { logger } from '@alga-psa/core';
 import { getSecret } from '../../core/getSecret';
 import { 
   WorkflowEventBase, 

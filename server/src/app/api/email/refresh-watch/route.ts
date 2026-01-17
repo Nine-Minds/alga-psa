@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getAdminConnection } from '@alga-psa/shared/db/admin';
+import { getAdminConnection } from '@alga-psa/db/admin';
 import { getCurrentUser } from '@/lib/actions/user-actions/userActions';
 import { configureGmailProvider } from '@/lib/actions/email-actions/configureGmailProvider';
 

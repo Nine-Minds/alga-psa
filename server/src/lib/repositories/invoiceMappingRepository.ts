@@ -1,4 +1,4 @@
-import logger from '@shared/core/logger';
+import logger from '@alga-psa/core/logger';
 import { Knex } from 'knex';
 import { AccountingAdapterType } from '../services/companySync/companySync.types';
 

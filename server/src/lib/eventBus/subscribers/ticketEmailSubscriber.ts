@@ -10,7 +10,7 @@ import {
   TicketCommentAddedEvent
 } from '../events';
 import { sendEventEmail, SendEmailParams } from '../../notifications/sendEventEmail';
-import logger from '@shared/core/logger';
+import logger from '@alga-psa/core/logger';
 import { getConnection } from '../../db/db';
 import { getSecret } from '../../utils/getSecret';
 import { createTenantKnex } from '../../db';

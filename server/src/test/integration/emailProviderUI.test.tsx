@@ -13,7 +13,7 @@ import type { EmailProvider } from '../../components/EmailProviderConfiguration'
 import { TestContext } from '../../../test-utils/testContext';
 import * as tenantActions from '../../lib/actions/tenantActions';
 import * as userActions from '../../lib/actions/user-actions/userActions';
-import { getSecretProviderInstance } from '@shared/core';
+import { getSecretProviderInstance } from '@alga-psa/core';
 
 const localStorageProviderMock = vi.hoisted(() => ({
   LocalStorageProvider: class {
@@ -32,7 +32,7 @@ const localStorageProviderMock = vi.hoisted(() => ({
 }));
 
 vi.mock('server/src/lib/storage/providers/LocalStorageProvider', () => localStorageProviderMock);
-vi.mock('server/src/lib/document-handlers/VideoDocumentHandler', () => ({
+vi.mock('@alga-psa/documents/handlers/VideoDocumentHandler', () => ({
   VideoDocumentHandler: class {
     canHandle() {
       return false;
@@ -63,7 +63,7 @@ vi.mock('@/lib/actions/integrations/googleActions', () => ({
   }),
 }));
 
-vi.mock('@shared/core', () => {
+vi.mock('@alga-psa/core', () => {
   const getAppSecret = vi.fn().mockResolvedValue(undefined);
   const tenantSecrets = new Map<string, Map<string, string>>();
 

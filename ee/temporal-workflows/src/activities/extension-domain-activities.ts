@@ -1,4 +1,4 @@
-import { getAdminConnection } from '@alga-psa/shared/db/admin.js';
+import { getAdminConnection } from '@alga-psa/db/admin.js';
 import { computeDomain as sharedComputeDomain } from '@alga-psa/shared/extensions/domain.js';
 import type { Knex } from 'knex';
 import { KubeConfig, CustomObjectsApi, PatchUtils } from '@kubernetes/client-node';

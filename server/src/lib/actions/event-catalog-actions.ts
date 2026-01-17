@@ -1,6 +1,6 @@
 'use server';
 
-import { withTransaction } from '@alga-psa/shared/db';
+import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { createTenantKnex } from '../db';
 import { EventCatalogModel } from '../../models/eventCatalog';
@@ -18,15 +18,19 @@ import { z } from 'zod';
  * @returns Array of event catalog entries
  */
 export async function getEventCatalogEntries(params: {
-  tenant: string;
+  tenant?: string;
   category?: string;
   isSystemEvent?: boolean;
   limit?: number;
   offset?: number;
-}): Promise<IEventCatalogEntry[]> {
-  const { tenant, category, isSystemEvent, limit, offset } = params;
+} = {}): Promise<IEventCatalogEntry[]> {
+  const { tenant: explicitTenant, category, isSystemEvent, limit, offset } = params;
   
-  const { knex } = await createTenantKnex();
+  const { knex, tenant: contextTenant } = await createTenantKnex();
+  const tenant = explicitTenant ?? contextTenant;
+  if (!tenant) {
+    throw new Error('Tenant not found');
+  }
   
   // Initialize system events if needed
   await EventCatalogModel.initializeSystemEvents(knex, tenant);
@@ -74,11 +78,15 @@ export async function getEventCatalogEntryById(params: {
  */
 export async function getEventCatalogEntryByEventType(params: {
   eventType: string;
-  tenant: string;
+  tenant?: string;
 }): Promise<IEventCatalogEntry | null> {
-  const { eventType, tenant } = params;
+  const { eventType, tenant: explicitTenant } = params;
   
-  const { knex } = await createTenantKnex();
+  const { knex, tenant: contextTenant } = await createTenantKnex();
+  const tenant = explicitTenant ?? contextTenant;
+  if (!tenant) {
+    throw new Error('Tenant not found');
+  }
   
   // Get the event catalog entry
   const entry = await EventCatalogModel.getByEventType(knex, eventType, tenant);

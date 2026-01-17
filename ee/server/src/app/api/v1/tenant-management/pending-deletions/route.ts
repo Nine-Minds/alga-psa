@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth/getSession';
-import { getAdminConnection } from '@alga-psa/shared/db/admin';
+import { getAdminConnection } from '@alga-psa/db/admin';
 import { getTenantDeletionState } from '@ee/lib/tenant-management/workflowClient';
 import { ApiKeyServiceForApi } from '@/lib/services/apiKeyServiceForApi';
 

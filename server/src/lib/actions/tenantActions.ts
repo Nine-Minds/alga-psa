@@ -1,7 +1,7 @@
 'use server'
 
 import { getTenantForCurrentRequest } from '../tenant';
-import { withTransaction } from '@alga-psa/shared/db';
+import { withTransaction } from '@alga-psa/db';
 import { Tenant, TenantCompany } from 'server/src/lib/types';
 import { Knex } from 'knex';
 import { createTenantKnex } from 'server/src/lib/db';

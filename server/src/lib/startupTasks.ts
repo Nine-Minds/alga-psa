@@ -1,8 +1,8 @@
 import fs from 'fs/promises';
 import path from 'path';
 import crypto from 'crypto';
-import { withAdminTransaction } from '@shared/db/index'; // Use admin connection for non-tenant access
-import { compileStandardTemplate } from './actions/invoiceTemplates'; // Import the standard compiler
+import { withAdminTransaction } from '@alga-psa/db'; // Use admin connection for non-tenant access
+import { compileStandardTemplate } from '@alga-psa/billing/actions/invoiceTemplates'; // Import the standard compiler
 
 /**
  * Checks standard AssemblyScript invoice templates against the database records

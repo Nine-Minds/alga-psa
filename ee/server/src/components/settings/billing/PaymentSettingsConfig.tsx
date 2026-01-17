@@ -11,11 +11,11 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import toast from 'react-hot-toast';
 import Link from 'next/link';
-import { Button } from 'server/src/components/ui/Button';
-import { Input } from 'server/src/components/ui/Input';
-import { Label } from 'server/src/components/ui/Label';
-import { Switch } from 'server/src/components/ui/Switch';
-import CustomSelect from 'server/src/components/ui/CustomSelect';
+import { Button } from '@alga-psa/ui/components/Button';
+import { Input } from '@alga-psa/ui/components/Input';
+import { Label } from '@alga-psa/ui/components/Label';
+import { Switch } from '@alga-psa/ui/components/Switch';
+import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import {
   AlertCircle,
   RefreshCw,

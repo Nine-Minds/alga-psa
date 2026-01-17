@@ -4,7 +4,7 @@
  */
 
 import { createTenantKnex } from '../../lib/db';
-import { withTransaction } from '@shared/db';
+import { withTransaction } from '@alga-psa/db';
 import { CalendarProviderConfig, CalendarEventMapping, CalendarSyncResult, ExternalCalendarEvent } from '../../interfaces/calendar.interfaces';
 import { IScheduleEntry } from '../../interfaces/schedule.interfaces';
 import { CalendarProviderService } from '../CalendarProviderService';

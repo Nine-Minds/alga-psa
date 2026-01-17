@@ -7,9 +7,9 @@ import * as z from 'zod';
 import toast from 'react-hot-toast'; // Use react-hot-toast
 import { MoreVertical, PlusCircle } from 'lucide-react';
 
-import { Button } from 'server/src/components/ui/Button';
-import { Card, CardHeader, CardTitle, CardContent } from 'server/src/components/ui/Card';
-import { DataTable } from 'server/src/components/ui/DataTable';
+import { Button } from '@alga-psa/ui/components/Button';
+import { Card, CardHeader, CardTitle, CardContent } from '@alga-psa/ui/components/Card';
+import { DataTable } from '@alga-psa/ui/components/DataTable';
 
 import {
   DropdownMenu,
@@ -17,19 +17,19 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
   DropdownMenuSeparator,
-} from 'server/src/components/ui/DropdownMenu';
+} from '@alga-psa/ui/components/DropdownMenu';
 
 // Removed Form imports as we'll use standard HTML form + react-hook-form control
-import { Label } from 'server/src/components/ui/Label'; // Import Label directly
+import { Label } from '@alga-psa/ui/components/Label'; // Import Label directly
 
-import { Input } from 'server/src/components/ui/Input';
-import { Switch } from 'server/src/components/ui/Switch';
-import { Badge } from 'server/src/components/ui/Badge';
+import { Input } from '@alga-psa/ui/components/Input';
+import { Switch } from '@alga-psa/ui/components/Switch';
+import { Badge } from '@alga-psa/ui/components/Badge';
 import { Row } from '@tanstack/react-table'; // Keep Row type
 import { Controller, ControllerRenderProps, FieldValues, Path, FieldError } from 'react-hook-form'; // Import Controller
 import { ITaxRegion } from 'server/src/interfaces/tax.interfaces';
 import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces'; // Import custom ColumnDefinition
-import GenericDialog from 'server/src/components/ui/GenericDialog'; // Import GenericDialog
+import GenericDialog from '@alga-psa/ui/components/GenericDialog'; // Import GenericDialog
 import {
   getTaxRegions,
   createTaxRegion,

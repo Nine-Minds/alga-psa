@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Input } from 'server/src/components/ui/Input';
-import { Button } from 'server/src/components/ui/Button';
+import { Input } from '@alga-psa/ui/components/Input';
+import { Button } from '@alga-psa/ui/components/Button';
 import { Plus } from 'lucide-react';
 import { ITag } from 'server/src/interfaces/tag.interfaces';
 import { generateEntityColor } from 'server/src/utils/colorUtils';

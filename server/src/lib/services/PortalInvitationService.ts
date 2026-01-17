@@ -3,7 +3,7 @@ import { getCurrentUser } from '../actions/user-actions/userActions';
 import { checkPortalInvitationLimit, formatRateLimitError } from '../security/rateLimiting';
 import crypto from 'crypto';
 import { Knex } from 'knex';
-import { withTransaction } from '@alga-psa/shared/db';
+import { withTransaction } from '@alga-psa/db';
 
 export interface PortalInvitation {
   invitation_id: string;

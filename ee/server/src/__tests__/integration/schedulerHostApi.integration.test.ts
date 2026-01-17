@@ -35,7 +35,7 @@ vi.mock('@/lib/db/db', () => ({
   getConnection: vi.fn(async () => db),
 }));
 
-vi.mock('@shared/db/admin', () => ({
+vi.mock('@alga-psa/db/admin', () => ({
   getAdminConnection: vi.fn(async () => db),
 }));
 

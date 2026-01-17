@@ -1,6 +1,6 @@
 'use server';
 
-import logger from '@alga-psa/shared/core/logger';
+import logger from '@alga-psa/core/logger';
 import { createTenantKnex } from '../../db';
 import { getPortalDomain } from 'server/src/models/PortalDomainModel';
 import { getTenantSlugForTenant } from '../tenant-actions/tenantSlugActions';

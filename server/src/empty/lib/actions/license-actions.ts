@@ -4,7 +4,7 @@
  */
 'use server';
 
-import logger from '@alga-psa/shared/core/logger';
+import logger from '@alga-psa/core/logger';
 
 /**
  * CE Stub - Not available in Community Edition

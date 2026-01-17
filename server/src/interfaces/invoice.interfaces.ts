@@ -1,4 +1,4 @@
-import { DateValue, ISO8601String } from '@shared/types/temporal';
+import { DateValue, ISO8601String } from '@alga-psa/types';
 import { TenantEntity } from './index';
 import { WasmInvoiceViewModel as RendererInvoiceViewModel, WasmInvoiceViewModel } from '../lib/invoice-renderer/types'; // Import the correct ViewModel
 

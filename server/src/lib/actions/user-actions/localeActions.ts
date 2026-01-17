@@ -2,7 +2,7 @@
 
 import { getCurrentUser } from './userActions';
 import { getConnection } from '@/lib/db/db';
-import { SupportedLocale, isSupportedLocale } from '@/lib/i18n/config';
+import { SupportedLocale, isSupportedLocale } from '@alga-psa/ui/lib/i18n/config';
 
 export async function updateUserLocaleAction(locale: SupportedLocale | null) {
   const user = await getCurrentUser();

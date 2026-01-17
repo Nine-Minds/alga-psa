@@ -3,9 +3,9 @@ import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 import { heartbeat } from '@temporalio/activity';
 
-import logger from '@alga-psa/shared/core/logger';
-import { getAdminConnection } from '@alga-psa/shared/db/admin.js';
-import { withTransaction } from '@alga-psa/shared/db';
+import logger from '@alga-psa/core/logger';
+import { getAdminConnection } from '@alga-psa/db/admin.js';
+import { withTransaction } from '@alga-psa/db';
 import { getRedisStreamClient } from '@shared/workflow/streams';
 
 import { createNinjaOneClient, NinjaOneClient } from '@ee/lib/integrations/ninjaone/ninjaOneClient';

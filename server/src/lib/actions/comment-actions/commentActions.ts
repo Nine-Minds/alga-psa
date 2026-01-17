@@ -3,12 +3,12 @@
 import Comment from 'server/src/lib/models/comment';
 import { IComment } from 'server/src/interfaces/comment.interface';
 import { createTenantKnex } from 'server/src/lib/db';
-import { withTransaction } from '@shared/db';
+import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { convertBlockNoteToMarkdown } from 'server/src/lib/utils/blocknoteUtils';
 import { publishEvent } from 'server/src/lib/eventBus/publishers';
 import { TicketResponseState } from 'server/src/interfaces/ticket.interfaces';
-import { maybeReopenBundleMasterFromChildReply } from 'server/src/lib/actions/ticket-actions/ticketBundleUtils';
+import { maybeReopenBundleMasterFromChildReply } from '@alga-psa/tickets/actions/ticketBundleUtils';
 
 /**
  * Helper function to determine the new response state based on comment properties

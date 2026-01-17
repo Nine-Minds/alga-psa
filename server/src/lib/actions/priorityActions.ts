@@ -2,7 +2,7 @@
 
 import { IPriority } from 'server/src/interfaces';
 import Priority from 'server/src/lib/models/priority';
-import { withTransaction } from '@alga-psa/shared/db';
+import { withTransaction } from '@alga-psa/db';
 import { createTenantKnex } from 'server/src/lib/db';
 import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
 import { Knex } from 'knex';

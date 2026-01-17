@@ -1,11 +1,11 @@
 import { useState } from 'react';
-import { Button } from '../../components/ui/Button';
+import { Button } from '@alga-psa/ui/components/Button';
 import { Action } from '../../lib/workflow/forms/actionHandlerRegistry';
 import {
   Dialog,
   DialogContent,
   DialogFooter
-} from '../../components/ui/Dialog';
+} from '@alga-psa/ui/components/Dialog';
 
 interface ActionButtonProps {
   action: Action;

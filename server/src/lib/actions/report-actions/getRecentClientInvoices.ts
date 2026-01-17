@@ -1,7 +1,7 @@
 'use server';
 
 import { createTenantKnex } from '../../db';
-import { withTransaction } from '@shared/db';
+import { withTransaction } from '@alga-psa/db';
 import { IInvoice } from '../../../interfaces/invoice.interfaces';
 import { z } from 'zod';
 import { Knex } from 'knex';

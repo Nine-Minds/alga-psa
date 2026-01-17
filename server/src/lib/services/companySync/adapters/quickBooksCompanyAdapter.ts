@@ -4,7 +4,7 @@ import {
   ExternalCompanyRecord,
   NormalizedCompanyPayload
 } from '../companySync.types';
-import { QboClientService } from '../../../qbo/qboClientService';
+import { QboClientService } from '@alga-psa/integrations/lib/qbo/qboClientService';
 import { AppError } from '../../../errors';
 
 type QboClientFactory = (tenantId: string, realmId: string) => Promise<QboClientService>;

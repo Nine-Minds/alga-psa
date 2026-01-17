@@ -560,7 +560,7 @@
 
 3. **For files importing from shared directory:**
    - Replace `@shared/` with relative path to shared directory
-   - Example: If importing from `@shared/types/temporal.ts`
+   - Example: If importing from `@alga-psa/types.ts`
    - Convert to: `../../../shared/types/temporal.ts` (adjust ../s based on file depth)
 
 4. **Cross-Project Imports:**

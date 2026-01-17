@@ -3,7 +3,7 @@
 import { ApiKeyService } from '../services/apiKeyService';
 import { getCurrentUser, getUserRoles } from './user-actions/userActions';
 import { IRole } from 'server/src/interfaces/auth.interfaces';
-import { withTransaction } from '@alga-psa/shared/db';
+import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 
 /**

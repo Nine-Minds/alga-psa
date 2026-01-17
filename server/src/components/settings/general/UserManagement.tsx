@@ -1,29 +1,29 @@
 'use client'
 
 import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from 'server/src/components/ui/Card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import UserList from './UserList';
 import { getAllUsers, addUser, getUserWithRoles, deleteUser, getMSPRoles, getClientPortalRoles } from 'server/src/lib/actions/user-actions/userActions';
-import { getAllClients } from 'server/src/lib/actions/client-actions/clientActions';
+import { getAllClients } from '@alga-psa/clients/actions';
 import { addContact, getContactsByClient, getAllContacts, getContactsEligibleForInvitation } from 'server/src/lib/actions/contact-actions/contactActions';
 import { sendPortalInvitation, createClientPortalUser } from 'server/src/lib/actions/portal-actions/portalInvitationActions';
 import { getTenantPortalLoginLink } from 'server/src/lib/actions/portal-actions/clientPortalLinkActions';
-import { ClientPicker } from 'server/src/components/clients/ClientPicker';
-import { ContactPicker } from 'server/src/components/ui/ContactPicker';
+import { ClientPicker } from '@alga-psa/clients/components/clients/ClientPicker';
+import { ContactPicker } from '@alga-psa/ui/components/ContactPicker';
 import toast from 'react-hot-toast';
 import { IUser, IRole } from 'server/src/interfaces/auth.interfaces';
 import { IClient } from 'server/src/interfaces/client.interfaces';
-import { Button } from 'server/src/components/ui/Button';
-import { Input } from 'server/src/components/ui/Input';
-import { Label } from 'server/src/components/ui/Label';
-import CustomSelect, { SelectOption } from 'server/src/components/ui/CustomSelect';
-import ViewSwitcher, { ViewSwitcherOption } from 'server/src/components/ui/ViewSwitcher';
+import { Button } from '@alga-psa/ui/components/Button';
+import { Input } from '@alga-psa/ui/components/Input';
+import { Label } from '@alga-psa/ui/components/Label';
+import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect';
+import ViewSwitcher, { ViewSwitcherOption } from '@alga-psa/ui/components/ViewSwitcher';
 import { Search, Eye, EyeOff } from 'lucide-react';
 import { getLicenseUsageAction } from 'server/src/lib/actions/license-actions';
 import { LicenseUsage } from 'server/src/lib/license/get-license-usage';
 import { validateContactName, validateEmailAddress, validatePassword, getPasswordRequirements } from 'server/src/lib/utils/clientFormValidation';
-import LoadingIndicator from 'server/src/components/ui/LoadingIndicator';
-import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
+import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
+import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 
 const UserManagement = (): React.JSX.Element => {
   const [users, setUsers] = useState<IUser[]>([]);

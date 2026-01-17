@@ -1,10 +1,10 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Card, CardContent } from 'server/src/components/ui/Card';
-import { Input } from 'server/src/components/ui/Input';
-import { Label } from 'server/src/components/ui/Label';
-import { Button } from 'server/src/components/ui/Button';
+import { Card, CardContent } from '@alga-psa/ui/components/Card';
+import { Input } from '@alga-psa/ui/components/Input';
+import { Label } from '@alga-psa/ui/components/Label';
+import { Button } from '@alga-psa/ui/components/Button';
 import { Eye, EyeOff, ChevronDown, ChevronUp } from 'lucide-react';
 import { changeOwnPassword } from 'server/src/lib/actions/user-actions/userActions';
 

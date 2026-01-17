@@ -11,8 +11,6 @@
     "paths": {
       "@shared/*": ["./*"],
       "@shared/workflow/*": ["./workflow/*"],
-      "@shared/core/*": ["./core/*"],
-      "@shared/types/*": ["./types/*"],
       "@shared/lib/*": ["./lib/*"],
       "@alga-psa/shared/*": ["./*"]
     }

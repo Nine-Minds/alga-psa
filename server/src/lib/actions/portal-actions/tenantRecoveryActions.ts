@@ -1,7 +1,7 @@
 'use server';
 
-import logger from '@alga-psa/shared/core/logger';
-import { getAdminConnection } from '@shared/db/admin';
+import logger from '@alga-psa/core/logger';
+import { getAdminConnection } from '@alga-psa/db/admin';
 import { IUser } from 'server/src/interfaces/auth.interfaces';
 import { getPortalDomain } from 'server/src/models/PortalDomainModel';
 import { getTenantSlugForTenant } from '../tenant-actions/tenantSlugActions';
