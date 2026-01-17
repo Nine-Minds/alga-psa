@@ -152,7 +152,11 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     const userId = currentUser?.user_id || session?.user?.id;
     const tenant = initialTicket.tenant;
     if (!tenant) {
-        throw new Error('tenant is not defined');
+        return (
+            <div id="ticket-error-message" className="p-4">
+                Error: tenant is not defined
+            </div>
+        );
     }
 
     const [ticket, setTicket] = useState(initialTicket);

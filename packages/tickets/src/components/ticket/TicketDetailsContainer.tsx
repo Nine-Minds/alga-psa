@@ -133,8 +133,7 @@ export default function TicketDetailsContainer({ ticketData, surveySummary = nul
     <div className="bg-gray-100 min-h-screen p-4">
       <Suspense fallback={<TicketDetailsSkeleton />}>
         <TicketDetails
-          ticketId={ticketData.ticket.ticket_id}
-          isOpen={true}
+          initialTicket={ticketData.ticket}
           initialBundle={ticketData.bundle}
           aggregatedChildClientComments={ticketData.aggregatedChildClientComments || []}
           onClose={() => router.back()}
