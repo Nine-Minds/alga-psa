@@ -2205,17 +2205,7 @@ function ExecuteReport() {
           style={{ minWidth: '150px' }}
         >
           {executing ? (
-            <span style={{ display: 'flex', alignItems: 'center', gap: '8px', justifyContent: 'center' }}>
-              <span style={{
-                width: '14px',
-                height: '14px',
-                border: '2px solid rgba(255,255,255,0.3)',
-                borderTopColor: 'white',
-                borderRadius: '50%',
-                animation: 'spin 1s linear infinite',
-              }} />
-              Executing...
-            </span>
+            <><Spinner size="button" variant="inverted" style={{ marginRight: '8px' }} /> Executing...</>
           ) : 'Execute Report'}
         </Button>
       </Card>
@@ -2228,12 +2218,6 @@ function ExecuteReport() {
           <ResultsRenderer results={results} />
         </div>
       )}
-
-      <style>{`
-        @keyframes spin {
-          to { transform: rotate(360deg); }
-        }
-      `}</style>
     </div>
   );
 }
@@ -2302,7 +2286,7 @@ function ActionMenu({ items, disabled, loading }: ActionMenuProps) {
         style={{ minWidth: '80px' }}
       >
         {loading ? (
-          <><Spinner size="xs" style={{ marginRight: '4px' }} /> Working...</>
+          <><Spinner size="button" style={{ marginRight: '4px' }} /> Working...</>
         ) : (
           <>Actions ▾</>
         )}
@@ -2507,13 +2491,17 @@ function TenantManagementView() {
   // Export dialog state
   const [showExportResultDialog, setShowExportResultDialog] = useState(false);
   const [exportResult, setExportResult] = useState<{
+    status: 'in_progress' | 'completed';
     tenantName: string;
-    downloadUrl: string;
-    urlExpiresAt: string;
-    tableCount: number;
-    recordCount: number;
-    fileSizeBytes: number;
+    workflowId?: string;
+    downloadUrl?: string;
+    urlExpiresAt?: string;
+    tableCount?: number;
+    recordCount?: number;
+    fileSizeBytes?: number;
+    message?: string;
   } | null>(null);
+  const [exportPollingInterval, setExportPollingInterval] = useState<NodeJS.Timeout | null>(null);
 
   // Fetch tenants
   const fetchTenants = useCallback(async () => {
@@ -2696,7 +2684,7 @@ function TenantManagementView() {
         method: 'POST',
         body: JSON.stringify({
           workflowId: selectedPendingDeletion.workflow_id,
-          confirmationType: confirmationType,
+          type: confirmationType,
         }),
       });
 
@@ -2757,18 +2745,71 @@ function TenantManagementView() {
     }
   };
 
+  // Poll for export status
+  const pollExportStatus = async (workflowId: string, tenantName: string) => {
+    try {
+      const result = await callTenantManagementApi<{
+        status: 'pending' | 'in_progress' | 'completed' | 'failed';
+        workflowId: string;
+        downloadUrl?: string;
+        urlExpiresAt?: string;
+        tableCount?: number;
+        recordCount?: number;
+        fileSizeBytes?: number;
+        error?: string;
+      }>(`/export-status?workflowId=${encodeURIComponent(workflowId)}`);
+
+      if (result.success && result.data) {
+        if (result.data.status === 'completed') {
+          // Stop polling
+          if (exportPollingInterval) {
+            clearInterval(exportPollingInterval);
+            setExportPollingInterval(null);
+          }
+          // Update result with completed data
+          setExportResult({
+            status: 'completed',
+            tenantName,
+            workflowId,
+            downloadUrl: result.data.downloadUrl,
+            urlExpiresAt: result.data.urlExpiresAt,
+            tableCount: result.data.tableCount,
+            recordCount: result.data.recordCount,
+            fileSizeBytes: result.data.fileSizeBytes,
+          });
+          fetchAuditLogs();
+        } else if (result.data.status === 'failed') {
+          // Stop polling
+          if (exportPollingInterval) {
+            clearInterval(exportPollingInterval);
+            setExportPollingInterval(null);
+          }
+          setShowExportResultDialog(false);
+          setExportResult(null);
+          setStatusMessage({ type: 'error', text: `Export failed: ${result.data.error || 'Unknown error'}` });
+        }
+        // If still in progress, continue polling
+      }
+    } catch (err) {
+      console.error('Error polling export status:', err);
+    }
+  };
+
   // Handle export tenant data
   const handleExportTenant = async (tenant: Tenant) => {
     setActionInProgress(tenant.tenant);
     try {
       const result = await callTenantManagementApi<{
-        exportId: string;
+        status: 'in_progress' | 'completed';
+        workflowId?: string;
+        exportId?: string;
         tenantName: string;
-        downloadUrl: string;
-        urlExpiresAt: string;
-        tableCount: number;
-        recordCount: number;
-        fileSizeBytes: number;
+        downloadUrl?: string;
+        urlExpiresAt?: string;
+        tableCount?: number;
+        recordCount?: number;
+        fileSizeBytes?: number;
+        message?: string;
       }>('/export-tenant', {
         method: 'POST',
         body: JSON.stringify({
@@ -2778,16 +2819,40 @@ function TenantManagementView() {
       });
 
       if (result.success && result.data) {
-        setExportResult({
-          tenantName: result.data.tenantName || tenant.client_name,
-          downloadUrl: result.data.downloadUrl,
-          urlExpiresAt: result.data.urlExpiresAt,
-          tableCount: result.data.tableCount,
-          recordCount: result.data.recordCount,
-          fileSizeBytes: result.data.fileSizeBytes,
-        });
-        setShowExportResultDialog(true);
-        fetchAuditLogs();
+        const data = result.data;
+
+        if (data.status === 'completed') {
+          // Export completed immediately
+          setExportResult({
+            status: 'completed',
+            tenantName: data.tenantName || tenant.client_name,
+            workflowId: data.workflowId,
+            downloadUrl: data.downloadUrl,
+            urlExpiresAt: data.urlExpiresAt,
+            tableCount: data.tableCount,
+            recordCount: data.recordCount,
+            fileSizeBytes: data.fileSizeBytes,
+          });
+          setShowExportResultDialog(true);
+          fetchAuditLogs();
+        } else if (data.status === 'in_progress' && data.workflowId) {
+          // Export is in progress, show dialog and start polling
+          setExportResult({
+            status: 'in_progress',
+            tenantName: data.tenantName || tenant.client_name,
+            workflowId: data.workflowId,
+            message: data.message || 'Export in progress...',
+          });
+          setShowExportResultDialog(true);
+
+          // Start polling every 2 seconds
+          const interval = setInterval(() => {
+            pollExportStatus(data.workflowId!, data.tenantName || tenant.client_name);
+          }, 2000);
+          setExportPollingInterval(interval);
+        } else {
+          setStatusMessage({ type: 'error', text: `Unexpected response: ${JSON.stringify(data)}` });
+        }
       } else {
         setStatusMessage({ type: 'error', text: `Export failed: ${result.error}` });
       }
@@ -2797,6 +2862,15 @@ function TenantManagementView() {
       setActionInProgress(null);
     }
   };
+
+  // Cleanup polling interval on unmount
+  useEffect(() => {
+    return () => {
+      if (exportPollingInterval) {
+        clearInterval(exportPollingInterval);
+      }
+    };
+  }, [exportPollingInterval]);
 
   // Check if tenant has a pending deletion
   const hasPendingDeletion = (tenantId: string): boolean => {
@@ -2978,7 +3052,7 @@ function TenantManagementView() {
         <h2 style={{ margin: 0 }}>Tenant Management</h2>
         <div style={{ display: 'flex', gap: '8px' }}>
           <Button variant="secondary" onClick={() => { fetchTenants(); fetchAuditLogs(); fetchPendingDeletions(); }} disabled={loading}>
-            {loading ? <><Spinner size="xs" style={{ marginRight: '6px' }} /> Loading...</> : 'Refresh'}
+            {loading ? <><Spinner size="button" style={{ marginRight: '6px' }} /> Loading...</> : 'Refresh'}
           </Button>
           <Button onClick={() => setShowCreateForm(true)}>
             Create Tenant
@@ -3332,23 +3406,50 @@ function TenantManagementView() {
       {/* Export Result Dialog */}
       <ConfirmDialog
         isOpen={showExportResultDialog}
-        title="Export Complete"
-        message={exportResult ? `Successfully exported data for "${exportResult.tenantName}".` : ''}
+        title={exportResult?.status === 'in_progress' ? 'Export In Progress' : 'Export Complete'}
+        message={exportResult ? (
+          exportResult.status === 'in_progress'
+            ? `Exporting data for "${exportResult.tenantName}"...`
+            : `Successfully exported data for "${exportResult.tenantName}".`
+        ) : ''}
         onConfirm={() => {
-          if (exportResult?.downloadUrl) {
+          if (exportResult?.status === 'completed' && exportResult?.downloadUrl) {
             window.open(exportResult.downloadUrl, '_blank');
+          }
+          if (exportResult?.status === 'completed') {
+            setShowExportResultDialog(false);
+            setExportResult(null);
+          }
+        }}
+        onCancel={() => {
+          // Stop polling if in progress
+          if (exportPollingInterval) {
+            clearInterval(exportPollingInterval);
+            setExportPollingInterval(null);
           }
           setShowExportResultDialog(false);
           setExportResult(null);
         }}
-        onCancel={() => {
-          setShowExportResultDialog(false);
-          setExportResult(null);
-        }}
-        confirmText="Download"
+        confirmText={exportResult?.status === 'in_progress' ? 'Please wait...' : 'Download'}
         cancelLabel="Close"
+        confirmDisabled={exportResult?.status === 'in_progress'}
       >
-        {exportResult && (
+        {exportResult && exportResult.status === 'in_progress' && (
+          <div style={{ marginTop: '12px' }}>
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: '24px',
+            }}>
+              <Spinner size="sm" />
+            </div>
+            <Alert tone="info">
+              Large exports may take a few minutes. You can close this dialog and check the audit log for status.
+            </Alert>
+          </div>
+        )}
+        {exportResult && exportResult.status === 'completed' && (
           <div style={{ marginTop: '12px' }}>
             <div style={{
               backgroundColor: 'var(--alga-surface)',
@@ -3359,19 +3460,19 @@ function TenantManagementView() {
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', fontSize: '0.875rem' }}>
                 <div>
                   <Text tone="muted">Tables:</Text>
-                  <Text style={{ fontWeight: 500 }}>{exportResult.tableCount}</Text>
+                  <Text style={{ fontWeight: 500 }}>{exportResult.tableCount ?? '-'}</Text>
                 </div>
                 <div>
                   <Text tone="muted">Records:</Text>
-                  <Text style={{ fontWeight: 500 }}>{exportResult.recordCount.toLocaleString()}</Text>
+                  <Text style={{ fontWeight: 500 }}>{exportResult.recordCount?.toLocaleString() ?? '-'}</Text>
                 </div>
                 <div>
                   <Text tone="muted">File Size:</Text>
-                  <Text style={{ fontWeight: 500 }}>{(exportResult.fileSizeBytes / 1024 / 1024).toFixed(2)} MB</Text>
+                  <Text style={{ fontWeight: 500 }}>{exportResult.fileSizeBytes ? ((exportResult.fileSizeBytes / 1024 / 1024).toFixed(2) + ' MB') : '-'}</Text>
                 </div>
                 <div>
                   <Text tone="muted">Expires:</Text>
-                  <Text style={{ fontWeight: 500 }}>{new Date(exportResult.urlExpiresAt).toLocaleTimeString()}</Text>
+                  <Text style={{ fontWeight: 500 }}>{exportResult.urlExpiresAt ? new Date(exportResult.urlExpiresAt).toLocaleTimeString() : '-'}</Text>
                 </div>
               </div>
             </div>
@@ -3564,7 +3665,7 @@ function AuditLogs() {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
         <h2 style={{ margin: 0 }}>Audit Logs</h2>
         <Button variant="secondary" onClick={fetchLogs} disabled={loading}>
-          {loading ? <><Spinner size="xs" style={{ marginRight: '6px' }} /> Loading...</> : 'Refresh'}
+          {loading ? <><Spinner size="button" style={{ marginRight: '6px' }} /> Loading...</> : 'Refresh'}
         </Button>
       </div>
 

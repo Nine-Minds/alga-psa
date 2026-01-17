@@ -462,11 +462,24 @@ class NinjaOneSyncWorker {
         if (existingMapping) {
           const existingAsset = await this.getAssetById(existingMapping.alga_entity_id);
           if (existingAsset) {
+            // Check if client_id needs correction (this must happen even if no other changes)
+            const needsClientIdCorrection = existingAsset.client_id !== deviceMapping.client_id;
+            
             const changes = calculateAssetChanges(existingAsset, deviceDetail);
 
-            if (Object.keys(changes).length > 0) {
+            // Always update if there are changes OR if client_id needs correction
+            if (Object.keys(changes).length > 0 || needsClientIdCorrection) {
               // Use the device's actual organization mapping, not the one passed to processBatch
               await this.updateExistingAsset(existingMapping.alga_entity_id, deviceDetail, deviceMapping);
+              
+              // Include client_id correction in changes if it occurred
+              if (needsClientIdCorrection) {
+                changes['client_id'] = {
+                  old: existingAsset.client_id,
+                  new: deviceMapping.client_id,
+                };
+              }
+              
               results.push({
                 deviceId: device.id,
                 deviceName: device.displayName || device.systemName || `Device-${device.id}`,

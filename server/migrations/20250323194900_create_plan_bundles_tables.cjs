@@ -1,6 +1,9 @@
 /**
- * Migration to create Plan Bundles feature tables
- * This implements the schema for plan bundles, bundle contract lines, and company plan bundles
+ * ⚠️ RENAMED: Tables in this file have been renamed.
+ * See 20251008000001_rename_billing_to_contracts.cjs for current names:
+ * - plan_bundles → contracts
+ * - company_plan_bundles → client_contracts
+ * - bundle_billing_plans → contract_line_mappings
  */
 exports.up = function(knex) {
   return knex.schema

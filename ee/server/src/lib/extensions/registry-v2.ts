@@ -1,7 +1,7 @@
 // EE-only registry service v2 (Knex-backed)
 import type { Knex } from 'knex';
 import type { ManifestV2, ManifestEndpoint } from './bundles/manifest';
-import { isValidSemverLike } from './bundles/manifest';
+import { isValidSemverLike, isWildcardVersion, resolveWildcardVersion } from './bundles/manifest';
 import type { SignatureVerificationResult } from './bundles/verify';
 import { computeDomain, enqueueProvisioningWorkflow } from './runtime/provision';
 import { isKnownCapability, normalizeCapability } from './providers';
@@ -439,6 +439,7 @@ interface VersionsRepo {
   findByHash(contentHash: string): Promise<ExtensionVersionRecord | null>;
   findLatestForExtension(extensionId: string): Promise<ExtensionVersionRecord | null>;
   findByExtensionAndVersion(extensionId: string, version: string): Promise<ExtensionVersionRecord | null>;
+  listVersionStringsForExtension(extensionId: string): Promise<string[]>;
 }
 
 interface RegistryV2Repository {
@@ -585,6 +586,13 @@ export async function getLatestVersionForExtension(extensionId: string): Promise
   return repo.versions.findLatestForExtension(id);
 }
 
+export async function listVersionStringsForExtension(extensionId: string): Promise<string[]> {
+  const repo = requireRepo();
+  const id = (extensionId || '').trim();
+  if (!id) throw new Error("Missing required 'extensionId'");
+  return repo.versions.listVersionStringsForExtension(id);
+}
+
 // 5) Higher-level helper for finalize flow
 
 export interface UpsertVersionFromManifestInput {
@@ -606,7 +614,7 @@ export interface UpsertVersionFromManifestInput {
 
 export async function upsertVersionFromManifest(
   input: UpsertVersionFromManifestInput
-): Promise<{ extension: ExtensionRecord; version: ExtensionVersionRecord }> {
+): Promise<{ extension: ExtensionRecord; version: ExtensionVersionRecord; resolvedVersion?: string }> {
   const { manifest, contentHash, parsed, signature } = input;
 
   // Ensure extension registry record exists
@@ -614,6 +622,19 @@ export async function upsertVersionFromManifest(
     name: manifest.name,
     publisher: manifest.publisher,
   });
+
+  // Resolve wildcard version if present (e.g., "1.2.*" -> "1.2.5")
+  let resolvedVersion = manifest.version;
+  if (isWildcardVersion(manifest.version)) {
+    const existingVersions = await listVersionStringsForExtension(extension.id);
+    resolvedVersion = resolveWildcardVersion(manifest.version, existingVersions);
+    console.info('[registry-v2] Resolved wildcard version', {
+      original: manifest.version,
+      resolved: resolvedVersion,
+      extensionId: extension.id,
+      existingVersions: existingVersions.slice(0, 10), // Log first 10 for debugging
+    });
+  }
 
   // Prepare signature payload mapping
   const sig = {
@@ -628,22 +649,22 @@ export async function upsertVersionFromManifest(
 
   // Create version; enforce uniqueness on (extensionId, version). If it exists, attach new bundle if needed.
   const repo = requireRepo();
-  const existing = await repo.versions.findByExtensionAndVersion(extension.id, manifest.version);
+  const existing = await repo.versions.findByExtensionAndVersion(extension.id, resolvedVersion);
   if (existing) {
     const want = validateContentHash(contentHash);
     if (existing.contentHash !== want) {
       // Attach new bundle row to this version (idempotent if same content_hash already present)
       await (repo as any).attachBundle?.(existing.id, { contentHash: `sha256:${want}` });
       // Re-read latest mapping for this version
-      const newest = await repo.versions.findByExtensionAndVersion(extension.id, manifest.version);
-      return { extension, version: newest || existing };
+      const newest = await repo.versions.findByExtensionAndVersion(extension.id, resolvedVersion);
+      return { extension, version: newest || existing, resolvedVersion: isWildcardVersion(manifest.version) ? resolvedVersion : undefined };
     }
-    return { extension, version: existing };
+    return { extension, version: existing, resolvedVersion: isWildcardVersion(manifest.version) ? resolvedVersion : undefined };
   }
 
   const versionRecord = await createExtensionVersion({
     extensionId: extension.id,
-    version: manifest.version,
+    version: resolvedVersion,
     contentHash,
     runtime: parsed.runtime,
     ui: parsed.ui,
@@ -653,7 +674,7 @@ export async function upsertVersionFromManifest(
     signature: sig,
   });
 
-  return { extension, version: versionRecord };
+  return { extension, version: versionRecord, resolvedVersion: isWildcardVersion(manifest.version) ? resolvedVersion : undefined };
 }
 
 // ===== End M1 additions =====

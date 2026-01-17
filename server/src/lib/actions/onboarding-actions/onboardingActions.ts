@@ -128,13 +128,12 @@ export async function saveClientInfo(data: ClientInfoData): Promise<OnboardingAc
       }
 
       // Save progress to tenant settings
+      // IMPORTANT: Do NOT save user-specific fields (firstName, lastName, email) to tenant-wide storage
+      // These fields are specific to the current user and should not be shared across users in the tenant
+      // Only save tenant-level data like clientName
       const progressData: any = {
         clientName: data.clientName
       };
-
-      if (data.firstName) progressData.firstName = data.firstName;
-      if (data.lastName) progressData.lastName = data.lastName;
-      if (data.email) progressData.email = data.email;
 
       await saveTenantOnboardingProgress(progressData);
     });

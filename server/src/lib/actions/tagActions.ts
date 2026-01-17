@@ -454,6 +454,90 @@ export async function createTagsForEntity(
   return createdTags;
 }
 
+/**
+ * Creates multiple tags for an entity within an existing transaction.
+ * Use this when creating tags as part of a larger transactional operation
+ * to ensure atomicity (e.g., during imports where rollback should remove all data).
+ *
+ * @param trx - The Knex transaction to use
+ * @param entityId - The ID of the entity to tag
+ * @param entityType - The type of entity (client, contact, ticket, project, project_task)
+ * @param pendingTags - Array of pending tags to create
+ * @returns Array of successfully created tags
+ */
+export async function createTagsForEntityWithTransaction(
+  trx: Knex.Transaction,
+  entityId: string,
+  entityType: TaggedEntityType,
+  pendingTags: PendingTag[]
+): Promise<ITag[]> {
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
+    throw new Error('User not found');
+  }
+  const userId = currentUser.user_id;
+  const tenant = await getCurrentTenantId() || '';
+
+  const createdTags: ITag[] = [];
+
+  for (const tag of pendingTags) {
+    try {
+      const tagText = tag.tag_text?.trim();
+      if (!tagText) continue;
+
+      // Validate length
+      if (tagText.length > 50) {
+        console.warn(`Tag text "${tagText}" too long, skipping`);
+        continue;
+      }
+
+      // Determine colors
+      let backgroundColor = tag.background_color;
+      let textColor = tag.text_color;
+
+      if (!backgroundColor || !textColor) {
+        const { generateEntityColor } = await import('server/src/utils/colorUtils');
+        const colors = generateEntityColor(tagText);
+        backgroundColor = backgroundColor || colors.background;
+        textColor = textColor || colors.text;
+      }
+
+      // Get or create tag definition
+      const definition = await TagDefinition.getOrCreate(
+        trx,
+        tagText,
+        entityType,
+        {
+          background_color: backgroundColor,
+          text_color: textColor
+        }
+      );
+
+      // Create mapping
+      const mapping = await TagMapping.insert(trx, {
+        tag_id: definition.tag_id,
+        tagged_id: entityId,
+        tagged_type: entityType
+      }, userId);
+
+      createdTags.push({
+        tag_id: mapping.mapping_id,
+        tenant,
+        tag_text: tagText,
+        tagged_id: entityId,
+        tagged_type: entityType,
+        background_color: backgroundColor,
+        text_color: textColor
+      });
+    } catch (error) {
+      console.error(`Failed to create tag "${tag.tag_text}" for ${entityType}:`, error);
+      // Continue with other tags - don't fail the entire operation
+    }
+  }
+
+  return createdTags;
+}
+
 export async function updateTagColor(tagId: string, backgroundColor: string | null, textColor: string | null): Promise<{ tag_text: string; background_color: string | null; text_color: string | null; }> {
   const { knex: db } = await createTenantKnex();
   

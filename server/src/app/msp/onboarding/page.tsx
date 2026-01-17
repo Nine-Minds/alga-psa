@@ -39,10 +39,14 @@ export default function OnboardingPage() {
         const initialDataResult = await getOnboardingInitialData();
 
         if (initialDataResult.success && initialDataResult.data) {
-          // Merge with any existing saved data (saved data takes precedence)
+          // Merge saved progress with current user data
+          // IMPORTANT: User-specific fields (firstName, lastName, email) must always come from
+          // the current user's session, NOT from saved tenant-wide data which could contain
+          // another user's info if they previously used the wizard
+          const { firstName: _f, lastName: _l, email: _e, ...savedNonUserData } = data;
           data = {
-            ...initialDataResult.data,
-            ...data
+            ...savedNonUserData,        // Saved progress (client info, team members, etc.)
+            ...initialDataResult.data,  // Current user's identity always takes precedence
           };
         }
       } else {

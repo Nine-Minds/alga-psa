@@ -28,6 +28,7 @@ import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import DuplicateTaskDialog, { DuplicateOptions } from './DuplicateTaskDialog';
 import MoveTaskDialog from './MoveTaskDialog';
 import ProjectPhases from './ProjectPhases';
+import PhaseTaskImportDialog from './PhaseTaskImportDialog';
 import KanbanBoard from './KanbanBoard';
 import DonutChart from './DonutChart';
 import { calculateProjectCompletion } from 'server/src/lib/utils/projectUtils';
@@ -86,6 +87,7 @@ export default function ProjectDetail({
   const selectedTaskIdRef = useRef<string | null>(null); // Ref for reliable access in callbacks
   const [showQuickAdd, setShowQuickAdd] = useState(false);
   const [showPhaseQuickAdd, setShowPhaseQuickAdd] = useState(false);
+  const [showImportDialog, setShowImportDialog] = useState(false);
   const [currentPhase, setCurrentPhase] = useState<IProjectPhase | null>(null);
   const [selectedPhase, setSelectedPhase] = useState<IProjectPhase | null>(null);
 
@@ -1688,6 +1690,7 @@ export default function ProjectDetail({
               onDrop={handlePhaseDropZone}
               onDragStart={handlePhaseDragStart}
               onDragEnd={handlePhaseDragEnd}
+              onImport={() => setShowImportDialog(true)}
             />
           </div>
           )}
@@ -1858,6 +1861,23 @@ export default function ProjectDetail({
           cancelLabel="Cancel"
         />
       )}
+
+      {/* Phase/Task Import Dialog */}
+      <PhaseTaskImportDialog
+        isOpen={showImportDialog}
+        onClose={() => setShowImportDialog(false)}
+        projectId={project.project_id}
+        onImportComplete={(result) => {
+          setShowImportDialog(false);
+          if (result.success || result.tasksCreated > 0) {
+            toast.success(`Imported ${result.phasesCreated} phases and ${result.tasksCreated} tasks`);
+            // Refresh the page to show imported data
+            window.location.reload();
+          } else if (result.errors.length > 0) {
+            toast.error(`Import failed: ${result.errors[0]}`);
+          }
+        }}
+      />
     </div>
   );
 }

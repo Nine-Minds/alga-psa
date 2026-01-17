@@ -6,6 +6,7 @@ import {
   getDefaultTemplate as getDefaultTemplateImpl,
   getInvoiceTemplate as getInvoiceTemplateImpl,
   getInvoiceTemplates as getInvoiceTemplatesImpl,
+  saveInvoiceTemplate as saveInvoiceTemplateImpl,
   setClientTemplate as setClientTemplateImpl,
 } from '@alga-psa/billing/actions/invoiceTemplates';
 
@@ -25,6 +26,12 @@ export async function getDefaultTemplate(): Promise<IInvoiceTemplate | null> {
 
 export async function setClientTemplate(clientId: string, templateId: string | null): Promise<void> {
   return setClientTemplateImpl(clientId, templateId);
+}
+
+export async function saveInvoiceTemplate(
+  ...args: Parameters<typeof saveInvoiceTemplateImpl>
+): ReturnType<typeof saveInvoiceTemplateImpl> {
+  return saveInvoiceTemplateImpl(...args);
 }
 
 export async function compileAndSaveTemplate(

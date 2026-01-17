@@ -1,8 +1,9 @@
 'use client';
 
 import { useState, useRef } from 'react';
-import { IProjectPhase } from 'server/src/interfaces/project.interfaces';
+import type { IProjectPhase } from '@alga-psa/types';
 import { Button } from '@alga-psa/ui/components/Button';
+import { Upload } from 'lucide-react';
 import PhaseListItem from './PhaseListItem';
 import styles from './ProjectDetail.module.css';
 
@@ -38,6 +39,7 @@ interface ProjectPhasesProps {
   onDrop: (e: React.DragEvent, phase: IProjectPhase, beforePhaseId: string | null, afterPhaseId: string | null) => void;
   onDragStart: (e: React.DragEvent, phaseId: string) => void;
   onDragEnd: (e: React.DragEvent) => void;
+  onImport?: () => void;
 }
 
 export const ProjectPhases: React.FC<ProjectPhasesProps> = ({
@@ -69,6 +71,7 @@ export const ProjectPhases: React.FC<ProjectPhasesProps> = ({
   onDrop,
   onDragStart,
   onDragEnd,
+  onImport,
 }) => {
   const handleContainerDragOver = (e: React.DragEvent) => {
     e.preventDefault();
@@ -143,7 +146,7 @@ export const ProjectPhases: React.FC<ProjectPhasesProps> = ({
   return (
     <div className="bg-white shadow rounded-lg p-4" onDragOver={handleContainerDragOver} onDrop={handleContainerDrop}>
       <h2 className="text-xl font-bold mb-2">Project Phases</h2>
-      <div className="flex gap-2 mb-4">
+      <div className="flex gap-2 mb-4 flex-wrap">
         <Button
           id="add-task-button"
           onClick={onAddTask}
@@ -159,6 +162,17 @@ export const ProjectPhases: React.FC<ProjectPhasesProps> = ({
         >
           + Add Phase
         </Button>
+        {onImport && (
+          <Button
+            id="import-phases-tasks-button"
+            onClick={onImport}
+            variant="outline"
+            className="text-sm"
+          >
+            <Upload className="h-4 w-4 mr-1" />
+            Import
+          </Button>
+        )}
       </div>
       <ul className="space-y-2">
         {(() => {
