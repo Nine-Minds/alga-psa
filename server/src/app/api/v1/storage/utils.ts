@@ -7,12 +7,7 @@ import { ApiKeyServiceForApi } from '@/lib/services/apiKeyServiceForApi';
 import { hasPermission } from '@/lib/auth/rbac';
 import { runWithTenant } from '@/lib/db';
 import { StorageServiceError, StorageValidationError } from '@/lib/storage/api/errors';
-
-export interface StorageAuthContext {
-  tenantId: string;
-  currentUser: Awaited<ReturnType<typeof getCurrentUser>> | Awaited<ReturnType<typeof findUserByIdForApi>>;
-  authType: 'session' | 'api-key';
-}
+import type { StorageAuthContext } from '@alga-psa/types';
 
 export async function resolveStorageAuthContext(req: NextRequest): Promise<StorageAuthContext> {
   const apiKey = req.headers.get('x-api-key');

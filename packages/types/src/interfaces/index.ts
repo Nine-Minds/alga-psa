@@ -51,6 +51,7 @@ export * from './software.interfaces';
 export * from './status.interface';
 export * from './subscription.interfaces';
 export * from './survey.interface';
+export * from './storage.interfaces';
 export * from './tag.interfaces';
 export * from './taskResource.interfaces';
 export * from './tenant.interface';

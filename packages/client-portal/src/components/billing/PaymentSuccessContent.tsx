@@ -130,7 +130,7 @@ export default function PaymentSuccessContent({ invoiceId, sessionId }: PaymentS
           )}
 
           <div className="mt-8 flex flex-col gap-3">
-            <Button variant="soft" asChild>
+            <Button id="back-to-billing-button" variant="soft" asChild>
               <Link href="/client-portal/billing" id="back-to-billing-button">
                 <ArrowLeft className="h-4 w-4 mr-2" />
                 Back to Billing
@@ -138,7 +138,7 @@ export default function PaymentSuccessContent({ invoiceId, sessionId }: PaymentS
             </Button>
 
             {status === 'success' && (
-              <Button variant="solid" asChild>
+              <Button id="view-invoice-button" variant="default" asChild>
                 <Link
                   href={`/client-portal/billing/invoices/${invoiceId}`}
                   id="view-invoice-button"
@@ -154,4 +154,3 @@ export default function PaymentSuccessContent({ invoiceId, sessionId }: PaymentS
     </div>
   );
 }
-

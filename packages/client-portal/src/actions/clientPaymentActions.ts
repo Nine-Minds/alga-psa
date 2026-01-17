@@ -222,13 +222,26 @@ export async function verifyClientPortalPayment(
     }
 
     // Check payment status from the payment provider
-    const paymentStatus = await getInvoicePaymentStatus(invoiceId);
+    const paymentStatus = await getInvoicePaymentStatus(tenantId, invoiceId);
 
     // Get the most current payment URL (if needed for retry)
     const paymentUrl = await getActiveInvoicePaymentLinkUrl(tenantId, invoiceId);
 
+    if (!paymentStatus) {
+      return {
+        success: true,
+        data: {
+          status: paymentUrl ? 'pending' : 'failed',
+          invoiceNumber: invoice.invoice_number,
+          amount: invoice.total_amount,
+          currencyCode: invoice.currency_code || 'USD',
+          message: paymentUrl ? 'pending' : 'payment_not_configured',
+        },
+      };
+    }
+
     // Map payment status to client-friendly status
-    if (paymentStatus.status === 'paid') {
+    if (paymentStatus.status === 'succeeded') {
       return {
         success: true,
         data: {
@@ -248,12 +261,12 @@ export async function verifyClientPortalPayment(
           invoiceNumber: invoice.invoice_number,
           amount: invoice.total_amount,
           currencyCode: invoice.currency_code || 'USD',
-          message: paymentStatus.message,
+          message: 'processing',
         },
       };
     }
 
-    if (paymentStatus.status === 'pending') {
+    if (paymentStatus.status === 'pending' || paymentStatus.status === 'requires_action') {
       return {
         success: true,
         data: {
@@ -261,7 +274,7 @@ export async function verifyClientPortalPayment(
           invoiceNumber: invoice.invoice_number,
           amount: invoice.total_amount,
           currencyCode: invoice.currency_code || 'USD',
-          message: paymentStatus.message,
+          message: paymentStatus.status,
         },
       };
     }
@@ -273,7 +286,7 @@ export async function verifyClientPortalPayment(
         invoiceNumber: invoice.invoice_number,
         amount: invoice.total_amount,
         currencyCode: invoice.currency_code || 'USD',
-        message: paymentUrl ? paymentStatus.message : 'payment_not_configured',
+        message: paymentUrl ? paymentStatus.status : 'payment_not_configured',
       },
     };
   } catch (error) {
@@ -288,4 +301,3 @@ export async function verifyClientPortalPayment(
     return { success: false, error: 'Failed to verify payment' };
   }
 }
-

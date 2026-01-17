@@ -2,7 +2,7 @@ import { getConsolidatedTicketListData } from '@alga-psa/tickets/actions/optimiz
 import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
 import { getTicketingDisplaySettings } from '@alga-psa/tickets/actions/ticketDisplaySettings';
 import TicketingDashboardContainer from '@alga-psa/tickets/components/TicketingDashboardContainer';
-import { ITicketListFilters } from 'server/src/interfaces/ticket.interfaces';
+import type { ITicketListFilters } from '@alga-psa/types';
 
 interface TicketsPageProps {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;

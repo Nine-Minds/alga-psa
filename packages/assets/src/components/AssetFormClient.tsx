@@ -3,10 +3,9 @@
 import dynamic from 'next/dynamic';
 import AssetFormSkeleton from '@alga-psa/ui/components/skeletons/AssetFormSkeleton';
 
-// Dynamic import for AssetForm with ssr: false
-const AssetForm = dynamic(() => import('@alga-psa/assets/components/AssetForm'), {
+const AssetForm = dynamic(() => import('./AssetForm'), {
   loading: () => <AssetFormSkeleton title="Edit Asset" isEdit={true} />,
-  ssr: false
+  ssr: false,
 });
 
 interface AssetFormClientProps {
@@ -16,3 +15,4 @@ interface AssetFormClientProps {
 export default function AssetFormClient({ assetId }: AssetFormClientProps) {
   return <AssetForm assetId={assetId} />;
 }
+

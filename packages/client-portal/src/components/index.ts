@@ -6,6 +6,7 @@ export { ClientExtensionsMenu } from './ClientExtensionsMenu';
 
 export { ClientDashboard } from './dashboard/ClientDashboard';
 
+export { default as AppointmentsPage } from './appointments/AppointmentsPage';
 export { AppointmentRequestDetailsPage } from './appointments/AppointmentRequestDetailsPage';
 export { RequestAppointmentModal } from './appointments/RequestAppointmentModal';
 
@@ -27,5 +28,6 @@ export { default as ClientPortalSettingsPage } from './settings/ClientPortalSett
 
 export { SwitchToMSPButton } from './account/SwitchToMSPButton';
 export { default as ClientAccount } from './account/ClientAccount';
+export { default as LicenseManagementPage } from './account/LicenseManagementPage';
 
 export { default as ClientPortalLayout } from './layout/ClientPortalLayout';
