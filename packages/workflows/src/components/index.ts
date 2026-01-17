@@ -20,3 +20,4 @@ export { default as DynamicReactFlow } from './visualization/DynamicReactFlow';
 export { default as WorkflowVisualizer } from './visualization/WorkflowVisualizer';
 
 export { default as AutomationHub } from './automation-hub/AutomationHub';
+export { TaskForm } from './workflow/TaskForm';

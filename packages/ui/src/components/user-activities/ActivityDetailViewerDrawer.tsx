@@ -20,7 +20,7 @@ import { getTimeEntryById, saveTimeEntry } from "@alga-psa/scheduling/actions/ti
 import TicketDetails from "@alga-psa/tickets/components/ticket/TicketDetails";
 import TaskEdit from "@alga-psa/projects/components/TaskEdit";
 import EntryPopup from "@alga-psa/scheduling/components/schedule/EntryPopup";
-import { TaskForm } from "server/src/components/workflow/TaskForm";
+import { TaskForm } from "@alga-psa/workflows/components";
 import TimeEntryDialog from "@alga-psa/scheduling/components/time-management/time-entry/time-sheet/TimeEntryDialog";
 import { toast } from 'react-hot-toast';
 import { formatISO } from 'date-fns';

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Button } from '@alga-psa/ui/components/Button';
-import { Action } from '../../lib/workflow/forms/actionHandlerRegistry';
+import { Action } from 'server/src/lib/workflow/forms/actionHandlerRegistry';
 import {
   Dialog,
   DialogContent,

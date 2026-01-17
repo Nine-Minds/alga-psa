@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { DynamicForm } from './DynamicForm';
 import { submitTaskForm } from '@alga-psa/workflows/actions/workflow-actions/taskInboxActions';
-import { Action } from '../../lib/workflow/forms/actionHandlerRegistry';
+import { Action } from 'server/src/lib/workflow/forms/actionHandlerRegistry';
 
 interface TaskFormProps {
   taskId: string;

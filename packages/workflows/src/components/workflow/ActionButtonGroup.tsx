@@ -1,4 +1,4 @@
-import { Action } from '../../lib/workflow/forms/actionHandlerRegistry';
+import { Action } from 'server/src/lib/workflow/forms/actionHandlerRegistry';
 import { ActionButton } from './ActionButton';
 
 interface ActionButtonGroupProps {

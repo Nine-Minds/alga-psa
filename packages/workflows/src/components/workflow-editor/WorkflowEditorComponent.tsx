@@ -11,9 +11,9 @@ import { Switch } from '@alga-psa/ui/components/Switch';
 import { ArrowLeft, Save, BookTemplate, AlertTriangle, Tag } from 'lucide-react';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { createWorkflow, updateWorkflow, getWorkflow, testWorkflow } from '@alga-psa/workflows/actions/workflow-editor-actions';
-import WorkflowEditor from 'server/src/components/workflow-editor/WorkflowEditor';
-import WorkflowVersionsDialog from 'server/src/components/workflow-editor/WorkflowVersionsDialog';
-import TestWorkflowModal from 'server/src/components/workflow-editor/TestWorkflowModal';
+import WorkflowEditor from './WorkflowEditor';
+import WorkflowVersionsDialog from './WorkflowVersionsDialog';
+import TestWorkflowModal from './TestWorkflowModal';
 import { toast } from 'react-hot-toast';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 

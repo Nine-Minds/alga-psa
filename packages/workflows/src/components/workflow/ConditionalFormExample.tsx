@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { DynamicForm } from './DynamicForm';
 import { RJSFSchema, UiSchema } from '@rjsf/utils';
-import { Action } from '../../lib/workflow/forms/actionHandlerRegistry';
+import { Action } from 'server/src/lib/workflow/forms/actionHandlerRegistry';
 
 /**
  * Example component that demonstrates conditional display logic in forms
