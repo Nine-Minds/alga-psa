@@ -104,6 +104,7 @@ export * from './providers/BrandingProvider';
 export * from './providers/TenantProvider';
 export * from './providers/PostHogProvider';
 export * from './providers/DynamicExtensionProvider';
+export * from './extensions/DynamicNavigationSlot';
 export * from './skeletons/AssetFormSkeleton';
 export { default as AssetFormSkeleton } from './skeletons/AssetFormSkeleton';
 export * from './skeletons/CalendarSkeleton';

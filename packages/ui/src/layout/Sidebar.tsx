@@ -18,7 +18,7 @@ import SidebarMenuItem from './SidebarMenuItem';
 import SidebarSubMenuItem from './SidebarSubMenuItem';
 import SidebarBottomMenuItem from './SidebarBottomMenuItem';
 import { Button } from '@alga-psa/ui/components/Button';
-import { DynamicNavigationSlot } from 'server/src/components/extensions/DynamicNavigationSlot';
+import { DynamicNavigationSlot } from '../components/extensions/DynamicNavigationSlot';
 import { ExternalLink, ChevronLeft } from 'lucide-react';
 import { getAppVersion } from 'server/src/lib/utils/version';
 
