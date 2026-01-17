@@ -44,6 +44,7 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   // Task/project details
   'task_checklist_items', 'project_task_dependencies', 'task_resources',
   'project_ticket_links', 'project_task_comments',
+  'project_materials', 'ticket_materials',
 
   // Project template details
   'project_template_checklist_items', 'project_template_dependencies',
@@ -89,6 +90,13 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   'extension_execution_log', 'extension_execution_log_old',
   'extension_quota_usage', 'extension_quota_usage_old',
   'extension_audit_logs', 'extension_event_subscription',
+  'extension_settings', 'extension_storage',
+
+  // Chat and messages
+  'messages', 'chats',
+
+  // Vector embeddings
+  'vectors',
 
   // Custom reports
   'custom_reports',
@@ -283,6 +291,7 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   // Extension installation (must come before tenant_settings)
   'tenant_extension_schedule', 'tenant_extension_install_secrets',
   'tenant_extension_install_config', 'tenant_extension_install',
+  'extensions',
 
   // Tenant settings last (before tenant itself)
   'tenant_settings',
