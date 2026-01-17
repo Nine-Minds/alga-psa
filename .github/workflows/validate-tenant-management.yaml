@@ -64,19 +64,26 @@ jobs:
           done
           echo "Postgres is ready!"
 
-      - name: Run CE migrations
+      - name: Create secrets directory
+        run: |
+          mkdir -p secrets
+          echo -n "test_password" > secrets/postgres_password
+          echo -n "test_password" > secrets/db_password_server
+          chmod 600 secrets/*
+
+      - name: Create database and roles
         working-directory: ./server
         env:
           DB_HOST: localhost
           DB_PORT: 5432
-          DB_USER_ADMIN: postgres
-          DB_PASSWORD_ADMIN: test_password
           DB_NAME_SERVER: alga_test
-          DB_TYPE: postgres
-        run: npx knex migrate:latest --knexfile knexfile.cjs --env migration
+          DB_USER_SERVER: app_user
+          DB_PASSWORD_ADMIN: test_password
+          DB_PASSWORD_SERVER: test_password
+          APP_ENV: test
+        run: node setup/create_database.js
 
-      - name: Run EE migrations
-        working-directory: ./ee/server
+      - name: Run combined migrations
         env:
           DB_HOST: localhost
           DB_PORT: 5432
@@ -84,8 +91,35 @@ jobs:
           DB_PASSWORD_ADMIN: test_password
           DB_NAME_SERVER: alga_test
           DB_TYPE: postgres
-        run: npx knex migrate:latest --knexfile knexfile.cjs --env migration
-        continue-on-error: true # EE migrations may not exist or may have dependencies
+        run: |
+          # Combine CE and EE migrations into single directory (same as entrypoint.sh)
+          mkdir -p server/combined-migrations
+          cp server/migrations/*.cjs server/combined-migrations/ 2>/dev/null || true
+          cp ee/server/migrations/*.cjs server/combined-migrations/ 2>/dev/null || true
+
+          # Create temporary knexfile for combined migrations
+          cat > server/knexfile-combined.cjs << 'EOF'
+          module.exports = {
+            migration: {
+              client: 'pg',
+              connection: {
+                host: process.env.DB_HOST || 'localhost',
+                port: process.env.DB_PORT || '5432',
+                user: process.env.DB_USER_ADMIN || 'postgres',
+                password: process.env.DB_PASSWORD_ADMIN,
+                database: process.env.DB_NAME_SERVER || 'alga_test',
+              },
+              pool: { min: 2, max: 20 },
+              migrations: { directory: './combined-migrations' }
+            }
+          };
+          EOF
+
+          # Run migrations
+          cd server && npx knex migrate:latest --knexfile knexfile-combined.cjs --env migration
+
+          # Clean up
+          rm -rf combined-migrations knexfile-combined.cjs
 
       - name: Validate tenant management schema
         env:
