@@ -34,7 +34,7 @@ import { QuickAddTicket } from '@alga-psa/tickets/components/QuickAddTicket';
 import { Button } from '@alga-psa/ui/components/Button';
 import { ExternalLink, Trash2 } from 'lucide-react';
 import BackNav from '@alga-psa/ui/components/BackNav';
-import TaxSettingsForm from 'server/src/components/TaxSettingsForm';
+import { TaxSettingsForm } from '@alga-psa/billing/components';
 import InteractionsFeed from '../interactions/InteractionsFeed';
 import { IInteraction } from 'server/src/interfaces/interaction.interfaces';
 import { useDrawer } from "server/src/context/DrawerContext";

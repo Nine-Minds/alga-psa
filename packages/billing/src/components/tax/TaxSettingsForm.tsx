@@ -1,8 +1,18 @@
+'use client';
+
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { getClientTaxSettings, updateClientTaxSettings, getTaxRates, createDefaultTaxSettings, updateClientTaxExemptStatus, getClientTaxExemptStatus } from '../lib/actions/taxSettingsActions';
-import { canClientOverrideTaxSource, getEffectiveTaxSourceForClient } from '../lib/actions/taxSourceActions';
-import { IClientTaxSettings, ITaxRate, ITaxComponent, ITaxRateThreshold, ITaxHoliday, TaxSource } from '../interfaces/tax.interfaces';
+import {
+  createDefaultTaxSettings,
+  getClientTaxExemptStatus,
+  getClientTaxSettings,
+  getTaxRates,
+  updateClientTaxExemptStatus,
+  updateClientTaxSettings,
+} from '@alga-psa/billing/actions/taxSettingsActions';
+import { canClientOverrideTaxSource, getEffectiveTaxSourceForClient } from '@alga-psa/billing/actions/taxSourceActions';
+import type { TaxSource } from '@alga-psa/types';
+import { IClientTaxSettings, ITaxRate, ITaxComponent, ITaxRateThreshold, ITaxHoliday } from 'server/src/interfaces/tax.interfaces';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
