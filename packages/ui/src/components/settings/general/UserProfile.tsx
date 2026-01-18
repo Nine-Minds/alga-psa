@@ -22,10 +22,10 @@ import {
   updateUserPreferenceAction
 } from 'server/src/lib/actions/notification-actions/notificationActions';
 import { InternalNotificationPreferences } from '@alga-psa/ui/components/settings/notifications/InternalNotificationPreferences';
-import PasswordChangeForm from 'server/src/components/settings/general/PasswordChangeForm';
-import ApiKeysSetup from 'server/src/components/settings/api/ApiKeysSetup';
-import UserAvatarUpload from 'server/src/components/settings/profile/UserAvatarUpload';
-import SessionManagement from 'server/src/components/settings/security/SessionManagement';
+import PasswordChangeForm from './PasswordChangeForm';
+import ApiKeysSetup from '../api/ApiKeysSetup';
+import UserAvatarUpload from '../profile/UserAvatarUpload';
+import SessionManagement from '../security/SessionManagement';
 import { toast } from 'react-hot-toast';
 import { getUserAvatarUrlAction } from '@/lib/actions/avatar-actions';
 import { validateContactName, validateEmailAddress, validatePhoneNumber } from 'server/src/lib/utils/clientFormValidation';

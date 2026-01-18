@@ -23,7 +23,7 @@ import { Input } from '@alga-psa/ui/components/Input';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import CategoryPicker from '@alga-psa/tickets/components/CategoryPicker';
 import UserPicker from '@alga-psa/ui/components/UserPicker';
-import { BoardPicker } from 'server/src/components/settings/general/BoardPicker';
+import { BoardPicker } from '@alga-psa/ui/components/settings/general/BoardPicker';
 import { IBoard } from 'server/src/interfaces';
 import { getTicketCategories } from 'server/src/lib/actions/ticketCategoryActions';
 import { getAllBoards } from 'server/src/lib/actions/board-actions/boardActions';

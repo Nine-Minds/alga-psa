@@ -7,7 +7,7 @@ import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
 import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
-import { BoardPicker } from 'server/src/components/settings/general/BoardPicker';
+import { BoardPicker } from '@alga-psa/ui/components/settings/general/BoardPicker';
 import CategoryPicker from '@alga-psa/tickets/components/CategoryPicker';
 import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect';
 import { getTicketsForListWithCursor } from '@alga-psa/tickets/actions/optimizedTicketActions';

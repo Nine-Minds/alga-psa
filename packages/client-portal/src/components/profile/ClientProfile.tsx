@@ -19,8 +19,8 @@ import {
 } from 'server/src/lib/actions/notification-actions/notificationActions';
 import type { NotificationCategory, NotificationSubtype, UserNotificationPreference } from 'server/src/lib/models/notification';
 import type { IUserWithRoles } from 'server/src/types';
-import PasswordChangeForm from 'server/src/components/settings/general/PasswordChangeForm';
-import SessionManagement from 'server/src/components/settings/security/SessionManagement';
+import PasswordChangeForm from '@alga-psa/ui/components/settings/general/PasswordChangeForm';
+import SessionManagement from '@alga-psa/ui/components/settings/security/SessionManagement';
 import { toast } from 'react-hot-toast';
 import ContactAvatarUpload from '../contacts/ContactAvatarUpload';
 import { getContactAvatarUrlAction } from 'server/src/lib/actions/avatar-actions';

@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
 import CustomTabs from '@alga-psa/ui/components/CustomTabs';
-import NumberingSettings from 'server/src/components/settings/general/NumberingSettings';
+import NumberingSettings from '@alga-psa/ui/components/settings/general/NumberingSettings';
 import { TenantProjectTaskStatusSettings } from './projects/TenantProjectTaskStatusSettings';
 import { ProjectStatusSettings } from './projects/ProjectStatusSettings';
 import TaskPrioritySettings from './projects/TaskPrioritySettings';

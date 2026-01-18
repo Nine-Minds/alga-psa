@@ -13,7 +13,7 @@ import { getTicketFormData } from '../actions/ticketFormActions';
 import { getTicketCategoriesByBoard, BoardCategoryData } from 'server/src/lib/actions/ticketCategoryActions';
 import { IUser, IBoard, ITicketStatus, IPriority, IStandardPriority, IClient, IClientLocation, IContact, ITicket, ITicketCategory } from 'server/src/interfaces';
 import { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
-import { BoardPicker } from 'server/src/components/settings/general/BoardPicker';
+import { BoardPicker } from '@alga-psa/ui/components/settings/general/BoardPicker';
 import { ClientPicker } from '@alga-psa/clients/components/clients/ClientPicker';
 import { CategoryPicker } from './CategoryPicker';
 import { ContactPicker } from '@alga-psa/ui/components/ContactPicker';

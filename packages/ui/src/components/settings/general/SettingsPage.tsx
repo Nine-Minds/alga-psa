@@ -6,32 +6,32 @@ import dynamic from 'next/dynamic';
 import { Settings, Globe, UserCog, Users, MessageSquare, Layers, Handshake, Bell, Clock, CreditCard, Download, Mail, Plug, Puzzle } from 'lucide-react';
 import CustomTabs, { TabContent } from "@alga-psa/ui/components/CustomTabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@alga-psa/ui/components/Card";
-import GeneralSettings from 'server/src/components/settings/general/GeneralSettings';
-import UserManagement from 'server/src/components/settings/general/UserManagement';
-import ClientPortalSettings from 'server/src/components/settings/general/ClientPortalSettings';
+import GeneralSettings from './GeneralSettings';
+import UserManagement from './UserManagement';
+import ClientPortalSettings from './ClientPortalSettings';
 import SettingsTabSkeleton from '@alga-psa/ui/components/skeletons/SettingsTabSkeleton';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 import { UnsavedChangesProvider } from "server/src/contexts/UnsavedChangesContext";
 
 // Dynamic imports for heavy settings components
-const TicketingSettings = dynamic(() => import('server/src/components/settings/general/TicketingSettings'), {
+const TicketingSettings = dynamic(() => import('./TicketingSettings'), {
   loading: () => <SettingsTabSkeleton title="Ticketing Settings" description="Loading ticketing configuration..." />,
   ssr: false
 });
 
-const TeamManagement = dynamic(() => import('server/src/components/settings/general/TeamManagement'), {
+const TeamManagement = dynamic(() => import('./TeamManagement'), {
   loading: () => <SettingsTabSkeleton title="Team Management" description="Loading team configuration..." showTabs={false} />,
   ssr: false
 });
-import InteractionSettings from 'server/src/components/settings/general/InteractionSettings';
+import InteractionSettings from './InteractionSettings';
 import { TimeEntrySettings } from '@alga-psa/scheduling/components';
 import { BillingSettings } from '@alga-psa/billing/components'; // Import the new component
-import NumberingSettings from 'server/src/components/settings/general/NumberingSettings';
-import NotificationsTab from 'server/src/components/settings/general/NotificationsTab';
+import NumberingSettings from './NumberingSettings';
+import NotificationsTab from './NotificationsTab';
 // Removed import: import IntegrationsTabLoader from './IntegrationsTabLoader';
 import { IntegrationsSettingsPage } from '@alga-psa/integrations/components';
 import { useSearchParams } from 'next/navigation';
-import ImportExportSettings from 'server/src/components/settings/import-export/ImportExportSettings';
+import ImportExportSettings from '../import-export/ImportExportSettings';
 // Extensions are only available in Enterprise Edition
 import { EmailSettings } from '@alga-psa/integrations/email/settings/entry';
 import { EmailProviderConfiguration } from '@alga-psa/integrations/components';

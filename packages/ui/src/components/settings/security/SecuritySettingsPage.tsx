@@ -7,27 +7,27 @@ import { useSearchParams } from 'next/navigation';
 import SettingsTabSkeleton from '@alga-psa/ui/components/skeletons/SettingsTabSkeleton';
 
 // Dynamic imports for heavy settings components
-const RoleManagement = dynamic(() => import('server/src/components/settings/policy/RoleManagement'), {
+const RoleManagement = dynamic(() => import('../policy/RoleManagement'), {
   loading: () => <SettingsTabSkeleton title="Role Management" description="Loading role configuration..." />,
   ssr: false
 });
 
-const PermissionsMatrix = dynamic(() => import('server/src/components/settings/policy/PermissionsMatrix'), {
+const PermissionsMatrix = dynamic(() => import('../policy/PermissionsMatrix'), {
   loading: () => <SettingsTabSkeleton title="Permissions Matrix" description="Loading permissions configuration..." showTable={true} showForm={false} />,
   ssr: false
 });
 
-const UserRoleAssignment = dynamic(() => import('server/src/components/settings/policy/UserRoleAssignment'), {
+const UserRoleAssignment = dynamic(() => import('../policy/UserRoleAssignment'), {
   loading: () => <SettingsTabSkeleton title="User Role Assignment" description="Loading user role configuration..." showDropdowns={true} />,
   ssr: false
 });
 
-const PolicyManagement = dynamic(() => import('server/src/components/settings/policy/PolicyManagement'), {
+const PolicyManagement = dynamic(() => import('../policy/PolicyManagement'), {
   loading: () => <SettingsTabSkeleton title="Policy Management" description="Loading policy configuration..." showTextArea={true} showTable={true} noCard={true} />,
   ssr: false
 });
 
-const AdminApiKeysSetup = dynamic(() => import('server/src/components/settings/api/AdminApiKeysSetup'), {
+const AdminApiKeysSetup = dynamic(() => import('../api/AdminApiKeysSetup'), {
   loading: () => <SettingsTabSkeleton title="API Keys" description="Loading API key configuration..." />,
   ssr: false
 });
@@ -46,7 +46,7 @@ const SsoBulkAssignment = dynamic(
   },
 );
 
-const AdminSessionManagement = dynamic(() => import('server/src/components/settings/security/AdminSessionManagement'), {
+const AdminSessionManagement = dynamic(() => import('./AdminSessionManagement'), {
   loading: () => <SettingsTabSkeleton title="Sessions" description="Loading active sessions..." showTable={true} />,
   ssr: false
 });

@@ -10,7 +10,7 @@ import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { X } from 'lucide-react';
-import { BoardPicker } from 'server/src/components/settings/general/BoardPicker';
+import { BoardPicker } from '@alga-psa/ui/components/settings/general/BoardPicker';
 import { PrioritySelect } from '@alga-psa/tickets/components/PrioritySelect';
 import type { SurveyTemplate, SurveyTrigger } from '@alga-psa/surveys/actions/surveyActions';
 import {

@@ -14,7 +14,7 @@ import { Input } from '@alga-psa/ui/components/Input';
 import { Switch } from '@alga-psa/ui/components/Switch';
 import { Label } from '@alga-psa/ui/components/Label';
 import { getCurrentUser, getCurrentUserPermissions } from 'server/src/lib/actions/user-actions/userActions';
-import { BoardPicker } from 'server/src/components/settings/general/BoardPicker';
+import { BoardPicker } from '@alga-psa/ui/components/settings/general/BoardPicker';
 import { ClientPicker } from '@alga-psa/clients/components/clients/ClientPicker';
 import { findTagsByEntityIds } from 'server/src/lib/actions/tagActions';
 import { TagFilter } from '@alga-psa/ui/components';

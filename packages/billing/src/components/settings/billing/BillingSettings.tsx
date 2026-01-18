@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@alga
 import { Skeleton } from '@alga-psa/ui/components/Skeleton';
 import Spinner from '@alga-psa/ui/components/Spinner';
 import CustomTabs, { TabContent } from '@alga-psa/ui/components/CustomTabs';
-import NumberingSettings from 'server/src/components/settings/general/NumberingSettings';
+import NumberingSettings from '@alga-psa/ui/components/settings/general/NumberingSettings';
 import ZeroDollarInvoiceSettings from './ZeroDollarInvoiceSettings';
 import CreditExpirationSettings from './CreditExpirationSettings';
 import { TaxSourceSettings } from '../tax/TaxSourceSettings';

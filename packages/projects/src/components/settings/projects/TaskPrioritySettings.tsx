@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import PrioritySettings from 'server/src/components/settings/general/PrioritySettings';
+import PrioritySettings from '@alga-psa/ui/components/settings/general/PrioritySettings';
 
 /**
  * Task Priority Settings
