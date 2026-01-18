@@ -29,7 +29,7 @@ import { BillingSettings } from '@alga-psa/billing/components'; // Import the ne
 import NumberingSettings from 'server/src/components/settings/general/NumberingSettings';
 import NotificationsTab from 'server/src/components/settings/general/NotificationsTab';
 // Removed import: import IntegrationsTabLoader from './IntegrationsTabLoader';
-import IntegrationsSettingsPage from 'server/src/components/settings/integrations/IntegrationsSettingsPage';
+import { IntegrationsSettingsPage } from '@alga-psa/integrations/components';
 import { useSearchParams } from 'next/navigation';
 import ImportExportSettings from 'server/src/components/settings/import-export/ImportExportSettings';
 // Extensions are only available in Enterprise Edition
