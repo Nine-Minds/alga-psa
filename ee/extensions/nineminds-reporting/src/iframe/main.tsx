@@ -803,8 +803,23 @@ function SimpleBarChart({ data, labelKey, valueKey, title }: {
 }
 
 // Intelligent results renderer
-function ResultsRenderer({ results }: { results: ReportResult }) {
+function ResultsRenderer({ results, report }: { results: ReportResult; report?: PlatformReport }) {
   const { metrics, metadata, parameters, executedAt } = results;
+
+  // Build a map of metric ID -> metric name from report definition
+  const metricNames: Record<string, string> = {};
+  if (report?.report_definition?.metrics) {
+    report.report_definition.metrics.forEach(m => {
+      if (m.id && m.name) {
+        metricNames[m.id] = m.name;
+      }
+    });
+  }
+
+  // Helper to get display name for a metric
+  const getMetricDisplayName = (metricId: string): string => {
+    return metricNames[metricId] || metricId.replace(/_/g, ' ').replace(/metric /i, '');
+  };
 
   // Detect if data is a single count result
   const isSingleCount = (data: unknown[]): boolean => {
@@ -878,17 +893,20 @@ function ResultsRenderer({ results }: { results: ReportResult }) {
 
         if (!Array.isArray(data)) return null;
 
-        // Single count value → StatCard
+        const displayName = getMetricDisplayName(metricId);
+
+        // Single count value → StatCard (fit-to-content width)
         if (isSingleCount(data)) {
           const row = data[0] as Record<string, unknown>;
           const countKey = Object.keys(row)[0];
           return (
-            <StatCard
-              key={metricId}
-              title={metricId.replace(/_/g, ' ').replace(/metric /i, '')}
-              value={Number(row[countKey]).toLocaleString()}
-              subtitle="Total count"
-            />
+            <div key={metricId} style={{ display: 'inline-block' }}>
+              <StatCard
+                title={displayName}
+                value={Number(row[countKey]).toLocaleString()}
+                subtitle="Total count"
+              />
+            </div>
           );
         }
 
@@ -901,15 +919,15 @@ function ResultsRenderer({ results }: { results: ReportResult }) {
                 data={data}
                 labelKey={grouped.labelKey}
                 valueKey={grouped.valueKey}
-                title={`${metricId.replace(/_/g, ' ')} (Chart)`}
+                title={`${displayName} (Chart)`}
               />
-              <ResultsTable data={data} title={`${metricId.replace(/_/g, ' ')} (Data)`} />
+              <ResultsTable data={data} title={`${displayName} (Data)`} />
             </div>
           );
         }
 
         // Default → Table
-        return <ResultsTable key={metricId} data={data} title={metricId.replace(/_/g, ' ')} />;
+        return <ResultsTable key={metricId} data={data} title={displayName} />;
       })}
 
       {/* Raw JSON toggle */}
@@ -1192,7 +1210,7 @@ function ReportDetail({
       {results && (
         <div style={{ marginTop: '16px' }}>
           <h3>Results</h3>
-          <ResultsRenderer results={results} />
+          <ResultsRenderer results={results} report={report} />
         </div>
       )}
     </div>
@@ -1587,24 +1605,30 @@ function CreateReport() {
                           setRawSqlMode(prev => ({ ...prev, [metric.id]: true }));
                           // Initialize raw SQL from current query if not set
                           if (!rawSqlText[metric.id]) {
-                            const fields = metric.query.fields.join(', ') || '*';
-                            const from = metric.query.table || 'table_name';
-                            let sql = `SELECT ${fields}\nFROM ${from}`;
-                            if ((metric.query.joins || []).length > 0) {
-                              metric.query.joins!.forEach(j => {
-                                const joinType = j.type.toUpperCase();
-                                const onClauses = j.on.map(c => `${c.left} = ${c.right}`).join(' AND ');
-                                sql += `\n${joinType} JOIN ${j.table} ON ${onClauses}`;
-                              });
+                            // If already in raw_sql mode, use the existing SQL from fields[0]
+                            if (metric.query.table === 'raw_sql' && metric.query.fields?.[0]) {
+                              setRawSqlText(prev => ({ ...prev, [metric.id]: metric.query.fields[0] }));
+                            } else {
+                              // Generate SQL from builder state
+                              const fields = metric.query.fields.join(', ') || '*';
+                              const from = metric.query.table || 'table_name';
+                              let sql = `SELECT ${fields}\nFROM ${from}`;
+                              if ((metric.query.joins || []).length > 0) {
+                                metric.query.joins!.forEach(j => {
+                                  const joinType = j.type.toUpperCase();
+                                  const onClauses = j.on.map(c => `${c.left} = ${c.right}`).join(' AND ');
+                                  sql += `\n${joinType} JOIN ${j.table} ON ${onClauses}`;
+                                });
+                              }
+                              if ((metric.query.filters || []).length > 0) {
+                                const whereClause = metric.query.filters!.map(f => `${f.field} ${f.operator} '${f.value}'`).join(' AND ');
+                                sql += `\nWHERE ${whereClause}`;
+                              }
+                              if ((metric.query.groupBy || []).length > 0) {
+                                sql += `\nGROUP BY ${metric.query.groupBy!.join(', ')}`;
+                              }
+                              setRawSqlText(prev => ({ ...prev, [metric.id]: sql }));
                             }
-                            if ((metric.query.filters || []).length > 0) {
-                              const whereClause = metric.query.filters!.map(f => `${f.field} ${f.operator} '${f.value}'`).join(' AND ');
-                              sql += `\nWHERE ${whereClause}`;
-                            }
-                            if ((metric.query.groupBy || []).length > 0) {
-                              sql += `\nGROUP BY ${metric.query.groupBy!.join(', ')}`;
-                            }
-                            setRawSqlText(prev => ({ ...prev, [metric.id]: sql }));
                           }
                         }}
                       >
@@ -2021,6 +2045,37 @@ function CreateReport() {
   );
 }
 
+// Helper: Extract parameter placeholders from report definition
+function extractReportParameters(report: PlatformReport): string[] {
+  const params = new Set<string>();
+  const regex = /\{\{(\w+)\}\}/g;
+
+  // Search in all metric queries
+  report.report_definition.metrics?.forEach(metric => {
+    // Check fields (raw SQL)
+    metric.query.fields?.forEach(field => {
+      let match;
+      while ((match = regex.exec(field)) !== null) {
+        params.add(match[1]);
+      }
+    });
+    // Check filters
+    metric.query.filters?.forEach(filter => {
+      if (typeof filter.value === 'string') {
+        let match;
+        while ((match = regex.exec(filter.value)) !== null) {
+          params.add(match[1]);
+        }
+      }
+    });
+  });
+
+  return Array.from(params);
+}
+
+// Known tenant-related parameters that can use dropdowns
+const TENANT_PARAMETERS = ['tenant', 'email', 'client_name'];
+
 function ExecuteReport() {
   const [reports, setReports] = useState<PlatformReport[]>([]);
   const [selectedReportId, setSelectedReportId] = useState('');
@@ -2030,6 +2085,14 @@ function ExecuteReport() {
   const [results, setResults] = useState<ReportResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [showParamsHelp, setShowParamsHelp] = useState(false);
+  const [showAdvancedJson, setShowAdvancedJson] = useState(false);
+
+  // Parameter dropdown state
+  const [tenants, setTenants] = useState<Tenant[]>([]);
+  const [tenantsLoading, setTenantsLoading] = useState(false);
+  const [selectedFilterParam, setSelectedFilterParam] = useState<string>('');
+  const [selectedFilterValue, setSelectedFilterValue] = useState<string>('');
+  const [tenantSearch, setTenantSearch] = useState('');
 
   useEffect(() => {
     async function fetchReports() {
@@ -2045,11 +2108,69 @@ function ExecuteReport() {
 
   const selectedReport = reports.find(r => r.report_id === selectedReportId);
 
+  // Extract parameters from selected report
+  const reportParams = selectedReport ? extractReportParameters(selectedReport) : [];
+  const hasTenantParams = reportParams.some(p => TENANT_PARAMETERS.includes(p));
+  const tenantParamsInReport = reportParams.filter(p => TENANT_PARAMETERS.includes(p));
+
+  // Fetch tenants when report with tenant params is selected
+  useEffect(() => {
+    if (hasTenantParams && tenants.length === 0 && !tenantsLoading) {
+      setTenantsLoading(true);
+      callTenantManagementApi<Tenant[]>('/tenants').then(result => {
+        if (result.success && result.data) {
+          setTenants(result.data);
+        }
+        setTenantsLoading(false);
+      });
+    }
+  }, [hasTenantParams, tenants.length, tenantsLoading]);
+
+  // Reset filter selections when report changes
+  useEffect(() => {
+    setSelectedFilterParam('');
+    setSelectedFilterValue('');
+    setTenantSearch('');
+    setResults(null);
+    setError(null);
+  }, [selectedReportId]);
+
   // Build report options for Select
   const reportOptions: SelectOption[] = reports.map(report => ({
     value: report.report_id,
     label: `${report.name}${report.category ? ` (${report.category})` : ''}`,
   }));
+
+  // Build filter parameter options
+  const filterParamOptions: SelectOption[] = tenantParamsInReport.map(param => ({
+    value: param,
+    label: param === 'tenant' ? 'Tenant UUID' :
+           param === 'email' ? 'User Email' :
+           param === 'client_name' ? 'Company Name' : param,
+  }));
+
+  // Build value options based on selected filter parameter
+  const getFilterValueOptions = (): SelectOption[] => {
+    const searchLower = tenantSearch.toLowerCase();
+    const filtered = tenants.filter(t => {
+      if (!tenantSearch) return true;
+      return (
+        t.client_name?.toLowerCase().includes(searchLower) ||
+        t.email?.toLowerCase().includes(searchLower) ||
+        t.tenant?.toLowerCase().includes(searchLower)
+      );
+    });
+
+    return filtered.map(t => {
+      if (selectedFilterParam === 'tenant') {
+        return { value: t.tenant, label: `${t.client_name} (${t.tenant.substring(0, 8)}...)` };
+      } else if (selectedFilterParam === 'email') {
+        return { value: t.email || '', label: `${t.email || 'No email'} - ${t.client_name}` };
+      } else {
+        return { value: t.client_name, label: t.client_name };
+      }
+    }).filter(opt => opt.value); // Remove empty values
+  };
 
   const handleExecute = async () => {
     if (!selectedReportId) {
@@ -2061,13 +2182,24 @@ function ExecuteReport() {
     setError(null);
     setResults(null);
 
-    let parsedParams = {};
-    try {
-      parsedParams = JSON.parse(parameters);
-    } catch {
-      setError('Invalid JSON in parameters');
-      setExecuting(false);
-      return;
+    let parsedParams: Record<string, string> = {};
+
+    // If using dropdown mode, build params from selections
+    if (hasTenantParams && selectedFilterParam && selectedFilterValue && !showAdvancedJson) {
+      // Set all tenant params to empty, then set the selected one
+      tenantParamsInReport.forEach(p => {
+        parsedParams[p] = '';
+      });
+      parsedParams[selectedFilterParam] = selectedFilterValue;
+    } else {
+      // Parse from JSON
+      try {
+        parsedParams = JSON.parse(parameters);
+      } catch {
+        setError('Invalid JSON in parameters');
+        setExecuting(false);
+        return;
+      }
     }
 
     const result = await callExtensionApi<ReportResult>(`/${selectedReportId}/execute`, {
@@ -2130,73 +2262,147 @@ function ExecuteReport() {
           </Card>
         )}
 
+        {/* Parameter Input Section */}
         <div style={{ marginBottom: '16px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-            <Text style={{ fontWeight: 500 }}>Parameters (JSON)</Text>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setShowParamsHelp(!showParamsHelp)}
-              style={{ fontSize: '0.75rem' }}
-            >
-              {showParamsHelp ? 'Hide Help' : 'What are parameters?'}
-            </Button>
-          </div>
-
-          {showParamsHelp && (
-            <Card style={{
-              background: 'var(--alga-card-bg)',
-              marginBottom: '12px',
-              fontSize: '0.8rem',
-            }}>
-              <div style={{ marginBottom: '12px' }}>
-                <strong>How Parameters Work</strong>
-                <p style={{ margin: '8px 0' }}>
-                  In your report filters, use <code style={{ background: 'var(--alga-muted)', padding: '2px 6px', borderRadius: '4px' }}>{'{{param_name}}'}</code> as the value.
-                  Then pass the actual value here when executing.
-                </p>
+          {/* Show dropdown UI for reports with tenant parameters */}
+          {hasTenantParams && !showAdvancedJson && (
+            <>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                <Text style={{ fontWeight: 500 }}>Filter By</Text>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowAdvancedJson(true)}
+                  style={{ fontSize: '0.75rem' }}
+                >
+                  Advanced (JSON)
+                </Button>
               </div>
 
+              {/* Filter parameter selector */}
               <div style={{ marginBottom: '12px' }}>
-                <strong>Example: Report with status filter</strong>
-                <div style={{ background: 'var(--alga-muted)', padding: '8px', borderRadius: '4px', marginTop: '4px', fontSize: '0.75rem' }}>
-                  <div>Filter in report: <code>status</code> <code>eq</code> <code>{'{{status_filter}}'}</code></div>
-                  <div style={{ marginTop: '4px' }}>Parameters to pass: <code>{`{"status_filter": "active"}`}</code></div>
+                <CustomSelect
+                  options={filterParamOptions}
+                  placeholder="Select filter type..."
+                  value={selectedFilterParam}
+                  onValueChange={(value) => {
+                    setSelectedFilterParam(value);
+                    setSelectedFilterValue('');
+                    setTenantSearch('');
+                  }}
+                />
+              </div>
+
+              {/* Value selector with search */}
+              {selectedFilterParam && (
+                <div style={{ marginBottom: '12px' }}>
+                  <Text style={{ display: 'block', marginBottom: '6px', fontWeight: 500 }}>
+                    Select {selectedFilterParam === 'tenant' ? 'Tenant' :
+                            selectedFilterParam === 'email' ? 'by Email' : 'Company'}
+                  </Text>
+                  <Input
+                    type="text"
+                    placeholder="Search tenants..."
+                    value={tenantSearch}
+                    onChange={(e) => setTenantSearch(e.target.value)}
+                    style={{ marginBottom: '8px' }}
+                  />
+                  {tenantsLoading ? (
+                    <LoadingIndicator size="sm" text="Loading tenants..." />
+                  ) : (
+                    <CustomSelect
+                      options={getFilterValueOptions()}
+                      placeholder={`Select ${selectedFilterParam}...`}
+                      value={selectedFilterValue}
+                      onValueChange={setSelectedFilterValue}
+                    />
+                  )}
+                  {selectedFilterValue && (
+                    <Text tone="muted" style={{ display: 'block', fontSize: '0.75rem', marginTop: '4px' }}>
+                      Will execute with: <code>{selectedFilterParam}={selectedFilterValue}</code>
+                    </Text>
+                  )}
                 </div>
-              </div>
-
-              <div style={{ marginBottom: '12px' }}>
-                <strong>Example: Date range filter</strong>
-                <div style={{ background: 'var(--alga-muted)', padding: '8px', borderRadius: '4px', marginTop: '4px', fontSize: '0.75rem' }}>
-                  <div>Filter 1: <code>created_at</code> <code>gte</code> <code>{'{{start_date}}'}</code></div>
-                  <div>Filter 2: <code>created_at</code> <code>lte</code> <code>{'{{end_date}}'}</code></div>
-                  <div style={{ marginTop: '4px' }}>Parameters: <code>{`{"start_date": "2025-01-01", "end_date": "2025-12-31"}`}</code></div>
-                </div>
-              </div>
-
-              <div>
-                <strong>Built-in Parameters (always available)</strong>
-                <ul style={{ margin: '4px 0 0 0', paddingLeft: '20px', fontSize: '0.75rem' }}>
-                  <li><code>{'{{start_of_month}}'}</code> - First day of current month</li>
-                  <li><code>{'{{end_of_month}}'}</code> - First day of next month</li>
-                  <li><code>{'{{start_of_year}}'}</code> - January 1st of current year</li>
-                  <li><code>{'{{end_of_year}}'}</code> - January 1st of next year</li>
-                  <li><code>{'{{current_date}}'}</code> - Current timestamp</li>
-                </ul>
-              </div>
-            </Card>
+              )}
+            </>
           )}
 
-          <textarea
-            style={{ ...textareaStyle, fontFamily: 'monospace', resize: 'vertical', fontSize: '0.875rem' }}
-            value={parameters}
-            onChange={(e) => setParameters(e.target.value)}
-            rows={3}
-            placeholder='{}'
-          />
-          <Text tone="muted" style={{ display: 'block', fontSize: '0.75rem', marginTop: '4px' }}>
-            Leave empty <code>{'{}'}</code> to use default parameters
-          </Text>
+          {/* Show JSON editor for non-tenant params or when advanced mode is enabled */}
+          {(!hasTenantParams || showAdvancedJson) && (
+            <>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                <Text style={{ fontWeight: 500 }}>Parameters (JSON)</Text>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  {hasTenantParams && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setShowAdvancedJson(false)}
+                      style={{ fontSize: '0.75rem' }}
+                    >
+                      Use Dropdowns
+                    </Button>
+                  )}
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setShowParamsHelp(!showParamsHelp)}
+                    style={{ fontSize: '0.75rem' }}
+                  >
+                    {showParamsHelp ? 'Hide Help' : 'Help'}
+                  </Button>
+                </div>
+              </div>
+
+              {showParamsHelp && (
+                <Card style={{
+                  background: 'var(--alga-card-bg)',
+                  marginBottom: '12px',
+                  fontSize: '0.8rem',
+                }}>
+                  <div style={{ marginBottom: '12px' }}>
+                    <strong>How Parameters Work</strong>
+                    <p style={{ margin: '8px 0' }}>
+                      In your report filters, use <code style={{ background: 'var(--alga-muted)', padding: '2px 6px', borderRadius: '4px' }}>{'{{param_name}}'}</code> as the value.
+                      Then pass the actual value here when executing.
+                    </p>
+                  </div>
+
+                  {reportParams.length > 0 && (
+                    <div style={{ marginBottom: '12px' }}>
+                      <strong>Detected Parameters in this Report</strong>
+                      <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', marginTop: '4px' }}>
+                        {reportParams.map(p => (
+                          <Badge key={p} tone="info">{p}</Badge>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  <div>
+                    <strong>Built-in Parameters (always available)</strong>
+                    <ul style={{ margin: '4px 0 0 0', paddingLeft: '20px', fontSize: '0.75rem' }}>
+                      <li><code>{'{{start_of_month}}'}</code> - First day of current month</li>
+                      <li><code>{'{{end_of_month}}'}</code> - First day of next month</li>
+                      <li><code>{'{{start_of_year}}'}</code> - January 1st of current year</li>
+                      <li><code>{'{{end_of_year}}'}</code> - January 1st of next year</li>
+                    </ul>
+                  </div>
+                </Card>
+              )}
+
+              <textarea
+                style={{ ...textareaStyle, fontFamily: 'monospace', resize: 'vertical', fontSize: '0.875rem' }}
+                value={parameters}
+                onChange={(e) => setParameters(e.target.value)}
+                rows={3}
+                placeholder='{}'
+              />
+              <Text tone="muted" style={{ display: 'block', fontSize: '0.75rem', marginTop: '4px' }}>
+                Leave empty <code>{'{}'}</code> to use default parameters
+              </Text>
+            </>
+          )}
         </div>
 
         <Button
@@ -2215,7 +2421,7 @@ function ExecuteReport() {
       {results && (
         <div style={{ marginTop: '16px' }}>
           <h3>Results</h3>
-          <ResultsRenderer results={results} />
+          <ResultsRenderer results={results} report={selectedReport} />
         </div>
       )}
     </div>
@@ -3745,8 +3951,25 @@ function EditReport({
   const { tables, tableOptions, getTableColumns, loading: schemaLoading } = useSchema();
 
   // Track which metrics are in "raw SQL" mode
-  const [rawSqlMode, setRawSqlMode] = useState<{ [key: string]: boolean }>({});
-  const [rawSqlText, setRawSqlText] = useState<{ [key: string]: string }>({});
+  // Initialize from existing metrics that have table === 'raw_sql'
+  const [rawSqlMode, setRawSqlMode] = useState<{ [key: string]: boolean }>(() => {
+    const initial: { [key: string]: boolean } = {};
+    (report.report_definition.metrics || []).forEach(m => {
+      if (m.query.table === 'raw_sql') {
+        initial[m.id] = true;
+      }
+    });
+    return initial;
+  });
+  const [rawSqlText, setRawSqlText] = useState<{ [key: string]: string }>(() => {
+    const initial: { [key: string]: string } = {};
+    (report.report_definition.metrics || []).forEach(m => {
+      if (m.query.table === 'raw_sql' && m.query.fields?.[0]) {
+        initial[m.id] = m.query.fields[0];
+      }
+    });
+    return initial;
+  });
   // Table search filter
   const [tableSearch, setTableSearch] = useState('');
 
@@ -4095,24 +4318,30 @@ function EditReport({
                         setRawSqlMode(prev => ({ ...prev, [metric.id]: true }));
                         // Initialize raw SQL from current query if not set
                         if (!rawSqlText[metric.id]) {
-                          const fields = metric.query.fields.join(', ') || '*';
-                          const from = metric.query.table || 'table_name';
-                          let sql = `SELECT ${fields}\nFROM ${from}`;
-                          if ((metric.query.joins || []).length > 0) {
-                            metric.query.joins!.forEach(j => {
-                              const joinType = j.type.toUpperCase();
-                              const onClauses = j.on.map(c => `${c.left} = ${c.right}`).join(' AND ');
-                              sql += `\n${joinType} JOIN ${j.table} ON ${onClauses}`;
-                            });
+                          // If already in raw_sql mode, use the existing SQL from fields[0]
+                          if (metric.query.table === 'raw_sql' && metric.query.fields?.[0]) {
+                            setRawSqlText(prev => ({ ...prev, [metric.id]: metric.query.fields[0] }));
+                          } else {
+                            // Generate SQL from builder state
+                            const fields = metric.query.fields.join(', ') || '*';
+                            const from = metric.query.table || 'table_name';
+                            let sql = `SELECT ${fields}\nFROM ${from}`;
+                            if ((metric.query.joins || []).length > 0) {
+                              metric.query.joins!.forEach(j => {
+                                const joinType = j.type.toUpperCase();
+                                const onClauses = j.on.map(c => `${c.left} = ${c.right}`).join(' AND ');
+                                sql += `\n${joinType} JOIN ${j.table} ON ${onClauses}`;
+                              });
+                            }
+                            if ((metric.query.filters || []).length > 0) {
+                              const whereClause = metric.query.filters!.map(f => `${f.field} ${f.operator} '${f.value}'`).join(' AND ');
+                              sql += `\nWHERE ${whereClause}`;
+                            }
+                            if ((metric.query.groupBy || []).length > 0) {
+                              sql += `\nGROUP BY ${metric.query.groupBy!.join(', ')}`;
+                            }
+                            setRawSqlText(prev => ({ ...prev, [metric.id]: sql }));
                           }
-                          if ((metric.query.filters || []).length > 0) {
-                            const whereClause = metric.query.filters!.map(f => `${f.field} ${f.operator} '${f.value}'`).join(' AND ');
-                            sql += `\nWHERE ${whereClause}`;
-                          }
-                          if ((metric.query.groupBy || []).length > 0) {
-                            sql += `\nGROUP BY ${metric.query.groupBy!.join(', ')}`;
-                          }
-                          setRawSqlText(prev => ({ ...prev, [metric.id]: sql }));
                         }
                       }}
                     >
