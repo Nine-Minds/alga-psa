@@ -11,9 +11,9 @@ import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { 
   createInboundTicketDefaults, 
   updateInboundTicketDefaults 
-} from '../../lib/actions/email-actions/inboundTicketDefaultsActions';
-import { getTicketFieldOptions, getCategoriesByBoard } from '../../lib/actions/email-actions/ticketFieldOptionsActions';
-import type { InboundTicketDefaults, TicketFieldOptions } from '../../types/email.types';
+} from 'server/src/lib/actions/email-actions/inboundTicketDefaultsActions';
+import { getTicketFieldOptions, getCategoriesByBoard } from 'server/src/lib/actions/email-actions/ticketFieldOptionsActions';
+import type { InboundTicketDefaults, TicketFieldOptions } from 'server/src/types/email.types';
 // Dedicated pickers used elsewhere in the app
 import { BoardPicker } from 'server/src/components/settings/general/BoardPicker';
 import { ClientPicker } from '@alga-psa/clients/components/clients/ClientPicker';

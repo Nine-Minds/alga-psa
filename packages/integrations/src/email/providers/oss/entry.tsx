@@ -1,4 +1,4 @@
-export { MicrosoftProviderForm } from '../../../../../../server/src/components/MicrosoftProviderForm';
-export { GmailProviderForm } from '../../../../../../server/src/components/GmailProviderForm';
-export { ImapProviderForm } from '../../../../../../server/src/components/ImapProviderForm';
-export { EmailProviderConfiguration } from '../../../../../../server/src/components/EmailProviderConfiguration';
+export { MicrosoftProviderForm } from '../../../components/email/MicrosoftProviderForm';
+export { GmailProviderForm } from '../../../components/email/GmailProviderForm';
+export { ImapProviderForm } from '../../../components/email/ImapProviderForm';
+export { EmailProviderConfiguration } from '../../../components/email/EmailProviderConfiguration';

@@ -34,7 +34,7 @@ import { useSearchParams } from 'next/navigation';
 import ImportExportSettings from 'server/src/components/settings/import-export/ImportExportSettings';
 // Extensions are only available in Enterprise Edition
 import { EmailSettings } from '@alga-psa/integrations/email/settings/entry';
-import { EmailProviderConfiguration } from 'server/src/components/EmailProviderConfiguration';
+import { EmailProviderConfiguration } from '@alga-psa/integrations/components';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import Link from 'next/link';
 // Removed import: import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';

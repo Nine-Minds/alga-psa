@@ -21,8 +21,8 @@ import {
   deleteManagedEmailDomain,
   ManagedDomainStatus,
 } from '@ee/lib/actions/email-actions/managedDomainActions';
-import { EmailProviderConfiguration } from 'server/src/components/EmailProviderConfiguration';
-import type { EmailProvider } from 'server/src/components/EmailProviderConfiguration';
+import { EmailProviderConfiguration } from '@alga-psa/integrations/components';
+import type { EmailProvider } from '@alga-psa/integrations/components';
 import type { TenantEmailSettings } from 'server/src/types/email.types';
 import { getEmailSettings, updateEmailSettings } from 'server/src/lib/actions/email-actions/emailSettingsActions';
 import { getEmailProviders } from 'server/src/lib/actions/email-actions/emailProviderActions';

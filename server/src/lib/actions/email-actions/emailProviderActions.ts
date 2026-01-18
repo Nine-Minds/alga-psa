@@ -2,7 +2,12 @@
 
 import { createTenantKnex } from '../../db';
 import { getCurrentUser } from '../user-actions/userActions';
-import type { EmailProvider, MicrosoftEmailProviderConfig, GoogleEmailProviderConfig, ImapEmailProviderConfig } from '../../../components/EmailProviderConfiguration';
+import type {
+  EmailProvider,
+  GoogleEmailProviderConfig,
+  ImapEmailProviderConfig,
+  MicrosoftEmailProviderConfig,
+} from '@alga-psa/integrations/components';
 import { getSecretProviderInstance } from '@alga-psa/core';
 import { setupPubSub } from './setupPubSub';
 import { ImapFlow } from 'imapflow';

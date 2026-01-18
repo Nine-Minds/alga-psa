@@ -24,7 +24,7 @@ import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { getInboundTicketDefaults } from '@/lib/actions/email-actions/inboundTicketDefaultsActions';
 import { getGoogleIntegrationStatus } from 'server/src/lib/actions/integrations/googleActions';
 
-type EEGmailProviderFormData = import('server/src/components/providers/gmail/schemas').BaseGmailProviderFormData;
+type EEGmailProviderFormData = import('@alga-psa/integrations/components').BaseGmailProviderFormData;
 
 interface EEGmailProviderFormProps {
   tenant: string;

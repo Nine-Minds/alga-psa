@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { EmailProvider } from '../../components/EmailProviderConfiguration';
+import type { EmailProvider } from '@alga-psa/integrations/components';
 
 // Mock database functions
 const mockDb = {

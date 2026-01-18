@@ -13,7 +13,7 @@ import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import { ExternalLink } from 'lucide-react';
 import type { EmailProvider } from './EmailProviderConfiguration';
-import { createEmailProvider, updateEmailProvider, upsertEmailProvider } from '../lib/actions/email-actions/emailProviderActions';
+import { createEmailProvider, updateEmailProvider, upsertEmailProvider } from 'server/src/lib/actions/email-actions/emailProviderActions';
 import { initiateEmailOAuth } from 'server/src/lib/actions/email-actions/oauthActions';
 import { useOAuthPopup } from './providers/gmail/useOAuthPopup';
 import { BasicConfigCard } from './providers/gmail/BasicConfigCard';

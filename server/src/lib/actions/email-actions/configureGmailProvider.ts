@@ -3,7 +3,7 @@
 import { createTenantKnex, runWithTenant } from '../../db';
 import { setupPubSub } from './setupPubSub';
 import { GmailWebhookService } from '../../../services/email/GmailWebhookService';
-import type { GoogleEmailProviderConfig } from '../../../components/EmailProviderConfiguration';
+import type { GoogleEmailProviderConfig } from '@alga-psa/integrations/components';
 import type { EmailProviderConfig } from '@alga-psa/shared/interfaces/inbound-email.interfaces';
 
 /**

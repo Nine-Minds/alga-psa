@@ -8,8 +8,8 @@ import userEvent from '@testing-library/user-event';
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 
-import { GmailProviderForm } from '../../components/GmailProviderForm';
-import type { EmailProvider } from '../../components/EmailProviderConfiguration';
+import { GmailProviderForm } from '@alga-psa/integrations/components';
+import type { EmailProvider } from '@alga-psa/integrations/components';
 import { TestContext } from '../../../test-utils/testContext';
 import * as tenantActions from '../../lib/actions/tenantActions';
 import * as userActions from '../../lib/actions/user-actions/userActions';

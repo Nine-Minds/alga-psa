@@ -17,7 +17,7 @@ import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import { Eye, EyeOff } from 'lucide-react';
 import type { EmailProvider } from './EmailProviderConfiguration';
-import { createEmailProvider, updateEmailProvider } from '../lib/actions/email-actions/emailProviderActions';
+import { createEmailProvider, updateEmailProvider } from 'server/src/lib/actions/email-actions/emailProviderActions';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { getInboundTicketDefaults } from 'server/src/lib/actions/email-actions/inboundTicketDefaultsActions';
 

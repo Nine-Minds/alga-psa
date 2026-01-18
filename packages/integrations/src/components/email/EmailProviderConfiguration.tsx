@@ -11,7 +11,9 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Plus, Settings, Trash2, CheckCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { MicrosoftProviderForm, GmailProviderForm, ImapProviderForm } from '@alga-psa/integrations/email/providers/entry';
+import { GmailProviderForm } from './GmailProviderForm';
+import { ImapProviderForm } from './ImapProviderForm';
+import { MicrosoftProviderForm } from './MicrosoftProviderForm';
 import { EmailProviderList } from './EmailProviderList';
 import { ProviderSetupWizardDialog } from './ProviderSetupWizardDialog';
 import { InboundTicketDefaultsManager } from './admin/InboundTicketDefaultsManager';
@@ -24,8 +26,8 @@ import {
   testEmailProviderConnection,
   resyncImapProvider,
   retryMicrosoftSubscriptionRenewal
-} from '../lib/actions/email-actions/emailProviderActions';
-import { getCurrentUser } from '../lib/actions/user-actions/userActions';
+} from 'server/src/lib/actions/email-actions/emailProviderActions';
+import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
 
 export interface EmailProvider {
   id: string;
