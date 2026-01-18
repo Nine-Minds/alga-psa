@@ -10,8 +10,8 @@ import { Switch } from '@alga-psa/ui/components/Switch'; // Corrected path
 import { TextArea } from '@alga-psa/ui/components/TextArea'; // Corrected component name casing
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@alga-psa/ui/components/Card'; // Corrected path
 import AssemblyScriptEditor from './AssemblyScriptEditor';
-import { getInvoiceTemplate, compileAndSaveTemplate } from '../../lib/actions/invoiceTemplates'; // Corrected action path
-import { IInvoiceTemplate } from '../../interfaces'; // Keep assumed path
+import { getInvoiceTemplate, compileAndSaveTemplate } from '../../actions/invoiceTemplates';
+import type { IInvoiceTemplate } from '@alga-psa/types';
 import { Save, Play } from 'lucide-react';
 
 interface AssemblyScriptTemplateEditorComponentProps {

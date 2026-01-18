@@ -12,3 +12,5 @@ export { TemplateRenderer } from './billing-dashboard/TemplateRenderer';
 export { PurchaseOrderSummaryBanner } from './billing-dashboard/invoicing/PurchaseOrderSummaryBanner';
 export { ServiceCatalogPicker, type ServiceCatalogPickerItem } from './billing-dashboard/contracts/ServiceCatalogPicker';
 export { default as CreditsPage } from './credits/CreditsPage';
+export { default as AssemblyScriptEditor } from './invoice-template-editor/AssemblyScriptEditor';
+export { default as AssemblyScriptTemplateEditorComponent } from './invoice-template-editor/AssemblyScriptTemplateEditorComponent';
