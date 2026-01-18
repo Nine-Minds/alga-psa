@@ -29,7 +29,7 @@ import {
   IWorkflowEventAttachment
 } from '@alga-psa/shared/workflow/types/eventCatalog';
 import { Dialog, DialogContent, DialogFooter } from '@alga-psa/ui/components/Dialog';
-import EventTriggerDialog from 'server/src/components/events-catalog/EventTriggerDialog';
+import EventTriggerDialog from '../events-catalog/EventTriggerDialog';
 
 export default function EventsCatalog() {
   const [events, setEvents] = useState<IEventCatalogEntry[]>([]);
