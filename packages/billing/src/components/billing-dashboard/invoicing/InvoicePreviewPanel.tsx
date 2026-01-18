@@ -14,7 +14,7 @@ import { TemplateRenderer } from '../TemplateRenderer';
 import PaperInvoice from '../PaperInvoice';
 import CreditExpirationInfo from '../CreditExpirationInfo';
 import { Button } from '@alga-psa/ui/components/Button';
-import { InvoiceTaxSourceBadge } from 'server/src/components/invoices/InvoiceTaxSourceBadge';
+import { InvoiceTaxSourceBadge } from '../../invoices/InvoiceTaxSourceBadge';
 
 interface InvoicePreviewPanelProps {
   invoiceId: string | null;

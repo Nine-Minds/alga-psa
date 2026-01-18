@@ -14,3 +14,4 @@ export { ServiceCatalogPicker, type ServiceCatalogPickerItem } from './billing-d
 export { default as CreditsPage } from './credits/CreditsPage';
 export { default as AssemblyScriptEditor } from './invoice-template-editor/AssemblyScriptEditor';
 export { default as AssemblyScriptTemplateEditorComponent } from './invoice-template-editor/AssemblyScriptTemplateEditorComponent';
+export * from './invoices';
