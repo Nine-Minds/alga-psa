@@ -12,7 +12,7 @@ import TaskEdit from '@alga-psa/projects/components/TaskEdit';
 import EntryPopup from '../../../schedule/EntryPopup';
 import { useTenant } from '@alga-psa/ui/components/providers/TenantProvider';
 import Spinner from '@alga-psa/ui/components/Spinner';
-import InteractionDetails from 'server/src/components/interactions/InteractionDetails';
+import { InteractionDetails } from '@alga-psa/clients/components';
 import { getInteractionById } from 'server/src/lib/actions/interactionActions';
 
 interface WorkItemDrawerProps {

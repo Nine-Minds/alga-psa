@@ -11,7 +11,7 @@ import Link from 'next/link';
 import { getRecentInteractions, getInteractionStatuses } from 'server/src/lib/actions/interactionActions';
 import { getAllInteractionTypes } from 'server/src/lib/actions/interactionTypeActions';
 import { useDrawer } from "server/src/context/DrawerContext";
-import InteractionDetails from 'server/src/components/interactions/InteractionDetails';
+import { InteractionDetails } from '@alga-psa/clients/components';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import InteractionIcon from '@alga-psa/ui/components/InteractionIcon';
 import UserPicker from '@alga-psa/ui/components/UserPicker';

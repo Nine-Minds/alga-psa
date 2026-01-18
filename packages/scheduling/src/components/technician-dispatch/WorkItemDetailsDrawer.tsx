@@ -14,7 +14,7 @@ import { toast } from 'react-hot-toast';
 import TicketDetails from '@alga-psa/tickets/components/ticket/TicketDetails';
 import TaskEdit from '@alga-psa/projects/components/TaskEdit';
 import EntryPopup from '@alga-psa/scheduling/components/schedule/EntryPopup';
-import InteractionDetails from 'server/src/components/interactions/InteractionDetails';
+import { InteractionDetails } from '@alga-psa/clients/components';
 import { useTenant } from '@alga-psa/ui/components/providers/TenantProvider';
 
 interface WorkItemDetailsDrawerProps {

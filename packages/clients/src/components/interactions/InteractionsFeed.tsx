@@ -8,7 +8,7 @@ import { QuickAddInteraction } from './QuickAddInteraction';
 import { getInteractionsForEntity, getInteractionById } from 'server/src/lib/actions/interactionActions';
 import { getAllInteractionTypes } from 'server/src/lib/actions/interactionTypeActions';
 import { useDrawer } from 'server/src/context/DrawerContext';
-import InteractionDetails from 'server/src/components/interactions/InteractionDetails';
+import { InteractionDetails } from '@alga-psa/clients/components';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Input } from '@alga-psa/ui/components/Input';
 import { DatePicker } from '@alga-psa/ui/components/DatePicker';

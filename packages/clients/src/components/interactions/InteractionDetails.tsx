@@ -1,7 +1,9 @@
 // src/components/interactions/InteractionDetails.tsx
 
+'use client';
+
 import React, { useState, useEffect } from 'react';
-import { IInteraction } from 'server/src/interfaces/interaction.interfaces';
+import type { IInteraction, ITicket, IWorkItem, WorkItemType } from '@alga-psa/types';
 import { Clock, FileText, ArrowLeft, Plus, Pen, Trash2 } from 'lucide-react';
 import { useAutomationIdAndRegister } from '@alga-psa/ui/ui-reflection/useAutomationIdAndRegister';
 import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContainer';
@@ -13,7 +15,6 @@ import AgentScheduleDrawer from '@alga-psa/tickets/components/ticket/AgentSchedu
 import { Button } from '@alga-psa/ui/components/Button';
 import { QuickAddTicket } from '@alga-psa/tickets/components/QuickAddTicket';
 import { QuickAddInteraction } from '@alga-psa/clients/components/interactions/QuickAddInteraction';
-import { ITicket } from 'server/src/interfaces';
 import { getContactByContactNameId } from 'server/src/lib/actions/contact-actions/contactActions';
 import { getClientById, getAllClients } from '@alga-psa/clients/actions';
 import { findUserById } from 'server/src/lib/actions/user-actions/userActions';
@@ -21,7 +22,6 @@ import { deleteInteraction } from 'server/src/lib/actions/interactionActions';
 import { Text, Flex, Heading } from '@radix-ui/themes';
 import { RichTextViewer } from '@alga-psa/ui/editor';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
-import { IWorkItem, WorkItemType } from 'server/src/interfaces/workItem.interfaces';
 import TimeEntryDialog from '@alga-psa/scheduling/components/time-management/time-entry/time-sheet/TimeEntryDialog';
 import { toast } from 'react-hot-toast';
 import { getCurrentTimePeriod } from '@alga-psa/scheduling/actions/timePeriodsActions';
