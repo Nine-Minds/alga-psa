@@ -15,7 +15,7 @@ import type {
   AccountingMappingContext,
   AccountingMappingModule,
   AccountingMappingLoadResult
-} from 'server/src/components/accounting-mappings/types';
+} from '@alga-psa/integrations/components';
 
 const ADAPTER_TYPE = 'xero_csv';
 
