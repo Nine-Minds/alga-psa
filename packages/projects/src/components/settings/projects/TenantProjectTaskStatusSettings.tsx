@@ -13,13 +13,13 @@ import {
   reorderTenantProjectStatuses
 } from '@alga-psa/projects/actions/projectTaskStatusActions';
 import { importReferenceData, getAvailableReferenceData, checkImportConflicts, type ImportConflict } from 'server/src/lib/actions/referenceDataActions';
-import { IStatus, IStandardStatus } from 'server/src/interfaces/status.interface';
+import type { IStatus, IStandardStatus } from '@alga-psa/types';
 import { ChevronUp, ChevronDown, Trash2, Edit2, Plus, Palette } from 'lucide-react';
 import * as LucideIcons from 'lucide-react';
 import { Dialog } from '@alga-psa/ui/components/Dialog';
 import ColorPicker from '@alga-psa/ui/components/ColorPicker';
-import { StatusImportDialog } from '../general/dialogs/StatusImportDialog';
-import { ConflictResolutionDialog } from '../general/dialogs/ConflictResolutionDialog';
+import { StatusImportDialog } from '@alga-psa/ui/components/settings/dialogs/StatusImportDialog';
+import { ConflictResolutionDialog } from '@alga-psa/ui/components/settings/dialogs/ConflictResolutionDialog';
 import { toast } from 'react-hot-toast';
 
 export function TenantProjectTaskStatusSettings() {

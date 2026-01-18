@@ -39,7 +39,7 @@ import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import Link from 'next/link';
 // Removed import: import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
 import SurveySettings from '@alga-psa/surveys/components/SurveySettings';
-import ProjectSettings from 'server/src/components/settings/general/ProjectSettings';
+import { ProjectSettings } from '@alga-psa/projects/components';
 
 // Wrapper component with UnsavedChangesProvider
 const SettingsPage = (): React.JSX.Element => {

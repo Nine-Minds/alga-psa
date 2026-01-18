@@ -17,3 +17,10 @@ export { default as ProjectTemplatesList } from './project-templates/ProjectTemp
 export { default as CreateTemplateForm } from './project-templates/CreateTemplateForm';
 export { default as TemplateEditor } from './project-templates/TemplateEditor';
 export { TemplateCreationWizard } from './project-templates/TemplateCreationWizard';
+
+export { default as ProjectSettings } from './settings/ProjectSettings';
+export { AddStatusDialog } from './settings/projects/AddStatusDialog';
+export { ProjectStatusSettings } from './settings/projects/ProjectStatusSettings';
+export { ProjectTaskStatusSettings } from './settings/projects/ProjectTaskStatusSettings';
+export { default as TaskPrioritySettings } from './settings/projects/TaskPrioritySettings';
+export { TenantProjectTaskStatusSettings } from './settings/projects/TenantProjectTaskStatusSettings';

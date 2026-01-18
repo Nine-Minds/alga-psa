@@ -19,10 +19,10 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
 } from '@alga-psa/ui/components/DropdownMenu';
-import { StatusDialog } from './dialogs/StatusDialog';
-import { StatusImportDialog } from './dialogs/StatusImportDialog';
-import { ConflictResolutionDialog } from './dialogs/ConflictResolutionDialog';
-import { DeleteConfirmationDialog } from './dialogs/DeleteConfirmationDialog';
+import { StatusDialog } from '@alga-psa/ui/components/settings/dialogs/StatusDialog';
+import { StatusImportDialog } from '@alga-psa/ui/components/settings/dialogs/StatusImportDialog';
+import { ConflictResolutionDialog } from '@alga-psa/ui/components/settings/dialogs/ConflictResolutionDialog';
+import { DeleteConfirmationDialog } from '@alga-psa/ui/components/settings/dialogs/DeleteConfirmationDialog';
 
 interface StatusSettingsProps {
   initialStatusType?: string | null;

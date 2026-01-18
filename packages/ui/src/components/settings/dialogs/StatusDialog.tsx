@@ -5,7 +5,7 @@ import { Dialog, DialogContent, DialogFooter } from '@alga-psa/ui/components/Dia
 import { Input } from '@alga-psa/ui/components/Input';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
-import { IStatus, ItemType } from 'server/src/interfaces/status.interface';
+import type { IStatus, ItemType } from '@alga-psa/types';
 import { createStatus, updateStatus } from 'server/src/lib/actions/status-actions/statusActions';
 import { toast } from 'react-hot-toast';
 

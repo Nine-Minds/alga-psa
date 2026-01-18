@@ -4,7 +4,7 @@ import React from 'react';
 import { Dialog, DialogContent, DialogFooter } from '@alga-psa/ui/components/Dialog';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
-import { IStandardStatus } from 'server/src/interfaces/status.interface';
+import type { IStandardStatus } from '@alga-psa/types';
 
 interface StatusImportDialogProps {
   open: boolean;

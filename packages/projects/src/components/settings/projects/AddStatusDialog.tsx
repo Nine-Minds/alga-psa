@@ -7,7 +7,7 @@ import {
   getTenantProjectStatuses,
   addStatusToProject
 } from '@alga-psa/projects/actions/projectTaskStatusActions';
-import { IStatus } from 'server/src/interfaces/status.interface';
+import type { IStatus } from '@alga-psa/types';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 
 interface AddStatusDialogProps {

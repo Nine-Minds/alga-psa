@@ -5,11 +5,11 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { Plus, MoreVertical } from "lucide-react";
 import { getStatuses, deleteStatus, updateStatus } from 'server/src/lib/actions/status-actions/statusActions';
 import { importReferenceData, getAvailableReferenceData, checkImportConflicts, type ImportConflict } from 'server/src/lib/actions/referenceDataActions';
-import { IStatus, IStandardStatus } from 'server/src/interfaces/status.interface';
+import type { IStatus, IStandardStatus } from '@alga-psa/types';
 import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
 import { Switch } from '@alga-psa/ui/components/Switch';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
-import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
+import type { ColumnDefinition } from '@alga-psa/types';
 import { toast } from 'react-hot-toast';
 import {
   DropdownMenu,
@@ -17,10 +17,10 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
 } from '@alga-psa/ui/components/DropdownMenu';
-import { StatusDialog } from '../general/dialogs/StatusDialog';
-import { StatusImportDialog } from '../general/dialogs/StatusImportDialog';
-import { ConflictResolutionDialog } from '../general/dialogs/ConflictResolutionDialog';
-import { DeleteConfirmationDialog } from '../general/dialogs/DeleteConfirmationDialog';
+import { StatusDialog } from '@alga-psa/ui/components/settings/dialogs/StatusDialog';
+import { StatusImportDialog } from '@alga-psa/ui/components/settings/dialogs/StatusImportDialog';
+import { ConflictResolutionDialog } from '@alga-psa/ui/components/settings/dialogs/ConflictResolutionDialog';
+import { DeleteConfirmationDialog } from '@alga-psa/ui/components/settings/dialogs/DeleteConfirmationDialog';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 
 /**
