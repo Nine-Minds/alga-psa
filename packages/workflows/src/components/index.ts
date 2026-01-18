@@ -22,3 +22,4 @@ export { default as WorkflowVisualizer } from './visualization/WorkflowVisualize
 export { default as AutomationHub } from './automation-hub/AutomationHub';
 export { TaskForm } from './workflow/TaskForm';
 export { default as EventTriggerDialog } from './events-catalog/EventTriggerDialog';
+export { default as TemplatePreview } from './template-library/TemplatePreview';
