@@ -135,3 +135,4 @@ export * from './widgets/RichTextViewerWidget';
 export { default as RichTextViewerWidget } from './widgets/RichTextViewerWidget';
 export * from './notifications';
 export * from './tags';
+export * from './dashboard';

@@ -1,7 +1,7 @@
 import { Suspense } from 'react';
-import DashboardContainer from '../../../components/dashboard/DashboardContainer';
-import { DashboardOnboardingSkeleton } from '../../../components/dashboard/DashboardOnboardingSkeleton';
-import { DashboardOnboardingSlot } from '../../../components/dashboard/DashboardOnboardingSlot';
+import DashboardContainer from '@alga-psa/ui/components/dashboard/DashboardContainer';
+import { DashboardOnboardingSkeleton } from '@alga-psa/ui/components/dashboard/DashboardOnboardingSkeleton';
+import { DashboardOnboardingSlot } from '@alga-psa/ui/components/dashboard/DashboardOnboardingSlot';
 
 export const dynamic = 'force-dynamic';
 
