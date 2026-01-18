@@ -1,0 +1,133 @@
+name: Validate Tenant Management Schema
+
+on:
+  workflow_dispatch: # Allows manual triggering
+  pull_request:
+    branches:
+      - '**'
+    paths:
+      - 'server/migrations/**'
+      - 'ee/server/migrations/**'
+      - 'ee/temporal-workflows/src/activities/tenant-deletion-activities.ts'
+      - '.github/workflows/validate-tenant-management.yaml'
+      - 'scripts/validate-tenant-management.ts'
+
+  push:
+    branches:
+      - main
+    paths:
+      - 'server/migrations/**'
+      - 'ee/server/migrations/**'
+      - 'ee/temporal-workflows/src/activities/tenant-deletion-activities.ts'
+      - '.github/workflows/validate-tenant-management.yaml'
+      - 'scripts/validate-tenant-management.ts'
+
+jobs:
+  validate-tenant-management:
+    name: Validate Tenant Management Schema
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    services:
+      postgres:
+        image: ankane/pgvector:latest
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: test_password
+          POSTGRES_DB: alga_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Wait for Postgres to be ready
+        run: |
+          until pg_isready -h localhost -p 5432 -U postgres; do
+            echo "Waiting for postgres..."
+            sleep 2
+          done
+          echo "Postgres is ready!"
+
+      - name: Create secrets directory
+        run: |
+          mkdir -p secrets
+          echo -n "test_password" > secrets/postgres_password
+          echo -n "test_password" > secrets/db_password_server
+          chmod 600 secrets/*
+
+      - name: Create database and roles
+        working-directory: ./server
+        env:
+          DB_HOST: localhost
+          DB_PORT: 5432
+          DB_NAME_SERVER: alga_test
+          DB_USER_SERVER: app_user
+          DB_PASSWORD_ADMIN: test_password
+          DB_PASSWORD_SERVER: test_password
+          APP_ENV: test
+        run: node setup/create_database.js
+
+      - name: Run combined migrations
+        env:
+          DB_HOST: localhost
+          DB_PORT: 5432
+          DB_USER_ADMIN: postgres
+          DB_PASSWORD_ADMIN: test_password
+          DB_NAME_SERVER: alga_test
+          DB_TYPE: postgres
+        run: |
+          # Combine CE and EE migrations into single directory (same as entrypoint.sh)
+          mkdir -p server/combined-migrations
+          cp server/migrations/*.cjs server/combined-migrations/ 2>/dev/null || true
+          cp -r server/migrations/utils server/combined-migrations/ 2>/dev/null || true
+          cp ee/server/migrations/*.cjs server/combined-migrations/ 2>/dev/null || true
+          cp -r ee/server/migrations/utils server/combined-migrations/ 2>/dev/null || true
+
+          # Create temporary knexfile for combined migrations
+          cat > server/knexfile-combined.cjs << 'EOF'
+          module.exports = {
+            migration: {
+              client: 'pg',
+              connection: {
+                host: process.env.DB_HOST || 'localhost',
+                port: process.env.DB_PORT || '5432',
+                user: process.env.DB_USER_ADMIN || 'postgres',
+                password: process.env.DB_PASSWORD_ADMIN,
+                database: process.env.DB_NAME_SERVER || 'alga_test',
+              },
+              pool: { min: 2, max: 20 },
+              migrations: { directory: './combined-migrations' }
+            }
+          };
+          EOF
+
+          # Run migrations
+          cd server && npx knex migrate:latest --knexfile knexfile-combined.cjs --env migration
+
+          # Clean up
+          rm -rf combined-migrations knexfile-combined.cjs
+
+      - name: Validate tenant management schema
+        env:
+          DB_HOST: localhost
+          DB_PORT: 5432
+          DB_USER: postgres
+          DB_PASSWORD: test_password
+          DB_NAME: alga_test
+        run: npx tsx scripts/validate-tenant-management.ts
