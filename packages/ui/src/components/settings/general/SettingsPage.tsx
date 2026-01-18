@@ -24,7 +24,7 @@ const TeamManagement = dynamic(() => import('server/src/components/settings/gene
   ssr: false
 });
 import InteractionSettings from 'server/src/components/settings/general/InteractionSettings';
-import TimeEntrySettings from 'server/src/components/settings/time-entry/TimeEntrySettings';
+import { TimeEntrySettings } from '@alga-psa/scheduling/components';
 import { BillingSettings } from '@alga-psa/billing/components'; // Import the new component
 import NumberingSettings from 'server/src/components/settings/general/NumberingSettings';
 import NotificationsTab from 'server/src/components/settings/general/NotificationsTab';

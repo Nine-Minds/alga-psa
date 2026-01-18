@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Settings, Calendar } from 'lucide-react';
 import CustomTabs, { TabContent } from "@alga-psa/ui/components/CustomTabs";
-import TimePeriodSettings from 'server/src/components/settings/time-entry/TimePeriodSettings';
+import TimePeriodSettings from './TimePeriodSettings';
 import TimePeriodList from './TimePeriodList';
 
 const TimeEntrySettings: React.FC = () => {
