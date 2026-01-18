@@ -27,7 +27,7 @@ import { findTagsByEntityIds } from 'server/src/lib/actions/tagActions';
 import { useTagPermissions } from 'server/src/hooks/useTagPermissions';
 import ClientDetails from '../clients/ClientDetails';
 import { getClientById } from '@alga-psa/clients/actions';
-import { TagFilter } from 'server/src/components/tags';
+import { TagFilter } from '@alga-psa/ui/components';
 
 interface ContactTicketsProps {
   contactId: string;

@@ -17,7 +17,7 @@ import { getCurrentUser, getCurrentUserPermissions } from 'server/src/lib/action
 import { BoardPicker } from 'server/src/components/settings/general/BoardPicker';
 import { ClientPicker } from '@alga-psa/clients/components/clients/ClientPicker';
 import { findTagsByEntityIds } from 'server/src/lib/actions/tagActions';
-import { TagFilter } from 'server/src/components/tags';
+import { TagFilter } from '@alga-psa/ui/components';
 import { useTagPermissions } from 'server/src/hooks/useTagPermissions';
 import { IBoard, IClient, IUser } from 'server/src/interfaces';
 import { DataTable } from '@alga-psa/ui/components/DataTable';

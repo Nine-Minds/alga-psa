@@ -15,7 +15,7 @@ import { CategoryPicker } from '../CategoryPicker';
 import { DatePicker } from '@alga-psa/ui/components/DatePicker';
 import { TimePicker } from '@alga-psa/ui/components/TimePicker';
 import { format, setHours, setMinutes } from 'date-fns';
-import { TagManager } from 'server/src/components/tags';
+import { TagManager } from '@alga-psa/ui/components';
 import { ResponseStateDisplay } from '../ResponseStateSelect';
 import styles from './TicketDetails.module.css';
 import { getTicketCategories, getTicketCategoriesByBoard, BoardCategoryData } from 'server/src/lib/actions/ticketCategoryActions';

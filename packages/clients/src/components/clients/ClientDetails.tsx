@@ -6,7 +6,7 @@ import { IContact } from 'server/src/interfaces/contact.interfaces';
 import type { IClient } from '@alga-psa/types';
 import { ITag } from 'server/src/interfaces/tag.interfaces';
 import UserPicker from '@alga-psa/ui/components/UserPicker';
-import { TagManager } from 'server/src/components/tags';
+import { TagManager } from '@alga-psa/ui/components';
 import { findTagsByEntityId } from 'server/src/lib/actions/tagActions';
 import { useTags } from 'server/src/context/TagContext';
 import { getAllUsersBasic } from 'server/src/lib/actions/user-actions/userActions';

@@ -24,7 +24,7 @@ import { getTicketingDisplaySettings, type TicketingDisplaySettings } from '@alg
 import { ITag } from 'server/src/interfaces/tag.interfaces';
 import { findTagsByEntityIds } from 'server/src/lib/actions/tagActions';
 import { useTagPermissions } from 'server/src/hooks/useTagPermissions';
-import { TagFilter } from 'server/src/components/tags';
+import { TagFilter } from '@alga-psa/ui/components';
 
 interface ClientTicketsProps {
   clientId: string;

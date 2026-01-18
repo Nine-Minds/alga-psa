@@ -21,7 +21,7 @@ import {
   validatePhoneNumber,
   validateNotes
 } from 'server/src/lib/utils/clientFormValidation';
-import { QuickAddTagPicker, PendingTag } from 'server/src/components/tags';
+import { QuickAddTagPicker, type PendingTag } from '@alga-psa/ui/components';
 import { createTagsForEntity } from 'server/src/lib/actions/tagActions';
 
 interface QuickAddContactProps {

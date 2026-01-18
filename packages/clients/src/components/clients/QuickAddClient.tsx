@@ -25,7 +25,7 @@ import CountryPicker from '@alga-psa/ui/components/CountryPicker';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import toast from 'react-hot-toast';
 import ClientCreatedDialog from './ClientCreatedDialog';
-import { QuickAddTagPicker, PendingTag } from 'server/src/components/tags';
+import { QuickAddTagPicker, type PendingTag } from '@alga-psa/ui/components';
 import { createTagsForEntity } from 'server/src/lib/actions/tagActions';
 import { 
   validateClientForm, 

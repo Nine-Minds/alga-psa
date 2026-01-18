@@ -25,7 +25,7 @@ import {
 } from '../actions/projectTaskActions';
 import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
 import { findTagsByEntityId, createTagsForEntity } from 'server/src/lib/actions/tagActions';
-import { TagManager, QuickAddTagPicker, PendingTag } from 'server/src/components/tags';
+import { QuickAddTagPicker, TagManager, type PendingTag } from '@alga-psa/ui/components';
 import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import { Button } from '@alga-psa/ui/components/Button';
 import { TextArea } from '@alga-psa/ui/components/TextArea';

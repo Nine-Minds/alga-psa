@@ -12,7 +12,7 @@ import { findPriorityById } from 'server/src/lib/actions/priorityActions';
 import UserPicker from '@alga-psa/ui/components/UserPicker';
 import UserAvatar from '@alga-psa/ui/components/UserAvatar';
 import { getTaskTicketLinksAction, getTaskResourcesAction } from '../actions/projectTaskActions';
-import { TagList, TagManager } from 'server/src/components/tags';
+import { TagList, TagManager } from '@alga-psa/ui/components';
 import { Button } from '@alga-psa/ui/components/Button';
 import {
   DropdownMenu,

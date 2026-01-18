@@ -23,7 +23,7 @@ import {
     ITicketCategory
 } from "server/src/interfaces";
 import { ITag } from "server/src/interfaces/tag.interfaces";
-import { TagManager } from "server/src/components/tags";
+import { TagManager } from "@alga-psa/ui/components";
 import { findTagsByEntityId } from "server/src/lib/actions/tagActions";
 import { useTags } from "server/src/context/TagContext";
 import TicketInfo from "./TicketInfo";

@@ -28,7 +28,7 @@ import { DialogComponent, FormFieldComponent, ButtonComponent, ContainerComponen
 import { withDataAutomationId } from '@alga-psa/ui/ui-reflection/withDataAutomationId';
 import { useRegisterUIComponent } from '@alga-psa/ui/ui-reflection/useRegisterUIComponent';
 import { calculateItilPriority, ItilLabels } from 'server/src/lib/utils/itilUtils';
-import { QuickAddTagPicker, PendingTag } from 'server/src/components/tags';
+import { QuickAddTagPicker, type PendingTag } from '@alga-psa/ui/components';
 import { DatePicker } from '@alga-psa/ui/components/DatePicker';
 import { TimePicker } from '@alga-psa/ui/components/TimePicker';
 import { createTagsForEntity } from 'server/src/lib/actions/tagActions';

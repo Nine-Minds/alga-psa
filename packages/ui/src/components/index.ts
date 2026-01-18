@@ -134,3 +134,4 @@ export { default as HighlightWidget } from './widgets/HighlightWidget';
 export * from './widgets/RichTextViewerWidget';
 export { default as RichTextViewerWidget } from './widgets/RichTextViewerWidget';
 export * from './notifications';
+export * from './tags';

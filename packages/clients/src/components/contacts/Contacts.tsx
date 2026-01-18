@@ -20,7 +20,7 @@ import ContactsImportDialog from './ContactsImportDialog';
 import ClientDetails from '../clients/ClientDetails';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
-import { TagManager, TagFilter } from 'server/src/components/tags';
+import { TagFilter, TagManager } from '@alga-psa/ui/components';
 import { useTagPermissions } from 'server/src/hooks/useTagPermissions';
 import { getUniqueTagTexts } from 'server/src/utils/colorUtils';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';

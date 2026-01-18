@@ -14,7 +14,7 @@ import { DatePicker } from '@alga-psa/ui/components/DatePicker';
 import { ClientPicker } from '@alga-psa/clients/components/clients/ClientPicker';
 import UserPicker from '@alga-psa/ui/components/UserPicker';
 import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect';
-import { TagManager } from 'server/src/components/tags';
+import { TagManager } from '@alga-psa/ui/components';
 import { updateProject, getProjectStatuses } from '../actions/projectActions';
 import { getContactsByClient, getAllContacts } from 'server/src/lib/actions/contact-actions/contactActions';
 import { getAllUsersBasic } from 'server/src/lib/actions/user-actions/userActions';

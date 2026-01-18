@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
 import { ITicketListItem, ITicketCategory, TicketResponseState } from 'server/src/interfaces/ticket.interfaces';
 import type { TicketingDisplaySettings } from '@alga-psa/tickets/actions/ticketDisplaySettings';
-import { TagManager } from 'server/src/components/tags';
+import { TagManager } from '@alga-psa/ui/components';
 import { ITag } from 'server/src/interfaces/tag.interfaces';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@alga-psa/ui/components/DropdownMenu';
 import { Button } from '@alga-psa/ui/components/Button';

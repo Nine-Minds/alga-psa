@@ -35,7 +35,7 @@ import { ITicketCategory } from 'server/src/interfaces/ticket.interfaces';
 import { IBoard } from 'server/src/interfaces/board.interface';
 import { SelectOption } from '@alga-psa/ui/components/CustomSelect';
 import { ClientPicker } from '../clients/ClientPicker';
-import { TagManager } from 'server/src/components/tags';
+import { TagManager } from '@alga-psa/ui/components';
 import { findTagsByEntityIds } from 'server/src/lib/actions/tagActions';
 import { useTags } from 'server/src/context/TagContext';
 import ContactAvatarUpload from '@alga-psa/client-portal/components/contacts/ContactAvatarUpload';

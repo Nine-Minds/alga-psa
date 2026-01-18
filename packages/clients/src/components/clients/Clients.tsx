@@ -15,7 +15,7 @@ import {
   markClientActiveWithContacts,
 } from '@alga-psa/clients/actions';
 import { findTagsByEntityIds, findAllTagsByType } from 'server/src/lib/actions/tagActions';
-import { TagFilter } from 'server/src/components/tags';
+import { TagFilter } from '@alga-psa/ui/components';
 import { useRouter } from 'next/navigation';
 import { useSearchParams } from 'next/navigation';
 import ClientsGrid from './ClientsGrid';

@@ -13,7 +13,7 @@ import { deleteProject } from '../actions/projectActions';
 import { getContactByContactNameId } from 'server/src/lib/actions/contact-actions/contactActions';
 import { findUserById } from 'server/src/lib/actions/user-actions/userActions';
 import { findTagsByEntityIds, findAllTagsByType } from 'server/src/lib/actions/tagActions';
-import { TagFilter, TagManager } from 'server/src/components/tags';
+import { TagFilter, TagManager } from '@alga-psa/ui/components';
 import { useTagPermissions } from 'server/src/hooks/useTagPermissions';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { toast } from 'react-hot-toast';

@@ -6,7 +6,7 @@ import { MouseEvent } from 'react';
 import type { IClient } from '@alga-psa/types';
 import { ITag } from 'server/src/interfaces/tag.interfaces';
 import ClientAvatar from '@alga-psa/ui/components/ClientAvatar';
-import { TagManager } from 'server/src/components/tags';
+import { TagManager } from '@alga-psa/ui/components';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 

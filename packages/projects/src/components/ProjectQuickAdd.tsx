@@ -21,7 +21,7 @@ import { IContact } from 'server/src/interfaces';
 import { getAllUsersBasic } from 'server/src/lib/actions/user-actions/userActions';
 import { IUser } from '@shared/interfaces/user.interfaces';
 import { ProjectTaskStatusSelector } from './ProjectTaskStatusSelector';
-import { QuickAddTagPicker, PendingTag } from 'server/src/components/tags';
+import { QuickAddTagPicker, type PendingTag } from '@alga-psa/ui/components';
 import { createTagsForEntity } from 'server/src/lib/actions/tagActions';
 import ClientPortalConfigEditor from './ClientPortalConfigEditor';
 import { ChevronDown, ChevronRight, Settings } from 'lucide-react';

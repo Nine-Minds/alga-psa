@@ -10,7 +10,7 @@ import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import ClientAvatar from '@alga-psa/ui/components/ClientAvatar';
-import { TagManager } from 'server/src/components/tags';
+import { TagManager } from '@alga-psa/ui/components';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
  import { useRegisterUIComponent } from '@alga-psa/ui/ui-reflection/useRegisterUIComponent';
  import { useRegisterChild } from '@alga-psa/ui/ui-reflection/useRegisterChild';

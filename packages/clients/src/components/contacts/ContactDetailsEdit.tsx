@@ -9,7 +9,7 @@ import { Flex, Text, Heading } from '@radix-ui/themes';
 import { updateContact } from 'server/src/lib/actions/contact-actions/contactActions';
 import { findTagsByEntityIds } from 'server/src/lib/actions/tagActions';
 import { ClientPicker } from '../clients/ClientPicker';
-import { TagManager } from 'server/src/components/tags';
+import { TagManager } from '@alga-psa/ui/components';
 import { useTags } from 'server/src/context/TagContext';
 import { ArrowLeft } from 'lucide-react';
 import { Switch } from '@alga-psa/ui/components/Switch';

@@ -11,7 +11,7 @@ import { getAllPriorities } from 'server/src/lib/actions/priorityActions';
 import { getTaskTypes } from '../actions/projectTaskActions';
 import { findTagsByEntityId, findTagsByEntityIds } from 'server/src/lib/actions/tagActions';
 import { getDocumentCountsForEntities } from '@alga-psa/documents/actions/documentActions';
-import { TagManager, TagFilter } from 'server/src/components/tags';
+import { TagFilter, TagManager } from '@alga-psa/ui/components';
 import { useTags } from 'server/src/context/TagContext';
 import { useTagPermissions } from 'server/src/hooks/useTagPermissions';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';

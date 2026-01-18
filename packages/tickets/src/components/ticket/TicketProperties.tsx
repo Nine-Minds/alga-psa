@@ -6,7 +6,7 @@ import { ITicket, ITimeSheet, ITimePeriod, ITimePeriodView, ITimeEntry, IAgentSc
 import { IUserWithRoles, ITeam } from 'server/src/interfaces/auth.interfaces';
 import { ITicketResource } from 'server/src/interfaces/ticketResource.interfaces';
 import { ITag } from 'server/src/interfaces/tag.interfaces';
-import { TagManager } from 'server/src/components/tags';
+import { TagManager } from '@alga-psa/ui/components';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Label } from '@alga-psa/ui/components/Label';
 import { Input } from '@alga-psa/ui/components/Input';
