@@ -1,3 +1,5 @@
+'use client';
+
 import React, { InputHTMLAttributes, useEffect, useRef, useCallback } from 'react';
 import { FormFieldComponent, AutomationProps } from '../ui-reflection/types';
 import { useAutomationIdAndRegister } from '../ui-reflection/useAutomationIdAndRegister';

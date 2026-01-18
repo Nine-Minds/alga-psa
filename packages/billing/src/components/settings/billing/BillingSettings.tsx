@@ -10,8 +10,8 @@ import CustomTabs, { TabContent } from '@alga-psa/ui/components/CustomTabs';
 import NumberingSettings from 'server/src/components/settings/general/NumberingSettings';
 import ZeroDollarInvoiceSettings from './ZeroDollarInvoiceSettings';
 import CreditExpirationSettings from './CreditExpirationSettings';
-import { TaxSourceSettings } from 'server/src/components/settings/tax/TaxSourceSettings';
-import { TaxRegionsManager } from 'server/src/components/settings/tax/TaxRegionsManager';
+import { TaxSourceSettings } from '../tax/TaxSourceSettings';
+import { TaxRegionsManager } from '../tax/TaxRegionsManager';
 
 // Payment Settings Skeleton Component
 const PaymentSettingsSkeleton: React.FC = () => {

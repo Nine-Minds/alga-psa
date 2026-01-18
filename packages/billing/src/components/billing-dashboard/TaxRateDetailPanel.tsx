@@ -9,9 +9,9 @@ import { ArrowLeft, Info, Layers, BarChart2, Calendar, AlertCircle } from 'lucid
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 
 import { ITaxRate } from 'server/src/interfaces/tax.interfaces';
-import { TaxComponentEditor } from 'server/src/components/settings/tax/TaxComponentEditor';
-import { TaxThresholdEditor } from 'server/src/components/settings/tax/TaxThresholdEditor';
-import { TaxHolidayManager } from 'server/src/components/settings/tax/TaxHolidayManager';
+import { TaxComponentEditor } from '../settings/tax/TaxComponentEditor';
+import { TaxThresholdEditor } from '../settings/tax/TaxThresholdEditor';
+import { TaxHolidayManager } from '../settings/tax/TaxHolidayManager';
 
 interface TaxRateDetailPanelProps {
   taxRate: ITaxRate;
