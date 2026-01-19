@@ -16,6 +16,9 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          # Required for `nx affected --base/--head` on PRs; shallow clones can miss the base SHA.
+          fetch-depth: 0
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
