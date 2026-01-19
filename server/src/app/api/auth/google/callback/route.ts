@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { headers } from 'next/headers';
-import { getSecretProviderInstance } from '@alga-psa/core';
+import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { createTenantKnex, runWithTenant } from '../../../../../lib/db';
-import { configureGmailProvider } from '../../../../../lib/actions/email-actions/configureGmailProvider';
+import { configureGmailProvider } from '@alga-psa/integrations/actions/email-actions/configureGmailProvider';
 import axios from 'axios';
 
 // make this dynamic

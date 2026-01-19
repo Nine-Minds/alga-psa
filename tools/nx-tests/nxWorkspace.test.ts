@@ -12,7 +12,13 @@ function runNx(args: string[]) {
     env: {
       ...process.env,
       NX_DAEMON: 'false',
+      NX_ISOLATE_PLUGINS: 'false',
       CI: 'true',
+      // Nx loads Playwright configs while building the project graph. In some restricted
+      // environments, binding/listening on ports is not permitted (EPERM), so force a
+      // locked port to avoid probing during config evaluation.
+      PLAYWRIGHT_APP_PORT: process.env.PLAYWRIGHT_APP_PORT || '3300',
+      PLAYWRIGHT_APP_PORT_LOCKED: 'true',
     },
     encoding: 'utf8',
     stdio: ['ignore', 'pipe', 'pipe'],
@@ -69,4 +75,3 @@ describe('nx workspace', () => {
     expect(output).toContain('tmp-module');
   });
 });
-

@@ -7,7 +7,7 @@ import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import { Calculator, Cloud, ArrowRight, AlertTriangle, CheckCircle, Info } from 'lucide-react';
 
-import { getInvoiceTaxReconciliation } from 'server/src/lib/actions/externalTaxImportActions';
+import { getInvoiceTaxReconciliation } from '@alga-psa/billing/actions';
 
 interface TaxReconciliationViewProps {
   invoiceId: string;

@@ -8,7 +8,7 @@
 import { Knex } from 'knex';
 import { setTypeParser } from 'pg-types';
 import { validate as uuidValidate } from 'uuid';
-import { getSecret } from '@alga-psa/core';
+import { getSecret } from '@alga-psa/core/server';
 
 type Function = (err: Error | null, connection: Knex.Client) => void;
 

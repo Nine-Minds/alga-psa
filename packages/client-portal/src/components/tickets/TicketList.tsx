@@ -7,12 +7,12 @@ import Link from 'next/link';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import Spinner from '@alga-psa/ui/components/Spinner';
 import { format } from 'date-fns';
-import { getClientTickets, updateTicketStatus } from 'server/src/lib/actions/client-portal-actions/client-tickets';
-import { getTicketStatuses } from 'server/src/lib/actions/status-actions/statusActions';
-import { getAllPriorities } from 'server/src/lib/actions/priorityActions';
-import { getTicketCategories } from 'server/src/lib/actions/ticketCategoryActions';
-import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
-import { ITicketListItem, ITicketCategory, TicketResponseState } from 'server/src/interfaces/ticket.interfaces';
+import { getClientTickets, updateTicketStatus } from '@alga-psa/client-portal/actions';
+import { getTicketStatuses } from '@alga-psa/reference-data/actions';
+import { getAllPriorities } from '@alga-psa/reference-data/actions';
+import { getTicketCategories } from '@alga-psa/tickets/actions';
+import { ColumnDefinition } from '@alga-psa/types';
+import { ITicketListItem, ITicketCategory, TicketResponseState } from '@alga-psa/types';
 import { ResponseStateBadge, CategoryPicker } from '@alga-psa/tickets/components';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
@@ -24,7 +24,7 @@ import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import { ClientAddTicket } from './ClientAddTicket';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
-import { getUserAvatarUrlsBatchAction } from 'server/src/lib/actions/avatar-actions';
+import { getUserAvatarUrlsBatchAction } from '@alga-psa/users/actions';
 
 const useDebounce = <T,>(value: T, delay: number): T => {
   const [debouncedValue, setDebouncedValue] = useState<T>(value);

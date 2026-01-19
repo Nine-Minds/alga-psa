@@ -1,7 +1,7 @@
 'use client'
 
 import React from 'react';
-import { TimeSheetStatus } from 'server/src/interfaces/timeEntry.interfaces';
+import { TimeSheetStatus } from '@alga-psa/types';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Switch } from '@alga-psa/ui/components/Switch';
 import { Label } from '@alga-psa/ui/components/Label';

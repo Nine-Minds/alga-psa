@@ -1,7 +1,7 @@
 'use client';
 
 import { Card } from '@alga-psa/ui/components/Card';
-import type { JobDetail } from 'server/src/services/job.service';
+import type { JobDetail } from '@alga-psa/jobs';
 
 interface JobStepHistoryProps {
   steps: JobDetail[];

@@ -1,6 +1,6 @@
 import type { IDocument, PreviewResponse } from '@alga-psa/types';
 import { BaseDocumentHandler } from './BaseDocumentHandler';
-import { convertBlockNoteToHTML } from 'server/src/lib/utils/blocknoteUtils';
+import { convertBlockNoteToHTML } from '@alga-psa/documents/lib/blocknoteUtils';
 import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 

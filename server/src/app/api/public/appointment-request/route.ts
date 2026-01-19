@@ -5,7 +5,7 @@ import {
   createPublicAppointmentRequestSchema,
   CreatePublicAppointmentRequestInput
 } from '@/lib/schemas/appointmentSchemas';
-import { getTenantIdBySlug } from '@/lib/actions/tenant-actions/tenantSlugActions';
+import { getTenantIdBySlug } from '@alga-psa/tenancy/actions';
 import { getConnection } from '@/lib/db/db';
 import { getServicesForPublicBooking } from '@/lib/services/availabilityService';
 import { SystemEmailService } from '@/lib/email/system/SystemEmailService';
@@ -13,7 +13,7 @@ import {
   getTenantSettings,
   formatDate,
   formatTime
-} from '@/lib/actions/appointmentHelpers';
+} from '@alga-psa/scheduling/actions';
 import logger from '@alga-psa/core/logger';
 import { z } from 'zod';
 

@@ -23,14 +23,14 @@ import {
 } from '@alga-psa/ui/components/DropdownMenu';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 
-import { ITaxComponent } from 'server/src/interfaces/tax.interfaces';
-import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
+import { ITaxComponent } from '@alga-psa/types';
+import { ColumnDefinition } from '@alga-psa/types';
 import {
   getTaxComponentsByTaxRate,
   createTaxComponent,
   updateTaxComponent,
   deleteTaxComponent,
-} from 'server/src/lib/actions/taxSettingsActions';
+} from '@alga-psa/billing/actions';
 
 // Zod schema for form validation
 const taxComponentSchema = z.object({

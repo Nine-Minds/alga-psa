@@ -22,14 +22,14 @@ import {
 } from '@alga-psa/ui/components/DropdownMenu';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 
-import { ITaxRateThreshold } from 'server/src/interfaces/tax.interfaces';
-import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
+import { ITaxRateThreshold } from '@alga-psa/types';
+import { ColumnDefinition } from '@alga-psa/types';
 import {
   getTaxRateThresholdsByTaxRate,
   createTaxRateThreshold,
   updateTaxRateThreshold,
   deleteTaxRateThreshold,
-} from 'server/src/lib/actions/taxSettingsActions';
+} from '@alga-psa/billing/actions';
 
 // Zod schema for form validation
 const taxThresholdSchema = z.object({

@@ -16,11 +16,11 @@ import {
   FileCheck,
   Repeat,
 } from 'lucide-react';
-import { CURRENCY_OPTIONS } from 'server/src/constants/currency';
-import { formatCurrencyFromMinorUnits } from 'server/src/lib/utils/formatters';
+import { CURRENCY_OPTIONS } from '@alga-psa/core';
+import { formatCurrencyFromMinorUnits } from '@alga-psa/core';
 import { parse } from 'date-fns';
-import { BILLING_FREQUENCY_OPTIONS, BILLING_FREQUENCY_DISPLAY } from 'server/src/constants/billing';
-import { getClients } from 'server/src/lib/actions/clientAction';
+import { BILLING_FREQUENCY_OPTIONS, BILLING_FREQUENCY_DISPLAY } from '@alga-psa/billing/constants/billing';
+import { getClientById } from '@alga-psa/clients/actions';
 
 interface ReviewContractStepProps {
   data: ContractWizardData;
@@ -37,9 +37,8 @@ export function ReviewContractStep({ data }: ReviewContractStepProps) {
       }
 
       try {
-        const clients = await getClients();
-        const match = clients.find((client) => client.id === data.client_id);
-        setClientName(match?.name || data.client_id);
+        const client = await getClientById(data.client_id);
+        setClientName(client?.client_name || data.client_id);
       } catch (error) {
         console.error('Error loading client name:', error);
         setClientName(data.client_id);

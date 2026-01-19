@@ -8,12 +8,12 @@ import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Coins, FileText, Receipt } from 'lucide-react';
 import type { IService, IClient } from '@alga-psa/types';
 import { getAllClients } from '@alga-psa/clients/actions';
-import { getServices } from 'server/src/lib/actions/serviceActions';
+import { getServices } from '@alga-psa/billing/actions';
 import AutomaticInvoices from '../AutomaticInvoices';
 import ManualInvoices from '../ManualInvoices';
 import PrepaymentInvoices from '../PrepaymentInvoices';
 import SuccessDialog from '@alga-psa/ui/components/SuccessDialog';
-import { useFeatureFlag } from 'server/src/hooks/useFeatureFlag';
+import { useFeatureFlag } from '@alga-psa/ui/hooks';
 
 interface GenerateTabProps {
   initialServices: IService[];

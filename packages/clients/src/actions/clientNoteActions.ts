@@ -7,10 +7,10 @@
  * Uses the document system with a 1:1 relationship (companies.notes_document_id).
  */
 
-import { createTenantKnex } from 'server/src/lib/db';
+import { createTenantKnex } from '@alga-psa/db';
 import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
-import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
+import { getCurrentUser } from '@alga-psa/users/actions';
 import {
   createBlockDocument,
   getBlockContent,

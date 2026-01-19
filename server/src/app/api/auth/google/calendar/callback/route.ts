@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getSecretProviderInstance } from '@alga-psa/core';
+import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { createTenantKnex, runWithTenant } from '@/lib/db';
 import { CalendarProviderService } from '@/services/calendar/CalendarProviderService';
 import { GoogleCalendarAdapter } from '@/services/calendar/providers/GoogleCalendarAdapter';

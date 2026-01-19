@@ -7,17 +7,17 @@ import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Dialog, DialogContent, DialogFooter } from '@alga-psa/ui/components/Dialog';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 // Import new action and types
-import { getServices, updateService, deleteService, getServiceTypesForSelection, PaginatedServicesResponse, createServiceTypeInline, updateServiceTypeInline, deleteServiceTypeInline, setServicePrices } from 'server/src/lib/actions/serviceActions';
-import { CURRENCY_OPTIONS, getCurrencySymbol } from 'server/src/constants/currency';
-import { getServiceCategories } from 'server/src/lib/actions/serviceCategoryActions';
+import { getServices, updateService, deleteService, getServiceTypesForSelection, PaginatedServicesResponse, createServiceTypeInline, updateServiceTypeInline, deleteServiceTypeInline, setServicePrices } from '@alga-psa/billing/actions';
+import { CURRENCY_OPTIONS, getCurrencySymbol } from '@alga-psa/core';
+import { getServiceCategories } from '@alga-psa/billing/actions';
 // Import action to get tax rates
-import { getTaxRates } from 'server/src/lib/actions/taxSettingsActions';
-import { IService, IServiceCategory, IServiceType, IServicePrice } from 'server/src/interfaces/billing.interfaces'; // Added IServiceType, IServicePrice
+import { getTaxRates } from '@alga-psa/billing/actions';
+import { IService, IServiceCategory, IServiceType, IServicePrice } from '@alga-psa/types'; // Added IServiceType, IServicePrice
 // Import ITaxRate interface
-import { ITaxRate } from 'server/src/interfaces/tax.interfaces'; // Corrected import path if needed
+import { ITaxRate } from '@alga-psa/types'; // Corrected import path if needed
 import { Card, CardContent, CardHeader } from '@alga-psa/ui/components/Card';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
-import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
+import { ColumnDefinition } from '@alga-psa/types';
 import { QuickAddService } from './QuickAddService';
 import { EditableServiceTypeSelect } from '@alga-psa/ui/components/EditableServiceTypeSelect';
 import { MoreVertical } from 'lucide-react';

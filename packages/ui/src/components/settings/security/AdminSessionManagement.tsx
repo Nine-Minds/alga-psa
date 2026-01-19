@@ -14,9 +14,9 @@ import {
   getAllSessionsAction,
   revokeSessionAction,
   type SessionWithUser,
-} from 'server/src/lib/actions/session-actions/sessionActions';
-import { getAllUsers } from 'server/src/lib/actions/user-actions/userActions';
-import { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
+} from '@alga-psa/auth/actions';
+import { getAllUsers } from '@alga-psa/users/actions';
+import { IUserWithRoles } from '@alga-psa/types';
 import {
   Monitor,
   Smartphone,

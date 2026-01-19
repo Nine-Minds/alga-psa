@@ -8,10 +8,10 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { AlertTriangle, Info, CheckCircle } from 'lucide-react';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
-import { IClientContractLine, IContractLine, IService } from 'server/src/interfaces/billing.interfaces';
-import { getContractLines } from 'server/src/lib/actions/contractLineAction';
-import { getContractLineServices } from 'server/src/lib/actions/contractLineServiceActions';
-import { PLAN_TYPE_DISPLAY } from 'server/src/constants/billing';
+import { IClientContractLine, IContractLine, IService } from '@alga-psa/types';
+import { getContractLines } from '@alga-psa/billing/actions';
+import { getContractLineServices } from '@alga-psa/billing/actions';
+import { PLAN_TYPE_DISPLAY } from '@alga-psa/billing/constants/billing';
 
 interface ClientServiceOverlapMatrixProps {
   clientId: string;

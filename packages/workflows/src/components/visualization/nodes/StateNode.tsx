@@ -1,6 +1,6 @@
 import React from 'react';
 import { Handle, Position, NodeProps } from 'reactflow';
-import { StateNodeData } from 'server/src/lib/workflow/visualization/types/visualizationTypes';
+import { StateNodeData } from '../../../visualization/types/visualizationTypes';
 import { Card } from '@alga-psa/ui/components/Card';
 
 /**

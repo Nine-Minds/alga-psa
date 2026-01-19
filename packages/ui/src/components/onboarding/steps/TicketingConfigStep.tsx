@@ -14,16 +14,16 @@ import {
   getAvailableReferenceData, 
   importReferenceData,
   deleteReferenceDataItem
-} from 'server/src/lib/actions/referenceDataActions';
-import { getTenantTicketingData } from 'server/src/lib/actions/onboarding-actions/onboardingActions';
-import { IStandardPriority, ITicketCategory } from 'server/src/interfaces/ticket.interfaces';
-import { IStandardStatus } from 'server/src/interfaces/status.interface';
+} from '@alga-psa/reference-data/actions';
+import { getTenantTicketingData } from '@alga-psa/onboarding/actions';
+import { IStandardPriority, ITicketCategory } from '@alga-psa/types';
+import { IStandardStatus } from '@alga-psa/types';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Switch } from '@alga-psa/ui/components/Switch';
-import { createBoard, updateBoard } from 'server/src/lib/actions/board-actions/boardActions';
-import { createCategory } from 'server/src/lib/actions/ticketCategoryActions';
-import { createStatus } from 'server/src/lib/actions/status-actions/statusActions';
-import { createPriority } from 'server/src/lib/actions/priorityActions';
+import { createBoard, updateBoard } from '@alga-psa/tickets/actions';
+import { createCategory } from '@alga-psa/tickets/actions';
+import { createStatus } from '@alga-psa/reference-data/actions';
+import { createPriority } from '@alga-psa/reference-data/actions';
 import toast from 'react-hot-toast';
 import { Dialog, DialogContent, DialogFooter } from '@alga-psa/ui/components/Dialog';
 
@@ -490,7 +490,7 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
           const firstOpenStatus = result.imported.find((s: any) => !s.is_closed);
           if (firstOpenStatus) {
             // Update the status to be default
-            const { updateStatus } = await import('server/src/lib/actions/status-actions/statusActions');
+            const { updateStatus } = await import('@alga-psa/reference-data/actions');
             await updateStatus(firstOpenStatus.status_id, { is_default: true });
             firstOpenStatus.is_default = true;
             toast.success('First open status automatically set as default', {
@@ -872,7 +872,7 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
       }
       
       // Update status to be default (this will automatically unset others)
-      const { updateStatus } = await import('server/src/lib/actions/status-actions/statusActions');
+      const { updateStatus } = await import('@alga-psa/reference-data/actions');
       await updateStatus(statusId, { is_default: true });
       
       // Refresh data from server to get updated default states

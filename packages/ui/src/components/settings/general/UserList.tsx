@@ -1,16 +1,16 @@
 'use client';
 import React, { useState, useEffect } from 'react';
-import { IUser } from 'server/src/interfaces/auth.interfaces';
+import { IUser } from '@alga-psa/types';
 import UserDetails from './UserDetails';
-import { useDrawer } from "server/src/context/DrawerContext";
+import { useDrawer } from "@alga-psa/ui";
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import UserAvatar from '@alga-psa/ui/components/UserAvatar';
-import { getUserAvatarUrlAction } from 'server/src/lib/actions/avatar-actions';
+import { getUserAvatarUrlAction } from '@alga-psa/users/actions';
 import { MoreVertical, Pen, Trash2 } from 'lucide-react';
 
 import ClientDetails from '@alga-psa/clients/components/clients/ClientDetails';
 
-import { getUsersClientInfo } from 'server/src/lib/actions/user-actions/userClientActions';
+import { getUsersClientInfo } from '@alga-psa/users/actions';
 import {
   DropdownMenu,
   DropdownMenuContent,

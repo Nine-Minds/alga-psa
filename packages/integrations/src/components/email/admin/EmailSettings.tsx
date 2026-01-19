@@ -18,16 +18,16 @@ import { Mail, Globe, Settings, CheckCircle, XCircle, Clock, Eye, EyeOff, Send, 
 import {
   TenantEmailSettings,
   EmailProviderConfig
-} from 'server/src/types/email.types';
+} from '@alga-psa/types';
 import {
   getEmailSettings,
   updateEmailSettings
-} from 'server/src/lib/actions/email-actions/emailSettingsActions';
+} from '../../../actions/email-actions/emailSettingsActions';
 import {
   getEmailDomains,
   addEmailDomain,
   verifyEmailDomain
-} from 'server/src/lib/actions/email-actions/emailDomainActions';
+} from '../../../actions/email-actions/emailDomainActions';
 import { EmailProviderConfiguration } from '../EmailProviderConfiguration';
 import { useTenant } from '@alga-psa/ui/components/providers/TenantProvider';
 

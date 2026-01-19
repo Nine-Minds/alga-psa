@@ -1,7 +1,7 @@
 import React from 'react';
-import { generateEntityColor } from 'server/src/utils/colorUtils';
-import { Button } from '@alga-psa/ui/components/Button';
-import { ITag } from 'server/src/interfaces/tag.interfaces';
+import { Badge } from '@alga-psa/ui/components/Badge';
+import { generateEntityColor } from '../../lib/colorUtils';
+import { ITag } from '@alga-psa/types';
 
 interface TagGridProps {
   tags: string[] | ITag[];

@@ -7,8 +7,8 @@ import { Input } from '@alga-psa/ui/components/Input';
 import { Label } from '@alga-psa/ui/components/Label';
 import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
-import type { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
-import { createApiKey, deactivateApiKey, listApiKeys } from 'server/src/lib/actions/apiKeyActions';
+import type { ColumnDefinition } from '@alga-psa/types';
+import { createApiKey, deactivateApiKey, listApiKeys } from '@alga-psa/auth/actions';
 import { useRouter } from 'next/navigation';
 import { toast } from 'react-hot-toast';
 

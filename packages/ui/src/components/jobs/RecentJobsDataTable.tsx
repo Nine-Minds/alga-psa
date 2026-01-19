@@ -2,9 +2,9 @@
 
 import React from 'react';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
-import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
+import { ColumnDefinition } from '@alga-psa/types';
 import JobDetailsDrawer from './JobDetailsDrawer';
-import { getJobDetailsWithHistory, JobRecord } from 'server/src/lib/actions/job-actions';
+import { getJobDetailsWithHistory, JobRecord } from '@alga-psa/jobs/actions';
 import { CheckCircle2, XCircle, Clock, Activity } from 'lucide-react';
 
 const formatDuration = (startTime?: Date, endTime?: Date): string => {

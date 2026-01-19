@@ -6,7 +6,7 @@ import { AlertCircle } from 'lucide-react';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { getContractLineById } from '@alga-psa/billing/actions/contractLineAction';
-import { IContractLine } from 'server/src/interfaces/billing.interfaces';
+import { IContractLine } from '@alga-psa/types';
 
 // Import the specialized components
 import { FixedPlanConfiguration } from './FixedContractLineConfiguration';

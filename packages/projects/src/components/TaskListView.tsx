@@ -1,9 +1,9 @@
 'use client';
 
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
-import { IProjectPhase, IProjectTask, ProjectStatus, IProjectTaskDependency } from 'server/src/interfaces/project.interfaces';
-import { ITag } from 'server/src/interfaces/tag.interfaces';
-import { ITaskResource } from 'server/src/interfaces/taskResource.interfaces';
+import { IProjectPhase, IProjectTask, ProjectStatus, IProjectTaskDependency } from '@alga-psa/types';
+import { ITag } from '@alga-psa/types';
+import { ITaskResource } from '@alga-psa/types';
 import { ChevronDown, ChevronRight, Pencil, Copy, Trash2, Link2, Ban, GitBranch, Calendar, GripVertical, Plus, CheckSquare, Paperclip, Zap } from 'lucide-react';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import { Button } from '@alga-psa/ui/components/Button';
@@ -12,8 +12,8 @@ import { format } from 'date-fns';
 import { TagList, TagManager } from '@alga-psa/ui/components';
 import UserAvatar from '@alga-psa/ui/components/UserAvatar';
 import UserPicker from '@alga-psa/ui/components/UserPicker';
-import { useResponsiveColumns, ColumnConfig } from 'server/src/hooks/useResponsiveColumns';
-import { getUserAvatarUrlsBatchAction } from 'server/src/lib/actions/avatar-actions';
+import { useResponsiveColumns, ColumnConfig } from '@alga-psa/ui/hooks';
+import { getUserAvatarUrlsBatchAction } from '@alga-psa/users/actions';
 
 // Column configuration for responsive hiding
 // Lower priority number = higher importance (shown first)

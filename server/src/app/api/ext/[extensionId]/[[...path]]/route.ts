@@ -4,7 +4,7 @@ import crypto from 'node:crypto';
 import { getTenantFromAuth, assertAccess } from 'server/src/lib/extensions/gateway/auth';
 import { getTenantInstall, resolveVersion } from 'server/src/lib/extensions/gateway/registry';
 import { filterRequestHeaders, filterResponseHeaders } from 'server/src/lib/extensions/gateway/headers';
-import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
+import { getCurrentUser } from '@alga-psa/users/actions';
 import { createTenantKnex } from 'server/src/lib/db';
 
 export const runtime = 'nodejs';

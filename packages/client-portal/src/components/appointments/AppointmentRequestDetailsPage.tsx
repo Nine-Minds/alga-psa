@@ -11,7 +11,7 @@ import Spinner from '@alga-psa/ui/components/Spinner';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { format } from 'date-fns';
 import toast from 'react-hot-toast';
-import { getAppointmentRequestDetails, cancelAppointmentRequest } from 'server/src/lib/actions/client-portal-actions/appointmentRequestActions';
+import { getAppointmentRequestDetails, cancelAppointmentRequest } from '@alga-psa/client-portal/actions';
 
 interface AppointmentRequestDetails {
   appointment_request_id: string;

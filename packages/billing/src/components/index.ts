@@ -32,4 +32,5 @@ export { default as TaxHolidayManager } from './settings/tax/TaxHolidayManager';
 export { TaxRegionsManager } from './settings/tax/TaxRegionsManager';
 export { default as TaxSourceSettings } from './settings/tax/TaxSourceSettings';
 export { default as TaxThresholdEditor } from './settings/tax/TaxThresholdEditor';
-export * from './invoices';
+export { InvoiceTaxSourceBadge } from './invoices/InvoiceTaxSourceBadge';
+export type { InvoiceTaxSourceBadgeProps } from './invoices/InvoiceTaxSourceBadge';

@@ -3,7 +3,7 @@ import '../../../../../test-utils/nextApiMock';
 import { TestContext } from '../../../../../test-utils/testContext';
 import { v4 as uuidv4 } from 'uuid';
 import { createInvoiceFromBillingResult } from '@alga-psa/billing/actions/invoiceGeneration';
-import { generateManualInvoice } from 'server/src/lib/actions/manualInvoiceActions';
+import { generateManualInvoice } from '@alga-psa/billing/actions';
 import { setupClientTaxConfiguration, assignServiceTaxRate, createTestService, ensureClientPlanBundlesTable } from '../../../../../test-utils/billingTestHelpers';
 import { setupCommonMocks } from '../../../../../test-utils/testMocks';
 import { TextEncoder as NodeTextEncoder } from 'util';

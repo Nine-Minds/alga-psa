@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { getJobProgressAction, type JobProgressData } from 'server/src/lib/actions/job-actions/getJobProgressAction';
+import { getJobProgressAction, type JobProgressData } from '@alga-psa/jobs/actions';
 
 export const useJobMonitor = (jobId: string) => {
   const [job, setJob] = useState<JobProgressData | null>(null);

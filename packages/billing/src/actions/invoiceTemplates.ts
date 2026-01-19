@@ -6,15 +6,15 @@ import { exec } from 'child_process';
 import fs from 'fs/promises';
 import path from 'path';
 import { promisify } from 'node:util';
-import { createTenantKnex } from 'server/src/lib/db';
-import Invoice from 'server/src/lib/models/invoice'; // Assuming Invoice model has template methods
+import { createTenantKnex } from '@alga-psa/db';
+import Invoice from '@alga-psa/billing/models/invoice'; // Assuming Invoice model has template methods
 import {
     IInvoiceTemplate,
     ICustomField,
     IConditionalRule,
     IInvoiceAnnotation,
     InvoiceTemplateSource
-} from 'server/src/interfaces/invoice.interfaces';
+} from '@alga-psa/types';
 import { v4 as uuidv4 } from 'uuid';
 
 export async function getInvoiceTemplate(templateId: string): Promise<IInvoiceTemplate | null> {
@@ -63,12 +63,15 @@ export async function getInvoiceTemplate(templateId: string): Promise<IInvoiceTe
 }
 
 export async function getInvoiceTemplates(): Promise<IInvoiceTemplate[]> {
-    const { knex } = await createTenantKnex();
+    const { knex, tenant } = await createTenantKnex();
+    if (!tenant) {
+        throw new Error('tenant context not found');
+    }
     return withTransaction(knex, async (trx: Knex.Transaction) => {
         // Assuming Invoice model has a static method getAllTemplates that now fetches
         // assemblyScriptSource and wasmPath instead of dsl.
         // It should return all standard templates and the templates for the current tenant.
-        const templates: IInvoiceTemplate[] = await Invoice.getAllTemplates(trx);
+        const templates: IInvoiceTemplate[] = await Invoice.getAllTemplates(trx, tenant);
 
         // No parsing needed here anymore as we are moving away from DSL
         return templates;
@@ -128,9 +131,12 @@ export async function setDefaultTemplate(payload: SetDefaultTemplatePayload): Pr
 }
 
 export async function getDefaultTemplate(): Promise<IInvoiceTemplate | null> {
-    const { knex } = await createTenantKnex();
+    const { knex, tenant } = await createTenantKnex();
+    if (!tenant) {
+        throw new Error('tenant context not found');
+    }
     return withTransaction(knex, async (trx: Knex.Transaction) => {
-        const templates = await Invoice.getAllTemplates(trx);
+        const templates = await Invoice.getAllTemplates(trx, tenant);
         return templates.find((template) => template.isTenantDefault) ?? null;
     });
 }
@@ -768,9 +774,9 @@ export async function getCompiledWasm(templateId: string): Promise<Buffer> {
 }
 // --- Server-Side Rendering Action ---
 
-import { executeWasmTemplate } from 'server/src/lib/invoice-renderer/wasm-executor';
-import { renderLayout } from 'server/src/lib/invoice-renderer/layout-renderer';
-import type { WasmInvoiceViewModel, RenderOutput } from 'server/src/lib/invoice-renderer/types';
+import { executeWasmTemplate } from '../lib/invoice-renderer/wasm-executor';
+import { renderLayout } from '../lib/invoice-renderer/layout-renderer';
+import type { WasmInvoiceViewModel, RenderOutput } from '@alga-psa/types';
 
 /**
  * Renders an invoice template entirely on the server-side.

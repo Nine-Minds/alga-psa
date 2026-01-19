@@ -6,7 +6,7 @@ import { Label } from '@alga-psa/ui/components/Label';
 import { Eye, EyeOff, AlertTriangle } from 'lucide-react';
 import { StepProps } from '../types';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
-import { validateEmailAddress, validateContactName, validateClientName } from 'server/src/lib/utils/clientFormValidation';
+import { validateEmailAddress, validateContactName, validateClientName } from '@alga-psa/validation';
 
 interface ClientInfoStepProps extends StepProps {
   isRevisit?: boolean;

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { toast } from 'react-hot-toast';
-import { TicketInterval, TicketIntervalGroup } from 'server/src/types/interval-tracking';
-import { IntervalTrackingService } from 'server/src/services/IntervalTrackingService';
+import { TicketInterval, TicketIntervalGroup } from '@alga-psa/types';
+import { IntervalTrackingService } from '@alga-psa/ui/services';
 import { IntervalItem } from './IntervalItem';
 import { formatDuration, calculateTotalDuration, secondsToMinutes, groupIntervalsByTicket } from './utils';
 import { Button } from '@alga-psa/ui/components/Button';

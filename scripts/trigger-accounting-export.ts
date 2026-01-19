@@ -1,6 +1,6 @@
 #!/usr/bin/env ts-node
 import { AccountingExportService } from '../server/src/lib/services/accountingExportService';
-import { createAccountingExportBatch } from '../server/src/lib/actions/accountingExportActions';
+import { createAccountingExportBatch } from '@alga-psa/billing/actions';
 
 const USAGE = `
 Usage: pnpm ts-node scripts/trigger-accounting-export.ts [adapterType] [realm]

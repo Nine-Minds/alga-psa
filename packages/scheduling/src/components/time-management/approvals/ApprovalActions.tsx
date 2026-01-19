@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ITimeSheet } from 'server/src/interfaces/timeEntry.interfaces';
+import { ITimeSheet } from '@alga-psa/types';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Dialog, DialogContent, DialogFooter } from '@alga-psa/ui/components/Dialog';
 import { TextArea } from '@alga-psa/ui/components/TextArea';

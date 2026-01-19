@@ -1,3 +1,5 @@
+'use client';
+
 import React, { useState, useRef, useEffect } from 'react';
 import CustomSelect from './CustomSelect';
 import { AutomationProps } from '../ui-reflection/types';

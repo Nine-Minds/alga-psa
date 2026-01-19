@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useMemo } from 'react';
-import { ITicketCategory } from 'server/src/interfaces/ticket.interfaces';
+import { ITicketCategory } from '@alga-psa/types';
 import TreeSelect, { TreeSelectOption, TreeSelectPath } from '@alga-psa/ui/components/TreeSelect';
 import { useAutomationIdAndRegister } from '@alga-psa/ui/ui-reflection/useAutomationIdAndRegister';
 import { AutomationProps, FormFieldComponent } from '@alga-psa/ui/ui-reflection/types';

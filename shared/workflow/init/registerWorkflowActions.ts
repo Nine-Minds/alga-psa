@@ -5,7 +5,8 @@
  */
 
 import { getActionRegistry, type ActionRegistry, type ActionExecutionContext } from '@alga-psa/shared/workflow/core/index';
-import { logger, getSecretProviderInstance } from '@alga-psa/core';
+import { logger } from '@alga-psa/core';
+import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { getTaskInboxService } from '@alga-psa/shared/workflow/core/taskInboxService';
 import axios from 'axios'; // For QBO API calls
 import type { Knex } from 'knex';

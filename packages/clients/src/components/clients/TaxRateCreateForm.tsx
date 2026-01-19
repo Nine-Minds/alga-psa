@@ -5,9 +5,9 @@ import { DatePicker } from '@alga-psa/ui/components/DatePicker';
 import { Label } from '@alga-psa/ui/components/Label';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
-import { addTaxRate } from 'server/src/lib/actions/taxRateActions';
-import { getActiveTaxRegions } from 'server/src/lib/actions/taxSettingsActions';
-import { ITaxRegion } from 'server/src/interfaces/tax.interfaces';
+import { addTaxRate } from '@alga-psa/billing/actions';
+import { getActiveTaxRegions } from '@alga-psa/billing/actions';
+import { ITaxRegion } from '@alga-psa/types';
 import { toast } from 'react-hot-toast';
 
 interface TaxRateCreateFormProps {

@@ -1,5 +1,5 @@
 import React from 'react';
-import { ITimePeriodWithStatusView, TimeSheetStatus } from 'server/src/interfaces/timeEntry.interfaces';
+import { ITimePeriodWithStatusView, TimeSheetStatus } from '@alga-psa/types';
 import { Button } from '@alga-psa/ui/components/Button';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { Settings } from 'lucide-react';

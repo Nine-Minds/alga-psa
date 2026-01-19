@@ -1,11 +1,13 @@
+'use client';
+
 import React, { useEffect, useState, useCallback } from 'react';
-import { WorkflowTaskActivity, ActivityType, ActivityFilters } from 'server/src/interfaces/activity.interfaces';
+import { WorkflowTaskActivity, ActivityType, ActivityFilters } from '@alga-psa/types';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Card, CardContent, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import { WorkflowTaskCard } from './ActivityCard';
-import { fetchDashboardWorkflowTasks } from 'server/src/lib/actions/activity-actions/workflowTaskActions';
+import { fetchDashboardWorkflowTasks } from '@alga-psa/workflows/actions';
 import { WorkflowTaskListDrawer } from './WorkflowTaskListDrawer';
-import { useDrawer } from 'server/src/context/DrawerContext';
+import { useDrawer } from '../../context/DrawerContext';
 import { WorkflowTasksSectionFiltersDialog } from './filters/WorkflowTasksSectionFiltersDialog';
 import { Filter, XCircleIcon } from 'lucide-react';
 import { useActivityDrawer } from './ActivityDrawerProvider';

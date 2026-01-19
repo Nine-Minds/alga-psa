@@ -12,7 +12,7 @@ import {
   AlertCircle 
 } from 'lucide-react';
 import type { AssetSummaryMetrics } from '@alga-psa/types';
-import { cn } from 'server/src/lib/utils';
+import { cn } from '@alga-psa/ui';
 
 interface AssetMetricsBannerProps {
   metrics: AssetSummaryMetrics | undefined;

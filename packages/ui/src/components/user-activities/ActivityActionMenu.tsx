@@ -1,5 +1,5 @@
 import React from 'react';
-import { Activity, ActivityType } from "server/src/interfaces/activity.interfaces";
+import { Activity, ActivityType } from "@alga-psa/types";
 import { Button } from "@alga-psa/ui/components/Button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@alga-psa/ui/components/DropdownMenu";
 import { MoreVertical } from 'lucide-react';
@@ -8,18 +8,18 @@ import { useActivityDrawer } from "./ActivityDrawerProvider";
 import {
   updateActivityStatus,
   reassignActivity
-} from "server/src/lib/actions/activity-actions/activityStatusActions";
+} from "@alga-psa/workflows/actions";
 import {
   cancelWorkflowTask,
   reassignWorkflowTask,
   submitTaskForm
-} from "server/src/lib/actions/activity-actions/workflowTaskActions";
+} from "@alga-psa/workflows/actions";
 import {
   dismissTask,
   hideTask,
   unhideTask
 } from "@alga-psa/workflows/actions/workflow-actions/taskInboxActions";
-import { markAsReadAction } from "server/src/lib/actions/internal-notification-actions/internalNotificationActions";
+import { markAsReadAction } from "@alga-psa/notifications/actions";
 
 interface ActivityActionMenuProps {
   activity: Activity;

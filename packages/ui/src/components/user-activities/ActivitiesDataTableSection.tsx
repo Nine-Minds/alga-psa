@@ -1,19 +1,21 @@
+'use client';
+
 import React, { useEffect, useState, useRef, useCallback, useMemo } from 'react';
 import {
   Activity,
   ActivityFilters,
   ActivityType,
   ActivityResponse
-} from 'server/src/interfaces/activity.interfaces';
+} from '@alga-psa/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import { Button } from '@alga-psa/ui/components/Button';
 import { RefreshCw, Filter, XCircleIcon } from 'lucide-react';
-import { fetchActivities } from 'server/src/lib/actions/activity-actions/activityServerActions';
+import { fetchActivities } from '@alga-psa/workflows/actions';
 import { ActivitiesDataTable } from './ActivitiesDataTable';
 import { ActivitiesTableFilters, ActivitiesTableFiltersRef } from './filters/ActivitiesTableFilters';
 import { useActivityDrawer } from './ActivityDrawerProvider';
-import { useActivitiesCache } from 'server/src/hooks/useActivitiesCache';
-import { ScheduleActivity } from 'server/src/interfaces/activity.interfaces';
+import { useActivitiesCache } from '@alga-psa/ui/hooks';
+import { ScheduleActivity } from '@alga-psa/types';
 import { ActivitiesTableSkeleton } from './ActivitiesTableSkeleton';
 
 interface ActivitiesDataTableSectionProps {

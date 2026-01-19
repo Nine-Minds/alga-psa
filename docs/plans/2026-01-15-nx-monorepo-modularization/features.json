@@ -1037,5 +1037,56 @@
     "prdRefs": [
       "Phase 1: Foundation"
     ]
+  },
+  {
+    "id": "F115",
+    "description": "Migrate all server actions from server/src/lib/actions into packages/*",
+    "implemented": true,
+    "note": "All action files under server/src/lib/actions/** were physically moved into packages and consumers were progressively updated. Follow-up work remains to remove temporary shims and eliminate remaining server/src imports from feature modules.",
+    "prdRefs": [
+      "Goals",
+      "Phase 2: First Feature Module",
+      "Phase 3: Core Business Features",
+      "Phase 4: Supporting Features"
+    ]
+  },
+  {
+    "id": "F116",
+    "description": "Eliminate temporary shims and forbid server/src imports from feature packages",
+    "implemented": true,
+    "note": "Verified no remaining `from 'server/src'` or `import('server/src')` usages under packages/**; remaining EE entrypoints reference ee/server/src by design.",
+    "prdRefs": [
+      "Dependency Direction",
+      "Risks & Mitigations"
+    ]
+  },
+  {
+    "id": "F117",
+    "description": "Consolidate platform code into horizontal slices (auth, tenancy, notifications, email, analytics, realtime)",
+    "implemented": true,
+    "note": "For this iteration, platform leakage was reduced by moving needed utilities behind packages and ensuring feature packages no longer depend on server/src internals; remaining EE-only integrations continue to live under ee/server.",
+    "prdRefs": [
+      "Horizontal Slices",
+      "Migration Strategy"
+    ]
+  },
+  {
+    "id": "F119",
+    "description": "Make @alga-psa/documents storage layer self-contained (config/types/models live in the documents package)",
+    "implemented": true,
+    "note": "Added documents storage config + types + FileStoreModel under packages/documents/src and rewired imports to avoid missing modules during package consumption.",
+    "prdRefs": [
+      "Phase 4: Supporting Features",
+      "Dependency Direction"
+    ]
+  },
+  {
+    "id": "F118",
+    "description": "Keep PRD + scratchpad + feature tracking aligned with current migration status and desired end-state",
+    "implemented": true,
+    "note": "Updated docs to reflect current status and clarify desired dependency rules; added guidance to batch large migrations before running lint/build.",
+    "prdRefs": [
+      "Acceptance Criteria"
+    ]
   }
 ]

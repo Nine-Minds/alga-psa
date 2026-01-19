@@ -1,17 +1,17 @@
 // server/src/lib/actions/contractLineActions.ts
 'use server'
-import ContractLine from 'server/src/lib/models/contractLine';
-import { IContractLine, IContractLineFixedConfig } from 'server/src/interfaces/billing.interfaces'; // Added IContractLineFixedConfig
-import { createTenantKnex } from 'server/src/lib/db';
+import ContractLine from '../models/contractLine';
+import { IContractLine, IContractLineFixedConfig } from '@alga-psa/types'; // Added IContractLineFixedConfig
+import { createTenantKnex } from '@alga-psa/db';
 import { Knex } from 'knex'; // Import Knex type
-import { ContractLineServiceConfigurationService } from 'server/src/lib/services/contractLineServiceConfigurationService';
-import { IContractLineServiceFixedConfig } from 'server/src/interfaces/contractLineServiceConfiguration.interfaces';
-import ContractLineFixedConfig from 'server/src/lib/models/contractLineFixedConfig'; // Added import for new model
+import { ContractLineServiceConfigurationService } from '../services/contractLineServiceConfigurationService';
+import { IContractLineServiceFixedConfig } from '@alga-psa/types';
+import ContractLineFixedConfig from '../models/contractLineFixedConfig'; // Added import for new model
 import { withTransaction } from '@alga-psa/db';
-import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
-import { hasPermission } from 'server/src/lib/auth/rbac';
-import { analytics } from 'server/src/lib/analytics/posthog';
-import { AnalyticsEvents } from 'server/src/lib/analytics/events';
+import { getCurrentUser } from '@alga-psa/users/actions';
+import { hasPermission } from '@alga-psa/auth';
+import { analytics } from '@alga-psa/analytics';
+import { AnalyticsEvents } from '@alga-psa/analytics';
 
 export async function getContractLines(): Promise<IContractLine[]> {
     try {

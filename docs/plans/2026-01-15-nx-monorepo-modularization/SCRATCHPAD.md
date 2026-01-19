@@ -5,6 +5,7 @@
 
 **DO NOT CHEAT.** When implementing features:
 
+0. **Work in large chunks before lint/build.** Prefer moving a whole coherent slice (e.g. an entire folder or feature) and fixing imports broadly. Only run lint/tests/build at the end of a large unit of work (or when truly blocked). Constant lint/build cycles are too expensive and slow the migration dramatically.
 1. **Actually move/copy the files** - don't just create re-exports from the old location
 2. **Update imports in the moved files** - fix relative imports to work in new location
 3. **Update consumers** - change imports in files that use the moved code
@@ -14,6 +15,12 @@
 If you have the choice between an easy path (re-exports) and the right path (actual migration),
 **ALWAYS choose the right path**. If you need to defer harder work to later iterations,
 add explicit new features to track that work - don't just drop it or pretend it's done.
+
+### Temporary Shim Exception (Migration Only)
+If a “shim” is required to keep work moving (e.g. to avoid editing dozens of call sites immediately), it must be:
+- treated as temporary and minimal (no long-lived architecture)
+- tracked explicitly in `features.json` (with a removal task)
+- removed once the owning package/horizontal slice has the real implementation
 
 ---
 
@@ -332,3 +339,26 @@ npm -w server test
 - **NX caching + affected**: added `npm run test:nx` (vitest config for `tools/nx-tests`) including a cache verification test (`nxCache.test.ts`) and an affected-project selection test (`nxAffected.test.ts`); added `npm run affected:test` and `npm run affected:build` scripts; updated `.github/workflows/typecheck.yml` to run `nx affected -t build`/`test`.
 - **@alga-psa/clients vertical slice**: migrated client/contacts actions + components into `packages/clients` and updated the `/msp/clients` + `/msp/contacts` routes to import from `@alga-psa/clients` (and actions from `@alga-psa/clients/actions`); `server npm run build` passes after import rewiring.
 - **Tax + client type alignment**: resolved an `ITaxRate` export collision by selectively exporting tax interfaces from `@alga-psa/types` (including `ITaxRateDetails` alias). Also aligned client/contacts typing by using `@alga-psa/types` in key action/components and allowing `client.properties` to be nullable where DB can return null.
+
+---
+
+## Implementation Notes (2026-01-18)
+
+### server/src import cleanup (packages)
+- Verified no remaining `from 'server/src'` or `import('server/src/...')` usages under `packages/**`.
+
+### Documents storage self-containment
+- Added missing documents storage primitives under `packages/documents/src/`:
+  - `config/storage.ts` (env/secret-driven storage config + validation)
+  - `types/storage.ts` (provider + file store types)
+  - `models/storage.ts` (`FileStoreModel` without `BaseModel`; tenant resolved via `requireTenantId`)
+- Rewired documents storage imports to stay within `packages/documents/src/**` (avoids importing files outside the package `src/` root).
+- Removed `@alga-psa/users/actions` dependency from documents storage to avoid pulling incomplete user avatar utilities into core storage logic.
+
+### Business-logic tests added
+- Scheduling: `packages/scheduling/tests/timePeriodSuggester.test.ts` (run `npm -w packages/scheduling test`)
+- Documents: `packages/documents/tests/storageConfig.test.ts` (run `npm -w packages/documents test`)
+- Auth: adjusted `packages/auth/src/lib/exports.test.ts` to validate RBAC behavior via the subpath export `@alga-psa/auth/rbac` (keeps the test focused and avoids pulling Next.js UI modules).
+
+### Known tooling limitation (out of scope here)
+- `tsc --noEmit` in many packages currently fails with `rootDir`/project-reference issues when TypeScript path aliases pull in other package sources (example: importing `@alga-psa/tenancy/actions` from another package). Unit tests via Vitest are still runnable and used for verification.

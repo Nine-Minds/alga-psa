@@ -6,9 +6,9 @@ import { Switch } from "@alga-psa/ui/components/Switch";
 import { Input } from "@alga-psa/ui/components/Input";
 import { Label } from "@alga-psa/ui/components/Label";
 import { Button } from "@alga-psa/ui/components/Button";
-import { getNotificationSettingsAction, updateNotificationSettingsAction } from "server/src/lib/actions/notification-actions/notificationActions";
-import { NotificationSettings as NotificationSettingsType } from "server/src/lib/models/notification";
-import { getCurrentTenant } from "server/src/lib/tenant-client";
+import { getNotificationSettingsAction, updateNotificationSettingsAction } from "@alga-psa/notifications/actions";
+import { NotificationSettings as NotificationSettingsType } from "@alga-psa/notifications";
+import { getCurrentTenant } from "@alga-psa/tenancy/client";
 import LoadingIndicator from "@alga-psa/ui/components/LoadingIndicator";
 
 export function NotificationSettings() {

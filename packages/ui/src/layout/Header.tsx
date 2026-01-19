@@ -23,13 +23,13 @@ import { Button } from '@alga-psa/ui/components/Button';
 import UserAvatar from '@alga-psa/ui/components/UserAvatar';
 import ContactAvatar from '@alga-psa/ui/components/ContactAvatar';
 import { NotificationBell } from '@alga-psa/ui/components/notifications/NotificationBell';
-import type { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
-import { menuItems, bottomMenuItems, MenuItem } from 'server/src/config/menuConfig';
-import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
-import { checkAccountManagementPermission } from 'server/src/lib/actions/permission-actions';
-import type { JobMetrics } from 'server/src/lib/actions/job-actions';
-import { getQueueMetricsAction } from 'server/src/lib/actions/job-actions';
-import { analytics } from 'server/src/lib/analytics/client';
+import type { IUserWithRoles } from '@alga-psa/types';
+import { menuItems, bottomMenuItems, MenuItem } from '../config/menuConfig';
+import { getCurrentUser } from '@alga-psa/users/actions';
+import { checkAccountManagementPermission } from '@alga-psa/auth/actions';
+import type { JobMetrics } from '@alga-psa/jobs/actions';
+import { getQueueMetricsAction } from '@alga-psa/jobs/actions';
+import { analytics } from '@alga-psa/analytics/client';
 import { QuickCreateDialog, QuickCreateType } from './QuickCreateDialog';
 
 interface HeaderProps {

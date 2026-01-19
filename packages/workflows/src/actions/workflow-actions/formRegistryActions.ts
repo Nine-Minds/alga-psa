@@ -13,7 +13,7 @@ import {
   FormWithSchema,
   IFormDefinition
 } from '@shared/workflow/persistence/formRegistryInterfaces';
-import { createTag, findTagsByEntityId, findAllTagsByType, deleteTag } from 'server/src/lib/actions/tagActions';
+import { createTag, findTagsByEntityId, findAllTagsByType, deleteTag } from '@alga-psa/tags/actions';
 import type { ITag } from '@alga-psa/types';
 
 /**
@@ -545,7 +545,7 @@ export async function composeFormAction(
 /**
  * Generate a unique form ID
  */
-export function generateFormIdAction(): string {
+export async function generateFormIdAction(): Promise<string> {
   const formRegistry = getFormRegistry();
   return formRegistry.generateFormId();
 }

@@ -33,3 +33,6 @@ export {
 
 // Re-export zod for convenience
 export { z } from 'zod';
+
+// Client-side validation helpers used by UI/forms
+export * from './lib/clientFormValidation';

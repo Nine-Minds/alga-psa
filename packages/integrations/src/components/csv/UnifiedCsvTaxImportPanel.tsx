@@ -10,11 +10,8 @@ import { Upload, FileText, AlertCircle, CheckCircle2, HelpCircle, ChevronDown, C
 import {
   previewXeroCsvTaxImport,
   executeXeroCsvTaxImport
-} from 'server/src/lib/actions/integrations/xeroCsvActions';
-import type {
-  TaxImportPreviewResult,
-  TaxImportResult
-} from 'server/src/lib/services/xeroCsvTaxImportService';
+} from '@alga-psa/integrations/actions';
+import type { TaxImportPreviewResult, TaxImportResult } from '@alga-psa/types';
 
 type ImportSource = 'xero' | 'quickbooks';
 

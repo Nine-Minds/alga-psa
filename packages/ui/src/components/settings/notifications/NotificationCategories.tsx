@@ -4,20 +4,20 @@ import { useState, useEffect, useCallback } from "react";
 import { Button } from "@alga-psa/ui/components/Button";
 import { Switch } from "@alga-psa/ui/components/Switch";
 import { DataTable } from "@alga-psa/ui/components/DataTable";
-import { ColumnDefinition } from "server/src/interfaces/dataTable.interfaces";
+import { ColumnDefinition } from "@alga-psa/types";
 import { ChevronDown, ChevronRight, CornerDownRight, MoreVertical, Lock } from "lucide-react";
 import { toast } from "react-hot-toast";
-import { useUserPreference } from "server/src/hooks/useUserPreference";
+import { useUserPreference } from "@alga-psa/ui";
 import {
   getCategoriesAction,
   getCategoryWithSubtypesAction,
   updateCategoryAction,
   updateSubtypeAction
-} from "server/src/lib/actions/notification-actions/notificationActions";
+} from "@alga-psa/notifications/actions";
 import {
   NotificationCategory,
   NotificationSubtype
-} from "server/src/lib/models/notification";
+} from "@alga-psa/notifications";
 import LoadingIndicator from "@alga-psa/ui/components/LoadingIndicator";
 import { ConfirmationDialog } from "@alga-psa/ui/components/ConfirmationDialog";
 import {
@@ -27,7 +27,7 @@ import {
   DropdownMenuItem,
 } from "@alga-psa/ui/components/DropdownMenu";
 import { Alert, AlertDescription } from "@alga-psa/ui/components/Alert";
-import { useRegisterUnsavedChanges } from "server/src/contexts/UnsavedChangesContext";
+import { useRegisterUnsavedChanges } from "@alga-psa/ui";
 
 // Types for tracking pending changes
 interface PendingCategoryChange {

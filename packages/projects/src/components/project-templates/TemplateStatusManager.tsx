@@ -5,7 +5,7 @@ import { Dialog, DialogContent, DialogFooter } from '@alga-psa/ui/components/Dia
 import { Button } from '@alga-psa/ui/components/Button';
 import { Plus, Trash, GripVertical, Circle } from 'lucide-react';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
-import { IProjectTemplateStatusMapping } from 'server/src/interfaces/projectTemplate.interfaces';
+import { IProjectTemplateStatusMapping } from '@alga-psa/types';
 import {
   addTemplateStatusMapping,
   removeTemplateStatusMapping,

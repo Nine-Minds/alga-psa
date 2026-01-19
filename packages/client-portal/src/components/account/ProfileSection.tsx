@@ -5,7 +5,7 @@ import { Input } from "@alga-psa/ui/components/Input";
 import { TextArea } from "@alga-psa/ui/components/TextArea";
 import { Button } from "@alga-psa/ui/components/Button";
 import { useState, useEffect } from 'react';
-import { getClientProfile, updateClientProfile, type ClientProfile } from "server/src/lib/actions/account";
+import { getClientProfile, updateClientProfile, type ClientProfile } from "@alga-psa/client-portal/actions";
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 interface ValidationErrors {

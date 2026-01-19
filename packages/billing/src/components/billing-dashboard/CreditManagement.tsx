@@ -7,10 +7,10 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { CustomTabs } from '@alga-psa/ui/components/CustomTabs';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { Skeleton } from '@alga-psa/ui/components/Skeleton';
-import { formatCurrency } from 'server/src/lib/utils/formatters';
-import { formatDateOnly } from 'server/src/lib/utils/dateTimeUtils';
-import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
-import { ICreditTracking } from 'server/src/interfaces/billing.interfaces';
+import { formatCurrency } from '@alga-psa/core';
+import { formatDateOnly } from '@alga-psa/core';
+import { ColumnDefinition } from '@alga-psa/types';
+import { ICreditTracking } from '@alga-psa/types';
 import { listClientCredits, getCreditDetails } from '@alga-psa/billing/actions/creditActions';
 import { Dialog, DialogContent, DialogFooter } from '@alga-psa/ui/components/Dialog';
 import {

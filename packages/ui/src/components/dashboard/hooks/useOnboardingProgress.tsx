@@ -3,14 +3,14 @@
 import { useEffect, useMemo, useRef } from 'react';
 import useSWR from 'swr';
 import { usePostHog } from 'posthog-js/react';
-import { STEP_DEFINITIONS, type StepDefinition } from '@/lib/onboarding/stepDefinitions';
+import { STEP_DEFINITIONS, type StepDefinition } from '@alga-psa/onboarding/lib/stepDefinitions';
 import {
   getOnboardingProgressAction,
   type OnboardingProgressResponse,
   type OnboardingStepServerState,
   type OnboardingStepStatus,
   type OnboardingStepId,
-} from '@/lib/actions/onboarding-progress';
+} from '@alga-psa/onboarding/actions';
 
 const REFRESH_INTERVAL_MS = 60_000;
 

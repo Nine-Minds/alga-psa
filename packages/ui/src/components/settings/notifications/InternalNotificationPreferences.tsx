@@ -8,13 +8,13 @@ import {
   getSubtypesAction as getInternalSubtypesAction,
   getUserInternalNotificationPreferencesAction,
   updateUserInternalNotificationPreferenceAction
-} from "server/src/lib/actions/internal-notification-actions/internalNotificationActions";
+} from "@alga-psa/notifications/actions";
 import {
   InternalNotificationCategory,
   InternalNotificationSubtype,
   UserInternalNotificationPreference
-} from "server/src/lib/models/internalNotification";
-import { getCurrentUser } from "server/src/lib/actions/user-actions/userActions";
+} from "@alga-psa/notifications";
+import { getCurrentUser } from "@alga-psa/users/actions";
 import { useTranslation } from "@alga-psa/ui/lib/i18n/client";
 
 export function InternalNotificationPreferences() {

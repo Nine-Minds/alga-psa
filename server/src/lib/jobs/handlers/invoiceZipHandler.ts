@@ -1,5 +1,5 @@
 import { JobService, JobStepResult } from 'server/src/services/job.service';
-import { getTenantDetails } from 'server/src/lib/actions/tenantActions';
+import { getTenantDetails } from '@alga-psa/tenancy/actions';
 import { getInvoiceForRendering } from '@alga-psa/billing/actions/invoiceQueries';
 import { uploadDocument } from '@alga-psa/documents/actions/documentActions';
 import type { TenantCompany } from 'server/src/lib/types';

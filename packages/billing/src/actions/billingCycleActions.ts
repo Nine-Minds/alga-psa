@@ -1,15 +1,15 @@
 'use server'
 
-import { createTenantKnex } from 'server/src/lib/db';
-import { BillingCycleType, IClientContractLineCycle } from 'server/src/interfaces/billing.interfaces';
-import { createClientContractLineCycles, type BillingCycleCreationResult } from 'server/src/lib/billing/createBillingCycles';
+import { createTenantKnex } from '@alga-psa/db';
+import { BillingCycleType, IClientContractLineCycle } from '@alga-psa/types';
+import { createClientContractLineCycles, type BillingCycleCreationResult } from '../lib/billing/createBillingCycles';
 import { v4 as uuidv4 } from 'uuid';
 import { getNextBillingDate } from './billingAndTax';
 import { hardDeleteInvoice } from './invoiceModification';
-import { ISO8601String } from 'server/src/types/types.d';
+import { ISO8601String } from '@alga-psa/types';
 import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
-import { getSession } from 'server/src/lib/auth/getSession';
+import { getSession } from '@alga-psa/auth';
 
 export async function getBillingCycle(clientId: string): Promise<BillingCycleType> {
   const session = await getSession();

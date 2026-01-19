@@ -8,7 +8,7 @@ import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { Card, CardContent, CardHeader } from '@alga-psa/ui/components/Card';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
-import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
+import { ColumnDefinition } from '@alga-psa/types';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -24,15 +24,15 @@ import {
   checkProductCanBeDeleted,
   deleteProductPermanently,
   ProductAssociationCheck
-} from 'server/src/lib/actions/serviceActions';
+} from '@alga-psa/billing/actions';
 import { QuickAddProduct } from './QuickAddProduct';
 
-import { getTaxRates } from 'server/src/lib/actions/taxSettingsActions';
-import { ITaxRate } from 'server/src/interfaces/tax.interfaces';
-import { IService, IServicePrice } from 'server/src/interfaces/billing.interfaces';
-import { getCurrencySymbol } from 'server/src/constants/currency';
-import { getServiceCategories } from 'server/src/lib/actions/categoryActions';
-import { IServiceCategory } from 'server/src/interfaces/billing.interfaces';
+import { getTaxRates } from '@alga-psa/billing/actions';
+import { ITaxRate } from '@alga-psa/types';
+import { IService, IServicePrice } from '@alga-psa/types';
+import { getCurrencySymbol } from '@alga-psa/core';
+import { getServiceCategories } from '@alga-psa/billing/actions';
+import { IServiceCategory } from '@alga-psa/types';
 
 const ProductsManager: React.FC = () => {
   const [products, setProducts] = useState<IService[]>([]);

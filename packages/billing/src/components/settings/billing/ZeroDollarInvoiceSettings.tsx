@@ -3,8 +3,8 @@ import CustomSelect from "@alga-psa/ui/components/CustomSelect";
 import { Switch } from "@alga-psa/ui/components/Switch";
 import { Label } from "@alga-psa/ui/components/Label";
 import toast from 'react-hot-toast';
-import { getDefaultBillingSettings, updateDefaultBillingSettings } from "server/src/lib/actions/billingSettingsActions";
-import type { BillingSettings } from "server/src/lib/actions/billingSettingsTypes";
+import { getDefaultBillingSettings, updateDefaultBillingSettings } from "@alga-psa/billing/actions";
+import type { BillingSettings } from "@alga-psa/billing/actions";
 
 const ZeroDollarInvoiceSettings = (): React.JSX.Element => {
   const [settings, setSettings] = React.useState<BillingSettings>({

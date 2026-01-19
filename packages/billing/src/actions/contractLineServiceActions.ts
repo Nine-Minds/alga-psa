@@ -1,14 +1,14 @@
 'use server';
 
 import { withTransaction } from '@alga-psa/db';
-import { IContractLineServiceRateTier, IUserTypeRate, IContractLineServiceConfiguration, IContractLineServiceFixedConfig, IContractLineServiceHourlyConfig, IContractLineServiceUsageConfig, IContractLineServiceBucketConfig } from 'server/src/interfaces/contractLineServiceConfiguration.interfaces';
-import { IContractLineService } from 'server/src/interfaces/billing.interfaces';
-import { IService } from 'server/src/interfaces/billing.interfaces';
+import { IContractLineServiceRateTier, IUserTypeRate, IContractLineServiceConfiguration, IContractLineServiceFixedConfig, IContractLineServiceHourlyConfig, IContractLineServiceUsageConfig, IContractLineServiceBucketConfig } from '@alga-psa/types';
+import { IContractLineService } from '@alga-psa/types';
+import { IService } from '@alga-psa/types';
  
 import { v4 as uuidv4 } from 'uuid';
-import { ContractLineServiceConfigurationService } from 'server/src/lib/services/contractLineServiceConfigurationService';
+import { ContractLineServiceConfigurationService } from '../services/contractLineServiceConfigurationService';
 import * as planServiceConfigActions from './contractLineServiceConfigurationActions';
-import { createTenantKnex } from 'server/src/lib/db';
+import { createTenantKnex } from '@alga-psa/db';
 import { Knex } from 'knex';
 
 async function findTemplateLine(
@@ -708,7 +708,7 @@ export async function getContractLineServicesWithConfigurations(contractLineId: 
 
     // If it's an hourly config, fetch user type rates
     if (configToUse.configuration_type === 'Hourly') {
-      const hourlyConfigModel = new (await import('server/src/lib/models/contractLineServiceHourlyConfig')).default(trx);
+      const hourlyConfigModel = new (await import('../models/contractLineServiceHourlyConfig')).default(trx);
       userTypeRates = await hourlyConfigModel.getUserTypeRates(configToUse.config_id);
     }
 

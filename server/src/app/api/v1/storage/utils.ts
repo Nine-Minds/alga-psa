@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import type { Knex } from 'knex';
-import { getCurrentUser } from '@/lib/actions/user-actions/userActions';
-import { findUserByIdForApi } from '@/lib/actions/user-actions/findUserByIdForApi';
+import { getCurrentUser, findUserByIdForApi } from '@alga-psa/users/actions';
 import { ApiKeyServiceForApi } from '@/lib/services/apiKeyServiceForApi';
 import { hasPermission } from '@/lib/auth/rbac';
 import { runWithTenant } from '@/lib/db';

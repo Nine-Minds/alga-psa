@@ -3,8 +3,8 @@
 import React, { useMemo, useState } from 'react';
 import * as Tabs from '@radix-ui/react-tabs';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { IService } from 'server/src/interfaces';
-import { IDocument } from 'server/src/interfaces/document.interface';
+import { IService } from '@alga-psa/types';
+import { IDocument } from '@alga-psa/types';
 import { Alert, AlertDescription, AlertTitle } from '@alga-psa/ui/components/Alert';
 
 // Import all the components

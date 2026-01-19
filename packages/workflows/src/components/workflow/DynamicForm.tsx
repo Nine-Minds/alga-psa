@@ -2,14 +2,14 @@ import { useState, FormEvent, useEffect, useMemo } from 'react';
 import { withTheme } from '@rjsf/core';
 import validator from '@rjsf/validator-ajv8';
 import { RJSFSchema, UiSchema, ValidatorType } from '@rjsf/utils';
-import { customWidgets } from 'server/src/lib/workflow/forms/customWidgets';
+import { customWidgets } from '@alga-psa/workflows/forms/customWidgets';
 // import { CustomFieldTemplate } from '../../lib/workflow/forms/customFieldTemplate'; // Removed
 // import { CustomTitleField } from '../../lib/workflow/forms/CustomTitleField'; // Removed
-import { Action, actionHandlerRegistry, ActionHandlerContext } from 'server/src/lib/workflow/forms/actionHandlerRegistry';
+import { Action, actionHandlerRegistry, ActionHandlerContext } from '@alga-psa/workflows/forms/actionHandlerRegistry';
 // Assuming a hypothetical shadcn theme package and import. User will need to verify/install.
 import { ActionButtonGroup } from './ActionButtonGroup';
-import { applyConditionalLogic } from 'server/src/lib/workflow/forms/conditionalLogic';
-import { processTemplateVariables } from 'server/src/utils/templateUtils';
+import { applyConditionalLogic } from '@alga-psa/workflows/forms/conditionalLogic';
+import { processTemplateVariables } from '@alga-psa/workflows/lib/templateVariables';
 
 // Create a themed form with Shadcn theme
 const ThemedForm = withTheme({});

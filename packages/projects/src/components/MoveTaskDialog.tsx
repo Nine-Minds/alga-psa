@@ -6,7 +6,7 @@ import { Button } from '@alga-psa/ui/components/Button';
 import TreeSelect, { TreeSelectOption, TreeSelectPath } from '@alga-psa/ui/components/TreeSelect';
 import { toast } from 'react-hot-toast';
 import { moveTaskToPhase } from '../actions/projectTaskActions';
-import { IProjectTask } from 'server/src/interfaces/project.interfaces';
+import { IProjectTask } from '@alga-psa/types';
 
 interface MoveTaskDialogProps {
   isOpen: boolean;

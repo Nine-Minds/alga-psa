@@ -5,17 +5,17 @@ import dynamic from 'next/dynamic';
 import { Card, CardContent, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import { Text } from '@radix-ui/themes';
 import { DataTable } from '@alga-psa/ui/components/DataTable'; // Import DataTable
-import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces'; // Import ColumnDefinition
-import { getRecentClientInvoices, RecentInvoice } from 'server/src/lib/actions/report-actions'; // Import action and type
+import { ColumnDefinition } from '@alga-psa/types'; // Import ColumnDefinition
+import { getRecentClientInvoices, type RecentInvoice } from '@alga-psa/reporting/actions'; // Import action and type
 import { Skeleton } from '@alga-psa/ui/components/Skeleton'; // Import Skeleton for loading state
-import { formatCurrency } from 'server/src/lib/utils/formatters'; // Import currency formatter
-import { formatDateOnly } from 'server/src/lib/utils/dateTimeUtils'; // Import date formatter
+import { formatCurrency } from '@alga-psa/core'; // Import currency formatter
+import { formatDateOnly } from '@alga-psa/core'; // Import date formatter
 import { parseISO, subDays, format } from 'date-fns'; // Import date functions
 import {
  getHoursByServiceType, HoursByServiceResult,
  getRemainingBucketUnits, RemainingBucketUnitsResult,
  getUsageDataMetrics, UsageMetricResult // Import usage action and type
-} from 'server/src/lib/actions/report-actions'; // Import actions and types
+} from '@alga-psa/reporting/actions'; // Import actions and types
 import ChartSkeleton from '@alga-psa/ui/components/skeletons/ChartSkeleton';
 import { BucketUsageChart } from '@alga-psa/ui/components';
 

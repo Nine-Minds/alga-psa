@@ -1,0 +1,26 @@
+{
+  "name": "@alga-psa/reference-data",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "packages/reference-data/src",
+  "projectType": "library",
+  "tags": ["scope:reference-data", "type:horizontal"],
+  "targets": {
+    "build": {
+      "executor": "nx:noop"
+    },
+    "test": {
+      "executor": "@nx/vite:test",
+      "outputs": ["{workspaceRoot}/coverage/packages/reference-data"],
+      "options": {
+        "passWithNoTests": true
+      }
+    },
+    "lint": {
+      "executor": "@nx/eslint:lint",
+      "outputs": ["{options.outputFile}"],
+      "options": {
+        "lintFilePatterns": ["packages/reference-data/**/*.{ts,tsx}"]
+      }
+    }
+  }
+}

@@ -6,9 +6,9 @@ import {
   type CreateMappingData,
   type ExternalEntityMapping,
   type UpdateMappingData
-} from 'server/src/lib/actions/externalMappingActions';
-import { getServices } from 'server/src/lib/actions/serviceActions';
-import { getTaxRegions } from 'server/src/lib/actions/taxSettingsActions';
+} from '@alga-psa/integrations/actions';
+import { getServices } from '@alga-psa/billing/actions';
+import { getTaxRegions } from '@alga-psa/billing/actions';
 import { getAllClients } from '@alga-psa/clients/actions';
 import type { IClient, IService, ITaxRegion } from '@alga-psa/types';
 import type {

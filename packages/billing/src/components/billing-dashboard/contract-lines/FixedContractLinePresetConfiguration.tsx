@@ -11,16 +11,16 @@ import { Input } from '@alga-psa/ui/components/Input';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Switch } from '@alga-psa/ui/components/Switch';
 import Spinner from '@alga-psa/ui/components/Spinner';
-import { getServices } from 'server/src/lib/actions/serviceActions';
+import { getServices } from '@alga-psa/billing/actions';
 import {
   getContractLinePresetById,
   updateContractLinePreset,
   updateContractLinePresetFixedConfig,
   getContractLinePresetFixedConfig,
 } from '@alga-psa/billing/actions/contractLinePresetActions';
-import { IService, IContractLinePreset } from 'server/src/interfaces/billing.interfaces';
+import { IService, IContractLinePreset } from '@alga-psa/types';
 import FixedContractLinePresetServicesList from '../FixedContractLinePresetServicesList'; // Import the preset-specific component
-import { BILLING_FREQUENCY_OPTIONS } from 'server/src/constants/billing';
+import { BILLING_FREQUENCY_OPTIONS } from '@alga-psa/billing/constants/billing';
 import { useTenant } from '@alga-psa/ui/components/providers/TenantProvider';
 
 interface FixedPresetConfigurationProps {

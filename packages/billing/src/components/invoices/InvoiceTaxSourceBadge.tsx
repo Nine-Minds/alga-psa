@@ -5,7 +5,7 @@ import { Badge } from '@alga-psa/ui/components/Badge';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import { Calculator, Cloud, Clock } from 'lucide-react';
 
-import { TaxSource } from 'server/src/interfaces/tax.interfaces';
+import { TaxSource } from '@alga-psa/types';
 
 interface InvoiceTaxSourceBadgeProps {
   taxSource: TaxSource;

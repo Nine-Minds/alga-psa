@@ -25,6 +25,10 @@
     "./encryption": {
       "import": "./src/lib/encryption.ts",
       "types": "./src/lib/encryption.ts"
+    },
+    "./server": {
+      "import": "./src/server.ts",
+      "types": "./src/server.ts"
     }
   },
   "scripts": {

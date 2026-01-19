@@ -1,9 +1,11 @@
+'use client';
+
 import React, { useEffect, useState } from 'react';
-import { ActivityFilters, ScheduleActivity, ActivityType } from 'server/src/interfaces/activity.interfaces';
+import { ActivityFilters, ScheduleActivity, ActivityType } from '@alga-psa/types';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Card, CardContent, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import { ScheduleCard } from './ActivityCard';
-import { fetchScheduleActivities } from 'server/src/lib/actions/activity-actions/activityServerActions';
+import { fetchScheduleActivities } from '@alga-psa/workflows/actions';
 import { ScheduleSectionFiltersDialog } from './filters/ScheduleSectionFiltersDialog';
 import { FilterIcon, XCircleIcon } from 'lucide-react';
 import { useActivityDrawer } from './ActivityDrawerProvider';

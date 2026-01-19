@@ -9,14 +9,14 @@ import { TextArea } from '@alga-psa/ui/components/TextArea';
 import { Switch } from '@alga-psa/ui/components/Switch';
 import { ExternalLink, Check, X } from 'lucide-react';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
-import { useDrawer } from "server/src/context/DrawerContext";
+import { useDrawer } from "@alga-psa/ui";
 import { WorkItemDrawer } from '@alga-psa/scheduling/components/time-management/time-entry/time-sheet/WorkItemDrawer';
 import { format, isWeekend, addYears } from 'date-fns';
 import { formatInTimeZone } from 'date-fns-tz';
-import { IScheduleEntry, IRecurrencePattern, IEditScope } from 'server/src/interfaces/schedule.interfaces';
+import { IScheduleEntry, IRecurrencePattern, IEditScope } from '@alga-psa/types';
 import { AddWorkItemDialog } from '@alga-psa/scheduling/components/time-management/time-entry/time-sheet/AddWorkItemDialog';
-import { IWorkItem, IExtendedWorkItem } from 'server/src/interfaces/workItem.interfaces';
-import { getWorkItemById } from 'server/src/lib/actions/workItemActions';
+import { IWorkItem, IExtendedWorkItem } from '@alga-psa/types';
+import { getWorkItemById } from '@alga-psa/scheduling/actions';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import UserPicker from '@alga-psa/ui/components/UserPicker';
 import SelectedWorkItem from '@alga-psa/scheduling/components/time-management/time-entry/time-sheet/SelectedWorkItem';
@@ -29,7 +29,7 @@ import {
   declineAppointmentRequest as declineRequest,
   getAppointmentRequestById,
   IAppointmentRequest
-} from 'server/src/lib/actions/appointmentRequestManagementActions';
+} from '@alga-psa/scheduling/actions';
 import toast from 'react-hot-toast';
 import { Label } from '@alga-psa/ui/components/Label';
 

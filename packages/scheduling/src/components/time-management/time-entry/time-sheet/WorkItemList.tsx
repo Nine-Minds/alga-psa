@@ -1,6 +1,6 @@
 'use client'
 import React, { useMemo } from 'react';
-import { WorkItemWithStatus, WorkItemType } from 'server/src/interfaces/workItem.interfaces';
+import { WorkItemWithStatus, WorkItemType } from '@alga-psa/types';
 
 interface MetaLinesProps {
   clientName?: string | null;

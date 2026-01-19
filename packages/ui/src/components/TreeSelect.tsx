@@ -1,3 +1,5 @@
+'use client';
+
 import React, { useState, useEffect, useSyncExternalStore, useRef } from 'react';
 import * as RadixSelect from '@radix-ui/react-select';
 import { ChevronDown, ChevronRight, X } from 'lucide-react';

@@ -7,9 +7,9 @@ import { Label } from '@alga-psa/ui/components/Label';
 import { Input } from '@alga-psa/ui/components/Input';
 import { DatePicker } from '@alga-psa/ui/components/DatePicker';
 import { Switch } from '@alga-psa/ui/components/Switch';
-import { ICreditTracking } from 'server/src/interfaces/billing.interfaces';
-import { formatCurrency } from 'server/src/lib/utils/formatters';
-import { toPlainDate, toISODate, formatDateOnly } from 'server/src/lib/utils/dateTimeUtils';
+import { ICreditTracking } from '@alga-psa/types';
+import { formatCurrency } from '@alga-psa/core';
+import { toPlainDate, toISODate, formatDateOnly } from '@alga-psa/core';
 import { Temporal } from '@js-temporal/polyfill';
 
 interface CreditExpirationModificationDialogProps {

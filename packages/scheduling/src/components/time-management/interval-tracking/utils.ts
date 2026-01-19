@@ -1,4 +1,4 @@
-import { TicketInterval, TicketIntervalGroup } from 'server/src/types/interval-tracking';
+import { TicketInterval, TicketIntervalGroup } from '@alga-psa/types';
 
 /**
  * Format seconds into HH:MM:SS format

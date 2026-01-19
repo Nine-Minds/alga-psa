@@ -8,7 +8,7 @@ import { getContractById } from '@alga-psa/billing/actions/contractActions';
 import ContractTemplateDetail from './ContractTemplateDetail';
 import ContractDetail from './ContractDetail';
 import { getClientContractById } from '@alga-psa/clients/actions';
-import { IDocument } from 'server/src/interfaces/document.interface';
+import { IDocument } from '@alga-psa/types';
 
 type ViewMode = 'loading' | 'template' | 'client' | 'error';
 

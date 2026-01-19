@@ -27,7 +27,7 @@ vi.mock('server/src/lib/models/UserSession', () => ({
   },
 }));
 
-vi.mock('server/src/lib/actions/tenant-actions/getTenantBrandingByDomain', () => ({
+vi.mock('@alga-psa/tenancy/actions', () => ({
   getTenantBrandingByDomain: getTenantBrandingByDomainMock,
   getTenantLocaleByDomain: getTenantLocaleByDomainMock,
 }));

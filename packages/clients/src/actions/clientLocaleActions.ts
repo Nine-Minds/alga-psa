@@ -1,10 +1,10 @@
 'use server';
 
-import { createTenantKnex } from 'server/src/lib/db';
+import { createTenantKnex } from '@alga-psa/db';
 import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { SupportedLocale, isSupportedLocale } from '@alga-psa/ui/lib/i18n/config';
-import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
+import { getCurrentUser } from '@alga-psa/users/actions';
 
 /**
  * Update client's default locale for all contacts

@@ -8,17 +8,17 @@ import { Clock, FileText, ArrowLeft, Plus, Pen, Trash2 } from 'lucide-react';
 import { useAutomationIdAndRegister } from '@alga-psa/ui/ui-reflection/useAutomationIdAndRegister';
 import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContainer';
 import { ButtonComponent, ContainerComponent } from '@alga-psa/ui/ui-reflection/types';
-import { useDrawer } from "server/src/context/DrawerContext";
+import { useDrawer } from "@alga-psa/ui";
 import ContactDetailsView from '@alga-psa/clients/components/contacts/ContactDetailsView';
 import ClientDetails from '@alga-psa/clients/components/clients/ClientDetails';
 import AgentScheduleDrawer from '@alga-psa/tickets/components/ticket/AgentScheduleDrawer';
 import { Button } from '@alga-psa/ui/components/Button';
 import { QuickAddTicket } from '@alga-psa/tickets/components/QuickAddTicket';
 import { QuickAddInteraction } from '@alga-psa/clients/components/interactions/QuickAddInteraction';
-import { getContactByContactNameId } from 'server/src/lib/actions/contact-actions/contactActions';
+import { getContactByContactNameId } from '@alga-psa/clients/actions';
 import { getClientById, getAllClients } from '@alga-psa/clients/actions';
-import { findUserById } from 'server/src/lib/actions/user-actions/userActions';
-import { deleteInteraction } from 'server/src/lib/actions/interactionActions';
+import { findUserById } from '@alga-psa/users/actions';
+import { deleteInteraction } from '@alga-psa/clients/actions';
 import { Text, Flex, Heading } from '@radix-ui/themes';
 import { RichTextViewer } from '@alga-psa/ui/editor';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
@@ -26,7 +26,7 @@ import TimeEntryDialog from '@alga-psa/scheduling/components/time-management/tim
 import { toast } from 'react-hot-toast';
 import { getCurrentTimePeriod } from '@alga-psa/scheduling/actions/timePeriodsActions';
 import { fetchOrCreateTimeSheet, saveTimeEntry } from '@alga-psa/scheduling/actions/timeEntryActions';
-import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
+import { getCurrentUser } from '@alga-psa/users/actions';
 
 interface InteractionDetailsProps {
   interaction: IInteraction;

@@ -4,28 +4,27 @@ import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 
-import { createTenantKnex } from 'server/src/lib/db';
-import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
-import { hasPermission } from 'server/src/lib/auth/rbac';
-import ContractLine from 'server/src/lib/models/contractLine';
-import ContractLineFixedConfig from 'server/src/lib/models/contractLineFixedConfig';
-import { ContractLineServiceConfigurationService } from 'server/src/lib/services/contractLineServiceConfigurationService';
+import { createTenantKnex } from '@alga-psa/db';
+import { getCurrentUser } from '@alga-psa/users/actions';
+import { hasPermission } from '@alga-psa/auth';
+import ContractLine from '../models/contractLine';
+import ContractLineFixedConfig from '../models/contractLineFixedConfig';
+import { ContractLineServiceConfigurationService } from '../services/contractLineServiceConfigurationService';
 import {
   getContractLineServicesWithConfigurations,
   getTemplateLineServicesWithConfigurations,
 } from './contractLineServiceActions';
-import { getSession } from 'server/src/lib/auth/getSession';
-import { ensureTemplateLineSnapshot } from 'server/src/lib/repositories/contractLineRepository';
-import { fetchDetailedContractLines } from 'server/src/lib/repositories/contractLineRepository';
+import { getSession } from '@alga-psa/auth';
+import { ensureTemplateLineSnapshot, fetchDetailedContractLines } from '../repositories/contractLineRepository';
 import {
   IContractLineServiceBucketConfig,
   IContractLineServiceHourlyConfig,
   IContractLineServiceUsageConfig,
-} from 'server/src/interfaces/contractLineServiceConfiguration.interfaces';
+} from '@alga-psa/types';
 import {
   BucketOverlayInput,
   upsertBucketOverlayInTransaction
-} from 'server/src/lib/actions/bucketOverlayActions';
+} from './bucketOverlayActions';
 
 // ---------------------- Template wizard types ----------------------
 

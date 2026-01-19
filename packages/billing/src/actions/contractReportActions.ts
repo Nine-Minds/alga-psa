@@ -1,7 +1,7 @@
 'use server'
 
-import { createTenantKnex } from 'server/src/lib/db';
-import { getSession } from 'server/src/lib/auth/getSession';
+import { createTenantKnex } from '@alga-psa/db';
+import { getSession } from '@alga-psa/auth';
 
 // Type definitions for reports
 export interface ContractRevenue {

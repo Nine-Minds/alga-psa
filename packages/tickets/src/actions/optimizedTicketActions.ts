@@ -15,18 +15,18 @@ import type {
   IDocument,
 } from '@alga-psa/types';
 import { withTransaction } from '@alga-psa/db';
-import { createTenantKnex } from 'server/src/lib/db';
+import { createTenantKnex } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { revalidatePath } from 'next/cache';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { z } from 'zod';
 import { validateData } from '@alga-psa/validation';
-import { publishEvent } from 'server/src/lib/eventBus/publishers';
-import { getEventBus } from 'server/src/lib/eventBus';
-import { getEmailEventChannel } from 'server/src/lib/notifications/emailChannel';
-import { convertBlockNoteToMarkdown } from 'server/src/lib/utils/blocknoteUtils';
+import { publishEvent } from '@alga-psa/event-bus/publishers';
+import { getEventBus } from '@alga-psa/event-bus';
+import { getEmailEventChannel } from '@alga-psa/notifications/emailChannel';
+import { convertBlockNoteToMarkdown } from '@alga-psa/documents/lib/blocknoteUtils';
 import { getImageUrl } from '@alga-psa/documents/actions/documentActions';
-import { getClientLogoUrl, getUserAvatarUrl, getClientLogoUrlsBatch } from 'server/src/lib/utils/avatarUtils';
+import { getClientLogoUrl, getUserAvatarUrl, getClientLogoUrlsBatch } from '@alga-psa/documents/lib/avatarUtils';
 import {
   ticketFormSchema,
   ticketSchema,
@@ -34,12 +34,12 @@ import {
   ticketAttributesQuerySchema,
   ticketListItemSchema,
   ticketListFiltersSchema
-} from 'server/src/lib/schemas/ticket.schema';
-import { analytics } from 'server/src/lib/analytics/posthog';
-import { AnalyticsEvents } from 'server/src/lib/analytics/events';
+} from '../schemas/ticket.schema';
+import { analytics } from '@alga-psa/analytics';
+import { AnalyticsEvents } from '@alga-psa/analytics';
 import { Temporal } from '@js-temporal/polyfill';
-import { resolveUserTimeZone, normalizeIanaTimeZone } from 'server/src/lib/utils/workDate';
-import { calculateItilPriority } from 'server/src/lib/utils/itilUtils';
+import { resolveUserTimeZone, normalizeIanaTimeZone } from '@alga-psa/db';
+import { calculateItilPriority } from '@alga-psa/tickets/lib/itilUtils';
 import { getCurrentUser } from '@alga-psa/auth/getCurrentUser';
 
 // Helper function to safely convert dates

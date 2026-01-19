@@ -1,8 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { IStatus } from 'server/src/interfaces/status.interface';
-import { IProjectStatusMapping } from 'server/src/interfaces/project.interfaces';
+import { IStatus } from '@alga-psa/types';
+import { IProjectStatusMapping } from '@alga-psa/types';
 import { Button } from '@alga-psa/ui/components/Button';
 import { ChevronUp, ChevronDown, Plus, X, ChevronRight } from 'lucide-react';
 import {

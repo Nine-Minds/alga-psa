@@ -3,7 +3,7 @@
 import React, { useMemo } from 'react';
 import { Label } from '@alga-psa/ui/components/Label';
 import { Repeat } from 'lucide-react';
-import { BILLING_FREQUENCY_OPTIONS, BILLING_FREQUENCY_DISPLAY } from 'server/src/constants/billing';
+import { BILLING_FREQUENCY_OPTIONS, BILLING_FREQUENCY_DISPLAY } from '@alga-psa/billing/constants/billing';
 import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect';
 
 interface BillingFrequencyOverrideSelectProps {

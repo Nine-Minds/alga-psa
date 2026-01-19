@@ -14,13 +14,13 @@ import {
   IContractLineServiceBucketConfig,
   IContractLineServiceRateTier,
   IUserTypeRate
-} from 'server/src/interfaces/contractLineServiceConfiguration.interfaces';
-import { IService, IContractLineFixedConfig } from 'server/src/interfaces/billing.interfaces';
+} from '@alga-psa/types';
+import { IService, IContractLineFixedConfig } from '@alga-psa/types';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Button } from '@alga-psa/ui/components/Button';
 import { SwitchWithLabel } from '@alga-psa/ui/components/SwitchWithLabel';
 import { BucketOverlayFields } from '../contracts/BucketOverlayFields';
-import { BucketOverlayInput } from 'server/src/lib/actions/bucketOverlayActions';
+import { BucketOverlayInput } from '@alga-psa/billing/actions';
 
 interface ServiceConfigurationPanelProps {
   configuration: Partial<IContractLineServiceConfiguration>;

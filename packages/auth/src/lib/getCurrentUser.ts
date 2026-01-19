@@ -1,8 +1,8 @@
 import { Knex } from 'knex';
-import type { IUser, IRole, IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
-import { createTenantKnex } from 'server/src/lib/db';
-import { getSession } from 'server/src/lib/auth/getSession';
-import { getUserAvatarUrl } from 'server/src/lib/utils/avatarUtils';
+import type { IUser, IRole, IUserWithRoles } from '@alga-psa/types';
+import { createTenantKnex } from '@alga-psa/db';
+import { getSession } from './getSession';
+import { getUserAvatarUrl } from '@alga-psa/documents/lib/avatarUtils';
 import logger from '@alga-psa/core/logger';
 import { withTransaction } from '@alga-psa/db';
 

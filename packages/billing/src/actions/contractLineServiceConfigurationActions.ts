@@ -1,7 +1,7 @@
 'use server';
 
-import { createTenantKnex } from 'server/src/lib/db';
-import { ContractLineServiceConfigurationService } from 'server/src/lib/services/contractLineServiceConfigurationService';
+import { createTenantKnex } from '@alga-psa/db';
+import { ContractLineServiceConfigurationService } from '../services/contractLineServiceConfigurationService';
 import {
   IContractLineServiceConfiguration,
   IContractLineServiceHourlyConfig,
@@ -9,7 +9,7 @@ import {
   IContractLineServiceBucketConfig,
   IContractLineServiceRateTierInput,
   IUserTypeRate
-} from 'server/src/interfaces/contractLineServiceConfiguration.interfaces';
+} from '@alga-psa/types';
 
 async function getService() {
   const { knex, tenant } = await createTenantKnex();

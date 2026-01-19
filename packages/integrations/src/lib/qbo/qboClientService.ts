@@ -1,8 +1,8 @@
 import axios from 'axios';
-import { getSecretProviderInstance } from '@alga-psa/core';
+import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import type { QboTenantCredentials } from './types';
-import { AppError } from 'server/src/lib/errors';
-import type { ExternalCompanyRecord, NormalizedCompanyPayload } from 'server/src/lib/services/companySync/companySync.types';
+import { AppError } from '@alga-psa/core';
+import type { ExternalCompanyRecord, NormalizedCompanyPayload } from '@alga-psa/types';
 
 // Define QuickBooksInstance type locally
 interface QuickBooksInstance {

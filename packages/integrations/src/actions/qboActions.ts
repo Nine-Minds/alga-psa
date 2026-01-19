@@ -5,7 +5,7 @@ import logger from '@alga-psa/core/logger';
 import { getCurrentUser } from '@alga-psa/auth/getCurrentUser';
 import { revalidatePath } from 'next/cache';
 import { ISecretProvider } from '@alga-psa/core';
-import { getSecretProviderInstance } from '@alga-psa/core';
+import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { QboClientService } from '../lib/qbo/qboClientService';
 

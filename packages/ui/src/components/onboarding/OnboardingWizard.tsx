@@ -20,7 +20,7 @@ import {
   configureTicketing,
   completeOnboarding,
   validateOnboardingDefaults
-} from 'server/src/lib/actions/onboarding-actions/onboardingActions';
+} from '@alga-psa/onboarding/actions';
 
 interface OnboardingWizardProps {
   open?: boolean;

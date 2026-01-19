@@ -5,8 +5,8 @@ import { Switch } from '@alga-psa/ui/components/Switch';
 import { Label } from '@alga-psa/ui/components/Label';
 import { Button } from '@alga-psa/ui/components/Button';
 import toast from 'react-hot-toast';
-import { getClientContractLineSettings, updateClientContractLineSettings } from "server/src/lib/actions/billingSettingsActions";
-import type { BillingSettings } from "server/src/lib/actions/billingSettingsTypes";
+import { getClientContractLineSettings, updateClientContractLineSettings } from "@alga-psa/billing/actions";
+import type { BillingSettings } from "@alga-psa/billing/actions";
 
 interface ClientCreditExpirationSettingsProps {
   clientId: string;

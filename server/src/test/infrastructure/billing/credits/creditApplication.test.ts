@@ -54,7 +54,7 @@ vi.mock('@alga-psa/core/logger', () => {
   return { default: logger };
 });
 
-vi.mock('server/src/lib/actions/user-actions/userActions', () => ({
+vi.mock('@alga-psa/users/actions', () => ({
   getCurrentUser: vi.fn(() => Promise.resolve({
     user_id: mockedUserId,
     tenant: mockedTenantId,

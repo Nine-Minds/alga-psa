@@ -2,7 +2,7 @@
 
 import React, { useMemo } from 'react';
 import { Info } from 'lucide-react';
-import type { ClientBucketUsageResult } from 'server/src/lib/actions/client-portal-actions/client-billing-metrics';
+import type { ClientBucketUsageResult } from '@alga-psa/client-portal/actions';
 
 interface BucketUsageChartProps {
   bucketData: ClientBucketUsageResult;

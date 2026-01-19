@@ -5,7 +5,7 @@ import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import type { IDocument } from '@alga-psa/types';
 import Spinner from '@alga-psa/ui/components/Spinner';
 import { getDocumentPreview } from '../actions/documentActions';
-import { getDocumentDownloadUrl, downloadDocument } from 'server/src/lib/utils/documentUtils';
+import { getDocumentDownloadUrl, downloadDocument } from '@alga-psa/documents/lib/documentUtils';
 import { Button } from '@alga-psa/ui/components/Button';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import {

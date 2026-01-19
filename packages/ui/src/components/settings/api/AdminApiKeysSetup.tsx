@@ -4,8 +4,8 @@ import { useState, useEffect, useMemo } from 'react';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Card } from '@alga-psa/ui/components/Card';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
-import type { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
-import { adminListApiKeys, adminDeactivateApiKey } from 'server/src/lib/actions/apiKeyActions';
+import type { ColumnDefinition } from '@alga-psa/types';
+import { adminListApiKeys, adminDeactivateApiKey } from '@alga-psa/auth/actions';
 
 export interface AdminApiKey {
   api_key_id: string;

@@ -1,60 +1,54 @@
 'use client';
 
-import React from 'react';
-import { useFeatureFlag } from 'server/src/hooks/useFeatureFlag';
+import React, { useEffect, useMemo } from 'react';
+import { useFeatureFlag } from '../hooks/useFeatureFlag';
 import Sidebar from './Sidebar';
-import { useEffect } from 'react';
 import {
-  navigationSections as originalSections,
   bottomMenuItems,
-  MenuItem,
-  NavigationSection,
   menuItems as legacyMenuItems,
-  NavMode
-} from 'server/src/config/menuConfig';
-import { analytics } from 'server/src/lib/analytics/client';
+  navigationSections as originalSections,
+  type MenuItem,
+  type NavigationSection
+} from '../config/menuConfig';
 
-interface SidebarWithFeatureFlagsProps {
-  sidebarOpen: boolean;
-  setSidebarOpen: React.Dispatch<React.SetStateAction<boolean>>;
-  disableTransition?: boolean;
-  mode?: NavMode;
-  onBackToMain?: () => void;
-}
+type SidebarWithFeatureFlagsProps = React.ComponentProps<typeof Sidebar>;
 
 export default function SidebarWithFeatureFlags(props: SidebarWithFeatureFlagsProps) {
   const advancedFeatureFlag = useFeatureFlag('advanced-features-enabled');
-  const isAdvancedFeaturesEnabled = typeof advancedFeatureFlag === 'boolean' ? advancedFeatureFlag : advancedFeatureFlag?.enabled;
+  const isAdvancedFeaturesEnabled =
+    typeof advancedFeatureFlag === 'boolean' ? advancedFeatureFlag : advancedFeatureFlag?.enabled;
   const navigationFlag = useFeatureFlag('ui-navigation-v2', { defaultValue: true });
-  const useNavigationSections = typeof navigationFlag === 'boolean' ? navigationFlag : navigationFlag?.enabled ?? false;
+  const useNavigationSections =
+    typeof navigationFlag === 'boolean' ? navigationFlag : navigationFlag?.enabled ?? false;
 
   useEffect(() => {
-    if (useNavigationSections) {
+    if (!useNavigationSections) return;
+    const analytics = (globalThis as any)?.analytics;
+    if (analytics?.capture) {
       analytics.capture('ui.nav.v2.enabled');
     }
   }, [useNavigationSections]);
 
   // Filter and modify menu items based on feature flags
-  const menuSections = React.useMemo<NavigationSection[]>(() => {
+  const menuSections = useMemo<NavigationSection[]>(() => {
+    const baseSections = useNavigationSections
+      ? originalSections
+      : [{ title: '', items: legacyMenuItems } satisfies NavigationSection];
+
     if (!useNavigationSections) {
-      return [
-        {
-          title: '',
-          items: legacyMenuItems
-        }
-      ];
+      return baseSections;
     }
 
-    return originalSections.map((section) => ({
+    return baseSections.map((section) => ({
       ...section,
       items: section.items.map((item) => {
         if (item.name === 'Automation Hub' && !isAdvancedFeaturesEnabled) {
-          return {
+          const updated: MenuItem = {
             ...item,
-            href: '/msp/automation-hub',
             subItems: undefined,
             underConstruction: true
-          } as MenuItem;
+          };
+          return updated;
         }
         return item;
       })
@@ -66,9 +60,6 @@ export default function SidebarWithFeatureFlags(props: SidebarWithFeatureFlagsPr
       {...props}
       menuSections={menuSections}
       bottomMenuItems={bottomMenuItems}
-      disableTransition={props.disableTransition}
-      mode={props.mode}
-      onBackToMain={props.onBackToMain}
     />
   );
 }

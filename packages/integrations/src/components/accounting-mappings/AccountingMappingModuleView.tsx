@@ -10,14 +10,14 @@ import {
   DropdownMenuTrigger
 } from '@alga-psa/ui/components/DropdownMenu';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
-import type { ExternalEntityMapping } from 'server/src/lib/actions/externalMappingActions';
+import type { ExternalEntityMapping } from '@alga-psa/integrations/actions';
 import {
   AccountingMappingContext,
   AccountingMappingModule,
   AccountingMappingOverrides
 } from './types';
 import { AccountingMappingDialog } from './AccountingMappingDialog';
-import type { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
+import type { ColumnDefinition } from '@alga-psa/types';
 
 type DisplayMapping = ExternalEntityMapping & {
   algaName?: string;

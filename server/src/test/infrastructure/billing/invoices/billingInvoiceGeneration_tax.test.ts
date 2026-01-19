@@ -9,7 +9,7 @@ import {
   ensureClientPlanBundlesTable as ensureClientContractsTable
 } from '../../../../../test-utils/billingTestHelpers';
 import { generateInvoice, createInvoiceFromBillingResult } from '@alga-psa/billing/actions/invoiceGeneration';
-import { generateManualInvoice } from 'server/src/lib/actions/manualInvoiceActions';
+import { generateManualInvoice } from '@alga-psa/billing/actions';
 import { finalizeInvoice } from '@alga-psa/billing/actions/invoiceModification';
 import { BillingEngine } from 'server/src/lib/billing/billingEngine';
 import { TextEncoder as NodeTextEncoder } from 'util';

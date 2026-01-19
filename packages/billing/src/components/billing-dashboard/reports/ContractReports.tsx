@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { Card } from '@alga-psa/ui/components/Card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@alga-psa/ui/components/Tabs';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
-import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
+import { ColumnDefinition } from '@alga-psa/types';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import {
   Coins,

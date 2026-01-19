@@ -3,8 +3,8 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { format } from 'date-fns';
-import { getDateFnsLocale } from 'server/src/lib/utils/dateFnsLocale';
-import { IClientPortalConfig } from 'server/src/interfaces/project.interfaces';
+import { getDateFnsLocale } from '@alga-psa/ui';
+import { IClientPortalConfig } from '@alga-psa/types';
 import {
   Calendar,
   ChevronDown,
@@ -19,7 +19,7 @@ import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import TaskDocumentUpload from './TaskDocumentUpload';
 import Spinner from '@alga-psa/ui/components/Spinner';
 import UserAvatar from '@alga-psa/ui/components/UserAvatar';
-import { useResponsiveColumns, ColumnConfig } from 'server/src/hooks/useResponsiveColumns';
+import { useResponsiveColumns, ColumnConfig } from '@alga-psa/ui/hooks';
 
 interface Phase {
   phase_id: string;

@@ -8,7 +8,7 @@ import { Badge } from '@alga-psa/ui/components/Badge';
 import { ArrowLeft, Info, Layers, BarChart2, Calendar, AlertCircle } from 'lucide-react';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 
-import { ITaxRate } from 'server/src/interfaces/tax.interfaces';
+import { ITaxRate } from '@alga-psa/types';
 import { TaxComponentEditor } from '../settings/tax/TaxComponentEditor';
 import { TaxThresholdEditor } from '../settings/tax/TaxThresholdEditor';
 import { TaxHolidayManager } from '../settings/tax/TaxHolidayManager';

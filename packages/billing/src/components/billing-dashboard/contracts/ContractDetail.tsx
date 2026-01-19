@@ -16,8 +16,8 @@ import { DatePicker } from '@alga-psa/ui/components/DatePicker';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import Drawer from '@alga-psa/ui/components/Drawer';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
-import { IContract, IContractAssignmentSummary } from 'server/src/interfaces/contract.interfaces';
-import { IClient } from 'server/src/interfaces';
+import { IContract, IContractAssignmentSummary } from '@alga-psa/types';
+import { IClient } from '@alga-psa/types';
 import type { IDocument } from '@alga-psa/types';
 import {
   getContractById,
@@ -29,8 +29,8 @@ import {
 import type { IContractSummary } from '@alga-psa/billing/actions/contractActions';
 import { updateClientContract, getClientById } from '@alga-psa/clients/actions';
 import { getDocumentsByContractId } from '@alga-psa/documents/actions/documentActions';
-import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
-import { BILLING_FREQUENCY_OPTIONS } from 'server/src/constants/billing';
+import { getCurrentUser } from '@alga-psa/users/actions';
+import { BILLING_FREQUENCY_OPTIONS } from '@alga-psa/billing/constants/billing';
 import { useTenant } from '@alga-psa/ui/components/providers/TenantProvider';
 import ContractHeader from './ContractHeader';
 import ContractLines from './ContractLines';
@@ -39,11 +39,11 @@ import PricingSchedules from './PricingSchedules';
 import ClientDetails from '@alga-psa/clients/components/clients/ClientDetails';
 import Documents from '@alga-psa/documents/components/Documents';
 import { Temporal } from '@js-temporal/polyfill';
-import { toPlainDate, toISODate } from 'server/src/lib/utils/dateTimeUtils';
+import { toPlainDate, toISODate } from '@alga-psa/core';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 import { Skeleton } from '@alga-psa/ui/components/Skeleton';
-import { cn } from 'server/src/lib/utils';
-import { formatCurrencyFromMinorUnits } from 'server/src/lib/utils/formatters';
+import { cn } from '@alga-psa/ui';
+import { formatCurrencyFromMinorUnits } from '@alga-psa/core';
 
 const formatDate = (value?: string | Date | null): string => {
   if (!value) {

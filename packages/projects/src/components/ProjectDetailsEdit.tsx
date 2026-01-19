@@ -1,11 +1,11 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { IProject } from 'server/src/interfaces/project.interfaces';
-import { IStatus } from 'server/src/interfaces';
-import { IClient } from 'server/src/interfaces/client.interfaces';
+import { IProject } from '@alga-psa/types';
+import { IStatus } from '@alga-psa/types';
+import { IClient } from '@alga-psa/types';
 import { IUser } from '@shared/interfaces/user.interfaces';
-import { ITag } from 'server/src/interfaces/tag.interfaces';
+import { ITag } from '@alga-psa/types';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Switch } from '@alga-psa/ui/components/Switch';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
@@ -16,16 +16,16 @@ import UserPicker from '@alga-psa/ui/components/UserPicker';
 import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect';
 import { TagManager } from '@alga-psa/ui/components';
 import { updateProject, getProjectStatuses } from '../actions/projectActions';
-import { getContactsByClient, getAllContacts } from 'server/src/lib/actions/contact-actions/contactActions';
-import { getAllUsersBasic } from 'server/src/lib/actions/user-actions/userActions';
-import { findTagsByEntityId } from 'server/src/lib/actions/tagActions';
-import { useTagPermissions } from 'server/src/hooks/useTagPermissions';
+import { getContactsByClient, getAllContacts } from '@alga-psa/clients/actions';
+import { getAllUsersBasic } from '@alga-psa/users/actions';
+import { findTagsByEntityId } from '@alga-psa/tags/actions';
+import { useTagPermissions } from '@alga-psa/ui';
 import { toast } from 'react-hot-toast';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { ProjectTaskStatusEditor } from './ProjectTaskStatusEditor';
 import { Dialog } from '@alga-psa/ui/components/Dialog';
 import ClientPortalConfigEditor from './ClientPortalConfigEditor';
-import { DEFAULT_CLIENT_PORTAL_CONFIG } from 'server/src/interfaces/project.interfaces';
+import { DEFAULT_CLIENT_PORTAL_CONFIG } from '@alga-psa/types';
 import { ChevronDown, ChevronRight, Settings } from 'lucide-react';
 
 interface ProjectDetailsEditProps {

@@ -1,13 +1,15 @@
+'use client';
+
 import React, { useState, useEffect, useRef } from 'react';
-import { ITag, TaggedEntityType } from 'server/src/interfaces/tag.interfaces';
-import { createTag, deleteTag, getAllTags, checkTagPermissions } from 'server/src/lib/actions/tagActions';
+import { ITag, TaggedEntityType } from '@alga-psa/types';
+import { createTag, deleteTag, getAllTags, checkTagPermissions } from '@alga-psa/tags/actions';
 import { TagList } from './TagList';
 import { TagInput } from './TagInput';
 import { TagInputInline } from './TagInputInline';
 // import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContainer';
 import { toast } from 'react-hot-toast';
-import { useTags } from 'server/src/context/TagContext';
-import { handleError } from 'server/src/lib/utils/errorHandling';
+import { useTags } from '../../context/TagContext';
+import { handleError } from '../../lib/errorHandling';
 
 interface TagManagerProps {
   id?: string; // Made optional to maintain backward compatibility

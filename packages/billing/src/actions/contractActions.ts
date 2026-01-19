@@ -1,20 +1,20 @@
-// server/src/lib/actions/contractActions.ts
+// @alga-psa/billing/actions.ts
 'use server'
 
-import Contract from 'server/src/lib/models/contract';
-import ContractTemplateModel from 'server/src/lib/models/contractTemplate';
+import Contract from '@alga-psa/billing/models/contract';
+import ContractTemplateModel from '../models/contractTemplate';
 import {
   IContract,
   IContractAssignmentSummary,
   IContractWithClient,
   IContractLineMapping,
-} from 'server/src/interfaces/contract.interfaces';
+} from '@alga-psa/types';
 import {
   IContractTemplate,
   IContractTemplateWithLines,
-} from 'server/src/interfaces/contractTemplate.interfaces';
-import { createTenantKnex } from 'server/src/lib/db';
-import { getSession } from 'server/src/lib/auth/getSession';
+} from '@alga-psa/types';
+import { createTenantKnex } from '@alga-psa/db';
+import { getSession } from '@alga-psa/auth';
 import { Knex } from 'knex';
 import {
   addContractLine as repoAddContractLine,
@@ -25,9 +25,9 @@ import {
   updateContractLine as repoUpdateContractLine,
   updateContractLineRate as repoUpdateContractLineRate,
   DetailedContractLine,
-} from 'server/src/lib/repositories/contractLineRepository';
-import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
-import { hasPermission } from 'server/src/lib/auth/rbac';
+} from '../repositories/contractLineRepository';
+import { getCurrentUser } from '@alga-psa/users/actions';
+import { hasPermission } from '@alga-psa/auth';
 
 const mapTemplateToContract = (template: IContractTemplate): IContract => ({
   tenant: template.tenant,
@@ -61,6 +61,14 @@ async function ensureSession() {
   }
 }
 
+function requireTenantIdFromSession(session: unknown): string {
+  const tenantCandidate = (session as any)?.user?.tenant;
+  if (typeof tenantCandidate !== 'string' || tenantCandidate.length === 0) {
+    throw new Error('Tenant context is missing from session');
+  }
+  return tenantCandidate;
+}
+
 export async function getContracts(): Promise<IContract[]> {
   const session = await getSession();
   if (!session?.user?.id) {
@@ -68,12 +76,12 @@ export async function getContracts(): Promise<IContract[]> {
   }
 
   try {
-    const { tenant } = await createTenantKnex();
+    const { knex, tenant } = await createTenantKnex(requireTenantIdFromSession(session));
     if (!tenant) {
       throw new Error("tenant context not found");
     }
 
-    return await Contract.getAll();
+    return await Contract.getAll(knex, tenant);
   } catch (error) {
     console.error('Error fetching contracts:', error);
     if (error instanceof Error) {
@@ -90,7 +98,7 @@ export async function getContractTemplates(): Promise<IContract[]> {
   }
 
   try {
-    const { tenant } = await createTenantKnex();
+    const { tenant } = await createTenantKnex(requireTenantIdFromSession(session));
     if (!tenant) {
       throw new Error('tenant context not found');
     }
@@ -113,12 +121,12 @@ export async function getContractsWithClients(): Promise<IContractWithClient[]> 
   }
 
   try {
-    const { tenant } = await createTenantKnex();
+    const { knex, tenant } = await createTenantKnex(requireTenantIdFromSession(session));
     if (!tenant) {
       throw new Error("tenant context not found");
     }
 
-    return await Contract.getAllWithClients();
+    return await Contract.getAllWithClients(knex, tenant);
   } catch (error) {
     console.error('Error fetching contracts with clients:', error);
     if (error instanceof Error) {
@@ -135,12 +143,12 @@ export async function getContractById(contractId: string): Promise<IContract | n
   }
 
   try {
-    const { tenant } = await createTenantKnex();
+    const { knex, tenant } = await createTenantKnex(requireTenantIdFromSession(session));
     if (!tenant) {
       throw new Error("tenant context not found");
     }
 
-    const contract = await Contract.getById(contractId);
+    const contract = await Contract.getById(knex, tenant, contractId);
     if (contract) {
       return { ...contract, is_template: false };
     }
@@ -161,8 +169,11 @@ export async function getContractById(contractId: string): Promise<IContract | n
 }
 
 export async function getContractLineMappings(contractId: string): Promise<IContractLineMapping[]> {
-  await ensureSession();
-  const { knex, tenant } = await createTenantKnex();
+  const session = await getSession();
+  if (!session?.user?.id) {
+    throw new Error('Unauthorized');
+  }
+  const { knex, tenant } = await createTenantKnex(requireTenantIdFromSession(session));
   if (!tenant) {
     throw new Error('tenant context not found');
   }
@@ -170,8 +181,11 @@ export async function getContractLineMappings(contractId: string): Promise<ICont
 }
 
 export async function getDetailedContractLines(contractId: string): Promise<DetailedContractLine[]> {
-  await ensureSession();
-  const { knex, tenant } = await createTenantKnex();
+  const session = await getSession();
+  if (!session?.user?.id) {
+    throw new Error('Unauthorized');
+  }
+  const { knex, tenant } = await createTenantKnex(requireTenantIdFromSession(session));
   if (!tenant) {
     throw new Error('tenant context not found');
   }
@@ -183,13 +197,16 @@ export async function addContractLine(
   contractLineId: string,
   customRate?: number
 ): Promise<IContractLineMapping> {
-  await ensureSession();
+  const session = await getSession();
+  if (!session?.user?.id) {
+    throw new Error('Unauthorized');
+  }
   const currentUser = await getCurrentUser();
   if (!currentUser) {
     throw new Error('Unauthorized');
   }
 
-  const { knex, tenant } = await createTenantKnex();
+  const { knex, tenant } = await createTenantKnex(requireTenantIdFromSession(session));
   if (!tenant) {
     throw new Error('tenant context not found');
   }
@@ -205,13 +222,16 @@ export async function addContractLine(
 }
 
 export async function removeContractLine(contractId: string, contractLineId: string): Promise<void> {
-  await ensureSession();
+  const session = await getSession();
+  if (!session?.user?.id) {
+    throw new Error('Unauthorized');
+  }
   const currentUser = await getCurrentUser();
   if (!currentUser) {
     throw new Error('Unauthorized');
   }
 
-  const { knex, tenant } = await createTenantKnex();
+  const { knex, tenant } = await createTenantKnex(requireTenantIdFromSession(session));
   if (!tenant) {
     throw new Error('tenant context not found');
   }

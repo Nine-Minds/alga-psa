@@ -3,7 +3,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter, usePathname } from 'next/navigation';
-import { getTenantSettings } from '@/lib/actions/tenant-settings-actions/tenantSettingsActions';
+import { getTenantSettings } from '@alga-psa/tenancy/actions';
 
 interface OnboardingProviderProps {
   children: React.ReactNode;

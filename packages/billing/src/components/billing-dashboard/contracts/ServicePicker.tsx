@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { cn } from 'server/src/lib/utils';
+import { cn } from '@alga-psa/ui';
 import SearchableSelect from '@alga-psa/ui/components/SearchableSelect';
 
 export interface SelectOption {

@@ -14,11 +14,11 @@ import {
 } from '@alga-psa/ui/components/DropdownMenu';
 import { ContractLineDialog } from '../ContractLineDialog';
 import { getContractLinePresets, deleteContractLinePreset } from '@alga-psa/billing/actions/contractLinePresetActions';
-import { IContractLinePreset, IServiceType } from 'server/src/interfaces/billing.interfaces'; // Added IServiceType
-import { getServiceTypesForSelection } from 'server/src/lib/actions/serviceActions'; // Added import for fetching types
+import { IContractLinePreset, IServiceType } from '@alga-psa/types'; // Added IServiceType
+import { getServiceTypesForSelection } from '@alga-psa/billing/actions'; // Added import for fetching types
 import { DataTable } from '@alga-psa/ui/components/DataTable';
-import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
-import { PLAN_TYPE_DISPLAY, BILLING_FREQUENCY_DISPLAY, CONTRACT_LINE_TYPE_DISPLAY } from 'server/src/constants/billing';
+import { ColumnDefinition } from '@alga-psa/types';
+import { PLAN_TYPE_DISPLAY, BILLING_FREQUENCY_DISPLAY, CONTRACT_LINE_TYPE_DISPLAY } from '@alga-psa/billing/constants/billing';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 import { Input } from '@alga-psa/ui/components/Input';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';

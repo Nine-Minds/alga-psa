@@ -6,8 +6,8 @@ import { Label } from '@alga-psa/ui/components/Label';
 import { Button } from '@alga-psa/ui/components/Button'; // Import Button
 import * as RadixTooltip from '@radix-ui/react-tooltip'; // Use Radix Tooltip directly
 import { Info, Trash2 } from 'lucide-react'; // Import Trash2
-import { getCurrencySymbol } from 'server/src/constants/currency';
-import { IContractLineServiceHourlyConfig, IUserTypeRate } from 'server/src/interfaces/contractLineServiceConfiguration.interfaces';
+import { getCurrencySymbol } from '@alga-psa/core';
+import { IContractLineServiceHourlyConfig, IUserTypeRate } from '@alga-psa/types';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect'; // Import CustomSelect
 
 // Define the structure for the configuration object (using imported interface)

@@ -9,7 +9,7 @@ import {
   getImportJobDetails,
   getImportSources,
   listImportJobs,
-} from '@/lib/actions/import-actions/importActions';
+} from '@alga-psa/reference-data/actions';
 
 interface ImportSourceDTO {
   import_source_id: string;

@@ -6,14 +6,14 @@ import Documents from './Documents';
 import { Card } from '@alga-psa/ui/components/Card';
 import { SelectOption } from '@alga-psa/ui/components/CustomSelect';
 import { getDistinctEntityTypes } from '../actions/documentActions';
-import { getCurrentUser, getAllUsersBasic } from 'server/src/lib/actions/user-actions/userActions';
+import { getCurrentUser, getAllUsersBasic } from '@alga-psa/users/actions';
 import type { IUser } from '@alga-psa/types';
 import { toast } from 'react-hot-toast';
 import DocumentFilters from './DocumentFilters';
 import DocumentsPageSkeleton from './DocumentsPageSkeleton';
 import { ChevronLeft, ChevronRight, Filter } from 'lucide-react';
 import { useSearchParams, useRouter } from 'next/navigation';
-import { useUserPreference } from 'server/src/hooks/useUserPreference';
+import { useUserPreference } from '@alga-psa/ui';
 
 const FILTERS_PANE_COLLAPSED_SETTING = 'documents_filters_pane_collapsed';
 

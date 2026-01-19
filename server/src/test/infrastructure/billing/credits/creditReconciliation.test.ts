@@ -33,7 +33,7 @@ vi.mock('server/src/lib/auth/getSession', () => ({
   }))
 }));
 
-vi.mock('server/src/lib/actions/user-actions/userActions', () => ({
+vi.mock('@alga-psa/users/actions', () => ({
   getCurrentUser: vi.fn(async () => ({
     user_id: mockedUserId,
     tenant: mockedTenantId,

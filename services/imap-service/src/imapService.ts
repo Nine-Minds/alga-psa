@@ -5,7 +5,7 @@ import { createHash } from 'crypto';
 import logger from '@alga-psa/core/logger';
 import { getAdminConnection } from '@alga-psa/db/admin';
 import { publishEvent } from '@alga-psa/shared/events/publisher';
-import { getSecretProviderInstance } from '@alga-psa/core';
+import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import axios from 'axios';
 import type { EmailMessageDetails } from '@alga-psa/shared/interfaces/inbound-email.interfaces';
 

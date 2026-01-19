@@ -8,9 +8,9 @@ import AvailabilitySettings from './AvailabilitySettings';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { Calendar, Settings } from 'lucide-react';
-import { getAppointmentRequests } from 'server/src/lib/actions/appointmentRequestManagementActions';
-import { getCurrentUserPermissions, getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
-import { getTeams } from 'server/src/lib/actions/team-actions/teamActions';
+import { getAppointmentRequests } from '@alga-psa/scheduling/actions';
+import { getCurrentUserPermissions, getCurrentUser } from '@alga-psa/users/actions';
+import { getTeams } from '@alga-psa/teams/actions';
 
 export default function SchedulePage() {
   const searchParams = useSearchParams();

@@ -20,16 +20,16 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
 } from '@alga-psa/ui/components/DropdownMenu';
-import { IServiceType, IStandardServiceType } from 'server/src/interfaces/billing.interfaces';
-import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
+import { IServiceType, IStandardServiceType } from '@alga-psa/types';
+import { ColumnDefinition } from '@alga-psa/types';
 import { 
     getServiceTypesForSelection, 
     getAllServiceTypes,
     createServiceType, 
     updateServiceType, 
     deleteServiceType 
-} from 'server/src/lib/actions/serviceActions';
-import { getAvailableReferenceData, importReferenceData, checkImportConflicts, ImportConflict } from 'server/src/lib/actions/referenceDataActions';
+} from '@alga-psa/billing/actions';
+import { getAvailableReferenceData, importReferenceData, checkImportConflicts, ImportConflict } from '@alga-psa/reference-data/actions';
 import { toast } from 'react-hot-toast';
 
 // Type for the data returned by getServiceTypesForSelection

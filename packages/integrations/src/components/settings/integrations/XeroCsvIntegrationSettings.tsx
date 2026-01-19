@@ -14,7 +14,7 @@ import {
   getXeroCsvSettings,
   updateXeroCsvSettings,
   XeroCsvSettings as XeroCsvSettingsType
-} from 'server/src/lib/actions/integrations/xeroCsvActions';
+} from '@alga-psa/integrations/actions';
 
 /**
  * Xero CSV Integration Settings Component

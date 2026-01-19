@@ -7,8 +7,8 @@ import {
   ITimeSheetView,
   ITimePeriodWithStatusView,
   TimeSheetStatus
-} from 'server/src/interfaces/timeEntry.interfaces';
-import { toPlainDate } from 'server/src/lib/utils/dateTimeUtils';
+} from '@alga-psa/types';
+import { toPlainDate } from '@alga-psa/core';
 import { validateData } from '@alga-psa/validation';
 import {
   submitTimeSheetParamsSchema,
@@ -18,9 +18,9 @@ import {
   fetchOrCreateTimeSheetParamsSchema,
   FetchOrCreateTimeSheetParams
 } from './timeEntrySchemas'; // Import schemas from the new module
-import { analytics } from 'server/src/lib/analytics/posthog';
-import { AnalyticsEvents } from 'server/src/lib/analytics/events';
-import { getSession } from 'server/src/lib/auth/getSession';
+import { analytics } from '@alga-psa/analytics';
+import { AnalyticsEvents } from '@alga-psa/analytics';
+import { getSession } from '@alga-psa/auth';
 
 export async function fetchTimeSheets(): Promise<ITimeSheet[]> {
   const session = await getSession();

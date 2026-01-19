@@ -8,10 +8,10 @@ import { DatePicker } from '@alga-psa/ui/components/DatePicker';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Label } from '@alga-psa/ui/components/Label';
 import { createTimePeriod, updateTimePeriod, deleteTimePeriod } from '@alga-psa/scheduling/actions/timePeriodsActions';
-import { ITimePeriodSettings, ITimePeriodView } from 'server/src/interfaces/timeEntry.interfaces';
+import { ITimePeriodSettings, ITimePeriodView } from '@alga-psa/types';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
-import { toPlainDate } from 'server/src/lib/utils/dateTimeUtils';
-import { TimePeriodSuggester } from 'server/src/lib/timePeriodSuggester';
+import { toPlainDate } from '@alga-psa/core';
+import { TimePeriodSuggester } from '../../../lib/timePeriodSuggester';
 import { Temporal } from '@js-temporal/polyfill';
 
 // Helper to convert Temporal.PlainDate to Date (for DatePicker)

@@ -9,12 +9,12 @@ import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { Cloud, Download, Clock, CheckCircle, XCircle, AlertTriangle, History, Info } from 'lucide-react';
 
-import { TaxSource } from 'server/src/interfaces/tax.interfaces';
+import { TaxSource } from '@alga-psa/types';
 import {
   importExternalTaxForInvoice,
   getExternalTaxImportHistory,
   getInvoiceTaxReconciliation
-} from 'server/src/lib/actions/externalTaxImportActions';
+} from '@alga-psa/billing/actions';
 
 interface ExternalTaxImportPanelProps {
   invoiceId: string;

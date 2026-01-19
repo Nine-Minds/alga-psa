@@ -16,7 +16,7 @@ import Stripe from 'stripe';
 import { Knex } from 'knex';
 import { getConnection } from '@/lib/db/db';
 import logger from '@alga-psa/core/logger';
-import { getSecretProviderInstance } from '@alga-psa/core';
+import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { startTenantDeletionWorkflow } from '@ee/lib/tenant-management/workflowClient';
 
 // Stripe configuration with secret provider support
@@ -134,11 +134,7 @@ interface StripeSubscription {
 export class StripeService {
   private stripe!: Stripe;
   private config!: Awaited<ReturnType<typeof getStripeConfig>>;
-  private initPromise: Promise<void>;
-
-  constructor() {
-    this.initPromise = this.initialize();
-  }
+  private initPromise: Promise<void> | null = null;
 
   private async initialize() {
     this.config = await getStripeConfig();
@@ -149,6 +145,10 @@ export class StripeService {
   }
 
   private async ensureInitialized() {
+    if (!this.initPromise) {
+      this.initPromise = this.initialize();
+    }
+
     await this.initPromise;
   }
 
@@ -159,6 +159,19 @@ export class StripeService {
   async getStripeClient(): Promise<Stripe> {
     await this.ensureInitialized();
     return this.stripe;
+  }
+
+  /**
+   * Returns true if Stripe can be initialized in the current environment.
+   * This is useful for gating optional billing UX in dev/test stacks.
+   */
+  async isConfigured(): Promise<boolean> {
+    try {
+      await this.ensureInitialized();
+      return true;
+    } catch {
+      return false;
+    }
   }
 
   /**

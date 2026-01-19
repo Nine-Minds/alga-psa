@@ -20,7 +20,7 @@ vi.mock('@alga-psa/db', () => ({
   withTransaction: vi.fn(),
 }));
 
-vi.mock('server/src/lib/actions/user-actions/userActions', () => ({
+vi.mock('@alga-psa/users/actions', () => ({
   getCurrentUser: vi.fn(),
 }));
 
@@ -45,7 +45,7 @@ vi.mock('server/src/lib/utils/documentPreviewGenerator', () => ({
 import { StorageService } from 'server/src/lib/storage/StorageService';
 import { createTenantKnex } from 'server/src/lib/db';
 import { withTransaction } from '@alga-psa/db';
-import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
+import { getCurrentUser } from '@alga-psa/users/actions';
 import { hasPermission } from 'server/src/lib/auth/rbac';
 import DocumentAssociation from 'server/src/models/document-association';
 import { v4 as uuidv4 } from 'uuid';

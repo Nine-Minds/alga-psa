@@ -8,16 +8,16 @@ import { Label } from '@alga-psa/ui/components/Label';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { Search, ChevronDown, ChevronUp, X } from 'lucide-react';
-import { IContractLinePreset, IContractLinePresetService, IContractLinePresetFixedConfig } from 'server/src/interfaces/billing.interfaces';
+import { IContractLinePreset, IContractLinePresetService, IContractLinePresetFixedConfig } from '@alga-psa/types';
 import {
   getContractLinePresets,
   copyPresetToContractLine,
   getContractLinePresetServices,
   getContractLinePresetFixedConfig
 } from '@alga-psa/billing/actions/contractLinePresetActions';
-import { getServices } from 'server/src/lib/actions/serviceActions';
+import { getServices } from '@alga-psa/billing/actions';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
-import { CONTRACT_LINE_TYPE_DISPLAY } from 'server/src/constants/billing';
+import { CONTRACT_LINE_TYPE_DISPLAY } from '@alga-psa/billing/constants/billing';
 
 interface ContractLinePresetServiceWithName extends IContractLinePresetService {
   service_name?: string;

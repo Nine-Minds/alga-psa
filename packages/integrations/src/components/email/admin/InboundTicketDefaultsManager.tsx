@@ -10,9 +10,9 @@ import { InboundTicketDefaultsForm } from '../forms/InboundTicketDefaultsForm';
 import { 
   getInboundTicketDefaults, 
   deleteInboundTicketDefaults 
-} from 'server/src/lib/actions/email-actions/inboundTicketDefaultsActions';
-import type { InboundTicketDefaults, TicketFieldOptions } from 'server/src/types/email.types';
-import { getTicketFieldOptions } from 'server/src/lib/actions/email-actions/ticketFieldOptionsActions';
+} from '@alga-psa/integrations/actions';
+import type { InboundTicketDefaults, TicketFieldOptions } from '@alga-psa/types';
+import { getTicketFieldOptions } from '@alga-psa/integrations/actions';
 import { MoreVertical } from 'lucide-react';
 import { 
   DropdownMenu,

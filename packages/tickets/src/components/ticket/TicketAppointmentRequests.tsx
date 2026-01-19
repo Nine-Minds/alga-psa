@@ -4,9 +4,9 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { Calendar, Clock, User, Briefcase } from 'lucide-react';
-import { getAppointmentRequestsByTicketId as getMspAppointmentRequests } from 'server/src/lib/actions/appointmentRequestManagementActions';
-import { getAppointmentRequestsByTicketId as getClientAppointmentRequests } from 'server/src/lib/actions/client-portal-actions/appointmentRequestActions';
-import type { IAppointmentRequest } from 'server/src/lib/actions/appointmentRequestManagementActions';
+import { getAppointmentRequestsByTicketId as getMspAppointmentRequests } from '@alga-psa/scheduling/actions';
+import { getAppointmentRequestsByTicketId as getClientAppointmentRequests } from '@alga-psa/client-portal/actions';
+import type { IAppointmentRequest } from '@alga-psa/scheduling/actions';
 import toast from 'react-hot-toast';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 

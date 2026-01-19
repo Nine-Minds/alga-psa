@@ -7,8 +7,8 @@ import { Input } from '@alga-psa/ui/components/Input';
 import { Label } from '@alga-psa/ui/components/Label';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { IconPicker, getIconComponent } from '@alga-psa/ui/components/IconPicker';
-import { createInteractionType, updateInteractionType, getAllInteractionTypes } from 'server/src/lib/actions/interactionTypeActions';
-import { IInteractionType } from 'server/src/interfaces/interaction.interfaces';
+import { createInteractionType, updateInteractionType, getAllInteractionTypes } from '@alga-psa/clients/actions';
+import { IInteractionType } from '@alga-psa/types';
 
 interface QuickAddInteractionTypeProps {
   isOpen: boolean;

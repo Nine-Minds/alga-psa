@@ -4,8 +4,8 @@ import React from 'react';
 import { Bell, AlertTriangle, Clock } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import { Button } from '@alga-psa/ui/components/Button';
-import { formatCurrency } from 'server/src/lib/utils/formatters';
-import { formatDateOnly } from 'server/src/lib/utils/dateTimeUtils';
+import { formatCurrency } from '@alga-psa/core/lib/formatters';
+import { formatDateOnly } from '@alga-psa/core/lib/dateTimeUtils';
 import Link from 'next/link';
 
 export interface CreditExpirationNotificationProps {

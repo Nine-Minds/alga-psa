@@ -19,12 +19,12 @@ import {
   IProjectTemplateTaskAssignment,
   IProjectTemplateChecklistItem,
   IProjectTemplateDependency,
-} from 'server/src/interfaces/projectTemplate.interfaces';
-import { DependencyType } from 'server/src/interfaces/project.interfaces';
-import { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
-import { ITaskType } from 'server/src/interfaces/project.interfaces';
-import { IService } from 'server/src/interfaces/billing.interfaces';
-import { getServices } from 'server/src/lib/actions/serviceActions';
+} from '@alga-psa/types';
+import { DependencyType } from '@alga-psa/types';
+import { IUserWithRoles } from '@alga-psa/types';
+import { ITaskType } from '@alga-psa/types';
+import { IService } from '@alga-psa/types';
+import { getServices } from '@alga-psa/billing/actions';
 
 /**
  * Local checklist item - unified type for both new and existing items.

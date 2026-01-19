@@ -1,9 +1,11 @@
+'use client';
+
 import React, { useState, useImperativeHandle, forwardRef } from 'react';
 import {
   ActivityFilters as ActivityFiltersType,
   ActivityPriority,
   ActivityType
-} from "server/src/interfaces/activity.interfaces";
+} from "@alga-psa/types";
 import { Button } from "@alga-psa/ui/components/Button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@alga-psa/ui/components/Dialog";
 import { Label } from "@alga-psa/ui/components/Label";

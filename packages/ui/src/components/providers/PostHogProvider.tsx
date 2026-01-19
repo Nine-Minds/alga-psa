@@ -4,7 +4,7 @@ import posthog from 'posthog-js';
 import { PostHogProvider as PHProvider, usePostHog } from 'posthog-js/react';
 import { useEffect, useState } from 'react';
 import { usePathname, useSearchParams } from 'next/navigation';
-import { isPostHogEnabled, posthogConfig } from 'server/src/config/posthog.config';
+import { isPostHogEnabled, posthogConfig } from '@alga-psa/analytics/config/posthog.config';
 
 function SuspendedPostHogPageView() {
   const posthogClient = usePostHog();
@@ -65,4 +65,3 @@ export function PostHogProvider({ children }: { children: React.ReactNode }) {
     </PHProvider>
   );
 }
-

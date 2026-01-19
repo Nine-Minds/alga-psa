@@ -11,9 +11,9 @@ import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { 
   createInboundTicketDefaults, 
   updateInboundTicketDefaults 
-} from 'server/src/lib/actions/email-actions/inboundTicketDefaultsActions';
-import { getTicketFieldOptions, getCategoriesByBoard } from 'server/src/lib/actions/email-actions/ticketFieldOptionsActions';
-import type { InboundTicketDefaults, TicketFieldOptions } from 'server/src/types/email.types';
+} from '@alga-psa/integrations/actions';
+import { getTicketFieldOptions, getCategoriesByBoard } from '@alga-psa/integrations/actions';
+import type { InboundTicketDefaults, TicketFieldOptions } from '@alga-psa/types';
 // Dedicated pickers used elsewhere in the app
 import { BoardPicker } from '@alga-psa/ui/components/settings/general/BoardPicker';
 import { ClientPicker } from '@alga-psa/clients/components/clients/ClientPicker';
@@ -21,13 +21,13 @@ import CategoryPicker from '@alga-psa/tickets/components/CategoryPicker';
 import { PrioritySelect } from '@alga-psa/tickets/components/PrioritySelect';
 import UserPicker from '@alga-psa/ui/components/UserPicker';
 // Loaders to hydrate pickers with full data
-import { getAllBoards } from 'server/src/lib/actions/board-actions/boardActions';
+import { getAllBoards } from '@alga-psa/tickets/actions';
 import { getAllClients } from '@alga-psa/clients/actions';
-import { getAllPriorities } from 'server/src/lib/actions/priorityActions';
-import { getAllUsersBasic } from 'server/src/lib/actions/user-actions/userActions';
-import type { IBoard, IPriority } from 'server/src/interfaces';
-import type { IClient } from 'server/src/interfaces/client.interfaces';
-import type { ITicketCategory } from 'server/src/interfaces/ticket.interfaces';
+import { getAllPriorities } from '@alga-psa/reference-data/actions';
+import { getAllUsersBasic } from '@alga-psa/users/actions';
+import type { IBoard, IPriority } from '@alga-psa/types';
+import type { IClient } from '@alga-psa/types';
+import type { ITicketCategory } from '@alga-psa/types';
 import type { IUser } from '@shared/interfaces/user.interfaces';
 
 export interface InboundTicketDefaultsFormProps {

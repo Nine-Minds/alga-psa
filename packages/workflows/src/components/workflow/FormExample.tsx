@@ -1,6 +1,6 @@
 import { DynamicForm } from './DynamicForm';
 import { RJSFSchema, UiSchema } from '@rjsf/utils';
-import { Action } from 'server/src/lib/workflow/forms/actionHandlerRegistry';
+import { Action } from '@alga-psa/workflows/forms/actionHandlerRegistry';
 
 // Example schema for a credit reimbursement form
 const creditReimbursementSchema: RJSFSchema = {

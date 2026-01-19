@@ -5,8 +5,8 @@ import { AtSign } from 'lucide-react';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import { Badge } from '@alga-psa/ui/components/Badge';
-import { getPortalDomainStatusAction } from '@/lib/actions/tenant-actions/portalDomainActions';
-import type { PortalDomainStatusResponse } from '@/lib/actions/tenant-actions/portalDomain.types';
+import { getPortalDomainStatusAction } from '@alga-psa/tenancy/actions';
+import type { PortalDomainStatusResponse } from '@alga-psa/tenancy/actions/tenant-actions/portalDomain.types';
 
 const ClientPortalDomainSettings = () => {
   const [portalStatus, setPortalStatus] = useState<PortalDomainStatusResponse | null>(null);

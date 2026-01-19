@@ -6,7 +6,7 @@ import { Input } from '@alga-psa/ui/components/Input';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import type { IStatus, ItemType } from '@alga-psa/types';
-import { createStatus, updateStatus } from 'server/src/lib/actions/status-actions/statusActions';
+import { createStatus, updateStatus } from '@alga-psa/reference-data/actions';
 import { toast } from 'react-hot-toast';
 
 interface StatusDialogProps {

@@ -157,6 +157,66 @@
       "@alga-psa/client-portal/*": [
         "../packages/client-portal/src/*"
       ],
+      "@alga-psa/notifications": [
+        "../packages/notifications/src"
+      ],
+      "@alga-psa/notifications/*": [
+        "../packages/notifications/src/*"
+      ],
+      "@alga-psa/reporting": [
+        "../packages/reporting/src"
+      ],
+      "@alga-psa/reporting/*": [
+        "../packages/reporting/src/*"
+      ],
+      "@alga-psa/tenancy": [
+        "../packages/tenancy/src"
+      ],
+      "@alga-psa/tenancy/*": [
+        "../packages/tenancy/src/*"
+      ],
+      "@alga-psa/onboarding": [
+        "../packages/onboarding/src"
+      ],
+      "@alga-psa/onboarding/*": [
+        "../packages/onboarding/src/*"
+      ],
+      "@alga-psa/jobs": [
+        "../packages/jobs/src"
+      ],
+      "@alga-psa/jobs/*": [
+        "../packages/jobs/src/*"
+      ],
+      "@alga-psa/reference-data": [
+        "../packages/reference-data/src"
+      ],
+      "@alga-psa/reference-data/*": [
+        "../packages/reference-data/src/*"
+      ],
+      "@alga-psa/teams": [
+        "../packages/teams/src"
+      ],
+      "@alga-psa/teams/*": [
+        "../packages/teams/src/*"
+      ],
+      "@alga-psa/users": [
+        "../packages/users/src"
+      ],
+      "@alga-psa/users/*": [
+        "../packages/users/src/*"
+      ],
+      "@alga-psa/licensing": [
+        "../packages/licensing/src"
+      ],
+      "@alga-psa/licensing/*": [
+        "../packages/licensing/src/*"
+      ],
+      "@alga-psa/tags": [
+        "../packages/tags/src"
+      ],
+      "@alga-psa/tags/*": [
+        "../packages/tags/src/*"
+      ],
       // CE-first: use stubs by default; EE runs are overridden by webpack
       "@ee": [
         "src/empty"

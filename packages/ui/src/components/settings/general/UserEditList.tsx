@@ -1,5 +1,5 @@
 import React from 'react';
-import { IUser, IUserWithRoles, IRole } from 'server/src/interfaces/auth.interfaces';
+import { IUser, IUserWithRoles, IRole } from '@alga-psa/types';
 import Link from 'next/link';
 
 interface UserListProps {

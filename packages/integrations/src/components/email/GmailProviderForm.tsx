@@ -13,16 +13,16 @@ import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import { ExternalLink } from 'lucide-react';
 import type { EmailProvider } from './EmailProviderConfiguration';
-import { createEmailProvider, updateEmailProvider, upsertEmailProvider } from 'server/src/lib/actions/email-actions/emailProviderActions';
-import { initiateEmailOAuth } from 'server/src/lib/actions/email-actions/oauthActions';
+import { createEmailProvider, updateEmailProvider, upsertEmailProvider } from '@alga-psa/integrations/actions';
+import { initiateEmailOAuth } from '@alga-psa/integrations/actions';
 import { useOAuthPopup } from './providers/gmail/useOAuthPopup';
 import { BasicConfigCard } from './providers/gmail/BasicConfigCard';
 import { ProcessingSettingsCard } from './providers/gmail/ProcessingSettingsCard';
 import { OAuthSection } from './providers/gmail/OAuthSection';
 import { ceGmailProviderSchema } from './providers/gmail/schemas';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
-import { getInboundTicketDefaults } from 'server/src/lib/actions/email-actions/inboundTicketDefaultsActions';
-import { getGoogleIntegrationStatus } from '@/lib/actions/integrations/googleActions';
+import { getInboundTicketDefaults } from '@alga-psa/integrations/actions';
+import { getGoogleIntegrationStatus } from '@alga-psa/integrations/actions';
 
 type GmailProviderFormData = import('./providers/gmail/schemas').CEGmailProviderFormData;
 

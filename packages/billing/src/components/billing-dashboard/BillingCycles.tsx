@@ -16,9 +16,9 @@ import { getClientBillingScheduleSummaries } from '@alga-psa/billing/actions/bil
 import { getAllClientsPaginated, getClientsWithBillingCycleRangePaginated, getActiveClientContractsByClientIds } from '@alga-psa/clients/actions';
 import type { BillingCycleDateRange } from '@alga-psa/clients/actions';
 import { getContracts } from '@alga-psa/billing/actions/contractActions';
-import { BillingCycleType, IClient } from 'server/src/interfaces';
-import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
-import { IContract } from 'server/src/interfaces/contract.interfaces';
+import { BillingCycleType, IClient } from '@alga-psa/types';
+import { ColumnDefinition } from '@alga-psa/types';
+import { IContract } from '@alga-psa/types';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 import { DateRangePicker, type DateRange } from '@alga-psa/ui/components/DateRangePicker';
 

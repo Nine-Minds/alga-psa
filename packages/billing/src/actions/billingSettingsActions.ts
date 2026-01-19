@@ -1,9 +1,9 @@
 'use server'
 
-import { createTenantKnex } from "server/src/lib/db";
+import { createTenantKnex } from "@alga-psa/db";
 import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
-import { getSession } from 'server/src/lib/auth/getSession';
+import { getSession } from '@alga-psa/auth';
 
 export interface BillingSettings {
   zeroDollarInvoiceHandling: 'normal' | 'finalized';

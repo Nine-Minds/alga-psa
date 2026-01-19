@@ -1,14 +1,14 @@
 'use server'
 
 import { withTransaction } from '@alga-psa/db';
-import { IClientTaxSettings, ITaxRate, ITaxComponent, ITaxRateThreshold, ITaxHoliday } from 'server/src/interfaces/tax.interfaces';
+import { IClientTaxSettings, ITaxRate, ITaxComponent, ITaxRateThreshold, ITaxHoliday } from '@alga-psa/types';
 import { v4 as uuid4 } from 'uuid';
 import { TaxService } from '../services/taxService';
-import { ITaxRegion } from 'server/src/interfaces/tax.interfaces';
-import { createTenantKnex } from 'server/src/lib/db';
+import { ITaxRegion } from '@alga-psa/types';
+import { createTenantKnex } from '@alga-psa/db';
 import { Knex } from 'knex';
-import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
-import { hasPermission } from 'server/src/lib/auth/rbac';
+import { getCurrentUser } from '@alga-psa/users/actions';
+import { hasPermission } from '@alga-psa/auth';
 export async function getClientTaxSettings(clientId: string): Promise<IClientTaxSettings | null> {
   try {
     const { knex: db, tenant } = await createTenantKnex();
@@ -551,7 +551,7 @@ export async function updateClientTaxExemptStatus(
         .update(updateData);
 
       // Create audit log entry for tax exempt status change
-      const { auditLog } = await import('server/src/lib/logging/auditLog');
+      const { auditLog } = await import('@alga-psa/db');
       await auditLog(trx, {
         userId: currentUser.user_id,
         operation: 'UPDATE',

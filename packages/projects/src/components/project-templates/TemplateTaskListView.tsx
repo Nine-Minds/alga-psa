@@ -8,9 +8,9 @@ import {
   IProjectTemplateChecklistItem,
   IProjectTemplateDependency,
   IProjectTemplateTaskAssignment,
-} from 'server/src/interfaces/projectTemplate.interfaces';
-import { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
-import { ITaskType } from 'server/src/interfaces/project.interfaces';
+} from '@alga-psa/types';
+import { IUserWithRoles } from '@alga-psa/types';
+import { ITaskType } from '@alga-psa/types';
 import {
   ChevronDown,
   ChevronRight,
@@ -30,8 +30,8 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import UserAvatar from '@alga-psa/ui/components/UserAvatar';
 import UserPicker from '@alga-psa/ui/components/UserPicker';
-import { useResponsiveColumns, ColumnConfig } from 'server/src/hooks/useResponsiveColumns';
-import { getUserAvatarUrlsBatchAction } from 'server/src/lib/actions/avatar-actions';
+import { useResponsiveColumns, ColumnConfig } from '@alga-psa/ui/hooks';
+import { getUserAvatarUrlsBatchAction } from '@alga-psa/users/actions';
 
 // Column configuration for responsive hiding
 // Lower priority number = higher importance (shown first)

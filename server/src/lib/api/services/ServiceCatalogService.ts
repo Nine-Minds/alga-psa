@@ -7,7 +7,7 @@ import {
   getServices,
   updateService,
   ServiceListOptions
-} from '@/lib/actions/serviceActions';
+} from '@alga-psa/billing/actions';
 import type { CreateServiceRequest, UpdateServiceRequest } from '../schemas/serviceSchemas';
 import { ca } from 'date-fns/locale';
 

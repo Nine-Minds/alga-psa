@@ -13,7 +13,7 @@ import type { EmailProvider } from '@alga-psa/integrations/components';
 import { TestContext } from '../../../test-utils/testContext';
 import * as tenantActions from '../../lib/actions/tenantActions';
 import * as userActions from '../../lib/actions/user-actions/userActions';
-import { getSecretProviderInstance } from '@alga-psa/core';
+import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 
 const localStorageProviderMock = vi.hoisted(() => ({
   LocalStorageProvider: class {

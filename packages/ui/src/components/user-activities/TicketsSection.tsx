@@ -1,15 +1,17 @@
+'use client';
+
 import React, { useEffect, useState, useCallback } from 'react';
-import { TicketActivity, ActivityFilters } from "server/src/interfaces/activity.interfaces";
-import { IClient } from "server/src/interfaces/client.interfaces";
-import { IContact } from "server/src/interfaces/contact.interfaces";
-import { IStatus } from "server/src/interfaces/status.interface";
+import { TicketActivity, ActivityFilters } from "@alga-psa/types";
+import { IClient } from "@alga-psa/types";
+import { IContact } from "@alga-psa/types";
+import { IStatus } from "@alga-psa/types";
 import { Button } from "@alga-psa/ui/components/Button";
 import { Card, CardContent, CardHeader, CardTitle } from "@alga-psa/ui/components/Card";
 import { TicketCard } from "./ActivityCard";
-import { fetchTicketActivities } from "server/src/lib/actions/activity-actions/activityServerActions";
+import { fetchTicketActivities } from "@alga-psa/workflows/actions";
 import { getAllClients } from "@alga-psa/clients/actions";
-import { getAllContacts } from "server/src/lib/actions/contact-actions/contactActions";
-import { getTicketStatuses } from "server/src/lib/actions/status-actions/statusActions";
+import { getAllContacts } from "@alga-psa/clients/actions";
+import { getTicketStatuses } from "@alga-psa/reference-data/actions";
 import { TicketSectionFiltersDialog } from "./filters/TicketSectionFiltersDialog";
 import { Filter, XCircleIcon } from 'lucide-react';
 import { useActivityDrawer } from "./ActivityDrawerProvider";

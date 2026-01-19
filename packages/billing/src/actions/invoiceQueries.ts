@@ -7,11 +7,11 @@ import {
   IInvoice,
   InvoiceViewModel,
   IInvoiceCharge
-} from 'server/src/interfaces/invoice.interfaces';
-import { createTenantKnex } from 'server/src/lib/db';
-import { toPlainDate } from 'server/src/lib/utils/dateTimeUtils';
-import Invoice from 'server/src/lib/models/invoice';
-import { getClientContractPurchaseOrderContext, getPurchaseOrderConsumedCents } from 'server/src/lib/services/purchaseOrderService';
+} from '@alga-psa/types';
+import { createTenantKnex } from '@alga-psa/db';
+import { toPlainDate } from '@alga-psa/core';
+import Invoice from '@alga-psa/billing/models/invoice';
+import { getClientContractPurchaseOrderContext, getPurchaseOrderConsumedCents } from '@alga-psa/billing/services/purchaseOrderService';
 
 // Types for paginated invoice fetching
 export interface FetchInvoicesOptions {

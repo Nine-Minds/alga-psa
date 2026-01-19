@@ -1,5 +1,5 @@
 import { getDocumentByClientId } from '@alga-psa/documents/actions/documentActions';
-import { getContactsByClient } from 'server/src/lib/actions/contact-actions/contactActions';
+import { getContactsByClient } from '@alga-psa/clients/actions';
 import { getClientById } from '@alga-psa/clients/actions';
 import { notFound } from 'next/navigation';
 import { ClientDetails } from '@alga-psa/clients';

@@ -3,23 +3,23 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Plus, MoreVertical, CornerDownRight } from "lucide-react";
-import { ITicketCategory } from 'server/src/interfaces/ticket.interfaces';
+import { ITicketCategory } from '@alga-psa/types';
 import {
   getAllCategories,
   createCategory,
   updateCategory,
   deleteCategory
-} from 'server/src/lib/actions/ticketCategoryActions';
-import { getAllBoards } from 'server/src/lib/actions/board-actions/boardActions';
-import { IBoard } from 'server/src/interfaces/board.interface';
-import { getAvailableReferenceData, importReferenceData, checkImportConflicts, ImportConflict } from 'server/src/lib/actions/referenceDataActions';
+} from '@alga-psa/tickets/actions';
+import { getAllBoards } from '@alga-psa/tickets/actions';
+import { IBoard } from '@alga-psa/types';
+import { getAvailableReferenceData, importReferenceData, checkImportConflicts, ImportConflict } from '@alga-psa/reference-data/actions';
 import { toast } from 'react-hot-toast';
 import { Dialog, DialogContent, DialogFooter } from '@alga-psa/ui/components/Dialog';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { Label } from '@alga-psa/ui/components/Label';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
-import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
+import { ColumnDefinition } from '@alga-psa/types';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import {

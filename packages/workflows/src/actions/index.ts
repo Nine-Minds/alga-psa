@@ -14,3 +14,6 @@ export * from './workflow-actions/formRegistryActions';
 export * from './workflow-actions/initializeWorkflows';
 export * from './workflow-actions/taskInboxActions';
 export * from './workflow-actions/workflowActionRegistry';
+export * from './activity-actions';
+export * from './event-catalog-actions';
+export * from './template-library-actions';

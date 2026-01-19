@@ -6,7 +6,7 @@ import Image from 'next/image';
 import { Eye, EyeOff } from 'lucide-react';
 import { CheckCircledIcon, CrossCircledIcon } from '@radix-ui/react-icons';
 import * as Form from '@radix-ui/react-form';
-import { setNewPassword, getAccountInfoFromToken } from 'server/src/lib/actions/useRegister';
+import { setNewPassword, getAccountInfoFromToken } from '@alga-psa/auth/actions';
 import { AlertProps, TPasswordCriteria } from 'server/src/interfaces';
 import { Alert } from '@alga-psa/auth/client';
 import { Alert as UIAlert, AlertDescription } from '@alga-psa/ui/components/Alert';

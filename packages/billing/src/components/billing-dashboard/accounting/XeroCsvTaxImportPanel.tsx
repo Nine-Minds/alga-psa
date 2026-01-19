@@ -16,8 +16,8 @@ import {
   ExternalLink,
   RefreshCw
 } from 'lucide-react';
-import { formatCurrency } from 'server/src/lib/utils/formatters';
-import type { TaxImportPreviewResult, TaxImportResult } from 'server/src/lib/services/xeroCsvTaxImportService';
+import { formatCurrency } from '@alga-psa/core';
+import type { TaxImportPreviewResult, TaxImportResult } from '@alga-psa/types';
 
 interface XeroCsvTaxImportPanelProps {
   /** Callback after successful import */

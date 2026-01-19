@@ -3,13 +3,13 @@ import {
   Activity,
   NotificationActivity,
   ActivityType
-} from "server/src/interfaces/activity.interfaces";
+} from "@alga-psa/types";
 import { useActivityDrawer } from "./ActivityDrawerProvider";
 import { Badge } from "@alga-psa/ui/components/Badge";
 import { ActivityActionMenu } from "./ActivityActionMenu";
 import { Bell, Info, CheckCircle, AlertCircle } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
-import { markAsReadAction } from 'server/src/lib/actions/internal-notification-actions/internalNotificationActions';
+import { markAsReadAction } from '@alga-psa/notifications/actions';
 
 interface NotificationCardProps {
   activity: Activity;

@@ -1,8 +1,8 @@
 'use client';
 
 import React from 'react';
-import { cn } from 'server/src/lib/utils';
 import { Check } from 'lucide-react';
+import { cn } from '../../lib/utils';
 import { Button } from '@alga-psa/ui/components/Button';
 
 interface WizardProgressProps {

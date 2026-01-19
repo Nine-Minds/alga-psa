@@ -14,9 +14,9 @@ import { Input } from '@alga-psa/ui/components/Input';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 
-import { IContract, IContractAssignmentSummary } from 'server/src/interfaces/contract.interfaces';
-import { DetailedContractLine } from 'server/src/lib/repositories/contractLineRepository';
-import { IContractLineServiceBucketConfig, IContractLineServiceConfiguration, IContractLineServiceHourlyConfig, IContractLineServiceUsageConfig } from 'server/src/interfaces/contractLineServiceConfiguration.interfaces';
+import { IContract, IContractAssignmentSummary } from '@alga-psa/types';
+import type { DetailedContractLine } from '../../../repositories/contractLineRepository';
+import { IContractLineServiceBucketConfig, IContractLineServiceConfiguration, IContractLineServiceHourlyConfig, IContractLineServiceUsageConfig } from '@alga-psa/types';
 import {
   getContractById,
   getContractSummary,
@@ -26,10 +26,10 @@ import {
   updateContractLineRate,
 } from '@alga-psa/billing/actions/contractActions';
 import { getContractLineServicesWithConfigurations, getTemplateLineServicesWithConfigurations } from '@alga-psa/billing/actions/contractLineServiceActions';
-import { toPlainDate } from 'server/src/lib/utils/dateTimeUtils';
-import { BILLING_FREQUENCY_OPTIONS } from 'server/src/constants/billing';
-import { CURRENCY_OPTIONS } from 'server/src/constants/currency';
-import { formatCurrencyFromMinorUnits } from 'server/src/lib/utils/formatters';
+import { toPlainDate } from '@alga-psa/core';
+import { BILLING_FREQUENCY_OPTIONS } from '@alga-psa/billing/constants/billing';
+import { CURRENCY_OPTIONS } from '@alga-psa/core';
+import { formatCurrencyFromMinorUnits } from '@alga-psa/core';
 import GenericPlanServicesList from '../contract-lines/GenericContractLineServicesList';
 import { ContractLineEditDialog } from './ContractLineEditDialog';
 

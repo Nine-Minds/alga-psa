@@ -6,7 +6,7 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Label } from '@alga-psa/ui/components/Label';
 import { Mail } from 'lucide-react';
-import { requestTenantLoginLinksAction } from 'server/src/lib/actions/portal-actions/tenantRecoveryActions';
+import { requestTenantLoginLinksAction } from '@alga-psa/client-portal/actions';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import toast from 'react-hot-toast';
 

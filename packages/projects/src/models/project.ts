@@ -10,7 +10,7 @@
  */
 
 import type { Knex } from 'knex';
-import type { IProject, IProjectPhase, IProjectStatusMapping } from '@alga-psa/types';
+import type { IProject, IProjectPhase, IProjectStatusMapping, IProjectTask, IStatus, IStandardStatus, ItemType } from '@alga-psa/types';
 import { v4 as uuidv4 } from 'uuid';
 
 /**
@@ -523,6 +523,421 @@ const ProjectModel = {
       .select('*');
 
     return projects;
+  },
+
+  getStatusesByType: async (knexOrTrx: Knex | Knex.Transaction, tenant: string, statusType: ItemType): Promise<IStatus[]> => {
+    if (!tenant) {
+      throw new Error('Tenant context is required for getting statuses by type');
+    }
+
+    try {
+      const statuses = await knexOrTrx<IStatus>('statuses')
+        .where('status_type', statusType)
+        .andWhere('tenant', tenant)
+        .orderBy('order_number');
+      return statuses;
+    } catch (error) {
+      console.error('Error getting statuses by type:', error);
+      throw error;
+    }
+  },
+
+  getStandardStatusesByType: async (
+    knexOrTrx: Knex | Knex.Transaction,
+    tenant: string,
+    itemType: ItemType
+  ): Promise<IStandardStatus[]> => {
+    if (!tenant) {
+      throw new Error('Tenant context is required for getting standard statuses by type');
+    }
+
+    try {
+      const standardStatuses = await knexOrTrx<IStandardStatus>('standard_statuses')
+        .where('item_type', itemType)
+        .andWhere('tenant', tenant)
+        .orderBy('display_order');
+      return standardStatuses;
+    } catch (error) {
+      console.error('Error getting standard statuses by type:', error);
+      throw error;
+    }
+  },
+
+  addProjectStatusMapping: async (
+    knexOrTrx: Knex | Knex.Transaction,
+    tenant: string,
+    projectId: string,
+    mappingData: Omit<IProjectStatusMapping, 'project_id' | 'project_status_mapping_id' | 'tenant'>
+  ): Promise<IProjectStatusMapping> => {
+    if (!tenant) {
+      throw new Error('Tenant context is required for adding project status mapping');
+    }
+
+    try {
+      const [newMapping] = await knexOrTrx<IProjectStatusMapping>('project_status_mappings')
+        .insert({
+          ...mappingData,
+          project_id: projectId,
+          project_status_mapping_id: uuidv4(),
+          tenant: tenant,
+        })
+        .returning('*');
+      return newMapping;
+    } catch (error) {
+      console.error('Error adding project status mapping:', error);
+      throw error;
+    }
+  },
+
+  getStandardStatus: async (knexOrTrx: Knex | Knex.Transaction, tenant: string, standardStatusId: string): Promise<IStandardStatus | null> => {
+    if (!tenant) {
+      throw new Error('Tenant context is required for getting standard status');
+    }
+
+    try {
+      const standardStatus = await knexOrTrx<IStandardStatus>('standard_statuses')
+        .where('standard_status_id', standardStatusId)
+        .andWhere('tenant', tenant)
+        .first();
+      return standardStatus || null;
+    } catch (error) {
+      console.error('Error getting standard status:', error);
+      throw error;
+    }
+  },
+
+  getCustomStatus: async (knexOrTrx: Knex | Knex.Transaction, tenant: string, statusId: string): Promise<IStatus | null> => {
+    if (!tenant) {
+      throw new Error('Tenant context is required for getting custom status');
+    }
+
+    try {
+      const customStatus = await knexOrTrx<IStatus>('statuses')
+        .where('status_id', statusId)
+        .andWhere('tenant', tenant)
+        .first();
+      return customStatus || null;
+    } catch (error) {
+      console.error('Error getting custom status:', error);
+      throw error;
+    }
+  },
+
+  getProjectTaskStatuses: async (
+    knexOrTrx: Knex | Knex.Transaction,
+    tenant: string,
+    projectId: string
+  ): Promise<(IStatus | IStandardStatus)[]> => {
+    try {
+      const mappings = await ProjectModel.getProjectStatusMappings(knexOrTrx, tenant, projectId);
+      const statuses = await Promise.all(
+        mappings.map(async (mapping: IProjectStatusMapping): Promise<IStatus | IStandardStatus | null> => {
+          if (mapping.is_standard && mapping.standard_status_id) {
+            const standardStatus = await ProjectModel.getStandardStatus(knexOrTrx, tenant, mapping.standard_status_id);
+            return standardStatus
+              ? ({
+                  ...standardStatus,
+                  project_status_mapping_id: mapping.project_status_mapping_id,
+                  custom_name: mapping.custom_name,
+                  display_order: mapping.display_order,
+                  is_visible: mapping.is_visible,
+                  is_standard: true,
+                } as IStandardStatus)
+              : null;
+          } else if (mapping.status_id) {
+            const customStatus = await ProjectModel.getCustomStatus(knexOrTrx, tenant, mapping.status_id);
+            return customStatus
+              ? ({
+                  ...customStatus,
+                  project_status_mapping_id: mapping.project_status_mapping_id,
+                  custom_name: mapping.custom_name,
+                  display_order: mapping.display_order,
+                  is_visible: mapping.is_visible,
+                  is_standard: false,
+                } as IStatus)
+              : null;
+          } else {
+            console.error('Invalid project status mapping: missing both standard_status_id and status_id');
+            return null;
+          }
+        })
+      );
+      return statuses.filter((status): status is IStatus | IStandardStatus => status !== null);
+    } catch (error) {
+      console.error('Error getting project statuses:', error);
+      throw error;
+    }
+  },
+
+  addStatusToProject: async (
+    knexOrTrx: Knex | Knex.Transaction,
+    tenant: string,
+    projectId: string,
+    statusData: Omit<IStatus, 'status_id' | 'created_at' | 'updated_at' | 'tenant'>
+  ): Promise<IStatus> => {
+    if (!tenant) {
+      throw new Error('Tenant context is required for adding status to project');
+    }
+
+    const isTransaction = (knexOrTrx as any).isTransaction || false;
+    const trx = isTransaction ? (knexOrTrx as Knex.Transaction) : await knexOrTrx.transaction();
+
+    try {
+      const [newStatus] = await trx<IStatus>('statuses')
+        .insert({
+          ...statusData,
+          status_id: uuidv4(),
+          tenant: tenant,
+        })
+        .returning('*');
+
+      await trx<IProjectStatusMapping>('project_status_mappings').insert({
+        project_id: projectId,
+        status_id: newStatus.status_id,
+        is_standard: false,
+        custom_name: null,
+        display_order: 0,
+        is_visible: true,
+        project_status_mapping_id: uuidv4(),
+        tenant: tenant,
+      });
+
+      if (!isTransaction) {
+        await trx.commit();
+      }
+
+      return newStatus;
+    } catch (error) {
+      if (!isTransaction) {
+        await trx.rollback();
+      }
+      console.error('Error adding status to project:', error);
+      throw error;
+    }
+  },
+
+  updateProjectStatus: async (
+    knexOrTrx: Knex | Knex.Transaction,
+    tenant: string,
+    statusId: string,
+    statusData: Partial<IStatus>,
+    mappingData: Partial<IProjectStatusMapping>
+  ): Promise<IStatus> => {
+    if (!tenant) {
+      throw new Error('Tenant context is required for updating project status');
+    }
+
+    const isTransaction = (knexOrTrx as any).isTransaction || false;
+    const trx = isTransaction ? (knexOrTrx as Knex.Transaction) : await knexOrTrx.transaction();
+
+    try {
+      const [updatedStatus] = await trx<IStatus>('statuses').where('status_id', statusId).andWhere('tenant', tenant).update({ ...statusData }).returning('*');
+
+      if (mappingData) {
+        await trx<IProjectStatusMapping>('project_status_mappings')
+          .where('status_id', statusId)
+          .andWhere('tenant', tenant)
+          .update(mappingData);
+      }
+
+      if (!isTransaction) {
+        await trx.commit();
+      }
+
+      return updatedStatus;
+    } catch (error) {
+      if (!isTransaction) {
+        await trx.rollback();
+      }
+      console.error('Error updating project status:', error);
+      throw error;
+    }
+  },
+
+  deleteProjectStatus: async (knexOrTrx: Knex | Knex.Transaction, tenant: string, statusId: string): Promise<void> => {
+    if (!tenant) {
+      throw new Error('Tenant context is required for deleting project status');
+    }
+
+    const isTransaction = (knexOrTrx as any).isTransaction || false;
+    const trx = isTransaction ? (knexOrTrx as Knex.Transaction) : await knexOrTrx.transaction();
+
+    try {
+      // First, check if the status is being used by any tasks
+      const tasksUsingStatus = await trx<IProjectTask>('project_tasks').where('project_status_mapping_id', statusId).first();
+
+      if (tasksUsingStatus) {
+        throw new Error('Cannot delete status: it is being used by one or more tasks');
+      }
+
+      await trx<IProjectStatusMapping>('project_status_mappings').where('status_id', statusId).andWhere('tenant', tenant).del();
+
+      await trx<IStatus>('statuses').where('status_id', statusId).andWhere('tenant', tenant).del();
+
+      if (!isTransaction) {
+        await trx.commit();
+      }
+    } catch (error) {
+      if (!isTransaction) {
+        await trx.rollback();
+      }
+      console.error('Error deleting project status:', error);
+      throw error;
+    }
+  },
+
+  getPhaseById: async (knexOrTrx: Knex | Knex.Transaction, tenant: string, phaseId: string): Promise<IProjectPhase | null> => {
+    if (!tenant) {
+      throw new Error('Tenant context is required for getting project phase by ID');
+    }
+
+    try {
+      const phase = await knexOrTrx<IProjectPhase>('project_phases').where('phase_id', phaseId).andWhere('tenant', tenant).first();
+      return phase || null;
+    } catch (error) {
+      console.error('Error getting project phase by ID:', error);
+      throw error;
+    }
+  },
+
+  updateStructure: async (
+    knexOrTrx: Knex | Knex.Transaction,
+    tenant: string,
+    projectId: string,
+    updates: { phases: Partial<IProjectPhase>[]; tasks: Partial<IProjectTask>[] }
+  ): Promise<void> => {
+    if (!tenant) {
+      throw new Error('Tenant context is required for updating project structure');
+    }
+
+    const isTransaction = (knexOrTrx as any).isTransaction || false;
+    const trx = isTransaction ? (knexOrTrx as Knex.Transaction) : await knexOrTrx.transaction();
+
+    try {
+      for (const phase of updates.phases) {
+        if (!phase.phase_id) {
+          throw new Error('Phase ID is required for update');
+        }
+        // Remove wbs_code from updates to prevent override
+        const { wbs_code: _wbs, ...phaseUpdate } = phase as any;
+        await trx('project_phases')
+          .where({ project_id: projectId, phase_id: phase.phase_id })
+          .andWhere('tenant', tenant)
+          .update({
+            ...phaseUpdate,
+            updated_at: trx.fn.now(),
+          });
+      }
+      for (const task of updates.tasks) {
+        if (!task.task_id) {
+          throw new Error('Task ID is required for update');
+        }
+        // Remove wbs_code from updates to prevent override
+        const { wbs_code: _wbs, ...taskUpdate } = task as any;
+        await trx('project_tasks')
+          .where({ task_id: task.task_id })
+          .andWhere('tenant', tenant)
+          .update({
+            ...taskUpdate,
+            updated_at: trx.fn.now(),
+          });
+      }
+
+      if (!isTransaction) {
+        await trx.commit();
+      }
+    } catch (error) {
+      if (!isTransaction) {
+        await trx.rollback();
+      }
+      console.error('Error updating project structure:', error);
+      throw error;
+    }
+  },
+
+  generateNextWbsCode: async (knexOrTrx: Knex | Knex.Transaction, tenant: string, parentWbsCode: string): Promise<string> => {
+    if (!tenant) {
+      throw new Error('Tenant context is required for generating WBS codes');
+    }
+
+    try {
+      // If no parent code, get next project number
+      if (!parentWbsCode) {
+        const projects = await knexOrTrx('projects').whereNot('wbs_code', '').andWhere('tenant', tenant).select('wbs_code');
+
+        if (projects.length === 0) return '1';
+
+        const numbers = projects
+          .map((p): number => parseInt((p as any).wbs_code))
+          .filter((n: number): boolean => !isNaN(n))
+          .sort((a: number, b: number): number => b - a);
+
+        return String(numbers[0] + 1);
+      }
+
+      // Split parent code into parts
+      const parts = parentWbsCode.split('.');
+
+      // For project level (single number), get next phase number
+      if (parts.length === 1) {
+        const phases = await knexOrTrx('project_phases').where('wbs_code', 'like', `${parentWbsCode}.%`).andWhere('tenant', tenant).select('wbs_code');
+
+        if (phases.length === 0) return `${parentWbsCode}.1`;
+
+        const numbers = phases
+          .map((phase): number => {
+            const phaseParts = (phase as any).wbs_code.split('.');
+            return parseInt(phaseParts[1]);
+          })
+          .filter((n: number): boolean => !isNaN(n))
+          .sort((a: number, b: number): number => b - a);
+
+        return `${parentWbsCode}.${numbers[0] + 1}`;
+      }
+
+      // For phase level (two numbers), get next task number
+      if (parts.length === 2) {
+        const tasks = await knexOrTrx('project_tasks').where('wbs_code', 'like', `${parentWbsCode}.%`).andWhere('tenant', tenant).select('wbs_code');
+
+        if (tasks.length === 0) return `${parentWbsCode}.1`;
+
+        const numbers = tasks
+          .map((task): number => {
+            const taskParts = (task as any).wbs_code.split('.');
+            return parseInt(taskParts[2]);
+          })
+          .filter((n: number): boolean => !isNaN(n))
+          .sort((a: number, b: number): number => b - a);
+
+        return `${parentWbsCode}.${numbers[0] + 1}`;
+      }
+
+      throw new Error('Invalid WBS code format');
+    } catch (error) {
+      console.error('Error generating next WBS code:', error);
+      throw error;
+    }
+  },
+
+  getProjectStatusMapping: async (
+    knexOrTrx: Knex | Knex.Transaction,
+    tenant: string,
+    mappingId: string
+  ): Promise<IProjectStatusMapping | null> => {
+    if (!tenant) {
+      throw new Error('Tenant context is required for getting project status mapping');
+    }
+
+    try {
+      const mapping = await knexOrTrx<IProjectStatusMapping>('project_status_mappings')
+        .where('project_status_mapping_id', mappingId)
+        .andWhere('tenant', tenant)
+        .first();
+      return mapping || null;
+    } catch (error) {
+      console.error('Error getting project status mapping:', error);
+      throw error;
+    }
   },
 };
 

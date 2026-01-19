@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import logger from '@alga-psa/core/logger';
-import { getSecretProviderInstance } from '@alga-psa/core';
+import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { processStripePaymentWebhookPayload } from '@alga-psa/billing/actions/paymentActions';
 
 /**

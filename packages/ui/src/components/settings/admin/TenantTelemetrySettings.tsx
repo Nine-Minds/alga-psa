@@ -7,7 +7,7 @@ import { Label } from "@alga-psa/ui/components/Label";
 import { Button } from "@alga-psa/ui/components/Button";
 import CustomSelect from "@alga-psa/ui/components/CustomSelect";
 import { Alert, AlertDescription } from "@alga-psa/ui/components/Alert";
-import type { TenantTelemetrySettings, AnonymizationLevel } from "server/src/config/telemetry";
+import type { TenantTelemetrySettings, AnonymizationLevel } from "@alga-psa/types";
 
 interface TenantTelemetrySettingsProps {
   onSettingsUpdate?: (settings: TenantTelemetrySettings) => void;

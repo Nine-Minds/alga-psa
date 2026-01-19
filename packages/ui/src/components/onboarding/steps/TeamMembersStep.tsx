@@ -8,8 +8,8 @@ import { Plus, Trash2, Users, AlertCircle, CheckCircle, Eye, EyeOff } from 'luci
 import { StepProps } from '../types';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
-import { getLicenseUsageAction } from 'server/src/lib/actions/license-actions';
-import { getAvailableRoles, addSingleTeamMember } from '@/lib/actions/onboarding-actions/onboardingActions';
+import { getLicenseUsageAction } from '@alga-psa/licensing/actions';
+import { getAvailableRoles, addSingleTeamMember } from '@alga-psa/onboarding/actions';
 
 export function TeamMembersStep({ data, updateData }: StepProps) {
   const [licenseInfo, setLicenseInfo] = useState<{

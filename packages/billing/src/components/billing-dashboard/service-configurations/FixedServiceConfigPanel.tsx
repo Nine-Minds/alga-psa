@@ -5,8 +5,8 @@ import { Card } from '@alga-psa/ui/components/Card';
 import { Label } from '@alga-psa/ui/components/Label';
 import { Switch } from '@alga-psa/ui/components/Switch';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
-import { IContractLineServiceFixedConfig } from 'server/src/interfaces/contractLineServiceConfiguration.interfaces';
-import { IContractLineFixedConfig } from 'server/src/interfaces/billing.interfaces';
+import { IContractLineServiceFixedConfig } from '@alga-psa/types';
+import { IContractLineFixedConfig } from '@alga-psa/types';
 
 interface FixedServiceConfigPanelProps {
   configuration: Partial<IContractLineServiceFixedConfig>;

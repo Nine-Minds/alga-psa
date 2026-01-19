@@ -4,8 +4,8 @@ import React, { useState, useEffect } from 'react';
 import { Dialog, DialogFooter } from '@alga-psa/ui/components/Dialog';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Mail, User, Building, AlertCircle, CheckCircle, Loader2, FileText } from 'lucide-react';
-import { getInvoiceEmailRecipientAction, InvoiceEmailRecipientInfo } from 'server/src/lib/actions/job-actions/getInvoiceEmailRecipientAction';
-import { sendInvoiceEmailAction } from 'server/src/lib/actions/job-actions/sendInvoiceEmailAction';
+import { getInvoiceEmailRecipientAction, InvoiceEmailRecipientInfo } from '@alga-psa/jobs/actions';
+import { sendInvoiceEmailAction } from '@alga-psa/jobs/actions';
 import toast from 'react-hot-toast';
 
 interface SendInvoiceEmailDialogProps {

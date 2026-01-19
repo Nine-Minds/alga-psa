@@ -6,10 +6,10 @@ import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { AlertCircle } from 'lucide-react';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Button } from '@alga-psa/ui/components/Button';
-import { IContract } from 'server/src/interfaces/contract.interfaces';
+import { IContract } from '@alga-psa/types';
 import { getContracts, getContractLinesForContract } from '@alga-psa/billing/actions/contractActions';
 import { getClientContracts, getAllClients } from '@alga-psa/clients/actions';
-import { IClient } from 'server/src/interfaces';
+import { IClient } from '@alga-psa/types';
 import Spinner from '@alga-psa/ui/components/Spinner';
 
 interface ContractMetrics {

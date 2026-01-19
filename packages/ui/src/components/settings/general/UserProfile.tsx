@@ -13,22 +13,22 @@ import { Switch } from '@alga-psa/ui/components/Switch';
 import TimezonePicker from '@alga-psa/ui/components/TimezonePicker';
 import CustomTabs, { TabContent } from '@alga-psa/ui/components/CustomTabs';
 import ViewSwitcher, { ViewSwitcherOption } from '@alga-psa/ui/components/ViewSwitcher';
-import { getCurrentUser, updateUser } from 'server/src/lib/actions/user-actions/userActions';
-import type { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
-import type { NotificationCategory, NotificationSubtype, UserNotificationPreference } from 'server/src/lib/models/notification';
+import { getCurrentUser, updateUser } from '@alga-psa/users/actions';
+import type { IUserWithRoles } from '@alga-psa/types';
+import type { NotificationCategory, NotificationSubtype, UserNotificationPreference } from '@alga-psa/notifications';
 import {
   getCategoriesAction,
   getCategoryWithSubtypesAction,
   updateUserPreferenceAction
-} from 'server/src/lib/actions/notification-actions/notificationActions';
+} from '@alga-psa/notifications/actions';
 import { InternalNotificationPreferences } from '@alga-psa/ui/components/settings/notifications/InternalNotificationPreferences';
 import PasswordChangeForm from './PasswordChangeForm';
 import ApiKeysSetup from '../api/ApiKeysSetup';
 import UserAvatarUpload from '../profile/UserAvatarUpload';
 import SessionManagement from '../security/SessionManagement';
 import { toast } from 'react-hot-toast';
-import { getUserAvatarUrlAction } from '@/lib/actions/avatar-actions';
-import { validateContactName, validateEmailAddress, validatePhoneNumber } from 'server/src/lib/utils/clientFormValidation';
+import { getUserAvatarUrlAction } from '@alga-psa/users/actions';
+import { validateContactName, validateEmailAddress, validatePhoneNumber } from '@alga-psa/validation';
 import { CalendarIntegrationsSettings } from '@alga-psa/integrations/components';
 import SettingsTabSkeleton from '@alga-psa/ui/components/skeletons/SettingsTabSkeleton';
 

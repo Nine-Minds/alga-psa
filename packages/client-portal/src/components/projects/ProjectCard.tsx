@@ -3,11 +3,11 @@
 import { useState, useEffect } from 'react';
 import { Card, CardContent } from '@alga-psa/ui/components/Card';
 import { Button } from '@alga-psa/ui/components/Button';
-import { getProjectProgress, getProjectManager } from 'server/src/lib/actions/client-portal-actions/client-projects';
-import { formatDateOnly } from 'server/src/lib/utils/dateTimeUtils';
+import { getProjectProgress, getProjectManager } from '@alga-psa/client-portal/actions';
+import { formatDateOnly } from '@alga-psa/core';
 import { Mail } from 'lucide-react';
 
-import { IProject } from 'server/src/interfaces/project.interfaces';
+import { IProject } from '@alga-psa/types';
 
 interface ProjectCardProps {
   project: IProject;

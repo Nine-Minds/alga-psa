@@ -19,12 +19,12 @@ import {
   DropdownMenuTrigger,
 } from '@alga-psa/ui/components/DropdownMenu';
 import { getInvoiceTemplates, saveInvoiceTemplate, setDefaultTemplate, deleteInvoiceTemplate } from '@alga-psa/billing/actions/invoiceTemplates'; // Added deleteInvoiceTemplate import
-import { IInvoiceTemplate } from 'server/src/interfaces/invoice.interfaces';
+import { IInvoiceTemplate } from '@alga-psa/types';
 // Removed InvoiceTemplateManager import
 import { FileTextIcon, PencilIcon, MoreVertical } from 'lucide-react'; // Added PencilIcon and MoreVertical imports
 import { GearIcon, CheckCircledIcon } from '@radix-ui/react-icons';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
-import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
+import { ColumnDefinition } from '@alga-psa/types';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 
 const InvoiceTemplates: React.FC = () => {

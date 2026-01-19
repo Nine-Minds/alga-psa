@@ -8,7 +8,7 @@ import {
   getDocumentsByEntity,
   removeDocumentAssociations
 } from '@alga-psa/documents/actions/documentActions';
-import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
+import { getCurrentUser } from '@alga-psa/users/actions';
 import { Button } from '@alga-psa/ui/components/Button';
 import DocumentUpload from '@alga-psa/documents/components/DocumentUpload';
 import DocumentSelector from '@alga-psa/documents/components/DocumentSelector';
@@ -22,8 +22,8 @@ import {
   createBlockDocument
 } from '@alga-psa/documents/actions/documentBlockContentActions';
 import { updateDocument } from '@alga-psa/documents/actions/documentActions';
-import { downloadDocumentInBrowser } from 'server/src/lib/actions/document-download/downloadHelpers';
-import { downloadDocument } from 'server/src/lib/utils/documentUtils';
+import { downloadDocumentInBrowser } from '@alga-psa/documents/actions';
+import { downloadDocument } from '@alga-psa/documents/lib/documentUtils';
 import { toast } from 'react-hot-toast';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import FolderSelectorModal from '@alga-psa/documents/components/FolderSelectorModal';

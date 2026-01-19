@@ -18,8 +18,8 @@ import {
   getGoogleIntegrationStatus,
   resetGoogleProvidersToDisconnected,
   saveGoogleIntegrationSettings
-} from '@/lib/actions/integrations/googleActions';
-import { useToast } from '@/hooks/use-toast';
+} from '@alga-psa/integrations/actions';
+import { useToast } from '@alga-psa/ui/hooks/use-toast';
 
 export function GoogleIntegrationSettings() {
   const { toast } = useToast();

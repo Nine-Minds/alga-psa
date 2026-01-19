@@ -1,4 +1,4 @@
-import { Action } from 'server/src/lib/workflow/forms/actionHandlerRegistry';
+import { Action } from '@alga-psa/workflows/forms/actionHandlerRegistry';
 import { ActionButton } from './ActionButton';
 
 interface ActionButtonGroupProps {

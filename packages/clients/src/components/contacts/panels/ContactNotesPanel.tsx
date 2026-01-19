@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@alga-psa/ui/components/Card';
 import { Button } from '@alga-psa/ui/components/Button';
-import { useContactNotes } from 'server/src/hooks/useContactNotes';
+import { useContactNotes } from '@alga-psa/clients/hooks';
 import { DEFAULT_BLOCK, TextEditor } from '@alga-psa/ui/editor';
 import { Save, Loader2 } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@alga-psa/ui/components/Alert';

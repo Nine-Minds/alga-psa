@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { IInvoiceCharge } from 'server/src/interfaces/invoice.interfaces';
+import { IInvoiceCharge } from '@alga-psa/types';
 import { Badge } from '@alga-psa/ui/components/Badge';
 
 interface ContractInvoiceItemsProps {

@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useEffect } from 'react';
-import { IInvoiceAnnotation } from 'server/src/interfaces/invoice.interfaces';
+import { IInvoiceAnnotation } from '@alga-psa/types';
 import { addInvoiceAnnotation, getInvoiceAnnotations } from '@alga-psa/billing/actions/invoiceTemplates';
 
 interface InvoiceAnnotationsProps {

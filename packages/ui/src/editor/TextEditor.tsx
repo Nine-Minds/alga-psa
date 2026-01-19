@@ -17,7 +17,7 @@ import {
   filterSuggestionItems,
 } from '@blocknote/core';
 import { Mention } from './Mention';
-import { searchUsersForMentions, type MentionUser } from 'server/src/lib/actions/user-actions/searchUsersForMentions';
+import { searchUsersForMentions, type MentionUser } from '@alga-psa/users/actions';
 
 // Debug flag
 const DEBUG = true;

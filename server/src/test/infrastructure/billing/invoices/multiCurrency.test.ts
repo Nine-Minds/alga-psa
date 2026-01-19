@@ -13,7 +13,7 @@ import {
   ensureClientPlanBundlesTable
 } from '../../../../../test-utils/billingTestHelpers';
 import { setupCommonMocks } from '../../../../../test-utils/testMocks';
-import { updateContract } from 'server/src/lib/actions/contractActions';
+import { updateContract } from '@alga-psa/billing/actions';
 
 // Override DB_PORT to connect directly to PostgreSQL instead of pgbouncer
 process.env.DB_PORT = '5432';

@@ -1,9 +1,9 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { IProjectTask, ProjectStatus, IProjectTicketLinkWithDetails, ITaskType, IProjectTaskDependency } from 'server/src/interfaces/project.interfaces';
-import { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
-import { ITag } from 'server/src/interfaces/tag.interfaces';
+import { IProjectTask, ProjectStatus, IProjectTicketLinkWithDetails, ITaskType, IProjectTaskDependency } from '@alga-psa/types';
+import { IUserWithRoles } from '@alga-psa/types';
+import { ITag } from '@alga-psa/types';
 import { getTaskTypes } from '../actions/projectTaskActions';
 import StatusColumn from './StatusColumn';
 import styles from './ProjectDetail.module.css';

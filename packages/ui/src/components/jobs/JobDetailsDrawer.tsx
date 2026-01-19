@@ -2,7 +2,7 @@ import React from 'react';
 import Drawer from '@alga-psa/ui/components/Drawer';
 import { JobProgress } from '../common/JobProgress';
 import JobMetricsDisplay from './JobMetricsDisplay';
-import { useJobMonitor } from 'server/src/lib/hooks/useJobMonitor';
+import { useJobMonitor } from '@alga-psa/ui/hooks';
 import JobStepHistory from './JobStepHistory';
 
 interface JobDetailsDrawerProps {

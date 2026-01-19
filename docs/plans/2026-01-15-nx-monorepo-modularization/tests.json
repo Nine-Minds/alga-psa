@@ -1080,5 +1080,23 @@
       "F104"
     ],
     "note": "Validated by inspection: `npm -w packages/core test` runs in under 1s in this environment, demonstrating fast per-module test execution."
+  },
+  {
+    "id": "T128",
+    "description": "Scheduling time period suggestion follows expected business rules (month/week boundaries)",
+    "implemented": true,
+    "featureIds": [
+      "F115"
+    ],
+    "note": "Covered by packages/scheduling/tests/timePeriodSuggester.test.ts (run `npm -w packages/scheduling test`)."
+  },
+  {
+    "id": "T129",
+    "description": "Documents storage config enforces file size + MIME allowlists",
+    "implemented": true,
+    "featureIds": [
+      "F119"
+    ],
+    "note": "Covered by packages/documents/tests/storageConfig.test.ts (run `npm -w packages/documents test`)."
   }
 ]

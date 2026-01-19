@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { NotificationActivity } from "server/src/interfaces/activity.interfaces";
+import { NotificationActivity } from "@alga-psa/types";
 import { Button } from "@alga-psa/ui/components/Button";
 import { Badge } from "@alga-psa/ui/components/Badge";
 import {

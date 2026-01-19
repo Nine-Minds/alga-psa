@@ -17,7 +17,6 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { Dialog } from '@alga-psa/ui/components/Dialog';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import CustomTabs, { TabContent } from '@alga-psa/ui/components/CustomTabs';
-import ContactModel from 'server/src/lib/models/contact';
 import {
   getClientContractLine,
   updateClientContractLine,
@@ -29,11 +28,11 @@ import {
   removeClientTaxRate,
   updateDefaultClientTaxRate,
 } from '@alga-psa/clients/actions';
-import { getContractLines } from 'server/src/lib/actions/contractLineAction';
-import { getServiceCategories } from 'server/src/lib/actions/serviceCategoryActions';
-import { getServices, createService, updateService, deleteService } from 'server/src/lib/actions/serviceActions';
-import { getTaxRates } from 'server/src/lib/actions/taxRateActions';
-import { setClientTemplate } from 'server/src/lib/actions/invoiceTemplates';
+import { getContractLines } from '@alga-psa/billing/actions';
+import { getServiceCategories } from '@alga-psa/billing/actions';
+import { getServices, createService, updateService, deleteService } from '@alga-psa/billing/actions';
+import { getTaxRates } from '@alga-psa/billing/actions';
+import { setClientTemplate } from '@alga-psa/billing/actions';
 import BillingConfigForm from './BillingConfigForm';
 import ClientTaxRates from './ClientTaxRates';
 import ContractLines from './ContractLines';
@@ -152,7 +151,7 @@ const BillingConfiguration: React.FC<BillingConfigurationProps> = ({ client, onS
             setServices(Array.isArray(servicesResponse) ? servicesResponse : (servicesResponse.services || []));
 
             // Fetch service types for the dropdown
-            const { getServiceTypesForSelection } = await import('server/src/lib/actions/serviceActions');
+            const { getServiceTypesForSelection } = await import('@alga-psa/billing/actions');
             const types = await getServiceTypesForSelection();
             setServiceTypes(types);
 

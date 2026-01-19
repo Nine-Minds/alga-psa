@@ -31,7 +31,7 @@ import {
 import { isAutoLinkEnabledForTenant } from "@ee/lib/auth/ssoAutoLink";
 import type { OAuthLinkProvider } from "@ee/lib/auth/oauthAccountLinks";
 import { cookies } from "next/headers";
-import { UserSession } from "server/src/lib/models/UserSession";
+import { UserSession } from "@alga-psa/db/models/UserSession";
 import { getClientIp } from "./ipAddress";
 import { generateDeviceFingerprint, getDeviceInfo } from "./deviceFingerprint";
 import { getLocationFromIp } from "./geolocation";
@@ -829,7 +829,7 @@ export async function buildAuthOptions(): Promise<NextAuthConfig> {
             async authorize(credentials, request): Promise<ExtendedUser | null> {
                 const { getAdminConnection } = await import("@alga-psa/db/admin");
                 const logger = (await import('@alga-psa/core/logger')).default;
-                const { authenticateUser } = await import('server/src/lib/actions/auth');
+                const { authenticateUser } = await import('@alga-psa/auth/actions');
                 console.log('==== Starting Credentials OAuth Authorization ====');
                 console.log('Received credentials:', {
                     email: credentials?.email,
@@ -1593,7 +1593,7 @@ export const options: NextAuthConfig = {
             },
             async authorize(credentials, request): Promise<ExtendedUser | null> {
                 const { getAdminConnection } = await import("@alga-psa/db/admin");
-                const { authenticateUser } = await import('server/src/lib/actions/auth');
+                const { authenticateUser } = await import('@alga-psa/auth/actions');
                 const logger = { info: (..._a:any[])=>{}, warn: (..._a:any[])=>{}, debug: (..._a:any[])=>{}, trace: (..._a:any[])=>{}, error: (..._a:any[])=>{} };
                 console.log('==== Starting Credentials OAuth Authorization ====');
                 console.log('Received credentials:', {

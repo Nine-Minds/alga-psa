@@ -1,13 +1,13 @@
 'use server'
 
 import { withTransaction } from '@alga-psa/db';
-import { ITaxRate, IService } from 'server/src/interfaces/billing.interfaces';
+import { ITaxRate, IService } from '@alga-psa/types';
 import { TaxService } from '../services/taxService';
 import { v4 as uuid4 } from 'uuid';
-import { createTenantKnex } from 'server/src/lib/db';
+import { createTenantKnex } from '@alga-psa/db';
 import { Knex } from 'knex';
-import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
-import { hasPermission } from 'server/src/lib/auth/rbac';
+import { getCurrentUser } from '@alga-psa/users/actions';
+import { hasPermission } from '@alga-psa/auth';
 
 export type DeleteTaxRateResult = {
   deleted: boolean;

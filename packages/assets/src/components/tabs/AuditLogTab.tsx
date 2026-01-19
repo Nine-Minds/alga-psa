@@ -2,7 +2,7 @@ import React from 'react';
 import useSWR from 'swr';
 import { Card, CardContent, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import { getAssetHistory } from '../../actions/assetActions';
-import { formatDateTime } from 'server/src/lib/utils/dateTimeUtils';
+import { formatDateTime } from '@alga-psa/core';
 
 interface AuditLogTabProps {
   assetId: string;

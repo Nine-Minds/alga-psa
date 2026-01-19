@@ -6,8 +6,8 @@ import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { Switch } from '@alga-psa/ui/components/Switch';
 import { Label } from '@alga-psa/ui/components/Label';
 import { ArrowUpDown } from 'lucide-react';
-import { IComment, ITicket } from 'server/src/interfaces';
-import { IDocument } from 'server/src/interfaces/document.interface';
+import { IComment, ITicket } from '@alga-psa/types';
+import { IDocument } from '@alga-psa/types';
 import { PartialBlock } from '@blocknote/core';
 import RichTextEditorSkeleton from '@alga-psa/ui/components/skeletons/RichTextEditorSkeleton';
 
@@ -38,9 +38,9 @@ import { Button } from '@alga-psa/ui/components/Button';
 import UserAvatar from '@alga-psa/ui/components/UserAvatar';
 import { withDataAutomationId } from '@alga-psa/ui/ui-reflection/withDataAutomationId';
 import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContainer';
-import { getContactAvatarUrlAction } from 'server/src/lib/actions/avatar-actions';
-import { getUserContactId } from 'server/src/lib/actions/user-actions/userActions';
-import { createTenantKnex } from 'server/src/lib/db';
+import { getContactAvatarUrlAction } from '@alga-psa/users/actions';
+import { getUserContactId } from '@alga-psa/users/actions';
+import { createTenantKnex } from '@alga-psa/db';
 
 interface TicketConversationProps {
   id?: string;

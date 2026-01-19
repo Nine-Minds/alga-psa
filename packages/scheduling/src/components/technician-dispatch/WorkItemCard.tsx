@@ -1,8 +1,8 @@
 import React from 'react';
-import { WorkItemType } from 'server/src/interfaces/workItem.interfaces';
+import { WorkItemType } from '@alga-psa/types';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
-import { cn } from 'server/src/lib/utils';
+import { cn } from '@alga-psa/ui';
 
 interface WorkItemCardProps {
   ticketNumber?: string;

@@ -2,7 +2,7 @@
 
 import React from 'react';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
-import { ITaskType } from 'server/src/interfaces/project.interfaces';
+import { ITaskType } from '@alga-psa/types';
 import { CheckSquare, Bug, Sparkles, TrendingUp, Flag, BookOpen, GitBranch } from 'lucide-react';
 
 interface TaskTypeSelectorProps {

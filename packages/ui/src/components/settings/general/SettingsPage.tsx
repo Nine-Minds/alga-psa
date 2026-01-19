@@ -11,7 +11,7 @@ import UserManagement from './UserManagement';
 import ClientPortalSettings from './ClientPortalSettings';
 import SettingsTabSkeleton from '@alga-psa/ui/components/skeletons/SettingsTabSkeleton';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
-import { UnsavedChangesProvider } from "server/src/contexts/UnsavedChangesContext";
+import { UnsavedChangesProvider } from "@alga-psa/ui";
 
 // Dynamic imports for heavy settings components
 const TicketingSettings = dynamic(() => import('./TicketingSettings'), {
@@ -37,7 +37,7 @@ import { EmailSettings } from '@alga-psa/integrations/email/settings/entry';
 import { EmailProviderConfiguration } from '@alga-psa/integrations/components';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import Link from 'next/link';
-// Removed import: import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
+// Removed import: import { getCurrentUser } from '@alga-psa/users/actions';
 import SurveySettings from '@alga-psa/surveys/components/SurveySettings';
 import { ProjectSettings } from '@alga-psa/projects/components';
 

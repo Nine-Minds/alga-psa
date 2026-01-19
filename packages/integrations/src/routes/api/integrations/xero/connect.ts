@@ -5,8 +5,8 @@ import crypto from 'crypto';
 
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 
-import { createTenantKnex } from 'server/src/lib/db';
-import { getXeroClientId } from 'server/src/lib/xero/xeroClientService';
+import { createTenantKnex } from '@alga-psa/db';
+import { getXeroClientId } from '../../../lib/xero/xeroClientService';
 
 const XERO_AUTHORIZE_URL =
   process.env.XERO_OAUTH_AUTHORIZE_URL ?? 'https://login.xero.com/identity/connect/authorize';

@@ -8,14 +8,14 @@ import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { Cloud, Download, Clock, CheckCircle, XCircle, AlertTriangle, RefreshCw, FileText, Info } from 'lucide-react';
-import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
+import { ColumnDefinition } from '@alga-psa/types';
 
 import {
   getPendingExternalTaxCount,
   getInvoicesPendingExternalTax,
   batchImportExternalTaxes,
   importExternalTaxForInvoice
-} from 'server/src/lib/actions/externalTaxImportActions';
+} from '@alga-psa/billing/actions';
 
 interface PendingInvoice {
   invoice_id: string;

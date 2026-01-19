@@ -9,7 +9,7 @@ import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import ViewSwitcher, { ViewSwitcherOption } from '@alga-psa/ui/components/ViewSwitcher';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
-import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
+import { ColumnDefinition } from '@alga-psa/types';
 import { Button } from '@alga-psa/ui/components/Button';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { 
@@ -18,8 +18,8 @@ import {
   getRolePermissions, 
   assignPermissionToRole, 
   removePermissionFromRole 
-} from 'server/src/lib/actions/policyActions';
-import { IPermission, IRole } from 'server/src/interfaces/auth.interfaces';
+} from '@alga-psa/auth/actions';
+import { IPermission, IRole } from '@alga-psa/types';
 import toast from 'react-hot-toast';
 
 type ViewMode = 'msp' | 'client';

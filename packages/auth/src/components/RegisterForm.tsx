@@ -7,10 +7,10 @@ import { Input } from '@alga-psa/ui/components/Input';
 import { Label } from '@alga-psa/ui/components/Label';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Eye, EyeOff } from 'lucide-react';
-import { verifyContactEmail } from 'server/src/lib/actions/user-actions/userActions';
-import { initiateRegistration } from 'server/src/lib/actions/user-actions/registrationActions';
+import { verifyContactEmail } from '@alga-psa/users/actions';
+import { initiateRegistration } from '@alga-psa/users/actions';
 import { usePostHog } from 'posthog-js/react';
-import { validateEmailAddress, validatePassword, getPasswordRequirements } from 'server/src/lib/utils/clientFormValidation';
+import { validateEmailAddress, validatePassword, getPasswordRequirements } from '@alga-psa/validation';
 
 export default function RegisterForm() {
   const [email, setEmail] = useState('');

@@ -5,12 +5,12 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { Plus, MoreVertical, Palette } from "lucide-react";
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import ColorPicker from '@alga-psa/ui/components/ColorPicker';
-import { getAllPriorities, createPriority, deletePriority, updatePriority } from 'server/src/lib/actions/priorityActions';
-import { importReferenceData, getAvailableReferenceData, checkImportConflicts, type ImportConflict } from 'server/src/lib/actions/referenceDataActions';
-import { IPriority, IStandardPriority } from 'server/src/interfaces/ticket.interfaces';
-import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
+import { getAllPriorities, createPriority, deletePriority, updatePriority } from '@alga-psa/reference-data/actions';
+import { importReferenceData, getAvailableReferenceData, checkImportConflicts, type ImportConflict } from '@alga-psa/reference-data/actions';
+import { IPriority, IStandardPriority } from '@alga-psa/types';
+import { getCurrentUser } from '@alga-psa/users/actions';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
-import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
+import { ColumnDefinition } from '@alga-psa/types';
 import { toast } from 'react-hot-toast';
 import {
   DropdownMenu,

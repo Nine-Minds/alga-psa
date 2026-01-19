@@ -8,9 +8,9 @@ import { Label } from '@alga-psa/ui/components/Label';
 import { toast } from 'react-hot-toast';
 import { Edit2, Info } from 'lucide-react';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
-import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
-import type { EntityType } from 'server/src/lib/services/numberingService';
-import { getNumberSettings, updateNumberSettings, type NumberSettings } from 'server/src/lib/actions/number-actions/numberingActions';
+import { getCurrentUser } from '@alga-psa/users/actions';
+import type { EntityType } from '@alga-psa/shared/services/numberingService';
+import { getNumberSettings, updateNumberSettings, type NumberSettings } from '@alga-psa/reference-data/actions';
 
 interface NumberingSettingsProps {
   entityType: EntityType;

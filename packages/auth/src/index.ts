@@ -16,6 +16,7 @@ export {
   buildSessionCookie,
   clearCachedSecret
 } from './lib/session';
+export { getSession, getSessionWithRevocationCheck } from './lib/getSession';
 
 // Type exports
 export type { PortalSessionTokenPayload } from './lib/session';
@@ -26,6 +27,8 @@ export {
   checkMultiplePermissions
 } from './lib/rbac';
 export type { PermissionCheck, PermissionResult } from './lib/rbac';
+
+export * from './lib/errors';
 
 // API auth helpers
 export {
@@ -63,3 +66,6 @@ export { default as PortalSwitchPrompt } from './components/PortalSwitchPrompt';
 export { default as RegisterForm } from './components/RegisterForm';
 export { default as SignOutDialog } from './components/SignOutDialog';
 export { default as TwoFactorInput } from './components/TwoFA';
+
+// Server actions (Next.js / server-side entrypoints)
+export * from './actions';

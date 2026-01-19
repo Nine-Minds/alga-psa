@@ -1,13 +1,13 @@
 'use server'
 
 import { withTransaction } from '@alga-psa/db';
-import { createTenantKnex } from 'server/src/lib/db';
+import { createTenantKnex } from '@alga-psa/db';
 import { Knex } from 'knex';
 import type { IClientContractLine } from '@alga-psa/types';
 import { Temporal } from '@js-temporal/polyfill';
-import { toPlainDate, toISODate } from 'server/src/lib/utils/dateTimeUtils';
-import { getSession } from 'server/src/lib/auth/getSession';
-import { cloneTemplateContractLine } from 'server/src/lib/billing/utils/templateClone';
+import { toPlainDate, toISODate } from '@alga-psa/core';
+import { getSession } from '@alga-psa/auth';
+import { cloneTemplateContractLine } from '@alga-psa/billing/lib/billing/utils/templateClone';
 
 // Helper function to get the latest invoiced end date
 async function getLatestInvoicedEndDate(db: any, tenant: string, clientContractLineId: string): Promise<Date | null> {

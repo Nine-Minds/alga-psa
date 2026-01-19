@@ -12,7 +12,7 @@ import toast from 'react-hot-toast';
 import {
   verifyPortalToken,
   completePortalSetup
-} from 'server/src/lib/actions/portal-actions/portalInvitationActions';
+} from '@alga-psa/client-portal/actions';
 import { signIn } from 'next-auth/react';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 

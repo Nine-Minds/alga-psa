@@ -3,7 +3,7 @@
 import { I18nProvider } from '@alga-psa/ui/lib/i18n/client';
 import { SupportedLocale, LOCALE_CONFIG } from '@alga-psa/ui/lib/i18n/config';
 import { ReactNode, useEffect, useState } from 'react';
-import { getHierarchicalLocaleAction } from 'server/src/lib/actions/locale-actions/getHierarchicalLocale';
+import { getHierarchicalLocaleAction } from '@alga-psa/tenancy/actions';
 
 interface I18nWrapperProps {
   children: ReactNode;

@@ -6,11 +6,11 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { Card, CardHeader, CardContent, CardTitle, CardDescription } from '@alga-psa/ui/components/Card';
 import ViewSwitcher, { ViewSwitcherOption } from '@alga-psa/ui/components/ViewSwitcher';
 import { SwitchWithLabel } from '@alga-psa/ui/components/SwitchWithLabel';
-import { assignRoleToUser, removeRoleFromUser, getRoles, getUserRoles } from 'server/src/lib/actions/policyActions';
-import { getAllUsers } from 'server/src/lib/actions/user-actions/userActions';
-import { IRole, IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
+import { assignRoleToUser, removeRoleFromUser, getRoles, getUserRoles } from '@alga-psa/auth/actions';
+import { getAllUsers } from '@alga-psa/users/actions';
+import { IRole, IUserWithRoles } from '@alga-psa/types';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
-import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
+import { ColumnDefinition } from '@alga-psa/types';
 import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect';
 import UserPicker from '@alga-psa/ui/components/UserPicker';
 

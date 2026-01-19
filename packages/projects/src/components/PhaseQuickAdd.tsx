@@ -1,7 +1,7 @@
 // server/src/components/projects/PhaseQuickAdd.tsx
 'use client'
 import React, { useState } from 'react';
-import { IProjectPhase } from 'server/src/interfaces/project.interfaces';
+import { IProjectPhase } from '@alga-psa/types';
 import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import { Button } from '@alga-psa/ui/components/Button';
 import { TextArea } from '@alga-psa/ui/components/TextArea';

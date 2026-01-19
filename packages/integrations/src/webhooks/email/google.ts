@@ -2,10 +2,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getAdminConnection } from '@alga-psa/db/admin';
 import { withTransaction } from '@alga-psa/db';
 import { publishEvent } from '@alga-psa/shared/events/publisher';
-import { GmailAdapter } from 'server/src/services/email/providers/GmailAdapter';
+import { GmailAdapter } from '../../services/email/providers/GmailAdapter';
 import type { EmailProviderConfig } from '@alga-psa/shared/interfaces/inbound-email.interfaces';
 import { OAuth2Client } from 'google-auth-library';
-import { getSecretProviderInstance } from '@alga-psa/core';
+import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 
 interface GooglePubSubMessage {
   message: {

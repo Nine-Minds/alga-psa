@@ -3,8 +3,8 @@
 import type { Knex } from 'knex';
 
 import { createTenantKnex } from '@/lib/db';
-import { getCurrentUser } from '@/lib/actions/user-actions/userActions';
-import { hasPermission } from '@/lib/auth/rbac';
+import { getCurrentUser } from '@alga-psa/users/actions';
+import { hasPermission } from '@alga-psa/auth';
 import {
   computeCanonicalHost,
   getPortalDomain,

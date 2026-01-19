@@ -15,7 +15,7 @@ let tenantId: string;
 const enqueueWorkflow = vi.fn(async () => ({ enqueued: true }));
 const analyticsCapture = vi.fn();
 
-vi.mock('@/lib/actions/user-actions/userActions', () => ({
+vi.mock('@alga-psa/users/actions', () => ({
   getCurrentUser: vi.fn(),
 }));
 
@@ -60,7 +60,7 @@ vi.mock('@/lib/db', () => ({
   createTenantKnex: vi.fn(async () => ({ knex: db, tenant: tenantId })),
 }));
 
-vi.mock('@/lib/auth/rbac', async () => {
+vi.mock('@alga-psa/auth', async () => {
   const modulePath = path.resolve(process.cwd(), '..', '..', 'server', 'src', 'lib', 'auth', 'rbac.ts');
   const actual = await import(pathToFileURL(modulePath).href);
   return actual;
@@ -90,7 +90,7 @@ vi.mock('@shared/utils/encryption', async () => {
   return actual;
 });
 
-const { getCurrentUser } = await import('@/lib/actions/user-actions/userActions');
+const { getCurrentUser } = await import('@alga-psa/users/actions');
 const { requestPortalDomainRegistrationAction } = await import('@/lib/actions/tenant-actions/portalDomainActions');
 const { runWithTenant } = await import('server/src/lib/db');
 

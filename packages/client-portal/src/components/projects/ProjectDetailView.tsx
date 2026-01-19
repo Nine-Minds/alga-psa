@@ -1,19 +1,19 @@
 'use client';
 
 import React, { useEffect, useState, useMemo } from 'react';
-import { IProject, IClientPortalConfig, DEFAULT_CLIENT_PORTAL_CONFIG } from 'server/src/interfaces/project.interfaces';
+import { IProject, IClientPortalConfig, DEFAULT_CLIENT_PORTAL_CONFIG } from '@alga-psa/types';
 import DonutChart from '@alga-psa/projects/components/DonutChart';
 import HoursProgressBar from '@alga-psa/projects/components/HoursProgressBar';
-import { calculateProjectCompletion, ProjectCompletionMetrics } from 'server/src/lib/utils/projectUtils';
+import { calculateProjectCompletion, ProjectCompletionMetrics } from '@alga-psa/projects/lib/projectUtils';
 import { formatDistanceToNow, format } from 'date-fns';
-import { getDateFnsLocale } from 'server/src/lib/utils/dateFnsLocale';
+import { getDateFnsLocale } from '@alga-psa/ui';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import ViewSwitcher from '@alga-psa/ui/components/ViewSwitcher';
 import {
   getClientProjectPhases,
   getClientProjectTasks,
   getClientProjectStatuses
-} from 'server/src/lib/actions/client-portal-actions/client-project-details';
+} from '@alga-psa/client-portal/actions';
 import ClientKanbanBoard from './ClientKanbanBoard';
 import ClientTaskListView from './ClientTaskListView';
 import { LayoutGrid, List } from 'lucide-react';

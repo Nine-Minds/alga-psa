@@ -20,14 +20,14 @@ import {
   getUserClientId, 
   deleteUser,
   getClientUsersForClient
-} from 'server/src/lib/actions/user-actions/userActions';
-import { createOrFindContactByEmail } from 'server/src/lib/actions/contact-actions/contactActions';
-import { createClientUser, getClientPortalRoles, getClientUserRoles } from 'server/src/lib/actions/client-portal-actions/clientUserActions';
-import type { IUser, IPermission } from 'server/src/interfaces/auth.interfaces';
+} from '@alga-psa/users/actions';
+import { createOrFindContactByEmail } from '@alga-psa/clients/actions';
+import { createClientUser, getClientPortalRoles, getClientUserRoles } from '@alga-psa/client-portal/actions';
+import type { IUser, IPermission } from '@alga-psa/types';
 import type { IRole as SharedIRole } from '@shared/interfaces/user.interfaces';
-import { useDrawer } from "server/src/context/DrawerContext";
+import { useDrawer } from "@alga-psa/ui";
 import { DataTable } from '@alga-psa/ui/components/DataTable';
-import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
+import { ColumnDefinition } from '@alga-psa/types';
 import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { getTeams } from 'server/src/lib/actions/team-actions/teamActions';
+import { getTeams } from '@alga-psa/teams/actions';
 import { ITeam, IUser } from 'server/src/interfaces';
 
 export function useTeamAuth(currentUser: IUser | null) {

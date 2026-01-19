@@ -1,9 +1,11 @@
+'use client';
+
 import React, { useEffect, useState, useCallback } from 'react';
-import { ProjectTaskActivity, ActivityFilters } from 'server/src/interfaces/activity.interfaces';
+import { ProjectTaskActivity, ActivityFilters } from '@alga-psa/types';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Card, CardContent, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import { ProjectTaskCard } from './ActivityCard';
-import { fetchProjectActivities } from 'server/src/lib/actions/activity-actions/activityServerActions';
+import { fetchProjectActivities } from '@alga-psa/workflows/actions';
 import { ProjectSectionFiltersDialog } from './filters/ProjectSectionFiltersDialog';
 import { Filter, XCircleIcon } from 'lucide-react';
 import type { IProject, IProjectPhase } from '@alga-psa/types';

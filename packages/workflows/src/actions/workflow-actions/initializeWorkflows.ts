@@ -8,7 +8,7 @@
 
 import { registerWorkflowActions } from '@shared/workflow/init/registerWorkflowActions';
 import logger from '@alga-psa/core/logger';
-import { registerAccountingExportWorkflowActions } from 'server/src/lib/workflow/registerAccountingExportActions';
+import { registerAccountingExportWorkflowActions } from '@alga-psa/workflows/lib/registerAccountingExportActions';
 
 // Track initialization state
 let initialized = false;

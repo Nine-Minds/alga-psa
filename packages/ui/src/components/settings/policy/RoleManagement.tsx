@@ -3,10 +3,10 @@
 import { useState, useEffect } from 'react';
 import { Flex, Text } from '@radix-ui/themes';
 import { Button } from '@alga-psa/ui/components/Button';
-import { createRole, updateRole, deleteRole, getRoles } from 'server/src/lib/actions/policyActions';
-import { IRole } from 'server/src/interfaces/auth.interfaces';
+import { createRole, updateRole, deleteRole, getRoles } from '@alga-psa/auth/actions';
+import { IRole } from '@alga-psa/types';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
-import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
+import { ColumnDefinition } from '@alga-psa/types';
 import GenericDialog from '@alga-psa/ui/components/GenericDialog';
 import { Card, CardHeader, CardContent, CardTitle, CardDescription } from '@alga-psa/ui/components/Card';
 import { Input } from '@alga-psa/ui/components/Input';

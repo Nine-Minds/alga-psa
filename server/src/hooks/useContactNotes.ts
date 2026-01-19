@@ -1,6 +1,6 @@
 import useSWR from 'swr';
 import { useState, useCallback } from 'react';
-import { getContactNoteContent, saveContactNote } from '../lib/actions/contact-actions/contactNoteActions';
+import { getContactNoteContent, saveContactNote } from '@alga-psa/clients/actions';
 import { toast } from 'react-hot-toast';
 
 // Type for BlockNote content (simplified)

@@ -10,11 +10,11 @@ import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import { RadioGroup } from '@alga-psa/ui/components/RadioGroup';
 import { Info, Calculator, Cloud } from 'lucide-react';
 
-import { TaxSource } from 'server/src/interfaces/tax.interfaces';
+import { TaxSource } from '@alga-psa/types';
 import {
   getTenantTaxSettings,
   updateTenantTaxSettings,
-} from 'server/src/lib/actions/taxSettingsActions';
+} from '@alga-psa/billing/actions';
 
 interface LocalTaxSettings {
   default_tax_source: TaxSource;

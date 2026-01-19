@@ -1,5 +1,5 @@
 export * from './EmailProviderCard';
-export * from './EmailProviderConfiguration';
+export { EmailProviderConfiguration, type EmailProvider, type MicrosoftEmailProviderConfig, type GoogleEmailProviderConfig, type ImapEmailProviderConfig } from './EmailProviderConfiguration';
 export * from './EmailProviderConfigurationWrapper';
 export * from './EmailProviderList';
 export * from './EmailProviderSelector';

@@ -1,25 +1,26 @@
 'use client'
 
 import React, { useState, useMemo, useEffect, useRef } from 'react';
+import { parse } from 'date-fns';
 import Link from 'next/link';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
-import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
-import { IProject, IClient } from 'server/src/interfaces';
-import { ITag } from 'server/src/interfaces/tag.interfaces';
+import { ColumnDefinition } from '@alga-psa/types';
+import { IProject, IClient } from '@alga-psa/types';
+import { ITag } from '@alga-psa/types';
 import { Button } from '@alga-psa/ui/components/Button';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import ProjectQuickAdd from './ProjectQuickAdd';
 import { deleteProject } from '../actions/projectActions';
-import { getContactByContactNameId } from 'server/src/lib/actions/contact-actions/contactActions';
-import { findUserById } from 'server/src/lib/actions/user-actions/userActions';
-import { findTagsByEntityIds, findAllTagsByType } from 'server/src/lib/actions/tagActions';
+import { getContactByContactNameId } from '@alga-psa/clients/actions';
+import { findUserById } from '@alga-psa/users/actions';
+import { findTagsByEntityIds, findAllTagsByType } from '@alga-psa/tags/actions';
 import { TagFilter, TagManager } from '@alga-psa/ui/components';
-import { useTagPermissions } from 'server/src/hooks/useTagPermissions';
+import { useTagPermissions } from '@alga-psa/ui';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { toast } from 'react-hot-toast';
 import { Search, MoreVertical, Pen, Trash2, XCircle, ExternalLink, FileText } from 'lucide-react';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
-import { useDrawer } from "server/src/context/DrawerContext";
+import { useDrawer } from "@alga-psa/ui";
 import ProjectDetailsEdit from './ProjectDetailsEdit';
 import { Input } from '@alga-psa/ui/components/Input';
 import { ClientPicker } from '@alga-psa/clients/components/clients/ClientPicker';
@@ -27,10 +28,10 @@ import { ContactPicker } from '@alga-psa/ui/components/ContactPicker';
 import UserPicker from '@alga-psa/ui/components/UserPicker';
 import { DatePicker } from '@alga-psa/ui/components/DatePicker';
 import { DeadlineFilter, DeadlineFilterValue } from './DeadlineFilter';
-import { IContact } from 'server/src/interfaces/contact.interfaces';
+import { IContact } from '@alga-psa/types';
 import { IUser } from '@shared/interfaces/user.interfaces';
-import { getAllContacts } from 'server/src/lib/actions/contact-actions/contactActions';
-import { getAllUsersBasic } from 'server/src/lib/actions/user-actions/userActions';
+import { getAllContacts } from '@alga-psa/clients/actions';
+import { getAllUsersBasic } from '@alga-psa/users/actions';
 import Drawer from '@alga-psa/ui/components/Drawer';
 import ClientDetails from '@alga-psa/clients/components/clients/ClientDetails';
 import { ApplyTemplateDialog } from './project-templates/ApplyTemplateDialog';
@@ -278,6 +279,30 @@ export default function Projects({ initialProjects, clients }: ProjectsProps) {
     }
   };
 
+  const formatDisplayDate = (value: unknown): string => {
+    if (value == null) return 'N/A';
+
+    const resolveDatePart = (): string | null => {
+      if (typeof value === 'string') {
+        const match = value.match(/^(\d{4}-\d{2}-\d{2})/);
+        if (match) return match[1];
+
+        const date = new Date(value);
+        return isNaN(date.getTime()) ? null : date.toISOString().slice(0, 10);
+      }
+
+      const date = value instanceof Date ? value : new Date(value as any);
+      return isNaN(date.getTime()) ? null : date.toISOString().slice(0, 10);
+    };
+
+    const datePart = resolveDatePart();
+    if (!datePart) return 'N/A';
+
+    // Use a date-only value to keep SSR and client rendering consistent regardless of timezone.
+    const date = parse(datePart, 'yyyy-MM-dd', new Date());
+    return isNaN(date.getTime()) ? 'N/A' : date.toLocaleDateString();
+  };
+
   const columns: ColumnDefinition<IProject>[] = [
     {
       title: 'Number',
@@ -342,13 +367,13 @@ export default function Projects({ initialProjects, clients }: ProjectsProps) {
       title: 'Deadline',
       dataIndex: 'end_date',
       width: '8%',
-      render: (value: string | null) => value ? new Date(value).toLocaleDateString() : 'N/A',
+      render: (value: unknown) => formatDisplayDate(value),
     },
     {
       title: 'Created',
       dataIndex: 'created_at',
       width: '8%',
-      render: (value: string | null) => value ? new Date(value).toLocaleDateString() : 'N/A',
+      render: (value: unknown) => formatDisplayDate(value),
     },
     {
       title: 'Project Manager',

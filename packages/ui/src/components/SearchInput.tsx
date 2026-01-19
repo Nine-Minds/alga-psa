@@ -1,3 +1,5 @@
+'use client';
+
 import React, { InputHTMLAttributes, useEffect } from 'react';
 import { Search } from 'lucide-react';
 import { FormFieldComponent, AutomationProps } from '../ui-reflection/types';

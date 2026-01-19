@@ -2,17 +2,17 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { getScheduledHoursForTicket } from '../../actions/ticketActions';
-import { ITicket, ITimeSheet, ITimePeriod, ITimePeriodView, ITimeEntry, IAgentSchedule, IClient, IClientLocation } from 'server/src/interfaces'; // Added IClient and IClientLocation
-import { IUserWithRoles, ITeam } from 'server/src/interfaces/auth.interfaces';
-import { ITicketResource } from 'server/src/interfaces/ticketResource.interfaces';
-import { ITag } from 'server/src/interfaces/tag.interfaces';
+import { ITicket, ITimeSheet, ITimePeriod, ITimePeriodView, ITimeEntry, IAgentSchedule, IClient, IClientLocation } from '@alga-psa/types'; // Added IClient and IClientLocation
+import { IUserWithRoles, ITeam } from '@alga-psa/types';
+import { ITicketResource } from '@alga-psa/types';
+import { ITag } from '@alga-psa/types';
 import { TagManager } from '@alga-psa/ui/components';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Label } from '@alga-psa/ui/components/Label';
 import { Input } from '@alga-psa/ui/components/Input';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Clock, Edit2, Play, Pause, StopCircle, UserPlus, X, AlertCircle, Calendar as CalendarIcon } from 'lucide-react';
-import { formatMinutesAsHoursAndMinutes } from 'server/src/lib/utils/dateTimeUtils';
+import { formatMinutesAsHoursAndMinutes } from '@alga-psa/core';
 import styles from './TicketDetails.module.css';
 import UserPicker from '@alga-psa/ui/components/UserPicker';
 import MultiUserPicker from '@alga-psa/ui/components/MultiUserPicker';
@@ -24,13 +24,13 @@ import { withDataAutomationId } from '@alga-psa/ui/ui-reflection/withDataAutomat
 import { IntervalManagement } from '@alga-psa/scheduling/components/time-management/interval-tracking/IntervalManagement';
 import ClientAvatar from '@alga-psa/ui/components/ClientAvatar';
 import ContactAvatar from '@alga-psa/ui/components/ContactAvatar';
-import { getUserAvatarUrlAction, getContactAvatarUrlAction } from 'server/src/lib/actions/avatar-actions';
-import { getUserContactId } from 'server/src/lib/actions/user-actions/userActions';
-import { utcToLocal, formatDateTime, getUserTimeZone } from 'server/src/lib/utils/dateTimeUtils';
+import { getUserAvatarUrlAction, getContactAvatarUrlAction } from '@alga-psa/users/actions';
+import { getUserContactId } from '@alga-psa/users/actions';
+import { utcToLocal, formatDateTime, getUserTimeZone } from '@alga-psa/core';
 import { getTicketingDisplaySettings } from '../../actions/ticketDisplaySettings';
 import TicketSurveySummaryCard from '@alga-psa/surveys/components/TicketSurveySummaryCard';
-import type { SurveyTicketSatisfactionSummary } from 'server/src/interfaces/survey.interface';
-import { getAppointmentRequestsByTicketId } from 'server/src/lib/actions/appointmentRequestManagementActions';
+import type { SurveyTicketSatisfactionSummary } from '@alga-psa/types';
+import { getAppointmentRequestsByTicketId } from '@alga-psa/scheduling/actions';
 import TicketMaterialsCard from './TicketMaterialsCard';
 
 interface TicketPropertiesProps {

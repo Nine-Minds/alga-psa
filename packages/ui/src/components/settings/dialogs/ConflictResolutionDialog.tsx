@@ -4,7 +4,7 @@ import React from 'react';
 import { Dialog, DialogContent, DialogFooter } from '@alga-psa/ui/components/Dialog';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
-import { ImportConflict } from 'server/src/lib/actions/referenceDataActions';
+import { ImportConflict } from '@alga-psa/reference-data/actions';
 import { AlertCircle } from 'lucide-react';
 
 interface ConflictResolutionDialogProps {

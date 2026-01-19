@@ -6,11 +6,11 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
 import { Flex, Text, Heading } from '@radix-ui/themes';
-import { updateContact } from 'server/src/lib/actions/contact-actions/contactActions';
-import { findTagsByEntityIds } from 'server/src/lib/actions/tagActions';
+import { updateContact } from '@alga-psa/clients/actions';
+import { findTagsByEntityIds } from '@alga-psa/tags/actions';
 import { ClientPicker } from '../clients/ClientPicker';
 import { TagManager } from '@alga-psa/ui/components';
-import { useTags } from 'server/src/context/TagContext';
+import { useTags } from '@alga-psa/ui';
 import { ArrowLeft } from 'lucide-react';
 import { Switch } from '@alga-psa/ui/components/Switch';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
@@ -18,7 +18,7 @@ import { useAutomationIdAndRegister } from '@alga-psa/ui/ui-reflection/useAutoma
 import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContainer';
 import { ButtonComponent, FormFieldComponent } from '@alga-psa/ui/ui-reflection/types';
 import ContactAvatarUpload from '@alga-psa/client-portal/components/contacts/ContactAvatarUpload';
-import { getContactAvatarUrlAction } from 'server/src/lib/actions/avatar-actions';
+import { getContactAvatarUrlAction } from '@alga-psa/users/actions';
 
 interface ContactDetailsEditProps {
   id?: string; // Made optional to maintain backward compatibility

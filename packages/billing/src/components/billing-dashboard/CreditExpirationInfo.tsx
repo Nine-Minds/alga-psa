@@ -2,10 +2,10 @@
 
 import React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
-import { formatCurrency } from 'server/src/lib/utils/formatters';
-import { ICreditTracking } from 'server/src/interfaces/billing.interfaces';
+import { formatCurrency } from '@alga-psa/core';
+import { ICreditTracking } from '@alga-psa/types';
 import CreditExpirationBadge from '@alga-psa/ui/components/CreditExpirationBadge';
-import { formatDateOnly } from 'server/src/lib/utils/dateTimeUtils';
+import { formatDateOnly } from '@alga-psa/core';
 import { getCreditDetails } from '@alga-psa/billing/actions/creditActions';
 
 interface CreditExpirationInfoProps {

@@ -1,6 +1,6 @@
 import React from 'react';
 import { ButtonComponent } from '@alga-psa/ui/ui-reflection/types';
-import { MenuItem } from 'server/src/config/menuConfig';
+import { MenuItem } from '../config/menuConfig';
 import { useAutomationIdAndRegister } from '@alga-psa/ui/ui-reflection/useAutomationIdAndRegister';
 
 interface SidebarBottomMenuItemProps {

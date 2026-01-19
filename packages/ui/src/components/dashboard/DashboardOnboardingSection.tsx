@@ -7,8 +7,8 @@ import { cn } from '../../lib/utils';
 import { useAutomationIdAndRegister } from '@alga-psa/ui/ui-reflection/useAutomationIdAndRegister';
 import type { ButtonComponent } from '@alga-psa/ui/ui-reflection/types';
 import { Badge } from '@alga-psa/ui/components/Badge';
-import { STEP_DEFINITIONS, type StepDefinition } from '@/lib/onboarding/stepDefinitions';
-import type { OnboardingStepId, OnboardingStepServerState } from '@/lib/actions/onboarding-progress';
+import { STEP_DEFINITIONS, type StepDefinition } from '@alga-psa/onboarding/lib/stepDefinitions';
+import type { OnboardingStepId, OnboardingStepServerState } from '@alga-psa/onboarding/actions';
 import { ArrowRight, CheckCircle2, Circle } from 'lucide-react';
 
 interface OnboardingProgressSummary {

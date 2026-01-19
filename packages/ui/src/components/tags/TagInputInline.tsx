@@ -1,9 +1,11 @@
+'use client';
+
 import React, { useState, useRef, useEffect } from 'react';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Plus } from 'lucide-react';
-import { ITag } from 'server/src/interfaces/tag.interfaces';
-import { generateEntityColor } from 'server/src/utils/colorUtils';
+import { ITag } from '@alga-psa/types';
+import { generateEntityColor } from '../../lib/colorUtils';
 
 interface TagInputInlineProps {
   id?: string;

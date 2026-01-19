@@ -18,7 +18,7 @@ import {
   type Invoice,
   type BillingCycle,
   type PaymentMethod
-} from "server/src/lib/actions/account";
+} from "@alga-psa/client-portal/actions";
 
 // Validation rules
 const CARD_NUMBER_REGEX = /^[0-9]{16}$/;

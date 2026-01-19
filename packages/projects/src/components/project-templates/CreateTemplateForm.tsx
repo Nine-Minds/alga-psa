@@ -6,7 +6,7 @@ import { Button } from '@alga-psa/ui/components/Button';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Input } from '@alga-psa/ui/components/Input';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
-import { IProject } from 'server/src/interfaces/project.interfaces';
+import { IProject } from '@alga-psa/types';
 import { toast } from 'react-hot-toast';
 import { createTemplateFromProject } from '../../actions/projectTemplateActions';
 

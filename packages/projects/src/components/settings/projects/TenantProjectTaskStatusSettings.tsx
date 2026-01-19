@@ -12,7 +12,7 @@ import {
   deleteTenantProjectStatus,
   reorderTenantProjectStatuses
 } from '@alga-psa/projects/actions/projectTaskStatusActions';
-import { importReferenceData, getAvailableReferenceData, checkImportConflicts, type ImportConflict } from 'server/src/lib/actions/referenceDataActions';
+import { importReferenceData, getAvailableReferenceData, checkImportConflicts, type ImportConflict } from '@alga-psa/reference-data/actions';
 import type { IStatus, IStandardStatus } from '@alga-psa/types';
 import { ChevronUp, ChevronDown, Trash2, Edit2, Plus, Palette } from 'lucide-react';
 import * as LucideIcons from 'lucide-react';

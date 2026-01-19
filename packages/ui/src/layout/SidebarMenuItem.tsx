@@ -1,6 +1,8 @@
 import React from 'react';
 import Link from 'next/link';
-import { MenuItem } from 'server/src/config/menuConfig';
+import { ButtonComponent } from '@alga-psa/ui/ui-reflection/types';
+import { MenuItem } from '../config/menuConfig';
+import { useAutomationIdAndRegister } from '@alga-psa/ui/ui-reflection/useAutomationIdAndRegister';
 import { Construction, ChevronDown } from 'lucide-react';
 
 interface SidebarMenuItemProps {

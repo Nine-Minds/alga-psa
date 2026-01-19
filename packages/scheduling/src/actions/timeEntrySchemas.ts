@@ -1,6 +1,6 @@
 
 import { z } from 'zod';
-import { timeEntrySchema } from 'server/src/lib/schemas/timeSheet.schemas';
+import { timeEntrySchema } from '../schemas/timeSheet.schemas';
 
 export const fetchTimeEntriesParamsSchema = z.object({
   timeSheetId: z.string().min(1, "Time sheet ID is required"),

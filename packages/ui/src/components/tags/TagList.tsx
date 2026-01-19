@@ -2,10 +2,10 @@
 
 import React from 'react';
 import { X, ChevronDown } from 'lucide-react';
-import { ITag } from 'server/src/interfaces/tag.interfaces';
-import { generateEntityColor } from 'server/src/utils/colorUtils';
-import { TagEditForm } from './TagEditForm';
-import { useTags } from 'server/src/context/TagContext';
+import { Badge } from '@alga-psa/ui/components/Badge';
+import { generateEntityColor } from '../../lib/colorUtils';
+import { ITag } from '@alga-psa/types';
+import { useTags } from '../../context/TagContext';
 
 interface TagListProps {
   tags: ITag[];

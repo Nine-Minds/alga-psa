@@ -2,23 +2,41 @@
  * @alga-psa/core
  *
  * Shared infrastructure module for Alga PSA.
- * Contains logging, secrets management, event publishing, and encryption utilities.
+ * Contains client-safe utilities.
  */
 
-// Logger
-export { default as logger } from './lib/logger';
+// Universal Logger (safe for both)
+export { default as logger } from './lib/logger-universal';
 
-// Secret Provider - full exports
+// Secret Provider Types only
 export type { ISecretProvider } from './lib/secrets/ISecretProvider';
-export { getSecretProviderInstance, getSecret } from './lib/secrets';
-export { EnvSecretProvider, FileSystemSecretProvider, CompositeSecretProvider, VaultSecretProvider } from './lib/secrets';
 
-// Event Publisher
-export { publishEvent } from './lib/events';
-export type { EventPayload } from './lib/events';
+// Date/time utilities
+export * from './lib/dateTimeUtils';
 
-// Encryption Utilities
-export { hashPassword, verifyPassword, generateSecurePassword } from './lib/encryption';
+// Error utilities
+export * from './lib/errors';
+
+// Edition / feature gating
+export * from './lib/features';
+
+// Version utilities
+export * from './lib/version';
+
+// Template utilities
+export * from './lib/templateUtils';
+
+// Formatting utilities
+export * from './lib/formatters';
+
+// CSV utilities
+export * from './lib/csvParser';
+
+// Validation utilities
+export * from './lib/validation';
+
+// Constants
+export * from './constants/currency';
 
 // Types barrel export
 export * from './types';

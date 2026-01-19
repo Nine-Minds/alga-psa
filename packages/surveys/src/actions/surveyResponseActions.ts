@@ -9,7 +9,7 @@ import {
   resolveSurveyTenantFromToken,
   type SurveyInvitationDetails,
 } from './surveyTokenService';
-import { publishEvent } from 'server/src/lib/eventBus/publishers';
+import { publishEvent } from '@alga-psa/event-bus/publishers';
 
 const SURVEY_INVITATIONS_TABLE = 'survey_invitations';
 const SURVEY_RESPONSES_TABLE = 'survey_responses';

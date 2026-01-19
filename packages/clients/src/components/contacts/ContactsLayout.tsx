@@ -1,12 +1,12 @@
 'use client';
 
 import React from 'react';
-import { IContact } from 'server/src/interfaces';
+import { IContact } from '@alga-psa/types';
 import { IUser } from '@shared/interfaces/user.interfaces';
 import type { IClient } from '@alga-psa/types';
 import Contacts from './Contacts';
 import OverallInteractionsFeed from '../interactions/OverallInteractionsFeed';
-import { useCollapsiblePreference } from 'server/src/hooks/useCollapsiblePreference';
+import { useCollapsiblePreference } from '@alga-psa/ui/hooks';
 
 interface ContactsLayoutProps {
   uniqueContacts: IContact[];

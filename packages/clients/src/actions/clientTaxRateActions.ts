@@ -2,7 +2,7 @@
 
 import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
-import { createTenantKnex } from 'server/src/lib/db';
+import { createTenantKnex } from '@alga-psa/db';
 import type { IClientTaxRateAssociation } from '@alga-psa/types';
 
 // Combine association data with rate details

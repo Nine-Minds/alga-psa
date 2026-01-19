@@ -1,14 +1,16 @@
+'use client';
+
 import React, { useState, useEffect, useRef, useLayoutEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { Plus } from 'lucide-react';
-import { generateEntityColor } from 'server/src/utils/colorUtils';
+import { generateEntityColor } from '../../lib/colorUtils';
 // import { useAutomationIdAndRegister } from '@alga-psa/ui/ui-reflection/useAutomationIdAndRegister';
 // import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContainer';
 // import { ButtonComponent, FormFieldComponent } from '@alga-psa/ui/ui-reflection/types';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Button } from '@alga-psa/ui/components/Button';
-import { ITag } from 'server/src/interfaces/tag.interfaces';
-import { useTags } from 'server/src/context/TagContext';
+import { ITag } from '@alga-psa/types';
+import { useTags } from '../../context/TagContext';
 
 interface TagInputProps {
   id?: string; // Made optional to maintain backward compatibility

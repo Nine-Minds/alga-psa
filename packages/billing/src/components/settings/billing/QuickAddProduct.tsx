@@ -14,12 +14,12 @@ import {
   createServiceTypeInline,
   updateServiceTypeInline,
   deleteServiceTypeInline
-} from 'server/src/lib/actions/serviceActions';
-import { getTaxRates } from 'server/src/lib/actions/taxSettingsActions';
-import { ITaxRate } from 'server/src/interfaces/tax.interfaces';
-import { IService, IServiceCategory } from 'server/src/interfaces/billing.interfaces';
-import { CURRENCY_OPTIONS, getCurrencySymbol } from 'server/src/constants/currency';
-import { getServiceCategories } from 'server/src/lib/actions/categoryActions';
+} from '@alga-psa/billing/actions';
+import { getTaxRates } from '@alga-psa/billing/actions';
+import { ITaxRate } from '@alga-psa/types';
+import { IService, IServiceCategory } from '@alga-psa/types';
+import { CURRENCY_OPTIONS, getCurrencySymbol } from '@alga-psa/core';
+import { getServiceCategories } from '@alga-psa/billing/actions';
 
 const LICENSE_TERM_OPTIONS = [
   { value: 'monthly', label: 'Monthly' },

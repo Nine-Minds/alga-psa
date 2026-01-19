@@ -7,9 +7,9 @@ import { z } from 'zod';
 import { createTenantKnex, runWithTenant } from '@alga-psa/db';
 import { getCurrentUser } from '@alga-psa/auth/getCurrentUser';
 import type { IBoard, IPriority, IStatus } from '@alga-psa/types';
-import { getAllBoards } from 'server/src/lib/actions/board-actions/boardActions';
-import { getTicketStatuses } from 'server/src/lib/actions/status-actions/statusActions';
-import { getAllPriorities } from 'server/src/lib/actions/priorityActions';
+import { getAllBoards } from '@alga-psa/tickets/actions';
+import { getTicketStatuses } from '@alga-psa/reference-data/actions';
+import { getAllPriorities } from '@alga-psa/reference-data/actions';
 import { getProjectStatuses } from '@alga-psa/projects/actions/projectActions';
 
 const SURVEY_TEMPLATE_TABLE = 'survey_templates';

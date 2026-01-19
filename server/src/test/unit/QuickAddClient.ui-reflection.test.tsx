@@ -4,16 +4,28 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react';
 import { vi, describe, it, expect, beforeEach } from 'vitest';
-import QuickAddClient from '../../components/clients/QuickAddClient';
+import QuickAddClient from '@alga-psa/clients/components/clients/QuickAddClient';
 import { UIStateProvider } from '@alga-psa/ui/ui-reflection/UIStateContext';
 
 // Mock the external dependencies
-vi.mock('../../lib/actions/user-actions/userActions', () => ({
-  getAllUsers: vi.fn().mockResolvedValue([])
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({
+    push: vi.fn(),
+    replace: vi.fn(),
+    refresh: vi.fn(),
+    prefetch: vi.fn(),
+  }),
 }));
 
-vi.mock('../../lib/actions/clientActions', () => ({
-  createClient: vi.fn().mockResolvedValue({ client_id: 'test-id', client_name: 'Test Client' })
+vi.mock('@alga-psa/users/actions', () => ({
+  getAllUsersBasic: vi.fn().mockResolvedValue([]),
+}));
+
+vi.mock('@alga-psa/clients/actions', () => ({
+  createClient: vi.fn().mockResolvedValue({ client_id: 'test-id', client_name: 'Test Client' }),
+  createClientLocation: vi.fn().mockResolvedValue({}),
+  createClientContact: vi.fn().mockResolvedValue({}),
+  getAllCountries: vi.fn().mockResolvedValue([]),
 }));
 
 vi.mock('react-hot-toast', () => ({

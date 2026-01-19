@@ -4,6 +4,10 @@ import * as RadixIcons from '@radix-ui/react-icons';
 import { ChevronRightIcon, MagnifyingGlassIcon } from '@radix-ui/react-icons';
 import Image from 'next/image';
 import * as Tooltip from '@radix-ui/react-tooltip';
+import { ChevronLeft, ExternalLink } from 'lucide-react';
+import { getAppVersion } from '@alga-psa/core';
+import { Button } from '../components/Button';
+import { DynamicNavigationSlot } from '../components/extensions/DynamicNavigationSlot';
 import {
   menuItems as defaultMenuItems,
   bottomMenuItems as defaultBottomMenuItems,
@@ -13,14 +17,12 @@ import {
   MenuItem,
   NavigationSection,
   NavMode
-} from 'server/src/config/menuConfig';
+} from '@alga-psa/ui';
 import SidebarMenuItem from './SidebarMenuItem';
 import SidebarSubMenuItem from './SidebarSubMenuItem';
 import SidebarBottomMenuItem from './SidebarBottomMenuItem';
-import { Button } from '@alga-psa/ui/components/Button';
-import { DynamicNavigationSlot } from '../components/extensions/DynamicNavigationSlot';
-import { ExternalLink, ChevronLeft } from 'lucide-react';
-import { getAppVersion } from 'server/src/lib/utils/version';
+import { MenuItem } from '../config/menuConfig';
+import { useUserPreference } from '../hooks/useUserPreference';
 
 interface SidebarProps {
   sidebarOpen: boolean;

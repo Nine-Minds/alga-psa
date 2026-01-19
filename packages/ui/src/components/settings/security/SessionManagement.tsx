@@ -12,7 +12,7 @@ import {
   revokeSessionAction,
   revokeAllOtherSessionsAction,
   type SessionData,
-} from 'server/src/lib/actions/session-actions/sessionActions';
+} from '@alga-psa/auth/actions';
 import {
   Monitor,
   Smartphone,

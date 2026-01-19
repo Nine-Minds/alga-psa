@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll, beforeEach, afterEach, afterAll, vi } from 'vitest';
 import '../../../../../test-utils/nextApiMock';
-import { generateManualInvoice, updateManualInvoice } from 'server/src/lib/actions/manualInvoiceActions';
+import { generateManualInvoice, updateManualInvoice } from '@alga-psa/billing/actions';
 import { v4 as uuidv4 } from 'uuid';
 import { TextEncoder as NodeTextEncoder } from 'util';
 import { TestContext } from '../../../../../test-utils/testContext';

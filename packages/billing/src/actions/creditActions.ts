@@ -1,17 +1,17 @@
 'use server'
 
 import { withTransaction } from '@alga-psa/db';
-import { auditLog } from 'server/src/lib/logging/auditLog';
-import { createTenantKnex } from 'server/src/lib/db';
-import ClientContractLine from 'server/src/lib/models/clientContractLine';
-import { IInvoice } from 'server/src/interfaces/invoice.interfaces';
-import { ITransaction, ICreditTracking } from 'server/src/interfaces/billing.interfaces';
+import { auditLog } from '@alga-psa/db';
+import { createTenantKnex } from '@alga-psa/db';
+import ClientContractLine from '../models/clientContractLine';
+import { IInvoice } from '@alga-psa/types';
+import { ITransaction, ICreditTracking } from '@alga-psa/types';
 import { v4 as uuidv4 } from 'uuid';
 import { generateInvoiceNumber } from './invoiceGeneration';
 import { Knex } from 'knex';
 import { validateCreditBalanceWithoutCorrection } from './creditReconciliationActions';
-import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
-import { hasPermission } from 'server/src/lib/auth/rbac';
+import { getCurrentUser } from '@alga-psa/users/actions';
+import { hasPermission } from '@alga-psa/auth';
 
 async function calculateNewBalance(
     clientId: string, 

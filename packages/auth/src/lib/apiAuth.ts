@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server';
 import { hasPermission } from './rbac';
-import { IUser } from 'server/src/interfaces/auth.interfaces';
+import { IUser } from '@alga-psa/types';
 
 export interface AuthenticatedUser {
   userId: string;

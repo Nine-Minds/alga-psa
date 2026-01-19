@@ -8,18 +8,18 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { CustomTabs } from '@alga-psa/ui/components/CustomTabs';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { Skeleton } from '@alga-psa/ui/components/Skeleton';
-import { formatCurrency } from 'server/src/lib/utils/formatters';
-import { formatDateOnly } from 'server/src/lib/utils/dateTimeUtils';
+import { formatCurrency } from '@alga-psa/core';
+import { formatDateOnly } from '@alga-psa/core';
 import { parseISO } from 'date-fns';
-import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
-import { ICreditReconciliationReport, ReconciliationStatus } from 'server/src/interfaces/billing.interfaces';
+import { ColumnDefinition } from '@alga-psa/types';
+import { ICreditReconciliationReport, ReconciliationStatus } from '@alga-psa/types';
 import { validateClientCredit } from '@alga-psa/billing/actions/creditReconciliationActions';
-import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
+import { getCurrentUser } from '@alga-psa/users/actions';
 import {
   fetchReconciliationReports,
   fetchClientsForDropdown,
   fetchReconciliationStats
-} from 'server/src/lib/actions/reconciliationReportActions';
+} from '@alga-psa/reporting/actions';
 import { 
   BarChart, 
   Bar, 

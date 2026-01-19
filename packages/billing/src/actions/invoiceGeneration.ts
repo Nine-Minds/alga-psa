@@ -2,48 +2,49 @@
 
 import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
-import { NumberingService } from 'server/src/lib/services/numberingService';
-import { BillingEngine } from 'server/src/lib/billing/billingEngine';
-import ClientContractLine from 'server/src/lib/models/clientContractLine';
+import { requireTenantId } from '@alga-psa/db';
+import { SharedNumberingService } from '@alga-psa/shared/services/numberingService';
+import { BillingEngine } from '../lib/billing/billingEngine';
+import ClientContractLine from '../models/clientContractLine';
 import { Session } from 'next-auth';
 import {
   IInvoiceCharge,
   IInvoice,
   PreviewInvoiceResponse,
   InvoiceViewModel
-} from 'server/src/interfaces/invoice.interfaces';
-import { WasmInvoiceViewModel } from 'server/src/lib/invoice-renderer/types';
-import { IBillingResult, IBillingCharge, IBucketCharge, IUsageBasedCharge, ITimeBasedCharge, IFixedPriceCharge, IProductCharge, ILicenseCharge, BillingCycleType } from 'server/src/interfaces/billing.interfaces';
-import { IClient, IClientWithLocation } from 'server/src/interfaces/client.interfaces';
-import Invoice from 'server/src/lib/models/invoice';
-import { createTenantKnex } from 'server/src/lib/db';
+} from '@alga-psa/types';
+import { WasmInvoiceViewModel } from '@alga-psa/types';
+import { IBillingResult, IBillingCharge, IBucketCharge, IUsageBasedCharge, ITimeBasedCharge, IFixedPriceCharge, IProductCharge, ILicenseCharge, BillingCycleType } from '@alga-psa/types';
+import { IClient, IClientWithLocation } from '@alga-psa/types';
+import Invoice from '@alga-psa/billing/models/invoice';
+import { createTenantKnex } from '@alga-psa/db';
 import { Temporal } from '@js-temporal/polyfill';
-import { PDFGenerationService, createPDFGenerationService } from 'server/src/services/pdf-generation.service';
-import { toPlainDate, toISODate, toISOTimestamp } from 'server/src/lib/utils/dateTimeUtils';
-import { StorageService } from 'server/src/lib/storage/StorageService';
-import { ISO8601String } from 'server/src/types/types.d';
+import { createPDFGenerationService } from '../services/pdfGenerationService';
+import { toPlainDate, toISODate, toISOTimestamp } from '@alga-psa/core';
+import { StorageService } from '@alga-psa/documents/storage/StorageService';
+import { ISO8601String } from '@alga-psa/types';
 import { TaxService } from '../services/taxService';
-import { ITaxCalculationResult } from 'server/src/interfaces/tax.interfaces';
+import { ITaxCalculationResult } from '@alga-psa/types';
 import { v4 as uuidv4 } from 'uuid';
-import { auditLog } from 'server/src/lib/logging/auditLog';
-import { getClientLogoUrl } from 'server/src/lib/utils/avatarUtils';
-import { calculateAndDistributeTax, getClientDetails, persistInvoiceCharges, updateInvoiceTotalsAndRecordTransaction, validateClientBillingEmail } from 'server/src/lib/services/invoiceService';
-import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
-import { hasPermission } from 'server/src/lib/auth/rbac';
-import { analytics } from 'server/src/lib/analytics/posthog';
-import { AnalyticsEvents } from 'server/src/lib/analytics/events';
+import { auditLog } from '@alga-psa/db';
+import { getClientLogoUrl } from '@alga-psa/documents/lib/avatarUtils';
+import { calculateAndDistributeTax, getClientDetails, persistInvoiceCharges, updateInvoiceTotalsAndRecordTransaction, validateClientBillingEmail } from '../services/invoiceService';
+import { getCurrentUser } from '@alga-psa/users/actions';
+import { hasPermission } from '@alga-psa/auth';
+import { analytics } from '@alga-psa/analytics';
+import { AnalyticsEvents } from '@alga-psa/analytics';
 // TODO: Import these from billingAndTax.ts once created
 import { getNextBillingDate, getDueDate } from './billingAndTax'; // Updated import
 import { getClientDefaultTaxRegionCode } from '@alga-psa/clients/actions';
 import { applyCreditToInvoice } from './creditActions';
-import { getCurrencySymbol } from 'server/src/constants/currency';
+import { getCurrencySymbol } from '@alga-psa/core';
 import { getInitialInvoiceTaxSource, shouldUseTaxDelegation } from './taxSourceActions';
-import { formatCurrencyFromMinorUnits } from 'server/src/lib/utils/formatters';
+import { formatCurrencyFromMinorUnits } from '@alga-psa/core';
 import {
   computePurchaseOrderOverage,
   getClientContractPurchaseOrderContext,
   getPurchaseOrderConsumedCents
-} from 'server/src/lib/services/purchaseOrderService';
+} from '@alga-psa/billing/services/purchaseOrderService';
 // TODO: Move these type guards to billingAndTax.ts or a shared utility file
 const POSTGRES_UNDEFINED_TABLE = '42P01';
 
@@ -822,8 +823,12 @@ export async function generateInvoiceNumber(_trx?: Knex.Transaction): Promise<st
     });
   }
 
-  const numberingService = new NumberingService();
-  return numberingService.getNextNumber('INVOICE');
+  const { knex } = await createTenantKnex();
+  const tenant = await requireTenantId(_trx ?? knex);
+  return SharedNumberingService.getNextNumber('INVOICE', {
+    knex: _trx ?? knex,
+    tenant,
+  });
 }
 
 export async function generateInvoicePDF(invoiceId: string): Promise<{ file_id: string }> {
@@ -847,8 +852,19 @@ export async function generateInvoicePDF(invoiceId: string): Promise<{ file_id: 
   // Use the factory function to create the PDF generation service
   const pdfGenerationService = createPDFGenerationService(tenant);
 
+  const invoice = await withTransaction(knex, async (trx: Knex.Transaction) => {
+    return await trx('invoices')
+      .where({ invoice_id: invoiceId, tenant })
+      .first(['invoice_number']);
+  });
+
+  if (!invoice?.invoice_number) {
+    throw new Error('Invoice not found');
+  }
+
   const fileRecord = await pdfGenerationService.generateAndStore({
     invoiceId,
+    invoiceNumber: invoice.invoice_number,
     userId: currentUser.user_id
   });
 

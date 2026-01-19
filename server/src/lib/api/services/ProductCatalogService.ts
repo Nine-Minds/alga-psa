@@ -8,7 +8,7 @@ import {
   setServicePrices,
   updateService,
   ServiceListOptions
-} from '@/lib/actions/serviceActions';
+} from '@alga-psa/billing/actions';
 import type { CreateProductRequest, UpdateProductRequest } from '../schemas/productSchemas';
 
 type SortField = NonNullable<ServiceListOptions['sort']>;
@@ -142,4 +142,3 @@ export class ProductCatalogService implements ControllerBaseService {
     return 'asc';
   }
 }
-

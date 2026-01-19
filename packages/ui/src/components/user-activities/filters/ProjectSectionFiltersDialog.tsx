@@ -14,10 +14,10 @@ import { Checkbox } from "@alga-psa/ui/components/Checkbox";
 import { Label } from "@alga-psa/ui/components/Label";
 import { Input } from "@alga-psa/ui/components/Input";
 import { StringDateRangePicker } from "@alga-psa/ui/components/DateRangePicker";
-import { ActivityFilters, ActivityPriority } from "server/src/interfaces/activity.interfaces";
+import { ActivityFilters, ActivityPriority } from "@alga-psa/types";
 import { ISO8601String } from '@alga-psa/types';
 import CustomSelect from "@alga-psa/ui/components/CustomSelect";
-import { IProject, IProjectPhase } from "server/src/interfaces/project.interfaces";
+import { IProject, IProjectPhase } from "@alga-psa/types";
 
 interface ProjectSectionFiltersDialogProps {
   isOpen: boolean;

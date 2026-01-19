@@ -8,23 +8,23 @@ import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Mail, Shield, User, Info } from 'lucide-react';
-import { IContact } from 'server/src/interfaces';
+import { IContact } from '@alga-psa/types';
 import { 
   updateContactPortalAdminStatus, 
   getUserByContactId 
-} from 'server/src/lib/actions/contact-actions/contactActions';
+} from '@alga-psa/clients/actions';
 import { 
   sendPortalInvitation,
   getPortalInvitations,
   revokePortalInvitation,
   InvitationHistoryItem
-} from 'server/src/lib/actions/portal-actions/portalInvitationActions';
+} from '@alga-psa/client-portal/actions';
 import { 
   assignRoleToUser, 
   removeRoleFromUser,
   getRoles 
-} from 'server/src/lib/actions/policyActions';
-import { updateClientUser } from 'server/src/lib/actions/client-portal-actions/clientUserActions';
+} from '@alga-psa/auth/actions';
+import { updateClientUser } from '@alga-psa/client-portal/actions';
 import toast from 'react-hot-toast';
 import SettingsTabSkeleton from '@alga-psa/ui/components/skeletons/SettingsTabSkeleton';
 

@@ -1,1 +1,1 @@
-export { getSecret } from '@alga-psa/core';
+export { getSecret } from '@alga-psa/core/server';

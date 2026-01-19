@@ -1,14 +1,14 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useTruncationDetection } from 'server/src/hooks/useTruncationDetection';
-import { IProjectTask, IProjectTicketLinkWithDetails, ITaskType, IProjectTaskDependency } from 'server/src/interfaces/project.interfaces';
-import { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
-import { IPriority, IStandardPriority } from 'server/src/interfaces/ticket.interfaces';
-import { ITag } from 'server/src/interfaces/tag.interfaces';
+import { useTruncationDetection } from '@alga-psa/ui/hooks';
+import { IProjectTask, IProjectTicketLinkWithDetails, ITaskType, IProjectTaskDependency } from '@alga-psa/types';
+import { IUserWithRoles } from '@alga-psa/types';
+import { IPriority, IStandardPriority } from '@alga-psa/types';
+import { ITag } from '@alga-psa/types';
 import { CheckSquare, Square, Ticket, MoreVertical, Move, Copy, Edit, Trash2, Bug, Sparkles, TrendingUp, Flag, BookOpen, Paperclip, Ban, GitBranch, Link2 } from 'lucide-react';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
-import { findPriorityById } from 'server/src/lib/actions/priorityActions';
+import { findPriorityById } from '@alga-psa/reference-data/actions';
 import UserPicker from '@alga-psa/ui/components/UserPicker';
 import UserAvatar from '@alga-psa/ui/components/UserAvatar';
 import { getTaskTicketLinksAction, getTaskResourcesAction } from '../actions/projectTaskActions';

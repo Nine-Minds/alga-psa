@@ -3,11 +3,11 @@
 // server/src/components/InvoiceTemplateManager.tsx
 import React, { useState } from 'react';
 // Import the type expected by the renderer
-import type { WasmInvoiceViewModel as RendererInvoiceViewModel } from 'server/src/lib/invoice-renderer/types';
+import type { WasmInvoiceViewModel as RendererInvoiceViewModel } from '@alga-psa/types';
 // Import the type used by sample data, aliasing it
-import type { IInvoiceTemplate, InvoiceViewModel as SampleInvoiceViewModel } from 'server/src/interfaces/invoice.interfaces';
+import type { IInvoiceTemplate, InvoiceViewModel as SampleInvoiceViewModel } from '@alga-psa/types';
 import { TemplateRenderer } from './TemplateRenderer';
-import { sampleInvoices } from 'server/src/utils/sampleInvoiceData'; // This uses SampleInvoiceViewModel
+import { sampleInvoices } from '../../utils/sampleInvoiceData'; // This uses SampleInvoiceViewModel
 import PaperInvoice from './PaperInvoice';
 // Removed unused imports: TextArea, Button, Input, parseInvoiceTemplate, saveInvoiceTemplate
 import { Button } from '@alga-psa/ui/components/Button'; // Keep Button if needed elsewhere, otherwise remove

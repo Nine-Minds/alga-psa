@@ -13,17 +13,17 @@ import { DateTimePicker } from '@alga-psa/ui/components/DateTimePicker';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
 import toast from 'react-hot-toast';
 import { Check, X, Calendar, Clock, User, FileText, Briefcase, Ticket } from 'lucide-react';
-import { getAllUsersBasic, getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
+import { getAllUsersBasic, getCurrentUser } from '@alga-psa/users/actions';
 import { IUser } from '@shared/interfaces/user.interfaces';
 import {
   getAppointmentRequests,
   approveAppointmentRequest as approveRequest,
   declineAppointmentRequest as declineRequest,
   IAppointmentRequest
-} from 'server/src/lib/actions/appointmentRequestManagementActions';
+} from '@alga-psa/scheduling/actions';
 import { getTicketById } from '@alga-psa/tickets/actions/ticketActions';
 import TicketDetails from '@alga-psa/tickets/components/ticket/TicketDetails';
-import { ITicket } from 'server/src/interfaces';
+import { ITicket } from '@alga-psa/types';
 
 interface AppointmentRequestsPanelProps {
   isOpen: boolean;

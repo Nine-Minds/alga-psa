@@ -11,9 +11,9 @@ import { DatePicker } from '@alga-psa/ui/components/DatePicker';
 import { ContractWizardData } from '../ContractWizard';
 import { getAllClients } from '@alga-psa/clients/actions';
 import { checkClientHasActiveContract } from '@alga-psa/billing/actions/contractActions';
-import { BILLING_FREQUENCY_OPTIONS } from 'server/src/constants/billing';
-import { CURRENCY_OPTIONS, getCurrencySymbol } from 'server/src/constants/currency';
-import { formatCurrencyFromMinorUnits } from 'server/src/lib/utils/formatters';
+import { BILLING_FREQUENCY_OPTIONS } from '@alga-psa/billing/constants/billing';
+import { CURRENCY_OPTIONS, getCurrencySymbol } from '@alga-psa/core';
+import { formatCurrencyFromMinorUnits } from '@alga-psa/core';
 import {
   Calendar,
   Building2,
@@ -27,7 +27,7 @@ import {
 } from 'lucide-react';
 import { format as formatDateFns, parse as parseDateFns } from 'date-fns';
 import { ClientPicker } from '@alga-psa/clients/components/clients/ClientPicker';
-import { IClient } from 'server/src/interfaces';
+import { IClient } from '@alga-psa/types';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 
 type TemplateOption = {

@@ -2,9 +2,9 @@
 
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
-import { getClientProjectPhases } from 'server/src/lib/actions/client-portal-actions/client-project-details';
+import { getClientProjectPhases } from '@alga-psa/client-portal/actions';
 import { format } from 'date-fns';
-import { getDateFnsLocale } from 'server/src/lib/utils/dateFnsLocale';
+import { getDateFnsLocale } from '@alga-psa/ui';
 
 interface Phase {
   phase_id: string;

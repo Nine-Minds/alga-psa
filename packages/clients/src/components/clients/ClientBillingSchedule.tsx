@@ -8,15 +8,15 @@ import { Input } from '@alga-psa/ui/components/Input';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import { Info } from 'lucide-react';
 import { toast } from 'react-hot-toast';
-import type { BillingCycleType } from 'server/src/interfaces/billing.interfaces';
-import { createNextBillingCycle } from 'server/src/lib/actions/billingCycleActions';
+import type { BillingCycleType } from '@alga-psa/types';
+import { createNextBillingCycle } from '@alga-psa/billing/actions';
 import {
   getClientBillingCycleAnchor,
   previewBillingPeriodsForSchedule,
   type BillingCyclePeriodPreview
-} from 'server/src/lib/actions/billingCycleAnchorActions';
-import { updateClientBillingSchedule } from 'server/src/lib/actions/billingScheduleActions';
-import type { ISO8601String } from 'server/src/types/types.d';
+} from '@alga-psa/billing/actions';
+import { updateClientBillingSchedule } from '@alga-psa/billing/actions';
+import type { ISO8601String } from '@alga-psa/types';
 
 const BILLING_CYCLE_OPTIONS: { value: BillingCycleType; label: string }[] = [
   { value: 'weekly', label: 'Weekly' },

@@ -9,7 +9,7 @@
 export { Invoice, Contract } from './models';
 
 // Components
-export * from './components';
+export { BillingDashboard, CreditsPage, TemplateRenderer, PurchaseOrderSummaryBanner, AutomaticInvoices, BillingCycles } from './components';
 
 // Re-export invoice types from @alga-psa/types
 export type {

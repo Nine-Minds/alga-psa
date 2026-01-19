@@ -51,5 +51,5 @@ export {
 };
 
 // Note: Types and schemas previously re-exported from here must now be imported
-// directly from 'server/src/lib/actions/timeEntrySchemas.ts' due to 'use server' constraints.
+// Note: these schemas were originally sourced from the legacy server action module due to 'use server' constraints.
 // This file now only exports the async server actions.

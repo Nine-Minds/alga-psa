@@ -9,7 +9,7 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { Trash2, Plus } from 'lucide-react';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { AlertCircle } from 'lucide-react';
-import { IContractLineServiceUsageConfig, IContractLineServiceRateTier } from 'server/src/interfaces/contractLineServiceConfiguration.interfaces';
+import { IContractLineServiceUsageConfig, IContractLineServiceRateTier } from '@alga-psa/types';
 
 interface UsageServiceConfigPanelProps {
   configuration: Partial<IContractLineServiceUsageConfig>;

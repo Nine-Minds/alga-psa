@@ -1,10 +1,10 @@
 'use client';
 
 import React, { createContext, useContext, useState, useCallback, ReactNode, useMemo } from 'react';
-import { Activity, ActivityType } from "server/src/interfaces/activity.interfaces";
-import { useDrawer } from "server/src/context/DrawerContext";
+import { Activity, ActivityType } from "@alga-psa/types";
+import { useDrawer } from "@alga-psa/ui";
 import { ActivityDetailViewerDrawer } from "./ActivityDetailViewerDrawer";
-import { useActivitiesCache } from "server/src/hooks/useActivitiesCache";
+import { useActivitiesCache } from "@alga-psa/ui/hooks";
 
 /**
  * Context for managing activity drawer state

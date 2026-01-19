@@ -12,13 +12,13 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@alga-psa/ui/components/DropdownMenu';
-import { IContractLinePresetService, IService } from 'server/src/interfaces/billing.interfaces';
+import { IContractLinePresetService, IService } from '@alga-psa/types';
 import {
   getContractLinePresetServices,
   updateContractLinePresetServices,
   getContractLinePresetById
 } from '@alga-psa/billing/actions/contractLinePresetActions';
-import { getServices } from 'server/src/lib/actions/serviceActions';
+import { getServices } from '@alga-psa/billing/actions';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { AlertCircle } from 'lucide-react';
 import { SwitchWithLabel } from '@alga-psa/ui/components/SwitchWithLabel';

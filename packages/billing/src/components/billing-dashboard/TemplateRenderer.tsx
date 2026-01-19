@@ -3,8 +3,8 @@
 import { useEffect, useState } from 'react';
 // Removed Buffer import - no longer needed client-side
 // Use the InvoiceViewModel type definition expected by the renderer
-import type { WasmInvoiceViewModel } from 'server/src/lib/invoice-renderer/types';
-import type { IInvoiceTemplate } from 'server/src/interfaces/invoice.interfaces'; // Keep this for template structure
+import type { WasmInvoiceViewModel } from '@alga-psa/types';
+import type { IInvoiceTemplate } from '@alga-psa/types'; // Keep this for template structure
 // Removed getCompiledWasm, executeWasmTemplate, renderLayout imports
 // Import the new server action
 import { renderTemplateOnServer } from '@alga-psa/billing/actions/invoiceTemplates';

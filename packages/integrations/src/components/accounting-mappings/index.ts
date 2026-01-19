@@ -1,4 +1,4 @@
-export * from './AccountingMappingDialog';
-export * from './AccountingMappingManager';
+export { AccountingMappingManager } from './AccountingMappingManager';
+export type { AccountingMappingContext, MappingModule } from './types';
 export * from './AccountingMappingModuleView';
-export * from './types';
+export * from './AccountingMappingDialog';

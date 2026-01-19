@@ -9,7 +9,7 @@ import { RichTextViewer, TextEditor } from '@alga-psa/ui/editor';
 import UserAvatar from '@alga-psa/ui/components/UserAvatar';
 import { Button } from '@alga-psa/ui/components/Button';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
-import { IProjectTaskCommentWithUser } from 'server/src/interfaces/projectTaskComment.interface';
+import { IProjectTaskCommentWithUser } from '@alga-psa/types';
 import { updateTaskComment, deleteTaskComment } from '../actions/projectTaskCommentActions';
 import { withDataAutomationId } from '@alga-psa/ui/ui-reflection/withDataAutomationId';
 

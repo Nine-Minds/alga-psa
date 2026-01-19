@@ -9,7 +9,7 @@ import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { Switch } from '@alga-psa/ui/components/Switch';
 import type { ColumnDefinition } from '@alga-psa/types';
 import { Upload, AlertTriangle, Check, ChevronDown, ChevronRight } from 'lucide-react';
-import { parseCSV } from 'server/src/lib/utils/csvParser';
+import { parseCSV } from '@alga-psa/core';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import {
@@ -36,7 +36,7 @@ import {
   AgentResolutionAction,
   TASK_IMPORT_FIELDS,
   DEFAULT_PHASE_NAME,
-} from 'server/src/interfaces/phaseTaskImport.interfaces';
+} from '@alga-psa/types';
 import type { IProjectStatusMapping } from '@alga-psa/types';
 
 interface PhaseTaskImportDialogProps {

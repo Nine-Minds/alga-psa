@@ -10,12 +10,12 @@ import { NotificationsSection } from './NotificationsSection';
 import { ActivitiesDataTableSection } from './ActivitiesDataTableSection';
 import { Button } from '@alga-psa/ui/components/Button';
 import { LayoutGrid, List, ChevronDown, ChevronUp } from 'lucide-react';
-import { ActivityFilters as ActivityFiltersType, ActivityType } from 'server/src/interfaces/activity.interfaces';
+import { ActivityFilters as ActivityFiltersType, ActivityType } from '@alga-psa/types';
 import { CustomTabs } from '@alga-psa/ui/components/CustomTabs';
-import { DrawerProvider } from 'server/src/context/DrawerContext';
+import { DrawerProvider } from '../../context/DrawerContext';
 import { ActivityDrawerProvider } from './ActivityDrawerProvider';
-import { useUserPreference } from 'server/src/hooks/useUserPreference';
-import { useFeatureFlag } from 'server/src/hooks/useFeatureFlag';
+import { useUserPreference } from '../../hooks/useUserPreference';
+import { useFeatureFlag } from '../../hooks/useFeatureFlag';
 import { Card, CardHeader } from '@alga-psa/ui/components/Card';
 
 export function UserActivitiesDashboard() {

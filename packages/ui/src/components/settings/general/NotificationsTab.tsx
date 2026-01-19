@@ -10,7 +10,7 @@ import { EmailTemplates } from "@alga-psa/ui/components/settings/notifications/E
 import { NotificationCategories } from "@alga-psa/ui/components/settings/notifications/NotificationCategories";
 import { InternalNotificationCategories } from "@alga-psa/ui/components/settings/notifications/InternalNotificationCategories";
 import { TelemetrySettings } from "../telemetry/TelemetrySettings";
-import { useUnsavedChanges } from "server/src/contexts/UnsavedChangesContext";
+import { useUnsavedChanges } from "@alga-psa/ui";
 
 type NotificationView = 'email' | 'internal';
 

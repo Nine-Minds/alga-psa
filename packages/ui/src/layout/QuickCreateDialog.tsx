@@ -10,9 +10,9 @@ import ProjectQuickAdd from '@alga-psa/projects/components/ProjectQuickAdd';
 import { QuickAddProduct, QuickAddService } from '@alga-psa/billing/components';
 import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
-import { ITicket, IClient, IContact, IProject } from 'server/src/interfaces';
+import { ITicket, IClient, IContact, IProject } from '@alga-psa/types';
 import { getAllClients } from '@alga-psa/clients/actions';
-import { getServiceTypesForSelection } from 'server/src/lib/actions/serviceActions';
+import { getServiceTypesForSelection } from '@alga-psa/billing/actions';
 import { toast } from 'react-hot-toast';
 
 export type QuickCreateType = 'ticket' | 'client' | 'contact' | 'project' | 'asset' | 'service' | 'product' | null;

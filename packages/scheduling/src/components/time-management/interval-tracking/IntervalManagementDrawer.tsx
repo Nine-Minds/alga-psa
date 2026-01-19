@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import Drawer from '@alga-psa/ui/components/Drawer';
-import { TicketInterval, TicketIntervalGroup } from 'server/src/types/interval-tracking';
-import { IntervalTrackingService } from 'server/src/services/IntervalTrackingService';
+import { TicketInterval, TicketIntervalGroup } from '@alga-psa/types';
+import { IntervalTrackingService } from '@alga-psa/ui/services';
 import { IntervalItem } from './IntervalItem';
 import { Switch } from '@alga-psa/ui/components/Switch';
 import { Label } from '@alga-psa/ui/components/Label';

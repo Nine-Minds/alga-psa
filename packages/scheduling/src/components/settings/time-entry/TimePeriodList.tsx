@@ -3,12 +3,12 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import { Button } from '@alga-psa/ui/components/Button';
-import { ITimePeriodSettings, ITimePeriodView } from 'server/src/interfaces/timeEntry.interfaces';
+import { ITimePeriodSettings, ITimePeriodView } from '@alga-psa/types';
 import TimePeriodForm from './TimePeriodForm';
 import { getTimePeriodSettings, fetchAllTimePeriods } from '@alga-psa/scheduling/actions/timePeriodsActions';
 import { MoreVertical } from 'lucide-react';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
-import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
+import { ColumnDefinition } from '@alga-psa/types';
 import {
   DropdownMenu,
   DropdownMenuTrigger,

@@ -2,10 +2,10 @@
 
 import React from 'react';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
-import { useTruncationDetection } from 'server/src/hooks/useTruncationDetection';
+import { useTruncationDetection } from '@alga-psa/ui/hooks';
 import { format, Locale } from 'date-fns';
-import { getDateFnsLocale } from 'server/src/lib/utils/dateFnsLocale';
-import { IClientPortalConfig } from 'server/src/interfaces/project.interfaces';
+import { getDateFnsLocale } from '@alga-psa/ui';
+import { IClientPortalConfig } from '@alga-psa/types';
 import { Calendar, Clock, CheckSquare, Ban, GitBranch } from 'lucide-react';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import TaskDocumentUpload from './TaskDocumentUpload';

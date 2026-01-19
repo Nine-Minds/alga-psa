@@ -19,7 +19,7 @@ import { TenantEmailService } from 'server/src/lib/services/TenantEmailService';
 import { StaticTemplateProcessor } from 'server/src/lib/email/tenant/templateProcessors';
 import { CalendarProviderConfig } from '@/interfaces/calendar.interfaces';
 import { IScheduleEntry } from '@/interfaces/schedule.interfaces';
-import { isValidEmail } from '../../utils/validation';
+import { isValidEmail } from '@alga-psa/core';
 
 let syncService: CalendarSyncService;
 let providerService: CalendarProviderService;

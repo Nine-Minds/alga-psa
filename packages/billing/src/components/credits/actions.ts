@@ -8,7 +8,7 @@ import {
   transferCredit,
   updateCreditExpiration,
 } from '../../actions/creditActions';
-import { getCurrentUser } from 'server/src/lib/auth/session';
+import { getCurrentUser } from '@alga-psa/auth/getCurrentUser';
 
 export async function listCredits(
   clientId: string,

@@ -2,13 +2,13 @@
 
 import { Knex } from 'knex'; // Import Knex type
 import { createTenantKnex } from '@alga-psa/db';
-import { determineDefaultContractLine } from 'server/src/lib/utils/contractLineDisambiguation';
-import { findOrCreateCurrentBucketUsageRecord, updateBucketUsageMinutes } from 'server/src/lib/services/bucketUsageService'; // Import bucket service functions
+import { determineDefaultContractLine } from '@alga-psa/billing/lib/contractLineDisambiguation';
+import { findOrCreateCurrentBucketUsageRecord, updateBucketUsageMinutes } from '../services/bucketUsageService'; // Import bucket service functions
 import {
   ITimeEntry,
   ITimeEntryWithWorkItem,
-} from 'server/src/interfaces/timeEntry.interfaces';
-import { IWorkItem } from 'server/src/interfaces/workItem.interfaces';
+} from '@alga-psa/types';
+import { IWorkItem } from '@alga-psa/types';
 import { getCurrentUser } from '@alga-psa/auth/getCurrentUser';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { v4 as uuidv4 } from 'uuid';
@@ -21,10 +21,10 @@ import {
   SaveTimeEntryParams
 } from './timeEntrySchemas'; // Import schemas
 import { getClientIdForWorkItem } from './timeEntryHelpers'; // Import helper
-import { analytics } from 'server/src/lib/analytics/posthog';
-import { AnalyticsEvents } from 'server/src/lib/analytics/events';
-import { getSession } from 'server/src/lib/auth/getSession';
-import { computeWorkDateFields, resolveUserTimeZone } from 'server/src/lib/utils/workDate';
+import { analytics } from '@alga-psa/analytics';
+import { AnalyticsEvents } from '@alga-psa/analytics';
+import { getSession } from '@alga-psa/auth';
+import { computeWorkDateFields, resolveUserTimeZone } from '@alga-psa/db';
 
 export async function fetchTimeEntriesForTimeSheet(timeSheetId: string): Promise<ITimeEntryWithWorkItem[]> {
   const currentUser = await getCurrentUser();

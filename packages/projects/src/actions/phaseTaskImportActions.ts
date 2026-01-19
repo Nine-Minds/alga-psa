@@ -1,20 +1,20 @@
 'use server';
 
 import { Knex } from 'knex';
-import { createTenantKnex } from 'server/src/lib/db';
+import { createTenantKnex } from '@alga-psa/db';
 import { withTransaction } from '@alga-psa/shared/db';
-import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
-import { hasPermission } from 'server/src/lib/auth/rbac';
-import { unparseCSV } from 'server/src/lib/utils/csvParser';
-import { getAllUsersBasic } from 'server/src/lib/actions/user-actions/userActions';
-import { getAllPriorities } from 'server/src/lib/actions/priorityActions';
-import { getServices } from 'server/src/lib/actions/serviceActions';
-import { createTagsForEntityWithTransaction } from 'server/src/lib/actions/tagActions';
-import ProjectModel from 'server/src/lib/models/project';
-import ProjectTaskModel from 'server/src/lib/models/projectTask';
-import { IProjectPhase } from 'server/src/interfaces/project.interfaces';
-import { IPriority } from 'server/src/interfaces';
-import { IService } from 'server/src/interfaces/billing.interfaces';
+import { getCurrentUser } from '@alga-psa/users/actions';
+import { hasPermission } from '@alga-psa/auth';
+import { unparseCSV } from '@alga-psa/core';
+import { getAllUsersBasic } from '@alga-psa/users/actions';
+import { getAllPriorities } from '@alga-psa/reference-data/actions';
+import { getServices } from '@alga-psa/billing/actions';
+import { createTagsForEntityWithTransaction } from '@alga-psa/tags/actions';
+import ProjectModel from '@alga-psa/projects/models/project';
+import ProjectTaskModel from '../models/projectTask';
+import { IProjectPhase } from '@alga-psa/types';
+import { IPriority } from '@alga-psa/types';
+import { IService } from '@alga-psa/types';
 import { IUser } from '@shared/interfaces/user.interfaces';
 import {
   ITaskImportRow,
@@ -28,8 +28,8 @@ import {
   DEFAULT_PHASE_NAME,
   DEFAULT_STATUS_COLOR,
   MappableTaskField,
-} from 'server/src/interfaces/phaseTaskImport.interfaces';
-import { IProjectStatusMapping } from 'server/src/interfaces/project.interfaces';
+} from '@alga-psa/types';
+import { IProjectStatusMapping } from '@alga-psa/types';
 
 /**
  * Parse a date string to Date object
@@ -285,7 +285,7 @@ export async function getImportReferenceData(
     throw new Error('No authenticated user found');
   }
 
-  const { knex: db } = await createTenantKnex();
+  const { knex: db, tenant } = await createTenantKnex();
 
   return await withTransaction(db, async (trx: Knex.Transaction) => {
     const tenant = currentUser.tenant;
@@ -522,7 +522,7 @@ export async function validatePhaseTaskImportData(
     throw new Error('No authenticated user found');
   }
 
-  const { knex: db } = await createTenantKnex();
+  const { knex: db, tenant } = await createTenantKnex();
 
   // Fetch lookup data
   const [users, priorities, servicesResponse] = await Promise.all([
@@ -735,7 +735,7 @@ export async function importPhasesAndTasks(
     throw new Error('Tenant context not found');
   }
 
-  const { knex: db } = await createTenantKnex();
+  const { knex: db, tenant } = await createTenantKnex();
 
   return await withTransaction(db, async (trx: Knex.Transaction) => {
     if (!await hasPermission(currentUser, 'project', 'update')) {
@@ -743,13 +743,13 @@ export async function importPhasesAndTasks(
     }
 
     // Verify project exists
-    const project = await ProjectModel.getById(trx, projectId);
+    const project = await ProjectModel.getById(trx, tenant, projectId);
     if (!project) {
       throw new Error('Project not found');
     }
 
     // Get existing status mappings
-    let statusMappings = await ProjectModel.getProjectStatusMappings(trx, projectId);
+    let statusMappings = await ProjectModel.getProjectStatusMappings(trx, tenant, projectId);
     if (!statusMappings || statusMappings.length === 0) {
       throw new Error('No status mappings found for project. Please configure task statuses first.');
     }
@@ -798,7 +798,7 @@ export async function importPhasesAndTasks(
     const firstStatusMappingId = statusMappings[0].project_status_mapping_id;
 
     // Get existing phases
-    const existingPhases = await ProjectModel.getPhases(trx, projectId);
+    const existingPhases = await ProjectModel.getPhases(trx, tenant, projectId);
     const existingPhaseMap = new Map<string, IProjectPhase>();
     existingPhases.forEach(phase => {
       existingPhaseMap.set(phase.phase_name.toLowerCase(), phase);
@@ -821,7 +821,7 @@ export async function importPhasesAndTasks(
           phase = existingPhase;
         } else {
           // Create new phase
-          const phases = await ProjectModel.getPhases(trx, projectId);
+          const phases = await ProjectModel.getPhases(trx, tenant, projectId);
           const nextOrderNumber = phases.length + 1;
 
           // Generate WBS code
@@ -849,7 +849,7 @@ export async function importPhasesAndTasks(
             orderKey = generateKeyBetween(lastPhase.order_key || null, null);
           }
 
-          phase = await ProjectModel.addPhase(trx, {
+          phase = await ProjectModel.addPhase(trx, tenant, {
             project_id: projectId,
             phase_name: groupedPhase.phase_name,
             description: groupedPhase.description,
@@ -882,7 +882,7 @@ export async function importPhasesAndTasks(
               taskStatusMappingId = firstStatusMappingId;
             }
 
-            const newTask = await ProjectTaskModel.addTask(trx, phase.phase_id, {
+            const newTask = await ProjectTaskModel.addTask(trx, tenant, phase.phase_id, {
               task_name: taskData.task_name,
               description: taskData.description,
               assigned_to: taskData.assigned_to,
@@ -903,7 +903,7 @@ export async function importPhasesAndTasks(
                 text_color: null,
                 isNew: true,
               }));
-              await createTagsForEntityWithTransaction(trx, newTask.task_id, 'project_task', pendingTags);
+              await createTagsForEntityWithTransaction(trx, tenant, newTask.task_id, 'project_task', pendingTags);
             }
 
             // Add additional agents as task resources (only if primary agent is assigned)
@@ -913,7 +913,7 @@ export async function importPhasesAndTasks(
                 agentId => agentId !== taskData.assigned_to
               );
               for (const additionalAgentId of uniqueAdditionalAgents) {
-                await ProjectTaskModel.addTaskResource(trx, newTask.task_id, additionalAgentId);
+                await ProjectTaskModel.addTaskResource(trx, tenant, newTask.task_id, additionalAgentId);
               }
             }
 

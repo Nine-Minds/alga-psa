@@ -5,7 +5,7 @@ import { createTenantKnex, withTransaction } from '@alga-psa/db';
 import { getCurrentUser } from '@alga-psa/auth/getCurrentUser';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import type { IProjectStatusMapping, IStatus } from '@alga-psa/types';
-import { publishEvent } from 'server/src/lib/eventBus/publishers';
+import { publishEvent } from '@alga-psa/event-bus/publishers';
 
 /**
  * Add a status to a project

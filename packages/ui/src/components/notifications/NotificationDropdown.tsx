@@ -5,12 +5,12 @@ import { CheckCheck, RefreshCw, WifiOff, AlertCircle } from 'lucide-react';
 import Link from 'next/link';
 import Spinner from '@alga-psa/ui/components/Spinner';
 import { NotificationItem } from './NotificationItem';
-import type { InternalNotification } from 'server/src/lib/models/internalNotification';
+import type { InternalNotification } from '@alga-psa/notifications';
 import { useActivityDrawer } from '@alga-psa/ui/components/user-activities/ActivityDrawerProvider';
-import { ActivityType, NotificationActivity } from 'server/src/interfaces/activity.interfaces';
+import { ActivityType, NotificationActivity } from '@alga-psa/types';
 import { useTenant } from '@alga-psa/ui/components/providers/TenantProvider';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
-import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
+import { getCurrentUser } from '@alga-psa/users/actions';
 
 interface NotificationDropdownProps {
   notifications: InternalNotification[];

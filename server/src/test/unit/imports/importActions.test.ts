@@ -20,7 +20,7 @@ const mockRegistry = {
   clear: vi.fn(),
 };
 
-vi.mock('server/src/lib/actions/user-actions/userActions', () => ({
+vi.mock('@alga-psa/users/actions', () => ({
   getCurrentUser: vi.fn(),
 }));
 
@@ -52,7 +52,7 @@ vi.mock('@/lib/imports/CsvImporter', () => ({
   CsvImporter: vi.fn(() => ({ sourceType: 'csv_upload', parse: vi.fn() })),
 }));
 
-const { getCurrentUser } = await import('server/src/lib/actions/user-actions/userActions');
+const { getCurrentUser } = await import('@alga-psa/users/actions');
 const { hasPermission } = await import('server/src/lib/auth/rbac');
 const { getAssetFieldDefinitions } = await import('@/lib/imports/assetFieldDefinitions');
 const { CsvImporter } = await import('@/lib/imports/CsvImporter');

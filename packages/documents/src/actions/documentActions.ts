@@ -1,6 +1,6 @@
 'use server'
 
-import { StorageService } from 'server/src/lib/storage/StorageService';
+import { StorageService } from '@alga-psa/documents/storage/StorageService';
 import { createTenantKnex, runWithTenant } from '@alga-psa/db';
 import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
@@ -10,9 +10,9 @@ import { fromPath } from 'pdf2pic';
 import puppeteer from 'puppeteer';
 import { writeFile, unlink, mkdir } from 'fs/promises';
 import { join } from 'path';
-import { CacheFactory } from 'server/src/lib/cache/CacheFactory';
-import { convertBlockNoteToHTML } from 'server/src/lib/utils/blocknoteUtils';
-import DocumentAssociation from 'server/src/models/document-association';
+import { CacheFactory } from '../cache/CacheFactory';
+import { convertBlockNoteToHTML } from '@alga-psa/documents/lib/blocknoteUtils';
+import DocumentAssociation from '@alga-psa/documents/models/documentAssociation';
 import {
     IDocument,
     IDocumentType,
@@ -26,15 +26,15 @@ import {
 } from '@alga-psa/types';
 import type { IDocumentAssociation, IDocumentAssociationInput, DocumentAssociationEntityType } from '@alga-psa/types';
 import { v4 as uuidv4 } from 'uuid';
-import { deleteFile } from 'server/src/lib/actions/file-actions/fileActions';
+import { deleteFile } from './file-actions/fileActions';
 import { NextResponse } from 'next/server';
 import { deleteDocumentContent } from './documentContentActions';
 import { deleteBlockContent } from './documentBlockContentActions';
 import { DocumentHandlerRegistry } from '@alga-psa/documents/handlers/DocumentHandlerRegistry';
 import { getCurrentUser } from '@alga-psa/auth/getCurrentUser';
-import { hasPermission } from 'server/src/lib/auth/rbac';
-import { getEntityTypesForUser } from 'server/src/lib/utils/documentPermissionUtils';
-import { generateDocumentPreviews } from 'server/src/lib/utils/documentPreviewGenerator';
+import { hasPermission } from '@alga-psa/auth';
+import { getEntityTypesForUser } from '../lib/documentPermissionUtils';
+import { generateDocumentPreviews } from '../lib/documentPreviewGenerator';
 
 async function loadSharp() {
   try {

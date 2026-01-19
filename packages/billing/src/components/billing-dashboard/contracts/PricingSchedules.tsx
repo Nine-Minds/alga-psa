@@ -11,8 +11,8 @@ import {
   DropdownMenuTrigger,
 } from '@alga-psa/ui/components/DropdownMenu';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
-import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
-import { IContractPricingSchedule } from 'server/src/interfaces/contract.interfaces';
+import { ColumnDefinition } from '@alga-psa/types';
+import { IContractPricingSchedule } from '@alga-psa/types';
 import {
   getPricingSchedulesByContract,
   deletePricingSchedule
@@ -20,8 +20,8 @@ import {
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { AlertCircle } from 'lucide-react';
 import { PricingScheduleDialog } from './PricingScheduleDialog';
-import { formatCurrency } from 'server/src/lib/utils/formatters';
-import { toPlainDate } from 'server/src/lib/utils/dateTimeUtils';
+import { formatCurrency } from '@alga-psa/core';
+import { toPlainDate } from '@alga-psa/core';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 
 interface PricingSchedulesProps {

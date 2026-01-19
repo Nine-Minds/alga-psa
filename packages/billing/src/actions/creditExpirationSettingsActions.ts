@@ -1,7 +1,7 @@
 'use server';
 
-import { createTenantKnex } from 'server/src/lib/db';
-import { ICreditExpirationSettings } from 'server/src/interfaces/billing.interfaces';
+import { createTenantKnex } from '@alga-psa/db';
+import { ICreditExpirationSettings } from '@alga-psa/types';
 
 /**
  * Get credit expiration settings for a client.

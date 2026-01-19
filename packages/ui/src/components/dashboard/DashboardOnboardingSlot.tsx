@@ -1,6 +1,6 @@
 import DashboardOnboardingSection from './DashboardOnboardingSection';
-import { getOnboardingProgressAction } from '@/lib/actions/onboarding-progress';
-import type { OnboardingStepServerState } from '@/lib/actions/onboarding-progress';
+import { getOnboardingProgressAction } from '@alga-psa/onboarding/actions';
+import type { OnboardingStepServerState } from '@alga-psa/onboarding/actions';
 
 interface OnboardingProgressSummary {
   completed: number;

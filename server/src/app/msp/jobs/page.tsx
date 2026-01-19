@@ -1,4 +1,4 @@
-import { getQueueMetricsAction, getJobDetailsWithHistory } from 'server/src/lib/actions/job-actions';
+import { getQueueMetricsAction, getJobDetailsWithHistory } from '@alga-psa/jobs/actions';
 import JobMetricsDisplay from '@alga-psa/ui/components/jobs/JobMetricsDisplay';
 import RecentJobsDataTable from '@alga-psa/ui/components/jobs/RecentJobsDataTable';
 import SystemMonitoringWrapper from '@alga-psa/ui/components/system-monitoring/SystemMonitoringWrapper';

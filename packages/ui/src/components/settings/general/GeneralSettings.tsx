@@ -8,10 +8,10 @@ import { Label } from "@alga-psa/ui/components/Label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@alga-psa/ui/components/Table";
 import { Plus, Trash } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { getTenantDetails, updateTenantName, addClientToTenant, removeClientFromTenant, setDefaultClient } from "server/src/lib/actions/tenantActions";
+import { getTenantDetails, updateTenantName, addClientToTenant, removeClientFromTenant, setDefaultClient } from "@alga-psa/tenancy/actions";
 import { getAllClients } from "@alga-psa/clients/actions";
 import { ClientPicker } from '@alga-psa/clients/components/clients/ClientPicker';
-import { IClient } from "server/src/interfaces/client.interfaces";
+import { IClient } from "@alga-psa/types";
 
 const GeneralSettings = () => {
   const [tenantName, setTenantName] = React.useState('');

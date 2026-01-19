@@ -7,20 +7,20 @@ import { Input } from "@alga-psa/ui/components/Input";
 import { Label } from "@alga-psa/ui/components/Label";
 import { TextArea } from "@alga-psa/ui/components/TextArea";
 import { DataTable } from "@alga-psa/ui/components/DataTable";
-import { ColumnDefinition } from "server/src/interfaces/dataTable.interfaces";
+import { ColumnDefinition } from "@alga-psa/types";
 import { ChevronDown, ChevronRight, CornerDownRight, MoreVertical, Filter, Check, X } from "lucide-react";
-import { useUserPreference } from "server/src/hooks/useUserPreference";
+import { useUserPreference } from "@alga-psa/ui";
 import {
   getTemplatesAction,
   updateTenantTemplateAction,
   cloneSystemTemplateAction,
   deactivateTenantTemplateAction
-} from "server/src/lib/actions/notification-actions/notificationActions";
+} from "@alga-psa/notifications/actions";
 import {
   SystemEmailTemplate,
   TenantEmailTemplate
-} from "server/src/lib/models/notification";
-import { getCurrentTenant } from "server/src/lib/tenant-client";
+} from "@alga-psa/notifications";
+import { getCurrentTenant } from "@alga-psa/tenancy/client";
 import LoadingIndicator from "@alga-psa/ui/components/LoadingIndicator";
 import {
   DropdownMenu,

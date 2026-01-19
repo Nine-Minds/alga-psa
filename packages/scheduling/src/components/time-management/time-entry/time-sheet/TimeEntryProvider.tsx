@@ -1,11 +1,11 @@
 'use client';
 
 import { createContext, useContext, useReducer, useEffect } from 'react';
-import { ITimeEntry, ITimeEntryWithWorkItem, ITimePeriod, ITimePeriodView } from 'server/src/interfaces/timeEntry.interfaces';
-import { IExtendedWorkItem } from 'server/src/interfaces/workItem.interfaces';
-import { TaxRegion } from 'server/src/types/types.d';
+import { ITimeEntry, ITimeEntryWithWorkItem, ITimePeriod, ITimePeriodView } from '@alga-psa/types';
+import { IExtendedWorkItem } from '@alga-psa/types';
+import { TaxRegion } from '@alga-psa/types';
 import { fetchClientTaxRateForWorkItem, fetchScheduleEntryForWorkItem, fetchServicesForTimeEntry, fetchTaxRegions } from '../../../../actions/timeEntryActions';
-import { getClientIdForWorkItem } from 'server/src/lib/utils/contractLineDisambiguation';
+import { getClientIdForWorkItem } from '@alga-psa/billing/lib/contractLineDisambiguation';
 import { formatISO, parseISO } from 'date-fns';
 import { getClientById } from '@alga-psa/clients/actions';
 import { Service, ITimeEntryWithNew } from './types';

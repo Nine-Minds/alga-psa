@@ -5,12 +5,12 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
-import { getCurrencySymbol } from 'server/src/constants/currency';
-import { addProjectMaterial, deleteProjectMaterial, listProjectMaterials } from 'server/src/lib/actions/materialActions';
-import { getServices } from 'server/src/lib/actions/serviceActions';
-import { resolveClientBillingCurrency } from 'server/src/lib/actions/billingCurrencyActions';
-import { IService } from 'server/src/interfaces/billing.interfaces';
-import { IProjectMaterial } from 'server/src/interfaces/material.interfaces';
+import { getCurrencySymbol } from '@alga-psa/core';
+import { addProjectMaterial, deleteProjectMaterial, listProjectMaterials } from '@alga-psa/billing/actions';
+import { getServices } from '@alga-psa/billing/actions';
+import { resolveClientBillingCurrency } from '@alga-psa/billing/actions';
+import { IService } from '@alga-psa/types';
+import { IProjectMaterial } from '@alga-psa/types';
 
 interface ProjectMaterialsDrawerProps {
   projectId: string;

@@ -1,8 +1,8 @@
 "use server";
 
 import { getTenantSettings, updateTenantSettings } from "server/src/lib/actions/tenant-settings-actions/tenantSettingsActions";
-import { getCurrentUser } from "@/lib/actions/user-actions/userActions";
-import { hasPermission } from "@/lib/auth/rbac";
+import { getCurrentUser } from "@alga-psa/users/actions";
+import { hasPermission } from "@alga-psa/auth";
 import { createTenantKnex } from "@/lib/db";
 import { listOAuthAccountLinksForUser } from "@ee/lib/auth/oauthAccountLinks";
 import User from "server/src/lib/models/user";

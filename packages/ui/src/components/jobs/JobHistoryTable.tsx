@@ -1,11 +1,11 @@
 'use client';
 
 import React from 'react';
-import { JobData } from 'server/src/lib/jobs/jobScheduler';
+import { JobData } from '@alga-psa/jobs/lib/jobs/jobScheduler';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
-import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
+import { ColumnDefinition } from '@alga-psa/types';
 import JobDetailsDrawer from './JobDetailsDrawer';
-import { getJobDetailsWithHistory } from 'server/src/lib/actions/job-actions';
+import { getJobDetailsWithHistory } from '@alga-psa/jobs/actions';
 
 const columns: ColumnDefinition<JobData>[] = [
   {

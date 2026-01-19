@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { QuickAddTicket } from '@alga-psa/tickets/components/QuickAddTicket';
-import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
+import { getCurrentUser } from '@alga-psa/users/actions';
 import { 
   addTicketLinkAction,
   deleteTaskTicketLinkAction,
@@ -10,11 +10,11 @@ import {
 } from '../actions/projectTaskActions';
 import { getTicketsForList } from '@alga-psa/tickets/actions/ticketActions';
 import { getConsolidatedTicketData } from '@alga-psa/tickets/actions/optimizedTicketActions';
-import { ITicketListFilters } from 'server/src/interfaces/ticket.interfaces';
-import { useDrawer } from "server/src/context/DrawerContext";
+import { ITicketListFilters } from '@alga-psa/types';
+import { useDrawer } from "@alga-psa/ui";
 import TicketDetails from '@alga-psa/tickets/components/ticket/TicketDetails';
-import { ITicketListItem, ITicket, ITicketCategory } from 'server/src/interfaces/ticket.interfaces';
-import { IProjectTicketLinkWithDetails } from 'server/src/interfaces/project.interfaces';
+import { ITicketListItem, ITicket, ITicketCategory } from '@alga-psa/types';
+import { IProjectTicketLinkWithDetails } from '@alga-psa/types';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Link, Plus, ExternalLink, Trash2, X } from 'lucide-react';
 import { toast } from 'react-hot-toast';
@@ -24,11 +24,11 @@ import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import CategoryPicker from '@alga-psa/tickets/components/CategoryPicker';
 import UserPicker from '@alga-psa/ui/components/UserPicker';
 import { BoardPicker } from '@alga-psa/ui/components/settings/general/BoardPicker';
-import { IBoard } from 'server/src/interfaces';
-import { getTicketCategories } from 'server/src/lib/actions/ticketCategoryActions';
-import { getAllBoards } from 'server/src/lib/actions/board-actions/boardActions';
-import { getTicketStatuses } from 'server/src/lib/actions/status-actions/statusActions';
-import { getAllPriorities } from 'server/src/lib/actions/priorityActions';
+import { IBoard } from '@alga-psa/types';
+import { getTicketCategories } from '@alga-psa/tickets/actions';
+import { getAllBoards } from '@alga-psa/tickets/actions';
+import { getTicketStatuses } from '@alga-psa/reference-data/actions';
+import { getAllPriorities } from '@alga-psa/reference-data/actions';
 import { IUser } from '@shared/interfaces/user.interfaces';
 import TicketSelect from './TicketSelect';
 

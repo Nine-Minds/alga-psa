@@ -5,7 +5,7 @@ import type { Asset } from '@alga-psa/types';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { Network, Link as LinkIcon } from 'lucide-react';
-import { formatDateTime } from 'server/src/lib/utils/dateTimeUtils';
+import { formatDateTime } from '@alga-psa/core';
 import { Dialog } from '@alga-psa/ui/components/Dialog';
 import { SearchInput } from '@alga-psa/ui/components/SearchInput';
 import useSWR, { useSWRConfig } from 'swr';

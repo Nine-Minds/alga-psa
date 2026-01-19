@@ -7,10 +7,10 @@ import { Input } from '@alga-psa/ui/components/Input';
 import { Dialog, DialogContent, DialogFooter } from '@alga-psa/ui/components/Dialog';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { ServiceCatalogPicker, type ServiceCatalogPickerItem } from '@alga-psa/billing/components';
-import { getCurrencySymbol } from 'server/src/constants/currency';
-import { addTicketMaterial, deleteTicketMaterial, listTicketMaterials } from 'server/src/lib/actions/materialActions';
+import { getCurrencySymbol } from '@alga-psa/core';
+import { addTicketMaterial, deleteTicketMaterial, listTicketMaterials } from '@alga-psa/billing/actions';
 import { resolveClientBillingCurrency } from '@alga-psa/billing/actions/billingCurrencyActions';
-import { ITicketMaterial } from 'server/src/interfaces/material.interfaces';
+import { ITicketMaterial } from '@alga-psa/types';
 
 interface TicketMaterialsCardProps {
   ticketId: string;

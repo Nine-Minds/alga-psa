@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import * as Popover from '@radix-ui/react-popover';
 import { Input } from '@alga-psa/ui/components/Input';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
-import { IBoard } from 'server/src/interfaces';
+import { IBoard } from '@alga-psa/types';
 import { ChevronDown } from 'lucide-react';
 import { useAutomationIdAndRegister } from '@alga-psa/ui/ui-reflection/useAutomationIdAndRegister';
 import { ContainerComponent, AutomationProps, FormFieldComponent } from '@alga-psa/ui/ui-reflection/types';

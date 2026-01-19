@@ -53,9 +53,9 @@ import {
     clientMaintenanceSummarySchema,
     assetRelationshipSchema,
     createAssetRelationshipSchema
-} from 'server/src/lib/schemas/asset.schema';
-import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
-import { hasPermission } from 'server/src/lib/auth/rbac';
+} from '../lib/schemas/asset.schema';
+import { getCurrentUser } from '@alga-psa/users/actions';
+import { hasPermission } from '@alga-psa/auth';
 import { createTenantKnex } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { withTransaction } from '@alga-psa/db';

@@ -9,8 +9,8 @@
 import { CopyObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
 import { createS3BundleStore } from "../storage/bundles/s3-bundle-store";
 import { isValidSha256Hash, objectKeyFor, normalizeBasePrefix } from "../storage/bundles/types";
+import { spawn } from "node:child_process";
 import { Readable } from "node:stream";
-import * as fzstd from "fzstd";
 import * as tarStream from "tar-stream";
 import { getS3Client, getBundleBucket } from "../storage/s3-client";
 import { createTenantKnex } from '@/lib/db/index';
@@ -67,6 +67,36 @@ class HttpError extends Error {
 const MAX_BUNDLE_SIZE_BYTES = 200 * 1024 * 1024; // 200 MiB
 const BASE_PREFIX = "sha256/";
 
+async function decompressZstdBuffer(compressed: Buffer): Promise<Buffer> {
+  return new Promise<Buffer>((resolve, reject) => {
+    const proc = spawn("zstd", ["-d", "-q", "--stdout"], {
+      stdio: ["pipe", "pipe", "pipe"],
+    });
+
+    const out: Buffer[] = [];
+    const err: Buffer[] = [];
+
+    proc.stdout.on("data", (chunk) => out.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk)));
+    proc.stderr.on("data", (chunk) => err.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk)));
+
+    proc.on("error", (error) => {
+      reject(new Error(`zstd decompression failed to start: ${error.message}`));
+    });
+
+    proc.on("close", (code) => {
+      if (code === 0) {
+        resolve(Buffer.concat(out));
+        return;
+      }
+
+      const stderr = Buffer.concat(err).toString("utf-8").trim();
+      reject(new Error(`zstd decompression failed (code=${code}): ${stderr || "unknown error"}`));
+    });
+
+    proc.stdin.end(compressed);
+  });
+}
+
 /**
  * Extract manifest.json from a .tar.zst bundle stored in S3.
  * Returns the manifest JSON string, or null if not found.
@@ -87,8 +117,7 @@ async function extractManifestFromBundle(key: string): Promise<string | null> {
   const compressedData = Buffer.concat(chunks);
 
   // Decompress with zstd
-  const decompressed = fzstd.decompress(new Uint8Array(compressedData));
-  const tarData = Buffer.from(decompressed);
+  const tarData = await decompressZstdBuffer(compressedData);
 
   // Parse tar and find manifest.json (at root or nested one level)
   return new Promise<string | null>((resolve, reject) => {

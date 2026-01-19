@@ -4,7 +4,7 @@ import {
   ScheduleActivity,
   ActivityPriority,
   ActivityType
-} from "server/src/interfaces/activity.interfaces";
+} from "@alga-psa/types";
 import { useActivityDrawer } from "./ActivityDrawerProvider";
 import { useRouter } from 'next/navigation';
 import { Card } from "@alga-psa/ui/components/Card";

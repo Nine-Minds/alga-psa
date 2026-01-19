@@ -31,6 +31,25 @@ This modularization effort will deliver:
 5. Convert routes to thin shims that delegate to feature modules
 6. Enable NX caching and affected commands for build optimization
 
+## Project Status (2026-01-18)
+
+This PRD is a living document. As of **January 18, 2026**, the migration is underway and partially complete.
+
+### What’s Done (high confidence)
+- NX workspace is initialized and `nx affected` + caching are wired up.
+- Horizontal slices exist and are used broadly: `@alga-psa/core`, `@alga-psa/db`, `@alga-psa/types`, `@alga-psa/validation`, `@alga-psa/ui`.
+- Large parts of the codebase already import from `@alga-psa/*` packages instead of `server/src/components`.
+- **All server actions under `server/src/lib/actions/**` have been moved into packages** (folder is empty). The public API is now largely `@alga-psa/<module>/actions` exports.
+- **Feature packages no longer import `server/src/**` directly** (including dynamic `import('server/src/...')`), keeping module boundaries explicit for NX.
+- `@alga-psa/documents` now owns its storage config/types/model primitives needed by other modules (e.g. billing PDF generation).
+
+### What’s In Progress / Not Yet True
+- Enterprise Edition packages still have a few **EE entrypoints** that load EE-only components from `ee/server/src/**` (expected until EE modularization is tackled).
+- The `@alga-psa/auth` horizontal slice exists, but still mixes low-level server utilities with Next.js UI exports; prefer subpath imports (e.g. `@alga-psa/auth/rbac`) for unit tests and tooling.
+
+### Key Risk We’re Managing
+If feature packages keep importing `server/src/**`, module boundaries become implicit again and NX caching/graph value is reduced (everything depends on the Next app).
+
 ## Non-Goals
 
 - Microservices architecture (not splitting into separate deployable services)
@@ -59,6 +78,7 @@ These modules contain cross-cutting concerns used by multiple features:
 | `@alga-psa/validation` | Zod schemas, form validation | `server/src/lib/utils/validation.ts`, scattered |
 | `@alga-psa/ui` | Shared UI components (internal app UI) | `packages/ui/` (migrated from `server/src/components/ui/`) |
 | `@alga-psa/auth` | Authentication, sessions, permissions | `server/src/lib/auth/` |
+| `@alga-psa/tenancy` | Tenant settings, branding, slug/domain resolution | `server/src/lib/tenant-client.ts`, `server/src/lib/actions/tenant-*/` |
 
 ### Vertical Slices (Feature Modules)
 
@@ -133,6 +153,13 @@ packages/<feature>/
 2. Feature modules should NOT import other feature modules directly
 3. Cross-feature communication goes through shared types or events
 4. Next.js app imports feature modules and composes routes
+5. **Desired end-state:** Feature modules should NOT import `server/src/**` directly; server internals must be exposed via horizontal slices (or moved into the owning feature package).
+
+### Temporary Shim Policy (Migration Only)
+During migration we may introduce short-lived shims to keep the build moving (e.g., a local module that re-exports a moved function so many call sites don’t need immediate edits). These are allowed only if:
+- they are explicitly tracked in `features.json` as debt to remove
+- they are not treated as “done” for the underlying migration
+- they are removed once the owning horizontal slice / feature module has the real implementation
 
 ## Migration Strategy
 

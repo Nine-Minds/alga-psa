@@ -1,7 +1,7 @@
 import React from 'react';
 import WorkItemCard from './WorkItemCard';
-import { IExtendedWorkItem, IWorkItem } from 'server/src/interfaces/workItem.interfaces';
-import { StatusOption } from 'server/src/lib/actions/status-actions/statusActions';
+import { IExtendedWorkItem, IWorkItem } from '@alga-psa/types';
+import { StatusOption } from '@alga-psa/reference-data/actions';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Switch } from '@alga-psa/ui/components/Switch';
 import { Input } from '@alga-psa/ui/components/Input';

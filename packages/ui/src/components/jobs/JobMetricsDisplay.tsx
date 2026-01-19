@@ -1,5 +1,5 @@
 import { Card } from '@alga-psa/ui/components/Card';
-import { JobMetrics } from 'server/src/lib/actions/job-actions';
+import { JobMetrics } from '@alga-psa/jobs/actions';
 import { CheckCircle2, XCircle, Clock, ListChecks, Activity } from 'lucide-react';
 
 interface JobMetricsDisplayProps {

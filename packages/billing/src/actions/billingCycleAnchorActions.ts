@@ -2,10 +2,10 @@
 
 import { Knex } from 'knex';
 import { withTransaction } from '@alga-psa/db';
-import { createTenantKnex } from 'server/src/lib/db';
-import { getSession } from 'server/src/lib/auth/getSession';
-import type { BillingCycleType } from 'server/src/interfaces/billing.interfaces';
-import type { ISO8601String } from 'server/src/types/types.d';
+import { createTenantKnex } from '@alga-psa/db';
+import { getSession } from '@alga-psa/auth';
+import type { BillingCycleType } from '@alga-psa/types';
+import type { ISO8601String } from '@alga-psa/types';
 import {
   ensureUtcMidnightIsoDate,
   getAnchorDefaultsForCycle,
@@ -15,7 +15,7 @@ import {
   validateAnchorSettingsForCycle,
   type BillingCycleAnchorSettingsInput,
   type NormalizedBillingCycleAnchorSettings
-} from 'server/src/lib/billing/billingCycleAnchors';
+} from '../lib/billing/billingCycleAnchors';
 
 function isDateObject(val: unknown): val is Date {
   return Object.prototype.toString.call(val) === '[object Date]';

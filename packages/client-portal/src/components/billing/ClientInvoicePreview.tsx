@@ -3,9 +3,9 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { Skeleton } from '@alga-psa/ui/components/Skeleton';
 import { TemplateRenderer, PaperInvoice } from '@alga-psa/billing/components';
-import { getClientInvoiceById, getClientInvoiceTemplates } from 'server/src/lib/actions/client-portal-actions/client-billing';
-import { mapDbInvoiceToWasmViewModel } from 'server/src/lib/adapters/invoiceAdapters';
-import type { WasmInvoiceViewModel } from 'server/src/lib/invoice-renderer/types';
+import { getClientInvoiceById, getClientInvoiceTemplates } from '@alga-psa/client-portal/actions';
+import { mapDbInvoiceToWasmViewModel } from '@alga-psa/billing/lib/adapters/invoiceAdapters';
+import type { WasmInvoiceViewModel } from '@alga-psa/types';
 import type { IInvoiceTemplate } from '@alga-psa/types';
 
 interface ClientInvoicePreviewProps {

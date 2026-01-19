@@ -4,13 +4,13 @@ import React, { useState, useEffect } from 'react';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Plus, MoreVertical } from "lucide-react";
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
-import { getStatuses, deleteStatus, updateStatus } from 'server/src/lib/actions/status-actions/statusActions';
-import { importReferenceData, getAvailableReferenceData, checkImportConflicts, type ImportConflict } from 'server/src/lib/actions/referenceDataActions';
-import { IStatus, IStandardStatus } from 'server/src/interfaces/status.interface';
-import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
+import { getStatuses, deleteStatus, updateStatus } from '@alga-psa/reference-data/actions';
+import { importReferenceData, getAvailableReferenceData, checkImportConflicts, type ImportConflict } from '@alga-psa/reference-data/actions';
+import { IStatus, IStandardStatus } from '@alga-psa/types';
+import { getCurrentUser } from '@alga-psa/users/actions';
 import { Switch } from '@alga-psa/ui/components/Switch';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
-import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
+import { ColumnDefinition } from '@alga-psa/types';
 import { toast } from 'react-hot-toast';
 import {
   DropdownMenu,

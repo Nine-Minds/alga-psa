@@ -1,3 +1,5 @@
+'use client';
+
 import React, { useState, useMemo, useCallback } from 'react';
 import {
   Activity,
@@ -5,10 +7,10 @@ import {
   ActivityPriority,
   ScheduleActivity,
   NotificationActivity
-} from 'server/src/interfaces/activity.interfaces';
+} from '@alga-psa/types';
 import { useActivityDrawer } from './ActivityDrawerProvider';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
-import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
+import { ColumnDefinition } from '@alga-psa/types';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { formatDistanceToNow } from 'date-fns';
 import { ActivityActionMenu } from './ActivityActionMenu';

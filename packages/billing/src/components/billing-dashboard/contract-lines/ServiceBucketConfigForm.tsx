@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { IContractLineServiceBucketConfig } from 'server/src/interfaces/contractLineServiceConfiguration.interfaces';
+import { IContractLineServiceBucketConfig } from '@alga-psa/types';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { Label } from '@alga-psa/ui/components/Label';

@@ -1,21 +1,21 @@
 // server/src/lib/actions/contractLinePresetActions.ts
 'use server'
 import { v4 as uuidv4 } from 'uuid';
-import ContractLinePreset from 'server/src/lib/models/contractLinePreset';
-import ContractLinePresetService from 'server/src/lib/models/contractLinePresetService';
-import ContractLinePresetFixedConfig from 'server/src/lib/models/contractLinePresetFixedConfig';
-import { IContractLinePreset, IContractLinePresetService, IContractLinePresetFixedConfig, IContractLine, IContractLineService, IContractLineFixedConfig } from 'server/src/interfaces/billing.interfaces';
-import { createTenantKnex } from 'server/src/lib/db';
+import ContractLinePreset from '../models/contractLinePreset';
+import ContractLinePresetService from '../models/contractLinePresetService';
+import ContractLinePresetFixedConfig from '../models/contractLinePresetFixedConfig';
+import { IContractLinePreset, IContractLinePresetService, IContractLinePresetFixedConfig, IContractLine, IContractLineService, IContractLineFixedConfig } from '@alga-psa/types';
+import { createTenantKnex } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { withTransaction } from '@alga-psa/db';
-import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
-import { hasPermission } from 'server/src/lib/auth/rbac';
-import { analytics } from 'server/src/lib/analytics/posthog';
-import { AnalyticsEvents } from 'server/src/lib/analytics/events';
-import ContractLine from 'server/src/lib/models/contractLine';
-import ContractLineFixedConfig from 'server/src/lib/models/contractLineFixedConfig';
-import { ContractLineServiceConfigurationService } from 'server/src/lib/services/contractLineServiceConfigurationService';
-import { IContractLineServiceConfiguration } from 'server/src/interfaces/contractLineServiceConfiguration.interfaces';
+import { getCurrentUser } from '@alga-psa/users/actions';
+import { hasPermission } from '@alga-psa/auth';
+import { analytics } from '@alga-psa/analytics';
+import { AnalyticsEvents } from '@alga-psa/analytics';
+import ContractLine from '../models/contractLine';
+import ContractLineFixedConfig from '../models/contractLineFixedConfig';
+import { ContractLineServiceConfigurationService } from '../services/contractLineServiceConfigurationService';
+import { IContractLineServiceConfiguration } from '@alga-psa/types';
 
 export async function getContractLinePresets(): Promise<IContractLinePreset[]> {
     try {

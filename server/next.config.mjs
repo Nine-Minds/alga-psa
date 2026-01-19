@@ -166,6 +166,9 @@ const nextConfig = {
       'mysql2': emptyShim,
       'oracledb': emptyShim,
       'tedious': emptyShim,
+      // Node.js-only modules that shouldn't be bundled for client
+      'node-vault': emptyShim,
+      'postman-request': emptyShim,
       // Optional ffmpeg dependencies
       'ffmpeg-static': emptyShim,
       'ffprobe-static': emptyShim,
@@ -524,6 +527,16 @@ const nextConfig = {
     // These are optional runtime dependencies that may not be installed
     config.externals.push('ffmpeg-static');
     config.externals.push('ffprobe-static');
+
+    // Replace Node.js-only modules with empty shims for client builds
+    // These modules use Node.js built-ins like 'tls', 'net', etc. that don't exist in the browser
+    if (!isServer && webpack) {
+      config.resolve.alias = {
+        ...config.resolve.alias,
+        'node-vault': emptyShim,
+        'postman-request': emptyShim,
+      };
+    }
 
     // Rule to handle .wasm files as assets
     config.module.rules.push({

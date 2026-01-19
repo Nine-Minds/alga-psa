@@ -14,7 +14,7 @@ import { Checkbox } from "@alga-psa/ui/components/Checkbox";
 import { Label } from "@alga-psa/ui/components/Label";
 import { Input } from "@alga-psa/ui/components/Input";
 import { StringDateRangePicker } from "@alga-psa/ui/components/DateRangePicker";
-import { ActivityFilters, ActivityType } from "server/src/interfaces/activity.interfaces";
+import { ActivityFilters, ActivityType } from "@alga-psa/types";
 import { ISO8601String } from '@alga-psa/types';
 import CustomSelect from "@alga-psa/ui/components/CustomSelect";
 

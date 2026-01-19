@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
-import { useTruncationDetection } from 'server/src/hooks/useTruncationDetection';
+import { useTruncationDetection } from '@alga-psa/ui/hooks';
 import { useRouter } from 'next/navigation';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Dialog } from '@alga-psa/ui/components/Dialog';
@@ -40,7 +40,7 @@ import {
   IProjectTemplateTaskAssignment,
   IProjectTemplateChecklistItem,
   IProjectTemplateDependency,
-} from 'server/src/interfaces/projectTemplate.interfaces';
+} from '@alga-psa/types';
 import {
   deleteTemplate,
   updateTemplate,
@@ -57,14 +57,14 @@ import {
   addTemplateDependency,
   removeTemplateDependency,
 } from '../../actions/projectTemplateActions';
-import { DependencyType, IClientPortalConfig, DEFAULT_CLIENT_PORTAL_CONFIG } from 'server/src/interfaces/project.interfaces';
+import { DependencyType, IClientPortalConfig, DEFAULT_CLIENT_PORTAL_CONFIG } from '@alga-psa/types';
 import ClientPortalConfigEditor from '../ClientPortalConfigEditor';
 import { getTenantProjectStatuses } from '../../actions/projectTaskStatusActions';
 import { getTaskTypes } from '../../actions/projectTaskActions';
-import { getAllPriorities } from 'server/src/lib/actions/priorityActions';
-import { getAllUsers } from 'server/src/lib/actions/user-actions/userActions';
-import { ITaskType } from 'server/src/interfaces/project.interfaces';
-import { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
+import { getAllPriorities } from '@alga-psa/reference-data/actions';
+import { getAllUsers } from '@alga-psa/users/actions';
+import { ITaskType } from '@alga-psa/types';
+import { IUserWithRoles } from '@alga-psa/types';
 import { toast } from 'react-hot-toast';
 import { ApplyTemplateDialog } from './ApplyTemplateDialog';
 import { TemplateTaskForm } from './TemplateTaskForm';
@@ -81,7 +81,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@alga-psa/ui/components/DropdownMenu';
-import { getUserAvatarUrlsBatchAction } from 'server/src/lib/actions/avatar-actions';
+import { getUserAvatarUrlsBatchAction } from '@alga-psa/users/actions';
 
 // Task type icons mapping (fallback icons when database doesn't specify)
 const taskTypeIcons: Record<string, React.ComponentType<{ className?: string; style?: React.CSSProperties }>> = {

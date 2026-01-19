@@ -1,6 +1,6 @@
 import type { IUser, IRole, IPermission, IRoleWithPermissions } from '@alga-psa/types';
-import User from 'server/src/lib/models/user';
-import { createTenantKnex } from 'server/src/lib/db';
+import User from '@alga-psa/db/models/user';
+import { createTenantKnex } from '@alga-psa/db';
 import { Knex } from 'knex';
 
 export class Role implements IRole {

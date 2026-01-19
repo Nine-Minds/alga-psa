@@ -15,8 +15,8 @@ import {
   ITimePeriodView, 
   TimeSheetStatus, 
   ITimeEntryWithWorkItemString 
-} from 'server/src/interfaces/timeEntry.interfaces';
-import { IExtendedWorkItem } from 'server/src/interfaces/workItem.interfaces';
+} from '@alga-psa/types';
+import { IExtendedWorkItem } from '@alga-psa/types';
 import { TimeEntryProvider, useTimeEntry } from './TimeEntryProvider';
 import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContainer';
 import TimeEntrySkeletons from './TimeEntrySkeletons';

@@ -1,9 +1,9 @@
 'use client';
 
 import React from 'react';
-import { cn } from 'server/src/lib/utils';
+import { cn } from '@alga-psa/ui';
 import { Clock, ArrowRightFromLine, ArrowLeftToLine } from 'lucide-react';
-import { TicketResponseState } from 'server/src/interfaces/ticket.interfaces';
+import { TicketResponseState } from '@alga-psa/types';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 
 export interface ResponseStateLabels {

@@ -6,7 +6,7 @@ import { Input } from '@alga-psa/ui/components/Input';
 import { Label } from '@alga-psa/ui/components/Label';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Eye, EyeOff } from 'lucide-react';
-import { changeOwnPassword, checkPasswordResetStatus } from 'server/src/lib/actions/user-actions/userActions';
+import { changeOwnPassword, checkPasswordResetStatus } from '@alga-psa/users/actions';
 import { PasswordResetWarning } from '@alga-psa/ui/components/PasswordResetWarning';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 

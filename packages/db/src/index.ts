@@ -31,6 +31,14 @@ export {
   setTenantContext,
   resetTenantConnectionPool
 } from './lib/tenant';
+export { resolveTenantId, requireTenantId } from './lib/tenantId';
+
+// Audit logging
+export { auditLog } from './lib/auditLog';
+export * from './lib/workDate';
+
+// DB models (tenant-scoped data access patterns)
+export * from './models';
 
 // Connection Management
 export {

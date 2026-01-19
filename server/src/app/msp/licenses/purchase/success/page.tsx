@@ -7,7 +7,7 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { CheckCircle, ArrowRight, Loader2, Calendar, Users } from 'lucide-react';
 import Link from 'next/link';
-import { getLicenseUsageAction } from 'server/src/lib/actions/license-actions';
+import { getLicenseUsageAction } from '@alga-psa/licensing/actions';
 import { getSubscriptionInfoAction } from '@/empty/lib/actions/license-actions';
 import type { IGetSubscriptionInfoResponse } from '@alga-psa/types';
 

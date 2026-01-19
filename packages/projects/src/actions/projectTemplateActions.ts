@@ -15,8 +15,8 @@ import type {
 } from '@alga-psa/types';
 import { DEFAULT_CLIENT_PORTAL_CONFIG } from '@alga-psa/types';
 import { addDays } from 'date-fns';
-import { publishEvent } from 'server/src/lib/eventBus/publishers';
-import ProjectModel from 'server/src/lib/models/project';
+import { publishEvent } from '@alga-psa/event-bus/publishers';
+import ProjectModel from '@alga-psa/projects/models/project';
 import { SharedNumberingService } from '@shared/services/numberingService';
 import { getProjectStatuses } from './projectActions';
 import type { IUser } from '@alga-psa/types';
@@ -25,7 +25,7 @@ import {
   createTemplateSchema,
   updateTemplateSchema,
   applyTemplateSchema
-} from 'server/src/lib/schemas/projectTemplate.schemas';
+} from '../schemas/projectTemplate.schemas';
 import { OrderingService } from '../lib/orderingService';
 import { generateKeyBetween } from 'fractional-indexing';
 
@@ -374,12 +374,12 @@ export async function applyTemplate(
       'PROJECT',
       { knex: trx, tenant: tenant! }
     );
-    const wbsCode = await ProjectModel.generateNextWbsCode(trx, '');
+    const wbsCode = await ProjectModel.generateNextWbsCode(trx, tenant, '');
 
     console.log(`[applyTemplate] Creating project "${validatedData.project_name}" with number ${projectNumber}`);
 
     // Create the project record
-    const newProject = await ProjectModel.create(trx, {
+    const newProject = await ProjectModel.create(trx, tenant, {
       project_name: validatedData.project_name,
       client_id: validatedData.client_id,
       assigned_to: validatedData.assigned_to ? String(validatedData.assigned_to) : null,
@@ -965,7 +965,7 @@ export async function updateTemplate(
     template_name?: string;
     description?: string;
     category?: string;
-    client_portal_config?: import('server/src/interfaces/project.interfaces').IClientPortalConfig;
+    client_portal_config?: import('@alga-psa/types').IClientPortalConfig;
   }
 ): Promise<IProjectTemplate> {
   const currentUser = await getCurrentUser();

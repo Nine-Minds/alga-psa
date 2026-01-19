@@ -137,3 +137,5 @@ export * from './notifications';
 export * from './tags';
 export * from './dashboard';
 export * from './common';
+export * from './tickets/ResponseStateBadge';
+export { default as ResponseStateBadge } from './tickets/ResponseStateBadge';

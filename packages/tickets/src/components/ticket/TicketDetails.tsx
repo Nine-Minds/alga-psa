@@ -3,7 +3,7 @@
 import React, { useEffect, useState, useCallback, useMemo, Suspense } from 'react';
 import { useRouter } from 'next/navigation';
 import { formatDistanceToNow } from 'date-fns';
-import { utcToLocal, formatDateTime, getUserTimeZone } from 'server/src/lib/utils/dateTimeUtils';
+import { utcToLocal, formatDateTime, getUserTimeZone } from '@alga-psa/core';
 import { getTicketingDisplaySettings } from '../../actions/ticketDisplaySettings';
 import { ConfirmationDialog } from "@alga-psa/ui/components/ConfirmationDialog";
 import {
@@ -21,11 +21,11 @@ import {
     ITeam,
     ITicketResource,
     ITicketCategory
-} from "server/src/interfaces";
-import { ITag } from "server/src/interfaces/tag.interfaces";
+} from "@alga-psa/types";
+import { ITag } from "@alga-psa/types";
 import { TagManager } from "@alga-psa/ui/components";
-import { findTagsByEntityId } from "server/src/lib/actions/tagActions";
-import { useTags } from "server/src/context/TagContext";
+import { findTagsByEntityId } from "@alga-psa/tags/actions";
+import { useTags } from "@alga-psa/ui";
 import TicketInfo from "./TicketInfo";
 import TicketProperties from "./TicketProperties";
 import TicketDocumentsSection from "./TicketDocumentsSection";
@@ -33,36 +33,36 @@ import TicketConversation from "./TicketConversation";
 import AssociatedAssets from "@alga-psa/assets/components/AssociatedAssets";
 import { useSession } from 'next-auth/react';
 import { toast } from 'react-hot-toast';
-import { useDrawer } from "server/src/context/DrawerContext";
-import { findUserById, getCurrentUser } from "server/src/lib/actions/user-actions/userActions";
-import { findBoardById, getAllBoards } from "server/src/lib/actions/board-actions/boardActions";
-import { findCommentsByTicketId, deleteComment, createComment, updateComment, findCommentById } from "server/src/lib/actions/comment-actions/commentActions";
+import { useDrawer } from "@alga-psa/ui";
+import { findUserById, getCurrentUser } from "@alga-psa/users/actions";
+import { findBoardById, getAllBoards } from "@alga-psa/tickets/actions";
+import { findCommentsByTicketId, deleteComment, createComment, updateComment, findCommentById } from "@alga-psa/tickets/actions";
 import { getDocumentByTicketId } from "@alga-psa/documents/actions/documentActions";
-import { getContactByContactNameId, getContactsByClient } from "server/src/lib/actions/contact-actions/contactActions";
+import { getContactByContactNameId, getContactsByClient } from "@alga-psa/clients/actions";
 import { getClientById, getAllClients } from "@alga-psa/clients/actions";
 import { updateTicketWithCache } from "../../actions/optimizedTicketActions";
 import { updateTicket } from "../../actions/ticketActions";
-import { getTicketStatuses } from "server/src/lib/actions/status-actions/statusActions";
-import { getAllPriorities } from "server/src/lib/actions/priorityActions";
+import { getTicketStatuses } from "@alga-psa/reference-data/actions";
+import { getAllPriorities } from "@alga-psa/reference-data/actions";
 import { fetchTimeSheets, fetchOrCreateTimeSheet, saveTimeEntry } from "@alga-psa/scheduling/actions/timeEntryActions";
 import { getCurrentTimePeriod } from "@alga-psa/scheduling/actions/timePeriodsActions";
 import ContactDetailsView from '@alga-psa/clients/components/contacts/ContactDetailsView';
 import ClientDetails from '@alga-psa/clients/components/clients/ClientDetails';
-import { addTicketResource, getTicketResources, removeTicketResource } from "server/src/lib/actions/ticketResourceActions";
+import { addTicketResource, getTicketResources, removeTicketResource } from "@alga-psa/tickets/actions";
 import AgentScheduleDrawer from "./AgentScheduleDrawer";
 import { Button } from "@alga-psa/ui/components/Button";
 import { Input } from "@alga-psa/ui/components/Input";
 import { ExternalLink } from 'lucide-react';
-import { WorkItemType } from "server/src/interfaces/workItem.interfaces";
+import { WorkItemType } from "@alga-psa/types";
 import { ReflectionContainer } from "@alga-psa/ui/ui-reflection/ReflectionContainer";
 import TimeEntryDialog from "@alga-psa/scheduling/components/time-management/time-entry/time-sheet/TimeEntryDialog";
 import { PartialBlock, StyledText } from '@blocknote/core';
-import { useTicketTimeTracking } from "server/src/hooks/useTicketTimeTracking";
-import { IntervalTrackingService } from "server/src/services/IntervalTrackingService";
+import { useTicketTimeTracking } from "@alga-psa/ui/hooks";
+import { IntervalTrackingService } from "@alga-psa/ui/services";
 import { IntervalManagement } from "@alga-psa/scheduling/components/time-management/interval-tracking/IntervalManagement";
-import { convertBlockNoteToMarkdown } from "server/src/lib/utils/blocknoteUtils";
+import { convertBlockNoteToMarkdown } from "@alga-psa/documents/lib/blocknoteUtils";
 import BackNav from '@alga-psa/ui/components/BackNav';
-import type { SurveyTicketSatisfactionSummary } from 'server/src/interfaces/survey.interface';
+import type { SurveyTicketSatisfactionSummary } from '@alga-psa/types';
 import {
     addChildrenToBundleAction,
     findTicketByNumberAction,

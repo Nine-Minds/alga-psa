@@ -17,7 +17,7 @@ const runner = {
   scheduleJob: vi.fn(async () => ({ jobId: uuidv4() })),
 };
 
-vi.mock('@/lib/actions/user-actions/userActions', () => ({
+vi.mock('@alga-psa/users/actions', () => ({
   // Some EE code imports `getCurrentUser` via `server/src/...`.
   // This mock is kept for any EE-local imports that still use `@/lib/...`.
   getCurrentUser: vi.fn(async () => ({ id: 'user-1', user_type: 'internal' })),
@@ -27,7 +27,7 @@ vi.mock('server/src/lib/actions/user-actions/userActions', () => ({
   getCurrentUser: vi.fn(async () => ({ id: 'user-1', user_type: 'internal' })),
 }));
 
-vi.mock('@/lib/auth/rbac', () => ({
+vi.mock('@alga-psa/auth', () => ({
   hasPermission: vi.fn(async () => true),
 }));
 
@@ -820,7 +820,7 @@ describe('Extension schedules (actions) – DB integration', () => {
 
   it('Security: schedule CRUD rejects user without extension permission', async () => {
     const { hasPermission: hasPermissionCore } = await import('server/src/lib/auth/rbac');
-    const { hasPermission: hasPermissionEe } = await import('@/lib/auth/rbac');
+    const { hasPermission: hasPermissionEe } = await import('@alga-psa/auth');
 
     const core = hasPermissionCore as any;
     const ee = hasPermissionEe as any;

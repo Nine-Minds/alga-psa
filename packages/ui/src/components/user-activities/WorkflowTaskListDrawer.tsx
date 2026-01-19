@@ -1,11 +1,13 @@
+'use client';
+
 import React, { useState, useEffect } from 'react';
 import {
   WorkflowTaskActivity,
   ActivityPriority,
   ActivityFilters,
   Activity
-} from 'server/src/interfaces/activity.interfaces';
-import { fetchWorkflowTaskActivities } from 'server/src/lib/actions/activity-actions/activityServerActions';
+} from '@alga-psa/types';
+import { fetchWorkflowTaskActivities } from '@alga-psa/workflows/actions';
 import { ActivitiesDataTable } from './ActivitiesDataTable';
 import { ActivitiesTableFilters } from './filters/ActivitiesTableFilters';
 import { Button } from '@alga-psa/ui/components/Button';

@@ -7,7 +7,7 @@ import {
   getClientContractLine,
   getClientInvoices,
   getCurrentUsage
-} from 'server/src/lib/actions/client-portal-actions/client-billing';
+} from '@alga-psa/client-portal/actions';
 import {
   getClientHoursByService,
   getClientBucketUsage,
@@ -16,15 +16,15 @@ import {
   ClientHoursByServiceResult,
   ClientBucketUsageResult,
   ClientUsageMetricResult
-} from 'server/src/lib/actions/client-portal-actions/client-billing-metrics';
+} from '@alga-psa/client-portal/actions';
 import { format, subDays } from 'date-fns';
 import {
   IClientContractLine,
   IBucketUsage,
   IService
-} from 'server/src/interfaces/billing.interfaces';
+} from '@alga-psa/types';
 import { getInvoiceForRendering } from '@alga-psa/billing/actions/invoiceQueries';
-import type { InvoiceViewModel } from 'server/src/interfaces/invoice.interfaces';
+import type { InvoiceViewModel } from '@alga-psa/types';
 import dynamic from 'next/dynamic';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 

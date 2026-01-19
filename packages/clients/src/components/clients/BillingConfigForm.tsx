@@ -1,16 +1,16 @@
 import { Text } from '@radix-ui/themes';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Input } from '@alga-psa/ui/components/Input';
-import { getInvoiceTemplates, getDefaultTemplate } from 'server/src/lib/actions/invoiceTemplates';
-import { getActiveTaxRegions } from 'server/src/lib/actions/taxSettingsActions'; // Added
-import { IInvoiceTemplate } from 'server/src/interfaces/invoice.interfaces';
-import { IContact } from 'server/src/interfaces/contact.interfaces';
-import { ITaxRegion } from 'server/src/interfaces/tax.interfaces'; // Added
+import { getInvoiceTemplates, getDefaultTemplate } from '@alga-psa/billing/actions';
+import { getActiveTaxRegions } from '@alga-psa/billing/actions'; // Added
+import { IInvoiceTemplate } from '@alga-psa/types';
+import { IContact } from '@alga-psa/types';
+import { ITaxRegion } from '@alga-psa/types'; // Added
 import { FileTextIcon } from 'lucide-react';
 import { GearIcon } from '@radix-ui/react-icons';
 import { useEffect, useState } from 'react';
 import { ContactPicker } from '@alga-psa/ui/components/ContactPicker';
-import { CURRENCY_OPTIONS } from 'server/src/constants/currency';
+import { CURRENCY_OPTIONS } from '@alga-psa/core';
 
 interface BillingConfigFormProps {
     billingConfig: {

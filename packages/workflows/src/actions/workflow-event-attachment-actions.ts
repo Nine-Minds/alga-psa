@@ -1,16 +1,16 @@
 'use server';
 
 import { createTenantKnex } from '@alga-psa/db';
-import { WorkflowEventAttachmentModel } from 'server/src/models/workflowEventAttachment';
-import { EventCatalogModel } from 'server/src/models/eventCatalog';
+import { WorkflowEventAttachmentModel } from '@alga-psa/workflows/models/workflowEventAttachment';
+import { EventCatalogModel } from '@alga-psa/workflows/models/eventCatalog';
 import {
   IWorkflowEventAttachment,
   ICreateWorkflowEventAttachment, // Will need update in shared types
   IUpdateWorkflowEventAttachment
 } from '@alga-psa/shared/workflow/types/eventCatalog';
 import { getWorkflowRegistration, startWorkflowFromEvent } from './workflow-runtime-actions';
-import { getEventBus } from 'server/src/lib/eventBus';
-// import { WorkflowTriggerModel } from 'server/src/models/workflowTrigger'; // Trigger logic might need review later
+import { getEventBus } from '@alga-psa/event-bus';
+// import { WorkflowTriggerModel } from '@alga-psa/workflows/models/workflowTrigger'; // Trigger logic might need review later
 import { getWorkflowRuntime } from '@alga-psa/shared/workflow/core';
 
 /**

@@ -23,7 +23,7 @@ import { AccountingExportValidation } from '../validation/accountingExportValida
 import { publishEvent } from '../eventBus/publishers';
 import { AppError } from '../errors';
 import { getExternalTaxImportService } from './externalTaxImportService';
-import { getXeroCsvSettings } from '../actions/integrations/xeroCsvActions';
+import { getXeroCsvSettings } from '@alga-psa/integrations/actions/integrations/xeroCsvActions';
 import logger from '@alga-psa/core/logger';
 
 export interface CreateExportBatchOptions extends CreateExportBatchInput {}

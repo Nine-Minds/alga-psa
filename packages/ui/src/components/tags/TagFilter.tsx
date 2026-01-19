@@ -1,104 +1,75 @@
+"use client";
+
 import React, { useState, useSyncExternalStore } from 'react';
 import { Tag as TagIcon } from 'lucide-react';
 import { Input } from '@alga-psa/ui/components/Input';
 import * as Popover from '@radix-ui/react-popover';
 import { TagGrid } from './TagGrid';
-import { filterTagsByText } from 'server/src/utils/colorUtils';
-import { ITag } from 'server/src/interfaces/tag.interfaces';
+import { filterTagsByText } from '../../lib/utils';
+import { ITag } from '@alga-psa/types';
 import Spinner from '@alga-psa/ui/components/Spinner';
 
-// Hook to detect if we're on the client (after hydration)
-const emptySubscribe = () => () => {};
-function useIsClient() {
-  return useSyncExternalStore(
-    emptySubscribe,
-    () => true,
-    () => false
-  );
-}
-
 interface TagFilterProps {
-  allTags: string[] | ITag[];
+  tags: ITag[];
   selectedTags: string[];
-  onTagSelect: (tag: string) => void;
-  className?: string;
-  onClear?: () => void;
+  onToggleTag: (tagText: string) => void;
+  onClearTags: () => void;
+  placeholder?: string;
 }
 
-export const TagFilter: React.FC<TagFilterProps> = ({
-  allTags,
+export function TagFilter({
+  tags,
   selectedTags,
-  onTagSelect,
-  className = '',
-  onClear
-}) => {
-  const isClient = useIsClient();
-  const [searchTerm, setSearchTerm] = useState('');
+  onToggleTag,
+  onClearTags,
+  placeholder = 'Filter by tags...',
+}: TagFilterProps) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
 
-  // Handle both string[] and ITag[] formats
-  const tagTexts = allTags.map(tag => typeof tag === 'string' ? tag : tag.tag_text);
-  const filteredTagTexts = filterTagsByText(tagTexts, searchTerm);
-
-  // If we have ITag objects, filter them based on the filtered texts
-  const filteredTags = typeof allTags[0] === 'string'
-    ? filteredTagTexts
-    : allTags.filter(tag => filteredTagTexts.includes((tag as ITag).tag_text)) as ITag[];
-
-  // Render a loading state during SSR to avoid hydration mismatch
-  // caused by Radix UI's useId() generating different IDs on server vs client
-  if (!isClient) {
-    return (
-      <div className={`flex items-center justify-center bg-white border border-gray-300 rounded-md p-2 min-w-[120px] ${className}`}>
-        <Spinner size="xs" />
-      </div>
-    );
-  }
+  const filteredTags = filterTagsByText(tags, searchQuery);
 
   return (
-    <Popover.Root>
+    <Popover.Root open={isOpen} onOpenChange={setIsOpen}>
       <Popover.Trigger asChild>
-        <button className={`flex items-center gap-2 bg-white border border-gray-300 rounded-md p-2 hover:bg-gray-50 ${className}`}>
-          <TagIcon size={16} className="text-gray-400" />
-          <span className="text-gray-400">Tags Filter</span>
-          {selectedTags.length > 0 && (
-            <span className="bg-blue-100 text-blue-800 text-xs font-semibold px-2 py-0.5 rounded-full">
-              {selectedTags.length}
-            </span>
-          )}
-        </button>
+        <Button variant="outline" className="h-9 gap-2">
+          <TagIcon className="h-4 w-4" />
+          <span>{selectedTags.length > 0 ? `${selectedTags.length} selected` : 'Filter'}</span>
+        </Button>
       </Popover.Trigger>
       <Popover.Portal>
-      <Popover.Content className="bg-white rounded-lg shadow-lg border border-gray-200 w-72" style={{ backgroundColor: 'white', zIndex: 9999 }}>
-          <div className="p-2 bg-white">
-            <div className="flex items-center gap-2 mb-2">
-              <Input
-                type="text"
-                placeholder="Search tags"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="flex-1"
-              />
-              {onClear && selectedTags.length > 0 && (
-                <button
-                  type="button"
-                  className="text-xs text-blue-600 hover:underline whitespace-nowrap"
-                  onClick={() => {
-                    onClear();
-                    setSearchTerm('');
-                  }}
-                >
-                  Clear
-                </button>
-              )}
-            </div>
-            <TagGrid
-              tags={filteredTags}
-              selectedTags={selectedTags}
-              onTagSelect={onTagSelect}
+        <Popover.Content
+          className="w-[300px] p-4 bg-white rounded-lg shadow-lg border border-gray-200 z-50"
+          sideOffset={5}
+        >
+          <div className="space-y-4">
+            <Input
+              placeholder={placeholder}
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              autoFocus
             />
+            <div className="max-h-[200px] overflow-y-auto">
+              <TagGrid
+                tags={filteredTags}
+                selectedTags={selectedTags}
+                onToggleTag={onToggleTag}
+              />
+            </div>
+            {selectedTags.length > 0 && (
+              <div className="pt-2 border-t flex justify-end">
+                <Button variant="ghost" size="sm" onClick={onClearTags}>
+                  Clear all
+                </Button>
+              </div>
+            )}
           </div>
         </Popover.Content>
       </Popover.Portal>
     </Popover.Root>
   );
-};
+}
+
+const Button = React.forwardRef<HTMLButtonElement, React.ComponentProps<typeof Button>>(({ className, ...props }, ref) => {
+  return <button ref={ref} className={className} {...props} />;
+});

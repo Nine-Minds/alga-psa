@@ -1,5 +1,5 @@
-import { getCurrentUser } from "server/src/lib/actions/user-actions/userActions";
-import { getTeams } from 'server/src/lib/actions/team-actions/teamActions';
+import { getCurrentUser } from "@alga-psa/users/actions";
+import { getTeams } from '@alga-psa/teams/actions';
 import TimeTrackingClient from '@alga-psa/scheduling/components/time-management/time-entry/TimeTrackingClient';
 
 export default async function TimeTrackingPage() {

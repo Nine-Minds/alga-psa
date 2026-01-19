@@ -13,7 +13,7 @@ import { IEventCatalogEntry, ICreateWorkflowEventAttachment, ICreateWorkflowTrig
 import { createWorkflowTrigger, createWorkflowEventMappings } from "@alga-psa/workflows/actions/workflow-trigger-actions";
 import { createWorkflowEventAttachment } from "@alga-psa/workflows/actions/workflow-event-attachment-actions";
 import { getAllWorkflowRegistrations } from "@alga-psa/workflows/actions/workflow-runtime-actions";
-import { getCurrentTenant } from "server/src/lib/actions/tenantActions";
+import { getCurrentTenant } from "@alga-psa/tenancy/actions";
 
 interface EventTriggerDialogProps {
   isOpen: boolean;

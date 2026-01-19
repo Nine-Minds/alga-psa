@@ -5,7 +5,7 @@ import Link from 'next/link';
 import toast from 'react-hot-toast';
 import { usePostHog } from 'posthog-js/react';
 import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContainer';
-import { usePerformanceTracking } from 'server/src/lib/analytics/client';
+import { usePerformanceTracking } from '@alga-psa/analytics/client';
 import {
   Ticket,
   BarChart3,

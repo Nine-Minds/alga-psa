@@ -12,7 +12,7 @@ import {
 } from '@alga-psa/billing/actions/taxSettingsActions';
 import { canClientOverrideTaxSource, getEffectiveTaxSourceForClient } from '@alga-psa/billing/actions/taxSourceActions';
 import type { TaxSource } from '@alga-psa/types';
-import { IClientTaxSettings, ITaxRate, ITaxComponent, ITaxRateThreshold, ITaxHoliday } from 'server/src/interfaces/tax.interfaces';
+import { IClientTaxSettings, ITaxRate, ITaxComponent, ITaxRateThreshold, ITaxHoliday } from '@alga-psa/types';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';

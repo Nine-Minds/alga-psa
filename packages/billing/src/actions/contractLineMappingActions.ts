@@ -1,11 +1,11 @@
 // server/src/lib/actions/contractLineMappingActions.ts
 'use server'
 
-import ContractLineMapping from 'server/src/lib/models/contractLineMapping';
-import { IContractLineMapping } from 'server/src/interfaces/contract.interfaces';
-import { createTenantKnex } from 'server/src/lib/db';
-import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
-import { hasPermission } from 'server/src/lib/auth/rbac';
+import ContractLineMapping from '../models/contractLineMapping';
+import { IContractLineMapping } from '@alga-psa/types';
+import { createTenantKnex } from '@alga-psa/db';
+import { getCurrentUser } from '@alga-psa/users/actions';
+import { hasPermission } from '@alga-psa/auth';
 import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 

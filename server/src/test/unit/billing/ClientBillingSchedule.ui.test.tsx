@@ -61,20 +61,20 @@ const mockPreviewBillingPeriodsForSchedule = vi.fn(async () => ([
   { periodStartDate: '2026-03-01T00:00:00Z', periodEndDate: '2026-04-01T00:00:00Z' },
 ]));
 
-vi.mock('server/src/lib/actions/billingCycleAnchorActions', () => ({
+vi.mock('@alga-psa/billing/actions', () => ({
   getClientBillingCycleAnchor: (...args: any[]) => mockGetClientBillingCycleAnchor(...args),
   previewBillingPeriodsForSchedule: (...args: any[]) => mockPreviewBillingPeriodsForSchedule(...args),
 }));
 
 const mockUpdateClientBillingSchedule = vi.fn(async () => ({ success: true }));
 
-vi.mock('server/src/lib/actions/billingScheduleActions', () => ({
+vi.mock('@alga-psa/billing/actions', () => ({
   updateClientBillingSchedule: (...args: any[]) => mockUpdateClientBillingSchedule(...args),
 }));
 
 const mockCreateNextBillingCycle = vi.fn(async () => ({ success: true }));
 
-vi.mock('server/src/lib/actions/billingCycleActions', () => ({
+vi.mock('@alga-psa/billing/actions', () => ({
   createNextBillingCycle: (...args: any[]) => mockCreateNextBillingCycle(...args),
 }));
 

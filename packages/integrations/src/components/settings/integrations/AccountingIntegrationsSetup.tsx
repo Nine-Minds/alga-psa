@@ -6,7 +6,7 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import CSVIntegrationSettings from './CSVIntegrationSettings';
 import XeroCsvIntegrationSettings from './XeroCsvIntegrationSettings';
-import { cn } from 'server/src/lib/utils';
+import { cn } from '@alga-psa/ui/lib/utils';
 
 type AccountingIntegrationId = 'quickbooks_online' | 'xero' | 'quickbooks_csv' | 'xero_csv';
 

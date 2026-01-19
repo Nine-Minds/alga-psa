@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Copy, Check } from 'lucide-react';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
-import { cn } from 'server/src/lib/utils';
+import { cn } from '@alga-psa/ui';
 
 interface CopyableFieldProps {
   label: string;

@@ -6,13 +6,13 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { HelpCircle } from 'lucide-react';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { addTicket } from '../actions/ticketActions';
-import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
-import { getContactsByClient } from 'server/src/lib/actions/contact-actions/contactActions';
+import { getCurrentUser } from '@alga-psa/users/actions';
+import { getContactsByClient } from '@alga-psa/clients/actions';
 import { getClientLocations } from '@alga-psa/clients/actions';
 import { getTicketFormData } from '../actions/ticketFormActions';
-import { getTicketCategoriesByBoard, BoardCategoryData } from 'server/src/lib/actions/ticketCategoryActions';
-import { IUser, IBoard, ITicketStatus, IPriority, IStandardPriority, IClient, IClientLocation, IContact, ITicket, ITicketCategory } from 'server/src/interfaces';
-import { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
+import { getTicketCategoriesByBoard, BoardCategoryData } from '@alga-psa/tickets/actions';
+import { IUser, IBoard, ITicketStatus, IPriority, IStandardPriority, IClient, IClientLocation, IContact, ITicket, ITicketCategory } from '@alga-psa/types';
+import { IUserWithRoles } from '@alga-psa/types';
 import { BoardPicker } from '@alga-psa/ui/components/settings/general/BoardPicker';
 import { ClientPicker } from '@alga-psa/clients/components/clients/ClientPicker';
 import { CategoryPicker } from './CategoryPicker';
@@ -27,11 +27,11 @@ import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContai
 import { DialogComponent, FormFieldComponent, ButtonComponent, ContainerComponent } from '@alga-psa/ui/ui-reflection/types';
 import { withDataAutomationId } from '@alga-psa/ui/ui-reflection/withDataAutomationId';
 import { useRegisterUIComponent } from '@alga-psa/ui/ui-reflection/useRegisterUIComponent';
-import { calculateItilPriority, ItilLabels } from 'server/src/lib/utils/itilUtils';
+import { calculateItilPriority, ItilLabels } from '@alga-psa/tickets/lib/itilUtils';
 import { QuickAddTagPicker, type PendingTag } from '@alga-psa/ui/components';
 import { DatePicker } from '@alga-psa/ui/components/DatePicker';
 import { TimePicker } from '@alga-psa/ui/components/TimePicker';
-import { createTagsForEntity } from 'server/src/lib/actions/tagActions';
+import { createTagsForEntity } from '@alga-psa/tags/actions';
 
 // Helper function to format location display
 const formatLocationDisplay = (location: IClientLocation): string => {

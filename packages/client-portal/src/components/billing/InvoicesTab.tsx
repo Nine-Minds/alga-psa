@@ -2,8 +2,8 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
-import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
-import type { InvoiceViewModel } from 'server/src/interfaces/invoice.interfaces';
+import { ColumnDefinition } from '@alga-psa/types';
+import type { InvoiceViewModel } from '@alga-psa/types';
 import { Skeleton } from '@alga-psa/ui/components/Skeleton';
 import { Button } from '@alga-psa/ui/components/Button';
 import { MoreVertical, Download, Eye, Mail, CreditCard, X } from 'lucide-react';
@@ -11,7 +11,7 @@ import {
   getClientInvoices,
   downloadClientInvoicePdf,
   sendClientInvoiceEmail,
-} from 'server/src/lib/actions/client-portal-actions/client-billing';
+} from '@alga-psa/client-portal/actions';
 import ClientInvoicePreview from './ClientInvoicePreview';
 import {
   DropdownMenu,

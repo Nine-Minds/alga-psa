@@ -3,7 +3,7 @@
 import React, { useMemo } from 'react';
 import { Button } from '@alga-psa/ui/components/Button';
 import { CalendarDays, Layers, Layers2, XCircle } from 'lucide-react';
-import { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
+import { IUserWithRoles } from '@alga-psa/types';
 
 interface TechnicianSidebarProps {
   technicians: IUserWithRoles[];

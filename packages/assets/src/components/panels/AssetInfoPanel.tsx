@@ -4,10 +4,10 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import { ExternalLink, Copy, Check } from 'lucide-react';
 import type { Asset } from '@alga-psa/types';
-import { formatDateOnly } from 'server/src/lib/utils/dateTimeUtils';
+import { formatDateOnly } from '@alga-psa/core';
 import Link from 'next/link';
-import { cn } from 'server/src/lib/utils';
-import { useDrawer } from 'server/src/context/DrawerContext';
+import { cn } from '@alga-psa/ui';
+import { useDrawer } from '@alga-psa/ui';
 import { ClientQuickView } from '@alga-psa/clients/components/clients/ClientQuickView';
 
 interface AssetInfoPanelProps {

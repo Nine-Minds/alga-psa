@@ -1,7 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { getTenantBrandingAction, type TenantBranding } from 'server/src/lib/actions/tenant-actions/tenantBrandingActions';
+import { getTenantBrandingAction, type TenantBranding } from '@alga-psa/tenancy/actions';
 
 interface BrandingContextType {
   branding: TenantBranding | null;

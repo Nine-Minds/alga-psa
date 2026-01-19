@@ -1,12 +1,12 @@
 'use client';
 
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { ITicketListItem, ITicketCategory, ITicketListFilters } from 'server/src/interfaces/ticket.interfaces';
-import { IBoard, IUser } from 'server/src/interfaces';
+import { ITicketListItem, ITicketCategory, ITicketListFilters } from '@alga-psa/types';
+import { IBoard, IUser } from '@alga-psa/types';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
-import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
+import { getCurrentUser } from '@alga-psa/users/actions';
 import { BoardPicker } from '@alga-psa/ui/components/settings/general/BoardPicker';
 import CategoryPicker from '@alga-psa/tickets/components/CategoryPicker';
 import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect';
@@ -14,16 +14,16 @@ import { getTicketsForListWithCursor } from '@alga-psa/tickets/actions/optimized
 import { deleteTicket } from '@alga-psa/tickets/actions/ticketActions';
 import { XCircle } from 'lucide-react';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
-import { useDrawer } from "server/src/context/DrawerContext";
+import { useDrawer } from "@alga-psa/ui";
 import TicketDetails from '@alga-psa/tickets/components/ticket/TicketDetails';
 import { getConsolidatedTicketData } from '@alga-psa/tickets/actions/optimizedTicketActions';
 import { toast } from 'react-hot-toast';
 import { QuickAddTicket } from '@alga-psa/tickets/components/QuickAddTicket';
-import { createTicketColumns } from 'server/src/lib/utils/ticket-columns';
+import { createTicketColumns } from '@alga-psa/ui/lib/ticket-columns';
 import { getTicketingDisplaySettings, type TicketingDisplaySettings } from '@alga-psa/tickets/actions/ticketDisplaySettings';
-import { ITag } from 'server/src/interfaces/tag.interfaces';
-import { findTagsByEntityIds } from 'server/src/lib/actions/tagActions';
-import { useTagPermissions } from 'server/src/hooks/useTagPermissions';
+import { ITag } from '@alga-psa/types';
+import { findTagsByEntityIds } from '@alga-psa/tags/actions';
+import { useTagPermissions } from '@alga-psa/ui';
 import { TagFilter } from '@alga-psa/ui/components';
 
 interface ClientTicketsProps {

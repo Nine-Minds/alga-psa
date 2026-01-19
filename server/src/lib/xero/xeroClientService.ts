@@ -1,6 +1,6 @@
 import axios, { AxiosError, AxiosRequestConfig } from 'axios';
 import logger from '@alga-psa/core/logger';
-import { getSecretProviderInstance, type ISecretProvider } from '@alga-psa/core';
+import { getSecretProviderInstance, type ISecretProvider } from '@alga-psa/core/secrets';
 import { AppError } from '../errors';
 import {
   ExternalCompanyRecord,

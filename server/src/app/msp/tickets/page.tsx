@@ -1,5 +1,5 @@
 import { getConsolidatedTicketListData } from '@alga-psa/tickets/actions/optimizedTicketActions';
-import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
+import { getCurrentUser } from '@alga-psa/users/actions';
 import { getTicketingDisplaySettings } from '@alga-psa/tickets/actions/ticketDisplaySettings';
 import TicketingDashboardContainer from '@alga-psa/tickets/components/TicketingDashboardContainer';
 import type { ITicketListFilters } from '@alga-psa/types';

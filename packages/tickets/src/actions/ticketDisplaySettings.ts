@@ -1,8 +1,8 @@
 'use server'
 
-import { getTenantSettings, updateTenantSettings } from 'server/src/lib/actions/tenant-settings-actions/tenantSettingsActions';
-import { createTenantKnex } from 'server/src/lib/db';
-import { getTenantForCurrentRequest } from 'server/src/lib/tenant';
+import { getTenantSettings, updateTenantSettings } from '@alga-psa/tenancy/actions';
+import { createTenantKnex } from '@alga-psa/db';
+import { getTenantForCurrentRequest } from '@alga-psa/tenancy/server';
 import { getCurrentUser } from '@alga-psa/auth/getCurrentUser';
 import { hasPermission } from '@alga-psa/auth/rbac';
 

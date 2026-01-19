@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { getEligibleContractLinesForUI } from 'server/src/lib/utils/contractLineDisambiguation';
+import { getEligibleContractLinesForUI } from '@alga-psa/billing/lib/contractLineDisambiguation';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Card, CardContent, CardHeader } from '@alga-psa/ui/components/Card';
 import { Dialog, DialogContent, DialogFooter } from '@alga-psa/ui/components/Dialog';
@@ -10,18 +10,18 @@ import { DatePicker } from '@alga-psa/ui/components/DatePicker';
 import { Label } from '@alga-psa/ui/components/Label';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Plus, AlertTriangle, Info, MoreVertical, Package } from 'lucide-react';
-import { useToast } from 'server/src/hooks/use-toast';
-import { IUsageRecord, ICreateUsageRecord, IUsageFilter } from 'server/src/interfaces/usage.interfaces';
-import { IService } from 'server/src/interfaces/billing.interfaces';
-import { IClient } from 'server/src/interfaces/client.interfaces';
-import { createUsageRecord, deleteUsageRecord, getUsageRecords, updateUsageRecord } from 'server/src/lib/actions/usageActions';
+import { useToast } from '@alga-psa/ui';
+import { IUsageRecord, ICreateUsageRecord, IUsageFilter } from '@alga-psa/types';
+import { IService } from '@alga-psa/types';
+import { IClient } from '@alga-psa/types';
+import { createUsageRecord, deleteUsageRecord, getUsageRecords, updateUsageRecord } from '../../actions/usageActions';
 import { getAllClients } from '@alga-psa/clients/actions';
 import { ClientPicker } from '@alga-psa/clients/components/clients/ClientPicker';
 import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContainer';
 import { useAutomationIdAndRegister } from '@alga-psa/ui/ui-reflection/useAutomationIdAndRegister';
 import { ContainerComponent } from '@alga-psa/ui/ui-reflection/types';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
-import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
+import { ColumnDefinition } from '@alga-psa/types';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import {
   DropdownMenu,
@@ -29,7 +29,7 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
 } from '@alga-psa/ui/components/DropdownMenu';
-import { getRemainingBucketUnits, RemainingBucketUnitsResult } from 'server/src/lib/actions/report-actions';
+import { getRemainingBucketUnits, type RemainingBucketUnitsResult } from '@alga-psa/reporting/actions';
 import { BucketUsageChart } from '@alga-psa/ui/components';
 import { Skeleton } from '@alga-psa/ui/components/Skeleton';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';

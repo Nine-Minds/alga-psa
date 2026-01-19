@@ -22,14 +22,14 @@ import {
 } from '@alga-psa/ui/components/DropdownMenu';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 
-import { ITaxHoliday } from 'server/src/interfaces/tax.interfaces';
-import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
+import { ITaxHoliday } from '@alga-psa/types';
+import { ColumnDefinition } from '@alga-psa/types';
 import {
   getTaxHolidaysByTaxRate,
   createTaxHoliday,
   updateTaxHoliday,
   deleteTaxHoliday,
-} from 'server/src/lib/actions/taxSettingsActions';
+} from '@alga-psa/billing/actions';
 
 // Zod schema for form validation
 const taxHolidaySchema = z.object({

@@ -1,18 +1,18 @@
 'use server'
 
 import type { IClient, IClientWithLocation } from '@alga-psa/types';
-import { createTenantKnex } from 'server/src/lib/db';
-import { unparseCSV } from 'server/src/lib/utils/csvParser';
-import { createDefaultTaxSettings } from 'server/src/lib/actions/taxSettingsActions';
+import { createTenantKnex } from '@alga-psa/db';
+import { unparseCSV } from '@alga-psa/core';
+import { createDefaultTaxSettings } from '@alga-psa/billing/actions';
 import { revalidatePath } from 'next/cache';
-import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
-import { hasPermission } from 'server/src/lib/auth/rbac';
-import { getClientLogoUrl, getClientLogoUrlsBatch } from 'server/src/lib/utils/avatarUtils';
-import { uploadEntityImage, deleteEntityImage } from 'server/src/lib/services/EntityImageService';
+import { getCurrentUser } from '@alga-psa/users/actions';
+import { hasPermission } from '@alga-psa/auth';
+import { getClientLogoUrl, getClientLogoUrlsBatch } from '@alga-psa/documents/lib/avatarUtils';
+import { uploadEntityImage, deleteEntityImage } from '@alga-psa/media';
 import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
-import { deleteEntityTags } from 'server/src/lib/utils/tagCleanup';
-import { createTag } from 'server/src/lib/actions/tagActions';
+import { deleteEntityTags } from '@alga-psa/tags/lib/tagCleanup';
+import { createTag } from '@alga-psa/tags/actions';
 import { ClientModel } from '@alga-psa/shared/models/clientModel';
 
 export async function getClientById(clientId: string): Promise<IClientWithLocation | null> {
@@ -680,10 +680,12 @@ export async function getAllClients(includeInactive: boolean = true): Promise<IC
     throw new Error('Permission denied: Cannot read clients');
   }
 
-  const {knex: db, tenant} = await createTenantKnex();
+  const tenant = currentUser.tenant;
   if (!tenant) {
     throw new Error('Tenant not found');
   }
+
+  const { knex: db } = await createTenantKnex(tenant);
 
   const clients = await withTransaction(db, async (trx) => {
     const query = trx('clients')
@@ -1059,7 +1061,7 @@ export async function exportClientsToCSV(clients: IClient[]): Promise<string> {
     });
 
     // Fetch tags for all clients
-    const { findTagsByEntityIds } = await import('server/src/lib/actions/tagActions');
+    const { findTagsByEntityIds } = await import('@alga-psa/tags/actions');
     const tags = await findTagsByEntityIds(clientIds, 'client');
     
     // Create a map of client_id to tags

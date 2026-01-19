@@ -4,8 +4,8 @@ import { Label } from "@alga-psa/ui/components/Label";
 import { Input } from "@alga-psa/ui/components/Input";
 import { Button } from "@alga-psa/ui/components/Button";
 import toast from 'react-hot-toast';
-import { getDefaultBillingSettings, updateDefaultBillingSettings } from "server/src/lib/actions/billingSettingsActions";
-import type { BillingSettings } from "server/src/lib/actions/billingSettingsTypes";
+import { getDefaultBillingSettings, updateDefaultBillingSettings } from "@alga-psa/billing/actions";
+import type { BillingSettings } from "@alga-psa/billing/actions";
 
 const CreditExpirationSettings = (): React.JSX.Element => {
   const [settings, setSettings] = React.useState<BillingSettings>({

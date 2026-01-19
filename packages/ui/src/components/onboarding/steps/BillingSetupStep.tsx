@@ -14,9 +14,9 @@ import {
   getStandardServiceTypes, 
   importServiceTypes, 
   getTenantServiceTypes 
-} from 'server/src/lib/actions/onboarding-actions/serviceTypeActions';
-import { deleteReferenceDataItem } from 'server/src/lib/actions/referenceDataActions';
-import { createServiceType } from 'server/src/lib/actions/serviceActions';
+} from '@alga-psa/onboarding/actions';
+import { deleteReferenceDataItem } from '@alga-psa/reference-data/actions';
+import { createServiceType } from '@alga-psa/billing/actions';
 import { useSession } from 'next-auth/react';
 import { Switch } from '@alga-psa/ui/components/Switch';
 import { Plus } from 'lucide-react';

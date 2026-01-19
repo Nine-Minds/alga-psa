@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 // Global vendor CSS for react-big-calendar is added via a <link> tag below
 import { Toaster } from 'react-hot-toast';
-import { getCurrentTenant } from "../lib/actions/tenantActions";
+import { getCurrentTenant, getTenantBrandingByDomain } from '@alga-psa/tenancy/actions';
 import { TenantProvider } from '@alga-psa/ui/components/providers/TenantProvider';
 import { DynamicExtensionProvider } from '@alga-psa/ui/components/providers/DynamicExtensionProvider';
 import { PostHogProvider } from '@alga-psa/ui/components/providers/PostHogProvider';
@@ -11,10 +11,9 @@ import { ThemeProvider } from '../context/ThemeContext';
 import { TagProvider } from '../context/TagContext';
 import { ClientUIStateProvider } from '@alga-psa/ui/ui-reflection/ClientUIStateProvider';
 import { I18nWrapper } from "@alga-psa/ui/lib/i18n/I18nWrapper";
-import { getServerLocale } from "@alga-psa/ui/lib/i18n/server";
+import { getServerLocale } from "@alga-psa/ui/lib/i18n/serverOnly";
 import { cookies, headers } from 'next/headers';
-import { getTenantBrandingByDomain } from "../lib/actions/tenant-actions/getTenantBrandingByDomain";
-import { generateBrandingStyles } from "../lib/branding/generateBrandingStyles";
+import { generateBrandingStyles } from "@alga-psa/tenancy";
 import { MantineProvider } from '@mantine/core';
 import '@mantine/core/styles.css';
 

@@ -1,15 +1,16 @@
-// server/src/lib/actions/clientContractActions.ts
+// @alga-psa/clients/actions.ts
 'use server'
 
 import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
-import ClientContract from 'server/src/lib/models/clientContract';
+import ClientContract from '../models/clientContract';
 import type { IClientContract } from '@alga-psa/types';
-import { createTenantKnex } from 'server/src/lib/db';
+import { createTenantKnex } from '@alga-psa/db';
 import { Temporal } from '@js-temporal/polyfill';
-import { toPlainDate } from 'server/src/lib/utils/dateTimeUtils';
-import { getSession } from 'server/src/lib/auth/getSession';
-import { cloneTemplateContractLine } from 'server/src/lib/billing/utils/templateClone';
+import { toPlainDate } from '@alga-psa/core';
+import { getSession } from '@alga-psa/auth';
+import { cloneTemplateContractLine } from '@alga-psa/billing/lib/billing/utils/templateClone';
+import { v4 as uuidv4 } from 'uuid';
 
 /**
  * Get all active contracts for a client.
@@ -148,6 +149,88 @@ export async function assignContractToClient(
   }
 }
 
+export async function createClientContract(input: {
+  client_id: string;
+  contract_id: string;
+  start_date: string;
+  end_date: string | null;
+  is_active: boolean;
+  po_required?: boolean;
+  po_number?: string | null;
+  po_amount?: number | null;
+}): Promise<IClientContract> {
+  const session = await getSession();
+  if (!session?.user?.id) {
+    throw new Error('Unauthorized');
+  }
+
+  const { knex, tenant } = await createTenantKnex();
+  if (!tenant) {
+    throw new Error("tenant context not found");
+  }
+
+  return withTransaction(knex, async (trx: Knex.Transaction) => {
+    const clientExists = await trx('clients').where({ client_id: input.client_id, tenant }).first();
+    if (!clientExists) {
+      throw new Error(`Client ${input.client_id} not found or belongs to a different tenant`);
+    }
+
+    const contractExists = await trx('contracts')
+      .where({ contract_id: input.contract_id, tenant, is_active: true })
+      .first();
+
+    if (!contractExists) {
+      throw new Error(`Contract ${input.contract_id} not found, inactive, or belongs to a different tenant`);
+    }
+
+    if (input.is_active) {
+      const overlapping = await trx('client_contracts')
+        .where({ client_id: input.client_id, tenant, is_active: true })
+        .where(function overlap() {
+          this.where(function overlapsExistingEnd() {
+            this.where('end_date', '>', input.start_date).orWhereNull('end_date');
+          }).where(function overlapsExistingStart() {
+            if (input.end_date) {
+              this.where('start_date', '<', input.end_date);
+            } else {
+              this.whereRaw('1 = 1');
+            }
+          });
+        })
+        .first();
+
+      if (overlapping) {
+        throw new Error(`Client ${input.client_id} already has an active contract overlapping the specified range`);
+      }
+    }
+
+    const timestamp = new Date().toISOString();
+    const insertPayload: Record<string, unknown> = {
+      client_contract_id: uuidv4(),
+      client_id: input.client_id,
+      contract_id: input.contract_id,
+      template_contract_id: null,
+      start_date: input.start_date,
+      end_date: input.end_date,
+      is_active: input.is_active,
+      tenant,
+      created_at: timestamp,
+      updated_at: timestamp,
+    };
+
+    const hasPoRequired = await trx.schema.hasColumn('client_contracts', 'po_required');
+    const hasPoNumber = await trx.schema.hasColumn('client_contracts', 'po_number');
+    const hasPoAmount = await trx.schema.hasColumn('client_contracts', 'po_amount');
+
+    if (hasPoRequired) insertPayload.po_required = Boolean(input.po_required);
+    if (hasPoNumber) insertPayload.po_number = input.po_number ?? null;
+    if (hasPoAmount) insertPayload.po_amount = input.po_amount ?? null;
+
+    const [created] = await trx<IClientContract>('client_contracts').insert(insertPayload).returning('*');
+    return created;
+  });
+}
+
 /**
  * Update a client's contract assignment
  */
@@ -226,7 +309,7 @@ export async function updateClientContract(
 
     // After updating the client contract, check if the parent contract should be reactivated
     // This handles the case where an expired contract's end dates are extended
-    const Contract = (await import('server/src/lib/models/contract')).default;
+    const Contract = (await import('@alga-psa/billing/models/contract')).default;
     await Contract.checkAndReactivateExpiredContract(updatedClientContract.contract_id);
 
     return updatedClientContract;

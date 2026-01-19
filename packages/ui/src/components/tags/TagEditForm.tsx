@@ -5,13 +5,13 @@ import { Dialog } from '@alga-psa/ui/components/Dialog';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Label } from '@alga-psa/ui/components/Label';
-import { ITag } from 'server/src/interfaces/tag.interfaces';
-import { generateEntityColor } from 'server/src/utils/colorUtils';
+import { ITag } from '@alga-psa/types';
+import { generateEntityColor } from '../../lib/colorUtils';
 import { toast } from 'react-hot-toast';
 import tinycolor from 'tinycolor2';
 import { Trash2, ShieldAlert } from 'lucide-react';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
-import { handleError } from 'server/src/lib/utils/errorHandling';
+import { handleError } from '../../lib/errorHandling';
 
 const PRESET_COLORS = [
   // Bright and distinct colors (Row 1)

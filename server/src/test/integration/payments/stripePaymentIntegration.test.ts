@@ -1027,7 +1027,7 @@ describe('Stripe Payment Integration - Vulnerability Tests', () => {
 
       const clientPaymentPath = path.join(
         process.cwd(),
-        'server/src/lib/actions/client-portal-actions/client-payment.ts'
+        '@alga-psa/client-portal/actions'
       );
 
       const sourceCode = fs.readFileSync(clientPaymentPath, 'utf-8');

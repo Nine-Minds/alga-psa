@@ -1,8 +1,8 @@
 import React, { memo } from 'react';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
-import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
+import { ColumnDefinition } from '@alga-psa/types';
 import type { IClient } from '@alga-psa/types';
-import { ITag } from 'server/src/interfaces/tag.interfaces';
+import { ITag } from '@alga-psa/types';
 import { useRouter } from 'next/navigation';
 import { MoreVertical, Pencil, Trash2, ExternalLink, Shield, ShieldOff } from "lucide-react";
 import { ReflectedDropdownMenu } from '@alga-psa/ui/components/ReflectedDropdownMenu';

@@ -27,14 +27,14 @@ import { Switch } from '@alga-psa/ui/components/Switch';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { Row } from '@tanstack/react-table'; // Keep Row type
 import { Controller, ControllerRenderProps, FieldValues, Path, FieldError } from 'react-hook-form'; // Import Controller
-import { ITaxRegion } from 'server/src/interfaces/tax.interfaces';
-import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces'; // Import custom ColumnDefinition
+import { ITaxRegion } from '@alga-psa/types';
+import { ColumnDefinition } from '@alga-psa/types'; // Import custom ColumnDefinition
 import GenericDialog from '@alga-psa/ui/components/GenericDialog'; // Import GenericDialog
 import {
   getTaxRegions,
   createTaxRegion,
   updateTaxRegion,
-} from 'server/src/lib/actions/taxSettingsActions';
+} from '@alga-psa/billing/actions';
 
 // Zod schema for form validation
 const taxRegionSchema = z.object({
