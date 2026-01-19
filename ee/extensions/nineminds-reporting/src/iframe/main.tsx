@@ -900,7 +900,7 @@ function ResultsRenderer({ results, report }: { results: ReportResult; report?: 
           const row = data[0] as Record<string, unknown>;
           const countKey = Object.keys(row)[0];
           return (
-            <div key={metricId} style={{ display: 'inline-block' }}>
+            <div key={metricId} style={{ alignSelf: 'flex-start' }}>
               <StatCard
                 title={displayName}
                 value={Number(row[countKey]).toLocaleString()}
@@ -967,7 +967,11 @@ function ReportsList() {
   }
 
   if (loading) {
-    return <LoadingIndicator size="sm" text="Loading reports..." />;
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '200px' }}>
+        <LoadingIndicator size="md" text="Loading reports..." layout="stacked" />
+      </div>
+    );
   }
 
   if (error) {
@@ -1304,6 +1308,14 @@ function CreateReport() {
     setMetrics(metrics.filter((_, i) => i !== index));
   };
 
+  const moveMetric = (index: number, direction: 'up' | 'down') => {
+    const newIndex = direction === 'up' ? index - 1 : index + 1;
+    if (newIndex < 0 || newIndex >= metrics.length) return;
+    const newMetrics = [...metrics];
+    [newMetrics[index], newMetrics[newIndex]] = [newMetrics[newIndex], newMetrics[index]];
+    setMetrics(newMetrics);
+  };
+
   const addFilter = (metricIndex: number) => {
     const newMetrics = [...metrics];
     const filters = [...(newMetrics[metricIndex].query.filters || [])];
@@ -1553,8 +1565,32 @@ function CreateReport() {
                   key={metric.id}
                   style={{ background: 'var(--alga-card-bg)' }}
                 >
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px' }}>
-                    <strong>Metric {index + 1}</strong>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <strong>Metric {index + 1}</strong>
+                      <div style={{ display: 'flex', gap: '4px' }}>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => moveMetric(index, 'up')}
+                          disabled={index === 0}
+                          title="Move up"
+                        >
+                          ↑
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => moveMetric(index, 'down')}
+                          disabled={index === metrics.length - 1}
+                          title="Move down"
+                        >
+                          ↓
+                        </Button>
+                      </div>
+                    </div>
                     <Button
                       type="button"
                       variant="danger"
@@ -2216,7 +2252,11 @@ function ExecuteReport() {
   };
 
   if (loading) {
-    return <LoadingIndicator size="sm" text="Loading reports..." />;
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '200px' }}>
+        <LoadingIndicator size="md" text="Loading reports..." layout="stacked" />
+      </div>
+    );
   }
 
   return (
@@ -2262,12 +2302,13 @@ function ExecuteReport() {
           </Card>
         )}
 
-        {/* Parameter Input Section */}
+        {/* Parameter Input Section - only show if report has parameters */}
+        {reportParams.length > 0 && (
         <div style={{ marginBottom: '16px' }}>
           {/* Show dropdown UI for reports with tenant parameters */}
           {hasTenantParams && !showAdvancedJson && (
             <>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
                 <Text style={{ fontWeight: 500 }}>Filter By</Text>
                 <Button
                   variant="ghost"
@@ -2279,50 +2320,63 @@ function ExecuteReport() {
                 </Button>
               </div>
 
-              {/* Filter parameter selector */}
-              <div style={{ marginBottom: '12px' }}>
-                <CustomSelect
-                  options={filterParamOptions}
-                  placeholder="Select filter type..."
-                  value={selectedFilterParam}
-                  onValueChange={(value) => {
-                    setSelectedFilterParam(value);
-                    setSelectedFilterValue('');
-                    setTenantSearch('');
-                  }}
-                />
+              {/* Two-column layout for filter selectors */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr', gap: '16px', alignItems: 'start' }}>
+                {/* Filter parameter selector */}
+                <div>
+                  <Text style={{ display: 'block', marginBottom: '6px', fontSize: '0.75rem', color: 'var(--alga-muted-fg)' }}>
+                    Filter Type
+                  </Text>
+                  <div style={{ minWidth: '180px' }}>
+                    <CustomSelect
+                      options={filterParamOptions}
+                      placeholder="Select..."
+                      value={selectedFilterParam}
+                      onValueChange={(value) => {
+                        setSelectedFilterParam(value);
+                        setSelectedFilterValue('');
+                        setTenantSearch('');
+                      }}
+                    />
+                  </div>
+                </div>
+
+                {/* Value selector with search */}
+                {selectedFilterParam && (
+                  <div>
+                    <Text style={{ display: 'block', marginBottom: '6px', fontSize: '0.75rem', color: 'var(--alga-muted-fg)' }}>
+                      {selectedFilterParam === 'tenant' ? 'Select Tenant' :
+                       selectedFilterParam === 'email' ? 'Select by Email' : 'Select Company'}
+                    </Text>
+                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                      <Input
+                        type="text"
+                        placeholder="Search..."
+                        value={tenantSearch}
+                        onChange={(e) => setTenantSearch(e.target.value)}
+                        style={{ width: '150px' }}
+                      />
+                      {tenantsLoading ? (
+                        <LoadingIndicator size="sm" text="Loading..." />
+                      ) : (
+                        <div style={{ minWidth: '250px' }}>
+                          <CustomSelect
+                            options={getFilterValueOptions()}
+                            placeholder={`Select...`}
+                            value={selectedFilterValue}
+                            onValueChange={setSelectedFilterValue}
+                          />
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
 
-              {/* Value selector with search */}
-              {selectedFilterParam && (
-                <div style={{ marginBottom: '12px' }}>
-                  <Text style={{ display: 'block', marginBottom: '6px', fontWeight: 500 }}>
-                    Select {selectedFilterParam === 'tenant' ? 'Tenant' :
-                            selectedFilterParam === 'email' ? 'by Email' : 'Company'}
-                  </Text>
-                  <Input
-                    type="text"
-                    placeholder="Search tenants..."
-                    value={tenantSearch}
-                    onChange={(e) => setTenantSearch(e.target.value)}
-                    style={{ marginBottom: '8px' }}
-                  />
-                  {tenantsLoading ? (
-                    <LoadingIndicator size="sm" text="Loading tenants..." />
-                  ) : (
-                    <CustomSelect
-                      options={getFilterValueOptions()}
-                      placeholder={`Select ${selectedFilterParam}...`}
-                      value={selectedFilterValue}
-                      onValueChange={setSelectedFilterValue}
-                    />
-                  )}
-                  {selectedFilterValue && (
-                    <Text tone="muted" style={{ display: 'block', fontSize: '0.75rem', marginTop: '4px' }}>
-                      Will execute with: <code>{selectedFilterParam}={selectedFilterValue}</code>
-                    </Text>
-                  )}
-                </div>
+              {selectedFilterValue && (
+                <Text tone="muted" style={{ display: 'block', fontSize: '0.75rem', marginTop: '8px' }}>
+                  Will execute with: <code>{selectedFilterParam}={selectedFilterValue}</code>
+                </Text>
               )}
             </>
           )}
@@ -2404,6 +2458,7 @@ function ExecuteReport() {
             </>
           )}
         </div>
+        )}
 
         <Button
           onClick={handleExecute}
@@ -3258,7 +3313,7 @@ function TenantManagementView() {
         <h2 style={{ margin: 0 }}>Tenant Management</h2>
         <div style={{ display: 'flex', gap: '8px' }}>
           <Button variant="secondary" onClick={() => { fetchTenants(); fetchAuditLogs(); fetchPendingDeletions(); }} disabled={loading}>
-            {loading ? <><Spinner size="button" style={{ marginRight: '6px' }} /> Loading...</> : 'Refresh'}
+            {loading ? 'Loading...' : 'Refresh'}
           </Button>
           <Button onClick={() => setShowCreateForm(true)}>
             Create Tenant
@@ -3382,7 +3437,9 @@ function TenantManagementView() {
           </div>
         </div>
         {loading ? (
-          <LoadingIndicator size="sm" text="Loading tenants..." />
+          <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '150px' }}>
+            <LoadingIndicator size="md" text="Loading tenants..." layout="stacked" />
+          </div>
         ) : tenants.length === 0 ? (
           <Text tone="muted">No tenants found.</Text>
         ) : (
@@ -3871,7 +3928,7 @@ function AuditLogs() {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
         <h2 style={{ margin: 0 }}>Audit Logs</h2>
         <Button variant="secondary" onClick={fetchLogs} disabled={loading}>
-          {loading ? <><Spinner size="button" style={{ marginRight: '6px' }} /> Loading...</> : 'Refresh'}
+          {loading ? 'Loading...' : 'Refresh'}
         </Button>
       </div>
 
@@ -3900,7 +3957,9 @@ function AuditLogs() {
       {error && <Alert tone="danger" style={{ marginBottom: '16px' }}>{error}</Alert>}
 
       {loading ? (
-        <LoadingIndicator size="sm" text="Loading audit logs..." />
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '200px' }}>
+          <LoadingIndicator size="md" text="Loading audit logs..." layout="stacked" />
+        </div>
       ) : logs.length === 0 ? (
         <Card>
           <Text tone="muted">
@@ -3995,6 +4054,14 @@ function EditReport({
 
   const removeMetric = (index: number) => {
     setMetrics(metrics.filter((_, i) => i !== index));
+  };
+
+  const moveMetric = (index: number, direction: 'up' | 'down') => {
+    const newIndex = direction === 'up' ? index - 1 : index + 1;
+    if (newIndex < 0 || newIndex >= metrics.length) return;
+    const newMetrics = [...metrics];
+    [newMetrics[index], newMetrics[newIndex]] = [newMetrics[newIndex], newMetrics[index]];
+    setMetrics(newMetrics);
   };
 
   const addMetric = () => {
@@ -4266,8 +4333,32 @@ function EditReport({
                 key={metric.id}
                 style={{ background: 'var(--alga-card-bg)' }}
               >
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px' }}>
-                  <strong>Metric {index + 1}</strong>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <strong>Metric {index + 1}</strong>
+                    <div style={{ display: 'flex', gap: '4px' }}>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => moveMetric(index, 'up')}
+                        disabled={index === 0}
+                        title="Move up"
+                      >
+                        ↑
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => moveMetric(index, 'down')}
+                        disabled={index === metrics.length - 1}
+                        title="Move down"
+                      >
+                        ↓
+                      </Button>
+                    </div>
+                  </div>
                   <Button
                     type="button"
                     variant="danger"
