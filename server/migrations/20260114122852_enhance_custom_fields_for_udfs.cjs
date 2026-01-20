@@ -3,36 +3,7 @@
  */
 exports.config = { transaction: false };
 
-/**
- * Check if Citus is available by looking for run_command_on_shards function
- */
-async function isCitusAvailable(knex) {
-    const result = await knex.raw(`
-        SELECT EXISTS (
-            SELECT 1 FROM pg_proc
-            WHERE proname = 'run_command_on_shards'
-        ) AS exists
-    `);
-    return result.rows?.[0]?.exists || false;
-}
-
-/**
- * Check if a table is distributed (uses parameterized query to avoid SQL injection)
- */
-async function isTableDistributed(knex, tableName) {
-    try {
-        const result = await knex.raw(`
-            SELECT EXISTS (
-                SELECT 1 FROM pg_dist_partition
-                WHERE logicalrelid = to_regclass(?)
-            ) AS distributed
-        `, [tableName]);
-        return result.rows?.[0]?.distributed || false;
-    } catch (e) {
-        // pg_dist_partition doesn't exist if Citus isn't installed
-        return false;
-    }
-}
+const { isCitusAvailable, isTableDistributed, runCommandOnShards } = require('./_utils.cjs');
 
 /**
  * @param { import("knex").Knex } knex
@@ -69,22 +40,18 @@ exports.up = async function(knex) {
     // For Citus distributed tables, run UPDATE on each shard to avoid broadcast
     if (citusAvailable && isDistributed) {
         console.log('  Running UPDATE on distributed table via shards...');
-        await knex.raw(`
-            SELECT run_command_on_shards(
-                'custom_fields',
-                $cmd$
-                    UPDATE %s
-                    SET type = 'text'
-                    WHERE type NOT IN ('text', 'number', 'date', 'boolean', 'picklist')
-                $cmd$
-            )
+        await runCommandOnShards(knex, 'custom_fields', `
+            UPDATE %s
+            SET type = 'text'
+            WHERE type NOT IN ('text', 'number', 'date', 'boolean', 'picklist')
         `);
     } else {
-        // For non-distributed tables, direct UPDATE works fine
+        // For non-distributed tables, include tenant filter to avoid full-table scan
         await knex.schema.raw(`
             UPDATE custom_fields
             SET type = 'text'
             WHERE type NOT IN ('text', 'number', 'date', 'boolean', 'picklist')
+            AND tenant IS NOT NULL
         `);
     }
     console.log('✓ Normalized invalid type values to text');
@@ -92,32 +59,16 @@ exports.up = async function(knex) {
     // Convert the type column to use the enum
     // For Citus distributed tables, we need to handle this carefully
     if (citusAvailable && isDistributed) {
-        // For distributed tables, use run_command_on_shards
-        // This executes the ALTER on each shard individually
         console.log('  Running ALTER COLUMN TYPE on distributed table via shards...');
-        try {
-            await knex.raw(`
-                SELECT run_command_on_shards(
-                    'custom_fields',
-                    $cmd$
-                        ALTER TABLE %s
-                        ALTER COLUMN type TYPE custom_field_type USING type::custom_field_type
-                    $cmd$
-                )
-            `);
-            // Also update the coordinator's metadata
-            await knex.raw(`
-                ALTER TABLE custom_fields
-                ALTER COLUMN type TYPE custom_field_type USING type::custom_field_type
-            `);
-        } catch (e) {
-            // If run_command_on_shards fails, try direct ALTER (may work for reference tables)
-            console.log('  Shard command failed, trying direct ALTER...');
-            await knex.raw(`
-                ALTER TABLE custom_fields
-                ALTER COLUMN type TYPE custom_field_type USING type::custom_field_type
-            `);
-        }
+        await runCommandOnShards(knex, 'custom_fields', `
+            ALTER TABLE %s
+            ALTER COLUMN type TYPE custom_field_type USING type::custom_field_type
+        `);
+        // Also update the coordinator's metadata
+        await knex.raw(`
+            ALTER TABLE custom_fields
+            ALTER COLUMN type TYPE custom_field_type USING type::custom_field_type
+        `);
     } else {
         // For non-distributed tables (local dev), direct ALTER works fine
         await knex.schema.raw(`
@@ -216,27 +167,14 @@ exports.down = async function(knex) {
     // Handle distributed tables carefully
     if (citusAvailable && isDistributed) {
         console.log('  Running ALTER COLUMN TYPE on distributed table via shards...');
-        try {
-            await knex.raw(`
-                SELECT run_command_on_shards(
-                    'custom_fields',
-                    $cmd$
-                        ALTER TABLE %s
-                        ALTER COLUMN type TYPE text USING type::text
-                    $cmd$
-                )
-            `);
-            await knex.raw(`
-                ALTER TABLE custom_fields
-                ALTER COLUMN type TYPE text USING type::text
-            `);
-        } catch (e) {
-            console.log('  Shard command failed, trying direct ALTER...');
-            await knex.raw(`
-                ALTER TABLE custom_fields
-                ALTER COLUMN type TYPE text USING type::text
-            `);
-        }
+        await runCommandOnShards(knex, 'custom_fields', `
+            ALTER TABLE %s
+            ALTER COLUMN type TYPE text USING type::text
+        `);
+        await knex.raw(`
+            ALTER TABLE custom_fields
+            ALTER COLUMN type TYPE text USING type::text
+        `);
     } else {
         await knex.schema.raw(`
             ALTER TABLE custom_fields

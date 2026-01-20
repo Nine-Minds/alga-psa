@@ -9,74 +9,16 @@
  *
  * Phase 3: Field Grouping
  * - Creates custom_field_groups table (Citus-compatible with composite PK)
- * - Adds group_id and group_tenant columns to custom_fields for composite FK
+ * - Adds group_id column to custom_fields with composite FK (group_id, tenant)
  *
  * Phase 4: Per-Client Field Templates
- * - Creates company_custom_field_settings table (Citus-compatible)
+ * - Creates company_custom_field_settings table (Citus-compatible with composite PK)
  *
  * Citus requires DDL outside of transactions for distributed tables
  */
 exports.config = { transaction: false };
 
-/**
- * Check if Citus create_distributed_table function is available
- */
-async function isCitusAvailable(knex) {
-    const result = await knex.raw(`
-        SELECT EXISTS (
-            SELECT 1 FROM pg_proc
-            WHERE proname = 'create_distributed_table'
-        ) AS exists;
-    `);
-    return result.rows?.[0]?.exists || false;
-}
-
-/**
- * Check if a table is already distributed (uses parameterized query to avoid SQL injection)
- */
-async function isTableDistributed(knex, tableName) {
-    try {
-        const result = await knex.raw(`
-            SELECT EXISTS (
-                SELECT 1 FROM pg_dist_partition
-                WHERE logicalrelid = to_regclass(?)
-            ) AS distributed
-        `, [tableName]);
-        return result.rows?.[0]?.distributed || false;
-    } catch (e) {
-        // pg_dist_partition doesn't exist if Citus isn't installed
-        return false;
-    }
-}
-
-/**
- * Distribute a table if Citus is available and table is not already distributed
- * Colocates with tenants table for efficient cross-table queries
- */
-async function distributeTableIfNeeded(knex, tableName) {
-    const citusAvailable = await isCitusAvailable(knex);
-    if (!citusAvailable) {
-        console.log(`  [${tableName}] Skipping distribution (Citus not available)`);
-        return;
-    }
-
-    const distributed = await isTableDistributed(knex, tableName);
-    if (distributed) {
-        console.log(`  [${tableName}] Already distributed`);
-        return;
-    }
-
-    try {
-        // Try with colocation first for optimal query performance
-        await knex.raw(`SELECT create_distributed_table('${tableName}', 'tenant', colocate_with => 'tenants')`);
-        console.log(`  ✓ Distributed ${tableName} (colocated with tenants)`);
-    } catch (e) {
-        // Fall back to distribution without colocation if it fails
-        console.log(`  Colocation failed for ${tableName}, retrying without colocation...`);
-        await knex.raw(`SELECT create_distributed_table('${tableName}', 'tenant')`);
-        console.log(`  ✓ Distributed ${tableName}`);
-    }
-}
+const { isCitusAvailable, isTableDistributed, distributeTableIfNeeded } = require('./_utils.cjs');
 
 /**
  * @param { import("knex").Knex } knex
@@ -133,9 +75,9 @@ exports.up = async function(knex) {
             PRIMARY KEY (group_id, tenant)
         )
     `);
-    console.log('✓ Created custom_field_groups table');
+    console.log('✓ Created custom_field_groups table with composite PK (group_id, tenant)');
 
-    // Add index for efficient group lookups
+    // Add index for efficient group lookups (tenant first for Citus)
     await knex.schema.raw(`
         CREATE INDEX IF NOT EXISTS idx_custom_field_groups_tenant_entity
         ON custom_field_groups(tenant, entity_type, group_order)
@@ -144,15 +86,14 @@ exports.up = async function(knex) {
     // Distribute custom_field_groups if Citus is available
     await distributeTableIfNeeded(knex, 'custom_field_groups');
 
-    // Add group_id and group_tenant columns to custom_fields for composite FK
-    // The FK references (group_id, tenant) to maintain Citus co-location
+    // Add group_id column to custom_fields for linking to groups
     await knex.schema.raw(`
         ALTER TABLE custom_fields
         ADD COLUMN IF NOT EXISTS group_id UUID DEFAULT NULL
     `);
 
     // Add composite foreign key constraint (group_id, tenant) -> custom_field_groups(group_id, tenant)
-    // This ensures the FK works correctly with Citus distribution
+    // This ensures the FK works correctly with Citus distribution by including tenant
     await knex.schema.raw(`
         DO $$
         BEGIN
@@ -170,7 +111,7 @@ exports.up = async function(knex) {
         END
         $$;
     `);
-    console.log('✓ Added group_id to custom_fields with composite FK');
+    console.log('✓ Added group_id to custom_fields with composite FK (group_id, tenant)');
 
     // =================================================================
     // Phase 4: Per-Client Field Templates
@@ -192,7 +133,7 @@ exports.up = async function(knex) {
             PRIMARY KEY (setting_id, tenant)
         )
     `);
-    console.log('✓ Created company_custom_field_settings table');
+    console.log('✓ Created company_custom_field_settings table with composite PK (setting_id, tenant)');
 
     // Add unique constraint including tenant for Citus co-location
     await knex.schema.raw(`
@@ -213,7 +154,6 @@ exports.up = async function(knex) {
     `);
 
     // Add composite foreign key to companies (company_id, tenant)
-    // Note: This assumes companies table has a composite key or is distributed on tenant
     await knex.schema.raw(`
         DO $$
         BEGIN
@@ -256,13 +196,13 @@ exports.up = async function(knex) {
         $$;
     `);
 
-    // Add index for efficient company field lookups (include tenant first for Citus)
+    // Add index for efficient company field lookups (tenant first for Citus)
     await knex.schema.raw(`
         CREATE INDEX IF NOT EXISTS idx_company_custom_field_settings_company
         ON company_custom_field_settings(tenant, company_id, is_enabled)
     `);
 
-    // Add index for field lookups
+    // Add index for field lookups (tenant first for Citus)
     await knex.schema.raw(`
         CREATE INDEX IF NOT EXISTS idx_company_custom_field_settings_field
         ON company_custom_field_settings(tenant, field_id)
@@ -314,8 +254,6 @@ exports.down = async function(knex) {
 
     // Note: Cannot remove enum values in PostgreSQL without recreating the type
     // This is a known limitation. The 'multi_picklist' value will remain but unused.
-    // Alternatively, convert any multi_picklist fields to picklist and recreate enum,
-    // but this is complex and potentially destructive, so we leave the value in place.
     console.log('  Note: multi_picklist enum value retained (PostgreSQL limitation)');
 
     // =================================================================
