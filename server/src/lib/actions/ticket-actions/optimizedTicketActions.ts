@@ -35,6 +35,7 @@ import { AnalyticsEvents } from '../../analytics/events';
 import { Temporal } from '@js-temporal/polyfill';
 import { resolveUserTimeZone, normalizeIanaTimeZone } from 'server/src/lib/utils/workDate';
 import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
+import { ConcurrencyConflictError, type UpdateTicketResult } from './ticketActionTypes';
 
 // Helper function to safely convert dates
 function convertDates<T extends { entered_at?: Date | string | null, updated_at?: Date | string | null, closed_at?: Date | string | null, due_date?: Date | string | null }>(record: T): T {
@@ -1196,7 +1197,7 @@ export async function updateTicketWithCache(
   data: Partial<ITicket>,
   _user?: IUser,
   expectedUpdatedAt?: string
-) {
+): Promise<UpdateTicketResult> {
   // Get user from session internally for security - ignore client-supplied user
   // IMPORTANT: Must be called BEFORE entering transaction to avoid nested transaction deadlock
   // getCurrentUser() uses its own withTransaction() internally
@@ -1242,10 +1243,16 @@ export async function updateTicketWithCache(
 
       const currentTime = normalizeTimestamp(currentTicket.updated_at);
       const expectedTime = normalizeTimestamp(expectedUpdatedAt);
+      const currentUpdatedAtStr = currentTicket.updated_at instanceof Date
+        ? currentTicket.updated_at.toISOString()
+        : String(currentTicket.updated_at || '');
 
       // Only check if both timestamps are valid and different
       if (currentTime !== null && expectedTime !== null && currentTime !== expectedTime) {
-        throw new Error('CONFLICT: This ticket was modified by another user. Please refresh and try again.');
+        throw new ConcurrencyConflictError(
+          'This ticket was modified by another user.',
+          currentUpdatedAtStr
+        );
       }
     }
 
@@ -1517,10 +1524,18 @@ export async function updateTicketWithCache(
     revalidatePath(`/msp/tickets/${id}`);
     revalidatePath('/msp/tickets');
 
-    return 'success';
+    // Return the actual updated_at from the database for optimistic concurrency
+    const returnedUpdatedAt = updatedTicket.updated_at instanceof Date
+      ? updatedTicket.updated_at.toISOString()
+      : String(updatedTicket.updated_at || new Date().toISOString());
+
+    return { success: true, updated_at: returnedUpdatedAt };
     } catch (error) {
       console.error('updateTicketWithCache error:', error);
-      // Preserve specific error messages (like CONFLICT) for the client
+      // Preserve ConcurrencyConflictError and other errors for the client
+      if (error instanceof ConcurrencyConflictError) {
+        throw error;
+      }
       if (error instanceof Error) {
         throw error;
       }
