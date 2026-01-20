@@ -6,12 +6,9 @@ import TicketDetails from 'server/src/components/tickets/ticket/TicketDetails';
 import { updateTicketWithCache, addTicketCommentWithCache } from 'server/src/lib/actions/ticket-actions/optimizedTicketActions';
 import { useSession } from 'next-auth/react';
 import { toast } from 'react-hot-toast';
-import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
-import { TicketDetailsSkeleton } from 'server/src/components/tickets/ticket/TicketDetailsSkeleton';
 import type { SurveyTicketSatisfactionSummary } from 'server/src/interfaces/survey.interface';
 import { UnsavedChangesProvider } from 'server/src/contexts/UnsavedChangesContext';
 import type { IComment } from 'server/src/interfaces/comment.interface';
-import type { IUser } from 'server/src/interfaces/auth.interfaces';
 
 // Define the props interface based on the consolidated data structure
 interface TicketDetailsContainerProps {
@@ -50,6 +47,12 @@ const getErrorMessage = (error: unknown): string => {
   return String(error);
 };
 
+// Helper to check if error is a concurrency conflict
+const isConflictError = (error: unknown): boolean => {
+  const message = getErrorMessage(error);
+  return message.includes('CONFLICT:');
+};
+
 export default function TicketDetailsContainer({ ticketData, surveySummary = null }: TicketDetailsContainerProps) {
   const router = useRouter();
   const { data: session } = useSession();
@@ -65,50 +68,15 @@ export default function TicketDetailsContainer({ ticketData, surveySummary = nul
   // Local state for comments to avoid mutating props (which doesn't trigger re-renders)
   const [comments, setComments] = useState<IComment[]>(ticketData.comments);
 
-  // Cache current user to avoid fetching on every save operation
-  const cachedUserRef = useRef<IUser | null>(null);
-  // Track which user the cache is for, to invalidate on session change
-  const cachedUserIdRef = useRef<string | null>(null);
+  // Track the expected updated_at for optimistic concurrency control
+  // This is set when the ticket is loaded and updated after each successful save
+  const expectedUpdatedAtRef = useRef<string | undefined>(ticketData.ticket.updated_at);
 
   // Cleanup on unmount
   useEffect(() => {
     return () => {
       isMountedRef.current = false;
     };
-  }, []);
-
-  // Fetch and cache current user on mount, invalidate cache on session change
-  useEffect(() => {
-    const currentUserId = session?.user?.id ?? null;
-
-    // Invalidate cache if session user changed
-    if (cachedUserIdRef.current !== currentUserId) {
-      cachedUserRef.current = null;
-      cachedUserIdRef.current = currentUserId;
-    }
-
-    const fetchCurrentUser = async () => {
-      if (session?.user && !cachedUserRef.current && isMountedRef.current) {
-        const user = await getCurrentUser();
-        if (isMountedRef.current) {
-          cachedUserRef.current = user;
-        }
-      }
-    };
-    fetchCurrentUser();
-  }, [session?.user?.id]);
-
-  // Helper to get current user - uses cache if available, otherwise fetches
-  const getUser = useCallback(async (): Promise<IUser | null> => {
-    if (cachedUserRef.current) {
-      return cachedUserRef.current;
-    }
-    // Fallback: fetch and cache if not yet available
-    const user = await getCurrentUser();
-    if (user) {
-      cachedUserRef.current = user;
-    }
-    return user;
   }, []);
 
   // Helper to wrap async operations with isSubmitting state management
@@ -131,6 +99,7 @@ export default function TicketDetailsContainer({ ticketData, surveySummary = nul
   }, []);
 
   // Handle single field ticket updates using the optimized server action
+  // Note: Server actions now get user from session internally for security
   const handleTicketUpdate = useCallback(async (field: string, value: any): Promise<void> => {
     if (!session?.user) {
       toast.error('You must be logged in to update tickets');
@@ -138,27 +107,29 @@ export default function TicketDetailsContainer({ ticketData, surveySummary = nul
     }
 
     return withSubmitting(async () => {
-      const user = await getUser();
-      if (!user) {
-        toast.error('Failed to get current user');
-        return;
-      }
-
       try {
         await updateTicketWithCache(
           ticketData.ticket.ticket_id,
           { [field]: value },
-          user
+          undefined, // user is now fetched internally by server action
+          expectedUpdatedAtRef.current // Pass expected updated_at for optimistic concurrency
         );
+        // Update expected updated_at after successful save
+        expectedUpdatedAtRef.current = new Date().toISOString();
         toast.success(`${field} updated successfully`);
       } catch (error) {
         console.error(`Error updating ${field}:`, error);
-        toast.error(`Failed to update ${field}: ${getErrorMessage(error)}`);
+        if (isConflictError(error)) {
+          toast.error('This ticket was modified by another user. Please refresh the page to see the latest changes.');
+        } else {
+          toast.error(`Failed to update ${field}: ${getErrorMessage(error)}`);
+        }
       }
     });
-  }, [session?.user, withSubmitting, getUser, ticketData.ticket.ticket_id]);
+  }, [session?.user, withSubmitting, ticketData.ticket.ticket_id]);
 
   // Handle batch ticket updates - saves all changes atomically to avoid partial updates
+  // Note: Server actions now get user from session internally for security
   const handleBatchTicketUpdate = useCallback(async (changes: Record<string, any>): Promise<boolean> => {
     // Check login first before any other logic
     if (!session?.user) {
@@ -172,31 +143,33 @@ export default function TicketDetailsContainer({ ticketData, surveySummary = nul
     }
 
     return withSubmitting(async () => {
-      const user = await getUser();
-      if (!user) {
-        toast.error('Failed to get current user');
-        return false;
-      }
-
       try {
         // Save all changes in a single API call - this ensures atomicity
         await updateTicketWithCache(
           ticketData.ticket.ticket_id,
           changes,
-          user
+          undefined, // user is now fetched internally by server action
+          expectedUpdatedAtRef.current // Pass expected updated_at for optimistic concurrency
         );
 
+        // Update expected updated_at after successful save
+        expectedUpdatedAtRef.current = new Date().toISOString();
         toast.success('Changes saved successfully');
         return true;
       } catch (error) {
         console.error('Error saving changes:', error);
-        toast.error(`Failed to save changes: ${getErrorMessage(error)}`);
+        if (isConflictError(error)) {
+          toast.error('This ticket was modified by another user. Please refresh the page to see the latest changes.');
+        } else {
+          toast.error(`Failed to save changes: ${getErrorMessage(error)}`);
+        }
         return false;
       }
     });
-  }, [session?.user, withSubmitting, getUser, ticketData.ticket.ticket_id]);
+  }, [session?.user, withSubmitting, ticketData.ticket.ticket_id]);
 
   // Handle adding comments using the optimized server action
+  // Note: Server actions now get user from session internally for security
   const handleAddComment = useCallback(async (content: string, isInternal: boolean, isResolution: boolean): Promise<void> => {
     if (!session?.user) {
       toast.error('You must be logged in to add comments');
@@ -204,19 +177,13 @@ export default function TicketDetailsContainer({ ticketData, surveySummary = nul
     }
 
     return withSubmitting(async () => {
-      const user = await getUser();
-      if (!user) {
-        toast.error('Failed to get current user');
-        return;
-      }
-
       try {
         const newComment = await addTicketCommentWithCache(
           ticketData.ticket.ticket_id,
           content,
           isInternal,
-          isResolution,
-          user
+          isResolution
+          // user is now fetched internally by server action
         );
 
         // Update local state to trigger re-render (not mutating props)
@@ -230,9 +197,10 @@ export default function TicketDetailsContainer({ ticketData, surveySummary = nul
         toast.error(`Failed to add comment: ${getErrorMessage(error)}`);
       }
     });
-  }, [session?.user, withSubmitting, getUser, ticketData.ticket.ticket_id]);
+  }, [session?.user, withSubmitting, ticketData.ticket.ticket_id]);
 
   // Handle updating description using the optimized server action
+  // Note: Server actions now get user from session internally for security
   const handleUpdateDescription = useCallback(async (content: string): Promise<boolean> => {
     if (!session?.user) {
       toast.error('You must be logged in to update the description');
@@ -240,12 +208,6 @@ export default function TicketDetailsContainer({ ticketData, surveySummary = nul
     }
 
     return withSubmitting(async () => {
-      const user = await getUser();
-      if (!user) {
-        toast.error('Failed to get current user');
-        return false;
-      }
-
       // Update the ticket's attributes.description field
       const currentAttributes = ticketData.ticket.attributes || {};
       const updatedAttributes = {
@@ -257,22 +219,27 @@ export default function TicketDetailsContainer({ ticketData, surveySummary = nul
         await updateTicketWithCache(
           ticketData.ticket.ticket_id,
           {
-            attributes: updatedAttributes,
-            updated_by: user.user_id,
-            updated_at: new Date().toISOString()
+            attributes: updatedAttributes
           },
-          user
+          undefined, // user is now fetched internally by server action
+          expectedUpdatedAtRef.current // Pass expected updated_at for optimistic concurrency
         );
 
+        // Update expected updated_at after successful save
+        expectedUpdatedAtRef.current = new Date().toISOString();
         toast.success('Description updated successfully');
         return true;
       } catch (error) {
         console.error('Error updating description:', error);
-        toast.error(`Failed to update description: ${getErrorMessage(error)}`);
+        if (isConflictError(error)) {
+          toast.error('This ticket was modified by another user. Please refresh the page to see the latest changes.');
+        } else {
+          toast.error(`Failed to update description: ${getErrorMessage(error)}`);
+        }
         return false;
       }
     });
-  }, [session?.user, withSubmitting, getUser, ticketData.ticket.ticket_id]);
+  }, [session?.user, withSubmitting, ticketData.ticket.ticket_id, ticketData.ticket.attributes]);
 
   // Render directly to avoid redefining a component each render,
   // which can cause unmount/mount cycles and side-effects

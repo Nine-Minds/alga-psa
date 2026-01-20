@@ -34,6 +34,7 @@ import { analytics } from '../../analytics/posthog';
 import { AnalyticsEvents } from '../../analytics/events';
 import { Temporal } from '@js-temporal/polyfill';
 import { resolveUserTimeZone, normalizeIanaTimeZone } from 'server/src/lib/utils/workDate';
+import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
 
 // Helper function to safely convert dates
 function convertDates<T extends { entered_at?: Date | string | null, updated_at?: Date | string | null, closed_at?: Date | string | null, due_date?: Date | string | null }>(record: T): T {
@@ -62,16 +63,26 @@ async function safePublishEvent(eventType: string, payload: any) {
  * Consolidated function to get all ticket data for the ticket details page
  * This reduces multiple network calls by fetching all related data in a single server action
  */
-export async function getConsolidatedTicketData(ticketId: string, user: IUser) {
+export async function getConsolidatedTicketData(ticketId: string, _user?: IUser) {
+  // Get user from session internally for security - ignore client-supplied user
+  // IMPORTANT: Must be called BEFORE entering transaction to avoid nested transaction deadlock
+  const user = await getCurrentUser();
+  if (!user) {
+    throw new Error('Authentication required');
+  }
+
   const {knex: db, tenant} = await createTenantKnex();
   if (!tenant) {
     throw new Error('Tenant not found');
   }
 
+  // Check permission before transaction to avoid nested withTransaction calls
+  const canRead = await hasPermission(user, 'ticket', 'read');
+  if (!canRead) {
+    throw new Error('Permission denied: Cannot view ticket');
+  }
+
   return withTransaction(db, async (trx) => {
-    if (!await hasPermission(user, 'ticket', 'read', trx)) {
-      throw new Error('Permission denied: Cannot view ticket');
-    }
 
     try {
 
@@ -607,20 +618,30 @@ export async function getConsolidatedTicketData(ticketId: string, user: IUser) {
  * This replaces cursor-based pagination with traditional page-based approach
  */
 export async function getTicketsForList(
-  user: IUser,
+  _user: IUser | null,
   filters: ITicketListFilters,
   page: number = 1,
   pageSize: number = 10
 ): Promise<{ tickets: ITicketListItem[], totalCount: number }> {
+  // Get user from session internally for security - ignore client-supplied user
+  // IMPORTANT: Must be called BEFORE entering transaction to avoid nested transaction deadlock
+  const user = await getCurrentUser();
+  if (!user) {
+    throw new Error('Authentication required');
+  }
+
   const {knex: db, tenant} = await createTenantKnex();
   if (!tenant) {
     throw new Error('Tenant not found');
   }
 
+  // Check permission before transaction to avoid nested withTransaction calls
+  const canRead = await hasPermission(user, 'ticket', 'read');
+  if (!canRead) {
+    throw new Error('Permission denied: Cannot view tickets');
+  }
+
   return withTransaction(db, async (trx) => {
-    if (!await hasPermission(user, 'ticket', 'read', trx)) {
-      throw new Error('Permission denied: Cannot view tickets');
-    }
 
     try {
       const validatedFilters = validateData(ticketListFiltersSchema, filters) as ITicketListFilters;
@@ -1027,16 +1048,26 @@ export async function getTicketsForList(
  * Get all options needed for ticket forms and filters
  * This consolidates multiple API calls into a single request
  */
-export async function getTicketFormOptions(user: IUser) {
+export async function getTicketFormOptions(_user?: IUser) {
+  // Get user from session internally for security - ignore client-supplied user
+  // IMPORTANT: Must be called BEFORE entering transaction to avoid nested transaction deadlock
+  const user = await getCurrentUser();
+  if (!user) {
+    throw new Error('Authentication required');
+  }
+
   const {knex: db, tenant} = await createTenantKnex();
   if (!tenant) {
     throw new Error('Tenant not found');
   }
 
+  // Check permission before transaction to avoid nested withTransaction calls
+  const canRead = await hasPermission(user, 'ticket', 'read');
+  if (!canRead) {
+    throw new Error('Permission denied: Cannot view ticket options');
+  }
+
   return withTransaction(db, async (trx) => {
-    if (!await hasPermission(user, 'ticket', 'read', trx)) {
-      throw new Error('Permission denied: Cannot view ticket options');
-    }
 
     try {
 
@@ -1154,18 +1185,38 @@ export async function getTicketFormOptions(user: IUser) {
 }
 
 /**
- * Update ticket with proper caching
+ * Update ticket with proper caching and optimistic concurrency control
+ * @param id - The ticket ID to update
+ * @param data - The partial ticket data to update
+ * @param _user - Deprecated: user is now fetched internally for security
+ * @param expectedUpdatedAt - Optional: the updated_at timestamp the client expects for concurrency control
  */
-export async function updateTicketWithCache(id: string, data: Partial<ITicket>, user: IUser) {
+export async function updateTicketWithCache(
+  id: string,
+  data: Partial<ITicket>,
+  _user?: IUser,
+  expectedUpdatedAt?: string
+) {
+  // Get user from session internally for security - ignore client-supplied user
+  // IMPORTANT: Must be called BEFORE entering transaction to avoid nested transaction deadlock
+  // getCurrentUser() uses its own withTransaction() internally
+  const user = await getCurrentUser();
+  if (!user) {
+    throw new Error('Authentication required');
+  }
+
   const {knex: db, tenant} = await createTenantKnex();
   if (!tenant) {
     throw new Error('Tenant not found');
   }
 
+  // Check permission before transaction to avoid nested withTransaction calls
+  const canUpdate = await hasPermission(user, 'ticket', 'update');
+  if (!canUpdate) {
+    throw new Error('Permission denied: Cannot update ticket');
+  }
+
   return withTransaction(db, async (trx) => {
-    if (!await hasPermission(user, 'ticket', 'update', trx)) {
-      throw new Error('Permission denied: Cannot update ticket');
-    }
 
     try {
       // Validate update data
@@ -1178,6 +1229,24 @@ export async function updateTicketWithCache(id: string, data: Partial<ITicket>, 
 
     if (!currentTicket) {
       throw new Error('Ticket not found');
+    }
+
+    // Optimistic concurrency control: check if ticket was modified since client loaded it
+    if (expectedUpdatedAt) {
+      // Normalize both timestamps to comparable format (milliseconds since epoch)
+      const normalizeTimestamp = (ts: Date | string | null | undefined): number | null => {
+        if (!ts) return null;
+        const date = ts instanceof Date ? ts : new Date(ts);
+        return isNaN(date.getTime()) ? null : date.getTime();
+      };
+
+      const currentTime = normalizeTimestamp(currentTicket.updated_at);
+      const expectedTime = normalizeTimestamp(expectedUpdatedAt);
+
+      // Only check if both timestamps are valid and different
+      if (currentTime !== null && expectedTime !== null && currentTime !== expectedTime) {
+        throw new Error('CONFLICT: This ticket was modified by another user. Please refresh and try again.');
+      }
     }
 
     // Bundled child tickets lock workflow fields by default
@@ -1450,7 +1519,11 @@ export async function updateTicketWithCache(id: string, data: Partial<ITicket>, 
 
     return 'success';
     } catch (error) {
-      console.error(error);
+      console.error('updateTicketWithCache error:', error);
+      // Preserve specific error messages (like CONFLICT) for the client
+      if (error instanceof Error) {
+        throw error;
+      }
       throw new Error('Failed to update ticket');
     }
   });
@@ -1464,17 +1537,27 @@ export async function addTicketCommentWithCache(
   content: string,
   isInternal: boolean,
   isResolution: boolean,
-  user: IUser
+  _user?: IUser
 ): Promise<IComment> {
+  // Get user from session internally for security - ignore client-supplied user
+  // IMPORTANT: Must be called BEFORE entering transaction to avoid nested transaction deadlock
+  const user = await getCurrentUser();
+  if (!user) {
+    throw new Error('Authentication required');
+  }
+
   const {knex: db, tenant} = await createTenantKnex();
   if (!tenant) {
     throw new Error('Tenant not found');
   }
 
+  // Check permission before transaction to avoid nested withTransaction calls
+  const canUpdate = await hasPermission(user, 'ticket', 'update');
+  if (!canUpdate) {
+    throw new Error('Permission denied: Cannot add comment');
+  }
+
   return withTransaction(db, async (trx) => {
-    if (!await hasPermission(user, 'ticket', 'update', trx)) {
-      throw new Error('Permission denied: Cannot add comment');
-    }
 
     try {
 
@@ -1609,26 +1692,37 @@ export async function addTicketCommentWithCache(
  * This reduces multiple network calls by fetching all related data in a single server action
  */
 export async function getConsolidatedTicketListData(
-  user: IUser,
+  _user: IUser | null,
   filters: ITicketListFilters,
   page: number = 1,
   pageSize: number = 10
 ) {
+  // Get user from session internally for security - ignore client-supplied user
+  // IMPORTANT: Must be called BEFORE entering transaction to avoid nested transaction deadlock
+  const user = await getCurrentUser();
+  if (!user) {
+    throw new Error('Authentication required');
+  }
+
   const {knex: db, tenant} = await createTenantKnex();
   if (!tenant) {
     throw new Error('Tenant not found');
   }
 
+  // Check permission before transaction to avoid nested withTransaction calls
+  const canRead = await hasPermission(user, 'ticket', 'read');
+  if (!canRead) {
+    throw new Error('Permission denied: Cannot view tickets');
+  }
+
   return withTransaction(db, async (trx) => {
-    if (!await hasPermission(user, 'ticket', 'read', trx)) {
-      throw new Error('Permission denied: Cannot view tickets');
-    }
 
     try {
       // Fetch filter options and tickets in parallel
+      // Note: These functions now get user internally too
       const [formOptions, ticketsData] = await Promise.all([
-        getTicketFormOptions(user),
-        getTicketsForList(user, filters, page, pageSize)
+        getTicketFormOptions(),
+        getTicketsForList(null, filters, page, pageSize)
       ]);
 
       // Return consolidated data
@@ -1649,23 +1743,33 @@ export async function getConsolidatedTicketListData(
  * This is used when changing pages or page size
  */
 export async function fetchTicketsWithPagination(
-  user: IUser,
+  _user: IUser | null,
   filters: ITicketListFilters,
   page: number = 1,
   pageSize: number = 10
 ) {
+  // Get user from session internally for security - ignore client-supplied user
+  // IMPORTANT: Must be called BEFORE entering transaction to avoid nested transaction deadlock
+  const user = await getCurrentUser();
+  if (!user) {
+    throw new Error('Authentication required');
+  }
+
   const {knex: db, tenant} = await createTenantKnex();
   if (!tenant) {
     throw new Error('Tenant not found');
   }
 
+  // Check permission before transaction to avoid nested withTransaction calls
+  const canRead = await hasPermission(user, 'ticket', 'read');
+  if (!canRead) {
+    throw new Error('Permission denied: Cannot view tickets');
+  }
+
   return withTransaction(db, async (trx) => {
-    if (!await hasPermission(user, 'ticket', 'read', trx)) {
-      throw new Error('Permission denied: Cannot view tickets');
-    }
 
     try {
-      return await getTicketsForList(user, filters, page, pageSize);
+      return await getTicketsForList(null, filters, page, pageSize);
     } catch (error) {
       console.error('Failed to fetch tickets:', error);
       throw new Error('Failed to fetch tickets');
@@ -1678,18 +1782,28 @@ export async function fetchTicketsWithPagination(
  * Used by the ticket list when in "bundled" view and expanding a master inline.
  */
 export async function fetchBundleChildrenForMaster(
-  user: IUser,
+  _user: IUser | null,
   masterTicketId: string
 ): Promise<ITicketListItem[]> {
+  // Get user from session internally for security - ignore client-supplied user
+  // IMPORTANT: Must be called BEFORE entering transaction to avoid nested transaction deadlock
+  const user = await getCurrentUser();
+  if (!user) {
+    throw new Error('Authentication required');
+  }
+
   const { knex: db, tenant } = await createTenantKnex();
   if (!tenant) {
     throw new Error('Tenant not found');
   }
 
+  // Check permission before transaction to avoid nested withTransaction calls
+  const canRead = await hasPermission(user, 'ticket', 'read');
+  if (!canRead) {
+    throw new Error('Permission denied: Cannot view tickets');
+  }
+
   return withTransaction(db, async (trx) => {
-    if (!await hasPermission(user, 'ticket', 'read', trx)) {
-      throw new Error('Permission denied: Cannot view tickets');
-    }
 
     const rows = await trx('tickets as t')
       .leftJoin('tickets as mt', function () {
@@ -1788,14 +1902,15 @@ export async function fetchBundleChildrenForMaster(
  * @deprecated Use getTicketsForList with page-based pagination instead
  */
 export async function getTicketsForListWithCursor(
-  user: IUser,
+  _user: IUser | null,
   filters: ITicketListFilters,
   cursor?: string,
   limit: number = 50
 ): Promise<{ tickets: ITicketListItem[], nextCursor: string | null }> {
   // For backward compatibility, we'll use page 1 with the specified limit
   // This doesn't support cursor pagination anymore, but prevents breaking existing code
-  const result = await getTicketsForList(user, filters, 1, limit);
+  // Note: getTicketsForList now gets user internally
+  const result = await getTicketsForList(null, filters, 1, limit);
 
   return {
     tickets: result.tickets,

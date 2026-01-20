@@ -99,6 +99,20 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
 
+  // Capture original ticket values when form is initialized
+  // This prevents stale comparisons if ticket updates externally while user has pending changes
+  const [originalTicketValues, setOriginalTicketValues] = useState<Partial<ITicket>>(() => ({
+    status_id: ticket.status_id,
+    assigned_to: ticket.assigned_to,
+    board_id: ticket.board_id,
+    category_id: ticket.category_id,
+    subcategory_id: ticket.subcategory_id,
+    priority_id: ticket.priority_id,
+    due_date: ticket.due_date,
+    response_state: ticket.response_state,
+    title: ticket.title,
+  }));
+
   // Local state for board config based on selected (pending) board
   const [pendingBoardConfig, setPendingBoardConfig] = useState<BoardCategoryData['boardConfig'] | null>(null);
   const [pendingCategories, setPendingCategories] = useState<ITicketCategory[] | null>(null);
@@ -330,16 +344,18 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
   };
 
   // Handler for pending field changes (not saved until Save Changes is clicked)
+  // Uses originalTicketValues to prevent stale comparisons if ticket updates externally
   const handlePendingChange = useCallback((field: keyof ITicket, value: string | null) => {
     setPendingChanges(prev => {
-      // If the value is the same as the original ticket value, remove from pending
-      if (value === ticket[field]) {
+      // If the value is the same as the original ticket value (when form was loaded), remove from pending
+      // This prevents issues where external ticket updates could incorrectly clear pending changes
+      if (value === originalTicketValues[field]) {
         const { [field]: _, ...rest } = prev;
         return rest;
       }
       return { ...prev, [field]: value };
     });
-  }, [ticket]);
+  }, [originalTicketValues]);
 
   // Handler for pending ITIL field changes
   const handlePendingItilChange = useCallback((field: 'itil_impact' | 'itil_urgency', value: number | null) => {
@@ -394,6 +410,13 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
       if (onSaveChanges) {
         const success = await onSaveChanges(allChanges);
         if (success) {
+          // Update original values to reflect saved state for future change detection
+          setOriginalTicketValues(prev => ({
+            ...prev,
+            ...allChanges,
+            // Ensure title is updated if it was changed
+            ...(allChanges.title ? { title: allChanges.title as string } : {}),
+          }));
           // Clear pending changes on success
           setPendingChanges({});
           setPendingItilChanges({});
@@ -417,6 +440,12 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
             onSelectChange(field as keyof ITicket, value as string | null);
           }
         }
+        // Update original values to reflect saved state for future change detection
+        setOriginalTicketValues(prev => ({
+          ...prev,
+          ...allChanges,
+          ...(allChanges.title ? { title: allChanges.title as string } : {}),
+        }));
         // Clear pending changes
         setPendingChanges({});
         setPendingItilChanges({});

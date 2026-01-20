@@ -244,6 +244,12 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     setBundle(initialBundle);
   }, [initialBundle]);
 
+  // Sync conversations with initialComments when it changes (e.g., when Container adds a comment)
+  // This eliminates the need for redundant API calls to refresh comments
+  useEffect(() => {
+    setConversations(initialComments);
+  }, [initialComments]);
+
   // Use pre-fetched options directly
   const [userMap, setUserMap] =
     useState<
@@ -800,12 +806,9 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
           return false;
         }
       } else if (onTicketUpdate) {
-        // TODO: This fallback path may cause partial updates if one request fails.
+        // WARN: This fallback path may cause partial updates if one request fails.
         // The preferred path is onBatchTicketUpdate which makes a single atomic API call.
-        // If this fallback is still being used, consider:
-        // 1. Ensuring the container provides onBatchTicketUpdate, or
-        // 2. Implementing server-side transaction support for batch field updates
-        // See: https://github.com/Nine-Minds/alga-psa/issues/XXX (create tracking issue)
+        // Container should always provide onBatchTicketUpdate to ensure atomic saves.
         console.warn(
           "[handleBatchSaveChanges] Using per-field fallback - may cause partial updates",
         );
@@ -924,17 +927,8 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
           isResolution,
         );
 
-        // Refresh comments to ensure immediate UI update
-        if (ticket.ticket_id) {
-          try {
-            const updatedComments = await findCommentsByTicketId(
-              ticket.ticket_id,
-            );
-            setConversations(updatedComments);
-          } catch (e) {
-            console.error("Failed to refresh comments after add:", e);
-          }
-        }
+        // Note: No need to fetch comments here - Container updates initialComments,
+        // and the useEffect syncs conversations with initialComments automatically
 
         // Reset the comment input
         setNewCommentContent([
