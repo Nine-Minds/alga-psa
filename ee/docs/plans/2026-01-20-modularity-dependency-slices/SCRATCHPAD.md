@@ -68,3 +68,13 @@ Replace dynamic-import “escape hatches” with a new shared slice so dependenc
 - Validation for this effort therefore relies on:
   - package typechecks (`tsc --noEmit`) for touched packages, and
   - import-greps confirming the key layering breaks (e.g. no `@alga-psa/ui` imports of `@alga-psa/tenancy|users|clients|client-portal`).
+
+## Build Fixes (2026-01-20)
+- Added CE stub component for EE policy settings so `server:build` can typecheck:
+  - `server/src/empty/components/settings/policy/PolicyManagement.tsx`
+- Fixed CE build typing for Temporal runner factory:
+  - `server/src/lib/jobs/JobRunnerFactory.ts` casts the dynamically-imported `TemporalJobRunner` to `IJobRunner` (CE stubs don’t structurally match the server interface).
+- Made Nx build fully offline-friendly by avoiding networked installs during sample component builds:
+  - `sdk/samples/component/secrets-demo/package.json` uses `alga build --skip-install`.
+- Fixed `workflow-worker:build` in CE by resolving `@ee/*` imports to the `@alga-psa/ee-stubs` sources instead of `server/src/empty`:
+  - `services/workflow-worker/tsconfig.json` maps `@ee/*` → `packages/ee/src/*`.

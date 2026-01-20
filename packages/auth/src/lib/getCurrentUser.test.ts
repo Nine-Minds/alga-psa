@@ -12,10 +12,6 @@ vi.mock('@alga-psa/auth', () => ({
   getSession: vi.fn(),
 }));
 
-vi.mock('@alga-psa/documents/lib/avatarUtils', () => ({
-  getUserAvatarUrl: vi.fn(async () => 'https://avatar.test/user.png'),
-}));
-
 vi.mock('@alga-psa/db', () => ({
   createTenantKnex: vi.fn(async () => ({ knex: {}, tenant: 'tenant-1' })),
   withTransaction: vi.fn(async (_knex: unknown, callback: (trx: any) => Promise<any>) => {

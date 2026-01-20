@@ -1,7 +1,7 @@
 'use server';
 
 import type { Knex } from 'knex';
-import { getConnection } from '@/lib/db/db';
+import { getConnection } from '@alga-psa/db/connection';
 import { StorageService } from './service';
 import { StorageServiceError } from './errors';
 

@@ -36,6 +36,7 @@ import { getClientIp } from "./ipAddress";
 import { generateDeviceFingerprint, getDeviceInfo } from "./deviceFingerprint";
 import { getLocationFromIp } from "./geolocation";
 import { getConnection } from "@alga-psa/db";
+import { getPortalDomain, getPortalDomainByHostname } from "./PortalDomainModel";
 
 function applyPortToVanityUrl(url: URL, portCandidate: string | undefined, protocol: string): void {
     if (!portCandidate || portCandidate.length === 0) {
@@ -94,10 +95,6 @@ async function computeVanityRedirect({
             target: target.toString(),
         });
         const { getAdminConnection } = await import('@alga-psa/db/admin');
-        const {
-            getPortalDomain,
-            getPortalDomainByHostname,
-        } = await import('@alga-psa/client-portal/models/PortalDomainModel');
         const knex = await getAdminConnection();
 
         const isSameOrigin = target.origin === base.origin;
@@ -1914,7 +1911,6 @@ export const options: NextAuthConfig = {
         async signIn({ user, account, credentials }) {
             // Track successful login
             // const extendedUser = user as ExtendedUser;
-            // const { analytics } = await import('@alga-psa/analytics');
             // analytics.capture(AnalyticsEvents.USER_LOGGED_IN, {
             //     provider: account?.provider || 'credentials',
             //     user_type: extendedUser.user_type,

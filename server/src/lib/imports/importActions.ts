@@ -1,10 +1,9 @@
 // @ts-nocheck
-// TODO: This file needs refactoring - import utilities are still in server/src/lib/imports
-// and cannot be properly imported from this package location.
+// TODO: Move import system into a dedicated lower slice (shared/imports) once modularization stabilizes.
 'use server';
 
 import { Buffer } from 'node:buffer';
-import { createTenantKnex } from '@/lib/db';
+import { createTenantKnex } from '@alga-psa/db';
 import { ImportManager } from '@/lib/imports/ImportManager';
 import { ImportRegistry } from '@/lib/imports/ImportRegistry';
 import { CsvImporter } from '@/lib/imports/CsvImporter';
@@ -407,3 +406,4 @@ export async function approveImport(importJobId: string) {
     throw error instanceof Error ? error : new Error('Failed to queue asset import job');
   }
 }
+

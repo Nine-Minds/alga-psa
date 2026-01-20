@@ -8,7 +8,7 @@ import { hasPermission } from '@alga-psa/auth';
 import { unparseCSV } from '@alga-psa/core';
 import { getAllUsersBasic } from '@alga-psa/users/actions';
 import { getAllPriorities } from '@alga-psa/reference-data/actions';
-import { getServices } from '@alga-psa/billing/actions';
+import { getServices } from './serviceCatalogActions';
 import { createTagsForEntityWithTransaction } from '@alga-psa/tags/actions';
 import ProjectModel from '@alga-psa/projects/models/project';
 import ProjectTaskModel from '../models/projectTask';
@@ -528,10 +528,13 @@ export async function validatePhaseTaskImportData(
   const [users, priorities, servicesResponse] = await Promise.all([
     getAllUsersBasic(true),
     getAllPriorities('project_task'),
-    getServices(1, 999, { is_active: true }),
+    getServices(1, 999),
   ]);
 
-  const services = servicesResponse.services;
+  const services = servicesResponse.services.filter((service) => {
+    const isActive = (service as any).is_active;
+    return isActive === undefined ? true : Boolean(isActive);
+  });
 
   // Build lookup maps (case-insensitive)
   const userLookup: Record<string, string> = {};

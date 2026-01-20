@@ -8,7 +8,6 @@
 
 import { registerWorkflowActions } from '@shared/workflow/init/registerWorkflowActions';
 import logger from '@alga-psa/core/logger';
-import { registerAccountingExportWorkflowActions } from '@alga-psa/workflows/lib/registerAccountingExportActions';
 
 // Track initialization state
 let initialized = false;
@@ -28,7 +27,6 @@ export async function initializeServerWorkflowActions(): Promise<void> {
     
     // Register all workflow actions
     registerWorkflowActions();
-    registerAccountingExportWorkflowActions();
     
     // Mark as initialized
     initialized = true;

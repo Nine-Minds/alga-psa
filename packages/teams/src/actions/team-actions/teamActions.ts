@@ -1,11 +1,50 @@
 'use server'
 
 import Team from '../../models/team';
-import { ITeam, IUserWithRoles } from '@alga-psa/types';
-import { getMultipleUsersWithRoles } from '@alga-psa/users/actions';
+import type { IRole, ITeam, IUser, IUserWithRoles } from '@alga-psa/types';
 import { withTransaction } from '@alga-psa/db';
 import { createTenantKnex } from '@alga-psa/db';
 import { Knex } from 'knex';
+
+async function getUsersWithRoles(
+  trx: Knex | Knex.Transaction,
+  tenant: string,
+  userIds: string[],
+): Promise<IUserWithRoles[]> {
+  if (userIds.length === 0) {
+    return [];
+  }
+
+  const users = await trx<IUser>('users')
+    .select('*')
+    .whereIn('user_id', userIds)
+    .where('tenant', tenant);
+
+  const roles = await trx<IRole>('roles')
+    .join('user_roles', function () {
+      this.on('roles.role_id', '=', 'user_roles.role_id')
+        .andOn('roles.tenant', '=', 'user_roles.tenant');
+    })
+    .whereIn('user_roles.user_id', userIds)
+    .where('user_roles.tenant', tenant)
+    .where('roles.tenant', tenant)
+    .select('roles.*', 'user_roles.user_id as user_id');
+
+  const rolesByUser = new Map<string, IRole[]>();
+  for (const row of roles as any[]) {
+    const userId = row.user_id as string;
+    const role: IRole = { ...(row as any) };
+    delete (role as any).user_id;
+    const list = rolesByUser.get(userId) ?? [];
+    list.push(role);
+    rolesByUser.set(userId, list);
+  }
+
+  return users.map((user) => ({
+    ...(user as any),
+    roles: rolesByUser.get(user.user_id) ?? [],
+  }));
+}
 
 export async function createTeam(teamData: Omit<ITeam, 'members'> & { members?: IUserWithRoles[] }): Promise<ITeam> {
   try {
@@ -126,7 +165,7 @@ export const getTeamById = async (teamId: string): Promise<ITeam> => {
       throw new Error('Team not found');
     }
     const memberIds = await Team.getMembers(knex, tenant, teamId);
-    const members = await getMultipleUsersWithRoles(memberIds);
+    const members = await getUsersWithRoles(knex, tenant, memberIds);
     
     return { ...team, members };
   } catch (error) {
@@ -144,7 +183,7 @@ export async function getTeams(): Promise<ITeam[]> {
     const teams = await Team.getAll(knex, tenant);
     const teamsWithMembers = await Promise.all(teams.map(async (team): Promise<ITeam> => {
       const memberIds = await Team.getMembers(knex, tenant, team.team_id);
-      const members = await getMultipleUsersWithRoles(memberIds);
+      const members = await getUsersWithRoles(knex, tenant, memberIds);
       return { ...team, members };
     }));
     return teamsWithMembers;

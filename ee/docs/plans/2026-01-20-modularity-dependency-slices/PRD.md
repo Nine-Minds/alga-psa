@@ -2,7 +2,7 @@
 
 - Slug: `modularity-dependency-slices`
 - Date: `2026-01-20`
-- Status: Draft
+- Status: Implemented
 
 ## Summary
 We have “domain slice” packages (e.g. `@alga-psa/billing`, `@alga-psa/clients`) intended to be vertically-owned modules. Today, **billing ↔ clients** have a bidirectional dependency that creates circular build graph issues and has prompted dynamic-import “escape hatches”.

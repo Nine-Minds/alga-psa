@@ -3,15 +3,12 @@ import type { CalendarProviderConfig } from '@alga-psa/types';
 import { MicrosoftCalendarAdapter } from './providers/MicrosoftCalendarAdapter';
 import logger from '@alga-psa/core/logger';
 import { CalendarProviderService } from './CalendarProviderService';
+import { getAnalytics } from '@alga-psa/analytics';
 
 // PostHog analytics (EE only)
 let analytics: any = null;
 if (process.env.EDITION === 'enterprise') {
-  try {
-    analytics = require('../../lib/analytics/posthog').getAnalytics();
-  } catch (error) {
-    // Analytics not available, continue without it
-  }
+  analytics = getAnalytics();
 }
 
 interface RenewalOptions {

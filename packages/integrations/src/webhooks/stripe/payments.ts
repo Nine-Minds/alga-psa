@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import logger from '@alga-psa/core/logger';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
-import { processStripePaymentWebhookPayload } from '@alga-psa/billing/actions/paymentActions';
+import type { WebhookProcessingResult } from '@alga-psa/types';
 
 /**
  * POST /api/webhooks/stripe/payments
@@ -171,6 +171,27 @@ export async function POST(req: NextRequest) {
       { error: 'Internal server error' },
       { status: 500 }
     );
+  }
+}
+
+async function processStripePaymentWebhookPayload(tenantId: string, payload: string): Promise<WebhookProcessingResult> {
+  if (process.env.EDITION !== 'ee' && process.env.NEXT_PUBLIC_EDITION !== 'enterprise') {
+    return { success: false, error: 'Payment integration not available' } as WebhookProcessingResult;
+  }
+
+  try {
+    const eeModule = await import('@ee/lib/payments');
+    const PaymentService = (eeModule as any).PaymentService;
+    const createStripePaymentProvider = (eeModule as any).createStripePaymentProvider;
+
+    const paymentService = await PaymentService.create(tenantId);
+    const provider = createStripePaymentProvider(tenantId);
+    const webhookEvent = provider.parseWebhookEvent(payload);
+
+    return paymentService.processWebhookEvent(webhookEvent);
+  } catch (error) {
+    logger.error('[Stripe Payment Webhook] processStripePaymentWebhookPayload failed', { tenantId, error });
+    return { success: false, error: 'Payment webhook processing failed' } as WebhookProcessingResult;
   }
 }
 

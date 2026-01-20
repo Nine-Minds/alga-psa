@@ -7,7 +7,7 @@ import React, { createContext, useContext, useState, useCallback, ReactNode, use
 import { Activity, ActivityType } from "@alga-psa/types";
 import { useDrawer } from "@alga-psa/ui";
 import { ActivityDetailViewerDrawer } from "./ActivityDetailViewerDrawer";
-import { useActivitiesCache } from "@alga-psa/ui/hooks";
+import { useActivitiesCache } from "../../hooks/useActivitiesCache";
 
 /**
  * Context for managing activity drawer state

@@ -23,7 +23,6 @@ import SelectedWorkItem from '@alga-psa/scheduling/components/time-management/ti
 import { DateTimePicker } from '@alga-psa/ui/components/DateTimePicker';
 import { IUser } from '@shared/interfaces/user.interfaces';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
-import { CalendarSyncStatusDisplay } from '@alga-psa/integrations/components';
 import {
   approveAppointmentRequest as approveRequest,
   declineAppointmentRequest as declineRequest,
@@ -945,12 +944,6 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
               disabled={!canEditFields} // Disable based on permissions
             />
           </div>
-          {/* Calendar Sync Status */}
-          {event && event.entry_id && (
-            <div className="border-t pt-4">
-              <CalendarSyncStatusDisplay entryId={event.entry_id} />
-            </div>
-          )}
         </div>
         <div className="space-y-4">
           <div className="relative z-10">

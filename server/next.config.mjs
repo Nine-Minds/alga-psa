@@ -155,8 +155,8 @@ const nextConfig = {
       '@/empty/': isEE ? '../ee/server/src/' : './src/empty/',
       './src/empty': isEE ? '../ee/server/src' : './src/empty',
       './src/empty/': isEE ? '../ee/server/src/' : './src/empty/',
-      '@ee': isEE ? '../ee/server/src' : './src/empty',
-      '@ee/': isEE ? '../ee/server/src/' : './src/empty/',
+      '@ee': isEE ? '../ee/server/src' : '../packages/ee/src',
+      '@ee/': isEE ? '../ee/server/src/' : '../packages/ee/src/',
       'ee/server/src': isEE ? '../ee/server/src' : './src/empty',
       'ee/server/src/': isEE ? '../ee/server/src/' : './src/empty/',
       // Native DB drivers not used
@@ -322,7 +322,7 @@ const nextConfig = {
       '@alga-psa/clients': path.join(__dirname, '../packages/clients/src'),
       '@ee': isEE
         ? path.join(__dirname, '../ee/server/src')
-        : path.join(__dirname, 'src/empty'), // Point to empty implementations for CE builds
+        : path.join(__dirname, '../packages/ee/src'), // Point to CE stub implementations
       // Also map deep EE paths used without the @ee alias to CE stubs
       // This ensures CE builds don't fail when code references ee/server/src directly
       'ee/server/src': isEE

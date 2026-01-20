@@ -1,4 +1,10 @@
 export * from './activityServerActions';
 export * from './activityStatusActions';
-export * from './workflowTaskActions';
-
+export {
+  fetchWorkflowTask,
+  fetchTaskFormSchema,
+  fetchTaskFormData,
+  cancelWorkflowTask,
+  reassignWorkflowTask,
+  fetchDashboardWorkflowTasks,
+} from './workflowTaskActions';

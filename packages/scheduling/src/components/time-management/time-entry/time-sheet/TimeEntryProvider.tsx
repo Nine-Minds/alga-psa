@@ -5,7 +5,7 @@ import { ITimeEntry, ITimeEntryWithWorkItem, ITimePeriod, ITimePeriodView } from
 import { IExtendedWorkItem } from '@alga-psa/types';
 import { TaxRegion } from '@alga-psa/types';
 import { fetchClientTaxRateForWorkItem, fetchScheduleEntryForWorkItem, fetchServicesForTimeEntry, fetchTaxRegions } from '../../../../actions/timeEntryActions';
-import { getClientIdForWorkItem } from '@alga-psa/billing/lib/contractLineDisambiguation';
+import { getClientIdForWorkItem } from '../../../../lib/contractLineDisambiguation';
 import { formatISO, parseISO } from 'date-fns';
 import { getClientById } from '@alga-psa/clients/actions';
 import { Service, ITimeEntryWithNew } from './types';

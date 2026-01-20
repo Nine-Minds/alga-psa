@@ -5,7 +5,7 @@
  * in the Enterprise Edition of Alga PSA.
  */
 
-export type RmmCachedData = Record<string, unknown>;
+import type { RmmCachedData } from '@alga-psa/types';
 
 export interface RmmRebootResult {
   success: boolean;

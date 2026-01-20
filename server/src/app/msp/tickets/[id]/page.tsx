@@ -5,6 +5,7 @@ import { Suspense } from 'react';
 import { TicketDetailsSkeleton } from '@alga-psa/tickets/components/ticket/TicketDetailsSkeleton';
 import { getSurveyTicketSummary } from '@alga-psa/surveys/actions/survey-actions/surveyDashboardActions';
 import TicketDetailsContainer from '@alga-psa/tickets/components/ticket/TicketDetailsContainer';
+import AssociatedAssets from '@alga-psa/assets/components/AssociatedAssets';
 
 interface TicketDetailsPageProps {
   params: Promise<{
@@ -30,11 +31,28 @@ export default async function TicketDetailsPage({ params }: TicketDetailsPagePro
         return null;
       }),
     ]);
+
+    const associatedAssets =
+      ticketData.ticket?.client_id && ticketData.ticket?.ticket_id ? (
+        <Suspense fallback={<div id="associated-assets-skeleton" className="animate-pulse bg-gray-200 h-32 rounded-lg"></div>}>
+          <AssociatedAssets
+            id="ticket-details-associated-assets"
+            entityId={ticketData.ticket.ticket_id}
+            entityType="ticket"
+            clientId={ticketData.ticket.client_id}
+            defaultBoardId={ticketData.ticket.board_id}
+          />
+        </Suspense>
+      ) : null;
     
     return (
       <div id="ticket-details-container" className="bg-gray-100">
         <Suspense fallback={<TicketDetailsSkeleton />}>
-          <TicketDetailsContainer ticketData={ticketData} surveySummary={surveySummary ?? null} />
+          <TicketDetailsContainer
+            ticketData={ticketData}
+            surveySummary={surveySummary ?? null}
+            associatedAssets={associatedAssets}
+          />
         </Suspense>
       </div>
     );

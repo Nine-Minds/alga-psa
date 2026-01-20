@@ -8,7 +8,7 @@ import { ISO8601String } from '@alga-psa/types';
 import { ActivityType } from "@alga-psa/types";
 import { processTemplateVariables } from "@alga-psa/core";
 import { useDrawer } from "@alga-psa/ui";
-import { useActivitiesCache } from "@alga-psa/ui/hooks";
+import { useActivitiesCache } from "../../hooks/useActivitiesCache";
 import { getConsolidatedTicketData } from "@alga-psa/tickets/actions/optimizedTicketActions";
 import { useTenant } from "@alga-psa/ui/components/providers/TenantProvider";
 import { AlertCircle, ArrowLeft } from 'lucide-react';

@@ -2,7 +2,7 @@
   "name": "sebastian-ee",
   "targets": {
     "build": {
-      "dependsOn": ["server:build"]
+      "executor": "nx:noop"
     }
   }
 }

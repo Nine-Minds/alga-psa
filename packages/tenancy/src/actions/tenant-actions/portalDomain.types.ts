@@ -1,7 +1,7 @@
 import type {
   PortalDomainStatus,
   PortalDomainVerificationMethod,
-} from '@alga-psa/client-portal/models/PortalDomainModel';
+} from '../../lib/PortalDomainModel';
 
 export type PortalDomainEdition = 'ce' | 'ee';
 

@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation';
-import { ClientPortalSignIn, ClientPortalTenantDiscovery, PortalSwitchPrompt } from '@alga-psa/auth/client';
+import { ClientPortalSignIn, PortalSwitchPrompt } from '@alga-psa/auth/client';
+import { ClientPortalTenantDiscovery } from '@alga-psa/client-portal/components';
 import { I18nWrapper } from '@alga-psa/tenancy/components';
 import { getTenantBrandingByDomain, getTenantLocaleByDomain } from '@alga-psa/tenancy/actions';
 import { getSession } from '@alga-psa/auth';

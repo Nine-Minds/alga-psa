@@ -1,5 +1,4 @@
 import type { IAnalyticsTracker } from '@alga-psa/shared/models/ticketModel';
-import { analytics, AnalyticsEvents } from '@alga-psa/analytics';
 
 export class TicketModelAnalyticsTracker implements IAnalyticsTracker {
   async trackTicketCreated(
@@ -18,14 +17,8 @@ export class TicketModelAnalyticsTracker implements IAnalyticsTracker {
     userId?: string
   ): Promise<void> {
     try {
-      analytics.capture(
-        AnalyticsEvents.TICKET_CREATED,
-        {
-          ...data,
-          ...data.metadata,
-        },
-        userId
-      );
+      void data;
+      void userId;
     } catch (error) {
       console.error('Failed to track ticket creation analytics:', error);
     }
@@ -36,14 +29,8 @@ export class TicketModelAnalyticsTracker implements IAnalyticsTracker {
     userId?: string
   ): Promise<void> {
     try {
-      analytics.capture(
-        AnalyticsEvents.TICKET_UPDATED,
-        {
-          ...data,
-          ...data.metadata,
-        },
-        userId
-      );
+      void data;
+      void userId;
     } catch (error) {
       console.error('Failed to track ticket update analytics:', error);
     }
@@ -54,14 +41,8 @@ export class TicketModelAnalyticsTracker implements IAnalyticsTracker {
     userId?: string
   ): Promise<void> {
     try {
-      analytics.capture(
-        AnalyticsEvents.COMMENT_CREATED,
-        {
-          ...data,
-          ...data.metadata,
-        },
-        userId
-      );
+      void data;
+      void userId;
     } catch (error) {
       console.error('Failed to track comment creation analytics:', error);
     }
@@ -71,4 +52,3 @@ export class TicketModelAnalyticsTracker implements IAnalyticsTracker {
     // No-op in package context (feature adoption tracker is server-owned today).
   }
 }
-

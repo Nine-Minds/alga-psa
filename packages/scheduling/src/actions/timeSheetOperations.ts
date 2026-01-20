@@ -18,9 +18,11 @@ import {
   fetchOrCreateTimeSheetParamsSchema,
   FetchOrCreateTimeSheetParams
 } from './timeEntrySchemas'; // Import schemas from the new module
-import { analytics } from '@alga-psa/analytics';
-import { AnalyticsEvents } from '@alga-psa/analytics';
 import { getSession } from '@alga-psa/auth';
+
+function captureAnalytics(_event: string, _properties?: Record<string, any>, _userId?: string): void {
+  // Intentionally no-op: avoid pulling analytics (and its tenancy/client-portal deps) into scheduling.
+}
 
 export async function fetchTimeSheets(): Promise<ITimeSheet[]> {
   const session = await getSession();
@@ -127,7 +129,7 @@ export async function submitTimeSheet(timeSheetId: string): Promise<ITimeSheet> 
 
       // Track analytics
       if (userId) {
-        analytics.capture(AnalyticsEvents.TIME_SHEET_SUBMITTED, {
+        captureAnalytics('time_sheet_submitted', {
           time_sheet_id: validatedParams.timeSheetId,
           entry_count: entriesInfo?.entry_count || 0,
           total_hours: parseFloat(entriesInfo?.total_hours || '0'),

@@ -13,13 +13,13 @@ import {
   declineAppointmentRequestSchema,
   updateAppointmentRequestDateTimeSchema,
   associateRequestToTicketSchema,
-  AppointmentRequestFilters,
+  type AppointmentRequestFilters,
   appointmentRequestFilterSchema,
-  ApproveAppointmentRequestInput,
-  DeclineAppointmentRequestInput,
-  UpdateAppointmentRequestDateTimeInput,
-  AssociateRequestToTicketInput
-} from '@alga-psa/client-portal';
+  type ApproveAppointmentRequestInput,
+  type DeclineAppointmentRequestInput,
+  type UpdateAppointmentRequestDateTimeInput,
+  type AssociateRequestToTicketInput
+} from '../schemas/appointmentRequestSchemas';
 import { SystemEmailService } from '@alga-psa/email';
 import ScheduleEntry from '../models/scheduleEntry';
 import { publishEvent } from '@alga-psa/event-bus/publishers';
@@ -31,7 +31,6 @@ import {
   formatDate,
   formatTime
 } from './appointmentHelpers';
-import { createNotificationFromTemplateInternal } from '@alga-psa/notifications/actions';
 import { generateICSBuffer, generateICSFilename, ICSEventData } from '../utils/icsGenerator';
 
 export interface IAppointmentRequest {
@@ -727,27 +726,6 @@ export async function approveAppointmentRequest(
           console.log(`[AppointmentRequest] Approval email sent to ${recipientEmail}`);
         }
 
-        // Send internal notification to client
-        if (request.contact_id && tenant) {
-          const clientUserId = await getClientUserIdFromContact(request.contact_id, tenant);
-          if (clientUserId) {
-            await createNotificationFromTemplateInternal(trx, {
-              tenant: request.tenant,
-              user_id: clientUserId,
-              template_name: 'appointment-request-approved',
-              type: 'success',
-              category: 'appointments',
-              link: `/client-portal/appointments/${request.appointment_request_id}`,
-              data: {
-                serviceName: service.service_name,
-                appointmentDate: await formatDate(finalDate, 'en'),
-                appointmentTime: await formatTime(finalTime, 'en'),
-                technicianName: `${assignedUser.first_name} ${assignedUser.last_name}`
-              }
-            });
-          }
-        }
-
         console.log(`[AppointmentRequest] Request ${request.appointment_request_id} approved by ${currentUser.user_id}`);
       } catch (emailError) {
         console.error('Error sending approval email:', emailError);
@@ -933,25 +911,6 @@ export async function declineAppointmentRequest(
           });
 
           console.log(`[AppointmentRequest] Decline email sent to ${recipientEmail}`);
-        }
-
-        // Send internal notification to client
-        if (request.contact_id && tenant) {
-          const clientUserId = await getClientUserIdFromContact(request.contact_id, tenant);
-          if (clientUserId) {
-            await createNotificationFromTemplateInternal(trx, {
-              tenant: request.tenant,
-              user_id: clientUserId,
-              template_name: 'appointment-request-declined',
-              type: 'warning',
-              category: 'appointments',
-              link: `/client-portal/appointments/${request.appointment_request_id}`,
-              data: {
-                serviceName: service.service_name,
-                declineReason: validatedData.decline_reason
-              }
-            });
-          }
         }
 
         console.log(`[AppointmentRequest] Request ${request.appointment_request_id} declined by ${currentUser.user_id}`);

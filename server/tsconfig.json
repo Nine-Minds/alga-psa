@@ -257,10 +257,10 @@
       ],
       // CE-first: use stubs by default; EE runs are overridden by webpack
       "@ee": [
-        "src/empty"
+        "../packages/ee/src"
       ],
       "@ee/*": [
-        "src/empty/*"
+        "../packages/ee/src/*"
       ],
       "@product/chat/entry": [
         "../packages/product-chat/oss/entry"

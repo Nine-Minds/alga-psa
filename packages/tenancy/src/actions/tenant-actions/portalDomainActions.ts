@@ -1,8 +1,8 @@
 'use server';
 
 import { createTenantKnex } from '@alga-psa/db';
-import { getPortalDomain, computeCanonicalHost } from '@alga-psa/client-portal/models/PortalDomainModel';
-import type { PortalDomain } from '@alga-psa/client-portal/models/PortalDomainModel';
+import { getPortalDomain, computeCanonicalHost } from '../../lib/PortalDomainModel';
+import type { PortalDomain } from '../../lib/PortalDomainModel';
 import type {
   PortalDomainStatusResponse,
   PortalDomainRegistrationRequest,

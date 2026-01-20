@@ -1,7 +1,7 @@
 'use server'
 
 import { IPriority } from '@alga-psa/types';
-import Priority from '@alga-psa/tickets/models/priority';
+import Priority from '../models/priority';
 import { withTransaction } from '@alga-psa/db';
 import { createTenantKnex } from '@alga-psa/db';
 import { getCurrentUser } from '@alga-psa/users/actions';

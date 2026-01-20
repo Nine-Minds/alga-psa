@@ -3,11 +3,10 @@
 import type { IUser, IBoard, ITicketStatus, IPriority, IClient, IContact } from '@alga-psa/types';
 import { getAllUsers } from '@alga-psa/users/actions';
 import { getCurrentUser } from '@alga-psa/auth/getCurrentUser';
-import { getAllBoards } from '@alga-psa/tickets/actions';
+import { getAllBoards } from './board-actions';
 import { getTicketStatuses } from '@alga-psa/reference-data/actions';
 import { getAllPriorities, getPrioritiesByBoardType } from '@alga-psa/reference-data/actions';
-import { getAllClients, getClientById } from '@alga-psa/clients/actions';
-import { getContactsByClient } from '@alga-psa/clients/actions';
+import { getAllClients, getClientById, getContactsByClient } from './clientLookupActions';
 import { withTransaction } from '@alga-psa/db';
 import { createTenantKnex } from '@alga-psa/db';
 import { Knex } from 'knex';

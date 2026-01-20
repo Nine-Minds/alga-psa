@@ -6,7 +6,7 @@
   { "id": "T005", "featureIds": ["F009","F010"], "description": "No dynamic import helpers remain that exist solely to avoid billing↔clients static dependency detection.", "implemented": true },
   { "id": "T006", "featureIds": ["F014"], "description": "Dependency graph is validated via import-greps and TypeScript file inclusion (nx graph optional).", "implemented": true },
   { "id": "T007", "featureIds": ["F015"], "description": "Build/typecheck “smoke checks” pass for shared, billing, and clients.", "implemented": true },
-  { "id": "T008", "featureIds": ["F017"], "description": "@alga-psa/auth typechecks after refactor (no test-only type errors during package typecheck).", "implemented": false },
-  { "id": "T009", "featureIds": ["F016","F018"], "description": "@alga-psa/ui typechecks and has no imports from vertical slices (verify via grep + typecheck).", "implemented": false },
-  { "id": "T010", "featureIds": ["F019"], "description": "nx build run-many succeeds without circular dependency errors.", "implemented": false }
+  { "id": "T008", "featureIds": ["F017"], "description": "@alga-psa/auth typechecks after refactor (no test-only type errors during package typecheck).", "implemented": true },
+  { "id": "T009", "featureIds": ["F016","F018"], "description": "@alga-psa/ui typechecks and has no imports from vertical slices (verify via grep + typecheck).", "implemented": true },
+  { "id": "T010", "featureIds": ["F019"], "description": "nx build run-many succeeds without circular dependency errors.", "implemented": true }
 ]

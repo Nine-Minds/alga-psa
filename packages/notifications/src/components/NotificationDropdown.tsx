@@ -7,8 +7,6 @@ import Link from 'next/link';
 import Spinner from '@alga-psa/ui/components/Spinner';
 import { NotificationItem } from './NotificationItem';
 import type { InternalNotification } from '../types/internalNotification';
-import { useActivityDrawer } from '@alga-psa/workflows/components';
-import { ActivityType, NotificationActivity } from '@alga-psa/types';
 import { useTenant } from '@alga-psa/ui/components/providers/TenantProvider';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { useSession } from 'next-auth/react';
@@ -39,7 +37,6 @@ export function NotificationDropdown({
   const [isMarkingAllAsRead, setIsMarkingAllAsRead] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const { data: session } = useSession();
-  const { openActivityDrawer } = useActivityDrawer();
   const tenant = useTenant();
 
   // Load both translation namespaces
@@ -97,48 +94,11 @@ export function NotificationDropdown({
       return;
     }
 
-    // For documents and other notifications, use the drawer
-    // Convert InternalNotification to NotificationActivity
-    // Map priority based on notification type
-    let priority: any;
-    switch (notification.type) {
-      case 'error':
-        priority = 'high';
-        break;
-      case 'warning':
-        priority = 'medium';
-        break;
-      default:
-        priority = 'low';
-    }
-
-    const notificationActivity: NotificationActivity = {
-      id: notification.internal_notification_id.toString(),
-      notificationId: notification.internal_notification_id,
-      title: notification.title,
-      message: notification.message,
-      description: notification.message,
-      type: ActivityType.NOTIFICATION,
-      sourceType: ActivityType.NOTIFICATION,
-      sourceId: notification.internal_notification_id.toString(),
-      status: notification.type || 'info',
-      priority: priority,
-      isRead: notification.is_read,
-      readAt: notification.read_at || undefined,
-      link: notification.link || undefined,
-      category: notification.category || undefined,
-      templateName: notification.template_name || '',
-      metadata: notification.metadata as Record<string, any>,
-      assignedTo: notification.user_id ? [notification.user_id] : [],
-      actions: [],
-      tenant: tenant || '',
-      createdAt: notification.created_at,
-      updatedAt: notification.updated_at || notification.created_at
-    };
-
-    // Close the dropdown and open the notification in the drawer
+    // Close the dropdown and navigate to the link (if present).
     onClose();
-    openActivityDrawer(notificationActivity);
+    if (notification.link) {
+      window.location.href = notification.link;
+    }
   };
 
   return (

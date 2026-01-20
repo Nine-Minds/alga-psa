@@ -3,7 +3,7 @@
 import { memo, useEffect, useState } from 'react';
 import { Info, FileText } from 'lucide-react';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
-import { getEligibleContractLinesForUI, getClientIdForWorkItem } from '@alga-psa/billing/lib/contractLineDisambiguation';
+import { getEligibleContractLinesForUI, getClientIdForWorkItem } from '../../../../lib/contractLineDisambiguation';
 import { ISO8601String } from '@alga-psa/types';
 
 interface ContractInfoBannerProps {

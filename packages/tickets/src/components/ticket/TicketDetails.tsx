@@ -30,7 +30,6 @@ import TicketInfo from "./TicketInfo";
 import TicketProperties from "./TicketProperties";
 import TicketDocumentsSection from "./TicketDocumentsSection";
 import TicketConversation from "./TicketConversation";
-import AssociatedAssets from "@alga-psa/assets/components/AssociatedAssets";
 import { useSession } from 'next-auth/react';
 import { toast } from 'react-hot-toast';
 import { useDrawer } from "@alga-psa/ui";
@@ -38,16 +37,11 @@ import { findUserById, getCurrentUser } from "@alga-psa/users/actions";
 import { findBoardById, getAllBoards } from "@alga-psa/tickets/actions";
 import { findCommentsByTicketId, deleteComment, createComment, updateComment, findCommentById } from "@alga-psa/tickets/actions";
 import { getDocumentByTicketId } from "@alga-psa/documents/actions/documentActions";
-import { getContactByContactNameId, getContactsByClient } from "@alga-psa/clients/actions";
-import { getClientById, getAllClients } from "@alga-psa/clients/actions";
+import { getContactByContactNameId, getContactsByClient, getClientById, getAllClients } from "../../actions/clientLookupActions";
 import { updateTicketWithCache } from "../../actions/optimizedTicketActions";
 import { updateTicket } from "../../actions/ticketActions";
 import { getTicketStatuses } from "@alga-psa/reference-data/actions";
 import { getAllPriorities } from "@alga-psa/reference-data/actions";
-import { fetchTimeSheets, fetchOrCreateTimeSheet, saveTimeEntry } from "@alga-psa/scheduling/actions/timeEntryActions";
-import { getCurrentTimePeriod } from "@alga-psa/scheduling/actions/timePeriodsActions";
-import ContactDetailsView from '@alga-psa/clients/components/contacts/ContactDetailsView';
-import ClientDetails from '@alga-psa/clients/components/clients/ClientDetails';
 import { addTicketResource, getTicketResources, removeTicketResource } from "@alga-psa/tickets/actions";
 import AgentScheduleDrawer from "./AgentScheduleDrawer";
 import { Button } from "@alga-psa/ui/components/Button";
@@ -55,11 +49,9 @@ import { Input } from "@alga-psa/ui/components/Input";
 import { ExternalLink } from 'lucide-react';
 import { WorkItemType } from "@alga-psa/types";
 import { ReflectionContainer } from "@alga-psa/ui/ui-reflection/ReflectionContainer";
-import TimeEntryDialog from "@alga-psa/scheduling/components/time-management/time-entry/time-sheet/TimeEntryDialog";
 import { PartialBlock, StyledText } from '@blocknote/core';
 import { useTicketTimeTracking } from "@alga-psa/ui/hooks";
 import { IntervalTrackingService } from "@alga-psa/ui/services";
-import { IntervalManagement } from "@alga-psa/scheduling/components/time-management/interval-tracking/IntervalManagement";
 import { convertBlockNoteToMarkdown } from "@alga-psa/documents/lib/blocknoteUtils";
 import BackNav from '@alga-psa/ui/components/BackNav';
 import type { SurveyTicketSatisfactionSummary } from '@alga-psa/types';
@@ -110,6 +102,12 @@ interface TicketDetailsProps {
     onUpdateDescription?: (content: string) => Promise<boolean>;
     isSubmitting?: boolean;
     surveySummary?: SurveyTicketSatisfactionSummary | null;
+
+    /**
+     * Optional injected UI for cross-slice composition (e.g. assets associations).
+     * This keeps @alga-psa/tickets from importing other vertical slices directly.
+     */
+    associatedAssets?: React.ReactNode;
 }
 
 const TicketDetails: React.FC<TicketDetailsProps> = ({
@@ -145,7 +143,8 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     onAddComment,
     onUpdateDescription,
     isSubmitting = false,
-    surveySummary = null
+    surveySummary = null,
+    associatedAssets = null
 }) => {
     const { data: session } = useSession();
     const [hasHydrated, setHasHydrated] = useState(false);
@@ -493,11 +492,17 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     const handleClientClick = () => {
         if (client) {
             openDrawer(
-                <ClientDetails
-                    client={client}
-                    isInDrawer={true}
-                    quickView={true}
-                />
+                <div className="p-4 space-y-3">
+                    <div className="text-lg font-semibold">{client.client_name}</div>
+                    <Button
+                        id="ticket-details-open-client"
+                        type="button"
+                        variant="outline"
+                        onClick={() => window.open(`/msp/clients/${client.client_id}`, '_blank', 'noopener,noreferrer')}
+                    >
+                        Open Client <ExternalLink className="ml-2 h-4 w-4" />
+                    </Button>
+                </div>
             );
         }
     };
@@ -505,15 +510,19 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     const handleContactClick = () => {
         if (contactInfo && client) {
             openDrawer(
-                <ContactDetailsView
-                    initialContact={{
-                        ...contactInfo,
-                        client_id: client.client_id
-                    }}
-                    clients={[client]}
-                    isInDrawer={true}
-                    clientReadOnly={true}
-                />
+                <div className="p-4 space-y-3">
+                    <div className="text-lg font-semibold">{contactInfo.full_name}</div>
+                    {contactInfo.email ? <div className="text-sm text-gray-600">{contactInfo.email}</div> : null}
+                    {contactInfo.phone_number ? <div className="text-sm text-gray-600">{contactInfo.phone_number}</div> : null}
+                    <Button
+                        id="ticket-details-open-contact-client"
+                        type="button"
+                        variant="outline"
+                        onClick={() => window.open(`/msp/clients/${client.client_id}`, '_blank', 'noopener,noreferrer')}
+                    >
+                        Open Client <ExternalLink className="ml-2 h-4 w-4" />
+                    </Button>
+                </div>
             );
         }
     };
@@ -905,108 +914,7 @@ const handleClose = () => {
 
     const handleAddTimeEntry = async () => {
         try {
-            if (!ticket.ticket_id || !userId) {
-                console.error('Ticket ID or User ID is missing');
-                toast.error('Unable to add time entry: Missing required information');
-                return;
-            }
-
-            const currentTimePeriod = await getCurrentTimePeriod();
-
-            if (!currentTimePeriod) {
-                console.error('No current time period found');
-                // Show the time period dialog instead of a toast
-                setIsTimeEntryPeriodDialogOpen(true);
-                return;
-            }
-
-            const timeSheet = await fetchOrCreateTimeSheet(userId!, currentTimePeriod.period_id);
-
-            if (!timeSheet) {
-                console.error('Failed to fetch or create time sheet');
-                toast.error('Unable to add time entry: Failed to create or fetch time sheet');
-                return;
-            }
-
-            // Create work item from ticket
-            const workItem = {
-                work_item_id: ticket.ticket_id,
-                type: 'ticket' as const,
-                name: ticket.title || 'Untitled Ticket',
-                description: timeDescription,
-                is_billable: true,
-                ticket_number: ticket.ticket_number
-            };
-
-            // Calculate times based on timer
-            const endTime = new Date();
-            const startTime = new Date();
-            
-            startTime.setTime(startTime.getTime() - (elapsedTime * 1000));
-            if (elapsedTime > 0 && (endTime.getTime() - startTime.getTime()) < 60000) {
-                startTime.setTime(endTime.getTime() - 60000);
-            }
-            
-            console.log('Time entry times:', {
-                startTime,
-                endTime,
-                elapsedTimeSeconds: elapsedTime,
-                elapsedTimeMinutes: Math.round(elapsedTime / 60),
-                timeDifferenceMs: endTime.getTime() - startTime.getTime(),
-                timeDifferenceMinutes: (endTime.getTime() - startTime.getTime()) / 60000
-            });
-
-            // Create initial time entry with description
-            const initialEntry = {
-                notes: timeDescription || '',
-                start_time: startTime.toISOString(),
-                end_time: endTime.toISOString(),
-                billable_duration: Math.round(elapsedTime / 60), // Convert seconds to minutes
-                work_item_type: 'ticket',
-                work_item_id: ticket.ticket_id!
-            };
-
-            // Open drawer with TimeEntryDialog
-            openDrawer(
-                <TimeEntryDialog
-                    id={`${id}-time-entry-dialog`}
-                    isOpen={true}
-                    onClose={closeDrawer}
-                    onSave={async (timeEntry) => {
-                        try {
-                            await saveTimeEntry({
-                                ...timeEntry,
-                                time_sheet_id: timeSheet.id,
-                                user_id: userId,
-                                created_at: new Date().toISOString(),
-                                updated_at: new Date().toISOString(),
-                                approval_status: 'DRAFT',
-                                work_item_type: 'ticket',
-                                work_item_id: ticket.ticket_id!
-                            });
-                            toast.success('Time entry saved successfully');
-                            closeDrawer();
-                        } catch (error) {
-                            console.error('Error saving time entry:', error);
-                            toast.error('Failed to save time entry');
-                        }
-                    }}
-                    workItem={workItem}
-                    date={new Date()}
-                    existingEntries={[]}
-                    timePeriod={currentTimePeriod!} // Already a view type from getCurrentTimePeriod
-                    isEditable={true}
-                    defaultStartTime={startTime}
-                    defaultEndTime={endTime}
-                    timeSheetId={timeSheet.id}
-                    inDrawer={true}
-                />
-            );
-
-            // Stop and reset timer
-            setIsRunning(false);
-            setElapsedTime(0);
-            setTimeDescription('');
+            toast('Time entry is managed in Scheduling.');
         } catch (error) {
             console.error('Error in handleAddTimeEntry:', error);
             toast.error('An error occurred while preparing the time entry. Please try again.');
@@ -1658,20 +1566,7 @@ const handleClose = () => {
                             />
                         </Suspense>
                         
-                        {/* Associated Assets - with Remote Access for RMM-managed devices */}
-                        {ticket.client_id && ticket.ticket_id && (
-                            <div className="mt-6" id="associated-assets-container">
-                                <Suspense fallback={<div id="associated-assets-skeleton" className="animate-pulse bg-gray-200 h-32 rounded-lg"></div>}>
-                                    <AssociatedAssets
-                                        id={`${id}-associated-assets`}
-                                        entityId={ticket.ticket_id}
-                                        entityType="ticket"
-                                        clientId={ticket.client_id}
-                                        defaultBoardId={ticket.board_id}
-                                    />
-                                </Suspense>
-                            </div>
-                        )}
+                        {associatedAssets ? <div className="mt-6" id="associated-assets-container">{associatedAssets}</div> : null}
                     </div>
                 </div>
             </div>

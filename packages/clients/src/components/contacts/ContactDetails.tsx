@@ -37,7 +37,7 @@ import { ClientPicker } from '../clients/ClientPicker';
 import { TagManager } from '@alga-psa/ui/components';
 import { findTagsByEntityIds } from '@alga-psa/tags/actions';
 import { useTags } from '@alga-psa/ui';
-import ContactAvatarUpload from '@alga-psa/client-portal/components/contacts/ContactAvatarUpload';
+import ContactAvatarUpload from './ContactAvatarUpload';
 import ClientAvatar from '@alga-psa/ui/components/ClientAvatar';
 import { getClientById, getAllCountries, ICountry } from '@alga-psa/clients/actions';
 import ClientDetails from '../clients/ClientDetails';
@@ -848,10 +848,8 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
         <div className="mr-4">
           <ContactAvatarUpload
             contactId={editedContact.contact_name_id}
-            contactName={editedContact.full_name}
-            avatarUrl={avatarUrl}
-            userType="internal"
-            onAvatarChange={(newAvatarUrl) => {
+            currentAvatarUrl={avatarUrl}
+            onAvatarUpdated={(newAvatarUrl) => {
               console.log("ContactDetails: Avatar URL changed:", newAvatarUrl);
               setAvatarUrl(newAvatarUrl);
             }}

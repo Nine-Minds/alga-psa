@@ -8,10 +8,6 @@ import { validateData, validateArray } from '@alga-psa/core';
 import { timePeriodSettingsSchema } from '../../schemas/timeSheet.schemas';
 import { formatUtcDateNoTime } from '@alga-psa/core';
 import { Knex } from 'knex';
-import { JobScheduler } from '@alga-psa/jobs/lib/jobs/jobScheduler';
-import { JobService } from '@alga-psa/jobs/lib/jobService';
-import { StorageService } from '@alga-psa/documents/storage/StorageService';
-import { logger } from '@alga-psa/core';
 
 // Special value to indicate end of period
 const END_OF_PERIOD = 0;
@@ -137,22 +133,7 @@ export async function createTimePeriodSettings(settings: Partial<ITimePeriodSett
     end_date: insertedSetting.end_date ? formatUtcDateNoTime(new Date(insertedSetting.end_date)) : undefined
   };
 
-  // Schedule the createNextTimePeriods job for this tenant if not already scheduled
-  try {
-    const jobService = await JobService.create();
-    const storageService = new StorageService();
-    const jobScheduler = await JobScheduler.getInstance(jobService, storageService);
-
-    await jobScheduler.scheduleRecurringJob(
-      'createNextTimePeriods',
-      '24 hours',
-      { tenantId: tenant }
-    );
-    logger.info(`Scheduled createNextTimePeriods job for tenant ${tenant} after settings creation`);
-  } catch (error) {
-    // Don't fail the settings creation if job scheduling fails
-    logger.error(`Failed to schedule createNextTimePeriods job for tenant ${tenant}:`, error);
-  }
+  // NOTE: Recurring job scheduling is handled at a higher layer; avoid scheduling → jobs deps here.
 
   // Now validate the complete record with the schema
   return validateData(timePeriodSettingsSchema, formattedSetting);

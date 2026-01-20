@@ -2,7 +2,7 @@
 
 import { Knex } from 'knex'; // Import Knex type
 import { createTenantKnex } from '@alga-psa/db';
-import { determineDefaultContractLine } from '@alga-psa/billing/lib/contractLineDisambiguation';
+import { determineDefaultContractLine } from '../lib/contractLineDisambiguation';
 import { findOrCreateCurrentBucketUsageRecord, updateBucketUsageMinutes } from '../services/bucketUsageService'; // Import bucket service functions
 import {
   ITimeEntry,
@@ -21,10 +21,12 @@ import {
   SaveTimeEntryParams
 } from './timeEntrySchemas'; // Import schemas
 import { getClientIdForWorkItem } from './timeEntryHelpers'; // Import helper
-import { analytics } from '@alga-psa/analytics';
-import { AnalyticsEvents } from '@alga-psa/analytics';
 import { getSession } from '@alga-psa/auth';
 import { computeWorkDateFields, resolveUserTimeZone } from '@alga-psa/db';
+
+function captureAnalytics(_event: string, _properties?: Record<string, any>, _userId?: string): void {
+  // Intentionally no-op: avoid pulling analytics (and its tenancy/client-portal deps) into scheduling.
+}
 
 export async function fetchTimeEntriesForTimeSheet(timeSheetId: string): Promise<ITimeEntryWithWorkItem[]> {
   const currentUser = await getCurrentUser();
@@ -735,7 +737,7 @@ export async function saveTimeEntry(timeEntry: Omit<ITimeEntry, 'tenant'>): Prom
 
     // Track time entry analytics
     const isUpdate = !!entry_id;
-    analytics.capture(isUpdate ? AnalyticsEvents.TIME_ENTRY_UPDATED : AnalyticsEvents.TIME_ENTRY_CREATED, {
+    captureAnalytics(isUpdate ? 'time_entry_updated' : 'time_entry_created', {
       work_item_type: entry.work_item_type,
       duration_minutes: finalBillableDuration,
       is_billable: finalBillableDuration > 0,
@@ -864,7 +866,7 @@ export async function deleteTimeEntry(entryId: string): Promise<void> {
          console.log(`Successfully deleted time entry ${entryId}`);
          
          // Track time entry deletion analytics
-         analytics.capture(AnalyticsEvents.TIME_ENTRY_DELETED, {
+         captureAnalytics('time_entry_deleted', {
            work_item_type: timeEntry.work_item_type,
            duration_minutes: timeEntry.billable_duration || 0,
            was_billable: (timeEntry.billable_duration || 0) > 0,

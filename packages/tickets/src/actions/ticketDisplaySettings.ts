@@ -1,8 +1,6 @@
 'use server'
 
-import { getTenantSettings, updateTenantSettings } from '@alga-psa/tenancy/actions';
 import { createTenantKnex } from '@alga-psa/db';
-import { getTenantForCurrentRequest } from '@alga-psa/tenancy/server';
 import { getCurrentUser } from '@alga-psa/auth/getCurrentUser';
 import { hasPermission } from '@alga-psa/auth/rbac';
 
@@ -36,8 +34,7 @@ const DEFAULT_TICKETING_DATETIME_FORMAT = 'MMM d, yyyy h:mm a';
 export async function getTicketingDisplaySettings(): Promise<TicketingDisplaySettings> {
   // Prefer dedicated column if present; fallback to nested settings for backward compatibility
   try {
-    const { knex } = await createTenantKnex();
-    const tenant = await getTenantForCurrentRequest();
+    const { knex, tenant } = await createTenantKnex();
     if (!tenant) throw new Error('Tenant not found');
     const row = await knex('tenant_settings').select('ticket_display_settings', 'settings').where({ tenant }).first();
     const fromColumn = (row?.ticket_display_settings as any) || {};
@@ -98,54 +95,59 @@ export async function updateTicketingDisplaySettings(updated: TicketingDisplaySe
     throw new Error('User not authenticated');
   }
   
-  const { knex } = await createTenantKnex();
+  const { knex, tenant } = await createTenantKnex();
   
   // Check if user has permission to update ticket settings
   if (!await hasPermission(currentUser, 'ticket_settings', 'update', knex)) {
     throw new Error('Permission denied: Cannot update ticket settings');
   }
   
-  // Prefer dedicated column; fallback to legacy nested settings if column write fails
-  const tenant = await getTenantForCurrentRequest();
   if (!tenant) throw new Error('Tenant not found');
 
-  try {
-    // Read existing from column
-    const existingRow = await knex('tenant_settings').select('ticket_display_settings').where({ tenant }).first();
-    const currentDisplay = (existingRow?.ticket_display_settings as any) || {};
-    const merged = {
-      ...currentDisplay,
-      ...updated,
-    };
+  // Read existing values for both the dedicated column and the legacy nested settings path.
+  const existingRow = await knex('tenant_settings')
+    .select('ticket_display_settings', 'settings')
+    .where({ tenant })
+    .first();
 
-    // Use a literal timestamp for Citus compatibility
-    const now = new Date();
-    
-    await knex('tenant_settings')
-      .insert({ tenant, ticket_display_settings: JSON.stringify(merged), updated_at: now })
-      .onConflict('tenant')
-      .merge({ ticket_display_settings: JSON.stringify(merged), updated_at: now });
+  const currentDisplay = (existingRow?.ticket_display_settings as any) || {};
+  const mergedDisplay = {
+    ...currentDisplay,
+    ...updated,
+  };
 
-    return { success: true };
-  } catch (e) {
-    // Fallback to legacy nested path under settings.ticketing.display
-    const current = await getTenantSettings();
-    const rootSettings = (current?.settings as any) || {};
-    const ticketing = rootSettings.ticketing || {};
-    const display = ticketing.display || {};
-    const newSettings = {
-      ...rootSettings,
-      ticketing: {
-        ...ticketing,
-        display: {
-          ...display,
-          ...updated,
-        },
+  const rootSettings = (existingRow?.settings as any) || {};
+  const ticketing = rootSettings.ticketing || {};
+  const display = ticketing.display || {};
+  const mergedSettings = {
+    ...rootSettings,
+    ticketing: {
+      ...ticketing,
+      display: {
+        ...display,
+        ...updated,
       },
-    };
-    await updateTenantSettings(newSettings);
-    return { success: true };
-  }
+    },
+  };
+
+  // Use a literal timestamp for Citus compatibility
+  const now = new Date();
+
+  await knex('tenant_settings')
+    .insert({
+      tenant,
+      ticket_display_settings: JSON.stringify(mergedDisplay),
+      settings: JSON.stringify(mergedSettings),
+      updated_at: now,
+    })
+    .onConflict('tenant')
+    .merge({
+      ticket_display_settings: JSON.stringify(mergedDisplay),
+      settings: JSON.stringify(mergedSettings),
+      updated_at: now,
+    });
+
+  return { success: true };
 }
 
 // Do not export non-async values from a "use server" module

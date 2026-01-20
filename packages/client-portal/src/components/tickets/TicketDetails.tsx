@@ -601,7 +601,6 @@ export function TicketDetails({
             <div>
               <TicketAppointmentRequests
                 ticketId={ticket.ticket_id}
-                id="client-portal-ticket-appointment-requests"
               />
             </div>
           )}

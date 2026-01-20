@@ -31,7 +31,7 @@ import {
 } from '@alga-psa/scheduling/actions';
 import { getAllUsersBasic } from '@alga-psa/users/actions';
 import { IUser } from '@shared/interfaces/user.interfaces';
-import { getServices } from '@alga-psa/billing/actions';
+import { getServices } from '@alga-psa/scheduling/actions';
 import { IService } from '@alga-psa/types';
 import { getTeams } from '@alga-psa/teams/actions';
 import { ITeam } from '@alga-psa/types';

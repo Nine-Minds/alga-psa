@@ -125,14 +125,18 @@ async function handleHeartbeat(request: ExecuteRequest, host: HostBindings): Pro
 async function handleSetup(request: ExecuteRequest, host: HostBindings): Promise<ExecuteResponse> {
   await safeLog(host, 'info', '[scheduler-demo] starting schedule setup...');
 
+  // Older versions of @alga-psa/extension-runtime shipped without scheduler typings.
+  // This demo targets the scheduler capability, so we access it dynamically.
+  const scheduler = (host as any).scheduler as any;
+
   const results: Array<{ name: string; success: boolean; scheduleId?: string; error?: string }> = [];
 
   // First, discover available schedulable endpoints
   try {
-    const endpoints = await host.scheduler.getEndpoints();
+    const endpoints = await scheduler.getEndpoints();
     await safeLog(host, 'info', `[scheduler-demo] discovered ${endpoints.length} endpoints`);
 
-    const schedulableEndpoints = endpoints.filter(e => e.schedulable);
+    const schedulableEndpoints = endpoints.filter((e: { schedulable?: boolean }) => e.schedulable);
     await safeLog(host, 'info', `[scheduler-demo] ${schedulableEndpoints.length} schedulable endpoints`);
   } catch (err) {
     const reason = err instanceof Error ? err.message : String(err);
@@ -142,7 +146,7 @@ async function handleSetup(request: ExecuteRequest, host: HostBindings): Promise
   // Check existing schedules to avoid duplicates
   let existingSchedules: Array<{ name?: string | null; endpointPath: string }> = [];
   try {
-    existingSchedules = await host.scheduler.list();
+    existingSchedules = await scheduler.list();
     await safeLog(host, 'info', `[scheduler-demo] found ${existingSchedules.length} existing schedules`);
   } catch (err) {
     const reason = err instanceof Error ? err.message : String(err);
@@ -156,7 +160,7 @@ async function handleSetup(request: ExecuteRequest, host: HostBindings): Promise
 
   if (!heartbeatExists) {
     try {
-      const result = await host.scheduler.create({
+      const result = await scheduler.create({
         endpoint: 'POST /api/heartbeat',
         cron: '*/5 * * * *', // Every 5 minutes
         timezone: 'UTC',
@@ -189,7 +193,7 @@ async function handleSetup(request: ExecuteRequest, host: HostBindings): Promise
 
   if (!statusExists) {
     try {
-      const result = await host.scheduler.create({
+      const result = await scheduler.create({
         endpoint: 'GET /api/status',
         cron: '0 9 * * *', // Every day at 9 AM
         timezone: 'America/New_York',
@@ -228,7 +232,7 @@ async function handleSetup(request: ExecuteRequest, host: HostBindings): Promise
  */
 async function handleListSchedules(request: ExecuteRequest, host: HostBindings): Promise<ExecuteResponse> {
   try {
-    const schedules = await host.scheduler.list();
+    const schedules = await (host as any).scheduler.list();
     await safeLog(host, 'info', `[scheduler-demo] listed ${schedules.length} schedules`);
 
     return jsonResponse({
@@ -268,7 +272,7 @@ async function handleDeleteSchedule(
   }
 
   try {
-    const result = await host.scheduler.delete(scheduleId);
+    const result = await (host as any).scheduler.delete(scheduleId);
 
     if (result.success) {
       await safeLog(host, 'info', `[scheduler-demo] deleted schedule ${scheduleId}`);

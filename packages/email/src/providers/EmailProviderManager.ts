@@ -209,10 +209,7 @@ export class EmailProviderManager implements IEmailProviderManager {
         return new SMTPEmailProvider(config.providerId);
       
       case 'resend':
-        // Prevent Vite/Vitest from trying to resolve this optional EE-only deep import at build time.
-        const { ResendEmailProvider } = await import(
-          /* @vite-ignore */ '@alga-psa/integrations/email/domains/providers/ResendEmailProvider'
-        );
+        const { ResendEmailProvider } = await import('./ResendEmailProvider');
         return new ResendEmailProvider(config.providerId);
       
       default:

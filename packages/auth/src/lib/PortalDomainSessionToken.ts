@@ -3,10 +3,8 @@ import { Knex } from 'knex';
 import logger from '@alga-psa/core/logger';
 import { getAdminConnection } from '@alga-psa/db/admin';
 
-// Dynamic import to avoid circular dependency (auth -> analytics -> tenancy -> auth)
-const getAnalytics = async () => (await import('@alga-psa/analytics')).analytics;
 import type { PortalSessionTokenPayload } from './session';
-import type { PortalDomainRecord } from '@alga-psa/client-portal/models/PortalDomainModel';
+import type { PortalDomainRecord } from './PortalDomainModel';
 
 const TABLE_NAME = 'portal_domain_session_otts';
 const PORTAL_DOMAINS_TABLE = 'portal_domains';
@@ -226,13 +224,14 @@ export async function issuePortalDomainOtt(params: IssuePortalDomainOttParams): 
 
   const record = mapRow(row);
 
-  await (await getAnalytics()).capture(ISSUE_EVENT, {
+  logger.info(ISSUE_EVENT, {
     tenant,
     portal_domain_id: portalDomainId,
     user_id: userId,
     expires_at: record.expiresAt.toISOString(),
     issued_from_host: issuedFromHost,
-  }, requestedBy ?? userId);
+    requested_by: requestedBy ?? userId,
+  });
 
   return { token, record };
 }
@@ -254,7 +253,7 @@ export async function consumePortalDomainOtt(params: ConsumePortalDomainOttParam
       .first();
 
     if (!row) {
-      await (await getAnalytics()).capture(FAILURE_EVENT, {
+      logger.info(FAILURE_EVENT, {
         reason: 'not_found',
         tenant,
         portal_domain_id: portalDomainId,
@@ -263,33 +262,36 @@ export async function consumePortalDomainOtt(params: ConsumePortalDomainOttParam
     }
 
     if (row.tenant !== tenant || row.portal_domain_id !== portalDomainId) {
-      await (await getAnalytics()).capture(FAILURE_EVENT, {
+      logger.info(FAILURE_EVENT, {
         reason: 'tenant_mismatch',
         tenant,
         portal_domain_id: portalDomainId,
         token_tenant: row.tenant,
         token_portal_domain_id: row.portal_domain_id,
-      }, row.user_id);
+        user_id: row.user_id,
+      });
       return null;
     }
 
     if (row.consumed_at) {
-      await (await getAnalytics()).capture(FAILURE_EVENT, {
+      logger.info(FAILURE_EVENT, {
         reason: 'already_consumed',
         tenant,
         portal_domain_id: portalDomainId,
         consumed_at: row.consumed_at.toISOString(),
-      }, row.user_id);
+        user_id: row.user_id,
+      });
       return null;
     }
 
     if (row.expires_at <= now) {
-      await (await getAnalytics()).capture(FAILURE_EVENT, {
+      logger.info(FAILURE_EVENT, {
         reason: 'expired',
         tenant,
         portal_domain_id: portalDomainId,
         expires_at: row.expires_at.toISOString(),
-      }, row.user_id);
+        user_id: row.user_id,
+      });
       return null;
     }
 
@@ -303,12 +305,12 @@ export async function consumePortalDomainOtt(params: ConsumePortalDomainOttParam
 
     const record = mapRow(updated);
 
-    await (await getAnalytics()).capture(CONSUME_EVENT, {
+    logger.info(CONSUME_EVENT, {
       tenant,
       portal_domain_id: portalDomainId,
       user_id: row.user_id,
       consumed_at: record.consumedAt?.toISOString(),
-    }, row.user_id);
+    });
 
     return record;
   });

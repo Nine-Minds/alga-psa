@@ -2,10 +2,16 @@
 
 import { getSystemEmailService } from './system/SystemEmailService';
 import logger from '@alga-psa/core/logger';
-import type { TenantLoginInfo } from '@alga-psa/client-portal/actions';
 import { getConnection } from '@alga-psa/db';
 import { SupportedLocale, LOCALE_CONFIG } from '@alga-psa/ui/lib/i18n/config';
 import { resolveEmailLocale } from './emailLocaleResolver';
+
+interface TenantLoginInfo {
+  tenantId: string;
+  tenantName: string;
+  loginUrl: string;
+  source: 'vanity' | 'canonical';
+}
 
 interface SendTenantRecoveryEmailParams {
   email: string;

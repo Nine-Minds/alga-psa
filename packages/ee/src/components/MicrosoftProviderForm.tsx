@@ -1,6 +1,9 @@
 /**
- * Empty fallback for MicrosoftProviderForm
- * Re-exports the Community Edition Microsoft provider form
+ * Community Edition stub for MicrosoftProviderForm.
+ *
+ * The actual implementation is only available in Enterprise Edition.
  */
 
-export { MicrosoftProviderForm } from '@alga-psa/integrations/components';
+export function MicrosoftProviderForm(): null {
+  return null;
+}

@@ -112,3 +112,11 @@ export {
   type XeroTaxRateOption,
   type XeroTrackingCategoryOption
 } from './integrations/xeroActions';
+export {
+  getServices,
+  type PaginatedServicesResponse,
+  type ServiceListOptions
+} from './serviceCatalogActions';
+export {
+  getTaxRegions
+} from './taxRegionActions';

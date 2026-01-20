@@ -1,6 +1,12 @@
 import type { IEventPublisher } from '@alga-psa/shared/models/ticketModel';
 import { getEventBus } from '@alga-psa/event-bus';
-import { getEmailEventChannel } from '@alga-psa/notifications/emailChannel';
+
+// Email event channel constant - inlined to avoid circular dependency with notifications
+// Must match the value in @alga-psa/notifications/emailChannel
+const EMAIL_EVENT_CHANNEL = 'emailservice::v7';
+function getEmailEventChannel(): string {
+  return EMAIL_EVENT_CHANNEL;
+}
 
 export class TicketModelEventPublisher implements IEventPublisher {
   async publishTicketCreated(data: { tenantId: string; ticketId: string; userId?: string; metadata?: Record<string, any> }): Promise<void> {
@@ -86,4 +92,3 @@ export class TicketModelEventPublisher implements IEventPublisher {
     }
   }
 }
-

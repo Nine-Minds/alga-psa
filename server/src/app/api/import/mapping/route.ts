@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getImportFieldMapping } from '@alga-psa/reference-data/actions';
+import { getImportFieldMapping } from '@/lib/imports/importActions';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';

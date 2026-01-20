@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import type { FieldMappingTemplate, ImportJobDetails, ImportJobRecord } from '@/types/imports.types';
+import type { FieldMappingTemplate, ImportErrorSummary, ImportJobDetails, ImportJobRecord } from '@/types/imports.types';
 import {
   approveImport as approveImportAction,
   createImportPreview as createImportPreviewAction,
@@ -9,7 +9,7 @@ import {
   getImportJobDetails,
   getImportSources,
   listImportJobs,
-} from '@alga-psa/reference-data/actions';
+} from '@/lib/imports/importActions';
 
 interface ImportSourceDTO {
   import_source_id: string;
@@ -30,7 +30,7 @@ interface PreviewResponse {
     };
     columnExamples?: Record<string, unknown[]>;
   };
-  errorSummary: unknown;
+  errorSummary: ImportErrorSummary | null;
 }
 
 const UI_FIELD_DEFINITIONS = [

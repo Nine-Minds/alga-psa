@@ -30,7 +30,6 @@ import { z } from 'zod';
 import { validateData } from '@alga-psa/validation';
 import { publishEvent } from '@alga-psa/event-bus/publishers';
 import { getEventBus } from '@alga-psa/event-bus';
-import { getEmailEventChannel } from '@alga-psa/notifications/emailChannel';
 import {
   TicketCreatedEvent,
   TicketUpdatedEvent,
@@ -38,12 +37,21 @@ import {
   TicketResponseStateChangedEvent
 } from '@alga-psa/event-bus/events';
 
-import { analytics } from '@alga-psa/analytics';
-import { AnalyticsEvents } from '@alga-psa/analytics';
 import { TicketModel, CreateTicketInput } from '@alga-psa/shared/models/ticketModel';
 import { TicketModelEventPublisher } from '../lib/adapters/TicketModelEventPublisher';
 import { TicketModelAnalyticsTracker } from '../lib/adapters/TicketModelAnalyticsTracker';
 import { calculateItilPriority } from '@alga-psa/tickets/lib/itilUtils';
+
+// Email event channel constant - inlined to avoid circular dependency with notifications
+// Must match the value in @alga-psa/notifications/emailChannel
+const EMAIL_EVENT_CHANNEL = 'emailservice::v7';
+function getEmailEventChannel(): string {
+  return EMAIL_EVENT_CHANNEL;
+}
+
+function captureAnalytics(_event: string, _properties?: Record<string, any>, _userId?: string): void {
+  // Intentionally no-op: avoid pulling analytics (and its tenancy/client-portal deps) into tickets.
+}
 
 // Helper function to safely convert dates
 function convertDates<T extends { entered_at?: Date | string | null, updated_at?: Date | string | null, closed_at?: Date | string | null, due_date?: Date | string | null }>(record: T): T {
@@ -648,7 +656,7 @@ export async function updateTicket(id: string, data: Partial<ITicket>, user: IUs
         });
 
         // Track ticket resolved analytics
-        analytics.capture(AnalyticsEvents.TICKET_RESOLVED, {
+        captureAnalytics('ticket_resolved', {
           time_to_resolution: currentTicket.entered_at ?
             Math.round((Date.now() - new Date(currentTicket.entered_at).getTime()) / 1000 / 60) : 0, // minutes
           priority_id: updatedTicket.priority_id,
@@ -669,7 +677,7 @@ export async function updateTicket(id: string, data: Partial<ITicket>, user: IUs
         });
 
         // Track ticket assignment analytics
-        analytics.capture(AnalyticsEvents.TICKET_ASSIGNED, {
+        captureAnalytics('ticket_assigned', {
           was_reassignment: !!currentTicket.assigned_to,
           time_to_assignment: currentTicket.entered_at && !currentTicket.assigned_to ?
             Math.round((Date.now() - new Date(currentTicket.entered_at).getTime()) / 1000 / 60) : 0, // minutes
@@ -688,7 +696,7 @@ export async function updateTicket(id: string, data: Partial<ITicket>, user: IUs
       }
       
       // Track general ticket update analytics
-      analytics.capture(AnalyticsEvents.TICKET_UPDATED, {
+      captureAnalytics('ticket_updated', {
         fields_updated: Object.keys(updateData),
         updated_priority: 'priority_id' in updateData,
         updated_status: 'status_id' in updateData,
@@ -1053,7 +1061,7 @@ async function deleteTicketTransactional(
     }
   });
 
-  analytics.capture('ticket_deleted', {
+  captureAnalytics('ticket_deleted', {
     was_resolved: !!ticket.closed_at,
     had_comments: false,
     age_in_days: ticket.entered_at ? 
@@ -1373,7 +1381,7 @@ export async function getTicketById(id: string, user: IUser): Promise<DetailedTi
     delete (detailedTicket as any).assigned_to_last_name;
 
     // Track ticket view analytics
-    analytics.capture('ticket_viewed', {
+    captureAnalytics('ticket_viewed', {
       ticket_id: id,
       status_id: ticket.status_id,
       status_name: ticket.status_name,

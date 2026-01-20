@@ -23,6 +23,7 @@ export * from './ticketBundleActions';
 export * from './ticketBundleUtils';
 export * from './ticketDisplaySettings';
 export * from './ticketFormActions';
+export * from './clientLookupActions';
 export * from './board-actions';
 export * from './comment-actions';
 export * from './ticket-number-actions';

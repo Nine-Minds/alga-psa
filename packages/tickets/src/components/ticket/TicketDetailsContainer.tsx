@@ -49,9 +49,14 @@ interface TicketDetailsContainerProps {
     agentSchedules: any[];
   };
   surveySummary?: SurveyTicketSatisfactionSummary | null;
+  associatedAssets?: React.ReactNode;
 }
 
-export default function TicketDetailsContainer({ ticketData, surveySummary = null }: TicketDetailsContainerProps) {
+export default function TicketDetailsContainer({
+  ticketData,
+  surveySummary = null,
+  associatedAssets = null,
+}: TicketDetailsContainerProps) {
   const router = useRouter();
   const { data: session } = useSession();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -160,6 +165,7 @@ export default function TicketDetailsContainer({ ticketData, surveySummary = nul
           onUpdateDescription={handleUpdateDescription}
           isSubmitting={isSubmitting}
           surveySummary={surveySummary}
+          associatedAssets={associatedAssets}
         />
       </Suspense>
     </div>

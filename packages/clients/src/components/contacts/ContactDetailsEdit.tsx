@@ -17,7 +17,7 @@ import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { useAutomationIdAndRegister } from '@alga-psa/ui/ui-reflection/useAutomationIdAndRegister';
 import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContainer';
 import { ButtonComponent, FormFieldComponent } from '@alga-psa/ui/ui-reflection/types';
-import ContactAvatarUpload from '@alga-psa/client-portal/components/contacts/ContactAvatarUpload';
+import ContactAvatarUpload from './ContactAvatarUpload';
 import { getContactAvatarUrlActionAsync } from '../../lib/usersHelpers';
 
 interface ContactDetailsEditProps {
@@ -135,10 +135,8 @@ const ContactDetailsEdit: React.FC<ContactDetailsEditProps> = ({
         <div className="mb-6">
           <ContactAvatarUpload
             contactId={contact.contact_name_id}
-            contactName={contact.full_name}
-            avatarUrl={avatarUrl}
-            userType="internal"
-            onAvatarChange={(newAvatarUrl) => setAvatarUrl(newAvatarUrl)}
+            currentAvatarUrl={avatarUrl}
+            onAvatarUpdated={(newAvatarUrl) => setAvatarUrl(newAvatarUrl)}
           />
         </div>
         <table className="min-w-full">

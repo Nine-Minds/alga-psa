@@ -21,7 +21,7 @@ import { fetchInvoicesPaginated } from '@alga-psa/billing/actions/invoiceQueries
 import { getInvoiceTemplates } from '@alga-psa/billing/actions/invoiceTemplates';
 import { unfinalizeInvoice } from '@alga-psa/billing/actions/invoiceModification';
 import { downloadInvoicePDF } from '@alga-psa/billing/actions/invoiceGeneration';
-import { scheduleInvoiceZipAction } from '@alga-psa/jobs/actions';
+import { scheduleInvoiceZipAction } from '@alga-psa/billing/actions/invoiceJobActions';
 import { SendInvoiceEmailDialog } from './SendInvoiceEmailDialog';
 import { toPlainDate } from '@alga-psa/core';
 import { formatCurrencyFromMinorUnits } from '@alga-psa/core';

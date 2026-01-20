@@ -32,6 +32,7 @@ export * from './creditReconciliationFixActions';
 export * from './externalTaxImportActions';
 export * from './invoiceModification';
 export * from './invoiceQueries';
+export * from './invoiceJobActions';
 export * from './invoiceTemplates';
 export * from './invoiceWorkflowActions';
 export * from './manualInvoiceActions';

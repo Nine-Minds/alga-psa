@@ -1,3 +1,5 @@
+'use client';
+
 import { useState } from 'react';
 import { DynamicForm } from './DynamicForm';
 import { submitTaskForm } from '@alga-psa/workflows/actions/workflow-actions/taskInboxActions';

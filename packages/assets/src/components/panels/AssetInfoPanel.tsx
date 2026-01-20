@@ -8,7 +8,20 @@ import { formatDateOnly } from '@alga-psa/core';
 import Link from 'next/link';
 import { cn } from '@alga-psa/ui';
 import { useDrawer } from '@alga-psa/ui';
-import { ClientQuickView } from '@alga-psa/clients/components/clients/ClientQuickView';
+
+const ClientQuickViewLite = ({ clientId, clientName }: { clientId: string; clientName: string }) => {
+  return (
+    <div className="p-6">
+      <div className="text-sm text-gray-600">Client</div>
+      <div className="text-lg font-semibold text-gray-900">{clientName}</div>
+      <div className="mt-4">
+        <Link href={`/msp/clients/${clientId}`} className="text-primary-600 hover:underline">
+          View client details
+        </Link>
+      </div>
+    </div>
+  );
+};
 
 interface AssetInfoPanelProps {
   asset: Asset;
@@ -96,7 +109,7 @@ export const AssetInfoPanel: React.FC<AssetInfoPanelProps> = ({
 
   const handleOpenClientDrawer = () => {
     if (asset.client_id) {
-      openDrawer(<ClientQuickView clientId={asset.client_id} />);
+      openDrawer(<ClientQuickViewLite clientId={asset.client_id} clientName={asset.client?.client_name || asset.client_id} />);
     }
   };
 

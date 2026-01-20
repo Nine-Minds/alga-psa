@@ -1,7 +1,9 @@
 /**
- * Community Edition Gmail Provider Configuration Form
- * Re-exports the CE version for when EE is not available
+ * Community Edition stub for GmailProviderForm.
+ *
+ * The actual implementation is only available in Enterprise Edition.
  */
 
-// Re-export the CE version of GmailProviderForm
-export { GmailProviderForm } from '@alga-psa/integrations/components';
+export function GmailProviderForm(): null {
+  return null;
+}

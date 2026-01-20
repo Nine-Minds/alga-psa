@@ -18,7 +18,7 @@ import {
   type SessionWithUser,
 } from '@alga-psa/auth/actions';
 import { getAllUsers } from '@alga-psa/users/actions';
-import { IUserWithRoles } from '@alga-psa/types';
+import type { IUserWithRoles } from '@alga-psa/types';
 import {
   Monitor,
   Smartphone,

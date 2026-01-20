@@ -17,7 +17,7 @@ vi.mock('next/navigation', () => ({
   redirect: redirectMock,
 }));
 
-vi.mock('server/src/lib/auth/getSession', () => ({
+vi.mock('@alga-psa/auth', () => ({
   getSession: getSessionMock,
 }));
 
@@ -36,10 +36,13 @@ vi.mock('@alga-psa/tenancy/components', () => ({
   I18nWrapper: ({ children }: { children: React.ReactNode }) => children,
 }));
 
-vi.mock('@alga-psa/auth', () => ({
+vi.mock('@alga-psa/auth/client', () => ({
   ClientPortalSignIn: ClientPortalSignInMock,
-  ClientPortalTenantDiscovery: ClientPortalTenantDiscoveryMock,
   PortalSwitchPrompt: PortalSwitchPromptMock,
+}));
+
+vi.mock('@alga-psa/client-portal/components', () => ({
+  ClientPortalTenantDiscovery: ClientPortalTenantDiscoveryMock,
 }));
 
 const { default: ClientPortalSignInPage } = await import('server/src/app/auth/client-portal/signin/page');

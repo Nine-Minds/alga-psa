@@ -35,7 +35,6 @@
     "@alga-psa/core": "*",
     "@alga-psa/db": "*",
     "@alga-psa/ui": "*",
-    "@alga-psa/workflows": "*",
     "@alga-psa/types": "*",
     "@alga-psa/validation": "*"
   },

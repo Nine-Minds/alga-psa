@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getImportSources } from '@alga-psa/reference-data/actions';
+import { getImportSources } from '@/lib/imports/importActions';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';

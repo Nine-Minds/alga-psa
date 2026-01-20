@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { CalendarWebhookProcessor } from '@/services/calendar/CalendarWebhookProcessor';
+import { CalendarWebhookProcessor } from '../../services/calendar/CalendarWebhookProcessor';
 
 interface GooglePubSubMessage {
   message: {

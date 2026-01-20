@@ -31,3 +31,5 @@ export { default as ClientAccount } from './account/ClientAccount';
 export { default as LicenseManagementPage } from './account/LicenseManagementPage';
 
 export { default as ClientPortalLayout } from './layout/ClientPortalLayout';
+
+export { default as ClientPortalTenantDiscovery } from './auth/ClientPortalTenantDiscovery';

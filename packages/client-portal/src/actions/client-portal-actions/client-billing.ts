@@ -21,8 +21,7 @@ import { finalizeInvoice, unfinalizeInvoice } from '@alga-psa/billing/actions/in
 import { InvoiceViewModel, IInvoiceTemplate } from '@alga-psa/types';
 import Invoice from '@alga-psa/billing/models/invoice';
 import { getSession } from '@alga-psa/auth';
-import { scheduleInvoiceZipAction } from '@alga-psa/jobs/actions';
-import { scheduleInvoiceEmailAction } from '@alga-psa/jobs/actions';
+import { scheduleInvoiceEmailAction, scheduleInvoiceZipAction } from '@alga-psa/billing/actions/invoiceJobActions';
 import { JobService } from '@alga-psa/jobs';
 import { JobStatus } from '@alga-psa/jobs';
 

@@ -14,8 +14,8 @@
   { "id": "F013", "description": "Update import paths across repo to the new shared slice exports (and UI primitive moves if adopted).", "implemented": true },
   { "id": "F014", "description": "Verify the dependency graph has no billing↔clients cycle (and add/adjust any guardrails if available).", "implemented": true },
   { "id": "F015", "description": "Run build/typecheck to confirm static dependency builds trigger correctly and no runtime-only dynamic import behavior remains.", "implemented": true },
-  { "id": "F016", "description": "Eliminate @alga-psa/ui imports of vertical slices (tenancy/users/clients/client-portal/etc) by moving feature components up into owning slices or server.", "implemented": false },
-  { "id": "F017", "description": "Fix auth package typecheck issues introduced during refactors (components moved + test files excluded from package typecheck).", "implemented": false },
-  { "id": "F018", "description": "Resolve NX build cycles involving ui by refactoring notifications/branding/i18n/settings components to avoid ui→vertical dependencies.", "implemented": false },
-  { "id": "F019", "description": "Verify nx build graph is cycle-free for build targets (nx run-many -t build).", "implemented": false }
+  { "id": "F016", "description": "Eliminate @alga-psa/ui imports of vertical slices (tenancy/users/clients/client-portal/etc) by moving feature components up into owning slices or server.", "implemented": true },
+  { "id": "F017", "description": "Fix auth package typecheck issues introduced during refactors (components moved + test files excluded from package typecheck).", "implemented": true },
+  { "id": "F018", "description": "Resolve NX build cycles involving ui by refactoring notifications/branding/i18n/settings components to avoid ui→vertical dependencies.", "implemented": true },
+  { "id": "F019", "description": "Verify nx build graph is cycle-free for build targets (nx run-many -t build).", "implemented": true }
 ]

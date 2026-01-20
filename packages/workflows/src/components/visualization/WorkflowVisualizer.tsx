@@ -1,3 +1,5 @@
+'use client';
+
 import React, { useCallback, useState, Suspense } from 'react';
 import dynamic from 'next/dynamic';
 import {

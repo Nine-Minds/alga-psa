@@ -1,3 +1,5 @@
+'use client';
+
 import React from 'react';
 
 import { Activity, ActivityType } from "@alga-psa/types";

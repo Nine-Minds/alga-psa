@@ -10,9 +10,9 @@ import ViewSwitcher, { ViewSwitcherOption } from '@alga-psa/ui/components/ViewSw
 import { SwitchWithLabel } from '@alga-psa/ui/components/SwitchWithLabel';
 import { assignRoleToUser, removeRoleFromUser, getRoles, getUserRoles } from '@alga-psa/auth/actions';
 import { getAllUsers } from '@alga-psa/users/actions';
-import { IRole, IUserWithRoles } from '@alga-psa/types';
+import type { IRole, IUserWithRoles } from '@alga-psa/types';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
-import { ColumnDefinition } from '@alga-psa/types';
+import type { ColumnDefinition } from '@alga-psa/types';
 import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect';
 import UserPicker from '@alga-psa/ui/components/UserPicker';
 

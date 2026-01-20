@@ -105,14 +105,10 @@ export default function ProjectInfo({
       toast.error('Project has no client assigned');
       return;
     }
-    const client = clients.find((c) => c.client_id === clientId);
-    const currencyCode = (client as any)?.default_currency_code || 'USD';
     openDrawer(
       <ProjectMaterialsDrawer
         projectId={currentProject.project_id}
         clientId={clientId}
-        currencyCode={currencyCode}
-        onClose={() => closeDrawer()}
       />
     );
   };

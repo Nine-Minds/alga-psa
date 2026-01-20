@@ -1,4 +1,4 @@
-import { SecuritySettingsPage } from '@alga-psa/auth/components';
+import SecuritySettingsPage from '@/components/settings/security/SecuritySettingsPage';
 
 export default function Page() {
   return <SecuritySettingsPage />;

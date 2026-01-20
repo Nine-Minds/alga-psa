@@ -10,7 +10,7 @@ import { Knex } from 'knex';
 import { hashPassword } from '@alga-psa/core/encryption';
 import Tenant from '@alga-psa/db/models/tenant';
 import UserPreferences from '@alga-psa/db/models/userPreferences';
-import { getUserAvatarUrl } from '@alga-psa/documents/lib/avatarUtils';
+import { getUserAvatarUrl } from '../../lib/avatarUtils';
 import { uploadEntityImage, deleteEntityImage } from '@alga-psa/media';
 import { hasPermission, throwPermissionError } from '@alga-psa/auth';
 import logger from '@alga-psa/core/logger';
@@ -105,12 +105,29 @@ export async function addUser(userData: {
 
       // Check license limits for  MSP (internal) users
       if (userData.userType !== 'client') {
-        const { getLicenseUsage } = await import('@alga-psa/licensing/lib/get-license-usage');
-        const usage = await getLicenseUsage(tenant!, trx);
-        
-        if (usage.limit !== null && usage.used >= usage.limit) {
+        const tenantRow = await trx('tenants')
+          .where({ tenant })
+          .first('licensed_user_count');
+
+        if (!tenantRow) {
+          throw new Error(`Tenant not found: ${tenant}`);
+        }
+
+        const usedResult = await trx('users')
+          .where({
+            tenant,
+            user_type: 'internal',
+            is_inactive: false,
+          })
+          .count('* as count');
+
+        const used = parseInt(usedResult[0].count as string, 10);
+        const limit = tenantRow.licensed_user_count as number | null;
+
+        if (limit !== null && used >= limit) {
           throw new Error("You've reached your MSP user licence limit.");
         }
+        
       }
 
       const [user] = await trx('users')
