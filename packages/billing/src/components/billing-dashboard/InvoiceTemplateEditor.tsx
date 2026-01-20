@@ -8,7 +8,7 @@ import { Card, CardHeader, CardContent, CardFooter } from '@alga-psa/ui/componen
 import { Input } from '@alga-psa/ui/components/Input'; // Import Input component
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert'; // Import Alert components
 import { getInvoiceTemplate, saveInvoiceTemplate } from '@alga-psa/billing/actions/invoiceTemplates'; // Correct function name
-import { IInvoiceTemplate } from 'server/src/interfaces/invoice.interfaces';
+import { IInvoiceTemplate } from '@alga-psa/types';
 import BackNav from '@alga-psa/ui/components/BackNav'; // Import BackNav
 import { Editor } from '@monaco-editor/react';
 

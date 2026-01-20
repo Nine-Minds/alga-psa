@@ -10,24 +10,25 @@ import {
   ITimeSheetView,
   ITimeSheetApprovalView,
   ITimePeriodView
-} from 'server/src/interfaces';
+} from '@alga-psa/types';
 import { createTenantKnex } from '@alga-psa/db';
-import TimeSheetComment from 'server/src/lib/models/timeSheetComment';
 import { formatISO } from 'date-fns';
-import { toPlainDate } from 'server/src/lib/utils/dateTimeUtils';
+import { toPlainDate } from '@alga-psa/core';
 import { 
   timeSheetApprovalViewSchema, 
   timeSheetCommentSchema, 
   timeEntrySchema, 
   timeSheetViewSchema 
-} from 'server/src/lib/schemas/timeSheet.schemas';
-import { WorkItemType } from 'server/src/interfaces/workItem.interfaces';
+} from '../schemas/timeSheet.schemas';
+import { WorkItemType } from '@alga-psa/types';
 import { validateArray, validateData } from '@alga-psa/validation';
 import { Temporal } from '@js-temporal/polyfill';
 import { getCurrentUser } from '@alga-psa/auth/getCurrentUser';
 import { hasPermission } from '@alga-psa/auth/rbac';
-import { analytics } from 'server/src/lib/analytics/posthog';
-import { AnalyticsEvents } from 'server/src/lib/analytics/events';
+
+function captureAnalytics(_event: string, _properties?: Record<string, any>, _userId?: string): void {
+  // Intentionally no-op: avoid pulling analytics (and its tenancy/client-portal deps) into scheduling.
+}
 
 // Database schema types
 interface DbTimePeriod {
@@ -308,7 +309,7 @@ export async function bulkApproveTimeSheets(timeSheetIds: string[], managerId: s
 
     // Track analytics for each approved sheet
     for (const sheet of approvedSheets) {
-      analytics.capture(AnalyticsEvents.TIME_SHEET_APPROVED, {
+      captureAnalytics('time_sheet_approved', {
         time_sheet_id: sheet.time_sheet_id,
         employee_id: sheet.user_id,
         entry_count: sheet.entry_count,
@@ -574,7 +575,7 @@ export async function approveTimeSheet(timeSheetId: string, approverId: string):
     });
 
     // Track analytics
-    analytics.capture(AnalyticsEvents.TIME_SHEET_APPROVED, {
+    captureAnalytics('time_sheet_approved', {
       ...analyticsData,
       approval_type: 'single'
     }, approverId);

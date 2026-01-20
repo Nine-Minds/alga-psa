@@ -1,7 +1,7 @@
 import { getAssetDetailBundle } from '@alga-psa/assets/actions/assetActions';
 import User from 'server/src/lib/models/user';
 import { redirect } from 'next/navigation';
-import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
+import { getCurrentUser } from '@alga-psa/users/actions';
 import { AssetDetailView } from '@alga-psa/assets/components/AssetDetailView';
 import { getConnection } from 'server/src/lib/db/db';
 import { getSession } from 'server/src/lib/auth/getSession';

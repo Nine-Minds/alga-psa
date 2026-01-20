@@ -8,7 +8,7 @@ import type {
   SetupTenantDataActivityResult
 } from '../types/workflow-types.js';
 import { updateSubscriptionMetadata } from '../services/stripe-service.js';
-import { getSecret } from '@alga-psa/core';
+import { getSecret } from '@alga-psa/core/secrets';
 
 const logger = () => Context.current().log;
 

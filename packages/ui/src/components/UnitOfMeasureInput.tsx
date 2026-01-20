@@ -1,3 +1,5 @@
+'use client';
+
 import React, { useState, useEffect } from 'react';
 import CustomSelect from './CustomSelect';
 import { Input } from './Input';

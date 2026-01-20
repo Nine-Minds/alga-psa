@@ -1,8 +1,8 @@
 'use client'
 import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
-import { IWorkItem } from 'server/src/interfaces/workItem.interfaces';
+import { IWorkItem } from '@alga-psa/types';
 import { WorkItemPicker } from './WorkItemPicker';
-import { ITimePeriodView } from 'server/src/interfaces/timeEntry.interfaces';
+import { ITimePeriodView } from '@alga-psa/types';
 import { useAutomationIdAndRegister } from '@alga-psa/ui/ui-reflection/useAutomationIdAndRegister';
 import { DialogComponent } from '@alga-psa/ui/ui-reflection/types';
 import { CommonActions } from '@alga-psa/ui/ui-reflection/actionBuilders';

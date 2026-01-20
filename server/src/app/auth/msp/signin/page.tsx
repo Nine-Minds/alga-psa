@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation';
 import { MspSignIn, PortalSwitchPrompt } from '@alga-psa/auth/client';
-import { getSession } from 'server/src/lib/auth/getSession';
-import { UserSession } from 'server/src/lib/models/UserSession';
+import { getSession } from '@alga-psa/auth';
+import { UserSession } from '@alga-psa/db/models/UserSession';
 
 export default async function MspSignInPage({
   searchParams,

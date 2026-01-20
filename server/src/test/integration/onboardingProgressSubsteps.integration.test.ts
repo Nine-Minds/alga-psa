@@ -1,14 +1,14 @@
 import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest';
 
-vi.mock('@/lib/db', () => ({
+vi.mock('server/src/lib/db', () => ({
   getCurrentTenantId: vi.fn().mockResolvedValue('tenant_1'),
 }));
 
-vi.mock('@/lib/db/db', () => ({
+vi.mock('server/src/lib/db/db', () => ({
   getConnection: vi.fn(),
 }));
 
-vi.mock('@/lib/actions/tenant-actions/portalDomainActions', () => ({
+vi.mock('@alga-psa/tenancy/actions', () => ({
   getPortalDomainStatusAction: vi.fn().mockResolvedValue({
     domain: 'portal.example.com',
     status: 'active',
@@ -84,7 +84,7 @@ describe('getOnboardingProgressAction (substeps)', () => {
   });
 
   it('returns portal + email steps with substeps', async () => {
-    const { getOnboardingProgressAction } = await import('@/lib/actions/onboarding-progress');
+    const { getOnboardingProgressAction } = await import('@alga-psa/onboarding/actions');
     const result = await getOnboardingProgressAction();
 
     const portal = result.steps.find((step) => step.id === 'client_portal_domain');
@@ -105,4 +105,3 @@ describe('getOnboardingProgressAction (substeps)', () => {
     expect(email?.status).toBe('complete');
   });
 });
-

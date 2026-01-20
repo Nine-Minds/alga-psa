@@ -1,3 +1,5 @@
+'use client';
+
 // server/src/components/ui/UserPicker.tsx
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';

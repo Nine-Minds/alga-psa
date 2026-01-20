@@ -6,7 +6,7 @@ import { RichTextViewer, TextEditor } from '@alga-psa/ui/editor';
 import { Pencil, Trash, Lock, CheckCircle } from 'lucide-react';
 import UserAvatar from '@alga-psa/ui/components/UserAvatar';
 import ContactAvatar from '@alga-psa/ui/components/ContactAvatar';
-import { IComment } from 'server/src/interfaces/comment.interface';
+import { IComment } from '@alga-psa/types';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import { withDataAutomationId } from '@alga-psa/ui/ui-reflection/withDataAutomationId';

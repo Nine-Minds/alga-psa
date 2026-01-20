@@ -2,7 +2,7 @@ import { Metadata } from 'next';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import { SurveyResponsePage } from '@alga-psa/surveys/components/public/SurveyResponsePage';
 import { getSurveyInvitationForToken } from '@alga-psa/surveys/actions/surveyResponseActions';
-import { getServerTranslation } from '@alga-psa/ui/lib/i18n/server';
+import { getServerTranslation } from '@alga-psa/ui/lib/i18n/serverOnly';
 
 type PageParams = {
   params: { token: string };

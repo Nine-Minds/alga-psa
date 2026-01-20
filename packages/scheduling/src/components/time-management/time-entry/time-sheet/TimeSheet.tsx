@@ -10,15 +10,15 @@ import {
     ITimeEntryWithWorkItemString,
     ITimeEntryWithWorkItem,
     ITimePeriodView
-} from 'server/src/interfaces/timeEntry.interfaces';
-import { IExtendedWorkItem } from 'server/src/interfaces/workItem.interfaces';
+} from '@alga-psa/types';
+import { IExtendedWorkItem } from '@alga-psa/types';
 import TimeEntryDialog from './TimeEntryDialog';
 import { AddWorkItemDialog } from './AddWorkItemDialog';
 import { fetchTimeEntriesForTimeSheet, fetchWorkItemsForTimeSheet, saveTimeEntry, submitTimeSheet, deleteWorkItem } from '../../../../actions/timeEntryActions';
-import { updateScheduleEntry } from 'server/src/lib/actions/scheduleActions';
+import { updateScheduleEntry } from '@alga-psa/scheduling/actions';
 import { toast } from 'react-hot-toast';
 import { fetchTimeSheet, fetchTimeSheetComments, addCommentToTimeSheet } from '../../../../actions/timeSheetActions';
-import { useDrawer } from "server/src/context/DrawerContext";
+import { useDrawer } from "@alga-psa/ui";
 import { formatISO, parseISO, format } from 'date-fns';
 import { TimeSheetTable } from './TimeSheetTable';
 import { TimeSheetListView } from './TimeSheetListView';
@@ -31,7 +31,7 @@ import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContai
 import { useAutomationIdAndRegister } from '@alga-psa/ui/ui-reflection/useAutomationIdAndRegister';
 import { ContainerComponent } from '@alga-psa/ui/ui-reflection/types';
 import { CommonActions } from '@alga-psa/ui/ui-reflection/actionBuilders';
-import { useUserPreference } from 'server/src/hooks/useUserPreference';
+import { useUserPreference } from '@alga-psa/users/hooks';
 
 const TIMESHEET_VIEW_MODE_SETTING = 'timesheet_view_mode';
 

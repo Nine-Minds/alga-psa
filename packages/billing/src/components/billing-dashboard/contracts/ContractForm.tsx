@@ -8,12 +8,12 @@ import { Input } from '@alga-psa/ui/components/Input';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Save } from 'lucide-react';
-import { IContract } from 'server/src/interfaces/contract.interfaces';
+import { IContract } from '@alga-psa/types';
 import { updateContract } from '@alga-psa/billing/actions/contractActions';
-import { useTenant } from 'server/src/components/TenantProvider';
+import { useTenant } from '@alga-psa/ui/components/providers/TenantProvider';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
-import { BILLING_FREQUENCY_OPTIONS } from 'server/src/constants/billing';
-import { CURRENCY_OPTIONS } from 'server/src/constants/currency';
+import { BILLING_FREQUENCY_OPTIONS } from '@alga-psa/billing/constants/billing';
+import { CURRENCY_OPTIONS } from '@alga-psa/core';
 
 interface ContractFormProps {
   contract: IContract;

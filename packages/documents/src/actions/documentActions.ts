@@ -1,6 +1,6 @@
 'use server'
 
-import { StorageService } from 'server/src/lib/storage/StorageService';
+import { StorageService } from '@alga-psa/documents/storage/StorageService';
 import { createTenantKnex, runWithTenant } from '@alga-psa/db';
 import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
@@ -10,9 +10,9 @@ import { fromPath } from 'pdf2pic';
 import puppeteer from 'puppeteer';
 import { writeFile, unlink, mkdir } from 'fs/promises';
 import { join } from 'path';
-import { CacheFactory } from 'server/src/lib/cache/CacheFactory';
-import { convertBlockNoteToHTML } from 'server/src/lib/utils/blocknoteUtils';
-import DocumentAssociation from 'server/src/models/document-association';
+import { CacheFactory } from '../cache/CacheFactory';
+import { convertBlockNoteToHTML } from '@alga-psa/documents/lib/blocknoteUtils';
+import DocumentAssociation from '@alga-psa/documents/models/documentAssociation';
 import {
     IDocument,
     IDocumentType,
@@ -26,15 +26,14 @@ import {
 } from '@alga-psa/types';
 import type { IDocumentAssociation, IDocumentAssociationInput, DocumentAssociationEntityType } from '@alga-psa/types';
 import { v4 as uuidv4 } from 'uuid';
-import { deleteFile } from 'server/src/lib/actions/file-actions/fileActions';
+import { deleteFile } from './file-actions/fileActions';
 import { NextResponse } from 'next/server';
 import { deleteDocumentContent } from './documentContentActions';
 import { deleteBlockContent } from './documentBlockContentActions';
 import { DocumentHandlerRegistry } from '@alga-psa/documents/handlers/DocumentHandlerRegistry';
-import { getCurrentUser } from '@alga-psa/auth/getCurrentUser';
-import { hasPermission } from 'server/src/lib/auth/rbac';
-import { getEntityTypesForUser } from 'server/src/lib/utils/documentPermissionUtils';
-import { generateDocumentPreviews } from 'server/src/lib/utils/documentPreviewGenerator';
+import { getCurrentUserAsync, hasPermissionAsync } from '../lib/authHelpers';
+import { getEntityTypesForUser } from '../lib/documentPermissionUtils';
+import { generateDocumentPreviews } from '../lib/documentPreviewGenerator';
 
 async function loadSharp() {
   try {
@@ -57,13 +56,13 @@ export async function addDocument(data: DocumentInput) {
     }
 
     // Get current user if not provided
-    const currentUser = await getCurrentUser();
+    const currentUser = await getCurrentUserAsync();
     if (!currentUser) {
       throw new Error('No authenticated user found');
     }
 
     // Check permission for document creation
-    if (!await hasPermission(currentUser, 'document', 'create')) {
+    if (!await hasPermissionAsync(currentUser, 'document', 'create')) {
       throw new Error('Permission denied: Cannot create documents');
     }
 
@@ -105,13 +104,13 @@ export async function addDocument(data: DocumentInput) {
 // Update document
 export async function updateDocument(documentId: string, data: Partial<IDocument>) {
   try {
-    const currentUser = await getCurrentUser();
+    const currentUser = await getCurrentUserAsync();
     if (!currentUser) {
       throw new Error('No authenticated user found');
     }
 
     // Check permission for document updates
-    if (!await hasPermission(currentUser, 'document', 'update')) {
+    if (!await hasPermissionAsync(currentUser, 'document', 'update')) {
       throw new Error('Permission denied: Cannot update documents');
     }
 
@@ -142,13 +141,13 @@ export async function updateDocument(documentId: string, data: Partial<IDocument
 // Delete document
 export async function deleteDocument(documentId: string, userId: string) {
   try {
-    const currentUser = await getCurrentUser();
+    const currentUser = await getCurrentUserAsync();
     if (!currentUser) {
       throw new Error('No authenticated user found');
     }
 
     // Check permission for document deletion
-    if (!await hasPermission(currentUser, 'document', 'delete')) {
+    if (!await hasPermissionAsync(currentUser, 'document', 'delete')) {
       throw new Error('Permission denied: Cannot delete documents');
     }
 
@@ -266,13 +265,13 @@ export async function deleteDocument(documentId: string, userId: string) {
 // Get single document
 export async function getDocument(documentId: string) {
   try {
-    const currentUser = await getCurrentUser();
+    const currentUser = await getCurrentUserAsync();
     if (!currentUser) {
       throw new Error('No authenticated user found');
     }
 
     // Check permission for document reading
-    if (!await hasPermission(currentUser, 'document', 'read')) {
+    if (!await hasPermissionAsync(currentUser, 'document', 'read')) {
       throw new Error('Permission denied: Cannot read documents');
     }
 
@@ -346,13 +345,13 @@ export async function getDocument(documentId: string) {
 // Get documents by ticket
 export async function getDocumentByTicketId(ticketId: string) {
   try {
-    const currentUser = await getCurrentUser();
+    const currentUser = await getCurrentUserAsync();
     if (!currentUser) {
       throw new Error('No authenticated user found');
     }
 
     // Check permission for document reading
-    if (!await hasPermission(currentUser, 'document', 'read')) {
+    if (!await hasPermissionAsync(currentUser, 'document', 'read')) {
       throw new Error('Permission denied: Cannot read documents');
     }
 
@@ -403,13 +402,13 @@ export async function getDocumentByTicketId(ticketId: string) {
 // Get documents by client
 export async function getDocumentByClientId(clientId: string) {
   try {
-    const currentUser = await getCurrentUser();
+    const currentUser = await getCurrentUserAsync();
     if (!currentUser) {
       throw new Error('No authenticated user found');
     }
 
     // Check permission for document reading
-    if (!await hasPermission(currentUser, 'document', 'read')) {
+    if (!await hasPermissionAsync(currentUser, 'document', 'read')) {
       throw new Error('Permission denied: Cannot read documents');
     }
 
@@ -459,16 +458,16 @@ export async function getDocumentByClientId(clientId: string) {
 
 export async function associateDocumentWithClient(input: IDocumentAssociationInput) {
   try {
-    const currentUser = await getCurrentUser();
+    const currentUser = await getCurrentUserAsync();
     if (!currentUser) {
       throw new Error('No authenticated user found');
     }
 
-    if (!await hasPermission(currentUser, 'document', 'create')) {
+    if (!await hasPermissionAsync(currentUser, 'document', 'create')) {
       throw new Error('Permission denied: Cannot associate documents');
     }
 
-    if (!await hasPermission(currentUser, 'client', 'update')) {
+    if (!await hasPermissionAsync(currentUser, 'client', 'update')) {
       throw new Error('Permission denied: Cannot modify client documents');
     }
 
@@ -495,13 +494,13 @@ export async function associateDocumentWithClient(input: IDocumentAssociationInp
 // Get documents by contact
 export async function getDocumentByContactNameId(contactNameId: string) {
   try {
-    const currentUser = await getCurrentUser();
+    const currentUser = await getCurrentUserAsync();
     if (!currentUser) {
       throw new Error('No authenticated user found');
     }
 
     // Check permission for document reading
-    if (!await hasPermission(currentUser, 'document', 'read')) {
+    if (!await hasPermissionAsync(currentUser, 'document', 'read')) {
       throw new Error('Permission denied: Cannot read documents');
     }
 
@@ -552,18 +551,18 @@ export async function getDocumentByContactNameId(contactNameId: string) {
 // Get documents by contract ID
 export async function getDocumentsByContractId(contractId: string) {
   try {
-    const currentUser = await getCurrentUser();
+    const currentUser = await getCurrentUserAsync();
     if (!currentUser) {
       throw new Error('No authenticated user found');
     }
 
     // Check permission for document reading
-    if (!await hasPermission(currentUser, 'document', 'read')) {
+    if (!await hasPermissionAsync(currentUser, 'document', 'read')) {
       throw new Error('Permission denied: Cannot read documents');
     }
 
     // Check billing permission (required for contract documents)
-    if (!await hasPermission(currentUser, 'billing', 'read')) {
+    if (!await hasPermissionAsync(currentUser, 'billing', 'read')) {
       throw new Error('Permission denied: Cannot access contract documents');
     }
 
@@ -596,18 +595,18 @@ export async function getDocumentsByContractId(contractId: string) {
 // Associate document with contract
 export async function associateDocumentWithContract(input: IDocumentAssociationInput) {
   try {
-    const currentUser = await getCurrentUser();
+    const currentUser = await getCurrentUserAsync();
     if (!currentUser) {
       throw new Error('No authenticated user found');
     }
 
     // Check permission for document association
-    if (!await hasPermission(currentUser, 'document', 'create')) {
+    if (!await hasPermissionAsync(currentUser, 'document', 'create')) {
       throw new Error('Permission denied: Cannot associate documents');
     }
 
     // Check billing permission (required for contract documents)
-    if (!await hasPermission(currentUser, 'billing', 'update')) {
+    if (!await hasPermissionAsync(currentUser, 'billing', 'update')) {
       throw new Error('Permission denied: Cannot modify contract documents');
     }
 
@@ -634,18 +633,18 @@ export async function associateDocumentWithContract(input: IDocumentAssociationI
 // Remove document from contract
 export async function removeDocumentFromContract(associationId: string) {
   try {
-    const currentUser = await getCurrentUser();
+    const currentUser = await getCurrentUserAsync();
     if (!currentUser) {
       throw new Error('No authenticated user found');
     }
 
     // Check permission for document deletion
-    if (!await hasPermission(currentUser, 'document', 'delete')) {
+    if (!await hasPermissionAsync(currentUser, 'document', 'delete')) {
       throw new Error('Permission denied: Cannot remove document associations');
     }
 
     // Check billing permission (required for contract documents)
-    if (!await hasPermission(currentUser, 'billing', 'update')) {
+    if (!await hasPermissionAsync(currentUser, 'billing', 'update')) {
       throw new Error('Permission denied: Cannot modify contract documents');
     }
 
@@ -725,13 +724,13 @@ export async function getDocumentPreview(
 ): Promise<PreviewResponse> {
   console.log(`[getDocumentPreview] Received identifier: ${identifier}`);
   try {
-    const currentUser = await getCurrentUser();
+    const currentUser = await getCurrentUserAsync();
     if (!currentUser) {
       throw new Error('No authenticated user found');
     }
 
     // Check permission for document reading
-    if (!await hasPermission(currentUser, 'document', 'read')) {
+    if (!await hasPermissionAsync(currentUser, 'document', 'read')) {
       throw new Error('Permission denied: Cannot read documents');
     }
 
@@ -847,13 +846,13 @@ export async function getDocumentPreview(
 
 // Get document download URL
 export async function getDocumentDownloadUrl(file_id: string): Promise<string> {
-    const currentUser = await getCurrentUser();
+    const currentUser = await getCurrentUserAsync();
     if (!currentUser) {
       throw new Error('No authenticated user found');
     }
 
     // Check permission for document reading/download
-    if (!await hasPermission(currentUser, 'document', 'read')) {
+    if (!await hasPermissionAsync(currentUser, 'document', 'read')) {
       throw new Error('Permission denied: Cannot read documents');
     }
 
@@ -869,13 +868,13 @@ export async function getDocumentDownloadUrl(file_id: string): Promise<string> {
  */
 export async function getDocumentThumbnailUrl(documentId: string): Promise<string | null> {
   try {
-    const currentUser = await getCurrentUser();
+    const currentUser = await getCurrentUserAsync();
     if (!currentUser) {
       throw new Error('No authenticated user found');
     }
 
     // Check permission for document reading
-    if (!await hasPermission(currentUser, 'document', 'read')) {
+    if (!await hasPermissionAsync(currentUser, 'document', 'read')) {
       throw new Error('Permission denied: Cannot read documents');
     }
 
@@ -923,13 +922,13 @@ export async function getDocumentThumbnailUrl(documentId: string): Promise<strin
  */
 export async function getDocumentPreviewUrl(documentId: string): Promise<string | null> {
   try {
-    const currentUser = await getCurrentUser();
+    const currentUser = await getCurrentUserAsync();
     if (!currentUser) {
       throw new Error('No authenticated user found');
     }
 
     // Check permission for document reading
-    if (!await hasPermission(currentUser, 'document', 'read')) {
+    if (!await hasPermissionAsync(currentUser, 'document', 'read')) {
       throw new Error('Permission denied: Cannot read documents');
     }
 
@@ -971,13 +970,13 @@ export async function getDocumentPreviewUrl(documentId: string): Promise<string 
 // Download document
 export async function downloadDocument(documentIdOrFileId: string) {
     try {
-        const currentUser = await getCurrentUser();
+        const currentUser = await getCurrentUserAsync();
         if (!currentUser) {
           throw new Error('No authenticated user found');
         }
 
         // Check permission for document reading/download
-        if (!await hasPermission(currentUser, 'document', 'read')) {
+        if (!await hasPermissionAsync(currentUser, 'document', 'read')) {
           throw new Error('Permission denied: Cannot read documents');
         }
 
@@ -1046,7 +1045,7 @@ export async function getDocumentCountsForEntities(
   entityIds: string[],
   entityType: string
 ): Promise<Map<string, number>> {
-  const currentUser = await getCurrentUser();
+  const currentUser = await getCurrentUserAsync();
   if (!currentUser || !currentUser.tenant) {
     throw new Error('User not authenticated');
   }
@@ -1089,13 +1088,13 @@ export async function getDocumentsByEntity(
   limit: number = 15
 ): Promise<PaginatedDocumentsResponse> {
   try {
-    const currentUser = await getCurrentUser();
+    const currentUser = await getCurrentUserAsync();
     if (!currentUser) {
       throw new Error('No authenticated user found');
     }
 
     // Check permission for document reading
-    if (!await hasPermission(currentUser, 'document', 'read')) {
+    if (!await hasPermissionAsync(currentUser, 'document', 'read')) {
       throw new Error('Permission denied: Cannot read documents');
     }
 
@@ -1330,13 +1329,13 @@ export async function getAllDocuments(
   limit: number = 10
 ): Promise<PaginatedDocumentsResponse> {
   try {
-    const currentUser = await getCurrentUser();
+    const currentUser = await getCurrentUserAsync();
     if (!currentUser) {
       throw new Error('No authenticated user found');
     }
 
     // Check permission for document reading
-    if (!await hasPermission(currentUser, 'document', 'read')) {
+    if (!await hasPermissionAsync(currentUser, 'document', 'read')) {
       throw new Error('Permission denied: Cannot read documents');
     }
 
@@ -1841,13 +1840,13 @@ export async function createDocumentAssociations(
   document_ids: string[]
 ): Promise<{ success: boolean }> {
   try {
-    const currentUser = await getCurrentUser();
+    const currentUser = await getCurrentUserAsync();
     if (!currentUser) {
       throw new Error('No authenticated user found');
     }
 
     // Check permission for document updates (associating documents is an update operation)
-    if (!await hasPermission(currentUser, 'document', 'update')) {
+    if (!await hasPermissionAsync(currentUser, 'document', 'update')) {
       throw new Error('Permission denied: Cannot update document associations');
     }
 
@@ -1886,13 +1885,13 @@ export async function removeDocumentAssociations(
   document_ids?: string[]
 ) {
   try {
-    const currentUser = await getCurrentUser();
+    const currentUser = await getCurrentUserAsync();
     if (!currentUser) {
       throw new Error('No authenticated user found');
     }
 
     // Check permission for document updates (removing associations is an update operation)
-    if (!await hasPermission(currentUser, 'document', 'update')) {
+    if (!await hasPermissionAsync(currentUser, 'document', 'update')) {
       throw new Error('Permission denied: Cannot update document associations');
     }
 
@@ -1939,13 +1938,13 @@ export async function uploadDocument(
   | { success: false; error: string }
 > {
   try {
-    const currentUser = await getCurrentUser();
+    const currentUser = await getCurrentUserAsync();
     if (!currentUser) {
       throw new Error('No authenticated user found');
     }
 
     // Check permission for document creation/upload
-    if (!await hasPermission(currentUser, 'document', 'create')) {
+    if (!await hasPermissionAsync(currentUser, 'document', 'create')) {
       throw new Error('Permission denied: Cannot create documents');
     }
 
@@ -2120,13 +2119,13 @@ async function validateDocumentUpload(file: File): Promise<void> {
 
 // Get document type ID
 export async function getDocumentTypeId(mimeType: string): Promise<{ typeId: string, isShared: boolean }> { // Export this function
-  const currentUser = await getCurrentUser();
+  const currentUser = await getCurrentUserAsync();
   if (!currentUser) {
     throw new Error('No authenticated user found');
   }
 
   // Check permission for document reading
-  if (!await hasPermission(currentUser, 'document', 'read')) {
+  if (!await hasPermissionAsync(currentUser, 'document', 'read')) {
     throw new Error('Permission denied: Cannot read document types');
   }
 
@@ -2256,13 +2255,13 @@ async function getImageUrlCore(file_id: string, useTransaction: boolean = true):
  */
 export async function getImageUrl(file_id: string): Promise<string | null> {
   try {
-    const currentUser = await getCurrentUser();
+    const currentUser = await getCurrentUserAsync();
     if (!currentUser) {
       throw new Error('No authenticated user found');
     }
 
     // Check permission for document reading
-    if (!await hasPermission(currentUser, 'document', 'read')) {
+    if (!await hasPermissionAsync(currentUser, 'document', 'read')) {
       throw new Error('Permission denied: Cannot read documents');
     }
 
@@ -2294,13 +2293,13 @@ export async function getImageUrlInternal(file_id: string): Promise<string | nul
 }
 export async function getDistinctEntityTypes(): Promise<string[]> {
   try {
-    const currentUser = await getCurrentUser();
+    const currentUser = await getCurrentUserAsync();
     if (!currentUser) {
       throw new Error('No authenticated user found');
     }
 
     // Check permission for document reading
-    if (!await hasPermission(currentUser, 'document', 'read')) {
+    if (!await hasPermissionAsync(currentUser, 'document', 'read')) {
       throw new Error('Permission denied: Cannot read document associations');
     }
 
@@ -2333,12 +2332,12 @@ export async function getDistinctEntityTypes(): Promise<string[]> {
  * @returns Promise<IFolderNode[]> - Root level folders with nested children
  */
 export async function getFolderTree(): Promise<IFolderNode[]> {
-  const currentUser = await getCurrentUser();
+  const currentUser = await getCurrentUserAsync();
   if (!currentUser) {
     throw new Error('User not authenticated');
   }
 
-  if (!(await hasPermission(currentUser, 'document', 'read'))) {
+  if (!(await hasPermissionAsync(currentUser, 'document', 'read'))) {
     throw new Error('Permission denied');
   }
 
@@ -2382,12 +2381,12 @@ export async function getFolderTree(): Promise<IFolderNode[]> {
  * @returns Promise<string[]> - Array of folder paths
  */
 export async function getFolders(): Promise<string[]> {
-  const currentUser = await getCurrentUser();
+  const currentUser = await getCurrentUserAsync();
   if (!currentUser) {
     throw new Error('User not authenticated');
   }
 
-  if (!(await hasPermission(currentUser, 'document', 'read'))) {
+  if (!(await hasPermissionAsync(currentUser, 'document', 'read'))) {
     throw new Error('Permission denied');
   }
 
@@ -2433,12 +2432,12 @@ export async function getDocumentsByFolder(
   limit: number = 15,
   filters?: DocumentFilters
 ): Promise<{ documents: IDocument[]; total: number }> {
-  const currentUser = await getCurrentUser();
+  const currentUser = await getCurrentUserAsync();
   if (!currentUser) {
     throw new Error('User not authenticated');
   }
 
-  if (!(await hasPermission(currentUser, 'document', 'read'))) {
+  if (!(await hasPermissionAsync(currentUser, 'document', 'read'))) {
     throw new Error('Permission denied');
   }
 
@@ -2653,12 +2652,12 @@ export async function moveDocumentsToFolder(
   documentIds: string[],
   newFolderPath: string | null
 ): Promise<void> {
-  const currentUser = await getCurrentUser();
+  const currentUser = await getCurrentUserAsync();
   if (!currentUser) {
     throw new Error('User not authenticated');
   }
 
-  if (!(await hasPermission(currentUser, 'document', 'update'))) {
+  if (!(await hasPermissionAsync(currentUser, 'document', 'update'))) {
     throw new Error('Permission denied');
   }
 
@@ -2682,7 +2681,7 @@ export async function moveDocumentsToFolder(
 export async function getFolderStats(
   folderPath: string
 ): Promise<IFolderStats> {
-  const currentUser = await getCurrentUser();
+  const currentUser = await getCurrentUserAsync();
   if (!currentUser) {
     throw new Error('User not authenticated');
   }
@@ -2713,12 +2712,12 @@ export async function getFolderStats(
  * @returns Promise<void>
  */
 export async function createFolder(folderPath: string): Promise<void> {
-  const currentUser = await getCurrentUser();
+  const currentUser = await getCurrentUserAsync();
   if (!currentUser) {
     throw new Error('User not authenticated');
   }
 
-  if (!(await hasPermission(currentUser, 'document', 'create'))) {
+  if (!(await hasPermissionAsync(currentUser, 'document', 'create'))) {
     throw new Error('Permission denied');
   }
 
@@ -2782,12 +2781,12 @@ export async function createFolder(folderPath: string): Promise<void> {
  * @returns Promise<void>
  */
 export async function deleteFolder(folderPath: string): Promise<void> {
-  const currentUser = await getCurrentUser();
+  const currentUser = await getCurrentUserAsync();
   if (!currentUser) {
     throw new Error('User not authenticated');
   }
 
-  if (!(await hasPermission(currentUser, 'document', 'delete'))) {
+  if (!(await hasPermissionAsync(currentUser, 'document', 'delete'))) {
     throw new Error('Permission denied');
   }
 
@@ -2874,7 +2873,7 @@ async function enrichFolderTreeWithCounts(
   }
 
   // Get current user for permission filtering
-  const currentUser = await getCurrentUser();
+  const currentUser = await getCurrentUserAsync();
   if (!currentUser) {
     return;
   }

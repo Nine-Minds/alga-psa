@@ -1,12 +1,12 @@
 'use client';
 
-import { IProjectTask, ProjectStatus, IProjectTicketLinkWithDetails, ITaskType, IProjectTaskDependency } from 'server/src/interfaces/project.interfaces';
-import { ITag } from 'server/src/interfaces/tag.interfaces';
+import { IProjectTask, ProjectStatus, IProjectTicketLinkWithDetails, ITaskType, IProjectTaskDependency } from '@alga-psa/types';
+import { ITag } from '@alga-psa/types';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Circle, Plus } from 'lucide-react';
 import TaskCard from './TaskCard';
 import styles from './ProjectDetail.module.css';
-import { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
+import { IUserWithRoles } from '@alga-psa/types';
 import { useState, useRef } from 'react';
 
 interface StatusColumnProps {

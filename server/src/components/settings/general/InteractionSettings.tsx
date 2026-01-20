@@ -1,5 +1,6 @@
 'use client';
 
+
 import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
 import CustomTabs from '@alga-psa/ui/components/CustomTabs';

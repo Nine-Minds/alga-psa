@@ -1,4 +1,4 @@
-import { isValidEmail } from './validation';
+import { isValidEmail } from '@alga-psa/core';
 
 // Enhanced validation utilities for client forms
 export interface ValidationResult {

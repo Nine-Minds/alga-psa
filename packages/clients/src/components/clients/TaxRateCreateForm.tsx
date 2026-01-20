@@ -5,9 +5,8 @@ import { DatePicker } from '@alga-psa/ui/components/DatePicker';
 import { Label } from '@alga-psa/ui/components/Label';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
-import { addTaxRate } from 'server/src/lib/actions/taxRateActions';
-import { getActiveTaxRegions } from 'server/src/lib/actions/taxSettingsActions';
-import { ITaxRegion } from 'server/src/interfaces/tax.interfaces';
+import { addTaxRateAsync, getActiveTaxRegionsAsync } from '../../lib/billingHelpers';
+import { ITaxRegion } from '@alga-psa/types';
 import { toast } from 'react-hot-toast';
 
 interface TaxRateCreateFormProps {
@@ -35,7 +34,7 @@ const TaxRateCreateForm: React.FC<TaxRateCreateFormProps> = ({ onSuccess, onErro
         const fetchTaxRegions = async () => {
             try {
                 setIsLoadingTaxRegions(true);
-                const regions = await getActiveTaxRegions();
+                const regions = await getActiveTaxRegionsAsync();
                 setTaxRegions(regions);
                 setErrorTaxRegions(null);
             } catch (error) {
@@ -146,7 +145,7 @@ const TaxRateCreateForm: React.FC<TaxRateCreateFormProps> = ({ onSuccess, onErro
         try {
             const percentageValue = parseFloat(percentage); // Already validated
             
-            await addTaxRate({
+            await addTaxRateAsync({
                 region_code: regionCode,
                 tax_percentage: percentageValue,
                 description: description.trim() || undefined,

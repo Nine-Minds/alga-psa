@@ -8,7 +8,7 @@ import {
   updateExternalEntityMapping,
   deleteExternalEntityMapping,
   getExternalEntityMappings
-} from 'server/src/lib/actions/externalMappingActions';
+} from '@alga-psa/integrations/actions';
 
 const helpers = TestContext.createHelpers();
 const HOOK_TIMEOUT = 120_000;

@@ -7,14 +7,14 @@ import { Input } from '@alga-psa/ui/components/Input';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { Switch } from '@alga-psa/ui/components/Switch';
-import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
+import { ColumnDefinition } from '@alga-psa/types';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
-import { ICSVColumnMapping, ICSVPreviewData, ICSVValidationResult, IContact, MappableField, ICSVImportOptions, ImportContactResult } from 'server/src/interfaces/contact.interfaces';
-import { importContactsFromCSV, checkExistingEmails, generateContactCSVTemplate } from 'server/src/lib/actions/contact-actions/contactActions';
+import { ICSVColumnMapping, ICSVPreviewData, ICSVValidationResult, IContact, MappableField, ICSVImportOptions, ImportContactResult } from '@alga-psa/types';
+import { importContactsFromCSV, checkExistingEmails, generateContactCSVTemplate } from '@alga-psa/clients/actions';
 import { X, Upload, AlertTriangle, Check, Download } from 'lucide-react';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
-import { parseCSV, unparseCSV, validateCSVHeaders } from 'server/src/lib/utils/csvParser';
+import { parseCSV, unparseCSV, validateCSVHeaders } from '@alga-psa/core';
 
 interface ContactsImportDialogProps {
   isOpen: boolean;

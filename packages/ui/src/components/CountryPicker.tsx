@@ -1,3 +1,5 @@
+'use client';
+
 import React, { useState, useRef, useEffect } from 'react';
 import { ChevronDown, Search } from 'lucide-react';
 import { AutomationProps, FormFieldComponent } from '../ui-reflection/types';

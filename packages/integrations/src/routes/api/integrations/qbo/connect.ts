@@ -5,7 +5,7 @@ import crypto from 'crypto';
 // --- Import Actual Implementations ---
 import { ISecretProvider } from '@alga-psa/core'; // Import the interface
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
-import { createTenantKnex } from 'server/src/lib/db'; // Import createTenantKnex
+import { createTenantKnex } from '@alga-psa/db'; // Import createTenantKnex
 import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 // TODO: Import the actual CSRF token storage mechanism

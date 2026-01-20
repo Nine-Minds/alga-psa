@@ -6,15 +6,15 @@ import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 import { FileTextIcon, GearIcon } from '@radix-ui/react-icons';
 import type { IInvoiceTemplate, TaxSource } from '@alga-psa/types';
-import type { WasmInvoiceViewModel } from 'server/src/lib/invoice-renderer/types';
+import type { WasmInvoiceViewModel } from '@alga-psa/types';
 import { getInvoiceForRendering, getInvoicePurchaseOrderSummary, type InvoicePurchaseOrderSummary } from '@alga-psa/billing/actions/invoiceQueries';
-import { mapDbInvoiceToWasmViewModel } from 'server/src/lib/adapters/invoiceAdapters';
+import { mapDbInvoiceToWasmViewModel } from '../../../lib/adapters/invoiceAdapters';
 import { PurchaseOrderSummaryBanner } from './PurchaseOrderSummaryBanner';
 import { TemplateRenderer } from '../TemplateRenderer';
 import PaperInvoice from '../PaperInvoice';
 import CreditExpirationInfo from '../CreditExpirationInfo';
 import { Button } from '@alga-psa/ui/components/Button';
-import { InvoiceTaxSourceBadge } from 'server/src/components/invoices/InvoiceTaxSourceBadge';
+import { InvoiceTaxSourceBadge } from '../../invoices/InvoiceTaxSourceBadge';
 
 interface InvoicePreviewPanelProps {
   invoiceId: string | null;

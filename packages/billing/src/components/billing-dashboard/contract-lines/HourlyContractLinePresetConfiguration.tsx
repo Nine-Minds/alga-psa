@@ -16,11 +16,11 @@ import * as Accordion from '@radix-ui/react-accordion';
 import * as Tooltip from '@radix-ui/react-tooltip'; // Correct Radix UI import
 // Removed incorrect import: import { TooltipContent, TooltipProvider, TooltipTrigger } from '@alga-psa/ui/components/Tooltip';
 import { getContractLinePresetById, updateContractLinePreset } from '@alga-psa/billing/actions/contractLinePresetActions';
-import { BILLING_FREQUENCY_OPTIONS } from 'server/src/constants/billing';
-import { useTenant } from 'server/src/components/TenantProvider';
+import { BILLING_FREQUENCY_OPTIONS } from '@alga-psa/billing/constants/billing';
+import { useTenant } from '@alga-psa/ui/components/providers/TenantProvider';
 import { getContractLineServicesWithConfigurations } from '@alga-psa/billing/actions/contractLineServiceActions'; // Corrected import path
 import HourlyContractLinePresetServicesList from './HourlyContractLinePresetServicesList';
-import { IContractLinePreset, IService as IBillingService } from 'server/src/interfaces/billing.interfaces'; // Use IService from billing.interfaces
+import { IContractLinePreset, IService as IBillingService } from '@alga-psa/types'; // Use IService from billing.interfaces
 import { ServiceHourlyConfigForm } from './ServiceHourlyConfigForm';
 import {
     upsertPlanServiceHourlyConfiguration, // Correct action import
@@ -30,10 +30,9 @@ import {
     IContractLineServiceHourlyConfig,
     IContractLineServiceConfiguration,
     IUserTypeRate
-} from 'server/src/interfaces/contractLineServiceConfiguration.interfaces';
-// Removed incorrect import: import { IService } from 'server/src/interfaces/service.interfaces';
+} from '@alga-psa/types';
+// Removed incorrect import: import { IService } from '@alga-psa/types';
 // Removed incorrect import: import { isDeepStrictEqual } from 'util';
-// Removed incorrect import: import { validateServiceHourlyConfig } from 'server/src/lib/validators/planServiceConfigurationValidators';
 
 // --- Local Deep Equality Helper ---
 function isEqual(a: unknown, b: unknown): boolean {

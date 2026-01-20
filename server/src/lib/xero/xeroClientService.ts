@@ -1,11 +1,11 @@
 import axios, { AxiosError, AxiosRequestConfig } from 'axios';
 import logger from '@alga-psa/core/logger';
-import { getSecretProviderInstance, type ISecretProvider } from '@alga-psa/core';
+import { getSecretProviderInstance, type ISecretProvider } from '@alga-psa/core/secrets';
 import { AppError } from '../errors';
-import {
+import type {
   ExternalCompanyRecord,
   NormalizedCompanyPayload
-} from '../services/companySync/companySync.types';
+} from '@alga-psa/billing';
 
 const XERO_TOKEN_ENDPOINT = 'https://identity.xero.com/connect/token';
 const XERO_API_BASE_URL = 'https://api.xero.com/api.xro/2.0';

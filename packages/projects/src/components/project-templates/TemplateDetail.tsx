@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Card } from '@alga-psa/ui/components/Card';
 import { ArrowLeft, Circle, Trash, FileText, MoreVertical, Rocket } from 'lucide-react';
-import { IProjectTemplateWithDetails, IProjectTemplateTask, IProjectTemplatePhase } from 'server/src/interfaces/projectTemplate.interfaces';
+import { IProjectTemplateWithDetails, IProjectTemplateTask, IProjectTemplatePhase } from '@alga-psa/types';
 import { deleteTemplate } from '../../actions/projectTemplateActions';
 import { toast } from 'react-hot-toast';
 import {

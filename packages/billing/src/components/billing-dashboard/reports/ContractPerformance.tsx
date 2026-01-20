@@ -6,10 +6,10 @@ import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { AlertCircle } from 'lucide-react';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Button } from '@alga-psa/ui/components/Button';
-import { IContract } from 'server/src/interfaces/contract.interfaces';
+import { IContract } from '@alga-psa/types';
 import { getContracts, getContractLinesForContract } from '@alga-psa/billing/actions/contractActions';
-import { getClientContracts, getAllClients } from '@alga-psa/clients/actions';
-import { IClient } from 'server/src/interfaces';
+import { getClientContractsForBilling, getAllClientsForBilling } from '@alga-psa/billing/actions/billingClientsActions';
+import { IClient } from '@alga-psa/types';
 import Spinner from '@alga-psa/ui/components/Spinner';
 
 interface ContractMetrics {
@@ -64,14 +64,14 @@ const ContractPerformance: React.FC = () => {
   const calculateContractMetrics = async (contract: IContract): Promise<ContractMetrics> => {
     try {
       // Get all clients
-      const clients = await getAllClients(false);
+      const clients = await getAllClientsForBilling(false);
       
       // Get all clients using this contract
       const clientsWithContract: IClient[] = [];
       let totalRevenue = 0;
       
       for (const client of clients) {
-        const clientContracts = await getClientContracts(client.client_id);
+        const clientContracts = await getClientContractsForBilling(client.client_id);
         const matchingContract = clientContracts.find(cc => 
           cc.contract_id === contract.contract_id && cc.is_active
         );

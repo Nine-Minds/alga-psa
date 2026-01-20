@@ -2,8 +2,9 @@
 
 import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
-import { createTenantKnex } from 'server/src/lib/db';
+import { createTenantKnex } from '@alga-psa/db';
 import type { IClientTaxRateAssociation } from '@alga-psa/types';
+import { getClientDefaultTaxRegionCode as getClientDefaultTaxRegionCodeShared } from '@alga-psa/shared/billingClients';
 
 // Combine association data with rate details
 // Removed 'name' from Pick as it doesn't exist on the tax_rates table
@@ -225,45 +226,15 @@ return await withTransaction(knex, async (trx: Knex.Transaction) => {
 export async function getClientDefaultTaxRegionCode(clientId: string): Promise<string | null> {
   const { knex, tenant } = await createTenantKnex();
   if (!tenant) {
-    console.error("[getClientDefaultTaxRegionCode] Tenant context not found.");
-    // Depending on strictness, could throw an error or return null.
-    // Returning null allows calling functions to potentially fallback.
     return null;
   }
 
   try {
-    const result = await withTransaction(knex, async (trx: Knex.Transaction) => {
-      return await trx('client_tax_rates as ctr')
-        .join('tax_rates as tr', function() {
-          this.on('ctr.tax_rate_id', '=', 'tr.tax_rate_id')
-              .andOn('ctr.tenant', '=', 'tr.tenant');
-        })
-        .where({
-          'ctr.client_id': clientId,
-          'ctr.tenant': tenant,
-          'ctr.is_default': true,
-        })
-        .whereNull('ctr.location_id') // Ensure it's the client-wide default
-        .select('tr.region_code')
-        .first();
+    return await withTransaction(knex, async (trx: Knex.Transaction) => {
+      return getClientDefaultTaxRegionCodeShared(trx, tenant, clientId);
     });
-
-    if (result && result.region_code) {
-      console.log(`[getClientDefaultTaxRegionCode] Found default region code '${result.region_code}' for client ${clientId}`);
-      return result.region_code;
-    } else {
-      console.warn(`[getClientDefaultTaxRegionCode] No default tax region code found for client ${clientId} using client_tax_rates.`);
-      // Attempt fallback to clients.region_code for backward compatibility or misconfiguration?
-      // Or strictly return null? For now, let's strictly return null based on the new table.
-      // const clientFallback = await knex('clients').where({ client_id: clientId, tenant: tenant }).select('region_code').first();
-      // if (clientFallback && clientFallback.region_code) {
-      //   console.warn(`[getClientDefaultTaxRegionCode] Falling back to clients.region_code: ${clientFallback.region_code}`);
-      //   return clientFallback.region_code;
-      // }
-      return null;
-    }
   } catch (error) {
-      console.error(`[getClientDefaultTaxRegionCode] Error fetching default tax region for client ${clientId}:`, error);
-      return null; // Return null on error
+    console.error(`[getClientDefaultTaxRegionCode] Error fetching default tax region for client ${clientId}:`, error);
+    return null;
   }
 }

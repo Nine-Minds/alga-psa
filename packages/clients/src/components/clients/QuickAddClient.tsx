@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import type { IClient, IClientLocation } from '@alga-psa/types';
-import { IContact } from 'server/src/interfaces/contact.interfaces';
+import { IContact } from '@alga-psa/types';
 import { IUser } from '@shared/interfaces/user.interfaces';
 import { Input } from '@alga-psa/ui/components/Input';
 import { PhoneInput } from '@alga-psa/ui/components/PhoneInput';
@@ -18,15 +18,15 @@ import {
   DialogFooter
 } from '@alga-psa/ui/components/Dialog';
 import UserPicker from '@alga-psa/ui/components/UserPicker';
-import { getAllUsersBasic } from 'server/src/lib/actions/user-actions/userActions';
+import { getAllUsersBasicAsync } from '../../lib/usersHelpers';
 import { createClient, createClientLocation, getAllCountries, ICountry } from '@alga-psa/clients/actions';
-import { createClientContact } from 'server/src/lib/actions/contact-actions/contactActions';
+import { createClientContact } from '@alga-psa/clients/actions';
 import CountryPicker from '@alga-psa/ui/components/CountryPicker';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import toast from 'react-hot-toast';
 import ClientCreatedDialog from './ClientCreatedDialog';
-import { QuickAddTagPicker, PendingTag } from 'server/src/components/tags';
-import { createTagsForEntity } from 'server/src/lib/actions/tagActions';
+import { QuickAddTagPicker, type PendingTag } from '@alga-psa/ui/components';
+import { createTagsForEntity } from '@alga-psa/tags/actions';
 import { 
   validateClientForm, 
   validateClientName, 
@@ -40,7 +40,7 @@ import {
   validateStateProvince,
   validateIndustry,
   validateNotes
-} from 'server/src/lib/utils/clientFormValidation';
+} from '@alga-psa/validation';
 
 type CreateClientData = Omit<IClient, "client_id" | "created_at" | "updated_at" | "notes_document_id" | "status" | "tenant" | "deleted_at">;
 
@@ -145,7 +145,7 @@ const QuickAddClient: React.FC<QuickAddClientProps> = ({
         if (isLoadingUsers || internalUsers.length > 0) return;
         setIsLoadingUsers(true);
         try {
-          const users = await getAllUsersBasic();
+          const users = await getAllUsersBasicAsync();
           setInternalUsers(users);
         } catch (error: any) {
           console.error("Error fetching MSP users:", error);

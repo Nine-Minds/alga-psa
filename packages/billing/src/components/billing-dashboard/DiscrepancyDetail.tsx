@@ -6,13 +6,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { Button } from '@alga-psa/ui/components/Button';
 import { Skeleton } from '@alga-psa/ui/components/Skeleton';
 import { CustomTabs, TabContent } from '@alga-psa/ui/components/CustomTabs';
-import { formatCurrency } from 'server/src/lib/utils/formatters';
-import { formatDateOnly, formatDateTime } from 'server/src/lib/utils/dateTimeUtils';
+import { formatCurrency } from '@alga-psa/core';
+import { formatDateOnly, formatDateTime } from '@alga-psa/core';
 import { parseISO } from 'date-fns';
-import { ICreditReconciliationReport, ITransaction, ICreditTracking } from 'server/src/interfaces/billing.interfaces';
+import { ICreditReconciliationReport, ITransaction, ICreditTracking } from '@alga-psa/types';
 import { resolveReconciliationReport } from '@alga-psa/billing/actions/creditReconciliationActions';
 import { applyReconciliationFix } from '@alga-psa/billing/actions/creditReconciliationFixActions';
-import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
+import { getCurrentUserAsync, hasPermissionAsync, getSessionAsync, getAnalyticsAsync } from '../../lib/authHelpers';
+
 import RecommendedFixPanel from './RecommendedFixPanel';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogTrigger } from '@alga-psa/ui/components/Dialog';
@@ -181,23 +182,23 @@ const DiscrepancyDetail: React.FC = () => {
     try {
       setIsResolvingReport(true);
       setResolutionError(null);
-      
+
       // Get the current user
-      const currentUser = await getCurrentUser();
+      const currentUser = await getCurrentUserAsync();
       if (!currentUser) {
         throw new Error('User not authenticated');
       }
-      
+
       const resolvedReport = await resolveReconciliationReport(
         report.report_id,
         currentUser.user_id,
         resolutionNotes
       );
-      
+
       // Update the report state with the resolved report
       setReport(resolvedReport);
       setIsResolutionDialogOpen(false);
-      
+
       setIsResolvingReport(false);
     } catch (error) {
       console.error('Error resolving report:', error);
@@ -212,13 +213,13 @@ const DiscrepancyDetail: React.FC = () => {
 
     try {
       setIsApplyingFix(true);
-      
+
       // Get the current user
-      const currentUser = await getCurrentUser();
+      const currentUser = await getCurrentUserAsync();
       if (!currentUser) {
         throw new Error('User not authenticated');
       }
-      
+
       // Call the server action to apply the fix
       const resolvedReport = await applyReconciliationFix(
         report.report_id,
@@ -227,10 +228,10 @@ const DiscrepancyDetail: React.FC = () => {
         notes,
         customData
       );
-      
+
       // Update the report state with the resolved report
       setReport(resolvedReport);
-      
+
       setIsApplyingFix(false);
     } catch (error) {
       console.error('Error applying fix:', error);

@@ -3,7 +3,7 @@
 import React, { useMemo } from 'react';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Dialog, DialogContent, DialogFooter } from '@alga-psa/ui/components/Dialog';
-import type { IClientContractLine } from 'server/src/interfaces/billing.interfaces';
+import type { IClientContractLine } from '@alga-psa/types';
 import { Skeleton } from '@alga-psa/ui/components/Skeleton';
 import { X, Package } from 'lucide-react';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';

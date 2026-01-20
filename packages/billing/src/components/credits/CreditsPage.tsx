@@ -3,9 +3,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@alga
 import { Skeleton } from '@alga-psa/ui/components/Skeleton';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { Button } from '@alga-psa/ui/components/Button';
-import { formatCurrency } from 'server/src/lib/utils/formatters';
-import type { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
-import type { ICreditExpirationSettings, ICreditTracking } from 'server/src/interfaces/billing.interfaces';
+import { formatCurrency } from '@alga-psa/core';
+import type { ColumnDefinition } from '@alga-psa/types';
+import type { ICreditExpirationSettings, ICreditTracking } from '@alga-psa/types';
 import { getCreditExpirationSettings } from '../../actions/creditExpirationSettingsActions';
 import { listCredits } from './actions';
 import AddCreditButton from './AddCreditButton';

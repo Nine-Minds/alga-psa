@@ -1,26 +1,27 @@
 // server/src/lib/actions/contractLinePresetActions.ts
 'use server'
 import { v4 as uuidv4 } from 'uuid';
-import ContractLinePreset from 'server/src/lib/models/contractLinePreset';
-import ContractLinePresetService from 'server/src/lib/models/contractLinePresetService';
-import ContractLinePresetFixedConfig from 'server/src/lib/models/contractLinePresetFixedConfig';
-import { IContractLinePreset, IContractLinePresetService, IContractLinePresetFixedConfig, IContractLine, IContractLineService, IContractLineFixedConfig } from 'server/src/interfaces/billing.interfaces';
-import { createTenantKnex } from 'server/src/lib/db';
+import ContractLinePreset from '../models/contractLinePreset';
+import ContractLinePresetService from '../models/contractLinePresetService';
+import ContractLinePresetFixedConfig from '../models/contractLinePresetFixedConfig';
+import { IContractLinePreset, IContractLinePresetService, IContractLinePresetFixedConfig, IContractLine, IContractLineService, IContractLineFixedConfig } from '@alga-psa/types';
+import { createTenantKnex } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { withTransaction } from '@alga-psa/db';
-import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
-import { hasPermission } from 'server/src/lib/auth/rbac';
-import { analytics } from 'server/src/lib/analytics/posthog';
-import { AnalyticsEvents } from 'server/src/lib/analytics/events';
-import ContractLine from 'server/src/lib/models/contractLine';
-import ContractLineFixedConfig from 'server/src/lib/models/contractLineFixedConfig';
-import { ContractLineServiceConfigurationService } from 'server/src/lib/services/contractLineServiceConfigurationService';
-import { IContractLineServiceConfiguration } from 'server/src/interfaces/contractLineServiceConfiguration.interfaces';
+import { getCurrentUserAsync, hasPermissionAsync, getSessionAsync, getAnalyticsAsync } from '../lib/authHelpers';
+
+
+
+
+import ContractLine from '../models/contractLine';
+import ContractLineFixedConfig from '../models/contractLineFixedConfig';
+import { ContractLineServiceConfigurationService } from '../services/contractLineServiceConfigurationService';
+import { IContractLineServiceConfiguration } from '@alga-psa/types';
 
 export async function getContractLinePresets(): Promise<IContractLinePreset[]> {
     try {
         const isBypass = process.env.E2E_AUTH_BYPASS === 'true';
-        const currentUser = isBypass ? ({} as any) : await getCurrentUser();
+        const currentUser = isBypass ? ({} as any) : await getCurrentUserAsync();
         if (!currentUser && !isBypass) {
             throw new Error('No authenticated user found');
         }
@@ -31,7 +32,7 @@ export async function getContractLinePresets(): Promise<IContractLinePreset[]> {
         }
 
         return await withTransaction(knex, async (trx: Knex.Transaction) => {
-            if (!isBypass && !await hasPermission(currentUser, 'billing', 'read', trx)) {
+            if (!isBypass && !await hasPermissionAsync(currentUser, 'billing', 'read')) {
                 throw new Error('Permission denied: Cannot read contract line presets');
             }
 
@@ -50,7 +51,7 @@ export async function getContractLinePresets(): Promise<IContractLinePreset[]> {
 export async function getContractLinePresetById(presetId: string): Promise<IContractLinePreset | null> {
     try {
         const isBypass = process.env.E2E_AUTH_BYPASS === 'true';
-        const currentUser = isBypass ? ({} as any) : await getCurrentUser();
+        const currentUser = isBypass ? ({} as any) : await getCurrentUserAsync();
         if (!currentUser && !isBypass) {
             throw new Error('No authenticated user found');
         }
@@ -61,7 +62,7 @@ export async function getContractLinePresetById(presetId: string): Promise<ICont
         }
 
         return await withTransaction(knex, async (trx: Knex.Transaction) => {
-            if (!isBypass && !await hasPermission(currentUser, 'billing', 'read', trx)) {
+            if (!isBypass && !await hasPermissionAsync(currentUser, 'billing', 'read')) {
                 throw new Error('Permission denied: Cannot read contract line presets');
             }
 
@@ -84,7 +85,7 @@ export async function createContractLinePreset(
     presetData: Omit<IContractLinePreset, 'preset_id' | 'tenant' | 'created_at' | 'updated_at'>
 ): Promise<IContractLinePreset> {
     try {
-        const currentUser = await getCurrentUser();
+        const currentUser = await getCurrentUserAsync();
         if (!currentUser) {
             throw new Error('No authenticated user found');
         }
@@ -95,7 +96,7 @@ export async function createContractLinePreset(
         }
 
         return await withTransaction(knex, async (trx: Knex.Transaction) => {
-            if (!await hasPermission(currentUser, 'billing', 'create', trx)) {
+            if (!await hasPermissionAsync(currentUser, 'billing', 'create')) {
                 throw new Error('Permission denied: Cannot create contract line presets');
             }
 
@@ -103,6 +104,7 @@ export async function createContractLinePreset(
             const preset = await ContractLinePreset.create(trx, safePresetData);
 
             // Track analytics
+            const { analytics, AnalyticsEvents } = await getAnalyticsAsync();
             analytics.capture(AnalyticsEvents.BILLING_RULE_CREATED, {
                 preset_id: preset.preset_id,
                 preset_name: preset.preset_name,
@@ -126,7 +128,7 @@ export async function updateContractLinePreset(
     updateData: Partial<IContractLinePreset>
 ): Promise<IContractLinePreset> {
     try {
-        const currentUser = await getCurrentUser();
+        const currentUser = await getCurrentUserAsync();
         if (!currentUser) {
             throw new Error('No authenticated user found');
         }
@@ -137,7 +139,7 @@ export async function updateContractLinePreset(
         }
 
         return await withTransaction(knex, async (trx: Knex.Transaction) => {
-            if (!await hasPermission(currentUser, 'billing', 'update', trx)) {
+            if (!await hasPermissionAsync(currentUser, 'billing', 'update')) {
                 throw new Error('Permission denied: Cannot update contract line presets');
             }
 
@@ -150,6 +152,7 @@ export async function updateContractLinePreset(
             const preset = await ContractLinePreset.update(trx, presetId, safeUpdateData);
 
             // Track analytics
+            const { analytics, AnalyticsEvents } = await getAnalyticsAsync();
             analytics.capture(AnalyticsEvents.BILLING_RULE_UPDATED, {
                 preset_id: preset.preset_id,
                 preset_name: preset.preset_name,
@@ -174,7 +177,7 @@ export async function updateContractLinePreset(
 
 export async function deleteContractLinePreset(presetId: string): Promise<void> {
     try {
-        const currentUser = await getCurrentUser();
+        const currentUser = await getCurrentUserAsync();
         if (!currentUser) {
             throw new Error('No authenticated user found');
         }
@@ -185,7 +188,7 @@ export async function deleteContractLinePreset(presetId: string): Promise<void> 
         }
 
         await withTransaction(knex, async (trx: Knex.Transaction) => {
-            if (!await hasPermission(currentUser, 'billing', 'delete', trx)) {
+            if (!await hasPermissionAsync(currentUser, 'billing', 'delete')) {
                 throw new Error('Permission denied: Cannot delete contract line presets');
             }
 
@@ -206,7 +209,7 @@ export async function deleteContractLinePreset(presetId: string): Promise<void> 
 export async function getContractLinePresetServices(presetId: string): Promise<IContractLinePresetService[]> {
     try {
         const isBypass = process.env.E2E_AUTH_BYPASS === 'true';
-        const currentUser = isBypass ? ({} as any) : await getCurrentUser();
+        const currentUser = isBypass ? ({} as any) : await getCurrentUserAsync();
         if (!currentUser && !isBypass) {
             throw new Error('No authenticated user found');
         }
@@ -217,7 +220,7 @@ export async function getContractLinePresetServices(presetId: string): Promise<I
         }
 
         return await withTransaction(knex, async (trx: Knex.Transaction) => {
-            if (!isBypass && !await hasPermission(currentUser, 'billing', 'read', trx)) {
+            if (!isBypass && !await hasPermissionAsync(currentUser, 'billing', 'read')) {
                 throw new Error('Permission denied: Cannot read contract line preset services');
             }
 
@@ -241,7 +244,7 @@ export async function updateContractLinePresetServices(
     services: Omit<IContractLinePresetService, 'tenant' | 'created_at' | 'updated_at'>[]
 ): Promise<IContractLinePresetService[]> {
     try {
-        const currentUser = await getCurrentUser();
+        const currentUser = await getCurrentUserAsync();
         if (!currentUser) {
             throw new Error('No authenticated user found');
         }
@@ -252,7 +255,7 @@ export async function updateContractLinePresetServices(
         }
 
         return await withTransaction(knex, async (trx: Knex.Transaction) => {
-            if (!await hasPermission(currentUser, 'billing', 'update', trx)) {
+            if (!await hasPermissionAsync(currentUser, 'billing', 'update')) {
                 throw new Error('Permission denied: Cannot update contract line preset services');
             }
 
@@ -274,7 +277,7 @@ export async function updateContractLinePresetServices(
 export async function getContractLinePresetFixedConfig(presetId: string): Promise<IContractLinePresetFixedConfig | null> {
     try {
         const isBypass = process.env.E2E_AUTH_BYPASS === 'true';
-        const currentUser = isBypass ? ({} as any) : await getCurrentUser();
+        const currentUser = isBypass ? ({} as any) : await getCurrentUserAsync();
         if (!currentUser && !isBypass) {
             throw new Error('No authenticated user found');
         }
@@ -285,7 +288,7 @@ export async function getContractLinePresetFixedConfig(presetId: string): Promis
         }
 
         return await withTransaction(knex, async (trx: Knex.Transaction) => {
-            if (!isBypass && !await hasPermission(currentUser, 'billing', 'read', trx)) {
+            if (!isBypass && !await hasPermissionAsync(currentUser, 'billing', 'read')) {
                 throw new Error('Permission denied: Cannot read contract line preset fixed config');
             }
 
@@ -309,7 +312,7 @@ export async function updateContractLinePresetFixedConfig(
     configData: Omit<IContractLinePresetFixedConfig, 'preset_id' | 'tenant' | 'created_at' | 'updated_at'>
 ): Promise<IContractLinePresetFixedConfig> {
     try {
-        const currentUser = await getCurrentUser();
+        const currentUser = await getCurrentUserAsync();
         if (!currentUser) {
             throw new Error('No authenticated user found');
         }
@@ -320,7 +323,7 @@ export async function updateContractLinePresetFixedConfig(
         }
 
         return await withTransaction(knex, async (trx: Knex.Transaction) => {
-            if (!await hasPermission(currentUser, 'billing', 'update', trx)) {
+            if (!await hasPermissionAsync(currentUser, 'billing', 'update')) {
                 throw new Error('Permission denied: Cannot update contract line preset fixed config');
             }
 
@@ -351,7 +354,7 @@ export async function copyPresetToContractLine(
     }
 ): Promise<string> {
     try {
-        const currentUser = await getCurrentUser();
+        const currentUser = await getCurrentUserAsync();
         if (!currentUser) {
             throw new Error('No authenticated user found');
         }
@@ -365,7 +368,7 @@ export async function copyPresetToContractLine(
         const tenantId: string = tenant;
 
         return await withTransaction(knex, async (trx: Knex.Transaction) => {
-            if (!await hasPermission(currentUser, 'billing', 'create', trx)) {
+            if (!await hasPermissionAsync(currentUser, 'billing', 'create')) {
                 throw new Error('Permission denied: Cannot create contract lines from presets');
             }
 
@@ -561,6 +564,7 @@ export async function copyPresetToContractLine(
             }
 
             // Track analytics
+            const { analytics, AnalyticsEvents } = await getAnalyticsAsync();
             analytics.capture(AnalyticsEvents.BILLING_RULE_CREATED, {
                 contract_line_id: contractLineId,
                 contract_line_name: contractLine.contract_line_name,
@@ -622,7 +626,7 @@ export async function createCustomContractLine(
     input: CreateCustomContractLineInput
 ): Promise<string> {
     try {
-        const currentUser = await getCurrentUser();
+        const currentUser = await getCurrentUserAsync();
         if (!currentUser) {
             throw new Error('No authenticated user found');
         }
@@ -635,7 +639,7 @@ export async function createCustomContractLine(
         const tenantId: string = tenant;
 
         return await withTransaction(knex, async (trx: Knex.Transaction) => {
-            if (!await hasPermission(currentUser, 'billing', 'create', trx)) {
+            if (!await hasPermissionAsync(currentUser, 'billing', 'create')) {
                 throw new Error('Permission denied: Cannot create contract lines');
             }
 
@@ -783,6 +787,7 @@ export async function createCustomContractLine(
             }
 
             // Track analytics
+            const { analytics, AnalyticsEvents } = await getAnalyticsAsync();
             analytics.capture(AnalyticsEvents.BILLING_RULE_CREATED, {
                 contract_line_id: contractLineId,
                 contract_line_name: contractLine.contract_line_name,

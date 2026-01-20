@@ -14,10 +14,10 @@
  */
 
 import { Knex } from 'knex';
-import { BaseService, ServiceContext, ListResult } from './BaseService';
+import { BaseService, ServiceContext, ListResult } from '@alga-psa/db';
 import { withTransaction } from '@alga-psa/db';
 import { ListOptions } from '../controllers/types';
-import { getCurrentUser } from '../../actions/user-actions/userActions';
+import { getCurrentUser } from '@alga-psa/users/actions';
 import { hasPermission } from '../../auth/rbac';
 import { auditLog } from '../../logging/auditLog';
 import { TaxService } from '../../services/taxService';

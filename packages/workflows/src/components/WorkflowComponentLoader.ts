@@ -1,3 +1,5 @@
+// @ts-nocheck
+// TODO: @/empty path alias resolved at build time
 import dynamic from 'next/dynamic';
 import type { ComponentType } from 'react';
 

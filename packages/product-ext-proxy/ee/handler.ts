@@ -5,7 +5,7 @@ import path from 'node:path';
 import { filterRequestHeaders, getTimeoutMs, pathnameFromParts } from '../shared/gateway-utils';
 import { loadInstallConfigCached } from './install-config-cache';
 import { getRunnerBackend, RunnerConfigError, RunnerRequestError } from './runner-backend';
-import { getTenantFromAuth, getUserInfoFromAuth, assertAccess } from 'server/src/lib/extensions/gateway/auth';
+import { getTenantFromAuth, getUserInfoFromAuth, assertAccess } from './gateway/auth';
 
 type Method = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE' | 'OPTIONS';
 

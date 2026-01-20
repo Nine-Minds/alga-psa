@@ -13,12 +13,12 @@ import { TemplateReviewStep } from './wizard-steps/TemplateReviewStep';
 import { createTemplateFromWizard } from '../../actions/projectTemplateWizardActions';
 import { getTenantProjectStatuses } from '../../actions/projectTaskStatusActions';
 import { getTaskTypes } from '../../actions/projectTaskActions';
-import { getAllPriorities } from 'server/src/lib/actions/priorityActions';
-import { getAllUsers } from 'server/src/lib/actions/user-actions/userActions';
-import { getServices } from 'server/src/lib/actions/serviceActions';
-import { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
-import { IStatus } from 'server/src/interfaces/status.interface';
-import { IService } from 'server/src/interfaces/billing.interfaces';
+import { getAllPriorities } from '@alga-psa/reference-data/actions';
+import { getAllUsers } from '@alga-psa/users/actions';
+import { getServices } from '@alga-psa/projects/actions/serviceCatalogActions';
+import { IUserWithRoles } from '@alga-psa/types';
+import { IStatus } from '@alga-psa/types';
+import { IService } from '@alga-psa/types';
 import { DEFAULT_CLIENT_PORTAL_CONFIG, type IClientPortalConfig } from '@alga-psa/types';
 import type {
   TemplateChecklistItem,

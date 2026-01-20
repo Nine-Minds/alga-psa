@@ -2,8 +2,8 @@
 
 import { Suspense } from 'react';
 import dynamic from 'next/dynamic';
-import { IProjectPhase, IProjectTask, ProjectStatus } from 'server/src/interfaces/project.interfaces';
-import { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
+import { IProjectPhase, IProjectTask, ProjectStatus } from '@alga-psa/types';
+import { IUserWithRoles } from '@alga-psa/types';
 import TaskFormSkeleton from '@alga-psa/ui/components/skeletons/TaskFormSkeleton';
 
 // Dynamic import for TaskForm

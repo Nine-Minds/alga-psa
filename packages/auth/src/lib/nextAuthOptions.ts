@@ -4,9 +4,9 @@ import GoogleProvider from "next-auth/providers/google";
 import AzureADProvider from "next-auth/providers/azure-ad";
 import { createHmac, timingSafeEqual } from "node:crypto";
 import type { NextAuthConfig } from "next-auth";
-import "server/src/types/next-auth";
-import { AnalyticsEvents } from "server/src/lib/analytics/events";
-// import { getAdminConnection } from "server/src/lib/db/admin";
+import "@alga-psa/auth/types/next-auth";
+// AnalyticsEvents imported dynamically when needed to avoid circular dependency
+// import { getAdminConnection } from "@alga-psa/db";
 import {
     getNextAuthSecret,
     getNextAuthSecretSync,
@@ -14,9 +14,9 @@ import {
     getSessionMaxAge,
     type PortalSessionTokenPayload,
 } from "./session";
-import { issuePortalDomainOtt } from "server/src/lib/models/PortalDomainSessionToken";
-import { buildTenantPortalSlug, isValidTenantSlug } from "@shared/utils/tenantSlug";
-import { isEnterprise } from "server/src/lib/features";
+import { issuePortalDomainOtt } from "./PortalDomainSessionToken";
+import { buildTenantPortalSlug, isValidTenantSlug } from "@alga-psa/validation";
+import { isEnterprise } from "@alga-psa/core";
 import {
     applyOAuthAccountHints,
     decodeOAuthJwtPayload,
@@ -31,11 +31,12 @@ import {
 import { isAutoLinkEnabledForTenant } from "@ee/lib/auth/ssoAutoLink";
 import type { OAuthLinkProvider } from "@ee/lib/auth/oauthAccountLinks";
 import { cookies } from "next/headers";
-import { UserSession } from "server/src/lib/models/UserSession";
+import { UserSession } from "@alga-psa/db/models/UserSession";
 import { getClientIp } from "./ipAddress";
 import { generateDeviceFingerprint, getDeviceInfo } from "./deviceFingerprint";
 import { getLocationFromIp } from "./geolocation";
-import { getConnection } from "server/src/lib/db/db";
+import { getConnection } from "@alga-psa/db";
+import { getPortalDomain, getPortalDomainByHostname } from "./PortalDomainModel";
 
 function applyPortToVanityUrl(url: URL, portCandidate: string | undefined, protocol: string): void {
     if (!portCandidate || portCandidate.length === 0) {
@@ -94,10 +95,6 @@ async function computeVanityRedirect({
             target: target.toString(),
         });
         const { getAdminConnection } = await import('@alga-psa/db/admin');
-        const {
-            getPortalDomain,
-            getPortalDomainByHostname,
-        } = await import('server/src/models/PortalDomainModel');
         const knex = await getAdminConnection();
 
         const isSameOrigin = target.origin === base.origin;
@@ -829,7 +826,7 @@ export async function buildAuthOptions(): Promise<NextAuthConfig> {
             async authorize(credentials, request): Promise<ExtendedUser | null> {
                 const { getAdminConnection } = await import("@alga-psa/db/admin");
                 const logger = (await import('@alga-psa/core/logger')).default;
-                const { authenticateUser } = await import('server/src/lib/actions/auth');
+                const { authenticateUser } = await import('../actions/auth');
                 console.log('==== Starting Credentials OAuth Authorization ====');
                 console.log('Received credentials:', {
                     email: credentials?.email,
@@ -962,7 +959,7 @@ export async function buildAuthOptions(): Promise<NextAuthConfig> {
                                 return null;
                             }
                             console.log('Verifying 2FA code');
-                            const { verifyAuthenticator } = await import('server/src/utils/authenticator/authenticator');
+                            const { verifyAuthenticator } = await import('./authenticator/authenticator');
                             const isValid2FA = await verifyAuthenticator(credentials.twoFactorCode as string, user.two_factor_secret);
                             console.log('2FA verification result:', { isValid: isValid2FA });
                             if (!isValid2FA) {
@@ -1039,7 +1036,7 @@ export async function buildAuthOptions(): Promise<NextAuthConfig> {
                     console.error('Error details:', {
                         email: credentials?.email
                     });
-                    logger.warn("Error authorizing email", credentials?.email, error);
+                    logger.warn("Error authorizing email", { email: credentials?.email, error });
                     throw error;
                 }
             }
@@ -1183,7 +1180,7 @@ export async function buildAuthOptions(): Promise<NextAuthConfig> {
             // Track last login
             if (extendedUser?.id && extendedUser?.tenant && providerId) {
                 try {
-                    const User = (await import('server/src/lib/models/user')).default;
+                    const User = (await import('@alga-psa/db/models/user')).default;
                     // Note: IP address would need to be passed from request headers
                     await User.updateLastLogin(
                         extendedUser.id,
@@ -1593,7 +1590,7 @@ export const options: NextAuthConfig = {
             },
             async authorize(credentials, request): Promise<ExtendedUser | null> {
                 const { getAdminConnection } = await import("@alga-psa/db/admin");
-                const { authenticateUser } = await import('server/src/lib/actions/auth');
+                const { authenticateUser } = await import('../actions/auth');
                 const logger = { info: (..._a:any[])=>{}, warn: (..._a:any[])=>{}, debug: (..._a:any[])=>{}, trace: (..._a:any[])=>{}, error: (..._a:any[])=>{} };
                 console.log('==== Starting Credentials OAuth Authorization ====');
                 console.log('Received credentials:', {
@@ -1725,7 +1722,7 @@ export const options: NextAuthConfig = {
                                 return null;
                             }
                             console.log('Verifying 2FA code');
-                            const { verifyAuthenticator } = await import('server/src/utils/authenticator/authenticator');
+                            const { verifyAuthenticator } = await import('./authenticator/authenticator');
                             const isValid2FA = await verifyAuthenticator(credentials.twoFactorCode as string, user.two_factor_secret);
                             console.log('2FA verification result:', { isValid: isValid2FA });
                             if (!isValid2FA) {
@@ -1802,7 +1799,7 @@ export const options: NextAuthConfig = {
                     console.error('Error details:', {
                         email: credentials?.email
                     });
-                    logger.warn("Error authorizing email", credentials?.email, error);
+                    logger.warn("Error authorizing email", { email: credentials?.email, error });
                     throw error;
                 }
             }
@@ -1914,7 +1911,6 @@ export const options: NextAuthConfig = {
         async signIn({ user, account, credentials }) {
             // Track successful login
             // const extendedUser = user as ExtendedUser;
-            // const { analytics } = await import('server/src/lib/analytics/posthog');
             // analytics.capture(AnalyticsEvents.USER_LOGGED_IN, {
             //     provider: account?.provider || 'credentials',
             //     user_type: extendedUser.user_type,
@@ -1949,7 +1945,7 @@ export const options: NextAuthConfig = {
             // Track last login
             if (extendedUser?.id && extendedUser?.tenant && providerId) {
                 try {
-                    const User = (await import('server/src/lib/models/user')).default;
+                    const User = (await import('@alga-psa/db/models/user')).default;
                     await User.updateLastLogin(
                         extendedUser.id,
                         extendedUser.tenant,
@@ -2203,7 +2199,7 @@ export const options: NextAuthConfig = {
 async function validateUser(token: any) {
     try {
         // Fetch the user from the database using email and user_type (lowercase for consistency)
-        const User = (await import('server/src/lib/models/user')).default;
+        const User = (await import('@alga-psa/db/models/user')).default;
         const logger = (await import('@alga-psa/core/logger')).default;
         const user = await User.findUserByEmailAndType(
           token.email.toLowerCase(),

@@ -6,9 +6,9 @@ import { Badge } from '@alga-psa/ui/components/Badge';
 import TaskComment from './TaskComment';
 import { TaskCommentForm } from './TaskCommentForm';
 import { getTaskComments } from '../actions/projectTaskCommentActions';
-import { IProjectTaskCommentWithUser } from 'server/src/interfaces/projectTaskComment.interface';
+import { IProjectTaskCommentWithUser } from '@alga-psa/types';
 import { withDataAutomationId } from '@alga-psa/ui/ui-reflection/withDataAutomationId';
-import { getCurrentUser, getCurrentUserAvatarUrl } from 'server/src/lib/actions/user-actions/userActions';
+import { getCurrentUser, getCurrentUserAvatarUrl } from '@alga-psa/users/actions';
 import UserAvatar from '@alga-psa/ui/components/UserAvatar';
 import { Button } from '@alga-psa/ui/components/Button';
 

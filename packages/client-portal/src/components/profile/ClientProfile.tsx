@@ -10,23 +10,23 @@ import { Switch } from '@alga-psa/ui/components/Switch';
 import TimezonePicker from '@alga-psa/ui/components/TimezonePicker';
 import CustomTabs, { TabContent } from '@alga-psa/ui/components/CustomTabs';
 import ViewSwitcher, { ViewSwitcherOption } from '@alga-psa/ui/components/ViewSwitcher';
-import { InternalNotificationPreferences } from '@alga-psa/ui/components/settings/notifications/InternalNotificationPreferences';
-import { getCurrentUser, updateUser } from 'server/src/lib/actions/user-actions/userActions';
+import { InternalNotificationPreferences } from '@alga-psa/notifications/components';
+import { getCurrentUser, updateUser } from '@alga-psa/users/actions';
 import {
   getCategoriesAction,
   getCategoryWithSubtypesAction,
   updateUserPreferenceAction
-} from 'server/src/lib/actions/notification-actions/notificationActions';
-import type { NotificationCategory, NotificationSubtype, UserNotificationPreference } from 'server/src/lib/models/notification';
-import type { IUserWithRoles } from 'server/src/types';
-import PasswordChangeForm from 'server/src/components/settings/general/PasswordChangeForm';
-import SessionManagement from 'server/src/components/settings/security/SessionManagement';
+} from '@alga-psa/notifications/actions';
+import type { NotificationCategory, NotificationSubtype, UserNotificationPreference } from '@alga-psa/notifications';
+import type { IUserWithRoles } from '@alga-psa/types';
+import { PasswordChangeForm } from '@alga-psa/users/components';
+import { SessionManagement } from '@alga-psa/auth/components';
 import { toast } from 'react-hot-toast';
 import ContactAvatarUpload from '../contacts/ContactAvatarUpload';
-import { getContactAvatarUrlAction } from 'server/src/lib/actions/avatar-actions';
+import { getContactAvatarUrlAction } from '@alga-psa/users/actions';
 import { LanguagePreference } from '@alga-psa/ui/components/LanguagePreference';
 import { SupportedLocale } from '@alga-psa/ui/lib/i18n/config';
-import { updateUserLocaleAction, getUserLocaleAction } from 'server/src/lib/actions/user-actions/localeActions';
+import { updateUserLocaleAction, getUserLocaleAction } from '@alga-psa/users/actions';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { ClientNotificationsList } from '../notifications/ClientNotificationsList';
 
@@ -74,7 +74,7 @@ export function ClientProfile() {
         setLanguage(userLocale); // This will be null if no preference is set
 
         // Get what locale would be inherited if user has no preference
-        const { getInheritedLocaleAction } = await import('server/src/lib/actions/locale-actions/getInheritedLocale');
+        const { getInheritedLocaleAction } = await import('@alga-psa/tenancy/actions');
         const inherited = await getInheritedLocaleAction();
         setCurrentEffectiveLocale(inherited.locale);
         setInheritedSource(inherited.source);

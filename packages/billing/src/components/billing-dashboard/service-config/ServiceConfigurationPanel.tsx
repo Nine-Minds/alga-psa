@@ -5,8 +5,8 @@ import { Card, CardHeader, CardContent, CardTitle, CardDescription } from '@alga
 import { UnitOfMeasureInput } from '@alga-psa/ui/components/UnitOfMeasureInput';
 import { ServiceTaxSettings } from './ServiceTaxSettings';
 import { ServiceRateTiers } from './ServiceRateTiers';
-import { IService } from 'server/src/interfaces/billing.interfaces';
-import { getServiceById } from 'server/src/lib/actions/serviceActions';
+import { IService } from '@alga-psa/types';
+import { getServiceById } from '@alga-psa/billing/actions';
 
 interface ServiceConfigurationPanelProps {
   serviceId: string;

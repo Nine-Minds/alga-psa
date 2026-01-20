@@ -3,15 +3,19 @@
 import React, { useState, useEffect } from 'react';
 import { Card, Box } from '@radix-ui/themes';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
-import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
+import { ColumnDefinition } from '@alga-psa/types';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { AlertCircle } from 'lucide-react';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Button } from '@alga-psa/ui/components/Button';
-import { IContract } from 'server/src/interfaces/contract.interfaces';
+import { IContract } from '@alga-psa/types';
 import { getContracts } from '@alga-psa/billing/actions/contractActions';
-import { getClientContracts, getDetailedClientContract, getAllClients } from '@alga-psa/clients/actions';
-import { IClient } from 'server/src/interfaces';
+import {
+  getClientContractsForBilling,
+  getDetailedClientContractForBilling,
+  getAllClientsForBilling,
+} from '@alga-psa/billing/actions/billingClientsActions';
+import { IClient } from '@alga-psa/types';
 import Spinner from '@alga-psa/ui/components/Spinner';
 
 interface ContractUsageRecord {
@@ -56,7 +60,7 @@ const ContractUsageReport: React.FC = () => {
       // Get all contracts and clients
       const [fetchedContracts, fetchedClients] = await Promise.all([
         getContracts(),
-        getAllClients(false) // false to get only active clients
+        getAllClientsForBilling(false) // false to get only active clients
       ]);
       
       setContracts(fetchedContracts);
@@ -84,11 +88,11 @@ const ContractUsageReport: React.FC = () => {
       const clientContracts: ContractUsageRecord[] = [];
       
       for (const client of clients) {
-        const clientContractAssignments = await getClientContracts(client.client_id);
+        const clientContractAssignments = await getClientContractsForBilling(client.client_id);
         const matchingContract = clientContractAssignments.find(cc => cc.contract_id === contractId);
         
         if (matchingContract && matchingContract.client_contract_id) {
-          const detailedContract = await getDetailedClientContract(matchingContract.client_contract_id);
+          const detailedContract = await getDetailedClientContractForBilling(matchingContract.client_contract_id);
           
           if (detailedContract) {
             clientContracts.push({

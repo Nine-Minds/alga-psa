@@ -2,35 +2,32 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { getScheduledHoursForTicket } from '../../actions/ticketActions';
-import { ITicket, ITimeSheet, ITimePeriod, ITimePeriodView, ITimeEntry, IAgentSchedule, IClient, IClientLocation } from 'server/src/interfaces'; // Added IClient and IClientLocation
-import { IUserWithRoles, ITeam } from 'server/src/interfaces/auth.interfaces';
-import { ITicketResource } from 'server/src/interfaces/ticketResource.interfaces';
-import { ITag } from 'server/src/interfaces/tag.interfaces';
-import { TagManager } from 'server/src/components/tags';
+import { ITicket, ITimeSheet, ITimePeriod, ITimePeriodView, ITimeEntry, IAgentSchedule, IClient, IClientLocation } from '@alga-psa/types'; // Added IClient and IClientLocation
+import { IUserWithRoles, ITeam } from '@alga-psa/types';
+import { ITicketResource } from '@alga-psa/types';
+import { ITag } from '@alga-psa/types';
+import { TagManager } from '@alga-psa/ui/components';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Label } from '@alga-psa/ui/components/Label';
 import { Input } from '@alga-psa/ui/components/Input';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Clock, Edit2, Play, Pause, StopCircle, UserPlus, X, AlertCircle, Calendar as CalendarIcon } from 'lucide-react';
-import { formatMinutesAsHoursAndMinutes } from 'server/src/lib/utils/dateTimeUtils';
+import { formatMinutesAsHoursAndMinutes } from '@alga-psa/core';
 import styles from './TicketDetails.module.css';
 import UserPicker from '@alga-psa/ui/components/UserPicker';
 import MultiUserPicker from '@alga-psa/ui/components/MultiUserPicker';
 import UserAvatar from '@alga-psa/ui/components/UserAvatar';
-import { ClientPicker } from '@alga-psa/clients/components/clients/ClientPicker';
+import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
 import { ContactPicker } from '@alga-psa/ui/components/ContactPicker';
 import { toast } from 'react-hot-toast';
 import { withDataAutomationId } from '@alga-psa/ui/ui-reflection/withDataAutomationId';
-import { IntervalManagement } from '@alga-psa/scheduling/components/time-management/interval-tracking/IntervalManagement';
 import ClientAvatar from '@alga-psa/ui/components/ClientAvatar';
 import ContactAvatar from '@alga-psa/ui/components/ContactAvatar';
-import { getUserAvatarUrlAction, getContactAvatarUrlAction } from 'server/src/lib/actions/avatar-actions';
-import { getUserContactId } from 'server/src/lib/actions/user-actions/userActions';
-import { utcToLocal, formatDateTime, getUserTimeZone } from 'server/src/lib/utils/dateTimeUtils';
+import { getUserAvatarUrlAction, getContactAvatarUrlAction } from '@alga-psa/users/actions';
+import { getUserContactId } from '@alga-psa/users/actions';
+import { utcToLocal, formatDateTime, getUserTimeZone } from '@alga-psa/core';
 import { getTicketingDisplaySettings } from '../../actions/ticketDisplaySettings';
-import TicketSurveySummaryCard from '@alga-psa/surveys/components/TicketSurveySummaryCard';
-import type { SurveyTicketSatisfactionSummary } from 'server/src/interfaces/survey.interface';
-import { getAppointmentRequestsByTicketId } from 'server/src/lib/actions/appointmentRequestManagementActions';
+import type { SurveyTicketSatisfactionSummary } from '@alga-psa/types';
 import TicketMaterialsCard from './TicketMaterialsCard';
 
 interface TicketPropertiesProps {
@@ -164,9 +161,6 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
   const [additionalAgentAvatarUrls, setAdditionalAgentAvatarUrls] = useState<Record<string, string | null>>({});
   const [contactAvatarUrl, setContactAvatarUrl] = useState<string | null>(null);
   const [dateTimeFormat, setDateTimeFormat] = useState<string>('MMM d, yyyy h:mm a');
-  const [appointmentRequestsCount, setAppointmentRequestsCount] = useState<number>(0);
-  const [appointmentRequests, setAppointmentRequests] = useState<any[]>([]);
-  const [showAppointmentTooltip, setShowAppointmentTooltip] = useState(false);
 
   const uniqueClientsForPicker = React.useMemo(() => {
     if (!clients) return [];
@@ -276,25 +270,6 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
     loadDisplay();
   }, []);
 
-  // Fetch appointment requests
-  useEffect(() => {
-    const fetchAppointmentRequests = async () => {
-      if (!ticket.ticket_id) return;
-
-      try {
-        const result = await getAppointmentRequestsByTicketId(ticket.ticket_id);
-        if (result.success && result.data) {
-          setAppointmentRequests(result.data);
-          setAppointmentRequestsCount(result.data.length);
-        }
-      } catch (error) {
-        console.error('Error fetching appointment requests:', error);
-      }
-    };
-
-    fetchAppointmentRequests();
-  }, [ticket.ticket_id]);
-
   return (
     <div className="flex-shrink-0 space-y-6">
       <div {...withDataAutomationId({ id: `${id}-time-entry` })} className={`${styles['card']} p-6 space-y-4`}>
@@ -356,24 +331,8 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
             </svg>
           </Button>
           
-          {/* Interval Management Section */}
-          <div className="mt-6 border-t pt-4">
-            <h3 className="text-sm font-medium mb-2">Tracked Intervals</h3>
-            {ticket.ticket_id && userId && (
-              <div {...withDataAutomationId({ id: `${id}-interval-management` })}>
-                <IntervalManagement
-                  ticketId={ticket.ticket_id}
-                  userId={userId}
-                  onCreateTimeEntry={onAddTimeEntry}
-                />
-              </div>
-            )}
-          </div>
         </div>
       </div>
-
-      {/* Customer Feedback Survey Summary */}
-      <TicketSurveySummaryCard summary={surveySummary} />
 
       <div {...withDataAutomationId({ id: `${id}-contact-info` })} className={`${styles['card']} p-6 space-y-4`}>
         <h2 className={`${styles['panel-header']}`}>Contact Info</h2>
@@ -651,81 +610,6 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
       <div className={`${styles['card']} p-6 space-y-4`}>
         <div className="flex items-center justify-between mb-4">
           <h2 className={`${styles['panel-header']}`}>Agent team</h2>
-          {/* Appointment Requests Indicator */}
-          {appointmentRequestsCount > 0 && (
-            <div
-              className="relative"
-              onMouseEnter={() => setShowAppointmentTooltip(true)}
-              onMouseLeave={() => setShowAppointmentTooltip(false)}
-            >
-              <a
-                href="/msp/schedule"
-                className="flex items-center text-sm text-blue-600 hover:text-blue-800 p-2 rounded hover:bg-blue-50"
-                target="_blank"
-                rel="noopener noreferrer"
-                title="View appointment requests on calendar"
-              >
-                <CalendarIcon className="h-4 w-4 mr-1" />
-                <span>{appointmentRequestsCount} Appointment Request{appointmentRequestsCount !== 1 ? 's' : ''}</span>
-              </a>
-
-              {/* Tooltip */}
-              {showAppointmentTooltip && (
-                <div className="absolute right-0 top-full mt-2 w-80 bg-white border border-gray-200 rounded-lg shadow-lg z-50 p-4">
-                  <div className="space-y-3 max-h-96 overflow-y-auto">
-                    {appointmentRequests.map((request, index) => (
-                      <div key={request.appointment_request_id} className="border-b border-gray-100 pb-3 last:border-0">
-                        <div className="flex items-start justify-between mb-2">
-                          <span className="text-xs font-semibold text-gray-700">
-                            Request #{index + 1}
-                          </span>
-                          <span className={`text-xs px-2 py-0.5 rounded ${
-                            request.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                            request.status === 'approved' ? 'bg-green-100 text-green-800' :
-                            request.status === 'declined' ? 'bg-red-100 text-red-800' :
-                            'bg-gray-100 text-gray-800'
-                          }`}>
-                            {request.status}
-                          </span>
-                        </div>
-                        <div className="space-y-1 text-xs text-gray-600">
-                          <div className="flex items-center">
-                            <CalendarIcon className="h-3 w-3 mr-1" />
-                            <span>{new Date(request.requested_date).toLocaleDateString()}</span>
-                            <span className="mx-1">at</span>
-                            <span>{request.requested_time}</span>
-                          </div>
-                          {request.service_name && (
-                            <div className="flex items-center">
-                              <span className="font-medium">Service:</span>
-                              <span className="ml-1">{request.service_name}</span>
-                            </div>
-                          )}
-                          {request.preferred_technician_first_name && (
-                            <div className="flex items-center">
-                              <span className="font-medium">Technician:</span>
-                              <span className="ml-1">
-                                {request.preferred_technician_first_name} {request.preferred_technician_last_name}
-                              </span>
-                            </div>
-                          )}
-                          <div className="flex items-center">
-                            <Clock className="h-3 w-3 mr-1" />
-                            <span>{request.requested_duration} minutes</span>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                  <div className="mt-3 pt-3 border-t border-gray-200">
-                    <p className="text-xs text-gray-500 text-center">
-                      Click to view on calendar
-                    </p>
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
         </div>
         <div className="space-y-4">
           {/* Primary Agent */}

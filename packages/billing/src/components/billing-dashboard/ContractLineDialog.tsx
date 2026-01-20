@@ -16,12 +16,12 @@ import {
   updateContractLinePresetServices,
   getContractLinePresetServices,
 } from '@alga-psa/billing/actions/contractLinePresetActions';
-import { IContractLinePreset } from 'server/src/interfaces/billing.interfaces';
-import { useTenant } from 'server/src/components/TenantProvider';
+import { IContractLinePreset } from '@alga-psa/types';
+import { useTenant } from '@alga-psa/ui/components/providers/TenantProvider';
 import { Package, Clock, Activity, Plus, X, Coins } from 'lucide-react';
-import { BILLING_FREQUENCY_OPTIONS } from 'server/src/constants/billing';
-import { getCurrencySymbol } from 'server/src/constants/currency';
-import { getServiceById } from 'server/src/lib/actions/serviceActions';
+import { BILLING_FREQUENCY_OPTIONS } from '@alga-psa/billing/constants/billing';
+import { getCurrencySymbol } from '@alga-psa/core';
+import { getServiceById } from '@alga-psa/billing/actions';
 import { SwitchWithLabel } from '@alga-psa/ui/components/SwitchWithLabel';
 import { BucketOverlayFields } from './contracts/BucketOverlayFields';
 import { BucketOverlayInput } from './contracts/ContractWizard';

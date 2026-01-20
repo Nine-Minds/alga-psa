@@ -5,7 +5,7 @@ import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { AlertCircle } from 'lucide-react';
-import { IContractLineService, IService, IContractLineFixedConfig } from 'server/src/interfaces/billing.interfaces';
+import { IContractLineService, IService, IContractLineFixedConfig } from '@alga-psa/types';
 import { updateContractLineFixedConfig, getContractLineById } from '@alga-psa/billing/actions/contractLineAction';
 import {
   IContractLineServiceConfiguration,
@@ -15,20 +15,20 @@ import {
   IContractLineServiceBucketConfig,
   IContractLineServiceRateTier,
   IUserTypeRate
-} from 'server/src/interfaces/contractLineServiceConfiguration.interfaces';
+} from '@alga-psa/types';
 import { updateContractLineService } from '@alga-psa/billing/actions/contractLineServiceActions';
 import {
   getConfigurationForService,
   getConfigurationWithDetails
 } from '@alga-psa/billing/actions/contractLineServiceConfigurationActions';
-import { useTenant } from 'server/src/components/TenantProvider';
+import { useTenant } from '@alga-psa/ui/components/providers/TenantProvider';
 import { ServiceConfigurationPanel } from '../service-configurations/ServiceConfigurationPanel';
 import {
   BucketOverlayInput,
   getBucketOverlay,
   upsertBucketOverlay,
   deleteBucketOverlay
-} from 'server/src/lib/actions/bucketOverlayActions';
+} from '../../../actions/bucketOverlayActions';
 
 interface ContractLineServiceFormProps {
   planService: IContractLineService;

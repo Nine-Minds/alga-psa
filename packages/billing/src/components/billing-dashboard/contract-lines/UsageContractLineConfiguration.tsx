@@ -19,12 +19,12 @@ import { ChevronDownIcon } from '@radix-ui/react-icons'; // Icon for Accordion
 import { getContractLineServicesWithConfigurations } from '@alga-psa/billing/actions/contractLineServiceActions'; // Get list of services
 import { getContractLineConfigurationForService, upsertPlanServiceConfiguration } from '@alga-psa/billing/actions/contractLineServiceConfigurationActions';
 // Import specific interfaces needed
-import { IContractLineServiceConfiguration, IContractLineServiceUsageConfig, IContractLineServiceRateTier, IService, IContractLine } from 'server/src/interfaces';
+import { IContractLineServiceConfiguration, IContractLineServiceUsageConfig, IContractLineServiceRateTier, IService, IContractLine } from '@alga-psa/types';
 import { getContractLineById, updateContractLine } from '@alga-psa/billing/actions/contractLineAction'; // Added action to get base plan details
 import { ServiceUsageConfigForm, ServiceUsageConfig, ServiceValidationErrors } from './ServiceUsageConfigForm'; // Import the new form component and types
 import { TierConfig } from './ServiceTierEditor'; // Import TierConfig type
-import { BILLING_FREQUENCY_OPTIONS } from 'server/src/constants/billing';
-import { useTenant } from 'server/src/components/TenantProvider';
+import { BILLING_FREQUENCY_OPTIONS } from '@alga-psa/billing/constants/billing';
+import { useTenant } from '@alga-psa/ui/components/providers/TenantProvider';
 
 // Keep GenericPlanServicesList for now, might remove in Phase 3
 import GenericPlanServicesList from './GenericContractLineServicesList';

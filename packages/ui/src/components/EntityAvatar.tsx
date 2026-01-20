@@ -1,3 +1,5 @@
+'use client';
+
 import * as React from 'react';
 import { generateEntityColor } from '../lib/colorUtils';
 import { cn } from '../lib/utils';

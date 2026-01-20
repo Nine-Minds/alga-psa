@@ -1,17 +1,17 @@
 'use client';
 
 import React, { useState, useCallback, useEffect, useMemo } from 'react';
-import { Dialog, DialogContent, DialogFooter } from 'server/src/components/ui/Dialog';
-import { Button } from 'server/src/components/ui/Button';
-import { Input } from 'server/src/components/ui/Input';
-import CustomSelect from 'server/src/components/ui/CustomSelect';
-import { DataTable } from 'server/src/components/ui/DataTable';
-import { Switch } from 'server/src/components/ui/Switch';
-import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
+import { Dialog, DialogContent, DialogFooter } from '@alga-psa/ui/components/Dialog';
+import { Button } from '@alga-psa/ui/components/Button';
+import { Input } from '@alga-psa/ui/components/Input';
+import CustomSelect from '@alga-psa/ui/components/CustomSelect';
+import { DataTable } from '@alga-psa/ui/components/DataTable';
+import { Switch } from '@alga-psa/ui/components/Switch';
+import type { ColumnDefinition } from '@alga-psa/types';
 import { Upload, AlertTriangle, Check, ChevronDown, ChevronRight } from 'lucide-react';
-import { parseCSV } from 'server/src/lib/utils/csvParser';
-import { Tooltip } from 'server/src/components/ui/Tooltip';
-import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
+import { parseCSV } from '@alga-psa/core';
+import { Tooltip } from '@alga-psa/ui/components/Tooltip';
+import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import {
   generatePhaseTaskCSVTemplate,
   getImportReferenceData,
@@ -36,7 +36,7 @@ import {
   AgentResolutionAction,
   TASK_IMPORT_FIELDS,
   DEFAULT_PHASE_NAME,
-} from 'server/src/interfaces/phaseTaskImport.interfaces';
+} from '@alga-psa/types';
 import type { IProjectStatusMapping } from '@alga-psa/types';
 
 interface PhaseTaskImportDialogProps {

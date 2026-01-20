@@ -12,8 +12,8 @@ import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import type { TemplateChecklistItem, TemplateTask, TemplateWizardData } from '../../../types/templateWizard';
 import UserPicker from '@alga-psa/ui/components/UserPicker';
 import MultiUserPicker from '@alga-psa/ui/components/MultiUserPicker';
-import { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
-import { IService } from 'server/src/interfaces/billing.interfaces';
+import { IUserWithRoles } from '@alga-psa/types';
+import { IService } from '@alga-psa/types';
 
 interface TemplateTasksStepProps {
   data: TemplateWizardData;

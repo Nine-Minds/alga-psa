@@ -2,21 +2,21 @@
 'use client'
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { IInteraction, IInteractionType } from 'server/src/interfaces/interaction.interfaces';
+import { IInteraction, IInteractionType } from '@alga-psa/types';
 import { IUser } from '@shared/interfaces/user.interfaces';
-import { IContact } from 'server/src/interfaces';
+import { IContact } from '@alga-psa/types';
 import type { IClient } from '@alga-psa/types';
 import { Filter, RefreshCw, ChevronRight, ChevronLeft } from 'lucide-react';
 import Link from 'next/link';
-import { getRecentInteractions, getInteractionStatuses } from 'server/src/lib/actions/interactionActions';
-import { getAllInteractionTypes } from 'server/src/lib/actions/interactionTypeActions';
-import { useDrawer } from "server/src/context/DrawerContext";
-import InteractionDetails from 'server/src/components/interactions/InteractionDetails';
+import { getRecentInteractions, getInteractionStatuses } from '@alga-psa/clients/actions';
+import { getAllInteractionTypes } from '@alga-psa/clients/actions';
+import { useDrawer } from "@alga-psa/ui";
+import { InteractionDetails } from '@alga-psa/clients/components';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import InteractionIcon from '@alga-psa/ui/components/InteractionIcon';
 import UserPicker from '@alga-psa/ui/components/UserPicker';
 import { ContactPicker } from '@alga-psa/ui/components/ContactPicker';
-import { ClientPicker } from '@alga-psa/clients/components/clients/ClientPicker';
+import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
 import { Input } from '@alga-psa/ui/components/Input';
 import { DateTimePicker } from '@alga-psa/ui/components/DateTimePicker';
 import { Button } from '@alga-psa/ui/components/Button';

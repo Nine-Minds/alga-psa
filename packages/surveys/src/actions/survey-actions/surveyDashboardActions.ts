@@ -7,7 +7,7 @@ import {
   type SurveyClientSatisfactionSummary,
 } from '@alga-psa/types';
 import { createTenantKnex } from '@alga-psa/db';
-import SurveyDashboardService from 'server/src/services/SurveyDashboardService';
+import SurveyDashboardService from '../../services/SurveyDashboardService';
 
 function ensureTenant(tenant: string | null): string {
   if (!tenant) {

@@ -14,20 +14,20 @@ import {
 } from '@alga-psa/ui/components/DropdownMenu';
 // Removed CustomSelect import as it wasn't used
 import { DataTable } from '@alga-psa/ui/components/DataTable';
-import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
-import { IContractLine, IContractLineService, IService, IServiceCategory } from 'server/src/interfaces/billing.interfaces';
+import { ColumnDefinition } from '@alga-psa/types';
+import { IContractLine, IContractLineService, IService, IServiceCategory } from '@alga-psa/types';
 import { getContractLineServicesWithConfigurations, addServiceToContractLine, removeServiceFromContractLine } from '@alga-psa/billing/actions/contractLineServiceActions';
-import { getServices } from 'server/src/lib/actions/serviceActions';
+import { getServices } from '@alga-psa/billing/actions';
 import { getContractLineById } from '@alga-psa/billing/actions/contractLineAction'; // Import action to get plan details
 import { getContractById } from '@alga-psa/billing/actions/contractActions';
-import { getCurrencySymbol } from 'server/src/constants/currency'; // Import currency helper
-import { getServiceCategories } from 'server/src/lib/actions/serviceCategoryActions'; // Added import
+import { getCurrencySymbol } from '@alga-psa/core'; // Import currency helper
+import { getServiceCategories } from '@alga-psa/billing/actions'; // Added import
 // Removed useTenant import as it wasn't used
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { AlertCircle } from 'lucide-react';
 import ContractLineServiceForm from './ContractLineServiceForm'; // Adjusted path
 import { Badge } from '@alga-psa/ui/components/Badge';
-import { IContractLineServiceConfiguration } from 'server/src/interfaces/contractLineServiceConfiguration.interfaces';
+import { IContractLineServiceConfiguration } from '@alga-psa/types';
 
 // Define billing method options
 const BILLING_METHOD_OPTIONS: Array<{ value: 'fixed' | 'hourly' | 'usage'; label: string }> = [

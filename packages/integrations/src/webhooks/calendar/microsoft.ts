@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { CalendarWebhookProcessor } from 'server/src/services/calendar/CalendarWebhookProcessor';
+import { CalendarWebhookProcessor } from '../../services/calendar/CalendarWebhookProcessor';
 import { getAdminConnection } from '@alga-psa/db';
 import logger from '@alga-psa/core/logger';
 

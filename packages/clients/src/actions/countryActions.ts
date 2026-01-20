@@ -1,6 +1,6 @@
 'use server'
 
-import { createTenantKnex } from 'server/src/lib/db';
+import { createTenantKnex } from '@alga-psa/db';
 
 export interface ICountry {
   code: string;

@@ -5,8 +5,19 @@ import { Switch } from '@alga-psa/ui/components/Switch';
 import { Label } from '@alga-psa/ui/components/Label';
 import { Button } from '@alga-psa/ui/components/Button';
 import toast from 'react-hot-toast';
-import { getClientContractLineSettings, updateClientContractLineSettings } from "server/src/lib/actions/billingSettingsActions";
-import type { BillingSettings } from "server/src/lib/actions/billingSettingsTypes";
+import {
+  getClientContractLineSettingsAsync,
+  updateClientContractLineSettingsAsync
+} from "../../lib/billingHelpers";
+
+// Local type definition to avoid circular dependency
+interface BillingSettings {
+  zeroDollarInvoiceHandling?: 'normal' | 'finalized';
+  suppressZeroDollarInvoices?: boolean;
+  enableCreditExpiration?: boolean;
+  creditExpirationDays?: number;
+  creditExpirationNotificationDays?: number[];
+}
 
 interface ClientCreditExpirationSettingsProps {
   clientId: string;
@@ -20,7 +31,7 @@ const ClientCreditExpirationSettings: React.FC<ClientCreditExpirationSettingsPro
   useEffect(() => {
     const loadSettings = async () => {
       try {
-        const clientSettings = await getClientContractLineSettings(clientId);
+        const clientSettings = await getClientContractLineSettingsAsync(clientId);
         if (clientSettings) {
           setSettings(clientSettings);
           setNotificationDays(clientSettings.creditExpirationNotificationDays?.join(', ') || '');
@@ -44,7 +55,7 @@ const ClientCreditExpirationSettings: React.FC<ClientCreditExpirationSettingsPro
         ...settings,
         enableCreditExpiration: checked,
       };
-      const result = await updateClientContractLineSettings(clientId, newSettings);
+      const result = await updateClientContractLineSettingsAsync(clientId, newSettings);
       if (result.success) {
         setSettings(newSettings);
         setUseDefault(false);
@@ -79,7 +90,7 @@ const ClientCreditExpirationSettings: React.FC<ClientCreditExpirationSettingsPro
         ...settings,
         creditExpirationDays: settings.creditExpirationDays
       };
-      const result = await updateClientContractLineSettings(clientId, newSettings);
+      const result = await updateClientContractLineSettingsAsync(clientId, newSettings);
       if (result.success) {
         setSettings(newSettings);
         setUseDefault(false);
@@ -106,7 +117,7 @@ const ClientCreditExpirationSettings: React.FC<ClientCreditExpirationSettingsPro
         creditExpirationNotificationDays: days
       };
 
-      const result = await updateClientContractLineSettings(clientId, newSettings);
+      const result = await updateClientContractLineSettingsAsync(clientId, newSettings);
       if (result.success) {
         setSettings(newSettings);
         setUseDefault(false);
@@ -121,7 +132,7 @@ const ClientCreditExpirationSettings: React.FC<ClientCreditExpirationSettingsPro
     try {
       if (checked) {
         // Remove client override
-        const result = await updateClientContractLineSettings(clientId, null);
+        const result = await updateClientContractLineSettingsAsync(clientId, null);
         if (result.success) {
           setSettings(null);
           setUseDefault(true);
@@ -129,7 +140,7 @@ const ClientCreditExpirationSettings: React.FC<ClientCreditExpirationSettingsPro
         }
       } else {
         // Create client override with current settings
-        const defaultSettings = await getClientContractLineSettings(clientId);
+        const defaultSettings = await getClientContractLineSettingsAsync(clientId);
         const newSettings: BillingSettings = {
           zeroDollarInvoiceHandling: defaultSettings?.zeroDollarInvoiceHandling || 'normal',
           suppressZeroDollarInvoices: defaultSettings?.suppressZeroDollarInvoices || false,
@@ -137,7 +148,7 @@ const ClientCreditExpirationSettings: React.FC<ClientCreditExpirationSettingsPro
           creditExpirationDays: defaultSettings?.creditExpirationDays ?? 365,
           creditExpirationNotificationDays: defaultSettings?.creditExpirationNotificationDays ?? [30, 7, 1],
         };
-        const result = await updateClientContractLineSettings(clientId, newSettings);
+        const result = await updateClientContractLineSettingsAsync(clientId, newSettings);
         if (result.success) {
           setSettings(newSettings);
           setNotificationDays(newSettings.creditExpirationNotificationDays?.join(', ') || '');

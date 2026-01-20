@@ -1,21 +1,21 @@
 'use client'
 
 import React from 'react';
-import { IExtendedWorkItem } from 'server/src/interfaces/workItem.interfaces';
-import { IProjectTask } from 'server/src/interfaces/project.interfaces';
-import { IScheduleEntry } from 'server/src/interfaces/schedule.interfaces';
+import { IExtendedWorkItem } from '@alga-psa/types';
+import { IProjectTask } from '@alga-psa/types';
+import { IScheduleEntry } from '@alga-psa/types';
 import { getConsolidatedTicketData } from '@alga-psa/tickets/actions/optimizedTicketActions';
 import { getTaskWithDetails } from '@alga-psa/projects/actions/projectTaskActions';
-import { getWorkItemById } from 'server/src/lib/actions/workItemActions';
-import { getCurrentUser, getAllUsersBasic } from 'server/src/lib/actions/user-actions/userActions';
-import { getScheduleEntries } from 'server/src/lib/actions/scheduleActions';
-import { getInteractionById } from 'server/src/lib/actions/interactionActions';
+import { getWorkItemById } from '@alga-psa/scheduling/actions';
+import { getCurrentUser, getAllUsersBasic } from '@alga-psa/users/actions';
+import { getScheduleEntries } from '@alga-psa/scheduling/actions';
+import { getInteractionById } from '@alga-psa/clients/actions';
 import { toast } from 'react-hot-toast';
 import TicketDetails from '@alga-psa/tickets/components/ticket/TicketDetails';
 import TaskEdit from '@alga-psa/projects/components/TaskEdit';
 import EntryPopup from '@alga-psa/scheduling/components/schedule/EntryPopup';
-import InteractionDetails from 'server/src/components/interactions/InteractionDetails';
-import { useTenant } from 'server/src/components/TenantProvider';
+import { InteractionDetails } from '@alga-psa/clients/components';
+import { useTenant } from '@alga-psa/ui/components/providers/TenantProvider';
 
 interface WorkItemDetailsDrawerProps {
     workItem: IExtendedWorkItem;
@@ -230,7 +230,7 @@ export function WorkItemDetailsDrawer({
 
                 case 'appointment_request': {
                     console.log('Loading appointment request with ID:', workItem.work_item_id);
-                    const { getAppointmentRequestById } = await import('server/src/lib/actions/appointmentRequestManagementActions');
+                    const { getAppointmentRequestById } = await import('@alga-psa/scheduling/actions');
                     const result = await getAppointmentRequestById(workItem.work_item_id);
                     if (!result.success || !result.data) {
                         toast.error('Failed to load appointment request data');

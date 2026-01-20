@@ -1,7 +1,7 @@
 import axios, { AxiosInstance } from 'axios';
 import { BaseCalendarAdapter } from './base/BaseCalendarAdapter';
 import { CalendarProviderConfig, ExternalCalendarEvent } from '@/interfaces/calendar.interfaces';
-import { getSecretProviderInstance } from '@alga-psa/core';
+import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { getAdminConnection } from '@alga-psa/db';
 import { CalendarProviderService } from '../CalendarProviderService';
 import { getWebhookBaseUrl } from '../../../utils/email/webhookHelpers';

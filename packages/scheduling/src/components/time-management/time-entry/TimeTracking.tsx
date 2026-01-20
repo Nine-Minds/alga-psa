@@ -5,8 +5,8 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { TimePeriodList } from './TimePeriodList';
 import { SkeletonTimeSheet } from './SkeletonTimeSheet';
-import { ITimePeriodWithStatusView } from 'server/src/interfaces/timeEntry.interfaces';
-import { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
+import { ITimePeriodWithStatusView } from '@alga-psa/types';
+import { IUserWithRoles } from '@alga-psa/types';
 import { fetchTimePeriods, fetchOrCreateTimeSheet } from '../../../actions/timeEntryActions';
 
 

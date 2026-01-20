@@ -2,8 +2,8 @@
 
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
-import { ITicket, ITicketListItem, ITicketCategory, ITicketListFilters } from 'server/src/interfaces/ticket.interfaces';
-import { ITag } from 'server/src/interfaces/tag.interfaces';
+import { ITicket, ITicketListItem, ITicketCategory, ITicketListFilters } from '@alga-psa/types';
+import { ITag } from '@alga-psa/types';
 import { QuickAddTicket } from './QuickAddTicket';
 import { CategoryPicker } from './CategoryPicker';
 import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect';
@@ -13,35 +13,33 @@ import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Switch } from '@alga-psa/ui/components/Switch';
 import { Label } from '@alga-psa/ui/components/Label';
-import { getCurrentUser, getCurrentUserPermissions } from 'server/src/lib/actions/user-actions/userActions';
-import { BoardPicker } from 'server/src/components/settings/general/BoardPicker';
-import { ClientPicker } from '@alga-psa/clients/components/clients/ClientPicker';
-import { findTagsByEntityIds } from 'server/src/lib/actions/tagActions';
-import { TagFilter } from 'server/src/components/tags';
-import { useTagPermissions } from 'server/src/hooks/useTagPermissions';
-import { IBoard, IClient, IUser } from 'server/src/interfaces';
+import { getCurrentUser, getCurrentUserPermissions } from '@alga-psa/users/actions';
+import { BoardPicker } from '@alga-psa/ui/components/settings/general/BoardPicker';
+import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
+import { findTagsByEntityIds } from '@alga-psa/tags/actions';
+import { TagFilter } from '@alga-psa/ui/components';
+import { useTagPermissions } from '@alga-psa/ui';
+import { IBoard, IClient, IUser } from '@alga-psa/types';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { Dialog, DialogContent, DialogFooter } from '@alga-psa/ui/components/Dialog';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
-import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
+import { ColumnDefinition } from '@alga-psa/types';
 import { deleteTicket, deleteTickets } from '../actions/ticketActions';
 import { bundleTicketsAction } from '../actions/ticketBundleActions';
 import { fetchBundleChildrenForMaster } from '../actions/optimizedTicketActions';
 import { XCircle, Clock } from 'lucide-react';
 import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContainer';
 import { withDataAutomationId } from '@alga-psa/ui/ui-reflection/withDataAutomationId';
-import { useIntervalTracking } from 'server/src/hooks/useIntervalTracking';
-import { IntervalManagementDrawer } from '@alga-psa/scheduling/components/time-management/interval-tracking/IntervalManagementDrawer';
+import { useIntervalTracking } from '@alga-psa/ui/hooks';
 import type { TicketingDisplaySettings } from '../actions/ticketDisplaySettings';
-import { saveTimeEntry } from '@alga-psa/scheduling/actions/timeEntryActions';
 import { toast } from 'react-hot-toast';
 import Drawer from '@alga-psa/ui/components/Drawer';
-import ClientDetails from '@alga-psa/clients/components/clients/ClientDetails';
-import { createTicketColumns } from 'server/src/lib/utils/ticket-columns';
+import { createTicketColumns } from '@alga-psa/ui/lib/ticket-columns';
 import Spinner from '@alga-psa/ui/components/Spinner';
 import MultiUserPicker from '@alga-psa/ui/components/MultiUserPicker';
-import { getUserAvatarUrlsBatchAction } from 'server/src/lib/actions/avatar-actions';
+import { getUserAvatarUrlsBatchAction } from '@alga-psa/users/actions';
 import { DatePicker } from '@alga-psa/ui/components/DatePicker';
+import { ExternalLink } from 'lucide-react';
 
 interface TicketingDashboardProps {
   id?: string;
@@ -115,7 +113,6 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   const [ticketToDelete, setTicketToDelete] = useState<string | null>(null);
   const [ticketToDeleteName, setTicketToDeleteName] = useState<string | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
-  const [isIntervalDrawerOpen, setIsIntervalDrawerOpen] = useState(false);
   const [currentUser, setCurrentUser] = useState<any>(user || null);
   const [isBulkDeleteDialogOpen, setIsBulkDeleteDialogOpen] = useState(false);
   const [isBulkDeleting, setIsBulkDeleting] = useState(false);
@@ -502,15 +499,6 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
 
 
   // Handle saving time entries created from intervals
-  const handleCreateTimeEntry = async (timeEntry: any): Promise<void> => {
-    try {
-      await saveTimeEntry(timeEntry);
-      toast.success('Time entry saved successfully');
-    } catch (error) {
-      console.error('Error saving time entry:', error);
-      toast.error('Failed to save time entry');
-    }
-  };
 
   const [expandedBundleMasters, setExpandedBundleMasters] = useState<Set<string>>(new Set());
   const [loadedBundleChildrenMasters, setLoadedBundleChildrenMasters] = useState<Set<string>>(new Set());
@@ -1178,20 +1166,6 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
       <div className="flex justify-between items-center mb-4">
         <h1 className="text-2xl font-bold">Ticketing Dashboard</h1>
         <div className="flex gap-2">
-          <Button
-            variant="outline"
-            onClick={() => setIsIntervalDrawerOpen(true)}
-            className="flex items-center gap-2"
-            id="view-intervals-button"
-          >
-            <Clock className="h-4 w-4" />
-            View Intervals
-            {intervalCount > 0 && (
-              <span className="bg-blue-500 text-white rounded-full px-2 py-0.5 text-xs">
-                {intervalCount}
-              </span>
-            )}
-          </Button>
           {hasSelection && (
             <Button
               id={`${id}-bulk-delete-button`}
@@ -1342,16 +1316,16 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
               containerClassName="" // Applied to the wrapping <div>, removes default mb-4
             />
             <TagFilter
-              allTags={allUniqueTags}
+              tags={allUniqueTags}
               selectedTags={selectedTags}
-              onTagSelect={(tag) => {
+              onToggleTag={(tag: string) => {
                 setSelectedTags(prev =>
                   prev.includes(tag)
                     ? prev.filter(t => t !== tag)
                     : [...prev, tag]
                 );
               }}
-              onClear={() => setSelectedTags([])}
+              onClearTags={() => setSelectedTags([])}
             />
             <div className="flex items-center gap-4 ml-auto">
               <div className="flex items-center gap-2 whitespace-nowrap">
@@ -1625,16 +1599,6 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
         </DialogFooter>
       </Dialog>
       
-      {/* Interval Management Drawer */}
-      {currentUser && (
-        <IntervalManagementDrawer
-          isOpen={isIntervalDrawerOpen}
-          onClose={() => setIsIntervalDrawerOpen(false)}
-          userId={currentUser.user_id}
-          onCreateTimeEntry={handleCreateTimeEntry}
-        />
-      )}
-      
       {/* Client Quick View Drawer */}
       <Drawer
         isOpen={isQuickViewOpen}
@@ -1644,13 +1608,19 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
           setQuickViewClient(null);
         }}
       >
-        {quickViewClient && (
-          <ClientDetails
-            client={quickViewClient}
-            isInDrawer={true}
-            quickView={true}
-          />
-        )}
+	        {quickViewClient ? (
+	          <div className="p-4 space-y-3">
+	            <div className="text-lg font-semibold">{quickViewClient.client_name}</div>
+	            <Button
+	              id={`${id}-quickview-open-client`}
+	              type="button"
+	              variant="outline"
+	              onClick={() => window.open(`/msp/clients/${quickViewClient.client_id}`, '_blank', 'noopener,noreferrer')}
+	            >
+	              Open Client <ExternalLink className="ml-2 h-4 w-4" />
+            </Button>
+          </div>
+        ) : null}
       </Drawer>
     </ReflectionContainer>
   );

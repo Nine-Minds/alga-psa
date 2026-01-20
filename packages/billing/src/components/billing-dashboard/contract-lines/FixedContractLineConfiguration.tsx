@@ -11,7 +11,7 @@ import { Input } from '@alga-psa/ui/components/Input';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Switch } from '@alga-psa/ui/components/Switch';
 import Spinner from '@alga-psa/ui/components/Spinner';
-import { getServices } from 'server/src/lib/actions/serviceActions';
+import { getServices } from '@alga-psa/billing/actions';
 import {
   getContractLineById,
   updateContractLine,
@@ -19,10 +19,10 @@ import {
   getContractLineFixedConfig,
   upsertContractLineTerms,
 } from '@alga-psa/billing/actions/contractLineAction';
-import { IService, IContractLine } from 'server/src/interfaces/billing.interfaces';
+import { IService, IContractLine } from '@alga-psa/types';
 import FixedPlanServicesList from '../FixedContractLineServicesList'; // Import the actual component
-import { BILLING_FREQUENCY_OPTIONS } from 'server/src/constants/billing';
-import { useTenant } from 'server/src/components/TenantProvider';
+import { BILLING_FREQUENCY_OPTIONS } from '@alga-psa/billing/constants/billing';
+import { useTenant } from '@alga-psa/ui/components/providers/TenantProvider';
 
 interface FixedPlanConfigurationProps {
   contractLineId: string;

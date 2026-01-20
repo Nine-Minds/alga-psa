@@ -6,11 +6,11 @@ import { z } from 'zod';
 
 import { createTenantKnex, runWithTenant } from '@alga-psa/db';
 import { getCurrentUser } from '@alga-psa/auth/getCurrentUser';
+import { hasPermission } from '@alga-psa/auth/lib/rbac';
 import type { IBoard, IPriority, IStatus } from '@alga-psa/types';
-import { getAllBoards } from 'server/src/lib/actions/board-actions/boardActions';
-import { getTicketStatuses } from 'server/src/lib/actions/status-actions/statusActions';
-import { getAllPriorities } from 'server/src/lib/actions/priorityActions';
-import { getProjectStatuses } from '@alga-psa/projects/actions/projectActions';
+import { getAllBoards } from '@alga-psa/tickets/actions';
+import { getTicketStatuses } from '@alga-psa/reference-data/actions';
+import { getAllPriorities } from '@alga-psa/reference-data/actions';
 
 const SURVEY_TEMPLATE_TABLE = 'survey_templates';
 const SURVEY_TRIGGER_TABLE = 'survey_triggers';
@@ -517,6 +517,31 @@ export interface SurveyTriggerReferenceData {
   priorities: IPriority[];
 }
 
+async function getProjectStatusesForSurveys(): Promise<IStatus[]> {
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
+    throw new Error('No authenticated user found');
+  }
+
+  const { knex, tenant } = await createTenantKnex();
+  if (!tenant) {
+    throw new Error('Tenant not found');
+  }
+
+  return withTransaction(knex, async (trx: Knex.Transaction) => {
+    // Keep permission consistent with projects; surveys UI should only expose options a user can use.
+    // If this becomes too restrictive, we can loosen it with a dedicated permission later.
+    if (!(await hasPermission(currentUser, 'project', 'read', trx))) {
+      throw new Error('Permission denied: Cannot read project statuses');
+    }
+
+    return (await trx('statuses')
+      .where({ tenant, item_type: 'project' })
+      .orderBy('display_order', 'asc')
+      .orderBy('name', 'asc')) as unknown as IStatus[];
+  });
+}
+
 export async function getSurveyTriggerReferenceData(): Promise<SurveyTriggerReferenceData> {
   const [boards, ticketStatuses, projectStatuses, priorities] = await Promise.all([
     getAllBoards(true).catch((error: unknown) => {
@@ -527,7 +552,7 @@ export async function getSurveyTriggerReferenceData(): Promise<SurveyTriggerRefe
       console.error('[surveyActions] Failed to load statuses for trigger reference data', error);
       throw new Error('Unable to load statuses.');
     }),
-    getProjectStatuses().catch((error: unknown) => {
+    getProjectStatusesForSurveys().catch((error: unknown) => {
       console.error('[surveyActions] Failed to load project statuses for trigger reference data', error);
       throw new Error('Unable to load project statuses.');
     }),

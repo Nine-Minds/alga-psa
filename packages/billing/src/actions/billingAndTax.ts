@@ -2,10 +2,11 @@
 
 import { Knex } from 'knex';
 import { Temporal } from '@js-temporal/polyfill';
-import { createTenantKnex } from 'server/src/lib/db';
-import { ISO8601String } from 'server/src/types/types.d';
-import { toPlainDate, toISODate } from 'server/src/lib/utils/dateTimeUtils';
+import { createTenantKnex } from '@alga-psa/db';
+import { ISO8601String } from '@alga-psa/types';
+import { toPlainDate, toISODate } from '@alga-psa/core';
 import { withTransaction } from '@alga-psa/db';
+import { getCurrentUserAsync, hasPermissionAsync, getSessionAsync, getAnalyticsAsync } from '../lib/authHelpers';
 import {
     IBillingCharge,
     IBucketCharge,
@@ -14,10 +15,10 @@ import {
     IFixedPriceCharge,
     BillingCycleType,
     IClientContractLineCycle
-} from 'server/src/interfaces/billing.interfaces';
+} from '@alga-psa/types';
 import { TaxService } from '../services/taxService';
-import { ITaxCalculationResult } from 'server/src/interfaces/tax.interfaces';
-import { getSession } from 'server/src/lib/auth/getSession';
+import { ITaxCalculationResult } from '@alga-psa/types';
+
 // Types for paginated billing periods
 export interface BillingPeriodWithMeta extends IClientContractLineCycle {
     client_name: string;
@@ -111,7 +112,7 @@ export async function getClientTaxRate(taxRegion: string, date: ISO8601String): 
 export async function getAvailableBillingPeriods(
     options: FetchBillingPeriodsOptions = {}
 ): Promise<PaginatedBillingPeriodsResult> {
-    const session = await getSession();
+    const session = await getSessionAsync();
     if (!session?.user?.id) {
         throw new Error('Unauthorized');
     }

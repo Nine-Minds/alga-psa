@@ -1,9 +1,9 @@
 import { describe, it, expect, beforeAll, beforeEach, afterEach, afterAll, vi } from 'vitest';
 import '../../../../../test-utils/nextApiMock';
 import { createClientContractLineCycles } from 'server/src/lib/billing/createBillingCycles';
-import { createNextBillingCycle } from 'server/src/lib/actions/billingCycleActions';
-import { updateClientBillingCycleAnchor } from 'server/src/lib/actions/billingCycleAnchorActions';
-import { updateClientBillingSchedule } from 'server/src/lib/actions/billingScheduleActions';
+import { createNextBillingCycle } from '@alga-psa/billing/actions';
+import { updateClientBillingCycleAnchor } from '@alga-psa/billing/actions';
+import { updateClientBillingSchedule } from '@alga-psa/billing/actions';
 import { TestContext } from 'server/test-utils/testContext';
 import { Temporal } from '@js-temporal/polyfill';
 import { TextEncoder as NodeTextEncoder } from 'util';

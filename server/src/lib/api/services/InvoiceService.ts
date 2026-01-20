@@ -7,10 +7,10 @@
 import { Knex } from 'knex';
 import { Temporal } from '@js-temporal/polyfill';
 import { v4 as uuidv4 } from 'uuid';
-import { BaseService, ServiceContext, ListOptions, ListResult } from './BaseService';
+import { BaseService, ServiceContext, ListOptions, ListResult } from '@alga-psa/db';
 import { withTransaction } from '@alga-psa/db';
 import { createTenantKnex } from '../../db';
-import { getCurrentUser } from '../../actions/user-actions/userActions';
+import { getCurrentUser } from '@alga-psa/users/actions';
 import { hasPermission } from '../../auth/rbac';
 import { auditLog } from '../../logging/auditLog';
 import { publishEvent } from '../../eventBus/publishers';

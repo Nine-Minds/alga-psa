@@ -6,7 +6,7 @@ import { Button } from '@alga-psa/ui/components/Button';
 import TimeEntryEditForm from './time-sheet/TimeEntryEditForm';
 import TimeEntryReadOnly from './time-sheet/TimeEntryReadOnly';
 import { ITimeEntryWithNew, TimeInputs, Service } from './time-sheet/types';
-import { TaxRegion } from 'server/src/types/types.d';
+import { TaxRegion } from '@alga-psa/types';
 
 interface TimeEntryListProps {
   id: string;

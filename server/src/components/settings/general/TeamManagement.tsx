@@ -1,9 +1,10 @@
 'use client';
+
 import React, { useState, useEffect } from 'react';
 import TeamList from './TeamList';
 import TeamDetails from './TeamDetails';
-import { getTeams } from 'server/src/lib/actions/team-actions/teamActions';
-import { ITeam } from 'server/src/interfaces/auth.interfaces';
+import { getTeams } from '@alga-psa/teams/actions';
+import { ITeam } from '@alga-psa/types';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 
 const TeamManagement: React.FC = () => {

@@ -15,18 +15,17 @@ import type {
   IDocument,
 } from '@alga-psa/types';
 import { withTransaction } from '@alga-psa/db';
-import { createTenantKnex } from 'server/src/lib/db';
+import { createTenantKnex } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { revalidatePath } from 'next/cache';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { z } from 'zod';
 import { validateData } from '@alga-psa/validation';
-import { publishEvent } from 'server/src/lib/eventBus/publishers';
-import { getEventBus } from 'server/src/lib/eventBus';
-import { getEmailEventChannel } from 'server/src/lib/notifications/emailChannel';
-import { convertBlockNoteToMarkdown } from 'server/src/lib/utils/blocknoteUtils';
+import { publishEvent } from '@alga-psa/event-bus/publishers';
+import { getEventBus } from '@alga-psa/event-bus';
+import { convertBlockNoteToMarkdown } from '@alga-psa/documents/lib/blocknoteUtils';
 import { getImageUrl } from '@alga-psa/documents/actions/documentActions';
-import { getClientLogoUrl, getUserAvatarUrl, getClientLogoUrlsBatch } from 'server/src/lib/utils/avatarUtils';
+import { getClientLogoUrl, getUserAvatarUrl, getClientLogoUrlsBatch } from '@alga-psa/documents/lib/avatarUtils';
 import {
   ticketFormSchema,
   ticketSchema,
@@ -34,12 +33,22 @@ import {
   ticketAttributesQuerySchema,
   ticketListItemSchema,
   ticketListFiltersSchema
-} from 'server/src/lib/schemas/ticket.schema';
-import { analytics } from 'server/src/lib/analytics/posthog';
-import { AnalyticsEvents } from 'server/src/lib/analytics/events';
+} from '../schemas/ticket.schema';
 import { Temporal } from '@js-temporal/polyfill';
-import { resolveUserTimeZone, normalizeIanaTimeZone } from 'server/src/lib/utils/workDate';
-import { calculateItilPriority } from 'server/src/lib/utils/itilUtils';
+import { resolveUserTimeZone, normalizeIanaTimeZone } from '@alga-psa/db';
+import { calculateItilPriority } from '@alga-psa/tickets/lib/itilUtils';
+import { getCurrentUser } from '@alga-psa/auth/getCurrentUser';
+
+// Email event channel constant - inlined to avoid circular dependency with notifications
+// Must match the value in @alga-psa/notifications/emailChannel
+const EMAIL_EVENT_CHANNEL = 'emailservice::v7';
+function getEmailEventChannel(): string {
+  return EMAIL_EVENT_CHANNEL;
+}
+
+function captureAnalytics(_event: string, _properties?: Record<string, any>, _userId?: string): void {
+  // Intentionally no-op: avoid pulling analytics (and its tenancy/client-portal deps) into tickets.
+}
 
 // Helper function to safely convert dates
 function convertDates<T extends { entered_at?: Date | string | null, updated_at?: Date | string | null, closed_at?: Date | string | null, due_date?: Date | string | null }>(record: T): T {
@@ -542,7 +551,7 @@ export async function getConsolidatedTicketData(ticketId: string, user: IUser) {
       : [];
 
     // Track ticket view analytics
-    analytics.capture('ticket_viewed', {
+    captureAnalytics('ticket_viewed', {
       ticket_id: ticketId,
       status_id: normalizedTicketData.status_id,
       status_name: normalizedTicketData.status_name,
@@ -1462,6 +1471,18 @@ export async function updateTicketWithCache(id: string, data: Partial<ITicket>, 
 }
 
 /**
+ * Client-safe wrapper: resolves current user on the server.
+ * Use this from Client Components to avoid importing server-only auth modules into the browser bundle.
+ */
+export async function updateTicketWithCacheForCurrentUser(id: string, data: Partial<ITicket>) {
+  const user = await getCurrentUser();
+  if (!user) {
+    throw new Error('User not authenticated');
+  }
+  return updateTicketWithCache(id, data, user);
+}
+
+/**
  * Add comment to ticket with proper caching
  */
 export async function addTicketCommentWithCache(
@@ -1591,7 +1612,7 @@ export async function addTicketCommentWithCache(
     });
     
     // Track comment analytics
-    analytics.capture('ticket_comment_added', {
+    captureAnalytics('ticket_comment_added', {
       is_internal: isInternal,
       is_resolution: isResolution,
       content_length: markdownContent.length,
@@ -1607,6 +1628,23 @@ export async function addTicketCommentWithCache(
       throw new Error('Failed to add ticket comment');
     }
   });
+}
+
+/**
+ * Client-safe wrapper: resolves current user on the server.
+ * Use this from Client Components to avoid importing server-only auth modules into the browser bundle.
+ */
+export async function addTicketCommentWithCacheForCurrentUser(
+  ticketId: string,
+  content: string,
+  isInternal: boolean,
+  isResolution: boolean
+): Promise<IComment> {
+  const user = await getCurrentUser();
+  if (!user) {
+    throw new Error('User not authenticated');
+  }
+  return addTicketCommentWithCache(ticketId, content, isInternal, isResolution, user);
 }
 
 /**

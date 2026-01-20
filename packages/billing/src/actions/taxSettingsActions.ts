@@ -1,14 +1,15 @@
 'use server'
 
 import { withTransaction } from '@alga-psa/db';
-import { IClientTaxSettings, ITaxRate, ITaxComponent, ITaxRateThreshold, ITaxHoliday } from 'server/src/interfaces/tax.interfaces';
+import { IClientTaxSettings, ITaxRate, ITaxComponent, ITaxRateThreshold, ITaxHoliday } from '@alga-psa/types';
 import { v4 as uuid4 } from 'uuid';
 import { TaxService } from '../services/taxService';
-import { ITaxRegion } from 'server/src/interfaces/tax.interfaces';
-import { createTenantKnex } from 'server/src/lib/db';
+import { ITaxRegion } from '@alga-psa/types';
+import { createTenantKnex } from '@alga-psa/db';
 import { Knex } from 'knex';
-import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
-import { hasPermission } from 'server/src/lib/auth/rbac';
+import { getCurrentUserAsync, hasPermissionAsync, getSessionAsync, getAnalyticsAsync } from '../lib/authHelpers';
+
+
 export async function getClientTaxSettings(clientId: string): Promise<IClientTaxSettings | null> {
   try {
     const { knex: db, tenant } = await createTenantKnex();
@@ -213,12 +214,12 @@ export async function updateTaxRegion(
   data: { region_code?: string; region_name?: string; is_active?: boolean }
 ): Promise<ITaxRegion> {
   try {
-    const currentUser = await getCurrentUser();
+    const currentUser = await getCurrentUserAsync();
     if (!currentUser) {
       throw new Error('No authenticated user found');
     }
 
-    if (!(await hasPermission(currentUser, 'billing', 'update'))) {
+    if (!(await hasPermissionAsync(currentUser, 'billing', 'update'))) {
       throw new Error('Permission denied: Cannot update tax regions');
     }
 
@@ -508,12 +509,12 @@ export async function updateClientTaxExemptStatus(
   taxExemptionCertificate?: string
 ): Promise<{ is_tax_exempt: boolean; tax_exemption_certificate?: string }> {
   try {
-    const currentUser = await getCurrentUser();
+    const currentUser = await getCurrentUserAsync();
     if (!currentUser) {
       throw new Error('No authenticated user found');
     }
 
-    if (!(await hasPermission(currentUser, 'client', 'update'))) {
+    if (!(await hasPermissionAsync(currentUser, 'client', 'update'))) {
       throw new Error('Permission denied: Cannot update client tax settings');
     }
 
@@ -551,7 +552,7 @@ export async function updateClientTaxExemptStatus(
         .update(updateData);
 
       // Create audit log entry for tax exempt status change
-      const { auditLog } = await import('server/src/lib/logging/auditLog');
+      const { auditLog } = await import('@alga-psa/db');
       await auditLog(trx, {
         userId: currentUser.user_id,
         operation: 'UPDATE',
@@ -678,12 +679,12 @@ export async function updateTenantTaxSettings(settings: {
   allow_external_tax_override: boolean;
 }): Promise<void> {
   try {
-    const currentUser = await getCurrentUser();
+    const currentUser = await getCurrentUserAsync();
     if (!currentUser) {
       throw new Error('No authenticated user found');
     }
 
-    if (!(await hasPermission(currentUser, 'billing', 'update'))) {
+    if (!(await hasPermissionAsync(currentUser, 'billing', 'update'))) {
       throw new Error('Permission denied: Cannot update tenant tax settings');
     }
 

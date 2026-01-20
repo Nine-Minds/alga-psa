@@ -1,7 +1,7 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { getSession, getSessionWithRevocationCheck } from "server/src/lib/auth/getSession";
-import { getTenantSettings } from "server/src/lib/actions/tenant-settings-actions/tenantSettingsActions";
+import { getSession, getSessionWithRevocationCheck } from "@alga-psa/auth";
+import { getTenantSettings } from "@alga-psa/tenancy/actions";
 import { MspLayoutClient } from "./MspLayoutClient";
 
 export default async function MspLayout({

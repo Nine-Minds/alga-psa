@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState } from 'react';
-import { ITimeSheetComment, TimeSheetStatus } from 'server/src/interfaces/timeEntry.interfaces';
+import { ITimeSheetComment, TimeSheetStatus } from '@alga-psa/types';
 import { Button } from '@alga-psa/ui/components/Button';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
 

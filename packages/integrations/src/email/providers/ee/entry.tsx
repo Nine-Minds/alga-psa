@@ -1,3 +1,3 @@
-export { MicrosoftProviderForm } from '../../../../../../ee/server/src/components/MicrosoftProviderForm';
-export { GmailProviderForm } from '../../../../../../ee/server/src/components/GmailProviderForm';
-export { ImapProviderForm } from '../../../../../../ee/server/src/components/ImapProviderForm';
+export { MicrosoftProviderForm } from '@ee/components/MicrosoftProviderForm';
+export { GmailProviderForm } from '@ee/components/GmailProviderForm';
+export { ImapProviderForm } from '@ee/components/ImapProviderForm';

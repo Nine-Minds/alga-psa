@@ -6,16 +6,16 @@ import {
   type CreateMappingData,
   type ExternalEntityMapping,
   type UpdateMappingData
-} from 'server/src/lib/actions/externalMappingActions';
-import { getServices } from 'server/src/lib/actions/serviceActions';
-import { getTaxRegions } from 'server/src/lib/actions/taxSettingsActions';
+} from '@alga-psa/integrations/actions';
+import { getServices } from '@alga-psa/integrations/actions';
+import { getTaxRegions } from '@alga-psa/integrations/actions';
 import { getAllClients } from '@alga-psa/clients/actions';
 import type { IClient, IService, ITaxRegion } from '@alga-psa/types';
 import type {
   AccountingMappingContext,
   AccountingMappingModule,
   AccountingMappingLoadResult
-} from 'server/src/components/accounting-mappings/types';
+} from '@alga-psa/integrations/components';
 
 const ADAPTER_TYPE = 'xero_csv';
 

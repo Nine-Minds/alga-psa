@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useCallback, useMemo, useRef, useEffect } from 'react';
-import { IScheduleEntry } from 'server/src/interfaces/schedule.interfaces';
+import { IScheduleEntry } from '@alga-psa/types';
 import { IUser } from '@shared/interfaces/user.interfaces';
 import TimeHeader from './TimeHeader';
 import TechnicianRow from './TechnicianRow';

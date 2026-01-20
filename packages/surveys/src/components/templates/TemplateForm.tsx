@@ -7,7 +7,7 @@ import { TextArea } from '@alga-psa/ui/components/TextArea';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Switch } from '@alga-psa/ui/components/Switch';
 import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect';
-import { useToast } from 'server/src/hooks/use-toast';
+import { useToast } from '@alga-psa/ui';
 import {
   createSurveyTemplate,
   deleteSurveyTemplate,

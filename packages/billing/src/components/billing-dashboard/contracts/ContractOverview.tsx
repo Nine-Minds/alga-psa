@@ -7,7 +7,7 @@ import { Skeleton } from '@alga-psa/ui/components/Skeleton';
 import { getContractOverview } from '@alga-psa/billing/actions/contractActions';
 import type { IContractOverview, IContractLineOverview } from '@alga-psa/billing/actions/contractActions';
 import { Package, Clock, Activity, Coins, Layers3, ChevronDown, ChevronRight } from 'lucide-react';
-import { cn } from 'server/src/lib/utils';
+import { cn } from '@alga-psa/ui/lib/utils';
 
 interface ContractOverviewProps {
   contractId: string;

@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { IClientPortalConfig, CONFIGURABLE_TASK_FIELDS } from 'server/src/interfaces/project.interfaces';
+import { IClientPortalConfig, CONFIGURABLE_TASK_FIELDS } from '@alga-psa/types';
 import { Switch } from '@alga-psa/ui/components/Switch';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { Alert, AlertDescription, AlertTitle } from '@alga-psa/ui/components/Alert';

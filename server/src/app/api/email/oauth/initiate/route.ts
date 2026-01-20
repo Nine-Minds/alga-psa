@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getCurrentUser } from '@/lib/actions/user-actions/userActions';
-import { getSecretProviderInstance } from '@alga-psa/core';
+import { getCurrentUser } from '@alga-psa/users/actions';
+import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { 
   generateMicrosoftAuthUrl, 
   generateGoogleAuthUrl, 

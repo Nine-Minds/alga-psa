@@ -3,14 +3,14 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@alga-psa/ui/components/Card';
 import { Table } from '@alga-psa/ui/components/Table';
-import { getClientClient } from 'server/src/lib/actions/client-portal-actions/client-client';
-import { getClientContractLine, getClientInvoices } from 'server/src/lib/actions/client-portal-actions/client-billing';
+import { getClientClient } from '@alga-psa/client-portal/actions';
+import { getClientContractLine, getClientInvoices } from '@alga-psa/client-portal/actions';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 
-import type { IClient } from 'server/src/interfaces/client.interfaces';
-import type { IClientContractLine } from 'server/src/interfaces/billing.interfaces';
-import type { InvoiceViewModel } from 'server/src/interfaces/invoice.interfaces';
+import type { IClient } from '@alga-psa/types';
+import type { IClientContractLine } from '@alga-psa/types';
+import type { InvoiceViewModel } from '@alga-psa/types';
 
 export default function ClientAccount() {
   const { t } = useTranslation('clientPortal');

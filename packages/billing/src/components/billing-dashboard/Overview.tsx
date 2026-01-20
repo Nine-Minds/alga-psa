@@ -16,8 +16,8 @@ import {
 } from 'lucide-react';
 import Spinner from '@alga-psa/ui/components/Spinner';
 import { Button } from '@alga-psa/ui/components/Button';
-import { getBillingOverview } from 'server/src/lib/reports/actions';
-import { ReportResult, FormattedMetricValue } from 'server/src/lib/reports/core/types';
+import { getBillingOverview } from '@alga-psa/reporting';
+import type { ReportResult, FormattedMetricValue } from '@alga-psa/reporting';
 
 interface MetricCardProps {
   title: string;

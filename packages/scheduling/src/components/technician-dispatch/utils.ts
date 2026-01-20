@@ -1,4 +1,4 @@
-import { WorkItemType } from 'server/src/interfaces/workItem.interfaces';
+import { WorkItemType } from '@alga-psa/types';
 
 export const calculateTimeFromPosition = (
   x: number,

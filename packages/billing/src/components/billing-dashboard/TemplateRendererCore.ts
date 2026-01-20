@@ -1,5 +1,5 @@
 import { Temporal } from '@js-temporal/polyfill';
-import { Calculation, Conditional, Field, IInvoiceTemplate, Section, Style, TemplateElement, StaticText, InvoiceViewModel, GlobalCalculation } from 'server/src/interfaces/invoice.interfaces';
+import { Calculation, Conditional, Field, IInvoiceTemplate, Section, Style, TemplateElement, StaticText, InvoiceViewModel, GlobalCalculation } from '@alga-psa/types';
 
 interface List {
     type: 'list';

@@ -15,15 +15,15 @@ import {
   updateClientTicketComment,
   deleteClientTicketComment,
   updateTicketStatus
-} from 'server/src/lib/actions/client-portal-actions/client-tickets';
+} from '@alga-psa/client-portal/actions';
 import { formatDistanceToNow, format } from 'date-fns';
-import { getDateFnsLocale } from 'server/src/lib/utils/dateFnsLocale';
-import { ITicketWithDetails, TicketResponseState } from 'server/src/interfaces/ticket.interfaces';
-import { IComment } from 'server/src/interfaces/comment.interface';
-import { IDocument } from 'server/src/interfaces/document.interface';
+import { getDateFnsLocale } from '@alga-psa/ui';
+import { ITicketWithDetails, TicketResponseState } from '@alga-psa/types';
+import { IComment } from '@alga-psa/types';
+import { IDocument } from '@alga-psa/types';
 import { PartialBlock } from '@blocknote/core';
-import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
-import { IStatus } from 'server/src/interfaces/status.interface';
+import { getCurrentUser } from '@alga-psa/users/actions';
+import { IStatus } from '@alga-psa/types';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import toast from 'react-hot-toast';
 
@@ -601,7 +601,6 @@ export function TicketDetails({
             <div>
               <TicketAppointmentRequests
                 ticketId={ticket.ticket_id}
-                id="client-portal-ticket-appointment-requests"
               />
             </div>
           )}

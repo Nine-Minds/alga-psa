@@ -103,8 +103,8 @@ vi.mock('server/src/lib/db', () => ({
 
 const mockEnsureClientBillingSettingsRow = vi.fn(async () => undefined);
 
-vi.mock('server/src/lib/actions/billingCycleAnchorActions', async () => {
-  const actual = await vi.importActual<any>('server/src/lib/actions/billingCycleAnchorActions');
+vi.mock('@alga-psa/billing/actions', async () => {
+  const actual = await vi.importActual<any>('@alga-psa/billing/actions');
   return {
     ...actual,
     ensureClientBillingSettingsRow: (...args: any[]) => mockEnsureClientBillingSettingsRow(...args),
@@ -125,7 +125,7 @@ describe('updateClientBillingSchedule', () => {
     };
     const { trx, calls } = makeFakeTransaction(responses);
     currentTrx = trx;
-    const { updateClientBillingSchedule: updateWithMock } = await import('server/src/lib/actions/billingScheduleActions');
+    const { updateClientBillingSchedule: updateWithMock } = await import('@alga-psa/billing/actions');
 
     await updateWithMock({
       clientId: 'client-1',
@@ -161,7 +161,7 @@ describe('updateClientBillingSchedule', () => {
     };
     const { trx, calls } = makeFakeTransaction(responses);
     currentTrx = trx;
-    const { updateClientBillingSchedule: updateWithMock } = await import('server/src/lib/actions/billingScheduleActions');
+    const { updateClientBillingSchedule: updateWithMock } = await import('@alga-psa/billing/actions');
 
     await updateWithMock({
       clientId: 'client-1',

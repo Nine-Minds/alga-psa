@@ -13,12 +13,17 @@ import {
   getAllBillingCycles
 } from '@alga-psa/billing/actions/billingCycleActions';
 import { getClientBillingScheduleSummaries } from '@alga-psa/billing/actions/billingScheduleActions';
-import { getAllClientsPaginated, getClientsWithBillingCycleRangePaginated, getActiveClientContractsByClientIds } from '@alga-psa/clients/actions';
-import type { BillingCycleDateRange } from '@alga-psa/clients/actions';
+import {
+  getAllClientsPaginatedForBilling,
+  getClientsWithBillingCycleRangePaginatedForBilling,
+  getActiveClientContractsByClientIdsForBilling,
+} from '@alga-psa/billing/actions/billingClientsActions';
+// BillingCycleDateRange type defined locally to avoid circular dependency
+type BillingCycleDateRange = { from?: string; to?: string };
 import { getContracts } from '@alga-psa/billing/actions/contractActions';
-import { BillingCycleType, IClient } from 'server/src/interfaces';
-import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
-import { IContract } from 'server/src/interfaces/contract.interfaces';
+import { BillingCycleType, IClient } from '@alga-psa/types';
+import { ColumnDefinition } from '@alga-psa/types';
+import { IContract } from '@alga-psa/types';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 import { DateRangePicker, type DateRange } from '@alga-psa/ui/components/DateRangePicker';
 
@@ -105,7 +110,7 @@ const BillingCycles: React.FC = () => {
     try {
       const rangeFilter = buildDateRangeFilter(appliedDateRange);
       const clientsPromise = rangeFilter
-        ? getClientsWithBillingCycleRangePaginated({
+        ? getClientsWithBillingCycleRangePaginatedForBilling({
           page: currentPage,
           pageSize,
           searchTerm: debouncedSearchTerm,
@@ -114,7 +119,7 @@ const BillingCycles: React.FC = () => {
           sortDirection,
           dateRange: rangeFilter
         })
-        : getAllClientsPaginated({
+        : getAllClientsPaginatedForBilling({
           page: currentPage,
           pageSize,
           searchTerm: debouncedSearchTerm,
@@ -154,7 +159,7 @@ const BillingCycles: React.FC = () => {
       }
 
       const [clientAssignedContracts, scheduleSummaries] = await Promise.all([
-        getActiveClientContractsByClientIds(clientIds),
+        getActiveClientContractsByClientIdsForBilling(clientIds),
         getClientBillingScheduleSummaries(clientIds)
       ]);
 

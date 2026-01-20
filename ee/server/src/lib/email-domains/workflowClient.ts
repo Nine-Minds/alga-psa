@@ -1,4 +1,4 @@
-import { observabilityLogger } from 'server/src/lib/observability/logging';
+import { observabilityLogger } from '@/lib/observability/logging';
 
 export interface ManagedEmailDomainWorkflowParams {
   tenantId: string;

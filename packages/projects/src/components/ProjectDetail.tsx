@@ -1,19 +1,19 @@
 'use client';
 
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { IProject, IProjectPhase, IProjectTask, IProjectTicketLink, IProjectTicketLinkWithDetails, ProjectStatus, ITaskType, IProjectTaskDependency } from 'server/src/interfaces/project.interfaces';
-import { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
-import { IPriority, IStandardPriority } from 'server/src/interfaces/ticket.interfaces';
-import { ITag } from 'server/src/interfaces/tag.interfaces';
-import { ITaskResource } from 'server/src/interfaces/taskResource.interfaces';
-import { useDrawer } from "server/src/context/DrawerContext";
-import { getAllPriorities } from 'server/src/lib/actions/priorityActions';
+import { IProject, IProjectPhase, IProjectTask, IProjectTicketLink, IProjectTicketLinkWithDetails, ProjectStatus, ITaskType, IProjectTaskDependency } from '@alga-psa/types';
+import { IUserWithRoles } from '@alga-psa/types';
+import { IPriority, IStandardPriority } from '@alga-psa/types';
+import { ITag } from '@alga-psa/types';
+import { ITaskResource } from '@alga-psa/types';
+import { useDrawer } from "@alga-psa/ui";
+import { getAllPriorities } from '@alga-psa/reference-data/actions';
 import { getTaskTypes } from '../actions/projectTaskActions';
-import { findTagsByEntityId, findTagsByEntityIds } from 'server/src/lib/actions/tagActions';
+import { findTagsByEntityId, findTagsByEntityIds } from '@alga-psa/tags/actions';
 import { getDocumentCountsForEntities } from '@alga-psa/documents/actions/documentActions';
-import { TagManager, TagFilter } from 'server/src/components/tags';
-import { useTags } from 'server/src/context/TagContext';
-import { useTagPermissions } from 'server/src/hooks/useTagPermissions';
+import { TagFilter, TagManager } from '@alga-psa/ui/components';
+import { useTags } from '@alga-psa/ui';
+import { useTagPermissions } from '@alga-psa/ui';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import TaskQuickAdd from './TaskQuickAdd';
 import TaskEdit from './TaskEdit';
@@ -31,14 +31,14 @@ import ProjectPhases from './ProjectPhases';
 import PhaseTaskImportDialog from './PhaseTaskImportDialog';
 import KanbanBoard from './KanbanBoard';
 import DonutChart from './DonutChart';
-import { calculateProjectCompletion } from 'server/src/lib/utils/projectUtils';
-import { IClient } from 'server/src/interfaces/client.interfaces';
+import { calculateProjectCompletion } from '@alga-psa/projects/lib/projectUtils';
+import { IClient } from '@alga-psa/types';
 import { HelpCircle, LayoutGrid, List } from 'lucide-react';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import { generateKeyBetween } from 'fractional-indexing';
 import KanbanBoardSkeleton from '@alga-psa/ui/components/skeletons/KanbanBoardSkeleton';
-import { useUserPreference } from 'server/src/hooks/useUserPreference';
-import { getUserAvatarUrlsBatchAction } from 'server/src/lib/actions/avatar-actions';
+import { useUserPreference } from '@alga-psa/users/hooks';
+import { getUserAvatarUrlsBatchAction } from '@alga-psa/users/actions';
 
 const PROJECT_VIEW_MODE_SETTING = 'project_detail_view_mode';
 
@@ -1432,15 +1432,16 @@ export default function ProjectDetail({
             <div className="flex justify-end items-center gap-4">
                 {/* Tag Filter */}
                 <TagFilter
-                  allTags={allTaskTags}
+                  tags={allTaskTags}
                   selectedTags={selectedTaskTags}
-                  onTagSelect={(tag) => {
+                  onToggleTag={(tag) => {
                     setSelectedTaskTags(prev =>
                       prev.includes(tag)
                         ? prev.filter(t => t !== tag)
                         : [...prev, tag]
                     );
                   }}
+                  onClearTags={() => setSelectedTaskTags([])}
                 />
 
                 {/* Priority Filter */}
@@ -1545,15 +1546,16 @@ export default function ProjectDetail({
             <div className="flex items-center gap-4">
               {/* Tag Filter */}
               <TagFilter
-                allTags={allTaskTags}
+                tags={allTaskTags}
                 selectedTags={selectedTaskTags}
-                onTagSelect={(tag) => {
+                onToggleTag={(tag) => {
                   setSelectedTaskTags(prev =>
                     prev.includes(tag)
                       ? prev.filter(t => t !== tag)
                       : [...prev, tag]
                   );
                 }}
+                onClearTags={() => setSelectedTaskTags([])}
               />
 
               {/* Priority Filter */}

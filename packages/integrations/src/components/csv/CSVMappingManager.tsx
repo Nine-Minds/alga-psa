@@ -1,8 +1,8 @@
 'use client';
 
 import React, { useMemo } from 'react';
-import { AccountingMappingManager } from 'server/src/components/accounting-mappings/AccountingMappingManager';
-import type { AccountingMappingContext } from 'server/src/components/accounting-mappings/types';
+import { AccountingMappingManager } from '@alga-psa/integrations/components';
+import type { AccountingMappingContext } from '@alga-psa/integrations/components';
 import { createCsvMappingModules } from './csvMappingModules';
 
 export function CSVMappingManager() {

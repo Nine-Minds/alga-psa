@@ -15,7 +15,7 @@ vi.mock('openid-client', () => ({
   Client: vi.fn(),
 }));
 vi.mock('jose', () => ({}));
-vi.mock('server/src/lib/actions/client-actions/clientActions', () => ({
+vi.mock('@alga-psa/clients/actions', () => ({
   getClientById: vi.fn(() =>
     Promise.resolve({
       client_id: 'mock-client-id',
@@ -82,4 +82,3 @@ describe('BillingEngine proration ([start, end) end exclusive)', () => {
     expect(factor).toBeCloseTo(5 / 31, 8);
   });
 });
-

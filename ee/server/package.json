@@ -3,9 +3,10 @@
   "private": true,
   "scripts": {
     "dev": "NODE_OPTIONS='--max-old-space-size=8192' NODE_ENV=development nodemon",
-    "build": "nx next:build",
+    "build": "NODE_ENV=production next build --webpack",
     "start": "nx next:start --port 3000",
     "lint": "next lint",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "vitest",
     "test:unit": "vitest run src/__tests__/unit",
     "test:integration": "vitest run src/__tests__/integration --exclude '**/*.playwright.*'",

@@ -5,7 +5,7 @@
  */
 
 import { Knex } from 'knex';
-import { BaseService, ServiceContext, ListResult } from './BaseService';
+import { BaseService, ServiceContext, ListResult } from '@alga-psa/db';
 import { withTransaction } from '@alga-psa/db';
 import { v4 as uuidv4 } from 'uuid';
 

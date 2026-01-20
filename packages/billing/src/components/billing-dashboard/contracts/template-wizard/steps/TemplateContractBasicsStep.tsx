@@ -5,7 +5,7 @@ import { Label } from '@alga-psa/ui/components/Label';
 import { Input } from '@alga-psa/ui/components/Input';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
-import { BILLING_FREQUENCY_OPTIONS } from 'server/src/constants/billing';
+import { BILLING_FREQUENCY_OPTIONS } from '@alga-psa/billing/constants/billing';
 // CURRENCY_OPTIONS removed - templates are now currency-neutral
 import { FileText, Repeat, StickyNote } from 'lucide-react';
 import { TemplateWizardData } from '../TemplateWizard';

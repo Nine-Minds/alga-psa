@@ -41,11 +41,11 @@ vi.mock('@/lib/db', () => ({
   createTenantKnex: vi.fn(async () => ({ knex: knexStub, tenant: 'tenant-123' })),
 }));
 
-vi.mock('@/lib/actions/user-actions/userActions', () => ({
+vi.mock('@alga-psa/users/actions', () => ({
   getCurrentUser: vi.fn(async () => ({ id: 'user-1' })),
 }));
 
-vi.mock('@/lib/auth/rbac', () => ({
+vi.mock('@alga-psa/auth', () => ({
   hasPermission: vi.fn(async () => true),
 }));
 

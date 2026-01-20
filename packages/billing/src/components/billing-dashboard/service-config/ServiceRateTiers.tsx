@@ -6,9 +6,9 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@alga-psa/ui/components/Table';
 import { PlusCircle, Trash2 } from 'lucide-react';
-import { IService } from 'server/src/interfaces/billing.interfaces';
-import { IServiceRateTier } from 'server/src/interfaces/serviceTier.interfaces';
-import { getServiceRateTiers, updateServiceRateTiers } from 'server/src/lib/actions/serviceRateTierActions';
+import { IService } from '@alga-psa/types';
+import { IServiceRateTier } from '@alga-psa/types';
+import { getServiceRateTiers, updateServiceRateTiers } from '@alga-psa/billing/actions';
 
 // Define the rate tier interface
 interface RateTier {

@@ -8,7 +8,7 @@ import { Input } from '@alga-psa/ui/components/Input';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
 import { DatePicker } from '@alga-psa/ui/components/DatePicker';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
-import { IContractPricingSchedule } from 'server/src/interfaces/contract.interfaces';
+import { IContractPricingSchedule } from '@alga-psa/types';
 import {
   createPricingSchedule,
   updatePricingSchedule

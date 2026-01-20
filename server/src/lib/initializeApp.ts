@@ -145,7 +145,13 @@ export async function initializeApp() {
     // Initialize workflow system
     try {
       await initializeServerWorkflows();
-      registerAccountingExportWorkflowActions();
+      // Register accounting export workflow actions
+      await registerAccountingExportWorkflowActions();
+
+      // Register invoice-specific workflow actions
+      const { registerInvoiceActions } = await import('@alga-psa/billing/actions/invoiceWorkflowRegistration');
+      registerInvoiceActions();
+
       logger.info('Workflow system initialized');
     } catch (error) {
       logger.error('Failed to initialize workflow system:', error);

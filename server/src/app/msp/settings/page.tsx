@@ -1,4 +1,4 @@
-import SettingsPage from '@alga-psa/ui/components/settings/general/SettingsPage';
+import SettingsPage from '@/components/settings/SettingsPage';
 
 export default function Page() {
   return <SettingsPage />;

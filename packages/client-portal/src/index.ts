@@ -9,3 +9,4 @@
 export * from './actions';
 export * from './components';
 export * from './models';
+export * from './schemas/appointmentSchemas';

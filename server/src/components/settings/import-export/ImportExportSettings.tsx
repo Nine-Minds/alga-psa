@@ -1,3 +1,5 @@
+'use client';
+
 import { type ReactNode, useCallback, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
@@ -7,7 +9,7 @@ import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Label } from '@alga-psa/ui/components/Label';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
-import CustomTabs, { TabContent } from '@alga-psa/ui/components/CustomTabs';
+import CustomTabs, { type TabContent } from '@alga-psa/ui/components/CustomTabs';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import Drawer from '@alga-psa/ui/components/Drawer';
 import Spinner from '@alga-psa/ui/components/Spinner';

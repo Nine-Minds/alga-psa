@@ -17,10 +17,16 @@ import {
   filterSuggestionItems,
 } from '@blocknote/core';
 import { Mention } from './Mention';
-import { searchUsersForMentions, type MentionUser } from 'server/src/lib/actions/user-actions/searchUsersForMentions';
 
 // Debug flag
 const DEBUG = true;
+
+export interface MentionUser {
+  user_id: string;
+  display_name: string;
+  username?: string | null;
+  email: string;
+}
 
 interface TextEditorProps {
   id?: string;
@@ -30,6 +36,7 @@ interface TextEditorProps {
   children?: React.ReactNode;
   editorRef?: MutableRefObject<BlockNoteEditor<any, any, any> | null>;
   documentId?: string;
+  searchMentions?: (query: string) => Promise<MentionUser[]>;
 }
 
 export const DEFAULT_BLOCK: PartialBlock[] = [{
@@ -61,7 +68,8 @@ export default function TextEditor({
   onContentChange,
   children,
   editorRef,
-  documentId
+  documentId,
+  searchMentions,
 }: TextEditorProps) {
   // Parse initial content and remove empty trailing blocks
   const initialContent = (() => {
@@ -180,7 +188,7 @@ export default function TextEditor({
     console.log('[TextEditor] getMentionMenuItems called with query:', query);
 
     try {
-      const users = await searchUsersForMentions(query);
+      const users = await (searchMentions ? searchMentions(query) : Promise.resolve([]));
       console.log('[TextEditor] Received users:', users.length);
 
       const items: DefaultReactSuggestionItem[] = [];
@@ -218,7 +226,7 @@ export default function TextEditor({
               type: "mention",
               props: {
                 userId: user.user_id,
-                username: user.username,
+                username: user.username ?? '',
                 displayName: user.display_name
               }
             },

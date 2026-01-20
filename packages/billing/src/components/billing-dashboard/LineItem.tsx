@@ -4,9 +4,9 @@ import React, { useState, useEffect } from 'react';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
 import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect';
-import { DiscountType } from 'server/src/interfaces/invoice.interfaces';
-import { formatCurrency } from 'server/src/lib/utils/formatters';
-import { getCurrencySymbol } from 'server/src/constants/currency';
+import { DiscountType } from '@alga-psa/types';
+import { formatCurrency } from '@alga-psa/core';
+import { getCurrencySymbol } from '@alga-psa/core';
 
 // Extend SelectOption to include rate
 export interface ServiceOption extends SelectOption {

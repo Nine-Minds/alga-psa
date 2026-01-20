@@ -12,6 +12,10 @@
 import type { Knex } from 'knex';
 import type { IContract, IContractWithClient, IContractLine } from '@alga-psa/types';
 import { v4 as uuidv4 } from 'uuid';
+import {
+  hasActiveContractForClient as hasActiveContractForClientShared,
+  checkAndReactivateExpiredContract as checkAndReactivateExpiredContractShared,
+} from '@alga-psa/shared/billingClients';
 
 /**
  * Contract model with tenant-explicit methods.
@@ -89,30 +93,7 @@ const Contract = {
     }
 
     try {
-      let query = knexOrTrx('client_contracts as cc')
-        .join('contracts as c', function () {
-          this.on('cc.contract_id', '=', 'c.contract_id')
-            .andOn('cc.tenant', '=', 'c.tenant');
-        })
-        .where({
-          'cc.client_id': clientId,
-          'cc.tenant': tenant,
-          'c.status': 'active'
-        });
-
-      query = query.andWhere((builder) =>
-        builder.whereNull('c.is_template').orWhere('c.is_template', false)
-      );
-
-      if (excludeContractId) {
-        query = query.andWhere('c.contract_id', '!=', excludeContractId);
-      }
-
-      const result = (await query
-        .count('cc.client_contract_id as count')
-        .first()) as { count?: string };
-
-      return Number(result?.count ?? 0) > 0;
+      return await hasActiveContractForClientShared(knexOrTrx, tenant, clientId, excludeContractId);
     } catch (error) {
       console.error(`Error checking active contracts for client ${clientId}:`, error);
       throw error;
@@ -464,71 +445,7 @@ const Contract = {
     }
 
     try {
-      // Get the contract
-      const contract = await knexOrTrx('contracts')
-        .where({ contract_id: contractId, tenant })
-        .first();
-
-      if (!contract) {
-        return;
-      }
-
-      if (contract.is_template === true) {
-        return;
-      }
-
-      // Only check expired contracts
-      if (contract.status !== 'expired') {
-        return;
-      }
-
-      // Get all client assignments for this contract
-      const assignments = await knexOrTrx('client_contracts')
-        .where({ contract_id: contractId, tenant })
-        .select('end_date', 'client_id');
-
-      // If no assignments, nothing to check
-      if (assignments.length === 0) {
-        return;
-      }
-
-      // Check if any assignment is ongoing (no end date) or has a future end date
-      const now = new Date();
-      const hasOngoingOrFutureAssignment = assignments.some((a) => {
-        if (!a.end_date) {
-          return true; // Ongoing assignment
-        }
-        const endDate = new Date(a.end_date);
-        return endDate > now; // Future end date
-      });
-
-      // If there's at least one ongoing or future assignment, we need to reactivate
-      if (hasOngoingOrFutureAssignment) {
-        // Before reactivating, check if any client already has an active contract
-        const clientIds = assignments.map((a) => a.client_id);
-
-        for (const clientId of clientIds) {
-          const hasActiveContract = await Contract.hasActiveContractForClient(
-            knexOrTrx,
-            tenant,
-            clientId,
-            contractId
-          );
-          if (hasActiveContract) {
-            throw new Error(
-              'Cannot extend contract end date because the client already has an active contract. To reactivate this contract, terminate their current active contract first.'
-            );
-          }
-        }
-
-        // All clear - reactivate the contract
-        await knexOrTrx('contracts')
-          .where({ contract_id: contractId, tenant })
-          .update({
-            status: 'active',
-            updated_at: new Date().toISOString()
-          });
-      }
+      await checkAndReactivateExpiredContractShared(knexOrTrx, tenant, contractId);
     } catch (error) {
       console.error(`Error checking contract ${contractId} reactivation:`, error);
       throw error;

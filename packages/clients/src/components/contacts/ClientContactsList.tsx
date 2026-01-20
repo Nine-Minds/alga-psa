@@ -1,22 +1,22 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { IContact } from 'server/src/interfaces/contact.interfaces';
-import { getContactsByClient } from 'server/src/lib/actions/contact-actions/contactActions';
+import { IContact } from '@alga-psa/types';
+import { getContactsByClient } from '@alga-psa/clients/actions';
 import { Button } from '@alga-psa/ui/components/Button';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import { Eye, ExternalLink, MoreVertical, Pen } from 'lucide-react';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
-import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
+import { ColumnDefinition } from '@alga-psa/types';
 import ContactAvatar from '@alga-psa/ui/components/ContactAvatar';
-import { useDrawer } from "server/src/context/DrawerContext";
+import { useDrawer } from "@alga-psa/ui";
 import ContactDetails from './ContactDetails';
 import ContactDetailsEdit from './ContactDetailsEdit';
 import type { IClient } from '@alga-psa/types';
-import { IDocument } from 'server/src/interfaces/document.interface';
+import { IDocument } from '@alga-psa/types';
 import { getDocumentsByEntity } from '@alga-psa/documents/actions/documentActions';
-import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
+import { getCurrentUserAsync } from '../../lib/usersHelpers';
 import QuickAddContact from './QuickAddContact';
 import { useRouter } from 'next/navigation';
 
@@ -65,7 +65,7 @@ const ClientContactsList: React.FC<ClientContactsListProps> = ({ clientId, clien
 
     const fetchUser = async () => {
       try {
-        const user = await getCurrentUser();
+        const user = await getCurrentUserAsync();
         if (user?.user_id) {
           setCurrentUser(user.user_id);
         }

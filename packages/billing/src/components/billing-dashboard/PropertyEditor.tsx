@@ -1,4 +1,4 @@
-import { LayoutBlock } from 'server/src/interfaces/invoice.interfaces';
+import { LayoutBlock } from '@alga-psa/types';
 import styles from './InvoiceDesigner.module.css';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 

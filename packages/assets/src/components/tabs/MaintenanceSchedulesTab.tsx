@@ -5,8 +5,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Button } from '@alga-psa/ui/components/Button';
 import { CalendarPlus, Pencil, Trash2 } from 'lucide-react';
 import { getAssetMaintenanceReport, getAssetMaintenanceSchedules, updateMaintenanceSchedule, deleteMaintenanceSchedule } from '../../actions/assetActions';
-import { formatDateOnly } from 'server/src/lib/utils/dateTimeUtils';
-import { cn } from 'server/src/lib/utils';
+import { formatDateOnly } from '@alga-psa/core';
+import { cn } from '@alga-psa/ui';
 import { CreateMaintenanceScheduleDialog } from './CreateMaintenanceScheduleDialog';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';

@@ -3,8 +3,8 @@
 import React, { useMemo, useState } from 'react';
 import * as Tabs from '@radix-ui/react-tabs';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { IService } from 'server/src/interfaces';
-import { IDocument } from 'server/src/interfaces/document.interface';
+import { IService } from '@alga-psa/types';
+import { IDocument } from '@alga-psa/types';
 import { Alert, AlertDescription, AlertTitle } from '@alga-psa/ui/components/Alert';
 
 // Import all the components
@@ -22,8 +22,8 @@ import BackNav from '@alga-psa/ui/components/BackNav';
 import ContractReports from './reports/ContractReports';
 import { billingTabDefinitions, BillingTabValue } from './billingTabsConfig';
 import InvoicingHub from './InvoicingHub';
-import ServiceCatalogManager from 'server/src/components/settings/billing/ServiceCatalogManager';
-import ProductsManager from 'server/src/components/settings/billing/ProductsManager';
+import ServiceCatalogManager from '../settings/billing/ServiceCatalogManager';
+import ProductsManager from '../settings/billing/ProductsManager';
 import AccountingExportsTab from './accounting/AccountingExportsTab';
 
 interface BillingDashboardProps {

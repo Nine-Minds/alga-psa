@@ -15,21 +15,21 @@ const {
   mockCreateInboundTicketDefaults,
   mockUpdateInboundTicketDefaults,
   mockGetAllBoards,
-  mockGetAllCompanies,
+  mockGetAllClients,
   mockGetAllPriorities,
-  mockGetAllUsers,
+  mockGetAllUsersBasic,
 } = vi.hoisted(() => ({
   mockGetTicketFieldOptions: vi.fn(),
   mockGetCategoriesByBoard: vi.fn(),
   mockCreateInboundTicketDefaults: vi.fn(),
   mockUpdateInboundTicketDefaults: vi.fn(),
   mockGetAllBoards: vi.fn(),
-  mockGetAllCompanies: vi.fn(),
+  mockGetAllClients: vi.fn(),
   mockGetAllPriorities: vi.fn(),
-  mockGetAllUsers: vi.fn(),
+  mockGetAllUsersBasic: vi.fn(),
 }));
 
-vi.mock('../../../components/settings/general/BoardPicker', () => ({
+vi.mock('@alga-psa/ui/components/settings/general/BoardPicker', () => ({
   __esModule: true,
   BoardPicker: ({
     id,
@@ -54,25 +54,25 @@ vi.mock('../../../components/settings/general/BoardPicker', () => ({
   ),
 }));
 
-vi.mock('../../../components/companies/CompanyPicker', () => ({
+vi.mock('@alga-psa/ui/components/ClientPicker', () => ({
   __esModule: true,
-  CompanyPicker: ({
+  ClientPicker: ({
     id,
-    companies = [],
-    selectedCompanyId,
+    clients = [],
+    selectedClientId,
     onSelect,
     placeholder,
   }: any) => (
     <select
       id={id}
-      data-testid="company-picker"
-      value={selectedCompanyId || ''}
+      data-testid="client-picker"
+      value={selectedClientId || ''}
       onChange={(event) => onSelect(event.target.value ? event.target.value : null)}
     >
-      <option value="">{placeholder ?? 'Select Company'}</option>
-      {companies.map((company: any) => (
-        <option key={company.company_id || company.id} value={company.company_id || company.id}>
-          {company.company_name || company.name}
+      <option value="">{placeholder ?? 'Select Client'}</option>
+      {clients.map((client: any) => (
+        <option key={client.client_id || client.id} value={client.client_id || client.id}>
+          {client.client_name || client.name}
         </option>
       ))}
     </select>
@@ -168,46 +168,42 @@ vi.mock('@alga-psa/ui/components/UserPicker', () => ({
   ),
 }));
 
-vi.mock('../../../lib/actions/email-actions/ticketFieldOptionsActions', () => ({
+vi.mock('@alga-psa/integrations/actions', () => ({
   __esModule: true,
   getTicketFieldOptions: mockGetTicketFieldOptions,
   getCategoriesByBoard: mockGetCategoriesByBoard,
-}));
-
-vi.mock('../../../lib/actions/email-actions/inboundTicketDefaultsActions', () => ({
-  __esModule: true,
   createInboundTicketDefaults: mockCreateInboundTicketDefaults,
   updateInboundTicketDefaults: mockUpdateInboundTicketDefaults,
 }));
 
-vi.mock('server/src/lib/actions/board-actions/boardActions', () => ({
+vi.mock('@alga-psa/tickets/actions', () => ({
   __esModule: true,
   getAllBoards: mockGetAllBoards,
 }));
 
-vi.mock('server/src/lib/actions/company-actions/companyActions', () => ({
+vi.mock('@alga-psa/clients/actions', () => ({
   __esModule: true,
-  getAllCompanies: mockGetAllCompanies,
+  getAllClients: mockGetAllClients,
 }));
 
-vi.mock('server/src/lib/actions/priorityActions', () => ({
+vi.mock('@alga-psa/reference-data/actions', () => ({
   __esModule: true,
   getAllPriorities: mockGetAllPriorities,
 }));
 
-vi.mock('server/src/lib/actions/user-actions/userActions', () => ({
+vi.mock('@alga-psa/users/actions', () => ({
   __esModule: true,
-  getAllUsers: mockGetAllUsers,
+  getAllUsersBasic: mockGetAllUsersBasic,
 }));
 
-import { InboundTicketDefaultsForm } from '../../../components/forms/InboundTicketDefaultsForm';
+import { InboundTicketDefaultsForm } from '@alga-psa/integrations/components';
 
 const sampleFieldOptions = {
   boards: [{ id: 'board-1', name: 'General', is_default: true }],
   statuses: [{ id: 'status-1', name: 'New', is_default: false }],
   priorities: [{ id: 'priority-1', name: 'Medium' }],
   categories: [],
-  companies: [{ id: 'company-1', name: 'Umbrella Corp' }],
+  clients: [{ id: 'client-1', name: 'Acme Corp' }],
   users: [],
   locations: [],
 };
@@ -216,8 +212,8 @@ const sampleBoards = [
   { board_id: 'board-1', board_name: 'General', is_inactive: false },
 ];
 
-const sampleCompanies = [
-  { company_id: 'company-1', company_name: 'Umbrella Corp', is_inactive: false },
+const sampleClients = [
+  { client_id: 'client-1', client_name: 'Acme Corp', is_inactive: false },
 ];
 
 const samplePriorities = [
@@ -231,9 +227,9 @@ describe('InboundTicketDefaultsForm', () => {
     mockGetTicketFieldOptions.mockResolvedValue({ options: sampleFieldOptions });
     mockGetCategoriesByBoard.mockResolvedValue({ categories: [] });
     mockGetAllBoards.mockResolvedValue(sampleBoards);
-    mockGetAllCompanies.mockResolvedValue(sampleCompanies);
+    mockGetAllClients.mockResolvedValue(sampleClients);
     mockGetAllPriorities.mockResolvedValue(samplePriorities);
-    mockGetAllUsers.mockResolvedValue([]);
+    mockGetAllUsersBasic.mockResolvedValue([]);
   });
 
   afterEach(() => {
@@ -257,13 +253,13 @@ describe('InboundTicketDefaultsForm', () => {
     const displayNameInput = screen.getByPlaceholderText('General Email Support');
     const statusSelect = screen.getByLabelText('Status *');
     const prioritySelect = screen.getByLabelText('Priority *');
-    const companySelect = screen.getByLabelText('Company *');
+    const clientSelect = screen.getByLabelText('Client *');
 
     await user.type(shortNameInput, 'catch-all');
     await user.type(displayNameInput, 'Catch All Defaults');
     await user.selectOptions(statusSelect, 'status-1');
     await user.selectOptions(prioritySelect, 'priority-1');
-    await user.selectOptions(companySelect, 'company-1');
+    await user.selectOptions(clientSelect, 'client-1');
 
     await user.click(screen.getByRole('button', { name: 'Create Defaults' }));
 

@@ -1,3 +1,5 @@
+'use client';
+
 import React, { useCallback, useState, Suspense } from 'react';
 import dynamic from 'next/dynamic';
 import {
@@ -44,9 +46,9 @@ import { FilterControls } from './controls/FilterControls';
 import { ZoomControls } from './controls/ZoomControls';
 import { LegendComponent } from './controls/LegendComponent';
 
-import { useWorkflowVisualization } from 'server/src/lib/workflow/visualization/hooks/useWorkflowVisualization';
-import { StatusMappingContext, defaultStatusMapping } from 'server/src/lib/workflow/visualization/types/statusMappingTypes';
-import { WorkflowVisualizerProps } from 'server/src/lib/workflow/visualization/types/visualizationTypes';
+import { useWorkflowVisualization } from '../../visualization/hooks/useWorkflowVisualization';
+import { StatusMappingContext, defaultStatusMapping } from '../../visualization/types/statusMappingTypes';
+import { WorkflowVisualizerProps } from '../../visualization/types/visualizationTypes';
 
 // Define custom node types
 const nodeTypes: NodeTypes = {

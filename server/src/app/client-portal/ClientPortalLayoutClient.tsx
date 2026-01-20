@@ -2,11 +2,11 @@
 
 import { AppSessionProvider } from "@alga-psa/auth/client";
 import { ClientPortalLayout } from "@alga-psa/client-portal/components";
-import { I18nWrapper } from "@alga-psa/ui/lib/i18n/I18nWrapper";
+import { I18nWrapper } from "@alga-psa/tenancy/components";
 import { PostHogUserIdentifier } from "@alga-psa/ui/components/analytics/PostHogUserIdentifier";
-import { BrandingProvider } from "@alga-psa/ui/components/providers/BrandingProvider";
+import { BrandingProvider } from "@alga-psa/tenancy/components";
 import type { Session } from "next-auth";
-import type { TenantBranding } from "server/src/lib/actions/tenant-actions/tenantBrandingActions";
+import type { TenantBranding } from "@alga-psa/tenancy/actions";
 import type { SupportedLocale } from "@alga-psa/ui/lib/i18n/config";
 
 interface Props {

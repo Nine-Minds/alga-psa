@@ -8,7 +8,7 @@ import type {
   Microsoft365DiagnosticsStep,
   DiagnosticsStepStatus,
 } from '../../../interfaces/microsoft365-diagnostics.interfaces';
-import { getSecretProviderInstance } from '../../../core';
+import { getSecretProviderInstance } from '../../../core/secretProvider';
 import { getAdminConnection } from '../../../db/admin';
 
 /**

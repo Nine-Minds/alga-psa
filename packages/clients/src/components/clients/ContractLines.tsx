@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { Button } from '@alga-psa/ui/components/Button';
 import PlanPickerDialog from './PlanPickerDialog';
-import { IClientContractLine, IContractLine, IServiceCategory } from 'server/src/interfaces/billing.interfaces';
+import { IClientContractLine, IContractLine, IServiceCategory } from '@alga-psa/types';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
-import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
+import { ColumnDefinition } from '@alga-psa/types';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Pencil, Trash2, Plus, MoreVertical } from 'lucide-react';
 import {

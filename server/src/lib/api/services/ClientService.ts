@@ -7,11 +7,11 @@
  */
 
 import { Knex } from 'knex';
-import { BaseService, ServiceContext, ListResult } from './BaseService';
+import { BaseService, ServiceContext, ListResult } from '@alga-psa/db';
 import { IClient, IClientLocation } from 'server/src/interfaces/client.interfaces';
 import { withTransaction } from '@alga-psa/db';
 import { getClientLogoUrl } from 'server/src/lib/utils/avatarUtils';
-import { createDefaultTaxSettings } from 'server/src/lib/actions/taxSettingsActions';
+import { createDefaultTaxSettings } from '@alga-psa/billing/actions';
 import { NotFoundError } from '../../api/middleware/apiMiddleware';
 import {
   CreateClientData,

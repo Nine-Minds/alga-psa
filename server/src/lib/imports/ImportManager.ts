@@ -17,9 +17,9 @@ import type {
   PreviewComputationResult,
   PreviewGenerationOptions,
   ImportErrorSummary
-} from '@/types/imports.types';
+} from '../../types/imports.types';
 import { AbstractImporter } from './AbstractImporter';
-import type { FieldMappingTemplate } from '@/types/imports.types';
+import type { FieldMappingTemplate } from '../../types/imports.types';
 import { ImportPreviewManager } from './ImportPreviewManager';
 import { FieldMapper } from './FieldMapper';
 import { ExternalEntityMappingRepository, ExternalMappingPayload } from './ExternalEntityMappingRepository';

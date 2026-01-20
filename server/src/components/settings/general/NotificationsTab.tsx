@@ -1,16 +1,14 @@
 'use client';
 
+
 import { useState, useCallback, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@alga-psa/ui/components/Card";
 import { CustomTabs } from "@alga-psa/ui/components/CustomTabs";
 import ViewSwitcher, { ViewSwitcherOption } from "@alga-psa/ui/components/ViewSwitcher";
-import { NotificationSettings } from "@alga-psa/ui/components/settings/notifications/NotificationSettings";
-import { EmailTemplates } from "@alga-psa/ui/components/settings/notifications/EmailTemplates";
-import { NotificationCategories } from "@alga-psa/ui/components/settings/notifications/NotificationCategories";
-import { InternalNotificationCategories } from "@alga-psa/ui/components/settings/notifications/InternalNotificationCategories";
-import { TelemetrySettings } from "server/src/components/settings/telemetry/TelemetrySettings";
-import { useUnsavedChanges } from "server/src/contexts/UnsavedChangesContext";
+import { NotificationSettings, EmailTemplates, NotificationCategories, InternalNotificationCategories } from "@alga-psa/notifications/components";
+import { TelemetrySettings } from "@alga-psa/ui/components/settings/telemetry/TelemetrySettings";
+import { useUnsavedChanges } from "@alga-psa/ui";
 
 type NotificationView = 'email' | 'internal';
 

@@ -2,9 +2,7 @@
 
 import { useState } from 'react';
 import { signOut } from 'next-auth/react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
-import { Button } from '@alga-psa/ui/components/Button';
-import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, Button, Alert, AlertDescription } from '@alga-psa/ui/components';
 import { AlertCircle, LogOut, ArrowRight } from 'lucide-react';
 
 interface PortalSwitchPromptProps {

@@ -29,9 +29,9 @@ import {
   WorkflowDataWithSystemFlag // Import the type
 } from '@alga-psa/workflows/actions/workflow-editor-actions';
 import { toast } from 'react-hot-toast';
-import WorkflowEditorComponent from 'server/src/components/workflow-editor/WorkflowEditorComponent';
-import TestWorkflowModal from 'server/src/components/workflow-editor/TestWorkflowModal';
-import WorkflowVersionsDialog from 'server/src/components/workflow-editor/WorkflowVersionsDialog';
+import WorkflowEditorComponent from '../workflow-editor/WorkflowEditorComponent';
+import TestWorkflowModal from '../workflow-editor/TestWorkflowModal';
+import WorkflowVersionsDialog from '../workflow-editor/WorkflowVersionsDialog';
 
 
 // Type for workflow data with events

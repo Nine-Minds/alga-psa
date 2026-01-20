@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { Badge } from '@alga-psa/ui/components/Badge';
-import { IContract } from 'server/src/interfaces/contract.interfaces';
+import { IContract } from '@alga-psa/types';
 import type { IContractSummary } from '@alga-psa/billing/actions/contractActions';
 import { Calendar, CalendarClock, FileCheck, Layers3, Coins } from 'lucide-react';
 

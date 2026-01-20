@@ -1,3 +1,5 @@
+import type { EventPayload } from './publisher';
+
 /**
  * @alga-psa/core - Events Module
  *
@@ -6,5 +8,12 @@
  */
 
 // Event Publisher
-export { publishEvent } from './publisher';
+export async function publishEvent(event: EventPayload): Promise<string> {
+  if (typeof window !== 'undefined') {
+    throw new Error('publishEvent is not available on the client');
+  }
+  const { publishEvent: internalPublish } = await import('./publisher');
+  return internalPublish(event);
+}
+
 export type { EventPayload } from './publisher';

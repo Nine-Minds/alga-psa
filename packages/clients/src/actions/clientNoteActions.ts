@@ -7,10 +7,10 @@
  * Uses the document system with a 1:1 relationship (companies.notes_document_id).
  */
 
-import { createTenantKnex } from 'server/src/lib/db';
+import { createTenantKnex } from '@alga-psa/db';
 import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
-import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
+import { getCurrentUserAsync } from '../lib/usersHelpers';
 import {
   createBlockDocument,
   getBlockContent,
@@ -30,7 +30,7 @@ export interface ClientNoteContent {
  */
 export async function getClientNoteContent(clientId: string): Promise<ClientNoteContent> {
   // Get current user FIRST to ensure we have the user's tenant
-  const currentUser = await getCurrentUser();
+  const currentUser = await getCurrentUserAsync();
   if (!currentUser) {
     throw new Error('No authenticated user found');
   }
@@ -121,7 +121,7 @@ export async function saveClientNote(
   blockData: unknown
 ): Promise<{ document_id: string }> {
   // Get current user FIRST to ensure we have the user's tenant
-  const currentUser = await getCurrentUser();
+  const currentUser = await getCurrentUserAsync();
   if (!currentUser) {
     throw new Error('No authenticated user found');
   }
@@ -196,7 +196,7 @@ export async function deleteClientNote(
   deleteDocument: boolean = false
 ): Promise<void> {
   // Get current user FIRST to ensure we have the user's tenant
-  const currentUser = await getCurrentUser();
+  const currentUser = await getCurrentUserAsync();
   if (!currentUser) {
     throw new Error('No authenticated user found');
   }

@@ -5,13 +5,13 @@ import { useRouter } from 'next/navigation';
 import TicketingDashboard from './TicketingDashboard';
 import { fetchTicketsWithPagination } from '../actions/optimizedTicketActions';
 import { toast } from 'react-hot-toast';
-import { ITicketListItem, ITicketCategory, ITicketListFilters } from 'server/src/interfaces/ticket.interfaces';
-import { IClient } from 'server/src/interfaces/client.interfaces';
-import { IUser } from 'server/src/interfaces/auth.interfaces';
+import { ITicketListItem, ITicketCategory, ITicketListFilters } from '@alga-psa/types';
+import { IClient } from '@alga-psa/types';
+import { IUser } from '@alga-psa/types';
 import { SelectOption } from '@alga-psa/ui/components/CustomSelect';
-import { IBoard } from 'server/src/interfaces';
+import { IBoard } from '@alga-psa/types';
 import type { TicketingDisplaySettings } from '../actions/ticketDisplaySettings';
-import { useUserPreference } from 'server/src/hooks/useUserPreference';
+import { useUserPreference } from '@alga-psa/users/hooks';
 
 const TICKETS_PAGE_SIZE_SETTING = 'tickets_list_page_size';
 

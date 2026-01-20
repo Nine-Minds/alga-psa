@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { Button } from '@alga-psa/ui/components/Button';
-import { IWorkItem } from 'server/src/interfaces/workItem.interfaces';
+import { IWorkItem } from '@alga-psa/types';
 
 interface SelectedWorkItemProps {
   workItem: Omit<IWorkItem, 'tenant'> | null;

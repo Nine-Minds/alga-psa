@@ -70,7 +70,7 @@ describe('Client contract overlap validation ([start, end) semantics)', () => {
 
   it('does not treat touching boundaries as overlap (start == invoiced period end)', async () => {
     const { updateClientContract } = await import(
-      'server/src/lib/actions/client-actions/clientContractActions'
+      '@alga-psa/clients/actions'
     );
 
     // Proposed start is exactly the invoiced cycle end boundary: no overlap under [start, end).
@@ -83,7 +83,7 @@ describe('Client contract overlap validation ([start, end) semantics)', () => {
 
   it('does not treat touching boundaries as overlap (end exclusive == invoiced period start)', async () => {
     const { updateClientContract } = await import(
-      'server/src/lib/actions/client-actions/clientContractActions'
+      '@alga-psa/clients/actions'
     );
 
     // end_date is stored inclusive; choose end_date so that (end_date + 1 day) == 2026-01-01.
@@ -97,7 +97,7 @@ describe('Client contract overlap validation ([start, end) semantics)', () => {
 
   it('rejects true overlaps with an invoiced period', async () => {
     const { updateClientContract } = await import(
-      'server/src/lib/actions/client-actions/clientContractActions'
+      '@alga-psa/clients/actions'
     );
 
     // Overlaps: [2026-01-15, ...] starts before invoiced end and has no end => overlap.

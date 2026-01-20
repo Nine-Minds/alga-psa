@@ -4,9 +4,9 @@ import { ReflectedDropdownMenu } from "@alga-psa/ui/components/ReflectedDropdown
 import { MoreVertical, Pencil, Trash2, ExternalLink, Shield, ShieldOff } from 'lucide-react';
 import { MouseEvent } from 'react';
 import type { IClient } from '@alga-psa/types';
-import { ITag } from 'server/src/interfaces/tag.interfaces';
+import { ITag } from '@alga-psa/types';
 import ClientAvatar from '@alga-psa/ui/components/ClientAvatar';
-import { TagManager } from 'server/src/components/tags';
+import { TagManager } from '@alga-psa/ui/components';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 

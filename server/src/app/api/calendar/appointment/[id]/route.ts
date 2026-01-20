@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createTenantKnex } from 'server/src/lib/db';
 import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
-import { generateICS, ICSEventData } from 'server/src/lib/utils/icsGenerator';
+import { generateICS, type ICSEventData } from '@alga-psa/scheduling';
 
 /**
  * GET /api/calendar/appointment/[id].ics

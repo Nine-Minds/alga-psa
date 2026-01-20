@@ -4,9 +4,9 @@ import { Knex } from 'knex';
 
 // Import actions and services involved in the integration
 import { saveTimeEntry, deleteTimeEntry } from '@alga-psa/scheduling/actions/timeEntryActions';
-import { createUsageRecord, updateUsageRecord, deleteUsageRecord } from 'server/src/lib/actions/usageActions';
+import { createUsageRecord, updateUsageRecord, deleteUsageRecord } from '@alga-psa/billing/actions';
 import { findOrCreateCurrentBucketUsageRecord, reconcileBucketUsageRecord } from 'server/src/lib/services/bucketUsageService';
-import { getRemainingBucketUnits } from 'server/src/lib/actions/report-actions/getRemainingBucketUnits';
+import { getRemainingBucketUnits } from '@alga-psa/reporting/actions';
 
 // Test utilities (if any, e.g., for creating test data)
 // import { createTestClient, createTestContractLine, createTestService, assignContractLineToClient, etc } from 'server/test-utils/seed';

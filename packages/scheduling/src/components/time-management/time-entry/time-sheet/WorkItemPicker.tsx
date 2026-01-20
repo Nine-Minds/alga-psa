@@ -6,18 +6,18 @@ import { toast } from 'react-hot-toast';
 import { Input } from '@alga-psa/ui/components/Input';
 import { SwitchWithLabel } from '@alga-psa/ui/components/SwitchWithLabel';
 import Spinner from '@alga-psa/ui/components/Spinner';
-import { IWorkItem, IExtendedWorkItem, WorkItemWithStatus, WorkItemType } from 'server/src/interfaces/workItem.interfaces';
-import { ITimePeriodView } from 'server/src/interfaces/timeEntry.interfaces';
-import { searchPickerWorkItems, createWorkItem } from 'server/src/lib/actions/workItemActions';
+import { IWorkItem, IExtendedWorkItem, WorkItemWithStatus, WorkItemType } from '@alga-psa/types';
+import { ITimePeriodView } from '@alga-psa/types';
+import { searchPickerWorkItems, createWorkItem } from '@alga-psa/scheduling/actions';
 import { Button } from '@alga-psa/ui/components/Button';
 import UserPicker from '@alga-psa/ui/components/UserPicker';
-import { ClientPicker } from '@alga-psa/clients/components/clients/ClientPicker';
+import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
 import { DatePicker } from '@alga-psa/ui/components/DatePicker';
 import { DateTimePicker } from '@alga-psa/ui/components/DateTimePicker';
 import { IUser } from '@shared/interfaces/user.interfaces';
-import { getAllUsersBasic, getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
+import { getAllUsersBasic, getCurrentUser } from '@alga-psa/users/actions';
 import { getAllClients } from '@alga-psa/clients/actions';
-import { IClient } from 'server/src/interfaces/client.interfaces';
+import { IClient } from '@alga-psa/types';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 
 interface WorkItemPickerProps {

@@ -27,7 +27,7 @@ export async function registerAccountingExportWorkflowActions(): Promise<void> {
     createParameters,
     async (params) => {
       try {
-        const { createAccountingExportBatch } = await import('server/src/lib/actions/accountingExportActions');
+        const { createAccountingExportBatch } = await import('@alga-psa/billing/actions');
         const filters: Record<string, unknown> = {};
 
         if (params.startDate) {
@@ -80,7 +80,7 @@ export async function registerAccountingExportWorkflowActions(): Promise<void> {
     executeParameters,
     async (params) => {
       try {
-        const { executeAccountingExportBatch } = await import('server/src/lib/actions/accountingExportActions');
+        const { executeAccountingExportBatch } = await import('@alga-psa/billing/actions');
         const result = await executeAccountingExportBatch(params.batchId);
         return {
           success: true,

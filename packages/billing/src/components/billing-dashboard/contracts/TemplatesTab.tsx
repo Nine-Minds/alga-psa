@@ -15,8 +15,8 @@ import {
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { Input } from '@alga-psa/ui/components/Input';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
-import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
-import { IContract } from 'server/src/interfaces/contract.interfaces';
+import { ColumnDefinition } from '@alga-psa/types';
+import { IContract } from '@alga-psa/types';
 import {
   deleteContract,
   getContractTemplates,

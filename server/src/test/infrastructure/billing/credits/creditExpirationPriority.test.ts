@@ -297,7 +297,7 @@ vi.mock('@shared/workflow/streams/workflowEventSchema', () => ({
   WorkflowEventBaseSchema: {}
 }));
 
-vi.mock('server/src/lib/actions/user-actions/userActions', () => ({
+vi.mock('@alga-psa/users/actions', () => ({
   getCurrentUser: vi.fn(() => Promise.resolve(currentUserRef.user))
 }));
 

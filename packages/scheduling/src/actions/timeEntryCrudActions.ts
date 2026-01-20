@@ -2,13 +2,13 @@
 
 import { Knex } from 'knex'; // Import Knex type
 import { createTenantKnex } from '@alga-psa/db';
-import { determineDefaultContractLine } from 'server/src/lib/utils/contractLineDisambiguation';
-import { findOrCreateCurrentBucketUsageRecord, updateBucketUsageMinutes } from 'server/src/lib/services/bucketUsageService'; // Import bucket service functions
+import { determineDefaultContractLine } from '../lib/contractLineDisambiguation';
+import { findOrCreateCurrentBucketUsageRecord, updateBucketUsageMinutes } from '../services/bucketUsageService'; // Import bucket service functions
 import {
   ITimeEntry,
   ITimeEntryWithWorkItem,
-} from 'server/src/interfaces/timeEntry.interfaces';
-import { IWorkItem } from 'server/src/interfaces/workItem.interfaces';
+} from '@alga-psa/types';
+import { IWorkItem } from '@alga-psa/types';
 import { getCurrentUser } from '@alga-psa/auth/getCurrentUser';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { v4 as uuidv4 } from 'uuid';
@@ -21,10 +21,12 @@ import {
   SaveTimeEntryParams
 } from './timeEntrySchemas'; // Import schemas
 import { getClientIdForWorkItem } from './timeEntryHelpers'; // Import helper
-import { analytics } from 'server/src/lib/analytics/posthog';
-import { AnalyticsEvents } from 'server/src/lib/analytics/events';
-import { getSession } from 'server/src/lib/auth/getSession';
-import { computeWorkDateFields, resolveUserTimeZone } from 'server/src/lib/utils/workDate';
+import { getSession } from '@alga-psa/auth';
+import { computeWorkDateFields, resolveUserTimeZone } from '@alga-psa/db';
+
+function captureAnalytics(_event: string, _properties?: Record<string, any>, _userId?: string): void {
+  // Intentionally no-op: avoid pulling analytics (and its tenancy/client-portal deps) into scheduling.
+}
 
 export async function fetchTimeEntriesForTimeSheet(timeSheetId: string): Promise<ITimeEntryWithWorkItem[]> {
   const currentUser = await getCurrentUser();
@@ -735,7 +737,7 @@ export async function saveTimeEntry(timeEntry: Omit<ITimeEntry, 'tenant'>): Prom
 
     // Track time entry analytics
     const isUpdate = !!entry_id;
-    analytics.capture(isUpdate ? AnalyticsEvents.TIME_ENTRY_UPDATED : AnalyticsEvents.TIME_ENTRY_CREATED, {
+    captureAnalytics(isUpdate ? 'time_entry_updated' : 'time_entry_created', {
       work_item_type: entry.work_item_type,
       duration_minutes: finalBillableDuration,
       is_billable: finalBillableDuration > 0,
@@ -864,7 +866,7 @@ export async function deleteTimeEntry(entryId: string): Promise<void> {
          console.log(`Successfully deleted time entry ${entryId}`);
          
          // Track time entry deletion analytics
-         analytics.capture(AnalyticsEvents.TIME_ENTRY_DELETED, {
+         captureAnalytics('time_entry_deleted', {
            work_item_type: timeEntry.work_item_type,
            duration_minutes: timeEntry.billable_duration || 0,
            was_billable: (timeEntry.billable_duration || 0) > 0,

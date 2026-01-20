@@ -9,7 +9,7 @@ import {
   type SurveyResponsePage,
 } from '@alga-psa/types';
 import { createTenantKnex } from '@alga-psa/db';
-import SurveyAnalyticsService from 'server/src/services/SurveyAnalyticsService';
+import SurveyAnalyticsService from '../../services/SurveyAnalyticsService';
 
 function ensureTenant(tenant: string | null): string {
   if (!tenant) {

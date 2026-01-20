@@ -7,7 +7,7 @@ import type { SurveyFilterOptions } from '@alga-psa/surveys/actions/survey-actio
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Button } from '@alga-psa/ui/components/Button';
 import { DateRangePicker, type DateRange } from '@alga-psa/ui/components/DateRangePicker';
-import { ClientPicker } from '@alga-psa/clients/components/clients/ClientPicker';
+import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
 import type { IClient } from '@alga-psa/types';
 
 export type ResponseFilterState = {

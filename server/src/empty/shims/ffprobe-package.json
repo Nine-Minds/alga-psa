@@ -1,5 +1,6 @@
 {
-  "name": "ffprobe-static-shim",
+  "name": "ffprobe-static",
   "version": "0.0.0",
-  "description": "Empty shim for ffprobe-static package.json"
+  "main": "./index.js"
 }
+

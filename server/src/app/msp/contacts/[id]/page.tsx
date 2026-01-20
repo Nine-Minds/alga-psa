@@ -1,13 +1,11 @@
 import { notFound } from 'next/navigation';
 import { ContactDetails } from '@alga-psa/clients';
-import { IContact } from 'server/src/interfaces/contact.interfaces';
-import { IClient } from 'server/src/interfaces/client.interfaces';
-import { IDocument } from 'server/src/interfaces/document.interface';
-import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
+import type { IDocument } from '@alga-psa/types';
+import { getCurrentUser } from '@alga-psa/users/actions';
 import { getDocumentsByEntity } from '@alga-psa/documents/actions/documentActions';
-import { getContactByContactNameId } from 'server/src/lib/actions/contact-actions/contactActions';
+import { getContactByContactNameId } from '@alga-psa/clients/actions';
 import { getAllClients } from '@alga-psa/clients/actions';
-import { getContactPortalPermissions } from 'server/src/lib/actions/permission-actions';
+import { getContactPortalPermissions } from '@alga-psa/auth/actions';
 
 interface ContactDetailPageProps {
   params: Promise<{ id: string }>;

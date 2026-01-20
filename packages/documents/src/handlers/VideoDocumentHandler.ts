@@ -2,7 +2,7 @@ import type { IDocument, PreviewResponse } from '@alga-psa/types';
 import { BaseDocumentHandler } from './BaseDocumentHandler';
 import path from 'path';
 import ffmpeg from 'fluent-ffmpeg';
-import { StorageProviderFactory } from 'server/src/lib/storage/StorageProviderFactory';
+import { StorageProviderFactory } from '../storage/StorageProviderFactory';
 import type { Knex } from 'knex';
 import { existsSync, promises as fs } from 'fs';
 import { createRequire } from 'module';

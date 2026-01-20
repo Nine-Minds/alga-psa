@@ -4,11 +4,24 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import { ExternalLink, Copy, Check } from 'lucide-react';
 import type { Asset } from '@alga-psa/types';
-import { formatDateOnly } from 'server/src/lib/utils/dateTimeUtils';
+import { formatDateOnly } from '@alga-psa/core';
 import Link from 'next/link';
-import { cn } from 'server/src/lib/utils';
-import { useDrawer } from 'server/src/context/DrawerContext';
-import { ClientQuickView } from '@alga-psa/clients/components/clients/ClientQuickView';
+import { cn } from '@alga-psa/ui';
+import { useDrawer } from '@alga-psa/ui';
+
+const ClientQuickViewLite = ({ clientId, clientName }: { clientId: string; clientName: string }) => {
+  return (
+    <div className="p-6">
+      <div className="text-sm text-gray-600">Client</div>
+      <div className="text-lg font-semibold text-gray-900">{clientName}</div>
+      <div className="mt-4">
+        <Link href={`/msp/clients/${clientId}`} className="text-primary-600 hover:underline">
+          View client details
+        </Link>
+      </div>
+    </div>
+  );
+};
 
 interface AssetInfoPanelProps {
   asset: Asset;
@@ -96,7 +109,7 @@ export const AssetInfoPanel: React.FC<AssetInfoPanelProps> = ({
 
   const handleOpenClientDrawer = () => {
     if (asset.client_id) {
-      openDrawer(<ClientQuickView clientId={asset.client_id} />);
+      openDrawer(<ClientQuickViewLite clientId={asset.client_id} clientName={asset.client?.client_name || asset.client_id} />);
     }
   };
 

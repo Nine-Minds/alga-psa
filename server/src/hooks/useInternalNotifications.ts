@@ -13,7 +13,7 @@ import {
   getUnreadCountAction,
   markAsReadAction,
   markAllAsReadAction
-} from '../lib/actions/internal-notification-actions/internalNotificationActions';
+} from '@alga-psa/notifications/actions';
 
 // Construct Hocuspocus URL based on current domain
 // In production, use wss://{current-domain}/hocuspocus

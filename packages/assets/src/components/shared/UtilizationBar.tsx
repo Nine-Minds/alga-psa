@@ -1,7 +1,7 @@
 import React from 'react';
 import { Progress } from '@alga-psa/ui/components/Progress';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
-import { cn } from 'server/src/lib/utils';
+import { cn } from '@alga-psa/ui';
 
 interface UtilizationBarProps {
   value: number | null; // 0-100

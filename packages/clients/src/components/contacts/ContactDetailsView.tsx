@@ -2,28 +2,28 @@
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { IContact } from 'server/src/interfaces/contact.interfaces';
+import { IContact } from '@alga-psa/types';
 import { Flex, Text, Heading } from '@radix-ui/themes';
 import { QuickAddInteraction } from '../interactions/QuickAddInteraction';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Pen, Plus, ArrowLeft, ExternalLink } from 'lucide-react';
-import { useDrawer } from 'server/src/context/DrawerContext';
+import { useDrawer } from '@alga-psa/ui';
 import ContactDetailsEdit from './ContactDetailsEdit';
-import { ITag } from 'server/src/interfaces/tag.interfaces';
+import { ITag } from '@alga-psa/types';
 import type { IClient } from '@alga-psa/types';
 import ClientDetails from '../clients/ClientDetails';
 import InteractionsFeed from '../interactions/InteractionsFeed';
-import { IInteraction } from 'server/src/interfaces/interaction.interfaces';
-import { TagManager } from 'server/src/components/tags';
+import { IInteraction } from '@alga-psa/types';
+import { TagManager } from '@alga-psa/ui/components';
 import { getClientById } from '@alga-psa/clients/actions';
-import { updateContact } from 'server/src/lib/actions/contact-actions/contactActions';
+import { updateContact } from '@alga-psa/clients/actions';
 import Documents from '@alga-psa/documents/components/Documents';
 import type { IDocument } from '@alga-psa/types';
 import { useAutomationIdAndRegister } from '@alga-psa/ui/ui-reflection/useAutomationIdAndRegister';
 import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContainer';
 import { ButtonComponent, ContainerComponent } from '@alga-psa/ui/ui-reflection/types';
 import ContactAvatar from '@alga-psa/ui/components/ContactAvatar';
-import { getContactAvatarUrlAction } from 'server/src/lib/actions/avatar-actions';
+import { getContactAvatarUrlActionAsync } from '../../lib/usersHelpers';
 import { ClientPicker } from '../clients/ClientPicker';
 
 interface ContactDetailsViewProps {
@@ -91,7 +91,7 @@ const ContactDetailsView: React.FC<ContactDetailsViewProps> = ({
         
         // Fetch contact avatar URL
         if (userId && contact.tenant) {
-          const contactAvatarUrl = await getContactAvatarUrlAction(contact.contact_name_id, contact.tenant);
+          const contactAvatarUrl = await getContactAvatarUrlActionAsync(contact.contact_name_id, contact.tenant);
           setAvatarUrl(contactAvatarUrl);
         }
       } catch (err) {

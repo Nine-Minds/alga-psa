@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useEffect, useRef } from 'react';
-import { toPlainDate } from 'server/src/lib/utils/dateTimeUtils';
+import { toPlainDate } from '@alga-psa/core';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { Input } from '@alga-psa/ui/components/Input';
@@ -12,12 +12,12 @@ import { DateRangePicker, DateRange } from '@alga-psa/ui/components/DateRangePic
 import { Search, Info, AlertTriangle, X, MoreVertical, Eye } from 'lucide-react';
 import type { IClientContractLineCycle, PreviewInvoiceResponse } from '@alga-psa/types';
 import { generateInvoice, getPurchaseOrderOverageForBillingCycle, previewInvoice } from '@alga-psa/billing/actions/invoiceGeneration';
-import { WasmInvoiceViewModel } from 'server/src/lib/invoice-renderer/types';
+import { WasmInvoiceViewModel } from '@alga-psa/types';
 import { getInvoicedBillingCyclesPaginated, removeBillingCycle, hardDeleteBillingCycle } from '@alga-psa/billing/actions/billingCycleActions';
 import { getAvailableBillingPeriods, type BillingPeriodDateRange } from '@alga-psa/billing/actions/billingAndTax';
-import type { ISO8601String } from 'server/src/types/types.d';
+import type { ISO8601String } from '@alga-psa/types';
 import { Dialog, DialogContent, DialogFooter, DialogDescription } from '@alga-psa/ui/components/Dialog';
-import { formatCurrency } from 'server/src/lib/utils/formatters';
+import { formatCurrency } from '@alga-psa/core';
 // Added imports for DropdownMenu
 import {
   DropdownMenu,

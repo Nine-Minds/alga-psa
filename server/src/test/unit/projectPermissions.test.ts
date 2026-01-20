@@ -52,7 +52,7 @@ vi.mock('server/src/lib/models/project', () => ({
 }));
 
 // Mock the userActions with both required functions
-vi.mock('server/src/lib/actions/user-actions/userActions', () => ({
+vi.mock('@alga-psa/users/actions', () => ({
   getAllUsers: vi.fn().mockResolvedValue([]),
   findUserById: vi.fn().mockResolvedValue(null),
 }));

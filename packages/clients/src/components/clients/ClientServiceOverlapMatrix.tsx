@@ -8,10 +8,12 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { AlertTriangle, Info, CheckCircle } from 'lucide-react';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
-import { IClientContractLine, IContractLine, IService } from 'server/src/interfaces/billing.interfaces';
-import { getContractLines } from 'server/src/lib/actions/contractLineAction';
-import { getContractLineServices } from 'server/src/lib/actions/contractLineServiceActions';
-import { PLAN_TYPE_DISPLAY } from 'server/src/constants/billing';
+import { IClientContractLine, IContractLine, IService } from '@alga-psa/types';
+import {
+  getContractLinesAsync,
+  getContractLineServicesAsync,
+  getPlanTypeDisplayAsync
+} from '../../lib/billingHelpers';
 
 interface ClientServiceOverlapMatrixProps {
   clientId: string;
@@ -34,6 +36,12 @@ const ClientServiceOverlapMatrix: React.FC<ClientServiceOverlapMatrixProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [showAllServices, setShowAllServices] = useState(false);
   const [allContractLines, setAllContractLines] = useState<IContractLine[]>([]);
+  const [planTypeDisplay, setPlanTypeDisplay] = useState<Record<string, string>>({});
+
+  // Load PLAN_TYPE_DISPLAY constant
+  useEffect(() => {
+    getPlanTypeDisplayAsync().then(display => setPlanTypeDisplay(display || {}));
+  }, []);
 
   // Fetch services for each client contract line
   useEffect(() => {
@@ -41,7 +49,7 @@ const ClientServiceOverlapMatrix: React.FC<ClientServiceOverlapMatrixProps> = ({
       setLoading(true);
       try {
         // Get all contract lines to get plan details
-        const contractLines = await getContractLines();
+        const contractLines = await getContractLinesAsync();
         setAllContractLines(contractLines);
         
         // Create a map of contract_line_id to plan details
@@ -58,7 +66,7 @@ const ClientServiceOverlapMatrix: React.FC<ClientServiceOverlapMatrixProps> = ({
         
         for (const clientPlan of clientContractLines) {
           if (clientPlan.contract_line_id) {
-            const planServicesList = await getContractLineServices(clientPlan.contract_line_id);
+            const planServicesList = await getContractLineServicesAsync(clientPlan.contract_line_id);
             
             // Convert plan services to full service objects
             const fullServices = planServicesList.map(ps => 
@@ -217,7 +225,7 @@ const ClientServiceOverlapMatrix: React.FC<ClientServiceOverlapMatrixProps> = ({
                           {plan.contract_line_name || 'Unnamed Plan'}
                         </Button>
                         <Badge className="mt-1 text-xs">
-                          {plan.contract_line_type ? (PLAN_TYPE_DISPLAY[plan.contract_line_type as keyof typeof PLAN_TYPE_DISPLAY] || plan.contract_line_type) : 'Unknown'}
+                          {plan.contract_line_type ? (planTypeDisplay[plan.contract_line_type] || plan.contract_line_type) : 'Unknown'}
                         </Badge>
                       </div>
                     </TableHead>

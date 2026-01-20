@@ -6,7 +6,7 @@
 
 import knex, { Knex } from 'knex';
 import knexfile from './knexfile';
-import { getSecret, logger } from '@alga-psa/core';
+import { getSecret, logger } from '@alga-psa/core/server';
 
 let adminConnection: Knex | null = null;
 

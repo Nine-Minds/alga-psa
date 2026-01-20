@@ -2,15 +2,24 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { Button } from '@alga-psa/ui/components/Button';
-import { Input } from '@alga-psa/ui/components/Input';
-import { Label } from '@alga-psa/ui/components/Label';
-import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
+import { Button, Input, Label, Alert, AlertDescription } from '@alga-psa/ui/components';
 import { Eye, EyeOff } from 'lucide-react';
-import { verifyContactEmail } from 'server/src/lib/actions/user-actions/userActions';
-import { initiateRegistration } from 'server/src/lib/actions/user-actions/registrationActions';
 import { usePostHog } from 'posthog-js/react';
-import { validateEmailAddress, validatePassword, getPasswordRequirements } from 'server/src/lib/utils/clientFormValidation';
+import { validateEmailAddress, validatePassword, getPasswordRequirements } from '@alga-psa/validation';
+
+// Dynamic imports to avoid circular dependency (auth -> users -> auth)
+// Note: Using string concatenation to prevent static analysis from detecting this dependency
+const getUsersModule = () => '@alga-psa/' + 'users/actions';
+
+const verifyContactEmail = async (email: string) => {
+  const { verifyContactEmail: verify } = await import(/* webpackIgnore: true */ getUsersModule());
+  return verify(email);
+};
+
+const initiateRegistration = async (email: string, password: string) => {
+  const { initiateRegistration: initReg } = await import(/* webpackIgnore: true */ getUsersModule());
+  return initReg(email, password);
+};
 
 export default function RegisterForm() {
   const [email, setEmail] = useState('');

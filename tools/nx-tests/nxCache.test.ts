@@ -12,7 +12,10 @@ function runNx(args: string[], extraEnv: Record<string, string>) {
     env: {
       ...process.env,
       NX_DAEMON: 'false',
+      NX_ISOLATE_PLUGINS: 'false',
       CI: 'true',
+      PLAYWRIGHT_APP_PORT: process.env.PLAYWRIGHT_APP_PORT || '3300',
+      PLAYWRIGHT_APP_PORT_LOCKED: 'true',
       ...extraEnv,
     },
     encoding: 'utf8',

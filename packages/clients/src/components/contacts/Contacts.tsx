@@ -1,37 +1,37 @@
 'use client';
 
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { IContact } from 'server/src/interfaces/contact.interfaces';
+import { IContact } from '@alga-psa/types';
 import type { IClient } from '@alga-psa/types';
-import { ITag } from 'server/src/interfaces/tag.interfaces';
+import { ITag } from '@alga-psa/types';
 import type { IDocument } from '@alga-psa/types';
-import { getAllContacts, getContactsByClient, getAllClients, exportContactsToCSV, deleteContact, updateContact } from 'server/src/lib/actions/contact-actions/contactActions';
-import { findTagsByEntityIds, findAllTagsByType } from 'server/src/lib/actions/tagActions';
+import { getAllContacts, getContactsByClient, getAllClients, exportContactsToCSV, deleteContact, updateContact } from '@alga-psa/clients/actions';
+import { findTagsByEntityIds, findAllTagsByType } from '@alga-psa/tags/actions';
 import { Button } from '@alga-psa/ui/components/Button';
 import { SearchInput } from '@alga-psa/ui/components/SearchInput';
 import { Pen, Eye, CloudDownload, MoreVertical, Upload, Trash2, XCircle, ExternalLink, Power, RotateCcw } from 'lucide-react';
 import toast from 'react-hot-toast';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import QuickAddContact from './QuickAddContact';
-import { useDrawer } from "server/src/context/DrawerContext";
+import { useDrawer } from "@alga-psa/ui";
 import ContactDetails from './ContactDetails';
 import ContactDetailsEdit from './ContactDetailsEdit';
 import ContactsImportDialog from './ContactsImportDialog';
 import ClientDetails from '../clients/ClientDetails';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
-import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
-import { TagManager, TagFilter } from 'server/src/components/tags';
-import { useTagPermissions } from 'server/src/hooks/useTagPermissions';
-import { getUniqueTagTexts } from 'server/src/utils/colorUtils';
+import { ColumnDefinition } from '@alga-psa/types';
+import { TagFilter, TagManager } from '@alga-psa/ui/components';
+import { useTagPermissions } from '@alga-psa/ui';
+import { getUniqueTagTexts } from '@alga-psa/ui';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
-import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
+import { getCurrentUserAsync } from '../../lib/usersHelpers';
 import { getDocumentsByEntity } from '@alga-psa/documents/actions/documentActions';
 import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContainer';
 import ContactAvatar from '@alga-psa/ui/components/ContactAvatar';
 import { useRouter } from 'next/navigation';
 import ContactsSkeleton from './ContactsSkeleton';
-import { useUserPreference } from 'server/src/hooks/useUserPreference';
+import { useUserPreference } from '@alga-psa/users/hooks';
 
 const CONTACTS_PAGE_SIZE_SETTING = 'contacts_page_size';
 
@@ -162,7 +162,7 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, clientId, preSelec
         if (isInitialLoad || clients.length === 0) {
           const [allClients, userData] = await Promise.all([
             getAllClients(),
-            getCurrentUser()
+            getCurrentUserAsync()
           ]);
 
           setClients(allClients);
@@ -772,9 +772,9 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, clientId, preSelec
                 />
 
                 <TagFilter
-                  allTags={allUniqueTags}
+                  tags={allUniqueTags}
                   selectedTags={selectedTags}
-                  onTagSelect={(tag) => {
+                  onToggleTag={(tag: string) => {
                     setSelectedTags(prev => {
                       const newTags = prev.includes(tag)
                         ? prev.filter(t => t !== tag)
@@ -783,6 +783,7 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, clientId, preSelec
                       return newTags;
                     });
                   }}
+                  onClearTags={() => setSelectedTags([])}
                 />
 
                 <CustomSelect

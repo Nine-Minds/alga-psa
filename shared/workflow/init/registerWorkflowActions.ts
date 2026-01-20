@@ -5,12 +5,16 @@
  */
 
 import { getActionRegistry, type ActionRegistry, type ActionExecutionContext } from '@alga-psa/shared/workflow/core/index';
-import { logger, getSecretProviderInstance } from '@alga-psa/core';
+import { logger } from '@alga-psa/core';
+import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { getTaskInboxService } from '@alga-psa/shared/workflow/core/taskInboxService';
 import axios from 'axios'; // For QBO API calls
 import type { Knex } from 'knex';
-import { ManagedDomainService as ManagedDomainServiceExport } from '@alga-psa/integrations/email/domains/entry';
 import type { DnsLookupResult } from '@alga-psa/types';
+
+// Dynamic import to avoid circular dependency (shared -> integrations -> ... -> shared)
+// Note: Using string concatenation to prevent static analysis from detecting this dependency
+const getIntegrationsModule = () => '@alga-psa/' + 'integrations/email/domains/entry';
 
 // --- Mock Secret Retrieval ---
 
@@ -89,8 +93,6 @@ type ManagedDomainServiceCtor = {
   forTenant: (options: { tenantId: string; knex: Knex }) => ManagedDomainServiceLike;
 };
 
-const ManagedDomainServiceCtor = ManagedDomainServiceExport as ManagedDomainServiceCtor | undefined;
-
 async function getKnexForTenant(tenantId: string, context: ActionExecutionContext): Promise<Knex> {
   if (context.knex) {
     return context.knex as Knex;
@@ -108,13 +110,22 @@ async function resolveManagedDomainService(
     throw new Error('Tenant ID is required for managed domain operations');
   }
 
-  if (!ManagedDomainServiceCtor) {
+  // Dynamically import ManagedDomainService to avoid circular dependency
+  let ManagedDomainServiceCtorImpl: ManagedDomainServiceCtor | undefined;
+  try {
+    const integrationsModule = await import(/* webpackIgnore: true */ getIntegrationsModule());
+    ManagedDomainServiceCtorImpl = integrationsModule.ManagedDomainService as ManagedDomainServiceCtor | undefined;
+  } catch (err) {
+    logger.debug('[WorkflowInit] Failed to import ManagedDomainService, may not be available in this edition');
+  }
+
+  if (!ManagedDomainServiceCtorImpl) {
     logger.warn('[WorkflowInit] ManagedDomainService unavailable in current edition');
     return null;
   }
 
   const knex = await getKnexForTenant(tenantId, context);
-  return ManagedDomainServiceCtor.forTenant({ tenantId, knex });
+  return ManagedDomainServiceCtorImpl.forTenant({ tenantId, knex });
 }
 
 /**

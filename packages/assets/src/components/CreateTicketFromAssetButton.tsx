@@ -8,9 +8,9 @@ import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect
 import { Input } from '@alga-psa/ui/components/Input';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
 import { createTicketFromAsset } from '@alga-psa/tickets/actions/ticketActions';
-import { getAllPriorities } from 'server/src/lib/actions/priorityActions';
-import { getTicketStatuses } from 'server/src/lib/actions/status-actions/statusActions';
-import { getAllBoards } from 'server/src/lib/actions/board-actions/boardActions';
+import { getAllPriorities } from '@alga-psa/reference-data/actions';
+import { getTicketStatuses } from '@alga-psa/reference-data/actions';
+import { getAllBoards } from '@alga-psa/tickets/actions';
 import { useRouter } from 'next/navigation';
 import { toast } from 'react-hot-toast';
 import { useRegisterUIComponent } from '@alga-psa/ui/ui-reflection/useRegisterUIComponent';

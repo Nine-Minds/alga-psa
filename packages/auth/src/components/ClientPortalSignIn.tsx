@@ -9,8 +9,14 @@ import Alert from './Alert';
 import type { AlertProps } from '@alga-psa/types';
 import { Ticket, FileText, Eye, History } from 'lucide-react';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
-import { TenantBranding } from 'server/src/lib/actions/tenant-actions/tenantBrandingActions';
-import { isValidTenantSlug } from '@shared/utils/tenantSlug';
+import { isValidTenantSlug } from '@alga-psa/validation';
+
+type TenantBranding = {
+  primaryColor: string;
+  secondaryColor: string;
+  logoUrl?: string | null;
+  clientName?: string | null;
+};
 
 interface ClientPortalSignInProps {
   branding?: TenantBranding | null;

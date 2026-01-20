@@ -15,9 +15,9 @@ import {
 } from '@alga-psa/ui/components/DropdownMenu';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip'; // Corrected Tooltip import
 import { DataTable } from '@alga-psa/ui/components/DataTable';
-import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
-import { IContractLine, IContractLineService, IService, IServiceCategory } from 'server/src/interfaces/billing.interfaces';
-import { IContractLineServiceConfiguration } from 'server/src/interfaces/contractLineServiceConfiguration.interfaces';
+import { ColumnDefinition } from '@alga-psa/types';
+import { IContractLine, IContractLineService, IService, IServiceCategory } from '@alga-psa/types';
+import { IContractLineServiceConfiguration } from '@alga-psa/types';
 import {
   getContractLineServices,
   addServiceToContractLine,
@@ -25,14 +25,14 @@ import {
   updateContractLineService,
   getContractLineServicesWithConfigurations
 } from '@alga-psa/billing/actions/contractLineServiceActions';
-import { getServices } from 'server/src/lib/actions/serviceActions';
-import { getServiceCategories } from 'server/src/lib/actions/serviceCategoryActions'; // Added import
+import { getServices } from '@alga-psa/billing/actions';
+import { getServiceCategories } from '@alga-psa/billing/actions'; // Added import
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { AlertCircle } from 'lucide-react';
 import EditPlanServiceQuantityDialog from './contract-lines/EditContractLineServiceQuantityDialog';
 import { getContractLineById } from '@alga-psa/billing/actions/contractLineAction';
 import { getContractById } from '@alga-psa/billing/actions/contractActions';
-import { getCurrencySymbol } from 'server/src/constants/currency';
+import { getCurrencySymbol } from '@alga-psa/core';
 import { Badge } from '@alga-psa/ui/components/Badge';
 // Removed ContractLineServiceForm import as 'Configure' is removed
 

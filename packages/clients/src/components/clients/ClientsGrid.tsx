@@ -1,5 +1,5 @@
 import type { IClient } from '@alga-psa/types';
-import { ITag } from 'server/src/interfaces/tag.interfaces';
+import { ITag } from '@alga-psa/types';
 import ClientGridCard from "./ClientGridCard";
 import Pagination from '@alga-psa/ui/components/Pagination';
 import { useState } from 'react';

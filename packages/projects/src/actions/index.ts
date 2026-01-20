@@ -10,3 +10,4 @@ export * from './projectTaskCommentActions';
 export * from './projectTemplateActions';
 export * from './projectTemplateWizardActions';
 export * from './regenerateOrderKeys';
+export * from './serviceCatalogActions';

@@ -3,7 +3,7 @@ import { Dialog, DialogContent, DialogFooter } from '@alga-psa/ui/components/Dia
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
 import { DatePicker } from '@alga-psa/ui/components/DatePicker';
-import { IContractLine, IServiceCategory } from 'server/src/interfaces/billing.interfaces';
+import { IContractLine, IServiceCategory } from '@alga-psa/types';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 

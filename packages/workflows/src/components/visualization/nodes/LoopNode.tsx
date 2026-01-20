@@ -1,6 +1,6 @@
 import React from 'react';
 import { Handle, Position, NodeProps } from 'reactflow';
-import { LoopNodeData } from 'server/src/lib/workflow/visualization/types/visualizationTypes';
+import { LoopNodeData } from '../../../visualization/types/visualizationTypes';
 import { Card } from '@alga-psa/ui/components/Card';
 
 /**

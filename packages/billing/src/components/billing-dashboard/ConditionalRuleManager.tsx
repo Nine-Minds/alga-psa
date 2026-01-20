@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { IConditionalRule, IInvoiceTemplate } from 'server/src/interfaces/invoice.interfaces';
+import { IConditionalRule, IInvoiceTemplate } from '@alga-psa/types';
 import { getConditionalRules, saveConditionalRule } from '@alga-psa/billing/actions/invoiceTemplates';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 

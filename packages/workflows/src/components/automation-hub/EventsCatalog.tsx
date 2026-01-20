@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { getCurrentTenant } from 'server/src/lib/actions/tenantActions';
+import { getCurrentTenant } from '@alga-psa/tenancy/actions';
 import { Card } from '@alga-psa/ui/components/Card';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Bell, Search, Filter, Plus, MoreVertical } from 'lucide-react';
@@ -18,7 +18,7 @@ import { toast } from 'react-hot-toast';
 import {
   getEventCatalogEntries,
   getEventCategories
-} from 'server/src/lib/actions/event-catalog-actions';
+} from '@alga-psa/workflows/actions';
 import {
   getWorkflowEventAttachmentsForEventType,
   deleteWorkflowEventAttachment,
@@ -29,7 +29,7 @@ import {
   IWorkflowEventAttachment
 } from '@alga-psa/shared/workflow/types/eventCatalog';
 import { Dialog, DialogContent, DialogFooter } from '@alga-psa/ui/components/Dialog';
-import EventTriggerDialog from 'server/src/components/events-catalog/EventTriggerDialog';
+import EventTriggerDialog from '../events-catalog/EventTriggerDialog';
 
 export default function EventsCatalog() {
   const [events, setEvents] = useState<IEventCatalogEntry[]>([]);

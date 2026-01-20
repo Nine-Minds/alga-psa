@@ -1,25 +1,25 @@
 'use client'
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { generateManualInvoice } from 'server/src/lib/actions/manualInvoiceActions';
+import { generateManualInvoice } from '@alga-psa/billing/actions';
 import { updateInvoiceManualItems } from '@alga-psa/billing/actions/invoiceModification';
 import { getInvoiceLineItems } from '@alga-psa/billing/actions/invoiceQueries';
 import type { ManualInvoiceUpdate } from '@alga-psa/billing/actions/invoiceActions'; // Import the specific type
-import type { ManualInvoiceItem as ManualInvoiceItemForAction } from 'server/src/lib/actions/manualInvoiceActions'; // Import and alias
+import type { ManualInvoiceItem as ManualInvoiceItemForAction } from '@alga-psa/billing/actions'; // Import and alias
 import { Button } from '@alga-psa/ui/components/Button';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { DatePicker } from '@alga-psa/ui/components/DatePicker';
 import { Card } from '@alga-psa/ui/components/Card';
 import { LineItem, ServiceOption, EditableItem as LineItemEditableItem } from './LineItem'; // Import EditableItem type from LineItem
-import { ClientPicker } from '@alga-psa/clients/components/clients/ClientPicker';
+import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
 import type { IClient } from '@alga-psa/types';
 import { ErrorBoundary } from 'react-error-boundary';
 import type { IService } from '@alga-psa/types';
-import { InvoiceViewModel, DiscountType, IInvoiceCharge } from 'server/src/interfaces/invoice.interfaces';
+import { InvoiceViewModel, DiscountType, IInvoiceCharge } from '@alga-psa/types';
 import type { JSX } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { PlusIcon, MinusCircleIcon } from 'lucide-react';
-import { formatCurrency } from 'server/src/lib/utils/formatters';
+import { formatCurrency } from '@alga-psa/core';
 
 // Use a constant for environment check since process.env is not available
 const IS_DEVELOPMENT = typeof window !== 'undefined' &&

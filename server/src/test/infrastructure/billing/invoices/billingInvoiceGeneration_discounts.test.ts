@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll, beforeEach, afterEach, afterAll, vi } from 'vitest';
 import '../../../../../test-utils/nextApiMock';
-import { generateManualInvoice } from 'server/src/lib/actions/manualInvoiceActions';
+import { generateManualInvoice } from '@alga-psa/billing/actions';
 import { TestContext } from '../../../../../test-utils/testContext';
 import { setupCommonMocks } from '../../../../../test-utils/testMocks';
 import { createTestService, assignServiceTaxRate, setupClientTaxConfiguration, ensureDefaultBillingSettings, ensureClientPlanBundlesTable } from '../../../../../test-utils/billingTestHelpers';

@@ -268,6 +268,12 @@ export async function getLicensePricingAction(): Promise<{
 
     // Fetch pricing from Stripe API using the price ID
     const stripeService = getStripeService();
+    if (!(await stripeService.isConfigured())) {
+      return {
+        success: false,
+        error: 'Stripe billing is not configured',
+      };
+    }
     const stripe = await stripeService.getStripeClient();
 
     const price = await stripe.prices.retrieve(licensePriceId);
@@ -386,6 +392,12 @@ export async function getPaymentMethodInfoAction(): Promise<IGetPaymentMethodRes
 
     const knex = await getConnection(session.user.tenant);
     const stripeService = getStripeService();
+    if (!(await stripeService.isConfigured())) {
+      return {
+        success: false,
+        error: 'Stripe billing is not configured',
+      };
+    }
 
     // Get customer from database
     const customer = await knex<IStripeCustomer>('stripe_customers')
@@ -460,6 +472,12 @@ export async function getRecentInvoicesAction(limit: number = 10): Promise<IGetI
 
     const knex = await getConnection(session.user.tenant);
     const stripeService = getStripeService();
+    if (!(await stripeService.isConfigured())) {
+      return {
+        success: true,
+        data: [],
+      };
+    }
 
     // Get customer from database
     const customer = await knex<IStripeCustomer>('stripe_customers')
@@ -531,6 +549,12 @@ export async function createCustomerPortalSessionAction(): Promise<IUpdatePaymen
 
     const knex = await getConnection(session.user.tenant);
     const stripeService = getStripeService();
+    if (!(await stripeService.isConfigured())) {
+      return {
+        success: false,
+        error: 'Stripe billing is not configured',
+      };
+    }
 
     // Get customer from database
     const customer = await knex<IStripeCustomer>('stripe_customers')
@@ -665,6 +689,12 @@ export async function cancelSubscriptionAction(): Promise<ICancelSubscriptionRes
 
     const knex = await getConnection(session.user.tenant);
     const stripeService = getStripeService();
+    if (!(await stripeService.isConfigured())) {
+      return {
+        success: false,
+        error: 'Stripe billing is not configured',
+      };
+    }
 
     // Get active subscription
     const subscription = await knex<IStripeSubscription>('stripe_subscriptions')
@@ -939,6 +969,12 @@ export async function getScheduledLicenseChangesAction(): Promise<{
     logger.info(`[getScheduledLicenseChangesAction] Getting scheduled changes for tenant ${session.user.tenant}`);
 
     const stripeService = getStripeService();
+    if (!(await stripeService.isConfigured())) {
+      return {
+        success: true,
+        data: null,
+      };
+    }
     const scheduledChanges = await stripeService.getScheduledLicenseChanges(session.user.tenant);
 
     if (!scheduledChanges) {

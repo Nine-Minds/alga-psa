@@ -1,5 +1,5 @@
 import React from 'react';
-import { IScheduleEntry } from 'server/src/interfaces/schedule.interfaces';
+import { IScheduleEntry } from '@alga-psa/types';
 import { IUser } from '@shared/interfaces/user.interfaces';
 import TimeSlot from './TimeSlot';
 import ScheduleEvent from './ScheduleEvent';

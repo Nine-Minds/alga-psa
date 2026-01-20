@@ -1,21 +1,22 @@
-// server/src/lib/actions/contractActions.ts
+// @alga-psa/billing/actions.ts
 'use server'
 
-import Contract from 'server/src/lib/models/contract';
-import ContractTemplateModel from 'server/src/lib/models/contractTemplate';
+import Contract from '@alga-psa/billing/models/contract';
+import ContractTemplateModel from '../models/contractTemplate';
 import {
   IContract,
   IContractAssignmentSummary,
   IContractWithClient,
   IContractLineMapping,
-} from 'server/src/interfaces/contract.interfaces';
+} from '@alga-psa/types';
 import {
   IContractTemplate,
   IContractTemplateWithLines,
-} from 'server/src/interfaces/contractTemplate.interfaces';
-import { createTenantKnex } from 'server/src/lib/db';
-import { getSession } from 'server/src/lib/auth/getSession';
+} from '@alga-psa/types';
+import { createTenantKnex } from '@alga-psa/db';
+
 import { Knex } from 'knex';
+import { getCurrentUserAsync, hasPermissionAsync, getSessionAsync } from '../lib/authHelpers';
 import {
   addContractLine as repoAddContractLine,
   fetchContractLineMappings,
@@ -25,9 +26,9 @@ import {
   updateContractLine as repoUpdateContractLine,
   updateContractLineRate as repoUpdateContractLineRate,
   DetailedContractLine,
-} from 'server/src/lib/repositories/contractLineRepository';
-import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
-import { hasPermission } from 'server/src/lib/auth/rbac';
+} from '../repositories/contractLineRepository';
+
+
 
 const mapTemplateToContract = (template: IContractTemplate): IContract => ({
   tenant: template.tenant,
@@ -55,25 +56,33 @@ async function isTemplateContract(knex: Knex, tenant: string, contractId: string
 }
 
 async function ensureSession() {
-  const session = await getSession();
+  const session = await getSessionAsync();
   if (!session?.user?.id) {
     throw new Error('Unauthorized');
   }
 }
 
+function requireTenantIdFromSession(session: unknown): string {
+  const tenantCandidate = (session as any)?.user?.tenant;
+  if (typeof tenantCandidate !== 'string' || tenantCandidate.length === 0) {
+    throw new Error('Tenant context is missing from session');
+  }
+  return tenantCandidate;
+}
+
 export async function getContracts(): Promise<IContract[]> {
-  const session = await getSession();
+  const session = await getSessionAsync();
   if (!session?.user?.id) {
     throw new Error('Unauthorized');
   }
 
   try {
-    const { tenant } = await createTenantKnex();
+    const { knex, tenant } = await createTenantKnex(requireTenantIdFromSession(session));
     if (!tenant) {
       throw new Error("tenant context not found");
     }
 
-    return await Contract.getAll();
+    return await Contract.getAll(knex, tenant);
   } catch (error) {
     console.error('Error fetching contracts:', error);
     if (error instanceof Error) {
@@ -84,13 +93,13 @@ export async function getContracts(): Promise<IContract[]> {
 }
 
 export async function getContractTemplates(): Promise<IContract[]> {
-  const session = await getSession();
+  const session = await getSessionAsync();
   if (!session?.user?.id) {
     throw new Error('Unauthorized');
   }
 
   try {
-    const { tenant } = await createTenantKnex();
+    const { tenant } = await createTenantKnex(requireTenantIdFromSession(session));
     if (!tenant) {
       throw new Error('tenant context not found');
     }
@@ -107,18 +116,18 @@ export async function getContractTemplates(): Promise<IContract[]> {
 }
 
 export async function getContractsWithClients(): Promise<IContractWithClient[]> {
-  const session = await getSession();
+  const session = await getSessionAsync();
   if (!session?.user?.id) {
     throw new Error('Unauthorized');
   }
 
   try {
-    const { tenant } = await createTenantKnex();
+    const { knex, tenant } = await createTenantKnex(requireTenantIdFromSession(session));
     if (!tenant) {
       throw new Error("tenant context not found");
     }
 
-    return await Contract.getAllWithClients();
+    return await Contract.getAllWithClients(knex, tenant);
   } catch (error) {
     console.error('Error fetching contracts with clients:', error);
     if (error instanceof Error) {
@@ -129,18 +138,18 @@ export async function getContractsWithClients(): Promise<IContractWithClient[]> 
 }
 
 export async function getContractById(contractId: string): Promise<IContract | null> {
-  const session = await getSession();
+  const session = await getSessionAsync();
   if (!session?.user?.id) {
     throw new Error('Unauthorized');
   }
 
   try {
-    const { tenant } = await createTenantKnex();
+    const { knex, tenant } = await createTenantKnex(requireTenantIdFromSession(session));
     if (!tenant) {
       throw new Error("tenant context not found");
     }
 
-    const contract = await Contract.getById(contractId);
+    const contract = await Contract.getById(knex, tenant, contractId);
     if (contract) {
       return { ...contract, is_template: false };
     }
@@ -161,8 +170,11 @@ export async function getContractById(contractId: string): Promise<IContract | n
 }
 
 export async function getContractLineMappings(contractId: string): Promise<IContractLineMapping[]> {
-  await ensureSession();
-  const { knex, tenant } = await createTenantKnex();
+  const session = await getSessionAsync();
+  if (!session?.user?.id) {
+    throw new Error('Unauthorized');
+  }
+  const { knex, tenant } = await createTenantKnex(requireTenantIdFromSession(session));
   if (!tenant) {
     throw new Error('tenant context not found');
   }
@@ -170,8 +182,11 @@ export async function getContractLineMappings(contractId: string): Promise<ICont
 }
 
 export async function getDetailedContractLines(contractId: string): Promise<DetailedContractLine[]> {
-  await ensureSession();
-  const { knex, tenant } = await createTenantKnex();
+  const session = await getSessionAsync();
+  if (!session?.user?.id) {
+    throw new Error('Unauthorized');
+  }
+  const { knex, tenant } = await createTenantKnex(requireTenantIdFromSession(session));
   if (!tenant) {
     throw new Error('tenant context not found');
   }
@@ -183,18 +198,21 @@ export async function addContractLine(
   contractLineId: string,
   customRate?: number
 ): Promise<IContractLineMapping> {
-  await ensureSession();
-  const currentUser = await getCurrentUser();
+  const session = await getSessionAsync();
+  if (!session?.user?.id) {
+    throw new Error('Unauthorized');
+  }
+  const currentUser = await getCurrentUserAsync();
   if (!currentUser) {
     throw new Error('Unauthorized');
   }
 
-  const { knex, tenant } = await createTenantKnex();
+  const { knex, tenant } = await createTenantKnex(requireTenantIdFromSession(session));
   if (!tenant) {
     throw new Error('tenant context not found');
   }
 
-  const canUpdate = await hasPermission(currentUser, 'billing', 'delete', knex);
+  const canUpdate = await hasPermissionAsync(currentUser, 'billing', 'delete');
   if (!canUpdate) {
     throw new Error('Permission denied: Cannot modify contract lines');
   }
@@ -205,18 +223,21 @@ export async function addContractLine(
 }
 
 export async function removeContractLine(contractId: string, contractLineId: string): Promise<void> {
-  await ensureSession();
-  const currentUser = await getCurrentUser();
+  const session = await getSessionAsync();
+  if (!session?.user?.id) {
+    throw new Error('Unauthorized');
+  }
+  const currentUser = await getCurrentUserAsync();
   if (!currentUser) {
     throw new Error('Unauthorized');
   }
 
-  const { knex, tenant } = await createTenantKnex();
+  const { knex, tenant } = await createTenantKnex(requireTenantIdFromSession(session));
   if (!tenant) {
     throw new Error('tenant context not found');
   }
 
-  const canUpdate = await hasPermission(currentUser, 'billing', 'update', knex);
+  const canUpdate = await hasPermissionAsync(currentUser, 'billing', 'update');
   if (!canUpdate) {
     throw new Error('Permission denied: Cannot modify contract lines');
   }
@@ -230,7 +251,7 @@ export async function updateContractLineAssociation(
   updateData: Partial<IContractLineMapping>
 ): Promise<IContractLineMapping> {
   await ensureSession();
-  const currentUser = await getCurrentUser();
+  const currentUser = await getCurrentUserAsync();
   if (!currentUser) {
     throw new Error('Unauthorized');
   }
@@ -240,7 +261,7 @@ export async function updateContractLineAssociation(
     throw new Error('tenant context not found');
   }
 
-  const canUpdate = await hasPermission(currentUser, 'billing', 'update', knex);
+  const canUpdate = await hasPermissionAsync(currentUser, 'billing', 'update');
   if (!canUpdate) {
     throw new Error('Permission denied: Cannot modify contract lines');
   }
@@ -255,7 +276,7 @@ export async function updateContractLineRate(
   billingTiming?: 'arrears' | 'advance'
 ): Promise<void> {
   await ensureSession();
-  const currentUser = await getCurrentUser();
+  const currentUser = await getCurrentUserAsync();
   if (!currentUser) {
     throw new Error('Unauthorized');
   }
@@ -265,7 +286,7 @@ export async function updateContractLineRate(
     throw new Error('tenant context not found');
   }
 
-  const canUpdate = await hasPermission(currentUser, 'billing', 'update', knex);
+  const canUpdate = await hasPermissionAsync(currentUser, 'billing', 'update');
   if (!canUpdate) {
     throw new Error('Permission denied: Cannot modify contract lines');
   }
@@ -288,19 +309,19 @@ export async function isContractLineAttached(contractId: string, contractLineId:
 export async function createContract(
   contractData: Omit<IContract, 'contract_id' | 'tenant' | 'created_at' | 'updated_at'>
 ): Promise<IContract> {
-  const session = await getSession();
+  const session = await getSessionAsync();
   if (!session?.user?.id) {
     throw new Error('Unauthorized');
   }
 
-  const { tenant } = await createTenantKnex();
+  const { knex, tenant } = await createTenantKnex();
   if (!tenant) {
     throw new Error("tenant context not found");
   }
 
   try {
     const { tenant: _, ...safeContractData } = contractData as any;
-    return await Contract.create(safeContractData);
+    return await Contract.create(knex, tenant, safeContractData);
   } catch (error) {
     console.error('Error creating contract:', error);
     if (error instanceof Error) {
@@ -314,7 +335,7 @@ export async function updateContract(
   contractId: string,
   updateData: Partial<IContract>
 ): Promise<IContract> {
-  const session = await getSession();
+  const session = await getSessionAsync();
   if (!session?.user?.id) {
     throw new Error('Unauthorized');
   }
@@ -326,7 +347,7 @@ export async function updateContract(
 
   try {
     // Attempt to load standard contract first; fall back to template
-    const currentContract = await Contract.getById(contractId);
+    const currentContract = await Contract.getById(knex, tenant, contractId);
     if (!currentContract) {
       const template = await ContractTemplateModel.getById(contractId);
       if (!template) {
@@ -383,7 +404,7 @@ export async function updateContract(
 
     // If trying to set contract to draft, check if it has invoices
     if (updateData.status === 'draft') {
-      const hasInvoices = await Contract.hasInvoices(contractId);
+      const hasInvoices = await Contract.hasInvoices(knex, tenant, contractId);
       if (hasInvoices) {
         throw new Error('Cannot set contract to draft because it has associated invoices. Contracts with invoices cannot be set to draft.');
       }
@@ -397,7 +418,7 @@ export async function updateContract(
         .select('client_id');
 
       for (const cc of clientContracts) {
-        const hasActiveContract = await Contract.hasActiveContractForClient(cc.client_id, contractId);
+        const hasActiveContract = await Contract.hasActiveContractForClient(knex, tenant, cc.client_id, contractId);
         if (hasActiveContract) {
           throw new Error('Client already has an active contract. To create a new active contract, terminate their current contract or save this contract as a draft.');
         }
@@ -405,13 +426,13 @@ export async function updateContract(
     }
 
     const { tenant: _, ...safeUpdateData } = updateData as any;
-    const updated = await Contract.update(contractId, safeUpdateData);
+    const updated = await Contract.update(knex, tenant, contractId, safeUpdateData);
 
     // After updating, check if an expired contract should be reactivated based on end dates
     if (currentContract.status === 'expired') {
-      await Contract.checkAndReactivateExpiredContract(contractId);
+      await Contract.checkAndReactivateExpiredContract(knex, tenant, contractId);
       // Re-fetch the contract to get the potentially updated status
-      const reactivatedContract = await Contract.getById(contractId);
+      const reactivatedContract = await Contract.getById(knex, tenant, contractId);
       return reactivatedContract!;
     }
 
@@ -426,16 +447,21 @@ export async function updateContract(
 }
 
 export async function checkContractHasInvoices(contractId: string): Promise<boolean> {
-  const session = await getSession();
+  const session = await getSessionAsync();
   if (!session?.user?.id) {
     throw new Error('Unauthorized');
   }
 
-  return await Contract.hasInvoices(contractId);
+  const { knex, tenant } = await createTenantKnex();
+  if (!tenant) {
+    throw new Error("tenant context not found");
+  }
+
+  return await Contract.hasInvoices(knex, tenant, contractId);
 }
 
 export async function deleteContract(contractId: string): Promise<void> {
-  const session = await getSession();
+  const session = await getSessionAsync();
   if (!session?.user?.id) {
     throw new Error('Unauthorized');
   }
@@ -452,7 +478,7 @@ export async function deleteContract(contractId: string): Promise<void> {
       return;
     }
 
-    await Contract.delete(contractId);
+    await Contract.delete(knex, tenant, contractId);
   } catch (error) {
     console.error('Error deleting contract:', error);
     if (error instanceof Error) {
@@ -463,18 +489,18 @@ export async function deleteContract(contractId: string): Promise<void> {
 }
 
 export async function getContractLinesForContract(contractId: string): Promise<any[]> {
-  const session = await getSession();
+  const session = await getSessionAsync();
   if (!session?.user?.id) {
     throw new Error('Unauthorized');
   }
 
   try {
-    const { tenant } = await createTenantKnex();
+    const { knex, tenant } = await createTenantKnex();
     if (!tenant) {
       throw new Error("tenant context not found");
     }
 
-    return await Contract.getContractLines(contractId);
+    return await Contract.getContractLines(knex, tenant, contractId);
   } catch (error) {
     console.error(`Error fetching contract lines for contract ${contractId}:`, error);
     if (error instanceof Error) {
@@ -495,7 +521,7 @@ export interface IContractSummary {
 }
 
 export async function getContractSummary(contractId: string): Promise<IContractSummary> {
-  const session = await getSession();
+  const session = await getSessionAsync();
   if (!session?.user?.id) {
     throw new Error('Unauthorized');
   }
@@ -514,13 +540,15 @@ export async function getContractSummary(contractId: string): Promise<IContractS
     if (templateRecord) {
       const templateLineCount = await knex('contract_template_lines')
         .where({ template_id: contractId, tenant })
-        .count<{ count: string }>('* as count');
-      lineCountRaw = templateLineCount[0]?.count;
+        .count('* as count')
+        .first() as { count: string } | undefined;
+      lineCountRaw = templateLineCount?.count;
     } else {
       const result = await knex('contract_lines')
         .where({ contract_id: contractId, tenant })
-        .count<{ count: string }>('* as count');
-      lineCountRaw = result[0]?.count;
+        .count('* as count')
+        .first() as { count: string } | undefined;
+      lineCountRaw = result?.count;
     }
 
     const hasPoRequired = await knex.schema.hasColumn('client_contracts', 'po_required');
@@ -596,13 +624,18 @@ export async function getContractSummary(contractId: string): Promise<IContractS
 }
 
 export async function checkClientHasActiveContract(clientId: string, excludeContractId?: string): Promise<boolean> {
-  const session = await getSession();
+  const session = await getSessionAsync();
   if (!session?.user?.id) {
     throw new Error('Unauthorized');
   }
 
+  const { knex, tenant } = await createTenantKnex();
+  if (!tenant) {
+    throw new Error("tenant context not found");
+  }
+
   try {
-    return await Contract.hasActiveContractForClient(clientId, excludeContractId);
+    return await Contract.hasActiveContractForClient(knex, tenant, clientId, excludeContractId);
   } catch (error) {
     console.error(`Error checking active contract for client ${clientId}:`, error);
     throw error;
@@ -610,7 +643,7 @@ export async function checkClientHasActiveContract(clientId: string, excludeCont
 }
 
 export async function getContractAssignments(contractId: string): Promise<IContractAssignmentSummary[]> {
-  const session = await getSession();
+  const session = await getSessionAsync();
   if (!session?.user?.id) {
     throw new Error('Unauthorized');
   }
@@ -715,7 +748,7 @@ export interface IContractOverview {
  * Get comprehensive contract overview including contract lines, services, and estimated value
  */
 export async function getContractOverview(contractId: string): Promise<IContractOverview> {
-  const session = await getSession();
+  const session = await getSessionAsync();
   if (!session?.user?.id) {
     throw new Error('Unauthorized');
   }

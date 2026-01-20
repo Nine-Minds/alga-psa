@@ -1,10 +1,11 @@
 import { redirect } from 'next/navigation';
-import { ClientPortalSignIn, ClientPortalTenantDiscovery, PortalSwitchPrompt } from '@alga-psa/auth/client';
-import { I18nWrapper } from '@alga-psa/ui/lib/i18n/I18nWrapper';
-import { getTenantBrandingByDomain, getTenantLocaleByDomain } from 'server/src/lib/actions/tenant-actions/getTenantBrandingByDomain';
-import { getSession } from 'server/src/lib/auth/getSession';
+import { ClientPortalSignIn, PortalSwitchPrompt } from '@alga-psa/auth/client';
+import { ClientPortalTenantDiscovery } from '@alga-psa/client-portal/components';
+import { I18nWrapper } from '@alga-psa/tenancy/components';
+import { getTenantBrandingByDomain, getTenantLocaleByDomain } from '@alga-psa/tenancy/actions';
+import { getSession } from '@alga-psa/auth';
 import { isValidTenantSlug } from '@shared/utils/tenantSlug';
-import { UserSession } from 'server/src/lib/models/UserSession';
+import { UserSession } from '@alga-psa/db/models/UserSession';
 
 export default async function ClientSignInPage({
   searchParams,

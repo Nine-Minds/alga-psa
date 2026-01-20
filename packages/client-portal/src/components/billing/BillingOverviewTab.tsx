@@ -7,9 +7,9 @@ import { Package, FileText, AlertCircle } from 'lucide-react';
 import BucketUsageChart from './BucketUsageChart';
 import type {
   IClientContractLine
-} from 'server/src/interfaces/billing.interfaces';
-import type { InvoiceViewModel } from 'server/src/interfaces/invoice.interfaces';
-import type { ClientBucketUsageResult } from 'server/src/lib/actions/client-portal-actions/client-billing-metrics';
+} from '@alga-psa/types';
+import type { InvoiceViewModel } from '@alga-psa/types';
+import type { ClientBucketUsageResult } from '@alga-psa/client-portal/actions';
 import { Skeleton } from '@alga-psa/ui/components/Skeleton';
 import PlanDetailsDialog from './PlanDetailsDialog';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';

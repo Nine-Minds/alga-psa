@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Card } from '@alga-psa/ui/components/Card';
-import { OnboardingWizard } from '@alga-psa/ui/components/onboarding/OnboardingWizard';
+import { OnboardingWizard } from '@alga-psa/onboarding/components';
 
 export default function OnboardingTestPage() {
   const [showWizard, setShowWizard] = useState(false);

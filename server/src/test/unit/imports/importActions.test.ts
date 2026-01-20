@@ -20,15 +20,15 @@ const mockRegistry = {
   clear: vi.fn(),
 };
 
-vi.mock('server/src/lib/actions/user-actions/userActions', () => ({
+vi.mock('@alga-psa/users/actions', () => ({
   getCurrentUser: vi.fn(),
 }));
 
-vi.mock('server/src/lib/auth/rbac', () => ({
+vi.mock('@alga-psa/auth', () => ({
   hasPermission: vi.fn(),
 }));
 
-vi.mock('server/src/lib/db', () => ({
+vi.mock('@alga-psa/db', () => ({
   createTenantKnex: vi.fn().mockResolvedValue({ tenant: 'tenant-1', knex: {} }),
 }));
 
@@ -52,12 +52,12 @@ vi.mock('@/lib/imports/CsvImporter', () => ({
   CsvImporter: vi.fn(() => ({ sourceType: 'csv_upload', parse: vi.fn() })),
 }));
 
-const { getCurrentUser } = await import('server/src/lib/actions/user-actions/userActions');
-const { hasPermission } = await import('server/src/lib/auth/rbac');
+const { getCurrentUser } = await import('@alga-psa/users/actions');
+const { hasPermission } = await import('@alga-psa/auth');
 const { getAssetFieldDefinitions } = await import('@/lib/imports/assetFieldDefinitions');
 const { CsvImporter } = await import('@/lib/imports/CsvImporter');
 
-const actions = await import('@/lib/actions/import-actions/importActions');
+const actions = await import('@/lib/imports/importActions');
 
 describe('import actions', () => {
 beforeEach(() => {

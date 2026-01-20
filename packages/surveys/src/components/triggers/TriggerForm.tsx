@@ -2,7 +2,7 @@
 
 import { useEffect, useId, useMemo, useState } from 'react';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
-import { useToast } from 'server/src/hooks/use-toast';
+import { useToast } from '@alga-psa/ui';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Switch } from '@alga-psa/ui/components/Switch';
 import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect';
@@ -10,7 +10,7 @@ import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { X } from 'lucide-react';
-import { BoardPicker } from 'server/src/components/settings/general/BoardPicker';
+import { BoardPicker } from '@alga-psa/ui/components/settings/general/BoardPicker';
 import { PrioritySelect } from '@alga-psa/tickets/components/PrioritySelect';
 import type { SurveyTemplate, SurveyTrigger } from '@alga-psa/surveys/actions/surveyActions';
 import {

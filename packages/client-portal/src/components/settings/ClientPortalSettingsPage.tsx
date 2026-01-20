@@ -6,8 +6,8 @@ import { CustomTabs } from '@alga-psa/ui/components/CustomTabs';
 import { ClientDetailsSettings } from './ClientDetailsSettings';
 import { UserManagementSettings } from './UserManagementSettings';
 import ClientAccount from '../account/ClientAccount';
-import { DrawerProvider } from "server/src/context/DrawerContext";
-import { checkClientPortalPermissions } from 'server/src/lib/actions/client-portal-actions/clientUserActions';
+import { DrawerProvider } from "@alga-psa/ui";
+import { checkClientPortalPermissions } from '@alga-psa/client-portal/actions';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 

@@ -6,8 +6,8 @@ import { DatePicker } from '@alga-psa/ui/components/DatePicker';
 import { Card, CardHeader, CardTitle, CardContent } from '@alga-psa/ui/components/Card';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { BarChart, Clock } from 'lucide-react';
-import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
-import type { ClientUsageMetricResult } from 'server/src/lib/actions/client-portal-actions/client-billing-metrics';
+import { ColumnDefinition } from '@alga-psa/types';
+import type { ClientUsageMetricResult } from '@alga-psa/client-portal/actions';
 import { Skeleton } from '@alga-psa/ui/components/Skeleton';
 import BucketUsageHistoryChart from './BucketUsageHistoryChart';
 

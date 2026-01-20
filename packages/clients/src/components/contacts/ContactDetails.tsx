@@ -1,12 +1,12 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { IContact } from 'server/src/interfaces/contact.interfaces';
+import { IContact } from '@alga-psa/types';
 import type { IClient } from '@alga-psa/types';
 import type { IDocument } from '@alga-psa/types';
-import { IInteraction } from 'server/src/interfaces/interaction.interfaces';
-import { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
-import { ITag } from 'server/src/interfaces/tag.interfaces';
+import { IInteraction } from '@alga-psa/types';
+import { IUserWithRoles } from '@alga-psa/types';
+import { ITag } from '@alga-psa/types';
 import { Flex, Text, Heading } from '@radix-ui/themes';
 import { Button } from '@alga-psa/ui/components/Button';
 import { ExternalLink, Pencil, Trash2 } from 'lucide-react';
@@ -18,27 +18,26 @@ import { DatePicker } from '@alga-psa/ui/components/DatePicker';
 import CustomTabs from '@alga-psa/ui/components/CustomTabs';
 import BackNav from '@alga-psa/ui/components/BackNav';
 import InteractionsFeed from '../interactions/InteractionsFeed';
-import { useDrawer } from "server/src/context/DrawerContext";
-import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
+import { useDrawer } from "@alga-psa/ui";
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import { Card } from '@alga-psa/ui/components/Card';
 import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContainer';
-import { getContactAvatarUrlAction } from 'server/src/lib/actions/avatar-actions';
-import { updateContact, getContactByContactNameId, deleteContact } from 'server/src/lib/actions/contact-actions/contactActions';
-import { validateEmailAddress, validatePhoneNumber, validateContactName, validateRole } from 'server/src/lib/utils/clientFormValidation';
+import { getCurrentUserAsync, getContactAvatarUrlActionAsync } from '../../lib/usersHelpers';
+import { updateContact, getContactByContactNameId, deleteContact } from '@alga-psa/clients/actions';
+import { validateEmailAddress, validatePhoneNumber, validateContactName, validateRole } from '@alga-psa/validation';
 import Documents from '@alga-psa/documents/components/Documents';
 import ContactDetailsEdit from './ContactDetailsEdit';
-import { useToast } from 'server/src/hooks/use-toast';
+import { useToast } from '@alga-psa/ui';
 import ContactTickets from './ContactTickets';
 import { getTicketFormOptions } from '@alga-psa/tickets/actions/optimizedTicketActions';
-import { ITicketCategory } from 'server/src/interfaces/ticket.interfaces';
-import { IBoard } from 'server/src/interfaces/board.interface';
+import { ITicketCategory } from '@alga-psa/types';
+import { IBoard } from '@alga-psa/types';
 import { SelectOption } from '@alga-psa/ui/components/CustomSelect';
 import { ClientPicker } from '../clients/ClientPicker';
-import { TagManager } from 'server/src/components/tags';
-import { findTagsByEntityIds } from 'server/src/lib/actions/tagActions';
-import { useTags } from 'server/src/context/TagContext';
-import ContactAvatarUpload from '@alga-psa/client-portal/components/contacts/ContactAvatarUpload';
+import { TagManager } from '@alga-psa/ui/components';
+import { findTagsByEntityIds } from '@alga-psa/tags/actions';
+import { useTags } from '@alga-psa/ui';
+import ContactAvatarUpload from './ContactAvatarUpload';
 import ClientAvatar from '@alga-psa/ui/components/ClientAvatar';
 import { getClientById, getAllCountries, ICountry } from '@alga-psa/clients/actions';
 import ClientDetails from '../clients/ClientDetails';
@@ -270,7 +269,7 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
   useEffect(() => {
     const fetchUser = async () => {
       try {
-        const user = await getCurrentUser();
+        const user = await getCurrentUserAsync();
         setCurrentUser(user);
       } catch (error) {
         console.error('Error fetching current user:', error);
@@ -322,7 +321,7 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
       if (userId && contact.tenant) {
         try {
           const [contactAvatarUrl, fetchedTags] = await Promise.all([
-            getContactAvatarUrlAction(contact.contact_name_id, contact.tenant),
+            getContactAvatarUrlActionAsync(contact.contact_name_id, contact.tenant),
             findTagsByEntityIds([contact.contact_name_id], 'contact')
           ]);
           
@@ -849,10 +848,8 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
         <div className="mr-4">
           <ContactAvatarUpload
             contactId={editedContact.contact_name_id}
-            contactName={editedContact.full_name}
-            avatarUrl={avatarUrl}
-            userType="internal"
-            onAvatarChange={(newAvatarUrl) => {
+            currentAvatarUrl={avatarUrl}
+            onAvatarUpdated={(newAvatarUrl) => {
               console.log("ContactDetails: Avatar URL changed:", newAvatarUrl);
               setAvatarUrl(newAvatarUrl);
             }}

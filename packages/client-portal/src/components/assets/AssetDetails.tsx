@@ -1,6 +1,6 @@
 'use client';
 
-import { Asset } from 'server/src/interfaces/asset.interfaces';
+import { Asset } from '@alga-psa/types';
 import { Card } from '@alga-psa/ui/components/Card';
 
 interface AssetDetailsProps {

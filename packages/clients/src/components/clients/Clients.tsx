@@ -1,7 +1,7 @@
 'use client';
 import React, { useState, useEffect, useCallback, memo } from 'react';
 import type { IClient } from '@alga-psa/types';
-import { ITag } from 'server/src/interfaces/tag.interfaces';
+import { ITag } from '@alga-psa/types';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import QuickAddClient from './QuickAddClient';
@@ -14,8 +14,8 @@ import {
   markClientInactiveWithContacts,
   markClientActiveWithContacts,
 } from '@alga-psa/clients/actions';
-import { findTagsByEntityIds, findAllTagsByType } from 'server/src/lib/actions/tagActions';
-import { TagFilter } from 'server/src/components/tags';
+import { findTagsByEntityIds, findAllTagsByType } from '@alga-psa/tags/actions';
+import { TagFilter } from '@alga-psa/ui/components';
 import { useRouter } from 'next/navigation';
 import { useSearchParams } from 'next/navigation';
 import ClientsGrid from './ClientsGrid';
@@ -24,7 +24,7 @@ import ViewSwitcher, { ViewSwitcherOption } from '@alga-psa/ui/components/ViewSw
 import { TrashIcon, MoreVertical, CloudDownload, Upload, LayoutGrid, List, Search, XCircle, Power, RotateCcw } from 'lucide-react';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
-import { useUserPreference } from 'server/src/hooks/useUserPreference';
+import { useUserPreference } from '@alga-psa/users/hooks';
 import ClientsImportDialog from './ClientsImportDialog';
 import { Dialog, DialogContent, DialogFooter } from '@alga-psa/ui/components/Dialog';
 import { Input } from '@alga-psa/ui/components/Input';
@@ -32,8 +32,8 @@ import Drawer from '@alga-psa/ui/components/Drawer';
 import ClientDetails from './ClientDetails';
 import { useAutomationIdAndRegister } from '@alga-psa/ui/ui-reflection/useAutomationIdAndRegister';
 import toast from 'react-hot-toast';
-import { handleError } from 'server/src/lib/utils/errorHandling';
-import { useTagPermissions } from 'server/src/hooks/useTagPermissions';
+import { handleError } from '@alga-psa/ui';
+import { useTagPermissions } from '@alga-psa/ui';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 
 const COMPANY_VIEW_MODE_SETTING = 'client_list_view_mode';
@@ -1031,16 +1031,17 @@ const Clients: React.FC = () => {
 
             {/* Tag Filter */}
             <TagFilter
-              allTags={allUniqueTags}
+              tags={allUniqueTags}
               selectedTags={selectedTags}
-              onTagSelect={(tag) => {
-                setSelectedTags(prev => 
-                  prev.includes(tag) 
+              onToggleTag={(tag: string) => {
+                setSelectedTags(prev =>
+                  prev.includes(tag)
                     ? prev.filter(t => t !== tag)
                     : [...prev, tag]
                 );
                 setCurrentPage(1); // Reset to first page when changing filter
               }}
+              onClearTags={() => setSelectedTags([])}
             />
 
             {/* Reset Filters Button */}

@@ -5,11 +5,11 @@ import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import {
   getClientProjectPhases,
   getClientProjectTasks
-} from 'server/src/lib/actions/client-portal-actions/client-project-details';
+} from '@alga-psa/client-portal/actions';
 import { format } from 'date-fns';
-import { getDateFnsLocale } from 'server/src/lib/utils/dateFnsLocale';
+import { getDateFnsLocale } from '@alga-psa/ui';
 import TaskDocumentUpload from './TaskDocumentUpload';
-import { IClientPortalConfig, DEFAULT_CLIENT_PORTAL_CONFIG } from 'server/src/interfaces/project.interfaces';
+import { IClientPortalConfig, DEFAULT_CLIENT_PORTAL_CONFIG } from '@alga-psa/types';
 import { ChevronRight, ChevronDown, Calendar, Clock, User, CheckCircle2, Circle, AlertCircle } from 'lucide-react';
 
 interface Phase {

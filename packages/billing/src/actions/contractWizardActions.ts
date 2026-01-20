@@ -4,28 +4,28 @@ import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 
-import { createTenantKnex } from 'server/src/lib/db';
-import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
-import { hasPermission } from 'server/src/lib/auth/rbac';
-import ContractLine from 'server/src/lib/models/contractLine';
-import ContractLineFixedConfig from 'server/src/lib/models/contractLineFixedConfig';
-import { ContractLineServiceConfigurationService } from 'server/src/lib/services/contractLineServiceConfigurationService';
+import { createTenantKnex } from '@alga-psa/db';
+import { getCurrentUserAsync, hasPermissionAsync, getSessionAsync, getAnalyticsAsync } from '../lib/authHelpers';
+
+
+import ContractLine from '../models/contractLine';
+import ContractLineFixedConfig from '../models/contractLineFixedConfig';
+import { ContractLineServiceConfigurationService } from '../services/contractLineServiceConfigurationService';
 import {
   getContractLineServicesWithConfigurations,
   getTemplateLineServicesWithConfigurations,
 } from './contractLineServiceActions';
-import { getSession } from 'server/src/lib/auth/getSession';
-import { ensureTemplateLineSnapshot } from 'server/src/lib/repositories/contractLineRepository';
-import { fetchDetailedContractLines } from 'server/src/lib/repositories/contractLineRepository';
+
+import { ensureTemplateLineSnapshot, fetchDetailedContractLines } from '../repositories/contractLineRepository';
 import {
   IContractLineServiceBucketConfig,
   IContractLineServiceHourlyConfig,
   IContractLineServiceUsageConfig,
-} from 'server/src/interfaces/contractLineServiceConfiguration.interfaces';
+} from '@alga-psa/types';
 import {
   BucketOverlayInput,
   upsertBucketOverlayInTransaction
-} from 'server/src/lib/actions/bucketOverlayActions';
+} from './bucketOverlayActions';
 
 // ---------------------- Template wizard types ----------------------
 
@@ -199,7 +199,7 @@ export async function createContractTemplateFromWizard(
 ): Promise<ContractWizardResult> {
   const isDraft = options?.isDraft ?? false;
   const isBypass = process.env.E2E_AUTH_BYPASS === 'true';
-  const currentUser = isBypass ? ({} as any) : await getCurrentUser();
+  const currentUser = isBypass ? ({} as any) : await getCurrentUserAsync();
   if (!currentUser && !isBypass) {
     throw new Error('No authenticated user found');
   }
@@ -211,8 +211,8 @@ export async function createContractTemplateFromWizard(
 
   return withTransaction(knex, async (trx: Knex.Transaction) => {
     if (!isBypass) {
-      const canCreateBilling = await hasPermission(currentUser, 'billing', 'create', trx);
-      const canUpdateBilling = await hasPermission(currentUser, 'billing', 'update', trx);
+      const canCreateBilling = await hasPermissionAsync(currentUser, 'billing', 'create');
+      const canUpdateBilling = await hasPermissionAsync(currentUser, 'billing', 'update');
       if (!canCreateBilling || !canUpdateBilling) {
         throw new Error('Permission denied: Cannot create billing templates');
       }
@@ -637,7 +637,7 @@ export async function createClientContractFromWizard(
 ): Promise<ContractWizardResult> {
   const isDraft = options?.isDraft ?? false;
   const isBypass = process.env.E2E_AUTH_BYPASS === 'true';
-  const currentUser = isBypass ? ({} as any) : await getCurrentUser();
+  const currentUser = isBypass ? ({} as any) : await getCurrentUserAsync();
   if (!currentUser && !isBypass) {
     throw new Error('No authenticated user found');
   }
@@ -649,8 +649,8 @@ export async function createClientContractFromWizard(
 
   return withTransaction(knex, async (trx: Knex.Transaction) => {
     if (!isBypass) {
-      const canCreateBilling = await hasPermission(currentUser, 'billing', 'create', trx);
-      const canUpdateBilling = await hasPermission(currentUser, 'billing', 'update', trx);
+      const canCreateBilling = await hasPermissionAsync(currentUser, 'billing', 'create');
+      const canUpdateBilling = await hasPermissionAsync(currentUser, 'billing', 'update');
       if (!canCreateBilling || !canUpdateBilling) {
         throw new Error('Permission denied: Cannot create billing contracts');
       }
@@ -1114,7 +1114,7 @@ export async function createClientContractFromWizard(
 // ---------------------------------------------------------------------------
 
 export async function checkTemplateNameExists(templateName: string): Promise<boolean> {
-  const session = await getSession();
+  const session = await getSessionAsync();
   if (!session?.user?.id) {
     throw new Error('Unauthorized');
   }
@@ -1137,7 +1137,7 @@ export async function checkTemplateNameExists(templateName: string): Promise<boo
 // ---------------------------------------------------------------------------
 
 export async function listContractTemplatesForWizard(): Promise<TemplateOption[]> {
-  const session = await getSession();
+  const session = await getSessionAsync();
   if (!session?.user?.id) {
     throw new Error('Unauthorized');
   }
@@ -1170,7 +1170,7 @@ export async function listContractTemplatesForWizard(): Promise<TemplateOption[]
 export async function getContractTemplateSnapshotForClientWizard(
   templateId: string
 ): Promise<ClientTemplateSnapshot> {
-  const session = await getSession();
+  const session = await getSessionAsync();
   if (!session?.user?.id) {
     throw new Error('Unauthorized');
   }

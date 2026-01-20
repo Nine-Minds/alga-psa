@@ -9,9 +9,9 @@ import {
   deleteClientLocation,
   setDefaultClientLocation 
 } from '@alga-psa/clients/actions';
-import { getActiveTaxRegions } from 'server/src/lib/actions/taxSettingsActions';
+import { getActiveTaxRegionsAsync } from '../../lib/billingHelpers';
 import { getAllCountries, ICountry } from '@alga-psa/clients/actions';
-import { ITaxRegion } from 'server/src/interfaces/tax.interfaces';
+import { ITaxRegion } from '@alga-psa/types';
 import CountryPicker from '@alga-psa/ui/components/CountryPicker';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
@@ -25,7 +25,7 @@ import { Switch } from '@alga-psa/ui/components/Switch';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Plus, Edit2, Trash2, MapPin, Star } from 'lucide-react';
-import { useToast } from 'server/src/hooks/use-toast';
+import { useToast } from '@alga-psa/ui';
 import { useAutomationIdAndRegister } from '@alga-psa/ui/ui-reflection/useAutomationIdAndRegister';
 import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContainer';
 import { ReflectionParentContext } from '@alga-psa/ui/ui-reflection/ReflectionParentContext';
@@ -407,7 +407,7 @@ export default function ClientLocations({ clientId, isEditing }: ClientLocations
 
   const loadTaxRegions = async () => {
     try {
-      const regions = await getActiveTaxRegions();
+      const regions = await getActiveTaxRegionsAsync();
       setTaxRegions(regions);
     } catch (error) {
       console.error('Error loading tax regions:', error);

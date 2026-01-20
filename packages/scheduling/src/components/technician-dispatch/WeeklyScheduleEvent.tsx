@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Trash, ExternalLink, MoreVertical } from 'lucide-react';
-import { IScheduleEntry } from 'server/src/interfaces/schedule.interfaces';
+import { IScheduleEntry } from '@alga-psa/types';
 import { getEventColors } from './utils';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { Button } from '@alga-psa/ui/components/Button';
@@ -10,7 +10,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger
 } from '@alga-psa/ui/components/DropdownMenu';
-import { useIsCompactEvent } from 'server/src/hooks/useIsCompactEvent';
+import { useIsCompactEvent } from '@alga-psa/ui/hooks';
 
 interface WeeklyScheduleEventProps {
   event: IScheduleEntry;

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef } from 'react';
-import { IProjectPhase } from 'server/src/interfaces/project.interfaces';
+import { IProjectPhase } from '@alga-psa/types';
 import { Pencil, Trash2, GripVertical } from 'lucide-react';
 import { Button } from '@alga-psa/ui/components/Button';
 import { TextArea } from '@alga-psa/ui/components/TextArea';

@@ -1,5 +1,5 @@
-import { ITimeEntry, ITimePeriodView } from 'server/src/interfaces';
-import { TaxRegion } from 'server/src/types/types.d';
+import { ITimeEntry, ITimePeriodView } from '@alga-psa/types';
+import { TaxRegion } from '@alga-psa/types';
 
 export interface Service {
   id: string;

@@ -1,7 +1,7 @@
 import { Metadata } from 'next';
 import { Suspense } from 'react';
 import AssetFormSkeleton from '@alga-psa/ui/components/skeletons/AssetFormSkeleton';
-import AssetFormClient from './AssetFormClient';
+import { AssetFormClient } from '@alga-psa/assets/components';
 
 interface AssetEditPageProps {
   params: Promise<{

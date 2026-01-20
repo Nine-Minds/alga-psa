@@ -6,8 +6,8 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { Download, FileSpreadsheet, CheckCircle, Info, ExternalLink } from 'lucide-react';
-import { formatDate } from 'server/src/lib/utils/formatters';
-import type { AccountingExportBatch } from 'server/src/interfaces/accountingExport.interfaces';
+import { formatDate } from '@alga-psa/core';
+import type { AccountingExportBatch } from '@alga-psa/types';
 
 interface XeroCsvExportPanelProps {
   /** The export batch to display download options for */

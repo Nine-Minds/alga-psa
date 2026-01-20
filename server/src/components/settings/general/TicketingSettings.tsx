@@ -1,14 +1,14 @@
 'use client';
 
+
 import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
 import CustomTabs from '@alga-psa/ui/components/CustomTabs';
-import NumberingSettings from './NumberingSettings';
 import BoardsSettings from './BoardsSettings';
-import CategoriesSettings from './CategoriesSettings';
-import DisplaySettings from './DisplaySettings';
 import StatusSettings from './StatusSettings';
-import PrioritySettings from './PrioritySettings';
+import { CategoriesSettings } from '@alga-psa/tickets/components';
+import { DisplaySettings } from '@alga-psa/tickets/components';
+import { NumberingSettings, PrioritySettings } from '@alga-psa/reference-data/components';
 
 const TicketingSettingsRefactored = (): React.JSX.Element => {
   const searchParams = useSearchParams();

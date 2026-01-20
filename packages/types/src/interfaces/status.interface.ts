@@ -2,6 +2,9 @@ import { TenantEntity } from ".";
 
 export type ItemType = 'project' | 'ticket' | 'project_task' | 'interaction';
 
+/** Alias for ItemType - status types for tickets, projects, etc. */
+export type StatusItemType = ItemType;
+
 export interface IStatus extends TenantEntity {
   status_id: string;
   name: string;

@@ -8,8 +8,8 @@ import { Input } from '@alga-psa/ui/components/Input';
 import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect';
 import { createAsset } from '../actions/assetActions';
 import type { CreateAssetRequest, IClient } from '@alga-psa/types';
-import { ClientPicker } from '@alga-psa/clients/components/clients/ClientPicker';
-import { getAllClients } from '@alga-psa/clients/actions';
+import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
+import { getAllClientsForAssets } from '../actions/clientLookupActions';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 
 interface QuickAddAssetProps {
@@ -120,7 +120,7 @@ export function QuickAddAsset({ clientId, onAssetAdded, onClose, defaultOpen = f
     const fetchClients = async () => {
       try {
         if (!clientId) {
-          const clientsData = await getAllClients(false);
+          const clientsData = await getAllClientsForAssets(false);
           setClients(clientsData);
         }
       } catch (error) {

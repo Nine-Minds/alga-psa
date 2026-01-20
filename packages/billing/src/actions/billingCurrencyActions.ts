@@ -1,7 +1,7 @@
 'use server';
 
 import { Temporal } from '@js-temporal/polyfill';
-import { createTenantKnex } from 'server/src/lib/db';
+import { createTenantKnex } from '@alga-psa/db';
 
 export async function resolveClientBillingCurrency(clientId: string, asOfDate?: string): Promise<string> {
   const { knex, tenant } = await createTenantKnex();

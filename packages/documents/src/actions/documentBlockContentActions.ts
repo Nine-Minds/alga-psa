@@ -4,12 +4,12 @@ import { createTenantKnex } from '@alga-psa/db';
 import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
-import Document from 'server/src/lib/models/document';
-import DocumentAssociation from 'server/src/models/document-association';
-import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
-import { CacheFactory } from 'server/src/lib/cache/CacheFactory';
+import Document from '../models/document';
+import DocumentAssociation from '@alga-psa/documents/models/documentAssociation';
+import { getCurrentUserAsync } from '../lib/authHelpers';
+import { CacheFactory } from '../cache/CacheFactory';
 import type { IDocument, IDocumentAssociationInput } from '@alga-psa/types';
-import { publishEvent } from 'server/src/lib/eventBus/publishers';
+import { publishEvent } from '@alga-psa/event-bus/publishers';
 
 interface BlockContentInput {
   block_data: any; // JSON data from block editor
@@ -35,7 +35,7 @@ export async function createBlockDocument(
   }
 
   // Get current user
-  const currentUser = await getCurrentUser();
+  const currentUser = await getCurrentUserAsync();
   if (!currentUser) {
     throw new Error('No authenticated user found');
   }

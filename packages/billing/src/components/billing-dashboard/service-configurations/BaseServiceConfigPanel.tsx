@@ -6,8 +6,8 @@ import { Label } from '@alga-psa/ui/components/Label';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { AlertCircle } from 'lucide-react';
-import { IContractLineServiceConfiguration } from 'server/src/interfaces/contractLineServiceConfiguration.interfaces';
-import { IService } from 'server/src/interfaces/billing.interfaces';
+import { IContractLineServiceConfiguration } from '@alga-psa/types';
+import { IService } from '@alga-psa/types';
 import { ConfigurationTypeSelector } from './ConfigurationTypeSelector';
 
 interface BaseServiceConfigPanelProps {

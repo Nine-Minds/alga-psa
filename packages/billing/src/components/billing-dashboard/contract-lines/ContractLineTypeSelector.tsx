@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
-import { PLAN_TYPE_OPTIONS } from 'server/src/constants/billing';
+import { PLAN_TYPE_OPTIONS } from '@alga-psa/billing/constants/billing';
 // Removed Card import as we'll use divs for custom styling
 import { Clock, Package, Shapes } from 'lucide-react'; // Import original icons
 

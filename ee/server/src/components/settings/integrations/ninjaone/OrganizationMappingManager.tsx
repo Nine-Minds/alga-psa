@@ -12,15 +12,15 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@alga
 import { Button } from '@alga-psa/ui/components/Button';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Building2, Link2, Link2Off, RefreshCw, Check } from 'lucide-react';
-import { ClientPicker } from '@/components/clients/ClientPicker';
+import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
 import {
   getNinjaOneOrganizationMappings,
   updateNinjaOneOrganizationMapping,
   syncNinjaOneOrganizations,
 } from '../../../../lib/actions/integrations/ninjaoneActions';
-import { getAllClients } from '@/lib/actions/client-actions/clientActions';
+import { getAllClients } from '@alga-psa/clients/actions';
 import { RmmOrganizationMapping } from '../../../../interfaces/rmm.interfaces';
-import { IClient } from '@/interfaces/client.interfaces';
+import type { IClient } from '@alga-psa/types';
 
 interface OrganizationMappingManagerProps {
   onMappingChanged?: () => void;

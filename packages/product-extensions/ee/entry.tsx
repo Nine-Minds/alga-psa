@@ -2,7 +2,7 @@ import Link from 'next/link';
 import ExtensionIframe from './ExtensionIframe';
 import DockerExtensionIframe from './DockerExtensionIframe';
 import { getInstallInfo } from '@ee/lib/actions/extensionDomainActions';
-import { buildExtUiSrc } from 'server/src/lib/extensions/assets/url.shared';
+import { buildExtUiSrc } from './lib/extensions/assets/url.shared';
 
 export const metadata = { title: 'Extension' };
 export const dynamic = 'force-dynamic';

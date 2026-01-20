@@ -13,6 +13,18 @@ export async function syncStandardTemplates(): Promise<void> {
     console.log('[Startup Task] Starting syncStandardTemplates...');
     try {
         // Corrected path: Removed 'server/' prefix assuming cwd is the server directory
+        const asmScriptProjectDir = path.resolve(process.cwd(), 'src/invoice-templates/assemblyscript');
+        const ascEntrypoint = path.resolve(asmScriptProjectDir, 'node_modules/assemblyscript/dist/asc.js');
+        try {
+            await fs.access(ascEntrypoint);
+        } catch {
+            console.warn(
+                `[Startup Task] Skipping syncStandardTemplates: AssemblyScript compiler missing (${ascEntrypoint}). ` +
+                `Reinstall deps in ${asmScriptProjectDir} (e.g. npm install) to enable recompilation.`
+            );
+            return;
+        }
+
         const standardTemplatesDir = path.resolve(process.cwd(), 'src/invoice-templates/assemblyscript/standard');
         console.log(`[Startup Task] Checking standard templates in: ${standardTemplatesDir}`);
 

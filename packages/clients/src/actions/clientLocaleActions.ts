@@ -1,10 +1,10 @@
 'use server';
 
-import { createTenantKnex } from 'server/src/lib/db';
+import { createTenantKnex } from '@alga-psa/db';
 import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { SupportedLocale, isSupportedLocale } from '@alga-psa/ui/lib/i18n/config';
-import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
+import { getCurrentUserAsync } from '../lib/usersHelpers';
 
 /**
  * Update client's default locale for all contacts
@@ -13,7 +13,7 @@ export async function updateClientLocaleAction(
   clientId: string,
   locale: SupportedLocale
 ) {
-  const user = await getCurrentUser();
+  const user = await getCurrentUserAsync();
   if (!user) {
     throw new Error('User not found');
   }
@@ -66,7 +66,7 @@ export async function updateClientLocaleAction(
 export async function getClientLocaleAction(
   clientId: string
 ): Promise<SupportedLocale | null> {
-  const user = await getCurrentUser();
+  const user = await getCurrentUserAsync();
   if (!user) {
     return null;
   }

@@ -12,39 +12,46 @@ import type {
 } from '@alga-psa/types';
 import Ticket from '../models/ticket';
 import { revalidatePath } from 'next/cache';
-import { getTicketAttributes } from 'server/src/lib/actions/policyActions';
+import { getTicketAttributes } from '@alga-psa/auth/actions';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { withTransaction } from '@alga-psa/db';
-import { createTenantKnex } from 'server/src/lib/db';
+import { createTenantKnex } from '@alga-psa/db';
 import { getCurrentUser } from '@alga-psa/auth/getCurrentUser';
 import { Knex } from 'knex';
-import { deleteEntityTags } from 'server/src/lib/utils/tagCleanup';
+import { deleteEntityTags } from '@alga-psa/tags/lib/tagCleanup';
 import { 
   ticketSchema, 
   ticketUpdateSchema, 
   ticketAttributesQuerySchema,
   ticketListItemSchema,
   ticketListFiltersSchema
-} from 'server/src/lib/schemas/ticket.schema';
+} from '../schemas/ticket.schema';
 import { z } from 'zod';
 import { validateData } from '@alga-psa/validation';
-import { AssetAssociationModel } from 'server/src/models/asset';
-import { publishEvent } from 'server/src/lib/eventBus/publishers';
-import { getEventBus } from 'server/src/lib/eventBus';
-import { getEmailEventChannel } from 'server/src/lib/notifications/emailChannel';
+import { publishEvent } from '@alga-psa/event-bus/publishers';
+import { getEventBus } from '@alga-psa/event-bus';
 import {
   TicketCreatedEvent,
   TicketUpdatedEvent,
   TicketClosedEvent,
   TicketResponseStateChangedEvent
-} from 'server/src/lib/eventBus/events';
+} from '@alga-psa/event-bus/events';
 
-import { analytics } from 'server/src/lib/analytics/posthog';
-import { AnalyticsEvents } from 'server/src/lib/analytics/events';
 import { TicketModel, CreateTicketInput } from '@alga-psa/shared/models/ticketModel';
-import { ServerEventPublisher } from 'server/src/lib/adapters/serverEventPublisher';
-import { ServerAnalyticsTracker } from 'server/src/lib/adapters/serverAnalyticsTracker';
-import { calculateItilPriority } from 'server/src/lib/utils/itilUtils';
+import { TicketModelEventPublisher } from '../lib/adapters/TicketModelEventPublisher';
+import { TicketModelAnalyticsTracker } from '../lib/adapters/TicketModelAnalyticsTracker';
+import { calculateItilPriority } from '@alga-psa/tickets/lib/itilUtils';
+
+// Email event channel constant - inlined to avoid circular dependency with notifications
+// Must match the value in @alga-psa/notifications/emailChannel
+const EMAIL_EVENT_CHANNEL = 'emailservice::v7';
+function getEmailEventChannel(): string {
+  return EMAIL_EVENT_CHANNEL;
+}
+
+function captureAnalytics(_event: string, _properties?: Record<string, any>, _userId?: string): void {
+  // Intentionally no-op: avoid pulling analytics (and its tenancy/client-portal deps) into tickets.
+}
 
 // Helper function to safely convert dates
 function convertDates<T extends { entered_at?: Date | string | null, updated_at?: Date | string | null, closed_at?: Date | string | null, due_date?: Date | string | null }>(record: T): T {
@@ -130,8 +137,8 @@ export async function createTicketFromAsset(data: CreateTicketFromAssetData): Pr
             }
 
             // Server-specific: Create adapters for dependency injection
-            const eventPublisher = new ServerEventPublisher();
-            const analyticsTracker = new ServerAnalyticsTracker();
+            const eventPublisher = new TicketModelEventPublisher();
+            const analyticsTracker = new TicketModelAnalyticsTracker();
 
             // Use shared TicketModel for asset ticket creation
             const ticketResult = await TicketModel.createTicketFromAsset(
@@ -144,12 +151,15 @@ export async function createTicketFromAsset(data: CreateTicketFromAssetData): Pr
             );
 
             // Server-specific: Create the asset association
-            await AssetAssociationModel.create(trx, {
-                asset_id: data.asset_id,
-                entity_id: ticketResult.ticket_id,
-                entity_type: 'ticket',
-                relationship_type: 'affected'
-            }, currentUser.user_id);
+            await trx('asset_associations').insert({
+              tenant,
+              asset_id: data.asset_id,
+              entity_id: ticketResult.ticket_id,
+              entity_type: 'ticket',
+              relationship_type: 'affected',
+              created_by: currentUser.user_id,
+              created_at: new Date().toISOString(),
+            });
 
             // Server-specific: Get full ticket data for return
             const fullTicket = await trx('tickets')
@@ -246,8 +256,8 @@ export async function addTicket(data: FormData, user: IUser): Promise<ITicket|un
       };
 
       // Server-specific: Create adapters for dependency injection
-      const eventPublisher = new ServerEventPublisher();
-      const analyticsTracker = new ServerAnalyticsTracker();
+      const eventPublisher = new TicketModelEventPublisher();
+      const analyticsTracker = new TicketModelAnalyticsTracker();
 
       // Use shared TicketModel with retry logic
       const ticketResult = await TicketModel.createTicketWithRetry(
@@ -263,12 +273,15 @@ export async function addTicket(data: FormData, user: IUser): Promise<ITicket|un
 
       // Server-specific: Create asset association if asset_id is provided
       if (asset_id) {
-        await AssetAssociationModel.create(trx, {
+        await trx('asset_associations').insert({
+          tenant,
           asset_id: asset_id as string,
           entity_id: ticketResult.ticket_id,
           entity_type: 'ticket',
-          relationship_type: 'affected'
-        }, user.user_id);
+          relationship_type: 'affected',
+          created_by: user.user_id,
+          created_at: new Date().toISOString(),
+        });
       }
 
       // Server-specific: Handle assigned ticket event
@@ -643,7 +656,7 @@ export async function updateTicket(id: string, data: Partial<ITicket>, user: IUs
         });
 
         // Track ticket resolved analytics
-        analytics.capture(AnalyticsEvents.TICKET_RESOLVED, {
+        captureAnalytics('ticket_resolved', {
           time_to_resolution: currentTicket.entered_at ?
             Math.round((Date.now() - new Date(currentTicket.entered_at).getTime()) / 1000 / 60) : 0, // minutes
           priority_id: updatedTicket.priority_id,
@@ -664,7 +677,7 @@ export async function updateTicket(id: string, data: Partial<ITicket>, user: IUs
         });
 
         // Track ticket assignment analytics
-        analytics.capture(AnalyticsEvents.TICKET_ASSIGNED, {
+        captureAnalytics('ticket_assigned', {
           was_reassignment: !!currentTicket.assigned_to,
           time_to_assignment: currentTicket.entered_at && !currentTicket.assigned_to ?
             Math.round((Date.now() - new Date(currentTicket.entered_at).getTime()) / 1000 / 60) : 0, // minutes
@@ -683,7 +696,7 @@ export async function updateTicket(id: string, data: Partial<ITicket>, user: IUs
       }
       
       // Track general ticket update analytics
-      analytics.capture(AnalyticsEvents.TICKET_UPDATED, {
+      captureAnalytics('ticket_updated', {
         fields_updated: Object.keys(updateData),
         updated_priority: 'priority_id' in updateData,
         updated_status: 'status_id' in updateData,
@@ -1048,7 +1061,7 @@ async function deleteTicketTransactional(
     }
   });
 
-  analytics.capture('ticket_deleted', {
+  captureAnalytics('ticket_deleted', {
     was_resolved: !!ticket.closed_at,
     had_comments: false,
     age_in_days: ticket.entered_at ? 
@@ -1368,7 +1381,7 @@ export async function getTicketById(id: string, user: IUser): Promise<DetailedTi
     delete (detailedTicket as any).assigned_to_last_name;
 
     // Track ticket view analytics
-    analytics.capture('ticket_viewed', {
+    captureAnalytics('ticket_viewed', {
       ticket_id: id,
       status_id: ticket.status_id,
       status_name: ticket.status_name,

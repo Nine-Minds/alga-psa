@@ -2,7 +2,7 @@ import { describe, it, expect, beforeAll, afterAll, beforeEach, afterEach } from
 import { TestContext } from '../../../test-utils/testContext';
 import { setupCommonMocks } from '../../../test-utils/testMocks';
 import { addDocument } from '@alga-psa/documents/actions/documentActions';
-import { createContract } from 'server/src/lib/actions/contractActions';
+import { createContract } from '@alga-psa/billing/actions';
 import DocumentAssociation from 'server/src/models/document-association';
 import {
   canAccessDocument,

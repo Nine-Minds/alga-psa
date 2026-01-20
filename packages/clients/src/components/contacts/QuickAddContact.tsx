@@ -7,22 +7,22 @@ import { Input } from "@alga-psa/ui/components/Input";
 import { PhoneInput } from "@alga-psa/ui/components/PhoneInput";
 import { Label } from "@alga-psa/ui/components/Label";
 import { TextArea } from "@alga-psa/ui/components/TextArea";
-import { addContact } from 'server/src/lib/actions/contact-actions/contactActions';
+import { addContact } from '@alga-psa/clients/actions';
 import { ClientPicker } from '../clients/ClientPicker';
 import type { IClient } from '@alga-psa/types';
-import { IContact } from 'server/src/interfaces/contact.interfaces';
+import { IContact } from '@alga-psa/types';
 import { Switch } from '@alga-psa/ui/components/Switch';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
-import { useToast } from 'server/src/hooks/use-toast';
+import { useToast } from '@alga-psa/ui';
 import { getAllCountries, ICountry } from '@alga-psa/clients/actions';
 import {
   validateContactName,
   validateEmailAddress,
   validatePhoneNumber,
   validateNotes
-} from 'server/src/lib/utils/clientFormValidation';
-import { QuickAddTagPicker, PendingTag } from 'server/src/components/tags';
-import { createTagsForEntity } from 'server/src/lib/actions/tagActions';
+} from '@alga-psa/validation';
+import { QuickAddTagPicker, type PendingTag } from '@alga-psa/ui/components';
+import { createTagsForEntity } from '@alga-psa/tags/actions';
 
 interface QuickAddContactProps {
   isOpen: boolean;

@@ -465,6 +465,14 @@ export interface ITaxRate extends TenantEntity {
   description?: string;
   start_date: string;
   end_date?: string | null;
+  // Additional fields from tax.interfaces.ts for compatibility with UI components
+  tax_type?: 'VAT' | 'GST' | 'Sales Tax';
+  country_code?: string;
+  is_reverse_charge_applicable?: boolean;
+  is_composite?: boolean;
+  is_active?: boolean;
+  conditions?: Record<string, any>;
+  name?: string;
 }
 
 export interface IClientTaxRate extends TenantEntity {

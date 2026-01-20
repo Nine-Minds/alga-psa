@@ -1,18 +1,19 @@
 import { describe, expect, it, vi } from 'vitest';
 
-vi.mock('server/src/lib/models/user', () => ({
+vi.mock('@alga-psa/db/models/user', () => ({
   default: {
     getUserRolesWithPermissions: vi.fn(async () => [])
   }
 }));
 
-vi.mock('server/src/lib/db', () => ({
+vi.mock('@alga-psa/db', () => ({
   createTenantKnex: vi.fn(async () => ({ knex: {} }))
 }));
 
 describe('auth package exports', () => {
   it('exports permission utilities from package root', async () => {
-    const auth = await import('../index');
+    process.env.NEXTAUTH_SECRET = 'test-secret';
+    const auth = await import('@alga-psa/auth/rbac');
     expect(typeof auth.hasPermission).toBe('function');
     expect(typeof auth.checkMultiplePermissions).toBe('function');
 

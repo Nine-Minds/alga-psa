@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { TicketInterval } from 'server/src/types/interval-tracking';
-import { IntervalTrackingService } from 'server/src/services/IntervalTrackingService';
+import { TicketInterval } from '@alga-psa/types';
+import { IntervalTrackingService } from '@alga-psa/ui/services';
 import { IntervalItem } from './IntervalItem';
 import { formatDuration, calculateTotalDuration, secondsToMinutes } from './utils';
 import { Button } from '@alga-psa/ui/components/Button';
@@ -9,7 +9,7 @@ import { Card } from '@alga-psa/ui/components/Card';
 import { Switch } from '@alga-psa/ui/components/Switch';
 import { Label } from '@alga-psa/ui/components/Label';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
-import { ITimeEntry } from 'server/src/interfaces/timeEntry.interfaces';
+import { ITimeEntry } from '@alga-psa/types';
 import { Dialog, DialogContent, DialogFooter } from '@alga-psa/ui/components/Dialog';
 import TimeEntryDialog from '../time-entry/time-sheet/TimeEntryDialog';
 import { saveTimeEntry } from '../../../actions/timeEntryActions';

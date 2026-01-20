@@ -8,7 +8,7 @@ import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import { BucketOverlayInput, ContractWizardData } from '../ContractWizard';
 import { ServiceCatalogPicker, ServiceCatalogPickerItem } from '../ServiceCatalogPicker';
 import { Plus, X, Package, HelpCircle, Coins } from 'lucide-react';
-import { getCurrencySymbol } from 'server/src/constants/currency';
+import { getCurrencySymbol } from '@alga-psa/core';
 import { SwitchWithLabel } from '@alga-psa/ui/components/SwitchWithLabel';
 import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContainer';
 import { BucketOverlayFields } from '../BucketOverlayFields';

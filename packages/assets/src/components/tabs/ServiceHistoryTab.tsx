@@ -6,13 +6,13 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { Ticket } from 'lucide-react';
 import { getAssetLinkedTickets } from '../../actions/assetActions';
-import { formatDateTime } from 'server/src/lib/utils/dateTimeUtils';
+import { formatDateTime } from '@alga-psa/core';
 import type { Asset } from '@alga-psa/types';
 import { QuickAddTicket } from '@alga-psa/tickets/components/QuickAddTicket';
-import { cn } from 'server/src/lib/utils';
-import { useDrawer } from 'server/src/context/DrawerContext';
+import { cn } from '@alga-psa/ui';
+import { useDrawer } from '@alga-psa/ui';
 import { getConsolidatedTicketData } from '@alga-psa/tickets/actions/optimizedTicketActions';
-import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
+import { getCurrentUser } from '@alga-psa/users/actions';
 import TicketDetails from '@alga-psa/tickets/components/ticket/TicketDetails';
 import { toast } from 'react-hot-toast';
 

@@ -1,6 +1,6 @@
 import type { IDocument, PreviewResponse } from '@alga-psa/types';
 import { DocumentTypeHandler } from './DocumentTypeHandler';
-import { CacheFactory } from 'server/src/lib/cache/CacheFactory';
+import { CacheFactory } from '../cache/CacheFactory';
 import puppeteer from 'puppeteer';
 
 async function loadSharp() {

@@ -9,11 +9,11 @@ import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { Label } from '@alga-psa/ui/components/Label';
 import { RadioGroup } from '@alga-psa/ui/components/RadioGroup';
 import { DatePicker } from '@alga-psa/ui/components/DatePicker';
-import { IProjectTemplate } from 'server/src/interfaces/projectTemplate.interfaces';
-import { IClient } from 'server/src/interfaces/client.interfaces';
-import { useToast } from 'server/src/hooks/use-toast';
+import { IProjectTemplate } from '@alga-psa/types';
+import { IClient } from '@alga-psa/types';
+import { useToast } from '@alga-psa/ui';
 import { useRouter } from 'next/navigation';
-import { ClientPicker } from '@alga-psa/clients/components/clients/ClientPicker';
+import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
 import { getTemplates, applyTemplate } from '../../actions/projectTemplateActions';
 import { getAllClientsForProjects } from '../../actions/projectActions';
 

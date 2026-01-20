@@ -8,9 +8,9 @@ import { Input } from '@alga-psa/ui/components/Input';
 import { Plus, Trash, MoreVertical, Pencil, Play, Wand2 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { IProjectTemplate } from 'server/src/interfaces/projectTemplate.interfaces';
+import { IProjectTemplate } from '@alga-psa/types';
 import { toast } from 'react-hot-toast';
-import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
+import { ColumnDefinition } from '@alga-psa/types';
 import { getTemplates, getTemplateCategories, deleteTemplate } from '../../actions/projectTemplateActions';
 import CreateTemplateDialog from './CreateTemplateDialog';
 import AddTemplateDialog from './AddTemplateDialog';
@@ -21,7 +21,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@alga-psa/ui/components/DropdownMenu';
-import { useUserPreference } from 'server/src/hooks/useUserPreference';
+import { useUserPreference } from '@alga-psa/users/hooks';
 
 const PROJECT_TEMPLATES_PAGE_SIZE_KEY = 'project_templates_page_size';
 

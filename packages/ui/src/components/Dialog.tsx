@@ -1,3 +1,5 @@
+'use client';
+
 // server/src/components/ui/Dialog.tsx
 import React, { ReactNode, useEffect, useState, useRef } from 'react';
 import * as RadixDialog from '@radix-ui/react-dialog';

@@ -7,8 +7,8 @@ import { Badge } from '@alga-psa/ui/components/Badge';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@alga-psa/ui/components/Table';
 import { Search, Plus, Check } from 'lucide-react';
-import { IService } from 'server/src/interfaces/billing.interfaces';
-import { getServices } from 'server/src/lib/actions/serviceActions';
+import { IService } from '@alga-psa/types';
+import { getServices } from '@alga-psa/billing/actions';
 import { addServiceToContractLine } from '@alga-psa/billing/actions/contractLineServiceActions';
 
 interface ServiceSelectionDialogProps {

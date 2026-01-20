@@ -7,7 +7,6 @@ import type {
   CreateAssetRequest,
   IClient,
   IClientLocation,
-  IClientWithLocation,
   MobileDeviceAsset,
   NetworkDeviceAsset,
   PrinterAsset,
@@ -24,13 +23,12 @@ import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import Spinner from '@alga-psa/ui/components/Spinner';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { getAsset, updateAsset } from '../actions/assetActions';
-import { getAllClients, getClientLocations, getClientById } from '@alga-psa/clients/actions';
+import { getAllClientsForAssets, getClientLocationsForAssets } from '../actions/clientLookupActions';
 import { useRouter } from 'next/navigation';
 import { Monitor, Network, Server, Smartphone, Printer as PrinterIcon, Router, Shield, Radio, Scale, MapPin, ExternalLink } from 'lucide-react';
 import { Text } from '@radix-ui/themes';
 import { useRegisterUIComponent } from '@alga-psa/ui/ui-reflection/useRegisterUIComponent';
 import Drawer from '@alga-psa/ui/components/Drawer';
-import ClientDetails from '@alga-psa/clients/components/clients/ClientDetails';
 
 interface AssetFormProps {
   assetId: string;
@@ -87,9 +85,7 @@ export default function AssetForm({ assetId }: AssetFormProps) {
   const [selectedLocationId, setSelectedLocationId] = useState<string>('');
   const [customLocation, setCustomLocation] = useState('');
   const [isClientDrawerOpen, setIsClientDrawerOpen] = useState(false);
-  const [clientDrawerData, setClientDrawerData] = useState<IClientWithLocation | null>(null);
-  const [clientDrawerLoading, setClientDrawerLoading] = useState(false);
-  const [clientDrawerError, setClientDrawerError] = useState<string | null>(null);
+  const [clientDrawerData, setClientDrawerData] = useState<ClientOptionSummary | null>(null);
 
   useRegisterUIComponent({
     id: 'asset-edit-form',
@@ -216,7 +212,7 @@ export default function AssetForm({ assetId }: AssetFormProps) {
       try {
         setClientsLoading(true);
         setClientsError(null);
-        const clientList = await getAllClients(false);
+        const clientList = await getAllClientsForAssets(false);
         if (!isMounted) return;
         setClients(
           clientList.map((client: IClient) => ({
@@ -256,7 +252,7 @@ export default function AssetForm({ assetId }: AssetFormProps) {
       try {
         setLocationsLoading(true);
         setLocationsError(null);
-        const locations = await getClientLocations(formData.client_id);
+        const locations = await getClientLocationsForAssets(formData.client_id);
         if (!isMounted) return;
         setClientLocations(locations);
 
@@ -385,36 +381,22 @@ export default function AssetForm({ assetId }: AssetFormProps) {
     }));
   };
 
-  const handleOpenClientDrawer = async () => {
+  const handleOpenClientDrawer = () => {
     if (!formData.client_id) {
       return;
     }
 
-    setIsClientDrawerOpen(true);
-    setClientDrawerLoading(true);
-    setClientDrawerError(null);
+    const clientSummary =
+      clients.find((client) => client.id === formData.client_id) ??
+      { id: formData.client_id, name: formData.client_id };
 
-    try {
-      const clientData = await getClientById(formData.client_id);
-      if (!clientData) {
-        setClientDrawerError('Client record could not be found.');
-        setClientDrawerData(null);
-      } else {
-        setClientDrawerData(clientData);
-      }
-    } catch (err) {
-      console.error('Error loading client quick view:', err);
-      setClientDrawerError('Unable to load client details.');
-      setClientDrawerData(null);
-    } finally {
-      setClientDrawerLoading(false);
-    }
+    setClientDrawerData(clientSummary);
+    setIsClientDrawerOpen(true);
   };
 
   const handleCloseClientDrawer = () => {
     setIsClientDrawerOpen(false);
     setClientDrawerData(null);
-    setClientDrawerError(null);
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -1279,22 +1261,22 @@ export default function AssetForm({ assetId }: AssetFormProps) {
         isOpen={isClientDrawerOpen}
         onClose={handleCloseClientDrawer}
       >
-        {clientDrawerLoading && (
-          <div className="flex min-h-[200px] items-center justify-center gap-2 text-sm text-[rgb(var(--color-text-600))]">
-            <Spinner size="sm" className="text-primary-500" />
-            Loading client profile...
+        {clientDrawerData ? (
+          <div className="p-6 space-y-3">
+            <div>
+              <div className="text-sm text-[rgb(var(--color-text-600))]">Client</div>
+              <div className="text-lg font-semibold text-[rgb(var(--color-text-900))]">
+                {clientDrawerData.name}
+              </div>
+            </div>
+            <Link
+              href={`/msp/clients/${clientDrawerData.id}`}
+              className="inline-flex items-center gap-1 text-primary-600 hover:text-primary-700 hover:underline"
+            >
+              View client details <ExternalLink size={14} />
+            </Link>
           </div>
-        )}
-
-        {!clientDrawerLoading && clientDrawerError && (
-          <Alert variant="destructive">
-            <AlertDescription>{clientDrawerError}</AlertDescription>
-          </Alert>
-        )}
-
-        {!clientDrawerLoading && !clientDrawerError && clientDrawerData && (
-          <ClientDetails client={clientDrawerData} isInDrawer quickView />
-        )}
+        ) : null}
       </Drawer>
     </div>
   );

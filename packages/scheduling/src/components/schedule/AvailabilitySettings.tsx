@@ -15,7 +15,7 @@ import { Calendar } from '@alga-psa/ui/components/Calendar';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@alga-psa/ui/components/Table';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
-import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
+import { ColumnDefinition } from '@alga-psa/types';
 import toast from 'react-hot-toast';
 import { Plus, Trash2, Save } from 'lucide-react';
 import { useSession } from 'next-auth/react';
@@ -28,13 +28,13 @@ import {
   deleteAvailabilityException,
   IAvailabilitySetting,
   IAvailabilityException
-} from 'server/src/lib/actions/availabilitySettingsActions';
-import { getAllUsersBasic } from 'server/src/lib/actions/user-actions/userActions';
+} from '@alga-psa/scheduling/actions';
+import { getAllUsersBasic } from '@alga-psa/users/actions';
 import { IUser } from '@shared/interfaces/user.interfaces';
-import { getServices } from 'server/src/lib/actions/serviceActions';
-import { IService } from 'server/src/interfaces/billing.interfaces';
-import { getTeams } from 'server/src/lib/actions/team-actions/teamActions';
-import { ITeam } from 'server/src/interfaces';
+import { getServices } from '@alga-psa/scheduling/actions';
+import { IService } from '@alga-psa/types';
+import { getTeams } from '@alga-psa/teams/actions';
+import { ITeam } from '@alga-psa/types';
 
 const DAYS_OF_WEEK = [
   { value: 0, label: 'Sunday' },

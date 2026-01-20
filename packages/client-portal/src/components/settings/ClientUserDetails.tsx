@@ -2,9 +2,9 @@
 
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
-import type { IPermission, IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
+import type { IPermission, IUserWithRoles } from '@alga-psa/types';
 import { IUser, IRole } from '@shared/interfaces/user.interfaces';
-import { getCurrentUser, getUserRolesWithPermissions } from 'server/src/lib/actions/user-actions/userActions';
+import { getCurrentUser, getUserRolesWithPermissions } from '@alga-psa/users/actions';
 import { 
   getClientUserById, 
   updateClientUser, 
@@ -13,8 +13,8 @@ import {
   getClientUserRoles,
   assignClientUserRole,
   removeClientUserRole
-} from 'server/src/lib/actions/client-portal-actions/clientUserActions';
-import { useDrawer } from "server/src/context/DrawerContext";
+} from '@alga-psa/client-portal/actions';
+import { useDrawer } from "@alga-psa/ui";
 import { Input } from '@alga-psa/ui/components/Input';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Switch } from '@alga-psa/ui/components/Switch';

@@ -16,7 +16,7 @@ let tenantId: string | undefined;
 
 const enqueueWorkflow = vi.fn(async () => ({ enqueued: true }));
 
-vi.mock('@/lib/actions/user-actions/userActions', () => ({
+vi.mock('@alga-psa/users/actions', () => ({
   getCurrentUser: vi.fn(async () => ({ id: 'user-test-1' })),
 }));
 

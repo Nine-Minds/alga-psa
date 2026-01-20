@@ -6,8 +6,8 @@ import { Label } from '@alga-psa/ui/components/Label';
 import { Card } from '@alga-psa/ui/components/Card';
 import { Switch } from '@alga-psa/ui/components/Switch';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
-import { IContractLineServiceBucketConfig } from 'server/src/interfaces/contractLineServiceConfiguration.interfaces';
-import { BILLING_FREQUENCY_OPTIONS } from 'server/src/constants/billing';
+import { IContractLineServiceBucketConfig } from '@alga-psa/types';
+import { BILLING_FREQUENCY_OPTIONS } from '@alga-psa/billing/constants/billing';
 
 interface BucketServiceConfigPanelProps {
   configuration: Partial<IContractLineServiceBucketConfig>;

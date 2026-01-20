@@ -1,8 +1,9 @@
 'use server';
 
-import { createTenantKnex } from 'server/src/lib/db';
+import { createTenantKnex } from '@alga-psa/db';
 import type { IContractPricingSchedule } from '@alga-psa/types';
-import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
+import { getCurrentUserAsync, hasPermissionAsync, getSessionAsync, getAnalyticsAsync } from '../lib/authHelpers';
+
 
 /**
  * Get all pricing schedules for a contract
@@ -95,7 +96,7 @@ export async function createPricingSchedule(
     throw new Error('Tenant not found');
   }
 
-  const currentUser = await getCurrentUser();
+  const currentUser = await getCurrentUserAsync();
   if (!currentUser) {
     throw new Error('User not authenticated');
   }
@@ -175,7 +176,7 @@ export async function updatePricingSchedule(
     throw new Error('Tenant not found');
   }
 
-  const currentUser = await getCurrentUser();
+  const currentUser = await getCurrentUserAsync();
   if (!currentUser) {
     throw new Error('User not authenticated');
   }

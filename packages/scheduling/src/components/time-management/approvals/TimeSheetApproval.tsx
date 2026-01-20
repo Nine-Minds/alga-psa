@@ -7,14 +7,14 @@ import {
   ITimeSheetApprovalView,
   ITimeEntryWithWorkItem, 
   TimeSheetStatus 
-} from 'server/src/interfaces/timeEntry.interfaces';
+} from '@alga-psa/types';
 import { addCommentToTimeSheet, fetchTimeSheetComments } from '../../../actions/timeSheetActions';
 import { Check, Clock, Undo, ChevronDown, ChevronUp } from 'lucide-react';
-import { IWorkItem } from 'server/src/interfaces/workItem.interfaces';
+import { IWorkItem } from '@alga-psa/types';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Card, CardHeader, CardTitle, CardContent } from '@alga-psa/ui/components/Card';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
-import { IUser } from 'server/src/interfaces/auth.interfaces';
+import { IUser } from '@alga-psa/types';
 import { fetchWorkItemsForTimeSheet, saveTimeEntry } from '../../../actions/timeEntryActions';
 import { parseISO } from 'date-fns';
 import { Temporal } from '@js-temporal/polyfill';

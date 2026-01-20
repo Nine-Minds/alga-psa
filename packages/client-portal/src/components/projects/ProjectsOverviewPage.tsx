@@ -3,14 +3,14 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { getClientProjects } from 'server/src/lib/actions/client-portal-actions/client-projects';
+import { getClientProjects } from '@alga-psa/client-portal/actions';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Search, XCircle, ExternalLink } from 'lucide-react';
-import { IProject } from 'server/src/interfaces/project.interfaces';
-import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
-import { formatDateOnly } from 'server/src/lib/utils/dateTimeUtils';
+import { IProject } from '@alga-psa/types';
+import { ColumnDefinition } from '@alga-psa/types';
+import { formatDateOnly } from '@alga-psa/core';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 export default function ProjectsOverviewPage() {

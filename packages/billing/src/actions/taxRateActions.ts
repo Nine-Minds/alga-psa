@@ -1,13 +1,14 @@
 'use server'
 
 import { withTransaction } from '@alga-psa/db';
-import { ITaxRate, IService } from 'server/src/interfaces/billing.interfaces';
+import { ITaxRate, IService } from '@alga-psa/types';
 import { TaxService } from '../services/taxService';
 import { v4 as uuid4 } from 'uuid';
-import { createTenantKnex } from 'server/src/lib/db';
+import { createTenantKnex } from '@alga-psa/db';
 import { Knex } from 'knex';
-import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
-import { hasPermission } from 'server/src/lib/auth/rbac';
+import { getCurrentUserAsync, hasPermissionAsync, getSessionAsync, getAnalyticsAsync } from '../lib/authHelpers';
+
+
 
 export type DeleteTaxRateResult = {
   deleted: boolean;
@@ -16,12 +17,12 @@ export type DeleteTaxRateResult = {
 
 export async function getTaxRates(): Promise<ITaxRate[]> {
   try {
-    const currentUser = await getCurrentUser();
+    const currentUser = await getCurrentUserAsync();
     if (!currentUser) {
       throw new Error('No authenticated user found');
     }
 
-    if (!await hasPermission(currentUser, 'billing', 'read')) {
+    if (!await hasPermissionAsync(currentUser, 'billing', 'read')) {
       throw new Error('Permission denied: Cannot read tax rates');
     }
 
@@ -39,12 +40,12 @@ export async function getTaxRates(): Promise<ITaxRate[]> {
 
 export async function addTaxRate(taxRateData: Omit<ITaxRate, 'tax_rate_id'>): Promise<ITaxRate> {
   try {
-    const currentUser = await getCurrentUser();
+    const currentUser = await getCurrentUserAsync();
     if (!currentUser) {
       throw new Error('No authenticated user found');
     }
 
-    if (!await hasPermission(currentUser, 'billing', 'create')) {
+    if (!await hasPermissionAsync(currentUser, 'billing', 'create')) {
       throw new Error('Permission denied: Cannot create tax rates');
     }
 
@@ -79,12 +80,12 @@ export async function addTaxRate(taxRateData: Omit<ITaxRate, 'tax_rate_id'>): Pr
 
 export async function updateTaxRate(taxRateData: ITaxRate): Promise<ITaxRate> {
   try {
-    const currentUser = await getCurrentUser();
+    const currentUser = await getCurrentUserAsync();
     if (!currentUser) {
       throw new Error('No authenticated user found');
     }
 
-    if (!await hasPermission(currentUser, 'billing', 'update')) {
+    if (!await hasPermissionAsync(currentUser, 'billing', 'update')) {
       throw new Error('Permission denied: Cannot update tax rates');
     }
 
@@ -147,17 +148,17 @@ export async function updateTaxRate(taxRateData: ITaxRate): Promise<ITaxRate> {
 
 export async function deleteTaxRate(taxRateId: string): Promise<DeleteTaxRateResult> {
   try {
-    const currentUser = await getCurrentUser();
+    const currentUser = await getCurrentUserAsync();
     if (!currentUser) {
       throw new Error('No authenticated user found');
     }
 
     // Need both read and delete permissions since we're checking for affected services and potentially deleting
-    if (!await hasPermission(currentUser, 'billing', 'read')) {
+    if (!await hasPermissionAsync(currentUser, 'billing', 'read')) {
       throw new Error('Permission denied: Cannot read tax rate information');
     }
 
-    if (!await hasPermission(currentUser, 'billing', 'delete')) {
+    if (!await hasPermissionAsync(currentUser, 'billing', 'delete')) {
       throw new Error('Permission denied: Cannot delete tax rates');
     }
 
@@ -195,13 +196,13 @@ export async function deleteTaxRate(taxRateId: string): Promise<DeleteTaxRateRes
 
 export async function confirmDeleteTaxRate(taxRateId: string): Promise<void> {
   try {
-    const currentUser = await getCurrentUser();
+    const currentUser = await getCurrentUserAsync();
     if (!currentUser) {
       throw new Error('No authenticated user found');
     }
 
     // Need delete permission for tax rates and update permission for services
-    if (!await hasPermission(currentUser, 'billing', 'delete')) {
+    if (!await hasPermissionAsync(currentUser, 'billing', 'delete')) {
       throw new Error('Permission denied: Cannot delete tax rates');
     }
 

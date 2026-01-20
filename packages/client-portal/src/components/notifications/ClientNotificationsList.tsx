@@ -2,16 +2,16 @@
 
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { ActivityFilters, NotificationActivity } from "server/src/interfaces/activity.interfaces";
+import { ActivityFilters, NotificationActivity } from "@alga-psa/types";
 import { Button } from "@alga-psa/ui/components/Button";
 import { Card } from "@alga-psa/ui/components/Card";
-import { NotificationCard } from "@alga-psa/ui/components/user-activities/NotificationCard";
-import { fetchNotificationActivities } from "server/src/lib/actions/activity-actions/activityServerActions";
-import { NotificationSectionFiltersDialog } from "@alga-psa/ui/components/user-activities/filters/NotificationSectionFiltersDialog";
+import { NotificationCard } from "@alga-psa/workflows/components";
+import { fetchNotificationActivities } from "@alga-psa/workflows/actions";
+import { NotificationSectionFiltersDialog } from "@alga-psa/workflows/components";
 import { Filter, XCircleIcon } from 'lucide-react';
-import { useActivityDrawer } from "@alga-psa/ui/components/user-activities/ActivityDrawerProvider";
-import { getUnreadCountAction } from "server/src/lib/actions/internal-notification-actions/internalNotificationActions";
-import { getCurrentUser } from "server/src/lib/actions/user-actions/userActions";
+import { useActivityDrawer } from "@alga-psa/workflows/components";
+import { getUnreadCountAction } from "@alga-psa/notifications/actions";
+import { getCurrentUser } from "@alga-psa/users/actions";
 import { Badge } from "@alga-psa/ui/components/Badge";
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import CustomTabs from '@alga-psa/ui/components/CustomTabs';

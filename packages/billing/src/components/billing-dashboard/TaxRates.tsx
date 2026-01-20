@@ -11,12 +11,12 @@ import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { getTaxRates, addTaxRate, updateTaxRate, deleteTaxRate, confirmDeleteTaxRate, DeleteTaxRateResult } from '@alga-psa/billing/actions/taxRateActions';
 import { getActiveTaxRegions } from '@alga-psa/billing/actions/taxSettingsActions';
-import { ITaxRate, IService } from 'server/src/interfaces/billing.interfaces';
-import { ITaxRegion, ITaxRate as FullTaxRate } from 'server/src/interfaces/tax.interfaces';
+import { ITaxRate, IService } from '@alga-psa/types';
+import { ITaxRegion, ITaxRate as FullTaxRate } from '@alga-psa/types';
 import { v4 as uuidv4 } from 'uuid';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
-import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
-import { toPlainDate, parseDateSafe } from 'server/src/lib/utils/dateTimeUtils';
+import { ColumnDefinition } from '@alga-psa/types';
+import { toPlainDate, parseDateSafe } from '@alga-psa/core';
 import { Temporal } from '@js-temporal/polyfill';
 import { MoreVertical, Layers, Settings } from 'lucide-react';
 import {

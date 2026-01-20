@@ -1,12 +1,12 @@
 'use server'
 
 import { withTransaction } from '@alga-psa/db';
-import { createTenantKnex } from 'server/src/lib/db';
-import { ICreditReconciliationReport } from 'server/src/interfaces/billing.interfaces';
+import { createTenantKnex } from '@alga-psa/db';
+import { ICreditReconciliationReport } from '@alga-psa/types';
 import { v4 as uuidv4 } from 'uuid';
 import { Knex } from 'knex';
-import CreditReconciliationReport from 'server/src/lib/models/creditReconciliationReport';
-import { auditLog } from 'server/src/lib/logging/auditLog';
+import CreditReconciliationReport from '../models/creditReconciliationReport';
+import { auditLog } from '@alga-psa/db';
 import { resolveReconciliationReport } from './creditReconciliationActions';
 
 /**

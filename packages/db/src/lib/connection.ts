@@ -5,7 +5,7 @@
  */
 
 import Knex, { Knex as KnexType } from 'knex';
-import { getSecretProviderInstance } from '@alga-psa/core';
+import { getSecretProviderInstance } from '@alga-psa/core/server';
 
 // Create a map to store Knex instances
 const knexInstances: Map<string, KnexType> = new Map();

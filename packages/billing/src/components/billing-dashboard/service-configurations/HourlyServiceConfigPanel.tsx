@@ -7,7 +7,7 @@ import { Card } from '@alga-psa/ui/components/Card';
 import { Switch } from '@alga-psa/ui/components/Switch';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Button } from '@alga-psa/ui/components/Button';
-import { IContractLineServiceHourlyConfig, IUserTypeRate } from 'server/src/interfaces/contractLineServiceConfiguration.interfaces';
+import { IContractLineServiceHourlyConfig, IUserTypeRate } from '@alga-psa/types';
 import { Trash2 } from 'lucide-react';
 
 interface HourlyServiceConfigPanelProps {

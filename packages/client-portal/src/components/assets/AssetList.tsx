@@ -1,11 +1,11 @@
 'use client';
 
-import { Asset } from 'server/src/interfaces/asset.interfaces';
+import { Asset } from '@alga-psa/types';
 import { useState } from 'react';
 import { AssetDetails } from './AssetDetails';
 import { Dialog } from '@alga-psa/ui/components/Dialog';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
-import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
+import { ColumnDefinition } from '@alga-psa/types';
 
 interface AssetListProps {
   assets: Asset[];

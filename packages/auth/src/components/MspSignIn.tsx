@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Image from 'next/image';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@alga-psa/ui/components';
 import MspLoginForm from './MspLoginForm';
 import TwoFactorInput from './TwoFA';
 import Alert from './Alert';

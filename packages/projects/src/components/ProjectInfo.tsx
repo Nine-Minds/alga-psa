@@ -1,16 +1,16 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { IClient, IProject, IUserWithRoles } from 'server/src/interfaces';
-import { ITag } from 'server/src/interfaces/tag.interfaces';
+import { IClient, IProject, IUserWithRoles } from '@alga-psa/types';
+import { ITag } from '@alga-psa/types';
 import HoursProgressBar from './HoursProgressBar';
-import { calculateProjectCompletion } from 'server/src/lib/utils/projectUtils';
+import { calculateProjectCompletion } from '@alga-psa/projects/lib/projectUtils';
 import { Edit2, Save } from 'lucide-react';
 import BackNav from '@alga-psa/ui/components/BackNav';
 import { Button } from '@alga-psa/ui/components/Button';
-import { useDrawer } from "server/src/context/DrawerContext";
+import { useDrawer } from "@alga-psa/ui";
 import ProjectDetailsEdit from './ProjectDetailsEdit';
-import { TagManager } from 'server/src/components/tags';
+import { TagManager } from '@alga-psa/ui/components';
 import { toast } from 'react-hot-toast';
 import CreateTemplateDialog from './project-templates/CreateTemplateDialog';
 import ProjectMaterialsDrawer from './ProjectMaterialsDrawer';
@@ -105,14 +105,10 @@ export default function ProjectInfo({
       toast.error('Project has no client assigned');
       return;
     }
-    const client = clients.find((c) => c.client_id === clientId);
-    const currencyCode = (client as any)?.default_currency_code || 'USD';
     openDrawer(
       <ProjectMaterialsDrawer
         projectId={currentProject.project_id}
         clientId={clientId}
-        currencyCode={currencyCode}
-        onClose={() => closeDrawer()}
       />
     );
   };

@@ -1,18 +1,18 @@
 'use client';
 
-import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo, Suspense } from 'react';
 import type { IDocument } from '@alga-psa/types';
-import { IContact } from 'server/src/interfaces/contact.interfaces';
+import { IContact } from '@alga-psa/types';
 import type { IClient } from '@alga-psa/types';
-import { ITag } from 'server/src/interfaces/tag.interfaces';
+import { ITag } from '@alga-psa/types';
 import UserPicker from '@alga-psa/ui/components/UserPicker';
-import { TagManager } from 'server/src/components/tags';
-import { findTagsByEntityId } from 'server/src/lib/actions/tagActions';
-import { useTags } from 'server/src/context/TagContext';
-import { getAllUsersBasic } from 'server/src/lib/actions/user-actions/userActions';
-import { BillingCycleType } from 'server/src/interfaces/billing.interfaces';
+import { TagManager } from '@alga-psa/ui/components';
+import { findTagsByEntityId } from '@alga-psa/tags/actions';
+import { useTags } from '@alga-psa/ui';
+import { getAllUsersBasicAsync, getCurrentUserAsync } from '../../lib/usersHelpers';
+import { BillingCycleType } from '@alga-psa/types';
 import Documents from '@alga-psa/documents/components/Documents';
-import { validateCompanySize, validateAnnualRevenue, validateWebsiteUrl, validateIndustry, validateClientName } from 'server/src/lib/utils/clientFormValidation';
+import { validateCompanySize, validateAnnualRevenue, validateWebsiteUrl, validateIndustry, validateClientName } from '@alga-psa/validation';
 import ClientContactsList from '../contacts/ClientContactsList';
 import { Flex, Text, Heading } from '@radix-ui/themes';
 import { Switch } from '@alga-psa/ui/components/Switch';
@@ -34,18 +34,17 @@ import { QuickAddTicket } from '@alga-psa/tickets/components/QuickAddTicket';
 import { Button } from '@alga-psa/ui/components/Button';
 import { ExternalLink, Trash2 } from 'lucide-react';
 import BackNav from '@alga-psa/ui/components/BackNav';
-import TaxSettingsForm from 'server/src/components/TaxSettingsForm';
 import InteractionsFeed from '../interactions/InteractionsFeed';
-import { IInteraction } from 'server/src/interfaces/interaction.interfaces';
-import { useDrawer } from "server/src/context/DrawerContext";
+import { IInteraction } from '@alga-psa/types';
+import { useDrawer } from "@alga-psa/ui";
 import TimezonePicker from '@alga-psa/ui/components/TimezonePicker';
-import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
 import { IUser } from '@shared/interfaces/user.interfaces';
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import ClientAssets from './ClientAssets';
 import ClientTickets from './ClientTickets';
 import ClientLocations from './ClientLocations';
-import { IBoard, ITicket, ITicketCategory } from 'server/src/interfaces';
+import TaxSettingsForm from './TaxSettingsForm';
+import { IBoard, ITicket, ITicketCategory } from '@alga-psa/types';
 import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect';
 import { Card } from '@alga-psa/ui/components/Card';
 import { Input } from '@alga-psa/ui/components/Input';
@@ -57,14 +56,14 @@ import { getImageUrl } from '@alga-psa/documents/actions/documentActions';
 import ClientContractLineDashboard from './ClientContractLineDashboard';
 import { ClientNotesPanel } from './panels/ClientNotesPanel';
 import { toast } from 'react-hot-toast';
-import { handleError } from 'server/src/lib/utils/errorHandling';
+import { handleError } from '@alga-psa/ui';
 import EntityImageUpload from '@alga-psa/ui/components/EntityImageUpload';
 import { getTicketFormOptions } from '@alga-psa/tickets/actions/optimizedTicketActions';
 import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import { ClientLanguagePreference } from './ClientLanguagePreference';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import ClientSurveySummaryCard from '@alga-psa/surveys/components/ClientSurveySummaryCard';
-import type { SurveyClientSatisfactionSummary } from 'server/src/interfaces/survey.interface';
+import type { SurveyClientSatisfactionSummary } from '@alga-psa/types';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 
 
@@ -339,7 +338,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
   const handleDirectMarkInactive = async () => {
     try {
       // Fetch active contacts for this client
-      const { getContactsByClient } = await import('server/src/lib/actions/contact-actions/contactActions');
+      const { getContactsByClient } = await import('@alga-psa/clients/actions');
       const activeContacts = await getContactsByClient(editedClient.client_id, 'active');
 
       if (activeContacts.length > 0) {
@@ -368,7 +367,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
   const handleDirectReactivate = async () => {
     try {
       // Fetch inactive contacts for this client
-      const { getContactsByClient } = await import('server/src/lib/actions/contact-actions/contactActions');
+      const { getContactsByClient } = await import('@alga-psa/clients/actions');
       const inactiveContacts = await getContactsByClient(editedClient.client_id, 'inactive');
 
       if (inactiveContacts.length > 0) {
@@ -516,7 +515,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
   useEffect(() => {
     const fetchUser = async () => {
       try {
-        const user = await getCurrentUser();
+        const user = await getCurrentUserAsync();
         if (user) {
           setCurrentUser(prev => (prev?.user_id === user.user_id ? prev : user));
         }
@@ -533,7 +532,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
       if (internalUsers.length > 0) return;
       setIsLoadingUsers(true);
       try {
-        const users = await getAllUsersBasic();
+        const users = await getAllUsersBasicAsync();
         setInternalUsers(users);
       } catch (error) {
         console.error("Error fetching MSP users:", error);
@@ -582,7 +581,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
     // Check if client is being deactivated (is_inactive changing from false to true)
     if (field === 'is_inactive' && editedClient.is_inactive === false && value === true) {
       // Fetch active contacts for this client
-      const { getContactsByClient } = await import('server/src/lib/actions/contact-actions/contactActions');
+      const { getContactsByClient } = await import('@alga-psa/clients/actions');
       const activeContacts = await getContactsByClient(editedClient.client_id, 'active');
 
       if (activeContacts.length > 0) {
@@ -595,7 +594,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
     // Check if client is being reactivated (is_inactive changing from true to false)
     if (field === 'is_inactive' && editedClient.is_inactive === true && value === false) {
       // Fetch inactive contacts for this client
-      const { getContactsByClient } = await import('server/src/lib/actions/contact-actions/contactActions');
+      const { getContactsByClient } = await import('@alga-psa/clients/actions');
       const inactiveContacts = await getContactsByClient(editedClient.client_id, 'inactive');
 
       if (inactiveContacts.length > 0) {
@@ -1019,7 +1018,9 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
       label: "Tax Settings",
       content: (
         <div className="bg-white p-6 rounded-lg shadow-sm">
-          <TaxSettingsForm clientId={client.client_id} />
+          <Suspense fallback={<div>Loading tax settings...</div>}>
+            <TaxSettingsForm clientId={client.client_id} />
+          </Suspense>
         </div>
       )
     },

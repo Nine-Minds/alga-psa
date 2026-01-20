@@ -7,7 +7,7 @@ import { Input } from '@alga-psa/ui/components/Input';
 import { Label } from '@alga-psa/ui/components/Label';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Plus, ChevronDown, ChevronUp, Trash2, Package, Edit, Check, X } from 'lucide-react';
-import { IContract } from 'server/src/interfaces/contract.interfaces';
+import { IContract } from '@alga-psa/types';
 import { updateContractLine, upsertContractLineTerms } from '@alga-psa/billing/actions/contractLineAction';
 import {
   getDetailedContractLines,
@@ -32,7 +32,7 @@ import { CreateCustomContractLineDialog } from './CreateCustomContractLineDialog
 import { SwitchWithLabel } from '@alga-psa/ui/components/SwitchWithLabel';
 import { BucketOverlayFields } from './BucketOverlayFields';
 import { BucketOverlayInput } from './ContractWizard';
-import { getCurrencySymbol } from 'server/src/constants/currency';
+import { getCurrencySymbol } from '@alga-psa/core';
 
 interface ContractLinesProps {
   contract: IContract;

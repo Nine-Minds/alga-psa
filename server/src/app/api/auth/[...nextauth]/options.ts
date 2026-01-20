@@ -1,1 +1,1 @@
-export { getAuthOptions } from 'server/src/lib/auth/nextAuthOptions';
+export { getAuthOptions } from '@alga-psa/auth/nextAuthOptions';

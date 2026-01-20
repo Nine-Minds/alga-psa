@@ -1,12 +1,12 @@
 'use client';
 
 import React, { useState, useEffect, useImperativeHandle } from 'react';
-import { IProjectTask, IProjectTaskDependency, ITaskType, DependencyType } from 'server/src/interfaces/project.interfaces';
+import { IProjectTask, IProjectTaskDependency, ITaskType, DependencyType } from '@alga-psa/types';
 import { Button } from '@alga-psa/ui/components/Button';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Ban, GitBranch, Link2, Plus, Trash2 } from 'lucide-react';
 import { addTaskDependency, removeTaskDependency } from '../actions/projectTaskActions';
-import { useDrawer } from "server/src/context/DrawerContext";
+import { useDrawer } from "@alga-psa/ui";
 import TaskEdit from './TaskEdit';
 
 interface TaskDependenciesProps {

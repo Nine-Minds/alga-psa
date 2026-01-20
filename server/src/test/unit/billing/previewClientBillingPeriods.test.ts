@@ -75,7 +75,7 @@ describe('previewClientBillingPeriods', () => {
     };
     const { trx } = makeFakeTransaction(responses);
     currentTrx = trx;
-    const { previewClientBillingPeriods } = await import('server/src/lib/actions/billingCycleAnchorActions');
+    const { previewClientBillingPeriods } = await import('@alga-psa/billing/actions');
 
     const periods = await previewClientBillingPeriods('client-1', {
       count: 3,

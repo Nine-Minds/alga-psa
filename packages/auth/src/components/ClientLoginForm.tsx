@@ -1,18 +1,14 @@
 'use client'
 
 import { signIn } from 'next-auth/react';
-import { Button } from '@alga-psa/ui/components/Button';
-import { Input } from '@alga-psa/ui/components/Input';
-import { Label } from '@alga-psa/ui/components/Label';
+import { Button, Input, Label, Alert, AlertDescription } from '@alga-psa/ui/components';
 import { Eye, EyeOff } from 'lucide-react';
-import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { useRegisterUIComponent } from '@alga-psa/ui/ui-reflection/useRegisterUIComponent';
-import { FormComponent, FormFieldComponent, ButtonComponent } from '@alga-psa/ui/ui-reflection/types';
-import { withDataAutomationId } from '@alga-psa/ui/ui-reflection/withDataAutomationId';
-import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
-import SsoProviderButtons from '@/empty/components/auth/SsoProviderButtons';
+import { useRegisterUIComponent, withDataAutomationId } from '@alga-psa/ui/ui-reflection';
+import type { FormComponent, FormFieldComponent, ButtonComponent } from '@alga-psa/ui/ui-reflection';
+import { useTranslation } from '@alga-psa/ui/lib';
+import SsoProviderButtons from '@ee/components/auth/SsoProviderButtons';
 
 interface ClientLoginFormProps {
   callbackUrl: string;

@@ -1,3 +1,5 @@
+'use client';
+
 import React, { useMemo } from 'react';
 import { generateAvatarColor } from '../lib/colorUtils';
 

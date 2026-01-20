@@ -8,19 +8,12 @@ vi.mock('@alga-psa/core/logger', () => ({
   },
 }));
 
-vi.mock('server/src/lib/auth/getSession', () => ({
+vi.mock('@alga-psa/auth', () => ({
   getSession: vi.fn(),
 }));
 
-vi.mock('server/src/lib/utils/avatarUtils', () => ({
-  getUserAvatarUrl: vi.fn(async () => 'https://avatar.test/user.png'),
-}));
-
-vi.mock('server/src/lib/db', () => ({
-  createTenantKnex: vi.fn(async () => ({ knex: {}, tenant: 'tenant-1' })),
-}));
-
 vi.mock('@alga-psa/db', () => ({
+  createTenantKnex: vi.fn(async () => ({ knex: {}, tenant: 'tenant-1' })),
   withTransaction: vi.fn(async (_knex: unknown, callback: (trx: any) => Promise<any>) => {
     const user = {
       user_id: 'user-1',
@@ -68,7 +61,7 @@ afterEach(() => {
 
 describe('getCurrentUser', () => {
   it('returns user with roles and avatar when session has id and tenant', async () => {
-    const { getSession } = await import('server/src/lib/auth/getSession');
+    const { getSession } = await import('@alga-psa/auth');
     vi.mocked(getSession).mockResolvedValue({
       user: {
         id: 'user-1',
@@ -85,14 +78,14 @@ describe('getCurrentUser', () => {
   });
 
   it('returns null when session is missing', async () => {
-    const { getSession } = await import('server/src/lib/auth/getSession');
+    const { getSession } = await import('@alga-psa/auth');
     vi.mocked(getSession).mockResolvedValue(null);
 
     await expect(getCurrentUser()).resolves.toBeNull();
   });
 
   it('throws when tenant context mismatches session tenant', async () => {
-    const { getSession } = await import('server/src/lib/auth/getSession');
+    const { getSession } = await import('@alga-psa/auth');
     vi.mocked(getSession).mockResolvedValue({
       user: {
         id: 'user-1',
@@ -100,7 +93,7 @@ describe('getCurrentUser', () => {
       },
     } as any);
 
-    const { createTenantKnex } = await import('server/src/lib/db');
+    const { createTenantKnex } = await import('@alga-psa/db');
     vi.mocked(createTenantKnex).mockResolvedValue({ knex: {}, tenant: 'tenant-1' });
 
     await expect(getCurrentUser()).rejects.toThrow('Tenant context mismatch');

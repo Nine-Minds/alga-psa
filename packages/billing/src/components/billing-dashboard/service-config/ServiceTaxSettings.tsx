@@ -5,9 +5,9 @@ import { Switch } from '@alga-psa/ui/components/Switch';
 import { Card, CardHeader, CardContent, CardTitle, CardFooter } from '@alga-psa/ui/components/Card';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Button } from '@alga-psa/ui/components/Button';
-import { updateService } from 'server/src/lib/actions/serviceActions';
-import { IService } from 'server/src/interfaces/billing.interfaces';
-import { ITaxRate } from 'server/src/interfaces/tax.interfaces'; // Use ITaxRate
+import { updateService } from '@alga-psa/billing/actions';
+import { IService } from '@alga-psa/types';
+import { ITaxRate } from '@alga-psa/types'; // Use ITaxRate
 import { getTaxRates } from '@alga-psa/billing/actions/taxSettingsActions'; // Use getTaxRates
 
 interface ServiceTaxSettingsProps {

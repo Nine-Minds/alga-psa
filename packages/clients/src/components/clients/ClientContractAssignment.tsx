@@ -20,10 +20,10 @@ import {
 } from "@alga-psa/ui/components/Dialog"; // Removed DialogClose
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
-import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
-import { IContract } from 'server/src/interfaces/contract.interfaces';
-import { IClientContract } from 'server/src/interfaces/contract.interfaces';
-import { getContracts } from 'server/src/lib/actions/contractActions';
+import { ColumnDefinition } from '@alga-psa/types';
+import { IContract } from '@alga-psa/types';
+import { IClientContract } from '@alga-psa/types';
+import { getContractsAsync } from '../../lib/billingHelpers';
 import {
   getClientContracts,
   getDetailedClientContract,
@@ -86,7 +86,7 @@ const ClientContractAssignment: React.FC<ClientContractAssignmentProps> = ({ cli
 
       // Get all contracts and client contracts
       const [contracts, clientContractsData] = await Promise.all([
-        getContracts(),
+        getContractsAsync(),
         getClientContracts(clientId)
       ]);
 

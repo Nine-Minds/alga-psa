@@ -1,12 +1,15 @@
+'use server';
+
 import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
-import { createTenantKnex } from 'server/src/lib/db';
-import { toPlainDate } from 'server/src/lib/utils/dateTimeUtils';
+import { createTenantKnex } from '@alga-psa/db';
+import { toPlainDate } from '@alga-psa/core';
 import { v4 as uuidv4 } from 'uuid';
-import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
+
 import { getActionRegistry, TransactionIsolationLevel } from '@alga-psa/shared/workflow/core';
 import { getWorkflowRuntime } from '@alga-psa/shared/workflow/core';
 import { submitWorkflowEventAction } from '@alga-psa/workflows/actions/workflow-event-actions';
+import { getCurrentUserAsync, hasPermissionAsync, getSessionAsync, getAnalyticsAsync } from '../lib/authHelpers';
 
 
 
@@ -35,7 +38,7 @@ export async function processInvoiceEvent(executionId: string | undefined, event
  */
 export async function approveInvoice(invoiceId: string, executionId?: string): Promise<any> {
   const { knex } = await createTenantKnex();
-  const currentUser = await getCurrentUser();
+  const currentUser = await getCurrentUserAsync();
   if (!currentUser?.tenant) {
     throw new Error('No current user found');
   }  
@@ -79,7 +82,7 @@ export async function approveInvoice(invoiceId: string, executionId?: string): P
  */
 export async function rejectInvoice(invoiceId: string, reason: string, executionId?: string): Promise<any> {
   const { knex } = await createTenantKnex();
-  const currentUser = await getCurrentUser();
+  const currentUser = await getCurrentUserAsync();
   if (!currentUser?.tenant) {
     throw new Error('No current user found');
   }  
@@ -118,136 +121,3 @@ export async function rejectInvoice(invoiceId: string, reason: string, execution
   });
 }
 
-/**
- * Register invoice-specific actions with the action registry
- * This function should be called during application initialization
- */
-export function registerInvoiceActions(): void {
-  const registry = getActionRegistry();
-  
-  // Register action to update invoice status to approved
-  registry.registerDatabaseAction(
-    'UpdateInvoiceStatusToApproved',
-    'Update invoice status to approved',
-    [
-      { name: 'invoiceId', type: 'string', required: true, description: 'Invoice ID' },
-      { name: 'approvedBy', type: 'string', required: true, description: 'User who approved the invoice' }
-    ],
-    TransactionIsolationLevel.REPEATABLE_READ, // Use the enum value for isolation level
-    async (params, context) => {
-      // Make sure we have a transaction
-      if (!context.transaction) {
-        throw new Error('Transaction required for database action');
-      }
-      
-      // Update the invoice status
-      await context.transaction('invoices')
-        .where({ 
-          id: params.invoiceId,
-          tenant: context.tenant 
-        })
-        .update({ 
-          status: 'approved',
-          approved_by: params.approvedBy,
-          approved_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        });
-      
-      return { 
-        updated: true,
-        invoiceId: params.invoiceId,
-        status: 'approved'
-      };
-    }
-  );
-  
-  // Register action to update invoice status to rejected
-  registry.registerDatabaseAction(
-    'UpdateInvoiceStatusToRejected',
-    'Update invoice status to rejected',
-    [
-      { name: 'invoiceId', type: 'string', required: true, description: 'Invoice ID' },
-      { name: 'rejectedBy', type: 'string', required: true, description: 'User who rejected the invoice' },
-      { name: 'reason', type: 'string', required: false, description: 'Reason for rejection' }
-    ],
-    TransactionIsolationLevel.REPEATABLE_READ, // Use the enum value for isolation level
-    async (params, context) => {
-      // Make sure we have a transaction
-      if (!context.transaction) {
-        throw new Error('Transaction required for database action');
-      }
-      
-      // Update the invoice status
-      await context.transaction('invoices')
-        .where({ 
-          id: params.invoiceId,
-          tenant: context.tenant 
-        })
-        .update({ 
-          status: 'rejected',
-          rejected_by: params.rejectedBy,
-          rejection_reason: params.reason || null,
-          rejected_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        });
-      
-      return { 
-        updated: true,
-        invoiceId: params.invoiceId,
-        status: 'rejected'
-      };
-    }
-  );
-  
-  // Register action to send notification
-  registry.registerSimpleAction(
-    'SendInvoiceNotification',
-    'Send notification about invoice status change',
-    [
-      { name: 'invoiceId', type: 'string', required: true, description: 'Invoice ID' },
-      { name: 'recipientId', type: 'string', required: true, description: 'User ID of recipient' },
-      { name: 'status', type: 'string', required: true, description: 'New invoice status' },
-      { name: 'message', type: 'string', required: false, description: 'Custom message' }
-    ],
-    async (params) => {
-      // In a real implementation, this would send an email or notification
-      console.log(`[NOTIFICATION] Invoice ${params.invoiceId} status changed to ${params.status}`);
-      console.log(`To: ${params.recipientId}, Message: ${params.message || 'No message'}`);
-      
-      // Return success
-      return {
-        sent: true,
-        timestamp: new Date().toISOString(),
-        recipient: params.recipientId
-      };
-    }
-  );
-  
-  // Register action to log audit event
-  registry.registerSimpleAction(
-    'LogInvoiceAuditEvent',
-    'Log an audit event for invoice operations',
-    [
-      { name: 'invoiceId', type: 'string', required: true, description: 'Invoice ID' },
-      { name: 'action', type: 'string', required: true, description: 'Action performed' },
-      { name: 'userId', type: 'string', required: true, description: 'User who performed the action' },
-      { name: 'details', type: 'object', required: false, description: 'Additional details' }
-    ],
-    async (params) => {
-      // In a real implementation, this would log to a database
-      console.log(`[AUDIT] Invoice ${params.invoiceId} - ${params.action} by ${params.userId}`);
-      if (params.details) {
-        console.log(`Details: ${JSON.stringify(params.details)}`);
-      }
-      
-      // Return success
-      return {
-        logged: true,
-        timestamp: new Date().toISOString()
-      };
-    }
-  );
-}
-
-// Initialize the invoice actions during module import
-registerInvoiceActions();

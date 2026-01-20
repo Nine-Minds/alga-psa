@@ -6,19 +6,19 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
 import { Flex, Text, Heading } from '@radix-ui/themes';
-import { updateContact } from 'server/src/lib/actions/contact-actions/contactActions';
-import { findTagsByEntityIds } from 'server/src/lib/actions/tagActions';
+import { updateContact } from '@alga-psa/clients/actions';
+import { findTagsByEntityIds } from '@alga-psa/tags/actions';
 import { ClientPicker } from '../clients/ClientPicker';
-import { TagManager } from 'server/src/components/tags';
-import { useTags } from 'server/src/context/TagContext';
+import { TagManager } from '@alga-psa/ui/components';
+import { useTags } from '@alga-psa/ui';
 import { ArrowLeft } from 'lucide-react';
 import { Switch } from '@alga-psa/ui/components/Switch';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { useAutomationIdAndRegister } from '@alga-psa/ui/ui-reflection/useAutomationIdAndRegister';
 import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContainer';
 import { ButtonComponent, FormFieldComponent } from '@alga-psa/ui/ui-reflection/types';
-import ContactAvatarUpload from '@alga-psa/client-portal/components/contacts/ContactAvatarUpload';
-import { getContactAvatarUrlAction } from 'server/src/lib/actions/avatar-actions';
+import ContactAvatarUpload from './ContactAvatarUpload';
+import { getContactAvatarUrlActionAsync } from '../../lib/usersHelpers';
 
 interface ContactDetailsEditProps {
   id?: string; // Made optional to maintain backward compatibility
@@ -52,7 +52,7 @@ const ContactDetailsEdit: React.FC<ContactDetailsEditProps> = ({
         setTags(fetchedTags);
         
         if (contact.tenant) {
-          const contactAvatarUrl = await getContactAvatarUrlAction(contact.contact_name_id, contact.tenant);
+          const contactAvatarUrl = await getContactAvatarUrlActionAsync(contact.contact_name_id, contact.tenant);
           setAvatarUrl(contactAvatarUrl);
         }
       } catch (err) {
@@ -135,10 +135,8 @@ const ContactDetailsEdit: React.FC<ContactDetailsEditProps> = ({
         <div className="mb-6">
           <ContactAvatarUpload
             contactId={contact.contact_name_id}
-            contactName={contact.full_name}
-            avatarUrl={avatarUrl}
-            userType="internal"
-            onAvatarChange={(newAvatarUrl) => setAvatarUrl(newAvatarUrl)}
+            currentAvatarUrl={avatarUrl}
+            onAvatarUpdated={(newAvatarUrl) => setAvatarUrl(newAvatarUrl)}
           />
         </div>
         <table className="min-w-full">

@@ -1,1 +1,1 @@
-export { default } from 'ee/server/src/components/settings/general/ClientPortalDomainSettings';
+export { default } from '@ee/components/settings/general/ClientPortalDomainSettings';

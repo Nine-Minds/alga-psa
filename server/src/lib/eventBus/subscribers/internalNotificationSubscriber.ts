@@ -24,7 +24,7 @@ import {
   AppointmentRequestDeclinedEvent,
   AppointmentRequestCancelledEvent
 } from '../events';
-import { createNotificationFromTemplateInternal } from '../../actions/internal-notification-actions/internalNotificationActions';
+import { createNotificationFromTemplateInternal } from '@alga-psa/notifications/actions';
 import logger from '@alga-psa/core/logger';
 import { getConnection } from '../../db/db';
 import type { Knex } from 'knex';

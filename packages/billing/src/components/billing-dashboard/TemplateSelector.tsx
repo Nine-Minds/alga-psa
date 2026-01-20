@@ -1,14 +1,13 @@
 'use client'
 
 import React, { useState, useEffect } from 'react';
-import { IInvoiceTemplate } from 'server/src/interfaces/invoice.interfaces';
+import { IInvoiceTemplate } from '@alga-psa/types';
 // Import compileAndSaveTemplate instead of saveInvoiceTemplate
 import { getInvoiceTemplates, compileAndSaveTemplate } from '@alga-psa/billing/actions/invoiceTemplates';
 import { Button } from '@alga-psa/ui/components/Button';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
 // Remove DSL parser import - no longer used
-// import { parseInvoiceTemplate } from 'server/src/lib/invoice-dsl/templateLanguage';
 
 interface TemplateSelectorProps {
     onTemplateSelect: (template: IInvoiceTemplate) => void;

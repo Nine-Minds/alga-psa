@@ -2,5 +2,7 @@
  * @alga-psa/client-portal - Actions
  */
 
-// Placeholder - actions will be migrated in F089
-export {};
+export * from './clientPaymentActions';
+export * from './account';
+export * from './client-portal-actions';
+export * from './portal-actions';

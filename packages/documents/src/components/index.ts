@@ -15,6 +15,7 @@ export { default as DocumentSelector } from './DocumentSelector';
 export { default as DocumentStorageCard } from './DocumentStorageCard';
 export { default as DocumentUpload } from './DocumentUpload';
 export { default as Documents } from './Documents';
+export { default as DocumentsPage } from './DocumentsPage';
 export { default as DocumentsPageSkeleton } from './DocumentsPageSkeleton';
 export { default as DocumentsPagination } from './DocumentsPagination';
 export { default as FolderBreadcrumb } from './FolderBreadcrumb';

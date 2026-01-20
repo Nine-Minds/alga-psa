@@ -4,30 +4,30 @@
   "private": true,
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
-  "types": "./dist/index.d.ts",
+  "types": "./src/index.ts",
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
+      "types": "./src/index.ts",
       "import": "./dist/index.mjs",
       "require": "./dist/index.js"
     },
     "./actions": {
-      "types": "./dist/actions/index.d.ts",
+      "types": "./src/actions/index.ts",
       "import": "./dist/actions/index.mjs",
       "require": "./dist/actions/index.js"
     },
     "./components": {
-      "types": "./dist/components/index.d.ts",
+      "types": "./src/components/index.ts",
       "import": "./dist/components/index.mjs",
       "require": "./dist/components/index.js"
     },
     "./models": {
-      "types": "./dist/models/index.d.ts",
+      "types": "./src/models/index.ts",
       "import": "./dist/models/index.mjs",
       "require": "./dist/models/index.js"
     },
     "./schemas": {
-      "types": "./dist/schemas/index.d.ts",
+      "types": "./src/schemas/index.ts",
       "import": "./dist/schemas/index.mjs",
       "require": "./dist/schemas/index.js"
     }
@@ -39,6 +39,7 @@
   "dependencies": {
     "@alga-psa/core": "*",
     "@alga-psa/db": "*",
+    "@alga-psa/shared": "*",
     "@alga-psa/types": "*",
     "@alga-psa/validation": "*",
     "zod": "^3.22.4"

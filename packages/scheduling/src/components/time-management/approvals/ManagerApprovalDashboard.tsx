@@ -1,9 +1,9 @@
 'use client'
 
 import { useState, useEffect } from 'react';
-import { ITimeSheet, ITimeSheetApproval, ITimeSheetApprovalView, ITimeSheetWithUserInfo } from 'server/src/interfaces/timeEntry.interfaces';
+import { ITimeSheet, ITimeSheetApproval, ITimeSheetApprovalView, ITimeSheetWithUserInfo } from '@alga-psa/types';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
-import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
+import { ColumnDefinition } from '@alga-psa/types';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import Link from 'next/link';
@@ -19,10 +19,10 @@ import {
   fetchTimeSheetComments,
   reverseTimeSheetApproval
 } from '../../../actions/timeSheetActions';
-import { useTeamAuth } from 'server/src/hooks/useTeamAuth';
-import { IUser } from 'server/src/interfaces';
+import { useTeamAuth } from '@alga-psa/teams/hooks';
+import { IUser } from '@alga-psa/types';
 import { TimeSheetApproval } from './TimeSheetApproval';
-import { useDrawer } from "server/src/context/DrawerContext";
+import { useDrawer } from "@alga-psa/ui";
 import { parseISO } from 'date-fns';
 
 interface ManagerApprovalDashboardProps {

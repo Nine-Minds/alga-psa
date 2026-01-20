@@ -28,8 +28,26 @@
       "@/*": ["../server/src/*"],
       "@/interfaces/*": ["../../server/src/interfaces/*"],
       "@alga-psa/integrations/email/domains/entry": ["../../packages/integrations/src/email/domains/ee/entry"],
-      "@alga-psa/integrations/*": ["../../packages/integrations/src/*"]
-    }
+      "@alga-psa/integrations/*": ["../../packages/integrations/src/*"],
+      "@alga-psa/core": ["../../packages/core/src"],
+      "@alga-psa/core/*": ["../../packages/core/src/*"],
+      "@alga-psa/core/server": ["../../packages/core/src/server.ts"],
+      "@alga-psa/core/secrets": ["../../packages/core/src/lib/secrets/index.ts"],
+      "@alga-psa/core/secrets.js": ["../../packages/core/src/lib/secrets/index.ts"],
+      "@alga-psa/db": ["../../packages/db/src"],
+      "@alga-psa/db/*": ["../../packages/db/src/*"],
+      "@alga-psa/db/admin": ["../../packages/db/src/lib/admin.ts"],
+      "@alga-psa/db/admin.js": ["../../packages/db/src/lib/admin.ts"],
+      "@temporalio/activity": ["../../node_modules/@temporalio/activity"],
+      "@temporalio/workflow": ["../../node_modules/@temporalio/workflow"],
+      "@temporalio/worker": ["../../node_modules/@temporalio/worker"],
+      "@temporalio/client": ["../../node_modules/@temporalio/client"],
+      "@temporalio/testing": ["../../node_modules/@temporalio/testing"],
+      "@kubernetes/client-node": ["../../node_modules/@kubernetes/client-node"],
+      "resend": ["../../node_modules/resend"],
+      "js-yaml": ["../../node_modules/@types/js-yaml", "../../node_modules/js-yaml"]
+    },
+    "typeRoots": ["../../node_modules/@types", "./node_modules/@types"]
   },
   "include": ["src/**/*"],
   "exclude": ["node_modules", "dist", "**/*.test.ts", "src/test-utils/**/*"],

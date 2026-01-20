@@ -906,7 +906,7 @@ export async function cancelTenantStripeSubscription(
 
     // Dynamically import Stripe to avoid issues in environments where it's not available
     const { default: Stripe } = await import('stripe');
-    const { getSecretProviderInstance } = await import('@alga-psa/core');
+    const { getSecretProviderInstance } = await import('@alga-psa/core/secrets');
 
     const secretProvider = await getSecretProviderInstance();
     let secretKey = await secretProvider.getAppSecret('stripe_secret_key');

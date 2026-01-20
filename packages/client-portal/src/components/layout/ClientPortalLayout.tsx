@@ -7,18 +7,18 @@ import { signOut } from "next-auth/react";
 import { LogOut, User, CreditCard } from 'lucide-react';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import ContactAvatar from '@alga-psa/ui/components/ContactAvatar';
-import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
-import type { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
+import { getCurrentUser } from '@alga-psa/users/actions';
+import type { IUserWithRoles } from '@alga-psa/types';
 import { useRouter } from 'next/navigation';
-import { getContactAvatarUrlAction } from 'server/src/lib/actions/avatar-actions';
-import { checkClientPortalPermissions } from 'server/src/lib/actions/client-portal-actions/clientUserActions';
+import { getContactAvatarUrlAction } from '@alga-psa/users/actions';
+import { checkClientPortalPermissions } from '@alga-psa/client-portal/actions';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
-import { useBranding } from '@alga-psa/ui/components/providers/BrandingProvider';
-import { getTenantSlugForTenant } from 'server/src/lib/actions/tenant-actions/tenantSlugActions';
+import { useBranding } from '@alga-psa/tenancy/components';
+import { getTenantSlugForTenant } from '@alga-psa/tenancy/actions';
 import { ClientExtensionsMenu } from '@alga-psa/client-portal/components';
-import { NotificationBell } from 'server/src/components/notifications/NotificationBell';
-import { ActivityDrawerProvider } from '@alga-psa/ui/components/user-activities/ActivityDrawerProvider';
-import { DrawerProvider } from 'server/src/context/DrawerContext';
+import { NotificationBell } from '@alga-psa/notifications/components';
+import { ActivityDrawerProvider } from '@alga-psa/workflows/components';
+import { DrawerProvider } from '@alga-psa/ui';
 
 interface ClientPortalLayoutProps {
   children: ReactNode;

@@ -1,11 +1,11 @@
 'use client'
 
 import React, { useEffect, useRef } from 'react';
-import { IScheduleEntry } from 'server/src/interfaces/schedule.interfaces';
+import { IScheduleEntry } from '@alga-psa/types';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Trash, CalendarDays } from 'lucide-react';
-import { WorkItemType } from 'server/src/interfaces/workItem.interfaces';
-import { useIsCompactEvent } from 'server/src/hooks/useIsCompactEvent';
+import { WorkItemType } from '@alga-psa/types';
+import { useIsCompactEvent } from '@alga-psa/ui/hooks';
 
 interface WeeklyScheduleEventProps {
   event: IScheduleEntry;

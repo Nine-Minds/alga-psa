@@ -1,18 +1,18 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useTruncationDetection } from 'server/src/hooks/useTruncationDetection';
-import { IProjectTask, IProjectTicketLinkWithDetails, ITaskType, IProjectTaskDependency } from 'server/src/interfaces/project.interfaces';
-import { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
-import { IPriority, IStandardPriority } from 'server/src/interfaces/ticket.interfaces';
-import { ITag } from 'server/src/interfaces/tag.interfaces';
+import { useTruncationDetection } from '@alga-psa/ui/hooks';
+import { IProjectTask, IProjectTicketLinkWithDetails, ITaskType, IProjectTaskDependency } from '@alga-psa/types';
+import { IUserWithRoles } from '@alga-psa/types';
+import { IPriority, IStandardPriority } from '@alga-psa/types';
+import { ITag } from '@alga-psa/types';
 import { CheckSquare, Square, Ticket, MoreVertical, Move, Copy, Edit, Trash2, Bug, Sparkles, TrendingUp, Flag, BookOpen, Paperclip, Ban, GitBranch, Link2 } from 'lucide-react';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
-import { findPriorityById } from 'server/src/lib/actions/priorityActions';
+import { findPriorityById } from '@alga-psa/reference-data/actions';
 import UserPicker from '@alga-psa/ui/components/UserPicker';
 import UserAvatar from '@alga-psa/ui/components/UserAvatar';
 import { getTaskTicketLinksAction, getTaskResourcesAction } from '../actions/projectTaskActions';
-import { TagList, TagManager } from 'server/src/components/tags';
+import { TagList, TagManager } from '@alga-psa/ui/components';
 import { Button } from '@alga-psa/ui/components/Button';
 import {
   DropdownMenu,
@@ -93,7 +93,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({
   const [priority, setPriority] = useState<IPriority | IStandardPriority | null>(null);
   const [documentCount, setDocumentCount] = useState<number>(providedDocumentCount ?? 0);
   const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
-  const [descriptionRef, isDescriptionTruncated] = useTruncationDetection(task.description, isDescriptionExpanded);
+  const { ref: descriptionRef, isTruncated: isDescriptionTruncated } = useTruncationDetection<HTMLParagraphElement>();
 
   // Update documentCount when providedDocumentCount changes
   useEffect(() => {

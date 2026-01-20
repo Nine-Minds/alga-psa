@@ -1,7 +1,7 @@
 import logger from '@alga-psa/core/logger';
 import { getAdminConnection } from '@alga-psa/db/admin';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
-import { configureGmailProvider } from '@/lib/actions/email-actions/configureGmailProvider';
+import { configureGmailProvider } from '@alga-psa/integrations/actions/email-actions/configureGmailProvider';
 
 export interface GoogleGmailWatchRenewalJobData extends Record<string, unknown> {
   tenantId: string;
@@ -71,4 +71,3 @@ export async function renewGoogleGmailWatchSubscriptions(
     }
   }
 }
-

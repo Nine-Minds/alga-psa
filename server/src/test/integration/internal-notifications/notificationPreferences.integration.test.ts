@@ -35,7 +35,7 @@ import {
   broadcastNotification
 } from 'server/src/lib/realtime/internalNotificationBroadcaster';
 
-let createNotificationFromTemplateAction: typeof import('server/src/lib/actions/internal-notification-actions/internalNotificationActions')['createNotificationFromTemplateAction'];
+let createNotificationFromTemplateAction: typeof import('@alga-psa/notifications/actions')['createNotificationFromTemplateAction'];
 
 function parseMetadata(metadata: unknown) {
   if (!metadata) return null;
@@ -51,7 +51,7 @@ function parseMetadata(metadata: unknown) {
 
 describe('Internal Notification Preferences (integration)', () => {
   beforeAll(async () => {
-    const actions = await import('server/src/lib/actions/internal-notification-actions/internalNotificationActions');
+    const actions = await import('@alga-psa/notifications/actions');
     createNotificationFromTemplateAction = actions.createNotificationFromTemplateAction;
 
     testDb = await createTestDbConnection();

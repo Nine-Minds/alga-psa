@@ -21,10 +21,10 @@ import { fetchInvoicesPaginated } from '@alga-psa/billing/actions/invoiceQueries
 import { getInvoiceTemplates } from '@alga-psa/billing/actions/invoiceTemplates';
 import { unfinalizeInvoice } from '@alga-psa/billing/actions/invoiceModification';
 import { downloadInvoicePDF } from '@alga-psa/billing/actions/invoiceGeneration';
-import { scheduleInvoiceZipAction } from 'server/src/lib/actions/job-actions/scheduleInvoiceZipAction';
+import { scheduleInvoiceZipAction } from '@alga-psa/billing/actions/invoiceJobActions';
 import { SendInvoiceEmailDialog } from './SendInvoiceEmailDialog';
-import { toPlainDate } from 'server/src/lib/utils/dateTimeUtils';
-import { formatCurrencyFromMinorUnits } from 'server/src/lib/utils/formatters';
+import { toPlainDate } from '@alga-psa/core';
+import { formatCurrencyFromMinorUnits } from '@alga-psa/core';
 import InvoicePreviewPanel from './InvoicePreviewPanel';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 

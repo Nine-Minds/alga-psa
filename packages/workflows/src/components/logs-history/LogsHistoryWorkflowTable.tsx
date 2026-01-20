@@ -4,7 +4,7 @@ import React from 'react';
 import { useRouter } from 'next/navigation';
 import WorkflowExecutionsTable from '../WorkflowExecutionsTable';
 import { IWorkflowExecution } from '@alga-psa/shared/workflow/persistence';
-import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
+import { ColumnDefinition } from '@alga-psa/types';
 
 export default function LogsHistoryWorkflowTable() {
   const router = useRouter();

@@ -5,7 +5,7 @@ import { Alert, AlertDescription, AlertTitle } from '@alga-psa/ui/components/Ale
 import { Eye } from 'lucide-react';
 import type { TemplateWizardData } from '../../../types/templateWizard';
 import ClientPortalConfigEditor from '../../ClientPortalConfigEditor';
-import { DEFAULT_CLIENT_PORTAL_CONFIG } from 'server/src/interfaces/project.interfaces';
+import { DEFAULT_CLIENT_PORTAL_CONFIG } from '@alga-psa/types';
 
 interface TemplateClientPortalStepProps {
   data: TemplateWizardData;

@@ -5,8 +5,8 @@
  * and delegating to the existing authenticator verification logic.
  */
 
-import { getConnection } from 'server/src/lib/db/db';
-import { verifyAuthenticator } from 'server/src/utils/authenticator/authenticator';
+import { getConnection } from '@alga-psa/db';
+import { verifyAuthenticator } from './authenticator/authenticator';
 
 /**
  * Verify a 2FA code for a user by fetching their secret from the database

@@ -10,6 +10,26 @@
       "import": "./src/index.ts",
       "types": "./src/index.ts"
     },
+    "./models": {
+      "import": "./src/models/index.ts",
+      "types": "./src/models/index.ts"
+    },
+    "./models/user": {
+      "import": "./src/models/user.ts",
+      "types": "./src/models/user.ts"
+    },
+    "./models/userPreferences": {
+      "import": "./src/models/userPreferences.ts",
+      "types": "./src/models/userPreferences.ts"
+    },
+    "./models/tenant": {
+      "import": "./src/models/tenant.ts",
+      "types": "./src/models/tenant.ts"
+    },
+    "./models/UserSession": {
+      "import": "./src/models/UserSession.ts",
+      "types": "./src/models/UserSession.ts"
+    },
     "./tenant": {
       "import": "./src/lib/tenant.ts",
       "types": "./src/lib/tenant.ts"

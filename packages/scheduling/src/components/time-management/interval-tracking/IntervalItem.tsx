@@ -1,5 +1,5 @@
 import React from 'react';
-import { TicketInterval } from 'server/src/types/interval-tracking';
+import { TicketInterval } from '@alga-psa/types';
 import { formatDuration } from './utils';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 

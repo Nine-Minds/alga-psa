@@ -6,7 +6,7 @@
     "outDir": "dist",
     "noEmit": false,
     "noEmitOnError": false,
-    "moduleResolution": "node",
+    "moduleResolution": "bundler",
     "baseUrl": "../..",
     "paths": {
       "@shared": ["shared"],

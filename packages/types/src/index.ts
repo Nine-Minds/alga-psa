@@ -11,7 +11,13 @@ export * from './lib/attributes';
 export * from './lib/general';
 export * from './lib/tax';
 export * from './lib/temporal';
+export * from './lib/interval-tracking';
 export * from './lib/invoice-renderer/types';
+export * from './lib/xeroCsvTaxImport';
+export * from './lib/companySync';
+export * from './lib/telemetry';
+export * from './lib/tenancy';
+export * from './lib/onboardingWizard';
 
 // Outbound email types - exported with explicit naming to avoid conflicts with inbound email interfaces.
 export type {
@@ -36,6 +42,8 @@ export type {
   EmailMessage,
   EmailProviderConfig
 } from './lib/email';
+
+export type { InboundTicketDefaults, TicketFieldOptions } from './lib/email';
 
 // Interface definitions (migrated from server/src/interfaces and shared/interfaces).
 export * from './interfaces';

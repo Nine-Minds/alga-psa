@@ -1,11 +1,11 @@
 'use server';
 
 import { Knex } from 'knex';
-import ProjectTaskModel from 'server/src/lib/models/projectTask';
-import ProjectModel from 'server/src/lib/models/project';
-import TaskTypeModel from 'server/src/lib/models/taskType';
-import TaskDependencyModel from 'server/src/lib/models/taskDependency';
-import { publishEvent } from 'server/src/lib/eventBus/publishers';
+import ProjectTaskModel from '../models/projectTask';
+import ProjectModel from '@alga-psa/projects/models/project';
+import TaskTypeModel from '../models/taskType';
+import TaskDependencyModel from '../models/taskDependency';
+import { publishEvent } from '@alga-psa/event-bus/publishers';
 import type {
   DependencyType,
   ICustomTaskType,
@@ -22,7 +22,7 @@ import type {
   IUserWithRoles,
   ProjectStatus,
 } from '@alga-psa/types';
-import { findTagsByEntityIds } from 'server/src/lib/actions/tagActions';
+import { findTagsByEntityIds } from '@alga-psa/tags/actions';
 import { getCurrentUser } from '@alga-psa/auth/getCurrentUser';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { validateArray, validateData } from '@alga-psa/validation';
@@ -33,9 +33,18 @@ import {
     updateTaskSchema, 
     createChecklistItemSchema, 
     updateChecklistItemSchema
-} from 'server/src/lib/schemas/project.schemas';
+} from '../schemas/project.schemas';
 import { OrderingService } from '../lib/orderingService';
 import { validateAndFixOrderKeys } from './regenerateOrderKeys';
+
+// Helper to get tenant with non-null assertion after validation
+async function getTenantKnex(): Promise<{ knex: Knex; tenant: string }> {
+  const { knex, tenant } = await getTenantKnex();
+  if (!tenant) {
+    throw new Error('SYSTEM_ERROR: Tenant context not found');
+  }
+  return { knex, tenant };
+}
 
 async function checkPermission(user: IUser, resource: string, action: string, knexConnection?: Knex | Knex.Transaction): Promise<void> {
     const hasPermissionResult = await hasPermission(user, resource, action, knexConnection);
@@ -57,12 +66,12 @@ export async function updateTaskWithChecklist(
             throw new Error("tenant context not found");
         }
 
-        const {knex: db} = await createTenantKnex();
+        const {knex: db, tenant} = await getTenantKnex();
         
         return await withTransaction(db, async (trx: Knex.Transaction) => {
             await checkPermission(currentUser, 'project', 'update', trx);
             
-            const existingTask = await ProjectTaskModel.getTaskById(trx, taskId);
+            const existingTask = await ProjectTaskModel.getTaskById(trx, tenant, taskId);
             if (!existingTask) {
                 throw new Error("Task not found");
             }
@@ -71,11 +80,11 @@ export async function updateTaskWithChecklist(
             const { checklist_items, tenant: _, ...taskUpdateData } = taskData;
             const validatedTaskData = validateData(updateTaskSchema, taskUpdateData);
 
-            const updatedTask = await ProjectTaskModel.updateTask(trx, taskId, validatedTaskData);
+            const updatedTask = await ProjectTaskModel.updateTask(trx, tenant, taskId, validatedTaskData);
 
             // If assigned_to was updated, publish event
             if ('assigned_to' in taskData && updatedTask.assigned_to) {
-                const phase = await ProjectModel.getPhaseById(trx, updatedTask.phase_id);
+                const phase = await ProjectModel.getPhaseById(trx, tenant, updatedTask.phase_id);
                 if (phase) {
                     // Ensure tenant exists before publishing event
                     if (!currentUser.tenant) {
@@ -99,14 +108,14 @@ export async function updateTaskWithChecklist(
             }
 
             if (checklist_items) {
-                await ProjectTaskModel.deleteChecklistItems(trx, taskId);
+                await ProjectTaskModel.deleteChecklistItems(trx, tenant, taskId);
                 
                 for (const item of checklist_items) {
-                    await ProjectTaskModel.addChecklistItem(trx, taskId, item);
+                    await ProjectTaskModel.addChecklistItem(trx, tenant, taskId, item);
                 }
             }
             
-            const finalTask = await ProjectTaskModel.getTaskById(trx, taskId);
+            const finalTask = await ProjectTaskModel.getTaskById(trx, tenant, taskId);
             if (!finalTask) {
                 throw new Error('Task not found after update');
             }
@@ -132,16 +141,16 @@ export async function addTaskToPhase(
             throw new Error("tenant context not found");
         }
 
-        const {knex: db} = await createTenantKnex();
+        const {knex: db, tenant} = await getTenantKnex();
         
         return await withTransaction(db, async (trx: Knex.Transaction) => {
             await checkPermission(currentUser, 'project', 'update', trx);
             
-            const newTask = await ProjectTaskModel.addTask(trx, phaseId, taskData);
+            const newTask = await ProjectTaskModel.addTask(trx, tenant, phaseId, taskData);
 
             // If task is assigned to someone, publish event
             if (taskData.assigned_to) {
-                const phase = await ProjectModel.getPhaseById(trx, phaseId);
+                const phase = await ProjectModel.getPhaseById(trx, tenant, phaseId);
                 if (phase) {
                     await publishEvent({
                         eventType: 'PROJECT_TASK_ASSIGNED',
@@ -160,10 +169,10 @@ export async function addTaskToPhase(
             }
 
             for (const item of checklistItems) {
-                await ProjectTaskModel.addChecklistItem(trx, newTask.task_id, item);
+                await ProjectTaskModel.addChecklistItem(trx, tenant, newTask.task_id, item);
             }
 
-            const taskWithChecklist = await ProjectTaskModel.getTaskById(trx, newTask.task_id);
+            const taskWithChecklist = await ProjectTaskModel.getTaskById(trx, tenant, newTask.task_id);
             return taskWithChecklist;
         });
     } catch (error) {
@@ -179,7 +188,7 @@ export async function updateTaskStatus(
     afterTaskId?: string | null
 ): Promise<IProjectTask> {
     
-    const {knex: db, tenant} = await createTenantKnex();
+    const {knex: db, tenant} = await getTenantKnex();
     
     return await withTransaction(db, async (trx: Knex.Transaction) => {
         const currentUser = await getCurrentUser();
@@ -286,10 +295,10 @@ export async function addChecklistItemToTask(
 
         const validatedData = validateData(createChecklistItemSchema, itemData);
         
-        const {knex: db} = await createTenantKnex();
+        const {knex: db, tenant} = await getTenantKnex();
         return await withTransaction(db, async (trx: Knex.Transaction) => {
             await checkPermission(currentUser, 'project', 'update', trx);
-            return await ProjectTaskModel.addChecklistItem(trx, taskId, validatedData);
+            return await ProjectTaskModel.addChecklistItem(trx, tenant, taskId, validatedData);
         });
     } catch (error) {
         console.error('Error adding checklist item to task:', error);
@@ -309,10 +318,10 @@ export async function updateChecklistItem(
 
         const validatedData = validateData(updateChecklistItemSchema, itemData);
         
-        const {knex: db} = await createTenantKnex();
+        const {knex: db, tenant} = await getTenantKnex();
         return await withTransaction(db, async (trx: Knex.Transaction) => {
             await checkPermission(currentUser, 'project', 'update', trx);
-            return await ProjectTaskModel.updateChecklistItem(trx, checklistItemId, validatedData);
+            return await ProjectTaskModel.updateChecklistItem(trx, tenant, checklistItemId, validatedData);
         });
     } catch (error) {
         console.error('Error updating checklist item:', error);
@@ -327,10 +336,10 @@ export async function deleteChecklistItem(checklistItemId: string): Promise<void
             throw new Error("user not found");
         }
 
-        const {knex: db} = await createTenantKnex();
+        const {knex: db, tenant} = await getTenantKnex();
         await withTransaction(db, async (trx: Knex.Transaction) => {
             await checkPermission(currentUser, 'project', 'delete', trx);
-            await ProjectTaskModel.deleteChecklistItem(trx, checklistItemId);
+            await ProjectTaskModel.deleteChecklistItem(trx, tenant, checklistItemId);
         });
     } catch (error) {
         console.error('Error deleting checklist item:', error);
@@ -345,10 +354,10 @@ export async function getTaskChecklistItems(taskId: string): Promise<ITaskCheckl
             throw new Error("user not found");
         }
 
-        const {knex: db} = await createTenantKnex();
+        const {knex: db, tenant} = await getTenantKnex();
         return await withTransaction(db, async (trx: Knex.Transaction) => {
             await checkPermission(currentUser, 'project', 'read', trx);
-            return await ProjectTaskModel.getChecklistItems(trx, taskId);
+            return await ProjectTaskModel.getChecklistItems(trx, tenant, taskId);
         });
     } catch (error) {
         console.error('Error fetching task checklist items:', error);
@@ -363,7 +372,7 @@ export async function deleteTask(taskId: string): Promise<void> {
             throw new Error("user not found");
         }
 
-        const {knex: db, tenant} = await createTenantKnex();
+        const {knex: db, tenant} = await getTenantKnex();
         
         await withTransaction(db, async (trx: Knex.Transaction) => {
             await checkPermission(currentUser, 'project', 'delete', trx);
@@ -382,15 +391,15 @@ export async function deleteTask(taskId: string): Promise<void> {
                 throw new Error(`Cannot delete task: ${timeEntryCount.count} associated time entries exist.`);
             }
 
-            const ticketLinks = await ProjectTaskModel.getTaskTicketLinks(trx, taskId);
+            const ticketLinks = await ProjectTaskModel.getTaskTicketLinks(trx, tenant, taskId);
             
             for (const link of ticketLinks) {
-                await ProjectTaskModel.deleteTaskTicketLink(trx, link.link_id);
+                await ProjectTaskModel.deleteTaskTicketLink(trx, tenant, link.link_id);
             }
 
-            await ProjectTaskModel.deleteChecklistItems(trx, taskId);
+            await ProjectTaskModel.deleteChecklistItems(trx, tenant, taskId);
 
-            await ProjectTaskModel.deleteTask(trx, taskId);
+            await ProjectTaskModel.deleteTask(trx, tenant, taskId);
         });
     } catch (error) {
         console.error('Error deleting task:', error);
@@ -405,10 +414,10 @@ export async function addTicketLinkAction(projectId: string, taskId: string | nu
             throw new Error("user not found");
         }
 
-        const {knex: db} = await createTenantKnex();
+        const {knex: db, tenant} = await getTenantKnex();
         return await withTransaction(db, async (trx: Knex.Transaction) => {
             await checkPermission(currentUser, 'project', 'update', trx);
-            return await ProjectTaskModel.addTaskTicketLink(trx, projectId, taskId, ticketId, phaseId);
+            return await ProjectTaskModel.addTaskTicketLink(trx, tenant, projectId, taskId, ticketId, phaseId);
         });
     } catch (error) {
         console.error('Error adding ticket link:', error);
@@ -423,10 +432,10 @@ export async function getTaskTicketLinksAction(taskId: string): Promise<IProject
             throw new Error("user not found");
         }
 
-        const {knex: db} = await createTenantKnex();
+        const {knex: db, tenant} = await getTenantKnex();
         return await withTransaction(db, async (trx: Knex.Transaction) => {
             await checkPermission(currentUser, 'project', 'read', trx);
-            return await ProjectTaskModel.getTaskTicketLinks(trx, taskId);
+            return await ProjectTaskModel.getTaskTicketLinks(trx, tenant, taskId);
         });
     } catch (error) {
         console.error('Error getting task ticket links:', error);
@@ -445,7 +454,7 @@ export async function getTasksForPhase(phaseId: string): Promise<{
         if (!currentUser) {
             throw new Error("user not found");
         }
-        const {knex: db, tenant} = await createTenantKnex();
+        const {knex: db, tenant} = await getTenantKnex();
         return await withTransaction(db, async (trx: Knex.Transaction) => {
             await checkPermission(currentUser, 'project', 'read', trx);
 
@@ -459,13 +468,13 @@ export async function getTasksForPhase(phaseId: string): Promise<{
             }
 
             // Get all tasks for this phase
-            const tasks = await ProjectTaskModel.getTasksByPhase(trx, phaseId);
+            const tasks = await ProjectTaskModel.getTasksByPhase(trx, tenant, phaseId);
 
             // Get all related data in parallel
             const taskIds = tasks.map(t => t.task_id);
             const [ticketLinksArray, taskResourcesArray, predecessorsArray, successorsArray] = await Promise.all([
-                taskIds.length > 0 ? ProjectTaskModel.getTaskTicketLinksForTasks(trx, taskIds) : [],
-                taskIds.length > 0 ? ProjectTaskModel.getTaskResourcesForTasks(trx, taskIds) : [],
+                taskIds.length > 0 ? ProjectTaskModel.getTaskTicketLinksForTasks(trx, tenant, taskIds) : [],
+                taskIds.length > 0 ? ProjectTaskModel.getTaskResourcesForTasks(trx, tenant, taskIds) : [],
                 // Fetch dependencies where task is the successor (predecessors of task)
                 taskIds.length > 0
                     ? trx('project_task_dependencies as ptd')
@@ -562,15 +571,15 @@ export async function addTaskResourceAction(taskId: string, userId: string, role
             throw new Error("user not found");
         }
 
-        const {knex: db} = await createTenantKnex();
+        const {knex: db, tenant} = await getTenantKnex();
         await withTransaction(db, async (trx: Knex.Transaction) => {
             await checkPermission(currentUser, 'project', 'update', trx);
-            await ProjectTaskModel.addTaskResource(trx, taskId, userId, role);
+            await ProjectTaskModel.addTaskResource(trx, tenant, taskId, userId, role);
 
             // When adding additional resource, publish task additional agent assigned event
-            const task = await ProjectTaskModel.getTaskById(trx, taskId);
+            const task = await ProjectTaskModel.getTaskById(trx, tenant, taskId);
             if (task) {
-                const phase = await ProjectModel.getPhaseById(trx, task.phase_id);
+                const phase = await ProjectModel.getPhaseById(trx, tenant, task.phase_id);
                 if (phase) {
                     const eventPayload = {
                         tenantId: currentUser.tenant,
@@ -601,10 +610,10 @@ export async function removeTaskResourceAction(assignmentId: string): Promise<vo
             throw new Error("user not found");
         }
 
-        const {knex: db} = await createTenantKnex();
+        const {knex: db, tenant} = await getTenantKnex();
         await withTransaction(db, async (trx: Knex.Transaction) => {
             await checkPermission(currentUser, 'project', 'update', trx);
-            await ProjectTaskModel.removeTaskResource(trx, assignmentId);
+            await ProjectTaskModel.removeTaskResource(trx, tenant, assignmentId);
         });
     } catch (error) {
         console.error('Error removing task resource:', error);
@@ -619,10 +628,10 @@ export async function getTaskResourcesAction(taskId: string): Promise<any[]> {
             throw new Error("user not found");
         }
 
-        const {knex: db} = await createTenantKnex();
+        const {knex: db, tenant} = await getTenantKnex();
         return await withTransaction(db, async (trx: Knex.Transaction) => {
             await checkPermission(currentUser, 'project', 'read', trx);
-            return await ProjectTaskModel.getTaskResources(trx, taskId);
+            return await ProjectTaskModel.getTaskResources(trx, tenant, taskId);
         });
     } catch (error) {
         console.error('Error getting task resources:', error);
@@ -637,10 +646,10 @@ export async function deleteTaskTicketLinkAction(linkId: string): Promise<void> 
             throw new Error("user not found");
         }
 
-        const {knex: db} = await createTenantKnex();
+        const {knex: db, tenant} = await getTenantKnex();
         await withTransaction(db, async (trx: Knex.Transaction) => {
             await checkPermission(currentUser, 'project', 'update', trx);
-            await ProjectTaskModel.deleteTaskTicketLink(trx, linkId);
+            await ProjectTaskModel.deleteTaskTicketLink(trx, tenant, linkId);
         });
     } catch (error) {
         console.error('Error deleting ticket link:', error);
@@ -662,25 +671,25 @@ export async function moveTaskToPhase(
             throw new Error("user not found");
         }
 
-        const {knex: db, tenant} = await createTenantKnex();
+        const {knex: db, tenant} = await getTenantKnex();
         
         return await withTransaction(db, async (trx: Knex.Transaction) => {
             await checkPermission(currentUser, 'project', 'update', trx);
             
             // Get the existing task to preserve its data
-            const existingTask = await ProjectTaskModel.getTaskById(trx, taskId);
+            const existingTask = await ProjectTaskModel.getTaskById(trx, tenant, taskId);
             if (!existingTask) {
                 throw new Error('Task not found');
             }
 
             // Get the new phase to access its project and WBS code
-            const newPhase = await ProjectModel.getPhaseById(trx, newPhaseId);
+            const newPhase = await ProjectModel.getPhaseById(trx, tenant, newPhaseId);
             if (!newPhase) {
                 throw new Error('Target phase not found');
             }
 
             // Get the current phase to check if this is a cross-project move
-            const currentPhase = await ProjectModel.getPhaseById(trx, existingTask.phase_id);
+            const currentPhase = await ProjectModel.getPhaseById(trx, tenant, existingTask.phase_id);
             if (!currentPhase) {
                 throw new Error('Current phase not found');
             }
@@ -691,19 +700,19 @@ export async function moveTaskToPhase(
             // If moving to a different project and no specific status mapping is provided
             if (currentPhase.project_id !== newPhase.project_id && !newStatusMappingId) {
                 // Get current status mapping
-                const currentMapping = await ProjectModel.getProjectStatusMapping(trx, existingTask.project_status_mapping_id);
+                const currentMapping = await ProjectModel.getProjectStatusMapping(trx, tenant, existingTask.project_status_mapping_id);
                 if (!currentMapping) {
                     throw new Error('Current status mapping not found');
                 }
 
                 // Get all status mappings for the new project
-                const newProjectMappings = await ProjectModel.getProjectStatusMappings(trx, newPhase.project_id);
+                const newProjectMappings = await ProjectModel.getProjectStatusMappings(trx, tenant, newPhase.project_id);
                 
                 // If no mappings exist in the target project, create default ones
                 if (!newProjectMappings || newProjectMappings.length === 0) {
-                    const standardStatuses = await ProjectModel.getStandardStatusesByType(trx, 'project_task');
+                    const standardStatuses = await ProjectModel.getStandardStatusesByType(trx, tenant, 'project_task');
                     for (const status of standardStatuses) {
-                        await ProjectModel.addProjectStatusMapping(trx, newPhase.project_id, {
+                        await ProjectModel.addProjectStatusMapping(trx, tenant, newPhase.project_id, {
                             standard_status_id: status.standard_status_id,
                             is_standard: true,
                             custom_name: null,
@@ -712,7 +721,7 @@ export async function moveTaskToPhase(
                         });
                     }
                     // Fetch the newly created mappings
-                    const updatedMappings = await ProjectModel.getProjectStatusMappings(trx, newPhase.project_id);
+                    const updatedMappings = await ProjectModel.getProjectStatusMappings(trx, tenant, newPhase.project_id);
                     if (!updatedMappings || updatedMappings.length === 0) {
                         throw new Error('Failed to create status mappings for target project');
                     }
@@ -727,7 +736,7 @@ export async function moveTaskToPhase(
                         );
                     } else if (currentMapping.status_id) {
                         // For custom status, try to match by custom name
-                        const currentStatus = await ProjectModel.getCustomStatus(trx, currentMapping.status_id);
+                        const currentStatus = await ProjectModel.getCustomStatus(trx, tenant, currentMapping.status_id);
                         if (currentStatus) {
                             equivalentMapping = newProjectMappings.find(m => 
                                 !m.is_standard && m.custom_name === currentMapping.custom_name
@@ -749,7 +758,7 @@ export async function moveTaskToPhase(
             }
 
             // Generate new WBS code for the task
-            const newWbsCode = await ProjectModel.generateNextWbsCode(trx, newPhase.wbs_code);
+            const newWbsCode = await ProjectModel.generateNextWbsCode(trx, tenant, newPhase.wbs_code);
 
             // Get order key for new position
             let beforeKey: string | null = null;
@@ -818,9 +827,9 @@ export async function moveTaskToPhase(
 
             // If this is a cross-project move, update ticket links
             if (currentPhase.project_id !== newPhase.project_id) {
-                const ticketLinks = await ProjectTaskModel.getTaskTicketLinks(trx, taskId);
+                const ticketLinks = await ProjectTaskModel.getTaskTicketLinks(trx, tenant, taskId);
                 for (const link of ticketLinks) {
-                    await ProjectTaskModel.updateTaskTicketLink(trx, link.link_id, {
+                    await ProjectTaskModel.updateTaskTicketLink(trx, tenant, link.link_id, {
                         project_id: newPhase.project_id,
                         phase_id: newPhaseId
                     });
@@ -853,24 +862,24 @@ export async function duplicateTaskToPhase(
             throw new Error("User or tenant context not found");
         }
 
-        const {knex: db, tenant} = await createTenantKnex();
+        const {knex: db, tenant} = await getTenantKnex();
         
         return await withTransaction(db, async (trx: Knex.Transaction) => {
             // Use 'create' permission as we are creating a new task entity
             await checkPermission(currentUser, 'project', 'create', trx);
             
             // 1. Fetch original task, new phase, and current phase
-            const originalTask = await ProjectTaskModel.getTaskById(trx, originalTaskId);
+            const originalTask = await ProjectTaskModel.getTaskById(trx, tenant, originalTaskId);
             if (!originalTask) {
                 throw new Error('Original task not found');
             }
 
-            const newPhase = await ProjectModel.getPhaseById(trx, newPhaseId);
+            const newPhase = await ProjectModel.getPhaseById(trx, tenant, newPhaseId);
             if (!newPhase) {
                 throw new Error('Target phase not found');
             }
 
-            const currentPhase = await ProjectModel.getPhaseById(trx, originalTask.phase_id);
+            const currentPhase = await ProjectModel.getPhaseById(trx, tenant, originalTask.phase_id);
             if (!currentPhase) {
                 throw new Error('Current phase of original task not found');
             }
@@ -880,17 +889,17 @@ export async function duplicateTaskToPhase(
 
             // If moving to a different project and no specific status mapping is provided
             if (currentPhase.project_id !== newPhase.project_id && !options?.newStatusMappingId) {
-                const currentMapping = await ProjectModel.getProjectStatusMapping(trx, originalTask.project_status_mapping_id);
+                const currentMapping = await ProjectModel.getProjectStatusMapping(trx, tenant, originalTask.project_status_mapping_id);
                 if (!currentMapping) {
                     // Fallback if current mapping is somehow invalid, use the first available in target project
                     console.warn(`Current status mapping ${originalTask.project_status_mapping_id} not found for task ${originalTaskId}. Falling back.`);
-                    const newProjectMappings = await ProjectModel.getProjectStatusMappings(trx, newPhase.project_id);
+                    const newProjectMappings = await ProjectModel.getProjectStatusMappings(trx, tenant, newPhase.project_id);
                      if (!newProjectMappings || newProjectMappings.length === 0) {
                          // Handle case where target project has no mappings (should ideally not happen if defaults exist)
                          // Attempt to create default mappings (similar logic as in moveTaskToPhase)
-                         const standardStatuses = await ProjectModel.getStandardStatusesByType(trx, 'project_task');
+                         const standardStatuses = await ProjectModel.getStandardStatusesByType(trx, tenant, 'project_task');
                          for (const status of standardStatuses) {
-                             await ProjectModel.addProjectStatusMapping(trx, newPhase.project_id, {
+                             await ProjectModel.addProjectStatusMapping(trx, tenant, newPhase.project_id, {
                                  standard_status_id: status.standard_status_id,
                                  is_standard: true,
                                  custom_name: null,
@@ -898,7 +907,7 @@ export async function duplicateTaskToPhase(
                                  is_visible: true,
                              });
                          }
-                         const updatedMappings = await ProjectModel.getProjectStatusMappings(trx, newPhase.project_id);
+                         const updatedMappings = await ProjectModel.getProjectStatusMappings(trx, tenant, newPhase.project_id);
                          if (!updatedMappings || updatedMappings.length === 0) {
                              throw new Error('Failed to find or create status mappings for target project');
                          }
@@ -907,12 +916,12 @@ export async function duplicateTaskToPhase(
                         finalStatusMappingId = newProjectMappings[0].project_status_mapping_id; // Use first available
                      }
                 } else {
-                    const newProjectMappings = await ProjectModel.getProjectStatusMappings(trx, newPhase.project_id);
+                    const newProjectMappings = await ProjectModel.getProjectStatusMappings(trx, tenant, newPhase.project_id);
                     if (!newProjectMappings || newProjectMappings.length === 0) {
                          // Attempt to create default mappings
-                         const standardStatuses = await ProjectModel.getStandardStatusesByType(trx, 'project_task');
+                         const standardStatuses = await ProjectModel.getStandardStatusesByType(trx, tenant, 'project_task');
                          for (const status of standardStatuses) {
-                             await ProjectModel.addProjectStatusMapping(trx, newPhase.project_id, {
+                             await ProjectModel.addProjectStatusMapping(trx, tenant, newPhase.project_id, {
                                  standard_status_id: status.standard_status_id,
                                  is_standard: true,
                                  custom_name: null,
@@ -920,7 +929,7 @@ export async function duplicateTaskToPhase(
                                  is_visible: true,
                              });
                          }
-                         const updatedMappings = await ProjectModel.getProjectStatusMappings(trx, newPhase.project_id);
+                         const updatedMappings = await ProjectModel.getProjectStatusMappings(trx, tenant, newPhase.project_id);
                          if (!updatedMappings || updatedMappings.length === 0) {
                              throw new Error('Failed to find or create status mappings for target project');
                          }
@@ -933,7 +942,7 @@ export async function duplicateTaskToPhase(
                                 m.is_standard && m.standard_status_id === currentMapping.standard_status_id
                             );
                         } else if (currentMapping.status_id) {
-                            const currentStatus = await ProjectModel.getCustomStatus(trx, currentMapping.status_id);
+                            const currentStatus = await ProjectModel.getCustomStatus(trx, tenant, currentMapping.status_id);
                             if (currentStatus) {
                                 equivalentMapping = newProjectMappings.find(m =>
                                     !m.is_standard && m.custom_name === currentMapping.custom_name
@@ -983,34 +992,34 @@ export async function duplicateTaskToPhase(
             };
 
             // 5. Create the new task
-            const newTask = await ProjectTaskModel.addTask(trx, newPhaseId, newTaskData);
+            const newTask = await ProjectTaskModel.addTask(trx, tenant, newPhaseId, newTaskData);
 
             // 5. Optionally duplicate related data
             // Duplicate Checklist Items
             if (options?.duplicateChecklist) {
-                const originalChecklistItems = await ProjectTaskModel.getChecklistItems(trx, originalTaskId);
+                const originalChecklistItems = await ProjectTaskModel.getChecklistItems(trx, tenant, originalTaskId);
                 for (const item of originalChecklistItems) {
                     // Omit IDs, task_id, timestamps, tenant
                     const newItemData = omit(item, ['checklist_item_id', 'task_id', 'created_at', 'updated_at', 'tenant']);
-                    await ProjectTaskModel.addChecklistItem(trx, newTask.task_id, newItemData);
+                    await ProjectTaskModel.addChecklistItem(trx, tenant, newTask.task_id, newItemData);
                 }
             }
 
             // Duplicate Additional Assignees (Task Resources)
             if (options?.duplicateAdditionalAssignees) {
-                const originalResources = await ProjectTaskModel.getTaskResources(trx, originalTaskId);
+                const originalResources = await ProjectTaskModel.getTaskResources(trx, tenant, originalTaskId);
                 for (const resource of originalResources) {
                     // addTaskResource expects taskId, userId, role
-                    await ProjectTaskModel.addTaskResource(trx, newTask.task_id, resource.additional_user_id, resource.role || undefined);
+                    await ProjectTaskModel.addTaskResource(trx, tenant, newTask.task_id, resource.additional_user_id, resource.role || undefined);
                 }
             }
 
             // Duplicate Ticket Links
             if (options?.duplicateTicketLinks) {
-                const originalTicketLinks = await ProjectTaskModel.getTaskTicketLinks(trx, originalTaskId);
+                const originalTicketLinks = await ProjectTaskModel.getTaskTicketLinks(trx, tenant, originalTaskId);
                 for (const link of originalTicketLinks) {
                     // addTaskTicketLink expects projectId, taskId, ticketId, phaseId
-                    await ProjectTaskModel.addTaskTicketLink(trx, newPhase.project_id, newTask.task_id, link.ticket_id, newPhaseId);
+                    await ProjectTaskModel.addTaskTicketLink(trx, tenant, newPhase.project_id, newTask.task_id, link.ticket_id, newPhaseId);
                 }
             }
 
@@ -1032,7 +1041,7 @@ export async function duplicateTaskToPhase(
 
             // 6. Return the newly created task object
             // Fetch again to potentially include relations if needed, though addTask returns the core task
-            const finalNewTask = await ProjectTaskModel.getTaskById(trx, newTask.task_id);
+            const finalNewTask = await ProjectTaskModel.getTaskById(trx, tenant, newTask.task_id);
             if (!finalNewTask) {
                 throw new Error("Failed to retrieve the newly created task after duplication.");
             }
@@ -1050,7 +1059,7 @@ export async function duplicateTaskToPhase(
 
 export async function getTaskWithDetails(taskId: string, user: IUser) {
     try {
-        const {knex: db, tenant} = await createTenantKnex();
+        const {knex: db, tenant} = await getTenantKnex();
         if (!tenant) {
             throw new Error("tenant context not found");
         }
@@ -1092,9 +1101,9 @@ export async function getTaskWithDetails(taskId: string, user: IUser) {
             
             // Get additional data needed for TaskEdit
             const [checklistItems, ticketLinks, resources] = await Promise.all([
-                ProjectTaskModel.getChecklistItems(trx, taskId),
-                ProjectTaskModel.getTaskTicketLinks(trx, taskId),
-                ProjectTaskModel.getTaskResources(trx, taskId)
+                ProjectTaskModel.getChecklistItems(trx, tenant, taskId),
+                ProjectTaskModel.getTaskTicketLinks(trx, tenant, taskId),
+                ProjectTaskModel.getTaskResources(trx, tenant, taskId)
             ]);
             
             return {
@@ -1120,7 +1129,7 @@ export async function reorderTask(
         throw new Error("user not found");
     }
 
-    const {knex: db, tenant} = await createTenantKnex();
+    const {knex: db, tenant} = await getTenantKnex();
     
     await withTransaction(db, async (trx: Knex.Transaction) => {
         await checkPermission(currentUser, 'project', 'update', trx);
@@ -1191,7 +1200,7 @@ export async function reorderTasksInStatus(tasks: { taskId: string, newWbsCode: 
             throw new Error("user not found");
         }
 
-        const {knex: db, tenant} = await createTenantKnex();
+        const {knex: db, tenant} = await getTenantKnex();
         await withTransaction(db, async (trx: Knex.Transaction) => {
             await checkPermission(currentUser, 'project', 'update', trx);
             
@@ -1235,7 +1244,7 @@ export async function cleanupOrderKeysForStatus(
             throw new Error("user not found");
         }
         
-        const {knex: db} = await createTenantKnex();
+        const {knex: db, tenant} = await getTenantKnex();
         
         const result = await withTransaction(db, async (trx: Knex.Transaction) => {
             await checkPermission(currentUser, 'project', 'update', trx);
@@ -1272,10 +1281,10 @@ export async function getTaskTypes(): Promise<ITaskType[]> {
         throw new Error("user not found");
     }
     
-    const {knex: db} = await createTenantKnex();
+    const {knex: db, tenant} = await getTenantKnex();
     await checkPermission(currentUser, 'project', 'read', db);
     
-    return await TaskTypeModel.getAllTaskTypes(db);
+    return await TaskTypeModel.getAllTaskTypes(db, tenant);
 }
 
 export async function createCustomTaskType(
@@ -1286,10 +1295,14 @@ export async function createCustomTaskType(
         throw new Error("user not found");
     }
     
-    const {knex: db} = await createTenantKnex();
+    const {knex: db, tenant} = await getTenantKnex();
     await checkPermission(currentUser, 'project', 'create', db);
     
-    return await TaskTypeModel.createCustomTaskType(db, data as Omit<ICustomTaskType, 'type_id' | 'tenant' | 'created_at' | 'updated_at'>);
+    return await TaskTypeModel.createCustomTaskType(
+        db,
+        tenant,
+        data as Omit<ICustomTaskType, 'type_id' | 'tenant' | 'created_at' | 'updated_at'>
+    );
 }
 
 // Task Dependency Actions
@@ -1305,7 +1318,7 @@ export async function addTaskDependency(
         throw new Error("user not found");
     }
     
-    const { knex: db, tenant } = await createTenantKnex();
+    const { knex: db, tenant } = await getTenantKnex();
     
     return await withTransaction(db, async (trx) => {
         await checkPermission(currentUser, 'project', 'update', trx);
@@ -1340,6 +1353,7 @@ export async function addTaskDependency(
         
         return await TaskDependencyModel.addDependency(
             trx,
+            tenant,
             actualPredecessorId, 
             actualSuccessorId, 
             actualDependencyType, 
@@ -1358,10 +1372,10 @@ export async function getTaskDependencies(taskId: string): Promise<{
         throw new Error("user not found");
     }
     
-    const {knex: db} = await createTenantKnex();
+    const {knex: db, tenant} = await getTenantKnex();
     await checkPermission(currentUser, 'project', 'read', db);
     
-    return await TaskDependencyModel.getTaskDependencies(db, taskId);
+    return await TaskDependencyModel.getTaskDependencies(db, tenant, taskId);
 }
 
 export async function removeTaskDependency(dependencyId: string): Promise<void> {
@@ -1370,10 +1384,10 @@ export async function removeTaskDependency(dependencyId: string): Promise<void> 
         throw new Error("user not found");
     }
     
-    const {knex: db} = await createTenantKnex();
+    const {knex: db, tenant} = await getTenantKnex();
     await checkPermission(currentUser, 'project', 'update', db);
     
-    await TaskDependencyModel.removeDependency(db, dependencyId);
+    await TaskDependencyModel.removeDependency(db, tenant, dependencyId);
 }
 
 export async function updateTaskDependency(
@@ -1385,10 +1399,10 @@ export async function updateTaskDependency(
         throw new Error("user not found");
     }
 
-    const {knex: db} = await createTenantKnex();
+    const {knex: db, tenant} = await getTenantKnex();
     await checkPermission(currentUser, 'project', 'update', db);
 
-    return await TaskDependencyModel.updateDependency(db, dependencyId, data);
+    return await TaskDependencyModel.updateDependency(db, tenant, dependencyId, data);
 }
 
 export async function getTaskById(taskId: string): Promise<IProjectTask | null> {
@@ -1401,7 +1415,7 @@ export async function getTaskById(taskId: string): Promise<IProjectTask | null> 
             throw new Error("tenant context not found");
         }
 
-        const {knex: db} = await createTenantKnex();
+        const {knex: db, tenant} = await getTenantKnex();
         await checkPermission(currentUser, 'project', 'read', db);
 
         const task = await db('project_tasks')
@@ -1431,7 +1445,7 @@ export async function getAllProjectTasksForListView(projectId: string): Promise<
     const currentUser = await getCurrentUser();
     if (!currentUser) throw new Error("user not found");
 
-    const { knex: db, tenant } = await createTenantKnex();
+    const { knex: db, tenant } = await getTenantKnex();
 
     return await withTransaction(db, async (trx: Knex.Transaction) => {
         await checkPermission(currentUser, 'project', 'read', trx);
@@ -1460,10 +1474,10 @@ export async function getAllProjectTasksForListView(projectId: string): Promise<
         // 4. Parallel fetch related data (including dependencies)
         const [ticketLinksArray, taskResourcesArray, checklistItemsArray, tagsArray, predecessorDeps, successorDeps] = await Promise.all([
             taskIds.length > 0
-                ? ProjectTaskModel.getTaskTicketLinksForTasks(trx, taskIds)
+                ? ProjectTaskModel.getTaskTicketLinksForTasks(trx, tenant, taskIds)
                 : [],
             taskIds.length > 0
-                ? ProjectTaskModel.getTaskResourcesForTasks(trx, taskIds)
+                ? ProjectTaskModel.getTaskResourcesForTasks(trx, tenant, taskIds)
                 : [],
             taskIds.length > 0
                 ? trx('task_checklist_items')
@@ -1566,7 +1580,7 @@ export async function getPhaseTaskCounts(projectId: string): Promise<Record<stri
     const currentUser = await getCurrentUser();
     if (!currentUser) throw new Error("user not found");
 
-    const { knex: db, tenant } = await createTenantKnex();
+    const { knex: db, tenant } = await getTenantKnex();
 
     await checkPermission(currentUser, 'project', 'read', db);
 

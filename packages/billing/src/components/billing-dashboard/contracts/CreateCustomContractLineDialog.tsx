@@ -10,7 +10,7 @@ import { Switch } from '@alga-psa/ui/components/Switch';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { createCustomContractLine, CreateCustomContractLineInput, CustomContractLineServiceConfig } from '@alga-psa/billing/actions/contractLinePresetActions';
 import { Package, Clock, Activity, Plus, X, Coins } from 'lucide-react';
-import { BILLING_FREQUENCY_OPTIONS } from 'server/src/constants/billing';
+import { BILLING_FREQUENCY_OPTIONS } from '@alga-psa/billing/constants/billing';
 import { SwitchWithLabel } from '@alga-psa/ui/components/SwitchWithLabel';
 import { BucketOverlayFields } from './BucketOverlayFields';
 import { BucketOverlayInput } from './ContractWizard';

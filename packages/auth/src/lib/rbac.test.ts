@@ -1,17 +1,17 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-vi.mock('server/src/lib/models/user', () => ({
+vi.mock('@alga-psa/db/models/user', () => ({
   default: {
     getUserRolesWithPermissions: vi.fn()
   }
 }));
 
-vi.mock('server/src/lib/db', () => ({
+vi.mock('@alga-psa/db', () => ({
   createTenantKnex: vi.fn(async () => ({ knex: {} }))
 }));
 
 import { hasPermission, checkMultiplePermissions } from './rbac';
-import type { IUser, IRoleWithPermissions, IPermission } from 'server/src/interfaces/auth.interfaces';
+import type { IUser, IRoleWithPermissions, IPermission } from '@alga-psa/types';
 
 const buildPermission = (resource: string, action: string, msp: boolean, client: boolean): IPermission => ({
   permission_id: `${resource}:${action}:${msp ? 'msp' : 'client'}`,
@@ -32,12 +32,12 @@ const buildRole = (permissions: IPermission[], msp: boolean, client: boolean): I
 
 describe('rbac permission checks', () => {
   beforeEach(async () => {
-    const { default: User } = await import('server/src/lib/models/user');
+    const { default: User } = await import('@alga-psa/db/models/user');
     vi.mocked(User.getUserRolesWithPermissions).mockReset();
   });
 
   it('allows internal users to use MSP permissions only', async () => {
-    const { default: User } = await import('server/src/lib/models/user');
+    const { default: User } = await import('@alga-psa/db/models/user');
     const mspPermissions = [
       buildPermission('client', 'read', true, false),
       buildPermission('client', 'write', true, false)
@@ -68,7 +68,7 @@ describe('rbac permission checks', () => {
   });
 
   it('allows client users to use client permissions only', async () => {
-    const { default: User } = await import('server/src/lib/models/user');
+    const { default: User } = await import('@alga-psa/db/models/user');
     const mspPermissions = [
       buildPermission('client', 'read', true, false)
     ];
@@ -98,7 +98,7 @@ describe('rbac permission checks', () => {
   });
 
   it('returns aggregated permission results', async () => {
-    const { default: User } = await import('server/src/lib/models/user');
+    const { default: User } = await import('@alga-psa/db/models/user');
     const permissions = [
       buildPermission('client', 'read', true, false),
       buildPermission('projects', 'write', true, false)

@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from '@alga-psa/ui/components/Button';
-import { ITaxRate, IClientTaxRate } from 'server/src/interfaces/billing.interfaces';
-import { ITaxRegion } from 'server/src/interfaces/tax.interfaces';
-import { getActiveTaxRegions } from 'server/src/lib/actions/taxSettingsActions';
+import { ITaxRate, IClientTaxRate } from '@alga-psa/types';
+import { ITaxRegion } from '@alga-psa/types';
+import { getActiveTaxRegionsAsync } from '../../lib/billingHelpers';
 import { Card, CardContent, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import Drawer from '@alga-psa/ui/components/Drawer'; // Correct: Use default import
@@ -40,7 +40,7 @@ const ClientTaxRates: React.FC<ClientTaxRatesProps> = ({
         const fetchTaxRegions = async () => {
             try {
                 setIsLoadingTaxRegions(true);
-                const regions = await getActiveTaxRegions();
+                const regions = await getActiveTaxRegionsAsync();
                 setTaxRegions(regions);
                 setErrorTaxRegions(null);
             } catch (error) {

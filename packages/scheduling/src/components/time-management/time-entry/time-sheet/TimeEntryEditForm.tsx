@@ -1,10 +1,10 @@
 'use client';
 
 import { memo, useCallback, useEffect, useMemo, useState, useRef } from 'react';
-import { getEligibleContractLinesForUI, getClientIdForWorkItem } from 'server/src/lib/utils/contractLineDisambiguation';
+import { getEligibleContractLinesForUI, getClientIdForWorkItem } from '../../../../lib/contractLineDisambiguation';
 import { getClientById } from '@alga-psa/clients/actions';
 import { formatISO, parseISO, addMinutes, setHours, setMinutes, setSeconds } from 'date-fns';
-import { IService } from 'server/src/interfaces/billing.interfaces';
+import { IService } from '@alga-psa/types';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Switch } from '@alga-psa/ui/components/Switch';
@@ -15,7 +15,7 @@ import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import { TimeEntryFormProps } from './types';
 import { calculateDuration, formatTimeForInput, parseTimeToDate, getDurationParts } from './utils';
-import { ISO8601String } from 'server/src/types/types.d';
+import { ISO8601String } from '@alga-psa/types';
 import ContractInfoBanner from './ContractInfoBanner';
 
 // Define the expected structure returned by getEligibleContractLinesForUI,

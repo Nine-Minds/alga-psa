@@ -2,7 +2,7 @@
 
 import { getSystemEmailService } from './system/SystemEmailService';
 import logger from '@alga-psa/core/logger';
-import { TenantLoginInfo } from '../actions/portal-actions/tenantRecoveryActions';
+import type { TenantLoginInfo } from '@alga-psa/client-portal/actions';
 import { getConnection } from '@/lib/db/db';
 import { SupportedLocale, LOCALE_CONFIG } from '@alga-psa/ui/lib/i18n/config';
 import { resolveEmailLocale } from '@/lib/notifications/emailLocaleResolver';

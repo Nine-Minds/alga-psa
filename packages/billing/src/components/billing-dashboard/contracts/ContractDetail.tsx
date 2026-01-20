@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
+import dynamic from 'next/dynamic';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@alga-psa/ui/components/Tabs';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { AlertCircle, CalendarClock, FileText, Layers3, Package, Users, Save, Pencil, X, Check, ArrowLeft, File, Upload, Trash2 } from 'lucide-react';
@@ -16,8 +17,8 @@ import { DatePicker } from '@alga-psa/ui/components/DatePicker';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import Drawer from '@alga-psa/ui/components/Drawer';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
-import { IContract, IContractAssignmentSummary } from 'server/src/interfaces/contract.interfaces';
-import { IClient } from 'server/src/interfaces';
+import { IContract, IContractAssignmentSummary } from '@alga-psa/types';
+import { IClient } from '@alga-psa/types';
 import type { IDocument } from '@alga-psa/types';
 import {
   getContractById,
@@ -27,23 +28,29 @@ import {
   deleteContract,
 } from '@alga-psa/billing/actions/contractActions';
 import type { IContractSummary } from '@alga-psa/billing/actions/contractActions';
-import { updateClientContract, getClientById } from '@alga-psa/clients/actions';
-import { getDocumentsByContractId } from '@alga-psa/documents/actions/documentActions';
-import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
-import { BILLING_FREQUENCY_OPTIONS } from 'server/src/constants/billing';
-import { useTenant } from 'server/src/components/TenantProvider';
+import { updateClientContractForBilling, getClientByIdForBilling } from '@alga-psa/billing/actions/billingClientsActions';
+import { getCurrentUserAsync, hasPermissionAsync, getSessionAsync, getAnalyticsAsync } from '../../../lib/authHelpers';
+import { getDocumentsByContractIdAsync } from '../../../lib/documentsHelpers';
+
+import { BILLING_FREQUENCY_OPTIONS } from '@alga-psa/billing/constants/billing';
+import { useTenant } from '@alga-psa/ui/components/providers/TenantProvider';
 import ContractHeader from './ContractHeader';
 import ContractLines from './ContractLines';
 import ContractOverview from './ContractOverview';
 import PricingSchedules from './PricingSchedules';
-import ClientDetails from '@alga-psa/clients/components/clients/ClientDetails';
-import Documents from '@alga-psa/documents/components/Documents';
 import { Temporal } from '@js-temporal/polyfill';
-import { toPlainDate, toISODate } from 'server/src/lib/utils/dateTimeUtils';
+import { toPlainDate, toISODate } from '@alga-psa/core';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
+import ClientAvatar from '@alga-psa/ui/components/ClientAvatar';
+
+// Dynamic import to avoid circular dependency (billing -> documents -> ui -> analytics -> ... -> billing)
+const Documents = dynamic(
+  () => import('@alga-psa/documents/components/Documents').then(mod => mod.default),
+  { ssr: false, loading: () => <LoadingIndicator /> }
+);
 import { Skeleton } from '@alga-psa/ui/components/Skeleton';
-import { cn } from 'server/src/lib/utils';
-import { formatCurrencyFromMinorUnits } from 'server/src/lib/utils/formatters';
+import { cn } from '@alga-psa/ui/lib/utils';
+import { formatCurrencyFromMinorUnits } from '@alga-psa/core';
 
 const formatDate = (value?: string | Date | null): string => {
   if (!value) {
@@ -285,8 +292,8 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
         getContractById(contractId),
         getContractSummary(contractId),
         getContractAssignments(contractId),
-        getDocumentsByContractId(contractId),
-        getCurrentUser()
+        getDocumentsByContractIdAsync(contractId),
+        getCurrentUserAsync()
       ]);
 
       if (!contractData) {
@@ -358,7 +365,7 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
 
   const handleOpenClientDrawer = async (clientId: string) => {
     try {
-      const clientData = await getClientById(clientId);
+      const clientData = await getClientByIdForBilling(clientId);
       if (clientData) {
         setQuickViewClient(clientData);
         setIsQuickViewOpen(true);
@@ -494,7 +501,7 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
 
         // Only update if there are changes
         if (Object.keys(updatePayload).length > 1) { // More than just tenant
-          await updateClientContract(assignmentId, updatePayload);
+          await updateClientContractForBilling(assignmentId, updatePayload);
         }
       }
 
@@ -1471,11 +1478,45 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
         }}
       >
         {quickViewClient && (
-          <ClientDetails
-            client={quickViewClient}
-            isInDrawer={true}
-            quickView={true}
-          />
+          <div className="p-4 space-y-4">
+            <div className="flex items-center gap-3">
+              <ClientAvatar
+                clientId={quickViewClient.client_id}
+                clientName={quickViewClient.client_name}
+                logoUrl={(quickViewClient as any).logoUrl}
+              />
+              <div className="min-w-0">
+                <div className="text-base font-semibold truncate">{quickViewClient.client_name}</div>
+                <div className="text-sm text-gray-600">
+                  {quickViewClient.is_inactive ? 'Inactive' : 'Active'}
+                  {quickViewClient.client_type ? ` • ${quickViewClient.client_type}` : ''}
+                </div>
+              </div>
+            </div>
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base font-semibold">Client Summary</CardTitle>
+              </CardHeader>
+              <CardContent className="text-sm text-gray-700 space-y-2">
+                <div className="flex justify-between gap-4">
+                  <span className="text-gray-500">Client ID</span>
+                  <span className="font-mono text-xs break-all">{quickViewClient.client_id}</span>
+                </div>
+                {'email' in quickViewClient && (quickViewClient as any).email ? (
+                  <div className="flex justify-between gap-4">
+                    <span className="text-gray-500">Email</span>
+                    <span className="truncate">{(quickViewClient as any).email}</span>
+                  </div>
+                ) : null}
+                {'phone_no' in quickViewClient && (quickViewClient as any).phone_no ? (
+                  <div className="flex justify-between gap-4">
+                    <span className="text-gray-500">Phone</span>
+                    <span className="truncate">{(quickViewClient as any).phone_no}</span>
+                  </div>
+                ) : null}
+              </CardContent>
+            </Card>
+          </div>
         )}
       </Drawer>
 

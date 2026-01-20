@@ -1,19 +1,19 @@
 'use client'
 
 import React from 'react';
-import { IExtendedWorkItem } from 'server/src/interfaces/workItem.interfaces';
+import { IExtendedWorkItem } from '@alga-psa/types';
 import { getConsolidatedTicketData } from '@alga-psa/tickets/actions/optimizedTicketActions';
 import { getTaskWithDetails } from '@alga-psa/projects/actions/projectTaskActions';
-import { getWorkItemById } from 'server/src/lib/actions/workItemActions';
-import { getCurrentUser, getAllUsersBasic } from 'server/src/lib/actions/user-actions/userActions';
+import { getWorkItemById } from '@alga-psa/scheduling/actions';
+import { getCurrentUser, getAllUsersBasic } from '@alga-psa/users/actions';
 import { toast } from 'react-hot-toast';
 import TicketDetails from '@alga-psa/tickets/components/ticket/TicketDetails';
 import TaskEdit from '@alga-psa/projects/components/TaskEdit';
 import EntryPopup from '../../../schedule/EntryPopup';
-import { useTenant } from 'server/src/components/TenantProvider';
+import { useTenant } from '@alga-psa/ui/components/providers/TenantProvider';
 import Spinner from '@alga-psa/ui/components/Spinner';
-import InteractionDetails from 'server/src/components/interactions/InteractionDetails';
-import { getInteractionById } from 'server/src/lib/actions/interactionActions';
+import { InteractionDetails } from '@alga-psa/clients/components';
+import { getInteractionById } from '@alga-psa/clients/actions';
 
 interface WorkItemDrawerProps {
     workItem: IExtendedWorkItem;

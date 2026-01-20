@@ -1,5 +1,5 @@
 import { createClient } from 'redis';
-import type { RedisClientType, RedisClientOptions } from 'redis';
+import type { RedisClientType } from 'redis';
 
 import logger from '../logger';
 import { getSecret } from '../secrets';
@@ -36,14 +36,16 @@ export class RedisStreamClient {
     if (this.client) return;
 
     const password = await getSecret('redis_password', 'REDIS_PASSWORD');
-    const clientOptions: RedisClientOptions = {
+    type CreateClientOptions = Parameters<typeof createClient>[0];
+
+    const clientOptions: CreateClientOptions = {
       url: this.url,
       password: password || undefined,
     };
 
     const client = createClient(clientOptions);
 
-    client.on('error', (err) => {
+    client.on('error', (err: unknown) => {
       logger.error('[RedisStreamClient] Redis error', { err });
     });
 
@@ -73,4 +75,3 @@ export class RedisStreamClient {
     return await this.client!.xAdd(this.streamName, '*', messageFields);
   }
 }
-

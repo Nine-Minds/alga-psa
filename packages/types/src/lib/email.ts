@@ -162,3 +162,38 @@ export interface IEmailProviderManager {
   sendBulkEmails(messages: EmailMessage[], tenantId: string): Promise<EmailSendResult[]>;
   getAvailableProviders(tenantId: string): Promise<IEmailProvider[]>;
 }
+
+/**
+ * Inbound ticket defaults for email-to-ticket processing
+ */
+export interface InboundTicketDefaults {
+  id: string;
+  tenant: string;
+  short_name: string;
+  display_name: string;
+  description?: string;
+  board_id?: string;
+  status_id?: string;
+  priority_id?: string;
+  client_id?: string;
+  entered_by?: string | null;
+  category_id?: string;
+  subcategory_id?: string;
+  location_id?: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+/**
+ * Options for ticket field dropdowns
+ */
+export interface TicketFieldOptions {
+  boards: Array<{ id: string; name: string; is_default: boolean }>;
+  statuses: Array<{ id: string; name: string; is_default?: boolean }>;
+  priorities: Array<{ id: string; name: string; is_default?: boolean }>;
+  categories: Array<{ id: string; name: string; parent_id?: string; board_id?: string }>;
+  clients: Array<{ id: string; name: string }>;
+  users: Array<{ id: string; name: string; username: string }>;
+  locations: Array<{ id: string; name: string; client_id: string }>;
+}

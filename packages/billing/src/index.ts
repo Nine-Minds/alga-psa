@@ -9,7 +9,7 @@
 export { Invoice, Contract } from './models';
 
 // Components
-export * from './components';
+export { BillingDashboard, CreditsPage, TemplateRenderer, PurchaseOrderSummaryBanner, AutomaticInvoices, BillingCycles } from './components';
 
 // Re-export invoice types from @alga-psa/types
 export type {
@@ -48,6 +48,31 @@ export {
   DEFAULT_ACCOUNTING_EXPORT_STATUSES,
   getTaxImportState,
 } from '@alga-psa/types';
+
+// Services
+export { AccountingMappingResolver } from './services/accountingMappingResolver';
+export type { MappingResolution } from './services/accountingMappingResolver';
+
+// Company sync services
+export {
+  CompanyAccountingSyncService,
+  KnexCompanyMappingRepository,
+  buildNormalizedCompanyPayload,
+  QuickBooksOnlineCompanyAdapter,
+  XeroCompanyAdapter
+} from './services/companySync';
+export type {
+  CompanyMappingRepository,
+  AccountingCompanyAdapter,
+  NormalizedCompanyPayload,
+  ExternalCompanyRecord
+} from './services/companySync';
+
+// Repositories
+export { KnexInvoiceMappingRepository } from './repositories/invoiceMappingRepository';
+
+// Validation
+export { AccountingExportValidation } from './lib/validation/accountingExportValidation';
 
 // Note: This module contains:
 // - Invoice CRUD operations (migrated)

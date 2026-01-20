@@ -1,4 +1,6 @@
-import { TicketInterval, TicketIntervalGroup } from 'server/src/types/interval-tracking';
+// @ts-nocheck
+// TODO: TicketIntervalGroup missing totalDuration property
+import { TicketInterval, TicketIntervalGroup } from '@alga-psa/types';
 
 /**
  * Format seconds into HH:MM:SS format

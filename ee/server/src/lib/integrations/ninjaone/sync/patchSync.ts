@@ -7,7 +7,7 @@
 
 import logger from '@alga-psa/core/logger';
 import axios from 'axios';
-import { createTenantKnex } from '@/db';
+import { createTenantKnex } from '@/lib/db';
 import { createNinjaOneClient } from '../ninjaOneClient';
 import type { NinjaOneDevicePatchStatus } from '../../../../interfaces/ninjaone.interfaces';
 

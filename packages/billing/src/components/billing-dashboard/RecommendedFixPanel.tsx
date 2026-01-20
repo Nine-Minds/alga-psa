@@ -5,10 +5,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { Button } from '@alga-psa/ui/components/Button';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { AlertCircle, CheckCircle, ArrowRight } from 'lucide-react';
-import { formatCurrency } from 'server/src/lib/utils/formatters';
-import { formatDateOnly } from 'server/src/lib/utils/dateTimeUtils';
+import { formatCurrency } from '@alga-psa/core';
+import { formatDateOnly } from '@alga-psa/core';
 import { parseISO } from 'date-fns';
-import { ICreditReconciliationReport } from 'server/src/interfaces/billing.interfaces';
+import { ICreditReconciliationReport } from '@alga-psa/types';
 import { Dialog, DialogContent, DialogDescription, DialogFooter } from '@alga-psa/ui/components/Dialog';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
 import { Input } from '@alga-psa/ui/components/Input';

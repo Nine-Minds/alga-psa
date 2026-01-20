@@ -1,5 +1,5 @@
 import { TenantEntity } from './index';
-import { ISO8601String } from '../types/types.d';
+import type { ISO8601String } from '@alga-psa/types';
 
 export interface IBillingPeriod extends TenantEntity {
   startDate: ISO8601String;

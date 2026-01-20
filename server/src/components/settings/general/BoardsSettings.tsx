@@ -1,26 +1,27 @@
 'use client'
 
+
 import React, { useState, useEffect } from 'react';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Plus, MoreVertical, HelpCircle } from "lucide-react";
-import { IBoard, CategoryType, PriorityType } from 'server/src/interfaces/board.interface';
+import { IBoard, CategoryType, PriorityType } from '@alga-psa/types';
 import {
   getAllBoards,
   createBoard,
   updateBoard,
   deleteBoard
-} from 'server/src/lib/actions/board-actions/boardActions';
-import { getAvailableReferenceData, importReferenceData, checkImportConflicts, ImportConflict } from 'server/src/lib/actions/referenceDataActions';
-import { getAllUsers } from 'server/src/lib/actions/user-actions/userActions';
+} from '@alga-psa/tickets/actions';
+import { getAvailableReferenceData, importReferenceData, checkImportConflicts, ImportConflict } from '@alga-psa/reference-data/actions';
+import { getAllUsers } from '@alga-psa/users/actions';
 import UserPicker from '@alga-psa/ui/components/UserPicker';
-import { IUser } from 'server/src/interfaces';
+import { IUser } from '@alga-psa/types';
 import { toast } from 'react-hot-toast';
 import { Dialog, DialogContent, DialogFooter } from '@alga-psa/ui/components/Dialog';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { Label } from '@alga-psa/ui/components/Label';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
-import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
+import { ColumnDefinition } from '@alga-psa/types';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Switch } from '@alga-psa/ui/components/Switch';

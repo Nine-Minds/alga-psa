@@ -1,15 +1,15 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import { IProjectPhase, IProjectTask, ITaskChecklistItem, ProjectStatus, IProjectTicketLinkWithDetails, IProjectTaskDependency } from 'server/src/interfaces/project.interfaces';
+import { IProjectPhase, IProjectTask, ITaskChecklistItem, ProjectStatus, IProjectTicketLinkWithDetails, IProjectTaskDependency } from '@alga-psa/types';
 import { IUser } from '@shared/interfaces/user.interfaces';
-import { IPriority } from 'server/src/interfaces/ticket.interfaces';
-import { ITag } from 'server/src/interfaces/tag.interfaces';
+import { IPriority } from '@alga-psa/types';
+import { ITag } from '@alga-psa/types';
 import UserAvatar from '@alga-psa/ui/components/UserAvatar';
 import { getProjectTreeData, getProjectDetails } from '../actions/projectActions';
-import { getAllPriorities } from 'server/src/lib/actions/priorityActions';
-import { getServices } from 'server/src/lib/actions/serviceActions';
-import { IService } from 'server/src/interfaces/billing.interfaces';
+import { getAllPriorities } from '@alga-psa/reference-data/actions';
+import { getServices } from '@alga-psa/projects/actions/serviceCatalogActions';
+import { IService } from '@alga-psa/types';
 import {
   updateTaskWithChecklist,
   addTaskToPhase,
@@ -23,9 +23,9 @@ import {
   duplicateTaskToPhase,
   getTaskDependencies
 } from '../actions/projectTaskActions';
-import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
-import { findTagsByEntityId, createTagsForEntity } from 'server/src/lib/actions/tagActions';
-import { TagManager, QuickAddTagPicker, PendingTag } from 'server/src/components/tags';
+import { getCurrentUser } from '@alga-psa/users/actions';
+import { findTagsByEntityId, createTagsForEntity } from '@alga-psa/tags/actions';
+import { QuickAddTagPicker, TagManager, type PendingTag } from '@alga-psa/ui/components';
 import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import { Button } from '@alga-psa/ui/components/Button';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
@@ -39,7 +39,7 @@ import { Input } from '@alga-psa/ui/components/Input';
 import { toast } from 'react-hot-toast';
 import { TaskTypeSelector } from './TaskTypeSelector';
 import { getTaskTypes } from '../actions/projectTaskActions';
-import { ITaskType } from 'server/src/interfaces/project.interfaces';
+import { ITaskType } from '@alga-psa/types';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import TaskTicketLinks from './TaskTicketLinks';
 import { TaskDependencies, TaskDependenciesRef } from './TaskDependencies';
@@ -49,11 +49,8 @@ import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import TreeSelect, { TreeSelectOption, TreeSelectPath } from '@alga-psa/ui/components/TreeSelect';
 import { PrioritySelect } from '@alga-psa/tickets/components/PrioritySelect';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
-import { useDrawer } from 'server/src/context/DrawerContext';
-import { IExtendedWorkItem, WorkItemType } from 'server/src/interfaces/workItem.interfaces';
-import TimeEntryDialog from '@alga-psa/scheduling/components/time-management/time-entry/time-sheet/TimeEntryDialog';
-import { getCurrentTimePeriod } from '@alga-psa/scheduling/actions/timePeriodsActions';
-import { fetchOrCreateTimeSheet, saveTimeEntry } from '@alga-psa/scheduling/actions/timeEntryActions';
+import { useDrawer } from '@alga-psa/ui';
+import { IExtendedWorkItem, WorkItemType } from '@alga-psa/types';
 
 type ProjectTreeTypes = 'project' | 'phase' | 'status';
 
@@ -764,71 +761,7 @@ export default function TaskForm({
     }
 
     try {
-      const currentUser = await getCurrentUser();
-      if (!currentUser) {
-        toast.error('No user session found');
-        return;
-      }
-
-      const currentTimePeriod = await getCurrentTimePeriod();
-
-      if (!currentTimePeriod) {
-        toast.error('No active time period found. Please contact your administrator.');
-        return;
-      }
-
-      const timeSheet = await fetchOrCreateTimeSheet(currentUser.user_id, currentTimePeriod.period_id);
-      if (!timeSheet) {
-        toast.error('Unable to add time entry: Failed to create or fetch time sheet');
-        return;
-      }
-
-      // Get the service name for the selected service
-      const selectedService = availableServices.find(s => s.service_id === selectedServiceId);
-
-      const workItem: Omit<IExtendedWorkItem, 'tenant'> = {
-        work_item_id: task.task_id,
-        type: 'project_task' as WorkItemType,
-        name: `${task.task_name}`,
-        description: '',  // Don't copy task description to time entry notes
-        project_name: phase.phase_name, // Using phase name as a placeholder
-        phase_name: phase.phase_name,
-        task_name: task.task_name,
-        service_id: selectedServiceId || task.service_id || null,
-        service_name: selectedService?.service_name || null,
-      };
-
-      openDrawer(
-        <TimeEntryDialog
-          isOpen={true}
-          onClose={closeDrawer}
-          onSave={async (timeEntry) => {
-            try {
-              await saveTimeEntry({
-                ...timeEntry,
-                time_sheet_id: timeSheet.id,
-                user_id: currentUser.user_id,
-                created_at: new Date().toISOString(),
-                updated_at: new Date().toISOString(),
-                approval_status: 'DRAFT',
-                work_item_type: 'project_task',
-                work_item_id: task.task_id!
-              });
-              toast.success('Time entry saved successfully');
-              closeDrawer();
-            } catch (error) {
-              console.error('Error saving time entry:', error);
-              toast.error('Failed to save time entry');
-            }
-          }}
-          workItem={workItem}
-          date={new Date()}
-          timePeriod={currentTimePeriod}
-          timeSheetId={timeSheet.id}
-          isEditable={true}
-          inDrawer={true}
-        />
-      );
+      toast('Time entry is managed in Scheduling.');
     } catch (error) {
       console.error('Error preparing time entry:', error);
       toast.error('Failed to prepare time entry. Please try again.');

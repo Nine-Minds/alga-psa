@@ -155,8 +155,8 @@ const nextConfig = {
       '@/empty/': isEE ? '../ee/server/src/' : './src/empty/',
       './src/empty': isEE ? '../ee/server/src' : './src/empty',
       './src/empty/': isEE ? '../ee/server/src/' : './src/empty/',
-      '@ee': isEE ? '../ee/server/src' : './src/empty',
-      '@ee/': isEE ? '../ee/server/src/' : './src/empty/',
+      '@ee': isEE ? '../ee/server/src' : '../packages/ee/src',
+      '@ee/': isEE ? '../ee/server/src/' : '../packages/ee/src/',
       'ee/server/src': isEE ? '../ee/server/src' : './src/empty',
       'ee/server/src/': isEE ? '../ee/server/src/' : './src/empty/',
       // Native DB drivers not used
@@ -166,6 +166,9 @@ const nextConfig = {
       'mysql2': emptyShim,
       'oracledb': emptyShim,
       'tedious': emptyShim,
+      // Node.js-only modules that shouldn't be bundled for client
+      'node-vault': emptyShim,
+      'postman-request': emptyShim,
       // Optional ffmpeg dependencies
       'ffmpeg-static': emptyShim,
       'ffprobe-static': emptyShim,
@@ -251,7 +254,6 @@ const nextConfig = {
     '@blocknote/react',
     '@blocknote/mantine',
     '@emoji-mart/data',
-    '@alga-psa/auth',
     '@alga-psa/ui',
     '@alga-psa/clients',
     '@alga-psa/integrations',
@@ -320,7 +322,7 @@ const nextConfig = {
       '@alga-psa/clients': path.join(__dirname, '../packages/clients/src'),
       '@ee': isEE
         ? path.join(__dirname, '../ee/server/src')
-        : path.join(__dirname, 'src/empty'), // Point to empty implementations for CE builds
+        : path.join(__dirname, '../packages/ee/src'), // Point to CE stub implementations
       // Also map deep EE paths used without the @ee alias to CE stubs
       // This ensures CE builds don't fail when code references ee/server/src directly
       'ee/server/src': isEE
@@ -524,6 +526,16 @@ const nextConfig = {
     // These are optional runtime dependencies that may not be installed
     config.externals.push('ffmpeg-static');
     config.externals.push('ffprobe-static');
+
+    // Replace Node.js-only modules with empty shims for client builds
+    // These modules use Node.js built-ins like 'tls', 'net', etc. that don't exist in the browser
+    if (!isServer && webpack) {
+      config.resolve.alias = {
+        ...config.resolve.alias,
+        'node-vault': emptyShim,
+        'postman-request': emptyShim,
+      };
+    }
 
     // Rule to handle .wasm files as assets
     config.module.rules.push({

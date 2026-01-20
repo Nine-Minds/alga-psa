@@ -1,0 +1,27 @@
+{
+  "name": "@alga-psa/analytics",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "packages/analytics/src",
+  "projectType": "library",
+  "tags": ["scope:analytics", "type:horizontal"],
+  "targets": {
+    "build": {
+      "executor": "nx:noop"
+    },
+    "test": {
+      "executor": "@nx/vite:test",
+      "outputs": ["{workspaceRoot}/coverage/packages/analytics"],
+      "options": {
+        "passWithNoTests": true
+      }
+    },
+    "lint": {
+      "executor": "@nx/eslint:lint",
+      "outputs": ["{options.outputFile}"],
+      "options": {
+        "lintFilePatterns": ["packages/analytics/**/*.{ts,tsx}"]
+      }
+    }
+  }
+}
+

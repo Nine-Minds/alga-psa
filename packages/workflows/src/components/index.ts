@@ -20,3 +20,11 @@ export { default as DynamicReactFlow } from './visualization/DynamicReactFlow';
 export { default as WorkflowVisualizer } from './visualization/WorkflowVisualizer';
 
 export { default as AutomationHub } from './automation-hub/AutomationHub';
+export { TaskForm } from './workflow/TaskForm';
+export { default as EventTriggerDialog } from './events-catalog/EventTriggerDialog';
+export { default as TemplatePreview } from './template-library/TemplatePreview';
+
+export { ActivityDrawerProvider, useActivityDrawer } from './user-activities/ActivityDrawerProvider';
+export { UserActivitiesDashboard } from './user-activities/UserActivitiesDashboard';
+export { NotificationCard } from './user-activities/NotificationCard';
+export { NotificationSectionFiltersDialog } from './user-activities/filters/NotificationSectionFiltersDialog';

@@ -2,7 +2,7 @@
 
 import { Knex } from 'knex'; // Import Knex type
 import { createTenantKnex } from '@alga-psa/db';
-import { IWorkItem } from 'server/src/interfaces/workItem.interfaces';
+import { IWorkItem } from '@alga-psa/types';
 import { getCurrentUser } from '@alga-psa/auth/getCurrentUser';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { validateData } from '@alga-psa/validation';
@@ -12,7 +12,7 @@ import {
   addWorkItemParamsSchema,
   AddWorkItemParams
 } from './timeEntrySchemas'; // Import schemas
-import { getSession } from 'server/src/lib/auth/getSession';
+import { getSession } from '@alga-psa/auth';
 
 export async function fetchWorkItemsForTimeSheet(timeSheetId: string): Promise<IWorkItem[]> {
   const currentUser = await getCurrentUser();
