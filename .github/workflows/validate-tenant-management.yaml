@@ -5,26 +5,51 @@ on:
   pull_request:
     branches:
       - '**'
-    paths:
-      - 'server/migrations/**'
-      - 'ee/server/migrations/**'
-      - 'ee/temporal-workflows/src/activities/tenant-deletion-activities.ts'
-      - '.github/workflows/validate-tenant-management.yaml'
-      - 'scripts/validate-tenant-management.ts'
-
   push:
     branches:
       - main
-    paths:
-      - 'server/migrations/**'
-      - 'ee/server/migrations/**'
-      - 'ee/temporal-workflows/src/activities/tenant-deletion-activities.ts'
-      - '.github/workflows/validate-tenant-management.yaml'
-      - 'scripts/validate-tenant-management.ts'
 
 jobs:
+  check-changes:
+    name: Check for relevant changes
+    runs-on: ubuntu-latest
+    outputs:
+      should_run: ${{ steps.filter.outputs.should_run }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check for migration or tenant management changes
+        id: filter
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "should_run=true" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          # Get the base ref for comparison
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            BASE_SHA="${{ github.event.pull_request.base.sha }}"
+          else
+            BASE_SHA="${{ github.event.before }}"
+          fi
+
+          # Check if any relevant files changed
+          CHANGED_FILES=$(git diff --name-only $BASE_SHA ${{ github.sha }} 2>/dev/null || echo "")
+
+          if echo "$CHANGED_FILES" | grep -qE '^(server/migrations/|ee/server/migrations/|ee/temporal-workflows/src/activities/tenant-deletion-activities\.ts|\.github/workflows/validate-tenant-management\.yaml|scripts/validate-tenant-management\.ts)'; then
+            echo "should_run=true" >> $GITHUB_OUTPUT
+            echo "Relevant changes detected - will run validation"
+          else
+            echo "should_run=false" >> $GITHUB_OUTPUT
+            echo "No relevant changes - skipping validation"
+          fi
+
   validate-tenant-management:
     name: Validate Tenant Management Schema
+    needs: check-changes
+    if: needs.check-changes.outputs.should_run == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
