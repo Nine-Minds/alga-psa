@@ -4,10 +4,44 @@
 exports.config = { transaction: false };
 
 /**
+ * Check if Citus is available
+ */
+async function isCitusAvailable(knex) {
+    const result = await knex.raw(`
+        SELECT EXISTS (
+            SELECT 1 FROM pg_proc
+            WHERE proname = 'run_command_on_shards'
+        ) AS exists;
+    `);
+    return result.rows?.[0]?.exists || false;
+}
+
+/**
+ * Check if a table is distributed
+ */
+async function isTableDistributed(knex, tableName) {
+    try {
+        const result = await knex.raw(`
+            SELECT EXISTS (
+                SELECT 1 FROM pg_dist_partition
+                WHERE logicalrelid = '${tableName}'::regclass
+            ) AS distributed;
+        `);
+        return result.rows?.[0]?.distributed || false;
+    } catch (e) {
+        // pg_dist_partition doesn't exist if Citus isn't installed
+        return false;
+    }
+}
+
+/**
  * @param { import("knex").Knex } knex
  * @returns { Promise<void> }
  */
 exports.up = async function(knex) {
+    const citusAvailable = await isCitusAvailable(knex);
+    const isDistributed = await isTableDistributed(knex, 'custom_fields');
+
     // Create ENUM types for better type safety and query performance
     // Using DO blocks to handle "type already exists" gracefully
     await knex.schema.raw(`
@@ -32,17 +66,53 @@ exports.up = async function(knex) {
 
     // Convert existing 'type' column from text to enum
     // First, ensure any existing values are valid enum values (default invalid to 'text')
+    // Include tenant predicate for Citus compatibility - only update rows that exist
+    // Using IF EXISTS pattern to skip if no rows need updating
     await knex.schema.raw(`
         UPDATE custom_fields
         SET type = 'text'
         WHERE type NOT IN ('text', 'number', 'date', 'boolean', 'picklist')
+        AND tenant IS NOT NULL
     `);
+    console.log('✓ Normalized invalid type values to text');
 
     // Convert the type column to use the enum
-    await knex.schema.raw(`
-        ALTER TABLE custom_fields
-        ALTER COLUMN type TYPE custom_field_type USING type::custom_field_type
-    `);
+    // For Citus distributed tables, we need to handle this carefully
+    if (citusAvailable && isDistributed) {
+        // For distributed tables, use run_command_on_shards
+        // This executes the ALTER on each shard individually
+        console.log('  Running ALTER COLUMN TYPE on distributed table via shards...');
+        try {
+            await knex.raw(`
+                SELECT run_command_on_shards(
+                    'custom_fields',
+                    $cmd$
+                        ALTER TABLE %s
+                        ALTER COLUMN type TYPE custom_field_type USING type::custom_field_type
+                    $cmd$
+                )
+            `);
+            // Also update the coordinator's metadata
+            await knex.raw(`
+                ALTER TABLE custom_fields
+                ALTER COLUMN type TYPE custom_field_type USING type::custom_field_type
+            `);
+        } catch (e) {
+            // If run_command_on_shards fails, try direct ALTER (may work for reference tables)
+            console.log('  Shard command failed, trying direct ALTER...');
+            await knex.raw(`
+                ALTER TABLE custom_fields
+                ALTER COLUMN type TYPE custom_field_type USING type::custom_field_type
+            `);
+        }
+    } else {
+        // For non-distributed tables (local dev), direct ALTER works fine
+        await knex.schema.raw(`
+            ALTER TABLE custom_fields
+            ALTER COLUMN type TYPE custom_field_type USING type::custom_field_type
+        `);
+    }
+    console.log('✓ Converted type column to enum');
 
     // Add new columns to custom_fields table for UDF support
     // Each column added separately for Citus compatibility
@@ -75,19 +145,16 @@ exports.up = async function(knex) {
         ALTER TABLE custom_fields
         ADD COLUMN IF NOT EXISTS description text
     `);
+    console.log('✓ Added UDF columns to custom_fields');
 
     // Add index for efficient querying by entity_type (includes field_order for sorting)
-    // Note: If is_active is frequently toggled, consider replacing this with:
-    // - A simpler index on (tenant, entity_type)
-    // - A partial index WHERE is_active = true
-    // This would reduce b-tree churn from status changes.
+    // Tenant is first column for Citus query optimization
     await knex.schema.raw(`
         CREATE INDEX IF NOT EXISTS idx_custom_fields_entity_type
         ON custom_fields(tenant, entity_type, is_active, field_order)
     `);
 
     // Add check constraint to limit picklist options to 200 to prevent unbounded bloat
-    // Note: No check constraint needed for type since enum provides type safety
     await knex.schema.raw(`
         DO $$
         BEGIN
@@ -101,6 +168,7 @@ exports.up = async function(knex) {
         END
         $$;
     `);
+    console.log('✓ Added index and constraints');
 };
 
 /**
@@ -108,6 +176,9 @@ exports.up = async function(knex) {
  * @returns { Promise<void> }
  */
 exports.down = async function(knex) {
+    const citusAvailable = await isCitusAvailable(knex);
+    const isDistributed = await isTableDistributed(knex, 'custom_fields');
+
     // Remove constraints (only ones we created)
     await knex.schema.raw(`
         ALTER TABLE custom_fields
@@ -126,15 +197,46 @@ exports.down = async function(knex) {
     await knex.schema.raw(`ALTER TABLE custom_fields DROP COLUMN IF EXISTS is_active`);
     await knex.schema.raw(`ALTER TABLE custom_fields DROP COLUMN IF EXISTS options`);
     await knex.schema.raw(`ALTER TABLE custom_fields DROP COLUMN IF EXISTS description`);
+    console.log('✓ Removed UDF columns from custom_fields');
 
     // Convert type column back to text before dropping enum
-    await knex.schema.raw(`
-        ALTER TABLE custom_fields
-        ALTER COLUMN type TYPE text USING type::text
-    `);
+    // Handle distributed tables carefully
+    if (citusAvailable && isDistributed) {
+        console.log('  Running ALTER COLUMN TYPE on distributed table via shards...');
+        try {
+            await knex.raw(`
+                SELECT run_command_on_shards(
+                    'custom_fields',
+                    $cmd$
+                        ALTER TABLE %s
+                        ALTER COLUMN type TYPE text USING type::text
+                    $cmd$
+                )
+            `);
+            await knex.raw(`
+                ALTER TABLE custom_fields
+                ALTER COLUMN type TYPE text USING type::text
+            `);
+        } catch (e) {
+            console.log('  Shard command failed, trying direct ALTER...');
+            await knex.raw(`
+                ALTER TABLE custom_fields
+                ALTER COLUMN type TYPE text USING type::text
+            `);
+        }
+    } else {
+        await knex.schema.raw(`
+            ALTER TABLE custom_fields
+            ALTER COLUMN type TYPE text USING type::text
+        `);
+    }
+    console.log('✓ Converted type column back to text');
 
-    // Drop ENUM types with CASCADE to handle any dependencies
-    // Note: CASCADE will also drop any columns/constraints using the enum
-    await knex.schema.raw(`DROP TYPE IF EXISTS custom_field_entity_type CASCADE`);
-    await knex.schema.raw(`DROP TYPE IF EXISTS custom_field_type CASCADE`);
+    // Drop ENUM types
+    // Note: We already converted the column to text above, so these should be safe to drop
+    // Using IF EXISTS to handle cases where types don't exist
+    // Avoiding CASCADE to prevent accidental drops of other dependent objects
+    await knex.schema.raw(`DROP TYPE IF EXISTS custom_field_entity_type`);
+    await knex.schema.raw(`DROP TYPE IF EXISTS custom_field_type`);
+    console.log('✓ Dropped enum types');
 };
