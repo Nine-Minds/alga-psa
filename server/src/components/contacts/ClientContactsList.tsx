@@ -30,10 +30,11 @@ type ContactWithId = IContact & { id: string };
 
 // Helper to ensure contacts have stable id for DataTable row keys
 // This prevents React DOM reconciliation errors when rows are re-rendered
+// Uses existing id if present, otherwise falls back to contact_name_id
 const addIdToContacts = (contacts: IContact[]): ContactWithId[] => {
   return contacts.map(contact => ({
     ...contact,
-    id: contact.contact_name_id
+    id: (contact as any).id ?? contact.contact_name_id
   }));
 };
 
@@ -105,7 +106,9 @@ const ClientContactsList: React.FC<ClientContactsListProps> = ({ clientId, clien
     const handleDrawerClose = () => {
       if (changesSavedInDrawer) {
         // Refresh contacts list
-        getContactsByClient(clientId, statusFilter).then(data => setContacts(addIdToContacts(data)));
+        getContactsByClient(clientId, statusFilter)
+          .then(data => setContacts(addIdToContacts(data)))
+          .catch(err => console.error('Error refreshing contacts after drawer close:', err));
         setChangesSavedInDrawer(false);
       }
     };
@@ -337,7 +340,9 @@ const ClientContactsList: React.FC<ClientContactsListProps> = ({ clientId, clien
         isOpen={isQuickAddContactOpen}
         onClose={() => setIsQuickAddContactOpen(false)}
         onContactAdded={() => {
-          getContactsByClient(clientId, statusFilter).then(data => setContacts(addIdToContacts(data)));
+          getContactsByClient(clientId, statusFilter)
+            .then(data => setContacts(addIdToContacts(data)))
+            .catch(err => console.error('Error refreshing contacts after quick add:', err));
         }}
         clients={clients}
         selectedClientId={clientId}
