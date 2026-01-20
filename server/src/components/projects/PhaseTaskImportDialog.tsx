@@ -5,6 +5,8 @@ import { Dialog, DialogContent, DialogFooter } from 'server/src/components/ui/Di
 import { Button } from 'server/src/components/ui/Button';
 import { Input } from 'server/src/components/ui/Input';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
+import UserPicker from 'server/src/components/ui/UserPicker';
+import { IUser } from '@shared/interfaces/user.interfaces';
 import { DataTable } from 'server/src/components/ui/DataTable';
 import { Switch } from 'server/src/components/ui/Switch';
 import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
@@ -996,17 +998,19 @@ const PhaseTaskImportDialog: React.FC<PhaseTaskImportDialogProps> = ({
                           />
                           <span className="text-sm">Map to existing user:</span>
                         </label>
-                        <CustomSelect
-                          options={availableUsers.map(user => ({
-                            value: user.user_id,
-                            label: `${user.first_name} ${user.last_name}`.trim() || 'Unnamed User',
-                          }))}
+                        <UserPicker
+                          id={`agent-mapping-${agentInfo.agentName}`}
+                          users={availableUsers as IUser[]}
                           value={resolution?.mappedUserId || ''}
                           onValueChange={(value) =>
                             handleAgentResolutionChange(agentInfo.agentName, 'map_to_existing', value)
                           }
                           disabled={resolution?.action !== 'map_to_existing'}
-                          className="w-48"
+                          placeholder="Select user..."
+                          labelStyle="none"
+                          buttonWidth="fit"
+                          size="sm"
+                          className="min-w-[200px]"
                         />
                       </div>
                     </div>
