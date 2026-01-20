@@ -4,29 +4,29 @@
 exports.config = { transaction: false };
 
 /**
- * Check if Citus is available
+ * Check if Citus is available by looking for run_command_on_shards function
  */
 async function isCitusAvailable(knex) {
     const result = await knex.raw(`
         SELECT EXISTS (
             SELECT 1 FROM pg_proc
             WHERE proname = 'run_command_on_shards'
-        ) AS exists;
+        ) AS exists
     `);
     return result.rows?.[0]?.exists || false;
 }
 
 /**
- * Check if a table is distributed
+ * Check if a table is distributed (uses parameterized query to avoid SQL injection)
  */
 async function isTableDistributed(knex, tableName) {
     try {
         const result = await knex.raw(`
             SELECT EXISTS (
                 SELECT 1 FROM pg_dist_partition
-                WHERE logicalrelid = '${tableName}'::regclass
-            ) AS distributed;
-        `);
+                WHERE logicalrelid = to_regclass(?)
+            ) AS distributed
+        `, [tableName]);
         return result.rows?.[0]?.distributed || false;
     } catch (e) {
         // pg_dist_partition doesn't exist if Citus isn't installed
@@ -66,14 +66,27 @@ exports.up = async function(knex) {
 
     // Convert existing 'type' column from text to enum
     // First, ensure any existing values are valid enum values (default invalid to 'text')
-    // Include tenant predicate for Citus compatibility - only update rows that exist
-    // Using IF EXISTS pattern to skip if no rows need updating
-    await knex.schema.raw(`
-        UPDATE custom_fields
-        SET type = 'text'
-        WHERE type NOT IN ('text', 'number', 'date', 'boolean', 'picklist')
-        AND tenant IS NOT NULL
-    `);
+    // For Citus distributed tables, run UPDATE on each shard to avoid broadcast
+    if (citusAvailable && isDistributed) {
+        console.log('  Running UPDATE on distributed table via shards...');
+        await knex.raw(`
+            SELECT run_command_on_shards(
+                'custom_fields',
+                $cmd$
+                    UPDATE %s
+                    SET type = 'text'
+                    WHERE type NOT IN ('text', 'number', 'date', 'boolean', 'picklist')
+                $cmd$
+            )
+        `);
+    } else {
+        // For non-distributed tables, direct UPDATE works fine
+        await knex.schema.raw(`
+            UPDATE custom_fields
+            SET type = 'text'
+            WHERE type NOT IN ('text', 'number', 'date', 'boolean', 'picklist')
+        `);
+    }
     console.log('✓ Normalized invalid type values to text');
 
     // Convert the type column to use the enum

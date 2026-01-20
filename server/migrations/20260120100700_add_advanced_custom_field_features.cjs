@@ -32,16 +32,21 @@ async function isCitusAvailable(knex) {
 }
 
 /**
- * Check if a table is already distributed
+ * Check if a table is already distributed (uses parameterized query to avoid SQL injection)
  */
 async function isTableDistributed(knex, tableName) {
-    const result = await knex.raw(`
-        SELECT EXISTS (
-            SELECT 1 FROM pg_dist_partition
-            WHERE logicalrelid = '${tableName}'::regclass
-        ) AS distributed;
-    `);
-    return result.rows?.[0]?.distributed || false;
+    try {
+        const result = await knex.raw(`
+            SELECT EXISTS (
+                SELECT 1 FROM pg_dist_partition
+                WHERE logicalrelid = to_regclass(?)
+            ) AS distributed
+        `, [tableName]);
+        return result.rows?.[0]?.distributed || false;
+    } catch (e) {
+        // pg_dist_partition doesn't exist if Citus isn't installed
+        return false;
+    }
 }
 
 /**
