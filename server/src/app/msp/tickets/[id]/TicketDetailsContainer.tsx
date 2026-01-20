@@ -7,10 +7,7 @@ import {
   updateTicketWithCache,
   addTicketCommentWithCache
 } from 'server/src/lib/actions/ticket-actions/optimizedTicketActions';
-import {
-  ConcurrencyConflictError,
-  type UpdateTicketResult
-} from 'server/src/lib/actions/ticket-actions/ticketActionTypes';
+import { isConcurrencyConflict } from 'server/src/lib/actions/ticket-actions/ticketActionTypes';
 import { useSession } from 'next-auth/react';
 import { toast } from 'react-hot-toast';
 import type { SurveyTicketSatisfactionSummary } from 'server/src/interfaces/survey.interface';
@@ -54,15 +51,6 @@ const getErrorMessage = (error: unknown): string => {
   return String(error);
 };
 
-// Type guard to check if error is a concurrency conflict using error code (not string matching)
-const isConcurrencyConflict = (error: unknown): error is ConcurrencyConflictError => {
-  return (
-    error instanceof Error &&
-    'code' in error &&
-    (error as any).code === 'CONCURRENCY_CONFLICT'
-  );
-};
-
 export default function TicketDetailsContainer({ ticketData, surveySummary = null }: TicketDetailsContainerProps) {
   const router = useRouter();
   const { data: session } = useSession();
@@ -92,11 +80,10 @@ export default function TicketDetailsContainer({ ticketData, surveySummary = nul
   }, []);
 
   // Handle concurrency conflict - auto-refresh to get latest data
-  const handleConflict = useCallback((error: ConcurrencyConflictError) => {
+  // Note: We don't update expectedUpdatedAtRef here because router.refresh() will
+  // reload the page and discard local state anyway
+  const handleConflict = useCallback(() => {
     toast.error('This ticket was modified by another user. Refreshing to show latest changes...');
-    // Update the expected timestamp to the server's current value
-    expectedUpdatedAtRef.current = error.currentUpdatedAt;
-    // Auto-refresh the page to get the latest data
     router.refresh();
   }, [router]);
 
@@ -136,12 +123,12 @@ export default function TicketDetailsContainer({ ticketData, surveySummary = nul
           expectedUpdatedAtRef.current // Only passed if defined
         );
         // Use the server's updated_at for the next request (not client-generated)
-        expectedUpdatedAtRef.current = result.updated_at;
+        expectedUpdatedAtRef.current = String(result.updated_at);
         toast.success(`${field} updated successfully`);
       } catch (error) {
         console.error(`Error updating ${field}:`, error);
         if (isConcurrencyConflict(error)) {
-          handleConflict(error);
+          handleConflict();
         } else {
           toast.error(`Failed to update ${field}: ${getErrorMessage(error)}`);
         }
@@ -174,13 +161,13 @@ export default function TicketDetailsContainer({ ticketData, surveySummary = nul
         );
 
         // Use the server's updated_at for the next request (not client-generated)
-        expectedUpdatedAtRef.current = result.updated_at;
+        expectedUpdatedAtRef.current = String(result.updated_at);
         toast.success('Changes saved successfully');
         return true;
       } catch (error) {
         console.error('Error saving changes:', error);
         if (isConcurrencyConflict(error)) {
-          handleConflict(error);
+          handleConflict();
         } else {
           toast.error(`Failed to save changes: ${getErrorMessage(error)}`);
         }
@@ -247,13 +234,13 @@ export default function TicketDetailsContainer({ ticketData, surveySummary = nul
         );
 
         // Use the server's updated_at for the next request (not client-generated)
-        expectedUpdatedAtRef.current = result.updated_at;
+        expectedUpdatedAtRef.current = String(result.updated_at);
         toast.success('Description updated successfully');
         return true;
       } catch (error) {
         console.error('Error updating description:', error);
         if (isConcurrencyConflict(error)) {
-          handleConflict(error);
+          handleConflict();
         } else {
           toast.error(`Failed to update description: ${getErrorMessage(error)}`);
         }
