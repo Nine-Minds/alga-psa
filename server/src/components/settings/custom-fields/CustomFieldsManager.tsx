@@ -98,6 +98,7 @@ function PicklistOptionEditor({ options, onChange }: PicklistOptionEditorProps) 
               containerClassName="mb-0 flex-1"
             />
             <Button
+              id={`remove-picklist-option-${index}`}
               type="button"
               variant="ghost"
               size="sm"
@@ -123,7 +124,7 @@ function PicklistOptionEditor({ options, onChange }: PicklistOptionEditorProps) 
             }
           }}
         />
-        <Button type="button" variant="outline" size="sm" onClick={addOption}>
+        <Button id="add-picklist-option" type="button" variant="outline" size="sm" onClick={addOption}>
           <Plus className="w-4 h-4" />
         </Button>
       </div>
@@ -320,7 +321,7 @@ export function CustomFieldsManager() {
       render: (_: string, record: ICustomField) => (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="sm">
+            <Button id={`field-actions-${record.field_id}`} variant="ghost" size="sm">
               <MoreVertical className="w-4 h-4" />
             </Button>
           </DropdownMenuTrigger>
@@ -382,7 +383,7 @@ export function CustomFieldsManager() {
 
       {/* Add Button */}
       <div className="flex justify-end">
-        <Button onClick={openAddDialog}>
+        <Button id="add-custom-field" onClick={openAddDialog}>
           <Plus className="w-4 h-4 mr-2" />
           Add Custom Field
         </Button>
@@ -463,10 +464,10 @@ export function CustomFieldsManager() {
           </div>
 
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowAddDialog(false)}>
+            <Button id="cancel-custom-field-dialog" variant="outline" onClick={() => setShowAddDialog(false)}>
               Cancel
             </Button>
-            <Button onClick={handleSave}>
+            <Button id="save-custom-field" onClick={handleSave}>
               {editingField ? 'Save Changes' : 'Create Field'}
             </Button>
           </DialogFooter>
@@ -475,6 +476,7 @@ export function CustomFieldsManager() {
 
       {/* Delete Confirmation */}
       <ConfirmationDialog
+        id="delete-custom-field-dialog"
         isOpen={deleteDialog.isOpen}
         onClose={() => setDeleteDialog({ isOpen: false, fieldId: '', fieldName: '', permanent: false })}
         onConfirm={handleDelete}
@@ -485,7 +487,6 @@ export function CustomFieldsManager() {
             : `Are you sure you want to deactivate "${deleteDialog.fieldName}"? The field will be hidden from forms but data will be preserved.`
         }
         confirmLabel={deleteDialog.permanent ? 'Delete Permanently' : 'Deactivate'}
-        variant={deleteDialog.permanent ? 'destructive' : 'default'}
       />
     </div>
   );
