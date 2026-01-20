@@ -4,8 +4,9 @@
  * Database connection management utilities.
  */
 
-import Knex, { Knex as KnexType } from 'knex';
-import { getSecretProviderInstance } from '@alga-psa/core/server';
+import Knex from 'knex';
+import type { Knex as KnexType } from 'knex';
+import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 
 // Create a map to store Knex instances
 const knexInstances: Map<string, KnexType> = new Map();

@@ -4,9 +4,10 @@
  * Provides tenant-aware database connections and transaction helpers.
  */
 
-import Knex, { Knex as KnexType } from './knex-turbopack';
+import Knex from './knex-turbopack';
+import type { Knex as KnexType } from './knex-turbopack';
 import { getKnexConfig } from './knexfile';
-import { logger } from '@alga-psa/core';
+import logger from '@alga-psa/core/logger';
 import { AsyncLocalStorage } from 'node:async_hooks';
 
 type PoolConfig = KnexType.PoolConfig & {

@@ -9,15 +9,13 @@ import { validateEmailAddress, validatePassword, getPasswordRequirements } from 
 
 // Dynamic imports to avoid circular dependency (auth -> users -> auth)
 // Note: Using string concatenation to prevent static analysis from detecting this dependency
-const getUsersModule = () => '@alga-psa/' + 'users/actions';
-
 const verifyContactEmail = async (email: string) => {
-  const { verifyContactEmail: verify } = await import(/* webpackIgnore: true */ getUsersModule());
+  const { verifyContactEmail: verify } = await import('@alga-psa/users/actions');
   return verify(email);
 };
 
 const initiateRegistration = async (email: string, password: string) => {
-  const { initiateRegistration: initReg } = await import(/* webpackIgnore: true */ getUsersModule());
+  const { initiateRegistration: initReg } = await import('@alga-psa/users/actions');
   return initReg(email, password);
 };
 

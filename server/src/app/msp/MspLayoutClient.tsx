@@ -2,7 +2,7 @@
 
 import { AppSessionProvider } from "@alga-psa/auth/client";
 import DefaultLayout from "@/components/layout/DefaultLayout";
-import { TagProvider } from "server/src/context/TagContext";
+import { TagProvider } from "@alga-psa/ui/context";
 import { PostHogUserIdentifier } from "@alga-psa/ui/components/analytics/PostHogUserIdentifier";
 import { ClientUIStateProvider } from "@alga-psa/ui/ui-reflection/ClientUIStateProvider";
 import { usePathname, useRouter } from "next/navigation";

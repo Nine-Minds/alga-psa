@@ -29,8 +29,7 @@ import {
 } from '@alga-psa/billing/actions/contractActions';
 import type { IContractSummary } from '@alga-psa/billing/actions/contractActions';
 import { updateClientContractForBilling, getClientByIdForBilling } from '@alga-psa/billing/actions/billingClientsActions';
-import { getCurrentUserAsync, hasPermissionAsync, getSessionAsync, getAnalyticsAsync } from '../../../lib/authHelpers';
-import { getDocumentsByContractIdAsync } from '../../../lib/documentsHelpers';
+import { getDocumentsByContractId } from '@alga-psa/documents/actions/documentActions';
 
 import { BILLING_FREQUENCY_OPTIONS } from '@alga-psa/billing/constants/billing';
 import { useTenant } from '@alga-psa/ui/components/providers/TenantProvider';
@@ -288,12 +287,11 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
     setPoAmountInputs({});
 
     try {
-      const [contractData, summaryData, assignmentData, documentsData, currentUser] = await Promise.all([
+      const [contractData, summaryData, assignmentData, documentsData] = await Promise.all([
         getContractById(contractId),
         getContractSummary(contractId),
         getContractAssignments(contractId),
-        getDocumentsByContractIdAsync(contractId),
-        getCurrentUserAsync()
+        getDocumentsByContractId(contractId)
       ]);
 
       if (!contractData) {
@@ -309,7 +307,6 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
       setSummary(summaryData);
       setAssignments(assignmentData);
       setDocuments(documentsData || []);
-      setCurrentUserId(currentUser?.user_id || '');
     } catch (err) {
       console.error('Error loading contract details:', err);
       setError('Failed to load contract');

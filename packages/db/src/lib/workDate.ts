@@ -1,4 +1,4 @@
-import { Knex } from 'knex';
+import type { Knex } from 'knex';
 import { Temporal } from '@js-temporal/polyfill';
 
 export function normalizeIanaTimeZone(timeZone: string | null | undefined): string {
@@ -53,4 +53,3 @@ export async function resolveUserTimeZone(
     .first();
   return normalizeIanaTimeZone(row?.timezone ?? null);
 }
-

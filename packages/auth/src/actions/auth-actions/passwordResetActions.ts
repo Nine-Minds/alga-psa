@@ -11,12 +11,12 @@ import { isValidEmail } from '@alga-psa/validation';
 const getEmailModule = () => '@alga-psa/' + 'email';
 
 const getTenantEmailService = async (tenant: string) => {
-  const { TenantEmailService } = await import(/* webpackIgnore: true */ getEmailModule());
+  const { TenantEmailService } = await import('@alga-psa/email');
   return TenantEmailService.getInstance(tenant);
 };
 
 const getSystemEmailServiceAsync = async () => {
-  const { getSystemEmailService } = await import(/* webpackIgnore: true */ getEmailModule());
+  const { getSystemEmailService } = await import('@alga-psa/email');
   return getSystemEmailService();
 };
 
@@ -29,7 +29,7 @@ const sendPasswordResetEmailAsync = async (params: {
   supportEmail: string;
   clientName: string;
 }) => {
-  const { sendPasswordResetEmail } = await import(/* webpackIgnore: true */ getEmailModule());
+  const { sendPasswordResetEmail } = await import('@alga-psa/email');
   return sendPasswordResetEmail(params);
 };
 

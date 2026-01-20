@@ -38,7 +38,7 @@ export { auditLog } from './lib/auditLog';
 export * from './lib/workDate';
 
 // DB models (tenant-scoped data access patterns)
-export * from './models';
+export * from './models/index';
 
 // Service infrastructure
 export * from './services/BaseService';
@@ -51,7 +51,7 @@ export {
 } from './lib/connection';
 
 // Transaction Helpers
-import { Knex as KnexType } from 'knex';
+import type { Knex as KnexType } from 'knex';
 import { getAdminConnection } from './lib/admin';
 
 /**

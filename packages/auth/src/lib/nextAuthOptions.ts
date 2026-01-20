@@ -16,7 +16,7 @@ import {
 } from "./session";
 import { issuePortalDomainOtt } from "./PortalDomainSessionToken";
 import { buildTenantPortalSlug, isValidTenantSlug } from "@alga-psa/validation";
-import { isEnterprise } from "@alga-psa/core";
+import { isEnterprise } from "@alga-psa/core/features";
 import {
     applyOAuthAccountHints,
     decodeOAuthJwtPayload,

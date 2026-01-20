@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { useSession } from 'next-auth/react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import { DatePicker } from '@alga-psa/ui/components/DatePicker';
 import { Button } from '@alga-psa/ui/components/Button';
@@ -14,7 +15,6 @@ import { parseISO } from 'date-fns';
 import { ColumnDefinition } from '@alga-psa/types';
 import { ICreditReconciliationReport, ReconciliationStatus } from '@alga-psa/types';
 import { validateClientCredit } from '@alga-psa/billing/actions/creditReconciliationActions';
-import { getCurrentUserAsync, hasPermissionAsync, getSessionAsync, getAnalyticsAsync } from '../../lib/authHelpers';
 
 import {
   fetchReconciliationReports,
@@ -154,6 +154,7 @@ const CreditReconciliation: React.FC = () => {
   });
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { data: session } = useSession();
   const subtabParam = searchParams?.get('subtab');
 
   // Map URL slugs to tab base labels (without counts)
@@ -278,14 +279,14 @@ const CreditReconciliation: React.FC = () => {
     try {
       setRunningValidation(true);
 
-      // Get the current user
-      const currentUser = await getCurrentUserAsync();
-      if (!currentUser) {
+      const sessionUser = session?.user as any;
+      const currentUserId = sessionUser?.id ?? sessionUser?.user_id;
+      if (!currentUserId) {
         throw new Error('User not authenticated');
       }
 
       // Call the server action to run validation for the selected client
-      const result = await validateClientCredit(selectedClient, currentUser.user_id);
+      const result = await validateClientCredit(selectedClient, String(currentUserId));
 
       console.log('Validation result:', result);
 

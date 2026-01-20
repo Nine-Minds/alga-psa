@@ -4,9 +4,11 @@
  * Provides admin database connections for privileged operations.
  */
 
-import knex, { Knex } from 'knex';
+import knex from 'knex';
+import type { Knex } from 'knex';
 import knexfile from './knexfile';
-import { getSecret, logger } from '@alga-psa/core/server';
+import logger from '@alga-psa/core/logger';
+import { getSecret } from '@alga-psa/core/secrets';
 
 let adminConnection: Knex | null = null;
 

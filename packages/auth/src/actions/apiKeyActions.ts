@@ -8,11 +8,10 @@ import { withTransaction } from '@alga-psa/db';
 // Dynamic import to avoid circular dependency (auth -> users -> auth)
 // Note: Using string concatenation to prevent static analysis from detecting this dependency
 const getUserRoles = async (userId: string) => {
-  const modulePath = '@alga-psa/' + 'users/actions';
-  const { getUserRoles: getRoles } = await import(/* webpackIgnore: true */ modulePath);
+  const { getUserRoles: getRoles } = await import('@alga-psa/users/actions');
   return getRoles(userId);
 };
-import { Knex } from 'knex';
+import type { Knex } from 'knex';
 
 /**
  * Create a new API key for the current user

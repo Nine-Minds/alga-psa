@@ -25,6 +25,18 @@
       "types": "./dist/handlers/index.d.ts",
       "import": "./dist/handlers/index.mjs",
       "require": "./dist/handlers/index.js"
+    },
+    "./lib/avatarUtils": {
+      "import": "./src/lib/avatarUtils.ts",
+      "types": "./src/lib/avatarUtils.ts"
+    },
+    "./lib/blocknoteUtils": {
+      "import": "./src/lib/blocknoteUtils.ts",
+      "types": "./src/lib/blocknoteUtils.ts"
+    },
+    "./lib/documentUtils": {
+      "import": "./src/lib/documentUtils.ts",
+      "types": "./src/lib/documentUtils.ts"
     }
   },
   "scripts": {

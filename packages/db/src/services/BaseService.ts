@@ -3,7 +3,7 @@
  * Provides common database operations and patterns for API services
  */
 
-import { Knex } from 'knex';
+import type { Knex } from 'knex';
 import { createTenantKnex, withTransaction } from '../lib/tenant';
 
 // Import and re-export for services

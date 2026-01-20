@@ -90,4 +90,4 @@ if (typeof globalThis !== 'undefined' && !globalThis.__knexDialectPatched) {
 import knex from 'knex';
 
 export default knex;
-export { Knex };
+export type { Knex };

@@ -3,36 +3,30 @@
  *
  * These are dynamic import wrappers to avoid circular dependency:
  * billing -> auth -> ui -> analytics -> tenancy -> ... -> billing
- *
- * Note: Using string concatenation to prevent static analysis from detecting dependencies
  */
 
-const getAuthModule = () => '@alga-psa/' + 'auth';
-const getAuthCurrentUserModule = () => '@alga-psa/' + 'auth/getCurrentUser';
-const getAnalyticsModule = () => '@alga-psa/' + 'analytics';
-
 export async function getCurrentUserAsync() {
-  const { getCurrentUser } = await import(/* webpackIgnore: true */ getAuthCurrentUserModule());
+  const { getCurrentUser } = await import('@alga-psa/auth/getCurrentUser');
   return getCurrentUser();
 }
 
 export async function getSessionAsync() {
-  const { getSession } = await import(/* webpackIgnore: true */ getAuthModule());
+  const { getSession } = await import('@alga-psa/auth');
   return getSession();
 }
 
 export async function hasPermissionAsync(user: any, resource: string, action: string): Promise<boolean> {
-  const { hasPermission } = await import(/* webpackIgnore: true */ getAuthModule());
+  const { hasPermission } = await import('@alga-psa/auth');
   return hasPermission(user, resource, action);
 }
 
 // Analytics helpers
 export async function getAnalyticsAsync() {
-  const { analytics, AnalyticsEvents } = await import(/* webpackIgnore: true */ getAnalyticsModule());
+  const { analytics, AnalyticsEvents } = await import('@alga-psa/analytics');
   return { analytics, AnalyticsEvents };
 }
 
 export async function trackAnalyticsEventAsync(eventName: string, properties: Record<string, any>, userId?: string) {
-  const { analytics } = await import(/* webpackIgnore: true */ getAnalyticsModule());
+  const { analytics } = await import('@alga-psa/analytics');
   analytics.capture(eventName, properties, userId);
 }

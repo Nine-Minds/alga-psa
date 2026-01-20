@@ -3,7 +3,7 @@ import jwt, { TokenExpiredError, JsonWebTokenError, NotBeforeError, SignOptions,
 import type { IUserRegister, TokenResponse } from '@alga-psa/types'; 
 
 import logger from '@alga-psa/core/logger';
-import { getSecretProviderInstance } from '@alga-psa/core/server';
+import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 
 
 async function getSecretKey(): Promise<Secret> {
