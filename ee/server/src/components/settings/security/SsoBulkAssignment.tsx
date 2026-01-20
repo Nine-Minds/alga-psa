@@ -89,8 +89,8 @@ export default function SsoBulkAssignment() {
           <div className="flex items-center justify-between rounded-lg border border-muted-foreground/20 p-4">
             <div className="max-w-xl space-y-1">
               <p className="text-sm text-muted-foreground">
-                While enabled, any new staff and existing emails already in your directory can sign in with Google or
-                Microsoft as soon as their address matches—no “Connect SSO” flow or manual linking required.
+                When enabled, newly added MSP users can sign in with Google or Microsoft using their work email. They
+                will not have to manually link their account.
               </p>
             </div>
             <Switch
