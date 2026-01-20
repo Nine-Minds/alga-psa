@@ -9,7 +9,18 @@ export * from './timeEntrySchemas';
 export * from './timeEntryServices';
 export * from './timeEntryWorkItemActions';
 export * from './timePeriodsActions';
-export * from './timeSheetActions';
+// Re-export timeSheetActions but exclude duplicate fetchTimeEntriesForTimeSheet
+export {
+  fetchTimeSheetsForApproval,
+  addCommentToTimeSheet,
+  bulkApproveTimeSheets,
+  fetchTimeSheet,
+  // fetchTimeEntriesForTimeSheet excluded - conflicts with timeEntryCrudActions
+  fetchTimeSheetComments,
+  approveTimeSheet,
+  requestChangesForTimeSheet,
+  reverseTimeSheetApproval
+} from './timeSheetActions';
 export * from './timeSheetOperations';
 export * from './time-period-settings-actions';
 export * from './appointmentHelpers';

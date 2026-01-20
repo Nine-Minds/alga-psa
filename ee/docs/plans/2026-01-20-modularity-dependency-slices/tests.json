@@ -1,0 +1,12 @@
+[
+  { "id": "T001", "featureIds": ["F001"], "description": "Layering rules are documented in PRD and referenced by this plan.", "implemented": true },
+  { "id": "T002", "featureIds": ["F002","F003","F004","F005"], "description": "@alga-psa/shared typechecks and builds with the new billingClients module.", "implemented": true },
+  { "id": "T003", "featureIds": ["F006","F007"], "description": "@alga-psa/billing typechecks and builds with no imports from @alga-psa/clients.", "implemented": true },
+  { "id": "T004", "featureIds": ["F008"], "description": "@alga-psa/clients typechecks and builds with no imports from @alga-psa/billing.", "implemented": true },
+  { "id": "T005", "featureIds": ["F009","F010"], "description": "No dynamic import helpers remain that exist solely to avoid billing↔clients static dependency detection.", "implemented": true },
+  { "id": "T006", "featureIds": ["F014"], "description": "Dependency graph is validated via import-greps and TypeScript file inclusion (nx graph optional).", "implemented": true },
+  { "id": "T007", "featureIds": ["F015"], "description": "Build/typecheck “smoke checks” pass for shared, billing, and clients.", "implemented": true },
+  { "id": "T008", "featureIds": ["F017"], "description": "@alga-psa/auth typechecks after refactor (no test-only type errors during package typecheck).", "implemented": false },
+  { "id": "T009", "featureIds": ["F016","F018"], "description": "@alga-psa/ui typechecks and has no imports from vertical slices (verify via grep + typecheck).", "implemented": false },
+  { "id": "T010", "featureIds": ["F019"], "description": "nx build run-many succeeds without circular dependency errors.", "implemented": false }
+]

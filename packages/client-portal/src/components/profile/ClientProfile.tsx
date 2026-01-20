@@ -10,7 +10,7 @@ import { Switch } from '@alga-psa/ui/components/Switch';
 import TimezonePicker from '@alga-psa/ui/components/TimezonePicker';
 import CustomTabs, { TabContent } from '@alga-psa/ui/components/CustomTabs';
 import ViewSwitcher, { ViewSwitcherOption } from '@alga-psa/ui/components/ViewSwitcher';
-import { InternalNotificationPreferences } from '@alga-psa/ui/components/settings/notifications/InternalNotificationPreferences';
+import { InternalNotificationPreferences } from '@alga-psa/notifications/components';
 import { getCurrentUser, updateUser } from '@alga-psa/users/actions';
 import {
   getCategoriesAction,
@@ -19,8 +19,8 @@ import {
 } from '@alga-psa/notifications/actions';
 import type { NotificationCategory, NotificationSubtype, UserNotificationPreference } from '@alga-psa/notifications';
 import type { IUserWithRoles } from '@alga-psa/types';
-import PasswordChangeForm from '@alga-psa/ui/components/settings/general/PasswordChangeForm';
-import SessionManagement from '@alga-psa/ui/components/settings/security/SessionManagement';
+import { PasswordChangeForm } from '@alga-psa/users/components';
+import { SessionManagement } from '@alga-psa/auth/components';
 import { toast } from 'react-hot-toast';
 import ContactAvatarUpload from '../contacts/ContactAvatarUpload';
 import { getContactAvatarUrlAction } from '@alga-psa/users/actions';

@@ -1,8 +1,7 @@
 import { Text } from '@radix-ui/themes';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Input } from '@alga-psa/ui/components/Input';
-import { getInvoiceTemplates, getDefaultTemplate } from '@alga-psa/billing/actions';
-import { getActiveTaxRegions } from '@alga-psa/billing/actions'; // Added
+import { getInvoiceTemplatesAsync, getDefaultTemplateAsync, getActiveTaxRegionsAsync } from '../../lib/billingHelpers';
 import { IInvoiceTemplate } from '@alga-psa/types';
 import { IContact } from '@alga-psa/types';
 import { ITaxRegion } from '@alga-psa/types'; // Added
@@ -46,8 +45,8 @@ const BillingConfigForm: React.FC<BillingConfigFormProps> = ({
         const loadTemplateData = async () => { // Renamed function
             try {
                 const [loadedTemplates, loadedDefault] = await Promise.all([
-                    getInvoiceTemplates(),
-                    getDefaultTemplate()
+                    getInvoiceTemplatesAsync(),
+                    getDefaultTemplateAsync()
                 ]);
                 
                 setTemplates(loadedTemplates);
@@ -62,7 +61,7 @@ const BillingConfigForm: React.FC<BillingConfigFormProps> = ({
         const loadTaxRegions = async () => { // Added function
            try {
                setIsLoadingTaxRegions(true);
-               const regions = await getActiveTaxRegions();
+               const regions = await getActiveTaxRegionsAsync();
                setTaxRegions(regions);
                setErrorTaxRegions(null);
            } catch (error) {

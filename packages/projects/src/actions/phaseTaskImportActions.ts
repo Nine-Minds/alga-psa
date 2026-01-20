@@ -736,6 +736,9 @@ export async function importPhasesAndTasks(
   }
 
   const { knex: db, tenant } = await createTenantKnex();
+  if (!tenant) {
+    throw new Error('Tenant context not found');
+  }
 
   return await withTransaction(db, async (trx: Knex.Transaction) => {
     if (!await hasPermission(currentUser, 'project', 'update')) {

@@ -6,7 +6,7 @@ import { IBoard, IUser } from '@alga-psa/types';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
-import { getCurrentUser } from '@alga-psa/users/actions';
+import { getCurrentUserAsync } from '../../lib/usersHelpers';
 import { BoardPicker } from '@alga-psa/ui/components/settings/general/BoardPicker';
 import CategoryPicker from '@alga-psa/tickets/components/CategoryPicker';
 import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect';
@@ -98,7 +98,7 @@ const ContactTickets: React.FC<ContactTicketsProps> = ({
     const fetchUserAndSettings = async () => {
       try {
         const [user, settings] = await Promise.all([
-          getCurrentUser(),
+          getCurrentUserAsync(),
           getTicketingDisplaySettings()
         ]);
         setCurrentUser(user);
@@ -407,15 +407,16 @@ const ContactTickets: React.FC<ContactTicketsProps> = ({
           
           {allUniqueTags.length > 0 && (
             <TagFilter
-              allTags={allUniqueTags}
+              tags={allUniqueTags}
               selectedTags={selectedTags}
-              onTagSelect={(tag) => {
-                setSelectedTags(prev => 
-                  prev.includes(tag) 
+              onToggleTag={(tag: string) => {
+                setSelectedTags(prev =>
+                  prev.includes(tag)
                     ? prev.filter(t => t !== tag)
                     : [...prev, tag]
                 );
               }}
+              onClearTags={() => setSelectedTags([])}
             />
           )}
           

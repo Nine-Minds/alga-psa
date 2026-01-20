@@ -5,7 +5,7 @@ import AzureADProvider from "next-auth/providers/azure-ad";
 import { createHmac, timingSafeEqual } from "node:crypto";
 import type { NextAuthConfig } from "next-auth";
 import "@alga-psa/auth/types/next-auth";
-import { AnalyticsEvents } from "@alga-psa/analytics";
+// AnalyticsEvents imported dynamically when needed to avoid circular dependency
 // import { getAdminConnection } from "@alga-psa/db";
 import {
     getNextAuthSecret,
@@ -15,7 +15,7 @@ import {
     type PortalSessionTokenPayload,
 } from "./session";
 import { issuePortalDomainOtt } from "./PortalDomainSessionToken";
-import { buildTenantPortalSlug, isValidTenantSlug } from "@shared/utils/tenantSlug";
+import { buildTenantPortalSlug, isValidTenantSlug } from "@alga-psa/validation";
 import { isEnterprise } from "@alga-psa/core";
 import {
     applyOAuthAccountHints,
@@ -1039,7 +1039,7 @@ export async function buildAuthOptions(): Promise<NextAuthConfig> {
                     console.error('Error details:', {
                         email: credentials?.email
                     });
-                    logger.warn("Error authorizing email", credentials?.email, error);
+                    logger.warn("Error authorizing email", { email: credentials?.email, error });
                     throw error;
                 }
             }
@@ -1802,7 +1802,7 @@ export const options: NextAuthConfig = {
                     console.error('Error details:', {
                         email: credentials?.email
                     });
-                    logger.warn("Error authorizing email", credentials?.email, error);
+                    logger.warn("Error authorizing email", { email: credentials?.email, error });
                     throw error;
                 }
             }

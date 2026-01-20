@@ -5,10 +5,11 @@ import { IServiceCategory } from '@alga-psa/types';
 import { TextNoneIcon } from '@radix-ui/react-icons';
 import { createTenantKnex } from '@alga-psa/db';
 import { Knex } from 'knex';
-import { getSession } from '@alga-psa/auth';
+import { getCurrentUserAsync, hasPermissionAsync, getSessionAsync, getAnalyticsAsync } from '../lib/authHelpers';
+
 
 export async function getServiceCategories() {
-  const session = await getSession();
+  const session = await getSessionAsync();
   if (!session?.user?.id) {
     throw new Error('Unauthorized');
   }
@@ -28,7 +29,7 @@ export async function getServiceCategories() {
 }
 
 export async function createServiceCategory(categoryName: string, description?: string) {
-  const session = await getSession();
+  const session = await getSessionAsync();
   if (!session?.user?.id) {
     throw new Error('Unauthorized');
   }
@@ -76,7 +77,7 @@ export async function createServiceCategory(categoryName: string, description?: 
 }
 
 export async function deleteServiceCategory(categoryId: string) {
-  const session = await getSession();
+  const session = await getSessionAsync();
   if (!session?.user?.id) {
     throw new Error('Unauthorized');
   }
@@ -119,7 +120,7 @@ export async function deleteServiceCategory(categoryId: string) {
 }
 
 export async function updateServiceCategory(categoryId: string, categoryData: Partial<IServiceCategory>) {
-  const session = await getSession();
+  const session = await getSessionAsync();
   if (!session?.user?.id) {
     throw new Error('Unauthorized');
   }

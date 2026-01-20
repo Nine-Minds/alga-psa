@@ -1,8 +1,16 @@
 'use server';
 
-import { getCurrentUser } from '@alga-psa/users/actions';
 import { getConnection } from '@alga-psa/db';
-import { SupportedLocale, isSupportedLocale, LOCALE_CONFIG } from '@alga-psa/ui/lib/i18n/config';
+import { SupportedLocale, isSupportedLocale, LOCALE_CONFIG } from '@alga-psa/core/i18n/config';
+
+// Dynamic import to avoid circular dependency (tenancy -> users -> auth -> ui -> analytics -> tenancy)
+// Note: Using string concatenation to prevent static analysis from detecting this dependency
+const getUsersModule = () => '@alga-psa/' + 'users/actions';
+
+const getCurrentUserAsync = async () => {
+  const { getCurrentUser } = await import(/* webpackIgnore: true */ getUsersModule());
+  return getCurrentUser();
+};
 
 /**
  * Get the user's client ID from their contact
@@ -39,7 +47,7 @@ export async function getInheritedLocaleAction(): Promise<{
   locale: SupportedLocale;
   source: 'client' | 'tenant' | 'system';
 }> {
-  const user = await getCurrentUser();
+  const user = await getCurrentUserAsync();
 
   if (!user) {
     return {

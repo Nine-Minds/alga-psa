@@ -245,7 +245,11 @@ export const assetQuerySchema = z.object({
   status: z.string().optional(),
   page: z.number().int().positive().optional(),
   pageSize: z.number().int().positive().optional(),
-  search: z.string().optional()
+  limit: z.number().int().positive().optional(),
+  search: z.string().optional(),
+  agent_status: z.string().optional(),
+  rmm_managed: z.boolean().optional(),
+  include_extension_data: z.boolean().optional()
 });
 
 export const assetMaintenanceReportSchema = z.object({
@@ -266,5 +270,10 @@ export const clientMaintenanceSummarySchema = z.object({
   client_name: z.string(),
   total_assets: z.number(),
   assets_with_maintenance: z.number(),
-  overdue_maintenance: z.number()
+  overdue_maintenance: z.number().optional(),
+  total_schedules: z.number(),
+  overdue_maintenances: z.number(),
+  upcoming_maintenances: z.number(),
+  compliance_rate: z.number(),
+  maintenance_by_type: z.record(z.number())
 });

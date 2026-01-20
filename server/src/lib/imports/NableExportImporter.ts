@@ -1,6 +1,6 @@
 import { CsvImporter } from './CsvImporter';
 import { normalizeRmmAssetType } from './assetTypeNormalizer';
-import type { FieldMapping, ParsedRecord, ValidationResult } from '@/types/imports.types';
+import type { FieldMapping, ParsedRecord, ValidationResult } from '../../types/imports.types';
 import { ImportValidationError } from '@/lib/imports/errors';
 import type { Buffer } from 'node:buffer';
 

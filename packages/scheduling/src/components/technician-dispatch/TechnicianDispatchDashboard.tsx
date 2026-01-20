@@ -12,7 +12,7 @@ import WorkItemListPanel from './WorkItemListPanel';
 import ScheduleViewPanel from './ScheduleViewPanel';
 import WorkItemCard from './WorkItemCard';
 import { getAllUsersBasic } from '@alga-psa/users/actions';
-import { useUserPreference } from '@alga-psa/ui';
+import { useUserPreference } from '@alga-psa/users/hooks';
 import { searchDispatchWorkItems, getWorkItemById, DispatchSearchOptions } from '@alga-psa/scheduling/actions';
 import { addScheduleEntry, updateScheduleEntry, getScheduleEntries, deleteScheduleEntry, ScheduleActionResult } from '@alga-psa/scheduling/actions';
 import { getWorkItemStatusOptions, StatusOption } from '@alga-psa/reference-data/actions';

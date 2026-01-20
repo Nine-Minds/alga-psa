@@ -47,8 +47,10 @@ const NinjaOneIntegrationSettings = dynamic(
 
 // Dynamic import for StripeConnectionSettings using the packages pattern
 // The webpack alias @product/billing/entry will resolve to either EE or OSS version
+// Note: @product/billing/entry is a webpack alias resolved at build time, not a real package
+const productBillingEntry = '@product/billing/entry';
 const StripeConnectionSettings = dynamic(
-  () => import('@product/billing/entry').then(mod => {
+  () => (import(productBillingEntry) as Promise<any>).then((mod) => {
     const StripeConnectionSettingsExport = mod.StripeConnectionSettings;
     const result = StripeConnectionSettingsExport();
 

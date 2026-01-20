@@ -40,6 +40,10 @@ export * from './lib/workDate';
 // DB models (tenant-scoped data access patterns)
 export * from './models';
 
+// Service infrastructure
+export * from './services/BaseService';
+export * from './services/SystemContext';
+
 // Connection Management
 export {
   getConnection as getDbConnection,

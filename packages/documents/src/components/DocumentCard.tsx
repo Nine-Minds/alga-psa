@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import type { IDocument } from '@alga-psa/types';
-import TextEditor, { DEFAULT_BLOCK } from '../editor/TextEditor';
+import TextEditor, { DEFAULT_BLOCK } from '@alga-psa/ui/editor/TextEditor';
 import { PartialBlock } from '@blocknote/core';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Card } from '@alga-psa/ui/components/Card';
@@ -10,6 +10,7 @@ import { Input } from '@alga-psa/ui/components/Input';
 import { FileText, Link2, Trash2 } from 'lucide-react';
 import { withDataAutomationId } from '@alga-psa/ui/ui-reflection/withDataAutomationId';
 import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContainer';
+import { searchUsersForMentions } from '@alga-psa/users/actions';
 
 interface DocumentCardProps {
   id?: string;
@@ -64,6 +65,7 @@ const DocumentCard: React.FC<DocumentCardProps> = ({
             id={`${id}-editor`}
             initialContent={editedContent}
             onContentChange={handleContentChange}
+            searchMentions={searchUsersForMentions}
           />
           <div className="flex justify-end space-x-2">
             <Button

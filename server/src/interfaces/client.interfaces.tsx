@@ -1,5 +1,5 @@
 import { BillingCycleType, TenantEntity } from './index';
-import { ISO8601String } from 'server/src/types/types.d';
+import type { ISO8601String } from '@alga-psa/types';
 import { ITaggable } from './tag.interfaces';
 import { IClient as SharedIClient } from '@alga-psa/shared/interfaces/client.interfaces';
 import { IContractLine } from './billing.interfaces';

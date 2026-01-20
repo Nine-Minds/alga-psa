@@ -140,7 +140,7 @@ async function handleSetup(request: ExecuteRequest, host: HostBindings): Promise
   }
 
   // Check existing schedules to avoid duplicates
-  let existingSchedules: Array<{ name?: string; endpointPath: string }> = [];
+  let existingSchedules: Array<{ name?: string | null; endpointPath: string }> = [];
   try {
     existingSchedules = await host.scheduler.list();
     await safeLog(host, 'info', `[scheduler-demo] found ${existingSchedules.length} existing schedules`);

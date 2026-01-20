@@ -1,6 +1,6 @@
 import { Knex } from 'knex';
 import { requireTenantId } from '@alga-psa/db';
-import { IContractLineServiceUsageConfig, IContractLineServiceRateTier } from '../../interfaces/contractLineServiceConfiguration.interfaces';
+import type { IContractLineServiceUsageConfig, IContractLineServiceRateTier } from '@alga-psa/types';
 import { v4 as uuidv4 } from 'uuid';
 
 export default class ContractLineServiceUsageConfig {

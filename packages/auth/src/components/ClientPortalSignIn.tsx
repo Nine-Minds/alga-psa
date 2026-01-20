@@ -9,8 +9,9 @@ import Alert from './Alert';
 import type { AlertProps } from '@alga-psa/types';
 import { Ticket, FileText, Eye, History } from 'lucide-react';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
-import { TenantBranding } from '@alga-psa/tenancy/actions';
-import { isValidTenantSlug } from '@shared/utils/tenantSlug';
+// Type-only import to avoid circular dependency (auth -> tenancy -> auth)
+import type { TenantBranding } from '@alga-psa/tenancy/actions';
+import { isValidTenantSlug } from '@alga-psa/validation';
 
 interface ClientPortalSignInProps {
   branding?: TenantBranding | null;

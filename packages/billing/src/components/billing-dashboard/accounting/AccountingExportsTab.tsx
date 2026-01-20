@@ -44,7 +44,7 @@ import {
   getQboConnectionStatus,
   type QboConnectionStatus
 } from '@alga-psa/integrations/actions/qboActions';
-import { useUsers } from '@alga-psa/ui/hooks';
+import { useUsers } from '@alga-psa/users/hooks';
 
 type BatchDetail = {
   batch: AccountingExportBatch | null;

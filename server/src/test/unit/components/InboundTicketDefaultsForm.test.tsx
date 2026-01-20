@@ -54,7 +54,7 @@ vi.mock('@alga-psa/ui/components/settings/general/BoardPicker', () => ({
   ),
 }));
 
-vi.mock('@alga-psa/clients/components/clients/ClientPicker', () => ({
+vi.mock('@alga-psa/ui/components/ClientPicker', () => ({
   __esModule: true,
   ClientPicker: ({
     id,

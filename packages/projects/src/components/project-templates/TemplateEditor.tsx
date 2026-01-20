@@ -1436,7 +1436,7 @@ function TaskCard({
   avatarUrls,
 }: TaskCardProps) {
   const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
-  const [descriptionRef, isDescriptionTruncated] = useTruncationDetection(task.description, isDescriptionExpanded);
+  const { ref: descriptionRef, isTruncated: isDescriptionTruncated } = useTruncationDetection<HTMLParagraphElement>();
 
   const handleDragStart = (e: React.DragEvent) => {
     document.body.classList.add('dragging-task');

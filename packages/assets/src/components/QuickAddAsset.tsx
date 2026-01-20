@@ -8,7 +8,7 @@ import { Input } from '@alga-psa/ui/components/Input';
 import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect';
 import { createAsset } from '../actions/assetActions';
 import type { CreateAssetRequest, IClient } from '@alga-psa/types';
-import { ClientPicker } from '@alga-psa/clients/components/clients/ClientPicker';
+import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
 import { getAllClients } from '@alga-psa/clients/actions';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 

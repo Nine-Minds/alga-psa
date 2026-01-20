@@ -7,7 +7,7 @@ import { Calculator, Cloud, Clock } from 'lucide-react';
 
 import { TaxSource } from '@alga-psa/types';
 
-interface InvoiceTaxSourceBadgeProps {
+export interface InvoiceTaxSourceBadgeProps {
   taxSource: TaxSource;
   externalAdapter?: string;
   importedAt?: string;

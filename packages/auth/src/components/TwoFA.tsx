@@ -2,10 +2,9 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { LockClosedIcon } from '@radix-ui/react-icons';
-import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
-import { useRegisterUIComponent } from '@alga-psa/ui/ui-reflection/useRegisterUIComponent';
-import { FormFieldComponent, ButtonComponent } from '@alga-psa/ui/ui-reflection/types';
-import { Input } from '@alga-psa/ui/components/Input';
+import { Dialog, DialogContent, Input } from '@alga-psa/ui/components';
+import { useRegisterUIComponent } from '@alga-psa/ui/ui-reflection';
+import type { FormFieldComponent, ButtonComponent } from '@alga-psa/ui/ui-reflection';
 
 interface TwoFactorInputProps {
   isOpen: boolean;

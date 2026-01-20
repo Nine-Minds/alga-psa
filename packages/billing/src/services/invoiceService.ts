@@ -9,8 +9,9 @@ import type { IClientWithLocation } from '@alga-psa/types';
 import { Knex } from 'knex';
 import { Session } from 'next-auth';
 import type { ISO8601String } from '@alga-psa/types';
-import { getClientDefaultTaxRegionCode } from '@alga-psa/clients/actions'; // Import the new lookup function
-import { getSession } from '@alga-psa/auth';
+import { getClientDefaultTaxRegionCode } from '@alga-psa/shared/billingClients';
+import { getCurrentUserAsync, hasPermissionAsync, getSessionAsync, getAnalyticsAsync } from '../lib/authHelpers';
+
 
 // Helper interface for tax calculation
 interface ITaxableEntity {
@@ -31,7 +32,7 @@ interface InvoiceContext {
 }
 
 export async function validateSessionAndTenant(): Promise<InvoiceContext> {
-  const session = await getSession();
+  const session = await getSessionAsync();
   if (!session?.user?.id) {
     throw new Error('Unauthorized');
   }
@@ -385,7 +386,7 @@ async function persistFixedInvoiceCharges(
             console.log(`[persistFixedInvoiceCharges] Using consistent charge region '${consolidatedRegion}' for consolidated item of plan assignment ${clientContractLineId}`);
           } else {
             // Fallback to client default if regions are inconsistent or all null/undefined
-            consolidatedRegion = await getClientDefaultTaxRegionCode(client.client_id);
+            consolidatedRegion = await getClientDefaultTaxRegionCode(tx, tenant, client.client_id);
             if (distinctChargeRegions.length > 1) {
               console.warn(`[persistFixedInvoiceCharges] Multiple distinct tax regions found among charges for plan assignment ${clientContractLineId}. Using client default region '${consolidatedRegion}'.`);
             } else {
@@ -844,7 +845,7 @@ export async function calculateAndDistributeTax(
         type: 'fixed_detail',
         amount: allocatedAmount,
         // Use service region first, then lookup client default. Provide empty string if null.
-        taxRegion: parentItem.tax_region || await getClientDefaultTaxRegionCode(client.client_id) || '', // Get region from parent
+        taxRegion: parentItem.tax_region || await getClientDefaultTaxRegionCode(tx, tenant, client.client_id) || '', // Get region from parent
         isTaxable: true,
         parentId: detail.parent_item_id,
       });
@@ -868,7 +869,7 @@ export async function calculateAndDistributeTax(
         type: 'item',
         amount: Number(item.net_amount),
         // Use item region first, then lookup client default. Provide empty string if null.
-        taxRegion: item.tax_region || await getClientDefaultTaxRegionCode(client.client_id) || '',
+        taxRegion: item.tax_region || await getClientDefaultTaxRegionCode(tx, tenant, client.client_id) || '',
         isTaxable: true,
       });
     }

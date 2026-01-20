@@ -16,11 +16,12 @@ import type {
 } from '../repositories/accountingExportRepository';
 import type { AccountingExportDeliveryResult } from '../lib/adapters/accounting/accountingExportAdapter';
 import { AccountingExportInvoiceSelector, type InvoiceSelectionFilters } from '../services/accountingExportInvoiceSelector';
-import { getCurrentUser } from '@alga-psa/users/actions';
-import { hasPermission } from '@alga-psa/auth';
+
+
 import { AppError } from '@alga-psa/core';
 import { getTenantContext, runWithTenant } from '@alga-psa/db';
 import { getConnection } from '@alga-psa/db';
+import { getCurrentUserAsync, hasPermissionAsync, getSessionAsync, getAnalyticsAsync } from '../lib/authHelpers';
 
 type AccountingExportPermission = 'create' | 'read' | 'update' | 'execute';
 
@@ -70,7 +71,7 @@ interface PermissionOverrideContext {
 }
 
 async function requireAccountingExportPermission(action: AccountingExportPermission, override?: PermissionOverrideContext) {
-  const currentUser = override?.user ?? (await getCurrentUser());
+  const currentUser = override?.user ?? (await getCurrentUserAsync());
   if (!currentUser) {
     throw new AppError('ACCOUNTING_EXPORT_UNAUTHENTICATED', 'Authentication required to manage accounting exports');
   }
@@ -91,7 +92,7 @@ async function requireAccountingExportPermission(action: AccountingExportPermiss
   // Accounting exports are currently managed from billing/integrations surfaces; gate with billing settings permissions.
   // Map export actions to billing_settings read/update to align with mapping + CSV export permissions.
   const billingAction = action === 'read' ? 'read' : 'update';
-  const allowed = await hasPermission(currentUser, 'billing_settings', billingAction, knex);
+  const allowed = await hasPermissionAsync(currentUser, 'billing_settings', billingAction);
   if (!allowed) {
     throw new AppError(
       'ACCOUNTING_EXPORT_FORBIDDEN',

@@ -5,7 +5,7 @@ import { Input } from "@alga-psa/ui/components/Input";
 import { TextArea } from "@alga-psa/ui/components/TextArea";
 import { Button } from "@alga-psa/ui/components/Button";
 import { useState, useEffect } from 'react';
-import { getClientProfile, updateClientProfile, type ClientProfile } from "@alga-psa/client-portal/actions";
+import { getClientProfile, updateClientProfile, type IClientProfile } from "@alga-psa/client-portal/actions";
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 interface ValidationErrors {
@@ -17,7 +17,7 @@ interface ValidationErrors {
 
 export default function ProfileSection() {
   const { t } = useTranslation('clientPortal');
-  const [profile, setProfile] = useState<ClientProfile>({
+  const [profile, setProfile] = useState<IClientProfile>({
     name: '',
     email: '',
     phone: '',

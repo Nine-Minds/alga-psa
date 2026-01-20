@@ -1,7 +1,7 @@
 import { v4 as uuid4 } from 'uuid';
 import logger from '@alga-psa/core/logger';
 import { createTenantKnex } from '@alga-psa/db';
-import { IExternalTaxImport, IExternalTaxImportResult, TaxSource } from '../../interfaces/tax.interfaces';
+import type { IExternalTaxImport, IExternalTaxImportResult, TaxSource } from '@alga-psa/types';
 import {
   AccountingExportAdapter,
   ExternalInvoiceData,

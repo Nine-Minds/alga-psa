@@ -3,17 +3,14 @@
 import { z } from 'zod';
 import { createTenantKnex } from '@alga-psa/db';
 import { withTransaction } from '@alga-psa/db';
-// Import interfaces from correct files
-import {
-  IContractLine,
+import type {
   IBucketUsage,
+  IContractLine,
   IContractLineService,
-  IService // Added IService for service_catalog join
-} from '../../../interfaces/billing.interfaces';
-import {
+  IContractLineServiceBucketConfig,
   IContractLineServiceConfiguration,
-  IContractLineServiceBucketConfig
-} from '../../../interfaces/contractLineServiceConfiguration.interfaces';
+  IService // Added IService for service_catalog join
+} from '@alga-psa/types';
 import { Knex } from 'knex'; // Import Knex type for query builder
 
 // Define the schema for the input parameters

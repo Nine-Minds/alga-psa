@@ -19,7 +19,7 @@ import {
   fetchTimeSheetComments,
   reverseTimeSheetApproval
 } from '../../../actions/timeSheetActions';
-import { useTeamAuth } from '@alga-psa/ui/hooks';
+import { useTeamAuth } from '@alga-psa/teams/hooks';
 import { IUser } from '@alga-psa/types';
 import { TimeSheetApproval } from './TimeSheetApproval';
 import { useDrawer } from "@alga-psa/ui";

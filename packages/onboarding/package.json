@@ -4,17 +4,32 @@
   "private": true,
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
-  "types": "./dist/index.d.ts",
+  "types": "./src/index.ts",
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
+      "types": "./src/index.ts",
       "import": "./dist/index.mjs",
       "require": "./dist/index.js"
     },
     "./actions": {
-      "types": "./dist/actions/index.d.ts",
+      "types": "./src/actions/index.ts",
       "import": "./dist/actions/index.mjs",
       "require": "./dist/actions/index.js"
+    },
+    "./components": {
+      "types": "./src/components/index.ts",
+      "import": "./dist/components/index.mjs",
+      "require": "./dist/components/index.js"
+    },
+    "./hooks": {
+      "types": "./src/hooks/index.ts",
+      "import": "./dist/hooks/index.mjs",
+      "require": "./dist/hooks/index.js"
+    },
+    "./lib": {
+      "types": "./src/lib/index.ts",
+      "import": "./dist/lib/index.mjs",
+      "require": "./dist/lib/index.js"
     }
   },
   "scripts": {
@@ -22,10 +37,15 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@alga-psa/analytics": "*",
     "@alga-psa/core": "*",
     "@alga-psa/db": "*",
     "@alga-psa/licensing": "*",
+    "@alga-psa/reference-data": "*",
+    "@alga-psa/tenancy": "*",
     "@alga-psa/types": "*",
+    "@alga-psa/ui": "*",
+    "@alga-psa/users": "*",
     "@alga-psa/validation": "*"
   },
   "devDependencies": {

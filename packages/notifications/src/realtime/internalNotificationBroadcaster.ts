@@ -1,4 +1,4 @@
-import { getRedisClient, getRedisConfig } from '@alga-psa/event-bus/config/redisConfig';
+import { getRedisClient, getRedisConfig } from '@alga-psa/event-bus';
 import type { InternalNotification } from '../types/internalNotification';
 import logger from '@alga-psa/core/logger';
 

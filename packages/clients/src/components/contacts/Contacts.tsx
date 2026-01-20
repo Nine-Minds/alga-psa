@@ -25,13 +25,13 @@ import { useTagPermissions } from '@alga-psa/ui';
 import { getUniqueTagTexts } from '@alga-psa/ui';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
-import { getCurrentUser } from '@alga-psa/users/actions';
+import { getCurrentUserAsync } from '../../lib/usersHelpers';
 import { getDocumentsByEntity } from '@alga-psa/documents/actions/documentActions';
 import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContainer';
 import ContactAvatar from '@alga-psa/ui/components/ContactAvatar';
 import { useRouter } from 'next/navigation';
 import ContactsSkeleton from './ContactsSkeleton';
-import { useUserPreference } from '@alga-psa/ui';
+import { useUserPreference } from '@alga-psa/users/hooks';
 
 const CONTACTS_PAGE_SIZE_SETTING = 'contacts_page_size';
 
@@ -162,7 +162,7 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, clientId, preSelec
         if (isInitialLoad || clients.length === 0) {
           const [allClients, userData] = await Promise.all([
             getAllClients(),
-            getCurrentUser()
+            getCurrentUserAsync()
           ]);
 
           setClients(allClients);
@@ -772,9 +772,9 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, clientId, preSelec
                 />
 
                 <TagFilter
-                  allTags={allUniqueTags}
+                  tags={allUniqueTags}
                   selectedTags={selectedTags}
-                  onTagSelect={(tag) => {
+                  onToggleTag={(tag: string) => {
                     setSelectedTags(prev => {
                       const newTags = prev.includes(tag)
                         ? prev.filter(t => t !== tag)
@@ -783,6 +783,7 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, clientId, preSelec
                       return newTags;
                     });
                   }}
+                  onClearTags={() => setSelectedTags([])}
                 />
 
                 <CustomSelect

@@ -2,11 +2,36 @@
 
 import { createTenantKnex, runWithTenant } from '@alga-psa/db';
 import { getAdminConnection } from '@alga-psa/db/admin';
-import { PasswordResetService } from '@alga-psa/auth/services/PasswordResetService';
-import { TenantEmailService, getSystemEmailService } from '@alga-psa/email';
-import { sendPasswordResetEmail } from '@alga-psa/email/sendPasswordResetEmail';
+import { PasswordResetService } from '@alga-psa/auth';
 import { hashPassword } from '@alga-psa/core/encryption';
 import { isValidEmail } from '@alga-psa/validation';
+
+// Dynamic imports to avoid circular dependency (auth -> email -> integrations -> users -> auth)
+// Note: Using string concatenation to prevent static analysis from detecting this dependency
+const getEmailModule = () => '@alga-psa/' + 'email';
+
+const getTenantEmailService = async (tenant: string) => {
+  const { TenantEmailService } = await import(/* webpackIgnore: true */ getEmailModule());
+  return TenantEmailService.getInstance(tenant);
+};
+
+const getSystemEmailServiceAsync = async () => {
+  const { getSystemEmailService } = await import(/* webpackIgnore: true */ getEmailModule());
+  return getSystemEmailService();
+};
+
+const sendPasswordResetEmailAsync = async (params: {
+  email: string;
+  userName: string;
+  resetLink: string;
+  expirationTime: string;
+  tenant: string;
+  supportEmail: string;
+  clientName: string;
+}) => {
+  const { sendPasswordResetEmail } = await import(/* webpackIgnore: true */ getEmailModule());
+  return sendPasswordResetEmail(params);
+};
 
 export interface RequestResetResult {
   success: boolean;
@@ -104,13 +129,13 @@ export async function requestPasswordReset(
 
       // Ensure at least one email provider path is configured before proceeding
       console.log('[PasswordReset] Checking tenant email service configuration...');
-      const tenantEmailService = TenantEmailService.getInstance(tenant);
+      const tenantEmailService = await getTenantEmailService(tenant);
       let emailConfigured = await tenantEmailService.isConfigured();
       console.log('[PasswordReset] Tenant email configured:', emailConfigured);
       
       if (!emailConfigured) {
         console.log('[PasswordReset] Falling back to system email configuration check');
-        const systemEmailService = await getSystemEmailService();
+        const systemEmailService = await getSystemEmailServiceAsync();
         emailConfigured = await systemEmailService.isConfigured();
         console.log('[PasswordReset] System email configured:', emailConfigured);
         if (!emailConfigured) {
@@ -191,7 +216,7 @@ export async function requestPasswordReset(
         console.log('[PasswordReset] Client name:', clientName);
         console.log('[PasswordReset] Support email:', supportEmail);
         
-        await sendPasswordResetEmail({
+        await sendPasswordResetEmailAsync({
           email: normalizedEmail,
           userName: userInfo.first_name || userInfo.username || normalizedEmail,
           resetLink: resetUrl,

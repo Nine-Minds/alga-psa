@@ -7,7 +7,7 @@
 import { Knex } from 'knex';
 import { Temporal } from '@js-temporal/polyfill';
 import { v4 as uuidv4 } from 'uuid';
-import { BaseService, ServiceContext, ListOptions, ListResult } from './BaseService';
+import { BaseService, ServiceContext, ListOptions, ListResult } from '@alga-psa/db';
 import { withTransaction } from '@alga-psa/db';
 import { createTenantKnex } from '../../db';
 import { getCurrentUser } from '@alga-psa/users/actions';

@@ -7,7 +7,7 @@ import { EmailProviderSelector } from './EmailProviderSelector';
 import { GmailProviderForm } from './GmailProviderForm';
 import { ImapProviderForm } from './ImapProviderForm';
 import { MicrosoftProviderForm } from './MicrosoftProviderForm';
-import type { EmailProvider } from './EmailProviderConfiguration';
+import type { EmailProvider } from './types';
 
 interface ProviderSetupWizardDialogProps {
   isOpen: boolean;

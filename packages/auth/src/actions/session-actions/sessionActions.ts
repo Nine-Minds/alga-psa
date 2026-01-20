@@ -1,6 +1,6 @@
 'use server';
 
-import { getCurrentUser } from '@alga-psa/users/actions';
+import { getCurrentUser } from '../../lib/getCurrentUser';
 import { hasPermission } from '../../lib/rbac';
 import { UserSession, IUserSession } from '@alga-psa/db/models/UserSession';
 import { getConnection } from '@alga-psa/db';

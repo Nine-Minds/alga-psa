@@ -15,7 +15,7 @@ import { Switch } from '@alga-psa/ui/components/Switch';
 import { Label } from '@alga-psa/ui/components/Label';
 import { getCurrentUser, getCurrentUserPermissions } from '@alga-psa/users/actions';
 import { BoardPicker } from '@alga-psa/ui/components/settings/general/BoardPicker';
-import { ClientPicker } from '@alga-psa/clients/components/clients/ClientPicker';
+import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
 import { findTagsByEntityIds } from '@alga-psa/tags/actions';
 import { TagFilter } from '@alga-psa/ui/components';
 import { useTagPermissions } from '@alga-psa/ui';
@@ -1342,16 +1342,16 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
               containerClassName="" // Applied to the wrapping <div>, removes default mb-4
             />
             <TagFilter
-              allTags={allUniqueTags}
+              tags={allUniqueTags}
               selectedTags={selectedTags}
-              onTagSelect={(tag) => {
+              onToggleTag={(tag: string) => {
                 setSelectedTags(prev =>
                   prev.includes(tag)
                     ? prev.filter(t => t !== tag)
                     : [...prev, tag]
                 );
               }}
-              onClear={() => setSelectedTags([])}
+              onClearTags={() => setSelectedTags([])}
             />
             <div className="flex items-center gap-4 ml-auto">
               <div className="flex items-center gap-2 whitespace-nowrap">

@@ -2,7 +2,7 @@
 
 import { createTenantKnex } from '@alga-psa/db';
 import { getCurrentUser } from '@alga-psa/users/actions';
-import type { TicketFieldOptions } from '../../../types/email.types';
+import type { TicketFieldOptions } from '@alga-psa/types';
 import { hasPermission } from '@alga-psa/auth/rbac';
 
 export async function getTicketFieldOptions(): Promise<{ options: TicketFieldOptions }> {

@@ -3,14 +3,14 @@
 import { createTenantKnex } from '@alga-psa/db';
 import type { IClientLocation } from '@alga-psa/types';
 import { v4 as uuidv4 } from 'uuid';
-import { getCurrentUser } from '@alga-psa/users/actions';
+import { getCurrentUserAsync } from '../lib/usersHelpers';
 import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { revalidatePath } from 'next/cache';
 
 export async function getClientLocations(clientId: string): Promise<IClientLocation[]> {
   const { knex, tenant } = await createTenantKnex();
-  const user = await getCurrentUser();
+  const user = await getCurrentUserAsync();
 
   if (!user) {
     throw new Error('User not authenticated');
@@ -32,7 +32,7 @@ export async function getClientLocations(clientId: string): Promise<IClientLocat
 
 export async function getClientLocation(locationId: string): Promise<IClientLocation | null> {
   const { knex, tenant } = await createTenantKnex();
-  const user = await getCurrentUser();
+  const user = await getCurrentUserAsync();
 
   if (!user) {
     throw new Error('User not authenticated');
@@ -55,7 +55,7 @@ export async function createClientLocation(
   locationData: Omit<IClientLocation, 'location_id' | 'tenant' | 'created_at' | 'updated_at'>
 ): Promise<IClientLocation> {
   const { knex, tenant } = await createTenantKnex();
-  const user = await getCurrentUser();
+  const user = await getCurrentUserAsync();
 
   if (!user) {
     throw new Error('User not authenticated');
@@ -121,7 +121,7 @@ export async function updateClientLocation(
   locationData: Partial<Omit<IClientLocation, 'location_id' | 'tenant' | 'client_id' | 'created_at'>>
 ): Promise<IClientLocation> {
   const { knex, tenant } = await createTenantKnex();
-  const user = await getCurrentUser();
+  const user = await getCurrentUserAsync();
 
   if (!user) {
     throw new Error('User not authenticated');
@@ -229,7 +229,7 @@ export async function updateClientLocation(
 
 export async function deleteClientLocation(locationId: string): Promise<void> {
   const { knex, tenant } = await createTenantKnex();
-  const user = await getCurrentUser();
+  const user = await getCurrentUserAsync();
 
   if (!user) {
     throw new Error('User not authenticated');
@@ -317,7 +317,7 @@ export async function deleteClientLocation(locationId: string): Promise<void> {
 
 export async function setDefaultClientLocation(locationId: string): Promise<void> {
   const { knex, tenant } = await createTenantKnex();
-  const user = await getCurrentUser();
+  const user = await getCurrentUserAsync();
 
   if (!user) {
     throw new Error('User not authenticated');
@@ -373,7 +373,7 @@ export async function setDefaultClientLocation(locationId: string): Promise<void
 
 export async function getDefaultClientLocation(clientId: string): Promise<IClientLocation | null> {
   const { knex, tenant } = await createTenantKnex();
-  const user = await getCurrentUser();
+  const user = await getCurrentUserAsync();
 
   if (!user) {
     throw new Error('User not authenticated');

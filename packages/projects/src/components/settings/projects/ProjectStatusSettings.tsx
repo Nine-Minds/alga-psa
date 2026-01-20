@@ -17,9 +17,9 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
 } from '@alga-psa/ui/components/DropdownMenu';
-import { StatusDialog } from '@alga-psa/ui/components/settings/dialogs/StatusDialog';
+import { StatusDialog } from '@alga-psa/reference-data/components';
 import { StatusImportDialog } from '@alga-psa/ui/components/settings/dialogs/StatusImportDialog';
-import { ConflictResolutionDialog } from '@alga-psa/ui/components/settings/dialogs/ConflictResolutionDialog';
+import { ConflictResolutionDialog } from '@alga-psa/reference-data/components';
 import { DeleteConfirmationDialog } from '@alga-psa/ui/components/settings/dialogs/DeleteConfirmationDialog';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 

@@ -5,16 +5,16 @@ import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { createTenantKnex, runWithTenant } from '@alga-psa/db';
 import { withTransaction } from '@alga-psa/db';
-import { generateGoogleCalendarAuthUrl, generateMicrosoftCalendarAuthUrl, generateCalendarNonce, encodeCalendarState } from '@/utils/calendar/oauthHelpers';
-import { resolveCalendarRedirectUri } from '@/utils/calendar/redirectUri';
-import { storeCalendarOAuthState } from '@/utils/calendar/oauthStateStore';
-import { CalendarProviderService } from '@/services/calendar/CalendarProviderService';
-import { GoogleCalendarAdapter } from '@/services/calendar/providers/GoogleCalendarAdapter';
-import { MicrosoftCalendarAdapter } from '@/services/calendar/providers/MicrosoftCalendarAdapter';
-import { CalendarSyncService } from '@/services/calendar/CalendarSyncService';
-import { CalendarWebhookMaintenanceService } from '@/services/calendar/CalendarWebhookMaintenanceService';
-import { CalendarProviderConfig, CalendarSyncStatus, CalendarConflictResolution } from '@/interfaces/calendar.interfaces';
-import { IScheduleEntry } from '@/interfaces/schedule.interfaces';
+import { generateGoogleCalendarAuthUrl, generateMicrosoftCalendarAuthUrl, generateCalendarNonce, encodeCalendarState } from '../utils/calendar/oauthHelpers';
+import { resolveCalendarRedirectUri } from '../utils/calendar/redirectUri';
+import { storeCalendarOAuthState } from '../utils/calendar/oauthStateStore';
+import { CalendarProviderService } from '../services/calendar/CalendarProviderService';
+import { GoogleCalendarAdapter } from '../services/calendar/providers/GoogleCalendarAdapter';
+import { MicrosoftCalendarAdapter } from '../services/calendar/providers/MicrosoftCalendarAdapter';
+import { CalendarSyncService } from '../services/calendar/CalendarSyncService';
+import { CalendarWebhookMaintenanceService } from '../services/calendar/CalendarWebhookMaintenanceService';
+import type { CalendarProviderConfig, CalendarSyncStatus, CalendarConflictResolution } from '@alga-psa/types';
+import type { IScheduleEntry } from '@alga-psa/types';
 
 /**
  * Initiate OAuth flow for calendar provider

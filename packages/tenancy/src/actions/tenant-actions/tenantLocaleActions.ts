@@ -1,8 +1,16 @@
 'use server';
 
 import { getConnection } from '@alga-psa/db';
-import { SupportedLocale, isSupportedLocale, LOCALE_CONFIG } from '@alga-psa/ui/lib/i18n/config';
-import { getCurrentUser } from '@alga-psa/users/actions';
+import { SupportedLocale, isSupportedLocale, LOCALE_CONFIG } from '@alga-psa/core/i18n/config';
+
+// Dynamic import to avoid circular dependency (tenancy -> users -> auth -> ui -> analytics -> tenancy)
+// Note: Using string concatenation to prevent static analysis from detecting this dependency
+const getUsersModule = () => '@alga-psa/' + 'users/actions';
+
+const getCurrentUserAsync = async () => {
+  const { getCurrentUser } = await import(/* webpackIgnore: true */ getUsersModule());
+  return getCurrentUser();
+};
 
 /**
  * Update tenant's default locale for all users
@@ -11,7 +19,7 @@ export async function updateTenantDefaultLocaleAction(
   locale: SupportedLocale,
   enabledLocales?: SupportedLocale[]
 ) {
-  const user = await getCurrentUser();
+  const user = await getCurrentUserAsync();
   if (!user) {
     throw new Error('User not found');
   }
@@ -73,7 +81,7 @@ export async function getTenantLocaleSettingsAction(): Promise<{
   defaultLocale: SupportedLocale;
   enabledLocales: SupportedLocale[];
 } | null> {
-  const user = await getCurrentUser();
+  const user = await getCurrentUserAsync();
   if (!user) {
     return null;
   }

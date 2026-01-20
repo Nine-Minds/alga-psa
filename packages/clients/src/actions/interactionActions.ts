@@ -7,7 +7,7 @@ import { Knex } from 'knex';
 import { revalidatePath } from 'next/cache'
 import InteractionModel from '../models/interactions';
 import { IInteractionType, IInteraction } from '@alga-psa/types'
-import { getCurrentUser } from '@alga-psa/users/actions'
+import { getCurrentUserAsync } from '../lib/usersHelpers'
 
 import { createTenantKnex } from '@alga-psa/db';
 

@@ -40,7 +40,7 @@ export async function updateClientContractLine(
   billingData: Partial<IClientContractLine>
 ): Promise<IClientContractLine> {
   try {
-    const existingBilling = await ClientContractLine.getById(billingId);
+    const existingBilling = await ClientContractLine.get(billingId);
     if (!existingBilling) {
       throw new Error(`Billing entry with ID ${billingId} not found`);
     }

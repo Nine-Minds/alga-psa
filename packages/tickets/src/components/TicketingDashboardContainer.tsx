@@ -11,7 +11,7 @@ import { IUser } from '@alga-psa/types';
 import { SelectOption } from '@alga-psa/ui/components/CustomSelect';
 import { IBoard } from '@alga-psa/types';
 import type { TicketingDisplaySettings } from '../actions/ticketDisplaySettings';
-import { useUserPreference } from '@alga-psa/ui';
+import { useUserPreference } from '@alga-psa/users/hooks';
 
 const TICKETS_PAGE_SIZE_SETTING = 'tickets_list_page_size';
 

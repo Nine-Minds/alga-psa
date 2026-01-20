@@ -11,7 +11,7 @@ import { IClientPortalConfig, DEFAULT_CLIENT_PORTAL_CONFIG } from '@alga-psa/typ
 import { toast } from 'react-hot-toast';
 import { createProject, getProjectStatuses } from '../actions/projectActions';
 import { getTenantProjectStatuses } from '../actions/projectTaskStatusActions';
-import { ClientPicker } from '@alga-psa/clients/components/clients/ClientPicker';
+import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import UserPicker from '@alga-psa/ui/components/UserPicker';
 import { ContactPicker } from '@alga-psa/ui/components/ContactPicker';

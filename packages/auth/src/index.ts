@@ -67,5 +67,12 @@ export { default as RegisterForm } from './components/RegisterForm';
 export { default as SignOutDialog } from './components/SignOutDialog';
 export { default as TwoFactorInput } from './components/TwoFA';
 
+// Services
+export { PasswordResetService } from './services/PasswordResetService';
+export { ApiKeyService } from './services/apiKeyService';
+
+// Rate limiting
+export * from './lib/security/rateLimiting';
+
 // Server actions (Next.js / server-side entrypoints)
 export * from './actions';

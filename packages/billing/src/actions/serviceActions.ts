@@ -8,8 +8,9 @@ import { createTenantKnex } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { validateArray } from '@alga-psa/validation';
 import { ServiceTypeModel } from '../models/serviceType'; // Import ServiceTypeModel
-import { getCurrentUser } from '@alga-psa/users/actions';
-import { hasPermission } from '@alga-psa/auth';
+import { getCurrentUserAsync, hasPermissionAsync } from '../lib/authHelpers';
+
+
 
 // Interface for paginated service response
 export interface PaginatedServicesResponse {
@@ -326,7 +327,7 @@ export async function createService(
 ): Promise<IService> {
     try {
         console.log('[serviceActions] createService called with data:', serviceData);
-        const currentUser = await getCurrentUser();
+        const currentUser = await getCurrentUserAsync();
         if (!currentUser) {
           throw new Error('Unauthorized');
         }
@@ -338,7 +339,7 @@ export async function createService(
 
         const { knex: db, tenant } = await createTenantKnex();
         return withTransaction(db, async (trx: Knex.Transaction) => {
-        const canCreate = await hasPermission(currentUser, 'service', 'create', trx);
+        const canCreate = await hasPermissionAsync(currentUser, 'service', 'create');
         if (!canCreate) {
           throw new Error('Permission denied: Cannot create services/products');
         }
@@ -388,14 +389,14 @@ export async function updateService(
     serviceId: string,
     serviceData: Partial<IService>
 ): Promise<IService> {
-    const currentUser = await getCurrentUser();
+    const currentUser = await getCurrentUserAsync();
     if (!currentUser) {
       throw new Error('Unauthorized');
     }
     const { knex: db } = await createTenantKnex();
     try {
         return await withTransaction(db, async (trx: Knex.Transaction) => {
-            const canUpdate = await hasPermission(currentUser, 'service', 'update', trx);
+            const canUpdate = await hasPermissionAsync(currentUser, 'service', 'update');
             if (!canUpdate) {
               throw new Error('Permission denied: Cannot update services/products');
             }
@@ -415,14 +416,14 @@ export async function updateService(
 }
 
 export async function deleteService(serviceId: string): Promise<void> {
-    const currentUser = await getCurrentUser();
+    const currentUser = await getCurrentUserAsync();
     if (!currentUser) {
       throw new Error('Unauthorized');
     }
     const { knex: db } = await createTenantKnex();
     try {
         await withTransaction(db, async (trx: Knex.Transaction) => {
-            const canDelete = await hasPermission(currentUser, 'service', 'delete', trx);
+            const canDelete = await hasPermissionAsync(currentUser, 'service', 'delete');
             if (!canDelete) {
               throw new Error('Permission denied: Cannot delete services/products');
             }
@@ -449,7 +450,7 @@ export interface ProductAssociationCheck {
  * Returns information about any associations that would block deletion.
  */
 export async function checkProductCanBeDeleted(serviceId: string): Promise<ProductAssociationCheck> {
-    const currentUser = await getCurrentUser();
+    const currentUser = await getCurrentUserAsync();
     if (!currentUser) {
       throw new Error('Unauthorized');
     }
@@ -573,7 +574,7 @@ export async function checkProductCanBeDeleted(serviceId: string): Promise<Produ
  * Will fail if the product has any associations (invoices, contracts, etc.)
  */
 export async function deleteProductPermanently(serviceId: string): Promise<void> {
-    const currentUser = await getCurrentUser();
+    const currentUser = await getCurrentUserAsync();
     if (!currentUser) {
       throw new Error('Unauthorized');
     }
@@ -581,7 +582,7 @@ export async function deleteProductPermanently(serviceId: string): Promise<void>
 
     try {
         await withTransaction(db, async (trx: Knex.Transaction) => {
-            const canDelete = await hasPermission(currentUser, 'service', 'delete', trx);
+            const canDelete = await hasPermissionAsync(currentUser, 'service', 'delete');
             if (!canDelete) {
               throw new Error('Permission denied: Cannot delete services/products');
             }
@@ -919,14 +920,14 @@ export async function setServicePrice(
   currencyCode: string,
   rate: number
 ): Promise<IServicePrice> {
-  const currentUser = await getCurrentUser();
+  const currentUser = await getCurrentUserAsync();
   if (!currentUser) {
     throw new Error('Unauthorized');
   }
   const { knex: db } = await createTenantKnex();
   try {
     return await withTransaction(db, async (trx: Knex.Transaction) => {
-      const canUpdate = await hasPermission(currentUser, 'service', 'update', trx);
+      const canUpdate = await hasPermissionAsync(currentUser, 'service', 'update');
       if (!canUpdate) {
         throw new Error('Permission denied: Cannot update service pricing');
       }
@@ -947,14 +948,14 @@ export async function setServicePrices(
   serviceId: string,
   prices: Array<{ currency_code: string; rate: number }>
 ): Promise<IServicePrice[]> {
-  const currentUser = await getCurrentUser();
+  const currentUser = await getCurrentUserAsync();
   if (!currentUser) {
     throw new Error('Unauthorized');
   }
   const { knex: db } = await createTenantKnex();
   try {
     return await withTransaction(db, async (trx: Knex.Transaction) => {
-      const canUpdate = await hasPermission(currentUser, 'service', 'update', trx);
+      const canUpdate = await hasPermissionAsync(currentUser, 'service', 'update');
       if (!canUpdate) {
         throw new Error('Permission denied: Cannot update service pricing');
       }
@@ -972,14 +973,14 @@ export async function setServicePrices(
  * Remove a specific price for a service
  */
 export async function removeServicePrice(serviceId: string, currencyCode: string): Promise<boolean> {
-  const currentUser = await getCurrentUser();
+  const currentUser = await getCurrentUserAsync();
   if (!currentUser) {
     throw new Error('Unauthorized');
   }
   const { knex: db } = await createTenantKnex();
   try {
     return await withTransaction(db, async (trx: Knex.Transaction) => {
-      const canUpdate = await hasPermission(currentUser, 'service', 'update', trx);
+      const canUpdate = await hasPermissionAsync(currentUser, 'service', 'update');
       if (!canUpdate) {
         throw new Error('Permission denied: Cannot update service pricing');
       }

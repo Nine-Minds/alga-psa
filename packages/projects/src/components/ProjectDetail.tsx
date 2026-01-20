@@ -37,7 +37,7 @@ import { HelpCircle, LayoutGrid, List } from 'lucide-react';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import { generateKeyBetween } from 'fractional-indexing';
 import KanbanBoardSkeleton from '@alga-psa/ui/components/skeletons/KanbanBoardSkeleton';
-import { useUserPreference } from '@alga-psa/ui';
+import { useUserPreference } from '@alga-psa/users/hooks';
 import { getUserAvatarUrlsBatchAction } from '@alga-psa/users/actions';
 
 const PROJECT_VIEW_MODE_SETTING = 'project_detail_view_mode';
@@ -1432,15 +1432,16 @@ export default function ProjectDetail({
             <div className="flex justify-end items-center gap-4">
                 {/* Tag Filter */}
                 <TagFilter
-                  allTags={allTaskTags}
+                  tags={allTaskTags}
                   selectedTags={selectedTaskTags}
-                  onTagSelect={(tag) => {
+                  onToggleTag={(tag) => {
                     setSelectedTaskTags(prev =>
                       prev.includes(tag)
                         ? prev.filter(t => t !== tag)
                         : [...prev, tag]
                     );
                   }}
+                  onClearTags={() => setSelectedTaskTags([])}
                 />
 
                 {/* Priority Filter */}
@@ -1545,15 +1546,16 @@ export default function ProjectDetail({
             <div className="flex items-center gap-4">
               {/* Tag Filter */}
               <TagFilter
-                allTags={allTaskTags}
+                tags={allTaskTags}
                 selectedTags={selectedTaskTags}
-                onTagSelect={(tag) => {
+                onToggleTag={(tag) => {
                   setSelectedTaskTags(prev =>
                     prev.includes(tag)
                       ? prev.filter(t => t !== tag)
                       : [...prev, tag]
                   );
                 }}
+                onClearTags={() => setSelectedTaskTags([])}
               />
 
               {/* Priority Filter */}

@@ -11,7 +11,7 @@ import {
   XeroConnectionsStore,
   upsertStoredXeroConnections,
   XERO_TOKEN_URL
-} from '../../../lib/xero/xeroClientService';
+} from '../../../../lib/xero/xeroClientService';
 
 const NEXTAUTH_URL = process.env.NEXTAUTH_URL || 'http://localhost:3000';
 const XERO_REDIRECT_URI = `${NEXTAUTH_URL}/api/integrations/xero/callback`;

@@ -11,7 +11,7 @@ import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { DatePicker } from '@alga-psa/ui/components/DatePicker';
 import { Card } from '@alga-psa/ui/components/Card';
 import { LineItem, ServiceOption, EditableItem as LineItemEditableItem } from './LineItem'; // Import EditableItem type from LineItem
-import { ClientPicker } from '@alga-psa/clients/components/clients/ClientPicker';
+import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
 import type { IClient } from '@alga-psa/types';
 import { ErrorBoundary } from 'react-error-boundary';
 import type { IService } from '@alga-psa/types';

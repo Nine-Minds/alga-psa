@@ -8,7 +8,8 @@ import {
   transferCredit,
   updateCreditExpiration,
 } from '../../actions/creditActions';
-import { getCurrentUser } from '@alga-psa/auth/getCurrentUser';
+import { getCurrentUserAsync, hasPermissionAsync, getSessionAsync, getAnalyticsAsync } from '../../lib/authHelpers';
+
 
 export async function listCredits(
   clientId: string,
@@ -43,7 +44,7 @@ export async function getCreditDetail(creditId: string) {
 
 export async function updateCreditExpirationDate(creditId: string, newExpirationDate: string | null) {
   try {
-    const user = await getCurrentUser();
+    const user = await getCurrentUserAsync();
     if (!user) {
       return { success: false, error: 'Authentication required' };
     }
@@ -62,7 +63,7 @@ export async function updateCreditExpirationDate(creditId: string, newExpiration
 
 export async function expireCredit(creditId: string, reason?: string) {
   try {
-    const user = await getCurrentUser();
+    const user = await getCurrentUserAsync();
     if (!user) {
       return { success: false, error: 'Authentication required' };
     }
@@ -86,7 +87,7 @@ export async function transferCreditToClient(
   reason?: string
 ) {
   try {
-    const user = await getCurrentUser();
+    const user = await getCurrentUserAsync();
     if (!user) {
       return { success: false, error: 'Authentication required' };
     }

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo, Suspense } from 'react';
 import type { IDocument } from '@alga-psa/types';
 import { IContact } from '@alga-psa/types';
 import type { IClient } from '@alga-psa/types';
@@ -9,7 +9,7 @@ import UserPicker from '@alga-psa/ui/components/UserPicker';
 import { TagManager } from '@alga-psa/ui/components';
 import { findTagsByEntityId } from '@alga-psa/tags/actions';
 import { useTags } from '@alga-psa/ui';
-import { getAllUsersBasic } from '@alga-psa/users/actions';
+import { getAllUsersBasicAsync, getCurrentUserAsync } from '../../lib/usersHelpers';
 import { BillingCycleType } from '@alga-psa/types';
 import Documents from '@alga-psa/documents/components/Documents';
 import { validateCompanySize, validateAnnualRevenue, validateWebsiteUrl, validateIndustry, validateClientName } from '@alga-psa/validation';
@@ -34,17 +34,16 @@ import { QuickAddTicket } from '@alga-psa/tickets/components/QuickAddTicket';
 import { Button } from '@alga-psa/ui/components/Button';
 import { ExternalLink, Trash2 } from 'lucide-react';
 import BackNav from '@alga-psa/ui/components/BackNav';
-import { TaxSettingsForm } from '@alga-psa/billing/components';
 import InteractionsFeed from '../interactions/InteractionsFeed';
 import { IInteraction } from '@alga-psa/types';
 import { useDrawer } from "@alga-psa/ui";
 import TimezonePicker from '@alga-psa/ui/components/TimezonePicker';
-import { getCurrentUser } from '@alga-psa/users/actions';
 import { IUser } from '@shared/interfaces/user.interfaces';
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import ClientAssets from './ClientAssets';
 import ClientTickets from './ClientTickets';
 import ClientLocations from './ClientLocations';
+import TaxSettingsForm from './TaxSettingsForm';
 import { IBoard, ITicket, ITicketCategory } from '@alga-psa/types';
 import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect';
 import { Card } from '@alga-psa/ui/components/Card';
@@ -516,7 +515,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
   useEffect(() => {
     const fetchUser = async () => {
       try {
-        const user = await getCurrentUser();
+        const user = await getCurrentUserAsync();
         if (user) {
           setCurrentUser(prev => (prev?.user_id === user.user_id ? prev : user));
         }
@@ -533,7 +532,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
       if (internalUsers.length > 0) return;
       setIsLoadingUsers(true);
       try {
-        const users = await getAllUsersBasic();
+        const users = await getAllUsersBasicAsync();
         setInternalUsers(users);
       } catch (error) {
         console.error("Error fetching MSP users:", error);
@@ -1019,7 +1018,9 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
       label: "Tax Settings",
       content: (
         <div className="bg-white p-6 rounded-lg shadow-sm">
-          <TaxSettingsForm clientId={client.client_id} />
+          <Suspense fallback={<div>Loading tax settings...</div>}>
+            <TaxSettingsForm clientId={client.client_id} />
+          </Suspense>
         </div>
       )
     },

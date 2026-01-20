@@ -11,7 +11,7 @@ import { Input } from '@alga-psa/ui/components/Input';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { getInboundTicketDefaults } from '@alga-psa/integrations/actions';
 import { updateEmailProvider } from '@alga-psa/integrations/actions';
-import type { EmailProvider } from './EmailProviderConfiguration';
+import type { EmailProvider } from './types';
 import { EmailProviderCard, EmptyProviderPlaceholder } from './EmailProviderCard';
 import { RefreshCw } from 'lucide-react';
 

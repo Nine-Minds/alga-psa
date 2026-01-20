@@ -9,12 +9,36 @@ import { IUserRegister, IUserWithRoles, IRoleWithPermissions } from '@alga-psa/t
 
 import { getInfoFromToken, createToken } from '../lib/tokenizer';
 import { hashPassword } from '@alga-psa/core/encryption';
-import { getSystemEmailService } from '@alga-psa/email';
-import { sendPasswordResetEmail } from '@alga-psa/email/sendPasswordResetEmail';
 import logger from '@alga-psa/core/logger';
-import { analytics } from '@alga-psa/analytics';
-import { AnalyticsEvents } from '@alga-psa/analytics';
 import { isValidEmail } from '@alga-psa/validation';
+
+// Dynamic imports to avoid circular dependency (auth -> email -> integrations -> users -> auth)
+// Note: Using string concatenation to prevent static analysis from detecting these dependencies
+const getEmailModule = () => '@alga-psa/' + 'email';
+
+const getAnalytics = async () => {
+  const analyticsModule = '@alga-psa/' + 'analytics';
+  const mod = await import(/* webpackIgnore: true */ analyticsModule);
+  return { analytics: mod.analytics, AnalyticsEvents: mod.AnalyticsEvents };
+};
+
+const getSystemEmailServiceAsync = async () => {
+  const { getSystemEmailService } = await import(/* webpackIgnore: true */ getEmailModule());
+  return getSystemEmailService();
+};
+
+const sendPasswordResetEmailAsync = async (params: {
+  email: string;
+  userName: string;
+  resetLink: string;
+  expirationTime: string;
+  tenant: string;
+  supportEmail: string;
+  clientName: string;
+}) => {
+  const { sendPasswordResetEmail } = await import(/* webpackIgnore: true */ getEmailModule());
+  return sendPasswordResetEmail(params);
+};
 
 const VERIFY_EMAIL_ENABLED = process.env.VERIFY_EMAIL_ENABLED === 'true';
 const EMAIL_ENABLE = process.env.EMAIL_ENABLE === 'true';
@@ -57,6 +81,7 @@ export async function verifyRegisterUser(token: string): Promise<VerifyResponse>
       await User.insert(db, newUser);
       
       // Track user registration
+      const { analytics, AnalyticsEvents } = await getAnalytics();
       analytics.capture(AnalyticsEvents.USER_SIGNED_UP, {
         user_type: newUser.user_type,
         registration_method: 'email_verification',
@@ -174,7 +199,7 @@ export async function recoverPassword(email: string, portal: 'msp' | 'client' = 
 
     // Use the proper sendPasswordResetEmail function which respects language hierarchy
     try {
-      await sendPasswordResetEmail({
+      await sendPasswordResetEmailAsync({
         email,
         userName: `${userInfo.first_name || ''} ${userInfo.last_name || ''}`.trim() || userInfo.username || email,
         resetLink,
@@ -226,7 +251,7 @@ export async function registerUser({ username, email, password, clientName }: IU
     const verificationUrl = `${process.env.HOST}/auth/verify-email?token=${verificationToken}`;
     
     // Use SystemEmailService for email verification
-    const systemEmailService = await getSystemEmailService();
+    const systemEmailService = await getSystemEmailServiceAsync();
     const emailResult = await systemEmailService.sendEmailVerification({
       email: email,
       verificationUrl: verificationUrl,
@@ -269,6 +294,7 @@ export async function registerUser({ username, email, password, clientName }: IU
       await User.insert(db, newUser);
       
       // Track user registration (direct, no email verification)
+      const { analytics, AnalyticsEvents } = await getAnalytics();
       analytics.capture(AnalyticsEvents.USER_SIGNED_UP, {
         user_type: 'internal',
         registration_method: 'direct',

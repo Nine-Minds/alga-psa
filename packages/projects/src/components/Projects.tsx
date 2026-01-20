@@ -23,7 +23,7 @@ import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import { useDrawer } from "@alga-psa/ui";
 import ProjectDetailsEdit from './ProjectDetailsEdit';
 import { Input } from '@alga-psa/ui/components/Input';
-import { ClientPicker } from '@alga-psa/clients/components/clients/ClientPicker';
+import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
 import { ContactPicker } from '@alga-psa/ui/components/ContactPicker';
 import UserPicker from '@alga-psa/ui/components/UserPicker';
 import { DatePicker } from '@alga-psa/ui/components/DatePicker';
@@ -588,15 +588,16 @@ export default function Projects({ initialProjects, clients }: ProjectsProps) {
 
         {/* Tag filter */}
         <TagFilter
-          allTags={allUniqueTags}
+          tags={allUniqueTags}
           selectedTags={selectedTags}
-          onTagSelect={(tag) => {
-            setSelectedTags(prev => 
-              prev.includes(tag) 
+          onToggleTag={(tag) => {
+            setSelectedTags(prev =>
+              prev.includes(tag)
                 ? prev.filter(t => t !== tag)
                 : [...prev, tag]
             );
           }}
+          onClearTags={() => setSelectedTags([])}
         />
 
         {/* Clear filters button */}

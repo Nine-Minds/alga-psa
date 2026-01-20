@@ -1,9 +1,9 @@
-import {
+import type {
   AccountingExportBatch,
   AccountingExportError,
   AccountingExportLine,
   AccountingExportStatus
-} from '../../interfaces/accountingExport.interfaces';
+} from '@alga-psa/types';
 import {
   AccountingExportRepository,
   CreateExportBatchInput,

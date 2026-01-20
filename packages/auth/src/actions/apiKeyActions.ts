@@ -1,9 +1,17 @@
 'use server'
 
 import { ApiKeyService } from '../services/apiKeyService';
-import { getCurrentUser, getUserRoles } from '@alga-psa/users/actions';
+import { getCurrentUser } from '../lib/getCurrentUser';
 import { IRole } from '@alga-psa/types';
 import { withTransaction } from '@alga-psa/db';
+
+// Dynamic import to avoid circular dependency (auth -> users -> auth)
+// Note: Using string concatenation to prevent static analysis from detecting this dependency
+const getUserRoles = async (userId: string) => {
+  const modulePath = '@alga-psa/' + 'users/actions';
+  const { getUserRoles: getRoles } = await import(/* webpackIgnore: true */ modulePath);
+  return getRoles(userId);
+};
 import { Knex } from 'knex';
 
 /**

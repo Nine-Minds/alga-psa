@@ -19,11 +19,10 @@ import CustomTabs from '@alga-psa/ui/components/CustomTabs';
 import BackNav from '@alga-psa/ui/components/BackNav';
 import InteractionsFeed from '../interactions/InteractionsFeed';
 import { useDrawer } from "@alga-psa/ui";
-import { getCurrentUser } from '@alga-psa/users/actions';
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import { Card } from '@alga-psa/ui/components/Card';
 import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContainer';
-import { getContactAvatarUrlAction } from '@alga-psa/users/actions';
+import { getCurrentUserAsync, getContactAvatarUrlActionAsync } from '../../lib/usersHelpers';
 import { updateContact, getContactByContactNameId, deleteContact } from '@alga-psa/clients/actions';
 import { validateEmailAddress, validatePhoneNumber, validateContactName, validateRole } from '@alga-psa/validation';
 import Documents from '@alga-psa/documents/components/Documents';
@@ -270,7 +269,7 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
   useEffect(() => {
     const fetchUser = async () => {
       try {
-        const user = await getCurrentUser();
+        const user = await getCurrentUserAsync();
         setCurrentUser(user);
       } catch (error) {
         console.error('Error fetching current user:', error);
@@ -322,7 +321,7 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
       if (userId && contact.tenant) {
         try {
           const [contactAvatarUrl, fetchedTags] = await Promise.all([
-            getContactAvatarUrlAction(contact.contact_name_id, contact.tenant),
+            getContactAvatarUrlActionAsync(contact.contact_name_id, contact.tenant),
             findTagsByEntityIds([contact.contact_name_id], 'contact')
           ]);
           

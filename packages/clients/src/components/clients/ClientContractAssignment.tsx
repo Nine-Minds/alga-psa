@@ -23,7 +23,7 @@ import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { ColumnDefinition } from '@alga-psa/types';
 import { IContract } from '@alga-psa/types';
 import { IClientContract } from '@alga-psa/types';
-import { getContracts } from '@alga-psa/billing/actions';
+import { getContractsAsync } from '../../lib/billingHelpers';
 import {
   getClientContracts,
   getDetailedClientContract,
@@ -86,7 +86,7 @@ const ClientContractAssignment: React.FC<ClientContractAssignmentProps> = ({ cli
 
       // Get all contracts and client contracts
       const [contracts, clientContractsData] = await Promise.all([
-        getContracts(),
+        getContractsAsync(),
         getClientContracts(clientId)
       ]);
 

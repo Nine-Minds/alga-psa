@@ -4,7 +4,7 @@
  */
 
 import { Knex } from 'knex';
-import { BaseService, ServiceContext, ListResult } from './BaseService';
+import { BaseService, ServiceContext, ListResult } from '@alga-psa/db';
 import { IContact } from 'server/src/interfaces/contact.interfaces';
 import { withTransaction } from '@alga-psa/db';
 import { getContactAvatarUrl } from 'server/src/lib/utils/avatarUtils';

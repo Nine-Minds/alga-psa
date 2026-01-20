@@ -6,6 +6,7 @@ export type CompactEventClasses = {
   text: string;
   padding: string;
   button: string;
+  buttonGap: string;
 };
 
 export type CompactEventState = {
@@ -22,7 +23,7 @@ export type CompactEventState = {
  */
 export function useIsCompactEvent(
   _event?: unknown,
-  eventRef?: React.RefObject<HTMLElement>
+  eventRef?: React.RefObject<HTMLElement | null>
 ): CompactEventState {
   const [isCompact, setIsCompact] = useState(false);
 
@@ -59,8 +60,8 @@ export function useIsCompactEvent(
 
   const compactClasses = useMemo<CompactEventClasses>(() => {
     return isCompact
-      ? { text: 'text-xs leading-tight', padding: 'p-1', button: 'h-5 w-5' }
-      : { text: 'text-sm', padding: 'p-2', button: 'h-6 w-6' };
+      ? { text: 'text-xs leading-tight', padding: 'p-1', button: 'h-5 w-5', buttonGap: 'gap-0.5' }
+      : { text: 'text-sm', padding: 'p-2', button: 'h-6 w-6', buttonGap: 'gap-1' };
   }, [isCompact]);
 
   return { isCompact, compactClasses };

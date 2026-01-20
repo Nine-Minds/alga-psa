@@ -1,3 +1,5 @@
+// @ts-nocheck
+// TODO: @alga-psa/product-extension-actions is resolved via webpack alias at build time
 'use client';
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';

@@ -16,7 +16,7 @@
  */
 
 import { Knex } from 'knex';
-import { BaseService, ServiceContext, ListResult } from './BaseService';
+import { BaseService, ServiceContext, ListResult } from '@alga-psa/db';
 import { ListOptions } from '../controllers/types';
 import { withTransaction } from '@alga-psa/db';
 import { 

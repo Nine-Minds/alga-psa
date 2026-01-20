@@ -6,13 +6,12 @@
   "module": "./dist/index.mjs",
   "types": "./dist/index.d.ts",
   "scripts": {
-    "build": "tsup",
-    "typecheck": "tsc --noEmit"
+    "build": "tsup src/index.ts --format cjs,esm --dts",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {
     "@alga-psa/core": "*",
     "@alga-psa/db": "*",
-    "@alga-psa/documents": "*",
     "@alga-psa/types": "*",
     "uuid": "^9.0.1"
   },
@@ -21,4 +20,3 @@
     "typescript": "^5.7.3"
   }
 }
-

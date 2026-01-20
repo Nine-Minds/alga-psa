@@ -29,6 +29,10 @@
     "./server": {
       "import": "./src/server.ts",
       "types": "./src/server.ts"
+    },
+    "./i18n/config": {
+      "import": "./src/lib/i18n/config.ts",
+      "types": "./src/lib/i18n/config.ts"
     }
   },
   "scripts": {

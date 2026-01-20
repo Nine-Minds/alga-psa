@@ -1,7 +1,6 @@
 import React from 'react';
 import Link from 'next/link';
 import type { ColumnDefinition, ITicketListItem, ITicketCategory, TicketResponseState, ITag, IBoard } from '@alga-psa/types';
-import type { TicketingDisplaySettings } from '@alga-psa/tickets/actions/ticketDisplaySettings';
 import { TagManager } from '@alga-psa/ui/components';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@alga-psa/ui/components/DropdownMenu';
 import { Button } from '@alga-psa/ui/components/Button';
@@ -10,6 +9,31 @@ import UserAvatar from '@alga-psa/ui/components/UserAvatar';
 import { MoreVertical, Trash2, ChevronDown, ChevronRight } from 'lucide-react';
 import { format } from 'date-fns';
 import { ResponseStateBadge } from '@alga-psa/ui/components';
+
+type TicketListColumnKey =
+  | 'ticket_number'
+  | 'title'
+  | 'status'
+  | 'priority'
+  | 'board'
+  | 'category'
+  | 'client'
+  | 'assigned_to'
+  | 'due_date'
+  | 'created'
+  | 'created_by'
+  | 'tags'
+  | 'actions';
+
+type TicketListSettings = {
+  columnVisibility?: Partial<Record<TicketListColumnKey, boolean>>;
+  tagsInlineUnderTitle?: boolean;
+};
+
+type TicketingDisplaySettings = {
+  dateTimeFormat?: string;
+  list?: TicketListSettings;
+};
 
 interface CreateTicketColumnsOptions {
   categories: ITicketCategory[];

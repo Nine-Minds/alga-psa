@@ -9,13 +9,18 @@ import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import { Info } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import type { BillingCycleType } from '@alga-psa/types';
-import { createNextBillingCycle } from '@alga-psa/billing/actions';
 import {
-  getClientBillingCycleAnchor,
-  previewBillingPeriodsForSchedule,
-  type BillingCyclePeriodPreview
-} from '@alga-psa/billing/actions';
-import { updateClientBillingSchedule } from '@alga-psa/billing/actions';
+  createNextBillingCycleAsync,
+  getClientBillingCycleAnchorAsync,
+  previewBillingPeriodsForScheduleAsync,
+  updateClientBillingScheduleAsync
+} from '../../lib/billingHelpers';
+
+// Local type definition to avoid circular dependency
+interface BillingCyclePeriodPreview {
+  periodStartDate: string;
+  periodEndDate: string;
+}
 import type { ISO8601String } from '@alga-psa/types';
 
 const BILLING_CYCLE_OPTIONS: { value: BillingCycleType; label: string }[] = [
@@ -110,7 +115,7 @@ export function ClientBillingSchedule(props: { clientId: string }): React.JSX.El
   const loadFromServer = async (): Promise<void> => {
     setLoading(true);
     try {
-      const config = await getClientBillingCycleAnchor(clientId);
+      const config = await getClientBillingCycleAnchorAsync(clientId);
 
       setBillingCycle(config.billingCycle);
       const defaults = defaultAnchorDraftForCycle(config.billingCycle);
@@ -142,7 +147,7 @@ export function ClientBillingSchedule(props: { clientId: string }): React.JSX.El
 
     const timeoutId = window.setTimeout(() => {
       setPreviewLoading(true);
-      void previewBillingPeriodsForSchedule(
+      void previewBillingPeriodsForScheduleAsync(
         billingCycle,
         {
           dayOfMonth: anchorDraft.dayOfMonth,
@@ -196,7 +201,7 @@ export function ClientBillingSchedule(props: { clientId: string }): React.JSX.El
   const saveSchedule = async (): Promise<void> => {
     setSaving(true);
     try {
-      await updateClientBillingSchedule({
+      await updateClientBillingScheduleAsync({
         clientId,
         billingCycle,
         anchor: {
@@ -221,7 +226,7 @@ export function ClientBillingSchedule(props: { clientId: string }): React.JSX.El
   const createNextCycle = async (): Promise<void> => {
     setCreatingCycle(true);
     try {
-      const result = await createNextBillingCycle(clientId);
+      const result = await createNextBillingCycleAsync(clientId);
       if (!result.success) {
         toast.error(result.message || 'Failed to create next billing cycle');
         return;

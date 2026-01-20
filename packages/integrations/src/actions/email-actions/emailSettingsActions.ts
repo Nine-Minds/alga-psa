@@ -6,7 +6,7 @@
 
 import { createTenantKnex } from '@alga-psa/db';
 import { getCurrentUser } from '@alga-psa/users/actions';
-import { TenantEmailSettings } from '../../../types/email.types';
+import type { TenantEmailSettings } from '@alga-psa/types';
 import { TenantEmailService } from '@alga-psa/email';
 
 function extractDomain(address?: string | null): string | null {

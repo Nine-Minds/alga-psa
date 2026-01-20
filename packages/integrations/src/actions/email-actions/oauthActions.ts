@@ -4,7 +4,7 @@ import { getCurrentUser } from '@alga-psa/users/actions';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { createTenantKnex } from '@alga-psa/db';
-import { generateMicrosoftAuthUrl, generateGoogleAuthUrl, generateNonce, type OAuthState } from '@/utils/email/oauthHelpers';
+import { generateMicrosoftAuthUrl, generateGoogleAuthUrl, generateNonce, type OAuthState } from '../../utils/email/oauthHelpers';
 
 export async function initiateEmailOAuth(params: {
   provider: 'microsoft' | 'google';

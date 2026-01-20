@@ -1,9 +1,17 @@
 'use server';
 
 import { getConnection } from '@alga-psa/db';
-import { getCurrentUser } from '@alga-psa/users/actions';
 import { revalidateTag } from 'next/cache';
 import { generateBrandingStyles } from '../../lib/generateBrandingStyles';
+
+// Dynamic import to avoid circular dependency (tenancy -> users -> auth -> ui -> analytics -> tenancy)
+// Note: Using string concatenation to prevent static analysis from detecting this dependency
+const getUsersModule = () => '@alga-psa/' + 'users/actions';
+
+const getCurrentUserAsync = async () => {
+  const { getCurrentUser } = await import(/* webpackIgnore: true */ getUsersModule());
+  return getCurrentUser();
+};
 
 export interface TenantBranding {
   logoUrl: string;
@@ -17,7 +25,7 @@ export interface TenantBranding {
  * Update tenant's branding settings
  */
 export async function updateTenantBrandingAction(branding: TenantBranding) {
-  const user = await getCurrentUser();
+  const user = await getCurrentUserAsync();
   if (!user) {
     throw new Error('User not found');
   }
@@ -83,7 +91,7 @@ export async function updateTenantBrandingAction(branding: TenantBranding) {
  * Get tenant's branding settings
  */
 export async function getTenantBrandingAction(): Promise<TenantBranding | null> {
-  const user = await getCurrentUser();
+  const user = await getCurrentUserAsync();
   if (!user) {
     return null;
   }

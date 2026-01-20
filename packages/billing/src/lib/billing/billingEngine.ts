@@ -30,7 +30,7 @@ import { Temporal } from '@js-temporal/polyfill';
 import type { ISO8601String, IClient } from '@alga-psa/types';
 import { getNextBillingDate } from '@alga-psa/billing/actions/billingAndTax'; // Removed getClientTaxRate
 import { toPlainDate, toISODate, getCurrencySymbol } from '@alga-psa/core';
-import { getClientById, getClientDefaultTaxRegionCode } from '@alga-psa/clients/actions';
+import { getClientDefaultTaxRegionCode } from '@alga-psa/shared/billingClients';
 // Removed TaxService import as it's no longer directly used here
 // Import necessary functions from invoiceService
 import { calculateAndDistributeTax, updateInvoiceTotalsAndRecordTransaction, getClientDetails } from '../../services/invoiceService';
@@ -137,7 +137,9 @@ export class BillingEngine {
   async calculateBilling(clientId: string, startDate: ISO8601String, endDate: ISO8601String, billingCycleId: string): Promise<IBillingResult & { error?: string }> {
     try {
       await this.initKnex();
-      const client = await getClientById(clientId);
+      const client = await this.knex<IClient>('clients')
+        .where({ client_id: clientId, tenant: this.tenant! })
+        .first();
       console.log(`Calculating billing for client ${client?.client_name} (${clientId}) using billingCycleId: ${billingCycleId}`);
 
       // Fetch the specific billing cycle record
@@ -1032,7 +1034,7 @@ export class BillingEngine {
         // ***** START OF CORRECTED BLOCK *****
         if (!client.is_tax_exempt && isTaxable) {
           // Use the region derived from tax_rate_id, fallback to client default ONLY if service region is null
-          const effectiveTaxRegion = serviceTaxRegion ?? await getClientDefaultTaxRegionCode(client.client_id) ?? '';
+          const effectiveTaxRegion = serviceTaxRegion ?? await getClientDefaultTaxRegionCode(this.knex, this.tenant!, client.client_id) ?? '';
           if (effectiveTaxRegion) {
             // Use TaxService to calculate tax
             // allocatedAmount is already in cents
@@ -1121,7 +1123,7 @@ export class BillingEngine {
           // Let's re-fetch it here for clarity, although it was calculated during allocation.
           // Ideally, the allocation object would carry the derived taxRegion.
           // For now, re-derive:
-          tax_region: (await this.getTaxInfoFromService(planService)).taxRegion ?? await getClientDefaultTaxRegionCode(client.client_id) ?? undefined, // Use derived region, fallback to client default lookup
+          tax_region: (await this.getTaxInfoFromService(planService)).taxRegion ?? await getClientDefaultTaxRegionCode(this.knex, this.tenant!, client.client_id) ?? undefined, // Use derived region, fallback to client default lookup
           // planId: clientContractLine.contract_line_id, // Removed - planId not part of IFixedPriceCharge
           client_contract_line_id: clientContractLine.client_contract_line_id, // Link back to the plan assignment
 
@@ -1178,7 +1180,7 @@ export class BillingEngine {
           type: 'fixed',
           tax_amount: 0,
           tax_rate: 0,
-          tax_region: serviceTaxRegion ?? await getClientDefaultTaxRegionCode(client.client_id) ?? undefined, // Use derived region, fallback to client default lookup
+          tax_region: serviceTaxRegion ?? await getClientDefaultTaxRegionCode(this.knex, this.tenant!, client.client_id) ?? undefined, // Use derived region, fallback to client default lookup
           is_taxable: isTaxable, // Use derived value
           // Use plan-level settings fetched earlier, even if plan type isn't strictly 'Fixed' now
           // This maintains consistency if a plan type was changed.
@@ -1465,7 +1467,7 @@ export class BillingEngine {
       // Calculate tax amount (will be recalculated later in invoiceService, but set initial values)
       let taxAmount = 0;
       let taxRate = 0;
-      const effectiveTaxRegion = serviceTaxRegion ?? await getClientDefaultTaxRegionCode(client.client_id) ?? undefined;
+      const effectiveTaxRegion = serviceTaxRegion ?? await getClientDefaultTaxRegionCode(this.knex, this.tenant!, client.client_id) ?? undefined;
 
       if (!client.is_tax_exempt && isTaxable && effectiveTaxRegion) {
         try {
@@ -1640,7 +1642,7 @@ export class BillingEngine {
       // Calculate tax amount (will be recalculated later)
       let taxAmount = 0;
       let taxRate = 0;
-      const effectiveTaxRegion = serviceTaxRegion ?? await getClientDefaultTaxRegionCode(client.client_id) ?? undefined;
+      const effectiveTaxRegion = serviceTaxRegion ?? await getClientDefaultTaxRegionCode(this.knex, this.tenant!, client.client_id) ?? undefined;
 
       if (!client.is_tax_exempt && isTaxable && effectiveTaxRegion) {
         try {
@@ -1776,7 +1778,7 @@ export class BillingEngine {
       // Calculate tax amount (will be recalculated later)
       let taxAmount = 0;
       let taxRate = 0;
-      const effectiveTaxRegion = serviceTaxRegion ?? await getClientDefaultTaxRegionCode(client.client_id) ?? undefined;
+      const effectiveTaxRegion = serviceTaxRegion ?? await getClientDefaultTaxRegionCode(this.knex, this.tenant!, client.client_id) ?? undefined;
 
       if (!client.is_tax_exempt && isTaxable && effectiveTaxRegion) {
         try {
@@ -1858,7 +1860,7 @@ export class BillingEngine {
       // Calculate tax amount (will be recalculated later)
       let taxAmount = 0;
       let taxRate = 0;
-      const effectiveTaxRegion = serviceTaxRegion ?? await getClientDefaultTaxRegionCode(client.client_id) ?? undefined;
+      const effectiveTaxRegion = serviceTaxRegion ?? await getClientDefaultTaxRegionCode(this.knex, this.tenant!, client.client_id) ?? undefined;
 
       if (!client.is_tax_exempt && isTaxable && effectiveTaxRegion) {
         try {
@@ -1998,7 +2000,7 @@ export class BillingEngine {
 
       let taxAmount = 0;
       let taxRate = 0;
-      const effectiveTaxRegion = serviceTaxRegion ?? await getClientDefaultTaxRegionCode(client.client_id) ?? undefined;
+      const effectiveTaxRegion = serviceTaxRegion ?? await getClientDefaultTaxRegionCode(this.knex, this.tenant!, client.client_id) ?? undefined;
 
       if (!client.is_tax_exempt && isTaxable && effectiveTaxRegion) {
         try {
@@ -2147,7 +2149,7 @@ export class BillingEngine {
         // Calculate tax amount (will be recalculated later)
         let taxAmount = 0;
         let taxRate = 0;
-        const effectiveTaxRegion = serviceTaxRegion ?? await getClientDefaultTaxRegionCode(client.client_id) ?? undefined;
+        const effectiveTaxRegion = serviceTaxRegion ?? await getClientDefaultTaxRegionCode(this.knex, this.tenant!, client.client_id) ?? undefined;
 
         if (!client.is_tax_exempt && isTaxable && effectiveTaxRegion) {
           try {

@@ -248,7 +248,7 @@ export function TenantTelemetrySettings({ onSettingsUpdate }: TenantTelemetrySet
 
         <div className="flex justify-between items-center pt-4 border-t">
           <div className="text-xs text-gray-500">
-            Last updated: {new Date(settings.lastUpdated).toLocaleString()}
+            {settings.lastUpdated && <>Last updated: {new Date(settings.lastUpdated).toLocaleString()}</>}
             {settings.updatedBy && ` by ${settings.updatedBy}`}
           </div>
           

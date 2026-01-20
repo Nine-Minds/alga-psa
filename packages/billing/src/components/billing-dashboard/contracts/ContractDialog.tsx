@@ -10,18 +10,17 @@ import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { IContract } from '@alga-psa/types';
 import { IContractLinePreset } from '@alga-psa/types';
 import { createContract, updateContract, checkClientHasActiveContract } from '@alga-psa/billing/actions/contractActions';
-import { createClientContract } from '@alga-psa/clients/actions';
 import { getContractLinePresets, copyPresetToContractLine } from '@alga-psa/billing/actions/contractLinePresetActions';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { DatePicker } from '@alga-psa/ui/components/DatePicker';
 import { Switch } from '@alga-psa/ui/components/Switch';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import { IClient } from '@alga-psa/types';
-import { getAllClients } from '@alga-psa/clients/actions';
+import { createClientContractForBilling, getAllClientsForBilling } from '@alga-psa/billing/actions/billingClientsActions';
 import { BILLING_FREQUENCY_OPTIONS, CONTRACT_LINE_TYPE_DISPLAY } from '@alga-psa/billing/constants/billing';
 import { CURRENCY_OPTIONS } from '@alga-psa/core';
 import { HelpCircle, Info, Plus, X, ChevronDown, ChevronUp, Search, Coins } from 'lucide-react';
-import { ClientPicker } from '@alga-psa/clients/components/clients/ClientPicker';
+import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { getContractLinePresetServices, getContractLinePresetFixedConfig } from '@alga-psa/billing/actions/contractLinePresetActions';
@@ -106,7 +105,7 @@ export function ContractDialog({ onContractSaved, editingContract, onClose, trig
 
   const loadClients = async () => {
     try {
-      const fetchedClients = await getAllClients();
+      const fetchedClients = await getAllClientsForBilling();
       setClients(fetchedClients);
     } catch (error) {
       console.error('Error loading clients:', error);
@@ -350,7 +349,7 @@ export function ContractDialog({ onContractSaved, editingContract, onClose, trig
         currency_code: currencyCode,
       };
 
-      let contract;
+      let contract: IContract | null = null;
       if (editingContract?.contract_id) {
         contract = await updateContract(editingContract.contract_id, contractData);
       } else {
@@ -396,14 +395,14 @@ export function ContractDialog({ onContractSaved, editingContract, onClose, trig
               }
             }
 
-            return copyPresetToContractLine(contract.contract_id, presetId, Object.keys(overrides).length > 0 ? overrides : undefined);
+            return copyPresetToContractLine(contract!.contract_id, presetId, Object.keys(overrides).length > 0 ? overrides : undefined);
           })
         );
       }
 
       // Then create the client contract assignment with PO fields
       if (contract && clientId && startDate) {
-        await createClientContract({
+        await createClientContractForBilling({
           client_id: clientId,
           contract_id: contract.contract_id,
           start_date: startDate.toISOString().split('T')[0],

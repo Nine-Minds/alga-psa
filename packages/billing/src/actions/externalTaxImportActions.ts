@@ -1,6 +1,6 @@
 'use server';
 
-import { getCurrentUser } from '@alga-psa/users/actions';
+import { getCurrentUserAsync, hasPermissionAsync, getSessionAsync, getAnalyticsAsync } from '../lib/authHelpers';
 import {
   getExternalTaxImportService,
   SingleImportResult,
@@ -16,7 +16,7 @@ import type { IExternalTaxImport } from '@alga-psa/types';
 export async function importExternalTaxForInvoice(
   invoiceId: string
 ): Promise<SingleImportResult> {
-  const user = await getCurrentUser();
+  const user = await getCurrentUserAsync();
   if (!user) {
     return {
       success: false,
@@ -38,7 +38,7 @@ export async function importExternalTaxForInvoice(
  * POST /api/invoices/batch-import-external-tax
  */
 export async function batchImportExternalTaxes(): Promise<BatchImportResult> {
-  const user = await getCurrentUser();
+  const user = await getCurrentUserAsync();
   if (!user) {
     return {
       totalProcessed: 0,
@@ -61,7 +61,7 @@ export async function batchImportExternalTaxes(): Promise<BatchImportResult> {
 export async function getExternalTaxImportHistory(
   invoiceId: string
 ): Promise<IExternalTaxImport[]> {
-  const user = await getCurrentUser();
+  const user = await getCurrentUserAsync();
   if (!user) {
     return [];
   }
@@ -76,7 +76,7 @@ export async function getExternalTaxImportHistory(
 export async function getInvoiceTaxReconciliation(
   invoiceId: string
 ): Promise<ReconciliationResult | null> {
-  const user = await getCurrentUser();
+  const user = await getCurrentUserAsync();
   if (!user) {
     return null;
   }
@@ -89,7 +89,7 @@ export async function getInvoiceTaxReconciliation(
  * Get count of invoices pending external tax import.
  */
 export async function getPendingExternalTaxCount(): Promise<number> {
-  const user = await getCurrentUser();
+  const user = await getCurrentUserAsync();
   if (!user) {
     return 0;
   }
@@ -111,7 +111,7 @@ export async function getInvoicesPendingExternalTax(): Promise<
     adapter_type?: string;
   }>
 > {
-  const user = await getCurrentUser();
+  const user = await getCurrentUserAsync();
   if (!user) {
     return [];
   }

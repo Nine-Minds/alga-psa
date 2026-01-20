@@ -36,3 +36,11 @@ export { z } from 'zod';
 
 // Client-side validation helpers used by UI/forms
 export * from './lib/clientFormValidation';
+
+// Tenant slug utilities
+export {
+  buildTenantPortalSlug,
+  isValidTenantSlug,
+  getSlugParts,
+  TENANT_SLUG_REGEX
+} from './lib/tenantSlug';

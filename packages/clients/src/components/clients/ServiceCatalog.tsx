@@ -2,8 +2,7 @@ import React, { useState } from 'react';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { Button } from '@radix-ui/themes';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
-import { ColumnDefinition } from '@alga-psa/types';
-import { IService, IServiceCategory } from '../../interfaces/billing.interfaces';
+import { ColumnDefinition, IService, IServiceCategory } from '@alga-psa/types';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Pencil, Trash2, Check, X } from 'lucide-react';
 

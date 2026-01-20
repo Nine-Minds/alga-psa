@@ -2,7 +2,7 @@
 
 import { createTenantKnex } from '@alga-psa/db';
 import { getCurrentUser } from '@alga-psa/users/actions';
-import type { InboundTicketDefaults } from '../../../types/email.types';
+import type { InboundTicketDefaults } from '@alga-psa/types';
 
 export async function getInboundTicketDefaults(): Promise<{ defaults: InboundTicketDefaults[] }> {
   const user = await getCurrentUser();

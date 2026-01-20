@@ -1,8 +1,14 @@
 import { createClient, RedisClientType } from 'redis';
 import logger from '@alga-psa/core/logger';
-import { getRedisConfig } from '../../config/redisConfig';
-import { getSecret } from '../../lib/utils/getSecret';
+import { getRedisConfig } from '@alga-psa/event-bus';
+import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import type { CalendarOAuthState } from '@alga-psa/types';
+
+// Helper to get secret from provider
+async function getSecret(secretName: string, envName: string): Promise<string | null> {
+  const provider = await getSecretProviderInstance();
+  return provider.getSecret(secretName) ?? process.env[envName] ?? null;
+}
 
 const STATE_NAMESPACE = 'calendar:oauth_state';
 const DEFAULT_TTL_SECONDS = 10 * 60; // 10 minutes

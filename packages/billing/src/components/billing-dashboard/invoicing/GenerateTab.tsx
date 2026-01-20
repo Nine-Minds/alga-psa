@@ -7,7 +7,7 @@ import { Button } from '@alga-psa/ui/components/Button';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Coins, FileText, Receipt } from 'lucide-react';
 import type { IService, IClient } from '@alga-psa/types';
-import { getAllClients } from '@alga-psa/clients/actions';
+import { getAllClientsForBilling } from '@alga-psa/billing/actions/billingClientsActions';
 import { getServices } from '@alga-psa/billing/actions';
 import AutomaticInvoices from '../AutomaticInvoices';
 import ManualInvoices from '../ManualInvoices';
@@ -53,7 +53,7 @@ const GenerateTab: React.FC<GenerateTabProps> = ({
   const loadManualInvoiceData = async () => {
     try {
       const [clientsData, servicesData] = await Promise.all([
-        getAllClients(),
+        getAllClientsForBilling(),
         getServices(1, 999, { item_kind: 'any' })
       ]);
 

@@ -1,5 +1,5 @@
 import { requireTenantId } from '@alga-psa/db';
-import { IService, IServicePrice } from '../../interfaces/billing.interfaces';
+import type { IService, IServicePrice } from '@alga-psa/types';
 import { v4 as uuidv4 } from 'uuid';
 import { z } from 'zod';
 import { validateData } from '@alga-psa/core';

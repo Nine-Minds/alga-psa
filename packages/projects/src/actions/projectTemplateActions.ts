@@ -341,6 +341,9 @@ export async function applyTemplate(
   };
 
   const { knex, tenant } = await createTenantKnex();
+  if (!tenant) {
+    throw new Error('Tenant context not found');
+  }
 
   const projectId = await withTransaction(knex, async (trx: Knex.Transaction) => {
     await checkPermission(currentUser, 'project', 'create', trx);
@@ -372,7 +375,7 @@ export async function applyTemplate(
     // Generate project number and WBS code
     const projectNumber = await SharedNumberingService.getNextNumber(
       'PROJECT',
-      { knex: trx, tenant: tenant! }
+      { knex: trx, tenant }
     );
     const wbsCode = await ProjectModel.generateNextWbsCode(trx, tenant, '');
 

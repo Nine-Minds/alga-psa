@@ -13,7 +13,7 @@ import DocumentFilters from './DocumentFilters';
 import DocumentsPageSkeleton from './DocumentsPageSkeleton';
 import { ChevronLeft, ChevronRight, Filter } from 'lucide-react';
 import { useSearchParams, useRouter } from 'next/navigation';
-import { useUserPreference } from '@alga-psa/ui';
+import { useUserPreference } from '@alga-psa/users/hooks';
 
 const FILTERS_PANE_COLLAPSED_SETTING = 'documents_filters_pane_collapsed';
 

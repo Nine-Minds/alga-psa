@@ -5,9 +5,9 @@ import TagMapping, { ITagMapping, ITagWithDefinition } from '../models/tagMappin
 import { ITag, TaggedEntityType, PendingTag } from '@alga-psa/types';
 import { withTransaction } from '@alga-psa/db';
 import { createTenantKnex } from '@alga-psa/db';
-import { getCurrentUser } from '@alga-psa/users/actions';
-import { hasPermission, throwPermissionError } from '@alga-psa/auth';
-import { generateEntityColor } from '@alga-psa/ui/lib';
+import { getCurrentUserAsync } from '../lib/usersHelpers';
+import { hasPermissionAsync, throwPermissionErrorAsync } from '../lib/authHelpers';
+import { generateEntityColorAsync } from '../lib/uiHelpers';
 import { Knex } from 'knex';
 import { TagModel, CreateTagInput } from '@alga-psa/shared/models/tagModel';
 
@@ -112,7 +112,7 @@ export async function createTag(tag: Omit<ITag, 'tag_id' | 'tenant'>): Promise<I
   }
   
   // Get current user for created_by field and permission check
-  const currentUser = await getCurrentUser();
+  const currentUser = await getCurrentUserAsync();
   if (!currentUser) {
     throw new Error('User not found');
   }
@@ -125,16 +125,16 @@ export async function createTag(tag: Omit<ITag, 'tag_id' | 'tenant'>): Promise<I
       // Map 'client' to 'client' for permission checks
       const entityResource = tag.tagged_type === 'client' ? 'client' : tag.tagged_type;
       
-      if (!await hasPermission(currentUser, entityResource, 'update', trx)) {
-        throwPermissionError(`update ${tag.tagged_type.replace('_', ' ')}`);
+      if (!await hasPermissionAsync(currentUser, entityResource, 'update', trx)) {
+        await throwPermissionErrorAsync(`update ${tag.tagged_type.replace('_', ' ')}`);
       }
       
       const existingTags = await TagDefinition.getAllByType(trx, tenant, tag.tagged_type);
       const existingTag = existingTags.find((t: ITagDefinition) => t.tag_text === tagText);
       
       // Check if this is a new tag (not in existing tags) - only then require tag:create permission
-      if (!existingTag && !await hasPermission(currentUser, 'tag', 'create', trx)) {
-        throwPermissionError('create new tags', 'You can only select from existing tags');
+      if (!existingTag && !await hasPermissionAsync(currentUser, 'tag', 'create', trx)) {
+        await throwPermissionErrorAsync('create new tags', 'You can only select from existing tags');
       }
 
       const tagWithTenant: Omit<ITag, 'tag_id' | 'tenant'> & { 
@@ -148,9 +148,9 @@ export async function createTag(tag: Omit<ITag, 'tag_id' | 'tenant'>): Promise<I
         tagWithTenant.text_color = existingTag.text_color;
       } else if (!tagWithTenant.background_color || !tagWithTenant.text_color) {
         // Generate and save colors for new tags
-        const colors = generateEntityColor(tagText);
-        tagWithTenant.background_color = tagWithTenant.background_color || colors.background;
-        tagWithTenant.text_color = tagWithTenant.text_color || colors.text;
+        const colors = await generateEntityColorAsync(tagText);
+        tagWithTenant.background_color = tagWithTenant.background_color || colors.backgroundColor;
+        tagWithTenant.text_color = tagWithTenant.text_color || colors.textColor;
       }
 
       // Get or create tag definition
@@ -197,7 +197,7 @@ export async function updateTag(id: string, tag: Partial<ITag>): Promise<void> {
   }
   
   // Get current user for permission check
-  const currentUser = await getCurrentUser();
+  const currentUser = await getCurrentUserAsync();
   if (!currentUser) {
     throw new Error('User not found');
   }
@@ -234,12 +234,12 @@ export async function updateTag(id: string, tag: Partial<ITag>): Promise<void> {
       // Map 'client' to 'client' for permission checks
       const entityResource = existingTag.tagged_type === 'client' ? 'client' : existingTag.tagged_type;
       
-      if (!await hasPermission(currentUser, entityResource, 'update', trx)) {
-        throwPermissionError(`update ${existingTag.tagged_type.replace('_', ' ')}`);
+      if (!await hasPermissionAsync(currentUser, entityResource, 'update', trx)) {
+        await throwPermissionErrorAsync(`update ${existingTag.tagged_type.replace('_', ' ')}`);
       }
       
-      if (!await hasPermission(currentUser, 'tag', 'update', trx)) {
-        throwPermissionError('update tags');
+      if (!await hasPermissionAsync(currentUser, 'tag', 'update', trx)) {
+        await throwPermissionErrorAsync('update tags');
       }
       
       // Update the definition (only certain fields can be updated)
@@ -266,7 +266,7 @@ export async function deleteTag(id: string): Promise<void> {
   }
   
   // Get current user for permission check
-  const currentUser = await getCurrentUser();
+  const currentUser = await getCurrentUserAsync();
   if (!currentUser) {
     throw new Error('User not found');
   }
@@ -302,14 +302,14 @@ export async function deleteTag(id: string): Promise<void> {
       // Map 'client' to 'client' for permission checks
       const entityResource = existingTag.tagged_type === 'client' ? 'client' : existingTag.tagged_type;
       
-      if (!await hasPermission(currentUser, entityResource, 'update', trx)) {
-        throwPermissionError(`update ${existingTag.tagged_type.replace('_', ' ')}`);
+      if (!await hasPermissionAsync(currentUser, entityResource, 'update', trx)) {
+        await throwPermissionErrorAsync(`update ${existingTag.tagged_type.replace('_', ' ')}`);
       }
       
       // Check if user created the tag (only creator can delete individual tags)
       // If created_by is not set (legacy tags), allow deletion for backward compatibility
       if (existingTag.created_by && existingTag.created_by !== currentUser.user_id) {
-        throwPermissionError('delete this tag', 'You can only delete tags you created');
+        await throwPermissionErrorAsync('delete this tag', 'You can only delete tags you created');
       }
       
       // id is actually mapping_id - just delete the mapping
@@ -469,7 +469,7 @@ export async function createTagsForEntityWithTransaction(
   entityType: TaggedEntityType,
   pendingTags: PendingTag[]
 ): Promise<ITag[]> {
-  const currentUser = await getCurrentUser();
+  const currentUser = await getCurrentUserAsync();
   if (!currentUser) {
     throw new Error('User not found');
   }
@@ -493,9 +493,9 @@ export async function createTagsForEntityWithTransaction(
       let textColor = tag.text_color;
 
       if (!backgroundColor || !textColor) {
-        const colors = generateEntityColor(tagText);
-        backgroundColor = backgroundColor || colors.background;
-        textColor = textColor || colors.text;
+        const colors = await generateEntityColorAsync(tagText);
+        backgroundColor = backgroundColor || colors.backgroundColor;
+        textColor = textColor || colors.textColor;
       }
 
       // Get or create tag definition
@@ -542,7 +542,7 @@ export async function updateTagColor(tagId: string, backgroundColor: string | nu
   }
   
   // Get current user for permission check
-  const currentUser = await getCurrentUser();
+  const currentUser = await getCurrentUserAsync();
   if (!currentUser) {
     throw new Error('User not found');
   }
@@ -586,12 +586,12 @@ export async function updateTagColor(tagId: string, backgroundColor: string | nu
       // Map 'client' to 'client' for permission checks
       const entityResource = tag.tagged_type === 'client' ? 'client' : tag.tagged_type;
       
-      if (!await hasPermission(currentUser, entityResource, 'update', trx)) {
-        throwPermissionError(`update ${tag.tagged_type.replace('_', ' ')}`);
+      if (!await hasPermissionAsync(currentUser, entityResource, 'update', trx)) {
+        await throwPermissionErrorAsync(`update ${tag.tagged_type.replace('_', ' ')}`);
       }
       
-      if (!await hasPermission(currentUser, 'tag', 'update', trx)) {
-        throwPermissionError('update tag colors');
+      if (!await hasPermissionAsync(currentUser, 'tag', 'update', trx)) {
+        await throwPermissionErrorAsync('update tag colors');
       }
       
       // Find the definition and update it
@@ -624,7 +624,7 @@ export async function updateTagText(tagId: string, newTagText: string): Promise<
   }
   
   // Get current user for permission check
-  const currentUser = await getCurrentUser();
+  const currentUser = await getCurrentUserAsync();
   if (!currentUser) {
     throw new Error('User not found');
   }
@@ -666,12 +666,12 @@ export async function updateTagText(tagId: string, newTagText: string): Promise<
       // Map 'client' to 'client' for permission checks
       const entityResource = tag.tagged_type === 'client' ? 'client' : tag.tagged_type;
       
-      if (!await hasPermission(currentUser, entityResource, 'update', trx)) {
-        throwPermissionError(`update ${tag.tagged_type.replace('_', ' ')}`);
+      if (!await hasPermissionAsync(currentUser, entityResource, 'update', trx)) {
+        await throwPermissionErrorAsync(`update ${tag.tagged_type.replace('_', ' ')}`);
       }
       
-      if (!await hasPermission(currentUser, 'tag', 'update', trx)) {
-        throwPermissionError('update tag text');
+      if (!await hasPermissionAsync(currentUser, 'tag', 'update', trx)) {
+        await throwPermissionErrorAsync('update tag text');
       }
       
       // Don't update if text is the same
@@ -736,7 +736,7 @@ export async function checkTagPermissions(taggedType: TaggedEntityType): Promise
   canDeleteAll: boolean;
 }> {
   try {
-    const currentUser = await getCurrentUser();
+    const currentUser = await getCurrentUserAsync();
     if (!currentUser) {
       return {
         canAddExisting: false,
@@ -756,10 +756,10 @@ export async function checkTagPermissions(taggedType: TaggedEntityType): Promise
       
       // Check all permissions in parallel
       const [entityUpdate, tagCreate, tagUpdate, tagDelete] = await Promise.all([
-        hasPermission(currentUser, permissionEntity, 'update', trx),
-        hasPermission(currentUser, 'tag', 'create', trx),
-        hasPermission(currentUser, 'tag', 'update', trx),
-        hasPermission(currentUser, 'tag', 'delete', trx)
+        hasPermissionAsync(currentUser, permissionEntity, 'update', trx),
+        hasPermissionAsync(currentUser, 'tag', 'create', trx),
+        hasPermissionAsync(currentUser, 'tag', 'update', trx),
+        hasPermissionAsync(currentUser, 'tag', 'delete', trx)
       ]);
 
       return {
@@ -792,7 +792,7 @@ export async function deleteAllTagsByText(tagText: string, taggedType: TaggedEnt
   }
   
   // Get current user for permission check
-  const currentUser = await getCurrentUser();
+  const currentUser = await getCurrentUserAsync();
   if (!currentUser) {
     throw new Error('User not found');
   }
@@ -810,12 +810,12 @@ export async function deleteAllTagsByText(tagText: string, taggedType: TaggedEnt
       // Map 'client' to 'client' for permission checks
       const entityResource = taggedType === 'client' ? 'client' : taggedType;
       
-      if (!await hasPermission(currentUser, entityResource, 'update', trx)) {
-        throwPermissionError(`update ${taggedType.replace('_', ' ')}`);
+      if (!await hasPermissionAsync(currentUser, entityResource, 'update', trx)) {
+        await throwPermissionErrorAsync(`update ${taggedType.replace('_', ' ')}`);
       }
       
-      if (!await hasPermission(currentUser, 'tag', 'delete', trx)) {
-        throwPermissionError('delete all instances of tags');
+      if (!await hasPermissionAsync(currentUser, 'tag', 'delete', trx)) {
+        await throwPermissionErrorAsync('delete all instances of tags');
       }
       
       // Find the definition and delete it (mappings will cascade delete)

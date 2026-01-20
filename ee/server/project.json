@@ -1,0 +1,8 @@
+{
+  "name": "sebastian-ee",
+  "targets": {
+    "build": {
+      "dependsOn": ["server:build"]
+    }
+  }
+}

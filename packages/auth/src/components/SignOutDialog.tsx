@@ -2,8 +2,7 @@
 
 import { useState } from 'react';
 import { signOut, useSession } from 'next-auth/react';
-import { Dialog, DialogDescription, DialogFooter } from '@alga-psa/ui/components/Dialog';
-import { Button } from '@alga-psa/ui/components/Button';
+import { Dialog, DialogDescription, DialogFooter, Button } from '@alga-psa/ui/components';
 import { usePostHog } from 'posthog-js/react';
 
 interface SignOutDialogProps {

@@ -4,7 +4,7 @@ import { createTenantKnex } from '@alga-psa/db';
 import { getCurrentUser } from '@alga-psa/users/actions';
 import { getInvoiceForRendering } from '@alga-psa/billing/actions/invoiceQueries';
 import { getClientById } from '@alga-psa/clients/actions';
-import { SystemEmailProviderFactory } from '@alga-psa/email/system/SystemEmailProviderFactory';
+import { SystemEmailProviderFactory } from '@alga-psa/email';
 import { createPDFGenerationService } from '@alga-psa/billing/services/pdfGenerationService';
 import { StorageService } from '@alga-psa/documents/storage/StorageService';
 import { getTenantDetails } from '@alga-psa/tenancy/actions';

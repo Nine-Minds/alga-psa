@@ -4,7 +4,7 @@ import { TextArea } from '@alga-psa/ui/components/TextArea';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { DatePicker } from '@alga-psa/ui/components/DatePicker';
 import UserPicker from '@alga-psa/ui/components/UserPicker';
-import { ClientPicker } from '@alga-psa/clients/components/clients/ClientPicker';
+import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
 import type { IUserWithRoles } from '@alga-psa/types';
 import AlertWidget from '@alga-psa/ui/components/widgets/AlertWidget';
 import HighlightWidget from '@alga-psa/ui/components/widgets/HighlightWidget';

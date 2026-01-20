@@ -1,4 +1,4 @@
-// server/src/config/sidebarNavigationConfig.ts
+// server/src/config/menuConfig.ts
 
 import type { ElementType } from 'react';
 import {

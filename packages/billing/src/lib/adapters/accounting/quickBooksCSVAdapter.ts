@@ -7,6 +7,7 @@
  */
 
 import logger from '@alga-psa/core/logger';
+import { unparseCSV } from '@alga-psa/core';
 import { Knex } from 'knex';
 import {
   AccountingExportAdapter,

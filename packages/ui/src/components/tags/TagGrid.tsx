@@ -1,5 +1,6 @@
 import React from 'react';
 import { Badge } from '@alga-psa/ui/components/Badge';
+import { Button } from '@alga-psa/ui/components/Button';
 import { generateEntityColor } from '../../lib/colorUtils';
 import { ITag } from '@alga-psa/types';
 

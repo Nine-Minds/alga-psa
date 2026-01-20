@@ -6,8 +6,8 @@ import { Knex } from 'knex';
 import type { IClientContractLine } from '@alga-psa/types';
 import { Temporal } from '@js-temporal/polyfill';
 import { toPlainDate, toISODate } from '@alga-psa/core';
-import { getSession } from '@alga-psa/auth';
-import { cloneTemplateContractLine } from '@alga-psa/billing/lib/billing/utils/templateClone';
+import { getSessionAsync } from '../lib/authHelpers';
+import { cloneTemplateContractLineAsync } from '../lib/billingHelpers';
 
 // Helper function to get the latest invoiced end date
 async function getLatestInvoicedEndDate(db: any, tenant: string, clientContractLineId: string): Promise<Date | null> {
@@ -66,7 +66,7 @@ async function getLatestInvoicedEndDate(db: any, tenant: string, clientContractL
 
 
 export async function getClientContractLine(clientId: string): Promise<IClientContractLine[]> {
-  const session = await getSession();
+  const session = await getSessionAsync();
   if (!session?.user?.id) {
     throw new Error('Unauthorized');
   }
@@ -120,7 +120,7 @@ export async function getClientContractLine(clientId: string): Promise<IClientCo
 }
 
 export async function updateClientContractLine(clientContractLineId: string, updates: Partial<IClientContractLine>): Promise<void> {
-  const session = await getSession();
+  const session = await getSessionAsync();
   if (!session?.user?.id) {
     throw new Error('Unauthorized');
   }
@@ -159,7 +159,7 @@ export async function updateClientContractLine(clientContractLineId: string, upd
 }
 
 export async function addClientContractLine(newBilling: Omit<IClientContractLine, 'client_contract_line_id' | 'tenant'>): Promise<void> {
-  const session = await getSession();
+  const session = await getSessionAsync();
   if (!session?.user?.id) {
     throw new Error('Unauthorized');
   }
@@ -239,7 +239,7 @@ export async function addClientContractLine(newBilling: Omit<IClientContractLine
         })
         .returning('contract_line_id');
 
-      await cloneTemplateContractLine(trx, {
+      await cloneTemplateContractLineAsync(trx, {
         tenant,
         templateContractLineId: newBilling.contract_line_id,
         contractLineId: created.contract_line_id,
@@ -263,7 +263,7 @@ export async function addClientContractLine(newBilling: Omit<IClientContractLine
 }
 
 export async function removeClientContractLine(clientContractLineId: string): Promise<void> {
-  const session = await getSession();
+  const session = await getSessionAsync();
   if (!session?.user?.id) {
     throw new Error('Unauthorized');
   }
@@ -313,7 +313,7 @@ export async function removeClientContractLine(clientContractLineId: string): Pr
 }
 
 export async function editClientContractLine(clientContractLineId: string, updates: Partial<IClientContractLine>): Promise<void> {
-  const session = await getSession();
+  const session = await getSessionAsync();
   if (!session?.user?.id) {
     throw new Error('Unauthorized');
   }

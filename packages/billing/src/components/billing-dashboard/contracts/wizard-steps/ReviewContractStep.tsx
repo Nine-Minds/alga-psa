@@ -20,7 +20,7 @@ import { CURRENCY_OPTIONS } from '@alga-psa/core';
 import { formatCurrencyFromMinorUnits } from '@alga-psa/core';
 import { parse } from 'date-fns';
 import { BILLING_FREQUENCY_OPTIONS, BILLING_FREQUENCY_DISPLAY } from '@alga-psa/billing/constants/billing';
-import { getClientById } from '@alga-psa/clients/actions';
+import { getClientByIdForBilling } from '@alga-psa/billing/actions/billingClientsActions';
 
 interface ReviewContractStepProps {
   data: ContractWizardData;
@@ -37,7 +37,7 @@ export function ReviewContractStep({ data }: ReviewContractStepProps) {
       }
 
       try {
-        const client = await getClientById(data.client_id);
+        const client = await getClientByIdForBilling(data.client_id);
         setClientName(client?.client_name || data.client_id);
       } catch (error) {
         console.error('Error loading client name:', error);

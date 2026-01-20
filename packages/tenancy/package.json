@@ -25,6 +25,11 @@
       "types": "./dist/client.d.ts",
       "import": "./dist/client.mjs",
       "require": "./dist/client.js"
+    },
+    "./components": {
+      "types": "./dist/components/index.d.ts",
+      "import": "./dist/components/index.mjs",
+      "require": "./dist/components/index.js"
     }
   },
   "scripts": {

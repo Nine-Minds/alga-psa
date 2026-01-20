@@ -1,8 +1,8 @@
 'use client';
 
 import React from 'react';
-import { IDocument } from '@/interfaces/document.interface';
-import { formatBytes, formatDate } from '@/lib/utils/formatters';
+import type { IDocument } from '@alga-psa/types';
+import { formatBytes, formatDate } from '@alga-psa/core/formatters';
 import { FileIcon, Download, Trash2 } from 'lucide-react';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@alga-psa/ui/components/Table';

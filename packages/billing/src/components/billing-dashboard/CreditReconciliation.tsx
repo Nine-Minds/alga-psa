@@ -14,7 +14,8 @@ import { parseISO } from 'date-fns';
 import { ColumnDefinition } from '@alga-psa/types';
 import { ICreditReconciliationReport, ReconciliationStatus } from '@alga-psa/types';
 import { validateClientCredit } from '@alga-psa/billing/actions/creditReconciliationActions';
-import { getCurrentUser } from '@alga-psa/users/actions';
+import { getCurrentUserAsync, hasPermissionAsync, getSessionAsync, getAnalyticsAsync } from '../../lib/authHelpers';
+
 import {
   fetchReconciliationReports,
   fetchClientsForDropdown,
@@ -273,25 +274,25 @@ const CreditReconciliation: React.FC = () => {
 
   const handleRunValidation = async () => {
     if (!selectedClient) return;
-    
+
     try {
       setRunningValidation(true);
-      
+
       // Get the current user
-      const currentUser = await getCurrentUser();
+      const currentUser = await getCurrentUserAsync();
       if (!currentUser) {
         throw new Error('User not authenticated');
       }
-      
+
       // Call the server action to run validation for the selected client
       const result = await validateClientCredit(selectedClient, currentUser.user_id);
-      
+
       console.log('Validation result:', result);
-      
+
       // In a real implementation, we would refresh the data after validation
       // For now, just show a success message
       alert(`Validation completed: Found ${result.balanceDiscrepancyCount} balance discrepancies and ${result.missingTrackingCount + result.inconsistentTrackingCount} tracking issues.`);
-      
+
       setRunningValidation(false);
     } catch (error) {
       console.error('Error running validation:', error);

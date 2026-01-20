@@ -6,6 +6,7 @@ import { createTenantKnex } from '@alga-psa/db';
 import { ISO8601String } from '@alga-psa/types';
 import { toPlainDate, toISODate } from '@alga-psa/core';
 import { withTransaction } from '@alga-psa/db';
+import { getCurrentUserAsync, hasPermissionAsync, getSessionAsync, getAnalyticsAsync } from '../lib/authHelpers';
 import {
     IBillingCharge,
     IBucketCharge,
@@ -17,7 +18,7 @@ import {
 } from '@alga-psa/types';
 import { TaxService } from '../services/taxService';
 import { ITaxCalculationResult } from '@alga-psa/types';
-import { getSession } from '@alga-psa/auth';
+
 // Types for paginated billing periods
 export interface BillingPeriodWithMeta extends IClientContractLineCycle {
     client_name: string;
@@ -111,7 +112,7 @@ export async function getClientTaxRate(taxRegion: string, date: ISO8601String): 
 export async function getAvailableBillingPeriods(
     options: FetchBillingPeriodsOptions = {}
 ): Promise<PaginatedBillingPeriodsResult> {
-    const session = await getSession();
+    const session = await getSessionAsync();
     if (!session?.user?.id) {
         throw new Error('Unauthorized');
     }

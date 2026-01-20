@@ -4,7 +4,7 @@
  */
 
 import { Knex } from 'knex';
-import { BaseService, ServiceContext, ListOptions, ListResult } from './BaseService';
+import { BaseService, ServiceContext, ListOptions, ListResult } from '@alga-psa/db';
 import { 
   CreateAssetData,
   CreateAssetWithExtensionData,

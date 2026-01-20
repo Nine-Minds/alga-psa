@@ -2,7 +2,7 @@
 
 import type { Knex } from 'knex';
 import { withTransaction } from '@alga-psa/db';
-import { getSession } from '@alga-psa/auth';
+
 import { createTenantKnex } from '@alga-psa/db';
 import type { BillingCycleType } from '@alga-psa/types';
 import type { ISO8601String } from '@alga-psa/types';
@@ -14,6 +14,7 @@ import {
   type NormalizedBillingCycleAnchorSettings
 } from '../lib/billing/billingCycleAnchors';
 import { ensureClientBillingSettingsRow } from './billingCycleAnchorActions';
+import { getCurrentUserAsync, hasPermissionAsync, getSessionAsync, getAnalyticsAsync } from '../lib/authHelpers';
 
 function isDateObject(val: unknown): val is Date {
   return Object.prototype.toString.call(val) === '[object Date]';
@@ -37,7 +38,7 @@ export type ClientBillingScheduleConfig = {
 export async function getClientBillingScheduleSummaries(
   clientIds: string[]
 ): Promise<Record<string, ClientBillingScheduleConfig>> {
-  const session = await getSession();
+  const session = await getSessionAsync();
   if (!session?.user?.id) {
     throw new Error('Unauthorized');
   }
@@ -96,7 +97,7 @@ export type UpdateClientBillingScheduleInput = {
 export async function updateClientBillingSchedule(
   input: UpdateClientBillingScheduleInput
 ): Promise<{ success: true }> {
-  const session = await getSession();
+  const session = await getSessionAsync();
   if (!session?.user?.id) {
     throw new Error('Unauthorized');
   }

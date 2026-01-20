@@ -1,5 +1,6 @@
 export * from './EmailProviderCard';
-export { EmailProviderConfiguration, type EmailProvider, type MicrosoftEmailProviderConfig, type GoogleEmailProviderConfig, type ImapEmailProviderConfig } from './EmailProviderConfiguration';
+export { EmailProviderConfiguration } from './EmailProviderConfiguration';
+export type { EmailProvider, MicrosoftEmailProviderConfig, GoogleEmailProviderConfig, ImapEmailProviderConfig } from './types';
 export * from './EmailProviderConfigurationWrapper';
 export * from './EmailProviderList';
 export * from './EmailProviderSelector';
@@ -16,3 +17,10 @@ export type {
   BaseGmailProviderFormData,
   CEGmailProviderFormData,
 } from './providers/gmail/schemas';
+
+// Gmail provider components for EE extension
+export { useOAuthPopup } from './providers/gmail/useOAuthPopup';
+export { BasicConfigCard } from './providers/gmail/BasicConfigCard';
+export { ProcessingSettingsCard } from './providers/gmail/ProcessingSettingsCard';
+export { OAuthSection } from './providers/gmail/OAuthSection';
+export { baseGmailProviderSchema } from './providers/gmail/schemas';

@@ -6,13 +6,16 @@ import { withTransaction } from '@alga-psa/db';
 import { getSession } from '@alga-psa/auth';
 import { getCurrencySymbol } from '@alga-psa/core';
 
-export interface ClientProfile {
+export interface IClientProfile {
   name: string;
   email: string;
   phone: string;
   address: string;
   notes: string;
 }
+
+/** @deprecated Use IClientProfile instead */
+export type ClientProfileData = IClientProfile;
 
 export interface BillingCycle {
   id: string;
@@ -133,7 +136,7 @@ const determineServiceStatus = (startDate: string, endDate: string | null): Serv
   }
 };
 
-export async function getClientProfile(): Promise<ClientProfile> {
+export async function getClientProfile(): Promise<IClientProfile> {
   const session = await getSession();
   if (!session?.user) throw new Error('Not authenticated');
   
@@ -220,7 +223,7 @@ export async function getClientProfile(): Promise<ClientProfile> {
   }
 }
 
-export async function updateClientProfile(profile: ClientProfile): Promise<{ success: boolean }> {
+export async function updateClientProfile(profile: IClientProfile): Promise<{ success: boolean }> {
   const session = await getSession();
   if (!session?.user) throw new Error('Not authenticated');
   if (!session.user.clientId) throw new Error('No client associated with user');

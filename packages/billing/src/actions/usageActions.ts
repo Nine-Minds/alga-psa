@@ -6,10 +6,11 @@ import { determineDefaultContractLine } from '@alga-psa/billing/lib/contractLine
 import { ICreateUsageRecord, IUpdateUsageRecord, IUsageFilter, IUsageRecord } from '@alga-psa/types';
 import { revalidatePath } from 'next/cache';
 import { findOrCreateCurrentBucketUsageRecord, updateBucketUsageMinutes } from '../services/bucketUsageService'; // Import bucket service functions
-import { getSession } from '@alga-psa/auth';
+import { getCurrentUserAsync, hasPermissionAsync, getSessionAsync, getAnalyticsAsync } from '../lib/authHelpers';
+
 
 export async function createUsageRecord(data: ICreateUsageRecord): Promise<IUsageRecord> {
-  const session = await getSession();
+  const session = await getSessionAsync();
   if (!session?.user?.id) {
     throw new Error('Unauthorized');
   }
@@ -103,7 +104,7 @@ export async function createUsageRecord(data: ICreateUsageRecord): Promise<IUsag
 }
 
 export async function updateUsageRecord(data: IUpdateUsageRecord): Promise<IUsageRecord> {
-  const session = await getSession();
+  const session = await getSessionAsync();
   if (!session?.user?.id) {
     throw new Error('Unauthorized');
   }
@@ -220,7 +221,7 @@ export async function updateUsageRecord(data: IUpdateUsageRecord): Promise<IUsag
 }
 
 export async function deleteUsageRecord(usageId: string): Promise<void> {
-  const session = await getSession();
+  const session = await getSessionAsync();
   if (!session?.user?.id) {
     throw new Error('Unauthorized');
   }
@@ -299,7 +300,7 @@ export async function deleteUsageRecord(usageId: string): Promise<void> {
 }
 
 export async function getUsageRecords(filter?: IUsageFilter): Promise<IUsageRecord[]> {
-  const session = await getSession();
+  const session = await getSessionAsync();
   if (!session?.user?.id) {
     throw new Error('Unauthorized');
   }
@@ -347,7 +348,7 @@ interface Client {
 }
 
 export async function getClients() {
-  const session = await getSession();
+  const session = await getSessionAsync();
   if (!session?.user?.id) {
     throw new Error('Unauthorized');
   }

@@ -24,7 +24,7 @@ import ViewSwitcher, { ViewSwitcherOption } from '@alga-psa/ui/components/ViewSw
 import { TrashIcon, MoreVertical, CloudDownload, Upload, LayoutGrid, List, Search, XCircle, Power, RotateCcw } from 'lucide-react';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
-import { useUserPreference } from '@alga-psa/ui';
+import { useUserPreference } from '@alga-psa/users/hooks';
 import ClientsImportDialog from './ClientsImportDialog';
 import { Dialog, DialogContent, DialogFooter } from '@alga-psa/ui/components/Dialog';
 import { Input } from '@alga-psa/ui/components/Input';
@@ -1031,16 +1031,17 @@ const Clients: React.FC = () => {
 
             {/* Tag Filter */}
             <TagFilter
-              allTags={allUniqueTags}
+              tags={allUniqueTags}
               selectedTags={selectedTags}
-              onTagSelect={(tag) => {
-                setSelectedTags(prev => 
-                  prev.includes(tag) 
+              onToggleTag={(tag: string) => {
+                setSelectedTags(prev =>
+                  prev.includes(tag)
                     ? prev.filter(t => t !== tag)
                     : [...prev, tag]
                 );
                 setCurrentPage(1); // Reset to first page when changing filter
               }}
+              onClearTags={() => setSelectedTags([])}
             />
 
             {/* Reset Filters Button */}

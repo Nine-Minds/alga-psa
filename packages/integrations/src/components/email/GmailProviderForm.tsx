@@ -12,7 +12,7 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import { ExternalLink } from 'lucide-react';
-import type { EmailProvider } from './EmailProviderConfiguration';
+import type { EmailProvider } from './types';
 import { createEmailProvider, updateEmailProvider, upsertEmailProvider } from '@alga-psa/integrations/actions';
 import { initiateEmailOAuth } from '@alga-psa/integrations/actions';
 import { useOAuthPopup } from './providers/gmail/useOAuthPopup';

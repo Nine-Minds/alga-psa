@@ -25,7 +25,7 @@ import {
   Repeat,
   Stethoscope,
 } from 'lucide-react';
-import type { EmailProvider } from './EmailProviderConfiguration';
+import type { EmailProvider } from './types';
 import { INBOUND_DEFAULTS_WARNING, providerNeedsInboundDefaults } from './emailProviderDefaults';
 
 interface EmailProviderCardProps {

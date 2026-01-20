@@ -7,7 +7,7 @@ import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 import { getContractById } from '@alga-psa/billing/actions/contractActions';
 import ContractTemplateDetail from './ContractTemplateDetail';
 import ContractDetail from './ContractDetail';
-import { getClientContractById } from '@alga-psa/clients/actions';
+import { getClientContractByIdForBilling } from '@alga-psa/billing/actions/billingClientsActions';
 import { IDocument } from '@alga-psa/types';
 
 type ViewMode = 'loading' | 'template' | 'client' | 'error';
@@ -49,7 +49,7 @@ const ContractDetailSwitcher: React.FC<ContractDetailSwitcherProps> = ({
 
       try {
         if (clientContractId) {
-          const clientContract = await getClientContractById(clientContractId);
+          const clientContract = await getClientContractByIdForBilling(clientContractId);
           if (!isMounted) {
             return;
           }

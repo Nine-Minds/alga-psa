@@ -290,6 +290,32 @@ const ClientContract = {
       throw error;
     }
   },
+
+  async getContractLines(clientContractId: string): Promise<any[]> {
+    const { knex: db, tenant } = await createTenantKnex();
+    if (!tenant) {
+      throw new Error('Tenant context is required for fetching contract lines');
+    }
+
+    try {
+      const clientContract = await db('client_contracts')
+        .where({ client_contract_id: clientContractId, tenant })
+        .first();
+
+      if (!clientContract) {
+        throw new Error(`Client contract ${clientContractId} not found`);
+      }
+
+      const contractLines = await db('contract_lines')
+        .where({ contract_id: clientContract.contract_id, tenant })
+        .select('*');
+
+      return contractLines;
+    } catch (error) {
+      console.error(`Error fetching contract lines for client contract ${clientContractId}:`, error);
+      throw error;
+    }
+  },
 };
 
 export default ClientContract;

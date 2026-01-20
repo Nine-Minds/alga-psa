@@ -18,7 +18,6 @@ export type {
   IExtendedWorkItem,
   WorkItemWithStatus,
   WorkItemType,
-  CreateScheduleEntryOptions,
   ITimePeriod,
   ITimeEntry,
   HighlightedSlot,
@@ -26,6 +25,9 @@ export type {
 
 // Re-export enums
 export { IEditScope, Views } from '@alga-psa/types';
+
+// Utils
+export { generateICS, type ICSEventData } from './utils/icsGenerator';
 
 // Note: This module contains:
 // - Schedule Entry management (migrated)

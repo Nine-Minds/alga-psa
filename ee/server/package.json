@@ -6,6 +6,7 @@
     "build": "nx next:build",
     "start": "nx next:start --port 3000",
     "lint": "next lint",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "vitest",
     "test:unit": "vitest run src/__tests__/unit",
     "test:integration": "vitest run src/__tests__/integration --exclude '**/*.playwright.*'",

@@ -3,15 +3,11 @@ import { useEffect, useState } from 'react';
 import { signIn } from 'next-auth/react';
 import { Eye, EyeOff } from 'lucide-react';
 import Link from 'next/link';
-import { Label } from '@alga-psa/ui/components/Label';
-import { Input } from '@alga-psa/ui/components/Input';
-import { Button } from '@alga-psa/ui/components/Button';
-import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
+import { Label, Input, Button, Alert, AlertDescription } from '@alga-psa/ui/components';
 import type { AlertProps } from '@alga-psa/types';
-import { useRegisterUIComponent } from '@alga-psa/ui/ui-reflection/useRegisterUIComponent';
-import { FormComponent, FormFieldComponent } from '@alga-psa/ui/ui-reflection/types';
-import { withDataAutomationId } from '@alga-psa/ui/ui-reflection/withDataAutomationId';
-import SsoProviderButtons from '@/empty/components/auth/SsoProviderButtons';
+import { useRegisterUIComponent, withDataAutomationId } from '@alga-psa/ui/ui-reflection';
+import type { FormComponent, FormFieldComponent } from '@alga-psa/ui/ui-reflection';
+import SsoProviderButtons from '@ee/components/auth/SsoProviderButtons';
 
 interface MspLoginFormProps {
   callbackUrl: string;

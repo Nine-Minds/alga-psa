@@ -10,7 +10,7 @@
 import { createTenantKnex } from '@alga-psa/db';
 import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
-import { getCurrentUser } from '@alga-psa/users/actions';
+import { getCurrentUserAsync } from '../../lib/usersHelpers';
 import {
   createBlockDocument,
   getBlockContent,
@@ -30,7 +30,7 @@ export interface ContactNoteContent {
  */
 export async function getContactNoteContent(contactId: string): Promise<ContactNoteContent> {
   // Get current user FIRST to ensure we have the user's tenant
-  const currentUser = await getCurrentUser();
+  const currentUser = await getCurrentUserAsync();
   if (!currentUser) {
     throw new Error('No authenticated user found');
   }
@@ -121,7 +121,7 @@ export async function saveContactNote(
   blockData: unknown
 ): Promise<{ document_id: string }> {
   // Get current user FIRST to ensure we have the user's tenant
-  const currentUser = await getCurrentUser();
+  const currentUser = await getCurrentUserAsync();
   if (!currentUser) {
     throw new Error('No authenticated user found');
   }
@@ -196,7 +196,7 @@ export async function deleteContactNote(
   deleteDocument: boolean = false
 ): Promise<void> {
   // Get current user FIRST to ensure we have the user's tenant
-  const currentUser = await getCurrentUser();
+  const currentUser = await getCurrentUserAsync();
   if (!currentUser) {
     throw new Error('No authenticated user found');
   }

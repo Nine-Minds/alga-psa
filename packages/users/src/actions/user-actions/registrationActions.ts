@@ -6,10 +6,10 @@ import { Knex } from 'knex';
 import { hashPassword } from '@alga-psa/core/encryption';
 import { verifyContactEmail } from '@alga-psa/users/actions';
 import User from '@alga-psa/db/models/user';
-import { 
-  checkRegistrationLimit, 
+import {
+  checkRegistrationLimit,
   formatRateLimitError
-} from '@alga-psa/auth/lib/security/rateLimiting';
+} from '@alga-psa/auth';
 
 interface IRegistrationResult {
   success: boolean;

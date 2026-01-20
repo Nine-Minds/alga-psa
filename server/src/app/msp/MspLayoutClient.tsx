@@ -1,7 +1,7 @@
 "use client";
 
 import { AppSessionProvider } from "@alga-psa/auth/client";
-import DefaultLayout from "@alga-psa/ui/layout/DefaultLayout";
+import DefaultLayout from "@/components/layout/DefaultLayout";
 import { TagProvider } from "server/src/context/TagContext";
 import { PostHogUserIdentifier } from "@alga-psa/ui/components/analytics/PostHogUserIdentifier";
 import { ClientUIStateProvider } from "@alga-psa/ui/ui-reflection/ClientUIStateProvider";

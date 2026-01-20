@@ -13,7 +13,7 @@ import { IProjectTemplate } from '@alga-psa/types';
 import { IClient } from '@alga-psa/types';
 import { useToast } from '@alga-psa/ui';
 import { useRouter } from 'next/navigation';
-import { ClientPicker } from '@alga-psa/clients/components/clients/ClientPicker';
+import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
 import { getTemplates, applyTemplate } from '../../actions/projectTemplateActions';
 import { getAllClientsForProjects } from '../../actions/projectActions';
 

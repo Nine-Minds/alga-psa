@@ -17,6 +17,7 @@ export * from './lib/xeroCsvTaxImport';
 export * from './lib/companySync';
 export * from './lib/telemetry';
 export * from './lib/tenancy';
+export * from './lib/onboardingWizard';
 
 // Outbound email types - exported with explicit naming to avoid conflicts with inbound email interfaces.
 export type {

@@ -18,7 +18,7 @@ import { useAutomationIdAndRegister } from '@alga-psa/ui/ui-reflection/useAutoma
 import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContainer';
 import { ButtonComponent, FormFieldComponent } from '@alga-psa/ui/ui-reflection/types';
 import ContactAvatarUpload from '@alga-psa/client-portal/components/contacts/ContactAvatarUpload';
-import { getContactAvatarUrlAction } from '@alga-psa/users/actions';
+import { getContactAvatarUrlActionAsync } from '../../lib/usersHelpers';
 
 interface ContactDetailsEditProps {
   id?: string; // Made optional to maintain backward compatibility
@@ -52,7 +52,7 @@ const ContactDetailsEdit: React.FC<ContactDetailsEditProps> = ({
         setTags(fetchedTags);
         
         if (contact.tenant) {
-          const contactAvatarUrl = await getContactAvatarUrlAction(contact.contact_name_id, contact.tenant);
+          const contactAvatarUrl = await getContactAvatarUrlActionAsync(contact.contact_name_id, contact.tenant);
           setAvatarUrl(contactAvatarUrl);
         }
       } catch (err) {

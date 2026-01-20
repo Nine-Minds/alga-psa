@@ -1,4 +1,4 @@
-import { UserActivitiesDashboard } from '@alga-psa/ui/components/user-activities/UserActivitiesDashboard';
+import { UserActivitiesDashboard } from '@alga-psa/workflows/components';
 import { getCurrentUser } from '@alga-psa/users/actions';
 import { redirect } from 'next/navigation';
 

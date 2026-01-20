@@ -9,7 +9,7 @@ import {
   deleteClientLocation,
   setDefaultClientLocation 
 } from '@alga-psa/clients/actions';
-import { getActiveTaxRegions } from '@alga-psa/billing/actions';
+import { getActiveTaxRegionsAsync } from '../../lib/billingHelpers';
 import { getAllCountries, ICountry } from '@alga-psa/clients/actions';
 import { ITaxRegion } from '@alga-psa/types';
 import CountryPicker from '@alga-psa/ui/components/CountryPicker';
@@ -407,7 +407,7 @@ export default function ClientLocations({ clientId, isEditing }: ClientLocations
 
   const loadTaxRegions = async () => {
     try {
-      const regions = await getActiveTaxRegions();
+      const regions = await getActiveTaxRegionsAsync();
       setTaxRegions(regions);
     } catch (error) {
       console.error('Error loading tax regions:', error);

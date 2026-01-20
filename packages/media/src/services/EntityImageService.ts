@@ -1,9 +1,11 @@
-import { StorageService } from '@alga-psa/documents/storage/StorageService';
-import { deleteDocument, getDocumentTypeId } from '@alga-psa/documents/actions/documentActions';
 import { createTenantKnex, withTransaction } from '@alga-psa/db';
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 import { getEntityImageUrl, EntityType } from '../lib/avatarUtils';
+import { getStorageServiceAsync, deleteDocumentAsync, getDocumentTypeIdAsync } from '../lib/documentsHelpers';
+
+// Re-export EntityType for external consumers
+export type { EntityType };
 
 interface UploadResult {
   success: boolean;
@@ -26,6 +28,7 @@ export async function uploadEntityImage(
     const fileBuffer = Buffer.from(await file.arrayBuffer());
     const context = contextName || `${entityType}_image`;
 
+    const StorageService = await getStorageServiceAsync();
     const externalFileRecord = await StorageService.uploadFile(
       tenant,
       fileBuffer,
@@ -42,7 +45,7 @@ export async function uploadEntityImage(
       throw new Error('File storage failed');
     }
 
-    const { typeId, isShared } = await getDocumentTypeId(file.type);
+    const { typeId, isShared } = await getDocumentTypeIdAsync(file.type);
     const newDocumentId = uuidv4();
 
     const documentData = {
@@ -93,7 +96,8 @@ export async function uploadEntityImage(
 
     if (!createdDocument?.document_id) {
       try {
-        await StorageService.deleteFile(externalFileRecord.file_id, userId);
+        const StorageServiceForCleanup = await getStorageServiceAsync();
+        await StorageServiceForCleanup.deleteFile(externalFileRecord.file_id, userId);
       } catch (deleteError) {
         console.error(`[EntityImageService] Failed to clean up file after document creation failure:`, {
           operation: 'cleanupAfterFailure',
@@ -167,7 +171,7 @@ export async function deleteEntityImage(
       return { success: true, message: `No ${entityType} image (or specified document) found to delete.` };
     }
 
-    const deleteResult = await deleteDocument(associationToDelete.document_id, userId);
+    const deleteResult = await deleteDocumentAsync(associationToDelete.document_id, userId);
 
     if (!deleteResult.success) {
       return {

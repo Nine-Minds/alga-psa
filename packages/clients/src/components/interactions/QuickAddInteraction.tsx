@@ -24,9 +24,9 @@ import { IInteraction, IInteractionType } from '@alga-psa/types';
 import { useTenant } from '@alga-psa/ui/components/providers/TenantProvider';
 import { useSession } from 'next-auth/react';
 import UserPicker from '@alga-psa/ui/components/UserPicker';
-import { ClientPicker } from '@alga-psa/clients/components/clients/ClientPicker';
+import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
 import { ContactPicker } from '@alga-psa/ui/components/ContactPicker';
-import { getAllUsersBasic } from '@alga-psa/users/actions';
+import { getAllUsersBasicAsync } from '../../lib/usersHelpers';
 import { getAllClients } from '@alga-psa/clients/actions';
 import { getAllContacts } from '@alga-psa/clients/actions';
 import { IUser } from '@shared/interfaces/user.interfaces';
@@ -206,7 +206,7 @@ export function QuickAddInteraction({
         
         // Fetch users, clients, and contacts for edit mode
         if (isEditMode) {
-          const usersList = await getAllUsersBasic();
+          const usersList = await getAllUsersBasicAsync();
           setUsers(usersList);
           
           const clientsList = await getAllClients();

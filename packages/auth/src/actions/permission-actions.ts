@@ -1,6 +1,6 @@
 'use server';
 
-import { getCurrentUser } from '@alga-psa/users/actions';
+import { getCurrentUser } from '../lib/getCurrentUser';
 import { hasPermission } from '../lib/rbac';
 
 export async function getContactPortalPermissions() {

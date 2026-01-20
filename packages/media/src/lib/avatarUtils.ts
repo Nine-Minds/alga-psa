@@ -1,5 +1,5 @@
 import { createTenantKnex } from '@alga-psa/db';
-import { getImageUrlInternal } from '@alga-psa/documents/actions/documentActions';
+import { getImageUrlInternalAsync } from './documentsHelpers';
 import { withTransaction } from '@alga-psa/db';
 import type { Knex } from 'knex';
 
@@ -47,7 +47,7 @@ export async function getEntityImageUrl(
       return null;
     }
 
-    const imageUrl = await getImageUrlInternal(result.file_id);
+    const imageUrl = await getImageUrlInternalAsync(result.file_id);
 
     if (imageUrl) {
       const timestamp = result.updated_at ? new Date(result.updated_at).getTime() : 0;

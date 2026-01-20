@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@alga
 import { Skeleton } from '@alga-psa/ui/components/Skeleton';
 import Spinner from '@alga-psa/ui/components/Spinner';
 import CustomTabs, { TabContent } from '@alga-psa/ui/components/CustomTabs';
-import NumberingSettings from '@alga-psa/ui/components/settings/general/NumberingSettings';
+import { NumberingSettings } from '@alga-psa/reference-data/components';
 import ZeroDollarInvoiceSettings from './ZeroDollarInvoiceSettings';
 import CreditExpirationSettings from './CreditExpirationSettings';
 import { TaxSourceSettings } from '../tax/TaxSourceSettings';
@@ -49,8 +49,10 @@ const PaymentSettingsSkeleton: React.FC = () => {
 
 // Dynamic import for PaymentSettingsConfig using the packages pattern
 // The webpack alias @product/billing/entry will resolve to either EE or OSS version
+// Note: @product/billing/entry is a webpack alias resolved at build time, not a real package
+const productBillingEntry = '@product/billing/entry';
 const PaymentSettingsConfig = dynamic(
-  () => import('@product/billing/entry').then(mod => {
+  () => (import(productBillingEntry) as Promise<any>).then((mod) => {
     const PaymentSettingsConfigExport = mod.PaymentSettingsConfig;
     const result = PaymentSettingsConfigExport();
 

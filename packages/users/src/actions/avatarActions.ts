@@ -1,7 +1,7 @@
 'use server';
 
 import { getUserAvatarUrl, getContactAvatarUrl, getClientLogoUrl, getEntityImageUrlsBatch } from '@alga-psa/documents/lib/avatarUtils';
-import { linkExistingDocumentAsEntityImage, EntityType } from '@alga-psa/media/services/EntityImageService';
+import { linkExistingDocumentAsEntityImage, EntityType } from '@alga-psa/media';
 import { getCurrentUser } from '@alga-psa/users/actions';
 import { createTenantKnex } from '@alga-psa/db';
 

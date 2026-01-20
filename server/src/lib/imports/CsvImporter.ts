@@ -4,7 +4,7 @@ import type {
   MapToAssetContext,
   ParsedRecord,
   ValidationResult
-} from '@/types/imports.types';
+} from '../../types/imports.types';
 import { ImportValidationError } from '@/lib/imports/errors';
 import Papa, { ParseResult, ParseMeta, ParseError } from 'papaparse';
 import * as XLSX from 'xlsx';
@@ -114,7 +114,7 @@ export class CsvImporter extends AbstractImporter {
           dataRowOffset += results.data.length;
         },
         complete: () => resolve(rows),
-        error: (error) => reject(error),
+        error: (error: Error) => reject(error),
       });
     });
   }

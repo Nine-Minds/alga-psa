@@ -3,11 +3,11 @@
 import type { IClient, IClientWithLocation } from '@alga-psa/types';
 import { createTenantKnex } from '@alga-psa/db';
 import { unparseCSV } from '@alga-psa/core';
-import { createDefaultTaxSettings } from '@alga-psa/billing/actions';
+import { createDefaultTaxSettingsAsync } from '../lib/billingHelpers';
 import { revalidatePath } from 'next/cache';
-import { getCurrentUser } from '@alga-psa/users/actions';
-import { hasPermission } from '@alga-psa/auth';
-import { getClientLogoUrl, getClientLogoUrlsBatch } from '@alga-psa/documents/lib/avatarUtils';
+import { getCurrentUserAsync } from '../lib/usersHelpers';
+import { hasPermissionAsync } from '../lib/authHelpers';
+import { getClientLogoUrlAsync, getClientLogoUrlsBatchAsync } from '../lib/documentsHelpers';
 import { uploadEntityImage, deleteEntityImage } from '@alga-psa/media';
 import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
@@ -16,13 +16,13 @@ import { createTag } from '@alga-psa/tags/actions';
 import { ClientModel } from '@alga-psa/shared/models/clientModel';
 
 export async function getClientById(clientId: string): Promise<IClientWithLocation | null> {
-  const currentUser = await getCurrentUser();
+  const currentUser = await getCurrentUserAsync();
   if (!currentUser) {
     throw new Error('No authenticated user found');
   }
 
   // Check permission for client reading (in MSP, clients are managed via 'client' resource)
-  if (!await hasPermission(currentUser, 'client', 'read')) {
+  if (!await hasPermissionAsync(currentUser, 'client', 'read')) {
     throw new Error('Permission denied: Cannot read clients');
   }
 
@@ -59,7 +59,7 @@ export async function getClientById(clientId: string): Promise<IClientWithLocati
   }
 
   // Get the client logo URL using the utility function
-  const logoUrl = await getClientLogoUrl(clientId, tenant);
+  const logoUrl = await getClientLogoUrlAsync(clientId, tenant);
 
   return {
     ...clientData,
@@ -68,13 +68,13 @@ export async function getClientById(clientId: string): Promise<IClientWithLocati
 }
 
 export async function updateClient(clientId: string, updateData: Partial<Omit<IClient, 'account_manager_full_name'>>): Promise<IClient> { // Omit joined field from update type
-  const currentUser = await getCurrentUser();
+  const currentUser = await getCurrentUserAsync();
   if (!currentUser) {
     throw new Error('No authenticated user found');
   }
 
   // Check permission for client updating
-  if (!await hasPermission(currentUser, 'client', 'update')) {
+  if (!await hasPermissionAsync(currentUser, 'client', 'update')) {
     throw new Error('Permission denied: Cannot update clients. Please contact your administrator if you need additional access.');
   }
 
@@ -179,13 +179,13 @@ export async function updateClient(clientId: string, updateData: Partial<Omit<IC
 }
 
 export async function createClient(client: Omit<IClient, 'client_id' | 'created_at' | 'updated_at' | 'account_manager_full_name'>): Promise<{ success: true; data: IClient } | { success: false; error: string }> {
-  const currentUser = await getCurrentUser();
+  const currentUser = await getCurrentUserAsync();
   if (!currentUser) {
     throw new Error('No authenticated user found');
   }
 
   // Check permission for client creation
-  if (!await hasPermission(currentUser, 'client', 'create')) {
+  if (!await hasPermissionAsync(currentUser, 'client', 'create')) {
     throw new Error('Permission denied: Cannot create clients');
   }
 
@@ -229,7 +229,7 @@ export async function createClient(client: Omit<IClient, 'client_id' | 'created_
     }
 
     // Create default tax settings for the new client
-    await createDefaultTaxSettings(createdClient.client_id);
+    await createDefaultTaxSettingsAsync(createdClient.client_id);
 
     // Email suffix functionality removed for security
 
@@ -300,13 +300,13 @@ export interface BillingCycleDateRange {
 }
 
 export async function getAllClientsPaginated(params: ClientPaginationParams = {}): Promise<PaginatedClientsResponse> {
-  const currentUser = await getCurrentUser();
+  const currentUser = await getCurrentUserAsync();
   if (!currentUser) {
     throw new Error('No authenticated user found');
   }
 
   // Check permission for client reading (in MSP, clients are managed via 'client' resource)
-  if (!await hasPermission(currentUser, 'client', 'read')) {
+  if (!await hasPermissionAsync(currentUser, 'client', 'read')) {
     throw new Error('Permission denied: Cannot read clients');
   }
 
@@ -452,7 +452,7 @@ export async function getAllClientsPaginated(params: ClientPaginationParams = {}
     
     if (loadLogos && clientsWithLogos.length > 0) {
       const clientIds = clientsWithLogos.map(c => c.client_id);
-      const logoUrlsMap = await getClientLogoUrlsBatch(clientIds, tenant);
+      const logoUrlsMap = await getClientLogoUrlsBatchAsync(clientIds, tenant);
       
       clientsWithLogos = clientsWithLogos.map((client) => ({
         ...client,
@@ -484,12 +484,12 @@ export async function getAllClientsPaginated(params: ClientPaginationParams = {}
 export async function getClientsWithBillingCycleRangePaginated(
   params: ClientPaginationParams & { dateRange?: BillingCycleDateRange }
 ): Promise<PaginatedClientsResponse> {
-  const currentUser = await getCurrentUser();
+  const currentUser = await getCurrentUserAsync();
   if (!currentUser) {
     throw new Error('No authenticated user found');
   }
 
-  if (!await hasPermission(currentUser, 'client', 'read')) {
+  if (!await hasPermissionAsync(currentUser, 'client', 'read')) {
     throw new Error('Permission denied: Cannot read clients');
   }
 
@@ -641,7 +641,7 @@ export async function getClientsWithBillingCycleRangePaginated(
 
     if (loadLogos && clientsWithLogos.length > 0) {
       const clientIds = clientsWithLogos.map(c => c.client_id);
-      const logoUrlsMap = await getClientLogoUrlsBatch(clientIds, tenant);
+      const logoUrlsMap = await getClientLogoUrlsBatchAsync(clientIds, tenant);
 
       clientsWithLogos = clientsWithLogos.map((client) => ({
         ...client,
@@ -670,13 +670,13 @@ export async function getClientsWithBillingCycleRangePaginated(
 }
 
 export async function getAllClients(includeInactive: boolean = true): Promise<IClient[]> {
-  const currentUser = await getCurrentUser();
+  const currentUser = await getCurrentUserAsync();
   if (!currentUser) {
     throw new Error('No authenticated user found');
   }
 
   // Check permission for client reading (in MSP, clients are managed via 'client' resource)
-  if (!await hasPermission(currentUser, 'client', 'read')) {
+  if (!await hasPermissionAsync(currentUser, 'client', 'read')) {
     throw new Error('Permission denied: Cannot read clients');
   }
 
@@ -705,7 +705,7 @@ export async function getAllClients(includeInactive: boolean = true): Promise<IC
   }
 
   const clientIds = clients.map((client: any) => client.client_id);
-  const logoUrlsMap = await getClientLogoUrlsBatch(clientIds, tenant);
+  const logoUrlsMap = await getClientLogoUrlsBatchAsync(clientIds, tenant);
 
   const clientsWithLogos = clients.map((client: any) => ({
     ...client,
@@ -716,20 +716,20 @@ export async function getAllClients(includeInactive: boolean = true): Promise<IC
   return clientsWithLogos as IClient[];
 }
 
-export async function deleteClient(clientId: string): Promise<{ 
+export async function deleteClient(clientId: string): Promise<{
   success: boolean;
   code?: string;
   message?: string;
   dependencies?: string[];
   counts?: Record<string, number>;
 }> {
-  const currentUser = await getCurrentUser();
+  const currentUser = await getCurrentUserAsync();
   if (!currentUser) {
     throw new Error('No authenticated user found');
   }
 
   // Check permission for client deletion
-  if (!await hasPermission(currentUser, 'client', 'delete')) {
+  if (!await hasPermissionAsync(currentUser, 'client', 'delete')) {
     throw new Error('Permission denied: Cannot delete clients');
   }
 
@@ -1031,13 +1031,13 @@ export async function deleteClient(clientId: string): Promise<{
 }
 
 export async function exportClientsToCSV(clients: IClient[]): Promise<string> {
-  const currentUser = await getCurrentUser();
+  const currentUser = await getCurrentUserAsync();
   if (!currentUser) {
     throw new Error('No authenticated user found');
   }
 
   // Check permission for client reading (export is a read operation)
-  if (!await hasPermission(currentUser, 'client', 'read')) {
+  if (!await hasPermissionAsync(currentUser, 'client', 'read')) {
     throw new Error('Permission denied: Cannot export clients');
   }
 
@@ -1170,13 +1170,13 @@ export async function getAllClientIds(params: {
   clientTypeFilter?: 'all' | 'company' | 'individual';
   selectedTags?: string[];
 } = {}): Promise<string[]> {
-  const currentUser = await getCurrentUser();
+  const currentUser = await getCurrentUserAsync();
   if (!currentUser) {
     throw new Error('No authenticated user found');
   }
 
   // Check permission for client reading (in MSP, clients are managed via 'client' resource)
-  if (!await hasPermission(currentUser, 'client', 'read')) {
+  if (!await hasPermissionAsync(currentUser, 'client', 'read')) {
     throw new Error('Permission denied: Cannot read clients');
   }
 
@@ -1258,13 +1258,13 @@ export async function getAllClientIds(params: {
 export async function checkExistingClients(
   clientNames: string[]
 ): Promise<IClient[]> {
-  const currentUser = await getCurrentUser();
+  const currentUser = await getCurrentUserAsync();
   if (!currentUser) {
     throw new Error('No authenticated user found');
   }
 
   // Check permission for client reading (in MSP, clients are managed via 'client' resource)
-  if (!await hasPermission(currentUser, 'client', 'read')) {
+  if (!await hasPermissionAsync(currentUser, 'client', 'read')) {
     throw new Error('Permission denied: Cannot read clients');
   }
 
@@ -1295,7 +1295,7 @@ export async function importClientsFromCSV(
   clientsData: Array<Record<string, any>>,
   updateExisting: boolean = false
 ): Promise<ImportClientResult[]> {
-  const currentUser = await getCurrentUser();
+  const currentUser = await getCurrentUserAsync();
   if (!currentUser) {
     throw new Error('No authenticated user found');
   }
@@ -1308,11 +1308,11 @@ export async function importClientsFromCSV(
   }
 
   // Check permissions for both create and update operations since import can do both
-  if (!await hasPermission(currentUser, 'client', 'create')) {
+  if (!await hasPermissionAsync(currentUser, 'client', 'create')) {
     throw new Error('Permission denied: Cannot create clients');
   }
 
-  if (updateExisting && !await hasPermission(currentUser, 'client', 'update')) {
+  if (updateExisting && !await hasPermissionAsync(currentUser, 'client', 'update')) {
     throw new Error('Permission denied: Cannot update clients');
   }
 
@@ -1481,7 +1481,7 @@ export async function uploadClientLogo(
     return { success: false, message: 'Tenant not found' };
   }
 
-  const currentUser = await getCurrentUser();
+  const currentUser = await getCurrentUserAsync();
   if (!currentUser) {
     return { success: false, message: 'User not authenticated' };
   }
@@ -1492,7 +1492,7 @@ export async function uploadClientLogo(
   }
 
   // Check permission for client updating (logo upload is an update operation)
-  if (!await hasPermission(currentUser, 'client', 'update')) {
+  if (!await hasPermissionAsync(currentUser, 'client', 'update')) {
     return { success: false, message: 'Permission denied: Cannot update client logo' };
   }
 
@@ -1536,13 +1536,13 @@ export async function deleteClientLogo(
     return { success: false, message: 'Tenant not found' };
   }
 
-  const currentUser = await getCurrentUser();
+  const currentUser = await getCurrentUserAsync();
   if (!currentUser) {
     return { success: false, message: 'User not authenticated' };
   }
 
   // Check permission for client deletion (logo deletion is a delete operation)
-  if (!await hasPermission(currentUser, 'client', 'delete')) {
+  if (!await hasPermissionAsync(currentUser, 'client', 'delete')) {
     return { success: false, message: 'Permission denied: Cannot delete client logo' };
   }
 
@@ -1588,13 +1588,13 @@ export async function deactivateClientContacts(
     return { success: false, contactsDeactivated: 0, message: 'Tenant not found' };
   }
 
-  const currentUser = await getCurrentUser();
+  const currentUser = await getCurrentUserAsync();
   if (!currentUser) {
     return { success: false, contactsDeactivated: 0, message: 'User not authenticated' };
   }
 
   // Check permission for contact updating
-  if (!await hasPermission(currentUser, 'contact', 'update')) {
+  if (!await hasPermissionAsync(currentUser, 'contact', 'update')) {
     return { success: false, contactsDeactivated: 0, message: 'Permission denied: Cannot update contacts. Please contact your administrator if you need additional access.' };
   }
 
@@ -1649,18 +1649,18 @@ export async function markClientInactiveWithContacts(
     return { success: false, contactsDeactivated: 0, message: 'Tenant not found' };
   }
 
-  const currentUser = await getCurrentUser();
+  const currentUser = await getCurrentUserAsync();
   if (!currentUser) {
     return { success: false, contactsDeactivated: 0, message: 'User not authenticated' };
   }
 
   // Check permission for client updating
-  if (!await hasPermission(currentUser, 'client', 'update')) {
+  if (!await hasPermissionAsync(currentUser, 'client', 'update')) {
     return { success: false, contactsDeactivated: 0, message: 'Permission denied: Cannot update clients. Please contact your administrator if you need additional access.' };
   }
 
   // If deactivating contacts, also check contact permission
-  if (deactivateContacts && !await hasPermission(currentUser, 'contact', 'update')) {
+  if (deactivateContacts && !await hasPermissionAsync(currentUser, 'contact', 'update')) {
     return { success: false, contactsDeactivated: 0, message: 'Permission denied: Cannot update contacts. Please contact your administrator if you need additional access.' };
   }
 
@@ -1724,18 +1724,18 @@ export async function markClientActiveWithContacts(
     return { success: false, contactsReactivated: 0, message: 'Tenant not found' };
   }
 
-  const currentUser = await getCurrentUser();
+  const currentUser = await getCurrentUserAsync();
   if (!currentUser) {
     return { success: false, contactsReactivated: 0, message: 'User not authenticated' };
   }
 
   // Check permission for client updating
-  if (!await hasPermission(currentUser, 'client', 'update')) {
+  if (!await hasPermissionAsync(currentUser, 'client', 'update')) {
     return { success: false, contactsReactivated: 0, message: 'Permission denied: Cannot update clients. Please contact your administrator if you need additional access.' };
   }
 
   // If reactivating contacts, also check contact permission
-  if (reactivateContacts && !await hasPermission(currentUser, 'contact', 'update')) {
+  if (reactivateContacts && !await hasPermissionAsync(currentUser, 'contact', 'update')) {
     return { success: false, contactsReactivated: 0, message: 'Permission denied: Cannot update contacts. Please contact your administrator if you need additional access.' };
   }
 
@@ -1797,13 +1797,13 @@ export async function reactivateClientContacts(
     return { success: false, contactsReactivated: 0, message: 'Tenant not found' };
   }
 
-  const currentUser = await getCurrentUser();
+  const currentUser = await getCurrentUserAsync();
   if (!currentUser) {
     return { success: false, contactsReactivated: 0, message: 'User not authenticated' };
   }
 
   // Check permission for contact updating
-  if (!await hasPermission(currentUser, 'contact', 'update')) {
+  if (!await hasPermissionAsync(currentUser, 'contact', 'update')) {
     return { success: false, contactsReactivated: 0, message: 'Permission denied: Cannot update contacts' };
   }
 

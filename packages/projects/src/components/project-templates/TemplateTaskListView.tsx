@@ -141,7 +141,7 @@ export default function TemplateTaskListView({
   });
 
   // Calculate visible column count for colSpan
-  const visibleColumnCount = COLUMN_CONFIG.filter(c => isColumnVisible(c.key)).length;
+  const visibleColumnCount = COLUMN_CONFIG.filter(c => isColumnVisible(c.key ?? '')).length;
 
   // Drag and drop state
   const [draggedTask, setDraggedTask] = useState<IProjectTemplateTask | null>(null);

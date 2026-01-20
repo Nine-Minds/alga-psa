@@ -103,3 +103,47 @@ export async function getTenantServiceTypes(): Promise<{
     };
   }
 }
+
+export async function createTenantServiceType(input: {
+  name: string;
+  description: string | null;
+  billing_method: 'fixed' | 'hourly' | 'usage';
+  is_active: boolean;
+  order_number: number;
+}): Promise<{ success: boolean; data?: { id: string }; error?: string }> {
+  try {
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+      return { success: false, error: 'No authenticated user found' };
+    }
+
+    const tenant = await getTenantForCurrentRequest();
+    if (!tenant) {
+      return { success: false, error: 'No tenant found' };
+    }
+
+    const { knex } = await createTenantKnex();
+
+    const inserted = await withTransaction(knex, async (trx: Knex.Transaction) => {
+      const [row] = await trx('service_types')
+        .insert({
+          tenant,
+          name: input.name,
+          description: input.description,
+          billing_method: input.billing_method,
+          is_active: input.is_active,
+          order_number: input.order_number,
+        })
+        .returning(['id']);
+      return row as { id: string };
+    });
+
+    return { success: true, data: { id: inserted.id } };
+  } catch (error) {
+    console.error('Error creating tenant service type:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    };
+  }
+}

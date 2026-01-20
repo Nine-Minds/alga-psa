@@ -19,7 +19,7 @@ import * as LucideIcons from 'lucide-react';
 import { Dialog } from '@alga-psa/ui/components/Dialog';
 import ColorPicker from '@alga-psa/ui/components/ColorPicker';
 import { StatusImportDialog } from '@alga-psa/ui/components/settings/dialogs/StatusImportDialog';
-import { ConflictResolutionDialog } from '@alga-psa/ui/components/settings/dialogs/ConflictResolutionDialog';
+import { ConflictResolutionDialog } from '@alga-psa/reference-data/components';
 import { toast } from 'react-hot-toast';
 
 export function TenantProjectTaskStatusSettings() {

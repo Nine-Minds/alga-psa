@@ -1,9 +1,10 @@
 // Client-safe version utility
-// Import package.json to get version at build time
-import packageJson from '../../../../server/package.json';
+// Version is provided via environment variable set during build
 
 export function getAppVersion(): string {
-  // Use package.json version which is available at build time
-  // This works for both client and server side
-  return packageJson.version || 'unknown';
+  // NEXT_PUBLIC_APP_VERSION should be set at build time
+  // Falls back to npm_package_version for server-side or 'dev' for local development
+  return process.env.NEXT_PUBLIC_APP_VERSION ||
+    process.env.npm_package_version ||
+    'dev';
 }

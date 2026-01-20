@@ -3,6 +3,9 @@
 // Client-side analytics interface
 // This file should be used by client components
 
+// Re-export client-safe PostHog configuration
+export { posthogConfig, isPostHogEnabled } from './config/posthog.config';
+
 export const analytics = {
   capture: (event: string, properties?: Record<string, any>, userId?: string) => {
     // Client-side analytics would use PostHog JS SDK

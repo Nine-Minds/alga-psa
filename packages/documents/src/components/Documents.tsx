@@ -24,7 +24,8 @@ import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { downloadDocument, getDocumentDownloadUrl } from '@alga-psa/documents/lib/documentUtils';
 import toast from 'react-hot-toast';
 import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContainer';
-import { useUserPreference } from '@alga-psa/ui';
+import { useUserPreference } from '@alga-psa/users/hooks';
+import { searchUsersForMentions } from '@alga-psa/users/actions';
 import {
   getDocumentsByEntity,
   getDocumentsByFolder,
@@ -1199,6 +1200,7 @@ const Documents = ({
                       initialContent={currentContent}
                       onContentChange={handleContentChange}
                       editorRef={editorRef}
+                      searchMentions={searchUsersForMentions}
                     />
                   ) : selectedDocument ? (
                     <RichTextViewer
@@ -1534,6 +1536,7 @@ const Documents = ({
                       initialContent={currentContent}
                       onContentChange={handleContentChange}
                       editorRef={editorRef}
+                      searchMentions={searchUsersForMentions}
                     />
                   ) : selectedDocument ? (
                     <RichTextViewer

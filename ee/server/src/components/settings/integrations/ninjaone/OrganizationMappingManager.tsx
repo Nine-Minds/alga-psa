@@ -12,7 +12,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@alga
 import { Button } from '@alga-psa/ui/components/Button';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Building2, Link2, Link2Off, RefreshCw, Check } from 'lucide-react';
-import { ClientPicker } from '@alga-psa/clients/components/clients/ClientPicker';
+import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
 import {
   getNinjaOneOrganizationMappings,
   updateNinjaOneOrganizationMapping,

@@ -5,10 +5,10 @@ import { createTenantKnex } from '@alga-psa/db';
 import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { unparseCSV } from '@alga-psa/core';
-import { getContactAvatarUrl, getContactAvatarUrlsBatch } from '@alga-psa/documents/lib/avatarUtils';
+import { getContactAvatarUrlsBatchAsync } from '../../lib/documentsHelpers';
 import { createTag } from '@alga-psa/tags/actions';
-import { getCurrentUser } from '@alga-psa/users/actions';
-import { hasPermission } from '@alga-psa/auth';
+import { getCurrentUserAsync } from '../../lib/usersHelpers';
+import { hasPermissionAsync } from '../../lib/authHelpers';
 import { ContactModel, CreateContactInput } from '@alga-psa/shared/models/contactModel';
 import { deleteEntityTags } from '@alga-psa/tags/lib/tagCleanup';
 
@@ -433,8 +433,8 @@ export async function getContactsByClient(clientId: string, status: ContactFilte
     // PERFORMANCE FIX: Fetch avatar URLs in batch to avoid N+1 query problem
     // Before: 142 contacts = 142 separate getContactAvatarUrl() calls = 142 DB queries
     // After: 1 batch call = 2 DB queries (associations + documents)
-    const contactIds = contacts.map(c => c.contact_name_id);
-    const avatarUrlsMap = await getContactAvatarUrlsBatch(contactIds, tenant);
+    const contactIds = contacts.map((c: IContact) => c.contact_name_id);
+    const avatarUrlsMap = await getContactAvatarUrlsBatchAsync(contactIds, tenant);
 
     const contactsWithAvatars = contacts.map((contact: IContact) => ({
       ...contact,
@@ -482,15 +482,13 @@ export async function getContactsEligibleForInvitation(
   }
 
   // RBAC: ensure user has permission to read contacts
-  const { getCurrentUser } = await import('@alga-psa/users/actions');
-  const { hasPermission } = await import('@alga-psa/auth');
-  const currentUser = await getCurrentUser();
+  const currentUser = await getCurrentUserAsync();
   if (!currentUser) {
     throw new Error('Unauthorized');
   }
   
   // Check permission to read contacts
-  const canRead = await hasPermission(currentUser, 'contact', 'read', db);
+  const canRead = await hasPermissionAsync(currentUser, 'contact', 'read', db);
     
   if (!canRead) {
     throw new Error('Permission denied: Cannot read contacts');
@@ -521,8 +519,8 @@ export async function getContactsEligibleForInvitation(
     });
 
     // PERFORMANCE FIX: Batch fetch avatar URLs to avoid N+1
-    const contactIds = contacts.map(c => c.contact_name_id);
-    const avatarUrlsMap = await getContactAvatarUrlsBatch(contactIds, tenant);
+    const contactIds = contacts.map((c: IContact) => c.contact_name_id);
+    const avatarUrlsMap = await getContactAvatarUrlsBatchAsync(contactIds, tenant);
 
     const contactsWithAvatars = contacts.map((contact: IContact) => ({
       ...contact,
@@ -536,21 +534,7 @@ export async function getContactsEligibleForInvitation(
   }
 }
 
-export async function getAllClients(): Promise<IClient[]> {
-  const { knex: db, tenant } = await createTenantKnex();
-  if (!tenant) {
-    throw new Error('SYSTEM_ERROR: Tenant configuration not found');
-  }
-
-  const clients = await withTransaction(db, async (trx: Knex.Transaction) => {
-    return trx('clients')
-      .select('*')
-      .where('tenant', tenant)
-      .orderBy('client_name', 'asc');
-  });
-
-  return clients as IClient[];
-}
+// getAllClients is exported from clientActions.ts to avoid duplicate exports
 
 export async function getAllContacts(status: ContactFilterStatus = 'active', sortBy: string = 'full_name', sortDirection: 'asc' | 'desc' = 'asc'): Promise<IContact[]> {
   const { knex: db, tenant } = await createTenantKnex();
@@ -592,15 +576,15 @@ export async function getAllContacts(status: ContactFilterStatus = 'active', sor
         // Try to add client names if clients table exists
         if (fetchedContacts.length > 0) {
           try {
-            const clientIds = fetchedContacts.map(c => c.client_id).filter(Boolean);
+            const clientIds = fetchedContacts.map((c: IContact) => c.client_id).filter(Boolean);
             if (clientIds.length > 0) {
               const clients = await trx('clients')
                 .select('client_id', 'client_name')
                 .whereIn('client_id', clientIds)
                 .where('tenant', tenant);
 
-              const clientMap = new Map(clients.map(c => [c.client_id, c.client_name]));
-              return fetchedContacts.map(contact => ({
+              const clientMap = new Map(clients.map((c: { client_id: string; client_name: string }) => [c.client_id, c.client_name]));
+              return fetchedContacts.map((contact: IContact) => ({
                 ...contact,
                 client_name: contact.client_id ? clientMap.get(contact.client_id) || null : null
               }));
@@ -632,7 +616,7 @@ export async function getAllContacts(status: ContactFilterStatus = 'active', sor
     let avatarUrlsMap: Map<string, string | null> = new Map();
     try {
       const contactIds = contacts.map(c => c.contact_name_id);
-      avatarUrlsMap = await getContactAvatarUrlsBatch(contactIds, tenant);
+      avatarUrlsMap = await getContactAvatarUrlsBatchAsync(contactIds, tenant);
     } catch (avatarErr) {
       console.warn('[getAllContacts] Failed to fetch avatars in batch:', avatarErr);
       // Continue without avatars
@@ -676,12 +660,12 @@ export async function addContact(contactData: Partial<IContact>): Promise<IConta
   }
 
   // Check permissions (keep authentication/authorization in server action)
-  const currentUser = await getCurrentUser();
+  const currentUser = await getCurrentUserAsync();
   if (!currentUser) {
     throw new Error('No authenticated user found');
   }
   
-  if (!await hasPermission(currentUser, 'contact', 'create')) {
+  if (!await hasPermissionAsync(currentUser, 'contact', 'create')) {
     throw new Error('Permission denied: Cannot create contacts');
   }
 
@@ -913,8 +897,8 @@ export async function updateContactsForClient(clientId: string, updateData: Part
         case 'role':
           // These fields are required strings
           acc[contactKey] = typeof value === 'string' ? value.trim() : String(value);
-          if (contactKey === 'email') {
-            acc[contactKey] = acc[contactKey].toLowerCase();
+          if (contactKey === 'email' && acc[contactKey]) {
+            acc[contactKey] = acc[contactKey]!.toLowerCase();
           }
           break;
 
@@ -1074,7 +1058,7 @@ export async function importContactsFromCSV(
     }
 
     // Get current user for tag creation
-    const currentUser = await getCurrentUser();
+    const currentUser = await getCurrentUserAsync();
     if (!currentUser) {
       throw new Error('SYSTEM_ERROR: User authentication required');
     }
@@ -1615,13 +1599,13 @@ export async function updateContactPortalAdminStatus(
   isPortalAdmin: boolean
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    const currentUser = await getCurrentUser();
+    const currentUser = await getCurrentUserAsync();
     if (!currentUser) {
       throw new Error('Unauthorized');
     }
 
     // Check permissions
-    const hasUpdatePermission = await hasPermission(currentUser, 'client', 'update');
+    const hasUpdatePermission = await hasPermissionAsync(currentUser, 'client', 'update');
     if (!hasUpdatePermission) {
       throw new Error('You do not have permission to update client settings');
     }
@@ -1664,13 +1648,13 @@ export async function getUserByContactId(
   contactId: string
 ): Promise<{ user: any | null; error?: string }> {
   try {
-    const currentUser = await getCurrentUser();
+    const currentUser = await getCurrentUserAsync();
     if (!currentUser) {
       throw new Error('Unauthorized');
     }
 
     // Check permissions
-    const hasReadPermission = await hasPermission(currentUser, 'client', 'read');
+    const hasReadPermission = await hasPermissionAsync(currentUser, 'client', 'read');
     if (!hasReadPermission) {
       throw new Error('You do not have permission to view client information');
     }

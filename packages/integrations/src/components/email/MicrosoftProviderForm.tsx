@@ -16,7 +16,7 @@ import { Switch } from '@alga-psa/ui/components/Switch';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import { ExternalLink, Eye, EyeOff, CheckCircle } from 'lucide-react';
-import type { EmailProvider } from './EmailProviderConfiguration';
+import type { EmailProvider } from './types';
 import { createEmailProvider, updateEmailProvider, upsertEmailProvider } from '@alga-psa/integrations/actions';
 import { initiateEmailOAuth } from '@alga-psa/integrations/actions';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';

@@ -32,8 +32,8 @@
       "@shared/extension-utils/*": ["shared/extension-utils/*"],
       "@shared/lib": ["shared/lib"],
       "@shared/lib/*": ["shared/lib/*"],
-      "@ee": ["server/src/empty"],
-      "@ee/*": ["server/src/empty/*"],
+      "@ee": ["packages/ee/src"],
+      "@ee/*": ["packages/ee/src/*"],
       "@alga-psa/extension-runtime": ["sdk/extension-runtime/src"],
       "@alga-psa/extension-runtime/*": ["sdk/extension-runtime/src/*"],
       "@alga-psa/core": ["packages/core/src"],
@@ -103,7 +103,14 @@
       "server": ["server"],
       "server/*": ["server/*"],
       "next-auth": ["node_modules/next-auth"],
-      "next-auth/*": ["node_modules/next-auth/*"]
+      "next-auth/*": ["node_modules/next-auth/*"],
+      "@product/settings-extensions/entry": ["packages/product-settings-extensions/oss/entry"],
+      "@product/settings-extensions/*": ["packages/product-settings-extensions/*"],
+      "@/types/imports.types": ["server/src/types/imports.types"],
+      "@/types/*": ["server/src/types/*"],
+      "@/lib/*": ["server/src/lib/*"],
+      "@/interfaces/*": ["server/src/interfaces/*"],
+      "@/services/*": ["server/src/services/*"]
     }
   }
 }

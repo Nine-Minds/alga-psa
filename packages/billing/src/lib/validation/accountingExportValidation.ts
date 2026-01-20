@@ -232,6 +232,6 @@ export class AccountingExportValidation {
     const openErrors = errors.filter((item) => item.resolution_state === 'open');
     const cleanedStatus = openErrors.length === 0 ? 'ready' : 'needs_attention';
     const service = await AccountingExportService.create();
-    await service.updateExportBatchStatus(batchId, { status: cleanedStatus });
+    await service.updateBatchStatus(batchId, { status: cleanedStatus });
   }
 }

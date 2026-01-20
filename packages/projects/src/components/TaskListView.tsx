@@ -443,7 +443,7 @@ export default function TaskListView({
   }, [draggedTask, onTaskMove]);
 
   // Calculate visible column count for colSpan
-  const visibleColumnCount = COLUMN_CONFIG.filter(c => isColumnVisible(c.key)).length;
+  const visibleColumnCount = COLUMN_CONFIG.filter(c => isColumnVisible(c.key ?? '')).length;
 
   return (
     <div ref={containerRef} className="flex flex-col bg-white border border-gray-200 rounded-lg overflow-hidden h-[calc(100vh-220px)] min-h-[400px]">

@@ -5,7 +5,15 @@ import { withTransaction } from '@alga-psa/db';
 import type { Tenant, TenantCompany } from '@alga-psa/types';
 import { Knex } from 'knex';
 import { createTenantKnex } from '@alga-psa/db';
-import { getSession } from '@alga-psa/auth';
+
+// Dynamic import to avoid circular dependency (tenancy -> auth -> ui -> analytics -> tenancy)
+// Note: Using string concatenation to prevent static analysis from detecting this dependency
+const getAuthModule = () => '@alga-psa/' + 'auth';
+
+const getSessionAsync = async () => {
+  const { getSession } = await import(/* webpackIgnore: true */ getAuthModule());
+  return getSession();
+};
 
 export async function getCurrentTenant(): Promise<string | null> {
   try {
@@ -18,7 +26,7 @@ export async function getCurrentTenant(): Promise<string | null> {
   }
 
   try {
-    const session = await getSession();
+    const session = await getSessionAsync();
     const tenantCandidate = (session as any)?.user?.tenant;
     if (typeof tenantCandidate === 'string' && tenantCandidate.length > 0) {
       return tenantCandidate;

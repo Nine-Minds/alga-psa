@@ -3,7 +3,8 @@ import { Knex } from 'knex';
 import logger from '@alga-psa/core/logger';
 import { getAdminConnection } from '@alga-psa/db/admin';
 
-import { analytics } from '@alga-psa/analytics';
+// Dynamic import to avoid circular dependency (auth -> analytics -> tenancy -> auth)
+const getAnalytics = async () => (await import('@alga-psa/analytics')).analytics;
 import type { PortalSessionTokenPayload } from './session';
 import type { PortalDomainRecord } from '@alga-psa/client-portal/models/PortalDomainModel';
 
@@ -225,7 +226,7 @@ export async function issuePortalDomainOtt(params: IssuePortalDomainOttParams): 
 
   const record = mapRow(row);
 
-  await analytics.capture(ISSUE_EVENT, {
+  await (await getAnalytics()).capture(ISSUE_EVENT, {
     tenant,
     portal_domain_id: portalDomainId,
     user_id: userId,
@@ -253,7 +254,7 @@ export async function consumePortalDomainOtt(params: ConsumePortalDomainOttParam
       .first();
 
     if (!row) {
-      await analytics.capture(FAILURE_EVENT, {
+      await (await getAnalytics()).capture(FAILURE_EVENT, {
         reason: 'not_found',
         tenant,
         portal_domain_id: portalDomainId,
@@ -262,7 +263,7 @@ export async function consumePortalDomainOtt(params: ConsumePortalDomainOttParam
     }
 
     if (row.tenant !== tenant || row.portal_domain_id !== portalDomainId) {
-      await analytics.capture(FAILURE_EVENT, {
+      await (await getAnalytics()).capture(FAILURE_EVENT, {
         reason: 'tenant_mismatch',
         tenant,
         portal_domain_id: portalDomainId,
@@ -273,7 +274,7 @@ export async function consumePortalDomainOtt(params: ConsumePortalDomainOttParam
     }
 
     if (row.consumed_at) {
-      await analytics.capture(FAILURE_EVENT, {
+      await (await getAnalytics()).capture(FAILURE_EVENT, {
         reason: 'already_consumed',
         tenant,
         portal_domain_id: portalDomainId,
@@ -283,7 +284,7 @@ export async function consumePortalDomainOtt(params: ConsumePortalDomainOttParam
     }
 
     if (row.expires_at <= now) {
-      await analytics.capture(FAILURE_EVENT, {
+      await (await getAnalytics()).capture(FAILURE_EVENT, {
         reason: 'expired',
         tenant,
         portal_domain_id: portalDomainId,
@@ -302,7 +303,7 @@ export async function consumePortalDomainOtt(params: ConsumePortalDomainOttParam
 
     const record = mapRow(updated);
 
-    await analytics.capture(CONSUME_EVENT, {
+    await (await getAnalytics()).capture(CONSUME_EVENT, {
       tenant,
       portal_domain_id: portalDomainId,
       user_id: row.user_id,

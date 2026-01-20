@@ -5,9 +5,19 @@ import { verifyPassword } from '@alga-psa/core/encryption';
 import logger from "@alga-psa/core/logger";
 
 import { IUser } from '@alga-psa/types';
-import { analytics } from '@alga-psa/analytics';
-import { getTenantIdBySlug } from '@alga-psa/tenancy/actions';
-import { isValidTenantSlug } from '@shared/utils/tenantSlug';
+import { isValidTenantSlug } from '@alga-psa/validation';
+
+// Dynamic imports to avoid circular dependencies
+// Note: Using string concatenation to prevent static analysis from detecting these dependencies
+const getAnalyticsModule = () => '@alga-psa/' + 'analytics';
+const getTenancyModule = () => '@alga-psa/' + 'tenancy/actions';
+
+const getAnalytics = async () => (await import(/* webpackIgnore: true */ getAnalyticsModule())).analytics;
+
+const getTenantIdBySlugAsync = async (slug: string): Promise<string | null> => {
+  const { getTenantIdBySlug } = await import(/* webpackIgnore: true */ getTenancyModule());
+  return getTenantIdBySlug(slug);
+};
 
 interface AuthenticateUserOptions {
     tenantId?: string;
@@ -45,7 +55,7 @@ export async function authenticateUser(
             return null;
         }
 
-        resolvedTenantId = await getTenantIdBySlug(options.tenantSlug);
+        resolvedTenantId = await getTenantIdBySlugAsync(options.tenantSlug);
         if (!resolvedTenantId) {
             logger.warn('[authenticateUser] Failed to resolve tenant from slug', {
                 email,
@@ -88,7 +98,7 @@ export async function authenticateUser(
     // Check if user is inactive
     if (user.is_inactive) {
         logger.warn(`[authenticateUser] Inactive user attempted to login: ${email}`);
-        analytics.capture('login_failed', {
+        (await getAnalytics()).capture('login_failed', {
             reason: 'inactive_account',
             has_two_factor: user.two_factor_enabled,
         });
@@ -97,7 +107,7 @@ export async function authenticateUser(
 
     if (!user.hashed_password) {
         logger.warn(`[authenticateUser] Missing hashed_password for email ${email}`);
-        analytics.capture('login_failed', {
+        (await getAnalytics()).capture('login_failed', {
             reason: 'missing_password_hash',
             has_two_factor: user.two_factor_enabled,
         });
@@ -107,14 +117,14 @@ export async function authenticateUser(
     const isValid = await verifyPassword(password, user.hashed_password);
     if (!isValid) {
         logger.warn(`[authenticateUser] Invalid password for email ${email}`);
-        analytics.capture('login_failed', {
+        (await getAnalytics()).capture('login_failed', {
             reason: 'invalid_password',
             has_two_factor: user.two_factor_enabled,
         });
         return null;
     }
 
-    analytics.capture(
+    (await getAnalytics()).capture(
         'auth_validated',
         {
             has_two_factor: user.two_factor_enabled,

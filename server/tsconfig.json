@@ -5,6 +5,7 @@
     "strictNullChecks": true,
     "noEmit": false,
     "noImplicitAny": false,
+    "allowArbitraryExtensions": true,
     "typeRoots": [
       "../types",
       "../node_modules/@types"
@@ -65,6 +66,43 @@
       "@alga-psa/db/*": [
         "../packages/db/src/*",
         "../packages/db/src/lib/*"
+      ],
+      "@alga-psa/validation": [
+        "../packages/validation/src"
+      ],
+      "@alga-psa/validation/*": [
+        "../packages/validation/src/*"
+      ],
+      "@alga-psa/auth": [
+        "../packages/auth/src"
+      ],
+      "@alga-psa/auth/*": [
+        "../packages/auth/src/*",
+        "../packages/auth/src/lib/*"
+      ],
+      "@alga-psa/analytics": [
+        "../packages/analytics/src"
+      ],
+      "@alga-psa/analytics/*": [
+        "../packages/analytics/src/*"
+      ],
+      "@alga-psa/event-bus": [
+        "../packages/event-bus/src"
+      ],
+      "@alga-psa/event-bus/*": [
+        "../packages/event-bus/src/*"
+      ],
+      "@alga-psa/email": [
+        "../packages/email/src"
+      ],
+      "@alga-psa/email/*": [
+        "../packages/email/src/*"
+      ],
+      "@alga-psa/media": [
+        "../packages/media/src"
+      ],
+      "@alga-psa/media/*": [
+        "../packages/media/src/*"
       ],
       "@shared/workflow": [
         "../shared/workflow"

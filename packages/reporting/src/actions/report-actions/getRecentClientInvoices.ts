@@ -2,7 +2,7 @@
 
 import { createTenantKnex } from '@alga-psa/db';
 import { withTransaction } from '@alga-psa/db';
-import { IInvoice } from '../../../interfaces/invoice.interfaces';
+import type { IInvoice } from '@alga-psa/types';
 import { z } from 'zod';
 import { Knex } from 'knex';
 // Removed safe-action import as it's not the standard pattern here

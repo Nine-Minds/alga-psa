@@ -2,8 +2,8 @@
 
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { getCurrentUser } from '@alga-psa/users/actions';
-import { hasPermission } from '@/lib/auth/rbac';
-import { createTenantKnex } from '@/db';
+import { hasPermission } from '@alga-psa/auth/rbac';
+import { createTenantKnex } from '@alga-psa/db';
 
 const GOOGLE_CLIENT_ID_SECRET = 'google_client_id';
 const GOOGLE_CLIENT_SECRET_SECRET = 'google_client_secret';

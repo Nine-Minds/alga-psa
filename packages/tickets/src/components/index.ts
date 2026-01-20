@@ -13,6 +13,9 @@ export { default as TicketListSkeleton } from './TicketListSkeleton';
 export { default as TicketingDashboard } from './TicketingDashboard';
 export { default as TicketingDashboardContainer } from './TicketingDashboardContainer';
 
+export { default as CategoriesSettings } from './settings/CategoriesSettings';
+export { default as DisplaySettings } from './settings/DisplaySettings';
+
 export { default as AgentScheduleDrawer } from './ticket/AgentScheduleDrawer';
 export * from './ticket/AgentScheduleDrawerStyles';
 export { default as CommentItem } from './ticket/CommentItem';

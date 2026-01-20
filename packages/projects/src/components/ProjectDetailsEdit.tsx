@@ -11,7 +11,7 @@ import { Switch } from '@alga-psa/ui/components/Switch';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
 import { Input } from '@alga-psa/ui/components/Input';
 import { DatePicker } from '@alga-psa/ui/components/DatePicker';
-import { ClientPicker } from '@alga-psa/clients/components/clients/ClientPicker';
+import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
 import UserPicker from '@alga-psa/ui/components/UserPicker';
 import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect';
 import { TagManager } from '@alga-psa/ui/components';

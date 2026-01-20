@@ -1,5 +1,5 @@
 import { ImportValidationError } from '@/lib/imports/errors';
-import type { FieldValidator, ParsedRecord, FieldValueParser } from '@/types/imports.types';
+import type { FieldValidator, ParsedRecord, FieldValueParser } from '../../types/imports.types';
 
 const MAC_REGEX = /^([0-9A-F]{2}[-:]?){6}$/i;
 const IP_REGEX = /^(?:(?:25[0-5]|2[0-4]\d|1\d{2}|[1-9]?\d)(?:\.(?!$)|$)){4}$/;

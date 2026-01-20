@@ -3,8 +3,7 @@
 import { z } from 'zod';
 import { createTenantKnex } from '@alga-psa/db';
 import { withTransaction } from '@alga-psa/db';
-import { IUsageRecord } from '../../../interfaces/usage.interfaces';
-import { IService } from '../../../interfaces/billing.interfaces';
+import type { IService, IUsageRecord } from '@alga-psa/types';
 import { Knex } from 'knex'; // Import Knex type
 
 // Define the schema for the input parameters

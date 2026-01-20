@@ -19,11 +19,11 @@ import {
   revokePortalInvitation,
   InvitationHistoryItem
 } from '@alga-psa/client-portal/actions';
-import { 
-  assignRoleToUser, 
-  removeRoleFromUser,
-  getRoles 
-} from '@alga-psa/auth/actions';
+import {
+  assignRoleToUserAsync,
+  removeRoleFromUserAsync,
+  getRolesAsync
+} from '../../lib/authHelpers';
 import { updateClientUser } from '@alga-psa/client-portal/actions';
 import toast from 'react-hot-toast';
 import SettingsTabSkeleton from '@alga-psa/ui/components/skeletons/SettingsTabSkeleton';
@@ -77,7 +77,7 @@ export function ContactPortalTab({ contact, currentUserPermissions }: ContactPor
       }
 
       // Load available client roles
-      const roles = await getRoles();
+      const roles = await getRolesAsync();
       const clientPortalRoles = roles.filter(role => role.client && !role.msp);
       setClientRoles(clientPortalRoles);
 
@@ -236,7 +236,7 @@ export function ContactPortalTab({ contact, currentUserPermissions }: ContactPor
 
     setIsUpdating(true);
     try {
-      await assignRoleToUser(existingUser.user_id, selectedRoleId);
+      await assignRoleToUserAsync(existingUser.user_id, selectedRoleId);
       
       toast.success("Role added successfully");
       setSelectedRoleId('');
@@ -259,7 +259,7 @@ export function ContactPortalTab({ contact, currentUserPermissions }: ContactPor
 
     setIsUpdating(true);
     try {
-      await removeRoleFromUser(existingUser.user_id, roleId);
+      await removeRoleFromUserAsync(existingUser.user_id, roleId);
       
       toast.success("Role removed successfully");
       

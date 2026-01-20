@@ -1,7 +1,8 @@
 'use server'
 
 import { createTenantKnex } from '@alga-psa/db';
-import { getSession } from '@alga-psa/auth';
+import { getCurrentUserAsync, hasPermissionAsync, getSessionAsync, getAnalyticsAsync } from '../lib/authHelpers';
+
 
 // Type definitions for reports
 export interface ContractRevenue {
@@ -51,7 +52,7 @@ export interface ContractReportSummary {
  * Shows monthly recurring revenue and year-to-date billing by contract
  */
 export async function getContractRevenueReport(): Promise<ContractRevenue[]> {
-  const session = await getSession();
+  const session = await getSessionAsync();
   if (!session?.user?.id) {
     throw new Error('Unauthorized');
   }
@@ -178,7 +179,7 @@ export async function getContractRevenueReport(): Promise<ContractRevenue[]> {
  * Track upcoming contract expirations and renewal opportunities
  */
 export async function getContractExpirationReport(): Promise<ContractExpiration[]> {
-  const session = await getSession();
+  const session = await getSessionAsync();
   if (!session?.user?.id) {
     throw new Error('Unauthorized');
   }
@@ -250,7 +251,7 @@ export async function getContractExpirationReport(): Promise<ContractExpiration[
  * Monitor bucket hours usage and identify overage situations
  */
 export async function getBucketUsageReport(): Promise<BucketUsage[]> {
-  const session = await getSession();
+  const session = await getSessionAsync();
   if (!session?.user?.id) {
     throw new Error('Unauthorized');
   }
@@ -324,7 +325,7 @@ export async function getBucketUsageReport(): Promise<BucketUsage[]> {
  * Basic profit margins and revenue vs. cost analysis by contract
  */
 export async function getProfitabilityReport(): Promise<Profitability[]> {
-  const session = await getSession();
+  const session = await getSessionAsync();
   if (!session?.user?.id) {
     throw new Error('Unauthorized');
   }
@@ -394,7 +395,7 @@ export async function getProfitabilityReport(): Promise<Profitability[]> {
  * Get contract report summary statistics
  */
 export async function getContractReportSummary(): Promise<ContractReportSummary> {
-  const session = await getSession();
+  const session = await getSessionAsync();
   if (!session?.user?.id) {
     throw new Error('Unauthorized');
   }
@@ -413,9 +414,10 @@ export async function getContractReportSummary(): Promise<ContractReportSummary>
     // Count active contracts
     const activeContracts = await knex('contracts')
       .where({ tenant, is_active: true })
-      .count<{ count: string }>('* as count');
+      .count('* as count')
+      .first() as { count: string } | undefined;
 
-    const activeContractCount = Number(activeContracts[0]?.count ?? 0);
+    const activeContractCount = Number(activeContracts?.count ?? 0);
 
     return {
       totalMRR,

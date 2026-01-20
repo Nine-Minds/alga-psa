@@ -3,9 +3,10 @@
 import { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 import { createTenantKnex } from '@alga-psa/db';
-import { getCurrentUser } from '@alga-psa/users/actions';
+
 import { withTransaction } from '@alga-psa/db';
-import { hasPermission } from '@alga-psa/auth';
+import { getCurrentUserAsync, hasPermissionAsync, getSessionAsync, getAnalyticsAsync } from '../lib/authHelpers';
+
 
 // Bucket overlay input type - matches the structure used in wizard
 export type BucketOverlayInput = {
@@ -33,7 +34,7 @@ export async function upsertBucketOverlay(
   quantity?: number | null,
   customRate?: number | null
 ): Promise<void> {
-  const currentUser = await getCurrentUser();
+  const currentUser = await getCurrentUserAsync();
   if (!currentUser) {
     throw new Error('No authenticated user found');
   }
@@ -44,7 +45,7 @@ export async function upsertBucketOverlay(
   }
 
   await withTransaction(knex, async (trx) => {
-    if (!await hasPermission(currentUser, 'billing', 'update', trx)) {
+    if (!await hasPermissionAsync(currentUser, 'billing', 'update')) {
       throw new Error('Permission denied: Cannot update bucket overlays');
     }
 
@@ -156,7 +157,7 @@ export async function deleteBucketOverlay(
   contractLineId: string,
   serviceId: string
 ): Promise<void> {
-  const currentUser = await getCurrentUser();
+  const currentUser = await getCurrentUserAsync();
   if (!currentUser) {
     throw new Error('No authenticated user found');
   }
@@ -167,7 +168,7 @@ export async function deleteBucketOverlay(
   }
 
   await withTransaction(knex, async (trx) => {
-    if (!await hasPermission(currentUser, 'billing', 'delete', trx)) {
+    if (!await hasPermissionAsync(currentUser, 'billing', 'delete')) {
       throw new Error('Permission denied: Cannot delete bucket overlays');
     }
 
@@ -227,7 +228,7 @@ export async function getBucketOverlay(
   contractLineId: string,
   serviceId: string
 ): Promise<BucketOverlayInput | null> {
-  const currentUser = await getCurrentUser();
+  const currentUser = await getCurrentUserAsync();
   if (!currentUser) {
     throw new Error('No authenticated user found');
   }
@@ -238,7 +239,7 @@ export async function getBucketOverlay(
   }
 
   return await withTransaction(knex, async (trx) => {
-    if (!await hasPermission(currentUser, 'billing', 'read', trx)) {
+    if (!await hasPermissionAsync(currentUser, 'billing', 'read')) {
       throw new Error('Permission denied: Cannot read bucket overlays');
     }
 

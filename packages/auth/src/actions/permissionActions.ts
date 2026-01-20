@@ -1,6 +1,6 @@
 'use server';
 
-import { getCurrentUser } from '@alga-psa/users/actions';
+import { getCurrentUser } from '../lib/getCurrentUser';
 import { hasPermission, checkMultiplePermissions, PermissionCheck, PermissionResult } from '../lib/rbac';
 import logger from '@alga-psa/core/logger'
 

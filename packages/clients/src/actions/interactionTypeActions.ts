@@ -6,11 +6,11 @@ import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { IInteractionType, ISystemInteractionType } from '@alga-psa/types';
 import { createTenantKnex } from '@alga-psa/db';
-import { getCurrentUser } from '@alga-psa/users/actions';
+import { getCurrentUserAsync } from '../lib/usersHelpers';
 
 export async function getAllInteractionTypes(): Promise<IInteractionType[]> {
   try {
-    const currentUser = await getCurrentUser();
+    const currentUser = await getCurrentUserAsync();
     if (!currentUser) {
       throw new Error('User not authenticated');
     }
@@ -75,7 +75,7 @@ export async function createInteractionType(
   interactionType: Omit<IInteractionType, 'type_id' | 'tenant'>
 ): Promise<IInteractionType> {
   try {
-    const currentUser = await getCurrentUser();
+    const currentUser = await getCurrentUserAsync();
     if (!currentUser) {
       throw new Error('User not authenticated');
     }
@@ -113,11 +113,11 @@ export async function createInteractionType(
 }
 
 export async function updateInteractionType(
-  typeId: string, 
+  typeId: string,
   data: Partial<Omit<IInteractionType, 'type_id' | 'tenant'>>
 ): Promise<IInteractionType> {
   try {
-    const currentUser = await getCurrentUser();
+    const currentUser = await getCurrentUserAsync();
     if (!currentUser) {
       throw new Error('User not authenticated');
     }
@@ -156,7 +156,7 @@ export async function updateInteractionType(
 
 export async function deleteInteractionType(typeId: string): Promise<void> {
   try {
-    const currentUser = await getCurrentUser();
+    const currentUser = await getCurrentUserAsync();
     if (!currentUser) {
       throw new Error('User not authenticated');
     }
@@ -201,7 +201,7 @@ export async function deleteInteractionType(typeId: string): Promise<void> {
 
 export async function getInteractionTypeById(typeId: string): Promise<IInteractionType | null> {
   try {
-    const currentUser = await getCurrentUser();
+    const currentUser = await getCurrentUserAsync();
     if (!currentUser) {
       throw new Error('User not authenticated');
     }

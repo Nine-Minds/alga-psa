@@ -28,11 +28,17 @@ import {
   removeClientTaxRate,
   updateDefaultClientTaxRate,
 } from '@alga-psa/clients/actions';
-import { getContractLines } from '@alga-psa/billing/actions';
-import { getServiceCategories } from '@alga-psa/billing/actions';
-import { getServices, createService, updateService, deleteService } from '@alga-psa/billing/actions';
-import { getTaxRates } from '@alga-psa/billing/actions';
-import { setClientTemplate } from '@alga-psa/billing/actions';
+import {
+  getContractLinesAsync,
+  getServiceCategoriesAsync,
+  getServicesAsync,
+  createServiceAsync,
+  updateServiceAsync,
+  deleteServiceAsync,
+  getTaxRatesAsync,
+  setClientTemplateAsync,
+  getServiceTypesForSelectionAsync
+} from '../../lib/billingHelpers';
 import BillingConfigForm from './BillingConfigForm';
 import ClientTaxRates from './ClientTaxRates';
 import ContractLines from './ContractLines';
@@ -140,19 +146,18 @@ const BillingConfiguration: React.FC<BillingConfigurationProps> = ({ client, onS
             }));
             setClientContractLines(contractLinesWithStringDates);
 
-            const plans = await getContractLines();
+            const plans = await getContractLinesAsync();
             setContractLines(plans);
 
-            const categories = await getServiceCategories();
+            const categories = await getServiceCategoriesAsync();
             setServiceCategories(categories);
 
-            const servicesResponse = await getServices(1, 999, { item_kind: 'any' });
+            const servicesResponse = await getServicesAsync(1, 999, { item_kind: 'any' });
             // Extract the services array from the paginated response
             setServices(Array.isArray(servicesResponse) ? servicesResponse : (servicesResponse.services || []));
 
             // Fetch service types for the dropdown
-            const { getServiceTypesForSelection } = await import('@alga-psa/billing/actions');
-            const types = await getServiceTypesForSelection();
+            const types = await getServiceTypesForSelectionAsync();
             setServiceTypes(types);
 
             // Find a default "Time" service type if it exists
@@ -162,7 +167,7 @@ const BillingConfiguration: React.FC<BillingConfigurationProps> = ({ client, onS
                 setNewService(prev => ({ ...prev, custom_service_type_id: timeType.id, billing_method: timeType.billing_method }));
             }
 
-            const fetchedTaxRates = await getTaxRates();
+            const fetchedTaxRates = await getTaxRatesAsync();
             setTaxRates(fetchedTaxRates);
 
             const fetchedClientTaxRates = await getClientTaxRates(client.client_id);
@@ -215,7 +220,7 @@ const BillingConfiguration: React.FC<BillingConfigurationProps> = ({ client, onS
 
             // Save template selection separately using the dedicated function
             if (invoice_template_id !== client.invoice_template_id) {
-                await setClientTemplate(client.client_id, invoice_template_id || null);
+                await setClientTemplateAsync(client.client_id, invoice_template_id ?? null);
             }
 
             toast.success('Billing configuration saved successfully');
@@ -350,7 +355,7 @@ const BillingConfiguration: React.FC<BillingConfigurationProps> = ({ client, onS
                 return;
             }
 
-            await createService(newService as any);
+            await createServiceAsync(newService as any);
 
             // Reset the form
             setNewService({
@@ -375,7 +380,7 @@ const BillingConfiguration: React.FC<BillingConfigurationProps> = ({ client, onS
                 }));
             }
 
-            const servicesResponse = await getServices(1, 999, { item_kind: 'any' });
+            const servicesResponse = await getServicesAsync(1, 999, { item_kind: 'any' });
             // Extract the services array from the paginated response
             setServices(Array.isArray(servicesResponse) ? servicesResponse : (servicesResponse.services || []));
             setErrorMessage(null);
@@ -389,8 +394,8 @@ const BillingConfiguration: React.FC<BillingConfigurationProps> = ({ client, onS
 
     const handleUpdateService = async (service: IService) => {
         try {
-            await updateService(service.service_id, service);
-            const servicesResponse = await getServices(1, 999, { item_kind: 'any' });
+            await updateServiceAsync(service.service_id, service);
+            const servicesResponse = await getServicesAsync(1, 999, { item_kind: 'any' });
             // Extract the services array from the paginated response
             setServices(Array.isArray(servicesResponse) ? servicesResponse : (servicesResponse.services || []));
             toast.success('Service updated successfully');
@@ -402,8 +407,8 @@ const BillingConfiguration: React.FC<BillingConfigurationProps> = ({ client, onS
 
     const handleDeleteService = async (serviceId: string) => {
         try {
-            await deleteService(serviceId);
-            const servicesResponse = await getServices(1, 999, { item_kind: 'any' });
+            await deleteServiceAsync(serviceId);
+            const servicesResponse = await getServicesAsync(1, 999, { item_kind: 'any' });
             // Extract the services array from the paginated response
             setServices(Array.isArray(servicesResponse) ? servicesResponse : (servicesResponse.services || []));
             toast.success('Service deleted successfully');
@@ -460,7 +465,7 @@ const BillingConfiguration: React.FC<BillingConfigurationProps> = ({ client, onS
     // Handler to refetch tax rates when a new one is created in the child component
     const handleTaxRateCreated = async () => {
         try {
-            const updatedTaxRates = await getTaxRates();
+            const updatedTaxRates = await getTaxRatesAsync();
             setTaxRates(updatedTaxRates);
             toast.success('Tax rate created successfully');
         } catch (error) {

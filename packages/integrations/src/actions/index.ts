@@ -18,15 +18,18 @@ export {
 } from './qboActions';
 export {
   getCalendarProviders,
-  upsertCalendarProvider,
   createCalendarProvider,
   updateCalendarProvider,
   deleteCalendarProvider,
   syncCalendarProvider,
+  syncScheduleEntryToCalendar,
+  syncExternalEventToSchedule,
+  resolveCalendarConflict,
   getScheduleEntrySyncStatus,
   initiateCalendarOAuth,
   getGoogleAuthUrl,
-  getMicrosoftAuthUrl
+  getMicrosoftAuthUrl,
+  retryMicrosoftCalendarSubscriptionRenewal
 } from './calendarActions';
 export {
   getExternalEntityMappings,
@@ -50,7 +53,8 @@ export {
   resyncImapProvider,
   testEmailProviderConnection,
   retryMicrosoftSubscriptionRenewal,
-  runMicrosoft365Diagnostics
+  runMicrosoft365Diagnostics,
+  getHostedMicrosoftConfig
 } from './email-actions/emailProviderActions';
 export {
   getEmailDomains,
@@ -86,7 +90,8 @@ export {
   executeXeroCsvTaxImport,
   exportClientsToXeroCsv,
   previewXeroCsvClientImport,
-  executeXeroCsvClientImport
+  executeXeroCsvClientImport,
+  type XeroCsvSettings
 } from './integrations/xeroCsvActions';
 export {
   getGoogleIntegrationStatus,
@@ -96,5 +101,14 @@ export {
 export {
   getXeroConnectionStatus,
   getXeroIntegrationStatus,
-  disconnectXero
+  disconnectXero,
+  getXeroAccounts,
+  getXeroItems,
+  getXeroTaxRates,
+  getXeroTrackingCategories,
+  type XeroConnectionStatus,
+  type XeroAccountOption,
+  type XeroItemOption,
+  type XeroTaxRateOption,
+  type XeroTrackingCategoryOption
 } from './integrations/xeroActions';

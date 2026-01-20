@@ -16,7 +16,7 @@ import { getTicketFieldOptions, getCategoriesByBoard } from '@alga-psa/integrati
 import type { InboundTicketDefaults, TicketFieldOptions } from '@alga-psa/types';
 // Dedicated pickers used elsewhere in the app
 import { BoardPicker } from '@alga-psa/ui/components/settings/general/BoardPicker';
-import { ClientPicker } from '@alga-psa/clients/components/clients/ClientPicker';
+import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
 import CategoryPicker from '@alga-psa/tickets/components/CategoryPicker';
 import { PrioritySelect } from '@alga-psa/tickets/components/PrioritySelect';
 import UserPicker from '@alga-psa/ui/components/UserPicker';

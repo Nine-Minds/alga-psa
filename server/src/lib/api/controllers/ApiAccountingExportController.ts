@@ -15,7 +15,7 @@ import {
   CreateExportErrorInput,
   UpdateExportBatchStatusInput
 } from '../../repositories/accountingExportRepository';
-import { AccountingExportValidation } from '../../validation/accountingExportValidation';
+import { AccountingExportValidation } from '@alga-psa/billing';
 import { AppError } from '../../errors';
 import { AccountingExportInvoiceSelector } from '../../services/accountingExportInvoiceSelector';
 import { runWithTenant, createTenantKnex } from '../../db';

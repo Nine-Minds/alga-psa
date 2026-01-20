@@ -12,7 +12,7 @@ import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 import { CheckCircle, AlertCircle, XCircle, Clock, Copy } from 'lucide-react';
-import type { EmailProvider } from '../EmailProviderConfiguration';
+import type { EmailProvider } from '../types';
 import { runMicrosoft365Diagnostics } from '@alga-psa/integrations/actions';
 import type { Microsoft365DiagnosticsReport, Microsoft365DiagnosticsStep } from '@alga-psa/shared/interfaces/microsoft365-diagnostics.interfaces';
 

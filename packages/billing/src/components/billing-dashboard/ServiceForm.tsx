@@ -117,7 +117,7 @@ export const ServiceForm: React.FC = () => {
 
   // Define tax rate options based on fetched taxRates and taxRegions state
   const taxRateOptions = taxRates.map(rate => {
-    const regionName = regionMap.get(rate.country_code);
+    const regionName = rate.country_code ? regionMap.get(rate.country_code) : undefined;
     // Use region name if found, otherwise fallback to tax_type or country_code
     const descriptionPart = regionName || rate.tax_type || rate.country_code || 'N/A';
     const percentagePart = rate.tax_percentage.toFixed(2); // tax_percentage is number

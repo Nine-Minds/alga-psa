@@ -8,8 +8,8 @@ import { TaxService } from '../services/taxService';
 import { BillingEngine } from '../lib/billing/billingEngine';
 import * as invoiceService from '../services/invoiceService';
 import { toPlainDate } from '@alga-psa/core';
-import { analytics } from '@alga-psa/analytics';
-import { AnalyticsEvents } from '@alga-psa/analytics';
+import { getCurrentUserAsync, hasPermissionAsync, getSessionAsync, getAnalyticsAsync } from '../lib/authHelpers';
+
 import { getInitialInvoiceTaxSource } from './taxSourceActions';
 
 export interface ManualInvoiceItem { // Add export
@@ -118,6 +118,7 @@ export async function generateManualInvoice(request: ManualInvoiceRequest): Prom
       .orderBy('created_at', 'asc');
 
     // Track analytics
+    const { analytics, AnalyticsEvents } = await getAnalyticsAsync();
     analytics.capture(AnalyticsEvents.INVOICE_GENERATED, {
       invoice_id: invoiceId,
       invoice_number: invoiceNumber,

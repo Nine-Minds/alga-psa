@@ -3,9 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'react-hot-toast';
-import Spinner from '@alga-psa/ui/components/Spinner';
-
-import { Button } from '@alga-psa/ui/components/Button';
+import { Spinner, Button } from '@alga-psa/ui/components';
 
 interface PortalSessionHandoffProps {
   ott: string | null;

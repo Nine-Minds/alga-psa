@@ -6,7 +6,7 @@ import { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 import Document from '../models/document';
 import DocumentAssociation from '@alga-psa/documents/models/documentAssociation';
-import { getCurrentUser } from '@alga-psa/auth/getCurrentUser';
+import { getCurrentUserAsync } from '../lib/authHelpers';
 import { CacheFactory } from '../cache/CacheFactory';
 import type { IDocument, IDocumentAssociationInput } from '@alga-psa/types';
 import { publishEvent } from '@alga-psa/event-bus/publishers';
@@ -35,7 +35,7 @@ export async function createBlockDocument(
   }
 
   // Get current user
-  const currentUser = await getCurrentUser();
+  const currentUser = await getCurrentUserAsync();
   if (!currentUser) {
     throw new Error('No authenticated user found');
   }

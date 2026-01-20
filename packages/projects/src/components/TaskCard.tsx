@@ -93,7 +93,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({
   const [priority, setPriority] = useState<IPriority | IStandardPriority | null>(null);
   const [documentCount, setDocumentCount] = useState<number>(providedDocumentCount ?? 0);
   const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
-  const [descriptionRef, isDescriptionTruncated] = useTruncationDetection(task.description, isDescriptionExpanded);
+  const { ref: descriptionRef, isTruncated: isDescriptionTruncated } = useTruncationDetection<HTMLParagraphElement>();
 
   // Update documentCount when providedDocumentCount changes
   useEffect(() => {

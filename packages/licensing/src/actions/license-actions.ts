@@ -1,8 +1,8 @@
 'use server';
 
 import { getLicenseUsage, type LicenseUsage } from '../lib/get-license-usage';
-import { getSession } from '@alga-psa/auth';
 import { getConnection } from '@alga-psa/db';
+import { getTenantForCurrentRequest } from '@alga-psa/tenancy/server';
 
 /**
  * Server action to get the current license usage for the session tenant
@@ -14,16 +14,16 @@ export async function getLicenseUsageAction(): Promise<{
   error?: string
 }> {
   try {
-    const session = await getSession();
+    const tenant = await getTenantForCurrentRequest();
 
-    if (!session?.user?.tenant) {
+    if (!tenant) {
       return {
         success: false,
-        error: 'No tenant in session'
+        error: 'No tenant in request'
       };
     }
 
-    const usage = await getLicenseUsage(session.user.tenant);
+    const usage = await getLicenseUsage(tenant);
 
     return {
       success: true,
@@ -67,16 +67,16 @@ export async function getActiveUserCountAction(): Promise<{
   error?: string;
 }> {
   try {
-    const session = await getSession();
+    const tenant = await getTenantForCurrentRequest();
 
-    if (!session?.user?.tenant) {
+    if (!tenant) {
       return {
         success: false,
-        error: 'No tenant in session'
+        error: 'No tenant in request'
       };
     }
 
-    const count = await getActiveUserCount(session.user.tenant);
+    const count = await getActiveUserCount(tenant);
 
     return {
       success: true,

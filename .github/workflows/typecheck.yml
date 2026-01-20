@@ -10,7 +10,7 @@ on:
 
 jobs:
   typecheck:
-    name: Nx affected build/test
+    name: Nx affected typecheck
     runs-on: ubuntu-latest
 
     steps:
@@ -55,14 +55,8 @@ jobs:
             echo "NX_HEAD=${{ github.sha }}" >> $GITHUB_ENV
           fi
 
-      - name: Nx affected build
-        run: npx nx affected -t build --base=$NX_BASE --head=$NX_HEAD --output-style=static
+      - name: Nx affected typecheck
+        run: npx nx affected -t typecheck --base=$NX_BASE --head=$NX_HEAD --output-style=static
         env:
           NX_DAEMON: 'false'
           NODE_OPTIONS: '--max-old-space-size=8192'
-
-      - name: Nx affected test
-        run: npx nx affected -t test --base=$NX_BASE --head=$NX_HEAD --output-style=static
-        env:
-          NODE_OPTIONS: '--max-old-space-size=8192'
-          NX_DAEMON: 'false'

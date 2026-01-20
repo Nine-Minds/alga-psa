@@ -16,7 +16,7 @@ import ContactDetailsEdit from './ContactDetailsEdit';
 import type { IClient } from '@alga-psa/types';
 import { IDocument } from '@alga-psa/types';
 import { getDocumentsByEntity } from '@alga-psa/documents/actions/documentActions';
-import { getCurrentUser } from '@alga-psa/users/actions';
+import { getCurrentUserAsync } from '../../lib/usersHelpers';
 import QuickAddContact from './QuickAddContact';
 import { useRouter } from 'next/navigation';
 
@@ -65,7 +65,7 @@ const ClientContactsList: React.FC<ClientContactsListProps> = ({ clientId, clien
 
     const fetchUser = async () => {
       try {
-        const user = await getCurrentUser();
+        const user = await getCurrentUserAsync();
         if (user?.user_id) {
           setCurrentUser(user.user_id);
         }

@@ -53,7 +53,7 @@ export function TagFilter({
               <TagGrid
                 tags={filteredTags}
                 selectedTags={selectedTags}
-                onToggleTag={onToggleTag}
+                onTagSelect={onToggleTag}
               />
             </div>
             {selectedTags.length > 0 && (
@@ -70,6 +70,8 @@ export function TagFilter({
   );
 }
 
-const Button = React.forwardRef<HTMLButtonElement, React.ComponentProps<typeof Button>>(({ className, ...props }, ref) => {
+const Button = React.forwardRef<HTMLButtonElement, React.ButtonHTMLAttributes<HTMLButtonElement> & { variant?: string; size?: string }>(({ className, variant, size, ...props }, ref) => {
   return <button ref={ref} className={className} {...props} />;
 });
+
+Button.displayName = 'Button';

@@ -10,13 +10,13 @@ import { DatePicker } from '@alga-psa/ui/components/DatePicker';
 import { Label } from '@alga-psa/ui/components/Label';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Plus, AlertTriangle, Info, MoreVertical, Package } from 'lucide-react';
-import { useToast } from '@alga-psa/ui';
+import { useToast } from '@alga-psa/ui/hooks/use-toast';
 import { IUsageRecord, ICreateUsageRecord, IUsageFilter } from '@alga-psa/types';
 import { IService } from '@alga-psa/types';
 import { IClient } from '@alga-psa/types';
 import { createUsageRecord, deleteUsageRecord, getUsageRecords, updateUsageRecord } from '../../actions/usageActions';
-import { getAllClients } from '@alga-psa/clients/actions';
-import { ClientPicker } from '@alga-psa/clients/components/clients/ClientPicker';
+import { getAllClientsForBilling } from '@alga-psa/billing/actions/billingClientsActions';
+import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
 import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContainer';
 import { useAutomationIdAndRegister } from '@alga-psa/ui/ui-reflection/useAutomationIdAndRegister';
 import { ContainerComponent } from '@alga-psa/ui/ui-reflection/types';
@@ -30,7 +30,7 @@ import {
   DropdownMenuItem,
 } from '@alga-psa/ui/components/DropdownMenu';
 import { getRemainingBucketUnits, type RemainingBucketUnitsResult } from '@alga-psa/reporting/actions';
-import { BucketUsageChart } from '@alga-psa/ui/components';
+import BucketUsageChart from '@alga-psa/ui/components/charts/BucketUsageChart';
 import { Skeleton } from '@alga-psa/ui/components/Skeleton';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
@@ -148,7 +148,7 @@ const UsageTracking: React.FC<UsageTrackingProps> = ({ initialServices }) => {
 
   const loadClients = async () => {
     try {
-      const fetchedClients = await getAllClients();
+      const fetchedClients = await getAllClientsForBilling();
       setClients(fetchedClients);
     } catch (error) {
       toast({

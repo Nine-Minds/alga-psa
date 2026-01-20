@@ -9,7 +9,7 @@ import { Switch } from '@alga-psa/ui/components/Switch';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import { DatePicker } from '@alga-psa/ui/components/DatePicker';
 import { ContractWizardData } from '../ContractWizard';
-import { getAllClients } from '@alga-psa/clients/actions';
+import { getAllClientsForBilling } from '@alga-psa/billing/actions/billingClientsActions';
 import { checkClientHasActiveContract } from '@alga-psa/billing/actions/contractActions';
 import { BILLING_FREQUENCY_OPTIONS } from '@alga-psa/billing/constants/billing';
 import { CURRENCY_OPTIONS, getCurrencySymbol } from '@alga-psa/core';
@@ -26,7 +26,7 @@ import {
   Coins,
 } from 'lucide-react';
 import { format as formatDateFns, parse as parseDateFns } from 'date-fns';
-import { ClientPicker } from '@alga-psa/clients/components/clients/ClientPicker';
+import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
 import { IClient } from '@alga-psa/types';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 
@@ -84,7 +84,7 @@ export function ContractBasicsStep({
   useEffect(() => {
     const loadClients = async () => {
       try {
-        const fetchedClients = await getAllClients();
+        const fetchedClients = await getAllClientsForBilling();
         setClients(fetchedClients);
       } catch (error) {
         console.error('Error loading clients:', error);

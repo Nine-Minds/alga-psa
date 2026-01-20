@@ -2,7 +2,7 @@
 
 import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
-import { hasPermission } from '@alga-psa/auth';
+import { hasPermissionAsync } from '../../lib/authHelpers';
 import {
   InternalNotification,
   InternalNotificationTemplate,
@@ -572,7 +572,7 @@ export async function deleteNotificationAction(
 /**
  * Get all categories
  */
-export async function getCategoriesAction(
+export async function getInternalNotificationCategoriesAction(
   forClientPortal?: boolean,
   locale?: string
 ): Promise<InternalNotificationCategory[]> {
@@ -816,7 +816,7 @@ export async function updateInternalCategoryAction(
 
   return await withTransaction(knex, async (trx: Knex.Transaction) => {
     // Check permission within transaction context
-    const hasUpdatePermission = await hasPermission(currentUser, 'settings', 'update', trx);
+    const hasUpdatePermission = await hasPermissionAsync(currentUser, 'settings', 'update', trx);
     if (!hasUpdatePermission) {
       throw new Error('Permission denied: Cannot update settings');
     }
@@ -888,7 +888,7 @@ export async function updateInternalSubtypeAction(
 
   return await withTransaction(knex, async (trx: Knex.Transaction) => {
     // Check permission within transaction context
-    const hasUpdatePermission = await hasPermission(currentUser, 'settings', 'update', trx);
+    const hasUpdatePermission = await hasPermissionAsync(currentUser, 'settings', 'update', trx);
     if (!hasUpdatePermission) {
       throw new Error('Permission denied: Cannot update settings');
     }

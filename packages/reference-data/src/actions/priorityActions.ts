@@ -7,8 +7,17 @@ import { createTenantKnex } from '@alga-psa/db';
 import { getCurrentUser } from '@alga-psa/users/actions';
 import { Knex } from 'knex';
 
+// Helper to get tenant with non-null assertion after validation
+async function getTenantKnex(): Promise<{ knex: Knex; tenant: string }> {
+  const { knex, tenant } = await createTenantKnex();
+  if (!tenant) {
+    throw new Error('SYSTEM_ERROR: Tenant context not found');
+  }
+  return { knex, tenant };
+}
+
 export async function getAllPriorities(itemType?: 'ticket' | 'project_task') {
-  const { knex: db, tenant } = await createTenantKnex();
+  const { knex: db, tenant } = await getTenantKnex();
   return withTransaction(db, async (trx: Knex.Transaction) => {
     try {
       const priorities = await Priority.getAll(trx, tenant, itemType);
@@ -27,7 +36,7 @@ export async function getAllPrioritiesWithStandard(itemType?: 'ticket' | 'projec
 }
 
 export async function findPriorityById(id: string) {
-  const { knex: db, tenant } = await createTenantKnex();
+  const { knex: db, tenant } = await getTenantKnex();
   return withTransaction(db, async (trx: Knex.Transaction) => {
     try {
       const priority = await Priority.get(trx, tenant, id);
@@ -43,7 +52,7 @@ export async function findPriorityById(id: string) {
 }
 
 export async function createPriority(priorityData: Omit<IPriority, 'priority_id' | 'tenant' | 'created_by' | 'created_at'>): Promise<IPriority> {
-  const { knex: db, tenant } = await createTenantKnex();
+  const { knex: db, tenant } = await getTenantKnex();
   const currentUser = await getCurrentUser();
 
   if (!currentUser) {
@@ -67,7 +76,7 @@ export async function createPriority(priorityData: Omit<IPriority, 'priority_id'
 
 
 export async function deletePriority(priorityId: string) {
-  const { knex: db, tenant } = await createTenantKnex();
+  const { knex: db, tenant } = await getTenantKnex();
   return withTransaction(db, async (trx: Knex.Transaction) => {
     try {
       // Check if this is an ITIL standard priority (immutable)
@@ -86,7 +95,7 @@ export async function deletePriority(priorityId: string) {
 }
 
 export async function updatePriority(priorityId: string, priorityData: Partial<IPriority>): Promise<IPriority> {
-  const { knex: db, tenant } = await createTenantKnex();
+  const { knex: db, tenant } = await getTenantKnex();
   return withTransaction(db, async (trx: Knex.Transaction) => {
     try {
       // Check if this is an ITIL standard priority (immutable)
@@ -112,7 +121,7 @@ export async function updatePriority(priorityId: string, priorityData: Partial<I
  * Returns ITIL priorities if board uses ITIL, custom priorities otherwise
  */
 export async function getPrioritiesByBoardType(boardId: string, itemType?: 'ticket' | 'project_task'): Promise<IPriority[]> {
-  const { knex: db, tenant } = await createTenantKnex();
+  const { knex: db, tenant } = await getTenantKnex();
   return withTransaction(db, async (trx: Knex.Transaction) => {
     try {
       // Get the board's priority type
@@ -165,7 +174,7 @@ export interface FindPriorityByNameOutput {
  * This action searches for existing priorities by name
  */
 export async function findPriorityByName(name: string): Promise<FindPriorityByNameOutput | null> {
-  const { knex: db, tenant } = await createTenantKnex();
+  const { knex: db, tenant } = await getTenantKnex();
   return withTransaction(db, async (trx: Knex.Transaction) => {
     try {
       const priority = await trx('priorities')

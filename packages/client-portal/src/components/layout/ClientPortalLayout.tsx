@@ -13,11 +13,11 @@ import { useRouter } from 'next/navigation';
 import { getContactAvatarUrlAction } from '@alga-psa/users/actions';
 import { checkClientPortalPermissions } from '@alga-psa/client-portal/actions';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
-import { useBranding } from '@alga-psa/ui/components/providers/BrandingProvider';
+import { useBranding } from '@alga-psa/tenancy/components';
 import { getTenantSlugForTenant } from '@alga-psa/tenancy/actions';
 import { ClientExtensionsMenu } from '@alga-psa/client-portal/components';
-import { NotificationBell } from '@alga-psa/ui/components/notifications/NotificationBell';
-import { ActivityDrawerProvider } from '@alga-psa/ui/components/user-activities/ActivityDrawerProvider';
+import { NotificationBell } from '@alga-psa/notifications/components';
+import { ActivityDrawerProvider } from '@alga-psa/workflows/components';
 import { DrawerProvider } from '@alga-psa/ui';
 
 interface ClientPortalLayoutProps {

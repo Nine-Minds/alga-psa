@@ -26,6 +26,7 @@
     "start:next": "nx next:start",
     "start:express": "tsx index.ts",
     "lint": "next lint",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "vitest",
     "test:watch": "vitest --watch",
     "test:unit": "vitest src/test/unit",

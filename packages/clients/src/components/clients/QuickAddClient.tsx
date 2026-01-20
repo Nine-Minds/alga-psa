@@ -18,7 +18,7 @@ import {
   DialogFooter
 } from '@alga-psa/ui/components/Dialog';
 import UserPicker from '@alga-psa/ui/components/UserPicker';
-import { getAllUsersBasic } from '@alga-psa/users/actions';
+import { getAllUsersBasicAsync } from '../../lib/usersHelpers';
 import { createClient, createClientLocation, getAllCountries, ICountry } from '@alga-psa/clients/actions';
 import { createClientContact } from '@alga-psa/clients/actions';
 import CountryPicker from '@alga-psa/ui/components/CountryPicker';
@@ -145,7 +145,7 @@ const QuickAddClient: React.FC<QuickAddClientProps> = ({
         if (isLoadingUsers || internalUsers.length > 0) return;
         setIsLoadingUsers(true);
         try {
-          const users = await getAllUsersBasic();
+          const users = await getAllUsersBasicAsync();
           setInternalUsers(users);
         } catch (error: any) {
           console.error("Error fetching MSP users:", error);

@@ -17,7 +17,6 @@ import { QuickAddTicket } from '@alga-psa/tickets/components/QuickAddTicket';
 import { QuickAddInteraction } from '@alga-psa/clients/components/interactions/QuickAddInteraction';
 import { getContactByContactNameId } from '@alga-psa/clients/actions';
 import { getClientById, getAllClients } from '@alga-psa/clients/actions';
-import { findUserById } from '@alga-psa/users/actions';
 import { deleteInteraction } from '@alga-psa/clients/actions';
 import { Text, Flex, Heading } from '@radix-ui/themes';
 import { RichTextViewer } from '@alga-psa/ui/editor';
@@ -26,7 +25,7 @@ import TimeEntryDialog from '@alga-psa/scheduling/components/time-management/tim
 import { toast } from 'react-hot-toast';
 import { getCurrentTimePeriod } from '@alga-psa/scheduling/actions/timePeriodsActions';
 import { fetchOrCreateTimeSheet, saveTimeEntry } from '@alga-psa/scheduling/actions/timeEntryActions';
-import { getCurrentUser } from '@alga-psa/users/actions';
+import { findUserByIdAsync, getCurrentUserAsync } from '../../lib/usersHelpers';
 
 interface InteractionDetailsProps {
   interaction: IInteraction;
@@ -88,7 +87,7 @@ const InteractionDetails: React.FC<InteractionDetailsProps> = ({ interaction: in
     const fetchUserFullName = async () => {
       if (initialInteraction.user_id) {
         try {
-          const user = await findUserById(initialInteraction.user_id);
+          const user = await findUserByIdAsync(initialInteraction.user_id);
           if (user) {
             setUserFullName(`${user.first_name} ${user.last_name}`);
           }
@@ -174,7 +173,7 @@ const InteractionDetails: React.FC<InteractionDetailsProps> = ({ interaction: in
     // Update user full name if user changed
     if (updatedInteraction.user_id) {
       try {
-        const user = await findUserById(updatedInteraction.user_id);
+        const user = await findUserByIdAsync(updatedInteraction.user_id);
         if (user) {
           setUserFullName(`${user.first_name} ${user.last_name}`);
         }
@@ -224,7 +223,7 @@ const InteractionDetails: React.FC<InteractionDetailsProps> = ({ interaction: in
     }
 
     try {
-      const currentUser = await getCurrentUser();
+      const currentUser = await getCurrentUserAsync();
       if (!currentUser) {
         toast.error('No user session found');
         return;

@@ -3,7 +3,7 @@
 import { Knex } from 'knex';
 import { withTransaction } from '@alga-psa/db';
 import { createTenantKnex } from '@alga-psa/db';
-import { getSession } from '@alga-psa/auth';
+
 import type { BillingCycleType } from '@alga-psa/types';
 import type { ISO8601String } from '@alga-psa/types';
 import {
@@ -16,6 +16,7 @@ import {
   type BillingCycleAnchorSettingsInput,
   type NormalizedBillingCycleAnchorSettings
 } from '../lib/billing/billingCycleAnchors';
+import { getCurrentUserAsync, hasPermissionAsync, getSessionAsync, getAnalyticsAsync } from '../lib/authHelpers';
 
 function isDateObject(val: unknown): val is Date {
   return Object.prototype.toString.call(val) === '[object Date]';
@@ -37,7 +38,7 @@ export type ClientBillingCycleAnchorConfig = {
 };
 
 export async function getClientBillingCycleAnchor(clientId: string): Promise<ClientBillingCycleAnchorConfig> {
-  const session = await getSession();
+  const session = await getSessionAsync();
   if (!session?.user?.id) {
     throw new Error('Unauthorized');
   }
@@ -91,7 +92,7 @@ export type UpdateClientBillingCycleAnchorInput = {
 export async function updateClientBillingCycleAnchor(
   input: UpdateClientBillingCycleAnchorInput
 ): Promise<{ success: true }> {
-  const session = await getSession();
+  const session = await getSessionAsync();
   if (!session?.user?.id) {
     throw new Error('Unauthorized');
   }
@@ -182,7 +183,7 @@ export async function previewBillingPeriodsForSchedule(
   anchor: BillingCycleAnchorSettingsInput,
   options: { count?: number; referenceDate?: ISO8601String } = {}
 ): Promise<BillingCyclePeriodPreview[]> {
-  const session = await getSession();
+  const session = await getSessionAsync();
   if (!session?.user?.id) {
     throw new Error('Unauthorized');
   }
@@ -214,7 +215,7 @@ export async function previewClientBillingPeriods(
   clientId: string,
   options: { count?: number; referenceDate?: ISO8601String } = {}
 ): Promise<BillingCyclePeriodPreview[]> {
-  const session = await getSession();
+  const session = await getSessionAsync();
   if (!session?.user?.id) {
     throw new Error('Unauthorized');
   }

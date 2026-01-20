@@ -5,7 +5,7 @@
  */
 
 import { Knex } from 'knex';
-import { TaggedEntityType } from '../../interfaces/tag.interfaces';
+import type { TaggedEntityType } from '@alga-psa/types';
 import { requireTenantId } from '@alga-psa/db';
 import TagMapping from '../models/tagMapping';
 

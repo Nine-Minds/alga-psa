@@ -2,7 +2,7 @@
 
 import { Knex } from 'knex';
 import { createTenantKnex } from '@alga-psa/db';
-import { IClientContractLine } from '../../interfaces/billing.interfaces';
+import type { IClientContractLine } from '@alga-psa/types';
 import { formatISO } from 'date-fns';
 
 type EligibleContractLine = IClientContractLine & {

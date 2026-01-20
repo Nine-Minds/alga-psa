@@ -9,7 +9,7 @@ import {
 import { TypeScriptWorkflowRuntime } from '@shared/workflow/core/index.js';
 import { createClient } from 'redis';
 import logger from '@alga-psa/core/logger';
-import { getSecret } from '@alga-psa/core';
+import { getSecret } from '@alga-psa/core/server';
 import { getAdminConnection } from '@alga-psa/db/admin';
 import { withAdminTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';

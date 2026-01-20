@@ -1,10 +1,9 @@
 import { v4 as uuidv4 } from 'uuid';
-import puppeteer from 'puppeteer';
+import puppeteer, { Page } from 'puppeteer';
 
 import { createTenantKnex, runWithTenant } from '@alga-psa/db';
 import type { FileStore } from '@alga-psa/documents/types/storage';
-import { StorageProviderFactory, generateStoragePath } from '@alga-psa/documents/storage/StorageProviderFactory';
-import { FileStoreModel } from '@alga-psa/documents/models/storage';
+import { getStorageProviderFactoryAsync, getFileStoreModelAsync } from '../lib/documentsHelpers';
 
 import { getInvoiceForRendering } from '../actions/invoiceQueries';
 import { getInvoiceTemplates, renderTemplateOnServer } from '../actions/invoiceTemplates';
@@ -50,6 +49,11 @@ export class PDFGenerationService {
 
     return runWithTenant(this.tenant, async () => {
       const fileId = uuidv4();
+
+      // Dynamic import to avoid circular dependency
+      const { StorageProviderFactory, generateStoragePath } = await getStorageProviderFactoryAsync();
+      const FileStoreModel = await getFileStoreModelAsync();
+
       const storagePath = generateStoragePath(this.tenant, 'pdfs', `${options.invoiceNumber}.pdf`);
 
       const provider = await StorageProviderFactory.createProvider();
@@ -115,7 +119,7 @@ export class PDFGenerationService {
   private async generatePDFBuffer(htmlContent: string): Promise<Buffer> {
     // Prefer the pool (mirrors server implementation), but fall back to direct launch if needed.
     let browser = await browserPoolService.getBrowser();
-    let page: puppeteer.Page | null = null;
+    let page: Page | null = null;
 
     try {
       page = await browser.newPage();

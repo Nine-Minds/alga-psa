@@ -1,9 +1,13 @@
 {
   "name": "sebastian-monorepo",
   "private": true,
+  "engines": {
+    "node": ">=20 <25"
+  },
   "workspaces": [
     "server",
     "ee/server",
+    "ee/temporal-workflows",
     "services/workflow-worker",
     "services/imap-service",
     "shared",
@@ -23,7 +27,7 @@
     "build": "npm run build:assemblyscript && cd server && npm run build",
     "build:ce": "npm run build:assemblyscript && cd server && npm run build",
     "build:ee": "npm run build:assemblyscript && cd server && EDITION=ee NEXT_PUBLIC_EDITION=enterprise npm run build:enterprise",
-    "build:assemblyscript": "cd server/src/invoice-templates/assemblyscript && npm install && npm run build",
+    "build:assemblyscript": "cd server/src/invoice-templates/assemblyscript && npm install --cache ../../../../.npm-cache && npm run build",
     "start": "cd server && npm start",
     "runner:up": "./scripts/dev-runner.sh up -d",
     "runner:down": "./scripts/dev-runner.sh down",

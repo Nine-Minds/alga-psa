@@ -17,7 +17,7 @@ import styles from './TicketDetails.module.css';
 import UserPicker from '@alga-psa/ui/components/UserPicker';
 import MultiUserPicker from '@alga-psa/ui/components/MultiUserPicker';
 import UserAvatar from '@alga-psa/ui/components/UserAvatar';
-import { ClientPicker } from '@alga-psa/clients/components/clients/ClientPicker';
+import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
 import { ContactPicker } from '@alga-psa/ui/components/ContactPicker';
 import { toast } from 'react-hot-toast';
 import { withDataAutomationId } from '@alga-psa/ui/ui-reflection/withDataAutomationId';

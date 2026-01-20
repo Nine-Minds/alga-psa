@@ -9,18 +9,11 @@ import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { Button } from '@alga-psa/ui/components/Button';
-import { Input } from '@alga-psa/ui/components/Input';
-import { Label } from '@alga-psa/ui/components/Label';
-import { Switch } from '@alga-psa/ui/components/Switch';
-import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
+import { Button, Input, Label, Switch, Alert, AlertDescription, Card, CardContent, CardDescription, CardHeader, CardTitle, CustomSelect } from '@alga-psa/ui/components';
 import { CheckCircle, Clock, Shield } from 'lucide-react';
-import type { EmailProvider } from '@/components/EmailProviderConfiguration';
-import { createEmailProvider, updateEmailProvider, upsertEmailProvider, getHostedMicrosoftConfig } from '@/lib/actions/email-actions/emailProviderActions';
-import { initiateEmailOAuth } from '@/lib/actions/email-actions/oauthActions';
-import CustomSelect from '@alga-psa/ui/components/CustomSelect';
-import { getInboundTicketDefaults } from '@/lib/actions/email-actions/inboundTicketDefaultsActions';
+import type { EmailProvider } from '@alga-psa/integrations';
+import { createEmailProvider, updateEmailProvider, upsertEmailProvider, initiateEmailOAuth, getInboundTicketDefaults } from '@alga-psa/integrations';
+import { getHostedMicrosoftConfig } from '@alga-psa/integrations/actions';
 
 const eeMicrosoftProviderSchema = z.object({
   providerName: z.string().min(1, 'Provider name is required'),
@@ -127,7 +120,11 @@ export function MicrosoftProviderForm({
         isActive: data.isActive,
         inboundTicketDefaultsId: data.inboundTicketDefaultsId,
         microsoftConfig: {
-          // EE hosted environment handles OAuth credentials automatically
+          // Null client credentials indicate EE hosted environment handles OAuth
+          client_id: null,
+          client_secret: null,
+          tenant_id: 'common',
+          redirect_uri: `${typeof window !== 'undefined' ? window.location.origin : ''}/api/auth/microsoft/callback`,
           auto_process_emails: data.autoProcessEmails,
           folder_filters: data.folderFilters ? data.folderFilters.split(',').map(f => f.trim()) : ['Inbox'],
           max_emails_per_sync: data.maxEmailsPerSync,
@@ -210,7 +207,7 @@ export function MicrosoftProviderForm({
         providerId,
       });
       if (!oauthInit.success) {
-        throw new Error(oauthInit.error || 'Failed to initiate OAuth');
+        throw new Error('error' in oauthInit ? oauthInit.error : 'Failed to initiate OAuth');
       }
       const { authUrl } = oauthInit;
 

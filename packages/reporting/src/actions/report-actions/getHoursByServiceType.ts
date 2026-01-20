@@ -4,11 +4,15 @@ import { z } from 'zod';
 import { createTenantKnex } from '@alga-psa/db';
 import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
-import { ITimeEntry } from '../../../interfaces/timeEntry.interfaces';
-import { IService, IServiceType } from '../../../interfaces/billing.interfaces';
-import { ITicket } from '../../../interfaces/ticket.interfaces'; // Removed .tsx extension
-import { IProjectTask, IProject, IProjectPhase } from '../../../interfaces/project.interfaces';
-import { toPlainDate } from '../../utils/dateTimeUtils'; // Assuming this utility exists for date handling
+import type {
+  IProject,
+  IProjectPhase,
+  IProjectTask,
+  IService,
+  IServiceType,
+  ITicket,
+  ITimeEntry,
+} from '@alga-psa/types';
 
 // Define the schema for the input parameters
 const InputSchema = z.object({

@@ -32,7 +32,7 @@ vi.mock('@alga-psa/tenancy/actions', () => ({
   getTenantLocaleByDomain: getTenantLocaleByDomainMock,
 }));
 
-vi.mock('@alga-psa/ui/lib/i18n/I18nWrapper', () => ({
+vi.mock('@alga-psa/tenancy/components', () => ({
   I18nWrapper: ({ children }: { children: React.ReactNode }) => children,
 }));
 

@@ -1,6 +1,6 @@
 import { Knex } from 'knex';
 import { requireTenantId } from '@alga-psa/db';
-import { IContractLineServiceHourlyConfig, IUserTypeRate } from '../../interfaces/contractLineServiceConfiguration.interfaces';
+import type { IContractLineServiceHourlyConfig, IUserTypeRate } from '@alga-psa/types';
 import { v4 as uuidv4 } from 'uuid';
 
 export default class ContractLineServiceHourlyConfig {

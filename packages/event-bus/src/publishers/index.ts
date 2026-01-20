@@ -1,7 +1,13 @@
 import logger from '@alga-psa/core/logger';
 import { Event } from '../events';
 import { getEventBus } from '../index';
-import { getEmailEventChannel } from '@alga-psa/notifications/emailChannel';
+
+// Email event channel constant - inlined to avoid circular dependency with notifications
+// Must match the value in @alga-psa/notifications/emailChannel
+const EMAIL_EVENT_CHANNEL = 'emailservice::v7';
+function getEmailEventChannel(): string {
+  return EMAIL_EVENT_CHANNEL;
+}
 
 export interface PublishOptions {
   channel?: string;

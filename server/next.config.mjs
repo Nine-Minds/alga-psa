@@ -254,7 +254,6 @@ const nextConfig = {
     '@blocknote/react',
     '@blocknote/mantine',
     '@emoji-mart/data',
-    '@alga-psa/auth',
     '@alga-psa/ui',
     '@alga-psa/clients',
     '@alga-psa/integrations',

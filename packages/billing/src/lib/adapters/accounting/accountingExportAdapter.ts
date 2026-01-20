@@ -1,5 +1,5 @@
-import { AccountingExportBatch, AccountingExportLine } from '../../../interfaces/accountingExport.interfaces';
-import { TaxSource } from '../../../interfaces/tax.interfaces';
+import type { AccountingExportBatch, AccountingExportLine } from '@alga-psa/types';
+import type { TaxSource } from '@alga-psa/types';
 
 export interface AccountingExportAdapterCapabilities {
   deliveryMode: 'api' | 'file';

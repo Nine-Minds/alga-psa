@@ -15,6 +15,11 @@
       "types": "./dist/actions/index.d.ts",
       "import": "./dist/actions/index.mjs",
       "require": "./dist/actions/index.js"
+    },
+    "./hooks": {
+      "types": "./dist/hooks/index.d.ts",
+      "import": "./dist/hooks/index.mjs",
+      "require": "./dist/hooks/index.js"
     }
   },
   "scripts": {

@@ -37,6 +37,15 @@ import {
 import { OrderingService } from '../lib/orderingService';
 import { validateAndFixOrderKeys } from './regenerateOrderKeys';
 
+// Helper to get tenant with non-null assertion after validation
+async function getTenantKnex(): Promise<{ knex: Knex; tenant: string }> {
+  const { knex, tenant } = await getTenantKnex();
+  if (!tenant) {
+    throw new Error('SYSTEM_ERROR: Tenant context not found');
+  }
+  return { knex, tenant };
+}
+
 async function checkPermission(user: IUser, resource: string, action: string, knexConnection?: Knex | Knex.Transaction): Promise<void> {
     const hasPermissionResult = await hasPermission(user, resource, action, knexConnection);
     if (!hasPermissionResult) {
@@ -57,7 +66,7 @@ export async function updateTaskWithChecklist(
             throw new Error("tenant context not found");
         }
 
-        const {knex: db, tenant} = await createTenantKnex();
+        const {knex: db, tenant} = await getTenantKnex();
         
         return await withTransaction(db, async (trx: Knex.Transaction) => {
             await checkPermission(currentUser, 'project', 'update', trx);
@@ -132,7 +141,7 @@ export async function addTaskToPhase(
             throw new Error("tenant context not found");
         }
 
-        const {knex: db, tenant} = await createTenantKnex();
+        const {knex: db, tenant} = await getTenantKnex();
         
         return await withTransaction(db, async (trx: Knex.Transaction) => {
             await checkPermission(currentUser, 'project', 'update', trx);
@@ -179,7 +188,7 @@ export async function updateTaskStatus(
     afterTaskId?: string | null
 ): Promise<IProjectTask> {
     
-    const {knex: db, tenant} = await createTenantKnex();
+    const {knex: db, tenant} = await getTenantKnex();
     
     return await withTransaction(db, async (trx: Knex.Transaction) => {
         const currentUser = await getCurrentUser();
@@ -286,7 +295,7 @@ export async function addChecklistItemToTask(
 
         const validatedData = validateData(createChecklistItemSchema, itemData);
         
-        const {knex: db, tenant} = await createTenantKnex();
+        const {knex: db, tenant} = await getTenantKnex();
         return await withTransaction(db, async (trx: Knex.Transaction) => {
             await checkPermission(currentUser, 'project', 'update', trx);
             return await ProjectTaskModel.addChecklistItem(trx, tenant, taskId, validatedData);
@@ -309,7 +318,7 @@ export async function updateChecklistItem(
 
         const validatedData = validateData(updateChecklistItemSchema, itemData);
         
-        const {knex: db, tenant} = await createTenantKnex();
+        const {knex: db, tenant} = await getTenantKnex();
         return await withTransaction(db, async (trx: Knex.Transaction) => {
             await checkPermission(currentUser, 'project', 'update', trx);
             return await ProjectTaskModel.updateChecklistItem(trx, tenant, checklistItemId, validatedData);
@@ -327,7 +336,7 @@ export async function deleteChecklistItem(checklistItemId: string): Promise<void
             throw new Error("user not found");
         }
 
-        const {knex: db, tenant} = await createTenantKnex();
+        const {knex: db, tenant} = await getTenantKnex();
         await withTransaction(db, async (trx: Knex.Transaction) => {
             await checkPermission(currentUser, 'project', 'delete', trx);
             await ProjectTaskModel.deleteChecklistItem(trx, tenant, checklistItemId);
@@ -345,7 +354,7 @@ export async function getTaskChecklistItems(taskId: string): Promise<ITaskCheckl
             throw new Error("user not found");
         }
 
-        const {knex: db, tenant} = await createTenantKnex();
+        const {knex: db, tenant} = await getTenantKnex();
         return await withTransaction(db, async (trx: Knex.Transaction) => {
             await checkPermission(currentUser, 'project', 'read', trx);
             return await ProjectTaskModel.getChecklistItems(trx, tenant, taskId);
@@ -363,7 +372,7 @@ export async function deleteTask(taskId: string): Promise<void> {
             throw new Error("user not found");
         }
 
-        const {knex: db, tenant} = await createTenantKnex();
+        const {knex: db, tenant} = await getTenantKnex();
         
         await withTransaction(db, async (trx: Knex.Transaction) => {
             await checkPermission(currentUser, 'project', 'delete', trx);
@@ -405,7 +414,7 @@ export async function addTicketLinkAction(projectId: string, taskId: string | nu
             throw new Error("user not found");
         }
 
-        const {knex: db, tenant} = await createTenantKnex();
+        const {knex: db, tenant} = await getTenantKnex();
         return await withTransaction(db, async (trx: Knex.Transaction) => {
             await checkPermission(currentUser, 'project', 'update', trx);
             return await ProjectTaskModel.addTaskTicketLink(trx, tenant, projectId, taskId, ticketId, phaseId);
@@ -423,7 +432,7 @@ export async function getTaskTicketLinksAction(taskId: string): Promise<IProject
             throw new Error("user not found");
         }
 
-        const {knex: db, tenant} = await createTenantKnex();
+        const {knex: db, tenant} = await getTenantKnex();
         return await withTransaction(db, async (trx: Knex.Transaction) => {
             await checkPermission(currentUser, 'project', 'read', trx);
             return await ProjectTaskModel.getTaskTicketLinks(trx, tenant, taskId);
@@ -445,7 +454,7 @@ export async function getTasksForPhase(phaseId: string): Promise<{
         if (!currentUser) {
             throw new Error("user not found");
         }
-        const {knex: db, tenant} = await createTenantKnex();
+        const {knex: db, tenant} = await getTenantKnex();
         return await withTransaction(db, async (trx: Knex.Transaction) => {
             await checkPermission(currentUser, 'project', 'read', trx);
 
@@ -562,7 +571,7 @@ export async function addTaskResourceAction(taskId: string, userId: string, role
             throw new Error("user not found");
         }
 
-        const {knex: db, tenant} = await createTenantKnex();
+        const {knex: db, tenant} = await getTenantKnex();
         await withTransaction(db, async (trx: Knex.Transaction) => {
             await checkPermission(currentUser, 'project', 'update', trx);
             await ProjectTaskModel.addTaskResource(trx, tenant, taskId, userId, role);
@@ -601,7 +610,7 @@ export async function removeTaskResourceAction(assignmentId: string): Promise<vo
             throw new Error("user not found");
         }
 
-        const {knex: db, tenant} = await createTenantKnex();
+        const {knex: db, tenant} = await getTenantKnex();
         await withTransaction(db, async (trx: Knex.Transaction) => {
             await checkPermission(currentUser, 'project', 'update', trx);
             await ProjectTaskModel.removeTaskResource(trx, tenant, assignmentId);
@@ -619,7 +628,7 @@ export async function getTaskResourcesAction(taskId: string): Promise<any[]> {
             throw new Error("user not found");
         }
 
-        const {knex: db, tenant} = await createTenantKnex();
+        const {knex: db, tenant} = await getTenantKnex();
         return await withTransaction(db, async (trx: Knex.Transaction) => {
             await checkPermission(currentUser, 'project', 'read', trx);
             return await ProjectTaskModel.getTaskResources(trx, tenant, taskId);
@@ -637,7 +646,7 @@ export async function deleteTaskTicketLinkAction(linkId: string): Promise<void> 
             throw new Error("user not found");
         }
 
-        const {knex: db, tenant} = await createTenantKnex();
+        const {knex: db, tenant} = await getTenantKnex();
         await withTransaction(db, async (trx: Knex.Transaction) => {
             await checkPermission(currentUser, 'project', 'update', trx);
             await ProjectTaskModel.deleteTaskTicketLink(trx, tenant, linkId);
@@ -662,7 +671,7 @@ export async function moveTaskToPhase(
             throw new Error("user not found");
         }
 
-        const {knex: db, tenant} = await createTenantKnex();
+        const {knex: db, tenant} = await getTenantKnex();
         
         return await withTransaction(db, async (trx: Knex.Transaction) => {
             await checkPermission(currentUser, 'project', 'update', trx);
@@ -853,7 +862,7 @@ export async function duplicateTaskToPhase(
             throw new Error("User or tenant context not found");
         }
 
-        const {knex: db, tenant} = await createTenantKnex();
+        const {knex: db, tenant} = await getTenantKnex();
         
         return await withTransaction(db, async (trx: Knex.Transaction) => {
             // Use 'create' permission as we are creating a new task entity
@@ -1050,7 +1059,7 @@ export async function duplicateTaskToPhase(
 
 export async function getTaskWithDetails(taskId: string, user: IUser) {
     try {
-        const {knex: db, tenant} = await createTenantKnex();
+        const {knex: db, tenant} = await getTenantKnex();
         if (!tenant) {
             throw new Error("tenant context not found");
         }
@@ -1120,7 +1129,7 @@ export async function reorderTask(
         throw new Error("user not found");
     }
 
-    const {knex: db, tenant} = await createTenantKnex();
+    const {knex: db, tenant} = await getTenantKnex();
     
     await withTransaction(db, async (trx: Knex.Transaction) => {
         await checkPermission(currentUser, 'project', 'update', trx);
@@ -1191,7 +1200,7 @@ export async function reorderTasksInStatus(tasks: { taskId: string, newWbsCode: 
             throw new Error("user not found");
         }
 
-        const {knex: db, tenant} = await createTenantKnex();
+        const {knex: db, tenant} = await getTenantKnex();
         await withTransaction(db, async (trx: Knex.Transaction) => {
             await checkPermission(currentUser, 'project', 'update', trx);
             
@@ -1235,7 +1244,7 @@ export async function cleanupOrderKeysForStatus(
             throw new Error("user not found");
         }
         
-        const {knex: db, tenant} = await createTenantKnex();
+        const {knex: db, tenant} = await getTenantKnex();
         
         const result = await withTransaction(db, async (trx: Knex.Transaction) => {
             await checkPermission(currentUser, 'project', 'update', trx);
@@ -1272,7 +1281,7 @@ export async function getTaskTypes(): Promise<ITaskType[]> {
         throw new Error("user not found");
     }
     
-    const {knex: db, tenant} = await createTenantKnex();
+    const {knex: db, tenant} = await getTenantKnex();
     await checkPermission(currentUser, 'project', 'read', db);
     
     return await TaskTypeModel.getAllTaskTypes(db, tenant);
@@ -1286,7 +1295,7 @@ export async function createCustomTaskType(
         throw new Error("user not found");
     }
     
-    const {knex: db, tenant} = await createTenantKnex();
+    const {knex: db, tenant} = await getTenantKnex();
     await checkPermission(currentUser, 'project', 'create', db);
     
     return await TaskTypeModel.createCustomTaskType(
@@ -1309,7 +1318,7 @@ export async function addTaskDependency(
         throw new Error("user not found");
     }
     
-    const { knex: db, tenant } = await createTenantKnex();
+    const { knex: db, tenant } = await getTenantKnex();
     
     return await withTransaction(db, async (trx) => {
         await checkPermission(currentUser, 'project', 'update', trx);
@@ -1363,7 +1372,7 @@ export async function getTaskDependencies(taskId: string): Promise<{
         throw new Error("user not found");
     }
     
-    const {knex: db, tenant} = await createTenantKnex();
+    const {knex: db, tenant} = await getTenantKnex();
     await checkPermission(currentUser, 'project', 'read', db);
     
     return await TaskDependencyModel.getTaskDependencies(db, tenant, taskId);
@@ -1375,7 +1384,7 @@ export async function removeTaskDependency(dependencyId: string): Promise<void> 
         throw new Error("user not found");
     }
     
-    const {knex: db, tenant} = await createTenantKnex();
+    const {knex: db, tenant} = await getTenantKnex();
     await checkPermission(currentUser, 'project', 'update', db);
     
     await TaskDependencyModel.removeDependency(db, tenant, dependencyId);
@@ -1390,7 +1399,7 @@ export async function updateTaskDependency(
         throw new Error("user not found");
     }
 
-    const {knex: db, tenant} = await createTenantKnex();
+    const {knex: db, tenant} = await getTenantKnex();
     await checkPermission(currentUser, 'project', 'update', db);
 
     return await TaskDependencyModel.updateDependency(db, tenant, dependencyId, data);
@@ -1406,7 +1415,7 @@ export async function getTaskById(taskId: string): Promise<IProjectTask | null> 
             throw new Error("tenant context not found");
         }
 
-        const {knex: db, tenant} = await createTenantKnex();
+        const {knex: db, tenant} = await getTenantKnex();
         await checkPermission(currentUser, 'project', 'read', db);
 
         const task = await db('project_tasks')
@@ -1436,7 +1445,7 @@ export async function getAllProjectTasksForListView(projectId: string): Promise<
     const currentUser = await getCurrentUser();
     if (!currentUser) throw new Error("user not found");
 
-    const { knex: db, tenant } = await createTenantKnex();
+    const { knex: db, tenant } = await getTenantKnex();
 
     return await withTransaction(db, async (trx: Knex.Transaction) => {
         await checkPermission(currentUser, 'project', 'read', trx);
@@ -1571,7 +1580,7 @@ export async function getPhaseTaskCounts(projectId: string): Promise<Record<stri
     const currentUser = await getCurrentUser();
     if (!currentUser) throw new Error("user not found");
 
-    const { knex: db, tenant } = await createTenantKnex();
+    const { knex: db, tenant } = await getTenantKnex();
 
     await checkPermission(currentUser, 'project', 'read', db);
 

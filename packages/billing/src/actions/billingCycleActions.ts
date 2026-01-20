@@ -9,10 +9,11 @@ import { hardDeleteInvoice } from './invoiceModification';
 import { ISO8601String } from '@alga-psa/types';
 import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
-import { getSession } from '@alga-psa/auth';
+import { getCurrentUserAsync, hasPermissionAsync, getSessionAsync, getAnalyticsAsync } from '../lib/authHelpers';
+
 
 export async function getBillingCycle(clientId: string): Promise<BillingCycleType> {
-  const session = await getSession();
+  const session = await getSessionAsync();
   if (!session?.user?.id) {
     throw new Error('Unauthorized');
   }
@@ -35,7 +36,7 @@ export async function updateBillingCycle(
   clientId: string,
   billingCycle: BillingCycleType,
 ): Promise<void> {
-  const session = await getSession();
+  const session = await getSessionAsync();
   if (!session?.user?.id) {
     throw new Error('Unauthorized');
   }
@@ -59,7 +60,7 @@ export async function canCreateNextBillingCycle(clientId: string): Promise<{
   isEarly: boolean;
   periodEndDate?: string;
 }> {
-  const session = await getSession();
+  const session = await getSessionAsync();
   if (!session?.user?.id) {
     throw new Error('Unauthorized');
   }
@@ -119,7 +120,7 @@ export async function getNextBillingCycleStatusForClients(
     periodEndDate?: string;
   };
 }> {
-  const session = await getSession();
+  const session = await getSessionAsync();
   if (!session?.user?.id) {
     throw new Error('Unauthorized');
   }
@@ -185,7 +186,7 @@ export async function createNextBillingCycle(
   clientId: string,
   effectiveDate?: string
 ): Promise<BillingCycleCreationResult> {
-  const session = await getSession();
+  const session = await getSessionAsync();
   if (!session?.user?.id) {
     throw new Error('Unauthorized');
   }
@@ -217,7 +218,7 @@ export async function createNextBillingCycle(
 
 // function for rollback (deactivate cycle, delete invoice)
 export async function removeBillingCycle(cycleId: string): Promise<void> {
-  const session = await getSession();
+  const session = await getSessionAsync();
   if (!session?.user?.id) {
     throw new Error('Unauthorized');
   }
@@ -284,7 +285,7 @@ export async function removeBillingCycle(cycleId: string): Promise<void> {
 
 // function for hard delete (delete cycle and invoice)
 export async function hardDeleteBillingCycle(cycleId: string): Promise<void> {
-  const session = await getSession();
+  const session = await getSessionAsync();
   if (!session?.user?.id) {
     throw new Error('Unauthorized');
   }
@@ -349,7 +350,7 @@ export async function getInvoicedBillingCycles(): Promise<(IClientContractLineCy
   period_start_date: ISO8601String;
   period_end_date: ISO8601String;
 })[]> {
-  const session = await getSession();
+  const session = await getSessionAsync();
   if (!session?.user?.id) {
     throw new Error('Unauthorized');
   }
@@ -415,7 +416,7 @@ export async function getInvoicedBillingCyclesPaginated(
     searchTerm = ''
   } = options;
 
-  const session = await getSession();
+  const session = await getSessionAsync();
   if (!session?.user?.id) {
     throw new Error('Unauthorized');
   }
@@ -494,7 +495,7 @@ export async function getInvoicedBillingCyclesPaginated(
 }
 
 export async function getAllBillingCycles(): Promise<{ [clientId: string]: BillingCycleType }> {
-  const session = await getSession();
+  const session = await getSessionAsync();
   if (!session?.user?.id) {
     throw new Error('Unauthorized');
   }

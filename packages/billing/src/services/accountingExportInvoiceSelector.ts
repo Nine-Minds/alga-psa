@@ -2,7 +2,7 @@ import { Knex } from 'knex';
 
 import { createTenantKnex } from '@alga-psa/db';
 import { AccountingExportService } from './accountingExportService';
-import { AccountingExportBatch } from '../../interfaces/accountingExport.interfaces';
+import type { AccountingExportBatch } from '@alga-psa/types';
 import { AppError } from '@alga-psa/core';
 
 type Nullable<T> = T | null | undefined;

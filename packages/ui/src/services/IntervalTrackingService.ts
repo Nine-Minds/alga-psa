@@ -396,6 +396,197 @@ export class IntervalTrackingService {
       };
     });
   }
+
+  async getOpenInterval(ticketId: string, userId: string): Promise<TicketInterval | null> {
+    const db = await this.initDatabase();
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction(['intervals'], 'readonly');
+      const objectStore = transaction.objectStore('intervals');
+      const ticketIndex = objectStore.index('ticketId');
+      const request = ticketIndex.getAll(ticketId);
+      request.onsuccess = (event) => {
+        const intervals = (event.target as IDBRequest<TicketInterval[]>).result;
+        const openInterval = intervals.find(interval =>
+          interval.userId === userId && interval.endTime === null
+        );
+        db.close();
+        resolve(openInterval || null);
+      };
+      request.onerror = (event) => {
+        console.error('Error retrieving open interval:', event);
+        db.close();
+        reject(new Error('Failed to retrieve open interval'));
+      };
+    });
+  }
+
+  async getIntervalsByTicket(ticketId: string): Promise<TicketInterval[]> {
+    const db = await this.initDatabase();
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction(['intervals'], 'readonly');
+      const objectStore = transaction.objectStore('intervals');
+      const ticketIndex = objectStore.index('ticketId');
+      const request = ticketIndex.getAll(ticketId);
+      request.onsuccess = (event) => {
+        const intervals = (event.target as IDBRequest<TicketInterval[]>).result;
+        const processedIntervals = this.autoCloseOpenIntervals(intervals);
+        db.close();
+        resolve(processedIntervals);
+      };
+      request.onerror = (event) => {
+        console.error('Error retrieving intervals by ticket:', event);
+        db.close();
+        reject(new Error('Failed to retrieve intervals'));
+      };
+    });
+  }
+
+  async getUserIntervals(userId: string): Promise<TicketInterval[]> {
+    const db = await this.initDatabase();
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction(['intervals'], 'readonly');
+      const objectStore = transaction.objectStore('intervals');
+      const userIndex = objectStore.index('userId');
+      const request = userIndex.getAll(userId);
+      request.onsuccess = (event) => {
+        const intervals = (event.target as IDBRequest<TicketInterval[]>).result;
+        const processedIntervals = this.autoCloseOpenIntervals(intervals);
+        processedIntervals.sort((a, b) => {
+          return new Date(b.startTime).getTime() - new Date(a.startTime).getTime();
+        });
+        db.close();
+        resolve(processedIntervals);
+      };
+      request.onerror = (event) => {
+        console.error('Error retrieving user intervals:', event);
+        db.close();
+        reject(new Error('Failed to retrieve intervals'));
+      };
+    });
+  }
+
+  async deleteIntervals(intervalIds: string[]): Promise<void> {
+    if (intervalIds.length === 0) return;
+    const db = await this.initDatabase();
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction(['intervals'], 'readwrite');
+      const objectStore = transaction.objectStore('intervals');
+      transaction.oncomplete = () => {
+        db.close();
+        resolve();
+      };
+      transaction.onerror = (event) => {
+        console.error('Error deleting intervals:', event);
+        db.close();
+        reject(new Error('Failed to delete intervals'));
+      };
+      for (const id of intervalIds) {
+        objectStore.delete(id);
+      }
+    });
+  }
+
+  async mergeIntervals(intervalIds: string[]): Promise<TicketInterval | null> {
+    if (intervalIds.length < 2) {
+      return null;
+    }
+    const intervals: TicketInterval[] = [];
+    for (const id of intervalIds) {
+      const interval = await this.getInterval(id);
+      if (interval) {
+        intervals.push(interval);
+      }
+    }
+    if (intervals.length < 2) {
+      return null;
+    }
+    // Sort by start time
+    intervals.sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime());
+    const first = intervals[0];
+    const last = intervals[intervals.length - 1];
+    // Calculate total duration
+    let totalDuration = 0;
+    for (const interval of intervals) {
+      if (interval.duration) {
+        totalDuration += interval.duration;
+      }
+    }
+    // Create merged interval
+    const mergedInterval: TicketInterval = {
+      id: uuidv4(),
+      ticketId: first.ticketId,
+      ticketNumber: first.ticketNumber,
+      ticketTitle: first.ticketTitle,
+      startTime: first.startTime,
+      endTime: last.endTime,
+      duration: totalDuration,
+      autoClosed: false,
+      userId: first.userId,
+    };
+    // Delete old intervals
+    await this.deleteIntervals(intervalIds);
+    // Save merged interval
+    const db = await this.initDatabase();
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction(['intervals'], 'readwrite');
+      const objectStore = transaction.objectStore('intervals');
+      const request = objectStore.add(mergedInterval);
+      request.onsuccess = () => {
+        db.close();
+        resolve(mergedInterval);
+      };
+      request.onerror = (event) => {
+        console.error('Error saving merged interval:', event);
+        db.close();
+        reject(new Error('Failed to save merged interval'));
+      };
+    });
+  }
+
+  private async getInterval(intervalId: string): Promise<TicketInterval | null> {
+    const db = await this.initDatabase();
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction(['intervals'], 'readonly');
+      const objectStore = transaction.objectStore('intervals');
+      const request = objectStore.get(intervalId);
+      request.onsuccess = (event) => {
+        const interval = (event.target as IDBRequest<TicketInterval>).result;
+        db.close();
+        resolve(interval || null);
+      };
+      request.onerror = (event) => {
+        console.error('Error retrieving interval:', event);
+        db.close();
+        reject(new Error('Failed to retrieve interval'));
+      };
+    });
+  }
+
+  private autoCloseOpenIntervals(intervals: TicketInterval[]): TicketInterval[] {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return intervals.map(interval => {
+      if (!interval.endTime) {
+        const startDate = new Date(interval.startTime);
+        const startDay = new Date(startDate);
+        startDay.setHours(0, 0, 0, 0);
+        if (startDay < today) {
+          const endDate = new Date(startDate);
+          endDate.setHours(17, 0, 0, 0);
+          if (startDate > endDate) {
+            endDate.setTime(startDate.getTime());
+          }
+          return {
+            ...interval,
+            endTime: endDate.toISOString(),
+            autoClosed: true,
+            duration: Math.floor((endDate.getTime() - startDate.getTime()) / 1000)
+          };
+        }
+      }
+      return interval;
+    });
+  }
 }
 
 export type IntervalTrackingSnapshot = {

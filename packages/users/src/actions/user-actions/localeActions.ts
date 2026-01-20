@@ -1,7 +1,7 @@
 'use server';
 
 import { getCurrentUser } from './userActions';
-import { getConnection } from '@/lib/db/db';
+import { createTenantKnex } from '@alga-psa/db';
 import { SupportedLocale, isSupportedLocale } from '@alga-psa/ui/lib/i18n/config';
 
 export async function updateUserLocaleAction(locale: SupportedLocale | null) {
@@ -15,7 +15,7 @@ export async function updateUserLocaleAction(locale: SupportedLocale | null) {
     throw new Error(`Unsupported locale: ${locale}`);
   }
 
-  const knex = await getConnection(user.tenant);
+  const { knex } = await createTenantKnex();
 
   if (locale === null) {
     // Delete the preference to clear it
@@ -71,7 +71,7 @@ export async function getUserLocaleAction(): Promise<SupportedLocale | null> {
     return null;
   }
 
-  const knex = await getConnection(user.tenant);
+  const { knex } = await createTenantKnex();
 
   const userPref = await knex('user_preferences')
     .where({

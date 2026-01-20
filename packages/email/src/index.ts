@@ -30,3 +30,13 @@ export type {
   EmailAddress,
   EmailSendResult
 } from './BaseEmailService';
+
+// Individual email sending functions
+export { sendPasswordResetEmail } from './sendPasswordResetEmail';
+export { sendPortalInvitationEmail } from './sendPortalInvitationEmail';
+export { sendTenantRecoveryEmail } from './clientPortalTenantRecoveryEmail';
+export { sendVerificationEmail } from './sendVerificationEmail';
+export { sendCancellationFeedbackEmail } from './sendCancellationFeedbackEmail';
+
+// System email provider factory
+export { SystemEmailProviderFactory } from './system/SystemEmailProviderFactory';

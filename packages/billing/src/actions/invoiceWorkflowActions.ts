@@ -5,10 +5,11 @@ import { Knex } from 'knex';
 import { createTenantKnex } from '@alga-psa/db';
 import { toPlainDate } from '@alga-psa/core';
 import { v4 as uuidv4 } from 'uuid';
-import { getCurrentUser } from '@alga-psa/users/actions';
+
 import { getActionRegistry, TransactionIsolationLevel } from '@alga-psa/shared/workflow/core';
 import { getWorkflowRuntime } from '@alga-psa/shared/workflow/core';
 import { submitWorkflowEventAction } from '@alga-psa/workflows/actions/workflow-event-actions';
+import { getCurrentUserAsync, hasPermissionAsync, getSessionAsync, getAnalyticsAsync } from '../lib/authHelpers';
 
 
 
@@ -37,7 +38,7 @@ export async function processInvoiceEvent(executionId: string | undefined, event
  */
 export async function approveInvoice(invoiceId: string, executionId?: string): Promise<any> {
   const { knex } = await createTenantKnex();
-  const currentUser = await getCurrentUser();
+  const currentUser = await getCurrentUserAsync();
   if (!currentUser?.tenant) {
     throw new Error('No current user found');
   }  
@@ -81,7 +82,7 @@ export async function approveInvoice(invoiceId: string, executionId?: string): P
  */
 export async function rejectInvoice(invoiceId: string, reason: string, executionId?: string): Promise<any> {
   const { knex } = await createTenantKnex();
-  const currentUser = await getCurrentUser();
+  const currentUser = await getCurrentUserAsync();
   if (!currentUser?.tenant) {
     throw new Error('No current user found');
   }  
