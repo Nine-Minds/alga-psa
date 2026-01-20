@@ -6,7 +6,7 @@
  */
 
 import { AsyncLocalStorage } from 'async_hooks';
-import { ServiceContext } from './BaseService';
+import type { ServiceContext } from './BaseService';
 
 // Async context storage for tracking system operations
 const systemOperationContext = new AsyncLocalStorage<{ isSystemOperation: boolean }>();

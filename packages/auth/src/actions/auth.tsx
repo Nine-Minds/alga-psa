@@ -7,15 +7,11 @@ import logger from "@alga-psa/core/logger";
 import { IUser } from '@alga-psa/types';
 import { isValidTenantSlug } from '@alga-psa/validation';
 
-// Dynamic imports to avoid circular dependencies
-// Note: Using string concatenation to prevent static analysis from detecting these dependencies
-const getAnalyticsModule = () => '@alga-psa/' + 'analytics';
-const getTenancyModule = () => '@alga-psa/' + 'tenancy/actions';
-
-const getAnalytics = async () => (await import(/* webpackIgnore: true */ getAnalyticsModule())).analytics;
+// Dynamic imports to avoid circular dependencies (but still allow Next/Turbopack to bundle them).
+const getAnalytics = async () => (await import('@alga-psa/analytics')).analytics;
 
 const getTenantIdBySlugAsync = async (slug: string): Promise<string | null> => {
-  const { getTenantIdBySlug } = await import(/* webpackIgnore: true */ getTenancyModule());
+  const { getTenantIdBySlug } = await import('@alga-psa/tenancy/actions');
   return getTenantIdBySlug(slug);
 };
 

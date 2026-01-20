@@ -18,7 +18,7 @@ import {
   cancelSubscriptionAction,
   getScheduledLicenseChangesAction,
   sendCancellationFeedbackAction,
-} from '@ee/lib/actions/license-actions';
+} from 'ee/server/src/lib/actions/license-actions';
 import { checkAccountManagementPermission } from 'server/src/lib/actions/permission-actions';
 import { useRouter } from 'next/navigation';
 import { ILicenseInfo, IPaymentMethod, ISubscriptionInfo, IInvoiceInfo, IScheduledLicenseChange } from 'server/src/interfaces/subscription.interfaces';

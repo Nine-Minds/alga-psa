@@ -10,6 +10,10 @@
       "import": "./src/index.ts",
       "types": "./src/index.ts"
     },
+    "./features": {
+      "import": "./src/lib/features.ts",
+      "types": "./src/lib/features.ts"
+    },
     "./logger": {
       "import": "./src/lib/logger.ts",
       "types": "./src/lib/logger.ts"

@@ -6,12 +6,8 @@ import type { Tenant, TenantCompany } from '@alga-psa/types';
 import { Knex } from 'knex';
 import { createTenantKnex } from '@alga-psa/db';
 
-// Dynamic import to avoid circular dependency (tenancy -> auth -> ui -> analytics -> tenancy)
-// Note: Using string concatenation to prevent static analysis from detecting this dependency
-const getAuthModule = () => '@alga-psa/' + 'auth';
-
 const getSessionAsync = async () => {
-  const { getSession } = await import(/* webpackIgnore: true */ getAuthModule());
+  const { getSession } = await import('@alga-psa/auth');
   return getSession();
 };
 

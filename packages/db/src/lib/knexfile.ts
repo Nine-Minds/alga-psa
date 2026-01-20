@@ -5,10 +5,10 @@
  * Supports development, test, and production environments.
  */
 
-import { Knex } from 'knex';
+import type { Knex } from 'knex';
 import { setTypeParser } from 'pg-types';
 import { validate as uuidValidate } from 'uuid';
-import { getSecret } from '@alga-psa/core/server';
+import { getSecret } from '@alga-psa/core/secrets';
 
 type Function = (err: Error | null, connection: Knex.Client) => void;
 

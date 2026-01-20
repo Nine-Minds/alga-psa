@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
+import { useSession } from 'next-auth/react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@alga-psa/ui/components/Card';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Skeleton } from '@alga-psa/ui/components/Skeleton';
@@ -12,7 +13,6 @@ import { parseISO } from 'date-fns';
 import { ICreditReconciliationReport, ITransaction, ICreditTracking } from '@alga-psa/types';
 import { resolveReconciliationReport } from '@alga-psa/billing/actions/creditReconciliationActions';
 import { applyReconciliationFix } from '@alga-psa/billing/actions/creditReconciliationFixActions';
-import { getCurrentUserAsync, hasPermissionAsync, getSessionAsync, getAnalyticsAsync } from '../../lib/authHelpers';
 
 import RecommendedFixPanel from './RecommendedFixPanel';
 import { Badge } from '@alga-psa/ui/components/Badge';
@@ -44,6 +44,7 @@ interface ExpandedState {
 const DiscrepancyDetail: React.FC = () => {
   const params = useParams();
   const router = useRouter();
+  const { data: session } = useSession();
   const searchParams = new URLSearchParams(window.location.search);
   const action = searchParams.get('action');
   const reportId = params?.reportId as string;
@@ -183,15 +184,15 @@ const DiscrepancyDetail: React.FC = () => {
       setIsResolvingReport(true);
       setResolutionError(null);
 
-      // Get the current user
-      const currentUser = await getCurrentUserAsync();
-      if (!currentUser) {
+      const sessionUser = session?.user as any;
+      const currentUserId = sessionUser?.id ?? sessionUser?.user_id;
+      if (!currentUserId) {
         throw new Error('User not authenticated');
       }
 
       const resolvedReport = await resolveReconciliationReport(
         report.report_id,
-        currentUser.user_id,
+        String(currentUserId),
         resolutionNotes
       );
 
@@ -214,16 +215,16 @@ const DiscrepancyDetail: React.FC = () => {
     try {
       setIsApplyingFix(true);
 
-      // Get the current user
-      const currentUser = await getCurrentUserAsync();
-      if (!currentUser) {
+      const sessionUser = session?.user as any;
+      const currentUserId = sessionUser?.id ?? sessionUser?.user_id;
+      if (!currentUserId) {
         throw new Error('User not authenticated');
       }
 
       // Call the server action to apply the fix
       const resolvedReport = await applyReconciliationFix(
         report.report_id,
-        currentUser.user_id,
+        String(currentUserId),
         fixType,
         notes,
         customData

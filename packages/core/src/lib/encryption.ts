@@ -5,7 +5,7 @@
  * Works in both Node.js and Edge runtimes.
  */
 
-import { getSecret } from './secrets';
+import { getSecret } from './secrets/index';
 
 // Utility: encode string to Uint8Array
 const te = new TextEncoder();

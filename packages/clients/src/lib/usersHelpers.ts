@@ -3,28 +3,24 @@
  *
  * These are dynamic import wrappers to avoid circular dependency:
  * clients -> users -> auth -> ui -> analytics -> tenancy -> client-portal -> clients
- *
- * Note: Using string concatenation to prevent static analysis from detecting dependencies
  */
 
-const getUsersActionsModule = () => '@alga-psa/' + 'users/actions';
-
 export async function getCurrentUserAsync() {
-  const module = await import(/* webpackIgnore: true */ getUsersActionsModule());
-  return (module as any).getCurrentUser();
+  const module = await import('@alga-psa/users/actions');
+  return module.getCurrentUser();
 }
 
-export async function getAllUsersBasicAsync(...args: any[]) {
-  const module = await import(/* webpackIgnore: true */ getUsersActionsModule());
-  return (module as any).getAllUsersBasic(...args);
+export async function getAllUsersBasicAsync(includeInactive?: boolean, userType?: string) {
+  const module = await import('@alga-psa/users/actions');
+  return module.getAllUsersBasic(includeInactive, userType);
 }
 
-export async function findUserByIdAsync(...args: any[]) {
-  const module = await import(/* webpackIgnore: true */ getUsersActionsModule());
-  return (module as any).findUserById(...args);
+export async function findUserByIdAsync(id: string) {
+  const module = await import('@alga-psa/users/actions');
+  return module.findUserById(id);
 }
 
-export async function getContactAvatarUrlActionAsync(...args: any[]) {
-  const module = await import(/* webpackIgnore: true */ getUsersActionsModule());
-  return (module as any).getContactAvatarUrlAction(...args);
+export async function getContactAvatarUrlActionAsync(contactId: string, tenant: string) {
+  const module = await import('@alga-psa/users/actions');
+  return module.getContactAvatarUrlAction(contactId, tenant);
 }
