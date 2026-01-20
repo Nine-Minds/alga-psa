@@ -16,7 +16,8 @@ exports.up = async function(knex) {
         ADD COLUMN IF NOT EXISTS properties jsonb NOT NULL DEFAULT '{}'::jsonb
     `);
 
-    // TODO: Consider adding GIN index on properties once usage patterns are established
+    // TODO(follow-up-ticket): Add GIN index on contacts.properties once usage patterns are established
+    // This mirrors companies.properties which may also benefit from a GIN index for JSONB queries.
     // CREATE INDEX IF NOT EXISTS idx_contacts_properties ON contacts USING GIN (properties);
 };
 

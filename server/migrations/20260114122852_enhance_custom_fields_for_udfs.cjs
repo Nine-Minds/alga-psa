@@ -30,6 +30,20 @@ exports.up = async function(knex) {
         $$;
     `);
 
+    // Convert existing 'type' column from text to enum
+    // First, ensure any existing values are valid enum values (default invalid to 'text')
+    await knex.schema.raw(`
+        UPDATE custom_fields
+        SET type = 'text'
+        WHERE type NOT IN ('text', 'number', 'date', 'boolean', 'picklist')
+    `);
+
+    // Convert the type column to use the enum
+    await knex.schema.raw(`
+        ALTER TABLE custom_fields
+        ALTER COLUMN type TYPE custom_field_type USING type::custom_field_type
+    `);
+
     // Add new columns to custom_fields table for UDF support
     // Each column added separately for Citus compatibility
     await knex.schema.raw(`
@@ -63,28 +77,17 @@ exports.up = async function(knex) {
     `);
 
     // Add index for efficient querying by entity_type (includes field_order for sorting)
+    // Note: If is_active is frequently toggled, consider replacing this with:
+    // - A simpler index on (tenant, entity_type)
+    // - A partial index WHERE is_active = true
+    // This would reduce b-tree churn from status changes.
     await knex.schema.raw(`
         CREATE INDEX IF NOT EXISTS idx_custom_fields_entity_type
         ON custom_fields(tenant, entity_type, is_active, field_order)
     `);
 
-    // Add check constraint for valid field types (extend existing 'type' column)
-    // Note: entity_type uses ENUM so no check constraint needed for that
-    await knex.schema.raw(`
-        DO $$
-        BEGIN
-            IF NOT EXISTS (
-                SELECT 1 FROM pg_constraint WHERE conname = 'chk_custom_fields_field_type'
-            ) THEN
-                ALTER TABLE custom_fields
-                ADD CONSTRAINT chk_custom_fields_field_type
-                CHECK (type IN ('text', 'number', 'date', 'boolean', 'picklist'));
-            END IF;
-        END
-        $$;
-    `);
-
     // Add check constraint to limit picklist options to 200 to prevent unbounded bloat
+    // Note: No check constraint needed for type since enum provides type safety
     await knex.schema.raw(`
         DO $$
         BEGIN
@@ -108,11 +111,6 @@ exports.down = async function(knex) {
     // Remove constraints (only ones we created)
     await knex.schema.raw(`
         ALTER TABLE custom_fields
-        DROP CONSTRAINT IF EXISTS chk_custom_fields_field_type
-    `);
-
-    await knex.schema.raw(`
-        ALTER TABLE custom_fields
         DROP CONSTRAINT IF EXISTS chk_custom_fields_options_length
     `);
 
@@ -129,7 +127,14 @@ exports.down = async function(knex) {
     await knex.schema.raw(`ALTER TABLE custom_fields DROP COLUMN IF EXISTS options`);
     await knex.schema.raw(`ALTER TABLE custom_fields DROP COLUMN IF EXISTS description`);
 
-    // Drop ENUM types (only if not used elsewhere)
-    await knex.schema.raw(`DROP TYPE IF EXISTS custom_field_entity_type`);
-    await knex.schema.raw(`DROP TYPE IF EXISTS custom_field_type`);
+    // Convert type column back to text before dropping enum
+    await knex.schema.raw(`
+        ALTER TABLE custom_fields
+        ALTER COLUMN type TYPE text USING type::text
+    `);
+
+    // Drop ENUM types with CASCADE to handle any dependencies
+    // Note: CASCADE will also drop any columns/constraints using the enum
+    await knex.schema.raw(`DROP TYPE IF EXISTS custom_field_entity_type CASCADE`);
+    await knex.schema.raw(`DROP TYPE IF EXISTS custom_field_type CASCADE`);
 };

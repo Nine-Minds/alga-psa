@@ -2,6 +2,16 @@
  * Custom Field / UDF (User Defined Field) interfaces
  *
  * These interfaces support custom fields for tickets, companies, and contacts.
+ *
+ * Storage pattern:
+ * - Field definitions are stored in the `custom_fields` table
+ * - Field values are stored in each entity's JSONB column under the 'custom_fields' key:
+ *   - tickets.attributes.custom_fields
+ *   - companies.properties.custom_fields
+ *   - contacts.properties.custom_fields (mirrors companies.properties pattern)
+ *
+ * Note: contacts.properties was added to mirror companies.properties for consistency.
+ * Both may benefit from a GIN index for JSONB queries once usage patterns are established.
  */
 
 /**

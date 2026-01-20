@@ -1,5 +1,3 @@
-'use client';
-
 import { Suspense } from 'react';
 import { Card } from 'server/src/components/ui/Card';
 import { CustomFieldsManager } from 'server/src/components/settings/custom-fields/CustomFieldsManager';

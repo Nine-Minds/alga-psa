@@ -828,6 +828,7 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
       {/* Custom Fields */}
       {ticket.ticket_id && (
         <CustomFieldsCard
+          id="ticket-custom-fields-card"
           entityType="ticket"
           entityId={ticket.ticket_id}
           title="Custom Fields"

@@ -15,6 +15,8 @@ import {
 import { toast } from 'react-hot-toast';
 
 interface CustomFieldsCardProps {
+  /** Unique identifier for UI reflection system */
+  id: string;
   /** The entity type (ticket, company, contact) */
   entityType: CustomFieldEntityType;
   /** The ID of the entity (ticket_id, company_id, contact_name_id) */
@@ -36,6 +38,7 @@ interface CustomFieldsCardProps {
  * Handles fetching, displaying, validating, and saving custom field values.
  */
 export function CustomFieldsCard({
+  id,
   entityType,
   entityId,
   disabled = false,
@@ -153,7 +156,7 @@ export function CustomFieldsCard({
   }
 
   return (
-    <div className={`custom-fields-card bg-white rounded-lg border border-gray-200 p-4 ${className}`}>
+    <div id={id} className={`custom-fields-card bg-white rounded-lg border border-gray-200 p-4 ${className}`}>
       <div className="flex items-center justify-between mb-3">
         <h4 className="text-sm font-semibold text-gray-900">{title}</h4>
         {saving && (

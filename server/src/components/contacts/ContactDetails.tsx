@@ -724,6 +724,7 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
           {/* Custom Fields */}
           {editedContact.contact_name_id && (
             <CustomFieldsCard
+              id="contact-custom-fields-card"
               entityType="contact"
               entityId={editedContact.contact_name_id}
               title="Custom Fields"

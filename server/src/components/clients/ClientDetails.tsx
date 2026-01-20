@@ -881,6 +881,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
               {/* Custom Fields */}
               {editedClient.client_id && (
                 <CustomFieldsCard
+                  id="company-custom-fields-card"
                   entityType="company"
                   entityId={editedClient.client_id}
                   title="Custom Fields"
