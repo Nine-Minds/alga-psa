@@ -25,8 +25,20 @@ interface ClientContactsListProps {
   clients: IClient[]; // Pass clients down for ContactDetailsView
 }
 
+// Extended contact type with id for stable DataTable keys
+type ContactWithId = IContact & { id: string };
+
+// Helper to ensure contacts have stable id for DataTable row keys
+// This prevents React DOM reconciliation errors when rows are re-rendered
+const addIdToContacts = (contacts: IContact[]): ContactWithId[] => {
+  return contacts.map(contact => ({
+    ...contact,
+    id: contact.contact_name_id
+  }));
+};
+
 const ClientContactsList: React.FC<ClientContactsListProps> = ({ clientId, clients }) => {
-  const [contacts, setContacts] = useState<IContact[]>([]);
+  const [contacts, setContacts] = useState<ContactWithId[]>([]);
   const [loading, setLoading] = useState(true);
   const [documentLoading, setDocumentLoading] = useState<Record<string, boolean>>({});
   const [error, setError] = useState<string | null>(null);
@@ -54,7 +66,7 @@ const ClientContactsList: React.FC<ClientContactsListProps> = ({ clientId, clien
       setError(null);
       try {
         const fetchedContacts = await getContactsByClient(clientId, statusFilter);
-        setContacts(fetchedContacts);
+        setContacts(addIdToContacts(fetchedContacts));
       } catch (err) {
         console.error('Error fetching client contacts:', err);
         setError('Failed to load contacts.');
@@ -93,7 +105,7 @@ const ClientContactsList: React.FC<ClientContactsListProps> = ({ clientId, clien
     const handleDrawerClose = () => {
       if (changesSavedInDrawer) {
         // Refresh contacts list
-        getContactsByClient(clientId, statusFilter).then(setContacts);
+        getContactsByClient(clientId, statusFilter).then(data => setContacts(addIdToContacts(data)));
         setChangesSavedInDrawer(false);
       }
     };
@@ -273,7 +285,7 @@ const ClientContactsList: React.FC<ClientContactsListProps> = ({ clientId, clien
             setLoading(true);
             setError(null);
             getContactsByClient(clientId, statusFilter)
-              .then(setContacts)
+              .then(data => setContacts(addIdToContacts(data)))
               .catch(err => {
                 console.error('Error retrying contact fetch:', err);
                 setError('Failed to load contacts. Please try again.');
@@ -325,7 +337,7 @@ const ClientContactsList: React.FC<ClientContactsListProps> = ({ clientId, clien
         isOpen={isQuickAddContactOpen}
         onClose={() => setIsQuickAddContactOpen(false)}
         onContactAdded={() => {
-          getContactsByClient(clientId, statusFilter).then(setContacts);
+          getContactsByClient(clientId, statusFilter).then(data => setContacts(addIdToContacts(data)));
         }}
         clients={clients}
         selectedClientId={clientId}
