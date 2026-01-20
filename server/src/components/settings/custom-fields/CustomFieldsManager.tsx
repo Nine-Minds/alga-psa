@@ -7,6 +7,7 @@ import { Input } from 'server/src/components/ui/Input';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
 import { Switch } from 'server/src/components/ui/Switch';
 import { DataTable } from 'server/src/components/ui/DataTable';
+import LoadingIndicator from 'server/src/components/ui/LoadingIndicator';
 import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from 'server/src/components/ui/Dialog';
 import { ConfirmationDialog } from 'server/src/components/ui/ConfirmationDialog';
@@ -92,6 +93,7 @@ function PicklistOptionEditor({ options, onChange }: PicklistOptionEditorProps) 
         {options.map((option, index) => (
           <div key={index} className="flex items-center gap-2">
             <Input
+              id={`picklist-option-${index}`}
               value={option.label}
               onChange={(e) => updateOption(index, e.target.value)}
               className="flex-1"
@@ -112,6 +114,7 @@ function PicklistOptionEditor({ options, onChange }: PicklistOptionEditorProps) 
       </div>
       <div className="flex items-center gap-2">
         <Input
+          id="new-picklist-option"
           value={newOptionLabel}
           onChange={(e) => setNewOptionLabel(e.target.value)}
           placeholder="Add new option..."
@@ -365,10 +368,13 @@ export function CustomFieldsManager() {
       </div>
 
       {/* Entity Type Tabs */}
-      <div className="flex gap-2 border-b border-gray-200">
+      <div className="flex gap-2 border-b border-gray-200" role="tablist">
         {ENTITY_TYPES.map((entityType) => (
           <button
             key={entityType.value}
+            id={`custom-fields-tab-${entityType.value}`}
+            role="tab"
+            aria-selected={selectedEntityType === entityType.value}
             onClick={() => setSelectedEntityType(entityType.value)}
             className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
               selectedEntityType === entityType.value
@@ -391,8 +397,8 @@ export function CustomFieldsManager() {
 
       {/* Fields Table */}
       {loading ? (
-        <div className="flex justify-center py-8">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-500"></div>
+        <div className="flex justify-center py-8" role="status" aria-label="Loading custom fields">
+          <LoadingIndicator text="Loading custom fields..." />
         </div>
       ) : fields.length === 0 ? (
         <div className="text-center py-8 text-gray-500">
@@ -418,6 +424,7 @@ export function CustomFieldsManager() {
 
           <div className="space-y-4 py-4">
             <Input
+              id="custom-field-name"
               label="Field Name"
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
@@ -426,6 +433,7 @@ export function CustomFieldsManager() {
             />
 
             <CustomSelect
+              id="custom-field-type"
               label="Field Type"
               options={FIELD_TYPES}
               value={formData.type}
@@ -444,6 +452,7 @@ export function CustomFieldsManager() {
             )}
 
             <TextArea
+              id="custom-field-description"
               label="Description (optional)"
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
@@ -453,6 +462,7 @@ export function CustomFieldsManager() {
 
             <div className="flex items-center gap-3">
               <Switch
+                id="custom-field-required"
                 checked={formData.is_required}
                 onCheckedChange={(checked) => setFormData({ ...formData, is_required: checked })}
               />

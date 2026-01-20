@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { CustomFieldsSection } from './CustomFieldsSection';
+import { Button } from './Button';
 import {
   CustomFieldEntityType,
   CustomFieldValuesMap
@@ -172,13 +173,14 @@ export function CustomFieldsCard({
       {/* Show manual save button if auto-save is disabled */}
       {autoSaveDelay === 0 && hasChangesRef.current && !disabled && (
         <div className="mt-4 flex justify-end">
-          <button
+          <Button
+            id={`save-custom-fields-${entityType}-${entityId}`}
             onClick={handleManualSave}
             disabled={saving}
-            className="px-3 py-1.5 text-sm bg-primary-500 text-white rounded hover:bg-primary-600 disabled:opacity-50"
+            size="sm"
           >
             {saving ? 'Saving...' : 'Save Custom Fields'}
-          </button>
+          </Button>
         </div>
       )}
     </div>
