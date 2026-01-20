@@ -22,7 +22,21 @@ export type CustomFieldEntityType = 'ticket' | 'company' | 'contact';
 /**
  * Supported field types for custom fields
  */
-export type CustomFieldType = 'text' | 'number' | 'date' | 'boolean' | 'picklist';
+export type CustomFieldType = 'text' | 'number' | 'date' | 'boolean' | 'picklist' | 'multi_picklist';
+
+/**
+ * Operators for conditional logic rules
+ */
+export type ConditionalLogicOperator = 'equals' | 'not_equals' | 'contains' | 'is_empty' | 'is_not_empty';
+
+/**
+ * Conditional logic rule for showing/hiding a field based on another field's value
+ */
+export interface IConditionalLogic {
+  field_id: string;
+  operator: ConditionalLogicOperator;
+  value?: string | number | boolean | string[] | null;
+}
 
 /**
  * Option for picklist field types
@@ -48,6 +62,8 @@ export interface ICustomField {
   is_required: boolean;
   is_active: boolean;
   description?: string;
+  conditional_logic?: IConditionalLogic | null;
+  group_id?: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -64,6 +80,8 @@ export interface CreateCustomFieldInput {
   field_order?: number;
   is_required?: boolean;
   description?: string;
+  conditional_logic?: IConditionalLogic | null;
+  group_id?: string | null;
 }
 
 /**
@@ -78,17 +96,89 @@ export interface UpdateCustomFieldInput {
   is_required?: boolean;
   is_active?: boolean;
   description?: string;
+  conditional_logic?: IConditionalLogic | null;
+  group_id?: string | null;
 }
 
 /**
  * Custom field value (stored in entity's properties/attributes JSONB column)
+ * Supports arrays for multi_picklist type
  */
 export interface ICustomFieldValue {
   field_id: string;
-  value: string | number | boolean | null;
+  value: string | number | boolean | string[] | null;
 }
 
 /**
  * Map of field_id to value for storing/retrieving custom field values
+ * Supports arrays for multi_picklist type
  */
-export type CustomFieldValuesMap = Record<string, string | number | boolean | null>;
+export type CustomFieldValuesMap = Record<string, string | number | boolean | string[] | null>;
+
+// =============================================================================
+// Field Groups (for organizing custom fields into sections)
+// =============================================================================
+
+/**
+ * Custom field group definition
+ */
+export interface ICustomFieldGroup {
+  group_id: string;
+  tenant: string;
+  entity_type: CustomFieldEntityType;
+  name: string;
+  description?: string | null;
+  group_order: number;
+  is_collapsed_by_default: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+/**
+ * Input for creating a custom field group
+ */
+export interface CreateCustomFieldGroupInput {
+  entity_type: CustomFieldEntityType;
+  name: string;
+  description?: string | null;
+  group_order?: number;
+  is_collapsed_by_default?: boolean;
+}
+
+/**
+ * Input for updating a custom field group
+ */
+export interface UpdateCustomFieldGroupInput {
+  name?: string;
+  description?: string | null;
+  group_order?: number;
+  is_collapsed_by_default?: boolean;
+}
+
+// =============================================================================
+// Per-Client Field Settings (for enabling/disabling fields per company)
+// =============================================================================
+
+/**
+ * Company-specific custom field settings
+ */
+export interface ICompanyCustomFieldSetting {
+  setting_id: string;
+  tenant: string;
+  company_id: string;
+  field_id: string;
+  is_enabled: boolean;
+  override_default_value?: string | number | boolean | string[] | null;
+  created_at: string;
+  updated_at: string;
+}
+
+/**
+ * Input for creating/updating company custom field settings
+ */
+export interface UpsertCompanyCustomFieldSettingInput {
+  company_id: string;
+  field_id: string;
+  is_enabled: boolean;
+  override_default_value?: string | number | boolean | string[] | null;
+}

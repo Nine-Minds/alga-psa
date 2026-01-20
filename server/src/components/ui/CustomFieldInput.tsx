@@ -9,8 +9,8 @@ import { ICustomField, CustomFieldType } from 'server/src/interfaces/customField
 
 interface CustomFieldInputProps {
   field: ICustomField;
-  value: string | number | boolean | null | undefined;
-  onChange: (fieldId: string, value: string | number | boolean | null) => void;
+  value: string | number | boolean | string[] | null | undefined;
+  onChange: (fieldId: string, value: string | number | boolean | string[] | null) => void;
   disabled?: boolean;
   error?: string;
 }
@@ -25,8 +25,17 @@ export function CustomFieldInput({
   disabled = false,
   error
 }: CustomFieldInputProps) {
-  const handleChange = (newValue: string | number | boolean | null) => {
+  const handleChange = (newValue: string | number | boolean | string[] | null) => {
     onChange(field.field_id, newValue);
+  };
+
+  // Handle multi-select checkbox toggle
+  const handleMultiSelectToggle = (optionValue: string, checked: boolean) => {
+    const currentValues = Array.isArray(value) ? value : [];
+    const newValues = checked
+      ? [...currentValues, optionValue]
+      : currentValues.filter(v => v !== optionValue);
+    handleChange(newValues.length > 0 ? newValues : null);
   };
 
   const renderInput = () => {
@@ -123,6 +132,49 @@ export function CustomFieldInput({
             placeholder={field.description || `Select ${field.name.toLowerCase()}`}
             allowClear={!field.is_required}
           />
+        );
+
+      case 'multi_picklist':
+        const multiOptions = (field.options || []).sort((a, b) => a.order - b.order);
+        const selectedValues = Array.isArray(value) ? value : [];
+
+        return (
+          <div className="mb-0">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              {field.name}
+              {field.is_required && <span className="text-red-500 ml-1">*</span>}
+            </label>
+            {field.description && (
+              <p className="text-xs text-gray-500 mb-2">{field.description}</p>
+            )}
+            <div className="space-y-2 border border-gray-200 rounded-md p-3 max-h-48 overflow-y-auto">
+              {multiOptions.length === 0 ? (
+                <p className="text-sm text-gray-500">No options available</p>
+              ) : (
+                multiOptions.map((opt) => (
+                  <label
+                    key={opt.value}
+                    className={`flex items-center gap-2 cursor-pointer ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={selectedValues.includes(opt.value)}
+                      onChange={(e) => handleMultiSelectToggle(opt.value, e.target.checked)}
+                      disabled={disabled}
+                      className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                    />
+                    <span className="text-sm text-gray-700">{opt.label}</span>
+                  </label>
+                ))
+              )}
+            </div>
+            {selectedValues.length > 0 && (
+              <p className="mt-1 text-xs text-gray-500">
+                {selectedValues.length} selected
+              </p>
+            )}
+            {error && <p className="mt-1 text-sm text-red-600">{error}</p>}
+          </div>
         );
 
       default:

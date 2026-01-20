@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { Button } from 'server/src/components/ui/Button';
-import { Plus, MoreVertical, GripVertical, Trash2, Pencil } from 'lucide-react';
+import { Plus, MoreVertical, GripVertical, Trash2, Pencil, FolderOpen, Eye, EyeOff } from 'lucide-react';
 import { Input } from 'server/src/components/ui/Input';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
 import { Switch } from 'server/src/components/ui/Switch';
@@ -21,6 +21,9 @@ import {
 import { toast } from 'react-hot-toast';
 import {
   ICustomField,
+  ICustomFieldGroup,
+  IConditionalLogic,
+  ConditionalLogicOperator,
   CustomFieldEntityType,
   CustomFieldType,
   CreateCustomFieldInput,
@@ -32,7 +35,11 @@ import {
   createCustomField,
   updateCustomField,
   deleteCustomField,
-  permanentlyDeleteCustomField
+  permanentlyDeleteCustomField,
+  getCustomFieldGroups,
+  createCustomFieldGroup,
+  updateCustomFieldGroup,
+  deleteCustomFieldGroup
 } from 'server/src/lib/actions/customFieldActions';
 
 const ENTITY_TYPES: { value: CustomFieldEntityType; label: string }[] = [
@@ -46,7 +53,16 @@ const FIELD_TYPES: { value: CustomFieldType; label: string }[] = [
   { value: 'number', label: 'Number' },
   { value: 'date', label: 'Date' },
   { value: 'boolean', label: 'Yes/No (Checkbox)' },
-  { value: 'picklist', label: 'Picklist (Dropdown)' }
+  { value: 'picklist', label: 'Picklist (Dropdown)' },
+  { value: 'multi_picklist', label: 'Multi-Select Picklist' }
+];
+
+const CONDITIONAL_OPERATORS: { value: ConditionalLogicOperator; label: string }[] = [
+  { value: 'equals', label: 'Equals' },
+  { value: 'not_equals', label: 'Does not equal' },
+  { value: 'contains', label: 'Contains' },
+  { value: 'is_empty', label: 'Is empty' },
+  { value: 'is_not_empty', label: 'Is not empty' }
 ];
 
 interface PicklistOptionEditorProps {
@@ -138,18 +154,139 @@ function PicklistOptionEditor({ options, onChange }: PicklistOptionEditorProps) 
   );
 }
 
+interface ConditionalLogicEditorProps {
+  condition: IConditionalLogic | null;
+  onChange: (condition: IConditionalLogic | null) => void;
+  availableFields: ICustomField[];
+  currentFieldId?: string;
+}
+
+function ConditionalLogicEditor({
+  condition,
+  onChange,
+  availableFields,
+  currentFieldId
+}: ConditionalLogicEditorProps) {
+  const [enabled, setEnabled] = useState(condition !== null);
+
+  // Filter out the current field and fields that already have conditions pointing to this field
+  const selectableFields = availableFields.filter(f =>
+    f.field_id !== currentFieldId && f.is_active
+  );
+
+  const handleToggle = (checked: boolean) => {
+    setEnabled(checked);
+    if (!checked) {
+      onChange(null);
+    } else if (selectableFields.length > 0) {
+      onChange({
+        field_id: selectableFields[0].field_id,
+        operator: 'equals',
+        value: ''
+      });
+    }
+  };
+
+  const selectedField = condition ? availableFields.find(f => f.field_id === condition.field_id) : null;
+  const needsValue = condition && !['is_empty', 'is_not_empty'].includes(condition.operator);
+
+  // Get value options for picklist fields
+  const valueOptions = selectedField?.options?.map(opt => ({
+    value: opt.value,
+    label: opt.label
+  })) || [];
+
+  return (
+    <div className="space-y-3 border border-gray-200 rounded-md p-3 bg-gray-50">
+      <div className="flex items-center gap-3">
+        <Switch
+          id="conditional-logic-enabled"
+          checked={enabled}
+          onCheckedChange={handleToggle}
+        />
+        <div>
+          <label className="text-sm font-medium text-gray-700">Conditional Logic</label>
+          <p className="text-xs text-gray-500">Show this field only when another field has a specific value</p>
+        </div>
+      </div>
+
+      {enabled && condition && (
+        <div className="space-y-3 pt-2">
+          <CustomSelect
+            id="conditional-logic-field"
+            label="Show when this field"
+            options={selectableFields.map(f => ({ value: f.field_id, label: f.name }))}
+            value={condition.field_id}
+            onValueChange={(value) => onChange({ ...condition, field_id: value, value: '' })}
+            placeholder="Select a field..."
+          />
+
+          <CustomSelect
+            id="conditional-logic-operator"
+            label="Condition"
+            options={CONDITIONAL_OPERATORS}
+            value={condition.operator}
+            onValueChange={(value) => onChange({ ...condition, operator: value as ConditionalLogicOperator })}
+          />
+
+          {needsValue && (
+            selectedField?.type === 'picklist' || selectedField?.type === 'multi_picklist' ? (
+              <CustomSelect
+                id="conditional-logic-value"
+                label="Value"
+                options={valueOptions}
+                value={condition.value as string || ''}
+                onValueChange={(value) => onChange({ ...condition, value })}
+                placeholder="Select a value..."
+              />
+            ) : selectedField?.type === 'boolean' ? (
+              <CustomSelect
+                id="conditional-logic-value"
+                label="Value"
+                options={[{ value: 'true', label: 'Yes' }, { value: 'false', label: 'No' }]}
+                value={String(condition.value) || ''}
+                onValueChange={(value) => onChange({ ...condition, value: value === 'true' })}
+              />
+            ) : (
+              <Input
+                id="conditional-logic-value"
+                label="Value"
+                value={condition.value as string || ''}
+                onChange={(e) => onChange({ ...condition, value: e.target.value })}
+                placeholder="Enter value..."
+              />
+            )
+          )}
+
+          {selectableFields.length === 0 && (
+            <p className="text-xs text-amber-600">Create other fields first to use conditional logic</p>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function CustomFieldsManager() {
   const [selectedEntityType, setSelectedEntityType] = useState<CustomFieldEntityType>('ticket');
   const [fields, setFields] = useState<ICustomField[]>([]);
+  const [groups, setGroups] = useState<ICustomFieldGroup[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAddDialog, setShowAddDialog] = useState(false);
+  const [showGroupDialog, setShowGroupDialog] = useState(false);
   const [editingField, setEditingField] = useState<ICustomField | null>(null);
+  const [editingGroup, setEditingGroup] = useState<ICustomFieldGroup | null>(null);
   const [deleteDialog, setDeleteDialog] = useState<{
     isOpen: boolean;
     fieldId: string;
     fieldName: string;
     permanent: boolean;
   }>({ isOpen: false, fieldId: '', fieldName: '', permanent: false });
+  const [deleteGroupDialog, setDeleteGroupDialog] = useState<{
+    isOpen: boolean;
+    groupId: string;
+    groupName: string;
+  }>({ isOpen: false, groupId: '', groupName: '' });
 
   // Form state
   const [formData, setFormData] = useState<{
@@ -158,19 +295,38 @@ export function CustomFieldsManager() {
     description: string;
     is_required: boolean;
     options: IPicklistOption[];
+    conditional_logic: IConditionalLogic | null;
+    group_id: string | null;
   }>({
     name: '',
     type: 'text',
     description: '',
     is_required: false,
-    options: []
+    options: [],
+    conditional_logic: null,
+    group_id: null
+  });
+
+  // Group form state
+  const [groupFormData, setGroupFormData] = useState<{
+    name: string;
+    description: string;
+    is_collapsed_by_default: boolean;
+  }>({
+    name: '',
+    description: '',
+    is_collapsed_by_default: false
   });
 
   const fetchFields = useCallback(async () => {
     try {
       setLoading(true);
-      const data = await getCustomFieldsByEntity(selectedEntityType, true);
-      setFields(data);
+      const [fieldsData, groupsData] = await Promise.all([
+        getCustomFieldsByEntity(selectedEntityType, true),
+        getCustomFieldGroups(selectedEntityType)
+      ]);
+      setFields(fieldsData);
+      setGroups(groupsData);
     } catch (error) {
       console.error('Error fetching custom fields:', error);
       toast.error('Failed to load custom fields');
@@ -189,7 +345,17 @@ export function CustomFieldsManager() {
       type: 'text',
       description: '',
       is_required: false,
-      options: []
+      options: [],
+      conditional_logic: null,
+      group_id: null
+    });
+  };
+
+  const resetGroupForm = () => {
+    setGroupFormData({
+      name: '',
+      description: '',
+      is_collapsed_by_default: false
     });
   };
 
@@ -205,10 +371,28 @@ export function CustomFieldsManager() {
       type: field.type,
       description: field.description || '',
       is_required: field.is_required,
-      options: field.options || []
+      options: field.options || [],
+      conditional_logic: field.conditional_logic || null,
+      group_id: field.group_id || null
     });
     setEditingField(field);
     setShowAddDialog(true);
+  };
+
+  const openAddGroupDialog = () => {
+    resetGroupForm();
+    setEditingGroup(null);
+    setShowGroupDialog(true);
+  };
+
+  const openEditGroupDialog = (group: ICustomFieldGroup) => {
+    setGroupFormData({
+      name: group.name,
+      description: group.description || '',
+      is_collapsed_by_default: group.is_collapsed_by_default
+    });
+    setEditingGroup(group);
+    setShowGroupDialog(true);
   };
 
   const handleSave = async () => {
@@ -217,7 +401,8 @@ export function CustomFieldsManager() {
       return;
     }
 
-    if (formData.type === 'picklist' && formData.options.length === 0) {
+    const isPicklistType = formData.type === 'picklist' || formData.type === 'multi_picklist';
+    if (isPicklistType && formData.options.length === 0) {
       toast.error('Picklist fields require at least one option');
       return;
     }
@@ -230,7 +415,9 @@ export function CustomFieldsManager() {
           type: formData.type,
           description: formData.description.trim() || undefined,
           is_required: formData.is_required,
-          options: formData.type === 'picklist' ? formData.options : undefined
+          options: isPicklistType ? formData.options : undefined,
+          conditional_logic: formData.conditional_logic,
+          group_id: formData.group_id
         };
         await updateCustomField(editingField.field_id, updateData);
         toast.success('Custom field updated');
@@ -242,7 +429,9 @@ export function CustomFieldsManager() {
           type: formData.type,
           description: formData.description.trim() || undefined,
           is_required: formData.is_required,
-          options: formData.type === 'picklist' ? formData.options : undefined
+          options: isPicklistType ? formData.options : undefined,
+          conditional_logic: formData.conditional_logic,
+          group_id: formData.group_id
         };
         await createCustomField(createData);
         toast.success('Custom field created');
@@ -254,6 +443,51 @@ export function CustomFieldsManager() {
     } catch (error) {
       console.error('Error saving custom field:', error);
       toast.error('Failed to save custom field');
+    }
+  };
+
+  const handleSaveGroup = async () => {
+    if (!groupFormData.name.trim()) {
+      toast.error('Group name is required');
+      return;
+    }
+
+    try {
+      if (editingGroup) {
+        await updateCustomFieldGroup(editingGroup.group_id, {
+          name: groupFormData.name.trim(),
+          description: groupFormData.description.trim() || undefined,
+          is_collapsed_by_default: groupFormData.is_collapsed_by_default
+        });
+        toast.success('Group updated');
+      } else {
+        await createCustomFieldGroup({
+          entity_type: selectedEntityType,
+          name: groupFormData.name.trim(),
+          description: groupFormData.description.trim() || undefined,
+          is_collapsed_by_default: groupFormData.is_collapsed_by_default
+        });
+        toast.success('Group created');
+      }
+
+      setShowGroupDialog(false);
+      resetGroupForm();
+      fetchFields();
+    } catch (error) {
+      console.error('Error saving group:', error);
+      toast.error('Failed to save group');
+    }
+  };
+
+  const handleDeleteGroup = async () => {
+    try {
+      await deleteCustomFieldGroup(deleteGroupDialog.groupId);
+      toast.success('Group deleted');
+      setDeleteGroupDialog({ isOpen: false, groupId: '', groupName: '' });
+      fetchFields();
+    } catch (error) {
+      console.error('Error deleting group:', error);
+      toast.error('Failed to delete group');
     }
   };
 
@@ -290,14 +524,30 @@ export function CustomFieldsManager() {
       title: 'Name',
       dataIndex: 'name',
       render: (value: string, record: ICustomField) => (
-        <div className="flex items-center gap-2">
-          <span className={record.is_active ? '' : 'text-gray-400 line-through'}>{value}</span>
-          {record.is_required && (
-            <span className="text-xs text-red-500">*Required</span>
-          )}
-          {!record.is_active && (
-            <span className="text-xs bg-gray-200 text-gray-600 px-1 rounded">Inactive</span>
-          )}
+        <div className="flex flex-col gap-1">
+          <div className="flex items-center gap-2">
+            <span className={record.is_active ? '' : 'text-gray-400 line-through'}>{value}</span>
+            {record.is_required && (
+              <span className="text-xs text-red-500">*Required</span>
+            )}
+            {!record.is_active && (
+              <span className="text-xs bg-gray-200 text-gray-600 px-1 rounded">Inactive</span>
+            )}
+          </div>
+          <div className="flex items-center gap-2">
+            {record.group_id && (
+              <span className="text-xs bg-blue-100 text-blue-700 px-1 rounded flex items-center gap-1">
+                <FolderOpen className="w-3 h-3" />
+                {groups.find(g => g.group_id === record.group_id)?.name || 'Group'}
+              </span>
+            )}
+            {record.conditional_logic && (
+              <span className="text-xs bg-purple-100 text-purple-700 px-1 rounded flex items-center gap-1">
+                <Eye className="w-3 h-3" />
+                Conditional
+              </span>
+            )}
+          </div>
         </div>
       )
     },
@@ -387,8 +637,54 @@ export function CustomFieldsManager() {
         ))}
       </div>
 
-      {/* Add Button */}
-      <div className="flex justify-end">
+      {/* Groups Section */}
+      {groups.length > 0 && (
+        <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-sm font-medium text-gray-700">Field Groups</h3>
+            <Button id="add-field-group" variant="outline" size="sm" onClick={openAddGroupDialog}>
+              <Plus className="w-4 h-4 mr-1" />
+              Add Group
+            </Button>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {groups.map(group => (
+              <div
+                key={group.group_id}
+                className="flex items-center gap-2 bg-white border border-gray-200 rounded px-3 py-1"
+              >
+                <FolderOpen className="w-4 h-4 text-blue-500" />
+                <span className="text-sm">{group.name}</span>
+                <button
+                  onClick={() => openEditGroupDialog(group)}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <Pencil className="w-3 h-3" />
+                </button>
+                <button
+                  onClick={() => setDeleteGroupDialog({
+                    isOpen: true,
+                    groupId: group.group_id,
+                    groupName: group.name
+                  })}
+                  className="text-gray-400 hover:text-red-600"
+                >
+                  <Trash2 className="w-3 h-3" />
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Add Buttons */}
+      <div className="flex justify-end gap-2">
+        {groups.length === 0 && (
+          <Button id="add-field-group" variant="outline" onClick={openAddGroupDialog}>
+            <FolderOpen className="w-4 h-4 mr-2" />
+            Add Group
+          </Button>
+        )}
         <Button id="add-custom-field" onClick={openAddDialog}>
           <Plus className="w-4 h-4 mr-2" />
           Add Custom Field
@@ -415,7 +711,7 @@ export function CustomFieldsManager() {
 
       {/* Add/Edit Dialog */}
       <Dialog isOpen={showAddDialog} onClose={() => setShowAddDialog(false)}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
               {editingField ? 'Edit Custom Field' : 'Add Custom Field'}
@@ -440,11 +736,11 @@ export function CustomFieldsManager() {
               onValueChange={(value) => setFormData({
                 ...formData,
                 type: value as CustomFieldType,
-                options: value === 'picklist' ? formData.options : []
+                options: (value === 'picklist' || value === 'multi_picklist') ? formData.options : []
               })}
             />
 
-            {formData.type === 'picklist' && (
+            {(formData.type === 'picklist' || formData.type === 'multi_picklist') && (
               <PicklistOptionEditor
                 options={formData.options}
                 onChange={(options) => setFormData({ ...formData, options })}
@@ -460,6 +756,21 @@ export function CustomFieldsManager() {
               rows={2}
             />
 
+            {groups.length > 0 && (
+              <CustomSelect
+                id="custom-field-group"
+                label="Field Group (optional)"
+                options={[
+                  { value: '', label: 'No group' },
+                  ...groups.map(g => ({ value: g.group_id, label: g.name }))
+                ]}
+                value={formData.group_id || ''}
+                onValueChange={(value) => setFormData({ ...formData, group_id: value || null })}
+                placeholder="Select a group..."
+                allowClear
+              />
+            )}
+
             <div className="flex items-center gap-3">
               <Switch
                 id="custom-field-required"
@@ -471,6 +782,14 @@ export function CustomFieldsManager() {
                 <p className="text-xs text-gray-500">Users must fill this field when creating/editing</p>
               </div>
             </div>
+
+            {/* Conditional Logic Editor */}
+            <ConditionalLogicEditor
+              condition={formData.conditional_logic}
+              onChange={(condition) => setFormData({ ...formData, conditional_logic: condition })}
+              availableFields={fields}
+              currentFieldId={editingField?.field_id}
+            />
           </div>
 
           <DialogFooter>
@@ -484,7 +803,59 @@ export function CustomFieldsManager() {
         </DialogContent>
       </Dialog>
 
-      {/* Delete Confirmation */}
+      {/* Add/Edit Group Dialog */}
+      <Dialog isOpen={showGroupDialog} onClose={() => setShowGroupDialog(false)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>
+              {editingGroup ? 'Edit Field Group' : 'Add Field Group'}
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            <Input
+              id="group-name"
+              label="Group Name"
+              value={groupFormData.name}
+              onChange={(e) => setGroupFormData({ ...groupFormData, name: e.target.value })}
+              placeholder="e.g., Contact Info, Billing Details"
+              required
+            />
+
+            <TextArea
+              id="group-description"
+              label="Description (optional)"
+              value={groupFormData.description}
+              onChange={(e) => setGroupFormData({ ...groupFormData, description: e.target.value })}
+              placeholder="Brief description of this group"
+              rows={2}
+            />
+
+            <div className="flex items-center gap-3">
+              <Switch
+                id="group-collapsed"
+                checked={groupFormData.is_collapsed_by_default}
+                onCheckedChange={(checked) => setGroupFormData({ ...groupFormData, is_collapsed_by_default: checked })}
+              />
+              <div>
+                <label className="text-sm font-medium text-gray-700">Collapsed by Default</label>
+                <p className="text-xs text-gray-500">Group will be collapsed when forms load</p>
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button id="cancel-group-dialog" variant="outline" onClick={() => setShowGroupDialog(false)}>
+              Cancel
+            </Button>
+            <Button id="save-group" onClick={handleSaveGroup}>
+              {editingGroup ? 'Save Changes' : 'Create Group'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Field Confirmation */}
       <ConfirmationDialog
         id="delete-custom-field-dialog"
         isOpen={deleteDialog.isOpen}
@@ -497,6 +868,17 @@ export function CustomFieldsManager() {
             : `Are you sure you want to deactivate "${deleteDialog.fieldName}"? The field will be hidden from forms but data will be preserved.`
         }
         confirmLabel={deleteDialog.permanent ? 'Delete Permanently' : 'Deactivate'}
+      />
+
+      {/* Delete Group Confirmation */}
+      <ConfirmationDialog
+        id="delete-group-dialog"
+        isOpen={deleteGroupDialog.isOpen}
+        onClose={() => setDeleteGroupDialog({ isOpen: false, groupId: '', groupName: '' })}
+        onConfirm={handleDeleteGroup}
+        title="Delete Field Group"
+        message={`Are you sure you want to delete "${deleteGroupDialog.groupName}"? Fields in this group will become ungrouped.`}
+        confirmLabel="Delete Group"
       />
     </div>
   );

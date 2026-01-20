@@ -10,7 +10,12 @@ import {
   CustomFieldEntityType,
   CreateCustomFieldInput,
   UpdateCustomFieldInput,
-  CustomFieldValuesMap
+  CustomFieldValuesMap,
+  ICustomFieldGroup,
+  CreateCustomFieldGroupInput,
+  UpdateCustomFieldGroupInput,
+  ICompanyCustomFieldSetting,
+  UpsertCompanyCustomFieldSettingInput
 } from 'server/src/interfaces/customField.interfaces';
 
 /**
@@ -40,11 +45,12 @@ export async function getCustomFieldsByEntity(
 
   const fields = await query;
 
-  // Parse JSONB options field
+  // Parse JSONB fields
   return fields.map((field: any) => ({
     ...field,
     options: field.options ? (typeof field.options === 'string' ? JSON.parse(field.options) : field.options) : [],
-    default_value: field.default_value ? (typeof field.default_value === 'string' ? JSON.parse(field.default_value) : field.default_value) : null
+    default_value: field.default_value ? (typeof field.default_value === 'string' ? JSON.parse(field.default_value) : field.default_value) : null,
+    conditional_logic: field.conditional_logic ? (typeof field.conditional_logic === 'string' ? JSON.parse(field.conditional_logic) : field.conditional_logic) : null
   }));
 }
 
@@ -73,7 +79,8 @@ export async function getCustomFieldById(fieldId: string): Promise<ICustomField 
   return {
     ...field,
     options: field.options ? (typeof field.options === 'string' ? JSON.parse(field.options) : field.options) : [],
-    default_value: field.default_value ? (typeof field.default_value === 'string' ? JSON.parse(field.default_value) : field.default_value) : null
+    default_value: field.default_value ? (typeof field.default_value === 'string' ? JSON.parse(field.default_value) : field.default_value) : null,
+    conditional_logic: field.conditional_logic ? (typeof field.conditional_logic === 'string' ? JSON.parse(field.conditional_logic) : field.conditional_logic) : null
   };
 }
 
@@ -115,6 +122,8 @@ export async function createCustomField(input: CreateCustomFieldInput): Promise<
     is_required: input.is_required ?? false,
     is_active: true,
     description: input.description ?? null,
+    conditional_logic: input.conditional_logic ? JSON.stringify(input.conditional_logic) : null,
+    group_id: input.group_id ?? null,
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString()
   };
@@ -126,7 +135,8 @@ export async function createCustomField(input: CreateCustomFieldInput): Promise<
   return {
     ...created,
     options: created.options ? (typeof created.options === 'string' ? JSON.parse(created.options) : created.options) : [],
-    default_value: created.default_value ? (typeof created.default_value === 'string' ? JSON.parse(created.default_value) : created.default_value) : null
+    default_value: created.default_value ? (typeof created.default_value === 'string' ? JSON.parse(created.default_value) : created.default_value) : null,
+    conditional_logic: created.conditional_logic ? (typeof created.conditional_logic === 'string' ? JSON.parse(created.conditional_logic) : created.conditional_logic) : null
   };
 }
 
@@ -163,6 +173,8 @@ export async function updateCustomField(
   if (input.is_required !== undefined) updateData.is_required = input.is_required;
   if (input.is_active !== undefined) updateData.is_active = input.is_active;
   if (input.description !== undefined) updateData.description = input.description;
+  if (input.conditional_logic !== undefined) updateData.conditional_logic = input.conditional_logic ? JSON.stringify(input.conditional_logic) : null;
+  if (input.group_id !== undefined) updateData.group_id = input.group_id;
 
   const [updated] = await knex('custom_fields')
     .where({ tenant, field_id: fieldId })
@@ -176,7 +188,8 @@ export async function updateCustomField(
   return {
     ...updated,
     options: updated.options ? (typeof updated.options === 'string' ? JSON.parse(updated.options) : updated.options) : [],
-    default_value: updated.default_value ? (typeof updated.default_value === 'string' ? JSON.parse(updated.default_value) : updated.default_value) : null
+    default_value: updated.default_value ? (typeof updated.default_value === 'string' ? JSON.parse(updated.default_value) : updated.default_value) : null,
+    conditional_logic: updated.conditional_logic ? (typeof updated.conditional_logic === 'string' ? JSON.parse(updated.conditional_logic) : updated.conditional_logic) : null
   };
 }
 
@@ -412,6 +425,20 @@ export async function validateCustomFieldValues(
           }
         }
         break;
+      case 'multi_picklist':
+        if (field.options && field.options.length > 0) {
+          const validValues = field.options.map(opt => opt.value);
+          // Value should be an array for multi_picklist
+          if (!Array.isArray(value)) {
+            errors.push(`${field.name} must be a list of values`);
+          } else {
+            const invalidValues = value.filter(v => !validValues.includes(String(v)));
+            if (invalidValues.length > 0) {
+              errors.push(`${field.name} contains invalid values: ${invalidValues.join(', ')}`);
+            }
+          }
+        }
+        break;
       // 'text' accepts any string value
     }
   }
@@ -449,4 +476,352 @@ function getTableConfig(entityType: CustomFieldEntityType): {
     default:
       throw new Error(`Unknown entity type: ${entityType}`);
   }
+}
+
+// =============================================================================
+// Custom Field Groups
+// =============================================================================
+
+/**
+ * Get all custom field groups for an entity type
+ */
+export async function getCustomFieldGroups(
+  entityType: CustomFieldEntityType
+): Promise<ICustomFieldGroup[]> {
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
+    throw new Error('No authenticated user found');
+  }
+
+  const { knex, tenant } = await createTenantKnex();
+  if (!tenant) {
+    throw new Error('Tenant not found');
+  }
+
+  const groups = await knex('custom_field_groups')
+    .where({ tenant, entity_type: entityType })
+    .orderBy('group_order', 'asc');
+
+  return groups;
+}
+
+/**
+ * Get a single custom field group by ID
+ */
+export async function getCustomFieldGroupById(groupId: string): Promise<ICustomFieldGroup | null> {
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
+    throw new Error('No authenticated user found');
+  }
+
+  const { knex, tenant } = await createTenantKnex();
+  if (!tenant) {
+    throw new Error('Tenant not found');
+  }
+
+  const group = await knex('custom_field_groups')
+    .where({ tenant, group_id: groupId })
+    .first();
+
+  return group || null;
+}
+
+/**
+ * Create a new custom field group
+ */
+export async function createCustomFieldGroup(
+  input: CreateCustomFieldGroupInput
+): Promise<ICustomFieldGroup> {
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
+    throw new Error('No authenticated user found');
+  }
+
+  if (!await hasPermission(currentUser, 'settings', 'update')) {
+    throw new Error('Permission denied: Cannot create custom field groups');
+  }
+
+  const { knex, tenant } = await createTenantKnex();
+  if (!tenant) {
+    throw new Error('Tenant not found');
+  }
+
+  // Get max group_order for this entity type
+  const maxOrderResult = await knex('custom_field_groups')
+    .where({ tenant, entity_type: input.entity_type })
+    .max('group_order as max_order')
+    .first();
+
+  const nextOrder = input.group_order ?? ((maxOrderResult?.max_order ?? -1) + 1);
+
+  const newGroup = {
+    tenant,
+    entity_type: input.entity_type,
+    name: input.name,
+    description: input.description ?? null,
+    group_order: nextOrder,
+    is_collapsed_by_default: input.is_collapsed_by_default ?? false,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString()
+  };
+
+  const [created] = await knex('custom_field_groups')
+    .insert(newGroup)
+    .returning('*');
+
+  return created;
+}
+
+/**
+ * Update a custom field group
+ */
+export async function updateCustomFieldGroup(
+  groupId: string,
+  input: UpdateCustomFieldGroupInput
+): Promise<ICustomFieldGroup> {
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
+    throw new Error('No authenticated user found');
+  }
+
+  if (!await hasPermission(currentUser, 'settings', 'update')) {
+    throw new Error('Permission denied: Cannot update custom field groups');
+  }
+
+  const { knex, tenant } = await createTenantKnex();
+  if (!tenant) {
+    throw new Error('Tenant not found');
+  }
+
+  const updateData: any = {
+    updated_at: new Date().toISOString()
+  };
+
+  if (input.name !== undefined) updateData.name = input.name;
+  if (input.description !== undefined) updateData.description = input.description;
+  if (input.group_order !== undefined) updateData.group_order = input.group_order;
+  if (input.is_collapsed_by_default !== undefined) updateData.is_collapsed_by_default = input.is_collapsed_by_default;
+
+  const [updated] = await knex('custom_field_groups')
+    .where({ tenant, group_id: groupId })
+    .update(updateData)
+    .returning('*');
+
+  if (!updated) {
+    throw new Error('Custom field group not found');
+  }
+
+  return updated;
+}
+
+/**
+ * Delete a custom field group
+ * Fields in this group will have their group_id set to null
+ */
+export async function deleteCustomFieldGroup(groupId: string): Promise<void> {
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
+    throw new Error('No authenticated user found');
+  }
+
+  if (!await hasPermission(currentUser, 'settings', 'delete')) {
+    throw new Error('Permission denied: Cannot delete custom field groups');
+  }
+
+  const { knex, tenant } = await createTenantKnex();
+  if (!tenant) {
+    throw new Error('Tenant not found');
+  }
+
+  await knex('custom_field_groups')
+    .where({ tenant, group_id: groupId })
+    .delete();
+}
+
+/**
+ * Reorder custom field groups
+ */
+export async function reorderCustomFieldGroups(
+  entityType: CustomFieldEntityType,
+  groupIds: string[]
+): Promise<void> {
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
+    throw new Error('No authenticated user found');
+  }
+
+  if (!await hasPermission(currentUser, 'settings', 'update')) {
+    throw new Error('Permission denied: Cannot reorder custom field groups');
+  }
+
+  const { knex, tenant } = await createTenantKnex();
+  if (!tenant) {
+    throw new Error('Tenant not found');
+  }
+
+  await withTransaction(knex, async (trx: Knex.Transaction) => {
+    for (let i = 0; i < groupIds.length; i++) {
+      await trx('custom_field_groups')
+        .where({ tenant, group_id: groupIds[i], entity_type: entityType })
+        .update({ group_order: i, updated_at: new Date().toISOString() });
+    }
+  });
+}
+
+// =============================================================================
+// Company Custom Field Settings (Per-Client Templates)
+// =============================================================================
+
+/**
+ * Get custom field settings for a company
+ */
+export async function getCompanyCustomFieldSettings(
+  companyId: string
+): Promise<ICompanyCustomFieldSetting[]> {
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
+    throw new Error('No authenticated user found');
+  }
+
+  const { knex, tenant } = await createTenantKnex();
+  if (!tenant) {
+    throw new Error('Tenant not found');
+  }
+
+  const settings = await knex('company_custom_field_settings')
+    .where({ tenant, company_id: companyId });
+
+  return settings.map((setting: any) => ({
+    ...setting,
+    override_default_value: setting.override_default_value
+      ? (typeof setting.override_default_value === 'string'
+        ? JSON.parse(setting.override_default_value)
+        : setting.override_default_value)
+      : null
+  }));
+}
+
+/**
+ * Upsert a company custom field setting
+ */
+export async function upsertCompanyCustomFieldSetting(
+  input: UpsertCompanyCustomFieldSettingInput
+): Promise<ICompanyCustomFieldSetting> {
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
+    throw new Error('No authenticated user found');
+  }
+
+  if (!await hasPermission(currentUser, 'company', 'update')) {
+    throw new Error('Permission denied: Cannot update company custom field settings');
+  }
+
+  const { knex, tenant } = await createTenantKnex();
+  if (!tenant) {
+    throw new Error('Tenant not found');
+  }
+
+  const settingData = {
+    tenant,
+    company_id: input.company_id,
+    field_id: input.field_id,
+    is_enabled: input.is_enabled,
+    override_default_value: input.override_default_value !== undefined
+      ? JSON.stringify(input.override_default_value)
+      : null,
+    updated_at: new Date().toISOString()
+  };
+
+  // Try to update first
+  const [updated] = await knex('company_custom_field_settings')
+    .where({ tenant, company_id: input.company_id, field_id: input.field_id })
+    .update(settingData)
+    .returning('*');
+
+  if (updated) {
+    return {
+      ...updated,
+      override_default_value: updated.override_default_value
+        ? (typeof updated.override_default_value === 'string'
+          ? JSON.parse(updated.override_default_value)
+          : updated.override_default_value)
+        : null
+    };
+  }
+
+  // Insert if not found
+  const [created] = await knex('company_custom_field_settings')
+    .insert({
+      ...settingData,
+      created_at: new Date().toISOString()
+    })
+    .returning('*');
+
+  return {
+    ...created,
+    override_default_value: created.override_default_value
+      ? (typeof created.override_default_value === 'string'
+        ? JSON.parse(created.override_default_value)
+        : created.override_default_value)
+      : null
+  };
+}
+
+/**
+ * Delete a company custom field setting
+ */
+export async function deleteCompanyCustomFieldSetting(
+  companyId: string,
+  fieldId: string
+): Promise<void> {
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
+    throw new Error('No authenticated user found');
+  }
+
+  if (!await hasPermission(currentUser, 'company', 'update')) {
+    throw new Error('Permission denied: Cannot delete company custom field settings');
+  }
+
+  const { knex, tenant } = await createTenantKnex();
+  if (!tenant) {
+    throw new Error('Tenant not found');
+  }
+
+  await knex('company_custom_field_settings')
+    .where({ tenant, company_id: companyId, field_id: fieldId })
+    .delete();
+}
+
+/**
+ * Get custom fields for a company, filtered by company settings
+ * Returns only fields that are enabled for this company
+ */
+export async function getCustomFieldsForCompany(
+  entityType: CustomFieldEntityType,
+  companyId: string
+): Promise<ICustomField[]> {
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
+    throw new Error('No authenticated user found');
+  }
+
+  const { knex, tenant } = await createTenantKnex();
+  if (!tenant) {
+    throw new Error('Tenant not found');
+  }
+
+  // Get all active fields for this entity type
+  const allFields = await getCustomFieldsByEntity(entityType, false);
+
+  // Get company settings
+  const settings = await getCompanyCustomFieldSettings(companyId);
+  const settingsMap = new Map(settings.map(s => [s.field_id, s]));
+
+  // Filter fields based on company settings
+  // Fields without settings are included by default
+  return allFields.filter(field => {
+    const setting = settingsMap.get(field.field_id);
+    return !setting || setting.is_enabled;
+  });
 }
