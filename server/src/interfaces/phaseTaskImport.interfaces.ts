@@ -6,6 +6,7 @@
  */
 
 import { TenantEntity } from './index';
+import { IUser } from '@shared/interfaces/user.interfaces';
 
 /**
  * All mappable fields in the CSV import
@@ -143,9 +144,14 @@ export interface IPhaseTaskValidationResponse {
  * Contains both full objects (for dropdowns) and lookup maps (for validation).
  * Fetched in a single transaction to reduce DB connection usage.
  */
+/**
+ * Subset of IUser fields needed for the import user picker
+ */
+export type IImportUser = Pick<IUser, 'user_id' | 'username' | 'first_name' | 'last_name' | 'email' | 'user_type' | 'is_inactive' | 'tenant'>;
+
 export interface IImportReferenceData {
   // Full objects for dropdowns
-  users: Array<{ user_id: string; first_name: string; last_name: string }>;
+  users: IImportUser[];
   priorities: Array<{ priority_id: string; priority_name: string }>;
   services: Array<{ service_id: string; service_name: string }>;
   statusMappings: Array<{ project_status_mapping_id: string; status_name: string; name: string; custom_name?: string; is_closed?: boolean }>;
