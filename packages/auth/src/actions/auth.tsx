@@ -6,9 +6,7 @@ import logger from "@alga-psa/core/logger";
 
 import { IUser } from '@alga-psa/types';
 import { isValidTenantSlug } from '@alga-psa/validation';
-
-// Dynamic imports to avoid circular dependencies (but still allow Next/Turbopack to bundle them).
-const getAnalytics = async () => (await import('@alga-psa/analytics')).analytics;
+import { analytics } from '@alga-psa/analytics';
 
 const getTenantIdBySlugAsync = async (slug: string): Promise<string | null> => {
   const { getTenantIdBySlug } = await import('@alga-psa/tenancy/actions');
@@ -94,7 +92,7 @@ export async function authenticateUser(
     // Check if user is inactive
     if (user.is_inactive) {
         logger.warn(`[authenticateUser] Inactive user attempted to login: ${email}`);
-        (await getAnalytics()).capture('login_failed', {
+        void analytics.capture('login_failed', {
             reason: 'inactive_account',
             has_two_factor: user.two_factor_enabled,
         });
@@ -103,7 +101,7 @@ export async function authenticateUser(
 
     if (!user.hashed_password) {
         logger.warn(`[authenticateUser] Missing hashed_password for email ${email}`);
-        (await getAnalytics()).capture('login_failed', {
+        void analytics.capture('login_failed', {
             reason: 'missing_password_hash',
             has_two_factor: user.two_factor_enabled,
         });
@@ -113,14 +111,14 @@ export async function authenticateUser(
     const isValid = await verifyPassword(password, user.hashed_password);
     if (!isValid) {
         logger.warn(`[authenticateUser] Invalid password for email ${email}`);
-        (await getAnalytics()).capture('login_failed', {
+        void analytics.capture('login_failed', {
             reason: 'invalid_password',
             has_two_factor: user.two_factor_enabled,
         });
         return null;
     }
 
-    (await getAnalytics()).capture(
+    void analytics.capture(
         'auth_validated',
         {
             has_two_factor: user.two_factor_enabled,

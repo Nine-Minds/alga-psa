@@ -11,15 +11,11 @@ import { getInfoFromToken, createToken } from '../lib/tokenizer';
 import { hashPassword } from '@alga-psa/core/encryption';
 import logger from '@alga-psa/core/logger';
 import { isValidEmail } from '@alga-psa/validation';
+import { analytics, AnalyticsEvents } from '@alga-psa/analytics';
 
 // Dynamic imports to avoid circular dependency (auth -> email -> integrations -> users -> auth)
 // Note: Using string concatenation to prevent static analysis from detecting these dependencies
 const getEmailModule = () => '@alga-psa/' + 'email';
-
-const getAnalytics = async () => {
-  const mod = await import('@alga-psa/analytics');
-  return { analytics: mod.analytics, AnalyticsEvents: mod.AnalyticsEvents };
-};
 
 const getSystemEmailServiceAsync = async () => {
   const { getSystemEmailService } = await import('@alga-psa/email');
@@ -80,8 +76,7 @@ export async function verifyRegisterUser(token: string): Promise<VerifyResponse>
       await User.insert(db, newUser);
       
       // Track user registration
-      const { analytics, AnalyticsEvents } = await getAnalytics();
-      analytics.capture(AnalyticsEvents.USER_SIGNED_UP, {
+      void analytics.capture(AnalyticsEvents.USER_SIGNED_UP, {
         user_type: newUser.user_type,
         registration_method: 'email_verification',
         client_created: true,
@@ -293,8 +288,7 @@ export async function registerUser({ username, email, password, clientName }: IU
       await User.insert(db, newUser);
       
       // Track user registration (direct, no email verification)
-      const { analytics, AnalyticsEvents } = await getAnalytics();
-      analytics.capture(AnalyticsEvents.USER_SIGNED_UP, {
+      void analytics.capture(AnalyticsEvents.USER_SIGNED_UP, {
         user_type: 'internal',
         registration_method: 'direct',
         client_created: true,
