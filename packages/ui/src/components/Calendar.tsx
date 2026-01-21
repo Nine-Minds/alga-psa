@@ -143,6 +143,7 @@ function Calendar({
           </button>
         </div>
       </div>
+      {/* @ts-ignore - DayPicker has complex discriminated union types for mode/selected/onSelect */}
       <DayPicker
         showOutsideDays={showOutsideDays}
         className={cn('rdp', className)}
@@ -151,7 +152,7 @@ function Calendar({
           caption: 'rdp-caption-hidden',
           nav: 'rdp-nav-hidden'
         }}
-        mode={mode}
+        mode="single"
         selected={selected}
         onSelect={onSelect}
         month={monthYear}

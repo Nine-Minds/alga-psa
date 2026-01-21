@@ -513,7 +513,7 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
         });
 
         if (!result.success) {
-          setError(result.error);
+          setError((result as { success: false; error: string }).error);
           return;
         }
 

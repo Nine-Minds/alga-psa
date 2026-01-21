@@ -94,7 +94,7 @@ export default function DockerExtensionIframe({ src, extensionId }: Props) {
             className="extension-loading-indicator"
             text="Starting extension"
             textClassName="extension-loading-text"
-            spinnerProps={{ size: 'sm', color: 'border-primary-400' }}
+            spinnerProps={{ size: 'sm' }}
           />
           <p className="extension-loading-subtext">Loading extension UI&hellip;</p>
         </div>

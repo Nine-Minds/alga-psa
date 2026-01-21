@@ -142,7 +142,7 @@ export default function InstallerPanel() {
         });
 
         if (!finalizeResponse.success) {
-          const { code, message, details } = finalizeResponse.error;
+          const { code, message, details } = (finalizeResponse as { success: false; error: { message: string; code?: string; details?: unknown } }).error;
           // Show manual manifest input if extraction failed or manifest is invalid
           const manifestIssue = code === 'MANIFEST_NOT_FOUND' || code === 'MANIFEST_EXTRACTION_FAILED' || code === 'INVALID_MANIFEST';
           if (manifestIssue) {
@@ -200,7 +200,7 @@ export default function InstallerPanel() {
       });
 
       if (!finalizeResponse.success) {
-        const { message, code, details } = finalizeResponse.error;
+        const { message, code, details } = (finalizeResponse as { success: false; error: { message: string; code?: string; details?: unknown } }).error;
         setError({
           error: message || 'Failed to finalize with provided manifest',
           code,

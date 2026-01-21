@@ -180,11 +180,10 @@
     "node_modules",
     "dist",
     "src/components/flow",
-    
+
     "../../server/src/test/**",
     "../../server/test-utils/**",
-    // Skip unit tests/specs but keep Playwright (handled via include paths)
-    
+
     ".next/types/**"
   ]
 }

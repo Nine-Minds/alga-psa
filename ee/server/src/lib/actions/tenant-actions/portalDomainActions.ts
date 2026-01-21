@@ -20,7 +20,7 @@ import type {
   PortalDomainStatusResponse,
   PortalDomainRegistrationRequest,
   PortalDomainRegistrationResult,
-} from '@/lib/actions/tenant-actions/portalDomain.types';
+} from '@alga-psa/tenancy/actions/tenant-actions/portalDomain.types';
 import { enqueuePortalDomainWorkflow } from '@ee/lib/portal-domains/workflowClient';
 import type { IUser } from 'server/src/interfaces/auth.interfaces';
 import { analytics } from '@/lib/analytics/posthog';

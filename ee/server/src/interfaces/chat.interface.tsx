@@ -1,4 +1,4 @@
-import { TenantEntity } from '@/interfaces';
+import { TenantEntity } from '@/interfaces/index';
 
 export interface IChat extends TenantEntity {
   id?: string;

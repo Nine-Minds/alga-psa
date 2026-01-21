@@ -78,7 +78,7 @@ export default async function ExtensionPage({ params }: { params: PageParams | P
 
   return (
     <div className="flex-1 w-full flex flex-col min-h-0">
-      <ExtensionIframe domain={info.runner_domain} />
+      <ExtensionIframe domain={info.runner_domain} extensionId={id} />
     </div>
   );
 }

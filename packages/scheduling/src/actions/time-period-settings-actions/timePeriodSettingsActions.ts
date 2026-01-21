@@ -52,7 +52,7 @@ export async function getActiveTimePeriodSettings(): Promise<ITimePeriodSettings
       })));
   });
 
-  return validateArray(timePeriodSettingsSchema, activeSettings);
+  return validateArray(timePeriodSettingsSchema, activeSettings) as ITimePeriodSettings[];
 }
 
 export async function updateTimePeriodSettings(settings: ITimePeriodSettings): Promise<void> {
@@ -143,7 +143,7 @@ export async function createTimePeriodSettings(settings: Partial<ITimePeriodSett
   // NOTE: Recurring job scheduling is handled at a higher layer; avoid scheduling → jobs deps here.
 
   // Now validate the complete record with the schema
-  return validateData(timePeriodSettingsSchema, formattedSetting);
+  return validateData(timePeriodSettingsSchema, formattedSetting) as ITimePeriodSettings;
 }
 
 export async function deleteTimePeriodSettings(settingId: string): Promise<void> {

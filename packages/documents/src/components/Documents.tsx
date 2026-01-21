@@ -810,7 +810,7 @@ const Documents = ({
             {/* View Mode Switcher */}
             <ViewSwitcher
               currentView={viewMode}
-              onChange={setViewMode}
+              onChange={(view: string) => setViewMode(view as 'grid' | 'list')}
               options={[
                 { value: 'grid', label: 'Grid', icon: Grid },
                 { value: 'list', label: 'List', icon: ListIcon },

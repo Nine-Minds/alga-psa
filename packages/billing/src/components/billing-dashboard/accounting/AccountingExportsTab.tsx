@@ -460,7 +460,7 @@ const AccountingExportsTab: React.FC = () => {
       {
         title: 'Batch ID',
         dataIndex: 'display_id'
-      },
+      } as ColumnDefinition<AccountingExportRow>,
       {
         title: 'Adapter',
         dataIndex: 'adapter_type',

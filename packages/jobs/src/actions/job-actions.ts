@@ -66,7 +66,7 @@ export async function getQueueMetricsAction(): Promise<JobMetrics> {
       knex.raw(`COUNT(*) FILTER (WHERE runner_type = 'pgboss') as pgboss`),
       knex.raw(`COUNT(*) FILTER (WHERE runner_type = 'temporal') as temporal`)
     )
-    .first();
+    .first() as unknown as { total: string; completed: string; failed: string; pending: string; active: string; queued: string; pgboss: string; temporal: string } | undefined;
 
   return {
     total: parseInt(String(result?.total || '0'), 10),

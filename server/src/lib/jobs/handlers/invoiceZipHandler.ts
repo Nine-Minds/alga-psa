@@ -192,7 +192,7 @@ export class InvoiceZipJobHandler {
       });
 
       if (!uploadResult.success) {
-        throw new Error(uploadResult.error || 'Failed to upload zip document');
+        throw new Error((uploadResult as { success: false; error: string }).error || 'Failed to upload zip document');
       }
 
       // Complete ZIP creation

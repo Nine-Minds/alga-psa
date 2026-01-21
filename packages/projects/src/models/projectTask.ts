@@ -120,7 +120,7 @@ const ProjectTaskModel = {
               if (typeof value === 'string') {
                 finalTaskData[typedKey] = new Date(value);
               } else if (value instanceof Date || value === null) {
-                finalTaskData[typedKey] = value;
+                finalTaskData[typedKey] = value as Date | null;
               }
               break;
             case 'service_id':

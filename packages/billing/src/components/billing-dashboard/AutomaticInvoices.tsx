@@ -329,7 +329,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
     } else {
       setPreviewState({ data: null, billingCycleId: null }); // Clear preview state on error
       setErrors({
-        preview: response.error
+        preview: (response as { success: false; error: string }).error
       });
       // Optionally open the dialog even on error to show the message
       setShowPreviewDialog(true);

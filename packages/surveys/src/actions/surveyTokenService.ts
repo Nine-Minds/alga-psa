@@ -90,7 +90,7 @@ export async function resolveSurveyTenantFromToken(token: string): Promise<Resol
 
   const tenantId = lookup.tenant;
 
-  const invitationRow = await runWithTenant(tenantId, async () => {
+  const invitationRow = await runWithTenant<InvitationDetailRow | undefined>(tenantId, async () => {
     const { knex } = await createTenantKnex();
 
     return knex<InvitationDetailRow>(SURVEY_INVITATIONS_TABLE)
@@ -120,7 +120,7 @@ export async function resolveSurveyTenantFromToken(token: string): Promise<Resol
         );
       })
       .where(`${SURVEY_INVITATIONS_TABLE}.survey_token_hash`, hashedToken)
-      .first();
+      .first() as unknown as InvitationDetailRow | undefined;
   });
 
   if (!invitationRow) {

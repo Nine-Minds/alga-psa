@@ -237,7 +237,7 @@ export class PlaywrightAuthSessionHelper {
     const expiresAtSeconds = issuedAtSeconds + maxAgeSeconds;
 
     const context = this.page.context();
-    const cookies: Parameters<typeof context.addCookies>[0] = [];
+    const cookies: Array<Parameters<typeof context.addCookies>[0][number]> = [];
 
     for (const url of this.cookieHosts) {
       for (const name of this.cookieNames) {

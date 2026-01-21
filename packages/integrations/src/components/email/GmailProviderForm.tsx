@@ -242,7 +242,7 @@ export function GmailProviderForm({
       });
 
       if (!oauthResult.success) {
-        throw new Error(oauthResult.error || 'Failed to initiate OAuth');
+        throw new Error((oauthResult as { success: false; error: string }).error || 'Failed to initiate OAuth');
       }
       const { authUrl } = oauthResult;
 

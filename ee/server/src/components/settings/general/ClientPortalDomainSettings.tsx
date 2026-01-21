@@ -17,7 +17,7 @@ import {
   requestPortalDomainRegistrationAction,
   retryPortalDomainRegistrationAction,
 } from '@ee/lib/actions/tenant-actions/portalDomainActions';
-import type { PortalDomainStatusResponse } from 'server/src/lib/actions/tenant-actions/portalDomain.types';
+import type { PortalDomainStatusResponse } from '@alga-psa/tenancy/actions/tenant-actions/portalDomain.types';
 import type { PortalDomainStatus } from 'server/src/models/PortalDomainModel';
 
 interface StatusBadgeConfig {

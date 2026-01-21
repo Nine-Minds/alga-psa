@@ -1,4 +1,5 @@
 import { getSession } from 'next-auth/react';
+import '@alga-psa/auth/types/next-auth';
 
 /**
  * Client-side function to get current tenant from session.

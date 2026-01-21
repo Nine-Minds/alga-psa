@@ -6,10 +6,6 @@ const { getAdminConnectionMock } = vi.hoisted(() => ({
   }),
 }));
 
-vi.mock("../../../../shared/db/admin", () => ({
-  getAdminConnection: getAdminConnectionMock,
-}));
-
 vi.mock("@alga-psa/db/admin", () => ({
   getAdminConnection: getAdminConnectionMock,
 }));
@@ -31,7 +27,8 @@ vi.mock("@/lib/analytics/posthog", () => ({
 }));
 
 import { previewBulkSsoAssignment } from "../../lib/actions/ssoActions";
-import { getAdminConnection } from "../../../../shared/db/admin";
+
+const getAdminConnection = getAdminConnectionMock;
 
 describe("previewBulkSsoAssignment", () => {
   beforeEach(() => {

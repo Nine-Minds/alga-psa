@@ -389,6 +389,7 @@ async function completeContractWizardFlow(
       allowRollover?: boolean;
       serviceName?: string;
     };
+    onReview?: (page: Page) => Promise<void>;
   }
 ): Promise<void> {
   if (!tenantData.client) {
@@ -1114,6 +1115,7 @@ test.describe('Contract Wizard Happy Path', () => {
     let tenantData: TenantTestData | null = null;
     const now = new Date();
     const fixedServiceName = `Playwright Fixed Service ${uuidv4().slice(0, 8)}`;
+    const usageServiceName = `Playwright Usage Service ${uuidv4().slice(0, 8)}`;
     const contractName = `Playwright Usage Bucket Contract ${uuidv4().slice(0, 8)}`;
 
     try {
@@ -1124,6 +1126,7 @@ test.describe('Contract Wizard Happy Path', () => {
       const tenantId = tenantData.tenant.tenantId;
       await prepareWizardTenant(db, tenantId, now);
       await seedFixedServiceForTenant(db, tenantId, fixedServiceName, now);
+      await seedUsageServiceForTenant(db, tenantId, usageServiceName, now, 50);
       await completeContractWizardFlow(page, tenantData, fixedServiceName, contractName, {
         baseRate: 500,
         usageBucketOverlay: {

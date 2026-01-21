@@ -1,6 +1,6 @@
 "use server";
 
-import { getTenantSettings, updateTenantSettings } from "server/src/lib/actions/tenant-settings-actions/tenantSettingsActions";
+import { getTenantSettings, updateTenantSettings } from "@alga-psa/tenancy/actions/tenant-settings-actions/tenantSettingsActions";
 import { getCurrentUser } from "@alga-psa/users/actions";
 import { hasPermission } from "@alga-psa/auth";
 import { createTenantKnex } from "@/lib/db";

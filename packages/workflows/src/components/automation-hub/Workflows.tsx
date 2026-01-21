@@ -92,13 +92,13 @@ export default function Workflows({ workflowId }: WorkflowsProps) {
       
       // TODO: Replace with actual event data when available
       // For now, we'll use placeholder event data
-      const workflowsWithEvents: WorkflowWithEvents[] = workflowsData.map((workflow: WorkflowDataWithSystemFlag) => ({
+      const workflowsWithEvents = workflowsData.map((workflow: WorkflowDataWithSystemFlag) => ({
         ...workflow,
         id: workflow.id || workflow.registration_id || '', // Ensure ID is set
-        events: [],
+        events: [] as string[],
         lastUpdated: workflow.updated_at || new Date().toISOString(), // Use updated_at if available
         isSystemManaged: workflow.isSystemManaged // Map the flag
-      }));
+      } as WorkflowWithEvents));
       
       setWorkflows(workflowsWithEvents);
     } catch (error) {
@@ -357,13 +357,13 @@ export default function Workflows({ workflowId }: WorkflowsProps) {
         // If not found in the current list, fetch it from the server
         const workflowData = await getWorkflow(id);
         if (workflowData) {
-          const workflowWithEvents: WorkflowWithEvents = {
+          const workflowWithEvents = {
             ...workflowData,
             id: workflowData.id || '',
-            events: [],
+            events: [] as string[],
             lastUpdated: new Date().toISOString(),
             isSystemManaged: workflowData.isSystemManaged // Add the missing flag
-          };
+          } as WorkflowWithEvents;
           setWorkflowToTest(workflowWithEvents);
           setIsTestModalOpen(true);
         } else {

@@ -23,7 +23,7 @@ type UpdateRequestBody = z.infer<typeof updateRequestSchema>;
 const updateHandler = withPermission('extension', 'write')(
   withValidation(updateRequestSchema)(async (_req: ApiRequest, body: UpdateRequestBody) => {
     try {
-      const result = await updateExtensionForCurrentTenantV2(body);
+      const result = await updateExtensionForCurrentTenantV2({ registryId: body.registryId!, version: body.version!, disableMissingSchedules: body.disableMissingSchedules });
       return createSuccessResponse(
         {
           registryId: body.registryId,

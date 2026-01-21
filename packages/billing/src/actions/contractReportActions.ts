@@ -343,7 +343,7 @@ export async function getProfitabilityReport(): Promise<Profitability[]> {
     const revenueResult = await knex('invoices')
       .where({ tenant })
       .whereRaw('invoice_date >= ?', [yearStart.toISOString()])
-      .select(knex.raw('SUM(total_amount) as total_revenue'));
+      .select(knex.raw('SUM(total_amount) as total_revenue')) as { total_revenue: number }[];
 
     const totalRevenue = (revenueResult[0]?.total_revenue as number) || 0;
 
@@ -351,7 +351,7 @@ export async function getProfitabilityReport(): Promise<Profitability[]> {
     const timeEntries = await knex('time_entries as te')
       .where({ 'te.tenant': tenant })
       .whereRaw('te.start_time >= ?', [yearStart.toISOString()])
-      .select(knex.raw('SUM(billable_duration) as total_minutes'));
+      .select(knex.raw('SUM(billable_duration) as total_minutes')) as { total_minutes: number }[];
 
     const totalMinutes = (timeEntries[0]?.total_minutes as number) || 0;
     const totalHours = totalMinutes / 60;
