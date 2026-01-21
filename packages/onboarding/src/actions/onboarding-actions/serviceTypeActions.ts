@@ -79,7 +79,7 @@ export async function getTenantServiceTypes(): Promise<{
       return { success: false, error: 'No tenant found' };
     }
 
-    const { knex } = await createTenantKnex();
+    const { knex } = await createTenantKnex(tenant);
     
     const serviceTypes = await withTransaction(knex, async (trx: Knex.Transaction) => {
       return await trx('service_types')
@@ -122,7 +122,7 @@ export async function createTenantServiceType(input: {
       return { success: false, error: 'No tenant found' };
     }
 
-    const { knex } = await createTenantKnex();
+    const { knex } = await createTenantKnex(tenant);
 
     const inserted = await withTransaction(knex, async (trx: Knex.Transaction) => {
       const [row] = await trx('service_types')

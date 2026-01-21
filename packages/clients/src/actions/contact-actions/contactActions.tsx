@@ -1022,7 +1022,12 @@ export async function importContactsFromCSV(
   contactsData: Array<ContactImportData>,
   updateExisting: boolean = false
 ): Promise<ImportContactResult[]> {
-  const { knex: db, tenant } = await createTenantKnex();
+  const currentUser = await getCurrentUserAsync();
+  if (!currentUser) {
+    throw new Error('Unauthorized');
+  }
+
+  const { knex: db, tenant } = await createTenantKnex(currentUser.tenant);
   if (!tenant) {
     throw new Error('SYSTEM_ERROR: Tenant configuration not found');
   }
@@ -1033,11 +1038,6 @@ export async function importContactsFromCSV(
       throw new Error('VALIDATION_ERROR: No contact data provided');
     }
 
-    // Get current user for tag creation
-    const currentUser = await getCurrentUserAsync();
-    if (!currentUser) {
-      throw new Error('SYSTEM_ERROR: User authentication required');
-    }
 
     const results: ImportContactResult[] = [];
 
@@ -1283,7 +1283,12 @@ export async function importContactsFromCSV(
 export async function checkExistingEmails(
   emails: string[]
 ): Promise<string[]> {
-  const { knex: db, tenant } = await createTenantKnex();
+  const currentUser = await getCurrentUserAsync();
+  if (!currentUser) {
+    throw new Error('Unauthorized');
+  }
+
+  const { knex: db, tenant } = await createTenantKnex(currentUser.tenant);
   if (!tenant) {
     throw new Error('SYSTEM_ERROR: Tenant configuration not found');
   }
@@ -1341,7 +1346,12 @@ export async function checkExistingEmails(
 
 export async function getContactByEmail(email: string, clientId: string) {
   try {
-    const { knex, tenant } = await createTenantKnex();
+    const currentUser = await getCurrentUserAsync();
+    if (!currentUser) {
+      throw new Error('Unauthorized');
+    }
+
+    const { knex, tenant } = await createTenantKnex(currentUser.tenant);
     if (!tenant) {
       throw new Error('Tenant not found');
     }
@@ -1381,7 +1391,12 @@ export async function createClientContact({
   jobTitle?: string;
 }) {
   try {
-    const { knex, tenant } = await createTenantKnex();
+    const currentUser = await getCurrentUserAsync();
+    if (!currentUser) {
+      throw new Error('Unauthorized');
+    }
+
+    const { knex, tenant } = await createTenantKnex(currentUser.tenant);
     if (!tenant) {
       throw new Error('Tenant not found');
     }
@@ -1430,7 +1445,12 @@ export async function createClientContact({
  */
 export async function findContactByEmailAddress(email: string): Promise<IContact | null> {
   try {
-    const { knex, tenant } = await createTenantKnex();
+    const currentUser = await getCurrentUserAsync();
+    if (!currentUser) {
+      throw new Error('Unauthorized');
+    }
+
+    const { knex, tenant } = await createTenantKnex(currentUser.tenant);
     if (!tenant) {
       throw new Error('Tenant not found');
     }
@@ -1476,7 +1496,12 @@ export async function createOrFindContactByEmail({
   title?: string;
 }): Promise<{ contact: IContact & { client_name: string }; isNew: boolean }> {
   try {
-    const { knex, tenant } = await createTenantKnex();
+    const currentUser = await getCurrentUserAsync();
+    if (!currentUser) {
+      throw new Error('Unauthorized');
+    }
+
+    const { knex, tenant } = await createTenantKnex(currentUser.tenant);
     if (!tenant) {
       throw new Error('Tenant not found');
     }
@@ -1586,7 +1611,7 @@ export async function updateContactPortalAdminStatus(
       throw new Error('You do not have permission to update client settings');
     }
 
-    const { knex, tenant } = await createTenantKnex();
+    const { knex, tenant } = await createTenantKnex(currentUser.tenant);
     if (!tenant) {
       throw new Error('Tenant not found');
     }
@@ -1635,7 +1660,7 @@ export async function getUserByContactId(
       throw new Error('You do not have permission to view client information');
     }
 
-    const { knex, tenant } = await createTenantKnex();
+    const { knex, tenant } = await createTenantKnex(currentUser.tenant);
     if (!tenant) {
       throw new Error('Tenant not found');
     }

@@ -81,7 +81,7 @@ export async function updateClient(clientId: string, updateData: Partial<Omit<IC
     throw new Error('Permission denied: Cannot update clients. Please contact your administrator if you need additional access.');
   }
 
-  const {knex: db, tenant} = await createTenantKnex();
+  const {knex: db, tenant} = await createTenantKnex(currentUser.tenant);
   if (!tenant) {
     throw new Error('Tenant not found');
   }
@@ -192,7 +192,7 @@ export async function createClient(client: Omit<IClient, 'client_id' | 'created_
     throw new Error('Permission denied: Cannot create clients');
   }
 
-  const { knex, tenant } = await createTenantKnex();
+  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
   if (!tenant) {
     throw new Error('Tenant not found');
   }
@@ -513,7 +513,7 @@ export async function getClientsWithBillingCycleRangePaginated(
     dateRange
   } = params;
 
-  const {knex: db, tenant} = await createTenantKnex();
+  const {knex: db, tenant} = await createTenantKnex(currentUser.tenant);
   if (!tenant) {
     throw new Error('Tenant not found');
   }
@@ -740,7 +740,7 @@ export async function deleteClient(clientId: string): Promise<{
   }
 
   try {
-    const {knex: db, tenant} = await createTenantKnex();
+    const {knex: db, tenant} = await createTenantKnex(currentUser.tenant);
     if (!tenant) {
       throw new Error('Tenant not found');
     }
@@ -1047,7 +1047,7 @@ export async function exportClientsToCSV(clients: IClient[]): Promise<string> {
     throw new Error('Permission denied: Cannot export clients');
   }
 
-  const { knex, tenant } = await createTenantKnex();
+  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
   if (!tenant) {
     throw new Error('Tenant not found');
   }
@@ -1186,7 +1186,7 @@ export async function getAllClientIds(params: {
     throw new Error('Permission denied: Cannot read clients');
   }
 
-  const {knex: db, tenant} = await createTenantKnex();
+  const {knex: db, tenant} = await createTenantKnex(currentUser.tenant);
   if (!tenant) {
     throw new Error('Tenant not found');
   }
@@ -1274,8 +1274,8 @@ export async function checkExistingClients(
     throw new Error('Permission denied: Cannot read clients');
   }
 
-  const {knex: db, tenant} = await createTenantKnex();
-  
+  const {knex: db, tenant} = await createTenantKnex(currentUser.tenant);
+
   if (!tenant) {
     throw new Error('Tenant not found');
   }
@@ -1306,13 +1306,6 @@ export async function importClientsFromCSV(
     throw new Error('No authenticated user found');
   }
 
-  const results: ImportClientResult[] = [];
-  const {knex: db, tenant} = await createTenantKnex();
-
-  if (!tenant) {
-    throw new Error('Tenant not found');
-  }
-
   // Check permissions for both create and update operations since import can do both
   if (!await hasPermissionAsync(currentUser, 'client', 'create')) {
     throw new Error('Permission denied: Cannot create clients');
@@ -1320,6 +1313,13 @@ export async function importClientsFromCSV(
 
   if (updateExisting && !await hasPermissionAsync(currentUser, 'client', 'update')) {
     throw new Error('Permission denied: Cannot update clients');
+  }
+
+  const results: ImportClientResult[] = [];
+  const {knex: db, tenant} = await createTenantKnex(currentUser.tenant);
+
+  if (!tenant) {
+    throw new Error('Tenant not found');
   }
 
   // Start a transaction to ensure all operations succeed or fail together
@@ -1482,11 +1482,6 @@ export async function uploadClientLogo(
   clientId: string,
   formData: FormData
 ): Promise<{ success: boolean; message?: string; logoUrl?: string | null }> {
-  const { knex, tenant } = await createTenantKnex();
-  if (!tenant) {
-    return { success: false, message: 'Tenant not found' };
-  }
-
   const currentUser = await getCurrentUserAsync();
   if (!currentUser) {
     return { success: false, message: 'User not authenticated' };
@@ -1500,6 +1495,11 @@ export async function uploadClientLogo(
   // Check permission for client updating (logo upload is an update operation)
   if (!await hasPermissionAsync(currentUser, 'client', 'update')) {
     return { success: false, message: 'Permission denied: Cannot update client logo' };
+  }
+
+  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
+  if (!tenant) {
+    return { success: false, message: 'Tenant not found' };
   }
 
   try {
@@ -1537,11 +1537,6 @@ export async function uploadClientLogo(
 export async function deleteClientLogo(
   clientId: string
 ): Promise<{ success: boolean; message?: string }> {
-  const { knex, tenant } = await createTenantKnex();
-  if (!tenant) {
-    return { success: false, message: 'Tenant not found' };
-  }
-
   const currentUser = await getCurrentUserAsync();
   if (!currentUser) {
     return { success: false, message: 'User not authenticated' };
@@ -1550,6 +1545,11 @@ export async function deleteClientLogo(
   // Check permission for client deletion (logo deletion is a delete operation)
   if (!await hasPermissionAsync(currentUser, 'client', 'delete')) {
     return { success: false, message: 'Permission denied: Cannot delete client logo' };
+  }
+
+  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
+  if (!tenant) {
+    return { success: false, message: 'Tenant not found' };
   }
 
   try {
@@ -1589,11 +1589,6 @@ export async function deleteClientLogo(
 export async function deactivateClientContacts(
   clientId: string
 ): Promise<{ success: boolean; contactsDeactivated: number; message?: string }> {
-  const { knex, tenant } = await createTenantKnex();
-  if (!tenant) {
-    return { success: false, contactsDeactivated: 0, message: 'Tenant not found' };
-  }
-
   const currentUser = await getCurrentUserAsync();
   if (!currentUser) {
     return { success: false, contactsDeactivated: 0, message: 'User not authenticated' };
@@ -1602,6 +1597,11 @@ export async function deactivateClientContacts(
   // Check permission for contact updating
   if (!await hasPermissionAsync(currentUser, 'contact', 'update')) {
     return { success: false, contactsDeactivated: 0, message: 'Permission denied: Cannot update contacts. Please contact your administrator if you need additional access.' };
+  }
+
+  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
+  if (!tenant) {
+    return { success: false, contactsDeactivated: 0, message: 'Tenant not found' };
   }
 
   try {
@@ -1650,11 +1650,6 @@ export async function markClientInactiveWithContacts(
   clientId: string,
   deactivateContacts: boolean = true
 ): Promise<{ success: boolean; contactsDeactivated: number; message?: string }> {
-  const { knex, tenant } = await createTenantKnex();
-  if (!tenant) {
-    return { success: false, contactsDeactivated: 0, message: 'Tenant not found' };
-  }
-
   const currentUser = await getCurrentUserAsync();
   if (!currentUser) {
     return { success: false, contactsDeactivated: 0, message: 'User not authenticated' };
@@ -1668,6 +1663,11 @@ export async function markClientInactiveWithContacts(
   // If deactivating contacts, also check contact permission
   if (deactivateContacts && !await hasPermissionAsync(currentUser, 'contact', 'update')) {
     return { success: false, contactsDeactivated: 0, message: 'Permission denied: Cannot update contacts. Please contact your administrator if you need additional access.' };
+  }
+
+  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
+  if (!tenant) {
+    return { success: false, contactsDeactivated: 0, message: 'Tenant not found' };
   }
 
   try {
@@ -1725,11 +1725,6 @@ export async function markClientActiveWithContacts(
   clientId: string,
   reactivateContacts: boolean = false
 ): Promise<{ success: boolean; contactsReactivated: number; message?: string }> {
-  const { knex, tenant } = await createTenantKnex();
-  if (!tenant) {
-    return { success: false, contactsReactivated: 0, message: 'Tenant not found' };
-  }
-
   const currentUser = await getCurrentUserAsync();
   if (!currentUser) {
     return { success: false, contactsReactivated: 0, message: 'User not authenticated' };
@@ -1743,6 +1738,11 @@ export async function markClientActiveWithContacts(
   // If reactivating contacts, also check contact permission
   if (reactivateContacts && !await hasPermissionAsync(currentUser, 'contact', 'update')) {
     return { success: false, contactsReactivated: 0, message: 'Permission denied: Cannot update contacts. Please contact your administrator if you need additional access.' };
+  }
+
+  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
+  if (!tenant) {
+    return { success: false, contactsReactivated: 0, message: 'Tenant not found' };
   }
 
   try {
@@ -1798,11 +1798,6 @@ export async function markClientActiveWithContacts(
 export async function reactivateClientContacts(
   clientId: string
 ): Promise<{ success: boolean; contactsReactivated: number; message?: string }> {
-  const { knex, tenant } = await createTenantKnex();
-  if (!tenant) {
-    return { success: false, contactsReactivated: 0, message: 'Tenant not found' };
-  }
-
   const currentUser = await getCurrentUserAsync();
   if (!currentUser) {
     return { success: false, contactsReactivated: 0, message: 'User not authenticated' };
@@ -1811,6 +1806,11 @@ export async function reactivateClientContacts(
   // Check permission for contact updating
   if (!await hasPermissionAsync(currentUser, 'contact', 'update')) {
     return { success: false, contactsReactivated: 0, message: 'Permission denied: Cannot update contacts' };
+  }
+
+  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
+  if (!tenant) {
+    return { success: false, contactsReactivated: 0, message: 'Tenant not found' };
   }
 
   try {

@@ -8,6 +8,7 @@ import { Temporal } from '@js-temporal/polyfill';
 import { toPlainDate, toISODate } from '@alga-psa/core';
 import { getSessionAsync } from '../lib/authHelpers';
 import { cloneTemplateContractLineAsync } from '../lib/billingHelpers';
+import { getCurrentUser } from '@alga-psa/auth/getCurrentUser';
 
 // Helper function to get the latest invoiced end date
 async function getLatestInvoicedEndDate(db: any, tenant: string, clientContractLineId: string): Promise<Date | null> {
@@ -66,13 +67,13 @@ async function getLatestInvoicedEndDate(db: any, tenant: string, clientContractL
 
 
 export async function getClientContractLine(clientId: string): Promise<IClientContractLine[]> {
-  const session = await getSessionAsync();
-  if (!session?.user?.id) {
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
     throw new Error('Unauthorized');
   }
 
   try {
-    const {knex: db, tenant} = await createTenantKnex();
+    const {knex: db, tenant} = await createTenantKnex(currentUser.tenant);
     const clientContractLine = await withTransaction(db, async (trx: Knex.Transaction) => {
       return await trx('contract_lines as cl')
         .join('client_contracts as cc', function () {
@@ -120,13 +121,13 @@ export async function getClientContractLine(clientId: string): Promise<IClientCo
 }
 
 export async function updateClientContractLine(clientContractLineId: string, updates: Partial<IClientContractLine>): Promise<void> {
-  const session = await getSessionAsync();
-  if (!session?.user?.id) {
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
     throw new Error('Unauthorized');
   }
 
   try {
-    const {knex: db, tenant} = await createTenantKnex();
+    const {knex: db, tenant} = await createTenantKnex(currentUser.tenant);
     const result = await withTransaction(db, async (trx: Knex.Transaction) => {
       // Filter updates to include only columns that exist on contract_lines
       const {
@@ -159,13 +160,13 @@ export async function updateClientContractLine(clientContractLineId: string, upd
 }
 
 export async function addClientContractLine(newBilling: Omit<IClientContractLine, 'client_contract_line_id' | 'tenant'>): Promise<void> {
-  const session = await getSessionAsync();
-  if (!session?.user?.id) {
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
     throw new Error('Unauthorized');
   }
 
   try {
-    const {knex: db, tenant} = await createTenantKnex();
+    const {knex: db, tenant} = await createTenantKnex(currentUser.tenant);
     if (!tenant) {
       throw new Error('No tenant found');
     }
@@ -263,13 +264,13 @@ export async function addClientContractLine(newBilling: Omit<IClientContractLine
 }
 
 export async function removeClientContractLine(clientContractLineId: string): Promise<void> {
-  const session = await getSessionAsync();
-  if (!session?.user?.id) {
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
     throw new Error('Unauthorized');
   }
 
   try {
-    const {knex: db, tenant} = await createTenantKnex();
+    const {knex: db, tenant} = await createTenantKnex(currentUser.tenant);
 
     // Ensure tenant context exists before proceeding
     if (!tenant) {
@@ -313,13 +314,13 @@ export async function removeClientContractLine(clientContractLineId: string): Pr
 }
 
 export async function editClientContractLine(clientContractLineId: string, updates: Partial<IClientContractLine>): Promise<void> {
-  const session = await getSessionAsync();
-  if (!session?.user?.id) {
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
     throw new Error('Unauthorized');
   }
 
   try {
-    const {knex: db, tenant} = await createTenantKnex();
+    const {knex: db, tenant} = await createTenantKnex(currentUser.tenant);
     
     // Convert dates to proper format
     // Use 'any' type here to allow assigning Date objects, knex will handle them.

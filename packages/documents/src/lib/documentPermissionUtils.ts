@@ -94,7 +94,7 @@ export async function filterAccessibleDocuments(
 
   // 3. Bulk load associations for all documents (single query!)
   const documentIds = documents.map(d => d.document_id);
-  const { knex } = await createTenantKnex();
+  const { knex } = await createTenantKnex(user.tenant);
 
   const associations = await knex('document_associations')
     .whereIn('document_id', documentIds)

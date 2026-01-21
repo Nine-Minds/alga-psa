@@ -30,10 +30,11 @@ export class CalendarSyncService {
   async syncScheduleEntryToExternal(
     entryId: string,
     calendarProviderId: string,
-    force: boolean = false
+    force: boolean = false,
+    tenantContext?: string
   ): Promise<CalendarSyncResult> {
     try {
-      const { knex, tenant } = await createTenantKnex();
+      const { knex, tenant } = await createTenantKnex(tenantContext);
       if (!tenant) {
         throw new Error('Tenant context is required for calendar synchronization');
       }
@@ -147,13 +148,13 @@ export class CalendarSyncService {
       
       // Update mapping status to error if it exists
       try {
-        const { knex, tenant } = await createTenantKnex();
-        if (tenant) {
-          const mapping = await this.getMappingByScheduleEntry(entryId, calendarProviderId, tenant);
+        const { knex: errorKnex, tenant: errorTenant } = await createTenantKnex(tenantContext);
+        if (errorTenant) {
+          const mapping = await this.getMappingByScheduleEntry(entryId, calendarProviderId, errorTenant);
           if (mapping) {
-            await knex('calendar_event_mappings')
+            await errorKnex('calendar_event_mappings')
               .where('id', mapping.id)
-              .andWhere('tenant', tenant)
+              .andWhere('tenant', errorTenant)
               .update({
                 sync_status: 'error',
                 sync_error_message: error.message,
@@ -180,10 +181,11 @@ export class CalendarSyncService {
   async syncExternalEventToSchedule(
     externalEventId: string,
     calendarProviderId: string,
-    force: boolean = false
+    force: boolean = false,
+    tenantContext?: string
   ): Promise<CalendarSyncResult> {
     try {
-      const { knex, tenant } = await createTenantKnex();
+      const { knex, tenant } = await createTenantKnex(tenantContext);
       if (!tenant) {
         throw new Error('Tenant context is required for calendar synchronization');
       }
@@ -534,10 +536,11 @@ export class CalendarSyncService {
   async resolveConflict(
     mappingId: string,
     resolution: 'alga' | 'external' | 'merge',
-    mergeData?: Partial<IScheduleEntry>
+    mergeData?: Partial<IScheduleEntry>,
+    tenantContext?: string
   ): Promise<CalendarSyncResult> {
     try {
-      const { knex, tenant } = await createTenantKnex();
+      const { knex, tenant } = await createTenantKnex(tenantContext);
       if (!tenant) {
         throw new Error('Tenant context is required for calendar synchronization');
       }
@@ -634,10 +637,11 @@ export class CalendarSyncService {
     entryId: string,
     calendarProviderId: string,
     deleteType: 'single' | 'future' | 'all' = 'all',
-    skipExternalDelete: boolean = false
+    skipExternalDelete: boolean = false,
+    tenantContext?: string
   ): Promise<{ success: boolean; error?: string }> {
     try {
-      const { knex, tenant } = await createTenantKnex();
+      const { knex, tenant } = await createTenantKnex(tenantContext);
       if (!tenant) {
         throw new Error('Tenant context is required for calendar synchronization');
       }
@@ -718,7 +722,7 @@ export class CalendarSyncService {
     calendarProviderId: string,
     tenant: string
   ): Promise<CalendarEventMapping | null> {
-    const { knex } = await createTenantKnex();
+    const { knex } = await createTenantKnex(tenant);
     const mapping = await knex('calendar_event_mappings')
       .where('schedule_entry_id', entryId)
       .andWhere('calendar_provider_id', calendarProviderId)
@@ -736,7 +740,7 @@ export class CalendarSyncService {
     calendarProviderId: string,
     tenant: string
   ): Promise<CalendarEventMapping | null> {
-    const { knex } = await createTenantKnex();
+    const { knex } = await createTenantKnex(tenant);
     const mapping = await knex('calendar_event_mappings')
       .where('external_event_id', externalEventId)
       .andWhere('calendar_provider_id', calendarProviderId)
@@ -750,7 +754,7 @@ export class CalendarSyncService {
    * Get mapping by ID
    */
   private async getMappingById(mappingId: string, tenant: string): Promise<CalendarEventMapping | null> {
-    const { knex } = await createTenantKnex();
+    const { knex } = await createTenantKnex(tenant);
     const mapping = await knex('calendar_event_mappings')
       .where('id', mappingId)
       .andWhere('tenant', tenant)

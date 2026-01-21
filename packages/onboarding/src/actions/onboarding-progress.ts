@@ -373,8 +373,8 @@ async function resolveCalendarStep(tenantId: string): Promise<OnboardingStepServ
   }
 }
 
-async function resolveManagedEmailStep(): Promise<OnboardingStepServerState> {
-  const { tenant: tenantId } = await createTenantKnex();
+async function resolveManagedEmailStep(tenant: string): Promise<OnboardingStepServerState> {
+  const { tenant: tenantId } = await createTenantKnex(tenant);
   if (!tenantId) {
     return buildErrorStep('managed_email', 'Tenant context is required to load email onboarding status.');
   }

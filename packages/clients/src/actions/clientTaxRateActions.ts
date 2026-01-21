@@ -5,6 +5,7 @@ import { Knex } from 'knex';
 import { createTenantKnex } from '@alga-psa/db';
 import type { IClientTaxRateAssociation } from '@alga-psa/types';
 import { getClientDefaultTaxRegionCode as getClientDefaultTaxRegionCodeShared } from '@alga-psa/shared/billingClients';
+import { getCurrentUser } from '@alga-psa/auth/getCurrentUser';
 
 // Combine association data with rate details
 // Removed 'name' from Pick as it doesn't exist on the tax_rates table
@@ -15,7 +16,11 @@ export type ClientTaxRateDetails = IClientTaxRateAssociation & {
 };
 
 export async function getClientTaxRates(clientId: string): Promise<ClientTaxRateDetails[]> {
-  const { knex, tenant } = await createTenantKnex();
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
+    throw new Error('Unauthorized');
+  }
+  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
   return await withTransaction(knex, async (trx: Knex.Transaction) => {
     return await trx('client_tax_rates')
       .join('tax_rates', function() {
@@ -43,7 +48,11 @@ export async function getClientTaxRates(clientId: string): Promise<ClientTaxRate
 export async function addClientTaxRate(
   clientTaxRateData: Pick<IClientTaxRateAssociation, 'client_id' | 'tax_rate_id'>
 ): Promise<IClientTaxRateAssociation> {
-  const { knex, tenant } = await createTenantKnex();
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
+    throw new Error('Unauthorized');
+  }
+  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
   const { client_id, tax_rate_id } = clientTaxRateData; // Destructure for clarity
 
   return await withTransaction(knex, async (trx: Knex.Transaction) => {
@@ -113,7 +122,11 @@ export async function addClientTaxRate(
 }
 
 export async function removeClientTaxRate(clientId: string, taxRateId: string): Promise<void> {
-  const { knex, tenant } = await createTenantKnex();
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
+    throw new Error('Unauthorized');
+  }
+  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
   await withTransaction(knex, async (trx: Knex.Transaction) => {
     return await trx('client_tax_rates')
       .where({ 
@@ -130,7 +143,11 @@ export async function updateDefaultClientTaxRate(
  clientId: string,
  newTaxRateId: string
 ): Promise<IClientTaxRateAssociation> {
- const { knex, tenant } = await createTenantKnex();
+ const currentUser = await getCurrentUser();
+ if (!currentUser) {
+   throw new Error('Unauthorized');
+ }
+ const { knex, tenant } = await createTenantKnex(currentUser.tenant);
 
  // Validate that the newTaxRateId exists for this tenant (optional but good practice)
  const newRateExists = await withTransaction(knex, async (trx: Knex.Transaction) => {
@@ -224,10 +241,11 @@ return await withTransaction(knex, async (trx: Knex.Transaction) => {
  * @returns The region_code string or null if no default rate/region is found.
  */
 export async function getClientDefaultTaxRegionCode(clientId: string): Promise<string | null> {
-  const { knex, tenant } = await createTenantKnex();
-  if (!tenant) {
-    return null;
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
+    throw new Error('Unauthorized');
   }
+  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
 
   try {
     return await withTransaction(knex, async (trx: Knex.Transaction) => {

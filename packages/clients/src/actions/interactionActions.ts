@@ -7,7 +7,7 @@ import { Knex } from 'knex';
 import { revalidatePath } from 'next/cache'
 import InteractionModel from '../models/interactions';
 import { IInteractionType, IInteraction } from '@alga-psa/types'
-import { getCurrentUserAsync } from '../lib/usersHelpers'
+import { getCurrentUser } from '@alga-psa/auth/getCurrentUser';
 
 import { createTenantKnex } from '@alga-psa/db';
 
@@ -30,10 +30,11 @@ async function getDefaultInteractionStatusId(trx: any, tenant: string): Promise<
 
 export async function addInteraction(interactionData: Omit<IInteraction, 'interaction_date'>): Promise<IInteraction> {
   try {
-    const { knex: db, tenant } = await createTenantKnex();
-    if (!tenant) {
-      throw new Error('Tenant context is required');
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+      throw new Error('Unauthorized');
     }
+    const { knex: db, tenant } = await createTenantKnex(currentUser.tenant);
     
     console.log('Received interaction data:', interactionData);
 
@@ -70,11 +71,11 @@ export async function addInteraction(interactionData: Omit<IInteraction, 'intera
 
 export async function getInteractionTypes(): Promise<IInteractionType[]> {
   try {
-    const { tenant } = await createTenantKnex();
-    if (!tenant) {
-      throw new Error('Tenant context is required');
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+      throw new Error('Unauthorized');
     }
-    const { knex } = await createTenantKnex();
+    const { knex } = await createTenantKnex(currentUser.tenant);
     return await withTransaction(knex, async (trx: Knex.Transaction) => {
       return await InteractionModel.getInteractionTypes();
     });
@@ -86,11 +87,11 @@ export async function getInteractionTypes(): Promise<IInteractionType[]> {
 
 export async function getInteractionsForEntity(entityId: string, entityType: 'contact' | 'client'): Promise<IInteraction[]> {
   try {
-    const { tenant } = await createTenantKnex();
-    if (!tenant) {
-      throw new Error('Tenant context is required');
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+      throw new Error('Unauthorized');
     }
-    const { knex } = await createTenantKnex();
+    const { knex } = await createTenantKnex(currentUser.tenant);
     return await withTransaction(knex, async (trx: Knex.Transaction) => {
       return await InteractionModel.getForEntity(entityId, entityType);
     });
@@ -108,11 +109,11 @@ export async function getRecentInteractions(filters: {
   typeId?: string;
 }): Promise<IInteraction[]> {
   try {
-    const { tenant } = await createTenantKnex();
-    if (!tenant) {
-      throw new Error('Tenant context is required');
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+      throw new Error('Unauthorized');
     }
-    const { knex } = await createTenantKnex();
+    const { knex } = await createTenantKnex(currentUser.tenant);
     return await withTransaction(knex, async (trx: Knex.Transaction) => {
       return await InteractionModel.getRecentInteractions(filters);
     });
@@ -124,11 +125,11 @@ export async function getRecentInteractions(filters: {
 
 export async function updateInteraction(interactionId: string, updateData: Partial<IInteraction>): Promise<IInteraction> {
   try {
-    const { tenant } = await createTenantKnex();
-    if (!tenant) {
-      throw new Error('Tenant context is required');
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+      throw new Error('Unauthorized');
     }
-    const { knex } = await createTenantKnex();
+    const { knex } = await createTenantKnex(currentUser.tenant);
     const updatedInteraction = await withTransaction(knex, async (trx: Knex.Transaction) => {
       return await InteractionModel.updateInteraction(interactionId, updateData);
     });
@@ -142,11 +143,11 @@ export async function updateInteraction(interactionId: string, updateData: Parti
 
 export async function getInteractionById(interactionId: string): Promise<IInteraction> {
   try {
-    const { tenant } = await createTenantKnex();
-    if (!tenant) {
-      throw new Error('Tenant context is required');
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+      throw new Error('Unauthorized');
     }
-    const { knex } = await createTenantKnex();
+    const { knex } = await createTenantKnex(currentUser.tenant);
     const interaction = await withTransaction(knex, async (trx: Knex.Transaction) => {
       return await InteractionModel.getById(interactionId);
     });
@@ -162,11 +163,11 @@ export async function getInteractionById(interactionId: string): Promise<IIntera
 
 export async function getInteractionStatuses(): Promise<any[]> {
   try {
-    const { tenant } = await createTenantKnex();
-    if (!tenant) {
-      throw new Error('Tenant context is required');
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+      throw new Error('Unauthorized');
     }
-    const { knex } = await createTenantKnex();
+    const { knex, tenant } = await createTenantKnex(currentUser.tenant);
     return await withTransaction(knex, async (trx: Knex.Transaction) => {
       return await trx('statuses')
         .where({ 
@@ -184,12 +185,12 @@ export async function getInteractionStatuses(): Promise<any[]> {
 
 export async function deleteInteraction(interactionId: string): Promise<void> {
   try {
-    const { tenant } = await createTenantKnex();
-    if (!tenant) {
-      throw new Error('Tenant context is required');
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+      throw new Error('Unauthorized');
     }
-    const { knex } = await createTenantKnex();
-    
+    const { knex, tenant } = await createTenantKnex(currentUser.tenant);
+
     return await withTransaction(knex, async (trx: Knex.Transaction) => {
       // Delete the interaction
       const deletedCount = await trx('interactions')

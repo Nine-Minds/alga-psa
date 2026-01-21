@@ -4,6 +4,7 @@ import { NextResponse } from 'next/server';
 import crypto from 'crypto';
 
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
+import { getSession } from '@alga-psa/auth';
 
 import { createTenantKnex } from '@alga-psa/db';
 import { getXeroClientId } from '../../../../lib/xero/xeroClientService';
@@ -31,7 +32,12 @@ function createPkcePair(): { verifier: string; challenge: string } {
 
 export async function GET(): Promise<NextResponse> {
   const secretProvider = await getSecretProviderInstance();
-  const { tenant } = await createTenantKnex();
+  const session = await getSession();
+  const sessionTenant = (session?.user as any)?.tenant;
+  if (!sessionTenant) {
+    return NextResponse.json({ error: 'Authentication required.' }, { status: 401 });
+  }
+  const { tenant } = await createTenantKnex(sessionTenant);
 
   if (!tenant) {
     return NextResponse.json({ error: 'Authentication required.' }, { status: 401 });
