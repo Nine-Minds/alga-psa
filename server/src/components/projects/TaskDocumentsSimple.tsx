@@ -1,7 +1,6 @@
 'use client'
 
 import React, { useEffect, useState, useRef, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
 import { Paperclip, Plus, Link, FileText, File, Image, Download, X, ChevronRight, ChevronDown, Eye, FileVideo } from 'lucide-react';
 import { IDocument } from 'server/src/interfaces/document.interface';
 import { 
@@ -64,7 +63,6 @@ export default function TaskDocumentsSimple({
   initialDocuments,
   onDocumentCreated
 }: TaskDocumentsSimpleProps) {
-  const router = useRouter();
   const [documents, setDocuments] = useState<IDocument[]>(initialDocuments || []);
   const [loading, setLoading] = useState(false);
   const [documentsLoaded, setDocumentsLoaded] = useState(!!initialDocuments);
@@ -122,14 +120,29 @@ export default function TaskDocumentsSimple({
     }
   }, [initialDocuments]);
 
-  // Handle document mutation - use callback or router.refresh()
+  // Refetch documents from the server
+  const refetchDocuments = useCallback(async () => {
+    try {
+      setLoading(true);
+      const response = await getDocumentsByEntity(taskId, 'project_task');
+      setDocuments(response.documents);
+      setDocumentsLoaded(true);
+    } catch (error) {
+      console.error('Error fetching documents:', error);
+      toast.error('Failed to load documents');
+    } finally {
+      setLoading(false);
+    }
+  }, [taskId]);
+
+  // Handle document mutation - refetch documents to update local state immediately
   const handleDocumentMutation = useCallback(async () => {
     if (onDocumentCreated) {
       await onDocumentCreated();
-    } else {
-      router.refresh();
     }
-  }, [onDocumentCreated, router]);
+    // Always refetch documents to ensure local state is up to date
+    await refetchDocuments();
+  }, [onDocumentCreated, refetchDocuments]);
 
   const fetchDocuments = async () => {
     if (documentsLoaded) return; // Don't refetch if already loaded
@@ -441,9 +454,13 @@ export default function TaskDocumentsSimple({
                   toast.error('Please log in to upload documents');
                   return;
                 }
-                
+
                 if (!documentsLoaded) {
                   await fetchDocuments();
+                }
+                // Expand the section when opening upload
+                if (!showUpload) {
+                  setIsExpanded(true);
                 }
                 setShowUpload(!showUpload);
               }}
