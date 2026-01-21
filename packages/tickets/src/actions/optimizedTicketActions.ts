@@ -928,7 +928,10 @@ export async function getTicketsForList(
           `(
             SELECT COUNT(DISTINCT x.client_id)::int
             FROM (
-              SELECT t.client_id as client_id
+              SELECT t2.client_id as client_id
+              FROM tickets as t2
+              WHERE t2.tenant = t.tenant
+                AND t2.ticket_id = t.ticket_id
               UNION ALL
               SELECT tc.client_id
               FROM tickets as tc
