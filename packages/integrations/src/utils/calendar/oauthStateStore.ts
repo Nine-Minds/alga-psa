@@ -7,7 +7,7 @@ import type { CalendarOAuthState } from '@alga-psa/types';
 // Helper to get secret from provider
 async function getSecret(secretName: string, envName: string): Promise<string | null> {
   const provider = await getSecretProviderInstance();
-  return provider.getSecret(secretName) ?? process.env[envName] ?? null;
+  return (await provider.getAppSecret(secretName)) ?? process.env[envName] ?? null;
 }
 
 const STATE_NAMESPACE = 'calendar:oauth_state';
