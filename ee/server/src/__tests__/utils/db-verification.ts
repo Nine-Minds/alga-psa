@@ -61,7 +61,10 @@ export async function verifyAdminUserCreation(
 
   // Verify user has admin role
   const userRole = await db('user_roles')
-    .join('roles', 'user_roles.role_id', 'roles.role_id')
+    .join('roles', function() {
+      this.on('user_roles.role_id', '=', 'roles.role_id')
+          .andOn('user_roles.tenant', '=', 'roles.tenant');
+    })
     .where('user_roles.user_id', tenantData.adminUserId)
     .where('user_roles.tenant', tenantData.tenantId)
     .where('roles.role_name', 'Admin')

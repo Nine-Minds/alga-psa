@@ -4,7 +4,10 @@ import { ITimeSheetApproval, ITimeSheetComment } from 'server/src/interfaces/tim
 const TimeSheetComment = {
   getByTimeSheetId: async (knexOrTrx: Knex | Knex.Transaction, timeSheetId: string): Promise<ITimeSheetApproval | null> => {
     const comments = await knexOrTrx('time_sheet_comments')
-      .join('users', 'time_sheet_comments.user_id', 'users.user_id')
+      .join('users', function() {
+        this.on('time_sheet_comments.user_id', '=', 'users.user_id')
+            .andOn('time_sheet_comments.tenant', '=', 'users.tenant');
+      })
       .where({ 'time_sheet_comments.time_sheet_id': timeSheetId })
       .select(
         'time_sheet_comments.*',
