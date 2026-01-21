@@ -2,7 +2,7 @@
 
 import { randomBytes, createHmac } from "node:crypto";
 import { auth } from "server/src/app/api/auth/[...nextauth]/auth";
-import { authenticateUser } from "server/src/lib/actions/auth";
+import { authenticateUser } from "@alga-psa/auth/actions/auth";
 import { verifyAuthenticator } from "server/src/utils/authenticator/authenticator";
 import logger from "@alga-psa/core/logger";
 import { getNextAuthSecret } from "server/src/lib/auth/sessionCookies";

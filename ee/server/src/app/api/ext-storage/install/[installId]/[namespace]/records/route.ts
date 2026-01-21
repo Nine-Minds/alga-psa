@@ -165,7 +165,7 @@ export async function POST(
 
     const request: StorageBulkPutRequest = {
       namespace,
-      items: body.items,
+      items: body.items as StorageBulkPutRequest['items'],
     };
 
     const result = await service.bulkPut(request);

@@ -181,23 +181,23 @@ export async function POST(
       throw new SchedulerApiError('RATE_LIMITED', 'Too many requests, please try again later');
     }
 
-    const ctx = await getInstallContext(installId ?? '');
+    const installCtx = await getInstallContext(installId ?? '');
 
     switch (base.operation) {
       case 'list': {
-        const schedules = await listSchedules(ctx);
+        const schedules = await listSchedules(installCtx);
         return NextResponse.json({ schedules }, { status: 200 });
       }
 
       case 'get': {
         const input = getSchema.parse(raw);
-        const schedule = await getSchedule(ctx, input.scheduleId);
+        const schedule = await getSchedule(installCtx, input.scheduleId);
         return NextResponse.json({ schedule }, { status: 200 });
       }
 
       case 'create': {
         const input = createSchema.parse(raw);
-        const result = await createSchedule(ctx, {
+        const result = await createSchedule(installCtx, {
           endpoint: input.endpoint,
           cron: input.cron,
           timezone: input.timezone,
@@ -210,7 +210,7 @@ export async function POST(
 
       case 'update': {
         const input = updateSchema.parse(raw);
-        const result = await updateSchedule(ctx, input.scheduleId, {
+        const result = await updateSchedule(installCtx, input.scheduleId, {
           endpoint: input.endpoint,
           cron: input.cron,
           timezone: input.timezone,
@@ -223,12 +223,12 @@ export async function POST(
 
       case 'delete': {
         const input = deleteSchema.parse(raw);
-        const result = await deleteSchedule(ctx, input.scheduleId);
+        const result = await deleteSchedule(installCtx, input.scheduleId);
         return NextResponse.json(result, { status: result.success ? 200 : 400 });
       }
 
       case 'getEndpoints': {
-        const endpoints = await getEndpoints(ctx);
+        const endpoints = await getEndpoints(installCtx);
         return NextResponse.json({ endpoints }, { status: 200 });
       }
 

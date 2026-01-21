@@ -183,7 +183,7 @@ const Service = {
           ...service,
           prices: pricesByService[service.service_id] || []
         });
-        return validated;
+        return validated as IService;
       });
 
       log.info(`[Service.getAll] Services data validated successfully`);
@@ -252,7 +252,7 @@ const Service = {
       const validatedService = serviceSchema.parse({
         ...serviceData,
         prices
-      });
+      }) as IService;
       log.info(`[Service.getById] Service data validated successfully`);
 
       return validatedService;
@@ -389,12 +389,12 @@ const Service = {
 
       if (!completeService) {
         log.info(`[Service.create] Failed to fetch complete service after creation: ${createdService.service_id}`);
-        return serviceSchema.parse({ ...createdService, prices: [] }); // Fall back to the original service data
+        return serviceSchema.parse({ ...createdService, prices: [] }) as IService; // Fall back to the original service data
       }
 
       // No prices exist yet for a newly created service
       // Validate and transform the DB result using the final schema's parse method
-      return serviceSchema.parse({ ...completeService, prices: [] });
+      return serviceSchema.parse({ ...completeService, prices: [] }) as IService;
     } catch (error) {
       log.error('[Service.create] Database error:', error);
       throw error;
@@ -512,7 +512,7 @@ const Service = {
         .select('*');
 
       // Validate and transform the DB result using the final schema's parse method
-      return serviceSchema.parse({ ...completeService, prices });
+      return serviceSchema.parse({ ...completeService, prices }) as IService;
     } catch (error) {
       log.error(`[Service.update] Error updating service ${service_id}:`, error);
       throw error;
@@ -691,7 +691,7 @@ const Service = {
         return serviceSchema.parse({
           ...service,
           prices: pricesByService[service.service_id] || []
-        });
+        }) as IService;
       });
     } catch (error) {
       log.error(`[Service.getByCategoryId] Error fetching services for category ${category_id}:`, error);

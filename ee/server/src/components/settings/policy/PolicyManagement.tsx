@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Flex, Text, TextArea } from '@radix-ui/themes';
-import { createPolicy, updatePolicy, deletePolicy, getPolicies } from '@/lib/actions/policyActions';
+import { createPolicy, updatePolicy, deletePolicy, getPolicies } from '@alga-psa/auth/actions/policyActions';
 import { IPolicy } from '@/interfaces/auth.interfaces';
 import { parsePolicy } from '@ee/lib/auth/policyParser';
 import { DataTable } from '@alga-psa/ui/components/DataTable';

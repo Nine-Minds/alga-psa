@@ -129,11 +129,11 @@ describe('Portal domain actions – DB integration', () => {
       status_message: 'Active',
       verification_method: 'cname',
       verification_details: { expected_cname: canonicalHost, requested_domain: 'old.example.com' },
-      last_checked_at: new Date().toISOString(),
+      last_checked_at: new Date(),
       certificate_secret_name: 'portal-domain-tenant1234',
       last_synced_resource_version: 'rv-123',
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
+      created_at: new Date(),
+      updated_at: new Date(),
     });
 
     const result = await requestPortalDomainRegistrationAction({ domain: 'new.example.com' });

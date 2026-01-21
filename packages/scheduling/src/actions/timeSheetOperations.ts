@@ -24,6 +24,12 @@ function captureAnalytics(_event: string, _properties?: Record<string, any>, _us
   // Intentionally no-op: avoid pulling analytics (and its tenancy/client-portal deps) into scheduling.
 }
 
+// Type for Knex raw query results with aggregate functions
+interface TimeEntriesInfo {
+  entry_count: number | string;
+  total_hours: number | string | null;
+}
+
 export async function fetchTimeSheets(): Promise<ITimeSheet[]> {
   const session = await getSession();
   if (!session?.user?.id) {
@@ -94,7 +100,7 @@ export async function submitTimeSheet(timeSheetId: string): Promise<ITimeSheet> 
           trx.raw('COUNT(*) as entry_count'),
           trx.raw('SUM(billable_duration) / 60 as total_hours')
         )
-        .first();
+        .first() as unknown as TimeEntriesInfo | undefined;
 
       // Get period info
       const periodInfo = await trx('time_periods')
@@ -132,7 +138,7 @@ export async function submitTimeSheet(timeSheetId: string): Promise<ITimeSheet> 
         captureAnalytics('time_sheet_submitted', {
           time_sheet_id: validatedParams.timeSheetId,
           entry_count: entriesInfo?.entry_count || 0,
-          total_hours: parseFloat(entriesInfo?.total_hours || '0'),
+          total_hours: parseFloat(String(entriesInfo?.total_hours ?? '0')),
           period_start: periodInfo?.start_date,
           period_end: periodInfo?.end_date
         }, userId);

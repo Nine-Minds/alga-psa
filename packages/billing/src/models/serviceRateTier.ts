@@ -67,11 +67,11 @@ const ServiceRateTier = {
         );
       
       log.info(`[ServiceRateTier.getByServiceId] Found ${tiers.length} rate tiers`);
-      
+
       const validatedTiers = tiers.map((tier): IServiceRateTier =>
-        validateData(serviceRateTierSchema, tier)
+        validateData(serviceRateTierSchema, tier) as IServiceRateTier
       );
-      
+
       return validatedTiers;
     } catch (error) {
       log.error(`[ServiceRateTier.getByServiceId] Error fetching rate tiers for service ${serviceId}:`, error);
@@ -110,7 +110,7 @@ const ServiceRateTier = {
       }
 
       log.info(`[ServiceRateTier.getById] Found rate tier for service: ${tier.service_id}`);
-      return validateData(serviceRateTierSchema, tier);
+      return validateData(serviceRateTierSchema, tier) as IServiceRateTier;
     } catch (error) {
       log.error(`[ServiceRateTier.getById] Error fetching rate tier ${tierId}:`, error);
       throw error;
@@ -206,7 +206,7 @@ const ServiceRateTier = {
         return null;
       }
 
-      return validateData(serviceRateTierSchema, updatedTier);
+      return validateData(serviceRateTierSchema, updatedTier) as IServiceRateTier;
     } catch (error) {
       log.error(`[ServiceRateTier.update] Error updating rate tier ${tierId}:`, error);
       throw error;

@@ -148,7 +148,7 @@ export async function getGoogleAuthUrl(params: {
 } = {}): Promise<string> {
   const result = await initiateCalendarOAuth({ provider: 'google', ...params });
   if (!result.success) {
-    throw new Error(result.error);
+    throw new Error((result as { success: false; error: string }).error);
   }
   return result.authUrl;
 }
@@ -160,7 +160,7 @@ export async function getMicrosoftAuthUrl(params: {
 } = {}): Promise<string> {
   const result = await initiateCalendarOAuth({ provider: 'microsoft', ...params });
   if (!result.success) {
-    throw new Error(result.error);
+    throw new Error((result as { success: false; error: string }).error);
   }
   return result.authUrl;
 }

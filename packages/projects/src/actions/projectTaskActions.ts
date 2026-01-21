@@ -89,7 +89,7 @@ export async function updateTaskWithChecklist(
             const { checklist_items, tenant: _, ...taskUpdateData } = taskData;
             const validatedTaskData = validateData(updateTaskSchema, taskUpdateData);
 
-            const updatedTask = await ProjectTaskModel.updateTask(trx, tenant, taskId, validatedTaskData);
+            const updatedTask = await ProjectTaskModel.updateTask(trx, tenant, taskId, validatedTaskData as Partial<IProjectTask>);
 
             // If assigned_to was updated, publish event
             if ('assigned_to' in taskData && updatedTask.assigned_to) {
@@ -307,7 +307,7 @@ export async function addChecklistItemToTask(
         const {knex: db, tenant} = await getTenantKnex();
         return await withTransaction(db, async (trx: Knex.Transaction) => {
             await checkPermission(currentUser, 'project', 'update', trx);
-            return await ProjectTaskModel.addChecklistItem(trx, tenant, taskId, validatedData);
+            return await ProjectTaskModel.addChecklistItem(trx, tenant, taskId, validatedData as Omit<ITaskChecklistItem, 'checklist_item_id' | 'task_id' | 'created_at' | 'updated_at' | 'tenant'>);
         });
     } catch (error) {
         console.error('Error adding checklist item to task:', error);

@@ -51,6 +51,12 @@ interface DbTimeSheet {
   period_end_date?: string;
 }
 
+// Type for Knex raw query results with aggregate functions
+interface TimeEntriesInfo {
+  entry_count: number | string;
+  total_hours: number | string | null;
+}
+
 // Helper function to convert database time period to interface time period
 function toTimePeriod(dbPeriod: Pick<DbTimePeriod, 'period_id' | 'start_date' | 'end_date' | 'tenant'>): ITimePeriod {
   const startDate = toPlainDate(dbPeriod.start_date);
@@ -161,7 +167,7 @@ export async function fetchTimeSheetsForApproval(
       tenant: sheet.tenant
     }));
 
-    return validateArray(timeSheetApprovalViewSchema, timeSheetApprovals);
+    return validateArray(timeSheetApprovalViewSchema, timeSheetApprovals) as ITimeSheetApprovalView[];
   } catch (error) {
     console.error('Error fetching time sheets for approval:', error);
     throw new Error('Failed to fetch time sheets for approval');
@@ -215,7 +221,7 @@ export async function addCommentToTimeSheet(
       created_at: formatISO(new Date(newComment.created_at))
     };
 
-    return validateData(timeSheetCommentSchema, formattedComment);
+    return validateData(timeSheetCommentSchema, formattedComment) as ITimeSheetComment;
   } catch (error) {
     console.error('Failed to add comment to time sheet:', error);
     throw new Error('Failed to add comment to time sheet');
@@ -276,7 +282,7 @@ export async function bulkApproveTimeSheets(timeSheetIds: string[], managerId: s
             trx.raw('COUNT(*) as entry_count'),
             trx.raw('SUM(billable_duration) / 60 as total_hours')
           )
-          .first();
+          .first() as unknown as TimeEntriesInfo | undefined;
 
         // Update time sheet status
         await trx('time_sheets')
@@ -302,7 +308,7 @@ export async function bulkApproveTimeSheets(timeSheetIds: string[], managerId: s
           time_sheet_id: id,
           user_id: timeSheet.user_id,
           entry_count: entriesInfo?.entry_count || 0,
-          total_hours: parseFloat(entriesInfo?.total_hours || '0')
+          total_hours: parseFloat(String(entriesInfo?.total_hours ?? '0'))
         });
       }
     });
@@ -366,7 +372,7 @@ export async function fetchTimeSheet(timeSheetId: string): Promise<ITimeSheetVie
       time_period: createTimePeriodView(timeSheet.period_id, timeSheet.tenant, timeSheet.period_start_date, timeSheet.period_end_date)
     };
 
-    return validateData(timeSheetViewSchema, result);
+    return validateData(timeSheetViewSchema, result) as ITimeSheetView;
   } catch (error) {
     console.error('Error fetching time sheet:', error);
     throw new Error('Failed to fetch time sheet');
@@ -422,7 +428,7 @@ export async function fetchTimeEntriesForTimeSheet(timeSheetId: string): Promise
       work_timezone: entry.work_timezone
     }));
 
-    return validateArray(timeEntrySchema, formattedEntries);
+    return validateArray(timeEntrySchema, formattedEntries) as ITimeEntry[];
   } catch (error) {
     console.error('Error fetching time entries for time sheet:', error);
     throw new Error('Failed to fetch time entries for time sheet');
@@ -491,7 +497,7 @@ export async function fetchTimeSheetComments(timeSheetId: string): Promise<ITime
       tenant: comment.tenant
     }));
 
-    return validateArray(timeSheetCommentSchema, formattedComments);
+    return validateArray(timeSheetCommentSchema, formattedComments) as ITimeSheetComment[];
   } catch (error) {
     console.error('Error fetching time sheet comments:', error);
     console.error('Stack trace:', error instanceof Error ? error.stack : 'No stack trace available');
@@ -535,13 +541,13 @@ export async function approveTimeSheet(timeSheetId: string, approverId: string):
           trx.raw('COUNT(*) as entry_count'),
           trx.raw('SUM(billable_duration) / 60 as total_hours')
         )
-        .first();
+        .first() as unknown as TimeEntriesInfo | undefined;
 
       analyticsData = {
         time_sheet_id: timeSheetId,
         employee_id: timeSheet.user_id,
         entry_count: entriesInfo?.entry_count || 0,
-        total_hours: parseFloat(entriesInfo?.total_hours || '0')
+        total_hours: parseFloat(String(entriesInfo?.total_hours ?? '0'))
       };
 
       // Update time sheet status

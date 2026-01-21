@@ -76,7 +76,7 @@ vi.mock('@alga-psa/core/logger', () => ({
 }));
 
 vi.mock('server/src/models/PortalDomainModel', async () => {
-  const actual = await vi.importActual<typeof import('server/src/models/PortalDomainModel')>('server/src/models/PortalDomainModel');
+  const actual = await vi.importActual('server/src/models/PortalDomainModel') as typeof import('server/src/models/PortalDomainModel');
 
   return {
     ...actual,

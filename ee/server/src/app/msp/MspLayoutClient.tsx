@@ -1,6 +1,6 @@
 "use client";
 
-import { AppSessionProvider } from "server/src/components/providers/AppSessionProvider";
+import { AppSessionProvider } from "@alga-psa/auth/components/AppSessionProvider";
 import DefaultLayout from "@/components/layout/DefaultLayout";
 import { TenantProvider } from "@alga-psa/ui/components/providers/TenantProvider";
 import { ClientUIStateProvider } from "@alga-psa/ui/ui-reflection/ClientUIStateProvider";

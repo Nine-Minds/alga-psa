@@ -357,7 +357,7 @@ export async function addProjectPhase(phaseData: Omit<IProjectPhase, 'phase_id' 
                 order_key: orderKey,
             };
 
-            return await ProjectModel.addPhase(trx, tenant, phaseWithDefaults);
+            return await ProjectModel.addPhase(trx, tenant, phaseWithDefaults as Omit<IProjectPhase, 'phase_id' | 'created_at' | 'updated_at' | 'tenant'>);
         });
     } catch (error) {
         console.error('Error adding project phase:', error);
@@ -622,7 +622,7 @@ export async function createProject(
                 ...projectDataWithStatus,
                 assigned_to: validatedData.assigned_to || null,
                 contact_name_id: validatedData.contact_name_id || null
-            });
+            } as Omit<IProject, 'project_id' | 'created_at' | 'updated_at' | 'tenant'>);
 
             // Create project status mappings - handle both standard and regular statuses
             const isUsingStandardStatuses = projectTaskStatuses.length === 0;

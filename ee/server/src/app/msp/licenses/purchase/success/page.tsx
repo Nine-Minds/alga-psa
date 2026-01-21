@@ -7,8 +7,8 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { CheckCircle, ArrowRight, Loader2, Calendar, Users } from 'lucide-react';
 import Link from 'next/link';
-import { getLicenseUsageAction } from 'server/src/lib/actions/license-actions';
-import { getSubscriptionInfoAction } from 'ee/server/src/lib/actions/license-actions';
+import { getLicenseUsageAction } from '@alga-psa/licensing/actions/license-actions';
+import { getSubscriptionInfoAction } from '@ee/lib/actions/license-actions';
 
 export default function LicensePurchaseSuccessPage() {
   const searchParams = useSearchParams();

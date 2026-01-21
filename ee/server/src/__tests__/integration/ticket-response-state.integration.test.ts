@@ -19,7 +19,7 @@ let tenantId: string;
 
 // Mock createTenantKnex to return our test database, but keep other exports
 vi.mock('../../../../../server/src/lib/db', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('../../../../../server/src/lib/db')>();
+  const actual = await importOriginal() as typeof import('../../../../../server/src/lib/db');
   return {
     ...actual,
     createTenantKnex: vi.fn(async () => ({ knex: db, tenant: tenantId })),
@@ -29,7 +29,7 @@ vi.mock('../../../../../server/src/lib/db', async (importOriginal) => {
 
 // Mock getCurrentUser for user context
 vi.mock('../../../../../server/src/lib/actions/user-actions/userActions', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('../../../../../server/src/lib/actions/user-actions/userActions')>();
+  const actual = await importOriginal() as typeof import('../../../../../server/src/lib/actions/user-actions/userActions');
   return {
     ...actual,
     getCurrentUser: vi.fn(async () => ({
@@ -44,7 +44,7 @@ vi.mock('../../../../../server/src/lib/actions/user-actions/userActions', async 
 
 // Mock RBAC permissions
 vi.mock('../../../../../server/src/lib/auth/rbac', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('../../../../../server/src/lib/auth/rbac')>();
+  const actual = await importOriginal() as typeof import('../../../../../server/src/lib/auth/rbac');
   return {
     ...actual,
     hasPermission: vi.fn(async () => true),
@@ -54,7 +54,7 @@ vi.mock('../../../../../server/src/lib/auth/rbac', async (importOriginal) => {
 // Mock event publishing to capture events
 const publishedEvents: Array<{ eventType: string; payload: any }> = [];
 vi.mock('../../../../../server/src/lib/eventBus/publishers', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('../../../../../server/src/lib/eventBus/publishers')>();
+  const actual = await importOriginal() as typeof import('../../../../../server/src/lib/eventBus/publishers');
   return {
     ...actual,
     publishEvent: vi.fn(async (event: { eventType: string; payload: any }) => {
@@ -64,7 +64,7 @@ vi.mock('../../../../../server/src/lib/eventBus/publishers', async (importOrigin
 });
 
 vi.mock('../../../../../server/src/lib/eventBus', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('../../../../../server/src/lib/eventBus')>();
+  const actual = await importOriginal() as typeof import('../../../../../server/src/lib/eventBus');
   return {
     ...actual,
     getEventBus: vi.fn(() => ({
@@ -74,7 +74,7 @@ vi.mock('../../../../../server/src/lib/eventBus', async (importOriginal) => {
 });
 
 vi.mock('../../../../../server/src/lib/notifications/emailChannel', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('../../../../../server/src/lib/notifications/emailChannel')>();
+  const actual = await importOriginal() as typeof import('../../../../../server/src/lib/notifications/emailChannel');
   return {
     ...actual,
     getEmailEventChannel: vi.fn(() => 'email-channel'),
@@ -214,7 +214,7 @@ describe('Ticket Response State Integration Tests', () => {
     isInternal: boolean;
     isResolution?: boolean;
   }): Promise<void> {
-    const { createComment } = await import('../../../../../server/src/lib/actions/comment-actions/commentActions');
+    const { createComment } = await import('@alga-psa/tickets/actions/comment-actions/commentActions');
 
     // The createComment function sets author_type internally based on user_id,
     // but we need to provide it to satisfy TypeScript - it will be overwritten

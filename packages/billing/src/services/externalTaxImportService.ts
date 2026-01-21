@@ -223,7 +223,7 @@ export class ExternalTaxImportService {
           knex.raw('COALESCE(SUM(net_amount), 0) as subtotal'),
           knex.raw('COALESCE(SUM(COALESCE(external_tax_amount, tax_amount, 0)), 0) as tax')
         )
-        .first();
+        .first() as unknown as { subtotal: number; tax: number } | undefined;
 
       const newTotal = Number(newTotals?.subtotal ?? 0) + Number(newTotals?.tax ?? 0);
 

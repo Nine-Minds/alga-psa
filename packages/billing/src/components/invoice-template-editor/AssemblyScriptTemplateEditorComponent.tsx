@@ -85,18 +85,20 @@ const AssemblyScriptTemplateEditorComponent: React.FC<AssemblyScriptTemplateEdit
       if (response.success) {
         toast.success('Template saved and compiled successfully!');
         // Update state with the potentially updated template returned from the server
-        setTemplate(response.template);
-        setName(response.template.name || '');
-        setVersion(response.template.version ?? '');
-        setIsDefault(response.template.is_default || false);
-        setAssemblyScriptSource(response.template.assemblyScriptSource || '');
-        setIsReadOnly(response.template.isStandard || false);
+        const successResponse = response as { success: true; template: IInvoiceTemplate };
+        setTemplate(successResponse.template);
+        setName(successResponse.template.name || '');
+        setVersion(successResponse.template.version ?? '');
+        setIsDefault(successResponse.template.is_default || false);
+        setAssemblyScriptSource(successResponse.template.assemblyScriptSource || '');
+        setIsReadOnly(successResponse.template.isStandard || false);
       } else {
-        toast.error(response.error || 'Failed to save template.', {
+        const errorResponse = response as { success: false; error: string; details?: unknown };
+        toast.error(errorResponse.error || 'Failed to save template.', {
            duration: 6000 // Show error longer
         });
-        if (response.details) {
-            console.error("Compilation/Save Error Details:", response.details);
+        if (errorResponse.details) {
+            console.error("Compilation/Save Error Details:", errorResponse.details);
             // Optionally show details in a modal or separate toast
         }
       }
