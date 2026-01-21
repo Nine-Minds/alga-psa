@@ -2,7 +2,7 @@
 
 import type { Knex } from 'knex';
 import { withTransaction } from '@alga-psa/db';
-
+import { getCurrentUser } from '@alga-psa/auth/getCurrentUser';
 import { createTenantKnex } from '@alga-psa/db';
 import type { BillingCycleType } from '@alga-psa/types';
 import type { ISO8601String } from '@alga-psa/types';
@@ -47,7 +47,12 @@ export async function getClientBillingScheduleSummaries(
     return {};
   }
 
-  const { knex, tenant } = await createTenantKnex();
+  const currentUser = await getCurrentUserAsync();
+  if (!currentUser) {
+    throw new Error('No authenticated user found');
+  }
+
+  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
   if (!tenant) {
     throw new Error('No tenant found');
   }
@@ -102,7 +107,12 @@ export async function updateClientBillingSchedule(
     throw new Error('Unauthorized');
   }
 
-  const { knex, tenant } = await createTenantKnex();
+  const currentUser = await getCurrentUserAsync();
+  if (!currentUser) {
+    throw new Error('No authenticated user found');
+  }
+
+  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
   if (!tenant) {
     throw new Error('No tenant found');
   }

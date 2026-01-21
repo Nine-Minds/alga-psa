@@ -15,7 +15,7 @@ export async function addTicketResource(
   role: string,
   currentUser: IUserWithRoles
 ): Promise<ITicketResource | null> {
-  const { knex: db, tenant } = await createTenantKnex();
+  const { knex: db, tenant } = await createTenantKnex(currentUser.tenant);
   return withTransaction(db, async (trx: Knex.Transaction) => {
     try {
       if (!await hasPermission(currentUser, 'ticket', 'update', trx)) {
@@ -120,7 +120,7 @@ export async function removeTicketResource(
   assignmentId: string,
   currentUser: IUserWithRoles
 ): Promise<void> {
-  const { knex: db, tenant } = await createTenantKnex();
+  const { knex: db, tenant } = await createTenantKnex(currentUser.tenant);
   return withTransaction(db, async (trx: Knex.Transaction) => {
     try {
       if (!await hasPermission(currentUser, 'ticket', 'update', trx)) {
@@ -160,7 +160,7 @@ export async function getTicketResources(
   ticketId: string,
   currentUser: IUserWithRoles
 ): Promise<ITicketResource[]> {
-  const { knex: db, tenant } = await createTenantKnex();
+  const { knex: db, tenant } = await createTenantKnex(currentUser.tenant);
   return withTransaction(db, async (trx: Knex.Transaction) => {
     try {
       if (!await hasPermission(currentUser, 'ticket', 'read', trx)) {
@@ -205,7 +205,7 @@ export async function canAddAsAdditionalAgent(
   userId: string,
   currentUser: IUserWithRoles
 ): Promise<boolean> {
-  const { knex: db, tenant } = await createTenantKnex();
+  const { knex: db, tenant } = await createTenantKnex(currentUser.tenant);
   return withTransaction(db, async (trx: Knex.Transaction) => {
     try {
     // First verify the ticket exists

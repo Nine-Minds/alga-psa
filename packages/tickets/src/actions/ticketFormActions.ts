@@ -106,7 +106,7 @@ export async function getClientTicketFormData(): Promise<Partial<TicketFormData>
       throw new Error('No authenticated user found');
     }
 
-    const { knex: db, tenant } = await createTenantKnex();
+    const { knex: db, tenant } = await createTenantKnex(currentUser.tenant);
 
     // Get the default board for client portal tickets
     const defaultBoard = await withTransaction(db, async (trx: Knex.Transaction) => {

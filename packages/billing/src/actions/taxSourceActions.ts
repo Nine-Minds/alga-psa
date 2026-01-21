@@ -3,6 +3,7 @@
 import { createTenantKnex } from '@alga-psa/db';
 import type { TaxSource } from '@alga-psa/types';
 import { getTaxImportState } from '@alga-psa/types';
+import { getCurrentUser } from '@alga-psa/auth/getCurrentUser';
 
 /**
  * Client-specific tax source resolution result.
@@ -23,7 +24,12 @@ export interface ClientTaxSourceInfo {
 export async function getEffectiveTaxSourceForClient(
   clientId: string
 ): Promise<ClientTaxSourceInfo> {
-  const { knex, tenant } = await createTenantKnex();
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
+    throw new Error('No authenticated user found');
+  }
+
+  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
 
   if (!tenant) {
     return {
@@ -88,7 +94,12 @@ export async function getInitialInvoiceTaxSource(clientId: string): Promise<TaxS
 export async function validateInvoiceFinalization(
   invoiceId: string
 ): Promise<{ canFinalize: boolean; error?: string; warning?: string }> {
-  const { knex, tenant } = await createTenantKnex();
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
+    throw new Error('No authenticated user found');
+  }
+
+  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
 
   if (!tenant) {
     return { canFinalize: false, error: 'No tenant context' };
@@ -127,7 +138,12 @@ export async function updateInvoiceTaxSource(
   invoiceId: string,
   newTaxSource: TaxSource
 ): Promise<{ success: boolean; error?: string }> {
-  const { knex, tenant } = await createTenantKnex();
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
+    throw new Error('No authenticated user found');
+  }
+
+  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
 
   if (!tenant) {
     return { success: false, error: 'No tenant context' };
@@ -176,7 +192,12 @@ export async function updateInvoiceTaxSource(
  * This is controlled by the tenant setting allow_external_tax_override.
  */
 export async function canClientOverrideTaxSource(): Promise<boolean> {
-  const { knex, tenant } = await createTenantKnex();
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
+    throw new Error('No authenticated user found');
+  }
+
+  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
 
   if (!tenant) {
     return false;

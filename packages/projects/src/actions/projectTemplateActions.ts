@@ -75,7 +75,7 @@ export async function createTemplateFromProject(
     copyServices: options?.copyServices ?? true
   };
 
-  const { knex, tenant } = await createTenantKnex();
+  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
 
   return await withTransaction(knex, async (trx: Knex.Transaction) => {
     await checkPermission(currentUser, 'project', 'create', trx);
@@ -340,7 +340,7 @@ export async function applyTemplate(
     assignmentOption: validatedData.options?.assignmentOption ?? 'primary'
   };
 
-  const { knex, tenant } = await createTenantKnex();
+  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
   if (!tenant) {
     throw new Error('Tenant context not found');
   }
@@ -817,7 +817,7 @@ export async function getTemplates(
     throw new Error('No authenticated user found');
   }
 
-  const { knex, tenant } = await createTenantKnex();
+  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
 
   await checkPermission(currentUser, 'project', 'read', knex);
 
@@ -849,7 +849,7 @@ export async function getTemplateWithDetails(
     throw new Error('No authenticated user found');
   }
 
-  const { knex, tenant } = await createTenantKnex();
+  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
 
   await checkPermission(currentUser, 'project', 'read', knex);
 
@@ -977,7 +977,7 @@ export async function updateTemplate(
   }
 
   const validatedData = validateData(updateTemplateSchema, data);
-  const { knex, tenant } = await createTenantKnex();
+  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
 
   return await withTransaction(knex, async (trx: Knex.Transaction) => {
     await checkPermission(currentUser, 'project', 'update', trx);
@@ -1014,7 +1014,7 @@ export async function deleteTemplate(templateId: string): Promise<void> {
     throw new Error('No authenticated user found');
   }
 
-  const { knex, tenant } = await createTenantKnex();
+  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
 
   await withTransaction(knex, async (trx: Knex.Transaction) => {
     await checkPermission(currentUser, 'project', 'delete', trx);
@@ -1041,7 +1041,7 @@ export async function duplicateTemplate(templateId: string): Promise<string> {
     throw new Error('No authenticated user found');
   }
 
-  const { knex, tenant } = await createTenantKnex();
+  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
 
   return await withTransaction(knex, async (trx: Knex.Transaction) => {
     await checkPermission(currentUser, 'project', 'create', trx);
@@ -1194,7 +1194,7 @@ export async function getTemplateCategories(): Promise<string[]> {
     throw new Error('No authenticated user found');
   }
 
-  const { knex, tenant } = await createTenantKnex();
+  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
 
   await checkPermission(currentUser, 'project', 'read', knex);
 
@@ -1227,7 +1227,7 @@ export async function addTemplateDependency(
     throw new Error('No authenticated user found');
   }
 
-  const { knex: db, tenant } = await createTenantKnex();
+  const { knex: db, tenant } = await createTenantKnex(currentUser.tenant);
 
   return await withTransaction(db, async (trx) => {
     await checkPermission(currentUser, 'project', 'update', trx);
@@ -1292,7 +1292,7 @@ export async function updateTemplateDependency(
     throw new Error('No authenticated user found');
   }
 
-  const { knex: db, tenant } = await createTenantKnex();
+  const { knex: db, tenant } = await createTenantKnex(currentUser.tenant);
 
   return await withTransaction(db, async (trx) => {
     await checkPermission(currentUser, 'project', 'update', trx);
@@ -1319,7 +1319,7 @@ export async function removeTemplateDependency(dependencyId: string): Promise<vo
     throw new Error('No authenticated user found');
   }
 
-  const { knex: db, tenant } = await createTenantKnex();
+  const { knex: db, tenant } = await createTenantKnex(currentUser.tenant);
 
   return await withTransaction(db, async (trx) => {
     await checkPermission(currentUser, 'project', 'update', trx);
@@ -1343,7 +1343,7 @@ export async function getTemplateDependencies(templateId: string): Promise<IProj
     throw new Error('No authenticated user found');
   }
 
-  const { knex, tenant } = await createTenantKnex();
+  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
 
   await checkPermission(currentUser, 'project', 'read', knex);
 
@@ -1363,7 +1363,7 @@ export async function getTaskTemplateDependencies(taskId: string): Promise<{
     throw new Error('No authenticated user found');
   }
 
-  const { knex, tenant } = await createTenantKnex();
+  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
 
   await checkPermission(currentUser, 'project', 'read', knex);
 
@@ -1409,7 +1409,7 @@ export async function addTemplatePhase(
     throw new Error('No authenticated user found');
   }
 
-  const { knex, tenant } = await createTenantKnex();
+  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
 
   return await withTransaction(knex, async (trx: Knex.Transaction) => {
     await checkPermission(currentUser, 'project', 'update', trx);
@@ -1478,7 +1478,7 @@ export async function updateTemplatePhase(
     throw new Error('No authenticated user found');
   }
 
-  const { knex, tenant } = await createTenantKnex();
+  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
 
   return await withTransaction(knex, async (trx: Knex.Transaction) => {
     await checkPermission(currentUser, 'project', 'update', trx);
@@ -1510,7 +1510,7 @@ export async function deleteTemplatePhase(phaseId: string): Promise<void> {
     throw new Error('No authenticated user found');
   }
 
-  const { knex, tenant } = await createTenantKnex();
+  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
 
   await withTransaction(knex, async (trx: Knex.Transaction) => {
     await checkPermission(currentUser, 'project', 'update', trx);
@@ -1548,7 +1548,7 @@ export async function reorderTemplatePhase(
     throw new Error('No authenticated user found');
   }
 
-  const { knex, tenant } = await createTenantKnex();
+  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
 
   return await withTransaction(knex, async (trx: Knex.Transaction) => {
     await checkPermission(currentUser, 'project', 'update', trx);
@@ -1618,7 +1618,7 @@ export async function addTemplateTask(
     throw new Error('No authenticated user found');
   }
 
-  const { knex, tenant } = await createTenantKnex();
+  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
 
   return await withTransaction(knex, async (trx: Knex.Transaction) => {
     await checkPermission(currentUser, 'project', 'update', trx);
@@ -1699,7 +1699,7 @@ export async function updateTemplateTask(
     throw new Error('No authenticated user found');
   }
 
-  const { knex, tenant } = await createTenantKnex();
+  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
 
   return await withTransaction(knex, async (trx: Knex.Transaction) => {
     await checkPermission(currentUser, 'project', 'update', trx);
@@ -1737,7 +1737,7 @@ export async function deleteTemplateTask(taskId: string): Promise<void> {
     throw new Error('No authenticated user found');
   }
 
-  const { knex, tenant } = await createTenantKnex();
+  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
 
   await withTransaction(knex, async (trx: Knex.Transaction) => {
     await checkPermission(currentUser, 'project', 'update', trx);
@@ -1784,7 +1784,7 @@ export async function moveTemplateTask(
     throw new Error('No authenticated user found');
   }
 
-  const { knex, tenant } = await createTenantKnex();
+  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
 
   return await withTransaction(knex, async (trx: Knex.Transaction) => {
     await checkPermission(currentUser, 'project', 'update', trx);
@@ -1861,7 +1861,7 @@ export async function updateTemplateTaskStatus(
     throw new Error('No authenticated user found');
   }
 
-  const { knex, tenant } = await createTenantKnex();
+  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
 
   return await withTransaction(knex, async (trx: Knex.Transaction) => {
     await checkPermission(currentUser, 'project', 'update', trx);
@@ -1931,7 +1931,7 @@ export async function addTemplateStatusMapping(
     throw new Error('No authenticated user found');
   }
 
-  const { knex, tenant } = await createTenantKnex();
+  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
 
   return await withTransaction(knex, async (trx: Knex.Transaction) => {
     await checkPermission(currentUser, 'project', 'update', trx);
@@ -1983,7 +1983,7 @@ export async function removeTemplateStatusMapping(
     throw new Error('No authenticated user found');
   }
 
-  const { knex, tenant } = await createTenantKnex();
+  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
 
   await withTransaction(knex, async (trx: Knex.Transaction) => {
     await checkPermission(currentUser, 'project', 'update', trx);
@@ -2024,7 +2024,7 @@ export async function reorderTemplateStatusMappings(
     throw new Error('No authenticated user found');
   }
 
-  const { knex, tenant } = await createTenantKnex();
+  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
 
   await withTransaction(knex, async (trx: Knex.Transaction) => {
     await checkPermission(currentUser, 'project', 'update', trx);
@@ -2055,7 +2055,7 @@ export async function getTaskAdditionalAgents(taskId: string): Promise<string[]>
     throw new Error('No authenticated user found');
   }
 
-  const { knex, tenant } = await createTenantKnex();
+  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
 
   await checkPermission(currentUser, 'project', 'read', knex);
 
@@ -2078,7 +2078,7 @@ export async function setTaskAdditionalAgents(
     throw new Error('No authenticated user found');
   }
 
-  const { knex, tenant } = await createTenantKnex();
+  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
 
   await withTransaction(knex, async (trx: Knex.Transaction) => {
     await checkPermission(currentUser, 'project', 'update', trx);
@@ -2132,7 +2132,7 @@ export async function addTaskAdditionalAgent(
     throw new Error('No authenticated user found');
   }
 
-  const { knex, tenant } = await createTenantKnex();
+  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
 
   await withTransaction(knex, async (trx: Knex.Transaction) => {
     await checkPermission(currentUser, 'project', 'update', trx);
@@ -2184,7 +2184,7 @@ export async function removeTaskAdditionalAgent(
     throw new Error('No authenticated user found');
   }
 
-  const { knex, tenant } = await createTenantKnex();
+  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
 
   await withTransaction(knex, async (trx: Knex.Transaction) => {
     await checkPermission(currentUser, 'project', 'update', trx);
@@ -2227,7 +2227,7 @@ export async function getTemplateTaskChecklistItems(
     throw new Error('No authenticated user found');
   }
 
-  const { knex, tenant } = await createTenantKnex();
+  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
 
   const items = await knex('project_template_checklist_items')
     .where({ template_task_id: taskId, tenant })
@@ -2253,7 +2253,7 @@ export async function addTemplateChecklistItem(
     throw new Error('No authenticated user found');
   }
 
-  const { knex, tenant } = await createTenantKnex();
+  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
 
   return await withTransaction(knex, async (trx: Knex.Transaction) => {
     await checkPermission(currentUser, 'project', 'update', trx);
@@ -2321,7 +2321,7 @@ export async function updateTemplateChecklistItem(
     throw new Error('No authenticated user found');
   }
 
-  const { knex, tenant } = await createTenantKnex();
+  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
 
   return await withTransaction(knex, async (trx: Knex.Transaction) => {
     await checkPermission(currentUser, 'project', 'update', trx);
@@ -2372,7 +2372,7 @@ export async function deleteTemplateChecklistItem(
     throw new Error('No authenticated user found');
   }
 
-  const { knex, tenant } = await createTenantKnex();
+  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
 
   await withTransaction(knex, async (trx: Knex.Transaction) => {
     await checkPermission(currentUser, 'project', 'update', trx);
@@ -2433,7 +2433,7 @@ export async function saveTemplateChecklistItems(
     throw new Error('No authenticated user found');
   }
 
-  const { knex, tenant } = await createTenantKnex();
+  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
 
   return await withTransaction(knex, async (trx: Knex.Transaction) => {
     await checkPermission(currentUser, 'project', 'update', trx);

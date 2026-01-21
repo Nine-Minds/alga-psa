@@ -92,7 +92,7 @@ export async function saveClientInfo(data: ClientInfoData): Promise<OnboardingAc
       return { success: false, error: 'No tenant found' };
     }
 
-    const { knex } = await createTenantKnex();
+    const { knex } = await createTenantKnex(tenant);
 
     await withTransaction(knex, async (trx: Knex.Transaction) => {
       // Only update user info if data is provided (for first-time users)
@@ -160,15 +160,15 @@ export async function addSingleTeamMember(member: TeamMember): Promise<Onboardin
     // Check license limits for MSP (internal) users
     const { getLicenseUsage } = await import('@alga-psa/licensing');
     const usage = await getLicenseUsage(tenant);
-    
+
     if (usage.limit !== null && usage.used >= usage.limit) {
-      return { 
-        success: false, 
+      return {
+        success: false,
         error: `You've reached your internal user licence limit of ${usage.limit}. Please remove or deactivate existing users to add new ones.`
       };
     }
 
-    const { knex } = await createTenantKnex();
+    const { knex } = await createTenantKnex(tenant);
     let created: string | null = null;
     let alreadyExists = false;
     let error: string | null = null;
@@ -291,7 +291,7 @@ export async function addTeamMembers(members: TeamMember[]): Promise<OnboardingA
     }
 
     // Check license limits for  MSP (internal) users
-    const { knex } = await createTenantKnex();
+    const { knex } = await createTenantKnex(tenant);
     const { getLicenseUsage } = await import('@alga-psa/licensing');
     const usage = await getLicenseUsage(tenant);
     
@@ -451,7 +451,7 @@ export async function createClient(data: ClientData): Promise<OnboardingActionRe
       return { success: false, error: 'No tenant found' };
     }
 
-    const { knex } = await createTenantKnex();
+    const { knex } = await createTenantKnex(tenant);
 
     let clientId: string | undefined = data.clientId;
 
@@ -579,7 +579,7 @@ export async function addClientContact(data: ClientContactData): Promise<Onboard
       return { success: false, error: 'No tenant found' };
     }
 
-    const { knex } = await createTenantKnex();
+    const { knex } = await createTenantKnex(tenant);
 
     // First, check if a contact with this email already exists for this client
     const existingContact = await withTransaction(knex, async (trx: Knex.Transaction) => {
@@ -667,7 +667,7 @@ export async function setupBilling(data: BillingData): Promise<OnboardingActionR
       return { success: false, error: 'No tenant found' };
     }
 
-    const { knex } = await createTenantKnex();
+    const { knex } = await createTenantKnex(tenant);
 
     let serviceId: string | undefined;
 
@@ -732,7 +732,7 @@ export async function configureTicketing(data: TicketingData): Promise<Onboardin
       return { success: false, error: 'No tenant found' };
     }
 
-    const { knex } = await createTenantKnex();
+    const { knex } = await createTenantKnex(tenant);
 
     const createdIds: Record<string, string[]> = {
       boardId: [],
@@ -1009,12 +1009,13 @@ export async function validateOnboardingDefaults(): Promise<OnboardingActionResu
       return { success: false, error: 'You do not have permission to configure ticket settings' };
     }
 
-    const { knex: db, tenant } = await createTenantKnex();
-    
+    const tenant = await getTenantForCurrentRequest();
     if (!tenant) {
-      return { success: false, error: 'Unable to identify tenant. Please refresh and try again.' };
+      return { success: false, error: 'No tenant found' };
     }
-    
+
+    const { knex: db } = await createTenantKnex(tenant);
+
     // Use withTransaction to check for defaults
     const validationResult = await withTransaction(db, async (trx) => {
       // Check for default board
@@ -1087,12 +1088,17 @@ export async function getAvailableRoles(): Promise<{
       return { success: false, error: 'No authenticated user found' };
     }
 
-    const { knex } = await createTenantKnex();
-    
+    const tenant = await getTenantForCurrentRequest();
+    if (!tenant) {
+      return { success: false, error: 'No tenant found' };
+    }
+
+    const { knex } = await createTenantKnex(tenant);
+
     const roles = await withTransaction(knex, async (trx: Knex.Transaction) => {
       return await trx('roles')
-        .where({ 
-          tenant: currentUser.tenant,
+        .where({
+          tenant,
           msp: true  // Only fetch MSP roles
         })
         .select('role_id', 'role_name')
@@ -1134,7 +1140,7 @@ export async function getOnboardingInitialData(): Promise<{
       return { success: false, error: 'No tenant found' };
     }
 
-    const { knex } = await createTenantKnex();
+    const { knex } = await createTenantKnex(tenant);
 
     // Get the tenant's client information
     const client = await knex('clients')
@@ -1181,7 +1187,7 @@ export async function getTenantTicketingData(): Promise<{
       return { success: false, error: 'No tenant found' };
     }
 
-    const { knex } = await createTenantKnex();
+    const { knex } = await createTenantKnex(tenant);
 
     const [boards, categories, statuses, priorities] = await Promise.all([
       // Get boards

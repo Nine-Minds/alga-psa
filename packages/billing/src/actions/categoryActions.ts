@@ -4,10 +4,16 @@ import { IServiceCategory } from '@alga-psa/types';
 import { ITicketCategory } from '@alga-psa/types';
 import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
+import { getCurrentUser } from '@alga-psa/auth/getCurrentUser';
 
 export async function getServiceCategories(): Promise<IServiceCategory[]> {
   try {
-    const {knex: db, tenant} = await createTenantKnex();
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+      throw new Error('Unauthorized');
+    }
+
+    const {knex: db, tenant} = await createTenantKnex(currentUser.tenant);
     if (!tenant) {
       throw new Error('Tenant not found');
     }
@@ -26,13 +32,18 @@ export async function getServiceCategories(): Promise<IServiceCategory[]> {
   }
 }
 
-export async function createServiceCategory(data: { 
-  category_name: string; 
+export async function createServiceCategory(data: {
+  category_name: string;
   description?: string;
   display_order?: number;
 }): Promise<IServiceCategory> {
   try {
-    const {knex: db, tenant} = await createTenantKnex();
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+      throw new Error('Unauthorized');
+    }
+
+    const {knex: db, tenant} = await createTenantKnex(currentUser.tenant);
     if (!tenant) {
       throw new Error('Tenant not found');
     }
@@ -68,15 +79,20 @@ export async function createServiceCategory(data: {
 }
 
 export async function updateServiceCategory(
-  categoryId: string, 
-  data: { 
-    category_name?: string; 
+  categoryId: string,
+  data: {
+    category_name?: string;
     description?: string;
     display_order?: number;
   }
 ): Promise<IServiceCategory> {
   try {
-    const {knex: db, tenant} = await createTenantKnex();
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+      throw new Error('Unauthorized');
+    }
+
+    const {knex: db, tenant} = await createTenantKnex(currentUser.tenant);
     if (!tenant) {
       throw new Error('Tenant not found');
     }
@@ -106,7 +122,12 @@ export async function updateServiceCategory(
 
 export async function deleteServiceCategory(categoryId: string): Promise<void> {
   try {
-    const {knex: db, tenant} = await createTenantKnex();
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+      throw new Error('Unauthorized');
+    }
+
+    const {knex: db, tenant} = await createTenantKnex(currentUser.tenant);
     if (!tenant) {
       throw new Error('Tenant not found');
     }

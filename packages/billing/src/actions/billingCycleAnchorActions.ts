@@ -43,7 +43,12 @@ export async function getClientBillingCycleAnchor(clientId: string): Promise<Cli
     throw new Error('Unauthorized');
   }
 
-  const { knex, tenant } = await createTenantKnex();
+  const currentUser = await getCurrentUserAsync();
+  if (!currentUser) {
+    throw new Error('No authenticated user found');
+  }
+
+  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
   if (!tenant) {
     throw new Error('No tenant found');
   }
@@ -97,7 +102,12 @@ export async function updateClientBillingCycleAnchor(
     throw new Error('Unauthorized');
   }
 
-  const { knex, tenant } = await createTenantKnex();
+  const currentUser = await getCurrentUserAsync();
+  if (!currentUser) {
+    throw new Error('No authenticated user found');
+  }
+
+  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
   if (!tenant) {
     throw new Error('No tenant found');
   }
@@ -220,7 +230,12 @@ export async function previewClientBillingPeriods(
     throw new Error('Unauthorized');
   }
 
-  const { knex, tenant } = await createTenantKnex();
+  const currentUser = await getCurrentUserAsync();
+  if (!currentUser) {
+    throw new Error('No authenticated user found');
+  }
+
+  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
   if (!tenant) {
     throw new Error('No tenant found');
   }

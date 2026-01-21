@@ -12,7 +12,7 @@ import Tenant from '@alga-psa/db/models/tenant';
 import UserPreferences from '@alga-psa/db/models/userPreferences';
 import { getUserAvatarUrl } from '../../lib/avatarUtils';
 import { uploadEntityImage, deleteEntityImage } from '@alga-psa/media';
-import { hasPermission, throwPermissionError } from '@alga-psa/auth';
+import { hasPermission, throwPermissionError } from '../../lib/permissions';
 import logger from '@alga-psa/core/logger';
 import { getCurrentUser } from '@alga-psa/auth/getCurrentUser';
 
@@ -61,14 +61,18 @@ export async function addUser(userData: {
   roleId?: string;
   userType?: 'internal' | 'client';
   contactId?: string;
-}): Promise<IUser> {
+  }): Promise<IUser> {
   try {
     const currentUser = await getCurrentUser();
     if (!currentUser) {
       throw new Error('No authenticated user found');
     }
 
-    const {knex: db, tenant} = await createTenantKnex();
+    if (!currentUser.tenant) {
+      throw new Error('Tenant is required');
+    }
+
+    const {knex: db, tenant} = await createTenantKnex(currentUser.tenant);
 
     return await withTransaction(db, async (trx: Knex.Transaction) => {
       if (!await hasPermission(currentUser, 'user', 'create', trx)) {
@@ -185,7 +189,11 @@ export async function deleteUser(userId: string): Promise<void> {
       throw new Error('No authenticated user found');
     }
 
-    const {knex: db, tenant} = await createTenantKnex();
+    if (!currentUser.tenant) {
+      throw new Error('Tenant is required');
+    }
+
+    const {knex: db, tenant} = await createTenantKnex(currentUser.tenant);
 
     await withTransaction(db, async (trx: Knex.Transaction) => {
       if (!await hasPermission(currentUser, 'user', 'delete', trx)) {
@@ -239,16 +247,22 @@ export async function findUserById(id: string): Promise<IUserWithRoles | null> {
       throw new Error('No authenticated user found');
     }
 
-    const {knex} = await createTenantKnex();
-    
-    return await withTransaction(knex, async (trx: Knex.Transaction) => {
-      if (!await hasPermission(currentUser, 'user', 'read', trx)) {
-        throw new Error('Permission denied: Cannot read user');
-      }
+    if (!currentUser.tenant) {
+      throw new Error('Tenant is required');
+    }
 
-      const user = await User.getUserWithRoles(trx, id);
-      return user || null;
-    });
+    const {knex} = await createTenantKnex(currentUser.tenant);
+
+    return await runWithTenant(currentUser.tenant, async () =>
+      withTransaction(knex, async (trx: Knex.Transaction) => {
+        if (!await hasPermission(currentUser, 'user', 'read', trx)) {
+          throw new Error('Permission denied: Cannot read user');
+        }
+
+        const user = await User.getUserWithRoles(trx, id);
+        return user || null;
+      })
+    );
   } catch (error) {
     logger.error(`Failed to find user with id ${id}:`, error);
     throw new Error('Failed to find user');
@@ -272,20 +286,22 @@ export async function getAllUsersBasic(includeInactive: boolean = true, userType
       throw new Error('Tenant is required');
     }
 
-    const {knex} = await createTenantKnex();
+    return await runWithTenant(tenant, async () => {
+      const {knex} = await createTenantKnex(tenant);
 
-    return await withTransaction(knex, async (trx: Knex.Transaction) => {
-      if (!await hasPermission(currentUser, 'user', 'read', trx)) {
-        throw new Error('Permission denied: Cannot read users');
-      }
+      return await withTransaction(knex, async (trx: Knex.Transaction) => {
+        if (!await hasPermission(currentUser, 'user', 'read', trx)) {
+          throw new Error('Permission denied: Cannot read users');
+        }
 
-      const users = await User.getAll(trx, includeInactive);
+        const users = await User.getAll(trx, includeInactive);
 
-      // Filter by tenant and optionally by user_type
-      return users.filter(user =>
-        user.tenant === tenant &&
-        (userType ? user.user_type === userType : true)
-      );
+        // Filter by tenant and optionally by user_type
+        return users.filter(user =>
+          user.tenant === tenant &&
+          (userType ? user.user_type === userType : true)
+        );
+      });
     });
   } catch (error) {
     logger.error('Failed to fetch users:', error);
@@ -306,29 +322,31 @@ export async function getAllUsers(includeInactive: boolean = true, userType?: st
       throw new Error('Tenant is required');
     }
 
-    const {knex} = await createTenantKnex();
+    return await runWithTenant(tenant, async () => {
+      const {knex} = await createTenantKnex(tenant);
 
-    return await withTransaction(knex, async (trx: Knex.Transaction) => {
-      if (!await hasPermission(currentUser, 'user', 'read', trx)) {
-        throw new Error('Permission denied: Cannot read users');
-      }
+      return await withTransaction(knex, async (trx: Knex.Transaction) => {
+        if (!await hasPermission(currentUser, 'user', 'read', trx)) {
+          throw new Error('Permission denied: Cannot read users');
+        }
 
-      const users = await User.getAll(trx, includeInactive);
+        const users = await User.getAll(trx, includeInactive);
 
-      // Filter by tenant and optionally by user_type first to reduce role fetching
-      const filteredUsers = users.filter(user =>
-        user.tenant === tenant &&
-        (userType ? user.user_type === userType : true)
-      );
+        // Filter by tenant and optionally by user_type first to reduce role fetching
+        const filteredUsers = users.filter(user =>
+          user.tenant === tenant &&
+          (userType ? user.user_type === userType : true)
+        );
 
-      // Fetch all roles in a single query (avoids N+1)
-      const userIds = filteredUsers.map(u => u.user_id);
-      const rolesByUser = await User.getUserRolesBulk(trx, userIds);
+        // Fetch all roles in a single query (avoids N+1)
+        const userIds = filteredUsers.map(u => u.user_id);
+        const rolesByUser = await User.getUserRolesBulk(trx, userIds);
 
-      return filteredUsers.map((user): IUserWithRoles => ({
-        ...user,
-        roles: rolesByUser.get(user.user_id) || []
-      }));
+        return filteredUsers.map((user): IUserWithRoles => ({
+          ...user,
+          roles: rolesByUser.get(user.user_id) || []
+        }));
+      });
     });
   } catch (error) {
     logger.error('Failed to fetch users:', error);
@@ -381,7 +399,11 @@ export async function updateUserRoles(userId: string, roleIds: string[]): Promis
       throw new Error('No authenticated user found');
     }
 
-    const {knex: db, tenant} = await createTenantKnex();
+    if (!currentUser.tenant) {
+      throw new Error('Tenant is required');
+    }
+
+    const {knex: db, tenant} = await createTenantKnex(currentUser.tenant);
 
     await withTransaction(db, async (trx: Knex.Transaction) => {
       if (!await hasPermission(currentUser, 'user', 'update', trx)) {
@@ -506,6 +528,10 @@ export async function getUserRolesWithPermissions(userId: string, knexConnection
       throw new Error('No authenticated user found');
     }
 
+    if (!currentUser.tenant) {
+      throw new Error('Tenant is required');
+    }
+
     let knex: Knex | Knex.Transaction;
     if (knexConnection) {
       knex = knexConnection;
@@ -513,10 +539,12 @@ export async function getUserRolesWithPermissions(userId: string, knexConnection
       if (!await hasPermission(currentUser, 'user', 'read', knex)) {
         throw new Error('Permission denied: Cannot read user roles with permissions');
       }
-      const rolesWithPermissions = await User.getUserRolesWithPermissions(knex, userId);
+      const rolesWithPermissions = await runWithTenant(currentUser.tenant, () =>
+        User.getUserRolesWithPermissions(knex, userId)
+      );
       return rolesWithPermissions;
     } else {
-      const result = await createTenantKnex();
+      const result = await createTenantKnex(currentUser.tenant);
       knex = result.knex;
       
       return await withTransaction(knex, async (trx: Knex.Transaction) => {
@@ -524,7 +552,9 @@ export async function getUserRolesWithPermissions(userId: string, knexConnection
           throw new Error('Permission denied: Cannot read user roles with permissions');
         }
         
-        const rolesWithPermissions = await User.getUserRolesWithPermissions(trx, userId);
+        const rolesWithPermissions = await runWithTenant(currentUser.tenant, () =>
+          User.getUserRolesWithPermissions(trx, userId)
+        );
         return rolesWithPermissions;
       });
     }
@@ -576,7 +606,11 @@ export async function getUserWithRoles(userId: string): Promise<IUserWithRoles |
       throw new Error('No authenticated user found');
     }
 
-    const {knex} = await createTenantKnex();
+    if (!currentUser.tenant) {
+      throw new Error('Tenant is required');
+    }
+
+    const {knex} = await createTenantKnex(currentUser.tenant);
     
     return await withTransaction(knex, async (trx: Knex.Transaction) => {
       if (!await hasPermission(currentUser, 'user', 'read', trx)) {
@@ -599,7 +633,11 @@ export async function getMultipleUsersWithRoles(userIds: string[]): Promise<IUse
       throw new Error('No authenticated user found');
     }
 
-    const {knex} = await createTenantKnex();
+    if (!currentUser.tenant) {
+      throw new Error('Tenant is required');
+    }
+
+    const {knex} = await createTenantKnex(currentUser.tenant);
     
     return await withTransaction(knex, async (trx: Knex.Transaction) => {
       if (!await hasPermission(currentUser, 'user', 'read', trx)) {
@@ -622,17 +660,19 @@ export async function getUserPreference(userId: string, settingName: string): Pr
     const tenant = currentUser?.tenant;
     if (!tenant) throw new Error('Tenant is required');
 
-    const {knex} = await createTenantKnex();
-    const preference = await UserPreferences.get(knex, userId, settingName);
-    if (!preference?.setting_value) return null;
+    return await runWithTenant(tenant, async () => {
+      const {knex} = await createTenantKnex(tenant);
+      const preference = await UserPreferences.get(knex, userId, settingName);
+      if (!preference?.setting_value) return null;
 
-    try {
-      // Try to parse the JSON value
-      return JSON.parse(preference.setting_value);
-    } catch (e) {
-      // If parsing fails, return the raw value
-      return preference.setting_value;
-    }
+      try {
+        // Try to parse the JSON value
+        return JSON.parse(preference.setting_value);
+      } catch (e) {
+        // If parsing fails, return the raw value
+        return preference.setting_value;
+      }
+    });
   } catch (error) {
     logger.error('Failed to get user preference:', error);
     throw new Error('Failed to get user preference');
@@ -645,15 +685,17 @@ export async function setUserPreference(userId: string, settingName: string, set
     const tenant = currentUser?.tenant;
     if (!tenant) throw new Error('Tenant is required');
 
-    // Convert the value to a JSON string
-    const jsonValue = JSON.stringify(settingValue);
+    await runWithTenant(tenant, async () => {
+      // Convert the value to a JSON string
+      const jsonValue = JSON.stringify(settingValue);
 
-    const {knex} = await createTenantKnex();
-    await UserPreferences.upsert(knex, {
-      user_id: userId,
-      setting_name: settingName,
-      setting_value: jsonValue,
-      updated_at: new Date()
+      const {knex} = await createTenantKnex(tenant);
+      await UserPreferences.upsert(knex, {
+        user_id: userId,
+        setting_name: settingName,
+        setting_value: jsonValue,
+        updated_at: new Date()
+      });
     });
   } catch (error) {
     logger.error('Failed to set user preference:', error);

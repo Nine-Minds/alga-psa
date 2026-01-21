@@ -4,9 +4,15 @@ import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { createTenantKnex } from '@alga-psa/db';
 import { ITicketMaterial, IProjectMaterial } from '@alga-psa/types';
+import { getCurrentUser } from '@alga-psa/auth/getCurrentUser';
 
 export async function listTicketMaterials(ticketId: string): Promise<ITicketMaterial[]> {
-  const { knex: db, tenant } = await createTenantKnex();
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
+    throw new Error('Unauthorized');
+  }
+
+  const { knex: db, tenant } = await createTenantKnex(currentUser.tenant);
   return withTransaction(db, async (trx: Knex.Transaction) => {
     const rows = await trx('ticket_materials as tm')
       .leftJoin('service_catalog as sc', function () {
@@ -32,7 +38,12 @@ export async function addTicketMaterial(input: {
   currency_code: string;
   description?: string | null;
 }): Promise<ITicketMaterial> {
-  const { knex: db, tenant } = await createTenantKnex();
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
+    throw new Error('Unauthorized');
+  }
+
+  const { knex: db, tenant } = await createTenantKnex(currentUser.tenant);
   return withTransaction(db, async (trx: Knex.Transaction) => {
     const [row] = await trx('ticket_materials')
       .insert({
@@ -52,7 +63,12 @@ export async function addTicketMaterial(input: {
 }
 
 export async function deleteTicketMaterial(ticketMaterialId: string): Promise<void> {
-  const { knex: db, tenant } = await createTenantKnex();
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
+    throw new Error('Unauthorized');
+  }
+
+  const { knex: db, tenant } = await createTenantKnex(currentUser.tenant);
   return withTransaction(db, async (trx: Knex.Transaction) => {
     const row = await trx('ticket_materials')
       .where({ tenant, ticket_material_id: ticketMaterialId })
@@ -71,7 +87,12 @@ export async function deleteTicketMaterial(ticketMaterialId: string): Promise<vo
 }
 
 export async function listProjectMaterials(projectId: string): Promise<IProjectMaterial[]> {
-  const { knex: db, tenant } = await createTenantKnex();
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
+    throw new Error('Unauthorized');
+  }
+
+  const { knex: db, tenant } = await createTenantKnex(currentUser.tenant);
   return withTransaction(db, async (trx: Knex.Transaction) => {
     const rows = await trx('project_materials as pm')
       .leftJoin('service_catalog as sc', function () {
@@ -97,7 +118,12 @@ export async function addProjectMaterial(input: {
   currency_code: string;
   description?: string | null;
 }): Promise<IProjectMaterial> {
-  const { knex: db, tenant } = await createTenantKnex();
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
+    throw new Error('Unauthorized');
+  }
+
+  const { knex: db, tenant } = await createTenantKnex(currentUser.tenant);
   return withTransaction(db, async (trx: Knex.Transaction) => {
     const [row] = await trx('project_materials')
       .insert({
@@ -117,7 +143,12 @@ export async function addProjectMaterial(input: {
 }
 
 export async function deleteProjectMaterial(projectMaterialId: string): Promise<void> {
-  const { knex: db, tenant } = await createTenantKnex();
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
+    throw new Error('Unauthorized');
+  }
+
+  const { knex: db, tenant } = await createTenantKnex(currentUser.tenant);
   return withTransaction(db, async (trx: Knex.Transaction) => {
     const row = await trx('project_materials')
       .where({ tenant, project_material_id: projectMaterialId })

@@ -11,6 +11,7 @@ import { convertBlockNoteToMarkdown } from '@alga-psa/documents/lib/blocknoteUti
 import { publishEvent } from '@alga-psa/event-bus/publishers';
 import { TicketResponseState } from '@alga-psa/types';
 import { maybeReopenBundleMasterFromChildReply } from '@alga-psa/tickets/actions/ticketBundleUtils';
+import { getCurrentUser } from '@alga-psa/auth/getCurrentUser';
 
 /**
  * Helper function to determine the new response state based on comment properties
@@ -82,7 +83,11 @@ async function updateTicketResponseState(
 }
 
 export async function findCommentsByTicketId(ticketId: string) {
-  const { knex: db, tenant } = await createTenantKnex();
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
+    throw new Error('Unauthorized');
+  }
+  const { knex: db, tenant } = await createTenantKnex(currentUser.tenant);
   try {
     return await withTransaction(db, async (trx: Knex.Transaction) => {
       const comments = await Comment.getAllbyTicketId(trx, tenant!, ticketId);
@@ -95,7 +100,11 @@ export async function findCommentsByTicketId(ticketId: string) {
 }
 
 export async function findCommentById(commentId: string) {
-  const { knex: db, tenant } = await createTenantKnex();
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
+    throw new Error('Unauthorized');
+  }
+  const { knex: db, tenant } = await createTenantKnex(currentUser.tenant);
   try {
     return await withTransaction(db, async (trx: Knex.Transaction) => {
       const comment = await Comment.get(trx, tenant!, commentId);
@@ -108,6 +117,10 @@ export async function findCommentById(commentId: string) {
 }
 
 export async function createComment(comment: Omit<IComment, 'tenant'>): Promise<string> {
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
+    throw new Error('Unauthorized');
+  }
   try {
     console.log(`[createComment] Starting with comment:`, {
       note_length: comment.note ? comment.note.length : 0,
@@ -115,10 +128,10 @@ export async function createComment(comment: Omit<IComment, 'tenant'>): Promise<
       is_resolution: comment.is_resolution,
       user_id: comment.user_id
     });
-    
+
     // Get user's type to set author_type
     if (comment.user_id) {
-      const { knex: db, tenant } = await createTenantKnex();
+      const { knex: db, tenant } = await createTenantKnex(currentUser.tenant);
       const user = await withTransaction(db, async (trx: Knex.Transaction) => {
         return await trx('users')
           .select('user_type')
@@ -175,9 +188,9 @@ export async function createComment(comment: Omit<IComment, 'tenant'>): Promise<
       note: commentToInsert.note ? `${commentToInsert.note.substring(0, 50)}...` : undefined,
       markdown_content_length: commentToInsert.markdown_content ? commentToInsert.markdown_content.length : 0
     });
-    
+
     // Use the Comment model to insert the comment
-    const { knex: db, tenant: commentTenant } = await createTenantKnex();
+    const { knex: db, tenant: commentTenant } = await createTenantKnex(currentUser.tenant);
     return await withTransaction(db, async (trx: Knex.Transaction) => {
       const commentId = await Comment.insert(trx, commentTenant!, commentToInsert);
       console.log(`[createComment] Comment inserted with ID:`, commentId);
@@ -252,6 +265,10 @@ export async function createComment(comment: Omit<IComment, 'tenant'>): Promise<
 }
 
 export async function updateComment(id: string, comment: Partial<IComment>) {
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
+    throw new Error('Unauthorized');
+  }
   console.log(`[updateComment] Starting update for comment ID: ${id}`, {
     commentData: {
       ...comment,
@@ -259,7 +276,7 @@ export async function updateComment(id: string, comment: Partial<IComment>) {
     }
   });
 
-  const { knex: db, tenant: commentTenant } = await createTenantKnex();
+  const { knex: db, tenant: commentTenant } = await createTenantKnex(currentUser.tenant);
   try {
     return await withTransaction(db, async (trx: Knex.Transaction) => {
       // Fetch existing comment to verify it exists
@@ -417,7 +434,11 @@ export async function updateComment(id: string, comment: Partial<IComment>) {
 }
 
 export async function deleteComment(id: string) {
-  const { knex: db, tenant } = await createTenantKnex();
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
+    throw new Error('Unauthorized');
+  }
+  const { knex: db, tenant } = await createTenantKnex(currentUser.tenant);
   try {
     await withTransaction(db, async (trx: Knex.Transaction) => {
       const existingComment = await Comment.get(trx, id);

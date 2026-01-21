@@ -8,7 +8,8 @@ import { ContractLineServiceConfigurationService } from '../services/contractLin
 import { IContractLineServiceFixedConfig } from '@alga-psa/types';
 import ContractLineFixedConfig from '../models/contractLineFixedConfig'; // Added import for new model
 import { withTransaction } from '@alga-psa/db';
-import { getCurrentUserAsync, hasPermissionAsync, getSessionAsync, getAnalyticsAsync } from '../lib/authHelpers';
+import { getCurrentUser } from '@alga-psa/auth/getCurrentUser';
+import { hasPermissionAsync, getSessionAsync, getAnalyticsAsync } from '../lib/authHelpers';
 
 
 
@@ -17,12 +18,12 @@ import { getCurrentUserAsync, hasPermissionAsync, getSessionAsync, getAnalyticsA
 export async function getContractLines(): Promise<IContractLine[]> {
     try {
         const isBypass = process.env.E2E_AUTH_BYPASS === 'true';
-        const currentUser = isBypass ? ({} as any) : await getCurrentUserAsync();
+        const currentUser = isBypass ? ({} as any) : await getCurrentUser();
         if (!currentUser && !isBypass) {
             throw new Error('No authenticated user found');
         }
 
-        const { knex, tenant } = await createTenantKnex();
+        const { knex, tenant } = await createTenantKnex(currentUser.tenant);
         if (!tenant) {
             throw new Error("tenant context not found");
         }
@@ -56,12 +57,12 @@ export async function getContractLineById(planId: string): Promise<IContractLine
     let tenant_copy: string = '';
     try {
         const isBypass = process.env.E2E_AUTH_BYPASS === 'true';
-        const currentUser = isBypass ? ({} as any) : await getCurrentUserAsync();
+        const currentUser = isBypass ? ({} as any) : await getCurrentUser();
         if (!currentUser && !isBypass) {
             throw new Error('No authenticated user found');
         }
 
-        const { knex, tenant } = await createTenantKnex();
+        const { knex, tenant } = await createTenantKnex(currentUser.tenant);
         if (!tenant) {
             throw new Error("tenant context not found");
         }
@@ -130,12 +131,12 @@ export async function createContractLine(
     planData: Omit<IContractLine, 'contract_line_id'>
 ): Promise<IContractLine> {
     try {
-        const currentUser = await getCurrentUserAsync();
+        const currentUser = await getCurrentUser();
         if (!currentUser) {
             throw new Error('No authenticated user found');
         }
 
-        const { knex, tenant } = await createTenantKnex();
+        const { knex, tenant } = await createTenantKnex(currentUser.tenant);
         if (!tenant) {
             throw new Error("tenant context not found");
         }
@@ -178,12 +179,12 @@ export async function updateContractLine(
     updateData: Partial<IContractLine>
 ): Promise<IContractLine> {
     try {
-        const currentUser = await getCurrentUserAsync();
+        const currentUser = await getCurrentUser();
         if (!currentUser) {
             throw new Error('No authenticated user found');
         }
 
-        const { knex, tenant } = await createTenantKnex();
+        const { knex, tenant } = await createTenantKnex(currentUser.tenant);
         if (!tenant) {
             throw new Error("tenant context not found");
         }
@@ -248,12 +249,12 @@ export async function upsertContractLineTerms(
     contractLineId: string,
     billingTiming: 'arrears' | 'advance'
 ): Promise<void> {
-    const currentUser = await getCurrentUserAsync();
+    const currentUser = await getCurrentUser();
     if (!currentUser) {
         throw new Error('No authenticated user found');
     }
 
-    const { knex, tenant } = await createTenantKnex();
+    const { knex, tenant } = await createTenantKnex(currentUser.tenant);
     if (!tenant) {
         throw new Error("tenant context not found");
     }
@@ -292,13 +293,13 @@ export async function upsertContractLineTerms(
 }
 
 export async function deleteContractLine(planId: string): Promise<void> {
-    try {
-        const currentUser = await getCurrentUserAsync();
-        if (!currentUser) {
-            throw new Error('No authenticated user found');
-        }
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+        throw new Error('No authenticated user found');
+    }
 
-        const { knex, tenant } = await createTenantKnex(); // Capture knex instance here
+    try {
+        const { knex, tenant } = await createTenantKnex(currentUser.tenant); // Capture knex instance here
         if (!tenant) {
             throw new Error("tenant context not found");
         }
@@ -375,7 +376,7 @@ export async function deleteContractLine(planId: string): Promise<void> {
             // We cast to 'any' to access potential driver-specific properties like 'code'
             if ((error as any).code === '23503') {
                  // Fetch client IDs associated with the plan
-                 const { knex: queryKnex, tenant: queryTenant } = await createTenantKnex();
+                 const { knex: queryKnex, tenant: queryTenant } = await createTenantKnex(currentUser.tenant);
                  const clientPlanLinks = await withTransaction(queryKnex, async (trx: Knex.Transaction) => {
                      return await trx('client_contract_lines')
                          .select('client_id')
@@ -434,12 +435,12 @@ export async function getCombinedFixedPlanConfiguration(
     config_id?: string; // Service-specific config ID
 } | null> {
     try {
-        const currentUser = await getCurrentUserAsync();
+        const currentUser = await getCurrentUser();
         if (!currentUser) {
             throw new Error('No authenticated user found');
         }
 
-        const { knex, tenant } = await createTenantKnex(); // Get knex instance
+        const { knex, tenant } = await createTenantKnex(currentUser.tenant); // Get knex instance
         if (!tenant) {
             throw new Error("tenant context not found");
         }
@@ -499,12 +500,12 @@ export async function getCombinedFixedPlanConfiguration(
 export async function getContractLineFixedConfig(planId: string): Promise<IContractLineFixedConfig | null> {
     try {
         const isBypass = process.env.E2E_AUTH_BYPASS === 'true';
-        const currentUser = isBypass ? ({} as any) : await getCurrentUserAsync();
+        const currentUser = isBypass ? ({} as any) : await getCurrentUser();
         if (!currentUser && !isBypass) {
             throw new Error('No authenticated user found');
         }
 
-        const { knex, tenant } = await createTenantKnex();
+        const { knex, tenant } = await createTenantKnex(currentUser.tenant);
         if (!tenant) {
             throw new Error("tenant context not found");
         }
@@ -536,12 +537,12 @@ export async function updateContractLineFixedConfig(
     configData: Partial<Omit<IContractLineFixedConfig, 'contract_line_id' | 'tenant' | 'created_at' | 'updated_at'>>
 ): Promise<boolean> {
     try {
-        const currentUser = await getCurrentUserAsync();
+        const currentUser = await getCurrentUser();
         if (!currentUser) {
             throw new Error('No authenticated user found');
         }
 
-        const { knex, tenant } = await createTenantKnex();
+        const { knex, tenant } = await createTenantKnex(currentUser.tenant);
         if (!tenant) {
             throw new Error("tenant context not found");
         }
@@ -596,12 +597,12 @@ export async function updatePlanServiceFixedConfigRate(
     baseRate: number | null // Only accept base_rate
 ): Promise<boolean> {
     try {
-        const currentUser = await getCurrentUserAsync();
+        const currentUser = await getCurrentUser();
         if (!currentUser) {
             throw new Error('No authenticated user found');
         }
 
-        const { knex, tenant } = await createTenantKnex();
+        const { knex, tenant } = await createTenantKnex(currentUser.tenant);
         if (!tenant) {
             throw new Error("tenant context not found");
         }

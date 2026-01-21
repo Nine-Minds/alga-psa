@@ -5,6 +5,8 @@ import { Knex } from 'knex';
 import { JobStatus } from '@alga-psa/jobs';
 import { createTenantKnex } from '@alga-psa/db';
 import { JobService } from '@alga-psa/jobs';
+import { getCurrentUser } from '@alga-psa/users/actions';
+import { runWithTenant } from '@alga-psa/db';
 
 export interface JobMetrics {
   total: number;
@@ -36,7 +38,8 @@ export interface JobRecord {
 }
 
 export async function getQueueMetricsAction(): Promise<JobMetrics> {
-  const { knex, tenant } = await createTenantKnex();
+  const user = await getCurrentUser();
+  const { knex, tenant } = await createTenantKnex(user?.tenant);
 
   if (!tenant) {
     return {
@@ -88,53 +91,57 @@ export async function getJobDetailsWithHistory(filter: {
   limit?: number;
   offset?: number;
 }): Promise<JobRecord[]> {
-  const { knex, tenant } = await createTenantKnex();
+  const user = await getCurrentUser();
+  const tenantId = filter.tenantId ?? user?.tenant ?? null;
+  const { knex, tenant } = await createTenantKnex(tenantId);
 
   if (!tenant) {
     throw new Error('Tenant not found');
   }
 
-  return await withTransaction(knex, async (trx: Knex.Transaction) => {
-    // Build and execute jobs query scoped explicitly to the tenant
-    let query = trx('jobs')
-      .select('*')
-      .where('tenant', tenant)
-      .orderBy('created_at', 'desc');
+  return runWithTenant(tenant, async () =>
+    withTransaction(knex, async (trx: Knex.Transaction) => {
+      // Build and execute jobs query scoped explicitly to the tenant
+      let query = trx('jobs')
+        .select('*')
+        .where('tenant', tenant)
+        .orderBy('created_at', 'desc');
 
-    if (filter.state) {
-      query = query.where('status', filter.state);
-    }
-    if (filter.startAfter) {
-      query = query.where('created_at', '>', filter.startAfter);
-    }
-    if (filter.beforeDate) {
-      query = query.where('created_at', '<', filter.beforeDate);
-    }
-    if (filter.jobName) {
-      query = query.where('type', filter.jobName);
-    }
-    if (filter.limit) {
-      query = query.limit(filter.limit);
-    }
-    if (filter.offset) {
-      query = query.offset(filter.offset);
-    }
+      if (filter.state) {
+        query = query.where('status', filter.state);
+      }
+      if (filter.startAfter) {
+        query = query.where('created_at', '>', filter.startAfter);
+      }
+      if (filter.beforeDate) {
+        query = query.where('created_at', '<', filter.beforeDate);
+      }
+      if (filter.jobName) {
+        query = query.where('type', filter.jobName);
+      }
+      if (filter.limit) {
+        query = query.limit(filter.limit);
+      }
+      if (filter.offset) {
+        query = query.offset(filter.offset);
+      }
 
-    const jobs = await query;
+      const jobs = await query;
 
-    if (jobs.length === 0) {
-      return [];
-    }
+      if (jobs.length === 0) {
+        return [];
+      }
 
-    // Get job details using the service method with the same transaction
-    const jobService = await JobService.create();
-    const jobsWithDetails = await Promise.all(
-      jobs.map(async job => ({
-        ...job,
-        details: await jobService.getJobDetails(job.job_id, trx)
-      }))
-    );
+      // Get job details using the service method with the same transaction
+      const jobService = await JobService.create();
+      const jobsWithDetails = await Promise.all(
+        jobs.map(async (job) => ({
+          ...job,
+          details: await jobService.getJobDetails(job.job_id, trx),
+        }))
+      );
 
-    return jobsWithDetails;
-  });
+      return jobsWithDetails;
+    })
+  );
 }

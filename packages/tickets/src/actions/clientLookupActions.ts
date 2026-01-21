@@ -10,12 +10,24 @@ import {
   getContactsByClient as getContactsByClientModel,
 } from '@alga-psa/shared/ticketClients/contacts';
 import { getClientLocations as getClientLocationsModel } from '@alga-psa/shared/ticketClients/locations';
+import { getCurrentUser } from '@alga-psa/auth/getCurrentUser';
 
-export async function getAllClients(includeInactive: boolean = true): Promise<IClient[]> {
-  const { knex, tenant } = await createTenantKnex();
+async function getTenantDbContext(): Promise<{ knex: Knex; tenant: string }> {
+  const currentUser = await getCurrentUser();
+  if (!currentUser?.tenant) {
+    throw new Error('Tenant configuration not found');
+  }
+
+  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
   if (!tenant) {
     throw new Error('Tenant configuration not found');
   }
+
+  return { knex, tenant };
+}
+
+export async function getAllClients(includeInactive: boolean = true): Promise<IClient[]> {
+  const { knex, tenant } = await getTenantDbContext();
 
   return withTransaction(knex, async (trx: Knex.Transaction) => {
     return getAllClientsModel(trx, tenant, includeInactive);
@@ -23,10 +35,7 @@ export async function getAllClients(includeInactive: boolean = true): Promise<IC
 }
 
 export async function getClientById(clientId: string): Promise<IClient | null> {
-  const { knex, tenant } = await createTenantKnex();
-  if (!tenant) {
-    throw new Error('Tenant configuration not found');
-  }
+  const { knex, tenant } = await getTenantDbContext();
 
   return withTransaction(knex, async (trx: Knex.Transaction) => {
     return getClientByIdModel(trx, tenant, clientId);
@@ -39,10 +48,7 @@ export async function getContactsByClient(
   sortBy: 'full_name' | 'created_at' | 'email' | 'phone_number' = 'full_name',
   sortDirection: 'asc' | 'desc' = 'asc'
 ): Promise<IContact[]> {
-  const { knex, tenant } = await createTenantKnex();
-  if (!tenant) {
-    throw new Error('Tenant configuration not found');
-  }
+  const { knex, tenant } = await getTenantDbContext();
 
   return withTransaction(knex, async (trx: Knex.Transaction) => {
     return getContactsByClientModel(trx, tenant, clientId, status, sortBy, sortDirection);
@@ -50,10 +56,7 @@ export async function getContactsByClient(
 }
 
 export async function getContactByContactNameId(contactNameId: string): Promise<IContact | null> {
-  const { knex, tenant } = await createTenantKnex();
-  if (!tenant) {
-    throw new Error('Tenant configuration not found');
-  }
+  const { knex, tenant } = await getTenantDbContext();
 
   return withTransaction(knex, async (trx: Knex.Transaction) => {
     return getContactByContactNameIdModel(trx, tenant, contactNameId);
@@ -61,13 +64,9 @@ export async function getContactByContactNameId(contactNameId: string): Promise<
 }
 
 export async function getClientLocations(clientId: string): Promise<IClientLocation[]> {
-  const { knex, tenant } = await createTenantKnex();
-  if (!tenant) {
-    throw new Error('Tenant configuration not found');
-  }
+  const { knex, tenant } = await getTenantDbContext();
 
   return withTransaction(knex, async (trx: Knex.Transaction) => {
     return getClientLocationsModel(trx, tenant, clientId);
   });
 }
-

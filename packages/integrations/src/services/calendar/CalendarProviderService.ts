@@ -127,8 +127,8 @@ export class CalendarProviderService {
 
   private static encryptionKeyPromise: Promise<Buffer> | null = null;
 
-  private async getDb() {
-    const { knex } = await createTenantKnex();
+  private async getDb(tenant: string) {
+    const { knex } = await createTenantKnex(tenant);
     return knex;
   }
 
@@ -148,7 +148,7 @@ export class CalendarProviderService {
    */
   async getProviders(filters: GetCalendarProvidersFilter): Promise<CalendarProviderConfig[]> {
     try {
-      const db = await this.getDb();
+      const db = await this.getDb(filters.tenant);
       let query = db('calendar_providers')
         .where('tenant', filters.tenant)
         .orderBy('created_at', 'desc');
@@ -198,7 +198,10 @@ export class CalendarProviderService {
     options: { includeSecrets?: boolean } = {}
   ): Promise<CalendarProviderConfig | null> {
     try {
-      const db = await this.getDb();
+      if (!tenant) {
+        throw new Error('Tenant is required for getProvider');
+      }
+      const db = await this.getDb(tenant);
       const provider = await db('calendar_providers')
         .where('id', providerId)
         .modify((builder) => {
@@ -233,7 +236,7 @@ export class CalendarProviderService {
    */
   async createProvider(data: CreateCalendarProviderData): Promise<CalendarProviderConfig> {
     try {
-      const db = await this.getDb();
+      const db = await this.getDb(data.tenant);
       
       // Create main provider record
       const [provider] = await db('calendar_providers')
@@ -307,7 +310,7 @@ export class CalendarProviderService {
     data: UpdateCalendarProviderData
   ): Promise<CalendarProviderConfig> {
     try {
-      const db = await this.getDb();
+      const db = await this.getDb(tenant);
       
       // Get existing provider to determine type and current config
       const existingProvider = await this.getProvider(providerId, tenant);
@@ -407,9 +410,9 @@ export class CalendarProviderService {
   /**
    * Update provider status
    */
-  async updateProviderStatus(providerId: string, status: CalendarProviderStatus): Promise<void> {
+  async updateProviderStatus(providerId: string, tenant: string, status: CalendarProviderStatus): Promise<void> {
     try {
-      const db = await this.getDb();
+      const db = await this.getDb(tenant);
       const updateData: any = {
         status: status.status,
         updated_at: db.fn.now()
@@ -439,7 +442,7 @@ export class CalendarProviderService {
    */
   async deleteProvider(providerId: string, tenant: string): Promise<void> {
     try {
-      const db = await this.getDb();
+      const db = await this.getDb(tenant);
       
       // Get provider info to determine type for cleanup
       const provider = await db('calendar_providers')

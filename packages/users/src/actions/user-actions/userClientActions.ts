@@ -4,7 +4,7 @@ import { createTenantKnex } from '@alga-psa/db';
 import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { getCurrentUser } from '@alga-psa/users/actions';
-import { hasPermission } from '@alga-psa/auth/rbac';
+import { hasPermission } from '../../lib/permissions';
 
 export interface UserClientInfo {
   user_id: string;

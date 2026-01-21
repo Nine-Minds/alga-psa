@@ -712,7 +712,7 @@ export async function upsertEmailProvider(data: {
     if (!skipAutomation && data.providerType === 'microsoft' && provider.microsoftConfig) {
       try {
         const service = new EmailProviderService();
-        await service.initializeProviderWebhook(provider.id);
+        await service.initializeProviderWebhook(provider.id, tenant);
         // Update returned provider state to reflect side-effects
         provider.lastSyncAt = new Date().toISOString();
         provider.status = 'connected';
@@ -836,7 +836,7 @@ export async function updateEmailProvider(
     if (!skipAutomation && data.providerType === 'microsoft' && provider.microsoftConfig) {
       try {
         const service = new EmailProviderService();
-        await service.initializeProviderWebhook(provider.id);
+        await service.initializeProviderWebhook(provider.id, tenant);
         // Update returned provider state to reflect side-effects
         provider.lastSyncAt = new Date().toISOString();
         provider.status = 'connected';

@@ -40,8 +40,8 @@ export interface ProviderStatus {
 }
 
 export class EmailProviderService {
-  private async getDb() {
-    const { knex } = await createTenantKnex();
+  private async getDb(tenant: string) {
+    const { knex } = await createTenantKnex(tenant);
     return knex;
   }
 
@@ -59,7 +59,7 @@ export class EmailProviderService {
    */
   async getProviders(filters: GetProvidersFilter): Promise<EmailProviderConfig[]> {
     try {
-      const db = await this.getDb();
+      const db = await this.getDb(filters.tenant);
       let query = db('email_providers')
         .where('tenant', filters.tenant)
         .orderBy('created_at', 'desc');
@@ -107,11 +107,12 @@ export class EmailProviderService {
   /**
    * Get a single email provider by ID
    */
-  async getProvider(providerId: string): Promise<EmailProviderConfig | null> {
+  async getProvider(providerId: string, tenant: string): Promise<EmailProviderConfig | null> {
     try {
-      const db = await this.getDb();
+      const db = await this.getDb(tenant);
       const provider = await db('email_providers')
         .where('id', providerId)
+        .where('tenant', tenant)
         .first();
 
       if (!provider) {
@@ -146,7 +147,7 @@ export class EmailProviderService {
    */
   async createProvider(data: CreateProviderData): Promise<EmailProviderConfig> {
     try {
-      const db = await this.getDb();
+      const db = await this.getDb(data.tenant);
       
       // Create main provider record
       const [provider] = await db('email_providers')
@@ -204,13 +205,13 @@ export class EmailProviderService {
       }
 
       console.log(`✅ Created email provider: ${provider.provider_name} (${provider.id})`);
-      
+
       // Fetch the complete provider with vendor config
-      const createdProvider = await this.getProvider(provider.id);
+      const createdProvider = await this.getProvider(provider.id, data.tenant);
       if (!createdProvider) {
         throw new Error('Failed to fetch created provider');
       }
-      
+
       return createdProvider;
     } catch (error: any) {
       console.error('Error creating email provider:', error);
@@ -221,12 +222,12 @@ export class EmailProviderService {
   /**
    * Update an existing email provider
    */
-  async updateProvider(providerId: string, data: UpdateProviderData): Promise<EmailProviderConfig> {
+  async updateProvider(providerId: string, tenant: string, data: UpdateProviderData): Promise<EmailProviderConfig> {
     try {
-      const db = await this.getDb();
-      
+      const db = await this.getDb(tenant);
+
       // Get existing provider to determine type and current config
-      const existingProvider = await this.getProvider(providerId);
+      const existingProvider = await this.getProvider(providerId, tenant);
       if (!existingProvider) {
         throw new Error('Provider not found');
       }
@@ -298,13 +299,13 @@ export class EmailProviderService {
       }
 
       // Fetch updated provider with vendor config
-      const updatedProvider = await this.getProvider(providerId);
+      const updatedProvider = await this.getProvider(providerId, tenant);
       if (!updatedProvider) {
         throw new Error('Failed to fetch updated provider');
       }
 
       console.log(`✅ Updated email provider: ${updatedProvider.name} (${updatedProvider.id})`);
-      
+
       return updatedProvider;
     } catch (error: any) {
       console.error(`Error updating email provider ${providerId}:`, error);
@@ -315,9 +316,9 @@ export class EmailProviderService {
   /**
    * Update provider status
    */
-  async updateProviderStatus(providerId: string, status: ProviderStatus): Promise<void> {
+  async updateProviderStatus(providerId: string, tenant: string, status: ProviderStatus): Promise<void> {
     try {
-      const db = await this.getDb();
+      const db = await this.getDb(tenant);
       const updateData: any = {
         status: status.status,
         updated_at: db.fn.now()
@@ -345,13 +346,14 @@ export class EmailProviderService {
   /**
    * Delete an email provider
    */
-  async deleteProvider(providerId: string): Promise<void> {
+  async deleteProvider(providerId: string, tenant: string): Promise<void> {
     try {
-      const db = await this.getDb();
-      
+      const db = await this.getDb(tenant);
+
       // Get provider info to determine type for cleanup
       const provider = await db('email_providers')
         .where('id', providerId)
+        .where('tenant', tenant)
         .first();
 
       if (!provider) {
@@ -392,9 +394,9 @@ export class EmailProviderService {
   /**
    * Initialize webhook for a provider
    */
-  async initializeProviderWebhook(providerId: string): Promise<void> {
+  async initializeProviderWebhook(providerId: string, tenant: string): Promise<void> {
     try {
-      const provider = await this.getProvider(providerId);
+      const provider = await this.getProvider(providerId, tenant);
       if (!provider) {
         throw new Error('Provider not found');
       }
@@ -411,7 +413,7 @@ export class EmailProviderService {
         }
 
         // Update provider with webhook subscription ID
-        await this.updateProvider(providerId, {
+        await this.updateProvider(providerId, tenant, {
           vendorConfig: {
             ...provider.provider_config,
             subscriptionId: result.subscriptionId
@@ -442,7 +444,7 @@ export class EmailProviderService {
         }
 
         // Update provider with webhook details
-        await this.updateProvider(providerId, {
+        await this.updateProvider(providerId, tenant, {
           vendorConfig: {
             ...provider.provider_config,
             history_id: result.historyId,
@@ -452,7 +454,7 @@ export class EmailProviderService {
       }
 
       // Update status to connected
-      await this.updateProviderStatus(providerId, {
+      await this.updateProviderStatus(providerId, tenant, {
         status: 'connected',
         errorMessage: null,
         lastSyncAt: new Date().toISOString()
@@ -461,13 +463,13 @@ export class EmailProviderService {
       console.log(`✅ Webhook initialized for provider: ${provider.name}`);
     } catch (error: any) {
       console.error(`❌ Failed to initialize webhook for provider ${providerId}:`, error);
-      
+
       // Update status to error
-      await this.updateProviderStatus(providerId, {
+      await this.updateProviderStatus(providerId, tenant, {
         status: 'error',
         errorMessage: error.message
       });
-      
+
       throw error;
     }
   }
@@ -475,9 +477,9 @@ export class EmailProviderService {
   /**
    * Deactivate webhook for a provider
    */
-  async deactivateProviderWebhook(providerId: string): Promise<void> {
+  async deactivateProviderWebhook(providerId: string, tenant: string): Promise<void> {
     try {
-      const provider = await this.getProvider(providerId);
+      const provider = await this.getProvider(providerId, tenant);
       if (!provider) {
         throw new Error('Provider not found');
       }
@@ -500,7 +502,7 @@ export class EmailProviderService {
       }
 
       // Update status to disconnected
-      await this.updateProviderStatus(providerId, {
+      await this.updateProviderStatus(providerId, tenant, {
         status: 'disconnected',
         errorMessage: null
       });

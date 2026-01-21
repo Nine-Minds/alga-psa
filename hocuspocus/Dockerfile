@@ -2,8 +2,8 @@ FROM node:22.5.1 AS builder
 
 WORKDIR /app/hocuspocus
 
-COPY hocuspocus/package.json ./
-RUN npm install --only=production
+COPY package.json ./
+RUN npm install --omit=dev --no-package-lock
 
 FROM node:22.5.1-slim
 
@@ -21,7 +21,7 @@ RUN groupadd -r nodejs && useradd -r -g nodejs nodejs
 
 # Copy built node modules and source files
 COPY --from=builder /app/hocuspocus/node_modules ./node_modules
-COPY hocuspocus/ ./
+COPY . ./
 
 # Set up entrypoint script
 RUN chmod +x ./entrypoint.sh

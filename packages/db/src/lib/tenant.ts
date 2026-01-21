@@ -15,7 +15,17 @@ type PoolConfig = KnexType.PoolConfig & {
 };
 
 let sharedKnexInstance: KnexType | null = null;
-const tenantContext = new AsyncLocalStorage<string>();
+const tenantContext: AsyncLocalStorage<string> = (() => {
+  const globalAny = globalThis as unknown as {
+    __ALGA_PSA_TENANT_CONTEXT__?: AsyncLocalStorage<string>;
+  };
+
+  if (!globalAny.__ALGA_PSA_TENANT_CONTEXT__) {
+    globalAny.__ALGA_PSA_TENANT_CONTEXT__ = new AsyncLocalStorage<string>();
+  }
+
+  return globalAny.__ALGA_PSA_TENANT_CONTEXT__;
+})();
 
 export function getTenantContext(): string | undefined {
   return tenantContext.getStore();
@@ -82,8 +92,9 @@ export async function withTransaction<T>(
   callback: (trx: KnexType.Transaction) => Promise<T>
 ): Promise<T> {
   if (typeof tenantIdOrKnexOrTrx === 'string') {
-    const knex = await getConnection(tenantIdOrKnexOrTrx);
-    return knex.transaction(callback);
+    const tenantId = tenantIdOrKnexOrTrx;
+    const knex = await getConnection(tenantId);
+    return tenantContext.run(tenantId, () => knex.transaction((trx) => tenantContext.run(tenantId, () => callback(trx))));
   }
 
   const maybeTrx = tenantIdOrKnexOrTrx as unknown as {
@@ -91,11 +102,21 @@ export async function withTransaction<T>(
     rollback?: unknown;
   };
 
+  const tenantId = getTenantContext();
+
   if (typeof maybeTrx?.commit === 'function' && typeof maybeTrx?.rollback === 'function') {
+    if (tenantId) {
+      return tenantContext.run(tenantId, () => callback(tenantIdOrKnexOrTrx as KnexType.Transaction));
+    }
     return callback(tenantIdOrKnexOrTrx as KnexType.Transaction);
   }
 
-  return (tenantIdOrKnexOrTrx as KnexType).transaction(callback);
+  const knex = tenantIdOrKnexOrTrx as KnexType;
+  if (tenantId) {
+    return tenantContext.run(tenantId, () => knex.transaction((trx) => tenantContext.run(tenantId, () => callback(trx))));
+  }
+
+  return knex.transaction(callback);
 }
 
 export async function createTenantKnex(
@@ -103,10 +124,9 @@ export async function createTenantKnex(
 ): Promise<{ knex: KnexType; tenant: string | null }> {
   let tenant = tenantId ?? getTenantContext() ?? null;
 
-  // Dev convenience: when running inside Next.js server actions / RSC without an established
-  // AsyncLocalStorage tenant context, fall back to the first tenant in the DB.
-  // This keeps local dev usable while production remains strict.
-  if (!tenant && process.env.NODE_ENV !== 'production') {
+  // Development-only escape hatch: fallback to the first tenant in the DB.
+  // Default is strict (no fallback) so missing tenant wiring fails fast in dev.
+  if (!tenant && process.env.NODE_ENV !== 'production' && process.env.ALGA_TENANT_FALLBACK === '1') {
     try {
       const knex = await getConnection(null);
       const row = await knex<{ tenant: string }>('tenants').select('tenant').first();
@@ -117,6 +137,14 @@ export async function createTenantKnex(
   }
 
   const knex = await getConnection(tenant);
+
+  // Ensure downstream helpers relying on AsyncLocalStorage (e.g. requireTenantId)
+  // can resolve the tenant in production when callers pass an explicit tenantId.
+  // Safe because AsyncLocalStorage is scoped to the current async execution chain.
+  if (tenant && getTenantContext() !== tenant) {
+    tenantContext.enterWith(tenant);
+  }
+
   return { knex, tenant };
 }
 

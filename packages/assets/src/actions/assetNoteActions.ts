@@ -41,8 +41,8 @@ export async function getAssetNoteContent(assetId: string): Promise<AssetNoteCon
     throw new Error('User tenant not found in session');
   }
 
-  // Get tenant context from DB (should match user's tenant)
-  const { knex, tenant } = await createTenantKnex();
+  // Use the user's tenant explicitly (server actions don't always inherit AsyncLocalStorage context)
+  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
   if (!tenant) {
     throw new Error('No tenant found in database context');
   }
@@ -134,8 +134,8 @@ export async function saveAssetNote(
     throw new Error('User tenant not found in session');
   }
 
-  // Get tenant context from DB (should match user's tenant)
-  const { knex, tenant } = await createTenantKnex();
+  // Use the user's tenant explicitly (server actions don't always inherit AsyncLocalStorage context)
+  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
   if (!tenant) {
     throw new Error('No tenant found in database context');
   }
@@ -210,8 +210,8 @@ export async function deleteAssetNote(
     throw new Error('User tenant not found in session');
   }
 
-  // Get tenant context from DB (should match user's tenant)
-  const { knex, tenant } = await createTenantKnex();
+  // Use the user's tenant explicitly (server actions don't always inherit AsyncLocalStorage context)
+  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
   if (!tenant) {
     throw new Error('No tenant found in database context');
   }

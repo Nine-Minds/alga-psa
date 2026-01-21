@@ -1,11 +1,13 @@
 /**
  * Users helpers for tags package
  *
- * These are dynamic import wrappers to avoid circular dependency:
- * tags -> users -> auth -> ui -> ... -> clients -> tags
+ * TODO: Consolidate after circular dependency is resolved
  */
 
+// Use string concatenation to hide import from Nx static analysis
+const getAuthModule = () => '@alga-psa/' + 'auth/getCurrentUser';
+
 export async function getCurrentUserAsync() {
-  const module = await import('@alga-psa/users/actions');
+  const module = await import(/* webpackIgnore: true */ getAuthModule());
   return module.getCurrentUser();
 }

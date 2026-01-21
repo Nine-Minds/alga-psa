@@ -20,6 +20,7 @@ export function CSVMappingManager() {
       context={context}
       tabStyles={tabStyles}
       defaultTabId="Clients"
+      urlParamKey="mappingTab"
     />
   );
 }

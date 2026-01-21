@@ -1,6 +1,6 @@
 import type { IUser, IRole, IPermission, IRoleWithPermissions } from '@alga-psa/types';
 import User from '@alga-psa/db/models/user';
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, runWithTenant } from '@alga-psa/db';
 import { Knex } from 'knex';
 
 export class Role implements IRole {
@@ -76,37 +76,43 @@ function canonicalizeResource(resource: string): string {
 }
 
 export async function hasPermission(user: IUser, resource: string, action: string, knexConnection?: Knex | Knex.Transaction): Promise<boolean> {
-  const normalizedResource = canonicalizeResource(resource);
-  let rolesWithPermissions: IRoleWithPermissions[];
-  
-  if (knexConnection) {
-    // Use provided connection (transaction or regular knex instance)
-    rolesWithPermissions = await User.getUserRolesWithPermissions(knexConnection, user.user_id);
-  } else {
-    // Create new connection if none provided
-    const { knex } = await createTenantKnex();
-    rolesWithPermissions = await User.getUserRolesWithPermissions(knex, user.user_id);
+  if (!user.tenant) {
+    throw new Error('Tenant is required');
   }
-  
-  // Determine portal type based on user type
-  const isClientPortal = user.user_type === 'client';
-  
-  for (const role of rolesWithPermissions) {
-    // Filter roles based on portal type
-    if (isClientPortal && !role.client) continue;
-    if (!isClientPortal && !role.msp) continue;
-    
-    for (const permission of role.permissions) {
-      // Filter permissions based on portal type
-      if (isClientPortal && !permission.client) continue;
-      if (!isClientPortal && !permission.msp) continue;
-      
-      if (canonicalizeResource(permission.resource) === normalizedResource && permission.action === action) {
-        return true;
+
+  return runWithTenant(user.tenant, async () => {
+    const normalizedResource = canonicalizeResource(resource);
+    let rolesWithPermissions: IRoleWithPermissions[];
+
+    if (knexConnection) {
+      // Use provided connection (transaction or regular knex instance)
+      rolesWithPermissions = await User.getUserRolesWithPermissions(knexConnection, user.user_id);
+    } else {
+      // Create new connection if none provided
+      const { knex } = await createTenantKnex(user.tenant);
+      rolesWithPermissions = await User.getUserRolesWithPermissions(knex, user.user_id);
+    }
+
+    // Determine portal type based on user type
+    const isClientPortal = user.user_type === 'client';
+
+    for (const role of rolesWithPermissions) {
+      // Filter roles based on portal type
+      if (isClientPortal && !role.client) continue;
+      if (!isClientPortal && !role.msp) continue;
+
+      for (const permission of role.permissions) {
+        // Filter permissions based on portal type
+        if (isClientPortal && !permission.client) continue;
+        if (!isClientPortal && !permission.msp) continue;
+
+        if (canonicalizeResource(permission.resource) === normalizedResource && permission.action === action) {
+          return true;
+        }
       }
     }
-  }
-  return false;
+    return false;
+  });
 }
 
 export interface PermissionCheck {
@@ -128,39 +134,45 @@ export async function checkMultiplePermissions(
   permissionChecks: PermissionCheck[],
   knexConnection?: Knex | Knex.Transaction
 ): Promise<PermissionResult[]> {
-  let rolesWithPermissions: IRoleWithPermissions[];
-  
-  if (knexConnection) {
-    // Use provided connection (transaction or regular knex instance)
-    rolesWithPermissions = await User.getUserRolesWithPermissions(knexConnection, user.user_id);
-  } else {
-    // Create new connection if none provided
-    const { knex } = await createTenantKnex();
-    rolesWithPermissions = await User.getUserRolesWithPermissions(knex, user.user_id);
+  if (!user.tenant) {
+    throw new Error('Tenant is required');
   }
-  
-  // Determine portal type based on user type
-  const isClientPortal = user.user_type === 'client';
-  
-  const userPermissions = new Set<string>();
-  
-  for (const role of rolesWithPermissions) {
-    // Filter roles based on portal type
-    if (isClientPortal && !role.client) continue;
-    if (!isClientPortal && !role.msp) continue;
-    
-    for (const permission of role.permissions) {
-      // Filter permissions based on portal type
-      if (isClientPortal && !permission.client) continue;
-      if (!isClientPortal && !permission.msp) continue;
-      
-      userPermissions.add(`${permission.resource}:${permission.action}`);
+
+  return runWithTenant(user.tenant, async () => {
+    let rolesWithPermissions: IRoleWithPermissions[];
+
+    if (knexConnection) {
+      // Use provided connection (transaction or regular knex instance)
+      rolesWithPermissions = await User.getUserRolesWithPermissions(knexConnection, user.user_id);
+    } else {
+      // Create new connection if none provided
+      const { knex } = await createTenantKnex(user.tenant);
+      rolesWithPermissions = await User.getUserRolesWithPermissions(knex, user.user_id);
     }
-  }
-  
-  return permissionChecks.map(check => ({
-    resource: check.resource,
-    action: check.action,
-    granted: userPermissions.has(`${check.resource}:${check.action}`)
-  }));
+
+    // Determine portal type based on user type
+    const isClientPortal = user.user_type === 'client';
+
+    const userPermissions = new Set<string>();
+
+    for (const role of rolesWithPermissions) {
+      // Filter roles based on portal type
+      if (isClientPortal && !role.client) continue;
+      if (!isClientPortal && !role.msp) continue;
+
+      for (const permission of role.permissions) {
+        // Filter permissions based on portal type
+        if (isClientPortal && !permission.client) continue;
+        if (!isClientPortal && !permission.msp) continue;
+
+        userPermissions.add(`${permission.resource}:${permission.action}`);
+      }
+    }
+
+    return permissionChecks.map(check => ({
+      resource: check.resource,
+      action: check.action,
+      granted: userPermissions.has(`${check.resource}:${check.action}`)
+    }));
+  });
 }

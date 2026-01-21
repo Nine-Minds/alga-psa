@@ -118,7 +118,7 @@ export async function getInvoicesPendingExternalTax(): Promise<
 
   // Import createTenantKnex here to avoid circular dependencies
   const { createTenantKnex } = await import('@alga-psa/db');
-  const { knex, tenant } = await createTenantKnex();
+  const { knex, tenant } = await createTenantKnex(user.tenant);
 
   if (!tenant) {
     return [];

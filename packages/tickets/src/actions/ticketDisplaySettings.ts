@@ -34,7 +34,10 @@ const DEFAULT_TICKETING_DATETIME_FORMAT = 'MMM d, yyyy h:mm a';
 export async function getTicketingDisplaySettings(): Promise<TicketingDisplaySettings> {
   // Prefer dedicated column if present; fallback to nested settings for backward compatibility
   try {
-    const { knex, tenant } = await createTenantKnex();
+    const currentUser = await getCurrentUser();
+    if (!currentUser) throw new Error('User not authenticated');
+
+    const { knex, tenant } = await createTenantKnex(currentUser.tenant);
     if (!tenant) throw new Error('Tenant not found');
     const row = await knex('tenant_settings').select('ticket_display_settings', 'settings').where({ tenant }).first();
     const fromColumn = (row?.ticket_display_settings as any) || {};
@@ -94,8 +97,8 @@ export async function updateTicketingDisplaySettings(updated: TicketingDisplaySe
   if (!currentUser) {
     throw new Error('User not authenticated');
   }
-  
-  const { knex, tenant } = await createTenantKnex();
+
+  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
   
   // Check if user has permission to update ticket settings
   if (!await hasPermission(currentUser, 'ticket_settings', 'update', knex)) {

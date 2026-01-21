@@ -5,7 +5,7 @@ import {
   EmailSendResult as ProviderEmailSendResult,
   EmailAddress as ProviderEmailAddress
 } from '@alga-psa/types';
-import { SupportedLocale } from '@alga-psa/ui/lib/i18n/config';
+import { SupportedLocale } from './lib/localeConfig';
 
 export interface EmailAddress {
   email: string;

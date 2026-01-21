@@ -14,16 +14,31 @@ export interface BillingSettings {
   creditExpirationNotificationDays?: number[];
 }
 
+async function getTenantKnex(): Promise<{ knex: Knex; tenant: string }> {
+  const currentUser = await getCurrentUserAsync();
+  if (!currentUser) {
+    throw new Error('No authenticated user found');
+  }
+
+  if (!currentUser.tenant) {
+    throw new Error('Tenant is required');
+  }
+
+  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
+  if (!tenant) {
+    throw new Error('SYSTEM_ERROR: Tenant context not found');
+  }
+
+  return { knex, tenant };
+}
+
 export async function getDefaultBillingSettings(): Promise<BillingSettings> {
   const session = await getSessionAsync();
   if (!session?.user?.id) {
     throw new Error("Unauthorized");
   }
 
-  const { knex, tenant } = await createTenantKnex();
-  if (!tenant) {
-    throw new Error("No tenant found");
-  }
+  const { knex, tenant } = await getTenantKnex();
 
   const settings = await withTransaction(knex, async (trx: Knex.Transaction) => {
     return await trx('default_billing_settings')
@@ -57,10 +72,7 @@ export async function updateDefaultBillingSettings(data: BillingSettings): Promi
     throw new Error("Unauthorized");
   }
 
-  const { knex, tenant } = await createTenantKnex();
-  if (!tenant) {
-    throw new Error("No tenant found");
-  }
+  const { knex, tenant } = await getTenantKnex();
 
   await withTransaction(knex, async (trx: Knex.Transaction) => {
     const existingSettings = await trx('default_billing_settings')
@@ -100,10 +112,7 @@ export async function getClientContractLineSettings(clientId: string): Promise<B
     throw new Error("Unauthorized");
   }
 
-  const { knex, tenant } = await createTenantKnex();
-  if (!tenant) {
-    throw new Error("No tenant found");
-  }
+  const { knex, tenant } = await getTenantKnex();
 
   const settings = await withTransaction(knex, async (trx: Knex.Transaction) => {
     return await trx('client_billing_settings')
@@ -136,10 +145,7 @@ export async function updateClientContractLineSettings(
     throw new Error("Unauthorized");
   }
 
-  const { knex, tenant } = await createTenantKnex();
-  if (!tenant) {
-    throw new Error("No tenant found");
-  }
+  const { knex, tenant } = await getTenantKnex();
 
   await withTransaction(knex, async (trx: Knex.Transaction) => {
     // If data is null, remove the client override

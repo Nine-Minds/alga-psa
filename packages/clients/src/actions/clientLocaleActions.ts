@@ -22,7 +22,7 @@ export async function updateClientLocaleAction(
     throw new Error(`Unsupported locale: ${locale}`);
   }
 
-  const { knex, tenant } = await createTenantKnex();
+  const { knex, tenant } = await createTenantKnex(user.tenant);
   if (!tenant) {
     throw new Error('Tenant not found');
   }
@@ -71,7 +71,7 @@ export async function getClientLocaleAction(
     return null;
   }
 
-  const { knex, tenant } = await createTenantKnex();
+  const { knex, tenant } = await createTenantKnex(user.tenant);
   if (!tenant) {
     return null;
   }

@@ -36,4 +36,9 @@ export HOCUSPOCUS_URL="${HOCUSPOCUS_URL:-ws://hocuspocus:1234}"
 
 cd /app/server
 # Avoid Nx flakiness inside long-lived containers (e.g. `docker compose restart`) by running Next directly.
-exec npx --no-install next dev --turbo --hostname 0.0.0.0 --port 3000
+# Next 16 defaults to Turbopack; keep that default. Webpack can be forced for debugging via ALGA_NEXT_WEBPACK=1.
+NEXT_DEV_FLAGS="--hostname 0.0.0.0 --port 3000"
+if [ "${ALGA_NEXT_WEBPACK:-0}" = "1" ]; then
+  NEXT_DEV_FLAGS="--webpack ${NEXT_DEV_FLAGS}"
+fi
+exec npx --no-install next dev ${NEXT_DEV_FLAGS}

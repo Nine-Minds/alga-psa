@@ -20,6 +20,7 @@ import { fromPath } from 'pdf2pic';
 import { StorageService } from '../storage/StorageService';
 import { createTenantKnex } from '@alga-psa/db';
 import type { IDocument } from '@alga-psa/types';
+import { getCurrentUser } from '@alga-psa/auth/getCurrentUser';
 import { v4 as uuidv4 } from 'uuid';
 import fs from 'fs/promises';
 import path from 'path';
@@ -117,7 +118,11 @@ async function generateImagePreviews(
   fileBuffer: Buffer
 ): Promise<PreviewGenerationResult> {
   try {
-    const { tenant } = await createTenantKnex();
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+      throw new Error('Unauthorized');
+    }
+    const { tenant } = await createTenantKnex(currentUser.tenant);
     if (!tenant) {
       throw new Error('No tenant found');
     }
@@ -234,7 +239,11 @@ async function generatePdfPreviews(
   let tempPdfPath: string | null = null;
 
   try {
-    const { tenant } = await createTenantKnex();
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+      throw new Error('Unauthorized');
+    }
+    const { tenant } = await createTenantKnex(currentUser.tenant);
     if (!tenant) {
       throw new Error('No tenant found');
     }
@@ -391,7 +400,11 @@ async function generateVideoPreviews(
       };
     }
 
-    const { tenant } = await createTenantKnex();
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+      throw new Error('Unauthorized');
+    }
+    const { tenant } = await createTenantKnex(currentUser.tenant);
     if (!tenant) {
       throw new Error('No tenant found');
     }
@@ -564,7 +577,11 @@ async function generateVideoPreviews(
  */
 export async function batchGeneratePreviews(limit: number = 50): Promise<number> {
   try {
-    const { knex, tenant } = await createTenantKnex();
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+      throw new Error('Unauthorized');
+    }
+    const { knex, tenant } = await createTenantKnex(currentUser.tenant);
     if (!tenant) {
       throw new Error('No tenant found');
     }
@@ -635,7 +652,11 @@ export async function batchGeneratePreviews(limit: number = 50): Promise<number>
  */
 export async function regenerateDocumentPreview(documentId: string): Promise<boolean> {
   try {
-    const { knex, tenant } = await createTenantKnex();
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+      throw new Error('Unauthorized');
+    }
+    const { knex, tenant } = await createTenantKnex(currentUser.tenant);
     if (!tenant) {
       throw new Error('No tenant found');
     }

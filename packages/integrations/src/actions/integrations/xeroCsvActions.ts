@@ -39,7 +39,12 @@ const DEFAULT_SETTINGS: XeroCsvSettings = {
  * Get Xero CSV integration settings for the current tenant.
  */
 export async function getXeroCsvSettings(): Promise<XeroCsvSettings> {
-  const { knex, tenant } = await createTenantKnex();
+  const user = await getCurrentUser();
+  if (!user) {
+    throw new Error('User must be authenticated');
+  }
+
+  const { knex, tenant } = await createTenantKnex(user.tenant);
 
   if (!tenant) {
     throw new Error('No tenant found');
@@ -65,16 +70,16 @@ export async function getXeroCsvSettings(): Promise<XeroCsvSettings> {
 export async function updateXeroCsvSettings(
   updates: Partial<XeroCsvSettings>
 ): Promise<XeroCsvSettings> {
-  const { knex, tenant } = await createTenantKnex();
-
-  if (!tenant) {
-    throw new Error('No tenant found');
-  }
-
   // Check user permissions
   const user = await getCurrentUser();
   if (!user) {
     throw new Error('User must be authenticated');
+  }
+
+  const { knex, tenant } = await createTenantKnex(user.tenant);
+
+  if (!tenant) {
+    throw new Error('No tenant found');
   }
 
   const canManageIntegrations = await hasPermission(user, 'billing_settings', 'update');
@@ -140,16 +145,16 @@ export const saveXeroCsvSettings = updateXeroCsvSettings;
 export async function previewXeroCsvTaxImport(
   csvContent: string
 ): Promise<TaxImportPreviewResult> {
-  const { tenant } = await createTenantKnex();
-
-  if (!tenant) {
-    throw new Error('No tenant found');
-  }
-
   // Check user permissions
   const user = await getCurrentUser();
   if (!user) {
     throw new Error('User must be authenticated');
+  }
+
+  const { tenant } = await createTenantKnex(user.tenant);
+
+  if (!tenant) {
+    throw new Error('No tenant found');
   }
 
   const canManageBilling = await hasPermission(user, 'billing_settings', 'update');
@@ -181,16 +186,16 @@ export async function previewXeroCsvTaxImport(
 export async function executeXeroCsvTaxImport(
   csvContent: string
 ): Promise<TaxImportResult> {
-  const { tenant } = await createTenantKnex();
-
-  if (!tenant) {
-    throw new Error('No tenant found');
-  }
-
   // Check user permissions
   const user = await getCurrentUser();
   if (!user) {
     throw new Error('User must be authenticated');
+  }
+
+  const { tenant } = await createTenantKnex(user.tenant);
+
+  if (!tenant) {
+    throw new Error('No tenant found');
   }
 
   const canManageBilling = await hasPermission(user, 'billing_settings', 'update');
@@ -235,16 +240,16 @@ export async function getXeroIntegrationMode(): Promise<'oauth' | 'csv'> {
 export async function exportClientsToXeroCsv(
   clientIds?: string[]
 ): Promise<ClientExportResult> {
-  const { tenant } = await createTenantKnex();
-
-  if (!tenant) {
-    throw new Error('No tenant found');
-  }
-
   // Check user permissions
   const user = await getCurrentUser();
   if (!user) {
     throw new Error('User must be authenticated');
+  }
+
+  const { tenant } = await createTenantKnex(user.tenant);
+
+  if (!tenant) {
+    throw new Error('No tenant found');
   }
 
   const canManageBilling = await hasPermission(user, 'billing_settings', 'update');
@@ -271,16 +276,16 @@ export async function previewXeroCsvClientImport(
   csvContent: string,
   options?: Partial<ClientImportOptions>
 ): Promise<ClientImportPreviewResult> {
-  const { tenant } = await createTenantKnex();
-
-  if (!tenant) {
-    throw new Error('No tenant found');
-  }
-
   // Check user permissions
   const user = await getCurrentUser();
   if (!user) {
     throw new Error('User must be authenticated');
+  }
+
+  const { tenant } = await createTenantKnex(user.tenant);
+
+  if (!tenant) {
+    throw new Error('No tenant found');
   }
 
   const canManageBilling = await hasPermission(user, 'billing_settings', 'update');
@@ -313,16 +318,16 @@ export async function executeXeroCsvClientImport(
   csvContent: string,
   options?: Partial<ClientImportOptions>
 ): Promise<ClientImportResult> {
-  const { tenant } = await createTenantKnex();
-
-  if (!tenant) {
-    throw new Error('No tenant found');
-  }
-
   // Check user permissions
   const user = await getCurrentUser();
   if (!user) {
     throw new Error('User must be authenticated');
+  }
+
+  const { tenant } = await createTenantKnex(user.tenant);
+
+  if (!tenant) {
+    throw new Error('No tenant found');
   }
 
   const canManageBilling = await hasPermission(user, 'billing_settings', 'update');
@@ -359,16 +364,16 @@ export async function getXeroCsvClientMappings(): Promise<Array<{
   xeroContactName: string;
   lastSyncedAt: string | null;
 }>> {
-  const { tenant } = await createTenantKnex();
-
-  if (!tenant) {
-    throw new Error('No tenant found');
-  }
-
   // Check user permissions
   const user = await getCurrentUser();
   if (!user) {
     throw new Error('User must be authenticated');
+  }
+
+  const { tenant } = await createTenantKnex(user.tenant);
+
+  if (!tenant) {
+    throw new Error('No tenant found');
   }
 
   const canReadBilling = await hasPermission(user, 'billing_settings', 'read');

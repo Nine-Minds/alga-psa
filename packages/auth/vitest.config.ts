@@ -10,7 +10,6 @@ export default defineConfig({
   },
   resolve: {
     alias: {
-      '@alga-psa/analytics': path.resolve(__dirname, '../analytics/src'),
       '@alga-psa/client-portal': path.resolve(__dirname, '../client-portal/src'),
       '@alga-psa/documents': path.resolve(__dirname, '../documents/src'),
       '@alga-psa/event-bus': path.resolve(__dirname, '../event-bus/src'),

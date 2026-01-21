@@ -204,7 +204,7 @@ export async function createContractTemplateFromWizard(
     throw new Error('No authenticated user found');
   }
 
-  const { knex, tenant } = await createTenantKnex();
+  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
   if (!tenant) {
     throw new Error('Tenant not found');
   }
@@ -642,7 +642,7 @@ export async function createClientContractFromWizard(
     throw new Error('No authenticated user found');
   }
 
-  const { knex, tenant } = await createTenantKnex();
+  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
   if (!tenant) {
     throw new Error('Tenant not found');
   }
@@ -1114,12 +1114,12 @@ export async function createClientContractFromWizard(
 // ---------------------------------------------------------------------------
 
 export async function checkTemplateNameExists(templateName: string): Promise<boolean> {
-  const session = await getSessionAsync();
-  if (!session?.user?.id) {
+  const currentUser = await getCurrentUserAsync();
+  if (!currentUser) {
     throw new Error('Unauthorized');
   }
 
-  const { knex, tenant } = await createTenantKnex();
+  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
   if (!tenant) {
     throw new Error('Tenant not found');
   }
@@ -1137,12 +1137,12 @@ export async function checkTemplateNameExists(templateName: string): Promise<boo
 // ---------------------------------------------------------------------------
 
 export async function listContractTemplatesForWizard(): Promise<TemplateOption[]> {
-  const session = await getSessionAsync();
-  if (!session?.user?.id) {
+  const currentUser = await getCurrentUserAsync();
+  if (!currentUser) {
     throw new Error('Unauthorized');
   }
 
-  const { knex, tenant } = await createTenantKnex();
+  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
   if (!tenant) {
     throw new Error('Tenant not found');
   }
@@ -1170,12 +1170,12 @@ export async function listContractTemplatesForWizard(): Promise<TemplateOption[]
 export async function getContractTemplateSnapshotForClientWizard(
   templateId: string
 ): Promise<ClientTemplateSnapshot> {
-  const session = await getSessionAsync();
-  if (!session?.user?.id) {
+  const currentUser = await getCurrentUserAsync();
+  if (!currentUser) {
     throw new Error('Unauthorized');
   }
 
-  const { knex, tenant } = await createTenantKnex();
+  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
   if (!tenant) {
     throw new Error('Tenant not found');
   }

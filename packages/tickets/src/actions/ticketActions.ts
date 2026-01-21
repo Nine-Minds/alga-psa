@@ -125,7 +125,7 @@ export async function createTicketFromAsset(data: CreateTicketFromAssetData): Pr
             throw new Error('Unauthorized');
         }
 
-        const {knex: db, tenant} = await createTenantKnex();
+        const {knex: db, tenant} = await createTenantKnex(currentUser.tenant);
         if (!tenant) {
             throw new Error('Tenant not found');
         }
@@ -187,7 +187,7 @@ export async function createTicketFromAsset(data: CreateTicketFromAssetData): Pr
 
 export async function addTicket(data: FormData, user: IUser): Promise<ITicket|undefined> {
   try {
-    const {knex: db, tenant} = await createTenantKnex();
+    const {knex: db, tenant} = await createTenantKnex(user.tenant);
     if (!tenant) {
       throw new Error('Tenant not found');
     }
@@ -325,7 +325,7 @@ export async function fetchTicketAttributes(ticketId: string, user: IUser) {
       { ticketId }
     );
 
-    const {knex: db, tenant} = await createTenantKnex();
+    const {knex: db, tenant} = await createTenantKnex(user.tenant);
     if (!tenant) {
       throw new Error('Tenant not found');
     }
@@ -363,7 +363,7 @@ export async function updateTicket(id: string, data: Partial<ITicket>, user: IUs
     // Validate update data
     const validatedData = validateData(ticketUpdateSchema, data);
 
-    const {knex: db, tenant} = await createTenantKnex();
+    const {knex: db, tenant} = await createTenantKnex(user.tenant);
     if (!tenant) {
       throw new Error('Tenant not found');
     }
@@ -716,7 +716,7 @@ export async function updateTicket(id: string, data: Partial<ITicket>, user: IUs
 
 export async function getTickets(user: IUser): Promise<ITicket[]> {
   try {
-    const {knex, tenant} = await createTenantKnex();
+    const {knex, tenant} = await createTenantKnex(user.tenant);
     if (!tenant) {
       throw new Error('Tenant not found');
     }
@@ -764,7 +764,7 @@ export async function getTickets(user: IUser): Promise<ITicket[]> {
 export async function getTicketsForList(user: IUser, filters: ITicketListFilters): Promise<ITicketListItem[]> {
   try {
     const validatedFilters = validateData(ticketListFiltersSchema, filters) as ITicketListFilters;
-    const {knex: db, tenant} = await createTenantKnex();
+    const {knex: db, tenant} = await createTenantKnex(user.tenant);
     if (!tenant) {
       throw new Error('Tenant not found');
     }
@@ -960,7 +960,7 @@ export async function getTicketsForList(user: IUser, filters: ITicketListFilters
 
 export async function addTicketComment(ticketId: string, comment: string, isInternal: boolean, user: IUser): Promise<void> {
   try {
-    const {knex: db, tenant} = await createTenantKnex();
+    const {knex: db, tenant} = await createTenantKnex(user.tenant);
     if (!tenant) {
       throw new Error('Tenant not found');
     }
@@ -1095,7 +1095,7 @@ function normalizeTicketDeleteError(error: unknown): { raw: string; userFacing: 
 
 export async function deleteTicket(ticketId: string, user: IUser): Promise<void> {
   try {
-    const {knex: db, tenant} = await createTenantKnex();
+    const {knex: db, tenant} = await createTenantKnex(user.tenant);
     if (!tenant) {
       throw new Error('Tenant not found');
     }
@@ -1122,7 +1122,7 @@ export async function deleteTickets(ticketIds: string[], user: IUser): Promise<{
     return { deletedIds: [], failed: [] };
   }
 
-  const { knex: db, tenant } = await createTenantKnex();
+  const { knex: db, tenant } = await createTenantKnex(user.tenant);
   if (!tenant) {
     throw new Error('Tenant not found');
   }
@@ -1157,8 +1157,11 @@ export async function getScheduledHoursForTicket(ticketId: string): Promise<IAge
     if (!currentUser) {
       throw new Error('No authenticated user found');
     }
+    if (!currentUser.tenant) {
+      throw new Error('Tenant not found');
+    }
     
-    const {knex: db, tenant} = await createTenantKnex();
+    const {knex: db, tenant} = await createTenantKnex(currentUser.tenant);
     if (!tenant) {
       throw new Error('Tenant not found');
     }
@@ -1286,7 +1289,7 @@ export type DetailedTicket = ITicket & {
 
 export async function getTicketById(id: string, user: IUser): Promise<DetailedTicket> {
   try {
-    const {knex: db, tenant} = await createTenantKnex();
+    const {knex: db, tenant} = await createTenantKnex(user.tenant);
     if (!tenant) {
       throw new Error('Tenant not found');
     }

@@ -6,32 +6,9 @@ import type { Tenant, TenantCompany } from '@alga-psa/types';
 import { Knex } from 'knex';
 import { createTenantKnex } from '@alga-psa/db';
 
-const getSessionAsync = async () => {
-  const { getSession } = await import('@alga-psa/auth');
-  return getSession();
-};
-
 export async function getCurrentTenant(): Promise<string | null> {
-  try {
-    const tenantFromRequest = await getTenantForCurrentRequest();
-    if (tenantFromRequest) {
-      return tenantFromRequest;
-    }
-  } catch {
-    // The per-request tenant context is not always available (e.g. in server actions).
-  }
-
-  try {
-    const session = await getSessionAsync();
-    const tenantCandidate = (session as any)?.user?.tenant;
-    if (typeof tenantCandidate === 'string' && tenantCandidate.length > 0) {
-      return tenantCandidate;
-    }
-    return null;
-  } catch (error) {
-    console.error('Failed to fetch tenant:', error);
-    throw new Error('Failed to fetch tenant');
-  }
+  const tenant = await getTenantForCurrentRequest();
+  return tenant;
 }
 
 export async function getTenantDetails(): Promise<Tenant & { clients: TenantCompany[] }> {

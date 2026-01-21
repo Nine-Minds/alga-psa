@@ -9,12 +9,13 @@ import { Knex } from 'knex';
 import { revalidatePath } from 'next/cache';
 
 export async function getClientLocations(clientId: string): Promise<IClientLocation[]> {
-  const { knex, tenant } = await createTenantKnex();
   const user = await getCurrentUserAsync();
 
   if (!user) {
     throw new Error('User not authenticated');
   }
+
+  const { knex, tenant } = await createTenantKnex(user.tenant);
 
   return withTransaction(knex, async (trx: Knex.Transaction) => {
     const locations = await trx('client_locations')
@@ -31,12 +32,13 @@ export async function getClientLocations(clientId: string): Promise<IClientLocat
 }
 
 export async function getClientLocation(locationId: string): Promise<IClientLocation | null> {
-  const { knex, tenant } = await createTenantKnex();
   const user = await getCurrentUserAsync();
 
   if (!user) {
     throw new Error('User not authenticated');
   }
+
+  const { knex, tenant } = await createTenantKnex(user.tenant);
 
   return withTransaction(knex, async (trx: Knex.Transaction) => {
     const location = await trx('client_locations')
@@ -54,12 +56,13 @@ export async function createClientLocation(
   clientId: string,
   locationData: Omit<IClientLocation, 'location_id' | 'tenant' | 'created_at' | 'updated_at'>
 ): Promise<IClientLocation> {
-  const { knex, tenant } = await createTenantKnex();
   const user = await getCurrentUserAsync();
 
   if (!user) {
     throw new Error('User not authenticated');
   }
+
+  const { knex, tenant } = await createTenantKnex(user.tenant);
 
   const locationId = uuidv4();
 
@@ -120,12 +123,13 @@ export async function updateClientLocation(
   locationId: string,
   locationData: Partial<Omit<IClientLocation, 'location_id' | 'tenant' | 'client_id' | 'created_at'>>
 ): Promise<IClientLocation> {
-  const { knex, tenant } = await createTenantKnex();
   const user = await getCurrentUserAsync();
 
   if (!user) {
     throw new Error('User not authenticated');
   }
+
+  const { knex, tenant } = await createTenantKnex(user.tenant);
 
   const updatedLocation = await withTransaction(knex, async (trx: Knex.Transaction) => {
     // Get the existing location first to check current state
@@ -228,12 +232,13 @@ export async function updateClientLocation(
 }
 
 export async function deleteClientLocation(locationId: string): Promise<void> {
-  const { knex, tenant } = await createTenantKnex();
   const user = await getCurrentUserAsync();
 
   if (!user) {
     throw new Error('User not authenticated');
   }
+
+  const { knex, tenant } = await createTenantKnex(user.tenant);
 
   const clientId = await withTransaction(knex, async (trx: Knex.Transaction) => {
     // Check if this is the default location
@@ -316,12 +321,13 @@ export async function deleteClientLocation(locationId: string): Promise<void> {
 }
 
 export async function setDefaultClientLocation(locationId: string): Promise<void> {
-  const { knex, tenant } = await createTenantKnex();
   const user = await getCurrentUserAsync();
 
   if (!user) {
     throw new Error('User not authenticated');
   }
+
+  const { knex, tenant } = await createTenantKnex(user.tenant);
 
   const clientId = await withTransaction(knex, async (trx: Knex.Transaction) => {
     // Get the location to find its client_id
@@ -372,12 +378,13 @@ export async function setDefaultClientLocation(locationId: string): Promise<void
 }
 
 export async function getDefaultClientLocation(clientId: string): Promise<IClientLocation | null> {
-  const { knex, tenant } = await createTenantKnex();
   const user = await getCurrentUserAsync();
 
   if (!user) {
     throw new Error('User not authenticated');
   }
+
+  const { knex, tenant } = await createTenantKnex(user.tenant);
 
   return withTransaction(knex, async (trx: Knex.Transaction) => {
     const location = await trx('client_locations')

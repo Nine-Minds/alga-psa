@@ -8,16 +8,31 @@ import { validateData, validateArray } from '@alga-psa/core';
 import { timePeriodSettingsSchema } from '../../schemas/timeSheet.schemas';
 import { formatUtcDateNoTime } from '@alga-psa/core';
 import { Knex } from 'knex';
+import { getCurrentUser } from '@alga-psa/users/actions';
 
 // Special value to indicate end of period
 const END_OF_PERIOD = 0;
 
-export async function getActiveTimePeriodSettings(): Promise<ITimePeriodSettings[]> {
-  const { knex: db, tenant } = await createTenantKnex();
-
-  if (!tenant) {
-    throw new Error('User is not logged in');
+async function getTenantKnex(): Promise<{ knex: Knex; tenant: string }> {
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
+    throw new Error('No authenticated user found');
   }
+
+  if (!currentUser.tenant) {
+    throw new Error('Tenant is required');
+  }
+
+  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
+  if (!tenant) {
+    throw new Error('SYSTEM_ERROR: Tenant context not found');
+  }
+
+  return { knex, tenant };
+}
+
+export async function getActiveTimePeriodSettings(): Promise<ITimePeriodSettings[]> {
+  const { knex: db, tenant } = await getTenantKnex();
 
   const activeSettings = await withTransaction(db, async (trx: Knex.Transaction) => {
     return await trx<ITimePeriodSettings>('time_period_settings')
@@ -41,11 +56,7 @@ export async function getActiveTimePeriodSettings(): Promise<ITimePeriodSettings
 }
 
 export async function updateTimePeriodSettings(settings: ITimePeriodSettings): Promise<void> {
-  const { knex: db, tenant } = await createTenantKnex();
-
-  if (!tenant) {
-    throw new Error('User is not logged in');
-  }
+  const { knex: db, tenant } = await getTenantKnex();
 
   // Validate input settings
   const validatedSettings = validateData(timePeriodSettingsSchema, {
@@ -81,11 +92,7 @@ export async function updateTimePeriodSettings(settings: ITimePeriodSettings): P
 }
 
 export async function createTimePeriodSettings(settings: Partial<ITimePeriodSettings>): Promise<ITimePeriodSettings> {
-  const { knex: db, tenant } = await createTenantKnex();
-
-  if (!tenant) {
-    throw new Error('User is not logged in');
-  }
+  const { knex: db, tenant } = await getTenantKnex();
 
   const now = formatISO(new Date());
   const newSettings = {
@@ -140,11 +147,7 @@ export async function createTimePeriodSettings(settings: Partial<ITimePeriodSett
 }
 
 export async function deleteTimePeriodSettings(settingId: string): Promise<void> {
-  const { knex: db, tenant } = await createTenantKnex();
-
-  if (!tenant) {
-    throw new Error('User is not logged in');
-  }
+  const { knex: db, tenant } = await getTenantKnex();
 
   await withTransaction(db, async (trx: Knex.Transaction) => {
     await trx('time_period_settings')

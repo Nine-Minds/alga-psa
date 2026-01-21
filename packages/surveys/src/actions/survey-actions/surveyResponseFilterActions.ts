@@ -1,6 +1,7 @@
 'use server';
 
 import { createTenantKnex } from '@alga-psa/db';
+import { getCurrentUser } from '@alga-psa/auth/getCurrentUser';
 
 type FilterOption = {
   value: string;
@@ -35,7 +36,12 @@ function ensureTenant(tenant: string | null): string {
 }
 
 export async function getSurveyFilterOptions(): Promise<SurveyFilterOptions> {
-  const { knex, tenant } = await createTenantKnex();
+  const currentUser = await getCurrentUser();
+  if (!currentUser?.tenant) {
+    throw new Error('Tenant context is required to load survey filter options');
+  }
+
+  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
   const tenantId = ensureTenant(tenant);
 
   const [templates, technicianRows, clientRows] = await Promise.all([

@@ -1,6 +1,7 @@
 import express from 'express';
 import next from 'next';
 import cookieParser from 'cookie-parser';
+import { runWithTenant } from '@alga-psa/db';
 import {
   apiKeyAuthMiddleware,
   sessionAuthMiddleware,
@@ -64,7 +65,20 @@ async function createServer() {
         // These should have been handled above, if we get here something is wrong
         return next();
       }
-      
+
+      const tenant =
+        (req as any).apiKey?.tenant ||
+        (req as any).user?.tenant ||
+        (req.headers['x-tenant-id'] as string | undefined) ||
+        (req.headers['x-auth-tenant'] as string | undefined);
+
+      // Ensure tenant context is available to server actions / DB helpers that use AsyncLocalStorage.
+      // This is the earliest point where we have reliable tenant info from either API key auth
+      // or NextAuth session auth, and it wraps the entire Next.js request lifecycle.
+      if (tenant) {
+        return runWithTenant(tenant, async () => handle(req, res));
+      }
+
       // Let Next.js handle everything else
       return handle(req, res);
     });

@@ -39,7 +39,7 @@ export async function upsertBucketOverlay(
     throw new Error('No authenticated user found');
   }
 
-  const { knex, tenant } = await createTenantKnex();
+  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
   if (!tenant) {
     throw new Error('tenant context not found');
   }
@@ -162,7 +162,7 @@ export async function deleteBucketOverlay(
     throw new Error('No authenticated user found');
   }
 
-  const { knex, tenant } = await createTenantKnex();
+  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
   if (!tenant) {
     throw new Error('tenant context not found');
   }
@@ -233,7 +233,7 @@ export async function getBucketOverlay(
     throw new Error('No authenticated user found');
   }
 
-  const { knex, tenant } = await createTenantKnex();
+  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
   if (!tenant) {
     throw new Error('tenant context not found');
   }

@@ -9,7 +9,7 @@ import User from '@alga-psa/db/models/user';
 import {
   checkRegistrationLimit,
   formatRateLimitError
-} from '@alga-psa/auth';
+} from '../../lib/rateLimiting';
 
 interface IRegistrationResult {
   success: boolean;

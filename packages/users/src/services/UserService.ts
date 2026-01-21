@@ -26,7 +26,7 @@ import {
   UserPermissionsResponse
 } from '../schemas/userSchemas';
 import { hashPassword, verifyPassword } from '@alga-psa/core/encryption';
-import { hasPermission } from '@alga-psa/auth';
+import { hasPermission } from '../lib/permissions';
 import { validateSystemContext } from '@alga-psa/db';
 import { getUserAvatarUrl } from '@alga-psa/media/lib/avatarUtils';
 import { uploadEntityImage, deleteEntityImage } from '@alga-psa/media/services/EntityImageService';

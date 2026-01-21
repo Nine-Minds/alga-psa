@@ -640,7 +640,7 @@ export async function syncCalendarProvider(
         const duration = Date.now() - startTime;
 
         if (failures.length === 0) {
-          await providerService.updateProviderStatus(calendarProviderId, {
+          await providerService.updateProviderStatus(calendarProviderId, tenantId, {
             status: 'connected',
             lastSyncAt: new Date().toISOString(),
             errorMessage: null
@@ -648,7 +648,7 @@ export async function syncCalendarProvider(
           console.log(`[calendarActions] Background sync completed successfully in ${duration}ms. Pushed=${pushed}, Pulled=${pulled}`);
         } else {
           const summary = `Manual sync completed with ${failures.length} issue(s). Pushed=${pushed}, Pulled=${pulled}.`;
-          await providerService.updateProviderStatus(calendarProviderId, {
+          await providerService.updateProviderStatus(calendarProviderId, tenantId, {
             status: 'error',
             errorMessage: `${summary} Details: ${failures.join('; ').slice(0, 500)}`
           });
@@ -658,7 +658,7 @@ export async function syncCalendarProvider(
         const message = error?.message || 'Failed to sync calendar provider';
         console.error(`[calendarActions] Background sync failed:`, error);
         try {
-          await providerService.updateProviderStatus(calendarProviderId, {
+          await providerService.updateProviderStatus(calendarProviderId, tenantId, {
             status: 'error',
             errorMessage: message
           });

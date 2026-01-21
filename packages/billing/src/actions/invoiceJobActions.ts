@@ -32,7 +32,7 @@ export async function scheduleInvoiceZipAction(invoiceIds: string[]) {
     throw new Error('Unauthorized - No user session found');
   }
 
-  const { knex, tenant } = await createTenantKnex();
+  const { knex, tenant } = await createTenantKnex(user.tenant);
   if (!tenant) {
     throw new Error('Tenant ID is required');
   }
@@ -84,9 +84,11 @@ export async function scheduleInvoiceZipAction(invoiceIds: string[]) {
 }
 
 export async function scheduleInvoiceEmailAction(invoiceIds: string[]) {
-  const { knex, tenant } = await createTenantKnex();
   const currentUser = await getCurrentUserAsync();
-  if (!tenant || !currentUser) throw new Error('Tenant or user not found');
+  if (!currentUser) throw new Error('User not found');
+
+  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
+  if (!tenant) throw new Error('Tenant not found');
 
   const jobService = await JobService.create();
 
@@ -179,11 +181,14 @@ export interface GetInvoiceEmailRecipientsResult {
 }
 
 export async function getInvoiceEmailRecipientAction(invoiceIds: string[]): Promise<GetInvoiceEmailRecipientsResult> {
-  const { knex, tenant } = await createTenantKnex();
   const currentUser = await getCurrentUserAsync();
+  if (!currentUser) {
+    throw new Error('User not found');
+  }
 
-  if (!tenant || !currentUser) {
-    throw new Error('Tenant or user not found');
+  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
+  if (!tenant) {
+    throw new Error('Tenant not found');
   }
 
   if (!invoiceIds || invoiceIds.length === 0) {
@@ -347,11 +352,14 @@ Best regards,
 }
 
 export async function sendInvoiceEmailAction(invoiceIds: string[], customMessage?: string): Promise<SendInvoiceEmailsResult> {
-  const { knex, tenant } = await createTenantKnex();
   const currentUser = await getCurrentUserAsync();
+  if (!currentUser) {
+    throw new Error('User not found');
+  }
 
-  if (!tenant || !currentUser) {
-    throw new Error('Tenant or user not found');
+  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
+  if (!tenant) {
+    throw new Error('Tenant not found');
   }
 
   if (!invoiceIds || invoiceIds.length === 0) {

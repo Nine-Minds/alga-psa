@@ -22,7 +22,7 @@ export async function getCurrentUser(): Promise<IUserWithRoles | null> {
       logger.debug(`Using user ID from session: ${sessionUser.id}, tenant: ${sessionUser.tenant}`);
 
       // Get connection with tenant context already set
-      const { knex, tenant } = await createTenantKnex();
+      const { knex, tenant } = await createTenantKnex(sessionUser.tenant);
 
       // Verify tenant matches session for security
       if (tenant && tenant !== sessionUser.tenant) {

@@ -3,6 +3,7 @@
 import { z } from 'zod';
 import { createTenantKnex } from '@alga-psa/db';
 import { withTransaction } from '@alga-psa/db';
+import { getCurrentUser } from '@alga-psa/auth/getCurrentUser';
 import type { IService, IUsageRecord } from '@alga-psa/types';
 import { Knex } from 'knex'; // Import Knex type
 
@@ -43,7 +44,12 @@ export async function getUsageDataMetrics(
   }
   const { clientId, startDate, endDate } = validationResult.data;
 
-  const { knex, tenant } = await createTenantKnex();
+  const currentUser = await getCurrentUser();
+  if (!currentUser?.tenant) {
+    throw new Error('Tenant context is required.');
+  }
+
+  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
 
   if (!tenant) {
     throw new Error('Tenant context is required.');

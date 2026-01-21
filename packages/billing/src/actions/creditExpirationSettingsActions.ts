@@ -2,6 +2,7 @@
 
 import { createTenantKnex } from '@alga-psa/db';
 import { ICreditExpirationSettings } from '@alga-psa/types';
+import { getCurrentUser } from '@alga-psa/auth/getCurrentUser';
 
 /**
  * Get credit expiration settings for a client.
@@ -9,7 +10,12 @@ import { ICreditExpirationSettings } from '@alga-psa/types';
 export async function getCreditExpirationSettings(
   clientId: string
 ): Promise<ICreditExpirationSettings> {
-  const { knex, tenant } = await createTenantKnex();
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
+    throw new Error('No authenticated user found');
+  }
+
+  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
   if (!tenant) throw new Error('No tenant found');
 
   const clientSettings = await knex('client_billing_settings')
@@ -57,7 +63,12 @@ export async function updateCreditExpirationSettings(
   settings: ICreditExpirationSettings
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    const { knex, tenant } = await createTenantKnex();
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+      throw new Error('No authenticated user found');
+    }
+
+    const { knex, tenant } = await createTenantKnex(currentUser.tenant);
     if (!tenant) throw new Error('No tenant found');
 
     await knex.transaction(async (trx) => {

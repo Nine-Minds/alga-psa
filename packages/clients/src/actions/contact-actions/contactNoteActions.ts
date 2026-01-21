@@ -39,8 +39,8 @@ export async function getContactNoteContent(contactId: string): Promise<ContactN
     throw new Error('User tenant not found in session');
   }
 
-  // Get tenant context from DB (should match user's tenant)
-  const { knex, tenant } = await createTenantKnex();
+  // Use the user's tenant explicitly (server actions don't always inherit AsyncLocalStorage context)
+  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
   if (!tenant) {
     throw new Error('No tenant found in database context');
   }
@@ -130,8 +130,8 @@ export async function saveContactNote(
     throw new Error('User tenant not found in session');
   }
 
-  // Get tenant context from DB (should match user's tenant)
-  const { knex, tenant } = await createTenantKnex();
+  // Use the user's tenant explicitly (server actions don't always inherit AsyncLocalStorage context)
+  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
   if (!tenant) {
     throw new Error('No tenant found in database context');
   }
@@ -205,8 +205,8 @@ export async function deleteContactNote(
     throw new Error('User tenant not found in session');
   }
 
-  // Get tenant context from DB (should match user's tenant)
-  const { knex, tenant } = await createTenantKnex();
+  // Use the user's tenant explicitly (server actions don't always inherit AsyncLocalStorage context)
+  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
   if (!tenant) {
     throw new Error('No tenant found in database context');
   }

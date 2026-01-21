@@ -26,7 +26,7 @@ export async function getTaxRates(): Promise<ITaxRate[]> {
       throw new Error('Permission denied: Cannot read tax rates');
     }
 
-    const { knex: db, tenant } = await createTenantKnex();
+    const { knex: db, tenant } = await createTenantKnex(currentUser.tenant);
     return withTransaction(db, async (trx: Knex.Transaction) => {
       return await trx('tax_rates')
         .where({ tenant })
@@ -49,7 +49,7 @@ export async function addTaxRate(taxRateData: Omit<ITaxRate, 'tax_rate_id'>): Pr
       throw new Error('Permission denied: Cannot create tax rates');
     }
 
-    const { knex: db, tenant } = await createTenantKnex();
+    const { knex: db, tenant } = await createTenantKnex(currentUser.tenant);
     return withTransaction(db, async (trx: Knex.Transaction) => {
       const taxService = new TaxService();
     
@@ -89,10 +89,10 @@ export async function updateTaxRate(taxRateData: ITaxRate): Promise<ITaxRate> {
       throw new Error('Permission denied: Cannot update tax rates');
     }
 
-    const { knex: db, tenant } = await createTenantKnex();
+    const { knex: db, tenant } = await createTenantKnex(currentUser.tenant);
     return withTransaction(db, async (trx: Knex.Transaction) => {
       const taxService = new TaxService();
-    
+
     if (!taxRateData.tax_rate_id) {
       throw new Error('Tax rate ID is required for updates');
     }
@@ -162,7 +162,7 @@ export async function deleteTaxRate(taxRateId: string): Promise<DeleteTaxRateRes
       throw new Error('Permission denied: Cannot delete tax rates');
     }
 
-    const { knex: db, tenant } = await createTenantKnex();
+    const { knex: db, tenant } = await createTenantKnex(currentUser.tenant);
     return withTransaction(db, async (trx: Knex.Transaction) => {
 
     const affectedServices = await trx('service_catalog')
@@ -206,7 +206,7 @@ export async function confirmDeleteTaxRate(taxRateId: string): Promise<void> {
       throw new Error('Permission denied: Cannot delete tax rates');
     }
 
-    const { knex: db, tenant } = await createTenantKnex();
+    const { knex: db, tenant } = await createTenantKnex(currentUser.tenant);
     return withTransaction(db, async (trx: Knex.Transaction) => {
       await trx('service_catalog')
         .where({ tenant, tax_rate_id: taxRateId })

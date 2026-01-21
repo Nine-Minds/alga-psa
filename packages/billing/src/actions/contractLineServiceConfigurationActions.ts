@@ -10,9 +10,14 @@ import {
   IContractLineServiceRateTierInput,
   IUserTypeRate
 } from '@alga-psa/types';
+import { getCurrentUser } from '@alga-psa/auth/getCurrentUser';
 
 async function getService() {
-  const { knex, tenant } = await createTenantKnex();
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
+    throw new Error('Unauthorized');
+  }
+  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
   if (!tenant) {
     throw new Error('tenant context not found');
   }

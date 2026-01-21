@@ -3,6 +3,7 @@
 import { createTenantKnex } from '@alga-psa/db';
 import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
+import { getCurrentUser } from '@alga-psa/auth/getCurrentUser';
 
 interface UpdateNumberResponse {
   success: boolean;
@@ -11,7 +12,11 @@ interface UpdateNumberResponse {
 }
 
 export async function getTicketNumberSettings() {
-  const { knex: db, tenant } = await createTenantKnex();
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
+    throw new Error('Unauthorized');
+  }
+  const { knex: db, tenant } = await createTenantKnex(currentUser.tenant);
   return await withTransaction(db, async (trx: Knex.Transaction) => {
     const settings = await trx('next_number')
       .where('entity_type', 'TICKET')
@@ -22,7 +27,11 @@ export async function getTicketNumberSettings() {
 }
 
 export async function updateTicketPrefix(prefix: string) {
-  const { knex: db, tenant } = await createTenantKnex();
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
+    throw new Error('Unauthorized');
+  }
+  const { knex: db, tenant } = await createTenantKnex(currentUser.tenant);
   await withTransaction(db, async (trx: Knex.Transaction) => {
     await trx('next_number')
       .where('entity_type', 'TICKET')
@@ -36,7 +45,11 @@ export async function updateTicketPrefix(prefix: string) {
 }
 
 export async function updateInitialValue(value: number): Promise<UpdateNumberResponse> {
-  const { knex: db, tenant } = await createTenantKnex();
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
+    throw new Error('Unauthorized');
+  }
+  const { knex: db, tenant } = await createTenantKnex(currentUser.tenant);
   
   try {
     // Validate input
@@ -74,7 +87,11 @@ export async function updateInitialValue(value: number): Promise<UpdateNumberRes
 }
 
 export async function updateLastNumber(value: number): Promise<UpdateNumberResponse> {
-  const { knex: db, tenant } = await createTenantKnex();
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
+    throw new Error('Unauthorized');
+  }
+  const { knex: db, tenant } = await createTenantKnex(currentUser.tenant);
 
   try {
     // Validate input
@@ -115,7 +132,11 @@ export async function updateLastNumber(value: number): Promise<UpdateNumberRespo
 }
 
 export async function updatePaddingLength(value: number): Promise<UpdateNumberResponse> {
-  const { knex: db, tenant } = await createTenantKnex();
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
+    throw new Error('Unauthorized');
+  }
+  const { knex: db, tenant } = await createTenantKnex(currentUser.tenant);
 
   try {
     // Validate input

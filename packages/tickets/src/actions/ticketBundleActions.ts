@@ -40,7 +40,7 @@ const findTicketByNumberSchema = z.object({
 
 export async function findTicketByNumberAction(input: z.input<typeof findTicketByNumberSchema>, user: IUser) {
   const data = findTicketByNumberSchema.parse(input);
-  const { knex: db, tenant } = await createTenantKnex();
+  const { knex: db, tenant } = await createTenantKnex(user.tenant);
   if (!tenant) throw new Error('Tenant not found');
 
   return withTransaction(db, async (trx) => {
@@ -63,7 +63,7 @@ export async function bundleTicketsAction(input: z.input<typeof bundleTicketsSch
     throw new Error('Select at least one child ticket different from the master.');
   }
 
-  const { knex: db, tenant } = await createTenantKnex();
+  const { knex: db, tenant } = await createTenantKnex(user.tenant);
   if (!tenant) throw new Error('Tenant not found');
 
   return withTransaction(db, async (trx) => {
@@ -145,7 +145,7 @@ export async function addChildrenToBundleAction(input: z.input<typeof addChildre
     throw new Error('No child tickets provided');
   }
 
-  const { knex: db, tenant } = await createTenantKnex();
+  const { knex: db, tenant } = await createTenantKnex(user.tenant);
   if (!tenant) throw new Error('Tenant not found');
 
   return withTransaction(db, async (trx) => {
@@ -197,7 +197,7 @@ export async function promoteBundleMasterAction(input: z.input<typeof promoteMas
   if (data.oldMasterTicketId === data.newMasterTicketId) {
     throw new Error('New master ticket must be different from the current master.');
   }
-  const { knex: db, tenant } = await createTenantKnex();
+  const { knex: db, tenant } = await createTenantKnex(user.tenant);
   if (!tenant) throw new Error('Tenant not found');
 
   return withTransaction(db, async (trx) => {
@@ -286,7 +286,7 @@ const updateBundleSettingsSchema = z.object({
 
 export async function updateBundleSettingsAction(input: z.input<typeof updateBundleSettingsSchema>, user: IUser) {
   const data = updateBundleSettingsSchema.parse(input);
-  const { knex: db, tenant } = await createTenantKnex();
+  const { knex: db, tenant } = await createTenantKnex(user.tenant);
   if (!tenant) throw new Error('Tenant not found');
 
   return withTransaction(db, async (trx) => {
@@ -326,7 +326,7 @@ const removeChildSchema = z.object({
 
 export async function removeChildFromBundleAction(input: z.input<typeof removeChildSchema>, user: IUser) {
   const data = removeChildSchema.parse(input);
-  const { knex: db, tenant } = await createTenantKnex();
+  const { knex: db, tenant } = await createTenantKnex(user.tenant);
   if (!tenant) throw new Error('Tenant not found');
 
   return withTransaction(db, async (trx) => {
@@ -373,7 +373,7 @@ const unbundleSchema = z.object({
 
 export async function unbundleMasterTicketAction(input: z.input<typeof unbundleSchema>, user: IUser) {
   const data = unbundleSchema.parse(input);
-  const { knex: db, tenant } = await createTenantKnex();
+  const { knex: db, tenant } = await createTenantKnex(user.tenant);
   if (!tenant) throw new Error('Tenant not found');
 
   return withTransaction(db, async (trx) => {

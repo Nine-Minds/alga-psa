@@ -37,11 +37,12 @@ export async function processInvoiceEvent(executionId: string | undefined, event
  * This is a convenience method for the approve action
  */
 export async function approveInvoice(invoiceId: string, executionId?: string): Promise<any> {
-  const { knex } = await createTenantKnex();
   const currentUser = await getCurrentUserAsync();
   if (!currentUser?.tenant) {
     throw new Error('No current user found');
-  }  
+  }
+
+  const { knex } = await createTenantKnex(currentUser.tenant);  
   
   // If execution ID is not provided, look it up
   if (!executionId) {
@@ -81,11 +82,12 @@ export async function approveInvoice(invoiceId: string, executionId?: string): P
  * This is a convenience method for the reject action
  */
 export async function rejectInvoice(invoiceId: string, reason: string, executionId?: string): Promise<any> {
-  const { knex } = await createTenantKnex();
   const currentUser = await getCurrentUserAsync();
   if (!currentUser?.tenant) {
     throw new Error('No current user found');
-  }  
+  }
+
+  const { knex } = await createTenantKnex(currentUser.tenant);  
   
   // If execution ID is not provided, look it up
   if (!executionId) {

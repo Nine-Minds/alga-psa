@@ -21,7 +21,6 @@
     "@alga-psa/core": "*",
     "@alga-psa/db": "*",
     "@alga-psa/types": "*",
-    "@alga-psa/ui": "*",
     "nodemailer": "^6.9.14"
   },
   "devDependencies": {

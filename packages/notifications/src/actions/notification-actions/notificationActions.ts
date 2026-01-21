@@ -14,6 +14,26 @@ import {
   isLockedCategory
 } from "../../types/notification";
 
+async function getTenantKnexFromUser(): Promise<{ knex: Knex; tenant: string }> {
+  const { getCurrentUser } = await import('@alga-psa/users/actions');
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
+    throw new Error('User not authenticated');
+  }
+
+  if (!currentUser.tenant) {
+    throw new Error('Tenant is required');
+  }
+
+  const { createTenantKnex } = await import('@alga-psa/db');
+  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
+  if (!tenant) {
+    throw new Error('SYSTEM_ERROR: Tenant context not found');
+  }
+
+  return { knex, tenant };
+}
+
 export async function getNotificationSettingsAction(tenant: string): Promise<NotificationSettings> {
   const notificationService = getEmailNotificationService();
   return notificationService.getSettings(tenant);
@@ -124,10 +144,7 @@ export async function deactivateTenantTemplateAction(
 }
 
 export async function getCategoriesAction(): Promise<NotificationCategory[]> {
-  const { knex, tenant } = await (await import("@alga-psa/db")).createTenantKnex();
-  if (!tenant) {
-    throw new Error('No tenant found');
-  }
+  const { knex, tenant } = await getTenantKnexFromUser();
 
   return await withTransaction(knex, async (trx: Knex.Transaction) => {
     const categories = await trx('notification_categories as nc')
@@ -157,10 +174,7 @@ export async function getCategoriesAction(): Promise<NotificationCategory[]> {
 export async function getCategoryWithSubtypesAction(
   categoryId: number
 ): Promise<NotificationCategory & { subtypes: NotificationSubtype[] }> {
-  const { knex, tenant } = await (await import("@alga-psa/db")).createTenantKnex();
-  if (!tenant) {
-    throw new Error('No tenant found');
-  }
+  const { knex, tenant } = await getTenantKnexFromUser();
 
   return await withTransaction(knex, async (trx: Knex.Transaction) => {
     const category = await trx('notification_categories as nc')
