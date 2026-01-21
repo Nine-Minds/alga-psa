@@ -1185,6 +1185,14 @@ async function performTicketDelete(
     .where({ ticket_id: ticketId, tenant })
     .delete();
 
+  // Delete SLA notification tracking records (CitusDB doesn't support ON DELETE CASCADE)
+  await trx('sla_notifications_sent')
+    .where({
+      ticket_id: ticketId,
+      tenant: tenant
+    })
+    .delete();
+
   await trx('tickets')
     .where({ ticket_id: ticketId, tenant })
     .delete();

@@ -30,3 +30,30 @@ export * from './contractTemplate.interfaces';
 export * from './scheduling.interfaces';
 export * from './projectTemplate.interfaces';
 export * from './material.interfaces';
+
+// SLA interfaces moved to @alga-psa/sla package
+export type {
+  ISlaPolicy,
+  ISlaPolicyTarget,
+  ISlaPolicyInput,
+  ISlaPolicyTargetInput,
+  ISlaPolicyWithTargets,
+  ISlaNotificationThreshold,
+  ISlaNotificationThresholdInput,
+  ISlaSettings,
+  IStatusSlaPauseConfig,
+  IBusinessHoursSchedule,
+  IBusinessHoursEntry,
+  IHoliday,
+  IBusinessHoursScheduleInput,
+  IBusinessHoursEntryInput,
+  IHolidayInput,
+  IBusinessHoursScheduleWithEntries,
+  SlaNotificationType,
+  SlaNotificationChannel,
+  SlaTimerStatus,
+  SlaPauseReason,
+  ISlaStatus,
+  ITicketSlaTracking,
+  ISlaPauseHistory
+} from '@alga-psa/sla/types';
