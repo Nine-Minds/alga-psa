@@ -15,7 +15,7 @@ export async function getAllInteractionTypes(): Promise<IInteractionType[]> {
       throw new Error('User not authenticated');
     }
 
-    const {knex: db, tenant} = await createTenantKnex();
+    const {knex: db, tenant} = await createTenantKnex(currentUser.tenant);
     if (!tenant) {
       throw new Error('Tenant context is required');
     }
@@ -38,7 +38,12 @@ export async function getAllInteractionTypes(): Promise<IInteractionType[]> {
 
 export async function getSystemInteractionTypes(): Promise<ISystemInteractionType[]> {
   try {
-    const {knex: db, tenant} = await createTenantKnex();
+    const currentUser = await getCurrentUserAsync();
+    if (!currentUser) {
+      throw new Error('User not authenticated');
+    }
+
+    const {knex: db, tenant} = await createTenantKnex(currentUser.tenant);
     if (!tenant) {
       throw new Error('Tenant context is required');
     }
@@ -55,7 +60,12 @@ export async function getSystemInteractionTypes(): Promise<ISystemInteractionTyp
 
 export async function getSystemInteractionTypeById(typeId: string): Promise<ISystemInteractionType | null> {
   try {
-    const {knex: db, tenant} = await createTenantKnex();
+    const currentUser = await getCurrentUserAsync();
+    if (!currentUser) {
+      throw new Error('User not authenticated');
+    }
+
+    const {knex: db, tenant} = await createTenantKnex(currentUser.tenant);
     if (!tenant) {
       throw new Error('Tenant context is required');
     }
@@ -80,7 +90,7 @@ export async function createInteractionType(
       throw new Error('User not authenticated');
     }
 
-    const {knex: db} = await createTenantKnex();
+    const {knex: db} = await createTenantKnex(currentUser.tenant);
     return await withTransaction(db, async (trx: Knex.Transaction) => {
       // Extract only the allowed fields from interactionType
       const { type_name, icon, display_order } = interactionType;
@@ -122,7 +132,7 @@ export async function updateInteractionType(
       throw new Error('User not authenticated');
     }
 
-    const {knex: db} = await createTenantKnex();
+    const {knex: db} = await createTenantKnex(currentUser.tenant);
     return await withTransaction(db, async (trx: Knex.Transaction) => {
       // Check if the type exists
       const existingType = await trx('interaction_types')
@@ -161,7 +171,7 @@ export async function deleteInteractionType(typeId: string): Promise<void> {
       throw new Error('User not authenticated');
     }
 
-    const {knex: db} = await createTenantKnex();
+    const {knex: db} = await createTenantKnex(currentUser.tenant);
 
     await withTransaction(db, async (trx: Knex.Transaction) => {
       // Check if the type exists
@@ -206,7 +216,7 @@ export async function getInteractionTypeById(typeId: string): Promise<IInteracti
       throw new Error('User not authenticated');
     }
 
-    const {knex: db} = await createTenantKnex();
+    const {knex: db} = await createTenantKnex(currentUser.tenant);
     return await withTransaction(db, async (trx: Knex.Transaction) => {
       const type = await trx('interaction_types')
         .where({ type_id: typeId, tenant: currentUser.tenant })

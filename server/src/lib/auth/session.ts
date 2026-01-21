@@ -1,6 +1,6 @@
 import { Knex } from 'knex';
 import type { IUser, IRole, IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
-import { createTenantKnex } from 'server/src/lib/db';
+import { createTenantKnex, runWithTenant } from 'server/src/lib/db';
 import { getSession } from 'server/src/lib/auth/getSession';
 import { getUserAvatarUrl } from 'server/src/lib/utils/avatarUtils';
 import logger from '@alga-psa/core/logger';
@@ -20,47 +20,48 @@ export async function getCurrentUser(): Promise<IUserWithRoles | null> {
     if (sessionUser.id && sessionUser.tenant) {
       logger.debug(`Using user ID from session: ${sessionUser.id}, tenant: ${sessionUser.tenant}`);
 
-      const { knex, tenant } = await createTenantKnex();
+      return runWithTenant(sessionUser.tenant, async () => {
+        const { knex, tenant } = await createTenantKnex();
 
-      if (tenant && tenant !== sessionUser.tenant) {
-        logger.error(`Tenant mismatch: session has ${sessionUser.tenant} but context has ${tenant}`);
-        throw new Error('Tenant context mismatch');
-      }
+        if (tenant && tenant !== sessionUser.tenant) {
+          logger.error(`Tenant mismatch: session has ${sessionUser.tenant} but context has ${tenant}`);
+          throw new Error('Tenant context mismatch');
+        }
 
-      const userWithRoles = await withTransaction(knex, async (trx: Knex.Transaction) => {
-        const user = await trx<IUser>('users')
-          .select('*')
-          .where('user_id', sessionUser.id)
-          .where('tenant', sessionUser.tenant)
-          .first();
+        const userWithRoles = await withTransaction(knex, async (trx: Knex.Transaction) => {
+          const user = await trx<IUser>('users')
+            .select('*')
+            .where('user_id', sessionUser.id)
+            .where('tenant', sessionUser.tenant)
+            .first();
 
-        if (!user) {
-          logger.debug(`User not found for ID: ${sessionUser.id} in tenant: ${sessionUser.tenant}`);
+          if (!user) {
+            logger.debug(`User not found for ID: ${sessionUser.id} in tenant: ${sessionUser.tenant}`);
+            return null;
+          }
+
+          logger.debug(`Fetching roles for user ID: ${user.user_id}`);
+          const roles = await trx<IRole>('roles')
+            .join('user_roles', function () {
+              this.on('roles.role_id', '=', 'user_roles.role_id')
+                .andOn('roles.tenant', '=', 'user_roles.tenant');
+            })
+            .where('user_roles.user_id', user.user_id)
+            .where('user_roles.tenant', sessionUser.tenant)
+            .where('roles.tenant', sessionUser.tenant)
+            .select('roles.*');
+
+          logger.debug(`Current user retrieved successfully: ${user.user_id} with ${roles.length} roles`);
+          return { ...user, roles };
+        });
+
+        if (!userWithRoles) {
           return null;
         }
 
-        logger.debug(`Fetching roles for user ID: ${user.user_id}`);
-        const roles = await trx<IRole>('roles')
-          .join('user_roles', function () {
-            this.on('roles.role_id', '=', 'user_roles.role_id')
-              .andOn('roles.tenant', '=', 'user_roles.tenant');
-          })
-          .where('user_roles.user_id', user.user_id)
-          .where('user_roles.tenant', sessionUser.tenant)
-          .where('roles.tenant', sessionUser.tenant)
-          .select('roles.*');
-
-        logger.debug(`Current user retrieved successfully: ${user.user_id} with ${roles.length} roles`);
-        return { ...user, roles };
+        const avatarUrl = await getUserAvatarUrl(userWithRoles.user_id, userWithRoles.tenant);
+        return { ...userWithRoles, avatarUrl };
       });
-
-      if (!userWithRoles) {
-        return null;
-      }
-
-      const avatarUrl = await getUserAvatarUrl(userWithRoles.user_id, userWithRoles.tenant);
-
-      return { ...userWithRoles, avatarUrl };
     }
 
     if (process.env.NODE_ENV === 'production') {

@@ -1157,8 +1157,11 @@ export async function getScheduledHoursForTicket(ticketId: string): Promise<IAge
     if (!currentUser) {
       throw new Error('No authenticated user found');
     }
+    if (!currentUser.tenant) {
+      throw new Error('Tenant not found');
+    }
     
-    const {knex: db, tenant} = await createTenantKnex();
+    const {knex: db, tenant} = await createTenantKnex(currentUser.tenant);
     if (!tenant) {
       throw new Error('Tenant not found');
     }

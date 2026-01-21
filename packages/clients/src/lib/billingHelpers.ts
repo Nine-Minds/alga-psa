@@ -54,6 +54,7 @@ import {
   type ClientTaxSourceInfo,
 } from '@alga-psa/shared/billingClients';
 import { getSessionAsync } from './authHelpers';
+import { getCurrentUserAsync } from './usersHelpers';
 
 function requireAuthenticatedSession(session: any): void {
   if (!session?.user?.id) {
@@ -61,14 +62,26 @@ function requireAuthenticatedSession(session: any): void {
   }
 }
 
-export async function createDefaultTaxSettingsAsync(clientId: string): Promise<IClientTaxSettings> {
+async function getTenantDbContext(): Promise<{ knex: Knex; tenant: string }> {
   const session = await getSessionAsync();
   requireAuthenticatedSession(session);
 
-  const { knex, tenant } = await createTenantKnex();
+  const currentUser = await getCurrentUserAsync();
+  const tenantId = currentUser?.tenant;
+  if (!tenantId) {
+    throw new Error('tenant context not found');
+  }
+
+  const { knex, tenant } = await createTenantKnex(tenantId);
   if (!tenant) {
     throw new Error('tenant context not found');
   }
+
+  return { knex, tenant };
+}
+
+export async function createDefaultTaxSettingsAsync(clientId: string): Promise<IClientTaxSettings> {
+  const { knex, tenant } = await getTenantDbContext();
 
   return withTransaction(knex, async (trx: Knex.Transaction) => {
     return createDefaultTaxSettings(trx, tenant, clientId);
@@ -90,13 +103,7 @@ export async function cloneTemplateContractLineAsync(
 }
 
 export async function getClientContractLineSettingsAsync(clientId: string): Promise<ClientBillingSettings | null> {
-  const session = await getSessionAsync();
-  requireAuthenticatedSession(session);
-
-  const { knex, tenant } = await createTenantKnex();
-  if (!tenant) {
-    throw new Error('tenant context not found');
-  }
+  const { knex, tenant } = await getTenantDbContext();
 
   return withTransaction(knex, async (trx: Knex.Transaction) => {
     return getClientBillingSettings(trx, tenant, clientId);
@@ -107,13 +114,7 @@ export async function updateClientContractLineSettingsAsync(
   clientId: string,
   settings: ClientBillingSettings | null
 ): Promise<{ success: true }> {
-  const session = await getSessionAsync();
-  requireAuthenticatedSession(session);
-
-  const { knex, tenant } = await createTenantKnex();
-  if (!tenant) {
-    throw new Error('tenant context not found');
-  }
+  const { knex, tenant } = await getTenantDbContext();
 
   await withTransaction(knex, async (trx: Knex.Transaction) => {
     await updateClientBillingSettings(trx, tenant, clientId, settings);
@@ -123,13 +124,7 @@ export async function updateClientContractLineSettingsAsync(
 }
 
 export async function createNextBillingCycleAsync(clientId: string, effectiveDate?: string): Promise<BillingCycleCreationResult> {
-  const session = await getSessionAsync();
-  requireAuthenticatedSession(session);
-
-  const { knex, tenant } = await createTenantKnex();
-  if (!tenant) {
-    throw new Error('tenant context not found');
-  }
+  const { knex, tenant } = await getTenantDbContext();
 
   return withTransaction(knex, async (trx: Knex.Transaction) => {
     return createNextBillingCycle(trx, tenant, clientId, effectiveDate);
@@ -137,13 +132,7 @@ export async function createNextBillingCycleAsync(clientId: string, effectiveDat
 }
 
 export async function updateClientBillingScheduleAsync(input: UpdateClientBillingScheduleInput): Promise<{ success: true }> {
-  const session = await getSessionAsync();
-  requireAuthenticatedSession(session);
-
-  const { knex, tenant } = await createTenantKnex();
-  if (!tenant) {
-    throw new Error('tenant context not found');
-  }
+  const { knex, tenant } = await getTenantDbContext();
 
   await withTransaction(knex, async (trx: Knex.Transaction) => {
     await updateClientBillingSchedule(trx, tenant, input);
@@ -161,13 +150,7 @@ export async function getClientBillingCycleAnchorAsync(clientId: string): Promis
     referenceDate: ISO8601String | null;
   };
 }> {
-  const session = await getSessionAsync();
-  requireAuthenticatedSession(session);
-
-  const { knex, tenant } = await createTenantKnex();
-  if (!tenant) {
-    throw new Error('tenant context not found');
-  }
+  const { knex, tenant } = await getTenantDbContext();
 
   return withTransaction(knex, async (trx: Knex.Transaction) => {
     return getClientBillingCycleAnchor(trx, tenant, clientId);
@@ -185,13 +168,7 @@ export async function previewBillingPeriodsForScheduleAsync(
 }
 
 export async function addTaxRateAsync(taxRate: Omit<ITaxRate, 'tax_rate_id'>): Promise<ITaxRate> {
-  const session = await getSessionAsync();
-  requireAuthenticatedSession(session);
-
-  const { knex, tenant } = await createTenantKnex();
-  if (!tenant) {
-    throw new Error('tenant context not found');
-  }
+  const { knex, tenant } = await getTenantDbContext();
 
   return withTransaction(knex, async (trx: Knex.Transaction) => {
     return addTaxRate(trx, tenant, taxRate);
@@ -199,13 +176,7 @@ export async function addTaxRateAsync(taxRate: Omit<ITaxRate, 'tax_rate_id'>): P
 }
 
 export async function getActiveTaxRegionsAsync(): Promise<Pick<ITaxRegion, 'region_code' | 'region_name'>[]> {
-  const session = await getSessionAsync();
-  requireAuthenticatedSession(session);
-
-  const { knex, tenant } = await createTenantKnex();
-  if (!tenant) {
-    throw new Error('tenant context not found');
-  }
+  const { knex, tenant } = await getTenantDbContext();
 
   return withTransaction(knex, async (trx: Knex.Transaction) => {
     return getActiveTaxRegions(trx, tenant);
@@ -213,13 +184,7 @@ export async function getActiveTaxRegionsAsync(): Promise<Pick<ITaxRegion, 'regi
 }
 
 export async function getTaxRatesAsync(): Promise<ITaxRate[]> {
-  const session = await getSessionAsync();
-  requireAuthenticatedSession(session);
-
-  const { knex, tenant } = await createTenantKnex();
-  if (!tenant) {
-    throw new Error('tenant context not found');
-  }
+  const { knex, tenant } = await getTenantDbContext();
 
   return withTransaction(knex, async (trx: Knex.Transaction) => {
     return getTaxRates(trx, tenant);
@@ -227,13 +192,7 @@ export async function getTaxRatesAsync(): Promise<ITaxRate[]> {
 }
 
 export async function getContractLinesAsync(): Promise<IContractLine[]> {
-  const session = await getSessionAsync();
-  requireAuthenticatedSession(session);
-
-  const { knex, tenant } = await createTenantKnex();
-  if (!tenant) {
-    throw new Error('tenant context not found');
-  }
+  const { knex, tenant } = await getTenantDbContext();
 
   return withTransaction(knex, async (trx: Knex.Transaction) => {
     return getContractLines(trx, tenant);
@@ -241,13 +200,7 @@ export async function getContractLinesAsync(): Promise<IContractLine[]> {
 }
 
 export async function getContractLineServicesAsync(contractLineId: string): Promise<IContractLineService[]> {
-  const session = await getSessionAsync();
-  requireAuthenticatedSession(session);
-
-  const { knex, tenant } = await createTenantKnex();
-  if (!tenant) {
-    throw new Error('tenant context not found');
-  }
+  const { knex, tenant } = await getTenantDbContext();
 
   return withTransaction(knex, async (trx: Knex.Transaction) => {
     return getContractLineServices(trx, tenant, contractLineId);
@@ -255,13 +208,7 @@ export async function getContractLineServicesAsync(contractLineId: string): Prom
 }
 
 export async function getContractsAsync(): Promise<IContract[]> {
-  const session = await getSessionAsync();
-  requireAuthenticatedSession(session);
-
-  const { knex, tenant } = await createTenantKnex();
-  if (!tenant) {
-    throw new Error('tenant context not found');
-  }
+  const { knex, tenant } = await getTenantDbContext();
 
   return withTransaction(knex, async (trx: Knex.Transaction) => {
     return getContracts(trx, tenant);
@@ -269,13 +216,7 @@ export async function getContractsAsync(): Promise<IContract[]> {
 }
 
 export async function getServiceCategoriesAsync(): Promise<any[]> {
-  const session = await getSessionAsync();
-  requireAuthenticatedSession(session);
-
-  const { knex, tenant } = await createTenantKnex();
-  if (!tenant) {
-    throw new Error('tenant context not found');
-  }
+  const { knex, tenant } = await getTenantDbContext();
 
   return withTransaction(knex, async (trx: Knex.Transaction) => {
     return getServiceCategories(trx, tenant);
@@ -287,13 +228,7 @@ export async function getServicesAsync(
   pageSize: number = 999,
   options: ServiceListOptions = {}
 ): Promise<PaginatedServicesResponse> {
-  const session = await getSessionAsync();
-  requireAuthenticatedSession(session);
-
-  const { knex, tenant } = await createTenantKnex();
-  if (!tenant) {
-    throw new Error('tenant context not found');
-  }
+  const { knex, tenant } = await getTenantDbContext();
 
   return withTransaction(knex, async (trx: Knex.Transaction) => {
     return getServices(trx, tenant, page, pageSize, options);
@@ -301,13 +236,7 @@ export async function getServicesAsync(
 }
 
 export async function createServiceAsync(service: any): Promise<IService> {
-  const session = await getSessionAsync();
-  requireAuthenticatedSession(session);
-
-  const { knex, tenant } = await createTenantKnex();
-  if (!tenant) {
-    throw new Error('tenant context not found');
-  }
+  const { knex, tenant } = await getTenantDbContext();
 
   return withTransaction(knex, async (trx: Knex.Transaction) => {
     return createService(trx, tenant, service);
@@ -315,13 +244,7 @@ export async function createServiceAsync(service: any): Promise<IService> {
 }
 
 export async function updateServiceAsync(serviceId: string, service: any): Promise<IService> {
-  const session = await getSessionAsync();
-  requireAuthenticatedSession(session);
-
-  const { knex, tenant } = await createTenantKnex();
-  if (!tenant) {
-    throw new Error('tenant context not found');
-  }
+  const { knex, tenant } = await getTenantDbContext();
 
   return withTransaction(knex, async (trx: Knex.Transaction) => {
     return updateService(trx, tenant, serviceId, service);
@@ -329,13 +252,7 @@ export async function updateServiceAsync(serviceId: string, service: any): Promi
 }
 
 export async function deleteServiceAsync(serviceId: string): Promise<void> {
-  const session = await getSessionAsync();
-  requireAuthenticatedSession(session);
-
-  const { knex, tenant } = await createTenantKnex();
-  if (!tenant) {
-    throw new Error('tenant context not found');
-  }
+  const { knex, tenant } = await getTenantDbContext();
 
   await withTransaction(knex, async (trx: Knex.Transaction) => {
     await deleteService(trx, tenant, serviceId);
@@ -343,13 +260,7 @@ export async function deleteServiceAsync(serviceId: string): Promise<void> {
 }
 
 export async function getInvoiceTemplatesAsync(): Promise<IInvoiceTemplate[]> {
-  const session = await getSessionAsync();
-  requireAuthenticatedSession(session);
-
-  const { knex, tenant } = await createTenantKnex();
-  if (!tenant) {
-    throw new Error('tenant context not found');
-  }
+  const { knex, tenant } = await getTenantDbContext();
 
   return withTransaction(knex, async (trx: Knex.Transaction) => {
     return getInvoiceTemplates(trx, tenant);
@@ -357,13 +268,7 @@ export async function getInvoiceTemplatesAsync(): Promise<IInvoiceTemplate[]> {
 }
 
 export async function getDefaultTemplateAsync(): Promise<IInvoiceTemplate | null> {
-  const session = await getSessionAsync();
-  requireAuthenticatedSession(session);
-
-  const { knex, tenant } = await createTenantKnex();
-  if (!tenant) {
-    throw new Error('tenant context not found');
-  }
+  const { knex, tenant } = await getTenantDbContext();
 
   return withTransaction(knex, async (trx: Knex.Transaction) => {
     return getDefaultInvoiceTemplate(trx, tenant);
@@ -371,13 +276,7 @@ export async function getDefaultTemplateAsync(): Promise<IInvoiceTemplate | null
 }
 
 export async function setClientTemplateAsync(clientId: string, templateId: string | null): Promise<void> {
-  const session = await getSessionAsync();
-  requireAuthenticatedSession(session);
-
-  const { knex, tenant } = await createTenantKnex();
-  if (!tenant) {
-    throw new Error('tenant context not found');
-  }
+  const { knex, tenant } = await getTenantDbContext();
 
   await withTransaction(knex, async (trx: Knex.Transaction) => {
     await setClientTemplate(trx, tenant, clientId, templateId);
@@ -387,13 +286,7 @@ export async function setClientTemplateAsync(clientId: string, templateId: strin
 export async function getServiceTypesForSelectionAsync(): Promise<
   Array<{ id: string; name: string; billing_method: 'fixed' | 'hourly' | 'per_unit' | 'usage'; is_standard: boolean }>
 > {
-  const session = await getSessionAsync();
-  requireAuthenticatedSession(session);
-
-  const { knex, tenant } = await createTenantKnex();
-  if (!tenant) {
-    throw new Error('tenant context not found');
-  }
+  const { knex, tenant } = await getTenantDbContext();
 
   return withTransaction(knex, async (trx: Knex.Transaction) => {
     return getServiceTypesForSelection(trx, tenant);
@@ -409,13 +302,7 @@ export async function getPlanTypeDisplayAsync(): Promise<Record<string, string>>
 }
 
 export async function getClientTaxSettingsAsync(clientId: string): Promise<IClientTaxSettings | null> {
-  const session = await getSessionAsync();
-  requireAuthenticatedSession(session);
-
-  const { knex, tenant } = await createTenantKnex();
-  if (!tenant) {
-    throw new Error('tenant context not found');
-  }
+  const { knex, tenant } = await getTenantDbContext();
 
   return withTransaction(knex, async (trx: Knex.Transaction) => {
     return getClientTaxSettings(trx, tenant, clientId);
@@ -426,13 +313,7 @@ export async function updateClientTaxSettingsAsync(
   clientId: string,
   taxSettings: Omit<IClientTaxSettings, 'tenant'>
 ): Promise<IClientTaxSettings | null> {
-  const session = await getSessionAsync();
-  requireAuthenticatedSession(session);
-
-  const { knex, tenant } = await createTenantKnex();
-  if (!tenant) {
-    throw new Error('tenant context not found');
-  }
+  const { knex, tenant } = await getTenantDbContext();
 
   return withTransaction(knex, async (trx: Knex.Transaction) => {
     return updateClientTaxSettings(trx, tenant, clientId, taxSettings);
@@ -440,13 +321,7 @@ export async function updateClientTaxSettingsAsync(
 }
 
 export async function getClientTaxExemptStatusAsync(clientId: string): Promise<{ is_tax_exempt: boolean; tax_exemption_certificate?: string } | null> {
-  const session = await getSessionAsync();
-  requireAuthenticatedSession(session);
-
-  const { knex, tenant } = await createTenantKnex();
-  if (!tenant) {
-    throw new Error('tenant context not found');
-  }
+  const { knex, tenant } = await getTenantDbContext();
 
   return withTransaction(knex, async (trx: Knex.Transaction) => {
     return getClientTaxExemptStatus(trx, tenant, clientId);
@@ -458,13 +333,7 @@ export async function updateClientTaxExemptStatusAsync(
   isTaxExempt: boolean,
   taxExemptionCertificate?: string
 ): Promise<{ is_tax_exempt: boolean; tax_exemption_certificate?: string }> {
-  const session = await getSessionAsync();
-  requireAuthenticatedSession(session);
-
-  const { knex, tenant } = await createTenantKnex();
-  if (!tenant) {
-    throw new Error('tenant context not found');
-  }
+  const { knex, tenant } = await getTenantDbContext();
 
   return withTransaction(knex, async (trx: Knex.Transaction) => {
     return updateClientTaxExemptStatus(trx, tenant, clientId, isTaxExempt, taxExemptionCertificate);
@@ -472,13 +341,7 @@ export async function updateClientTaxExemptStatusAsync(
 }
 
 export async function canClientOverrideTaxSourceAsync(): Promise<boolean> {
-  const session = await getSessionAsync();
-  requireAuthenticatedSession(session);
-
-  const { knex, tenant } = await createTenantKnex();
-  if (!tenant) {
-    throw new Error('tenant context not found');
-  }
+  const { knex, tenant } = await getTenantDbContext();
 
   return withTransaction(knex, async (trx: Knex.Transaction) => {
     return canClientOverrideTaxSource(trx, tenant);
@@ -486,13 +349,7 @@ export async function canClientOverrideTaxSourceAsync(): Promise<boolean> {
 }
 
 export async function getEffectiveTaxSourceForClientAsync(clientId: string): Promise<ClientTaxSourceInfo> {
-  const session = await getSessionAsync();
-  requireAuthenticatedSession(session);
-
-  const { knex, tenant } = await createTenantKnex();
-  if (!tenant) {
-    throw new Error('tenant context not found');
-  }
+  const { knex, tenant } = await getTenantDbContext();
 
   return withTransaction(knex, async (trx: Knex.Transaction) => {
     return getEffectiveTaxSourceForClient(trx, tenant, clientId);

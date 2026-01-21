@@ -42,21 +42,25 @@ import SurveySettings from '@alga-psa/surveys/components/SurveySettings';
 import { ProjectSettings } from '@alga-psa/projects/components';
 
 // Wrapper component with UnsavedChangesProvider
-const SettingsPage = (): React.JSX.Element => {
+type SettingsPageProps = {
+  initialTabParam?: string;
+};
+
+const SettingsPage = ({ initialTabParam }: SettingsPageProps): React.JSX.Element => {
   return (
     <UnsavedChangesProvider
       dialogTitle="Unsaved Changes"
       dialogMessage="You have unsaved changes. Are you sure you want to leave? Your changes will be lost."
     >
-      <SettingsPageContent />
+      <SettingsPageContent initialTabParam={initialTabParam} />
     </UnsavedChangesProvider>
   );
 };
 
 // Main content component
-const SettingsPageContent = (): React.JSX.Element =>  {
+const SettingsPageContent = ({ initialTabParam }: SettingsPageProps): React.JSX.Element =>  {
   const searchParams = useSearchParams();
-  const tabParam = searchParams?.get('tab');
+  const tabParam = searchParams?.get('tab') ?? initialTabParam;
   // Extensions are conditionally available based on edition
   // The webpack alias will resolve to either the EE component or empty component
   const isEEAvailable = process.env.NEXT_PUBLIC_EDITION === 'enterprise';

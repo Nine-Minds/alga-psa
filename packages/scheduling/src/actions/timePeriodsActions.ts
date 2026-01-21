@@ -25,10 +25,20 @@ import logger from '@alga-psa/core/logger';
 import { getSession } from '@alga-psa/auth';
 import { resolveUserTimeZone } from '@alga-psa/db';
 import { v4 as uuidv4 } from 'uuid';
+import { getCurrentUser } from '@alga-psa/users/actions';
 
 // Helper to get tenant with non-null assertion after validation
 async function getTenantKnex(): Promise<{ knex: Knex; tenant: string }> {
-  const { knex, tenant } = await getTenantKnex();
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
+    throw new Error('No authenticated user found');
+  }
+
+  if (!currentUser.tenant) {
+    throw new Error('Tenant is required');
+  }
+
+  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
   if (!tenant) {
     throw new Error('SYSTEM_ERROR: Tenant context not found');
   }

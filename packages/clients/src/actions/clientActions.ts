@@ -20,13 +20,16 @@ export async function getClientById(clientId: string): Promise<IClientWithLocati
   if (!currentUser) {
     throw new Error('No authenticated user found');
   }
+  if (!currentUser.tenant) {
+    throw new Error('Tenant not found');
+  }
 
   // Check permission for client reading (in MSP, clients are managed via 'client' resource)
   if (!await hasPermissionAsync(currentUser, 'client', 'read')) {
     throw new Error('Permission denied: Cannot read clients');
   }
 
-  const { knex, tenant } = await createTenantKnex();
+  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
   if (!tenant) {
     throw new Error('Tenant not found');
   }
@@ -304,6 +307,9 @@ export async function getAllClientsPaginated(params: ClientPaginationParams = {}
   if (!currentUser) {
     throw new Error('No authenticated user found');
   }
+  if (!currentUser.tenant) {
+    throw new Error('Tenant not found');
+  }
 
   // Check permission for client reading (in MSP, clients are managed via 'client' resource)
   if (!await hasPermissionAsync(currentUser, 'client', 'read')) {
@@ -323,7 +329,7 @@ export async function getAllClientsPaginated(params: ClientPaginationParams = {}
     sortDirection = 'asc'
   } = params;
 
-  const {knex: db, tenant} = await createTenantKnex();
+  const {knex: db, tenant} = await createTenantKnex(currentUser.tenant);
   if (!tenant) {
     throw new Error('Tenant not found');
   }

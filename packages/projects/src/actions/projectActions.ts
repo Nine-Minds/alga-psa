@@ -32,8 +32,15 @@ import { OrderingService } from '../lib/orderingService';
 import { SharedNumberingService } from '@shared/services/numberingService';
 
 // Helper to get tenant with non-null assertion after validation
-async function getTenantKnex(): Promise<{ knex: Knex; tenant: string }> {
-  const { knex, tenant } = await createTenantKnex();
+async function getTenantKnex(tenantId?: string | null): Promise<{ knex: Knex; tenant: string }> {
+  let tenant = tenantId ?? null;
+  if (!tenant) {
+    const currentUser = await getCurrentUser();
+    tenant = currentUser?.tenant ?? null;
+  }
+
+  const { knex, tenant: resolvedTenant } = await createTenantKnex(tenant);
+  tenant = resolvedTenant;
   if (!tenant) {
     throw new Error('SYSTEM_ERROR: Tenant context not found');
   }
@@ -69,9 +76,6 @@ async function checkPermission(user: IUser, resource: string, action: string, kn
 
 export async function getAllClientsForProjects(): Promise<IClient[]> {
   const { knex: db, tenant } = await getTenantKnex();
-  if (!tenant) {
-    throw new Error('SYSTEM_ERROR: Tenant configuration not found');
-  }
 
   const clients = await withTransaction(db, async (trx: Knex.Transaction) => {
     return trx('clients').select('*').where('tenant', tenant).orderBy('client_name', 'asc');
@@ -89,7 +93,7 @@ export async function getProjects(): Promise<IProject[]> {
         if (!currentUser.tenant) {
             throw new Error("tenant context not found");
         }
-        const {knex, tenant} = await getTenantKnex();
+        const {knex, tenant} = await getTenantKnex(currentUser.tenant);
         
         const projects = await withTransaction(knex, async (trx: Knex.Transaction) => {
             await checkPermission(currentUser, 'project', 'read', trx);
@@ -122,7 +126,7 @@ export async function getProjectPhase(phaseId: string): Promise<IProjectPhase | 
             throw new Error('No authenticated user found');
         }
 
-        const {knex, tenant} = await getTenantKnex();
+        const {knex, tenant} = await getTenantKnex(currentUser.tenant);
         const phase = await withTransaction(knex, async (trx: Knex.Transaction) => {
             if (!await hasPermission(currentUser, 'project', 'read', trx)) {
                 throw new Error('Permission denied: Cannot read project');
@@ -143,7 +147,7 @@ export async function getProjectTreeData(projectId?: string) {
       throw new Error("user not found");
     }
 
-    const {knex, tenant} = await getTenantKnex();
+    const {knex, tenant} = await getTenantKnex(currentUser.tenant);
     
     return await withTransaction(knex, async (trx: Knex.Transaction) => {
       await checkPermission(currentUser, 'project', 'read', trx);

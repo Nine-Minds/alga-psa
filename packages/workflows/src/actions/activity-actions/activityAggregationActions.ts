@@ -86,6 +86,11 @@ export async function fetchUserActivities(
   if (!user) {
     throw new Error("User not authenticated");
   }
+  if (!user.tenant) {
+    throw new Error("Tenant is required");
+  }
+
+  const tenantId: string = user.tenant;
 
   // Fetch activities from different sources based on filters
   const activities: Activity[] = [];
@@ -98,27 +103,27 @@ export async function fetchUserActivities(
     : Object.values(ActivityType);
 
   if (typesToFetch.includes(ActivityType.SCHEDULE)) {
-    promises.push(fetchScheduleActivities(user.user_id, filters));
+    promises.push(fetchScheduleActivities(user.user_id, tenantId, filters));
   }
 
   if (typesToFetch.includes(ActivityType.PROJECT_TASK)) {
-    promises.push(fetchProjectActivities(user.user_id, filters));
+    promises.push(fetchProjectActivities(user.user_id, tenantId, filters));
   }
 
   if (typesToFetch.includes(ActivityType.TICKET)) {
-    promises.push(fetchTicketActivities(user.user_id, filters));
+    promises.push(fetchTicketActivities(user.user_id, tenantId, filters));
   }
 
   if (typesToFetch.includes(ActivityType.TIME_ENTRY)) {
-    promises.push(fetchTimeEntryActivities(user.user_id, filters));
+    promises.push(fetchTimeEntryActivities(user.user_id, tenantId, filters));
   }
 
   if (typesToFetch.includes(ActivityType.WORKFLOW_TASK)) {
-    promises.push(fetchWorkflowTaskActivities(user.user_id, filters));
+    promises.push(fetchWorkflowTaskActivities(user.user_id, tenantId, filters));
   }
 
   if (typesToFetch.includes(ActivityType.NOTIFICATION)) {
-    promises.push(fetchNotificationActivities(user.user_id, filters));
+    promises.push(fetchNotificationActivities(user.user_id, tenantId, filters));
   }
 
   // Wait for all fetches to complete
@@ -167,6 +172,7 @@ export async function fetchUserActivities(
  */
 export async function fetchScheduleActivities(
   userId: string,
+  tenantId: string,
   filters: ActivityFilters
 ): Promise<Activity[]> {
   try {
@@ -181,8 +187,11 @@ export async function fetchScheduleActivities(
       : new Date(start.getTime() + 30 * 24 * 60 * 60 * 1000);
     
     // Fetch schedule entries
-    const { knex } = await createTenantKnex();
-    const entries = await ScheduleEntry.getAll(knex, start, end);
+    const { knex, tenant } = await createTenantKnex(tenantId);
+    if (!tenant) {
+      throw new Error("Tenant is required");
+    }
+    const entries = await ScheduleEntry.getAll(knex, tenant, start, end);
     
     // Filter entries assigned to the user
     let userEntries = entries.filter(entry =>
@@ -232,10 +241,11 @@ export async function fetchScheduleActivities(
  */
 export async function fetchProjectActivities(
   userId: string,
+  tenantId: string,
   filters: ActivityFilters
 ): Promise<Activity[]> {
   try {
-    const { knex: db, tenant } = await createTenantKnex();
+    const { knex: db, tenant } = await createTenantKnex(tenantId);
     if (!tenant) {
       throw new Error("Tenant is required");
     }
@@ -403,10 +413,11 @@ export async function fetchProjectActivities(
  */
 export async function fetchTicketActivities(
   userId: string,
+  tenantId: string,
   filters: ActivityFilters
 ): Promise<Activity[]> {
   try {
-    const { knex: db, tenant } = await createTenantKnex();
+    const { knex: db, tenant } = await createTenantKnex(tenantId);
     if (!tenant) {
       throw new Error("Tenant is required");
     }
@@ -573,10 +584,11 @@ export async function fetchTicketActivities(
  */
 export async function fetchTimeEntryActivities(
   userId: string,
+  tenantId: string,
   filters: ActivityFilters
 ): Promise<Activity[]> {
   try {
-    const { knex: db, tenant } = await createTenantKnex();
+    const { knex: db, tenant } = await createTenantKnex(tenantId);
     if (!tenant) {
       throw new Error("Tenant is required");
     }
@@ -649,10 +661,11 @@ interface WorkflowTaskData {
  */
 export async function fetchWorkflowTaskActivities(
   userId: string,
+  tenantId: string,
   filters: ActivityFilters
 ): Promise<Activity[]> {
   try {
-    const { knex: db, tenant } = await createTenantKnex();
+    const { knex: db, tenant } = await createTenantKnex(tenantId);
     if (!tenant) {
       throw new Error("Tenant is required");
     }
@@ -899,10 +912,11 @@ function processActivities(
  */
 export async function fetchNotificationActivities(
   userId: string,
+  tenantId: string,
   filters: ActivityFilters
 ): Promise<Activity[]> {
   try {
-    const { knex: db, tenant } = await createTenantKnex();
+    const { knex: db, tenant } = await createTenantKnex(tenantId);
     if (!tenant) {
       throw new Error("Tenant is required");
     }

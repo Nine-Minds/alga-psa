@@ -12,7 +12,12 @@ import { Knex } from 'knex';
 import { TagModel, CreateTagInput } from '@alga-psa/shared/models/tagModel';
 
 export async function findTagsByEntityId(entityId: string, entityType: string): Promise<ITag[]> {
-  const { knex: db, tenant } = await createTenantKnex();
+  const currentUser = await getCurrentUserAsync();
+  if (!currentUser?.tenant) {
+    throw new Error('Tenant context is required');
+  }
+
+  const { knex: db, tenant } = await createTenantKnex(currentUser.tenant);
   if (!tenant) {
     throw new Error('Tenant context is required');
   }
@@ -325,7 +330,12 @@ export async function deleteTag(id: string): Promise<void> {
 }
 
 export async function findTagsByEntityIds(entityIds: string[], entityType: TaggedEntityType): Promise<ITag[]> {
-  const { knex: db, tenant } = await createTenantKnex();
+  const currentUser = await getCurrentUserAsync();
+  if (!currentUser?.tenant) {
+    throw new Error('Tenant context is required');
+  }
+
+  const { knex: db, tenant } = await createTenantKnex(currentUser.tenant);
   if (!tenant) {
     throw new Error('Tenant context is required');
   }

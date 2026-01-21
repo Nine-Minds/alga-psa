@@ -636,9 +636,18 @@ export async function getTenantTaxSettings(): Promise<{
   allow_external_tax_override: boolean;
 } | null> {
   try {
-    const { knex, tenant } = await createTenantKnex();
+    const currentUser = await getCurrentUserAsync();
+    if (!currentUser) {
+      throw new Error('No authenticated user found');
+    }
+
+    if (!currentUser.tenant) {
+      throw new Error('Tenant is required');
+    }
+
+    const { knex, tenant } = await createTenantKnex(currentUser.tenant);
     if (!tenant) {
-      throw new Error('Tenant context is required');
+      throw new Error('SYSTEM_ERROR: Tenant context not found');
     }
 
     const settings = await knex('tenant_settings')
@@ -688,9 +697,13 @@ export async function updateTenantTaxSettings(settings: {
       throw new Error('Permission denied: Cannot update tenant tax settings');
     }
 
-    const { knex, tenant } = await createTenantKnex();
+    if (!currentUser.tenant) {
+      throw new Error('Tenant is required');
+    }
+
+    const { knex, tenant } = await createTenantKnex(currentUser.tenant);
     if (!tenant) {
-      throw new Error('Tenant context is required');
+      throw new Error('SYSTEM_ERROR: Tenant context not found');
     }
 
     const updateData = {

@@ -13,9 +13,12 @@ export async function getStatuses(type?: ItemType) {
     if (!user) {
       throw new Error('Unauthorized');
     }
+    if (!(user as any).tenant) {
+      throw new Error('Tenant not found');
+    }
 
     // Get the database connection with tenant
-    const {knex: db, tenant} = await createTenantKnex();
+    const {knex: db, tenant} = await createTenantKnex((user as any).tenant);
     if (!tenant) {
       throw new Error("Tenant not found");
     }
@@ -47,9 +50,12 @@ export async function getTicketStatuses() {
     if (!user) {
       throw new Error('Unauthorized');
     }
+    if (!(user as any).tenant) {
+      throw new Error('Tenant not found');
+    }
 
     // Get the database connection with tenant
-    const {knex: db, tenant} = await createTenantKnex();
+    const {knex: db, tenant} = await createTenantKnex((user as any).tenant);
     if (!tenant) {
       throw new Error("Tenant not found");
     }
@@ -77,12 +83,15 @@ export async function createStatus(statusData: Omit<IStatus, 'status_id' | 'tena
   if (!user) {
     throw new Error('Unauthorized');
   }
+  if (!(user as any).tenant) {
+    throw new Error('Tenant not found');
+  }
 
   if (!statusData.name || statusData.name.trim() === '') {
     throw new Error('Status name is required');
   }
 
-  const {knex: db, tenant} = await createTenantKnex();
+  const {knex: db, tenant} = await createTenantKnex((user as any).tenant);
   try {
     if (!tenant) {
       throw new Error("Tenant not found");
@@ -173,6 +182,9 @@ export async function updateStatus(statusId: string, statusData: Partial<IStatus
   if (!user) {
     throw new Error('Unauthorized');
   }
+  if (!(user as any).tenant) {
+    throw new Error('Tenant not found');
+  }
 
   if (!statusId) {
     throw new Error('Status ID is required');
@@ -182,7 +194,7 @@ export async function updateStatus(statusId: string, statusData: Partial<IStatus
     throw new Error('Status name cannot be empty');
   }
 
-  const {knex: db, tenant} = await createTenantKnex();
+  const {knex: db, tenant} = await createTenantKnex((user as any).tenant);
   try {
     if (!tenant) {
       throw new Error("Tenant not found");
@@ -290,7 +302,17 @@ export interface StatusOption {
 
 export async function getWorkItemStatusOptions(itemType?: ItemType | ItemType[]): Promise<StatusOption[]> {
   try {
-    const { knex: db, tenant } = await createTenantKnex();
+    let { knex: db, tenant } = await createTenantKnex();
+    if (!tenant) {
+      const user = await getCurrentUser();
+      if (!(user as any)?.tenant) {
+        throw new Error('Tenant not found');
+      }
+      ({ knex: db, tenant } = await createTenantKnex((user as any).tenant));
+    }
+    if (!tenant) {
+      throw new Error('Tenant not found');
+    }
 
     return await withTransaction(db, async (trx: Knex.Transaction) => {
       const itemTypesToFetch = itemType 
@@ -332,12 +354,15 @@ export async function deleteStatus(statusId: string) {
   if (!user) {
     throw new Error('Unauthorized');
   }
+  if (!(user as any).tenant) {
+    throw new Error('Tenant not found');
+  }
 
   if (!statusId) {
     throw new Error('Status ID is required');
   }
 
-  const {knex: db, tenant} = await createTenantKnex();
+  const {knex: db, tenant} = await createTenantKnex((user as any).tenant);
   try {
     if (!tenant) {
       throw new Error("Tenant not found");
@@ -452,7 +477,13 @@ export interface FindStatusByNameOutput {
  * This action searches for existing statuses by name and type
  */
 export async function findStatusByName(input: FindStatusByNameInput): Promise<FindStatusByNameOutput | null> {
-  const { knex: db, tenant } = await createTenantKnex();
+  let { knex: db, tenant } = await createTenantKnex();
+  if (!tenant) {
+    const user = await getCurrentUser();
+    if ((user as any)?.tenant) {
+      ({ knex: db, tenant } = await createTenantKnex((user as any).tenant));
+    }
+  }
   if (!tenant) {
     throw new Error('Tenant not found');
   }

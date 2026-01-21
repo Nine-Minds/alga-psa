@@ -20,6 +20,7 @@ export function XeroCsvMappingManager() {
       context={context}
       tabStyles={tabStyles}
       defaultTabId="Clients"
+      urlParamKey="mappingTab"
     />
   );
 }

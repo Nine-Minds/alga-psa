@@ -263,7 +263,7 @@ export async function getAsset(asset_id: string): Promise<Asset> {
     }
 
     // Get tenant context from DB (should match user's tenant)
-    const { knex, tenant } = await createTenantKnex();
+    const { knex, tenant } = await createTenantKnex(currentUser.tenant);
     if (!tenant) {
         throw new Error('No tenant found in database context');
     }
@@ -290,7 +290,7 @@ export async function getAssetDetailBundle(asset_id: string): Promise<AssetDetai
     }
 
     // Get tenant context from DB (should match user's tenant)
-    const { knex, tenant } = await createTenantKnex();
+    const { knex, tenant } = await createTenantKnex(currentUser.tenant);
     if (!tenant) {
         throw new Error('No tenant found in database context');
     }
@@ -1026,7 +1026,7 @@ export async function listAssets(params: AssetQueryParams): Promise<AssetListRes
     }
 
     // Get tenant context from DB (should match user's tenant)
-    const { knex, tenant } = await createTenantKnex();
+    const { knex, tenant } = await createTenantKnex(currentUser.tenant);
     if (!tenant) {
         throw new Error('No tenant found in database context');
     }
@@ -2078,7 +2078,7 @@ export async function listEntityAssets(entity_id: string, entity_type: 'ticket' 
     }
 
     // Get tenant context from DB (should match user's tenant)
-    const { knex, tenant } = await createTenantKnex();
+    const { knex, tenant } = await createTenantKnex(currentUser.tenant);
     if (!tenant) {
         throw new Error('No tenant found in database context');
     }

@@ -275,7 +275,7 @@ export async function getDocument(documentId: string) {
       throw new Error('Permission denied: Cannot read documents');
     }
 
-    const { knex, tenant } = await createTenantKnex();
+    const { knex, tenant } = await createTenantKnex(currentUser.tenant);
     if (!tenant) {
       throw new Error('No tenant found');
     }
@@ -349,13 +349,16 @@ export async function getDocumentByTicketId(ticketId: string) {
     if (!currentUser) {
       throw new Error('No authenticated user found');
     }
+    if (!currentUser.tenant) {
+      throw new Error('Tenant is required');
+    }
 
     // Check permission for document reading
     if (!await hasPermissionAsync(currentUser, 'document', 'read')) {
       throw new Error('Permission denied: Cannot read documents');
     }
 
-    const { knex, tenant } = await createTenantKnex();
+    const { knex, tenant } = await createTenantKnex(currentUser.tenant);
     if (!tenant) {
       throw new Error('No tenant found');
     }
@@ -406,13 +409,16 @@ export async function getDocumentByClientId(clientId: string) {
     if (!currentUser) {
       throw new Error('No authenticated user found');
     }
+    if (!currentUser.tenant) {
+      throw new Error('Tenant is required');
+    }
 
     // Check permission for document reading
     if (!await hasPermissionAsync(currentUser, 'document', 'read')) {
       throw new Error('Permission denied: Cannot read documents');
     }
 
-    const { knex, tenant } = await createTenantKnex();
+    const { knex, tenant } = await createTenantKnex(currentUser.tenant);
     if (!tenant) {
       throw new Error('No tenant found');
     }
@@ -471,7 +477,7 @@ export async function associateDocumentWithClient(input: IDocumentAssociationInp
       throw new Error('Permission denied: Cannot modify client documents');
     }
 
-    const { knex, tenant } = await createTenantKnex();
+    const { knex, tenant } = await createTenantKnex(currentUser.tenant);
     if (!tenant) {
       throw new Error('No tenant found');
     }
@@ -504,7 +510,7 @@ export async function getDocumentByContactNameId(contactNameId: string) {
       throw new Error('Permission denied: Cannot read documents');
     }
 
-    const { knex, tenant } = await createTenantKnex();
+    const { knex, tenant } = await createTenantKnex(currentUser.tenant);
     if (!tenant) {
       throw new Error('No tenant found');
     }
@@ -878,7 +884,7 @@ export async function getDocumentThumbnailUrl(documentId: string): Promise<strin
       throw new Error('Permission denied: Cannot read documents');
     }
 
-    const { knex, tenant } = await createTenantKnex();
+    const { knex, tenant } = await createTenantKnex(currentUser.tenant);
     if (!tenant) {
       throw new Error('No tenant found');
     }
@@ -1098,7 +1104,7 @@ export async function getDocumentsByEntity(
       throw new Error('Permission denied: Cannot read documents');
     }
 
-    const { knex, tenant } = await createTenantKnex();
+    const { knex, tenant } = await createTenantKnex(currentUser.tenant);
     if (!tenant) {
       throw new Error('No tenant found');
     }
@@ -1339,7 +1345,7 @@ export async function getAllDocuments(
       throw new Error('Permission denied: Cannot read documents');
     }
 
-    const { knex, tenant } = await createTenantKnex();
+    const { knex, tenant } = await createTenantKnex(currentUser.tenant);
     if (!tenant) {
       throw new Error('No tenant found');
     }
@@ -2297,13 +2303,16 @@ export async function getDistinctEntityTypes(): Promise<string[]> {
     if (!currentUser) {
       throw new Error('No authenticated user found');
     }
+    if (!currentUser.tenant) {
+      throw new Error('Tenant is required');
+    }
 
     // Check permission for document reading
     if (!await hasPermissionAsync(currentUser, 'document', 'read')) {
       throw new Error('Permission denied: Cannot read document associations');
     }
 
-    const { knex, tenant } = await createTenantKnex();
+    const { knex, tenant } = await createTenantKnex(currentUser.tenant);
     if (!tenant) {
       throw new Error('No tenant found');
     }
@@ -2336,12 +2345,15 @@ export async function getFolderTree(): Promise<IFolderNode[]> {
   if (!currentUser) {
     throw new Error('User not authenticated');
   }
+  if (!currentUser.tenant) {
+    throw new Error('Tenant is required');
+  }
 
   if (!(await hasPermissionAsync(currentUser, 'document', 'read'))) {
     throw new Error('Permission denied');
   }
 
-  const { knex, tenant } = await createTenantKnex();
+  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
   if (!tenant) {
     throw new Error('Tenant not found');
   }

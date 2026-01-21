@@ -61,9 +61,12 @@ export async function fetchScheduleActivities(
     if (!user) {
       throw new Error("User not authenticated");
     }
+    if (!user.tenant) {
+      throw new Error("Tenant is required");
+    }
 
     // This function already handles tenant isolation internally
-    return await fetchScheduleActivitiesInternal(user.user_id, filters) as ScheduleActivity[];
+    return await fetchScheduleActivitiesInternal(user.user_id, user.tenant, filters) as ScheduleActivity[];
   } catch (error) {
     console.error("Error fetching schedule activities:", error);
     throw new Error("Failed to fetch schedule activities. Please try again later.");
@@ -84,9 +87,12 @@ export async function fetchProjectActivities(
     if (!user) {
       throw new Error("User not authenticated");
     }
+    if (!user.tenant) {
+      throw new Error("Tenant is required");
+    }
 
     // This function already handles tenant isolation internally
-    return await fetchProjectActivitiesInternal(user.user_id, filters) as ProjectTaskActivity[];
+    return await fetchProjectActivitiesInternal(user.user_id, user.tenant, filters) as ProjectTaskActivity[];
   } catch (error) {
     console.error("Error fetching project activities:", error);
     throw new Error("Failed to fetch project activities. Please try again later.");
@@ -107,9 +113,12 @@ export async function fetchTicketActivities(
     if (!user) {
       throw new Error("User not authenticated");
     }
+    if (!user.tenant) {
+      throw new Error("Tenant is required");
+    }
 
     // This function already handles tenant isolation internally
-    return await fetchTicketActivitiesInternal(user.user_id, filters) as TicketActivity[];
+    return await fetchTicketActivitiesInternal(user.user_id, user.tenant, filters) as TicketActivity[];
   } catch (error) {
     console.error("Error fetching ticket activities:", error);
     throw new Error("Failed to fetch ticket activities. Please try again later.");
@@ -130,9 +139,12 @@ export async function fetchTimeEntryActivities(
     if (!user) {
       throw new Error("User not authenticated");
     }
+    if (!user.tenant) {
+      throw new Error("Tenant is required");
+    }
 
     // This function already handles tenant isolation internally
-    return await fetchTimeEntryActivitiesInternal(user.user_id, filters) as TimeEntryActivity[];
+    return await fetchTimeEntryActivitiesInternal(user.user_id, user.tenant, filters) as TimeEntryActivity[];
   } catch (error) {
     console.error("Error fetching time entry activities:", error);
     throw new Error("Failed to fetch time entry activities. Please try again later.");
@@ -153,9 +165,12 @@ export async function fetchWorkflowTaskActivities(
     if (!user) {
       throw new Error("User not authenticated");
     }
+    if (!user.tenant) {
+      throw new Error("Tenant is required");
+    }
 
     // This function already handles tenant isolation internally
-    return await fetchWorkflowTaskActivitiesInternal(user.user_id, filters) as WorkflowTaskActivity[];
+    return await fetchWorkflowTaskActivitiesInternal(user.user_id, user.tenant, filters) as WorkflowTaskActivity[];
   } catch (error) {
     console.error("Error fetching workflow task activities:", error);
     throw new Error("Failed to fetch workflow task activities. Please try again later.");
@@ -176,9 +191,12 @@ export async function fetchNotificationActivities(
     if (!user) {
       throw new Error("User not authenticated");
     }
+    if (!user.tenant) {
+      throw new Error("Tenant is required");
+    }
 
     // This function already handles tenant isolation internally
-    return await fetchNotificationActivitiesInternal(user.user_id, filters) as NotificationActivity[];
+    return await fetchNotificationActivitiesInternal(user.user_id, user.tenant, filters) as NotificationActivity[];
   } catch (error) {
     console.error("Error fetching notification activities:", error);
     throw new Error("Failed to fetch notification activities. Please try again later.");
@@ -201,28 +219,31 @@ export async function fetchActivityById(
     if (!user) {
       throw new Error("User not authenticated");
     }
+    if (!user.tenant) {
+      throw new Error("Tenant is required");
+    }
 
     // Fetch activities of the specified type
     let activities: Activity[] = [];
     
     switch (type) {
       case ActivityType.SCHEDULE:
-        activities = await fetchScheduleActivitiesInternal(user.user_id, {});
+        activities = await fetchScheduleActivitiesInternal(user.user_id, user.tenant, {});
         break;
       case ActivityType.PROJECT_TASK:
-        activities = await fetchProjectActivitiesInternal(user.user_id, {});
+        activities = await fetchProjectActivitiesInternal(user.user_id, user.tenant, {});
         break;
       case ActivityType.TICKET:
-        activities = await fetchTicketActivitiesInternal(user.user_id, {});
+        activities = await fetchTicketActivitiesInternal(user.user_id, user.tenant, {});
         break;
       case ActivityType.TIME_ENTRY:
-        activities = await fetchTimeEntryActivitiesInternal(user.user_id, {});
+        activities = await fetchTimeEntryActivitiesInternal(user.user_id, user.tenant, {});
         break;
       case ActivityType.WORKFLOW_TASK:
-        activities = await fetchWorkflowTaskActivitiesInternal(user.user_id, {});
+        activities = await fetchWorkflowTaskActivitiesInternal(user.user_id, user.tenant, {});
         break;
       case ActivityType.NOTIFICATION:
-        activities = await fetchNotificationActivitiesInternal(user.user_id, {});
+        activities = await fetchNotificationActivitiesInternal(user.user_id, user.tenant, {});
         break;
       default:
         throw new Error(`Unsupported activity type: ${type}`);
@@ -288,6 +309,9 @@ export async function fetchDashboardActivities(
     if (!user) {
       throw new Error("User not authenticated");
     }
+    if (!user.tenant) {
+      throw new Error("Tenant is required");
+    }
 
     // Fetch activities for each type with a limit
     const filters: ActivityFilters = { isClosed: false };
@@ -299,11 +323,11 @@ export async function fetchDashboardActivities(
       timeEntryActivities,
       workflowTaskActivities
     ] = await Promise.all([
-      fetchScheduleActivitiesInternal(user.user_id, filters),
-      fetchProjectActivitiesInternal(user.user_id, filters),
-      fetchTicketActivitiesInternal(user.user_id, filters),
-      fetchTimeEntryActivitiesInternal(user.user_id, filters),
-      fetchWorkflowTaskActivitiesInternal(user.user_id, filters)
+      fetchScheduleActivitiesInternal(user.user_id, user.tenant, filters),
+      fetchProjectActivitiesInternal(user.user_id, user.tenant, filters),
+      fetchTicketActivitiesInternal(user.user_id, user.tenant, filters),
+      fetchTimeEntryActivitiesInternal(user.user_id, user.tenant, filters),
+      fetchWorkflowTaskActivitiesInternal(user.user_id, user.tenant, filters)
     ]);
 
     // Sort and limit each type of activity

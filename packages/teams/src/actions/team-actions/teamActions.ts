@@ -5,6 +5,21 @@ import type { IRole, ITeam, IUser, IUserWithRoles } from '@alga-psa/types';
 import { withTransaction } from '@alga-psa/db';
 import { createTenantKnex } from '@alga-psa/db';
 import { Knex } from 'knex';
+import { getCurrentUser } from '@alga-psa/users/actions';
+
+async function getTenantKnex(): Promise<{ knex: Knex; tenant: string }> {
+  const user = await getCurrentUser();
+  if (!user?.tenant) {
+    throw new Error('Tenant not found');
+  }
+
+  const { knex, tenant } = await createTenantKnex(user.tenant);
+  if (!tenant) {
+    throw new Error('Tenant not found');
+  }
+
+  return { knex, tenant };
+}
 
 async function getUsersWithRoles(
   trx: Knex | Knex.Transaction,
@@ -58,7 +73,7 @@ export async function createTeam(teamData: Omit<ITeam, 'members'> & { members?: 
       throw new Error('A team must have a manager. Please specify a manager_id or provide at least one team member.');
     }
     
-    const {knex: db, tenant} = await createTenantKnex();
+    const {knex: db, tenant} = await getTenantKnex();
     if (!tenant) {
       throw new Error('Tenant not found');
     }
@@ -100,7 +115,7 @@ export async function createTeam(teamData: Omit<ITeam, 'members'> & { members?: 
 
 export async function updateTeam(teamId: string, teamData: Partial<ITeam>): Promise<ITeam> {
   try {
-    const {knex, tenant} = await createTenantKnex();
+    const {knex, tenant} = await getTenantKnex();
     if (!tenant) {
       throw new Error('Tenant not found');
     }
@@ -114,7 +129,7 @@ export async function updateTeam(teamId: string, teamData: Partial<ITeam>): Prom
 
 export async function deleteTeam(teamId: string): Promise<{ success: boolean }> {
   try {
-    const {knex, tenant} = await createTenantKnex();
+    const {knex, tenant} = await getTenantKnex();
     if (!tenant) {
       throw new Error('Tenant not found');
     }
@@ -128,7 +143,7 @@ export async function deleteTeam(teamId: string): Promise<{ success: boolean }> 
 
 export const addUserToTeam = async (teamId: string, userId: string): Promise<ITeam> => {
   try {
-    const {knex, tenant} = await createTenantKnex();
+    const {knex, tenant} = await getTenantKnex();
     if (!tenant) {
       throw new Error('Tenant not found');
     }
@@ -142,7 +157,7 @@ export const addUserToTeam = async (teamId: string, userId: string): Promise<ITe
 
 export const removeUserFromTeam = async (teamId: string, userId: string): Promise<ITeam> => {
   try {
-    const {knex, tenant} = await createTenantKnex();
+    const {knex, tenant} = await getTenantKnex();
     if (!tenant) {
       throw new Error('Tenant not found');
     }
@@ -156,7 +171,7 @@ export const removeUserFromTeam = async (teamId: string, userId: string): Promis
 
 export const getTeamById = async (teamId: string): Promise<ITeam> => {
   try {
-    const {knex, tenant} = await createTenantKnex();
+    const {knex, tenant} = await getTenantKnex();
     if (!tenant) {
       throw new Error('Tenant not found');
     }
@@ -176,7 +191,7 @@ export const getTeamById = async (teamId: string): Promise<ITeam> => {
 
 export async function getTeams(): Promise<ITeam[]> {
   try {
-    const {knex, tenant} = await createTenantKnex();
+    const {knex, tenant} = await getTenantKnex();
     if (!tenant) {
       throw new Error('Tenant not found');
     }
@@ -195,7 +210,7 @@ export async function getTeams(): Promise<ITeam[]> {
 
 export const assignManagerToTeam = async (teamId: string, userId: string): Promise<ITeam> => {
   try {
-    const {knex, tenant} = await createTenantKnex();
+    const {knex, tenant} = await getTenantKnex();
     if (!tenant) {
       throw new Error('Tenant not found');
     }

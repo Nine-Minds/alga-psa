@@ -78,7 +78,7 @@ async function safePublishEvent(eventType: string, payload: any) {
  * This reduces multiple network calls by fetching all related data in a single server action
  */
 export async function getConsolidatedTicketData(ticketId: string, user: IUser) {
-  const {knex: db, tenant} = await createTenantKnex();
+  const {knex: db, tenant} = await createTenantKnex(user.tenant);
   if (!tenant) {
     throw new Error('Tenant not found');
   }
@@ -627,7 +627,7 @@ export async function getTicketsForList(
   page: number = 1,
   pageSize: number = 10
 ): Promise<{ tickets: ITicketListItem[], totalCount: number }> {
-  const {knex: db, tenant} = await createTenantKnex();
+  const {knex: db, tenant} = await createTenantKnex(user.tenant);
   if (!tenant) {
     throw new Error('Tenant not found');
   }
@@ -1043,7 +1043,7 @@ export async function getTicketsForList(
  * This consolidates multiple API calls into a single request
  */
 export async function getTicketFormOptions(user: IUser) {
-  const {knex: db, tenant} = await createTenantKnex();
+  const {knex: db, tenant} = await createTenantKnex(user.tenant);
   if (!tenant) {
     throw new Error('Tenant not found');
   }
@@ -1172,7 +1172,7 @@ export async function getTicketFormOptions(user: IUser) {
  * Update ticket with proper caching
  */
 export async function updateTicketWithCache(id: string, data: Partial<ITicket>, user: IUser) {
-  const {knex: db, tenant} = await createTenantKnex();
+  const {knex: db, tenant} = await createTenantKnex(user.tenant);
   if (!tenant) {
     throw new Error('Tenant not found');
   }
@@ -1492,7 +1492,7 @@ export async function addTicketCommentWithCache(
   isResolution: boolean,
   user: IUser
 ): Promise<IComment> {
-  const {knex: db, tenant} = await createTenantKnex();
+  const {knex: db, tenant} = await createTenantKnex(user.tenant);
   if (!tenant) {
     throw new Error('Tenant not found');
   }
@@ -1657,7 +1657,7 @@ export async function getConsolidatedTicketListData(
   page: number = 1,
   pageSize: number = 10
 ) {
-  const {knex: db, tenant} = await createTenantKnex();
+  const {knex: db, tenant} = await createTenantKnex(user.tenant);
   if (!tenant) {
     throw new Error('Tenant not found');
   }
@@ -1697,7 +1697,7 @@ export async function fetchTicketsWithPagination(
   page: number = 1,
   pageSize: number = 10
 ) {
-  const {knex: db, tenant} = await createTenantKnex();
+  const {knex: db, tenant} = await createTenantKnex(user.tenant);
   if (!tenant) {
     throw new Error('Tenant not found');
   }
@@ -1724,7 +1724,7 @@ export async function fetchBundleChildrenForMaster(
   user: IUser,
   masterTicketId: string
 ): Promise<ITicketListItem[]> {
-  const { knex: db, tenant } = await createTenantKnex();
+  const { knex: db, tenant } = await createTenantKnex(user.tenant);
   if (!tenant) {
     throw new Error('Tenant not found');
   }

@@ -576,10 +576,20 @@ export async function getInternalNotificationCategoriesAction(
   forClientPortal?: boolean,
   locale?: string
 ): Promise<InternalNotificationCategory[]> {
-  const { knex, tenant } = await (await import("@alga-psa/db")).createTenantKnex();
+  const { getCurrentUser } = await import('@alga-psa/users/actions');
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
+    throw new Error('User not authenticated');
+  }
 
+  if (!currentUser.tenant) {
+    throw new Error('Tenant is required');
+  }
+
+  const { createTenantKnex } = await import('@alga-psa/db');
+  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
   if (!tenant) {
-    throw new Error('No tenant found');
+    throw new Error('SYSTEM_ERROR: Tenant context not found');
   }
 
   return await withTransaction(knex, async (trx: Knex.Transaction) => {
@@ -619,10 +629,20 @@ export async function getSubtypesAction(
   forClientPortal?: boolean,
   locale?: string
 ): Promise<InternalNotificationSubtype[]> {
-  const { knex, tenant } = await (await import("@alga-psa/db")).createTenantKnex();
+  const { getCurrentUser } = await import('@alga-psa/users/actions');
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
+    throw new Error('User not authenticated');
+  }
 
+  if (!currentUser.tenant) {
+    throw new Error('Tenant is required');
+  }
+
+  const { createTenantKnex } = await import('@alga-psa/db');
+  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
   if (!tenant) {
-    throw new Error('No tenant found');
+    throw new Error('SYSTEM_ERROR: Tenant context not found');
   }
 
   return await withTransaction(knex, async (trx: Knex.Transaction) => {

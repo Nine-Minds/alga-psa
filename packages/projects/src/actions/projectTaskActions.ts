@@ -38,11 +38,20 @@ import { OrderingService } from '../lib/orderingService';
 import { validateAndFixOrderKeys } from './regenerateOrderKeys';
 
 // Helper to get tenant with non-null assertion after validation
-async function getTenantKnex(): Promise<{ knex: Knex; tenant: string }> {
-  const { knex, tenant } = await getTenantKnex();
+async function getTenantKnex(tenantId?: string | null): Promise<{ knex: Knex; tenant: string }> {
+  let tenant = tenantId ?? null;
+  if (!tenant) {
+    const currentUser = await getCurrentUser();
+    tenant = currentUser?.tenant ?? null;
+  }
+
+  const { knex, tenant: resolvedTenant } = await createTenantKnex(tenant);
+  tenant = resolvedTenant;
+
   if (!tenant) {
     throw new Error('SYSTEM_ERROR: Tenant context not found');
   }
+
   return { knex, tenant };
 }
 

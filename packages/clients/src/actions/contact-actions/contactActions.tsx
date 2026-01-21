@@ -27,12 +27,20 @@ const CONTACT_SORT_COLUMNS_ALIASED = {
   phone_number: 'phone_number'
 } as const;
 
-export async function getContactByContactNameId(contactNameId: string): Promise<IContact | null> {
-  // Revert to using createTenantKnex for now
-  const { knex: db, tenant } = await createTenantKnex();
+async function getTenantDbContext() {
+  const currentUser = await getCurrentUserAsync();
+  const tenant = currentUser?.tenant;
   if (!tenant) {
     throw new Error('SYSTEM_ERROR: Tenant configuration not found');
   }
+
+  const { knex: db } = await createTenantKnex(tenant);
+  return { db, tenant, currentUser };
+}
+
+export async function getContactByContactNameId(contactNameId: string): Promise<IContact | null> {
+  // Revert to using createTenantKnex for now
+  const { db, tenant } = await getTenantDbContext();
   try {
     // Validate input
     if (!contactNameId) {
@@ -96,12 +104,8 @@ export async function deleteContact(contactId: string): Promise<{
 }> {
   console.log('🔍 Starting deleteContact function with contactId:', contactId);
 
-  const { knex: db, tenant } = await createTenantKnex();
+  const { db, tenant } = await getTenantDbContext();
   console.log('🔍 Got database connection, tenant:', tenant);
-
-  if (!tenant) {
-    throw new Error('SYSTEM_ERROR: Tenant configuration not found');
-  }
 
   try {
     // Validate input
@@ -380,10 +384,7 @@ export async function deleteContact(contactId: string): Promise<{
 export type ContactFilterStatus = 'active' | 'inactive' | 'all';
 
 export async function getContactsByClient(clientId: string, status: ContactFilterStatus = 'active', sortBy: string = 'full_name', sortDirection: 'asc' | 'desc' = 'asc'): Promise<IContact[]> {
-  const { knex: db, tenant } = await createTenantKnex();
-  if (!tenant) {
-    throw new Error('SYSTEM_ERROR: Tenant configuration not found');
-  }
+  const { db, tenant } = await getTenantDbContext();
 
   try {
     // Validate input
@@ -476,16 +477,8 @@ export async function getContactsEligibleForInvitation(
   clientId?: string,
   status: ContactFilterStatus = 'active'
 ): Promise<IContact[]> {
-  const { knex: db, tenant } = await createTenantKnex();
-  if (!tenant) {
-    throw new Error('SYSTEM_ERROR: Tenant configuration not found');
-  }
-
   // RBAC: ensure user has permission to read contacts
-  const currentUser = await getCurrentUserAsync();
-  if (!currentUser) {
-    throw new Error('Unauthorized');
-  }
+  const { db, tenant, currentUser } = await getTenantDbContext();
   
   // Check permission to read contacts
   const canRead = await hasPermissionAsync(currentUser, 'contact', 'read', db);
@@ -537,10 +530,7 @@ export async function getContactsEligibleForInvitation(
 // getAllClients is exported from clientActions.ts to avoid duplicate exports
 
 export async function getAllContacts(status: ContactFilterStatus = 'active', sortBy: string = 'full_name', sortDirection: 'asc' | 'desc' = 'asc'): Promise<IContact[]> {
-  const { knex: db, tenant } = await createTenantKnex();
-  if (!tenant) {
-    throw new Error('SYSTEM_ERROR: Tenant configuration not found');
-  }
+  const { db, tenant } = await getTenantDbContext();
 
   try {
     // Validate status parameter
@@ -654,16 +644,8 @@ export async function getAllContacts(status: ContactFilterStatus = 'active', sor
 }
 
 export async function addContact(contactData: Partial<IContact>): Promise<IContact> {
-  const { knex: db, tenant } = await createTenantKnex();
-  if (!tenant) {
-    throw new Error('SYSTEM_ERROR: Tenant configuration not found');
-  }
-
   // Check permissions (keep authentication/authorization in server action)
-  const currentUser = await getCurrentUserAsync();
-  if (!currentUser) {
-    throw new Error('No authenticated user found');
-  }
+  const { db, tenant, currentUser } = await getTenantDbContext();
   
   if (!await hasPermissionAsync(currentUser, 'contact', 'create')) {
     throw new Error('Permission denied: Cannot create contacts');
@@ -701,10 +683,7 @@ export async function addContact(contactData: Partial<IContact>): Promise<IConta
 }
 
 export async function updateContact(contactData: Partial<IContact>): Promise<IContact> {
-  const { knex: db, tenant } = await createTenantKnex();
-  if (!tenant) {
-    throw new Error('SYSTEM_ERROR: Tenant configuration not found');
-  }
+  const { db, tenant } = await getTenantDbContext();
 
   try {
     // Validate required fields
@@ -845,10 +824,7 @@ export async function updateContact(contactData: Partial<IContact>): Promise<ICo
 }
 
 export async function updateContactsForClient(clientId: string, updateData: Partial<IContact>): Promise<void> {
-  const { knex: db, tenant } = await createTenantKnex();
-  if (!tenant) {
-    throw new Error('SYSTEM_ERROR: Tenant configuration not found');
-  }
+  const { db, tenant } = await getTenantDbContext();
 
   try {
     // Validate input

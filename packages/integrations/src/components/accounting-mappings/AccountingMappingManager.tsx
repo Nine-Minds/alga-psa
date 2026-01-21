@@ -24,6 +24,7 @@ type AccountingMappingManagerProps = {
     trigger?: string;
   };
   defaultTabId?: string;
+  urlParamKey?: string;
 };
 
 export function AccountingMappingManager({
@@ -31,10 +32,12 @@ export function AccountingMappingManager({
   context,
   realmLabel,
   tabStyles,
-  defaultTabId
+  defaultTabId,
+  urlParamKey
 }: AccountingMappingManagerProps) {
   const searchParams = useSearchParams();
-  const tabParam = searchParams?.get('tab');
+  const paramKey = urlParamKey ?? 'tab';
+  const tabParam = searchParams?.get(paramKey);
 
   // Build mapping between URL slugs and tab labels
   const { slugToLabelMap, labelToSlugMap } = useMemo(() => {
@@ -77,9 +80,9 @@ export function AccountingMappingManager({
     const currentSearchParams = new URLSearchParams(window.location.search);
 
     if (urlSlug && urlSlug !== defaultSlug) {
-      currentSearchParams.set('tab', urlSlug);
+      currentSearchParams.set(paramKey, urlSlug);
     } else {
-      currentSearchParams.delete('tab');
+      currentSearchParams.delete(paramKey);
     }
 
     const newUrl = currentSearchParams.toString()

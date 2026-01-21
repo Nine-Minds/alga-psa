@@ -7,6 +7,7 @@ import {
   type SurveyClientSatisfactionSummary,
 } from '@alga-psa/types';
 import { createTenantKnex } from '@alga-psa/db';
+import { getCurrentUser } from '@alga-psa/auth/getCurrentUser';
 import SurveyDashboardService from '../../services/SurveyDashboardService';
 
 function ensureTenant(tenant: string | null): string {
@@ -19,7 +20,12 @@ function ensureTenant(tenant: string | null): string {
 export async function getSurveyDashboardData(
   filters?: SurveyDashboardFilters
 ): Promise<SurveyDashboardData> {
-  const { knex, tenant } = await createTenantKnex();
+  const currentUser = await getCurrentUser();
+  if (!currentUser?.tenant) {
+    throw new Error('Tenant context is required to access survey dashboard data');
+  }
+
+  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
   const tenantId = ensureTenant(tenant);
   return SurveyDashboardService.getDashboardData(knex, tenantId, filters);
 }
@@ -27,7 +33,12 @@ export async function getSurveyDashboardData(
 export async function getSurveyClientSummary(
   clientId: string
 ): Promise<SurveyClientSatisfactionSummary | null> {
-  const { knex, tenant } = await createTenantKnex();
+  const currentUser = await getCurrentUser();
+  if (!currentUser?.tenant) {
+    throw new Error('Tenant context is required to access survey dashboard data');
+  }
+
+  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
   const tenantId = ensureTenant(tenant);
   return SurveyDashboardService.getClientSummary(knex, tenantId, clientId);
 }
@@ -35,7 +46,12 @@ export async function getSurveyClientSummary(
 export async function getSurveyTicketSummary(
   ticketId: string
 ): Promise<SurveyTicketSatisfactionSummary | null> {
-  const { knex, tenant } = await createTenantKnex();
+  const currentUser = await getCurrentUser();
+  if (!currentUser?.tenant) {
+    throw new Error('Tenant context is required to access survey dashboard data');
+  }
+
+  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
   const tenantId = ensureTenant(tenant);
   return SurveyDashboardService.getTicketSummary(knex, tenantId, ticketId);
 }

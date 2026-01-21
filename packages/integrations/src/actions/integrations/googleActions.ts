@@ -79,8 +79,7 @@ export async function getGoogleIntegrationStatus(): Promise<{
     const permitted = await hasPermission(user as any, 'system_settings', 'read');
     if (!permitted) return { success: false, error: 'Forbidden' };
 
-    const { tenant } = await createTenantKnex();
-    if (!tenant) return { success: false, error: 'Tenant not found' };
+    const tenant = user.tenant;
 
     const secretProvider = await getSecretProviderInstance();
 
@@ -153,8 +152,7 @@ export async function saveGoogleIntegrationSettings(input: {
     const permitted = await hasPermission(user as any, 'system_settings', 'update');
     if (!permitted) return { success: false, error: 'Forbidden' };
 
-    const { tenant } = await createTenantKnex();
-    if (!tenant) return { success: false, error: 'Tenant not found' };
+    const tenant = user.tenant;
 
     const projectId = input.projectId?.trim();
     if (!projectId) return { success: false, error: 'Google Cloud project ID is required' };
@@ -220,7 +218,7 @@ export async function resetGoogleProvidersToDisconnected(): Promise<{ success: b
     const permitted = await hasPermission(user as any, 'system_settings', 'update');
     if (!permitted) return { success: false, error: 'Forbidden' };
 
-    const { knex, tenant } = await createTenantKnex();
+    const { knex, tenant } = await createTenantKnex(user.tenant);
     if (!tenant) return { success: false, error: 'Tenant not found' };
 
     // Email providers: mark disconnected + clear tokens
