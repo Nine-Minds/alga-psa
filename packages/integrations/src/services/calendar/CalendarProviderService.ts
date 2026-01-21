@@ -14,7 +14,7 @@ import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 // Helper to get secret with provider instance
 async function getSecret(secretName: string): Promise<string | null> {
   const provider = await getSecretProviderInstance();
-  return provider.getAppSecret(secretName) ?? null;
+  return (await provider.getAppSecret(secretName)) ?? null;
 }
 
 export interface CreateCalendarProviderData {
