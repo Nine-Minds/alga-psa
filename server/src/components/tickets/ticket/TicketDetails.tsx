@@ -1110,9 +1110,10 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     try {
       // Use the optimized handler if provided
       if (onUpdateDescription) {
-        const success = await onUpdateDescription(content);
+        const result = await onUpdateDescription(content);
 
-        if (success) {
+        // Treat undefined/null as success (only explicit false is failure)
+        if (result !== false) {
           // Update the local ticket state
           const currentAttributes = ticket.attributes || {};
           const updatedAttributes = {
@@ -1125,9 +1126,11 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
             attributes: updatedAttributes,
             updated_at: new Date().toISOString(),
           }));
+
+          return true;
         }
 
-        return success;
+        return false;
       } else {
         // Fallback to the original implementation
         const user = await getCurrentUser();

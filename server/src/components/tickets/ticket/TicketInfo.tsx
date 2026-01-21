@@ -208,6 +208,24 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
               setPendingCategories(categoriesArray);
               if (data.boardConfig) {
                 setPendingBoardConfig(data.boardConfig);
+
+                // Only clear priority fields if the priority_type changes (custom <-> ITIL)
+                // This preserves priority when switching between boards with the same priority type
+                const currentPriorityType = boardConfig.priority_type;
+                const newPriorityType = data.boardConfig.priority_type;
+
+                if (currentPriorityType !== newPriorityType) {
+                  // Priority type changed, clear priority fields
+                  setPendingChanges(prev => ({
+                    ...prev,
+                    priority_id: null,
+                  }));
+                  setPendingItilChanges(prev => ({
+                    ...prev,
+                    itil_impact: undefined,
+                    itil_urgency: undefined,
+                  }));
+                }
               }
             }
             setIsLoadingBoardConfig(false);
@@ -229,7 +247,7 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
     };
 
     fetchPendingBoardConfig();
-  }, [pendingChanges.board_id, ticket.board_id]);
+  }, [pendingChanges.board_id, ticket.board_id, boardConfig.priority_type]);
 
   // Clear category selections when board changes (separate effect to avoid dependency issues)
   useEffect(() => {
@@ -746,15 +764,12 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
                 onValueChange={(value) => {
                   handlePendingChange('board_id', value);
                   // Clear pending categories when board changes
+                  // (categories are board-specific)
                   handlePendingChange('category_id', null);
                   handlePendingChange('subcategory_id', null);
-
-                  // Clear priority fields when board changes
-                  // This ensures that switching between custom and ITIL priority types
-                  // doesn't retain the wrong priority data
-                  handlePendingChange('priority_id', null);
-                  handlePendingItilChange('itil_impact', null);
-                  handlePendingItilChange('itil_urgency', null);
+                  // Note: Priority is NOT cleared here anymore.
+                  // Priority will only be cleared if priority_type changes (custom <-> ITIL)
+                  // after the new board's config is loaded in the useEffect below.
                 }}
                 customStyles={customStyles}
                 className="!w-fit"
@@ -1052,9 +1067,14 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
                     id={`${id}-save-description-btn`}
                     onClick={async () => {
                       if (onUpdateDescription) {
-                        const success = await onUpdateDescription(JSON.stringify(descriptionContent));
-                        if (success) {
-                          setIsEditingDescription(false);
+                        try {
+                          const result = await onUpdateDescription(JSON.stringify(descriptionContent));
+                          // Treat undefined/null as success (only explicit false is failure)
+                          if (result !== false) {
+                            setIsEditingDescription(false);
+                          }
+                        } catch (error) {
+                          console.error('Failed to save description:', error);
                         }
                       }
                     }}
