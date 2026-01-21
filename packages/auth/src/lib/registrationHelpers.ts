@@ -1,15 +1,15 @@
 'use server'
 
+// TODO: Consolidate with @alga-psa/users after circular dependency is resolved
+// This is a temporary duplication to break the auth <-> users cycle
+
 import { getAdminConnection } from '@alga-psa/db/admin';
-import { withTransaction } from '@alga-psa/db';
+import { withTransaction, withAdminTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { hashPassword } from '@alga-psa/core/encryption';
-import { verifyContactEmail } from '@alga-psa/users/actions';
 import User from '@alga-psa/db/models/user';
-import {
-  checkRegistrationLimit,
-  formatRateLimitError
-} from '../../lib/rateLimiting';
+import logger from '@alga-psa/core/logger';
+import { checkRegistrationLimit, formatRateLimitError } from './security/rateLimiting';
 
 interface IRegistrationResult {
   success: boolean;
@@ -17,107 +17,97 @@ interface IRegistrationResult {
   registrationId?: string;
 }
 
+export async function verifyContactEmail(email: string): Promise<{ exists: boolean; isActive: boolean; clientId?: string; tenant?: string }> {
+  try {
+    const contact = await withAdminTransaction(async (trx: Knex.Transaction) => {
+      return await trx('contacts')
+        .join('clients', function() {
+          this.on('clients.client_id', '=', 'contacts.client_id')
+              .andOn('clients.tenant', '=', 'contacts.tenant');
+        })
+        .where({ 'contacts.email': email.toLowerCase() })
+        .select('contacts.contact_name_id', 'contacts.client_id', 'contacts.is_inactive', 'contacts.tenant')
+        .first();
+    });
+
+    if (!contact) {
+      return { exists: false, isActive: false };
+    }
+
+    return {
+      exists: true,
+      isActive: !contact.is_inactive,
+      clientId: contact.client_id,
+      tenant: contact.tenant
+    };
+  } catch (error) {
+    logger.error('Failed to verify contact email:', error);
+    throw new Error('Failed to verify contact email');
+  }
+}
 
 export async function initiateRegistration(
   email: string,
   password: string
 ): Promise<IRegistrationResult> {
   const adminDb = await getAdminConnection();
-  
+
   try {
-    // Check rate limits first
     const rateLimitResult = await checkRegistrationLimit(email);
     if (!rateLimitResult.success) {
       const errorMessage = await formatRateLimitError(rateLimitResult.msBeforeNext);
-      return { 
-        success: false, 
+      return {
+        success: false,
         error: errorMessage
       };
     }
 
-    // First try contact-based registration
     const contactVerification = await verifyContactEmail(email);
-    
+
     if (contactVerification.exists && !contactVerification.isActive) {
       return { success: false, error: "This contact is inactive" };
     }
-    
+
     if (contactVerification.exists) {
-      // Get contact's client and tenant
       const contact = await adminDb('contacts')
         .join('clients', 'contacts.client_id', 'clients.client_id')
         .where('contacts.email', email)
         .select('clients.client_id', 'clients.tenant')
         .first();
-      
+
       if (!contact?.tenant) {
         return { success: false, error: "Contact client not found" };
       }
-      
+
       const result = await registerContactUser(email, password);
       if (!result.success) {
         return result;
       }
-      
+
       return { success: true };
     }
-    
-    // No email domain restrictions - registration not allowed for non-contacts
-    return { 
-      success: false, 
-      error: "Registration is only available for existing contacts. Please contact your administrator." 
+
+    return {
+      success: false,
+      error: "Registration is only available for existing contacts. Please contact your administrator."
     };
   } catch (error) {
     console.error('Registration error:', error);
-    return { 
-      success: false, 
-      error: 'An unexpected error occurred during registration' 
+    return {
+      success: false,
+      error: 'An unexpected error occurred during registration'
     };
   }
 }
 
-// Email suffix registration functions removed for security
-// Only contact-based registration is now allowed
-
-// Function for getting user client ID during registration (without tenant context)
-export async function getUserClientIdForRegistration(userId: string): Promise<string | null> {
-  try {
-    const adminDb = await getAdminConnection();
-    const user = await User.getForRegistration(userId);
-    if (!user) return null;
-
-    return await withTransaction(adminDb, async (trx: Knex.Transaction) => {
-      // First try to get client ID from contact if user is contact-based
-      if (user.contact_id) {
-        const contact = await trx('contacts')
-          .where('contact_name_id', user.contact_id)
-          .select('client_id')
-          .first();
-
-        if (contact?.client_id) {
-          return contact.client_id;
-        }
-      }
-
-      // Email suffix functionality removed for security
-      return null;
-    });
-  } catch (error) {
-    console.error('Error getting user client ID for registration:', error);
-    throw new Error('Failed to get user client ID for registration');
-  }
-}
-
-// Helper function for contact-based registration
 async function registerContactUser(
-  email: string, 
+  email: string,
   password: string
 ): Promise<IRegistrationResult> {
   const adminDb = await getAdminConnection();
-  
+
   try {
     return await withTransaction(adminDb, async (trx: Knex.Transaction) => {
-      // Get contact details and tenant
       const contact = await trx('contacts')
         .join('clients', 'contacts.client_id', 'clients.client_id')
         .where({ 'contacts.email': email })
@@ -132,7 +122,6 @@ async function registerContactUser(
         return { success: false, error: 'Contact is inactive' };
       }
 
-      // Check if user already exists
       const existingUser = await trx('users')
         .where({ email })
         .first();
@@ -141,12 +130,10 @@ async function registerContactUser(
         return { success: false, error: 'User already exists' };
       }
 
-      // Split full name
       const nameParts = contact.full_name.trim().split(' ');
       const firstName = nameParts[0] || '';
       const lastName = nameParts.slice(1).join(' ') || '';
 
-      // Create user
       const hashedPassword = await hashPassword(password);
       const [user] = await trx('users')
         .insert({
@@ -163,9 +150,8 @@ async function registerContactUser(
         })
         .returning('*');
 
-      // Get User role
       const roles = await trx('roles').where({ tenant: contact.tenant });
-      const userRole = roles.find(r => 
+      const userRole = roles.find(r =>
         r.role_name && r.role_name.toLowerCase() === 'user'
       );
 
@@ -173,7 +159,6 @@ async function registerContactUser(
         throw new Error('User role not found');
       }
 
-      // Assign role
       await trx('user_roles').insert({
         tenant: contact.tenant,
         user_id: user.user_id,
@@ -184,9 +169,9 @@ async function registerContactUser(
     });
   } catch (error) {
     console.error('Contact registration error:', error);
-    return { 
-      success: false, 
-      error: 'An unexpected error occurred during registration' 
+    return {
+      success: false,
+      error: 'An unexpected error occurred during registration'
     };
   }
 }

@@ -12,7 +12,7 @@ import Tenant from '@alga-psa/db/models/tenant';
 import UserPreferences from '@alga-psa/db/models/userPreferences';
 import { getUserAvatarUrl } from '../../lib/avatarUtils';
 import { uploadEntityImage, deleteEntityImage } from '@alga-psa/media';
-import { hasPermission, throwPermissionError } from '@alga-psa/auth';
+import { hasPermission, throwPermissionError } from '../../lib/permissions';
 import logger from '@alga-psa/core/logger';
 import { getCurrentUser } from '@alga-psa/auth/getCurrentUser';
 

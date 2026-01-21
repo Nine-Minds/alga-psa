@@ -6,7 +6,6 @@ import logger from "@alga-psa/core/logger";
 
 import { IUser } from '@alga-psa/types';
 import { isValidTenantSlug } from '@alga-psa/validation';
-import { analytics } from '@alga-psa/analytics';
 
 const getTenantIdBySlugAsync = async (slug: string): Promise<string | null> => {
   const { getTenantIdBySlug } = await import('@alga-psa/tenancy/actions');
@@ -92,40 +91,19 @@ export async function authenticateUser(
     // Check if user is inactive
     if (user.is_inactive) {
         logger.warn(`[authenticateUser] Inactive user attempted to login: ${email}`);
-        void analytics.capture('login_failed', {
-            reason: 'inactive_account',
-            has_two_factor: user.two_factor_enabled,
-        });
         return null;
     }
 
     if (!user.hashed_password) {
         logger.warn(`[authenticateUser] Missing hashed_password for email ${email}`);
-        void analytics.capture('login_failed', {
-            reason: 'missing_password_hash',
-            has_two_factor: user.two_factor_enabled,
-        });
         return null;
     }
 
     const isValid = await verifyPassword(password, user.hashed_password);
     if (!isValid) {
         logger.warn(`[authenticateUser] Invalid password for email ${email}`);
-        void analytics.capture('login_failed', {
-            reason: 'invalid_password',
-            has_two_factor: user.two_factor_enabled,
-        });
         return null;
     }
-
-    void analytics.capture(
-        'auth_validated',
-        {
-            has_two_factor: user.two_factor_enabled,
-            is_admin: (user as any).is_admin || false,
-        },
-        user.user_id
-    );
 
     return user;
 }

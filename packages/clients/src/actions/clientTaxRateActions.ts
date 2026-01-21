@@ -246,6 +246,9 @@ export async function getClientDefaultTaxRegionCode(clientId: string): Promise<s
     throw new Error('Unauthorized');
   }
   const { knex, tenant } = await createTenantKnex(currentUser.tenant);
+  if (!tenant) {
+    throw new Error('Tenant not found');
+  }
 
   try {
     return await withTransaction(knex, async (trx: Knex.Transaction) => {

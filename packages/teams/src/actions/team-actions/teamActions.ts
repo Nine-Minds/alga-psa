@@ -5,7 +5,7 @@ import type { IRole, ITeam, IUser, IUserWithRoles } from '@alga-psa/types';
 import { withTransaction } from '@alga-psa/db';
 import { createTenantKnex } from '@alga-psa/db';
 import { Knex } from 'knex';
-import { getCurrentUser } from '@alga-psa/users/actions';
+import { getCurrentUser } from '@alga-psa/auth/getCurrentUser';
 
 async function getTenantKnex(): Promise<{ knex: Knex; tenant: string }> {
   const user = await getCurrentUser();

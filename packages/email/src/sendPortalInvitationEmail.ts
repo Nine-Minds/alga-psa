@@ -4,7 +4,7 @@ import { getSystemEmailService, TenantEmailService } from './index';
 import { DatabaseTemplateProcessor } from './templateProcessors';
 import { getConnection, runWithTenant } from '@alga-psa/db';
 import { getUserInfoForEmail, resolveEmailLocale } from './emailLocaleResolver';
-import { SupportedLocale } from '@alga-psa/ui/lib/i18n/config';
+import { SupportedLocale } from './lib/localeConfig';
 import logger from '@alga-psa/core/logger';
 
 interface SendPortalInvitationEmailParams {

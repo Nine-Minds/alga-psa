@@ -3,7 +3,7 @@
 import { getSystemEmailService } from './system/SystemEmailService';
 import logger from '@alga-psa/core/logger';
 import { getConnection } from '@alga-psa/db';
-import { SupportedLocale, LOCALE_CONFIG } from '@alga-psa/ui/lib/i18n/config';
+import { SupportedLocale, LOCALE_CONFIG } from './lib/localeConfig';
 import { resolveEmailLocale } from './emailLocaleResolver';
 
 interface TenantLoginInfo {

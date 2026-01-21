@@ -11,7 +11,6 @@ import { getInfoFromToken, createToken } from '../lib/tokenizer';
 import { hashPassword } from '@alga-psa/core/encryption';
 import logger from '@alga-psa/core/logger';
 import { isValidEmail } from '@alga-psa/validation';
-import { analytics, AnalyticsEvents } from '@alga-psa/analytics';
 
 // Dynamic imports to avoid circular dependency (auth -> email -> integrations -> users -> auth)
 // Note: Using string concatenation to prevent static analysis from detecting these dependencies
@@ -74,14 +73,7 @@ export async function verifyRegisterUser(token: string): Promise<VerifyResponse>
         user_type: 'internal'
       };
       await User.insert(db, newUser);
-      
-      // Track user registration
-      void analytics.capture(AnalyticsEvents.USER_SIGNED_UP, {
-        user_type: newUser.user_type,
-        registration_method: 'email_verification',
-        client_created: true,
-      }, newUser.user_id);
-      
+
       return {
         message: 'User verified and registered successfully',
         wasSuccess: true,
@@ -286,15 +278,7 @@ export async function registerUser({ username, email, password, clientName }: IU
         user_type: 'internal'
       };
       await User.insert(db, newUser);
-      
-      // Track user registration (direct, no email verification)
-      void analytics.capture(AnalyticsEvents.USER_SIGNED_UP, {
-        user_type: 'internal',
-        registration_method: 'direct',
-        client_created: true,
-        email_verification_required: VERIFY_EMAIL_ENABLED,
-      }, newUser.user_id);
-      
+
       logger.info(`User [ ${email} ] registered successfully`);
       return true;
     } catch (error) {

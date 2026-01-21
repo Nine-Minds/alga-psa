@@ -35,7 +35,10 @@ export async function addInteraction(interactionData: Omit<IInteraction, 'intera
       throw new Error('Unauthorized');
     }
     const { knex: db, tenant } = await createTenantKnex(currentUser.tenant);
-    
+    if (!tenant) {
+      throw new Error('Tenant not found');
+    }
+
     console.log('Received interaction data:', interactionData);
 
     if (!interactionData.user_id) {

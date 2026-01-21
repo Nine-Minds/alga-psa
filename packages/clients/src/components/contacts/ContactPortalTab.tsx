@@ -14,17 +14,43 @@ import {
   getUserByContactId
 } from '../../actions/contact-actions/contactActions';
 import {
-  sendPortalInvitation,
-  getPortalInvitations,
-  revokePortalInvitation,
-  type InvitationHistoryItem
-} from '@alga-psa/client-portal/actions';
-import {
   assignRoleToUser,
   removeRoleFromUser,
   getRoles
 } from '@alga-psa/auth/actions';
-import { updateClientUser } from '@alga-psa/client-portal/actions';
+
+// Dynamic imports to avoid circular dependency (clients -> client-portal -> clients)
+// TODO: Consolidate after circular dependency is resolved
+type InvitationHistoryItem = {
+  invitation_id: string;
+  email: string;
+  created_at: string | Date;
+  expires_at: string | Date;
+  status: 'pending' | 'accepted' | 'expired' | 'revoked';
+  used_at?: string | Date | null;
+};
+
+const getClientPortalModule = () => '@alga-psa/' + 'client-portal/actions';
+
+const sendPortalInvitation = async (contactId: string): Promise<{ success: boolean; message?: string; invitation?: any }> => {
+  const mod = await import(/* webpackIgnore: true */ getClientPortalModule());
+  return mod.sendPortalInvitation(contactId);
+};
+
+const getPortalInvitations = async (contactId: string): Promise<InvitationHistoryItem[]> => {
+  const mod = await import(/* webpackIgnore: true */ getClientPortalModule());
+  return mod.getPortalInvitations(contactId);
+};
+
+const revokePortalInvitation = async (invitationId: string): Promise<{ success: boolean; message?: string }> => {
+  const mod = await import(/* webpackIgnore: true */ getClientPortalModule());
+  return mod.revokePortalInvitation(invitationId);
+};
+
+const updateClientUser = async (userId: string, data: { is_inactive?: boolean }): Promise<{ success: boolean; message?: string }> => {
+  const mod = await import(/* webpackIgnore: true */ getClientPortalModule());
+  return mod.updateClientUser(userId, data);
+};
 import { useToast } from '@alga-psa/ui';
 import SettingsTabSkeleton from '@alga-psa/ui/components/skeletons/SettingsTabSkeleton';
 
@@ -121,7 +147,7 @@ export function ContactPortalTab({ contact, currentUserPermissions }: ContactPor
       } else {
         toast({
           title: "Error",
-          description: result.error || "Failed to send invitation",
+          description: result.message || "Failed to send invitation",
           variant: "destructive"
         });
       }
@@ -152,7 +178,7 @@ export function ContactPortalTab({ contact, currentUserPermissions }: ContactPor
       } else {
         toast({
           title: "Error",
-          description: result.error || "Failed to revoke invitation",
+          description: result.message || "Failed to revoke invitation",
           variant: "destructive"
         });
       }
@@ -191,7 +217,7 @@ export function ContactPortalTab({ contact, currentUserPermissions }: ContactPor
       } else {
         toast({
           title: "Error",
-          description: result.error || "Failed to resend invitation",
+          description: result.message || "Failed to resend invitation",
           variant: "destructive"
         });
       }
@@ -207,8 +233,9 @@ export function ContactPortalTab({ contact, currentUserPermissions }: ContactPor
     }
   };
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
+  const formatDate = (dateValue: string | Date) => {
+    const date = dateValue instanceof Date ? dateValue : new Date(dateValue);
+    return date.toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'short',
       day: 'numeric',

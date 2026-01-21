@@ -1,12 +1,12 @@
 /**
  * UI helpers for tags package
  *
- * These are dynamic import wrappers to avoid circular dependency:
- * tags -> ui -> ... -> clients -> tags
+ * TODO: Consolidate with @alga-psa/ui after circular dependency is resolved
  */
 
+import { generateEntityColor } from './colorUtils';
+
 export async function generateEntityColorAsync(name: string): Promise<{ backgroundColor: string; textColor: string }> {
-  const module = await import('@alga-psa/ui/lib');
-  const result = module.generateEntityColor(name);
+  const result = generateEntityColor(name);
   return { backgroundColor: result.background, textColor: result.text };
 }

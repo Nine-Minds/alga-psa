@@ -1,7 +1,7 @@
 'use server';
 
 import { createTenantKnex } from '@alga-psa/db';
-import { getSession } from '@alga-psa/auth';
+import { getTenantForCurrentRequest } from '../../server';
 import { getPortalDomain, computeCanonicalHost } from '../../lib/PortalDomainModel';
 import type { PortalDomain } from '../../lib/PortalDomainModel';
 import type {
@@ -51,11 +51,8 @@ function formatResponse(record: PortalDomain | null, canonicalHost: string): Por
 }
 
 export async function getPortalDomainStatusAction(): Promise<PortalDomainStatusResponse> {
-  // Get tenant from session to ensure tenant context is established
-  const session = await getSession();
-  const sessionTenant = (session?.user as any)?.tenant;
-
-  const { knex, tenant } = await createTenantKnex(sessionTenant);
+  const requestTenant = await getTenantForCurrentRequest();
+  const { knex, tenant } = await createTenantKnex(requestTenant ?? undefined);
 
   if (!tenant) {
     throw new Error('Tenant context is required to read portal domain status');

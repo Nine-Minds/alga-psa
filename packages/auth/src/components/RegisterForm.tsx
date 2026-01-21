@@ -6,18 +6,7 @@ import { Button, Input, Label, Alert, AlertDescription } from '@alga-psa/ui/comp
 import { Eye, EyeOff } from 'lucide-react';
 import { usePostHog } from 'posthog-js/react';
 import { validateEmailAddress, validatePassword, getPasswordRequirements } from '@alga-psa/validation';
-
-// Dynamic imports to avoid circular dependency (auth -> users -> auth)
-// Note: Using string concatenation to prevent static analysis from detecting this dependency
-const verifyContactEmail = async (email: string) => {
-  const { verifyContactEmail: verify } = await import('@alga-psa/users/actions');
-  return verify(email);
-};
-
-const initiateRegistration = async (email: string, password: string) => {
-  const { initiateRegistration: initReg } = await import('@alga-psa/users/actions');
-  return initReg(email, password);
-};
+import { verifyContactEmail, initiateRegistration } from '../lib/registrationHelpers';
 
 export default function RegisterForm() {
   const [email, setEmail] = useState('');

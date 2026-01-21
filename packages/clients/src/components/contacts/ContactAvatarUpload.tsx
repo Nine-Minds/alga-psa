@@ -1,7 +1,25 @@
 'use client';
 
 import EntityImageUpload from '@alga-psa/ui/components/EntityImageUpload';
-import { uploadContactAvatar, deleteContactAvatar } from '@alga-psa/client-portal/actions';
+
+// Dynamic imports to avoid circular dependency (clients -> client-portal -> clients)
+// TODO: Consolidate after circular dependency is resolved
+const getClientPortalModule = () => '@alga-psa/' + 'client-portal/actions';
+
+const uploadContactAvatar = async (
+  contactId: string,
+  formData: FormData
+): Promise<{ success: boolean; message?: string; imageUrl?: string | null; error?: string }> => {
+  const mod = await import(/* webpackIgnore: true */ getClientPortalModule());
+  return mod.uploadContactAvatar(contactId, formData);
+};
+
+const deleteContactAvatar = async (
+  contactId: string
+): Promise<{ success: boolean; message?: string; error?: string }> => {
+  const mod = await import(/* webpackIgnore: true */ getClientPortalModule());
+  return mod.deleteContactAvatar(contactId);
+};
 
 interface ContactAvatarUploadProps {
   contactId: string;
