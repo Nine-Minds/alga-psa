@@ -10,10 +10,8 @@ export interface ICountry {
 }
 
 export async function getAllCountries(): Promise<ICountry[]> {
-  const { knex, tenant } = await createTenantKnex();
-  if (!tenant) {
-    throw new Error('Tenant not found');
-  }
+  // Countries are global reference data (not tenant-scoped).
+  const { knex } = await createTenantKnex(null);
 
   try {
     // Fetch active countries from reference table (shared across all tenants)

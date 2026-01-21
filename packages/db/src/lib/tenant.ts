@@ -15,7 +15,17 @@ type PoolConfig = KnexType.PoolConfig & {
 };
 
 let sharedKnexInstance: KnexType | null = null;
-const tenantContext = new AsyncLocalStorage<string>();
+const tenantContext: AsyncLocalStorage<string> = (() => {
+  const globalAny = globalThis as unknown as {
+    __ALGA_PSA_TENANT_CONTEXT__?: AsyncLocalStorage<string>;
+  };
+
+  if (!globalAny.__ALGA_PSA_TENANT_CONTEXT__) {
+    globalAny.__ALGA_PSA_TENANT_CONTEXT__ = new AsyncLocalStorage<string>();
+  }
+
+  return globalAny.__ALGA_PSA_TENANT_CONTEXT__;
+})();
 
 export function getTenantContext(): string | undefined {
   return tenantContext.getStore();

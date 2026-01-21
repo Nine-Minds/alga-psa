@@ -8,7 +8,8 @@
     "npm": ">=10.0.0"
   },
   "scripts": {
-    "dev": "nx next:dev --turbo",
+    "dev": "NX_DAEMON=false nx next:dev",
+    "dev:turbo": "NX_DAEMON=false nx next:dev --turbo",
     "dev:express": "NODE_OPTIONS='--max-old-space-size=8192' NODE_ENV=development nodemon --watch index.ts --watch src/middleware --ext ts --exec tsx index.ts",
     "dev:turbo": "nx next:dev --turbo",
     "dev:ngrok": "node scripts/dev-with-ngrok-instructions.js",
