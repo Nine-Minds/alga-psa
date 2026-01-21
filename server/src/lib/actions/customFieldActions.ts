@@ -15,7 +15,9 @@ import {
   CreateCustomFieldGroupInput,
   UpdateCustomFieldGroupInput,
   ICompanyCustomFieldSetting,
-  UpsertCompanyCustomFieldSettingInput
+  UpsertCompanyCustomFieldSettingInput,
+  BulkFieldOrderInput,
+  FieldGroupDisplayStyle
 } from 'server/src/interfaces/customField.interfaces';
 
 /**
@@ -561,6 +563,8 @@ export async function createCustomFieldGroup(
     description: input.description ?? null,
     group_order: nextOrder,
     is_collapsed_by_default: input.is_collapsed_by_default ?? false,
+    display_style: input.display_style ?? 'collapsible',
+    icon: input.icon ?? null,
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString()
   };
@@ -601,6 +605,8 @@ export async function updateCustomFieldGroup(
   if (input.description !== undefined) updateData.description = input.description;
   if (input.group_order !== undefined) updateData.group_order = input.group_order;
   if (input.is_collapsed_by_default !== undefined) updateData.is_collapsed_by_default = input.is_collapsed_by_default;
+  if (input.display_style !== undefined) updateData.display_style = input.display_style;
+  if (input.icon !== undefined) updateData.icon = input.icon;
 
   const [updated] = await knex('custom_field_groups')
     .where({ tenant, group_id: groupId })
@@ -824,4 +830,129 @@ export async function getCustomFieldsForCompany(
     const setting = settingsMap.get(field.field_id);
     return !setting || setting.is_enabled;
   });
+}
+
+// =============================================================================
+// Bulk Field Operations (for drag-drop reordering)
+// =============================================================================
+
+/**
+ * Bulk update field order and optionally move fields between groups
+ * Used for drag-and-drop reordering in the UI
+ */
+export async function bulkUpdateFieldOrder(
+  entityType: CustomFieldEntityType,
+  orders: BulkFieldOrderInput[]
+): Promise<void> {
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
+    throw new Error('No authenticated user found');
+  }
+
+  if (!await hasPermission(currentUser, 'settings', 'update')) {
+    throw new Error('Permission denied: Cannot reorder custom fields');
+  }
+
+  const { knex, tenant } = await createTenantKnex();
+  if (!tenant) {
+    throw new Error('Tenant not found');
+  }
+
+  await withTransaction(knex, async (trx: Knex.Transaction) => {
+    for (const item of orders) {
+      const updateData: any = {
+        field_order: item.order,
+        updated_at: new Date().toISOString()
+      };
+
+      // If groupId is explicitly provided (even if null), update it
+      if (item.groupId !== undefined) {
+        updateData.group_id = item.groupId;
+      }
+
+      await trx('custom_fields')
+        .where({ tenant, field_id: item.fieldId, entity_type: entityType })
+        .update(updateData);
+    }
+  });
+}
+
+/**
+ * Move a field to a different group (or ungrouped)
+ * Also updates the field order within the new group
+ */
+export async function moveFieldToGroup(
+  fieldId: string,
+  targetGroupId: string | null,
+  newOrder: number
+): Promise<ICustomField> {
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
+    throw new Error('No authenticated user found');
+  }
+
+  if (!await hasPermission(currentUser, 'settings', 'update')) {
+    throw new Error('Permission denied: Cannot move custom fields');
+  }
+
+  const { knex, tenant } = await createTenantKnex();
+  if (!tenant) {
+    throw new Error('Tenant not found');
+  }
+
+  const [updated] = await knex('custom_fields')
+    .where({ tenant, field_id: fieldId })
+    .update({
+      group_id: targetGroupId,
+      field_order: newOrder,
+      updated_at: new Date().toISOString()
+    })
+    .returning('*');
+
+  if (!updated) {
+    throw new Error('Custom field not found');
+  }
+
+  return {
+    ...updated,
+    options: updated.options ? (typeof updated.options === 'string' ? JSON.parse(updated.options) : updated.options) : [],
+    default_value: updated.default_value ? (typeof updated.default_value === 'string' ? JSON.parse(updated.default_value) : updated.default_value) : null,
+    conditional_logic: updated.conditional_logic ? (typeof updated.conditional_logic === 'string' ? JSON.parse(updated.conditional_logic) : updated.conditional_logic) : null
+  };
+}
+
+/**
+ * Update the display style of a field group
+ */
+export async function updateFieldGroupDisplayStyle(
+  groupId: string,
+  displayStyle: FieldGroupDisplayStyle
+): Promise<ICustomFieldGroup> {
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
+    throw new Error('No authenticated user found');
+  }
+
+  if (!await hasPermission(currentUser, 'settings', 'update')) {
+    throw new Error('Permission denied: Cannot update field group display style');
+  }
+
+  const { knex, tenant } = await createTenantKnex();
+  if (!tenant) {
+    throw new Error('Tenant not found');
+  }
+
+  const [updated] = await knex('custom_field_groups')
+    .where({ tenant, group_id: groupId })
+    .update({
+      display_style: displayStyle,
+      updated_at: new Date().toISOString()
+    })
+    .returning('*');
+
+  if (!updated) {
+    throw new Error('Custom field group not found');
+  }
+
+  return updated;
 }

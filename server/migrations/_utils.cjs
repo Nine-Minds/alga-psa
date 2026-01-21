@@ -112,3 +112,8 @@ module.exports = {
     runCommandOnShards,
     distributeTableIfNeeded
 };
+
+// Dummy migration functions to prevent Knex from treating this as an invalid migration
+// This file is a utility module, not an actual migration
+module.exports.up = async function() {};
+module.exports.down = async function() {};

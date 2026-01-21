@@ -9,6 +9,7 @@ import CategoriesSettings from './CategoriesSettings';
 import DisplaySettings from './DisplaySettings';
 import StatusSettings from './StatusSettings';
 import PrioritySettings from './PrioritySettings';
+import { TicketTemplatesManager } from 'server/src/components/settings/tickets/TicketTemplatesManager';
 
 const TicketingSettingsRefactored = (): React.JSX.Element => {
   const searchParams = useSearchParams();
@@ -22,7 +23,8 @@ const TicketingSettingsRefactored = (): React.JSX.Element => {
     'boards': 'Boards',
     'statuses': 'Statuses',
     'priorities': 'Priorities',
-    'categories': 'Categories'
+    'categories': 'Categories',
+    'templates': 'Templates'
   };
 
   // Determine initial active tab based on URL parameter
@@ -64,6 +66,10 @@ const TicketingSettingsRefactored = (): React.JSX.Element => {
     {
       label: "Categories",
       content: <CategoriesSettings />
+    },
+    {
+      label: "Templates",
+      content: <TicketTemplatesManager />
     }
   ];
 

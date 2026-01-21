@@ -32,6 +32,8 @@ import { QuickAddTagPicker, PendingTag } from 'server/src/components/tags';
 import { DatePicker } from 'server/src/components/ui/DatePicker';
 import { TimePicker } from 'server/src/components/ui/TimePicker';
 import { createTagsForEntity } from 'server/src/lib/actions/tagActions';
+import { TemplatePicker } from 'server/src/components/tickets/TemplatePicker';
+import { AppliedTemplateData, ITicketTemplate } from 'server/src/interfaces/ticketTemplate.interfaces';
 
 // Helper function to format location display
 const formatLocationDisplay = (location: IClientLocation): string => {
@@ -125,6 +127,10 @@ export function QuickAddTicket({
   const [pendingTags, setPendingTags] = useState<PendingTag[]>([]);
   const [dueDateDate, setDueDateDate] = useState<Date | undefined>(undefined);
   const [dueDateTime, setDueDateTime] = useState<string | undefined>(undefined);
+
+  // Template picker state
+  const [showTemplatePicker, setShowTemplatePicker] = useState(true);
+  const [selectedTemplate, setSelectedTemplate] = useState<ITicketTemplate | null>(null);
 
   // ITIL-specific state
   const [itilImpact, setItilImpact] = useState<number | undefined>(undefined);
@@ -364,6 +370,44 @@ export function QuickAddTicket({
     }
   };
 
+  // Handle template selection
+  const handleTemplateSelect = (data: AppliedTemplateData, template: ITicketTemplate) => {
+    setSelectedTemplate(template);
+    setShowTemplatePicker(false);
+
+    // Apply default values from template
+    if (data.default_values.title) {
+      setTitle(data.default_values.title);
+    }
+    if (data.default_values.description) {
+      setDescription(data.default_values.description);
+    }
+    if (data.default_values.priority_id) {
+      setPriorityId(data.default_values.priority_id);
+    }
+    if (data.default_values.status_id) {
+      setStatusId(data.default_values.status_id);
+    }
+    if (data.default_values.assigned_to) {
+      setAssignedTo(data.default_values.assigned_to);
+    }
+    if (data.default_values.category_id) {
+      setSelectedCategories([data.default_values.category_id]);
+    }
+    // Apply ITIL values if present
+    if (data.default_values.itil_impact) {
+      setItilImpact(data.default_values.itil_impact);
+    }
+    if (data.default_values.itil_urgency) {
+      setItilUrgency(data.default_values.itil_urgency);
+    }
+  };
+
+  const handleSkipTemplate = () => {
+    setShowTemplatePicker(false);
+    setSelectedTemplate(null);
+  };
+
 
   const resetForm = () => {
     setTitle('');
@@ -395,6 +439,9 @@ export function QuickAddTicket({
     setDueDateTime(undefined);
     setError(null);
     setHasAttemptedSubmit(false);
+    // Reset template picker
+    setShowTemplatePicker(true);
+    setSelectedTemplate(null);
   };
 
   const handleClose = () => {
@@ -605,6 +652,37 @@ export function QuickAddTicket({
                     </ul>
                   </AlertDescription>
                 </Alert>
+              )}
+
+              {/* Template Picker - Show at the top when creating a new ticket */}
+              {showTemplatePicker && (
+                <div className="mb-4 pb-4 border-b border-gray-200">
+                  <TemplatePicker
+                    boardId={boardId}
+                    onSelectTemplate={handleTemplateSelect}
+                    onSkip={handleSkipTemplate}
+                    selectedTemplateId={selectedTemplate?.template_id}
+                    variant="compact"
+                  />
+                </div>
+              )}
+
+              {/* Show selected template indicator */}
+              {!showTemplatePicker && selectedTemplate && (
+                <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-blue-700">
+                      Using template: <strong>{selectedTemplate.name}</strong>
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setShowTemplatePicker(true)}
+                    className="text-xs text-blue-600 hover:text-blue-800 underline"
+                  >
+                    Change
+                  </button>
+                </div>
               )}
 
               <ReflectionContainer id={`${id}-form`} label="Quick Add Ticket Form">

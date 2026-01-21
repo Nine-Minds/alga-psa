@@ -49,6 +49,7 @@ import { getImageUrl } from 'server/src/lib/actions/document-actions/documentAct
 import ClientContractLineDashboard from '../billing-dashboard/ClientContractLineDashboard';
 import { ClientNotesPanel } from './panels/ClientNotesPanel';
 import { CustomFieldsCard } from 'server/src/components/ui/CustomFieldsCard';
+import { TabbedCustomFieldsCard } from 'server/src/components/ui/TabbedCustomFieldsCard';
 import { ClientCustomFieldSettings } from './ClientCustomFieldSettings';
 import { toast } from 'react-hot-toast';
 import { handleError } from 'server/src/lib/utils/errorHandling';
@@ -879,13 +880,15 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
                 />
               </div>
 
-              {/* Custom Fields */}
+              {/* Custom Fields - Enhanced with tabbed groups */}
               {editedClient.client_id && (
-                <CustomFieldsCard
+                <TabbedCustomFieldsCard
                   id="company-custom-fields-card"
                   entityType="company"
                   entityId={editedClient.client_id}
                   title="Custom Fields"
+                  viewMode="collapsible"
+                  autoSaveDelay={1500}
                 />
               )}
             </div>

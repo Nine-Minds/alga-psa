@@ -120,6 +120,14 @@ export type CustomFieldValuesMap = Record<string, string | number | boolean | st
 // =============================================================================
 
 /**
+ * Display style for field groups
+ * - 'collapsible': Traditional collapsible section (default, backward compatible)
+ * - 'tab': Horizontal tab in a tabbed interface (Halo-style)
+ * - 'section': Always-visible section with header
+ */
+export type FieldGroupDisplayStyle = 'collapsible' | 'tab' | 'section';
+
+/**
  * Custom field group definition
  */
 export interface ICustomFieldGroup {
@@ -130,6 +138,10 @@ export interface ICustomFieldGroup {
   description?: string | null;
   group_order: number;
   is_collapsed_by_default: boolean;
+  /** Display style for UI rendering: 'collapsible' | 'tab' | 'section' */
+  display_style: FieldGroupDisplayStyle;
+  /** Optional icon identifier (Lucide icon name) for visual representation */
+  icon?: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -143,6 +155,8 @@ export interface CreateCustomFieldGroupInput {
   description?: string | null;
   group_order?: number;
   is_collapsed_by_default?: boolean;
+  display_style?: FieldGroupDisplayStyle;
+  icon?: string | null;
 }
 
 /**
@@ -153,6 +167,17 @@ export interface UpdateCustomFieldGroupInput {
   description?: string | null;
   group_order?: number;
   is_collapsed_by_default?: boolean;
+  display_style?: FieldGroupDisplayStyle;
+  icon?: string | null;
+}
+
+/**
+ * Input for bulk reordering fields
+ */
+export interface BulkFieldOrderInput {
+  fieldId: string;
+  order: number;
+  groupId?: string | null;
 }
 
 // =============================================================================

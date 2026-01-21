@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { Button } from 'server/src/components/ui/Button';
-import { Plus, MoreVertical, GripVertical, Trash2, Pencil, FolderOpen, Eye, EyeOff } from 'lucide-react';
+import { Plus, MoreVertical, GripVertical, Trash2, Pencil, FolderOpen, Eye, EyeOff, LayoutList, LayoutGrid } from 'lucide-react';
 import { Input } from 'server/src/components/ui/Input';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
 import { Switch } from 'server/src/components/ui/Switch';
@@ -28,7 +28,9 @@ import {
   CustomFieldType,
   CreateCustomFieldInput,
   UpdateCustomFieldInput,
-  IPicklistOption
+  IPicklistOption,
+  BulkFieldOrderInput,
+  FieldGroupDisplayStyle
 } from 'server/src/interfaces/customField.interfaces';
 import {
   getCustomFieldsByEntity,
@@ -39,8 +41,10 @@ import {
   getCustomFieldGroups,
   createCustomFieldGroup,
   updateCustomFieldGroup,
-  deleteCustomFieldGroup
+  deleteCustomFieldGroup,
+  bulkUpdateFieldOrder
 } from 'server/src/lib/actions/customFieldActions';
+import { TabbedFieldGroupsView, CollapsibleFieldGroupsView } from './TabbedFieldGroupsView';
 
 const ENTITY_TYPES: { value: CustomFieldEntityType; label: string }[] = [
   { value: 'ticket', label: 'Tickets' },
@@ -267,6 +271,8 @@ function ConditionalLogicEditor({
   );
 }
 
+type ViewMode = 'table' | 'drag-drop';
+
 export function CustomFieldsManager() {
   const [selectedEntityType, setSelectedEntityType] = useState<CustomFieldEntityType>('ticket');
   const [fields, setFields] = useState<ICustomField[]>([]);
@@ -287,6 +293,8 @@ export function CustomFieldsManager() {
     groupId: string;
     groupName: string;
   }>({ isOpen: false, groupId: '', groupName: '' });
+  const [viewMode, setViewMode] = useState<ViewMode>('drag-drop');
+  const [defaultGroupId, setDefaultGroupId] = useState<string | null>(null);
 
   // Form state
   const [formData, setFormData] = useState<{
@@ -312,10 +320,14 @@ export function CustomFieldsManager() {
     name: string;
     description: string;
     is_collapsed_by_default: boolean;
+    display_style: FieldGroupDisplayStyle;
+    icon: string | null;
   }>({
     name: '',
     description: '',
-    is_collapsed_by_default: false
+    is_collapsed_by_default: false,
+    display_style: 'collapsible',
+    icon: null
   });
 
   const fetchFields = useCallback(async () => {
@@ -355,14 +367,33 @@ export function CustomFieldsManager() {
     setGroupFormData({
       name: '',
       description: '',
-      is_collapsed_by_default: false
+      is_collapsed_by_default: false,
+      display_style: 'collapsible',
+      icon: null
     });
   };
 
-  const openAddDialog = () => {
+  const openAddDialog = (groupId?: string | null) => {
     resetForm();
     setEditingField(null);
+    // If groupId is provided, pre-select it in the form
+    if (groupId !== undefined) {
+      setFormData(prev => ({ ...prev, group_id: groupId }));
+    }
     setShowAddDialog(true);
+  };
+
+  // Handle bulk reorder from drag-drop
+  const handleReorder = async (reorderedFields: BulkFieldOrderInput[]) => {
+    try {
+      await bulkUpdateFieldOrder(selectedEntityType, reorderedFields);
+      // Refresh to get updated order
+      fetchFields();
+    } catch (error) {
+      console.error('Error reordering fields:', error);
+      toast.error('Failed to reorder fields');
+      throw error; // Re-throw so the UI can handle it
+    }
   };
 
   const openEditDialog = (field: ICustomField) => {
@@ -389,7 +420,9 @@ export function CustomFieldsManager() {
     setGroupFormData({
       name: group.name,
       description: group.description || '',
-      is_collapsed_by_default: group.is_collapsed_by_default
+      is_collapsed_by_default: group.is_collapsed_by_default,
+      display_style: group.display_style || 'collapsible',
+      icon: group.icon || null
     });
     setEditingGroup(group);
     setShowGroupDialog(true);
@@ -457,7 +490,9 @@ export function CustomFieldsManager() {
         await updateCustomFieldGroup(editingGroup.group_id, {
           name: groupFormData.name.trim(),
           description: groupFormData.description.trim() || undefined,
-          is_collapsed_by_default: groupFormData.is_collapsed_by_default
+          is_collapsed_by_default: groupFormData.is_collapsed_by_default,
+          display_style: groupFormData.display_style,
+          icon: groupFormData.icon
         });
         toast.success('Group updated');
       } else {
@@ -465,7 +500,9 @@ export function CustomFieldsManager() {
           entity_type: selectedEntityType,
           name: groupFormData.name.trim(),
           description: groupFormData.description.trim() || undefined,
-          is_collapsed_by_default: groupFormData.is_collapsed_by_default
+          is_collapsed_by_default: groupFormData.is_collapsed_by_default,
+          display_style: groupFormData.display_style,
+          icon: groupFormData.icon
         });
         toast.success('Group created');
       }
@@ -615,6 +652,27 @@ export function CustomFieldsManager() {
             Use required fields sparingly to avoid form friction.
           </p>
         </div>
+        <div className="flex items-center gap-2">
+          <Button
+            id="view-mode-toggle"
+            variant={viewMode === 'drag-drop' ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setViewMode(viewMode === 'drag-drop' ? 'table' : 'drag-drop')}
+            title={viewMode === 'drag-drop' ? 'Switch to table view' : 'Switch to drag-drop view'}
+          >
+            {viewMode === 'drag-drop' ? (
+              <>
+                <LayoutGrid className="w-4 h-4 mr-1" />
+                Grouped View
+              </>
+            ) : (
+              <>
+                <LayoutList className="w-4 h-4 mr-1" />
+                Table View
+              </>
+            )}
+          </Button>
+        </div>
       </div>
 
       {/* Entity Type Tabs */}
@@ -637,76 +695,106 @@ export function CustomFieldsManager() {
         ))}
       </div>
 
-      {/* Groups Section */}
-      {groups.length > 0 && (
-        <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="text-sm font-medium text-gray-700">Field Groups</h3>
-            <Button id="add-field-group" variant="outline" size="sm" onClick={openAddGroupDialog}>
-              <Plus className="w-4 h-4 mr-1" />
-              Add Group
-            </Button>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {groups.map(group => (
-              <div
-                key={group.group_id}
-                className="flex items-center gap-2 bg-white border border-gray-200 rounded px-3 py-1"
-              >
-                <FolderOpen className="w-4 h-4 text-blue-500" />
-                <span className="text-sm">{group.name}</span>
-                <button
-                  onClick={() => openEditGroupDialog(group)}
-                  className="text-gray-400 hover:text-gray-600"
-                >
-                  <Pencil className="w-3 h-3" />
-                </button>
-                <button
-                  onClick={() => setDeleteGroupDialog({
-                    isOpen: true,
-                    groupId: group.group_id,
-                    groupName: group.name
-                  })}
-                  className="text-gray-400 hover:text-red-600"
-                >
-                  <Trash2 className="w-3 h-3" />
-                </button>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Add Buttons */}
-      <div className="flex justify-end gap-2">
-        {groups.length === 0 && (
-          <Button id="add-field-group" variant="outline" onClick={openAddGroupDialog}>
-            <FolderOpen className="w-4 h-4 mr-2" />
-            Add Group
-          </Button>
-        )}
-        <Button id="add-custom-field" onClick={openAddDialog}>
-          <Plus className="w-4 h-4 mr-2" />
-          Add Custom Field
-        </Button>
-      </div>
-
-      {/* Fields Table */}
+      {/* Content based on view mode */}
       {loading ? (
         <div className="flex justify-center py-8" role="status" aria-label="Loading custom fields">
           <LoadingIndicator text="Loading custom fields..." />
         </div>
-      ) : fields.length === 0 ? (
-        <div className="text-center py-8 text-gray-500">
-          <p>No custom fields defined for {ENTITY_TYPES.find(e => e.value === selectedEntityType)?.label}.</p>
-          <p className="text-sm mt-1">Click "Add Custom Field" to create one.</p>
-        </div>
-      ) : (
-        <DataTable
-          data={fields}
-          columns={columns}
-          pagination={false}
+      ) : viewMode === 'drag-drop' ? (
+        /* Drag-Drop Grouped View */
+        <TabbedFieldGroupsView
+          entityType={selectedEntityType}
+          fields={fields}
+          groups={groups}
+          onReorder={handleReorder}
+          onEditField={openEditDialog}
+          onDeleteField={(field) => setDeleteDialog({
+            isOpen: true,
+            fieldId: field.field_id,
+            fieldName: field.name,
+            permanent: true
+          })}
+          onToggleFieldActive={handleToggleActive}
+          onAddField={openAddDialog}
+          onEditGroup={openEditGroupDialog}
+          onDeleteGroup={(group) => setDeleteGroupDialog({
+            isOpen: true,
+            groupId: group.group_id,
+            groupName: group.name
+          })}
+          onAddGroup={openAddGroupDialog}
         />
+      ) : (
+        /* Table View (Legacy) */
+        <>
+          {/* Groups Section */}
+          {groups.length > 0 && (
+            <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-sm font-medium text-gray-700">Field Groups</h3>
+                <Button id="add-field-group" variant="outline" size="sm" onClick={openAddGroupDialog}>
+                  <Plus className="w-4 h-4 mr-1" />
+                  Add Group
+                </Button>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {groups.map(group => (
+                  <div
+                    key={group.group_id}
+                    className="flex items-center gap-2 bg-white border border-gray-200 rounded px-3 py-1"
+                  >
+                    <FolderOpen className="w-4 h-4 text-blue-500" />
+                    <span className="text-sm">{group.name}</span>
+                    <button
+                      onClick={() => openEditGroupDialog(group)}
+                      className="text-gray-400 hover:text-gray-600"
+                    >
+                      <Pencil className="w-3 h-3" />
+                    </button>
+                    <button
+                      onClick={() => setDeleteGroupDialog({
+                        isOpen: true,
+                        groupId: group.group_id,
+                        groupName: group.name
+                      })}
+                      className="text-gray-400 hover:text-red-600"
+                    >
+                      <Trash2 className="w-3 h-3" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Add Buttons */}
+          <div className="flex justify-end gap-2">
+            {groups.length === 0 && (
+              <Button id="add-field-group" variant="outline" onClick={openAddGroupDialog}>
+                <FolderOpen className="w-4 h-4 mr-2" />
+                Add Group
+              </Button>
+            )}
+            <Button id="add-custom-field" onClick={() => openAddDialog()}>
+              <Plus className="w-4 h-4 mr-2" />
+              Add Custom Field
+            </Button>
+          </div>
+
+          {/* Fields Table */}
+          {fields.length === 0 ? (
+            <div className="text-center py-8 text-gray-500">
+              <p>No custom fields defined for {ENTITY_TYPES.find(e => e.value === selectedEntityType)?.label}.</p>
+              <p className="text-sm mt-1">Click "Add Custom Field" to create one.</p>
+            </div>
+          ) : (
+            <DataTable
+              data={fields}
+              columns={columns}
+              pagination={false}
+            />
+          )}
+        </>
       )}
 
       {/* Add/Edit Dialog */}
@@ -831,6 +919,18 @@ export function CustomFieldsManager() {
               rows={2}
             />
 
+            <CustomSelect
+              id="group-display-style"
+              label="Display Style"
+              options={[
+                { value: 'collapsible', label: 'Collapsible Section' },
+                { value: 'tab', label: 'Tab (Halo-style)' },
+                { value: 'section', label: 'Always Visible Section' }
+              ]}
+              value={groupFormData.display_style}
+              onValueChange={(value) => setGroupFormData({ ...groupFormData, display_style: value as FieldGroupDisplayStyle })}
+            />
+
             <div className="flex items-center gap-3">
               <Switch
                 id="group-collapsed"
@@ -839,7 +939,7 @@ export function CustomFieldsManager() {
               />
               <div>
                 <label className="text-sm font-medium text-gray-700">Collapsed by Default</label>
-                <p className="text-xs text-gray-500">Group will be collapsed when forms load</p>
+                <p className="text-xs text-gray-500">Group will be collapsed when forms load (for collapsible style)</p>
               </div>
             </div>
           </div>
