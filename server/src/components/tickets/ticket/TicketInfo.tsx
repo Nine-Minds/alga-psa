@@ -308,6 +308,10 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
   }, [initialCategories]);
 
   // Separate useEffect for fetching categories and board config based on board
+  // NOTE: We intentionally omit `categories` and `ticket.category_id` from deps to avoid
+  // infinite loops. This effect should only run when board_id changes, using the current
+  // categories state at that moment to decide whether to fetch.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     const fetchCategoriesAndConfig = async () => {
       // Check if we already have categories from initialCategories
