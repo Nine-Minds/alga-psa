@@ -14,7 +14,10 @@ import {
 import { getAvailableReferenceData, importReferenceData, checkImportConflicts, ImportConflict } from '@alga-psa/reference-data/actions';
 import { getAllPriorities } from '@alga-psa/reference-data/actions';
 import { getAllUsers, getUserAvatarUrlsBatchAction } from '@alga-psa/users/actions';
+import { getSlaPolicies } from '@alga-psa/sla/actions';
 import UserPicker from '@alga-psa/ui/components/UserPicker';
+import { IUser } from '@alga-psa/types';
+import { ISlaPolicy } from '@alga-psa/sla/types';
 import { toast } from 'react-hot-toast';
 import { Dialog, DialogContent, DialogFooter } from '@alga-psa/ui/components/Dialog';
 import { Input } from '@alga-psa/ui/components/Input';
@@ -37,6 +40,7 @@ const BoardsSettings: React.FC = () => {
   const [boards, setBoards] = useState<IBoard[]>([]);
   const [users, setUsers] = useState<IUser[]>([]);
   const [priorities, setPriorities] = useState<IPriority[]>([]);
+  const [slaPolicies, setSlaPolicies] = useState<ISlaPolicy[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [deleteDialog, setDeleteDialog] = useState<{
     isOpen: boolean;
@@ -108,7 +112,8 @@ const BoardsSettings: React.FC = () => {
     priority_type: 'custom' as PriorityType,
     is_itil_compliant: false,
     default_assigned_to: '',
-    default_priority_id: ''
+    default_priority_id: '',
+    sla_policy_id: ''
   });
   
   // State for Import Dialog
@@ -126,6 +131,7 @@ const BoardsSettings: React.FC = () => {
     fetchBoards();
     fetchUsers();
     fetchPriorities();
+    fetchSlaPolicies();
   }, []);
 
   // Prevent saving a mismatched default priority when toggling ITIL compliance on new boards.
@@ -175,6 +181,15 @@ const BoardsSettings: React.FC = () => {
     }
   };
 
+  const fetchSlaPolicies = async () => {
+    try {
+      const policies = await getSlaPolicies();
+      setSlaPolicies(policies);
+    } catch (error) {
+      console.error('Error fetching SLA policies:', error);
+    }
+  };
+
   const startEditing = (board: IBoard) => {
     setEditingBoard(board);
     setFormData({
@@ -186,7 +201,8 @@ const BoardsSettings: React.FC = () => {
       priority_type: board.priority_type || 'custom',
       is_itil_compliant: board.category_type === 'itil' && board.priority_type === 'itil',
       default_assigned_to: board.default_assigned_to || '',
-      default_priority_id: board.default_priority_id || ''
+      default_priority_id: board.default_priority_id || '',
+      sla_policy_id: board.sla_policy_id || ''
     });
     setShowAddEditDialog(true);
     setError(null);
@@ -273,7 +289,8 @@ const BoardsSettings: React.FC = () => {
           category_type: categoryType,
           priority_type: priorityType,
           default_assigned_to: formData.default_assigned_to || null,
-          default_priority_id: formData.default_priority_id || null
+          default_priority_id: formData.default_priority_id || null,
+          sla_policy_id: formData.sla_policy_id || null
         });
         toast.success('Board updated successfully');
       } else {
@@ -285,14 +302,15 @@ const BoardsSettings: React.FC = () => {
           category_type: categoryType,
           priority_type: priorityType,
           default_assigned_to: formData.default_assigned_to || null,
-          default_priority_id: formData.default_priority_id || null
+          default_priority_id: formData.default_priority_id || null,
+          sla_policy_id: formData.sla_policy_id || null
         });
         toast.success('Board created successfully');
       }
 
       setShowAddEditDialog(false);
       setEditingBoard(null);
-      setFormData({ board_name: '', description: '', display_order: 0, is_inactive: false, category_type: 'custom', priority_type: 'custom', is_itil_compliant: false, default_assigned_to: '', default_priority_id: '' });
+      setFormData({ board_name: '', description: '', display_order: 0, is_inactive: false, category_type: 'custom', priority_type: 'custom', is_itil_compliant: false, default_assigned_to: '', default_priority_id: '', sla_policy_id: '' });
       await fetchBoards();
     } catch (error) {
       console.error('Error saving board:', error);
@@ -562,9 +580,9 @@ const BoardsSettings: React.FC = () => {
             id="add-board-button"
             onClick={() => {
               setEditingBoard(null);
-              setFormData({ board_name: '', description: '', display_order: 0, is_inactive: false, category_type: 'custom', priority_type: 'custom', is_itil_compliant: false, default_assigned_to: '', default_priority_id: '' });
+              setFormData({ board_name: '', description: '', display_order: 0, is_inactive: false, category_type: 'custom', priority_type: 'custom', is_itil_compliant: false, default_assigned_to: '', default_priority_id: '', sla_policy_id: '' });
               setShowAddEditDialog(true);
-            }} 
+            }}
             className="bg-primary-500 text-white hover:bg-primary-600"
           >
             <Plus className="h-4 w-4 mr-2" /> Add Board
@@ -639,7 +657,7 @@ const BoardsSettings: React.FC = () => {
         onClose={() => {
           setShowAddEditDialog(false);
           setEditingBoard(null);
-          setFormData({ board_name: '', description: '', display_order: 0, is_inactive: false, category_type: 'custom', priority_type: 'custom', is_itil_compliant: false, default_assigned_to: '', default_priority_id: '' });
+          setFormData({ board_name: '', description: '', display_order: 0, is_inactive: false, category_type: 'custom', priority_type: 'custom', is_itil_compliant: false, default_assigned_to: '', default_priority_id: '', sla_policy_id: '' });
           setError(null);
         }}
         title={editingBoard ? "Edit Board" : "Add Board"}
@@ -705,6 +723,25 @@ const BoardsSettings: React.FC = () => {
               />
               <p className="text-xs text-muted-foreground mt-1">
                 When set, new tickets on this board will be automatically assigned to this agent. For tickets created via the client portal or email, assignment is automatic. For MSP users, this pre-fills the assigned agent field if empty.
+              </p>
+            </div>
+            <div>
+              <Label htmlFor="sla-policy-picker">SLA Policy</Label>
+              <CustomSelect
+                id="sla-policy-picker"
+                value={formData.sla_policy_id}
+                onValueChange={(value) => setFormData({ ...formData, sla_policy_id: value })}
+                options={[
+                  { value: '', label: 'None' },
+                  ...slaPolicies.map((policy): SelectOption => ({
+                    value: policy.sla_policy_id,
+                    label: policy.policy_name + (policy.is_default ? ' (Default)' : '')
+                  }))
+                ]}
+                placeholder="Select SLA policy"
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                When set, tickets on this board will use this SLA policy for response and resolution time tracking, unless the client has a specific SLA policy assigned.
               </p>
             </div>
 
@@ -777,7 +814,7 @@ const BoardsSettings: React.FC = () => {
             onClick={() => {
               setShowAddEditDialog(false);
               setEditingBoard(null);
-              setFormData({ board_name: '', description: '', display_order: 0, is_inactive: false, category_type: 'custom', priority_type: 'custom', is_itil_compliant: false, default_assigned_to: '', default_priority_id: '' });
+              setFormData({ board_name: '', description: '', display_order: 0, is_inactive: false, category_type: 'custom', priority_type: 'custom', is_itil_compliant: false, default_assigned_to: '', default_priority_id: '', sla_policy_id: '' });
               setError(null);
             }}
           >
