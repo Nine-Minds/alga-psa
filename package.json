@@ -34,7 +34,7 @@
     "runner:down": "./scripts/dev-runner.sh down",
     "runner:logs": "./scripts/dev-runner.sh logs -f",
     "dev:runner": "RUNNER_BACKEND=docker RUNNER_DOCKER_HOST=${RUNNER_DOCKER_HOST:-http://localhost:${RUNNER_DOCKER_PORT:-8085}} RUNNER_PUBLIC_BASE=/runner npm run dev",
-    "build:shared": "cd shared && npm run build",
+    "build:shared": "npx nx build @alga-psa/shared",
     "build:workflow-worker": "cd services/workflow-worker && npm run build",
     "build:sdk": "npm -w sdk/alga-client-sdk run build",
     "dev:sdk": "npm -w sdk/alga-client-sdk run dev",
