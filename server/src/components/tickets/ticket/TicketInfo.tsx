@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState, useMemo, useCallback } from 'react';
+import React, { useEffect, useState, useMemo, useCallback, useRef } from 'react';
 import RichTextViewer from 'server/src/components/editor/RichTextViewer';
 import TextEditor from 'server/src/components/editor/TextEditor';
 import { PartialBlock } from '@blocknote/core';
@@ -48,6 +48,8 @@ interface TicketInfoProps {
   isInDrawer?: boolean;
   onItilFieldChange?: (field: string, value: any) => void;
   isBundledChild?: boolean;
+  // Pre-fetched categories from server to avoid timing issues
+  initialCategories?: ITicketCategory[];
   // Local ITIL state values
   itilImpact?: number;
   itilUrgency?: number;
@@ -73,12 +75,14 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
   isInDrawer = false,
   onItilFieldChange,
   isBundledChild = false,
+  initialCategories = [],
   itilImpact,
   itilUrgency,
   itilCategory,
   itilSubcategory,
 }) => {
-  const [categories, setCategories] = useState<ITicketCategory[]>([]);
+  // Use initialCategories from server to avoid timing issues on first render
+  const [categories, setCategories] = useState<ITicketCategory[]>(initialCategories);
   const [boardConfig, setBoardConfig] = useState<BoardCategoryData['boardConfig']>({
     category_type: 'custom',
     priority_type: 'custom',
@@ -175,30 +179,71 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
     }
   }, [ticket, isFormInitialized]);
 
+  // Track loading state for board config
+  const [isLoadingBoardConfig, setIsLoadingBoardConfig] = useState(false);
+  // Track the board_id being fetched to handle race conditions
+  const fetchingBoardIdRef = useRef<string | null>(null);
+
   // Fetch board config when pending board changes
   useEffect(() => {
+    const boardIdToFetch = pendingChanges.board_id;
+
     const fetchPendingBoardConfig = async () => {
-      if (pendingChanges.board_id && pendingChanges.board_id !== ticket.board_id) {
+      if (boardIdToFetch && boardIdToFetch !== ticket.board_id) {
+        // Track which board we're fetching
+        fetchingBoardIdRef.current = boardIdToFetch;
+
+        // Immediately clear old pending data to avoid showing stale categories
+        setPendingCategories([]);
+        setPendingBoardConfig(null);
+        setIsLoadingBoardConfig(true);
+
         try {
-          const data = await getTicketCategoriesByBoard(pendingChanges.board_id);
-          if (data && data.categories) {
-            const categoriesArray = Array.isArray(data.categories) ? data.categories : [];
-            setPendingCategories(categoriesArray);
-            if (data.boardConfig) {
-              setPendingBoardConfig(data.boardConfig);
+          const data = await getTicketCategoriesByBoard(boardIdToFetch);
+
+          // Only update state if this is still the board we want
+          if (fetchingBoardIdRef.current === boardIdToFetch) {
+            if (data && data.categories) {
+              const categoriesArray = Array.isArray(data.categories) ? data.categories : [];
+              setPendingCategories(categoriesArray);
+              if (data.boardConfig) {
+                setPendingBoardConfig(data.boardConfig);
+              }
             }
+            setIsLoadingBoardConfig(false);
           }
         } catch (error) {
-          console.error('Failed to fetch pending board config:', error);
+          // Only update state if this is still the board we want
+          if (fetchingBoardIdRef.current === boardIdToFetch) {
+            console.error('Failed to fetch pending board config:', error);
+            setIsLoadingBoardConfig(false);
+          }
         }
-      } else if (!pendingChanges.board_id) {
+      } else if (!boardIdToFetch) {
         // Reset pending config if board is cleared from pending
+        fetchingBoardIdRef.current = null;
         setPendingBoardConfig(null);
         setPendingCategories(null);
+        setIsLoadingBoardConfig(false);
       }
     };
 
     fetchPendingBoardConfig();
+  }, [pendingChanges.board_id, ticket.board_id]);
+
+  // Clear category selections when board changes (separate effect to avoid dependency issues)
+  useEffect(() => {
+    if (pendingChanges.board_id && pendingChanges.board_id !== ticket.board_id) {
+      // Clear category selections since they may not be valid for the new board
+      setPendingChanges(prev => {
+        // Only clear if category/subcategory exist in pending
+        if ('category_id' in prev || 'subcategory_id' in prev) {
+          const { category_id, subcategory_id, ...rest } = prev;
+          return rest;
+        }
+        return prev;
+      });
+    }
   }, [pendingChanges.board_id, ticket.board_id]);
 
   // Get ITIL categories from props (now includes both custom and ITIL)
@@ -255,62 +300,70 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
     }
   }, [ticket, conversations]);
 
-  // Separate useEffect for fetching categories based on board
+  // Sync categories with initialCategories when they change (handles navigation between tickets)
   useEffect(() => {
-    const fetchCategories = async () => {
+    if (initialCategories && initialCategories.length > 0) {
+      setCategories(initialCategories);
+    }
+  }, [initialCategories]);
+
+  // Separate useEffect for fetching categories and board config based on board
+  useEffect(() => {
+    const fetchCategoriesAndConfig = async () => {
+      // Check if we already have categories from initialCategories
+      const hasValidCategories = categories.length > 0 && categories.some(c => c.category_id === ticket.category_id);
+
       try {
         if (ticket.board_id) {
-          // Fetch categories for the specific board
+          // Always fetch board config to get ITIL settings, even if we have categories
           const data = await getTicketCategoriesByBoard(ticket.board_id);
-          // Ensure data is properly resolved and categories is an array
-          if (data && data.categories) {
-            // Extra safety check - ensure it's actually an array
+
+          // Always set board config for ITIL support
+          if (data && data.boardConfig) {
+            setBoardConfig(data.boardConfig);
+          }
+
+          // Only update categories if we don't have valid ones from initialCategories
+          if (!hasValidCategories && data && data.categories) {
             const categoriesArray = Array.isArray(data.categories) ? data.categories : [];
             setCategories(categoriesArray);
-            if (data.boardConfig) {
-              setBoardConfig(data.boardConfig);
-            }
-          } else {
-            console.error('Invalid categories data received:', data);
-            setCategories([]);
-            setBoardConfig({
-              category_type: 'custom',
-              priority_type: 'custom',
-              display_itil_impact: false,
-              display_itil_urgency: false,
-              });
           }
         } else {
-          // If no board, fetch all categories and use custom categories
-          const fetchedCategories = await getTicketCategories();
-          // Ensure fetchedCategories is an array
-          if (Array.isArray(fetchedCategories)) {
-            setCategories(fetchedCategories);
-          } else {
-            console.error('Invalid categories data received:', fetchedCategories);
-            setCategories([]);
-          }
+          // If no board, use custom config
           setBoardConfig({
             category_type: 'custom',
             priority_type: 'custom',
             display_itil_impact: false,
             display_itil_urgency: false,
           });
+
+          // Only fetch categories if we don't have them
+          if (!hasValidCategories) {
+            const fetchedCategories = await getTicketCategories();
+            if (Array.isArray(fetchedCategories)) {
+              setCategories(fetchedCategories);
+            } else {
+              console.error('Invalid categories data received:', fetchedCategories);
+              setCategories([]);
+            }
+          }
         }
       } catch (error) {
-        console.error('Failed to fetch categories:', error);
-        // Set empty defaults on error
-        setCategories([]);
+        console.error('Failed to fetch categories and config:', error);
+        // Set defaults on error
         setBoardConfig({
           category_type: 'custom',
           priority_type: 'custom',
           display_itil_impact: false,
           display_itil_urgency: false,
         });
+        if (!hasValidCategories) {
+          setCategories([]);
+        }
       }
     };
 
-    fetchCategories();
+    fetchCategoriesAndConfig();
   }, [ticket.board_id]); // Re-fetch when board changes
 
   useEffect(() => {
@@ -384,12 +437,10 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
         allChanges.title = titleValue;
       }
 
-      // If there's a board change, clear categories and priority
-      if (pendingChanges.board_id && pendingChanges.board_id !== ticket.board_id) {
-        allChanges.category_id = null;
-        allChanges.subcategory_id = null;
-        allChanges.priority_id = null;
-      }
+      // Note: When board changes, the board change handler (lines 687-699) already clears
+      // category_id, subcategory_id, and priority_id in pendingChanges. If the user then
+      // selects new values, those are captured in pendingChanges and will be saved.
+      // We no longer need to force-clear these fields here - that was overwriting user selections.
 
       // Save ITIL changes if any
       if (Object.keys(pendingItilChanges).length > 0) {
@@ -492,7 +543,8 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
   }, [handleDiscardChanges]);
 
   const handleCategoryChange = (categoryIds: string[]) => {
-    if (categoryIds.length === 0) {
+    // Handle empty selection or "no-category" special value
+    if (categoryIds.length === 0 || categoryIds[0] === 'no-category' || categoryIds[0] === '') {
       handlePendingChange('category_id', null);
       handlePendingChange('subcategory_id', null);
       return;
@@ -502,7 +554,10 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
     const selectedCategory = effectiveCategories.find(c => c.category_id === selectedCategoryId);
 
     if (!selectedCategory) {
-      console.error('Selected category not found');
+      // Don't return early - still try to set the category ID even if not found in local state
+      // This handles cases where effectiveCategories might be stale
+      handlePendingChange('category_id', selectedCategoryId);
+      handlePendingChange('subcategory_id', null);
       return;
     }
 
@@ -751,13 +806,19 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
               <div className="col-span-2">
                 <h5 className="font-bold mb-1">{effectiveBoardConfig.category_type === 'custom' ? 'Category' : 'ITIL Category'}</h5>
                 <div className="w-fit">
-                  <CategoryPicker
-                    id={`${id}-category-picker`}
-                    categories={effectiveCategories}
-                    selectedCategories={[getSelectedCategoryId()]}
-                    onSelect={handleCategoryChange}
-                    placeholder={effectiveBoardConfig.category_type === 'custom' ? "Select a category..." : "Select ITIL category..."}
-                  />
+                  {isLoadingBoardConfig ? (
+                    <div className="h-10 w-48 bg-gray-100 animate-pulse rounded-md flex items-center justify-center text-sm text-gray-500">
+                      Loading categories...
+                    </div>
+                  ) : (
+                    <CategoryPicker
+                      id={`${id}-category-picker`}
+                      categories={effectiveCategories}
+                      selectedCategories={[getSelectedCategoryId()]}
+                      onSelect={handleCategoryChange}
+                      placeholder={effectiveBoardConfig.category_type === 'custom' ? "Select a category..." : "Select ITIL category..."}
+                    />
+                  )}
                 </div>
               </div>
             )}

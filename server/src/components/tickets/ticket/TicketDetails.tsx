@@ -1999,6 +1999,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
                   itilImpact={itilImpact}
                   itilUrgency={itilUrgency}
                   isBundledChild={Boolean(bundle?.isBundleChild)}
+                  initialCategories={initialCategories}
                 />
               </div>
             </Suspense>

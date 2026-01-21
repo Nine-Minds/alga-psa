@@ -185,7 +185,7 @@ export const CategoryPicker: React.FC<CategoryPickerProps & AutomationProps> = (
   const currentValue = selectedCategories[0] || '';
   const displayLabel = useMemo(() => {
     const parts: string[] = [];
-    
+
     if (selectedCategories.length > 0) {
       if (selectedCategories.length === 1) {
         const selectedId = selectedCategories[0];

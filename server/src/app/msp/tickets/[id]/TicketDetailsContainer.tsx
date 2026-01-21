@@ -163,6 +163,9 @@ export default function TicketDetailsContainer({ ticketData, surveySummary = nul
         // Use the server's updated_at for the next request (not client-generated)
         expectedUpdatedAtRef.current = String(result.updated_at);
         toast.success('Changes saved successfully');
+        // Refresh the page data to show the updated values
+        // Without this, the UI would show stale ticket values after pendingChanges is cleared
+        router.refresh();
         return true;
       } catch (error) {
         console.error('Error saving changes:', error);
@@ -174,7 +177,7 @@ export default function TicketDetailsContainer({ ticketData, surveySummary = nul
         return false;
       }
     });
-  }, [session?.user, withSubmitting, ticketData.ticket.ticket_id, handleConflict]);
+  }, [session?.user, withSubmitting, ticketData.ticket.ticket_id, handleConflict, router]);
 
   // Handle adding comments using the optimized server action
   // Note: Server actions now get user from session internally for security
