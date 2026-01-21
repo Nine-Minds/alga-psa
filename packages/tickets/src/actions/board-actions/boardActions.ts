@@ -89,6 +89,7 @@ export const createBoard = withAuth(async (user, { tenant }, boardData: Omit<IBo
           display_itil_impact: boardData.display_itil_impact || false,
           display_itil_urgency: boardData.display_itil_urgency || false,
           default_assigned_to: boardData.default_assigned_to || null,
+          sla_policy_id: boardData.sla_policy_id || null,
           tenant
         })
         .returning('*');
@@ -342,10 +343,13 @@ export const updateBoard = withAuth(async (user, { tenant }, boardId: string, bo
           .update({ is_default: false });
       }
 
-      // Sanitize default_assigned_to: convert empty string to null
+      // Sanitize default_assigned_to and sla_policy_id: convert empty string to null
       const sanitizedData = { ...boardData };
       if ('default_assigned_to' in sanitizedData) {
         sanitizedData.default_assigned_to = sanitizedData.default_assigned_to || null;
+      }
+      if ('sla_policy_id' in sanitizedData) {
+        sanitizedData.sla_policy_id = sanitizedData.sla_policy_id || null;
       }
 
       const [updatedBoard] = await trx('boards')

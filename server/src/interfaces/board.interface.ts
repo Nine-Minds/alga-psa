@@ -35,4 +35,10 @@ export interface IBoard extends TenantEntity {
 
   // Default assignment configuration
   default_assigned_to?: string | null;
+
+  // Board manager for SLA notifications
+  manager_user_id?: string | null;
+
+  // SLA policy assignment (board-level SLA)
+  sla_policy_id?: string | null;
 }

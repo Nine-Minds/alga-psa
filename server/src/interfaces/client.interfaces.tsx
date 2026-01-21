@@ -56,6 +56,8 @@ export interface IClient extends SharedIClient, TenantEntity, ITaggable {
   account_manager_full_name?: string;
   account_manager_id?: string | null;
   logoUrl?: string | null;
+  // SLA policy assignment (client-level SLA)
+  sla_policy_id?: string | null;
 }
 
 export interface IClientLocation extends TenantEntity {

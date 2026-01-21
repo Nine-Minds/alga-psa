@@ -10,6 +10,8 @@ import { TagManager } from '@alga-psa/tags/components';
 import { findTagsByEntityId } from '@alga-psa/tags/actions';
 import { useTags } from '@alga-psa/tags/context';
 import { getAllUsersBasicAsync, getCurrentUserAsync } from '../../lib/usersHelpers';
+import { getSlaPolicies } from '@alga-psa/sla/actions';
+import { ISlaPolicy } from '@alga-psa/sla/types';
 import { BillingCycleType } from '@alga-psa/types';
 import Documents from '@alga-psa/documents/components/Documents';
 import { validateCompanySize, validateAnnualRevenue, validateWebsiteUrl, validateIndustry, validateClientName } from '@alga-psa/validation';
@@ -233,6 +235,8 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
   const [tags, setTags] = useState<ITag[]>([]);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
+  const [slaPolicies, setSlaPolicies] = useState<ISlaPolicy[]>([]);
+  const [isLoadingSlaPolicies, setIsLoadingSlaPolicies] = useState(false);
   const { tags: allTags } = useTags();
   const router = useRouter();
   const memoizedRouter = useMemo(() => router, [router]);
@@ -577,7 +581,24 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
     fetchTags();
   }, [client.client_id]);
 
-  const handleFieldChange = async (field: string, value: string | boolean) => {
+  // Fetch SLA policies
+  useEffect(() => {
+    const fetchSlaPolicies = async () => {
+      if (slaPolicies.length > 0) return;
+      setIsLoadingSlaPolicies(true);
+      try {
+        const policies = await getSlaPolicies();
+        setSlaPolicies(policies);
+      } catch (error) {
+        console.error('Error fetching SLA policies:', error);
+      } finally {
+        setIsLoadingSlaPolicies(false);
+      }
+    };
+    fetchSlaPolicies();
+  }, [slaPolicies.length]);
+
+  const handleFieldChange = async (field: string, value: string | boolean | null) => {
     // Check if client is being deactivated (is_inactive changing from false to true)
     if (field === 'is_inactive' && editedClient.is_inactive === false && value === true) {
       // Fetch active contacts for this client
@@ -800,7 +821,31 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
                   buttonWidth="full"
                 />
               </FieldContainer>
-              
+
+              <FieldContainer
+                label="SLA Policy"
+                fieldType="select"
+                value={slaPolicies.find(p => p.sla_policy_id === editedClient.sla_policy_id)?.policy_name || ''}
+                helperText="Select the SLA policy for this client"
+                automationId="sla-policy-field"
+              >
+                <Text as="label" size="2" className="text-gray-700 font-medium">SLA Policy</Text>
+                <CustomSelect
+                  id="sla-policy-select"
+                  value={editedClient.sla_policy_id || ''}
+                  onValueChange={(value) => handleFieldChange('sla_policy_id', value === '' ? null : value)}
+                  options={[
+                    { value: '', label: 'None' },
+                    ...slaPolicies.map((policy) => ({
+                      value: policy.sla_policy_id,
+                      label: policy.is_default ? `${policy.policy_name} (Default)` : policy.policy_name
+                    }))
+                  ]}
+                  disabled={isLoadingSlaPolicies}
+                  placeholder={isLoadingSlaPolicies ? "Loading policies..." : "Select SLA Policy"}
+                />
+              </FieldContainer>
+
               <TextDetailItem
                 label="Website"
                 value={editedClient.properties?.website || ''}
@@ -1111,28 +1156,30 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
       )
     }
   ], [
-    editedClient, 
-    internalUsers, 
-    isLoadingUsers, 
-    t, 
-    id, 
-    tags, 
-    handleTagsChange, 
-    isInDrawer, 
-    locationsRefreshKey, 
-    surveySummary, 
-    hasAttemptedSubmit, 
-    fieldErrors, 
-    handleSave, 
-    isSaving, 
-    setIsQuickAddTicketOpen, 
-    ticketFormOptions, 
-    client.client_id, 
-    client.client_name, 
-    handleBillingConfigSave, 
-    contacts, 
-    currentUser, 
-    documents, 
+    editedClient,
+    internalUsers,
+    isLoadingUsers,
+    slaPolicies,
+    isLoadingSlaPolicies,
+    t,
+    id,
+    tags,
+    handleTagsChange,
+    isInDrawer,
+    locationsRefreshKey,
+    surveySummary,
+    hasAttemptedSubmit,
+    fieldErrors,
+    handleSave,
+    isSaving,
+    setIsQuickAddTicketOpen,
+    ticketFormOptions,
+    client.client_id,
+    client.client_name,
+    handleBillingConfigSave,
+    contacts,
+    currentUser,
+    documents,
     memoizedRouter,
     interactions
   ]);
