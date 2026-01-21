@@ -7,6 +7,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { Knex } from 'knex';
 import CreditReconciliationReport from '../models/creditReconciliationReport';
 import { auditLog } from '@alga-psa/db';
+import { getCurrentUser } from '@alga-psa/auth/getCurrentUser';
 
 /**
  * Validates a client's credit balance without making automatic corrections
@@ -27,7 +28,12 @@ export async function validateCreditBalanceWithoutCorrection(
     reportId?: string;
     lastTransaction?: ITransaction;
 }> {
-    const { knex, tenant } = await createTenantKnex();
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+        throw new Error('No authenticated user found');
+    }
+
+    const { knex, tenant } = await createTenantKnex(currentUser.tenant);
     if (!tenant) {
         throw new Error('Tenant context is required for credit balance validation');
     }
@@ -245,7 +251,12 @@ export async function runScheduledCreditBalanceValidation(clientId?: string, use
     inconsistentTrackingCount: number;
     errorCount: number;
 }> {
-    const { knex, tenant } = await createTenantKnex();
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+        throw new Error('No authenticated user found');
+    }
+
+    const { knex, tenant } = await createTenantKnex(currentUser.tenant);
 
     let clients: { client_id: string }[];
     const startTime = new Date().toISOString();
@@ -381,7 +392,12 @@ export async function validateCreditTrackingEntries(
     missingEntries: number;
     reportIds: string[];
 }> {
-    const { knex, tenant } = await createTenantKnex();
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+        throw new Error('No authenticated user found');
+    }
+
+    const { knex, tenant } = await createTenantKnex(currentUser.tenant);
     if (!tenant) {
         throw new Error('Tenant context is required for credit tracking validation');
     }
@@ -500,7 +516,12 @@ export async function validateCreditTrackingRemainingAmounts(
     inconsistentEntries: number;
     reportIds: string[];
 }> {
-    const { knex, tenant } = await createTenantKnex();
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+        throw new Error('No authenticated user found');
+    }
+
+    const { knex, tenant } = await createTenantKnex(currentUser.tenant);
     if (!tenant) {
         throw new Error('Tenant context is required for credit tracking validation');
     }
@@ -667,7 +688,12 @@ export async function validateAllCreditTracking(
     inconsistentEntries: number;
     reportIds: string[];
 }> {
-    const { knex, tenant } = await createTenantKnex();
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+        throw new Error('No authenticated user found');
+    }
+
+    const { knex, tenant } = await createTenantKnex(currentUser.tenant);
     if (!tenant) {
         throw new Error('Tenant context is required for credit tracking validation');
     }
@@ -710,7 +736,12 @@ export async function resolveReconciliationReport(
     notes?: string,
     trx?: Knex.Transaction
 ): Promise<ICreditReconciliationReport> {
-    const { knex, tenant } = await createTenantKnex();
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+        throw new Error('No authenticated user found');
+    }
+
+    const { knex, tenant } = await createTenantKnex(currentUser.tenant);
     if (!tenant) {
         throw new Error('Tenant context is required for resolving reconciliation report');
     }

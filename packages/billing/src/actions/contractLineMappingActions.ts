@@ -4,7 +4,8 @@
 import ContractLineMapping from '../models/contractLineMapping';
 import { IContractLineMapping } from '@alga-psa/types';
 import { createTenantKnex } from '@alga-psa/db';
-import { getCurrentUserAsync, hasPermissionAsync, getSessionAsync, getAnalyticsAsync } from '../lib/authHelpers';
+import { getCurrentUser } from '@alga-psa/auth/getCurrentUser';
+import { hasPermissionAsync, getSessionAsync, getAnalyticsAsync } from '../lib/authHelpers';
 
 import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
@@ -277,13 +278,13 @@ export async function ensureTemplateLineSnapshot(
  * After migration 20251028090000, data is stored directly in contract_lines/contract_template_lines.
  */
 export async function getContractLineMappings(contractId: string): Promise<IContractLineMapping[]> {
-  const currentUser = await getCurrentUserAsync();
+  const currentUser = await getCurrentUser();
   if (!currentUser) {
     throw new Error('No authenticated user found');
   }
 
   try {
-    const { knex, tenant } = await createTenantKnex();
+    const { knex, tenant } = await createTenantKnex(currentUser.tenant);
     if (!tenant) {
       throw new Error("tenant context not found");
     }
@@ -326,13 +327,13 @@ export async function getContractLineMappings(contractId: string): Promise<ICont
  * After migration 20251028090000, data is stored directly in contract_lines/contract_template_lines.
  */
 export async function getDetailedContractLines(contractId: string): Promise<any[]> {
-  const currentUser = await getCurrentUserAsync();
+  const currentUser = await getCurrentUser();
   if (!currentUser) {
     throw new Error('No authenticated user found');
   }
 
   try {
-    const { knex, tenant } = await createTenantKnex();
+    const { knex, tenant } = await createTenantKnex(currentUser.tenant);
     if (!tenant) {
       throw new Error("tenant context not found");
     }
@@ -394,13 +395,13 @@ export async function addContractLine(
   contractLineId: string,
   customRate?: number
 ): Promise<IContractLineMapping> {
-  const currentUser = await getCurrentUserAsync();
+  const currentUser = await getCurrentUser();
   if (!currentUser) {
     throw new Error('No authenticated user found');
   }
 
   try {
-    const { knex, tenant } = await createTenantKnex();
+    const { knex, tenant } = await createTenantKnex(currentUser.tenant);
     if (!tenant) {
       throw new Error("tenant context not found");
     }
@@ -475,13 +476,13 @@ export async function addContractLine(
  * After migration 20251028090000, data is stored directly in contract_lines/contract_template_lines.
  */
 export async function removeContractLine(contractId: string, contractLineId: string): Promise<void> {
-  const currentUser = await getCurrentUserAsync();
+  const currentUser = await getCurrentUser();
   if (!currentUser) {
     throw new Error('No authenticated user found');
   }
 
   try {
-    const { knex, tenant } = await createTenantKnex();
+    const { knex, tenant } = await createTenantKnex(currentUser.tenant);
     if (!tenant) {
       throw new Error("tenant context not found");
     }
@@ -527,13 +528,13 @@ export async function updateContractLineAssociation(
   contractLineId: string,
   updateData: Partial<IContractLineMapping>
 ): Promise<IContractLineMapping> {
-  const currentUser = await getCurrentUserAsync();
+  const currentUser = await getCurrentUser();
   if (!currentUser) {
     throw new Error('No authenticated user found');
   }
 
   try {
-    const { knex, tenant } = await createTenantKnex();
+    const { knex, tenant } = await createTenantKnex(currentUser.tenant);
     if (!tenant) {
       throw new Error("tenant context not found");
     }
@@ -602,13 +603,13 @@ export async function updateContractLineAssociation(
  * Determine whether a contract line is already associated with a contract.
  */
 export async function isContractLineAttached(contractId: string, contractLineId: string): Promise<boolean> {
-  const currentUser = await getCurrentUserAsync();
+  const currentUser = await getCurrentUser();
   if (!currentUser) {
     throw new Error('No authenticated user found');
   }
 
   try {
-    const { knex, tenant } = await createTenantKnex();
+    const { knex, tenant } = await createTenantKnex(currentUser.tenant);
     if (!tenant) {
       throw new Error("tenant context not found");
     }

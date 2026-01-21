@@ -1,7 +1,7 @@
 'use client';
 
-import React from 'react';
-import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
+import EntityImageUpload from '@alga-psa/ui/components/EntityImageUpload';
+import { uploadContactAvatar, deleteContactAvatar } from '@alga-psa/client-portal/actions';
 
 interface ContactAvatarUploadProps {
   contactId: string;
@@ -9,13 +9,22 @@ interface ContactAvatarUploadProps {
   onAvatarUpdated?: (newUrl: string | null) => void;
 }
 
-export default function ContactAvatarUpload({ contactId }: ContactAvatarUploadProps) {
+export default function ContactAvatarUpload({
+  contactId,
+  currentAvatarUrl,
+  onAvatarUpdated,
+}: ContactAvatarUploadProps) {
   return (
-    <Alert>
-      <AlertDescription>
-        Contact avatar upload is now owned by Client Portal. (contactId: {contactId})
-      </AlertDescription>
-    </Alert>
+    <EntityImageUpload
+      entityType="contact"
+      entityId={contactId}
+      entityName=""
+      imageUrl={currentAvatarUrl || null}
+      onImageChange={onAvatarUpdated}
+      uploadAction={uploadContactAvatar}
+      deleteAction={deleteContactAvatar}
+      size="md"
+    />
   );
 }
 

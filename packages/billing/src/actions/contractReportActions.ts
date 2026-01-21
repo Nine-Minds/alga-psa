@@ -1,7 +1,8 @@
 'use server'
 
 import { createTenantKnex } from '@alga-psa/db';
-import { getCurrentUserAsync, hasPermissionAsync, getSessionAsync, getAnalyticsAsync } from '../lib/authHelpers';
+import { getCurrentUser } from '@alga-psa/auth/getCurrentUser';
+import { hasPermissionAsync, getSessionAsync, getAnalyticsAsync } from '../lib/authHelpers';
 
 
 // Type definitions for reports
@@ -52,13 +53,13 @@ export interface ContractReportSummary {
  * Shows monthly recurring revenue and year-to-date billing by contract
  */
 export async function getContractRevenueReport(): Promise<ContractRevenue[]> {
-  const session = await getSessionAsync();
-  if (!session?.user?.id) {
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
     throw new Error('Unauthorized');
   }
 
   try {
-    const { knex, tenant } = await createTenantKnex();
+    const { knex, tenant } = await createTenantKnex(currentUser.tenant);
     if (!tenant) {
       throw new Error('tenant context not found');
     }
@@ -179,13 +180,13 @@ export async function getContractRevenueReport(): Promise<ContractRevenue[]> {
  * Track upcoming contract expirations and renewal opportunities
  */
 export async function getContractExpirationReport(): Promise<ContractExpiration[]> {
-  const session = await getSessionAsync();
-  if (!session?.user?.id) {
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
     throw new Error('Unauthorized');
   }
 
   try {
-    const { knex, tenant } = await createTenantKnex();
+    const { knex, tenant } = await createTenantKnex(currentUser.tenant);
     if (!tenant) {
       throw new Error('tenant context not found');
     }
@@ -251,13 +252,13 @@ export async function getContractExpirationReport(): Promise<ContractExpiration[
  * Monitor bucket hours usage and identify overage situations
  */
 export async function getBucketUsageReport(): Promise<BucketUsage[]> {
-  const session = await getSessionAsync();
-  if (!session?.user?.id) {
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
     throw new Error('Unauthorized');
   }
 
   try {
-    const { knex, tenant } = await createTenantKnex();
+    const { knex, tenant } = await createTenantKnex(currentUser.tenant);
     if (!tenant) {
       throw new Error('tenant context not found');
     }
@@ -325,13 +326,13 @@ export async function getBucketUsageReport(): Promise<BucketUsage[]> {
  * Basic profit margins and revenue vs. cost analysis by contract
  */
 export async function getProfitabilityReport(): Promise<Profitability[]> {
-  const session = await getSessionAsync();
-  if (!session?.user?.id) {
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
     throw new Error('Unauthorized');
   }
 
   try {
-    const { knex, tenant } = await createTenantKnex();
+    const { knex, tenant } = await createTenantKnex(currentUser.tenant);
     if (!tenant) {
       throw new Error('tenant context not found');
     }
@@ -395,13 +396,13 @@ export async function getProfitabilityReport(): Promise<Profitability[]> {
  * Get contract report summary statistics
  */
 export async function getContractReportSummary(): Promise<ContractReportSummary> {
-  const session = await getSessionAsync();
-  if (!session?.user?.id) {
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
     throw new Error('Unauthorized');
   }
 
   try {
-    const { knex, tenant } = await createTenantKnex();
+    const { knex, tenant } = await createTenantKnex(currentUser.tenant);
     if (!tenant) {
       throw new Error('tenant context not found');
     }

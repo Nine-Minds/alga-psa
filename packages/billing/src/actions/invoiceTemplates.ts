@@ -18,9 +18,15 @@ import {
     InvoiceTemplateSource
 } from '@alga-psa/types';
 import { v4 as uuidv4 } from 'uuid';
+import { getCurrentUser } from '@alga-psa/auth/getCurrentUser';
 
 export async function getInvoiceTemplate(templateId: string): Promise<IInvoiceTemplate | null> {
-    const { knex, tenant } = await createTenantKnex();
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+        throw new Error('Unauthorized: No authenticated user found');
+    }
+
+    const { knex, tenant } = await createTenantKnex(currentUser.tenant);
     const template = await withTransaction(knex, async (trx: Knex.Transaction) => {
       const record = await trx('invoice_templates')
         .select(
@@ -65,7 +71,12 @@ export async function getInvoiceTemplate(templateId: string): Promise<IInvoiceTe
 }
 
 export async function getInvoiceTemplates(): Promise<IInvoiceTemplate[]> {
-    const { knex, tenant } = await createTenantKnex();
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+        throw new Error('Unauthorized: No authenticated user found');
+    }
+
+    const { knex, tenant } = await createTenantKnex(currentUser.tenant);
     if (!tenant) {
         throw new Error('tenant context not found');
     }
@@ -85,7 +96,12 @@ type SetDefaultTemplatePayload =
     | { templateSource: Extract<InvoiceTemplateSource, 'standard'>; standardTemplateCode: string };
 
 export async function setDefaultTemplate(payload: SetDefaultTemplatePayload): Promise<void> {
-    const { knex, tenant } = await createTenantKnex();
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+        throw new Error('Unauthorized: No authenticated user found');
+    }
+
+    const { knex, tenant } = await createTenantKnex(currentUser.tenant);
 
     await withTransaction(knex, async (trx: Knex.Transaction) => {
         await trx('invoice_template_assignments')
@@ -133,7 +149,12 @@ export async function setDefaultTemplate(payload: SetDefaultTemplatePayload): Pr
 }
 
 export async function getDefaultTemplate(): Promise<IInvoiceTemplate | null> {
-    const { knex, tenant } = await createTenantKnex();
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+        throw new Error('Unauthorized: No authenticated user found');
+    }
+
+    const { knex, tenant } = await createTenantKnex(currentUser.tenant);
     if (!tenant) {
         throw new Error('tenant context not found');
     }
@@ -144,7 +165,12 @@ export async function getDefaultTemplate(): Promise<IInvoiceTemplate | null> {
 }
 
 export async function setClientTemplate(clientId: string, templateId: string | null): Promise<void> {
-    const { knex, tenant } = await createTenantKnex();
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+        throw new Error('Unauthorized: No authenticated user found');
+    }
+
+    const { knex, tenant } = await createTenantKnex(currentUser.tenant);
     await withTransaction(knex, async (trx: Knex.Transaction) => {
       return await trx('clients')
           .where({
@@ -160,7 +186,12 @@ export async function setClientTemplate(clientId: string, templateId: string | n
 export async function saveInvoiceTemplate(
     template: Omit<IInvoiceTemplate, 'tenant'> & { isClone?: boolean }
 ): Promise<{ success: boolean; template?: IInvoiceTemplate; compilationError?: { error: string; details?: string } }> {
-    const { knex } = await createTenantKnex();
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+        throw new Error('Unauthorized: No authenticated user found');
+    }
+
+    const { knex } = await createTenantKnex(currentUser.tenant);
     // The original function had `isStandard` check, assuming it's handled before calling or within Invoice.saveTemplate
     // if (template.isStandard) {
     //   throw new Error('Cannot modify standard templates');
@@ -311,7 +342,12 @@ export async function saveConditionalRule(rule: IConditionalRule): Promise<ICond
 export async function addInvoiceAnnotation(annotation: Omit<IInvoiceAnnotation, 'annotation_id'>): Promise<IInvoiceAnnotation> {
     // Implementation to add an invoice annotation
     console.warn('addInvoiceAnnotation implementation needed');
-    const { knex, tenant } = await createTenantKnex(); // Assuming tenant needed
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+        throw new Error('Unauthorized: No authenticated user found');
+    }
+
+    const { knex, tenant } = await createTenantKnex(currentUser.tenant); // Assuming tenant needed
     const newAnnotation = {
         annotation_id: uuidv4(),
         tenant: tenant, // Assuming tenant is required
@@ -355,7 +391,15 @@ export async function compileAndSaveTemplate(
     assemblyScriptSource: string
     // existingWasmBinary parameter removed
 ): Promise<CompileSuccessResponse | CompileErrorResponse> {
-    const { knex, tenant } = await createTenantKnex();
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+        return {
+            success: false,
+            error: 'Unauthorized: No authenticated user found',
+        };
+    }
+
+    const { knex, tenant } = await createTenantKnex(currentUser.tenant);
 
     if (!tenant) {
         return {
@@ -688,7 +732,12 @@ export async function compileAndSaveTemplate(
 }
 export async function getCompiledWasm(templateId: string): Promise<Buffer> {
     console.log(`[getCompiledWasm] Called for template ID: ${templateId}`); // Log entry point
-    const { knex, tenant } = await createTenantKnex();
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+        throw new Error('Unauthorized: No authenticated user found');
+    }
+
+    const { knex, tenant } = await createTenantKnex(currentUser.tenant);
 
     if (!tenant) {
         // Although standard templates don't need a tenant, the initial check does.
@@ -825,7 +874,12 @@ export async function renderTemplateOnServer(
     }
 }
 export async function deleteInvoiceTemplate(templateId: string): Promise<{ success: boolean; error?: string }> {
-    const { knex, tenant } = await createTenantKnex();
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+        return { success: false, error: 'Unauthorized: No authenticated user found' };
+    }
+
+    const { knex, tenant } = await createTenantKnex(currentUser.tenant);
 
     if (!tenant) {
         return { success: false, error: 'Tenant context is missing.' };

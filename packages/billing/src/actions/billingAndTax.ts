@@ -89,7 +89,12 @@ export async function getChargeUnitPrice(charge: IBillingCharge): Promise<number
  * there is no overlap or gap in coverage.
  */
 export async function getClientTaxRate(taxRegion: string, date: ISO8601String): Promise<number> {
-    const { knex, tenant } = await createTenantKnex();
+    const currentUser = await getCurrentUserAsync();
+    if (!currentUser) {
+        throw new Error('No authenticated user found');
+    }
+
+    const { knex, tenant } = await createTenantKnex(currentUser.tenant);
     const taxRates = await withTransaction(knex, async (trx: Knex.Transaction) => {
         return await trx('tax_rates')
             .where({
@@ -125,7 +130,13 @@ export async function getAvailableBillingPeriods(
     } = options;
 
     console.log(`Starting getAvailableBillingPeriods: page=${page}, pageSize=${pageSize}, search="${searchTerm}", dateRange=${JSON.stringify(dateRange)}`);
-    const { knex, tenant } = await createTenantKnex();
+
+    const currentUser = await getCurrentUserAsync();
+    if (!currentUser) {
+        throw new Error('No authenticated user found');
+    }
+
+    const { knex, tenant } = await createTenantKnex(currentUser.tenant);
     const currentDate = toISODate(Temporal.Now.plainDateISO());
 
     try {
@@ -263,7 +274,12 @@ export async function getPaymentTermDays(paymentTerms: string): Promise<number> 
 }
 
 export async function getDueDate(clientId: string, billingEndDate: ISO8601String): Promise<ISO8601String> {
-    const { knex, tenant } = await createTenantKnex();
+    const currentUser = await getCurrentUserAsync();
+    if (!currentUser) {
+        throw new Error('No authenticated user found');
+    }
+
+    const { knex, tenant } = await createTenantKnex(currentUser.tenant);
     const client = await withTransaction(knex, async (trx: Knex.Transaction) => {
         return await trx('clients')
             .where({
@@ -293,7 +309,12 @@ export async function getDueDate(clientId: string, billingEndDate: ISO8601String
  * This ensures continuous coverage with no gaps or overlaps between billing periods.
  */
 export async function getNextBillingDate(clientId: string, currentEndDate: ISO8601String): Promise<ISO8601String> {
-    const { knex, tenant } = await createTenantKnex();
+    const currentUser = await getCurrentUserAsync();
+    if (!currentUser) {
+        throw new Error('No authenticated user found');
+    }
+
+    const { knex, tenant } = await createTenantKnex(currentUser.tenant);
     const client = await withTransaction(knex, async (trx: Knex.Transaction) => {
         return await trx('client_billing_cycles')
             .where({
@@ -408,10 +429,15 @@ export async function getPaymentTermsList(): Promise<IPaymentTermOption[]> {
   console.log(`[Billing Action] Fetching available payment terms list.`);
 
   try {
+    const currentUser = await getCurrentUserAsync();
+    if (!currentUser) {
+        throw new Error('No authenticated user found');
+    }
+
     // Although payment terms might be global, we use createTenantKnex
     // as it's the standard way to get a Knex instance here.
     // If the table IS tenant-specific, a tenant filter would be added.
-    const { knex } = await createTenantKnex();
+    const { knex } = await createTenantKnex(currentUser.tenant);
 
     const terms = await withTransaction(knex, async (trx: Knex.Transaction) => {
       return await trx('payment_terms')

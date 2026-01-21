@@ -3,8 +3,9 @@
 import logger from '@alga-psa/core/logger';
 import { getAdminConnection } from '@alga-psa/db/admin';
 import { getPortalDomainStatusAction } from '@alga-psa/tenancy/actions';
-import { createTenantKnex, getTenantContext, runWithTenant } from '@alga-psa/db';
+import { createTenantKnex } from '@alga-psa/db';
 import { getConnection } from '@alga-psa/db';
+import { getSession } from '@alga-psa/auth';
 import type { CalendarProviderConfig } from '@alga-psa/types';
 import {
   deriveParentStepFromSubsteps,
@@ -70,7 +71,11 @@ const buildErrorStep = (
 };
 
 export async function getOnboardingProgressAction(): Promise<OnboardingProgressResponse> {
-  const { tenant: tenantId } = await createTenantKnex();
+  // Get tenant from session to ensure tenant context is established
+  const session = await getSession();
+  const sessionTenant = (session?.user as any)?.tenant;
+
+  const { tenant: tenantId } = await createTenantKnex(sessionTenant);
   if (!tenantId) {
     throw new Error('Tenant context is required to load onboarding progress');
   }

@@ -6,16 +6,17 @@ import { determineDefaultContractLine } from '@alga-psa/billing/lib/contractLine
 import { ICreateUsageRecord, IUpdateUsageRecord, IUsageFilter, IUsageRecord } from '@alga-psa/types';
 import { revalidatePath } from 'next/cache';
 import { findOrCreateCurrentBucketUsageRecord, updateBucketUsageMinutes } from '../services/bucketUsageService'; // Import bucket service functions
+import { getCurrentUser } from '@alga-psa/auth/getCurrentUser';
 import { getCurrentUserAsync, hasPermissionAsync, getSessionAsync, getAnalyticsAsync } from '../lib/authHelpers';
 
 
 export async function createUsageRecord(data: ICreateUsageRecord): Promise<IUsageRecord> {
-  const session = await getSessionAsync();
-  if (!session?.user?.id) {
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
     throw new Error('Unauthorized');
   }
 
-  const { knex, tenant } = await createTenantKnex();
+  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
 
   return await knex.transaction(async (trx) => {
     // If no contract line ID is provided, try to determine the default one
@@ -104,12 +105,12 @@ export async function createUsageRecord(data: ICreateUsageRecord): Promise<IUsag
 }
 
 export async function updateUsageRecord(data: IUpdateUsageRecord): Promise<IUsageRecord> {
-  const session = await getSessionAsync();
-  if (!session?.user?.id) {
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
     throw new Error('Unauthorized');
   }
 
-  const { knex, tenant } = await createTenantKnex();
+  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
 
   return await knex.transaction(async (trx) => {
     // 1. Fetch the original record BEFORE update
@@ -221,12 +222,12 @@ export async function updateUsageRecord(data: IUpdateUsageRecord): Promise<IUsag
 }
 
 export async function deleteUsageRecord(usageId: string): Promise<void> {
-  const session = await getSessionAsync();
-  if (!session?.user?.id) {
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
     throw new Error('Unauthorized');
   }
 
-  const { knex, tenant } = await createTenantKnex();
+  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
 
   await knex.transaction(async (trx) => {
     // 1. Fetch the record BEFORE deleting
@@ -300,12 +301,12 @@ export async function deleteUsageRecord(usageId: string): Promise<void> {
 }
 
 export async function getUsageRecords(filter?: IUsageFilter): Promise<IUsageRecord[]> {
-  const session = await getSessionAsync();
-  if (!session?.user?.id) {
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
     throw new Error('Unauthorized');
   }
 
-  const { knex, tenant } = await createTenantKnex();
+  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
 
   let query = knex('usage_tracking')
     .select(
@@ -348,12 +349,12 @@ interface Client {
 }
 
 export async function getClients() {
-  const session = await getSessionAsync();
-  if (!session?.user?.id) {
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
     throw new Error('Unauthorized');
   }
 
-  const { knex, tenant } = await createTenantKnex();
+  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
 
   const clients = await knex('clients')
     .select('client_id', 'client_name')

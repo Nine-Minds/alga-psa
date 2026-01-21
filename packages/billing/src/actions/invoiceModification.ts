@@ -21,6 +21,7 @@ import { getWorkflowRuntime } from '@alga-psa/shared/workflow/core'; // Import r
 
 import { validateInvoiceFinalization } from './taxSourceActions';
 import { getCurrentUserAsync, hasPermissionAsync, getSessionAsync, getAnalyticsAsync } from '../lib/authHelpers';
+import { getCurrentUser } from '@alga-psa/auth/getCurrentUser';
 
 // Interface definitions specific to manual updates (might move to interfaces file later)
 export interface ManualInvoiceUpdate {
@@ -45,13 +46,13 @@ interface ManualItemsUpdate {
 
 
 export async function finalizeInvoice(invoiceId: string): Promise<void> {
-  const { knex, tenant } = await createTenantKnex();
   const session = await getSessionAsync();
 
   if (!session?.user?.id) {
     throw new Error('Unauthorized');
   }
 
+  const { knex, tenant } = await createTenantKnex(session.user.tenant);
   if (!tenant) {
     throw new Error('No tenant found');
   }
@@ -264,13 +265,13 @@ export async function finalizeInvoiceWithKnex(
 }
 
 export async function unfinalizeInvoice(invoiceId: string): Promise<void> {
-  const { knex, tenant } = await createTenantKnex();
   const session = await getSessionAsync();
 
   if (!session?.user?.id) {
     throw new Error('Unauthorized');
   }
 
+  const { knex, tenant } = await createTenantKnex(session.user.tenant);
   if (!tenant) {
     throw new Error('No tenant found');
   }
@@ -332,11 +333,6 @@ export async function updateInvoiceManualItems(
   invoiceId: string,
   changes: ManualItemsUpdate
 ): Promise<InvoiceViewModel> {
-  const { knex, tenant } = await createTenantKnex();
-  if (!tenant) {
-    throw new Error('No tenant found');
-  }
-
   const session = await getSessionAsync();
   const billingEngine = new BillingEngine();
 
@@ -344,6 +340,11 @@ export async function updateInvoiceManualItems(
 
   if (!session?.user?.id) {
     throw new Error('Unauthorized');
+  }
+
+  const { knex, tenant } = await createTenantKnex(session.user.tenant);
+  if (!tenant) {
+    throw new Error('No tenant found');
   }
 
   // Load and validate invoice
@@ -384,7 +385,7 @@ async function updateManualInvoiceItemsInternal(
   session: Session,
   tenant: string
 ): Promise<void> {
-  const { knex } = await createTenantKnex();
+  const { knex } = await createTenantKnex(tenant);
   const billingEngine = new BillingEngine();
   const currentDate = Temporal.Now.plainDateISO().toString();
 
@@ -566,14 +567,15 @@ export async function addManualItemsToInvoice(
   invoiceId: string,
   items: IInvoiceCharge[]
 ): Promise<InvoiceViewModel> {
-  const { knex, tenant } = await createTenantKnex();
-  if (!tenant) {
-    throw new Error('No tenant found');
-  }
   const session = await getSessionAsync();
 
   if (!session?.user?.id) {
     throw new Error('Unauthorized');
+  }
+
+  const { knex, tenant } = await createTenantKnex(session.user.tenant);
+  if (!tenant) {
+    throw new Error('No tenant found');
   }
 
   // Load and validate invoice
@@ -618,7 +620,7 @@ async function addManualInvoiceItemsInternal(
   session: Session,
   tenant: string
 ): Promise<void> {
-  const { knex } = await createTenantKnex();
+  const { knex } = await createTenantKnex(tenant);
 
   const invoice = await withTransaction(knex, async (trx: Knex.Transaction) => {
     return await trx('invoices')
@@ -680,7 +682,12 @@ async function addManualInvoiceItemsInternal(
 
 
 export async function hardDeleteInvoice(invoiceId: string) {
-  const { knex, tenant } = await createTenantKnex();
+  const currentUser = await getCurrentUserAsync();
+  if (!currentUser) {
+    throw new Error('Unauthorized: No authenticated user found');
+  }
+
+  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
 
   await withTransaction(knex, async (trx: Knex.Transaction) => {
     // 1. Get invoice details

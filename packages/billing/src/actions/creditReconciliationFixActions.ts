@@ -8,6 +8,7 @@ import { Knex } from 'knex';
 import CreditReconciliationReport from '../models/creditReconciliationReport';
 import { auditLog } from '@alga-psa/db';
 import { resolveReconciliationReport } from './creditReconciliationActions';
+import { getCurrentUser } from '@alga-psa/auth/getCurrentUser';
 
 /**
  * Create a credit tracking entry for a missing entry
@@ -22,7 +23,12 @@ export async function createMissingCreditTrackingEntry(
   userId: string,
   notes: string
 ): Promise<ICreditReconciliationReport> {
-  const { knex, tenant } = await createTenantKnex();
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
+    throw new Error('No authenticated user found');
+  }
+
+  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
   if (!tenant) {
     throw new Error('Tenant context is required for creating credit tracking entry');
   }
@@ -126,7 +132,12 @@ export async function updateCreditTrackingRemainingAmount(
   userId: string,
   notes: string
 ): Promise<ICreditReconciliationReport> {
-  const { knex, tenant } = await createTenantKnex();
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
+    throw new Error('No authenticated user found');
+  }
+
+  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
   if (!tenant) {
     throw new Error('Tenant context is required for updating credit tracking remaining amount');
   }
@@ -231,7 +242,12 @@ export async function applyCustomCreditAdjustment(
   notes: string,
   amount?: number
 ): Promise<ICreditReconciliationReport> {
-  const { knex, tenant } = await createTenantKnex();
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
+    throw new Error('No authenticated user found');
+  }
+
+  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
   if (!tenant) {
     throw new Error('Tenant context is required for applying credit adjustment');
   }
@@ -362,7 +378,12 @@ export async function markReportAsResolvedNoAction(
   userId: string,
   notes: string
 ): Promise<ICreditReconciliationReport> {
-  const { knex, tenant } = await createTenantKnex();
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
+    throw new Error('No authenticated user found');
+  }
+
+  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
   if (!tenant) {
     throw new Error('Tenant context is required for resolving reconciliation report');
   }

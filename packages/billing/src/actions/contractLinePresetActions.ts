@@ -26,7 +26,8 @@ export async function getContractLinePresets(): Promise<IContractLinePreset[]> {
             throw new Error('No authenticated user found');
         }
 
-        const { knex, tenant } = await createTenantKnex();
+        // Explicitly pass tenant to ensure context is set (dynamic imports can lose AsyncLocalStorage context)
+        const { knex, tenant } = await createTenantKnex(currentUser?.tenant);
         if (!tenant) {
             throw new Error("tenant context not found");
         }
@@ -56,7 +57,7 @@ export async function getContractLinePresetById(presetId: string): Promise<ICont
             throw new Error('No authenticated user found');
         }
 
-        const { knex, tenant } = await createTenantKnex();
+        const { knex, tenant } = await createTenantKnex(currentUser?.tenant);
         if (!tenant) {
             throw new Error("tenant context not found");
         }
@@ -90,7 +91,7 @@ export async function createContractLinePreset(
             throw new Error('No authenticated user found');
         }
 
-        const { knex, tenant } = await createTenantKnex();
+        const { knex, tenant } = await createTenantKnex(currentUser.tenant);
         if (!tenant) {
             throw new Error("tenant context not found");
         }
@@ -133,7 +134,7 @@ export async function updateContractLinePreset(
             throw new Error('No authenticated user found');
         }
 
-        const { knex, tenant } = await createTenantKnex();
+        const { knex, tenant } = await createTenantKnex(currentUser.tenant);
         if (!tenant) {
             throw new Error("tenant context not found");
         }
@@ -182,7 +183,7 @@ export async function deleteContractLinePreset(presetId: string): Promise<void> 
             throw new Error('No authenticated user found');
         }
 
-        const { knex, tenant } = await createTenantKnex();
+        const { knex, tenant } = await createTenantKnex(currentUser.tenant);
         if (!tenant) {
             throw new Error("tenant context not found");
         }
@@ -214,7 +215,7 @@ export async function getContractLinePresetServices(presetId: string): Promise<I
             throw new Error('No authenticated user found');
         }
 
-        const { knex, tenant } = await createTenantKnex();
+        const { knex, tenant } = await createTenantKnex(currentUser?.tenant);
         if (!tenant) {
             throw new Error("tenant context not found");
         }
@@ -249,7 +250,7 @@ export async function updateContractLinePresetServices(
             throw new Error('No authenticated user found');
         }
 
-        const { knex, tenant } = await createTenantKnex();
+        const { knex, tenant } = await createTenantKnex(currentUser.tenant);
         if (!tenant) {
             throw new Error("tenant context not found");
         }
@@ -282,7 +283,7 @@ export async function getContractLinePresetFixedConfig(presetId: string): Promis
             throw new Error('No authenticated user found');
         }
 
-        const { knex, tenant } = await createTenantKnex();
+        const { knex, tenant } = await createTenantKnex(currentUser?.tenant);
         if (!tenant) {
             throw new Error("tenant context not found");
         }
@@ -317,7 +318,7 @@ export async function updateContractLinePresetFixedConfig(
             throw new Error('No authenticated user found');
         }
 
-        const { knex, tenant } = await createTenantKnex();
+        const { knex, tenant } = await createTenantKnex(currentUser.tenant);
         if (!tenant) {
             throw new Error("tenant context not found");
         }
@@ -359,7 +360,7 @@ export async function copyPresetToContractLine(
             throw new Error('No authenticated user found');
         }
 
-        const { knex, tenant } = await createTenantKnex();
+        const { knex, tenant } = await createTenantKnex(currentUser.tenant);
         if (!tenant) {
             throw new Error("tenant context not found");
         }
@@ -631,7 +632,7 @@ export async function createCustomContractLine(
             throw new Error('No authenticated user found');
         }
 
-        const { knex, tenant } = await createTenantKnex();
+        const { knex, tenant } = await createTenantKnex(currentUser.tenant);
         if (!tenant) {
             throw new Error("tenant context not found");
         }

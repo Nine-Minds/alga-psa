@@ -6,7 +6,7 @@ import { createTenantKnex } from '@alga-psa/db';
 import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { ItilStandardsService } from '../../services/itilStandardsService';
-import { getCurrentUser } from '@alga-psa/users/actions';
+import { getCurrentUser } from '@alga-psa/auth/getCurrentUser';
 
 export interface FindBoardByNameOutput {
   id: string;
@@ -17,7 +17,12 @@ export interface FindBoardByNameOutput {
 }
 
 export async function findBoardById(id: string): Promise<IBoard | undefined> {
-  const { knex: db } = await createTenantKnex();
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
+    throw new Error('User not authenticated');
+  }
+
+  const { knex: db } = await createTenantKnex(currentUser.tenant);
   try {
     return await withTransaction(db, async (trx: Knex.Transaction) => {
       const board = await Board.get(trx, id);
@@ -30,7 +35,12 @@ export async function findBoardById(id: string): Promise<IBoard | undefined> {
 }
 
 export async function getAllBoards(includeAll: boolean = true): Promise<IBoard[]> {
-  const { knex: db, tenant } = await createTenantKnex();
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
+    throw new Error('User not authenticated');
+  }
+
+  const { knex: db, tenant } = await createTenantKnex(currentUser.tenant);
   try {
     return await withTransaction(db, async (trx: Knex.Transaction) => {
       const boards = await trx('boards')
@@ -47,14 +57,14 @@ export async function getAllBoards(includeAll: boolean = true): Promise<IBoard[]
 }
 
 export async function createBoard(boardData: Omit<IBoard, 'board_id' | 'tenant'>): Promise<IBoard> {
-  const { knex: db, tenant } = await createTenantKnex();
-  if (!tenant) {
-    throw new Error('Tenant not found');
-  }
-
   const user = await getCurrentUser();
   if (!user) {
     throw new Error('User not authenticated');
+  }
+
+  const { knex: db, tenant } = await createTenantKnex(user.tenant);
+  if (!tenant) {
+    throw new Error('Tenant not found');
   }
 
   try {
@@ -145,7 +155,12 @@ export async function deleteBoard(
   force = false,
   cleanupItil = false
 ): Promise<DeleteBoardResult> {
-  const { knex: db, tenant } = await createTenantKnex();
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
+    return { success: false, code: 'NO_AUTH', message: 'User not authenticated' };
+  }
+
+  const { knex: db, tenant } = await createTenantKnex(currentUser.tenant);
   if (!tenant) {
     return { success: false, code: 'NO_TENANT', message: 'No tenant context' };
   }
@@ -330,14 +345,14 @@ export async function deleteBoardLegacy(boardId: string): Promise<boolean> {
 }
 
 export async function updateBoard(boardId: string, boardData: Partial<Omit<IBoard, 'tenant'>>): Promise<IBoard> {
-  const { knex: db, tenant } = await createTenantKnex();
-  if (!tenant) {
-    throw new Error('Tenant not found');
-  }
-
   const user = await getCurrentUser();
   if (!user) {
     throw new Error('User not authenticated');
+  }
+
+  const { knex: db, tenant } = await createTenantKnex(user.tenant);
+  if (!tenant) {
+    throw new Error('Tenant not found');
   }
 
   try {
@@ -410,7 +425,12 @@ export async function updateBoard(boardId: string, boardData: Partial<Omit<IBoar
  * This action searches for existing boards by name
  */
 export async function findBoardByName(name: string): Promise<FindBoardByNameOutput | null> {
-  const { knex: db, tenant } = await createTenantKnex();
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
+    throw new Error('User not authenticated');
+  }
+
+  const { knex: db, tenant } = await createTenantKnex(currentUser.tenant);
   if (!tenant) {
     throw new Error('Tenant not found');
   }

@@ -162,7 +162,7 @@ export async function getPurchaseOrderOverageForBillingCycle(
     throw new Error('Unauthorized: No authenticated user found');
   }
 
-  const { knex, tenant } = await createTenantKnex();
+  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
   if (!tenant) {
     throw new Error('No tenant found');
   }
@@ -308,7 +308,7 @@ async function adaptToWasmViewModel(
   let tenantClientInfo: { name: any; address: any; logoUrl: string | null } | null = null;
   let poNumber: string | null = null;
   if (tenant) {
-    const { knex } = await createTenantKnex(); // Get knex instance again if needed
+    const { knex } = await createTenantKnex(tenant); // Get knex instance again if needed
     const tenantClientLink = await withTransaction(knex, async (trx: Knex.Transaction) => {
       return await trx('tenant_companies')
         .where({ tenant: tenant, is_default: true })
@@ -389,7 +389,7 @@ export async function previewInvoice(billing_cycle_id: string): Promise<PreviewI
     };
   }
 
-  const { knex, tenant } = await createTenantKnex();
+  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
 
   if (!tenant) {
     return {
@@ -605,7 +605,7 @@ export async function generateInvoice(
   }
 
   // Get billing cycle details
-  const { knex, tenant } = await createTenantKnex();
+  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
 
   if (!tenant) {
     throw new Error('No tenant found');
@@ -815,7 +815,7 @@ export async function generateInvoiceNumber(_trx?: Knex.Transaction): Promise<st
     }
   } else {
     // If no transaction provided, create a temporary one for permission check
-    const { knex } = await createTenantKnex();
+    const { knex } = await createTenantKnex(currentUser.tenant);
     await withTransaction(knex, async (trx: Knex.Transaction) => {
       if (!await hasPermissionAsync(currentUser, 'invoice', 'create') && !await hasPermissionAsync(currentUser, 'invoice', 'generate')) {
         throw new Error('Permission denied: Cannot generate invoice numbers');
@@ -823,7 +823,7 @@ export async function generateInvoiceNumber(_trx?: Knex.Transaction): Promise<st
     });
   }
 
-  const { knex } = await createTenantKnex();
+  const { knex } = await createTenantKnex(currentUser.tenant);
   const tenant = await requireTenantId(_trx ?? knex);
   return SharedNumberingService.getNextNumber('INVOICE', {
     knex: _trx ?? knex,
@@ -837,7 +837,7 @@ export async function generateInvoicePDF(invoiceId: string): Promise<{ file_id: 
     throw new Error('Unauthorized: No authenticated user found');
   }
 
-  const { knex, tenant } = await createTenantKnex();
+  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
   if (!tenant) {
     throw new Error('No tenant found');
   }
@@ -879,7 +879,7 @@ export async function downloadInvoicePDF(invoiceId: string): Promise<{ pdfData: 
       throw new Error('Unauthorized: No authenticated user found');
     }
 
-    const { knex, tenant } = await createTenantKnex();
+    const { knex, tenant } = await createTenantKnex(currentUser.tenant);
     if (!tenant) {
       throw new Error('No tenant found');
     }
@@ -942,7 +942,7 @@ export async function createInvoiceFromBillingResult(
     throw new Error('Permission denied: User ID mismatch');
   }
 
-  const { knex, tenant } = await createTenantKnex();
+  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
   if (!tenant) {
     throw new Error('No tenant found');
   }

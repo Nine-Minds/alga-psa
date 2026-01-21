@@ -40,7 +40,7 @@ export async function createTemplateFromWizard(data: TemplateWizardData): Promis
     throw new Error('Template name is required');
   }
 
-  const { knex, tenant } = await createTenantKnex();
+  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
 
   return await withTransaction(knex, async (trx: Knex.Transaction) => {
     await checkPermission(currentUser, 'project', 'create', trx);
@@ -214,7 +214,7 @@ export async function updateTemplateFromEditor(
     throw new Error('Template name is required');
   }
 
-  const { knex, tenant } = await createTenantKnex();
+  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
 
   return await withTransaction(knex, async (trx: Knex.Transaction) => {
     await checkPermission(currentUser, 'project', 'update', trx);
@@ -395,7 +395,7 @@ export async function saveTemplateAsNew(
     throw new Error('New template name is required');
   }
 
-  const { knex, tenant } = await createTenantKnex();
+  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
 
   return await withTransaction(knex, async (trx: Knex.Transaction) => {
     await checkPermission(currentUser, 'project', 'create', trx);

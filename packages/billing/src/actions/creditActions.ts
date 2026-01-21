@@ -15,12 +15,17 @@ import { getCurrentUserAsync, hasPermissionAsync, getSessionAsync, getAnalyticsA
 
 
 async function calculateNewBalance(
-    clientId: string, 
+    clientId: string,
     changeAmount: number,
     trx?: Knex.Transaction
 ): Promise<number> {
-    const { knex, tenant } = await createTenantKnex();
-    
+    const currentUser = await getCurrentUserAsync();
+    if (!currentUser) {
+        throw new Error('No authenticated user found');
+    }
+
+    const { knex, tenant } = await createTenantKnex(currentUser.tenant);
+
     if (trx) {
         const [client] = await trx('clients')
             .where({ client_id: clientId, tenant })
@@ -56,7 +61,7 @@ export async function validateCreditBalance(
         throw new Error('No authenticated user found');
     }
 
-    const { knex, tenant } = await createTenantKnex();
+    const { knex, tenant } = await createTenantKnex(currentUser.tenant);
     if (!tenant) {
         throw new Error('Tenant context is required for credit balance validation');
     }
@@ -194,7 +199,7 @@ export async function createPrepaymentInvoice(
         throw new Error('Permission denied: Cannot create prepayment invoices or issue credits');
     }
 
-    const { knex, tenant } = await createTenantKnex();
+    const { knex, tenant } = await createTenantKnex(currentUser.tenant);
     if (!tenant) {
         throw new Error('No tenant found');
     }
@@ -437,7 +442,7 @@ export async function applyCreditToInvoice(
         throw new Error('Permission denied: Cannot apply credits to invoices');
     }
 
-    const { knex, tenant } = await createTenantKnex();
+    const { knex, tenant } = await createTenantKnex(currentUser.tenant);
     if (!tenant) throw new Error('No tenant found');
     
     await withTransaction(knex, async (trx: Knex.Transaction) => {
@@ -677,8 +682,8 @@ export async function getCreditHistory(
         throw new Error('Permission denied: Cannot read credit history');
     }
 
-    const { knex, tenant } = await createTenantKnex();
-    
+    const { knex, tenant } = await createTenantKnex(currentUser.tenant);
+
     return await withTransaction(knex, async (trx: Knex.Transaction) => {
         const query = trx('transactions')
             .where({
@@ -729,7 +734,7 @@ export async function listClientCredits(
         throw new Error('Permission denied: Cannot read client credits');
     }
 
-    const { knex, tenant } = await createTenantKnex();
+    const { knex, tenant } = await createTenantKnex(currentUser.tenant);
     if (!tenant) throw new Error('No tenant found');
 
     // Calculate offset for pagination
@@ -826,7 +831,7 @@ export async function getCreditDetails(creditId: string): Promise<{
         throw new Error('Permission denied: Cannot read credit details');
     }
 
-    const { knex, tenant } = await createTenantKnex();
+    const { knex, tenant } = await createTenantKnex(currentUser.tenant);
     if (!tenant) throw new Error('No tenant found');
 
     return await withTransaction(knex, async (trx: Knex.Transaction) => {
@@ -902,7 +907,7 @@ export async function updateCreditExpiration(
         throw new Error('Permission denied: Cannot update credit expiration dates');
     }
 
-    const { knex, tenant } = await createTenantKnex();
+    const { knex, tenant } = await createTenantKnex(currentUser.tenant);
     if (!tenant) throw new Error('No tenant found');
 
     return await withTransaction(knex, async (trx: Knex.Transaction) => {
@@ -1005,7 +1010,7 @@ export async function manuallyExpireCredit(
         throw new Error('Permission denied: Cannot manually expire credits');
     }
 
-    const { knex, tenant } = await createTenantKnex();
+    const { knex, tenant } = await createTenantKnex(currentUser.tenant);
     if (!tenant) throw new Error('No tenant found');
 
     return await withTransaction(knex, async (trx: Knex.Transaction) => {
@@ -1132,7 +1137,7 @@ export async function transferCredit(
         throw new Error('Permission denied: Cannot transfer credits between clients');
     }
 
-    const { knex, tenant } = await createTenantKnex();
+    const { knex, tenant } = await createTenantKnex(currentUser.tenant);
     if (!tenant) throw new Error('No tenant found');
 
     if (amount <= 0) {

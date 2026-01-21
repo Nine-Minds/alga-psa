@@ -2,7 +2,8 @@
 
 import { createTenantKnex } from '@alga-psa/db';
 import type { IContractPricingSchedule } from '@alga-psa/types';
-import { getCurrentUserAsync, hasPermissionAsync, getSessionAsync, getAnalyticsAsync } from '../lib/authHelpers';
+import { getCurrentUser } from '@alga-psa/auth/getCurrentUser';
+import { hasPermissionAsync, getSessionAsync, getAnalyticsAsync } from '../lib/authHelpers';
 
 
 /**
@@ -13,7 +14,12 @@ import { getCurrentUserAsync, hasPermissionAsync, getSessionAsync, getAnalyticsA
 export async function getPricingSchedulesByContract(
   contractId: string
 ): Promise<IContractPricingSchedule[]> {
-  const { knex, tenant } = await createTenantKnex();
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
+    throw new Error('Unauthorized');
+  }
+
+  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
 
   if (!tenant) {
     throw new Error('Tenant not found');
@@ -38,7 +44,12 @@ export async function getPricingSchedulesByContract(
 export async function getPricingScheduleById(
   scheduleId: string
 ): Promise<IContractPricingSchedule | null> {
-  const { knex, tenant } = await createTenantKnex();
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
+    throw new Error('Unauthorized');
+  }
+
+  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
 
   if (!tenant) {
     throw new Error('Tenant not found');
@@ -90,15 +101,15 @@ function calculateEndDateFromDuration(
 export async function createPricingSchedule(
   scheduleData: Omit<IContractPricingSchedule, 'schedule_id' | 'tenant' | 'created_at' | 'updated_at' | 'created_by' | 'updated_by'>
 ): Promise<IContractPricingSchedule> {
-  const { knex, tenant } = await createTenantKnex();
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
+    throw new Error('User not authenticated');
+  }
+
+  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
 
   if (!tenant) {
     throw new Error('Tenant not found');
-  }
-
-  const currentUser = await getCurrentUserAsync();
-  if (!currentUser) {
-    throw new Error('User not authenticated');
   }
 
   // Calculate end_date from duration if provided
@@ -170,15 +181,15 @@ export async function updatePricingSchedule(
   scheduleId: string,
   scheduleData: Partial<Omit<IContractPricingSchedule, 'schedule_id' | 'tenant' | 'contract_id' | 'created_at' | 'updated_at' | 'created_by' | 'updated_by'>>
 ): Promise<IContractPricingSchedule> {
-  const { knex, tenant } = await createTenantKnex();
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
+    throw new Error('User not authenticated');
+  }
+
+  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
 
   if (!tenant) {
     throw new Error('Tenant not found');
-  }
-
-  const currentUser = await getCurrentUserAsync();
-  if (!currentUser) {
-    throw new Error('User not authenticated');
   }
 
   // Get existing schedule
@@ -256,7 +267,12 @@ export async function updatePricingSchedule(
  * @param scheduleId The schedule ID
  */
 export async function deletePricingSchedule(scheduleId: string): Promise<void> {
-  const { knex, tenant } = await createTenantKnex();
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
+    throw new Error('Unauthorized');
+  }
+
+  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
 
   if (!tenant) {
     throw new Error('Tenant not found');
@@ -280,7 +296,12 @@ export async function getActivePricingScheduleByContract(
   contractId: string,
   date?: Date
 ): Promise<IContractPricingSchedule | null> {
-  const { knex, tenant } = await createTenantKnex();
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
+    throw new Error('Unauthorized');
+  }
+
+  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
 
   if (!tenant) {
     throw new Error('Tenant not found');

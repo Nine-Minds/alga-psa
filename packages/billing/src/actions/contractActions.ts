@@ -256,7 +256,7 @@ export async function updateContractLineAssociation(
     throw new Error('Unauthorized');
   }
 
-  const { knex, tenant } = await createTenantKnex();
+  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
   if (!tenant) {
     throw new Error('tenant context not found');
   }
@@ -281,7 +281,7 @@ export async function updateContractLineRate(
     throw new Error('Unauthorized');
   }
 
-  const { knex, tenant } = await createTenantKnex();
+  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
   if (!tenant) {
     throw new Error('tenant context not found');
   }
@@ -298,7 +298,11 @@ export async function updateContractLineRate(
 
 export async function isContractLineAttached(contractId: string, contractLineId: string): Promise<boolean> {
   await ensureSession();
-  const { knex, tenant } = await createTenantKnex();
+  const currentUser = await getCurrentUserAsync();
+  if (!currentUser) {
+    throw new Error('Unauthorized');
+  }
+  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
   if (!tenant) {
     throw new Error('tenant context not found');
   }
@@ -314,7 +318,7 @@ export async function createContract(
     throw new Error('Unauthorized');
   }
 
-  const { knex, tenant } = await createTenantKnex();
+  const { knex, tenant } = await createTenantKnex(requireTenantIdFromSession(session));
   if (!tenant) {
     throw new Error("tenant context not found");
   }
@@ -340,7 +344,7 @@ export async function updateContract(
     throw new Error('Unauthorized');
   }
 
-  const { knex, tenant } = await createTenantKnex();
+  const { knex, tenant } = await createTenantKnex(requireTenantIdFromSession(session));
   if (!tenant) {
     throw new Error("tenant context not found");
   }
@@ -452,7 +456,7 @@ export async function checkContractHasInvoices(contractId: string): Promise<bool
     throw new Error('Unauthorized');
   }
 
-  const { knex, tenant } = await createTenantKnex();
+  const { knex, tenant } = await createTenantKnex(requireTenantIdFromSession(session));
   if (!tenant) {
     throw new Error("tenant context not found");
   }
@@ -466,7 +470,7 @@ export async function deleteContract(contractId: string): Promise<void> {
     throw new Error('Unauthorized');
   }
 
-  const { knex, tenant } = await createTenantKnex();
+  const { knex, tenant } = await createTenantKnex(requireTenantIdFromSession(session));
   if (!tenant) {
     throw new Error("tenant context not found");
   }
@@ -495,7 +499,7 @@ export async function getContractLinesForContract(contractId: string): Promise<a
   }
 
   try {
-    const { knex, tenant } = await createTenantKnex();
+    const { knex, tenant } = await createTenantKnex(requireTenantIdFromSession(session));
     if (!tenant) {
       throw new Error("tenant context not found");
     }
@@ -527,7 +531,7 @@ export async function getContractSummary(contractId: string): Promise<IContractS
   }
 
   try {
-    const { knex, tenant } = await createTenantKnex();
+    const { knex, tenant } = await createTenantKnex(requireTenantIdFromSession(session));
     if (!tenant) {
       throw new Error('tenant context not found');
     }
@@ -629,7 +633,7 @@ export async function checkClientHasActiveContract(clientId: string, excludeCont
     throw new Error('Unauthorized');
   }
 
-  const { knex, tenant } = await createTenantKnex();
+  const { knex, tenant } = await createTenantKnex(requireTenantIdFromSession(session));
   if (!tenant) {
     throw new Error("tenant context not found");
   }
@@ -649,7 +653,7 @@ export async function getContractAssignments(contractId: string): Promise<IContr
   }
 
   try {
-    const { knex, tenant } = await createTenantKnex();
+    const { knex, tenant } = await createTenantKnex(requireTenantIdFromSession(session));
     if (!tenant) {
       throw new Error('tenant context not found');
     }
@@ -754,7 +758,7 @@ export async function getContractOverview(contractId: string): Promise<IContract
   }
 
   try {
-    const { knex, tenant } = await createTenantKnex();
+    const { knex, tenant } = await createTenantKnex(requireTenantIdFromSession(session));
     if (!tenant) {
       throw new Error('tenant context not found');
     }

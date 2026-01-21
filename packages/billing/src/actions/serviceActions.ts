@@ -56,7 +56,11 @@ export type CatalogPickerItem = Pick<
 export async function searchServiceCatalogForPicker(
   options: CatalogPickerSearchOptions = {}
 ): Promise<{ items: CatalogPickerItem[]; totalCount: number }> {
-  const { knex: db, tenant } = await createTenantKnex();
+  const currentUser = await getCurrentUserAsync();
+  if (!currentUser) {
+    throw new Error('Unauthorized');
+  }
+  const { knex: db, tenant } = await createTenantKnex(currentUser.tenant);
 
   const page = options.page ?? 1;
   const limit = options.limit ?? 10;
@@ -122,7 +126,11 @@ export async function getServices(
   options: ServiceListOptions = {}
 ): Promise<PaginatedServicesResponse> {
     try {
-        const { knex: db, tenant } = await createTenantKnex();
+        const currentUser = await getCurrentUserAsync();
+        if (!currentUser) {
+          throw new Error('Unauthorized');
+        }
+        const { knex: db, tenant } = await createTenantKnex(currentUser.tenant);
         return withTransaction(db, async (trx: Knex.Transaction) => {
 
         // Calculate pagination offset
@@ -298,7 +306,11 @@ export async function getServices(
 }
 
 export async function getServiceById(serviceId: string): Promise<IService | null> {
-    const { knex: db } = await createTenantKnex();
+    const currentUser = await getCurrentUserAsync();
+    if (!currentUser) {
+      throw new Error('Unauthorized');
+    }
+    const { knex: db } = await createTenantKnex(currentUser.tenant);
     try {
         return await withTransaction(db, async (trx: Knex.Transaction) => {
             const service = await Service.getById(trx, serviceId)
@@ -337,7 +349,7 @@ export async function createService(
             throw new Error('custom_service_type_id is required to create a service.');
         }
 
-        const { knex: db, tenant } = await createTenantKnex();
+        const { knex: db, tenant } = await createTenantKnex(currentUser.tenant);
         return withTransaction(db, async (trx: Knex.Transaction) => {
         const canCreate = await hasPermissionAsync(currentUser, 'service', 'create');
         if (!canCreate) {
@@ -393,7 +405,7 @@ export async function updateService(
     if (!currentUser) {
       throw new Error('Unauthorized');
     }
-    const { knex: db } = await createTenantKnex();
+    const { knex: db } = await createTenantKnex(currentUser.tenant);
     try {
         return await withTransaction(db, async (trx: Knex.Transaction) => {
             const canUpdate = await hasPermissionAsync(currentUser, 'service', 'update');
@@ -420,7 +432,7 @@ export async function deleteService(serviceId: string): Promise<void> {
     if (!currentUser) {
       throw new Error('Unauthorized');
     }
-    const { knex: db } = await createTenantKnex();
+    const { knex: db } = await createTenantKnex(currentUser.tenant);
     try {
         await withTransaction(db, async (trx: Knex.Transaction) => {
             const canDelete = await hasPermissionAsync(currentUser, 'service', 'delete');
@@ -454,7 +466,7 @@ export async function checkProductCanBeDeleted(serviceId: string): Promise<Produ
     if (!currentUser) {
       throw new Error('Unauthorized');
     }
-    const { knex: db, tenant } = await createTenantKnex();
+    const { knex: db, tenant } = await createTenantKnex(currentUser.tenant);
 
     try {
         return await withTransaction(db, async (trx: Knex.Transaction) => {
@@ -578,7 +590,7 @@ export async function deleteProductPermanently(serviceId: string): Promise<void>
     if (!currentUser) {
       throw new Error('Unauthorized');
     }
-    const { knex: db, tenant } = await createTenantKnex();
+    const { knex: db, tenant } = await createTenantKnex(currentUser.tenant);
 
     try {
         await withTransaction(db, async (trx: Knex.Transaction) => {
@@ -639,7 +651,11 @@ export async function deleteProductPermanently(serviceId: string): Promise<void>
 }
 
 export async function getServicesByCategory(categoryId: string): Promise<IService[]> {
-    const { knex: db } = await createTenantKnex();
+    const currentUser = await getCurrentUserAsync();
+    if (!currentUser) {
+      throw new Error('Unauthorized');
+    }
+    const { knex: db } = await createTenantKnex(currentUser.tenant);
     try {
         return await withTransaction(db, async (trx: Knex.Transaction) => {
             const services = await Service.getByCategoryId(trx, categoryId)
@@ -654,8 +670,14 @@ export async function getServicesByCategory(categoryId: string): Promise<IServic
 // New action to get combined service types for UI selection
 export async function getServiceTypesForSelection(): Promise<{ id: string; name: string; billing_method: 'fixed' | 'hourly' | 'per_unit' | 'usage'; is_standard: boolean }[]> {
    try {
-      // ServiceTypeModel is imported at the top of the file
-       const { knex: db } = await createTenantKnex();
+       // Get current user to establish tenant context from session
+       const currentUser = await getCurrentUserAsync();
+       if (!currentUser) {
+           throw new Error('Unauthorized');
+       }
+
+       // Explicitly pass tenant to ensure context is set (dynamic imports can lose AsyncLocalStorage context)
+       const { knex: db } = await createTenantKnex(currentUser.tenant);
        const serviceTypes = await withTransaction(db, async (trx: Knex.Transaction) => {
            return await ServiceTypeModel.findAllIncludingStandard(trx);
        });
@@ -675,7 +697,11 @@ export async function createServiceType(
   try {
       // ServiceTypeModel is imported at the top of the file
       // Tenant context is handled within the model method
-      const { knex: db } = await createTenantKnex();
+      const currentUser = await getCurrentUserAsync();
+      if (!currentUser) {
+        throw new Error('Unauthorized');
+      }
+      const { knex: db } = await createTenantKnex(currentUser.tenant);
       const newServiceType = await withTransaction(db, async (trx: Knex.Transaction) => {
           return await ServiceTypeModel.create(trx, data);
       });
@@ -695,7 +721,11 @@ export async function updateServiceType(
   try {
       // ServiceTypeModel is imported at the top of the file
       // Tenant context is handled within the model method
-      const { knex: db } = await createTenantKnex();
+      const currentUser = await getCurrentUserAsync();
+      if (!currentUser) {
+        throw new Error('Unauthorized');
+      }
+      const { knex: db } = await createTenantKnex(currentUser.tenant);
       const updatedServiceType = await withTransaction(db, async (trx: Knex.Transaction) => {
           return await ServiceTypeModel.update(trx, id, data);
       });
@@ -714,7 +744,11 @@ export async function updateServiceType(
 export async function getAllServiceTypes(): Promise<IServiceType[]> {
   try {
     // ServiceTypeModel is imported at the top of the file
-    const { knex: db } = await createTenantKnex();
+    const currentUser = await getCurrentUserAsync();
+    if (!currentUser) {
+      throw new Error('Unauthorized');
+    }
+    const { knex: db } = await createTenantKnex(currentUser.tenant);
     const serviceTypes = await withTransaction(db, async (trx: Knex.Transaction) => {
       return await ServiceTypeModel.findAll(trx);
     });
@@ -728,9 +762,13 @@ export async function getAllServiceTypes(): Promise<IServiceType[]> {
 export async function deleteServiceType(id: string): Promise<void> {
   try {
       // ServiceTypeModel is imported at the top of the file
-      
+
       // First check if the service type is in use by any services
-      const { knex: db, tenant } = await createTenantKnex();
+      const currentUser = await getCurrentUserAsync();
+      if (!currentUser) {
+        throw new Error('Unauthorized');
+      }
+      const { knex: db, tenant } = await createTenantKnex(currentUser.tenant);
       return withTransaction(db, async (trx: Knex.Transaction) => {
       
       // Check if any services are using this service type
@@ -782,7 +820,11 @@ export async function createServiceTypeInline(
   billing_method: 'fixed' | 'hourly' | 'per_unit' | 'usage' = 'usage'
 ): Promise<IServiceType> {
   try {
-    const { knex: db, tenant } = await createTenantKnex();
+    const currentUser = await getCurrentUserAsync();
+    if (!currentUser) {
+      throw new Error('Unauthorized');
+    }
+    const { knex: db, tenant } = await createTenantKnex(currentUser.tenant);
     if (!tenant) {
       throw new Error('Tenant not found for request');
     }
@@ -854,7 +896,11 @@ export async function createServiceTypeInline(
 export async function updateServiceTypeInline(id: string, name: string): Promise<IServiceType> {
   try {
     // ServiceTypeModel is imported at the top of the file
-    const { knex: db } = await createTenantKnex();
+    const currentUser = await getCurrentUserAsync();
+    if (!currentUser) {
+      throw new Error('Unauthorized');
+    }
+    const { knex: db } = await createTenantKnex(currentUser.tenant);
 
     const updatedServiceType = await withTransaction(db, async (trx: Knex.Transaction) => {
       return await ServiceTypeModel.update(trx, id, { name: name.trim() });
@@ -886,7 +932,11 @@ export async function deleteServiceTypeInline(id: string): Promise<void> {
  * Get all prices for a service
  */
 export async function getServicePrices(serviceId: string): Promise<IServicePrice[]> {
-  const { knex: db } = await createTenantKnex();
+  const currentUser = await getCurrentUserAsync();
+  if (!currentUser) {
+    throw new Error('Unauthorized');
+  }
+  const { knex: db } = await createTenantKnex(currentUser.tenant);
   try {
     return await withTransaction(db, async (trx: Knex.Transaction) => {
       return await Service.getPrices(trx, serviceId);
@@ -901,7 +951,11 @@ export async function getServicePrices(serviceId: string): Promise<IServicePrice
  * Get a specific price for a service in a given currency
  */
 export async function getServicePrice(serviceId: string, currencyCode: string): Promise<IServicePrice | null> {
-  const { knex: db } = await createTenantKnex();
+  const currentUser = await getCurrentUserAsync();
+  if (!currentUser) {
+    throw new Error('Unauthorized');
+  }
+  const { knex: db } = await createTenantKnex(currentUser.tenant);
   try {
     return await withTransaction(db, async (trx: Knex.Transaction) => {
       return await Service.getPrice(trx, serviceId, currencyCode);
@@ -924,7 +978,7 @@ export async function setServicePrice(
   if (!currentUser) {
     throw new Error('Unauthorized');
   }
-  const { knex: db } = await createTenantKnex();
+  const { knex: db } = await createTenantKnex(currentUser.tenant);
   try {
     return await withTransaction(db, async (trx: Knex.Transaction) => {
       const canUpdate = await hasPermissionAsync(currentUser, 'service', 'update');
@@ -952,7 +1006,7 @@ export async function setServicePrices(
   if (!currentUser) {
     throw new Error('Unauthorized');
   }
-  const { knex: db } = await createTenantKnex();
+  const { knex: db } = await createTenantKnex(currentUser.tenant);
   try {
     return await withTransaction(db, async (trx: Knex.Transaction) => {
       const canUpdate = await hasPermissionAsync(currentUser, 'service', 'update');
@@ -977,7 +1031,7 @@ export async function removeServicePrice(serviceId: string, currencyCode: string
   if (!currentUser) {
     throw new Error('Unauthorized');
   }
-  const { knex: db } = await createTenantKnex();
+  const { knex: db } = await createTenantKnex(currentUser.tenant);
   try {
     return await withTransaction(db, async (trx: Knex.Transaction) => {
       const canUpdate = await hasPermissionAsync(currentUser, 'service', 'update');
@@ -1002,7 +1056,11 @@ export async function validateServiceCurrencyPrices(
   serviceIds: string[],
   requiredCurrency: string
 ): Promise<{ valid: boolean; missingServices: Array<{ service_id: string; service_name: string }> }> {
-  const { knex: db } = await createTenantKnex();
+  const currentUser = await getCurrentUserAsync();
+  if (!currentUser) {
+    throw new Error('Unauthorized');
+  }
+  const { knex: db } = await createTenantKnex(currentUser.tenant);
   try {
     return await withTransaction(db, async (trx: Knex.Transaction) => {
       return await Service.validateCurrencyPrices(trx, serviceIds, requiredCurrency);

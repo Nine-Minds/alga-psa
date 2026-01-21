@@ -80,6 +80,8 @@
       "@alga-psa/integrations/*": ["packages/integrations/src/*"],
       "@alga-psa/client-portal": ["packages/client-portal/src"],
       "@alga-psa/client-portal/*": ["packages/client-portal/src/*"],
+      "@alga-psa/portal-shared": ["packages/portal-shared/src"],
+      "@alga-psa/portal-shared/*": ["packages/portal-shared/src/*"],
       "@alga-psa/notifications": ["packages/notifications/src"],
       "@alga-psa/notifications/*": ["packages/notifications/src/*"],
       "@alga-psa/reporting": ["packages/reporting/src"],

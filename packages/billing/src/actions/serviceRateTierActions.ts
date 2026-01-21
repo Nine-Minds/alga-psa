@@ -6,13 +6,19 @@ import type { IServiceRateTier, ICreateServiceRateTier, IUpdateServiceRateTier }
 import { withTransaction } from '@alga-psa/db'
 import { createTenantKnex } from '@alga-psa/db'
 import { Knex } from 'knex'
+import { getCurrentUser } from '@alga-psa/auth/getCurrentUser';
 
 /**
  * Get all rate tiers for a specific service
  */
 export async function getServiceRateTiers(serviceId: string): Promise<IServiceRateTier[]> {
   try {
-    const { knex } = await createTenantKnex()
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+      throw new Error('Unauthorized');
+    }
+
+    const { knex } = await createTenantKnex(currentUser.tenant)
     const tiers = await withTransaction(knex, async (trx) => {
       return await ServiceRateTier.getByServiceId(trx, serviceId)
     })
@@ -28,7 +34,12 @@ export async function getServiceRateTiers(serviceId: string): Promise<IServiceRa
  */
 export async function getServiceRateTierById(tierId: string): Promise<IServiceRateTier | null> {
   try {
-    const { knex } = await createTenantKnex()
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+      throw new Error('Unauthorized');
+    }
+
+    const { knex } = await createTenantKnex(currentUser.tenant)
     const tier = await withTransaction(knex, async (trx) => {
       return await ServiceRateTier.getById(trx, tierId)
     })
@@ -45,7 +56,12 @@ export async function getServiceRateTierById(tierId: string): Promise<IServiceRa
 export async function createServiceRateTier(
   tierData: ICreateServiceRateTier
 ): Promise<IServiceRateTier> {
-  const { knex: db } = await createTenantKnex()
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
+    throw new Error('Unauthorized');
+  }
+
+  const { knex: db } = await createTenantKnex(currentUser.tenant)
   return withTransaction(db, async (trx: Knex.Transaction) => {
     try {
       console.log('[serviceRateTierActions] createServiceRateTier called with data:', tierData)
@@ -67,7 +83,12 @@ export async function updateServiceRateTier(
   tierId: string,
   tierData: IUpdateServiceRateTier
 ): Promise<IServiceRateTier | null> {
-  const { knex: db } = await createTenantKnex()
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
+    throw new Error('Unauthorized');
+  }
+
+  const { knex: db } = await createTenantKnex(currentUser.tenant)
   return withTransaction(db, async (trx: Knex.Transaction) => {
     try {
       const updatedTier = await ServiceRateTier.update(trx, tierId, tierData)
@@ -89,7 +110,12 @@ export async function updateServiceRateTier(
  * Delete a rate tier
  */
 export async function deleteServiceRateTier(tierId: string): Promise<void> {
-  const { knex: db } = await createTenantKnex()
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
+    throw new Error('Unauthorized');
+  }
+
+  const { knex: db } = await createTenantKnex(currentUser.tenant)
   return withTransaction(db, async (trx: Knex.Transaction) => {
     try {
       const success = await ServiceRateTier.delete(trx, tierId)
@@ -109,7 +135,12 @@ export async function deleteServiceRateTier(tierId: string): Promise<void> {
  * Delete all rate tiers for a service
  */
 export async function deleteServiceRateTiersByServiceId(serviceId: string): Promise<void> {
-  const { knex: db } = await createTenantKnex()
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
+    throw new Error('Unauthorized');
+  }
+
+  const { knex: db } = await createTenantKnex(currentUser.tenant)
   return withTransaction(db, async (trx: Knex.Transaction) => {
     try {
       await ServiceRateTier.deleteByServiceId(trx, serviceId)
@@ -129,7 +160,12 @@ export async function updateServiceRateTiers(
   serviceId: string,
   tiers: Omit<ICreateServiceRateTier, 'service_id'>[]
 ): Promise<IServiceRateTier[]> {
-  const { knex: db } = await createTenantKnex()
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
+    throw new Error('Unauthorized');
+  }
+
+  const { knex: db } = await createTenantKnex(currentUser.tenant)
   return withTransaction(db, async (trx: Knex.Transaction) => {
     try {
       // Delete all existing tiers for this service
