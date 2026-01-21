@@ -313,6 +313,127 @@ async function getManagementTenantIdInternal(knex: Knex): Promise<string | null>
 }
 
 /**
+ * Find the customer client in the management tenant that represents a given tenant.
+ * Tries multiple lookup strategies:
+ * 1. By tenant_id property in client properties (UUID)
+ * 2. By exact client name matching tenant name
+ * 3. By finding a contact with the tenant admin's email
+ */
+async function findCustomerClientInManagementTenant(
+  knex: Knex,
+  tenantId: string,
+  managementTenantId: string,
+  log: ReturnType<typeof logger>
+): Promise<{ client_id: string; client_name: string } | null> {
+  // Strategy 1: Look for client with tenant_id in properties matching the tenantId
+  let customerClient = await knex('clients')
+    .where({ tenant: managementTenantId })
+    .whereRaw("properties->>'tenant_id' = ?", [tenantId])
+    .first();
+
+  if (customerClient) {
+    log.info('Found customer client by tenant_id property', {
+      clientId: customerClient.client_id,
+      clientName: customerClient.client_name,
+    });
+    return customerClient;
+  }
+
+  // Strategy 2: Look for client by exact name match
+  const tenant = await knex('tenants').where({ tenant: tenantId }).first();
+  if (tenant) {
+    customerClient = await knex('clients')
+      .where({ tenant: managementTenantId, client_name: tenant.client_name })
+      .first();
+
+    if (customerClient) {
+      log.info('Found customer client by name match', {
+        clientId: customerClient.client_id,
+        clientName: customerClient.client_name,
+      });
+      return customerClient;
+    }
+  }
+
+  // Strategy 3: Find by tenant admin user's email
+  // Get the admin user's email from the tenant being deleted
+  const adminUser = await knex('users')
+    .where({ tenant: tenantId })
+    .whereIn('user_id', function() {
+      this.select('user_id')
+        .from('user_roles')
+        .where({ tenant: tenantId })
+        .whereIn('role_id', function() {
+          this.select('role_id')
+            .from('roles')
+            .where({ tenant: tenantId, role_name: 'Admin' });
+        });
+    })
+    .first();
+
+  if (adminUser?.email) {
+    log.info('Trying email-based lookup', { email: adminUser.email });
+
+    // Find a contact in the management tenant with this email
+    const contact = await knex('contacts')
+      .where({ tenant: managementTenantId, email: adminUser.email })
+      .whereNotNull('client_id')
+      .first();
+
+    if (contact?.client_id) {
+      customerClient = await knex('clients')
+        .where({ tenant: managementTenantId, client_id: contact.client_id })
+        .first();
+
+      if (customerClient) {
+        log.info('Found customer client by admin email', {
+          clientId: customerClient.client_id,
+          clientName: customerClient.client_name,
+          email: adminUser.email,
+        });
+        return customerClient;
+      }
+    }
+  }
+
+  // Strategy 4: Try any user email from the tenant (fallback)
+  const anyUser = await knex('users')
+    .where({ tenant: tenantId })
+    .whereNotNull('email')
+    .first();
+
+  if (anyUser?.email) {
+    log.info('Trying email-based lookup with any user', { email: anyUser.email });
+
+    const contact = await knex('contacts')
+      .where({ tenant: managementTenantId, email: anyUser.email })
+      .whereNotNull('client_id')
+      .first();
+
+    if (contact?.client_id) {
+      customerClient = await knex('clients')
+        .where({ tenant: managementTenantId, client_id: contact.client_id })
+        .first();
+
+      if (customerClient) {
+        log.info('Found customer client by user email', {
+          clientId: customerClient.client_id,
+          clientName: customerClient.client_name,
+          email: anyUser.email,
+        });
+        return customerClient;
+      }
+    }
+  }
+
+  log.warn('No customer client found for tenant in management tenant', {
+    tenantId,
+    tenantName: tenant?.client_name,
+  });
+  return null;
+}
+
+/**
  * Validate that a tenant can be deleted.
  * CRITICAL SAFEGUARD: Prevents deletion of master/management tenant.
  */
@@ -457,45 +578,15 @@ export async function tagClientAsCanceled(
       return {};
     }
 
-    // Find the customer client in management tenant that represents this tenant
-    // Look for client with tenant_id in properties matching the tenantId
-    const customerClient = await adminKnex('clients')
-      .where({ tenant: managementTenantId })
-      .whereRaw("properties->>'tenant_id' = ?", [tenantId])
-      .first();
+    // Find the customer client using the unified lookup function
+    const customerClient = await findCustomerClientInManagementTenant(
+      adminKnex,
+      tenantId,
+      managementTenantId,
+      log
+    );
 
     if (!customerClient) {
-      // Try alternate lookup - by client name matching tenant name
-      const tenant = await adminKnex('tenants').where({ tenant: tenantId }).first();
-      if (tenant) {
-        const clientByName = await adminKnex('clients')
-          .where({ tenant: managementTenantId, client_name: tenant.client_name })
-          .first();
-
-        if (clientByName) {
-          // Found by name, use this client
-          const tagResult = await adminKnex.transaction(async (trx) => {
-            return await TagModel.createTag(
-              {
-                tag_text: 'Canceled',
-                tagged_id: clientByName.client_id,
-                tagged_type: 'client',
-                created_by: 'system',
-              },
-              managementTenantId,
-              trx
-            );
-          });
-          log.info('Client tagged as Canceled (by name lookup)', {
-            tenantId,
-            clientId: clientByName.client_id,
-            tagId: tagResult.tag_id,
-          });
-          return { tagId: tagResult.tag_id };
-        }
-      }
-
-      log.warn('No customer client found for tenant in management tenant', { tenantId });
       return {};
     }
 
@@ -546,31 +637,15 @@ export async function removeClientCanceledTag(tenantId: string): Promise<void> {
       return;
     }
 
-    // Find customer client
-    const customerClient = await adminKnex('clients')
-      .where({ tenant: managementTenantId })
-      .whereRaw("properties->>'tenant_id' = ?", [tenantId])
-      .first();
+    // Find customer client using the unified lookup function
+    const customerClient = await findCustomerClientInManagementTenant(
+      adminKnex,
+      tenantId,
+      managementTenantId,
+      log
+    );
 
     if (!customerClient) {
-      // Try by name
-      const tenant = await adminKnex('tenants').where({ tenant: tenantId }).first();
-      if (tenant) {
-        const clientByName = await adminKnex('clients')
-          .where({ tenant: managementTenantId, client_name: tenant.client_name })
-          .first();
-        if (clientByName) {
-          await adminKnex('tag_mappings')
-            .where({ tenant: managementTenantId, tagged_id: clientByName.client_id })
-            .whereIn('tag_id', function() {
-              this.select('tag_id').from('tag_definitions').where({ tenant: managementTenantId, tag_text: 'Canceled' });
-            })
-            .del();
-          log.info('Canceled tag removed from client (by name lookup)');
-          return;
-        }
-      }
-      log.warn('No customer client found for tag removal');
       return;
     }
 
@@ -616,24 +691,15 @@ export async function deactivateMasterTenantClient(
       return { clientDeactivated: false, contactsDeactivated: 0 };
     }
 
-    // Find the customer client in management tenant that represents this tenant
-    let customerClient = await adminKnex('clients')
-      .where({ tenant: managementTenantId })
-      .whereRaw("properties->>'tenant_id' = ?", [tenantId])
-      .first();
-
-    // Try alternate lookup by name if not found by properties
-    if (!customerClient) {
-      const tenant = await adminKnex('tenants').where({ tenant: tenantId }).first();
-      if (tenant) {
-        customerClient = await adminKnex('clients')
-          .where({ tenant: managementTenantId, client_name: tenant.client_name })
-          .first();
-      }
-    }
+    // Find the customer client using the unified lookup function
+    const customerClient = await findCustomerClientInManagementTenant(
+      adminKnex,
+      tenantId,
+      managementTenantId,
+      log
+    );
 
     if (!customerClient) {
-      log.warn('No customer client found for tenant in management tenant', { tenantId });
       return { clientDeactivated: false, contactsDeactivated: 0 };
     }
 
@@ -692,23 +758,15 @@ export async function reactivateMasterTenantClient(tenantId: string): Promise<vo
       return;
     }
 
-    // Find customer client
-    let customerClient = await adminKnex('clients')
-      .where({ tenant: managementTenantId })
-      .whereRaw("properties->>'tenant_id' = ?", [tenantId])
-      .first();
+    // Find customer client using the unified lookup function
+    const customerClient = await findCustomerClientInManagementTenant(
+      adminKnex,
+      tenantId,
+      managementTenantId,
+      log
+    );
 
     if (!customerClient) {
-      const tenant = await adminKnex('tenants').where({ tenant: tenantId }).first();
-      if (tenant) {
-        customerClient = await adminKnex('clients')
-          .where({ tenant: managementTenantId, client_name: tenant.client_name })
-          .first();
-      }
-    }
-
-    if (!customerClient) {
-      log.warn('No customer client found for reactivation');
       return;
     }
 
