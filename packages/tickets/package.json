@@ -45,7 +45,6 @@
     "@alga-psa/ui": "*",
     "@alga-psa/validation": "*",
     "date-fns": "^3.6.0",
-    "lucide-react": "^0.376.0",
     "zod": "^3.22.4"
   },
   "peerDependencies": {
