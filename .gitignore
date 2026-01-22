@@ -75,6 +75,7 @@ server/logs/
 # Nx cache
 .nx/
 dep-graph.json
+graph.json
 
 # IDE
 .idea/

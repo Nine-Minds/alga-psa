@@ -2,14 +2,11 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { ITag, TaggedEntityType } from '@alga-psa/types';
-import { createTag, deleteTag, getAllTags, checkTagPermissions } from '@alga-psa/tags/actions';
-import { TagList } from './TagList';
-import { TagInput } from './TagInput';
-import { TagInputInline } from './TagInputInline';
-// import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContainer';
+import { createTag, deleteTag, getAllTags } from '../actions';
+import { TagList, TagInput, TagInputInline } from '@alga-psa/ui/components/tags';
 import { toast } from 'react-hot-toast';
-import { useTags } from '../../context/TagContext';
-import { handleError } from '../../lib/errorHandling';
+import { useTags } from '../context/TagContext';
+import { handleError } from '@alga-psa/ui';
 
 interface TagManagerProps {
   id?: string; // Made optional to maintain backward compatibility
@@ -92,7 +89,7 @@ export const TagManager: React.FC<TagManagerProps> = ({
             globalTagsByText.set(key, globalT);
           }
         });
-      
+
       const updatedTags = tags.map(localTag => {
         // First try to find by exact tag_id match (for the tag that was just edited)
         const exactMatch = tagContext.tags.find(globalT => globalT.tag_id === localTag.tag_id);
@@ -104,7 +101,7 @@ export const TagManager: React.FC<TagManagerProps> = ({
             text_color: exactMatch.text_color
           };
         }
-        
+
         // For other tags, try to find a canonical version with same current text
         const key = `${localTag.tag_text}_${localTag.tagged_type}`;
         const canonicalTag = globalTagsByText.get(key);
@@ -116,10 +113,10 @@ export const TagManager: React.FC<TagManagerProps> = ({
             text_color: canonicalTag.text_color
           };
         }
-        
+
         return localTag;
       });
-      
+
       // Only update if there are actual changes
       const hasChanges = updatedTags.some((tag, index) => {
         const original = tags[index];
@@ -127,7 +124,7 @@ export const TagManager: React.FC<TagManagerProps> = ({
                tag.background_color !== original.background_color ||
                tag.text_color !== original.text_color;
       });
-      
+
       if (hasChanges) {
         setTags(updatedTags);
         onTagsChange?.(updatedTags);
@@ -145,7 +142,7 @@ export const TagManager: React.FC<TagManagerProps> = ({
       setPermissions(passedPermissions);
       return;
     }
-    
+
     // Fetch permissions from TagContext if not passed as props
     const fetchPermissions = async () => {
       if (tagContext?.getPermissions) {
@@ -167,7 +164,7 @@ export const TagManager: React.FC<TagManagerProps> = ({
         }
       }
     };
-    
+
     fetchPermissions();
   }, [passedPermissions, entityType]); // Remove tagContext?.getPermissions from dependencies
 
@@ -177,7 +174,7 @@ export const TagManager: React.FC<TagManagerProps> = ({
     const isDuplicate = tags.some(tag =>
       tag.tag_text.toLowerCase() === tagText.toLowerCase()
     );
-    
+
     if (isDuplicate) {
       toast.error(`Tag "${tagText}" already exists on this item`);
       return;
@@ -201,7 +198,7 @@ export const TagManager: React.FC<TagManagerProps> = ({
       const updatedTags = [...tags, newTag];
       setTags(updatedTags);
       onTagsChange?.(updatedTags);
-      
+
       // Skip TagContext updates to prevent circular updates
       // Global syncing is handled by the parent component through onTagsChange
       toast.success(`Tag "${tagText}" added successfully`);
@@ -217,7 +214,7 @@ export const TagManager: React.FC<TagManagerProps> = ({
       const updatedTags = tags.filter(tag => tag.tag_id !== tagId);
       setTags(updatedTags);
       onTagsChange?.(updatedTags);
-      
+
       // Skip TagContext updates to prevent circular updates
       // Global syncing is handled by the parent component through onTagsChange
     } catch (error) {
@@ -226,12 +223,12 @@ export const TagManager: React.FC<TagManagerProps> = ({
   };
 
   const handleTagUpdate = async (tagId: string, updates: { text?: string; backgroundColor?: string | null; textColor?: string | null }) => {
-    
+
     try {
       // Store original text for syncing other tags with same text
       const originalTag = tags.find(t => t.tag_id === tagId);
       const originalText = originalTag?.tag_text;
-      
+
       // For text updates, update ALL local tags with the same original text immediately
       const updatedTags = tags.map(tag => {
         if (updates.text !== undefined && tag.tag_text === originalText && tag.tagged_type === entityType) {
@@ -252,21 +249,21 @@ export const TagManager: React.FC<TagManagerProps> = ({
         }
         return tag;
       });
-      
+
       setTags(updatedTags);
       onTagsChange?.(updatedTags);
-      
+
       // Perform actual API updates through TagContext for global syncing
       // Only update TagContext if the API call is successful
       if (updates.text !== undefined && tagContext?.updateTagText) {
         await tagContext.updateTagText(tagId, updates.text);
       }
-      
+
       if ((updates.backgroundColor !== undefined || updates.textColor !== undefined) && tagContext?.updateTagColor) {
         const tag = originalTag;
         if (tag) {
           await tagContext.updateTagColor(
-            tagId, 
+            tagId,
             updates.backgroundColor !== undefined ? updates.backgroundColor : (tag.background_color ?? null),
             updates.textColor !== undefined ? updates.textColor : (tag.text_color ?? null)
           );

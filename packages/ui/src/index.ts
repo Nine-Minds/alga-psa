@@ -3,12 +3,12 @@
 // may pull in client components and cause build/runtime errors.
 // Prefer importing from specific subpaths like @alga-psa/ui/lib/utils.
 
-export { cn } from './lib/utils';
+export { cn, filterTagsByText } from './lib/utils';
 export { throwPermissionError, handleError } from './lib/errorHandling';
 export { getDateFnsLocale } from './lib/dateFnsLocale';
 export { useToast } from './hooks/use-toast';
 export { useFeatureFlag } from './hooks/useFeatureFlag';
-export { useTagPermissions } from './hooks/useTagPermissions';
+// Note: useTagPermissions has been moved to @alga-psa/tags/hooks
 export { useTenant } from './components/providers/TenantProvider';
 export { DrawerProvider, useDrawer } from './context/DrawerContext';
 

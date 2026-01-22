@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
-import { TaggedEntityType } from 'server/src/interfaces/tag.interfaces';
-import { useTags } from 'server/src/context/TagContext';
+import type { TaggedEntityType } from '@alga-psa/types';
+import { useTags } from '../context/TagContext';
 
 /**
  * Hook to pre-fetch tag permissions for specified entity types
@@ -14,7 +14,7 @@ export const useTagPermissions = (entityTypes: TaggedEntityType[]) => {
     // Only run once per component mount to avoid infinite loops
     if (hasInitialized.current) return;
     hasInitialized.current = true;
-    
+
     // Pre-fetch permissions for all entity types used on this page
     const fetchPermissions = async () => {
       try {

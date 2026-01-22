@@ -1,6 +1,6 @@
 export * from './usePagination';
 export * from './use-toast';
-export * from './useTagPermissions';
+// Note: useTagPermissions has been moved to @alga-psa/tags/hooks
 export * from './useCollapsiblePreference';
 export * from './useFeatureFlag';
 export * from './useIntervalTracking';

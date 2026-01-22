@@ -25,6 +25,11 @@
       "types": "./dist/models/index.d.ts",
       "import": "./dist/models/index.mjs",
       "require": "./dist/models/index.js"
+    },
+    "./lib": {
+      "types": "./dist/lib/index.d.ts",
+      "import": "./dist/lib/index.mjs",
+      "require": "./dist/lib/index.js"
     }
   },
   "scripts": {
@@ -35,8 +40,12 @@
     "@alga-psa/core": "*",
     "@alga-psa/db": "*",
     "@alga-psa/shared": "*",
+    "@alga-psa/tags": "*",
     "@alga-psa/types": "*",
+    "@alga-psa/ui": "*",
     "@alga-psa/validation": "*",
+    "date-fns": "^3.6.0",
+    "lucide-react": "^0.376.0",
     "zod": "^3.22.4"
   },
   "peerDependencies": {

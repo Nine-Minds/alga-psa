@@ -33,7 +33,7 @@ import ClientDetails from './ClientDetails';
 import { useAutomationIdAndRegister } from '@alga-psa/ui/ui-reflection/useAutomationIdAndRegister';
 import toast from 'react-hot-toast';
 import { handleError } from '@alga-psa/ui';
-import { useTagPermissions } from '@alga-psa/ui';
+import { useTagPermissions } from '@alga-psa/tags/hooks';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 
 const COMPANY_VIEW_MODE_SETTING = 'client_list_view_mode';

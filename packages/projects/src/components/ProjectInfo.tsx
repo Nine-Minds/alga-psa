@@ -10,7 +10,7 @@ import BackNav from '@alga-psa/ui/components/BackNav';
 import { Button } from '@alga-psa/ui/components/Button';
 import { useDrawer } from "@alga-psa/ui";
 import ProjectDetailsEdit from './ProjectDetailsEdit';
-import { TagManager } from '@alga-psa/ui/components';
+import { TagManager } from '@alga-psa/tags/components';
 import { toast } from 'react-hot-toast';
 import CreateTemplateDialog from './project-templates/CreateTemplateDialog';
 import ProjectMaterialsDrawer from './ProjectMaterialsDrawer';
