@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { getActionRegistryV2 } from '../../registries/actionRegistry';
+import { EmailProviderError } from '@alga-psa/types';
 import {
   uuidSchema,
   isoDateTimeSchema,
@@ -50,11 +51,10 @@ export function registerEmailActions(): void {
       // Use the existing email permission taxonomy (email:process).
       await requirePermission(ctx, tx, { resource: 'email', action: 'process' });
 
-      const { TenantEmailService } = await import('server/src/lib/services/TenantEmailService');
-      const { StaticTemplateProcessor } = await import('server/src/lib/services/email/templateProcessors');
-      const { EmailProviderManager } = await import('server/src/services/email/EmailProviderManager');
-      const { StorageProviderFactory } = await import('server/src/lib/storage/StorageProviderFactory');
-      const { EmailProviderError } = await import('@shared/types/email');
+      const { TenantEmailService } = await import('@/lib/services/TenantEmailService');
+      const { StaticTemplateProcessor } = await import('@/lib/services/email/templateProcessors');
+      const { EmailProviderManager } = await import('@/services/email/EmailProviderManager');
+      const { StorageProviderFactory } = await import('@/lib/storage/StorageProviderFactory');
 
       const settings = await TenantEmailService.getTenantEmailSettings(tx.tenantId, tx.trx);
       if (!settings) {
@@ -189,4 +189,3 @@ export function registerEmailActions(): void {
     })
   });
 }
-

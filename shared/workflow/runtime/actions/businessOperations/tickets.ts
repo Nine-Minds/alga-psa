@@ -660,8 +660,8 @@ export function registerTicketActions(): void {
           throwActionError(ctx, { category: 'ValidationError', code: 'VALIDATION_ERROR', message: 'Requester contact has no email address' });
         }
 
-        const { TenantEmailService } = await import('server/src/lib/services/TenantEmailService');
-        const { StaticTemplateProcessor } = await import('server/src/lib/services/email/templateProcessors');
+        const { TenantEmailService } = await import('@/lib/services/TenantEmailService');
+        const { StaticTemplateProcessor } = await import('@/lib/services/email/templateProcessors');
         const service = TenantEmailService.getInstance(tx.tenantId);
         const subject = input.email?.subject ?? `Ticket ${ticket.ticket_number ?? ''} closed`;
         const html = input.email?.html ?? `<p>Your ticket has been closed.</p><p>Resolution: ${input.resolution.code}</p>`;
@@ -1048,4 +1048,3 @@ export function registerTicketActions(): void {
     })
   });
 }
-

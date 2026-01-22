@@ -1,9 +1,9 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Dialog, DialogFooter } from 'server/src/components/ui/Dialog';
-import { Button } from 'server/src/components/ui/Button';
-import { Input } from 'server/src/components/ui/Input';
+import { Dialog, DialogFooter } from '@alga-psa/ui/components/Dialog';
+import { Button } from '@alga-psa/ui/components/Button';
+import { Input } from '@alga-psa/ui/components/Input';
 import { Calendar, Zap, MousePointer, Check } from 'lucide-react';
 
 export type WorkflowTriggerType = 'event' | 'scheduled' | 'manual';

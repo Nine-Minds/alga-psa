@@ -1,13 +1,13 @@
 'use client';
 
 import React, { useCallback, useEffect, useState } from 'react';
-import { Button } from '@/components/ui/Button';
-import { Card } from '@/components/ui/Card';
-import { Input } from '@/components/ui/Input';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/Table';
-import { Badge } from '@/components/ui/Badge';
+import { Button } from '@alga-psa/ui/components/Button';
+import { Card } from '@alga-psa/ui/components/Card';
+import { Input } from '@alga-psa/ui/components/Input';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@alga-psa/ui/components/Table';
+import { Badge } from '@alga-psa/ui/components/Badge';
 import { toast } from 'react-hot-toast';
-import { listWorkflowDeadLetterRunsAction } from 'server/src/lib/actions/workflow-runtime-v2-actions';
+import { listWorkflowDeadLetterRunsAction } from '@/lib/actions/workflow-runtime-v2-actions';
 import WorkflowRunDetails from './WorkflowRunDetails';
 
 type DeadLetterRun = {

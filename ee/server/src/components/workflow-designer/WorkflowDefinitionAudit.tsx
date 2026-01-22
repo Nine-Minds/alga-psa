@@ -1,14 +1,14 @@
 'use client';
 
 import React, { useCallback, useEffect, useState } from 'react';
-import { Button } from '@/components/ui/Button';
-import { Card } from '@/components/ui/Card';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/Table';
+import { Button } from '@alga-psa/ui/components/Button';
+import { Card } from '@alga-psa/ui/components/Card';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@alga-psa/ui/components/Table';
 import { toast } from 'react-hot-toast';
 import {
   exportWorkflowAuditLogsAction,
   listWorkflowAuditLogsAction
-} from 'server/src/lib/actions/workflow-runtime-v2-actions';
+} from '@/lib/actions/workflow-runtime-v2-actions';
 
 type WorkflowAuditLogRecord = {
   audit_id: string;

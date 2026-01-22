@@ -318,7 +318,7 @@ export async function attachDocumentToTicket(
       throwActionError(ctx, { category: 'ValidationError', code: 'VALIDATION_ERROR', message: 'Attachment mime_type not allowed' });
     }
 
-    const { StorageProviderFactory, generateStoragePath } = await import('server/src/lib/storage/StorageProviderFactory');
+    const { StorageProviderFactory, generateStoragePath } = await import('@/lib/storage/StorageProviderFactory');
     const provider = await StorageProviderFactory.createProvider();
     const filename = input.filename ?? new URL(input.source.url).pathname.split('/').filter(Boolean).pop() ?? 'attachment.bin';
     const storagePath = generateStoragePath(tx.tenantId, '', filename);
@@ -406,4 +406,3 @@ export function actionProvidedKey(input: { idempotency_key?: string | null }, ct
   if (input.idempotency_key && String(input.idempotency_key).trim()) return String(input.idempotency_key).trim();
   return `run:${ctx.runId}:${ctx.stepPath}`;
 }
-

@@ -357,7 +357,7 @@ const nextConfig = {
         ? path.join(__dirname, '../packages/client-portal/src/domain-settings/ee/entry.tsx')
         : path.join(__dirname, '../packages/client-portal/src/domain-settings/oss/entry.tsx'),
       '@alga-psa/workflows/entry': isEE
-        ? path.join(__dirname, '../packages/workflows/src/ee/entry.ts')
+        ? path.join(__dirname, '../packages/workflows/src/ee/entry.tsx')
         : path.join(__dirname, '../packages/workflows/src/oss/entry.tsx'),
       '@product/billing/entry': isEE
         ? path.join(__dirname, '../packages/product-billing/ee/entry.tsx')

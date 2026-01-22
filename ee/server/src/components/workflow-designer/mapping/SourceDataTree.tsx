@@ -18,8 +18,8 @@ import {
   PinOff,
   GripVertical
 } from 'lucide-react';
-import { Input } from '@/components/ui/Input';
-import { Badge } from '@/components/ui/Badge';
+import { Input } from '@alga-psa/ui/components/Input';
+import { Badge } from '@alga-psa/ui/components/Badge';
 import {
   TypeCompatibility,
   getTypeCompatibility,

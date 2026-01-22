@@ -2,17 +2,17 @@
 
 import { z } from 'zod';
 import { v4 as uuidv4 } from 'uuid';
-import { createTenantKnex } from 'server/src/lib/db';
-import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
-import { hasPermission } from 'server/src/lib/auth/rbac';
-import { EventCatalogModel } from 'server/src/models/eventCatalog';
+import { createTenantKnex } from '@/lib/db';
+import { getCurrentUser } from '@/lib/actions/user-actions/userActions';
+import { hasPermission } from '@/lib/auth/rbac';
+import { EventCatalogModel } from '@/models/eventCatalog';
 import { getSchemaRegistry } from '@shared/workflow/runtime';
 import { initializeWorkflowRuntimeV2 } from '@shared/workflow/runtime/init';
 import WorkflowDefinitionModelV2 from '@shared/workflow/persistence/workflowDefinitionModelV2';
 import WorkflowDefinitionVersionModelV2 from '@shared/workflow/persistence/workflowDefinitionVersionModelV2';
-import { auditLog } from 'server/src/lib/logging/auditLog';
-import { submitWorkflowEventAction, createWorkflowDefinitionAction, publishWorkflowDefinitionAction } from 'server/src/lib/actions/workflow-runtime-v2-actions';
-import { createEventCatalogEntry } from 'server/src/lib/actions/event-catalog-actions';
+import { auditLog } from '@/lib/logging/auditLog';
+import { submitWorkflowEventAction, createWorkflowDefinitionAction, publishWorkflowDefinitionAction } from '@/lib/actions/workflow-runtime-v2-actions';
+import { createEventCatalogEntry } from '@alga-psa/workflows/actions';
 
 type PermissionLevel = 'read' | 'manage' | 'publish' | 'admin';
 

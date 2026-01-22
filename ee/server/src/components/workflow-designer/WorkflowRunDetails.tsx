@@ -4,16 +4,16 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { AlertTriangle, Play, StopCircle, RotateCcw, Repeat, RefreshCw } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 
-import { Badge } from '@/components/ui/Badge';
-import { Button } from '@/components/ui/Button';
-import { Card } from '@/components/ui/Card';
-import CustomSelect, { SelectOption } from '@/components/ui/CustomSelect';
-import { ConfirmationDialog } from '@/components/ui/ConfirmationDialog';
-import { Input } from '@/components/ui/Input';
-import { Switch } from '@/components/ui/Switch';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/Tabs';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/Table';
-import { TextArea } from '@/components/ui/TextArea';
+import { Badge } from '@alga-psa/ui/components/Badge';
+import { Button } from '@alga-psa/ui/components/Button';
+import { Card } from '@alga-psa/ui/components/Card';
+import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect';
+import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
+import { Input } from '@alga-psa/ui/components/Input';
+import { Switch } from '@alga-psa/ui/components/Switch';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@alga-psa/ui/components/Tabs';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@alga-psa/ui/components/Table';
+import { TextArea } from '@alga-psa/ui/components/TextArea';
 import {
   cancelWorkflowRunAction,
   exportWorkflowAuditLogsAction,
@@ -28,7 +28,7 @@ import {
   replayWorkflowRunAction,
   resumeWorkflowRunAction,
   retryWorkflowRunAction
-} from 'server/src/lib/actions/workflow-runtime-v2-actions';
+} from '@/lib/actions/workflow-runtime-v2-actions';
 
 import type { WorkflowDefinition, Step, IfBlock, ForEachBlock, TryCatchBlock } from '@shared/workflow/runtime';
 import { pathDepth } from '@shared/workflow/runtime/utils/nodePathUtils';

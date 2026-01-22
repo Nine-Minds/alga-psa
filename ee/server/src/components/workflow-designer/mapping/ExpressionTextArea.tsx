@@ -10,14 +10,14 @@
  */
 
 import React, { useCallback, useMemo } from 'react';
-import { TextArea } from '@/components/ui/TextArea';
+import { TextArea } from '@alga-psa/ui/components/TextArea';
 import {
   ExpressionAutocomplete,
   buildSuggestionsFromContext,
   type AutocompleteSuggestion
 } from './ExpressionAutocomplete';
 import { useExpressionAutocomplete } from './useExpressionAutocomplete';
-import type { SelectOption } from '@/components/ui/CustomSelect';
+import type { SelectOption } from '@alga-psa/ui/components/CustomSelect';
 
 /**
  * Data field for building autocomplete suggestions

@@ -14,9 +14,9 @@
 
 import React, { useCallback, useMemo, useRef } from 'react';
 import { ExpressionEditor, type ExpressionEditorHandle, type ExpressionContext, type JsonSchema } from './ExpressionEditor';
-import type { SelectOption } from '@/components/ui/CustomSelect';
-import CustomSelect from '@/components/ui/CustomSelect';
-import { Label } from '@/components/ui/Label';
+import type { SelectOption } from '@alga-psa/ui/components/CustomSelect';
+import CustomSelect from '@alga-psa/ui/components/CustomSelect';
+import { Label } from '@alga-psa/ui/components/Label';
 
 /**
  * Data context for building schema from SelectOptions

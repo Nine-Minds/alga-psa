@@ -16,7 +16,7 @@ import { useMappingDnd } from './useMappingDnd';
 import { useMappingPositions } from './useMappingPositions';
 import { MappingConnectionsOverlay, type ConnectionData } from './MappingConnectionsOverlay';
 import { TypeCompatibility, getTypeCompatibility } from './typeCompatibility';
-import type { SelectOption } from '@/components/ui/CustomSelect';
+import type { SelectOption } from '@alga-psa/ui/components/CustomSelect';
 import type { Expr, InputMapping } from '@shared/workflow/runtime';
 import type { ExpressionContext, JsonSchema } from '../expression-editor';
 

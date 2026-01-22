@@ -3,14 +3,14 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Card } from 'server/src/components/ui/Card';
-import { Button } from 'server/src/components/ui/Button';
-import { Input } from 'server/src/components/ui/Input';
-import { Badge } from 'server/src/components/ui/Badge';
-import { Skeleton } from 'server/src/components/ui/Skeleton';
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from 'server/src/components/ui/Dialog';
-import { TextArea } from 'server/src/components/ui/TextArea';
-import SearchableSelect from 'server/src/components/ui/SearchableSelect';
+import { Card } from '@alga-psa/ui/components/Card';
+import { Button } from '@alga-psa/ui/components/Button';
+import { Input } from '@alga-psa/ui/components/Input';
+import { Badge } from '@alga-psa/ui/components/Badge';
+import { Skeleton } from '@alga-psa/ui/components/Skeleton';
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@alga-psa/ui/components/Dialog';
+import { TextArea } from '@alga-psa/ui/components/TextArea';
+import SearchableSelect from '@alga-psa/ui/components/SearchableSelect';
 import { toast } from 'react-hot-toast';
 import {
   BarChart3,
@@ -49,7 +49,7 @@ import {
   listSchemaRegistryRefsAction,
   simulateWorkflowEventAction,
   type WorkflowEventCatalogEntryV2
-} from 'server/src/lib/actions/workflow-event-catalog-v2-actions';
+} from '@/lib/actions/workflow-event-catalog-v2-actions';
 
 type ViewMode = 'grid' | 'list';
 type SortMode = 'category_name' | 'most_active';

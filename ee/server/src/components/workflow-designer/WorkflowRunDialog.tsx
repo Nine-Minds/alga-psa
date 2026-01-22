@@ -2,24 +2,24 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { Button } from '@/components/ui/Button';
-import { Input } from '@/components/ui/Input';
-import { TextArea } from '@/components/ui/TextArea';
-import { Badge } from '@/components/ui/Badge';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/Dialog';
-import CustomSelect, { SelectOption } from '@/components/ui/CustomSelect';
-import { Switch } from '@/components/ui/Switch';
+import { Button } from '@alga-psa/ui/components/Button';
+import { Input } from '@alga-psa/ui/components/Input';
+import { TextArea } from '@alga-psa/ui/components/TextArea';
+import { Badge } from '@alga-psa/ui/components/Badge';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@alga-psa/ui/components/Dialog';
+import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect';
+import { Switch } from '@alga-psa/ui/components/Switch';
 import toast from 'react-hot-toast';
-import SearchableSelect from 'server/src/components/ui/SearchableSelect';
+import SearchableSelect from '@alga-psa/ui/components/SearchableSelect';
 import {
   getWorkflowSchemaAction,
   getLatestWorkflowRunAction,
   listWorkflowSchemaRefsAction,
   listWorkflowDefinitionVersionsAction,
   startWorkflowRunAction
-} from 'server/src/lib/actions/workflow-runtime-v2-actions';
-import { getEventCatalogEntries, getEventCatalogEntryByEventType } from 'server/src/lib/actions/event-catalog-actions';
-import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
+} from '@/lib/actions/workflow-runtime-v2-actions';
+import { getEventCatalogEntries, getEventCatalogEntryByEventType } from '@alga-psa/workflows/actions';
+import { getCurrentUser } from '@/lib/actions/user-actions/userActions';
 import {
   filterEventCatalogEntries,
   getSchemaDiffSummary,

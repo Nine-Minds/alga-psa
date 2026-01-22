@@ -1,16 +1,16 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from 'server/src/components/ui/Dialog';
-import { Button } from 'server/src/components/ui/Button';
-import { Input } from 'server/src/components/ui/Input';
-import { Label } from 'server/src/components/ui/Label';
-import { TextArea } from 'server/src/components/ui/TextArea';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@alga-psa/ui/components/Dialog';
+import { Button } from '@alga-psa/ui/components/Button';
+import { Input } from '@alga-psa/ui/components/Input';
+import { Label } from '@alga-psa/ui/components/Label';
+import { TextArea } from '@alga-psa/ui/components/TextArea';
 import {
   createSecret,
   updateSecret,
   validateSecretName
-} from 'server/src/lib/actions/tenant-secret-actions';
+} from '@/lib/actions/tenant-secret-actions';
 import type { TenantSecretMetadata } from '@alga-psa/shared/workflow/secrets';
 import { toast } from 'react-hot-toast';
 import { Eye, EyeOff, AlertCircle } from 'lucide-react';

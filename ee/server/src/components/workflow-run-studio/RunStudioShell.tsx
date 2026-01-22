@@ -2,12 +2,12 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { Card } from '@/components/ui/Card';
-import { Badge } from '@/components/ui/Badge';
-import { Button } from '@/components/ui/Button';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/Dialog';
-import { Input } from '@/components/ui/Input';
-import { TextArea } from '@/components/ui/TextArea';
+import { Card } from '@alga-psa/ui/components/Card';
+import { Badge } from '@alga-psa/ui/components/Badge';
+import { Button } from '@alga-psa/ui/components/Button';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@alga-psa/ui/components/Dialog';
+import { Input } from '@alga-psa/ui/components/Input';
+import { TextArea } from '@alga-psa/ui/components/TextArea';
 import { RefreshCw } from 'lucide-react';
 import toast from 'react-hot-toast';
 import {
@@ -20,8 +20,8 @@ import {
   listWorkflowRunTimelineEventsAction,
   cancelWorkflowRunAction,
   replayWorkflowRunAction
-} from 'server/src/lib/actions/workflow-runtime-v2-actions';
-import { getCurrentUserPermissions } from 'server/src/lib/actions/user-actions/userActions';
+} from '@/lib/actions/workflow-runtime-v2-actions';
+import { getCurrentUserPermissions } from '@/lib/actions/user-actions/userActions';
 import WorkflowGraph from '../workflow-graph/WorkflowGraph';
 import type { WorkflowDefinition, Step } from '@shared/workflow/runtime';
 import type { IfBlock, ForEachBlock, TryCatchBlock, NodeStep } from '@shared/workflow/runtime';

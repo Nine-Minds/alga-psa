@@ -2,15 +2,15 @@
 
 import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { ChevronRight, ChevronDown, Plus, Trash2, Code, Key, Type, AlertTriangle, Wand2, Sparkles, RotateCcw, LinkIcon } from 'lucide-react';
-import { Button } from '@/components/ui/Button';
-import { Input } from '@/components/ui/Input';
-import { TextArea } from '@/components/ui/TextArea';
-import { Card } from '@/components/ui/Card';
-import { Badge } from '@/components/ui/Badge';
-import { Label } from '@/components/ui/Label';
-import CustomSelect, { SelectOption } from '@/components/ui/CustomSelect';
+import { Button } from '@alga-psa/ui/components/Button';
+import { Input } from '@alga-psa/ui/components/Input';
+import { TextArea } from '@alga-psa/ui/components/TextArea';
+import { Card } from '@alga-psa/ui/components/Card';
+import { Badge } from '@alga-psa/ui/components/Badge';
+import { Label } from '@alga-psa/ui/components/Label';
+import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect';
 import { validateExpressionSource } from '@shared/workflow/runtime/expressionEngine';
-import { listTenantSecrets } from 'server/src/lib/actions/tenant-secret-actions';
+import { listTenantSecrets } from '@/lib/actions/tenant-secret-actions';
 import type { InputMapping, MappingValue, Expr } from '@shared/workflow/runtime';
 import {
   ExpressionEditor,

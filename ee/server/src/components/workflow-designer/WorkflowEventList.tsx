@@ -1,20 +1,20 @@
 'use client';
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Button } from '@/components/ui/Button';
-import { Card } from '@/components/ui/Card';
-import { Input } from '@/components/ui/Input';
-import CustomSelect, { SelectOption } from '@/components/ui/CustomSelect';
-import { Badge } from '@/components/ui/Badge';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/Table';
-import { TextArea } from '@/components/ui/TextArea';
+import { Button } from '@alga-psa/ui/components/Button';
+import { Card } from '@alga-psa/ui/components/Card';
+import { Input } from '@alga-psa/ui/components/Input';
+import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect';
+import { Badge } from '@alga-psa/ui/components/Badge';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@alga-psa/ui/components/Table';
+import { TextArea } from '@alga-psa/ui/components/TextArea';
 import { toast } from 'react-hot-toast';
 import {
   exportWorkflowEventsAction,
   getWorkflowEventAction,
   listWorkflowEventSummaryAction,
   listWorkflowEventsAction
-} from 'server/src/lib/actions/workflow-runtime-v2-actions';
+} from '@/lib/actions/workflow-runtime-v2-actions';
 import WorkflowRunDetails from './WorkflowRunDetails';
 
 type WorkflowEventRecord = {

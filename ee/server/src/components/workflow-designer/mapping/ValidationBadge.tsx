@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { CheckCircle, AlertTriangle, XCircle, Circle, ChevronDown, ChevronUp, ExternalLink } from 'lucide-react';
-import { Badge } from '@/components/ui/Badge';
+import { Badge } from '@alga-psa/ui/components/Badge';
 import type { PublishError } from '@shared/workflow/runtime';
 
 export type ValidationStatus = 'valid' | 'warning' | 'error' | 'incomplete';

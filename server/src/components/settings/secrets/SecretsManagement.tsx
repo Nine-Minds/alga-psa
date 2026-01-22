@@ -1,21 +1,21 @@
 'use client';
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { Button } from 'server/src/components/ui/Button';
-import { Card } from 'server/src/components/ui/Card';
-import { DataTable } from 'server/src/components/ui/DataTable';
-import type { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
+import { Button } from '@alga-psa/ui/components/Button';
+import { Card } from '@alga-psa/ui/components/Card';
+import { DataTable } from '@alga-psa/ui/components/DataTable';
+import type { ColumnDefinition } from '@alga-psa/types';
 import {
   listTenantSecrets,
   deleteSecret,
   getSecretUsage
-} from 'server/src/lib/actions/tenant-secret-actions';
+} from '@/lib/actions/tenant-secret-actions';
 import type { TenantSecretMetadata } from '@alga-psa/shared/workflow/secrets';
 import { toast } from 'react-hot-toast';
 import { Plus, Trash2, Edit, Key, AlertTriangle, Search } from 'lucide-react';
 import SecretDialog from './SecretDialog';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from 'server/src/components/ui/Dialog';
-import { Input } from 'server/src/components/ui/Input';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@alga-psa/ui/components/Dialog';
+import { Input } from '@alga-psa/ui/components/Input';
 
 export default function SecretsManagement() {
   const [secrets, setSecrets] = useState<TenantSecretMetadata[]>([]);

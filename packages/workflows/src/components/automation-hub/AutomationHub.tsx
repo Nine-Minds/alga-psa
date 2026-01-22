@@ -12,7 +12,6 @@ import TemplateLibrary from './TemplateLibrary';
 import Workflows from './Workflows';
 import EventsCatalogV2 from './EventsCatalogV2';
 import LogsHistory from './LogsHistory';
-import FeatureFlagPageWrapper from '@alga-psa/ui/components/feature-flags/FeatureFlagPageWrapper';
 
 export default function AutomationHub() {
   const router = useRouter();
@@ -49,15 +48,15 @@ export default function AutomationHub() {
   const tabs = [
     {
       label: 'Template Library',
-      content: <FeatureFlagPageWrapper featureFlag="advanced-features-enabled"><TemplateLibrary /></FeatureFlagPageWrapper>
+      content: <TemplateLibrary />
     },
     {
       label: 'Workflows',
-      content: <FeatureFlagPageWrapper featureFlag="advanced-features-enabled"><Workflows workflowId={workflowId} /></FeatureFlagPageWrapper>
+      content: <Workflows workflowId={workflowId} />
     },
     {
       label: 'Events Catalog',
-      content: <FeatureFlagPageWrapper featureFlag="advanced-features-enabled"><EventsCatalogV2 /></FeatureFlagPageWrapper>
+      content: <EventsCatalogV2 />
     },
     {
       label: 'Logs & History',

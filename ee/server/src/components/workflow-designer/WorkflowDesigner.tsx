@@ -49,7 +49,7 @@ import WorkflowListV2 from '@alga-psa/workflows/components/automation-hub/Workfl
 import { MappingPanel, type ActionInputField } from './mapping';
 import { ExpressionEditor, type ExpressionEditorHandle, type ExpressionContext, type JsonSchema as ExprJsonSchema } from './expression-editor';
 import { getCurrentUser, getCurrentUserPermissions } from '@/lib/actions/user-actions/userActions';
-import { getEventCatalogEntryByEventType } from '@/lib/actions/event-catalog-actions';
+import { getEventCatalogEntryByEventType } from '@alga-psa/workflows/actions';
 import { listEventCatalogOptionsV2Action, type WorkflowEventCatalogOptionV2 } from '@/lib/actions/workflow-event-catalog-v2-actions';
 import {
   createWorkflowDefinitionAction,

@@ -28,9 +28,9 @@ import {
   Settings,
   ArrowRight
 } from 'lucide-react';
-import { Card } from '@/components/ui/Card';
-import { Badge } from '@/components/ui/Badge';
-import { Button } from '@/components/ui/Button';
+import { Card } from '@alga-psa/ui/components/Card';
+import { Badge } from '@alga-psa/ui/components/Badge';
+import { Button } from '@alga-psa/ui/components/Button';
 import type { Step, IfBlock, ForEachBlock, TryCatchBlock, NodeStep } from '@shared/workflow/runtime';
 
 /**
