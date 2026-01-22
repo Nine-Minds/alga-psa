@@ -162,11 +162,13 @@ const CommentItem: React.FC<CommentItemProps> = ({
   const authorFirstName = conversation.user_id ? userMap[conversation.user_id]?.first_name || '' : '';
   const authorLastName = conversation.user_id ? userMap[conversation.user_id]?.last_name || '' : '';
 
-  // Keep editor content in sync if this comment enters edit mode with updated data
+  // Reset editor content when entering edit mode - always use conversation.note (persisted value)
+  // not currentComment.note (which may have unsaved edits from a previous cancelled edit)
   useEffect(() => {
     if (isEditing && currentComment?.comment_id === conversation.comment_id) {
       try {
-        const parsed = JSON.parse(currentComment?.note || '');
+        // Use conversation.note as the source of truth for the persisted content
+        const parsed = JSON.parse(conversation.note || '');
         if (Array.isArray(parsed) && parsed.length > 0) {
           setEditedContent(parsed);
         }
@@ -182,7 +184,7 @@ const CommentItem: React.FC<CommentItemProps> = ({
             content: [
               {
                 type: "text",
-                text: currentComment?.note || '',
+                text: conversation.note || '',
                 styles: {}
               }
             ]
@@ -190,7 +192,7 @@ const CommentItem: React.FC<CommentItemProps> = ({
         ]);
       }
     }
-  }, [isEditing, currentComment?.comment_id, currentComment?.note, conversation.comment_id]);
+  }, [isEditing, currentComment?.comment_id, conversation.comment_id, conversation.note]);
 
 
   return (
