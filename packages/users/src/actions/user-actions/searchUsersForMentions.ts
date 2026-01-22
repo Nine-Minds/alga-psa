@@ -24,7 +24,7 @@ export async function searchUsersForMentions(query: string = ''): Promise<Mentio
     throw new Error('Not authenticated');
   }
 
-  const { knex } = await createTenantKnex();
+  const { knex } = await createTenantKnex(currentUser.tenant);
 
   try {
     console.log('[searchUsersForMentions] Searching with query:', query);

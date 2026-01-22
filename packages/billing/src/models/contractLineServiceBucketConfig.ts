@@ -1,5 +1,6 @@
 import { Knex } from 'knex';
 import { createTenantKnex } from '@alga-psa/db';
+import { getCurrentUser } from '@alga-psa/auth/getCurrentUser';
 import type { IContractLineServiceBucketConfig } from '@alga-psa/types';
 
 export default class ContractLineServiceBucketConfig {
@@ -16,7 +17,11 @@ export default class ContractLineServiceBucketConfig {
    */
   private async initKnex() {
     if (!this.knex) {
-      const { knex, tenant } = await createTenantKnex();
+      const currentUser = await getCurrentUser();
+      if (!currentUser) {
+        throw new Error('User not authenticated');
+      }
+      const { knex, tenant } = await createTenantKnex(currentUser.tenant);
       if (!tenant) {
         throw new Error("tenant context not found");
       }

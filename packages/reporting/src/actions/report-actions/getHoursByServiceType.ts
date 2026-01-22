@@ -13,6 +13,7 @@ import type {
   ITicket,
   ITimeEntry,
 } from '@alga-psa/types';
+import { getCurrentUser } from '@alga-psa/users/actions';
 
 // Define the schema for the input parameters
 const InputSchema = z.object({
@@ -53,7 +54,12 @@ export async function getHoursByServiceType(
   }
   const { clientId, startDate, endDate, groupByServiceType } = validationResult.data;
 
-  const { knex, tenant } = await createTenantKnex();
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
+    throw new Error('User not authenticated');
+  }
+
+  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
 
   if (!tenant) {
     throw new Error('Tenant context is required.');

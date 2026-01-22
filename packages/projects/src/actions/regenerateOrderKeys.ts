@@ -17,8 +17,8 @@ export async function regenerateOrderKeysForStatus(
         throw new Error('No authenticated user found');
     }
 
-    const { knex: db, tenant } = await createTenantKnex();
-    
+    const { knex: db, tenant } = await createTenantKnex(currentUser.tenant);
+
     await db.transaction(async (trx: Knex.Transaction) => {
         if (!await hasPermission(currentUser, 'project', 'update', trx)) {
             throw new Error('Permission denied: Cannot update project');
@@ -62,12 +62,12 @@ export async function validateAndFixOrderKeys(
         throw new Error('No authenticated user found');
     }
 
-    const { knex: db, tenant } = await createTenantKnex();
-    
+    const { knex: db, tenant } = await createTenantKnex(currentUser.tenant);
+
     if (!await hasPermission(currentUser, 'project', 'update', db)) {
         throw new Error('Permission denied: Cannot update project');
     }
-    
+
     const tasks = await db<IProjectTask>('project_tasks')
         .where('phase_id', phaseId)
         .where('project_status_mapping_id', statusId)
@@ -122,8 +122,8 @@ export async function regenerateOrderKeysForPhases(
         throw new Error('No authenticated user found');
     }
 
-    const { knex: db, tenant } = await createTenantKnex();
-    
+    const { knex: db, tenant } = await createTenantKnex(currentUser.tenant);
+
     await db.transaction(async (trx: Knex.Transaction) => {
         if (!await hasPermission(currentUser, 'project', 'update', trx)) {
             throw new Error('Permission denied: Cannot update project');
@@ -172,12 +172,12 @@ export async function validateAndFixPhaseOrderKeys(
         throw new Error('No authenticated user found');
     }
 
-    const { knex: db, tenant } = await createTenantKnex();
-    
+    const { knex: db, tenant } = await createTenantKnex(currentUser.tenant);
+
     if (!await hasPermission(currentUser, 'project', 'update', db)) {
         throw new Error('Permission denied: Cannot update project');
     }
-    
+
     const phases = await db<IProjectPhase>('project_phases')
         .where('project_id', projectId)
         .where('tenant', tenant!)

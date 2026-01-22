@@ -4,6 +4,7 @@ import { Knex } from 'knex';
 import { createTenantKnex } from '@alga-psa/db';
 import type { IClientContractLine } from '@alga-psa/types';
 import { formatISO } from 'date-fns';
+import { getCurrentUser } from '@alga-psa/users/actions';
 
 // Copied from @alga-psa/billing/lib/contractLineDisambiguation to avoid scheduling → billing deps.
 
@@ -18,7 +19,11 @@ type EligibleContractLine = IClientContractLine & {
 };
 
 export async function determineDefaultContractLine(clientId: string, serviceId: string): Promise<string | null> {
-  const { knex, tenant } = await createTenantKnex();
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
+    throw new Error('User not authenticated');
+  }
+  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
 
   if (!tenant) {
     throw new Error('Tenant context not found');
@@ -171,7 +176,11 @@ export async function getEligibleContractLinesForUI(
     bucket_overlay?: EligibleContractLine['bucket_overlay'];
   }>
 > {
-  const { knex, tenant } = await createTenantKnex();
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
+    throw new Error('User not authenticated');
+  }
+  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
 
   if (!tenant) {
     throw new Error('Tenant context not found');
@@ -201,7 +210,11 @@ export async function getEligibleContractLinesForUI(
 }
 
 export async function getClientIdForWorkItem(workItemId: string, workItemType: string): Promise<string | null> {
-  const { knex, tenant } = await createTenantKnex();
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
+    throw new Error('User not authenticated');
+  }
+  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
 
   if (!tenant) {
     throw new Error('Tenant context not found');

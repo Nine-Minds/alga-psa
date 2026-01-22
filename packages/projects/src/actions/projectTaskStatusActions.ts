@@ -30,7 +30,7 @@ export async function addStatusToProject(
     throw new Error('Permission denied: Cannot update project');
   }
 
-  const { knex } = await createTenantKnex();
+  const { knex } = await createTenantKnex(currentUser.tenant);
 
   return await withTransaction(knex, async (trx) => {
     // Get next display_order
@@ -79,7 +79,7 @@ export async function getProjectStatusMappings(
     throw new Error('User tenant not found');
   }
   const tenant = currentUser.tenant;
-  const { knex } = await createTenantKnex();
+  const { knex } = await createTenantKnex(currentUser.tenant);
 
   return await withTransaction(knex, async (trx) => {
     return await trx('project_status_mappings as psm')
@@ -124,7 +124,7 @@ export async function updateProjectStatusMapping(
     throw new Error('Permission denied: Cannot update project');
   }
 
-  const { knex } = await createTenantKnex();
+  const { knex } = await createTenantKnex(currentUser.tenant);
 
   await knex('project_status_mappings')
     .where({ project_status_mapping_id: mappingId, tenant })
@@ -158,7 +158,7 @@ export async function deleteProjectStatusMapping(
     throw new Error('Permission denied: Cannot update project');
   }
 
-  const { knex } = await createTenantKnex();
+  const { knex } = await createTenantKnex(currentUser.tenant);
 
   return await withTransaction(knex, async (trx) => {
     // Get mapping info
@@ -228,7 +228,7 @@ export async function reorderProjectStatuses(
     throw new Error('Permission denied: Cannot update project');
   }
 
-  const { knex } = await createTenantKnex();
+  const { knex } = await createTenantKnex(currentUser.tenant);
 
   return await withTransaction(knex, async (trx) => {
     for (const { mapping_id, display_order } of statusOrder) {
@@ -264,7 +264,7 @@ export async function getTenantProjectStatuses(): Promise<IStatus[]> {
     throw new Error('User tenant not found');
   }
   const tenant = currentUser.tenant;
-  const { knex } = await createTenantKnex();
+  const { knex } = await createTenantKnex(currentUser.tenant);
 
   // First try the new statuses table
   const regularStatuses = await knex('statuses')
@@ -317,7 +317,7 @@ export async function createTenantProjectStatus(
     throw new Error('Permission denied: Cannot update project');
   }
 
-  const { knex } = await createTenantKnex();
+  const { knex } = await createTenantKnex(currentUser.tenant);
 
   return await withTransaction(knex, async (trx) => {
     // Use advisory lock to serialize status creation for this tenant/type combination
@@ -387,7 +387,7 @@ export async function updateTenantProjectStatus(
     throw new Error('Permission denied: Cannot update project');
   }
 
-  const { knex } = await createTenantKnex();
+  const { knex } = await createTenantKnex(currentUser.tenant);
 
   await knex('statuses')
     .where({ status_id: statusId, tenant, status_type: 'project_task' })
@@ -411,7 +411,7 @@ export async function deleteTenantProjectStatus(
     throw new Error('Permission denied: Cannot update project');
   }
 
-  const { knex } = await createTenantKnex();
+  const { knex } = await createTenantKnex(currentUser.tenant);
 
   return await withTransaction(knex, async (trx) => {
     // Check if any projects are using this status
@@ -451,7 +451,7 @@ export async function reorderTenantProjectStatuses(
     throw new Error('Permission denied: Cannot update project');
   }
 
-  const { knex } = await createTenantKnex();
+  const { knex } = await createTenantKnex(currentUser.tenant);
 
   return await withTransaction(knex, async (trx) => {
     for (const { status_id, order_number } of statusOrder) {

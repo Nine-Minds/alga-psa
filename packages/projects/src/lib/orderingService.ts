@@ -1,5 +1,6 @@
 import { generateKeyBetween } from 'fractional-indexing';
 import { createTenantKnex } from '@alga-psa/db';
+import { getCurrentUser } from '@alga-psa/auth/getCurrentUser';
 
 export class OrderingService {
   static generateInitialKeys(count: number): string[] {
@@ -58,7 +59,12 @@ export class OrderingService {
   ): Promise<string> {
     const newKey = this.generateKeyForPosition(beforeKey, afterKey);
 
-    const { knex: db, tenant } = await createTenantKnex();
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+      throw new Error('No authenticated user found');
+    }
+
+    const { knex: db, tenant } = await createTenantKnex(currentUser.tenant);
     if (!tenant) {
       throw new Error('Tenant context is required for reordering project task');
     }
@@ -76,7 +82,12 @@ export class OrderingService {
   static async reorderProjectPhase(phaseId: string, beforeKey: string | null, afterKey: string | null): Promise<string> {
     const newKey = this.generateKeyForPosition(beforeKey, afterKey);
 
-    const { knex: db, tenant } = await createTenantKnex();
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+      throw new Error('No authenticated user found');
+    }
+
+    const { knex: db, tenant } = await createTenantKnex(currentUser.tenant);
     if (!tenant) {
       throw new Error('Tenant context is required for reordering project phase');
     }

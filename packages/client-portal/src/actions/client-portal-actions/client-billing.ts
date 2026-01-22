@@ -384,7 +384,7 @@ export interface ClientJobStatus {
  */
 async function getJobStatus(jobId: string, tenant: string): Promise<ClientJobStatus> {
   const jobService = await JobService.create();
-  const { knex } = await createTenantKnex();
+  const { knex } = await createTenantKnex(tenant);
 
   // Get job record
   const job = await knex('jobs')

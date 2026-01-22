@@ -36,10 +36,11 @@ export async function fetchTimeSheets(): Promise<ITimeSheet[]> {
     throw new Error("User not authenticated");
   }
   const currentUserId = session.user.id;
+  const sessionTenant = (session.user as any).tenant;
 
   console.log('Fetching time sheets for user:', currentUserId);
 
-  const {knex: db, tenant} = await createTenantKnex();
+  const {knex: db, tenant} = await createTenantKnex(sessionTenant);
   const query = db('time_sheets')
     .join('time_periods', function() {
       this.on('time_sheets.period_id', '=', 'time_periods.period_id')
@@ -77,8 +78,9 @@ export async function submitTimeSheet(timeSheetId: string): Promise<ITimeSheet> 
 
   const session = await getSession();
   const userId = session?.user?.id;
+  const sessionTenant = (session?.user as any)?.tenant;
 
-  const {knex: db, tenant} = await createTenantKnex();
+  const {knex: db, tenant} = await createTenantKnex(sessionTenant);
 
   try {
     return await db.transaction(async (trx) => {
@@ -153,7 +155,9 @@ export async function submitTimeSheet(timeSheetId: string): Promise<ITimeSheet> 
 }
 
 export async function fetchAllTimeSheets(): Promise<ITimeSheet[]> {
-  const {knex: db, tenant} = await createTenantKnex();
+  const session = await getSession();
+  const sessionTenant = (session?.user as any)?.tenant;
+  const {knex: db, tenant} = await createTenantKnex(sessionTenant);
 
   console.log('Fetching all time sheets');
 
@@ -187,7 +191,9 @@ export async function fetchTimePeriods(userId: string): Promise<ITimePeriodWithS
   // Validate input
   const validatedParams = validateData<FetchTimePeriodsParams>(fetchTimePeriodsParamsSchema, { userId });
 
-  const {knex: db, tenant} = await createTenantKnex();
+  const session = await getSession();
+  const sessionTenant = (session?.user as any)?.tenant;
+  const {knex: db, tenant} = await createTenantKnex(sessionTenant);
 
   const periods = await db('time_periods as tp')
     .leftJoin('time_sheets as ts', function() {
@@ -220,7 +226,9 @@ export async function fetchOrCreateTimeSheet(userId: string, periodId: string): 
     { userId, periodId }
   );
 
-  const {knex: db, tenant} = await createTenantKnex();
+  const session = await getSession();
+  const sessionTenant = (session?.user as any)?.tenant;
+  const {knex: db, tenant} = await createTenantKnex(sessionTenant);
 
   let timeSheet = await db('time_sheets')
     .where({

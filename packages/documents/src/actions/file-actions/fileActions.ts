@@ -6,12 +6,18 @@ import { Knex } from 'knex';
 import { StorageService } from '@alga-psa/documents/storage/StorageService';
 import { FileStoreModel } from '../../models/storage';
 import { FileStore } from '../../types/storage';
+import { getCurrentUserAsync } from '../../lib/authHelpers';
 
 export async function uploadFile(
     formData: FormData
 ): Promise<{ success: boolean; file?: FileStore; error?: string }> {
     try {
-        const { knex, tenant } = await createTenantKnex();
+        const currentUser = await getCurrentUserAsync();
+        if (!currentUser) {
+            throw new Error('No authenticated user found');
+        }
+
+        const { knex, tenant } = await createTenantKnex(currentUser.tenant);
         if (!tenant) {
             throw new Error('No tenant found');
         }
@@ -58,7 +64,12 @@ export async function downloadFile(
     file_id: string
 ): Promise<{ success: boolean; data?: { buffer: Buffer; metadata: any }; error?: string }> {
     try {
-        const { tenant } = await createTenantKnex();
+        const currentUser = await getCurrentUserAsync();
+        if (!currentUser) {
+            throw new Error('No authenticated user found');
+        }
+
+        const { tenant } = await createTenantKnex(currentUser.tenant);
         if (!tenant) {
             throw new Error('No tenant found');
         }
@@ -79,7 +90,12 @@ export async function deleteFile(
     deleted_by_id: string
 ): Promise<{ success: boolean; error?: string }> {
     try {
-        const { tenant, knex } = await createTenantKnex();
+        const currentUser = await getCurrentUserAsync();
+        if (!currentUser) {
+            throw new Error('No authenticated user found');
+        }
+
+        const { tenant, knex } = await createTenantKnex(currentUser.tenant);
         if (!tenant) {
             throw new Error('No tenant found');
         }
@@ -103,7 +119,13 @@ export async function validateFileUpload(
 ): Promise<{ success: boolean; error?: string }> {
     console.log('Starting validateFileUpload:', { mime_type, file_size });
     try {
-        const { tenant } = await createTenantKnex();
+        const currentUser = await getCurrentUserAsync();
+        if (!currentUser) {
+            console.log('No authenticated user found');
+            throw new Error('No authenticated user found');
+        }
+
+        const { tenant } = await createTenantKnex(currentUser.tenant);
         if (!tenant) {
             console.log('No tenant found');
             throw new Error('No tenant found');

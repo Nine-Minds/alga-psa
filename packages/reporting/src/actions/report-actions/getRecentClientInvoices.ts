@@ -5,6 +5,7 @@ import { withTransaction } from '@alga-psa/db';
 import type { IInvoice } from '@alga-psa/types';
 import { z } from 'zod';
 import { Knex } from 'knex';
+import { getCurrentUser } from '@alga-psa/users/actions';
 // Removed safe-action import as it's not the standard pattern here
 // Define the schema for the input parameters
 const InputSchema = z.object({
@@ -31,7 +32,12 @@ export async function getRecentClientInvoices(input: { clientId: string; limit?:
   }
   const { clientId, limit } = validationResult.data;
 
-  const { knex, tenant } = await createTenantKnex();
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
+    throw new Error('User not authenticated');
+  }
+
+  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
 
   if (!tenant) {
     throw new Error('Tenant context is required.');

@@ -26,9 +26,9 @@ export async function initiateEmailOAuth(params: {
 
     // If providerId is specified, ensure it belongs to the caller's tenant
     if (params.providerId) {
-      const { knex, tenant } = await createTenantKnex();
+      const { knex } = await createTenantKnex(user.tenant);
       const exists = await knex('email_providers')
-        .where({ id: params.providerId, tenant })
+        .where({ id: params.providerId, tenant: user.tenant })
         .first();
       if (!exists) {
         return { success: false, error: 'Invalid providerId for tenant' };

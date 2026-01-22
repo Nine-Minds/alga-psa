@@ -46,7 +46,11 @@ interface SearchResult {
 // ==================================
 export async function searchDispatchWorkItems(options: DispatchSearchOptions): Promise<SearchResult> {
   try {
-    const {knex: db, tenant} = await createTenantKnex();
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+      throw new Error('User not authenticated');
+    }
+    const {knex: db, tenant} = await createTenantKnex(currentUser.tenant);
     const searchTerm = options.searchTerm || '';
     const statusFilter = options.statusFilter || 'all_open';
     const filterUnscheduledOption = options.filterUnscheduled;
@@ -274,7 +278,11 @@ export async function searchDispatchWorkItems(options: DispatchSearchOptions): P
 // ==================================
 export async function searchPickerWorkItems(options: PickerSearchOptions): Promise<SearchResult> {
   try {
-    const {knex: db, tenant} = await createTenantKnex();
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+      throw new Error('User not authenticated');
+    }
+    const {knex: db, tenant} = await createTenantKnex(currentUser.tenant);
     const searchTerm = options.searchTerm || '';
     const statusFilter = options.statusFilter || 'all_open';
     const page = options.page || 1;
@@ -741,12 +749,11 @@ export async function searchPickerWorkItems(options: PickerSearchOptions): Promi
 
 export async function createWorkItem(item: Omit<IWorkItem, "work_item_id">): Promise<Omit<IExtendedWorkItem, "tenant">> {
   try {
-    const {knex: db, tenant} = await createTenantKnex();
     const currentUser = await getCurrentUser();
-
     if (!currentUser) {
       throw new Error('User not authenticated');
     }
+    const {knex: db, tenant} = await createTenantKnex(currentUser.tenant);
 
     if (!item.startTime || !item.endTime) {
       throw new Error('Start time and end time are required for ad-hoc entries');
@@ -788,7 +795,11 @@ export async function createWorkItem(item: Omit<IWorkItem, "work_item_id">): Pro
 
 export async function getWorkItemById(workItemId: string, workItemType: WorkItemType): Promise<Omit<IExtendedWorkItem, "tenant"> | null> {
   try {
-    const {knex: db, tenant} = await createTenantKnex();
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+      throw new Error('User not authenticated');
+    }
+    const {knex: db, tenant} = await createTenantKnex(currentUser.tenant);
     let workItem;
 
     if (workItemType === 'ticket') {

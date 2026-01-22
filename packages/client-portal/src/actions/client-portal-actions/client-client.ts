@@ -25,7 +25,7 @@ export async function getClientClient(): Promise<IClient | null> {
     return null; // No associated client
   }
 
-  const { knex, tenant } = await createTenantKnex();
+  const { knex, tenant } = await createTenantKnex(user.tenant);
   if (!tenant) {
     throw new Error('Tenant not found');
   }

@@ -3,6 +3,7 @@
 import type { IService } from '@alga-psa/types';
 import { createTenantKnex, withTransaction } from '@alga-psa/db';
 import type { Knex } from 'knex';
+import { getCurrentUser } from '@alga-psa/users/actions';
 
 export interface PaginatedServicesResponse {
   services: IService[];
@@ -12,7 +13,12 @@ export interface PaginatedServicesResponse {
 }
 
 export async function getServices(page: number = 1, pageSize: number = 999): Promise<PaginatedServicesResponse> {
-  const { knex: db, tenant } = await createTenantKnex();
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
+    throw new Error('No authenticated user found');
+  }
+
+  const { knex: db, tenant } = await createTenantKnex(currentUser.tenant);
   if (!tenant) {
     throw new Error('Tenant not found');
   }
@@ -35,4 +41,3 @@ export async function getServices(page: number = 1, pageSize: number = 999): Pro
     return { services, totalCount, page, pageSize };
   });
 }
-

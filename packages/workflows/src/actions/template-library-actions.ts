@@ -37,8 +37,8 @@ export async function getAllTemplates(): Promise<TemplateData[]> {
     if (!user) {
       throw new Error("User not authenticated");
     }
-    
-    const { knex: db, tenant } = await createTenantKnex();
+
+    const { knex: db, tenant } = await createTenantKnex(user.tenant);
     return withTransaction(db, async (trx: Knex.Transaction) => {
       // Get all published templates
       const templates = await trx('workflow_templates')
@@ -76,8 +76,8 @@ export async function getTemplate(id: string): Promise<TemplateData> {
     if (!user) {
       throw new Error("User not authenticated");
     }
-    
-    const { knex: db, tenant } = await createTenantKnex();
+
+    const { knex: db, tenant } = await createTenantKnex(user.tenant);
     return withTransaction(db, async (trx: Knex.Transaction) => {
       // Get template
       const template = await trx('workflow_templates')
@@ -119,8 +119,8 @@ export async function getTemplatesByCategory(category: string): Promise<Template
     if (!user) {
       throw new Error("User not authenticated");
     }
-    
-    const { knex: db, tenant } = await createTenantKnex();
+
+    const { knex: db, tenant } = await createTenantKnex(user.tenant);
     return withTransaction(db, async (trx: Knex.Transaction) => {
       // Get templates by category
       const templates = await trx('workflow_templates')
@@ -158,8 +158,8 @@ export async function getAllTemplateCategories(): Promise<{ category_id: string;
     if (!user) {
       throw new Error("User not authenticated");
     }
-    
-    const { knex: db, tenant } = await createTenantKnex();
+
+    const { knex: db, tenant } = await createTenantKnex(user.tenant);
     return withTransaction(db, async (trx: Knex.Transaction) => {
       // Get all categories
       const categories = await trx('workflow_template_categories')
@@ -198,8 +198,8 @@ export async function createWorkflowFromTemplate(
     if (!user) {
       throw new Error("User not authenticated");
     }
-    
-    const { knex: db, tenant } = await createTenantKnex();
+
+    const { knex: db, tenant } = await createTenantKnex(user.tenant);
     return withTransaction(db, async (trx: Knex.Transaction) => {
       // Get the template
       const template = await trx('workflow_templates')

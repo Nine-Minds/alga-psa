@@ -44,7 +44,7 @@ export async function linkDocumentAsAvatarAction(
       return { success: false, message: 'Not authenticated' };
     }
 
-    const { tenant } = await createTenantKnex();
+    const { tenant } = await createTenantKnex(currentUser.tenant);
     if (!tenant) {
       return { success: false, message: 'No tenant found' };
     }

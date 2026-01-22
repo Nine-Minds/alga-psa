@@ -414,7 +414,7 @@ export async function getScheduleEntryById(entryId: string, user: any): Promise<
       throw new Error('User not authenticated');
     }
 
-    const { knex: db, tenant } = await createTenantKnex();
+    const { knex: db, tenant } = await createTenantKnex(user.tenant);
     return withTransaction(db, async (trx: Knex.Transaction) => {
 
     // Get the schedule entry

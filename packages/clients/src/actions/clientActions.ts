@@ -8,7 +8,7 @@ import { revalidatePath } from 'next/cache';
 import { getCurrentUserAsync } from '../lib/usersHelpers';
 import { hasPermissionAsync } from '../lib/authHelpers';
 import { getClientLogoUrlAsync, getClientLogoUrlsBatchAsync } from '../lib/documentsHelpers';
-import { uploadEntityImage, deleteEntityImage } from '@alga-psa/media';
+import { uploadEntityImage, deleteEntityImage } from '@alga-psa/documents';
 import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { deleteEntityTags } from '@alga-psa/tags/lib/tagCleanup';

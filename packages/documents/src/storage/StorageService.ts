@@ -207,7 +207,7 @@ export class StorageService {
                 throw new Error('File not found');
             }
 
-            // Get storage provider 
+            // Get storage provider
             const provider = await StorageProviderFactory.createProvider();
 
             // Download file from storage provider
@@ -285,7 +285,7 @@ export class StorageService {
         throw new Error('Failed to create document system entry: ' + (error as Error).message);
       }
     }
-  
+
     static async getFileMetadata(fileId: string): Promise<FileStore> {
       try {
         const currentUser = await getCurrentUser();
@@ -302,7 +302,7 @@ export class StorageService {
         throw new Error('Failed to get file metadata: ' + (error as Error).message);
       }
     }
-  
+
     static async updateFileMetadata(fileId: string, metadata: Record<string, unknown>): Promise<void> {
       try {
         const currentUser = await getCurrentUser();

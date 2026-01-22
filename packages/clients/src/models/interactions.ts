@@ -2,8 +2,8 @@ import type { IInteraction, IInteractionType } from '@alga-psa/types';
 import { createTenantKnex } from '@alga-psa/db';
 
 class InteractionModel {
-  static async getForEntity(entityId: string, entityType: 'contact' | 'client'): Promise<IInteraction[]> {
-    const { knex: db, tenant } = await createTenantKnex();
+  static async getForEntity(entityId: string, entityType: 'contact' | 'client', tenantId: string): Promise<IInteraction[]> {
+    const { knex: db, tenant } = await createTenantKnex(tenantId);
 
     try {
       const query = db('interactions')
@@ -81,8 +81,8 @@ class InteractionModel {
     dateTo?: Date;
     typeId?: string;
     limit?: number;
-  }): Promise<IInteraction[]> {
-    const { knex: db, tenant } = await createTenantKnex();
+  }, tenantId: string): Promise<IInteraction[]> {
+    const { knex: db, tenant } = await createTenantKnex(tenantId);
 
     try {
       let interactions: any[] = [];
@@ -222,8 +222,8 @@ class InteractionModel {
     }
   }
 
-  static async addInteraction(interactionData: Omit<IInteraction, 'interaction_id'>): Promise<IInteraction> {
-    const { knex: db, tenant } = await createTenantKnex();
+  static async addInteraction(interactionData: Omit<IInteraction, 'interaction_id'>, tenantId: string): Promise<IInteraction> {
+    const { knex: db, tenant } = await createTenantKnex(tenantId);
 
     try {
       const [newInteraction] = await db('interactions')
@@ -233,7 +233,7 @@ class InteractionModel {
         })
         .returning('*');
 
-      const fullInteraction = await this.getById(newInteraction.interaction_id);
+      const fullInteraction = await this.getById(newInteraction.interaction_id, tenantId);
       if (!fullInteraction) {
         throw new Error('Failed to fetch created interaction');
       }
@@ -245,8 +245,8 @@ class InteractionModel {
     }
   }
 
-  static async getInteractionTypes(): Promise<IInteractionType[]> {
-    const { knex: db, tenant } = await createTenantKnex();
+  static async getInteractionTypes(tenantId: string): Promise<IInteractionType[]> {
+    const { knex: db, tenant } = await createTenantKnex(tenantId);
 
     try {
       const result = await db('interaction_types')
@@ -260,8 +260,8 @@ class InteractionModel {
     }
   }
 
-  static async updateInteraction(interactionId: string, updateData: Partial<IInteraction>): Promise<IInteraction> {
-    const { knex: db, tenant } = await createTenantKnex();
+  static async updateInteraction(interactionId: string, updateData: Partial<IInteraction>, tenantId: string): Promise<IInteraction> {
+    const { knex: db, tenant } = await createTenantKnex(tenantId);
 
     try {
       const { tenant: _ignoreTenant, interaction_id: _ignoreId, ...safeUpdateData } = updateData as any;
@@ -274,7 +274,7 @@ class InteractionModel {
         .update(safeUpdateData)
         .returning('*');
 
-      const fullInteraction = await this.getById(updatedInteraction.interaction_id);
+      const fullInteraction = await this.getById(updatedInteraction.interaction_id, tenantId);
       if (!fullInteraction) {
         throw new Error('Failed to fetch updated interaction');
       }
@@ -286,8 +286,8 @@ class InteractionModel {
     }
   }
 
-  static async getById(interactionId: string): Promise<IInteraction | null> {
-    const { knex: db, tenant } = await createTenantKnex();
+  static async getById(interactionId: string, tenantId: string): Promise<IInteraction | null> {
+    const { knex: db, tenant } = await createTenantKnex(tenantId);
 
     try {
       const result = await db('interactions')

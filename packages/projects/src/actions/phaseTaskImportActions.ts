@@ -285,7 +285,7 @@ export async function getImportReferenceData(
     throw new Error('No authenticated user found');
   }
 
-  const { knex: db, tenant } = await createTenantKnex();
+  const { knex: db, tenant } = await createTenantKnex(currentUser.tenant);
 
   return await withTransaction(db, async (trx: Knex.Transaction) => {
     const tenant = currentUser.tenant;
@@ -522,7 +522,7 @@ export async function validatePhaseTaskImportData(
     throw new Error('No authenticated user found');
   }
 
-  const { knex: db, tenant } = await createTenantKnex();
+  const { knex: db, tenant } = await createTenantKnex(currentUser.tenant);
 
   // Fetch lookup data
   const [users, priorities, servicesResponse] = await Promise.all([
@@ -738,7 +738,7 @@ export async function importPhasesAndTasks(
     throw new Error('Tenant context not found');
   }
 
-  const { knex: db, tenant } = await createTenantKnex();
+  const { knex: db, tenant } = await createTenantKnex(currentUser.tenant);
   if (!tenant) {
     throw new Error('Tenant context not found');
   }

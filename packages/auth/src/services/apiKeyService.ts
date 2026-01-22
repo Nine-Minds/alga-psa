@@ -176,10 +176,12 @@ export class ApiKeyService {
 
   /**
    * Validate an API key and return the associated user and tenant information
+   * @param plaintextKey - The API key to validate
+   * @param tenantId - Optional tenant ID. If not provided, will try to get from context.
    */
-  static async validateApiKey(plaintextKey: string): Promise<ApiKey | null> {
-    const { knex, tenant } = await createTenantKnex();
-    
+  static async validateApiKey(plaintextKey: string, tenantId?: string): Promise<ApiKey | null> {
+    const { knex, tenant } = await createTenantKnex(tenantId);
+
     if (!tenant) {
       console.error('Tenant context is required for API key validation');
       return null;
@@ -370,7 +372,7 @@ export class ApiKeyService {
     tenant: string,
     increment: number = 1
   ): Promise<{ active: boolean; usageCount: number; usageLimit: number | null }> {
-    const { knex, tenant: currentTenant } = await createTenantKnex();
+    const { knex, tenant: currentTenant } = await createTenantKnex(tenant);
 
     if (!currentTenant || currentTenant !== tenant) {
       throw new Error(`Tenant context mismatch while consuming API key ${apiKeyId}`);

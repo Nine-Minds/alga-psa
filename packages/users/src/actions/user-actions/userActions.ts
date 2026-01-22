@@ -14,7 +14,7 @@ import { getUserAvatarUrl } from '../../lib/avatarUtils';
 import { uploadEntityImage, deleteEntityImage } from '@alga-psa/media';
 import { hasPermission, throwPermissionError } from '../../lib/permissions';
 import logger from '@alga-psa/core/logger';
-import { getCurrentUser } from '../../lib/currentUser';
+import { getCurrentUser } from '@alga-psa/auth';
 
 interface ActionResult {
   success: boolean;
@@ -1042,13 +1042,17 @@ export async function uploadUserAvatar(
       return { success: false, error: 'Authentication required.' };
     }
 
-    const { tenant } = await createTenantKnex(); // Still need tenant
+    // Use tenant from currentUser - don't rely on AsyncLocalStorage context
+    const tenant = currentUser.tenant;
     if (!tenant) {
         return { success: false, error: 'Tenant context is missing.' };
     }
 
-    const {knex} = await createTenantKnex();
-    const targetUser = await User.get(knex, userId); // Use existing User model
+    // Wrap in runWithTenant to ensure AsyncLocalStorage context is available for User model
+    const targetUser = await runWithTenant(tenant, async () => {
+      const { knex } = await createTenantKnex(tenant);
+      return User.get(knex, userId);
+    });
 
     if (!targetUser) {
       return { success: false, error: 'Target user not found.' };
@@ -1062,15 +1066,24 @@ export async function uploadUserAvatar(
     // Permission Check: User can update their own avatar OR have user update permission
     const isOwnAvatar = currentUser.user_id === userId;
     const isAdmin = currentUser.roles.some(role => role.role_name.toLowerCase() === 'admin');
-    
+
     // Always allow users to update their own avatar, regardless of permissions
     if (isOwnAvatar) {
         console.log(`[uploadUserAvatar] User ${currentUser.user_id} updating their own avatar`);
-    } else if (isAdmin || await hasPermission(currentUser, 'user', 'update', knex)) {
-        console.log(`[uploadUserAvatar] User ${currentUser.user_id} with admin/update permission updating avatar for user ${userId}`);
+    } else if (isAdmin) {
+        console.log(`[uploadUserAvatar] Admin user ${currentUser.user_id} updating avatar for user ${userId}`);
     } else {
-        console.log(`[uploadUserAvatar] Permission denied: User ${currentUser.user_id} trying to update avatar for user ${userId}`);
-        return { success: false, error: 'Permission denied: You can only update your own avatar.' };
+        // Check permission within tenant context
+        const hasUpdatePermission = await runWithTenant(tenant, async () => {
+          const { knex } = await createTenantKnex(tenant);
+          return hasPermission(currentUser, 'user', 'update', knex);
+        });
+        if (hasUpdatePermission) {
+            console.log(`[uploadUserAvatar] User ${currentUser.user_id} with update permission updating avatar for user ${userId}`);
+        } else {
+            console.log(`[uploadUserAvatar] Permission denied: User ${currentUser.user_id} trying to update avatar for user ${userId}`);
+            return { success: false, error: 'Permission denied: You can only update your own avatar.' };
+        }
     }
 
     const file = formData.get('avatar') as File | null;
@@ -1083,16 +1096,19 @@ export async function uploadUserAvatar(
         return { success: false, error: 'Avatar file cannot be empty.' };
     }
 
-    // Call the generic service function
-    const uploadResult = await uploadEntityImage(
-      'user',
-      userId,
-      file,
-      currentUser.user_id,
-      tenant,
-      'user_avatar',
-      true
-    );
+    // Call the generic service function within tenant context
+    // This ensures all downstream createTenantKnex() calls have proper context
+    const uploadResult = await runWithTenant(tenant, async () => {
+      return await uploadEntityImage(
+        'user',
+        userId,
+        file,
+        currentUser.user_id,
+        tenant,
+        'user_avatar',
+        true
+      );
+    });
 
     if (!uploadResult.success) {
       return { success: false, error: uploadResult.message || 'Failed to upload avatar.' };
@@ -1139,12 +1155,13 @@ export async function deleteUserAvatar(userId: string): Promise<ActionResult> {
       return { success: false, error: 'Authentication required.' };
     }
 
-    const { tenant } = await createTenantKnex(); // Still need tenant
+    // Use tenant from currentUser - don't rely on AsyncLocalStorage context
+    const tenant = currentUser.tenant;
     if (!tenant) {
         return { success: false, error: 'Tenant context is missing.' };
     }
 
-    const {knex} = await createTenantKnex();
+    const { knex } = await createTenantKnex(tenant);
     const targetUser = await User.get(knex, userId);
 
     if (!targetUser) {
@@ -1170,13 +1187,16 @@ export async function deleteUserAvatar(userId: string): Promise<ActionResult> {
         return { success: false, error: 'Permission denied: You can only delete your own avatar.' };
     }
 
-    // Call the generic service function
-    const deleteResult = await deleteEntityImage(
-      'user',
-      userId,
-      currentUser.user_id,
-      tenant
-    );
+    // Call the generic service function within tenant context
+    // This ensures all downstream createTenantKnex() calls have proper context
+    const deleteResult = await runWithTenant(tenant, async () => {
+      return await deleteEntityImage(
+        'user',
+        userId,
+        currentUser.user_id,
+        tenant
+      );
+    });
 
     if (!deleteResult.success) {
       return { success: false, error: deleteResult.message || 'Failed to delete avatar.' };

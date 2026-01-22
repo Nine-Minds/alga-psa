@@ -7,24 +7,20 @@
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.mjs",
-      "require": "./dist/index.js"
+      "import": "./src/index.ts",
+      "types": "./src/index.ts"
     },
     "./actions": {
-      "types": "./dist/actions/index.d.ts",
-      "import": "./dist/actions/index.mjs",
-      "require": "./dist/actions/index.js"
+      "import": "./src/actions/index.ts",
+      "types": "./src/actions/index.ts"
     },
     "./components": {
-      "types": "./dist/components/index.d.ts",
-      "import": "./dist/components/index.mjs",
-      "require": "./dist/components/index.js"
+      "import": "./src/components/index.ts",
+      "types": "./src/components/index.ts"
     },
     "./handlers": {
-      "types": "./dist/handlers/index.d.ts",
-      "import": "./dist/handlers/index.mjs",
-      "require": "./dist/handlers/index.js"
+      "import": "./src/handlers/index.ts",
+      "types": "./src/handlers/index.ts"
     },
     "./lib/avatarUtils": {
       "import": "./src/lib/avatarUtils.ts",
@@ -37,6 +33,14 @@
     "./lib/documentUtils": {
       "import": "./src/lib/documentUtils.ts",
       "types": "./src/lib/documentUtils.ts"
+    },
+    "./lib/entityImageService": {
+      "import": "./src/lib/entityImageService.ts",
+      "types": "./src/lib/entityImageService.ts"
+    },
+    "./storage/StorageService": {
+      "import": "./src/storage/StorageService.ts",
+      "types": "./src/storage/StorageService.ts"
     }
   },
   "scripts": {

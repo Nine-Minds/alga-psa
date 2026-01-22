@@ -7,9 +7,14 @@ import { IRole, IUserRole } from '@alga-psa/types';
 import { withTransaction } from '@alga-psa/db';
 import { createTenantKnex } from '@alga-psa/db';
 import { Knex } from 'knex';
+import { getCurrentUser } from '../actions/user-actions/userActions';
 
 export async function getRoles(): Promise<IRole[]> {
-    const { knex: db, tenant } = await createTenantKnex();
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+        throw new Error('No authenticated user found');
+    }
+    const { knex: db, tenant } = await createTenantKnex(currentUser.tenant);
     return withTransaction(db, async (trx: Knex.Transaction) => {
         return await trx('roles')
             .where({ tenant })
@@ -18,7 +23,11 @@ export async function getRoles(): Promise<IRole[]> {
 }
 
 export async function assignRoleToUser(userId: string, roleId: string): Promise<IUserRole> {
-    const { knex: db, tenant } = await createTenantKnex();
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+        throw new Error('No authenticated user found');
+    }
+    const { knex: db, tenant } = await createTenantKnex(currentUser.tenant);
     return withTransaction(db, async (trx: Knex.Transaction) => {
         const [user, role] = await Promise.all([
             trx('users').where({ user_id: userId, tenant }).first(),
@@ -49,7 +58,11 @@ export async function assignRoleToUser(userId: string, roleId: string): Promise<
 }
 
 export async function removeRoleFromUser(userId: string, roleId: string): Promise<void> {
-    const { knex: db, tenant } = await createTenantKnex();
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+        throw new Error('No authenticated user found');
+    }
+    const { knex: db, tenant } = await createTenantKnex(currentUser.tenant);
     return withTransaction(db, async (trx: Knex.Transaction) => {
         await trx('user_roles').where({ user_id: userId, role_id: roleId, tenant }).del();
     });

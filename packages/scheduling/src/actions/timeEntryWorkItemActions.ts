@@ -28,7 +28,7 @@ export async function fetchWorkItemsForTimeSheet(timeSheetId: string): Promise<I
   // Validate input
   const validatedParams = validateData<FetchTimeEntriesParams>(fetchTimeEntriesParamsSchema, { timeSheetId });
 
-  const {knex: db, tenant} = await createTenantKnex();
+  const {knex: db, tenant} = await createTenantKnex(currentUser.tenant);
 
   // Get tickets
   const tickets = await db('tickets')
@@ -159,7 +159,7 @@ export async function addWorkItem(workItem: Omit<IWorkItem, 'tenant'>): Promise<
   // Validate input
   const validatedWorkItem = validateData<AddWorkItemParams>(addWorkItemParamsSchema, workItem);
 
-  const {knex: db, tenant} = await createTenantKnex();
+  const {knex: db, tenant} = await createTenantKnex(currentUser.tenant);
 
   // Note: This function seems to insert into 'service_catalog', which might be incorrect
   // based on the function name 'addWorkItem'. Review if this logic is correct.
@@ -195,7 +195,7 @@ export async function deleteWorkItem(workItemId: string): Promise<void> {
     throw new Error('Permission denied: Cannot delete work items for time entries');
   }
 
-  const {knex: db, tenant} = await createTenantKnex();
+  const {knex: db, tenant} = await createTenantKnex(currentUser.tenant);
   const session = await getSession();
   if (!session?.user?.id) {
     throw new Error("User not authenticated");

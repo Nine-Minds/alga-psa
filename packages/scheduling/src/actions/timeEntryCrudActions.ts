@@ -42,7 +42,7 @@ export async function fetchTimeEntriesForTimeSheet(timeSheetId: string): Promise
   // Validate input
   const validatedParams = validateData<FetchTimeEntriesParams>(fetchTimeEntriesParamsSchema, { timeSheetId });
 
-  const {knex: db, tenant} = await createTenantKnex();
+  const {knex: db, tenant} = await createTenantKnex(currentUser.tenant);
 
   const timeEntries = await db('time_entries')
     .where({
@@ -225,7 +225,7 @@ export async function saveTimeEntry(timeEntry: Omit<ITimeEntry, 'tenant'>): Prom
   // Validate input
   const validatedTimeEntry = validateData<SaveTimeEntryParams>(saveTimeEntryParamsSchema, timeEntry);
 
-  const {knex: db, tenant} = await createTenantKnex();
+  const {knex: db, tenant} = await createTenantKnex(currentUser.tenant);
   const session = await getSession();
 
   if (!tenant) {
@@ -782,7 +782,7 @@ export async function deleteTimeEntry(entryId: string): Promise<void> {
     throw new Error('Permission denied: Cannot delete time entries');
   }
 
-  const {knex: db, tenant} = await createTenantKnex();
+  const {knex: db, tenant} = await createTenantKnex(currentUser.tenant);
   const session = await getSession();
   if (!session?.user?.id) {
     throw new Error("User not authenticated");
@@ -926,7 +926,7 @@ export async function deleteTimeEntry(entryId: string): Promise<void> {
       throw new Error('Permission denied: Cannot read time entries');
     }
 
-    const { knex: db, tenant } = await createTenantKnex();
+    const { knex: db, tenant } = await createTenantKnex(currentUser.tenant);
     if (!tenant) {
       throw new Error("Tenant context not found");
     }

@@ -15,7 +15,7 @@ export async function updateUserLocaleAction(locale: SupportedLocale | null) {
     throw new Error(`Unsupported locale: ${locale}`);
   }
 
-  const { knex } = await createTenantKnex();
+  const { knex } = await createTenantKnex(user.tenant);
 
   if (locale === null) {
     // Delete the preference to clear it
@@ -71,7 +71,7 @@ export async function getUserLocaleAction(): Promise<SupportedLocale | null> {
     return null;
   }
 
-  const { knex } = await createTenantKnex();
+  const { knex } = await createTenantKnex(user.tenant);
 
   const userPref = await knex('user_preferences')
     .where({

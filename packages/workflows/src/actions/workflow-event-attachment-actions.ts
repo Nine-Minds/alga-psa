@@ -1,6 +1,7 @@
 'use server';
 
 import { createTenantKnex } from '@alga-psa/db';
+import { getCurrentUser } from '@alga-psa/users/actions';
 import { WorkflowEventAttachmentModel } from '@alga-psa/workflows/models/workflowEventAttachment';
 import { EventCatalogModel } from '@alga-psa/workflows/models/eventCatalog';
 import {
@@ -25,8 +26,8 @@ export async function getWorkflowEventAttachmentsForWorkflow(params: {
   isActive?: boolean;
 }): Promise<(IWorkflowEventAttachment & { isSystemManaged: boolean })[]> { // Updated return type
   const { workflowId, tenant, isActive } = params;
-  
-  const { knex } = await createTenantKnex();
+
+  const { knex } = await createTenantKnex(tenant);
   
   // Get all workflow event attachments for the workflow
   const attachments = await WorkflowEventAttachmentModel.getAllForWorkflow(knex, workflowId, tenant, {
@@ -49,7 +50,7 @@ export async function getWorkflowEventAttachmentsForEventType(params: {
 }): Promise<(IWorkflowEventAttachment & { isSystemManaged: boolean })[]> { // Updated return type
   const { eventType, tenant, isActive } = params;
 
-  const { knex } = await createTenantKnex();
+  const { knex } = await createTenantKnex(tenant);
 
   // Get all workflow event attachments for the event type
   // NOTE: Assumes WorkflowEventAttachmentModel.getAllForEventType exists/will be created
@@ -71,8 +72,8 @@ export async function getWorkflowEventAttachmentById(params: {
   tenant: string;
 }): Promise<(IWorkflowEventAttachment & { isSystemManaged: boolean }) | null> { // Updated return type
   const { attachmentId, tenant } = params;
-  
-  const { knex } = await createTenantKnex();
+
+  const { knex } = await createTenantKnex(tenant);
   
   // Get the workflow event attachment
   const attachment = await WorkflowEventAttachmentModel.getById(knex, attachmentId, tenant);
@@ -88,8 +89,8 @@ export async function getWorkflowEventAttachmentById(params: {
  */
 // NOTE: ICreateWorkflowEventAttachment interface in shared types needs event_id changed to event_type
 export async function createWorkflowEventAttachment(params: ICreateWorkflowEventAttachment): Promise<IWorkflowEventAttachment> {
-  const { knex } = await createTenantKnex();
   const { workflow_id, event_type, tenant } = params; // Destructure event_type
+  const { knex } = await createTenantKnex(tenant);
 
   // Verify that the workflow exists
   const workflow = await getWorkflowRegistration(workflow_id);
@@ -168,8 +169,8 @@ export async function updateWorkflowEventAttachment(params: {
   data: IUpdateWorkflowEventAttachment;
 }): Promise<IWorkflowEventAttachment | null> {
   const { attachmentId, tenant, data } = params;
-  
-  const { knex } = await createTenantKnex();
+
+  const { knex } = await createTenantKnex(tenant);
   
   // Get the workflow event attachment
   const attachment = await WorkflowEventAttachmentModel.getById(knex, attachmentId, tenant);
@@ -215,8 +216,8 @@ export async function deleteWorkflowEventAttachment(params: {
   tenant: string;
 }): Promise<boolean> {
   const { attachmentId, tenant } = params;
-  
-  const { knex } = await createTenantKnex();
+
+  const { knex } = await createTenantKnex(tenant);
   
   // Get the workflow event attachment
   const attachment = await WorkflowEventAttachmentModel.getById(knex, attachmentId, tenant);
@@ -253,8 +254,8 @@ export async function getWorkflowsForEventType(params: {
   tenant: string;
 }): Promise<{ workflow_id: string; isSystemManaged: boolean }[]> { // Updated return type
   const { eventType, tenant } = params;
-  
-  const { knex } = await createTenantKnex();
+
+  const { knex } = await createTenantKnex(tenant);
   
   // Get all workflows attached to the event type (now returns objects with isSystemManaged flag)
   const workflowAttachments = await WorkflowEventAttachmentModel.getWorkflowsForEventType(knex, eventType, tenant);
@@ -275,7 +276,7 @@ async function subscribeWorkflowToEvent(
   tenant: string
 ): Promise<void> {
   const eventBus = getEventBus();
-  const { knex } = await createTenantKnex();
+  const { knex } = await createTenantKnex(tenant);
   
   // Create a unique subscription ID for this workflow and event
   const subscriptionId = `workflow:${workflowId}:event:${eventType}`;

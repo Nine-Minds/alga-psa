@@ -56,8 +56,6 @@
       "@alga-psa/event-bus/*": ["packages/event-bus/src/*"],
       "@alga-psa/email": ["packages/email/src"],
       "@alga-psa/email/*": ["packages/email/src/*"],
-      "@alga-psa/media": ["packages/media/src"],
-      "@alga-psa/media/*": ["packages/media/src/*"],
       "@alga-psa/clients": ["packages/clients/src"],
       "@alga-psa/clients/*": ["packages/clients/src/*"],
       "@alga-psa/billing": ["packages/billing/src"],

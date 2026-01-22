@@ -85,8 +85,6 @@
       "@alga-psa/analytics/*": ["packages/analytics/src/*"],
       "@alga-psa/email": ["packages/email/src"],
       "@alga-psa/email/*": ["packages/email/src/*"],
-      "@alga-psa/media": ["packages/media/src"],
-      "@alga-psa/media/*": ["packages/media/src/*"],
       "next-auth": ["node_modules/next-auth"],
       "next-auth/*": ["node_modules/next-auth/*"],
       "@/*": ["server/src/*"],

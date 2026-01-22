@@ -129,7 +129,7 @@ async function resolveTenantContext(): Promise<{
     throw new Error('User or Tenant ID not found. Unable to perform tenant-scoped operation.');
   }
 
-  const { knex } = await createTenantKnex();
+  const { knex } = await createTenantKnex(user.tenant);
   return { tenantId: user.tenant, knex, user };
 }
 
@@ -472,7 +472,7 @@ async function lookupExternalEntityIdAction(
   });
 
   try {
-    const { knex } = await createTenantKnex();
+    const { knex } = await createTenantKnex(tenant);
 
     const result = await withTransaction(knex, async (trx: Knex.Transaction) => {
       const query = trx('tenant_external_entity_mappings')

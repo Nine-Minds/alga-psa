@@ -22,7 +22,7 @@ export async function getUsersClientInfo(userIds: string[]): Promise<UserClientI
     throw new Error('No authenticated user found');
   }
 
-  const { knex: db, tenant } = await createTenantKnex();
+  const { knex: db, tenant } = await createTenantKnex(currentUser.tenant);
   if (!tenant) {
     throw new Error('Tenant not found');
   }

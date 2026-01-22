@@ -22,7 +22,8 @@ export async function getEmailSettings(): Promise<TenantEmailSettings | null> {
     throw new Error('User not authenticated');
   }
 
-  const { knex, tenant } = await createTenantKnex();
+  const { knex } = await createTenantKnex(user.tenant);
+  const tenant = user.tenant;
 
   try {
     // Use TenantEmailService to get email settings
@@ -84,7 +85,8 @@ export async function updateEmailSettings(updates: Partial<TenantEmailSettings>)
     throw new Error('User not authenticated');
   }
 
-  const { knex, tenant } = await createTenantKnex();
+  const { knex } = await createTenantKnex(user.tenant);
+  const tenant = user.tenant;
 
   try {
     const now = new Date();

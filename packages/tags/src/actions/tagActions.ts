@@ -42,7 +42,12 @@ export async function findTagsByEntityId(entityId: string, entityType: string): 
 }
 
 export async function findTagById(tagId: string): Promise<ITag | undefined> {
-  const { knex: db, tenant } = await createTenantKnex();
+  const currentUser = await getCurrentUserAsync();
+  if (!currentUser?.tenant) {
+    throw new Error('Tenant context is required');
+  }
+
+  const { knex: db, tenant } = await createTenantKnex(currentUser.tenant);
   if (!tenant) {
     throw new Error('Tenant context is required');
   }
@@ -110,17 +115,17 @@ export async function createTag(tag: Omit<ITag, 'tag_id' | 'tenant'>): Promise<I
     throw new Error('Tag text contains invalid characters');
   }
   
-  const { knex: db, tenant } = await createTenantKnex();
-  if (!tenant) {
-    throw new Error('Tenant context is required');
-  }
-  
   // Get current user for created_by field and permission check
   const currentUser = await getCurrentUserAsync();
   if (!currentUser) {
     throw new Error('User not found');
   }
   const userId = currentUser.user_id;
+
+  const { knex: db, tenant } = await createTenantKnex(currentUser.tenant);
+  if (!tenant) {
+    throw new Error('Tenant context is required');
+  }
   
   return await withTransaction(db, async (trx: Knex.Transaction) => {
     try {
@@ -195,15 +200,15 @@ export async function createTag(tag: Omit<ITag, 'tag_id' | 'tenant'>): Promise<I
 }
 
 export async function updateTag(id: string, tag: Partial<ITag>): Promise<void> {
-  const { knex: db, tenant } = await createTenantKnex();
-  if (!tenant) {
-    throw new Error('Tenant context is required');
-  }
-  
   // Get current user for permission check
   const currentUser = await getCurrentUserAsync();
   if (!currentUser) {
     throw new Error('User not found');
+  }
+
+  const { knex: db, tenant } = await createTenantKnex(currentUser.tenant);
+  if (!tenant) {
+    throw new Error('Tenant context is required');
   }
   
   return await withTransaction(db, async (trx: Knex.Transaction) => {
@@ -264,15 +269,15 @@ export async function updateTag(id: string, tag: Partial<ITag>): Promise<void> {
 }
 
 export async function deleteTag(id: string): Promise<void> {
-  const { knex: db, tenant } = await createTenantKnex();
-  if (!tenant) {
-    throw new Error('Tenant context is required');
-  }
-  
   // Get current user for permission check
   const currentUser = await getCurrentUserAsync();
   if (!currentUser) {
     throw new Error('User not found');
+  }
+
+  const { knex: db, tenant } = await createTenantKnex(currentUser.tenant);
+  if (!tenant) {
+    throw new Error('Tenant context is required');
   }
   
   return await withTransaction(db, async (trx: Knex.Transaction) => {
@@ -363,7 +368,14 @@ export async function findTagsByEntityIds(entityIds: string[], entityType: Tagge
 
 export async function getAllTags(): Promise<ITag[]> {
   try {
-    const { knex: db, tenant } = await createTenantKnex();
+    const currentUser = await getCurrentUserAsync();
+    if (!currentUser?.tenant) {
+      // Return empty array when no tenant context (e.g., during initial client render)
+      console.warn('No tenant context available for getAllTags - returning empty array');
+      return [];
+    }
+
+    const { knex: db, tenant } = await createTenantKnex(currentUser.tenant);
     if (!tenant) {
       // Return empty array when no tenant context (e.g., during initial client render)
       console.warn('No tenant context available for getAllTags - returning empty array');
@@ -398,7 +410,13 @@ export async function getAllTags(): Promise<ITag[]> {
 
 export async function findAllTagsByType(entityType: TaggedEntityType): Promise<ITag[]> {
   try {
-    const { knex: db, tenant } = await createTenantKnex();
+    const currentUser = await getCurrentUserAsync();
+    if (!currentUser?.tenant) {
+      console.warn(`No tenant context available for findAllTagsByType(${entityType}) - returning empty array`);
+      return [];
+    }
+
+    const { knex: db, tenant } = await createTenantKnex(currentUser.tenant);
     if (!tenant) {
       console.warn(`No tenant context available for findAllTagsByType(${entityType}) - returning empty array`);
       return [];
@@ -545,15 +563,15 @@ export async function createTagsForEntityWithTransaction(
 }
 
 export async function updateTagColor(tagId: string, backgroundColor: string | null, textColor: string | null): Promise<{ tag_text: string; background_color: string | null; text_color: string | null; }> {
-  const { knex: db, tenant } = await createTenantKnex();
-  if (!tenant) {
-    throw new Error('Tenant context is required');
-  }
-  
   // Get current user for permission check
   const currentUser = await getCurrentUserAsync();
   if (!currentUser) {
     throw new Error('User not found');
+  }
+
+  const { knex: db, tenant } = await createTenantKnex(currentUser.tenant);
+  if (!tenant) {
+    throw new Error('Tenant context is required');
   }
   
   // Validate hex color codes if provided
@@ -627,15 +645,15 @@ export async function updateTagColor(tagId: string, backgroundColor: string | nu
 }
 
 export async function updateTagText(tagId: string, newTagText: string): Promise<{ old_tag_text: string; new_tag_text: string; tagged_type: TaggedEntityType; updated_count: number; }> {
-  const { knex: db, tenant } = await createTenantKnex();
-  if (!tenant) {
-    throw new Error('Tenant context is required');
-  }
-  
   // Get current user for permission check
   const currentUser = await getCurrentUserAsync();
   if (!currentUser) {
     throw new Error('User not found');
+  }
+
+  const { knex: db, tenant } = await createTenantKnex(currentUser.tenant);
+  if (!tenant) {
+    throw new Error('Tenant context is required');
   }
   
   // Validate tag text
@@ -757,12 +775,12 @@ export async function checkTagPermissions(taggedType: TaggedEntityType): Promise
       };
     }
 
-    const { knex: db } = await createTenantKnex();
-    
+    const { knex: db } = await createTenantKnex(currentUser.tenant);
+
     return await withTransaction(db, async (trx: Knex.Transaction) => {
       // Map 'client' to 'client' for permission checks
       const permissionEntity = taggedType === 'client' ? 'client' : taggedType;
-      
+
       // Check all permissions in parallel
       const [entityUpdate, tagCreate, tagUpdate, tagDelete] = await Promise.all([
         hasPermissionAsync(currentUser, permissionEntity, 'update', trx),
@@ -795,15 +813,15 @@ export async function checkTagPermissions(taggedType: TaggedEntityType): Promise
 }
 
 export async function deleteAllTagsByText(tagText: string, taggedType: TaggedEntityType): Promise<{ deleted_count: number }> {
-  const { knex: db, tenant } = await createTenantKnex();
-  if (!tenant) {
-    throw new Error('Tenant context is required');
-  }
-  
   // Get current user for permission check
   const currentUser = await getCurrentUserAsync();
   if (!currentUser) {
     throw new Error('User not found');
+  }
+
+  const { knex: db, tenant } = await createTenantKnex(currentUser.tenant);
+  if (!tenant) {
+    throw new Error('Tenant context is required');
   }
   
   // Validate tag text

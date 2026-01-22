@@ -12,15 +12,15 @@ import ProjectModel from '@alga-psa/projects/models/project';
  * Verifies client access and returns project with client_portal_config
  */
 export async function getClientProjectDetails(projectId: string): Promise<IProject | null> {
-  const { knex, tenant } = await createTenantKnex();
-  if (!tenant) {
-    throw new Error('Tenant not found');
-  }
-
   // Get current user and verify they are a client
   const user = await getCurrentUser();
   if (!user) {
     throw new Error('User not authenticated');
+  }
+
+  const { knex, tenant } = await createTenantKnex(user.tenant);
+  if (!tenant) {
+    throw new Error('Tenant not found');
   }
 
   const clientId = await getUserClientId(user.user_id);
@@ -74,15 +74,15 @@ export async function getClientProjects(options: {
   page: number;
   pageSize: number;
 }> {
-  const { knex, tenant } = await createTenantKnex();
-  if (!tenant) {
-    throw new Error('Tenant not found');
-  }
-  
   // Get current user and client
   const user = await getCurrentUser();
   if (!user) {
     throw new Error('User not authenticated');
+  }
+
+  const { knex, tenant } = await createTenantKnex(user.tenant);
+  if (!tenant) {
+    throw new Error('Tenant not found');
   }
   
   const clientId = await getUserClientId(user.user_id);
@@ -198,15 +198,15 @@ export async function getProjectProgress(projectId: string): Promise<{
   timelineStatus: 'on_track' | 'delayed' | 'at_risk';
   daysRemaining: number;
 } | null> {
-  const { knex, tenant } = await createTenantKnex();
-  if (!tenant) {
-    throw new Error('Tenant not found');
-  }
-
   // Get current user and client
   const user = await getCurrentUser();
   if (!user) {
     throw new Error('User not authenticated');
+  }
+
+  const { knex, tenant } = await createTenantKnex(user.tenant);
+  if (!tenant) {
+    throw new Error('Tenant not found');
   }
 
   // Get project to verify access and check visibility config
@@ -332,15 +332,15 @@ export async function getProjectManager(projectId: string): Promise<{
   email: string | null;
   phone?: string;
 }> {
-  const { knex, tenant } = await createTenantKnex();
-  if (!tenant) {
-    throw new Error('Tenant not found');
-  }
-  
   // Get current user
   const user = await getCurrentUser();
   if (!user) {
     throw new Error('User not authenticated');
+  }
+
+  const { knex, tenant } = await createTenantKnex(user.tenant);
+  if (!tenant) {
+    throw new Error('Tenant not found');
   }
   
   // Get project to verify access

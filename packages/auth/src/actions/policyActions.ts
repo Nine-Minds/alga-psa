@@ -7,16 +7,21 @@ import { USER_ATTRIBUTES, TICKET_ATTRIBUTES } from '../lib/attributes/EntityAttr
 import { withTransaction } from '@alga-psa/db';
 import { createTenantKnex } from '@alga-psa/db';
 import { Knex } from 'knex';
+import { getCurrentUser } from '../lib/getCurrentUser';
 
 const policyEngine = new PolicyEngine();
 
 // Role actions
 export async function createRole(roleName: string, description: string, msp: boolean = true, client: boolean = false): Promise<IRole> {
-    const { knex: db, tenant } = await createTenantKnex();
+    const currentUser = await getCurrentUser();
+    if (!currentUser?.tenant) {
+        throw new Error('User must be authenticated to create a role');
+    }
+    const { knex: db, tenant } = await createTenantKnex(currentUser.tenant);
     return withTransaction(db, async (trx: Knex.Transaction) => {
-        const [role] = await trx('roles').insert({ 
-            role_name: roleName, 
-            description, 
+        const [role] = await trx('roles').insert({
+            role_name: roleName,
+            description,
             tenant,
             msp,
             client
@@ -26,7 +31,11 @@ export async function createRole(roleName: string, description: string, msp: boo
 }
 
 export async function updateRole(roleId: string, roleName: string): Promise<IRole> {
-    const { knex: db, tenant } = await createTenantKnex();
+    const currentUser = await getCurrentUser();
+    if (!currentUser?.tenant) {
+        throw new Error('User must be authenticated to update a role');
+    }
+    const { knex: db, tenant } = await createTenantKnex(currentUser.tenant);
     return withTransaction(db, async (trx: Knex.Transaction) => {
         const [updatedRole] = await trx('roles')
             .where({ role_id: roleId, tenant })
@@ -37,28 +46,36 @@ export async function updateRole(roleId: string, roleName: string): Promise<IRol
 }
 
 export async function deleteRole(roleId: string): Promise<void> {
-    const { knex: db, tenant } = await createTenantKnex();
+    const currentUser = await getCurrentUser();
+    if (!currentUser?.tenant) {
+        throw new Error('User must be authenticated to delete a role');
+    }
+    const { knex: db, tenant } = await createTenantKnex(currentUser.tenant);
     return withTransaction(db, async (trx: Knex.Transaction) => {
         // Check if role is an Admin role (immutable)
         const role = await trx('roles')
             .where({ role_id: roleId, tenant })
             .first();
-        
+
         if (!role) {
             throw new Error('Role not found');
         }
-        
+
         // Prevent deletion of Admin roles
         if (role.role_name.toLowerCase() === 'admin') {
             throw new Error('Admin roles cannot be deleted');
         }
-        
+
         await trx('roles').where({ role_id: roleId, tenant }).del();
     });
 }
 
 export async function getRoles(): Promise<IRole[]> {
-    const { knex: db, tenant } = await createTenantKnex();
+    const currentUser = await getCurrentUser();
+    if (!currentUser?.tenant) {
+        throw new Error('User must be authenticated to get roles');
+    }
+    const { knex: db, tenant } = await createTenantKnex(currentUser.tenant);
     return withTransaction(db, async (trx: Knex.Transaction) => {
         return await trx('roles')
             .where({ tenant })
@@ -68,26 +85,30 @@ export async function getRoles(): Promise<IRole[]> {
 
 // Role-Permission actions
 export async function assignPermissionToRole(roleId: string, permissionId: string): Promise<void> {
+    const currentUser = await getCurrentUser();
+    if (!currentUser?.tenant) {
+        throw new Error('User must be authenticated to assign permission to role');
+    }
     try {
-        const { knex: db, tenant } = await createTenantKnex();
+        const { knex: db, tenant } = await createTenantKnex(currentUser.tenant);
         return withTransaction(db, async (trx: Knex.Transaction) => {
-        
+
         // First, verify both the role and permission exist for this tenant
         const [role, permission] = await Promise.all([
             trx('roles').where({ role_id: roleId, tenant }).first(),
             trx('permissions').where({ permission_id: permissionId, tenant }).first()
         ]);
-            
+
         if (!role || !permission) {
             throw new Error('Role or permission not found for this tenant');
         }
 
         // Then insert the role permission
         await trx('role_permissions')
-            .insert({ 
-                role_id: roleId, 
-                permission_id: permissionId, 
-                tenant 
+            .insert({
+                role_id: roleId,
+                permission_id: permissionId,
+                tenant
             })
             .onConflict(['role_id', 'permission_id', 'tenant'])
               .ignore();
@@ -99,14 +120,18 @@ export async function assignPermissionToRole(roleId: string, permissionId: strin
 }
 
 export async function removePermissionFromRole(roleId: string, permissionId: string): Promise<void> {
+    const currentUser = await getCurrentUser();
+    if (!currentUser?.tenant) {
+        throw new Error('User must be authenticated to remove permission from role');
+    }
     try {
-        const { knex: db, tenant } = await createTenantKnex();
+        const { knex: db, tenant } = await createTenantKnex(currentUser.tenant);
         return withTransaction(db, async (trx: Knex.Transaction) => {
         await trx('role_permissions')
-            .where({ 
-                role_id: roleId, 
+            .where({
+                role_id: roleId,
                 permission_id: permissionId,
-                tenant 
+                tenant
             })
               .del();
         });
@@ -118,31 +143,35 @@ export async function removePermissionFromRole(roleId: string, permissionId: str
 
 // User-Role actions
 export async function assignRoleToUser(userId: string, roleId: string): Promise<IUserRole> {
-    const { knex: db, tenant } = await createTenantKnex();
+    const currentUser = await getCurrentUser();
+    if (!currentUser?.tenant) {
+        throw new Error('User must be authenticated to assign role to user');
+    }
+    const { knex: db, tenant } = await createTenantKnex(currentUser.tenant);
     return withTransaction(db, async (trx: Knex.Transaction) => {
         // Validate that the role and user exist and are compatible
         const [user, role] = await Promise.all([
             trx('users').where({ user_id: userId, tenant }).first(),
             trx('roles').where({ role_id: roleId, tenant }).first()
         ]);
-        
+
         if (!user) {
             throw new Error('User not found');
         }
-        
+
         if (!role) {
             throw new Error('Role not found');
         }
-        
+
         // Validate role compatibility based on user type
         if (user.user_type === 'internal' && !role.msp) {
             throw new Error('Cannot assign client portal role to MSP user');
         }
-        
+
         if (user.user_type === 'client' && !role.client) {
             throw new Error('Cannot assign MSP role to client portal user');
         }
-        
+
         const [userRole] = await trx('user_roles')
             .insert({ user_id: userId, role_id: roleId, tenant })
             .returning('*');
@@ -151,14 +180,22 @@ export async function assignRoleToUser(userId: string, roleId: string): Promise<
 }
 
 export async function removeRoleFromUser(userId: string, roleId: string): Promise<void> {
-    const { knex: db, tenant } = await createTenantKnex();
+    const currentUser = await getCurrentUser();
+    if (!currentUser?.tenant) {
+        throw new Error('User must be authenticated to remove role from user');
+    }
+    const { knex: db, tenant } = await createTenantKnex(currentUser.tenant);
     return withTransaction(db, async (trx: Knex.Transaction) => {
         await trx('user_roles').where({ user_id: userId, role_id: roleId, tenant }).del();
     });
 }
 
 export async function getUserRoles(userId: string): Promise<IRole[]> {
-    const { knex: db, tenant } = await createTenantKnex();
+    const currentUser = await getCurrentUser();
+    if (!currentUser?.tenant) {
+        throw new Error('User must be authenticated to get user roles');
+    }
+    const { knex: db, tenant } = await createTenantKnex(currentUser.tenant);
     return withTransaction(db, async (trx: Knex.Transaction) => {
         return await trx('user_roles')
             .join('roles', function() {
@@ -175,10 +212,14 @@ export async function getUserRoles(userId: string): Promise<IRole[]> {
 
 // User-Attribute actions
 export async function getUserAttributes(userId: string): Promise<Partial<IUserWithRoles>> {
-    const { knex: db, tenant } = await createTenantKnex();
+    const currentUser = await getCurrentUser();
+    if (!currentUser?.tenant) {
+        throw new Error('User must be authenticated to get user attributes');
+    }
+    const { knex: db, tenant } = await createTenantKnex(currentUser.tenant);
     return withTransaction(db, async (trx: Knex.Transaction) => {
         const user = await trx('users').where({ user_id: userId, tenant }).first();
-    
+
     if (!user) {
         throw new Error('User not found');
     }
@@ -198,10 +239,14 @@ export async function getUserAttributes(userId: string): Promise<Partial<IUserWi
 
 // Ticket-Attribute actions
 export async function getTicketAttributes(ticketId: string): Promise<Partial<ITicket>> {
-    const { knex: db, tenant } = await createTenantKnex();
+    const currentUser = await getCurrentUser();
+    if (!currentUser?.tenant) {
+        throw new Error('User must be authenticated to get ticket attributes');
+    }
+    const { knex: db, tenant } = await createTenantKnex(currentUser.tenant);
     return withTransaction(db, async (trx: Knex.Transaction) => {
         const ticket = await trx('tickets').where({ ticket_id: ticketId, tenant }).first();
-    
+
     if (!ticket) {
         throw new Error('Ticket not found');
     }
@@ -214,13 +259,17 @@ export async function getTicketAttributes(ticketId: string): Promise<Partial<ITi
 
 // Policy actions
 export async function createPolicy(policyName: string, resource: string, action: string, conditions: ICondition[]): Promise<IPolicy> {
-    const { knex: db, tenant } = await createTenantKnex();
+    const currentUser = await getCurrentUser();
+    if (!currentUser?.tenant) {
+        throw new Error('User must be authenticated to create a policy');
+    }
+    const { knex: db, tenant } = await createTenantKnex(currentUser.tenant);
     return withTransaction(db, async (trx: Knex.Transaction) => {
-        const [policy] = await trx('policies').insert({ 
+        const [policy] = await trx('policies').insert({
             tenant,
-            policy_name: policyName, 
-            resource, 
-            action, 
+            policy_name: policyName,
+            resource,
+            action,
             conditions
         }).returning('*');
         policyEngine.addPolicy(policy);
@@ -229,14 +278,18 @@ export async function createPolicy(policyName: string, resource: string, action:
 }
 
 export async function updatePolicy(policyId: string, policyName: string, resource: string, action: string, conditions: ICondition[]): Promise<IPolicy> {
-    const { knex: db, tenant } = await createTenantKnex();
+    const currentUser = await getCurrentUser();
+    if (!currentUser?.tenant) {
+        throw new Error('User must be authenticated to update a policy');
+    }
+    const { knex: db, tenant } = await createTenantKnex(currentUser.tenant);
     return withTransaction(db, async (trx: Knex.Transaction) => {
         const [updatedPolicy] = await trx('policies')
             .where({ policy_id: policyId, tenant })
-            .update({ 
-                policy_name: policyName, 
-                resource, 
-                action, 
+            .update({
+                policy_name: policyName,
+                resource,
+                action,
                 conditions
             })
             .returning('*');
@@ -247,7 +300,11 @@ export async function updatePolicy(policyId: string, policyName: string, resourc
 }
 
 export async function deletePolicy(policyId: string): Promise<void> {
-    const { knex: db, tenant } = await createTenantKnex();
+    const currentUser = await getCurrentUser();
+    if (!currentUser?.tenant) {
+        throw new Error('User must be authenticated to delete a policy');
+    }
+    const { knex: db, tenant } = await createTenantKnex(currentUser.tenant);
     return withTransaction(db, async (trx: Knex.Transaction) => {
         const [deletedPolicy] = await trx('policies').where({ policy_id: policyId, tenant }).returning('*');
         await trx('policies').where({ policy_id: policyId, tenant }).del();
@@ -256,7 +313,11 @@ export async function deletePolicy(policyId: string): Promise<void> {
 }
 
 export async function getPolicies(): Promise<IPolicy[]> {
-    const { knex: db, tenant } = await createTenantKnex();
+    const currentUser = await getCurrentUser();
+    if (!currentUser?.tenant) {
+        throw new Error('User must be authenticated to get policies');
+    }
+    const { knex: db, tenant } = await createTenantKnex(currentUser.tenant);
     return withTransaction(db, async (trx: Knex.Transaction) => {
         const policies = await trx('policies').where({ tenant });
         return policies.map((policy: any): IPolicy => ({
@@ -272,8 +333,12 @@ export async function evaluateAccess(user: IUserWithRoles, resource: any, action
 
 // Role-permission management
 export async function getRolePermissions(roleId: string): Promise<IPermission[]> {
+    const currentUser = await getCurrentUser();
+    if (!currentUser?.tenant) {
+        throw new Error('User must be authenticated to get role permissions');
+    }
     try {
-        const { knex: db, tenant } = await createTenantKnex();
+        const { knex: db, tenant } = await createTenantKnex(currentUser.tenant);
         return withTransaction(db, async (trx: Knex.Transaction) => {
             return await trx('role_permissions')
                 .join('permissions', function() {
@@ -293,8 +358,12 @@ export async function getRolePermissions(roleId: string): Promise<IPermission[]>
 }
 
 export async function getPermissions(): Promise<IPermission[]> {
+    const currentUser = await getCurrentUser();
+    if (!currentUser?.tenant) {
+        throw new Error('User must be authenticated to get permissions');
+    }
     try {
-        const { knex: db, tenant } = await createTenantKnex();
+        const { knex: db, tenant } = await createTenantKnex(currentUser.tenant);
         return withTransaction(db, async (trx: Knex.Transaction) => {
             const permissions = await trx('permissions')
                 .where({ tenant })

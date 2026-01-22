@@ -1,6 +1,6 @@
 'use server';
 
-import { uploadEntityImage, deleteEntityImage, EntityType } from '@alga-psa/media';
+import { uploadEntityImage, deleteEntityImage, EntityType } from '@alga-psa/documents';
 import { getConnection } from '@alga-psa/db';
 import { getCurrentUser } from '@alga-psa/users/actions';
 

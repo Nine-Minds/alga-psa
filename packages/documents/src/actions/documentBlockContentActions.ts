@@ -29,15 +29,15 @@ interface CreateBlockDocumentInput extends BlockContentInput {
 export async function createBlockDocument(
   input: CreateBlockDocumentInput
 ): Promise<{ document_id: string; content_id: string }> {
-  const { knex, tenant } = await createTenantKnex();
-  if (!tenant) {
-    throw new Error('No tenant found');
-  }
-
-  // Get current user
+  // Get current user first to get tenant
   const currentUser = await getCurrentUserAsync();
   if (!currentUser) {
     throw new Error('No authenticated user found');
+  }
+
+  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
+  if (!tenant) {
+    throw new Error('No tenant found');
   }
 
   try {
@@ -129,7 +129,12 @@ export async function createBlockDocument(
 
 // Get document block content
 export async function getBlockContent(documentId: string) {
-  const { knex, tenant } = await createTenantKnex();
+  const currentUser = await getCurrentUserAsync();
+  if (!currentUser) {
+    throw new Error('No authenticated user found');
+  }
+
+  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
   if (!tenant) {
     throw new Error('No tenant found');
   }
@@ -157,7 +162,12 @@ export async function updateBlockContent(
   documentId: string,
   input: BlockContentInput & { user_id: string }
 ) {
-  const { knex, tenant } = await createTenantKnex();
+  const currentUser = await getCurrentUserAsync();
+  if (!currentUser) {
+    throw new Error('No authenticated user found');
+  }
+
+  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
   if (!tenant) {
     throw new Error('No tenant found');
   }
@@ -284,7 +294,12 @@ export async function updateBlockContent(
 
 // Delete document block content
 export async function deleteBlockContent(documentId: string): Promise<void> {
-  const { knex, tenant } = await createTenantKnex();
+  const currentUser = await getCurrentUserAsync();
+  if (!currentUser) {
+    throw new Error('No authenticated user found');
+  }
+
+  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
   if (!tenant) {
     throw new Error('No tenant found');
   }

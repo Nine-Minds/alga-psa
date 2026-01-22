@@ -2,6 +2,7 @@
 
 import { createTenantKnex } from '@alga-psa/db';
 import { withTransaction } from '@alga-psa/db';
+import { getCurrentUser } from '@alga-psa/users/actions';
 import { WorkflowTriggerModel } from '@alga-psa/workflows/models/workflowTrigger';
 import { WorkflowEventMappingModel } from '@alga-psa/workflows/models/workflowEventMapping';
 import { EventCatalogModel } from '@alga-psa/workflows/models/eventCatalog';
@@ -27,7 +28,7 @@ export async function getWorkflowTriggers(params: {
 }): Promise<IWorkflowTrigger[]> {
   const { tenant, eventType, limit, offset } = params;
 
-  const { knex } = await createTenantKnex();
+  const { knex } = await createTenantKnex(tenant);
 
   // Get all workflow triggers
   const triggers = await withTransaction(knex, async (trx) => {
@@ -53,7 +54,7 @@ export async function getWorkflowTriggerById(params: {
 }): Promise<IWorkflowTrigger | null> {
   const { triggerId, tenant } = params;
 
-  const { knex } = await createTenantKnex();
+  const { knex } = await createTenantKnex(tenant);
 
   // Get the workflow trigger
   const trigger = await withTransaction(knex, async (trx) => {
@@ -70,7 +71,7 @@ export async function getWorkflowTriggerById(params: {
  * @returns The created workflow trigger
  */
 export async function createWorkflowTrigger(params: ICreateWorkflowTrigger): Promise<IWorkflowTrigger> {
-  const { knex } = await createTenantKnex();
+  const { knex } = await createTenantKnex(params.tenant);
 
   // Verify that the event type exists in the event catalog
   const trigger = await withTransaction(knex, async (trx) => {
@@ -100,7 +101,7 @@ export async function updateWorkflowTrigger(params: {
 }): Promise<IWorkflowTrigger | null> {
   const { triggerId, tenant, data } = params;
 
-  const { knex } = await createTenantKnex();
+  const { knex } = await createTenantKnex(tenant);
 
   // Get the workflow trigger
   const updatedTrigger = await withTransaction(knex, async (trx) => {
@@ -138,7 +139,7 @@ export async function deleteWorkflowTrigger(params: {
 }): Promise<boolean> {
   const { triggerId, tenant } = params;
 
-  const { knex } = await createTenantKnex();
+  const { knex } = await createTenantKnex(tenant);
 
   // Get the workflow trigger
   const result = await withTransaction(knex, async (trx) => {
@@ -169,7 +170,11 @@ export async function getWorkflowEventMappings(params: {
 }): Promise<IWorkflowEventMapping[]> {
   const { triggerId } = params;
 
-  const { knex } = await createTenantKnex();
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
+    throw new Error('User not authenticated');
+  }
+  const { knex } = await createTenantKnex(currentUser.tenant);
 
   // Get all event mappings for the trigger
   const mappings = await withTransaction(knex, async (trx) => {
@@ -186,7 +191,11 @@ export async function getWorkflowEventMappings(params: {
  * @returns The created workflow event mapping
  */
 export async function createWorkflowEventMapping(params: ICreateWorkflowEventMapping): Promise<IWorkflowEventMapping> {
-  const { knex } = await createTenantKnex();
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
+    throw new Error('User not authenticated');
+  }
+  const { knex } = await createTenantKnex(currentUser.tenant);
 
   // Create the workflow event mapping
   const mapping = await withTransaction(knex, async (trx) => {
@@ -211,7 +220,11 @@ export async function createWorkflowEventMappings(params: {
     return [];
   }
 
-  const { knex } = await createTenantKnex();
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
+    throw new Error('User not authenticated');
+  }
+  const { knex } = await createTenantKnex(currentUser.tenant);
 
   // Create the workflow event mappings
   const createdMappings = await withTransaction(knex, async (trx) => {
@@ -232,7 +245,11 @@ export async function deleteWorkflowEventMapping(params: {
 }): Promise<boolean> {
   const { mappingId } = params;
 
-  const { knex } = await createTenantKnex();
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
+    throw new Error('User not authenticated');
+  }
+  const { knex } = await createTenantKnex(currentUser.tenant);
 
   // Delete the workflow event mapping
   const result = await withTransaction(knex, async (trx) => {
@@ -253,7 +270,11 @@ export async function deleteAllWorkflowEventMappings(params: {
 }): Promise<number> {
   const { triggerId } = params;
 
-  const { knex } = await createTenantKnex();
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
+    throw new Error('User not authenticated');
+  }
+  const { knex } = await createTenantKnex(currentUser.tenant);
 
   // Delete all event mappings for the trigger
   const result = await withTransaction(knex, async (trx) => {

@@ -35,7 +35,7 @@ export async function getDashboardMetrics(): Promise<DashboardMetrics> {
     throw new Error('Unauthorized: Contact information not found');
   }
 
-  const { knex, tenant } = await createTenantKnex();
+  const { knex, tenant } = await createTenantKnex(user.tenant);
 
   try {
     const result = await withTransaction(knex, async (trx: Knex.Transaction) => {
@@ -125,7 +125,7 @@ export async function getRecentActivity(): Promise<RecentActivity[]> {
     throw new Error('Unauthorized: Contact information not found');
   }
 
-  const { knex, tenant } = await createTenantKnex();
+  const { knex, tenant } = await createTenantKnex(user.tenant);
 
   try {
     const result = await withTransaction(knex, async (trx: Knex.Transaction) => {

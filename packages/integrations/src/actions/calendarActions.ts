@@ -40,10 +40,10 @@ export async function initiateCalendarOAuth(params: {
 
     // If calendarProviderId is specified, ensure it belongs to the caller's tenant
     if (params.calendarProviderId) {
-      const { knex, tenant } = await createTenantKnex();
+      const { knex } = await createTenantKnex(user.tenant);
       const exists = await withTransaction(knex, async (trx) => {
         return await trx('calendar_providers')
-          .where({ id: params.calendarProviderId, tenant })
+          .where({ id: params.calendarProviderId, tenant: user.tenant })
           .first();
       });
       if (!exists) {
@@ -446,16 +446,13 @@ export async function getScheduleEntrySyncStatus(
       return { success: false, error: 'Unauthorized' };
     }
 
-    const { knex, tenant } = await createTenantKnex();
-    if (!tenant) {
-      return { success: false, error: 'Tenant context unavailable' };
-    }
+    const { knex } = await createTenantKnex(user.tenant);
 
     // Get all mappings for this entry
     const mappings = await withTransaction(knex, async (trx) => {
       return await trx('calendar_event_mappings')
         .where('schedule_entry_id', entryId)
-        .andWhere('tenant', tenant)
+        .andWhere('tenant', user.tenant)
         .select('*');
     });
 
@@ -466,7 +463,7 @@ export async function getScheduleEntrySyncStatus(
     for (const mapping of mappings) {
       const provider = await providerService.getProvider(
         mapping.calendar_provider_id,
-        tenant,
+        user.tenant,
         { includeSecrets: false }
       );
       if (provider) {
@@ -540,7 +537,7 @@ export async function syncCalendarProvider(
         const allowPull = provider.sync_direction === 'bidirectional' || provider.sync_direction === 'from_external';
 
         await runWithTenant(tenantId, async () => {
-          const { knex } = await createTenantKnex();
+          const { knex } = await createTenantKnex(tenantId);
 
           // Define sync window: 2 days ago to 15 days from now
           // This avoids bulk syncing historical or far-future entries
@@ -695,11 +692,11 @@ export async function retryMicrosoftCalendarSubscriptionRenewal(
     }
 
     // Verify provider belongs to user's tenant
-    const { knex, tenant } = await createTenantKnex();
+    const { knex } = await createTenantKnex(user.tenant);
     const provider = await knex('calendar_providers')
-      .where({ id: providerId, tenant })
+      .where({ id: providerId, tenant: user.tenant })
       .first();
-    
+
     if (!provider) {
       return { success: false, error: 'Provider not found or access denied' };
     }
@@ -710,7 +707,7 @@ export async function retryMicrosoftCalendarSubscriptionRenewal(
 
     const service = new CalendarWebhookMaintenanceService();
     const results = await service.renewMicrosoftWebhooks({
-      tenantId: tenant ?? undefined,
+      tenantId: user.tenant,
       providerId: providerId,
       lookAheadMinutes: 0 // Force check regardless of expiration time
     });

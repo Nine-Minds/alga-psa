@@ -501,8 +501,9 @@ async function persistImapConfig(
  */
 
 export async function getEmailProviders(): Promise<{ providers: EmailProvider[] }> {
-  await assertAuthenticated();
-  const { knex, tenant } = await createTenantKnex();
+  const user = await assertAuthenticated();
+  const { knex } = await createTenantKnex(user.tenant);
+  const tenant = user.tenant;
   
   try {
     const providers = await knex('email_providers')
@@ -639,8 +640,8 @@ export async function upsertEmailProvider(data: {
   imapConfig?: Omit<ImapEmailProviderConfig, 'email_provider_id' | 'tenant' | 'created_at' | 'updated_at'>;
 }, skipAutomation?: boolean): Promise<EmailProviderSetupResult> {
   const user = await assertAuthenticated();
-  const { knex, tenant } = await createTenantKnex();
-  if (!tenant) throw new Error('Tenant is required');
+  const { knex } = await createTenantKnex(user.tenant);
+  const tenant = user.tenant;
 
   const result: EmailProviderSetupResult = {
     provider: null as any,
@@ -763,8 +764,8 @@ export async function updateEmailProvider(
   skipAutomation?: boolean
 ): Promise<EmailProviderSetupResult> {
   const user = await assertAuthenticated();
-  const { knex, tenant } = await createTenantKnex();
-  if (!tenant) throw new Error('Tenant is required');
+  const { knex } = await createTenantKnex(user.tenant);
+  const tenant = user.tenant;
 
   const result: EmailProviderSetupResult = {
     provider: null as any,
@@ -857,8 +858,9 @@ export async function updateEmailProvider(
 }
 
 export async function deleteEmailProvider(providerId: string): Promise<void> {
-  await assertAuthenticated();
-  const { knex, tenant } = await createTenantKnex();
+  const user = await assertAuthenticated();
+  const { knex } = await createTenantKnex(user.tenant);
+  const tenant = user.tenant;
   
   try {
     const result = await knex('email_providers')
@@ -875,8 +877,9 @@ export async function deleteEmailProvider(providerId: string): Promise<void> {
 }
 
 export async function resyncImapProvider(providerId: string): Promise<{ success: boolean; error?: string }> {
-  await assertAuthenticated();
-  const { knex, tenant } = await createTenantKnex();
+  const user = await assertAuthenticated();
+  const { knex } = await createTenantKnex(user.tenant);
+  const tenant = user.tenant;
 
   try {
     const provider = await knex('email_providers')
@@ -919,9 +922,9 @@ export async function resyncImapProvider(providerId: string): Promise<{ success:
 }
 
 export async function testEmailProviderConnection(providerId: string): Promise<{ success: boolean; error?: string }> {
-  await assertAuthenticated();
-  const { knex: baseKnex, tenant: baseTenant } = await createTenantKnex();
-  const tenant = baseTenant as string;
+  const user = await assertAuthenticated();
+  const { knex: baseKnex } = await createTenantKnex(user.tenant);
+  const tenant = user.tenant;
   const knex = baseKnex as any;
   
   try {
@@ -1066,7 +1069,8 @@ export async function retryMicrosoftSubscriptionRenewal(providerId: string): Pro
 export async function runMicrosoft365Diagnostics(providerId: string): Promise<{ success: boolean; report?: Microsoft365DiagnosticsReport; error?: string }> {
   try {
     const user = await assertAuthenticated();
-    const { knex, tenant } = await createTenantKnex();
+    const { knex } = await createTenantKnex(user.tenant);
+    const tenant = user.tenant;
 
     const permitted = await hasPermission(user, 'ticket_settings', 'update', knex);
     if (!permitted) {

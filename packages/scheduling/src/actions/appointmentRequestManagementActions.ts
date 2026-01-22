@@ -77,7 +77,7 @@ export async function getAppointmentRequestById(
       return { success: false, error: 'User not authenticated' };
     }
 
-    const { knex: db, tenant } = await createTenantKnex();
+    const { knex: db, tenant } = await createTenantKnex(currentUser.tenant);
 
     // Check permissions - use same permission as schedule actions
     const userPermissions = await getCurrentUserPermissions();
@@ -150,7 +150,7 @@ export async function getAppointmentRequests(
       return { success: false, error: 'User not authenticated' };
     }
 
-    const { knex: db, tenant } = await createTenantKnex();
+    const { knex: db, tenant } = await createTenantKnex(currentUser.tenant);
 
     // Check permissions - use same permission as schedule actions
     const userPermissions = await getCurrentUserPermissions();
@@ -314,7 +314,7 @@ export async function getAppointmentRequestsByTicketId(
       return { success: false, error: 'User not authenticated' };
     }
 
-    const { knex: db, tenant } = await createTenantKnex();
+    const { knex: db, tenant } = await createTenantKnex(currentUser.tenant);
 
     // Check permissions - use same permission as schedule actions
     const userPermissions = await getCurrentUserPermissions();
@@ -389,7 +389,7 @@ export async function approveAppointmentRequest(
     // Validate input
     const validatedData = approveAppointmentRequestSchema.parse(data);
 
-    const { knex: db, tenant } = await createTenantKnex();
+    const { knex: db, tenant } = await createTenantKnex(currentUser.tenant);
 
     // Check permissions - use same permission as schedule actions
     const userPermissions = await getCurrentUserPermissions();
@@ -758,7 +758,7 @@ export async function declineAppointmentRequest(
     // Validate input
     const validatedData = declineAppointmentRequestSchema.parse(data);
 
-    const { knex: db, tenant } = await createTenantKnex();
+    const { knex: db, tenant } = await createTenantKnex(currentUser.tenant);
 
     // Check permissions - use same permission as schedule actions
     const userPermissions = await getCurrentUserPermissions();
@@ -943,7 +943,7 @@ export async function updateAppointmentRequestDateTime(
     // Validate input
     const validatedData = updateAppointmentRequestDateTimeSchema.parse(data);
 
-    const { knex: db, tenant } = await createTenantKnex();
+    const { knex: db, tenant } = await createTenantKnex(currentUser.tenant);
 
     // Check permissions - use same permission as schedule actions
     const userPermissions = await getCurrentUserPermissions();
@@ -1022,7 +1022,7 @@ export async function associateRequestToTicket(
     // Validate input
     const validatedData = associateRequestToTicketSchema.parse(data);
 
-    const { knex: db, tenant } = await createTenantKnex();
+    const { knex: db, tenant } = await createTenantKnex(currentUser.tenant);
 
     // Check permissions - use same permission as schedule actions
     const userPermissions = await getCurrentUserPermissions();

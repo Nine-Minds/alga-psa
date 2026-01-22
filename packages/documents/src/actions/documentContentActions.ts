@@ -6,6 +6,7 @@ import { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 import type { IDocumentContent, UpdateDocumentContentInput } from '@alga-psa/types';
 import { addDocument } from './documentActions';
+import { getCurrentUserAsync } from '../lib/authHelpers';
 
 // Create a new content document
 export async function createContentDocument(
@@ -16,7 +17,12 @@ export async function createContentDocument(
     entityType?: 'ticket' | 'client' | 'contact' | 'asset'
 ): Promise<{ document_id: string }> {
     try {
-        const { knex, tenant } = await createTenantKnex();
+        const currentUser = await getCurrentUserAsync();
+        if (!currentUser) {
+            throw new Error('No authenticated user found');
+        }
+
+        const { knex, tenant } = await createTenantKnex(currentUser.tenant);
         if (!tenant) {
             throw new Error('No tenant found');
         }
@@ -56,7 +62,12 @@ export async function createContentDocument(
 // Get document content
 export async function getDocumentContent(documentId: string): Promise<IDocumentContent | null> {
     try {
-        const { knex, tenant } = await createTenantKnex();
+        const currentUser = await getCurrentUserAsync();
+        if (!currentUser) {
+            throw new Error('No authenticated user found');
+        }
+
+        const { knex, tenant } = await createTenantKnex(currentUser.tenant);
         if (!tenant) {
             throw new Error('No tenant found');
         }
@@ -77,7 +88,12 @@ export async function getDocumentContent(documentId: string): Promise<IDocumentC
 // Update document content
 export async function updateDocumentContent(documentId: string, data: UpdateDocumentContentInput): Promise<void> {
     try {
-        const { knex, tenant } = await createTenantKnex();
+        const currentUser = await getCurrentUserAsync();
+        if (!currentUser) {
+            throw new Error('No authenticated user found');
+        }
+
+        const { knex, tenant } = await createTenantKnex(currentUser.tenant);
         if (!tenant) {
             throw new Error('No tenant found');
         }
@@ -117,7 +133,12 @@ export async function updateDocumentContent(documentId: string, data: UpdateDocu
 // Delete document content
 export async function deleteDocumentContent(documentId: string): Promise<void> {
     try {
-        const { knex, tenant } = await createTenantKnex();
+        const currentUser = await getCurrentUserAsync();
+        if (!currentUser) {
+            throw new Error('No authenticated user found');
+        }
+
+        const { knex, tenant } = await createTenantKnex(currentUser.tenant);
         if (!tenant) {
             throw new Error('No tenant found');
         }

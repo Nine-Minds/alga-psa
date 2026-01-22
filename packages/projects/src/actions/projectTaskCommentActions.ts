@@ -14,14 +14,15 @@ import { Knex } from 'knex';
 export async function createTaskComment(
   comment: Omit<IProjectTaskComment, 'taskCommentId' | 'tenant' | 'createdAt' | 'authorType' | 'markdownContent' | 'userId'>
 ): Promise<string> {
-  const { knex: db, tenant } = await createTenantKnex();
+  const currentUser = await getCurrentUser();
+
+  if (!currentUser) {
+    throw new Error('User not authenticated');
+  }
+
+  const { knex: db, tenant } = await createTenantKnex(currentUser.tenant);
 
   return await withTransaction(db, async (trx: Knex.Transaction) => {
-    const currentUser = await getCurrentUser();
-
-    if (!currentUser) {
-      throw new Error('User not authenticated');
-    }
 
     const userId = currentUser.user_id;
 
@@ -90,7 +91,13 @@ export async function createTaskComment(
 export async function getTaskComments(
   taskId: string
 ): Promise<IProjectTaskCommentWithUser[]> {
-  const { knex: db, tenant } = await createTenantKnex();
+  const currentUser = await getCurrentUser();
+
+  if (!currentUser) {
+    throw new Error('User not authenticated');
+  }
+
+  const { knex: db, tenant } = await createTenantKnex(currentUser.tenant);
 
   const comments = await db('project_task_comments')
     .where({ 'project_task_comments.task_id': taskId, 'project_task_comments.tenant': tenant })
@@ -136,13 +143,13 @@ export async function updateTaskComment(
   taskCommentId: string,
   updates: Partial<Pick<IProjectTaskComment, 'note'>>
 ): Promise<void> {
-  const { knex: db, tenant } = await createTenantKnex();
   const currentUser = await getCurrentUser();
 
   if (!currentUser) {
     throw new Error('User not authenticated');
   }
 
+  const { knex: db, tenant } = await createTenantKnex(currentUser.tenant);
   const userId = currentUser.user_id;
 
   return await withTransaction(db, async (trx: Knex.Transaction) => {
@@ -217,13 +224,13 @@ export async function updateTaskComment(
 export async function deleteTaskComment(
   taskCommentId: string
 ): Promise<void> {
-  const { knex: db, tenant } = await createTenantKnex();
   const currentUser = await getCurrentUser();
 
   if (!currentUser) {
     throw new Error('User not authenticated');
   }
 
+  const { knex: db, tenant } = await createTenantKnex(currentUser.tenant);
   const userId = currentUser.user_id;
 
   return await withTransaction(db, async (trx: Knex.Transaction) => {
@@ -257,7 +264,13 @@ export async function deleteTaskComment(
  * Get comment count for a task
  */
 export async function getTaskCommentCount(taskId: string): Promise<number> {
-  const { knex: db, tenant } = await createTenantKnex();
+  const currentUser = await getCurrentUser();
+
+  if (!currentUser) {
+    throw new Error('User not authenticated');
+  }
+
+  const { knex: db, tenant } = await createTenantKnex(currentUser.tenant);
 
   const result = await db('project_task_comments')
     .where({ task_id: taskId, tenant })

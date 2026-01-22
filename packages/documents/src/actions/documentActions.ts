@@ -2205,27 +2205,41 @@ export async function getDocumentTypeId(mimeType: string): Promise<{ typeId: str
 /**
  * Core implementation for generating image URLs from file IDs.
  * Handles different storage providers (local vs. S3).
- * 
+ *
  * @param file_id The ID of the file in external_files
  * @param useTransaction Whether to use database transaction (default: true)
+ * @param providedTenant Optional tenant - if provided, skips getCurrentUser call (for internal use)
  * @returns A promise resolving to the image URL string, or null if an error occurs or the file is not found/an image
  */
-async function getImageUrlCore(file_id: string, useTransaction: boolean = true): Promise<string | null> {
+async function getImageUrlCore(file_id: string, useTransaction: boolean = true, providedTenant?: string): Promise<string | null> {
   try {
-    const currentUser = await getCurrentUserAsync();
-    if (!currentUser) {
-      console.error('getImageUrlCore: No authenticated user found');
-      return null;
+    let tenant: string;
+    let knex: Knex;
+
+    if (providedTenant) {
+      // Internal call with tenant already known - skip getCurrentUser to avoid circular dependency
+      const result = await createTenantKnex(providedTenant);
+      knex = result.knex;
+      tenant = providedTenant;
+    } else {
+      // External call - need to get user for tenant
+      const currentUser = await getCurrentUserAsync();
+      if (!currentUser) {
+        console.error('getImageUrlCore: No authenticated user found');
+        return null;
+      }
+      const result = await createTenantKnex(currentUser.tenant);
+      knex = result.knex;
+      tenant = result.tenant!;
     }
 
-    const { knex, tenant } = await createTenantKnex(currentUser.tenant);
     if (!tenant) {
       console.error('getImageUrlCore: No tenant found');
       return null;
     }
 
     // Fetch minimal file details to check MIME type and existence
-    const fileDetails = useTransaction 
+    const fileDetails = useTransaction
       ? await withTransaction(knex, async (trx: Knex.Transaction) => {
           return await trx('external_files')
             .select('mime_type', 'storage_path')
@@ -2292,21 +2306,22 @@ export async function getImageUrl(file_id: string): Promise<string | null> {
 /**
  * Generates a URL for accessing an image file by its ID without authentication checks.
  * This is the INTERNAL API that bypasses user authentication and permission validation.
- * 
+ *
  * Use this function when:
  * - System-level operations that don't require user context
  * - Internal service calls where authentication is handled elsewhere
  * - Background processes and workflows
  * - Avatar utilities and other trusted internal operations
- * 
+ *
  * SECURITY WARNING: This function bypasses all user authentication and permission checks.
  * Only use in trusted contexts where access control is handled at a higher level.
- * 
+ *
  * @param file_id The ID of the file in external_files
+ * @param tenant Optional tenant - if provided, skips getCurrentUser call (avoids circular dependency)
  * @returns A promise resolving to the image URL string, or null if an error occurs or the file is not found/an image
  */
-export async function getImageUrlInternal(file_id: string): Promise<string | null> {
-  return await getImageUrlCore(file_id, false);
+export async function getImageUrlInternal(file_id: string, tenant?: string): Promise<string | null> {
+  return await getImageUrlCore(file_id, false, tenant);
 }
 export async function getDistinctEntityTypes(): Promise<string[]> {
   try {

@@ -29,7 +29,8 @@ export async function getEmailDomains(): Promise<DomainStatus[]> {
     throw new Error('User not authenticated');
   }
 
-  const { knex, tenant } = await createTenantKnex();
+  const { knex } = await createTenantKnex(user.tenant);
+  const tenant = user.tenant;
 
   try {
     const domains = await knex('email_domains')
@@ -66,7 +67,8 @@ export async function addEmailDomain(domainName: string): Promise<{ success: boo
     throw new Error('Invalid domain format');
   }
 
-  const { knex, tenant } = await createTenantKnex();
+  const { knex } = await createTenantKnex(user.tenant);
+  const tenant = user.tenant;
 
   try {
     // Check if domain already exists
@@ -126,7 +128,8 @@ export async function verifyEmailDomain(domainName: string): Promise<{ success: 
     throw new Error('User not authenticated');
   }
 
-  const { knex, tenant } = await createTenantKnex();
+  const { knex } = await createTenantKnex(user.tenant);
+  const tenant = user.tenant;
 
   try {
     // Check if domain exists
@@ -201,7 +204,8 @@ export async function deleteEmailDomain(domainName: string): Promise<{ success: 
     throw new Error('User not authenticated');
   }
 
-  const { knex, tenant } = await createTenantKnex();
+  const { knex } = await createTenantKnex(user.tenant);
+  const tenant = user.tenant;
 
   try {
     // Check if domain exists

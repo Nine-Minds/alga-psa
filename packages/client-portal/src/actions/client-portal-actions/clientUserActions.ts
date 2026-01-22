@@ -6,7 +6,7 @@ import { Knex } from 'knex';
 import { hashPassword } from '@alga-psa/core/encryption';
 import { revalidatePath } from 'next/cache';
 import { getCurrentUser, getUserRolesWithPermissions, getUserClientId } from '@alga-psa/users/actions';
-import { uploadEntityImage, deleteEntityImage } from '@alga-psa/media';
+import { uploadEntityImage, deleteEntityImage } from '@alga-psa/documents';
 import { hasPermission } from '@alga-psa/auth';
 import { getRoles, assignRoleToUser, removeRoleFromUser, getUserRoles } from '@alga-psa/auth/actions';
 import { 
@@ -21,11 +21,16 @@ import { IUser, IRole } from '@shared/interfaces/user.interfaces';
  */
 export async function getClientPortalRoles(): Promise<IRole[]> {
   try {
-    const { knex, tenant } = await createTenantKnex();
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+      throw new Error('User not authenticated');
+    }
+
+    const { knex, tenant } = await createTenantKnex(currentUser.tenant);
     if (!tenant) {
       throw new Error('Tenant not found');
     }
-    
+
     return await getClientPortalRolesFromDB(knex, tenant);
   } catch (error) {
     console.error('Error fetching client portal roles:', error);
@@ -77,7 +82,12 @@ export async function updateClientUser(
   userData: Partial<IUser>
 ): Promise<IUser | null> {
   try {
-    const { knex, tenant } = await createTenantKnex();
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+      throw new Error('User not authenticated');
+    }
+
+    const { knex, tenant } = await createTenantKnex(currentUser.tenant);
     if (!tenant) {
       throw new Error('Tenant not found');
     }
@@ -107,7 +117,12 @@ export async function resetClientUserPassword(
   newPassword: string
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    const { knex, tenant } = await createTenantKnex();
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+      throw new Error('User not authenticated');
+    }
+
+    const { knex, tenant } = await createTenantKnex(currentUser.tenant);
     if (!tenant) {
       throw new Error('Tenant not found');
     }
@@ -146,7 +161,12 @@ export async function resetClientUserPassword(
  */
 export async function getClientUserById(userId: string): Promise<IUser | null> {
   try {
-    const { knex, tenant } = await createTenantKnex();
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+      throw new Error('User not authenticated');
+    }
+
+    const { knex, tenant } = await createTenantKnex(currentUser.tenant);
     if (!tenant) {
       throw new Error('Tenant not found');
     }
@@ -185,16 +205,17 @@ export async function createClientUser({
   roleId?: string;
 }): Promise<{ success: boolean; error?: string }> {
   try {
-    const { knex, tenant } = await createTenantKnex();
-    if (!tenant) {
-      throw new Error('Tenant not found');
-    }
-
     // Enforce RBAC: require permission to create users
     const currentUser = await getCurrentUser();
     if (!currentUser) {
       return { success: false, error: 'User not authenticated' };
     }
+
+    const { knex, tenant } = await createTenantKnex(currentUser.tenant);
+    if (!tenant) {
+      throw new Error('Tenant not found');
+    }
+
     const allowed = await hasPermission(currentUser, 'user', 'create', knex);
     if (!allowed) {
       return { success: false, error: 'Permission denied: Cannot create client user' };
@@ -244,15 +265,15 @@ export async function uploadContactAvatar(
   contactId: string,
   formData: FormData
 ): Promise<{ success: boolean; message?: string; imageUrl?: string | null }> {
-  const { knex, tenant } = await createTenantKnex();
-  if (!tenant) {
-    return { success: false, message: 'Tenant not found' };
-  }
-
   // Get current user
   const currentUser = await getCurrentUser();
   if (!currentUser) {
     return { success: false, message: 'User not authenticated' };
+  }
+
+  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
+  if (!tenant) {
+    return { success: false, message: 'Tenant not found' };
   }
 
   // Permission check

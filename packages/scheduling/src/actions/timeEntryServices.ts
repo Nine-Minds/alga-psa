@@ -22,7 +22,7 @@ export async function fetchTaxRegions(): Promise<TaxRegion[]> {
     throw new Error('Permission denied: Cannot read tax regions for time entries');
   }
 
-  const {knex: db, tenant} = await createTenantKnex();
+  const {knex: db, tenant} = await createTenantKnex(currentUser.tenant);
   const regions = await db('tax_regions')
     .where({ tenant, is_active: true })
     .select('region_code as id', 'region_name as name')
@@ -44,7 +44,7 @@ export async function fetchClientTaxRateForWorkItem(workItemId: string, workItem
 
   console.log(`Fetching default tax rate percentage for work item ${workItemId} of type ${workItemType}`);
 
-  const {knex: db, tenant} = await createTenantKnex();
+  const {knex: db, tenant} = await createTenantKnex(currentUser.tenant);
 
   try {
     let query;
@@ -127,7 +127,7 @@ export async function fetchDefaultClientTaxRateInfoForWorkItem(workItemId: strin
 
   console.log(`Fetching default tax rate info for work item ${workItemId} of type ${workItemType}`);
 
-  const {knex: db, tenant} = await createTenantKnex();
+  const {knex: db, tenant} = await createTenantKnex(currentUser.tenant);
 
   try {
     let query;
@@ -215,7 +215,7 @@ export async function fetchServicesForTimeEntry(workItemType?: string): Promise<
     throw new Error('Permission denied: Cannot read services for time entries');
   }
 
-  const {knex: db, tenant} = await createTenantKnex();
+  const {knex: db, tenant} = await createTenantKnex(currentUser.tenant);
 
   let query = db('service_catalog as sc')
     .leftJoin('service_types as st', function() {
@@ -265,7 +265,7 @@ export async function fetchScheduleEntryForWorkItem(workItemId: string): Promise
   }
 
   try {
-    const { knex, tenant } = await createTenantKnex();
+    const { knex, tenant } = await createTenantKnex(currentUser.tenant);
 
     if (!tenant) {
       throw new Error("Tenant context not found");

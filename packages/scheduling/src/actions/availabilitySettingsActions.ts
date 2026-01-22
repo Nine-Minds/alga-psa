@@ -68,7 +68,7 @@ export async function createOrUpdateAvailabilitySetting(
     // Validate input
     const validatedData = availabilitySettingSchema.parse(data);
 
-    const { knex: db, tenant } = await createTenantKnex();
+    const { knex: db, tenant } = await createTenantKnex(currentUser.tenant);
 
     // Check permissions
     const canManage = await hasPermission(currentUser as any, 'system_settings', 'update', db);
@@ -204,7 +204,7 @@ export async function getAvailabilitySettings(
       return { success: false, error: 'User not authenticated' };
     }
 
-    const { knex: db, tenant } = await createTenantKnex();
+    const { knex: db, tenant } = await createTenantKnex(currentUser.tenant);
 
     // Check permissions
     const canRead = await hasPermission(currentUser as any, 'system_settings', 'read', db);
@@ -255,7 +255,7 @@ export async function deleteAvailabilitySetting(
       return { success: false, error: 'User not authenticated' };
     }
 
-    const { knex: db, tenant } = await createTenantKnex();
+    const { knex: db, tenant } = await createTenantKnex(currentUser.tenant);
 
     // Check permissions
     const canDelete = await hasPermission(currentUser as any, 'system_settings', 'delete', db);
@@ -306,7 +306,7 @@ export async function addAvailabilityException(
     // Validate input
     const validatedData = availabilityExceptionSchema.parse(data);
 
-    const { knex: db, tenant } = await createTenantKnex();
+    const { knex: db, tenant } = await createTenantKnex(currentUser.tenant);
 
     // Check permissions
     const canManage = await hasPermission(currentUser as any, 'system_settings', 'update', db);
@@ -398,7 +398,7 @@ export async function getAvailabilityExceptions(
       return { success: false, error: 'User not authenticated' };
     }
 
-    const { knex: db, tenant } = await createTenantKnex();
+    const { knex: db, tenant } = await createTenantKnex(currentUser.tenant);
 
     // Check permissions
     const canRead = await hasPermission(currentUser as any, 'system_settings', 'read', db);
@@ -442,7 +442,7 @@ export async function deleteAvailabilityException(
       return { success: false, error: 'User not authenticated' };
     }
 
-    const { knex: db, tenant } = await createTenantKnex();
+    const { knex: db, tenant } = await createTenantKnex(currentUser.tenant);
 
     // Check permissions
     const canDelete = await hasPermission(currentUser as any, 'system_settings', 'delete', db);

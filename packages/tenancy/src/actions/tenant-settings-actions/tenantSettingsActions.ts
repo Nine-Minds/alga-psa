@@ -27,7 +27,7 @@ export async function getTenantSettings(): Promise<TenantSettings | null> {
       return null;
     }
 
-    const { knex } = await createTenantKnex();
+    const { knex } = await createTenantKnex(tenant);
     const settings = await knex
       .select('*')
       .from('tenant_settings')
@@ -58,7 +58,7 @@ export async function updateTenantOnboardingStatus(
       throw new Error('User must be authenticated');
     }
 
-    const { knex } = await createTenantKnex();
+    const { knex } = await createTenantKnex(tenant);
     
     // Use a literal timestamp for Citus compatibility
     const now = new Date();
@@ -126,7 +126,7 @@ export async function saveTenantOnboardingProgress(
       ...wizardData,
     };
 
-    const { knex } = await createTenantKnex();
+    const { knex } = await createTenantKnex(tenant);
     
     // Use a literal timestamp for Citus compatibility
     const now = new Date();
@@ -173,7 +173,7 @@ export async function clearTenantOnboardingData(): Promise<void> {
       throw new Error('Only admin users can clear onboarding data');
     }
 
-    const { knex } = await createTenantKnex();
+    const { knex } = await createTenantKnex(tenant);
     
     // Use a literal timestamp for Citus compatibility
     const now = new Date();
@@ -209,7 +209,7 @@ export async function updateTenantSettings(
       ...settings
     };
 
-    const { knex } = await createTenantKnex();
+    const { knex } = await createTenantKnex(tenant);
     
     // Use a literal timestamp for Citus compatibility
     const now = new Date();
@@ -266,7 +266,7 @@ export async function updateTenantAnalyticsSettings(
 
 export async function initializeTenantSettings(tenantId: string): Promise<void> {
   try {
-    const { knex } = await createTenantKnex();
+    const { knex } = await createTenantKnex(tenantId);
     
     // Use a literal timestamp for Citus compatibility
     const now = new Date();

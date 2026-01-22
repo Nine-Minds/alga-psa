@@ -85,9 +85,9 @@ export async function createWorkflow(data: WorkflowData): Promise<string> {
     // The metadata comes from workflowData (validatedData)
     
     // Create Knex instance
-    const { knex } = await createTenantKnex();
+    const { knex } = await createTenantKnex(user.tenant);
     knexInstance = knex;
-    
+
     // Use a transaction to ensure both operations succeed or fail together
     return await knex.transaction(async (trx) => {
       // Create workflow definition
@@ -159,11 +159,11 @@ export async function updateWorkflow(id: string, data: WorkflowData): Promise<st
     
     // Validate input
     const validatedData = WorkflowSchema.parse(data);
-    
+
     // Create Knex instance
-    const { knex } = await createTenantKnex();
+    const { knex } = await createTenantKnex(user.tenant);
     knexInstance = knex;
-    
+
     // Use a transaction to ensure all operations succeed or fail together
     return await knex.transaction(async (trx) => {
       // Get the latest version
@@ -281,7 +281,7 @@ export async function getWorkflowVersions(id: string): Promise<WorkflowVersionDa
     throw new Error("User not authenticated");
   }
 
-  const { knex } = await createTenantKnex();
+  const { knex } = await createTenantKnex(user.tenant);
 
   try {
     return await withTransaction(knex, async (trx) => {
@@ -340,9 +340,9 @@ export async function setActiveWorkflowVersion(workflowId: string, versionId: st
   if (!user) {
     throw new Error("User not authenticated");
   }
-  
-  const { knex } = await createTenantKnex();
-  
+
+  const { knex } = await createTenantKnex(user.tenant);
+
   try {
     return await knex.transaction(async (trx) => {
       // Get workflow registration to verify it exists
@@ -352,11 +352,11 @@ export async function setActiveWorkflowVersion(workflowId: string, versionId: st
           tenant: user.tenant
         })
         .first();
-      
+
       if (!registration) {
         throw new Error(`Workflow with ID ${workflowId} not found`);
       }
-      
+
       // Get the version to verify it exists
       const version = await trx('workflow_registration_versions')
         .where({
@@ -427,7 +427,7 @@ export async function getWorkflow(id: string): Promise<WorkflowDataWithSystemFla
     }
 
     // Create Knex instance
-    const { knex } = await createTenantKnex();
+    const { knex } = await createTenantKnex(user.tenant);
 
     return await withTransaction(knex, async (trx) => {
       // Use the model to get the workflow, which handles system/tenant logic
@@ -494,8 +494,14 @@ export async function getAllWorkflows(includeInactive: boolean = false): Promise
   try {
     console.log(`getAllWorkflows called with includeInactive=${includeInactive}`);
 
+    // Get current user
+    const user = await getCurrentUser();
+    if (!user) {
+      throw new Error("User not authenticated");
+    }
+
     // Create Knex instance
-    const { knex, tenant } = await createTenantKnex();
+    const { knex, tenant } = await createTenantKnex(user.tenant);
 
     return await withTransaction(knex, async (trx) => {
       // Fetch tenant workflows
@@ -620,11 +626,11 @@ export async function deleteWorkflow(id: string): Promise<boolean> {
     if (!user) {
       throw new Error("User not authenticated");
     }
-    
+
     // Create Knex instance
-    const { knex } = await createTenantKnex();
+    const { knex } = await createTenantKnex(user.tenant);
     knexInstance = knex;
-    
+
     // Use a transaction to ensure both operations succeed or fail together
     return await knex.transaction(async (trx) => {
       // Delete workflow versions
@@ -671,7 +677,7 @@ export async function updateWorkflowStatus(id: string, isActive: boolean): Promi
     }
 
     // Create Knex instance
-    const { knex } = await createTenantKnex();
+    const { knex } = await createTenantKnex(user.tenant);
 
     return await withTransaction(knex, async (trx) => {
       // Get current status for logging
@@ -788,7 +794,7 @@ export async function executeWorkflowTest(
     }
 
     // Create Knex instance
-    const { knex, tenant } = await createTenantKnex();
+    const { knex, tenant } = await createTenantKnex(user.tenant);
 
     // First validate the workflow code
     const testResult = await testWorkflow(code);
