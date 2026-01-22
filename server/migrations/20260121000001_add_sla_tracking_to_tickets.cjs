@@ -47,12 +47,9 @@ exports.up = async function(knex) {
     // ADD: New comprehensive SLA tracking fields
     // =========================================================================
 
-    // SLA Policy assignment
+    // SLA Policy assignment (foreign key added separately via raw SQL for composite key)
     table.uuid('sla_policy_id')
       .nullable()
-      .references('sla_policy_id')
-      .inTable('sla_policies')
-      .onDelete('SET NULL')
       .comment('The SLA policy applied to this ticket');
 
     table.timestamp('sla_started_at', { useTz: true })
@@ -122,11 +119,26 @@ exports.up = async function(knex) {
     table.dropColumn('escalated_by');
   });
 
+  // Add composite foreign key for sla_policy_id (must reference tenant + sla_policy_id)
+  await knex.raw(`
+    ALTER TABLE tickets
+    ADD CONSTRAINT tickets_sla_policy_fkey
+    FOREIGN KEY (tenant, sla_policy_id)
+    REFERENCES sla_policies(tenant, sla_policy_id)
+    ON DELETE SET NULL
+  `);
+
   console.log('SLA tracking columns added and legacy fields removed from tickets table');
 };
 
 exports.down = async function(knex) {
   console.log('Removing SLA tracking columns and restoring legacy fields...');
+
+  // Drop foreign key constraint first
+  await knex.raw(`
+    ALTER TABLE tickets
+    DROP CONSTRAINT IF EXISTS tickets_sla_policy_fkey
+  `);
 
   await knex.schema.alterTable('tickets', (table) => {
     // =========================================================================
@@ -188,3 +200,6 @@ exports.down = async function(knex) {
 
   console.log('SLA tracking columns removed and legacy fields restored');
 };
+
+// Citus requires ALTER TABLE with foreign key constraints to run outside a transaction block
+exports.config = { transaction: false };
