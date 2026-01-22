@@ -7,7 +7,6 @@ import {
   updateTicketWithCache,
   addTicketCommentWithCache
 } from 'server/src/lib/actions/ticket-actions/optimizedTicketActions';
-import { isConcurrencyConflict } from 'server/src/lib/actions/ticket-actions/ticketActionTypes';
 import { useSession } from 'next-auth/react';
 import { toast } from 'react-hot-toast';
 import { getErrorMessage } from 'server/src/lib/utils/errorHandling';
@@ -60,12 +59,6 @@ export default function TicketDetailsContainer({ ticketData, surveySummary = nul
   // Local state for comments to avoid mutating props (which doesn't trigger re-renders)
   const [comments, setComments] = useState<IComment[]>(ticketData.comments);
 
-  // Track the expected updated_at for optimistic concurrency control
-  // Guard against undefined for newly created tickets - only set if valid
-  const expectedUpdatedAtRef = useRef<string | undefined>(
-    ticketData.ticket.updated_at ? String(ticketData.ticket.updated_at) : undefined
-  );
-
   // Cleanup on unmount
   useEffect(() => {
     return () => {
@@ -73,13 +66,10 @@ export default function TicketDetailsContainer({ ticketData, surveySummary = nul
     };
   }, []);
 
-  // Handle concurrency conflict - auto-refresh to get latest data
-  // Note: We don't update expectedUpdatedAtRef here because router.refresh() will
-  // reload the page and discard local state anyway
-  const handleConflict = useCallback(() => {
-    toast.error('This ticket was modified by another user. Refreshing to show latest changes...');
-    router.refresh();
-  }, [router]);
+  // Re-sync comments when ticketData updates (e.g., after router.refresh())
+  useEffect(() => {
+    setComments(ticketData.comments);
+  }, [ticketData.comments]);
 
   // Helper to wrap async operations with isSubmitting state management
   // Uses a counter to handle concurrent requests properly
@@ -112,25 +102,17 @@ export default function TicketDetailsContainer({ ticketData, surveySummary = nul
 
     return withSubmitting(async () => {
       try {
-        const result = await updateTicketWithCache(
+        await updateTicketWithCache(
           ticketData.ticket.ticket_id,
-          { [field]: value },
-          undefined, // user is now fetched internally by server action
-          expectedUpdatedAtRef.current // Only passed if defined
+          { [field]: value }
         );
-        // Use the server's updated_at for the next request (not client-generated)
-        expectedUpdatedAtRef.current = String(result.updated_at);
         toast.success(`${field} updated successfully`);
       } catch (error) {
         console.error(`Error updating ${field}:`, error);
-        if (isConcurrencyConflict(error)) {
-          handleConflict();
-        } else {
-          toast.error(`Failed to update ${field}: ${getErrorMessage(error)}`);
-        }
+        toast.error(`Failed to update ${field}: ${getErrorMessage(error)}`);
       }
     });
-  }, [session?.user, withSubmitting, ticketData.ticket.ticket_id, handleConflict]);
+  }, [session?.user, withSubmitting, ticketData.ticket.ticket_id]);
 
   // Handle batch ticket updates - saves all changes atomically to avoid partial updates
   // Note: Server actions now get user from session internally for security
@@ -149,15 +131,11 @@ export default function TicketDetailsContainer({ ticketData, surveySummary = nul
     return withSubmitting(async () => {
       try {
         // Save all changes in a single API call - this ensures atomicity
-        const result = await updateTicketWithCache(
+        await updateTicketWithCache(
           ticketData.ticket.ticket_id,
-          changes,
-          undefined, // user is now fetched internally by server action
-          expectedUpdatedAtRef.current // Pass expected updated_at for optimistic concurrency
+          changes
         );
 
-        // Use the server's updated_at for the next request (not client-generated)
-        expectedUpdatedAtRef.current = String(result.updated_at);
         toast.success('Changes saved successfully');
         // Refresh the page data to show the updated values
         // Without this, the UI would show stale ticket values after pendingChanges is cleared
@@ -165,15 +143,11 @@ export default function TicketDetailsContainer({ ticketData, surveySummary = nul
         return true;
       } catch (error) {
         console.error('Error saving changes:', error);
-        if (isConcurrencyConflict(error)) {
-          handleConflict();
-        } else {
-          toast.error(`Failed to save changes: ${getErrorMessage(error)}`);
-        }
+        toast.error(`Failed to save changes: ${getErrorMessage(error)}`);
         return false;
       }
     });
-  }, [session?.user, withSubmitting, ticketData.ticket.ticket_id, handleConflict, router]);
+  }, [session?.user, withSubmitting, ticketData.ticket.ticket_id, router]);
 
   // Handle adding comments using the optimized server action
   // Note: Server actions now get user from session internally for security
@@ -218,30 +192,22 @@ export default function TicketDetailsContainer({ ticketData, surveySummary = nul
       try {
         // Send only the description - server will merge with existing attributes
         // This avoids stale closure issues where ticketData.ticket.attributes might be outdated
-        const result = await updateTicketWithCache(
+        await updateTicketWithCache(
           ticketData.ticket.ticket_id,
           {
             attributes: { description: content }
-          },
-          undefined, // user is now fetched internally by server action
-          expectedUpdatedAtRef.current // Pass expected updated_at for optimistic concurrency
+          }
         );
 
-        // Use the server's updated_at for the next request (not client-generated)
-        expectedUpdatedAtRef.current = String(result.updated_at);
         toast.success('Description updated successfully');
         return true;
       } catch (error) {
         console.error('Error updating description:', error);
-        if (isConcurrencyConflict(error)) {
-          handleConflict();
-        } else {
-          toast.error(`Failed to update description: ${getErrorMessage(error)}`);
-        }
+        toast.error(`Failed to update description: ${getErrorMessage(error)}`);
         return false;
       }
     });
-  }, [session?.user, withSubmitting, ticketData.ticket.ticket_id, handleConflict]);
+  }, [session?.user, withSubmitting, ticketData.ticket.ticket_id]);
 
   // Render directly to avoid redefining a component each render,
   // which can cause unmount/mount cycles and side-effects

@@ -576,6 +576,11 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
     setPendingItilChanges({});
     setPendingBoardConfig(null);
     setPendingCategories(null);
+    // Reset description to original content
+    if (originalDescriptionRef.current) {
+      setDescriptionContent(originalDescriptionRef.current);
+    }
+    setHasDescriptionContentChanged(false);
     // Close all edit modes
     setIsEditingTitle(false);
     setIsEditingDescription(false);
@@ -693,13 +698,14 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
                   containerClassName="mb-0 flex-1"
                   style={{minWidth: '300px', width: '100%'}}
                 />
-                {/* Purple checkmark button - saves title immediately */}
+                {/* Checkmark button - saves title immediately */}
                 <Button
                   id={`${id}-save-title-btn`}
                   type="button"
+                  variant="default"
                   size="sm"
                   onClick={handleTitleSubmit}
-                  className="bg-purple-600 hover:bg-purple-700 text-white flex-shrink-0"
+                  className="flex-shrink-0"
                   title="Save title"
                 >
                   <Check className="w-4 h-4" />

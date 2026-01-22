@@ -35,7 +35,7 @@ import { AnalyticsEvents } from '../../analytics/events';
 import { Temporal } from '@js-temporal/polyfill';
 import { resolveUserTimeZone, normalizeIanaTimeZone } from 'server/src/lib/utils/workDate';
 import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
-import { ConcurrencyConflictError, type UpdateTicketResult } from './ticketActionTypes';
+import { type UpdateTicketResult } from './ticketActionTypes';
 
 // Helper function to safely convert dates
 function convertDates<T extends { entered_at?: Date | string | null, updated_at?: Date | string | null, closed_at?: Date | string | null, due_date?: Date | string | null }>(record: T): T {
@@ -1180,17 +1180,15 @@ export async function getTicketFormOptions(_user?: IUser) {
 }
 
 /**
- * Update ticket with proper caching and optimistic concurrency control
+ * Update ticket with proper caching
  * @param id - The ticket ID to update
  * @param data - The partial ticket data to update
  * @param _user - Deprecated: user is now fetched internally for security
- * @param expectedUpdatedAt - Optional: the updated_at timestamp the client expects for concurrency control
  */
 export async function updateTicketWithCache(
   id: string,
   data: Partial<ITicket>,
-  _user?: IUser,
-  expectedUpdatedAt?: string
+  _user?: IUser
 ): Promise<UpdateTicketResult> {
   // Get user from session internally for security - ignore client-supplied user
   // IMPORTANT: Must be called BEFORE entering transaction to avoid nested transaction deadlock
@@ -1224,30 +1222,6 @@ export async function updateTicketWithCache(
 
     if (!currentTicket) {
       throw new Error('Ticket not found');
-    }
-
-    // Optimistic concurrency control: check if ticket was modified since client loaded it
-    if (expectedUpdatedAt) {
-      // Normalize both timestamps to comparable format (milliseconds since epoch)
-      const normalizeTimestamp = (ts: Date | string | null | undefined): number | null => {
-        if (!ts) return null;
-        const date = ts instanceof Date ? ts : new Date(ts);
-        return isNaN(date.getTime()) ? null : date.getTime();
-      };
-
-      const currentTime = normalizeTimestamp(currentTicket.updated_at);
-      const expectedTime = normalizeTimestamp(expectedUpdatedAt);
-      const currentUpdatedAtStr = currentTicket.updated_at instanceof Date
-        ? currentTicket.updated_at.toISOString()
-        : String(currentTicket.updated_at || '');
-
-      // Only check if both timestamps are valid and different
-      if (currentTime !== null && expectedTime !== null && currentTime !== expectedTime) {
-        throw new ConcurrencyConflictError(
-          'This ticket was modified by another user.',
-          currentUpdatedAtStr
-        );
-      }
     }
 
     // Bundled child tickets lock workflow fields by default
@@ -1385,30 +1359,11 @@ export async function updateTicketWithCache(
         }
         
         // Step 5: Update the ticket with the new assigned_to
-        // Include updated_at in WHERE clause to prevent TOCTOU race condition
-        const updateQuery = trx('tickets')
-          .where({ ticket_id: id, tenant: tenant });
-
-        // Add timestamp check to WHERE clause if expectedUpdatedAt was provided
-        if (expectedUpdatedAt) {
-          updateQuery.where('updated_at', currentTicket.updated_at);
-        }
-
-        const updateResult = await updateQuery.update(updateData).returning('*');
+        const updateResult = await trx('tickets')
+          .where({ ticket_id: id, tenant: tenant })
+          .update(updateData)
+          .returning('*');
         const [updated] = updateResult;
-
-        // Check if update succeeded (row count > 0)
-        if (!updated && expectedUpdatedAt) {
-          // Re-fetch to get current updated_at for the error message
-          const current = await trx('tickets').where({ ticket_id: id, tenant }).first();
-          const currentUpdatedAtStr = current?.updated_at instanceof Date
-            ? current.updated_at.toISOString()
-            : String(current?.updated_at || '');
-          throw new ConcurrencyConflictError(
-            'This ticket was modified by another user.',
-            currentUpdatedAtStr
-          );
-        }
 
         // Step 6: Re-create the resources with the new assigned_to
         for (const resourceData of resourcesToRecreate) {
@@ -1421,30 +1376,11 @@ export async function updateTicketWithCache(
         updatedTicket = updated;
     } else {
       // Regular update without changing assignment
-      // Include updated_at in WHERE clause to prevent TOCTOU race condition
-      const updateQuery = trx('tickets')
-        .where({ ticket_id: id, tenant: tenant });
-
-      // Add timestamp check to WHERE clause if expectedUpdatedAt was provided
-      if (expectedUpdatedAt) {
-        updateQuery.where('updated_at', currentTicket.updated_at);
-      }
-
-      const updateResult = await updateQuery.update(updateData).returning('*');
+      const updateResult = await trx('tickets')
+        .where({ ticket_id: id, tenant: tenant })
+        .update(updateData)
+        .returning('*');
       [updatedTicket] = updateResult;
-
-      // Check if update succeeded (row count > 0)
-      if (!updatedTicket && expectedUpdatedAt) {
-        // Re-fetch to get current updated_at for the error message
-        const current = await trx('tickets').where({ ticket_id: id, tenant }).first();
-        const currentUpdatedAtStr = current?.updated_at instanceof Date
-          ? current.updated_at.toISOString()
-          : String(current?.updated_at || '');
-        throw new ConcurrencyConflictError(
-          'This ticket was modified by another user.',
-          currentUpdatedAtStr
-        );
-      }
     }
 
     if (!updatedTicket) {
@@ -1576,10 +1512,6 @@ export async function updateTicketWithCache(
     return { success: true, updated_at: returnedUpdatedAt };
     } catch (error) {
       console.error('updateTicketWithCache error:', error);
-      // Preserve ConcurrencyConflictError and other errors for the client
-      if (error instanceof ConcurrencyConflictError) {
-        throw error;
-      }
       if (error instanceof Error) {
         throw error;
       }
