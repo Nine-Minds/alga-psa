@@ -773,36 +773,42 @@ export async function getAllServiceTypes(): Promise<IServiceType[]> {
 
 export async function deleteServiceType(id: string): Promise<void> {
   try {
-      // ServiceTypeModel is imported at the top of the file
+    // ServiceTypeModel is imported at the top of the file
 
-      // First check if the service type is in use by any services
-      const currentUser = await getCurrentUserAsync();
-      if (!currentUser) {
-        throw new Error('Unauthorized');
-      }
-      const { knex: db, tenant } = await createTenantKnex(currentUser.tenant);
-      return withTransaction(db, async (trx: Knex.Transaction) => {
-      
+    // First check if the service type is in use by any services
+    const currentUser = await getCurrentUserAsync();
+    if (!currentUser) {
+      throw new Error('Unauthorized');
+    }
+
+    const { knex: db, tenant } = await createTenantKnex(currentUser.tenant);
+    if (!tenant) {
+      throw new Error('tenant context not found');
+    }
+
+    const tenantId = tenant;
+
+    return withTransaction(db, async (trx: Knex.Transaction) => {
       // Check if any services are using this service type
       const servicesUsingType = await trx('service_catalog')
-          .where({ custom_service_type_id: id, tenant })
-          .count('service_id as count')
-          .first();
-      
+        .where({ custom_service_type_id: id, tenant: tenantId })
+        .count('service_id as count')
+        .first();
+
       if (servicesUsingType && parseInt(String(servicesUsingType.count)) > 0) {
-          throw new Error(`Cannot delete service type because it is currently in use by ${servicesUsingType.count} service(s).`);
+        throw new Error(`Cannot delete service type because it is currently in use by ${servicesUsingType.count} service(s).`);
       }
-      
+
       // Tenant context is handled within the model method
-      const deleted = await ServiceTypeModel.delete(trx, tenant, id);
+      const deleted = await ServiceTypeModel.delete(trx, tenantId, id);
       if (!deleted) {
-          // Handle the case where the type wasn't found
-          throw new Error(`Service type with ID ${id} not found.`);
+        // Handle the case where the type wasn't found
+        throw new Error(`Service type with ID ${id} not found.`);
       }
-      
-          // Revalidate paths for the service type management page
-          safeRevalidate('/msp/settings/billing');
-      });
+
+      // Revalidate paths for the service type management page
+      safeRevalidate('/msp/settings/billing');
+    });
   } catch (error: any) {
       console.error(`Error deleting service type ${id}:`, error);
       

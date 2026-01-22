@@ -7,6 +7,9 @@ import { getCurrentUser } from '@alga-psa/users/actions';
 
 export async function getAllClientsForAssets(includeInactive: boolean = true): Promise<IClient[]> {
   const currentUser = await getCurrentUser();
+  if (!currentUser) {
+    throw new Error('Unauthorized');
+  }
   const { knex, tenant } = await createTenantKnex(currentUser.tenant);
   if (!tenant) {
     throw new Error('Tenant not found');
@@ -28,6 +31,9 @@ export async function getAllClientsForAssets(includeInactive: boolean = true): P
 
 export async function getClientLocationsForAssets(clientId: string): Promise<IClientLocation[]> {
   const currentUser = await getCurrentUser();
+  if (!currentUser) {
+    throw new Error('Unauthorized');
+  }
   const { knex, tenant } = await createTenantKnex(currentUser.tenant);
   if (!tenant) {
     throw new Error('Tenant not found');

@@ -69,10 +69,12 @@ export async function getCurrentTenantId(): Promise<string | null> {
  * This function provides backward compatibility for code still expecting the old { knex, tenant } structure.
  * It retrieves the shared Knex instance and identifies the current tenant.
  */
-export async function createTenantKnex(): Promise<{ knex: KnexType; tenant: string | null }> {
+export async function createTenantKnex(
+    tenantId?: string | null
+): Promise<{ knex: KnexType; tenant: string | null }> {
     try {
         // Get the tenant-specific Knex instance
-        const tenant = await getCurrentTenantId();
+        const tenant = tenantId ?? await getCurrentTenantId();
         const knex = await getConnection(tenant);
         // Tenant ID is already fetched above
         // Add a warning to encourage migration

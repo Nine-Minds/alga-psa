@@ -3,7 +3,7 @@
 import logger from '@alga-psa/core/logger';
 import { getAdminConnection } from '@alga-psa/db/admin';
 import { getPortalDomainStatusForTenant } from '@alga-psa/tenancy/server';
-import { getConnection } from '@alga-psa/db';
+import { createTenantKnex, getConnection } from '@alga-psa/db';
 import { getSession } from '@alga-psa/auth';
 import type { CalendarProviderConfig } from '@alga-psa/types';
 import {
