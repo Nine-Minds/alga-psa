@@ -27,29 +27,30 @@ import {
   CollapsibleBlock
 } from './pipeline/PipelineComponents';
 
-import { Button } from '@/components/ui/Button';
-import { Input } from '@/components/ui/Input';
-import { TextArea } from '@/components/ui/TextArea';
-import { Card } from '@/components/ui/Card';
-import { Badge } from '@/components/ui/Badge';
-import CustomSelect, { SelectOption } from '@/components/ui/CustomSelect';
-import CustomTabs from '@/components/ui/CustomTabs';
-import { Switch } from '@/components/ui/Switch';
-import { Label } from '@/components/ui/Label';
-import SearchableSelect from 'server/src/components/ui/SearchableSelect';
-import { Skeleton } from 'server/src/components/ui/Skeleton';
-import { analytics } from 'server/src/lib/analytics/client';
+import { Button } from '@alga-psa/ui/components/Button';
+import { Input } from '@alga-psa/ui/components/Input';
+import { TextArea } from '@alga-psa/ui/components/TextArea';
+import { Card } from '@alga-psa/ui/components/Card';
+import { Badge } from '@alga-psa/ui/components/Badge';
+import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect';
+import CustomTabs from '@alga-psa/ui/components/CustomTabs';
+import { Switch } from '@alga-psa/ui/components/Switch';
+import { Label } from '@alga-psa/ui/components/Label';
+import SearchableSelect from '@alga-psa/ui/components/SearchableSelect';
+import { Skeleton } from '@alga-psa/ui/components/Skeleton';
+import { analytics } from '@/lib/analytics/client';
 import WorkflowRunList from './WorkflowRunList';
 import WorkflowDeadLetterQueue from './WorkflowDeadLetterQueue';
 import WorkflowEventList from './WorkflowEventList';
 import WorkflowDefinitionAudit from './WorkflowDefinitionAudit';
 import WorkflowRunDialog from './WorkflowRunDialog';
 import WorkflowGraph from '../workflow-graph/WorkflowGraph';
+import WorkflowListV2 from '@alga-psa/workflows/components/automation-hub/WorkflowList';
 import { MappingPanel, type ActionInputField } from './mapping';
 import { ExpressionEditor, type ExpressionEditorHandle, type ExpressionContext, type JsonSchema as ExprJsonSchema } from './expression-editor';
-import { getCurrentUser, getCurrentUserPermissions } from 'server/src/lib/actions/user-actions/userActions';
-import { getEventCatalogEntryByEventType } from 'server/src/lib/actions/event-catalog-actions';
-import { listEventCatalogOptionsV2Action, type WorkflowEventCatalogOptionV2 } from 'server/src/lib/actions/workflow-event-catalog-v2-actions';
+import { getCurrentUser, getCurrentUserPermissions } from '@/lib/actions/user-actions/userActions';
+import { getEventCatalogEntryByEventType } from '@/lib/actions/event-catalog-actions';
+import { listEventCatalogOptionsV2Action, type WorkflowEventCatalogOptionV2 } from '@/lib/actions/workflow-event-catalog-v2-actions';
 import {
   createWorkflowDefinitionAction,
   getWorkflowSchemaAction,
@@ -63,7 +64,7 @@ import {
   publishWorkflowDefinitionAction,
   updateWorkflowDefinitionDraftAction,
   updateWorkflowDefinitionMetadataAction
-} from 'server/src/lib/actions/workflow-runtime-v2-actions';
+} from '@/lib/actions/workflow-runtime-v2-actions';
 
 import type {
   WorkflowDefinition,
@@ -1248,7 +1249,7 @@ const createStepFromPalette = (
 };
 
 const WorkflowDesigner: React.FC = () => {
-  const [activeTab, setActiveTab] = useState('Designer');
+  const [activeTab, setActiveTab] = useState('Workflows');
   const [definitions, setDefinitions] = useState<WorkflowDefinitionRecord[]>([]);
   const [activeDefinition, setActiveDefinition] = useState<WorkflowDefinition | null>(null);
   const [activeWorkflowId, setActiveWorkflowId] = useState<string | null>(null);
@@ -1332,8 +1333,10 @@ const WorkflowDesigner: React.FC = () => {
   const nodeRegistryMap = useMemo(() => Object.fromEntries(nodeRegistry.map((node) => [node.id, node])), [nodeRegistry]);
   const router = useRouter();
   const searchParams = useSearchParams();
+  const searchParamsString = searchParams.toString();
   const workflowIdFromQuery = searchParams.get('workflowId');
   const newWorkflowFromQuery = searchParams.get('new') === '1';
+  const tabFromQuery = searchParams.get('tab');
   const didApplyWorkflowIdFromQuery = useRef<string | null>(null);
   const didApplyNewWorkflowFromQuery = useRef<boolean>(false);
 
@@ -1586,6 +1589,54 @@ const WorkflowDesigner: React.FC = () => {
     () => userPermissions.includes('workflow:manage') || canAdmin,
     [userPermissions, canAdmin]
   );
+
+  const tabLabelFromQuery = useMemo(() => {
+    const raw = (tabFromQuery ?? '').trim().toLowerCase();
+    if (!raw) return null;
+    if (raw === 'workflows' || raw === 'list') return 'Workflows';
+    if (raw === 'designer') return 'Designer';
+    if (raw === 'runs') return 'Runs';
+    if (raw === 'events') return 'Events';
+    if (raw === 'dead-letter' || raw === 'deadletter' || raw === 'dead_letter') return 'Dead Letter';
+    if (raw === 'audit') return 'Audit';
+    return null;
+  }, [tabFromQuery]);
+
+  useEffect(() => {
+    if (!tabLabelFromQuery) return;
+
+    const isAdminTab = tabLabelFromQuery === 'Dead Letter' || tabLabelFromQuery === 'Audit';
+    if (isAdminTab && !canAdmin) {
+      const params = new URLSearchParams(searchParamsString);
+      params.set('tab', 'workflows');
+      router.replace(`/msp/workflows?${params.toString()}`);
+      return;
+    }
+
+    setActiveTab(tabLabelFromQuery);
+  }, [canAdmin, router, searchParamsString, tabLabelFromQuery]);
+
+  const handleTabChange = useCallback((nextTabLabel: string) => {
+    setActiveTab(nextTabLabel);
+
+    const tabValue =
+      nextTabLabel === 'Workflows' ? 'workflows'
+        : nextTabLabel === 'Designer' ? 'designer'
+          : nextTabLabel === 'Runs' ? 'runs'
+            : nextTabLabel === 'Events' ? 'events'
+              : nextTabLabel === 'Dead Letter' ? 'dead-letter'
+                : nextTabLabel === 'Audit' ? 'audit'
+                  : null;
+
+    if (!tabValue) return;
+
+    const params = new URLSearchParams(searchParamsString);
+    params.set('tab', tabValue);
+    const nextParamsString = params.toString();
+    if (nextParamsString !== searchParamsString) {
+      router.replace(`/msp/workflows?${nextParamsString}`);
+    }
+  }, [router, searchParamsString]);
 
   const triggerRequiresEventCatalog = useMemo(() => {
     return Boolean(activeDefinition?.trigger?.type === 'event' && activeDefinition.trigger.eventName);
@@ -4159,13 +4210,38 @@ const WorkflowDesigner: React.FC = () => {
     />
   );
 
+  const workflowListContent = (
+    <WorkflowListV2
+      onSelectWorkflow={(workflowId) => {
+        const params = new URLSearchParams(searchParamsString);
+        params.delete('search');
+        params.delete('status');
+        params.delete('trigger');
+        params.delete('new');
+        params.set('workflowId', workflowId);
+        params.set('tab', 'designer');
+        router.push(`/msp/workflows?${params.toString()}`);
+      }}
+      onCreateNew={() => {
+        const params = new URLSearchParams(searchParamsString);
+        params.delete('search');
+        params.delete('status');
+        params.delete('trigger');
+        params.delete('workflowId');
+        params.set('new', '1');
+        params.set('tab', 'designer');
+        router.push(`/msp/workflows?${params.toString()}`);
+      }}
+    />
+  );
+
   return (
     <div className="h-full min-h-0 flex flex-col">
       <div className="border-b bg-white px-6 py-4">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-xl font-semibold text-gray-900">Workflow Designer</h1>
-            <p className="text-sm text-gray-500">Build structured pipelines with published validation.</p>
+            <h1 className="text-xl font-semibold text-gray-900">Workflows</h1>
+            <p className="text-sm text-gray-500">Create, run, and audit workflow automations.</p>
           </div>
           {activeTab === 'Designer' && (
             <div className="flex items-center gap-2">
@@ -4252,8 +4328,9 @@ const WorkflowDesigner: React.FC = () => {
         <CustomTabs
           idPrefix="workflow-designer-tabs"
           value={activeTab}
-          onTabChange={setActiveTab}
+          onTabChange={handleTabChange}
           tabs={[
+            { label: 'Workflows', content: workflowListContent },
             { label: 'Designer', content: designerContent },
             { label: 'Runs', content: runListContent },
             { label: 'Events', content: eventListContent },

@@ -1,14 +1,14 @@
 'use client';
 
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { DataTable } from 'server/src/components/ui/DataTable';
-import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
-import { Button } from 'server/src/components/ui/Button';
-import { Badge, BadgeVariant } from 'server/src/components/ui/Badge';
-import { SearchInput } from 'server/src/components/ui/SearchInput';
-import CustomSelect from 'server/src/components/ui/CustomSelect';
-import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionContainer';
-import { ConfirmationDialog } from 'server/src/components/ui/ConfirmationDialog';
+import { DataTable } from '@alga-psa/ui/components/DataTable';
+import { ColumnDefinition } from '@alga-psa/types/dataTable.interfaces';
+import { Button } from '@alga-psa/ui/components/Button';
+import { Badge, BadgeVariant } from '@alga-psa/ui/components/Badge';
+import { SearchInput } from '@alga-psa/ui/components/SearchInput';
+import CustomSelect from '@alga-psa/ui/components/CustomSelect';
+import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContainer';
+import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import {
   Plus,
   Play,
@@ -30,7 +30,7 @@ import {
   listWorkflowDefinitionsAction,
   deleteWorkflowDefinitionAction,
   updateWorkflowDefinitionMetadataAction
-} from 'server/src/lib/actions/workflow-runtime-v2-actions';
+} from '@/lib/actions/workflow-runtime-v2-actions';
 import { formatDistanceToNow } from 'date-fns';
 import { useRouter, useSearchParams } from 'next/navigation';
 
@@ -297,7 +297,7 @@ export default function WorkflowList({ onSelectWorkflow, onCreateNew }: Workflow
   const handleViewRuns = (workflow: WorkflowDefinitionListItem, e: React.MouseEvent) => {
     e.stopPropagation();
     // Navigate to runs tab with workflow filter
-    router.push(`/msp/automation-hub?tab=runs&workflowId=${workflow.workflow_id}`);
+    router.push(`/msp/workflows?tab=runs&workflowId=${workflow.workflow_id}`);
   };
 
   // Bulk selection handlers

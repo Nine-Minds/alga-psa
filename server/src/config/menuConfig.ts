@@ -23,7 +23,6 @@ import {
   Home,
   KeyRound,
   Layers,
-  Layout,
   LayoutDashboard,
   LayoutTemplate,
   ListTree,
@@ -44,7 +43,6 @@ import {
   User,
   UserCog,
   Users,
-  Workflow,
   Star
 } from 'lucide-react';
 import { billingTabDefinitions } from '@alga-psa/billing/components/billing-dashboard/billingTabsConfig';
@@ -144,28 +142,11 @@ export const navigationSections: NavigationSection[] = [
       {
         name: 'Automation Hub',
         icon: Rocket,
-        href: '/msp/automation-hub',
         subItems: [
-          {
-            name: 'Template Library',
-            icon: Layout,
-            href: '/msp/automation-hub?tab=template-library'
-          },
-          {
-            name: 'Workflows',
-            icon: Workflow,
-            href: '/msp/automation-hub?tab=workflows'
-          },
-          {
-            name: 'Events Catalog',
-            icon: Bell,
-            href: '/msp/automation-hub?tab=events-catalog'
-          },
-          {
-            name: 'Logs & History',
-            icon: Clock,
-            href: '/msp/automation-hub?tab=logs-history'
-          }
+          { name: 'Workflows', icon: ListTree, href: '/msp/workflows?tab=workflows' },
+          { name: 'Runs', icon: Clock, href: '/msp/workflows?tab=runs' },
+          { name: 'Events', icon: Bell, href: '/msp/workflows?tab=events' },
+          { name: 'Dead Letter', icon: Mail, href: '/msp/workflows?tab=dead-letter' },
         ]
       },
       {
