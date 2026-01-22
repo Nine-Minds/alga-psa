@@ -161,11 +161,13 @@ export async function getUserRoles(userId: string): Promise<IRole[]> {
     const { knex: db, tenant } = await createTenantKnex();
     return withTransaction(db, async (trx: Knex.Transaction) => {
         return await trx('user_roles')
-            .join('roles', 'user_roles.role_id', '=', 'roles.role_id')
-            .where({ 
+            .join('roles', function() {
+                this.on('user_roles.role_id', '=', 'roles.role_id')
+                    .andOn('user_roles.tenant', '=', 'roles.tenant');
+            })
+            .where({
                 'user_roles.user_id': userId,
-                'user_roles.tenant': tenant,
-                'roles.tenant': tenant 
+                'user_roles.tenant': tenant
             })
             .select('roles.*');
     });
@@ -274,11 +276,13 @@ export async function getRolePermissions(roleId: string): Promise<IPermission[]>
         const { knex: db, tenant } = await createTenantKnex();
         return withTransaction(db, async (trx: Knex.Transaction) => {
             return await trx('role_permissions')
-                .join('permissions', 'role_permissions.permission_id', '=', 'permissions.permission_id')
-                .where({ 
+                .join('permissions', function() {
+                    this.on('role_permissions.permission_id', '=', 'permissions.permission_id')
+                        .andOn('role_permissions.tenant', '=', 'permissions.tenant');
+                })
+                .where({
                     'role_permissions.role_id': roleId,
-                    'role_permissions.tenant': tenant,
-                    'permissions.tenant': tenant 
+                    'role_permissions.tenant': tenant
                 })
                 .select('permissions.permission_id', 'permissions.resource', 'permissions.action', 'permissions.tenant', 'permissions.msp', 'permissions.client', 'permissions.description');
         });

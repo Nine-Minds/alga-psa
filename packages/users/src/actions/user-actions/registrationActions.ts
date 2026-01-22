@@ -45,7 +45,10 @@ export async function initiateRegistration(
     if (contactVerification.exists) {
       // Get contact's client and tenant
       const contact = await adminDb('contacts')
-        .join('clients', 'contacts.client_id', 'clients.client_id')
+        .join('clients', function() {
+          this.on('contacts.client_id', '=', 'clients.client_id')
+              .andOn('contacts.tenant', '=', 'clients.tenant');
+        })
         .where('contacts.email', email)
         .select('clients.client_id', 'clients.tenant')
         .first();
@@ -119,7 +122,10 @@ async function registerContactUser(
     return await withTransaction(adminDb, async (trx: Knex.Transaction) => {
       // Get contact details and tenant
       const contact = await trx('contacts')
-        .join('clients', 'contacts.client_id', 'clients.client_id')
+        .join('clients', function() {
+          this.on('contacts.client_id', '=', 'clients.client_id')
+              .andOn('contacts.tenant', '=', 'clients.tenant');
+        })
         .where({ 'contacts.email': email })
         .select('contacts.contact_name_id', 'contacts.client_id', 'contacts.is_inactive', 'contacts.full_name', 'clients.tenant')
         .first();
