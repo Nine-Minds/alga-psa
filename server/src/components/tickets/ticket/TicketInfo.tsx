@@ -146,6 +146,11 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
     return null;
   }, [effectiveItilImpact, effectiveItilUrgency]);
 
+  // Store original description when entering edit mode (for cancel reset)
+  const originalDescriptionRef = useRef<PartialBlock[] | null>(null);
+  // Track if description content has actually changed from original
+  const [hasDescriptionContentChanged, setHasDescriptionContentChanged] = useState(false);
+
   // Track if there are unsaved changes
   const hasUnsavedChanges = useMemo(() => {
     if (!isFormInitialized) {
@@ -288,10 +293,6 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
       styles: {}
     }]
   }]);
-  // Store original description when entering edit mode (for cancel reset)
-  const originalDescriptionRef = useRef<PartialBlock[] | null>(null);
-  // Track if description content has actually changed from original
-  const [hasDescriptionContentChanged, setHasDescriptionContentChanged] = useState(false);
 
   useEffect(() => {
     // Initialize description content from the ticket attributes
