@@ -8,7 +8,7 @@ import { useSession } from "next-auth/react";
 import { Switch } from "@alga-psa/ui/components/Switch";
 import { Label } from "@alga-psa/ui/components/Label";
 import {
-  getCategoriesAction as getInternalCategoriesAction,
+  getInternalNotificationCategoriesAction as getInternalCategoriesAction,
   getSubtypesAction as getInternalSubtypesAction,
   getUserInternalNotificationPreferencesAction,
   updateUserInternalNotificationPreferenceAction

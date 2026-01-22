@@ -3,43 +3,43 @@
   "version": "0.0.1",
   "private": true,
   "type": "module",
-  "main": "./src/index.ts",
+  "main": "./dist/index.js",
   "types": "./src/index.ts",
   "exports": {
     ".": {
-      "import": "./src/index.ts",
+      "import": "./dist/index.js",
       "types": "./src/index.ts"
     },
     "./models": {
-      "import": "./src/models/index.ts",
+      "import": "./dist/models/index.js",
       "types": "./src/models/index.ts"
     },
     "./models/user": {
-      "import": "./src/models/user.ts",
+      "import": "./dist/models/user.js",
       "types": "./src/models/user.ts"
     },
     "./models/userPreferences": {
-      "import": "./src/models/userPreferences.ts",
+      "import": "./dist/models/userPreferences.js",
       "types": "./src/models/userPreferences.ts"
     },
     "./models/tenant": {
-      "import": "./src/models/tenant.ts",
+      "import": "./dist/models/tenant.js",
       "types": "./src/models/tenant.ts"
     },
     "./models/UserSession": {
-      "import": "./src/models/UserSession.ts",
+      "import": "./dist/models/UserSession.js",
       "types": "./src/models/UserSession.ts"
     },
     "./tenant": {
-      "import": "./src/lib/tenant.ts",
+      "import": "./dist/lib/tenant.js",
       "types": "./src/lib/tenant.ts"
     },
     "./admin": {
-      "import": "./src/lib/admin.ts",
+      "import": "./dist/lib/admin.js",
       "types": "./src/lib/admin.ts"
     },
     "./connection": {
-      "import": "./src/lib/connection.ts",
+      "import": "./dist/lib/connection.js",
       "types": "./src/lib/connection.ts"
     }
   },

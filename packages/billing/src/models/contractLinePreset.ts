@@ -1,13 +1,10 @@
 // server/src/lib/models/contractLinePreset.ts
 import { Knex } from 'knex';
 import type { IContractLinePreset } from '@alga-psa/types';
-import { requireTenantId } from '@alga-psa/db';
 import { v4 as uuidv4 } from 'uuid';
 
 const ContractLinePreset = {
-  getAll: async (knexOrTrx: Knex | Knex.Transaction): Promise<IContractLinePreset[]> => {
-    const tenant = await requireTenantId(knexOrTrx);
-
+  getAll: async (knexOrTrx: Knex | Knex.Transaction, tenant: string): Promise<IContractLinePreset[]> => {
     try {
       const presets = await knexOrTrx<IContractLinePreset>('contract_line_presets')
         .where({ tenant })
@@ -22,9 +19,7 @@ const ContractLinePreset = {
     }
   },
 
-  findById: async (knexOrTrx: Knex | Knex.Transaction, presetId: string): Promise<IContractLinePreset | null> => {
-    const tenant = await requireTenantId(knexOrTrx);
-
+  findById: async (knexOrTrx: Knex | Knex.Transaction, tenant: string, presetId: string): Promise<IContractLinePreset | null> => {
     try {
       const preset = await knexOrTrx<IContractLinePreset>('contract_line_presets')
         .where({
@@ -46,9 +41,11 @@ const ContractLinePreset = {
     }
   },
 
-  create: async (knexOrTrx: Knex | Knex.Transaction, preset: Omit<IContractLinePreset, 'preset_id' | 'tenant' | 'created_at' | 'updated_at'>): Promise<IContractLinePreset> => {
-    const tenant = await requireTenantId(knexOrTrx);
-
+  create: async (
+    knexOrTrx: Knex | Knex.Transaction,
+    tenant: string,
+    preset: Omit<IContractLinePreset, 'preset_id' | 'tenant' | 'created_at' | 'updated_at'>
+  ): Promise<IContractLinePreset> => {
     const presetWithId = {
       ...preset,
       preset_id: uuidv4(),
@@ -62,9 +59,12 @@ const ContractLinePreset = {
     return createdPreset;
   },
 
-  update: async (knexOrTrx: Knex | Knex.Transaction, presetId: string, updateData: Partial<IContractLinePreset>): Promise<IContractLinePreset> => {
-    const tenant = await requireTenantId(knexOrTrx);
-
+  update: async (
+    knexOrTrx: Knex | Knex.Transaction,
+    tenant: string,
+    presetId: string,
+    updateData: Partial<IContractLinePreset>
+  ): Promise<IContractLinePreset> => {
     try {
       // Remove tenant from update data to prevent modification
       const { tenant: _, preset_id: __, ...dataToUpdate } = updateData;
@@ -88,9 +88,7 @@ const ContractLinePreset = {
     }
   },
 
-  delete: async (knexOrTrx: Knex | Knex.Transaction, presetId: string): Promise<void> => {
-    const tenant = await requireTenantId(knexOrTrx);
-
+  delete: async (knexOrTrx: Knex | Knex.Transaction, tenant: string, presetId: string): Promise<void> => {
     try {
       const deletedCount = await knexOrTrx('contract_line_presets')
         .where({

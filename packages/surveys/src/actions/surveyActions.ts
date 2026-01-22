@@ -523,7 +523,7 @@ async function getProjectStatusesForSurveys(): Promise<IStatus[]> {
     // Keep permission consistent with projects; surveys UI should only expose options a user can use.
     // If this becomes too restrictive, we can loosen it with a dedicated permission later.
     if (!(await hasPermission(currentUser, 'project', 'read', trx))) {
-      throw new Error('Permission denied: Cannot read project statuses');
+      return [];
     }
 
     return (await trx('statuses')
@@ -545,7 +545,7 @@ export async function getSurveyTriggerReferenceData(): Promise<SurveyTriggerRefe
     }),
     getProjectStatusesForSurveys().catch((error: unknown) => {
       console.error('[surveyActions] Failed to load project statuses for trigger reference data', error);
-      throw new Error('Unable to load project statuses.');
+      return [];
     }),
     getAllPriorities('ticket').catch((error: unknown) => {
       console.error('[surveyActions] Failed to load priorities for trigger reference data', error);

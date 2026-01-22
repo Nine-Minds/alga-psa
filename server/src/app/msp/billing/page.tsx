@@ -11,6 +11,10 @@ interface BillingPageProps {
 
 const BillingPage = async ({ searchParams }: BillingPageProps) => {
   const params = await searchParams;
+  const tab = typeof params.tab === 'string' ? params.tab : undefined;
+  const subtab = typeof params.subtab === 'string' ? params.subtab : undefined;
+  const templateId = typeof params.templateId === 'string' ? params.templateId : undefined;
+  const presetId = typeof params.presetId === 'string' ? params.presetId : undefined;
   const contractId = typeof params.contractId === 'string' ? params.contractId : undefined;
   const contractView = typeof params.contractView === 'string' ? params.contractView : undefined;
 
@@ -38,6 +42,7 @@ const BillingPage = async ({ searchParams }: BillingPageProps) => {
         initialServices={services}
         contractDocuments={contractDocuments}
         currentUserId={currentUserId}
+        initialQuery={{ tab, subtab, templateId, presetId, contractId, contractView }}
       />
     </Suspense>
   );

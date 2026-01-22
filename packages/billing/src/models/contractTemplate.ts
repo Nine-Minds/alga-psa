@@ -1,10 +1,9 @@
-import { Knex } from 'knex';
 import { createTenantKnex } from '@alga-psa/db';
 import type { IContractTemplate, IContractTemplateWithLines } from '@alga-psa/types';
 
 const ContractTemplateModel = {
-  async getAll(): Promise<IContractTemplate[]> {
-    const { knex, tenant } = await createTenantKnex();
+  async getAll(tenantId: string): Promise<IContractTemplate[]> {
+    const { knex, tenant } = await createTenantKnex(tenantId);
     if (!tenant) {
       throw new Error('Tenant context is required for fetching contract templates');
     }
@@ -14,8 +13,8 @@ const ContractTemplateModel = {
       .orderBy('created_at', 'desc');
   },
 
-  async getById(templateId: string): Promise<IContractTemplateWithLines | null> {
-    const { knex, tenant } = await createTenantKnex();
+  async getById(templateId: string, tenantId: string): Promise<IContractTemplateWithLines | null> {
+    const { knex, tenant } = await createTenantKnex(tenantId);
     if (!tenant) {
       throw new Error('Tenant context is required for fetching a contract template');
     }
@@ -62,9 +61,10 @@ const ContractTemplateModel = {
   },
 
   async create(
-    payload: Omit<IContractTemplate, 'template_id' | 'created_at' | 'updated_at' | 'tenant'>
+    payload: Omit<IContractTemplate, 'template_id' | 'created_at' | 'updated_at' | 'tenant'>,
+    tenantId: string
   ): Promise<IContractTemplate> {
-    const { knex, tenant } = await createTenantKnex();
+    const { knex, tenant } = await createTenantKnex(tenantId);
     if (!tenant) {
       throw new Error('Tenant context is required for creating contract templates');
     }
@@ -86,9 +86,10 @@ const ContractTemplateModel = {
 
   async update(
     templateId: string,
-    updates: Partial<Omit<IContractTemplate, 'template_id' | 'tenant'>>
+    updates: Partial<Omit<IContractTemplate, 'template_id' | 'tenant'>>,
+    tenantId: string
   ): Promise<IContractTemplate> {
-    const { knex, tenant } = await createTenantKnex();
+    const { knex, tenant } = await createTenantKnex(tenantId);
     if (!tenant) {
       throw new Error('Tenant context is required for updating contract templates');
     }
@@ -110,8 +111,8 @@ const ContractTemplateModel = {
     return record;
   },
 
-  async delete(templateId: string): Promise<void> {
-    const { knex, tenant } = await createTenantKnex();
+  async delete(templateId: string, tenantId: string): Promise<void> {
+    const { knex, tenant } = await createTenantKnex(tenantId);
     if (!tenant) {
       throw new Error('Tenant context is required for deleting contract templates');
     }

@@ -37,7 +37,7 @@ export async function getContractLinePresets(): Promise<IContractLinePreset[]> {
                 throw new Error('Permission denied: Cannot read contract line presets');
             }
 
-            const presets = await ContractLinePreset.getAll(trx);
+            const presets = await ContractLinePreset.getAll(trx, tenant);
             return presets;
         });
     } catch (error) {
@@ -67,7 +67,7 @@ export async function getContractLinePresetById(presetId: string): Promise<ICont
                 throw new Error('Permission denied: Cannot read contract line presets');
             }
 
-            const preset = await ContractLinePreset.findById(trx, presetId);
+            const preset = await ContractLinePreset.findById(trx, tenant, presetId);
             return preset;
         });
     } catch (error) {
@@ -102,7 +102,7 @@ export async function createContractLinePreset(
             }
 
             const { tenant: _, ...safePresetData } = presetData as any;
-            const preset = await ContractLinePreset.create(trx, safePresetData);
+            const preset = await ContractLinePreset.create(trx, tenant, safePresetData);
 
             // Track analytics
             const { analytics, AnalyticsEvents } = await getAnalyticsAsync();
@@ -144,13 +144,13 @@ export async function updateContractLinePreset(
                 throw new Error('Permission denied: Cannot update contract line presets');
             }
 
-            const existingPreset = await ContractLinePreset.findById(trx, presetId);
+            const existingPreset = await ContractLinePreset.findById(trx, tenant, presetId);
             if (!existingPreset) {
                 throw new Error(`Contract Line Preset with ID ${presetId} not found.`);
             }
 
             const { tenant: _, preset_id: __, ...safeUpdateData } = updateData as any;
-            const preset = await ContractLinePreset.update(trx, presetId, safeUpdateData);
+            const preset = await ContractLinePreset.update(trx, tenant, presetId, safeUpdateData);
 
             // Track analytics
             const { analytics, AnalyticsEvents } = await getAnalyticsAsync();
@@ -193,7 +193,7 @@ export async function deleteContractLinePreset(presetId: string): Promise<void> 
                 throw new Error('Permission denied: Cannot delete contract line presets');
             }
 
-            await ContractLinePreset.delete(trx, presetId);
+            await ContractLinePreset.delete(trx, tenant, presetId);
         });
     } catch (error) {
         console.error('Error deleting contract line preset:', error);
@@ -374,7 +374,7 @@ export async function copyPresetToContractLine(
             }
 
             // 1. Fetch the preset
-            const preset = await ContractLinePreset.findById(trx, presetId);
+            const preset = await ContractLinePreset.findById(trx, tenant, presetId);
             if (!preset) {
                 throw new Error(`Contract line preset ${presetId} not found`);
             }

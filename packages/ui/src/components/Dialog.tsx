@@ -11,6 +11,21 @@ import { DialogComponent, AutomationProps } from '../ui-reflection/types';
 import { withDataAutomationId } from '../ui-reflection/withDataAutomationId';
 import { useAutomationIdAndRegister } from '../ui-reflection/useAutomationIdAndRegister';
 
+function containsDialogDescription(node: ReactNode): boolean {
+  if (node === null || node === undefined || typeof node === 'boolean') return false;
+
+  if (Array.isArray(node)) {
+    return node.some(containsDialogDescription);
+  }
+
+  if (!React.isValidElement(node)) return false;
+
+  if (node.type === DialogDescription || node.type === RadixDialog.Description) return true;
+
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+  return containsDialogDescription((node.props as { children?: ReactNode } | null | undefined)?.children);
+}
+
 interface DialogProps {
   isOpen: boolean;
   onClose: () => void;
@@ -50,6 +65,7 @@ export function Dialog({
   allowOverflow = false,
   disableFocusTrap = false
 }: DialogProps & AutomationProps): React.ReactElement {
+  const hasDescription = containsDialogDescription(children);
   const { automationIdProps: updateDialog, updateMetadata } = useAutomationIdAndRegister<DialogComponent>({
     id: `${id}-dialog`,
     type: 'dialog',
@@ -304,6 +320,7 @@ export function Dialog({
         <RadixDialog.Content
           ref={dialogRef}
           {...withDataAutomationId(updateDialog)}
+          {...(!hasDescription ? { 'aria-describedby': undefined } : {})}
           className={`fixed top-1/2 left-1/2 bg-white rounded-lg shadow-lg w-full ${className || 'max-w-3xl'} z-50 focus-within:ring-2 focus-within:ring-primary-100 focus-within:ring-offset-2 max-h-[90vh] flex flex-col`}
           style={dialogStyle}
           onKeyDown={(e) => {

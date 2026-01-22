@@ -50,9 +50,8 @@ const PaymentSettingsSkeleton: React.FC = () => {
 // Dynamic import for PaymentSettingsConfig using the packages pattern
 // The webpack alias @product/billing/entry will resolve to either EE or OSS version
 // Note: @product/billing/entry is a webpack alias resolved at build time, not a real package
-const productBillingEntry = '@product/billing/entry';
 const PaymentSettingsConfig = dynamic(
-  () => (import(productBillingEntry) as Promise<any>).then((mod) => {
+  () => (import('@product/billing/entry') as Promise<any>).then((mod) => {
     const PaymentSettingsConfigExport = mod.PaymentSettingsConfig;
     const result = PaymentSettingsConfigExport();
 
