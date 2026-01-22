@@ -2,22 +2,14 @@
 
 import { uploadEntityImage, deleteEntityImage, EntityType } from '@alga-psa/media';
 import { getConnection } from '@alga-psa/db';
-
-// Dynamic import to avoid circular dependency (tenancy -> users -> auth -> ui -> analytics -> tenancy)
-// Note: Using string concatenation to prevent static analysis from detecting this dependency
-const getUsersModule = () => '@alga-psa/' + 'users/actions';
-
-const getCurrentUserAsync = async () => {
-  const { getCurrentUser } = await import(/* webpackIgnore: true */ getUsersModule());
-  return getCurrentUser();
-};
+import { getCurrentUser } from '@alga-psa/users/actions';
 
 /**
  * Upload a logo for the tenant
  */
 export async function uploadTenantLogo(tenantId: string, formData: FormData) {
   try {
-    const user = await getCurrentUserAsync();
+    const user = await getCurrentUser();
     if (!user) {
       return { success: false, error: 'User not found' };
     }
@@ -99,7 +91,7 @@ export async function uploadTenantLogo(tenantId: string, formData: FormData) {
  */
 export async function deleteTenantLogo(tenantId: string) {
   try {
-    const user = await getCurrentUserAsync();
+    const user = await getCurrentUser();
     if (!user) {
       return { success: false, error: 'User not found' };
     }
