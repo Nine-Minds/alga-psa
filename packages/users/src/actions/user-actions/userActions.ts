@@ -14,7 +14,7 @@ import { getUserAvatarUrl } from '../../lib/avatarUtils';
 import { uploadEntityImage, deleteEntityImage } from '@alga-psa/media';
 import { hasPermission, throwPermissionError } from '../../lib/permissions';
 import logger from '@alga-psa/core/logger';
-import { getCurrentUser } from '@alga-psa/auth/getCurrentUser';
+import { getCurrentUser } from '../../lib/currentUser';
 
 interface ActionResult {
   success: boolean;
