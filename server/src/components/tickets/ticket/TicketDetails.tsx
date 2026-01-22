@@ -1112,8 +1112,8 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
       if (onUpdateDescription) {
         const result = await onUpdateDescription(content);
 
-        // Treat undefined/null as success (only explicit false is failure)
-        if (result !== false) {
+        // Strict check: only treat explicit true as success
+        if (result === true) {
           // Update the local ticket state
           const currentAttributes = ticket.attributes || {};
           const updatedAttributes = {
@@ -1130,6 +1130,10 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
           return true;
         }
 
+        // Log unexpected return values for debugging
+        if (result !== false) {
+          console.warn('handleUpdateDescription: unexpected return value from onUpdateDescription:', result);
+        }
         return false;
       } else {
         // Fallback to the original implementation

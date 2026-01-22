@@ -97,7 +97,7 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
 
   // Local state for pending changes (not saved until Save Changes is clicked)
   const [pendingChanges, setPendingChanges] = useState<Partial<ITicket>>({});
-  const [pendingItilChanges, setPendingItilChanges] = useState<{ itil_impact?: number; itil_urgency?: number }>({});
+  const [pendingItilChanges, setPendingItilChanges] = useState<{ itil_impact?: number | null; itil_urgency?: number | null }>({});
   const [isSaving, setIsSaving] = useState(false);
   const [isFormInitialized, setIsFormInitialized] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
@@ -184,6 +184,12 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
   // Track the board_id being fetched to handle race conditions
   const fetchingBoardIdRef = useRef<string | null>(null);
 
+  // Track current board's priority type in a ref to avoid triggering re-fetches
+  const currentPriorityTypeRef = useRef(boardConfig.priority_type);
+  useEffect(() => {
+    currentPriorityTypeRef.current = boardConfig.priority_type;
+  }, [boardConfig.priority_type]);
+
   // Fetch board config when pending board changes
   useEffect(() => {
     const boardIdToFetch = pendingChanges.board_id;
@@ -211,20 +217,16 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
 
                 // Only clear priority fields if the priority_type changes (custom <-> ITIL)
                 // This preserves priority when switching between boards with the same priority type
-                const currentPriorityType = boardConfig.priority_type;
+                const currentPriorityType = currentPriorityTypeRef.current;
                 const newPriorityType = data.boardConfig.priority_type;
 
                 if (currentPriorityType !== newPriorityType) {
-                  // Priority type changed, clear priority fields
+                  // Priority type changed, clear priority fields (use null for proper JSON serialization)
                   setPendingChanges(prev => ({
                     ...prev,
                     priority_id: null,
                   }));
-                  setPendingItilChanges(prev => ({
-                    ...prev,
-                    itil_impact: undefined,
-                    itil_urgency: undefined,
-                  }));
+                  setPendingItilChanges({ itil_impact: null, itil_urgency: null });
                 }
               }
             }
@@ -247,22 +249,12 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
     };
 
     fetchPendingBoardConfig();
-  }, [pendingChanges.board_id, ticket.board_id, boardConfig.priority_type]);
-
-  // Clear category selections when board changes (separate effect to avoid dependency issues)
-  useEffect(() => {
-    if (pendingChanges.board_id && pendingChanges.board_id !== ticket.board_id) {
-      // Clear category selections since they may not be valid for the new board
-      setPendingChanges(prev => {
-        // Only clear if category/subcategory exist in pending
-        if ('category_id' in prev || 'subcategory_id' in prev) {
-          const { category_id, subcategory_id, ...rest } = prev;
-          return rest;
-        }
-        return prev;
-      });
-    }
   }, [pendingChanges.board_id, ticket.board_id]);
+
+  // Note: Category clearing when board changes is handled directly in the board select's
+  // onValueChange handler (which sets category_id and subcategory_id to null).
+  // We don't use a separate useEffect because that would remove the null values from
+  // pendingChanges, preventing them from being sent to the server.
 
   // Get ITIL categories from props (now includes both custom and ITIL)
   // NOTE: Categories are now unified - no need for separate ITIL category filtering
@@ -441,7 +433,7 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
         const { [field]: _, ...rest } = prev;
         return rest;
       }
-      return { ...prev, [field]: value ?? undefined };
+      return { ...prev, [field]: value };
     });
   }, [itilImpact, itilUrgency]);
 
@@ -464,12 +456,12 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
       // selects new values, those are captured in pendingChanges and will be saved.
       // We no longer need to force-clear these fields here - that was overwriting user selections.
 
-      // Save ITIL changes if any
+      // Save ITIL changes if any (include null values to clear fields on server)
       if (Object.keys(pendingItilChanges).length > 0) {
-        if (pendingItilChanges.itil_impact !== undefined) {
+        if ('itil_impact' in pendingItilChanges) {
           allChanges.itil_impact = pendingItilChanges.itil_impact;
         }
-        if (pendingItilChanges.itil_urgency !== undefined) {
+        if ('itil_urgency' in pendingItilChanges) {
           allChanges.itil_urgency = pendingItilChanges.itil_urgency;
         }
       }
@@ -1069,8 +1061,8 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
                       if (onUpdateDescription) {
                         try {
                           const result = await onUpdateDescription(JSON.stringify(descriptionContent));
-                          // Treat undefined/null as success (only explicit false is failure)
-                          if (result !== false) {
+                          // Strict check: only close edit mode on explicit true
+                          if (result === true) {
                             setIsEditingDescription(false);
                           }
                         } catch (error) {
