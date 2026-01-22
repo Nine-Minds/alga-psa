@@ -10,6 +10,7 @@ import {
 import { isConcurrencyConflict } from 'server/src/lib/actions/ticket-actions/ticketActionTypes';
 import { useSession } from 'next-auth/react';
 import { toast } from 'react-hot-toast';
+import { getErrorMessage } from 'server/src/lib/utils/errorHandling';
 import type { SurveyTicketSatisfactionSummary } from 'server/src/interfaces/survey.interface';
 import { UnsavedChangesProvider } from 'server/src/contexts/UnsavedChangesContext';
 import type { IComment } from 'server/src/interfaces/comment.interface';
@@ -43,13 +44,6 @@ interface TicketDetailsContainerProps {
   };
   surveySummary?: SurveyTicketSatisfactionSummary | null;
 }
-
-
-// Helper to extract error message from unknown error
-const getErrorMessage = (error: unknown): string => {
-  if (error instanceof Error) return error.message;
-  return String(error);
-};
 
 export default function TicketDetailsContainer({ ticketData, surveySummary = null }: TicketDetailsContainerProps) {
   const router = useRouter();
@@ -90,6 +84,8 @@ export default function TicketDetailsContainer({ ticketData, surveySummary = nul
   // Helper to wrap async operations with isSubmitting state management
   // Uses a counter to handle concurrent requests properly
   // Checks isMountedRef to prevent state updates after unmount
+  // Note: Empty dependency array is intentional - pendingRequestsRef and isMountedRef are
+  // stable refs that don't need to be in deps (React refs are designed to be mutable containers)
   const withSubmitting = useCallback(async <T,>(operation: () => Promise<T>): Promise<T> => {
     pendingRequestsRef.current++;
     if (isMountedRef.current) {
