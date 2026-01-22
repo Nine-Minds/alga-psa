@@ -21,7 +21,7 @@ import { getEventBus } from '../../../lib/eventBus';
 import { getEmailEventChannel } from '../../../lib/notifications/emailChannel';
 import { convertBlockNoteToMarkdown } from 'server/src/lib/utils/blocknoteUtils';
 import { getImageUrl } from 'server/src/lib/actions/document-actions/documentActions';
-import { getClientLogoUrl, getUserAvatarUrl, getClientLogoUrlsBatch } from 'server/src/lib/utils/avatarUtils';
+import { getClientLogoUrl, getUserAvatarUrl, getClientLogoUrlsBatch, getUserAvatarUrlsBatch } from 'server/src/lib/utils/avatarUtils';
 import {
   ticketFormSchema,
   ticketSchema,
@@ -335,32 +335,26 @@ export async function getConsolidatedTicketData(ticketId: string, _user?: IUser)
         .first() : null;
 
     // Process user data for userMap, including avatar URLs
-    const usersWithAvatars = await Promise.all(users.map(async (user: any) => {
-      let avatarUrl: string | null = null;
-      try {
-        avatarUrl = await getUserAvatarUrl(user.user_id, tenant);
-      } catch (imgError) {
-        console.error(`Error fetching avatar URL for user ${user.user_id}:`, imgError);
-        avatarUrl = null;
-      }
+    // Use batch fetching to avoid N+1 queries
+    const userIds = users.map((user: any) => user.user_id);
+    let avatarUrlsMap: Map<string, string | null> = new Map();
+    try {
+      avatarUrlsMap = await getUserAvatarUrlsBatch(userIds, tenant);
+    } catch (imgError) {
+      console.error('Error fetching avatar URLs batch:', imgError);
+    }
 
-      return {
-        ...user,
-        avatarUrl,
-      };
-    }));
-
-    const userMap = usersWithAvatars.reduce((acc, user) => {
+    const userMap = users.reduce((acc: Record<string, { user_id: string; first_name: string; last_name: string; email?: string, user_type: string, avatarUrl: string | null }>, user: any) => {
       acc[user.user_id] = {
         user_id: user.user_id,
         first_name: user.first_name || '',
         last_name: user.last_name || '',
         email: user.email,
         user_type: user.user_type,
-        avatarUrl: user.avatarUrl // Include avatarUrl
+        avatarUrl: avatarUrlsMap.get(user.user_id) || null
       };
       return acc;
-    }, {} as Record<string, { user_id: string; first_name: string; last_name: string; email?: string, user_type: string, avatarUrl: string | null }>);
+    }, {});
 
     // Format options for dropdowns
     const statusOptions = statuses.map((status) => ({
@@ -1277,6 +1271,16 @@ export async function updateTicketWithCache(
       updateData.subcategory_id = null;
     }
 
+    // Handle attributes merge server-side to avoid stale closure issues
+    // When client sends attributes, merge with current ticket attributes instead of replacing
+    if ('attributes' in updateData && updateData.attributes) {
+      const currentAttributes = currentTicket.attributes || {};
+      updateData.attributes = {
+        ...currentAttributes,
+        ...updateData.attributes
+      };
+    }
+
     // Handle ITIL priority calculation if impact or urgency is being updated
     if (('itil_impact' in updateData || 'itil_urgency' in updateData)) {
       const newImpact = 'itil_impact' in updateData ? updateData.itil_impact : currentTicket.itil_impact;
@@ -1381,11 +1385,31 @@ export async function updateTicketWithCache(
         }
         
         // Step 5: Update the ticket with the new assigned_to
-        const [updated] = await trx('tickets')
-          .where({ ticket_id: id, tenant: tenant })
-          .update(updateData)
-          .returning('*');
-          
+        // Include updated_at in WHERE clause to prevent TOCTOU race condition
+        const updateQuery = trx('tickets')
+          .where({ ticket_id: id, tenant: tenant });
+
+        // Add timestamp check to WHERE clause if expectedUpdatedAt was provided
+        if (expectedUpdatedAt) {
+          updateQuery.where('updated_at', currentTicket.updated_at);
+        }
+
+        const updateResult = await updateQuery.update(updateData).returning('*');
+        const [updated] = updateResult;
+
+        // Check if update succeeded (row count > 0)
+        if (!updated && expectedUpdatedAt) {
+          // Re-fetch to get current updated_at for the error message
+          const current = await trx('tickets').where({ ticket_id: id, tenant }).first();
+          const currentUpdatedAtStr = current?.updated_at instanceof Date
+            ? current.updated_at.toISOString()
+            : String(current?.updated_at || '');
+          throw new ConcurrencyConflictError(
+            'This ticket was modified by another user.',
+            currentUpdatedAtStr
+          );
+        }
+
         // Step 6: Re-create the resources with the new assigned_to
         for (const resourceData of resourcesToRecreate) {
           await trx('ticket_resources').insert({
@@ -1397,10 +1421,30 @@ export async function updateTicketWithCache(
         updatedTicket = updated;
     } else {
       // Regular update without changing assignment
-      [updatedTicket] = await trx('tickets')
-        .where({ ticket_id: id, tenant: tenant })
-        .update(updateData)
-        .returning('*');
+      // Include updated_at in WHERE clause to prevent TOCTOU race condition
+      const updateQuery = trx('tickets')
+        .where({ ticket_id: id, tenant: tenant });
+
+      // Add timestamp check to WHERE clause if expectedUpdatedAt was provided
+      if (expectedUpdatedAt) {
+        updateQuery.where('updated_at', currentTicket.updated_at);
+      }
+
+      const updateResult = await updateQuery.update(updateData).returning('*');
+      [updatedTicket] = updateResult;
+
+      // Check if update succeeded (row count > 0)
+      if (!updatedTicket && expectedUpdatedAt) {
+        // Re-fetch to get current updated_at for the error message
+        const current = await trx('tickets').where({ ticket_id: id, tenant }).first();
+        const currentUpdatedAtStr = current?.updated_at instanceof Date
+          ? current.updated_at.toISOString()
+          : String(current?.updated_at || '');
+        throw new ConcurrencyConflictError(
+          'This ticket was modified by another user.',
+          currentUpdatedAtStr
+        );
+      }
     }
 
     if (!updatedTicket) {

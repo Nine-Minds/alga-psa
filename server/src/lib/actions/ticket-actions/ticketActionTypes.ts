@@ -17,12 +17,28 @@ export class ConcurrencyConflictError extends Error {
 }
 
 // Type guard for concurrency conflict errors - exported so client and server use the same logic
+// Note: When errors cross the server/client boundary in Next.js server actions, they lose
+// their prototype chain during serialization. We check multiple conditions to be robust.
 export function isConcurrencyConflict(error: unknown): error is ConcurrencyConflictError {
-  return (
-    error instanceof Error &&
-    'code' in error &&
-    (error as ConcurrencyConflictError).code === CONCURRENCY_CONFLICT_CODE
-  );
+  if (!error || typeof error !== 'object') {
+    return false;
+  }
+
+  // Check for the code property (works for both serialized and non-serialized errors)
+  if ('code' in error && (error as { code: unknown }).code === CONCURRENCY_CONFLICT_CODE) {
+    return true;
+  }
+
+  // Fallback: check error message for concurrency conflict pattern
+  // This handles cases where only the message survives serialization
+  if ('message' in error && typeof (error as { message: unknown }).message === 'string') {
+    const message = (error as { message: string }).message.toLowerCase();
+    if (message.includes('modified by another user') || message.includes('concurrency')) {
+      return true;
+    }
+  }
+
+  return false;
 }
 
 // Return type for updateTicketWithCache

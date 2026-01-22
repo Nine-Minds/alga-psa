@@ -226,6 +226,16 @@ export async function getContactAvatarUrlsBatch(
 }
 
 /**
+ * Convenience function to get multiple user avatar URLs at once
+ */
+export async function getUserAvatarUrlsBatch(
+  userIds: string[],
+  tenant: string
+): Promise<Map<string, string | null>> {
+  return getEntityImageUrlsBatch('user', userIds, tenant);
+}
+
+/**
  * Example usage:
  *
  * // Using the general function:

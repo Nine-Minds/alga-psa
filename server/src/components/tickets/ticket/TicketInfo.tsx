@@ -46,7 +46,7 @@ interface TicketInfoProps {
   allTagTexts?: string[];
   onTagsChange?: (tags: ITag[]) => void;
   isInDrawer?: boolean;
-  onItilFieldChange?: (field: string, value: any) => void;
+  onItilFieldChange?: (field: 'itil_impact' | 'itil_urgency', value: number | null) => void;
   isBundledChild?: boolean;
   // Pre-fetched categories from server to avoid timing issues
   initialCategories?: ITicketCategory[];
@@ -156,11 +156,11 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
     const hasPendingTicketChanges = Object.keys(pendingChanges).length > 0;
     const hasPendingItilChanges = Object.keys(pendingItilChanges).length > 0;
     const hasTitleChange = titleValue !== ticket.title;
-    // Check if description is being edited (any changes in the editor are unsaved)
-    const hasDescriptionChange = isEditingDescription;
+    // Check if description content has actually changed (not just if in edit mode)
+    const hasDescriptionChange = hasDescriptionContentChanged;
 
     return hasPendingTicketChanges || hasPendingItilChanges || hasTitleChange || hasDescriptionChange;
-  }, [isFormInitialized, pendingChanges, pendingItilChanges, titleValue, ticket.title, isEditingDescription]);
+  }, [isFormInitialized, pendingChanges, pendingItilChanges, titleValue, ticket.title, hasDescriptionContentChanged]);
 
   // Register unsaved changes with the context
   // This hook will throw if used outside of UnsavedChangesProvider,
@@ -183,6 +183,17 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
   const [isLoadingBoardConfig, setIsLoadingBoardConfig] = useState(false);
   // Track the board_id being fetched to handle race conditions
   const fetchingBoardIdRef = useRef<string | null>(null);
+  // Track save success timeout for cleanup on unmount
+  const saveSuccessTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Cleanup timeout on unmount to prevent memory leaks
+  useEffect(() => {
+    return () => {
+      if (saveSuccessTimeoutRef.current) {
+        clearTimeout(saveSuccessTimeoutRef.current);
+      }
+    };
+  }, []);
 
   // Track current board's priority type in a ref to avoid triggering re-fetches
   const currentPriorityTypeRef = useRef(boardConfig.priority_type);
@@ -277,6 +288,10 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
       styles: {}
     }]
   }]);
+  // Store original description when entering edit mode (for cancel reset)
+  const originalDescriptionRef = useRef<PartialBlock[] | null>(null);
+  // Track if description content has actually changed from original
+  const [hasDescriptionContentChanged, setHasDescriptionContentChanged] = useState(false);
 
   useEffect(() => {
     // Initialize description content from the ticket attributes
@@ -487,12 +502,21 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
           setPendingItilChanges({});
           setPendingBoardConfig(null);
           setPendingCategories(null);
+          // Update original description ref to saved content
+          if (isEditingDescription) {
+            originalDescriptionRef.current = descriptionContent;
+          }
+          setHasDescriptionContentChanged(false);
           // Close all edit modes
           setIsEditingTitle(false);
           setIsEditingDescription(false);
           // Show success message for 3 seconds (like contracts)
           setSaveSuccess(true);
-          setTimeout(() => setSaveSuccess(false), 3000);
+          // Clear any existing timeout before setting a new one
+          if (saveSuccessTimeoutRef.current) {
+            clearTimeout(saveSuccessTimeoutRef.current);
+          }
+          saveSuccessTimeoutRef.current = setTimeout(() => setSaveSuccess(false), 3000);
         }
       } else {
         // Fallback: save each field individually using onSelectChange
@@ -516,19 +540,28 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
         setPendingItilChanges({});
         setPendingBoardConfig(null);
         setPendingCategories(null);
+        // Update original description ref to saved content
+        if (isEditingDescription) {
+          originalDescriptionRef.current = descriptionContent;
+        }
+        setHasDescriptionContentChanged(false);
         // Close all edit modes
         setIsEditingTitle(false);
         setIsEditingDescription(false);
         // Show success message for 3 seconds (like contracts)
         setSaveSuccess(true);
-        setTimeout(() => setSaveSuccess(false), 3000);
+        // Clear any existing timeout before setting a new one
+        if (saveSuccessTimeoutRef.current) {
+          clearTimeout(saveSuccessTimeoutRef.current);
+        }
+        saveSuccessTimeoutRef.current = setTimeout(() => setSaveSuccess(false), 3000);
       }
     } catch (error) {
       console.error('Error saving changes:', error);
     } finally {
       setIsSaving(false);
     }
-  }, [hasUnsavedChanges, pendingChanges, pendingItilChanges, titleValue, ticket.title, ticket.board_id, onSaveChanges, onSelectChange, onItilFieldChange, isEditingDescription, onUpdateDescription, descriptionContent]);
+  }, [hasUnsavedChanges, pendingChanges, pendingItilChanges, titleValue, ticket.title, ticket.board_id, onSaveChanges, onSelectChange, onItilFieldChange, isEditingDescription, onUpdateDescription, descriptionContent, hasDescriptionContentChanged]);
 
   // Handler for discarding all pending changes
   const handleDiscardChanges = useCallback(() => {
@@ -607,7 +640,7 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
   };
 
   // Handler for ITIL field changes (now uses pending changes)
-  const handleLocalItilFieldChange = (field: string, value: any) => {
+  const handleLocalItilFieldChange = (field: 'itil_impact' | 'itil_urgency', value: number | null) => {
     if (field === 'itil_impact' || field === 'itil_urgency') {
       handlePendingItilChange(field, value);
     }
@@ -1036,7 +1069,12 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
               <h2 className="text-lg font-semibold">Description</h2>
               {!isEditingDescription && (
                 <button
-                  onClick={() => setIsEditingDescription(true)}
+                  onClick={() => {
+                    // Store original content before entering edit mode
+                    originalDescriptionRef.current = descriptionContent;
+                    setHasDescriptionContentChanged(false);
+                    setIsEditingDescription(true);
+                  }}
                   className="p-1 hover:bg-gray-100 rounded-full transition-colors duration-200"
                   title="Edit description"
                 >
@@ -1051,7 +1089,15 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
                   <TextEditor
                     id={`${id}-description-editor`}
                     initialContent={descriptionContent}
-                    onContentChange={setDescriptionContent}
+                    onContentChange={(content) => {
+                      setDescriptionContent(content);
+                      // Track if content has changed from original
+                      if (originalDescriptionRef.current) {
+                        const originalStr = JSON.stringify(originalDescriptionRef.current);
+                        const currentStr = JSON.stringify(content);
+                        setHasDescriptionContentChanged(originalStr !== currentStr);
+                      }
+                    }}
                   />
                 </div>
                 <div className="flex justify-end space-x-2 mt-2">
@@ -1063,6 +1109,9 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
                           const result = await onUpdateDescription(JSON.stringify(descriptionContent));
                           // Strict check: only close edit mode on explicit true
                           if (result === true) {
+                            // Update original ref to new saved content
+                            originalDescriptionRef.current = descriptionContent;
+                            setHasDescriptionContentChanged(false);
                             setIsEditingDescription(false);
                           }
                         } catch (error) {
@@ -1080,6 +1129,10 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
                     variant="outline"
                     onClick={() => {
                       // Reset to original content and cancel editing
+                      if (originalDescriptionRef.current) {
+                        setDescriptionContent(originalDescriptionRef.current);
+                      }
+                      setHasDescriptionContentChanged(false);
                       setIsEditingDescription(false);
                     }}
                   >

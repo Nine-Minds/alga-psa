@@ -108,7 +108,7 @@ export default function TicketDetailsContainer({ ticketData, surveySummary = nul
 
   // Handle single field ticket updates using the optimized server action
   // Note: Server actions now get user from session internally for security
-  const handleTicketUpdate = useCallback(async (field: string, value: any): Promise<void> => {
+  const handleTicketUpdate = useCallback(async (field: string, value: string | number | boolean | null | undefined): Promise<void> => {
     if (!session?.user) {
       toast.error('You must be logged in to update tickets');
       return;
@@ -138,7 +138,7 @@ export default function TicketDetailsContainer({ ticketData, surveySummary = nul
 
   // Handle batch ticket updates - saves all changes atomically to avoid partial updates
   // Note: Server actions now get user from session internally for security
-  const handleBatchTicketUpdate = useCallback(async (changes: Record<string, any>): Promise<boolean> => {
+  const handleBatchTicketUpdate = useCallback(async (changes: Record<string, unknown>): Promise<boolean> => {
     // Check login first before any other logic
     if (!session?.user) {
       toast.error('You must be logged in to update tickets');
@@ -219,18 +219,13 @@ export default function TicketDetailsContainer({ ticketData, surveySummary = nul
     }
 
     return withSubmitting(async () => {
-      // Update the ticket's attributes.description field
-      const currentAttributes = ticketData.ticket.attributes || {};
-      const updatedAttributes = {
-        ...currentAttributes,
-        description: content
-      };
-
       try {
+        // Send only the description - server will merge with existing attributes
+        // This avoids stale closure issues where ticketData.ticket.attributes might be outdated
         const result = await updateTicketWithCache(
           ticketData.ticket.ticket_id,
           {
-            attributes: updatedAttributes
+            attributes: { description: content }
           },
           undefined, // user is now fetched internally by server action
           expectedUpdatedAtRef.current // Pass expected updated_at for optimistic concurrency
@@ -250,7 +245,7 @@ export default function TicketDetailsContainer({ ticketData, surveySummary = nul
         return false;
       }
     });
-  }, [session?.user, withSubmitting, ticketData.ticket.ticket_id, ticketData.ticket.attributes, handleConflict]);
+  }, [session?.user, withSubmitting, ticketData.ticket.ticket_id, handleConflict]);
 
   // Render directly to avoid redefining a component each render,
   // which can cause unmount/mount cycles and side-effects
