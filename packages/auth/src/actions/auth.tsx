@@ -1,16 +1,12 @@
 "use server";
 import User from "@alga-psa/db/models/user";
+import { getTenantIdBySlug } from "@alga-psa/db";
 
 import { verifyPassword } from '@alga-psa/core/encryption';
 import logger from "@alga-psa/core/logger";
 
 import { IUser } from '@alga-psa/types';
 import { isValidTenantSlug } from '@alga-psa/validation';
-
-const getTenantIdBySlugAsync = async (slug: string): Promise<string | null> => {
-  const { getTenantIdBySlug } = await import('@alga-psa/tenancy/actions');
-  return getTenantIdBySlug(slug);
-};
 
 interface AuthenticateUserOptions {
     tenantId?: string;
@@ -48,7 +44,7 @@ export async function authenticateUser(
             return null;
         }
 
-        resolvedTenantId = await getTenantIdBySlugAsync(options.tenantSlug);
+        resolvedTenantId = await getTenantIdBySlug(options.tenantSlug);
         if (!resolvedTenantId) {
             logger.warn('[authenticateUser] Failed to resolve tenant from slug', {
                 email,
