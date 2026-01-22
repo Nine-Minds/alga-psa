@@ -447,6 +447,7 @@ const ProjectModel = {
           trx('project_tasks')
             .select('task_id')
             .where('phase_id', phaseId)
+            .andWhere('tenant', tenant)
         )
         .andWhere('tenant', tenant)
         .del();
@@ -764,7 +765,10 @@ const ProjectModel = {
 
     try {
       // First, check if the status is being used by any tasks
-      const tasksUsingStatus = await trx<IProjectTask>('project_tasks').where('project_status_mapping_id', statusId).first();
+      const tasksUsingStatus = await trx<IProjectTask>('project_tasks')
+        .where('project_status_mapping_id', statusId)
+        .andWhere('tenant', tenant)
+        .first();
 
       if (tasksUsingStatus) {
         throw new Error('Cannot delete status: it is being used by one or more tasks');

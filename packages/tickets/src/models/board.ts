@@ -1,11 +1,9 @@
-import { getTenantContext } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { IBoard } from '@alga-psa/types';
 
 const Board = {
-  getAll: async (knexOrTrx: Knex | Knex.Transaction, includeAll: boolean = false): Promise<IBoard[]> => {
+  getAll: async (knexOrTrx: Knex | Knex.Transaction, tenant: string, includeAll: boolean = false): Promise<IBoard[]> => {
     try {
-      const tenant = getTenantContext();
       if (!tenant) {
         throw new Error('Tenant context is required');
       }
@@ -24,9 +22,8 @@ const Board = {
     }
   },
 
-  get: async (knexOrTrx: Knex | Knex.Transaction, id: string): Promise<IBoard | undefined> => {
+  get: async (knexOrTrx: Knex | Knex.Transaction, tenant: string, id: string): Promise<IBoard | undefined> => {
     try {
-      const tenant = getTenantContext();
       if (!tenant) {
         throw new Error('Tenant context is required');
       }
@@ -43,10 +40,8 @@ const Board = {
     }
   },
 
-  insert: async (knexOrTrx: Knex | Knex.Transaction, board: Omit<IBoard, 'board_id' | 'tenant'>): Promise<IBoard> => {
+  insert: async (knexOrTrx: Knex | Knex.Transaction, tenant: string, board: Omit<IBoard, 'board_id' | 'tenant'>): Promise<IBoard> => {
     try {
-      const tenant = getTenantContext();
-
       if (!tenant) {
         throw new Error('Tenant context is required for creating board');
       }
@@ -70,10 +65,8 @@ const Board = {
     }
   },
 
-  delete: async (knexOrTrx: Knex | Knex.Transaction, id: string): Promise<void> => {
+  delete: async (knexOrTrx: Knex | Knex.Transaction, tenant: string, id: string): Promise<void> => {
     try {
-      const tenant = getTenantContext();
-
       if (!tenant) {
         throw new Error('Tenant context is required for deleting board');
       }
@@ -101,10 +94,8 @@ const Board = {
     }
   },
 
-  update: async (knexOrTrx: Knex | Knex.Transaction, id: string, updates: Partial<Omit<IBoard, 'tenant'>>): Promise<IBoard | undefined> => {
+  update: async (knexOrTrx: Knex | Knex.Transaction, tenant: string, id: string, updates: Partial<Omit<IBoard, 'tenant'>>): Promise<IBoard | undefined> => {
     try {
-      const tenant = getTenantContext();
-
       if (!tenant) {
         throw new Error('Tenant context is required for updating board');
       }

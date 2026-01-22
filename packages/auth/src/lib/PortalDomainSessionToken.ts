@@ -249,7 +249,7 @@ export async function consumePortalDomainOtt(params: ConsumePortalDomainOttParam
 
   return knex.transaction(async (trx) => {
     const row = await trx<PortalDomainSessionOttRow>(TABLE_NAME)
-      .where({ token_hash: tokenHash })
+      .where({ token_hash: tokenHash, tenant, portal_domain_id: portalDomainId })
       .first();
 
     if (!row) {
@@ -257,18 +257,6 @@ export async function consumePortalDomainOtt(params: ConsumePortalDomainOttParam
         reason: 'not_found',
         tenant,
         portal_domain_id: portalDomainId,
-      });
-      return null;
-    }
-
-    if (row.tenant !== tenant || row.portal_domain_id !== portalDomainId) {
-      logger.info(FAILURE_EVENT, {
-        reason: 'tenant_mismatch',
-        tenant,
-        portal_domain_id: portalDomainId,
-        token_tenant: row.tenant,
-        token_portal_domain_id: row.portal_domain_id,
-        user_id: row.user_id,
       });
       return null;
     }

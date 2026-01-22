@@ -1,13 +1,6 @@
 'use server';
 
-// Dynamic import to avoid circular dependency (tenancy -> users -> auth -> ui -> analytics -> tenancy)
-// Note: Using string concatenation to prevent static analysis from detecting this dependency
-const getUsersModule = () => '@alga-psa/' + 'users/actions';
-
-const getCurrentUserAsync = async () => {
-  const { getCurrentUser } = await import(/* webpackIgnore: true */ getUsersModule());
-  return getCurrentUser();
-};
+import { getCurrentUser } from '@alga-psa/users/actions';
 import { getTenantForCurrentRequest } from '../../server';
 import { createTenantKnex } from '@alga-psa/db';
 import type { WizardData } from '@alga-psa/types';
@@ -60,7 +53,7 @@ export async function updateTenantOnboardingStatus(
     }
 
     // Ensure user is authenticated (no admin check during onboarding)
-    const user = await getCurrentUserAsync();
+    const user = await getCurrentUser();
     if (!user) {
       throw new Error('User must be authenticated');
     }
@@ -119,7 +112,7 @@ export async function saveTenantOnboardingProgress(
     }
 
     // Ensure user is authenticated (no admin check during onboarding)
-    const user = await getCurrentUserAsync();
+    const user = await getCurrentUser();
     if (!user) {
       throw new Error('User must be authenticated');
     }
@@ -175,7 +168,7 @@ export async function clearTenantOnboardingData(): Promise<void> {
     }
 
     // Check if user has admin permissions
-    const user = await getCurrentUserAsync();
+    const user = await getCurrentUser();
     if (!user || !user.roles.some((role: any) => role.role_name === 'admin')) {
       throw new Error('Only admin users can clear onboarding data');
     }

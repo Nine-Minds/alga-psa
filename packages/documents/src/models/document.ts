@@ -1,15 +1,11 @@
 import type { IDocument } from '@alga-psa/types';
-import { createTenantKnex } from '@alga-psa/db';
+import { requireTenantId } from '@alga-psa/db';
 import type { Knex } from 'knex';
 
 const Document = {
     getAll: async (knexOrTrx: Knex | Knex.Transaction): Promise<IDocument[]> => {
         try {
-            const { tenant } = await createTenantKnex();
-            
-            if (!tenant) {
-                throw new Error('Tenant context is required for getting documents');
-            }
+            const tenant = await requireTenantId();
 
             return await knexOrTrx<IDocument>('documents')
                 .select(
@@ -31,6 +27,8 @@ const Document = {
 
     get: async (knexOrTrx: Knex | Knex.Transaction, document_id: string): Promise<IDocument | undefined> => {
         try {
+            const tenant = await requireTenantId();
+
             return await knexOrTrx<IDocument>('documents')
                     .select(
                         'documents.*',
@@ -50,6 +48,7 @@ const Document = {
                     })
                     .leftJoin('shared_document_types as sdt', 'documents.shared_type_id', 'sdt.type_id')
                     .where('documents.document_id', document_id)
+                    .andWhere('documents.tenant', tenant)
                     .first();
         } catch (error) {
             console.error(`Error getting document with id ${document_id}:`, error);
@@ -71,9 +70,11 @@ const Document = {
 
     update: async (knexOrTrx: Knex | Knex.Transaction, document_id: string, document: Partial<IDocument>): Promise<void> => {
         try {
+            const tenant = await requireTenantId();
             const { tenant: _, ...updateData } = document;
             await knexOrTrx<IDocument>('documents')
                 .where('document_id', document_id)
+                .andWhere('tenant', tenant)
                 .update(updateData);
         } catch (error) {
             console.error(`Error updating document with id ${document_id}:`, error);
@@ -83,8 +84,10 @@ const Document = {
 
     delete: async (knexOrTrx: Knex | Knex.Transaction, document_id: string): Promise<void> => {
         try {
+            const tenant = await requireTenantId();
             await knexOrTrx<IDocument>('documents')
                 .where('document_id', document_id)
+                .andWhere('tenant', tenant)
                 .del();
         } catch (error) {
             console.error(`Error deleting document with id ${document_id}:`, error);
