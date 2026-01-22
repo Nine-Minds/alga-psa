@@ -10,7 +10,6 @@ import { generateEntityColor } from '../../lib/colorUtils';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Button } from '@alga-psa/ui/components/Button';
 import { ITag } from '@alga-psa/types';
-import { useTags } from '../../context/TagContext';
 
 interface TagInputProps {
   id?: string; // Made optional to maintain backward compatibility

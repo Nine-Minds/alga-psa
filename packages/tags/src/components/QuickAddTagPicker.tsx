@@ -3,11 +3,11 @@
 "use client";
 
 import React, { useMemo, useRef, useEffect, useState } from 'react';
-import { filterTagsByText } from '../../lib/utils';
+import { filterTagsByText } from '@alga-psa/ui';
 import type { ITag, PendingTag, TaggedEntityType } from '@alga-psa/types';
 import { X, Plus } from 'lucide-react';
-import { getAllTags } from '@alga-psa/tags/actions';
-import { useTags } from '../../context/TagContext';
+import { getAllTags } from '../actions';
+import { useTags } from '../context/TagContext';
 
 interface QuickAddTagPickerProps {
   id?: string;

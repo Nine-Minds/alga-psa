@@ -2,19 +2,9 @@
 
 import type { IUserWithRoles } from '@alga-psa/types';
 import { getUserWithRoles, getUserWithRolesByEmail, createTenantKnex } from '@alga-psa/db';
+import { getSession } from '@alga-psa/auth';
 import logger from '@alga-psa/core/logger';
 import { getUserAvatarUrl } from '@alga-psa/media';
-
-/**
- * Lazy-loaded session getter to avoid circular dependencies.
- * Uses template literal to prevent static analysis from detecting the import.
- */
-async function getSession() {
-  // Template literal prevents Nx from detecting this as a static dependency
-  const modulePath = `@alga-psa/${'auth'}`;
-  const authModule = await import(/* webpackIgnore: true */ modulePath);
-  return authModule.getSession();
-}
 
 /**
  * Get the current user from the session.
