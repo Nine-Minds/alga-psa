@@ -1,6 +1,6 @@
 // BillingDashboard.tsx
 'use client'
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import * as Tabs from '@radix-ui/react-tabs';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { IService } from '@alga-psa/types';
@@ -32,18 +32,38 @@ interface BillingDashboardProps {
   contractDocuments?: IDocument[] | null;
   /** Current user ID fetched server-side */
   currentUserId?: string | null;
+  /** Snapshot of query params used for the initial server render (prevents hydration mismatch). */
+  initialQuery?: Record<string, string | undefined>;
 }
 
 const BillingDashboard: React.FC<BillingDashboardProps> = ({
   initialServices,
   contractDocuments,
-  currentUserId
+  currentUserId,
+  initialQuery
 }) => {
   const router = useRouter();
-  const searchParams = useSearchParams();
+  const liveSearchParams = useSearchParams();
+  const [isHydrated, setIsHydrated] = useState(false);
   const [error] = useState<string | null>(null);
 
   const tabDefinitions = useMemo(() => billingTabDefinitions, []);
+
+  const initialSearchParams = useMemo(() => {
+    const params = new URLSearchParams();
+    for (const [key, value] of Object.entries(initialQuery ?? {})) {
+      if (typeof value === 'string' && value.length > 0) {
+        params.set(key, value);
+      }
+    }
+    return params;
+  }, [initialQuery]);
+
+  const searchParams = isHydrated ? liveSearchParams : initialSearchParams;
+
+  useEffect(() => {
+    setIsHydrated(true);
+  }, []);
 
   const handleTabChange = (value: string) => {
     const tabValue = value as BillingTabValue;
