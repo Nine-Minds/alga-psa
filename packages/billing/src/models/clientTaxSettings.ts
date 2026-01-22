@@ -99,7 +99,10 @@ const ClientTaxSettings = {
         throw new Error('Tenant context is required for tax components lookup');
       }
       const components = await db<ITaxComponent>('tax_components')
-        .join('composite_tax_mappings', 'tax_components.tax_component_id', 'composite_tax_mappings.tax_component_id')
+        .join('composite_tax_mappings', function() {
+          this.on('tax_components.tax_component_id', '=', 'composite_tax_mappings.tax_component_id')
+            .andOn('tax_components.tenant', '=', 'composite_tax_mappings.tenant');
+        })
         .where({
           'composite_tax_mappings.composite_tax_id': tax_rate_id,
           'tax_components.tenant': tenant,

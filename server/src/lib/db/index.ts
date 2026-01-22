@@ -5,7 +5,7 @@ import { headers } from 'next/headers';
 import { getTenantForCurrentRequest, getTenantFromHeaders } from '../tenant';
 import { getConnection } from './db'; // Use the tenant-scoped connection function
 import logger from '@alga-psa/core/logger';
-import { getTenantContext as getTenantContextFromDb, runWithTenant as runWithTenantFromDb } from '@alga-psa/db';
+import { getTenantContext as getTenantContextFromDb, runWithTenant as runWithTenantFromDb, setTenantContext } from '@alga-psa/db';
 
 // Interface simplified as tenant identification is separate now
 interface DbConnection {
@@ -76,8 +76,13 @@ export async function createTenantKnex(
         // Get the tenant-specific Knex instance
         const tenant = tenantId ?? await getCurrentTenantId();
         const knex = await getConnection(tenant);
-        // Tenant ID is already fetched above
-        // Add a warning to encourage migration
+
+        // Ensure AsyncLocalStorage context is set for downstream code that uses
+        // getTenantContext() or requireTenantId() - matches behavior of @alga-psa/db version
+        if (tenant && getTenantContextFromDb() !== tenant) {
+            await setTenantContext(null, tenant);
+        }
+
         return { knex, tenant };
         // Remove the temporary fix attempt from the previous step as it's handled by afterCreate now
     } catch (error) {

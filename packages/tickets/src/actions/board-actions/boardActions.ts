@@ -22,10 +22,13 @@ export async function findBoardById(id: string): Promise<IBoard | undefined> {
     throw new Error('User not authenticated');
   }
 
-  const { knex: db } = await createTenantKnex(currentUser.tenant);
+  const { knex: db, tenant } = await createTenantKnex(currentUser.tenant);
+  if (!tenant) {
+    throw new Error('Tenant not found');
+  }
   try {
     return await withTransaction(db, async (trx: Knex.Transaction) => {
-      const board = await Board.get(trx, id);
+      const board = await Board.get(trx, tenant, id);
       return board;
     });
   } catch (error) {
