@@ -1,4 +1,4 @@
-import { initializeScheduler, scheduleExpiredCreditsJob, scheduleExpiringCreditsNotificationJob, scheduleCreditReconciliationJob, scheduleReconcileBucketUsageJob, scheduleCleanupTemporaryFormsJob, scheduleCleanupAiSessionKeysJob, scheduleMicrosoftWebhookRenewalJob, scheduleGooglePubSubVerificationJob, scheduleGoogleGmailWatchRenewalJob, scheduleEmailWebhookMaintenanceJob } from './index';
+import { initializeScheduler, scheduleExpiredCreditsJob, scheduleExpiringCreditsNotificationJob, scheduleCreditReconciliationJob, scheduleReconcileBucketUsageJob, scheduleCleanupTemporaryFormsJob, scheduleCleanupAiSessionKeysJob, scheduleMicrosoftWebhookRenewalJob, scheduleGooglePubSubVerificationJob, scheduleGoogleGmailWatchRenewalJob, scheduleEmailWebhookMaintenanceJob, scheduleSlaTimerJob } from './index';
 import logger from '@alga-psa/core/logger';
 import { getConnection } from 'server/src/lib/db/db';
 
@@ -160,6 +160,23 @@ export async function initializeScheduledJobs(): Promise<void> {
         }
       } catch (error) {
         logger.error(`Failed to schedule email webhook maintenance job for tenant ${tenantId}`, error);
+      }
+
+      // Schedule SLA Timer (every 5 minutes)
+      try {
+        const cron = '*/5 * * * *';
+        const slaTimerJobId = await scheduleSlaTimerJob(tenantId, cron);
+        if (slaTimerJobId) {
+          logger.info(`Scheduled SLA timer job for tenant ${tenantId} with job ID ${slaTimerJobId}`);
+        } else {
+          logger.info('SLA timer job already scheduled (singleton active)', {
+            tenantId,
+            cron,
+            returnedJobId: slaTimerJobId
+          });
+        }
+      } catch (error) {
+        logger.error(`Failed to schedule SLA timer job for tenant ${tenantId}`, error);
       }
    }
    

@@ -42,6 +42,7 @@ import {
   extensionScheduledInvocationHandler,
   ExtensionScheduledInvocationJobData,
 } from './handlers/extensionScheduledInvocationHandler';
+import { slaTimerHandler, SlaTimerJobData } from './handlers/slaTimerHandler';
 
 /**
  * Options for registering handlers
@@ -281,6 +282,23 @@ export async function registerAllJobHandlers(
   );
 
   // ============================================================================
+  // SLA HANDLERS
+  // ============================================================================
+
+  // SLA timer handler - checks SLA thresholds and sends notifications
+  JobHandlerRegistry.register<SlaTimerJobData & BaseJobData>(
+    {
+      name: 'sla-timer',
+      handler: async (_jobId, data) => {
+        await slaTimerHandler(data);
+      },
+      retry: { maxAttempts: 2 },
+      timeoutMs: 300000, // 5 minutes
+    },
+    registerOpts
+  );
+
+  // ============================================================================
   // ENTERPRISE-ONLY HANDLERS
   // ============================================================================
 
@@ -330,6 +348,8 @@ export function getAvailableJobHandlers(): string[] {
     'renew-microsoft-calendar-webhooks',
     'verify-google-calendar-pubsub',
     'renew-google-gmail-watch',
+    // SLA
+    'sla-timer',
     // Enterprise-only
     ...(process.env.EDITION === 'enterprise' ? ['cleanup-ai-session-keys'] : []),
   ];

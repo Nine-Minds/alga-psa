@@ -80,6 +80,7 @@ const BoardsSettings: React.FC = () => {
     priority_type: 'custom' as PriorityType,
     is_itil_compliant: false,
     default_assigned_to: '',
+    manager_user_id: '',
     sla_policy_id: ''
   });
   
@@ -140,6 +141,7 @@ const BoardsSettings: React.FC = () => {
       priority_type: board.priority_type || 'custom',
       is_itil_compliant: board.category_type === 'itil' && board.priority_type === 'itil',
       default_assigned_to: board.default_assigned_to || '',
+      manager_user_id: board.manager_user_id || '',
       sla_policy_id: board.sla_policy_id || ''
     });
     setShowAddEditDialog(true);
@@ -227,6 +229,7 @@ const BoardsSettings: React.FC = () => {
           category_type: categoryType,
           priority_type: priorityType,
           default_assigned_to: formData.default_assigned_to || null,
+          manager_user_id: formData.manager_user_id || null,
           sla_policy_id: formData.sla_policy_id || null
         });
         toast.success('Board updated successfully');
@@ -239,6 +242,7 @@ const BoardsSettings: React.FC = () => {
           category_type: categoryType,
           priority_type: priorityType,
           default_assigned_to: formData.default_assigned_to || null,
+          manager_user_id: formData.manager_user_id || null,
           sla_policy_id: formData.sla_policy_id || null
         });
         toast.success('Board created successfully');
@@ -246,7 +250,7 @@ const BoardsSettings: React.FC = () => {
 
       setShowAddEditDialog(false);
       setEditingBoard(null);
-      setFormData({ board_name: '', description: '', display_order: 0, is_inactive: false, category_type: 'custom', priority_type: 'custom', is_itil_compliant: false, default_assigned_to: '', sla_policy_id: '' });
+      setFormData({ board_name: '', description: '', display_order: 0, is_inactive: false, category_type: 'custom', priority_type: 'custom', is_itil_compliant: false, default_assigned_to: '', manager_user_id: '', sla_policy_id: '' });
       await fetchBoards();
     } catch (error) {
       console.error('Error saving board:', error);
@@ -426,6 +430,19 @@ const BoardsSettings: React.FC = () => {
       },
     },
     {
+      title: 'Board Manager',
+      dataIndex: 'manager_user_id',
+      render: (value: string | null) => {
+        if (!value) return <span className="text-gray-400">-</span>;
+        const user = users.find(u => u.user_id === value);
+        return user ? (
+          <span className="text-gray-700">{user.first_name} {user.last_name}</span>
+        ) : (
+          <span className="text-gray-400 italic">Unknown</span>
+        );
+      },
+    },
+    {
       title: 'Order',
       dataIndex: 'display_order',
       render: (value: number) => (
@@ -509,7 +526,7 @@ const BoardsSettings: React.FC = () => {
             id="add-board-button"
             onClick={() => {
               setEditingBoard(null);
-              setFormData({ board_name: '', description: '', display_order: 0, is_inactive: false, category_type: 'custom', priority_type: 'custom', is_itil_compliant: false, default_assigned_to: '', sla_policy_id: '' });
+              setFormData({ board_name: '', description: '', display_order: 0, is_inactive: false, category_type: 'custom', priority_type: 'custom', is_itil_compliant: false, default_assigned_to: '', manager_user_id: '', sla_policy_id: '' });
               setShowAddEditDialog(true);
             }}
             className="bg-primary-500 text-white hover:bg-primary-600"
@@ -614,7 +631,7 @@ const BoardsSettings: React.FC = () => {
         onClose={() => {
           setShowAddEditDialog(false);
           setEditingBoard(null);
-          setFormData({ board_name: '', description: '', display_order: 0, is_inactive: false, category_type: 'custom', priority_type: 'custom', is_itil_compliant: false, default_assigned_to: '', sla_policy_id: '' });
+          setFormData({ board_name: '', description: '', display_order: 0, is_inactive: false, category_type: 'custom', priority_type: 'custom', is_itil_compliant: false, default_assigned_to: '', manager_user_id: '', sla_policy_id: '' });
           setError(null);
         }}
         title={editingBoard ? "Edit Board" : "Add Board"}
@@ -700,6 +717,22 @@ const BoardsSettings: React.FC = () => {
                 When set, tickets on this board will use this SLA policy for response and resolution time tracking, unless the client has a specific SLA policy assigned.
               </p>
             </div>
+            <div>
+              <Label htmlFor="board-manager-picker">Board Manager</Label>
+              <UserPicker
+                id="board-manager-picker"
+                value={formData.manager_user_id}
+                onValueChange={(value) => setFormData({ ...formData, manager_user_id: value })}
+                users={users}
+                userTypeFilter="internal"
+                placeholder="None (no escalation manager)"
+                buttonWidth="full"
+                labelStyle="none"
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                When set, this user will be notified of SLA breaches and escalations for tickets on this board.
+              </p>
+            </div>
 
             {/* ITIL Configuration - Only show for new boards */}
             {!editingBoard && (
@@ -736,7 +769,7 @@ const BoardsSettings: React.FC = () => {
             onClick={() => {
               setShowAddEditDialog(false);
               setEditingBoard(null);
-              setFormData({ board_name: '', description: '', display_order: 0, is_inactive: false, category_type: 'custom', priority_type: 'custom', is_itil_compliant: false, default_assigned_to: '', sla_policy_id: '' });
+              setFormData({ board_name: '', description: '', display_order: 0, is_inactive: false, category_type: 'custom', priority_type: 'custom', is_itil_compliant: false, default_assigned_to: '', manager_user_id: '', sla_policy_id: '' });
               setError(null);
             }}
           >

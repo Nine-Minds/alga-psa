@@ -45,6 +45,17 @@ export interface ITicket extends TenantEntity, ITaggable {
   itil_priority_level?: number; // 1-5 calculated ITIL priority based on impact × urgency matrix
   // Response state tracking (who needs to respond next)
   response_state?: TicketResponseState;
+  // SLA tracking fields
+  sla_policy_id?: string | null;           // The SLA policy applied to this ticket
+  sla_started_at?: string | null;          // When the SLA clock started
+  sla_response_due_at?: string | null;     // When first response is due
+  sla_response_at?: string | null;         // When first response was made
+  sla_response_met?: boolean | null;       // Whether response SLA was met
+  sla_resolution_due_at?: string | null;   // When resolution is due
+  sla_resolution_at?: string | null;       // When ticket was resolved
+  sla_resolution_met?: boolean | null;     // Whether resolution SLA was met
+  sla_paused_at?: string | null;           // When SLA was paused (null = not paused)
+  sla_total_pause_minutes?: number;        // Cumulative pause time in minutes
 }
 
 export interface ITicketListItem extends Omit<ITicket, 'status_id' | 'priority_id' | 'board_id' | 'entered_by' | 'category_id' | 'subcategory_id'> {
