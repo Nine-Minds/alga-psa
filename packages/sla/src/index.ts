@@ -11,6 +11,9 @@ export * from './types';
 // Re-export components
 export * from './components';
 
+// Re-export services
+export * from './services';
+
 // Note: This module contains:
 // - SLA Policy management (create, update, delete, resolve)
 // - SLA Policy Targets (response/resolution time per priority)
