@@ -484,7 +484,12 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
 
       // Save description if it's being edited
       if (isEditingDescription && onUpdateDescription) {
-        await onUpdateDescription(JSON.stringify(descriptionContent));
+        const descriptionSaved = await onUpdateDescription(JSON.stringify(descriptionContent));
+        if (!descriptionSaved) {
+          // Short-circuit - don't clear pending changes or show success if description failed to save
+          // The onUpdateDescription handler already shows an error toast
+          return;
+        }
       }
 
       // Use the onSaveChanges prop if available, otherwise fall back to individual updates
