@@ -9,7 +9,6 @@ import { getCurrentUserAsync } from '../lib/usersHelpers';
 import { hasPermissionAsync, throwPermissionErrorAsync } from '../lib/authHelpers';
 import { generateEntityColorAsync } from '../lib/uiHelpers';
 import { Knex } from 'knex';
-import { TagModel, CreateTagInput } from '@alga-psa/shared/models/tagModel';
 
 export async function findTagsByEntityId(entityId: string, entityType: string): Promise<ITag[]> {
   const currentUser = await getCurrentUserAsync();

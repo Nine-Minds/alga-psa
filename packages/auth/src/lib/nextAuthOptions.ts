@@ -30,7 +30,7 @@ import {
 } from "@ee/lib/auth/oauthAccountLinks";
 import { isAutoLinkEnabledForTenant } from "@ee/lib/auth/ssoAutoLink";
 import type { OAuthLinkProvider } from "@ee/lib/auth/oauthAccountLinks";
-import { cookies } from "next/headers";
+import { cookies } from "next/headers.js";
 import { UserSession } from "@alga-psa/db/models/UserSession";
 import { getClientIp } from "./ipAddress";
 import { generateDeviceFingerprint, getDeviceInfo } from "./deviceFingerprint";

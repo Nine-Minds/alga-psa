@@ -31,7 +31,7 @@ export async function getClientContracts(clientId: string): Promise<IClientContr
       throw new Error("tenant context not found");
     }
 
-    const clientContracts = await ClientContract.getByClientId(clientId);
+    const clientContracts = await ClientContract.getByClientId(clientId, tenant);
     return clientContracts;
   } catch (error) {
     console.error(`Error fetching contracts for client ${clientId}:`, error);
@@ -57,7 +57,7 @@ export async function getActiveClientContractsByClientIds(clientIds: string[]): 
       throw new Error("tenant context not found");
     }
 
-    return await ClientContract.getActiveByClientIds(clientIds);
+    return await ClientContract.getActiveByClientIds(clientIds, tenant);
   } catch (error) {
     console.error('Error fetching contracts for clients:', error);
     if (error instanceof Error) {
@@ -82,7 +82,7 @@ export async function getClientContractById(clientContractId: string): Promise<I
       throw new Error("tenant context not found");
     }
 
-    return await ClientContract.getById(clientContractId);
+    return await ClientContract.getById(clientContractId, tenant);
   } catch (error) {
     console.error(`Error fetching client contract ${clientContractId}:`, error);
     if (error instanceof Error) {
@@ -107,7 +107,7 @@ export async function getDetailedClientContract(clientContractId: string): Promi
       throw new Error("tenant context not found");
     }
 
-    return await ClientContract.getDetailedClientContract(clientContractId);
+    return await ClientContract.getDetailedClientContract(clientContractId, tenant);
   } catch (error) {
     console.error(`Error fetching detailed client contract ${clientContractId}:`, error);
     if (error instanceof Error) {
@@ -141,7 +141,8 @@ export async function assignContractToClient(
       clientId, 
       contractId, 
       startDate,
-      endDate
+      endDate,
+      tenant
     );
     return clientContract;
   } catch (error) {
@@ -256,7 +257,7 @@ export async function updateClientContract(
     // --- Start Validation ---
     if (updateData.start_date || updateData.end_date !== undefined) { // Check if dates are being updated (end_date can be null)
       // 1. Get current client contract details
-      const currentContract = await ClientContract.getById(clientContractId);
+      const currentContract = await ClientContract.getById(clientContractId, tenant);
       if (!currentContract) {
         throw new Error(`Client contract ${clientContractId} not found.`);
       }
@@ -309,7 +310,7 @@ export async function updateClientContract(
 
     // Remove tenant field if present in updateData to prevent override
     const { tenant: _, ...safeUpdateData } = updateData as any;
-    const updatedClientContract = await ClientContract.updateClientContract(clientContractId, safeUpdateData);
+    const updatedClientContract = await ClientContract.updateClientContract(clientContractId, safeUpdateData, tenant);
 
     // After updating the client contract, check if the parent contract should be reactivated
     // This handles the case where an expired contract's end dates are extended
@@ -346,7 +347,7 @@ export async function deactivateClientContract(clientContractId: string): Promis
       throw new Error("tenant context not found");
     }
 
-    const deactivatedContract = await ClientContract.deactivateClientContract(clientContractId);
+    const deactivatedContract = await ClientContract.deactivateClientContract(clientContractId, tenant);
     return deactivatedContract;
   } catch (error) {
     console.error(`Error deactivating client contract ${clientContractId}:`, error);
@@ -372,7 +373,7 @@ export async function getClientContractLines(clientContractId: string): Promise<
       throw new Error("tenant context not found");
     }
 
-    const contractLines = await ClientContract.getContractLines(clientContractId);
+    const contractLines = await ClientContract.getContractLines(clientContractId, tenant);
     return contractLines;
   } catch (error) {
     console.error(`Error fetching contract lines for client contract ${clientContractId}:`, error);
@@ -401,13 +402,13 @@ export async function applyContractToClient(clientContractId: string): Promise<v
 
   try {
     // Get the client contract
-    const clientContract = await ClientContract.getById(clientContractId);
+    const clientContract = await ClientContract.getById(clientContractId, tenant);
     if (!clientContract) {
       throw new Error(`Client contract ${clientContractId} not found`);
     }
 
     // Get all contract lines associated with the contract
-    const contractLines = await ClientContract.getContractLines(clientContractId);
+    const contractLines = await ClientContract.getContractLines(clientContractId, tenant);
     if (contractLines.length === 0) {
       throw new Error(`No contract lines found in contract ${clientContract.contract_id}`);
     }

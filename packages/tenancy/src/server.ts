@@ -1,5 +1,7 @@
-import { headers } from 'next/headers';
+import { headers } from 'next/headers.js';
 import { getTenantContext } from '@alga-psa/db';
+
+export * from './server/portalDomainStatus';
 
 export async function getTenantForCurrentRequest(fallbackTenant?: string): Promise<string | null> {
   const contextTenant = getTenantContext() ?? null;
@@ -23,4 +25,3 @@ export async function getTenantForCurrentRequest(fallbackTenant?: string): Promi
 export function getTenantFromHeaders(headers: Headers): string | null {
   return headers.get('x-tenant-id');
 }
-

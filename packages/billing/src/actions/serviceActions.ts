@@ -677,9 +677,12 @@ export async function getServiceTypesForSelection(): Promise<{ id: string; name:
        }
 
        // Explicitly pass tenant to ensure context is set (dynamic imports can lose AsyncLocalStorage context)
-       const { knex: db } = await createTenantKnex(currentUser.tenant);
+       const { knex: db, tenant } = await createTenantKnex(currentUser.tenant);
+       if (!tenant) {
+         throw new Error('tenant context not found');
+       }
        const serviceTypes = await withTransaction(db, async (trx: Knex.Transaction) => {
-           return await ServiceTypeModel.findAllIncludingStandard(trx);
+           return await ServiceTypeModel.findAllIncludingStandard(trx, tenant);
        });
        // No validation needed here as it's directly from the model method designed for this
        return serviceTypes;
@@ -701,9 +704,12 @@ export async function createServiceType(
       if (!currentUser) {
         throw new Error('Unauthorized');
       }
-      const { knex: db } = await createTenantKnex(currentUser.tenant);
+      const { knex: db, tenant } = await createTenantKnex(currentUser.tenant);
+      if (!tenant) {
+        throw new Error('tenant context not found');
+      }
       const newServiceType = await withTransaction(db, async (trx: Knex.Transaction) => {
-          return await ServiceTypeModel.create(trx, data);
+          return await ServiceTypeModel.create(trx, tenant, data);
       });
       // Optionally revalidate paths if there's a UI for managing these
       // revalidatePath('/path/to/service/type/management');
@@ -725,9 +731,12 @@ export async function updateServiceType(
       if (!currentUser) {
         throw new Error('Unauthorized');
       }
-      const { knex: db } = await createTenantKnex(currentUser.tenant);
+      const { knex: db, tenant } = await createTenantKnex(currentUser.tenant);
+      if (!tenant) {
+        throw new Error('tenant context not found');
+      }
       const updatedServiceType = await withTransaction(db, async (trx: Knex.Transaction) => {
-          return await ServiceTypeModel.update(trx, id, data);
+          return await ServiceTypeModel.update(trx, tenant, id, data);
       });
       if (!updatedServiceType) {
           throw new Error(`Service type with id ${id} not found or could not be updated.`);
@@ -748,9 +757,12 @@ export async function getAllServiceTypes(): Promise<IServiceType[]> {
     if (!currentUser) {
       throw new Error('Unauthorized');
     }
-    const { knex: db } = await createTenantKnex(currentUser.tenant);
+    const { knex: db, tenant } = await createTenantKnex(currentUser.tenant);
+    if (!tenant) {
+      throw new Error('tenant context not found');
+    }
     const serviceTypes = await withTransaction(db, async (trx: Knex.Transaction) => {
-      return await ServiceTypeModel.findAll(trx);
+      return await ServiceTypeModel.findAll(trx, tenant);
     });
     return serviceTypes;
   } catch (error) {
@@ -782,7 +794,7 @@ export async function deleteServiceType(id: string): Promise<void> {
       }
       
       // Tenant context is handled within the model method
-      const deleted = await ServiceTypeModel.delete(trx, id);
+      const deleted = await ServiceTypeModel.delete(trx, tenant, id);
       if (!deleted) {
           // Handle the case where the type wasn't found
           throw new Error(`Service type with ID ${id} not found.`);
@@ -900,10 +912,13 @@ export async function updateServiceTypeInline(id: string, name: string): Promise
     if (!currentUser) {
       throw new Error('Unauthorized');
     }
-    const { knex: db } = await createTenantKnex(currentUser.tenant);
+    const { knex: db, tenant } = await createTenantKnex(currentUser.tenant);
+    if (!tenant) {
+      throw new Error('tenant context not found');
+    }
 
     const updatedServiceType = await withTransaction(db, async (trx: Knex.Transaction) => {
-      return await ServiceTypeModel.update(trx, id, { name: name.trim() });
+      return await ServiceTypeModel.update(trx, tenant, id, { name: name.trim() });
     });
 
     if (!updatedServiceType) {

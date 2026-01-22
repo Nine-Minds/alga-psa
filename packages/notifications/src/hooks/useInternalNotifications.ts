@@ -1,11 +1,11 @@
 // @ts-nocheck
 // TODO: Action argument count issues
-"use client";
-
-
-import { useState, useEffect, useCallback, useRef } from 'react';
-import * as Y from 'yjs';
-import { HocuspocusProvider } from '@hocuspocus/provider';
+	"use client";
+	
+	
+	import { useState, useEffect, useCallback, useRef } from 'react';
+	import * as Y from 'yjs';
+	import { HocuspocusProvider } from '@hocuspocus/provider';
 import type {
   InternalNotification,
   InternalNotificationListResponse,
@@ -16,27 +16,31 @@ import {
   getUnreadCountAction,
   markAsReadAction,
   markAllAsReadAction,
-} from '@alga-psa/notifications/actions';
-
-const getHocuspocusUrl = () => {
-  if (typeof window === 'undefined') {
-    return 'ws://localhost:1234';
-  }
-
-  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-  const host = window.location.host;
-
-  if (!host.includes('localhost')) {
-    return `${protocol}//${host}/hocuspocus`;
-  }
-
-  return process.env.NEXT_PUBLIC_HOCUSPOCUS_URL || 'ws://localhost:1234';
-};
-
-const HOCUSPOCUS_URL = getHocuspocusUrl();
-const POLLING_INTERVAL = 30000;
-const MAX_RECONNECT_DELAY = 30000;
-const INITIAL_RECONNECT_DELAY = 1000;
+	} from '@alga-psa/notifications/actions';
+	
+	const getHocuspocusUrl = () => {
+	  const configuredUrl = process.env.NEXT_PUBLIC_HOCUSPOCUS_URL;
+	
+	  // This hook can be rendered on the server as part of Client Component SSR.
+	  // Avoid baking localhost defaults into the HTML, which causes client-only connection failures.
+	  if (typeof window === 'undefined') {
+	    return configuredUrl || null;
+	  }
+	
+	  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+	  const host = window.location.host;
+	
+	  // In production (not localhost), use /hocuspocus path on same domain.
+	  if (!host.includes('localhost')) {
+	    return `${protocol}//${host}/hocuspocus`;
+	  }
+	
+	  // In local dev, only connect when explicitly configured.
+	  return configuredUrl || null;
+	};
+	const POLLING_INTERVAL = 30000;
+	const MAX_RECONNECT_DELAY = 30000;
+	const INITIAL_RECONNECT_DELAY = 1000;
 
 interface UseInternalNotificationsOptions {
   tenant: string;
@@ -74,13 +78,21 @@ export function useInternalNotifications(
   const reconnectDelayRef = useRef<number>(INITIAL_RECONNECT_DELAY);
 
   const fetchNotificationsRef = useRef<(() => Promise<void>) | undefined>(undefined);
-  const enablePollingRef = useRef<boolean>(enablePolling);
-
-  const fetchNotifications = useCallback(async () => {
-    try {
-      const response: InternalNotificationListResponse = await getNotificationsAction({
-        tenant,
-        user_id: userId,
+	  const enablePollingRef = useRef<boolean>(enablePolling);
+	
+	  const fetchNotifications = useCallback(async () => {
+	    if (!tenant || !userId) {
+	      setNotifications([]);
+	      setUnreadCount(0);
+	      setError(null);
+	      setIsLoading(false);
+	      return;
+	    }
+	
+	    try {
+	      const response: InternalNotificationListResponse = await getNotificationsAction({
+	        tenant,
+	        user_id: userId,
         limit,
       });
       setNotifications(response.notifications);
@@ -100,7 +112,7 @@ export function useInternalNotifications(
     } finally {
       setIsLoading(false);
     }
-  }, [tenant, userId, limit]);
+	  }, [tenant, userId, limit]);
 
   useEffect(() => {
     fetchNotificationsRef.current = fetchNotifications;
@@ -110,24 +122,50 @@ export function useInternalNotifications(
     enablePollingRef.current = enablePolling;
   }, [enablePolling]);
 
-  const fetchUnreadCount = useCallback(async () => {
-    try {
-      const response: UnreadCountResponse = await getUnreadCountAction(tenant, userId);
-      setUnreadCount(response.unread_count);
+	  const fetchUnreadCount = useCallback(async () => {
+	    if (!tenant || !userId) {
+	      setUnreadCount(0);
+	      return;
+	    }
+	
+	    try {
+	      const response: UnreadCountResponse = await getUnreadCountAction(tenant, userId);
+	      setUnreadCount(response.unread_count);
     } catch (err) {
       console.error('Failed to fetch unread count:', err);
     }
-  }, [tenant, userId]);
-
-  const setupWebSocket = useCallback(() => {
-    const roomName = `notifications:${tenant}:${userId}`;
-    const ydoc = new Y.Doc();
-    const provider = new HocuspocusProvider({
-      url: HOCUSPOCUS_URL,
-      name: roomName,
-      document: ydoc,
-
-      onConnect: () => {
+	  }, [tenant, userId]);
+	
+	  const setupWebSocket = useCallback(() => {
+	    if (!tenant || !userId) {
+	      setIsConnected(false);
+	      return () => {};
+	    }
+	
+	    const hocuspocusUrl = getHocuspocusUrl();
+	    if (!hocuspocusUrl) {
+	      setIsConnected(false);
+	      if (enablePollingRef.current && !pollingIntervalRef.current) {
+	        pollingIntervalRef.current = setInterval(() => {
+	          fetchNotificationsRef.current?.();
+	        }, POLLING_INTERVAL);
+	      }
+	      return () => {
+	        if (pollingIntervalRef.current) {
+	          clearInterval(pollingIntervalRef.current);
+	          pollingIntervalRef.current = null;
+	        }
+	      };
+	    }
+	
+	    const roomName = `notifications:${tenant}:${userId}`;
+	    const ydoc = new Y.Doc();
+	    const provider = new HocuspocusProvider({
+	      url: hocuspocusUrl,
+	      name: roomName,
+	      document: ydoc,
+	
+	      onConnect: () => {
         console.log('Connected to notification stream');
         setIsConnected(true);
         setError(null);
@@ -191,11 +229,11 @@ export function useInternalNotifications(
       provider.destroy();
       ydoc.destroy();
     };
-  }, [tenant, userId]);
-
-  useEffect(() => {
-    setIsLoading(true);
-    fetchNotifications();
+	  }, [tenant, userId]);
+	
+	  useEffect(() => {
+	    setIsLoading(true);
+	    fetchNotifications();
 
     const cleanup = setupWebSocket();
 
