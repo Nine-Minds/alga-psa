@@ -13,14 +13,11 @@ exports.up = async function(knex) {
   console.log('Creating sla_audit_log table...');
 
   await knex.schema.createTable('sla_audit_log', (table) => {
-    table.uuid('log_id').primary().defaultTo(knex.raw('gen_random_uuid()'));
     table.uuid('tenant').notNullable();
+    table.uuid('log_id').defaultTo(knex.raw('gen_random_uuid()')).notNullable();
 
     table.uuid('ticket_id')
       .notNullable()
-      .references('ticket_id')
-      .inTable('tickets')
-      .onDelete('CASCADE')
       .comment('The ticket this event relates to');
 
     table.string('event_type', 50)
@@ -33,20 +30,40 @@ exports.up = async function(knex) {
 
     table.uuid('triggered_by')
       .nullable()
-      .references('user_id')
-      .inTable('users')
-      .onDelete('SET NULL')
       .comment('User who triggered this event (null for system-triggered events)');
 
     table.timestamp('created_at', { useTz: true })
       .defaultTo(knex.fn.now())
       .notNullable();
 
+    // Primary key must include tenant for Citus
+    table.primary(['tenant', 'log_id']);
+
+    // Foreign key to tenants
+    table.foreign('tenant').references('tenant').inTable('tenants');
+
     // Indexes for common queries
     table.index(['tenant', 'ticket_id']);
     table.index(['tenant', 'event_type']);
     table.index(['tenant', 'created_at']);
   });
+
+  // Add composite foreign keys using raw SQL
+  await knex.raw(`
+    ALTER TABLE sla_audit_log
+    ADD CONSTRAINT sla_audit_log_ticket_fkey
+    FOREIGN KEY (tenant, ticket_id)
+    REFERENCES tickets(tenant, ticket_id)
+    ON DELETE CASCADE
+  `);
+
+  await knex.raw(`
+    ALTER TABLE sla_audit_log
+    ADD CONSTRAINT sla_audit_log_user_fkey
+    FOREIGN KEY (tenant, triggered_by)
+    REFERENCES users(tenant, user_id)
+    ON DELETE SET NULL
+  `);
 
   // Add comment to table
   await knex.raw(`
@@ -61,3 +78,6 @@ exports.down = async function(knex) {
   await knex.schema.dropTableIfExists('sla_audit_log');
   console.log('sla_audit_log table dropped');
 };
+
+// Citus requires ALTER TABLE with foreign key constraints to run outside a transaction block
+exports.config = { transaction: false };
