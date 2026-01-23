@@ -11,6 +11,7 @@ import { DrawerProvider } from "@alga-psa/ui";
 import { ActivityDrawerProvider } from "@alga-psa/workflows/components";
 import { savePreference } from '@alga-psa/ui/lib';
 import QuickAskOverlay from 'server/src/components/chat/QuickAskOverlay';
+import { isExperimentalFeatureEnabled } from '@alga-psa/tenancy/actions';
 
 interface DefaultLayoutProps {
   children: React.ReactNode;
@@ -22,6 +23,7 @@ export default function DefaultLayout({ children, initialSidebarCollapsed = fals
   const [drawerContent] = useState<React.ReactNode>(null);
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const [aiAssistantEnabled, setAiAssistantEnabled] = useState(false);
 
   // Track page type for sidebar mode switching
   const isOnSettingsPage = pathname?.startsWith('/msp/settings') ?? false;
@@ -96,6 +98,20 @@ export default function DefaultLayout({ children, initialSidebarCollapsed = fals
   const [isTitleLocked] = useState(false);
 
   useEffect(() => {
+    const loadAiAssistantEnabled = async () => {
+      try {
+        const enabled = await isExperimentalFeatureEnabled('aiAssistant');
+        setAiAssistantEnabled(enabled);
+      } catch (error) {
+        console.error('[DefaultLayout] Failed to check aiAssistant feature flag', error);
+        setAiAssistantEnabled(false);
+      }
+    };
+
+    void loadAiAssistantEnabled();
+  }, []);
+
+  useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if ((event.metaKey || event.ctrlKey) && event.key === 'l') {
         event.preventDefault();
@@ -103,6 +119,10 @@ export default function DefaultLayout({ children, initialSidebarCollapsed = fals
       }
 
       if ((event.metaKey || event.ctrlKey) && event.key === 'ArrowUp') {
+        if (!aiAssistantEnabled) {
+          return;
+        }
+
         event.preventDefault();
 
         if (rightSidebarOpen) {
@@ -152,7 +172,7 @@ export default function DefaultLayout({ children, initialSidebarCollapsed = fals
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [rightSidebarOpen]);
+  }, [aiAssistantEnabled, rightSidebarOpen]);
 
   const handleQuickAskClose = () => {
     setQuickAskOpen(false);

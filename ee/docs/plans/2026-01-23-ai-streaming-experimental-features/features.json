@@ -56,7 +56,7 @@
   {
     "id": "F010",
     "description": "Gate Quick Ask keyboard shortcut (⌘↑/Ctrl↑) behind aiAssistant feature check in DefaultLayout",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["UI Gating", "Flow C"]
   },
   {

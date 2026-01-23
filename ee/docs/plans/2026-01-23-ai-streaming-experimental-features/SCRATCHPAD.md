@@ -98,4 +98,6 @@ curl -X POST localhost:3000/api/chat/stream/chat \
 - Implemented default-disabled experimental features behavior:
   - `getExperimentalFeatures()` now normalizes unset/malformed values to `{ aiAssistant: false }`: `packages/tenancy/src/actions/tenant-settings-actions/tenantSettingsActions.ts`
   - `initializeTenantSettings()` now seeds `settings.experimentalFeatures` with `{ aiAssistant: false }` for new tenants: `packages/tenancy/src/actions/tenant-settings-actions/tenantSettingsActions.ts`
-- Next feature item: F010 Gate Quick Ask keyboard shortcut (⌘↑/Ctrl↑) behind aiAssistant feature check in DefaultLayout
+- Implemented Quick Ask shortcut gating (⌘↑/Ctrl↑) behind `aiAssistant` experimental feature flag in `DefaultLayout` (disabled until flag loads; no `preventDefault` when disabled): `server/src/components/layout/DefaultLayout.tsx`
+- Validation: `npx eslint server/src/components/layout/DefaultLayout.tsx --max-warnings=0`
+- Next feature item: F011 Gate QuickAskOverlay rendering behind aiAssistant feature check
