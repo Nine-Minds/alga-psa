@@ -85,4 +85,8 @@ curl -X POST localhost:3000/api/chat/stream/chat \
 - Implemented `ExperimentalFeaturesSettings` client component with load-on-mount + local toggle state: `server/src/components/settings/general/ExperimentalFeaturesSettings.tsx`
 - Validation: `npx eslint server/src/components/settings/general/ExperimentalFeaturesSettings.tsx --max-warnings=0`
 - Note: `npm -w server run typecheck` currently fails due to missing `@ee/components/chat/QuickAskOverlay` module import in `server/src/components/chat/QuickAskOverlay.tsx` (unrelated to experimental features UI).
-- Next feature item: F005 Add 'Experimental Features' tab to `server/src/components/settings/SettingsPage.tsx`
+- Implemented "Experimental Features" settings entry point:
+  - Added `experimental-features` slug mapping + tab content using dynamic import: `server/src/components/settings/SettingsPage.tsx`
+  - Added Settings sidebar navigation item linking to `/msp/settings?tab=experimental-features`: `server/src/config/menuConfig.ts`
+  - Validation: `npx eslint server/src/components/settings/SettingsPage.tsx server/src/config/menuConfig.ts --max-warnings=0`
+- Next feature item: F006 Display AI Assistant toggle in Experimental Features with name, description, and switch
