@@ -208,9 +208,22 @@ Implication: we should standardize on `@alga-psa/event-bus/publishers` helpers f
     - `timezone` is emitted as `UTC`.
     - No “block updated” domain event exists yet; time changes to an existing block do not emit a domain event unless the entry crosses the block/non-block boundary.
 
+- 2026-01-23: Completed `F022` (capacity threshold emission):
+  - Emitted `CAPACITY_THRESHOLD_REACHED` from real scheduling mutations:
+    - `packages/scheduling/src/actions/scheduleActions.ts` publishes after create/update/delete via `maybePublishCapacityThresholdReached(...)`.
+  - Implemented team/day capacity math (UTC date) based on existing data model:
+    - Capacity limit = sum of `resources.max_daily_capacity` for active team members.
+    - Current booked = sum of schedule-entry overlap hours per assignee for that team/date.
+    - Event emits only on a threshold **crossing** (previousBooked < limit && currentBooked >= limit).
+  - Added shared payload builder + unit coverage:
+    - `shared/workflow/streams/domainEventBuilders/capacityThresholdEventBuilders.ts`
+    - `shared/workflow/streams/domainEventBuilders/__tests__/capacityThresholdEventBuilders.test.ts`
+  - Added scheduling unit coverage for threshold/date math:
+    - `packages/scheduling/src/lib/__tests__/capacityThresholdWorkflowEvents.test.ts`
+
 ## Next Up
 
-- `F022`: emit capacity alert event (`CAPACITY_THRESHOLD_REACHED`) when capacity thresholds are configured.
+- `F023`: emit dispatch lifecycle events (TECHNICIAN_DISPATCHED, TECHNICIAN_EN_ROUTE, TECHNICIAN_ARRIVED, TECHNICIAN_CHECKED_OUT) when supported.
 
 ## Suggested Phasing (to reduce risk)
 

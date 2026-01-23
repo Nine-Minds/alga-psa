@@ -28,6 +28,7 @@ import {
   buildScheduleBlockDeletedPayload,
   isScheduleBlockEntry,
 } from '@shared/workflow/streams/domainEventBuilders/scheduleBlockEventBuilders';
+import { maybePublishCapacityThresholdReached } from '../lib/capacityThresholdWorkflowEvents';
 
 export type ScheduleActionResult<T> =
   | { success: true; entries: T; error?: never }
@@ -278,6 +279,17 @@ export async function addScheduleEntry(
       }
     }
 
+    try {
+      await maybePublishCapacityThresholdReached({
+        db,
+        tenantId: currentUser.tenant,
+        actorUserId: currentUser.user_id,
+        after: createdEntry,
+      });
+    } catch (eventError) {
+      console.error('[ScheduleActions] Failed to publish CAPACITY_THRESHOLD_REACHED workflow event', eventError);
+    }
+
     return { success: true, entry: createdEntry };
   } catch (error) {
     console.error('Error creating schedule entry:', error);
@@ -494,6 +506,20 @@ export async function updateScheduleEntry(
       }
     }
 
+    if (updatedEntry) {
+      try {
+        await maybePublishCapacityThresholdReached({
+          db,
+          tenantId: currentUser.tenant,
+          actorUserId: currentUser.user_id,
+          before: existingEntry,
+          after: updatedEntry,
+        });
+      } catch (eventError) {
+        console.error('[ScheduleActions] Failed to publish CAPACITY_THRESHOLD_REACHED workflow event', eventError);
+      }
+    }
+
     return { success: true, entry: updatedEntry };
   } catch (error) {
     console.error('Error updating schedule entry:', error);
@@ -638,6 +664,17 @@ export async function deleteScheduleEntry(entry_id: string, deleteType: IEditSco
         } catch (eventError) {
           console.error('[ScheduleActions] Failed to publish APPOINTMENT_CANCELED workflow event', eventError);
         }
+      }
+
+      try {
+        await maybePublishCapacityThresholdReached({
+          db,
+          tenantId: currentUser.tenant,
+          actorUserId: currentUser.user_id,
+          before: existingEntry,
+        });
+      } catch (eventError) {
+        console.error('[ScheduleActions] Failed to publish CAPACITY_THRESHOLD_REACHED workflow event', eventError);
       }
     }
 
