@@ -22,6 +22,7 @@ import {
   buildClientStatusChangedPayload,
   buildClientUpdatedPayload,
 } from '@alga-psa/shared/workflow/streams/domainEventBuilders/clientEventBuilders';
+import { buildContactPrimarySetPayload } from '@alga-psa/shared/workflow/streams/domainEventBuilders/contactEventBuilders';
 
 function maybeUserActor(currentUser: any) {
   const userId = currentUser?.user_id;
@@ -272,6 +273,28 @@ export async function updateClient(clientId: string, updateData: Partial<Omit<IC
         payload: updatedPayload,
         ctx: { tenantId: tenant, occurredAt, actor },
         idempotencyKey: `client_updated:${clientId}:${occurredAt}`,
+      });
+    }
+
+    const previousBillingContactId = (updateResult.before as any)?.billing_contact_id;
+    const newBillingContactId = (updateResult.after as any)?.billing_contact_id;
+    if (
+      previousBillingContactId !== newBillingContactId &&
+      typeof newBillingContactId === 'string' &&
+      newBillingContactId
+    ) {
+      await publishWorkflowEvent({
+        eventType: 'CONTACT_PRIMARY_SET',
+        payload: buildContactPrimarySetPayload({
+          clientId,
+          contactId: newBillingContactId,
+          previousPrimaryContactId:
+            typeof previousBillingContactId === 'string' && previousBillingContactId ? previousBillingContactId : undefined,
+          setByUserId: currentUser.user_id,
+          setAt: occurredAt,
+        }),
+        ctx: { tenantId: tenant, occurredAt, actor },
+        idempotencyKey: `contact_primary_set:${clientId}:${newBillingContactId}:${occurredAt}`,
       });
     }
 

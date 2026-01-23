@@ -363,9 +363,22 @@ Implication: we should standardize on `@alga-psa/event-bus/publishers` helpers f
   - Notes/constraints:
     - `CLIENT_MERGED` remains catalog-only for now (no authoritative client merge/consolidate path exists to emit from today).
 
+- 2026-01-23: Completed `F051` (CRM contact events emission):
+  - Added shared payload builders + schema-compat unit tests:
+    - `shared/workflow/streams/domainEventBuilders/contactEventBuilders.ts`
+    - `shared/workflow/streams/domainEventBuilders/__tests__/contactEventBuilders.test.ts`
+  - Emitted workflow v2 contact domain events from real contact create/update/archive paths:
+    - `packages/clients/src/actions/contact-actions/contactActions.tsx` publishes `CONTACT_CREATED`, `CONTACT_UPDATED`, `CONTACT_ARCHIVED` (when `is_inactive` transitions `false → true`) via `publishWorkflowEvent(...)`.
+    - `server/src/lib/api/services/ContactService.ts` publishes the same domain events for REST API create/update paths.
+  - Implemented `CONTACT_PRIMARY_SET` emission from the authoritative client billing contact change:
+    - `packages/clients/src/actions/clientActions.ts` publishes when `billing_contact_id` changes to a non-empty contact id.
+    - `server/src/lib/api/services/ClientService.ts` publishes the same event for REST API updates.
+  - Notes/constraints:
+    - `CONTACT_MERGED` remains catalog-only for now (no authoritative “merge contacts” path exists in product code today).
+
 ## Next Up
 
-- `F051`: emit CRM contact events (CONTACT_CREATED, CONTACT_UPDATED, CONTACT_PRIMARY_SET, CONTACT_ARCHIVED, CONTACT_MERGED).
+- `F052`: emit CRM interaction/note events (INTERACTION_LOGGED, NOTE_CREATED).
 
 ## Suggested Phasing (to reduce risk)
 
