@@ -50,7 +50,7 @@
   {
     "id": "F009",
     "description": "Default all experimental features to disabled for new and existing tenants",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Goals"]
   },
   {

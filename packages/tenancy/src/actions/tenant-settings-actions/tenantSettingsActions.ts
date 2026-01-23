@@ -18,7 +18,22 @@ export interface TenantSettings {
 }
 
 export interface ExperimentalFeatures {
-  aiAssistant?: boolean;
+  aiAssistant: boolean;
+}
+
+const DEFAULT_EXPERIMENTAL_FEATURES: ExperimentalFeatures = {
+  aiAssistant: false,
+};
+
+function normalizeExperimentalFeatures(value: unknown): ExperimentalFeatures {
+  if (!value || typeof value !== 'object') {
+    return { ...DEFAULT_EXPERIMENTAL_FEATURES };
+  }
+
+  const record = value as Record<string, unknown>;
+  return {
+    aiAssistant: record.aiAssistant === true,
+  };
 }
 
 export async function getTenantSettings(): Promise<TenantSettings | null> {
@@ -48,10 +63,10 @@ export async function getTenantSettings(): Promise<TenantSettings | null> {
 export async function getExperimentalFeatures(): Promise<ExperimentalFeatures> {
   try {
     const settings = await getTenantSettings();
-    return settings?.settings?.experimentalFeatures || {};
+    return normalizeExperimentalFeatures(settings?.settings?.experimentalFeatures);
   } catch (error) {
     console.error('Error getting experimental features:', error);
-    return {};
+    return { ...DEFAULT_EXPERIMENTAL_FEATURES };
   }
 }
 
@@ -89,7 +104,7 @@ export async function isExperimentalFeatureEnabled(
 ): Promise<boolean> {
   try {
     const features = await getExperimentalFeatures();
-    return (features as Record<string, unknown>)[featureKey] === true;
+    return (features as unknown as Record<string, unknown>)[featureKey] === true;
   } catch (error) {
     console.error('Error checking experimental feature:', error);
     return false;
@@ -333,7 +348,9 @@ export async function initializeTenantSettings(tenantId: string): Promise<void> 
         onboarding_completed: false,
         onboarding_skipped: false,
         onboarding_data: null,
-        settings: null,
+        settings: JSON.stringify({
+          experimentalFeatures: DEFAULT_EXPERIMENTAL_FEATURES,
+        }),
         created_at: now,
         updated_at: now,
       })

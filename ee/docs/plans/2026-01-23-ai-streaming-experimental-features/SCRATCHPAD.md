@@ -95,4 +95,7 @@ curl -X POST localhost:3000/api/chat/stream/chat \
 - Validation: `npx eslint server/src/components/settings/general/ExperimentalFeaturesSettings.tsx --max-warnings=0`
 - Wired Save button to persist experimental feature toggles via `updateExperimentalFeatures()`; includes disabled state when unchanged and a success toast reminding to reload: `server/src/components/settings/general/ExperimentalFeaturesSettings.tsx`
 - Validation: `npx eslint server/src/components/settings/general/ExperimentalFeaturesSettings.tsx --max-warnings=0`
-- Next feature item: F009 Default all experimental features to disabled for new and existing tenants
+- Implemented default-disabled experimental features behavior:
+  - `getExperimentalFeatures()` now normalizes unset/malformed values to `{ aiAssistant: false }`: `packages/tenancy/src/actions/tenant-settings-actions/tenantSettingsActions.ts`
+  - `initializeTenantSettings()` now seeds `settings.experimentalFeatures` with `{ aiAssistant: false }` for new tenants: `packages/tenancy/src/actions/tenant-settings-actions/tenantSettingsActions.ts`
+- Next feature item: F010 Gate Quick Ask keyboard shortcut (⌘↑/Ctrl↑) behind aiAssistant feature check in DefaultLayout
