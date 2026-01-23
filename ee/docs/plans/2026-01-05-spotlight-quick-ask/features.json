@@ -1,24 +1,24 @@
 [
-  { "id": "F001", "description": "Add a global Quick Ask overlay entry point controlled from `server/src/components/layout/DefaultLayout.tsx` (open/close state).", "implemented": false },
-  { "id": "F002", "description": "Register a hardcoded keyboard shortcut to toggle Quick Ask: macOS `⌘+ArrowUp`, Windows/Linux `Ctrl+ArrowUp`.", "implemented": false },
-  { "id": "F003", "description": "Ensure Quick Ask shortcut works globally (including while focus is in inputs) and focuses sidebar chat instead of opening Quick Ask when the right sidebar chat is already open.", "implemented": false },
-  { "id": "F004", "description": "Implement Quick Ask overlay shell as a centered modal overlay with Spotlight-style visuals and ESC-to-close.", "implemented": false },
-  { "id": "F005", "description": "Implement Quick Ask collapsed state UI (multiline input, hint row, Enter-to-submit, Shift+Enter newline).", "implemented": false },
-  { "id": "F006", "description": "Implement Quick Ask expanded state UI (transcript area + streaming response + follow-up input).", "implemented": false },
-  { "id": "F007", "description": "Animate transition between collapsed and expanded overlay states (size/height) without remounting the dialog.", "implemented": false },
+  { "id": "F001", "description": "Add a global Quick Ask overlay entry point controlled from `server/src/components/layout/DefaultLayout.tsx` (open/close state).", "implemented": true },
+  { "id": "F002", "description": "Register a hardcoded keyboard shortcut to toggle Quick Ask: macOS `⌘+ArrowUp`, Windows/Linux `Ctrl+ArrowUp`.", "implemented": true },
+  { "id": "F003", "description": "Ensure Quick Ask shortcut works globally (including while focus is in inputs) and focuses sidebar chat instead of opening Quick Ask when the right sidebar chat is already open.", "implemented": true },
+  { "id": "F004", "description": "Implement Quick Ask overlay shell as a centered modal overlay with Spotlight-style visuals and ESC-to-close.", "implemented": true },
+  { "id": "F005", "description": "Implement Quick Ask collapsed state UI (multiline input, hint row, Enter-to-submit, Shift+Enter newline).", "implemented": true },
+  { "id": "F006", "description": "Implement Quick Ask expanded state UI (transcript area + streaming response + follow-up input).", "implemented": true },
+  { "id": "F007", "description": "Animate transition between collapsed and expanded overlay states (size/height) without remounting the dialog.", "implemented": true },
 
   { "id": "F008", "description": "Extract headless chat session logic from `ee/server/src/components/chat/Chat.tsx` into a reusable hook/service (conversation state, persistence, send/stop, errors).", "implemented": false },
   { "id": "F009", "description": "Update the existing sidebar chat UI to use the shared chat session logic (no behavior regression).", "implemented": false },
   { "id": "F010", "description": "Update Quick Ask overlay UI to use the shared chat session logic (no separate persistence implementation).", "implemented": false },
 
-  { "id": "F011", "description": "Support chatId lifecycle in shared logic (create chat on first message via `createNewChatAction`).", "implemented": false },
-  { "id": "F012", "description": "Persist user messages sent from Quick Ask via `addMessageToChatAction` just like sidebar chat.", "implemented": false },
-  { "id": "F013", "description": "Persist assistant messages for Quick Ask via `addMessageToChatAction` just like sidebar chat.", "implemented": false },
-  { "id": "F014", "description": "Provide stop/cancel handling in shared logic and surface in Quick Ask expanded UI.", "implemented": false },
+  { "id": "F011", "description": "Support chatId lifecycle in shared logic (create chat on first message via `createNewChatAction`).", "implemented": true },
+  { "id": "F012", "description": "Persist user messages sent from Quick Ask via `addMessageToChatAction` just like sidebar chat.", "implemented": true },
+  { "id": "F013", "description": "Persist assistant messages for Quick Ask via `addMessageToChatAction` just like sidebar chat.", "implemented": true },
+  { "id": "F014", "description": "Provide stop/cancel handling in shared logic and surface in Quick Ask expanded UI.", "implemented": true },
 
   { "id": "F015", "description": "Add a shared session state channel (e.g., `ChatSessionProvider`) so overlay and sidebar can reference the same in-memory session during handoff.", "implemented": false },
-  { "id": "F016", "description": "Add an “Open in sidebar” control in Quick Ask expanded UI that opens the right sidebar and binds it to the active overlay session.", "implemented": false },
-  { "id": "F017", "description": "Ensure the sidebar can render an externally-provided active session without forcing a new chat reset.", "implemented": false },
+  { "id": "F016", "description": "Add an "Open in sidebar" control in Quick Ask expanded UI that opens the right sidebar and binds it to the active overlay session.", "implemented": true },
+  { "id": "F017", "description": "Ensure the sidebar can render an externally-provided active session without forcing a new chat reset.", "implemented": true },
 
   { "id": "F018", "description": "Gate Quick Ask availability behind the same AI enablement logic used by the sidebar (`AI-stuff` feature flag / disabled flags), with a clear disabled state.", "implemented": false },
 
@@ -26,5 +26,5 @@
   { "id": "F020", "description": "Choose an initial backend transport for streaming (existing `/api/chat/stream/*` SSE endpoints or an SSE mode for `/api/chat/v1/completions`) and implement it for shared logic.", "implemented": false },
   { "id": "F021", "description": "Ensure streaming mode still persists assistant output (at least final write) using existing server actions.", "implemented": false },
 
-  { "id": "F022", "description": "Add polish: click-outside handling consistent with existing Dialog patterns; maintain focus behavior (autofocus input on open, restore focus on close).", "implemented": false }
+  { "id": "F022", "description": "Add polish: click-outside handling consistent with existing Dialog patterns; maintain focus behavior (autofocus input on open, restore focus on close).", "implemented": true }
 ]
