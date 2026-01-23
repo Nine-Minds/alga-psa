@@ -6,7 +6,8 @@
   "tags": ["scope:ui", "type:horizontal"],
   "targets": {
     "build": {
-      "executor": "nx:noop"
+      "executor": "nx:noop",
+      "dependsOn": []
     },
     "test": {
       "executor": "@nx/vitest:test",

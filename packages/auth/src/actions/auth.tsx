@@ -7,7 +7,6 @@ import logger from "@alga-psa/core/logger";
 
 import { IUser } from '@alga-psa/types';
 import { isValidTenantSlug } from '@alga-psa/validation';
-
 interface AuthenticateUserOptions {
     tenantId?: string;
     tenantSlug?: string;
