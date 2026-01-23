@@ -89,7 +89,8 @@ exports.up = async function (knex) {
     required: ['emailData', 'providerId', 'tenantId']
   };
 
-  const now = knex.fn.now();
+  // Use literal timestamp for Citus compatibility (CURRENT_TIMESTAMP is not IMMUTABLE)
+  const now = new Date().toISOString();
 
   if (await knex.schema.hasTable('system_event_catalog')) {
     await knex('system_event_catalog')
