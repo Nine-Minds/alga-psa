@@ -3,14 +3,47 @@ import User from "@alga-psa/db/models/user";
 
 import { verifyPassword } from '@alga-psa/core/encryption';
 import logger from "@alga-psa/core/logger";
+import { getAdminConnection } from '@alga-psa/db/admin';
 
 import { IUser } from '@alga-psa/types';
-import { isValidTenantSlug } from '@alga-psa/validation';
+import { getSlugParts, isValidTenantSlug } from '@alga-psa/validation';
 
-const getTenantIdBySlugAsync = async (slug: string): Promise<string | null> => {
-  const { getTenantIdBySlug } = await import('@alga-psa/tenancy/actions');
-  return getTenantIdBySlug(slug);
-};
+async function getTenantIdBySlug(slug: string): Promise<string | null> {
+  if (!isValidTenantSlug(slug)) {
+    logger.warn('[authenticateUser] Invalid tenant slug provided', { slug });
+    return null;
+  }
+
+  const { prefix, suffix } = getSlugParts(slug);
+  try {
+    const adminDb = await getAdminConnection();
+    const matches = await adminDb<{ tenant: string }>('tenants')
+      .select('tenant')
+      .whereRaw("left(replace(tenant::text, '-', ''), 6) = ?", [prefix])
+      .andWhereRaw("right(replace(tenant::text, '-', ''), 6) = ?", [suffix]);
+
+    if (matches.length === 1) {
+      return matches[0].tenant;
+    }
+
+    if (matches.length > 1) {
+      logger.error('[authenticateUser] Multiple tenants matched slug', {
+        slug,
+        tenantIds: matches.map((match) => match.tenant),
+      });
+      return null;
+    }
+
+    logger.warn('[authenticateUser] No tenant found for slug', { slug });
+    return null;
+  } catch (error) {
+    logger.error('[authenticateUser] Failed to resolve tenant by slug', {
+      slug,
+      error: error instanceof Error ? error.message : error,
+    });
+    return null;
+  }
+}
 
 interface AuthenticateUserOptions {
     tenantId?: string;
@@ -48,7 +81,7 @@ export async function authenticateUser(
             return null;
         }
 
-        resolvedTenantId = await getTenantIdBySlugAsync(options.tenantSlug);
+        resolvedTenantId = await getTenantIdBySlug(options.tenantSlug);
         if (!resolvedTenantId) {
             logger.warn('[authenticateUser] Failed to resolve tenant from slug', {
                 email,

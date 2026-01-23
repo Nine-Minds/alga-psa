@@ -18,6 +18,12 @@
     "react": "^19.2.3",
     "react-dom": "^19.2.3"
   },
+  "optionalDependencies": {
+    "@oxc-parser/binding-linux-arm64-gnu": "0.76.0",
+    "@oxc-parser/binding-linux-arm64-musl": "0.76.0",
+    "@oxc-parser/binding-linux-x64-gnu": "0.76.0",
+    "@oxc-parser/binding-linux-x64-musl": "0.76.0"
+  },
   "devDependencies": {
     "@bytecodealliance/componentize-js": "^0.19.3",
     "esbuild": "^0.20.0",
