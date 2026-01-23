@@ -8,46 +8,33 @@ import { getActionRegistry, type ActionRegistry, type ActionExecutionContext } f
 import { logger } from '@alga-psa/core';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { getTaskInboxService } from '@alga-psa/shared/workflow/core/taskInboxService';
+import { getManagedDomainServiceFactory, type ManagedDomainServiceLike } from '@alga-psa/shared/workflow/services/managedDomainRegistry';
 import axios from 'axios'; // For QBO API calls
 import type { Knex } from 'knex';
-import type { DnsLookupResult } from '@alga-psa/types';
-
-// Dynamic import to avoid circular dependency (shared -> integrations -> ... -> shared)
-// Note: Using string concatenation to prevent static analysis from detecting this dependency
-const getIntegrationsModule = () => '@alga-psa/' + 'integrations/email/domains/entry';
-
-// --- Mock Secret Retrieval ---
-
 
 // --- QBO Helper Types and Constants ---
 const QBO_BASE_URL = process.env.QBO_API_BASE_URL || 'https://sandbox-quickbooks.api.intuit.com';
 
 interface QboCredentials {
   accessToken: string;
-  refreshToken?: string; // Optional, as not all flows might expose it directly here
-  realmId: string; // Already a param in actions, but good to have in a credentials object
-  accessTokenExpiresAt: string; // ISO string
-  // refreshTokenExpiresAt?: string; // ISO string, optional
+  refreshToken?: string;
+  realmId: string;
+  accessTokenExpiresAt: string;
 }
 
-// --- QBO Customer Specific Types ---
 interface QuickBooksClientInfo {
   Id: string;
   SyncToken: string;
   DisplayName?: string;
-  PrimaryNameValue?: string; // For individual customers
+  PrimaryNameValue?: string;
   GivenName?: string;
   MiddleName?: string;
   FamilyName?: string;
   Suffix?: string;
   FullyQualifiedName?: string;
   ClientName?: string;
-  PrimaryEmailAddr?: {
-    Address?: string;
-  };
-  PrimaryPhone?: {
-    FreeFormNumber?: string;
-  };
+  PrimaryEmailAddr?: { Address?: string };
+  PrimaryPhone?: { FreeFormNumber?: string };
   BillAddr?: {
     Id?: string;
     Line1?: string;
@@ -57,12 +44,11 @@ interface QuickBooksClientInfo {
     Line5?: string;
     City?: string;
     Country?: string;
-    CountrySubDivisionCode?: string; // State
+    CountrySubDivisionCode?: string;
     PostalCode?: string;
     Lat?: string;
     Long?: string;
   };
-  // Add other fields as necessary based on typical QBO Customer structure
 }
 
 interface QboCustomerByIdResult {
@@ -73,26 +59,6 @@ interface QboCustomerByIdResult {
   qboRawResponse?: any;
 }
 
-type ManagedDomainServiceLike = {
-  createDomain: (options: { domain: string; region?: string }) => Promise<{
-    providerDomainId: string;
-    status: string;
-    dnsRecords: any[];
-  }>;
-  checkDomainStatus: (identifier: { domain?: string; providerDomainId?: string }) => Promise<{
-    provider: any;
-    dnsLookup: DnsLookupResult[];
-    providerDomainId: string;
-  }>;
-  activateDomain: (domain: string) => Promise<void>;
-  deleteDomain: (domain: string) => Promise<void>;
-  startDomainVerification?: (domainId: string) => Promise<any>;
-};
-
-type ManagedDomainServiceCtor = {
-  forTenant: (options: { tenantId: string; knex: Knex }) => ManagedDomainServiceLike;
-};
-
 async function getKnexForTenant(tenantId: string, context: ActionExecutionContext): Promise<Knex> {
   if (context.knex) {
     return context.knex as Knex;
@@ -102,6 +68,11 @@ async function getKnexForTenant(tenantId: string, context: ActionExecutionContex
   return module.getConnection(tenantId);
 }
 
+/**
+ * Resolve ManagedDomainService using the registry pattern.
+ * The integrations package registers its implementation at startup.
+ * Returns null if not registered (CE mode).
+ */
 async function resolveManagedDomainService(
   tenantId: string,
   context: ActionExecutionContext
@@ -110,22 +81,14 @@ async function resolveManagedDomainService(
     throw new Error('Tenant ID is required for managed domain operations');
   }
 
-  // Dynamically import ManagedDomainService to avoid circular dependency
-  let ManagedDomainServiceCtorImpl: ManagedDomainServiceCtor | undefined;
-  try {
-    const integrationsModule = await import(/* webpackIgnore: true */ getIntegrationsModule());
-    ManagedDomainServiceCtorImpl = integrationsModule.ManagedDomainService as ManagedDomainServiceCtor | undefined;
-  } catch (err) {
-    logger.debug('[WorkflowInit] Failed to import ManagedDomainService, may not be available in this edition');
-  }
-
-  if (!ManagedDomainServiceCtorImpl) {
-    logger.warn('[WorkflowInit] ManagedDomainService unavailable in current edition');
+  const factory = getManagedDomainServiceFactory();
+  if (!factory) {
+    logger.debug('[WorkflowInit] ManagedDomainService not registered, unavailable in current edition');
     return null;
   }
 
   const knex = await getKnexForTenant(tenantId, context);
-  return ManagedDomainServiceCtorImpl.forTenant({ tenantId, knex });
+  return factory.forTenant({ tenantId, knex });
 }
 
 /**

@@ -17,19 +17,9 @@ import {
 import { issuePortalDomainOtt } from "./PortalDomainSessionToken";
 import { buildTenantPortalSlug, isValidTenantSlug } from "@alga-psa/validation";
 import { isEnterprise } from "@alga-psa/core/features";
-import {
-    applyOAuthAccountHints,
-    decodeOAuthJwtPayload,
-    mapOAuthProfileToExtendedUser,
-} from "@ee/lib/auth/ssoProviders";
-import type { OAuthProfileMappingResult } from "@ee/lib/auth/ssoProviders";
-import {
-    OAuthAccountLinkConflictError,
-    upsertOAuthAccountLink,
-    findOAuthAccountLink,
-} from "@ee/lib/auth/oauthAccountLinks";
-import { isAutoLinkEnabledForTenant } from "@ee/lib/auth/ssoAutoLink";
-import type { OAuthLinkProvider } from "@ee/lib/auth/oauthAccountLinks";
+import { getSSORegistry } from "./sso/registry";
+import type { OAuthProfileMappingResult, OAuthLinkProvider } from "./sso/types";
+import { OAuthAccountLinkConflictError } from "./sso/types";
 import { cookies } from "next/headers.js";
 import { UserSession } from "@alga-psa/db/models/UserSession";
 import { getClientIp } from "./ipAddress";
@@ -491,7 +481,7 @@ function extractOAuthAccountMetadata(
     }
 
     const idToken = toOptionalString(account.id_token);
-    const claims = decodeOAuthJwtPayload(idToken);
+    const claims = getSSORegistry().decodeOAuthJwtPayload(idToken);
     if (claims) {
         const allowedClaims = ['sub', 'tid', 'oid', 'email', 'upn', 'preferred_username'];
         const filteredClaims: Record<string, unknown> = {};
@@ -638,10 +628,10 @@ async function ensureOAuthAccountLink(
         toOptionalString(metadata.linkNonceSignature),
     );
 
-    const existingLink = await findOAuthAccountLink(normalizedProvider, providerAccountId);
+    const existingLink = await getSSORegistry().findOAuthAccountLink(normalizedProvider, providerAccountId);
     let autoLinkAuthorized = false;
     if (!linkingAuthorized && (!existingLink || existingLink.user_id !== user.id)) {
-        autoLinkAuthorized = await isAutoLinkEnabledForTenant(
+        autoLinkAuthorized = await getSSORegistry().isAutoLinkEnabledForTenant(
             typeof user.tenant === "string" ? user.tenant : undefined,
             (user.user_type as "internal" | "client") || "internal",
         );
@@ -664,7 +654,7 @@ async function ensureOAuthAccountLink(
     };
 
     try {
-        await upsertOAuthAccountLink({
+        await getSSORegistry().upsertOAuthAccountLink({
             tenant: user.tenant,
             userId: linkUserId,
             provider: normalizedProvider,
@@ -760,7 +750,7 @@ export async function buildAuthOptions(): Promise<NextAuthConfig> {
                             typeof googleProfile.vanity_host === 'string'
                                 ? googleProfile.vanity_host
                                 : undefined;
-                        return await mapOAuthProfileToExtendedUser({
+                        return await getSSORegistry().mapOAuthProfileToExtendedUser({
                             provider: 'google',
                             email: profile.email,
                             image: profile.picture,
@@ -801,7 +791,7 @@ export async function buildAuthOptions(): Promise<NextAuthConfig> {
                             typeof profile.vanity_host === 'string' ? profile.vanity_host : undefined;
                         const userTypeHint =
                             typeof profile.user_type === 'string' ? profile.user_type : undefined;
-                        return mapOAuthProfileToExtendedUser({
+                        return getSSORegistry().mapOAuthProfileToExtendedUser({
                             provider: 'microsoft',
                             email: typeof emailCandidate === 'string' ? emailCandidate : undefined,
                             image: profile.picture ?? profile.photo ?? undefined,
@@ -1162,7 +1152,7 @@ export async function buildAuthOptions(): Promise<NextAuthConfig> {
 
                 const accountRecord = account as unknown as Record<string, unknown> | null;
                 try {
-                    const enrichedUser = await applyOAuthAccountHints(
+                    const enrichedUser = await getSSORegistry().applyOAuthAccountHints(
                         toOAuthProfileMappingResult(extendedUser),
                         accountRecord,
                     );
@@ -1524,7 +1514,7 @@ export const options: NextAuthConfig = {
                             typeof googleProfile.vanity_host === 'string'
                                 ? googleProfile.vanity_host
                                 : undefined;
-                        return await mapOAuthProfileToExtendedUser({
+                        return await getSSORegistry().mapOAuthProfileToExtendedUser({
                             provider: 'google',
                             email: profile.email,
                             image: (profile as any).picture,
@@ -1566,7 +1556,7 @@ export const options: NextAuthConfig = {
                             typeof profile.vanity_host === 'string' ? profile.vanity_host : undefined;
                         const userTypeHint =
                             typeof profile.user_type === 'string' ? profile.user_type : undefined;
-                        return mapOAuthProfileToExtendedUser({
+                        return getSSORegistry().mapOAuthProfileToExtendedUser({
                             provider: 'microsoft',
                             email: typeof emailCandidate === 'string' ? emailCandidate : undefined,
                             image: profile.picture ?? profile.photo ?? undefined,
@@ -1927,7 +1917,7 @@ export const options: NextAuthConfig = {
 
                 const accountRecord = account as unknown as Record<string, unknown> | null;
                 try {
-                    const enrichedUser = await applyOAuthAccountHints(
+                    const enrichedUser = await getSSORegistry().applyOAuthAccountHints(
                         toOAuthProfileMappingResult(extendedUser),
                         accountRecord,
                     );

@@ -10,8 +10,8 @@ import {
   EventSchemas,
   BaseEventSchema,
   convertToWorkflowEvent
-} from '@shared/workflow/streams/eventBusSchema';
-import { WorkflowEventBaseSchema } from '@shared/workflow/streams/workflowEventSchema';
+} from './schemas/eventBusSchema';
+import { WorkflowEventBaseSchema } from './schemas/workflowEventSchema';
 
 type EventHandler = (event: Event) => Promise<void>;
 

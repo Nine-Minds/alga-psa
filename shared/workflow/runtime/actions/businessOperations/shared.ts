@@ -318,7 +318,7 @@ export async function attachDocumentToTicket(
       throwActionError(ctx, { category: 'ValidationError', code: 'VALIDATION_ERROR', message: 'Attachment mime_type not allowed' });
     }
 
-    const { StorageProviderFactory, generateStoragePath } = await import('@/lib/storage/StorageProviderFactory');
+    const { StorageProviderFactory, generateStoragePath } = await import('@alga-psa/documents');
     const provider = await StorageProviderFactory.createProvider();
     const filename = input.filename ?? new URL(input.source.url).pathname.split('/').filter(Boolean).pop() ?? 'attachment.bin';
     const storagePath = generateStoragePath(tx.tenantId, '', filename);

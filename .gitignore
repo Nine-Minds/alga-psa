@@ -75,7 +75,9 @@ server/logs/
 
 # Nx cache
 .nx/
-dep-graph.json
+affected.json
+*-deps.json
+*-graph.json
 graph.json
 
 # IDE
@@ -181,6 +183,11 @@ opencode.md
 .opencode
 shared/core/*.d.ts
 shared/core/*.js
+
+# Package build artifacts (compiled TypeScript)
+packages/*/src/**/*.js
+packages/*/src/**/*.d.ts
+packages/**/dist/
 
 # Rust build output
 /target/

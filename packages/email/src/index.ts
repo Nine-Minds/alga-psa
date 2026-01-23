@@ -40,3 +40,6 @@ export { sendCancellationFeedbackEmail } from './sendCancellationFeedbackEmail';
 
 // System email provider factory
 export { SystemEmailProviderFactory } from './system/SystemEmailProviderFactory';
+
+// Tenant email provider manager
+export { EmailProviderManager } from './providers/EmailProviderManager';

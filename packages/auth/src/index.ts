@@ -84,3 +84,6 @@ export * from './lib/security/rateLimiting';
 
 // Server actions (Next.js / server-side entrypoints)
 export * from './actions';
+
+// SSO/OAuth registration system (for EE to register implementations)
+export * from './lib/sso';

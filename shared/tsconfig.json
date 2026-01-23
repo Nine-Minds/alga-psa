@@ -1,13 +1,18 @@
 {
-  "extends": "../tsconfig.base.json",
   "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "esModuleInterop": true,
+    "strict": false,
+    "skipLibCheck": true,
     "outDir": "./dist",
     "rootDir": ".",
-    "baseUrl": ".",
     "declaration": true,
-    "composite": true,
     "noEmit": false,
-    "target": "es2022",
+    "baseUrl": ".",
+    "isolatedModules": true,
+    "jsx": "react-jsx",
     "paths": {
       "@shared/*": ["./*"],
       "@shared/workflow/*": ["./workflow/*"],

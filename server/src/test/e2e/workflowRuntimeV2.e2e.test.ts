@@ -20,7 +20,7 @@ import WorkflowRunModelV2 from '@shared/workflow/persistence/workflowRunModelV2'
 import WorkflowRunSnapshotModelV2 from '@shared/workflow/persistence/workflowRunSnapshotModelV2';
 import WorkflowDefinitionModelV2 from '@shared/workflow/persistence/workflowDefinitionModelV2';
 import WorkflowDefinitionVersionModelV2 from '@shared/workflow/persistence/workflowDefinitionVersionModelV2';
-import { WorkflowRuntimeV2Worker } from '../../../../services/workflow-worker/src/v2/WorkflowRuntimeV2Worker';
+import { WorkflowRuntimeV2Worker } from '@shared/workflow/workers';
 import { getActionRegistryV2, getSchemaRegistry } from '@shared/workflow/runtime';
 import {
   ensureWorkflowRuntimeV2TestRegistrations,
