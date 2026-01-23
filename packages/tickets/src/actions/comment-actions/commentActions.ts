@@ -8,10 +8,11 @@ import { createTenantKnex } from '@alga-psa/db';
 import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { convertBlockNoteToMarkdown } from '@alga-psa/documents/lib/blocknoteUtils';
-import { publishEvent } from '@alga-psa/event-bus/publishers';
+import { publishEvent, publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import { TicketResponseState } from '@alga-psa/types';
 import { maybeReopenBundleMasterFromChildReply } from '@alga-psa/tickets/actions/ticketBundleUtils';
 import { getCurrentUser } from '@alga-psa/auth/getCurrentUser';
+import { buildTicketCommunicationWorkflowEvents } from '../../lib/workflowTicketCommunicationEvents';
 
 /**
  * Helper function to determine the new response state based on comment properties
@@ -221,7 +222,7 @@ export async function createComment(comment: Omit<IComment, 'tenant'>): Promise<
       // Get user details for event
       if (comment.user_id && commentTenant) {
         const user = await trx('users')
-          .select('first_name', 'last_name')
+          .select('first_name', 'last_name', 'user_type', 'contact_id')
           .where({ user_id: comment.user_id, tenant: commentTenant })
           .first();
 
@@ -249,6 +250,52 @@ export async function createComment(comment: Omit<IComment, 'tenant'>): Promise<
         } catch (eventError) {
           console.error(`[createComment] Failed to publish TICKET_COMMENT_ADDED event:`, eventError);
           // Don't throw - allow comment creation to succeed even if event publishing fails
+        }
+
+        // Publish workflow v2 domain ticket message events (additive; no impact on legacy comment events).
+        try {
+          const insertedComment = await Comment.get(trx, commentTenant, commentId);
+          const createdAt = insertedComment?.created_at ?? undefined;
+          const visibility = comment.is_internal ? 'internal' : 'public';
+
+          const isInternalUser = user?.user_type === 'internal';
+          const hasContactId = Boolean(user?.contact_id);
+          const author = isInternalUser
+            ? { authorType: 'user', authorId: comment.user_id }
+            : hasContactId
+              ? { authorType: 'contact', authorId: user.contact_id, contactId: user.contact_id }
+              : { authorType: 'user', authorId: comment.user_id };
+
+          const workflowCtx = {
+            tenantId: commentTenant,
+            occurredAt: createdAt ?? new Date().toISOString(),
+            actor: isInternalUser
+              ? { actorType: 'USER', actorUserId: comment.user_id }
+              : hasContactId
+                ? { actorType: 'CONTACT', actorContactId: user.contact_id }
+                : { actorType: 'USER', actorUserId: comment.user_id },
+            correlationId: commentId,
+          };
+
+          const channel = isInternalUser ? 'ui' : 'portal';
+          const events = buildTicketCommunicationWorkflowEvents({
+            ticketId: comment.ticket_id!,
+            messageId: commentId,
+            visibility,
+            author,
+            channel,
+            createdAt,
+          });
+
+          for (const ev of events) {
+            await publishWorkflowEvent({
+              eventType: ev.eventType,
+              payload: ev.payload,
+              ctx: workflowCtx,
+            });
+          }
+        } catch (eventError) {
+          console.error(`[createComment] Failed to publish workflow ticket message events:`, eventError);
         }
       }
 

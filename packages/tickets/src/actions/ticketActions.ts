@@ -42,6 +42,7 @@ import { TicketModelEventPublisher } from '../lib/adapters/TicketModelEventPubli
 import { TicketModelAnalyticsTracker } from '../lib/adapters/TicketModelAnalyticsTracker';
 import { calculateItilPriority } from '@alga-psa/tickets/lib/itilUtils';
 import { buildTicketTransitionWorkflowEvents } from '../lib/workflowTicketTransitionEvents';
+import { buildTicketCommunicationWorkflowEvents } from '../lib/workflowTicketCommunicationEvents';
 
 // Email event channel constant - inlined to avoid circular dependency with notifications
 // Must match the value in @alga-psa/notifications/emailChannel
@@ -1060,13 +1061,42 @@ export async function addTicketComment(ticketId: string, comment: string, isInte
           ticketId: ticketId,
           userId: user.user_id,
           comment: {
-            id: newComment.id,
+            id: (newComment as any).comment_id ?? (newComment as any).id,
             content: comment,
             author: `${user.first_name} ${user.last_name}`,
             isInternal
           }
         }
       });
+
+      // Publish workflow v2 ticket message events (additive).
+      try {
+        const occurredAt = new Date().toISOString();
+        const workflowCtx = {
+          tenantId: tenant,
+          actor: { actorType: 'USER' as const, actorUserId: user.user_id },
+          occurredAt,
+          correlationId: (newComment as any).comment_id ?? (newComment as any).id,
+        };
+
+        const messageId = (newComment as any).comment_id ?? (newComment as any).id;
+        if (!messageId) return;
+        const createdAt = (newComment as any).created_at ?? occurredAt;
+        const events = buildTicketCommunicationWorkflowEvents({
+          ticketId,
+          messageId,
+          visibility: isInternal ? 'internal' : 'public',
+          author: { authorType: 'user', authorId: user.user_id },
+          channel: 'ui',
+          createdAt,
+        });
+
+        for (const ev of events) {
+          await publishWorkflowEvent({ eventType: ev.eventType, payload: ev.payload, ctx: workflowCtx });
+        }
+      } catch (eventError) {
+        console.error('[addTicketComment] Failed to publish workflow ticket message events:', eventError);
+      }
     });
   } catch (error) {
     console.error('Failed to add ticket comment:', error);

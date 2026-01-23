@@ -39,6 +39,7 @@ import { resolveUserTimeZone, normalizeIanaTimeZone } from '@alga-psa/db';
 import { calculateItilPriority } from '@alga-psa/tickets/lib/itilUtils';
 import { getCurrentUser } from '@alga-psa/auth/getCurrentUser';
 import { buildTicketTransitionWorkflowEvents } from '../lib/workflowTicketTransitionEvents';
+import { buildTicketCommunicationWorkflowEvents } from '../lib/workflowTicketCommunicationEvents';
 
 // Email event channel constant - inlined to avoid circular dependency with notifications
 // Must match the value in @alga-psa/notifications/emailChannel
@@ -1672,6 +1673,32 @@ export async function addTicketCommentWithCache(
         }
       }
     });
+
+    // Publish workflow v2 ticket message events (additive).
+    try {
+      const occurredAt = newComment.created_at ?? new Date().toISOString();
+      const workflowCtx = {
+        tenantId: tenant,
+        actor: { actorType: 'USER' as const, actorUserId: user.user_id },
+        occurredAt,
+        correlationId: newComment.comment_id,
+      };
+
+      const events = buildTicketCommunicationWorkflowEvents({
+        ticketId,
+        messageId: newComment.comment_id,
+        visibility: isInternal ? 'internal' : 'public',
+        author: { authorType: 'user', authorId: user.user_id },
+        channel: 'ui',
+        createdAt: occurredAt,
+      });
+
+      for (const ev of events) {
+        await publishWorkflowEvent({ eventType: ev.eventType, payload: ev.payload, ctx: workflowCtx });
+      }
+    } catch (eventError) {
+      console.error('[addTicketCommentWithCache] Failed to publish workflow ticket message events:', eventError);
+    }
     
     // Track comment analytics
     captureAnalytics('ticket_comment_added', {

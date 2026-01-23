@@ -146,9 +146,20 @@ Implication: we should standardize on `@alga-psa/event-bus/publishers` helpers f
     - Semantics note: these events represent **bundle attach/detach** in today’s product (there is no true destructive “merge tickets” feature yet); payload still follows proposed schema (`sourceTicketId`/`targetTicketId`, `originalTicketId`/`newTicketIds`) and includes `reason` for workflow authors.
   - Updated bundling integration test harness to mock `@alga-psa/event-bus/publishers` to keep DB-backed tests isolated from the event bus.
 
+- 2026-01-23: Completed `F012` (ticket communication emission):
+  - Added a shared builder for ticket communication domain events:
+    - `packages/tickets/src/lib/workflowTicketCommunicationEvents.ts` builds additive `TICKET_MESSAGE_ADDED` plus:
+      - `TICKET_INTERNAL_NOTE_ADDED` for internal visibility
+      - `TICKET_CUSTOMER_REPLIED` when a contact id is available
+  - Emitted these events from real comment creation paths (while keeping legacy `TICKET_COMMENT_*` unchanged):
+    - `packages/tickets/src/actions/comment-actions/commentActions.ts` (primary comment creation flow)
+    - `packages/tickets/src/actions/ticketActions.ts` and `packages/tickets/src/actions/optimizedTicketActions.ts` (legacy/server action flows)
+  - Added unit coverage with schema validation via `buildWorkflowPayload(...)`:
+    - `packages/tickets/src/lib/__tests__/workflowTicketCommunicationEvents.test.ts`
+
 ## Next Up
 
-- `F012`: emit ticket communication events (`TICKET_MESSAGE_ADDED`, `TICKET_CUSTOMER_REPLIED`, `TICKET_INTERNAL_NOTE_ADDED`).
+- `F013`: emit ticket work tracking event (`TICKET_TIME_ENTRY_ADDED`).
 
 ## Suggested Phasing (to reduce risk)
 

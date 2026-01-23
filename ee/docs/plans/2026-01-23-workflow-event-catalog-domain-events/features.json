@@ -8,7 +8,7 @@
 
   { "id": "F010", "description": "Tickets: emit transition events (TICKET_STATUS_CHANGED, TICKET_PRIORITY_CHANGED, TICKET_ASSIGNED, TICKET_UNASSIGNED, TICKET_REOPENED, TICKET_ESCALATED, TICKET_QUEUE_CHANGED)", "implemented": true, "prdRefs": ["7.2"] },
   { "id": "F011", "description": "Tickets: emit relationship/aggregation events (TICKET_MERGED, TICKET_SPLIT)", "implemented": true, "prdRefs": ["7.2"] },
-  { "id": "F012", "description": "Tickets: emit communication events (TICKET_MESSAGE_ADDED, TICKET_CUSTOMER_REPLIED, TICKET_INTERNAL_NOTE_ADDED) or map to existing comment events per PRD §7.3", "implemented": false, "prdRefs": ["7.2", "7.3"] },
+  { "id": "F012", "description": "Tickets: emit communication events (TICKET_MESSAGE_ADDED, TICKET_CUSTOMER_REPLIED, TICKET_INTERNAL_NOTE_ADDED) or map to existing comment events per PRD §7.3", "implemented": true, "prdRefs": ["7.2", "7.3"] },
   { "id": "F013", "description": "Tickets: emit work tracking event (TICKET_TIME_ENTRY_ADDED) with consistent payload conventions", "implemented": false, "prdRefs": ["7.2"] },
   { "id": "F014", "description": "Tickets: emit SLA stage events (TICKET_SLA_STAGE_ENTERED, TICKET_SLA_STAGE_MET, TICKET_SLA_STAGE_BREACHED) when SLA module is enabled", "implemented": false, "prdRefs": ["7.2", "7.3"] },
   { "id": "F015", "description": "Tickets: emit approval events (TICKET_APPROVAL_REQUESTED, TICKET_APPROVAL_GRANTED, TICKET_APPROVAL_REJECTED) when approvals exist/enabled", "implemented": false, "prdRefs": ["7.2", "7.3"] },
