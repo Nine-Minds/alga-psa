@@ -321,9 +321,23 @@ Implication: we should standardize on `@alga-psa/event-bus/publishers` helpers f
   - Verification:
     - `npx vitest run shared/workflow/streams/domainEventBuilders/__tests__/creditNoteEventBuilders.test.ts`
 
+- 2026-01-23: Completed `F043` (contract events emission):
+  - Added shared contract payload builders + renewal timing helper:
+    - `shared/workflow/streams/domainEventBuilders/contractEventBuilders.ts`
+    - Renewal “upcoming” window default: **30 days** (`computeContractRenewalUpcoming`)
+  - Emitted workflow v2 contract domain events from real client-contract paths:
+    - `packages/clients/src/actions/clientContractActions.ts` publishes:
+      - `CONTRACT_CREATED` on `assignContractToClient` and `createClientContract`
+      - `CONTRACT_UPDATED` + `CONTRACT_STATUS_CHANGED` + `CONTRACT_RENEWAL_UPCOMING` (on threshold crossing) on `updateClientContract`
+      - `CONTRACT_STATUS_CHANGED` on `deactivateClientContract`
+    - `packages/billing/src/actions/contractWizardActions.ts` publishes:
+      - `CONTRACT_CREATED` (+ optional `CONTRACT_RENEWAL_UPCOMING`) on `createClientContractFromWizard`
+  - Added schema-compat unit test coverage:
+    - `shared/workflow/streams/domainEventBuilders/__tests__/contractEventBuilders.test.ts`
+
 ## Next Up
 
-- `F043`: emit contract events (CONTRACT_CREATED, CONTRACT_UPDATED, CONTRACT_STATUS_CHANGED, CONTRACT_RENEWAL_UPCOMING).
+- `F044`: emit recurring billing run events (RECURRING_BILLING_RUN_STARTED, RECURRING_BILLING_RUN_COMPLETED, RECURRING_BILLING_RUN_FAILED).
 
 ## Suggested Phasing (to reduce risk)
 

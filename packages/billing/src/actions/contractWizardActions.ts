@@ -6,6 +6,12 @@ import { v4 as uuidv4 } from 'uuid';
 
 import { createTenantKnex } from '@alga-psa/db';
 import { getCurrentUserAsync, hasPermissionAsync, getSessionAsync, getAnalyticsAsync } from '../lib/authHelpers';
+import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
+import {
+  buildContractCreatedPayload,
+  buildContractRenewalUpcomingPayload,
+  computeContractRenewalUpcoming,
+} from '@shared/workflow/streams/domainEventBuilders/contractEventBuilders';
 
 
 import ContractLine from '../models/contractLine';
@@ -647,7 +653,18 @@ export async function createClientContractFromWizard(
     throw new Error('Tenant not found');
   }
 
-  return withTransaction(knex, async (trx: Knex.Transaction) => {
+  let createdForWorkflow: {
+    contractId: string;
+    clientId: string;
+    createdAt: string;
+    startDate: string;
+    endDate: string | null;
+    status: string;
+    actorUserId?: string;
+  } | null = null;
+  let renewalForWorkflow: { renewalAt: string; daysUntilRenewal: number } | null = null;
+
+  const result = await withTransaction(knex, async (trx: Knex.Transaction) => {
     if (!isBypass) {
       const canCreateBilling = await hasPermissionAsync(currentUser, 'billing', 'create');
       const canUpdateBilling = await hasPermissionAsync(currentUser, 'billing', 'update');
@@ -1096,6 +1113,20 @@ export async function createClientContractFromWizard(
       template_contract_id: submission.template_id ?? null,
     });
 
+    createdForWorkflow = {
+      contractId,
+      clientId: submission.client_id,
+      createdAt: now.toISOString(),
+      startDate,
+      endDate,
+      status: isDraft ? 'draft' : 'active',
+      actorUserId: typeof currentUser?.user_id === 'string' ? currentUser.user_id : undefined,
+    };
+
+    renewalForWorkflow = endDate
+      ? computeContractRenewalUpcoming({ renewalAt: endDate, now: now.toISOString() })
+      : null;
+
     // NOTE: The legacy replicateContractLinesToClient call has been removed.
     // The client_contract_lines, client_contract_services, and related tables are
     // redundant since contracts are already client-specific via client_contracts.
@@ -1107,6 +1138,51 @@ export async function createClientContractFromWizard(
       contract_line_ids: createdContractLineIds,
     };
   });
+
+  if (createdForWorkflow) {
+    await publishWorkflowEvent({
+      eventType: 'CONTRACT_CREATED',
+      payload: buildContractCreatedPayload({
+        contractId: createdForWorkflow.contractId,
+        clientId: createdForWorkflow.clientId,
+        createdByUserId: createdForWorkflow.actorUserId,
+        createdAt: createdForWorkflow.createdAt,
+        startDate: createdForWorkflow.startDate,
+        endDate: createdForWorkflow.endDate,
+        status: createdForWorkflow.status,
+      }),
+      ctx: {
+        tenantId: tenant,
+        occurredAt: createdForWorkflow.createdAt,
+        actor: createdForWorkflow.actorUserId
+          ? { actorType: 'USER' as const, actorUserId: createdForWorkflow.actorUserId }
+          : undefined,
+      },
+      idempotencyKey: `contract_created:${createdForWorkflow.contractId}:${createdForWorkflow.clientId}`,
+    });
+  }
+
+  if (createdForWorkflow && renewalForWorkflow) {
+    await publishWorkflowEvent({
+      eventType: 'CONTRACT_RENEWAL_UPCOMING',
+      payload: buildContractRenewalUpcomingPayload({
+        contractId: createdForWorkflow.contractId,
+        clientId: createdForWorkflow.clientId,
+        renewalAt: renewalForWorkflow.renewalAt,
+        daysUntilRenewal: renewalForWorkflow.daysUntilRenewal,
+      }),
+      ctx: {
+        tenantId: tenant,
+        occurredAt: createdForWorkflow.createdAt,
+        actor: createdForWorkflow.actorUserId
+          ? { actorType: 'USER' as const, actorUserId: createdForWorkflow.actorUserId }
+          : undefined,
+      },
+      idempotencyKey: `contract_renewal_upcoming:${createdForWorkflow.contractId}:${createdForWorkflow.clientId}:${renewalForWorkflow.renewalAt}`,
+    });
+  }
+
+  return result;
 }
 
 // ---------------------------------------------------------------------------
