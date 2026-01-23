@@ -1041,9 +1041,9 @@ async function handleProjectTaskAssigned(event: ProjectTaskAssignedEvent): Promi
         't.task_name',
         't.description',
         't.due_date',
+        't.phase_id',
         'p.project_name',
         'p.project_id',
-        'p.wbs_code as project_number',
         'u.email as user_email',
         'u.first_name as user_first_name',
         'u.last_name as user_last_name',
@@ -1099,6 +1099,12 @@ async function handleProjectTaskAssigned(event: ProjectTaskAssignedEvent): Promi
       .andWhere('tr.tenant', tenantId)  // Explicit tenant filter on main table
       .whereNotNull('tr.additional_user_id');
 
+    // Build task URL using URLSearchParams for consistency
+    const taskUrlParams = new URLSearchParams();
+    taskUrlParams.set('phaseId', task.phase_id);
+    taskUrlParams.set('taskId', task.task_id);
+    const taskUrl = `/msp/projects/${task.project_id}?${taskUrlParams.toString()}`;
+
     // Send email to primary assignee
     if (isValidEmail(task.user_email)) {
       await sendNotificationIfEnabled({
@@ -1112,7 +1118,7 @@ async function handleProjectTaskAssigned(event: ProjectTaskAssignedEvent): Promi
             project: task.project_name,
             dueDate: task.due_date,
             assignedBy: `${task.assigner_first_name} ${task.assigner_last_name}`,
-            url: `/projects/${task.project_number}/tasks/${task.task_id}`,
+            url: taskUrl,
             role: 'Primary Assignee'
           }
         },
@@ -1149,7 +1155,7 @@ async function handleProjectTaskAssigned(event: ProjectTaskAssignedEvent): Promi
             project: task.project_name,
             dueDate: task.due_date,
             assignedBy: `${task.assigner_first_name} ${task.assigner_last_name}`,
-            url: `/projects/${task.project_number}/tasks/${task.task_id}`,
+            url: taskUrl,
             role: 'Additional Agent'
           }
         },

@@ -454,7 +454,7 @@ async function handleProjectTaskAdditionalAgentAssigned(
 
     // Get task and project details
     const taskData = await db('project_tasks as pt')
-      .select('pt.task_name', 'p.project_name')
+      .select('pt.task_name', 'pt.phase_id', 'p.project_name')
       .leftJoin('project_phases as ph', function() {
         this.on('pt.phase_id', 'ph.phase_id')
            .andOn('pt.tenant', 'ph.tenant');
@@ -488,7 +488,8 @@ async function handleProjectTaskAdditionalAgentAssigned(
     const { internalUrl } = await resolveNotificationLinks(db, tenantId, {
       type: 'project_task',
       taskId,
-      projectId
+      projectId,
+      phaseId: taskData.phase_id
     });
 
     // 1. Notify the additional agent being added
@@ -1021,6 +1022,7 @@ async function handleTaskCommentAdded(event: TaskCommentAddedEvent): Promise<voi
         'pt.task_id',
         'pt.task_name',
         'pt.assigned_to',
+        'pt.phase_id',
         'p.project_id',
         'p.project_name'
       )
@@ -1092,6 +1094,7 @@ async function handleTaskCommentAdded(event: TaskCommentAddedEvent): Promise<voi
       type: 'project_task',
       projectId,
       taskId,
+      phaseId: task.phase_id,
       taskCommentId
     });
 
@@ -1151,7 +1154,8 @@ async function handleTaskCommentAdded(event: TaskCommentAddedEvent): Promise<voi
     const { internalUrl: taskUrl } = await resolveNotificationLinks(db, tenantId, {
       type: 'project_task',
       projectId,
-      taskId
+      taskId,
+      phaseId: task.phase_id
     });
 
     // Notify all assigned agents
@@ -1232,6 +1236,7 @@ async function handleTaskCommentUpdated(event: TaskCommentUpdatedEvent): Promise
         'pt.task_id',
         'pt.task_name',
         'pt.assigned_to',
+        'pt.phase_id',
         'p.project_id',
         'p.project_name'
       )
@@ -1310,6 +1315,7 @@ async function handleTaskCommentUpdated(event: TaskCommentUpdatedEvent): Promise
       type: 'project_task',
       projectId,
       taskId,
+      phaseId: task.phase_id,
       taskCommentId
     });
 
@@ -2042,6 +2048,7 @@ async function handleTaskAssigned(event: ProjectTaskAssignedEvent): Promise<void
     const task = await db('project_tasks as pt')
       .select(
         'pt.task_name',
+        'pt.phase_id',
         'p.project_name'
       )
       .leftJoin('project_phases as ph', function() {
@@ -2081,7 +2088,8 @@ async function handleTaskAssigned(event: ProjectTaskAssignedEvent): Promise<void
     const { internalUrl } = await resolveNotificationLinks(db, tenantId, {
       type: 'project_task',
       projectId,
-      taskId
+      taskId,
+      phaseId: task.phase_id
     });
 
     // Primary assignment notification
