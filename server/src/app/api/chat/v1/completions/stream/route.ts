@@ -103,6 +103,14 @@ function encodeSseData(encoder: TextEncoder, payload: unknown): Uint8Array {
   return encoder.encode(`data: ${JSON.stringify(payload)}\n\n`);
 }
 
+function tryEnqueue(controller: ReadableStreamDefaultController<Uint8Array>, chunk: Uint8Array) {
+  try {
+    controller.enqueue(chunk);
+  } catch {
+    // Stream likely closed/cancelled already.
+  }
+}
+
 export async function POST(req: NextRequest) {
   if (!isEnterpriseEdition) {
     return new Response(
@@ -163,8 +171,12 @@ export async function POST(req: NextRequest) {
 
           const token = chunk?.choices?.[0]?.delta?.content;
           if (typeof token === 'string' && token.length > 0) {
-            controller.enqueue(encodeSseData(encoder, { content: token, done: false }));
+            tryEnqueue(controller, encodeSseData(encoder, { content: token, done: false }));
           }
+        }
+
+        if (!req.signal.aborted) {
+          tryEnqueue(controller, encodeSseData(encoder, { content: '', done: true }));
         }
       })()
         .catch((error) => {

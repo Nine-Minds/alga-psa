@@ -136,6 +136,9 @@ curl -X POST localhost:3000/api/chat/stream/chat \
 - Implemented SSE token chunk formatting for streaming completions endpoint:
   - `/api/chat/v1/completions/stream` now reads request `messages` and streams tokens as `data: {"content":"...","done":false}\n\n`
   - File: `server/src/app/api/chat/v1/completions/stream/route.ts`
-  - Note: no final `done:true` event yet (next item)
 - Validation: `npx eslint server/src/app/api/chat/v1/completions/stream/route.ts --max-warnings=0`
-- Next feature item: F019 Send final SSE message `done: true` on completion
+- Implemented final SSE completion event:
+  - `/api/chat/v1/completions/stream` now sends `data: {"content":"","done":true}\n\n` when the upstream stream completes (best-effort; skipped when request is aborted)
+  - File: `server/src/app/api/chat/v1/completions/stream/route.ts`
+- Validation: `npx eslint server/src/app/api/chat/v1/completions/stream/route.ts --max-warnings=0`
+- Next feature item: F020 Update Chat.tsx to use streaming endpoint and read response via ReadableStream/getReader()

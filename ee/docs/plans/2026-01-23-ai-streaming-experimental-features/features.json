@@ -110,7 +110,7 @@
   {
     "id": "F019",
     "description": "Send final SSE message `data: {\"content\": \"\", \"done\": true}` when streaming completes",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Streaming Implementation"]
   },
   {
