@@ -326,7 +326,7 @@ export const Chat: React.FC<ChatProps> = ({
   const [showValidationDialog, setShowValidationDialog] = useState(false);
   const [validationMessage, setValidationMessage] = useState('');
   const autoSendRef = useRef(false);
-  const typingControllerRef = useRef<AbortController | null>(null);
+  const streamAbortControllerRef = useRef<AbortController | null>(null);
   const messageOrderRef = useRef<number>(0);
   const streamingTextRef = useRef<string | null>(null);
   const generationIdRef = useRef<number>(0);
@@ -385,7 +385,7 @@ export const Chat: React.FC<ChatProps> = ({
 
   useEffect(() => {
     return () => {
-      typingControllerRef.current?.abort();
+      streamAbortControllerRef.current?.abort();
     };
   }, []);
 
@@ -542,7 +542,8 @@ export const Chat: React.FC<ChatProps> = ({
 
   const handleStop = () => {
     generationIdRef.current += 1;
-    typingControllerRef.current?.abort();
+    streamAbortControllerRef.current?.abort();
+    streamAbortControllerRef.current = null;
     if (streamingTextRef.current) {
       setIncomingMessage('');
       setFullMessage(streamingTextRef.current);
@@ -628,6 +629,13 @@ export const Chat: React.FC<ChatProps> = ({
     }
 
     try {
+      const generationId = generationIdRef.current + 1;
+      generationIdRef.current = generationId;
+
+      streamAbortControllerRef.current?.abort();
+      const abortController = new AbortController();
+      streamAbortControllerRef.current = abortController;
+
       const response = await fetch('/api/chat/v1/completions/stream', {
         method: 'POST',
         headers: {
@@ -636,6 +644,7 @@ export const Chat: React.FC<ChatProps> = ({
         body: JSON.stringify({
           messages: conversationWithUser,
         }),
+        signal: abortController.signal,
       });
 
       if (!response.ok) {
@@ -650,9 +659,6 @@ export const Chat: React.FC<ChatProps> = ({
         }
         throw new Error(errorMessage);
       }
-
-      const generationId = generationIdRef.current + 1;
-      generationIdRef.current = generationId;
 
       streamingTextRef.current = '';
       let renderScheduled = false;
@@ -708,12 +714,22 @@ export const Chat: React.FC<ChatProps> = ({
       setIsFunction(false);
       setIncomingMessage('');
       streamingTextRef.current = null;
+      streamAbortControllerRef.current = null;
       setFullMessage(finalAssistantContent);
       setGeneratingResponse(false);
       setPendingFunctionStatus('idle');
       setPendingFunctionAction('none');
       setPendingFunction(null);
     } catch (error) {
+      if (
+        streamAbortControllerRef.current?.signal.aborted ||
+        (typeof error === 'object' &&
+          error != null &&
+          'name' in error &&
+          (error as { name?: unknown }).name === 'AbortError')
+      ) {
+        return;
+      }
       console.error('Error generating completion', error);
       setIncomingMessage('An error occurred while generating the response.');
       setIsFunction(false);

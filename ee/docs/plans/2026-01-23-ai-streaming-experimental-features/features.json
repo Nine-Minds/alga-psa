@@ -128,7 +128,7 @@
   {
     "id": "F022",
     "description": "Support AbortController in streaming fetch to enable stop/cancel mid-generation",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Streaming Implementation", "Flow B"]
   },
   {

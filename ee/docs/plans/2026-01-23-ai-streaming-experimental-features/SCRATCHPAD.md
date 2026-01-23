@@ -153,4 +153,9 @@ curl -X POST localhost:3000/api/chat/stream/chat \
   - File: `ee/server/src/components/chat/Chat.tsx`
 - Validation: `npx eslint ee/server/src/components/chat/Chat.tsx` (warnings present in file; no errors)
 - Validation: `npm -w sebastian-ee run typecheck` still fails due to pre-existing TS2307 imports in `ee/server/src/components/chat/QuickAskOverlay.tsx` (unrelated to F021)
-- Next feature item: F022 Support AbortController in streaming fetch to enable stop/cancel mid-generation
+- Implemented AbortController cancellation for true streaming:
+  - `handleSend()` creates an `AbortController` per generation and passes `signal` to `fetch()`
+  - Stop button now triggers `AbortController.abort()` so the network request is actually canceled mid-stream (no error banner for AbortError)
+  - File: `ee/server/src/components/chat/Chat.tsx`
+- Validation: `npx eslint ee/server/src/components/chat/Chat.tsx`
+- Next feature item: F023 Display streaming indicator/cursor while tokens are being received
