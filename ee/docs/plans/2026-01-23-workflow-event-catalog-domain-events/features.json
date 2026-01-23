@@ -29,7 +29,7 @@
   { "id": "F043", "description": "Billing: emit contract events (CONTRACT_CREATED, CONTRACT_UPDATED, CONTRACT_STATUS_CHANGED, CONTRACT_RENEWAL_UPCOMING)", "implemented": true, "prdRefs": ["7.2"] },
   { "id": "F044", "description": "Billing: emit recurring billing run events (RECURRING_BILLING_RUN_STARTED, RECURRING_BILLING_RUN_COMPLETED, RECURRING_BILLING_RUN_FAILED)", "implemented": true, "prdRefs": ["7.2"] },
 
-  { "id": "F050", "description": "CRM: emit client events (CLIENT_CREATED, CLIENT_UPDATED, CLIENT_STATUS_CHANGED, CLIENT_OWNER_ASSIGNED, CLIENT_MERGED, CLIENT_ARCHIVED)", "implemented": false, "prdRefs": ["7.2"] },
+  { "id": "F050", "description": "CRM: emit client events (CLIENT_CREATED, CLIENT_UPDATED, CLIENT_STATUS_CHANGED, CLIENT_OWNER_ASSIGNED, CLIENT_MERGED, CLIENT_ARCHIVED)", "implemented": true, "prdRefs": ["7.2"] },
   { "id": "F051", "description": "CRM: emit contact events (CONTACT_CREATED, CONTACT_UPDATED, CONTACT_PRIMARY_SET, CONTACT_ARCHIVED, CONTACT_MERGED)", "implemented": false, "prdRefs": ["7.2"] },
   { "id": "F052", "description": "CRM: emit interaction/note events (INTERACTION_LOGGED, NOTE_CREATED)", "implemented": false, "prdRefs": ["7.2"] },
   { "id": "F053", "description": "Tags: emit tag definition and tag application events (TAG_DEFINITION_CREATED, TAG_DEFINITION_UPDATED, TAG_APPLIED, TAG_REMOVED) with generic entityType/entityId payload shape", "implemented": false, "prdRefs": ["7.2"] },

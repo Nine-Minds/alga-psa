@@ -347,9 +347,25 @@ Implication: we should standardize on `@alga-psa/event-bus/publishers` helpers f
     - `npx vitest run shared/workflow/streams/domainEventBuilders/__tests__/recurringBillingRunEventBuilders.test.ts`
     - Note: `npx tsc -p packages/billing/tsconfig.json --noEmit` currently fails due to existing TS errors in `packages/billing/src/actions/contractWizardActions.ts` and `packages/billing/src/actions/creditActions.ts` (pre-existing; not addressed in this item).
 
+- 2026-01-23: Completed `F050` (CRM client events emission):
+  - Added shared payload builders:
+    - `shared/workflow/streams/domainEventBuilders/clientEventBuilders.ts`
+  - Emitted workflow v2 domain events from real client create/update/archive paths:
+    - `packages/clients/src/actions/clientActions.ts` now publishes:
+      - `CLIENT_CREATED` on create
+      - `CLIENT_UPDATED` on update (with `updatedFields` + `{previous,new}` `changes`)
+      - `CLIENT_STATUS_CHANGED` when `properties.status` transitions
+      - `CLIENT_OWNER_ASSIGNED` when `account_manager_id` changes to a user
+      - `CLIENT_ARCHIVED` when `is_inactive` transitions to true (including `markClientInactiveWithContacts`)
+    - `server/src/lib/api/services/ClientService.ts` now publishes the same domain events for REST API create/update paths.
+  - Added schema-compat unit test coverage:
+    - `shared/workflow/streams/domainEventBuilders/__tests__/clientEventBuilders.test.ts`
+  - Notes/constraints:
+    - `CLIENT_MERGED` remains catalog-only for now (no authoritative client merge/consolidate path exists to emit from today).
+
 ## Next Up
 
-- `F050`: emit CRM client events (CLIENT_CREATED, CLIENT_UPDATED, CLIENT_STATUS_CHANGED, CLIENT_OWNER_ASSIGNED, CLIENT_MERGED, CLIENT_ARCHIVED).
+- `F051`: emit CRM contact events (CONTACT_CREATED, CONTACT_UPDATED, CONTACT_PRIMARY_SET, CONTACT_ARCHIVED, CONTACT_MERGED).
 
 ## Suggested Phasing (to reduce risk)
 

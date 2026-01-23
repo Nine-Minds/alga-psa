@@ -14,6 +14,20 @@ import { Knex } from 'knex';
 import { deleteEntityTags } from '@alga-psa/tags/lib/tagCleanup';
 import { createTag } from '@alga-psa/tags/actions';
 import { ClientModel } from '@alga-psa/shared/models/clientModel';
+import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
+import {
+  buildClientArchivedPayload,
+  buildClientCreatedPayload,
+  buildClientOwnerAssignedPayload,
+  buildClientStatusChangedPayload,
+  buildClientUpdatedPayload,
+} from '@alga-psa/shared/workflow/streams/domainEventBuilders/clientEventBuilders';
+
+function maybeUserActor(currentUser: any) {
+  const userId = currentUser?.user_id;
+  if (typeof userId !== 'string' || !userId) return undefined;
+  return { actorType: 'USER' as const, actorUserId: userId };
+}
 
 export async function getClientById(clientId: string): Promise<IClientWithLocation | null> {
   const currentUser = await getCurrentUserAsync();
@@ -89,7 +103,7 @@ export async function updateClient(clientId: string, updateData: Partial<Omit<IC
   try {
     console.log('Updating client in database:', clientId, updateData);
 
-    await withTransaction(db, async (trx: Knex.Transaction) => {
+    const updateResult = await withTransaction(db, async (trx: Knex.Transaction) => {
       // Build update object with explicit null handling
       const updateObject: any = {
         updated_at: new Date().toISOString()
@@ -160,9 +174,21 @@ export async function updateClient(clientId: string, updateData: Partial<Omit<IC
       console.log('Final updateObject being sent to database:', JSON.stringify(updateObject, null, 2));
       console.log('Update contains is_inactive:', 'is_inactive' in updateObject, 'value:', updateObject.is_inactive);
 
-      await trx('clients')
+      const [updatedClient] = await trx<IClient>('clients')
         .where({ client_id: clientId, tenant })
-        .update(updateObject);
+        .update(updateObject)
+        .returning('*');
+
+      if (!updatedClient) {
+        throw new Error('Failed to fetch updated client');
+      }
+
+      return {
+        before: currentClient,
+        after: updatedClient,
+        updatedFieldKeys: Object.keys(updateObject),
+        occurredAt: updateObject.updated_at,
+      };
     });
 
     // Email suffix functionality removed for security
@@ -171,6 +197,82 @@ export async function updateClient(clientId: string, updateData: Partial<Omit<IC
     const updatedClientWithLogo = await getClientById(clientId);
     if (!updatedClientWithLogo) {
         throw new Error('Failed to fetch updated client data');
+    }
+
+    const occurredAt = updateResult.occurredAt ?? updatedClientWithLogo.updated_at ?? new Date().toISOString();
+    const actor = maybeUserActor(currentUser);
+
+    const previousLifecycleStatus = (updateResult.before as any)?.properties?.status;
+    const newLifecycleStatus = (updateResult.after as any)?.properties?.status;
+    if (
+      typeof previousLifecycleStatus === 'string' &&
+      typeof newLifecycleStatus === 'string' &&
+      previousLifecycleStatus &&
+      newLifecycleStatus &&
+      previousLifecycleStatus !== newLifecycleStatus
+    ) {
+      await publishWorkflowEvent({
+        eventType: 'CLIENT_STATUS_CHANGED',
+        payload: buildClientStatusChangedPayload({
+          clientId,
+          previousStatus: previousLifecycleStatus,
+          newStatus: newLifecycleStatus,
+          changedAt: occurredAt,
+        }),
+        ctx: { tenantId: tenant, occurredAt, actor },
+        idempotencyKey: `client_status_changed:${clientId}:${occurredAt}`,
+      });
+    }
+
+    const previousOwnerUserId = (updateResult.before as any)?.account_manager_id;
+    const newOwnerUserId = (updateResult.after as any)?.account_manager_id;
+    if (previousOwnerUserId !== newOwnerUserId && typeof newOwnerUserId === 'string' && newOwnerUserId) {
+      await publishWorkflowEvent({
+        eventType: 'CLIENT_OWNER_ASSIGNED',
+        payload: buildClientOwnerAssignedPayload({
+          clientId,
+          previousOwnerUserId: typeof previousOwnerUserId === 'string' ? previousOwnerUserId : undefined,
+          newOwnerUserId,
+          assignedByUserId: currentUser.user_id,
+          assignedAt: occurredAt,
+        }),
+        ctx: { tenantId: tenant, occurredAt, actor },
+        idempotencyKey: `client_owner_assigned:${clientId}:${occurredAt}`,
+      });
+    }
+
+    const wasInactive = Boolean((updateResult.before as any)?.is_inactive);
+    const isInactive = Boolean((updateResult.after as any)?.is_inactive);
+    if (!wasInactive && isInactive) {
+      await publishWorkflowEvent({
+        eventType: 'CLIENT_ARCHIVED',
+        payload: buildClientArchivedPayload({
+          clientId,
+          archivedByUserId: currentUser.user_id,
+          archivedAt: occurredAt,
+        }),
+        ctx: { tenantId: tenant, occurredAt, actor },
+        idempotencyKey: `client_archived:${clientId}:${occurredAt}`,
+      });
+    }
+
+    const updatedPayload = buildClientUpdatedPayload({
+      clientId,
+      before: updateResult.before as any,
+      after: updateResult.after as any,
+      updatedFieldKeys: updateResult.updatedFieldKeys ?? [],
+      updatedAt: occurredAt,
+    });
+
+    const updatedFields = (updatedPayload as any).updatedFields;
+    const changes = (updatedPayload as any).changes;
+    if ((Array.isArray(updatedFields) && updatedFields.length) || (changes && Object.keys(changes).length)) {
+      await publishWorkflowEvent({
+        eventType: 'CLIENT_UPDATED',
+        payload: updatedPayload,
+        ctx: { tenantId: tenant, occurredAt, actor },
+        idempotencyKey: `client_updated:${clientId}:${occurredAt}`,
+      });
     }
 
     console.log('Updated client data:', updatedClientWithLogo);
@@ -235,6 +337,27 @@ export async function createClient(client: Omit<IClient, 'client_id' | 'created_
     await createDefaultTaxSettingsAsync(createdClient.client_id);
 
     // Email suffix functionality removed for security
+
+    const createdAt = createdClient.created_at ?? new Date().toISOString();
+    const status =
+      (createdClient as any)?.properties?.status ??
+      (createdClient.is_inactive ? 'inactive' : 'active');
+    await publishWorkflowEvent({
+      eventType: 'CLIENT_CREATED',
+      payload: buildClientCreatedPayload({
+        clientId: createdClient.client_id,
+        clientName: createdClient.client_name,
+        createdByUserId: currentUser.user_id,
+        createdAt,
+        status,
+      }),
+      ctx: {
+        tenantId: tenant,
+        occurredAt: createdAt,
+        actor: maybeUserActor(currentUser),
+      },
+      idempotencyKey: `client_created:${createdClient.client_id}`,
+    });
 
     return { success: true, data: createdClient };
   } catch (error: any) {
@@ -1671,6 +1794,7 @@ export async function markClientInactiveWithContacts(
   }
 
   try {
+    const occurredAt = new Date().toISOString();
     const result = await withTransaction(knex, async (trx: Knex.Transaction) => {
       let contactsDeactivated = 0;
 
@@ -1701,13 +1825,24 @@ export async function markClientInactiveWithContacts(
       // Mark the client as inactive
       await trx('clients')
         .where({ client_id: clientId, tenant })
-        .update({ is_inactive: true, updated_at: new Date().toISOString() });
+        .update({ is_inactive: true, updated_at: occurredAt });
 
       return { contactsDeactivated };
     });
 
     revalidatePath(`/msp/clients/${clientId}`);
     revalidatePath(`/msp/contacts`);
+
+    await publishWorkflowEvent({
+      eventType: 'CLIENT_ARCHIVED',
+      payload: buildClientArchivedPayload({
+        clientId,
+        archivedByUserId: currentUser.user_id,
+        archivedAt: occurredAt,
+      }),
+      ctx: { tenantId: tenant, occurredAt, actor: maybeUserActor(currentUser) },
+      idempotencyKey: `client_archived:${clientId}:${occurredAt}`,
+    });
 
     return { success: true, contactsDeactivated: result.contactsDeactivated };
   } catch (error) {
