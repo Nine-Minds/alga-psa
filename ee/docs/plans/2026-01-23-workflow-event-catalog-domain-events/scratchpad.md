@@ -394,9 +394,23 @@ Implication: we should standardize on `@alga-psa/event-bus/publishers` helpers f
   - Added `getOrCreateWithStatus` to detect definition creates reliably:
     - `packages/tags/src/models/tagDefinition.ts`
 
+- 2026-01-23: Completed `F060` (document storage lifecycle emission):
+  - Added shared payload builders:
+    - `shared/workflow/streams/domainEventBuilders/documentStorageEventBuilders.ts`
+  - Emitted workflow v2 document storage domain events from the authoritative storage service:
+    - `packages/documents/src/storage/StorageService.ts` publishes:
+      - `DOCUMENT_UPLOADED` after file record creation (includes `documentId`, `fileName`, `contentType`, `sizeBytes`, `storageKey`)
+      - `DOCUMENT_DELETED` after storage delete + soft delete (includes `documentId`, `deletedAt`)
+  - Verification:
+    - `npx tsc -p packages/documents/tsconfig.json --noEmit`
+    - `npx vitest run packages/documents/tests/storageConfig.test.ts`
+  - Notes/constraints:
+    - `documentId` maps to the file storage record id (`external_files.file_id`) today.
+    - Publishing is best-effort (errors are logged but do not fail the upload/delete).
+
 ## Next Up
 
-- `F060`: emit storage lifecycle events (DOCUMENT_UPLOADED, DOCUMENT_DELETED).
+- `F061`: emit association events (DOCUMENT_ASSOCIATED, DOCUMENT_DETACHED).
 
 ## Suggested Phasing (to reduce risk)
 
