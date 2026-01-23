@@ -178,9 +178,13 @@ Implication: we should standardize on `@alga-psa/event-bus/publishers` helpers f
     - Stage emitted is currently `resolution` only (no first-class response/custom stage model in product yet).
     - Uses `tenantId` as a stable `slaPolicyId` placeholder until a real SLA policy model exists.
 
+- 2026-01-23: Completed `F015` (ticket approvals — catalog-only):
+  - Marked `TICKET_APPROVAL_REQUESTED` / `TICKET_APPROVAL_GRANTED` / `TICKET_APPROVAL_REJECTED` as **catalog-only** for now (no ticket approval subsystem exists to emit these events from).
+  - Documented the decision in `ee/docs/plans/2026-01-23-workflow-event-catalog-domain-events/PRD.md` (Open Questions #4).
+
 ## Next Up
 
-- `F015`: emit ticket approval events (`TICKET_APPROVAL_*`) when approvals exist/enabled.
+- `F020`: emit appointment lifecycle events (`APPOINTMENT_*`) or map to `SCHEDULE_ENTRY_*` per PRD §10.
 
 ## Suggested Phasing (to reduce risk)
 

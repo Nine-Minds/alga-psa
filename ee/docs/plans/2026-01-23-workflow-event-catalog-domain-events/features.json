@@ -11,7 +11,7 @@
   { "id": "F012", "description": "Tickets: emit communication events (TICKET_MESSAGE_ADDED, TICKET_CUSTOMER_REPLIED, TICKET_INTERNAL_NOTE_ADDED) or map to existing comment events per PRD §7.3", "implemented": true, "prdRefs": ["7.2", "7.3"] },
   { "id": "F013", "description": "Tickets: emit work tracking event (TICKET_TIME_ENTRY_ADDED) with consistent payload conventions", "implemented": true, "prdRefs": ["7.2"] },
   { "id": "F014", "description": "Tickets: emit SLA stage events (TICKET_SLA_STAGE_ENTERED, TICKET_SLA_STAGE_MET, TICKET_SLA_STAGE_BREACHED) when SLA module is enabled", "implemented": true, "prdRefs": ["7.2", "7.3"] },
-  { "id": "F015", "description": "Tickets: emit approval events (TICKET_APPROVAL_REQUESTED, TICKET_APPROVAL_GRANTED, TICKET_APPROVAL_REJECTED) when approvals exist/enabled", "implemented": false, "prdRefs": ["7.2", "7.3"] },
+  { "id": "F015", "description": "Tickets: approval events (TICKET_APPROVAL_REQUESTED, TICKET_APPROVAL_GRANTED, TICKET_APPROVAL_REJECTED) are catalog-only until a ticket approval subsystem exists", "implemented": true, "prdRefs": ["7.2", "7.3", "10"] },
 
   { "id": "F020", "description": "Scheduling: emit appointment/schedule events (APPOINTMENT_CREATED, APPOINTMENT_RESCHEDULED, APPOINTMENT_CANCELED, APPOINTMENT_COMPLETED, APPOINTMENT_NO_SHOW, APPOINTMENT_ASSIGNED) or map to SCHEDULE_ENTRY_* per PRD §7.3", "implemented": false, "prdRefs": ["7.2", "7.3"] },
   { "id": "F021", "description": "Scheduling: emit availability block events (SCHEDULE_BLOCK_CREATED, SCHEDULE_BLOCK_DELETED)", "implemented": false, "prdRefs": ["7.2"] },
