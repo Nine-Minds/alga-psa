@@ -167,3 +167,12 @@ curl -X POST localhost:3000/api/chat/stream/chat \
   - Files: `ee/server/src/components/message/Message.tsx`, `ee/server/src/components/message/message.css`, `ee/server/src/components/chat/Chat.tsx`
 - Validation: `npx eslint ee/server/src/components/chat/Chat.tsx ee/server/src/components/message/Message.tsx --max-warnings=9999` (warnings present; no errors)
 - Next feature item: F024 Handle stream interruption gracefully - show partial response with error indicator
+
+### 2026-01-23 (cont.)
+- Implemented graceful stream interruption handling:
+  - If the SSE stream ends without a `done: true` event, Chat now treats it as an interruption and shows the partial assistant content with an "Interrupted" indicator.
+  - If a non-abort network/error occurs mid-stream, Chat shows the partial assistant content (if any) with an "Interrupted" indicator.
+  - Partial/interrupted responses are not persisted; only fully completed (`done: true`) responses are persisted.
+  - Files: `ee/server/src/components/chat/Chat.tsx`, `ee/server/src/components/message/Message.tsx`, `ee/server/src/components/message/message.css`
+- Validation: `npx eslint ee/server/src/components/chat/Chat.tsx ee/server/src/components/message/Message.tsx --max-warnings=9999` (warnings present; no errors)
+- Next feature item: F025 Persist assistant message to database after streaming completes (final content)

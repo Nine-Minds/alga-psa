@@ -200,10 +200,12 @@ type SseReadHandlers = {
   onDone?: (accumulated: string) => void;
 };
 
+type SseReadResult = { content: string; doneReceived: boolean };
+
 async function readAssistantContentFromSse(
   response: Response,
   handlers: SseReadHandlers = {},
-): Promise<string> {
+): Promise<SseReadResult> {
   if (!response.body) {
     throw new Error('Streaming response missing body');
   }
@@ -212,6 +214,7 @@ async function readAssistantContentFromSse(
   const decoder = new TextDecoder();
   let buffer = '';
   let content = '';
+  let doneReceived = false;
 
   const processEvent = (rawEvent: string) => {
     const lines = rawEvent.split('\n');
@@ -236,6 +239,7 @@ async function readAssistantContentFromSse(
         handlers.onToken?.(payload.content, content);
       }
       if (payload.done === true) {
+        doneReceived = true;
         handlers.onDone?.(content);
         return true;
       }
@@ -261,7 +265,7 @@ async function readAssistantContentFromSse(
       const rawEvent = buffer.slice(0, boundaryIndex);
       buffer = buffer.slice(boundaryIndex + 2);
       if (processEvent(rawEvent)) {
-        return content;
+        return { content, doneReceived };
       }
       boundaryIndex = buffer.indexOf('\n\n');
     }
@@ -271,7 +275,7 @@ async function readAssistantContentFromSse(
     processEvent(buffer);
   }
 
-  return content;
+  return { content, doneReceived };
 }
 
 export const Chat: React.FC<ChatProps> = ({
@@ -304,10 +308,16 @@ export const Chat: React.FC<ChatProps> = ({
       content: string;
       reasoning?: string;
       functionCallMeta?: FunctionCallMeta;
+      status?: 'interrupted';
+      statusDetail?: string;
     }[]
   >([]);
   const [fullMessage, setFullMessage] = useState('');
   const [fullReasoning, setFullReasoning] = useState<string | null>(null);
+  const [fullMessageStatus, setFullMessageStatus] = useState<'interrupted' | null>(null);
+  const [fullMessageStatusDetail, setFullMessageStatusDetail] = useState<string | null>(
+    null,
+  );
   const [chatId, setChatId] = useState<string | null>(initialChatId ?? null);
   const [userMessageId, setUserMessageId] = useState<string | null>(null);
   const [botMessageId, setBotMessageId] = useState<string | null>(null);
@@ -421,12 +431,23 @@ export const Chat: React.FC<ChatProps> = ({
           content: fullMessage,
           reasoning: fullReasoning ?? undefined,
           functionCallMeta: undefined,
+          status: fullMessageStatus ?? undefined,
+          statusDetail: fullMessageStatusDetail ?? undefined,
         },
       ]);
       setFullMessage('');
       setFullReasoning(null);
+      setFullMessageStatus(null);
+      setFullMessageStatusDetail(null);
     }
-  }, [generatingResponse, fullMessage, botMessageId, fullReasoning]);
+  }, [
+    generatingResponse,
+    fullMessage,
+    botMessageId,
+    fullReasoning,
+    fullMessageStatus,
+    fullMessageStatusDetail,
+  ]);
 
   const autoResizeTextarea = useCallback(() => {
     if (!inputRef.current) {
@@ -546,6 +567,8 @@ export const Chat: React.FC<ChatProps> = ({
     streamAbortControllerRef.current = null;
     if (streamingTextRef.current) {
       setIncomingMessage('');
+      setFullMessageStatus(null);
+      setFullMessageStatusDetail(null);
       setFullMessage(streamingTextRef.current);
       streamingTextRef.current = null;
     }
@@ -557,6 +580,8 @@ export const Chat: React.FC<ChatProps> = ({
 
   const handleSend = useCallback(async (trimmedMessage: string) => {
     setFunctionError(null);
+    setFullMessageStatus(null);
+    setFullMessageStatusDetail(null);
     setGeneratingResponse(true);
     setIsFunction(true);
     setIncomingMessage('Thinking...');
@@ -678,29 +703,38 @@ export const Chat: React.FC<ChatProps> = ({
         });
       };
 
-      const finalAssistantContent = await readAssistantContentFromSse(response, {
-        shouldContinue: () => generationIdRef.current === generationId,
-        onToken: (_token, accumulated) => {
-          streamingTextRef.current = accumulated;
-          if (!sawToken) {
-            sawToken = true;
-            setIsFunction(false);
-          }
-          scheduleIncomingRender();
-        },
-      });
+      const { content: finalAssistantContent, doneReceived } =
+        await readAssistantContentFromSse(response, {
+          shouldContinue: () => generationIdRef.current === generationId,
+          onToken: (_token, accumulated) => {
+            streamingTextRef.current = accumulated;
+            if (!sawToken) {
+              sawToken = true;
+              setIsFunction(false);
+            }
+            scheduleIncomingRender();
+          },
+        });
 
       if (generationIdRef.current !== generationId) {
         return;
       }
 
-      const assistantOrder = messageOrderRef.current + 1;
-      messageOrderRef.current = assistantOrder;
-      await addAssistantMessageToPersistence(
-        createdChatId ?? chatId,
-        finalAssistantContent,
-        assistantOrder,
-      );
+      const wasInterrupted = !doneReceived;
+      if (!wasInterrupted) {
+        const assistantOrder = messageOrderRef.current + 1;
+        messageOrderRef.current = assistantOrder;
+        await addAssistantMessageToPersistence(
+          createdChatId ?? chatId,
+          finalAssistantContent,
+          assistantOrder,
+        );
+        setFullMessageStatus(null);
+        setFullMessageStatusDetail(null);
+      } else {
+        setFullMessageStatus('interrupted');
+        setFullMessageStatusDetail('Connection interrupted — showing partial response.');
+      }
 
       setConversation([
         ...conversationWithUser,
@@ -731,7 +765,22 @@ export const Chat: React.FC<ChatProps> = ({
         return;
       }
       console.error('Error generating completion', error);
-      setIncomingMessage('An error occurred while generating the response.');
+      const partial = streamingTextRef.current ?? '';
+      if (partial.trim().length > 0) {
+        setIncomingMessage('');
+        setFullMessageStatus('interrupted');
+        setFullMessageStatusDetail(
+          error instanceof Error
+            ? `Connection interrupted — ${error.message}`
+            : 'Connection interrupted — showing partial response.',
+        );
+        setFullMessage(partial);
+      } else {
+        setIncomingMessage('An error occurred while generating the response.');
+      }
+
+      streamingTextRef.current = null;
+      streamAbortControllerRef.current = null;
       setIsFunction(false);
       setGeneratingResponse(false);
     }
@@ -1055,6 +1104,8 @@ export const Chat: React.FC<ChatProps> = ({
                   clientUrl={clientUrl}
                   reasoning={message.reasoning}
                   functionCallMeta={message.functionCallMeta}
+                  status={message.status}
+                  statusDetail={message.statusDetail}
                 />
               ))}
               {!!incomingMessage && (
