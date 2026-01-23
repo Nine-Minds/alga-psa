@@ -20,16 +20,19 @@ import type {
   ProjectStatus,
 } from '@alga-psa/types';
 import { getAllUsers, findUserById } from '@alga-psa/users/actions/user-actions/userActions';
-import { getContactByContactNameId } from '@alga-psa/clients/actions/contact-actions/contactActions';
 import { getCurrentUser } from '@alga-psa/auth/getCurrentUser';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { validateArray, validateData } from '@alga-psa/validation';
 import { createTenantKnex, withTransaction } from '@alga-psa/db';
 import { z } from 'zod';
-import { publishEvent } from '@alga-psa/event-bus/publishers';
+import { publishEvent, publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import { createProjectSchema, updateProjectSchema, projectPhaseSchema } from '../schemas/project.schemas';
 import { OrderingService } from '../lib/orderingService';
 import { SharedNumberingService } from '@shared/services/numberingService';
+import {
+  buildProjectStatusChangedPayload,
+  buildProjectUpdatedPayload,
+} from '@shared/workflow/streams/domainEventBuilders/projectLifecycleEventBuilders';
 
 // Helper to get tenant with non-null assertion after validation
 async function getTenantKnex(tenantId?: string | null): Promise<{ knex: Knex; tenant: string }> {
@@ -72,6 +75,17 @@ async function checkPermission(user: IUser, resource: string, action: string, kn
     if (!hasPermissionResult) {
         throw new Error(`Permission denied: Cannot ${action} ${resource}`);
     }
+}
+
+async function getContactFullNameByContactNameId(params: {
+    knexOrTrx: Knex | Knex.Transaction;
+    tenant: string;
+    contactNameId: string;
+}): Promise<string | null> {
+    const row = await params.knexOrTrx('contacts')
+        .where({ tenant: params.tenant, contact_name_id: params.contactNameId })
+        .first<{ full_name: string }>('full_name');
+    return row?.full_name ?? null;
 }
 
 export async function getAllClientsForProjects(): Promise<IClient[]> {
@@ -733,8 +747,12 @@ export async function updateProject(projectId: string, projectData: Partial<IPro
         
         const {knex, tenant} = await getTenantKnex();
         
-        let updatedProject = await withTransaction(knex, async (trx: Knex.Transaction) => {
+        const { beforeProject, updatedProject } = await withTransaction(knex, async (trx: Knex.Transaction) => {
             await checkPermission(currentUser, 'project', 'update', trx);
+            const beforeProject = await ProjectModel.getById(trx, tenant, projectId);
+            if (!beforeProject) {
+                throw new Error(`Project ${projectId} not found`);
+            }
             let project = await ProjectModel.update(trx, tenant, projectId, validatedData);
 
             // If status was updated, fetch the status details
@@ -748,7 +766,7 @@ export async function updateProject(projectId: string, projectData: Partial<IPro
                     });
                 }
             }
-            return project;
+            return { beforeProject, updatedProject: project };
         });
 
         // If assigned_to was updated, fetch the full user details and publish event
@@ -781,8 +799,12 @@ export async function updateProject(projectId: string, projectData: Partial<IPro
         // If contact_name_id was updated, fetch the full contact details
         if ('contact_name_id' in projectData) {
             if (updatedProject.contact_name_id) {
-                const contact = await getContactByContactNameId(updatedProject.contact_name_id);
-                updatedProject.contact_name = contact?.full_name || null;
+                const fullName = await getContactFullNameByContactNameId({
+                    knexOrTrx: knex,
+                    tenant,
+                    contactNameId: updatedProject.contact_name_id,
+                });
+                updatedProject.contact_name = fullName;
             } else {
                 updatedProject.contact_name = null;
             }
@@ -793,19 +815,36 @@ export async function updateProject(projectId: string, projectData: Partial<IPro
             throw new Error("tenant context required for event publishing");
         }
 
-        // Remove tenant field from changes if present
-        const { tenant: omittedTenant, ...safeChanges } = validatedData;
+        const occurredAt = updatedProject.updated_at instanceof Date ? updatedProject.updated_at : new Date();
+        const ctx = {
+            tenantId: currentUser.tenant,
+            occurredAt,
+            actor: { actorType: 'USER' as const, actorUserId: currentUser.user_id },
+        };
 
-        // Publish project updated event
-        await publishEvent({
+        if ('status' in validatedData && beforeProject.status !== updatedProject.status) {
+            await publishWorkflowEvent({
+                eventType: 'PROJECT_STATUS_CHANGED',
+                ctx,
+                payload: buildProjectStatusChangedPayload({
+                    projectId,
+                    previousStatus: beforeProject.status,
+                    newStatus: updatedProject.status,
+                    changedAt: occurredAt,
+                }),
+            });
+        }
+
+        await publishWorkflowEvent({
             eventType: 'PROJECT_UPDATED',
-            payload: {
-                tenantId: currentUser.tenant,
-                projectId: projectId,
-                userId: currentUser.user_id,
-                changes: safeChanges,
-                timestamp: new Date().toISOString()
-            }
+            ctx,
+            payload: buildProjectUpdatedPayload({
+                projectId,
+                before: beforeProject as unknown as Record<string, unknown> & { project_id: string },
+                after: updatedProject as unknown as Record<string, unknown> & { project_id: string },
+                updatedFieldKeys: Object.keys(validatedData),
+                updatedAt: occurredAt,
+            }),
         });
 
         return updatedProject;

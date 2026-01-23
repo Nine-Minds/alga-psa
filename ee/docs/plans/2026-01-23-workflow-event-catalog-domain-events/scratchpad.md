@@ -232,9 +232,21 @@ Implication: we should standardize on `@alga-psa/event-bus/publishers` helpers f
   - Added schema-compat unit test coverage:
     - `shared/workflow/streams/domainEventBuilders/__tests__/technicianDispatchEventBuilders.test.ts`
 
+- 2026-01-23: Completed `F030` (project lifecycle emission):
+  - Added shared payload builders:
+    - `shared/workflow/streams/domainEventBuilders/projectLifecycleEventBuilders.ts`
+  - Emitted domain events from real project update paths:
+    - `packages/projects/src/actions/projectActions.ts` publishes `PROJECT_UPDATED` (with `updatedFields` + `{previous,new}` `changes`) and `PROJECT_STATUS_CHANGED` on status transitions via `publishWorkflowEvent(...)`.
+    - `server/src/lib/api/services/ProjectService.ts` publishes the same domain events for REST API updates.
+  - Kept legacy email notifications working with the new payload shape:
+    - `server/src/lib/eventBus/subscribers/projectEmailSubscriber.ts` now supports both legacy `{ changes: Record<string, unknown> }` and domain `{ changes: Record<string, {previous,new}> }` shapes and uses `actorUserId` when `userId` is absent.
+  - Added schema-compat unit test coverage:
+    - `shared/workflow/streams/domainEventBuilders/__tests__/projectLifecycleEventBuilders.test.ts`
+  - Cleanup: removed forbidden feature-to-feature import (projects → clients) by querying contacts directly in `packages/projects/src/actions/projectActions.ts`.
+
 ## Next Up
 
-- `F030`: emit project lifecycle events (PROJECT_UPDATED, PROJECT_STATUS_CHANGED).
+- `F031`: emit project task lifecycle events (PROJECT_TASK_CREATED, PROJECT_TASK_ASSIGNED, PROJECT_TASK_STATUS_CHANGED, PROJECT_TASK_COMPLETED).
 
 ## Suggested Phasing (to reduce risk)
 
@@ -265,3 +277,4 @@ Phase 3 (feature dependent / optional modules):
 - (Resolved in this worktree) Earlier sandbox runs had `git add` / `git commit` failing with `.../.git/worktrees/.../index.lock` permission errors. As of 2026-01-23 in `/Users/roberisaacs/alga-psa.worktrees/feature/workflow-events-catalog`, commits succeed normally.
 - DB-backed vitest integration tests (e.g. `server/src/test/integration/ticketBundling.integration.test.ts`) require a local Postgres instance matching `.env.localtest` (observed `ECONNREFUSED` on `localhost:5438` when not running).
 - `npm run test:nx` currently fails on `tools/nx-tests/editionSwapping.test.ts` (CE alias `ee` resolves to `packages/ee/src` instead of `server/src/empty`). This appears unrelated to workflow event changes; use targeted vitest runs for verification until fixed.
+- Some older unit tests import deep, non-exported subpaths (e.g. `@alga-psa/projects/actions/projectActions`) and fail under Vite import-analysis with `Missing "./actions/projectActions" specifier...`; use source-relative imports in tests or prefer shared-schema-level tests until package exports are updated.

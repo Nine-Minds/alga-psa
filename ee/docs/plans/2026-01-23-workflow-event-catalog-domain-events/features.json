@@ -18,7 +18,7 @@
   { "id": "F022", "description": "Scheduling: emit capacity alert event (CAPACITY_THRESHOLD_REACHED) when capacity thresholds are configured", "implemented": true, "prdRefs": ["7.2"] },
   { "id": "F023", "description": "Scheduling/Field Ops: emit dispatch lifecycle events (TECHNICIAN_DISPATCHED, TECHNICIAN_EN_ROUTE, TECHNICIAN_ARRIVED, TECHNICIAN_CHECKED_OUT) when supported", "implemented": true, "prdRefs": ["7.2", "7.3"] },
 
-  { "id": "F030", "description": "Projects: emit project lifecycle events (PROJECT_UPDATED, PROJECT_STATUS_CHANGED)", "implemented": false, "prdRefs": ["7.2"] },
+  { "id": "F030", "description": "Projects: emit project lifecycle events (PROJECT_UPDATED, PROJECT_STATUS_CHANGED)", "implemented": true, "prdRefs": ["7.2"] },
   { "id": "F031", "description": "Projects: emit task lifecycle events (PROJECT_TASK_CREATED, PROJECT_TASK_ASSIGNED, PROJECT_TASK_STATUS_CHANGED, PROJECT_TASK_COMPLETED)", "implemented": false, "prdRefs": ["7.2"] },
   { "id": "F032", "description": "Projects: emit dependency events (PROJECT_TASK_DEPENDENCY_BLOCKED, PROJECT_TASK_DEPENDENCY_UNBLOCKED)", "implemented": false, "prdRefs": ["7.2"] },
   { "id": "F033", "description": "Projects: emit approval events (PROJECT_APPROVAL_REQUESTED, PROJECT_APPROVAL_GRANTED, PROJECT_APPROVAL_REJECTED) when approvals exist/enabled", "implemented": false, "prdRefs": ["7.2", "7.3"] },

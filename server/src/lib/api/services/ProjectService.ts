@@ -30,8 +30,12 @@ import {
 import { NotFoundError } from '../middleware/apiMiddleware';
 import ProjectModel from 'server/src/lib/models/project';
 import ProjectTaskModel from 'server/src/lib/models/projectTask';
-import { publishEvent } from 'server/src/lib/eventBus/publishers';
+import { publishEvent, publishWorkflowEvent } from 'server/src/lib/eventBus/publishers';
 import { OrderingService } from 'server/src/lib/services/orderingService';
+import {
+  buildProjectStatusChangedPayload,
+  buildProjectUpdatedPayload,
+} from '@shared/workflow/streams/domainEventBuilders/projectLifecycleEventBuilders';
 
 export class ProjectService extends BaseService<IProject> {
   constructor() {
@@ -260,6 +264,13 @@ export class ProjectService extends BaseService<IProject> {
       const { knex } = await this.getKnex();
       
       return withTransaction(knex, async (trx) => {
+        const beforeProject = await trx(this.tableName)
+          .where({ [this.primaryKey]: id, tenant: context.tenant })
+          .first();
+        if (!beforeProject) {
+          throw new NotFoundError('Project not found');
+        }
+
         // Handle status name to UUID conversion if needed
         let statusId = data.status;
         if (data.status && !this.isUUID(data.status)) {
@@ -286,16 +297,36 @@ export class ProjectService extends BaseService<IProject> {
           project.status = data.status;
         }
   
-        // Publish event
-        await publishEvent({
+        const occurredAt = updateData.updated_at instanceof Date ? updateData.updated_at : new Date();
+        const ctx = {
+          tenantId: context.tenant,
+          occurredAt,
+          actor: { actorType: 'USER' as const, actorUserId: context.userId },
+        };
+
+        if ('status' in data && beforeProject.status !== project.status) {
+          await publishWorkflowEvent({
+            eventType: 'PROJECT_STATUS_CHANGED',
+            ctx,
+            payload: buildProjectStatusChangedPayload({
+              projectId: id,
+              previousStatus: beforeProject.status,
+              newStatus: project.status,
+              changedAt: occurredAt,
+            }),
+          });
+        }
+
+        await publishWorkflowEvent({
           eventType: 'PROJECT_UPDATED',
-          payload: {
-            tenantId: context.tenant,
+          ctx,
+          payload: buildProjectUpdatedPayload({
             projectId: id,
-            changes: data,
-            userId: context.userId,
-            timestamp: new Date().toISOString()
-          }
+            before: beforeProject as unknown as Record<string, unknown> & { project_id: string },
+            after: project as unknown as Record<string, unknown> & { project_id: string },
+            updatedFieldKeys: Object.keys(data),
+            updatedAt: occurredAt,
+          }),
         });
   
         return project;
