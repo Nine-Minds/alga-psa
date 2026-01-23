@@ -273,9 +273,14 @@ Implication: we should standardize on `@alga-psa/event-bus/publishers` helpers f
   - Notes/constraints:
     - Only blocking relationships emit events; `related_to` dependencies remain non-workflow.
 
+- 2026-01-23: Completed `F033` (project approvals — catalog-only):
+  - Discovery: there is no authoritative “project approval request/decision” subsystem today (no project approval model/service/actions to hook).
+  - Decision: treat `PROJECT_APPROVAL_*` events as **catalog-only** (mirrors `TICKET_APPROVAL_*` rationale) until a real project approval feature exists.
+  - Updated `ee/docs/plans/2026-01-23-workflow-event-catalog-domain-events/PRD.md` Open Questions #4 to reflect `PROJECT_APPROVAL_*` catalog-only status.
+
 ## Next Up
 
-- `F033`: emit project approval events (PROJECT_APPROVAL_REQUESTED, PROJECT_APPROVAL_GRANTED, PROJECT_APPROVAL_REJECTED) when approvals exist/enabled.
+- `F040`: emit billing invoice lifecycle events (INVOICE_SENT, INVOICE_STATUS_CHANGED, INVOICE_DUE_DATE_CHANGED, INVOICE_OVERDUE, INVOICE_WRITTEN_OFF).
 
 ## Suggested Phasing (to reduce risk)
 

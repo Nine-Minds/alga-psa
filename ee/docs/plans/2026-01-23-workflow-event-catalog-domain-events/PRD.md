@@ -145,7 +145,7 @@ Some proposed names overlap with existing event bus types (e.g., `TICKET_COMMENT
 3. **Appointments vs schedule entries:** Should the scheduling layer expose `APPOINTMENT_*` events, or reuse/expand `SCHEDULE_ENTRY_*`?
    - **Decision (2026-01-23):** Introduce `APPOINTMENT_*` as canonical workflow triggers; keep `SCHEDULE_ENTRY_*` for lower-level schedule entry changes and existing calendar-sync integrations.
 4. **Catalog-only events:** Are SLA/approval/dispatch events expected to exist as real product behavior today, or should they be cataloged but emitted only when those modules are enabled?
-   - **Decision (2026-01-23):** `TICKET_APPROVAL_*` events are **catalog-only** for now. The product does not currently have a ticket approval request/decision subsystem (no authoritative create/approve/reject path to hook), so we will not emit these events until that behavior exists.
+   - **Decision (2026-01-23):** `TICKET_APPROVAL_*` and `PROJECT_APPROVAL_*` events are **catalog-only** for now. The product does not currently have a ticket/project approval request/decision subsystem (no authoritative create/approve/reject path to hook), so we will not emit these events until that behavior exists.
 5. **Payload field casing:** Confirm we’re standardizing on camelCase payload keys for new schemas (matches much of `shared/workflow/streams/eventBusSchema.ts` today).
    - **Decision:** use camelCase payload keys for all new `payload.*.v1` schemas and event bus payloads.
 
@@ -153,6 +153,6 @@ Some proposed names overlap with existing event bus types (e.g., `TICKET_COMMENT
 
 - All events in `event-proposals.md` are either:
   - Implemented end-to-end (catalog + schema registry + event bus + emission), **or**
-  - Explicitly marked as deferred/catalo g-only with rationale and tracked follow-up.
+  - Explicitly marked as deferred/catalog-only with rationale and tracked follow-up.
 - The workflow v2 simulator can simulate every catalog event using its `payload_schema_ref`.
 - Integration tests validate that representative business actions publish the expected event type with a valid payload and that the workflow worker ingests it without schema errors.
