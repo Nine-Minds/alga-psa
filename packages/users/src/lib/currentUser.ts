@@ -1,9 +1,15 @@
+'use server';
+
 import type { IUserWithRoles } from '@alga-psa/types';
 import { getUserWithRoles, getUserWithRolesByEmail, createTenantKnex } from '@alga-psa/db';
-import { getSession } from './getSession';
+import { getSession } from '@alga-psa/auth';
 import logger from '@alga-psa/core/logger';
 import { getUserAvatarUrl } from '@alga-psa/media';
 
+/**
+ * Get the current user from the session.
+ * This is a session-aware wrapper around the db functions.
+ */
 export async function getCurrentUser(): Promise<IUserWithRoles | null> {
   try {
     logger.debug('Getting current user from session');
@@ -99,7 +105,6 @@ export async function getCurrentUser(): Promise<IUserWithRoles | null> {
     return userWithRoles;
   } catch (error) {
     logger.error('Failed to get current user:', error);
-    // Preserve the original error and stack trace
     throw error;
   }
 }

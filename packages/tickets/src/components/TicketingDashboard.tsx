@@ -18,7 +18,7 @@ import { BoardPicker } from '@alga-psa/ui/components/settings/general/BoardPicke
 import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
 import { findTagsByEntityIds } from '@alga-psa/tags/actions';
 import { TagFilter } from '@alga-psa/ui/components';
-import { useTagPermissions } from '@alga-psa/ui';
+import { useTagPermissions } from '@alga-psa/tags/hooks';
 import { IBoard, IClient, IUser } from '@alga-psa/types';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { Dialog, DialogContent, DialogFooter } from '@alga-psa/ui/components/Dialog';
@@ -34,7 +34,7 @@ import { useIntervalTracking } from '@alga-psa/ui/hooks';
 import type { TicketingDisplaySettings } from '../actions/ticketDisplaySettings';
 import { toast } from 'react-hot-toast';
 import Drawer from '@alga-psa/ui/components/Drawer';
-import { createTicketColumns } from '@alga-psa/ui/lib/ticket-columns';
+import { createTicketColumns } from '@alga-psa/tickets/lib';
 import Spinner from '@alga-psa/ui/components/Spinner';
 import MultiUserPicker from '@alga-psa/ui/components/MultiUserPicker';
 import { getUserAvatarUrlsBatchAction } from '@alga-psa/users/actions';

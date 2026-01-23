@@ -14,7 +14,7 @@ import type { IClient } from '@alga-psa/types';
 import ClientDetails from '../clients/ClientDetails';
 import InteractionsFeed from '../interactions/InteractionsFeed';
 import { IInteraction } from '@alga-psa/types';
-import { TagManager } from '@alga-psa/ui/components';
+import { TagManager } from '@alga-psa/tags/components';
 import { getClientById } from '@alga-psa/clients/actions';
 import { updateContact } from '@alga-psa/clients/actions';
 import Documents from '@alga-psa/documents/components/Documents';

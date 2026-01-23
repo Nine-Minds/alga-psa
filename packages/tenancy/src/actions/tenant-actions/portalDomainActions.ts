@@ -2,6 +2,7 @@
 
 import { getTenantForCurrentRequest } from '../../server';
 import { getPortalDomainStatusForTenant } from '../../server/portalDomainStatus';
+import { getCurrentUser } from '@alga-psa/users/actions';
 import type {
   PortalDomainStatusResponse,
   PortalDomainRegistrationRequest,
@@ -9,6 +10,13 @@ import type {
 } from './portalDomain.types';
 
 export async function getPortalDomainStatusAction(): Promise<PortalDomainStatusResponse> {
+  // First try to get tenant from user session (works in client component effects)
+  const user = await getCurrentUser();
+  if (user?.tenant) {
+    return getPortalDomainStatusActionForTenant(user.tenant);
+  }
+
+  // Fallback to request-based tenant resolution
   const requestTenant = await getTenantForCurrentRequest();
   return getPortalDomainStatusActionForTenant(requestTenant ?? undefined);
 }

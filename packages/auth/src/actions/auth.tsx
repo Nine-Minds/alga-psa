@@ -1,50 +1,12 @@
 "use server";
 import User from "@alga-psa/db/models/user";
+import { getTenantIdBySlug } from "@alga-psa/db";
 
 import { verifyPassword } from '@alga-psa/core/encryption';
 import logger from "@alga-psa/core/logger";
-import { getAdminConnection } from '@alga-psa/db/admin';
 
 import { IUser } from '@alga-psa/types';
-import { getSlugParts, isValidTenantSlug } from '@alga-psa/validation';
-
-async function getTenantIdBySlug(slug: string): Promise<string | null> {
-  if (!isValidTenantSlug(slug)) {
-    logger.warn('[authenticateUser] Invalid tenant slug provided', { slug });
-    return null;
-  }
-
-  const { prefix, suffix } = getSlugParts(slug);
-  try {
-    const adminDb = await getAdminConnection();
-    const matches = await adminDb<{ tenant: string }>('tenants')
-      .select('tenant')
-      .whereRaw("left(replace(tenant::text, '-', ''), 6) = ?", [prefix])
-      .andWhereRaw("right(replace(tenant::text, '-', ''), 6) = ?", [suffix]);
-
-    if (matches.length === 1) {
-      return matches[0].tenant;
-    }
-
-    if (matches.length > 1) {
-      logger.error('[authenticateUser] Multiple tenants matched slug', {
-        slug,
-        tenantIds: matches.map((match) => match.tenant),
-      });
-      return null;
-    }
-
-    logger.warn('[authenticateUser] No tenant found for slug', { slug });
-    return null;
-  } catch (error) {
-    logger.error('[authenticateUser] Failed to resolve tenant by slug', {
-      slug,
-      error: error instanceof Error ? error.message : error,
-    });
-    return null;
-  }
-}
-
+import { isValidTenantSlug } from '@alga-psa/validation';
 interface AuthenticateUserOptions {
     tenantId?: string;
     tenantSlug?: string;
