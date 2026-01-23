@@ -86,7 +86,7 @@
   {
     "id": "F015",
     "description": "Add aiAssistant feature check to /api/chat/stream/* endpoints, return 403 if disabled",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["API Gating"]
   },
   {

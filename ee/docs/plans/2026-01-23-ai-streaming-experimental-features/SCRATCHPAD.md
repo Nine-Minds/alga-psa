@@ -118,4 +118,10 @@ curl -X POST localhost:3000/api/chat/stream/chat \
   - `/api/chat/v1/execute` returns 403 with `"AI Assistant is not enabled for this tenant"` when `aiAssistant` is disabled
   - File: `server/src/app/api/chat/v1/execute/route.ts`
 - Validation: `npx eslint server/src/app/api/chat/v1/execute/route.ts` (existing `no-undef` warnings for `process` in route handlers)
-- Next feature item: F015 Add aiAssistant feature check to `/api/chat/stream/*` endpoints, return 403 if disabled
+- Implemented API gating for chat streaming:
+  - `/api/chat/stream/title` returns 403 with `"AI Assistant is not enabled for this tenant"` when `aiAssistant` is disabled
+  - `/api/chat/stream/*` (slugged) returns 403 with `"AI Assistant is not enabled for this tenant"` when `aiAssistant` is disabled
+  - Files: `server/src/app/api/chat/stream/title/route.ts`, `server/src/app/api/chat/stream/[...slug]/route.ts`
+- Validation: `npx eslint server/src/app/api/chat/stream/title/route.ts server/src/app/api/chat/stream/[...slug]/route.ts --max-warnings=0`
+- Note: `npm -w server run typecheck` still fails with `TS2307` for `@ee/components/chat/QuickAskOverlay` from `server/src/components/chat/QuickAskOverlay.tsx` (pre-existing).
+- Next feature item: F016 Create new streaming completions endpoint `/api/chat/v1/completions/stream` that returns SSE
