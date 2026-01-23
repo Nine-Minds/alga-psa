@@ -335,9 +335,21 @@ Implication: we should standardize on `@alga-psa/event-bus/publishers` helpers f
   - Added schema-compat unit test coverage:
     - `shared/workflow/streams/domainEventBuilders/__tests__/contractEventBuilders.test.ts`
 
+- 2026-01-23: Completed `F044` (recurring billing run events emission):
+  - Added shared payload builders + schema-compat unit tests:
+    - `shared/workflow/streams/domainEventBuilders/recurringBillingRunEventBuilders.ts`
+    - `shared/workflow/streams/domainEventBuilders/__tests__/recurringBillingRunEventBuilders.test.ts`
+  - Implemented a billing “run” action that publishes workflow v2 events around invoice generation:
+    - `packages/billing/src/actions/recurringBillingRunActions.ts` publishes `RECURRING_BILLING_RUN_STARTED` / `COMPLETED` (with `invoicesCreated`, `failedCount`) and `FAILED` for unexpected fatal failures.
+  - Updated billing dashboard invoice generation flows to use the run action (batch + preview generation):
+    - `packages/billing/src/components/billing-dashboard/AutomaticInvoices.tsx`
+  - Verification:
+    - `npx vitest run shared/workflow/streams/domainEventBuilders/__tests__/recurringBillingRunEventBuilders.test.ts`
+    - Note: `npx tsc -p packages/billing/tsconfig.json --noEmit` currently fails due to existing TS errors in `packages/billing/src/actions/contractWizardActions.ts` and `packages/billing/src/actions/creditActions.ts` (pre-existing; not addressed in this item).
+
 ## Next Up
 
-- `F044`: emit recurring billing run events (RECURRING_BILLING_RUN_STARTED, RECURRING_BILLING_RUN_COMPLETED, RECURRING_BILLING_RUN_FAILED).
+- `F050`: emit CRM client events (CLIENT_CREATED, CLIENT_UPDATED, CLIENT_STATUS_CHANGED, CLIENT_OWNER_ASSIGNED, CLIENT_MERGED, CLIENT_ARCHIVED).
 
 ## Suggested Phasing (to reduce risk)
 

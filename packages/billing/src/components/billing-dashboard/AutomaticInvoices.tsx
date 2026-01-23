@@ -11,7 +11,8 @@ import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import { DateRangePicker, DateRange } from '@alga-psa/ui/components/DateRangePicker';
 import { Search, Info, AlertTriangle, X, MoreVertical, Eye } from 'lucide-react';
 import type { IClientContractLineCycle, PreviewInvoiceResponse } from '@alga-psa/types';
-import { generateInvoice, getPurchaseOrderOverageForBillingCycle, previewInvoice } from '@alga-psa/billing/actions/invoiceGeneration';
+import { getPurchaseOrderOverageForBillingCycle, previewInvoice } from '@alga-psa/billing/actions/invoiceGeneration';
+import { generateInvoicesAsRecurringBillingRun } from '@alga-psa/billing/actions/recurringBillingRunActions';
 import { WasmInvoiceViewModel } from '@alga-psa/types';
 import { getInvoicedBillingCyclesPaginated, removeBillingCycle, hardDeleteBillingCycle } from '@alga-psa/billing/actions/billingCycleActions';
 import { getAvailableBillingPeriods, type BillingPeriodDateRange } from '@alga-psa/billing/actions/billingAndTax';
@@ -385,16 +386,12 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
         return;
       }
 
-      // Generate invoices sequentially (they're already sequential, but we could batch if needed)
+      const runResult = await generateInvoicesAsRecurringBillingRun({ billingCycleIds });
       const newErrors: { [key: string]: string } = {};
-      for (const billingCycleId of billingCycleIds) {
-        try {
-          await generateInvoice(billingCycleId);
-        } catch (err) {
-          const period = periods.find((p) => p.billing_cycle_id === billingCycleId);
-          const clientName = period?.client_name || billingCycleId;
-          newErrors[clientName] = err instanceof Error ? err.message : 'Unknown error occurred';
-        }
+      for (const failure of runResult.failures) {
+        const period = periods.find((p) => p.billing_cycle_id === failure.billingCycleId);
+        const clientName = period?.client_name || failure.billingCycleId;
+        newErrors[clientName] = failure.errorMessage;
       }
 
       if (Object.keys(newErrors).length > 0) {
@@ -432,14 +429,14 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
         }
       }
 
-      for (const billingCycleId of toGenerate) {
-        try {
-          await generateInvoice(billingCycleId, { allowPoOverage: decision === 'allow' });
-        } catch (err) {
-          const period = periods.find((p) => p.billing_cycle_id === billingCycleId);
-          const clientName = period?.client_name || billingCycleId;
-          newErrors[clientName] = err instanceof Error ? err.message : 'Unknown error occurred';
-        }
+      const runResult = await generateInvoicesAsRecurringBillingRun({
+        billingCycleIds: toGenerate,
+        allowPoOverage: decision === 'allow',
+      });
+      for (const failure of runResult.failures) {
+        const period = periods.find((p) => p.billing_cycle_id === failure.billingCycleId);
+        const clientName = period?.client_name || failure.billingCycleId;
+        newErrors[clientName] = failure.errorMessage;
       }
 
       if (Object.keys(newErrors).length > 0) {
@@ -512,7 +509,10 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
         return;
       }
 
-      await generateInvoice(previewState.billingCycleId);
+      const runResult = await generateInvoicesAsRecurringBillingRun({ billingCycleIds: [previewState.billingCycleId] });
+      if (runResult.failures.length > 0) {
+        throw new Error(runResult.failures[0]?.errorMessage || 'Failed to generate invoice from preview');
+      }
       setShowPreviewDialog(false); // Close dialog on success
       setPreviewState({ data: null, billingCycleId: null }); // Reset preview state
       onGenerateSuccess(); // Refresh data lists
@@ -537,7 +537,13 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
     setErrors({});
 
     try {
-      await generateInvoice(billingCycleId, { allowPoOverage: true });
+      const runResult = await generateInvoicesAsRecurringBillingRun({
+        billingCycleIds: [billingCycleId],
+        allowPoOverage: true,
+      });
+      if (runResult.failures.length > 0) {
+        throw new Error(runResult.failures[0]?.errorMessage || 'Failed to generate invoice from preview');
+      }
       setShowPreviewDialog(false);
       setPreviewState({ data: null, billingCycleId: null });
       onGenerateSuccess();
