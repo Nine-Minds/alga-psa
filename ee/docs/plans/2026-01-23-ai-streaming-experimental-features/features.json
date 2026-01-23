@@ -44,7 +44,7 @@
   {
     "id": "F008",
     "description": "Wire Save button in Experimental Features to call updateExperimentalFeatures()",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Experimental Features Settings Tab"]
   },
   {

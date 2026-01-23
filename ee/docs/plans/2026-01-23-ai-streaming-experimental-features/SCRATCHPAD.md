@@ -93,4 +93,6 @@ curl -X POST localhost:3000/api/chat/stream/chat \
 - Validation: `npx eslint server/src/components/settings/general/ExperimentalFeaturesSettings.tsx --max-warnings=0`
 - Added warning banner copy for experimental feature stability: `server/src/components/settings/general/ExperimentalFeaturesSettings.tsx`
 - Validation: `npx eslint server/src/components/settings/general/ExperimentalFeaturesSettings.tsx --max-warnings=0`
-- Next feature item: F008 Wire Save button in Experimental Features to call updateExperimentalFeatures()
+- Wired Save button to persist experimental feature toggles via `updateExperimentalFeatures()`; includes disabled state when unchanged and a success toast reminding to reload: `server/src/components/settings/general/ExperimentalFeaturesSettings.tsx`
+- Validation: `npx eslint server/src/components/settings/general/ExperimentalFeaturesSettings.tsx --max-warnings=0`
+- Next feature item: F009 Default all experimental features to disabled for new and existing tenants

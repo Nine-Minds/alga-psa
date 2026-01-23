@@ -3,10 +3,11 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { toast } from 'react-hot-toast';
 import { Alert, AlertDescription, AlertTitle } from '@alga-psa/ui/components/Alert';
+import { Button } from '@alga-psa/ui/components/Button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 import { Switch } from '@alga-psa/ui/components/Switch';
-import { getExperimentalFeatures } from '@alga-psa/tenancy/actions';
+import { getExperimentalFeatures, updateExperimentalFeatures } from '@alga-psa/tenancy/actions';
 
 type ExperimentalFeatureKey = 'aiAssistant';
 
@@ -32,7 +33,9 @@ const defaultExperimentalFeatureState: ExperimentalFeatureState = {
 
 export default function ExperimentalFeaturesSettings(): React.JSX.Element {
   const [features, setFeatures] = useState<ExperimentalFeatureState>(defaultExperimentalFeatureState);
+  const [savedFeatures, setSavedFeatures] = useState<ExperimentalFeatureState>(defaultExperimentalFeatureState);
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
 
   const load = useCallback(async (): Promise<void> => {
@@ -41,9 +44,11 @@ export default function ExperimentalFeaturesSettings(): React.JSX.Element {
       setLoadError(null);
 
       const saved = await getExperimentalFeatures();
-      setFeatures({
+      const loaded: ExperimentalFeatureState = {
         aiAssistant: saved.aiAssistant === true,
-      });
+      };
+      setFeatures(loaded);
+      setSavedFeatures(loaded);
     } catch (error) {
       console.error('Failed to load experimental features:', error);
       setLoadError('Failed to load experimental feature settings.');
@@ -64,6 +69,24 @@ export default function ExperimentalFeaturesSettings(): React.JSX.Element {
     }));
   }, []);
 
+  const hasChanges = features.aiAssistant !== savedFeatures.aiAssistant;
+
+  const handleSave = useCallback(async (): Promise<void> => {
+    try {
+      setSaving(true);
+      await updateExperimentalFeatures({
+        aiAssistant: features.aiAssistant,
+      });
+      setSavedFeatures(features);
+      toast.success('Experimental feature settings saved. Reload the page to apply changes.');
+    } catch (error) {
+      console.error('Failed to save experimental features:', error);
+      toast.error('Failed to save experimental feature settings');
+    } finally {
+      setSaving(false);
+    }
+  }, [features]);
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-8">
@@ -76,12 +99,9 @@ export default function ExperimentalFeaturesSettings(): React.JSX.Element {
     return (
       <div className="space-y-3">
         <p className="text-accent-500">{loadError}</p>
-        <button
-          onClick={load}
-          className="bg-primary-500 text-white px-4 py-2 rounded hover:bg-primary-600 transition-colors"
-        >
+        <Button id="retry-load-experimental-features" onClick={load}>
           Retry
-        </button>
+        </Button>
       </div>
     );
   }
@@ -113,6 +133,15 @@ export default function ExperimentalFeaturesSettings(): React.JSX.Element {
             />
           </div>
         ))}
+        <div className="flex justify-end pt-2">
+          <Button
+            id="save-experimental-features"
+            onClick={handleSave}
+            disabled={!hasChanges || saving}
+          >
+            {saving ? 'Saving...' : 'Save'}
+          </Button>
+        </div>
       </CardContent>
     </Card>
   );
