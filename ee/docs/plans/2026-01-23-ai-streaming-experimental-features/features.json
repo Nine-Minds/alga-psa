@@ -74,7 +74,7 @@
   {
     "id": "F013",
     "description": "Add aiAssistant feature check to /api/chat/v1/completions endpoint, return 403 if disabled",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["API Gating"]
   },
   {

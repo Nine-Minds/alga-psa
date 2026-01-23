@@ -109,4 +109,9 @@ curl -X POST localhost:3000/api/chat/stream/chat \
   - Updated Quick Ask “Open in Sidebar” handoff to no-op if `aiAssistant` is disabled
   - File: `server/src/components/layout/DefaultLayout.tsx`
 - Validation: `npx eslint server/src/components/layout/DefaultLayout.tsx --max-warnings=0`
-- Next feature item: F013 Add aiAssistant feature check to `/api/chat/v1/completions` endpoint, return 403 if disabled
+- Implemented API gating for chat completions:
+  - `/api/chat/v1/completions` returns 403 with `"AI Assistant is not enabled for this tenant"` when `aiAssistant` is disabled
+  - File: `server/src/app/api/chat/v1/completions/route.ts`
+- Validation: `npx eslint server/src/app/api/chat/v1/completions/route.ts` (existing `no-undef` warnings for `process` in route handlers)
+- Note: `npm -w server run lint` currently fails (`next lint` reports invalid project directory `/server/lint`).
+- Next feature item: F014 Add aiAssistant feature check to `/api/chat/v1/execute` endpoint, return 403 if disabled
