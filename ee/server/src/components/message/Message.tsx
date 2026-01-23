@@ -23,6 +23,7 @@ type MessageProps = {
   content: string;
   clientUrl?: string;
   isFunction?: boolean;
+  showStreamingCursor?: boolean;
   reasoning?: string;
   functionCallMeta?: FunctionCallMeta;
 };
@@ -105,6 +106,7 @@ export const Message: React.FC<MessageProps> = ({
   content,
   clientUrl,
   isFunction,
+  showStreamingCursor,
   reasoning,
   functionCallMeta,
 }) => {
@@ -235,6 +237,11 @@ export const Message: React.FC<MessageProps> = ({
               >
                 {markdownContent}
               </ReactMarkdown>
+              {showStreamingCursor ? (
+                <span className="message-streaming-cursor" aria-hidden="true">
+                  ▍
+                </span>
+              ) : null}
             </div>
 
             {reasoningContent ? (

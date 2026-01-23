@@ -134,7 +134,7 @@
   {
     "id": "F023",
     "description": "Display streaming indicator/cursor while tokens are being received",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Streaming UX"]
   },
   {

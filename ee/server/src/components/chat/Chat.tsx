@@ -1058,7 +1058,12 @@ export const Chat: React.FC<ChatProps> = ({
                 />
               ))}
               {!!incomingMessage && (
-                <Message role="bot" isFunction={isFunction} content={incomingMessage} />
+                <Message
+                  role="bot"
+                  isFunction={isFunction}
+                  content={incomingMessage}
+                  showStreamingCursor={generatingResponse && !isFunction}
+                />
               )}
             </>
           )}

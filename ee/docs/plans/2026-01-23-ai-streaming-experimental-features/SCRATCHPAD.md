@@ -159,3 +159,11 @@ curl -X POST localhost:3000/api/chat/stream/chat \
   - File: `ee/server/src/components/chat/Chat.tsx`
 - Validation: `npx eslint ee/server/src/components/chat/Chat.tsx`
 - Next feature item: F023 Display streaming indicator/cursor while tokens are being received
+
+### 2026-01-23 (cont.)
+- Implemented streaming cursor indicator while tokens are being received:
+  - Added `showStreamingCursor` prop to `Message` and render a blinking cursor glyph (`▍`) after markdown content
+  - Wired Chat incoming assistant message to set `showStreamingCursor={generatingResponse && !isFunction}` so it only shows during token streaming (not during the initial “Thinking...” phase)
+  - Files: `ee/server/src/components/message/Message.tsx`, `ee/server/src/components/message/message.css`, `ee/server/src/components/chat/Chat.tsx`
+- Validation: `npx eslint ee/server/src/components/chat/Chat.tsx ee/server/src/components/message/Message.tsx --max-warnings=9999` (warnings present; no errors)
+- Next feature item: F024 Handle stream interruption gracefully - show partial response with error indicator
