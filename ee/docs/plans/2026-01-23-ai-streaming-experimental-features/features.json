@@ -98,7 +98,7 @@
   {
     "id": "F017",
     "description": "Modify ChatCompletionsService to support streaming mode with `stream: true` parameter to OpenRouter",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Streaming Implementation"]
   },
   {

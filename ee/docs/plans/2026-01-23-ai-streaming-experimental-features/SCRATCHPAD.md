@@ -128,4 +128,9 @@ curl -X POST localhost:3000/api/chat/stream/chat \
   - File: `server/src/app/api/chat/v1/completions/stream/route.ts`
   - Note: currently sends a single SSE comment (`: ok`) then closes; token streaming is implemented in later items.
 - Validation: `npx eslint server/src/app/api/chat/v1/completions/stream/route.ts`
-- Next feature item: F017 Modify ChatCompletionsService to support streaming mode with `stream: true`
+- Implemented OpenRouter streaming support in ChatCompletionsService:
+  - Added `createRawCompletionStream()` public helper for later SSE endpoints
+  - Added `generateStreamingCompletion()` internal helper that calls OpenRouter with `stream: true`
+  - File: `ee/server/src/services/chatCompletionsService.ts`
+- Validation: `npm -w sebastian-ee run typecheck` currently fails due to pre-existing TS2307 imports in `ee/server/src/components/chat/QuickAskOverlay.tsx` (unrelated to streaming support)
+- Next feature item: F018 Format streaming response as SSE `data: {"content":"token","done":false}`

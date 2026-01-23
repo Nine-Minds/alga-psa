@@ -111,6 +111,13 @@ interface ExecuteCompletionParams {
 }
 
 export class ChatCompletionsService {
+  static async createRawCompletionStream(
+    conversation: ChatCompletionMessage[],
+  ): Promise<AsyncIterable<OpenAI.Chat.Completions.ChatCompletionChunk>> {
+    const client = await this.getOpenRouterClient();
+    return this.generateStreamingCompletion(client, conversation);
+  }
+
   static async handleRequest(req: NextRequest): Promise<Response> {
     if (!isEnterpriseEdition()) {
       return new Response(
@@ -903,6 +910,21 @@ export class ChatCompletionsService {
     }
 
     throw new Error(EMPTY_RESPONSE_ERROR);
+  }
+
+  private static async generateStreamingCompletion(
+    client: OpenAI,
+    conversation: ChatCompletionMessage[],
+  ) {
+    return client.chat.completions.create({
+      model: process.env.OPENROUTER_CHAT_MODEL ?? 'minimax/minimax-m2',
+      messages: this.buildOpenAiMessages(conversation),
+      tools: this.buildToolDefinitions(),
+      tool_choice: 'auto',
+      temperature: 1.0,
+      top_p: 0.95,
+      stream: true,
+    });
   }
 
   private static hasMeaningfulContent(content: ParsedAssistantContent): boolean {
