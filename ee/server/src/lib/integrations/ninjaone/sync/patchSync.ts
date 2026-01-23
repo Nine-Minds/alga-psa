@@ -5,9 +5,9 @@
  * Updates pending patches, failed patches, and last scan timestamps.
  */
 
-import logger from '@shared/core/logger';
+import logger from '@alga-psa/core/logger';
 import axios from 'axios';
-import { createTenantKnex } from '@/db';
+import { createTenantKnex } from '@/lib/db';
 import { createNinjaOneClient } from '../ninjaOneClient';
 import type { NinjaOneDevicePatchStatus } from '../../../../interfaces/ninjaone.interfaces';
 

@@ -131,6 +131,13 @@ export function registerRegistryV2KnexRepo(knex: Knex) {
       } as any;
     },
 
+    async listVersionStringsForExtension(extensionId: string): Promise<string[]> {
+      const rows = await knex('extension_version')
+        .where({ registry_id: extensionId })
+        .select(['version']);
+      return rows.map((r: any) => r.version as string);
+    },
+
     async create(input: Omit<ExtensionVersionRecord, 'id' | 'createdAt'>): Promise<ExtensionVersionRecord> {
       const id = uuid();
       const now = knex.fn.now();

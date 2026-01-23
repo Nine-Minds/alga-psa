@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Popup from './Popup';
 import { Template } from '../../services/flow/types/workflowTypes';
-import { Input } from '@/components/ui/Input';
+import { Input } from '@alga-psa/ui/components/Input';
 
 interface ComboBoxFieldSelectorProps {
   value?: Template;

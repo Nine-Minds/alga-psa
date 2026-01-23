@@ -4,8 +4,8 @@
  */
 
 import { Knex } from 'knex';
-import { withTransaction } from '@shared/db';
-import { BaseService, ServiceContext, ListOptions, ListResult } from './BaseService';
+import { withTransaction } from '@alga-psa/db';
+import { BaseService, ServiceContext, ListOptions, ListResult } from '@alga-psa/db';
 import { 
   IProject, 
   IProjectPhase, 

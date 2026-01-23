@@ -18,6 +18,6 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const { ChatCompletionsService } = await import('@product/chat/ee/entry');
+  const { ChatCompletionsService } = await import('@product/chat/entry');
   return ChatCompletionsService.handleRequest(req);
 }

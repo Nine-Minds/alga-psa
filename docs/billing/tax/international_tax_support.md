@@ -63,7 +63,7 @@ To define a tax holiday:
 ## Implementation Details
 
 - The `TaxService` class (`server/src/lib/services/taxService.ts`) handles the complex tax calculations.
-- Tax settings are managed through the `TaxSettingsForm` component (`server/src/components/TaxSettingsForm.tsx`).
+- Tax settings are managed through the `TaxSettingsForm` component (`packages/billing/src/components/tax/TaxSettingsForm.tsx`).
 - The `invoiceActions.ts` file has been updated to use the new tax calculation logic when generating invoices.
 
 ## API

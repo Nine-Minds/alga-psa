@@ -26,7 +26,7 @@ vi.hoisted(() => {
   return {}
 });
 
-vi.mock('@alga-psa/shared/db/admin', () => ({
+vi.mock('@alga-psa/db/admin', () => ({
   getAdminConnection: vi.fn(async () => {
     const state = (globalThis as any)['__surveyTriggerDispatchTestState__'] as TestState;
     if (!state.integrationDb) {

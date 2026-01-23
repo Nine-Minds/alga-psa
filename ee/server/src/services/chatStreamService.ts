@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server';
 import { OpenRouterChatModel } from '../models/OpenRouterChatModel';
-import { getSecretProviderInstance } from '@alga-psa/shared/core/secretProvider';
+import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 
 interface StreamRequestBody {
   inputs: any[];

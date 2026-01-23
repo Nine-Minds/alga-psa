@@ -4,7 +4,7 @@
   "type": "module",
   "scripts": {
     "clean": "rimraf dist",
-    "build": "alga build",
+    "build": "alga build --skip-install",
     "postbuild": "node ./scripts/postbuild.mjs",
     "pack": "alga pack",
     "test": "vitest"

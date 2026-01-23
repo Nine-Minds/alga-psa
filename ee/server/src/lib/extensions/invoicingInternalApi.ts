@@ -53,7 +53,7 @@ export async function handleInternalInvoicingInstallRequest(params: {
     }
 
     const validated = validateCreateManualInvoiceInput(raw)
-    if (!validated.ok) {
+    if (validated.ok === false) {
       return {
         status: 400,
         body: { success: false, error: validated.error, fieldErrors: validated.fieldErrors },

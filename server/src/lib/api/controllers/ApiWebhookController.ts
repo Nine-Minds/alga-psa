@@ -28,9 +28,7 @@ import { z } from 'zod';
 import { 
   ApiKeyServiceForApi 
 } from '../../services/apiKeyServiceForApi';
-import { 
-  findUserByIdForApi 
-} from '../../actions/user-actions/findUserByIdForApi';
+import { findUserByIdForApi } from '@alga-psa/users/actions';
 import { 
   runWithTenant 
 } from '../../db';

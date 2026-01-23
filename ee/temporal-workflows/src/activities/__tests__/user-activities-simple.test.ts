@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { setupTestDatabase, type TestDatabase } from '../../test-utils/database';
-import { withAdminTransaction } from '@alga-psa/shared/db/index.js';
+import { withAdminTransaction } from '@alga-psa/db.js';
 import { v4 as uuidv4 } from 'uuid';
 import { hashPassword, generateSecurePassword } from '@alga-psa/shared/utils/encryption.js';
 import type { Knex } from 'knex';

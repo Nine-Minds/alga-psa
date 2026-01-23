@@ -1,4 +1,4 @@
-import { ClientDashboard } from 'server/src/components/client-portal/dashboard/ClientDashboard';
+import { ClientDashboard } from '@alga-psa/client-portal/components';
 
 export default function DashboardPage() {
   return <ClientDashboard />;

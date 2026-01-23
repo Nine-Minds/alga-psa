@@ -7,17 +7,17 @@
 import { Knex } from 'knex';
 import { Temporal } from '@js-temporal/polyfill';
 import { v4 as uuidv4 } from 'uuid';
-import { BaseService, ServiceContext, ListOptions, ListResult } from './BaseService';
-import { withTransaction } from '@shared/db';
+import { BaseService, ServiceContext, ListOptions, ListResult } from '@alga-psa/db';
+import { withTransaction } from '@alga-psa/db';
 import { createTenantKnex } from '../../db';
-import { getCurrentUser } from '../../actions/user-actions/userActions';
+import { getCurrentUser } from '@alga-psa/users/actions';
 import { hasPermission } from '../../auth/rbac';
 import { auditLog } from '../../logging/auditLog';
 import { publishEvent } from '../../eventBus/publishers';
 
 // Import existing service functions
 import * as invoiceService from '../../services/invoiceService';
-import { generateInvoiceNumber } from '../../actions/invoiceGeneration';
+import { generateInvoiceNumber } from '@alga-psa/billing/actions/invoiceGeneration';
 import { BillingEngine } from '../../billing/billingEngine';
 import { TaxService } from '../../services/taxService';
 import { NumberingService } from '../../services/numberingService';
@@ -25,7 +25,7 @@ import { PDFGenerationService, createPDFGenerationService } from '../../../servi
 import { StorageService } from '../../storage/StorageService';
 
 // Import workflow actions
-import { approveInvoice, rejectInvoice, processInvoiceEvent } from '../../actions/invoiceWorkflowActions';
+import { approveInvoice, rejectInvoice, processInvoiceEvent } from '@alga-psa/billing/actions/invoiceWorkflowActions';
 
 // Import schemas and interfaces
 import {

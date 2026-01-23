@@ -842,7 +842,7 @@ async exportPayment(payment: AccountingPaymentExport) {
 - **Invoice System**: `invoices`, `invoice_payments`, `transactions` tables
 - **Email System**: `invoiceEmailHandler.ts`, `emailService.tsx`
 - **Accounting Export**: `AccountingExportAdapter`, `tenant_external_entity_mappings`
-- **Secret Provider**: Credential storage via `@shared/core/secretProvider`
+- **Secret Provider**: Credential storage via `@alga-psa/core/secrets`
 - **Event Bus**: Payment events for workflow triggers
 
 ### External Services

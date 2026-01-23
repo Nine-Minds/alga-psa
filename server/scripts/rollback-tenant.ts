@@ -4,7 +4,7 @@
  * CLI script to rollback/delete a tenant
  */
 
-import { rollbackTenant } from '../../ee/server/src/lib/testing/tenant-creation';
+import { rollbackTenant } from '@ee/lib/testing/tenant-creation';
 import knex from 'knex';
 import { parse } from 'ts-command-line-args';
 import * as dotenv from 'dotenv';

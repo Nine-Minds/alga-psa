@@ -1,0 +1,65 @@
+{
+  "name": "@alga-psa/core",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./src/index.ts"
+    },
+    "./features": {
+      "import": "./dist/lib/features.js",
+      "types": "./src/lib/features.ts"
+    },
+    "./logger": {
+      "import": "./dist/lib/logger.js",
+      "types": "./src/lib/logger.ts"
+    },
+    "./formatters": {
+      "import": "./dist/lib/formatters.js",
+      "types": "./src/lib/formatters.ts"
+    },
+    "./secrets": {
+      "import": "./dist/lib/secrets/index.js",
+      "types": "./src/lib/secrets/index.ts"
+    },
+    "./events": {
+      "import": "./dist/lib/events/index.js",
+      "types": "./src/lib/events/index.ts"
+    },
+    "./encryption": {
+      "import": "./dist/lib/encryption.js",
+      "types": "./src/lib/encryption.ts"
+    },
+    "./server": {
+      "import": "./dist/server.js",
+      "types": "./src/server.ts"
+    },
+    "./i18n/config": {
+      "import": "./dist/lib/i18n/config.js",
+      "types": "./src/lib/i18n/config.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsc -b",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "eslint src/"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.5",
+    "node-vault": "^0.10.2",
+    "redis": "^4.6.10",
+    "uuid": "^9.0.1",
+    "winston": "^3.13.1",
+    "winston-daily-rotate-file": "^5.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/uuid": "^9.0.7",
+    "typescript": "^5.7.3"
+  }
+}

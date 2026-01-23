@@ -2,13 +2,10 @@
 
 import { Suspense, useState, useCallback, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
-import { NotificationSettings } from "server/src/components/settings/notifications/NotificationSettings";
-import { EmailTemplates } from "server/src/components/settings/notifications/EmailTemplates";
-import { NotificationCategories } from "server/src/components/settings/notifications/NotificationCategories";
-import { InternalNotificationCategories } from "server/src/components/settings/notifications/InternalNotificationCategories";
-import { CustomTabs } from "server/src/components/ui/CustomTabs";
-import ViewSwitcher, { ViewSwitcherOption } from "server/src/components/ui/ViewSwitcher";
-import { Card } from "server/src/components/ui/Card";
+import { NotificationSettings, EmailTemplates, NotificationCategories, InternalNotificationCategories } from "@alga-psa/notifications/components";
+import { CustomTabs } from "@alga-psa/ui/components/CustomTabs";
+import ViewSwitcher, { ViewSwitcherOption } from "@alga-psa/ui/components/ViewSwitcher";
+import { Card } from "@alga-psa/ui/components/Card";
 import { UnsavedChangesProvider, useUnsavedChanges } from "server/src/contexts/UnsavedChangesContext";
 
 type NotificationView = 'email' | 'internal';

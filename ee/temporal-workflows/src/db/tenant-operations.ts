@@ -1,5 +1,5 @@
 import { Context } from '@temporalio/activity';
-import { getAdminConnection } from '@alga-psa/shared/db/admin.js';
+import { getAdminConnection } from '@alga-psa/db/admin.js';
 import type { Knex } from 'knex';
 import type {
   CreateTenantActivityInput,
@@ -8,7 +8,7 @@ import type {
   SetupTenantDataActivityResult
 } from '../types/workflow-types.js';
 import { updateSubscriptionMetadata } from '../services/stripe-service.js';
-import { getSecret } from '@alga-psa/shared/core';
+import { getSecret } from '@alga-psa/core/secrets';
 
 const logger = () => Context.current().log;
 

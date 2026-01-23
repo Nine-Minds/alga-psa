@@ -1,14 +1,15 @@
 'use client'
 
+
 import React, { useState, useEffect } from 'react';
-import { Dialog } from 'server/src/components/ui/Dialog';
-import { Button } from 'server/src/components/ui/Button';
-import { Input } from 'server/src/components/ui/Input';
-import { Label } from 'server/src/components/ui/Label';
-import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
-import { IconPicker, getIconComponent } from 'server/src/components/ui/IconPicker';
-import { createInteractionType, updateInteractionType, getAllInteractionTypes } from 'server/src/lib/actions/interactionTypeActions';
-import { IInteractionType } from 'server/src/interfaces/interaction.interfaces';
+import { Dialog } from '@alga-psa/ui/components/Dialog';
+import { Button } from '@alga-psa/ui/components/Button';
+import { Input } from '@alga-psa/ui/components/Input';
+import { Label } from '@alga-psa/ui/components/Label';
+import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
+import { IconPicker, getIconComponent } from '@alga-psa/ui/components/IconPicker';
+import { createInteractionType, updateInteractionType, getAllInteractionTypes } from '@alga-psa/clients/actions';
+import { IInteractionType } from '@alga-psa/types';
 
 interface QuickAddInteractionTypeProps {
   isOpen: boolean;

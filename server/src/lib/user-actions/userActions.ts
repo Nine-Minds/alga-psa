@@ -1,1 +1,1 @@
-export * from '../actions/user-actions/userActions';
+export * from '@alga-psa/users/actions';

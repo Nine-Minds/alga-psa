@@ -1,7 +1,7 @@
 'use server'
 
 import { createTenantKnex } from '@/lib/db';
-import { getAdminConnection } from '@alga-psa/shared/db/admin';
+import { getAdminConnection } from '@alga-psa/db/admin';
 import type { Knex } from 'knex';
 import { computeDomain, enqueueProvisioningWorkflow } from '@ee/lib/extensions/runtime/provision';
 

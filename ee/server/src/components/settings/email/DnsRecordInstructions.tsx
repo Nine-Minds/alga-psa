@@ -2,10 +2,10 @@
 
 import React from 'react';
 import { Copy, CheckCircle2, AlertTriangle, XCircle, Clock } from 'lucide-react';
-import { Button } from 'server/src/components/ui/Button';
-import { Card, CardContent } from 'server/src/components/ui/Card';
-import { Label } from 'server/src/components/ui/Label';
-import type { DnsRecord, DnsLookupResult } from '@shared/types/email';
+import { Button } from '@alga-psa/ui/components/Button';
+import { Card, CardContent } from '@alga-psa/ui/components/Card';
+import { Label } from '@alga-psa/ui/components/Label';
+import type { DnsRecord, DnsLookupResult } from '@alga-psa/types';
 import toast from 'react-hot-toast';
 
 interface DnsRecordInstructionsProps {

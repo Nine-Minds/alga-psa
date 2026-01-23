@@ -1,4 +1,4 @@
-import { ISO8601String } from '../types/types.d';
+import { ISO8601String } from '@alga-psa/types';
 import { TenantEntity } from './index';
 
 export interface ITicketMaterial extends TenantEntity {

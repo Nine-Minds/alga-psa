@@ -1,3 +1,13 @@
+/**
+ * ⚠️ SCHEMA RENAME NOTICE: Many tables in this file have been renamed.
+ * DO NOT use names from this file directly - check the rename migrations:
+ *
+ * - companies → clients (see 20251003000001_company_to_client_migration.cjs)
+ * - channels → boards (see 20250930000001_rename_channels_to_boards.cjs)
+ * - billing_plans → contract_lines (see 20251008000001_rename_billing_to_contracts.cjs)
+ * - service_categories → ticket_categories (see 20250327144330_rename_service_categories_to_ticket_categories.cjs)
+ */
+
 exports.up = async function(knex) {
     await knex.schema.createTable('tenants', (table) => {
         table.uuid('tenant').primary().defaultTo(knex.raw('gen_random_uuid()'));

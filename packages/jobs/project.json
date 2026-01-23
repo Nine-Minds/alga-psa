@@ -1,0 +1,26 @@
+{
+  "name": "@alga-psa/jobs",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "packages/jobs/src",
+  "projectType": "library",
+  "tags": ["scope:jobs", "type:horizontal"],
+  "targets": {
+    "build": {
+      "executor": "nx:noop"
+    },
+    "test": {
+      "executor": "@nx/vite:test",
+      "outputs": ["{workspaceRoot}/coverage/packages/jobs"],
+      "options": {
+        "passWithNoTests": true
+      }
+    },
+    "lint": {
+      "executor": "@nx/eslint:lint",
+      "outputs": ["{options.outputFile}"],
+      "options": {
+        "lintFilePatterns": ["packages/jobs/**/*.{ts,tsx}"]
+      }
+    }
+  }
+}

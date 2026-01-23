@@ -8,10 +8,10 @@
  * @see ee/docs/plans/asset-detail-view-enhancement.md §1.3.3
  */
 
-import logger from '@shared/core/logger';
+import logger from '@alga-psa/core/logger';
 import axios from 'axios';
 import { Knex } from 'knex';
-import { createTenantKnex } from '@/db';
+import { createTenantKnex } from '@/lib/db';
 import { createNinjaOneClient } from '../ninjaOneClient';
 import type { NinjaOneSoftware } from '../../../../interfaces/ninjaone.interfaces';
 import type {

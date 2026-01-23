@@ -5,8 +5,8 @@ import { DatabaseTemplateProcessor } from '../services/email/templateProcessors'
 import { getConnection } from '../db/db';
 import { runWithTenant } from '../db/index';
 import { getUserInfoForEmail, resolveEmailLocale } from '../notifications/emailLocaleResolver';
-import { SupportedLocale } from '../i18n/config';
-import logger from '@alga-psa/shared/core/logger';
+import { SupportedLocale } from '@alga-psa/ui/lib/i18n/config';
+import logger from '@alga-psa/core/logger';
 
 interface SendPortalInvitationEmailParams {
   email: string;

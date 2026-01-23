@@ -1,8 +1,8 @@
 import fs from 'fs/promises';
 import path from 'path';
 import crypto from 'crypto';
-import { withAdminTransaction } from '@shared/db/index'; // Use admin connection for non-tenant access
-import { compileStandardTemplate } from './actions/invoiceTemplates'; // Import the standard compiler
+import { withAdminTransaction } from '@alga-psa/db'; // Use admin connection for non-tenant access
+import { compileStandardTemplate } from '@alga-psa/billing/actions/invoiceTemplates'; // Import the standard compiler
 
 /**
  * Checks standard AssemblyScript invoice templates against the database records
@@ -13,6 +13,18 @@ export async function syncStandardTemplates(): Promise<void> {
     console.log('[Startup Task] Starting syncStandardTemplates...');
     try {
         // Corrected path: Removed 'server/' prefix assuming cwd is the server directory
+        const asmScriptProjectDir = path.resolve(process.cwd(), 'src/invoice-templates/assemblyscript');
+        const ascEntrypoint = path.resolve(asmScriptProjectDir, 'node_modules/assemblyscript/dist/asc.js');
+        try {
+            await fs.access(ascEntrypoint);
+        } catch {
+            console.warn(
+                `[Startup Task] Skipping syncStandardTemplates: AssemblyScript compiler missing (${ascEntrypoint}). ` +
+                `Reinstall deps in ${asmScriptProjectDir} (e.g. npm install) to enable recompilation.`
+            );
+            return;
+        }
+
         const standardTemplatesDir = path.resolve(process.cwd(), 'src/invoice-templates/assemblyscript/standard');
         console.log(`[Startup Task] Checking standard templates in: ${standardTemplatesDir}`);
 
@@ -71,7 +83,8 @@ export async function syncStandardTemplates(): Promise<void> {
                         if (compileResult.success) {
                             console.log(`[Startup Task] Successfully recompiled and updated standard template: ${standard_invoice_template_code}. New SHA: ${compileResult.sha}`);
                         } else {
-                            console.error(`[Startup Task] Failed to recompile standard template ${standard_invoice_template_code}: ${compileResult.error}`, compileResult.details || '');
+                            const errorResult = compileResult as { success: false; error: string; details?: string };
+                            console.error(`[Startup Task] Failed to recompile standard template ${standard_invoice_template_code}: ${errorResult.error}`, errorResult.details || '');
                             // Decide if failure should halt startup or just log error
                         }
                     } else {

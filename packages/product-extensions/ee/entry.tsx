@@ -2,7 +2,7 @@ import Link from 'next/link';
 import ExtensionIframe from './ExtensionIframe';
 import DockerExtensionIframe from './DockerExtensionIframe';
 import { getInstallInfo } from '@ee/lib/actions/extensionDomainActions';
-import { buildExtUiSrc } from 'server/src/lib/extensions/assets/url.shared';
+import { buildExtUiSrc } from './lib/extensions/assets/url.shared';
 
 export const metadata = { title: 'Extension' };
 export const dynamic = 'force-dynamic';
@@ -106,7 +106,7 @@ export default async function Page({ params }: { params: PageParams | Promise<Pa
 
   return (
     <div className="flex-1 h-full w-full flex flex-col min-h-0">
-      <ExtensionIframe domain={info.runner_domain} extensionId={id} />
+      <ExtensionIframe domain={info.runner_domain} extensionId={id} contentHash={info.content_hash} />
     </div>
   );
 }

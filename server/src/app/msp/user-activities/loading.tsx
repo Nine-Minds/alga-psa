@@ -1,4 +1,4 @@
-import Spinner from 'server/src/components/ui/Spinner';
+import Spinner from '@alga-psa/ui/components/Spinner';
 
 export default function UserActivitiesLoading() {
   return (

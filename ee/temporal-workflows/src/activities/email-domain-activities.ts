@@ -1,8 +1,8 @@
 import { Context } from '@temporalio/activity';
 import type { Knex } from 'knex';
 
-import type { DomainVerificationResult, DnsRecord, DnsLookupResult } from '@shared/types/email';
-import { ManagedDomainService as ManagedDomainServiceExport } from '@product/email-domains/entry';
+import type { DomainVerificationResult, DnsRecord, DnsLookupResult } from '@alga-psa/types';
+import { ManagedDomainService as ManagedDomainServiceExport } from '@alga-psa/integrations/email/domains/entry';
 
 const log = () => Context.current().log;
 
@@ -28,7 +28,7 @@ interface ManagedDomainServiceCtor {
 
 const ManagedDomainServiceCtor = ManagedDomainServiceExport as ManagedDomainServiceCtor | undefined;
 
-import { getConnection } from '@shared/db/tenant';
+import { getConnection } from '@alga-psa/db/tenant';
 
 async function buildService(tenantId: string): Promise<ManagedDomainServiceLike> {
   if (!tenantId) {

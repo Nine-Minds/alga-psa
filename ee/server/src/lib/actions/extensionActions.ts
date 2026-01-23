@@ -2,10 +2,10 @@
 
 import { revalidatePath } from 'next/cache'
 import { createTenantKnex } from '@/lib/db'
-import { withTransaction } from '@shared/db'
+import { withTransaction } from '@alga-psa/db'
 import { ExtensionRegistry } from '../extensions/registry'
 import { ExtensionStorageService } from '../extensions/storage/storageService'
-import logger from '@shared/core/logger'
+import logger from '@alga-psa/core/logger'
 import { Extension, ExtensionManifest } from '../extensions/types'
 import { Knex } from 'knex'
 import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions'

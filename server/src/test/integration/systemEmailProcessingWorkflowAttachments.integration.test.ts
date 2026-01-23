@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { systemEmailProcessingWorkflow } from '../../../../services/workflow-worker/src/workflows/system-email-processing-workflow';
+import { systemEmailProcessingWorkflow } from '@shared/workflow/workflows/system-email-processing-workflow';
 
 function createWorkflowHarness(overrides?: {
   findTicketByEmailThreadResult?: any;

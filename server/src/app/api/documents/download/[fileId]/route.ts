@@ -4,11 +4,11 @@ import DocumentBlockContent from 'server/src/lib/models/documentBlockContent';
 import Document from 'server/src/lib/models/document';
 import { marked } from 'marked';
 import { convertBlockNoteToHTML } from 'server/src/lib/utils/blocknoteUtils';
-import logger from '@alga-psa/shared/core/logger';
-import { downloadDocument } from 'server/src/lib/actions/document-actions/documentActions';
+import logger from '@alga-psa/core/logger';
+import { downloadDocument } from '@alga-psa/documents/actions/documentActions';
 import { createPDFGenerationService } from 'server/src/services/pdf-generation.service';
 import { StorageService } from 'server/src/lib/storage/StorageService';
-import { withTransaction } from '@alga-psa/shared/db';
+import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { getSession } from 'server/src/lib/auth/getSession';
 

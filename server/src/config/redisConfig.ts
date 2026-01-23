@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { createClient } from 'redis';
-import logger from '@alga-psa/shared/core/logger';
+import logger from '@alga-psa/core/logger';
 import { getSecret } from '../lib/utils/getSecret';
 
 // Construct Redis URL from environment variables
@@ -101,9 +101,8 @@ export async function getRedisClient() {
     logger.warn('[Redis] No Redis password configured - this is not recommended for production');
   }
   
-  const client = createClient({
+  const clientOptions: Parameters<typeof createClient>[0] = {
     url: config.url,
-    password,
     socket: {
       reconnectStrategy: (retries) => {
         if (retries > 20) {
@@ -112,7 +111,14 @@ export async function getRedisClient() {
         return Math.min(500 * Math.pow(2, retries), 5000);
       }
     }
-  });
+  };
+
+  // Avoid sending AUTH when no password is configured (node-redis will AUTH if `password` is set, even to an empty string).
+  if (password) {
+    (clientOptions as any).password = password;
+  }
+
+  const client = createClient(clientOptions);
 
   await client.connect();
   return client;

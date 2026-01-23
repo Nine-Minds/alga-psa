@@ -9,7 +9,9 @@
 import { CopyObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
 import { createS3BundleStore } from "../storage/bundles/s3-bundle-store";
 import { isValidSha256Hash, objectKeyFor, normalizeBasePrefix } from "../storage/bundles/types";
+import { spawn } from "node:child_process";
 import { Readable } from "node:stream";
+import * as tarStream from "tar-stream";
 import { getS3Client, getBundleBucket } from "../storage/s3-client";
 import { createTenantKnex } from '@/lib/db/index';
 import { HeadBucketCommand } from "@aws-sdk/client-s3";
@@ -30,7 +32,7 @@ import {
 import { upsertVersionFromManifest } from "../extensions/registry-v2";
 import { ensureRegistryV2KnexRepo } from "../extensions/registry-v2-repo-knex";
 import type { Knex } from "knex";
-import { getAdminConnection } from '@shared/db/admin';
+import { getAdminConnection } from '@alga-psa/db/admin';
 // import { createTenantKnex } from '@/lib/db/index';
 
 //
@@ -64,6 +66,102 @@ class HttpError extends Error {
 
 const MAX_BUNDLE_SIZE_BYTES = 200 * 1024 * 1024; // 200 MiB
 const BASE_PREFIX = "sha256/";
+
+async function decompressZstdBuffer(compressed: Buffer): Promise<Buffer> {
+  return new Promise<Buffer>((resolve, reject) => {
+    const proc = spawn("zstd", ["-d", "-q", "--stdout"], {
+      stdio: ["pipe", "pipe", "pipe"],
+    });
+
+    const out: Buffer[] = [];
+    const err: Buffer[] = [];
+
+    proc.stdout.on("data", (chunk) => out.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk)));
+    proc.stderr.on("data", (chunk) => err.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk)));
+
+    proc.on("error", (error) => {
+      reject(new Error(`zstd decompression failed to start: ${error.message}`));
+    });
+
+    proc.on("close", (code) => {
+      if (code === 0) {
+        resolve(Buffer.concat(out));
+        return;
+      }
+
+      const stderr = Buffer.concat(err).toString("utf-8").trim();
+      reject(new Error(`zstd decompression failed (code=${code}): ${stderr || "unknown error"}`));
+    });
+
+    proc.stdin.end(compressed);
+  });
+}
+
+/**
+ * Extract manifest.json from a .tar.zst bundle stored in S3.
+ * Returns the manifest JSON string, or null if not found.
+ */
+async function extractManifestFromBundle(key: string): Promise<string | null> {
+  const store = createS3BundleStore();
+
+  // Get the bundle stream from S3
+  const got = await store.getObjectStream(key);
+  const nodeStream = got.stream as NodeJS.ReadableStream;
+
+  // Collect the entire bundle into memory for zstd decompression
+  // (fzstd requires the full buffer, not streaming)
+  const chunks: Buffer[] = [];
+  for await (const chunk of nodeStream) {
+    chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+  }
+  const compressedData = Buffer.concat(chunks);
+
+  // Decompress with zstd
+  const tarData = await decompressZstdBuffer(compressedData);
+
+  // Parse tar and find manifest.json (at root or nested one level)
+  return new Promise<string | null>((resolve, reject) => {
+    const extract = tarStream.extract();
+    let manifestContent: string | null = null;
+    let resolved = false;
+
+    extract.on('entry', (header, stream, next) => {
+      // Normalize path: remove leading ./ and trailing slashes
+      const name = header.name.replace(/^\.\//, '').replace(/\/$/, '');
+      // Match manifest.json at root or one level deep (e.g., "package/manifest.json")
+      const isManifest = name === 'manifest.json' || /^[^/]+\/manifest\.json$/.test(name);
+
+      if (isManifest && !manifestContent) {
+        const chunks: Buffer[] = [];
+        stream.on('data', (chunk: Buffer) => chunks.push(chunk));
+        stream.on('end', () => {
+          manifestContent = Buffer.concat(chunks).toString('utf-8');
+          resolved = true;
+          // Stop processing further entries
+          extract.destroy();
+          resolve(manifestContent);
+        });
+        stream.on('error', next);
+      } else {
+        // Drain the stream and move to next entry
+        stream.on('end', next);
+        stream.resume();
+      }
+    });
+
+    extract.on('finish', () => {
+      if (!resolved) resolve(manifestContent);
+    });
+    extract.on('error', (err) => {
+      // Ignore errors after we've resolved (from destroy())
+      if (!resolved) reject(err);
+    });
+
+    // Feed tar data to extractor
+    const readable = Readable.from(tarData);
+    readable.pipe(extract);
+  });
+}
 
 // Types
 // Initiate/presign flow removed; uploads now use server-proxied streaming.
@@ -269,24 +367,29 @@ async function finalizeUploadInternal(params: FinalizeParamsInternal): Promise<F
 
   // canonical copy moved below after registry upsert to know tenant/extension
 
-  // Require manifest for this milestone
-  if (typeof manifestJson === "undefined") {
-    throw new HttpError(400, "MANIFEST_REQUIRED", "manifestJson is required for this milestone");
-  }
-  if (typeof manifestJson !== "string" || manifestJson.trim().length === 0) {
-    throw new HttpError(
-      400,
-      "BAD_REQUEST",
-      "manifestJson, if provided, must be a non-empty string"
-    );
+  // Extract manifest from bundle if not provided
+  let resolvedManifestJson = manifestJson;
+  if (typeof resolvedManifestJson === "undefined" || (typeof resolvedManifestJson === "string" && resolvedManifestJson.trim().length === 0)) {
+    try {
+      console.info("ext.finalize.extracting_manifest", { key });
+      const extracted = await extractManifestFromBundle(key);
+      if (!extracted) {
+        throw new HttpError(400, "MANIFEST_NOT_FOUND", "manifest.json not found in bundle");
+      }
+      resolvedManifestJson = extracted;
+      console.info("ext.finalize.manifest_extracted", { key, length: extracted.length });
+    } catch (e: any) {
+      if (e instanceof HttpError) throw e;
+      throw new HttpError(500, "MANIFEST_EXTRACTION_FAILED", `Failed to extract manifest from bundle: ${e?.message || 'unknown error'}`);
+    }
   }
 
   // Temporary debug logging to disambiguate flows and surface parse issues
   try {
     // eslint-disable-next-line no-console
     console.info("ext.finalize.debug.input", {
-      hasManifestJson: typeof manifestJson === "string",
-      manifestLength: typeof manifestJson === "string" ? manifestJson.length : 0,
+      hasManifestJson: typeof resolvedManifestJson === "string",
+      manifestLength: typeof resolvedManifestJson === "string" ? resolvedManifestJson.length : 0,
       key,
       hasSignature: Boolean(signature?.text),
       sigAlg: signature?.algorithm,
@@ -295,7 +398,7 @@ async function finalizeUploadInternal(params: FinalizeParamsInternal): Promise<F
     // ignore logging errors
   }
 
-  const parsed = parseManifestJson(manifestJson);
+  const parsed = parseManifestJson(resolvedManifestJson);
   if (!parsed.manifest) {
     try {
       // eslint-disable-next-line no-console
@@ -394,7 +497,7 @@ async function finalizeUploadInternal(params: FinalizeParamsInternal): Promise<F
   const manifestKey = `tenants/${tenant}/extensions/${upsertResult.extension.id}/sha256/${computedHash}/manifest.json`;
   try {
     const store2 = createS3BundleStore();
-    await store2.putObject(manifestKey, Buffer.from(manifestJson, 'utf-8'), { contentType: 'application/json', cacheControl: 'public, max-age=31536000, immutable', ifNoneMatch: '*' });
+    await store2.putObject(manifestKey, Buffer.from(resolvedManifestJson, 'utf-8'), { contentType: 'application/json', cacheControl: 'public, max-age=31536000, immutable', ifNoneMatch: '*' });
   } catch (e: any) {
     const status = e?.httpStatusCode ?? e?.statusCode;
     if (status === 412 || status === 409) { try { console.info('ext.finalize.debug.manifest_exists', { key: manifestKey, status }); } catch {} }

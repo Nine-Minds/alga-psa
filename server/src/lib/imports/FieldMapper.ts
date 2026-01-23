@@ -3,7 +3,7 @@ import type {
   FieldMapping,
   FieldMappingResult,
   ParsedRecord
-} from '@/types/imports.types';
+} from '../../types/imports.types';
 import { ImportValidationError } from '@/lib/imports/errors';
 
 export interface FieldMapperOptions {

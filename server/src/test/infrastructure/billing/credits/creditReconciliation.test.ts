@@ -1,9 +1,9 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach, vi } from 'vitest';
 import '../../../../../test-utils/nextApiMock';
 import { TestContext } from '../../../../../test-utils/testContext';
-import { createPrepaymentInvoice, applyCreditToInvoice, validateCreditBalance } from 'server/src/lib/actions/creditActions';
-import { finalizeInvoice } from 'server/src/lib/actions/invoiceModification';
-import { generateInvoice } from 'server/src/lib/actions/invoiceGeneration';
+import { createPrepaymentInvoice, applyCreditToInvoice, validateCreditBalance } from '@alga-psa/billing/actions/creditActions';
+import { finalizeInvoice } from '@alga-psa/billing/actions/invoiceModification';
+import { generateInvoice } from '@alga-psa/billing/actions/invoiceGeneration';
 import {
   setupClientTaxConfiguration,
   assignServiceTaxRate
@@ -33,7 +33,7 @@ vi.mock('server/src/lib/auth/getSession', () => ({
   }))
 }));
 
-vi.mock('server/src/lib/actions/user-actions/userActions', () => ({
+vi.mock('@alga-psa/users/actions', () => ({
   getCurrentUser: vi.fn(async () => ({
     user_id: mockedUserId,
     tenant: mockedTenantId,
@@ -54,8 +54,8 @@ vi.mock('server/src/lib/services/numberingService', () => ({
   }
 }));
 
-vi.mock('@alga-psa/shared/db', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@alga-psa/shared/db')>();
+vi.mock('@alga-psa/db', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@alga-psa/db')>();
   return {
     ...actual,
     withTransaction: vi.fn(async (knex, callback) => callback(knex)),
@@ -63,7 +63,7 @@ vi.mock('@alga-psa/shared/db', async (importOriginal) => {
   };
 });
 
-vi.mock('@shared/db', () => ({
+vi.mock('@alga-psa/db', () => ({
   withTransaction: vi.fn(async (knex, callback) => callback(knex)),
   withAdminTransaction: vi.fn(async (callback, existingConnection) => callback(existingConnection as any))
 }));

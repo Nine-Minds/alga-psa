@@ -10,7 +10,7 @@ import {
   TicketCommentAddedEvent
 } from '../events';
 import { sendEventEmail, SendEmailParams } from '../../notifications/sendEventEmail';
-import logger from '@shared/core/logger';
+import logger from '@alga-psa/core/logger';
 import { getConnection } from '../../db/db';
 import { getSecret } from '../../utils/getSecret';
 import { createTenantKnex } from '../../db';
@@ -21,7 +21,7 @@ import { getPortalDomain } from 'server/src/models/PortalDomainModel';
 import { buildTenantPortalSlug } from '@shared/utils/tenantSlug';
 import { TenantEmailService } from '../../services/TenantEmailService';
 import { NotificationAccumulator, PendingNotification, AccumulatedChange } from '../../notifications/NotificationAccumulator';
-import { isValidEmail } from '../../utils/validation';
+import { isValidEmail } from '@alga-psa/core';
 
 /**
  * Get the base URL from NEXTAUTH_URL environment variable

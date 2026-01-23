@@ -1,5 +1,6 @@
 # Start with a base image and install system dependencies
-FROM node:alpine AS base
+# Pinned to Node 24 because the monorepo enforces ">=20 <25" in package.json engines.
+FROM node:24-alpine AS base
 RUN apk add \
     graphicsmagick \
     imagemagick \
@@ -53,15 +54,11 @@ RUN mkdir -p /app/ee/server/src/services && \
 # Remove EE-specific scripts that shouldn't be in CE build
 RUN rm -f /app/server/src/scripts/check-extension.ts
 
-RUN npm install --include=optional sharp --workspace=shared --workspace=server
-RUN npm install --workspace=shared --workspace=server
+RUN npm install --include=optional
 
 # Build shared module first
 WORKDIR /app/shared
 RUN npm run build
-
-WORKDIR /app/server
-RUN npm install
 
 # Increase Node.js memory limit for the build process
 ENV NODE_OPTIONS="--max-old-space-size=8192"
@@ -70,9 +67,8 @@ ENV NODE_OPTIONS="--max-old-space-size=8192"
 ENV EDITION="ce"
 ENV NEXT_PUBLIC_EDITION="community"
 
-RUN NEXTAUTH_SECRET="${NEXTAUTH_SECRET_BUILD}" AUTH_SECRET="${NEXTAUTH_SECRET_BUILD}" npm run build
-
 WORKDIR /app/server
+RUN NEXTAUTH_SECRET="${NEXTAUTH_SECRET_BUILD}" AUTH_SECRET="${NEXTAUTH_SECRET_BUILD}" npm run build
 
 # Create secrets directory and populate with secure placeholder values
 RUN mkdir -p /app/secrets && \
@@ -97,7 +93,7 @@ COPY .env.example /app/.env
 COPY .env.example /app/server/.env  
 
 # Final production image with minimal runtime artifacts
-FROM node:alpine
+FROM node:24-alpine
 RUN apk add --no-cache bash \
     postgresql-client \
     redis \

@@ -11,9 +11,12 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 import { getWorkflowRuntime, getActionRegistry } from '@shared/workflow/core/index.js';
+import { initializeWorkflowRuntimeV2 } from '@shared/workflow/runtime';
+import { WorkflowRuntimeV2Worker } from './v2/WorkflowRuntimeV2Worker.js';
+import { WorkflowRuntimeV2EventStreamWorker } from './v2/WorkflowRuntimeV2EventStreamWorker.js';
 import { WorkflowWorker } from './WorkflowWorker.js';
 import { WorkerServer } from './server.js';
-import logger from '@shared/core/logger.js';
+import logger from '@alga-psa/core/logger';
 import { initializeServerWorkflows } from '@shared/workflow/index.js';
 import { registerAccountingExportWorkflowActions } from 'server/src/lib/workflow/registerAccountingExportActions';
 import { updateSystemWorkflowsFromAssets } from './init/updateWorkflows.js';
@@ -37,43 +40,82 @@ async function startServices() {
   try {
     logger.info('[WorkflowWorker] Initializing services');
     
-    // Initialize the workflow system
-    await initializeServerWorkflows();
-    registerAccountingExportWorkflowActions();
+    const mode = (process.env.WORKFLOW_WORKER_MODE || 'all').trim().toLowerCase();
+    const enableLegacy = mode === 'all' || mode === 'legacy';
+    const enableV2 = mode === 'all' || mode === 'v2';
+    const verbose =
+      process.env.WORKFLOW_WORKER_VERBOSE === 'true' ||
+      process.env.WORKFLOW_WORKER_VERBOSE === '1' ||
+      process.env.WORKFLOW_WORKER_VERBOSE === 'yes';
 
-    // Register enterprise storage providers (required for StorageProviderFactory in worker context)
-    await registerEnterpriseStorageProviders();
-    
-    // Update system workflows from compiled assets
-    await updateSystemWorkflowsFromAssets();
-    
-    // Get the action registry and workflow runtime
-    const actionRegistry = getActionRegistry();
-    registerEmailAttachmentActions(actionRegistry);
+    if (!enableLegacy && !enableV2) {
+      throw new Error(`Invalid WORKFLOW_WORKER_MODE=${process.env.WORKFLOW_WORKER_MODE ?? ''} (expected: all|legacy|v2)`);
+    }
 
-    const workflowRuntime = getWorkflowRuntime(actionRegistry);
-    
-    // Create worker instance with configuration from environment
-    const workerConfig = {
-      pollIntervalMs: parseInt(process.env.POLL_INTERVAL_MS || '300000', 10),
-      batchSize: parseInt(process.env.BATCH_SIZE || '10', 10),
-      maxRetries: parseInt(process.env.MAX_RETRIES || '3', 10),
-      concurrencyLimit: parseInt(process.env.CONCURRENCY_LIMIT || '5', 10),
-      healthCheckIntervalMs: parseInt(process.env.HEALTH_CHECK_INTERVAL_MS || '30000', 10),
-      metricsReportingIntervalMs: parseInt(process.env.METRICS_REPORTING_INTERVAL_MS || '60000', 10)
-    };
-    
-    logger.info('[WorkflowWorker] Starting with config:', workerConfig);
-    const worker = new WorkflowWorker(workflowRuntime, workerConfig);
-    
-    // Create HTTP server instance
-    const server = new WorkerServer(worker);
-    
-    // Start both services
-    await Promise.all([
-      worker.start(),
-      server.start()
-    ]);
+    logger.info('[WorkflowWorker] Mode selection', {
+      mode,
+      enableLegacy,
+      enableV2,
+      verbose,
+      logLevel: process.env.LOG_LEVEL ?? null,
+    });
+
+    if (enableV2) {
+      initializeWorkflowRuntimeV2();
+    }
+
+    let legacyWorker: WorkflowWorker | null = null;
+    let legacyServer: WorkerServer | null = null;
+    if (enableLegacy) {
+      await initializeServerWorkflows();
+      registerAccountingExportWorkflowActions();
+
+      // Register enterprise storage providers (required for StorageProviderFactory in worker context)
+      await registerEnterpriseStorageProviders();
+
+      await updateSystemWorkflowsFromAssets();
+
+      const actionRegistry = getActionRegistry();
+      registerEmailAttachmentActions(actionRegistry);
+      const workflowRuntime = getWorkflowRuntime(actionRegistry);
+
+      const workerConfig = {
+        pollIntervalMs: parseInt(process.env.POLL_INTERVAL_MS || '300000', 10),
+        batchSize: parseInt(process.env.BATCH_SIZE || '10', 10),
+        maxRetries: parseInt(process.env.MAX_RETRIES || '3', 10),
+        concurrencyLimit: parseInt(process.env.CONCURRENCY_LIMIT || '5', 10),
+        healthCheckIntervalMs: parseInt(process.env.HEALTH_CHECK_INTERVAL_MS || '30000', 10),
+        metricsReportingIntervalMs: parseInt(process.env.METRICS_REPORTING_INTERVAL_MS || '60000', 10)
+      };
+
+      logger.info('[WorkflowWorker] Starting legacy worker with config:', workerConfig);
+      legacyWorker = new WorkflowWorker(workflowRuntime, workerConfig);
+      legacyServer = new WorkerServer(legacyWorker);
+    } else {
+      logger.info('[WorkflowWorker] Legacy worker disabled (WORKFLOW_WORKER_MODE=v2)');
+    }
+
+    const runtimeV2WorkerId = enableV2 ? `runtime-v2-${Date.now()}` : null;
+    const runtimeV2EventWorkerId = enableV2 ? `runtime-v2-events-${Date.now()}` : null;
+    const runtimeV2Worker = runtimeV2WorkerId ? new WorkflowRuntimeV2Worker(runtimeV2WorkerId) : null;
+    const runtimeV2EventWorker = runtimeV2EventWorkerId ? new WorkflowRuntimeV2EventStreamWorker(runtimeV2EventWorkerId) : null;
+    if (enableV2) {
+      logger.info('[WorkflowWorker] Starting runtime v2 workers', {
+        runtimeV2WorkerId,
+        runtimeV2EventWorkerId,
+        consumerGroup: process.env.WORKFLOW_RUNTIME_V2_EVENT_CONSUMER_GROUP ?? 'workflow-runtime-v2',
+      });
+    }
+
+    const startPromises: Promise<unknown>[] = [];
+    if (legacyWorker && legacyServer) {
+      startPromises.push(legacyWorker.start(), legacyServer.start());
+    }
+    if (runtimeV2Worker && runtimeV2EventWorker) {
+      startPromises.push(runtimeV2Worker.start(), runtimeV2EventWorker.start());
+    }
+
+    await Promise.all(startPromises);
     
     logger.info('[WorkflowWorker] All services started successfully');
     
@@ -83,10 +125,14 @@ async function startServices() {
     
     async function shutdown() {
       logger.info('[WorkflowWorker] Shutting down services...');
-      await Promise.all([
-        worker.stop(),
-        server.stop()
-      ]);
+      const stopPromises: Promise<unknown>[] = [];
+      if (legacyWorker && legacyServer) {
+        stopPromises.push(legacyWorker.stop(), legacyServer.stop());
+      }
+      if (runtimeV2Worker && runtimeV2EventWorker) {
+        stopPromises.push(runtimeV2Worker.stop(), runtimeV2EventWorker.stop());
+      }
+      await Promise.all(stopPromises);
       process.exit(0);
     }
   } catch (error) {

@@ -8,13 +8,13 @@ import { DuplicateDetector } from '@/lib/imports/DuplicateDetector';
 import { StorageService } from 'server/src/lib/storage/StorageService';
 import { computeRecordHash } from '@/lib/imports/ExternalEntityMappingRepository';
 import { AssetImportJobContext } from '@/lib/imports/importJobContext';
-import { createAsset } from 'server/src/lib/actions/asset-actions/assetActions';
-import type { CreateAssetRequest } from 'server/src/interfaces/asset.interfaces';
-import type { DuplicateDetectionStrategy, FieldMapping, ImportErrorSummary } from '@/types/imports.types';
+import { createAsset } from '@alga-psa/assets/actions/assetActions';
+import type { CreateAssetRequest } from '@alga-psa/types';
+import type { DuplicateDetectionStrategy, FieldMapping, ImportErrorSummary } from '../../../types/imports.types';
 import { JobService } from 'server/src/services/job.service';
 import { JobStatus } from 'server/src/types/job';
 import { runWithTenant } from '@/lib/db';
-import { ImportJobItemStatus } from '@/types/imports.types';
+import { ImportJobItemStatus } from '../../../types/imports.types';
 import { CsvImporter } from '@/lib/imports/CsvImporter';
 
 export interface AssetImportJobData extends Record<string, unknown> {

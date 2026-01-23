@@ -5,7 +5,7 @@ import {
   applyTemplate,
   getTemplateWithDetails,
   getTemplates
-} from 'server/src/lib/actions/project-actions/projectTemplateActions';
+} from '@alga-psa/projects/actions/projectTemplateActions';
 
 // Mock authentication and permissions
 let mockedTenantId = '11111111-1111-1111-1111-111111111111';
@@ -20,11 +20,8 @@ vi.mock('server/src/lib/auth/getSession', () => ({
   }))
 }));
 
-vi.mock('server/src/lib/auth/rbac', () => ({
-  hasPermission: vi.fn(() => Promise.resolve(true))
-}));
-
-vi.mock('server/src/lib/actions/user-actions/userActions', () => ({
+vi.mock('@alga-psa/auth', () => ({
+  hasPermission: vi.fn(() => Promise.resolve(true)),
   getCurrentUser: vi.fn(async () => ({
     user_id: mockedUserId,
     tenant: mockedTenantId,

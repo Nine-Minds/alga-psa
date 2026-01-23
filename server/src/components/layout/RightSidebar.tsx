@@ -1,4 +1,3 @@
-// server/src/components/layout/RightSidebar.tsx
 'use client';
 
 import React, { useEffect, Suspense, lazy, useState } from 'react';

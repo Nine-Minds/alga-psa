@@ -1,0 +1,178 @@
+[
+  { "id": "T001", "description": "Docs: PRD exists and references dependency plans correctly", "implemented": true, "featureIds": ["F001"] },
+
+  { "id": "T002", "description": "Migration: Draft workflow definitions accept null/empty payload schema ref", "implemented": true, "featureIds": ["F002"] },
+  { "id": "T003", "description": "Migration: Existing published workflows remain unchanged after migration", "implemented": true, "featureIds": ["F002", "F078"] },
+  { "id": "T004", "description": "Migration: payload schema mode metadata column(s) exist and default to inferred for new drafts", "implemented": true, "featureIds": ["F003", "F067"] },
+  { "id": "T005", "description": "Migration: Backfill sets payload schema mode to pinned for drafts that already have payloadSchemaRef", "implemented": true, "featureIds": ["F066", "F078"] },
+
+  { "id": "T006", "description": "Unit: WorkflowDefinition draft schema supports payloadSchemaMode field", "implemented": true, "featureIds": ["F005"] },
+  { "id": "T007", "description": "Unit: Published WorkflowDefinition schema requires payloadSchemaRef", "implemented": true, "featureIds": ["F006"] },
+
+  { "id": "T008", "description": "Unit: Publish persists payload_schema_json snapshot and provenance (no dynamic registry generation)", "implemented": false, "featureIds": ["F007", "F008"] },
+  { "id": "T009", "description": "API: list/get schema endpoints return known schema refs used by events/workflows", "implemented": false, "featureIds": ["F009"] },
+  { "id": "T010", "description": "Unit: Payload schema snapshot hashing is deterministic given the same schema JSON", "implemented": true, "featureIds": ["F085"] },
+
+  { "id": "T011", "description": "UI: Designer shows 'Workflow data contract' section instead of requiring payload schema pick", "implemented": true, "featureIds": ["F010"] },
+  { "id": "T012", "description": "UI: New workflow starts in inferred contract mode", "implemented": true, "featureIds": ["F011", "F067"] },
+  { "id": "T013", "description": "UI: Advanced toggle enables pinning payload schema ref", "implemented": true, "featureIds": ["F012"] },
+  { "id": "T014", "description": "UI: Pinning mode shows schema select + advanced input", "implemented": true, "featureIds": ["F013"] },
+  { "id": "T015", "description": "UI: Inferred mode hides/disables payload schema selection controls", "implemented": true, "featureIds": ["F014"] },
+  { "id": "T016", "description": "UI: Inferred mode displays an 'Effective schema (design time)' preview label", "implemented": true, "featureIds": ["F015", "F053"] },
+  { "id": "T017", "description": "UI: Pinned mode displays 'Pinned contract schema' label and preview", "implemented": true, "featureIds": ["F016", "F053"] },
+  { "id": "T018", "description": "UI: Published version displays 'Published contract schema' ref and preview", "implemented": false, "featureIds": ["F017", "F053"] },
+
+  { "id": "T019", "description": "Unit: Effective data context includes event.payload typed by trigger schema", "implemented": true, "featureIds": ["F018", "F019"] },
+  { "id": "T020", "description": "Unit: Effective data context includes vars.<saveAs> typed by output schema where available", "implemented": true, "featureIds": ["F018", "F020"] },
+  { "id": "T021", "description": "Unit: Unknown output schemas are surfaced as unknown type in effective context", "implemented": true, "featureIds": ["F021"] },
+  { "id": "T022", "description": "Unit: Expression editor context uses effective schema (inferred/pinned) as payload typing source", "implemented": true, "featureIds": ["F022"] },
+  { "id": "T023", "description": "Unit: Mapping panel target fields derive from effective payload schema", "implemented": true, "featureIds": ["F023"] },
+
+  { "id": "T024", "description": "UI: Trigger section clearly distinguishes trigger schema vs payload contract", "implemented": true, "featureIds": ["F024"] },
+  { "id": "T025", "description": "UI: Trigger section shows schema ref/status + View schema link", "implemented": false, "featureIds": ["F025"] },
+  { "id": "T026", "description": "UI: System event with missing schema cannot be selected as trigger", "implemented": false, "featureIds": ["F027"] },
+  { "id": "T027", "description": "UI: Tenant event with missing schema selectable but disables publish/run", "implemented": false, "featureIds": ["F028"] },
+  { "id": "T028", "description": "UI: Publish/run disabled while event catalog is still loading (no transient error banner)", "implemented": false, "featureIds": ["F068"] },
+  { "id": "T029", "description": "UI: Publish/run disabled while required schema previews are still loading (shows skeleton)", "implemented": false, "featureIds": ["F069"] },
+
+  { "id": "T030", "description": "Persistence: Saving draft persists payload schema mode and any pinned ref", "implemented": true, "featureIds": ["F030"] },
+  { "id": "T031", "description": "Unit: Effective payload schema inference returns a JSON schema object for draft previews", "implemented": true, "featureIds": ["F031", "F033"] },
+  { "id": "T032", "description": "Unit: Inference input includes trigger schema and ordered step output schemas", "implemented": true, "featureIds": ["F032"] },
+  { "id": "T033", "description": "Unit: Inference merges known outputs into vars namespace in a stable way", "implemented": true, "featureIds": ["F034"] },
+  { "id": "T034", "description": "Perf: Inference recompute is cached/debounced and only triggers on structural changes", "implemented": true, "featureIds": ["F054", "F080"] },
+
+  { "id": "T035", "description": "Publish: Inferred mode publishes by inferring payloadSchemaRef from the trigger event schemaRef and storing a snapshot", "implemented": true, "featureIds": ["F035"] },
+  { "id": "T036", "description": "Publish: Published version stores payload_schema_json snapshot (no dynamic schema registry registration)", "implemented": true, "featureIds": ["F036", "F007"] },
+  { "id": "T037", "description": "Publish: payload_schema_ref and provenance are stored on workflow_definitions for the published version", "implemented": true, "featureIds": ["F037", "F004"] },
+  { "id": "T038", "description": "Publish: Updates workflow_definitions validation fields and payload schema diagnostics after publish", "implemented": false, "featureIds": ["F038"] },
+  { "id": "T039", "description": "Publish: Pinned mode validates the pinned schemaRef exists (unknown is error)", "implemented": true, "featureIds": ["F039"] },
+  { "id": "T040", "description": "Publish: Determinism — re-publishing same draft without changes yields same contract schema content", "implemented": true, "featureIds": ["F085"] },
+  { "id": "T041", "description": "Publish: Failure — unknown schema ref blocks publish with actionable error", "implemented": true, "featureIds": ["F087"] },
+
+  { "id": "T042", "description": "Validator: Draft save allowed with missing payload schema ref in inferred mode", "implemented": true, "featureIds": ["F040"] },
+  { "id": "T043", "description": "Validator: Deep nested mapping validation catches missing required nested fields", "implemented": true, "featureIds": ["F041"] },
+  { "id": "T044", "description": "Validator: Missing secret referenced in mapping/expression produces an error", "implemented": false, "featureIds": ["F042"] },
+  { "id": "T045", "description": "Validator: Type mismatch where both sides known produces an error", "implemented": true, "featureIds": ["F043"] },
+  { "id": "T046", "description": "Validator: Type mismatch where either side unknown produces a warning", "implemented": true, "featureIds": ["F044"] },
+  { "id": "T047", "description": "Validator: Validation details persist inferred vs pinned mode and effective schema diagnostics", "implemented": true, "featureIds": ["F045"] },
+
+  { "id": "T048", "description": "Run dialog: Form builder uses trigger schema to build event payload input", "implemented": false, "featureIds": ["F046"] },
+  { "id": "T049", "description": "Run dialog: Applying trigger mapping produces workflow payload and validates against contract", "implemented": false, "featureIds": ["F047"] },
+  { "id": "T050", "description": "Run dialog: When trigger schema missing/unknown, run is disabled with error", "implemented": false, "featureIds": ["F049"] },
+  { "id": "T051", "description": "Run dialog: Inferred mode (unpublished) can generate ephemeral contract preview for run UX", "implemented": false, "featureIds": ["F048"] },
+
+  { "id": "T052", "description": "Execution: Runs use published payloadSchemaRef contract and do not depend on inferred schema", "implemented": true, "featureIds": ["F050"] },
+  { "id": "T053", "description": "Execution: Trigger mapping semantics from 2025-12-27 plan remain unchanged", "implemented": false, "featureIds": ["F051"] },
+
+  { "id": "T054", "description": "UI: Schema preview modal supports inferred schema rendering (no ref) with syntax highlighting", "implemented": true, "featureIds": ["F052", "F089"] },
+  { "id": "T055", "description": "UI: Modal indicates whether schema is inferred vs pinned vs published", "implemented": true, "featureIds": ["F053"] },
+  { "id": "T056", "description": "UI: Skeleton loaders appear for inferred schema computation sections (no blank gaps)", "implemented": false, "featureIds": ["F062"] },
+  { "id": "T057", "description": "UI: If inference fails, draft can still be saved but publish is blocked and error shown", "implemented": true, "featureIds": ["F063", "F088"] },
+
+  { "id": "T058", "description": "Event catalog: All system events used in designer have schema refs (enforced)", "implemented": false, "featureIds": ["F055"] },
+  { "id": "T059", "description": "Event catalog: Designer trigger selector displays event schema status consistently", "implemented": false, "featureIds": ["F056"] },
+
+  { "id": "T060", "description": "Telemetry: Emits event when user toggles inferred<->pinned mode", "implemented": false, "featureIds": ["F057"] },
+  { "id": "T061", "description": "Telemetry: Emits event when publish locks payload contract schema ref (pinned or inferred)", "implemented": false, "featureIds": ["F058"] },
+  { "id": "T062", "description": "Telemetry: Emits event when publish blocked due to missing schema/mapping/secrets", "implemented": false, "featureIds": ["F059"] },
+
+  { "id": "T063", "description": "Permissions: Pinning payload schema is blocked without workflow:manage", "implemented": false, "featureIds": ["F060"] },
+  { "id": "T064", "description": "Permissions: Publishing payload contract is blocked without workflow:publish", "implemented": false, "featureIds": ["F061"] },
+  { "id": "T065", "description": "Security: Tenant is inferred and never editable in test event builders", "implemented": false, "featureIds": ["F082"] },
+
+  { "id": "T066", "description": "API: Workflow definition read APIs include payload schema mode + provenance", "implemented": true, "featureIds": ["F064"] },
+  { "id": "T067", "description": "Audit: Published contract schema ref appears in workflow audit/history", "implemented": false, "featureIds": ["F065"] },
+
+  { "id": "T068", "description": "Edge: Manual (no trigger) workflow cannot publish in inferred mode without pinned schema (blocked)", "implemented": true, "featureIds": ["F074"] },
+  { "id": "T069", "description": "Edge: Non-event triggers (future) have defined inference behavior (documented or blocked)", "implemented": true, "featureIds": ["F075"] },
+
+  { "id": "T070", "description": "Docs: Help text explains trigger schema vs payload contract and inferred vs pinned modes", "implemented": true, "featureIds": ["F072"] },
+  { "id": "T071", "description": "Docs: Operator notes exist for payload contract snapshots (no dynamic registry generation)", "implemented": true, "featureIds": ["F073"] },
+
+  { "id": "T072", "description": "UX: 'View effective contract' action previews publish-time schemaRef and schema JSON", "implemented": false, "featureIds": ["F083"] },
+  { "id": "T073", "description": "UX: Warn when inferred contract differs from current pinned/published contract", "implemented": false, "featureIds": ["F084"] },
+
+  { "id": "T074", "description": "Perf: Schema registry lookups/JSON conversions are cached", "implemented": true, "featureIds": ["F081"] },
+  { "id": "T075", "description": "Observability: Validation persistence stores effective schema summary hash", "implemented": true, "featureIds": ["F071"] },
+
+  { "id": "T076", "description": "Sanity: Features.json contains > 75 features", "implemented": true, "featureIds": ["F090"] },
+  { "id": "T077", "description": "Sanity: Tests.json contains at least as many entries as features.json", "implemented": true, "featureIds": ["F090"] },
+
+  { "id": "T078", "description": "UI: Contract section shows default message indicating contract is inferred from the selected trigger event", "implemented": true, "featureIds": ["F011"] },
+  { "id": "T079", "description": "UI: Switching to pinned mode requires selecting a schema (and shows validation when unknown)", "implemented": true, "featureIds": ["F012", "F039"] },
+  { "id": "T080", "description": "UI: Switching from pinned -> inferred clears pinned ref (or preserves but ignores) per spec", "implemented": true, "featureIds": ["F029", "F030"] },
+
+  { "id": "T081", "description": "Unit: Effective schema uses pinned schemaRef when mode=pinned", "implemented": true, "featureIds": ["F015", "F016", "F031"] },
+  { "id": "T082", "description": "Unit: Effective schema uses inferred schema when mode=inferred", "implemented": true, "featureIds": ["F031", "F033"] },
+  { "id": "T083", "description": "Unit: Effective schema recompute invalidates when trigger changes", "implemented": true, "featureIds": ["F054"] },
+  { "id": "T084", "description": "Unit: Effective schema recompute invalidates when steps array changes structurally (add/remove/reorder)", "implemented": true, "featureIds": ["F054", "F080"] },
+
+  { "id": "T085", "description": "Validator: Inferred mode uses effective schema for required mapping checks", "implemented": true, "featureIds": ["F040", "F041"] },
+  { "id": "T086", "description": "Validator: Pinned mode uses pinned schema for required mapping checks", "implemented": true, "featureIds": ["F041"] },
+  { "id": "T087", "description": "Validator: Validation persistence includes inferred/pinned flags and useful diagnostic payload", "implemented": true, "featureIds": ["F045"] },
+
+  { "id": "T088", "description": "Publish: Publishing in inferred mode sets mode/provenance fields correctly", "implemented": true, "featureIds": ["F035", "F037", "F004"] },
+  { "id": "T089", "description": "Publish: Publishing in pinned mode sets provenance fields correctly (provenance=pinned)", "implemented": true, "featureIds": ["F004", "F039"] },
+  { "id": "T090", "description": "Publish: Publishing fails when trigger schema is missing/unknown for a system event", "implemented": false, "featureIds": ["F026", "F055"] },
+  { "id": "T091", "description": "Publish: Publishing fails when trigger mapping required but missing", "implemented": false, "featureIds": ["F051", "F041"] },
+
+  { "id": "T092", "description": "UI: Publish button tooltip shows why publish is disabled (trigger schema / catalog loading)", "implemented": false, "featureIds": ["F068", "F069"] },
+  { "id": "T093", "description": "UI: Run button tooltip shows why run is disabled (trigger schema / catalog loading)", "implemented": false, "featureIds": ["F068", "F069", "F049"] },
+
+  { "id": "T094", "description": "UI: Trigger schema modal title and label refer to event payload (not workflow payload)", "implemented": false, "featureIds": ["F024", "F025"] },
+  { "id": "T095", "description": "UI: Payload schema modal title and label refer to workflow payload contract", "implemented": false, "featureIds": ["F024", "F052"] },
+
+  { "id": "T096", "description": "UI: Schema preview indicates inferred vs pinned vs published correctly", "implemented": true, "featureIds": ["F053"] },
+  { "id": "T097", "description": "UI: Schema preview provides meaningful top-level property chips for inferred schema", "implemented": false, "featureIds": ["F015", "F033"] },
+
+  { "id": "T098", "description": "Execution: When trigger schema changes after publish, workflow still runs using mapping and published contract", "implemented": true, "featureIds": ["F050", "F051"] },
+  { "id": "T099", "description": "Execution: When trigger schema changes and mapping is missing (required), workflow does not start", "implemented": false, "featureIds": ["F051", "F041"] },
+
+  { "id": "T100", "description": "API: Workflow definition payload schema mode appears in list workflows response", "implemented": true, "featureIds": ["F064"] },
+  { "id": "T101", "description": "API: Workflow definition provenance fields appear in get workflow response", "implemented": true, "featureIds": ["F064", "F004"] },
+
+  { "id": "T102", "description": "Audit: Publish event records payload schemaRef, mode, and provenance", "implemented": false, "featureIds": ["F065", "F058"] },
+
+  { "id": "T103", "description": "Telemetry: Contract mode change event includes workflowId and prior/next mode", "implemented": false, "featureIds": ["F057"] },
+  { "id": "T104", "description": "Telemetry: Contract publish event includes payload schemaRef and version", "implemented": false, "featureIds": ["F058"] },
+  { "id": "T105", "description": "Telemetry: Publish blocked event includes reason code (missing schema/mapping/secrets)", "implemented": false, "featureIds": ["F059"] },
+
+  { "id": "T106", "description": "Error handling: Draft save continues to work when inference throws (shows error banner)", "implemented": true, "featureIds": ["F063", "F088"] },
+  { "id": "T107", "description": "Error handling: Publish fails with actionable error when inference cannot produce a contract snapshot", "implemented": true, "featureIds": ["F088"] },
+
+  { "id": "T108", "description": "Registry: Schema registry JSON conversions are cached and stable across calls", "implemented": true, "featureIds": ["F081", "F085"] },
+  { "id": "T109", "description": "Publish: payload_schema_json snapshot is retrievable immediately after publish", "implemented": true, "featureIds": ["F036", "F009"] },
+
+  { "id": "T110", "description": "UI: 'View effective contract' shows preview without publishing", "implemented": true, "featureIds": ["F083"] },
+  { "id": "T111", "description": "UI: Warning appears when inferred contract differs from pinned/published contract", "implemented": true, "featureIds": ["F084"] },
+
+  { "id": "T112", "description": "Edge: Manual workflow (no trigger) publishes only when pinned schema provided", "implemented": true, "featureIds": ["F074"] },
+  { "id": "T113", "description": "Edge: Manual workflow (no trigger) shows clear UX guidance to pin schema before publish", "implemented": true, "featureIds": ["F074", "F010"] },
+
+  { "id": "T114", "description": "Edge: Future non-event trigger types are rejected or handled per documented behavior", "implemented": false, "featureIds": ["F075"] },
+
+  { "id": "T115", "description": "Performance: Effective schema computation does not block typing in the designer UI", "implemented": true, "featureIds": ["F080"] },
+  { "id": "T116", "description": "Performance: Effective schema computation scales to 100+ steps without noticeable lag", "implemented": true, "featureIds": ["F080"] },
+
+  { "id": "T117", "description": "Security: Only workflow:manage can toggle pin mode and change contract settings", "implemented": false, "featureIds": ["F060"] },
+  { "id": "T118", "description": "Security: Read-only users can view effective schema preview but cannot change contract settings", "implemented": true, "featureIds": ["F010", "F060"] },
+
+  { "id": "T119", "description": "Docs: PRD acceptance criteria covers 'build without schema', 'publish locks contract', and 'stable across trigger changes'", "implemented": true, "featureIds": ["F090"] },
+
+  { "id": "T120", "description": "UI: Loading skeletons show for contract section while schema refs/registries load", "implemented": false, "featureIds": ["F062", "F069"] },
+  { "id": "T121", "description": "UI: No transient 'trigger missing from catalog' banner appears while catalog is loading", "implemented": false, "featureIds": ["F068"] },
+
+  { "id": "T122", "description": "Validator: Type mismatch between known event schema and known contract schema blocks publish (error)", "implemented": false, "featureIds": ["F043", "F041"] },
+  { "id": "T123", "description": "Validator: Type mismatch involving unknown step output schema does not block publish (warning)", "implemented": false, "featureIds": ["F044"] },
+
+  { "id": "T124", "description": "Validation UI: Displays contract mode and effective schema context alongside validation errors/warnings", "implemented": false, "featureIds": ["F070"] },
+  { "id": "T125", "description": "Validation persistence: Stores a stable summary hash for the effective schema used during validation", "implemented": false, "featureIds": ["F071"] },
+
+  { "id": "T126", "description": "Compat: Existing drafts with payloadSchemaRef render as pinned mode and behave unchanged", "implemented": true, "featureIds": ["F078"] },
+  { "id": "T127", "description": "Compat: Existing published workflows continue to execute without changes to payloadSchemaRef", "implemented": true, "featureIds": ["F078", "F050"] },
+
+  { "id": "T128", "description": "Docs: Add operator notes for locating payload contract snapshots in workflow_definition_versions", "implemented": false, "featureIds": ["F073"] },
+  { "id": "T129", "description": "Docs: Add user-facing help for 'inferred contract' and when to pin", "implemented": false, "featureIds": ["F072"] },
+
+  { "id": "T130", "description": "Sanity: Tests cover every feature id at least once (spot-check mapping)", "implemented": true, "featureIds": ["F090"] }
+]

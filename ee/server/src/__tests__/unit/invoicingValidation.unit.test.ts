@@ -9,7 +9,7 @@ describe('Invoicing validation (T012, T017)', () => {
       items: [],
     })
     expect(result.ok).toBe(false)
-    if (!result.ok) {
+    if (result.ok === false) {
       expect(result.fieldErrors.items).toBeTruthy()
     }
   })
@@ -20,7 +20,7 @@ describe('Invoicing validation (T012, T017)', () => {
       items: [{ quantity: 1 }],
     })
     expect(result.ok).toBe(false)
-    if (!result.ok) {
+    if (result.ok === false) {
       expect(result.fieldErrors['items[0].serviceId']).toBeTruthy()
       expect(result.fieldErrors['items[0].description']).toBeTruthy()
       expect(result.fieldErrors['items[0].rate']).toBeTruthy()
@@ -42,7 +42,7 @@ describe('Invoicing validation (T012, T017)', () => {
       ],
     })
     expect(result.ok).toBe(false)
-    if (!result.ok) {
+    if (result.ok === false) {
       expect(result.fieldErrors.invoiceDate).toBeTruthy()
       expect(result.fieldErrors.dueDate).toBeTruthy()
     }

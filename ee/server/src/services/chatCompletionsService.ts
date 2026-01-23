@@ -2,13 +2,13 @@ import OpenAI from 'openai';
 import { NextRequest } from 'next/server';
 import { v4 as uuid } from 'uuid';
 
-import { getCurrentUser } from '@/lib/actions/user-actions/userActions';
+import { getCurrentUser } from '@alga-psa/users/actions';
 import { getRegistry } from '../chat/registry/apiRegistry.indexer';
 import {
   ChatApiRegistryEntry,
 } from '../chat/registry/apiRegistry.schema';
 import { TemporaryApiKeyService } from './temporaryApiKeyService';
-import { getSecretProviderInstance } from '@alga-psa/shared/core/secretProvider';
+import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { parseAssistantContent, ParsedAssistantContent } from '../utils/chatContent';
 import { reprovisionExtension } from '../lib/actions/extensionDomainActions';
 

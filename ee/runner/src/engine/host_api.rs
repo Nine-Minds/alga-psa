@@ -611,15 +611,17 @@ impl storage::HostWithStore for HasSelf<HostState> {
                 );
                 return Err(StorageError::Denied);
             }
-            let install_id = install_id.ok_or_else(|| {
-                tracing::error!(
-                    tenant = ?ctx.tenant_id,
-                    extension = ?ctx.extension_id,
-                    request_id = ?ctx.request_id,
-                    "storage capability denied - install_id missing"
-                );
-                StorageError::Denied
-            })?;
+            let install_id = install_id
+                .filter(|id| !id.is_empty())
+                .ok_or_else(|| {
+                    tracing::error!(
+                        tenant = ?ctx.tenant_id,
+                        extension = ?ctx.extension_id,
+                        request_id = ?ctx.request_id,
+                        "storage capability denied - install_id missing or empty"
+                    );
+                    StorageError::Denied
+                })?;
             let tenant = ctx.tenant_id.unwrap_or_default();
             let extension = ctx.extension_id.unwrap_or_default();
             let namespace_log = namespace.clone();
@@ -663,15 +665,17 @@ impl storage::HostWithStore for HasSelf<HostState> {
                 );
                 return Err(StorageError::Denied);
             }
-            let install_id = install_id.ok_or_else(|| {
-                tracing::error!(
-                    tenant = ?ctx.tenant_id,
-                    extension = ?ctx.extension_id,
-                    request_id = ?ctx.request_id,
-                    "storage capability denied - install_id missing"
-                );
-                StorageError::Denied
-            })?;
+            let install_id = install_id
+                .filter(|id| !id.is_empty())
+                .ok_or_else(|| {
+                    tracing::error!(
+                        tenant = ?ctx.tenant_id,
+                        extension = ?ctx.extension_id,
+                        request_id = ?ctx.request_id,
+                        "storage capability denied - install_id missing or empty"
+                    );
+                    StorageError::Denied
+                })?;
             let tenant = ctx.tenant_id.unwrap_or_default();
             let extension = ctx.extension_id.unwrap_or_default();
             let namespace_log = entry.namespace.clone();
@@ -735,15 +739,17 @@ impl storage::HostWithStore for HasSelf<HostState> {
                 );
                 return Err(StorageError::Denied);
             }
-            let install_id = install_id.ok_or_else(|| {
-                tracing::error!(
-                    tenant = ?ctx.tenant_id,
-                    extension = ?ctx.extension_id,
-                    request_id = ?ctx.request_id,
-                    "storage capability denied - install_id missing"
-                );
-                StorageError::Denied
-            })?;
+            let install_id = install_id
+                .filter(|id| !id.is_empty())
+                .ok_or_else(|| {
+                    tracing::error!(
+                        tenant = ?ctx.tenant_id,
+                        extension = ?ctx.extension_id,
+                        request_id = ?ctx.request_id,
+                        "storage capability denied - install_id missing or empty"
+                    );
+                    StorageError::Denied
+                })?;
             let tenant = ctx.tenant_id.unwrap_or_default();
             let extension = ctx.extension_id.unwrap_or_default();
             let namespace_log = namespace.clone();
@@ -791,15 +797,17 @@ impl storage::HostWithStore for HasSelf<HostState> {
                 );
                 return Err(StorageError::Denied);
             }
-            let install_id = install_id.ok_or_else(|| {
-                tracing::error!(
-                    tenant = ?ctx.tenant_id,
-                    extension = ?ctx.extension_id,
-                    request_id = ?ctx.request_id,
-                    "storage capability denied - install_id missing"
-                );
-                StorageError::Denied
-            })?;
+            let install_id = install_id
+                .filter(|id| !id.is_empty())
+                .ok_or_else(|| {
+                    tracing::error!(
+                        tenant = ?ctx.tenant_id,
+                        extension = ?ctx.extension_id,
+                        request_id = ?ctx.request_id,
+                        "storage capability denied - install_id missing or empty"
+                    );
+                    StorageError::Denied
+                })?;
             let tenant = ctx.tenant_id.unwrap_or_default();
             let extension = ctx.extension_id.unwrap_or_default();
             let namespace_log = namespace.clone();
@@ -1136,6 +1144,7 @@ async fn storage_request(
         base.trim_end_matches('/'),
         install_id
     );
+    tracing::info!(url = %url, operation = %operation, "storage request dispatch");
     let namespace_log = payload
         .get("namespace")
         .and_then(|v| v.as_str())
@@ -1155,7 +1164,7 @@ async fn storage_request(
     );
 
     let response = HTTP_CLIENT
-        .post(url)
+        .post(url.as_str())
         .header("content-type", "application/json")
         .header("x-runner-auth", token)
         .json(&payload)
@@ -1170,7 +1179,13 @@ async fn storage_request(
     let text = response.text().await.unwrap_or_default();
 
     if !status.is_success() {
-        tracing::warn!(status = status.as_u16(), body = %text, operation, "storage_request error");
+        tracing::warn!(
+            status = status.as_u16(),
+            body = %text,
+            operation,
+            install_id = %install_id,
+            "storage_request error"
+        );
         return Err(map_storage_status(status));
     }
 

@@ -3,8 +3,8 @@ import { getSecret } from '../lib/utils/getSecret';
 import { StorageService } from 'server/src/lib/storage/StorageService';
 import { InvoiceViewModel } from 'server/src/interfaces/invoice.interfaces';
 import { getCurrencySymbol } from 'server/src/constants/currency';
-import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
-import { getTenantDetails } from 'server/src/lib/actions/tenantActions';
+import { getCurrentUser } from '@alga-psa/users/actions';
+import { getTenantDetails } from '@alga-psa/tenancy/actions';
 import { createTenantKnex } from 'server/src/lib/db';
 
 interface EmailConfig {

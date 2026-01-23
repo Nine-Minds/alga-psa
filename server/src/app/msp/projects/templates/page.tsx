@@ -1,10 +1,10 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { IProjectTemplate } from 'server/src/interfaces/projectTemplate.interfaces';
-import { getTemplates, getTemplateCategories } from 'server/src/lib/actions/project-actions/projectTemplateActions';
-import ProjectTemplatesList from 'server/src/components/projects/project-templates/ProjectTemplatesList';
-import Spinner from 'server/src/components/ui/Spinner';
+import type { IProjectTemplate } from '@alga-psa/types';
+import { getTemplates, getTemplateCategories } from '@alga-psa/projects/actions/projectTemplateActions';
+import ProjectTemplatesList from '@alga-psa/projects/components/project-templates/ProjectTemplatesList';
+import Spinner from '@alga-psa/ui/components/Spinner';
 
 function TemplatesListSkeleton() {
   return (

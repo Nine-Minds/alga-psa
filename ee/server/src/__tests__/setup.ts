@@ -55,9 +55,9 @@ vi.mock('next/navigation', () => ({
   },
 }));
 
-// Set test environment variables  
+// Set test environment variables
 if (!process.env.NODE_ENV) {
-  process.env.NODE_ENV = 'test';
+  (process.env as { NODE_ENV?: string }).NODE_ENV = 'test';
 }
 process.env.NEXTAUTH_SECRET = process.env.NEXTAUTH_SECRET || 'test-secret';
 

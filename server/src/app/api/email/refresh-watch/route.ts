@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getAdminConnection } from '@alga-psa/shared/db/admin';
-import { getCurrentUser } from '@/lib/actions/user-actions/userActions';
-import { configureGmailProvider } from '@/lib/actions/email-actions/configureGmailProvider';
+import { getAdminConnection } from '@alga-psa/db/admin';
+import { getCurrentUser } from '@alga-psa/users/actions';
+import { configureGmailProvider } from '@alga-psa/integrations/actions/email-actions/configureGmailProvider';
 
 export async function POST(request: NextRequest) {
   try {

@@ -16,11 +16,11 @@ vi.mock('../../../lib/actions/email-actions/emailProviderActions', () => ({
   upsertEmailProvider: vi.fn(),
 }));
 
-vi.mock('server/src/lib/actions/email-actions/inboundTicketDefaultsActions', () => ({
+vi.mock('@alga-psa/integrations/actions', () => ({
   getInboundTicketDefaults: vi.fn().mockResolvedValue({ defaults: [] }),
 }));
 
-vi.mock('server/src/lib/actions/email-actions/oauthActions', () => ({
+vi.mock('@alga-psa/integrations/actions', () => ({
   initiateEmailOAuth: vi.fn().mockResolvedValue({ success: false, error: 'not used in unit tests' }),
 }));
 

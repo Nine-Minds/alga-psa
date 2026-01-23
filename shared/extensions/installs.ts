@@ -1,5 +1,5 @@
 import type { Knex } from 'knex';
-import { getAdminConnection } from '@alga-psa/shared/db/admin';
+import { getAdminConnection } from '@alga-psa/db/admin';
 import { computeDomain } from './domain';
 import type { InstallInfo } from './types';
 

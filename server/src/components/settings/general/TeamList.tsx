@@ -1,11 +1,12 @@
 'use client';
+
 import React, { useState, useEffect } from 'react';
-import { createTeam, deleteTeam } from 'server/src/lib/actions/team-actions/teamActions';
-import { getAllUsers } from 'server/src/lib/actions/user-actions/userActions';
-import { ITeam, IUser, IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
-import UserPicker from 'server/src/components/ui/UserPicker';
-import { ConfirmationDialog } from 'server/src/components/ui/ConfirmationDialog';
-import { Input } from 'server/src/components/ui/Input';
+import { createTeam, deleteTeam } from '@alga-psa/teams/actions';
+import { getAllUsers } from '@alga-psa/users/actions';
+import { ITeam, IUser, IUserWithRoles } from '@alga-psa/types';
+import UserPicker from '@alga-psa/ui/components/UserPicker';
+import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
+import { Input } from '@alga-psa/ui/components/Input';
 
 interface TeamListProps {
   teams: ITeam[];

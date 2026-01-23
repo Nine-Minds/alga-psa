@@ -6,14 +6,9 @@ import {
   StorageServiceError,
   StorageValidationError,
 } from '@ee/lib/extensions/storage/v2/errors';
+import { resolveInstallIdFromParamsOrUrl } from '@ee/lib/next/routeParams';
 
 export const dynamic = 'force-dynamic';
-
-type RouteParams = { installId: string };
-
-async function resolveParams(params: RouteParams | Promise<RouteParams>): Promise<RouteParams> {
-  return await Promise.resolve(params);
-}
 
 const baseSchema = z.object({
   operation: z.enum(['put', 'get', 'list', 'delete', 'bulkPut']),
@@ -116,15 +111,15 @@ function ensureRunnerAuth(req: NextRequest): void {
 
 export async function POST(
   req: NextRequest,
-  { params }: { params: RouteParams | Promise<RouteParams> }
+  ctx: { params?: unknown }
 ) {
   try {
     ensureRunnerAuth(req);
 
+    const installId = await resolveInstallIdFromParamsOrUrl(ctx.params, req.url);
     const raw = await req.json();
     const base = baseSchema.parse(raw);
-    const { installId } = await resolveParams(params);
-    const { service } = await getStorageServiceForInstall(installId);
+    const { service } = await getStorageServiceForInstall(installId ?? '');
 
     switch (base.operation) {
       case 'put': {

@@ -6,7 +6,7 @@
  */
 
 import { NextResponse } from 'next/server';
-import { getAssetSummaryMetrics } from 'server/src/lib/actions/asset-actions/assetActions';
+import { getAssetSummaryMetrics } from '@alga-psa/assets/actions/assetActions';
 
 export async function GET(
   request: Request,

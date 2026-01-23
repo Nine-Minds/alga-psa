@@ -1,4 +1,4 @@
-import logger from '@shared/core/logger';
+import logger from '@alga-psa/core/logger';
 import { Event } from '../events';
 import { getEventBus } from '../index';
 import { getEmailEventChannel } from '../../notifications/emailChannel';

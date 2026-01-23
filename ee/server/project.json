@@ -1,0 +1,9 @@
+{
+  "name": "sebastian-ee",
+  "targets": {
+    "build": {
+      "executor": "nx:noop",
+      "dependsOn": []
+    }
+  }
+}

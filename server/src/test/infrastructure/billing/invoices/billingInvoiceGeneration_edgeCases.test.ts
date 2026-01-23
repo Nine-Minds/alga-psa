@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeAll, beforeEach, afterEach, afterAll, vi } from 'vitest';
 import '../../../../../test-utils/nextApiMock';
 import { TestContext } from '../../../../../test-utils/testContext';
-import { generateInvoice } from 'server/src/lib/actions/invoiceGeneration';
+import { generateInvoice } from '@alga-psa/billing/actions/invoiceGeneration';
 import { setupCommonMocks } from '../../../../../test-utils/testMocks';
 import { createTestService, assignServiceTaxRate, setupClientTaxConfiguration, createFixedPlanAssignment, addServiceToFixedPlan, ensureClientPlanBundlesTable } from '../../../../../test-utils/billingTestHelpers';
 import { TextEncoder as NodeTextEncoder } from 'util';
@@ -28,12 +28,12 @@ vi.mock('server/src/lib/analytics/posthog', () => ({
   }
 }));
 
-vi.mock('@alga-psa/shared/db', () => ({
+vi.mock('@alga-psa/db', () => ({
   withTransaction: vi.fn(async (knex, callback) => callback(knex)),
   withAdminTransaction: vi.fn(async (callback, existingConnection) => callback(existingConnection as any))
 }));
 
-vi.mock('@alga-psa/shared/core/logger', () => ({
+vi.mock('@alga-psa/core/logger', () => ({
   default: {
     info: vi.fn(),
     warn: vi.fn(),
@@ -42,7 +42,7 @@ vi.mock('@alga-psa/shared/core/logger', () => ({
   },
 }));
 
-vi.mock('@alga-psa/shared/core/secretProvider', () => ({
+vi.mock('@alga-psa/core/secrets', () => ({
   getSecretProviderInstance: () => ({
     getSecret: async () => undefined,
     getAppSecret: async () => undefined,
@@ -52,7 +52,7 @@ vi.mock('@alga-psa/shared/core/secretProvider', () => ({
   }),
 }));
 
-vi.mock('@alga-psa/shared/core', () => ({
+vi.mock('@alga-psa/core', () => ({
   getSecretProviderInstance: () => ({
     getSecret: async () => undefined,
     getAppSecret: async () => undefined,

@@ -2,7 +2,7 @@ import { getCurrentTenantId } from '../db';
 import { IServiceRateTier, ICreateServiceRateTier, IUpdateServiceRateTier } from '../../interfaces/serviceTier.interfaces';
 import { v4 as uuidv4 } from 'uuid';
 import { z } from 'zod';
-import { validateData } from '../utils/validation';
+import { validateData } from '@alga-psa/core';
 import { Knex } from 'knex';
 
 // Use a constant for environment check

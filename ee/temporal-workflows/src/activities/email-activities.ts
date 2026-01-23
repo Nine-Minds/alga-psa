@@ -98,6 +98,10 @@ function createWelcomeEmailContent(input: SendWelcomeEmailActivityInput): {
     const params = new URLSearchParams({ tenant: tenantSlug });
     clientPortalLoginUrl = `/auth/client-portal/signin?${params.toString()}`;
   }
+
+  // Nine Minds support portal URL (hardcoded custom domain)
+  const nineMindsPortalUrl = "https://portal.nineminds.com/auth/client-portal/signin";
+
   const currentYear = new Date().getFullYear();
 
   const subject = `Welcome to Alga PSA - Your Account is Ready`;
@@ -244,7 +248,7 @@ function createWelcomeEmailContent(input: SendWelcomeEmailActivityInput): {
                                 <td bgcolor="#f0fbff" style="background-color: #f0fbff; padding: 24px; border: 1px solid #bae6fd; border-left: 4px solid #40cff9; border-radius: 8px;">
                                   <h4 style="color: #0284c7; font-size: 18px; font-weight: 600; font-family: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0 0 12px 0;">👥 Nine Minds Portal</h4>
                                   <p style="color: #334155; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0 0 12px 0; line-height: 1.6; font-size: 14px;">Nine Minds Client Portal where you can submit support tickets, track them, and get help from our team.</p>
-                                  <p style="color: #334155; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 8px 0; font-size: 14px;"><b style="color: #0f172a; font-weight: 600;">Login URL:</b> <a href="${clientPortalLoginUrl}" style="color: #0284c7; text-decoration: underline;">${clientPortalLoginUrl}</a></p>
+                                  <p style="color: #334155; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 8px 0; font-size: 14px;"><b style="color: #0f172a; font-weight: 600;">Login URL:</b> <a href="${nineMindsPortalUrl}" style="color: #0284c7; text-decoration: underline;">${nineMindsPortalUrl}</a></p>
                                 </td>
                               </tr>
                             </table>
@@ -430,7 +434,7 @@ What's Next?
 
 Need help?
 If you have any questions or need assistance getting started, please don't hesitate to contact our support team.
-For support, use the Nine Minds Client Portal: ${clientPortalLoginUrl}
+For support, use the Nine Minds Client Portal: ${nineMindsPortalUrl}
 
 Welcome aboard!
 

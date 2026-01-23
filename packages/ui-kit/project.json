@@ -1,0 +1,35 @@
+{
+  "name": "@alga-psa/ui-kit",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "packages/ui-kit/src",
+  "projectType": "library",
+  "tags": ["scope:ui", "type:horizontal"],
+  "targets": {
+    "build": {
+      "executor": "@nx/js:tsc",
+      "outputs": ["{options.outputPath}"],
+      "options": {
+        "outputPath": "dist/packages/ui-kit",
+        "tsConfig": "packages/ui-kit/tsconfig.json",
+        "packageJson": "packages/ui-kit/package.json",
+        "main": "packages/ui-kit/src/index.ts",
+        "assets": ["packages/ui-kit/src/theme/tokens.css"]
+      }
+    },
+    "test": {
+      "executor": "@nx/vite:test",
+      "outputs": ["{workspaceRoot}/coverage/packages/ui-kit"],
+      "options": {
+        "passWithNoTests": true
+      }
+    },
+    "lint": {
+      "executor": "@nx/eslint:lint",
+      "outputs": ["{options.outputFile}"],
+      "options": {
+        "lintFilePatterns": ["packages/ui-kit/**/*.{ts,tsx}"]
+      }
+    }
+  }
+}
+

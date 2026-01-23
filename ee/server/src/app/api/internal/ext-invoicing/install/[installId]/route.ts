@@ -1,20 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
 
 import { handleInternalInvoicingInstallRequest } from '@ee/lib/extensions/invoicingInternalApi'
+import { resolveInstallIdFromParamsOrUrl } from '@ee/lib/next/routeParams'
 
 export const dynamic = 'force-dynamic'
 
-type RouteParams = { installId: string }
-
-async function resolveParams(params: RouteParams | Promise<RouteParams>): Promise<RouteParams> {
-  return await Promise.resolve(params)
-}
-
-export async function POST(req: NextRequest, { params }: { params: RouteParams | Promise<RouteParams> }) {
-  const { installId } = await resolveParams(params)
+export async function POST(req: NextRequest, ctx: { params?: unknown }) {
+  const installId = await resolveInstallIdFromParamsOrUrl(ctx.params, req.url)
   const body = await req.json().catch(() => undefined)
   const result = await handleInternalInvoicingInstallRequest({
-    installId,
+    installId: installId ?? '',
     headers: req.headers,
     body,
   })

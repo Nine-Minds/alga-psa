@@ -1,5 +1,5 @@
 import { describe, it, expect, afterEach, vi } from 'vitest';
-import { getContractLines, createContractLine } from 'server/src/lib/actions/contractLineAction';
+import { getContractLines, createContractLine } from '@alga-psa/billing/actions';
 import ContractLine from 'server/src/lib/models/contractLine';
 import { IContractLine } from 'server/src/interfaces/billing.interfaces';
 

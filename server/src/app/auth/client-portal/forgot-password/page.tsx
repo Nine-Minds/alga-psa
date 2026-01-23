@@ -5,11 +5,11 @@ import Image from 'next/image';
 import Link from 'next/link';
 import * as Label from '@radix-ui/react-label';
 import * as Form from '@radix-ui/react-form';
-import { recoverPassword } from 'server/src/lib/actions/useRegister';
-import { Input } from 'server/src/components/ui/Input';
-import { Button } from 'server/src/components/ui/Button';
+import { recoverPassword } from '@alga-psa/auth/actions';
+import { Input } from '@alga-psa/ui/components/Input';
+import { Button } from '@alga-psa/ui/components/Button';
 import toast from 'react-hot-toast';
-import { useTranslation } from 'server/src/lib/i18n/client';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 type FormData = {
   email: string;

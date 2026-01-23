@@ -1,3 +1,0 @@
-// Subpath-only package
-export {};
-

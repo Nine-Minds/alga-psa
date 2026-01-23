@@ -1,4 +1,4 @@
-import PortalSessionHandoff from 'server/src/components/auth/PortalSessionHandoff';
+import { PortalSessionHandoff } from '@alga-psa/auth/client';
 
 function buildFallbackLoginUrl(): string {
   const authUrl = process.env.NEXTAUTH_URL;

@@ -1,5 +1,5 @@
 import { Buffer } from 'node:buffer';
-import logger from '@alga-psa/shared/core/logger';
+import logger from '@alga-psa/core/logger';
 import type { IUser } from 'server/src/interfaces/auth.interfaces';
 import { buildTenantPortalSlug, isValidTenantSlug, getSlugParts } from '@shared/utils/tenantSlug';
 
@@ -30,7 +30,7 @@ async function resolveTenantIdFromSlug(slug: string): Promise<string | undefined
     return undefined;
   }
 
-  const { getAdminConnection } = await import('@shared/db/admin');
+  const { getAdminConnection } = await import('@alga-psa/db/admin');
   const knex = await getAdminConnection();
   const { prefix, suffix } = getSlugParts(normalizedSlug);
 
@@ -59,7 +59,7 @@ async function resolveTenantIdFromVanityHost(host?: string | null): Promise<stri
     return undefined;
   }
 
-  const { getAdminConnection } = await import('@shared/db/admin');
+  const { getAdminConnection } = await import('@alga-psa/db/admin');
   const knex = await getAdminConnection();
   const record = await knex('portal_domains')
     .select('tenant')

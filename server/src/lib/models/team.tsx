@@ -1,7 +1,7 @@
 import logger from '../../utils/logger';
 import { ITeam } from '../../interfaces';
 import { getCurrentTenantId } from '../db';
-import { withTransaction } from '@alga-psa/shared/db';
+import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { v4 as uuid4 } from 'uuid';
 

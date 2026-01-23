@@ -37,16 +37,16 @@ import {
   broadcastAllNotificationsRead
 } from 'server/src/lib/realtime/internalNotificationBroadcaster';
 
-let createNotificationFromTemplateAction: typeof import('server/src/lib/actions/internal-notification-actions/internalNotificationActions')['createNotificationFromTemplateAction'];
-let getNotificationsAction: typeof import('server/src/lib/actions/internal-notification-actions/internalNotificationActions')['getNotificationsAction'];
-let getUnreadCountAction: typeof import('server/src/lib/actions/internal-notification-actions/internalNotificationActions')['getUnreadCountAction'];
-let markAsReadAction: typeof import('server/src/lib/actions/internal-notification-actions/internalNotificationActions')['markAsReadAction'];
-let markAllAsReadAction: typeof import('server/src/lib/actions/internal-notification-actions/internalNotificationActions')['markAllAsReadAction'];
-let deleteNotificationAction: typeof import('server/src/lib/actions/internal-notification-actions/internalNotificationActions')['deleteNotificationAction'];
+let createNotificationFromTemplateAction: typeof import('@alga-psa/notifications/actions')['createNotificationFromTemplateAction'];
+let getNotificationsAction: typeof import('@alga-psa/notifications/actions')['getNotificationsAction'];
+let getUnreadCountAction: typeof import('@alga-psa/notifications/actions')['getUnreadCountAction'];
+let markAsReadAction: typeof import('@alga-psa/notifications/actions')['markAsReadAction'];
+let markAllAsReadAction: typeof import('@alga-psa/notifications/actions')['markAllAsReadAction'];
+let deleteNotificationAction: typeof import('@alga-psa/notifications/actions')['deleteNotificationAction'];
 
 describe('Internal notification CRUD (integration)', () => {
   beforeAll(async () => {
-    const actions = await import('server/src/lib/actions/internal-notification-actions/internalNotificationActions');
+    const actions = await import('@alga-psa/notifications/actions');
     createNotificationFromTemplateAction = actions.createNotificationFromTemplateAction;
     getNotificationsAction = actions.getNotificationsAction;
     getUnreadCountAction = actions.getUnreadCountAction;

@@ -1,5 +1,5 @@
 import PgBoss, { Job } from 'pg-boss';
-import logger from '@shared/core/logger';
+import logger from '@alga-psa/core/logger';
 import { getPostgresConnection } from '../../db/knexfile';
 import { JobService } from '../../../services/job.service';
 import { StorageService } from '../../storage/StorageService';

@@ -13,10 +13,15 @@ export interface ConfirmDialogProps {
   title?: string;
   message: string;
   confirmLabel?: string;
+  /** @deprecated Use confirmLabel instead */
+  confirmText?: string;
   cancelLabel?: string;
   variant?: 'default' | 'danger';
+  confirmDisabled?: boolean;
   onConfirm: () => void;
   onCancel: () => void;
+  /** Additional content to render below the message */
+  children?: React.ReactNode;
 }
 
 const overlayStyle: React.CSSProperties = {
@@ -37,7 +42,7 @@ const dialogStyle: React.CSSProperties = {
   borderRadius: 'var(--alga-radius, 8px)',
   boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
   padding: '24px',
-  maxWidth: '400px',
+  maxWidth: '500px',
   width: '90%',
   animation: 'dialogFadeIn 0.15s ease-out',
 };
@@ -127,20 +132,31 @@ export function ConfirmDialog({
   title = 'Confirm Action',
   message,
   confirmLabel = 'Confirm',
+  confirmText,
   cancelLabel = 'Cancel',
   variant = 'default',
+  confirmDisabled = false,
   onConfirm,
   onCancel,
+  children,
 }: ConfirmDialogProps) {
+  // Support both confirmLabel and confirmText for backward compatibility
+  const buttonLabel = confirmText || confirmLabel;
+
   return (
     <Dialog isOpen={isOpen} onClose={onCancel} title={title}>
-      <p style={messageStyle}>{message}</p>
+      <p style={{ ...messageStyle, whiteSpace: 'pre-line' }}>{message}</p>
+      {children}
       <div style={actionsStyle}>
         <Button variant="secondary" onClick={onCancel}>
           {cancelLabel}
         </Button>
-        <Button variant={variant === 'danger' ? 'danger' : 'primary'} onClick={onConfirm}>
-          {confirmLabel}
+        <Button
+          variant={variant === 'danger' ? 'danger' : 'primary'}
+          onClick={onConfirm}
+          disabled={confirmDisabled}
+        >
+          {buttonLabel}
         </Button>
       </div>
     </Dialog>

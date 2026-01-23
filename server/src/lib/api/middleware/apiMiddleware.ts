@@ -7,9 +7,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { ZodSchema, ZodError } from 'zod';
 import { ApiKeyService } from '../../services/apiKeyService';
 import { hasPermission } from '../../auth/rbac';
-import { findUserById } from '../../actions/user-actions/userActions';
-import { getSecretProviderInstance } from '@alga-psa/shared/core/secretProvider';
-import { runAsSystem } from '../services/SystemContext';
+import { findUserById } from '@alga-psa/users/actions';
+import { getSecretProviderInstance } from '@alga-psa/core/secrets';
+import { runAsSystem } from '@alga-psa/db';
 
 export interface ApiContext {
   userId: string;

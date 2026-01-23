@@ -21,7 +21,7 @@ const getSecretProviderInstanceMock = vi.hoisted(() =>
   vi.fn().mockResolvedValue(secretProviderMock)
 );
 
-vi.mock('@alga-psa/shared/core', () => ({
+vi.mock('@alga-psa/core', () => ({
   getSecretProviderInstance: getSecretProviderInstanceMock
 }));
 
@@ -32,7 +32,7 @@ const loggerMock = vi.hoisted(() => ({
   debug: vi.fn()
 }));
 
-vi.mock('@shared/core/logger', () => ({
+vi.mock('@alga-psa/core/logger', () => ({
   default: loggerMock
 }));
 

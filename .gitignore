@@ -2,6 +2,8 @@
 node_modules/
 .pnp
 .pnp.js
+.npm-cache/
+.tmp*
 
 # testing
 /coverage
@@ -64,11 +66,17 @@ helm/values-dev-env.yaml
 
 # Logs
 logs
+logs-test/
 *.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 server/logs/
+
+# Nx cache
+.nx/
+dep-graph.json
+graph.json
 
 # IDE
 .idea/
@@ -154,6 +162,9 @@ volumes/
 prod.config.ini
 secrets/
 !server/src/lib/secrets/
+!packages/core/src/lib/secrets/
+!shared/workflow/secrets/
+!server/src/components/settings/secrets/
 .secrets
 .clinerules
 data/
@@ -180,3 +191,13 @@ server/coverage
 coverage-nyc/
 server/coverage
 packages/product-extension-storage-api/coverage
+
+
+
+.nx/cache
+.nx/workspace-data
+vitest.config.*.timestamp*
+
+# Next.js
+.next
+out

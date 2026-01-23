@@ -1,19 +1,21 @@
 import { describe, expect, it } from 'vitest';
 import { fetchTicketsViaProxy, TicketProxyResponse } from '../src/tickets-panel.js';
-import type { UiProxyHost } from '@alga/extension-runtime';
+import type { UiProxyHost } from '@alga-psa/extension-runtime';
 
 const encoder = new TextEncoder();
 
 function createUiProxy(response: TicketProxyResponse): UiProxyHost {
+  const handler = async (route: string, payload?: Uint8Array | null) => {
+    expect(route).toBe('/tickets/list');
+    if (payload) {
+      const decoded = JSON.parse(new TextDecoder().decode(payload));
+      expect(decoded.limit).toBe(5);
+    }
+    return encoder.encode(JSON.stringify(response));
+  };
   return {
-    async call(route: string, payload?: Uint8Array | null) {
-      expect(route).toBe('/tickets/list');
-      if (payload) {
-        const decoded = JSON.parse(new TextDecoder().decode(payload));
-        expect(decoded.limit).toBe(5);
-      }
-      return encoder.encode(JSON.stringify(response));
-    },
+    callRoute: handler,
+    call: handler,
   };
 }
 

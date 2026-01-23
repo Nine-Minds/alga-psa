@@ -1,0 +1,1492 @@
+'use client';
+import React, { useState, useEffect, useCallback, memo } from 'react';
+import type { IClient } from '@alga-psa/types';
+import { ITag } from '@alga-psa/types';
+import { Button } from '@alga-psa/ui/components/Button';
+import { Checkbox } from '@alga-psa/ui/components/Checkbox';
+import QuickAddClient from './QuickAddClient';
+import {
+  getAllClients,
+  getAllClientsPaginated,
+  deleteClient,
+  importClientsFromCSV,
+  exportClientsToCSV,
+  markClientInactiveWithContacts,
+  markClientActiveWithContacts,
+} from '@alga-psa/clients/actions';
+import { findTagsByEntityIds, findAllTagsByType } from '@alga-psa/tags/actions';
+import { TagFilter } from '@alga-psa/ui/components';
+import { useRouter } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
+import ClientsGrid from './ClientsGrid';
+import ClientsList from './ClientsList';
+import ViewSwitcher, { ViewSwitcherOption } from '@alga-psa/ui/components/ViewSwitcher';
+import { TrashIcon, MoreVertical, CloudDownload, Upload, LayoutGrid, List, Search, XCircle, Power, RotateCcw } from 'lucide-react';
+import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
+import CustomSelect from '@alga-psa/ui/components/CustomSelect';
+import { useUserPreference } from '@alga-psa/users/hooks';
+import ClientsImportDialog from './ClientsImportDialog';
+import { Dialog, DialogContent, DialogFooter } from '@alga-psa/ui/components/Dialog';
+import { Input } from '@alga-psa/ui/components/Input';
+import Drawer from '@alga-psa/ui/components/Drawer';
+import ClientDetails from './ClientDetails';
+import { useAutomationIdAndRegister } from '@alga-psa/ui/ui-reflection/useAutomationIdAndRegister';
+import toast from 'react-hot-toast';
+import { handleError } from '@alga-psa/ui';
+import { useTagPermissions } from '@alga-psa/tags/hooks';
+import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
+
+const COMPANY_VIEW_MODE_SETTING = 'client_list_view_mode';
+const CLIENTS_GRID_PAGE_SIZE_SETTING = 'clients_grid_page_size';
+const CLIENTS_LIST_PAGE_SIZE_SETTING = 'clients_list_page_size';
+
+// Memoized search input component to prevent re-renders
+const SearchInput = memo(({ value, onChange }: { value: string; onChange: (e: React.ChangeEvent<HTMLInputElement>) => void }) => {
+  return (
+    <div className="relative p-0.5">
+      <Input
+        id="search-clients"
+        data-automation-id="search-clients"
+        type="text"
+        placeholder="Search clients"
+        className="border-2 border-gray-200 focus:border-purple-500 rounded-md pl-10 pr-4 py-2 w-64 outline-none bg-white"
+        value={value}
+        onChange={onChange}
+        preserveCursor={true}
+      />
+      <Search size={20} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+    </div>
+  );
+});
+
+SearchInput.displayName = 'SearchInput';
+
+// Client results component that handles its own loading state
+interface ClientResultsProps {
+  searchTerm: string;
+  filterStatus: 'all' | 'active' | 'inactive';
+  clientTypeFilter: 'all' | 'company' | 'individual';
+  selectedTags: string[];
+  viewMode: 'grid' | 'list';
+  selectedClients: string[];
+  onCheckboxChange: (clientId: string) => void;
+  onEditClient: (clientId: string) => void;
+  onDeleteClient: (client: IClient) => void;
+  onQuickView?: (client: IClient) => void;
+  onTagsChange: (clientId: string, tags: ITag[]) => void;
+  currentPage: number;
+  pageSize: number;
+  onPageChange: (page: number) => void;
+  onPageSizeChange: (size: number) => void;
+  onClientTagsLoaded?: (clientTags: Record<string, ITag[]>, allUniqueTags: ITag[]) => void;
+  onClientsLoaded?: (clients: IClient[]) => void;
+  // Add props to receive parent's tag state
+  clientTags?: Record<string, ITag[]>;
+  allUniqueTagsFromParent?: ITag[];
+  sortBy?: string;
+  sortDirection?: 'asc' | 'desc';
+  onSortChange?: (sortBy: string, sortDirection: 'asc' | 'desc') => void;
+}
+
+const ClientResults = memo(({
+  searchTerm,
+  filterStatus,
+  clientTypeFilter,
+  selectedTags,
+  viewMode,
+  selectedClients,
+  onCheckboxChange,
+  onEditClient,
+  onDeleteClient,
+  onQuickView,
+  onTagsChange,
+  currentPage,
+  pageSize,
+  onPageChange,
+  onPageSizeChange,
+  onClientTagsLoaded,
+  onClientsLoaded,
+  clientTags: parentClientTags,
+  allUniqueTagsFromParent,
+  sortBy,
+  sortDirection,
+  onSortChange
+}: ClientResultsProps) => {
+  const [clients, setClients] = useState<IClient[]>([]);
+  const [totalCount, setTotalCount] = useState(0);
+  const [isLoading, setIsLoading] = useState(true);
+  const [localClientTags, setLocalClientTags] = useState<Record<string, ITag[]>>({});
+  const [allUniqueTags, setAllUniqueTags] = useState<ITag[]>([]);
+  
+  // Use parent's tag state if available, otherwise use local state
+  const effectiveClientTags = parentClientTags || localClientTags;
+  const effectiveAllUniqueTags = allUniqueTagsFromParent || allUniqueTags;
+
+  // Load clients when filters change
+  useEffect(() => {
+    const loadClients = async () => {
+      try {
+        // Only show loading for the first load and page changes, not for sorting
+        const isInitialLoad = clients.length === 0;
+        const isPageChange = currentPage !== 1 && clients.length > 0;
+
+        if (isInitialLoad || isPageChange) {
+          setIsLoading(true);
+        }
+
+        const response = await getAllClientsPaginated({
+          page: currentPage,
+          pageSize,
+          statusFilter: filterStatus,
+          searchTerm: searchTerm || undefined,
+          clientTypeFilter,
+          selectedTags,
+          loadLogos: true,
+          sortBy,
+          sortDirection
+        });
+
+        setClients(response.clients);
+        setTotalCount(response.totalCount);
+        // Notify parent component when clients are loaded
+        onClientsLoaded?.(response.clients);
+        setIsLoading(false);
+      } catch (error) {
+        console.error('Error loading clients:', error);
+        setIsLoading(false);
+      }
+    };
+
+    loadClients();
+  }, [currentPage, pageSize, filterStatus, searchTerm, clientTypeFilter, selectedTags, sortBy, sortDirection]);
+
+  // Fetch tags when clients change
+  useEffect(() => {
+    const fetchTags = async () => {
+      if (clients.length === 0) return;
+      
+      try {
+        // Fetch both client-specific tags and all unique tags
+        const [clientTags, allTags] = await Promise.all([
+          findTagsByEntityIds(
+            clients.map((client: IClient): string => client.client_id),
+            'client'
+          ),
+          findAllTagsByType('client')
+        ]);
+
+        const newClientTags: Record<string, ITag[]> = {};
+        clientTags.forEach(tag => {
+          if (!newClientTags[tag.tagged_id]) {
+            newClientTags[tag.tagged_id] = [];
+          }
+          newClientTags[tag.tagged_id].push(tag);
+        });
+
+        setLocalClientTags(newClientTags);
+        setAllUniqueTags(allTags);
+        
+        // Notify parent component about loaded tags
+        if (onClientTagsLoaded) {
+          onClientTagsLoaded(newClientTags, allTags);
+        }
+      } catch (error) {
+        console.error('Error fetching tags:', error);
+      }
+    };
+    fetchTags();
+  }, [clients]);
+
+  // No need for client-side filtering anymore since it's done server-side
+  const filteredClients = clients;
+
+  if (isLoading) {
+    return (
+      <div className="flex-1 flex items-center justify-center min-h-[400px]">
+        <LoadingIndicator
+          text="Loading clients..."
+          spinnerProps={{ size: 'lg' }}
+          layout="stacked"
+        />
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex-1">
+      {viewMode === 'grid' ? (
+        <ClientsGrid
+          filteredClients={filteredClients}
+          selectedClients={selectedClients}
+          handleCheckboxChange={onCheckboxChange}
+          handleEditClient={onEditClient}
+          handleDeleteClient={onDeleteClient}
+          onQuickView={onQuickView}
+          currentPage={currentPage}
+          pageSize={pageSize}
+          totalCount={totalCount}
+          onPageChange={onPageChange}
+          onPageSizeChange={onPageSizeChange}
+          clientTags={effectiveClientTags}
+          allUniqueTags={effectiveAllUniqueTags}
+          onTagsChange={onTagsChange}
+        />
+      ) : (
+        <ClientsList
+          selectedClients={selectedClients}
+          filteredClients={filteredClients}
+          setSelectedClients={() => {}} // This prop seems unused in the component
+          handleCheckboxChange={onCheckboxChange}
+          handleEditClient={onEditClient}
+          handleDeleteClient={onDeleteClient}
+          onQuickView={onQuickView}
+          currentPage={currentPage}
+          pageSize={pageSize}
+          totalCount={totalCount}
+          onPageChange={onPageChange}
+          onPageSizeChange={onPageSizeChange}
+          clientTags={effectiveClientTags}
+          allUniqueTags={effectiveAllUniqueTags}
+          onTagsChange={onTagsChange}
+          sortBy={sortBy}
+          sortDirection={sortDirection}
+          onSortChange={onSortChange}
+        />
+      )}
+    </div>
+  );
+});
+
+ClientResults.displayName = 'ClientResults';
+
+const Clients: React.FC = () => {
+  useTagPermissions(['client']);
+  
+
+   const { automationIdProps: containerProps, updateMetadata } = useAutomationIdAndRegister({
+     id: 'clients-page',
+     type: 'container',
+     label: 'Clients Page',
+     helperText: "Main clients management page with search, filters, and client grid/list view"
+   });
+
+   const { automationIdProps: createButtonProps } = useAutomationIdAndRegister({
+     id: 'create-client-btn',
+     type: 'button',
+     label: 'Create Client',
+     helperText: "Opens dialog to create a new client/client"
+   });
+
+   const { automationIdProps: actionsMenuProps } = useAutomationIdAndRegister({
+     id: 'actions-menu-btn',
+     type: 'button',
+     label: 'Actions Menu',
+     helperText: "Menu for importing/exporting clients"
+   });
+
+   const { automationIdProps: deleteSelectedProps } = useAutomationIdAndRegister({
+     id: 'delete-selected-btn',
+     type: 'button',
+     label: 'Delete Selected',
+     helperText: "Delete multiple selected clients"
+   });
+
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const [refreshKey, setRefreshKey] = useState(0);
+
+  useEffect(() => {
+    if (searchParams) {
+      const create = searchParams.get('create');
+      if (create === 'true') {
+        setIsDialogOpen(true);
+      }
+    }
+  }, [searchParams]);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [clientToDelete, setClientToDelete] = useState<IClient | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [searchInput, setSearchInput] = useState(''); // Local state for input field
+  
+  // Use the custom hook for view mode preference
+  type ClientViewMode = 'grid' | 'list';
+  const {
+    value: viewMode,
+    setValue: setViewModePreference,
+    isLoading: isViewModeLoading
+  } = useUserPreference<ClientViewMode>(
+    COMPANY_VIEW_MODE_SETTING,
+    {
+      defaultValue: 'grid',
+      localStorageKey: COMPANY_VIEW_MODE_SETTING,
+      debounceMs: 300
+    }
+  );
+
+  // Use user preferences for page sizes (separate for grid and list views)
+  const {
+    value: gridPageSize,
+    setValue: setGridPageSize
+  } = useUserPreference<number>(
+    CLIENTS_GRID_PAGE_SIZE_SETTING,
+    {
+      defaultValue: 9,
+      localStorageKey: CLIENTS_GRID_PAGE_SIZE_SETTING,
+      debounceMs: 300
+    }
+  );
+
+  const {
+    value: listPageSize,
+    setValue: setListPageSize
+  } = useUserPreference<number>(
+    CLIENTS_LIST_PAGE_SIZE_SETTING,
+    {
+      defaultValue: 10,
+      localStorageKey: CLIENTS_LIST_PAGE_SIZE_SETTING,
+      debounceMs: 300
+    }
+  );
+
+  // Current page size based on view mode
+  const pageSize = viewMode === 'grid' ? gridPageSize : listPageSize;
+
+  const [selectedClients, setSelectedClients] = useState<string[]>([]);
+  const [isSelectAllMode, setIsSelectAllMode] = useState(false);
+  const [loadedClients, setLoadedClients] = useState<IClient[]>([]);
+  const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'inactive'>('active');
+  const [clientTypeFilter, setClientTypeFilter] = useState<'all' | 'company' | 'individual'>('all');
+  const [isMultiDeleteDialogOpen, setIsMultiDeleteDialogOpen] = useState(false);
+  const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [multiDeleteError, setMultiDeleteError] = useState<string | null>(null);
+  const [multiDeleteResults, setMultiDeleteResults] = useState<{
+    successCount: number;
+    failedClients: Array<{ clientId: string; clientName: string; reason: string }>;
+  } | null>(null);
+  const [showDeactivateOption, setShowDeactivateOption] = useState(false);
+  const [deleteDependencies, setDeleteDependencies] = useState<{
+    contacts?: number;
+    tickets?: number;
+    projects?: number;
+    invoices?: number;
+    documents?: number;
+    interactions?: number;
+    assets?: number;
+    service_usage?: number;
+    bucket_usage?: number;
+  } | null>(null);
+
+
+  // Quick View state
+  const [quickViewClient, setQuickViewClient] = useState<IClient | null>(null);
+  const [isQuickViewOpen, setIsQuickViewOpen] = useState(false);
+
+  // Edit state - removed since edit now navigates directly
+
+  // Tag-related state
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [allUniqueTags, setAllUniqueTags] = useState<ITag[]>([]);
+  const [clientTags, setClientTags] = useState<Record<string, ITag[]>>({});
+
+  // Track if filters are applied
+  const [isFiltered, setIsFiltered] = useState(false);
+
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+
+  // Sorting state
+  const [sortBy, setSortBy] = useState<string>('client_name');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
+  
+  // For multi-delete functionality, we need to track clients
+  
+
+  // Debounce search input
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setSearchTerm(searchInput);
+      setCurrentPage(1); // Reset to first page when searching
+    }, 300); // 300ms delay
+
+    return () => clearTimeout(timer);
+  }, [searchInput]);
+
+  // Update isFiltered when any filter changes
+  useEffect(() => {
+    const hasFilters = 
+      searchTerm !== '' || 
+      filterStatus !== 'active' || 
+      clientTypeFilter !== 'all' || 
+      selectedTags.length > 0;
+    setIsFiltered(hasFilters);
+  }, [searchTerm, filterStatus, clientTypeFilter, selectedTags]);
+
+  // Tags will be loaded by ClientResults component
+
+  // Reset to first page when view mode changes
+  useEffect(() => {
+    if (!isViewModeLoading) {
+      setCurrentPage(1);
+    }
+  }, [viewMode, isViewModeLoading]);
+
+  const viewOptions: ViewSwitcherOption<ClientViewMode>[] = [
+    { value: 'grid', label: 'Cards', icon: LayoutGrid },
+    { value: 'list', label: 'Table', icon: List },
+  ];
+
+  const handleViewModeChange = (newMode: ClientViewMode) => {
+    setViewModePreference(newMode);
+    setCurrentPage(1); // Reset to first page when changing view
+  };
+
+
+  const handleClientAdded = (newClient: IClient) => {
+    // Store tags for the new client if provided (for immediate display)
+    if (newClient.client_id && newClient.tags && newClient.tags.length > 0) {
+      setClientTags(current => ({
+        ...current,
+        [newClient.client_id]: newClient.tags!
+      }));
+
+      // Update unique tags list with any new tags
+      setAllUniqueTags(prevTags => {
+        const currentTagTexts = new Set(prevTags.map(t => t.tag_text));
+        const newUniqueTags = newClient.tags!.filter(tag => !currentTagTexts.has(tag.tag_text));
+        if (newUniqueTags.length > 0) {
+          return [...prevTags, ...newUniqueTags];
+        }
+        return prevTags;
+      });
+    }
+
+    // Refresh the list after a client is added
+    setRefreshKey(prev => prev + 1);
+    toast.success(`${newClient.client_name} has been created successfully.`);
+  };
+
+  const handleCheckboxChange = (clientId: string) => {
+    setSelectedClients((prevSelected) => {
+      if (prevSelected.includes(clientId)) {
+        return prevSelected.filter((id) => id !== clientId);
+      } else {
+        return [...prevSelected, clientId];
+      }
+    });
+    // If user manually selects/deselects, exit select all mode
+    setIsSelectAllMode(false);
+  };
+
+  const handleSelectAll = () => {
+    if (selectedClients.length > 0 || isSelectAllMode) {
+      // Clear all selections
+      setSelectedClients([]);
+      setIsSelectAllMode(false);
+    } else {
+      // Select all clients on the current page (from loaded clients)
+      const clientIds = loadedClients.map(c => c.client_id);
+      if (clientIds.length > 0) {
+        setSelectedClients(clientIds);
+        setIsSelectAllMode(true);
+      }
+    }
+  };
+
+  const handleTagsChange = useCallback((clientId: string, tags: ITag[]) => {
+    // Update local tag state for optimistic UI updates
+    setClientTags(current => ({
+      ...current,
+      [clientId]: tags
+    }));
+    
+    // Update unique tags list if needed
+    setAllUniqueTags(current => {
+      const currentTagTexts = new Set(current.map(t => t.tag_text));
+      const newTags = tags.filter(tag => !currentTagTexts.has(tag.tag_text));
+      return [...current, ...newTags];
+    });
+  }, []);
+  
+  const handleClientTagsLoaded = useCallback((loadedClientTags: Record<string, ITag[]>, uniqueTags: ITag[]) => {
+    // Update the main component's tag state when ClientResults loads tags
+    setClientTags(loadedClientTags);
+    setAllUniqueTags(uniqueTags);
+  }, []);
+
+  const handleClientsLoaded = useCallback((clients: IClient[]) => {
+    // Store loaded clients for use in bulk operations (e.g., displaying names in delete results)
+    setLoadedClients(clients);
+  }, []);
+  
+
+  const handleEditClient = async (clientId: string) => {
+    // Navigate directly to the client page for editing
+    router.push(`/msp/clients/${clientId}`);
+  };
+
+  const handleQuickView = (client: IClient) => {
+    setQuickViewClient(client);
+    setIsQuickViewOpen(true);
+  };
+
+
+
+  const handleDeleteClient = async (client: IClient) => {
+    setClientToDelete(client);
+    setDeleteError(null);
+    setShowDeactivateOption(false);
+    setIsDeleteDialogOpen(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!clientToDelete) return;
+    
+    try {
+      const result = await deleteClient(clientToDelete.client_id);
+      
+      if (!result.success) {
+        if ('code' in result && result.code === 'COMPANY_HAS_DEPENDENCIES') {
+          handleDependencyError(result);
+          setShowDeactivateOption(true);
+          return;
+        }
+        throw new Error(result.message || 'Failed to delete client');
+      }
+
+      // Show success toast
+      toast.success(`${clientToDelete.client_name} has been deleted successfully.`);
+      
+      setRefreshKey(prev => prev + 1);
+      resetDeleteState();
+    } catch (error) {
+      console.error('Error deleting client:', error);
+      setDeleteError('An error occurred while deleting the client. Please try again.');
+    }
+  };
+
+  // Handler for deactivating client from delete dialog (deactivates all contacts)
+  const handleMarkClientInactiveAll = async () => {
+    if (!clientToDelete) return;
+
+    const clientName = clientToDelete.client_name;
+    try {
+      // Use atomic action to deactivate client AND all contacts
+      const result = await markClientInactiveWithContacts(clientToDelete.client_id, true);
+
+      if (!result.success) {
+        handleError(new Error(result.message || 'Failed to mark client as inactive'));
+        resetDeleteState();
+        return;
+      }
+
+      if (result.contactsDeactivated > 0) {
+        toast.success(`${clientName} and ${result.contactsDeactivated} contact${result.contactsDeactivated !== 1 ? 's' : ''} have been deactivated successfully.`);
+      } else {
+        toast.success(`${clientName} has been marked as inactive successfully.`);
+      }
+
+      // Close dialog first, then refresh
+      resetDeleteState();
+      await refreshClients();
+    } catch (error: any) {
+      handleError(error, 'An error occurred while marking the client as inactive. Please try again.');
+      resetDeleteState();
+    }
+  };
+
+  // Handler for deactivating client from delete dialog (client only)
+  const handleMarkClientInactiveOnly = async () => {
+    if (!clientToDelete) return;
+
+    const clientName = clientToDelete.client_name;
+    try {
+      // Use atomic action to deactivate client only
+      const result = await markClientInactiveWithContacts(clientToDelete.client_id, false);
+
+      if (!result.success) {
+        handleError(new Error(result.message || 'Failed to mark client as inactive'));
+        resetDeleteState();
+        return;
+      }
+
+      toast.success(`${clientName} has been marked as inactive successfully.`);
+
+      // Close dialog first, then refresh
+      resetDeleteState();
+      await refreshClients();
+    } catch (error: any) {
+      handleError(error, 'An error occurred while marking the client as inactive. Please try again.');
+      resetDeleteState();
+    }
+  };
+
+  // Handler for bulk Mark as Inactive
+  const handleBulkMarkInactive = async () => {
+    if (selectedClients.length === 0) return;
+
+    try {
+      // Process in chunks of 10 to avoid overwhelming the server
+      const CHUNK_SIZE = 10;
+      const results: { clientId: string; success: boolean; contactsDeactivated: number }[] = [];
+
+      for (let i = 0; i < selectedClients.length; i += CHUNK_SIZE) {
+        const chunk = selectedClients.slice(i, i + CHUNK_SIZE);
+        const chunkResults = await Promise.all(
+          chunk.map(async (clientId: string) => {
+            try {
+              const result = await markClientInactiveWithContacts(clientId, true);
+              return { clientId, success: result.success, contactsDeactivated: result.contactsDeactivated || 0 };
+            } catch (error) {
+              return { clientId, success: false, contactsDeactivated: 0 };
+            }
+          })
+        );
+        results.push(...chunkResults);
+      }
+
+      const successCount = results.filter(r => r.success).length;
+      const failCount = results.length - successCount;
+      const totalContactsDeactivated = results.reduce((sum, r) => sum + r.contactsDeactivated, 0);
+
+      if (failCount > 0) {
+        toast.error(`${failCount} client${failCount !== 1 ? 's' : ''} could not be marked as inactive.`);
+      }
+      if (successCount > 0) {
+        if (totalContactsDeactivated > 0) {
+          toast.success(`${successCount} client${successCount !== 1 ? 's' : ''} and ${totalContactsDeactivated} contact${totalContactsDeactivated !== 1 ? 's' : ''} have been marked as inactive successfully.`);
+        } else {
+          toast.success(`${successCount} client${successCount !== 1 ? 's' : ''} ${successCount !== 1 ? 'have' : 'has'} been marked as inactive successfully.`);
+        }
+      }
+
+      setSelectedClients([]);
+      setIsSelectAllMode(false);
+      await refreshClients();
+    } catch (error) {
+      handleError(error, 'An error occurred while marking clients as inactive. Please try again.');
+    }
+  };
+
+  // Handler for bulk Reactivate
+  const handleBulkReactivate = async () => {
+    if (selectedClients.length === 0) return;
+
+    try {
+      // Process in chunks of 10 to avoid overwhelming the server
+      const CHUNK_SIZE = 10;
+      const results: { clientId: string; success: boolean; contactsReactivated: number }[] = [];
+
+      for (let i = 0; i < selectedClients.length; i += CHUNK_SIZE) {
+        const chunk = selectedClients.slice(i, i + CHUNK_SIZE);
+        const chunkResults = await Promise.all(
+          chunk.map(async (clientId: string) => {
+            try {
+              const result = await markClientActiveWithContacts(clientId, true);
+              return { clientId, success: result.success, contactsReactivated: result.contactsReactivated || 0 };
+            } catch (error) {
+              return { clientId, success: false, contactsReactivated: 0 };
+            }
+          })
+        );
+        results.push(...chunkResults);
+      }
+
+      const successCount = results.filter(r => r.success).length;
+      const failCount = results.length - successCount;
+      const totalContactsReactivated = results.reduce((sum, r) => sum + r.contactsReactivated, 0);
+
+      if (failCount > 0) {
+        toast.error(`${failCount} client${failCount !== 1 ? 's' : ''} could not be reactivated.`);
+      }
+      if (successCount > 0) {
+        if (totalContactsReactivated > 0) {
+          toast.success(`${successCount} client${successCount !== 1 ? 's' : ''} and ${totalContactsReactivated} contact${totalContactsReactivated !== 1 ? 's' : ''} have been reactivated successfully.`);
+        } else {
+          toast.success(`${successCount} client${successCount !== 1 ? 's' : ''} ${successCount !== 1 ? 'have' : 'has'} been reactivated successfully.`);
+        }
+      }
+
+      setSelectedClients([]);
+      setIsSelectAllMode(false);
+      await refreshClients();
+    } catch (error) {
+      handleError(error, 'An error occurred while reactivating clients. Please try again.');
+    }
+  };
+
+  const handleMultiDelete = () => {
+    setMultiDeleteError(null);
+    setIsMultiDeleteDialogOpen(true);
+  };
+
+  const refreshClients = async () => {
+    // Force refresh by changing a key to trigger ClientResults re-render
+    setRefreshKey(prev => prev + 1);
+  };
+
+  // Memoized search input change handler to prevent re-creation on every render
+  const handleSearchInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchInput(e.target.value);
+  }, []);
+
+  // Handle reset filters
+  const handleResetFilters = useCallback(() => {
+    setSearchInput('');
+    setSearchTerm('');
+    setFilterStatus('active');
+    setClientTypeFilter('all');
+    setSelectedTags([]);
+    setCurrentPage(1);
+    setIsFiltered(false);
+  }, []);
+  
+  // Handle sort change
+  const handleSortChange = useCallback((newSortBy: string, newSortDirection: 'asc' | 'desc') => {
+    setSortBy(newSortBy);
+    setSortDirection(newSortDirection);
+    setCurrentPage(1); // Reset to first page when sorting changes
+  }, []);
+  
+  const confirmMultiDelete = async () => {
+    try {
+      const deleteResults = await Promise.all(
+        selectedClients.map(async (clientId: string): Promise<{ clientId: string; result: any }> => {
+          const result = await deleteClient(clientId);
+          return { clientId, result };
+        })
+      );
+
+      const failedClients: Array<{ clientId: string; clientName: string; reason: string }> = [];
+      const successfulDeletes: string[] = [];
+
+      deleteResults.forEach(({ clientId, result }) => {
+        if (!result.success) {
+          const client = loadedClients.find(c => c.client_id === clientId);
+          const clientName = client ? client.client_name : 'Unknown Client';
+
+          if ('code' in result && result.code === 'COMPANY_HAS_DEPENDENCIES') {
+            const reason = formatDependencyText(result);
+            failedClients.push({ clientId, clientName, reason });
+          } else {
+            failedClients.push({ clientId, clientName, reason: result.message || 'Unknown error' });
+          }
+        } else {
+          successfulDeletes.push(clientId);
+        }
+      });
+
+      // Update selected clients to remove successfully deleted ones
+      setSelectedClients(prev => prev.filter(id => !successfulDeletes.includes(id)));
+
+      // If any clients were successfully deleted, refresh the list
+      if (successfulDeletes.length > 0) {
+        await refreshClients();
+      }
+
+      // If all selected clients were successfully deleted, close the dialog
+      if (failedClients.length === 0) {
+        setIsMultiDeleteDialogOpen(false);
+        setMultiDeleteError(null);
+        setMultiDeleteResults(null);
+        toast.success(`${successfulDeletes.length} client${successfulDeletes.length !== 1 ? 's have' : ' has'} been deleted successfully.`);
+      } else {
+        // Store structured results for better UI display
+        setMultiDeleteResults({
+          successCount: successfulDeletes.length,
+          failedClients
+        });
+      }
+
+    } catch (error) {
+      console.error('Error in multi-delete:', error);
+      setMultiDeleteError('An error occurred while deleting clients. Please try again.');
+    }
+  };
+
+  // Handler for marking failed bulk-delete clients as inactive
+  const handleBulkMarkFailedAsInactive = async () => {
+    if (!multiDeleteResults || multiDeleteResults.failedClients.length === 0) return;
+
+    const clientIds = multiDeleteResults.failedClients.map(c => c.clientId);
+
+    try {
+      const results = await Promise.all(
+        clientIds.map(async (clientId) => {
+          try {
+            const result = await markClientInactiveWithContacts(clientId, true);
+            return { clientId, success: result.success, contactsDeactivated: result.contactsDeactivated || 0 };
+          } catch (error) {
+            return { clientId, success: false, contactsDeactivated: 0 };
+          }
+        })
+      );
+
+      const successCount = results.filter(r => r.success).length;
+      const totalContactsDeactivated = results.reduce((sum, r) => sum + r.contactsDeactivated, 0);
+
+      // Close dialog and reset state
+      setIsMultiDeleteDialogOpen(false);
+      setMultiDeleteError(null);
+      setMultiDeleteResults(null);
+      setSelectedClients([]);
+      setIsSelectAllMode(false);
+
+      await refreshClients();
+
+      if (successCount > 0) {
+        if (totalContactsDeactivated > 0) {
+          toast.success(`${successCount} client${successCount !== 1 ? 's' : ''} and ${totalContactsDeactivated} contact${totalContactsDeactivated !== 1 ? 's' : ''} have been marked as inactive.`);
+        } else {
+          toast.success(`${successCount} client${successCount !== 1 ? 's have' : ' has'} been marked as inactive.`);
+        }
+      }
+    } catch (error) {
+      handleError(error, 'An error occurred while marking clients as inactive.');
+    }
+  };
+
+  interface DependencyResult {
+    dependencies?: string[];
+    counts?: Record<string, number>; // Changed from string to number to match backend
+    code?: string;
+    message?: string;
+  }
+
+  const formatDependencyText = (result: DependencyResult): string => {
+    const dependencies = result.dependencies || [];
+    const counts = result.counts || {};
+    
+    // Map the base keys to their full dependency names
+    const keyMap: Record<string, string> = {
+      'contact': 'contacts',
+      'ticket': 'active tickets',
+      'project': 'active projects',
+      'document': 'documents',
+      'invoice': 'invoices',
+      'interaction': 'interactions',
+      'location': 'locations',
+      'service_usage': 'service usage records',
+      'bucket_usage': 'bucket usage records',
+      'contract_line': 'contract lines',
+      'tax_rate': 'tax rates',
+      'tax_setting': 'tax settings'
+    };
+
+    // Create a reverse mapping from full names to base keys
+    const reverseKeyMap: Record<string, string> = {};
+    Object.entries(keyMap).forEach(([key, value]) => {
+      reverseKeyMap[value] = key;
+    });
+
+    return dependencies
+    .map((dep: string): string => {
+      // Get the base key for this dependency
+      const baseKey = reverseKeyMap[dep];
+      const count = baseKey ? counts[baseKey] || 0 : 0;
+      return `${count} ${dep}`;
+    })
+    .join(', ');
+  };
+
+  const handleDependencyError = (result: DependencyResult) => {
+    // Store the dependency counts for structured display
+    // Only include counts that are > 0
+    const counts = result.counts || {};
+    setDeleteDependencies({
+      contacts: counts['contact'] > 0 ? counts['contact'] : undefined,
+      tickets: counts['ticket'] > 0 ? counts['ticket'] : undefined,
+      projects: counts['project'] > 0 ? counts['project'] : undefined,
+      invoices: counts['invoice'] > 0 ? counts['invoice'] : undefined,
+      documents: counts['document'] > 0 ? counts['document'] : undefined,
+      interactions: counts['interaction'] > 0 ? counts['interaction'] : undefined,
+      assets: counts['asset'] > 0 ? counts['asset'] : undefined,
+      service_usage: counts['service_usage'] > 0 ? counts['service_usage'] : undefined,
+      bucket_usage: counts['bucket_usage'] > 0 ? counts['bucket_usage'] : undefined,
+    });
+  };
+
+
+  const resetDeleteState = () => {
+    setIsDeleteDialogOpen(false);
+    setClientToDelete(null);
+    setDeleteError(null);
+    setShowDeactivateOption(false);
+    setDeleteDependencies(null);
+  };
+
+  const handleExportToCSV = async () => {
+    try {
+      let clientsToExport: IClient[];
+      
+      // If clients are selected, export only those
+      if (selectedClients.length > 0) {
+        const allClients = await getAllClients(true);
+        clientsToExport = allClients.filter(client => 
+          selectedClients.includes(client.client_id)
+        );
+      } else {
+        // Otherwise export all clients with current filters
+        clientsToExport = await getAllClients(true);
+      }
+      
+      const csvData = await exportClientsToCSV(clientsToExport);
+      
+      const blob = new Blob([csvData], { type: 'text/csv;charset=utf-8;' });
+      
+      const link = document.createElement('a');
+      if (link.download !== undefined) {
+        const url = URL.createObjectURL(blob);
+        link.setAttribute('href', url);
+        link.setAttribute('download', 'clients.csv');
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      }
+      
+      toast.success(`Exported ${clientsToExport.length} ${clientsToExport.length === 1 ? 'client' : 'clients'} to CSV`);
+    } catch (error) {
+      console.error('Error exporting clients to CSV:', error);
+      toast.error('Failed to export clients to CSV');
+    }
+  };
+
+  const handleImportComplete = async (clients: IClient[], updateExisting: boolean) => {
+    try {
+      await importClientsFromCSV(clients, updateExisting);
+      setIsImportDialogOpen(false);
+      router.refresh();
+    } catch (error) {
+      console.error('Error importing clients:', error);
+    }
+  };
+
+  if (viewMode === null) {
+    return (
+      <div className="w-full">
+        <div className="flex justify-end mb-4 flex-wrap gap-6">
+          {/* Show loading skeleton for controls */}
+          <div className="w-64 h-10 bg-gray-200 rounded animate-pulse" />
+          <div className="w-64 h-10 bg-gray-200 rounded animate-pulse" />
+          <div className="w-32 h-10 bg-gray-200 rounded animate-pulse" />
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col min-h-full">
+        {/* Quick Add Client Dialog */}
+        <QuickAddClient
+          open={isDialogOpen}
+          onOpenChange={setIsDialogOpen}
+          onClientAdded={handleClientAdded}
+        />
+
+        <div className="flex justify-between items-start mb-4 flex-wrap gap-4">
+          {/* Left side - Search and Filters */}
+          <div className="flex items-center gap-4 flex-wrap">
+            {/* Search */}
+            <SearchInput value={searchInput} onChange={handleSearchInputChange} />
+
+            {/* Status Filter */}
+            <div className="w-48">
+              <CustomSelect
+                id="status-filter"
+                value={filterStatus}
+                onValueChange={(value) => {
+                  setFilterStatus(value as 'all' | 'active' | 'inactive');
+                  setCurrentPage(1); // Reset to first page when changing filter
+                }}
+                options={[
+                  { value: 'active', label: 'Active Clients' },
+                  { value: 'inactive', label: 'Inactive Clients' },
+                  { value: 'all', label: 'All Clients' }
+                ]}
+                placeholder="Filter by status"
+                label="Status Filter"
+              />
+            </div>
+
+            {/* Client Type Filter */}
+            <div className="w-48">
+              <CustomSelect
+                id="client-type-filter"
+                value={clientTypeFilter}
+                onValueChange={(value) => {
+                  setClientTypeFilter(value as 'all' | 'company' | 'individual');
+                  setCurrentPage(1); // Reset to first page when changing filter
+                }}
+                options={[
+                  { value: 'all', label: 'All Types' },
+                  { value: 'company', label: 'Companies' },
+                  { value: 'individual', label: 'Individuals' }
+                ]}
+                placeholder="Filter by type"
+                label="Client Type Filter"
+              />
+            </div>
+
+            {/* Tag Filter */}
+            <TagFilter
+              tags={allUniqueTags}
+              selectedTags={selectedTags}
+              onToggleTag={(tag: string) => {
+                setSelectedTags(prev =>
+                  prev.includes(tag)
+                    ? prev.filter(t => t !== tag)
+                    : [...prev, tag]
+                );
+                setCurrentPage(1); // Reset to first page when changing filter
+              }}
+              onClearTags={() => setSelectedTags([])}
+            />
+
+            {/* Reset Filters Button */}
+            {isFiltered && (
+              <Button
+                id="reset-filters-button"
+                variant="outline"
+                size="sm"
+                className="whitespace-nowrap flex items-center gap-2"
+                onClick={handleResetFilters}
+              >
+                <XCircle className="h-4 w-4" />
+                Reset Filters
+              </Button>
+            )}
+          </div>
+
+          {/* Right side - Actions and View Switcher */}
+          <div className="flex items-center gap-4">
+            {/* Actions */}
+            <div className="flex gap-2">
+              <Button
+                id="create-client-button"
+                onClick={() => setIsDialogOpen(true)}
+              >
+                + Create Client
+              </Button>
+
+              <DropdownMenu.Root>
+                <DropdownMenu.Trigger asChild>
+                  <Button
+                    id="clients-actions-button"
+                    variant="outline"
+                    className="flex items-center gap-2"
+                  >
+                    <MoreVertical size={16} />
+                    Actions
+                  </Button>
+                </DropdownMenu.Trigger>
+                <DropdownMenu.Content className="bg-white rounded-md shadow-lg p-1">
+                  <DropdownMenu.Item
+                    className="px-2 py-1 text-sm cursor-pointer hover:bg-gray-100 flex items-center"
+                    onSelect={() => setIsImportDialogOpen(true)}
+                  >
+                    <Upload size={14} className="mr-2" />
+                    Upload CSV
+                  </DropdownMenu.Item>
+                  <DropdownMenu.Item
+                    className="px-2 py-1 text-sm cursor-pointer hover:bg-gray-100 flex items-center"
+                    onSelect={() => void handleExportToCSV()}
+                  >
+                    <CloudDownload size={14} className="mr-2" />
+                    Download CSV
+                  </DropdownMenu.Item>
+                  <DropdownMenu.Separator className="h-px bg-gray-200 my-1" />
+                  <DropdownMenu.Item
+                    className={`px-2 py-1 text-sm cursor-pointer hover:bg-gray-100 flex items-center ${selectedClients.length === 0 ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    onSelect={() => selectedClients.length > 0 && void handleBulkMarkInactive()}
+                    disabled={selectedClients.length === 0}
+                  >
+                    <Power size={14} className="mr-2" />
+                    Mark as Inactive
+                  </DropdownMenu.Item>
+                  <DropdownMenu.Item
+                    className={`px-2 py-1 text-sm cursor-pointer hover:bg-gray-100 flex items-center ${selectedClients.length === 0 ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    onSelect={() => selectedClients.length > 0 && void handleBulkReactivate()}
+                    disabled={selectedClients.length === 0}
+                  >
+                    <RotateCcw size={14} className="mr-2" />
+                    Reactivate
+                  </DropdownMenu.Item>
+                </DropdownMenu.Content>
+              </DropdownMenu.Root>
+            </div>
+
+            {/* View Switcher */}
+            <ViewSwitcher
+              currentView={viewMode}
+              onChange={(mode) => void handleViewModeChange(mode)}
+              options={viewOptions}
+            />
+          </div>
+        </div>
+
+      {/* Delete */}
+      <div className="flex items-center gap-8 mb-6 ms-4">
+        <div className="[&>div]:mb-0 [&>div]:flex [&>div]:items-center">
+          <Checkbox
+            id="select-all-clients"
+            checked={selectedClients.length > 0}
+            onChange={handleSelectAll}
+          />
+        </div>
+        {selectedClients.length > 0 && (
+          <span className="text-sm font-medium text-gray-500">
+            {isSelectAllMode ? `All ${selectedClients.length} clients selected` : `${selectedClients.length} Selected`}
+          </span>
+        )}
+
+        <Button
+          id="delete-selected-clients"
+          variant="ghost"
+          size="sm"
+          className="flex gap-1 text-gray-500"
+          disabled={selectedClients.length === 0}
+          onClick={handleMultiDelete}
+        >
+          Delete
+          <TrashIcon className="h-5 w-5" />
+        </Button>
+      </div>
+
+      {/* Clients */}
+      <ClientResults
+        key={refreshKey}
+        searchTerm={searchTerm}
+        filterStatus={filterStatus}
+        clientTypeFilter={clientTypeFilter}
+        selectedTags={selectedTags}
+        viewMode={viewMode!}
+        selectedClients={selectedClients}
+        onCheckboxChange={handleCheckboxChange}
+        onEditClient={handleEditClient}
+        onDeleteClient={handleDeleteClient}
+        onQuickView={handleQuickView}
+        onTagsChange={handleTagsChange}
+        currentPage={currentPage}
+        pageSize={pageSize}
+        onPageChange={setCurrentPage}
+        onPageSizeChange={(size) => {
+          // Save to the appropriate preference based on current view mode
+          if (viewMode === 'grid') {
+            setGridPageSize(size);
+          } else {
+            setListPageSize(size);
+          }
+          setCurrentPage(1); // Reset to first page when changing page size
+        }}
+        onClientTagsLoaded={handleClientTagsLoaded}
+        onClientsLoaded={handleClientsLoaded}
+        clientTags={clientTags}
+        allUniqueTagsFromParent={allUniqueTags}
+        sortBy={sortBy}
+        sortDirection={sortDirection}
+        onSortChange={handleSortChange}
+      />
+
+      {/* Multi-delete confirmation dialog */}
+      <Dialog
+        isOpen={isMultiDeleteDialogOpen}
+        onClose={() => {
+          setIsMultiDeleteDialogOpen(false);
+          setMultiDeleteError(null);
+          setMultiDeleteResults(null);
+        }}
+        id="multi-delete-confirmation-dialog"
+        title={multiDeleteResults ? "Delete Results" : "Delete Selected Clients"}
+      >
+        <DialogContent>
+          <div className="space-y-4">
+            {multiDeleteError ? (
+              <div className="text-red-600">{multiDeleteError}</div>
+            ) : multiDeleteResults ? (
+              <>
+                {/* Success message if any were deleted */}
+                {multiDeleteResults.successCount > 0 && (
+                  <div className="bg-green-50 border border-green-200 rounded-md p-3">
+                    <p className="text-green-800">
+                      <span className="font-semibold">{multiDeleteResults.successCount}</span> client{multiDeleteResults.successCount !== 1 ? 's were' : ' was'} successfully deleted.
+                    </p>
+                  </div>
+                )}
+
+                {/* Failed clients section */}
+                {multiDeleteResults.failedClients.length > 0 && (
+                  <div className="space-y-3">
+                    <div className="bg-amber-50 border border-amber-200 rounded-md p-3">
+                      <p className="text-amber-800 font-semibold mb-2">
+                        {multiDeleteResults.failedClients.length} client{multiDeleteResults.failedClients.length !== 1 ? 's' : ''} could not be deleted
+                      </p>
+                      <p className="text-amber-700 text-sm">
+                        These clients have associated records that must be removed first.
+                      </p>
+                    </div>
+
+                    <div className="max-h-48 overflow-y-auto border rounded-md">
+                      <table className="w-full text-sm">
+                        <thead className="bg-gray-50 sticky top-0">
+                          <tr>
+                            <th className="text-left p-2 font-medium text-gray-700">Client</th>
+                            <th className="text-left p-2 font-medium text-gray-700">Associated Records</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y">
+                          {multiDeleteResults.failedClients.map((client) => (
+                            <tr key={client.clientId} className="hover:bg-gray-50">
+                              <td className="p-2 font-medium text-gray-900">{client.clientName}</td>
+                              <td className="p-2 text-gray-600">{client.reason}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+
+                    <div className="bg-blue-50 border border-blue-200 rounded-md p-3">
+                      <p className="text-blue-800 text-sm">
+                        <span className="font-semibold">Alternative:</span> Mark these clients as inactive. They will be hidden from most views but retain all their data.
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </>
+            ) : (
+              <p className="text-gray-600">
+                Are you sure you want to delete <span className="font-semibold">{selectedClients.length}</span> selected client{selectedClients.length !== 1 ? 's' : ''}? This action cannot be undone.
+              </p>
+            )}
+          </div>
+
+          <DialogFooter>
+            <div className="mt-4 flex justify-end gap-2">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setIsMultiDeleteDialogOpen(false);
+                  setMultiDeleteError(null);
+                  setMultiDeleteResults(null);
+                }}
+                id="multi-delete-cancel"
+              >
+                {multiDeleteResults ? "Close" : "Cancel"}
+              </Button>
+
+              {multiDeleteResults && multiDeleteResults.failedClients.length > 0 && (
+                <Button
+                  variant="default"
+                  onClick={() => void handleBulkMarkFailedAsInactive()}
+                  id="multi-delete-mark-inactive"
+                >
+                  Mark {multiDeleteResults.failedClients.length} as Inactive
+                </Button>
+              )}
+
+              {!multiDeleteResults && !multiDeleteError && (
+                <Button
+                  variant="destructive"
+                  onClick={() => void confirmMultiDelete()}
+                  id="multi-delete-confirm"
+                >
+                  Delete
+                </Button>
+              )}
+            </div>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Single client delete confirmation dialog */}
+      <Dialog
+        isOpen={isDeleteDialogOpen}
+        onClose={resetDeleteState}
+        id="single-delete-confirmation-dialog"
+        title="Delete Client"
+      >
+        <DialogContent>
+          <div className="space-y-4">
+            {clientToDelete?.is_inactive && showDeactivateOption && deleteDependencies ? (
+              <>
+                <div className="bg-amber-50 border border-amber-200 rounded-md p-4">
+                  <p className="text-amber-800">
+                    <span className="font-semibold">Note:</span> This client is already marked as inactive.
+                  </p>
+                </div>
+                <p className="text-gray-700">Unable to delete this client due to the following associated records:</p>
+                <div>
+                  <ul className="list-disc list-inside space-y-1 text-gray-700">
+                    {deleteDependencies.contacts && deleteDependencies.contacts > 0 && (
+                      <li>{deleteDependencies.contacts} contact{deleteDependencies.contacts !== 1 ? 's' : ''}</li>
+                    )}
+                    {deleteDependencies.tickets && deleteDependencies.tickets > 0 && (
+                      <li>{deleteDependencies.tickets} ticket{deleteDependencies.tickets !== 1 ? 's' : ''}</li>
+                    )}
+                    {deleteDependencies.projects && deleteDependencies.projects > 0 && (
+                      <li>{deleteDependencies.projects} project{deleteDependencies.projects !== 1 ? 's' : ''}</li>
+                    )}
+                    {deleteDependencies.invoices && deleteDependencies.invoices > 0 && (
+                      <li>{deleteDependencies.invoices} invoice{deleteDependencies.invoices !== 1 ? 's' : ''}</li>
+                    )}
+                    {deleteDependencies.documents && deleteDependencies.documents > 0 && (
+                      <li>{deleteDependencies.documents} document{deleteDependencies.documents !== 1 ? 's' : ''}</li>
+                    )}
+                    {deleteDependencies.interactions && deleteDependencies.interactions > 0 && (
+                      <li>{deleteDependencies.interactions} interaction{deleteDependencies.interactions !== 1 ? 's' : ''}</li>
+                    )}
+                    {deleteDependencies.assets && deleteDependencies.assets > 0 && (
+                      <li>{deleteDependencies.assets} asset{deleteDependencies.assets !== 1 ? 's' : ''}</li>
+                    )}
+                    {deleteDependencies.service_usage && deleteDependencies.service_usage > 0 && (
+                      <li>{deleteDependencies.service_usage} service usage record{deleteDependencies.service_usage !== 1 ? 's' : ''}</li>
+                    )}
+                    {deleteDependencies.bucket_usage && deleteDependencies.bucket_usage > 0 && (
+                      <li>{deleteDependencies.bucket_usage} bucket usage record{deleteDependencies.bucket_usage !== 1 ? 's' : ''}</li>
+                    )}
+                  </ul>
+                </div>
+                <p className="text-gray-700">Please remove or reassign these items before the client can be deleted.</p>
+              </>
+            ) : showDeactivateOption && deleteDependencies ? (
+              <>
+                <p className="text-gray-700">Unable to delete this client.</p>
+                <div>
+                  <p className="text-gray-700 mb-2">This client has the following associated records:</p>
+                  <ul className="list-disc list-inside space-y-1 text-gray-700">
+                    {deleteDependencies.contacts && deleteDependencies.contacts > 0 && (
+                      <li>{deleteDependencies.contacts} contact{deleteDependencies.contacts !== 1 ? 's' : ''}</li>
+                    )}
+                    {deleteDependencies.tickets && deleteDependencies.tickets > 0 && (
+                      <li>{deleteDependencies.tickets} ticket{deleteDependencies.tickets !== 1 ? 's' : ''}</li>
+                    )}
+                    {deleteDependencies.projects && deleteDependencies.projects > 0 && (
+                      <li>{deleteDependencies.projects} project{deleteDependencies.projects !== 1 ? 's' : ''}</li>
+                    )}
+                    {deleteDependencies.invoices && deleteDependencies.invoices > 0 && (
+                      <li>{deleteDependencies.invoices} invoice{deleteDependencies.invoices !== 1 ? 's' : ''}</li>
+                    )}
+                    {deleteDependencies.documents && deleteDependencies.documents > 0 && (
+                      <li>{deleteDependencies.documents} document{deleteDependencies.documents !== 1 ? 's' : ''}</li>
+                    )}
+                    {deleteDependencies.interactions && deleteDependencies.interactions > 0 && (
+                      <li>{deleteDependencies.interactions} interaction{deleteDependencies.interactions !== 1 ? 's' : ''}</li>
+                    )}
+                    {deleteDependencies.assets && deleteDependencies.assets > 0 && (
+                      <li>{deleteDependencies.assets} asset{deleteDependencies.assets !== 1 ? 's' : ''}</li>
+                    )}
+                    {deleteDependencies.service_usage && deleteDependencies.service_usage > 0 && (
+                      <li>{deleteDependencies.service_usage} service usage record{deleteDependencies.service_usage !== 1 ? 's' : ''}</li>
+                    )}
+                    {deleteDependencies.bucket_usage && deleteDependencies.bucket_usage > 0 && (
+                      <li>{deleteDependencies.bucket_usage} bucket usage record{deleteDependencies.bucket_usage !== 1 ? 's' : ''}</li>
+                    )}
+                  </ul>
+                </div>
+                <div className="bg-blue-50 border border-blue-200 rounded-md p-4">
+                  <p className="text-blue-800">
+                    <span className="font-semibold">Alternative Option:</span> You can mark this client as inactive instead. Inactive clients are hidden from most views but retain all their data and can be marked as active later.
+                  </p>
+                  {deleteDependencies.contacts && deleteDependencies.contacts > 0 && (
+                    <p className="text-blue-800 mt-2">
+                      Would you like to also deactivate the {deleteDependencies.contacts} associated contact{deleteDependencies.contacts !== 1 ? 's' : ''}?
+                    </p>
+                  )}
+                </div>
+              </>
+            ) : deleteError ? (
+              <div className="text-gray-600 whitespace-pre-line">
+                {deleteError}
+              </div>
+            ) : (
+              <p className="text-gray-600">
+                Are you sure you want to delete {clientToDelete?.client_name}? This action cannot be undone.
+              </p>
+            )}
+          </div>
+
+          <DialogFooter>
+            <div className="mt-4 flex justify-end space-x-2">
+              <Button
+                variant="outline"
+                onClick={resetDeleteState}
+                id="single-delete-cancel"
+              >
+                Cancel
+              </Button>
+
+              {clientToDelete?.is_inactive && showDeactivateOption ? (
+                <Button
+                  variant="default"
+                  onClick={resetDeleteState}
+                  id="single-delete-close"
+                >
+                  Close
+                </Button>
+              ) : showDeactivateOption ? (
+                <>
+                  {deleteDependencies?.contacts && deleteDependencies.contacts > 0 && (
+                    <Button
+                      variant="outline"
+                      onClick={() => void handleMarkClientInactiveOnly()}
+                      id="single-delete-client-only"
+                    >
+                      Client Only
+                    </Button>
+                  )}
+                  <Button
+                    variant="default"
+                    onClick={() => void handleMarkClientInactiveAll()}
+                    id="single-delete-mark-inactive"
+                  >
+                    {deleteDependencies?.contacts && deleteDependencies.contacts > 0 ? "Client & Contacts" : "Mark as Inactive"}
+                  </Button>
+                </>
+              ) : !deleteError && (
+                <Button
+                  onClick={() => void confirmDelete()}
+                  id="single-delete-confirm"
+                  variant="destructive"
+                >
+                  Delete
+                </Button>
+              )}
+            </div>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* CSV Import Dialog */}
+      <ClientsImportDialog
+        isOpen={isImportDialogOpen}
+        onClose={() => setIsImportDialogOpen(false)}
+        onImportComplete={(clients, updateExisting) => void handleImportComplete(clients, updateExisting)}
+      />
+      
+      {/* Quick View Drawer */}
+      <Drawer
+        id="client-quick-view-drawer"
+        isOpen={isQuickViewOpen}
+        onClose={() => {
+          setIsQuickViewOpen(false);
+          setQuickViewClient(null);
+          // Refresh clients to show any updates
+          refreshClients();
+        }}
+      >
+        {quickViewClient && (
+          <ClientDetails
+            client={quickViewClient}
+            isInDrawer={true}
+            quickView={true}
+          />
+        )}
+      </Drawer>
+
+
+    </div>
+  );
+};
+
+export default Clients;

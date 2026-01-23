@@ -1,8 +1,8 @@
 'use client';
 
 import { Suspense } from 'react';
-import { AppointmentRequestDetailsPage } from 'server/src/components/client-portal/appointments/AppointmentRequestDetailsPage';
-import { Skeleton } from 'server/src/components/ui/Skeleton';
+import { AppointmentRequestDetailsPage } from '@alga-psa/client-portal/components';
+import { Skeleton } from '@alga-psa/ui/components/Skeleton';
 
 export default function AppointmentRequestPage() {
   return (

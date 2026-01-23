@@ -2,10 +2,10 @@ import { ImapFlow } from 'imapflow';
 import { simpleParser } from 'mailparser';
 import { v4 as uuidv4 } from 'uuid';
 import { createHash } from 'crypto';
-import logger from '@alga-psa/shared/core/logger';
-import { getAdminConnection } from '@alga-psa/shared/db/admin';
+import logger from '@alga-psa/core/logger';
+import { getAdminConnection } from '@alga-psa/db/admin';
 import { publishEvent } from '@alga-psa/shared/events/publisher';
-import { getSecretProviderInstance } from '@alga-psa/shared/core';
+import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import axios from 'axios';
 import type { EmailMessageDetails } from '@alga-psa/shared/interfaces/inbound-email.interfaces';
 

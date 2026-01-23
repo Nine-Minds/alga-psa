@@ -439,7 +439,7 @@ export class CompanyModel {
 ```typescript
 // ee/temporal-workflows/src/activities/customer-tracking-activities.ts
 import { Context } from '@temporalio/activity';
-import { getAdminConnection } from '@alga-psa/shared/db/admin';
+import { getAdminConnection } from '@alga-psa/db/admin';
 import { CompanyModel } from '@alga-psa/shared/models/companyModel';
 import { ContactModel } from '@alga-psa/shared/models/contactModel';
 import { TagModel } from '@alga-psa/shared/models/tagModel';

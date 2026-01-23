@@ -5,7 +5,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { ApiBaseController } from './ApiBaseController';
-import { UserService, UserActivityFilter } from '../services/UserService';
+import { UserService, UserActivityFilter } from '@alga-psa/users';
 import { 
   createUserSchema,
   updateUserSchema,
@@ -18,9 +18,7 @@ import {
 import { 
   ApiKeyServiceForApi 
 } from '../../services/apiKeyServiceForApi';
-import { 
-  findUserByIdForApi 
-} from '../../actions/user-actions/findUserByIdForApi';
+import { findUserByIdForApi } from '@alga-psa/users/actions';
 import { 
   runWithTenant 
 } from '../../db';
@@ -30,7 +28,7 @@ import {
 import { 
   hasPermission 
 } from '../../auth/rbac';
-import { createSystemContext } from '../services/SystemContext';
+import { createSystemContext } from '@alga-psa/db';
 import {
   ApiRequest,
   UnauthorizedError,

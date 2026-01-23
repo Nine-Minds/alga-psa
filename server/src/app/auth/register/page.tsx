@@ -8,9 +8,9 @@ import Link from 'next/link';
 import { Eye, EyeOff, CheckCircle, XCircle } from 'lucide-react';
 import * as Label from '@radix-ui/react-label';
 import { AlertProps, TPasswordCriteria } from 'server/src/interfaces';
-import { registerUser } from 'server/src/lib/actions/useRegister';
-import Alert from 'server/src/components/auth/Alert';
-import { Input } from 'server/src/components/ui/Input';
+import { registerUser } from '@alga-psa/auth/actions';
+import { Alert } from '@alga-psa/auth/client';
+import { Input } from '@alga-psa/ui/components/Input';
 
 
 

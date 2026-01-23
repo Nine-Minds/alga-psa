@@ -2,7 +2,7 @@ import { Temporal } from '@js-temporal/polyfill';
 import { createTenantKnex } from 'server/src/lib/db';
 import { v4 as uuidv4 } from 'uuid';
 import { TaxService } from 'server/src/lib/services/taxService';
-import { generateInvoiceNumber } from 'server/src/lib/actions/invoiceGeneration';
+import { generateInvoiceNumber } from '@alga-psa/billing/actions/invoiceGeneration';
 import { BillingEngine } from 'server/src/lib/billing/billingEngine';
 import { InvoiceViewModel, IInvoiceCharge as ManualInvoiceItem, NetAmountItem, DiscountType } from 'server/src/interfaces/invoice.interfaces'; // Renamed for clarity
 import { IBillingCharge, IFixedPriceCharge, IService, TransactionType } from 'server/src/interfaces/billing.interfaces'; // Added import
@@ -10,7 +10,8 @@ import { IClientWithLocation } from 'server/src/interfaces/client.interfaces';
 import { Knex } from 'knex';
 import type { Session } from 'next-auth';
 import { ISO8601String } from 'server/src/types/types.d';
-import { getClientDefaultTaxRegionCode } from 'server/src/lib/actions/client-actions/clientTaxRateActions'; // Import the new lookup function
+import { getClientDefaultTaxRegionCode } from '@alga-psa/clients/actions';
+import { getSession } from 'server/src/lib/auth/getSession';
 
 // Helper interface for tax calculation
 interface ITaxableEntity {
