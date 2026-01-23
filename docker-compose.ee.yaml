@@ -61,6 +61,21 @@ services:
       NINJAONE_CLIENT_ID: ${NINJAONE_CLIENT_ID:-}
       NINJAONE_CLIENT_SECRET: ${NINJAONE_CLIENT_SECRET:-}
       NINJAONE_REDIRECT_URI: ${NINJAONE_REDIRECT_URI:-}
+      # Extension runner (Docker backend) + bundle storage (MinIO dev)
+      RUNNER_BACKEND: ${RUNNER_BACKEND:-docker}
+      RUNNER_BASE_URL: ${RUNNER_BASE_URL:-http://host.docker.internal:8085}
+      RUNNER_DOCKER_HOST: ${RUNNER_DOCKER_HOST:-http://host.docker.internal:8085}
+      RUNNER_PUBLIC_BASE: ${RUNNER_PUBLIC_BASE:-/runner}
+      RUNNER_SERVICE_TOKEN: ${RUNNER_SERVICE_TOKEN:-local-runner-key}
+      RUNNER_STORAGE_API_TOKEN: ${RUNNER_STORAGE_API_TOKEN:-local-runner-key}
+      RUNNER_CONFIG_API_TOKEN: ${RUNNER_CONFIG_API_TOKEN:-local-runner-key}
+      STORAGE_S3_ENDPOINT: ${STORAGE_S3_ENDPOINT:-http://host.docker.internal:9000}
+      STORAGE_S3_REGION: ${STORAGE_S3_REGION:-us-east-1}
+      STORAGE_S3_ACCESS_KEY: ${STORAGE_S3_ACCESS_KEY:-minioadmin}
+      STORAGE_S3_SECRET_KEY: ${STORAGE_S3_SECRET_KEY:-minioadmin}
+      STORAGE_S3_BUCKET: ${STORAGE_S3_BUCKET:-extensions}
+      STORAGE_S3_BUNDLE_BUCKET: ${STORAGE_S3_BUNDLE_BUCKET:-extensions}
+      STORAGE_S3_FORCE_PATH_STYLE: ${STORAGE_S3_FORCE_PATH_STYLE:-true}
     volumes:
       - type: bind
         source: ./secrets/db_password_server

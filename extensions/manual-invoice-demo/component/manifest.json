@@ -1,0 +1,9 @@
+{
+  "name": "manual-invoice-demo",
+  "publisher": "Alga",
+  "version": "0.1.0",
+  "runtime": "wasm-js@1",
+  "entry": "dist/main.wasm",
+  "capabilities": ["cap:invoice.manual.create", "cap:log.emit", "cap:context.read"]
+}
+

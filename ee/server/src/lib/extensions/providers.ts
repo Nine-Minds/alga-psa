@@ -7,9 +7,12 @@ export const KNOWN_PROVIDER_CAPABILITIES = [
   'cap:ui.proxy',
   'cap:user.read',
   'cap:scheduler.manage',
+  'cap:invoice.manual.create',
 ] as const;
 
 export const DEFAULT_PROVIDER_CAPABILITIES = ['cap:context.read', 'cap:log.emit', 'cap:user.read'] as const;
+
+export const CAP_INVOICE_MANUAL_CREATE = 'cap:invoice.manual.create' as const;
 
 export type ProviderCapability = (typeof KNOWN_PROVIDER_CAPABILITIES)[number];
 

@@ -9,6 +9,12 @@ import {
 
 export const dynamic = 'force-dynamic';
 
+type RouteParams = { installId: string };
+
+async function resolveParams(params: RouteParams | Promise<RouteParams>): Promise<RouteParams> {
+  return await Promise.resolve(params);
+}
+
 const baseSchema = z.object({
   operation: z.enum(['put', 'get', 'list', 'delete', 'bulkPut']),
   namespace: z.string().min(1).max(128),
@@ -110,14 +116,15 @@ function ensureRunnerAuth(req: NextRequest): void {
 
 export async function POST(
   req: NextRequest,
-  { params }: { params: { installId: string } }
+  { params }: { params: RouteParams | Promise<RouteParams> }
 ) {
   try {
     ensureRunnerAuth(req);
 
     const raw = await req.json();
     const base = baseSchema.parse(raw);
-    const { service } = await getStorageServiceForInstall(params.installId);
+    const { installId } = await resolveParams(params);
+    const { service } = await getStorageServiceForInstall(installId);
 
     switch (base.operation) {
       case 'put': {

@@ -88,6 +88,7 @@ async fn test_execute_endpoint_structure() -> anyhow::Result<()> {
         limits: Limits::default(),
         secret_envelope: None,
         providers: vec![],
+        user: None,
     };
 
     let resp = client.post(format!("{}/v1/execute", base_url))

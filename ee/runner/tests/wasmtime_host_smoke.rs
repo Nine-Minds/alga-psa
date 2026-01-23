@@ -80,6 +80,7 @@ async fn executes_dynamic_component_in_process() -> anyhow::Result<()> {
         },
         secret_envelope: None,
         providers: Vec::new(),
+        user: None,
     };
 
     let providers: HashSet<String> = providers::default_capabilities()
@@ -96,6 +97,7 @@ async fn executes_dynamic_component_in_process() -> anyhow::Result<()> {
         config: request.context.config.clone(),
         providers,
         secrets: None,
+        user: request.user.clone(),
     };
 
     let response = loader
@@ -188,6 +190,7 @@ async fn executes_dynamic_component_with_secrets_capability() -> anyhow::Result<
         },
         secret_envelope: None,
         providers: Vec::new(),
+        user: None,
     };
 
     let mut providers: HashSet<String> = providers::default_capabilities()
@@ -212,6 +215,7 @@ async fn executes_dynamic_component_with_secrets_capability() -> anyhow::Result<
             values: secret_values,
             version: Some("v42".to_string()),
         }),
+        user: request.user.clone(),
     };
 
     let response = loader
@@ -278,6 +282,7 @@ async fn secrets_capability_denied() -> anyhow::Result<()> {
         },
         secret_envelope: None,
         providers: Vec::new(),
+        user: None,
     };
 
     let providers: HashSet<String> = providers::default_capabilities()
@@ -300,6 +305,7 @@ async fn secrets_capability_denied() -> anyhow::Result<()> {
             values: secret_values,
             version: Some("v1".to_string()),
         }),
+        user: request.user.clone(),
     };
 
     let response = loader
@@ -361,6 +367,7 @@ async fn ui_proxy_capability_denied() -> anyhow::Result<()> {
         },
         secret_envelope: None,
         providers: Vec::new(),
+        user: None,
     };
 
     let providers: HashSet<String> = providers::default_capabilities()
@@ -377,6 +384,7 @@ async fn ui_proxy_capability_denied() -> anyhow::Result<()> {
         config: request.context.config.clone(),
         providers,
         secrets: None,
+        user: request.user.clone(),
     };
 
     let response = loader
@@ -537,6 +545,7 @@ async fn ui_proxy_forwards_request() -> anyhow::Result<()> {
         },
         secret_envelope: None,
         providers: Vec::new(),
+        user: None,
     };
 
     let mut providers: HashSet<String> = providers::default_capabilities()
@@ -554,6 +563,7 @@ async fn ui_proxy_forwards_request() -> anyhow::Result<()> {
         config: request.context.config.clone(),
         providers,
         secrets: None,
+        user: request.user.clone(),
     };
 
     let response = loader
@@ -658,6 +668,7 @@ async fn ui_proxy_route_not_found_without_backend() -> anyhow::Result<()> {
         },
         secret_envelope: None,
         providers: Vec::new(),
+        user: None,
     };
 
     let mut providers: HashSet<String> = providers::default_capabilities()
@@ -675,6 +686,7 @@ async fn ui_proxy_route_not_found_without_backend() -> anyhow::Result<()> {
         config: request.context.config.clone(),
         providers,
         secrets: None,
+        user: request.user.clone(),
     };
 
     let response = loader

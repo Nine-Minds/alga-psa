@@ -14,6 +14,12 @@ import { getInstallConfigByInstallId } from '@ee/lib/extensions/installConfig';
 
 export const dynamic = 'force-dynamic';
 
+type RouteParams = { installId: string };
+
+async function resolveParams(params: RouteParams | Promise<RouteParams>): Promise<RouteParams> {
+  return await Promise.resolve(params);
+}
+
 // Simple in-memory rate limiter for create/update operations
 // Limits: 10 operations per minute per install
 const RATE_LIMIT_WINDOW_MS = 60_000; // 1 minute
@@ -166,20 +172,23 @@ async function getInstallContext(installId: string): Promise<InstallContext> {
 
 export async function POST(
   req: NextRequest,
-  { params }: { params: { installId: string } }
+  { params }: { params: RouteParams | Promise<RouteParams> }
 ) {
   try {
     ensureRunnerAuth(req);
 
-    const raw = await req.json();
+    const raw = await req.json().catch(() => {
+      throw new SchedulerApiError('VALIDATION_FAILED', 'Invalid JSON body');
+    });
     const base = baseSchema.parse(raw);
+    const { installId } = await resolveParams(params);
 
     // Apply rate limiting for mutating operations
-    if (!checkRateLimit(params.installId, base.operation)) {
+    if (!checkRateLimit(installId, base.operation)) {
       throw new SchedulerApiError('RATE_LIMITED', 'Too many requests, please try again later');
     }
 
-    const ctx = await getInstallContext(params.installId);
+    const ctx = await getInstallContext(installId);
 
     switch (base.operation) {
       case 'list': {

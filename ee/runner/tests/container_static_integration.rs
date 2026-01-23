@@ -572,16 +572,40 @@ fn write_dynamic_component_artifact(root: &Path) -> anyhow::Result<String> {
         "write_dynamic_component_artifact into {}",
         root.display()
     ));
+
+    let mut raw_tar: Vec<u8> = Vec::new();
+    {
+        let mut tar = Builder::new(&mut raw_tar);
+
+        let mut hdr = tar::Header::new_gnu();
+        hdr.set_size(DYNAMIC_COMPONENT_WASM.len() as u64);
+        hdr.set_mode(0o644);
+        hdr.set_cksum();
+        tar.append_data(&mut hdr, "dist/main.wasm", DYNAMIC_COMPONENT_WASM)?;
+
+        tar.finish()?;
+    }
+
+    let tarzst = zstd_encode_all(&raw_tar[..], 0)?;
     let mut hasher = Sha256::new();
-    hasher.update(DYNAMIC_COMPONENT_WASM);
+    hasher.update(&tarzst);
     let hex = hex::encode(hasher.finalize());
-    let target_dir = root.join(format!("sha256/{}/dist", hex));
-    std::fs::create_dir_all(&target_dir)?;
-    std::fs::write(target_dir.join("main.wasm"), DYNAMIC_COMPONENT_WASM)?;
-    log(&format!(
-        "dynamic component wasm written to {} (hash sha256:{hex})",
-        target_dir.display()
+
+    let target = root.join(format!(
+        "tenants/{}/extensions/{}/sha256/{}/bundle.tar.zst",
+        TENANT_ID, EXTENSION_ID, hex
     ));
+    if let Some(parent) = target.parent() {
+        std::fs::create_dir_all(parent)?;
+    }
+    std::fs::write(&target, &tarzst)?;
+
+    log(&format!(
+        "dynamic component bundle written to {} ({} bytes, hash sha256:{hex})",
+        target.display(),
+        tarzst.len()
+    ));
+
     Ok(hex)
 }
 
