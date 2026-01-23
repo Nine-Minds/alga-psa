@@ -84,6 +84,18 @@ export async function updateExperimentalFeatures(
   }
 }
 
+export async function isExperimentalFeatureEnabled(
+  featureKey: string
+): Promise<boolean> {
+  try {
+    const features = await getExperimentalFeatures();
+    return (features as Record<string, unknown>)[featureKey] === true;
+  } catch (error) {
+    console.error('Error checking experimental feature:', error);
+    return false;
+  }
+}
+
 export async function updateTenantOnboardingStatus(
   completed: boolean,
   wizardData?: WizardData,

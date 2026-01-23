@@ -14,7 +14,7 @@
   {
     "id": "F003",
     "description": "Add `isExperimentalFeatureEnabled(featureKey)` server action for single-feature checks",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Server Actions"]
   },
   {
