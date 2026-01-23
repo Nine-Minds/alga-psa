@@ -1,26 +1,115 @@
 'use client';
 
-import { useState, useCallback } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "server/src/components/ui/Card";
-import { CustomTabs } from "server/src/components/ui/CustomTabs";
-import ViewSwitcher, { ViewSwitcherOption } from "server/src/components/ui/ViewSwitcher";
-import { NotificationSettings } from "server/src/components/settings/notifications/NotificationSettings";
-import { EmailTemplates } from "server/src/components/settings/notifications/EmailTemplates";
-import { NotificationCategories } from "server/src/components/settings/notifications/NotificationCategories";
-import { InternalNotificationCategories } from "server/src/components/settings/notifications/InternalNotificationCategories";
-import { TelemetrySettings } from "server/src/components/settings/telemetry/TelemetrySettings";
-import { useUnsavedChanges } from "server/src/contexts/UnsavedChangesContext";
+
+import { useState, useCallback, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@alga-psa/ui/components/Card";
+import { CustomTabs } from "@alga-psa/ui/components/CustomTabs";
+import ViewSwitcher, { ViewSwitcherOption } from "@alga-psa/ui/components/ViewSwitcher";
+import { NotificationSettings, EmailTemplates, NotificationCategories, InternalNotificationCategories } from "@alga-psa/notifications/components";
+import { TelemetrySettings } from "@alga-psa/ui/components/settings/telemetry/TelemetrySettings";
+import { useUnsavedChanges } from "@alga-psa/ui";
 
 type NotificationView = 'email' | 'internal';
+
+// Map URL slugs to tab labels for email view
+const emailSectionToLabelMap: Record<string, string> = {
+  'settings': 'Settings',
+  'email-templates': 'Email Templates',
+  'categories': 'Categories',
+  'telemetry': 'Telemetry'
+};
+
+// Map URL slugs to tab labels for internal view
+const internalSectionToLabelMap: Record<string, string> = {
+  'categories': 'Categories'
+};
+
+// Map tab labels back to URL slugs for email view
+const emailLabelToSlugMap: Record<string, string> = {
+  'Settings': 'settings',
+  'Email Templates': 'email-templates',
+  'Categories': 'categories',
+  'Telemetry': 'telemetry'
+};
+
+// Map tab labels back to URL slugs for internal view
+const internalLabelToSlugMap: Record<string, string> = {
+  'Categories': 'categories'
+};
 
 export default function NotificationsTab() {
   return <NotificationsTabContent />;
 }
 
 function NotificationsTabContent() {
-  const [currentView, setCurrentView] = useState<NotificationView>('email');
-  const [currentTab, setCurrentTab] = useState<string>('Settings');
+  const searchParams = useSearchParams();
+  const viewParam = searchParams?.get('view');
+  const sectionParam = searchParams?.get('section');
+
+  // Determine initial view based on URL parameter
+  const getInitialView = (): NotificationView => {
+    if (viewParam === 'internal') return 'internal';
+    return 'email';
+  };
+
+  // Determine initial tab based on URL parameter and view
+  const getInitialTab = (view: NotificationView): string => {
+    if (!sectionParam) {
+      return view === 'email' ? 'Settings' : 'Categories';
+    }
+    const sectionMap = view === 'email' ? emailSectionToLabelMap : internalSectionToLabelMap;
+    return sectionMap[sectionParam.toLowerCase()] || (view === 'email' ? 'Settings' : 'Categories');
+  };
+
+  const initialView = getInitialView();
+  const [currentView, setCurrentView] = useState<NotificationView>(initialView);
+  const [currentTab, setCurrentTab] = useState<string>(getInitialTab(initialView));
   const { confirmNavigation } = useUnsavedChanges();
+
+  // Update state when URL parameters change
+  useEffect(() => {
+    const newView = getInitialView();
+    const newTab = getInitialTab(newView);
+
+    if (newView !== currentView) {
+      setCurrentView(newView);
+      setCurrentTab(newTab);
+    } else if (newTab !== currentTab) {
+      setCurrentTab(newTab);
+    }
+  }, [viewParam, sectionParam, currentView, currentTab]);
+
+  // Update URL when view or tab changes
+  const updateURL = useCallback((view: NotificationView, tabLabel: string) => {
+    const currentSearchParams = new URLSearchParams(window.location.search);
+
+    // Update view parameter
+    if (view === 'internal') {
+      currentSearchParams.set('view', 'internal');
+    } else {
+      currentSearchParams.delete('view');
+    }
+
+    // Update section parameter
+    const slugMap = view === 'email' ? emailLabelToSlugMap : internalLabelToSlugMap;
+    const urlSlug = slugMap[tabLabel];
+    const defaultSlug = view === 'email' ? 'settings' : 'categories';
+
+    if (urlSlug && urlSlug !== defaultSlug) {
+      currentSearchParams.set('section', urlSlug);
+    } else {
+      currentSearchParams.delete('section');
+    }
+
+    // Keep the tab=notifications parameter
+    if (!currentSearchParams.has('tab')) {
+      currentSearchParams.set('tab', 'notifications');
+    }
+
+    const newUrl = `/msp/settings?${currentSearchParams.toString()}`;
+    window.history.pushState({}, '', newUrl);
+  }, []);
 
   const viewOptions: ViewSwitcherOption<NotificationView>[] = [
     { value: 'email', label: 'Email Notifications' },
@@ -34,9 +123,11 @@ function NotificationsTabContent() {
     confirmNavigation(() => {
       setCurrentView(newView);
       // Reset to first tab of new view
-      setCurrentTab(newView === 'email' ? 'Settings' : 'Categories');
+      const newTab = newView === 'email' ? 'Settings' : 'Categories';
+      setCurrentTab(newTab);
+      updateURL(newView, newTab);
     });
-  }, [currentView, confirmNavigation]);
+  }, [currentView, confirmNavigation, updateURL]);
 
   // Handle tab change with confirmation
   const handleTabChange = useCallback((newTab: string) => {
@@ -44,8 +135,9 @@ function NotificationsTabContent() {
 
     confirmNavigation(() => {
       setCurrentTab(newTab);
+      updateURL(currentView, newTab);
     });
-  }, [currentTab, confirmNavigation]);
+  }, [currentTab, currentView, confirmNavigation, updateURL]);
 
   const emailTabContent = [
     {

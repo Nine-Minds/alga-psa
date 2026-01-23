@@ -1,6 +1,6 @@
 import { getCurrentTenantId } from 'server/src/lib/db';
 import { IRole } from '../../interfaces/auth.interfaces';
-import logger from '@alga-psa/shared/core/logger';
+import logger from '@alga-psa/core/logger';
 import { Knex } from 'knex';
 
 const Role = {

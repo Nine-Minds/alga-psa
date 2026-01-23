@@ -2,8 +2,8 @@
 
 import type { Knex } from 'knex';
 import { createTenantKnex } from '@/lib/db';
-import { getCurrentUser } from '@/lib/actions/user-actions/userActions';
-import { hasPermission } from '@/lib/auth/rbac';
+import { getCurrentUser } from '@alga-psa/users/actions';
+import { hasPermission } from '@alga-psa/auth';
 import type { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
 
 const REQUIRED_RESOURCE = 'settings';

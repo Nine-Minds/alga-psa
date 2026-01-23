@@ -1,6 +1,6 @@
 import { v4 as uuidv4 } from 'uuid';
 import { Knex } from 'knex';
-import { logger } from '@alga-psa/shared/core';
+import { logger } from '@alga-psa/core';
 import { acquireDistributedLock, releaseDistributedLock, LockError, LockErrorType } from './distributedLock';
 
 /**

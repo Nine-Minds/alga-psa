@@ -1,5 +1,5 @@
 import { TenantEntity } from './index';
-import { ISO8601String } from '../types/types.d';
+import type { ISO8601String } from '@alga-psa/types';
 
 export interface IBillingPeriod extends TenantEntity {
   startDate: ISO8601String;
@@ -184,6 +184,7 @@ export interface IService extends TenantEntity {
   is_active?: boolean;
   sku?: string | null;
   cost?: number | null; // cents
+  cost_currency?: string | null; // ISO 4217 currency code
   vendor?: string | null;
   manufacturer?: string | null;
   product_category?: string | null;

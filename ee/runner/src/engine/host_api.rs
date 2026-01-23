@@ -592,15 +592,17 @@ impl storage::HostWithStore for HasSelf<HostState> {
                 );
                 return Err(StorageError::Denied);
             }
-            let install_id = install_id.ok_or_else(|| {
-                tracing::error!(
-                    tenant = ?ctx.tenant_id,
-                    extension = ?ctx.extension_id,
-                    request_id = ?ctx.request_id,
-                    "storage capability denied - install_id missing"
-                );
-                StorageError::Denied
-            })?;
+            let install_id = install_id
+                .filter(|id| !id.is_empty())
+                .ok_or_else(|| {
+                    tracing::error!(
+                        tenant = ?ctx.tenant_id,
+                        extension = ?ctx.extension_id,
+                        request_id = ?ctx.request_id,
+                        "storage capability denied - install_id missing or empty"
+                    );
+                    StorageError::Denied
+                })?;
             let tenant = ctx.tenant_id.unwrap_or_default();
             let extension = ctx.extension_id.unwrap_or_default();
             let namespace_log = namespace.clone();
@@ -644,15 +646,17 @@ impl storage::HostWithStore for HasSelf<HostState> {
                 );
                 return Err(StorageError::Denied);
             }
-            let install_id = install_id.ok_or_else(|| {
-                tracing::error!(
-                    tenant = ?ctx.tenant_id,
-                    extension = ?ctx.extension_id,
-                    request_id = ?ctx.request_id,
-                    "storage capability denied - install_id missing"
-                );
-                StorageError::Denied
-            })?;
+            let install_id = install_id
+                .filter(|id| !id.is_empty())
+                .ok_or_else(|| {
+                    tracing::error!(
+                        tenant = ?ctx.tenant_id,
+                        extension = ?ctx.extension_id,
+                        request_id = ?ctx.request_id,
+                        "storage capability denied - install_id missing or empty"
+                    );
+                    StorageError::Denied
+                })?;
             let tenant = ctx.tenant_id.unwrap_or_default();
             let extension = ctx.extension_id.unwrap_or_default();
             let namespace_log = entry.namespace.clone();
@@ -716,15 +720,17 @@ impl storage::HostWithStore for HasSelf<HostState> {
                 );
                 return Err(StorageError::Denied);
             }
-            let install_id = install_id.ok_or_else(|| {
-                tracing::error!(
-                    tenant = ?ctx.tenant_id,
-                    extension = ?ctx.extension_id,
-                    request_id = ?ctx.request_id,
-                    "storage capability denied - install_id missing"
-                );
-                StorageError::Denied
-            })?;
+            let install_id = install_id
+                .filter(|id| !id.is_empty())
+                .ok_or_else(|| {
+                    tracing::error!(
+                        tenant = ?ctx.tenant_id,
+                        extension = ?ctx.extension_id,
+                        request_id = ?ctx.request_id,
+                        "storage capability denied - install_id missing or empty"
+                    );
+                    StorageError::Denied
+                })?;
             let tenant = ctx.tenant_id.unwrap_or_default();
             let extension = ctx.extension_id.unwrap_or_default();
             let namespace_log = namespace.clone();
@@ -772,15 +778,17 @@ impl storage::HostWithStore for HasSelf<HostState> {
                 );
                 return Err(StorageError::Denied);
             }
-            let install_id = install_id.ok_or_else(|| {
-                tracing::error!(
-                    tenant = ?ctx.tenant_id,
-                    extension = ?ctx.extension_id,
-                    request_id = ?ctx.request_id,
-                    "storage capability denied - install_id missing"
-                );
-                StorageError::Denied
-            })?;
+            let install_id = install_id
+                .filter(|id| !id.is_empty())
+                .ok_or_else(|| {
+                    tracing::error!(
+                        tenant = ?ctx.tenant_id,
+                        extension = ?ctx.extension_id,
+                        request_id = ?ctx.request_id,
+                        "storage capability denied - install_id missing or empty"
+                    );
+                    StorageError::Denied
+                })?;
             let tenant = ctx.tenant_id.unwrap_or_default();
             let extension = ctx.extension_id.unwrap_or_default();
             let namespace_log = namespace.clone();
@@ -891,11 +899,19 @@ impl ui_proxy::HostWithStore for HasSelf<HostState> {
                 None => (trimmed_route, None),
             };
 
+            // Build URL based on route type:
+            // - Routes starting with /api/ go directly to platform APIs (no extension prefix)
+            // - Other routes are prefixed with extension ID (backward compatible for self-proxying)
+            // Authentication is via api_key from secret envelope
+            let is_platform_api = path_part.starts_with("/api/") || path_part.starts_with("api/");
             let mut url = base_url.clone();
             {
                 let mut segments = url.path_segments_mut().map_err(|_| ProxyError::Internal)?;
                 segments.pop_if_empty();
-                segments.push(&extension);
+                // Only prefix with extension ID for non-platform-api routes
+                if !is_platform_api {
+                    segments.push(&extension);
+                }
                 for segment in path_part.trim_start_matches('/').split('/') {
                     if segment.is_empty() {
                         continue;
@@ -923,7 +939,12 @@ impl ui_proxy::HostWithStore for HasSelf<HostState> {
             }
 
             let client: &Client = &HTTP_CLIENT;
-            let mut request = client.post(url.clone()).timeout(runtime.ui_proxy_timeout);
+            // Use GET when no payload, POST when payload is present
+            let mut request = if payload.is_some() {
+                client.post(url.clone())
+            } else {
+                client.get(url.clone())
+            }.timeout(runtime.ui_proxy_timeout);
             request = request
                 .header("x-request-id", &request_id)
                 .header("x-alga-tenant", &tenant)
@@ -934,8 +955,17 @@ impl ui_proxy::HostWithStore for HasSelf<HostState> {
             if let Some(version) = ctx.version_id.clone() {
                 request = request.header("x-ext-version-id", version);
             }
-            if let Some(auth) = runtime.ui_proxy_auth.clone() {
-                request = request.header("x-runner-auth", auth);
+            // Get API key from extension's secret envelope for authentication
+            if let Some(ref secrets) = ctx.secrets {
+                if let Some(api_key) = secrets.values.get("api_key") {
+                    request = request.header("x-api-key", api_key);
+                }
+            }
+
+            // Forward user info for activity logging
+            if let Some(ref user) = ctx.user {
+                request = request.header("x-user-id", &user.user_id);
+                request = request.header("x-user-email", &user.user_email);
             }
 
             let has_body = payload.is_some();
@@ -943,8 +973,6 @@ impl ui_proxy::HostWithStore for HasSelf<HostState> {
                 request = request
                     .header("content-type", "application/json")
                     .body(body);
-            } else {
-                request = request.header("content-type", "application/json");
             }
 
             let started = Instant::now();
@@ -954,6 +982,7 @@ impl ui_proxy::HostWithStore for HasSelf<HostState> {
                 route=%path_part,
                 url=%url,
                 has_body,
+                is_platform_api,
                 "ui proxy dispatch start"
             );
 
@@ -1096,6 +1125,7 @@ async fn storage_request(
         base.trim_end_matches('/'),
         install_id
     );
+    tracing::info!(url = %url, operation = %operation, "storage request dispatch");
     let namespace_log = payload
         .get("namespace")
         .and_then(|v| v.as_str())
@@ -1115,7 +1145,7 @@ async fn storage_request(
     );
 
     let response = HTTP_CLIENT
-        .post(url)
+        .post(url.as_str())
         .header("content-type", "application/json")
         .header("x-runner-auth", token)
         .json(&payload)
@@ -1130,7 +1160,13 @@ async fn storage_request(
     let text = response.text().await.unwrap_or_default();
 
     if !status.is_success() {
-        tracing::warn!(status = status.as_u16(), body = %text, operation, "storage_request error");
+        tracing::warn!(
+            status = status.as_u16(),
+            body = %text,
+            operation,
+            install_id = %install_id,
+            "storage_request error"
+        );
         return Err(map_storage_status(status));
     }
 
@@ -1813,10 +1849,11 @@ impl user::HostWithStore for HasSelf<HostState> {
                     );
                     Ok(UserData {
                         tenant_id: tenant,
-                        company_name: user_info.company_name.clone(),
+                        client_name: user_info.client_name.clone(),
                         user_id: user_info.user_id.clone(),
                         user_email: user_info.user_email.clone(),
                         user_name: user_info.user_name.clone(),
+                        user_type: user_info.user_type.clone(),
                     })
                 }
                 None => {

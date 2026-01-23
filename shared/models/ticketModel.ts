@@ -62,6 +62,7 @@ export const ticketSchema = z.object({
   entered_at: z.string().nullable(),
   updated_at: z.string().nullable(),
   closed_at: z.string().nullable(),
+  due_date: z.string().nullable().optional(),
   attributes: z.record(z.unknown()).nullable(),
   priority_id: z.string().uuid().nullable().optional(), // Optional for ITIL tickets
   // ITIL-specific fields
@@ -124,6 +125,7 @@ export interface CreateTicketInput {
   itil_urgency?: number;
   closed_at?: string;
   is_closed?: boolean;
+  due_date?: string;
 }
 
 export interface CreateTicketFromAssetInput {
@@ -140,16 +142,17 @@ export interface UpdateTicketInput {
   title?: string;
   url?: string;
   client_id?: string;
-  location_id?: string;
-  contact_name_id?: string;
+  location_id?: string | null;
+  contact_name_id?: string | null;
   status_id?: string;
-  category_id?: string;
-  subcategory_id?: string;
+  category_id?: string | null;
+  subcategory_id?: string | null;
   updated_by?: string;
   closed_by?: string;
-  assigned_to?: string;
+  assigned_to?: string | null;
   updated_at?: string;
   closed_at?: string;
+  due_date?: string | null;
   attributes?: Record<string, any>;
   priority_id?: string;
 }
@@ -657,6 +660,7 @@ export class TicketModel {
       entered_by: cleanedInput.entered_by || null,
       entered_at: now.toISOString(),
       updated_at: now.toISOString(),
+      due_date: cleanedInput.due_date || null,
       // ITIL-specific fields (for UI display only - not stored in DB)
       itil_impact: cleanedInput.itil_impact || null,
       itil_urgency: cleanedInput.itil_urgency || null,

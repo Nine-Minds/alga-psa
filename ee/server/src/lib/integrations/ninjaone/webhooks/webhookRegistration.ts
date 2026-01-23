@@ -12,7 +12,7 @@ import {
   WebhookConfiguration,
   NINJAONE_WEBHOOK_STATUS_CODES,
 } from '../../../../interfaces/ninjaone.interfaces';
-import logger from '@shared/core/logger';
+import logger from '@alga-psa/core/logger';
 
 // Header name for webhook authentication
 const WEBHOOK_AUTH_HEADER = 'X-Alga-Webhook-Secret';

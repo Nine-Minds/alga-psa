@@ -1,7 +1,8 @@
 import { Request, Response, NextFunction } from 'express';
 import { getToken, decode } from 'next-auth/jwt';
 import { ApiKeyServiceForApi } from '../../lib/services/apiKeyServiceForApi';
-import { getSecretProviderInstance } from '@alga-psa/shared/core/secretProvider';
+import { getSecretProviderInstance } from '@alga-psa/core/secrets';
+import { getSessionCookieName } from 'server/src/lib/auth/sessionCookies';
 
 // Cache NM Store key to avoid fetching every request
 let NM_STORE_KEY_CACHE: string | null = null;
@@ -92,16 +93,35 @@ function adaptRequestForNextAuth(expressReq: Request): any {
 async function getNextAuthToken(expressReq: Request, secret: string): Promise<any> {
   const cookies = expressReq.cookies || {};
 
-  // Get the session token cookie
-  const sessionToken =
-    cookies['authjs.session-token'] ||
-    cookies['__Secure-authjs.session-token'] ||
-    cookies['next-auth.session-token'] ||
-    cookies['__Secure-next-auth.session-token'];
+  const primaryCookieName = getSessionCookieName();
+  const cookieCandidates = [primaryCookieName];
 
-  console.log("Cookies: " + cookies);
+  // Only consider legacy cookie names when we are not using a port-scoped cookie name.
+  // This avoids localhost cross-port cookie collisions during dev (multiple worktrees).
+  if (
+    primaryCookieName === 'authjs.session-token' ||
+    primaryCookieName === '__Secure-authjs.session-token'
+  ) {
+    cookieCandidates.push(
+      'authjs.session-token',
+      '__Secure-authjs.session-token',
+      'next-auth.session-token',
+      '__Secure-next-auth.session-token',
+    );
+  }
 
-  if (!sessionToken) {
+  let sessionToken: string | undefined;
+  let salt: string | undefined;
+  for (const candidate of cookieCandidates) {
+    const value = cookies[candidate];
+    if (typeof value === 'string' && value.length > 0) {
+      sessionToken = value;
+      salt = candidate;
+      break;
+    }
+  }
+
+  if (!sessionToken || !salt) {
     return null;
   }
 
@@ -110,7 +130,7 @@ async function getNextAuthToken(expressReq: Request, secret: string): Promise<an
     const decoded = await decode({
       token: sessionToken,
       secret: secret,
-      salt: 'authjs.session-token'
+      salt,
     });
 
     return decoded;

@@ -1,4 +1,4 @@
-import { getAdminConnection } from '@shared/db/admin';
+import { getAdminConnection } from '@alga-psa/db/admin';
 import { CreateTenantInput, TenantResponse } from './types/tenant.schema';
 import { Knex } from 'knex';
 

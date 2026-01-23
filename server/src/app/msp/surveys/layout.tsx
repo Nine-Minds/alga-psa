@@ -1,4 +1,4 @@
-import SurveyModuleFrame from 'server/src/components/surveys/SurveyModuleFrame';
+import SurveyModuleFrame from '@alga-psa/surveys/components/SurveyModuleFrame';
 
 export default function SurveysLayout({
   children,

@@ -1,4 +1,14 @@
-import sharp from 'sharp';
+async function loadSharp() {
+  try {
+    const mod = await import('sharp');
+    return (mod as any).default ?? (mod as any);
+  } catch (error) {
+    throw new Error(
+      `Failed to load optional dependency "sharp" (required for image processing). ` +
+        `Ensure platform-specific sharp binaries are installed. Original error: ${error instanceof Error ? error.message : String(error)}`
+    );
+  }
+}
 import { fileTypeFromBuffer } from 'file-type';
 import { Readable } from 'stream';
 import { v4 as uuidv4 } from 'uuid';
@@ -6,7 +16,7 @@ import { StorageProviderFactory, generateStoragePath } from './StorageProviderFa
 import { FileStoreModel } from '../../models/storage';
 import type { FileStore } from '../../types/storage';
 import { StorageError } from './providers/StorageProvider';
-import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
+import { getCurrentUser } from '@alga-psa/users/actions';
 import fs from 'fs';
 
 import { 
@@ -114,6 +124,7 @@ export class StorageService {
             console.warn(`Provided MIME type (${options.mime_type}) differs from detected type (${detectedType.mime}). Using detected type.`);
         }
 
+        const sharp = await loadSharp();
         processedBuffer = await sharp(fileBuffer)
           .resize(256, 256, {
             fit: 'cover',

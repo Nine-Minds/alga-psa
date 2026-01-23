@@ -1,5 +1,5 @@
 import { TenantEntity } from '.';
-import { ISO8601String } from '../types/types.d';
+import { ISO8601String } from '@alga-psa/types';
 
 /**
  * Interface for service rate tiers

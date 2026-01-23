@@ -1,6 +1,6 @@
 import { Job } from 'pg-boss';
 import { EmailWebhookMaintenanceService } from '@alga-psa/shared/services/email/EmailWebhookMaintenanceService';
-import logger from '@shared/core/logger';
+import logger from '@alga-psa/core/logger';
 
 export interface EmailWebhookMaintenanceJobData {
   tenantId?: string;

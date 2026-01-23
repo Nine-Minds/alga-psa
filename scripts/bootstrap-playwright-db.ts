@@ -1,6 +1,7 @@
 import dotenv from 'dotenv';
 import fs from 'node:fs/promises';
 import { createRequire } from 'node:module';
+import * as fsSync from 'node:fs';
 import path from 'node:path';
 import knex, { Knex } from 'knex';
 
@@ -9,6 +10,33 @@ dotenv.config({ path: path.resolve(process.cwd(), 'ee/server/.env') });
 dotenv.config({ path: path.resolve(process.cwd(), 'server/.env') });
 
 const require = createRequire(import.meta.url);
+
+function resolveSecretValue(raw?: string): string | undefined {
+  if (!raw) return raw;
+  const trimmed = raw.trim();
+  if (!trimmed) return trimmed;
+
+  const candidates: string[] = [trimmed];
+
+  // If running locally, a docker-style secret path often corresponds to ./secrets/<name>
+  if (trimmed.startsWith('/run/secrets/')) {
+    const secretBasename = path.basename(trimmed);
+    candidates.push(path.resolve(process.cwd(), 'secrets', secretBasename));
+    candidates.push(path.resolve(process.cwd(), 'secrets-playwright', secretBasename));
+  }
+
+  for (const candidate of candidates) {
+    try {
+      if (fsSync.existsSync(candidate) && fsSync.statSync(candidate).isFile()) {
+        return fsSync.readFileSync(candidate, 'utf8').trim();
+      }
+    } catch {
+      // ignore and fall back to next candidate / literal value
+    }
+  }
+
+  return trimmed;
+}
 
 class DirectoryMigrationSource {
   private readonly directory: string;
@@ -63,17 +91,17 @@ function getCfg(): DbCfg {
   const adminUser =
     process.env.PLAYWRIGHT_DB_ADMIN_USER ?? process.env.DB_USER_ADMIN ?? 'postgres';
   const adminPassword =
-    process.env.PLAYWRIGHT_DB_ADMIN_PASSWORD ??
-    process.env.DB_PASSWORD_ADMIN ??
-    process.env.DB_PASSWORD ??
+    resolveSecretValue(process.env.PLAYWRIGHT_DB_ADMIN_PASSWORD) ??
+    resolveSecretValue(process.env.DB_PASSWORD_ADMIN) ??
+    resolveSecretValue(process.env.DB_PASSWORD) ??
     'postpass123';
   const appUser =
     process.env.PLAYWRIGHT_DB_APP_USER ??
     process.env.DB_USER_SERVER ??
     'app_user';
   const appPassword =
-    process.env.PLAYWRIGHT_DB_APP_PASSWORD ??
-    process.env.DB_PASSWORD_SERVER ??
+    resolveSecretValue(process.env.PLAYWRIGHT_DB_APP_PASSWORD) ??
+    resolveSecretValue(process.env.DB_PASSWORD_SERVER) ??
     'postpass123';
   const ssl =
     (process.env.PLAYWRIGHT_DB_SSL ?? process.env.DB_SSL ?? '').toLowerCase() === 'true';
@@ -157,9 +185,6 @@ async function migrateAndSeed(cfg: DbCfg): Promise<void> {
 
     const serverMigrationsDir = path.resolve(process.cwd(), 'server/migrations');
     const eeMigrationsDir = path.resolve(process.cwd(), 'ee/server/migrations');
-    const seedsDir = path.resolve(process.cwd(), 'server/seeds/dev');
-
-    // 1) Apply core (CE) migrations.
     await db.migrate.latest({
       migrationSource: new DirectoryMigrationSource(serverMigrationsDir) as any,
     });
@@ -184,9 +209,15 @@ async function migrateAndSeed(cfg: DbCfg): Promise<void> {
       tableName: 'knex_migrations_ee',
     });
 
-    await db.seed
-      .run({ directory: seedsDir, loadExtensions: ['.cjs', '.js'] })
-      .catch(() => undefined);
+    const seedsDirs = [path.resolve(process.cwd(), 'server/seeds/dev')];
+    const eeSeedsDir = path.resolve(process.cwd(), 'ee/server/seeds/dev');
+    if (fsSync.existsSync(eeSeedsDir)) {
+      seedsDirs.push(eeSeedsDir);
+    }
+
+    for (const dir of seedsDirs) {
+      await db.seed.run({ directory: dir, loadExtensions: ['.cjs', '.js'] }).catch(() => undefined);
+    }
   } finally {
     await db.destroy().catch(() => undefined);
   }

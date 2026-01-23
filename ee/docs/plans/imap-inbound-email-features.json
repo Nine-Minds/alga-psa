@@ -1,0 +1,838 @@
+[
+  {
+    "description": "Allow inbound email provider type 'imap' in shared inbound email interfaces",
+    "implemented": true
+  },
+  {
+    "description": "Allow inbound email provider type 'imap' in server email interfaces",
+    "implemented": true
+  },
+  {
+    "description": "Expose IMAP provider type in provider type validation for inbound email actions",
+    "implemented": true
+  },
+  {
+    "description": "Persist IMAP provider records in email_providers with provider_type='imap'",
+    "implemented": true
+  },
+  {
+    "description": "Create imap_email_provider_config table with tenant + provider composite primary key",
+    "implemented": true
+  },
+  {
+    "description": "Store IMAP host in imap_email_provider_config",
+    "implemented": true
+  },
+  {
+    "description": "Store IMAP port in imap_email_provider_config",
+    "implemented": true
+  },
+  {
+    "description": "Store IMAP TLS/SSL boolean in imap_email_provider_config",
+    "implemented": true
+  },
+  {
+    "description": "Store IMAP STARTTLS preference in imap_email_provider_config",
+    "implemented": true
+  },
+  {
+    "description": "Store IMAP authentication type (password|oauth2) in imap_email_provider_config",
+    "implemented": true
+  },
+  {
+    "description": "Store IMAP username in imap_email_provider_config",
+    "implemented": true
+  },
+  {
+    "description": "Store IMAP folder_filters (json array) in imap_email_provider_config",
+    "implemented": true
+  },
+  {
+    "description": "Store IMAP auto_process_emails flag in imap_email_provider_config",
+    "implemented": true
+  },
+  {
+    "description": "Store IMAP max_emails_per_sync in imap_email_provider_config",
+    "implemented": true
+  },
+  {
+    "description": "Store IMAP last_uid per provider in imap_email_provider_config",
+    "implemented": true
+  },
+  {
+    "description": "Store IMAP uid_validity per provider in imap_email_provider_config",
+    "implemented": true
+  },
+  {
+    "description": "Store IMAP last_seen_at timestamp per provider in imap_email_provider_config",
+    "implemented": true
+  },
+  {
+    "description": "Store IMAP last_sync_at timestamp per provider in imap_email_provider_config",
+    "implemented": true
+  },
+  {
+    "description": "Store IMAP last_error message per provider in imap_email_provider_config",
+    "implemented": true
+  },
+  {
+    "description": "Store IMAP OAuth access token in imap_email_provider_config",
+    "implemented": true
+  },
+  {
+    "description": "Store IMAP OAuth refresh token in imap_email_provider_config",
+    "implemented": true
+  },
+  {
+    "description": "Store IMAP OAuth token expiry in imap_email_provider_config",
+    "implemented": true
+  },
+  {
+    "description": "Create index on imap_email_provider_config (tenant)",
+    "implemented": true
+  },
+  {
+    "description": "Create index on imap_email_provider_config (tenant, email_provider_id)",
+    "implemented": true
+  },
+  {
+    "description": "Distribute imap_email_provider_config by tenant for Citus deployments",
+    "implemented": true
+  },
+  {
+    "description": "Extend EmailProviderService.getProviders to load IMAP vendor config",
+    "implemented": true
+  },
+  {
+    "description": "Extend EmailProviderService.getProvider to load IMAP vendor config",
+    "implemented": true
+  },
+  {
+    "description": "Extend EmailProviderService.createProvider to persist IMAP vendor config",
+    "implemented": true
+  },
+  {
+    "description": "Extend EmailProviderService.updateProvider to update IMAP vendor config",
+    "implemented": true
+  },
+  {
+    "description": "Extend EmailProviderService.deleteProvider to delete IMAP vendor config",
+    "implemented": true
+  },
+  {
+    "description": "Expose IMAP provider config in emailProviderActions create/update payloads",
+    "implemented": true
+  },
+  {
+    "description": "Add IMAP provider config to EmailProviderConfiguration types",
+    "implemented": true
+  },
+  {
+    "description": "Add IMAP provider in EmailProviderSelector UI",
+    "implemented": true
+  },
+  {
+    "description": "Add IMAP provider card styling and copy in selector UI",
+    "implemented": true
+  },
+  {
+    "description": "Add IMAP provider form for OSS bundle",
+    "implemented": true
+  },
+  {
+    "description": "Add IMAP provider form for EE bundle",
+    "implemented": true
+  },
+  {
+    "description": "Collect IMAP mailbox address in IMAP provider form",
+    "implemented": true
+  },
+  {
+    "description": "Collect IMAP host in IMAP provider form",
+    "implemented": true
+  },
+  {
+    "description": "Collect IMAP port in IMAP provider form",
+    "implemented": true
+  },
+  {
+    "description": "Collect IMAP TLS/SSL option in IMAP provider form",
+    "implemented": true
+  },
+  {
+    "description": "Collect IMAP STARTTLS option in IMAP provider form",
+    "implemented": true
+  },
+  {
+    "description": "Collect IMAP authentication type in IMAP provider form",
+    "implemented": true
+  },
+  {
+    "description": "Collect IMAP username in IMAP provider form",
+    "implemented": true
+  },
+  {
+    "description": "Collect IMAP password/app-password in IMAP provider form",
+    "implemented": true
+  },
+  {
+    "description": "Collect IMAP OAuth authorize URL input when auth_type=oauth2",
+    "implemented": true
+  },
+  {
+    "description": "Collect IMAP OAuth token URL input when auth_type=oauth2",
+    "implemented": true
+  },
+  {
+    "description": "Collect IMAP OAuth client_id input when auth_type=oauth2",
+    "implemented": true
+  },
+  {
+    "description": "Collect IMAP OAuth client_secret input when auth_type=oauth2",
+    "implemented": true
+  },
+  {
+    "description": "Collect IMAP OAuth scopes input when auth_type=oauth2",
+    "implemented": true
+  },
+  {
+    "description": "Collect IMAP folder filters in IMAP provider form",
+    "implemented": true
+  },
+  {
+    "description": "Do not expose IMAP auto_process_emails in provider UI; always on (processing gated by provider Active flag)",
+    "implemented": true
+  },
+  {
+    "description": "Do not expose IMAP max_emails_per_sync in provider UI; enforce via env/default (default 5)",
+    "implemented": true
+  },
+  {
+    "description": "Collect inbound ticket defaults in IMAP provider form",
+    "implemented": true
+  },
+  {
+    "description": "Persist inbound ticket defaults for IMAP providers",
+    "implemented": true
+  },
+  {
+    "description": "Validate IMAP host is non-empty in server-side validator",
+    "implemented": true
+  },
+  {
+    "description": "Validate IMAP port is within valid range in server-side validator",
+    "implemented": true
+  },
+  {
+    "description": "Validate IMAP mailbox is a valid email in server-side validator",
+    "implemented": true
+  },
+  {
+    "description": "Validate IMAP auth_type is supported in server-side validator",
+    "implemented": true
+  },
+  {
+    "description": "Require IMAP username/password when auth_type=password",
+    "implemented": true
+  },
+  {
+    "description": "Require IMAP OAuth settings when auth_type=oauth2",
+    "implemented": true
+  },
+  {
+    "description": "Persist IMAP password via tenant secret provider",
+    "implemented": true
+  },
+  {
+    "description": "Persist IMAP OAuth client_secret via tenant secret provider",
+    "implemented": true
+  },
+  {
+    "description": "Persist IMAP OAuth refresh_token via tenant secret provider",
+    "implemented": true
+  },
+  {
+    "description": "Support IMAP OAuth2 authorization flow to obtain refresh token",
+    "implemented": true
+  },
+  {
+    "description": "Support IMAP OAuth2 token refresh flow",
+    "implemented": true
+  },
+  {
+    "description": "Store IMAP OAuth access token in vendor config after refresh",
+    "implemented": true
+  },
+  {
+    "description": "Store IMAP OAuth expires_at in vendor config after refresh",
+    "implemented": true
+  },
+  {
+    "description": "Add server API to initiate IMAP OAuth flow",
+    "implemented": true
+  },
+  {
+    "description": "Add server API callback endpoint for IMAP OAuth",
+    "implemented": true
+  },
+  {
+    "description": "Record IMAP OAuth connection status on provider after callback",
+    "implemented": true
+  },
+  {
+    "description": "Add IMAP provider in ProviderSetupWizardDialog flow",
+    "implemented": true
+  },
+  {
+    "description": "Show IMAP provider status in EmailProviderCard",
+    "implemented": true
+  },
+  {
+    "description": "Show IMAP connection error in EmailProviderCard",
+    "implemented": true
+  },
+  {
+    "description": "Enable Test Connection action for IMAP providers",
+    "implemented": true
+  },
+  {
+    "description": "Implement IMAP Test Connection on server via IMAP service or adapter",
+    "implemented": true
+  },
+  {
+    "description": "Update EmailProviderList to handle IMAP test/refresh actions",
+    "implemented": true
+  },
+  {
+    "description": "Add IMAP provider to any provider type filters or enums in UI",
+    "implemented": true
+  },
+  {
+    "description": "Create new service package services/imap-service",
+    "implemented": true
+  },
+  {
+    "description": "Add services/imap-service package.json with dependencies",
+    "implemented": true
+  },
+  {
+    "description": "Add services/imap-service tsconfig",
+    "implemented": true
+  },
+  {
+    "description": "Add services/imap-service entrypoint to start worker",
+    "implemented": true
+  },
+  {
+    "description": "Add Dockerfile for services/imap-service",
+    "implemented": true
+  },
+  {
+    "description": "Add docker-compose service definition for imap-service (dev)",
+    "implemented": true
+  },
+  {
+    "description": "Add docker-compose service definition for imap-service (prod)",
+    "implemented": true
+  },
+  {
+    "description": "Add environment variable wiring for imap-service",
+    "implemented": true
+  },
+  {
+    "description": "Add /health HTTP endpoint to imap-service for Kubernetes probes",
+    "implemented": true
+  },
+  {
+    "description": "Add Helm chart ee/helm/imap-service for Kubernetes deployment",
+    "implemented": true
+  },
+  {
+    "description": "Add nm-kube-config values files for imap-service deployments",
+    "implemented": true
+  },
+  {
+    "description": "Add Argo workflow template to build and deploy imap-service",
+    "implemented": true
+  },
+  {
+    "description": "Implement IMAP connection manager per provider",
+    "implemented": true
+  },
+  {
+    "description": "Implement IMAP connection pool or per-provider connection tracking",
+    "implemented": true
+  },
+  {
+    "description": "Load active IMAP providers from DB on service startup",
+    "implemented": true
+  },
+  {
+    "description": "Refresh IMAP provider list on interval (configurable)",
+    "implemented": true
+  },
+  {
+    "description": "Connect IMAP providers marked active only",
+    "implemented": true
+  },
+  {
+    "description": "Skip IMAP providers with status=error until re-enabled",
+    "implemented": true
+  },
+  {
+    "description": "Support multiple folder subscriptions per IMAP provider",
+    "implemented": true
+  },
+  {
+    "description": "Resolve folder names against IMAP mailbox hierarchy",
+    "implemented": true
+  },
+  {
+    "description": "Fallback to INBOX when folder_filters empty",
+    "implemented": true
+  },
+  {
+    "description": "Implement IMAP IDLE listener for new mail",
+    "implemented": true
+  },
+  {
+    "description": "Implement automatic re-IDLE after server idle timeout",
+    "implemented": true
+  },
+  {
+    "description": "Detect IMAP connection drops and reconnect with backoff",
+    "implemented": true
+  },
+  {
+    "description": "Use exponential backoff with jitter for IMAP reconnect",
+    "implemented": true
+  },
+  {
+    "description": "Add jitter to IMAP timers (refresh/poll/idle-noop/heartbeat) to avoid thundering herd",
+    "implemented": true
+  },
+  {
+    "description": "Stagger IMAP folder listener startup to avoid connection spikes on service restart",
+    "implemented": true
+  },
+  {
+    "description": "Cap IMAP reconnect backoff to configurable max",
+    "implemented": true
+  },
+  {
+    "description": "Mark provider status=disconnected on IMAP disconnect",
+    "implemented": true
+  },
+  {
+    "description": "Mark provider status=connected on successful IMAP login",
+    "implemented": true
+  },
+  {
+    "description": "Persist last_error when IMAP connection fails",
+    "implemented": true
+  },
+  {
+    "description": "Persist last_seen_at on successful IMAP polling/idle",
+    "implemented": true
+  },
+  {
+    "description": "Use UIDVALIDITY to detect mailbox reset",
+    "implemented": true
+  },
+  {
+    "description": "On UIDVALIDITY change, reset last_uid and resync",
+    "implemented": true
+  },
+  {
+    "description": "Track last_uid per provider folder in state",
+    "implemented": true
+  },
+  {
+    "description": "Persist last_uid to imap_email_provider_config",
+    "implemented": true
+  },
+  {
+    "description": "Fetch new message UIDs when EXISTS event fires",
+    "implemented": true
+  },
+  {
+    "description": "Support IMAP SEARCH to find unseen/new messages",
+    "implemented": true
+  },
+  {
+    "description": "Support IMAP FETCH of full message body without marking seen",
+    "implemented": true
+  },
+  {
+    "description": "Enforce read-only mode by using BODY.PEEK",
+    "implemented": true
+  },
+  {
+    "description": "Parse raw RFC822 message into EmailMessageDetails",
+    "implemented": true
+  },
+  {
+    "description": "Extract subject from MIME headers",
+    "implemented": true
+  },
+  {
+    "description": "Extract from address from MIME headers",
+    "implemented": true
+  },
+  {
+    "description": "Extract to addresses from MIME headers",
+    "implemented": true
+  },
+  {
+    "description": "Extract cc addresses from MIME headers",
+    "implemented": true
+  },
+  {
+    "description": "Extract date/receivedAt from MIME headers",
+    "implemented": true
+  },
+  {
+    "description": "Extract text body from MIME parts",
+    "implemented": true
+  },
+  {
+    "description": "Extract html body from MIME parts",
+    "implemented": true
+  },
+  {
+    "description": "Extract attachments metadata from MIME parts",
+    "implemented": true
+  },
+  {
+    "description": "Include attachment contentId when present in MIME parts",
+    "implemented": true
+  },
+  {
+    "description": "Capture Message-ID header for threading",
+    "implemented": true
+  },
+  {
+    "description": "Capture In-Reply-To header for threading",
+    "implemented": true
+  },
+  {
+    "description": "Capture References header for threading",
+    "implemented": true
+  },
+  {
+    "description": "Populate emailData.headers map with raw headers",
+    "implemented": true
+  },
+  {
+    "description": "Set provider field to 'imap' in EmailMessageDetails",
+    "implemented": true
+  },
+  {
+    "description": "Set providerId and tenant in EmailMessageDetails",
+    "implemented": true
+  },
+  {
+    "description": "Publish INBOUND_EMAIL_RECEIVED for each new IMAP message",
+    "implemented": true
+  },
+  {
+    "description": "Publish events through shared/events/publisher.ts",
+    "implemented": true
+  },
+  {
+    "description": "Include tenantId and tenant in published payload",
+    "implemented": true
+  },
+  {
+    "description": "Dedupe IMAP messages by Message-ID per provider",
+    "implemented": true
+  },
+  {
+    "description": "Dedupe IMAP messages by UID per folder",
+    "implemented": true
+  },
+  {
+    "description": "Persist dedupe state to avoid reprocessing after restart",
+    "implemented": true
+  },
+  {
+    "description": "Skip already processed IMAP messages on reconnect",
+    "implemented": true
+  },
+  {
+    "description": "Support initial backfill of recent messages up to max_emails_per_sync",
+    "implemented": true
+  },
+  {
+    "description": "Support manual resync trigger for IMAP providers",
+    "implemented": true
+  },
+  {
+    "description": "Throttle IMAP fetch rate per provider to avoid overload",
+    "implemented": true
+  },
+  {
+    "description": "Handle IMAP servers without IDLE by falling back to polling",
+    "implemented": true
+  },
+  {
+    "description": "Configurable polling interval for non-IDLE servers",
+    "implemented": true
+  },
+  {
+    "description": "Graceful shutdown of IMAP service with logout per connection",
+    "implemented": true
+  },
+  {
+    "description": "Health check endpoint or log heartbeat for IMAP service",
+    "implemented": true
+  },
+  {
+    "description": "Update email_providers.last_sync_at after IMAP event publish",
+    "implemented": true
+  },
+  {
+    "description": "Update email_providers.status=error when IMAP auth fails",
+    "implemented": true
+  },
+  {
+    "description": "Expose IMAP connection error message in settings UI",
+    "implemented": true
+  },
+  {
+    "description": "Allow toggling IMAP provider active/inactive in UI",
+    "implemented": true
+  },
+  {
+    "description": "Stop IMAP listener when provider is deactivated",
+    "implemented": true
+  },
+  {
+    "description": "Restart IMAP listener when provider is reactivated",
+    "implemented": true
+  },
+  {
+    "description": "Support per-provider folder filter changes without restart",
+    "implemented": true
+  },
+  {
+    "description": "Support per-provider auth changes without restart",
+    "implemented": true
+  },
+  {
+    "description": "Surface IMAP OAuth connection status in provider form",
+    "implemented": true
+  },
+  {
+    "description": "Support OAuth re-auth flow from provider edit screen",
+    "implemented": true
+  },
+  {
+    "description": "Use IMAP OAuth2 SASL XOAUTH2 for authentication",
+    "implemented": true
+  },
+  {
+    "description": "Refresh IMAP OAuth2 access token before expiry",
+    "implemented": true
+  },
+  {
+    "description": "Handle IMAP OAuth2 invalid_grant by marking provider error",
+    "implemented": true
+  },
+  {
+    "description": "Provide IMAP provider card action to retry OAuth",
+    "implemented": true
+  },
+  {
+    "description": "Support multiple IMAP providers per tenant",
+    "implemented": true
+  },
+  {
+    "description": "Isolate IMAP event publishing by tenant channel if configured",
+    "implemented": true
+  },
+  {
+    "description": "Respect inbound ticket defaults on IMAP events",
+    "implemented": true
+  },
+  {
+    "description": "Support custom folder names with hierarchy delimiters",
+    "implemented": true
+  },
+  {
+    "description": "Normalize folder names to server-reported case",
+    "implemented": true
+  },
+  {
+    "description": "Support IMAP servers with separate Sent/Trash folders (ignore by default)",
+    "implemented": true
+  },
+  {
+    "description": "Skip processing messages with empty From header",
+    "implemented": true
+  },
+  {
+    "description": "Skip processing messages lacking Message-ID but with duplicate hash",
+    "implemented": true
+  },
+  {
+    "description": "Compute hash-based fallback dedupe for IMAP messages",
+    "implemented": true
+  },
+  {
+    "description": "Limit attachment size fetched by IMAP service (configurable)",
+    "implemented": true
+  },
+  {
+    "description": "Expose IMAP attachment size limit in server env config",
+    "implemented": true
+  },
+  {
+    "description": "Log structured IMAP events per provider (connect, idle, fetch, publish)",
+    "implemented": true
+  },
+  {
+    "description": "Add IMAP provider to any admin reporting of inbound email status",
+    "implemented": true
+  },
+  {
+    "description": "Add IMAP provider to inbound email settings page copy",
+    "implemented": true
+  },
+  {
+    "description": "Add IMAP provider to provider list filtering and search",
+    "implemented": true
+  },
+  {
+    "description": "Display IMAP provider folder filters in provider detail view",
+    "implemented": true
+  },
+  {
+    "description": "Support per-folder UID tracking for IMAP providers",
+    "implemented": true
+  },
+  {
+    "description": "Persist per-folder UID tracking state in vendor config",
+    "implemented": true
+  },
+  {
+    "description": "Handle IMAP EXPUNGE events gracefully without resync",
+    "implemented": true
+  },
+  {
+    "description": "Handle IMAP server unsolicited BYE with reconnect",
+    "implemented": true
+  },
+  {
+    "description": "Ensure IMAP service uses shared DB connection helpers",
+    "implemented": true
+  },
+  {
+    "description": "Ensure IMAP service uses shared secrets provider helpers",
+    "implemented": true
+  },
+  {
+    "description": "Ensure IMAP service uses shared event publisher helpers",
+    "implemented": true
+  },
+  {
+    "description": "Add IMAP provider to any server-side provider-type enums",
+    "implemented": true
+  },
+  {
+    "description": "Add IMAP provider to any client-side provider-type enums",
+    "implemented": true
+  },
+  {
+    "description": "Add IMAP provider to inbound email docs list in settings help",
+    "implemented": true
+  },
+  {
+    "description": "Configure IMAP connection timeout via env/default (default 10s; not in UI)",
+    "implemented": true
+  },
+  {
+    "description": "Enable IMAP TCP socket keepalive by default (env override; not in UI)",
+    "implemented": true
+  },
+  {
+    "description": "Support IMAP servers requiring LOGIN or PLAIN auth",
+    "implemented": true
+  },
+  {
+    "description": "Support IMAP servers requiring OAUTHBEARER auth (optional)",
+    "implemented": true
+  },
+  {
+    "description": "Support IMAP servers requiring STARTTLS upgrade",
+    "implemented": true
+  },
+  {
+    "description": "Fallback to polling when IDLE fails repeatedly",
+    "implemented": true
+  },
+  {
+    "description": "Expose IMAP service instance metrics per provider in logs",
+    "implemented": true
+  },
+  {
+    "description": "Record IMAP last_processed_message_id in vendor config",
+    "implemented": true
+  },
+  {
+    "description": "Store IMAP server greeting/capabilities for diagnostics",
+    "implemented": true
+  },
+  {
+    "description": "Handle RFC822 headers encoding (UTF-8/quoted-printable)",
+    "implemented": true
+  },
+  {
+    "description": "Handle large multipart/mixed messages in MIME parsing",
+    "implemented": true
+  },
+  {
+    "description": "Handle inline images referenced by CID in HTML body",
+    "implemented": true
+  },
+  {
+    "description": "Map inline attachments with contentId in EmailMessageDetails",
+    "implemented": true
+  },
+  {
+    "description": "Preserve thread headers in emailData.headers for workflow threading",
+    "implemented": true
+  },
+  {
+    "description": "Maintain per-tenant concurrency limits for IMAP connections",
+    "implemented": true
+  },
+  {
+    "description": "Prevent multiple IMAP service instances from double-processing same provider",
+    "implemented": true
+  },
+  {
+    "description": "Implement IMAP provider lease/lock using Redis or DB",
+    "implemented": true
+  },
+  {
+    "description": "Release IMAP provider lease on graceful shutdown",
+    "implemented": true
+  },
+  {
+    "description": "Add admin-only endpoint to force IMAP provider reconnect",
+    "implemented": true
+  },
+  {
+    "description": "Add admin-only endpoint to force IMAP provider resync",
+    "implemented": true
+  },
+  {
+    "description": "Add IMAP provider audit log entries for auth changes",
+    "implemented": true
+  },
+  {
+    "description": "Add IMAP provider audit log entries for folder changes",
+    "implemented": true
+  }
+]

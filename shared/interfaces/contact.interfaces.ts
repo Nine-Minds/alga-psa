@@ -16,6 +16,7 @@ export interface IContact {
   email: string | null;
   role: string | null;
   notes: string | null;
+  notes_document_id?: string | null;
   is_inactive: boolean | null;
   created_at: string;
   updated_at: string;

@@ -1,18 +1,18 @@
 import { StorageService } from 'server/src/lib/storage/StorageService';
 import { Browser } from 'puppeteer';
 import { FileStore } from 'server/src/types/storage';
-import { getInvoiceForRendering } from 'server/src/lib/actions/invoiceQueries';
-import { getInvoiceTemplates, getCompiledWasm } from 'server/src/lib/actions/invoiceTemplates';
+import { getInvoiceForRendering } from '@alga-psa/billing/actions/invoiceQueries';
+import { getInvoiceTemplates, getCompiledWasm } from '@alga-psa/billing/actions/invoiceTemplates';
 import { runWithTenant, createTenantKnex } from 'server/src/lib/db';
 import { getClientLogoUrl } from 'server/src/lib/utils/avatarUtils';
 import { executeWasmTemplate } from 'server/src/lib/invoice-renderer/wasm-executor';
 import { renderLayout } from 'server/src/lib/invoice-renderer/layout-renderer';
 import type { WasmInvoiceViewModel } from 'server/src/lib/invoice-renderer/types';
 import type { InvoiceViewModel as DbInvoiceViewModel, IInvoiceCharge } from 'server/src/interfaces/invoice.interfaces';
-import { DateValue } from '@alga-psa/shared/types';
+import { DateValue } from '@alga-psa/types';
 import { browserPoolService, BrowserPoolService } from './browser-pool.service';
 import { IDocument } from 'server/src/interfaces/document.interface';
-import { getDocument } from 'server/src/lib/actions/document-actions/documentActions';
+import { getDocument } from '@alga-psa/documents/actions/documentActions';
 import { convertBlockNoteToHTML } from 'server/src/lib/utils/blocknoteUtils';
 import { v4 as uuidv4 } from 'uuid';
 import { StorageProviderFactory, generateStoragePath } from 'server/src/lib/storage/StorageProviderFactory';
@@ -177,6 +177,7 @@ export class PDFGenerationService {
       invoiceNumber: dbData.invoice_number,
       issueDate: this.formatDateValue(dbData.invoice_date),
       dueDate: this.formatDateValue(dbData.due_date),
+      poNumber: dbData.po_number ?? null,
       customer: {
         name: dbData.client?.name || 'N/A',
         address: dbData.contact?.address || dbData.client?.address || 'N/A',

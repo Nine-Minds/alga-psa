@@ -4,23 +4,24 @@ import * as RadixIcons from '@radix-ui/react-icons';
 import { ChevronRightIcon, MagnifyingGlassIcon } from '@radix-ui/react-icons';
 import Image from 'next/image';
 import * as Tooltip from '@radix-ui/react-tooltip';
+import { ChevronLeft, ExternalLink } from 'lucide-react';
+import { getAppVersion } from '@alga-psa/core';
+import { Button } from '@alga-psa/ui/components/Button';
+import { DynamicNavigationSlot } from '@alga-psa/ui/components/extensions/DynamicNavigationSlot';
 import {
   menuItems as defaultMenuItems,
   bottomMenuItems as defaultBottomMenuItems,
   navigationSections as defaultNavigationSections,
   settingsNavigationSections,
   billingNavigationSections,
-  MenuItem,
-  NavigationSection,
-  NavMode
-} from '../../config/menuConfig';
+  type NavigationSection,
+  type NavMode,
+} from '@/config/menuConfig';
 import SidebarMenuItem from './SidebarMenuItem';
 import SidebarSubMenuItem from './SidebarSubMenuItem';
 import SidebarBottomMenuItem from './SidebarBottomMenuItem';
-import { Button } from 'server/src/components/ui/Button';
-import { DynamicNavigationSlot } from '../extensions/DynamicNavigationSlot';
-import { ExternalLink, ChevronLeft } from 'lucide-react';
-import { getAppVersion } from 'server/src/lib/utils/version';
+import type { MenuItem } from '@/config/menuConfig';
+import { useUserPreference } from '@alga-psa/users/hooks';
 
 interface SidebarProps {
   sidebarOpen: boolean;

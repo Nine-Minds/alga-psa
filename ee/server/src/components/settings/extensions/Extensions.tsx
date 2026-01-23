@@ -7,18 +7,18 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
-import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionContainer';
-import { useAutomationIdAndRegister } from 'server/src/types/ui-reflection/useAutomationIdAndRegister';
-import { ContainerComponent } from 'server/src/types/ui-reflection/types';
+import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContainer';
+import { useAutomationIdAndRegister } from '@alga-psa/ui/ui-reflection/useAutomationIdAndRegister';
+import { ContainerComponent } from '@alga-psa/ui/ui-reflection/types';
 import { Extension } from '../../../lib/extensions/types';
 import { AlertCircleIcon, CheckCircleIcon, XCircleIcon, Settings, EyeIcon } from 'lucide-react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from 'server/src/components/ui/Dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@alga-psa/ui/components/Dialog';
 import { fetchInstalledExtensionsV2, toggleExtensionV2, uninstallExtensionV2 } from '../../../lib/actions/extRegistryV2Actions';
 import { getInstallInfo, reprovisionExtension } from '../../../lib/actions/extensionDomainActions';
-import { DataTable } from 'server/src/components/ui/DataTable';
+import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
 import { toast } from 'react-hot-toast';
-import LoadingIndicator from 'server/src/components/ui/LoadingIndicator';
+import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 
 /**
  * Extensions management page

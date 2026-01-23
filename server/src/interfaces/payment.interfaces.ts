@@ -7,7 +7,7 @@
  */
 
 import { TenantEntity } from './index';
-import { ISO8601String } from '@shared/types/temporal';
+import { ISO8601String } from '@alga-psa/types';
 
 // =============================================================================
 // Payment Provider Capabilities

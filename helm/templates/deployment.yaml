@@ -9,7 +9,10 @@ metadata:
 spec:
   replicas: {{ .Values.server.replicaCount }}
   strategy:
-    type: Recreate
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
   selector:
     matchLabels:
       {{- include "sebastian.selectorLabels" . | nindent 6 }}
@@ -104,6 +107,8 @@ spec:
             value: "{{ include "sebastian.resolveHost" . }}"
           - name: VERIFY_EMAIL_ENABLED
             value: "{{ .Values.server.verify_email}}"
+          - name: SERVER_ACTIONS_BODY_LIMIT
+            value: "{{ .Values.server.serverActionsBodyLimit | default "200mb" }}"
 
           # ----------- TEMPORAL ----------------
           - name: TEMPORAL_ADDRESS
@@ -568,7 +573,13 @@ spec:
 
           # Non-sensitive Stripe configuration
           {{- if .Values.stripe }}
-          {{- if .Values.stripe.master_billing_tenant_id }}
+          {{- if .Values.stripe.master_billing_tenant_id_secret }}
+          - name: MASTER_BILLING_TENANT_ID
+            valueFrom:
+              secretKeyRef:
+                name: {{ .Values.stripe.master_billing_tenant_id_secret.name | default "alga-psa-shared" }}
+                key: {{ .Values.stripe.master_billing_tenant_id_secret.key | default "MASTER_BILLING_TENANT_ID" }}
+          {{- else if .Values.stripe.master_billing_tenant_id }}
           - name: MASTER_BILLING_TENANT_ID
             value: "{{ .Values.stripe.master_billing_tenant_id }}"
           {{- end }}

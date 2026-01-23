@@ -1,4 +1,4 @@
-import type { FieldDefinition } from '@/types/imports.types';
+import type { FieldDefinition } from '../../types/imports.types';
 import {
   createEnumValidator,
   createMacAddressParser,

@@ -23,7 +23,7 @@ import {
 import { JobService } from '../../services/job.service';
 import { getConnection } from '../db/db';
 import { StorageService } from '../../lib/storage/StorageService';
-import logger from '@shared/core/logger';
+import logger from '@alga-psa/core/logger';
 
 // =============================================================================
 // NEW JOB RUNNER ABSTRACTION EXPORTS

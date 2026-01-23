@@ -1,5 +1,5 @@
 import Stripe from 'stripe';
-import { getSecret } from '@alga-psa/shared/core';
+import { getSecret } from '@alga-psa/core/secrets';
 
 let stripeClient: Stripe | null = null;
 

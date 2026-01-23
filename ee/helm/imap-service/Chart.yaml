@@ -1,0 +1,19 @@
+apiVersion: v2
+name: imap-service
+description: Helm chart for the Alga PSA IMAP inbound email listener service
+type: application
+version: 0.1.0
+appVersion: "1.0"
+home: https://github.com/Nine-Minds/alga-psa
+maintainers:
+  - name: Alga PSA Team
+    email: support@algapsa.com
+keywords:
+  - imap
+  - email
+  - inbound
+  - worker
+  - alga-psa
+sources:
+  - https://github.com/Nine-Minds/alga-psa
+

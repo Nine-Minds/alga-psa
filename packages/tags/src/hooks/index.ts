@@ -1,0 +1,1 @@
+export { useTagPermissions } from './useTagPermissions';

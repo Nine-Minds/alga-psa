@@ -2,7 +2,7 @@ import { getCurrentTenantId } from '../db';
 import { IService, IServicePrice } from '../../interfaces/billing.interfaces';
 import { v4 as uuidv4 } from 'uuid';
 import { z } from 'zod';
-import { validateData } from '../utils/validation';
+import { validateData } from '@alga-psa/core';
 import { Knex } from 'knex';
 
 // Use a constant for environment check
@@ -55,6 +55,7 @@ const baseServiceSchema = z.object({
   cost: z.union([z.string(), z.number()]).transform(val =>
     typeof val === 'string' ? parseFloat(val) || 0 : val
   ).nullable().optional(),
+  cost_currency: z.string().length(3).nullable().optional().default('USD'),
   vendor: z.string().nullable().optional(),
   manufacturer: z.string().nullable().optional(),
   product_category: z.string().nullable().optional(),
@@ -149,6 +150,7 @@ const Service = {
           'sc.is_active',
           'sc.sku',
           knexOrTrx.raw('CAST(sc.cost AS FLOAT) as cost'),
+          'sc.cost_currency',
           'sc.vendor',
           'sc.manufacturer',
           'sc.product_category',
@@ -234,6 +236,7 @@ const Service = {
           'sc.is_active',
           'sc.sku',
           knexOrTrx.raw('CAST(sc.cost AS FLOAT) as cost'),
+          'sc.cost_currency',
           'sc.vendor',
           'sc.manufacturer',
           'sc.product_category',
@@ -340,6 +343,7 @@ const Service = {
       is_active: validatedData.is_active ?? true,
       sku: validatedData.sku ?? null,
       cost: normalizedCost,
+      cost_currency: validatedData.cost_currency ?? 'USD',
       vendor: validatedData.vendor ?? null,
       manufacturer: validatedData.manufacturer ?? null,
       product_category: validatedData.product_category ?? null,
@@ -382,6 +386,7 @@ const Service = {
           'sc.is_active',
           'sc.sku',
           knexOrTrx.raw('CAST(sc.cost AS FLOAT) as cost'),
+          'sc.cost_currency',
           'sc.vendor',
           'sc.manufacturer',
           'sc.product_category',
@@ -501,6 +506,7 @@ const Service = {
           'sc.is_active',
           'sc.sku',
           knexOrTrx.raw('CAST(sc.cost AS FLOAT) as cost'),
+          'sc.cost_currency',
           'sc.vendor',
           'sc.manufacturer',
           'sc.product_category',
@@ -678,6 +684,7 @@ const Service = {
           'sc.is_active',
           'sc.sku',
           knexOrTrx.raw('CAST(sc.cost AS FLOAT) as cost'),
+          'sc.cost_currency',
           'sc.vendor',
           'sc.manufacturer',
           'sc.product_category',

@@ -1,4 +1,4 @@
-import BillingOverview from 'server/src/components/client-portal/billing/BillingOverview';
+import { BillingOverview } from '@alga-psa/client-portal/components';
 
 export default function BillingPage() {
   return <BillingOverview />;

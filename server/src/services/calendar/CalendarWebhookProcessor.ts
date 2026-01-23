@@ -10,7 +10,7 @@ import { GoogleCalendarAdapter } from './providers/GoogleCalendarAdapter';
 import { MicrosoftCalendarAdapter } from './providers/MicrosoftCalendarAdapter';
 import { BaseCalendarAdapter } from './providers/base/BaseCalendarAdapter';
 import { runWithTenant, createTenantKnex } from '../../lib/db';
-import { getAdminConnection } from '@alga-psa/shared/db/admin';
+import { getAdminConnection } from '@alga-psa/db/admin';
 
 export class CalendarWebhookProcessor {
   private syncService: CalendarSyncService;

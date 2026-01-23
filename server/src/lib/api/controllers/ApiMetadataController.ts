@@ -18,7 +18,7 @@ import {
   apiStatsResponseSchema
 } from '../schemas/metadataSchemas';
 import { ApiKeyServiceForApi } from '../../services/apiKeyServiceForApi';
-import { findUserByIdForApi } from '../../actions/user-actions/findUserByIdForApi';
+import { findUserByIdForApi } from '@alga-psa/users/actions';
 import { runWithTenant } from '../../db';
 import { getConnection } from '../../db/db';
 import { hasPermission } from '../../auth/rbac';

@@ -2,9 +2,9 @@
 
 import React from 'react';
 import { RefreshCw, Trash2, CheckCircle2, AlertTriangle, Clock } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from 'server/src/components/ui/Card';
-import { Button } from 'server/src/components/ui/Button';
-import { Badge } from 'server/src/components/ui/Badge';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@alga-psa/ui/components/Card';
+import { Button } from '@alga-psa/ui/components/Button';
+import { Badge } from '@alga-psa/ui/components/Badge';
 import DnsRecordInstructions from './DnsRecordInstructions';
 import type { ManagedDomainStatus } from '@ee/lib/actions/email-actions/managedDomainActions';
 

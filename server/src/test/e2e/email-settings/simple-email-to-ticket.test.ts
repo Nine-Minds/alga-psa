@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { v4 as uuidv4 } from 'uuid';
-import { getConnection } from '@shared/db/connection';
+import { getConnection } from '@alga-psa/db/connection';
 import { getEventBus } from '../../../lib/eventBus';
 import type { Knex } from 'knex';
 

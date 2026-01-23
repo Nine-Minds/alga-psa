@@ -4,11 +4,11 @@ import React, { FormEvent, useCallback, useEffect, useState } from 'react';
 import { AtSign } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from 'server/src/components/ui/Card';
-import { Badge, type BadgeVariant } from 'server/src/components/ui/Badge';
-import { Button } from 'server/src/components/ui/Button';
-import { Input } from 'server/src/components/ui/Input';
-import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
+import { Badge, type BadgeVariant } from '@alga-psa/ui/components/Badge';
+import { Button } from '@alga-psa/ui/components/Button';
+import { Input } from '@alga-psa/ui/components/Input';
+import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 
 import {
   disablePortalDomainAction,
@@ -17,7 +17,7 @@ import {
   requestPortalDomainRegistrationAction,
   retryPortalDomainRegistrationAction,
 } from '@ee/lib/actions/tenant-actions/portalDomainActions';
-import type { PortalDomainStatusResponse } from 'server/src/lib/actions/tenant-actions/portalDomain.types';
+import type { PortalDomainStatusResponse } from '@alga-psa/tenancy/actions/tenant-actions/portalDomain.types';
 import type { PortalDomainStatus } from 'server/src/models/PortalDomainModel';
 
 interface StatusBadgeConfig {

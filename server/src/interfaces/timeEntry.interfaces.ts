@@ -1,7 +1,7 @@
 import { IUser } from './auth.interfaces';
 import { WorkItemType, IWorkItem } from './workItem.interfaces';
 import { TenantEntity } from '.';
-import { DateValue, ISO8601String } from '@shared/types/temporal';
+import { DateValue, ISO8601String } from '@alga-psa/types';
 
 export type TimeSheetStatus = 'DRAFT' | 'SUBMITTED' | 'APPROVED' | 'CHANGES_REQUESTED';
 
@@ -51,7 +51,7 @@ export interface ITimeEntry extends TenantEntity  {
   approval_status: TimeSheetStatus;
   service_id?: string;
   tax_region?: string;
-  contract_line_id?: string;
+  contract_line_id?: string | null;
   tax_rate_id?: string | null; // ID of the applied tax rate
   tax_percentage?: number | null; // Percentage of the applied tax rate
 }

@@ -1,5 +1,6 @@
 'use client';
 
+
 import React, { useState, useEffect } from 'react';
 import {
   getTicketNumberSettings,
@@ -7,14 +8,14 @@ import {
   updateInitialValue,
   updateLastNumber,
   updatePaddingLength
-} from 'server/src/lib/actions/ticket-number-actions/ticketNumberActions';
-import { Input } from 'server/src/components/ui/Input';
-import { Label } from 'server/src/components/ui/Label';
-import { Button } from 'server/src/components/ui/Button';
-import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
+} from '@alga-psa/tickets/actions';
+import { Input } from '@alga-psa/ui/components/Input';
+import { Label } from '@alga-psa/ui/components/Label';
+import { Button } from '@alga-psa/ui/components/Button';
+import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Edit2, Info } from 'lucide-react';
-import { ConfirmationDialog } from 'server/src/components/ui/ConfirmationDialog';
-import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
+import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
+import { getCurrentUser } from '@alga-psa/users/actions';
 import { toast } from 'react-hot-toast';
 
 interface TicketNumberSettings {

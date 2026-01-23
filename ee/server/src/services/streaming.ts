@@ -1,8 +1,8 @@
-import { HfInference, HfInferenceEndpoint } from '@huggingface/inference';
+import type { HfInference } from '@huggingface/inference';
 
 export async function* evaluatePrompt(
   prompt: string,
-  hf: HfInferenceEndpoint,
+  hf: unknown, // HfInferenceEndpoint - not currently used
   selectedAccount: string,
   selectedUserId: string,
   controller: AbortController,

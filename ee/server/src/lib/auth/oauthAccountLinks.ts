@@ -1,5 +1,5 @@
-import logger from '@alga-psa/shared/core/logger';
-import { getAdminConnection } from '@shared/db/admin';
+import logger from '@alga-psa/core/logger';
+import { getAdminConnection } from '@alga-psa/db/admin';
 
 export type OAuthLinkProvider = 'google' | 'microsoft';
 

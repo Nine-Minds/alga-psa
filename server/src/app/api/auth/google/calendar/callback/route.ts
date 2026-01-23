@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getSecretProviderInstance } from '@alga-psa/shared/core';
+import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { createTenantKnex, runWithTenant } from '@/lib/db';
 import { CalendarProviderService } from '@/services/calendar/CalendarProviderService';
 import { GoogleCalendarAdapter } from '@/services/calendar/providers/GoogleCalendarAdapter';
@@ -277,6 +277,8 @@ export async function GET(request: NextRequest) {
             await providerService.updateProvider(stateData.calendarProviderId!, stateData.tenant, {
               calendarId: primaryCalendar.id,
               vendorConfig: {
+                client_id: clientId,
+                client_secret: clientSecret,
                 project_id: projectId || null,
                 redirect_uri: redirectUri,
                 access_token: access_token,

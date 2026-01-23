@@ -6,10 +6,10 @@ import SidebarWithFeatureFlags from "./SidebarWithFeatureFlags";
 import Header from "./Header";
 import Body from "./Body";
 import RightSidebar from "./RightSidebar";
-import Drawer from 'server/src/components/ui/Drawer';
-import { DrawerProvider } from "server/src/context/DrawerContext";
-import { ActivityDrawerProvider } from "server/src/components/user-activities/ActivityDrawerProvider";
-import { savePreference } from 'server/src/lib/utils/cookies';
+import Drawer from '@alga-psa/ui/components/Drawer';
+import { DrawerProvider } from "@alga-psa/ui";
+import { ActivityDrawerProvider } from "@alga-psa/workflows/components";
+import { savePreference } from '@alga-psa/ui/lib';
 import QuickAskOverlay from 'server/src/components/chat/QuickAskOverlay';
 
 interface DefaultLayoutProps {

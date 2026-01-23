@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import { ConfirmationDialog } from '../components/ui/ConfirmationDialog';
+import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 
 interface UnsavedChangesContextType {
   /**

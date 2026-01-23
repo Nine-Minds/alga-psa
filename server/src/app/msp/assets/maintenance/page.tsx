@@ -1,4 +1,4 @@
-import { FeaturePlaceholder } from 'server/src/components/FeaturePlaceholder';
+import { FeaturePlaceholder } from '@alga-psa/ui/components/feature-flags/FeaturePlaceholder';
 
 export default function AssetMaintenancePage() {
   return (

@@ -32,6 +32,7 @@ export class InvoiceViewModel {
   invoiceNumber: string = "";
   issueDate: string = "";
   currencyCode: string = "USD";
+  poNumber: string | null = null;
   customer: Customer | null = null;
   tenantClient: TenantClient | null = null;
   items: Array<InvoiceItem> = [];

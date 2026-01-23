@@ -1,8 +1,8 @@
-import { getConsolidatedTicketListData } from 'server/src/lib/actions/ticket-actions/optimizedTicketActions';
-import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
-import { getTicketingDisplaySettings } from 'server/src/lib/actions/ticket-actions/ticketDisplaySettings';
-import TicketingDashboardContainer from 'server/src/components/tickets/TicketingDashboardContainer';
-import { ITicketListFilters } from 'server/src/interfaces/ticket.interfaces';
+import { getConsolidatedTicketListData } from '@alga-psa/tickets/actions/optimizedTicketActions';
+import { getCurrentUser } from '@alga-psa/users/actions';
+import { getTicketingDisplaySettings } from '@alga-psa/tickets/actions/ticketDisplaySettings';
+import TicketingDashboardContainer from '@alga-psa/tickets/components/TicketingDashboardContainer';
+import type { ITicketListFilters } from '@alga-psa/types';
 
 interface TicketsPageProps {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
@@ -73,6 +73,20 @@ export default async function TicketsPage({ searchParams }: TicketsPageProps) {
     if (params?.includeUnassigned === 'true') {
       filtersFromURL.includeUnassigned = true;
     }
+    // Parse due date filter from URL
+    if (params?.dueDateFilter && typeof params.dueDateFilter === 'string') {
+      const allowedDueDateFilters = ['all', 'overdue', 'upcoming', 'today', 'no_due_date', 'before', 'after', 'custom'] as const;
+      if ((allowedDueDateFilters as readonly string[]).includes(params.dueDateFilter)) {
+        filtersFromURL.dueDateFilter = params.dueDateFilter as ITicketListFilters['dueDateFilter'];
+      }
+    }
+    // Parse due date range values from URL
+    if (params?.dueDateFrom && typeof params.dueDateFrom === 'string') {
+      filtersFromURL.dueDateFrom = params.dueDateFrom;
+    }
+    if (params?.dueDateTo && typeof params.dueDateTo === 'string') {
+      filtersFromURL.dueDateTo = params.dueDateTo;
+    }
     const allowedSortKeys = [
       'ticket_number',
       'title',
@@ -82,7 +96,8 @@ export default async function TicketsPage({ searchParams }: TicketsPageProps) {
       'category_name',
       'client_name',
       'entered_at',
-      'entered_by_name'
+      'entered_by_name',
+      'due_date'
     ] as const;
 
     if (params?.sortBy && typeof params.sortBy === 'string') {
@@ -96,12 +111,19 @@ export default async function TicketsPage({ searchParams }: TicketsPageProps) {
         filtersFromURL.sortDirection = sortDirection;
       }
     }
+    if (params?.bundleView && typeof params.bundleView === 'string') {
+      const bundleView = params.bundleView;
+      if (bundleView === 'bundled' || bundleView === 'individual') {
+        filtersFromURL.bundleView = bundleView;
+      }
+    }
 
     // Apply defaults for missing parameters
     const initialFilters: Partial<ITicketListFilters> = {
       boardFilterState: 'active',
       statusId: 'open',
       priorityId: 'all',
+      bundleView: 'bundled',
       sortBy: filtersFromURL.sortBy ?? 'entered_at',
       sortDirection: filtersFromURL.sortDirection ?? 'desc',
       ...filtersFromURL
@@ -120,8 +142,12 @@ export default async function TicketsPage({ searchParams }: TicketsPageProps) {
       tags: initialFilters.tags || undefined,
       assignedToIds: initialFilters.assignedToIds || undefined,
       includeUnassigned: initialFilters.includeUnassigned || undefined,
+      dueDateFilter: initialFilters.dueDateFilter || undefined,
+      dueDateFrom: initialFilters.dueDateFrom || undefined,
+      dueDateTo: initialFilters.dueDateTo || undefined,
       sortBy: initialFilters.sortBy || 'entered_at',
-      sortDirection: initialFilters.sortDirection || 'desc'
+      sortDirection: initialFilters.sortDirection || 'desc',
+      bundleView: initialFilters.bundleView || 'bundled'
     };
 
     // Fetch consolidated data for the ticket list with initial filters and pagination

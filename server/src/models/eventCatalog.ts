@@ -64,14 +64,29 @@ export class EventCatalogModel extends BaseModel {
     eventType: string,
     tenantId: string
   ): Promise<IEventCatalogEntry | null> {
-    const entry = await knexOrTrx('event_catalog')
+    const tenantEntry = await knexOrTrx('event_catalog')
       .where({
         event_type: eventType,
         tenant: tenantId
       })
       .first();
-    
-    return entry || null;
+
+    if (tenantEntry) {
+      return tenantEntry;
+    }
+
+    const systemEntry = await knexOrTrx('system_event_catalog')
+      .where({ event_type: eventType })
+      .first();
+
+    if (!systemEntry) {
+      return null;
+    }
+
+    return {
+      ...systemEntry,
+      tenant: tenantId
+    } as IEventCatalogEntry;
   }
 
   /**
@@ -119,7 +134,8 @@ export class EventCatalogModel extends BaseModel {
       const systemEvents = await systemEventsQuery.orderBy('name', 'asc').limit(limit).offset(offset);
 
       // Simple concatenation for now, pagination/ordering across combined results might need more complex logic
-      return [...tenantEvents, ...systemEvents];
+      const normalizedSystem = systemEvents.map((entry: any) => ({ ...entry, tenant: tenantId }));
+      return [...tenantEvents, ...normalizedSystem];
     }
 
     if (category !== undefined) {
@@ -130,7 +146,11 @@ export class EventCatalogModel extends BaseModel {
       .orderBy('name', 'asc')
       .limit(limit)
       .offset(offset);
-    
+
+    if (isSystemEvent === true) {
+      return entries.map((entry: any) => ({ ...entry, tenant: tenantId }));
+    }
+
     return entries;
   }
 
@@ -319,11 +339,128 @@ export class EventCatalogModel extends BaseModel {
           required: ['tenantId', 'invoiceId', 'clientId', 'userId', 'amount']
         },
         tenant: tenantId
+      },
+      {
+        event_type: 'TICKET_RESPONSE_STATE_CHANGED',
+        name: 'Ticket Response State Changed',
+        description: 'Triggered when a ticket\'s response state changes (e.g., from awaiting client to awaiting internal)',
+        category: 'Tickets',
+        payload_schema: {
+          type: 'object',
+          properties: {
+            tenantId: { type: 'string', format: 'uuid' },
+            ticketId: { type: 'string', format: 'uuid' },
+            userId: { type: 'string', format: 'uuid', nullable: true },
+            previousState: { type: 'string', enum: ['awaiting_client', 'awaiting_internal'], nullable: true },
+            newState: { type: 'string', enum: ['awaiting_client', 'awaiting_internal'], nullable: true },
+            trigger: { type: 'string', enum: ['comment', 'manual', 'close'] }
+          },
+          required: ['tenantId', 'ticketId', 'trigger']
+        },
+        tenant: tenantId
+      },
+      {
+        event_type: 'INBOUND_EMAIL_RECEIVED',
+        name: 'Inbound Email Received',
+        description: 'Triggered when an inbound email is received and normalized for workflow processing',
+        category: 'Email Processing',
+        payload_schema_ref: 'payload.EmailWorkflowPayload.v1',
+        payload_schema: {
+          type: 'object',
+          properties: {
+            emailData: {
+              type: 'object',
+              properties: {
+                id: { type: 'string' },
+                mailhogId: { type: 'string' },
+                threadId: { type: 'string' },
+                from: {
+                  type: 'object',
+                  properties: {
+                    email: { type: 'string', format: 'email' },
+                    name: { type: 'string' }
+                  },
+                  required: ['email']
+                },
+                to: {
+                  type: 'array',
+                  items: {
+                    type: 'object',
+                    properties: {
+                      email: { type: 'string', format: 'email' },
+                      name: { type: 'string' }
+                    },
+                    required: ['email']
+                  }
+                },
+                cc: {
+                  type: 'array',
+                  items: {
+                    type: 'object',
+                    properties: {
+                      email: { type: 'string', format: 'email' },
+                      name: { type: 'string' }
+                    },
+                    required: ['email']
+                  }
+                },
+                bcc: {
+                  type: 'array',
+                  items: {
+                    type: 'object',
+                    properties: {
+                      email: { type: 'string', format: 'email' },
+                      name: { type: 'string' }
+                    },
+                    required: ['email']
+                  }
+                },
+                subject: { type: 'string' },
+                body: {
+                  type: 'object',
+                  properties: {
+                    text: { type: 'string' },
+                    html: { type: 'string' }
+                  }
+                },
+                inReplyTo: { type: 'string' },
+                references: { type: 'array', items: { type: 'string' } },
+                attachments: {
+                  type: 'array',
+                  items: {
+                    type: 'object',
+                    properties: {
+                      id: { type: 'string' },
+                      name: { type: 'string' },
+                      contentType: { type: 'string' },
+                      size: { type: 'number' },
+                      contentId: { type: 'string' }
+                    },
+                    required: ['id', 'name', 'contentType', 'size']
+                  }
+                },
+                receivedAt: { type: 'string' },
+                tenant: { type: 'string' },
+                providerId: { type: 'string' }
+              },
+              required: ['id', 'from', 'subject', 'body']
+            },
+            providerId: { type: 'string' },
+            tenantId: { type: 'string' }
+          },
+          required: ['emailData', 'providerId', 'tenantId']
+        },
+        tenant: tenantId
       }
     ];
 
     // Insert system events
     // Insert system events
-    await knexOrTrx('system_event_catalog').insert(systemEvents);
+    await knexOrTrx('system_event_catalog').insert(
+      systemEvents.map((entry) => {
+        const { tenant, ...rest } = entry as any;
+        return rest;
+      })
+    );
   }
 }

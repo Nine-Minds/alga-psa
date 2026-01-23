@@ -14,10 +14,10 @@
  */
 
 import { Knex } from 'knex';
-import { BaseService, ServiceContext, ListResult } from './BaseService';
-import { withTransaction } from '@shared/db';
+import { BaseService, ServiceContext, ListResult } from '@alga-psa/db';
+import { withTransaction } from '@alga-psa/db';
 import { ListOptions } from '../controllers/types';
-import { getCurrentUser } from '../../actions/user-actions/userActions';
+import { getCurrentUser } from '@alga-psa/users/actions';
 import { hasPermission } from '../../auth/rbac';
 import { auditLog } from '../../logging/auditLog';
 import { TaxService } from '../../services/taxService';
@@ -99,9 +99,9 @@ import {
 } from '../../../interfaces/billing.interfaces';
 
 // Import existing actions to integrate with
-import * as creditActions from '../../actions/creditActions';
-import * as creditReconciliationActions from '../../actions/creditReconciliationActions';
-import * as billingAndTaxActions from '../../actions/billingAndTax';
+import * as creditActions from '@alga-psa/billing/actions/creditActions';
+import * as creditReconciliationActions from '@alga-psa/billing/actions/creditReconciliationActions';
+import * as billingAndTaxActions from '@alga-psa/billing/actions/billingAndTax';
 import { BillingEngine as BillingEngineClass } from '../../billing/billingEngine';
 
 /**

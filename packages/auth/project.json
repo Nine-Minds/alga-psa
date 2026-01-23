@@ -1,0 +1,35 @@
+{
+  "name": "@alga-psa/auth",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "packages/auth/src",
+  "projectType": "library",
+  "tags": ["scope:auth", "type:horizontal"],
+  "targets": {
+    "build": {
+      "executor": "@nx/js:tsc",
+      "outputs": ["{options.outputPath}"],
+      "options": {
+        "outputPath": "dist/packages/auth",
+        "tsConfig": "packages/auth/tsconfig.json",
+        "packageJson": "packages/auth/package.json",
+        "main": "packages/auth/src/index.ts",
+        "assets": []
+      }
+    },
+    "test": {
+      "executor": "@nx/vite:test",
+      "outputs": ["{workspaceRoot}/coverage/packages/auth"],
+      "options": {
+        "passWithNoTests": true
+      }
+    },
+    "lint": {
+      "executor": "@nx/eslint:lint",
+      "outputs": ["{options.outputFile}"],
+      "options": {
+        "lintFilePatterns": ["packages/auth/**/*.{ts,tsx}"]
+      }
+    }
+  }
+}
+

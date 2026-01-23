@@ -1,5 +1,5 @@
-import { UserActivitiesDashboard } from 'server/src/components/user-activities/UserActivitiesDashboard';
-import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
+import { UserActivitiesDashboard } from '@alga-psa/workflows/components';
+import { getCurrentUser } from '@alga-psa/users/actions';
 import { redirect } from 'next/navigation';
 
 export default async function UserActivitiesPage() {

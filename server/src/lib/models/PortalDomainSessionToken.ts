@@ -1,7 +1,7 @@
 import { randomBytes, createHash } from 'crypto';
 import { Knex } from 'knex';
-import logger from '@alga-psa/shared/core/logger';
-import { getAdminConnection } from '@shared/db/admin';
+import logger from '@alga-psa/core/logger';
+import { getAdminConnection } from '@alga-psa/db/admin';
 
 import { analytics } from 'server/src/lib/analytics/posthog';
 import type { PortalSessionTokenPayload } from 'server/src/lib/auth/sessionCookies';

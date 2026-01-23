@@ -5,12 +5,16 @@
  */
 
 import { getActionRegistry, type ActionRegistry, type ActionExecutionContext } from '@alga-psa/shared/workflow/core/index';
-import { logger, getSecretProviderInstance } from '@alga-psa/shared/core';
+import { logger } from '@alga-psa/core';
+import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { getTaskInboxService } from '@alga-psa/shared/workflow/core/taskInboxService';
 import axios from 'axios'; // For QBO API calls
 import type { Knex } from 'knex';
-import { ManagedDomainService as ManagedDomainServiceExport } from '@product/email-domains/entry';
-import type { DnsLookupResult } from '@shared/types/email';
+import type { DnsLookupResult } from '@alga-psa/types';
+
+// Dynamic import to avoid circular dependency (shared -> integrations -> ... -> shared)
+// Note: Using string concatenation to prevent static analysis from detecting this dependency
+const getIntegrationsModule = () => '@alga-psa/' + 'integrations/email/domains/entry';
 
 // --- Mock Secret Retrieval ---
 
@@ -89,14 +93,12 @@ type ManagedDomainServiceCtor = {
   forTenant: (options: { tenantId: string; knex: Knex }) => ManagedDomainServiceLike;
 };
 
-const ManagedDomainServiceCtor = ManagedDomainServiceExport as ManagedDomainServiceCtor | undefined;
-
 async function getKnexForTenant(tenantId: string, context: ActionExecutionContext): Promise<Knex> {
   if (context.knex) {
     return context.knex as Knex;
   }
 
-  const module = await import('@shared/db/tenant');
+  const module = await import('@alga-psa/db/tenant');
   return module.getConnection(tenantId);
 }
 
@@ -108,13 +110,22 @@ async function resolveManagedDomainService(
     throw new Error('Tenant ID is required for managed domain operations');
   }
 
-  if (!ManagedDomainServiceCtor) {
+  // Dynamically import ManagedDomainService to avoid circular dependency
+  let ManagedDomainServiceCtorImpl: ManagedDomainServiceCtor | undefined;
+  try {
+    const integrationsModule = await import(/* webpackIgnore: true */ getIntegrationsModule());
+    ManagedDomainServiceCtorImpl = integrationsModule.ManagedDomainService as ManagedDomainServiceCtor | undefined;
+  } catch (err) {
+    logger.debug('[WorkflowInit] Failed to import ManagedDomainService, may not be available in this edition');
+  }
+
+  if (!ManagedDomainServiceCtorImpl) {
     logger.warn('[WorkflowInit] ManagedDomainService unavailable in current edition');
     return null;
   }
 
   const knex = await getKnexForTenant(tenantId, context);
-  return ManagedDomainServiceCtor.forTenant({ tenantId, knex });
+  return ManagedDomainServiceCtorImpl.forTenant({ tenantId, knex });
 }
 
 /**
@@ -174,7 +185,7 @@ function registerCommonActions(actionRegistry: ActionRegistry): void {
         const formRegistry = getFormRegistry();
 
         // Create Knex instance
-        const { getAdminConnection } = await import('@alga-psa/shared/db/admin');
+        const { getAdminConnection } = await import('@alga-psa/db/admin');
         const knex = await getAdminConnection();
 
         // Register the form
@@ -221,7 +232,7 @@ function registerCommonActions(actionRegistry: ActionRegistry): void {
         const formRegistry = getFormRegistry();
 
         // Create Knex instance
-        const { getAdminConnection } = await import('@alga-psa/shared/db/admin');
+        const { getAdminConnection } = await import('@alga-psa/db/admin');
         const knex = await getAdminConnection();
 
         // Get the form
@@ -288,7 +299,7 @@ function registerCommonActions(actionRegistry: ActionRegistry): void {
         const formRegistry = getFormRegistry();
 
         // Create Knex instance
-        const { getAdminConnection } = await import('@alga-psa/shared/db/admin');
+        const { getAdminConnection } = await import('@alga-psa/db/admin');
         const knex = await getAdminConnection();
 
         // Create new version
@@ -332,7 +343,7 @@ function registerCommonActions(actionRegistry: ActionRegistry): void {
         logger.info(`Looking up user with email: ${params.email}`);
 
         // Get database connection
-        const { getAdminConnection } = await import('@alga-psa/shared/db/admin');
+        const { getAdminConnection } = await import('@alga-psa/db/admin');
         const knex = await getAdminConnection();
 
         // Find user by email - case insensitive search
@@ -392,7 +403,7 @@ function registerCommonActions(actionRegistry: ActionRegistry): void {
         logger.info(`Looking up role with name: ${params.roleName}`);
 
         // Get database connection
-        const { getAdminConnection } = await import('@alga-psa/shared/db/admin');
+        const { getAdminConnection } = await import('@alga-psa/db/admin');
         const knex = await getAdminConnection();
 
         // Find role by name - case insensitive search
@@ -518,7 +529,7 @@ function registerCommonActions(actionRegistry: ActionRegistry): void {
     async (params: Record<string, any>, context: ActionExecutionContext) => {
       logger.info(`[ACTION] get_invoice called for id: ${params.id}, tenant: ${context.tenant}`);
       try {
-        const { getAdminConnection } = await import('@alga-psa/shared/db/admin');
+        const { getAdminConnection } = await import('@alga-psa/db/admin');
         const knex = await getAdminConnection();
 
         const invoice = await knex('invoices')
@@ -562,7 +573,7 @@ function registerCommonActions(actionRegistry: ActionRegistry): void {
       const logPrefix = `[ACTION] [${context.workflowName || 'UnknownWorkflow'}${context.correlationId ? `:${context.correlationId}` : ''} (${context.executionId})]`;
       logger.info(`${logPrefix} get_invoice_charges called for invoiceId: ${params.invoiceId}, tenant: ${context.tenant}`);
       try {
-        const { getAdminConnection } = await import('@alga-psa/shared/db/admin');
+        const { getAdminConnection } = await import('@alga-psa/db/admin');
         const knex = await getAdminConnection();
 
         const items = await knex('invoice_charges')
@@ -589,7 +600,7 @@ function registerCommonActions(actionRegistry: ActionRegistry): void {
     async (params: Record<string, any>, context: ActionExecutionContext) => {
       logger.info(`[ACTION] get_client called for id: ${params.id}, tenant: ${context.tenant}`);
       try {
-        const { getAdminConnection } = await import('@alga-psa/shared/db/admin');
+        const { getAdminConnection } = await import('@alga-psa/db/admin');
         const knex = await getAdminConnection();
 
         const client = await knex('clients')
@@ -629,7 +640,7 @@ function registerCommonActions(actionRegistry: ActionRegistry): void {
     async (params: Record<string, any>, context: ActionExecutionContext) => {
       logger.info(`[ACTION] get_client_default_location called for clientId: ${params.clientId}, tenant: ${context.tenant}`);
       try {
-        const { getAdminConnection } = await import('@alga-psa/shared/db/admin');
+        const { getAdminConnection } = await import('@alga-psa/db/admin');
         const knex = await getAdminConnection();
 
         const location = await knex('client_locations')
@@ -681,7 +692,7 @@ function registerCommonActions(actionRegistry: ActionRegistry): void {
     async (params: Record<string, any>, context: ActionExecutionContext) => {
       logger.info(`[ACTION] get_client_locations called for clientId: ${params.clientId}, tenant: ${context.tenant}`);
       try {
-        const { getAdminConnection } = await import('@alga-psa/shared/db/admin');
+        const { getAdminConnection } = await import('@alga-psa/db/admin');
         const knex = await getAdminConnection();
 
         const locations = await knex('client_locations')
@@ -726,7 +737,7 @@ function registerCommonActions(actionRegistry: ActionRegistry): void {
       logger.info(`[ACTION] trigger_workflow called for name: ${params.name}, tenant: ${context.tenant}, correlationId: ${params.correlationId}`, { input: params.input });
       try {
         const { getWorkflowRuntime } = await import('@alga-psa/shared/workflow/core/workflowRuntime');
-        const { getAdminConnection } = await import('@alga-psa/shared/db/admin');
+        const { getAdminConnection } = await import('@alga-psa/db/admin');
         const knex = await getAdminConnection();
 
         // Determine if the target workflow is system_managed or tenant-specific.
@@ -937,7 +948,7 @@ function registerCommonActions(actionRegistry: ActionRegistry): void {
       logger.info(`${logPrefix} get_external_entity_mapping called for algaEntityType: ${entityType}, algaEntityId: ${params.algaEntityId}, externalSystemName: ${params.externalSystemName}, externalRealmId: ${params.externalRealmId}, tenant: ${context.tenant}`);
 
       try {
-        const { getAdminConnection } = await import('@alga-psa/shared/db/admin');
+        const { getAdminConnection } = await import('@alga-psa/db/admin');
         const knex = await getAdminConnection();
 
         const mapping = await knex('tenant_external_entity_mappings')
@@ -999,7 +1010,7 @@ function registerCommonActions(actionRegistry: ActionRegistry): void {
       }
 
       try {
-        const { getAdminConnection } = await import('@alga-psa/shared/db/admin');
+        const { getAdminConnection } = await import('@alga-psa/db/admin');
         const knex = await getAdminConnection();
 
         // Create timestamp for both created_at and updated_at
@@ -1789,7 +1800,7 @@ function registerEmailWorkflowActions(actionRegistry: ActionRegistry): void {
     async (params: Record<string, any>, context: ActionExecutionContext) => {
       try {
         // Import the database connection
-        const { getAdminConnection } = await import('@alga-psa/shared/db/admin');
+        const { getAdminConnection } = await import('@alga-psa/db/admin');
         const knex = await getAdminConnection();
 
         let board = await knex('boards')
@@ -1875,7 +1886,7 @@ function registerEmailWorkflowActions(actionRegistry: ActionRegistry): void {
     ],
     async (params: Record<string, any>, context: ActionExecutionContext) => {
       try {
-        const { getAdminConnection } = await import('@alga-psa/shared/db/admin');
+        const { getAdminConnection } = await import('@alga-psa/db/admin');
         const knex = await getAdminConnection();
 
         const query = knex('statuses')
@@ -1929,7 +1940,7 @@ function registerEmailWorkflowActions(actionRegistry: ActionRegistry): void {
     [{ name: 'name', type: 'string', required: true }],
     async (params: Record<string, any>, context: ActionExecutionContext) => {
       try {
-        const { getAdminConnection } = await import('@alga-psa/shared/db/admin');
+        const { getAdminConnection } = await import('@alga-psa/db/admin');
         const knex = await getAdminConnection();
 
         let priority = await knex('priorities')

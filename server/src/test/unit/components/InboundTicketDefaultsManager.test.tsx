@@ -17,7 +17,7 @@ const {
   mockGetAllBoards,
   mockGetAllClients,
   mockGetAllPriorities,
-  mockGetAllUsers,
+  mockGetAllUsersBasic,
 } = vi.hoisted(() => ({
   mockGetInboundTicketDefaults: vi.fn(),
   mockCreateInboundTicketDefaults: vi.fn(),
@@ -25,11 +25,11 @@ const {
   mockGetAllBoards: vi.fn(),
   mockGetAllClients: vi.fn(),
   mockGetAllPriorities: vi.fn(),
-  mockGetAllUsers: vi.fn(),
+  mockGetAllUsersBasic: vi.fn(),
 }));
 
 // Mock UI subcomponents used by the form for predictable interactions
-vi.mock('../../../components/settings/general/BoardPicker', () => ({
+vi.mock('@alga-psa/ui/components/settings/general/BoardPicker', () => ({
   __esModule: true,
   BoardPicker: ({ id, boards = [], selectedBoardId, onSelect, placeholder }: any) => (
     <select
@@ -49,12 +49,12 @@ vi.mock('../../../components/settings/general/BoardPicker', () => ({
   ),
 }));
 
-vi.mock('../../../components/clients/ClientPicker', () => ({
+vi.mock('@alga-psa/ui/components/ClientPicker', () => ({
   __esModule: true,
   ClientPicker: ({ id, clients = [], selectedClientId, onSelect, placeholder }: any) => (
     <select
       id={id}
-      aria-label="Client"
+      aria-label="Client *"
       value={selectedClientId || ''}
       data-testid="client-picker"
       onChange={(e) => onSelect(e.target.value ? e.target.value : '')}
@@ -69,9 +69,9 @@ vi.mock('../../../components/clients/ClientPicker', () => ({
   ),
 }));
 
-vi.mock('../../../components/tickets/CategoryPicker', () => ({
+vi.mock('@alga-psa/tickets/components/CategoryPicker', () => ({
   __esModule: true,
-  CategoryPicker: ({ id = 'category-picker', selectedCategories = [], onSelect, placeholder, disabled }: any) => (
+  default: ({ id = 'category-picker', selectedCategories = [], onSelect, placeholder, disabled }: any) => (
     <select
       id={id}
       aria-label="Category"
@@ -86,7 +86,7 @@ vi.mock('../../../components/tickets/CategoryPicker', () => ({
   ),
 }));
 
-vi.mock('../../../components/tickets/PrioritySelect', () => ({
+vi.mock('@alga-psa/tickets/components/PrioritySelect', () => ({
   __esModule: true,
   PrioritySelect: ({ id, options = [], value, onValueChange, placeholder }: any) => (
     <select
@@ -106,7 +106,7 @@ vi.mock('../../../components/tickets/PrioritySelect', () => ({
   ),
 }));
 
-vi.mock('../../../components/ui/CustomSelect', () => ({
+vi.mock('@alga-psa/ui/components/CustomSelect', () => ({
   __esModule: true,
   default: ({ id, options = [], value, onValueChange, placeholder }: any) => (
     <select
@@ -125,42 +125,38 @@ vi.mock('../../../components/ui/CustomSelect', () => ({
   ),
 }));
 
-// Mock server actions used by Manager and Form
-vi.mock('../../../lib/actions/email-actions/inboundTicketDefaultsActions', () => ({
+// Mock actions used by Manager and Form
+vi.mock('@alga-psa/integrations/actions', () => ({
   __esModule: true,
   getInboundTicketDefaults: mockGetInboundTicketDefaults,
   createInboundTicketDefaults: mockCreateInboundTicketDefaults,
   updateInboundTicketDefaults: vi.fn(),
   deleteInboundTicketDefaults: vi.fn(),
-}));
-
-vi.mock('../../../lib/actions/email-actions/ticketFieldOptionsActions', () => ({
-  __esModule: true,
   getTicketFieldOptions: mockGetTicketFieldOptions,
   getCategoriesByBoard: vi.fn().mockResolvedValue({ categories: [] }),
 }));
 
-vi.mock('server/src/lib/actions/board-actions/boardActions', () => ({
+vi.mock('@alga-psa/tickets/actions', () => ({
   __esModule: true,
   getAllBoards: mockGetAllBoards,
 }));
 
-vi.mock('server/src/lib/actions/client-actions/clientActions', () => ({
+vi.mock('@alga-psa/clients/actions', () => ({
   __esModule: true,
   getAllClients: mockGetAllClients,
 }));
 
-vi.mock('server/src/lib/actions/priorityActions', () => ({
+vi.mock('@alga-psa/reference-data/actions', () => ({
   __esModule: true,
   getAllPriorities: mockGetAllPriorities,
 }));
 
-vi.mock('server/src/lib/actions/user-actions/userActions', () => ({
+vi.mock('@alga-psa/users/actions', () => ({
   __esModule: true,
-  getAllUsers: mockGetAllUsers,
+  getAllUsersBasic: mockGetAllUsersBasic,
 }));
 
-import { InboundTicketDefaultsManager } from '../../../components/admin/InboundTicketDefaultsManager';
+import { InboundTicketDefaultsManager } from '@alga-psa/integrations/components';
 
 const sampleFieldOptions = {
   boards: [{ id: 'board-1', name: 'General', is_default: true }],
@@ -193,7 +189,7 @@ describe('InboundTicketDefaultsManager', () => {
     mockGetAllBoards.mockResolvedValue(sampleBoards);
     mockGetAllClients.mockResolvedValue(sampleClients);
     mockGetAllPriorities.mockResolvedValue(samplePriorities);
-    mockGetAllUsers.mockResolvedValue([]);
+    mockGetAllUsersBasic.mockResolvedValue([]);
     mockCreateInboundTicketDefaults.mockResolvedValue({
       defaults: {
         id: 'new-1',
@@ -235,7 +231,7 @@ describe('InboundTicketDefaultsManager', () => {
     const boardSelect = screen.getByLabelText('Board *');
     const statusSelect = screen.getByLabelText('Status *');
     const prioritySelect = screen.getByLabelText('Priority *');
-    const clientSelect = screen.getByLabelText('Client');
+    const clientSelect = screen.getByLabelText('Client *');
 
     await user.type(shortName, 'catch-all');
     await user.type(displayName, 'Catch All Defaults');

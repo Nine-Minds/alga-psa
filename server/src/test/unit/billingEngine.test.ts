@@ -4,11 +4,11 @@ import { getConnection } from 'server/src/lib/db/db';
 import { IAdjustment, IBillingCharge, IBillingPeriod, IBillingResult, IClientContractLine, IDiscount, IFixedPriceCharge, ITimeBasedCharge, IUsageBasedCharge } from 'server/src/interfaces/billing.interfaces';
 import { ISO8601String } from '../../types/types.d';
 import { TaxService } from 'server/src/lib/services/taxService';
-import * as clientTaxRateActions from 'server/src/lib/actions/client-actions/clientTaxRateActions';
+import * as clientActions from '@alga-psa/clients/actions';
 
 
 vi.mock('@/lib/db/db');
-vi.mock('@alga-psa/shared/db', () => ({
+vi.mock('@alga-psa/db', () => ({
   withTransaction: vi.fn(async (_knex, callback) => callback(_knex)),
   withAdminTransaction: vi.fn(async (_callback, existing) => _callback(existing)),
 }));
@@ -32,14 +32,20 @@ vi.mock('jose', () => ({
   // Add any jose methods you're using
 }));
 
-vi.mock('server/src/lib/actions/client-actions/clientActions', () => ({
-  getClientById: vi.fn(() => Promise.resolve({
-    client_id: 'mock-client-id',
-    client_name: 'Mock Client',
-    tenant: 'test_tenant',
-    is_tax_exempt: false
-  }))
-}));
+vi.mock('@alga-psa/clients/actions', async () => {
+  const actual = await vi.importActual<any>('@alga-psa/clients/actions');
+  return {
+    ...actual,
+    getClientById: vi.fn(() =>
+      Promise.resolve({
+        client_id: 'mock-client-id',
+        client_name: 'Mock Client',
+        tenant: 'test_tenant',
+        is_tax_exempt: false,
+      })
+    ),
+  };
+});
 
 
 describe('BillingEngine', () => {
@@ -62,7 +68,7 @@ describe('BillingEngine', () => {
       taxRegion: undefined,
       isTaxable: false
     });
-    vi.spyOn(clientTaxRateActions, 'getClientDefaultTaxRegionCode').mockResolvedValue('US-NY');
+    vi.spyOn(clientActions, 'getClientDefaultTaxRegionCode').mockResolvedValue('US-NY');
     const mockQueryBuilder = {
       select: vi.fn().mockReturnThis(),
       where: vi.fn().mockReturnThis(),
@@ -242,7 +248,7 @@ describe('BillingEngine', () => {
         charges: [],
         totalAmount: 0,
         finalAmount: 0,
-        error: 'No active contract lines found for client test_client_id in the given period'
+        error: 'No active contract lines found for this client in the selected billing period.'
       });
     });
 

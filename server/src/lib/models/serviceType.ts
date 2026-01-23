@@ -29,6 +29,9 @@ export const ServiceTypeModel = {
 
   async create(knexOrTrx: Knex | Knex.Transaction, data: Omit<IServiceType, 'id' | 'created_at' | 'updated_at' | 'tenant'>): Promise<IServiceType> {
     const tenant = await getCurrentTenantId();
+    if (!tenant) {
+      throw new Error('Tenant not found for request');
+    }
     
     const dataToInsert = {
       ...data,

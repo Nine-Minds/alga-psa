@@ -2,8 +2,8 @@
 import 'server/test-utils/testMocks';
 
 import { describe, it, expect, beforeAll, afterAll, beforeEach, afterEach } from 'vitest';
-import { createProject } from 'server/src/lib/actions/project-actions/projectActions';
-import { IProject } from 'server/src/interfaces/project.interfaces';
+import { createProject } from '@alga-psa/projects/actions/projectActions';
+import type { IProject } from '@alga-psa/types';
 import { TestContext } from 'server/test-utils/testContext';
 import { setupCommonMocks } from 'server/test-utils/testMocks';
 

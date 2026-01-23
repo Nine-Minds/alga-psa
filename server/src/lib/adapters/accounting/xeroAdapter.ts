@@ -1,4 +1,4 @@
-import logger from '@shared/core/logger';
+import logger from '@alga-psa/core/logger';
 import { Knex } from 'knex';
 import {
   AccountingExportAdapter,
@@ -18,21 +18,28 @@ import {
   XeroInvoiceLinePayload,
   XeroTrackingCategoryOption,
   XeroTaxComponentPayload
-} from '../../xero/xeroClientService';
-import { createTenantKnex } from '../../db';
-import { AccountingMappingResolver, MappingResolution } from '../../services/accountingMappingResolver';
-import { AppError } from '../../errors';
+} from '@alga-psa/integrations/lib/xero/xeroClientService';
+import { createTenantKnex } from '@alga-psa/db';
 import {
+  AccountingMappingResolver,
+  MappingResolution,
   CompanyAccountingSyncService,
   KnexCompanyMappingRepository,
-  buildNormalizedCompanyPayload
-} from '../../services/companySync';
-import { XeroCompanyAdapter } from '../../services/companySync/adapters/xeroCompanyAdapter';
-import { KnexInvoiceMappingRepository } from '../../repositories/invoiceMappingRepository';
+  buildNormalizedCompanyPayload,
+  XeroCompanyAdapter,
+  KnexInvoiceMappingRepository
+} from '@alga-psa/billing';
+import { AppError } from '@alga-psa/core';
+
+export function buildXeroInvoiceReference(baseReference: string, poNumber?: string | null): string {
+  const reference = poNumber ? `${baseReference} | PO ${poNumber}` : baseReference;
+  return reference.length > 255 ? reference.slice(0, 255) : reference;
+}
 
 type DbInvoice = {
   invoice_id: string;
   invoice_number?: string | null;
+  po_number?: string | null;
   invoice_date?: string | Date | null;
   due_date?: string | Date | null;
   client_id?: string | null;
@@ -305,11 +312,14 @@ export class XeroAdapter implements AccountingExportAdapter {
         continue;
       }
 
+      const baseReference = invoice.invoice_number ?? invoiceId;
+      const reference = buildXeroInvoiceReference(baseReference, invoice.po_number);
+
       const invoicePayload: XeroInvoicePayload = {
         invoiceId,
         contactId: clientMapping.external_entity_id,
         currency: invoice.currency_code ?? exportLines[0]?.currency_code ?? null,
-        reference: invoice.invoice_number ?? invoiceId,
+        reference,
         invoiceDate: formatDate(invoice.invoice_date),
         dueDate: formatDate(invoice.due_date),
         lineAmountType: detectedLineAmountType ?? defaultLineAmountType(lineItems),
@@ -462,6 +472,7 @@ export class XeroAdapter implements AccountingExportAdapter {
       .select(
         'invoice_id',
         'invoice_number',
+        'po_number',
         'invoice_date',
         'due_date',
         'client_id',

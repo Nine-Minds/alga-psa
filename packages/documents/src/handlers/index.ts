@@ -1,0 +1,11 @@
+export { BaseDocumentHandler } from './BaseDocumentHandler';
+export { BlockNoteDocumentHandler } from './BlockNoteDocumentHandler';
+export { DocumentHandlerRegistry } from './DocumentHandlerRegistry';
+export type { DocumentTypeHandler } from './DocumentTypeHandler';
+export { GenericFileDocumentHandler } from './GenericFileDocumentHandler';
+export { ImageDocumentHandler } from './ImageDocumentHandler';
+export { MarkdownDocumentHandler } from './MarkdownDocumentHandler';
+export { OfficeDocumentHandler } from './OfficeDocumentHandler';
+export { PDFDocumentHandler } from './PDFDocumentHandler';
+export { TextDocumentHandler } from './TextDocumentHandler';
+export { VideoDocumentHandler } from './VideoDocumentHandler';

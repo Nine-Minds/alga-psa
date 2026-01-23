@@ -125,6 +125,6 @@ export function filterResponseHeaders(
 
 export function getTimeoutMs(): number {
   const raw = process.env.EXT_GATEWAY_TIMEOUT_MS;
-  const parsed = raw ? Number(raw) : 5000;
-  return Number.isFinite(parsed) && parsed > 0 ? parsed : 5000;
+  const parsed = raw ? Number(raw) : 30000;
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : 30000;
 }

@@ -1,0 +1,1605 @@
+{
+  "feature": "Workflow Run Studio",
+  "description": "End-to-end UX for running workflows, supplying synthetic event payloads, and observing live execution with step status, logs, and history.",
+  "branch": "feat/workflow-overhaul",
+  "createdAt": "2025-12-26",
+  "relatedPRDSection": "§21",
+  "tasks": [
+    {
+      "id": "WRX-001",
+      "category": "Run Trigger",
+      "description": "Add Run button in designer toolbar (only when workflow has a published version)",
+      "file": "",
+      "done": true
+    },
+    {
+      "id": "WRX-002",
+      "category": "Run Trigger",
+      "description": "Disable Run when workflow is paused or validation_status=error",
+      "file": "",
+      "done": true
+    },
+    {
+      "id": "WRX-003",
+      "category": "Run Trigger",
+      "description": "Show published version selector in Run dialog",
+      "file": "",
+      "done": true
+    },
+    {
+      "id": "WRX-004",
+      "category": "Run Trigger",
+      "description": "Allow running latest published version by default",
+      "file": "",
+      "done": true
+    },
+    {
+      "id": "WRX-005",
+      "category": "Run Trigger",
+      "description": "Display trigger type (event/manual) in Run dialog header",
+      "file": "",
+      "done": true
+    },
+    {
+      "id": "WRX-006",
+      "category": "Run Trigger",
+      "description": "Show warning when draft differs from published version",
+      "file": "",
+      "done": true
+    },
+    {
+      "id": "WRX-007",
+      "category": "Run Trigger",
+      "description": "Offer quick link to publish before running",
+      "file": "",
+      "done": true
+    },
+    {
+      "id": "WRX-008",
+      "category": "Run Trigger",
+      "description": "Add confirmation when running system workflows",
+      "file": "",
+      "done": true
+    },
+    {
+      "id": "WRX-009",
+      "category": "Run Trigger",
+      "description": "Surface concurrency limit notice in Run dialog",
+      "file": "",
+      "done": true
+    },
+    {
+      "id": "WRX-010",
+      "category": "Run Trigger",
+      "description": "Remember last used run options per workflow",
+      "file": "",
+      "done": true
+    },
+    {
+      "id": "WRX-011",
+      "category": "Test Event Builder",
+      "description": "Render payload editor seeded with payload schema defaults",
+      "file": "",
+      "done": true
+    },
+    {
+      "id": "WRX-012",
+      "category": "Test Event Builder",
+      "description": "Support JSON editor + structured form toggle",
+      "file": "",
+      "done": true
+    },
+    {
+      "id": "WRX-013",
+      "category": "Test Event Builder",
+      "description": "Validate JSON syntax and show inline errors",
+      "file": "",
+      "done": true
+    },
+    {
+      "id": "WRX-014",
+      "category": "Test Event Builder",
+      "description": "Provide schema-driven required field indicators",
+      "file": "",
+      "done": true
+    },
+    {
+      "id": "WRX-015",
+      "category": "Test Event Builder",
+      "description": "Offer example payload snippets from schema examples",
+      "file": "",
+      "done": true
+    },
+    {
+      "id": "WRX-016",
+      "category": "Test Event Builder",
+      "description": "Allow saving named payload presets per workflow",
+      "file": "",
+      "done": true
+    },
+    {
+      "id": "WRX-017",
+      "category": "Test Event Builder",
+      "description": "Allow cloning prior run payload into editor",
+      "file": "",
+      "done": true
+    },
+    {
+      "id": "WRX-018",
+      "category": "Test Event Builder",
+      "description": "Add \"Reset to defaults\" action",
+      "file": "",
+      "done": true
+    },
+    {
+      "id": "WRX-019",
+      "category": "Test Event Builder",
+      "description": "Support quick-fill from sample templates (email, webhook, etc.)",
+      "file": "",
+      "done": true
+    },
+    {
+      "id": "WRX-020",
+      "category": "Test Event Builder",
+      "description": "Show payload size estimate and limit warnings",
+      "file": "",
+      "done": true
+    },
+    {
+      "id": "WRX-021",
+      "category": "Schema-Based Form",
+      "description": "Auto-generate form fields from payload schema",
+      "file": "",
+      "done": true
+    },
+    {
+      "id": "WRX-022",
+      "category": "Schema-Based Form",
+      "description": "Support nested objects with collapsible sections",
+      "file": "",
+      "done": true
+    },
+    {
+      "id": "WRX-023",
+      "category": "Schema-Based Form",
+      "description": "Support arrays with add/remove row controls",
+      "file": "",
+      "done": true
+    },
+    {
+      "id": "WRX-024",
+      "category": "Schema-Based Form",
+      "description": "Render enums as select dropdowns",
+      "file": "",
+      "done": true
+    },
+    {
+      "id": "WRX-025",
+      "category": "Schema-Based Form",
+      "description": "Render booleans as toggles",
+      "file": "",
+      "done": true
+    },
+    {
+      "id": "WRX-026",
+      "category": "Schema-Based Form",
+      "description": "Render date/time with datetime picker",
+      "file": "",
+      "done": true
+    },
+    {
+      "id": "WRX-027",
+      "category": "Schema-Based Form",
+      "description": "Show field descriptions as helper text",
+      "file": "",
+      "done": true
+    },
+    {
+      "id": "WRX-028",
+      "category": "Schema-Based Form",
+      "description": "Surface default values with reset per field",
+      "file": "",
+      "done": true
+    },
+    {
+      "id": "WRX-029",
+      "category": "Schema-Based Form",
+      "description": "Show validation errors from Zod schema",
+      "file": "",
+      "done": true
+    },
+    {
+      "id": "WRX-030",
+      "category": "Schema-Based Form",
+      "description": "Allow copy JSON from form view",
+      "file": "",
+      "done": true
+    },
+    {
+      "id": "WRX-031",
+      "category": "Run Studio Layout",
+      "description": "Create dedicated Run Studio page for a workflow run",
+      "file": "",
+      "done": true
+    },
+    {
+      "id": "WRX-032",
+      "category": "Run Studio Layout",
+      "description": "Left: pipeline visualization; right: details/logs",
+      "file": "",
+      "done": true
+    },
+    {
+      "id": "WRX-033",
+      "category": "Run Studio Layout",
+      "description": "Top bar with run status, workflow name, version",
+      "file": "",
+      "done": true
+    },
+    {
+      "id": "WRX-034",
+      "category": "Run Studio Layout",
+      "description": "Breadcrumb navigation back to workflow designer",
+      "file": "",
+      "done": true
+    },
+    {
+      "id": "WRX-035",
+      "category": "Run Studio Layout",
+      "description": "Sticky status summary on scroll",
+      "file": "",
+      "done": false
+    },
+    {
+      "id": "WRX-036",
+      "category": "Run Studio Layout",
+      "description": "Split panel resizing with persisted widths",
+      "file": "",
+      "done": false
+    },
+    {
+      "id": "WRX-037",
+      "category": "Run Studio Layout",
+      "description": "Run metadata panel (run_id, started_at, duration)",
+      "file": "",
+      "done": true
+    },
+    {
+      "id": "WRX-038",
+      "category": "Run Studio Layout",
+      "description": "Show tenant and trigger metadata",
+      "file": "",
+      "done": true
+    },
+    {
+      "id": "WRX-039",
+      "category": "Run Studio Layout",
+      "description": "Quick link to open definition version",
+      "file": "",
+      "done": false
+    },
+    {
+      "id": "WRX-040",
+      "category": "Run Studio Layout",
+      "description": "Empty state when no run selected",
+      "file": "",
+      "done": false
+    },
+    {
+      "id": "WRX-041",
+      "category": "Node Status Visualization",
+      "description": "Show running node highlighted (e.g., cyan) with pulse",
+      "file": "",
+      "done": true
+    },
+    {
+      "id": "WRX-042",
+      "category": "Node Status Visualization",
+      "description": "Show succeeded nodes in green",
+      "file": "",
+      "done": true
+    },
+    {
+      "id": "WRX-043",
+      "category": "Node Status Visualization",
+      "description": "Show failed nodes in red",
+      "file": "",
+      "done": true
+    },
+    {
+      "id": "WRX-044",
+      "category": "Node Status Visualization",
+      "description": "Show canceled nodes in gray",
+      "file": "",
+      "done": true
+    },
+    {
+      "id": "WRX-045",
+      "category": "Node Status Visualization",
+      "description": "Show waiting nodes in yellow",
+      "file": "",
+      "done": false
+    },
+    {
+      "id": "WRX-046",
+      "category": "Node Status Visualization",
+      "description": "Render retrying nodes with striped indicator",
+      "file": "",
+      "done": true
+    },
+    {
+      "id": "WRX-047",
+      "category": "Node Status Visualization",
+      "description": "Display node attempt count badge",
+      "file": "",
+      "done": true
+    },
+    {
+      "id": "WRX-048",
+      "category": "Node Status Visualization",
+      "description": "Animate transition from running → succeeded",
+      "file": "",
+      "done": false
+    },
+    {
+      "id": "WRX-049",
+      "category": "Node Status Visualization",
+      "description": "Show tooltip with last status + timestamp",
+      "file": "",
+      "done": true
+    },
+    {
+      "id": "WRX-050",
+      "category": "Node Status Visualization",
+      "description": "Expose legend for status colors",
+      "file": "",
+      "done": true
+    },
+    {
+      "id": "WRX-051",
+      "category": "Live Updates",
+      "description": "Poll run status and step statuses at interval",
+      "file": "",
+      "done": true
+    },
+    {
+      "id": "WRX-052",
+      "category": "Live Updates",
+      "description": "Backoff polling when run completes",
+      "file": "",
+      "done": true
+    },
+    {
+      "id": "WRX-053",
+      "category": "Live Updates",
+      "description": "Allow manual refresh button",
+      "file": "",
+      "done": true
+    },
+    {
+      "id": "WRX-054",
+      "category": "Live Updates",
+      "description": "Subscribe to server-sent events when available",
+      "file": "",
+      "done": false
+    },
+    {
+      "id": "WRX-055",
+      "category": "Live Updates",
+      "description": "Auto-scroll to latest step on updates",
+      "file": "",
+      "done": false
+    },
+    {
+      "id": "WRX-056",
+      "category": "Live Updates",
+      "description": "Detect stale UI and display \"out of date\" banner",
+      "file": "",
+      "done": false
+    },
+    {
+      "id": "WRX-057",
+      "category": "Live Updates",
+      "description": "Update duration timer live while running",
+      "file": "",
+      "done": true
+    },
+    {
+      "id": "WRX-058",
+      "category": "Live Updates",
+      "description": "Handle network disconnects gracefully",
+      "file": "",
+      "done": false
+    },
+    {
+      "id": "WRX-059",
+      "category": "Live Updates",
+      "description": "Prevent UI flicker with diff-based updates",
+      "file": "",
+      "done": false
+    },
+    {
+      "id": "WRX-060",
+      "category": "Live Updates",
+      "description": "Show \"last updated\" timestamp",
+      "file": "",
+      "done": true
+    },
+    {
+      "id": "WRX-061",
+      "category": "Execution History",
+      "description": "Show chronological step execution timeline",
+      "file": "",
+      "done": true
+    },
+    {
+      "id": "WRX-062",
+      "category": "Execution History",
+      "description": "Group retries under a step with expandable attempts",
+      "file": "",
+      "done": true
+    },
+    {
+      "id": "WRX-063",
+      "category": "Execution History",
+      "description": "Show wait steps (event/human/timeout) in timeline",
+      "file": "",
+      "done": true
+    },
+    {
+      "id": "WRX-064",
+      "category": "Execution History",
+      "description": "Display duration per step attempt",
+      "file": "",
+      "done": true
+    },
+    {
+      "id": "WRX-065",
+      "category": "Execution History",
+      "description": "Provide search/filter within history",
+      "file": "",
+      "done": true
+    },
+    {
+      "id": "WRX-066",
+      "category": "Execution History",
+      "description": "Highlight failed attempts with error summary",
+      "file": "",
+      "done": false
+    },
+    {
+      "id": "WRX-067",
+      "category": "Execution History",
+      "description": "Allow jumping timeline to node in graph",
+      "file": "",
+      "done": true
+    },
+    {
+      "id": "WRX-068",
+      "category": "Execution History",
+      "description": "Show state.set transitions in timeline",
+      "file": "",
+      "done": false
+    },
+    {
+      "id": "WRX-069",
+      "category": "Execution History",
+      "description": "Show control block enter/exit markers",
+      "file": "",
+      "done": false
+    },
+    {
+      "id": "WRX-070",
+      "category": "Execution History",
+      "description": "Export timeline as JSON",
+      "file": "",
+      "done": false
+    },
+    {
+      "id": "WRX-071",
+      "category": "Run Logs",
+      "description": "Stream logs for the run with level filtering",
+      "file": "",
+      "done": false
+    },
+    {
+      "id": "WRX-072",
+      "category": "Run Logs",
+      "description": "Support log search (text match)",
+      "file": "",
+      "done": true
+    },
+    {
+      "id": "WRX-073",
+      "category": "Run Logs",
+      "description": "Support paging/virtualization for large log sets",
+      "file": "",
+      "done": false
+    },
+    {
+      "id": "WRX-074",
+      "category": "Run Logs",
+      "description": "Show log context (step_path, event_name)",
+      "file": "",
+      "done": false
+    },
+    {
+      "id": "WRX-075",
+      "category": "Run Logs",
+      "description": "Allow copy log line with timestamp",
+      "file": "",
+      "done": false
+    },
+    {
+      "id": "WRX-076",
+      "category": "Run Logs",
+      "description": "Allow download logs as CSV",
+      "file": "",
+      "done": false
+    },
+    {
+      "id": "WRX-077",
+      "category": "Run Logs",
+      "description": "Colorize by log level",
+      "file": "",
+      "done": true
+    },
+    {
+      "id": "WRX-078",
+      "category": "Run Logs",
+      "description": "Pin logs panel open across navigation",
+      "file": "",
+      "done": false
+    },
+    {
+      "id": "WRX-079",
+      "category": "Run Logs",
+      "description": "Show empty state when no logs",
+      "file": "",
+      "done": true
+    },
+    {
+      "id": "WRX-080",
+      "category": "Run Logs",
+      "description": "Show \"log source\" column",
+      "file": "",
+      "done": false
+    },
+    {
+      "id": "WRX-081",
+      "category": "Step Details",
+      "description": "Show selected step configuration (read-only)",
+      "file": "",
+      "done": true
+    },
+    {
+      "id": "WRX-082",
+      "category": "Step Details",
+      "description": "Show input mapping resolved values (from snapshot)",
+      "file": "",
+      "done": true
+    },
+    {
+      "id": "WRX-083",
+      "category": "Step Details",
+      "description": "Show output payload for action.call steps",
+      "file": "",
+      "done": true
+    },
+    {
+      "id": "WRX-084",
+      "category": "Step Details",
+      "description": "Show error payload for failed steps",
+      "file": "",
+      "done": true
+    },
+    {
+      "id": "WRX-085",
+      "category": "Step Details",
+      "description": "Show retry policy for step",
+      "file": "",
+      "done": false
+    },
+    {
+      "id": "WRX-086",
+      "category": "Step Details",
+      "description": "Allow copy JSON of input/output",
+      "file": "",
+      "done": true
+    },
+    {
+      "id": "WRX-087",
+      "category": "Step Details",
+      "description": "Show action id + version for action.call",
+      "file": "",
+      "done": true
+    },
+    {
+      "id": "WRX-088",
+      "category": "Step Details",
+      "description": "Show node type + config for node steps",
+      "file": "",
+      "done": false
+    },
+    {
+      "id": "WRX-089",
+      "category": "Step Details",
+      "description": "Surface idempotency key for action steps",
+      "file": "",
+      "done": false
+    },
+    {
+      "id": "WRX-090",
+      "category": "Step Details",
+      "description": "Show step path with breadcrumbs",
+      "file": "",
+      "done": false
+    },
+    {
+      "id": "WRX-091",
+      "category": "Envelope Snapshots",
+      "description": "View envelope snapshot per step",
+      "file": "",
+      "done": true
+    },
+    {
+      "id": "WRX-092",
+      "category": "Envelope Snapshots",
+      "description": "Diff two snapshots side-by-side",
+      "file": "",
+      "done": false
+    },
+    {
+      "id": "WRX-093",
+      "category": "Envelope Snapshots",
+      "description": "Highlight changed fields between steps",
+      "file": "",
+      "done": false
+    },
+    {
+      "id": "WRX-094",
+      "category": "Envelope Snapshots",
+      "description": "Allow expand/collapse large objects",
+      "file": "",
+      "done": false
+    },
+    {
+      "id": "WRX-095",
+      "category": "Envelope Snapshots",
+      "description": "Mask secrets in snapshot view",
+      "file": "",
+      "done": false
+    },
+    {
+      "id": "WRX-096",
+      "category": "Envelope Snapshots",
+      "description": "Search within snapshot JSON",
+      "file": "",
+      "done": false
+    },
+    {
+      "id": "WRX-097",
+      "category": "Envelope Snapshots",
+      "description": "Copy JSON path from snapshot view",
+      "file": "",
+      "done": false
+    },
+    {
+      "id": "WRX-098",
+      "category": "Envelope Snapshots",
+      "description": "Show snapshot size and redaction status",
+      "file": "",
+      "done": false
+    },
+    {
+      "id": "WRX-099",
+      "category": "Envelope Snapshots",
+      "description": "Allow download snapshot JSON",
+      "file": "",
+      "done": false
+    },
+    {
+      "id": "WRX-100",
+      "category": "Envelope Snapshots",
+      "description": "Show warnings when snapshot truncated",
+      "file": "",
+      "done": false
+    },
+    {
+      "id": "WRX-101",
+      "category": "Error Handling UX",
+      "description": "Display run-level error summary banner",
+      "file": "",
+      "done": true
+    },
+    {
+      "id": "WRX-102",
+      "category": "Error Handling UX",
+      "description": "Show stack trace panel for failures",
+      "file": "",
+      "done": false
+    },
+    {
+      "id": "WRX-103",
+      "category": "Error Handling UX",
+      "description": "Display error category (ActionError, ValidationError)",
+      "file": "",
+      "done": false
+    },
+    {
+      "id": "WRX-104",
+      "category": "Error Handling UX",
+      "description": "Show last successful step before failure",
+      "file": "",
+      "done": true
+    },
+    {
+      "id": "WRX-105",
+      "category": "Error Handling UX",
+      "description": "Provide link to retry/resume actions",
+      "file": "",
+      "done": false
+    },
+    {
+      "id": "WRX-106",
+      "category": "Error Handling UX",
+      "description": "Show human task link if created",
+      "file": "",
+      "done": false
+    },
+    {
+      "id": "WRX-107",
+      "category": "Error Handling UX",
+      "description": "Expose error_json from run record",
+      "file": "",
+      "done": true
+    },
+    {
+      "id": "WRX-108",
+      "category": "Error Handling UX",
+      "description": "Show resume_event_name/payload when waiting",
+      "file": "",
+      "done": true
+    },
+    {
+      "id": "WRX-109",
+      "category": "Error Handling UX",
+      "description": "Offer \"Report bug\" with context",
+      "file": "",
+      "done": false
+    },
+    {
+      "id": "WRX-110",
+      "category": "Error Handling UX",
+      "description": "Show hints for common error codes",
+      "file": "",
+      "done": false
+    },
+    {
+      "id": "WRX-111",
+      "category": "Run Controls",
+      "description": "Add Cancel Run button",
+      "file": "",
+      "done": true
+    },
+    {
+      "id": "WRX-112",
+      "category": "Run Controls",
+      "description": "Add Resume Run button (admin only)",
+      "file": "",
+      "done": false
+    },
+    {
+      "id": "WRX-113",
+      "category": "Run Controls",
+      "description": "Add Replay Run button with payload override",
+      "file": "",
+      "done": true
+    },
+    {
+      "id": "WRX-114",
+      "category": "Run Controls",
+      "description": "Confirm destructive actions (cancel/replay)",
+      "file": "",
+      "done": true
+    },
+    {
+      "id": "WRX-115",
+      "category": "Run Controls",
+      "description": "Show run status change toast notifications",
+      "file": "",
+      "done": true
+    },
+    {
+      "id": "WRX-116",
+      "category": "Run Controls",
+      "description": "Disable controls when run is finished",
+      "file": "",
+      "done": true
+    },
+    {
+      "id": "WRX-117",
+      "category": "Run Controls",
+      "description": "Add \"Requeue wait\" action for waiting runs",
+      "file": "",
+      "done": false
+    },
+    {
+      "id": "WRX-118",
+      "category": "Run Controls",
+      "description": "Show reason input for cancel/replay",
+      "file": "",
+      "done": true
+    },
+    {
+      "id": "WRX-119",
+      "category": "Run Controls",
+      "description": "Audit log entry for operator actions",
+      "file": "",
+      "done": false
+    },
+    {
+      "id": "WRX-120",
+      "category": "Run Controls",
+      "description": "Expose \"Open in new tab\" action",
+      "file": "",
+      "done": false
+    },
+    {
+      "id": "WRX-121",
+      "category": "Run List Integration",
+      "description": "Add \"Run now\" action to workflow list row",
+      "file": "",
+      "done": true
+    },
+    {
+      "id": "WRX-122",
+      "category": "Run List Integration",
+      "description": "Add \"View latest run\" quick action",
+      "file": "",
+      "done": true
+    },
+    {
+      "id": "WRX-123",
+      "category": "Run List Integration",
+      "description": "Open Run Studio from Runs tab",
+      "file": "",
+      "done": true
+    },
+    {
+      "id": "WRX-124",
+      "category": "Run List Integration",
+      "description": "Filter runs by workflow version",
+      "file": "",
+      "done": true
+    },
+    {
+      "id": "WRX-125",
+      "category": "Run List Integration",
+      "description": "Filter runs by status",
+      "file": "",
+      "done": true
+    },
+    {
+      "id": "WRX-126",
+      "category": "Run List Integration",
+      "description": "Filter runs by date range",
+      "file": "",
+      "done": true
+    },
+    {
+      "id": "WRX-127",
+      "category": "Run List Integration",
+      "description": "Show run count badges per workflow",
+      "file": "",
+      "done": true
+    },
+    {
+      "id": "WRX-128",
+      "category": "Run List Integration",
+      "description": "Show latest run status in workflow list",
+      "file": "",
+      "done": true
+    },
+    {
+      "id": "WRX-129",
+      "category": "Run List Integration",
+      "description": "Link run_id to Run Studio",
+      "file": "",
+      "done": true
+    },
+    {
+      "id": "WRX-130",
+      "category": "Run List Integration",
+      "description": "Support shareable run URLs",
+      "file": "",
+      "done": true
+    },
+    {
+      "id": "WRX-131",
+      "category": "Permissions & Security",
+      "description": "Require workflow:manage permission to run",
+      "file": "",
+      "done": true
+    },
+    {
+      "id": "WRX-132",
+      "category": "Permissions & Security",
+      "description": "Require workflow:admin for system workflow runs",
+      "file": "",
+      "done": true
+    },
+    {
+      "id": "WRX-133",
+      "category": "Permissions & Security",
+      "description": "Hide secrets in logs and snapshots",
+      "file": "",
+      "done": true
+    },
+    {
+      "id": "WRX-134",
+      "category": "Permissions & Security",
+      "description": "Restrict log access to workflow:read",
+      "file": "",
+      "done": true
+    },
+    {
+      "id": "WRX-135",
+      "category": "Permissions & Security",
+      "description": "Enforce tenant isolation for run data",
+      "file": "",
+      "done": true
+    },
+    {
+      "id": "WRX-136",
+      "category": "Permissions & Security",
+      "description": "Check secrets.view for secret metadata in UI",
+      "file": "",
+      "done": true
+    },
+    {
+      "id": "WRX-137",
+      "category": "Permissions & Security",
+      "description": "Block run controls for read-only users",
+      "file": "",
+      "done": true
+    },
+    {
+      "id": "WRX-138",
+      "category": "Permissions & Security",
+      "description": "Audit user actions for run controls",
+      "file": "",
+      "done": true
+    },
+    {
+      "id": "WRX-139",
+      "category": "Permissions & Security",
+      "description": "Mask sensitive payload fields by pattern",
+      "file": "",
+      "done": true
+    },
+    {
+      "id": "WRX-140",
+      "category": "Permissions & Security",
+      "description": "Support per-tenant redaction overrides",
+      "file": "",
+      "done": true
+    },
+    {
+      "id": "WRX-141",
+      "category": "Backend API",
+      "description": "Add server action to create synthetic run with payload",
+      "file": "",
+      "done": true
+    },
+    {
+      "id": "WRX-142",
+      "category": "Backend API",
+      "description": "Add server action to list steps + snapshots for run",
+      "file": "",
+      "done": true
+    },
+    {
+      "id": "WRX-143",
+      "category": "Backend API",
+      "description": "Add server action to list logs for run",
+      "file": "",
+      "done": true
+    },
+    {
+      "id": "WRX-144",
+      "category": "Backend API",
+      "description": "Add server action to export logs",
+      "file": "",
+      "done": true
+    },
+    {
+      "id": "WRX-145",
+      "category": "Backend API",
+      "description": "Add server action to fetch run summary metadata",
+      "file": "",
+      "done": true
+    },
+    {
+      "id": "WRX-146",
+      "category": "Backend API",
+      "description": "Add server action to fetch latest run by workflow",
+      "file": "",
+      "done": true
+    },
+    {
+      "id": "WRX-147",
+      "category": "Backend API",
+      "description": "Add server action to replay run",
+      "file": "",
+      "done": true
+    },
+    {
+      "id": "WRX-148",
+      "category": "Backend API",
+      "description": "Add server action to cancel run",
+      "file": "",
+      "done": true
+    },
+    {
+      "id": "WRX-149",
+      "category": "Backend API",
+      "description": "Add server action to resume run",
+      "file": "",
+      "done": true
+    },
+    {
+      "id": "WRX-150",
+      "category": "Backend API",
+      "description": "Add server action to list run timeline events",
+      "file": "",
+      "done": true
+    },
+    {
+      "id": "WRX-151",
+      "category": "Backend Runtime",
+      "description": "Emit step status updates with timestamps",
+      "file": "",
+      "done": true
+    },
+    {
+      "id": "WRX-152",
+      "category": "Backend Runtime",
+      "description": "Persist node_path on each step transition",
+      "file": "",
+      "done": true
+    },
+    {
+      "id": "WRX-153",
+      "category": "Backend Runtime",
+      "description": "Record attempt counts per step",
+      "file": "",
+      "done": true
+    },
+    {
+      "id": "WRX-154",
+      "category": "Backend Runtime",
+      "description": "Write action invocation records for idempotency",
+      "file": "",
+      "done": true
+    },
+    {
+      "id": "WRX-155",
+      "category": "Backend Runtime",
+      "description": "Store snapshot size and enforce limits",
+      "file": "",
+      "done": true
+    },
+    {
+      "id": "WRX-156",
+      "category": "Backend Runtime",
+      "description": "Write logs for state transitions",
+      "file": "",
+      "done": true
+    },
+    {
+      "id": "WRX-157",
+      "category": "Backend Runtime",
+      "description": "Capture error context for run",
+      "file": "",
+      "done": true
+    },
+    {
+      "id": "WRX-158",
+      "category": "Backend Runtime",
+      "description": "Expose wait metadata for event/human/timeouts",
+      "file": "",
+      "done": true
+    },
+    {
+      "id": "WRX-159",
+      "category": "Backend Runtime",
+      "description": "Provide run summary aggregation",
+      "file": "",
+      "done": true
+    },
+    {
+      "id": "WRX-160",
+      "category": "Backend Runtime",
+      "description": "Support resume from persisted node_path",
+      "file": "",
+      "done": true
+    },
+    {
+      "id": "WRX-161",
+      "category": "Telemetry & Analytics",
+      "description": "Track run started event",
+      "file": "",
+      "done": false
+    },
+    {
+      "id": "WRX-162",
+      "category": "Telemetry & Analytics",
+      "description": "Track run completed event",
+      "file": "",
+      "done": false
+    },
+    {
+      "id": "WRX-163",
+      "category": "Telemetry & Analytics",
+      "description": "Track run failed event",
+      "file": "",
+      "done": false
+    },
+    {
+      "id": "WRX-164",
+      "category": "Telemetry & Analytics",
+      "description": "Track time-to-complete metric",
+      "file": "",
+      "done": false
+    },
+    {
+      "id": "WRX-165",
+      "category": "Telemetry & Analytics",
+      "description": "Track step retry counts",
+      "file": "",
+      "done": false
+    },
+    {
+      "id": "WRX-166",
+      "category": "Telemetry & Analytics",
+      "description": "Capture workflow_run_id in logs",
+      "file": "",
+      "done": false
+    },
+    {
+      "id": "WRX-167",
+      "category": "Telemetry & Analytics",
+      "description": "Emit run status change notifications",
+      "file": "",
+      "done": false
+    },
+    {
+      "id": "WRX-168",
+      "category": "Telemetry & Analytics",
+      "description": "Expose metrics for dashboard",
+      "file": "",
+      "done": false
+    },
+    {
+      "id": "WRX-169",
+      "category": "Telemetry & Analytics",
+      "description": "Track usage of Run Studio",
+      "file": "",
+      "done": false
+    },
+    {
+      "id": "WRX-170",
+      "category": "Telemetry & Analytics",
+      "description": "Track export logs usage",
+      "file": "",
+      "done": false
+    },
+    {
+      "id": "WRX-171",
+      "category": "Performance",
+      "description": "Virtualize run log list",
+      "file": "",
+      "done": false
+    },
+    {
+      "id": "WRX-172",
+      "category": "Performance",
+      "description": "Virtualize snapshot JSON viewer",
+      "file": "",
+      "done": false
+    },
+    {
+      "id": "WRX-173",
+      "category": "Performance",
+      "description": "Debounce polling when UI inactive",
+      "file": "",
+      "done": false
+    },
+    {
+      "id": "WRX-174",
+      "category": "Performance",
+      "description": "Cache schema and registry lookups",
+      "file": "",
+      "done": false
+    },
+    {
+      "id": "WRX-175",
+      "category": "Performance",
+      "description": "Compress large payload previews",
+      "file": "",
+      "done": false
+    },
+    {
+      "id": "WRX-176",
+      "category": "Performance",
+      "description": "Lazy-load run studio panels",
+      "file": "",
+      "done": false
+    },
+    {
+      "id": "WRX-177",
+      "category": "Performance",
+      "description": "Avoid re-rendering graph on log updates",
+      "file": "",
+      "done": false
+    },
+    {
+      "id": "WRX-178",
+      "category": "Performance",
+      "description": "Batch UI updates per polling tick",
+      "file": "",
+      "done": false
+    },
+    {
+      "id": "WRX-179",
+      "category": "Performance",
+      "description": "Reduce payload size with redaction",
+      "file": "",
+      "done": false
+    },
+    {
+      "id": "WRX-180",
+      "category": "Performance",
+      "description": "Memoize computed status map",
+      "file": "",
+      "done": false
+    },
+    {
+      "id": "WRX-181",
+      "category": "Accessibility",
+      "description": "Ensure color status has text/label alternatives",
+      "file": "",
+      "done": false
+    },
+    {
+      "id": "WRX-182",
+      "category": "Accessibility",
+      "description": "Add aria-live region for run status",
+      "file": "",
+      "done": false
+    },
+    {
+      "id": "WRX-183",
+      "category": "Accessibility",
+      "description": "Keyboard navigation for timeline",
+      "file": "",
+      "done": false
+    },
+    {
+      "id": "WRX-184",
+      "category": "Accessibility",
+      "description": "Focusable step nodes with status",
+      "file": "",
+      "done": false
+    },
+    {
+      "id": "WRX-185",
+      "category": "Accessibility",
+      "description": "Screen reader labels for log entries",
+      "file": "",
+      "done": false
+    },
+    {
+      "id": "WRX-186",
+      "category": "Accessibility",
+      "description": "High-contrast mode for statuses",
+      "file": "",
+      "done": false
+    },
+    {
+      "id": "WRX-187",
+      "category": "Accessibility",
+      "description": "Respect reduced motion for animations",
+      "file": "",
+      "done": false
+    },
+    {
+      "id": "WRX-188",
+      "category": "Accessibility",
+      "description": "Accessible dialog for Run input",
+      "file": "",
+      "done": false
+    },
+    {
+      "id": "WRX-189",
+      "category": "Accessibility",
+      "description": "Focus trap in Run dialog",
+      "file": "",
+      "done": false
+    },
+    {
+      "id": "WRX-190",
+      "category": "Accessibility",
+      "description": "Skip links to main panels",
+      "file": "",
+      "done": false
+    },
+    {
+      "id": "WRX-191",
+      "category": "Testing",
+      "description": "Unit tests for payload form generation",
+      "file": "",
+      "done": false
+    },
+    {
+      "id": "WRX-192",
+      "category": "Testing",
+      "description": "Unit tests for validation of synthetic payloads",
+      "file": "",
+      "done": false
+    },
+    {
+      "id": "WRX-193",
+      "category": "Testing",
+      "description": "Unit tests for status color mapping",
+      "file": "",
+      "done": false
+    },
+    {
+      "id": "WRX-194",
+      "category": "Testing",
+      "description": "Integration tests for start run action",
+      "file": "",
+      "done": false
+    },
+    {
+      "id": "WRX-195",
+      "category": "Testing",
+      "description": "Integration tests for cancel/resume actions",
+      "file": "",
+      "done": false
+    },
+    {
+      "id": "WRX-196",
+      "category": "Testing",
+      "description": "Integration tests for run status polling",
+      "file": "",
+      "done": false
+    },
+    {
+      "id": "WRX-197",
+      "category": "Testing",
+      "description": "Playwright test for Run dialog",
+      "file": "",
+      "done": false
+    },
+    {
+      "id": "WRX-198",
+      "category": "Testing",
+      "description": "Playwright test for Run Studio status updates",
+      "file": "",
+      "done": false
+    },
+    {
+      "id": "WRX-199",
+      "category": "Testing",
+      "description": "Playwright test for logs viewer search",
+      "file": "",
+      "done": false
+    },
+    {
+      "id": "WRX-200",
+      "category": "Testing",
+      "description": "Playwright test for snapshot viewer",
+      "file": "",
+      "done": false
+    },
+    {
+      "id": "WRX-201",
+      "category": "Event Registry Payloads",
+      "description": "Add event registry selector to Run dialog (choose event type)",
+      "file": "",
+      "done": true
+    },
+    {
+      "id": "WRX-202",
+      "category": "Event Registry Payloads",
+      "description": "Preselect event based on workflow trigger eventName when available",
+      "file": "",
+      "done": true
+    },
+    {
+      "id": "WRX-203",
+      "category": "Event Registry Payloads",
+      "description": "Display event category + description in selector row",
+      "file": "",
+      "done": true
+    },
+    {
+      "id": "WRX-204",
+      "category": "Event Registry Payloads",
+      "description": "Load event catalog entries for current tenant",
+      "file": "",
+      "done": true
+    },
+    {
+      "id": "WRX-205",
+      "category": "Event Registry Payloads",
+      "description": "Allow searching/filtering event catalog list",
+      "file": "",
+      "done": true
+    },
+    {
+      "id": "WRX-206",
+      "category": "Event Registry Payloads",
+      "description": "Show system vs tenant event badge in selector",
+      "file": "",
+      "done": true
+    },
+    {
+      "id": "WRX-207",
+      "category": "Event Registry Payloads",
+      "description": "On event selection, load payload_schema from event registry",
+      "file": "",
+      "done": true
+    },
+    {
+      "id": "WRX-208",
+      "category": "Event Registry Payloads",
+      "description": "Seed payload builder from selected event schema",
+      "file": "",
+      "done": true
+    },
+    {
+      "id": "WRX-209",
+      "category": "Event Registry Payloads",
+      "description": "Allow switching back to workflow payload schema",
+      "file": "",
+      "done": true
+    },
+    {
+      "id": "WRX-210",
+      "category": "Event Registry Payloads",
+      "description": "Warn when selected event schema differs from workflow payload schema",
+      "file": "",
+      "done": true
+    },
+    {
+      "id": "WRX-211",
+      "category": "Event Registry Payloads",
+      "description": "Allow manual override of schema source (event vs payloadSchemaRef)",
+      "file": "",
+      "done": true
+    },
+    {
+      "id": "WRX-212",
+      "category": "Event Registry Payloads",
+      "description": "Persist last selected event per workflow (localStorage)",
+      "file": "",
+      "done": true
+    },
+    {
+      "id": "WRX-213",
+      "category": "Event Registry Payloads",
+      "description": "Support example payloads from event schema examples",
+      "file": "",
+      "done": true
+    },
+    {
+      "id": "WRX-214",
+      "category": "Event Registry Payloads",
+      "description": "Support event-specific sample templates (email/webhook)",
+      "file": "",
+      "done": true
+    },
+    {
+      "id": "WRX-215",
+      "category": "Event Registry Payloads",
+      "description": "Show event name/slug in Run dialog header",
+      "file": "",
+      "done": true
+    },
+    {
+      "id": "WRX-216",
+      "category": "Event Registry Payloads",
+      "description": "Add quick link to open Events Catalog entry",
+      "file": "",
+      "done": true
+    },
+    {
+      "id": "WRX-217",
+      "category": "Event Registry Payloads",
+      "description": "Handle missing event schema gracefully (fallback to payloadSchemaRef)",
+      "file": "",
+      "done": true
+    },
+    {
+      "id": "WRX-218",
+      "category": "Event Registry Payloads",
+      "description": "Validate event payload against event schema when selected",
+      "file": "",
+      "done": true
+    },
+    {
+      "id": "WRX-219",
+      "category": "Event Registry Payloads",
+      "description": "Display event schema required field indicators in form mode",
+      "file": "",
+      "done": true
+    },
+    {
+      "id": "WRX-220",
+      "category": "Event Registry Payloads",
+      "description": "Include event schema descriptions as helper text",
+      "file": "",
+      "done": true
+    },
+    {
+      "id": "WRX-221",
+      "category": "Event Registry Payloads",
+      "description": "Allow cloning latest run for the selected event",
+      "file": "",
+      "done": true
+    },
+    {
+      "id": "WRX-222",
+      "category": "Event Registry Payloads",
+      "description": "Remember schema source + event selection across sessions",
+      "file": "",
+      "done": true
+    },
+    {
+      "id": "WRX-223",
+      "category": "Event Registry Payloads",
+      "description": "Expose event selection in Run options persistence",
+      "file": "",
+      "done": true
+    },
+    {
+      "id": "WRX-224",
+      "category": "Event Registry Payloads",
+      "description": "Include eventType in run metadata for synthetic runs",
+      "file": "",
+      "done": true
+    },
+    {
+      "id": "WRX-225",
+      "category": "Event Registry Payloads",
+      "description": "Provide inline diff between event schema and payload schema",
+      "file": "",
+      "done": true
+    },
+    {
+      "id": "WRX-226",
+      "category": "Event Registry Payloads",
+      "description": "Add \"Use event schema\" action in Run dialog warnings",
+      "file": "",
+      "done": true
+    },
+    {
+      "id": "WRX-227",
+      "category": "Event Registry Payloads",
+      "description": "Add telemetry: track event selection usage in Run dialog",
+      "file": "",
+      "done": true
+    },
+    {
+      "id": "WRX-228",
+      "category": "Event Registry Payloads",
+      "description": "Add tests for event selector + schema seeding",
+      "file": "",
+      "done": true
+    }
+  ]
+}

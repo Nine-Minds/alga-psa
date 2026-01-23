@@ -8,23 +8,24 @@
 import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Button } from '@/components/ui/Button';
-import { Alert, AlertDescription } from '@/components/ui/Alert';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
+import { Button, Alert, AlertDescription, Card, CardContent, CardDescription, CardHeader, CardTitle, CustomSelect } from '@alga-psa/ui/components';
 import { Shield } from 'lucide-react';
-import type { EmailProvider } from '@/components/EmailProviderConfiguration';
-import { createEmailProvider, updateEmailProvider, upsertEmailProvider } from '@/lib/actions/email-actions/emailProviderActions';
-import { initiateEmailOAuth } from '@/lib/actions/email-actions/oauthActions';
-import { useOAuthPopup } from '@/components/providers/gmail/useOAuthPopup';
-import { BasicConfigCard } from '@/components/providers/gmail/BasicConfigCard';
-import { ProcessingSettingsCard } from '@/components/providers/gmail/ProcessingSettingsCard';
-import { OAuthSection } from '@/components/providers/gmail/OAuthSection';
-import { baseGmailProviderSchema } from '@/components/providers/gmail/schemas';
-import CustomSelect from '@/components/ui/CustomSelect';
-import { getInboundTicketDefaults } from '@/lib/actions/email-actions/inboundTicketDefaultsActions';
-import { getGoogleIntegrationStatus } from 'server/src/lib/actions/integrations/googleActions';
+import type { EmailProvider } from '@alga-psa/integrations';
+import {
+  createEmailProvider,
+  updateEmailProvider,
+  upsertEmailProvider,
+  initiateEmailOAuth,
+  getInboundTicketDefaults,
+  getGoogleIntegrationStatus,
+  useOAuthPopup,
+  BasicConfigCard,
+  ProcessingSettingsCard,
+  OAuthSection,
+  baseGmailProviderSchema
+} from '@alga-psa/integrations';
 
-type EEGmailProviderFormData = import('server/src/components/providers/gmail/schemas').BaseGmailProviderFormData;
+type EEGmailProviderFormData = import('@alga-psa/integrations/components').BaseGmailProviderFormData;
 
 interface EEGmailProviderFormProps {
   tenant: string;
@@ -41,6 +42,7 @@ export function GmailProviderForm({
 }: EEGmailProviderFormProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [setupWarnings, setSetupWarnings] = useState<string[]>([]);
   const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
   const { oauthStatus, oauthData, autoSubmitCountdown, openOAuthPopup, cancelAutoSubmit, setOauthStatus } = useOAuthPopup<any>({ provider: 'google', countdownSeconds: 0 });
   const [defaultsOptions, setDefaultsOptions] = useState<{ value: string; label: string }[]>([]);
@@ -131,6 +133,9 @@ export function GmailProviderForm({
         isActive: data.isActive,
         inboundTicketDefaultsId: (form.getValues() as any).inboundTicketDefaultsId || undefined,
         googleConfig: {
+          // Null client credentials indicate tenant-level OAuth is used
+          client_id: null,
+          client_secret: null,
           auto_process_emails: data.autoProcessEmails,
           label_filters: data.labelFilters ? data.labelFilters.split(',').map(l => l.trim()) : ['INBOX'],
           max_emails_per_sync: data.maxEmailsPerSync,
@@ -144,10 +149,20 @@ export function GmailProviderForm({
       };
 
       // After OAuth, run automation once to set up Pub/Sub + watch
-      const result = isEditing 
+      const result = isEditing
         ? await updateEmailProvider(provider.id, payload, false) // skipAutomation: false
         : await createEmailProvider(payload, false); // skipAutomation: false
 
+      // Check for setup errors or warnings
+      if (result.setupError) {
+        setError(`Provider saved but setup incomplete: ${result.setupError}`);
+      }
+      if (result.setupWarnings && result.setupWarnings.length > 0) {
+        setSetupWarnings(result.setupWarnings);
+      }
+
+      // Still call onSuccess so the provider appears in the list
+      // The user can see the error/warning state in the UI
       onSuccess(result.provider);
 
     } catch (err: any) {
@@ -194,6 +209,9 @@ export function GmailProviderForm({
           isActive: formData.isActive,
           inboundTicketDefaultsId: (form.getValues() as any).inboundTicketDefaultsId || undefined,
           googleConfig: {
+            // Null client credentials indicate tenant-level OAuth is used
+            client_id: null,
+            client_secret: null,
             auto_process_emails: formData.autoProcessEmails,
             label_filters: formData.labelFilters ? formData.labelFilters.split(',').map(l => l.trim()) : ['INBOX'],
             max_emails_per_sync: formData.maxEmailsPerSync ?? 50
@@ -213,7 +231,7 @@ export function GmailProviderForm({
         providerId,
       });
       if (!oauthResult.success) {
-        throw new Error(oauthResult.error || 'Failed to initiate OAuth');
+        throw new Error('error' in oauthResult ? oauthResult.error : 'Failed to initiate OAuth');
       }
       const { authUrl } = oauthResult;
 
@@ -257,6 +275,19 @@ export function GmailProviderForm({
       {error && (
         <Alert variant="destructive">
           <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
+
+      {setupWarnings.length > 0 && (
+        <Alert className="border-yellow-500 bg-yellow-50">
+          <AlertDescription>
+            <p className="font-medium text-yellow-800 mb-2">Setup completed with warnings:</p>
+            <ul className="list-disc list-inside space-y-1 text-yellow-700">
+              {setupWarnings.map((warning, idx) => (
+                <li key={idx}>{warning}</li>
+              ))}
+            </ul>
+          </AlertDescription>
         </Alert>
       )}
 

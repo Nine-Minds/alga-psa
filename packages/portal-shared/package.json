@@ -1,0 +1,37 @@
+{
+  "name": "@alga-psa/portal-shared",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Shared portal invitation and management infrastructure",
+  "main": "./dist/index.js",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./src/index.ts"
+    },
+    "./actions": {
+      "import": "./dist/actions/index.js",
+      "types": "./src/actions/index.ts"
+    },
+    "./types": {
+      "import": "./dist/types/index.js",
+      "types": "./src/types/index.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsup",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@alga-psa/client-portal": "*",
+    "@alga-psa/core": "*",
+    "@alga-psa/db": "*"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "tsup": "^8.0.0",
+    "typescript": "^5.7.3"
+  }
+}

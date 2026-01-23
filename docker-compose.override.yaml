@@ -2,7 +2,29 @@ services:
   server:
     environment:
       NEXTAUTH_SECRET: ${NEXTAUTH_SECRET}
+      # Ensure file changes on macOS/Windows propagate reliably for Next.js dev/HMR
+      WATCHPACK_POLLING: ${WATCHPACK_POLLING:-true}
+      CHOKIDAR_USEPOLLING: ${CHOKIDAR_USEPOLLING:-true}
+    volumes:
+      # Bind-mount the worktree so Next.js dev server sees edits immediately (HMR)
+      - type: bind
+        source: .
+        target: /app
+        consistency: delegated
+      # Keep container-installed node_modules (avoid shadowing by the bind mount)
+      - /app/node_modules
+      - /app/server/node_modules
+      - /app/shared/node_modules
+      - /app/packages/node_modules
+      - /app/services/workflow-worker/node_modules
+      - /app/ee/server/node_modules
 
   workflow-worker:
     environment:
       NEXTAUTH_SECRET: ${NEXTAUTH_SECRET}
+      # Run the v2 runtime by default in this worktree.
+      WORKFLOW_WORKER_MODE: ${WORKFLOW_WORKER_MODE:-v2}
+      WORKFLOW_RUNTIME_V2_EVENT_CONSUMER_GROUP: ${WORKFLOW_RUNTIME_V2_EVENT_CONSUMER_GROUP:-workflow-runtime-v2}
+      # Visibility for local debugging (safe logs: IDs/counts, not full payloads)
+      LOG_LEVEL: ${WORKFLOW_WORKER_LOG_LEVEL:-debug}
+      WORKFLOW_WORKER_VERBOSE: ${WORKFLOW_WORKER_VERBOSE:-true}

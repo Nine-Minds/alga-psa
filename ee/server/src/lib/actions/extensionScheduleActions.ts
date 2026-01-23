@@ -3,7 +3,7 @@
 import crypto from 'node:crypto'
 import { createTenantKnex } from '@/lib/db'
 import type { Knex } from 'knex'
-import logger from '@shared/core/logger'
+import logger from '@alga-psa/core/logger'
 import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions'
 import { hasPermission } from 'server/src/lib/auth/rbac'
 import { resolveUserTimeZone } from 'server/src/lib/utils/workDate'

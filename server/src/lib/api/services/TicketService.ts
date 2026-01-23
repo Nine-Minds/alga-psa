@@ -4,16 +4,17 @@
  */
 
 import { Knex } from 'knex';
-import { BaseService, ServiceContext, ListResult } from './BaseService';
+import { BaseService, ServiceContext, ListResult } from '@alga-psa/db';
 import { ITicket } from 'server/src/interfaces/ticket.interfaces';
-import { withTransaction } from '@shared/db';
+import { withTransaction } from '@alga-psa/db';
+import { maybeReopenBundleMasterFromChildReply } from '@alga-psa/tickets/actions/ticketBundleUtils';
 import { NumberingService } from 'server/src/lib/services/numberingService';
 import { getEventBus } from 'server/src/lib/eventBus';
 import { getEmailEventChannel } from '../../notifications/emailChannel';
 import { NotFoundError, ValidationError } from '../middleware/apiMiddleware';
 import { TicketModel, CreateTicketInput } from '@shared/models/ticketModel';
-import { ServerEventPublisher } from '../../adapters/serverEventPublisher';
-import { ServerAnalyticsTracker } from '../../adapters/serverAnalyticsTracker';
+import { ServerEventPublisher } from '@alga-psa/event-bus';
+import { ServerAnalyticsTracker } from '@alga-psa/analytics';
 // Event types no longer needed as we create objects directly
 import { 
   CreateTicketData, 
@@ -509,6 +510,10 @@ export class TicketService extends BaseService<ITicket> {
       };
 
       const [comment] = await trx('comments').insert(commentData).returning('*');
+
+      if (!comment.is_internal) {
+        await maybeReopenBundleMasterFromChildReply(trx, context.tenant, ticketId, context.userId);
+      }
 
       // Update ticket updated_at
       await trx('tickets')

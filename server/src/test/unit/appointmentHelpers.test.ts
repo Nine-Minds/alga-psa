@@ -12,7 +12,7 @@ import {
   type ScheduleApprover
 } from '../../lib/actions/appointmentHelpers';
 import * as dbModule from '../../lib/db';
-import * as sharedDb from '@shared/db';
+import * as sharedDb from '@alga-psa/db';
 import type { Knex } from 'knex';
 
 // Mock the database module
@@ -21,7 +21,7 @@ vi.mock('../../lib/db', () => ({
 }));
 
 // Mock the shared db module
-vi.mock('@shared/db', () => ({
+vi.mock('@alga-psa/db', () => ({
   withTransaction: vi.fn((knex, callback) => callback(knex))
 }));
 

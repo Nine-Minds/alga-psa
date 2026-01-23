@@ -1,6 +1,6 @@
 #!/usr/bin/env tsx
 import { pruneExpiredPortalDomainOtts } from 'server/src/lib/models/PortalDomainSessionToken';
-import { getAdminConnection } from '@shared/db/admin';
+import { getAdminConnection } from '@alga-psa/db/admin';
 
 interface CliOptions {
   tenant?: string;

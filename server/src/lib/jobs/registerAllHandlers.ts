@@ -1,5 +1,5 @@
 import { Job } from 'pg-boss';
-import logger from '@shared/core/logger';
+import logger from '@alga-psa/core/logger';
 import { JobHandlerRegistry } from './jobHandlerRegistry';
 import { BaseJobData } from './interfaces';
 import { StorageService } from '../storage/StorageService';

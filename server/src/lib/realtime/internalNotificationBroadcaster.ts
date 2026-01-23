@@ -1,6 +1,6 @@
 import { getRedisClient, getRedisConfig } from '../../config/redisConfig';
 import { InternalNotification } from '../models/internalNotification';
-import logger from '@alga-psa/shared/core/logger';
+import logger from '@alga-psa/core/logger';
 
 /**
  * Broadcast internal notifications via Redis Pub/Sub

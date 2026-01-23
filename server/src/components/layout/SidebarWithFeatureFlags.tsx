@@ -1,74 +1,87 @@
 'use client';
 
-import React from 'react';
-import { useFeatureFlag } from 'server/src/hooks/useFeatureFlag';
+import React, { useEffect, useMemo, useState } from 'react';
+import { useFeatureFlag } from '@alga-psa/ui/hooks';
 import Sidebar from './Sidebar';
-import { useEffect } from 'react';
 import {
-  navigationSections as originalSections,
   bottomMenuItems,
-  MenuItem,
-  NavigationSection,
   menuItems as legacyMenuItems,
-  NavMode
-} from '../../config/menuConfig';
-import { analytics } from 'server/src/lib/analytics/client';
+  navigationSections as originalSections,
+  type NavigationSection
+} from '@/config/menuConfig';
+import { getCurrentUserPermissions } from '@alga-psa/users/actions';
 
-interface SidebarWithFeatureFlagsProps {
-  sidebarOpen: boolean;
-  setSidebarOpen: React.Dispatch<React.SetStateAction<boolean>>;
-  disableTransition?: boolean;
-  mode?: NavMode;
-  onBackToMain?: () => void;
-}
+type SidebarWithFeatureFlagsProps = React.ComponentProps<typeof Sidebar>;
 
 export default function SidebarWithFeatureFlags(props: SidebarWithFeatureFlagsProps) {
-  const advancedFeatureFlag = useFeatureFlag('advanced-features-enabled');
-  const isAdvancedFeaturesEnabled = typeof advancedFeatureFlag === 'boolean' ? advancedFeatureFlag : advancedFeatureFlag?.enabled;
   const navigationFlag = useFeatureFlag('ui-navigation-v2', { defaultValue: true });
-  const useNavigationSections = typeof navigationFlag === 'boolean' ? navigationFlag : navigationFlag?.enabled ?? false;
+  const useNavigationSections =
+    typeof navigationFlag === 'boolean' ? navigationFlag : navigationFlag?.enabled ?? false;
+  const [userPermissions, setUserPermissions] = useState<string[]>([]);
 
   useEffect(() => {
-    if (useNavigationSections) {
+    if (!useNavigationSections) return;
+    const analytics = (globalThis as any)?.analytics;
+    if (analytics?.capture) {
       analytics.capture('ui.nav.v2.enabled');
     }
   }, [useNavigationSections]);
 
-  // Filter and modify menu items based on feature flags
-  const menuSections = React.useMemo<NavigationSection[]>(() => {
-    if (!useNavigationSections) {
-      return [
-        {
-          title: '',
-          items: legacyMenuItems
+  useEffect(() => {
+    let isMounted = true;
+    const loadPermissions = async () => {
+      try {
+        const permissions = await getCurrentUserPermissions();
+        if (isMounted) {
+          setUserPermissions(permissions);
         }
-      ];
-    }
+      } catch (error) {
+        console.error('[Sidebar] Failed to load user permissions:', error);
+        if (isMounted) {
+          setUserPermissions([]);
+        }
+      }
+    };
 
-    return originalSections.map((section) => ({
+    loadPermissions();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const canWorkflowAdmin = userPermissions.includes('workflow:admin');
+
+  // Filter and modify menu items based on permissions
+  const menuSections = useMemo<NavigationSection[]>(() => {
+    const baseSections = useNavigationSections
+      ? originalSections
+      : [{ title: '', items: legacyMenuItems } satisfies NavigationSection];
+
+    return baseSections.map((section) => ({
       ...section,
       items: section.items.map((item) => {
-        if (item.name === 'Automation Hub' && !isAdvancedFeaturesEnabled) {
-          return {
-            ...item,
-            href: '/msp/automation-hub',
-            subItems: undefined,
-            underConstruction: true
-          } as MenuItem;
+        if (item.name !== 'Automation Hub') {
+          return item;
         }
-        return item;
+
+        const filteredSubItems = item.subItems?.filter((subItem) => {
+          if (subItem.name !== 'Dead Letter') return true;
+          return canWorkflowAdmin;
+        });
+
+        return {
+          ...item,
+          subItems: filteredSubItems
+        };
       })
     }));
-  }, [isAdvancedFeaturesEnabled, useNavigationSections]);
+  }, [canWorkflowAdmin, useNavigationSections]);
 
   return (
     <Sidebar
       {...props}
       menuSections={menuSections}
       bottomMenuItems={bottomMenuItems}
-      disableTransition={props.disableTransition}
-      mode={props.mode}
-      onBackToMain={props.onBackToMain}
     />
   );
 }

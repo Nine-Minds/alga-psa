@@ -24,7 +24,7 @@
   "license": "ISC",
   "devDependencies": {
     "@assemblyscript/loader": "^0.27.36",
-    "assemblyscript": "^0.27.36"
+    "assemblyscript": "file:../../../../assemblyscript-0.27.36.tgz"
   },
   "type": "module",
   "exports": {

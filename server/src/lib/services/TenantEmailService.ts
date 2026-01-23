@@ -8,7 +8,7 @@ import {
   EmailMessage,
   EmailProviderConfig
 } from '../../types/email.types';
-import logger from '@alga-psa/shared/core/logger';
+import logger from '@alga-psa/core/logger';
 import { 
   ITemplateProcessor
 } from './email/templateProcessors';

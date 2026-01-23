@@ -10,11 +10,11 @@ import {
   ProjectTaskAssignedEvent
 } from '../events';
 import { sendEventEmail, SendEmailParams } from '../../notifications/sendEventEmail';
-import logger from '@shared/core/logger';
+import logger from '@alga-psa/core/logger';
 import { createTenantKnex } from '../../db';
 import { formatBlockNoteContent } from '../../utils/blocknoteUtils';
 import { getEmailEventChannel } from '@/lib/notifications/emailChannel';
-import { isValidEmail } from '../../utils/validation';
+import { isValidEmail } from '@alga-psa/core';
 
 /**
  * Wrapper function that checks notification preferences before sending email

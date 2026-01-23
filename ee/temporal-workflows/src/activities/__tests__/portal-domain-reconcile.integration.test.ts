@@ -4,7 +4,7 @@ const virtualServices: any[] = [];
 const certificates: any[] = [];
 const deletedVirtualServices: Array<{ namespace: string; name: string }> = [];
 
-vi.mock('@alga-psa/shared/db/admin.js', () => {
+vi.mock('@alga-psa/db/admin.js', () => {
   const rows = [
     {
       id: 'domain-success',

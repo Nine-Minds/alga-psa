@@ -1,4 +1,4 @@
-import { generateInvoice } from '../../actions/invoiceGeneration';
+import { generateInvoice } from '@alga-psa/billing/actions/invoiceGeneration';
 
 export interface GenerateInvoiceData extends Record<string, unknown> {
   tenantId: string;

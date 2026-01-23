@@ -1,8 +1,8 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach, afterEach } from 'vitest';
 import { TestContext } from '../../../test-utils/testContext';
 import { setupCommonMocks } from '../../../test-utils/testMocks';
-import { addDocument } from 'server/src/lib/actions/document-actions/documentActions';
-import { createContract } from 'server/src/lib/actions/contractActions';
+import { addDocument } from '@alga-psa/documents/actions/documentActions';
+import { createContract } from '@alga-psa/billing/actions';
 import DocumentAssociation from 'server/src/models/document-association';
 import {
   canAccessDocument,

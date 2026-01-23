@@ -1,4 +1,4 @@
-import logger from '@shared/core/logger';
+import logger from '@alga-psa/core/logger';
 import { Knex } from 'knex';
 import {
   AccountingExportAdapter,
@@ -13,21 +13,23 @@ import {
   ExternalTaxComponent,
   PendingTaxImportRecord
 } from './accountingExportAdapter';
-import { createTenantKnex } from '../../db';
-import { AccountingMappingResolver, MappingResolution } from '../../services/accountingMappingResolver';
-import { QboClientService } from '../../qbo/qboClientService';
-import { QboInvoice, QboInvoiceLine, QboSalesItemLineDetail } from '../../actions/qbo/types';
+import { createTenantKnex } from '@alga-psa/db';
 import {
+  AccountingMappingResolver,
+  MappingResolution,
   CompanyAccountingSyncService,
   KnexCompanyMappingRepository,
-  buildNormalizedCompanyPayload
-} from '../../services/companySync';
-import { QuickBooksOnlineCompanyAdapter } from '../../services/companySync/adapters/quickBooksCompanyAdapter';
-import { KnexInvoiceMappingRepository } from '../../repositories/invoiceMappingRepository';
+  buildNormalizedCompanyPayload,
+  QuickBooksOnlineCompanyAdapter,
+  KnexInvoiceMappingRepository
+} from '@alga-psa/billing';
+import { QboClientService } from '@alga-psa/integrations/lib/qbo/qboClientService';
+import { QboInvoice, QboInvoiceLine, QboSalesItemLineDetail } from '@alga-psa/integrations/lib/qbo/types';
 
 type DbInvoice = {
   invoice_id: string;
   invoice_number: string;
+  po_number?: string | null;
   invoice_date: string | Date;
   due_date?: string | Date | null;
   total_amount: number;
@@ -89,6 +91,10 @@ interface InvoiceDocumentPayload {
   totals: {
     amountCents: number;
   };
+}
+
+export function buildQboPrivateNoteForPurchaseOrder(poNumber: string): string {
+  return `PO: ${poNumber}`;
 }
 
 export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
@@ -284,6 +290,10 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
         Line: qboLines
       };
 
+      if (invoice.po_number) {
+        qboInvoice.PrivateNote = buildQboPrivateNoteForPurchaseOrder(invoice.po_number);
+      }
+
       if (clientRow?.payment_terms) {
         let termRef = paymentTermCache.get(clientRow.payment_terms);
         if (termRef === undefined) {
@@ -476,6 +486,7 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
       .select(
         'invoice_id',
         'invoice_number',
+        'po_number',
         'invoice_date',
         'due_date',
         'total_amount',

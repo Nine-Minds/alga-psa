@@ -1,8 +1,8 @@
-import logger from '@alga-psa/shared/core/logger';
+import logger from '@alga-psa/core/logger';
 
 import { getEventBus } from '../index';
 import { EventSchemas, type TicketClosedEvent, type ProjectClosedEvent } from '../events';
-import { getSurveyTriggersForTenant, type SurveyTrigger } from '../../actions/surveyActions';
+import { getSurveyTriggersForTenant, type SurveyTrigger } from '@alga-psa/surveys/actions/surveyActions';
 import { createTenantKnex, runWithTenant } from '../../db';
 import { sendSurveyInvitation } from '../../../services/surveyService';
 

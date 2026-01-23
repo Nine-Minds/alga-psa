@@ -7,6 +7,10 @@ import { applyPlaywrightDatabaseEnv } from './src/__tests__/integration/utils/pl
 // Load environment variables from the correct path
 dotenv.config({ path: path.resolve(__dirname, '.env') });
 
+// Playwright runs should be self-contained and must not depend on developer filesystem secrets.
+process.env.SECRET_READ_CHAIN = process.env.SECRET_READ_CHAIN || 'env';
+process.env.SECRET_WRITE_PROVIDER = process.env.SECRET_WRITE_PROVIDER || 'env';
+
 // Don't set STORAGE_LOCAL_BASE_PATH - we want to use MinIO for tests
 // const storageBasePath = path.resolve(__dirname, 'playwright-storage');
 // if (!fs.existsSync(storageBasePath)) {
@@ -37,9 +41,6 @@ process.env.DB_DIRECT_PORT = process.env.DB_DIRECT_PORT || directDbPort;
 
 process.env.PLAYWRIGHT_DB_HOST = process.env.PLAYWRIGHT_DB_HOST || directDbHost;
 process.env.PLAYWRIGHT_DB_PORT = process.env.PLAYWRIGHT_DB_PORT || directDbPort;
-
-// Apply Playwright-specific database configuration
-applyPlaywrightDatabaseEnv();
 
 process.env.NODE_ENV = process.env.NODE_ENV || 'test';
 
@@ -84,6 +85,13 @@ tryPort(start, attempts);
   return { success: false, error: error || 'port-probe-failed' };
 }
 
+function isPortProbePermissionError(error?: string): boolean {
+  if (!error) return false;
+  const normalized = error.trim().toUpperCase();
+  // Some sandboxed environments forbid binding/listening, causing EPERM/EACCES.
+  return normalized.includes('EPERM') || normalized.includes('EACCES');
+}
+
 function resolveWebPortSync(): number {
   const preferred = Number(process.env.PLAYWRIGHT_APP_PORT || process.env.APP_PORT || 3300);
   if (process.env.PLAYWRIGHT_APP_PORT_LOCKED === 'true' && process.env.PLAYWRIGHT_APP_PORT) {
@@ -98,6 +106,10 @@ function resolveWebPortSync(): number {
     }
     const check = runPortProbe(preferred, 0, true);
     if (!check.success || typeof check.port !== 'number') {
+      if (isPortProbePermissionError(check.error)) {
+        console.warn(`[Playwright] Port probe blocked (${check.error}); using PLAYWRIGHT_APP_PORT=${preferred} without validation.`);
+        return preferred;
+      }
       // Even if a preferred port is provided, fall back to scanning for a nearby
       // available port to avoid spurious failures when developers have multiple
       // environments running locally.
@@ -112,8 +124,36 @@ function resolveWebPortSync(): number {
 
   const probe = runPortProbe(preferred, 25, false);
   if (!probe.success || typeof probe.port !== 'number') {
+    if (isPortProbePermissionError(probe.error)) {
+      console.warn(`[Playwright] Port probe blocked (${probe.error}); defaulting to port ${preferred}.`);
+      return preferred;
+    }
     throw new Error(`Unable to find an available port for the Playwright dev server (${probe.error || 'probe failed'}).`);
   }
+  return probe.port;
+}
+
+function resolveServicePortSync(envVarName: string, fallbackPort: number): number {
+  const preferred = Number(process.env[envVarName] || fallbackPort);
+  if (!Number.isFinite(preferred)) {
+    throw new Error(`Invalid ${envVarName} value: ${process.env[envVarName]}`);
+  }
+
+  const lockedVarName = `${envVarName}_LOCKED`;
+  if (process.env[lockedVarName] === 'true') {
+    return preferred;
+  }
+
+  // If the preferred port is taken, scan forward for an available one (up to 25).
+  const probe = runPortProbe(preferred, 25, false);
+  if (!probe.success || typeof probe.port !== 'number') {
+    if (isPortProbePermissionError(probe.error)) {
+      console.warn(`[Playwright] Port probe blocked (${probe.error}); using ${envVarName}=${preferred} without validation.`);
+      return preferred;
+    }
+    throw new Error(`Unable to find an available port for ${envVarName} starting at ${preferred} (${probe.error || 'probe failed'}).`);
+  }
+
   return probe.port;
 }
 
@@ -139,14 +179,74 @@ const resolvedWebPort = getCachedWebPort();
 const webHost = process.env.PLAYWRIGHT_APP_HOST || 'localhost';
 const resolvedBaseUrl = process.env.PLAYWRIGHT_BASE_URL || `http://${webHost}:${resolvedWebPort}`;
 
+const resolvedHostForEnv = (() => {
+  try {
+    return new URL(resolvedBaseUrl).host;
+  } catch {
+    return `${webHost}:${resolvedWebPort}`;
+  }
+})();
+
 process.env.PLAYWRIGHT_APP_PORT = String(resolvedWebPort);
 process.env.PLAYWRIGHT_APP_PORT_LOCKED = 'true';
-process.env.EE_BASE_URL = process.env.EE_BASE_URL || resolvedBaseUrl;
-process.env.NEXTAUTH_URL = process.env.NEXTAUTH_URL || resolvedBaseUrl;
-process.env.HOST = process.env.HOST || resolvedBaseUrl;
+process.env.HOST = process.env.HOST || resolvedHostForEnv;
 process.env.APP_PORT = process.env.APP_PORT || String(resolvedWebPort);
 process.env.EXPOSE_SERVER_PORT = process.env.EXPOSE_SERVER_PORT || String(resolvedWebPort);
 process.env.PORT = process.env.PORT || String(resolvedWebPort);
+
+// Reserve ports for dockerized Playwright deps (postgres/redis/worker).
+const resolvedPlaywrightDbPort = resolveServicePortSync('PLAYWRIGHT_DB_PORT', Number(directDbPort || 5439));
+process.env.PLAYWRIGHT_DB_PORT = String(resolvedPlaywrightDbPort);
+process.env.PLAYWRIGHT_DB_PORT_LOCKED = 'true';
+process.env.DB_DIRECT_PORT = String(resolvedPlaywrightDbPort);
+process.env.PLAYWRIGHT_DB_PORT = String(resolvedPlaywrightDbPort);
+
+const resolvedPlaywrightRedisPort = resolveServicePortSync('REDIS_PORT', Number(process.env.REDIS_PORT || 16379));
+process.env.REDIS_PORT = String(resolvedPlaywrightRedisPort);
+process.env.REDIS_PORT_LOCKED = 'true';
+
+// Apply Playwright-specific database configuration (after port resolution).
+applyPlaywrightDatabaseEnv();
+
+function parseTruthyEnv(value?: string): boolean {
+  if (!value) return false;
+  const normalized = value.trim().toLowerCase();
+  return normalized === '1' || normalized === 'true' || normalized === 'yes' || normalized === 'y' || normalized === 'on';
+}
+
+// Decide whether Playwright should manage starting the dev server.
+// - In CI, some pipelines start the server externally and only want tests to connect.
+// - However, if no explicit base URL is provided, disabling webServer causes hard-to-debug ECONNREFUSED.
+const explicitBaseUrlProvided = Boolean(
+  process.env.PLAYWRIGHT_BASE_URL || process.env.EE_BASE_URL || process.env.NEXTAUTH_URL
+);
+const isCi = parseTruthyEnv(process.env.CI);
+const shouldRunWebServer =
+  process.env.PW_WEBSERVER === 'true'
+    ? true
+    : process.env.PW_WEBSERVER === 'false'
+      ? false
+      : !(isCi && explicitBaseUrlProvided);
+
+// If Playwright is managing the dev server, make the computed base URL authoritative.
+// This avoids a mismatch where an env file sets EE_BASE_URL/NEXTAUTH_URL to a different port.
+if (shouldRunWebServer && !process.env.PLAYWRIGHT_BASE_URL) {
+  process.env.EE_BASE_URL = resolvedBaseUrl;
+  process.env.NEXTAUTH_URL = resolvedBaseUrl;
+} else {
+  process.env.EE_BASE_URL = process.env.EE_BASE_URL || resolvedBaseUrl;
+  process.env.NEXTAUTH_URL = process.env.NEXTAUTH_URL || resolvedBaseUrl;
+}
+
+console.log('[Playwright] webServer', {
+  CI: process.env.CI,
+  isCi,
+  explicitBaseUrlProvided,
+  shouldRunWebServer,
+  resolvedBaseUrl,
+  EE_BASE_URL: process.env.EE_BASE_URL,
+  NEXTAUTH_URL: process.env.NEXTAUTH_URL,
+});
 
 /**
  * Playwright configuration for EE server integration tests
@@ -241,22 +341,33 @@ export default defineConfig({
   ],
 
   /* Run your local dev server before starting the tests */
-  webServer: process.env.CI ? undefined : {
+  webServer: shouldRunWebServer ? {
     // Reset DB once per session before starting the dev server.
-    command: 'cd ../../ && node --import tsx/esm scripts/bootstrap-playwright-db.ts && NEXT_PUBLIC_EDITION=enterprise npm run dev',
+    command:
+      'cd ../../' +
+      ` && PLAYWRIGHT_DB_PORT=${resolvedPlaywrightDbPort} REDIS_PORT=${resolvedPlaywrightRedisPort} docker compose -f docker-compose.playwright-workflow-deps.yml -p alga-psa-playwright-workflow --env-file ee/server/.env up -d --wait --wait-timeout 60 postgres-playwright redis-playwright` +
+      ' && node --import tsx/esm scripts/bootstrap-playwright-db.ts' +
+      ` && PLAYWRIGHT_DB_PORT=${resolvedPlaywrightDbPort} REDIS_PORT=${resolvedPlaywrightRedisPort} docker compose -f docker-compose.playwright-workflow-deps.yml -p alga-psa-playwright-workflow --env-file ee/server/.env up -d --build workflow-worker-playwright` +
+      ' && NEXT_PUBLIC_EDITION=enterprise npm run dev',
     url: resolvedBaseUrl,
-    // Reuse existing server by default for local development; set PW_REUSE=false to start fresh
-    reuseExistingServer: process.env.PW_REUSE !== 'false',
-    timeout: 120000,
+    // Default to starting a fresh server (we also need to bring up dockerized deps + reset the DB).
+    // Opt-in reuse with PW_REUSE=true for local iteration.
+    reuseExistingServer: process.env.PW_REUSE === 'true',
+    timeout: 300000,
     stdout: 'pipe',
     stderr: 'pipe',
     env: {
       ...process.env,
+      // Use env-only secrets for Playwright runs so local `../secrets/*` (e.g. redis_password) doesn't
+      // conflict with the dockerized Playwright deps (which intentionally run without auth).
+      SECRET_READ_CHAIN: 'env',
+      SECRET_WRITE_PROVIDER: 'env',
       NEXT_PUBLIC_EDITION: 'enterprise',
       E2E_AUTH_BYPASS: 'true',
       EE_BASE_URL: resolvedBaseUrl,
       NEXTAUTH_URL: resolvedBaseUrl,
-      HOST: resolvedBaseUrl,
+      HOST: resolvedHostForEnv,
+      HOSTNAME: webHost,
       PORT: String(resolvedWebPort),
       APP_PORT: String(resolvedWebPort),
       EXPOSE_SERVER_PORT: String(resolvedWebPort),
@@ -266,15 +377,16 @@ export default defineConfig({
       NEXT_PUBLIC_EXTERNAL_APP_URL: resolvedBaseUrl,
       NEXTAUTH_SECRET: process.env.NEXTAUTH_SECRET || 'test-nextauth-secret',
       NEXT_PUBLIC_DISABLE_FEATURE_FLAGS: process.env.NEXT_PUBLIC_DISABLE_FEATURE_FLAGS ?? 'true',
-      DB_HOST: process.env.DB_HOST,
-      DB_PORT: process.env.DB_PORT,
-      DB_NAME: process.env.DB_NAME,
-      DB_NAME_SERVER: process.env.DB_NAME_SERVER,
-      DB_USER: process.env.DB_USER,
-      DB_PASSWORD: process.env.DB_PASSWORD,
-      DB_USER_SERVER: process.env.DB_USER_SERVER,
-      DB_PASSWORD_SERVER: process.env.DB_PASSWORD_SERVER,
-      DB_PASSWORD_ADMIN: process.env.DB_PASSWORD_ADMIN,
+      // Explicitly set DB config for Playwright - override server/.env settings
+      DB_HOST: process.env.PLAYWRIGHT_DB_HOST || process.env.DB_HOST || 'localhost',
+      DB_PORT: process.env.PLAYWRIGHT_DB_PORT || process.env.DB_PORT || '5439',
+      DB_NAME: process.env.PLAYWRIGHT_DB_NAME || process.env.DB_NAME || 'alga_contract_wizard_test',
+      DB_NAME_SERVER: process.env.PLAYWRIGHT_DB_NAME || process.env.DB_NAME_SERVER || 'alga_contract_wizard_test',
+      DB_USER: process.env.PLAYWRIGHT_DB_ADMIN_USER || process.env.DB_USER || 'postgres',
+      DB_PASSWORD: process.env.PLAYWRIGHT_DB_ADMIN_PASSWORD || process.env.DB_PASSWORD || '',
+      DB_USER_SERVER: process.env.PLAYWRIGHT_DB_ADMIN_USER || process.env.DB_USER_SERVER || 'postgres',
+      DB_PASSWORD_SERVER: process.env.PLAYWRIGHT_DB_ADMIN_PASSWORD || process.env.DB_PASSWORD_SERVER || '',
+      DB_PASSWORD_ADMIN: process.env.PLAYWRIGHT_DB_ADMIN_PASSWORD || process.env.DB_PASSWORD_ADMIN || '',
       // Use S3/MinIO for file uploads (not local storage)
       // MinIO test instance runs on port 9002 (separate from Payload MinIO on 9000)
       STORAGE_DEFAULT_PROVIDER: 's3', // Use S3/MinIO instead of local storage
@@ -284,8 +396,11 @@ export default defineConfig({
       STORAGE_S3_BUCKET: process.env.STORAGE_S3_BUCKET || 'alga-test',
       STORAGE_S3_REGION: process.env.STORAGE_S3_REGION || 'us-east-1',
       STORAGE_S3_FORCE_PATH_STYLE: process.env.STORAGE_S3_FORCE_PATH_STYLE || 'true',
+      // Redis is required for the event bus; prefer a local instance for Playwright.
+      REDIS_HOST: process.env.REDIS_HOST || 'localhost',
+      REDIS_PORT: process.env.REDIS_PORT || '6379',
     }
-  },
+  } : undefined,
 
   /* Global test timeout */
   timeout: 60000,

@@ -1,0 +1,13 @@
+{
+  "name": "@alga-psa/ee-stubs",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "packages/ee/src",
+  "projectType": "library",
+  "tags": ["scope:ee-stubs", "type:horizontal"],
+  "targets": {
+    "build": {
+      "executor": "nx:noop"
+    }
+  }
+}
+

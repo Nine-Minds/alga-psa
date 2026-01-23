@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { auth } from './app/api/auth/[...nextauth]/edge-auth';
+import { getSessionCookieName } from './lib/auth/sessionCookies';
 import { i18nMiddleware, shouldSkipI18n } from './middleware/i18n';
 
 // Minimal, Edge-safe middleware: API key header presence check for select API routes
@@ -53,10 +54,21 @@ const _middleware = auth((request) => {
   const requestHost = request.headers.get('host') || '';
   const requestHostname = requestHost.split(':')[0];
   const origin = request.headers.get('origin');
+  const nextAction = request.headers.get('next-action');
 
   // Handle CORS preflight requests early
   if (request.method === 'OPTIONS') {
     return corsPreflightResponse(origin);
+  }
+
+  // Dev-only guard: prevent noisy stack traces from stale Server Action IDs after refactors/restarts.
+  // If the browser is running an older bundle, it can keep POSTing an action id that no longer exists.
+  if (process.env.NODE_ENV === 'development' && nextAction === '0091be379ebfc31238a6a78b24a504906087e8813c') {
+    const errorResponse = NextResponse.json(
+      { error: 'Stale Server Action request. Hard refresh the page (or close/reopen the tab) to load the latest bundle.' },
+      { status: 409 }
+    );
+    return applyCorsHeaders(errorResponse, origin);
   }
 
   // Clone request headers so we can pass additional metadata downstream
@@ -92,6 +104,7 @@ const _middleware = auth((request) => {
       '/api/documents/download/',
       '/api/documents/view/',
       '/api/email/webhooks/',
+      '/api/calendar/webhooks/',
       '/api/email/oauth/',
       '/api/client-portal/domain-session',
       '/api/integrations/ninjaone/callback',
@@ -187,6 +200,18 @@ const _middleware = auth((request) => {
   // Protect MSP app routes: validate user type
   if (pathname.startsWith(protectedPrefix)) {
     if (!request.auth) {
+      // In dev, Edge auth can occasionally fail to hydrate the session during HMR/middleware rebuilds.
+      // If the browser still has a session cookie, avoid redirecting to /auth/signin (which looks like "being logged out").
+      // Let the Node runtime handle auth in the page/server actions instead.
+      if (process.env.NODE_ENV === 'development') {
+        const sessionCookieName = getSessionCookieName();
+        const hasSessionCookie =
+          Boolean(request.cookies.get(sessionCookieName)?.value);
+        if (hasSessionCookie) {
+          return applyCorsHeaders(response, origin);
+        }
+      }
+
       // Next.js Server Actions are POST requests that expect an RSC payload. If we redirect here,
       // the client will follow the redirect and receive HTML, surfacing as:
       // "An unexpected response was received from the server."
@@ -218,6 +243,16 @@ const _middleware = auth((request) => {
   // Protect Client Portal routes: validate user type (but not auth pages)
   if (pathname.startsWith(clientPortalPrefix) && !isAuthPage) {
     if (!request.auth) {
+      // Same HMR-friendly behavior as /msp: avoid "logout-like" redirects when the session cookie exists.
+      if (process.env.NODE_ENV === 'development') {
+        const sessionCookieName = getSessionCookieName();
+        const hasSessionCookie =
+          Boolean(request.cookies.get(sessionCookieName)?.value);
+        if (hasSessionCookie) {
+          return applyCorsHeaders(response, origin);
+        }
+      }
+
       const callbackUrlAbsolute = new URL(request.nextUrl.pathname + (request.nextUrl.search || ''), request.nextUrl);
       const canonicalUrlEnv = getCanonicalUrl();
 

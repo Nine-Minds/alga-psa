@@ -15,7 +15,17 @@
  * - Other types: Return null (use type-based icons in UI)
  */
 
-import sharp from 'sharp';
+async function loadSharp() {
+  try {
+    const mod = await import('sharp');
+    return (mod as any).default ?? (mod as any);
+  } catch (error) {
+    throw new Error(
+      `Failed to load optional dependency "sharp" (required for document previews). ` +
+        `Ensure platform-specific sharp binaries are installed. Original error: ${error instanceof Error ? error.message : String(error)}`
+    );
+  }
+}
 import { PDFDocument } from 'pdf-lib';
 import { fromPath } from 'pdf2pic';
 import { StorageService } from '../storage/StorageService';
@@ -110,6 +120,8 @@ async function generateImagePreviews(
     if (!tenant) {
       throw new Error('No tenant found');
     }
+
+    const sharp = await loadSharp();
 
     // Get image metadata to check dimensions
     const metadata = await sharp(fileBuffer).metadata();
@@ -225,6 +237,8 @@ async function generatePdfPreviews(
     if (!tenant) {
       throw new Error('No tenant found');
     }
+
+    const sharp = await loadSharp();
 
     // Create temporary file for PDF (pdf2pic requires a file path)
     const tempDir = os.tmpdir();
@@ -380,6 +394,8 @@ async function generateVideoPreviews(
     if (!tenant) {
       throw new Error('No tenant found');
     }
+
+    const sharp = await loadSharp();
 
     console.log(`[generateVideoPreviews] Extracting frame from video for document ${document.document_id}`);
 

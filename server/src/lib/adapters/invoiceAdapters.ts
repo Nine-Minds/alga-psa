@@ -5,7 +5,7 @@ import type {
 } from 'server/src/interfaces/invoice.interfaces';
 // Ensure the correct type is imported
 import type { WasmInvoiceViewModel } from 'server/src/lib/invoice-renderer/types';
-import { DateValue } from '@alga-psa/shared/types';
+import { DateValue } from '@alga-psa/types';
 import { Temporal } from '@js-temporal/polyfill';
 // toPlainDate is likely not needed here as we format to string for Wasm
 
@@ -57,6 +57,7 @@ export function mapDbInvoiceToWasmViewModel(inputData: DbInvoiceViewModel | Wasm
           name: String(dbData.client?.name ?? 'N/A'),
           address: String(dbData.client?.address ?? 'N/A'),
         },
+        poNumber: (dbData as any).po_number ?? null,
         // tenantClient does not exist directly in DbInvoiceViewModel, assuming it's not needed or handled elsewhere
         tenantClient: null,
 

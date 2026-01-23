@@ -1,5 +1,5 @@
 import { v4 as uuid4, validate as uuidValidate } from 'uuid';
-import logger from '@shared/core/logger';
+import logger from '@alga-psa/core/logger';
 import { createTenantKnex } from '../db';
 import { TaxSource } from '../../interfaces/tax.interfaces';
 import { parseCSV } from '../utils/csvParser';
@@ -10,6 +10,23 @@ import { parseCSV } from '../utils/csvParser';
 const TRACKING_CATEGORY_SOURCE_SYSTEM = 'Source System';
 const TRACKING_CATEGORY_SOURCE_VALUE = 'AlgaPSA';
 const TRACKING_CATEGORY_INVOICE_ID = 'External Invoice ID';
+
+export function extractInvoiceIdFromReference(reference: string): string | null {
+  const trimmed = reference.trim();
+  const prefix = trimmed.split('|')[0]?.trim();
+  if (prefix && uuidValidate(prefix)) {
+    return prefix;
+  }
+
+  const match = trimmed.match(
+    /[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}/
+  );
+  if (match && uuidValidate(match[0])) {
+    return match[0];
+  }
+
+  return null;
+}
 
 /**
  * Parsed row from Xero Invoice Details Report.
@@ -379,20 +396,16 @@ export class XeroCsvTaxImportService {
         const reference = lines[0]?.reference;
         if (reference) {
           // Reference might be the invoice_id (UUID) or invoice_number
-          // Only search by invoice_id if reference looks like a valid UUID
-          const isValidUuid = uuidValidate(reference);
+          // Support decorated references like "<uuid> | PO <number>" by extracting a UUID prefix when present.
+          const referenceInvoiceId = extractInvoiceIdFromReference(reference);
 
           const query = knex('invoices')
             .where({ tenant })
             .select('invoice_id');
 
-          if (isValidUuid) {
-            query.where(function() {
-              this.where('invoice_id', reference)
-                .orWhere('invoice_number', reference);
-            });
+          if (referenceInvoiceId) {
+            query.where('invoice_id', referenceInvoiceId);
           } else {
-            // Not a UUID, only search by invoice_number
             query.where('invoice_number', reference);
           }
 

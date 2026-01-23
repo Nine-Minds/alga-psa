@@ -20,6 +20,9 @@
     "build": "tsc -p tsconfig.json",
     "prepublishOnly": "npm run build"
   },
+  "dependencies": {
+    "@radix-ui/react-select": "^2.1.2"
+  },
   "peerDependencies": {
     "react": "^18 || ^19",
     "react-dom": "^18 || ^19"
@@ -28,8 +31,7 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "typescript": "^5.4.0"
-  }
-  ,
+  },
   "publishConfig": {
     "access": "public"
   }

@@ -3,7 +3,7 @@
  */
 
 import nodemailer from 'nodemailer';
-import logger from '@alga-psa/shared/core/logger';
+import logger from '@alga-psa/core/logger';
 import {
   IEmailProvider,
   EmailMessage,

@@ -39,10 +39,10 @@ import {
 } from '../schemas/quickbooksSchemas';
 import { DatabaseService } from './DatabaseService';
 import { PaginatedResponse, SuccessResponse } from '../../types/api';
-import { validateTenantAccess } from '../../utils/validation';
+import { validateTenantAccess } from '@alga-psa/validation';
 import { EventBusService } from './EventBusService';
 import { AuditLogService } from './AuditLogService';
-import { getSecretProviderInstance } from '@alga-psa/shared/core/secretProvider';
+import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 
 export class QuickBooksService {
   private readonly qboApiUrl = 'https://quickbooks-api.intuit.com';

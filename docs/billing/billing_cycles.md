@@ -4,6 +4,12 @@
 
 The billing cycle feature allows for flexible billing periods for each client. This enhancement enables the system to generate invoices based on custom billing frequencies, such as weekly, bi-weekly, monthly, quarterly, semi-annually, or annually.
 
+### Date Semantics (Important)
+All billing periods are treated as **`[start, end)`** (end date is **exclusive**). The end date represents the **start of the next period**.
+
+- Example: a monthly period might be `2026-01-10 → 2026-02-10` (the `2026-02-10` boundary is not billed in the prior period).
+- Query rule of thumb: include records where `timestamp >= start` and `timestamp < end`.
+
 **Related Documentation:** See [billing.md](./billing.md) for overall billing system architecture.
 
 ## Billing Engine
@@ -72,6 +78,14 @@ Billing cycles can be set and updated for each client through the Billing Dashbo
 **UI Components:**
 - [BillingCycles.tsx](../server/src/components/billing-dashboard/BillingCycles.tsx) - Main billing cycles management interface
 - [BillingConfiguration.tsx](../server/src/components/clients/BillingConfiguration.tsx) - Client-specific billing configuration
+
+### Billing Cycle Anchors
+Billing cycles can also be **anchored** per client to support non-calendar boundaries (e.g., “bill on the 10th”).
+
+- **Weekly:** choose a weekday (Mon–Sun)
+- **Bi-weekly:** choose a “first cycle start date” to establish stable parity
+- **Monthly:** choose a day-of-month (**1–28**)
+- **Quarterly / Semi-annually / Annually:** choose a start month + day-of-month (**1–28**)
 
 ### Billing Cycles in Practice
 

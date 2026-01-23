@@ -2,12 +2,12 @@
 
 import React, { useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { Card, CardContent } from 'server/src/components/ui/Card';
-import { Button } from 'server/src/components/ui/Button';
-import { Badge } from 'server/src/components/ui/Badge';
+import { Card, CardContent } from '@alga-psa/ui/components/Card';
+import { Button } from '@alga-psa/ui/components/Button';
+import { Badge } from '@alga-psa/ui/components/Badge';
 import { CheckCircle, ArrowRight, Loader2, Calendar, Users } from 'lucide-react';
 import Link from 'next/link';
-import { getLicenseUsageAction } from 'server/src/lib/actions/license-actions';
+import { getLicenseUsageAction } from '@alga-psa/licensing/actions/license-actions';
 import { getSubscriptionInfoAction } from '@ee/lib/actions/license-actions';
 
 export default function LicensePurchaseSuccessPage() {

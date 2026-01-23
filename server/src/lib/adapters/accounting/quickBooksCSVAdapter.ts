@@ -6,7 +6,7 @@
  * allowing users to manually import invoices into QuickBooks.
  */
 
-import logger from '@shared/core/logger';
+import logger from '@alga-psa/core/logger';
 import { Knex } from 'knex';
 import {
   AccountingExportAdapter,
@@ -18,10 +18,9 @@ import {
   AccountingExportFileAttachment,
   PendingTaxImportRecord
 } from './accountingExportAdapter';
-import { createTenantKnex } from '../../db';
-import { AccountingMappingResolver } from '../../services/accountingMappingResolver';
-import { unparseCSV } from '../../utils/csvParser';
-import { KnexInvoiceMappingRepository } from '../../repositories/invoiceMappingRepository';
+import { createTenantKnex } from '@alga-psa/db';
+import { AccountingMappingResolver, KnexInvoiceMappingRepository } from '@alga-psa/billing';
+import { unparseCSV } from '@alga-psa/core';
 
 /**
  * Database types for invoices and charges
@@ -29,6 +28,7 @@ import { KnexInvoiceMappingRepository } from '../../repositories/invoiceMappingR
 type DbInvoice = {
   invoice_id: string;
   invoice_number: string;
+  po_number?: string | null;
   invoice_date: string | Date;
   due_date?: string | Date | null;
   total_amount: number;
@@ -112,6 +112,10 @@ interface InvoiceDocumentPayload {
     amountCents: number;
     taxCents: number;
   };
+}
+
+export function buildQuickBooksCsvMemo(invoiceId: string, poNumber?: string | null): string {
+  return poNumber ? `Alga PSA: ${invoiceId} | PO ${poNumber}` : `Alga PSA: ${invoiceId}`;
 }
 
 /**
@@ -267,7 +271,7 @@ export class QuickBooksCSVAdapter implements AccountingExportAdapter {
           '*ItemRate': this.centsToAmount(unitPrice).toFixed(2),
           '*ItemAmount': this.centsToAmount(lineAmount).toFixed(2),
           Terms: terms,
-          Memo: `Alga PSA: ${invoiceId}`,
+          Memo: buildQuickBooksCsvMemo(invoiceId, invoice.po_number),
           TaxCode: taxCode,
           TaxAmount: shouldExcludeTax ? '' : this.centsToAmount(taxAmount).toFixed(2)
         };
@@ -497,6 +501,7 @@ export class QuickBooksCSVAdapter implements AccountingExportAdapter {
       .select(
         'invoice_id',
         'invoice_number',
+        'po_number',
         'invoice_date',
         'due_date',
         'total_amount',

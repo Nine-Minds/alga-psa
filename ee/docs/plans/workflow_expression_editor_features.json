@@ -1,0 +1,709 @@
+{
+  "feature": "Monaco Expression Editor",
+  "description": "Rich code editor for workflow expressions using Monaco (VS Code editor), providing syntax highlighting, intelligent autocomplete, validation, and contextual help for JSONata-style expressions.",
+  "branch": "feat/workflow-overhaul",
+  "createdAt": "2024-12-24",
+  "relatedPRDSection": "§20",
+  "tasks": [
+    {
+      "id": "MEE-001",
+      "category": "Language Definition",
+      "description": "Define Monaco language ID 'jsonata-workflow' for workflow expressions",
+      "file": "ee/server/src/components/workflow-designer/expression-editor/jsonataLanguage.ts",
+      "done": true
+    },
+    {
+      "id": "MEE-002",
+      "category": "Language Definition",
+      "description": "Define token types: context roots (payload, vars, meta, error), functions, operators, strings, numbers, booleans, null",
+      "file": "ee/server/src/components/workflow-designer/expression-editor/jsonataLanguage.ts",
+      "done": true
+    },
+    {
+      "id": "MEE-003",
+      "category": "Language Definition",
+      "description": "Create Monarch tokenizer rules for JSONata syntax",
+      "file": "ee/server/src/components/workflow-designer/expression-editor/jsonataLanguage.ts",
+      "done": true
+    },
+    {
+      "id": "MEE-004",
+      "category": "Language Definition",
+      "description": "Define bracket pairs: (), [], {}",
+      "file": "ee/server/src/components/workflow-designer/expression-editor/jsonataLanguage.ts",
+      "done": true
+    },
+    {
+      "id": "MEE-005",
+      "category": "Language Definition",
+      "description": "Define auto-closing pairs for quotes and brackets",
+      "file": "ee/server/src/components/workflow-designer/expression-editor/jsonataLanguage.ts",
+      "done": true
+    },
+    {
+      "id": "MEE-006",
+      "category": "Language Definition",
+      "description": "Define comment syntax (JSONata uses /* */ for block comments)",
+      "file": "ee/server/src/components/workflow-designer/expression-editor/jsonataLanguage.ts",
+      "done": true
+    },
+    {
+      "id": "MEE-007",
+      "category": "Language Definition",
+      "description": "Register language with Monaco on module load",
+      "file": "ee/server/src/components/workflow-designer/expression-editor/jsonataLanguage.ts",
+      "done": true
+    },
+    {
+      "id": "MEE-008",
+      "category": "Syntax Highlighting",
+      "description": "Define color theme tokens for context roots (blue for payload/vars/meta/error)",
+      "file": "ee/server/src/components/workflow-designer/expression-editor/jsonataTheme.ts",
+      "done": true
+    },
+    {
+      "id": "MEE-009",
+      "category": "Syntax Highlighting",
+      "description": "Define color theme tokens for functions (purple)",
+      "file": "ee/server/src/components/workflow-designer/expression-editor/jsonataTheme.ts",
+      "done": true
+    },
+    {
+      "id": "MEE-010",
+      "category": "Syntax Highlighting",
+      "description": "Define color theme tokens for operators and keywords (pink: and, or, not, in, ?:)",
+      "file": "ee/server/src/components/workflow-designer/expression-editor/jsonataTheme.ts",
+      "done": true
+    },
+    {
+      "id": "MEE-011",
+      "category": "Syntax Highlighting",
+      "description": "Define color theme tokens for strings (green)",
+      "file": "ee/server/src/components/workflow-designer/expression-editor/jsonataTheme.ts",
+      "done": true
+    },
+    {
+      "id": "MEE-012",
+      "category": "Syntax Highlighting",
+      "description": "Define color theme tokens for numbers (orange)",
+      "file": "ee/server/src/components/workflow-designer/expression-editor/jsonataTheme.ts",
+      "done": true
+    },
+    {
+      "id": "MEE-013",
+      "category": "Syntax Highlighting",
+      "description": "Define color theme tokens for property accessors (default text)",
+      "file": "ee/server/src/components/workflow-designer/expression-editor/jsonataTheme.ts",
+      "done": true
+    },
+    {
+      "id": "MEE-014",
+      "category": "Syntax Highlighting",
+      "description": "Define color theme tokens for parentheses/brackets (gray with rainbow nesting option)",
+      "file": "ee/server/src/components/workflow-designer/expression-editor/jsonataTheme.ts",
+      "done": true
+    },
+    {
+      "id": "MEE-015",
+      "category": "Syntax Highlighting",
+      "description": "Create dark theme variant for dark mode support",
+      "file": "ee/server/src/components/workflow-designer/expression-editor/jsonataTheme.ts",
+      "done": true
+    },
+    {
+      "id": "MEE-016",
+      "category": "Syntax Highlighting",
+      "description": "Register theme with Monaco editor",
+      "file": "ee/server/src/components/workflow-designer/expression-editor/jsonataTheme.ts",
+      "done": true
+    },
+    {
+      "id": "MEE-017",
+      "category": "Autocomplete - Context Roots",
+      "description": "Provide completion items for context roots: payload, vars, meta, error",
+      "file": "ee/server/src/components/workflow-designer/expression-editor/completionProvider.ts",
+      "done": true
+    },
+    {
+      "id": "MEE-018",
+      "category": "Autocomplete - Context Roots",
+      "description": "Show context root completions with icons and descriptions",
+      "file": "ee/server/src/components/workflow-designer/expression-editor/completionProvider.ts",
+      "done": true
+    },
+    {
+      "id": "MEE-019",
+      "category": "Autocomplete - Payload",
+      "description": "Parse payload schema and provide field completions after 'payload.'",
+      "file": "ee/server/src/components/workflow-designer/expression-editor/completionProvider.ts",
+      "done": true
+    },
+    {
+      "id": "MEE-020",
+      "category": "Autocomplete - Payload",
+      "description": "Support nested payload field completions (payload.emailData.from.email)",
+      "file": "ee/server/src/components/workflow-designer/expression-editor/completionProvider.ts",
+      "done": true
+    },
+    {
+      "id": "MEE-021",
+      "category": "Autocomplete - Payload",
+      "description": "Show field types and descriptions in completion details",
+      "file": "ee/server/src/components/workflow-designer/expression-editor/completionProvider.ts",
+      "done": false
+    },
+    {
+      "id": "MEE-022",
+      "category": "Autocomplete - Vars",
+      "description": "Provide completion for step output variables (vars.stepName)",
+      "file": "ee/server/src/components/workflow-designer/expression-editor/completionProvider.ts",
+      "done": false
+    },
+    {
+      "id": "MEE-023",
+      "category": "Autocomplete - Vars",
+      "description": "Parse action output schemas to provide nested var completions",
+      "file": "ee/server/src/components/workflow-designer/expression-editor/completionProvider.ts",
+      "done": false
+    },
+    {
+      "id": "MEE-024",
+      "category": "Autocomplete - Vars",
+      "description": "Only show vars from steps that execute before the current step",
+      "file": "ee/server/src/components/workflow-designer/expression-editor/completionProvider.ts",
+      "done": false
+    },
+    {
+      "id": "MEE-025",
+      "category": "Autocomplete - Vars",
+      "description": "Show step label alongside variable name in completion list",
+      "file": "ee/server/src/components/workflow-designer/expression-editor/completionProvider.ts",
+      "done": false
+    },
+    {
+      "id": "MEE-026",
+      "category": "Autocomplete - Meta",
+      "description": "Provide completions for meta fields (state, traceId, tags)",
+      "file": "ee/server/src/components/workflow-designer/expression-editor/completionProvider.ts",
+      "done": false
+    },
+    {
+      "id": "MEE-027",
+      "category": "Autocomplete - Error",
+      "description": "Provide completions for error fields in try/catch blocks",
+      "file": "ee/server/src/components/workflow-designer/expression-editor/completionProvider.ts",
+      "done": false
+    },
+    {
+      "id": "MEE-028",
+      "category": "Autocomplete - Functions",
+      "description": "Define built-in JSONata function list with signatures",
+      "file": "ee/server/src/components/workflow-designer/expression-editor/functionDefinitions.ts",
+      "done": true
+    },
+    {
+      "id": "MEE-029",
+      "category": "Autocomplete - Functions",
+      "description": "Provide function completions with parameter snippets",
+      "file": "ee/server/src/components/workflow-designer/expression-editor/completionProvider.ts",
+      "done": true
+    },
+    {
+      "id": "MEE-030",
+      "category": "Autocomplete - Functions",
+      "description": "Show function documentation in completion details panel",
+      "file": "ee/server/src/components/workflow-designer/expression-editor/completionProvider.ts",
+      "done": true
+    },
+    {
+      "id": "MEE-031",
+      "category": "Autocomplete - Functions",
+      "description": "Group functions by category (String, Number, Array, Object, Boolean, Date)",
+      "file": "ee/server/src/components/workflow-designer/expression-editor/completionProvider.ts",
+      "done": true
+    },
+    {
+      "id": "MEE-032",
+      "category": "Autocomplete - Operators",
+      "description": "Provide operator completions (and, or, not, in, =, !=, <, >, etc.)",
+      "file": "ee/server/src/components/workflow-designer/expression-editor/completionProvider.ts",
+      "done": true
+    },
+    {
+      "id": "MEE-033",
+      "category": "Signature Help",
+      "description": "Show function signature help when typing inside function parentheses",
+      "file": "ee/server/src/components/workflow-designer/expression-editor/signatureHelpProvider.ts",
+      "done": true
+    },
+    {
+      "id": "MEE-034",
+      "category": "Signature Help",
+      "description": "Highlight current parameter in signature help",
+      "file": "ee/server/src/components/workflow-designer/expression-editor/signatureHelpProvider.ts",
+      "done": true
+    },
+    {
+      "id": "MEE-035",
+      "category": "Signature Help",
+      "description": "Show parameter descriptions and types in signature help",
+      "file": "ee/server/src/components/workflow-designer/expression-editor/signatureHelpProvider.ts",
+      "done": true
+    },
+    {
+      "id": "MEE-036",
+      "category": "Hover Information",
+      "description": "Show type information on hover for context variables",
+      "file": "ee/server/src/components/workflow-designer/expression-editor/hoverProvider.ts",
+      "done": true
+    },
+    {
+      "id": "MEE-037",
+      "category": "Hover Information",
+      "description": "Show field schema details on hover for payload/vars paths",
+      "file": "ee/server/src/components/workflow-designer/expression-editor/hoverProvider.ts",
+      "done": true
+    },
+    {
+      "id": "MEE-038",
+      "category": "Hover Information",
+      "description": "Show function documentation on hover",
+      "file": "ee/server/src/components/workflow-designer/expression-editor/hoverProvider.ts",
+      "done": true
+    },
+    {
+      "id": "MEE-039",
+      "category": "Hover Information",
+      "description": "Show operator precedence and description on hover",
+      "file": "ee/server/src/components/workflow-designer/expression-editor/hoverProvider.ts",
+      "done": true
+    },
+    {
+      "id": "MEE-040",
+      "category": "Validation - Syntax",
+      "description": "Parse expressions and report syntax errors with position",
+      "file": "ee/server/src/components/workflow-designer/expression-editor/diagnosticsProvider.ts",
+      "done": true
+    },
+    {
+      "id": "MEE-041",
+      "category": "Validation - Syntax",
+      "description": "Show syntax error markers in editor gutter",
+      "file": "ee/server/src/components/workflow-designer/expression-editor/diagnosticsProvider.ts",
+      "done": true
+    },
+    {
+      "id": "MEE-042",
+      "category": "Validation - Syntax",
+      "description": "Underline syntax errors with red squiggly",
+      "file": "ee/server/src/components/workflow-designer/expression-editor/diagnosticsProvider.ts",
+      "done": true
+    },
+    {
+      "id": "MEE-043",
+      "category": "Validation - References",
+      "description": "Validate that referenced paths exist in available context",
+      "file": "ee/server/src/components/workflow-designer/expression-editor/diagnosticsProvider.ts",
+      "done": true
+    },
+    {
+      "id": "MEE-044",
+      "category": "Validation - References",
+      "description": "Warn when referencing vars from steps after current step",
+      "file": "ee/server/src/components/workflow-designer/expression-editor/diagnosticsProvider.ts",
+      "done": false
+    },
+    {
+      "id": "MEE-045",
+      "category": "Validation - References",
+      "description": "Show warning markers in gutter (yellow)",
+      "file": "ee/server/src/components/workflow-designer/expression-editor/diagnosticsProvider.ts",
+      "done": false
+    },
+    {
+      "id": "MEE-046",
+      "category": "Validation - Types",
+      "description": "Infer expression result type where possible",
+      "file": "ee/server/src/components/workflow-designer/expression-editor/typeInference.ts",
+      "done": false
+    },
+    {
+      "id": "MEE-047",
+      "category": "Validation - Types",
+      "description": "Warn on obvious type mismatches in comparisons",
+      "file": "ee/server/src/components/workflow-designer/expression-editor/diagnosticsProvider.ts",
+      "done": false
+    },
+    {
+      "id": "MEE-048",
+      "category": "Validation - Types",
+      "description": "Warn on function argument type mismatches",
+      "file": "ee/server/src/components/workflow-designer/expression-editor/diagnosticsProvider.ts",
+      "done": false
+    },
+    {
+      "id": "MEE-049",
+      "category": "Editor Component",
+      "description": "Create ExpressionEditor React component wrapping Monaco",
+      "file": "ee/server/src/components/workflow-designer/expression-editor/ExpressionEditor.tsx",
+      "done": true
+    },
+    {
+      "id": "MEE-050",
+      "category": "Editor Component",
+      "description": "Accept value, onChange, dataContext props",
+      "file": "ee/server/src/components/workflow-designer/expression-editor/ExpressionEditor.tsx",
+      "done": true
+    },
+    {
+      "id": "MEE-051",
+      "category": "Editor Component",
+      "description": "Support single-line and multi-line modes",
+      "file": "ee/server/src/components/workflow-designer/expression-editor/ExpressionEditor.tsx",
+      "done": true
+    },
+    {
+      "id": "MEE-052",
+      "category": "Editor Component",
+      "description": "Configure appropriate editor options (minimap off, line numbers optional)",
+      "file": "ee/server/src/components/workflow-designer/expression-editor/ExpressionEditor.tsx",
+      "done": true
+    },
+    {
+      "id": "MEE-053",
+      "category": "Editor Component",
+      "description": "Handle editor height auto-sizing for single-line mode",
+      "file": "ee/server/src/components/workflow-designer/expression-editor/ExpressionEditor.tsx",
+      "done": true
+    },
+    {
+      "id": "MEE-054",
+      "category": "Editor Component",
+      "description": "Provide ref for programmatic focus control",
+      "file": "ee/server/src/components/workflow-designer/expression-editor/ExpressionEditor.tsx",
+      "done": true
+    },
+    {
+      "id": "MEE-055",
+      "category": "Editor Component",
+      "description": "Support placeholder text when empty",
+      "file": "ee/server/src/components/workflow-designer/expression-editor/ExpressionEditor.tsx",
+      "done": true
+    },
+    {
+      "id": "MEE-056",
+      "category": "Editor Component",
+      "description": "Match form field styling (border, focus ring, error state)",
+      "file": "ee/server/src/components/workflow-designer/expression-editor/ExpressionEditor.tsx",
+      "done": true
+    },
+    {
+      "id": "MEE-057",
+      "category": "Editor Component",
+      "description": "Support disabled/readonly state",
+      "file": "ee/server/src/components/workflow-designer/expression-editor/ExpressionEditor.tsx",
+      "done": true
+    },
+    {
+      "id": "MEE-058",
+      "category": "Editor Component",
+      "description": "Debounce onChange to avoid excessive updates",
+      "file": "ee/server/src/components/workflow-designer/expression-editor/ExpressionEditor.tsx",
+      "done": true
+    },
+    {
+      "id": "MEE-059",
+      "category": "Context Provider",
+      "description": "Create ExpressionEditorContext for sharing dataContext",
+      "file": "ee/server/src/components/workflow-designer/expression-editor/ExpressionEditorContext.tsx",
+      "done": false
+    },
+    {
+      "id": "MEE-060",
+      "category": "Context Provider",
+      "description": "Memoize schema parsing to avoid repeated computation",
+      "file": "ee/server/src/components/workflow-designer/expression-editor/ExpressionEditorContext.tsx",
+      "done": false
+    },
+    {
+      "id": "MEE-061",
+      "category": "Integration",
+      "description": "Replace ExpressionTextArea with ExpressionEditor in SchemaForm",
+      "file": "ee/server/src/components/workflow-designer/WorkflowDesigner.tsx",
+      "done": true
+    },
+    {
+      "id": "MEE-062",
+      "category": "Integration",
+      "description": "Replace expression inputs in InputMappingEditor with ExpressionEditor",
+      "file": "ee/server/src/components/workflow-designer/mapping/InputMappingEditor.tsx",
+      "done": true
+    },
+    {
+      "id": "MEE-063",
+      "category": "Integration",
+      "description": "Replace condition input in If block config with ExpressionEditor",
+      "file": "ee/server/src/components/workflow-designer/WorkflowDesigner.tsx",
+      "done": true
+    },
+    {
+      "id": "MEE-064",
+      "category": "Integration",
+      "description": "Replace items expression in ForEach block config with ExpressionEditor",
+      "file": "ee/server/src/components/workflow-designer/WorkflowDesigner.tsx",
+      "done": true
+    },
+    {
+      "id": "MEE-065",
+      "category": "Integration",
+      "description": "Pass dataContext from step config panel to ExpressionEditor",
+      "file": "ee/server/src/components/workflow-designer/WorkflowDesigner.tsx",
+      "done": false
+    },
+    {
+      "id": "MEE-066",
+      "category": "Field Picker Integration",
+      "description": "Add 'Insert Field' button next to ExpressionEditor",
+      "file": "ee/server/src/components/workflow-designer/expression-editor/ExpressionEditorWithPicker.tsx",
+      "done": false
+    },
+    {
+      "id": "MEE-067",
+      "category": "Field Picker Integration",
+      "description": "Open field picker dropdown on button click",
+      "file": "ee/server/src/components/workflow-designer/expression-editor/ExpressionEditorWithPicker.tsx",
+      "done": false
+    },
+    {
+      "id": "MEE-068",
+      "category": "Field Picker Integration",
+      "description": "Insert selected field path at cursor position",
+      "file": "ee/server/src/components/workflow-designer/expression-editor/ExpressionEditorWithPicker.tsx",
+      "done": false
+    },
+    {
+      "id": "MEE-069",
+      "category": "Keyboard Shortcuts",
+      "description": "Ctrl+Space to trigger autocomplete",
+      "file": "ee/server/src/components/workflow-designer/expression-editor/ExpressionEditor.tsx",
+      "done": true
+    },
+    {
+      "id": "MEE-070",
+      "category": "Keyboard Shortcuts",
+      "description": "Ctrl+Shift+Space to trigger signature help",
+      "file": "ee/server/src/components/workflow-designer/expression-editor/ExpressionEditor.tsx",
+      "done": false
+    },
+    {
+      "id": "MEE-071",
+      "category": "Keyboard Shortcuts",
+      "description": "F1 or Ctrl+Shift+P for command palette (optional)",
+      "file": "ee/server/src/components/workflow-designer/expression-editor/ExpressionEditor.tsx",
+      "done": false
+    },
+    {
+      "id": "MEE-072",
+      "category": "Keyboard Shortcuts",
+      "description": "Escape to dismiss autocomplete/signature help",
+      "file": "ee/server/src/components/workflow-designer/expression-editor/ExpressionEditor.tsx",
+      "done": false
+    },
+    {
+      "id": "MEE-073",
+      "category": "Keyboard Shortcuts",
+      "description": "Tab to accept completion and move to next tab stop",
+      "file": "ee/server/src/components/workflow-designer/expression-editor/ExpressionEditor.tsx",
+      "done": false
+    },
+    {
+      "id": "MEE-074",
+      "category": "Quick Fixes",
+      "description": "Suggest 'Did you mean X?' for similar field names on unknown reference",
+      "file": "ee/server/src/components/workflow-designer/expression-editor/codeActionsProvider.ts",
+      "done": false
+    },
+    {
+      "id": "MEE-075",
+      "category": "Quick Fixes",
+      "description": "Suggest wrapping in coalesce() for nullable field access",
+      "file": "ee/server/src/components/workflow-designer/expression-editor/codeActionsProvider.ts",
+      "done": false
+    },
+    {
+      "id": "MEE-076",
+      "category": "Quick Fixes",
+      "description": "Suggest $string() or $number() for type coercion",
+      "file": "ee/server/src/components/workflow-designer/expression-editor/codeActionsProvider.ts",
+      "done": false
+    },
+    {
+      "id": "MEE-077",
+      "category": "Formatting",
+      "description": "Format expression on save or format command (optional)",
+      "file": "ee/server/src/components/workflow-designer/expression-editor/formattingProvider.ts",
+      "done": false
+    },
+    {
+      "id": "MEE-078",
+      "category": "Formatting",
+      "description": "Auto-indent on newline in multi-line mode",
+      "file": "ee/server/src/components/workflow-designer/expression-editor/ExpressionEditor.tsx",
+      "done": false
+    },
+    {
+      "id": "MEE-079",
+      "category": "Go to Definition",
+      "description": "Ctrl+Click on vars.X to navigate to the step that defines it",
+      "file": "ee/server/src/components/workflow-designer/expression-editor/definitionProvider.ts",
+      "done": false
+    },
+    {
+      "id": "MEE-080",
+      "category": "Find References",
+      "description": "Find all usages of a variable across expressions in the workflow",
+      "file": "ee/server/src/components/workflow-designer/expression-editor/referenceProvider.ts",
+      "done": false
+    },
+    {
+      "id": "MEE-081",
+      "category": "Rename Symbol",
+      "description": "Rename variable across all expressions when step saveAs changes",
+      "file": "ee/server/src/components/workflow-designer/expression-editor/renameProvider.ts",
+      "done": false
+    },
+    {
+      "id": "MEE-082",
+      "category": "Testing",
+      "description": "Unit tests for Monarch tokenizer rules",
+      "file": "ee/server/src/components/workflow-designer/expression-editor/__tests__/jsonataLanguage.test.ts",
+      "done": true
+    },
+    {
+      "id": "MEE-083",
+      "category": "Testing",
+      "description": "Unit tests for completion provider with mock schemas",
+      "file": "ee/server/src/components/workflow-designer/expression-editor/__tests__/completionProvider.test.ts",
+      "done": true
+    },
+    {
+      "id": "MEE-084",
+      "category": "Testing",
+      "description": "Unit tests for diagnostics provider",
+      "file": "ee/server/src/components/workflow-designer/expression-editor/__tests__/diagnosticsProvider.test.ts",
+      "done": true
+    },
+    {
+      "id": "MEE-085",
+      "category": "Testing",
+      "description": "Integration tests for ExpressionEditor component",
+      "file": "ee/server/src/components/workflow-designer/expression-editor/__tests__/ExpressionEditor.test.tsx",
+      "done": false
+    },
+    {
+      "id": "MEE-086",
+      "category": "Testing",
+      "description": "Playwright tests for autocomplete interaction",
+      "file": "ee/server/src/__tests__/integration/workflow-expression-editor.playwright.test.ts",
+      "done": false
+    },
+    {
+      "id": "MEE-087",
+      "category": "Performance",
+      "description": "Lazy load Monaco editor bundle",
+      "file": "ee/server/src/components/workflow-designer/expression-editor/ExpressionEditor.tsx",
+      "done": false
+    },
+    {
+      "id": "MEE-088",
+      "category": "Performance",
+      "description": "Cache schema parsing results per workflow",
+      "file": "ee/server/src/components/workflow-designer/expression-editor/ExpressionEditorContext.tsx",
+      "done": false
+    },
+    {
+      "id": "MEE-089",
+      "category": "Performance",
+      "description": "Throttle diagnostics updates during typing",
+      "file": "ee/server/src/components/workflow-designer/expression-editor/diagnosticsProvider.ts",
+      "done": true
+    },
+    {
+      "id": "MEE-090",
+      "category": "Performance",
+      "description": "Use web worker for validation if expressions are complex",
+      "file": "ee/server/src/components/workflow-designer/expression-editor/validationWorker.ts",
+      "done": false
+    },
+    {
+      "id": "MEE-091",
+      "category": "Accessibility",
+      "description": "Ensure autocomplete list is screen-reader accessible",
+      "file": "ee/server/src/components/workflow-designer/expression-editor/ExpressionEditor.tsx",
+      "done": false
+    },
+    {
+      "id": "MEE-092",
+      "category": "Accessibility",
+      "description": "Announce validation errors to screen readers",
+      "file": "ee/server/src/components/workflow-designer/expression-editor/ExpressionEditor.tsx",
+      "done": false
+    },
+    {
+      "id": "MEE-093",
+      "category": "Accessibility",
+      "description": "Support high contrast mode",
+      "file": "ee/server/src/components/workflow-designer/expression-editor/jsonataTheme.ts",
+      "done": false
+    },
+    {
+      "id": "MEE-094",
+      "category": "Documentation",
+      "description": "Create expression language reference documentation",
+      "file": "docs/workflow/expression-language.md",
+      "done": false
+    },
+    {
+      "id": "MEE-095",
+      "category": "Documentation",
+      "description": "Document available functions with examples",
+      "file": "docs/workflow/expression-functions.md",
+      "done": false
+    },
+    {
+      "id": "MEE-096",
+      "category": "Documentation",
+      "description": "Add inline help link in editor to expression docs",
+      "file": "ee/server/src/components/workflow-designer/expression-editor/ExpressionEditor.tsx",
+      "done": false
+    },
+    {
+      "id": "MEE-097",
+      "category": "Error Recovery",
+      "description": "Gracefully handle Monaco load failure with fallback to plain textarea",
+      "file": "ee/server/src/components/workflow-designer/expression-editor/ExpressionEditor.tsx",
+      "done": false
+    },
+    {
+      "id": "MEE-098",
+      "category": "Error Recovery",
+      "description": "Handle malformed schema data without crashing completions",
+      "file": "ee/server/src/components/workflow-designer/expression-editor/completionProvider.ts",
+      "done": false
+    },
+    {
+      "id": "MEE-099",
+      "category": "Secrets Integration",
+      "description": "Provide completions for $secret() references",
+      "file": "ee/server/src/components/workflow-designer/expression-editor/completionProvider.ts",
+      "done": false
+    },
+    {
+      "id": "MEE-100",
+      "category": "Secrets Integration",
+      "description": "Show available tenant secrets in autocomplete after $secret(",
+      "file": "ee/server/src/components/workflow-designer/expression-editor/completionProvider.ts",
+      "done": false
+    }
+  ]
+}

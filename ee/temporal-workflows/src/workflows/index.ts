@@ -7,3 +7,6 @@ export * from './generic-job-workflow.js';
 export * from './email-webhook-maintenance-workflow.js';
 export * from './calendar-webhook-maintenance-workflow.js';
 export * from './ninjaone-sync-workflow.js';
+export * from './resend-welcome-email-workflow.js';
+export * from './tenant-deletion-workflow.js';
+export * from './tenant-export-workflow.js';

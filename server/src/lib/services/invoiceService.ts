@@ -2,7 +2,7 @@ import { Temporal } from '@js-temporal/polyfill';
 import { createTenantKnex } from 'server/src/lib/db';
 import { v4 as uuidv4 } from 'uuid';
 import { TaxService } from 'server/src/lib/services/taxService';
-import { generateInvoiceNumber } from 'server/src/lib/actions/invoiceGeneration';
+import { generateInvoiceNumber } from '@alga-psa/billing/actions/invoiceGeneration';
 import { BillingEngine } from 'server/src/lib/billing/billingEngine';
 import { InvoiceViewModel, IInvoiceCharge as ManualInvoiceItem, NetAmountItem, DiscountType } from 'server/src/interfaces/invoice.interfaces'; // Renamed for clarity
 import { IBillingCharge, IFixedPriceCharge, IService, TransactionType } from 'server/src/interfaces/billing.interfaces'; // Added import
@@ -10,7 +10,7 @@ import { IClientWithLocation } from 'server/src/interfaces/client.interfaces';
 import { Knex } from 'knex';
 import { Session } from 'next-auth';
 import { ISO8601String } from 'server/src/types/types.d';
-import { getClientDefaultTaxRegionCode } from 'server/src/lib/actions/client-actions/clientTaxRateActions'; // Import the new lookup function
+import { getClientDefaultTaxRegionCode } from '@alga-psa/clients/actions'; // Import the new lookup function
 import { getSession } from 'server/src/lib/auth/getSession';
 
 // Helper interface for tax calculation
@@ -396,6 +396,9 @@ async function persistFixedInvoiceCharges(
           // --- End Determine Consolidated Item Tax Region & Taxability ---
 
           console.log(`[INVOICE DEBUG] Setting fixedPlanDetailsMap for ${clientContractLineId}, charge.base_rate: ${charge.base_rate}`);
+          const planClientContractId =
+            chargesForThisPlan.find((c) => c.client_contract_id)?.client_contract_id ?? null;
+
           fixedPlanDetailsMap.set(clientContractLineId, {
               consolidatedItem: {
                   invoice_id: invoiceId,
@@ -416,6 +419,7 @@ async function persistFixedInvoiceCharges(
                   discount_percentage: undefined,
                   applies_to_item_id: null,
                   applies_to_service_id: null,
+                  client_contract_id: planClientContractId,
                   created_by: session.user.id,
                   created_at: now,
                   tenant
@@ -452,6 +456,7 @@ async function persistFixedInvoiceCharges(
         discount_percentage: undefined,
         applies_to_item_id: null,
         applies_to_service_id: null,
+        client_contract_id: charge.client_contract_id ?? null,
         created_by: session.user.id,
         created_at: now,
         tenant
@@ -686,6 +691,7 @@ export async function persistInvoiceCharges(
       discount_percentage: undefined,
       applies_to_item_id: null,
       applies_to_service_id: null,
+      client_contract_id: charge.client_contract_id ?? null,
       created_by: session.user.id,
       created_at: now,
       tenant

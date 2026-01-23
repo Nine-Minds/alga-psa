@@ -15,3 +15,14 @@ export * from "./job-activities";
 export * from "./email-webhook-maintenance-activities";
 export * from "./calendar-webhook-maintenance-activities";
 export * from "./ninjaone-sync-activities";
+export * from "./tenant-deletion-activities";
+export * from "./tenant-export-activities";
+// Exclude generateTemporaryPassword and sendWelcomeEmail to avoid duplicates with email-activities
+export {
+  getTenant,
+  getUser,
+  findAdminUser,
+  updateUserPassword,
+  logAuditEvent,
+  type AuditEventInput,
+} from "./resend-welcome-email-activities";

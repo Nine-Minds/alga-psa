@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getImportSources } from '@/lib/actions/import-actions/importActions';
+import { getImportSources } from '@/lib/imports/importActions';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';

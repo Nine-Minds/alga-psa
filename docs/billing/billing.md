@@ -86,6 +86,10 @@ Contracts can be created manually or cloned from templates. When cloning, templa
 When a contract is assigned to a client, the system snapshots all relevant data:
 
 - `client_contracts` – assignment record with start/end dates, PO requirements, and current status. Managed by `clientContractActions` (`server/src/lib/actions/client-actions/clientContractActions.ts`).
+  - Purchase order fields:
+    - `po_required` (boolean) – blocks invoice generation when enabled and `po_number` is missing.
+    - `po_number` (text) – the customer’s PO reference used on invoices and accounting exports.
+    - `po_amount` (bigint cents, nullable) – advisory “authorized spend” amount for warning on overages.
 - `client_contract_lines` – individual lines the client receives. Each record may reference both the base contract line and the originating template line (for audits).
 - `client_contract_line_terms` – per-client billing rules (frequency, overtime, rounding) plus the `billing_timing` setting that determines whether a line bills in advance or arrears.
 - `client_contract_line_pricing` – the rate strategy used for the client instance. Stores template references and overrides applied either by templates, contracts, or pricing schedules.
@@ -94,6 +98,20 @@ When a contract is assigned to a client, the system snapshots all relevant data:
 - `client_contract_line_discounts` – optional mapping of discounts to client contract lines.
 
 The cloning helper ensures that future template edits do not retroactively change existing client contracts while still allowing the UI to surface “template vs client” differences.
+
+## Purchase Orders (PO)
+
+Alga stores PO context on the client contract assignment (`client_contracts`) and snapshots the PO number onto invoices generated from contract billing:
+
+- `invoices.po_number` – stored as a snapshot at invoice creation time.
+- `invoices.client_contract_id` – links an invoice back to the generating contract assignment for PO consumption tracking.
+
+### PO limits (advisory)
+
+If `client_contracts.po_amount` is set, billing computes warnings when a newly generated invoice would exceed the remaining authorized spend:
+
+- Remaining is calculated from finalized invoices for the same `client_contract_id`.
+- Overages are warnings (invoice generation is not blocked), but UI flows prompt users to allow or skip overages during batch invoicing.
 
 ### Activity & Reference Data
 
@@ -139,7 +157,7 @@ await assignContractToClient('client-id', contract.contract_id, '2025-01-01', nu
 The billing engine lives in `server/src/lib/billing/billingEngine.ts`. It operates per client and billing cycle and returns an `IBillingResult` consumed by invoice generation.
 
 1. **Initialize tenant context** – `createTenantKnex()` establishes the multi-tenant connection.
-2. **Load billing cycle** – `client_billing_cycles` provides effective date ranges. If no explicit period exists, the engine derives it from the client’s frequency.
+2. **Load billing cycle** – `client_billing_cycles` provides effective date ranges using **`[start, end)`** semantics (end is exclusive). If no explicit period exists, the engine derives it from the client’s frequency.
 3. **Guard rails** – `validateBillingPeriod` ensures the requested range does not span cycle changes. Existing invoices are detected via `hasExistingInvoiceForCycle`.
 4. **Collect client contract lines** – `getClientContractLinesAndCycle` joins `client_contract_lines`, `contract_lines`, `client_contract_line_pricing`, `client_contract_line_terms`, and the parent contract to build a normalized in-memory model. Template references are resolved so both template-sourced and bespoke lines participate.
 5. **Charge calculation** – for each client contract line the engine executes:

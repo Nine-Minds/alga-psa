@@ -1,10 +1,19 @@
-import React from 'react';
-import Dashboard from 'server/src/components/dashboard/Dashboard';
+import { Suspense } from 'react';
+import DashboardContainer from '@/components/dashboard/DashboardContainer';
+import { DashboardOnboardingSkeleton, DashboardOnboardingSlot } from '@alga-psa/onboarding/components';
 
-const DashboardPage: React.FC = () => {
+export const dynamic = 'force-dynamic';
+
+function DashboardPage() {
   return (
-    <Dashboard />
+    <DashboardContainer
+      onboardingSection={(
+        <Suspense fallback={<DashboardOnboardingSkeleton />}>
+          <DashboardOnboardingSlot />
+        </Suspense>
+      )}
+    />
   );
-};
+}
 
 export default DashboardPage;

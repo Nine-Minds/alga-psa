@@ -1,0 +1,219 @@
+{
+  "feature": "Workflow Payload Schema Ref UX",
+  "description": "Replace free-text payloadSchemaRef entry with a guided, searchable, validated schema picker that can be inferred from triggers/events and previews the schema to improve correctness and speed.",
+  "branch": "feat/workflow-overhaul",
+  "createdAt": "2025-12-27",
+  "relatedPRDSection": "§Workflow Designer",
+  "tasks": [
+    {
+      "id": "PSR-001",
+      "category": "Backend - Schemas",
+      "description": "Add server action to list available workflow schema refs from SchemaRegistry",
+      "file": "server/src/lib/actions/workflow-runtime-v2-actions.ts",
+      "done": true
+    },
+    {
+      "id": "PSR-002",
+      "category": "Backend - Schemas",
+      "description": "Add server action to search schema refs (prefix / contains) for large registries",
+      "file": "server/src/lib/actions/workflow-runtime-v2-actions.ts",
+      "done": true
+    },
+    {
+      "id": "PSR-003",
+      "category": "Backend - Schemas",
+      "description": "Return lightweight schema metadata (title/description/object root) alongside refs when listing schemas",
+      "file": "server/src/lib/actions/workflow-runtime-v2-actions.ts",
+      "done": true
+    },
+    {
+      "id": "PSR-004",
+      "category": "Backend - Permissions",
+      "description": "Gate schema list/search actions behind workflow 'read' permission",
+      "file": "server/src/lib/actions/workflow-runtime-v2-actions.ts",
+      "done": true
+    },
+    {
+      "id": "PSR-005",
+      "category": "UI - Picker",
+      "description": "Replace payloadSchemaRef free-text input with searchable select (combobox) backed by schema registry",
+      "file": "ee/server/src/components/workflow-designer/WorkflowDesigner.tsx",
+      "done": true
+    },
+    {
+      "id": "PSR-006",
+      "category": "UI - Picker",
+      "description": "Use overlay dropdown mode for schema picker to avoid clipping in panels/scroll containers",
+      "file": "ee/server/src/components/workflow-designer/WorkflowDesigner.tsx",
+      "done": true
+    },
+    {
+      "id": "PSR-007",
+      "category": "UI - Picker",
+      "description": "Show selected schema ref and human label (if available) in picker button",
+      "file": "ee/server/src/components/workflow-designer/WorkflowDesigner.tsx",
+      "done": true
+    },
+    {
+      "id": "PSR-008",
+      "category": "UI - Validation",
+      "description": "Inline error when a workflow has a payloadSchemaRef that is not present in schema registry",
+      "file": "ee/server/src/components/workflow-designer/WorkflowDesigner.tsx",
+      "done": true
+    },
+    {
+      "id": "PSR-009",
+      "category": "UI - Validation",
+      "description": "Provide a one-click fix action for invalid payloadSchemaRef (open picker and clear value)",
+      "file": "ee/server/src/components/workflow-designer/WorkflowDesigner.tsx",
+      "done": true
+    },
+    {
+      "id": "PSR-010",
+      "category": "UI - Preview",
+      "description": "Add compact schema preview under the picker (top-level fields + types) for quick confirmation",
+      "file": "ee/server/src/components/workflow-designer/WorkflowDesigner.tsx",
+      "done": true
+    },
+    {
+      "id": "PSR-011",
+      "category": "UI - Preview",
+      "description": "Add 'View full schema' modal (read-only JSON viewer) from the preview",
+      "file": "ee/server/src/components/workflow-designer/WorkflowDesigner.tsx",
+      "done": true
+    },
+    {
+      "id": "PSR-012",
+      "category": "UX - Inference",
+      "description": "When trigger event name changes, offer to infer payloadSchemaRef from event catalog entry",
+      "file": "ee/server/src/components/workflow-designer/WorkflowDesigner.tsx",
+      "done": true
+    },
+    {
+      "id": "PSR-013",
+      "category": "UX - Inference",
+      "description": "Add 'Override inferred schema' toggle to allow manual schema selection when inference is enabled",
+      "file": "ee/server/src/components/workflow-designer/WorkflowDesigner.tsx",
+      "done": true
+    },
+    {
+      "id": "PSR-014",
+      "category": "UX - Inference",
+      "description": "If trigger has no known event catalog entry, show a warning and keep manual selection available",
+      "file": "ee/server/src/components/workflow-designer/WorkflowDesigner.tsx",
+      "done": true
+    },
+    {
+      "id": "PSR-015",
+      "category": "Data Model",
+      "description": "Add payload_schema_ref to event catalog entries (optional) to connect events to schema registry",
+      "file": "shared/workflow/types/eventCatalog.ts",
+      "done": true
+    },
+    {
+      "id": "PSR-016",
+      "category": "Data Model",
+      "description": "Update EventCatalogModel + migrations to persist payload_schema_ref for system events",
+      "file": "server/src/models/eventCatalog.ts",
+      "done": true
+    },
+    {
+      "id": "PSR-017",
+      "category": "Data Model",
+      "description": "Update event catalog actions to include payload_schema_ref in responses",
+      "file": "server/src/lib/actions/event-catalog-actions.ts",
+      "done": true
+    },
+    {
+      "id": "PSR-018",
+      "category": "Registry",
+      "description": "Ensure schema registry contains a schemaRef for inbound email payload and matches current payload structure",
+      "file": "shared/workflow/runtime/init.ts",
+      "done": true
+    },
+    {
+      "id": "PSR-019",
+      "category": "Registry",
+      "description": "Ensure event catalog 'INBOUND_EMAIL_RECEIVED' includes matching payload_schema_ref (and payload_schema if still stored)",
+      "file": "server/src/models/eventCatalog.ts",
+      "done": true
+    },
+    {
+      "id": "PSR-020",
+      "category": "Designer - Run Dialog",
+      "description": "Update run dialog to prefer event catalog payload_schema_ref when building the test event form schema",
+      "file": "ee/server/src/components/workflow-designer/WorkflowRunDialog.tsx",
+      "done": true
+    },
+    {
+      "id": "PSR-021",
+      "category": "Designer - Run Dialog",
+      "description": "When schema source is 'event', allow switching to 'payload schema ref' and reuse same picker component",
+      "file": "ee/server/src/components/workflow-designer/WorkflowRunDialog.tsx",
+      "done": true
+    },
+    {
+      "id": "PSR-022",
+      "category": "Validation",
+      "description": "Treat unknown payloadSchemaRef as validation error (publish should fail; draft can save with invalid status)",
+      "file": "shared/workflow/runtime/validation.ts",
+      "done": true
+    },
+    {
+      "id": "PSR-023",
+      "category": "Validation",
+      "description": "Improve validation error details for schemaRef issues (include ref, nearest matches, and remediation)",
+      "file": "shared/workflow/runtime/validation.ts",
+      "done": true
+    },
+    {
+      "id": "PSR-024",
+      "category": "Performance",
+      "description": "Cache schema ref list in the designer session (avoid refetch on every selection)",
+      "file": "ee/server/src/components/workflow-designer/WorkflowDesigner.tsx",
+      "done": true
+    },
+    {
+      "id": "PSR-025",
+      "category": "Performance",
+      "description": "Lazy-load full schema JSON only when the preview is expanded or schema is used in expression editor context",
+      "file": "ee/server/src/components/workflow-designer/WorkflowDesigner.tsx",
+      "done": true
+    },
+    {
+      "id": "PSR-026",
+      "category": "Accessibility",
+      "description": "Ensure schema picker is keyboard navigable and announces selection (aria) in overlay mode",
+      "file": "server/src/components/ui/SearchableSelect.tsx",
+      "done": true
+    },
+    {
+      "id": "PSR-027",
+      "category": "Testing",
+      "description": "Unit tests for list schema refs server action",
+      "file": "server/src/test/unit/workflowSchemaRegistry.unit.test.ts",
+      "done": true
+    },
+    {
+      "id": "PSR-028",
+      "category": "Testing",
+      "description": "Playwright test: create workflow, pick schema ref from dropdown, ensure payload schema loads and autocomplete uses it",
+      "file": "ee/server/src/__tests__/integration/workflow-designer-basic.playwright.test.ts",
+      "done": true
+    },
+    {
+      "id": "PSR-029",
+      "category": "Documentation",
+      "description": "Document schema ref conventions and how schema refs relate to triggers/events",
+      "file": "ee/docs/plans/2025-12-21-workflow-overhaul.md",
+      "done": true
+    },
+    {
+      "id": "PSR-030",
+      "category": "Telemetry",
+      "description": "Track schema picker usage and invalid schemaRef occurrences (client-side event)",
+      "file": "ee/server/src/components/workflow-designer/WorkflowDesigner.tsx",
+      "done": true
+    }
+  ]
+}

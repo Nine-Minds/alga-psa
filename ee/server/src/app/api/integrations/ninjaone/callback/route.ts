@@ -10,7 +10,7 @@ export const dynamic = 'force-dynamic';
 import { NextResponse, NextRequest } from 'next/server';
 import axios from 'axios';
 import fs from 'fs';
-import { getSecretProviderInstance } from '@alga-psa/shared/core/secretProvider';
+import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { createTenantKnex, runWithTenant } from '../../../../../lib/db';
 import {
   NINJAONE_REGIONS,

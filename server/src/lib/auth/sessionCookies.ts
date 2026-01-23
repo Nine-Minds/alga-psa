@@ -1,9 +1,56 @@
+/**
+ * Session cookie management and JWT encoding utilities for Alga PSA authentication.
+ * Built on top of @auth/core for NextAuth compatibility.
+ */
+
 import { encode } from '@auth/core/jwt';
 import type { CookieOption } from '@auth/core/types';
 
 const DEFAULT_SESSION_MAX_AGE_SECONDS = 60 * 60 * 24; // 24 hours
 
 let cachedSecret: string | null = null;
+let warnedAboutFallbackSecret = false;
+
+function getFallbackNextAuthSecret(): string {
+  const source =
+    process.env.NEXTAUTH_URL ??
+    process.env.APP_URL ??
+    process.env.NEXT_PUBLIC_APP_URL ??
+    'http://localhost';
+
+  return `insecure-dev-nextauth-secret:${source}`;
+}
+
+function shouldRequireNextAuthSecret(): boolean {
+  return Boolean(process.env.CI);
+}
+
+function getDevCookiePortSuffix(): string | null {
+  if (process.env.NODE_ENV === 'production') {
+    return null;
+  }
+
+  const urlCandidates = [
+    process.env.NEXTAUTH_URL,
+    process.env.APP_URL,
+    process.env.NEXT_PUBLIC_APP_URL,
+  ].filter(Boolean) as string[];
+
+  for (const candidate of urlCandidates) {
+    try {
+      const parsed = new URL(candidate);
+      if (parsed.port) {
+        return parsed.port;
+      }
+    } catch {
+      // Ignore invalid URLs and fall through to other candidates.
+    }
+  }
+
+  const portCandidate =
+    process.env.PORT ?? process.env.APP_PORT ?? process.env.EXPOSE_SERVER_PORT ?? null;
+  return portCandidate && portCandidate.length > 0 ? portCandidate : null;
+}
 
 export function getSessionMaxAge(): number {
   const raw = process.env.NEXTAUTH_SESSION_EXPIRES;
@@ -16,9 +63,16 @@ export function getSessionMaxAge(): number {
 }
 
 export function getSessionCookieName(): string {
-  return process.env.NODE_ENV === 'production'
+  const baseName = process.env.NODE_ENV === 'production'
     ? '__Secure-authjs.session-token'
     : 'authjs.session-token';
+
+  const portSuffix = getDevCookiePortSuffix();
+  if (!portSuffix) {
+    return baseName;
+  }
+
+  return `${baseName}.${portSuffix}`;
 }
 
 export function getSessionCookieConfig(): CookieOption {
@@ -41,25 +95,21 @@ export async function getNextAuthSecret(): Promise<string> {
     return cachedSecret;
   }
 
-  // try {
-  //   const { getSecretProviderInstance } = await import('@alga-psa/shared/core/secretProvider');
-  //   const provider = await getSecretProviderInstance();
-  //   const secret = await provider.getAppSecret('NEXTAUTH_SECRET');
-
-  //   if (secret) {
-  //     cachedSecret = secret;
-  //     return secret;
-  //   }
-  // } catch (error) {
-  //   // Fallback to environment variable if secret provider is unavailable
-  //   console.warn('[auth] Falling back to NEXTAUTH_SECRET from environment', {
-  //     error: error instanceof Error ? error.message : 'unknown',
-  //   });
-  // }
-
   const envSecret = process.env.NEXTAUTH_SECRET;
   if (!envSecret) {
-    throw new Error('NEXTAUTH_SECRET is not configured.');
+    if (shouldRequireNextAuthSecret()) {
+      throw new Error('NEXTAUTH_SECRET is not configured.');
+    }
+
+    if (!warnedAboutFallbackSecret) {
+      console.warn(
+        '[auth] NEXTAUTH_SECRET is not configured; using an insecure development fallback secret.',
+      );
+      warnedAboutFallbackSecret = true;
+    }
+
+    cachedSecret = getFallbackNextAuthSecret();
+    return cachedSecret;
   }
 
   cachedSecret = envSecret;
@@ -73,7 +123,19 @@ export function getNextAuthSecretSync(): string {
 
   const envSecret = process.env.NEXTAUTH_SECRET;
   if (!envSecret) {
-    throw new Error('NEXTAUTH_SECRET environment variable is required for edge auth.');
+    if (shouldRequireNextAuthSecret()) {
+      throw new Error('NEXTAUTH_SECRET environment variable is required for edge auth.');
+    }
+
+    if (!warnedAboutFallbackSecret) {
+      console.warn(
+        '[auth] NEXTAUTH_SECRET is not configured; using an insecure development fallback secret.',
+      );
+      warnedAboutFallbackSecret = true;
+    }
+
+    cachedSecret = getFallbackNextAuthSecret();
+    return cachedSecret;
   }
 
   cachedSecret = envSecret;
@@ -89,8 +151,8 @@ export interface PortalSessionTokenPayload {
   clientId?: string | null;
   contactId?: string | null;
   roles?: string[] | null;
-  session_id?: string | null; // NEW: Preserve session ID across domain handoff
-  login_method?: string | null; // NEW: Preserve login method
+  session_id?: string | null;
+  login_method?: string | null;
   [key: string]: unknown;
 }
 
@@ -125,4 +187,8 @@ export function buildSessionCookie(value: string): {
     maxAge,
     options: config.options,
   };
+}
+
+export function clearCachedSecret(): void {
+  cachedSecret = null;
 }

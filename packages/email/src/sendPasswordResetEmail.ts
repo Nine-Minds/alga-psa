@@ -1,0 +1,108 @@
+'use server'
+
+import { getSystemEmailService, TenantEmailService } from './index';
+import { DatabaseTemplateProcessor } from './templateProcessors';
+import { getConnection, runWithTenant } from '@alga-psa/db';
+import { getUserInfoForEmail, resolveEmailLocale } from './emailLocaleResolver';
+import logger from '@alga-psa/core/logger';
+
+interface SendPasswordResetEmailParams {
+  email: string;
+  userName: string;
+  resetLink: string;
+  expirationTime: string;
+  tenant: string;
+  supportEmail: string;
+  clientName: string;
+}
+
+export async function sendPasswordResetEmail({
+  email,
+  userName,
+  resetLink,
+  expirationTime,
+  tenant,
+  supportEmail,
+  clientName
+}: SendPasswordResetEmailParams): Promise<boolean> {
+  logger.info('[sendPasswordResetEmail] Starting email send for:', email);
+  logger.info('[sendPasswordResetEmail] Tenant:', tenant);
+
+  try {
+    return await runWithTenant(tenant, async () => {
+      logger.info('[sendPasswordResetEmail] Getting connection for tenant:', tenant);
+      const knex = await getConnection(tenant);
+
+      // Resolve recipient locale for language-aware email
+      const recipientInfo = await getUserInfoForEmail(tenant, email) || { email };
+
+      // Internal users always get English (MSP portal doesn't support i18n)
+      // Client portal users use preference hierarchy
+      const recipientLocale = recipientInfo.userType === 'internal'
+        ? 'en'
+        : await resolveEmailLocale(tenant, recipientInfo);
+
+      logger.info('[sendPasswordResetEmail] Resolved locale for password reset email:', {
+        locale: recipientLocale,
+        email,
+        userId: recipientInfo.userId,
+        userType: recipientInfo.userType
+      });
+
+      // Prepare template data
+      const templateData = {
+        userName,
+        email,
+        resetLink,
+        expirationTime,
+        supportEmail,
+        clientName,
+        currentYear: new Date().getFullYear()
+      };
+
+      // Create database template processor to get the template from tenant DB
+      logger.info('[sendPasswordResetEmail] Creating template processor for password-reset template');
+      const templateProcessor = new DatabaseTemplateProcessor(knex, 'password-reset');
+
+      const emailParams = {
+        to: email,
+        templateProcessor,
+        templateData,
+        locale: recipientLocale, // Pass resolved locale
+        tenantId: tenant,
+        userId: recipientInfo.userId,
+        replyTo: supportEmail // Support email as reply-to
+      };
+
+      const tenantEmailService = TenantEmailService.getInstance(tenant);
+
+      logger.info('[sendPasswordResetEmail] Attempting to send via TenantEmailService');
+      let result = await tenantEmailService.sendEmail(emailParams);
+
+      if (!result.success) {
+        logger.warn('[sendPasswordResetEmail] Tenant email send failed, falling back to SystemEmailService', {
+          tenant,
+          error: result.error || 'unknown_error'
+        });
+        const systemEmailService = await getSystemEmailService();
+        result = await systemEmailService.sendEmail(emailParams);
+      }
+      
+      logger.info('[sendPasswordResetEmail] Email send result:', result);
+
+      if (!result.success) {
+        logger.error('[sendPasswordResetEmail] Failed to send password reset email:', result.error);
+        // Throw error to trigger transaction rollback
+        throw new Error(result.error || 'Failed to send password reset email');
+      }
+
+      logger.info('[sendPasswordResetEmail] Email sent successfully');
+      return result.success;
+    });
+  } catch (error) {
+    logger.error('[sendPasswordResetEmail] Error sending password reset email:', error);
+    logger.error('[sendPasswordResetEmail] Error stack:', (error as any).stack);
+    // Re-throw the error to ensure transaction rollback
+    throw error;
+  }
+}

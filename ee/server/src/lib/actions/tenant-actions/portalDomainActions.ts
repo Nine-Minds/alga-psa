@@ -3,8 +3,8 @@
 import type { Knex } from 'knex';
 
 import { createTenantKnex } from '@/lib/db';
-import { getCurrentUser } from '@/lib/actions/user-actions/userActions';
-import { hasPermission } from '@/lib/auth/rbac';
+import { getCurrentUser } from '@alga-psa/users/actions';
+import { hasPermission } from '@alga-psa/auth';
 import {
   computeCanonicalHost,
   getPortalDomain,
@@ -20,7 +20,7 @@ import type {
   PortalDomainStatusResponse,
   PortalDomainRegistrationRequest,
   PortalDomainRegistrationResult,
-} from '@/lib/actions/tenant-actions/portalDomain.types';
+} from '@alga-psa/tenancy/actions/tenant-actions/portalDomain.types';
 import { enqueuePortalDomainWorkflow } from '@ee/lib/portal-domains/workflowClient';
 import type { IUser } from 'server/src/interfaces/auth.interfaces';
 import { analytics } from '@/lib/analytics/posthog';

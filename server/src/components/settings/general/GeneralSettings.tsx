@@ -1,18 +1,18 @@
 'use client'
 
+
 import React from 'react';
-import { Card, CardContent } from "server/src/components/ui/Card";
-import { Input } from "server/src/components/ui/Input";
-import { Button } from "server/src/components/ui/Button";
-import { Label } from "server/src/components/ui/Label";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "server/src/components/ui/Table";
-import { Checkbox } from "server/src/components/ui/Checkbox";
+import { Card, CardContent } from "@alga-psa/ui/components/Card";
+import { Input } from "@alga-psa/ui/components/Input";
+import { Button } from "@alga-psa/ui/components/Button";
+import { Label } from "@alga-psa/ui/components/Label";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@alga-psa/ui/components/Table";
 import { Plus, Trash } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { getTenantDetails, updateTenantName, addClientToTenant, removeClientFromTenant, setDefaultClient } from "server/src/lib/actions/tenantActions";
-import { getAllClients } from "server/src/lib/actions/client-actions/clientActions";
-import { ClientPicker } from "server/src/components/clients/ClientPicker";
-import { IClient } from "server/src/interfaces/client.interfaces";
+import { getTenantDetails, updateTenantName, addClientToTenant, removeClientFromTenant, setDefaultClient } from "@alga-psa/tenancy/actions";
+import { getAllClients } from "@alga-psa/clients/actions";
+import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
+import { IClient } from "@alga-psa/types";
 
 const GeneralSettings = () => {
   const [tenantName, setTenantName] = React.useState('');
@@ -150,12 +150,22 @@ const GeneralSettings = () => {
             <TableBody>
               {clients.map((client) => (
                 <TableRow key={client.id}>
-                  <TableCell>{client.name}</TableCell>
                   <TableCell>
-                    <Checkbox
-                      id={`default-client-checkbox-${client.id}`}
+                    <label htmlFor={`default-client-radio-${client.id}`} className="cursor-pointer">
+                      {client.name}
+                    </label>
+                  </TableCell>
+                  <TableCell>
+                    <input
+                      type="radio"
+                      name="default-client"
+                      id={`default-client-radio-${client.id}`}
                       checked={client.isDefault}
                       onChange={() => handleSetDefaultClient(client.id)}
+                      className="h-4 w-4 border-gray-300 text-primary-500 focus:ring-2 focus:ring-primary-500 focus:ring-offset-0 focus-visible:outline-none focus:outline-none cursor-pointer"
+                      style={{
+                        accentColor: 'rgb(var(--color-primary-500))',
+                      }}
                     />
                   </TableCell>
                   <TableCell>

@@ -5,9 +5,9 @@
  * that were created for inline workflow tasks
  */
 
-import { withAdminTransaction } from '@alga-psa/shared/db';
+import { withAdminTransaction } from '@alga-psa/db';
 import { getTaskInboxService } from '@alga-psa/shared/workflow/core/taskInboxService';
-import logger from '@shared/core/logger';
+import logger from '@alga-psa/core/logger';
 
 /**
  * Execute the cleanup job

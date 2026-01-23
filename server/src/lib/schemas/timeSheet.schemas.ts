@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { iso8601Schema, tenantSchema, plainDateSchema } from 'server/src/lib/utils/validation';
+import { iso8601Schema, tenantSchema, plainDateSchema } from '@alga-psa/validation';
 
 export const timeSheetStatusSchema = z.enum(['DRAFT', 'SUBMITTED', 'APPROVED', 'CHANGES_REQUESTED']);
 export const workItemTypeSchema = z.enum(['ticket', 'project_task', 'non_billable_category', 'ad_hoc', 'interaction'] as const);
@@ -88,6 +88,6 @@ export const timeEntrySchema = tenantSchema.extend({
   approval_status: timeSheetStatusSchema,
   service_id: z.string().optional(),
   tax_region: z.string().optional(),
-  contract_line_id: z.string().optional(),
+  contract_line_id: z.string().nullable().optional(),
   tax_rate_id: z.string().nullable().optional()
 });

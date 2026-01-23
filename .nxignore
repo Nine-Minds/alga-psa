@@ -1,0 +1,27 @@
+# Directories that are not npm packages but contain Dockerfiles
+ee/runner
+ee/setup
+setup
+pgbouncer
+redis
+docker
+
+# Build artifacts and dependencies
+**/node_modules
+**/.next
+**/dist
+**/out
+**/build
+**/.cache
+
+# Test artifacts
+**/coverage
+
+# Other non-project directories
+.git
+.github
+.vscode
+tools
+cli
+docs
+scripts

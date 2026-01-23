@@ -3,8 +3,10 @@
   --alga-fg: #111111;
   --alga-muted: #f5f5f7;
   --alga-muted-fg: #4b5563;
-  --alga-primary: #2563eb;
+  --alga-primary: #9855ee;
   --alga-primary-foreground: #ffffff;
+  --alga-secondary: #53d7fa;
+  --alga-secondary-foreground: #111111;
   --alga-border: #e5e7eb;
   --alga-ring: 0 0% 0%;
   --alga-radius: 8px;
@@ -18,8 +20,10 @@
   --alga-fg: #e5e7eb;
   --alga-muted: #0f1720;
   --alga-muted-fg: #9ca3af;
-  --alga-primary: #3b82f6;
-  --alga-primary-foreground: #0b0f14;
+  --alga-primary: #8a4dea;
+  --alga-primary-foreground: #ffffff;
+  --alga-secondary: #40cff9;
+  --alga-secondary-foreground: #0b0f14;
   --alga-border: #1f2937;
   --alga-ring: 0 0% 98%;
   --alga-radius: 8px;

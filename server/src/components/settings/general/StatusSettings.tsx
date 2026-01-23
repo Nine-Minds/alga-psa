@@ -1,16 +1,17 @@
 'use client';
 
+
 import React, { useState, useEffect } from 'react';
-import { Button } from 'server/src/components/ui/Button';
+import { Button } from '@alga-psa/ui/components/Button';
 import { Plus, MoreVertical } from "lucide-react";
-import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
-import { getStatuses, deleteStatus, updateStatus } from 'server/src/lib/actions/status-actions/statusActions';
-import { importReferenceData, getAvailableReferenceData, checkImportConflicts, type ImportConflict } from 'server/src/lib/actions/referenceDataActions';
-import { IStatus, IStandardStatus, ItemType } from 'server/src/interfaces/status.interface';
-import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
-import { Switch } from 'server/src/components/ui/Switch';
-import { DataTable } from 'server/src/components/ui/DataTable';
-import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
+import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
+import { getStatuses, deleteStatus, updateStatus } from '@alga-psa/reference-data/actions';
+import { importReferenceData, getAvailableReferenceData, checkImportConflicts, type ImportConflict } from '@alga-psa/reference-data/actions';
+import { IStatus, IStandardStatus, ItemType } from '@alga-psa/types';
+import { getCurrentUser } from '@alga-psa/users/actions';
+import { Switch } from '@alga-psa/ui/components/Switch';
+import { DataTable } from '@alga-psa/ui/components/DataTable';
+import { ColumnDefinition } from '@alga-psa/types';
 // CustomSelect removed - no longer needed as this component only manages ticket statuses
 import { toast } from 'react-hot-toast';
 import {
@@ -18,11 +19,11 @@ import {
   DropdownMenuTrigger,
   DropdownMenuContent,
   DropdownMenuItem,
-} from 'server/src/components/ui/DropdownMenu';
-import { StatusDialog } from './dialogs/StatusDialog';
-import { StatusImportDialog } from './dialogs/StatusImportDialog';
-import { ConflictResolutionDialog } from './dialogs/ConflictResolutionDialog';
-import { DeleteConfirmationDialog } from './dialogs/DeleteConfirmationDialog';
+} from '@alga-psa/ui/components/DropdownMenu';
+import { StatusDialog } from '@alga-psa/reference-data/components';
+import { StatusImportDialog } from '@alga-psa/ui/components/settings/dialogs/StatusImportDialog';
+import { ConflictResolutionDialog } from '@alga-psa/reference-data/components';
+import { DeleteConfirmationDialog } from '@alga-psa/ui/components/settings/dialogs/DeleteConfirmationDialog';
 
 interface StatusSettingsProps {
   initialStatusType?: string | null;

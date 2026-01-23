@@ -54,7 +54,26 @@ export function applyPlaywrightAuthEnvDefaults(): void {
 }
 
 export function resolvePlaywrightBaseUrl(): string {
-  return process.env.EE_BASE_URL || process.env.NEXTAUTH_URL || 'http://localhost:3000';
+  const candidate =
+    process.env.EE_BASE_URL ||
+    process.env.NEXTAUTH_URL ||
+    process.env.PLAYWRIGHT_BASE_URL;
+
+  if (candidate && candidate !== 'undefined' && candidate !== 'null') {
+    return candidate;
+  }
+
+  const host = process.env.PLAYWRIGHT_APP_HOST || 'localhost';
+  const port =
+    process.env.PLAYWRIGHT_APP_PORT ||
+    process.env.APP_PORT ||
+    process.env.PORT;
+
+  if (port && port !== 'undefined' && port !== 'null') {
+    return `http://${host}:${port}`;
+  }
+
+  return 'http://localhost:3000';
 }
 
 /**
@@ -96,15 +115,53 @@ export class PlaywrightAuthSessionHelper {
     return this.baseUrl.startsWith('https://');
   }
 
+  private get devCookiePortSuffix(): string | null {
+    if (process.env.NODE_ENV === 'production') {
+      return null;
+    }
+
+    // Match server/src/lib/auth/sessionCookies#getDevCookiePortSuffix behavior:
+    // prefer NEXTAUTH_URL (and friends), then fall back to PORT/APP_PORT.
+    const urlCandidates = [
+      process.env.NEXTAUTH_URL,
+      process.env.APP_URL,
+      process.env.NEXT_PUBLIC_APP_URL,
+      this.baseUrl,
+    ].filter(Boolean) as string[];
+
+    for (const candidate of urlCandidates) {
+      try {
+        const parsed = new URL(candidate);
+        if (parsed.port) {
+          return parsed.port;
+        }
+      } catch {
+        // Ignore invalid URLs and fall through to other candidates.
+      }
+    }
+
+    const portCandidate =
+      process.env.PORT ?? process.env.APP_PORT ?? process.env.EXPOSE_SERVER_PORT ?? null;
+    return portCandidate && portCandidate.length > 0 ? portCandidate : null;
+  }
+
   private get primaryCookieName(): string {
-    return process.env.NODE_ENV === 'production'
+    const baseName = process.env.NODE_ENV === 'production'
       ? '__Secure-authjs.session-token'
       : 'authjs.session-token';
+
+    const portSuffix = this.devCookiePortSuffix;
+    if (!portSuffix) {
+      return baseName;
+    }
+
+    return `${baseName}.${portSuffix}`;
   }
 
   private get cookieNames(): string[] {
     const cookieNames = new Set<string>([
       this.primaryCookieName,
+      // Back-compat / additional lookups (some parts of the app/tests still check these)
       'authjs.session-token',
       'next-auth.session-token',
       ...(this.options.additionalCookieNames ?? []),
@@ -199,7 +256,7 @@ export class PlaywrightAuthSessionHelper {
     const expiresAtSeconds = issuedAtSeconds + maxAgeSeconds;
 
     const context = this.page.context();
-    const cookies: Parameters<typeof context.addCookies>[0] = [];
+    const cookies: Array<Parameters<typeof context.addCookies>[0][number]> = [];
 
     for (const url of this.cookieHosts) {
       for (const name of this.cookieNames) {
@@ -269,9 +326,15 @@ export async function ensureRoleHasPermission(
         tenant: tenantId,
         resource,
         action,
+        msp: true,
+        client: false,
         created_at: new Date(),
       };
       await db('permissions').insert(permission);
+    } else if (!permission.msp) {
+      await db('permissions')
+        .where({ permission_id: permission.permission_id })
+        .update({ msp: true });
     }
 
     const existingLink = await db('role_permissions')

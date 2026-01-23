@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation';
-import { getSession } from 'server/src/lib/auth/getSession';
+import { getSession } from '@alga-psa/auth';
 
 export default async function SignIn({
   searchParams,

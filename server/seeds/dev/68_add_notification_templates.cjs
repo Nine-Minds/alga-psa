@@ -285,7 +285,7 @@ View ticket: {{ticket.url}}
         <td align="center">
           <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="width:100%;max-width:600px;background:#ffffff;border-radius:16px;overflow:hidden;border:1px solid #e4ddff;box-shadow:0 12px 32px rgba(138,77,234,0.12);">
             <tr>
-              <td style="padding:32px;background:linear-gradient(135deg,#10b981,#059669);color:#ffffff;">
+              <td style="padding:32px;background:linear-gradient(135deg,#8A4DEA,#40CFF9);color:#ffffff;">
                 <div style="text-transform:uppercase;letter-spacing:0.08em;font-size:12px;font-weight:600;opacity:0.85;">Ticket Closed</div>
                 <div style="font-size:22px;font-weight:600;margin-top:8px;">{{ticket.title}}</div>
                 <div style="margin-top:12px;font-size:14px;opacity:0.85;">{{ticket.metaLine}}</div>
@@ -295,13 +295,13 @@ View ticket: {{ticket.url}}
               <td style="padding:28px 32px 20px 32px;">
                 <p style="margin:0 0 16px 0;font-size:15px;color:#1f2933;line-height:1.5;">A ticket for <strong>{{ticket.clientName}}</strong> has been resolved and closed. Review the resolution details below.</p>
                 <div style="margin-bottom:24px;">
-                  <div style="display:inline-block;padding:6px 12px;border-radius:999px;background:rgba(16,185,129,0.12);color:#047857;font-size:12px;font-weight:600;letter-spacing:0.02em;">Ticket #{{ticket.id}}</div>
+                  <div style="display:inline-block;padding:6px 12px;border-radius:999px;background:rgba(138,77,234,0.12);color:#5b38b0;font-size:12px;font-weight:600;letter-spacing:0.02em;">Ticket #{{ticket.id}}</div>
                 </div>
                 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;font-size:14px;color:#1f2933;">
                   <tr>
                     <td style="padding:12px 0;border-bottom:1px solid #eef2ff;width:160px;font-weight:600;color:#475467;">Status</td>
                     <td style="padding:12px 0;border-bottom:1px solid #eef2ff;">
-                      <span style="display:inline-block;padding:6px 12px;border-radius:999px;background-color:#10b981;color:#ffffff;font-weight:600;">Closed</span>
+                      <span style="display:inline-block;padding:6px 12px;border-radius:999px;background-color:#8A4DEA;color:#ffffff;font-weight:600;">Closed</span>
                     </td>
                   </tr>
                   <tr>
@@ -335,15 +335,15 @@ View ticket: {{ticket.url}}
                     <td style="padding:12px 0;">{{ticket.locationSummary}}</td>
                   </tr>
                 </table>
-                <div style="margin:28px 0 16px 0;padding:18px 20px;border-radius:12px;background:#f0fdf4;border:1px solid #bbf7d0;">
-                  <div style="font-weight:600;color:#047857;margin-bottom:8px;">Resolution</div>
+                <div style="margin:28px 0 16px 0;padding:18px 20px;border-radius:12px;background:#f8f5ff;border:1px solid #e6deff;">
+                  <div style="font-weight:600;color:#5b38b0;margin-bottom:8px;">Resolution</div>
                   <div style="color:#475467;line-height:1.5;">{{{ticket.resolution}}}</div>
                 </div>
-                <a href="{{ticket.url}}" style="display:inline-block;background:#10b981;color:#ffffff;text-decoration:none;padding:12px 24px;border-radius:10px;font-weight:600;">View Ticket</a>
+                <a href="{{ticket.url}}" style="display:inline-block;background:#8A4DEA;color:#ffffff;text-decoration:none;padding:12px 24px;border-radius:10px;font-weight:600;">View Ticket</a>
               </td>
             </tr>
             <tr>
-              <td style="padding:18px 32px;background:#f0fdf4;color:#047857;font-size:12px;text-align:center;">Powered by Alga PSA • Keeping teams aligned</td>
+              <td style="padding:18px 32px;background:#f8f5ff;color:#5b38b0;font-size:12px;text-align:center;">Powered by Alga PSA • Keeping teams aligned</td>
             </tr>
           </table>
         </td>

@@ -1,5 +1,5 @@
 import { getRedisClient, getRedisConfig } from '../../config/redisConfig';
-import logger from '@alga-psa/shared/core/logger';
+import logger from '@alga-psa/core/logger';
 import type { RedisClientType } from 'redis';
 
 /**

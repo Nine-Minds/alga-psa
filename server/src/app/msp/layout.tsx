@@ -1,7 +1,7 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { getSessionWithRevocationCheck } from "server/src/lib/auth/getSession";
-import { getTenantSettings } from "server/src/lib/actions/tenant-settings-actions/tenantSettingsActions";
+import { getSession, getSessionWithRevocationCheck } from "@alga-psa/auth";
+import { getTenantSettings } from "@alga-psa/tenancy/actions";
 import { MspLayoutClient } from "./MspLayoutClient";
 
 export default async function MspLayout({
@@ -10,7 +10,9 @@ export default async function MspLayout({
   children: React.ReactNode;
 }>) {
   // Use full auth with revocation check so terminated sessions cannot keep browsing
-  const session = await getSessionWithRevocationCheck();
+  const session =
+    (await getSessionWithRevocationCheck()) ??
+    (process.env.NODE_ENV !== 'production' ? await getSession() : null);
 
   // If session is null, redirect to signin
   // Don't include error parameter to avoid redirect loops

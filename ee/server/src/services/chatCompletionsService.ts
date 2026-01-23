@@ -2,15 +2,15 @@ import OpenAI from 'openai';
 import { NextRequest } from 'next/server';
 import { v4 as uuid } from 'uuid';
 
-import { getCurrentUser } from '@/lib/actions/user-actions/userActions';
+import { getCurrentUser } from '@alga-psa/users/actions';
 import { getRegistry } from '../chat/registry/apiRegistry.indexer';
 import {
   ChatApiRegistryEntry,
 } from '../chat/registry/apiRegistry.schema';
 import { TemporaryApiKeyService } from './temporaryApiKeyService';
+import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { parseAssistantContent, ParsedAssistantContent } from '../utils/chatContent';
 import { reprovisionExtension } from '../lib/actions/extensionDomainActions';
-import { getOpenRouterApiKey } from '../utils/openRouterApiKey';
 
 const isEnterpriseEdition = () =>
   process.env.NEXT_PUBLIC_EDITION === 'enterprise' ||
@@ -1218,7 +1218,11 @@ export class ChatCompletionsService {
   }
 
   private static async getOpenRouterClient() {
-    const apiKey = await getOpenRouterApiKey();
+    const secretProvider = await getSecretProviderInstance();
+    const apiKey =
+      (await secretProvider.getAppSecret('OPENROUTER_API_KEY')) ||
+      process.env.OPENROUTER_API_KEY;
+
     if (!apiKey) {
       throw new Error('OpenRouter API key is not configured');
     }

@@ -5,7 +5,7 @@ import path from 'node:path';
 import { filterRequestHeaders, getTimeoutMs, pathnameFromParts } from '../shared/gateway-utils';
 import { loadInstallConfigCached } from './install-config-cache';
 import { getRunnerBackend, RunnerConfigError, RunnerRequestError } from './runner-backend';
-import { getTenantFromAuth, assertAccess } from 'server/src/lib/extensions/gateway/auth';
+import { getTenantFromAuth, getUserInfoFromAuth, assertAccess } from './gateway/auth';
 
 type Method = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE' | 'OPTIONS';
 
@@ -145,7 +145,8 @@ async function handle(
     const url = new URL(req.url);
 
     const tenantId = await getTenantFromAuth(req);
-    logDebug('ext-proxy:start', { tenantId, extensionId, method });
+    const userInfo = await getUserInfoFromAuth(req);
+    logDebug('ext-proxy:start', { tenantId, extensionId, method, hasUserInfo: !!userInfo });
     if (!tenantId) return applyCorsHeaders(json(401, { error: 'Unauthorized' }), corsOrigin);
 
     await wrapAssertAccess(tenantId, extensionId, method, pathname);
@@ -153,6 +154,15 @@ async function handle(
     const installConfig = await loadInstallConfigCached(tenantId, extensionId);
     if (!installConfig) {
       return applyCorsHeaders(json(404, { error: 'Extension not installed' }), corsOrigin);
+    }
+    const installId = String(installConfig.installId ?? '').trim();
+    if (!installId) {
+      console.error('[ext-proxy] Missing installId in install config', {
+        tenantId,
+        extensionId,
+        installId: installConfig.installId,
+      });
+      return applyCorsHeaders(json(502, { error: 'Extension install context missing (installId)' }), corsOrigin);
     }
     if (!installConfig.contentHash) {
       console.error('[ext-proxy] Missing content hash', { tenantId, extensionId });
@@ -179,13 +189,14 @@ async function handle(
         request_id: requestId,
         tenant_id: tenantId,
         extension_id: extensionId,
-        install_id: installConfig.installId,
+        install_id: installId,
         version_id: installConfig.versionId,
         content_hash: installConfig.contentHash,
         config: installConfig.config,
       },
       http: {
         method,
+        url: pathname,
         path: pathname,
         query: Object.fromEntries(url.searchParams.entries()),
         headers: filterRequestHeaders(req.headers, tenantId, extensionId, requestId, method),
@@ -195,6 +206,14 @@ async function handle(
       providers: installConfig.providers,
       secret_envelope: installConfig.secretEnvelope ?? undefined,
       endpoint: `ui-proxy:${pathname}`,
+      // Pass user info from session to runner for activity logging
+      user: userInfo ? {
+        user_id: userInfo.user_id,
+        user_email: userInfo.user_email,
+        user_name: userInfo.user_name,
+        user_type: userInfo.user_type,
+        client_name: userInfo.client_name,
+      } : undefined,
     };
 
     const backend = getRunnerBackend();

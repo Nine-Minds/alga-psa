@@ -367,7 +367,7 @@ export class MailHogPollingService {
     
     try {
       // Get the actual tenant from the database using proper transaction wrapper
-      const { withAdminTransaction } = await import('@shared/db/index');
+      const { withAdminTransaction } = await import('@alga-psa/db');
       
       const tenantId = await withAdminTransaction(async (trx) => {
         const tenant = await trx('tenants').select('tenant').first();
