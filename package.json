@@ -27,7 +27,7 @@
     "dev:turbo": "npx nx next:dev server -- --turbo",
     "build": "npm run build:assemblyscript && cd server && npm run build",
     "build:ce": "npm run build:assemblyscript && cd server && npm run build",
-    "build:ee": "npm run build:assemblyscript && cd server && EDITION=ee NEXT_PUBLIC_EDITION=enterprise npm run build:enterprise",
+    "build:ee": "NEXT_PUBLIC_EDITION=enterprise ./scripts/build-enterprise.sh && npm run build:assemblyscript && cd server && EDITION=ee NEXT_PUBLIC_EDITION=enterprise npm run build:enterprise",
     "build:assemblyscript": "cd server/src/invoice-templates/assemblyscript && npm install --cache ../../../../.npm-cache && npm run build",
     "start": "cd server && npm start",
     "runner:up": "./scripts/dev-runner.sh up -d",

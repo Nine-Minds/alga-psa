@@ -573,6 +573,29 @@ const nextConfig = {
     config.externals.push('ffmpeg-static');
     config.externals.push('ffprobe-static');
 
+    // Externalize sharp for server builds to avoid bundling native dependencies.
+    // sharp (and its optional @img/* helpers) should be resolved at runtime by Node.
+    if (isServer) {
+      config.externals.push('sharp');
+    } else if (webpack) {
+      // For client builds, make sure any accidental sharp import is replaced with an empty shim.
+      config.resolve.alias = {
+        ...config.resolve.alias,
+        sharp: emptyShim,
+      };
+    }
+
+    // sharp conditionally requires these optional packages; webpack can't statically resolve them
+    // and we don't want missing-module failures during compilation.
+    if (webpack) {
+      config.plugins.push(
+        new webpack.IgnorePlugin({ resourceRegExp: /^@img\/sharp-libvips-dev\/(include|cplusplus)$/ })
+      );
+      config.plugins.push(
+        new webpack.IgnorePlugin({ resourceRegExp: /^@img\/sharp-wasm32\/versions$/ })
+      );
+    }
+
     // Replace Node.js-only modules with empty shims for client builds
     // These modules use Node.js built-ins like 'tls', 'net', etc. that don't exist in the browser
     if (!isServer && webpack) {

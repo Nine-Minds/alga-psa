@@ -17,8 +17,16 @@ echo "📁 Copying EE extension files to main server..."
 
 # Create directories in main server if they don't exist
 mkdir -p server/src/app/msp/extensions
+mkdir -p server/src/app/msp
 mkdir -p server/src/lib/extensions
 mkdir -p server/src/lib/actions/extension-actions
+
+# Copy EE MSP app routes/layouts (filesystem routing requires these live under server/src/app)
+if [ -d "ee/server/src/app/msp" ]; then
+    echo "   🧭 Copying MSP app routes/layouts..."
+    cp -r ee/server/src/app/msp/* server/src/app/msp/
+    echo "   ✅ MSP app routes/layouts copied"
+fi
 
 # Copy EE extension routes
 if [ -d "ee/server/src/app/msp/extensions" ]; then
@@ -40,14 +48,6 @@ if [ -d "ee/server/src/lib/actions/extension-actions" ]; then
     cp -r ee/server/src/lib/actions/extension-actions/* server/src/lib/actions/extension-actions/
     echo "   ✅ Extension actions copied"
 fi
-
-# Copy EE MSP layout if it doesn't exist in main server
-if [ -f "ee/server/src/app/msp/layout.tsx" ] && [ ! -f "server/src/app/msp/layout.tsx" ]; then
-    echo "   🎨 Copying MSP layout..."
-    cp ee/server/src/app/msp/layout.tsx server/src/app/msp/layout.tsx
-    echo "   ✅ MSP layout copied"
-fi
-
 
 echo "✅ Enterprise Edition build complete!"
 echo "🚀 Extension system ready for deployment"
