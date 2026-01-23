@@ -69,6 +69,7 @@ export function SearchableSelect({
   const triggerRef = useRef<HTMLButtonElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
   const [overlayPosition, setOverlayPosition] = useState<{ top: number; left: number; width: number } | null>(null);
+  const [announce, setAnnounce] = useState('');
 
   // Memoize the mapped options to prevent recreating on every render
   const mappedOptions = useMemo(() => options.map((opt: SelectOption): { value: string; label: string } => ({
@@ -112,6 +113,9 @@ export function SearchableSelect({
 
   // Find the selected option label
   const selectedOption = options.find((option: SelectOption) => option.value === value);
+  const labelId = label ? `${automationIdProps.id}-label` : undefined;
+  const listboxId = `${automationIdProps.id}-listbox`;
+  const inputId = `${automationIdProps.id}-search`;
 
   const resolvedSearchPlaceholder =
     searchPlaceholder ??
@@ -187,6 +191,14 @@ export function SearchableSelect({
     if (!open) setSearch('');
   }, [open]);
 
+  useEffect(() => {
+    if (selectedOption) {
+      setAnnounce(`Selected ${selectedOption.label}`);
+      return;
+    }
+    setAnnounce('');
+  }, [selectedOption]);
+
   const dropdown = (
     <div
       ref={contentRef}
@@ -201,6 +213,7 @@ export function SearchableSelect({
         <div className="flex items-center border-b px-3 py-2">
           <Search className="mr-2 h-4 w-4 shrink-0 opacity-50" />
           <Command.Input
+            id={inputId}
             autoFocus={autoFocusSearch}
             value={search}
             onValueChange={setSearch}
@@ -214,7 +227,13 @@ export function SearchableSelect({
             placeholder={resolvedSearchPlaceholder}
           />
         </div>
-        <Command.List className="overflow-y-auto p-1" style={{ maxHeight: maxListHeight }}>
+        <Command.List
+          id={listboxId}
+          role="listbox"
+          aria-label={label ?? placeholder}
+          className="overflow-y-auto p-1"
+          style={{ maxHeight: maxListHeight }}
+        >
           {filteredOptions.length > 0 ? (
             filteredOptions.map((option: SelectOption) => (
               <Command.Item
@@ -250,10 +269,14 @@ export function SearchableSelect({
   return (
     <div className={label ? 'mb-4' : ''} id={id} data-automation-type="searchable-select">
       {label && (
-        <label className="block text-sm font-medium text-gray-700 mb-1">
+        <label id={labelId} className="block text-sm font-medium text-gray-700 mb-1">
           {label}
         </label>
       )}
+
+      <span className="sr-only" aria-live="polite">
+        {announce}
+      </span>
       
       <div className="relative">
         <Button
@@ -261,13 +284,28 @@ export function SearchableSelect({
           type="button"
           variant="outline"
           role="combobox"
+          aria-controls={open ? listboxId : undefined}
+          aria-haspopup="listbox"
           aria-expanded={open}
+          aria-labelledby={labelId}
+          aria-required={required}
           className={cn(
             "w-full justify-between",
             disabled && "opacity-50 cursor-not-allowed",
             className
           )}
           onClick={() => !disabled && setOpen(!open)}
+          onKeyDown={(e) => {
+            if (disabled) return;
+            if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+              e.preventDefault();
+              setOpen(true);
+            }
+            if (e.key === 'Escape' && open) {
+              e.preventDefault();
+              setOpen(false);
+            }
+          }}
           disabled={disabled}
           {...automationIdProps}
         >

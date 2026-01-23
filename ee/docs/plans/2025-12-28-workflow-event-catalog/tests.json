@@ -1,0 +1,71 @@
+[
+  { "id": "T001", "description": "Routing: navigating to Events Catalog renders screen and header", "implemented": false, "featureIds": ["F001", "F002", "F004"] },
+  { "id": "T002", "description": "Deep link: ?eventType preselects and opens details drawer for event", "implemented": false, "featureIds": ["F003", "F030"] },
+
+  { "id": "T003", "description": "Filters: search matches name/description/event_type", "implemented": false, "featureIds": ["F007"] },
+  { "id": "T004", "description": "Filters: category dropdown filters results", "implemented": false, "featureIds": ["F008"] },
+  { "id": "T005", "description": "Filters: status dropdown filters results", "implemented": false, "featureIds": ["F009"] },
+  { "id": "T006", "description": "Filters: source toggle filters system vs tenant entries", "implemented": false, "featureIds": ["F010"] },
+  { "id": "T007", "description": "Filters: clear resets to defaults and repopulates list", "implemented": false, "featureIds": ["F012"] },
+  { "id": "T008", "description": "View toggle: grid/list toggles and persists across reload", "implemented": false, "featureIds": ["F011"] },
+
+  { "id": "T009", "description": "Pagination: grid shows 24 per page and total counts", "implemented": false, "featureIds": ["F016"] },
+  { "id": "T010", "description": "Pagination: list shows 50 per page and total counts", "implemented": false, "featureIds": ["F016"] },
+
+  { "id": "T011", "description": "Event card: renders icon/name/event_type/status/description", "implemented": false, "featureIds": ["F017", "F018", "F019", "F020"] },
+  { "id": "T012", "description": "Event card: schemaRef badge renders known/unknown/missing states", "implemented": false, "featureIds": ["F021"] },
+  { "id": "T013", "description": "Event card: attached workflows count matches server response", "implemented": false, "featureIds": ["F022", "F066"] },
+  { "id": "T014", "description": "Event card: quick metrics show '-' when no data", "implemented": false, "featureIds": ["F026"] },
+
+  { "id": "T015", "description": "API: listEventCatalogWithMetrics returns combined system+tenant entries with filters/pagination", "implemented": false, "featureIds": ["F065", "F013", "F014", "F075"] },
+  { "id": "T016", "description": "API: listEventCatalogWithMetrics quick metrics are correct for known fixtures (executions/success/latency)", "implemented": false, "featureIds": ["F023", "F024", "F025", "F065"] },
+
+  { "id": "T017", "description": "Details drawer: opens on card click and shows schema + metadata", "implemented": false, "featureIds": ["F030", "F031"] },
+  { "id": "T018", "description": "Details drawer: schema preview renders top-level props and required list", "implemented": false, "featureIds": ["F032"] },
+  { "id": "T019", "description": "Details drawer: full schema modal opens, highlights JSON, and copy button works", "implemented": false, "featureIds": ["F033"] },
+
+  { "id": "T020", "description": "API: listAttachedWorkflowsByEventType returns published workflows triggered by event_type", "implemented": false, "featureIds": ["F066", "F034"] },
+  { "id": "T021", "description": "Details drawer: attached workflows list shows name/version/status/system/paused badges", "implemented": false, "featureIds": ["F035"] },
+  { "id": "T022", "description": "Details drawer: open-in-designer navigates and selects workflow", "implemented": false, "featureIds": ["F036"] },
+
+  { "id": "T023", "description": "Simulate: dialog opens from card and loads schema by payload_schema_ref", "implemented": false, "featureIds": ["F027", "F038"] },
+  { "id": "T024", "description": "Simulate: form mode generates defaults from schema and validates required fields", "implemented": false, "featureIds": ["F038"] },
+  { "id": "T025", "description": "Simulate: JSON mode blocks invalid JSON and surfaces schema errors", "implemented": false, "featureIds": ["F039"] },
+  { "id": "T026", "description": "Simulate: correlationKey is optional and persisted per event", "implemented": false, "featureIds": ["F040", "F045"] },
+  { "id": "T027", "description": "Simulate: schemaRef override changes payloadSchemaRef sent to ingestion", "implemented": false, "featureIds": ["F041"] },
+  { "id": "T028", "description": "API: simulate uses submitWorkflowEventAction and returns startedRuns and event id", "implemented": false, "featureIds": ["F042"] },
+  { "id": "T029", "description": "Simulate: success summary shows started runs and links to run details", "implemented": false, "featureIds": ["F043"] },
+  { "id": "T030", "description": "Simulate: ingestion error shows error_message and retains payload for retry", "implemented": false, "featureIds": ["F044"] },
+
+  { "id": "T031", "description": "Metrics: panel opens from card and defaults to last 7 days", "implemented": false, "featureIds": ["F028", "F046"] },
+  { "id": "T032", "description": "API: metrics summary counts match workflow_runtime_events fixture data", "implemented": false, "featureIds": ["F068", "F047"] },
+  { "id": "T033", "description": "API: metrics run stats (runs started, success rate, avg duration) match fixture data", "implemented": false, "featureIds": ["F068", "F048"] },
+  { "id": "T034", "description": "API: metrics time series returns daily buckets that sum to totals", "implemented": false, "featureIds": ["F068", "F049"] },
+  { "id": "T035", "description": "Metrics: chart renders buckets and updates when range changes", "implemented": false, "featureIds": ["F049"] },
+  { "id": "T036", "description": "Metrics: recent events table shows status + timestamps + correlationKey", "implemented": false, "featureIds": ["F050"] },
+  { "id": "T037", "description": "Metrics: deep link to workflow events list preserves event_name filter", "implemented": false, "featureIds": ["F051"] },
+
+  { "id": "T038", "description": "Attach: clicking Attach creates draft workflow and navigates to designer", "implemented": false, "featureIds": ["F052", "F055", "F069"] },
+  { "id": "T039", "description": "Attach: new draft workflow trigger.eventName equals selected event_type", "implemented": false, "featureIds": ["F052"] },
+  { "id": "T040", "description": "Attach: payloadSchemaRef defaults to event payload_schema_ref when present", "implemented": false, "featureIds": ["F053"] },
+  { "id": "T041", "description": "Attach: trigger.sourcePayloadSchemaRef defaults to event schemaRef", "implemented": false, "featureIds": ["F054"] },
+
+  { "id": "T042", "description": "Detach: confirmation dialog appears and describes publish impact", "implemented": false, "featureIds": ["F056"] },
+  { "id": "T043", "description": "API: detach publishes a new version with trigger removed", "implemented": false, "featureIds": ["F057", "F070"] },
+  { "id": "T044", "description": "Detach: system workflow detach requires workflow:admin (403 for non-admin)", "implemented": false, "featureIds": ["F058"] },
+  { "id": "T045", "description": "Detach: after success, attached workflow list/count updates", "implemented": false, "featureIds": ["F059"] },
+
+  { "id": "T046", "description": "Custom event: Define Custom Event dialog opens and validates required fields", "implemented": false, "featureIds": ["F060", "F061"] },
+  { "id": "T047", "description": "Custom event: schemaRef selection uses schema registry list and rejects unknown refs", "implemented": false, "featureIds": ["F062"] },
+  { "id": "T048", "description": "Custom event: inline schema editor validates JSON and stores payload_schema", "implemented": false, "featureIds": ["F063"] },
+  { "id": "T049", "description": "Custom event: event_type uniqueness enforced per tenant", "implemented": false, "featureIds": ["F064"] },
+
+  { "id": "T050", "description": "Permissions: view requires workflow:read", "implemented": false, "featureIds": ["F072"] },
+  { "id": "T051", "description": "Permissions: simulate/attach/detach require workflow:manage", "implemented": false, "featureIds": ["F072"] },
+
+  { "id": "T052", "description": "Audit: simulate emits audit entry with event_type/correlationKey", "implemented": false, "featureIds": ["F073"] },
+  { "id": "T053", "description": "Audit: attach/detach emit audit entries with workflow id/version and event_type", "implemented": false, "featureIds": ["F073"] },
+
+  { "id": "T054", "description": "Redaction: recent event payload preview redacts sensitive keys", "implemented": false, "featureIds": ["F074"] }
+]
+

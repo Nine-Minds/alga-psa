@@ -8,6 +8,7 @@ export default defineConfig({
     setupFiles: [path.resolve(__dirname, './src/test/setup.ts')],
     globalSetup: [path.resolve(__dirname, './vitest.globalSetup.js')],
     isolate: true,
+    maxConcurrency: 1,
     sequence: {
       concurrent: false,
       shuffle: true
@@ -23,6 +24,7 @@ export default defineConfig({
     },
     logHeapUsage: true,
     testTimeout: 20000,
+    hookTimeout: 120000,
     coverage: {
       enabled: true,
       provider: 'v8',

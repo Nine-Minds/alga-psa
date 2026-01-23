@@ -5,11 +5,33 @@
 'use server';
 
 import logger from '@alga-psa/core/logger';
+import type {
+  ICancelSubscriptionResponse,
+  IGetInvoicesResponse,
+  IGetPaymentMethodResponse,
+  IGetSubscriptionInfoResponse,
+  IScheduledLicenseChange,
+} from '@alga-psa/types';
 
 /**
  * CE Stub - Not available in Community Edition
  */
-export async function getInvoicePreviewAction(): Promise<{ success: boolean; error: string }> {
+export async function getInvoicePreviewAction(
+  _quantity: number,
+): Promise<{
+  success: boolean;
+  data?: {
+    currentQuantity: number;
+    newQuantity: number;
+    isIncrease: boolean;
+    amountDue: number;
+    currency: string;
+    currentPeriodEnd: string;
+    prorationAmount: number;
+    remainingAmount: number;
+  };
+  error?: string;
+}> {
   logger.warn('[CE] getInvoicePreviewAction called but Stripe integration is EE-only');
   return {
     success: false,
@@ -20,9 +42,18 @@ export async function getInvoicePreviewAction(): Promise<{ success: boolean; err
 /**
  * CE Stub - Not available in Community Edition
  */
-export async function createLicenseCheckoutSessionAction(): Promise<{
+export async function createLicenseCheckoutSessionAction(
+  _quantity: number,
+): Promise<{
   success: boolean;
-  error: string;
+  data?: {
+    type: 'checkout' | 'updated';
+    clientSecret?: string;
+    sessionId?: string;
+    publishableKey?: string;
+    scheduledChange?: boolean;
+  };
+  error?: string;
 }> {
   logger.warn('[CE] createLicenseCheckoutSessionAction called but Stripe integration is EE-only');
   return {
@@ -34,7 +65,16 @@ export async function createLicenseCheckoutSessionAction(): Promise<{
 /**
  * CE Stub - Not available in Community Edition
  */
-export async function getLicensePricingAction(): Promise<{ success: boolean; error: string }> {
+export async function getLicensePricingAction(): Promise<{
+  success: boolean;
+  data?: {
+    priceId: string;
+    unitAmount: number;
+    currency: string;
+    interval: string;
+  };
+  error?: string;
+}> {
   logger.warn('[CE] getLicensePricingAction called but Stripe integration is EE-only');
   return {
     success: false,
@@ -45,7 +85,7 @@ export async function getLicensePricingAction(): Promise<{ success: boolean; err
 /**
  * CE Stub - Not available in Community Edition
  */
-export async function getSubscriptionInfoAction(): Promise<{ success: boolean; error: string }> {
+export async function getSubscriptionInfoAction(): Promise<IGetSubscriptionInfoResponse> {
   logger.warn('[CE] getSubscriptionInfoAction called but Stripe integration is EE-only');
   return {
     success: false,
@@ -56,7 +96,7 @@ export async function getSubscriptionInfoAction(): Promise<{ success: boolean; e
 /**
  * CE Stub - Not available in Community Edition
  */
-export async function getPaymentMethodInfoAction(): Promise<{ success: boolean; error: string }> {
+export async function getPaymentMethodInfoAction(): Promise<IGetPaymentMethodResponse> {
   logger.warn('[CE] getPaymentMethodInfoAction called but Stripe integration is EE-only');
   return {
     success: false,
@@ -67,7 +107,7 @@ export async function getPaymentMethodInfoAction(): Promise<{ success: boolean; 
 /**
  * CE Stub - Not available in Community Edition
  */
-export async function getRecentInvoicesAction(): Promise<{ success: boolean; error: string }> {
+export async function getRecentInvoicesAction(): Promise<IGetInvoicesResponse> {
   logger.warn('[CE] getRecentInvoicesAction called but Stripe integration is EE-only');
   return {
     success: false,
@@ -80,7 +120,10 @@ export async function getRecentInvoicesAction(): Promise<{ success: boolean; err
  */
 export async function createCustomerPortalSessionAction(): Promise<{
   success: boolean;
-  error: string;
+  data?: {
+    portal_url: string;
+  };
+  error?: string;
 }> {
   logger.warn('[CE] createCustomerPortalSessionAction called but Stripe integration is EE-only');
   return {
@@ -92,7 +135,7 @@ export async function createCustomerPortalSessionAction(): Promise<{
 /**
  * CE Stub - Not available in Community Edition
  */
-export async function cancelSubscriptionAction(): Promise<{ success: boolean; error: string }> {
+export async function cancelSubscriptionAction(): Promise<ICancelSubscriptionResponse> {
   logger.warn('[CE] cancelSubscriptionAction called but Stripe integration is EE-only');
   return {
     success: false,
@@ -103,7 +146,19 @@ export async function cancelSubscriptionAction(): Promise<{ success: boolean; er
 /**
  * CE Stub - Not available in Community Edition
  */
-export async function reduceLicenseCount(): Promise<{ success: boolean; error: string }> {
+export async function reduceLicenseCount(
+  _tenantId: string,
+  _newQuantity: number,
+): Promise<{
+  success: boolean;
+  data?: {
+    scheduledChange: boolean;
+    effectiveDate: string;
+    currentQuantity: number;
+    newQuantity: number;
+  };
+  error?: string;
+}> {
   logger.warn('[CE] reduceLicenseCount called but Stripe integration is EE-only');
   return {
     success: false,
@@ -114,7 +169,23 @@ export async function reduceLicenseCount(): Promise<{ success: boolean; error: s
 /**
  * CE Stub - Not available in Community Edition
  */
-export async function reduceLicenseCountAction(): Promise<{ success: boolean; error: string }> {
+export async function reduceLicenseCountAction(
+  _newQuantity: number,
+): Promise<{
+  success: boolean;
+  data?: {
+    scheduledChange: boolean;
+    effectiveDate: string;
+    currentQuantity: number;
+    newQuantity: number;
+    creditAmount?: number;
+    currency?: string;
+  };
+  error?: string;
+  needsDeactivation?: boolean;
+  activeUserCount?: number;
+  requestedQuantity?: number;
+}> {
   logger.warn('[CE] reduceLicenseCountAction called but Stripe integration is EE-only');
   return {
     success: false,
@@ -127,7 +198,8 @@ export async function reduceLicenseCountAction(): Promise<{ success: boolean; er
  */
 export async function getScheduledLicenseChangesAction(): Promise<{
   success: boolean;
-  error: string;
+  data?: IScheduledLicenseChange | null;
+  error?: string;
 }> {
   logger.warn('[CE] getScheduledLicenseChangesAction called but Stripe integration is EE-only');
   return {

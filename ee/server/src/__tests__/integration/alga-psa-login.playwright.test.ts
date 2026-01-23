@@ -8,39 +8,42 @@
  */
 
 import { test, expect } from '@playwright/test';
-import dotenv from 'dotenv';
-import path from 'path';
-import { fileURLToPath } from 'url';
 import { createTestDbConnection } from '../../lib/testing/db-test-utils';
 import { createTestTenant } from '../../lib/testing/tenant-test-factory';
 import { rollbackTenant } from '../../lib/testing/tenant-creation';
 import { LoginPage } from '../page-objects/LoginPage';
+import {
+  applyPlaywrightAuthEnvDefaults,
+  resolvePlaywrightBaseUrl,
+} from './helpers/playwrightAuthSessionHelper';
 
-// Ensure environment variables are loaded for tests
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-dotenv.config({ path: path.resolve(__dirname, '../../../.env') });
+// Apply standard Playwright environment configuration
+applyPlaywrightAuthEnvDefaults();
+
+const TEST_CONFIG = {
+  baseUrl: resolvePlaywrightBaseUrl(),
+};
 
 test.describe('Alga PSA Login Integration Tests', () => {
   test('should show login form when accessing root path', async ({ page }) => {
     // Navigate to root path
-    await page.goto('/');
-    
+    await page.goto(`${TEST_CONFIG.baseUrl}/`);
+
     // Wait for login form to appear
     const loginPage = new LoginPage(page);
     await expect(loginPage.emailInput).toBeVisible();
     await expect(loginPage.passwordInput).toBeVisible();
     await expect(loginPage.loginButton).toBeVisible();
-    
+
     // Verify we're on some form of login page
     expect(page.url()).toMatch(/\/(login|auth|$)/);
   });
 
   test('should redirect to signin page with error on failed authentication', async ({ page }) => {
     const loginPage = new LoginPage(page);
-    
+
     // Navigate to root path
-    await page.goto('/');
+    await page.goto(`${TEST_CONFIG.baseUrl}/`);
     
     // Wait for login form to appear
     await expect(loginPage.emailInput).toBeVisible();
@@ -77,8 +80,8 @@ test.describe('Alga PSA Login Integration Tests', () => {
       
       const loginPage = new LoginPage(page);
       
-      // Navigate to root path - using explicit URL since baseURL is undefined
-      await page.goto('http://localhost:3000/');
+      // Navigate to root path
+      await page.goto(`${TEST_CONFIG.baseUrl}/`);
       
       // Wait for login form to appear
       await expect(loginPage.emailInput).toBeVisible();
@@ -110,9 +113,9 @@ test.describe('Alga PSA Login Integration Tests', () => {
 
   test('should handle login form validation', async ({ page }) => {
     const loginPage = new LoginPage(page);
-    
+
     // Navigate to root path
-    await page.goto('/');
+    await page.goto(`${TEST_CONFIG.baseUrl}/`);
     
     // Wait for login form to appear
     await expect(loginPage.emailInput).toBeVisible();
@@ -146,7 +149,7 @@ test.describe('Alga PSA Login Integration Tests', () => {
       });
       
       // Try to access a protected page directly
-      await page.goto('/msp/tickets');
+      await page.goto(`${TEST_CONFIG.baseUrl}/msp/tickets`);
       
       const loginPage = new LoginPage(page);
       
@@ -196,7 +199,7 @@ test.describe('Alga PSA Login Integration Tests', () => {
       const loginPage = new LoginPage(page);
       
       // Navigate to root path
-      await page.goto('http://localhost:3000/');
+      await page.goto(`${TEST_CONFIG.baseUrl}/`);
       
       // Wait for login form to appear
       await expect(loginPage.emailInput).toBeVisible();

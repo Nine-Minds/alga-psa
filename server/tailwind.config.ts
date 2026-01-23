@@ -5,6 +5,8 @@ const config: Config = {
     "./src/pages/**/*.{js,ts,jsx,tsx,mdx}",
     "./src/components/**/*.{js,ts,jsx,tsx,mdx}",
     "./src/app/**/*.{js,ts,jsx,tsx,mdx}",
+    // EE UI lives outside this package but is imported via Next's `externalDir`.
+    "../ee/server/src/**/*.{js,ts,jsx,tsx,mdx}",
 
     // Monorepo UI sources consumed by the Next.js app. Keep this list explicit to avoid
     // accidentally scanning `node_modules` and to reduce Tailwind's file-watching workload.

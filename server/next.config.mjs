@@ -13,7 +13,7 @@ try {
 }
 
 // Determine if this is an EE build
-const isEE = process.env.EDITION === 'ee' || process.env.NEXT_PUBLIC_EDITION === 'enterprise';
+const isEE = process.env.EDITION === 'ee' || process.env.EDITION === 'enterprise' || process.env.NEXT_PUBLIC_EDITION === 'enterprise';
 
 // Reusable path to an empty shim for optional/native modules (used by Turbopack aliases)
 const emptyShim = './src/empty/shims/empty.ts';
@@ -236,7 +236,7 @@ const nextConfig = {
         : '@product/settings-extensions/oss/entry',
       '@product/chat/entry': isEE
         ? '@product/chat/ee/entry'
-        : './src/services/chatStreamService',
+        : '@product/chat/oss/entry',
       '@product/ext-proxy/handler': isEE
         ? '@product/ext-proxy/ee/handler'
         : '@product/ext-proxy/oss/handler',
@@ -403,7 +403,7 @@ const nextConfig = {
         ? path.join(__dirname, '../packages/client-portal/src/domain-settings/ee/entry.tsx')
         : path.join(__dirname, '../packages/client-portal/src/domain-settings/oss/entry.tsx'),
       '@alga-psa/workflows/entry': isEE
-        ? path.join(__dirname, '../packages/workflows/src/ee/entry.ts')
+        ? path.join(__dirname, '../packages/workflows/src/ee/entry.tsx')
         : path.join(__dirname, '../packages/workflows/src/oss/entry.tsx'),
       '@product/billing/entry': isEE
         ? path.join(__dirname, '../packages/product-billing/ee/entry.tsx')
@@ -572,6 +572,29 @@ const nextConfig = {
     // These are optional runtime dependencies that may not be installed
     config.externals.push('ffmpeg-static');
     config.externals.push('ffprobe-static');
+
+    // Externalize sharp for server builds to avoid bundling native dependencies.
+    // sharp (and its optional @img/* helpers) should be resolved at runtime by Node.
+    if (isServer) {
+      config.externals.push('sharp');
+    } else if (webpack) {
+      // For client builds, make sure any accidental sharp import is replaced with an empty shim.
+      config.resolve.alias = {
+        ...config.resolve.alias,
+        sharp: emptyShim,
+      };
+    }
+
+    // sharp conditionally requires these optional packages; webpack can't statically resolve them
+    // and we don't want missing-module failures during compilation.
+    if (webpack) {
+      config.plugins.push(
+        new webpack.IgnorePlugin({ resourceRegExp: /^@img\/sharp-libvips-dev\/(include|cplusplus)$/ })
+      );
+      config.plugins.push(
+        new webpack.IgnorePlugin({ resourceRegExp: /^@img\/sharp-wasm32\/versions$/ })
+      );
+    }
 
     // Replace Node.js-only modules with empty shims for client builds
     // These modules use Node.js built-ins like 'tls', 'net', etc. that don't exist in the browser

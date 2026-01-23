@@ -16,16 +16,11 @@ import { CustomTabs } from '@alga-psa/ui/components/CustomTabs';
 import { DrawerProvider } from '@alga-psa/ui';
 import { ActivityDrawerProvider } from './ActivityDrawerProvider';
 import { useUserPreference } from '@alga-psa/users/hooks';
-import { useFeatureFlag } from '@alga-psa/ui';
 import { Card, CardHeader } from '@alga-psa/ui/components/Card';
 
 export function UserActivitiesDashboard() {
   // Define view mode type
   type UserActivitiesViewMode = 'cards' | 'table';
-  
-  // Check if advanced features are enabled
-  const advancedFeatureFlag = useFeatureFlag('advanced-features-enabled');
-  const isAdvancedFeaturesEnabled = typeof advancedFeatureFlag === 'boolean' ? advancedFeatureFlag : advancedFeatureFlag?.enabled;
   
   // Use the custom hook for view mode preference
   const { 
@@ -149,16 +144,14 @@ export function UserActivitiesDashboard() {
           onViewAll={handleViewAllProjects}
         />
 
-        {/* Workflow Tasks Section - Only show if advanced features are enabled */}
-        {isAdvancedFeaturesEnabled && (
-          <WorkflowTasksSection
-            limit={5}
-            onViewAll={handleViewAllWorkflowTasks}
-          />
-        )}
+        {/* Workflow Tasks Section */}
+        <WorkflowTasksSection
+          limit={5}
+          onViewAll={handleViewAllWorkflowTasks}
+        />
       </div>
     </div>
-  ), [handleViewAllSchedule, handleViewAllTickets, handleViewAllProjects, handleViewAllNotifications, handleViewAllWorkflowTasks, isAdvancedFeaturesEnabled, expandedSections.notifications, expandedSections.schedule]
+  ), [handleViewAllSchedule, handleViewAllTickets, handleViewAllProjects, handleViewAllNotifications, handleViewAllWorkflowTasks, expandedSections.notifications, expandedSections.schedule]
   );
 
   // Define options for the ViewSwitcher with explicit type

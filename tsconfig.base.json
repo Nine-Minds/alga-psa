@@ -110,7 +110,8 @@
       "@/types/*": ["server/src/types/*"],
       "@/lib/*": ["server/src/lib/*"],
       "@/interfaces/*": ["server/src/interfaces/*"],
-      "@/services/*": ["server/src/services/*"]
+      "@/services/*": ["server/src/services/*"],
+      "@/models/*": ["server/src/models/*"]
     }
   }
 }

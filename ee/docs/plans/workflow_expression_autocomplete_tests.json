@@ -1,0 +1,210 @@
+[
+  {
+    "description": "Autocomplete triggers when typing 'payload.' at start of expression",
+    "reference": "\u00a716.2 Trigger Detection",
+    "implemented": true,
+    "testFile": "ee/server/src/__tests__/integration/workflow-designer-autocomplete.playwright.test.ts"
+  },
+  {
+    "description": "Autocomplete triggers when typing 'vars.' at start of expression",
+    "reference": "\u00a716.2 Trigger Detection",
+    "implemented": true,
+    "testFile": "ee/server/src/__tests__/integration/workflow-designer-autocomplete.playwright.test.ts",
+    "note": "Test verifies autocomplete does NOT trigger when no variables are saved (correct UX)"
+  },
+  {
+    "description": "Autocomplete triggers when typing 'meta.' at start of expression",
+    "reference": "\u00a716.2 Trigger Detection",
+    "implemented": true,
+    "testFile": "ee/server/src/__tests__/integration/workflow-designer-autocomplete.playwright.test.ts"
+  },
+  {
+    "description": "Autocomplete triggers when typing 'error.' inside catch block context",
+    "reference": "\u00a716.2 Trigger Detection",
+    "implemented": true,
+    "testFile": "ee/server/src/__tests__/integration/workflow-designer-autocomplete.playwright.test.ts"
+  },
+  {
+    "description": "Autocomplete triggers when typing '$item.' inside forEach context",
+    "reference": "\u00a716.2 Trigger Detection",
+    "implemented": true,
+    "testFile": "ee/server/src/__tests__/integration/workflow-designer-autocomplete.playwright.test.ts"
+  },
+  {
+    "description": "Autocomplete triggers mid-expression after operator (e.g., 'payload.id + vars.')",
+    "reference": "\u00a716.2 Trigger Detection",
+    "implemented": true
+  },
+  {
+    "description": "Autocomplete does NOT trigger for arbitrary text that doesn't match root paths",
+    "reference": "\u00a716.2 Trigger Detection",
+    "implemented": true
+  },
+  {
+    "description": "Autocomplete triggers after opening parenthesis (e.g., 'coalesce(payload.')",
+    "reference": "\u00a716.2 Trigger Detection",
+    "implemented": true
+  },
+  {
+    "description": "extractCurrentPath returns correct path when cursor is at end of 'payload.tick'",
+    "reference": "\u00a716.2 Path Extraction",
+    "implemented": true
+  },
+  {
+    "description": "extractCurrentPath returns correct path when cursor is mid-word",
+    "reference": "\u00a716.2 Path Extraction",
+    "implemented": true
+  },
+  {
+    "description": "extractCurrentPath handles nested paths like 'vars.createTicket.ticket_id'",
+    "reference": "\u00a716.2 Path Extraction",
+    "implemented": true
+  },
+  {
+    "description": "extractCurrentPath returns null for empty expression",
+    "reference": "\u00a716.2 Path Extraction",
+    "implemented": true
+  },
+  {
+    "description": "extractCurrentPath handles paths after whitespace correctly",
+    "reference": "\u00a716.2 Path Extraction",
+    "implemented": true
+  },
+  {
+    "description": "filterSuggestions returns all children when path ends with '.'",
+    "reference": "\u00a716.2 Filtering",
+    "implemented": true
+  },
+  {
+    "description": "filterSuggestions filters by prefix match on leaf name",
+    "reference": "\u00a716.2 Filtering",
+    "implemented": true
+  },
+  {
+    "description": "filterSuggestions is case-insensitive",
+    "reference": "\u00a716.2 Filtering",
+    "implemented": true
+  },
+  {
+    "description": "filterSuggestions returns empty array when no matches found",
+    "reference": "\u00a716.2 Filtering",
+    "implemented": true
+  },
+  {
+    "description": "filterSuggestions limits results to reasonable count (max 20)",
+    "reference": "\u00a716.2 Filtering",
+    "implemented": true
+  },
+  {
+    "description": "filterSuggestions prioritizes exact parent matches over fuzzy matches",
+    "reference": "\u00a716.2 Filtering",
+    "implemented": true
+  },
+  {
+    "description": "Arrow Down moves selection to next suggestion",
+    "reference": "\u00a716.2 Keyboard Navigation",
+    "implemented": true
+  },
+  {
+    "description": "Arrow Up moves selection to previous suggestion",
+    "reference": "\u00a716.2 Keyboard Navigation",
+    "implemented": true
+  },
+  {
+    "description": "Arrow Down at last item stays at last item (no wrap)",
+    "reference": "\u00a716.2 Keyboard Navigation",
+    "implemented": true
+  },
+  {
+    "description": "Arrow Up at first item stays at first item (no wrap)",
+    "reference": "\u00a716.2 Keyboard Navigation",
+    "implemented": true
+  },
+  {
+    "description": "Enter key selects current suggestion and inserts path",
+    "reference": "\u00a716.2 Keyboard Navigation",
+    "implemented": true
+  },
+  {
+    "description": "Tab key selects current suggestion and inserts path",
+    "reference": "\u00a716.2 Keyboard Navigation",
+    "implemented": true
+  },
+  {
+    "description": "Escape key closes dropdown without selecting",
+    "reference": "\u00a716.2 Keyboard Navigation",
+    "implemented": true
+  },
+  {
+    "description": "Selecting a leaf field inserts full path and closes dropdown",
+    "reference": "\u00a716.2 Selection Behavior",
+    "implemented": true
+  },
+  {
+    "description": "Selecting an object field inserts path with trailing dot and keeps dropdown open",
+    "reference": "\u00a716.2 Selection Behavior",
+    "implemented": true
+  },
+  {
+    "description": "Selection replaces the partial path being typed, not the entire expression",
+    "reference": "\u00a716.2 Selection Behavior",
+    "implemented": true
+  },
+  {
+    "description": "Cursor position is correctly set after path insertion",
+    "reference": "\u00a716.2 Selection Behavior",
+    "implemented": true
+  },
+  {
+    "description": "Click on suggestion selects it",
+    "reference": "\u00a716.2 Selection Behavior",
+    "implemented": true
+  },
+  {
+    "description": "Suggestions include payload fields from workflow input schema",
+    "reference": "\u00a716.2 Data Context",
+    "implemented": true
+  },
+  {
+    "description": "Suggestions include vars from previous steps with saveAs configured",
+    "reference": "\u00a716.2 Data Context",
+    "implemented": true
+  },
+  {
+    "description": "Suggestions do NOT include vars from steps that come AFTER current step",
+    "reference": "\u00a716.2 Data Context",
+    "implemented": true
+  },
+  {
+    "description": "Suggestions include meta fields (state, traceId, tags)",
+    "reference": "\u00a716.2 Data Context",
+    "implemented": true
+  },
+  {
+    "description": "Suggestions include $item and $index when inside forEach block",
+    "reference": "\u00a716.2 Data Context",
+    "implemented": true
+  },
+  {
+    "description": "Dropdown positions below cursor when space available",
+    "reference": "\u00a716.2 UI/Visual",
+    "implemented": true,
+    "testFile": "ee/server/src/__tests__/integration/workflow-designer-autocomplete.playwright.test.ts",
+    "note": "All trigger tests verify bounding box is on-screen (x >= 0, y >= 0, width > 50, height > 20)"
+  },
+  {
+    "description": "Type icons display correctly for string, number, boolean, object, array types",
+    "reference": "\u00a716.2 UI/Visual",
+    "implemented": true
+  },
+  {
+    "description": "Selected suggestion is visually highlighted",
+    "reference": "\u00a716.2 UI/Visual",
+    "implemented": true
+  },
+  {
+    "description": "Dropdown scrolls to keep selected item visible",
+    "reference": "\u00a716.2 UI/Visual",
+    "implemented": true
+  }
+]

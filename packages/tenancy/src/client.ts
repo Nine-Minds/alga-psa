@@ -17,4 +17,3 @@ export async function getCurrentTenantOrThrow(): Promise<string> {
  * @deprecated Use getCurrentTenantOrThrow instead. This is kept for backwards compatibility.
  */
 export const getCurrentTenant = getCurrentTenantOrThrow;
-

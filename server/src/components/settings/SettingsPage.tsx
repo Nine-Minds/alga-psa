@@ -4,7 +4,7 @@
 
 import React, { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import dynamic from 'next/dynamic';
-import { Settings, Globe, UserCog, Users, MessageSquare, Layers, Handshake, Bell, Clock, CreditCard, Download, Mail, Plug, Puzzle } from 'lucide-react';
+import { Settings, Globe, UserCog, Users, MessageSquare, Layers, Handshake, Bell, Clock, CreditCard, Download, Mail, Plug, Puzzle, KeyRound } from 'lucide-react';
 import CustomTabs, { TabContent } from "@alga-psa/ui/components/CustomTabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@alga-psa/ui/components/Card";
 import GeneralSettings from './general/GeneralSettings';
@@ -40,6 +40,7 @@ import Link from 'next/link';
 // Removed import: import { getCurrentUser } from '@alga-psa/users/actions';
 import SurveySettings from '@alga-psa/surveys/components/SurveySettings';
 import { ProjectSettings } from '@alga-psa/projects/components';
+import { SecretsManagement } from './secrets';
 
 // Wrapper component with UnsavedChangesProvider
 type SettingsPageProps = {
@@ -111,6 +112,7 @@ const SettingsPageContent = ({ initialTabParam }: SettingsPageProps): React.JSX.
     notifications: 'Notifications',
     'time-entry': 'Time Entry',
     billing: 'Billing',
+    secrets: 'Secrets',
     'import-export': 'Import/Export',
     email: 'Email',
     integrations: 'Integrations',
@@ -273,6 +275,23 @@ const SettingsPageContent = ({ initialTabParam }: SettingsPageProps): React.JSX.
           </CardHeader>
           <CardContent>
             <BillingSettings />
+          </CardContent>
+        </Card>
+      ),
+    },
+    {
+      label: "Secrets",
+      icon: KeyRound,
+      content: (
+        <Card>
+          <CardHeader>
+            <CardTitle>Secrets Management</CardTitle>
+            <CardDescription>
+              Manage encrypted secrets for use in workflows. Secrets can be referenced in workflow actions using the $secret syntax.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <SecretsManagement />
           </CardContent>
         </Card>
       ),
