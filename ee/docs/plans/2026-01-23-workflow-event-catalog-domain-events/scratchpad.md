@@ -182,9 +182,22 @@ Implication: we should standardize on `@alga-psa/event-bus/publishers` helpers f
   - Marked `TICKET_APPROVAL_REQUESTED` / `TICKET_APPROVAL_GRANTED` / `TICKET_APPROVAL_REJECTED` as **catalog-only** for now (no ticket approval subsystem exists to emit these events from).
   - Documented the decision in `ee/docs/plans/2026-01-23-workflow-event-catalog-domain-events/PRD.md` (Open Questions #4).
 
+- 2026-01-23: Completed `F020` (appointment lifecycle/assignment emission):
+  - Emitted workflow v2 appointment domain events from real scheduling/appointment flows:
+    - `packages/scheduling/src/actions/scheduleActions.ts` emits `APPOINTMENT_CREATED`, `APPOINTMENT_RESCHEDULED`, `APPOINTMENT_CANCELED`, `APPOINTMENT_COMPLETED`, `APPOINTMENT_NO_SHOW`, `APPOINTMENT_ASSIGNED` when schedule entries represent appointments (`work_item_type='appointment_request'` or `ticket`).
+    - `packages/client-portal/src/actions/client-portal-actions/appointmentRequestActions.ts` emits `APPOINTMENT_CREATED`, `APPOINTMENT_RESCHEDULED`, `APPOINTMENT_CANCELED`, `APPOINTMENT_ASSIGNED` for client portal appointment requests (actor is `CONTACT`).
+    - `packages/scheduling/src/actions/appointmentRequestManagementActions.ts` emits `APPOINTMENT_CREATED`/`APPOINTMENT_ASSIGNED` for the legacy “approve request creates schedule entry” fallback; emits `APPOINTMENT_ASSIGNED` on reassignment during approval.
+  - Added shared payload builders:
+    - `shared/workflow/streams/domainEventBuilders/appointmentEventBuilders.ts`
+  - Added schema-compat unit test coverage:
+    - `shared/workflow/streams/domainEventBuilders/__tests__/appointmentEventBuilders.test.ts`
+  - Notes/constraints:
+    - `timezone` is emitted as `UTC` (schedule UI and storage treat times as UTC today).
+    - `APPOINTMENT_NO_SHOW` is emitted only when a schedule entry status is set to a no-show variant; `party` defaults to `customer` until the product captures who no-showed explicitly.
+
 ## Next Up
 
-- `F020`: emit appointment lifecycle events (`APPOINTMENT_*`) or map to `SCHEDULE_ENTRY_*` per PRD §10.
+- `F021`: emit availability block events (`SCHEDULE_BLOCK_CREATED`, `SCHEDULE_BLOCK_DELETED`).
 
 ## Suggested Phasing (to reduce risk)
 

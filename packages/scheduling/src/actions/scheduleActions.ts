@@ -7,10 +7,40 @@ import { withTransaction } from '@alga-psa/db';
 import { createTenantKnex } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { publishEvent } from '@alga-psa/event-bus/publishers';
+import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
+import {
+  buildAppointmentAssignedPayload,
+  buildAppointmentCanceledPayload,
+  buildAppointmentCompletedPayload,
+  buildAppointmentCreatedPayload,
+  buildAppointmentNoShowPayload,
+  buildAppointmentRescheduledPayload,
+  getSingleUserAssigneeId,
+  getTicketIdFromScheduleEntry,
+  isAppointmentCanceledStatus,
+  isAppointmentCompletedStatus,
+  isAppointmentNoShowStatus,
+  isAppointmentRescheduled,
+  shouldEmitAppointmentEvents,
+} from '@shared/workflow/streams/domainEventBuilders/appointmentEventBuilders';
 
 export type ScheduleActionResult<T> =
   | { success: true; entries: T; error?: never }
   | { success: false; error: string; entries?: never }
+
+async function getTicketIdForAppointmentRequest(
+  db: Knex,
+  tenant: string,
+  appointmentRequestId: string
+): Promise<string | undefined> {
+  const row = await withTransaction(db, async (trx: Knex.Transaction) => {
+    return await trx('appointment_requests')
+      .where({ tenant, appointment_request_id: appointmentRequestId })
+      .select('ticket_id')
+      .first();
+  });
+  return row?.ticket_id || undefined;
+}
 
 /**
  * Fetches schedule entries based on date range and user permissions.
@@ -184,6 +214,48 @@ export async function addScheduleEntry(
       console.error('[ScheduleActions] Failed to publish SCHEDULE_ENTRY_CREATED event', eventError);
     }
 
+    if (shouldEmitAppointmentEvents(createdEntry)) {
+      const timezone = 'UTC';
+      const ticketId =
+        getTicketIdFromScheduleEntry(createdEntry) ||
+        (createdEntry.work_item_type === 'appointment_request' && createdEntry.work_item_id
+          ? await getTicketIdForAppointmentRequest(db, tenant, createdEntry.work_item_id)
+          : undefined);
+
+      const ctx = {
+        tenantId: currentUser.tenant,
+        actor: { actorType: 'USER' as const, actorUserId: currentUser.user_id },
+      };
+
+      try {
+        await publishWorkflowEvent({
+          eventType: 'APPOINTMENT_CREATED',
+          ctx,
+          payload: buildAppointmentCreatedPayload({
+            entry: createdEntry,
+            ticketId,
+            timezone,
+            createdByUserId: currentUser.user_id,
+          }),
+        });
+
+        const assigneeId = getSingleUserAssigneeId(createdEntry);
+        if (assigneeId) {
+          await publishWorkflowEvent({
+            eventType: 'APPOINTMENT_ASSIGNED',
+            ctx,
+            payload: buildAppointmentAssignedPayload({
+              appointmentId: createdEntry.entry_id,
+              ticketId,
+              newAssigneeId: assigneeId,
+            }),
+          });
+        }
+      } catch (eventError) {
+        console.error('[ScheduleActions] Failed to publish APPOINTMENT_* workflow events', eventError);
+      }
+    }
+
     return { success: true, entry: createdEntry };
   } catch (error) {
     console.error('Error creating schedule entry:', error);
@@ -291,6 +363,76 @@ export async function updateScheduleEntry(
       } catch (eventError) {
         console.error('[ScheduleActions] Failed to publish SCHEDULE_ENTRY_UPDATED event', eventError);
       }
+
+      if (shouldEmitAppointmentEvents(existingEntry) || shouldEmitAppointmentEvents(updatedEntry)) {
+        const timezone = 'UTC';
+        const ticketId =
+          getTicketIdFromScheduleEntry(updatedEntry) ||
+          (updatedEntry.work_item_type === 'appointment_request' && updatedEntry.work_item_id
+            ? await getTicketIdForAppointmentRequest(db, tenant, updatedEntry.work_item_id)
+            : undefined);
+
+        const ctx = {
+          tenantId: currentUser.tenant,
+          actor: { actorType: 'USER' as const, actorUserId: currentUser.user_id },
+        };
+
+        try {
+          if (isAppointmentRescheduled(existingEntry, updatedEntry)) {
+            await publishWorkflowEvent({
+              eventType: 'APPOINTMENT_RESCHEDULED',
+              ctx,
+              payload: buildAppointmentRescheduledPayload({
+                before: existingEntry,
+                after: updatedEntry,
+                ticketId,
+                timezone,
+              }),
+            });
+          }
+
+          const previousAssigneeId = getSingleUserAssigneeId(existingEntry);
+          const newAssigneeId = getSingleUserAssigneeId(updatedEntry);
+          if (newAssigneeId && newAssigneeId !== previousAssigneeId) {
+            await publishWorkflowEvent({
+              eventType: 'APPOINTMENT_ASSIGNED',
+              ctx,
+              payload: buildAppointmentAssignedPayload({
+                appointmentId: updatedEntry.entry_id,
+                ticketId,
+                previousAssigneeId,
+                newAssigneeId,
+              }),
+            });
+          }
+
+          if (!isAppointmentCanceledStatus(existingEntry.status) && isAppointmentCanceledStatus(updatedEntry.status)) {
+            await publishWorkflowEvent({
+              eventType: 'APPOINTMENT_CANCELED',
+              ctx,
+              payload: buildAppointmentCanceledPayload({ appointmentId: updatedEntry.entry_id, ticketId }),
+            });
+          }
+
+          if (!isAppointmentCompletedStatus(existingEntry.status) && isAppointmentCompletedStatus(updatedEntry.status)) {
+            await publishWorkflowEvent({
+              eventType: 'APPOINTMENT_COMPLETED',
+              ctx,
+              payload: buildAppointmentCompletedPayload({ appointmentId: updatedEntry.entry_id, ticketId }),
+            });
+          }
+
+          if (!isAppointmentNoShowStatus(existingEntry.status) && isAppointmentNoShowStatus(updatedEntry.status)) {
+            await publishWorkflowEvent({
+              eventType: 'APPOINTMENT_NO_SHOW',
+              ctx,
+              payload: buildAppointmentNoShowPayload({ appointmentId: updatedEntry.entry_id, ticketId, party: 'customer' }),
+            });
+          }
+        } catch (eventError) {
+          console.error('[ScheduleActions] Failed to publish appointment workflow events', eventError);
+        }
+      }
     }
 
     return { success: true, entry: updatedEntry };
@@ -390,6 +532,33 @@ export async function deleteScheduleEntry(entry_id: string, deleteType: IEditSco
         });
       } catch (eventError) {
         console.error('[ScheduleActions] Failed to publish SCHEDULE_ENTRY_DELETED event', eventError);
+      }
+
+      if (shouldEmitAppointmentEvents(existingEntry)) {
+        const ticketId =
+          getTicketIdFromScheduleEntry(existingEntry) ||
+          (existingEntry.work_item_type === 'appointment_request' && existingEntry.work_item_id
+            ? await getTicketIdForAppointmentRequest(db, tenant, existingEntry.work_item_id)
+            : undefined);
+
+        const ctx = {
+          tenantId: currentUser.tenant,
+          actor: { actorType: 'USER' as const, actorUserId: currentUser.user_id },
+        };
+
+        try {
+          await publishWorkflowEvent({
+            eventType: 'APPOINTMENT_CANCELED',
+            ctx,
+            payload: buildAppointmentCanceledPayload({
+              appointmentId: existingEntry.entry_id,
+              ticketId,
+              reason: deleteType === IEditScope.ALL ? 'Deleted (all occurrences)' : 'Deleted',
+            }),
+          });
+        } catch (eventError) {
+          console.error('[ScheduleActions] Failed to publish APPOINTMENT_CANCELED workflow event', eventError);
+        }
       }
     }
 

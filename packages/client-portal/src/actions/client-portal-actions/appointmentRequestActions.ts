@@ -16,22 +16,23 @@ import {
   appointmentRequestFilterSchema
 } from '../../schemas/appointmentSchemas';
 import { SystemEmailService } from '@alga-psa/email';
+import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
+import {
+  buildAppointmentAssignedPayload,
+  buildAppointmentCanceledPayload,
+  buildAppointmentCreatedPayload,
+  buildAppointmentRescheduledPayload,
+} from '@shared/workflow/streams/domainEventBuilders/appointmentEventBuilders';
 import {
   getAvailableServicesForClient,
   getServicesForPublicBooking,
   getAvailableTimeSlots as getTimeSlotsFromService,
   getAvailableDates as getDatesFromService
 } from '../../services/availabilityService';
-import {
-  getTenantSettings,
-  getScheduleApprovers,
-  getClientUserIdFromContact,
-  formatDate,
-  formatTime,
-  getClientCompanyName
-} from '@alga-psa/scheduling/actions';
 import { createNotificationFromTemplateInternal } from '@alga-psa/notifications/actions';
 import { isValidEmail } from '@alga-psa/core';
+import { format, type Locale } from 'date-fns';
+import { de, es, fr, it, nl, enUS } from 'date-fns/locale';
 
 export interface IAppointmentRequest {
   appointment_request_id: string;
@@ -63,6 +64,156 @@ export interface AppointmentRequestResult<T> {
   success: boolean;
   data?: T;
   error?: string;
+}
+
+type TenantSettings = {
+  contactEmail: string;
+  contactPhone: string;
+  tenantName: string;
+  defaultLocale: string;
+};
+
+type ScheduleApprover = {
+  user_id: string;
+  email: string;
+  first_name: string;
+  last_name: string;
+};
+
+async function getScheduleApprovers(tenant: string): Promise<ScheduleApprover[]> {
+  const { knex: db } = await createTenantKnex();
+
+  return await withTransaction(db, async (trx) => {
+    const approvers = await trx('users as u')
+      .join('user_roles as ur', function () {
+        this.on('u.user_id', 'ur.user_id').andOn('u.tenant', 'ur.tenant');
+      })
+      .join('roles as r', function () {
+        this.on('ur.role_id', 'r.role_id').andOn('ur.tenant', 'r.tenant');
+      })
+      .join('role_permissions as rp', function () {
+        this.on('r.role_id', 'rp.role_id').andOn('r.tenant', 'rp.tenant');
+      })
+      .join('permissions as p', function () {
+        this.on('rp.permission_id', 'p.permission_id').andOn('rp.tenant', 'p.tenant');
+      })
+      .where({
+        'u.tenant': tenant,
+        'u.user_type': 'internal',
+        'p.resource': 'user_schedule',
+        'p.action': 'update',
+      })
+      .where(function () {
+        this.where('u.is_inactive', false).orWhereNull('u.is_inactive');
+      })
+      .select('u.user_id', 'u.email', 'u.first_name', 'u.last_name')
+      .distinct();
+
+    return approvers;
+  });
+}
+
+async function getTenantSettings(tenant: string): Promise<TenantSettings> {
+  const { knex: db } = await createTenantKnex();
+
+  return await withTransaction(db, async (trx) => {
+    const settings = await trx('tenant_settings').where({ tenant }).first();
+    const tenantSettings = settings?.settings || {};
+
+    let tenantName = tenantSettings.branding?.clientName;
+    if (!tenantName) {
+      const tenantRecord = await trx('tenants').where({ tenant }).select('client_name').first();
+      tenantName = tenantRecord?.client_name;
+    }
+    if (!tenantName) tenantName = 'Your Service Provider';
+
+    return {
+      contactEmail: tenantSettings.supportEmail || tenantSettings.contactEmail || 'support@company.com',
+      contactPhone: tenantSettings.supportPhone || tenantSettings.contactPhone || '',
+      tenantName,
+      defaultLocale: tenantSettings.defaultLocale || 'en',
+    };
+  });
+}
+
+async function getClientUserIdFromContact(contactId: string, tenant: string): Promise<string | null> {
+  const { knex: db } = await createTenantKnex();
+
+  return await withTransaction(db, async (trx) => {
+    const user = await trx('users')
+      .where({
+        tenant,
+        contact_id: contactId,
+        user_type: 'client',
+      })
+      .where(function () {
+        this.where('is_inactive', false).orWhereNull('is_inactive');
+      })
+      .select('user_id')
+      .first();
+
+    return user?.user_id || null;
+  });
+}
+
+async function formatDate(dateString: string, locale: string = 'en'): Promise<string> {
+  try {
+    const date = new Date(dateString);
+    const localeMap: Record<string, Locale> = {
+      en: enUS,
+      de,
+      es,
+      fr,
+      it,
+      nl,
+    };
+    const dateFnsLocale = localeMap[locale] || enUS;
+    return format(date, 'PPP', { locale: dateFnsLocale });
+  } catch (error) {
+    console.error('Error formatting date:', error);
+    return dateString;
+  }
+}
+
+async function formatTime(timeString: string, locale: string = 'en'): Promise<string> {
+  try {
+    const [hours, minutes] = timeString.split(':').map(Number);
+    const date = new Date();
+    date.setHours(hours, minutes, 0, 0);
+
+    const localeMap: Record<string, Locale> = {
+      en: enUS,
+      de,
+      es,
+      fr,
+      it,
+      nl,
+    };
+    const dateFnsLocale = localeMap[locale] || enUS;
+    if (locale === 'en') {
+      return format(date, 'p', { locale: dateFnsLocale });
+    }
+    return format(date, 'HH:mm', { locale: dateFnsLocale });
+  } catch (error) {
+    console.error('Error formatting time:', error);
+    return timeString;
+  }
+}
+
+async function getClientCompanyName(clientId: string, tenant: string): Promise<string> {
+  const { knex: db } = await createTenantKnex();
+
+  return await withTransaction(db, async (trx) => {
+    const client = await trx('clients')
+      .where({
+        client_id: clientId,
+        tenant,
+      })
+      .select('client_name')
+      .first();
+
+    return client?.client_name || 'Unknown Client';
+  });
 }
 
 /**
@@ -336,6 +487,51 @@ export async function createAppointmentRequest(
       });
     }
 
+    try {
+      if (scheduleEntryId) {
+        const scheduledStart = new Date(`${normalizedRequestedDate}T${normalizedRequestedTime}:00Z`);
+        const scheduledEnd = new Date(scheduledStart.getTime() + validatedData.requested_duration * 60000);
+        const ticketId = appointmentRequest.ticket_id || undefined;
+
+        const ctx = {
+          tenantId: tenant,
+          actor: { actorType: 'CONTACT' as const, actorContactId: (currentUser as any).contact_id as string },
+        };
+
+        await publishWorkflowEvent({
+          eventType: 'APPOINTMENT_CREATED',
+          ctx,
+          payload: buildAppointmentCreatedPayload({
+            entry: {
+              entry_id: scheduleEntryId,
+              work_item_type: 'appointment_request',
+              work_item_id: appointmentRequest.appointment_request_id,
+              scheduled_start: scheduledStart,
+              scheduled_end: scheduledEnd,
+              created_at: new Date(),
+              assigned_user_ids: assignedUserId ? [assignedUserId] : [],
+            },
+            ticketId,
+            timezone: 'UTC',
+          }),
+        });
+
+        if (assignedUserId) {
+          await publishWorkflowEvent({
+            eventType: 'APPOINTMENT_ASSIGNED',
+            ctx,
+            payload: buildAppointmentAssignedPayload({
+              appointmentId: scheduleEntryId,
+              ticketId,
+              newAssigneeId: assignedUserId,
+            }),
+          });
+        }
+      }
+    } catch (eventError) {
+      console.error('[createAppointmentRequest] Failed to publish appointment workflow events', eventError);
+    }
+
     // Send notification emails and internal notifications
     try {
       const emailService = SystemEmailService.getInstance();
@@ -597,27 +793,44 @@ export async function updateAppointmentRequest(
         });
     });
 
+    let appointmentWorkflowUpdate:
+      | {
+          appointmentId: string;
+          beforeStart: Date;
+          beforeEnd: Date;
+          afterStart: Date;
+          afterEnd: Date;
+          previousAssigneeId?: string;
+          newAssigneeId?: string;
+          ticketId?: string;
+        }
+      | undefined;
+
     // Update the associated schedule entry if it exists
     if (existingRequest.schedule_entry_id) {
-      await withTransaction(db, async (trx: Knex.Transaction) => {
-        const [startHour, startMinute] = validatedData.requested_time.split(':').map(Number);
-        // Parse date and time as UTC explicitly
-        const scheduledStart = new Date(`${validatedData.requested_date}T${validatedData.requested_time}:00Z`);
+      const beforeStart = new Date(`${existingRequest.requested_date}T${existingRequest.requested_time}:00Z`);
+      const beforeEnd = new Date(beforeStart.getTime() + existingRequest.requested_duration * 60000);
 
-        const scheduledEnd = new Date(scheduledStart);
-        scheduledEnd.setMinutes(scheduledEnd.getMinutes() + validatedData.requested_duration);
+      appointmentWorkflowUpdate = await withTransaction(db, async (trx: Knex.Transaction) => {
+        const previousAssigneeRow = await trx('schedule_entry_assignees')
+          .where({ entry_id: existingRequest.schedule_entry_id, tenant })
+          .select('user_id')
+          .first();
+
+        const scheduledStart = new Date(`${validatedData.requested_date}T${validatedData.requested_time}:00Z`);
+        const scheduledEnd = new Date(scheduledStart.getTime() + validatedData.requested_duration * 60000);
 
         await trx('schedule_entries')
           .where({
             entry_id: existingRequest.schedule_entry_id,
-            tenant
+            tenant,
           })
           .update({
             title: `[Pending Request] ${service.service_name}`,
             scheduled_start: scheduledStart.toISOString(),
             scheduled_end: scheduledEnd.toISOString(),
             notes: validatedData.description || 'Appointment request from client portal',
-            updated_at: new Date()
+            updated_at: new Date(),
           });
 
         // Update assignee if changed
@@ -626,11 +839,10 @@ export async function updateAppointmentRequest(
           let newAssigneeId = validatedData.preferred_assigned_user_id;
 
           if (!newAssigneeId) {
-            // Get default approver
             const generalSetting = await trx('availability_settings')
               .where({
                 tenant,
-                setting_type: 'general_settings'
+                setting_type: 'general_settings',
               })
               .whereNotNull('config_json')
               .first();
@@ -639,24 +851,89 @@ export async function updateAppointmentRequest(
           }
 
           if (newAssigneeId) {
-            // Delete old assignee
             await trx('schedule_entry_assignees')
               .where({
                 entry_id: existingRequest.schedule_entry_id,
-                tenant
+                tenant,
               })
               .delete();
 
-            // Add new assignee
             await trx('schedule_entry_assignees').insert({
               entry_id: existingRequest.schedule_entry_id,
               user_id: newAssigneeId,
               tenant,
-              created_at: new Date()
+              created_at: new Date(),
             });
           }
         }
+
+        const newAssigneeRow = await trx('schedule_entry_assignees')
+          .where({ entry_id: existingRequest.schedule_entry_id, tenant })
+          .select('user_id')
+          .first();
+
+        return {
+          appointmentId: existingRequest.schedule_entry_id,
+          beforeStart,
+          beforeEnd,
+          afterStart: scheduledStart,
+          afterEnd: scheduledEnd,
+          previousAssigneeId: previousAssigneeRow?.user_id,
+          newAssigneeId: newAssigneeRow?.user_id,
+          ticketId: validatedData.ticket_id || undefined,
+        };
       });
+    }
+
+    if (appointmentWorkflowUpdate) {
+      try {
+        const ctx = {
+          tenantId: tenant,
+          actor: { actorType: 'CONTACT' as const, actorContactId: (currentUser as any).contact_id as string },
+        };
+
+        if (
+          appointmentWorkflowUpdate.beforeStart.toISOString() !== appointmentWorkflowUpdate.afterStart.toISOString() ||
+          appointmentWorkflowUpdate.beforeEnd.toISOString() !== appointmentWorkflowUpdate.afterEnd.toISOString()
+        ) {
+          await publishWorkflowEvent({
+            eventType: 'APPOINTMENT_RESCHEDULED',
+            ctx,
+            payload: buildAppointmentRescheduledPayload({
+              before: {
+                entry_id: appointmentWorkflowUpdate.appointmentId,
+                scheduled_start: appointmentWorkflowUpdate.beforeStart,
+                scheduled_end: appointmentWorkflowUpdate.beforeEnd,
+              },
+              after: {
+                entry_id: appointmentWorkflowUpdate.appointmentId,
+                scheduled_start: appointmentWorkflowUpdate.afterStart,
+                scheduled_end: appointmentWorkflowUpdate.afterEnd,
+              },
+              ticketId: appointmentWorkflowUpdate.ticketId,
+              timezone: 'UTC',
+            }),
+          });
+        }
+
+        if (
+          appointmentWorkflowUpdate.newAssigneeId &&
+          appointmentWorkflowUpdate.newAssigneeId !== appointmentWorkflowUpdate.previousAssigneeId
+        ) {
+          await publishWorkflowEvent({
+            eventType: 'APPOINTMENT_ASSIGNED',
+            ctx,
+            payload: buildAppointmentAssignedPayload({
+              appointmentId: appointmentWorkflowUpdate.appointmentId,
+              ticketId: appointmentWorkflowUpdate.ticketId,
+              previousAssigneeId: appointmentWorkflowUpdate.previousAssigneeId,
+              newAssigneeId: appointmentWorkflowUpdate.newAssigneeId,
+            }),
+          });
+        }
+      } catch (eventError) {
+        console.error('[updateAppointmentRequest] Failed to publish appointment workflow events', eventError);
+      }
     }
 
     // Get updated request
@@ -971,6 +1248,26 @@ export async function cancelAppointmentRequest(
           declined_reason: validatedData.cancellation_reason || 'Cancelled by client',
           updated_at: now
         });
+
+      try {
+        if (request.schedule_entry_id) {
+          const ctx = {
+            tenantId: tenant,
+            actor: { actorType: 'CONTACT' as const, actorContactId: (currentUser as any).contact_id as string },
+          };
+          await publishWorkflowEvent({
+            eventType: 'APPOINTMENT_CANCELED',
+            ctx,
+            payload: buildAppointmentCanceledPayload({
+              appointmentId: request.schedule_entry_id,
+              ticketId: request.ticket_id || undefined,
+              reason: validatedData.cancellation_reason || 'Cancelled by client',
+            }),
+          });
+        }
+      } catch (eventError) {
+        console.error('[cancelAppointmentRequest] Failed to publish APPOINTMENT_CANCELED workflow event', eventError);
+      }
 
       // Send notification emails and internal notifications
       try {
