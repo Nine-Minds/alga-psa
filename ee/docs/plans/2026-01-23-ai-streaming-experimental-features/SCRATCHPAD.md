@@ -124,4 +124,8 @@ curl -X POST localhost:3000/api/chat/stream/chat \
   - Files: `server/src/app/api/chat/stream/title/route.ts`, `server/src/app/api/chat/stream/[...slug]/route.ts`
 - Validation: `npx eslint server/src/app/api/chat/stream/title/route.ts server/src/app/api/chat/stream/[...slug]/route.ts --max-warnings=0`
 - Note: `npm -w server run typecheck` still fails with `TS2307` for `@ee/components/chat/QuickAskOverlay` from `server/src/components/chat/QuickAskOverlay.tsx` (pre-existing).
-- Next feature item: F016 Create new streaming completions endpoint `/api/chat/v1/completions/stream` that returns SSE
+- Implemented `/api/chat/v1/completions/stream` POST endpoint returning an SSE response (placeholder stream) with EE + `aiAssistant` gating:
+  - File: `server/src/app/api/chat/v1/completions/stream/route.ts`
+  - Note: currently sends a single SSE comment (`: ok`) then closes; token streaming is implemented in later items.
+- Validation: `npx eslint server/src/app/api/chat/v1/completions/stream/route.ts`
+- Next feature item: F017 Modify ChatCompletionsService to support streaming mode with `stream: true`

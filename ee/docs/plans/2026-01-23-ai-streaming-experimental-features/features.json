@@ -92,7 +92,7 @@
   {
     "id": "F016",
     "description": "Create new streaming completions endpoint /api/chat/v1/completions/stream that returns SSE",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Streaming Implementation"]
   },
   {
