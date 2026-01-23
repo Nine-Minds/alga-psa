@@ -12,10 +12,15 @@ import { getServices } from './serviceCatalogActions';
 import { createTagsForEntityWithTransaction } from '@alga-psa/tags/actions';
 import ProjectModel from '@alga-psa/projects/models/project';
 import ProjectTaskModel from '../models/projectTask';
+import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import { IProjectPhase } from '@alga-psa/types';
 import { IPriority } from '@alga-psa/types';
 import { IService } from '@alga-psa/types';
 import { IUser } from '@shared/interfaces/user.interfaces';
+import {
+  buildProjectTaskAssignedPayload,
+  buildProjectTaskCreatedPayload,
+} from '@shared/workflow/streams/domainEventBuilders/projectTaskEventBuilders';
 import {
   ITaskImportRow,
   ITaskImportValidationResult,
@@ -30,6 +35,34 @@ import {
   MappableTaskField,
 } from '@alga-psa/types';
 import { IProjectStatusMapping } from '@alga-psa/types';
+
+async function resolveProjectStatusInfo(
+  trx: Knex.Transaction,
+  tenant: string,
+  projectStatusMappingId: string
+): Promise<{ status: string; isClosed: boolean }> {
+  const row = await trx('project_status_mappings as psm')
+    .leftJoin('statuses as s', function joinStatuses(this: Knex.JoinClause) {
+      this.on('psm.status_id', '=', 's.status_id').andOn('psm.tenant', '=', 's.tenant');
+    })
+    .leftJoin('standard_statuses as ss', function joinStandardStatuses(this: Knex.JoinClause) {
+      this.on('psm.standard_status_id', '=', 'ss.standard_status_id').andOn('psm.tenant', '=', 'ss.tenant');
+    })
+    .where({ 'psm.project_status_mapping_id': projectStatusMappingId, 'psm.tenant': tenant })
+    .select(
+      trx.raw(
+        'COALESCE(psm.custom_name, s.name, ss.name, psm.project_status_mapping_id) as status_name'
+      ),
+      trx.raw('COALESCE(s.is_closed, ss.is_closed, false) as is_closed')
+    )
+    .first<{ status_name: string; is_closed: boolean }>();
+
+  if (!row) {
+    return { status: projectStatusMappingId, isClosed: false };
+  }
+
+  return { status: row.status_name, isClosed: Boolean(row.is_closed) };
+}
 
 /**
  * Parse a date string to Date object
@@ -921,6 +954,43 @@ export async function importPhasesAndTasks(
               for (const additionalAgentId of uniqueAdditionalAgents) {
                 await ProjectTaskModel.addTaskResource(trx, tenant, newTask.task_id, additionalAgentId);
               }
+            }
+
+            const occurredAt = newTask.created_at instanceof Date ? newTask.created_at : new Date();
+            const ctx = {
+              tenantId: tenant,
+              occurredAt,
+              actor: { actorType: 'USER' as const, actorUserId: currentUser.user_id },
+            };
+            const statusInfo = await resolveProjectStatusInfo(trx, tenant, newTask.project_status_mapping_id);
+
+            await publishWorkflowEvent({
+              eventType: 'PROJECT_TASK_CREATED',
+              ctx,
+              payload: buildProjectTaskCreatedPayload({
+                projectId,
+                taskId: newTask.task_id,
+                title: newTask.task_name,
+                dueDate: newTask.due_date,
+                status: statusInfo.status,
+                createdByUserId: currentUser.user_id,
+                createdAt: occurredAt,
+              }),
+            });
+
+            if (newTask.assigned_to) {
+              await publishWorkflowEvent({
+                eventType: 'PROJECT_TASK_ASSIGNED',
+                ctx,
+                payload: buildProjectTaskAssignedPayload({
+                  projectId,
+                  taskId: newTask.task_id,
+                  assignedToId: newTask.assigned_to,
+                  assignedToType: 'user',
+                  assignedByUserId: currentUser.user_id,
+                  assignedAt: occurredAt,
+                }),
+              });
             }
 
             tasksCreated++;

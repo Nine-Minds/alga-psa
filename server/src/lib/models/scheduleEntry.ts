@@ -3,7 +3,8 @@ import { IEditScope, IScheduleEntry, IRecurrencePattern } from 'server/src/inter
 import { v4 as uuidv4 } from 'uuid';
 import { generateOccurrences } from '../utils/recurrenceUtils';
 import { Knex } from 'knex';
-import { publishEvent } from '../eventBus/publishers';
+import { publishEvent, publishWorkflowEvent } from '../eventBus/publishers';
+import { buildProjectTaskAssignedPayload } from '@shared/workflow/streams/domainEventBuilders/projectTaskEventBuilders';
 
 interface CreateScheduleEntryOptions {
   assignedUserIds: string[];  // Make required since it's the only way to assign users now
@@ -439,17 +440,23 @@ class ScheduleEntry {
 
                   // Publish primary assignment event
                   if (phase) {
-                    await publishEvent({
+                    const occurredAt = new Date();
+                    const assignedByUserId = options.assignedByUserId || userId;
+                    await publishWorkflowEvent({
                       eventType: 'PROJECT_TASK_ASSIGNED',
-                      payload: {
+                      ctx: {
                         tenantId: tenant,
+                        occurredAt,
+                        actor: { actorType: 'USER', actorUserId: assignedByUserId },
+                      },
+                      payload: buildProjectTaskAssignedPayload({
                         projectId: phase.project_id,
                         taskId: entry.work_item_id,
-                        userId: userId,
-                        assignedTo: userId,
-                        assignedByUserId: options.assignedByUserId,
-                        additionalUsers: []
-                      }
+                        assignedToId: userId,
+                        assignedToType: 'user',
+                        assignedByUserId,
+                        assignedAt: occurredAt,
+                      }),
                     });
                   }
                   // No task_resources record is created when there's no additional user

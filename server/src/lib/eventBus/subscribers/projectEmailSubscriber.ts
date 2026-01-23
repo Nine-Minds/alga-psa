@@ -1080,7 +1080,10 @@ async function handleProjectAssigned(event: ProjectAssignedEvent): Promise<void>
  */
 async function handleProjectTaskAssigned(event: ProjectTaskAssignedEvent): Promise<void> {
   const { payload } = event;
-  const { tenantId, assignedTo, additionalUsers = [] } = payload;
+  const tenantId = (payload as any).tenantId;
+  const assignedToUserId =
+    (payload as any).assignedToId ?? (payload as any).assignedTo ?? (payload as any).userId;
+  const assignedByUserId = (payload as any).assignedByUserId ?? (payload as any).actorUserId;
   
   try {
     const { knex: db, tenant } = await createTenantKnex();
@@ -1115,7 +1118,7 @@ async function handleProjectTaskAssigned(event: ProjectTaskAssignedEvent): Promi
             .andOn('u.is_inactive', '=', db.raw('false'));
       })
       .leftJoin('users as au', function() {
-        this.on('au.user_id', '=', db.raw('?', [payload.userId]))
+        this.on('au.user_id', '=', db.raw('?', [assignedByUserId ?? null]))
             .andOn('au.tenant', '=', 't.tenant')
             .andOn('au.is_inactive', '=', db.raw('false'));
       })
@@ -1150,6 +1153,11 @@ async function handleProjectTaskAssigned(event: ProjectTaskAssignedEvent): Promi
       .andWhere('tr.tenant', tenantId)  // Explicit tenant filter on main table
       .whereNotNull('tr.additional_user_id');
 
+    const assignedByName =
+      task.assigner_first_name && task.assigner_last_name
+        ? `${task.assigner_first_name} ${task.assigner_last_name}`
+        : 'Someone';
+
     // Send email to primary assignee
     if (isValidEmail(task.user_email)) {
       await sendNotificationIfEnabled({
@@ -1162,7 +1170,7 @@ async function handleProjectTaskAssigned(event: ProjectTaskAssignedEvent): Promi
             name: task.task_name,
             project: task.project_name,
             dueDate: task.due_date,
-            assignedBy: `${task.assigner_first_name} ${task.assigner_last_name}`,
+            assignedBy: assignedByName,
             url: `/projects/${task.project_number}/tasks/${task.task_id}`,
             role: 'Primary Assignee'
           }
@@ -1170,7 +1178,7 @@ async function handleProjectTaskAssigned(event: ProjectTaskAssignedEvent): Promi
         replyContext: {
           projectId: task.project_id || payload.projectId
         }
-      }, 'Project Task Assigned', assignedTo);
+      }, 'Project Task Assigned', assignedToUserId);
     }
 
     // Send emails to additional users (deduplicate by user_id/email)
@@ -1199,7 +1207,7 @@ async function handleProjectTaskAssigned(event: ProjectTaskAssignedEvent): Promi
             name: task.task_name,
             project: task.project_name,
             dueDate: task.due_date,
-            assignedBy: `${task.assigner_first_name} ${task.assigner_last_name}`,
+            assignedBy: assignedByName,
             url: `/projects/${task.project_number}/tasks/${task.task_id}`,
             role: 'Additional Agent'
           }

@@ -244,9 +244,27 @@ Implication: we should standardize on `@alga-psa/event-bus/publishers` helpers f
     - `shared/workflow/streams/domainEventBuilders/__tests__/projectLifecycleEventBuilders.test.ts`
   - Cleanup: removed forbidden feature-to-feature import (projects → clients) by querying contacts directly in `packages/projects/src/actions/projectActions.ts`.
 
+- 2026-01-23: Completed `F031` (project task lifecycle emission):
+  - Added shared payload builders + schema-compat unit tests:
+    - `shared/workflow/streams/domainEventBuilders/projectTaskEventBuilders.ts`
+    - `shared/workflow/streams/domainEventBuilders/__tests__/projectTaskEventBuilders.test.ts`
+  - Emitted workflow v2 domain events from real task creation/update paths:
+    - `packages/projects/src/actions/projectTaskActions.ts` publishes:
+      - `PROJECT_TASK_CREATED` on task create/duplicate
+      - `PROJECT_TASK_ASSIGNED` on primary assignee changes (domain payload with `assignedToId/assignedToType`)
+      - `PROJECT_TASK_STATUS_CHANGED` + `PROJECT_TASK_COMPLETED` when status mapping transitions (completed = enters a closed status)
+    - `packages/projects/src/actions/phaseTaskImportActions.ts` publishes `PROJECT_TASK_CREATED` (+ `PROJECT_TASK_ASSIGNED` when assigned) for imported tasks.
+    - `server/src/lib/api/services/ProjectService.ts` publishes the same task lifecycle events for REST API create/update paths.
+    - `server/src/lib/models/scheduleEntry.ts` now publishes domain-shaped `PROJECT_TASK_ASSIGNED` when schedule-driven dispatch assigns a task.
+  - Updated legacy notification/email subscribers to tolerate domain payloads:
+    - `server/src/lib/eventBus/subscribers/internalNotificationSubscriber.ts` (PROJECT_TASK_ASSIGNED)
+    - `server/src/lib/eventBus/subscribers/projectEmailSubscriber.ts` (PROJECT_TASK_ASSIGNED)
+  - Verification:
+    - `npx vitest run shared/workflow/streams/domainEventBuilders/__tests__/projectTaskEventBuilders.test.ts`
+
 ## Next Up
 
-- `F031`: emit project task lifecycle events (PROJECT_TASK_CREATED, PROJECT_TASK_ASSIGNED, PROJECT_TASK_STATUS_CHANGED, PROJECT_TASK_COMPLETED).
+- `F032`: emit project dependency events (PROJECT_TASK_DEPENDENCY_BLOCKED, PROJECT_TASK_DEPENDENCY_UNBLOCKED).
 
 ## Suggested Phasing (to reduce risk)
 

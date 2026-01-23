@@ -5,7 +5,7 @@ import ProjectTaskModel from '../models/projectTask';
 import ProjectModel from '@alga-psa/projects/models/project';
 import TaskTypeModel from '../models/taskType';
 import TaskDependencyModel from '../models/taskDependency';
-import { publishEvent } from '@alga-psa/event-bus/publishers';
+import { publishEvent, publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import type {
   DependencyType,
   ICustomTaskType,
@@ -36,6 +36,12 @@ import {
 } from '../schemas/project.schemas';
 import { OrderingService } from '../lib/orderingService';
 import { validateAndFixOrderKeys } from './regenerateOrderKeys';
+import {
+  buildProjectTaskAssignedPayload,
+  buildProjectTaskCompletedPayload,
+  buildProjectTaskCreatedPayload,
+  buildProjectTaskStatusChangedPayload,
+} from '@shared/workflow/streams/domainEventBuilders/projectTaskEventBuilders';
 
 // Helper to get tenant with non-null assertion after validation
 async function getTenantKnex(tenantId?: string | null): Promise<{ knex: Knex; tenant: string }> {
@@ -53,6 +59,34 @@ async function getTenantKnex(tenantId?: string | null): Promise<{ knex: Knex; te
   }
 
   return { knex, tenant };
+}
+
+async function resolveProjectStatusInfo(
+  trx: Knex.Transaction,
+  tenant: string,
+  projectStatusMappingId: string
+): Promise<{ status: string; isClosed: boolean }> {
+  const row = await trx('project_status_mappings as psm')
+    .leftJoin('statuses as s', function joinStatuses(this: Knex.JoinClause) {
+      this.on('psm.status_id', '=', 's.status_id').andOn('psm.tenant', '=', 's.tenant');
+    })
+    .leftJoin('standard_statuses as ss', function joinStandardStatuses(this: Knex.JoinClause) {
+      this.on('psm.standard_status_id', '=', 'ss.standard_status_id').andOn('psm.tenant', '=', 'ss.tenant');
+    })
+    .where({ 'psm.project_status_mapping_id': projectStatusMappingId, 'psm.tenant': tenant })
+    .select(
+      trx.raw(
+        'COALESCE(psm.custom_name, s.name, ss.name, psm.project_status_mapping_id) as status_name'
+      ),
+      trx.raw('COALESCE(s.is_closed, ss.is_closed, false) as is_closed')
+    )
+    .first<{ status_name: string; is_closed: boolean }>();
+
+  if (!row) {
+    return { status: projectStatusMappingId, isClosed: false };
+  }
+
+  return { status: row.status_name, isClosed: Boolean(row.is_closed) };
 }
 
 async function checkPermission(user: IUser, resource: string, action: string, knexConnection?: Knex | Knex.Transaction): Promise<void> {
@@ -91,28 +125,67 @@ export async function updateTaskWithChecklist(
 
             const updatedTask = await ProjectTaskModel.updateTask(trx, tenant, taskId, validatedTaskData as Partial<IProjectTask>);
 
-            // If assigned_to was updated, publish event
-            if ('assigned_to' in taskData && updatedTask.assigned_to) {
-                const phase = await ProjectModel.getPhaseById(trx, tenant, updatedTask.phase_id);
-                if (phase) {
-                    // Ensure tenant exists before publishing event
-                    if (!currentUser.tenant) {
-                        throw new Error("tenant context required for event publishing");
-                    }
+            const phase = await ProjectModel.getPhaseById(trx, tenant, updatedTask.phase_id);
+            if (phase) {
+                if (!currentUser.tenant) {
+                    throw new Error("tenant context required for event publishing");
+                }
 
-                    await publishEvent({
+                const occurredAt = updatedTask.updated_at instanceof Date ? updatedTask.updated_at : new Date();
+                const ctx = {
+                    tenantId: currentUser.tenant,
+                    occurredAt,
+                    actor: { actorType: 'USER' as const, actorUserId: currentUser.user_id },
+                };
+
+                if ('assigned_to' in taskData && existingTask.assigned_to !== updatedTask.assigned_to && updatedTask.assigned_to) {
+                    await publishWorkflowEvent({
                         eventType: 'PROJECT_TASK_ASSIGNED',
-                        payload: {
-                            tenantId: currentUser.tenant,
+                        ctx,
+                        payload: buildProjectTaskAssignedPayload({
                             projectId: phase.project_id,
-                            taskId: taskId,
-                            userId: updatedTask.assigned_to,  // The user being assigned
-                            assignedTo: updatedTask.assigned_to,  // For backward compatibility
-                            assignedByUserId: currentUser.user_id,  // The user who performed the action
-                            additionalUsers: [], // No additional users in this case
-                            timestamp: new Date().toISOString()
-                        }
+                            taskId,
+                            assignedToId: updatedTask.assigned_to,
+                            assignedToType: 'user',
+                            assignedByUserId: currentUser.user_id,
+                            assignedAt: occurredAt,
+                        }),
                     });
+                }
+
+                if (
+                    'project_status_mapping_id' in taskData &&
+                    existingTask.project_status_mapping_id !== updatedTask.project_status_mapping_id
+                ) {
+                    const [beforeStatus, afterStatus] = await Promise.all([
+                        resolveProjectStatusInfo(trx, tenant, existingTask.project_status_mapping_id),
+                        resolveProjectStatusInfo(trx, tenant, updatedTask.project_status_mapping_id),
+                    ]);
+
+                    await publishWorkflowEvent({
+                        eventType: 'PROJECT_TASK_STATUS_CHANGED',
+                        ctx,
+                        payload: buildProjectTaskStatusChangedPayload({
+                            projectId: phase.project_id,
+                            taskId,
+                            previousStatus: beforeStatus.status,
+                            newStatus: afterStatus.status,
+                            changedAt: occurredAt,
+                        }),
+                    });
+
+                    if (!beforeStatus.isClosed && afterStatus.isClosed) {
+                        await publishWorkflowEvent({
+                            eventType: 'PROJECT_TASK_COMPLETED',
+                            ctx,
+                            payload: buildProjectTaskCompletedPayload({
+                                projectId: phase.project_id,
+                                taskId,
+                                completedByUserId: currentUser.user_id,
+                                completedAt: occurredAt,
+                            }),
+                        });
+                    }
                 }
             }
 
@@ -157,22 +230,42 @@ export async function addTaskToPhase(
             
             const newTask = await ProjectTaskModel.addTask(trx, tenant, phaseId, taskData);
 
-            // If task is assigned to someone, publish event
-            if (taskData.assigned_to) {
-                const phase = await ProjectModel.getPhaseById(trx, tenant, phaseId);
-                if (phase) {
-                    await publishEvent({
+            const phase = await ProjectModel.getPhaseById(trx, tenant, phaseId);
+            if (phase) {
+                const occurredAt = newTask.created_at instanceof Date ? newTask.created_at : new Date();
+                const ctx = {
+                    tenantId: currentUser.tenant,
+                    occurredAt,
+                    actor: { actorType: 'USER' as const, actorUserId: currentUser.user_id },
+                };
+                const statusInfo = await resolveProjectStatusInfo(trx, tenant, newTask.project_status_mapping_id);
+
+                await publishWorkflowEvent({
+                    eventType: 'PROJECT_TASK_CREATED',
+                    ctx,
+                    payload: buildProjectTaskCreatedPayload({
+                        projectId: phase.project_id,
+                        taskId: newTask.task_id,
+                        title: newTask.task_name,
+                        dueDate: newTask.due_date,
+                        status: statusInfo.status,
+                        createdByUserId: currentUser.user_id,
+                        createdAt: occurredAt,
+                    }),
+                });
+
+                if (newTask.assigned_to) {
+                    await publishWorkflowEvent({
                         eventType: 'PROJECT_TASK_ASSIGNED',
-                        payload: {
-                            tenantId: currentUser.tenant,
+                        ctx,
+                        payload: buildProjectTaskAssignedPayload({
                             projectId: phase.project_id,
                             taskId: newTask.task_id,
-                            userId: taskData.assigned_to,  // The user being assigned
-                            assignedTo: taskData.assigned_to,  // For backward compatibility
-                            assignedByUserId: currentUser.user_id,  // The user who performed the action
-                            additionalUsers: [], // No additional users in initial creation
-                            timestamp: new Date().toISOString()
-                        }
+                            assignedToId: newTask.assigned_to,
+                            assignedToType: 'user',
+                            assignedByUserId: currentUser.user_id,
+                            assignedAt: occurredAt,
+                        }),
                     });
                 }
             }
@@ -282,6 +375,47 @@ export async function updateTaskStatus(
                 .first();
             if (!updatedTask) {
                 throw new Error('Task not found after status update');
+            }
+
+            if (currentUser.tenant) {
+                const phase = await ProjectModel.getPhaseById(trx, tenant, updatedTask.phase_id);
+                if (phase) {
+                    const occurredAt = updatedTask.updated_at instanceof Date ? updatedTask.updated_at : new Date();
+                    const ctx = {
+                        tenantId: currentUser.tenant,
+                        occurredAt,
+                        actor: { actorType: 'USER' as const, actorUserId: currentUser.user_id },
+                    };
+                    const [beforeStatus, afterStatus] = await Promise.all([
+                        resolveProjectStatusInfo(trx, tenant, task.project_status_mapping_id),
+                        resolveProjectStatusInfo(trx, tenant, updatedTask.project_status_mapping_id),
+                    ]);
+
+                    await publishWorkflowEvent({
+                        eventType: 'PROJECT_TASK_STATUS_CHANGED',
+                        ctx,
+                        payload: buildProjectTaskStatusChangedPayload({
+                            projectId: phase.project_id,
+                            taskId,
+                            previousStatus: beforeStatus.status,
+                            newStatus: afterStatus.status,
+                            changedAt: occurredAt,
+                        }),
+                    });
+
+                    if (!beforeStatus.isClosed && afterStatus.isClosed) {
+                        await publishWorkflowEvent({
+                            eventType: 'PROJECT_TASK_COMPLETED',
+                            ctx,
+                            payload: buildProjectTaskCompletedPayload({
+                                projectId: phase.project_id,
+                                taskId,
+                                completedByUserId: currentUser.user_id,
+                                completedAt: occurredAt,
+                            }),
+                        });
+                    }
+                }
             }
             
             return updatedTask;
@@ -1032,20 +1166,43 @@ export async function duplicateTaskToPhase(
                 }
             }
 
-            // Publish event if task was assigned
-            if (newTask.assigned_to) {
-                 await publishEvent({
-                     eventType: 'PROJECT_TASK_ASSIGNED',
-                     payload: {
-                         tenantId: currentUser.tenant,
-                         projectId: newPhase.project_id,
-                         taskId: newTask.task_id,
-                         userId: currentUser.user_id, // User performing the action
-                         assignedTo: newTask.assigned_to,
-                         additionalUsers: [], // Additional users handled separately if duplicated
-                         timestamp: new Date().toISOString()
-                     }
-                 });
+            if (currentUser.tenant) {
+                const occurredAt = newTask.created_at instanceof Date ? newTask.created_at : new Date();
+                const ctx = {
+                    tenantId: currentUser.tenant,
+                    occurredAt,
+                    actor: { actorType: 'USER' as const, actorUserId: currentUser.user_id },
+                };
+                const statusInfo = await resolveProjectStatusInfo(trx, tenant, newTask.project_status_mapping_id);
+
+                await publishWorkflowEvent({
+                    eventType: 'PROJECT_TASK_CREATED',
+                    ctx,
+                    payload: buildProjectTaskCreatedPayload({
+                        projectId: newPhase.project_id,
+                        taskId: newTask.task_id,
+                        title: newTask.task_name,
+                        dueDate: newTask.due_date,
+                        status: statusInfo.status,
+                        createdByUserId: currentUser.user_id,
+                        createdAt: occurredAt,
+                    }),
+                });
+
+                if (newTask.assigned_to) {
+                    await publishWorkflowEvent({
+                        eventType: 'PROJECT_TASK_ASSIGNED',
+                        ctx,
+                        payload: buildProjectTaskAssignedPayload({
+                            projectId: newPhase.project_id,
+                            taskId: newTask.task_id,
+                            assignedToId: newTask.assigned_to,
+                            assignedToType: 'user',
+                            assignedByUserId: currentUser.user_id,
+                            assignedAt: occurredAt,
+                        }),
+                    });
+                }
             }
 
             // 6. Return the newly created task object
