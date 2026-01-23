@@ -116,7 +116,7 @@
   {
     "id": "F020",
     "description": "Update Chat.tsx to use streaming endpoint and read response via ReadableStream/getReader()",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Streaming Implementation"]
   },
   {

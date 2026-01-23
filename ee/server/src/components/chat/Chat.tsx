@@ -192,6 +192,72 @@ const mapMessagesFromProps = (records: any[]): ChatCompletionMessage[] =>
     reasoning: record.reasoning ?? undefined,
   }));
 
+type StreamEventPayload = { content?: unknown; done?: unknown };
+
+async function readAssistantContentFromSse(response: Response): Promise<string> {
+  if (!response.body) {
+    throw new Error('Streaming response missing body');
+  }
+
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = '';
+  let content = '';
+
+  const processEvent = (rawEvent: string) => {
+    const lines = rawEvent.split('\n');
+    for (const line of lines) {
+      if (!line.startsWith('data:')) {
+        continue;
+      }
+      const jsonText = line.slice('data:'.length).trim();
+      if (!jsonText.length) {
+        continue;
+      }
+
+      let payload: StreamEventPayload;
+      try {
+        payload = JSON.parse(jsonText) as StreamEventPayload;
+      } catch {
+        continue;
+      }
+
+      if (typeof payload.content === 'string') {
+        content += payload.content;
+      }
+      if (payload.done === true) {
+        return true;
+      }
+    }
+
+    return false;
+  };
+
+  while (true) {
+    const { value, done } = await reader.read();
+    if (done) {
+      break;
+    }
+
+    buffer += decoder.decode(value, { stream: true });
+    let boundaryIndex = buffer.indexOf('\n\n');
+    while (boundaryIndex !== -1) {
+      const rawEvent = buffer.slice(0, boundaryIndex);
+      buffer = buffer.slice(boundaryIndex + 2);
+      if (processEvent(rawEvent)) {
+        return content;
+      }
+      boundaryIndex = buffer.indexOf('\n\n');
+    }
+  }
+
+  if (buffer.length > 0) {
+    processEvent(buffer);
+  }
+
+  return content;
+}
+
 export const Chat: React.FC<ChatProps> = ({
   clientUrl,
   accountId,
@@ -544,113 +610,92 @@ export const Chat: React.FC<ChatProps> = ({
     }
 
     try {
-      const response = await fetch('/api/chat/v1/completions', {
+      const response = await fetch('/api/chat/v1/completions/stream', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
           messages: conversationWithUser,
-          chatId: createdChatId,
         }),
       });
 
-      const data = await response.json();
       if (!response.ok) {
-        throw new Error(data?.error || `Request failed with status ${response.status}`);
+        let errorMessage = `Request failed with status ${response.status}`;
+        try {
+          const data = await response.json();
+          if (data?.error) {
+            errorMessage = data.error;
+          }
+        } catch {
+          // best-effort
+        }
+        throw new Error(errorMessage);
       }
 
-      if (data.type === 'assistant_message') {
-        const modelMessages = data.modelMessages ?? data.nextMessages;
-        const assistantContentRaw = (data.message?.content ?? '').trim();
-        const assistantReasoning: string | null = data.message?.reasoning ?? null;
-        const finalAssistantContent =
-          assistantContentRaw.length > 0
-            ? assistantContentRaw
-            : (assistantReasoning ?? '').trim();
+      const finalAssistantContent = await readAssistantContentFromSse(response);
 
-        const assistantOrder = messageOrderRef.current + 1;
-        messageOrderRef.current = assistantOrder;
-        await addAssistantMessageToPersistence(
-          createdChatId ?? chatId,
-          finalAssistantContent,
-          assistantOrder,
-        );
-        setConversation(
-          modelMessages ?? [
-            ...conversationWithUser,
-            {
-              role: 'assistant',
-              content: finalAssistantContent,
-              reasoning: assistantReasoning ?? undefined,
-            },
-          ],
-        );
+      const assistantOrder = messageOrderRef.current + 1;
+      messageOrderRef.current = assistantOrder;
+      await addAssistantMessageToPersistence(
+        createdChatId ?? chatId,
+        finalAssistantContent,
+        assistantOrder,
+      );
 
-        typingControllerRef.current?.abort();
-        const controller = new AbortController();
-        typingControllerRef.current = controller;
+      setConversation([
+        ...conversationWithUser,
+        {
+          role: 'assistant',
+          content: finalAssistantContent,
+        },
+      ]);
 
-        setFullReasoning(assistantReasoning);
-        setIsFunction(false);
+      typingControllerRef.current?.abort();
+      const controller = new AbortController();
+      typingControllerRef.current = controller;
+
+      setFullReasoning(null);
+      setIsFunction(false);
+      setIncomingMessage('');
+      streamingTextRef.current = finalAssistantContent;
+
+      const fullText = finalAssistantContent;
+      const totalSteps = Math.max(12, Math.min(140, Math.ceil(fullText.length / 14)));
+      const stepSize = Math.max(1, Math.ceil(fullText.length / totalSteps));
+
+      if (fullText.length === 0) {
         setIncomingMessage('');
-        streamingTextRef.current = finalAssistantContent;
+        setFullMessage('');
+        setGeneratingResponse(false);
+        streamingTextRef.current = null;
+      } else {
+        let revealed = 0;
+        const streamStep = () => {
+          if (controller.signal.aborted) {
+            return;
+          }
 
-        const fullText = finalAssistantContent;
-        const totalSteps = Math.max(12, Math.min(140, Math.ceil(fullText.length / 14)));
-        const stepSize = Math.max(1, Math.ceil(fullText.length / totalSteps));
+          revealed = Math.min(fullText.length, revealed + stepSize);
+          const next = fullText.slice(0, revealed);
+          setIncomingMessage(next);
 
-        if (fullText.length === 0) {
-          setIncomingMessage('');
-          setFullMessage('');
-          setGeneratingResponse(false);
-          streamingTextRef.current = null;
-        } else {
-          let revealed = 0;
-          const streamStep = () => {
-            if (controller.signal.aborted) {
-              return;
-            }
-
-            revealed = Math.min(fullText.length, revealed + stepSize);
-            const next = fullText.slice(0, revealed);
-            setIncomingMessage(next);
-
-            if (revealed >= fullText.length) {
-              setIncomingMessage('');
-              setFullMessage(fullText);
-              setGeneratingResponse(false);
-              streamingTextRef.current = null;
-              return;
-            }
-
-            requestAnimationFrame(streamStep);
-          };
+          if (revealed >= fullText.length) {
+            setIncomingMessage('');
+            setFullMessage(fullText);
+            setGeneratingResponse(false);
+            streamingTextRef.current = null;
+            return;
+          }
 
           requestAnimationFrame(streamStep);
-        }
-        setPendingFunctionStatus('idle');
-        setPendingFunctionAction('none');
-        setPendingFunction(null);
-      } else if (data.type === 'function_proposed') {
-        const modelMessages = data.modelMessages ?? data.nextMessages;
-        setPendingFunction({
-          metadata: data.function,
-          assistantPreview: data.assistantPreview,
-          assistantReasoning: data.assistantReasoning,
-          functionCall: data.functionCall,
-          nextMessages: modelMessages,
-          chatId: createdChatId ?? chatId,
-        });
-        setConversation(modelMessages);
-        setPendingFunctionStatus('awaiting');
-        setPendingFunctionAction('none');
-        setIncomingMessage('');
-        setIsFunction(true);
-        setGeneratingResponse(false);
-      } else {
-        throw new Error('Unexpected response from the assistant.');
+        };
+
+        requestAnimationFrame(streamStep);
       }
+      setPendingFunctionStatus('idle');
+      setPendingFunctionAction('none');
+      setPendingFunction(null);
     } catch (error) {
       console.error('Error generating completion', error);
       setIncomingMessage('An error occurred while generating the response.');

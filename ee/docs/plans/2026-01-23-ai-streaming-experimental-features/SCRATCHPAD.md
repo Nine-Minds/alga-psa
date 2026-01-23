@@ -141,4 +141,9 @@ curl -X POST localhost:3000/api/chat/stream/chat \
   - `/api/chat/v1/completions/stream` now sends `data: {"content":"","done":true}\n\n` when the upstream stream completes (best-effort; skipped when request is aborted)
   - File: `server/src/app/api/chat/v1/completions/stream/route.ts`
 - Validation: `npx eslint server/src/app/api/chat/v1/completions/stream/route.ts --max-warnings=0`
-- Next feature item: F020 Update Chat.tsx to use streaming endpoint and read response via ReadableStream/getReader()
+- Implemented Chat.tsx wiring to streaming endpoint:
+  - `ee/server/src/components/chat/Chat.tsx` now posts to `/api/chat/v1/completions/stream`
+  - Reads SSE response via `response.body.getReader()` and reconstructs final assistant content from `data: {content, done}` events
+  - Note: UI still uses existing “typing” reveal once streaming completes; incremental token display is handled in the next feature item.
+- Validation: `npx eslint ee/server/src/components/chat/Chat.tsx` (warnings present in file; no errors)
+- Next feature item: F021 Parse SSE chunks in Chat.tsx and append tokens to message state incrementally
