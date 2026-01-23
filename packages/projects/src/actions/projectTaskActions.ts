@@ -40,6 +40,8 @@ import {
   buildProjectTaskAssignedPayload,
   buildProjectTaskCompletedPayload,
   buildProjectTaskCreatedPayload,
+  buildProjectTaskDependencyBlockedPayload,
+  buildProjectTaskDependencyUnblockedPayload,
   buildProjectTaskStatusChangedPayload,
 } from '@shared/workflow/streams/domainEventBuilders/projectTaskEventBuilders';
 
@@ -87,6 +89,20 @@ async function resolveProjectStatusInfo(
   }
 
   return { status: row.status_name, isClosed: Boolean(row.is_closed) };
+}
+
+function resolveTaskBlockRelation(params: {
+  dependencyType: DependencyType;
+  predecessorTaskId: string;
+  successorTaskId: string;
+}): { blockedTaskId: string; blockedByTaskId: string } | null {
+  if (params.dependencyType === 'blocks') {
+    return { blockedTaskId: params.successorTaskId, blockedByTaskId: params.predecessorTaskId };
+  }
+  if (params.dependencyType === 'blocked_by') {
+    return { blockedTaskId: params.predecessorTaskId, blockedByTaskId: params.successorTaskId };
+  }
+  return null;
 }
 
 async function checkPermission(user: IUser, resource: string, action: string, knexConnection?: Knex | Knex.Transaction): Promise<void> {
@@ -1517,15 +1533,53 @@ export async function addTaskDependency(
             );
         }
         
-        return await TaskDependencyModel.addDependency(
-            trx,
-            tenant,
-            actualPredecessorId, 
-            actualSuccessorId, 
-            actualDependencyType, 
-            leadLagDays, 
-            notes
+        const dependency = await TaskDependencyModel.addDependency(
+          trx,
+          tenant,
+          actualPredecessorId,
+          actualSuccessorId,
+          actualDependencyType,
+          leadLagDays,
+          notes
         );
+
+        if (!currentUser.tenant) {
+          throw new Error('tenant context required for event publishing');
+        }
+
+        const blockRelation = resolveTaskBlockRelation({
+          dependencyType: actualDependencyType,
+          predecessorTaskId: actualPredecessorId,
+          successorTaskId: actualSuccessorId,
+        });
+
+        if (blockRelation) {
+          const blockedTask = await ProjectTaskModel.getTaskById(trx, tenant, blockRelation.blockedTaskId);
+          if (blockedTask) {
+            const phase = await ProjectModel.getPhaseById(trx, tenant, blockedTask.phase_id);
+            if (phase) {
+              const occurredAt = dependency.created_at instanceof Date ? dependency.created_at : new Date();
+              const ctx = {
+                tenantId: currentUser.tenant,
+                occurredAt,
+                actor: { actorType: 'USER' as const, actorUserId: currentUser.user_id },
+              };
+
+              await publishWorkflowEvent({
+                eventType: 'PROJECT_TASK_DEPENDENCY_BLOCKED',
+                ctx,
+                payload: buildProjectTaskDependencyBlockedPayload({
+                  projectId: phase.project_id,
+                  taskId: blockRelation.blockedTaskId,
+                  blockedByTaskId: blockRelation.blockedByTaskId,
+                  blockedAt: occurredAt,
+                }),
+              });
+            }
+          }
+        }
+
+        return dependency;
     });
 }
 
@@ -1550,10 +1604,57 @@ export async function removeTaskDependency(dependencyId: string): Promise<void> 
         throw new Error("user not found");
     }
     
-    const {knex: db, tenant} = await getTenantKnex();
-    await checkPermission(currentUser, 'project', 'update', db);
-    
-    await TaskDependencyModel.removeDependency(db, tenant, dependencyId);
+    const { knex: db, tenant } = await getTenantKnex();
+
+    await withTransaction(db, async (trx) => {
+      await checkPermission(currentUser, 'project', 'update', trx);
+
+      const dependency = await trx('project_task_dependencies')
+        .where({ dependency_id: dependencyId, tenant })
+        .first();
+
+      if (!dependency) {
+        throw new Error('Dependency not found');
+      }
+
+      await TaskDependencyModel.removeDependency(trx, tenant, dependencyId);
+
+      if (!currentUser.tenant) {
+        throw new Error('tenant context required for event publishing');
+      }
+
+      const blockRelation = resolveTaskBlockRelation({
+        dependencyType: dependency.dependency_type,
+        predecessorTaskId: dependency.predecessor_task_id,
+        successorTaskId: dependency.successor_task_id,
+      });
+
+      if (!blockRelation) return;
+
+      const blockedTask = await ProjectTaskModel.getTaskById(trx, tenant, blockRelation.blockedTaskId);
+      if (!blockedTask) return;
+
+      const phase = await ProjectModel.getPhaseById(trx, tenant, blockedTask.phase_id);
+      if (!phase) return;
+
+      const occurredAt = new Date();
+      const ctx = {
+        tenantId: currentUser.tenant,
+        occurredAt,
+        actor: { actorType: 'USER' as const, actorUserId: currentUser.user_id },
+      };
+
+      await publishWorkflowEvent({
+        eventType: 'PROJECT_TASK_DEPENDENCY_UNBLOCKED',
+        ctx,
+        payload: buildProjectTaskDependencyUnblockedPayload({
+          projectId: phase.project_id,
+          taskId: blockRelation.blockedTaskId,
+          unblockedByTaskId: blockRelation.blockedByTaskId,
+          unblockedAt: occurredAt,
+        }),
+      });
+    });
 }
 
 export async function updateTaskDependency(

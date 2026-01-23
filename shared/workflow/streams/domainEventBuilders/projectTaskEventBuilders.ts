@@ -72,3 +72,30 @@ export function buildProjectTaskCompletedPayload(params: {
   };
 }
 
+export function buildProjectTaskDependencyBlockedPayload(params: {
+  projectId: string;
+  taskId: string;
+  blockedByTaskId: string;
+  blockedAt?: Date | string;
+}): Record<string, unknown> {
+  return {
+    projectId: params.projectId,
+    taskId: params.taskId,
+    blockedByTaskId: params.blockedByTaskId,
+    ...(params.blockedAt ? { blockedAt: normalizeValue(params.blockedAt) } : {}),
+  };
+}
+
+export function buildProjectTaskDependencyUnblockedPayload(params: {
+  projectId: string;
+  taskId: string;
+  unblockedByTaskId: string;
+  unblockedAt?: Date | string;
+}): Record<string, unknown> {
+  return {
+    projectId: params.projectId,
+    taskId: params.taskId,
+    unblockedByTaskId: params.unblockedByTaskId,
+    ...(params.unblockedAt ? { unblockedAt: normalizeValue(params.unblockedAt) } : {}),
+  };
+}

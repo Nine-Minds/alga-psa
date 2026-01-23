@@ -262,9 +262,20 @@ Implication: we should standardize on `@alga-psa/event-bus/publishers` helpers f
   - Verification:
     - `npx vitest run shared/workflow/streams/domainEventBuilders/__tests__/projectTaskEventBuilders.test.ts`
 
+- 2026-01-23: Completed `F032` (project dependency events emission):
+  - Added shared payload builders + schema-compat unit tests:
+    - `shared/workflow/streams/domainEventBuilders/projectTaskEventBuilders.ts` (dependency blocked/unblocked payload builders)
+    - `shared/workflow/streams/domainEventBuilders/__tests__/projectTaskEventBuilders.test.ts`
+  - Emitted dependency lifecycle workflow events from real dependency CRUD paths:
+    - `packages/projects/src/actions/projectTaskActions.ts` publishes:
+      - `PROJECT_TASK_DEPENDENCY_BLOCKED` when a blocking relationship is created (`dependency_type` in {`blocks`,`blocked_by`})
+      - `PROJECT_TASK_DEPENDENCY_UNBLOCKED` when a blocking relationship is removed
+  - Notes/constraints:
+    - Only blocking relationships emit events; `related_to` dependencies remain non-workflow.
+
 ## Next Up
 
-- `F032`: emit project dependency events (PROJECT_TASK_DEPENDENCY_BLOCKED, PROJECT_TASK_DEPENDENCY_UNBLOCKED).
+- `F033`: emit project approval events (PROJECT_APPROVAL_REQUESTED, PROJECT_APPROVAL_GRANTED, PROJECT_APPROVAL_REJECTED) when approvals exist/enabled.
 
 ## Suggested Phasing (to reduce risk)
 

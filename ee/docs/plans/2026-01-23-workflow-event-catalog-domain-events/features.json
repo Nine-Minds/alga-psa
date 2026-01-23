@@ -20,7 +20,7 @@
 
   { "id": "F030", "description": "Projects: emit project lifecycle events (PROJECT_UPDATED, PROJECT_STATUS_CHANGED)", "implemented": true, "prdRefs": ["7.2"] },
   { "id": "F031", "description": "Projects: emit task lifecycle events (PROJECT_TASK_CREATED, PROJECT_TASK_ASSIGNED, PROJECT_TASK_STATUS_CHANGED, PROJECT_TASK_COMPLETED)", "implemented": true, "prdRefs": ["7.2"] },
-  { "id": "F032", "description": "Projects: emit dependency events (PROJECT_TASK_DEPENDENCY_BLOCKED, PROJECT_TASK_DEPENDENCY_UNBLOCKED)", "implemented": false, "prdRefs": ["7.2"] },
+  { "id": "F032", "description": "Projects: emit dependency events (PROJECT_TASK_DEPENDENCY_BLOCKED, PROJECT_TASK_DEPENDENCY_UNBLOCKED)", "implemented": true, "prdRefs": ["7.2"] },
   { "id": "F033", "description": "Projects: emit approval events (PROJECT_APPROVAL_REQUESTED, PROJECT_APPROVAL_GRANTED, PROJECT_APPROVAL_REJECTED) when approvals exist/enabled", "implemented": false, "prdRefs": ["7.2", "7.3"] },
 
   { "id": "F040", "description": "Billing: emit invoice lifecycle events (INVOICE_SENT, INVOICE_STATUS_CHANGED, INVOICE_DUE_DATE_CHANGED, INVOICE_OVERDUE, INVOICE_WRITTEN_OFF) in addition to existing invoice events", "implemented": false, "prdRefs": ["7.2"] },

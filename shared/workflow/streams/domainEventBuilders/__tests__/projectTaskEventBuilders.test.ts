@@ -4,12 +4,16 @@ import {
   projectTaskAssignedEventPayloadSchema,
   projectTaskCompletedEventPayloadSchema,
   projectTaskCreatedEventPayloadSchema,
+  projectTaskDependencyBlockedEventPayloadSchema,
+  projectTaskDependencyUnblockedEventPayloadSchema,
   projectTaskStatusChangedEventPayloadSchema,
 } from '../../../runtime/schemas/projectEventSchemas';
 import {
   buildProjectTaskAssignedPayload,
   buildProjectTaskCompletedPayload,
   buildProjectTaskCreatedPayload,
+  buildProjectTaskDependencyBlockedPayload,
+  buildProjectTaskDependencyUnblockedPayload,
   buildProjectTaskStatusChangedPayload,
 } from '../projectTaskEventBuilders';
 
@@ -87,5 +91,32 @@ describe('projectTaskEventBuilders', () => {
 
     expect(projectTaskCompletedEventPayloadSchema.safeParse(payload).success).toBe(true);
   });
-});
 
+  it('builds PROJECT_TASK_DEPENDENCY_BLOCKED payloads compatible with schema', () => {
+    const payload = buildWorkflowPayload(
+      buildProjectTaskDependencyBlockedPayload({
+        projectId,
+        taskId,
+        blockedByTaskId: '0db4bb8b-6e7b-4e2c-8b4f-34d3e4f94b6a',
+        blockedAt: occurredAt,
+      }),
+      ctx
+    );
+
+    expect(projectTaskDependencyBlockedEventPayloadSchema.safeParse(payload).success).toBe(true);
+  });
+
+  it('builds PROJECT_TASK_DEPENDENCY_UNBLOCKED payloads compatible with schema', () => {
+    const payload = buildWorkflowPayload(
+      buildProjectTaskDependencyUnblockedPayload({
+        projectId,
+        taskId,
+        unblockedByTaskId: '0db4bb8b-6e7b-4e2c-8b4f-34d3e4f94b6a',
+        unblockedAt: occurredAt,
+      }),
+      ctx
+    );
+
+    expect(projectTaskDependencyUnblockedEventPayloadSchema.safeParse(payload).success).toBe(true);
+  });
+});
