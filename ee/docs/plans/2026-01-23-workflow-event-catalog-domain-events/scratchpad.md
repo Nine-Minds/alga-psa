@@ -385,9 +385,18 @@ Implication: we should standardize on `@alga-psa/event-bus/publishers` helpers f
     - `packages/clients/src/actions/clientNoteActions.ts` publishes `NOTE_CREATED` when a notes document is first created/linked to a client.
     - `packages/clients/src/actions/contact-actions/contactNoteActions.ts` publishes `NOTE_CREATED` when a notes document is first created/linked to a contact.
 
+- 2026-01-23: Completed `F053` (tags events emission):
+  - Added shared payload builders + schema-compat unit tests:
+    - `shared/workflow/streams/domainEventBuilders/tagEventBuilders.ts`
+    - `shared/workflow/streams/domainEventBuilders/__tests__/tagEventBuilders.test.ts`
+  - Emitted workflow v2 tag domain events from tag actions:
+    - `packages/tags/src/actions/tagActions.ts` publishes `TAG_DEFINITION_CREATED`, `TAG_DEFINITION_UPDATED`, `TAG_APPLIED`, `TAG_REMOVED` (uses definition id as `tagId`, and `entityType/entityId` from `tagged_type/tagged_id`).
+  - Added `getOrCreateWithStatus` to detect definition creates reliably:
+    - `packages/tags/src/models/tagDefinition.ts`
+
 ## Next Up
 
-- `F053`: emit tag definition and tag application events (TAG_DEFINITION_CREATED, TAG_DEFINITION_UPDATED, TAG_APPLIED, TAG_REMOVED).
+- `F060`: emit storage lifecycle events (DOCUMENT_UPLOADED, DOCUMENT_DELETED).
 
 ## Suggested Phasing (to reduce risk)
 

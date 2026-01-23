@@ -32,7 +32,7 @@
   { "id": "F050", "description": "CRM: emit client events (CLIENT_CREATED, CLIENT_UPDATED, CLIENT_STATUS_CHANGED, CLIENT_OWNER_ASSIGNED, CLIENT_MERGED, CLIENT_ARCHIVED)", "implemented": true, "prdRefs": ["7.2"] },
   { "id": "F051", "description": "CRM: emit contact events (CONTACT_CREATED, CONTACT_UPDATED, CONTACT_PRIMARY_SET, CONTACT_ARCHIVED, CONTACT_MERGED)", "implemented": true, "prdRefs": ["7.2"] },
   { "id": "F052", "description": "CRM: emit interaction/note events (INTERACTION_LOGGED, NOTE_CREATED)", "implemented": true, "prdRefs": ["7.2"] },
-  { "id": "F053", "description": "Tags: emit tag definition and tag application events (TAG_DEFINITION_CREATED, TAG_DEFINITION_UPDATED, TAG_APPLIED, TAG_REMOVED) with generic entityType/entityId payload shape", "implemented": false, "prdRefs": ["7.2"] },
+  { "id": "F053", "description": "Tags: emit tag definition and tag application events (TAG_DEFINITION_CREATED, TAG_DEFINITION_UPDATED, TAG_APPLIED, TAG_REMOVED) with generic entityType/entityId payload shape", "implemented": true, "prdRefs": ["7.2"] },
 
   { "id": "F060", "description": "Documents: emit storage lifecycle events (DOCUMENT_UPLOADED, DOCUMENT_DELETED)", "implemented": false, "prdRefs": ["7.2"] },
   { "id": "F061", "description": "Documents: emit association events (DOCUMENT_ASSOCIATED, DOCUMENT_DETACHED)", "implemented": false, "prdRefs": ["7.2"] },

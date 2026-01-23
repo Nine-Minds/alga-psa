@@ -103,30 +103,53 @@ const TagDefinition = {
     tagged_type: TaggedEntityType,
     defaults: Partial<Omit<ITagDefinition, 'tag_id' | 'tenant' | 'tag_text' | 'tagged_type'>> = {}
   ): Promise<ITagDefinition> => {
+    const { definition } = await TagDefinition.getOrCreateWithStatus(
+      knexOrTrx,
+      tenant,
+      tag_text,
+      tagged_type,
+      defaults
+    );
+    return definition;
+  },
+
+  getOrCreateWithStatus: async (
+    knexOrTrx: Knex | Knex.Transaction,
+    tenant: string,
+    tag_text: string,
+    tagged_type: TaggedEntityType,
+    defaults: Partial<Omit<ITagDefinition, 'tag_id' | 'tenant' | 'tag_text' | 'tagged_type'>> = {}
+  ): Promise<{ definition: ITagDefinition; created: boolean }> => {
     let definition = await TagDefinition.findByTextAndType(knexOrTrx, tenant, tag_text, tagged_type);
 
-    if (!definition) {
-      try {
-        definition = await TagDefinition.insert(knexOrTrx, tenant, {
-          tag_text,
-          tagged_type,
-          ...defaults
-        });
-      } catch (insertError: any) {
-        if (insertError.code === '23505' || insertError.message?.includes('duplicate')) {
-          definition = await TagDefinition.findByTextAndType(knexOrTrx, tenant, tag_text, tagged_type);
-          if (!definition) {
-            throw insertError;
-          }
-        } else {
-          throw insertError;
-        }
-      }
+    if (definition) {
+      return { definition, created: false };
     }
 
-    return definition;
+    try {
+      definition = await TagDefinition.insert(knexOrTrx, tenant, {
+        tag_text,
+        tagged_type,
+        ...defaults
+      });
+      return { definition, created: true };
+    } catch (insertError: unknown) {
+      const errorCode =
+        typeof insertError === 'object' && insertError !== null && 'code' in insertError
+          ? String((insertError as { code?: unknown }).code)
+          : undefined;
+      const errorMessage = insertError instanceof Error ? insertError.message : undefined;
+
+      if (errorCode === '23505' || errorMessage?.includes('duplicate')) {
+        definition = await TagDefinition.findByTextAndType(knexOrTrx, tenant, tag_text, tagged_type);
+        if (!definition) {
+          throw insertError;
+        }
+        return { definition, created: false };
+      }
+      throw insertError;
+    }
   }
 };
 
 export default TagDefinition;
-
