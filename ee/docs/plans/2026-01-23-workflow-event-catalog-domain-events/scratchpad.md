@@ -291,9 +291,25 @@ Implication: we should standardize on `@alga-psa/event-bus/publishers` helpers f
   - Added schema-compat unit coverage:
     - `server/src/test/unit/invoiceWorkflowEvents.test.ts`
 
+- 2026-01-23: Completed `F041` (payment events emission):
+  - Added billing workflow payload builders:
+    - `server/src/lib/api/services/paymentWorkflowEvents.ts`
+  - Emitted workflow v2 payment domain events from real payment paths:
+    - Manual invoice payments/refunds in `server/src/lib/api/services/InvoiceService.ts` now publish:
+      - `PAYMENT_RECORDED` + `PAYMENT_APPLIED` on `recordPayment`
+      - `PAYMENT_REFUNDED` on `recordRefund`
+    - Stripe webhook processing in `ee/server/src/lib/payments/PaymentService.ts` now publishes:
+      - `PAYMENT_RECORDED` + `PAYMENT_APPLIED` on successful payment recording
+      - `PAYMENT_REFUNDED` on refund recording
+      - `PAYMENT_FAILED` on `payment_intent.payment_failed` events (when amount is present)
+  - Added schema-compat unit coverage:
+    - `server/src/test/unit/paymentWorkflowEvents.test.ts`
+  - Verification:
+    - `npx vitest run server/src/test/unit/paymentWorkflowEvents.test.ts`
+
 ## Next Up
 
-- `F041`: emit payment events (PAYMENT_RECORDED, PAYMENT_APPLIED, PAYMENT_FAILED, PAYMENT_REFUNDED).
+- `F042`: emit credit events (CREDIT_NOTE_CREATED, CREDIT_NOTE_APPLIED, CREDIT_NOTE_VOIDED).
 
 ## Suggested Phasing (to reduce risk)
 

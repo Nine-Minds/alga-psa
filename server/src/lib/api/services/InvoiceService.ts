@@ -23,6 +23,7 @@ import {
   inferInvoiceDeliveryMethod,
   toIsoDateString,
 } from './invoiceWorkflowEvents';
+import { buildPaymentAppliedPayload, buildPaymentRecordedPayload, buildPaymentRefundedPayload } from './paymentWorkflowEvents';
 
 // Import existing service functions
 import * as invoiceService from '../../services/invoiceService';
@@ -864,6 +865,8 @@ export class InvoiceService extends BaseService<IInvoice> {
     const { knex } = await this.getKnex();
     
     return withTransaction(knex, async (trx) => {
+      const occurredAt = new Date().toISOString();
+
       const invoice = await trx('invoices')
         .where({ invoice_id: data.invoice_id, tenant: context.tenant })
         .first();
@@ -891,6 +894,42 @@ export class InvoiceService extends BaseService<IInvoice> {
       };
 
       await trx('invoice_payments').insert(paymentData);
+
+      await publishWorkflowEvent({
+        eventType: 'PAYMENT_RECORDED',
+        payload: buildPaymentRecordedPayload({
+          paymentId: paymentData.payment_id,
+          clientId: invoice.client_id,
+          receivedAt: occurredAt,
+          amount: data.payment_amount,
+          currency: String(invoice.currency_code ?? 'USD'),
+          method: String(data.payment_method ?? 'manual'),
+          receivedByUserId: context.userId,
+          gatewayTransactionId: data.reference_number,
+        }),
+        ctx: {
+          tenantId: context.tenant,
+          occurredAt,
+          actor: { actorType: 'USER', actorUserId: context.userId },
+        },
+        idempotencyKey: `payment_recorded:${paymentData.payment_id}`,
+      });
+
+      await publishWorkflowEvent({
+        eventType: 'PAYMENT_APPLIED',
+        payload: buildPaymentAppliedPayload({
+          paymentId: paymentData.payment_id,
+          appliedAt: occurredAt,
+          appliedByUserId: context.userId,
+          applications: [{ invoiceId: data.invoice_id, amountApplied: data.payment_amount }],
+        }),
+        ctx: {
+          tenantId: context.tenant,
+          occurredAt,
+          actor: { actorType: 'USER', actorUserId: context.userId },
+        },
+        idempotencyKey: `payment_applied:${paymentData.payment_id}:${data.invoice_id}`,
+      });
 
       // Calculate total payments
       const payments = await trx('invoice_payments')
@@ -930,7 +969,6 @@ export class InvoiceService extends BaseService<IInvoice> {
 	      });
 
 	      if (String(newStatus) !== String(invoice.status)) {
-	        const occurredAt = new Date().toISOString();
 	        await publishWorkflowEvent({
 	          eventType: 'INVOICE_STATUS_CHANGED',
 	          payload: buildInvoiceStatusChangedPayload({
@@ -1097,6 +1135,8 @@ export class InvoiceService extends BaseService<IInvoice> {
     const { knex } = await this.getKnex();
 
     return withTransaction(knex, async (trx) => {
+      const occurredAt = new Date().toISOString();
+
       const invoice = await trx('invoices')
         .where({ invoice_id: data.invoice_id, tenant: context.tenant })
         .first();
@@ -1137,6 +1177,24 @@ export class InvoiceService extends BaseService<IInvoice> {
 
       await trx('invoice_payments').insert(refundData);
 
+      await publishWorkflowEvent({
+        eventType: 'PAYMENT_REFUNDED',
+        payload: buildPaymentRefundedPayload({
+          paymentId: refundData.payment_id,
+          refundedAt: occurredAt,
+          refundedByUserId: context.userId,
+          amount: data.refund_amount,
+          currency: String(invoice.currency_code ?? 'USD'),
+          reason: data.reason,
+        }),
+        ctx: {
+          tenantId: context.tenant,
+          occurredAt,
+          actor: { actorType: 'USER', actorUserId: context.userId },
+        },
+        idempotencyKey: `payment_refunded:${refundData.payment_id}`,
+      });
+
       // Calculate net payments after refund
       const netPayments = await trx('invoice_payments')
         .where({ invoice_id: data.invoice_id, tenant: context.tenant })
@@ -1176,7 +1234,6 @@ export class InvoiceService extends BaseService<IInvoice> {
 	      });
 
 	      if (String(newStatus) !== String(invoice.status)) {
-	        const occurredAt = new Date().toISOString();
 	        await publishWorkflowEvent({
 	          eventType: 'INVOICE_STATUS_CHANGED',
 	          payload: buildInvoiceStatusChangedPayload({
