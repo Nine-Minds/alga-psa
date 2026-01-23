@@ -3,48 +3,46 @@
 import { Knex } from 'knex'; // Import Knex type
 import { createTenantKnex } from '@alga-psa/db';
 import { TaxRegion } from '@alga-psa/types';
-import { getCurrentUser } from '@alga-psa/auth/getCurrentUser';
-import { hasPermission } from '@alga-psa/auth/rbac';
+import { withAuth, hasPermission } from '@alga-psa/auth';
 interface DefaultTaxRateInfo {
   tax_rate_id: string;
   tax_percentage: number;
   region_code: string | null; // Expect region_code
 }
 
-export async function fetchTaxRegions(): Promise<TaxRegion[]> {
-  const currentUser = await getCurrentUser();
-  if (!currentUser) {
-    throw new Error('No authenticated user found');
-  }
+export const fetchTaxRegions = withAuth(async (
+  user,
+  { tenant }
+): Promise<TaxRegion[]> => {
+  const {knex: db} = await createTenantKnex();
 
   // Check permission for time entry reading (reading tax regions for time entries)
-  if (!await hasPermission(currentUser, 'timeentry', 'read')) {
+  if (!await hasPermission(user, 'timeentry', 'read', db)) {
     throw new Error('Permission denied: Cannot read tax regions for time entries');
   }
 
-  const {knex: db, tenant} = await createTenantKnex(currentUser.tenant);
   const regions = await db('tax_regions')
     .where({ tenant, is_active: true })
     .select('region_code as id', 'region_name as name')
     .orderBy('region_name');
   return regions;
-}
+});
 
 // Phase 1.2: Fetch the default tax rate percentage for the client associated with the work item.
-export async function fetchClientTaxRateForWorkItem(workItemId: string, workItemType: string): Promise<number | undefined> {
-  const currentUser = await getCurrentUser();
-  if (!currentUser) {
-    throw new Error('No authenticated user found');
-  }
+export const fetchClientTaxRateForWorkItem = withAuth(async (
+  user,
+  { tenant },
+  workItemId: string,
+  workItemType: string
+): Promise<number | undefined> => {
+  const {knex: db} = await createTenantKnex();
 
   // Check permission for time entry reading (reading tax rates for time entries)
-  if (!await hasPermission(currentUser, 'timeentry', 'read')) {
+  if (!await hasPermission(user, 'timeentry', 'read', db)) {
     throw new Error('Permission denied: Cannot read tax rates for time entries');
   }
 
   console.log(`Fetching default tax rate percentage for work item ${workItemId} of type ${workItemType}`);
-
-  const {knex: db, tenant} = await createTenantKnex(currentUser.tenant);
 
   try {
     let query;
@@ -111,23 +109,23 @@ export async function fetchClientTaxRateForWorkItem(workItemId: string, workItem
     console.error('Error fetching tax rate:', error);
     return undefined;
   }
-}
+});
 
 // Fetch the default tax rate ID and percentage for the client associated with the work item.
-export async function fetchDefaultClientTaxRateInfoForWorkItem(workItemId: string, workItemType: string): Promise<DefaultTaxRateInfo | null> {
-  const currentUser = await getCurrentUser();
-  if (!currentUser) {
-    throw new Error('No authenticated user found');
-  }
+export const fetchDefaultClientTaxRateInfoForWorkItem = withAuth(async (
+  user,
+  { tenant },
+  workItemId: string,
+  workItemType: string
+): Promise<DefaultTaxRateInfo | null> => {
+  const {knex: db} = await createTenantKnex();
 
   // Check permission for time entry reading (reading tax rate info for time entries)
-  if (!await hasPermission(currentUser, 'timeentry', 'read')) {
+  if (!await hasPermission(user, 'timeentry', 'read', db)) {
     throw new Error('Permission denied: Cannot read tax rate info for time entries');
   }
 
   console.log(`Fetching default tax rate info for work item ${workItemId} of type ${workItemType}`);
-
-  const {knex: db, tenant} = await createTenantKnex(currentUser.tenant);
 
   try {
     let query;
@@ -202,20 +200,19 @@ export async function fetchDefaultClientTaxRateInfoForWorkItem(workItemId: strin
     console.error('Error fetching default tax rate info:', error);
     return null;
   }
-}
+});
 
-export async function fetchServicesForTimeEntry(workItemType?: string): Promise<{ id: string; name: string; type: string; tax_rate_id: string | null; tax_percentage: number | null }[]> {
-  const currentUser = await getCurrentUser();
-  if (!currentUser) {
-    throw new Error('No authenticated user found');
-  }
+export const fetchServicesForTimeEntry = withAuth(async (
+  user,
+  { tenant },
+  workItemType?: string
+): Promise<{ id: string; name: string; type: string; tax_rate_id: string | null; tax_percentage: number | null }[]> => {
+  const {knex: db} = await createTenantKnex();
 
   // Check permission for time entry reading (reading services for time entries)
-  if (!await hasPermission(currentUser, 'timeentry', 'read')) {
+  if (!await hasPermission(user, 'timeentry', 'read', db)) {
     throw new Error('Permission denied: Cannot read services for time entries');
   }
-
-  const {knex: db, tenant} = await createTenantKnex(currentUser.tenant);
 
   let query = db('service_catalog as sc')
     .leftJoin('service_types as st', function() {
@@ -243,34 +240,29 @@ export async function fetchServicesForTimeEntry(workItemType?: string): Promise<
 
   const services = await query;
   return services;
-}
+});
 
 /**
  * Fetches schedule entry information for a work item
  * @param workItemId The work item ID
  * @returns The schedule entry information or null if not found
  */
-export async function fetchScheduleEntryForWorkItem(workItemId: string): Promise<{
+export const fetchScheduleEntryForWorkItem = withAuth(async (
+  user,
+  { tenant },
+  workItemId: string
+): Promise<{
   scheduled_start: string;
   scheduled_end: string
-} | null> {
-  const currentUser = await getCurrentUser();
-  if (!currentUser) {
-    throw new Error('No authenticated user found');
-  }
+} | null> => {
+  const { knex } = await createTenantKnex();
 
   // Check permission for time entry reading (reading schedule entries for time entries)
-  if (!await hasPermission(currentUser, 'timeentry', 'read')) {
+  if (!await hasPermission(user, 'timeentry', 'read', knex)) {
     throw new Error('Permission denied: Cannot read schedule entries for time entries');
   }
 
   try {
-    const { knex, tenant } = await createTenantKnex(currentUser.tenant);
-
-    if (!tenant) {
-      throw new Error("Tenant context not found");
-    }
-
     const scheduleEntry = await knex('schedule_entries')
       .where('entry_id', workItemId)
       .select('scheduled_start', 'scheduled_end')
@@ -281,4 +273,4 @@ export async function fetchScheduleEntryForWorkItem(workItemId: string): Promise
     console.error('Error fetching schedule entry for work item:', error);
     return null;
   }
-}
+});

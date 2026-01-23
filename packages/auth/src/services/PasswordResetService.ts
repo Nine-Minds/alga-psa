@@ -377,7 +377,7 @@ export class PasswordResetService {
         tenant = currentUser?.tenant;
       }
       const { knex, tenant: contextTenant } = await createTenantKnex(tenant);
-      tenant = tenant || contextTenant;
+      tenant = tenant || contextTenant || undefined;
 
       if (!tenant) {
         return 0;

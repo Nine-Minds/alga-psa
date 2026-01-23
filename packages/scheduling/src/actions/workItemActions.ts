@@ -2,7 +2,7 @@
 // TODO: Model argument count issues
 'use server';
 import { createTenantKnex } from '@alga-psa/db';
-import { getCurrentUser } from '@alga-psa/users/actions';
+import { withAuth } from '@alga-psa/auth';
 import { IWorkItem, IExtendedWorkItem, WorkItemType } from '@alga-psa/types';
 import { IUser } from '@alga-psa/types';
 import ScheduleEntry from '@alga-psa/scheduling/models/scheduleEntry';
@@ -44,13 +44,13 @@ interface SearchResult {
 // ==================================
 // Function for Technician Dispatch
 // ==================================
-export async function searchDispatchWorkItems(options: DispatchSearchOptions): Promise<SearchResult> {
+export const searchDispatchWorkItems = withAuth(async (
+  user,
+  { tenant },
+  options: DispatchSearchOptions
+): Promise<SearchResult> => {
   try {
-    const currentUser = await getCurrentUser();
-    if (!currentUser) {
-      throw new Error('User not authenticated');
-    }
-    const {knex: db, tenant} = await createTenantKnex(currentUser.tenant);
+    const {knex: db} = await createTenantKnex();
     const searchTerm = options.searchTerm || '';
     const statusFilter = options.statusFilter || 'all_open';
     const filterUnscheduledOption = options.filterUnscheduled;
@@ -168,7 +168,7 @@ export async function searchDispatchWorkItems(options: DispatchSearchOptions): P
     } else {
        ticketsQuery = ticketsQuery.orderBy('t.ticket_id', options.sortOrder || 'asc');
     }
- 
+
     ticketsQuery = ticketsQuery.limit(pageSize).offset(offset);
 
     const results = await ticketsQuery;
@@ -270,19 +270,19 @@ export async function searchDispatchWorkItems(options: DispatchSearchOptions): P
     console.error('Error searching dispatch work items:', error);
     throw new Error('Failed to search dispatch work items');
   }
-}
+});
 
 
 // ==================================
 // Function for Work Item Picker
 // ==================================
-export async function searchPickerWorkItems(options: PickerSearchOptions): Promise<SearchResult> {
+export const searchPickerWorkItems = withAuth(async (
+  user,
+  { tenant },
+  options: PickerSearchOptions
+): Promise<SearchResult> => {
   try {
-    const currentUser = await getCurrentUser();
-    if (!currentUser) {
-      throw new Error('User not authenticated');
-    }
-    const {knex: db, tenant} = await createTenantKnex(currentUser.tenant);
+    const {knex: db} = await createTenantKnex();
     const searchTerm = options.searchTerm || '';
     const statusFilter = options.statusFilter || 'all_open';
     const page = options.page || 1;
@@ -685,7 +685,7 @@ export async function searchPickerWorkItems(options: PickerSearchOptions): Promi
     const interactionIds = results
       .filter((item: any) => item.type === 'interaction')
       .map((item: any) => item.work_item_id);
-    
+
     let interactionTypesMap = new Map<string, string>();
     if (interactionIds.length > 0) {
       const interactionTypes = await db('interactions as i')
@@ -696,7 +696,7 @@ export async function searchPickerWorkItems(options: PickerSearchOptions): Promi
               .andOn('i.tenant', '=', 'it.tenant');
         })
         .select('i.interaction_id', 'it.type_name');
-      
+
       interactionTypes.forEach((item: any) => {
         interactionTypesMap.set(item.interaction_id, item.type_name);
       });
@@ -745,15 +745,15 @@ export async function searchPickerWorkItems(options: PickerSearchOptions): Promi
     console.error('Error message:', error instanceof Error ? error.message : error);
     throw new Error('Failed to search picker work items: ' + (error instanceof Error ? error.message : error));
   }
-}
+});
 
-export async function createWorkItem(item: Omit<IWorkItem, "work_item_id">): Promise<Omit<IExtendedWorkItem, "tenant">> {
+export const createWorkItem = withAuth(async (
+  user,
+  { tenant },
+  item: Omit<IWorkItem, "work_item_id">
+): Promise<Omit<IExtendedWorkItem, "tenant">> => {
   try {
-    const currentUser = await getCurrentUser();
-    if (!currentUser) {
-      throw new Error('User not authenticated');
-    }
-    const {knex: db, tenant} = await createTenantKnex(currentUser.tenant);
+    const {knex: db} = await createTenantKnex();
 
     if (!item.startTime || !item.endTime) {
       throw new Error('Start time and end time are required for ad-hoc entries');
@@ -770,8 +770,8 @@ export async function createWorkItem(item: Omit<IWorkItem, "work_item_id">): Pro
       work_item_id: null,
       assigned_user_ids: []  // This will be populated by the model
     }, {
-      assignedUserIds: [currentUser.user_id],
-      assignedByUserId: currentUser.user_id
+      assignedUserIds: [user.user_id],
+      assignedByUserId: user.user_id
     });
 
     // For ad-hoc entries, use title as name if provided, otherwise use a default name
@@ -791,15 +791,16 @@ export async function createWorkItem(item: Omit<IWorkItem, "work_item_id">): Pro
     console.error('Error creating work item:', error);
     throw new Error('Failed to create work item');
   }
-}
+});
 
-export async function getWorkItemById(workItemId: string, workItemType: WorkItemType): Promise<Omit<IExtendedWorkItem, "tenant"> | null> {
+export const getWorkItemById = withAuth(async (
+  user,
+  { tenant },
+  workItemId: string,
+  workItemType: WorkItemType
+): Promise<Omit<IExtendedWorkItem, "tenant"> | null> => {
   try {
-    const currentUser = await getCurrentUser();
-    if (!currentUser) {
-      throw new Error('User not authenticated');
-    }
-    const {knex: db, tenant} = await createTenantKnex(currentUser.tenant);
+    const {knex: db} = await createTenantKnex();
     let workItem;
 
     if (workItemType === 'ticket') {
@@ -1058,4 +1059,4 @@ export async function getWorkItemById(workItemId: string, workItemType: WorkItem
     console.error('Error fetching work item by ID:', error);
     throw new Error('Failed to fetch work item by ID');
   }
-}
+});

@@ -1,14 +1,14 @@
 'use server'
 
 import { createTenantKnex, runWithTenant } from '@alga-psa/db';
-import { getCurrentUser } from '@alga-psa/users/actions';
 import { PortalInvitationService } from '../../services/PortalInvitationService';
 import { getTenantSlugForTenant } from '@alga-psa/tenancy/actions';
 import { getSystemEmailService, TenantEmailService, sendPortalInvitationEmail } from '@alga-psa/email';
 import { UserService } from '@alga-psa/users';
 import { runAsSystem, createSystemContext } from '@alga-psa/db';
-import { hasPermission } from '@alga-psa/auth';
+import { hasPermission, withAuth, type AuthContext } from '@alga-psa/auth';
 import { isValidEmail } from '@alga-psa/core';
+import type { IUserWithRoles } from '@alga-psa/types';
 
 export interface SendInvitationResult {
   success: boolean;
@@ -62,16 +62,13 @@ export interface CreateClientPortalUserParams {
   requirePasswordChange?: boolean;
 }
 
-export async function createClientPortalUser(
+export const createClientPortalUser = withAuth(async (
+  user: IUserWithRoles,
+  { tenant }: AuthContext,
   params: CreateClientPortalUserParams
-): Promise<{ success: boolean; userId?: string; message?: string; error?: string }> {
+): Promise<{ success: boolean; userId?: string; message?: string; error?: string }> => {
   try {
-    const user = await getCurrentUser();
-    if (!user) {
-      return { success: false, error: 'Unauthorized' };
-    }
-
-    const { knex, tenant } = await createTenantKnex();
+    const { knex } = await createTenantKnex();
 
     // RBAC: ensure user has permission to create users
     const canCreate = await hasPermission(user, 'user', 'create', knex);
@@ -265,19 +262,18 @@ export async function createClientPortalUser(
     console.error('Error creating client portal user:', error);
     return { success: false, error: 'Failed to create client portal user' };
   }
-}
+});
 
 /**
  * Send a portal invitation to a contact
  */
-export async function sendPortalInvitation(contactId: string): Promise<SendInvitationResult> {
+export const sendPortalInvitation = withAuth(async (
+  user: IUserWithRoles,
+  { tenant }: AuthContext,
+  contactId: string
+): Promise<SendInvitationResult> => {
   try {
-    const user = await getCurrentUser();
-    if (!user) {
-      return { success: false, error: 'Unauthorized' };
-    }
-
-    const { knex, tenant } = await createTenantKnex();
+    const { knex } = await createTenantKnex();
 
     // RBAC: ensure user has permission to invite users
     const canInvite = await hasPermission(user, 'user', 'invite', knex);
@@ -433,7 +429,7 @@ export async function sendPortalInvitation(contactId: string): Promise<SendInvit
     console.error('Error sending portal invitation:', error);
     return { success: false, error: 'Failed to send invitation' };
   }
-}
+});
 
 /**
  * Verify a portal invitation token
@@ -636,18 +632,17 @@ export async function completePortalSetup(
 /**
  * Get invitation history for a contact
  */
-export async function getPortalInvitations(contactId: string): Promise<InvitationHistoryItem[]> {
+export const getPortalInvitations = withAuth(async (
+  _user: IUserWithRoles,
+  _ctx: AuthContext,
+  contactId: string
+): Promise<InvitationHistoryItem[]> => {
   try {
-    const user = await getCurrentUser();
-    if (!user) {
-      return [];
-    }
-
     const invitations = await PortalInvitationService.getInvitationHistory(contactId);
-    
+
     return invitations.map(invitation => {
       let status: 'pending' | 'expired' | 'used' | 'revoked' = 'pending';
-      
+
       if (invitation.used_at) {
         status = invitation.metadata?.revoked ? 'revoked' : 'used';
       } else if (new Date(invitation.expires_at) < new Date()) {
@@ -668,20 +663,19 @@ export async function getPortalInvitations(contactId: string): Promise<Invitatio
     console.error('Error fetching portal invitations:', error);
     return [];
   }
-}
+});
 
 /**
  * Revoke a portal invitation
  */
-export async function revokePortalInvitation(invitationId: string): Promise<{ success: boolean; error?: string }> {
+export const revokePortalInvitation = withAuth(async (
+  _user: IUserWithRoles,
+  _ctx: AuthContext,
+  invitationId: string
+): Promise<{ success: boolean; error?: string }> => {
   try {
-    const user = await getCurrentUser();
-    if (!user) {
-      return { success: false, error: 'Unauthorized' };
-    }
-
     const revoked = await PortalInvitationService.revokeInvitation(invitationId);
-    
+
     if (!revoked) {
       return { success: false, error: 'Invitation not found or already used' };
     }
@@ -692,4 +686,4 @@ export async function revokePortalInvitation(invitationId: string): Promise<{ su
     console.error('Error revoking portal invitation:', error);
     return { success: false, error: 'Failed to revoke invitation' };
   }
-}
+});

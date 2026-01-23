@@ -5,7 +5,7 @@
 'use server';
 
 import { createTenantKnex } from '@alga-psa/db';
-import { getCurrentUser } from '@alga-psa/users/actions';
+import { withAuth } from '@alga-psa/auth';
 import { getWorkflowRuntime } from '@shared/workflow/core/workflowRuntime';
 import { getActionRegistry } from '@shared/workflow/core/index';
 
@@ -23,14 +23,11 @@ interface DomainStatus {
   providerDomainId?: string;
 }
 
-export async function getEmailDomains(): Promise<DomainStatus[]> {
-  const user = await getCurrentUser();
-  if (!user) {
-    throw new Error('User not authenticated');
-  }
-
-  const { knex } = await createTenantKnex(user.tenant);
-  const tenant = user.tenant;
+export const getEmailDomains = withAuth(async (
+  _user,
+  { tenant }
+): Promise<DomainStatus[]> => {
+  const { knex } = await createTenantKnex();
 
   try {
     const domains = await knex('email_domains')
@@ -53,22 +50,20 @@ export async function getEmailDomains(): Promise<DomainStatus[]> {
     console.error('Error fetching domains:', error);
     throw new Error('Failed to fetch domains');
   }
-}
+});
 
-export async function addEmailDomain(domainName: string): Promise<{ success: boolean; message: string }> {
-  const user = await getCurrentUser();
-  if (!user) {
-    throw new Error('User not authenticated');
-  }
-
+export const addEmailDomain = withAuth(async (
+  user,
+  { tenant },
+  domainName: string
+): Promise<{ success: boolean; message: string }> => {
   // Validate domain format
   const domainRegex = /^[a-zA-Z0-9][a-zA-Z0-9-]{0,61}[a-zA-Z0-9](?:\.[a-zA-Z0-9][a-zA-Z0-9-]{0,61}[a-zA-Z0-9])*$/;
   if (!domainRegex.test(domainName)) {
     throw new Error('Invalid domain format');
   }
 
-  const { knex } = await createTenantKnex(user.tenant);
-  const tenant = user.tenant;
+  const { knex } = await createTenantKnex();
 
   try {
     // Check if domain already exists
@@ -120,16 +115,14 @@ export async function addEmailDomain(domainName: string): Promise<{ success: boo
     console.error('Error adding domain:', error);
     throw new Error(error.message || 'Failed to add domain');
   }
-}
+});
 
-export async function verifyEmailDomain(domainName: string): Promise<{ success: boolean; message: string }> {
-  const user = await getCurrentUser();
-  if (!user) {
-    throw new Error('User not authenticated');
-  }
-
-  const { knex } = await createTenantKnex(user.tenant);
-  const tenant = user.tenant;
+export const verifyEmailDomain = withAuth(async (
+  user,
+  { tenant },
+  domainName: string
+): Promise<{ success: boolean; message: string }> => {
+  const { knex } = await createTenantKnex();
 
   try {
     // Check if domain exists
@@ -196,16 +189,14 @@ export async function verifyEmailDomain(domainName: string): Promise<{ success: 
     console.error('Error verifying domain:', error);
     throw new Error(error.message || 'Failed to verify domain');
   }
-}
+});
 
-export async function deleteEmailDomain(domainName: string): Promise<{ success: boolean; message: string }> {
-  const user = await getCurrentUser();
-  if (!user) {
-    throw new Error('User not authenticated');
-  }
-
-  const { knex } = await createTenantKnex(user.tenant);
-  const tenant = user.tenant;
+export const deleteEmailDomain = withAuth(async (
+  _user,
+  { tenant },
+  domainName: string
+): Promise<{ success: boolean; message: string }> => {
+  const { knex } = await createTenantKnex();
 
   try {
     // Check if domain exists
@@ -242,4 +233,4 @@ export async function deleteEmailDomain(domainName: string): Promise<{ success: 
     console.error('Error deleting domain:', error);
     throw new Error(error.message || 'Failed to delete domain');
   }
-}
+});

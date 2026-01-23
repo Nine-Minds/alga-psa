@@ -7,51 +7,32 @@ import {
   type SurveyClientSatisfactionSummary,
 } from '@alga-psa/types';
 import { createTenantKnex } from '@alga-psa/db';
-import { getCurrentUser } from '@alga-psa/auth/getCurrentUser';
+import { withAuth } from '@alga-psa/auth';
 import SurveyDashboardService from '../../services/SurveyDashboardService';
 
-function ensureTenant(tenant: string | null): string {
-  if (!tenant) {
-    throw new Error('Tenant context is required to access survey dashboard data');
-  }
-  return tenant;
-}
-
-export async function getSurveyDashboardData(
+export const getSurveyDashboardData = withAuth(async (
+  _user,
+  { tenant },
   filters?: SurveyDashboardFilters
-): Promise<SurveyDashboardData> {
-  const currentUser = await getCurrentUser();
-  if (!currentUser?.tenant) {
-    throw new Error('Tenant context is required to access survey dashboard data');
-  }
+): Promise<SurveyDashboardData> => {
+  const { knex } = await createTenantKnex();
+  return SurveyDashboardService.getDashboardData(knex, tenant, filters);
+});
 
-  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
-  const tenantId = ensureTenant(tenant);
-  return SurveyDashboardService.getDashboardData(knex, tenantId, filters);
-}
-
-export async function getSurveyClientSummary(
+export const getSurveyClientSummary = withAuth(async (
+  _user,
+  { tenant },
   clientId: string
-): Promise<SurveyClientSatisfactionSummary | null> {
-  const currentUser = await getCurrentUser();
-  if (!currentUser?.tenant) {
-    throw new Error('Tenant context is required to access survey dashboard data');
-  }
+): Promise<SurveyClientSatisfactionSummary | null> => {
+  const { knex } = await createTenantKnex();
+  return SurveyDashboardService.getClientSummary(knex, tenant, clientId);
+});
 
-  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
-  const tenantId = ensureTenant(tenant);
-  return SurveyDashboardService.getClientSummary(knex, tenantId, clientId);
-}
-
-export async function getSurveyTicketSummary(
+export const getSurveyTicketSummary = withAuth(async (
+  _user,
+  { tenant },
   ticketId: string
-): Promise<SurveyTicketSatisfactionSummary | null> {
-  const currentUser = await getCurrentUser();
-  if (!currentUser?.tenant) {
-    throw new Error('Tenant context is required to access survey dashboard data');
-  }
-
-  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
-  const tenantId = ensureTenant(tenant);
-  return SurveyDashboardService.getTicketSummary(knex, tenantId, ticketId);
-}
+): Promise<SurveyTicketSatisfactionSummary | null> => {
+  const { knex } = await createTenantKnex();
+  return SurveyDashboardService.getTicketSummary(knex, tenant, ticketId);
+});

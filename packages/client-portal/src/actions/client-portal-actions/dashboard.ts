@@ -4,7 +4,8 @@ import { createTenantKnex } from '@alga-psa/db';
 import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { headers } from 'next/headers.js';
-import { getCurrentUser } from '@alga-psa/users/actions';
+import { withAuth, type AuthContext } from '@alga-psa/auth';
+import type { IUserWithRoles } from '@alga-psa/types';
 
 export interface DashboardMetrics {
   openTickets: number;
@@ -20,13 +21,10 @@ export interface RecentActivity {
   description: string;
 }
 
-export async function getDashboardMetrics(): Promise<DashboardMetrics> {
-  const user = await getCurrentUser();
-  
-  if (!user) {
-    throw new Error('Unauthorized: User not found');
-  }
-
+export const getDashboardMetrics = withAuth(async (
+  user: IUserWithRoles,
+  { tenant }: AuthContext
+): Promise<DashboardMetrics> => {
   if (user.user_type !== 'client') {
     throw new Error('Unauthorized: Invalid user type for client portal');
   }
@@ -35,7 +33,7 @@ export async function getDashboardMetrics(): Promise<DashboardMetrics> {
     throw new Error('Unauthorized: Contact information not found');
   }
 
-  const { knex, tenant } = await createTenantKnex(user.tenant);
+  const { knex } = await createTenantKnex();
 
   try {
     const result = await withTransaction(knex, async (trx: Knex.Transaction) => {
@@ -108,15 +106,12 @@ export async function getDashboardMetrics(): Promise<DashboardMetrics> {
     console.error('Error fetching dashboard metrics:', error);
     throw new Error('Failed to fetch dashboard metrics');
   }
-}
+});
 
-export async function getRecentActivity(): Promise<RecentActivity[]> {
-  const user = await getCurrentUser();
-  
-  if (!user) {
-    throw new Error('Unauthorized: User not found');
-  }
-
+export const getRecentActivity = withAuth(async (
+  user: IUserWithRoles,
+  { tenant }: AuthContext
+): Promise<RecentActivity[]> => {
   if (user.user_type !== 'client') {
     throw new Error('Unauthorized: Invalid user type for client portal');
   }
@@ -125,7 +120,7 @@ export async function getRecentActivity(): Promise<RecentActivity[]> {
     throw new Error('Unauthorized: Contact information not found');
   }
 
-  const { knex, tenant } = await createTenantKnex(user.tenant);
+  const { knex } = await createTenantKnex();
 
   try {
     const result = await withTransaction(knex, async (trx: Knex.Transaction) => {
@@ -229,4 +224,4 @@ export async function getRecentActivity(): Promise<RecentActivity[]> {
     console.error('Error fetching recent activity:', error);
     throw new Error('Failed to fetch recent activity');
   }
-}
+});

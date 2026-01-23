@@ -3,19 +3,13 @@
 import { createTenantKnex } from '@alga-psa/db';
 import type { IClientLocation } from '@alga-psa/types';
 import { v4 as uuidv4 } from 'uuid';
-import { getCurrentUserAsync } from '../lib/usersHelpers';
+import { withAuth } from '@alga-psa/auth';
 import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { revalidatePath } from 'next/cache';
 
-export async function getClientLocations(clientId: string): Promise<IClientLocation[]> {
-  const user = await getCurrentUserAsync();
-
-  if (!user) {
-    throw new Error('User not authenticated');
-  }
-
-  const { knex, tenant } = await createTenantKnex(user.tenant);
+export const getClientLocations = withAuth(async (_user, { tenant }, clientId: string): Promise<IClientLocation[]> => {
+  const { knex } = await createTenantKnex();
 
   return withTransaction(knex, async (trx: Knex.Transaction) => {
     const locations = await trx('client_locations')
@@ -29,16 +23,10 @@ export async function getClientLocations(clientId: string): Promise<IClientLocat
 
     return locations;
   });
-}
+});
 
-export async function getClientLocation(locationId: string): Promise<IClientLocation | null> {
-  const user = await getCurrentUserAsync();
-
-  if (!user) {
-    throw new Error('User not authenticated');
-  }
-
-  const { knex, tenant } = await createTenantKnex(user.tenant);
+export const getClientLocation = withAuth(async (_user, { tenant }, locationId: string): Promise<IClientLocation | null> => {
+  const { knex } = await createTenantKnex();
 
   return withTransaction(knex, async (trx: Knex.Transaction) => {
     const location = await trx('client_locations')
@@ -50,19 +38,15 @@ export async function getClientLocation(locationId: string): Promise<IClientLoca
 
     return location || null;
   });
-}
+});
 
-export async function createClientLocation(
+export const createClientLocation = withAuth(async (
+  _user,
+  { tenant },
   clientId: string,
   locationData: Omit<IClientLocation, 'location_id' | 'tenant' | 'created_at' | 'updated_at'>
-): Promise<IClientLocation> {
-  const user = await getCurrentUserAsync();
-
-  if (!user) {
-    throw new Error('User not authenticated');
-  }
-
-  const { knex, tenant } = await createTenantKnex(user.tenant);
+): Promise<IClientLocation> => {
+  const { knex } = await createTenantKnex();
 
   const locationId = uuidv4();
 
@@ -117,19 +101,15 @@ export async function createClientLocation(
   revalidatePath('/client-portal/client-settings');
 
   return newLocation;
-}
+});
 
-export async function updateClientLocation(
+export const updateClientLocation = withAuth(async (
+  _user,
+  { tenant },
   locationId: string,
   locationData: Partial<Omit<IClientLocation, 'location_id' | 'tenant' | 'client_id' | 'created_at'>>
-): Promise<IClientLocation> {
-  const user = await getCurrentUserAsync();
-
-  if (!user) {
-    throw new Error('User not authenticated');
-  }
-
-  const { knex, tenant } = await createTenantKnex(user.tenant);
+): Promise<IClientLocation> => {
+  const { knex } = await createTenantKnex();
 
   const updatedLocation = await withTransaction(knex, async (trx: Knex.Transaction) => {
     // Get the existing location first to check current state
@@ -229,16 +209,10 @@ export async function updateClientLocation(
   revalidatePath('/client-portal/client-settings');
 
   return updatedLocation;
-}
+});
 
-export async function deleteClientLocation(locationId: string): Promise<void> {
-  const user = await getCurrentUserAsync();
-
-  if (!user) {
-    throw new Error('User not authenticated');
-  }
-
-  const { knex, tenant } = await createTenantKnex(user.tenant);
+export const deleteClientLocation = withAuth(async (_user, { tenant }, locationId: string): Promise<void> => {
+  const { knex } = await createTenantKnex();
 
   const clientId = await withTransaction(knex, async (trx: Knex.Transaction) => {
     // Check if this is the default location
@@ -318,16 +292,10 @@ export async function deleteClientLocation(locationId: string): Promise<void> {
 
   revalidatePath(`/msp/clients/${clientId}`);
   revalidatePath('/client-portal/client-settings');
-}
+});
 
-export async function setDefaultClientLocation(locationId: string): Promise<void> {
-  const user = await getCurrentUserAsync();
-
-  if (!user) {
-    throw new Error('User not authenticated');
-  }
-
-  const { knex, tenant } = await createTenantKnex(user.tenant);
+export const setDefaultClientLocation = withAuth(async (_user, { tenant }, locationId: string): Promise<void> => {
+  const { knex } = await createTenantKnex();
 
   const clientId = await withTransaction(knex, async (trx: Knex.Transaction) => {
     // Get the location to find its client_id
@@ -375,16 +343,10 @@ export async function setDefaultClientLocation(locationId: string): Promise<void
 
   revalidatePath(`/msp/clients/${clientId}`);
   revalidatePath('/client-portal/client-settings');
-}
+});
 
-export async function getDefaultClientLocation(clientId: string): Promise<IClientLocation | null> {
-  const user = await getCurrentUserAsync();
-
-  if (!user) {
-    throw new Error('User not authenticated');
-  }
-
-  const { knex, tenant } = await createTenantKnex(user.tenant);
+export const getDefaultClientLocation = withAuth(async (_user, { tenant }, clientId: string): Promise<IClientLocation | null> => {
+  const { knex } = await createTenantKnex();
 
   return withTransaction(knex, async (trx: Knex.Transaction) => {
     const location = await trx('client_locations')
@@ -398,4 +360,4 @@ export async function getDefaultClientLocation(clientId: string): Promise<IClien
 
     return location || null;
   });
-}
+});

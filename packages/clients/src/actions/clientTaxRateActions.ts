@@ -5,7 +5,7 @@ import { Knex } from 'knex';
 import { createTenantKnex } from '@alga-psa/db';
 import type { IClientTaxRateAssociation } from '@alga-psa/types';
 import { getClientDefaultTaxRegionCode as getClientDefaultTaxRegionCodeShared } from '@alga-psa/shared/billingClients';
-import { getCurrentUser } from '@alga-psa/auth/getCurrentUser';
+import { withAuth } from '@alga-psa/auth';
 
 // Combine association data with rate details
 // Removed 'name' from Pick as it doesn't exist on the tax_rates table
@@ -15,12 +15,12 @@ export type ClientTaxRateDetails = IClientTaxRateAssociation & {
   country_code: string;
 };
 
-export async function getClientTaxRates(clientId: string): Promise<ClientTaxRateDetails[]> {
-  const currentUser = await getCurrentUser();
-  if (!currentUser) {
-    throw new Error('Unauthorized');
-  }
-  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
+export const getClientTaxRates = withAuth(async (
+  _user,
+  { tenant },
+  clientId: string
+): Promise<ClientTaxRateDetails[]> => {
+  const { knex } = await createTenantKnex();
   return await withTransaction(knex, async (trx: Knex.Transaction) => {
     return await trx('client_tax_rates')
       .join('tax_rates', function() {
@@ -41,18 +41,16 @@ export async function getClientTaxRates(clientId: string): Promise<ClientTaxRate
         // Add them back if they are needed and present in ITaxRate
       );
   });
-}
+});
 
 // Phase 1: Only allow adding a single default rate per client.
 // Handles inserting a new default OR updating an existing non-default rate to become the default.
-export async function addClientTaxRate(
+export const addClientTaxRate = withAuth(async (
+  _user,
+  { tenant },
   clientTaxRateData: Pick<IClientTaxRateAssociation, 'client_id' | 'tax_rate_id'>
-): Promise<IClientTaxRateAssociation> {
-  const currentUser = await getCurrentUser();
-  if (!currentUser) {
-    throw new Error('Unauthorized');
-  }
-  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
+): Promise<IClientTaxRateAssociation> => {
+  const { knex } = await createTenantKnex();
   const { client_id, tax_rate_id } = clientTaxRateData; // Destructure for clarity
 
   return await withTransaction(knex, async (trx: Knex.Transaction) => {
@@ -119,120 +117,119 @@ export async function addClientTaxRate(
 
     return association;
   });
-}
+});
 
-export async function removeClientTaxRate(clientId: string, taxRateId: string): Promise<void> {
-  const currentUser = await getCurrentUser();
-  if (!currentUser) {
-    throw new Error('Unauthorized');
-  }
-  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
+export const removeClientTaxRate = withAuth(async (
+  _user,
+  { tenant },
+  clientId: string,
+  taxRateId: string
+): Promise<void> => {
+  const { knex } = await createTenantKnex();
   await withTransaction(knex, async (trx: Knex.Transaction) => {
     return await trx('client_tax_rates')
-      .where({ 
+      .where({
         client_id: clientId,
         tax_rate_id: taxRateId,
         tenant
       })
       .del();
   });
-}
+});
 
 // Phase 1: Update the default tax rate for a client
-export async function updateDefaultClientTaxRate(
- clientId: string,
- newTaxRateId: string
-): Promise<IClientTaxRateAssociation> {
- const currentUser = await getCurrentUser();
- if (!currentUser) {
-   throw new Error('Unauthorized');
- }
- const { knex, tenant } = await createTenantKnex(currentUser.tenant);
+export const updateDefaultClientTaxRate = withAuth(async (
+  _user,
+  { tenant },
+  clientId: string,
+  newTaxRateId: string
+): Promise<IClientTaxRateAssociation> => {
+  const { knex } = await createTenantKnex();
 
- // Validate that the newTaxRateId exists for this tenant (optional but good practice)
- const newRateExists = await withTransaction(knex, async (trx: Knex.Transaction) => {
-   return await trx('tax_rates')
-     .where({ tax_rate_id: newTaxRateId, tenant: tenant })
-     .first();
- });
- if (!newRateExists) {
-   throw new Error(`Tax rate with ID ${newTaxRateId} not found.`);
- }
-
-return await withTransaction(knex, async (trx: Knex.Transaction) => {
-  // 1. Find the current default rate ID (if one exists)
-  const currentDefaultResult = await trx('client_tax_rates')
-   .select('client_tax_rates_id', 'tax_rate_id') // Corrected column name (plural rates)
-    .where({
-      client_id: clientId,
-      tenant: tenant,
-      is_default: true,
-    })
-    .first();
-
- const currentDefaultRatesId = currentDefaultResult?.client_tax_rates_id; // Corrected variable name
-  const currentDefaultTaxRateId = currentDefaultResult?.tax_rate_id;
-
-  if (currentDefaultTaxRateId && currentDefaultTaxRateId === newTaxRateId) {
-    // If the selected rate is already the default, fetch and return the full record
-    console.log('Selected rate is already the default. No change needed.');
-   const fullCurrentDefault = await trx('client_tax_rates').where({ client_tax_rates_id: currentDefaultRatesId, tenant: tenant }).first(); // Corrected column name
-    return fullCurrentDefault || Promise.reject('Failed to retrieve current default record.'); // Should not happen if ID exists
+  // Validate that the newTaxRateId exists for this tenant (optional but good practice)
+  const newRateExists = await withTransaction(knex, async (trx: Knex.Transaction) => {
+    return await trx('tax_rates')
+      .where({ tax_rate_id: newTaxRateId, tenant: tenant })
+      .first();
+  });
+  if (!newRateExists) {
+    throw new Error(`Tax rate with ID ${newTaxRateId} not found.`);
   }
 
- // 2. Unset the current default if it exists
- if (currentDefaultRatesId) { // Corrected variable name
-   await trx('client_tax_rates')
-     .where('client_tax_rates_id', currentDefaultRatesId) // Corrected column name
-      .andWhere('tenant', tenant)
-      .update({ is_default: false });
-  }
+  return await withTransaction(knex, async (trx: Knex.Transaction) => {
+    // 1. Find the current default rate ID (if one exists)
+    const currentDefaultResult = await trx('client_tax_rates')
+      .select('client_tax_rates_id', 'tax_rate_id') // Corrected column name (plural rates)
+      .where({
+        client_id: clientId,
+        tenant: tenant,
+        is_default: true,
+      })
+      .first();
 
-   // 2. Find or create the association for the new rate
-   let newDefaultAssociation = await trx('client_tax_rates')
-     .where({
-       client_id: clientId,
-       tax_rate_id: newTaxRateId,
-       tenant: tenant,
-     })
-     .first();
+    const currentDefaultRatesId = currentDefaultResult?.client_tax_rates_id; // Corrected variable name
+    const currentDefaultTaxRateId = currentDefaultResult?.tax_rate_id;
 
-  if (newDefaultAssociation) {
-    // If association exists, update it to be the default
-    const [updatedAssociation] = await trx('client_tax_rates')
-     .where('client_tax_rates_id', newDefaultAssociation.client_tax_rates_id) // Corrected column name
-      .andWhere('tenant', tenant)
-       .update({
-         is_default: true,
-         location_id: null, // Ensure location_id is null for default in Phase 1
-         updated_at: knex.fn.now() // Explicitly update timestamp
-       })
-       .returning('*');
-     newDefaultAssociation = updatedAssociation;
-   } else {
-     // If association doesn't exist, create it as the default
-    // Corrected Omit type to use plural 'rates' id
-    const dataToInsert: Omit<IClientTaxRateAssociation, 'client_tax_rates_id' | 'created_at' | 'updated_at'> = {
-       client_id: clientId,
-       tax_rate_id: newTaxRateId,
-       tenant: tenant!,
-       is_default: true,
-       location_id: null, // Ensure location_id is null for default in Phase 1
-     };
-     const [createdAssociation] = await trx('client_tax_rates')
-       .insert(dataToInsert)
-       .returning('*');
-     newDefaultAssociation = createdAssociation;
-   }
+    if (currentDefaultTaxRateId && currentDefaultTaxRateId === newTaxRateId) {
+      // If the selected rate is already the default, fetch and return the full record
+      console.log('Selected rate is already the default. No change needed.');
+      const fullCurrentDefault = await trx('client_tax_rates').where({ client_tax_rates_id: currentDefaultRatesId, tenant: tenant }).first(); // Corrected column name
+      return fullCurrentDefault || Promise.reject('Failed to retrieve current default record.'); // Should not happen if ID exists
+    }
 
-   if (!newDefaultAssociation) {
-       // This case should ideally not happen if the transaction logic is correct
-       throw new Error('Failed to set the new default tax rate association.');
-   }
+    // 2. Unset the current default if it exists
+    if (currentDefaultRatesId) { // Corrected variable name
+      await trx('client_tax_rates')
+        .where('client_tax_rates_id', currentDefaultRatesId) // Corrected column name
+        .andWhere('tenant', tenant)
+        .update({ is_default: false });
+    }
 
-   return newDefaultAssociation;
- });
-}
+    // 2. Find or create the association for the new rate
+    let newDefaultAssociation = await trx('client_tax_rates')
+      .where({
+        client_id: clientId,
+        tax_rate_id: newTaxRateId,
+        tenant: tenant,
+      })
+      .first();
+
+    if (newDefaultAssociation) {
+      // If association exists, update it to be the default
+      const [updatedAssociation] = await trx('client_tax_rates')
+        .where('client_tax_rates_id', newDefaultAssociation.client_tax_rates_id) // Corrected column name
+        .andWhere('tenant', tenant)
+        .update({
+          is_default: true,
+          location_id: null, // Ensure location_id is null for default in Phase 1
+          updated_at: knex.fn.now() // Explicitly update timestamp
+        })
+        .returning('*');
+      newDefaultAssociation = updatedAssociation;
+    } else {
+      // If association doesn't exist, create it as the default
+      // Corrected Omit type to use plural 'rates' id
+      const dataToInsert: Omit<IClientTaxRateAssociation, 'client_tax_rates_id' | 'created_at' | 'updated_at'> = {
+        client_id: clientId,
+        tax_rate_id: newTaxRateId,
+        tenant: tenant!,
+        is_default: true,
+        location_id: null, // Ensure location_id is null for default in Phase 1
+      };
+      const [createdAssociation] = await trx('client_tax_rates')
+        .insert(dataToInsert)
+        .returning('*');
+      newDefaultAssociation = createdAssociation;
+    }
+
+    if (!newDefaultAssociation) {
+      // This case should ideally not happen if the transaction logic is correct
+      throw new Error('Failed to set the new default tax rate association.');
+    }
+
+    return newDefaultAssociation;
+  });
+});
 
 /**
  * Fetches the region_code associated with the default tax rate for a client.
@@ -240,15 +237,12 @@ return await withTransaction(knex, async (trx: Knex.Transaction) => {
  * @param clientId The UUID of the client.
  * @returns The region_code string or null if no default rate/region is found.
  */
-export async function getClientDefaultTaxRegionCode(clientId: string): Promise<string | null> {
-  const currentUser = await getCurrentUser();
-  if (!currentUser) {
-    throw new Error('Unauthorized');
-  }
-  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
-  if (!tenant) {
-    throw new Error('Tenant not found');
-  }
+export const getClientDefaultTaxRegionCode = withAuth(async (
+  _user,
+  { tenant },
+  clientId: string
+): Promise<string | null> => {
+  const { knex } = await createTenantKnex();
 
   try {
     return await withTransaction(knex, async (trx: Knex.Transaction) => {
@@ -258,4 +252,4 @@ export async function getClientDefaultTaxRegionCode(clientId: string): Promise<s
     console.error(`[getClientDefaultTaxRegionCode] Error fetching default tax region for client ${clientId}:`, error);
     return null;
   }
-}
+});

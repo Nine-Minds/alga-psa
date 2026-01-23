@@ -2,15 +2,10 @@
 
 import { Temporal } from '@js-temporal/polyfill';
 import { createTenantKnex } from '@alga-psa/db';
-import { getCurrentUser } from '@alga-psa/auth/getCurrentUser';
+import { withAuth } from '@alga-psa/auth';
 
-export async function resolveClientBillingCurrency(clientId: string, asOfDate?: string): Promise<string> {
-  const currentUser = await getCurrentUser();
-  if (!currentUser) {
-    throw new Error('No authenticated user found');
-  }
-
-  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
+export const resolveClientBillingCurrency = withAuth(async (_user, { tenant }, clientId: string, asOfDate?: string): Promise<string> => {
+  const { knex } = await createTenantKnex();
   const effectiveDate = asOfDate || Temporal.Now.plainDateISO().toString();
 
   const client = await knex('clients')
@@ -40,5 +35,5 @@ export async function resolveClientBillingCurrency(clientId: string, asOfDate?: 
   }
 
   return unique[0] || client?.default_currency_code || 'USD';
-}
+});
 

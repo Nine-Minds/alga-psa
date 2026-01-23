@@ -3,8 +3,7 @@
 import { Knex } from 'knex'; // Import Knex type
 import { createTenantKnex } from '@alga-psa/db';
 import { IWorkItem } from '@alga-psa/types';
-import { getCurrentUser } from '@alga-psa/auth/getCurrentUser';
-import { hasPermission } from '@alga-psa/auth/rbac';
+import { withAuth, hasPermission } from '@alga-psa/auth';
 import { validateData } from '@alga-psa/validation';
 import {
   fetchTimeEntriesParamsSchema, // Re-use for fetching work items based on time sheet
@@ -12,23 +11,21 @@ import {
   addWorkItemParamsSchema,
   AddWorkItemParams
 } from './timeEntrySchemas'; // Import schemas
-import { getSession } from '@alga-psa/auth';
 
-export async function fetchWorkItemsForTimeSheet(timeSheetId: string): Promise<IWorkItem[]> {
-  const currentUser = await getCurrentUser();
-  if (!currentUser) {
-    throw new Error('No authenticated user found');
-  }
+export const fetchWorkItemsForTimeSheet = withAuth(async (
+  user,
+  { tenant },
+  timeSheetId: string
+): Promise<IWorkItem[]> => {
+  const {knex: db} = await createTenantKnex();
 
   // Check permission for time entry reading (reading work items for time entries)
-  if (!await hasPermission(currentUser, 'timeentry', 'read')) {
+  if (!await hasPermission(user, 'timeentry', 'read', db)) {
     throw new Error('Permission denied: Cannot read time entry work items');
   }
 
   // Validate input
   const validatedParams = validateData<FetchTimeEntriesParams>(fetchTimeEntriesParamsSchema, { timeSheetId });
-
-  const {knex: db, tenant} = await createTenantKnex(currentUser.tenant);
 
   // Get tickets
   const tickets = await db('tickets')
@@ -143,23 +140,22 @@ export async function fetchWorkItemsForTimeSheet(timeSheetId: string): Promise<I
     is_billable: item.type !== 'non_billable_category',
     ticket_number: item.type === 'ticket' ? item.ticket_number : undefined
   }));
-}
+});
 
-export async function addWorkItem(workItem: Omit<IWorkItem, 'tenant'>): Promise<IWorkItem> {
-  const currentUser = await getCurrentUser();
-  if (!currentUser) {
-    throw new Error('No authenticated user found');
-  }
+export const addWorkItem = withAuth(async (
+  user,
+  { tenant },
+  workItem: Omit<IWorkItem, 'tenant'>
+): Promise<IWorkItem> => {
+  const {knex: db} = await createTenantKnex();
 
   // Check permission for time entry creation (adding work items for time entries)
-  if (!await hasPermission(currentUser, 'timeentry', 'create')) {
+  if (!await hasPermission(user, 'timeentry', 'create', db)) {
     throw new Error('Permission denied: Cannot add work items for time entries');
   }
 
   // Validate input
   const validatedWorkItem = validateData<AddWorkItemParams>(addWorkItemParamsSchema, workItem);
-
-  const {knex: db, tenant} = await createTenantKnex(currentUser.tenant);
 
   // Note: This function seems to insert into 'service_catalog', which might be incorrect
   // based on the function name 'addWorkItem'. Review if this logic is correct.
@@ -181,24 +177,19 @@ export async function addWorkItem(workItem: Omit<IWorkItem, 'tenant'>): Promise<
     ...newWorkItem,
     is_billable: newWorkItem.type !== 'non_billable_category', // Inferring billable status
   };
-}
+});
 
 
-export async function deleteWorkItem(workItemId: string): Promise<void> {
-  const currentUser = await getCurrentUser();
-  if (!currentUser) {
-    throw new Error('No authenticated user found');
-  }
+export const deleteWorkItem = withAuth(async (
+  user,
+  { tenant },
+  workItemId: string
+): Promise<void> => {
+  const {knex: db} = await createTenantKnex();
 
   // Check permission for time entry deletion (deleting work items affects time entries)
-  if (!await hasPermission(currentUser, 'timeentry', 'delete')) {
+  if (!await hasPermission(user, 'timeentry', 'delete', db)) {
     throw new Error('Permission denied: Cannot delete work items for time entries');
-  }
-
-  const {knex: db, tenant} = await createTenantKnex(currentUser.tenant);
-  const session = await getSession();
-  if (!session?.user?.id) {
-    throw new Error("User not authenticated");
   }
 
   try {
@@ -218,4 +209,4 @@ export async function deleteWorkItem(workItemId: string): Promise<void> {
     console.error('Error deleting work item (associated time entries):', error);
     throw new Error('Failed to delete work item (associated time entries)');
   }
-}
+});

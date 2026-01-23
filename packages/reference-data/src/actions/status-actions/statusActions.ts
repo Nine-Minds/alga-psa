@@ -3,25 +3,13 @@
 import { createTenantKnex } from '@alga-psa/db';
 import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
-import { getCurrentUser } from '@alga-psa/users/actions';
+import { withAuth } from '@alga-psa/auth';
 import { IStatus, ItemType } from '@alga-psa/types';
 
-export async function getStatuses(type?: ItemType) {
+export const getStatuses = withAuth(async (_user, { tenant }, type?: ItemType) => {
   try {
-    // Get the current user to ensure we have a valid user
-    const user = await getCurrentUser();
-    if (!user) {
-      throw new Error('Unauthorized');
-    }
-    if (!(user as any).tenant) {
-      throw new Error('Tenant not found');
-    }
-
     // Get the database connection with tenant
-    const {knex: db, tenant} = await createTenantKnex((user as any).tenant);
-    if (!tenant) {
-      throw new Error("Tenant not found");
-    }
+    const {knex: db} = await createTenantKnex();
 
     return await withTransaction(db, async (trx: Knex.Transaction) => {
       // Build query
@@ -41,24 +29,12 @@ export async function getStatuses(type?: ItemType) {
     console.error('Error fetching ticket statuses:', error);
     throw error;
   }
-}
+});
 
-export async function getTicketStatuses() {
+export const getTicketStatuses = withAuth(async (_user, { tenant }) => {
   try {
-    // Get the current user to ensure we have a valid user
-    const user = await getCurrentUser();
-    if (!user) {
-      throw new Error('Unauthorized');
-    }
-    if (!(user as any).tenant) {
-      throw new Error('Tenant not found');
-    }
-
     // Get the database connection with tenant
-    const {knex: db, tenant} = await createTenantKnex((user as any).tenant);
-    if (!tenant) {
-      throw new Error("Tenant not found");
-    }
+    const {knex: db} = await createTenantKnex();
 
     return await withTransaction(db, async (trx: Knex.Transaction) => {
       // Fetch statuses for the current tenant
@@ -76,27 +52,15 @@ export async function getTicketStatuses() {
     console.error('Error fetching ticket statuses:', error);
     throw error;
   }
-}
+});
 
-export async function createStatus(statusData: Omit<IStatus, 'status_id' | 'tenant'>): Promise<IStatus> {
-  const user = await getCurrentUser();
-  if (!user) {
-    throw new Error('Unauthorized');
-  }
-  if (!(user as any).tenant) {
-    throw new Error('Tenant not found');
-  }
-
+export const createStatus = withAuth(async (user, { tenant }, statusData: Omit<IStatus, 'status_id' | 'tenant'>): Promise<IStatus> => {
   if (!statusData.name || statusData.name.trim() === '') {
     throw new Error('Status name is required');
   }
 
-  const {knex: db, tenant} = await createTenantKnex((user as any).tenant);
+  const {knex: db} = await createTenantKnex();
   try {
-    if (!tenant) {
-      throw new Error("Tenant not found");
-    }
-
     const newStatus = await withTransaction(db, async (trx: Knex.Transaction) => {
       // Check if status with same name already exists
       const existingStatus = await trx('statuses')
@@ -175,17 +139,9 @@ export async function createStatus(statusData: Omit<IStatus, 'status_id' | 'tena
     }
     throw new Error('Failed to create status');
   }
-}
+});
 
-export async function updateStatus(statusId: string, statusData: Partial<IStatus>) {
-  const user = await getCurrentUser();
-  if (!user) {
-    throw new Error('Unauthorized');
-  }
-  if (!(user as any).tenant) {
-    throw new Error('Tenant not found');
-  }
-
+export const updateStatus = withAuth(async (_user, { tenant }, statusId: string, statusData: Partial<IStatus>) => {
   if (!statusId) {
     throw new Error('Status ID is required');
   }
@@ -194,12 +150,8 @@ export async function updateStatus(statusId: string, statusData: Partial<IStatus
     throw new Error('Status name cannot be empty');
   }
 
-  const {knex: db, tenant} = await createTenantKnex((user as any).tenant);
+  const {knex: db} = await createTenantKnex();
   try {
-    if (!tenant) {
-      throw new Error("Tenant not found");
-    }
-
     return await withTransaction(db, async (trx: Knex.Transaction) => {
       // Check if new name conflicts with existing status
       if (statusData.name) {
@@ -292,7 +244,7 @@ export async function updateStatus(statusId: string, statusData: Partial<IStatus
     }
     throw new Error('Failed to update status');
   }
-}
+});
 
 export interface StatusOption {
   value: string;
@@ -300,19 +252,9 @@ export interface StatusOption {
   isStandard?: boolean;
 }
 
-export async function getWorkItemStatusOptions(itemType?: ItemType | ItemType[]): Promise<StatusOption[]> {
+export const getWorkItemStatusOptions = withAuth(async (_user, { tenant }, itemType?: ItemType | ItemType[]): Promise<StatusOption[]> => {
   try {
-    let { knex: db, tenant } = await createTenantKnex();
-    if (!tenant) {
-      const user = await getCurrentUser();
-      if (!(user as any)?.tenant) {
-        throw new Error('Tenant not found');
-      }
-      ({ knex: db, tenant } = await createTenantKnex((user as any).tenant));
-    }
-    if (!tenant) {
-      throw new Error('Tenant not found');
-    }
+    const { knex: db } = await createTenantKnex();
 
     return await withTransaction(db, async (trx: Knex.Transaction) => {
       const itemTypesToFetch = itemType 
@@ -347,27 +289,15 @@ export async function getWorkItemStatusOptions(itemType?: ItemType | ItemType[])
     console.error('Error fetching work item status options:', error);
     throw new Error('Failed to fetch work item status options');
   }
-}
+});
 
-export async function deleteStatus(statusId: string) {
-  const user = await getCurrentUser();
-  if (!user) {
-    throw new Error('Unauthorized');
-  }
-  if (!(user as any).tenant) {
-    throw new Error('Tenant not found');
-  }
-
+export const deleteStatus = withAuth(async (_user, { tenant }, statusId: string) => {
   if (!statusId) {
     throw new Error('Status ID is required');
   }
 
-  const {knex: db, tenant} = await createTenantKnex((user as any).tenant);
+  const {knex: db} = await createTenantKnex();
   try {
-    if (!tenant) {
-      throw new Error("Tenant not found");
-    }
-
     return await withTransaction(db, async (trx: Knex.Transaction) => {
       // Get the status to check its type
       const status = await trx<IStatus>('statuses')
@@ -457,7 +387,7 @@ export async function deleteStatus(statusId: string) {
     }
     throw new Error('Failed to delete status');
   }
-}
+});
 
 export interface FindStatusByNameInput {
   name: string;
@@ -476,17 +406,8 @@ export interface FindStatusByNameOutput {
  * Find status by name and item type
  * This action searches for existing statuses by name and type
  */
-export async function findStatusByName(input: FindStatusByNameInput): Promise<FindStatusByNameOutput | null> {
-  let { knex: db, tenant } = await createTenantKnex();
-  if (!tenant) {
-    const user = await getCurrentUser();
-    if ((user as any)?.tenant) {
-      ({ knex: db, tenant } = await createTenantKnex((user as any).tenant));
-    }
-  }
-  if (!tenant) {
-    throw new Error('Tenant not found');
-  }
+export const findStatusByName = withAuth(async (_user, { tenant }, input: FindStatusByNameInput): Promise<FindStatusByNameOutput | null> => {
+  const { knex: db } = await createTenantKnex();
 
   return await withTransaction(db, async (trx: Knex.Transaction) => {
     const status = await trx('statuses')
@@ -498,4 +419,4 @@ export async function findStatusByName(input: FindStatusByNameInput): Promise<Fi
 
     return status || null;
   });
-}
+});

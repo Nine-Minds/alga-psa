@@ -1,7 +1,8 @@
 'use server'
 
 import { createTenantKnex } from '@alga-psa/db';
-import { getCurrentUser } from '@alga-psa/users/actions';
+import { withAuth } from '@alga-psa/auth';
+import type { IUserWithRoles } from '@alga-psa/types';
 import type {
   EmailProvider,
   GoogleEmailProviderConfig,
@@ -82,16 +83,6 @@ const PROVIDER_COLUMNS = [
   'updated_at as updatedAt'
 ];
 
-/**
- * Assert user is authenticated and return user
- */
-async function assertAuthenticated() {
-  const user = await getCurrentUser();
-  if (!user) {
-    throw new Error('User not authenticated');
-  }
-  return user;
-}
 
 /**
  * Create or update a provider record
@@ -500,10 +491,11 @@ async function persistImapConfig(
  * Finalize Google provider setup with Pub/Sub and Gmail watch
  */
 
-export async function getEmailProviders(): Promise<{ providers: EmailProvider[] }> {
-  const user = await assertAuthenticated();
-  const { knex } = await createTenantKnex(user.tenant);
-  const tenant = user.tenant;
+export const getEmailProviders = withAuth(async (
+  _user,
+  { tenant }
+): Promise<{ providers: EmailProvider[] }> => {
+  const { knex } = await createTenantKnex();
   
   try {
     const providers = await knex('email_providers')
@@ -626,9 +618,12 @@ export async function getEmailProviders(): Promise<{ providers: EmailProvider[] 
     // Return empty array if table doesn't exist yet
     return { providers: [] };
   }
-}
+});
 
-export async function upsertEmailProvider(data: {
+export const upsertEmailProvider = withAuth(async (
+  user,
+  { tenant },
+  data: {
   tenant: string;
   providerType: string;
   providerName: string;
@@ -638,10 +633,10 @@ export async function upsertEmailProvider(data: {
   microsoftConfig?: Omit<MicrosoftEmailProviderConfig, 'email_provider_id' | 'tenant' | 'created_at' | 'updated_at'>;
   googleConfig?: Omit<GoogleEmailProviderConfig, 'email_provider_id' | 'tenant' | 'created_at' | 'updated_at'>;
   imapConfig?: Omit<ImapEmailProviderConfig, 'email_provider_id' | 'tenant' | 'created_at' | 'updated_at'>;
-}, skipAutomation?: boolean): Promise<EmailProviderSetupResult> {
-  const user = await assertAuthenticated();
-  const { knex } = await createTenantKnex(user.tenant);
-  const tenant = user.tenant;
+},
+  skipAutomation?: boolean
+): Promise<EmailProviderSetupResult> => {
+  const { knex } = await createTenantKnex();
 
   const result: EmailProviderSetupResult = {
     provider: null as any,
@@ -731,9 +726,12 @@ export async function upsertEmailProvider(data: {
     console.error('Failed to upsert email provider:', error);
     throw new Error('Failed to upsert email provider');
   }
-}
+});
 
-export async function createEmailProvider(data: {
+export const createEmailProvider = withAuth(async (
+  user,
+  { tenant },
+  data: {
   tenant: string;
   providerType: string;
   providerName: string;
@@ -743,12 +741,16 @@ export async function createEmailProvider(data: {
   microsoftConfig?: Omit<MicrosoftEmailProviderConfig, 'email_provider_id' | 'tenant' | 'created_at' | 'updated_at'>;
   googleConfig?: Omit<GoogleEmailProviderConfig, 'email_provider_id' | 'tenant' | 'created_at' | 'updated_at'>;
   imapConfig?: Omit<ImapEmailProviderConfig, 'email_provider_id' | 'tenant' | 'created_at' | 'updated_at'>;
-}, skipAutomation?: boolean): Promise<EmailProviderSetupResult> {
+},
+  skipAutomation?: boolean
+): Promise<EmailProviderSetupResult> => {
   // Delegate to upsertEmailProvider since they have identical logic
   return upsertEmailProvider(data, skipAutomation);
-}
+});
 
-export async function updateEmailProvider(
+export const updateEmailProvider = withAuth(async (
+  user,
+  { tenant },
   providerId: string,
   data: {
     tenant: string;
@@ -762,10 +764,8 @@ export async function updateEmailProvider(
     imapConfig?: Omit<ImapEmailProviderConfig, 'email_provider_id' | 'tenant' | 'created_at' | 'updated_at'>;
   },
   skipAutomation?: boolean
-): Promise<EmailProviderSetupResult> {
-  const user = await assertAuthenticated();
-  const { knex } = await createTenantKnex(user.tenant);
-  const tenant = user.tenant;
+): Promise<EmailProviderSetupResult> => {
+  const { knex } = await createTenantKnex();
 
   const result: EmailProviderSetupResult = {
     provider: null as any,
@@ -855,12 +855,14 @@ export async function updateEmailProvider(
     console.error('Failed to update email provider:', error);
     throw new Error('Failed to update email provider');
   }
-}
+});
 
-export async function deleteEmailProvider(providerId: string): Promise<void> {
-  const user = await assertAuthenticated();
-  const { knex } = await createTenantKnex(user.tenant);
-  const tenant = user.tenant;
+export const deleteEmailProvider = withAuth(async (
+  _user,
+  { tenant },
+  providerId: string
+): Promise<void> => {
+  const { knex } = await createTenantKnex();
   
   try {
     const result = await knex('email_providers')
@@ -874,12 +876,14 @@ export async function deleteEmailProvider(providerId: string): Promise<void> {
     console.error('Failed to delete email provider:', error);
     throw new Error('Failed to delete email provider');
   }
-}
+});
 
-export async function resyncImapProvider(providerId: string): Promise<{ success: boolean; error?: string }> {
-  const user = await assertAuthenticated();
-  const { knex } = await createTenantKnex(user.tenant);
-  const tenant = user.tenant;
+export const resyncImapProvider = withAuth(async (
+  _user,
+  { tenant },
+  providerId: string
+): Promise<{ success: boolean; error?: string }> => {
+  const { knex } = await createTenantKnex();
 
   try {
     const provider = await knex('email_providers')
@@ -919,12 +923,14 @@ export async function resyncImapProvider(providerId: string): Promise<{ success:
       error: error instanceof Error ? error.message : 'Failed to resync IMAP provider'
     };
   }
-}
+});
 
-export async function testEmailProviderConnection(providerId: string): Promise<{ success: boolean; error?: string }> {
-  const user = await assertAuthenticated();
-  const { knex: baseKnex } = await createTenantKnex(user.tenant);
-  const tenant = user.tenant;
+export const testEmailProviderConnection = withAuth(async (
+  _user,
+  { tenant },
+  providerId: string
+): Promise<{ success: boolean; error?: string }> => {
+  const { knex: baseKnex } = await createTenantKnex();
   const knex = baseKnex as any;
   
   try {
@@ -1029,23 +1035,25 @@ export async function testEmailProviderConnection(providerId: string): Promise<{
     return { success: true };
   } catch (error) {
     console.error('Connection test failed:', error);
-    return { 
-      success: false, 
-      error: error instanceof Error ? error.message : 'Connection test failed' 
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Connection test failed'
     };
   }
-}
+});
 
 /**
  * Manually retry Microsoft subscription renewal for a specific provider
  */
-export async function retryMicrosoftSubscriptionRenewal(providerId: string): Promise<{ success: boolean; message?: string }> {
+export const retryMicrosoftSubscriptionRenewal = withAuth(async (
+  user,
+  { tenant },
+  providerId: string
+): Promise<{ success: boolean; message?: string }> => {
   try {
-    const user = await assertAuthenticated();
-    
     const service = new EmailWebhookMaintenanceService();
     const results = await service.renewMicrosoftWebhooks({
-      tenantId: user.tenant,
+      tenantId: tenant,
       providerId: providerId,
       lookAheadMinutes: 0 // Force check regardless of expiration time
     });
@@ -1064,13 +1072,15 @@ export async function retryMicrosoftSubscriptionRenewal(providerId: string): Pro
     console.error('Manual renewal failed:', error);
     return { success: false, message: error.message || 'Internal server error' };
   }
-}
+});
 
-export async function runMicrosoft365Diagnostics(providerId: string): Promise<{ success: boolean; report?: Microsoft365DiagnosticsReport; error?: string }> {
+export const runMicrosoft365Diagnostics = withAuth(async (
+  user,
+  { tenant },
+  providerId: string
+): Promise<{ success: boolean; report?: Microsoft365DiagnosticsReport; error?: string }> => {
   try {
-    const user = await assertAuthenticated();
-    const { knex } = await createTenantKnex(user.tenant);
-    const tenant = user.tenant;
+    const { knex } = await createTenantKnex();
 
     const permitted = await hasPermission(user, 'ticket_settings', 'update', knex);
     if (!permitted) {
@@ -1130,7 +1140,7 @@ export async function runMicrosoft365Diagnostics(providerId: string): Promise<{ 
   } catch (error: any) {
     return { success: false, error: error?.message || 'Failed to run diagnostics' };
   }
-}
+});
 
 // Re-export setupPubSub from the actual implementation
 // export { setupPubSub } from './setupPubSub';

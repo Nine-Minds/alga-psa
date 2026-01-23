@@ -6,7 +6,8 @@ import type {
   AccountingExportError,
   AccountingExportLine,
   AccountingExportStatus,
-  IUser
+  IUser,
+  IUserWithRoles
 } from '@alga-psa/types';
 import type {
   CreateExportBatchInput,
@@ -19,9 +20,8 @@ import { AccountingExportInvoiceSelector, type InvoiceSelectionFilters } from '.
 
 
 import { AppError } from '@alga-psa/core';
-import { getTenantContext, runWithTenant } from '@alga-psa/db';
-import { getConnection } from '@alga-psa/db';
-import { getCurrentUserAsync, hasPermissionAsync, getSessionAsync, getAnalyticsAsync } from '../lib/authHelpers';
+import { withAuth, type AuthContext } from '@alga-psa/auth';
+import { hasPermission } from '@alga-psa/auth/rbac';
 
 type AccountingExportPermission = 'create' | 'read' | 'update' | 'execute';
 
@@ -70,183 +70,165 @@ interface PermissionOverrideContext {
   user?: IUser;
 }
 
-async function requireAccountingExportPermission(action: AccountingExportPermission, override?: PermissionOverrideContext) {
-  const currentUser = override?.user ?? (await getCurrentUserAsync());
-  if (!currentUser) {
-    throw new AppError('ACCOUNTING_EXPORT_UNAUTHENTICATED', 'Authentication required to manage accounting exports');
-  }
-
-  if (currentUser.user_type === 'client') {
+function checkAccountingExportPermission(
+  user: IUserWithRoles,
+  action: AccountingExportPermission
+): void {
+  if (user.user_type === 'client') {
     throw new AppError(
       'ACCOUNTING_EXPORT_FORBIDDEN',
       'Client portal users are not permitted to manage accounting exports'
     );
   }
 
-  let tenant = getTenantContext() ?? (typeof (currentUser as any)?.tenant === 'string' ? (currentUser as any).tenant : undefined);
-  if (!tenant) {
-    throw new AppError('ACCOUNTING_EXPORT_TENANT_REQUIRED', 'Tenant context is required for accounting export operations');
-  }
-
-  const knex = await getConnection(tenant);
   // Accounting exports are currently managed from billing/integrations surfaces; gate with billing settings permissions.
   // Map export actions to billing_settings read/update to align with mapping + CSV export permissions.
   const billingAction = action === 'read' ? 'read' : 'update';
-  const allowed = await hasPermissionAsync(currentUser, 'billing_settings', billingAction);
+  const allowed = hasPermission(user, 'billing_settings', billingAction);
   if (!allowed) {
     throw new AppError(
       'ACCOUNTING_EXPORT_FORBIDDEN',
       `Permission denied: Cannot ${ACTION_DESCRIPTIONS[action]}`
     );
   }
-
-  return { currentUser, tenant };
 }
 
-export async function createAccountingExportBatch(
-  input: CreateExportBatchInput,
-  override?: PermissionOverrideContext
-): Promise<AccountingExportBatch> {
-  const { currentUser, tenant } = await requireAccountingExportPermission('create', override);
-  return runWithTenant(tenant, async () => {
-    const selector = await AccountingExportInvoiceSelector.create();
-    const filters = normalizeCreateBatchFilters(input.filters);
-    const { batch } = await selector.createBatchFromFilters({
-      adapterType: input.adapter_type,
-      targetRealm: input.target_realm ?? null,
-      notes: input.notes ?? null,
-      createdBy: input.created_by ?? currentUser.user_id,
-      filters
-    });
-    return batch;
+export const createAccountingExportBatch = withAuth(async (
+  user,
+  { tenant },
+  input: CreateExportBatchInput
+): Promise<AccountingExportBatch> => {
+  await checkAccountingExportPermission(user, 'create');
+  const selector = await AccountingExportInvoiceSelector.create();
+  const filters = normalizeCreateBatchFilters(input.filters);
+  const { batch } = await selector.createBatchFromFilters({
+    adapterType: input.adapter_type,
+    targetRealm: input.target_realm ?? null,
+    notes: input.notes ?? null,
+    createdBy: input.created_by ?? user.user_id,
+    filters
   });
-}
+  return batch;
+});
 
-export async function appendAccountingExportLines(
+export const appendAccountingExportLines = withAuth(async (
+  user,
+  { tenant },
   batchId: string,
-  lines: CreateExportLineInput[],
-  override?: PermissionOverrideContext
-): Promise<AccountingExportLine[]> {
-  const { tenant } = await requireAccountingExportPermission('update', override);
-  return runWithTenant(tenant, async () => {
-    const service = await AccountingExportService.create();
-    return service.appendLines(batchId, { lines });
+  lines: CreateExportLineInput[]
+): Promise<AccountingExportLine[]> => {
+  await checkAccountingExportPermission(user, 'update');
+  const service = await AccountingExportService.create();
+  return service.appendLines(batchId, { lines });
+});
+
+export const appendAccountingExportErrors = withAuth(async (
+  user,
+  { tenant },
+  batchId: string,
+  errors: CreateExportErrorInput[]
+): Promise<AccountingExportError[]> => {
+  await checkAccountingExportPermission(user, 'update');
+  const service = await AccountingExportService.create();
+  return service.appendErrors(batchId, { errors });
+});
+
+export const updateAccountingExportBatchStatus = withAuth(async (
+  user,
+  { tenant },
+  batchId: string,
+  updates: UpdateExportBatchStatusInput
+): Promise<AccountingExportBatch | null> => {
+  await checkAccountingExportPermission(user, 'update');
+  const service = await AccountingExportService.create();
+  return service.updateBatchStatus(batchId, {
+    ...updates,
+    last_updated_by: updates.last_updated_by ?? user.user_id
   });
-}
+});
 
-export async function appendAccountingExportErrors(
-  batchId: string,
-  errors: CreateExportErrorInput[],
-  override?: PermissionOverrideContext
-): Promise<AccountingExportError[]> {
-  const { tenant } = await requireAccountingExportPermission('update', override);
-  return runWithTenant(tenant, async () => {
-    const service = await AccountingExportService.create();
-    return service.appendErrors(batchId, { errors });
-  });
-}
-
-export async function updateAccountingExportBatchStatus(
-  batchId: string,
-  updates: UpdateExportBatchStatusInput,
-  override?: PermissionOverrideContext
-): Promise<AccountingExportBatch | null> {
-  const { currentUser, tenant } = await requireAccountingExportPermission('update', override);
-  return runWithTenant(tenant, async () => {
-    const service = await AccountingExportService.create();
-    return service.updateBatchStatus(batchId, {
-      ...updates,
-      last_updated_by: updates.last_updated_by ?? currentUser.user_id
-    });
-  });
-}
-
-export async function getAccountingExportBatch(
-  batchId: string,
-  override?: PermissionOverrideContext
+export const getAccountingExportBatch = withAuth(async (
+  user,
+  { tenant },
+  batchId: string
 ): Promise<{
   batch: AccountingExportBatch | null;
   lines: AccountingExportLine[];
   errors: AccountingExportError[];
-}> {
-  const { tenant } = await requireAccountingExportPermission('read', override);
-  return runWithTenant(tenant, async () => {
-    const service = await AccountingExportService.create();
-    return service.getBatchWithDetails(batchId);
-  });
-}
+}> => {
+  await checkAccountingExportPermission(user, 'read');
+  const service = await AccountingExportService.create();
+  return service.getBatchWithDetails(batchId);
+});
 
-export async function listAccountingExportBatches(
-  params: { status?: AccountingExportStatus; adapter_type?: string } = {},
-  override?: PermissionOverrideContext
-): Promise<AccountingExportBatch[]> {
-  const { tenant } = await requireAccountingExportPermission('read', override);
-  return runWithTenant(tenant, async () => {
-    const service = await AccountingExportService.create();
-    return service.listBatches(params);
-  });
-}
+export const listAccountingExportBatches = withAuth(async (
+  user,
+  { tenant },
+  params: { status?: AccountingExportStatus; adapter_type?: string } = {}
+): Promise<AccountingExportBatch[]> => {
+  await checkAccountingExportPermission(user, 'read');
+  const service = await AccountingExportService.create();
+  return service.listBatches(params);
+});
 
-export async function executeAccountingExportBatch(
-  batchId: string,
-  override?: PermissionOverrideContext
-): Promise<AccountingExportDeliveryResult> {
-  const { tenant } = await requireAccountingExportPermission('execute', override);
-  return runWithTenant(tenant, async () => {
-    const service = await AccountingExportService.create();
-    return service.executeBatch(batchId);
-  });
-}
+export const executeAccountingExportBatch = withAuth(async (
+  user,
+  { tenant },
+  batchId: string
+): Promise<AccountingExportDeliveryResult> => {
+  await checkAccountingExportPermission(user, 'execute');
+  const service = await AccountingExportService.create();
+  return service.executeBatch(batchId);
+});
 
-export async function previewAccountingExport(
-  filters: AccountingExportPreviewFilters = {},
-  override?: PermissionOverrideContext
-): Promise<AccountingExportPreviewResult> {
-  const { tenant } = await requireAccountingExportPermission('read', override);
+export const previewAccountingExport = withAuth(async (
+  user,
+  { tenant },
+  filters: AccountingExportPreviewFilters = {}
+): Promise<AccountingExportPreviewResult> => {
+  await checkAccountingExportPermission(user, 'read');
 
-  return runWithTenant(tenant, async () => {
-    const selector = await AccountingExportInvoiceSelector.create();
-    const normalizedFilters: InvoiceSelectionFilters = {
-      startDate: toOptionalString(filters.startDate),
-      endDate: toOptionalString(filters.endDate),
-      invoiceStatuses: toStringArray(filters.invoiceStatuses),
-      clientIds: toStringArray(filters.clientIds),
-      clientSearch: toOptionalString(filters.clientSearch),
-      adapterType: toOptionalString(filters.adapterType),
-      targetRealm: toOptionalString(filters.targetRealm) ?? null,
-      excludeSyncedInvoices: true
-    };
+  const selector = await AccountingExportInvoiceSelector.create();
+  const normalizedFilters: InvoiceSelectionFilters = {
+    startDate: toOptionalString(filters.startDate),
+    endDate: toOptionalString(filters.endDate),
+    invoiceStatuses: toStringArray(filters.invoiceStatuses),
+    clientIds: toStringArray(filters.clientIds),
+    clientSearch: toOptionalString(filters.clientSearch),
+    adapterType: toOptionalString(filters.adapterType),
+    targetRealm: toOptionalString(filters.targetRealm) ?? null,
+    excludeSyncedInvoices: true
+  };
 
-    const lines = await selector.previewInvoiceLines(normalizedFilters);
-    const totalsByCurrency = lines.reduce<Record<string, number>>((acc, line) => {
-      const currency = line.currencyCode || 'USD';
-      acc[currency] = (acc[currency] ?? 0) + line.amountCents;
-      return acc;
-    }, {});
-    const invoiceCount = new Set(lines.map((line) => line.invoiceId)).size;
+  const lines = await selector.previewInvoiceLines(normalizedFilters);
+  const totalsByCurrency = lines.reduce<Record<string, number>>((acc, line) => {
+    const currency = line.currencyCode || 'USD';
+    acc[currency] = (acc[currency] ?? 0) + line.amountCents;
+    return acc;
+  }, {});
+  const invoiceCount = new Set(lines.map((line) => line.invoiceId)).size;
 
-    const limitedLines = lines.slice(0, PREVIEW_LINE_LIMIT).map<AccountingExportPreviewLine>((line) => ({
-      invoiceId: line.invoiceId,
-      invoiceNumber: line.invoiceNumber,
-      invoiceDate: line.invoiceDate,
-      invoiceStatus: line.invoiceStatus,
-      clientName: line.clientName,
-      chargeId: line.chargeId,
-      amountCents: line.amountCents,
-      currencyCode: line.currencyCode || 'USD',
-      servicePeriodStart: line.servicePeriodStart ?? null,
-      servicePeriodEnd: line.servicePeriodEnd ?? null
-    }));
+  const limitedLines = lines.slice(0, PREVIEW_LINE_LIMIT).map<AccountingExportPreviewLine>((line) => ({
+    invoiceId: line.invoiceId,
+    invoiceNumber: line.invoiceNumber,
+    invoiceDate: line.invoiceDate,
+    invoiceStatus: line.invoiceStatus,
+    clientName: line.clientName,
+    chargeId: line.chargeId,
+    amountCents: line.amountCents,
+    currencyCode: line.currencyCode || 'USD',
+    servicePeriodStart: line.servicePeriodStart ?? null,
+    servicePeriodEnd: line.servicePeriodEnd ?? null
+  }));
 
-    return {
-      invoiceCount,
-      lineCount: lines.length,
-      totalsByCurrency,
-      lines: limitedLines,
-      truncated: lines.length > limitedLines.length
-    };
-  });
-}
+  return {
+    invoiceCount,
+    lineCount: lines.length,
+    totalsByCurrency,
+    lines: limitedLines,
+    truncated: lines.length > limitedLines.length
+  };
+});
 
 function toOptionalString(value: string | string[] | undefined | null): string | undefined {
   if (Array.isArray(value)) {

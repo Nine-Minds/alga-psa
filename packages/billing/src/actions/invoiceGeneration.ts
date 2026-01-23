@@ -6,7 +6,9 @@ import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { requireTenantId } from '@alga-psa/db';
 import { SharedNumberingService } from '@alga-psa/shared/services/numberingService';
-import { getCurrentUserAsync, hasPermissionAsync, getAnalyticsAsync } from '../lib/authHelpers';
+import { withAuth } from '@alga-psa/auth';
+import { hasPermission } from '@alga-psa/auth/rbac';
+import { getAnalyticsAsync } from '../lib/authHelpers';
 import { BillingEngine } from '../lib/billing/billingEngine';
 import ClientContractLine from '../models/clientContractLine';
 import { Session } from 'next-auth';
@@ -154,21 +156,15 @@ export type PurchaseOrderOverageResult = {
   overage_cents: number;
 };
 
-export async function getPurchaseOrderOverageForBillingCycle(
+export const getPurchaseOrderOverageForBillingCycle = withAuth(async (
+  user,
+  { tenant },
   billing_cycle_id: string
-): Promise<PurchaseOrderOverageResult | null> {
-  const currentUser = await getCurrentUserAsync();
-  if (!currentUser) {
-    throw new Error('Unauthorized: No authenticated user found');
-  }
-
-  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
-  if (!tenant) {
-    throw new Error('No tenant found');
-  }
+): Promise<PurchaseOrderOverageResult | null> => {
+  const { knex } = await createTenantKnex();
 
   const billingCycle = await withTransaction(knex, async (trx: Knex.Transaction) => {
-    if (!await hasPermissionAsync(currentUser, 'invoice', 'create') && !await hasPermissionAsync(currentUser, 'invoice', 'generate')) {
+    if (!hasPermission(user, 'invoice', 'create') && !hasPermission(user, 'invoice', 'generate')) {
       throw new Error('Permission denied: Cannot generate invoices');
     }
 
@@ -239,7 +235,7 @@ export async function getPurchaseOrderOverageForBillingCycle(
     invoice_total_cents: computed.invoiceTotalCents,
     overage_cents: computed.overageCents,
   };
-}
+});
 
 // TODO: Move to billingAndTax.ts
 async function calculateChargeDetails(
@@ -380,29 +376,18 @@ async function adaptToWasmViewModel(
 }
 
 
-export async function previewInvoice(billing_cycle_id: string): Promise<PreviewInvoiceResponse> {
-  const currentUser = await getCurrentUserAsync();
-  if (!currentUser) {
-    return {
-      success: false,
-      error: 'Unauthorized: No authenticated user found'
-    };
-  }
-
-  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
-
-  if (!tenant) {
-    return {
-      success: false,
-      error: 'No tenant found'
-    };
-  }
+export const previewInvoice = withAuth(async (
+  user,
+  { tenant },
+  billing_cycle_id: string
+): Promise<PreviewInvoiceResponse> => {
+  const { knex } = await createTenantKnex();
 
   try {
     // Get billing cycle details
     const billingCycle = await withTransaction(knex, async (trx: Knex.Transaction) => {
       // Check permissions within transaction
-      if (!await hasPermissionAsync(currentUser, 'invoice', 'create') && !await hasPermissionAsync(currentUser, 'invoice', 'generate')) {
+      if (!hasPermission(user, 'invoice', 'create') && !hasPermission(user, 'invoice', 'generate')) {
         throw new Error('Permission denied: Cannot preview invoices');
       }
 
@@ -592,28 +577,21 @@ export async function previewInvoice(billing_cycle_id: string): Promise<PreviewI
       error: error instanceof Error ? error.message : 'An error occurred while previewing the invoice'
     };
   }
-}
+});
 
 // Update return type to the interface InvoiceViewModel
-export async function generateInvoice(
+export const generateInvoice = withAuth(async (
+  user,
+  { tenant },
   billing_cycle_id: string,
   options: { allowPoOverage?: boolean } = {}
-): Promise<InvoiceViewModel | null> {
-  const currentUser = await getCurrentUserAsync();
-  if (!currentUser) {
-    throw new Error('Unauthorized: No authenticated user found');
-  }
-
+): Promise<InvoiceViewModel | null> => {
   // Get billing cycle details
-  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
-
-  if (!tenant) {
-    throw new Error('No tenant found');
-  }
+  const { knex } = await createTenantKnex();
 
   const billingCycle = await withTransaction(knex, async (trx: Knex.Transaction) => {
     // Check permissions within transaction
-    if (!await hasPermissionAsync(currentUser, 'invoice', 'create') && !await hasPermissionAsync(currentUser, 'invoice', 'generate')) {
+    if (!hasPermission(user, 'invoice', 'create') && !hasPermission(user, 'invoice', 'generate')) {
       throw new Error('Permission denied: Cannot generate invoices');
     }
 
@@ -754,12 +732,12 @@ export async function generateInvoice(
       cycleStart,
       cycleEnd,
       billing_cycle_id,
-      currentUser.user_id
+      user.user_id
     );
 
     if (settings.zero_dollar_invoice_handling === 'finalized') {
       // TODO: Import finalizeInvoiceWithKnex from invoiceModification.ts once created
-      // await finalizeInvoiceWithKnex(createdInvoice.invoice_id, knex, tenant, currentUser.user_id);
+      // await finalizeInvoiceWithKnex(createdInvoice.invoice_id, knex, tenant, user.user_id);
       console.warn('finalizeInvoiceWithKnex needs to be imported and called here for zero-dollar finalized invoices.');
     }
 
@@ -783,7 +761,7 @@ console.log(`[generateInvoice] Zero-dollar invoice created (${createdInvoice.inv
     cycleStart,
     cycleEnd,
     billing_cycle_id,
-    currentUser.user_id
+    user.user_id
   );
 
   // Get the next billing date as a PlainDate string (YYYY-MM-DD)
@@ -800,54 +778,36 @@ console.log(`[generateInvoice] Regular invoice created (${createdInvoice.invoice
   let invoiceView = await Invoice.getFullInvoiceById(knex, createdInvoice.invoice_id);
 
   return invoiceView;
-}
+});
 
-export async function generateInvoiceNumber(_trx?: Knex.Transaction): Promise<string> {
-  const currentUser = await getCurrentUserAsync();
-  if (!currentUser) {
-    throw new Error('Unauthorized: No authenticated user found');
+export const generateInvoiceNumber = withAuth(async (
+  user,
+  { tenant },
+  _trx?: Knex.Transaction
+): Promise<string> => {
+  // Check permissions
+  if (!hasPermission(user, 'invoice', 'create') && !hasPermission(user, 'invoice', 'generate')) {
+    throw new Error('Permission denied: Cannot generate invoice numbers');
   }
 
-  // If transaction is provided, check permissions within it
-  if (_trx) {
-    if (!await hasPermissionAsync(currentUser, 'invoice', 'create') && !await hasPermissionAsync(currentUser, 'invoice', 'generate')) {
-      throw new Error('Permission denied: Cannot generate invoice numbers');
-    }
-  } else {
-    // If no transaction provided, create a temporary one for permission check
-    const { knex } = await createTenantKnex(currentUser.tenant);
-    await withTransaction(knex, async (trx: Knex.Transaction) => {
-      if (!await hasPermissionAsync(currentUser, 'invoice', 'create') && !await hasPermissionAsync(currentUser, 'invoice', 'generate')) {
-        throw new Error('Permission denied: Cannot generate invoice numbers');
-      }
-    });
-  }
-
-  const { knex } = await createTenantKnex(currentUser.tenant);
-  const tenant = await requireTenantId(_trx ?? knex);
+  const { knex } = await createTenantKnex();
   return SharedNumberingService.getNextNumber('INVOICE', {
     knex: _trx ?? knex,
     tenant,
   });
-}
+});
 
-export async function generateInvoicePDF(invoiceId: string): Promise<{ file_id: string }> {
-  const currentUser = await getCurrentUserAsync();
-  if (!currentUser) {
-    throw new Error('Unauthorized: No authenticated user found');
+export const generateInvoicePDF = withAuth(async (
+  user,
+  { tenant },
+  invoiceId: string
+): Promise<{ file_id: string }> => {
+  const { knex } = await createTenantKnex();
+
+  // Check permissions
+  if (!hasPermission(user, 'invoice', 'create') && !hasPermission(user, 'invoice', 'generate')) {
+    throw new Error('Permission denied: Cannot generate invoice PDFs');
   }
-
-  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
-  if (!tenant) {
-    throw new Error('No tenant found');
-  }
-
-  // Check permissions within transaction
-  await withTransaction(knex, async (trx: Knex.Transaction) => {
-    if (!await hasPermissionAsync(currentUser, 'invoice', 'create') && !await hasPermissionAsync(currentUser, 'invoice', 'generate')) {
-      throw new Error('Permission denied: Cannot generate invoice PDFs');
-    }
-  });
 
   // Use the factory function to create the PDF generation service
   const pdfGenerationService = createPDFGenerationService(tenant);
@@ -865,31 +825,26 @@ export async function generateInvoicePDF(invoiceId: string): Promise<{ file_id: 
   const fileRecord = await pdfGenerationService.generateAndStore({
     invoiceId,
     invoiceNumber: invoice.invoice_number,
-    userId: currentUser.user_id
+    userId: user.user_id
   });
 
   return { file_id: fileRecord.file_id };
-}
+});
 
-export async function downloadInvoicePDF(invoiceId: string): Promise<{ pdfData: number[]; invoiceNumber: string }> {
+export const downloadInvoicePDF = withAuth(async (
+  user,
+  { tenant },
+  invoiceId: string
+): Promise<{ pdfData: number[]; invoiceNumber: string }> => {
   try {
     console.log('[downloadInvoicePDF] Called with invoiceId:', invoiceId);
-    const currentUser = await getCurrentUserAsync();
-    if (!currentUser) {
-      throw new Error('Unauthorized: No authenticated user found');
-    }
 
-    const { knex, tenant } = await createTenantKnex(currentUser.tenant);
-    if (!tenant) {
-      throw new Error('No tenant found');
-    }
+    const { knex } = await createTenantKnex();
 
-    // Check permissions within transaction
-    await withTransaction(knex, async (trx: Knex.Transaction) => {
-      if (!await hasPermissionAsync(currentUser, 'invoice', 'read')) {
-        throw new Error('Permission denied: Cannot download invoice PDFs');
-      }
-    });
+    // Check permissions
+    if (!hasPermission(user, 'invoice', 'read')) {
+      throw new Error('Permission denied: Cannot download invoice PDFs');
+    }
 
     // Get invoice details
     const invoice = await withTransaction(knex, async (trx: Knex.Transaction) => {
@@ -908,7 +863,7 @@ export async function downloadInvoicePDF(invoiceId: string): Promise<{ pdfData: 
 
     const pdfBuffer = await pdfGenerationService.generatePDF({
       invoiceId,
-      userId: currentUser.user_id
+      userId: user.user_id
     });
 
     console.log('[downloadInvoicePDF] PDF generated, size:', pdfBuffer.length, 'bytes');
@@ -922,30 +877,24 @@ export async function downloadInvoicePDF(invoiceId: string): Promise<{ pdfData: 
     console.error('[downloadInvoicePDF] Error stack:', error instanceof Error ? error.stack : 'No stack trace');
     throw error;
   }
-}
+});
 
-export async function createInvoiceFromBillingResult(
+export const createInvoiceFromBillingResult = withAuth(async (
+  user,
+  { tenant },
   billingResult: IBillingResult,
   clientId: string,
   cycleStart: ISO8601String,
   cycleEnd: ISO8601String,
   billing_cycle_id: string,
   userId: string
-): Promise<IInvoice> {
-  const currentUser = await getCurrentUserAsync();
-  if (!currentUser) {
-    throw new Error('Unauthorized: No authenticated user found');
-  }
-
+): Promise<IInvoice> => {
   // Verify that the userId matches the current user
-  if (currentUser.user_id !== userId) {
+  if (user.user_id !== userId) {
     throw new Error('Permission denied: User ID mismatch');
   }
 
-  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
-  if (!tenant) {
-    throw new Error('No tenant found');
-  }
+  const { knex } = await createTenantKnex();
 
   const client = await getClientDetails(knex, tenant, clientId);
   let region_code = await getClientDefaultTaxRegionCode(knex, tenant, clientId);
@@ -1013,7 +962,7 @@ export async function createInvoiceFromBillingResult(
       invoiceData.invoice_number = invoiceNumber;
       const [insertedInvoice] = await withTransaction(knex, async (trx: Knex.Transaction) => {
         // Check permissions within transaction
-        if (!await hasPermissionAsync(currentUser, 'invoice', 'create') && !await hasPermissionAsync(currentUser, 'invoice', 'generate')) {
+        if (!hasPermission(user, 'invoice', 'create') && !hasPermission(user, 'invoice', 'generate')) {
           throw new Error('Permission denied: Cannot create invoices');
         }
 
@@ -1048,16 +997,16 @@ export async function createInvoiceFromBillingResult(
     // Persist all items (including fixed details) using the dedicated service function
     const sessionObject: Session = {
       user: {
-        id: currentUser.user_id,
-        email: currentUser.email,
-        name: `${currentUser.first_name || ''} ${currentUser.last_name || ''}`.trim() || currentUser.username,
-        username: currentUser.username,
-        image: currentUser.image,
-        proToken: '', // Not available in currentUser, using empty string
-        tenant: currentUser.tenant,
-        user_type: currentUser.user_type,
-        clientId: undefined, // Not available in currentUser
-        contactId: currentUser.contact_id
+        id: user.user_id,
+        email: user.email,
+        name: `${user.first_name || ''} ${user.last_name || ''}`.trim() || user.username,
+        username: user.username,
+        image: user.image,
+        proToken: '', // Not available in user, using empty string
+        tenant: user.tenant,
+        user_type: user.user_type,
+        clientId: undefined, // Not available in user
+        contactId: user.contact_id
       },
       expires: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString() // 24 hours from now
     };
@@ -1184,4 +1133,4 @@ export async function createInvoiceFromBillingResult(
   }, userId);
 
   return newInvoice;
-}
+});

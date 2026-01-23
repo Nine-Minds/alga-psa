@@ -16,7 +16,7 @@ import {
   type BillingCycleAnchorSettingsInput,
   type NormalizedBillingCycleAnchorSettings
 } from '../lib/billing/billingCycleAnchors';
-import { getCurrentUserAsync, hasPermissionAsync, getSessionAsync, getAnalyticsAsync } from '../lib/authHelpers';
+import { withAuth } from '@alga-psa/auth';
 
 function isDateObject(val: unknown): val is Date {
   return Object.prototype.toString.call(val) === '[object Date]';
@@ -37,18 +37,12 @@ export type ClientBillingCycleAnchorConfig = {
   anchor: NormalizedBillingCycleAnchorSettings;
 };
 
-export async function getClientBillingCycleAnchor(clientId: string): Promise<ClientBillingCycleAnchorConfig> {
-  const session = await getSessionAsync();
-  if (!session?.user?.id) {
-    throw new Error('Unauthorized');
-  }
-
-  const currentUser = await getCurrentUserAsync();
-  if (!currentUser) {
-    throw new Error('No authenticated user found');
-  }
-
-  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
+export const getClientBillingCycleAnchor = withAuth(async (
+  user,
+  { tenant },
+  clientId: string
+): Promise<ClientBillingCycleAnchorConfig> => {
+  const { knex } = await createTenantKnex();
   if (!tenant) {
     throw new Error('No tenant found');
   }
@@ -86,7 +80,7 @@ export async function getClientBillingCycleAnchor(clientId: string): Promise<Cli
   });
 
   return result;
-}
+});
 
 export type UpdateClientBillingCycleAnchorInput = {
   clientId: string;
@@ -94,20 +88,12 @@ export type UpdateClientBillingCycleAnchorInput = {
   anchor: BillingCycleAnchorSettingsInput;
 };
 
-export async function updateClientBillingCycleAnchor(
+export const updateClientBillingCycleAnchor = withAuth(async (
+  user,
+  { tenant },
   input: UpdateClientBillingCycleAnchorInput
-): Promise<{ success: true }> {
-  const session = await getSessionAsync();
-  if (!session?.user?.id) {
-    throw new Error('Unauthorized');
-  }
-
-  const currentUser = await getCurrentUserAsync();
-  if (!currentUser) {
-    throw new Error('No authenticated user found');
-  }
-
-  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
+): Promise<{ success: true }> => {
+  const { knex } = await createTenantKnex();
   if (!tenant) {
     throw new Error('No tenant found');
   }
@@ -181,23 +167,20 @@ export async function updateClientBillingCycleAnchor(
   });
 
   return { success: true };
-}
+});
 
 export type BillingCyclePeriodPreview = {
   periodStartDate: ISO8601String;
   periodEndDate: ISO8601String;
 };
 
-export async function previewBillingPeriodsForSchedule(
+export const previewBillingPeriodsForSchedule = withAuth(async (
+  user,
+  { tenant },
   billingCycle: BillingCycleType,
   anchor: BillingCycleAnchorSettingsInput,
   options: { count?: number; referenceDate?: ISO8601String } = {}
-): Promise<BillingCyclePeriodPreview[]> {
-  const session = await getSessionAsync();
-  if (!session?.user?.id) {
-    throw new Error('Unauthorized');
-  }
-
+): Promise<BillingCyclePeriodPreview[]> => {
   validateAnchorSettingsForCycle(billingCycle, anchor);
   const normalized = normalizeAnchorSettingsForCycle(billingCycle, anchor);
 
@@ -219,23 +202,15 @@ export async function previewBillingPeriodsForSchedule(
   }
 
   return periods;
-}
+});
 
-export async function previewClientBillingPeriods(
+export const previewClientBillingPeriods = withAuth(async (
+  user,
+  { tenant },
   clientId: string,
   options: { count?: number; referenceDate?: ISO8601String } = {}
-): Promise<BillingCyclePeriodPreview[]> {
-  const session = await getSessionAsync();
-  if (!session?.user?.id) {
-    throw new Error('Unauthorized');
-  }
-
-  const currentUser = await getCurrentUserAsync();
-  if (!currentUser) {
-    throw new Error('No authenticated user found');
-  }
-
-  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
+): Promise<BillingCyclePeriodPreview[]> => {
+  const { knex } = await createTenantKnex();
   if (!tenant) {
     throw new Error('No tenant found');
   }
@@ -291,7 +266,7 @@ export async function previewClientBillingPeriods(
   }
 
   return periods;
-}
+});
 
 async function ensureClientBillingSettingsRow(
   trx: Knex.Transaction,

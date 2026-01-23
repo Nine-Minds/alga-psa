@@ -5,7 +5,7 @@ import { withTransaction } from '@alga-psa/db';
 import type { IInvoice } from '@alga-psa/types';
 import { z } from 'zod';
 import { Knex } from 'knex';
-import { getCurrentUser } from '@alga-psa/users/actions';
+import { withAuth } from '@alga-psa/auth';
 // Removed safe-action import as it's not the standard pattern here
 // Define the schema for the input parameters
 const InputSchema = z.object({
@@ -23,7 +23,11 @@ export type RecentInvoice = Pick<IInvoice, 'invoice_id' | 'invoice_number' | 'in
  * @param limit - The maximum number of invoices to return (default: 10).
  * @returns A promise that resolves to an array of recent invoices or throws an error.
  */
-export async function getRecentClientInvoices(input: { clientId: string; limit?: number }): Promise<RecentInvoice[]> {
+export const getRecentClientInvoices = withAuth(async (
+  _user,
+  { tenant },
+  input: { clientId: string; limit?: number }
+): Promise<RecentInvoice[]> => {
   // Validate input
   const validationResult = InputSchema.safeParse(input);
   if (!validationResult.success) {
@@ -32,16 +36,7 @@ export async function getRecentClientInvoices(input: { clientId: string; limit?:
   }
   const { clientId, limit } = validationResult.data;
 
-  const currentUser = await getCurrentUser();
-  if (!currentUser) {
-    throw new Error('User not authenticated');
-  }
-
-  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
-
-  if (!tenant) {
-    throw new Error('Tenant context is required.');
-  }
+  const { knex } = await createTenantKnex();
 
   console.log(`Fetching recent invoices for client ${clientId} in tenant ${tenant}, limit ${limit}`);
 
@@ -71,4 +66,4 @@ export async function getRecentClientInvoices(input: { clientId: string; limit?:
     console.error(`Error fetching recent invoices for client ${clientId} in tenant ${tenant}:`, error);
     throw new Error(`Failed to fetch recent invoices: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
-}
+});

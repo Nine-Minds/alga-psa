@@ -7,17 +7,19 @@ import { v4 as uuidv4 } from 'uuid';
 import { Knex } from 'knex';
 import CreditReconciliationReport from '../models/creditReconciliationReport';
 import { auditLog } from '@alga-psa/db';
-import { getCurrentUser } from '@alga-psa/auth/getCurrentUser';
+import { withAuth } from '@alga-psa/auth';
 
 /**
  * Validates a client's credit balance without making automatic corrections
  * Instead, it creates a reconciliation report when discrepancies are found
- * 
+ *
  * @param clientId The ID of the client to validate
  * @param providedTrx Optional transaction object
  * @returns Object containing validation results and report ID if a discrepancy was found
  */
-export async function validateCreditBalanceWithoutCorrection(
+export const validateCreditBalanceWithoutCorrection = withAuth(async (
+    user,
+    { tenant },
     clientId: string,
     providedTrx?: Knex.Transaction
 ): Promise<{
@@ -27,16 +29,8 @@ export async function validateCreditBalanceWithoutCorrection(
     difference: number;
     reportId?: string;
     lastTransaction?: ITransaction;
-}> {
-    const currentUser = await getCurrentUser();
-    if (!currentUser) {
-        throw new Error('No authenticated user found');
-    }
-
-    const { knex, tenant } = await createTenantKnex(currentUser.tenant);
-    if (!tenant) {
-        throw new Error('Tenant context is required for credit balance validation');
-    }
+}> => {
+    const { knex } = await createTenantKnex();
 
     // Use provided transaction or create a new one
     const executeWithTransaction = async (trx: Knex.Transaction) => {
@@ -233,7 +227,7 @@ export async function validateCreditBalanceWithoutCorrection(
     } else {
         return await withTransaction(knex, executeWithTransaction);
     }
-}
+});
 
 /**
  * Run credit balance validation for all clients in the tenant or a specific client
@@ -243,20 +237,20 @@ export async function validateCreditBalanceWithoutCorrection(
  * @param clientId Optional client ID to validate only a specific client
  * @returns Summary of validation results
  */
-export async function runScheduledCreditBalanceValidation(clientId?: string, userId: string = 'system'): Promise<{
+export const runScheduledCreditBalanceValidation = withAuth(async (
+    user,
+    { tenant },
+    clientId?: string,
+    userId: string = 'system'
+): Promise<{
     totalClients: number;
     balanceValidCount: number;
     balanceDiscrepancyCount: number;
     missingTrackingCount: number;
     inconsistentTrackingCount: number;
     errorCount: number;
-}> {
-    const currentUser = await getCurrentUser();
-    if (!currentUser) {
-        throw new Error('No authenticated user found');
-    }
-
-    const { knex, tenant } = await createTenantKnex(currentUser.tenant);
+}> => {
+    const { knex } = await createTenantKnex();
 
     let clients: { client_id: string }[];
     const startTime = new Date().toISOString();
@@ -374,7 +368,7 @@ export async function runScheduledCreditBalanceValidation(clientId?: string, use
 
         return results;
     });
-}
+});
 
 /**
  * Validates credit tracking entries for a client to identify missing entries
@@ -384,23 +378,17 @@ export async function runScheduledCreditBalanceValidation(clientId?: string, use
  * @param providedTrx Optional transaction object
  * @returns Object containing validation results and report IDs if discrepancies were found
  */
-export async function validateCreditTrackingEntries(
+export const validateCreditTrackingEntries = withAuth(async (
+    user,
+    { tenant },
     clientId: string,
     providedTrx?: Knex.Transaction
 ): Promise<{
     isValid: boolean;
     missingEntries: number;
     reportIds: string[];
-}> {
-    const currentUser = await getCurrentUser();
-    if (!currentUser) {
-        throw new Error('No authenticated user found');
-    }
-
-    const { knex, tenant } = await createTenantKnex(currentUser.tenant);
-    if (!tenant) {
-        throw new Error('Tenant context is required for credit tracking validation');
-    }
+}> => {
+    const { knex } = await createTenantKnex();
 
     // Use provided transaction or create a new one
     const executeWithTransaction = async (trx: Knex.Transaction) => {
@@ -498,7 +486,7 @@ export async function validateCreditTrackingEntries(
     } else {
         return await withTransaction(knex, executeWithTransaction);
     }
-}
+});
 
 /**
  * Validates credit tracking remaining amounts for consistency
@@ -508,23 +496,17 @@ export async function validateCreditTrackingEntries(
  * @param providedTrx Optional transaction object
  * @returns Object containing validation results and report IDs if discrepancies were found
  */
-export async function validateCreditTrackingRemainingAmounts(
+export const validateCreditTrackingRemainingAmounts = withAuth(async (
+    user,
+    { tenant },
     clientId: string,
     providedTrx?: Knex.Transaction
 ): Promise<{
     isValid: boolean;
     inconsistentEntries: number;
     reportIds: string[];
-}> {
-    const currentUser = await getCurrentUser();
-    if (!currentUser) {
-        throw new Error('No authenticated user found');
-    }
-
-    const { knex, tenant } = await createTenantKnex(currentUser.tenant);
-    if (!tenant) {
-        throw new Error('Tenant context is required for credit tracking validation');
-    }
+}> => {
+    const { knex } = await createTenantKnex();
 
     // Use provided transaction or create a new one
     const executeWithTransaction = async (trx: Knex.Transaction) => {
@@ -669,7 +651,7 @@ export async function validateCreditTrackingRemainingAmounts(
     } else {
         return await withTransaction(knex, executeWithTransaction);
     }
-}
+});
 
 /**
  * Run both credit tracking validations for a client
@@ -679,7 +661,9 @@ export async function validateCreditTrackingRemainingAmounts(
  * @param providedTrx Optional transaction object
  * @returns Object containing validation results and report IDs if discrepancies were found
  */
-export async function validateAllCreditTracking(
+export const validateAllCreditTracking = withAuth(async (
+    user,
+    { tenant },
     clientId: string,
     providedTrx?: Knex.Transaction
 ): Promise<{
@@ -687,16 +671,8 @@ export async function validateAllCreditTracking(
     missingEntries: number;
     inconsistentEntries: number;
     reportIds: string[];
-}> {
-    const currentUser = await getCurrentUser();
-    if (!currentUser) {
-        throw new Error('No authenticated user found');
-    }
-
-    const { knex, tenant } = await createTenantKnex(currentUser.tenant);
-    if (!tenant) {
-        throw new Error('Tenant context is required for credit tracking validation');
-    }
+}> => {
+    const { knex } = await createTenantKnex();
 
     // Use provided transaction or create a new one
     const executeWithTransaction = async (trx: Knex.Transaction) => {
@@ -719,32 +695,26 @@ export async function validateAllCreditTracking(
     } else {
         return await withTransaction(knex, executeWithTransaction);
     }
-}
+});
 
 /**
  * Resolve a credit reconciliation report by applying the correction
- * 
+ *
  * @param reportId The ID of the reconciliation report to resolve
  * @param userId The ID of the user resolving the report
  * @param notes Optional notes about the resolution
  * @param trx Optional transaction object
  * @returns The resolved report
  */
-export async function resolveReconciliationReport(
+export const resolveReconciliationReport = withAuth(async (
+    user,
+    { tenant },
     reportId: string,
     userId: string,
     notes?: string,
     trx?: Knex.Transaction
-): Promise<ICreditReconciliationReport> {
-    const currentUser = await getCurrentUser();
-    if (!currentUser) {
-        throw new Error('No authenticated user found');
-    }
-
-    const { knex, tenant } = await createTenantKnex(currentUser.tenant);
-    if (!tenant) {
-        throw new Error('Tenant context is required for resolving reconciliation report');
-    }
+): Promise<ICreditReconciliationReport> => {
+    const { knex } = await createTenantKnex();
 
     const executeWithTransaction = async (transaction: Knex.Transaction) => {
         try {
@@ -874,7 +844,7 @@ export async function resolveReconciliationReport(
     } else {
         return await withTransaction(knex, executeWithTransaction);
     }
-}
+});
 
 /**
  * Run credit balance validation for a specific client

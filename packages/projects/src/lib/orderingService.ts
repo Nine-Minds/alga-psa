@@ -1,104 +1,55 @@
-import { generateKeyBetween } from 'fractional-indexing';
+'use server';
+
 import { createTenantKnex } from '@alga-psa/db';
-import { getCurrentUser } from '@alga-psa/auth/getCurrentUser';
+import { withAuth } from '@alga-psa/auth';
+import { generateKeyForPosition } from './orderingUtils';
 
-export class OrderingService {
-  static generateInitialKeys(count: number): string[] {
-    const keys: string[] = [];
-    let lastKey: string | null = null;
+/**
+ * Reorder a project task to a new position
+ */
+export const reorderProjectTask = withAuth(async (
+  _user,
+  { tenant },
+  taskId: string,
+  targetStatusId: string,
+  beforeKey: string | null,
+  afterKey: string | null
+): Promise<string> => {
+  const newKey = generateKeyForPosition(beforeKey, afterKey);
 
-    for (let i = 0; i < count; i++) {
-      const newKey = generateKeyBetween(lastKey, null);
-      keys.push(newKey);
-      lastKey = newKey;
-    }
+  const { knex: db } = await createTenantKnex();
 
-    return keys;
-  }
+  await db('project_tasks')
+    .where({ task_id: taskId, tenant })
+    .update({
+      project_status_mapping_id: targetStatusId,
+      order_key: newKey,
+      updated_at: db.fn.now(),
+    });
 
-  static generateKeyForPosition(beforeKey: string | null | undefined, afterKey: string | null | undefined): string {
-    const normalizedBeforeKey = beforeKey === undefined ? null : beforeKey;
-    const normalizedAfterKey = afterKey === undefined ? null : afterKey;
+  return newKey;
+});
 
-    if (normalizedBeforeKey && normalizedAfterKey) {
-      if (normalizedBeforeKey >= normalizedAfterKey) {
-        console.error('Invalid key order: beforeKey must be less than afterKey', {
-          beforeKey: normalizedBeforeKey,
-          afterKey: normalizedAfterKey,
-        });
-        throw new Error(
-          `Invalid key order: beforeKey (${normalizedBeforeKey}) must be less than afterKey (${normalizedAfterKey})`,
-        );
-      }
-    }
+/**
+ * Reorder a project phase to a new position
+ */
+export const reorderProjectPhase = withAuth(async (
+  _user,
+  { tenant },
+  phaseId: string,
+  beforeKey: string | null,
+  afterKey: string | null
+): Promise<string> => {
+  const newKey = generateKeyForPosition(beforeKey, afterKey);
 
-    if (normalizedBeforeKey && normalizedAfterKey && normalizedBeforeKey === normalizedAfterKey) {
-      console.error('Identical keys provided', { beforeKey: normalizedBeforeKey, afterKey: normalizedAfterKey });
-      throw new Error('Cannot generate key between identical keys');
-    }
+  const { knex: db } = await createTenantKnex();
 
-    try {
-      const newKey = generateKeyBetween(normalizedBeforeKey, normalizedAfterKey);
-      console.log('Generated new key:', newKey, 'for position between', normalizedBeforeKey, 'and', normalizedAfterKey);
-      return newKey;
-    } catch (error) {
-      console.error('Error generating key between:', {
-        beforeKey: normalizedBeforeKey,
-        afterKey: normalizedAfterKey,
-        error,
-      });
-      throw error;
-    }
-  }
+  await db('project_phases')
+    .where({ phase_id: phaseId, tenant })
+    .update({
+      order_key: newKey,
+      updated_at: db.fn.now(),
+    });
 
-  static async reorderProjectTask(
-    taskId: string,
-    targetStatusId: string,
-    beforeKey: string | null,
-    afterKey: string | null,
-  ): Promise<string> {
-    const newKey = this.generateKeyForPosition(beforeKey, afterKey);
-
-    const currentUser = await getCurrentUser();
-    if (!currentUser) {
-      throw new Error('No authenticated user found');
-    }
-
-    const { knex: db, tenant } = await createTenantKnex(currentUser.tenant);
-    if (!tenant) {
-      throw new Error('Tenant context is required for reordering project task');
-    }
-    await db('project_tasks')
-      .where({ task_id: taskId, tenant })
-      .update({
-        project_status_mapping_id: targetStatusId,
-        order_key: newKey,
-        updated_at: db.fn.now(),
-      });
-
-    return newKey;
-  }
-
-  static async reorderProjectPhase(phaseId: string, beforeKey: string | null, afterKey: string | null): Promise<string> {
-    const newKey = this.generateKeyForPosition(beforeKey, afterKey);
-
-    const currentUser = await getCurrentUser();
-    if (!currentUser) {
-      throw new Error('No authenticated user found');
-    }
-
-    const { knex: db, tenant } = await createTenantKnex(currentUser.tenant);
-    if (!tenant) {
-      throw new Error('Tenant context is required for reordering project phase');
-    }
-    await db('project_phases')
-      .where({ phase_id: phaseId, tenant })
-      .update({
-        order_key: newKey,
-        updated_at: db.fn.now(),
-      });
-
-    return newKey;
-  }
-}
-
+  return newKey;
+});

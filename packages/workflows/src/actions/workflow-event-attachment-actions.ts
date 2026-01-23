@@ -1,7 +1,6 @@
 'use server';
 
 import { createTenantKnex } from '@alga-psa/db';
-import { getCurrentUser } from '@alga-psa/users/actions';
 import { WorkflowEventAttachmentModel } from '@alga-psa/workflows/models/workflowEventAttachment';
 import { EventCatalogModel } from '@alga-psa/workflows/models/eventCatalog';
 import {

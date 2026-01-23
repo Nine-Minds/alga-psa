@@ -2,8 +2,9 @@
 
 import { getEmailNotificationService } from "../../notifications/email";
 import { revalidatePath } from "next/cache";
-import { withTransaction } from '@alga-psa/db';
+import { withTransaction, createTenantKnex } from '@alga-psa/db';
 import { Knex } from 'knex';
+import { withAuth } from '@alga-psa/auth';
 import {
   NotificationSettings,
   SystemEmailTemplate,
@@ -13,26 +14,6 @@ import {
   UserNotificationPreference,
   isLockedCategory
 } from "../../types/notification";
-
-async function getTenantKnexFromUser(): Promise<{ knex: Knex; tenant: string }> {
-  const { getCurrentUser } = await import('@alga-psa/users/actions');
-  const currentUser = await getCurrentUser();
-  if (!currentUser) {
-    throw new Error('User not authenticated');
-  }
-
-  if (!currentUser.tenant) {
-    throw new Error('Tenant is required');
-  }
-
-  const { createTenantKnex } = await import('@alga-psa/db');
-  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
-  if (!tenant) {
-    throw new Error('SYSTEM_ERROR: Tenant context not found');
-  }
-
-  return { knex, tenant };
-}
 
 export async function getNotificationSettingsAction(tenant: string): Promise<NotificationSettings> {
   const notificationService = getEmailNotificationService();
@@ -143,8 +124,8 @@ export async function deactivateTenantTemplateAction(
   revalidatePath("/msp/settings/notifications");
 }
 
-export async function getCategoriesAction(): Promise<NotificationCategory[]> {
-  const { knex, tenant } = await getTenantKnexFromUser();
+export const getCategoriesAction = withAuth(async (_user, { tenant }): Promise<NotificationCategory[]> => {
+  const { knex } = await createTenantKnex();
 
   return await withTransaction(knex, async (trx: Knex.Transaction) => {
     const categories = await trx('notification_categories as nc')
@@ -169,12 +150,14 @@ export async function getCategoriesAction(): Promise<NotificationCategory[]> {
       is_locked: isLockedCategory(cat.name)
     }));
   });
-}
+});
 
-export async function getCategoryWithSubtypesAction(
+export const getCategoryWithSubtypesAction = withAuth(async (
+  _user,
+  { tenant },
   categoryId: number
-): Promise<NotificationCategory & { subtypes: NotificationSubtype[] }> {
-  const { knex, tenant } = await getTenantKnexFromUser();
+): Promise<NotificationCategory & { subtypes: NotificationSubtype[] }> => {
+  const { knex } = await createTenantKnex();
 
   return await withTransaction(knex, async (trx: Knex.Transaction) => {
     const category = await trx('notification_categories as nc')
@@ -218,25 +201,16 @@ export async function getCategoryWithSubtypesAction(
 
     return { ...category, subtypes };
   });
-}
+});
 
-export async function updateCategoryAction(
+export const updateCategoryAction = withAuth(async (
+  currentUser,
+  { tenant },
   id: number,
   category: Partial<NotificationCategory>
-): Promise<NotificationCategory> {
-  // Check permissions - requires 'settings' 'update' permission
-  const { getCurrentUser } = await import('@alga-psa/users/actions');
+): Promise<NotificationCategory> => {
   const { hasPermission } = await import('@alga-psa/auth');
-  const currentUser = await getCurrentUser();
-
-  if (!currentUser) {
-    throw new Error('User not authenticated');
-  }
-
-  const { knex, tenant } = await (await import("@alga-psa/db")).createTenantKnex();
-  if (!tenant) {
-    throw new Error('No tenant found');
-  }
+  const { knex } = await createTenantKnex();
 
   return await withTransaction(knex, async (trx: Knex.Transaction) => {
     // Check permission within transaction context
@@ -313,25 +287,16 @@ export async function updateCategoryAction(
     revalidatePath("/msp/settings/notifications");
     return updated;
   });
-}
+});
 
-export async function updateSubtypeAction(
+export const updateSubtypeAction = withAuth(async (
+  currentUser,
+  { tenant },
   id: number,
   subtype: Partial<NotificationSubtype>
-): Promise<NotificationSubtype> {
-  // Check permissions - requires 'settings' 'update' permission
-  const { getCurrentUser } = await import('@alga-psa/users/actions');
+): Promise<NotificationSubtype> => {
   const { hasPermission } = await import('@alga-psa/auth');
-  const currentUser = await getCurrentUser();
-
-  if (!currentUser) {
-    throw new Error('User not authenticated');
-  }
-
-  const { knex, tenant } = await (await import("@alga-psa/db")).createTenantKnex();
-  if (!tenant) {
-    throw new Error('No tenant found');
-  }
+  const { knex } = await createTenantKnex();
 
   return await withTransaction(knex, async (trx: Knex.Transaction) => {
     // Check permission within transaction context
@@ -401,7 +366,7 @@ export async function updateSubtypeAction(
     revalidatePath("/msp/settings/notifications");
     return updated;
   });
-}
+});
 
 export async function getUserPreferencesAction(
   tenant: string,

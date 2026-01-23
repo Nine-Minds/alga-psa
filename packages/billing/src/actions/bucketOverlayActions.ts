@@ -5,7 +5,9 @@ import { v4 as uuidv4 } from 'uuid';
 import { createTenantKnex } from '@alga-psa/db';
 
 import { withTransaction } from '@alga-psa/db';
-import { getCurrentUserAsync, hasPermissionAsync, getSessionAsync, getAnalyticsAsync } from '../lib/authHelpers';
+import { withAuth } from '@alga-psa/auth';
+import { hasPermission } from '@alga-psa/auth/rbac';
+import { getAnalyticsAsync } from '../lib/authHelpers';
 
 
 // Bucket overlay input type - matches the structure used in wizard
@@ -27,25 +29,19 @@ export type BucketOverlayInput = {
  * @param quantity - Optional quantity for the service
  * @param customRate - Optional custom rate for the service
  */
-export async function upsertBucketOverlay(
+export const upsertBucketOverlay = withAuth(async (
+  user,
+  { tenant },
   contractLineId: string,
   serviceId: string,
   overlay: BucketOverlayInput,
   quantity?: number | null,
   customRate?: number | null
-): Promise<void> {
-  const currentUser = await getCurrentUserAsync();
-  if (!currentUser) {
-    throw new Error('No authenticated user found');
-  }
-
-  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
-  if (!tenant) {
-    throw new Error('tenant context not found');
-  }
+): Promise<void> => {
+  const { knex } = await createTenantKnex();
 
   await withTransaction(knex, async (trx) => {
-    if (!await hasPermissionAsync(currentUser, 'billing', 'update')) {
+    if (!hasPermission(user, 'billing', 'update')) {
       throw new Error('Permission denied: Cannot update bucket overlays');
     }
 
@@ -59,7 +55,7 @@ export async function upsertBucketOverlay(
       customRate
     );
   });
-}
+});
 
 /**
  * Internal function to upsert bucket overlay within a transaction.
@@ -153,28 +149,22 @@ export async function upsertBucketOverlayInTransaction(
  * @param contractLineId - The contract line ID
  * @param serviceId - The service ID
  */
-export async function deleteBucketOverlay(
+export const deleteBucketOverlay = withAuth(async (
+  user,
+  { tenant },
   contractLineId: string,
   serviceId: string
-): Promise<void> {
-  const currentUser = await getCurrentUserAsync();
-  if (!currentUser) {
-    throw new Error('No authenticated user found');
-  }
-
-  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
-  if (!tenant) {
-    throw new Error('tenant context not found');
-  }
+): Promise<void> => {
+  const { knex } = await createTenantKnex();
 
   await withTransaction(knex, async (trx) => {
-    if (!await hasPermissionAsync(currentUser, 'billing', 'delete')) {
+    if (!hasPermission(user, 'billing', 'delete')) {
       throw new Error('Permission denied: Cannot delete bucket overlays');
     }
 
     await deleteBucketOverlayInTransaction(trx, tenant, contractLineId, serviceId);
   });
-}
+});
 
 /**
  * Internal function to delete bucket overlay within a transaction.
@@ -224,22 +214,16 @@ export async function deleteBucketOverlayInTransaction(
  * @param serviceId - The service ID
  * @returns The bucket overlay configuration or null
  */
-export async function getBucketOverlay(
+export const getBucketOverlay = withAuth(async (
+  user,
+  { tenant },
   contractLineId: string,
   serviceId: string
-): Promise<BucketOverlayInput | null> {
-  const currentUser = await getCurrentUserAsync();
-  if (!currentUser) {
-    throw new Error('No authenticated user found');
-  }
-
-  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
-  if (!tenant) {
-    throw new Error('tenant context not found');
-  }
+): Promise<BucketOverlayInput | null> => {
+  const { knex } = await createTenantKnex();
 
   return await withTransaction(knex, async (trx) => {
-    if (!await hasPermissionAsync(currentUser, 'billing', 'read')) {
+    if (!hasPermission(user, 'billing', 'read')) {
       throw new Error('Permission denied: Cannot read bucket overlays');
     }
 
@@ -273,4 +257,4 @@ export async function getBucketOverlay(
       billing_period: result.billing_period as 'weekly' | 'monthly',
     };
   });
-}
+});

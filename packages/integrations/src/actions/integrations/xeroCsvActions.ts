@@ -1,10 +1,10 @@
 'use server';
 
 import { createTenantKnex } from '@alga-psa/db';
-import { getCurrentUser } from '@alga-psa/users/actions';
+import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { getXeroCsvTaxImportService } from '../../services/xeroCsvTaxImportService';
-import type { TaxImportPreviewResult, TaxImportResult } from '@alga-psa/types';
+import type { TaxImportPreviewResult, TaxImportResult, IUserWithRoles } from '@alga-psa/types';
 import {
   getXeroCsvClientSyncService,
   type ClientExportResult,
@@ -38,17 +38,11 @@ const DEFAULT_SETTINGS: XeroCsvSettings = {
 /**
  * Get Xero CSV integration settings for the current tenant.
  */
-export async function getXeroCsvSettings(): Promise<XeroCsvSettings> {
-  const user = await getCurrentUser();
-  if (!user) {
-    throw new Error('User must be authenticated');
-  }
-
-  const { knex, tenant } = await createTenantKnex(user.tenant);
-
-  if (!tenant) {
-    throw new Error('No tenant found');
-  }
+export const getXeroCsvSettings = withAuth(async (
+  _user,
+  { tenant }
+): Promise<XeroCsvSettings> => {
+  const { knex } = await createTenantKnex();
 
   const tenantSettings = await knex('tenant_settings')
     .where({ tenant })
@@ -62,25 +56,17 @@ export async function getXeroCsvSettings(): Promise<XeroCsvSettings> {
     ...DEFAULT_SETTINGS,
     ...xeroCsvSettings
   };
-}
+});
 
 /**
  * Update Xero CSV integration settings for the current tenant.
  */
-export async function updateXeroCsvSettings(
+export const updateXeroCsvSettings = withAuth(async (
+  user,
+  { tenant },
   updates: Partial<XeroCsvSettings>
-): Promise<XeroCsvSettings> {
-  // Check user permissions
-  const user = await getCurrentUser();
-  if (!user) {
-    throw new Error('User must be authenticated');
-  }
-
-  const { knex, tenant } = await createTenantKnex(user.tenant);
-
-  if (!tenant) {
-    throw new Error('No tenant found');
-  }
+): Promise<XeroCsvSettings> => {
+  const { knex } = await createTenantKnex();
 
   const canManageIntegrations = await hasPermission(user, 'billing_settings', 'update');
   if (!canManageIntegrations) {
@@ -133,7 +119,7 @@ export async function updateXeroCsvSettings(
   });
 
   return newXeroCsvSettings;
-}
+});
 
 // Backwards-compatible alias.
 export const saveXeroCsvSettings = updateXeroCsvSettings;
@@ -142,21 +128,11 @@ export const saveXeroCsvSettings = updateXeroCsvSettings;
  * Preview tax import from Xero Invoice Details Report CSV.
  * Parses the CSV and shows which invoices will be matched/updated.
  */
-export async function previewXeroCsvTaxImport(
+export const previewXeroCsvTaxImport = withAuth(async (
+  user,
+  { tenant },
   csvContent: string
-): Promise<TaxImportPreviewResult> {
-  // Check user permissions
-  const user = await getCurrentUser();
-  if (!user) {
-    throw new Error('User must be authenticated');
-  }
-
-  const { tenant } = await createTenantKnex(user.tenant);
-
-  if (!tenant) {
-    throw new Error('No tenant found');
-  }
-
+): Promise<TaxImportPreviewResult> => {
   const canManageBilling = await hasPermission(user, 'billing_settings', 'update');
   if (!canManageBilling) {
     throw new Error('User does not have permission to manage billing');
@@ -177,27 +153,17 @@ export async function previewXeroCsvTaxImport(
   });
 
   return result;
-}
+});
 
 /**
  * Execute tax import from Xero Invoice Details Report CSV.
  * Applies tax amounts to matched invoices.
  */
-export async function executeXeroCsvTaxImport(
+export const executeXeroCsvTaxImport = withAuth(async (
+  user,
+  { tenant },
   csvContent: string
-): Promise<TaxImportResult> {
-  // Check user permissions
-  const user = await getCurrentUser();
-  if (!user) {
-    throw new Error('User must be authenticated');
-  }
-
-  const { tenant } = await createTenantKnex(user.tenant);
-
-  if (!tenant) {
-    throw new Error('No tenant found');
-  }
-
+): Promise<TaxImportResult> => {
   const canManageBilling = await hasPermission(user, 'billing_settings', 'update');
   if (!canManageBilling) {
     throw new Error('User does not have permission to manage billing');
@@ -219,7 +185,7 @@ export async function executeXeroCsvTaxImport(
   });
 
   return result;
-}
+});
 
 /**
  * Get the current Xero integration mode for the tenant.
@@ -237,21 +203,11 @@ export async function getXeroIntegrationMode(): Promise<'oauth' | 'csv'> {
 /**
  * Export Alga clients to Xero Contacts CSV format.
  */
-export async function exportClientsToXeroCsv(
+export const exportClientsToXeroCsv = withAuth(async (
+  user,
+  { tenant },
   clientIds?: string[]
-): Promise<ClientExportResult> {
-  // Check user permissions
-  const user = await getCurrentUser();
-  if (!user) {
-    throw new Error('User must be authenticated');
-  }
-
-  const { tenant } = await createTenantKnex(user.tenant);
-
-  if (!tenant) {
-    throw new Error('No tenant found');
-  }
-
+): Promise<ClientExportResult> => {
   const canManageBilling = await hasPermission(user, 'billing_settings', 'update');
   if (!canManageBilling) {
     throw new Error('User does not have permission to manage billing');
@@ -267,27 +223,17 @@ export async function exportClientsToXeroCsv(
   });
 
   return result;
-}
+});
 
 /**
  * Preview importing Xero Contacts CSV into Alga.
  */
-export async function previewXeroCsvClientImport(
+export const previewXeroCsvClientImport = withAuth(async (
+  user,
+  { tenant },
   csvContent: string,
   options?: Partial<ClientImportOptions>
-): Promise<ClientImportPreviewResult> {
-  // Check user permissions
-  const user = await getCurrentUser();
-  if (!user) {
-    throw new Error('User must be authenticated');
-  }
-
-  const { tenant } = await createTenantKnex(user.tenant);
-
-  if (!tenant) {
-    throw new Error('No tenant found');
-  }
-
+): Promise<ClientImportPreviewResult> => {
   const canManageBilling = await hasPermission(user, 'billing_settings', 'update');
   if (!canManageBilling) {
     throw new Error('User does not have permission to manage billing');
@@ -309,27 +255,17 @@ export async function previewXeroCsvClientImport(
   });
 
   return result;
-}
+});
 
 /**
  * Execute importing Xero Contacts CSV into Alga.
  */
-export async function executeXeroCsvClientImport(
+export const executeXeroCsvClientImport = withAuth(async (
+  user,
+  { tenant },
   csvContent: string,
   options?: Partial<ClientImportOptions>
-): Promise<ClientImportResult> {
-  // Check user permissions
-  const user = await getCurrentUser();
-  if (!user) {
-    throw new Error('User must be authenticated');
-  }
-
-  const { tenant } = await createTenantKnex(user.tenant);
-
-  if (!tenant) {
-    throw new Error('No tenant found');
-  }
-
+): Promise<ClientImportResult> => {
   const canManageBilling = await hasPermission(user, 'billing_settings', 'update');
   if (!canManageBilling) {
     throw new Error('User does not have permission to manage billing');
@@ -353,29 +289,20 @@ export async function executeXeroCsvClientImport(
   });
 
   return result;
-}
+});
 
 /**
  * Get all Xero CSV client mappings.
  */
-export async function getXeroCsvClientMappings(): Promise<Array<{
+export const getXeroCsvClientMappings = withAuth(async (
+  user,
+  _ctx
+): Promise<Array<{
   clientId: string;
   clientName: string;
   xeroContactName: string;
   lastSyncedAt: string | null;
-}>> {
-  // Check user permissions
-  const user = await getCurrentUser();
-  if (!user) {
-    throw new Error('User must be authenticated');
-  }
-
-  const { tenant } = await createTenantKnex(user.tenant);
-
-  if (!tenant) {
-    throw new Error('No tenant found');
-  }
-
+}>> => {
   const canReadBilling = await hasPermission(user, 'billing_settings', 'read');
   if (!canReadBilling) {
     throw new Error('User does not have permission to view billing settings');
@@ -383,4 +310,4 @@ export async function getXeroCsvClientMappings(): Promise<Array<{
 
   const service = getXeroCsvClientSyncService();
   return service.getClientMappings();
-}
+});

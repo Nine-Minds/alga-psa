@@ -3,7 +3,7 @@
 import type { IService } from '@alga-psa/types';
 import { createTenantKnex, withTransaction } from '@alga-psa/db';
 import type { Knex } from 'knex';
-import { getCurrentUser } from '@alga-psa/users/actions';
+import { withAuth } from '@alga-psa/auth';
 
 export interface PaginatedServicesResponse {
   services: IService[];
@@ -22,24 +22,14 @@ export interface ServiceListOptions {
   item_kind?: 'service' | 'product' | 'any';
 }
 
-export async function getServices(
+export const getServices = withAuth(async (
+  _user,
+  { tenant },
   page: number = 1,
   pageSize: number = 999,
   options: ServiceListOptions = {}
-): Promise<PaginatedServicesResponse> {
-  const currentUser = await getCurrentUser();
-  if (!currentUser) {
-    throw new Error('No authenticated user found');
-  }
-
-  if (!currentUser.tenant) {
-    throw new Error('Tenant is required');
-  }
-
-  const { knex: db, tenant } = await createTenantKnex(currentUser.tenant);
-  if (!tenant) {
-    throw new Error('SYSTEM_ERROR: Tenant context not found');
-  }
+): Promise<PaginatedServicesResponse> => {
+  const { knex: db } = await createTenantKnex();
 
   const itemKind = options.item_kind ?? 'service';
 
@@ -63,4 +53,4 @@ export async function getServices(
 
     return { services, totalCount, page, pageSize };
   });
-}
+});

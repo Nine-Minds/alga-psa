@@ -4,8 +4,9 @@
 import ContractLineMapping from '../models/contractLineMapping';
 import { IContractLineMapping } from '@alga-psa/types';
 import { createTenantKnex } from '@alga-psa/db';
-import { getCurrentUser } from '@alga-psa/auth/getCurrentUser';
-import { hasPermissionAsync, getSessionAsync, getAnalyticsAsync } from '../lib/authHelpers';
+import { withAuth } from '@alga-psa/auth';
+import { hasPermission } from '@alga-psa/auth/rbac';
+import { getAnalyticsAsync } from '../lib/authHelpers';
 
 import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
@@ -277,20 +278,12 @@ export async function ensureTemplateLineSnapshot(
  * Retrieve all contract line mappings for a contract.
  * After migration 20251028090000, data is stored directly in contract_lines/contract_template_lines.
  */
-export async function getContractLineMappings(contractId: string): Promise<IContractLineMapping[]> {
-  const currentUser = await getCurrentUser();
-  if (!currentUser) {
-    throw new Error('No authenticated user found');
-  }
-
+export const getContractLineMappings = withAuth(async (user, { tenant }, contractId: string): Promise<IContractLineMapping[]> => {
   try {
-    const { knex, tenant } = await createTenantKnex(currentUser.tenant);
-    if (!tenant) {
-      throw new Error("tenant context not found");
-    }
+    const { knex } = await createTenantKnex();
 
     return await withTransaction(knex, async (trx) => {
-      if (!await hasPermissionAsync(currentUser, 'billing', 'read')) {
+      if (!hasPermission(user, 'billing', 'read')) {
         throw new Error('Permission denied: Cannot read contract line mappings');
       }
 
@@ -320,26 +313,18 @@ export async function getContractLineMappings(contractId: string): Promise<ICont
     }
     throw new Error(`Failed to fetch contract line mappings: ${error}`);
   }
-}
+});
 
 /**
  * Retrieve detailed contract line mappings for a contract.
  * After migration 20251028090000, data is stored directly in contract_lines/contract_template_lines.
  */
-export async function getDetailedContractLines(contractId: string): Promise<any[]> {
-  const currentUser = await getCurrentUser();
-  if (!currentUser) {
-    throw new Error('No authenticated user found');
-  }
-
+export const getDetailedContractLines = withAuth(async (user, { tenant }, contractId: string): Promise<any[]> => {
   try {
-    const { knex, tenant } = await createTenantKnex(currentUser.tenant);
-    if (!tenant) {
-      throw new Error("tenant context not found");
-    }
+    const { knex } = await createTenantKnex();
 
     return await withTransaction(knex, async (trx) => {
-      if (!await hasPermissionAsync(currentUser, 'billing', 'read')) {
+      if (!hasPermission(user, 'billing', 'read')) {
         throw new Error('Permission denied: Cannot read detailed contract lines');
       }
 
@@ -384,30 +369,24 @@ export async function getDetailedContractLines(contractId: string): Promise<any[
     }
     throw new Error(`Failed to fetch detailed contract line mappings: ${error}`);
   }
-}
+});
 
 /**
  * Associate a contract line with a contract.
  * After migration 20251028090000, data is stored directly in contract_lines/contract_template_lines.
  */
-export async function addContractLine(
+export const addContractLine = withAuth(async (
+  user,
+  { tenant },
   contractId: string,
   contractLineId: string,
   customRate?: number
-): Promise<IContractLineMapping> {
-  const currentUser = await getCurrentUser();
-  if (!currentUser) {
-    throw new Error('No authenticated user found');
-  }
-
+): Promise<IContractLineMapping> => {
   try {
-    const { knex, tenant } = await createTenantKnex(currentUser.tenant);
-    if (!tenant) {
-      throw new Error("tenant context not found");
-    }
+    const { knex } = await createTenantKnex();
 
     return await withTransaction(knex, async (trx) => {
-      if (!await hasPermissionAsync(currentUser, 'billing', 'create')) {
+      if (!hasPermission(user, 'billing', 'create')) {
         throw new Error('Permission denied: Cannot add contract lines');
       }
 
@@ -469,26 +448,18 @@ export async function addContractLine(
     }
     throw new Error(`Failed to add contract line to contract: ${error}`);
   }
-}
+});
 
 /**
  * Remove a contract line association.
  * After migration 20251028090000, data is stored directly in contract_lines/contract_template_lines.
  */
-export async function removeContractLine(contractId: string, contractLineId: string): Promise<void> {
-  const currentUser = await getCurrentUser();
-  if (!currentUser) {
-    throw new Error('No authenticated user found');
-  }
-
+export const removeContractLine = withAuth(async (user, { tenant }, contractId: string, contractLineId: string): Promise<void> => {
   try {
-    const { knex, tenant } = await createTenantKnex(currentUser.tenant);
-    if (!tenant) {
-      throw new Error("tenant context not found");
-    }
+    const { knex } = await createTenantKnex();
 
     await withTransaction(knex, async (trx) => {
-      if (!await hasPermissionAsync(currentUser, 'billing', 'delete')) {
+      if (!hasPermission(user, 'billing', 'delete')) {
         throw new Error('Permission denied: Cannot remove contract lines');
       }
 
@@ -517,30 +488,24 @@ export async function removeContractLine(contractId: string, contractLineId: str
     }
     throw new Error(`Failed to remove contract line from contract: ${error}`);
   }
-}
+});
 
 /**
  * Update metadata for a contract line association.
  * After migration 20251028090000, data is stored directly in contract_lines/contract_template_lines.
  */
-export async function updateContractLineAssociation(
+export const updateContractLineAssociation = withAuth(async (
+  user,
+  { tenant },
   contractId: string,
   contractLineId: string,
   updateData: Partial<IContractLineMapping>
-): Promise<IContractLineMapping> {
-  const currentUser = await getCurrentUser();
-  if (!currentUser) {
-    throw new Error('No authenticated user found');
-  }
-
+): Promise<IContractLineMapping> => {
   try {
-    const { knex, tenant } = await createTenantKnex(currentUser.tenant);
-    if (!tenant) {
-      throw new Error("tenant context not found");
-    }
+    const { knex } = await createTenantKnex();
 
     return await withTransaction(knex, async (trx) => {
-      if (!await hasPermissionAsync(currentUser, 'billing', 'update')) {
+      if (!hasPermission(user, 'billing', 'update')) {
         throw new Error('Permission denied: Cannot update contract line associations');
       }
 
@@ -597,25 +562,17 @@ export async function updateContractLineAssociation(
     }
     throw new Error(`Failed to update contract line association: ${error}`);
   }
-}
+});
 
 /**
  * Determine whether a contract line is already associated with a contract.
  */
-export async function isContractLineAttached(contractId: string, contractLineId: string): Promise<boolean> {
-  const currentUser = await getCurrentUser();
-  if (!currentUser) {
-    throw new Error('No authenticated user found');
-  }
-
+export const isContractLineAttached = withAuth(async (user, { tenant }, contractId: string, contractLineId: string): Promise<boolean> => {
   try {
-    const { knex, tenant } = await createTenantKnex(currentUser.tenant);
-    if (!tenant) {
-      throw new Error("tenant context not found");
-    }
+    const { knex } = await createTenantKnex();
 
     return await withTransaction(knex, async (trx) => {
-      if (!await hasPermissionAsync(currentUser, 'billing', 'read')) {
+      if (!hasPermission(user, 'billing', 'read')) {
         throw new Error('Permission denied: Cannot check contract line associations');
       }
 
@@ -628,4 +585,4 @@ export async function isContractLineAttached(contractId: string, contractLineId:
     }
     throw new Error(`Failed to check contract line association: ${error}`);
   }
-}
+});

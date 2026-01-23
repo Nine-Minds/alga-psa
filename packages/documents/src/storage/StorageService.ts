@@ -1,5 +1,4 @@
 // @ts-nocheck
-// TODO: getCurrentUser and type issues
 async function loadSharp() {
   try {
     const mod = await import('sharp');
@@ -20,14 +19,13 @@ import type { FileStore } from '../types/storage';
 import { StorageError } from './providers/StorageProvider';
 import fs from 'fs';
 
-import { 
-    getProviderConfig, 
-    getStorageConfig, 
+import {
+    getProviderConfig,
+    getStorageConfig,
     validateFileUpload as validateFileConfig
 } from '../config/storage';
 import { LocalProviderConfig, S3ProviderConfig } from '../types/storage';
 import { createTenantKnex } from '@alga-psa/db';
-import { getCurrentUser } from '@alga-psa/auth/getCurrentUser';
 
 async function streamToBuffer(stream: Readable): Promise<Buffer> {
   return new Promise((resolve, reject) => {
@@ -48,11 +46,7 @@ function changeFileExtension(filename: string, newExtension: string): string {
  
 export class StorageService {
   async getFileReadStream(fileId: string, range?: { start: number; end: number }): Promise<Readable> {
-    const currentUser = await getCurrentUser();
-    if (!currentUser) {
-      throw new Error('Unauthorized');
-    }
-    const { knex } = await createTenantKnex(currentUser.tenant);
+    const { knex } = await createTenantKnex();
     const file = await FileStoreModel.findById(knex, fileId);
     if (!file) {
       throw new Error('File not found');
@@ -197,11 +191,7 @@ export class StorageService {
     }> {
         try {
             // Get file record
-            const currentUser = await getCurrentUser();
-            if (!currentUser) {
-              throw new Error('Unauthorized');
-            }
-            const { knex } = await createTenantKnex(currentUser.tenant);
+            const { knex } = await createTenantKnex();
             const fileRecord = await FileStoreModel.findById(knex, file_id);
             if (!fileRecord) {
                 throw new Error('File not found');
@@ -232,11 +222,7 @@ export class StorageService {
     static async deleteFile(file_id: string, deleted_by_id: string): Promise<void> {
         try {
             // Get file record
-            const currentUser = await getCurrentUser();
-            if (!currentUser) {
-              throw new Error('Unauthorized');
-            }
-            const { knex } = await createTenantKnex(currentUser.tenant);
+            const { knex } = await createTenantKnex();
             const fileRecord = await FileStoreModel.findById(knex, file_id);
             if (!fileRecord) {
                 throw new Error('File not found');
@@ -275,11 +261,7 @@ export class StorageService {
       metadata: Record<string, unknown>;
     }): Promise<void> {
       try {
-        const currentUser = await getCurrentUser();
-        if (!currentUser) {
-          throw new Error('Unauthorized');
-        }
-        const { knex } = await createTenantKnex(currentUser.tenant);
+        const { knex } = await createTenantKnex();
         await FileStoreModel.createDocumentSystemEntry(knex, options);
       } catch (error) {
         throw new Error('Failed to create document system entry: ' + (error as Error).message);
@@ -288,11 +270,7 @@ export class StorageService {
 
     static async getFileMetadata(fileId: string): Promise<FileStore> {
       try {
-        const currentUser = await getCurrentUser();
-        if (!currentUser) {
-          throw new Error('Unauthorized');
-        }
-        const { knex } = await createTenantKnex(currentUser.tenant);
+        const { knex } = await createTenantKnex();
         const file = await FileStoreModel.findById(knex, fileId);
         if (!file) {
           throw new Error('File not found');
@@ -305,28 +283,20 @@ export class StorageService {
 
     static async updateFileMetadata(fileId: string, metadata: Record<string, unknown>): Promise<void> {
       try {
-        const currentUser = await getCurrentUser();
-        if (!currentUser) {
-          throw new Error('Unauthorized');
-        }
-        const { knex } = await createTenantKnex(currentUser.tenant);
+        const { knex } = await createTenantKnex();
         await FileStoreModel.updateMetadata(knex, fileId, metadata);
       } catch (error) {
         throw new Error('Failed to update file metadata: ' + (error as Error).message);
       }
     }
-  
+
     static async storePDF(
       invoiceId: string,
       invoiceNumber: string,
       buffer: Buffer,
       metadata: Record<string, any>
     ) {
-        const currentUser = await getCurrentUser();
-        if (!currentUser) {
-            throw new Error('Unauthorized');
-        }
-        const { tenant } = await createTenantKnex(currentUser.tenant);
+        const { tenant } = await createTenantKnex();
 
         if (!tenant) {
             throw new Error('No tenant found');

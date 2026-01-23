@@ -537,12 +537,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
 
     const handleAddAgent = async (userId: string) => {
         try {
-            const currentUser = await getCurrentUser();
-            if (!currentUser) {
-                toast.error('No user session found');
-                return;
-            }
-            const result = await addTicketResource(ticket.ticket_id!, userId, 'support', currentUser);
+            const result = await addTicketResource(ticket.ticket_id!, userId, 'support');
 
             if (result) {
                 setAdditionalAgents(prev => [...prev, result]);
@@ -562,12 +557,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     
     const handleRemoveAgent = async (assignmentId: string) => {
         try {
-            const currentUser = await getCurrentUser();
-            if (!currentUser) {
-                toast.error('No user session found');
-                return;
-            }
-            await removeTicketResource(assignmentId, currentUser);
+            await removeTicketResource(assignmentId);
             setAdditionalAgents(prev => prev.filter(agent => agent.assignment_id !== assignmentId));
             toast.success('Agent removed successfully');
         } catch (error) {
@@ -597,15 +587,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
                 // This will be handled by the container component and passed back in props
             } else {
                 // Fallback to the original implementation if no optimized handler is provided
-                const user = await getCurrentUser();
-                if (!user) {
-                    console.error('Failed to get user');
-                    // Revert to previous value if we can't get the user
-                    setTicket(prevTicket => ({ ...prevTicket, [field]: previousValue }));
-                    return;
-                }
-                
-                const result = await updateTicket(ticket.ticket_id || '', { [field]: normalizedValue }, user);
+                const result = await updateTicket(ticket.ticket_id || '', { [field]: normalizedValue });
                 
                 if (result === 'success') {
                     console.log(`${field} changed to: ${normalizedValue}`);
@@ -614,7 +596,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
                     if (field === 'assigned_to') {
                         try {
                             // Refresh the additional resources
-                            const resources = await getTicketResources(ticket.ticket_id!, user);
+                            const resources = await getTicketResources(ticket.ticket_id!);
                             setAdditionalAgents(resources);
                             console.log('Additional resources refreshed after assignment change');
                         } catch (resourceError) {
@@ -868,12 +850,6 @@ const handleClose = () => {
                 return success;
             } else {
                 // Fallback to the original implementation
-                const user = await getCurrentUser();
-                if (!user) {
-                    console.error('Failed to get user');
-                    return false;
-                }
-
                 if (!ticket.ticket_id) {
                     console.error('Ticket ID is missing');
                     return false;
@@ -889,15 +865,13 @@ const handleClose = () => {
                 // Update the ticket
                 await updateTicket(ticket.ticket_id, {
                     attributes: updatedAttributes,
-                    updated_by: user.user_id,
                     updated_at: new Date().toISOString()
-                }, user);
+                });
 
                 // Update the local ticket state
                 setTicket(prev => ({
                     ...prev,
                     attributes: updatedAttributes,
-                    updated_by: user.user_id,
                     updated_at: new Date().toISOString()
                 }));
 
@@ -935,13 +909,7 @@ const handleClose = () => {
 
     const handleContactChange = async (newContactId: string | null) => {
         try {
-            const user = await getCurrentUser();
-            if (!user) {
-                toast.error('No user session found');
-                return;
-            }
-
-            await updateTicket(ticket.ticket_id!, { contact_name_id: newContactId }, user);
+            await updateTicket(ticket.ticket_id!, { contact_name_id: newContactId });
             
             if (newContactId) {
                 const contactData = await getContactByContactNameId(newContactId);
@@ -971,12 +939,6 @@ const handleClose = () => {
                 // NOTE: itil_category and itil_subcategory are now handled by unified CategoryPicker
             }
 
-            const user = await getCurrentUser();
-            if (!user) {
-                toast.error('No user session found');
-                return;
-            }
-
             // Create update object with the specific ITIL field
             const updateData: any = {};
             updateData[field] = value;
@@ -992,7 +954,7 @@ const handleClose = () => {
 
             // NOTE: Category management is now unified through the CategoryPicker
 
-            await updateTicketWithCache(ticket.ticket_id!, updateData, user);
+            await updateTicketWithCache(ticket.ticket_id!, updateData);
 
             // Update local ticket state to reflect the change
             setTicket(prevTicket => ({
@@ -1009,17 +971,11 @@ const handleClose = () => {
 
     const handleClientChange = async (newClientId: string) => {
         try {
-            const user = await getCurrentUser();
-            if (!user) {
-                toast.error('No user session found');
-                return;
-            }
-
-            await updateTicket(ticket.ticket_id!, { 
+            await updateTicket(ticket.ticket_id!, {
                 client_id: newClientId,
                 contact_name_id: null, // Reset contact when client changes
                 location_id: null // Reset location when client changes
-            }, user);
+            });
             
             const [clientData, contactsData] = await Promise.all([
                 getClientById(newClientId),
@@ -1046,15 +1002,9 @@ const handleClose = () => {
     
     const handleLocationChange = async (newLocationId: string | null) => {
         try {
-            const user = await getCurrentUser();
-            if (!user) {
-                toast.error('No user session found');
-                return;
-            }
-
-            await updateTicket(ticket.ticket_id!, { 
+            await updateTicket(ticket.ticket_id!, {
                 location_id: newLocationId
-            }, user);
+            });
             
             // Update the ticket state with the new location
             setTicket(prevTicket => ({
@@ -1105,46 +1055,36 @@ const handleClose = () => {
         }
     }, [ticket.ticket_id]);
 
-    const getBundlingUser = useCallback(async () => {
-        if (currentUser) return currentUser;
-        const user = await getCurrentUser();
-        if (!user) throw new Error('User not authenticated');
-        return user;
-    }, [currentUser]);
-
     const handleRemoveChildFromBundle = useCallback(async (childTicketId: string) => {
         try {
-            const user = await getBundlingUser();
-            await removeChildFromBundleAction({ childTicketId }, user);
+            await removeChildFromBundleAction({ childTicketId });
             toast.success('Removed ticket from bundle');
             router.refresh();
         } catch (error) {
             console.error('Failed to remove child from bundle:', error);
             toast.error(error instanceof Error ? error.message : 'Failed to remove ticket from bundle');
         }
-    }, [getBundlingUser, router]);
+    }, [router]);
 
     const handleUnbundleMaster = useCallback(async () => {
         if (!ticket.ticket_id) return;
         try {
-            const user = await getBundlingUser();
-            await unbundleMasterTicketAction({ masterTicketId: ticket.ticket_id }, user);
+            await unbundleMasterTicketAction({ masterTicketId: ticket.ticket_id });
             toast.success('Bundle removed');
             router.refresh();
         } catch (error) {
             console.error('Failed to unbundle master ticket:', error);
             toast.error(error instanceof Error ? error.message : 'Failed to unbundle ticket');
         }
-    }, [ticket.ticket_id, getBundlingUser, router]);
+    }, [ticket.ticket_id, router]);
 
     const performAddChildToBundle = useCallback(async (childTicketId: string) => {
         if (!ticket.ticket_id) return;
-        const user = await getBundlingUser();
-        await addChildrenToBundleAction({ masterTicketId: ticket.ticket_id, childTicketIds: [childTicketId] }, user);
+        await addChildrenToBundleAction({ masterTicketId: ticket.ticket_id, childTicketIds: [childTicketId] });
         toast.success('Added ticket to bundle');
         setAddChildTicketNumber('');
         router.refresh();
-    }, [ticket.ticket_id, getBundlingUser, router]);
+    }, [ticket.ticket_id, router]);
 
     const handleAddChildToBundle = useCallback(async () => {
         if (!ticket.ticket_id) return;
@@ -1152,8 +1092,7 @@ const handleClose = () => {
         if (!normalized) return;
 
         try {
-            const user = await getBundlingUser();
-            const found = await findTicketByNumberAction({ ticketNumber: normalized }, user);
+            const found = await findTicketByNumberAction({ ticketNumber: normalized });
             if (!found) {
                 toast.error('Ticket not found');
                 return;
@@ -1178,7 +1117,7 @@ const handleClose = () => {
             console.error('Failed to add child to bundle:', error);
             toast.error(error instanceof Error ? error.message : 'Failed to add ticket to bundle');
         }
-    }, [ticket.ticket_id, ticket.client_id, addChildTicketNumber, getBundlingUser, performAddChildToBundle]);
+    }, [ticket.ticket_id, ticket.client_id, addChildTicketNumber, performAddChildToBundle]);
 
     const bundleHasMultipleClients = useMemo(() => {
         if (!bundle?.isBundleMaster || !Array.isArray(bundle.children)) return false;
@@ -1193,8 +1132,7 @@ const handleClose = () => {
     const handlePromoteChildToMaster = useCallback(async (childTicketId: string) => {
         if (!ticket.ticket_id) return;
         try {
-            const user = await getBundlingUser();
-            await promoteBundleMasterAction({ oldMasterTicketId: ticket.ticket_id, newMasterTicketId: childTicketId }, user);
+            await promoteBundleMasterAction({ oldMasterTicketId: ticket.ticket_id, newMasterTicketId: childTicketId });
             toast.success('Promoted new master');
             router.push(`/msp/tickets/${childTicketId}`);
             router.refresh();
@@ -1202,15 +1140,14 @@ const handleClose = () => {
             console.error('Failed to promote master:', error);
             toast.error(error instanceof Error ? error.message : 'Failed to promote master');
         }
-    }, [ticket.ticket_id, getBundlingUser, router]);
+    }, [ticket.ticket_id, router]);
 
     const handleToggleBundleMode = useCallback(async () => {
         if (!ticket.ticket_id || !bundle?.isBundleMaster) return;
         try {
             setIsUpdatingBundleSettings(true);
-            const user = await getBundlingUser();
             const nextMode = bundle.mode === 'link_only' ? 'sync_updates' : 'link_only';
-            await updateBundleSettingsAction({ masterTicketId: ticket.ticket_id, mode: nextMode }, user);
+            await updateBundleSettingsAction({ masterTicketId: ticket.ticket_id, mode: nextMode });
             toast.success('Bundle settings updated');
             router.refresh();
         } catch (error) {
@@ -1219,7 +1156,7 @@ const handleClose = () => {
         } finally {
             setIsUpdatingBundleSettings(false);
         }
-    }, [ticket.ticket_id, bundle?.isBundleMaster, bundle?.mode, getBundlingUser, router]);
+    }, [ticket.ticket_id, bundle?.isBundleMaster, bundle?.mode, router]);
 
     return (
         <ReflectionContainer id={id} label={`Ticket Details - ${ticket.ticket_number}`}>

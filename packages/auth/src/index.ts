@@ -52,6 +52,15 @@ export { getAuthOptions } from './lib/nextAuthOptions';
 // Current user helper
 export { getCurrentUser } from './lib/getCurrentUser';
 
+// Server action wrappers (boundary-layer auth + tenant context)
+export {
+  withAuth,
+  withOptionalAuth,
+  withAuthCheck,
+  AuthenticationError
+} from './lib/withAuth';
+export type { AuthContext, WithAuthOptions } from './lib/withAuth';
+
 // UI components (used by Next.js route shims)
 export { AppSessionProvider } from './components/AppSessionProvider';
 export { default as Alert } from './components/Alert';

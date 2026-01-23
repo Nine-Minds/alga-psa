@@ -2,20 +2,18 @@
 
 import { getConnection } from '@alga-psa/db';
 import { SupportedLocale, isSupportedLocale, LOCALE_CONFIG } from '@alga-psa/core/i18n/config';
-import { getCurrentUser } from '@alga-psa/users/actions';
+import { withAuth, withOptionalAuth, type AuthContext } from '@alga-psa/auth';
+import type { IUserWithRoles } from '@alga-psa/types';
 
 /**
  * Update tenant's default locale for all users
  */
-export async function updateTenantDefaultLocaleAction(
+export const updateTenantDefaultLocaleAction = withAuth(async (
+  user: IUserWithRoles,
+  { tenant }: AuthContext,
   locale: SupportedLocale,
   enabledLocales?: SupportedLocale[]
-) {
-  const user = await getCurrentUser();
-  if (!user) {
-    throw new Error('User not found');
-  }
-
+) => {
   // Check if user has admin permissions (you may want to add proper permission checks)
   // For now, we'll assume any internal user can update tenant settings
   if (user.user_type !== 'internal') {
@@ -26,11 +24,11 @@ export async function updateTenantDefaultLocaleAction(
     throw new Error(`Unsupported locale: ${locale}`);
   }
 
-  const knex = await getConnection(user.tenant);
+  const knex = await getConnection(tenant);
 
   // Get existing settings
   const existingRecord = await knex('tenant_settings')
-    .where({ tenant: user.tenant })
+    .where({ tenant })
     .first();
 
   const existingSettings = existingRecord?.settings || {};
@@ -49,14 +47,14 @@ export async function updateTenantDefaultLocaleAction(
 
   if (existingRecord) {
     await knex('tenant_settings')
-      .where({ tenant: user.tenant })
+      .where({ tenant })
       .update({
         settings: updatedSettings,
         updated_at: knex.fn.now()
       });
   } else {
     await knex('tenant_settings').insert({
-      tenant: user.tenant,
+      tenant,
       settings: updatedSettings,
       created_at: knex.fn.now(),
       updated_at: knex.fn.now()
@@ -64,24 +62,24 @@ export async function updateTenantDefaultLocaleAction(
   }
 
   return { success: true };
-}
+});
 
 /**
  * Get tenant's default locale and enabled locales
  */
-export async function getTenantLocaleSettingsAction(): Promise<{
+export const getTenantLocaleSettingsAction = withOptionalAuth(async (user: IUserWithRoles | null, ctx: AuthContext | null): Promise<{
   defaultLocale: SupportedLocale;
   enabledLocales: SupportedLocale[];
-} | null> {
-  const user = await getCurrentUser();
-  if (!user) {
+} | null> => {
+  if (!user || !ctx) {
     return null;
   }
 
-  const knex = await getConnection(user.tenant);
+  const { tenant } = ctx;
+  const knex = await getConnection(tenant);
 
   const tenantSettings = await knex('tenant_settings')
-    .where({ tenant: user.tenant })
+    .where({ tenant })
     .first();
 
   if (!tenantSettings?.settings) {
@@ -102,4 +100,4 @@ export async function getTenantLocaleSettingsAction(): Promise<{
       ? enabledLocales
       : [...LOCALE_CONFIG.supportedLocales]
   };
-}
+});

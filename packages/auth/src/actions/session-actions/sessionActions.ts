@@ -1,11 +1,11 @@
 'use server';
 
-import { getCurrentUser } from '../../lib/getCurrentUser';
 import { hasPermission } from '../../lib/rbac';
 import { UserSession, IUserSession } from '@alga-psa/db/models/UserSession';
 import { getConnection } from '@alga-psa/db';
 import { getSession } from '../../lib/getSession';
 import { isTwoFactorEnabled, verifyTwoFactorCode } from '../../lib/twoFactorHelpers';
+import { withAuth } from '../../lib/withAuth';
 
 // Session for current user (no user info needed)
 export interface SessionData extends IUserSession {
@@ -50,18 +50,12 @@ export interface RevokeAllSessionsResult {
 /**
  * Get current user's active sessions
  */
-export async function getUserSessionsAction(): Promise<UserSessionsResponse> {
-  const currentUser = await getCurrentUser();
-
-  if (!currentUser) {
-    throw new Error('Unauthorized');
-  }
-
+export const getUserSessionsAction = withAuth(async (currentUser, { tenant }): Promise<UserSessionsResponse> => {
   const session = await getSession();
   const currentSessionId = (session as any)?.session_id;
 
   const sessions = await UserSession.getUserSessions(
-    currentUser.tenant,
+    tenant,
     currentUser.user_id
   );
 
@@ -75,18 +69,12 @@ export async function getUserSessionsAction(): Promise<UserSessionsResponse> {
     sessions: sessionsWithCurrent,
     total: sessionsWithCurrent.length
   };
-}
+});
 
 /**
  * Get all users' active sessions (admin only)
  */
-export async function getAllSessionsAction(): Promise<AllSessionsResponse> {
-  const currentUser = await getCurrentUser();
-
-  if (!currentUser) {
-    throw new Error('Unauthorized');
-  }
-
+export const getAllSessionsAction = withAuth(async (currentUser, { tenant }): Promise<AllSessionsResponse> => {
   // Check if user has permission to read security settings
   const canReadSecuritySettings = await hasPermission(
     currentUser,
@@ -98,7 +86,7 @@ export async function getAllSessionsAction(): Promise<AllSessionsResponse> {
     throw new Error('Forbidden: Insufficient permissions to view all sessions');
   }
 
-  const knex = await getConnection(currentUser.tenant);
+  const knex = await getConnection(tenant);
 
   // Get all active sessions with user information
   const sessionsWithUsers = await knex('sessions')
@@ -112,7 +100,7 @@ export async function getAllSessionsAction(): Promise<AllSessionsResponse> {
       this.on('sessions.user_id', '=', 'users.user_id')
         .andOn('sessions.tenant', '=', 'users.tenant');
     })
-    .where('sessions.tenant', currentUser.tenant)
+    .where('sessions.tenant', tenant)
     .whereNull('sessions.revoked_at')
     .where('sessions.expires_at', '>', knex.fn.now())
     .orderBy('sessions.last_activity_at', 'desc');
@@ -135,22 +123,21 @@ export async function getAllSessionsAction(): Promise<AllSessionsResponse> {
     sessions,
     total: sessions.length
   };
-}
+});
 
 /**
  * Revoke a specific session
  */
-export async function revokeSessionAction(sessionId: string): Promise<RevokeSessionResult> {
+export const revokeSessionAction = withAuth(async (currentUser, { tenant }, sessionId: string): Promise<RevokeSessionResult> => {
   const session = await getSession();
-  const currentUser = await getCurrentUser();
 
-  if (!currentUser || !session?.user?.id) {
+  if (!session?.user?.id) {
     throw new Error('Unauthorized');
   }
 
   // Verify the session belongs to the current user OR user has admin permission
   const targetSession = await UserSession.findById(
-    currentUser.tenant,
+    tenant,
     sessionId
   );
 
@@ -180,7 +167,7 @@ export async function revokeSessionAction(sessionId: string): Promise<RevokeSess
 
   // Revoke the session
   await UserSession.revokeSession(
-    currentUser.tenant,
+    tenant,
     sessionId,
     revocationReason
   );
@@ -192,18 +179,19 @@ export async function revokeSessionAction(sessionId: string): Promise<RevokeSess
       ? 'Current session revoked - you will be logged out'
       : 'Session revoked successfully'
   };
-}
+});
 
 /**
  * Revoke all other sessions (except current)
  */
-export async function revokeAllOtherSessionsAction(
+export const revokeAllOtherSessionsAction = withAuth(async (
+  currentUser,
+  { tenant },
   params?: RevokeAllSessionsParams
-): Promise<RevokeAllSessionsResult> {
+): Promise<RevokeAllSessionsResult> => {
   const session = await getSession();
-  const currentUser = await getCurrentUser();
 
-  if (!currentUser || !session?.user?.id) {
+  if (!session?.user?.id) {
     throw new Error('Unauthorized');
   }
 
@@ -214,7 +202,7 @@ export async function revokeAllOtherSessionsAction(
   }
 
   // Check if user has 2FA enabled
-  const has2FA = await isTwoFactorEnabled(currentUser.tenant, currentUser.user_id);
+  const has2FA = await isTwoFactorEnabled(tenant, currentUser.user_id);
 
   if (has2FA) {
     const twoFactorCode = params?.two_factor_code;
@@ -229,7 +217,7 @@ export async function revokeAllOtherSessionsAction(
     }
 
     const isValid = await verifyTwoFactorCode(
-      currentUser.tenant,
+      tenant,
       currentUser.user_id,
       twoFactorCode
     );
@@ -241,7 +229,7 @@ export async function revokeAllOtherSessionsAction(
 
   // Revoke all other sessions
   const revokedCount = await UserSession.revokeAllExcept(
-    currentUser.tenant,
+    tenant,
     currentUser.user_id,
     currentSessionId
   );
@@ -251,4 +239,4 @@ export async function revokeAllOtherSessionsAction(
     revoked_count: revokedCount,
     message: `Successfully logged out from ${revokedCount} other device${revokedCount !== 1 ? 's' : ''}`
   };
-}
+});

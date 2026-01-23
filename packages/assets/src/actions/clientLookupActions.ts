@@ -3,17 +3,14 @@
 import { createTenantKnex, withTransaction } from '@alga-psa/db';
 import type { Knex } from 'knex';
 import type { IClient, IClientLocation } from '@alga-psa/types';
-import { getCurrentUser } from '@alga-psa/users/actions';
+import { withAuth } from '@alga-psa/auth';
 
-export async function getAllClientsForAssets(includeInactive: boolean = true): Promise<IClient[]> {
-  const currentUser = await getCurrentUser();
-  if (!currentUser) {
-    throw new Error('Unauthorized');
-  }
-  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
-  if (!tenant) {
-    throw new Error('Tenant not found');
-  }
+export const getAllClientsForAssets = withAuth(async (
+  _user,
+  { tenant },
+  includeInactive: boolean = true
+): Promise<IClient[]> => {
+  const { knex } = await createTenantKnex();
 
   return withTransaction(knex, async (trx: Knex.Transaction) => {
     const query = trx('clients')
@@ -27,17 +24,14 @@ export async function getAllClientsForAssets(includeInactive: boolean = true): P
 
     return query;
   }) as unknown as IClient[];
-}
+});
 
-export async function getClientLocationsForAssets(clientId: string): Promise<IClientLocation[]> {
-  const currentUser = await getCurrentUser();
-  if (!currentUser) {
-    throw new Error('Unauthorized');
-  }
-  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
-  if (!tenant) {
-    throw new Error('Tenant not found');
-  }
+export const getClientLocationsForAssets = withAuth(async (
+  _user,
+  { tenant },
+  clientId: string
+): Promise<IClientLocation[]> => {
+  const { knex } = await createTenantKnex();
 
   return withTransaction(knex, async (trx: Knex.Transaction) => {
     return trx('client_locations')
@@ -49,4 +43,4 @@ export async function getClientLocationsForAssets(clientId: string): Promise<ICl
       .orderBy('is_default', 'desc')
       .orderBy('location_name', 'asc');
   }) as unknown as IClientLocation[];
-}
+});

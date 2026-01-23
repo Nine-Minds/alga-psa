@@ -1,8 +1,6 @@
 'use server';
 
-import { getCurrentUser } from '@alga-psa/users/actions';
 import { createTenantKnex } from '@alga-psa/db';
-import { getTenantForCurrentRequest } from '@alga-psa/tenancy/server';
 import { revalidatePath } from 'next/cache';
 import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
@@ -10,7 +8,8 @@ import { hashPassword } from '@alga-psa/core/encryption';
 import { createClient as createClientInternal } from '@alga-psa/clients/actions';
 import { createClientContact } from '@alga-psa/clients/actions';
 import { updateTenantOnboardingStatus, saveTenantOnboardingProgress } from '@alga-psa/tenancy/actions';
-import { hasPermission } from '@alga-psa/auth';
+import { hasPermission, withAuth, type AuthContext } from '@alga-psa/auth';
+import type { IUserWithRoles } from '@alga-psa/types';
 
 export interface OnboardingActionResult {
   success: boolean;
@@ -80,19 +79,13 @@ export interface TicketingData {
   statuses?: any[];
 }
 
-export async function saveClientInfo(data: ClientInfoData): Promise<OnboardingActionResult> {
+export const saveClientInfo = withAuth(async (
+  currentUser: IUserWithRoles,
+  { tenant }: AuthContext,
+  data: ClientInfoData
+): Promise<OnboardingActionResult> => {
   try {
-    const currentUser = await getCurrentUser();
-    if (!currentUser) {
-      return { success: false, error: 'No authenticated user found' };
-    }
-
-    const tenant = await getTenantForCurrentRequest();
-    if (!tenant) {
-      return { success: false, error: 'No tenant found' };
-    }
-
-    const { knex } = await createTenantKnex(tenant);
+    const { knex } = await createTenantKnex();
 
     await withTransaction(knex, async (trx: Knex.Transaction) => {
       // Only update user info if data is provided (for first-time users)
@@ -144,19 +137,14 @@ export async function saveClientInfo(data: ClientInfoData): Promise<OnboardingAc
     console.error('Error saving client info:', error);
     return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
   }
-}
+});
 
-export async function addSingleTeamMember(member: TeamMember): Promise<OnboardingActionResult> {
+export const addSingleTeamMember = withAuth(async (
+  _user: IUserWithRoles,
+  { tenant }: AuthContext,
+  member: TeamMember
+): Promise<OnboardingActionResult> => {
   try {
-    const currentUser = await getCurrentUser();
-    if (!currentUser) {
-      return { success: false, error: 'No authenticated user found' };
-    }
-    const tenant = await getTenantForCurrentRequest();
-    if (!tenant) {
-      return { success: false, error: 'No tenant found' };
-    }
-
     // Check license limits for MSP (internal) users
     const { getLicenseUsage } = await import('@alga-psa/licensing');
     const usage = await getLicenseUsage(tenant);
@@ -168,7 +156,7 @@ export async function addSingleTeamMember(member: TeamMember): Promise<Onboardin
       };
     }
 
-    const { knex } = await createTenantKnex(tenant);
+    const { knex } = await createTenantKnex();
     let created: string | null = null;
     let alreadyExists = false;
     let error: string | null = null;
@@ -276,22 +264,16 @@ export async function addSingleTeamMember(member: TeamMember): Promise<Onboardin
     console.error('Error adding single team member:', error);
     return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
   }
-}
+});
 
-export async function addTeamMembers(members: TeamMember[]): Promise<OnboardingActionResult> {
+export const addTeamMembers = withAuth(async (
+  _user: IUserWithRoles,
+  { tenant }: AuthContext,
+  members: TeamMember[]
+): Promise<OnboardingActionResult> => {
   try {
-    const currentUser = await getCurrentUser();
-    if (!currentUser) {
-      return { success: false, error: 'No authenticated user found' };
-    }
-
-    const tenant = await getTenantForCurrentRequest();
-    if (!tenant) {
-      return { success: false, error: 'No tenant found' };
-    }
-
     // Check license limits for  MSP (internal) users
-    const { knex } = await createTenantKnex(tenant);
+    const { knex } = await createTenantKnex();
     const { getLicenseUsage } = await import('@alga-psa/licensing');
     const usage = await getLicenseUsage(tenant);
     
@@ -437,21 +419,15 @@ export async function addTeamMembers(members: TeamMember[]): Promise<OnboardingA
     console.error('Error adding team members:', error);
     return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
   }
-}
+});
 
-export async function createClient(data: ClientData): Promise<OnboardingActionResult> {
+export const createClient = withAuth(async (
+  _user: IUserWithRoles,
+  { tenant }: AuthContext,
+  data: ClientData
+): Promise<OnboardingActionResult> => {
   try {
-    const currentUser = await getCurrentUser();
-    if (!currentUser) {
-      return { success: false, error: 'No authenticated user found' };
-    }
-
-    const tenant = await getTenantForCurrentRequest();
-    if (!tenant) {
-      return { success: false, error: 'No tenant found' };
-    }
-
-    const { knex } = await createTenantKnex(tenant);
+    const { knex } = await createTenantKnex();
 
     let clientId: string | undefined = data.clientId;
 
@@ -565,21 +541,15 @@ export async function createClient(data: ClientData): Promise<OnboardingActionRe
     console.error('Error creating client:', error);
     return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
   }
-}
+});
 
-export async function addClientContact(data: ClientContactData): Promise<OnboardingActionResult> {
+export const addClientContact = withAuth(async (
+  _user: IUserWithRoles,
+  { tenant }: AuthContext,
+  data: ClientContactData
+): Promise<OnboardingActionResult> => {
   try {
-    const currentUser = await getCurrentUser();
-    if (!currentUser) {
-      return { success: false, error: 'No authenticated user found' };
-    }
-
-    const tenant = await getTenantForCurrentRequest();
-    if (!tenant) {
-      return { success: false, error: 'No tenant found' };
-    }
-
-    const { knex } = await createTenantKnex(tenant);
+    const { knex } = await createTenantKnex();
 
     // First, check if a contact with this email already exists for this client
     const existingContact = await withTransaction(knex, async (trx: Knex.Transaction) => {
@@ -653,21 +623,15 @@ export async function addClientContact(data: ClientContactData): Promise<Onboard
     console.error('Error adding client contact:', error);
     return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
   }
-}
+});
 
-export async function setupBilling(data: BillingData): Promise<OnboardingActionResult> {
+export const setupBilling = withAuth(async (
+  _user: IUserWithRoles,
+  { tenant }: AuthContext,
+  data: BillingData
+): Promise<OnboardingActionResult> => {
   try {
-    const currentUser = await getCurrentUser();
-    if (!currentUser) {
-      return { success: false, error: 'No authenticated user found' };
-    }
-
-    const tenant = await getTenantForCurrentRequest();
-    if (!tenant) {
-      return { success: false, error: 'No tenant found' };
-    }
-
-    const { knex } = await createTenantKnex(tenant);
+    const { knex } = await createTenantKnex();
 
     let serviceId: string | undefined;
 
@@ -718,21 +682,15 @@ export async function setupBilling(data: BillingData): Promise<OnboardingActionR
     console.error('Error setting up billing:', error);
     return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
   }
-}
+});
 
-export async function configureTicketing(data: TicketingData): Promise<OnboardingActionResult> {
+export const configureTicketing = withAuth(async (
+  currentUser: IUserWithRoles,
+  { tenant }: AuthContext,
+  data: TicketingData
+): Promise<OnboardingActionResult> => {
   try {
-    const currentUser = await getCurrentUser();
-    if (!currentUser) {
-      return { success: false, error: 'No authenticated user found' };
-    }
-
-    const tenant = await getTenantForCurrentRequest();
-    if (!tenant) {
-      return { success: false, error: 'No tenant found' };
-    }
-
-    const { knex } = await createTenantKnex(tenant);
+    const { knex } = await createTenantKnex();
 
     const createdIds: Record<string, string[]> = {
       boardId: [],
@@ -994,27 +952,20 @@ export async function configureTicketing(data: TicketingData): Promise<Onboardin
     console.error('Error configuring ticketing:', error);
     return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
   }
-}
+});
 
-export async function validateOnboardingDefaults(): Promise<OnboardingActionResult> {
+export const validateOnboardingDefaults = withAuth(async (
+  currentUser: IUserWithRoles,
+  { tenant }: AuthContext
+): Promise<OnboardingActionResult> => {
   try {
-    const currentUser = await getCurrentUser();
-    if (!currentUser) {
-      return { success: false, error: 'No authenticated user found' };
-    }
-
     // Check permission to configure ticket settings
     const canConfigureTicketing = await hasPermission(currentUser, 'ticket_settings', 'update');
     if (!canConfigureTicketing) {
       return { success: false, error: 'You do not have permission to configure ticket settings' };
     }
 
-    const tenant = await getTenantForCurrentRequest();
-    if (!tenant) {
-      return { success: false, error: 'No tenant found' };
-    }
-
-    const { knex: db } = await createTenantKnex(tenant);
+    const { knex: db } = await createTenantKnex();
 
     // Use withTransaction to check for defaults
     const validationResult = await withTransaction(db, async (trx) => {
@@ -1055,15 +1006,13 @@ export async function validateOnboardingDefaults(): Promise<OnboardingActionResu
     console.error('Error validating onboarding defaults:', error);
     return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
   }
-}
+});
 
-export async function completeOnboarding(): Promise<OnboardingActionResult> {
+export const completeOnboarding = withAuth(async (
+  _user: IUserWithRoles,
+  _ctx: AuthContext
+): Promise<OnboardingActionResult> => {
   try {
-    const currentUser = await getCurrentUser();
-    if (!currentUser) {
-      return { success: false, error: 'No authenticated user found' };
-    }
-
     // Mark onboarding as completed and clear wizard data
     await updateTenantOnboardingStatus(true);
 
@@ -1075,25 +1024,18 @@ export async function completeOnboarding(): Promise<OnboardingActionResult> {
     console.error('Error completing onboarding:', error);
     return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
   }
-}
+});
 
-export async function getAvailableRoles(): Promise<{
+export const getAvailableRoles = withAuth(async (
+  _user: IUserWithRoles,
+  { tenant }: AuthContext
+): Promise<{
   success: boolean;
   data?: Array<{ value: string; label: string }>;
   error?: string;
-}> {
+}> => {
   try {
-    const currentUser = await getCurrentUser();
-    if (!currentUser) {
-      return { success: false, error: 'No authenticated user found' };
-    }
-
-    const tenant = await getTenantForCurrentRequest();
-    if (!tenant) {
-      return { success: false, error: 'No tenant found' };
-    }
-
-    const { knex } = await createTenantKnex(tenant);
+    const { knex } = await createTenantKnex();
 
     const roles = await withTransaction(knex, async (trx: Knex.Transaction) => {
       return await trx('roles')
@@ -1122,25 +1064,18 @@ export async function getAvailableRoles(): Promise<{
       error: error instanceof Error ? error.message : 'Unknown error' 
     };
   }
-}
+});
 
-export async function getOnboardingInitialData(): Promise<{
+export const getOnboardingInitialData = withAuth(async (
+  currentUser: IUserWithRoles,
+  { tenant }: AuthContext
+): Promise<{
   success: boolean;
   data?: Partial<ClientInfoData>;
   error?: string;
-}> {
+}> => {
   try {
-    const currentUser = await getCurrentUser();
-    if (!currentUser) {
-      return { success: false, error: 'No authenticated user found' };
-    }
-
-    const tenant = await getTenantForCurrentRequest();
-    if (!tenant) {
-      return { success: false, error: 'No tenant found' };
-    }
-
-    const { knex } = await createTenantKnex(tenant);
+    const { knex } = await createTenantKnex();
 
     // Get the tenant's client information
     const client = await knex('clients')
@@ -1164,9 +1099,12 @@ export async function getOnboardingInitialData(): Promise<{
       error: error instanceof Error ? error.message : 'Unknown error' 
     };
   }
-}
+});
 
-export async function getTenantTicketingData(): Promise<{
+export const getTenantTicketingData = withAuth(async (
+  _user: IUserWithRoles,
+  { tenant }: AuthContext
+): Promise<{
   success: boolean;
   data?: {
     boards: any[];
@@ -1175,19 +1113,9 @@ export async function getTenantTicketingData(): Promise<{
     priorities: any[];
   };
   error?: string;
-}> {
+}> => {
   try {
-    const currentUser = await getCurrentUser();
-    if (!currentUser) {
-      return { success: false, error: 'No authenticated user found' };
-    }
-
-    const tenant = await getTenantForCurrentRequest();
-    if (!tenant) {
-      return { success: false, error: 'No tenant found' };
-    }
-
-    const { knex } = await createTenantKnex(tenant);
+    const { knex } = await createTenantKnex();
 
     const [boards, categories, statuses, priorities] = await Promise.all([
       // Get boards
@@ -1226,9 +1154,9 @@ export async function getTenantTicketingData(): Promise<{
     };
   } catch (error) {
     console.error('Error getting tenant ticketing data:', error);
-    return { 
-      success: false, 
-      error: error instanceof Error ? error.message : 'Unknown error' 
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error'
     };
   }
-}
+});

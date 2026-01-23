@@ -12,7 +12,6 @@ import { QuickAddTicket } from '@alga-psa/tickets/components/QuickAddTicket';
 import { cn } from '@alga-psa/ui';
 import { useDrawer } from '@alga-psa/ui';
 import { getConsolidatedTicketData } from '@alga-psa/tickets/actions/optimizedTicketActions';
-import { getCurrentUser } from '@alga-psa/users/actions';
 import TicketDetails from '@alga-psa/tickets/components/ticket/TicketDetails';
 import { toast } from 'react-hot-toast';
 
@@ -36,13 +35,7 @@ export const ServiceHistoryTab: React.FC<ServiceHistoryTabProps> = ({ asset }) =
 
   const handleTicketClick = useCallback(async (ticketId: string) => {
     try {
-      const currentUser = await getCurrentUser();
-      if (!currentUser) {
-        toast.error('User not authenticated');
-        return;
-      }
-
-      const ticketData = await getConsolidatedTicketData(ticketId, currentUser);
+      const ticketData = await getConsolidatedTicketData(ticketId);
       
       if (!ticketData) {
         toast.error('Failed to load ticket');
@@ -68,7 +61,6 @@ export const ServiceHistoryTab: React.FC<ServiceHistoryTabProps> = ({ asset }) =
           initialCategories={ticketData.categories}
           initialClients={ticketData.clients}
           initialLocations={ticketData.locations}
-          currentUser={currentUser}
         />,
         undefined,
         undefined,

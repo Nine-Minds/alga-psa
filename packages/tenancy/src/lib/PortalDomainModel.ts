@@ -1,5 +1,7 @@
 import type { Knex } from 'knex';
 import { createTenantKnex } from '@alga-psa/db';
+import { withAuth, type AuthContext } from '@alga-psa/auth';
+import type { IUserWithRoles } from '@alga-psa/types';
 
 export const PORTAL_DOMAIN_TABLE = 'portal_domains';
 
@@ -126,20 +128,8 @@ function mapRow(row: PortalDomainRecord): PortalDomain {
   };
 }
 
-async function getTenantAndKnex(): Promise<{ knex: Knex; tenant: string }> {
-  // Import getCurrentUser dynamically to avoid circular dependencies
-  const { getCurrentUser } = await import('@alga-psa/users/actions');
-  const currentUser = await getCurrentUser();
-  if (!currentUser?.tenant) {
-    throw new Error('Tenant context is required for portal domain operations');
-  }
-
-  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
-
-  if (!tenant) {
-    throw new Error('Tenant context is required for portal domain operations');
-  }
-
+async function getKnexForTenant(tenant: string): Promise<{ knex: Knex; tenant: string }> {
+  const { knex } = await createTenantKnex();
   return { knex, tenant };
 }
 
@@ -160,10 +150,10 @@ export async function getPortalDomainByHostname(knex: Knex, domain: string): Pro
   return record ? mapRow(record) : null;
 }
 
-export async function getCurrentTenantPortalDomain(): Promise<PortalDomain | null> {
-  const { knex, tenant } = await getTenantAndKnex();
+export const getCurrentTenantPortalDomain = withAuth(async (_user: IUserWithRoles, { tenant }: AuthContext): Promise<PortalDomain | null> => {
+  const { knex } = await getKnexForTenant(tenant);
   return getPortalDomain(knex, tenant);
-}
+});
 
 export async function upsertPortalDomain(knex: Knex, tenant: string, input: UpsertPortalDomainInput): Promise<PortalDomain> {
   const now = knex.fn.now();
@@ -206,10 +196,10 @@ export async function upsertPortalDomain(knex: Knex, tenant: string, input: Upse
   return mapRow(record);
 }
 
-export async function upsertCurrentTenantPortalDomain(input: UpsertPortalDomainInput): Promise<PortalDomain> {
-  const { knex, tenant } = await getTenantAndKnex();
+export const upsertCurrentTenantPortalDomain = withAuth(async (_user: IUserWithRoles, { tenant }: AuthContext, input: UpsertPortalDomainInput): Promise<PortalDomain> => {
+  const { knex } = await getKnexForTenant(tenant);
   return upsertPortalDomain(knex, tenant, input);
-}
+});
 
 export async function updatePortalDomain(
   knex: Knex,

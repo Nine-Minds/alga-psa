@@ -1,7 +1,7 @@
 // @ts-nocheck
 // TODO: DocumentAssociation model method signature changes
 import type { IUser, IDocument, IDocumentAssociation } from '@alga-psa/types';
-import { hasPermissionAsync } from './authHelpers';
+import { hasPermission } from '@alga-psa/auth';
 import DocumentAssociation from '@alga-psa/documents/models/documentAssociation';
 import { createTenantKnex } from '@alga-psa/db';
 
@@ -33,7 +33,7 @@ export async function canAccessDocument(
   document: IDocument
 ): Promise<boolean> {
   // 1. Check if user has 'document' read permission
-  if (!(await hasPermissionAsync(user, 'document', 'read'))) {
+  if (!(await hasPermission(user, 'document', 'read'))) {
     return false;
   }
 
@@ -57,7 +57,7 @@ export async function canAccessDocument(
     }
 
     // Check if user has the required permission for this entity type
-    if (requiredPermission && (await hasPermissionAsync(user, requiredPermission, 'read'))) {
+    if (requiredPermission && (await hasPermission(user, requiredPermission, 'read'))) {
       return true;
     }
   }
@@ -80,21 +80,21 @@ export async function filterAccessibleDocuments(
   if (documents.length === 0) return [];
 
   // 1. Check if user has 'document' read permission
-  if (!(await hasPermissionAsync(user, 'document', 'read'))) {
+  if (!(await hasPermission(user, 'document', 'read'))) {
     return [];
   }
 
   // 2. Build list of permissions user has for entity types
   const userEntityPermissions = new Set<string>();
   for (const [entityType, permission] of Object.entries(ENTITY_TO_PERMISSION_MAP)) {
-    if (await hasPermissionAsync(user, permission, 'read')) {
+    if (await hasPermission(user, permission, 'read')) {
       userEntityPermissions.add(entityType);
     }
   }
 
   // 3. Bulk load associations for all documents (single query!)
   const documentIds = documents.map(d => d.document_id);
-  const { knex } = await createTenantKnex(user.tenant);
+  const { knex } = await createTenantKnex();
 
   const associations = await knex('document_associations')
     .whereIn('document_id', documentIds)
@@ -151,7 +151,7 @@ export async function canAssociateWithEntity(
   entityType: string
 ): Promise<boolean> {
   // Need document permission
-  if (!(await hasPermissionAsync(user, 'document', 'update'))) {
+  if (!(await hasPermission(user, 'document', 'update'))) {
     return false;
   }
 
@@ -161,7 +161,7 @@ export async function canAssociateWithEntity(
     return false;
   }
 
-  return await hasPermissionAsync(user, requiredPermission, 'read');
+  return await hasPermission(user, requiredPermission, 'read');
 }
 
 /**
@@ -175,7 +175,7 @@ export async function getEntityTypesForUser(user: IUser): Promise<string[]> {
   const allowedTypes: string[] = ['tenant']; // Always include tenant
 
   for (const [entityType, permission] of Object.entries(ENTITY_TO_PERMISSION_MAP)) {
-    if (await hasPermissionAsync(user, permission, 'read')) {
+    if (await hasPermission(user, permission, 'read')) {
       allowedTypes.push(entityType);
     }
   }

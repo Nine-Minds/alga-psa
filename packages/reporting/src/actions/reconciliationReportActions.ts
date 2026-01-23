@@ -5,7 +5,7 @@ import { ReconciliationStatus } from '@alga-psa/types';
 import { withTransaction } from '@alga-psa/db';
 import { createTenantKnex } from '@alga-psa/db';
 import { Knex } from 'knex';
-import { getCurrentUser } from '@alga-psa/users/actions';
+import { withAuth } from '@alga-psa/auth';
 // Mock function for getting client by ID - in a real implementation, this would be imported from a client model
 async function getClientById(clientId: string) {
   // This is a placeholder - in a real implementation, you would fetch the client from the database
@@ -15,7 +15,7 @@ async function getClientById(clientId: string) {
     'client3': { id: 'client3', name: 'Initech' },
     'client4': { id: 'client4', name: 'Umbrella Corp' }
   };
-  
+
   return mockClients[clientId as keyof typeof mockClients] || null;
 }
 
@@ -24,7 +24,7 @@ async function getClientById(clientId: string) {
  * @param options Filtering and pagination options
  * @returns Object containing reports and pagination info
  */
-export async function fetchReconciliationReports({
+export const fetchReconciliationReports = withAuth(async (_user, { tenant }, {
   clientId,
   status,
   startDate,
@@ -38,12 +38,8 @@ export async function fetchReconciliationReports({
   endDate?: string;
   page?: number;
   pageSize?: number;
-}) {
-  const currentUser = await getCurrentUser();
-  if (!currentUser) {
-    throw new Error('User not authenticated');
-  }
-  const { knex: db, tenant } = await createTenantKnex(currentUser.tenant);
+}) => {
+  const { knex: db } = await createTenantKnex();
   return withTransaction(db, async (trx: Knex.Transaction) => {
     try {
       // Fetch reports with pagination and filtering
@@ -76,18 +72,14 @@ export async function fetchReconciliationReports({
       throw error;
     }
   });
-}
+});
 
 /**
  * Fetch all clients for the dropdown
  * @returns Array of client objects with id and name
  */
-export async function fetchClientsForDropdown() {
-  const currentUser = await getCurrentUser();
-  if (!currentUser) {
-    throw new Error('User not authenticated');
-  }
-  const { knex: db, tenant } = await createTenantKnex(currentUser.tenant);
+export const fetchClientsForDropdown = withAuth(async (_user, { tenant }) => {
+  const { knex: db } = await createTenantKnex();
   return withTransaction(db, async (trx: Knex.Transaction) => {
     try {
       // This is a placeholder - in a real implementation, you would fetch clients from the database
@@ -103,18 +95,14 @@ export async function fetchClientsForDropdown() {
       throw error;
     }
   });
-}
+});
 
 /**
  * Fetch summary statistics for reconciliation reports
  * @returns Object containing summary statistics
  */
-export async function fetchReconciliationStats() {
-  const currentUser = await getCurrentUser();
-  if (!currentUser) {
-    throw new Error('User not authenticated');
-  }
-  const { knex: db, tenant } = await createTenantKnex(currentUser.tenant);
+export const fetchReconciliationStats = withAuth(async (_user, { tenant }) => {
+  const { knex: db } = await createTenantKnex();
   return withTransaction(db, async (trx: Knex.Transaction) => {
     try {
       // Get total counts by status
@@ -137,4 +125,4 @@ export async function fetchReconciliationStats() {
       throw error;
     }
   });
-}
+});

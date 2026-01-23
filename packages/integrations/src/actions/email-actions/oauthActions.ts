@@ -1,18 +1,20 @@
 'use server'
 
-import { getCurrentUser } from '@alga-psa/users/actions';
+import { withAuth } from '@alga-psa/auth';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { createTenantKnex } from '@alga-psa/db';
 import { generateMicrosoftAuthUrl, generateGoogleAuthUrl, generateNonce, type OAuthState } from '../../utils/email/oauthHelpers';
 
-export async function initiateEmailOAuth(params: {
-  provider: 'microsoft' | 'google';
-  providerId?: string;
-  redirectUri?: string;
-}): Promise<{ success: true; authUrl: string; state: string } | { success: false; error: string } > {
-  const user = await getCurrentUser();
-  if (!user) return { success: false, error: 'Unauthorized' };
+export const initiateEmailOAuth = withAuth(async (
+  user,
+  { tenant },
+  params: {
+    provider: 'microsoft' | 'google';
+    providerId?: string;
+    redirectUri?: string;
+  }
+): Promise<{ success: true; authUrl: string; state: string } | { success: false; error: string }> => {
 
   try {
     // RBAC: validate permission based on intent (create vs update)
@@ -26,9 +28,9 @@ export async function initiateEmailOAuth(params: {
 
     // If providerId is specified, ensure it belongs to the caller's tenant
     if (params.providerId) {
-      const { knex } = await createTenantKnex(user.tenant);
+      const { knex } = await createTenantKnex();
       const exists = await knex('email_providers')
-        .where({ id: params.providerId, tenant: user.tenant })
+        .where({ id: params.providerId, tenant })
         .first();
       if (!exists) {
         return { success: false, error: 'Invalid providerId for tenant' };
@@ -43,10 +45,10 @@ export async function initiateEmailOAuth(params: {
 
     if (provider === 'google') {
       // Google is always tenant-owned (CE and EE): do not fall back to app-level secrets.
-      clientId = (await secretProvider.getTenantSecret(user.tenant, 'google_client_id')) || null;
+      clientId = (await secretProvider.getTenantSecret(tenant, 'google_client_id')) || null;
     } else {
       // Microsoft remains as-is (tenant secret with optional env fallback).
-      clientId = process.env.MICROSOFT_CLIENT_ID || (await secretProvider.getTenantSecret(user.tenant, 'microsoft_client_id')) || null;
+      clientId = process.env.MICROSOFT_CLIENT_ID || (await secretProvider.getTenantSecret(tenant, 'microsoft_client_id')) || null;
     }
 
     if (!effectiveRedirectUri) {
@@ -64,7 +66,7 @@ export async function initiateEmailOAuth(params: {
     }
 
     const state: OAuthState = {
-      tenant: user.tenant,
+      tenant,
       userId: user.user_id,
       providerId,
       redirectUri: effectiveRedirectUri,
@@ -85,4 +87,4 @@ export async function initiateEmailOAuth(params: {
   } catch (err: any) {
     return { success: false, error: err?.message || 'Failed to initiate OAuth' };
   }
-}
+});

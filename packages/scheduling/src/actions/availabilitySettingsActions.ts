@@ -3,8 +3,7 @@
 import { createTenantKnex } from '@alga-psa/db';
 import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
-import { getCurrentUser } from '@alga-psa/users/actions';
-import { hasPermission } from '@alga-psa/auth';
+import { withAuth, hasPermission } from '@alga-psa/auth';
 import { v4 as uuidv4 } from 'uuid';
 import {
   availabilitySettingSchema,
@@ -56,22 +55,19 @@ export interface AvailabilitySettingsResult<T> {
  * Create or update an availability setting
  * If a matching setting exists (same type, user_id, service_id, day_of_week), it will be updated
  */
-export async function createOrUpdateAvailabilitySetting(
+export const createOrUpdateAvailabilitySetting = withAuth(async (
+  user,
+  { tenant },
   data: AvailabilitySettingInput & { availability_setting_id?: string }
-): Promise<AvailabilitySettingsResult<IAvailabilitySetting>> {
+): Promise<AvailabilitySettingsResult<IAvailabilitySetting>> => {
   try {
-    const currentUser = await getCurrentUser();
-    if (!currentUser) {
-      return { success: false, error: 'User not authenticated' };
-    }
-
     // Validate input
     const validatedData = availabilitySettingSchema.parse(data);
 
-    const { knex: db, tenant } = await createTenantKnex(currentUser.tenant);
+    const { knex: db } = await createTenantKnex();
 
     // Check permissions
-    const canManage = await hasPermission(currentUser as any, 'system_settings', 'update', db);
+    const canManage = await hasPermission(user, 'system_settings', 'update', db);
     if (!canManage) {
       return { success: false, error: 'Insufficient permissions to manage availability settings' };
     }
@@ -190,24 +186,21 @@ export async function createOrUpdateAvailabilitySetting(
     const message = error instanceof Error ? error.message : 'Failed to create/update availability setting';
     return { success: false, error: message };
   }
-}
+});
 
 /**
  * Get availability settings with optional filters
  */
-export async function getAvailabilitySettings(
+export const getAvailabilitySettings = withAuth(async (
+  user,
+  { tenant },
   filters?: AvailabilitySettingFilters
-): Promise<AvailabilitySettingsResult<IAvailabilitySetting[]>> {
+): Promise<AvailabilitySettingsResult<IAvailabilitySetting[]>> => {
   try {
-    const currentUser = await getCurrentUser();
-    if (!currentUser) {
-      return { success: false, error: 'User not authenticated' };
-    }
-
-    const { knex: db, tenant } = await createTenantKnex(currentUser.tenant);
+    const { knex: db } = await createTenantKnex();
 
     // Check permissions
-    const canRead = await hasPermission(currentUser as any, 'system_settings', 'read', db);
+    const canRead = await hasPermission(user, 'system_settings', 'read', db);
     if (!canRead) {
       return { success: false, error: 'Insufficient permissions to view availability settings' };
     }
@@ -241,24 +234,21 @@ export async function getAvailabilitySettings(
     const message = error instanceof Error ? error.message : 'Failed to fetch availability settings';
     return { success: false, error: message };
   }
-}
+});
 
 /**
  * Delete an availability setting
  */
-export async function deleteAvailabilitySetting(
+export const deleteAvailabilitySetting = withAuth(async (
+  user,
+  { tenant },
   settingId: string
-): Promise<AvailabilitySettingsResult<void>> {
+): Promise<AvailabilitySettingsResult<void>> => {
   try {
-    const currentUser = await getCurrentUser();
-    if (!currentUser) {
-      return { success: false, error: 'User not authenticated' };
-    }
-
-    const { knex: db, tenant } = await createTenantKnex(currentUser.tenant);
+    const { knex: db } = await createTenantKnex();
 
     // Check permissions
-    const canDelete = await hasPermission(currentUser as any, 'system_settings', 'delete', db);
+    const canDelete = await hasPermission(user, 'system_settings', 'delete', db);
     if (!canDelete) {
       return { success: false, error: 'Insufficient permissions to delete availability settings' };
     }
@@ -289,27 +279,24 @@ export async function deleteAvailabilitySetting(
     const message = error instanceof Error ? error.message : 'Failed to delete availability setting';
     return { success: false, error: message };
   }
-}
+});
 
 /**
  * Add an availability exception (holiday, time off, etc.)
  */
-export async function addAvailabilityException(
+export const addAvailabilityException = withAuth(async (
+  user,
+  { tenant },
   data: AvailabilityExceptionInput
-): Promise<AvailabilitySettingsResult<IAvailabilityException>> {
+): Promise<AvailabilitySettingsResult<IAvailabilityException>> => {
   try {
-    const currentUser = await getCurrentUser();
-    if (!currentUser) {
-      return { success: false, error: 'User not authenticated' };
-    }
-
     // Validate input
     const validatedData = availabilityExceptionSchema.parse(data);
 
-    const { knex: db, tenant } = await createTenantKnex(currentUser.tenant);
+    const { knex: db } = await createTenantKnex();
 
     // Check permissions
-    const canManage = await hasPermission(currentUser as any, 'system_settings', 'update', db);
+    const canManage = await hasPermission(user, 'system_settings', 'update', db);
     if (!canManage) {
       return { success: false, error: 'Insufficient permissions to manage availability exceptions' };
     }
@@ -383,25 +370,22 @@ export async function addAvailabilityException(
     const message = error instanceof Error ? error.message : 'Failed to add availability exception';
     return { success: false, error: message };
   }
-}
+});
 
 /**
  * Get availability exceptions with optional filters
  */
-export async function getAvailabilityExceptions(
+export const getAvailabilityExceptions = withAuth(async (
+  user,
+  { tenant },
   userId?: string,
   dateRange?: { from: string; to: string }
-): Promise<AvailabilitySettingsResult<IAvailabilityException[]>> {
+): Promise<AvailabilitySettingsResult<IAvailabilityException[]>> => {
   try {
-    const currentUser = await getCurrentUser();
-    if (!currentUser) {
-      return { success: false, error: 'User not authenticated' };
-    }
-
-    const { knex: db, tenant } = await createTenantKnex(currentUser.tenant);
+    const { knex: db } = await createTenantKnex();
 
     // Check permissions
-    const canRead = await hasPermission(currentUser as any, 'system_settings', 'read', db);
+    const canRead = await hasPermission(user, 'system_settings', 'read', db);
     if (!canRead) {
       return { success: false, error: 'Insufficient permissions to view availability exceptions' };
     }
@@ -428,24 +412,21 @@ export async function getAvailabilityExceptions(
     const message = error instanceof Error ? error.message : 'Failed to fetch availability exceptions';
     return { success: false, error: message };
   }
-}
+});
 
 /**
  * Delete an availability exception
  */
-export async function deleteAvailabilityException(
+export const deleteAvailabilityException = withAuth(async (
+  user,
+  { tenant },
   exceptionId: string
-): Promise<AvailabilitySettingsResult<void>> {
+): Promise<AvailabilitySettingsResult<void>> => {
   try {
-    const currentUser = await getCurrentUser();
-    if (!currentUser) {
-      return { success: false, error: 'User not authenticated' };
-    }
-
-    const { knex: db, tenant } = await createTenantKnex(currentUser.tenant);
+    const { knex: db } = await createTenantKnex();
 
     // Check permissions
-    const canDelete = await hasPermission(currentUser as any, 'system_settings', 'delete', db);
+    const canDelete = await hasPermission(user, 'system_settings', 'delete', db);
     if (!canDelete) {
       return { success: false, error: 'Insufficient permissions to delete availability exceptions' };
     }
@@ -476,4 +457,4 @@ export async function deleteAvailabilityException(
     const message = error instanceof Error ? error.message : 'Failed to delete availability exception';
     return { success: false, error: message };
   }
-}
+});

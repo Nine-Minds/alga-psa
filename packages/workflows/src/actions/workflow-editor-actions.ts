@@ -1,7 +1,7 @@
 'use server';
 import { createTenantKnex } from '@alga-psa/db';
 import { withTransaction } from '@alga-psa/db';
-import { getCurrentUser } from '@alga-psa/auth/getCurrentUser';
+import { withAuth } from '@alga-psa/auth';
 import { z } from "zod";
 import { logger } from "@alga-psa/core";
 import { v4 as uuidv4 } from 'uuid';
@@ -65,27 +65,21 @@ interface WorkflowTestResult {
 
 /**
  * Create a new workflow
- * 
+ *
  * @param data Workflow data
  * @returns Created workflow ID
  */
-export async function createWorkflow(data: WorkflowData): Promise<string> {
+export const createWorkflow = withAuth(async (user, { tenant }, data: WorkflowData): Promise<string> => {
   let knexInstance;
   try {
-    // Get current user
-    const user = await getCurrentUser();
-    if (!user) {
-      throw new Error("User not authenticated");
-    }
-    
     // Validate input
     const validatedData = WorkflowSchema.parse(data);
-    
+
     // We no longer need to extract metadata from the code
     // The metadata comes from workflowData (validatedData)
-    
+
     // Create Knex instance
-    const { knex } = await createTenantKnex(user.tenant);
+    const { knex } = await createTenantKnex();
     knexInstance = knex;
 
     // Use a transaction to ensure both operations succeed or fail together
@@ -105,7 +99,7 @@ export async function createWorkflow(data: WorkflowData): Promise<string> {
       // Create workflow registration
       const [registration] = await trx('workflow_registrations')
         .insert({
-          tenant: user.tenant,
+          tenant: tenant,
           name: validatedData.name,
           description: validatedData.description || '',
           category: 'custom',
@@ -117,20 +111,20 @@ export async function createWorkflow(data: WorkflowData): Promise<string> {
           updated_at: new Date().toISOString(),
         })
         .returning('registration_id');
-      
-      
+
+
       // Create workflow version
       await trx('workflow_registration_versions')
         .insert({
           registration_id: registration.registration_id,
-          tenant: user.tenant,
+          tenant: tenant,
           version: validatedData.version,
           is_current: true,
           code: validatedData.code, // Use the new code field
           created_by: user.user_id,
           created_at: new Date().toISOString(),
         });
-      
+
       return registration.registration_id;
     });
   } catch (error) {
@@ -139,29 +133,23 @@ export async function createWorkflow(data: WorkflowData): Promise<string> {
   } finally {
     // Connection will be released automatically
   }
-}
+});
 
 /**
  * Update an existing workflow
- * 
+ *
  * @param id Workflow ID
  * @param data Workflow data
  * @returns Updated workflow ID
  */
-export async function updateWorkflow(id: string, data: WorkflowData): Promise<string> {
+export const updateWorkflow = withAuth(async (user, { tenant }, id: string, data: WorkflowData): Promise<string> => {
   let knexInstance;
   try {
-    // Get current user
-    const user = await getCurrentUser();
-    if (!user) {
-      throw new Error("User not authenticated");
-    }
-    
     // Validate input
     const validatedData = WorkflowSchema.parse(data);
 
     // Create Knex instance
-    const { knex } = await createTenantKnex(user.tenant);
+    const { knex } = await createTenantKnex();
     knexInstance = knex;
 
     // Use a transaction to ensure all operations succeed or fail together
@@ -170,31 +158,31 @@ export async function updateWorkflow(id: string, data: WorkflowData): Promise<st
       const registration = await trx('workflow_registrations')
         .where({
           registration_id: id,
-          tenant: user.tenant,
+          tenant: tenant,
         })
         .first();
-      
+
       if (!registration) {
         throw new Error(`Workflow with ID ${id} not found`);
       }
-      
+
       // Auto-increment the version number
       // Format is expected to be like 1.0.0 or 1.2.3
       // We increment the rightmost segment
       let newVersion = validatedData.version;
-      
+
       // Check for existing versions to avoid conflicts
       const existingVersions = await trx('workflow_registration_versions')
         .where({
           registration_id: id,
-          tenant: user.tenant
+          tenant: tenant
         })
         .select('version')
         .orderBy('created_at', 'desc');
-      
+
       // Create a set of existing versions for quick lookup
       const existingVersionSet = new Set(existingVersions.map(v => v.version));
-      
+
       // Get the version parts
       const versionParts = validatedData.version.split('.');
       if (versionParts.length > 0) {
@@ -208,7 +196,7 @@ export async function updateWorkflow(id: string, data: WorkflowData): Promise<st
           } while (existingVersionSet.has(newVersion));
         }
       }
-      
+
       // Create workflow definition with new version
       const workflowDefinition = {
         metadata: {
@@ -225,7 +213,7 @@ export async function updateWorkflow(id: string, data: WorkflowData): Promise<st
       await trx('workflow_registrations')
         .where({
           registration_id: id,
-          tenant: user.tenant,
+          tenant: tenant,
         })
         .update({
           name: validatedData.name,
@@ -235,29 +223,29 @@ export async function updateWorkflow(id: string, data: WorkflowData): Promise<st
           status: validatedData.isActive ? 'active' : 'inactive',
           updated_at: new Date().toISOString(),
         });
-      
+
       // Set all existing versions to not current
       await trx('workflow_registration_versions')
         .where({
           registration_id: id,
-          tenant: user.tenant,
+          tenant: tenant,
         })
         .update({
           is_current: false,
         });
-      
+
       // Create new workflow version with incremented version number
       await trx('workflow_registration_versions')
         .insert({
           registration_id: id,
-          tenant: user.tenant,
+          tenant: tenant,
           version: newVersion, // Use the new version
           is_current: true,
           code: validatedData.code, // Use the new code field
           created_by: user.user_id,
           created_at: new Date().toISOString(),
         });
-      
+
       return id;
     });
   } catch (error) {
@@ -266,7 +254,7 @@ export async function updateWorkflow(id: string, data: WorkflowData): Promise<st
   } finally {
     // Connection will be released automatically
   }
-}
+});
 
 /**
  * Get all versions of a workflow
@@ -274,14 +262,8 @@ export async function updateWorkflow(id: string, data: WorkflowData): Promise<st
  * @param id Workflow ID
  * @returns Array of workflow versions
  */
-export async function getWorkflowVersions(id: string): Promise<WorkflowVersionData[]> {
-  // Get current user
-  const user = await getCurrentUser();
-  if (!user) {
-    throw new Error("User not authenticated");
-  }
-
-  const { knex } = await createTenantKnex(user.tenant);
+export const getWorkflowVersions = withAuth(async (_user, { tenant }, id: string): Promise<WorkflowVersionData[]> => {
+  const { knex } = await createTenantKnex();
 
   try {
     return await withTransaction(knex, async (trx) => {
@@ -289,7 +271,7 @@ export async function getWorkflowVersions(id: string): Promise<WorkflowVersionDa
       const registration = await trx('workflow_registrations')
         .where({
           registration_id: id,
-          tenant: user.tenant
+          tenant: tenant
         })
         .first();
 
@@ -301,7 +283,7 @@ export async function getWorkflowVersions(id: string): Promise<WorkflowVersionDa
       const versions = await trx('workflow_registration_versions')
         .where({
           registration_id: id,
-          tenant: user.tenant
+          tenant: tenant
         })
         .select(
           'version_id',
@@ -325,7 +307,7 @@ export async function getWorkflowVersions(id: string): Promise<WorkflowVersionDa
     logger.error(`Error getting workflow versions for ${id}:`, error);
     throw error;
   }
-}
+});
 
 /**
  * Set a specific version as the active version
@@ -334,14 +316,8 @@ export async function getWorkflowVersions(id: string): Promise<WorkflowVersionDa
  * @param versionId Version ID to set as active
  * @returns Success status
  */
-export async function setActiveWorkflowVersion(workflowId: string, versionId: string): Promise<{ success: boolean }> {
-  // Get current user
-  const user = await getCurrentUser();
-  if (!user) {
-    throw new Error("User not authenticated");
-  }
-
-  const { knex } = await createTenantKnex(user.tenant);
+export const setActiveWorkflowVersion = withAuth(async (_user, { tenant }, workflowId: string, versionId: string): Promise<{ success: boolean }> => {
+  const { knex } = await createTenantKnex();
 
   try {
     return await knex.transaction(async (trx) => {
@@ -349,7 +325,7 @@ export async function setActiveWorkflowVersion(workflowId: string, versionId: st
       const registration = await trx('workflow_registrations')
         .where({
           registration_id: workflowId,
-          tenant: user.tenant
+          tenant: tenant
         })
         .first();
 
@@ -362,46 +338,46 @@ export async function setActiveWorkflowVersion(workflowId: string, versionId: st
         .where({
           version_id: versionId,
           registration_id: workflowId,
-          tenant: user.tenant
+          tenant: tenant
         })
         .first();
-      
+
       if (!version) {
         throw new Error(`Version with ID ${versionId} not found for workflow ${workflowId}`);
       }
-      
+
       // Set all versions to not current
       await trx('workflow_registration_versions')
         .where({
           registration_id: workflowId,
-          tenant: user.tenant
+          tenant: tenant
         })
         .update({
           is_current: false
         });
-      
+
       // Set the specified version as current
       await trx('workflow_registration_versions')
         .where({
           version_id: versionId,
           registration_id: workflowId,
-          tenant: user.tenant
+          tenant: tenant
         })
         .update({
           is_current: true
         });
-      
+
       // Update the workflow registration with the version number
       await trx('workflow_registrations')
         .where({
           registration_id: workflowId,
-          tenant: user.tenant
+          tenant: tenant
         })
         .update({
           version: version.version,
           updated_at: new Date().toISOString()
         });
-      
+
       return { success: true };
     });
   } catch (error) {
@@ -410,28 +386,22 @@ export async function setActiveWorkflowVersion(workflowId: string, versionId: st
   } finally {
     // Connection will be released automatically
   }
-}
+});
 
 /**
  * Get a workflow by ID
- * 
+ *
  * @param id Workflow ID
  * @returns Workflow data
  */
-export async function getWorkflow(id: string): Promise<WorkflowDataWithSystemFlag> { // Updated return type
+export const getWorkflow = withAuth(async (_user, { tenant }, id: string): Promise<WorkflowDataWithSystemFlag> => {
   try {
-    // Get current user
-    const user = await getCurrentUser();
-    if (!user) {
-      throw new Error("User not authenticated");
-    }
-
     // Create Knex instance
-    const { knex } = await createTenantKnex(user.tenant);
+    const { knex } = await createTenantKnex();
 
     return await withTransaction(knex, async (trx) => {
       // Use the model to get the workflow, which handles system/tenant logic
-      const result = await WorkflowRegistrationModel.getById(trx, user.tenant, id);
+      const result = await WorkflowRegistrationModel.getById(trx, tenant, id);
 
       if (!result) {
         throw new Error(`Workflow with ID ${id} not found`);
@@ -441,7 +411,7 @@ export async function getWorkflow(id: string): Promise<WorkflowDataWithSystemFla
       const currentVersion = await trx('workflow_registration_versions')
         .where({
           registration_id: id,
-          tenant: user.tenant,
+          tenant: tenant,
           is_current: true,
         })
         .select('code')
@@ -477,7 +447,7 @@ export async function getWorkflow(id: string): Promise<WorkflowDataWithSystemFla
     logger.error(`Error getting workflow ${id}:`, error);
     throw error;
   }
-}
+});
 
 /**
  * Get all workflows
@@ -490,18 +460,12 @@ export async function getWorkflow(id: string): Promise<WorkflowDataWithSystemFla
  * @param includeInactive Whether to include inactive workflows (default: false)
  * @returns Array of workflow data
  */
-export async function getAllWorkflows(includeInactive: boolean = false): Promise<WorkflowDataWithSystemFlag[]> {
+export const getAllWorkflows = withAuth(async (_user, { tenant }, includeInactive: boolean = false): Promise<WorkflowDataWithSystemFlag[]> => {
   try {
     console.log(`getAllWorkflows called with includeInactive=${includeInactive}`);
 
-    // Get current user
-    const user = await getCurrentUser();
-    if (!user) {
-      throw new Error("User not authenticated");
-    }
-
     // Create Knex instance
-    const { knex, tenant } = await createTenantKnex(user.tenant);
+    const { knex } = await createTenantKnex();
 
     return await withTransaction(knex, async (trx) => {
       // Fetch tenant workflows
@@ -610,25 +574,19 @@ export async function getAllWorkflows(includeInactive: boolean = false): Promise
     logger.error("Error getting all workflows:", error);
     throw error;
   }
-}
+});
 
 /**
  * Delete a workflow
- * 
+ *
  * @param id Workflow ID
  * @returns Success status
  */
-export async function deleteWorkflow(id: string): Promise<boolean> {
+export const deleteWorkflow = withAuth(async (_user, { tenant }, id: string): Promise<boolean> => {
   let knexInstance;
   try {
-    // Get current user
-    const user = await getCurrentUser();
-    if (!user) {
-      throw new Error("User not authenticated");
-    }
-
     // Create Knex instance
-    const { knex } = await createTenantKnex(user.tenant);
+    const { knex } = await createTenantKnex();
     knexInstance = knex;
 
     // Use a transaction to ensure both operations succeed or fail together
@@ -637,18 +595,18 @@ export async function deleteWorkflow(id: string): Promise<boolean> {
       await trx('workflow_registration_versions')
         .where({
           registration_id: id,
-          tenant: user.tenant,
+          tenant: tenant,
         })
         .delete();
-      
+
       // Delete workflow registration
       const deleted = await trx('workflow_registrations')
         .where({
           registration_id: id,
-          tenant: user.tenant,
+          tenant: tenant,
         })
         .delete();
-      
+
       return deleted > 0;
     });
   } catch (error) {
@@ -657,7 +615,7 @@ export async function deleteWorkflow(id: string): Promise<boolean> {
   } finally {
     // Connection will be released automatically
   }
-}
+});
 
 /**
  * Update workflow status (activate/deactivate)
@@ -666,25 +624,19 @@ export async function deleteWorkflow(id: string): Promise<boolean> {
  * @param isActive New active status
  * @returns Success status
  */
-export async function updateWorkflowStatus(id: string, isActive: boolean): Promise<boolean> {
+export const updateWorkflowStatus = withAuth(async (_user, { tenant }, id: string, isActive: boolean): Promise<boolean> => {
   try {
     console.log(`updateWorkflowStatus called with id=${id}, isActive=${isActive}`);
 
-    // Get current user
-    const user = await getCurrentUser();
-    if (!user) {
-      throw new Error("User not authenticated");
-    }
-
     // Create Knex instance
-    const { knex } = await createTenantKnex(user.tenant);
+    const { knex } = await createTenantKnex();
 
     return await withTransaction(knex, async (trx) => {
       // Get current status for logging
       const currentWorkflow = await trx('workflow_registrations')
         .where({
           registration_id: id,
-          tenant: user.tenant,
+          tenant: tenant,
         })
         .first();
 
@@ -697,7 +649,7 @@ export async function updateWorkflowStatus(id: string, isActive: boolean): Promi
       const updated = await trx('workflow_registrations')
         .where({
           registration_id: id,
-          tenant: user.tenant,
+          tenant: tenant,
         })
         .update({
           status: newStatus,
@@ -711,22 +663,16 @@ export async function updateWorkflowStatus(id: string, isActive: boolean): Promi
     logger.error(`Error updating workflow status for ${id}:`, error);
     throw error;
   }
-}
+});
 
 /**
  * Test a workflow
- * 
+ *
  * @param code Workflow code
  * @returns Test result
  */
-export async function testWorkflow(code: string): Promise<{ success: boolean; output: string; warnings?: string[] }> {
+export const testWorkflow = withAuth(async (_user, _ctx, code: string): Promise<{ success: boolean; output: string; warnings?: string[] }> => {
   try {
-    // Get current user
-    const user = await getCurrentUser();
-    if (!user) {
-      throw new Error("User not authenticated");
-    }
-
     // Validate workflow code
     const validation = validateWorkflowCode('async function execute(context) {\n' + code + '\n}');
 
@@ -755,7 +701,7 @@ export async function testWorkflow(code: string): Promise<{ success: boolean; ou
     logger.error("Error testing workflow:", error);
     throw error;
   }
-}
+});
 
 // Helper function to safely convert string to EventType
 const getEventType = (name: string): EventType => {
@@ -773,28 +719,24 @@ const getEventType = (name: string): EventType => {
  * Execute a workflow test with the provided event data
  * This function uses version_id in the event payload to directly trigger
  * the specific workflow version without using temporary event attachments
- * 
+ *
  * @param code Workflow code
  * @param eventName Event name
  * @param eventPayload Event payload
  * @param workflowId Workflow ID to use for testing
  * @returns Test execution result
  */
-export async function executeWorkflowTest(
+export const executeWorkflowTest = withAuth(async (
+  user,
+  { tenant },
   code: string,
   eventName: string,
   eventPayload: any,
   workflowId: string
-): Promise<WorkflowTestResult> {
+): Promise<WorkflowTestResult> => {
   try {
-    // Get current user
-    const user = await getCurrentUser();
-    if (!user) {
-      throw new Error("User not authenticated");
-    }
-
     // Create Knex instance
-    const { knex, tenant } = await createTenantKnex(user.tenant);
+    const { knex } = await createTenantKnex();
 
     // First validate the workflow code
     const testResult = await testWorkflow(code);
@@ -919,4 +861,4 @@ export async function executeWorkflowTest(
       message: error instanceof Error ? error.message : String(error)
     };
   }
-}
+});

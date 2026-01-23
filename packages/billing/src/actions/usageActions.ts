@@ -6,17 +6,12 @@ import { determineDefaultContractLine } from '@alga-psa/billing/lib/contractLine
 import { ICreateUsageRecord, IUpdateUsageRecord, IUsageFilter, IUsageRecord } from '@alga-psa/types';
 import { revalidatePath } from 'next/cache';
 import { findOrCreateCurrentBucketUsageRecord, updateBucketUsageMinutes } from '../services/bucketUsageService'; // Import bucket service functions
-import { getCurrentUser } from '@alga-psa/auth/getCurrentUser';
-import { getCurrentUserAsync, hasPermissionAsync, getSessionAsync, getAnalyticsAsync } from '../lib/authHelpers';
+import { withAuth } from '@alga-psa/auth';
+import { getAnalyticsAsync } from '../lib/authHelpers';
 
 
-export async function createUsageRecord(data: ICreateUsageRecord): Promise<IUsageRecord> {
-  const currentUser = await getCurrentUser();
-  if (!currentUser) {
-    throw new Error('Unauthorized');
-  }
-
-  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
+export const createUsageRecord = withAuth(async (_user, { tenant }, data: ICreateUsageRecord): Promise<IUsageRecord> => {
+  const { knex } = await createTenantKnex();
 
   return await knex.transaction(async (trx) => {
     // If no contract line ID is provided, try to determine the default one
@@ -102,15 +97,10 @@ export async function createUsageRecord(data: ICreateUsageRecord): Promise<IUsag
     revalidatePath('/msp/billing');
     return record;
   });
-}
+});
 
-export async function updateUsageRecord(data: IUpdateUsageRecord): Promise<IUsageRecord> {
-  const currentUser = await getCurrentUser();
-  if (!currentUser) {
-    throw new Error('Unauthorized');
-  }
-
-  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
+export const updateUsageRecord = withAuth(async (_user, { tenant }, data: IUpdateUsageRecord): Promise<IUsageRecord> => {
+  const { knex } = await createTenantKnex();
 
   return await knex.transaction(async (trx) => {
     // 1. Fetch the original record BEFORE update
@@ -219,15 +209,10 @@ export async function updateUsageRecord(data: IUpdateUsageRecord): Promise<IUsag
     revalidatePath('/msp/billing');
     return updatedRecord;
   });
-}
+});
 
-export async function deleteUsageRecord(usageId: string): Promise<void> {
-  const currentUser = await getCurrentUser();
-  if (!currentUser) {
-    throw new Error('Unauthorized');
-  }
-
-  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
+export const deleteUsageRecord = withAuth(async (_user, { tenant }, usageId: string): Promise<void> => {
+  const { knex } = await createTenantKnex();
 
   await knex.transaction(async (trx) => {
     // 1. Fetch the record BEFORE deleting
@@ -298,15 +283,10 @@ export async function deleteUsageRecord(usageId: string): Promise<void> {
 
   // Revalidate outside the transaction after commit
   revalidatePath('/msp/billing');
-}
+});
 
-export async function getUsageRecords(filter?: IUsageFilter): Promise<IUsageRecord[]> {
-  const currentUser = await getCurrentUser();
-  if (!currentUser) {
-    throw new Error('Unauthorized');
-  }
-
-  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
+export const getUsageRecords = withAuth(async (_user, { tenant }, filter?: IUsageFilter): Promise<IUsageRecord[]> => {
+  const { knex } = await createTenantKnex();
 
   let query = knex('usage_tracking')
     .select(
@@ -341,20 +321,15 @@ export async function getUsageRecords(filter?: IUsageFilter): Promise<IUsageReco
   }
 
   return query.orderBy('usage_tracking.usage_date', 'desc');
-}
+});
 
 interface Client {
   client_id: string;
   client_name: string;
 }
 
-export async function getClients() {
-  const currentUser = await getCurrentUser();
-  if (!currentUser) {
-    throw new Error('Unauthorized');
-  }
-
-  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
+export const getClients = withAuth(async (_user, { tenant }) => {
+  const { knex } = await createTenantKnex();
 
   const clients = await knex('clients')
     .select('client_id', 'client_name')
@@ -365,4 +340,4 @@ export async function getClients() {
     value: client.client_id,
     label: client.client_name
   }));
-}
+});

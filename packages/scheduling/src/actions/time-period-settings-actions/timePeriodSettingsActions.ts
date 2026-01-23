@@ -8,31 +8,16 @@ import { validateData, validateArray } from '@alga-psa/core';
 import { timePeriodSettingsSchema } from '../../schemas/timeSheet.schemas';
 import { formatUtcDateNoTime } from '@alga-psa/core';
 import { Knex } from 'knex';
-import { getCurrentUser } from '@alga-psa/users/actions';
+import { withAuth } from '@alga-psa/auth';
 
 // Special value to indicate end of period
 const END_OF_PERIOD = 0;
 
-async function getTenantKnex(): Promise<{ knex: Knex; tenant: string }> {
-  const currentUser = await getCurrentUser();
-  if (!currentUser) {
-    throw new Error('No authenticated user found');
-  }
-
-  if (!currentUser.tenant) {
-    throw new Error('Tenant is required');
-  }
-
-  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
-  if (!tenant) {
-    throw new Error('SYSTEM_ERROR: Tenant context not found');
-  }
-
-  return { knex, tenant };
-}
-
-export async function getActiveTimePeriodSettings(): Promise<ITimePeriodSettings[]> {
-  const { knex: db, tenant } = await getTenantKnex();
+export const getActiveTimePeriodSettings = withAuth(async (
+  _user,
+  { tenant }
+): Promise<ITimePeriodSettings[]> => {
+  const { knex: db } = await createTenantKnex();
 
   const activeSettings = await withTransaction(db, async (trx: Knex.Transaction) => {
     return await trx<ITimePeriodSettings>('time_period_settings')
@@ -53,10 +38,14 @@ export async function getActiveTimePeriodSettings(): Promise<ITimePeriodSettings
   });
 
   return validateArray(timePeriodSettingsSchema, activeSettings) as ITimePeriodSettings[];
-}
+});
 
-export async function updateTimePeriodSettings(settings: ITimePeriodSettings): Promise<void> {
-  const { knex: db, tenant } = await getTenantKnex();
+export const updateTimePeriodSettings = withAuth(async (
+  _user,
+  { tenant },
+  settings: ITimePeriodSettings
+): Promise<void> => {
+  const { knex: db } = await createTenantKnex();
 
   // Validate input settings
   const validatedSettings = validateData(timePeriodSettingsSchema, {
@@ -89,10 +78,14 @@ export async function updateTimePeriodSettings(settings: ITimePeriodSettings): P
         updated_at: validatedSettings.updated_at,
       });
   });
-}
+});
 
-export async function createTimePeriodSettings(settings: Partial<ITimePeriodSettings>): Promise<ITimePeriodSettings> {
-  const { knex: db, tenant } = await getTenantKnex();
+export const createTimePeriodSettings = withAuth(async (
+  _user,
+  { tenant },
+  settings: Partial<ITimePeriodSettings>
+): Promise<ITimePeriodSettings> => {
+  const { knex: db } = await createTenantKnex();
 
   const now = formatISO(new Date());
   const newSettings = {
@@ -144,10 +137,14 @@ export async function createTimePeriodSettings(settings: Partial<ITimePeriodSett
 
   // Now validate the complete record with the schema
   return validateData(timePeriodSettingsSchema, formattedSetting) as ITimePeriodSettings;
-}
+});
 
-export async function deleteTimePeriodSettings(settingId: string): Promise<void> {
-  const { knex: db, tenant } = await getTenantKnex();
+export const deleteTimePeriodSettings = withAuth(async (
+  _user,
+  { tenant },
+  settingId: string
+): Promise<void> => {
+  const { knex: db } = await createTenantKnex();
 
   await withTransaction(db, async (trx: Knex.Transaction) => {
     await trx('time_period_settings')
@@ -155,7 +152,7 @@ export async function deleteTimePeriodSettings(settingId: string): Promise<void>
       .andWhere('tenant', tenant)
       .delete();
   });
-}
+});
 
 function getEndOfPeriodDay(period: ITimePeriodSettings, month?: number): number {
   if (period.frequency_unit === 'week') {
