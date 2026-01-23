@@ -43,6 +43,10 @@ import { TicketModelAnalyticsTracker } from '../lib/adapters/TicketModelAnalytic
 import { calculateItilPriority } from '@alga-psa/tickets/lib/itilUtils';
 import { buildTicketTransitionWorkflowEvents } from '../lib/workflowTicketTransitionEvents';
 import { buildTicketCommunicationWorkflowEvents } from '../lib/workflowTicketCommunicationEvents';
+import {
+  buildTicketResolutionSlaStageCompletionEvent,
+  buildTicketResolutionSlaStageEnteredEvent,
+} from '../lib/workflowTicketSlaStageEvents';
 
 // Email event channel constant - inlined to avoid circular dependency with notifications
 // Must match the value in @alga-psa/notifications/emailChannel
@@ -170,6 +174,27 @@ export async function createTicketFromAsset(data: CreateTicketFromAssetData): Pr
 
             if (!fullTicket) {
                 throw new Error('Failed to retrieve created ticket');
+            }
+
+            const enteredSlaEvent = buildTicketResolutionSlaStageEnteredEvent({
+              tenantId: tenant,
+              ticketId: ticketResult.ticket_id,
+              itilPriorityLevel: fullTicket.itil_priority_level,
+              enteredAt: fullTicket.entered_at,
+            });
+            if (enteredSlaEvent) {
+              await publishWorkflowEvent({
+                eventType: enteredSlaEvent.eventType,
+                payload: enteredSlaEvent.payload,
+                ctx: {
+                  tenantId: tenant,
+                  actor: { actorType: 'USER' as const, actorUserId: currentUser.user_id },
+                  occurredAt: (fullTicket.entered_at instanceof Date
+                    ? fullTicket.entered_at.toISOString()
+                    : fullTicket.entered_at) || new Date().toISOString(),
+                },
+                idempotencyKey: enteredSlaEvent.idempotencyKey,
+              });
             }
 
             return convertDates(fullTicket);
@@ -306,6 +331,27 @@ export async function addTicket(data: FormData, user: IUser): Promise<ITicket|un
 
       if (!fullTicket) {
         throw new Error('Failed to retrieve created ticket');
+      }
+
+      const enteredSlaEvent = buildTicketResolutionSlaStageEnteredEvent({
+        tenantId: tenant,
+        ticketId: ticketResult.ticket_id,
+        itilPriorityLevel: fullTicket.itil_priority_level,
+        enteredAt: fullTicket.entered_at,
+      });
+      if (enteredSlaEvent) {
+        await publishWorkflowEvent({
+          eventType: enteredSlaEvent.eventType,
+          payload: enteredSlaEvent.payload,
+          ctx: {
+            tenantId: tenant,
+            actor: { actorType: 'USER' as const, actorUserId: user.user_id },
+            occurredAt: (fullTicket.entered_at instanceof Date
+              ? fullTicket.entered_at.toISOString()
+              : fullTicket.entered_at) || new Date().toISOString(),
+          },
+          idempotencyKey: enteredSlaEvent.idempotencyKey,
+        });
       }
 
       // Server-specific: Revalidate cache paths
@@ -706,6 +752,22 @@ export async function updateTicket(id: string, data: Partial<ITicket>, user: IUs
           fromState: currentTicket.status_id,
           toState: updatedTicket.status_id,
         });
+
+        const slaCompletionEvent = buildTicketResolutionSlaStageCompletionEvent({
+          tenantId: tenant,
+          ticketId: id,
+          itilPriorityLevel: currentTicket.itil_priority_level,
+          enteredAt: currentTicket.entered_at,
+          closedAt: occurredAt,
+        });
+        if (slaCompletionEvent) {
+          await publishWorkflowEvent({
+            eventType: slaCompletionEvent.eventType,
+            payload: slaCompletionEvent.payload,
+            ctx: workflowCtx,
+            idempotencyKey: slaCompletionEvent.idempotencyKey,
+          });
+        }
 
         // Track ticket resolved analytics
         captureAnalytics('ticket_resolved', {

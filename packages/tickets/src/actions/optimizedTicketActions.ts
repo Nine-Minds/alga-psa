@@ -40,6 +40,7 @@ import { calculateItilPriority } from '@alga-psa/tickets/lib/itilUtils';
 import { getCurrentUser } from '@alga-psa/auth/getCurrentUser';
 import { buildTicketTransitionWorkflowEvents } from '../lib/workflowTicketTransitionEvents';
 import { buildTicketCommunicationWorkflowEvents } from '../lib/workflowTicketCommunicationEvents';
+import { buildTicketResolutionSlaStageCompletionEvent } from '../lib/workflowTicketSlaStageEvents';
 
 // Email event channel constant - inlined to avoid circular dependency with notifications
 // Must match the value in @alga-psa/notifications/emailChannel
@@ -1466,6 +1467,22 @@ export async function updateTicketWithCache(id: string, data: Partial<ITicket>, 
         fromState: currentTicket.status_id,
         toState: updatedTicket.status_id,
       });
+
+      const slaCompletionEvent = buildTicketResolutionSlaStageCompletionEvent({
+        tenantId: tenant,
+        ticketId: id,
+        itilPriorityLevel: currentTicket.itil_priority_level,
+        enteredAt: currentTicket.entered_at,
+        closedAt: occurredAt,
+      });
+      if (slaCompletionEvent) {
+        await publishWorkflowEvent({
+          eventType: slaCompletionEvent.eventType,
+          payload: slaCompletionEvent.payload,
+          ctx: workflowCtx,
+          idempotencyKey: slaCompletionEvent.idempotencyKey,
+        });
+      }
     } else if (updateData.assigned_to && updateData.assigned_to !== currentTicket.assigned_to) {
       // Ticket was assigned - userId should be the user being assigned, not the one making the update
       await publishWorkflowEvent({

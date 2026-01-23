@@ -165,9 +165,22 @@ Implication: we should standardize on `@alga-psa/event-bus/publishers` helpers f
   - Added unit coverage that validates the built payload against `payload.TicketTimeEntryAdded.v1` via `buildWorkflowPayload(...)`:
     - `server/src/test/unit/timeEntryWorkflowEvents.test.ts`
 
+- 2026-01-23: Completed `F014` (ticket SLA stage emission):
+  - Implemented ITIL-backed “resolution SLA” stage events when `itil_priority_level` is present:
+    - `TICKET_SLA_STAGE_ENTERED` emitted on ticket create in:
+      - `packages/tickets/src/actions/ticketActions.ts` (`addTicket`, `createTicketFromAsset`)
+    - `TICKET_SLA_STAGE_MET` / `TICKET_SLA_STAGE_BREACHED` emitted on ticket close in:
+      - `packages/tickets/src/actions/ticketActions.ts` (`updateTicket`)
+      - `packages/tickets/src/actions/optimizedTicketActions.ts` (`updateTicketWithCache`)
+  - Added pure builders and idempotency keys:
+    - `packages/tickets/src/lib/workflowTicketSlaStageEvents.ts`
+  - Notes/constraints:
+    - Stage emitted is currently `resolution` only (no first-class response/custom stage model in product yet).
+    - Uses `tenantId` as a stable `slaPolicyId` placeholder until a real SLA policy model exists.
+
 ## Next Up
 
-- `F014`: emit ticket SLA stage events (`TICKET_SLA_STAGE_*`) when SLA module is enabled.
+- `F015`: emit ticket approval events (`TICKET_APPROVAL_*`) when approvals exist/enabled.
 
 ## Suggested Phasing (to reduce risk)
 
