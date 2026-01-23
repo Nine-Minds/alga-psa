@@ -122,7 +122,7 @@
   {
     "id": "F021",
     "description": "Parse SSE chunks in Chat.tsx and append tokens to message state incrementally",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Streaming Implementation"]
   },
   {

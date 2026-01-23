@@ -194,7 +194,16 @@ const mapMessagesFromProps = (records: any[]): ChatCompletionMessage[] =>
 
 type StreamEventPayload = { content?: unknown; done?: unknown };
 
-async function readAssistantContentFromSse(response: Response): Promise<string> {
+type SseReadHandlers = {
+  shouldContinue?: () => boolean;
+  onToken?: (token: string, accumulated: string) => void;
+  onDone?: (accumulated: string) => void;
+};
+
+async function readAssistantContentFromSse(
+  response: Response,
+  handlers: SseReadHandlers = {},
+): Promise<string> {
   if (!response.body) {
     throw new Error('Streaming response missing body');
   }
@@ -224,8 +233,10 @@ async function readAssistantContentFromSse(response: Response): Promise<string> 
 
       if (typeof payload.content === 'string') {
         content += payload.content;
+        handlers.onToken?.(payload.content, content);
       }
       if (payload.done === true) {
+        handlers.onDone?.(content);
         return true;
       }
     }
@@ -234,6 +245,11 @@ async function readAssistantContentFromSse(response: Response): Promise<string> 
   };
 
   while (true) {
+    if (handlers.shouldContinue && !handlers.shouldContinue()) {
+      await reader.cancel();
+      break;
+    }
+
     const { value, done } = await reader.read();
     if (done) {
       break;
@@ -313,6 +329,7 @@ export const Chat: React.FC<ChatProps> = ({
   const typingControllerRef = useRef<AbortController | null>(null);
   const messageOrderRef = useRef<number>(0);
   const streamingTextRef = useRef<string | null>(null);
+  const generationIdRef = useRef<number>(0);
 
   const resolveMessageId = (candidate?: string | null) =>
     candidate ?? (typeof crypto !== 'undefined' && 'randomUUID' in crypto
@@ -524,6 +541,7 @@ export const Chat: React.FC<ChatProps> = ({
   };
 
   const handleStop = () => {
+    generationIdRef.current += 1;
     typingControllerRef.current?.abort();
     if (streamingTextRef.current) {
       setIncomingMessage('');
@@ -633,7 +651,42 @@ export const Chat: React.FC<ChatProps> = ({
         throw new Error(errorMessage);
       }
 
-      const finalAssistantContent = await readAssistantContentFromSse(response);
+      const generationId = generationIdRef.current + 1;
+      generationIdRef.current = generationId;
+
+      streamingTextRef.current = '';
+      let renderScheduled = false;
+      let sawToken = false;
+
+      const scheduleIncomingRender = () => {
+        if (renderScheduled) {
+          return;
+        }
+        renderScheduled = true;
+        requestAnimationFrame(() => {
+          renderScheduled = false;
+          if (generationIdRef.current !== generationId) {
+            return;
+          }
+          setIncomingMessage(streamingTextRef.current ?? '');
+        });
+      };
+
+      const finalAssistantContent = await readAssistantContentFromSse(response, {
+        shouldContinue: () => generationIdRef.current === generationId,
+        onToken: (_token, accumulated) => {
+          streamingTextRef.current = accumulated;
+          if (!sawToken) {
+            sawToken = true;
+            setIsFunction(false);
+          }
+          scheduleIncomingRender();
+        },
+      });
+
+      if (generationIdRef.current !== generationId) {
+        return;
+      }
 
       const assistantOrder = messageOrderRef.current + 1;
       messageOrderRef.current = assistantOrder;
@@ -651,48 +704,12 @@ export const Chat: React.FC<ChatProps> = ({
         },
       ]);
 
-      typingControllerRef.current?.abort();
-      const controller = new AbortController();
-      typingControllerRef.current = controller;
-
       setFullReasoning(null);
       setIsFunction(false);
       setIncomingMessage('');
-      streamingTextRef.current = finalAssistantContent;
-
-      const fullText = finalAssistantContent;
-      const totalSteps = Math.max(12, Math.min(140, Math.ceil(fullText.length / 14)));
-      const stepSize = Math.max(1, Math.ceil(fullText.length / totalSteps));
-
-      if (fullText.length === 0) {
-        setIncomingMessage('');
-        setFullMessage('');
-        setGeneratingResponse(false);
-        streamingTextRef.current = null;
-      } else {
-        let revealed = 0;
-        const streamStep = () => {
-          if (controller.signal.aborted) {
-            return;
-          }
-
-          revealed = Math.min(fullText.length, revealed + stepSize);
-          const next = fullText.slice(0, revealed);
-          setIncomingMessage(next);
-
-          if (revealed >= fullText.length) {
-            setIncomingMessage('');
-            setFullMessage(fullText);
-            setGeneratingResponse(false);
-            streamingTextRef.current = null;
-            return;
-          }
-
-          requestAnimationFrame(streamStep);
-        };
-
-        requestAnimationFrame(streamStep);
-      }
+      streamingTextRef.current = null;
+      setFullMessage(finalAssistantContent);
+      setGeneratingResponse(false);
       setPendingFunctionStatus('idle');
       setPendingFunctionAction('none');
       setPendingFunction(null);

@@ -146,4 +146,11 @@ curl -X POST localhost:3000/api/chat/stream/chat \
   - Reads SSE response via `response.body.getReader()` and reconstructs final assistant content from `data: {content, done}` events
   - Note: UI still uses existing “typing” reveal once streaming completes; incremental token display is handled in the next feature item.
 - Validation: `npx eslint ee/server/src/components/chat/Chat.tsx` (warnings present in file; no errors)
-- Next feature item: F021 Parse SSE chunks in Chat.tsx and append tokens to message state incrementally
+- Implemented true incremental token rendering in Chat.tsx:
+  - `readAssistantContentFromSse()` now supports per-token callbacks
+  - `handleSend()` updates `incomingMessage` as tokens arrive (throttled to animation frames) and removes the simulated typewriter reveal
+  - Added `generationIdRef` guard so Stop invalidates the active generation and prevents late stream updates/persistence from racing in (does not abort the network request yet)
+  - File: `ee/server/src/components/chat/Chat.tsx`
+- Validation: `npx eslint ee/server/src/components/chat/Chat.tsx` (warnings present in file; no errors)
+- Validation: `npm -w sebastian-ee run typecheck` still fails due to pre-existing TS2307 imports in `ee/server/src/components/chat/QuickAskOverlay.tsx` (unrelated to F021)
+- Next feature item: F022 Support AbortController in streaming fetch to enable stop/cancel mid-generation
