@@ -219,19 +219,19 @@ export async function listEventCatalogOptionsV2Action(input: unknown) {
   });
 
   if (parsed.source !== 'all') {
-    events = events.filter((e) => e.source === parsed.source);
+    events = events.filter((e: WorkflowEventCatalogOptionV2) => e.source === parsed.source);
   }
   if (parsed.status !== 'all') {
-    events = events.filter((e) => e.status === parsed.status);
+    events = events.filter((e: WorkflowEventCatalogOptionV2) => e.status === parsed.status);
   }
   if (searchLower) {
-    events = events.filter((e) => {
+    events = events.filter((e: WorkflowEventCatalogOptionV2) => {
       const hay = `${e.name} ${e.event_type} ${e.description ?? ''} ${e.category ?? ''}`.toLowerCase();
       return hay.includes(searchLower);
     });
   }
 
-  events.sort((a, b) => {
+  events.sort((a: WorkflowEventCatalogOptionV2, b: WorkflowEventCatalogOptionV2) => {
     const ca = (a.category ?? '').toLowerCase();
     const cb = (b.category ?? '').toLowerCase();
     if (ca !== cb) return ca.localeCompare(cb);
@@ -393,7 +393,7 @@ export async function listEventCatalogWithMetricsAction(input: unknown) {
     const eventTypes = filtered.map((e: any) => String(e.event_type));
     const maps = await computeMapsForEventTypes(eventTypes);
     const enriched = filtered.map((entry: any) => buildEntry(entry, maps));
-    enriched.sort((a, b) => {
+    enriched.sort((a: WorkflowEventCatalogEntryV2, b: WorkflowEventCatalogEntryV2) => {
       const ea = a.metrics_7d.executions ?? 0;
       const eb = b.metrics_7d.executions ?? 0;
       if (eb !== ea) return eb - ea;
@@ -717,7 +717,7 @@ export async function getEventMetricsAction(input: unknown) {
     .where({ tenant_id: tenant, event_name: parsed.eventType })
     .where('created_at', '>=', range.from)
     .where('created_at', '<=', range.to)
-    .first();
+    .first() as unknown as { total: number; matched: number; unmatched: number; error: number } | undefined;
 
   const seriesRows = await knex('workflow_runtime_events')
     .select(knex.raw("date_trunc('day', created_at) as day"))
@@ -737,7 +737,7 @@ export async function getEventMetricsAction(input: unknown) {
     .where({ tenant_id: tenant, event_type: parsed.eventType })
     .where('started_at', '>=', range.from)
     .where('started_at', '<=', range.to)
-    .first();
+    .first() as unknown as { total: number; succeeded: number; avg_ms: number | null } | undefined;
 
   const recentRows = await knex('workflow_runtime_events')
     .select(

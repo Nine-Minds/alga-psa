@@ -1219,8 +1219,8 @@ test.describe('Expression Autocomplete - Selection Behavior', () => {
       await expect(exprField).toHaveValue('payload.providerId');
 
       const cursorPosition = await exprField.evaluate((element) => ({
-        start: element.selectionStart,
-        end: element.selectionEnd
+        start: (element as HTMLTextAreaElement).selectionStart,
+        end: (element as HTMLTextAreaElement).selectionEnd
       }));
 
       expect(cursorPosition.start).toBe('payload.providerId'.length);

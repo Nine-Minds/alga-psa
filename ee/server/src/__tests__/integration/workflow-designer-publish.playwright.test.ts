@@ -54,11 +54,6 @@ async function applyWorkflowOverrides(page: Page, overrides: WorkflowPlaywrightO
   }, overrides);
 }
 
-async function setupDesigner(page: Page): Promise<{
-  db: Knex;
-  tenantData: TenantTestData;
-  workflowPage: WorkflowDesignerPage;
-}>;
 async function setupDesigner(
   page: Page,
   overrides?: WorkflowPlaywrightOverrides

@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
-import { ColumnDefinition } from '@alga-psa/types/dataTable.interfaces';
+import type { ColumnDefinition } from '@alga-psa/types';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Badge, BadgeVariant } from '@alga-psa/ui/components/Badge';
 import { SearchInput } from '@alga-psa/ui/components/SearchInput';

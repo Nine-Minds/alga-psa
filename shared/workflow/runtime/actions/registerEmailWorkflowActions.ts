@@ -675,7 +675,7 @@ export function registerEmailWorkflowActionsV2(): void {
             ticketId: input.ticketId,
             tenant: input.tenant,
             providerId: input.providerId,
-            attachmentData: attachment
+            attachmentData: attachment as { id: string; name: string; contentType: string; size: number; contentId?: string }
           }, ctx.tenantId ?? '');
           processed += 1;
         } catch (error) {

@@ -13,9 +13,9 @@ import React, { useCallback, useMemo } from 'react';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
 import {
   ExpressionAutocomplete,
-  buildSuggestionsFromContext,
-  type AutocompleteSuggestion
+  buildSuggestionsFromContext
 } from './ExpressionAutocomplete';
+import type { AutocompleteSuggestion } from './expressionAutocompleteUtils';
 import { useExpressionAutocomplete } from './useExpressionAutocomplete';
 import type { SelectOption } from '@alga-psa/ui/components/CustomSelect';
 

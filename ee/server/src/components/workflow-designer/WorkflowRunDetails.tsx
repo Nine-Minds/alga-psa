@@ -139,7 +139,7 @@ type WorkflowAuditLogResponse = {
 };
 
 type WorkflowDefinitionVersionRecord = {
-  definition_json: WorkflowDefinition;
+  definition_json: Record<string, unknown> | null;
 };
 
 const STATUS_STYLES: Record<string, string> = {
@@ -340,7 +340,7 @@ const WorkflowRunDetails: React.FC<WorkflowRunDetailsProps> = ({
             workflowId: runData.workflow_id,
             version: runData.workflow_version
           })) as WorkflowDefinitionVersionRecord;
-          definitionJson = definitionRecord.definition_json ?? null;
+          definitionJson = (definitionRecord.definition_json as WorkflowDefinition) ?? null;
         }
       } catch {
         definitionJson = null;

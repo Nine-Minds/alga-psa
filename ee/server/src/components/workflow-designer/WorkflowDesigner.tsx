@@ -4441,7 +4441,7 @@ const Pipe: React.FC<{
                       onPipeHover={onPipeHover}
                       onInsertStep={onInsertStep}
                       onInsertAtPath={onInsertAtPath}
-                      dragHandleProps={dragProvided.dragHandleProps}
+                      dragHandleProps={dragProvided.dragHandleProps ?? undefined}
                       nodeRegistry={nodeRegistry}
                       errorCount={errorMap.get(step.id)?.length ?? 0}
                       errorMap={errorMap}
@@ -5189,7 +5189,7 @@ const StepConfigPanel: React.FC<{
 const PaletteTooltip: React.FC<{
   label: string;
   description: string;
-  triggerRef: React.RefObject<HTMLDivElement>;
+  triggerRef: React.RefObject<HTMLDivElement | null>;
   isHovered: boolean;
 }> = ({ label, description, triggerRef, isHovered }) => {
   const [visible, setVisible] = useState(false);

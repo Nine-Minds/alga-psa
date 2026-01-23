@@ -732,7 +732,7 @@ const WorkflowRunDialog: React.FC<WorkflowRunDialogProps> = ({
 
   const updateFormValue = (updater: (prev: unknown) => unknown) => {
     setPayloadTouched(true);
-    setFormValue((prev) => updater(prev));
+    setFormValue((prev: unknown) => updater(prev));
   };
 
   const renderField = (

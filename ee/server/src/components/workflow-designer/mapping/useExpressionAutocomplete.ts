@@ -63,7 +63,7 @@ export interface ExpressionAutocompleteHandlers {
   /** Handle blur */
   handleBlur: () => void;
   /** Get ref to attach to textarea */
-  textareaRef: React.RefObject<HTMLTextAreaElement>;
+  textareaRef: React.RefObject<HTMLTextAreaElement | null>;
 }
 
 /**

@@ -485,7 +485,7 @@ export function diagnosticsToMarkers(
     const endPos = model.getPositionAt(d.endOffset);
 
     return {
-      severity: d.severity as monaco.MarkerSeverity,
+      severity: d.severity as unknown as monaco.MarkerSeverity,
       message: d.message,
       startLineNumber: startPos.lineNumber,
       startColumn: startPos.column,

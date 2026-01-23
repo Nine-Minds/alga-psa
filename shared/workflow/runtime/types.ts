@@ -226,34 +226,29 @@ const stepSchemaInner = z.unknown().transform((val, ctx) => {
     return z.NEVER;
   }
 
-  let result: z.SafeParseReturnType<unknown, Step>;
+  const parseAndReturn = <T>(schema: z.ZodType<T>): Step | typeof z.NEVER => {
+    const result = schema.safeParse(val);
+    if (!result.success) {
+      result.error.issues.forEach(issue => ctx.addIssue(issue));
+      return z.NEVER;
+    }
+    return result.data as Step;
+  };
 
   switch (type) {
     case 'control.if':
-      result = ifBlockSchema.safeParse(val);
-      break;
+      return parseAndReturn(ifBlockSchema);
     case 'control.forEach':
-      result = forEachBlockSchema.safeParse(val);
-      break;
+      return parseAndReturn(forEachBlockSchema);
     case 'control.tryCatch':
-      result = tryCatchBlockSchema.safeParse(val);
-      break;
+      return parseAndReturn(tryCatchBlockSchema);
     case 'control.callWorkflow':
-      result = callWorkflowBlockSchema.safeParse(val);
-      break;
+      return parseAndReturn(callWorkflowBlockSchema);
     case 'control.return':
-      result = returnStepSchema.safeParse(val);
-      break;
+      return parseAndReturn(returnStepSchema);
     default:
-      result = nodeStepSchema.safeParse(val);
+      return parseAndReturn(nodeStepSchema);
   }
-
-  if (!result.success) {
-    result.error.issues.forEach(issue => ctx.addIssue(issue));
-    return z.NEVER;
-  }
-
-  return result.data;
 });
 
 export const stepSchema: z.ZodType<Step> = z.lazy(() => stepSchemaInner) as z.ZodType<Step>;
