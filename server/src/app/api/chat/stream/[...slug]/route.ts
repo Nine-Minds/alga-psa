@@ -28,6 +28,6 @@ export async function POST(
   }
 
   // Delegate to EE business logic
-  const { ChatStreamService } = await import('@product/chat/ee/entry');
+  const { ChatStreamService } = await import('@product/chat/entry');
   return ChatStreamService.handleChatStream(req);
 }

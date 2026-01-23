@@ -11,7 +11,7 @@ export async function cleanupAiSessionKeysHandler(): Promise<void> {
   }
 
   try {
-    const { TemporaryApiKeyService } = await import('@product/chat/ee/entry');
+    const { TemporaryApiKeyService } = await import('@product/chat/entry');
 
     if (!TemporaryApiKeyService || typeof TemporaryApiKeyService.cleanupExpiredAiKeys !== 'function') {
       logger.warn('[cleanupAiSessionKeysHandler] TemporaryApiKeyService unavailable; skipping cleanup');

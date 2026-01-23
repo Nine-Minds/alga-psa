@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import LicensePurchaseForm from '@/empty/components/licensing/LicensePurchaseForm';
+import LicensePurchaseForm from '@ee/components/licensing/LicensePurchaseForm';
 import { ArrowLeft } from 'lucide-react';
 import { Button } from '@alga-psa/ui/components/Button';
 import { useRouter } from 'next/navigation';

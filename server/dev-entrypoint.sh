@@ -13,17 +13,6 @@ mkdir -p "$NX_CACHE_DIRECTORY" "$NX_WORKSPACE_DATA_DIRECTORY" >/dev/null 2>&1 ||
 cd /app
 npx --no-install nx reset >/dev/null 2>&1 || true
 
-# If Enterprise Edition is enabled, overlay EE-only routes/libs into `server/src/*`.
-# This is required because Next.js file-system routing only picks up pages that exist under `server/src/app`.
-if [ "${NEXT_PUBLIC_EDITION:-community}" = "enterprise" ] || [ "${EDITION:-}" = "ee" ] || [ "${EDITION:-}" = "enterprise" ]; then
-  echo "[server-dev-entrypoint] Enterprise edition enabled; applying EE overlay"
-  if [ -x /app/scripts/build-enterprise.sh ]; then
-    /bin/bash /app/scripts/build-enterprise.sh
-  else
-    echo "[server-dev-entrypoint] WARN: /app/scripts/build-enterprise.sh not found; EE overlay skipped" >&2
-  fi
-fi
-
 DB_PASSWORD=""
 SECRET_FILE="/run/secrets/db_password_server"
 if [ -f "$SECRET_FILE" ]; then

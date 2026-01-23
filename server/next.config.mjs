@@ -236,7 +236,7 @@ const nextConfig = {
         : '@product/settings-extensions/oss/entry',
       '@product/chat/entry': isEE
         ? '@product/chat/ee/entry'
-        : './src/services/chatStreamService',
+        : '@product/chat/oss/entry',
       '@product/ext-proxy/handler': isEE
         ? '@product/ext-proxy/ee/handler'
         : '@product/ext-proxy/oss/handler',
