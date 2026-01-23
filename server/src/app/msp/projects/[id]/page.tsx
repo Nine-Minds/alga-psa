@@ -3,8 +3,8 @@
 import { getProjectMetadata, updateProject } from 'server/src/lib/actions/project-actions/projectActions';
 import ProjectInfo from 'server/src/components/projects/ProjectInfo';
 import ProjectDetail from 'server/src/components/projects/ProjectDetail';
-import { useEffect, useState } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useEffect, useState, useCallback } from 'react';
+import { useSearchParams, useRouter, usePathname } from 'next/navigation';
 import { IProject, IProjectPhase, IProjectTask, IProjectTicketLinkWithDetails, ProjectStatus } from 'server/src/interfaces/project.interfaces';
 import { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
 import { IClient } from 'server/src/interfaces/client.interfaces';
@@ -22,7 +22,10 @@ interface ProjectMetadata {
 
 export default function ProjectPage({ params }: { params: Promise<{ id: string }> }) {
   const searchParams = useSearchParams();
+  const router = useRouter();
+  const pathname = usePathname();
   const taskIdFromUrl = searchParams?.get('taskId') ?? null;
+  const phaseIdFromUrl = searchParams?.get('phaseId') ?? null;
   const [projectId, setProjectId] = useState<string | null>(null);
   const [projectMetadata, setProjectMetadata] = useState<ProjectMetadata | null>(null);
   const [projectTags, setProjectTags] = useState<ITag[]>([]);
@@ -94,6 +97,21 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
     setAllTagTexts(allTags);
   };
 
+  // Update URL when phase or task selection changes
+  const handleUrlUpdate = useCallback((phaseId: string | null, taskId: string | null) => {
+    const params = new URLSearchParams();
+    if (phaseId) {
+      params.set('phaseId', phaseId);
+    }
+    if (taskId) {
+      params.set('taskId', taskId);
+    }
+    const queryString = params.toString();
+    const newUrl = queryString ? `${pathname}?${queryString}` : pathname;
+    // Use replace to avoid adding to browser history for every phase click
+    router.replace(newUrl, { scroll: false });
+  }, [pathname, router]);
+
   if (!projectMetadata) {
     return <div>Loading...</div>;
   }
@@ -121,6 +139,8 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
         clients={projectMetadata.clients}
         onTagsUpdate={handleTagsUpdate}
         initialTaskId={taskIdFromUrl}
+        initialPhaseId={phaseIdFromUrl}
+        onUrlUpdate={handleUrlUpdate}
       />
     </div>
   );
