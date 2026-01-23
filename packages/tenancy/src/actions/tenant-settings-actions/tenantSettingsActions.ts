@@ -17,6 +17,10 @@ export interface TenantSettings {
   updated_at: Date;
 }
 
+export interface ExperimentalFeatures {
+  aiAssistant?: boolean;
+}
+
 export async function getTenantSettings(): Promise<TenantSettings | null> {
   try {
     const tenant = await getTenantForCurrentRequest();
@@ -38,6 +42,16 @@ export async function getTenantSettings(): Promise<TenantSettings | null> {
   } catch (error) {
     console.error('Error getting tenant settings:', error);
     return null;
+  }
+}
+
+export async function getExperimentalFeatures(): Promise<ExperimentalFeatures> {
+  try {
+    const settings = await getTenantSettings();
+    return settings?.settings?.experimentalFeatures || {};
+  } catch (error) {
+    console.error('Error getting experimental features:', error);
+    return {};
   }
 }
 

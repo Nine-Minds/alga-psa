@@ -1,0 +1,308 @@
+[
+  {
+    "id": "T001",
+    "description": "getExperimentalFeatures() returns empty object when no settings exist",
+    "implemented": false,
+    "featureIds": ["F001"]
+  },
+  {
+    "id": "T002",
+    "description": "getExperimentalFeatures() returns saved experimental features from tenant_settings",
+    "implemented": false,
+    "featureIds": ["F001"]
+  },
+  {
+    "id": "T003",
+    "description": "updateExperimentalFeatures() creates settings entry if none exists",
+    "implemented": false,
+    "featureIds": ["F002"]
+  },
+  {
+    "id": "T004",
+    "description": "updateExperimentalFeatures() merges with existing settings without overwriting other keys",
+    "implemented": false,
+    "featureIds": ["F002"]
+  },
+  {
+    "id": "T005",
+    "description": "updateExperimentalFeatures() requires settings:update permission",
+    "implemented": false,
+    "featureIds": ["F002"]
+  },
+  {
+    "id": "T006",
+    "description": "isExperimentalFeatureEnabled() returns false for unknown feature keys",
+    "implemented": false,
+    "featureIds": ["F003"]
+  },
+  {
+    "id": "T007",
+    "description": "isExperimentalFeatureEnabled('aiAssistant') returns false when not set",
+    "implemented": false,
+    "featureIds": ["F003", "F009"]
+  },
+  {
+    "id": "T008",
+    "description": "isExperimentalFeatureEnabled('aiAssistant') returns true when enabled",
+    "implemented": false,
+    "featureIds": ["F003"]
+  },
+  {
+    "id": "T009",
+    "description": "ExperimentalFeaturesSettings component renders list of features with toggles",
+    "implemented": false,
+    "featureIds": ["F004"]
+  },
+  {
+    "id": "T010",
+    "description": "ExperimentalFeaturesSettings loads current settings on mount",
+    "implemented": false,
+    "featureIds": ["F004"]
+  },
+  {
+    "id": "T011",
+    "description": "ExperimentalFeaturesSettings toggle updates local state",
+    "implemented": false,
+    "featureIds": ["F004", "F006"]
+  },
+  {
+    "id": "T012",
+    "description": "Experimental Features tab appears in Settings navigation",
+    "implemented": false,
+    "featureIds": ["F005"]
+  },
+  {
+    "id": "T013",
+    "description": "Experimental Features tab loads lazily",
+    "implemented": false,
+    "featureIds": ["F005"]
+  },
+  {
+    "id": "T014",
+    "description": "AI Assistant feature shows name 'AI Assistant' and description",
+    "implemented": false,
+    "featureIds": ["F006"]
+  },
+  {
+    "id": "T015",
+    "description": "AI Assistant toggle defaults to off",
+    "implemented": false,
+    "featureIds": ["F006", "F009"]
+  },
+  {
+    "id": "T016",
+    "description": "Warning banner displays experimental features disclaimer",
+    "implemented": false,
+    "featureIds": ["F007"]
+  },
+  {
+    "id": "T017",
+    "description": "Save button calls updateExperimentalFeatures() with current toggle states",
+    "implemented": false,
+    "featureIds": ["F008"]
+  },
+  {
+    "id": "T018",
+    "description": "Save button shows success feedback after saving",
+    "implemented": false,
+    "featureIds": ["F008"]
+  },
+  {
+    "id": "T019",
+    "description": "Quick Ask shortcut (⌘↑) is ignored when aiAssistant is disabled",
+    "implemented": false,
+    "featureIds": ["F010"]
+  },
+  {
+    "id": "T020",
+    "description": "Quick Ask shortcut (⌘↑) works when aiAssistant is enabled",
+    "implemented": false,
+    "featureIds": ["F010"]
+  },
+  {
+    "id": "T021",
+    "description": "QuickAskOverlay is not rendered when aiAssistant is disabled",
+    "implemented": false,
+    "featureIds": ["F011"]
+  },
+  {
+    "id": "T022",
+    "description": "QuickAskOverlay is rendered when aiAssistant is enabled",
+    "implemented": false,
+    "featureIds": ["F011"]
+  },
+  {
+    "id": "T023",
+    "description": "Sidebar Chat toggle (⌘L) is ignored when aiAssistant is disabled",
+    "implemented": false,
+    "featureIds": ["F012"]
+  },
+  {
+    "id": "T024",
+    "description": "RightSidebar chat is hidden when aiAssistant is disabled",
+    "implemented": false,
+    "featureIds": ["F012"]
+  },
+  {
+    "id": "T025",
+    "description": "Sidebar Chat works normally when aiAssistant is enabled",
+    "implemented": false,
+    "featureIds": ["F012"]
+  },
+  {
+    "id": "T026",
+    "description": "/api/chat/v1/completions returns 403 when aiAssistant is disabled",
+    "implemented": false,
+    "featureIds": ["F013"]
+  },
+  {
+    "id": "T027",
+    "description": "/api/chat/v1/completions returns 200 when aiAssistant is enabled",
+    "implemented": false,
+    "featureIds": ["F013"]
+  },
+  {
+    "id": "T028",
+    "description": "/api/chat/v1/execute returns 403 when aiAssistant is disabled",
+    "implemented": false,
+    "featureIds": ["F014"]
+  },
+  {
+    "id": "T029",
+    "description": "/api/chat/stream/* returns 403 when aiAssistant is disabled",
+    "implemented": false,
+    "featureIds": ["F015"]
+  },
+  {
+    "id": "T030",
+    "description": "/api/chat/v1/completions/stream endpoint exists and accepts POST",
+    "implemented": false,
+    "featureIds": ["F016"]
+  },
+  {
+    "id": "T031",
+    "description": "/api/chat/v1/completions/stream returns Content-Type: text/event-stream",
+    "implemented": false,
+    "featureIds": ["F016"]
+  },
+  {
+    "id": "T032",
+    "description": "Streaming endpoint passes stream: true to OpenRouter API",
+    "implemented": false,
+    "featureIds": ["F017"]
+  },
+  {
+    "id": "T033",
+    "description": "Streaming response chunks follow SSE format with data: prefix",
+    "implemented": false,
+    "featureIds": ["F018"]
+  },
+  {
+    "id": "T034",
+    "description": "Each SSE chunk contains JSON with content and done fields",
+    "implemented": false,
+    "featureIds": ["F018"]
+  },
+  {
+    "id": "T035",
+    "description": "Final SSE message has done: true",
+    "implemented": false,
+    "featureIds": ["F019"]
+  },
+  {
+    "id": "T036",
+    "description": "Chat.tsx uses streaming endpoint for new messages",
+    "implemented": false,
+    "featureIds": ["F020"]
+  },
+  {
+    "id": "T037",
+    "description": "Chat.tsx reads streaming response via getReader()",
+    "implemented": false,
+    "featureIds": ["F020"]
+  },
+  {
+    "id": "T038",
+    "description": "Tokens are appended to message display as they arrive",
+    "implemented": false,
+    "featureIds": ["F021"]
+  },
+  {
+    "id": "T039",
+    "description": "Message state updates incrementally during streaming",
+    "implemented": false,
+    "featureIds": ["F021"]
+  },
+  {
+    "id": "T040",
+    "description": "Stop button triggers AbortController.abort() during streaming",
+    "implemented": false,
+    "featureIds": ["F022"]
+  },
+  {
+    "id": "T041",
+    "description": "Aborting stream stops token display and ends generation state",
+    "implemented": false,
+    "featureIds": ["F022"]
+  },
+  {
+    "id": "T042",
+    "description": "Streaming indicator is visible while receiving tokens",
+    "implemented": false,
+    "featureIds": ["F023"]
+  },
+  {
+    "id": "T043",
+    "description": "Streaming indicator disappears when done: true received",
+    "implemented": false,
+    "featureIds": ["F023"]
+  },
+  {
+    "id": "T044",
+    "description": "Network error during streaming shows partial response",
+    "implemented": false,
+    "featureIds": ["F024"]
+  },
+  {
+    "id": "T045",
+    "description": "Stream interruption shows error indicator on message",
+    "implemented": false,
+    "featureIds": ["F024"]
+  },
+  {
+    "id": "T046",
+    "description": "Assistant message is persisted after streaming completes successfully",
+    "implemented": false,
+    "featureIds": ["F025"]
+  },
+  {
+    "id": "T047",
+    "description": "Persisted message content matches final streamed content",
+    "implemented": false,
+    "featureIds": ["F025"]
+  },
+  {
+    "id": "T048",
+    "description": "Quick Ask expanded view streams responses",
+    "implemented": false,
+    "featureIds": ["F026"]
+  },
+  {
+    "id": "T049",
+    "description": "Sidebar Chat streams responses",
+    "implemented": false,
+    "featureIds": ["F027"]
+  },
+  {
+    "id": "T050",
+    "description": "Enabling AI Assistant allows Quick Ask usage after page reload",
+    "implemented": false,
+    "featureIds": ["F010", "F011"]
+  },
+  {
+    "id": "T051",
+    "description": "Disabling AI Assistant prevents Quick Ask usage after page reload",
+    "implemented": false,
+    "featureIds": ["F010", "F011"]
+  }
+]
