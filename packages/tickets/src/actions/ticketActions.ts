@@ -28,7 +28,7 @@ import {
 } from '../schemas/ticket.schema';
 import { z } from 'zod';
 import { validateData } from '@alga-psa/validation';
-import { publishEvent } from '@alga-psa/event-bus/publishers';
+import { publishEvent, publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import { getEventBus } from '@alga-psa/event-bus';
 import {
   TicketCreatedEvent,
@@ -41,6 +41,7 @@ import { TicketModel, CreateTicketInput } from '@alga-psa/shared/models/ticketMo
 import { TicketModelEventPublisher } from '../lib/adapters/TicketModelEventPublisher';
 import { TicketModelAnalyticsTracker } from '../lib/adapters/TicketModelAnalyticsTracker';
 import { calculateItilPriority } from '@alga-psa/tickets/lib/itilUtils';
+import { buildTicketTransitionWorkflowEvents } from '../lib/workflowTicketTransitionEvents';
 
 // Email event channel constant - inlined to avoid circular dependency with notifications
 // Must match the value in @alga-psa/notifications/emailChannel
@@ -529,8 +530,8 @@ export async function updateTicket(id: string, data: Partial<ITicket>, user: IUs
             assigned_to: updateData.assigned_to
           });
         }
-        
-        return updated;
+
+        updatedTicket = updated;
       } else {
         // Regular update without changing assignment
         const [updated] = await trx('tickets')
@@ -554,6 +555,51 @@ export async function updateTicket(id: string, data: Partial<ITicket>, user: IUs
           })
           .first() :
         oldStatus;
+
+      // Emit expanded domain transition events for workflow v2 triggers.
+      // These events are additive and emitted in addition to legacy TICKET_* events.
+      const occurredAt = new Date().toISOString();
+      const workflowCtx = {
+        tenantId: tenant,
+        actor: { actorType: 'USER' as const, actorUserId: user.user_id },
+        occurredAt,
+      };
+
+      const transitionEvents = buildTicketTransitionWorkflowEvents({
+        before: {
+          ticketId: id,
+          statusId: currentTicket.status_id,
+          priorityId: currentTicket.priority_id,
+          assignedTo: currentTicket.assigned_to,
+          boardId: currentTicket.board_id,
+          escalated: currentTicket.escalated,
+        },
+        after: {
+          ticketId: id,
+          statusId: updatedTicket.status_id,
+          priorityId: updatedTicket.priority_id,
+          assignedTo: updatedTicket.assigned_to,
+          boardId: updatedTicket.board_id,
+          escalated: updatedTicket.escalated,
+        },
+        ctx: {
+          occurredAt,
+          actorUserId: user.user_id,
+          previousStatusIsClosed: !!oldStatus?.is_closed,
+          newStatusIsClosed: !!newStatus?.is_closed,
+        },
+      });
+
+      for (const ev of transitionEvents) {
+        await publishWorkflowEvent({
+          eventType: ev.eventType,
+          payload: ev.payload,
+          ctx: workflowCtx,
+          eventName: ev.workflow?.eventName,
+          fromState: ev.workflow?.fromState,
+          toState: ev.workflow?.toState,
+        });
+      }
 
       // Build structured changes object with old/new values
       const structuredChanges: Record<string, any> = {};
@@ -645,14 +691,19 @@ export async function updateTicket(id: string, data: Partial<ITicket>, user: IUs
       // Publish appropriate event based on the update
       if (newStatus?.is_closed && !oldStatus?.is_closed) {
         // Ticket was closed
-        await publishEvent({
+        await publishWorkflowEvent({
           eventType: 'TICKET_CLOSED',
           payload: {
-            tenantId: tenant,
             ticketId: id,
             userId: user.user_id,
-            changes: structuredChanges
-          }
+            closedByUserId: user.user_id,
+            closedAt: occurredAt,
+            changes: structuredChanges,
+          },
+          ctx: workflowCtx,
+          eventName: 'Ticket Closed',
+          fromState: currentTicket.status_id,
+          toState: updatedTicket.status_id,
         });
 
         // Track ticket resolved analytics
@@ -665,15 +716,21 @@ export async function updateTicket(id: string, data: Partial<ITicket>, user: IUs
         }, user.user_id);
       } else if (updateData.assigned_to && updateData.assigned_to !== currentTicket.assigned_to) {
         // Ticket was assigned - userId should be the user being assigned, not the one making the update
-        await publishEvent({
+        await publishWorkflowEvent({
           eventType: 'TICKET_ASSIGNED',
           payload: {
-            tenantId: tenant,
             ticketId: id,
-            userId: updateData.assigned_to,  // The user being assigned to the ticket
-            assignedByUserId: user.user_id,  // The user who performed the assignment
-            changes: structuredChanges
-          }
+            userId: updateData.assigned_to, // Legacy: assigned user
+            assignedByUserId: user.user_id,
+            previousAssigneeId: currentTicket.assigned_to ?? undefined,
+            previousAssigneeType: currentTicket.assigned_to ? 'user' : undefined,
+            newAssigneeId: updateData.assigned_to,
+            newAssigneeType: 'user',
+            assignedAt: occurredAt,
+            changes: structuredChanges,
+          },
+          ctx: workflowCtx,
+          eventName: 'Ticket Assigned',
         });
 
         // Track ticket assignment analytics
@@ -684,14 +741,16 @@ export async function updateTicket(id: string, data: Partial<ITicket>, user: IUs
         }, user.user_id);
       } else {
         // Regular update
-        await publishEvent({
+        await publishWorkflowEvent({
           eventType: 'TICKET_UPDATED',
           payload: {
-            tenantId: tenant,
             ticketId: id,
             userId: user.user_id,
-            changes: structuredChanges
-          }
+            updatedByUserId: user.user_id,
+            changes: structuredChanges,
+          },
+          ctx: workflowCtx,
+          eventName: 'Ticket Updated',
         });
       }
       

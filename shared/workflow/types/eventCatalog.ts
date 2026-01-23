@@ -1,61 +1,11 @@
-import { z } from 'zod';
-
 /**
- * Event type enum copied from server/src/lib/eventBus/events.ts
- * This is duplicated here to avoid import issues between shared and server code
+ * Event type enum is sourced from the shared event bus schema so catalog types
+ * stay aligned with publish/ingest validation.
  */
-export const EventTypeEnum = z.enum([
-  'TICKET_CREATED',
-  'TICKET_UPDATED',
-  'TICKET_CLOSED',
-  'TICKET_ASSIGNED',
-  'TICKET_ADDITIONAL_AGENT_ASSIGNED',
-  'TICKET_COMMENT_ADDED',
-  'TICKET_COMMENT_UPDATED',
-  'TICKET_DELETED',
-  'TICKET_RESPONSE_STATE_CHANGED',
-  'PROJECT_CREATED',
-  'PROJECT_UPDATED',
-  'PROJECT_CLOSED',
-  'PROJECT_ASSIGNED',
-  'PROJECT_TASK_ASSIGNED',
-  'PROJECT_TASK_ADDITIONAL_AGENT_ASSIGNED',
-  'PROJECT_TASK_COMMENT_ADDED',
-  'TASK_COMMENT_ADDED',
-  'TASK_COMMENT_UPDATED',
-  'TIME_ENTRY_SUBMITTED',
-  'TIME_ENTRY_APPROVED',
-  'INVOICE_GENERATED',
-  'INVOICE_FINALIZED',
-  'CUSTOM_EVENT', // Added for test events
-  'INBOUND_EMAIL_RECEIVED', // Inbound email processing
-  'ACCOUNTING_EXPORT_COMPLETED',
-  'ACCOUNTING_EXPORT_FAILED',
-  'SCHEDULE_ENTRY_CREATED',
-  'SCHEDULE_ENTRY_UPDATED',
-  'SCHEDULE_ENTRY_DELETED',
-  'CALENDAR_SYNC_STARTED',
-  'CALENDAR_SYNC_COMPLETED',
-  'CALENDAR_SYNC_FAILED',
-  'CALENDAR_CONFLICT_DETECTED',
-  'MESSAGE_SENT',
-  'USER_MENTIONED_IN_DOCUMENT',
-  // RMM Integration events
-  'RMM_DEVICE_CREATED',
-  'RMM_DEVICE_UPDATED',
-  'RMM_DEVICE_DELETED',
-  'RMM_DEVICE_ONLINE',
-  'RMM_DEVICE_OFFLINE',
-  'RMM_ALERT_TRIGGERED',
-  'RMM_ALERT_RESOLVED',
-  'RMM_SYNC_STARTED',
-  'RMM_SYNC_COMPLETED',
-  'RMM_SYNC_FAILED',
-  'RMM_WEBHOOK_RECEIVED',
-  'UNKNOWN'
-]);
+import { z } from 'zod';
+import { EventTypeEnum, type EventType } from '../streams/eventBusSchema';
 
-export type EventType = z.infer<typeof EventTypeEnum>;
+export { EventTypeEnum, type EventType };
 
 /**
  * Interface for an event catalog entry

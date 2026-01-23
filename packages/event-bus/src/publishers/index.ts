@@ -1,6 +1,8 @@
 import logger from '@alga-psa/core/logger';
 import { Event } from '../events';
 import { getEventBus } from '../index';
+import { buildWorkflowPayload, type WorkflowEventPublishContext } from '@shared/workflow/streams/workflowEventPublishHelpers';
+import type { WorkflowPublishHooks } from '@shared/workflow/streams/eventBusSchema';
 
 // Email event channel constant - inlined to avoid circular dependency with notifications
 // Must match the value in @alga-psa/notifications/emailChannel
@@ -11,6 +13,7 @@ function getEmailEventChannel(): string {
 
 export interface PublishOptions {
   channel?: string;
+  workflow?: WorkflowPublishHooks;
 }
 
 const EMAIL_EVENT_TYPES = new Set<Event['eventType']>([
@@ -63,20 +66,20 @@ export async function publishEvent(
     const channel = options?.channel;
 
     // Always publish to the default global channel first (for workflows)
-    await getEventBus().publish(event);
+    await getEventBus().publish(event as any, { workflow: options?.workflow });
 
     // If this is an internal notification event, publish to the internal-notifications channel
     if (isInternalNotificationEvent && !channel) {
-      await getEventBus().publish(event, { channel: 'internal-notifications' });
+      await getEventBus().publish(event as any, { channel: 'internal-notifications', workflow: options?.workflow });
     }
 
     // If this is an email event type and no specific channel was provided,
     // also publish to the email channel for email notifications
     if (isEmailEvent && !channel) {
-      await getEventBus().publish(event, { channel: getEmailEventChannel() });
+      await getEventBus().publish(event as any, { channel: getEmailEventChannel(), workflow: options?.workflow });
     } else if (channel) {
       // If a specific channel was provided, publish to that channel as well
-      await getEventBus().publish(event, { channel });
+      await getEventBus().publish(event as any, { channel, workflow: options?.workflow });
     }
   } catch (error) {
     logger.error('[EventPublisher] Failed to publish event:', {
@@ -87,3 +90,27 @@ export async function publishEvent(
     throw error;
   }
 }
+
+export async function publishWorkflowEvent(params: {
+  eventType: Event['eventType'];
+  payload: Record<string, unknown>;
+  ctx: WorkflowEventPublishContext;
+  eventName?: string;
+  fromState?: string;
+  toState?: string;
+}, options?: Omit<PublishOptions, 'workflow'>): Promise<void> {
+  const payload = buildWorkflowPayload(params.payload, params.ctx);
+  const workflow: WorkflowPublishHooks = {
+    executionId: params.ctx.correlationId,
+    eventName: params.eventName,
+    fromState: params.fromState,
+    toState: params.toState,
+  };
+
+  await publishEvent(
+    { eventType: params.eventType, payload } as any,
+    { ...options, workflow }
+  );
+}
+
+export type { WorkflowActor, WorkflowEventPublishContext } from '@shared/workflow/streams/workflowEventPublishHelpers';
