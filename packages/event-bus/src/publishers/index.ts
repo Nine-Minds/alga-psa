@@ -95,13 +95,15 @@ export async function publishWorkflowEvent(params: {
   eventType: Event['eventType'];
   payload: Record<string, unknown>;
   ctx: WorkflowEventPublishContext;
+  idempotencyKey?: string;
   eventName?: string;
   fromState?: string;
   toState?: string;
 }, options?: Omit<PublishOptions, 'workflow'>): Promise<void> {
-  const payload = buildWorkflowPayload(params.payload, params.ctx);
+  const ctx = params.idempotencyKey ? { ...params.ctx, idempotencyKey: params.idempotencyKey } : params.ctx;
+  const payload = buildWorkflowPayload(params.payload, ctx);
   const workflow: WorkflowPublishHooks = {
-    executionId: params.ctx.correlationId,
+    executionId: ctx.correlationId,
     eventName: params.eventName,
     fromState: params.fromState,
     toState: params.toState,

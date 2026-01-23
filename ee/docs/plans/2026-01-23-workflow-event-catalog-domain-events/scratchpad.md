@@ -278,9 +278,22 @@ Implication: we should standardize on `@alga-psa/event-bus/publishers` helpers f
   - Decision: treat `PROJECT_APPROVAL_*` events as **catalog-only** (mirrors `TICKET_APPROVAL_*` rationale) until a real project approval feature exists.
   - Updated `ee/docs/plans/2026-01-23-workflow-event-catalog-domain-events/PRD.md` Open Questions #4 to reflect `PROJECT_APPROVAL_*` catalog-only status.
 
+- 2026-01-23: Completed `F040` (invoice lifecycle emission):
+  - Added billing workflow payload builders:
+    - `server/src/lib/api/services/invoiceWorkflowEvents.ts`
+  - Emitted invoice lifecycle workflow v2 domain events from real invoice operations:
+    - `server/src/lib/api/services/InvoiceService.ts` now publishes:
+      - `INVOICE_SENT` on `sendInvoice` (delivery method inferred; includes `clientId`, `sentByUserId`, `sentAt`)
+      - `INVOICE_STATUS_CHANGED` on all invoice status transitions across `update`, `finalizeInvoice`, `sendInvoice`, `recordPayment`, `applyCredit`, `recordRefund`, `bulkUpdateStatus`, and soft-cancel in `delete`
+      - `INVOICE_DUE_DATE_CHANGED` from `update` when due date changes
+      - `INVOICE_OVERDUE` when status transitions into `overdue` (amount due computed from payments + credits)
+      - `INVOICE_WRITTEN_OFF` when transitioning `overdue` → `cancelled` with a remaining balance (maps “write off” onto today’s available status model)
+  - Added schema-compat unit coverage:
+    - `server/src/test/unit/invoiceWorkflowEvents.test.ts`
+
 ## Next Up
 
-- `F040`: emit billing invoice lifecycle events (INVOICE_SENT, INVOICE_STATUS_CHANGED, INVOICE_DUE_DATE_CHANGED, INVOICE_OVERDUE, INVOICE_WRITTEN_OFF).
+- `F041`: emit payment events (PAYMENT_RECORDED, PAYMENT_APPLIED, PAYMENT_FAILED, PAYMENT_REFUNDED).
 
 ## Suggested Phasing (to reduce risk)
 
