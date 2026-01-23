@@ -22,28 +22,9 @@ import { Temporal } from '@js-temporal/polyfill';
 import { createTenantKnex, withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import logger from '@alga-psa/core/logger';
-import { getSession } from '@alga-psa/auth';
+import { getSession, withAuth } from '@alga-psa/auth';
 import { resolveUserTimeZone } from '@alga-psa/db';
 import { v4 as uuidv4 } from 'uuid';
-import { getCurrentUser } from '@alga-psa/users/actions';
-
-// Helper to get tenant with non-null assertion after validation
-async function getTenantKnex(): Promise<{ knex: Knex; tenant: string }> {
-  const currentUser = await getCurrentUser();
-  if (!currentUser) {
-    throw new Error('No authenticated user found');
-  }
-
-  if (!currentUser.tenant) {
-    throw new Error('Tenant is required');
-  }
-
-  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
-  if (!tenant) {
-    throw new Error('SYSTEM_ERROR: Tenant context not found');
-  }
-  return { knex, tenant };
-}
 
 // Special value to indicate end of period
 const END_OF_PERIOD = 0;
@@ -54,38 +35,40 @@ interface TimePeriodInput {
   end_date: string;
 }
 
-export async function getLatestTimePeriod(): Promise<ITimePeriod | null> {
+export const getLatestTimePeriod = withAuth(async (_user, { tenant }): Promise<ITimePeriod | null> => {
   try {
-    const { knex, tenant } = await getTenantKnex();
+    const { knex } = await createTenantKnex();
     const latestPeriod = await TimePeriod.getLatest(knex, tenant);
     return latestPeriod ? validateData(timePeriodSchema, latestPeriod) : null;
   } catch (error) {
     console.error('Error fetching latest time period:', error)
     throw new Error('Failed to fetch latest time period')
   }
-}
+});
 
-export async function getTimePeriodSettings(): Promise<ITimePeriodSettings[]> {
+export const getTimePeriodSettings = withAuth(async (_user, { tenant }): Promise<ITimePeriodSettings[]> => {
   try {
-    const { knex, tenant } = await getTenantKnex();
+    const { knex } = await createTenantKnex();
     const settings = await TimePeriodSettings.getActiveSettings(knex, tenant);
     return validateArray(timePeriodSettingsSchema, settings);
   } catch (error) {
     console.error('Error fetching time period settings:', error);
     throw new Error('Failed to fetch time period settings');
   }
-}
+});
 
-export async function createTimePeriod(
+export const createTimePeriod = withAuth(async (
+  _user,
+  { tenant },
   input: TimePeriodInput
-): Promise<ITimePeriod> {
+): Promise<ITimePeriod> => {
   // Convert string dates to Temporal.PlainDate (Next.js server actions can't receive Temporal objects)
   const timePeriodData = {
     start_date: toPlainDate(input.start_date),
     end_date: toPlainDate(input.end_date)
   };
 
-  const { knex: db, tenant } = await getTenantKnex();
+  const { knex: db } = await createTenantKnex();
   return withTransaction(db, async (trx: Knex.Transaction) => {
     try {
       const settings = await TimePeriodSettings.getActiveSettings(trx, tenant);
@@ -113,13 +96,13 @@ export async function createTimePeriod(
       throw error;
     }
   });
-}
+});
 
-export async function fetchAllTimePeriods(): Promise<ITimePeriodView[]> {
+export const fetchAllTimePeriods = withAuth(async (_user, { tenant }): Promise<ITimePeriodView[]> => {
   try {
     console.log('Fetching all time periods...');
 
-    const { knex, tenant } = await getTenantKnex();
+    const { knex } = await createTenantKnex();
     const timePeriods = await TimePeriod.getAll(knex, tenant);
 
     // Convert model types to view types
@@ -133,7 +116,7 @@ export async function fetchAllTimePeriods(): Promise<ITimePeriodView[]> {
 
     // Validate as model type first
     const validatedPeriods = validateArray(timePeriodSchema, timePeriods);
-    
+
     // Then convert to view type
     return validatedPeriods.map((period): ITimePeriodView => ({
       ...period,
@@ -144,7 +127,7 @@ export async function fetchAllTimePeriods(): Promise<ITimePeriodView[]> {
     console.error('Error fetching all time periods:', error)
     throw new Error('Failed to fetch time periods')
   }
-}
+});
 
 // Utility function to get current date as Temporal.PlainDate
 function getCurrentDate(timeZone: string): Temporal.PlainDate {
@@ -196,12 +179,11 @@ function toModelPeriodsWithPlainDate(periods: ITimePeriodView[]): ITimePeriodWit
   }));
 }
 
-export async function getCurrentTimePeriod(): Promise<ITimePeriodView | null> {
+export const getCurrentTimePeriod = withAuth(async (user, { tenant }): Promise<ITimePeriodView | null> => {
   try {
-    const { knex, tenant } = await getTenantKnex();
-    const session = await getSession();
+    const { knex } = await createTenantKnex();
 
-    const userId = session?.user?.id || null;
+    const userId = user?.user_id || null;
     const userTimeZone = tenant && userId ? await resolveUserTimeZone(knex, tenant, userId) : 'UTC';
 
     const currentDate = getCurrentDate(userTimeZone).toString();
@@ -218,7 +200,7 @@ export async function getCurrentTimePeriod(): Promise<ITimePeriodView | null> {
     console.error('Error fetching current time period:', error)
     throw new Error('Failed to fetch current time period')
   }
-}
+});
 
 // Helper function to get the end of a period based on frequency unit
 function getEndOfPeriod(startDate: string, setting: ITimePeriodSettings): Temporal.PlainDate {
@@ -362,9 +344,9 @@ function alignToMonthDay(dateStr: string, targetDay: number): string {
   return alignedDate.toString();
 }
 
-export async function deleteTimePeriod(periodId: string): Promise<void> {
+export const deleteTimePeriod = withAuth(async (_user, { tenant }, periodId: string): Promise<void> => {
   try {
-    const { knex } = await getTenantKnex();
+    const { knex } = await createTenantKnex();
     // Check if period exists and has no associated time records
     const period = await TimePeriod.findById(knex, periodId);
     if (!period) {
@@ -390,18 +372,20 @@ export async function deleteTimePeriod(periodId: string): Promise<void> {
     console.error('Error in deleteTimePeriod:', error);
     throw error;
   }
-}
+});
 
-export async function updateTimePeriod(
+export const updateTimePeriod = withAuth(async (
+  _user,
+  { tenant },
   periodId: string,
   input: Partial<TimePeriodInput>
-): Promise<ITimePeriod> {
+): Promise<ITimePeriod> => {
   // Convert string dates to Temporal.PlainDate (Next.js server actions can't receive Temporal objects)
   const updates: Partial<Omit<ITimePeriod, 'period_id' | 'tenant'>> = {};
   if (input.start_date) updates.start_date = toPlainDate(input.start_date);
   if (input.end_date) updates.end_date = toPlainDate(input.end_date);
 
-  const { knex: db } = await getTenantKnex();
+  const { knex: db } = await createTenantKnex();
   return withTransaction(db, async (trx: Knex.Transaction) => {
     try {
       // Check if period exists and has no associated time records
@@ -443,10 +427,10 @@ export async function updateTimePeriod(
       throw error;
     }
   });
-}
+});
 
-export async function generateAndSaveTimePeriods(startDate: ISO8601String, endDate: ISO8601String): Promise<ITimePeriod[]> {
-  const { knex: db } = await getTenantKnex();
+export const generateAndSaveTimePeriods = withAuth(async (_user, { tenant }, startDate: ISO8601String, endDate: ISO8601String): Promise<ITimePeriod[]> => {
+  const { knex: db } = await createTenantKnex();
   return withTransaction(db, async (trx: Knex.Transaction) => {
     try {
       const settings = await getTimePeriodSettings();
@@ -483,7 +467,7 @@ export async function generateAndSaveTimePeriods(startDate: ISO8601String, endDa
       throw new Error('Failed to generate and save time periods');
     }
   });
-}
+});
 
 /**
  * Creates the next time period(s) based on settings, filling any gaps up to the threshold.
@@ -494,14 +478,16 @@ export async function generateAndSaveTimePeriods(startDate: ISO8601String, endDa
  * @param settings - Time period settings to use for generation
  * @param daysThreshold - How many days ahead to create periods (default: 5)
  */
-export async function createNextTimePeriod(
+export const createNextTimePeriod = withAuth(async (
+  _user,
+  { tenant },
   settings: ITimePeriodSettings[],
   daysThreshold: number = 5
-): Promise<ITimePeriod | null> {
+): Promise<ITimePeriod | null> => {
   // Safety limit to prevent infinite loops (max 1 year of weekly periods)
   const MAX_PERIODS_PER_RUN = 52;
 
-  const { knex: db } = await getTenantKnex();
+  const { knex: db } = await createTenantKnex();
 
   try {
     return await withTransaction(db, async (trx) => {
@@ -510,7 +496,7 @@ export async function createNextTimePeriod(
       const createdPeriods: ITimePeriod[] = [];
 
       // Get initial existing time periods using the transaction
-      const existingPeriods = await fetchAllTimePeriodsWithTrx(trx);
+      const existingPeriods = await fetchAllTimePeriodsWithTrx(trx, tenant);
       // Keep model periods in memory to avoid repeated DB queries
       const modelPeriods: ITimePeriodWithPlainDate[] = toModelPeriodsWithPlainDate(existingPeriods);
 
@@ -540,7 +526,7 @@ export async function createNextTimePeriod(
         }
 
         // Create the first period using the transaction
-        const newPeriod = await createTimePeriodWithTrx(trx, {
+        const newPeriod = await createTimePeriodWithTrx(trx, tenant, {
           start_date: toPlainDate(newPeriodResult.data.start_date),
           end_date: toPlainDate(newPeriodResult.data.end_date)
         });
@@ -591,7 +577,7 @@ export async function createNextTimePeriod(
         }
 
         // Create the period using the transaction
-        const newPeriod = await createTimePeriodWithTrx(trx, {
+        const newPeriod = await createTimePeriodWithTrx(trx, tenant, {
           start_date: toPlainDate(newPeriodResult.data.start_date),
           end_date: toPlainDate(newPeriodResult.data.end_date)
         });
@@ -625,4 +611,4 @@ export async function createNextTimePeriod(
     logger.error('Error creating next time period:', error);
     throw error;
   }
-}
+});

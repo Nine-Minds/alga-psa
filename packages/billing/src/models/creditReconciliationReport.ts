@@ -1,6 +1,7 @@
 import { v4 as uuidv4 } from 'uuid';
 import { Knex } from 'knex';
 import { createTenantKnex } from '@alga-psa/db';
+import { getCurrentUser } from '@alga-psa/auth/getCurrentUser';
 import type { ICreditReconciliationReport, ReconciliationStatus } from '@alga-psa/types';
 
 interface ListReportsOptions {
@@ -23,7 +24,11 @@ class CreditReconciliationReport {
     reportData: Omit<ICreditReconciliationReport, 'report_id' | 'created_at' | 'updated_at'>,
     trx?: Knex.Transaction
   ): Promise<ICreditReconciliationReport> {
-    const { knex, tenant } = await createTenantKnex();
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+      throw new Error('User not authenticated');
+    }
+    const { knex, tenant } = await createTenantKnex(currentUser.tenant);
     if (!tenant) {
       throw new Error('Tenant context is required for creating reconciliation report');
     }
@@ -78,7 +83,11 @@ class CreditReconciliationReport {
    * @returns The report or null if not found
    */
   static async getById(reportId: string): Promise<ICreditReconciliationReport | null> {
-    const { knex, tenant } = await createTenantKnex();
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+      throw new Error('User not authenticated');
+    }
+    const { knex, tenant } = await createTenantKnex(currentUser.tenant);
     if (!tenant) {
       throw new Error('Tenant context is required for fetching reconciliation report');
     }
@@ -116,7 +125,11 @@ class CreditReconciliationReport {
     clientId: string,
     status?: ReconciliationStatus | ReconciliationStatus[]
   ): Promise<ICreditReconciliationReport[]> {
-    const { knex, tenant } = await createTenantKnex();
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+      throw new Error('User not authenticated');
+    }
+    const { knex, tenant } = await createTenantKnex(currentUser.tenant);
     if (!tenant) {
       throw new Error('Tenant context is required for fetching client reconciliation reports');
     }
@@ -168,7 +181,11 @@ class CreditReconciliationReport {
     updateData: Partial<ICreditReconciliationReport>,
     trx?: Knex.Transaction
   ): Promise<ICreditReconciliationReport> {
-    const { knex, tenant } = await createTenantKnex();
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+      throw new Error('User not authenticated');
+    }
+    const { knex, tenant } = await createTenantKnex(currentUser.tenant);
     if (!tenant) {
       throw new Error('Tenant context is required for updating reconciliation report');
     }
@@ -228,7 +245,11 @@ class CreditReconciliationReport {
     pageSize: number;
     totalPages: number;
   }> {
-    const { knex, tenant } = await createTenantKnex();
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+      throw new Error('User not authenticated');
+    }
+    const { knex, tenant } = await createTenantKnex(currentUser.tenant);
     if (!tenant) {
       throw new Error('Tenant context is required for listing reconciliation reports');
     }
@@ -321,7 +342,11 @@ class CreditReconciliationReport {
     },
     trx?: Knex.Transaction
   ): Promise<ICreditReconciliationReport> {
-    const { knex, tenant } = await createTenantKnex();
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+      throw new Error('User not authenticated');
+    }
+    const { knex, tenant } = await createTenantKnex(currentUser.tenant);
     if (!tenant) {
       throw new Error('Tenant context is required for resolving reconciliation report');
     }
@@ -370,7 +395,11 @@ class CreditReconciliationReport {
    * @returns The number of open reports
    */
   static async countOpenReports(clientId: string): Promise<number> {
-    const { knex, tenant } = await createTenantKnex();
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+      throw new Error('User not authenticated');
+    }
+    const { knex, tenant } = await createTenantKnex(currentUser.tenant);
     if (!tenant) {
       throw new Error('Tenant context is required for counting open reconciliation reports');
     }
@@ -397,7 +426,11 @@ class CreditReconciliationReport {
    * @returns The number of reports with the given status
    */
   static async countByStatus(status: ReconciliationStatus): Promise<number> {
-    const { knex, tenant } = await createTenantKnex();
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+      throw new Error('User not authenticated');
+    }
+    const { knex, tenant } = await createTenantKnex(currentUser.tenant);
     if (!tenant) {
       throw new Error('Tenant context is required for counting reconciliation reports by status');
     }
@@ -422,7 +455,11 @@ class CreditReconciliationReport {
    * @returns The total discrepancy amount
    */
   static async getTotalDiscrepancyAmount(): Promise<number> {
-    const { knex, tenant } = await createTenantKnex();
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+      throw new Error('User not authenticated');
+    }
+    const { knex, tenant } = await createTenantKnex(currentUser.tenant);
     if (!tenant) {
       throw new Error('Tenant context is required for getting total discrepancy amount');
     }

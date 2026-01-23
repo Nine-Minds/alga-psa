@@ -12,7 +12,7 @@ import { formatCurrency, dateValueToDate, isValidEmail } from '@alga-psa/core';
 import type { IContact } from '@alga-psa/types';
 import Handlebars from 'handlebars';
 import fs from 'fs/promises';
-import { getCurrentUserAsync } from '../lib/authHelpers';
+import { withAuth } from '@alga-psa/auth';
 import { getClientById } from '@alga-psa/shared/billingClients/clients';
 
 interface InitialJobData extends JobData {
@@ -26,16 +26,12 @@ interface InitialJobData extends JobData {
   };
 }
 
-export async function scheduleInvoiceZipAction(invoiceIds: string[]) {
-  const user = await getCurrentUserAsync();
-  if (!user || !user.user_id) {
-    throw new Error('Unauthorized - No user session found');
-  }
-
-  const { knex, tenant } = await createTenantKnex(user.tenant);
-  if (!tenant) {
-    throw new Error('Tenant ID is required');
-  }
+export const scheduleInvoiceZipAction = withAuth(async (
+  user,
+  { tenant },
+  invoiceIds: string[]
+) => {
+  const { knex } = await createTenantKnex();
 
   const jobService = await JobService.create();
 
@@ -81,14 +77,14 @@ export async function scheduleInvoiceZipAction(invoiceIds: string[]) {
     const errorMessage = error instanceof Error ? error.message : 'Failed to schedule invoice zip job';
     throw new Error(errorMessage);
   }
-}
+});
 
-export async function scheduleInvoiceEmailAction(invoiceIds: string[]) {
-  const currentUser = await getCurrentUserAsync();
-  if (!currentUser) throw new Error('User not found');
-
-  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
-  if (!tenant) throw new Error('Tenant not found');
+export const scheduleInvoiceEmailAction = withAuth(async (
+  user,
+  { tenant },
+  invoiceIds: string[]
+) => {
+  const { knex } = await createTenantKnex();
 
   const jobService = await JobService.create();
 
@@ -126,10 +122,10 @@ export async function scheduleInvoiceEmailAction(invoiceIds: string[]) {
   const jobData = {
     invoiceIds,
     tenantId: tenant,
-    user_id: currentUser.user_id,
+    user_id: user.user_id,
     steps,
     metadata: {
-      user_id: currentUser.user_id,
+      user_id: user.user_id,
       invoice_count: invoiceIds.length,
       tenantId: tenant,
     },
@@ -146,7 +142,7 @@ export async function scheduleInvoiceEmailAction(invoiceIds: string[]) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     logger.error('Failed to schedule invoice email job', {
       error: errorMessage,
-      userId: currentUser.user_id,
+      userId: user.user_id,
       invoiceIds,
       invoiceDetails: invoiceDetails?.map((d) => ({
         invoiceNumber: d.invoiceNumber,
@@ -155,7 +151,7 @@ export async function scheduleInvoiceEmailAction(invoiceIds: string[]) {
     });
     throw new Error(errorMessage);
   }
-}
+});
 
 export interface InvoiceEmailRecipientInfo {
   invoiceId: string;
@@ -180,16 +176,12 @@ export interface GetInvoiceEmailRecipientsResult {
   errors: Array<{ invoiceId: string; error: string }>;
 }
 
-export async function getInvoiceEmailRecipientAction(invoiceIds: string[]): Promise<GetInvoiceEmailRecipientsResult> {
-  const currentUser = await getCurrentUserAsync();
-  if (!currentUser) {
-    throw new Error('User not found');
-  }
-
-  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
-  if (!tenant) {
-    throw new Error('Tenant not found');
-  }
+export const getInvoiceEmailRecipientAction = withAuth(async (
+  user,
+  { tenant },
+  invoiceIds: string[]
+): Promise<GetInvoiceEmailRecipientsResult> => {
+  const { knex } = await createTenantKnex();
 
   if (!invoiceIds || invoiceIds.length === 0) {
     throw new Error('No invoice IDs provided');
@@ -282,7 +274,7 @@ export async function getInvoiceEmailRecipientAction(invoiceIds: string[]): Prom
   }
 
   return { recipients, errors };
-}
+});
 
 export interface SendInvoiceEmailResult {
   success: boolean;
@@ -351,16 +343,13 @@ Best regards,
   };
 }
 
-export async function sendInvoiceEmailAction(invoiceIds: string[], customMessage?: string): Promise<SendInvoiceEmailsResult> {
-  const currentUser = await getCurrentUserAsync();
-  if (!currentUser) {
-    throw new Error('User not found');
-  }
-
-  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
-  if (!tenant) {
-    throw new Error('Tenant not found');
-  }
+export const sendInvoiceEmailAction = withAuth(async (
+  user,
+  { tenant },
+  invoiceIds: string[],
+  customMessage?: string
+): Promise<SendInvoiceEmailsResult> => {
+  const { knex } = await createTenantKnex();
 
   if (!invoiceIds || invoiceIds.length === 0) {
     throw new Error('No invoice IDs provided');
@@ -438,7 +427,7 @@ export async function sendInvoiceEmailAction(invoiceIds: string[], customMessage
         invoiceId,
         invoiceNumber: invoice.invoice_number,
         version: 1,
-        userId: currentUser.user_id,
+        userId: user.user_id,
       });
 
       const { buffer } = await StorageService.downloadFile(file_id);
@@ -544,4 +533,4 @@ export async function sendInvoiceEmailAction(invoiceIds: string[], customMessage
   const failureCount = results.length - successCount;
 
   return { results, successCount, failureCount };
-}
+});

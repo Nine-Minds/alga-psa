@@ -2,8 +2,7 @@
 
 import type { Knex } from 'knex';
 import { createTenantKnex } from '@/lib/db';
-import { getCurrentUser } from '@alga-psa/users/actions';
-import { hasPermission } from '@alga-psa/auth';
+import { withAuth, hasPermission } from '@alga-psa/auth';
 import type { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
 
 const REQUIRED_RESOURCE = 'settings';
@@ -15,16 +14,8 @@ export interface SsoPermissionContext {
   knex: Knex;
 }
 
-export async function ensureSsoSettingsPermission(): Promise<SsoPermissionContext> {
-  const user = await getCurrentUser();
-  if (!user) {
-    throw new Error('Authentication is required to manage SSO settings.');
-  }
-
-  const { knex, tenant } = await createTenantKnex();
-  if (!tenant) {
-    throw new Error('Tenant context is required.');
-  }
+export const ensureSsoSettingsPermission = withAuth(async (user, { tenant }): Promise<SsoPermissionContext> => {
+  const { knex } = await createTenantKnex();
 
   const allowed = await hasPermission(user, REQUIRED_RESOURCE, REQUIRED_ACTION, knex);
   if (!allowed) {
@@ -32,4 +23,4 @@ export async function ensureSsoSettingsPermission(): Promise<SsoPermissionContex
   }
 
   return { user, tenant, knex };
-}
+});

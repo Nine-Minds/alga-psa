@@ -1,3 +1,10 @@
+/**
+ * OAuth Account Links - CE stubs
+ *
+ * These are placeholder implementations for Community Edition.
+ * Enterprise Edition provides real implementations in ee/server.
+ */
+
 export type OAuthLinkProvider = 'google' | 'microsoft';
 
 export interface OAuthAccountLinkInput {
@@ -30,20 +37,23 @@ export class OAuthAccountLinkConflictError extends Error {
   }
 }
 
-export async function upsertOAuthAccountLink(input: OAuthAccountLinkInput): Promise<void> {
+// These are no longer used - auth uses the registry pattern instead.
+// Kept for any external code that might still import from here.
+
+export async function upsertOAuthAccountLink(_input: OAuthAccountLinkInput): Promise<void> {
   throw new Error('OAuth account linking is only available in Enterprise Edition');
 }
 
 export async function findOAuthAccountLink(
-  provider: OAuthLinkProvider,
-  providerAccountId: string,
+  _provider: OAuthLinkProvider,
+  _providerAccountId: string,
 ): Promise<OAuthAccountLinkRecord | undefined> {
   return undefined;
 }
 
 export async function listOAuthAccountLinksForUser(
-  tenant: string,
-  userId: string,
+  _tenant: string,
+  _userId: string,
 ): Promise<OAuthAccountLinkRecord[]> {
   return [];
 }

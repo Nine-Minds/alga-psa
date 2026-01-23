@@ -3,8 +3,7 @@
 import { z } from 'zod';
 import { v4 as uuidv4 } from 'uuid';
 import { createTenantKnex } from '@/lib/db';
-import { getCurrentUser } from '@/lib/actions/user-actions/userActions';
-import { hasPermission } from '@/lib/auth/rbac';
+import { withAuth, hasPermission } from '@alga-psa/auth';
 import { EventCatalogModel } from '@/models/eventCatalog';
 import { getSchemaRegistry } from '@shared/workflow/runtime';
 import { initializeWorkflowRuntimeV2 } from '@shared/workflow/runtime/init';
@@ -18,35 +17,29 @@ type PermissionLevel = 'read' | 'manage' | 'publish' | 'admin';
 
 const SENSITIVE_KEY_PATTERN = /(secret|token|password|api[_-]?key|authorization)/i;
 
-const requireUser = async () => {
-  const user = await getCurrentUser();
-  if (!user) {
-    throw new Error('Unauthorized');
-  }
-  return user;
-};
+type AuthUser = NonNullable<Awaited<ReturnType<typeof import('@alga-psa/auth').getCurrentUser>>>;
 
 const requireWorkflowPermission = async (
-  user: Awaited<ReturnType<typeof getCurrentUser>>,
+  user: AuthUser,
   action: PermissionLevel,
   knex: Awaited<ReturnType<typeof createTenantKnex>>['knex']
 ) => {
-  const allowed = await hasPermission(user!, 'workflow', action as any, knex);
+  const allowed = await hasPermission(user, 'workflow', action as any, knex);
   if (allowed) return;
   if (action === 'read') {
-    const viewAllowed = await hasPermission(user!, 'workflow', 'view', knex);
+    const viewAllowed = await hasPermission(user, 'workflow', 'view', knex);
     if (viewAllowed) return;
-    const manageAllowed = await hasPermission(user!, 'workflow', 'manage', knex);
+    const manageAllowed = await hasPermission(user, 'workflow', 'manage', knex);
     if (manageAllowed) return;
-    const adminAllowed = await hasPermission(user!, 'workflow', 'admin', knex);
+    const adminAllowed = await hasPermission(user, 'workflow', 'admin', knex);
     if (adminAllowed) return;
   }
   if (action === 'manage') {
-    const adminAllowed = await hasPermission(user!, 'workflow', 'admin', knex);
+    const adminAllowed = await hasPermission(user, 'workflow', 'admin', knex);
     if (adminAllowed) return;
   }
   if (action === 'publish') {
-    const adminAllowed = await hasPermission(user!, 'workflow', 'admin', knex);
+    const adminAllowed = await hasPermission(user, 'workflow', 'admin', knex);
     if (adminAllowed) return;
   }
   throw new Error('Forbidden');
@@ -54,7 +47,7 @@ const requireWorkflowPermission = async (
 
 const audit = async (
   knex: Awaited<ReturnType<typeof createTenantKnex>>['knex'],
-  user: Awaited<ReturnType<typeof getCurrentUser>>,
+  user: AuthUser,
   params: {
     operation: string;
     tableName: string;
@@ -64,7 +57,6 @@ const audit = async (
     source?: string | null;
   }
 ) => {
-  if (!user) return;
   await auditLog(knex, {
     userId: user.user_id,
     operation: params.operation,
@@ -152,9 +144,8 @@ const redactSensitiveValues = (value: unknown): unknown => {
   return value;
 };
 
-export async function listEventCatalogCategoriesV2Action() {
-  const user = await requireUser();
-  const { knex, tenant } = await createTenantKnex();
+export const listEventCatalogCategoriesV2Action = withAuth(async (user, { tenant }) => {
+  const { knex } = await createTenantKnex();
   await requireWorkflowPermission(user, 'read', knex);
   if (!tenant) return { categories: [] as string[] };
 
@@ -178,11 +169,10 @@ export async function listEventCatalogCategoriesV2Action() {
   });
 
   return { categories: Array.from(set).sort((a, b) => a.localeCompare(b)) };
-}
+});
 
-export async function listEventCatalogOptionsV2Action(input: unknown) {
+export const listEventCatalogOptionsV2Action = withAuth(async (user, { tenant }, input: unknown) => {
   initializeWorkflowRuntimeV2();
-  const user = await requireUser();
   const parsed = z.object({
     search: z.string().optional(),
     source: z.enum(['all', 'system', 'tenant']).optional().default('all'),
@@ -190,7 +180,7 @@ export async function listEventCatalogOptionsV2Action(input: unknown) {
     limit: z.number().int().min(1).max(2000).optional().default(500)
   }).parse(input ?? {});
 
-  const { knex, tenant } = await createTenantKnex();
+  const { knex } = await createTenantKnex();
   await requireWorkflowPermission(user, 'read', knex);
   if (!tenant) return { events: [] as WorkflowEventCatalogOptionV2[] };
 
@@ -239,11 +229,10 @@ export async function listEventCatalogOptionsV2Action(input: unknown) {
   });
 
   return { events: events.slice(0, parsed.limit) };
-}
+});
 
-export async function listEventCatalogWithMetricsAction(input: unknown) {
+export const listEventCatalogWithMetricsAction = withAuth(async (user, { tenant }, input: unknown) => {
   initializeWorkflowRuntimeV2();
-  const user = await requireUser();
   const parsed = z.object({
     search: z.string().optional(),
     category: z.string().optional(),
@@ -256,7 +245,7 @@ export async function listEventCatalogWithMetricsAction(input: unknown) {
     metricsTo: z.string().optional()
   }).parse(input ?? {});
 
-  const { knex, tenant } = await createTenantKnex();
+  const { knex } = await createTenantKnex();
   await requireWorkflowPermission(user, 'read', knex);
   if (!tenant) {
     return { events: [], total: 0 };
@@ -416,19 +405,17 @@ export async function listEventCatalogWithMetricsAction(input: unknown) {
   const maps = await computeMapsForEventTypes(pageEventTypes);
   const events: WorkflowEventCatalogEntryV2[] = page.map((entry: any) => buildEntry(entry, maps));
   return { events, total };
-}
+});
 
-export async function listSchemaRegistryRefsAction() {
+export const listSchemaRegistryRefsAction = withAuth(async (user, { tenant }) => {
   initializeWorkflowRuntimeV2();
-  const user = await requireUser();
   const { knex } = await createTenantKnex();
   await requireWorkflowPermission(user, 'read', knex);
   const registry = getSchemaRegistry();
   return { refs: registry.listRefs() };
-}
+});
 
-export async function getEventCatalogPermissionsAction() {
-  const user = await requireUser();
+export const getEventCatalogPermissionsAction = withAuth(async (user, { tenant }) => {
   const { knex } = await createTenantKnex();
 
   const canAdmin = await hasPermission(user, 'workflow', 'admin', knex);
@@ -442,12 +429,11 @@ export async function getEventCatalogPermissionsAction() {
     await hasPermission(user, 'workflow', 'view', knex);
 
   return { canRead, canManage, canPublish, canAdmin };
-}
+});
 
-export async function listAttachedWorkflowsByEventTypeAction(input: unknown) {
-  const user = await requireUser();
+export const listAttachedWorkflowsByEventTypeAction = withAuth(async (user, { tenant }, input: unknown) => {
   const parsed = z.object({ eventType: z.string().min(1) }).parse(input);
-  const { knex, tenant } = await createTenantKnex();
+  const { knex } = await createTenantKnex();
   await requireWorkflowPermission(user, 'read', knex);
 
   const rows = await knex('workflow_definitions')
@@ -488,11 +474,10 @@ export async function listAttachedWorkflowsByEventTypeAction(input: unknown) {
       is_visible: r.is_visible !== false
     }))
   };
-}
+});
 
-export async function getEventSchemaByRefAction(input: unknown) {
+export const getEventSchemaByRefAction = withAuth(async (user, { tenant }, input: unknown) => {
   initializeWorkflowRuntimeV2();
-  const user = await requireUser();
   const parsed = z.object({ schemaRef: z.string().min(1) }).parse(input);
   const { knex } = await createTenantKnex();
   await requireWorkflowPermission(user, 'read', knex);
@@ -501,10 +486,9 @@ export async function getEventSchemaByRefAction(input: unknown) {
     return { ref: parsed.schemaRef, schema: null };
   }
   return { ref: parsed.schemaRef, schema: registry.toJsonSchema(parsed.schemaRef) };
-}
+});
 
-export async function simulateWorkflowEventAction(input: unknown) {
-  const user = await requireUser();
+export const simulateWorkflowEventAction = withAuth(async (user, { tenant }, input: unknown) => {
   const parsed = z.object({
     eventName: z.string().min(1),
     payload: z.record(z.any()).optional().default({}),
@@ -537,10 +521,9 @@ export async function simulateWorkflowEventAction(input: unknown) {
   });
 
   return result;
-}
+});
 
-export async function createWorkflowFromEventAction(input: unknown) {
-  const user = await requireUser();
+export const createWorkflowFromEventAction = withAuth(async (user, { tenant }, input: unknown) => {
   const parsed = z.object({
     eventType: z.string().min(1),
     name: z.string().trim().min(1).optional(),
@@ -578,10 +561,9 @@ export async function createWorkflowFromEventAction(input: unknown) {
   });
 
   return created;
-}
+});
 
-export async function detachWorkflowTriggerFromEventAction(input: unknown) {
-  const user = await requireUser();
+export const detachWorkflowTriggerFromEventAction = withAuth(async (user, { tenant }, input: unknown) => {
   const parsed = z.object({
     workflowId: z.string().uuid(),
     eventType: z.string().min(1)
@@ -632,11 +614,10 @@ export async function detachWorkflowTriggerFromEventAction(input: unknown) {
   });
 
   return publishResult;
-}
+});
 
-export async function createCustomEventAction(input: unknown) {
+export const createCustomEventAction = withAuth(async (user, { tenant }, input: unknown) => {
   initializeWorkflowRuntimeV2();
-  const user = await requireUser();
   const parsed = z.object({
     eventType: z.string().trim().min(1),
     name: z.string().trim().min(1),
@@ -646,7 +627,7 @@ export async function createCustomEventAction(input: unknown) {
     payloadSchemaJson: z.record(z.any()).optional()
   }).parse(input);
 
-  const { knex, tenant } = await createTenantKnex();
+  const { knex } = await createTenantKnex();
   await requireWorkflowPermission(user, 'manage', knex);
   if (!tenant) throw new Error('Missing tenant');
 
@@ -684,10 +665,9 @@ export async function createCustomEventAction(input: unknown) {
   });
 
   return entry;
-}
+});
 
-export async function getEventMetricsAction(input: unknown) {
-  const user = await requireUser();
+export const getEventMetricsAction = withAuth(async (user, { tenant }, input: unknown) => {
   const parsed = z.object({
     eventType: z.string().min(1),
     from: z.string().optional(),
@@ -696,7 +676,7 @@ export async function getEventMetricsAction(input: unknown) {
     recentOffset: z.number().int().min(0).optional().default(0)
   }).parse(input ?? {});
 
-  const { knex, tenant } = await createTenantKnex();
+  const { knex } = await createTenantKnex();
   await requireWorkflowPermission(user, 'read', knex);
   if (!tenant) {
     return { summary: null, series: [], recent: [], runStats: null };
@@ -792,4 +772,4 @@ export async function getEventMetricsAction(input: unknown) {
     recent,
     recentTotal: totalRecent
   };
-}
+});

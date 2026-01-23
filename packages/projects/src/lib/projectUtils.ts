@@ -2,7 +2,7 @@
 
 import type { IProject, IProjectTask, ITimeEntry } from '@alga-psa/types';
 import { createTenantKnex } from '@alga-psa/db';
-import { getCurrentUser } from '@alga-psa/auth/getCurrentUser';
+import { withAuth } from '@alga-psa/auth';
 
 export interface ProjectCompletionMetrics {
   taskCompletionPercentage: number;
@@ -19,13 +19,12 @@ export interface ProjectCompletionMetrics {
  * @param projectId The project ID to calculate metrics for
  * @returns ProjectCompletionMetrics object with task and hours-based completion percentages
  */
-export async function calculateProjectCompletion(projectId: string): Promise<ProjectCompletionMetrics> {
-  const currentUser = await getCurrentUser();
-  if (!currentUser?.tenant) {
-    throw new Error('Tenant is required');
-  }
-
-  const { knex: db, tenant } = await createTenantKnex(currentUser.tenant);
+export const calculateProjectCompletion = withAuth(async (
+  _user,
+  { tenant },
+  projectId: string
+): Promise<ProjectCompletionMetrics> => {
+  const { knex: db } = await createTenantKnex();
 
   // Get project details
   const project = await db('projects')
@@ -102,4 +101,4 @@ export async function calculateProjectCompletion(projectId: string): Promise<Pro
     spentHours,
     remainingHours
   };
-}
+});

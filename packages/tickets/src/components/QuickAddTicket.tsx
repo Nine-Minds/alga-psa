@@ -447,11 +447,6 @@ export function QuickAddTicket({
     setIsSubmitting(true);
 
     try {
-      const user = await getCurrentUser();
-      if (!user) {
-        throw new Error('You must be logged in to create a ticket');
-      }
-
       const formData = new FormData();
       formData.append('title', title);
       formData.append('description', description);
@@ -515,7 +510,7 @@ export function QuickAddTicket({
       // ITIL categories now use the unified category system
       // The selected ITIL category ID is already in selectedCategories/categoryId
 
-      const newTicket = await addTicket(formData, user);
+      const newTicket = await addTicket(formData);
       if (!newTicket) {
         throw new Error('Failed to create ticket');
       }

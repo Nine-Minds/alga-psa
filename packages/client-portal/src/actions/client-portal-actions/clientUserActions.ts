@@ -5,33 +5,30 @@ import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { hashPassword } from '@alga-psa/core/encryption';
 import { revalidatePath } from 'next/cache';
-import { getCurrentUser, getUserRolesWithPermissions, getUserClientId } from '@alga-psa/users/actions';
-import { uploadEntityImage, deleteEntityImage } from '@alga-psa/media';
-import { hasPermission } from '@alga-psa/auth';
+import { getUserRolesWithPermissions, getUserClientId } from '@alga-psa/users/actions';
+import { uploadEntityImage, deleteEntityImage } from '@alga-psa/documents';
+import { hasPermission, withAuth, type AuthContext } from '@alga-psa/auth';
 import { getRoles, assignRoleToUser, removeRoleFromUser, getUserRoles } from '@alga-psa/auth/actions';
-import { 
-  createPortalUserInDB, 
+import {
+  createPortalUserInDB,
   getClientPortalRoles as getClientPortalRolesFromDB,
   CreatePortalUserInput
 } from '@shared/models/userModel';
 import { IUser, IRole } from '@shared/interfaces/user.interfaces';
+import type { IUserWithRoles } from '@alga-psa/types';
 
 /**
  * Get available client portal roles
  */
-export async function getClientPortalRoles(): Promise<IRole[]> {
+export const getClientPortalRoles = withAuth(async (_user: IUserWithRoles, { tenant }: AuthContext): Promise<IRole[]> => {
   try {
-    const { knex, tenant } = await createTenantKnex();
-    if (!tenant) {
-      throw new Error('Tenant not found');
-    }
-    
+    const { knex } = await createTenantKnex();
     return await getClientPortalRolesFromDB(knex, tenant);
   } catch (error) {
     console.error('Error fetching client portal roles:', error);
     return [];
   }
-}
+});
 
 /**
  * Assign a role to a client user
@@ -72,15 +69,14 @@ export async function getClientUserRoles(userId: string): Promise<IRole[]> {
 /**
  * Update a client user
  */
-export async function updateClientUser(
+export const updateClientUser = withAuth(async (
+  _user: IUserWithRoles,
+  { tenant }: AuthContext,
   userId: string,
   userData: Partial<IUser>
-): Promise<IUser | null> {
+): Promise<IUser | null> => {
   try {
-    const { knex, tenant } = await createTenantKnex();
-    if (!tenant) {
-      throw new Error('Tenant not found');
-    }
+    const { knex } = await createTenantKnex();
 
     const [updatedUser] = await withTransaction(knex, async (trx: Knex.Transaction) => {
       return await trx('users')
@@ -97,34 +93,33 @@ export async function updateClientUser(
     console.error('Error updating client user:', error);
     throw error;
   }
-}
+});
 
 /**
  * Reset client user password
  */
-export async function resetClientUserPassword(
+export const resetClientUserPassword = withAuth(async (
+  _user: IUserWithRoles,
+  { tenant }: AuthContext,
   userId: string,
   newPassword: string
-): Promise<{ success: boolean; error?: string }> {
+): Promise<{ success: boolean; error?: string }> => {
   try {
-    const { knex, tenant } = await createTenantKnex();
-    if (!tenant) {
-      throw new Error('Tenant not found');
-    }
+    const { knex } = await createTenantKnex();
 
     // Check if the password field exists in the users table
     const hasPasswordField = await knex.schema.hasColumn('users', 'password');
     const passwordField = hasPasswordField ? 'password' : 'hashed_password';
-    
+
     console.log(`Using password field: ${passwordField}`);
-    
+
     const hashedPassword = await hashPassword(newPassword);
-    
+
     const updateData: any = {
       updated_at: new Date().toISOString()
     };
     updateData[passwordField] = hashedPassword;
-    
+
     await withTransaction(knex, async (trx: Knex.Transaction) => {
       await trx('users')
       .where({ user_id: userId, tenant })
@@ -134,22 +129,23 @@ export async function resetClientUserPassword(
     return { success: true };
   } catch (error) {
     console.error('Error resetting client user password:', error);
-    return { 
-      success: false, 
-      error: error instanceof Error ? error.message : 'Unknown error' 
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error'
     };
   }
-}
+});
 
 /**
  * Get client user by ID
  */
-export async function getClientUserById(userId: string): Promise<IUser | null> {
+export const getClientUserById = withAuth(async (
+  _user: IUserWithRoles,
+  { tenant }: AuthContext,
+  userId: string
+): Promise<IUser | null> => {
   try {
-    const { knex, tenant } = await createTenantKnex();
-    if (!tenant) {
-      throw new Error('Tenant not found');
-    }
+    const { knex } = await createTenantKnex();
 
     const user = await withTransaction(knex, async (trx: Knex.Transaction) => {
       return await trx('users')
@@ -162,39 +158,35 @@ export async function getClientUserById(userId: string): Promise<IUser | null> {
     console.error('Error getting client user:', error);
     throw error;
   }
-}
+});
 
 /**
- * Create a client user 
+ * Create a client user
  */
-export async function createClientUser({
-  email,
-  password,
-  contactId,
-  clientId,
-  firstName,
-  lastName,
-  roleId
-}: {
-  email: string;
-  password: string;
-  contactId: string;
-  clientId: string;
-  firstName?: string;
-  lastName?: string;
-  roleId?: string;
-}): Promise<{ success: boolean; error?: string }> {
+export const createClientUser = withAuth(async (
+  currentUser: IUserWithRoles,
+  { tenant }: AuthContext,
+  {
+    email,
+    password,
+    contactId,
+    clientId,
+    firstName,
+    lastName,
+    roleId
+  }: {
+    email: string;
+    password: string;
+    contactId: string;
+    clientId: string;
+    firstName?: string;
+    lastName?: string;
+    roleId?: string;
+  }
+): Promise<{ success: boolean; error?: string }> => {
   try {
-    const { knex, tenant } = await createTenantKnex();
-    if (!tenant) {
-      throw new Error('Tenant not found');
-    }
+    const { knex } = await createTenantKnex();
 
-    // Enforce RBAC: require permission to create users
-    const currentUser = await getCurrentUser();
-    if (!currentUser) {
-      return { success: false, error: 'User not authenticated' };
-    }
     const allowed = await hasPermission(currentUser, 'user', 'create', knex);
     if (!allowed) {
       return { success: false, error: 'Permission denied: Cannot create client user' };
@@ -213,7 +205,7 @@ export async function createClientUser({
     };
 
     const result = await createPortalUserInDB(knex, input);
-    
+
     // Revalidate paths after successful creation
     if (result.success) {
       revalidatePath('/client/settings/users');
@@ -226,12 +218,12 @@ export async function createClientUser({
     };
   } catch (error) {
     console.error('Error creating client user:', error);
-    return { 
-      success: false, 
-      error: error instanceof Error ? error.message : 'Unknown error' 
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error'
     };
   }
-}
+});
 
 
 /**
@@ -240,20 +232,13 @@ export async function createClientUser({
  * Allows an authenticated client user to upload an avatar for their own linked contact record,
  * or an MSP user with appropriate permissions to manage contact avatars.
  */
-export async function uploadContactAvatar(
+export const uploadContactAvatar = withAuth(async (
+  currentUser: IUserWithRoles,
+  { tenant }: AuthContext,
   contactId: string,
   formData: FormData
-): Promise<{ success: boolean; message?: string; imageUrl?: string | null }> {
-  const { knex, tenant } = await createTenantKnex();
-  if (!tenant) {
-    return { success: false, message: 'Tenant not found' };
-  }
-
-  // Get current user
-  const currentUser = await getCurrentUser();
-  if (!currentUser) {
-    return { success: false, message: 'User not authenticated' };
-  }
+): Promise<{ success: boolean; message?: string; imageUrl?: string | null }> => {
+  const { knex } = await createTenantKnex();
 
   // Permission check
   let canModify = false;
@@ -353,7 +338,7 @@ export async function uploadContactAvatar(
     const message = error instanceof Error ? error.message : 'Failed to upload contact avatar';
     return { success: false, message };
   }
-}
+});
 
 /**
  * Delete a contact's avatar
@@ -361,19 +346,12 @@ export async function uploadContactAvatar(
  * Allows an authenticated client user to delete the avatar for their own linked contact record,
  * or an MSP user with appropriate permissions to manage contact avatars.
  */
-export async function deleteContactAvatar(
+export const deleteContactAvatar = withAuth(async (
+  currentUser: IUserWithRoles,
+  { tenant }: AuthContext,
   contactId: string
-): Promise<{ success: boolean; message?: string }> {
-  const { knex, tenant } = await createTenantKnex();
-  if (!tenant) {
-    return { success: false, message: 'Tenant not found' };
-  }
-
-  // Get current user
-  const currentUser = await getCurrentUser();
-  if (!currentUser) {
-    return { success: false, message: 'User not authenticated' };
-  }
+): Promise<{ success: boolean; message?: string }> => {
+  const { knex } = await createTenantKnex();
 
   // Permission check
   let canDelete = false;
@@ -394,7 +372,7 @@ export async function deleteContactAvatar(
           })
           .first();
       });
-      
+
       if (userContact) {
         // Check if there's a user with this contact_id
         const contactUser = await withTransaction(knex, async (trx: Knex.Transaction) => {
@@ -406,7 +384,7 @@ export async function deleteContactAvatar(
             })
             .first();
         });
-        
+
         if (contactUser) {
           canDelete = true;
         }
@@ -477,34 +455,27 @@ export async function deleteContactAvatar(
     const message = error instanceof Error ? error.message : 'Failed to delete contact avatar';
     return { success: false, message };
   }
-}
+});
 
 /**
  * Check client portal permissions for navigation
  * Returns permissions for billing, user management, client settings, and account
  */
-export async function checkClientPortalPermissions(): Promise<{
+export const checkClientPortalPermissions = withAuth(async (
+  currentUser: IUserWithRoles,
+  { tenant }: AuthContext
+): Promise<{
   hasBillingAccess: boolean;
   hasUserManagementAccess: boolean;
   hasClientSettingsAccess: boolean;
   hasAccountAccess: boolean;
-}> {
+}> => {
   try {
-    const currentUser = await getCurrentUser();
-    if (!currentUser) {
-      return {
-        hasBillingAccess: false,
-        hasUserManagementAccess: false,
-        hasClientSettingsAccess: false,
-        hasAccountAccess: false
-      };
-    }
-
     const { knex } = await createTenantKnex();
 
     // Check if this is a hosted tenant (has Stripe customer record)
     const isHosted = await knex('stripe_customers')
-      .where({ tenant: currentUser.tenant })
+      .where({ tenant })
       .first()
       .then(result => !!result)
       .catch(() => false);
@@ -533,4 +504,4 @@ export async function checkClientPortalPermissions(): Promise<{
       hasAccountAccess: false
     };
   }
-}
+});

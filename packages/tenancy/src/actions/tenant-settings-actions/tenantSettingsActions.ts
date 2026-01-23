@@ -1,6 +1,7 @@
 'use server';
 
-import { getCurrentUser } from '@alga-psa/users/actions';
+import { withAuth, withOptionalAuth, type AuthContext } from '@alga-psa/auth';
+import type { IUserWithRoles } from '@alga-psa/types';
 import { getTenantForCurrentRequest } from '../../server';
 import { createTenantKnex } from '@alga-psa/db';
 import type { WizardData } from '@alga-psa/types';
@@ -27,7 +28,7 @@ export async function getTenantSettings(): Promise<TenantSettings | null> {
       return null;
     }
 
-    const { knex } = await createTenantKnex();
+    const { knex } = await createTenantKnex(tenant);
     const settings = await knex
       .select('*')
       .from('tenant_settings')
@@ -41,28 +42,19 @@ export async function getTenantSettings(): Promise<TenantSettings | null> {
   }
 }
 
-export async function updateTenantOnboardingStatus(
+export const updateTenantOnboardingStatus = withAuth(async (
+  _user: IUserWithRoles,
+  { tenant }: AuthContext,
   completed: boolean,
   wizardData?: WizardData,
   skipped: boolean = false
-): Promise<void> {
+): Promise<void> => {
   try {
-    const tenant = await getTenantForCurrentRequest();
-    if (!tenant) {
-      throw new Error('No tenant found');
-    }
-
-    // Ensure user is authenticated (no admin check during onboarding)
-    const user = await getCurrentUser();
-    if (!user) {
-      throw new Error('User must be authenticated');
-    }
-
     const { knex } = await createTenantKnex();
-    
+
     // Use a literal timestamp for Citus compatibility
     const now = new Date();
-    
+
     const updateData: any = {
       onboarding_completed: completed,
       onboarding_skipped: skipped,
@@ -100,23 +92,14 @@ export async function updateTenantOnboardingStatus(
     console.error('Error updating tenant onboarding status:', error);
     throw error;
   }
-}
+});
 
-export async function saveTenantOnboardingProgress(
+export const saveTenantOnboardingProgress = withAuth(async (
+  _user: IUserWithRoles,
+  { tenant }: AuthContext,
   wizardData: Partial<WizardData>
-): Promise<void> {
+): Promise<void> => {
   try {
-    const tenant = await getTenantForCurrentRequest();
-    if (!tenant) {
-      throw new Error('No tenant found');
-    }
-
-    // Ensure user is authenticated (no admin check during onboarding)
-    const user = await getCurrentUser();
-    if (!user) {
-      throw new Error('User must be authenticated');
-    }
-
     // Get existing data to merge with
     const existingSettings = await getTenantSettings();
     const existingData = existingSettings?.onboarding_data || {};
@@ -127,10 +110,10 @@ export async function saveTenantOnboardingProgress(
     };
 
     const { knex } = await createTenantKnex();
-    
+
     // Use a literal timestamp for Citus compatibility
     const now = new Date();
-    
+
     // Check if tenant settings already exist
     const existingRecord = await knex('tenant_settings')
       .where({ tenant })
@@ -158,26 +141,23 @@ export async function saveTenantOnboardingProgress(
     console.error('Error saving tenant onboarding progress:', error);
     throw error;
   }
-}
+});
 
-export async function clearTenantOnboardingData(): Promise<void> {
+export const clearTenantOnboardingData = withAuth(async (
+  user: IUserWithRoles,
+  { tenant }: AuthContext
+): Promise<void> => {
   try {
-    const tenant = await getTenantForCurrentRequest();
-    if (!tenant) {
-      throw new Error('No tenant found');
-    }
-
     // Check if user has admin permissions
-    const user = await getCurrentUser();
-    if (!user || !user.roles.some((role: any) => role.role_name === 'admin')) {
+    if (!user.roles.some((role: any) => role.role_name === 'admin')) {
       throw new Error('Only admin users can clear onboarding data');
     }
 
     const { knex } = await createTenantKnex();
-    
+
     // Use a literal timestamp for Citus compatibility
     const now = new Date();
-    
+
     await knex('tenant_settings')
       .where({ tenant })
       .update({
@@ -189,7 +169,7 @@ export async function clearTenantOnboardingData(): Promise<void> {
     console.error('Error clearing tenant onboarding data:', error);
     throw error;
   }
-}
+});
 
 export async function updateTenantSettings(
   settings: Record<string, any>
@@ -209,7 +189,7 @@ export async function updateTenantSettings(
       ...settings
     };
 
-    const { knex } = await createTenantKnex();
+    const { knex } = await createTenantKnex(tenant);
     
     // Use a literal timestamp for Citus compatibility
     const now = new Date();
@@ -266,7 +246,7 @@ export async function updateTenantAnalyticsSettings(
 
 export async function initializeTenantSettings(tenantId: string): Promise<void> {
   try {
-    const { knex } = await createTenantKnex();
+    const { knex } = await createTenantKnex(tenantId);
     
     // Use a literal timestamp for Citus compatibility
     const now = new Date();

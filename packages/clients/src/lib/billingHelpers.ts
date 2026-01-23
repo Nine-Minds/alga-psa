@@ -53,40 +53,19 @@ import {
   type UpdateClientBillingScheduleInput,
   type ClientTaxSourceInfo,
 } from '@alga-psa/shared/billingClients';
-import { getSessionAsync } from './authHelpers';
-import { getCurrentUserAsync } from './usersHelpers';
+import { withAuth, withAuthCheck } from '@alga-psa/auth';
 
-function requireAuthenticatedSession(session: any): void {
-  if (!session?.user?.id) {
-    throw new Error('Unauthorized');
-  }
-}
-
-async function getTenantDbContext(): Promise<{ knex: Knex; tenant: string }> {
-  const session = await getSessionAsync();
-  requireAuthenticatedSession(session);
-
-  const currentUser = await getCurrentUserAsync();
-  const tenantId = currentUser?.tenant;
-  if (!tenantId) {
-    throw new Error('tenant context not found');
-  }
-
-  const { knex, tenant } = await createTenantKnex(tenantId);
-  if (!tenant) {
-    throw new Error('tenant context not found');
-  }
-
-  return { knex, tenant };
-}
-
-export async function createDefaultTaxSettingsAsync(clientId: string): Promise<IClientTaxSettings> {
-  const { knex, tenant } = await getTenantDbContext();
+export const createDefaultTaxSettingsAsync = withAuth(async (
+  _user,
+  { tenant },
+  clientId: string
+): Promise<IClientTaxSettings> => {
+  const { knex } = await createTenantKnex();
 
   return withTransaction(knex, async (trx: Knex.Transaction) => {
     return createDefaultTaxSettings(trx, tenant, clientId);
   });
-}
+});
 
 export async function cloneTemplateContractLineAsync(
   trx: Knex.Transaction,
@@ -102,46 +81,65 @@ export async function cloneTemplateContractLineAsync(
   return cloneTemplateContractLine(trx, options);
 }
 
-export async function getClientContractLineSettingsAsync(clientId: string): Promise<ClientBillingSettings | null> {
-  const { knex, tenant } = await getTenantDbContext();
+export const getClientContractLineSettingsAsync = withAuth(async (
+  _user,
+  { tenant },
+  clientId: string
+): Promise<ClientBillingSettings | null> => {
+  const { knex } = await createTenantKnex();
 
   return withTransaction(knex, async (trx: Knex.Transaction) => {
     return getClientBillingSettings(trx, tenant, clientId);
   });
-}
+});
 
-export async function updateClientContractLineSettingsAsync(
+export const updateClientContractLineSettingsAsync = withAuth(async (
+  _user,
+  { tenant },
   clientId: string,
   settings: ClientBillingSettings | null
-): Promise<{ success: true }> {
-  const { knex, tenant } = await getTenantDbContext();
+): Promise<{ success: true }> => {
+  const { knex } = await createTenantKnex();
 
   await withTransaction(knex, async (trx: Knex.Transaction) => {
     await updateClientBillingSettings(trx, tenant, clientId, settings);
   });
 
   return { success: true };
-}
+});
 
-export async function createNextBillingCycleAsync(clientId: string, effectiveDate?: string): Promise<BillingCycleCreationResult> {
-  const { knex, tenant } = await getTenantDbContext();
+export const createNextBillingCycleAsync = withAuth(async (
+  _user,
+  { tenant },
+  clientId: string,
+  effectiveDate?: string
+): Promise<BillingCycleCreationResult> => {
+  const { knex } = await createTenantKnex();
 
   return withTransaction(knex, async (trx: Knex.Transaction) => {
     return createNextBillingCycle(trx, tenant, clientId, effectiveDate);
   });
-}
+});
 
-export async function updateClientBillingScheduleAsync(input: UpdateClientBillingScheduleInput): Promise<{ success: true }> {
-  const { knex, tenant } = await getTenantDbContext();
+export const updateClientBillingScheduleAsync = withAuth(async (
+  _user,
+  { tenant },
+  input: UpdateClientBillingScheduleInput
+): Promise<{ success: true }> => {
+  const { knex } = await createTenantKnex();
 
   await withTransaction(knex, async (trx: Knex.Transaction) => {
     await updateClientBillingSchedule(trx, tenant, input);
   });
 
   return { success: true };
-}
+});
 
-export async function getClientBillingCycleAnchorAsync(clientId: string): Promise<{
+export const getClientBillingCycleAnchorAsync = withAuth(async (
+  _user,
+  { tenant },
+  clientId: string
+): Promise<{
   billingCycle: BillingCycleType;
   anchor: {
     dayOfMonth: number | null;
@@ -149,209 +147,281 @@ export async function getClientBillingCycleAnchorAsync(clientId: string): Promis
     dayOfWeek: number | null;
     referenceDate: ISO8601String | null;
   };
-}> {
-  const { knex, tenant } = await getTenantDbContext();
+}> => {
+  const { knex } = await createTenantKnex();
 
   return withTransaction(knex, async (trx: Knex.Transaction) => {
     return getClientBillingCycleAnchor(trx, tenant, clientId);
   });
-}
+});
 
-export async function previewBillingPeriodsForScheduleAsync(
+export const previewBillingPeriodsForScheduleAsync = withAuthCheck(async (
+  _user,
   billingCycle: BillingCycleType,
   anchor: BillingCycleAnchorSettingsInput,
   options: { count?: number; referenceDate?: ISO8601String } = {}
-): Promise<Array<{ periodStartDate: ISO8601String; periodEndDate: ISO8601String }>> {
-  const session = await getSessionAsync();
-  requireAuthenticatedSession(session);
+): Promise<Array<{ periodStartDate: ISO8601String; periodEndDate: ISO8601String }>> => {
   return previewBillingPeriodsForSchedule(billingCycle, anchor, options);
-}
+});
 
-export async function addTaxRateAsync(taxRate: Omit<ITaxRate, 'tax_rate_id'>): Promise<ITaxRate> {
-  const { knex, tenant } = await getTenantDbContext();
+export const addTaxRateAsync = withAuth(async (
+  _user,
+  { tenant },
+  taxRate: Omit<ITaxRate, 'tax_rate_id'>
+): Promise<ITaxRate> => {
+  const { knex } = await createTenantKnex();
 
   return withTransaction(knex, async (trx: Knex.Transaction) => {
     return addTaxRate(trx, tenant, taxRate);
   });
-}
+});
 
-export async function getActiveTaxRegionsAsync(): Promise<Pick<ITaxRegion, 'region_code' | 'region_name'>[]> {
-  const { knex, tenant } = await getTenantDbContext();
+export const getActiveTaxRegionsAsync = withAuth(async (
+  _user,
+  { tenant }
+): Promise<Pick<ITaxRegion, 'region_code' | 'region_name'>[]> => {
+  const { knex } = await createTenantKnex();
 
   return withTransaction(knex, async (trx: Knex.Transaction) => {
     return getActiveTaxRegions(trx, tenant);
   });
-}
+});
 
-export async function getTaxRatesAsync(): Promise<ITaxRate[]> {
-  const { knex, tenant } = await getTenantDbContext();
+export const getTaxRatesAsync = withAuth(async (
+  _user,
+  { tenant }
+): Promise<ITaxRate[]> => {
+  const { knex } = await createTenantKnex();
 
   return withTransaction(knex, async (trx: Knex.Transaction) => {
     return getTaxRates(trx, tenant);
   });
-}
+});
 
-export async function getContractLinesAsync(): Promise<IContractLine[]> {
-  const { knex, tenant } = await getTenantDbContext();
+export const getContractLinesAsync = withAuth(async (
+  _user,
+  { tenant }
+): Promise<IContractLine[]> => {
+  const { knex } = await createTenantKnex();
 
   return withTransaction(knex, async (trx: Knex.Transaction) => {
     return getContractLines(trx, tenant);
   });
-}
+});
 
-export async function getContractLineServicesAsync(contractLineId: string): Promise<IContractLineService[]> {
-  const { knex, tenant } = await getTenantDbContext();
+export const getContractLineServicesAsync = withAuth(async (
+  _user,
+  { tenant },
+  contractLineId: string
+): Promise<IContractLineService[]> => {
+  const { knex } = await createTenantKnex();
 
   return withTransaction(knex, async (trx: Knex.Transaction) => {
     return getContractLineServices(trx, tenant, contractLineId);
   });
-}
+});
 
-export async function getContractsAsync(): Promise<IContract[]> {
-  const { knex, tenant } = await getTenantDbContext();
+export const getContractsAsync = withAuth(async (
+  _user,
+  { tenant }
+): Promise<IContract[]> => {
+  const { knex } = await createTenantKnex();
 
   return withTransaction(knex, async (trx: Knex.Transaction) => {
     return getContracts(trx, tenant);
   });
-}
+});
 
-export async function getServiceCategoriesAsync(): Promise<any[]> {
-  const { knex, tenant } = await getTenantDbContext();
+export const getServiceCategoriesAsync = withAuth(async (
+  _user,
+  { tenant }
+): Promise<any[]> => {
+  const { knex } = await createTenantKnex();
 
   return withTransaction(knex, async (trx: Knex.Transaction) => {
     return getServiceCategories(trx, tenant);
   });
-}
+});
 
-export async function getServicesAsync(
+export const getServicesAsync = withAuth(async (
+  _user,
+  { tenant },
   page: number = 1,
   pageSize: number = 999,
   options: ServiceListOptions = {}
-): Promise<PaginatedServicesResponse> {
-  const { knex, tenant } = await getTenantDbContext();
+): Promise<PaginatedServicesResponse> => {
+  const { knex } = await createTenantKnex();
 
   return withTransaction(knex, async (trx: Knex.Transaction) => {
     return getServices(trx, tenant, page, pageSize, options);
   });
-}
+});
 
-export async function createServiceAsync(service: any): Promise<IService> {
-  const { knex, tenant } = await getTenantDbContext();
+export const createServiceAsync = withAuth(async (
+  _user,
+  { tenant },
+  service: any
+): Promise<IService> => {
+  const { knex } = await createTenantKnex();
 
   return withTransaction(knex, async (trx: Knex.Transaction) => {
     return createService(trx, tenant, service);
   });
-}
+});
 
-export async function updateServiceAsync(serviceId: string, service: any): Promise<IService> {
-  const { knex, tenant } = await getTenantDbContext();
+export const updateServiceAsync = withAuth(async (
+  _user,
+  { tenant },
+  serviceId: string,
+  service: any
+): Promise<IService> => {
+  const { knex } = await createTenantKnex();
 
   return withTransaction(knex, async (trx: Knex.Transaction) => {
     return updateService(trx, tenant, serviceId, service);
   });
-}
+});
 
-export async function deleteServiceAsync(serviceId: string): Promise<void> {
-  const { knex, tenant } = await getTenantDbContext();
+export const deleteServiceAsync = withAuth(async (
+  _user,
+  { tenant },
+  serviceId: string
+): Promise<void> => {
+  const { knex } = await createTenantKnex();
 
   await withTransaction(knex, async (trx: Knex.Transaction) => {
     await deleteService(trx, tenant, serviceId);
   });
-}
+});
 
-export async function getInvoiceTemplatesAsync(): Promise<IInvoiceTemplate[]> {
-  const { knex, tenant } = await getTenantDbContext();
+export const getInvoiceTemplatesAsync = withAuth(async (
+  _user,
+  { tenant }
+): Promise<IInvoiceTemplate[]> => {
+  const { knex } = await createTenantKnex();
 
   return withTransaction(knex, async (trx: Knex.Transaction) => {
     return getInvoiceTemplates(trx, tenant);
   });
-}
+});
 
-export async function getDefaultTemplateAsync(): Promise<IInvoiceTemplate | null> {
-  const { knex, tenant } = await getTenantDbContext();
+export const getDefaultTemplateAsync = withAuth(async (
+  _user,
+  { tenant }
+): Promise<IInvoiceTemplate | null> => {
+  const { knex } = await createTenantKnex();
 
   return withTransaction(knex, async (trx: Knex.Transaction) => {
     return getDefaultInvoiceTemplate(trx, tenant);
   });
-}
+});
 
-export async function setClientTemplateAsync(clientId: string, templateId: string | null): Promise<void> {
-  const { knex, tenant } = await getTenantDbContext();
+export const setClientTemplateAsync = withAuth(async (
+  _user,
+  { tenant },
+  clientId: string,
+  templateId: string | null
+): Promise<void> => {
+  const { knex } = await createTenantKnex();
 
   await withTransaction(knex, async (trx: Knex.Transaction) => {
     await setClientTemplate(trx, tenant, clientId, templateId);
   });
-}
+});
 
-export async function getServiceTypesForSelectionAsync(): Promise<
+export const getServiceTypesForSelectionAsync = withAuth(async (
+  _user,
+  { tenant }
+): Promise<
   Array<{ id: string; name: string; billing_method: 'fixed' | 'hourly' | 'per_unit' | 'usage'; is_standard: boolean }>
-> {
-  const { knex, tenant } = await getTenantDbContext();
+> => {
+  const { knex } = await createTenantKnex();
 
   return withTransaction(knex, async (trx: Knex.Transaction) => {
     return getServiceTypesForSelection(trx, tenant);
   });
-}
+});
 
-export async function getPlanTypeDisplayAsync(): Promise<Record<string, string>> {
+export const getPlanTypeDisplayAsync = withAuthCheck(async (
+  _user
+): Promise<Record<string, string>> => {
   return {
     Fixed: 'Fixed',
     Hourly: 'Hourly',
     Usage: 'Usage Based',
   };
-}
+});
 
-export async function getClientTaxSettingsAsync(clientId: string): Promise<IClientTaxSettings | null> {
-  const { knex, tenant } = await getTenantDbContext();
+export const getClientTaxSettingsAsync = withAuth(async (
+  _user,
+  { tenant },
+  clientId: string
+): Promise<IClientTaxSettings | null> => {
+  const { knex } = await createTenantKnex();
 
   return withTransaction(knex, async (trx: Knex.Transaction) => {
     return getClientTaxSettings(trx, tenant, clientId);
   });
-}
+});
 
-export async function updateClientTaxSettingsAsync(
+export const updateClientTaxSettingsAsync = withAuth(async (
+  _user,
+  { tenant },
   clientId: string,
   taxSettings: Omit<IClientTaxSettings, 'tenant'>
-): Promise<IClientTaxSettings | null> {
-  const { knex, tenant } = await getTenantDbContext();
+): Promise<IClientTaxSettings | null> => {
+  const { knex } = await createTenantKnex();
 
   return withTransaction(knex, async (trx: Knex.Transaction) => {
     return updateClientTaxSettings(trx, tenant, clientId, taxSettings);
   });
-}
+});
 
-export async function getClientTaxExemptStatusAsync(clientId: string): Promise<{ is_tax_exempt: boolean; tax_exemption_certificate?: string } | null> {
-  const { knex, tenant } = await getTenantDbContext();
+export const getClientTaxExemptStatusAsync = withAuth(async (
+  _user,
+  { tenant },
+  clientId: string
+): Promise<{ is_tax_exempt: boolean; tax_exemption_certificate?: string } | null> => {
+  const { knex } = await createTenantKnex();
 
   return withTransaction(knex, async (trx: Knex.Transaction) => {
     return getClientTaxExemptStatus(trx, tenant, clientId);
   });
-}
+});
 
-export async function updateClientTaxExemptStatusAsync(
+export const updateClientTaxExemptStatusAsync = withAuth(async (
+  _user,
+  { tenant },
   clientId: string,
   isTaxExempt: boolean,
   taxExemptionCertificate?: string
-): Promise<{ is_tax_exempt: boolean; tax_exemption_certificate?: string }> {
-  const { knex, tenant } = await getTenantDbContext();
+): Promise<{ is_tax_exempt: boolean; tax_exemption_certificate?: string }> => {
+  const { knex } = await createTenantKnex();
 
   return withTransaction(knex, async (trx: Knex.Transaction) => {
     return updateClientTaxExemptStatus(trx, tenant, clientId, isTaxExempt, taxExemptionCertificate);
   });
-}
+});
 
-export async function canClientOverrideTaxSourceAsync(): Promise<boolean> {
-  const { knex, tenant } = await getTenantDbContext();
+export const canClientOverrideTaxSourceAsync = withAuth(async (
+  _user,
+  { tenant }
+): Promise<boolean> => {
+  const { knex } = await createTenantKnex();
 
   return withTransaction(knex, async (trx: Knex.Transaction) => {
     return canClientOverrideTaxSource(trx, tenant);
   });
-}
+});
 
-export async function getEffectiveTaxSourceForClientAsync(clientId: string): Promise<ClientTaxSourceInfo> {
-  const { knex, tenant } = await getTenantDbContext();
+export const getEffectiveTaxSourceForClientAsync = withAuth(async (
+  _user,
+  { tenant },
+  clientId: string
+): Promise<ClientTaxSourceInfo> => {
+  const { knex } = await createTenantKnex();
 
   return withTransaction(knex, async (trx: Knex.Transaction) => {
     return getEffectiveTaxSourceForClient(trx, tenant, clientId);
   });
-}
+});

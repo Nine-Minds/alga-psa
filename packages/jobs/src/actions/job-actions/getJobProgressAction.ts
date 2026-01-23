@@ -1,9 +1,8 @@
 'use server';
 
-import { getCurrentUser } from '@alga-psa/users/actions';
-import { createTenantKnex, runWithTenant } from '@alga-psa/db';
 import { withAdminTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
+import { withAuth } from '@alga-psa/auth';
 
 import { JobStatus } from '@alga-psa/jobs';
 import type { JobHeader, JobDetail } from '@alga-psa/jobs';
@@ -15,47 +14,34 @@ export interface JobProgressData {
   metrics: JobMetrics;
 }
 
-export async function getJobProgressAction(jobId: string): Promise<JobProgressData> {
-  const user = await getCurrentUser();
-  
-  if (!user || !user.user_id || !user.tenant) {
-    throw new Error('Unauthorized - Invalid user session');
-  }
-
+export const getJobProgressAction = withAuth(async (user, { tenant }, jobId: string): Promise<JobProgressData> => {
   try {
-    const { tenant } = await createTenantKnex(user.tenant);
-    if (!tenant) {
-      throw new Error('No tenant found');
-    }
+    const { header, details } = await withAdminTransaction(async (trx: Knex.Transaction) => {
+      const [headerResult] = await trx('jobs as j')
+        .select(
+          'j.job_id as id',
+          'j.type as name',
+          'j.status',
+          'j.created_at as createdOn'
+        )
+        .where('j.job_id', jobId)
+        .andWhere('j.tenant', tenant);
 
-    const { header, details } = await runWithTenant(tenant, () =>
-      withAdminTransaction(async (trx: Knex.Transaction) => {
-        const [headerResult] = await trx('jobs as j')
-          .select(
-            'j.job_id as id',
-            'j.type as name',
-            'j.status',
-            'j.created_at as createdOn'
-          )
-          .where('j.job_id', jobId)
-          .andWhere('j.tenant', tenant);
+      const detailsResult = await trx('job_details as jd')
+        .select(
+          'jd.detail_id as id',
+          'jd.step_name as stepName',
+          'jd.status',
+          'jd.processed_at as processedAt',
+          'jd.retry_count as retryCount',
+          'jd.result'
+        )
+        .where('jd.job_id', jobId)
+        .andWhere('jd.tenant', tenant)
+        .orderBy('jd.processed_at', 'asc');
 
-        const detailsResult = await trx('job_details as jd')
-          .select(
-            'jd.detail_id as id',
-            'jd.step_name as stepName',
-            'jd.status',
-            'jd.processed_at as processedAt',
-            'jd.retry_count as retryCount',
-            'jd.result'
-          )
-          .where('jd.job_id', jobId)
-          .andWhere('jd.tenant', tenant)
-          .orderBy('jd.processed_at', 'asc');
-
-        return { header: headerResult, details: detailsResult };
-      })
-    );
+      return { header: headerResult, details: detailsResult };
+    });
 
     if (!header) {
       throw new Error(`Job not found: ${jobId}`);
@@ -93,4 +79,4 @@ export async function getJobProgressAction(jobId: string): Promise<JobProgressDa
     }
     throw new Error('Failed to get job progress');
   }
-}
+});

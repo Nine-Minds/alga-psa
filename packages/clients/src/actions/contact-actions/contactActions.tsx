@@ -7,10 +7,10 @@ import { Knex } from 'knex';
 import { unparseCSV } from '@alga-psa/core';
 import { getContactAvatarUrlsBatchAsync } from '../../lib/documentsHelpers';
 import { createTag } from '@alga-psa/tags/actions';
-import { getCurrentUserAsync } from '../../lib/usersHelpers';
 import { hasPermissionAsync } from '../../lib/authHelpers';
 import { ContactModel, CreateContactInput } from '@alga-psa/shared/models/contactModel';
 import { deleteEntityTags } from '@alga-psa/tags/lib/tagCleanup';
+import { withAuth } from '@alga-psa/auth';
 
 // Shared column mapping for contact sorting
 const CONTACT_SORT_COLUMNS = {
@@ -27,20 +27,12 @@ const CONTACT_SORT_COLUMNS_ALIASED = {
   phone_number: 'phone_number'
 } as const;
 
-async function getTenantDbContext() {
-  const currentUser = await getCurrentUserAsync();
-  const tenant = currentUser?.tenant;
-  if (!tenant) {
-    throw new Error('SYSTEM_ERROR: Tenant configuration not found');
-  }
-
-  const { knex: db } = await createTenantKnex(tenant);
-  return { db, tenant, currentUser };
-}
-
-export async function getContactByContactNameId(contactNameId: string): Promise<IContact | null> {
-  // Revert to using createTenantKnex for now
-  const { db, tenant } = await getTenantDbContext();
+export const getContactByContactNameId = withAuth(async (
+  _user,
+  { tenant },
+  contactNameId: string
+): Promise<IContact | null> => {
+  const { knex: db } = await createTenantKnex();
   try {
     // Validate input
     if (!contactNameId) {
@@ -54,7 +46,7 @@ export async function getContactByContactNameId(contactNameId: string): Promise<
           'contacts.*',
           'clients.client_name'
         )
-        .leftJoin('clients', function (this: Knex.JoinClause) { // Add type for 'this'
+        .leftJoin('clients', function (this: Knex.JoinClause) {
           this.on('contacts.client_id', 'clients.client_id')
             .andOn('clients.tenant', 'contacts.tenant')
         })
@@ -65,75 +57,64 @@ export async function getContactByContactNameId(contactNameId: string): Promise<
         .first();
     });
 
-    // Note: We don't throw an error if contact is not found
-    // Instead return null as this is a lookup function
     return contact || null;
   } catch (err) {
-    // Log the error for debugging
     console.error('Error getting contact by contact_name_id:', err);
 
-    // Handle known error types
     if (err instanceof Error) {
       const message = err.message;
-
-      // If it's already one of our formatted errors, rethrow it
       if (message.includes('VALIDATION_ERROR:') ||
         message.includes('SYSTEM_ERROR:')) {
         throw err;
       }
-
-      // Handle database-specific errors
       if (message.includes('relation') && message.includes('does not exist')) {
         throw new Error('SYSTEM_ERROR: Database schema error - please contact support');
       }
     }
 
-    // For unexpected errors, throw a generic system error
     throw new Error('SYSTEM_ERROR: An unexpected error occurred while retrieving contact information');
   }
-  // Remove closing bracket for runWithTenant
-}
+});
 
-export async function deleteContact(contactId: string): Promise<{
+export const deleteContact = withAuth(async (
+  _user,
+  { tenant },
+  contactId: string
+): Promise<{
   success: boolean;
   code?: string;
   message?: string;
   dependencies?: string[];
   counts?: Record<string, number>;
   dependencyText?: string;
-}> {
-  console.log('🔍 Starting deleteContact function with contactId:', contactId);
+}> => {
+  console.log('Starting deleteContact function with contactId:', contactId);
 
-  const { db, tenant } = await getTenantDbContext();
-  console.log('🔍 Got database connection, tenant:', tenant);
+  const { knex: db } = await createTenantKnex();
+  console.log('Got database connection, tenant:', tenant);
 
   try {
-    // Validate input
     if (!contactId) {
       throw new Error('VALIDATION_ERROR: Contact ID is required');
     }
 
-    console.log('🔍 Checking if contact exists...');
-    // Verify contact exists
+    console.log('Checking if contact exists...');
     const contact = await withTransaction(db, async (trx: Knex.Transaction) => {
       return await trx('contacts')
         .where({ contact_name_id: contactId, tenant })
         .first();
     });
 
-    console.log('🔍 Contact found:', !!contact);
+    console.log('Contact found:', !!contact);
     if (!contact) {
       throw new Error('VALIDATION_ERROR: The contact you are trying to delete no longer exists');
     }
 
-    console.log('🔍 Checking for dependencies...');
-    // Check for dependencies
+    console.log('Checking for dependencies...');
     const dependencies: string[] = [];
     const counts: Record<string, number> = {};
 
-    // Check dependencies within transaction
     await withTransaction(db, async (trx: Knex.Transaction) => {
-      // Check if this is the billing contact for their client
       if (contact.client_id) {
         const clientInfo = await trx('clients')
           .where({ client_id: contact.client_id, tenant })
@@ -145,12 +126,8 @@ export async function deleteContact(contactId: string): Promise<{
         }
       }
 
-      // Check for tickets
       const ticketCount = await trx('tickets')
-        .where({
-          contact_name_id: contactId,
-          tenant
-        })
+        .where({ contact_name_id: contactId, tenant })
         .count('* as count')
         .first();
       if (ticketCount && Number(ticketCount.count) > 0) {
@@ -158,12 +135,8 @@ export async function deleteContact(contactId: string): Promise<{
         counts['ticket'] = Number(ticketCount.count);
       }
 
-      // Check for interactions
       const interactionCount = await trx('interactions')
-        .where({
-          contact_name_id: contactId,
-          tenant
-        })
+        .where({ contact_name_id: contactId, tenant })
         .count('* as count')
         .first();
       if (interactionCount && Number(interactionCount.count) > 0) {
@@ -171,13 +144,8 @@ export async function deleteContact(contactId: string): Promise<{
         counts['interaction'] = Number(interactionCount.count);
       }
 
-      // Check for document associations
       const documentCount = await trx('document_associations')
-        .where({
-          entity_id: contactId,
-          entity_type: 'contact',
-          tenant
-        })
+        .where({ entity_id: contactId, entity_type: 'contact', tenant })
         .count('* as count')
         .first();
       if (documentCount && Number(documentCount.count) > 0) {
@@ -185,12 +153,8 @@ export async function deleteContact(contactId: string): Promise<{
         counts['document'] = Number(documentCount.count);
       }
 
-      // Check for projects
       const projectCount = await trx('projects')
-        .where({
-          contact_name_id: contactId,
-          tenant
-        })
+        .where({ contact_name_id: contactId, tenant })
         .count('* as count')
         .first();
       if (projectCount && Number(projectCount.count) > 0) {
@@ -198,19 +162,8 @@ export async function deleteContact(contactId: string): Promise<{
         counts['project'] = Number(projectCount.count);
       }
 
-      // Note: Boards are not directly associated with contacts, so we skip this check
-      // The boards table doesn't have a contact_name_id column
-
-      // Note: Comments are not directly associated with contacts, so we skip this check
-      // The comments table doesn't have a contact_name_id column (removed by migration 20250217202553_drop_contact_columns.cjs)
-
-      // Check for client portal user - a contact with an associated user account should not be deleted
       const portalUserCount = await trx('users')
-        .where({
-          contact_id: contactId,
-          tenant,
-          user_type: 'client'
-        })
+        .where({ contact_id: contactId, tenant, user_type: 'client' })
         .count('* as count')
         .first();
       if (portalUserCount && Number(portalUserCount.count) > 0) {
@@ -219,7 +172,6 @@ export async function deleteContact(contactId: string): Promise<{
       }
     });
 
-    // If there are dependencies, return error with details (similar to client deletion)
     if (dependencies.length > 0) {
       const readableTypes: Record<string, string> = {
         'billing_contact': 'billing contact assignment',
@@ -246,66 +198,56 @@ export async function deleteContact(contactId: string): Promise<{
       };
     }
 
-    // If no dependencies, proceed with contact deletion
-    console.log('🔍 Proceeding with contact deletion...');
+    console.log('Proceeding with contact deletion...');
     const result = await withTransaction(db, async (trx: Knex.Transaction) => {
       try {
-        console.log('🔍 Inside transaction, attempting deletion with params:', { contact_name_id: contactId, tenant });
+        console.log('Inside transaction, attempting deletion with params:', { contact_name_id: contactId, tenant });
 
-        // Get the contact's notes_document_id before deletion
         const contactRecord = await trx('contacts')
           .where({ contact_name_id: contactId, tenant })
           .select('notes_document_id')
           .first();
 
-        // Clean up notes document if it exists
         if (contactRecord?.notes_document_id) {
-          console.log('🔍 Cleaning up notes document:', contactRecord.notes_document_id);
+          console.log('Cleaning up notes document:', contactRecord.notes_document_id);
 
-          // Delete block content first (due to FK)
           await trx('document_block_content')
             .where({ tenant, document_id: contactRecord.notes_document_id })
             .delete();
 
-          // Delete document associations
           await trx('document_associations')
             .where({ tenant, document_id: contactRecord.notes_document_id })
             .delete();
 
-          // Delete the document
           await trx('documents')
             .where({ tenant, document_id: contactRecord.notes_document_id })
             .delete();
         }
 
-        // Clean up any tags associated with this contact
         await deleteEntityTags(trx, contactId, 'contact');
 
-        // Delete the contact record itself
         const deleted = await trx('contacts')
           .where({ contact_name_id: contactId, tenant })
           .delete();
 
-        console.log('🔍 Deletion result:', deleted);
+        console.log('Deletion result:', deleted);
 
         if (!deleted || deleted === 0) {
-          console.error('🚨 No rows were deleted');
+          console.error('No rows were deleted');
           throw new Error('Contact record not found or could not be deleted');
         }
 
-        console.log('✅ Contact deletion successful');
+        console.log('Contact deletion successful');
         return { success: true };
       } catch (err) {
-        console.error('❌ Error during contact deletion transaction:', err);
+        console.error('Error during contact deletion transaction:', err);
 
-        // Get more detailed error information
         let errorMessage = 'Unknown error';
         if (err instanceof Error) {
           errorMessage = err.message;
           console.error('Detailed error message:', errorMessage);
           console.error('Error stack:', err.stack);
 
-          // Log the actual SQL error if available
           if ('code' in err) {
             console.error('Database error code:', (err as any).code);
           }
@@ -317,7 +259,6 @@ export async function deleteContact(contactId: string): Promise<{
           }
         }
 
-        // Handle specific database errors
         if (errorMessage.includes('relation') && errorMessage.includes('does not exist')) {
           throw new Error(`SYSTEM_ERROR: Database table missing - ${errorMessage}`);
         }
@@ -326,26 +267,21 @@ export async function deleteContact(contactId: string): Promise<{
           throw new Error('VALIDATION_ERROR: Cannot delete contact because it has associated records');
         }
 
-        // Handle connection issues
         if (errorMessage.includes('connection') || errorMessage.includes('timeout')) {
           throw new Error(`SYSTEM_ERROR: Database connection issue - ${errorMessage}`);
         }
 
-        // Re-throw the error with more context but preserve the original error
         throw err;
       }
     });
 
     return result;
   } catch (err) {
-    // Log the error for debugging
-    console.error('❌ Error in deleteContact outer catch:', err);
+    console.error('Error in deleteContact outer catch:', err);
 
-    // Handle known error types
     if (err instanceof Error) {
       const message = err.message;
 
-      // Handle database-specific errors
       if (message.includes('violates foreign key constraint')) {
         console.error('Foreign key constraint violation detected');
         return {
@@ -354,7 +290,6 @@ export async function deleteContact(contactId: string): Promise<{
         };
       }
 
-      // Handle connection/timeout issues
       if (message.includes('connection') || message.includes('timeout')) {
         console.error('Database connection issue detected:', message);
         return {
@@ -363,7 +298,6 @@ export async function deleteContact(contactId: string): Promise<{
         };
       }
 
-      // Log and return error info for better debugging
       console.error('Contact deletion failed:', message);
       console.error('Error stack:', err.stack);
       return {
@@ -372,34 +306,35 @@ export async function deleteContact(contactId: string): Promise<{
       };
     }
 
-    // For non-Error objects, provide more debugging info
     console.error('Non-Error object thrown:', typeof err, err);
     return {
       success: false,
       message: 'An unexpected error occurred while deleting the contact'
     };
   }
-}
+});
 
 export type ContactFilterStatus = 'active' | 'inactive' | 'all';
 
-export async function getContactsByClient(clientId: string, status: ContactFilterStatus = 'active', sortBy: string = 'full_name', sortDirection: 'asc' | 'desc' = 'asc'): Promise<IContact[]> {
-  const { db, tenant } = await getTenantDbContext();
+export const getContactsByClient = withAuth(async (
+  _user,
+  { tenant },
+  clientId: string,
+  status: ContactFilterStatus = 'active',
+  sortBy: string = 'full_name',
+  sortDirection: 'asc' | 'desc' = 'asc'
+): Promise<IContact[]> => {
+  const { knex: db } = await createTenantKnex();
 
   try {
-    // Validate input
     if (!clientId) {
       throw new Error('VALIDATION_ERROR: Client ID is required');
     }
 
-    // Validate sortBy parameter against whitelist
     const allowedSortBy = ['full_name', 'created_at', 'email', 'phone_number'];
     const safeSortBy = allowedSortBy.includes(sortBy) ? sortBy : 'full_name';
-
-    // Validate sortDirection parameter
     const safeSortDirection = sortDirection === 'desc' ? 'desc' : 'asc';
 
-    // Verify client exists
     const client = await withTransaction(db, async (trx: Knex.Transaction) => {
       return await trx('clients')
         .where({ client_id: clientId, tenant })
@@ -410,20 +345,16 @@ export async function getContactsByClient(clientId: string, status: ContactFilte
       throw new Error('VALIDATION_ERROR: The specified client does not exist');
     }
 
-    // Fetch contacts with client information
     const contacts = await withTransaction(db, async (trx: Knex.Transaction) => {
       return await trx('contacts')
-        .select(
-          'contacts.*',
-          'clients.client_name'
-        )
-        .leftJoin('clients', function (this: Knex.JoinClause) { // Add type for 'this'
+        .select('contacts.*', 'clients.client_name')
+        .leftJoin('clients', function (this: Knex.JoinClause) {
           this.on('contacts.client_id', 'clients.client_id')
             .andOn('clients.tenant', 'contacts.tenant')
         })
         .where('contacts.client_id', clientId)
         .andWhere('contacts.tenant', tenant)
-        .modify(function (queryBuilder: Knex.QueryBuilder) { // Add type for 'queryBuilder'
+        .modify(function (queryBuilder: Knex.QueryBuilder) {
           if (status !== 'all') {
             queryBuilder.where('contacts.is_inactive', status === 'inactive');
           }
@@ -431,9 +362,6 @@ export async function getContactsByClient(clientId: string, status: ContactFilte
         .orderBy(CONTACT_SORT_COLUMNS[safeSortBy as keyof typeof CONTACT_SORT_COLUMNS] || 'contacts.full_name', safeSortDirection);
     });
 
-    // PERFORMANCE FIX: Fetch avatar URLs in batch to avoid N+1 query problem
-    // Before: 142 contacts = 142 separate getContactAvatarUrl() calls = 142 DB queries
-    // After: 1 batch call = 2 DB queries (associations + documents)
     const contactIds = contacts.map((c: IContact) => c.contact_name_id);
     const avatarUrlsMap = await getContactAvatarUrlsBatchAsync(contactIds, tenant);
 
@@ -442,47 +370,33 @@ export async function getContactsByClient(clientId: string, status: ContactFilte
       avatarUrl: avatarUrlsMap.get(contact.contact_name_id) || null,
     }));
 
-    // Return contacts with avatar URLs
     return contactsWithAvatars;
   } catch (err) {
-    // Log the error for debugging
     console.error('Error fetching contacts for client:', err);
 
-    // Handle known error types
     if (err instanceof Error) {
       const message = err.message;
-
-      // If it's already one of our formatted errors, rethrow it
-      if (message.includes('VALIDATION_ERROR:') ||
-        message.includes('SYSTEM_ERROR:')) {
+      if (message.includes('VALIDATION_ERROR:') || message.includes('SYSTEM_ERROR:')) {
         throw err;
       }
-
-      // Handle database-specific errors
       if (message.includes('relation') && message.includes('does not exist')) {
         throw new Error('SYSTEM_ERROR: Database schema error - please contact support');
       }
     }
 
-    // For unexpected errors, throw a generic system error
     throw new Error('SYSTEM_ERROR: An unexpected error occurred while retrieving client contacts');
   }
-}
+});
 
-/**
- * Get contacts that do not yet have an associated client portal user.
- * Optionally filter by client and status (active by default).
- */
-export async function getContactsEligibleForInvitation(
+export const getContactsEligibleForInvitation = withAuth(async (
+  user,
+  { tenant },
   clientId?: string,
   status: ContactFilterStatus = 'active'
-): Promise<IContact[]> {
-  // RBAC: ensure user has permission to read contacts
-  const { db, tenant, currentUser } = await getTenantDbContext();
-  
-  // Check permission to read contacts
-  const canRead = await hasPermissionAsync(currentUser, 'contact', 'read', db);
-    
+): Promise<IContact[]> => {
+  const { knex: db } = await createTenantKnex();
+
+  const canRead = await hasPermissionAsync(user, 'contact', 'read', db);
   if (!canRead) {
     throw new Error('Permission denied: Cannot read contacts');
   }
@@ -511,7 +425,6 @@ export async function getContactsEligibleForInvitation(
       return q;
     });
 
-    // PERFORMANCE FIX: Batch fetch avatar URLs to avoid N+1
     const contactIds = contacts.map((c: IContact) => c.contact_name_id);
     const avatarUrlsMap = await getContactAvatarUrlsBatchAsync(contactIds, tenant);
 
@@ -525,29 +438,28 @@ export async function getContactsEligibleForInvitation(
     console.error('Error fetching contacts eligible for invitation:', err);
     throw new Error('SYSTEM_ERROR: Failed to retrieve contacts eligible for invitation');
   }
-}
+});
 
-// getAllClients is exported from clientActions.ts to avoid duplicate exports
-
-export async function getAllContacts(status: ContactFilterStatus = 'active', sortBy: string = 'full_name', sortDirection: 'asc' | 'desc' = 'asc'): Promise<IContact[]> {
-  const { db, tenant } = await getTenantDbContext();
+export const getAllContacts = withAuth(async (
+  _user,
+  { tenant },
+  status: ContactFilterStatus = 'active',
+  sortBy: string = 'full_name',
+  sortDirection: 'asc' | 'desc' = 'asc'
+): Promise<IContact[]> => {
+  const { knex: db } = await createTenantKnex();
 
   try {
-    // Validate status parameter
     if (!['active', 'inactive', 'all'].includes(status)) {
       throw new Error('VALIDATION_ERROR: Invalid status filter provided');
     }
 
-    // Validate sortBy parameter against whitelist
     const allowedSortBy = ['full_name', 'created_at', 'email', 'phone_number'];
     const safeSortBy = allowedSortBy.includes(sortBy) ? sortBy : 'full_name';
-
-    // Validate sortDirection parameter
     const safeSortDirection = sortDirection === 'desc' ? 'desc' : 'asc';
 
     console.log('[getAllContacts] Fetching contacts with status:', status, 'for tenant:', tenant);
 
-    // Check if contacts table exists and fallback gracefully
     let contacts: any[] = [];
     try {
       contacts = await withTransaction(db, async (trx: Knex.Transaction) => {
@@ -563,7 +475,6 @@ export async function getAllContacts(status: ContactFilterStatus = 'active', sor
 
         console.log('[getAllContacts] Found', fetchedContacts.length, 'contacts');
 
-        // Try to add client names if clients table exists
         if (fetchedContacts.length > 0) {
           try {
             const clientIds = fetchedContacts.map((c: IContact) => c.client_id).filter(Boolean);
@@ -581,7 +492,6 @@ export async function getAllContacts(status: ContactFilterStatus = 'active', sor
             }
           } catch (clientErr) {
             console.warn('[getAllContacts] Failed to fetch client names, proceeding without them:', clientErr);
-            // Continue without client names
           }
         }
 
@@ -600,16 +510,12 @@ export async function getAllContacts(status: ContactFilterStatus = 'active', sor
       throw dbErr;
     }
 
-    // PERFORMANCE FIX: Batch fetch avatar URLs to avoid N+1 problem
-    // Before: Each contact triggered individual getContactAvatarUrl() call
-    // After: Single batch call for all contacts
     let avatarUrlsMap: Map<string, string | null> = new Map();
     try {
       const contactIds = contacts.map(c => c.contact_name_id);
       avatarUrlsMap = await getContactAvatarUrlsBatchAsync(contactIds, tenant);
     } catch (avatarErr) {
       console.warn('[getAllContacts] Failed to fetch avatars in batch:', avatarErr);
-      // Continue without avatars
     }
 
     const contactsWithAvatars = contacts.map((contact: IContact) => ({
@@ -619,39 +525,33 @@ export async function getAllContacts(status: ContactFilterStatus = 'active', sor
 
     return contactsWithAvatars;
   } catch (err) {
-    // Log the error for debugging
     console.error('Error fetching all contacts:', err);
 
-    // Handle known error types
     if (err instanceof Error) {
       const message = err.message;
-
-      // If it's already one of our formatted errors, rethrow it
-      if (message.includes('VALIDATION_ERROR:') ||
-        message.includes('SYSTEM_ERROR:')) {
+      if (message.includes('VALIDATION_ERROR:') || message.includes('SYSTEM_ERROR:')) {
         throw err;
       }
-
-      // Handle database-specific errors
       if (message.includes('relation') && message.includes('does not exist')) {
         throw new Error('SYSTEM_ERROR: Database schema error - please contact support');
       }
     }
 
-    // For unexpected errors, throw a generic system error
     throw new Error('SYSTEM_ERROR: An unexpected error occurred while retrieving contacts');
   }
-}
+});
 
-export async function addContact(contactData: Partial<IContact>): Promise<IContact> {
-  // Check permissions (keep authentication/authorization in server action)
-  const { db, tenant, currentUser } = await getTenantDbContext();
-  
-  if (!await hasPermissionAsync(currentUser, 'contact', 'create')) {
+export const addContact = withAuth(async (
+  user,
+  { tenant },
+  contactData: Partial<IContact>
+): Promise<IContact> => {
+  const { knex: db } = await createTenantKnex();
+
+  if (!await hasPermissionAsync(user, 'contact', 'create')) {
     throw new Error('Permission denied: Cannot create contacts');
   }
 
-  // Convert to CreateContactInput format for the model
   const createInput: CreateContactInput = {
     full_name: contactData.full_name || '',
     email: contactData.email,
@@ -662,16 +562,13 @@ export async function addContact(contactData: Partial<IContact>): Promise<IConta
     is_inactive: contactData.is_inactive
   };
 
-  // Use the shared ContactModel to create the contact
-  // The model handles all validation and business logic
   return await withTransaction(db, async (trx: Knex.Transaction) => {
     const contact = await ContactModel.createContact(
       createInput,
       tenant,
       trx
     );
-    
-    // Convert to server IContact format (ensuring non-nullable fields)
+
     return {
       ...contact,
       phone_number: contact.phone_number || '',
@@ -680,31 +577,29 @@ export async function addContact(contactData: Partial<IContact>): Promise<IConta
       is_inactive: contact.is_inactive || false
     } as IContact;
   });
-}
+});
 
-export async function updateContact(contactData: Partial<IContact>): Promise<IContact> {
-  const { db, tenant } = await getTenantDbContext();
+export const updateContact = withAuth(async (
+  _user,
+  { tenant },
+  contactData: Partial<IContact>
+): Promise<IContact> => {
+  const { knex: db } = await createTenantKnex();
 
   try {
-    // Validate required fields
     if (!contactData.contact_name_id) {
       throw new Error('VALIDATION_ERROR: Contact ID is required for updates');
     }
 
-    // If email is being updated, validate format
     if (contactData.email) {
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       if (!emailRegex.test(contactData.email.trim())) {
         throw new Error('VALIDATION_ERROR: Please enter a valid email address');
       }
 
-      // Check if new email already exists for another contact
       const existingContact = await withTransaction(db, async (trx: Knex.Transaction) => {
         return await trx('contacts')
-          .where({
-            email: contactData.email!.trim().toLowerCase(),
-            tenant
-          })
+          .where({ email: contactData.email!.trim().toLowerCase(), tenant })
           .whereNot({ contact_name_id: contactData.contact_name_id })
           .first();
       });
@@ -714,7 +609,6 @@ export async function updateContact(contactData: Partial<IContact>): Promise<ICo
       }
     }
 
-    // If client_id is being updated, verify it exists (but allow null to remove association)
     if ('client_id' in contactData && contactData.client_id) {
       const client = await withTransaction(db, async (trx: Knex.Transaction) => {
         return await trx('clients')
@@ -727,26 +621,22 @@ export async function updateContact(contactData: Partial<IContact>): Promise<ICo
       }
     }
 
-    // Define valid fields
     const validFields: (keyof IContact)[] = [
       'contact_name_id', 'full_name', 'client_id', 'phone_number',
       'email', 'created_at', 'updated_at', 'is_inactive',
       'role', 'notes'
     ];
 
-    // Filter and sanitize update data
     const updateData: Partial<IContact> = {};
     for (const key of validFields) {
       if (key in contactData && contactData[key] !== undefined) {
         let value = contactData[key];
-        // Sanitize string values
         if (typeof value === 'string') {
           value = value.trim();
           if (key === 'email') {
             value = value.toLowerCase();
           }
         }
-        // Convert empty strings to null for UUID fields (PostgreSQL cannot cast '' to UUID)
         if (key === 'client_id' && value === '') {
           (updateData as any)[key] = null;
         } else {
@@ -757,7 +647,6 @@ export async function updateContact(contactData: Partial<IContact>): Promise<ICo
 
     updateData.updated_at = new Date().toISOString();
 
-    // Verify contact exists and perform update in transaction
     const updatedContact = await withTransaction(db, async (trx: Knex.Transaction) => {
       const existingContact = await trx('contacts')
         .where({ contact_name_id: contactData.contact_name_id, tenant })
@@ -772,7 +661,6 @@ export async function updateContact(contactData: Partial<IContact>): Promise<ICo
         .update(updateData)
         .returning('*');
 
-      // If the contact is being set to inactive, also deactivate the associated user
       if (updateData.is_inactive === true) {
         await trx('users')
           .where({ contact_id: contactData.contact_name_id, tenant, user_type: 'client' })
@@ -788,14 +676,10 @@ export async function updateContact(contactData: Partial<IContact>): Promise<ICo
 
     return updatedContact;
   } catch (err) {
-    // Log the error for debugging
     console.error('Error updating contact:', err);
 
-    // Handle known error types
     if (err instanceof Error) {
       const message = err.message;
-
-      // If it's already one of our formatted errors, rethrow it
       if (message.includes('VALIDATION_ERROR:') ||
         message.includes('EMAIL_EXISTS:') ||
         message.includes('FOREIGN_KEY_ERROR:') ||
@@ -803,7 +687,6 @@ export async function updateContact(contactData: Partial<IContact>): Promise<ICo
         throw err;
       }
 
-      // Handle database-specific errors
       if (message.includes('duplicate key') && message.includes('contacts_email_tenant_unique')) {
         throw new Error('EMAIL_EXISTS: A contact with this email address already exists in the system');
       }
@@ -818,21 +701,23 @@ export async function updateContact(contactData: Partial<IContact>): Promise<ICo
       }
     }
 
-    // For unexpected errors, throw a generic system error
     throw new Error('SYSTEM_ERROR: An unexpected error occurred while updating the contact');
   }
-}
+});
 
-export async function updateContactsForClient(clientId: string, updateData: Partial<IContact>): Promise<void> {
-  const { db, tenant } = await getTenantDbContext();
+export const updateContactsForClient = withAuth(async (
+  _user,
+  { tenant },
+  clientId: string,
+  updateData: Partial<IContact>
+): Promise<void> => {
+  const { knex: db } = await createTenantKnex();
 
   try {
-    // Validate input
     if (!clientId) {
       throw new Error('VALIDATION_ERROR: Client ID is required');
     }
 
-    // Verify client exists
     const client = await withTransaction(db, async (trx: Knex.Transaction) => {
       return await trx('clients')
         .where({ client_id: clientId, tenant })
@@ -843,12 +728,10 @@ export async function updateContactsForClient(clientId: string, updateData: Part
       throw new Error('VALIDATION_ERROR: The specified client does not exist');
     }
 
-    // Validate update data
     if (Object.keys(updateData).length === 0) {
       throw new Error('VALIDATION_ERROR: No update data provided');
     }
 
-    // If email is being updated, validate format
     if (updateData.email) {
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       if (!emailRegex.test(updateData.email.trim())) {
@@ -856,50 +739,35 @@ export async function updateContactsForClient(clientId: string, updateData: Part
       }
     }
 
-    // Sanitize update data
     const sanitizedData = Object.entries(updateData).reduce<Partial<IContact>>((acc, [key, value]) => {
       const contactKey = key as keyof IContact;
+      if (value === undefined) return acc;
 
-      // Skip undefined values
-      if (value === undefined) {
-        return acc;
-      }
-
-      // Handle different value types based on field
       switch (contactKey) {
         case 'email':
         case 'full_name':
         case 'phone_number':
         case 'role':
-          // These fields are required strings
           acc[contactKey] = typeof value === 'string' ? value.trim() : String(value);
           if (contactKey === 'email' && acc[contactKey]) {
             acc[contactKey] = acc[contactKey]!.toLowerCase();
           }
           break;
-
         case 'notes':
-          // These fields are optional strings
           if (value === null) {
             acc[contactKey] = undefined;
           } else {
             acc[contactKey] = typeof value === 'string' ? value.trim() : String(value);
           }
           break;
-
         case 'client_id':
-          // This field is string | null
           acc[contactKey] = value === null ? null : String(value);
           break;
-
         case 'is_inactive':
-          // This field is boolean
           acc[contactKey] = Boolean(value);
           break;
-
         case 'created_at':
         case 'updated_at':
-          // These fields are strings (ISO dates)
           if (typeof value === 'string') {
             acc[contactKey] = value;
           } else if (value instanceof Date) {
@@ -909,11 +777,9 @@ export async function updateContactsForClient(clientId: string, updateData: Part
           }
           break;
       }
-
       return acc;
     }, {});
 
-    // Perform the update within a transaction
     await withTransaction(db, async (trx: Knex.Transaction) => {
       const updated = await trx('contacts')
         .where({ client_id: clientId, tenant })
@@ -927,14 +793,10 @@ export async function updateContactsForClient(clientId: string, updateData: Part
       }
     });
   } catch (err) {
-    // Log the error for debugging
     console.error('Error updating contacts for client:', err);
 
-    // Handle known error types
     if (err instanceof Error) {
       const message = err.message;
-
-      // If it's already one of our formatted errors, rethrow it
       if (message.includes('VALIDATION_ERROR:') ||
         message.includes('EMAIL_EXISTS:') ||
         message.includes('FOREIGN_KEY_ERROR:') ||
@@ -942,7 +804,6 @@ export async function updateContactsForClient(clientId: string, updateData: Part
         throw err;
       }
 
-      // Handle database-specific errors
       if (message.includes('duplicate key') && message.includes('contacts_email_tenant_unique')) {
         throw new Error('EMAIL_EXISTS: One or more contacts already have this email address');
       }
@@ -957,10 +818,9 @@ export async function updateContactsForClient(clientId: string, updateData: Part
       }
     }
 
-    // For unexpected errors, throw a generic system error
     throw new Error('SYSTEM_ERROR: An unexpected error occurred while updating client contacts');
   }
-}
+});
 
 export async function exportContactsToCSV(
   contacts: IContact[],
@@ -989,7 +849,6 @@ export async function exportContactsToCSV(
 }
 
 export async function generateContactCSVTemplate(): Promise<string> {
-  // Create template with Alice in Wonderland themed sample data
   const templateData = [
     {
       full_name: 'Alice Liddell',
@@ -1018,39 +877,28 @@ export async function generateContactCSVTemplate(): Promise<string> {
 
 type ContactImportData = Partial<IContact> & { tags?: string };
 
-export async function importContactsFromCSV(
+export const importContactsFromCSV = withAuth(async (
+  user,
+  { tenant },
   contactsData: Array<ContactImportData>,
   updateExisting: boolean = false
-): Promise<ImportContactResult[]> {
-  const currentUser = await getCurrentUserAsync();
-  if (!currentUser) {
-    throw new Error('Unauthorized');
-  }
-
-  const { knex: db, tenant } = await createTenantKnex(currentUser.tenant);
-  if (!tenant) {
-    throw new Error('SYSTEM_ERROR: Tenant configuration not found');
-  }
+): Promise<ImportContactResult[]> => {
+  const { knex: db } = await createTenantKnex();
 
   try {
-    // Validate input
     if (!contactsData || contactsData.length === 0) {
       throw new Error('VALIDATION_ERROR: No contact data provided');
     }
 
-
     const results: ImportContactResult[] = [];
 
-    // Start a transaction to ensure all operations succeed or fail together
     await withTransaction(db, async (trx: Knex.Transaction) => {
       for (const contactData of contactsData) {
         try {
-          // Validate required fields
           if (!contactData.full_name?.trim()) {
             throw new Error('VALIDATION_ERROR: Full name is required');
           }
 
-          // Validate email if provided
           if (contactData.email) {
             const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
             if (!emailRegex.test(contactData.email.trim())) {
@@ -1058,7 +906,6 @@ export async function importContactsFromCSV(
             }
           }
 
-          // Verify client if provided
           if (contactData.client_id) {
             const client = await trx('clients')
               .where({ client_id: contactData.client_id, tenant })
@@ -1069,18 +916,13 @@ export async function importContactsFromCSV(
             }
           }
 
-          // Check for existing contact by email (primary unique constraint)
           let existingContact: IContact | undefined = undefined;
           if (contactData.email) {
             existingContact = await trx('contacts')
-              .where({
-                email: contactData.email.trim().toLowerCase(),
-                tenant
-              })
+              .where({ email: contactData.email.trim().toLowerCase(), tenant })
               .first();
           }
 
-          // If no email provided or no match by email, check by name and client
           if (!existingContact) {
             existingContact = await trx('contacts')
               .where({
@@ -1104,8 +946,6 @@ export async function importContactsFromCSV(
           let savedContact: IContact;
 
           if (existingContact && updateExisting) {
-            // Prepare update data with proper sanitization
-            // Exclude tags and tenant from updateData - tags handled separately, tenant is partition key
             const { tags, tenant: _tenant, ...contactDataWithoutTagsAndTenant } = contactData;
             const updateData = {
               ...contactDataWithoutTagsAndTenant,
@@ -1122,19 +962,12 @@ export async function importContactsFromCSV(
               .update(updateData)
               .returning('*');
 
-            // Handle tags if provided (for updates, we'll replace existing tags)
             if (contactData.tags !== undefined) {
               try {
-                // First, delete existing tag mappings
                 await trx('tag_mappings')
-                  .where({
-                    tagged_id: savedContact.contact_name_id,
-                    tagged_type: 'contact',
-                    tenant
-                  })
+                  .where({ tagged_id: savedContact.contact_name_id, tagged_type: 'contact', tenant })
                   .delete();
 
-                // Then create new tags if any
                 if (contactData.tags) {
                   const tagTexts = contactData.tags.split(',').map((tag: string) => tag.trim()).filter((tag: string) => tag);
                   for (const tagText of tagTexts) {
@@ -1142,13 +975,12 @@ export async function importContactsFromCSV(
                       tag_text: tagText,
                       tagged_id: savedContact.contact_name_id,
                       tagged_type: 'contact',
-                      created_by: currentUser.user_id
+                      created_by: user.user_id
                     });
                   }
                 }
               } catch (tagError) {
                 console.error('Failed to update tags during CSV import:', tagError);
-                // Don't fail the contact import if tag update fails
               }
             }
 
@@ -1159,7 +991,6 @@ export async function importContactsFromCSV(
               originalData: contactData
             });
           } else {
-            // Prepare new contact data with proper sanitization
             const contactToCreate = {
               full_name: contactData.full_name.trim(),
               email: contactData.email?.trim().toLowerCase() || '',
@@ -1177,7 +1008,6 @@ export async function importContactsFromCSV(
               .insert(contactToCreate)
               .returning('*');
 
-            // Handle tags if provided
             if (contactData.tags) {
               try {
                 const tagTexts = contactData.tags.split(',').map((tag: string) => tag.trim()).filter((tag: string) => tag);
@@ -1186,12 +1016,11 @@ export async function importContactsFromCSV(
                     tag_text: tagText,
                     tagged_id: savedContact.contact_name_id,
                     tagged_type: 'contact',
-                    created_by: currentUser.user_id
+                    created_by: user.user_id
                   });
                 }
               } catch (tagError) {
                 console.error('Failed to create tags during CSV import:', tagError);
-                // Don't fail the contact import if tag creation fails
               }
             }
 
@@ -1203,14 +1032,10 @@ export async function importContactsFromCSV(
             });
           }
         } catch (err) {
-          // Log the error for debugging
           console.error('Error processing contact:', contactData, err);
 
-          // Handle known error types
           if (err instanceof Error) {
             const message = err.message;
-
-            // If it's already one of our formatted errors, use it
             if (message.includes('VALIDATION_ERROR:') ||
               message.includes('EMAIL_EXISTS:') ||
               message.includes('FOREIGN_KEY_ERROR:') ||
@@ -1223,7 +1048,6 @@ export async function importContactsFromCSV(
               continue;
             }
 
-            // Handle database-specific errors
             if (message.includes('duplicate key') && (message.includes('contacts_email_tenant_unique') || message.includes('contacts_tenant_email_unique'))) {
               results.push({
                 success: false,
@@ -1244,7 +1068,6 @@ export async function importContactsFromCSV(
             }
           }
 
-          // For unexpected errors
           results.push({
             success: false,
             message: 'SYSTEM_ERROR: An unexpected error occurred while processing the contact',
@@ -1256,50 +1079,34 @@ export async function importContactsFromCSV(
 
     return results;
   } catch (err) {
-    // Log the error for debugging
     console.error('Error importing contacts:', err);
 
-    // Handle known error types
     if (err instanceof Error) {
       const message = err.message;
-
-      // If it's already one of our formatted errors, rethrow it
-      if (message.includes('VALIDATION_ERROR:') ||
-        message.includes('SYSTEM_ERROR:')) {
+      if (message.includes('VALIDATION_ERROR:') || message.includes('SYSTEM_ERROR:')) {
         throw err;
       }
-
-      // Handle database-specific errors
       if (message.includes('relation') && message.includes('does not exist')) {
         throw new Error('SYSTEM_ERROR: Database schema error - please contact support');
       }
     }
 
-    // For unexpected errors, throw a generic system error
     throw new Error('SYSTEM_ERROR: An unexpected error occurred while importing contacts');
   }
-}
+});
 
-export async function checkExistingEmails(
+export const checkExistingEmails = withAuth(async (
+  _user,
+  { tenant },
   emails: string[]
-): Promise<string[]> {
-  const currentUser = await getCurrentUserAsync();
-  if (!currentUser) {
-    throw new Error('Unauthorized');
-  }
-
-  const { knex: db, tenant } = await createTenantKnex(currentUser.tenant);
-  if (!tenant) {
-    throw new Error('SYSTEM_ERROR: Tenant configuration not found');
-  }
+): Promise<string[]> => {
+  const { knex: db } = await createTenantKnex();
 
   try {
-    // Validate input
     if (!emails || emails.length === 0) {
       throw new Error('VALIDATION_ERROR: No email addresses provided');
     }
 
-    // Sanitize and validate email format
     const sanitizedEmails = emails.map(email => {
       const trimmedEmail = email.trim().toLowerCase();
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -1309,7 +1116,6 @@ export async function checkExistingEmails(
       return trimmedEmail;
     });
 
-    // Check for existing emails
     const existingContacts = await withTransaction(db, async (trx: Knex.Transaction) => {
       return await trx('contacts')
         .select('email')
@@ -1317,52 +1123,36 @@ export async function checkExistingEmails(
         .andWhere('tenant', tenant);
     });
 
-    // Return sanitized existing emails
     return existingContacts.map((contact: { email: string }): string => contact.email);
   } catch (err) {
-    // Log the error for debugging
     console.error('Error checking existing emails:', err);
 
-    // Handle known error types
     if (err instanceof Error) {
       const message = err.message;
-
-      // If it's already one of our formatted errors, rethrow it
-      if (message.includes('VALIDATION_ERROR:') ||
-        message.includes('SYSTEM_ERROR:')) {
+      if (message.includes('VALIDATION_ERROR:') || message.includes('SYSTEM_ERROR:')) {
         throw err;
       }
-
-      // Handle database-specific errors
       if (message.includes('relation') && message.includes('does not exist')) {
         throw new Error('SYSTEM_ERROR: Database schema error - please contact support');
       }
     }
 
-    // For unexpected errors, throw a generic system error
     throw new Error('SYSTEM_ERROR: An unexpected error occurred while checking existing emails');
   }
-}
+});
 
-export async function getContactByEmail(email: string, clientId: string) {
+export const getContactByEmail = withAuth(async (
+  _user,
+  { tenant },
+  email: string,
+  clientId: string
+) => {
   try {
-    const currentUser = await getCurrentUserAsync();
-    if (!currentUser) {
-      throw new Error('Unauthorized');
-    }
-
-    const { knex, tenant } = await createTenantKnex(currentUser.tenant);
-    if (!tenant) {
-      throw new Error('Tenant not found');
-    }
+    const { knex } = await createTenantKnex();
 
     const contact = await withTransaction(knex, async (trx: Knex.Transaction) => {
       return await trx('contacts')
-        .where({
-          email,
-          client_id: clientId,
-          tenant
-        })
+        .where({ email, client_id: clientId, tenant })
         .first();
     });
 
@@ -1371,43 +1161,35 @@ export async function getContactByEmail(email: string, clientId: string) {
     console.error('Error getting contact by email:', error);
     throw error;
   }
-}
+});
 
 /**
  * Create a new contact for a client
  * @deprecated Use createOrFindContactByEmail instead for better duplicate handling
  */
-export async function createClientContact({
-  clientId,
-  fullName,
-  email,
-  phone = '',
-  jobTitle = ''
-}: {
-  clientId: string;
-  fullName: string;
-  email: string;
-  phone?: string;
-  jobTitle?: string;
-}) {
+export const createClientContact = withAuth(async (
+  _user,
+  { tenant },
+  {
+    clientId,
+    fullName,
+    email,
+    phone = '',
+    jobTitle = ''
+  }: {
+    clientId: string;
+    fullName: string;
+    email: string;
+    phone?: string;
+    jobTitle?: string;
+  }
+) => {
   try {
-    const currentUser = await getCurrentUserAsync();
-    if (!currentUser) {
-      throw new Error('Unauthorized');
-    }
+    const { knex } = await createTenantKnex();
 
-    const { knex, tenant } = await createTenantKnex(currentUser.tenant);
-    if (!tenant) {
-      throw new Error('Tenant not found');
-    }
-
-    // Check if email already exists across the tenant
     const existingContact = await withTransaction(knex, async (trx: Knex.Transaction) => {
       return await trx('contacts')
-        .where({ 
-          email: email.trim().toLowerCase(), 
-          tenant 
-        })
+        .where({ email: email.trim().toLowerCase(), tenant })
         .first();
     });
 
@@ -1428,7 +1210,7 @@ export async function createClientContact({
           updated_at: new Date().toISOString()
         })
         .returning('*');
-      
+
       return inserted;
     });
 
@@ -1437,30 +1219,23 @@ export async function createClientContact({
     console.error('Error creating client contact:', error);
     throw error;
   }
-}
+});
 
 /**
  * Find contact by email address (without requiring client_id)
  * Used for email processing workflows
  */
-export async function findContactByEmailAddress(email: string): Promise<IContact | null> {
+export const findContactByEmailAddress = withAuth(async (
+  _user,
+  { tenant },
+  email: string
+): Promise<IContact | null> => {
   try {
-    const currentUser = await getCurrentUserAsync();
-    if (!currentUser) {
-      throw new Error('Unauthorized');
-    }
-
-    const { knex, tenant } = await createTenantKnex(currentUser.tenant);
-    if (!tenant) {
-      throw new Error('Tenant not found');
-    }
+    const { knex } = await createTenantKnex();
 
     const contact = await withTransaction(knex, async (trx: Knex.Transaction) => {
       return await trx('contacts')
-        .select(
-          'contacts.*',
-          'clients.client_name'
-        )
+        .select('contacts.*', 'clients.client_name')
         .leftJoin('clients', function (this: Knex.JoinClause) {
           this.on('contacts.client_id', 'clients.client_id')
             .andOn('clients.tenant', 'contacts.tenant')
@@ -1477,42 +1252,34 @@ export async function findContactByEmailAddress(email: string): Promise<IContact
     console.error('Error finding contact by email address:', error);
     throw error;
   }
-}
+});
 
 /**
  * Create or find contact - if contact exists, return it; otherwise create new one
  */
-export async function createOrFindContactByEmail({
-  email,
-  name,
-  clientId,
-  phone,
-  title
-}: {
-  email: string;
-  name?: string;
-  clientId: string;
-  phone?: string;
-  title?: string;
-}): Promise<{ contact: IContact & { client_name: string }; isNew: boolean }> {
+export const createOrFindContactByEmail = withAuth(async (
+  _user,
+  { tenant },
+  {
+    email,
+    name,
+    clientId,
+    phone,
+    title
+  }: {
+    email: string;
+    name?: string;
+    clientId: string;
+    phone?: string;
+    title?: string;
+  }
+): Promise<{ contact: IContact & { client_name: string }; isNew: boolean }> => {
   try {
-    const currentUser = await getCurrentUserAsync();
-    if (!currentUser) {
-      throw new Error('Unauthorized');
-    }
-
-    const { knex, tenant } = await createTenantKnex(currentUser.tenant);
-    if (!tenant) {
-      throw new Error('Tenant not found');
-    }
+    const { knex } = await createTenantKnex();
 
     return await withTransaction(knex, async (trx: Knex.Transaction) => {
-      // First, check if contact exists anywhere in the tenant
       const existingContactInTenant = await trx('contacts')
-        .select(
-          'contacts.*',
-          'clients.client_name'
-        )
+        .select('contacts.*', 'clients.client_name')
         .leftJoin('clients', function (this: Knex.JoinClause) {
           this.on('contacts.client_id', 'clients.client_id')
             .andOn('clients.tenant', 'contacts.tenant')
@@ -1524,16 +1291,12 @@ export async function createOrFindContactByEmail({
         .first();
 
       if (existingContactInTenant) {
-        // If the contact exists but is in a different client, throw an error
         if (existingContactInTenant.client_id !== clientId) {
-          // If contact has no client, still throw error - don't auto-assign
           if (!existingContactInTenant.client_id) {
             throw new Error('EMAIL_EXISTS: A contact with this email address already exists in the system without a client assignment');
           }
-          // If they already belong to a different client, throw error with client name
           throw new Error(`EMAIL_EXISTS: This email is already associated with ${existingContactInTenant.client_name || 'another client'}`);
         }
-        // Contact exists in the same client - return it
         const contactWithClientName = {
           ...existingContactInTenant,
           client_name: existingContactInTenant.client_name || ''
@@ -1541,7 +1304,6 @@ export async function createOrFindContactByEmail({
         return { contact: contactWithClientName, isNew: false };
       }
 
-      // Create new contact if not found
       const contactName = name || extractNameFromEmail(email);
       const now = new Date();
 
@@ -1559,7 +1321,6 @@ export async function createOrFindContactByEmail({
         })
         .returning('*');
 
-      // Add client name for consistency
       const client = await trx('clients')
         .select('client_name')
         .where({ client_id: clientId, tenant })
@@ -1576,15 +1337,14 @@ export async function createOrFindContactByEmail({
     console.error('Error creating or finding contact:', error);
     throw error;
   }
-}
+});
 
 /**
  * Extract a reasonable name from email address if no name provided
  */
 function extractNameFromEmail(email: string): string {
   const localPart = email.split('@')[0];
-  
-  // Replace common separators with spaces and capitalize words
+
   return localPart
     .replace(/[._-]/g, ' ')
     .split(' ')
@@ -1595,33 +1355,23 @@ function extractNameFromEmail(email: string): string {
 /**
  * Update contact's portal admin status
  */
-export async function updateContactPortalAdminStatus(
+export const updateContactPortalAdminStatus = withAuth(async (
+  user,
+  { tenant },
   contactId: string,
   isPortalAdmin: boolean
-): Promise<{ success: boolean; error?: string }> {
+): Promise<{ success: boolean; error?: string }> => {
   try {
-    const currentUser = await getCurrentUserAsync();
-    if (!currentUser) {
-      throw new Error('Unauthorized');
-    }
-
-    // Check permissions
-    const hasUpdatePermission = await hasPermissionAsync(currentUser, 'client', 'update');
+    const hasUpdatePermission = await hasPermissionAsync(user, 'client', 'update');
     if (!hasUpdatePermission) {
       throw new Error('You do not have permission to update client settings');
     }
 
-    const { knex, tenant } = await createTenantKnex(currentUser.tenant);
-    if (!tenant) {
-      throw new Error('Tenant not found');
-    }
+    const { knex } = await createTenantKnex();
 
     await withTransaction(knex, async (trx: Knex.Transaction) => {
       const updated = await trx('contacts')
-        .where({ 
-          contact_name_id: contactId,
-          tenant
-        })
+        .where({ contact_name_id: contactId, tenant })
         .update({
           is_client_admin: isPortalAdmin,
           updated_at: new Date().toISOString()
@@ -1635,51 +1385,38 @@ export async function updateContactPortalAdminStatus(
     return { success: true };
   } catch (error) {
     console.error('[contactActions.updateContactPortalAdminStatus]', error);
-    return { 
-      success: false, 
-      error: error instanceof Error ? error.message : 'Failed to update contact' 
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to update contact'
     };
   }
-}
+});
 
 /**
  * Get user associated with a contact
  */
-export async function getUserByContactId(
+export const getUserByContactId = withAuth(async (
+  user,
+  { tenant },
   contactId: string
-): Promise<{ user: any | null; error?: string }> {
+): Promise<{ user: any | null; error?: string }> => {
   try {
-    const currentUser = await getCurrentUserAsync();
-    if (!currentUser) {
-      throw new Error('Unauthorized');
-    }
-
-    // Check permissions
-    const hasReadPermission = await hasPermissionAsync(currentUser, 'client', 'read');
+    const hasReadPermission = await hasPermissionAsync(user, 'client', 'read');
     if (!hasReadPermission) {
       throw new Error('You do not have permission to view client information');
     }
 
-    const { knex, tenant } = await createTenantKnex(currentUser.tenant);
-    if (!tenant) {
-      throw new Error('Tenant not found');
-    }
+    const { knex } = await createTenantKnex();
 
     const userWithRoles = await withTransaction(knex, async (trx: Knex.Transaction) => {
-      // First get the user
-      const user = await trx('users')
-        .where({
-          contact_id: contactId,
-          tenant: tenant,
-          user_type: 'client'
-        })
+      const foundUser = await trx('users')
+        .where({ contact_id: contactId, tenant: tenant, user_type: 'client' })
         .first();
 
-      if (!user) {
+      if (!foundUser) {
         return null;
       }
 
-      // Then get the roles separately
       const roles = await trx('user_roles')
         .select('roles.role_id', 'roles.role_name')
         .join('roles', function(this: Knex.JoinClause) {
@@ -1687,13 +1424,12 @@ export async function getUserByContactId(
             .andOn('roles.tenant', trx.raw('?', [tenant]));
         })
         .where({
-          'user_roles.user_id': user.user_id,
+          'user_roles.user_id': foundUser.user_id,
           'user_roles.tenant': tenant
         });
 
-      // Attach roles to user object
       return {
-        ...user,
+        ...foundUser,
         roles: roles || []
       };
     });
@@ -1705,9 +1441,9 @@ export async function getUserByContactId(
     return { user: userWithRoles, error: undefined };
   } catch (error) {
     console.error('[contactActions.getUserByContactId]', error);
-    return { 
+    return {
       user: null,
-      error: error instanceof Error ? error.message : 'Failed to get user' 
+      error: error instanceof Error ? error.message : 'Failed to get user'
     };
   }
-}
+});

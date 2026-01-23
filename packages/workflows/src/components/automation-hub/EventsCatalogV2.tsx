@@ -49,7 +49,7 @@ import {
   listSchemaRegistryRefsAction,
   simulateWorkflowEventAction,
   type WorkflowEventCatalogEntryV2
-} from '@/lib/actions/workflow-event-catalog-v2-actions';
+} from '@alga-psa/workflows/actions';
 
 type ViewMode = 'grid' | 'list';
 type SortMode = 'category_name' | 'most_active';

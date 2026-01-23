@@ -3,6 +3,7 @@
 import { StorageService } from '@alga-psa/documents/storage/StorageService';
 import { createTenantKnex, runWithTenant } from '@alga-psa/db';
 import { withTransaction } from '@alga-psa/db';
+import { withAuth, hasPermission } from '@alga-psa/auth';
 import { Knex } from 'knex';
 import { marked } from 'marked';
 import { PDFDocument } from 'pdf-lib';
@@ -31,7 +32,6 @@ import { NextResponse } from 'next/server';
 import { deleteDocumentContent } from './documentContentActions';
 import { deleteBlockContent } from './documentBlockContentActions';
 import { DocumentHandlerRegistry } from '@alga-psa/documents/handlers/DocumentHandlerRegistry';
-import { getCurrentUserAsync, hasPermissionAsync } from '../lib/authHelpers';
 import { getEntityTypesForUser } from '../lib/documentPermissionUtils';
 import { generateDocumentPreviews } from '../lib/documentPreviewGenerator';
 
@@ -48,41 +48,32 @@ async function loadSharp() {
 }
 
 // Add new document
-export async function addDocument(data: DocumentInput) {
+export const addDocument = withAuth(async (user, { tenant }, data: DocumentInput) => {
   try {
-    // Get current user if not provided
-    const currentUser = await getCurrentUserAsync();
-    if (!currentUser) {
-      throw new Error('No authenticated user found');
-    }
-
-    const { tenant, knex } = await createTenantKnex(currentUser.tenant);
-    if (!tenant) {
-      throw new Error('No tenant found');
-    }
+    const { knex } = await createTenantKnex();
 
     // Check permission for document creation
-    if (!await hasPermissionAsync(currentUser, 'document', 'create')) {
+    if (!await hasPermission(user, 'document', 'create')) {
       throw new Error('Permission denied: Cannot create documents');
     }
 
     return await withTransaction(knex, async (trx: Knex.Transaction) => {
       const documentId = uuidv4();
-      
+
       // Clean up the data - replace empty strings with proper values
       const cleanedData = {
         ...data,
-        user_id: data.user_id || currentUser.user_id,
-        created_by: data.created_by || currentUser.user_id,
+        user_id: data.user_id || user.user_id,
+        created_by: data.created_by || user.user_id,
         tenant: tenant
       };
 
       // Remove empty string values that should be null
       if (cleanedData.user_id === '') {
-        cleanedData.user_id = currentUser.user_id;
+        cleanedData.user_id = user.user_id;
       }
       if (cleanedData.created_by === '') {
-        cleanedData.created_by = currentUser.user_id;
+        cleanedData.created_by = user.user_id;
       }
 
       const new_document: IDocument = {
@@ -99,25 +90,17 @@ export async function addDocument(data: DocumentInput) {
     console.error(error);
     throw error;
   }
-}
+});
 
 // Update document
-export async function updateDocument(documentId: string, data: Partial<IDocument>) {
+export const updateDocument = withAuth(async (user, { tenant }, documentId: string, data: Partial<IDocument>) => {
   try {
-    const currentUser = await getCurrentUserAsync();
-    if (!currentUser) {
-      throw new Error('No authenticated user found');
-    }
-
     // Check permission for document updates
-    if (!await hasPermissionAsync(currentUser, 'document', 'update')) {
+    if (!await hasPermission(user, 'document', 'update')) {
       throw new Error('Permission denied: Cannot update documents');
     }
 
-    const { tenant, knex } = await createTenantKnex(currentUser.tenant);
-    if (!tenant) {
-      throw new Error('No tenant found');
-    }
+    const { knex } = await createTenantKnex();
 
     await withTransaction(knex, async (trx: Knex.Transaction) => {
       await trx('documents')
@@ -136,25 +119,17 @@ export async function updateDocument(documentId: string, data: Partial<IDocument
     console.error(error);
     throw new Error("Failed to update the document");
   }
-}
+});
 
 // Delete document
-export async function deleteDocument(documentId: string, userId: string) {
+export const deleteDocument = withAuth(async (user, { tenant }, documentId: string, userId: string) => {
   try {
-    const currentUser = await getCurrentUserAsync();
-    if (!currentUser) {
-      throw new Error('No authenticated user found');
-    }
-
     // Check permission for document deletion
-    if (!await hasPermissionAsync(currentUser, 'document', 'delete')) {
+    if (!await hasPermission(user, 'document', 'delete')) {
       throw new Error('Permission denied: Cannot delete documents');
     }
 
-    const { tenant, knex } = await createTenantKnex(currentUser.tenant);
-    if (!tenant) {
-      throw new Error('No tenant found');
-    }
+    const { knex } = await createTenantKnex();
 
     // Use a single transaction for all database operations
     const result = await withTransaction(knex, async (trx: Knex.Transaction) => {
@@ -260,25 +235,17 @@ export async function deleteDocument(documentId: string, userId: string) {
     console.error('Error deleting document:', error);
     throw new Error(error instanceof Error ? error.message : "Failed to delete the document");
   }
-}
+});
 
 // Get single document
-export async function getDocument(documentId: string) {
+export const getDocument = withAuth(async (user, { tenant }, documentId: string) => {
   try {
-    const currentUser = await getCurrentUserAsync();
-    if (!currentUser) {
-      throw new Error('No authenticated user found');
-    }
-
     // Check permission for document reading
-    if (!await hasPermissionAsync(currentUser, 'document', 'read')) {
+    if (!await hasPermission(user, 'document', 'read')) {
       throw new Error('Permission denied: Cannot read documents');
     }
 
-    const { knex, tenant } = await createTenantKnex(currentUser.tenant);
-    if (!tenant) {
-      throw new Error('No tenant found');
-    }
+    const { knex } = await createTenantKnex();
 
     // Use direct query to join with users table
     const document = await withTransaction(knex, async (trx: Knex.Transaction) => {
@@ -340,28 +307,18 @@ export async function getDocument(documentId: string) {
     console.error(error);
     throw new Error("Failed to get the document");
   }
-}
+});
 
 // Get documents by ticket
-export async function getDocumentByTicketId(ticketId: string) {
+export const getDocumentByTicketId = withAuth(async (user, { tenant }, ticketId: string) => {
   try {
-    const currentUser = await getCurrentUserAsync();
-    if (!currentUser) {
-      throw new Error('No authenticated user found');
-    }
-    if (!currentUser.tenant) {
-      throw new Error('Tenant is required');
-    }
-
     // Check permission for document reading
-    if (!await hasPermissionAsync(currentUser, 'document', 'read')) {
+    if (!await hasPermission(user, 'document', 'read')) {
       throw new Error('Permission denied: Cannot read documents');
     }
 
-    const { knex, tenant } = await createTenantKnex(currentUser.tenant);
-    if (!tenant) {
-      throw new Error('No tenant found');
-    }
+    const { knex } = await createTenantKnex();
+
     return await withTransaction(knex, async (trx: Knex.Transaction) => {
       const documents = await trx('documents')
         .join('document_associations', function() {
@@ -400,28 +357,18 @@ export async function getDocumentByTicketId(ticketId: string) {
     console.error(error);
     throw new Error("Failed to get the documents");
   }
-}
+});
 
 // Get documents by client
-export async function getDocumentByClientId(clientId: string) {
+export const getDocumentByClientId = withAuth(async (user, { tenant }, clientId: string) => {
   try {
-    const currentUser = await getCurrentUserAsync();
-    if (!currentUser) {
-      throw new Error('No authenticated user found');
-    }
-    if (!currentUser.tenant) {
-      throw new Error('Tenant is required');
-    }
-
     // Check permission for document reading
-    if (!await hasPermissionAsync(currentUser, 'document', 'read')) {
+    if (!await hasPermission(user, 'document', 'read')) {
       throw new Error('Permission denied: Cannot read documents');
     }
 
-    const { knex, tenant } = await createTenantKnex(currentUser.tenant);
-    if (!tenant) {
-      throw new Error('No tenant found');
-    }
+    const { knex } = await createTenantKnex();
+
     return await withTransaction(knex, async (trx: Knex.Transaction) => {
       const documents = await trx('documents')
         .join('document_associations', function() {
@@ -460,27 +407,19 @@ export async function getDocumentByClientId(clientId: string) {
     console.error(error);
     throw new Error("Failed to get the documents");
   }
-}
+});
 
-export async function associateDocumentWithClient(input: IDocumentAssociationInput) {
+export const associateDocumentWithClient = withAuth(async (user, { tenant }, input: IDocumentAssociationInput) => {
   try {
-    const currentUser = await getCurrentUserAsync();
-    if (!currentUser) {
-      throw new Error('No authenticated user found');
-    }
-
-    if (!await hasPermissionAsync(currentUser, 'document', 'create')) {
+    if (!await hasPermission(user, 'document', 'create')) {
       throw new Error('Permission denied: Cannot associate documents');
     }
 
-    if (!await hasPermissionAsync(currentUser, 'client', 'update')) {
+    if (!await hasPermission(user, 'client', 'update')) {
       throw new Error('Permission denied: Cannot modify client documents');
     }
 
-    const { knex, tenant } = await createTenantKnex(currentUser.tenant);
-    if (!tenant) {
-      throw new Error('No tenant found');
-    }
+    const { knex } = await createTenantKnex();
 
     return await withTransaction(knex, async (trx: Knex.Transaction) => {
       const association = await DocumentAssociation.create(trx, {
@@ -495,25 +434,18 @@ export async function associateDocumentWithClient(input: IDocumentAssociationInp
     console.error('Error associating document with client:', error);
     throw new Error('Failed to associate document with client');
   }
-}
+});
 
 // Get documents by contact
-export async function getDocumentByContactNameId(contactNameId: string) {
+export const getDocumentByContactNameId = withAuth(async (user, { tenant }, contactNameId: string) => {
   try {
-    const currentUser = await getCurrentUserAsync();
-    if (!currentUser) {
-      throw new Error('No authenticated user found');
-    }
-
     // Check permission for document reading
-    if (!await hasPermissionAsync(currentUser, 'document', 'read')) {
+    if (!await hasPermission(user, 'document', 'read')) {
       throw new Error('Permission denied: Cannot read documents');
     }
 
-    const { knex, tenant } = await createTenantKnex(currentUser.tenant);
-    if (!tenant) {
-      throw new Error('No tenant found');
-    }
+    const { knex } = await createTenantKnex();
+
     return await withTransaction(knex, async (trx: Knex.Transaction) => {
       const documents = await trx('documents')
         .join('document_associations', function() {
@@ -552,30 +484,22 @@ export async function getDocumentByContactNameId(contactNameId: string) {
     console.error(error);
     throw new Error("Failed to get the documents");
   }
-}
+});
 
 // Get documents by contract ID
-export async function getDocumentsByContractId(contractId: string) {
+export const getDocumentsByContractId = withAuth(async (user, { tenant }, contractId: string) => {
   try {
-    const currentUser = await getCurrentUserAsync();
-    if (!currentUser) {
-      throw new Error('No authenticated user found');
-    }
-
     // Check permission for document reading
-    if (!await hasPermissionAsync(currentUser, 'document', 'read')) {
+    if (!await hasPermission(user, 'document', 'read')) {
       throw new Error('Permission denied: Cannot read documents');
     }
 
     // Check billing permission (required for contract documents)
-    if (!await hasPermissionAsync(currentUser, 'billing', 'read')) {
+    if (!await hasPermission(user, 'billing', 'read')) {
       throw new Error('Permission denied: Cannot access contract documents');
     }
 
-    const { knex, tenant } = await createTenantKnex(currentUser.tenant);
-    if (!tenant) {
-      throw new Error('No tenant found');
-    }
+    const { knex } = await createTenantKnex();
 
     return await withTransaction(knex, async (trx: Knex.Transaction) => {
       const documents = await trx('documents')
@@ -596,30 +520,22 @@ export async function getDocumentsByContractId(contractId: string) {
     console.error(error);
     throw new Error("Failed to get contract documents");
   }
-}
+});
 
 // Associate document with contract
-export async function associateDocumentWithContract(input: IDocumentAssociationInput) {
+export const associateDocumentWithContract = withAuth(async (user, { tenant }, input: IDocumentAssociationInput) => {
   try {
-    const currentUser = await getCurrentUserAsync();
-    if (!currentUser) {
-      throw new Error('No authenticated user found');
-    }
-
     // Check permission for document association
-    if (!await hasPermissionAsync(currentUser, 'document', 'create')) {
+    if (!await hasPermission(user, 'document', 'create')) {
       throw new Error('Permission denied: Cannot associate documents');
     }
 
     // Check billing permission (required for contract documents)
-    if (!await hasPermissionAsync(currentUser, 'billing', 'update')) {
+    if (!await hasPermission(user, 'billing', 'update')) {
       throw new Error('Permission denied: Cannot modify contract documents');
     }
 
-    const { knex, tenant } = await createTenantKnex(currentUser.tenant);
-    if (!tenant) {
-      throw new Error('No tenant found');
-    }
+    const { knex } = await createTenantKnex();
 
     return await withTransaction(knex, async (trx: Knex.Transaction) => {
       const association = await DocumentAssociation.create(trx, {
@@ -634,30 +550,22 @@ export async function associateDocumentWithContract(input: IDocumentAssociationI
     console.error(error);
     throw new Error("Failed to associate document with contract");
   }
-}
+});
 
 // Remove document from contract
-export async function removeDocumentFromContract(associationId: string) {
+export const removeDocumentFromContract = withAuth(async (user, { tenant }, associationId: string) => {
   try {
-    const currentUser = await getCurrentUserAsync();
-    if (!currentUser) {
-      throw new Error('No authenticated user found');
-    }
-
     // Check permission for document deletion
-    if (!await hasPermissionAsync(currentUser, 'document', 'delete')) {
+    if (!await hasPermission(user, 'document', 'delete')) {
       throw new Error('Permission denied: Cannot remove document associations');
     }
 
     // Check billing permission (required for contract documents)
-    if (!await hasPermissionAsync(currentUser, 'billing', 'update')) {
+    if (!await hasPermission(user, 'billing', 'update')) {
       throw new Error('Permission denied: Cannot modify contract documents');
     }
 
-    const { knex, tenant } = await createTenantKnex(currentUser.tenant);
-    if (!tenant) {
-      throw new Error('No tenant found');
-    }
+    const { knex } = await createTenantKnex();
 
     return await withTransaction(knex, async (trx: Knex.Transaction) => {
       await trx('document_associations')
@@ -672,7 +580,7 @@ export async function removeDocumentFromContract(associationId: string) {
     console.error(error);
     throw new Error("Failed to remove document from contract");
   }
-}
+});
 
 // Get document preview
 async function renderHtmlToPng(htmlContent: string, width: number = 400, height: number = 300): Promise<Buffer> {
@@ -725,26 +633,19 @@ const IN_APP_BLOCKNOTE_TYPE_NAMES = ['blocknote', 'block note', 'blocknote docum
  * @param identifier The document ID or file ID to generate a preview for
  * @returns A promise that resolves to a PreviewResponse
  */
-export async function getDocumentPreview(
+export const getDocumentPreview = withAuth(async (
+  user,
+  { tenant },
   identifier: string
-): Promise<PreviewResponse> {
+): Promise<PreviewResponse> => {
   console.log(`[getDocumentPreview] Received identifier: ${identifier}`);
   try {
-    const currentUser = await getCurrentUserAsync();
-    if (!currentUser) {
-      throw new Error('No authenticated user found');
-    }
-
     // Check permission for document reading
-    if (!await hasPermissionAsync(currentUser, 'document', 'read')) {
+    if (!await hasPermission(user, 'document', 'read')) {
       throw new Error('Permission denied: Cannot read documents');
     }
 
-    const { knex, tenant } = await createTenantKnex(currentUser.tenant);
-    if (!tenant) {
-      console.error("[getDocumentPreview] No tenant found");
-      throw new Error('No tenant found');
-    }
+    const { knex } = await createTenantKnex();
 
     // Check if the identifier is a document ID
     let document = await withTransaction(knex, async (trx: Knex.Transaction) => {
@@ -848,22 +749,17 @@ export async function getDocumentPreview(
       error: error instanceof Error ? error.message : 'Failed to preview file'
     };
   }
-}
+});
 
 // Get document download URL
-export async function getDocumentDownloadUrl(file_id: string): Promise<string> {
-    const currentUser = await getCurrentUserAsync();
-    if (!currentUser) {
-      throw new Error('No authenticated user found');
-    }
-
+export const getDocumentDownloadUrl = withAuth(async (user, { tenant }, file_id: string): Promise<string> => {
     // Check permission for document reading/download
-    if (!await hasPermissionAsync(currentUser, 'document', 'read')) {
+    if (!await hasPermission(user, 'document', 'read')) {
       throw new Error('Permission denied: Cannot read documents');
     }
 
     return `/api/documents/download/${file_id}`;
-}
+});
 
 /**
  * Get thumbnail URL for a document
@@ -872,22 +768,14 @@ export async function getDocumentDownloadUrl(file_id: string): Promise<string> {
  * @param documentId - The document ID
  * @returns URL to thumbnail or null if not available
  */
-export async function getDocumentThumbnailUrl(documentId: string): Promise<string | null> {
+export const getDocumentThumbnailUrl = withAuth(async (user, { tenant }, documentId: string): Promise<string | null> => {
   try {
-    const currentUser = await getCurrentUserAsync();
-    if (!currentUser) {
-      throw new Error('No authenticated user found');
-    }
-
     // Check permission for document reading
-    if (!await hasPermissionAsync(currentUser, 'document', 'read')) {
+    if (!await hasPermission(user, 'document', 'read')) {
       throw new Error('Permission denied: Cannot read documents');
     }
 
-    const { knex, tenant } = await createTenantKnex(currentUser.tenant);
-    if (!tenant) {
-      throw new Error('No tenant found');
-    }
+    const { knex } = await createTenantKnex();
 
     // Get document
     const document = await withTransaction(knex, async (trx: Knex.Transaction) => {
@@ -917,7 +805,7 @@ export async function getDocumentThumbnailUrl(documentId: string): Promise<strin
     console.error(`[getDocumentThumbnailUrl] Error for document ${documentId}:`, error);
     return null;
   }
-}
+});
 
 /**
  * Get preview URL for a document
@@ -926,22 +814,14 @@ export async function getDocumentThumbnailUrl(documentId: string): Promise<strin
  * @param documentId - The document ID
  * @returns URL to preview or null if not available
  */
-export async function getDocumentPreviewUrl(documentId: string): Promise<string | null> {
+export const getDocumentPreviewUrl = withAuth(async (user, { tenant }, documentId: string): Promise<string | null> => {
   try {
-    const currentUser = await getCurrentUserAsync();
-    if (!currentUser) {
-      throw new Error('No authenticated user found');
-    }
-
     // Check permission for document reading
-    if (!await hasPermissionAsync(currentUser, 'document', 'read')) {
+    if (!await hasPermission(user, 'document', 'read')) {
       throw new Error('Permission denied: Cannot read documents');
     }
 
-    const { knex, tenant } = await createTenantKnex(currentUser.tenant);
-    if (!tenant) {
-      throw new Error('No tenant found');
-    }
+    const { knex } = await createTenantKnex();
 
     // Get document
     const document = await withTransaction(knex, async (trx: Knex.Transaction) => {
@@ -971,25 +851,17 @@ export async function getDocumentPreviewUrl(documentId: string): Promise<string 
     console.error(`[getDocumentPreviewUrl] Error for document ${documentId}:`, error);
     return null;
   }
-}
+});
 
 // Download document
-export async function downloadDocument(documentIdOrFileId: string) {
+export const downloadDocument = withAuth(async (user, { tenant }, documentIdOrFileId: string) => {
     try {
-        const currentUser = await getCurrentUserAsync();
-        if (!currentUser) {
-          throw new Error('No authenticated user found');
-        }
-
         // Check permission for document reading/download
-        if (!await hasPermissionAsync(currentUser, 'document', 'read')) {
+        if (!await hasPermission(user, 'document', 'read')) {
           throw new Error('Permission denied: Cannot read documents');
         }
 
-        const { knex, tenant } = await createTenantKnex(currentUser.tenant);
-        if (!tenant) {
-            throw new Error('No tenant found');
-        }
+        const { knex } = await createTenantKnex();
 
         // Get document by file_id or document_id
         const document = await withTransaction(knex, async (trx: Knex.Transaction) => {
@@ -1023,7 +895,7 @@ export async function downloadDocument(documentIdOrFileId: string) {
         const asciiFilename = document.document_name?.replace(/[^\x00-\x7F]/g, '_') || 'download';
         headers.set('Content-Disposition', `attachment; filename="${asciiFilename}"; filename*=UTF-8''${encodedFilename}`);
         headers.set('Content-Length', buffer.length.toString());
-        
+
         // Add cache control headers for images to enable browser caching
         const isImage = metadata.mime_type?.startsWith('image/');
         if (isImage) {
@@ -1044,25 +916,22 @@ export async function downloadDocument(documentIdOrFileId: string) {
         console.error('Error downloading document:', error);
         throw error;
     }
-}
+});
 
 // Get documents by entity using the new association table
-export async function getDocumentCountsForEntities(
+export const getDocumentCountsForEntities = withAuth(async (
+  user,
+  { tenant },
   entityIds: string[],
   entityType: string
-): Promise<Map<string, number>> {
-  const currentUser = await getCurrentUserAsync();
-  if (!currentUser || !currentUser.tenant) {
-    throw new Error('User not authenticated');
-  }
-
-  const { knex } = await createTenantKnex(currentUser.tenant);
+): Promise<Map<string, number>> => {
+  const { knex } = await createTenantKnex();
   
   try {
     const counts = await knex('document_associations')
       .select('entity_id')
       .count('document_id as count')
-      .where('tenant', currentUser.tenant)
+      .where('tenant', tenant)
       .whereIn('entity_id', entityIds)
       .where('entity_type', entityType)
       .groupBy('entity_id');
@@ -1071,43 +940,37 @@ export async function getDocumentCountsForEntities(
     for (const row of counts) {
       countMap.set(String(row.entity_id), Number(row.count));
     }
-    
+
     // Ensure all requested entities have a count (0 if no documents)
     for (const entityId of entityIds) {
       if (!countMap.has(entityId)) {
         countMap.set(entityId, 0);
       }
     }
-    
+
     return countMap;
   } catch (error) {
     console.error('Error fetching document counts:', error);
     throw error;
   }
-}
+});
 
-export async function getDocumentsByEntity(
+export const getDocumentsByEntity = withAuth(async (
+  user,
+  { tenant },
   entity_id: string,
   entity_type: string,
   filters?: DocumentFilters,
   page: number = 1,
   limit: number = 15
-): Promise<PaginatedDocumentsResponse> {
+): Promise<PaginatedDocumentsResponse> => {
   try {
-    const currentUser = await getCurrentUserAsync();
-    if (!currentUser) {
-      throw new Error('No authenticated user found');
-    }
-
     // Check permission for document reading
-    if (!await hasPermissionAsync(currentUser, 'document', 'read')) {
+    if (!await hasPermission(user, 'document', 'read')) {
       throw new Error('Permission denied: Cannot read documents');
     }
 
-    const { knex, tenant } = await createTenantKnex(currentUser.tenant);
-    if (!tenant) {
-      throw new Error('No tenant found');
-    }
+    const { knex } = await createTenantKnex();
 
     console.log('Getting documents for entity:', { entity_id, entity_type, filters, page, limit });
 
@@ -1326,29 +1189,23 @@ export async function getDocumentsByEntity(
     console.error('Error fetching documents by entity:', error);
     throw new Error('Failed to fetch documents');
   }
-}
+});
 
 // Get all documents with optional filtering
-export async function getAllDocuments(
+export const getAllDocuments = withAuth(async (
+  user,
+  { tenant },
   filters?: DocumentFilters,
   page: number = 1,
   limit: number = 10
-): Promise<PaginatedDocumentsResponse> {
+): Promise<PaginatedDocumentsResponse> => {
   try {
-    const currentUser = await getCurrentUserAsync();
-    if (!currentUser) {
-      throw new Error('No authenticated user found');
-    }
-
     // Check permission for document reading
-    if (!await hasPermissionAsync(currentUser, 'document', 'read')) {
+    if (!await hasPermission(user, 'document', 'read')) {
       throw new Error('Permission denied: Cannot read documents');
     }
 
-    const { knex, tenant } = await createTenantKnex(currentUser.tenant);
-    if (!tenant) {
-      throw new Error('No tenant found');
-    }
+    const { knex } = await createTenantKnex();
 
     console.log('Getting documents with filters:', { filters, page, limit });
     const offset = (page - 1) * limit;
@@ -1837,29 +1694,23 @@ export async function getAllDocuments(
     console.error('Error fetching documents:', error);
     throw error;
   }
-}
+});
 
 // Create document associations
-export async function createDocumentAssociations(
+export const createDocumentAssociations = withAuth(async (
+  user,
+  { tenant },
   entity_id: string,
   entity_type: DocumentAssociationEntityType,
   document_ids: string[]
-): Promise<{ success: boolean }> {
+): Promise<{ success: boolean }> => {
   try {
-    const currentUser = await getCurrentUserAsync();
-    if (!currentUser) {
-      throw new Error('No authenticated user found');
-    }
-
     // Check permission for document updates (associating documents is an update operation)
-    if (!await hasPermissionAsync(currentUser, 'document', 'update')) {
+    if (!await hasPermission(user, 'document', 'update')) {
       throw new Error('Permission denied: Cannot update document associations');
     }
 
-    const { knex: db, tenant } = await createTenantKnex(currentUser.tenant);
-    if (!tenant) {
-      throw new Error('No tenant found');
-    }
+    const { knex: db } = await createTenantKnex();
 
     // Create associations for all selected documents
     const associations = document_ids.map((document_id): IDocumentAssociationInput => ({
@@ -1882,29 +1733,23 @@ export async function createDocumentAssociations(
     console.error('Error creating document associations:', error);
     throw new Error('Failed to create document associations');
   }
-}
+});
 
 // Remove document associations
-export async function removeDocumentAssociations(
+export const removeDocumentAssociations = withAuth(async (
+  user,
+  { tenant },
   entity_id: string,
   entity_type: DocumentAssociationEntityType,
   document_ids?: string[]
-) {
+) => {
   try {
-    const currentUser = await getCurrentUserAsync();
-    if (!currentUser) {
-      throw new Error('No authenticated user found');
-    }
-
     // Check permission for document updates (removing associations is an update operation)
-    if (!await hasPermissionAsync(currentUser, 'document', 'update')) {
+    if (!await hasPermission(user, 'document', 'update')) {
       throw new Error('Permission denied: Cannot update document associations');
     }
 
-    const { knex, tenant } = await createTenantKnex(currentUser.tenant);
-    if (!tenant) {
-      throw new Error('No tenant found');
-    }
+    const { knex } = await createTenantKnex();
 
     await withTransaction(knex, async (trx: Knex.Transaction) => {
       let query = trx('document_associations')
@@ -1924,10 +1769,12 @@ export async function removeDocumentAssociations(
     console.error('Error removing document associations:', error);
     throw new Error('Failed to remove document associations');
   }
-}
+});
 
 // Upload new document
-export async function uploadDocument(
+export const uploadDocument = withAuth(async (
+  user,
+  { tenant },
   file: FormData,
   options: {
     userId: string;
@@ -1942,22 +1789,14 @@ export async function uploadDocument(
 ): Promise<
   | { success: true; document: IDocument }
   | { success: false; error: string }
-> {
+> => {
   try {
-    const currentUser = await getCurrentUserAsync();
-    if (!currentUser) {
-      throw new Error('No authenticated user found');
-    }
-
     // Check permission for document creation/upload
-    if (!await hasPermissionAsync(currentUser, 'document', 'create')) {
+    if (!await hasPermission(user, 'document', 'create')) {
       throw new Error('Permission denied: Cannot create documents');
     }
 
-    const { knex, tenant } = await createTenantKnex(currentUser.tenant);
-    if (!tenant) {
-      throw new Error('No tenant found');
-    }
+    const { knex } = await createTenantKnex();
 
       // Extract file from FormData
       const fileData = file.get('file') as File;
@@ -2107,16 +1946,11 @@ export async function uploadDocument(
       error: error instanceof Error ? error.message : 'Failed to upload document'
     };
   }
-}
+});
 
-// Centralized validation logic
+// Centralized validation logic - internal helper, uses tenant from context
 async function validateDocumentUpload(file: File): Promise<void> {
-  const currentUser = await getCurrentUserAsync();
-  if (!currentUser) {
-    throw new Error('No authenticated user found');
-  }
-
-  const { tenant } = await createTenantKnex(currentUser.tenant);
+  const { tenant } = await createTenantKnex();
   if (!tenant) {
     throw new Error('No tenant found');
   }
@@ -2129,18 +1963,13 @@ async function validateDocumentUpload(file: File): Promise<void> {
 }
 
 // Get document type ID
-export async function getDocumentTypeId(mimeType: string): Promise<{ typeId: string, isShared: boolean }> { // Export this function
-  const currentUser = await getCurrentUserAsync();
-  if (!currentUser) {
-    throw new Error('No authenticated user found');
-  }
-
+export const getDocumentTypeId = withAuth(async (user, { tenant }, mimeType: string): Promise<{ typeId: string, isShared: boolean }> => {
   // Check permission for document reading
-  if (!await hasPermissionAsync(currentUser, 'document', 'read')) {
+  if (!await hasPermission(user, 'document', 'read')) {
     throw new Error('Permission denied: Cannot read document types');
   }
 
-  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
+  const { knex } = await createTenantKnex();
 
   return await withTransaction(knex, async (trx: Knex.Transaction) => {
     // First try to find a tenant-specific type
@@ -2193,7 +2022,7 @@ export async function getDocumentTypeId(mimeType: string): Promise<{ typeId: str
 
     return { typeId: unknownType.type_id, isShared: true };
   });
-}
+});
 
 /**
  * Generates a publicly accessible URL for an image file.
@@ -2205,27 +2034,23 @@ export async function getDocumentTypeId(mimeType: string): Promise<{ typeId: str
 /**
  * Core implementation for generating image URLs from file IDs.
  * Handles different storage providers (local vs. S3).
- * 
+ * This is an internal helper that uses the tenant from AsyncLocalStorage context.
+ *
  * @param file_id The ID of the file in external_files
  * @param useTransaction Whether to use database transaction (default: true)
  * @returns A promise resolving to the image URL string, or null if an error occurs or the file is not found/an image
  */
 async function getImageUrlCore(file_id: string, useTransaction: boolean = true): Promise<string | null> {
   try {
-    const currentUser = await getCurrentUserAsync();
-    if (!currentUser) {
-      console.error('getImageUrlCore: No authenticated user found');
-      return null;
-    }
+    const { knex, tenant } = await createTenantKnex();
 
-    const { knex, tenant } = await createTenantKnex(currentUser.tenant);
     if (!tenant) {
       console.error('getImageUrlCore: No tenant found');
       return null;
     }
 
     // Fetch minimal file details to check MIME type and existence
-    const fileDetails = useTransaction 
+    const fileDetails = useTransaction
       ? await withTransaction(knex, async (trx: Knex.Transaction) => {
           return await trx('external_files')
             .select('mime_type', 'storage_path')
@@ -2261,24 +2086,19 @@ async function getImageUrlCore(file_id: string, useTransaction: boolean = true):
 /**
  * Generates a URL for accessing an image file by its ID.
  * This is the PUBLIC API that includes user authentication and permission checks.
- * 
+ *
  * Use this function when:
  * - Handling user requests that need authentication
  * - API endpoints that require permission validation
  * - Any user-facing functionality
- * 
+ *
  * @param file_id The ID of the file in external_files
  * @returns A promise resolving to the image URL string, or null if an error occurs or the file is not found/an image
  */
-export async function getImageUrl(file_id: string): Promise<string | null> {
+export const getImageUrl = withAuth(async (user, { tenant }, file_id: string): Promise<string | null> => {
   try {
-    const currentUser = await getCurrentUserAsync();
-    if (!currentUser) {
-      throw new Error('No authenticated user found');
-    }
-
     // Check permission for document reading
-    if (!await hasPermissionAsync(currentUser, 'document', 'read')) {
+    if (!await hasPermission(user, 'document', 'read')) {
       throw new Error('Permission denied: Cannot read documents');
     }
 
@@ -2287,46 +2107,38 @@ export async function getImageUrl(file_id: string): Promise<string | null> {
     console.error(`getImageUrl: Error generating URL for file_id ${file_id}:`, error);
     return null;
   }
-}
+});
 
 /**
  * Generates a URL for accessing an image file by its ID without authentication checks.
  * This is the INTERNAL API that bypasses user authentication and permission validation.
- * 
+ *
  * Use this function when:
  * - System-level operations that don't require user context
  * - Internal service calls where authentication is handled elsewhere
  * - Background processes and workflows
  * - Avatar utilities and other trusted internal operations
- * 
+ *
  * SECURITY WARNING: This function bypasses all user authentication and permission checks.
  * Only use in trusted contexts where access control is handled at a higher level.
- * 
+ *
  * @param file_id The ID of the file in external_files
+ * @param tenant Optional tenant - if provided, skips getCurrentUser call (avoids circular dependency)
  * @returns A promise resolving to the image URL string, or null if an error occurs or the file is not found/an image
  */
-export async function getImageUrlInternal(file_id: string): Promise<string | null> {
+export async function getImageUrlInternal(file_id: string, tenant?: string): Promise<string | null> {
+  // For internal use, we can use runWithTenant if tenant is provided
   return await getImageUrlCore(file_id, false);
 }
-export async function getDistinctEntityTypes(): Promise<string[]> {
-  try {
-    const currentUser = await getCurrentUserAsync();
-    if (!currentUser) {
-      throw new Error('No authenticated user found');
-    }
-    if (!currentUser.tenant) {
-      throw new Error('Tenant is required');
-    }
 
+export const getDistinctEntityTypes = withAuth(async (user, { tenant }): Promise<string[]> => {
+  try {
     // Check permission for document reading
-    if (!await hasPermissionAsync(currentUser, 'document', 'read')) {
+    if (!await hasPermission(user, 'document', 'read')) {
       throw new Error('Permission denied: Cannot read document associations');
     }
 
-    const { knex, tenant } = await createTenantKnex(currentUser.tenant);
-    if (!tenant) {
-      throw new Error('No tenant found');
-    }
+    const { knex } = await createTenantKnex();
 
     const result = await withTransaction(knex, async (trx: Knex.Transaction) => {
       return await trx('document_associations')
@@ -2340,7 +2152,7 @@ export async function getDistinctEntityTypes(): Promise<string[]> {
     console.error('Error fetching distinct entity types:', error);
     throw new Error('Failed to fetch distinct entity types');
   }
-}
+});
 
 // ============================================================================
 // FOLDER OPERATIONS
@@ -2351,23 +2163,12 @@ export async function getDistinctEntityTypes(): Promise<string[]> {
  *
  * @returns Promise<IFolderNode[]> - Root level folders with nested children
  */
-export async function getFolderTree(): Promise<IFolderNode[]> {
-  const currentUser = await getCurrentUserAsync();
-  if (!currentUser) {
-    throw new Error('User not authenticated');
-  }
-  if (!currentUser.tenant) {
-    throw new Error('Tenant is required');
-  }
-
-  if (!(await hasPermissionAsync(currentUser, 'document', 'read'))) {
+export const getFolderTree = withAuth(async (user, { tenant }): Promise<IFolderNode[]> => {
+  if (!(await hasPermission(user, 'document', 'read'))) {
     throw new Error('Permission denied');
   }
 
-  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
-  if (!tenant) {
-    throw new Error('Tenant not found');
-  }
+  const { knex } = await createTenantKnex();
 
   // Get explicit folders from document_folders table
   const explicitFolders = await knex('document_folders')
@@ -2397,23 +2198,18 @@ export async function getFolderTree(): Promise<IFolderNode[]> {
   await enrichFolderTreeWithCounts(tree, knex, tenant);
 
   return tree;
-}
+});
 
 /**
  * Get list of all folder paths (for folder selector)
  * @returns Promise<string[]> - Array of folder paths
  */
-export async function getFolders(): Promise<string[]> {
-  const currentUser = await getCurrentUserAsync();
-  if (!currentUser) {
-    throw new Error('User not authenticated');
-  }
-
-  if (!(await hasPermissionAsync(currentUser, 'document', 'read'))) {
+export const getFolders = withAuth(async (user, { tenant }): Promise<string[]> => {
+  if (!(await hasPermission(user, 'document', 'read'))) {
     throw new Error('Permission denied');
   }
 
-  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
+  const { knex } = await createTenantKnex();
 
   // Get explicit folders from document_folders table
   const explicitFolders = await knex('document_folders')
@@ -2436,7 +2232,7 @@ export async function getFolders(): Promise<string[]> {
   // Merge both lists (remove duplicates) and sort
   const allPaths = Array.from(new Set([...explicitPaths, ...implicitPaths]));
   return allPaths.sort();
-}
+});
 
 /**
  * Get documents in a specific folder (OPTIMIZED - filters at DB level)
@@ -2448,26 +2244,23 @@ export async function getFolders(): Promise<string[]> {
  * @param filters - Optional filters including sorting
  * @returns Promise with documents and pagination info
  */
-export async function getDocumentsByFolder(
+export const getDocumentsByFolder = withAuth(async (
+  user,
+  { tenant },
   folderPath: string | null,
   includeSubfolders: boolean = false,
   page: number = 1,
   limit: number = 15,
   filters?: DocumentFilters
-): Promise<{ documents: IDocument[]; total: number }> {
-  const currentUser = await getCurrentUserAsync();
-  if (!currentUser) {
-    throw new Error('User not authenticated');
-  }
-
-  if (!(await hasPermissionAsync(currentUser, 'document', 'read'))) {
+): Promise<{ documents: IDocument[]; total: number }> => {
+  if (!(await hasPermission(user, 'document', 'read'))) {
     throw new Error('Permission denied');
   }
 
   // Build list of entity types user has permission for
-  const allowedEntityTypes = await getEntityTypesForUser(currentUser);
+  const allowedEntityTypes = await getEntityTypesForUser(user);
 
-  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
+  const { knex } = await createTenantKnex();
 
   // Build base query with permission filtering at DB level
   let query = knex('documents as d')
@@ -2663,7 +2456,7 @@ export async function getDocumentsByFolder(
     documents,
     total,
   };
-}
+});
 
 /**
  * Move documents to a different folder
@@ -2671,20 +2464,17 @@ export async function getDocumentsByFolder(
  * @param documentIds - Array of document IDs to move
  * @param newFolderPath - Destination folder path
  */
-export async function moveDocumentsToFolder(
+export const moveDocumentsToFolder = withAuth(async (
+  user,
+  { tenant },
   documentIds: string[],
   newFolderPath: string | null
-): Promise<void> {
-  const currentUser = await getCurrentUserAsync();
-  if (!currentUser) {
-    throw new Error('User not authenticated');
-  }
-
-  if (!(await hasPermissionAsync(currentUser, 'document', 'update'))) {
+): Promise<void> => {
+  if (!(await hasPermission(user, 'document', 'update'))) {
     throw new Error('Permission denied');
   }
 
-  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
+  const { knex } = await createTenantKnex();
 
   await knex('documents')
     .whereIn('document_id', documentIds)
@@ -2693,7 +2483,7 @@ export async function moveDocumentsToFolder(
       folder_path: newFolderPath,
       updated_at: new Date(),
     });
-}
+});
 
 /**
  * Get folder statistics (document count, total size)
@@ -2701,15 +2491,12 @@ export async function moveDocumentsToFolder(
  * @param folderPath - Path to folder
  * @returns Promise<IFolderStats> - Folder statistics
  */
-export async function getFolderStats(
+export const getFolderStats = withAuth(async (
+  user,
+  { tenant },
   folderPath: string
-): Promise<IFolderStats> {
-  const currentUser = await getCurrentUserAsync();
-  if (!currentUser) {
-    throw new Error('User not authenticated');
-  }
-
-  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
+): Promise<IFolderStats> => {
+  const { knex } = await createTenantKnex();
 
   const result = await knex('documents')
     .where('tenant', tenant)
@@ -2726,7 +2513,7 @@ export async function getFolderStats(
     documentCount: parseInt(result?.count as string) || 0,
     totalSize: parseInt(result?.size as string) || 0,
   };
-}
+});
 
 /**
  * Create a new folder explicitly
@@ -2734,17 +2521,12 @@ export async function getFolderStats(
  * @param folderPath - Full path to the folder (e.g., '/Legal/Contracts')
  * @returns Promise<void>
  */
-export async function createFolder(folderPath: string): Promise<void> {
-  const currentUser = await getCurrentUserAsync();
-  if (!currentUser) {
-    throw new Error('User not authenticated');
-  }
-
-  if (!(await hasPermissionAsync(currentUser, 'document', 'create'))) {
+export const createFolder = withAuth(async (user, { tenant }, folderPath: string): Promise<void> => {
+  if (!(await hasPermission(user, 'document', 'create'))) {
     throw new Error('Permission denied');
   }
 
-  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
+  const { knex } = await createTenantKnex();
 
   // Validate folder path
   if (!folderPath || !folderPath.startsWith('/')) {
@@ -2793,9 +2575,9 @@ export async function createFolder(folderPath: string): Promise<void> {
     folder_path: folderPath,
     folder_name: folderName,
     parent_folder_id: parentFolderId,
-    created_by: currentUser.user_id,
+    created_by: user.user_id,
   });
-}
+});
 
 /**
  * Delete a folder (only if it's empty - no documents and no subfolders)
@@ -2803,17 +2585,12 @@ export async function createFolder(folderPath: string): Promise<void> {
  * @param folderPath - Path to the folder to delete
  * @returns Promise<void>
  */
-export async function deleteFolder(folderPath: string): Promise<void> {
-  const currentUser = await getCurrentUserAsync();
-  if (!currentUser) {
-    throw new Error('User not authenticated');
-  }
-
-  if (!(await hasPermissionAsync(currentUser, 'document', 'delete'))) {
+export const deleteFolder = withAuth(async (user, { tenant }, folderPath: string): Promise<void> => {
+  if (!(await hasPermission(user, 'document', 'delete'))) {
     throw new Error('Permission denied');
   }
 
-  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
+  const { knex } = await createTenantKnex();
 
   // Check if folder has documents
   const docCount = await knex('documents')
@@ -2842,7 +2619,7 @@ export async function deleteFolder(folderPath: string): Promise<void> {
     .where('tenant', tenant)
     .where('folder_path', folderPath)
     .delete();
-}
+});
 
 // Helper functions
 function buildFolderTreeFromPaths(paths: string[]): IFolderNode[] {
@@ -2895,14 +2672,9 @@ async function enrichFolderTreeWithCounts(
     return;
   }
 
-  // Get current user for permission filtering
-  const currentUser = await getCurrentUserAsync();
-  if (!currentUser) {
-    return;
-  }
-
-  // Build list of entity types user has permission for
-  const allowedEntityTypes = await getEntityTypesForUser(currentUser);
+  // Note: This is an internal helper called from within withAuth-wrapped functions
+  // so the tenant context is already established. We use a fixed set of entity types.
+  const allowedEntityTypes = ['ticket', 'client', 'contact', 'asset', 'project_task', 'contract'];
 
   // Single query to get counts for ALL folders at once - with same permission filtering as getDocumentsByFolder
   const counts = await knex('documents as d')

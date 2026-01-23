@@ -7,18 +7,27 @@ import { IRole, IUserRole } from '@alga-psa/types';
 import { withTransaction } from '@alga-psa/db';
 import { createTenantKnex } from '@alga-psa/db';
 import { Knex } from 'knex';
+import { withAuth } from '@alga-psa/auth';
 
-export async function getRoles(): Promise<IRole[]> {
-    const { knex: db, tenant } = await createTenantKnex();
+export const getRoles = withAuth(async (
+    _user,
+    { tenant }
+): Promise<IRole[]> => {
+    const { knex: db } = await createTenantKnex();
     return withTransaction(db, async (trx: Knex.Transaction) => {
         return await trx('roles')
             .where({ tenant })
             .select('role_id', 'role_name', 'description', 'tenant', 'msp', 'client');
     });
-}
+});
 
-export async function assignRoleToUser(userId: string, roleId: string): Promise<IUserRole> {
-    const { knex: db, tenant } = await createTenantKnex();
+export const assignRoleToUser = withAuth(async (
+    _user,
+    { tenant },
+    userId: string,
+    roleId: string
+): Promise<IUserRole> => {
+    const { knex: db } = await createTenantKnex();
     return withTransaction(db, async (trx: Knex.Transaction) => {
         const [user, role] = await Promise.all([
             trx('users').where({ user_id: userId, tenant }).first(),
@@ -46,11 +55,16 @@ export async function assignRoleToUser(userId: string, roleId: string): Promise<
             .returning('*');
         return userRole;
     });
-}
+});
 
-export async function removeRoleFromUser(userId: string, roleId: string): Promise<void> {
-    const { knex: db, tenant } = await createTenantKnex();
+export const removeRoleFromUser = withAuth(async (
+    _user,
+    { tenant },
+    userId: string,
+    roleId: string
+): Promise<void> => {
+    const { knex: db } = await createTenantKnex();
     return withTransaction(db, async (trx: Knex.Transaction) => {
         await trx('user_roles').where({ user_id: userId, role_id: roleId, tenant }).del();
     });
-}
+});

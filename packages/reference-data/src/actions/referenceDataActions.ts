@@ -7,7 +7,7 @@ import { IStandardPriority, IPriority } from '@alga-psa/types';
 import { IStandardStatus, IStatus } from '@alga-psa/types';
 import { IStandardServiceType } from '@alga-psa/types';
 import { IInteractionType } from '@alga-psa/types';
-import { getCurrentUser } from '@alga-psa/users/actions';
+import { withAuth } from '@alga-psa/auth';
 
 export type ReferenceDataType = 'priorities' | 'statuses' | 'service_types' | 'task_types' | 'interaction_types' | 'service_categories' | 'categories' | 'boards';
 
@@ -242,40 +242,37 @@ export interface ImportConflict {
   suggestedOrder?: number;
 }
 
-export async function checkImportConflicts(
+export const checkImportConflicts = withAuth(async (
+  user,
+  { tenant },
   dataType: ReferenceDataType,
   referenceIds: string[],
   filters?: any
-): Promise<ImportConflict[]> {
-  const currentUser = await getCurrentUser();
-  if (!currentUser?.user_id || !currentUser?.tenant) {
-    throw new Error('User not authenticated or tenant not found');
-  }
-
+): Promise<ImportConflict[]> => {
   const config = referenceDataConfigs[dataType];
   const { knex: db } = await createTenantKnex();
-  
+
   // Wrap in transaction
   return await withTransaction(db, async (trx) => {
     let referenceData = await getReferenceData(dataType, filters);
-    
+
     if (referenceIds && referenceIds.length > 0) {
-      referenceData = referenceData.filter((item: any) => 
+      referenceData = referenceData.filter((item: any) =>
         referenceIds.includes(item.id || item.priority_id || item.standard_status_id || item.status_id || item.type_id)
       );
     }
-    
+
     const conflicts: ImportConflict[] = [];
-    
+
     for (const item of referenceData) {
-      const mappedData = config.mapFields(item, currentUser.tenant, currentUser.user_id, filters);
+      const mappedData = config.mapFields(item, tenant, user.user_id, filters);
       
       let hasNameConflict = false;
       let hasOrderConflict = false;
-      
+
       // Check name conflict
       if (config.conflictCheck) {
-        hasNameConflict = await config.conflictCheck(mappedData, currentUser.tenant, trx);
+        hasNameConflict = await config.conflictCheck(mappedData, tenant, trx);
         if (hasNameConflict) {
           conflicts.push({
             referenceItem: item,
@@ -286,12 +283,12 @@ export async function checkImportConflicts(
       }
     
     // Check order conflict for data types that have order (even if there's a name conflict)
-    if (dataType === 'priorities' || dataType === 'statuses' || dataType === 'service_types' || 
-        dataType === 'interaction_types' || dataType === 'service_categories' || 
+    if (dataType === 'priorities' || dataType === 'statuses' || dataType === 'service_types' ||
+        dataType === 'interaction_types' || dataType === 'service_categories' ||
         dataType === 'categories' || dataType === 'boards') {
       const orderField = (dataType === 'priorities' || dataType === 'service_types' || dataType === 'statuses') ? 'order_number' : 'display_order';
       const orderValue = mappedData[orderField];
-      
+
       if (orderValue && !hasNameConflict) { // Only check order if no name conflict
         // For categories, skip subcategories - they don't conflict with parent category orders
         if (dataType === 'categories' && item.parent_category_uuid) {
@@ -299,7 +296,7 @@ export async function checkImportConflicts(
           // No need to check for conflicts here
         } else {
           const whereClause: any = {
-            tenant: currentUser.tenant,
+            tenant: tenant,
             [orderField]: orderValue
           };
           
@@ -316,11 +313,11 @@ export async function checkImportConflicts(
           const existingWithOrder = await trx(config.targetTable)
             .where(whereClause)
             .first();
-            
+
           if (existingWithOrder) {
             // Find next available order number
             const maxOrderWhereClause: any = {
-              tenant: currentUser.tenant
+              tenant: tenant
             };
             
             // For statuses, use status_type; for priorities, use item_type
@@ -350,22 +347,19 @@ export async function checkImportConflicts(
       }
     }
   }
-  
+
     return conflicts;
   });
-}
+});
 
-export async function importReferenceData(
-  dataType: ReferenceDataType, 
-  referenceIds?: string[], 
+export const importReferenceData = withAuth(async (
+  user,
+  { tenant },
+  dataType: ReferenceDataType,
+  referenceIds?: string[],
   filters?: any,
   conflictResolutions?: Record<string, { action: 'skip' | 'rename' | 'reorder', newName?: string, newOrder?: number }>
-) {
-  const currentUser = await getCurrentUser();
-  if (!currentUser?.user_id || !currentUser?.tenant) {
-    throw new Error('User not authenticated or tenant not found');
-  }
-  
+) => {
   // Validate required filters for specific data types
   if (dataType === 'categories' && !filters?.board_id) {
     throw new Error('Board ID is required when importing categories');
@@ -377,20 +371,20 @@ export async function importReferenceData(
   // Wrap everything in a transaction
   return await withTransaction(db, async (trx) => {
     let referenceData = await getReferenceData(dataType, filters);
-    
+
     if (referenceIds && referenceIds.length > 0) {
-      referenceData = referenceData.filter((item: any) => 
+      referenceData = referenceData.filter((item: any) =>
         referenceIds.includes(item.id || item.priority_id || item.standard_status_id || item.status_id || item.type_id)
       );
     }
-    
+
     const importedItems: any[] = [];
     const skippedItems: Array<{ name: any; reason: string }> = [];
-    
+
     for (const item of referenceData) {
     const itemId = item.id || item.priority_id || item.standard_status_id || item.status_id || item.type_id;
     const resolution = conflictResolutions?.[itemId];
-    
+
     if (resolution?.action === 'skip') {
       const itemName = item.name || item.priority_name || item.type_name || item.service_type || item.category_name || item.board_name;
       skippedItems.push({
@@ -399,8 +393,8 @@ export async function importReferenceData(
       });
       continue;
     }
-    
-    let mappedData = config.mapFields(item, currentUser.tenant, currentUser.user_id, filters);
+
+    let mappedData = config.mapFields(item, tenant, user.user_id, filters);
     
     // Apply conflict resolutions
     if (resolution?.action === 'rename' && resolution.newName) {
@@ -417,7 +411,7 @@ export async function importReferenceData(
     
     // Check for name conflict one more time after resolution
     if (config.conflictCheck && !resolution) {
-      const hasConflict = await config.conflictCheck(mappedData, currentUser.tenant, trx);
+      const hasConflict = await config.conflictCheck(mappedData, tenant, trx);
       if (hasConflict) {
         const itemName = item.name || item.priority_name || item.type_name || item.service_type || item.category_name || item.board_name;
         skippedItems.push({
@@ -442,7 +436,7 @@ export async function importReferenceData(
         // No conflict checking needed
       } else {
         const orderCheckClause: any = {
-          tenant: currentUser.tenant,
+          tenant: tenant,
           [orderField]: mappedData[orderField]
         };
         
@@ -462,7 +456,7 @@ export async function importReferenceData(
         
         if (existingWithOrder) {
           // Find next available order
-          const maxOrderWhereClause: any = { tenant: currentUser.tenant };
+          const maxOrderWhereClause: any = { tenant: tenant };
           
           if (dataType === 'statuses' && mappedData.status_type) {
             maxOrderWhereClause.status_type = mappedData.status_type;
@@ -492,12 +486,12 @@ export async function importReferenceData(
         const standardParentCategory = await trx('standard_categories')
           .where('id', item.parent_category_uuid)
           .first();
-          
+
         if (standardParentCategory) {
           // Now find the corresponding category in the tenant
           const parentCategory = await trx('categories')
             .where({
-              tenant: currentUser.tenant,
+              tenant: tenant,
               category_name: standardParentCategory.category_name,
               board_id: filters?.board_id
             })
@@ -520,25 +514,25 @@ export async function importReferenceData(
       if (dataType === 'boards' && mappedData.is_default === true) {
         // Check if there's already a default board
         const existingDefault = await trx('boards')
-          .where({ tenant: currentUser.tenant, is_default: true })
+          .where({ tenant: tenant, is_default: true })
           .first();
-        
+
         if (existingDefault) {
           // Don't import as default if one already exists
           mappedData.is_default = false;
         }
       }
-      
+
       if (dataType === 'statuses' && mappedData.is_default === true) {
         // Check if there's already a default status of the same type
         const existingDefault = await trx('statuses')
-          .where({ 
-            tenant: currentUser.tenant, 
+          .where({
+            tenant: tenant,
             is_default: true,
-            status_type: mappedData.status_type 
+            status_type: mappedData.status_type
           })
           .first();
-        
+
         if (existingDefault) {
           // Don't import as default if one already exists
           mappedData.is_default = false;
@@ -575,28 +569,23 @@ export async function importReferenceData(
       totalProcessed: referenceData.length
     };
   });
-}
+});
 
-export async function getAvailableReferenceData(dataType: ReferenceDataType, filters?: any) {
-  const currentUser = await getCurrentUser();
-  if (!currentUser?.tenant) {
-    throw new Error('User not authenticated or tenant not found');
-  }
-
+export const getAvailableReferenceData = withAuth(async (user, { tenant }, dataType: ReferenceDataType, filters?: any) => {
   const { knex: db } = await createTenantKnex();
-  
+
   // Wrap in transaction to avoid multiple connections
   return await withTransaction(db, async (trx) => {
     const referenceData = await getReferenceData(dataType, filters);
     const config = referenceDataConfigs[dataType];
-    
+
     const availableItems: any[] = [];
-    
+
     for (const item of referenceData) {
-      const mappedData = config.mapFields(item, currentUser.tenant, currentUser.user_id, filters);
-      
+      const mappedData = config.mapFields(item, tenant, user.user_id, filters);
+
       if (config.conflictCheck) {
-        const hasConflict = await config.conflictCheck(mappedData, currentUser.tenant, trx);
+        const hasConflict = await config.conflictCheck(mappedData, tenant, trx);
         if (!hasConflict) {
           availableItems.push(item);
         }
@@ -604,21 +593,18 @@ export async function getAvailableReferenceData(dataType: ReferenceDataType, fil
         availableItems.push(item);
       }
     }
-    
+
     return availableItems;
   });
-}
+});
 
-export async function deleteReferenceDataItem(
+export const deleteReferenceDataItem = withAuth(async (
+  _user,
+  { tenant },
   dataType: ReferenceDataType,
   itemId: string
-): Promise<{ success: boolean; error?: string }> {
+): Promise<{ success: boolean; error?: string }> => {
   try {
-    const currentUser = await getCurrentUser();
-    if (!currentUser?.user_id || !currentUser?.tenant) {
-      throw new Error('User not authenticated or tenant not found');
-    }
-
     const config = referenceDataConfigs[dataType];
     const { knex: db } = await createTenantKnex();
 
@@ -644,7 +630,7 @@ export async function deleteReferenceDataItem(
       const existing = await trx(config.targetTable)
         .where({
           [idField]: itemId,
-          tenant: currentUser.tenant
+          tenant: tenant
         })
         .first();
 
@@ -657,7 +643,7 @@ export async function deleteReferenceDataItem(
         const categoryCount = await trx('categories')
           .where({
             board_id: itemId,
-            tenant: currentUser.tenant
+            tenant: tenant
           })
           .count('* as count')
           .first();
@@ -672,7 +658,7 @@ export async function deleteReferenceDataItem(
         const subcategoryCount = await trx('categories')
           .where({
             parent_category: itemId,
-            tenant: currentUser.tenant
+            tenant: tenant
           })
           .count('* as count')
           .first();
@@ -687,7 +673,7 @@ export async function deleteReferenceDataItem(
         const serviceCount = await trx('service_catalog')
           .where({
             custom_service_type_id: itemId,
-            tenant: currentUser.tenant
+            tenant: tenant
           })
           .count('* as count')
           .first();
@@ -701,7 +687,7 @@ export async function deleteReferenceDataItem(
       await trx(config.targetTable)
         .where({
           [idField]: itemId,
-          tenant: currentUser.tenant
+          tenant: tenant
         })
         .delete();
     });
@@ -709,9 +695,9 @@ export async function deleteReferenceDataItem(
     return { success: true };
   } catch (error) {
     console.error('Error deleting reference data item:', error);
-    return { 
-      success: false, 
-      error: error instanceof Error ? error.message : 'Unknown error' 
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error'
     };
   }
-}
+});

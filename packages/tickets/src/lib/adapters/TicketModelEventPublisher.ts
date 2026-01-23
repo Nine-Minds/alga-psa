@@ -1,4 +1,4 @@
-import type { IEventPublisher } from '@alga-psa/shared/models/ticketModel';
+import type { IEventPublisher } from '@alga-psa/types';
 import { getEventBus } from '@alga-psa/event-bus';
 
 // Email event channel constant - inlined to avoid circular dependency with notifications

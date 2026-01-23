@@ -2,12 +2,13 @@
 'use server';
 
 import logger from '@alga-psa/core/logger';
-import { getCurrentUser } from '@alga-psa/auth/getCurrentUser';
+import { withAuth } from '@alga-psa/auth';
 import { revalidatePath } from 'next/cache';
 import { ISecretProvider } from '@alga-psa/core';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { QboClientService } from '../lib/qbo/qboClientService';
+import type { IUserWithRoles } from '@alga-psa/types';
 
 // Corrected QboCredentials interface (using ISO strings for dates)
 interface QboCredentials {
@@ -147,40 +148,18 @@ function normalizeTermRow(row: QboTermRow): QboTerm {
   };
 }
 
-type BillingAccess = {
-  tenantId: string;
-};
-
-async function ensureBillingReadAccess(): Promise<BillingAccess> {
-  const user = await getCurrentUser();
-  if (!user?.tenant) {
-    throw new Error('Authentication required.');
-  }
-
+async function checkBillingReadAccess(user: IUserWithRoles): Promise<void> {
   const allowed = await hasPermission(user, 'billing_settings', 'read');
   if (!allowed) {
     throw new Error('Forbidden: You do not have permission to view QuickBooks integration settings.');
   }
-
-  return {
-    tenantId: user.tenant
-  };
 }
 
-async function ensureBillingUpdateAccess(): Promise<BillingAccess> {
-  const user = await getCurrentUser();
-  if (!user?.tenant) {
-    throw new Error('Authentication required.');
-  }
-
+async function checkBillingUpdateAccess(user: IUserWithRoles): Promise<void> {
   const allowed = await hasPermission(user, 'billing_settings', 'update');
   if (!allowed) {
     throw new Error('Forbidden: You do not have permission to manage QuickBooks integration settings.');
   }
-
-  return {
-    tenantId: user.tenant
-  };
 }
 
 async function getTenantCredentialMap(tenantId: string): Promise<QboCredentialsMap> {
@@ -308,55 +287,62 @@ export interface QboTerm { // Exporting for use in components
  * When a realmId is provided, attempts to load catalog data for that realm first.
  * Falls back to any other connected realms if necessary.
  */
-export async function getQboItems(options: { realmId?: string | null } = {}): Promise<QboItem[]> {
-  const { tenantId } = await ensureBillingReadAccess();
+export const getQboItems = withAuth(async (
+  user,
+  { tenant },
+  options: { realmId?: string | null } = {}
+): Promise<QboItem[]> => {
+  await checkBillingReadAccess(user);
   const targetRealm = options.realmId ?? null;
-  const cacheKey = buildCacheKey(tenantId, targetRealm, 'items');
+  const cacheKey = buildCacheKey(tenant, targetRealm, 'items');
   const cached = getCachedValue(itemCache, cacheKey);
   if (cached) {
     return [...cached];
   }
 
-  const credentials = await getTenantCredentialMap(tenantId);
+  const credentials = await getTenantCredentialMap(tenant);
   const candidateRealmIds = resolveRealmPriority(credentials, targetRealm);
 
   if (candidateRealmIds.length === 0) {
-    logger.warn('Unable to load QBO items: no credential entries found', { tenantId });
+    logger.warn('Unable to load QBO items: no credential entries found', { tenantId: tenant });
     return [];
   }
 
   for (const realmId of candidateRealmIds) {
     try {
-      logger.debug('Fetching QBO items', { tenantId, realmId });
-      const qboClient = await QboClientService.create(tenantId, realmId);
+      logger.debug('Fetching QBO items', { tenantId: tenant, realmId });
+      const qboClient = await QboClientService.create(tenant, realmId);
       const qboItems = await qboClient.query<QboItemRow>('SELECT Id, Name FROM Item');
       const mappedItems = qboItems.map(normalizeItemRow);
-      setCachedValue(itemCache, buildCacheKey(tenantId, realmId, 'items'), mappedItems);
+      setCachedValue(itemCache, buildCacheKey(tenant, realmId, 'items'), mappedItems);
       return [...mappedItems];
     } catch (error) {
-      logger.warn('Failed to fetch QBO items', { tenantId, realmId, error });
+      logger.warn('Failed to fetch QBO items', { tenantId: tenant, realmId, error });
       continue;
     }
   }
 
-  logger.warn('Unable to fetch QBO items for any realm', { tenantId });
+  logger.warn('Unable to fetch QBO items for any realm', { tenantId: tenant });
   return [];
-}
+});
 
 /**
  * Server Action to fetch the current QuickBooks Online connection status for the tenant.
  * Uses QboClientService which automatically handles token refresh.
  * Corresponds to Task 82.
  */
-export async function getQboConnectionStatus(): Promise<QboConnectionStatus> {
-  const { tenantId } = await ensureBillingReadAccess();
+export const getQboConnectionStatus = withAuth(async (
+  user,
+  { tenant }
+): Promise<QboConnectionStatus> => {
+  await checkBillingReadAccess(user);
 
   try {
-    const credentialMap = await getTenantCredentialMap(tenantId);
+    const credentialMap = await getTenantCredentialMap(tenant);
     const entries = Object.entries(credentialMap);
 
     if (entries.length === 0) {
-      logger.warn('No QuickBooks credentials stored for tenant', { tenantId });
+      logger.warn('No QuickBooks credentials stored for tenant', { tenantId: tenant });
       return {
         connected: false,
         connections: [],
@@ -376,8 +362,8 @@ export async function getQboConnectionStatus(): Promise<QboConnectionStatus> {
       let summaryError: string | null = null;
 
       try {
-        logger.debug('Validating QuickBooks connection', { tenantId, realmId });
-        const qboClient = await QboClientService.create(tenantId, realmId);
+        logger.debug('Validating QuickBooks connection', { tenantId: tenant, realmId });
+        const qboClient = await QboClientService.create(tenant, realmId);
         const clientInfoResult = await qboClient.query<QboClientInfoRow>('SELECT CompanyName FROM CompanyInfo');
         const clientInfo = clientInfoResult?.[0];
         const clientName =
@@ -413,7 +399,7 @@ export async function getQboConnectionStatus(): Promise<QboConnectionStatus> {
           aggregatedError = message;
         }
         logger.warn('QuickBooks connection validation failed', {
-          tenantId,
+          tenantId: tenant,
           realmId,
           error: message
         });
@@ -445,128 +431,138 @@ export async function getQboConnectionStatus(): Promise<QboConnectionStatus> {
       error instanceof Error
         ? error.message
         : 'An unexpected error occurred while checking the QuickBooks connection status.';
-    logger.error('QuickBooks connection status check failed', { tenantId, error });
+    logger.error('QuickBooks connection status check failed', { tenantId: tenant, error });
     return {
       connected: false,
       connections: [],
       error: message
     };
   }
-}
+});
 
 /**
  * Disconnects the QuickBooks Online integration for the current tenant
  * by deleting stored credentials and optionally revoking the token with Intuit.
  * Corresponds to Task 84.
  */
-export async function disconnectQbo(): Promise<{ success: boolean; error?: string }> {
-  let tenantId: string | null = null;
+export const disconnectQbo = withAuth(async (
+  user,
+  { tenant }
+): Promise<{ success: boolean; error?: string }> => {
   const secretProvider = await getSecretProviderInstance();
 
   try {
-    ({ tenantId } = await ensureBillingUpdateAccess());
+    await checkBillingUpdateAccess(user);
 
-    logger.info('Disconnecting QuickBooks integration', { tenantId });
+    logger.info('Disconnecting QuickBooks integration', { tenantId: tenant });
 
-    const rawSecretContent = await secretProvider.getTenantSecret(tenantId, QBO_CREDENTIALS_SECRET_NAME);
+    const rawSecretContent = await secretProvider.getTenantSecret(tenant, QBO_CREDENTIALS_SECRET_NAME);
     const credentialsExist = Boolean(rawSecretContent);
 
-    await deleteTenantQboCredentials(secretProvider, tenantId);
-    logger.info('Deleted stored QuickBooks credentials', { tenantId });
+    await deleteTenantQboCredentials(secretProvider, tenant);
+    logger.info('Deleted stored QuickBooks credentials', { tenantId: tenant });
 
     if (credentialsExist) {
-      logger.debug('QuickBooks credential revocation pending implementation', { tenantId });
+      logger.debug('QuickBooks credential revocation pending implementation', { tenantId: tenant });
     }
 
     revalidatePath('/settings/integrations/quickbooks');
-    logger.debug('Revalidated QuickBooks integration settings path', { tenantId });
+    logger.debug('Revalidated QuickBooks integration settings path', { tenantId: tenant });
 
     return { success: true };
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'An unexpected error occurred during disconnection.';
-    logger.error('QuickBooks disconnect failed', { tenantId, error });
+    logger.error('QuickBooks disconnect failed', { tenantId: tenant, error });
     return {
       success: false,
       error: message
     };
   }
-}
+});
 
 
 /**
  * Fetches a list of TaxCodes from QuickBooks Online.
  * Respects the requested realm and falls back to other connected realms.
  */
-export async function getQboTaxCodes(options: { realmId?: string | null } = {}): Promise<QboTaxCode[]> {
-  const { tenantId } = await ensureBillingReadAccess();
+export const getQboTaxCodes = withAuth(async (
+  user,
+  { tenant },
+  options: { realmId?: string | null } = {}
+): Promise<QboTaxCode[]> => {
+  await checkBillingReadAccess(user);
   const targetRealm = options.realmId ?? null;
-  const cacheKey = buildCacheKey(tenantId, targetRealm, 'tax-codes');
+  const cacheKey = buildCacheKey(tenant, targetRealm, 'tax-codes');
   const cached = getCachedValue(taxCodeCache, cacheKey);
   if (cached) {
     return [...cached];
   }
 
-  const credentials = await getTenantCredentialMap(tenantId);
+  const credentials = await getTenantCredentialMap(tenant);
   const candidateRealmIds = resolveRealmPriority(credentials, targetRealm);
 
   if (candidateRealmIds.length === 0) {
-    logger.warn('Unable to load QBO tax codes: no credential entries found', { tenantId });
+    logger.warn('Unable to load QBO tax codes: no credential entries found', { tenantId: tenant });
     return [];
   }
 
   for (const realmId of candidateRealmIds) {
     try {
-      logger.debug('Fetching QBO tax codes', { tenantId, realmId });
-      const qboClient = await QboClientService.create(tenantId, realmId);
+      logger.debug('Fetching QBO tax codes', { tenantId: tenant, realmId });
+      const qboClient = await QboClientService.create(tenant, realmId);
       const qboTaxCodes = await qboClient.query<QboTaxCodeRow>('SELECT Id, Name FROM TaxCode');
       const mappedTaxCodes = qboTaxCodes.map(normalizeTaxCodeRow);
-      setCachedValue(taxCodeCache, buildCacheKey(tenantId, realmId, 'tax-codes'), mappedTaxCodes);
+      setCachedValue(taxCodeCache, buildCacheKey(tenant, realmId, 'tax-codes'), mappedTaxCodes);
       return [...mappedTaxCodes];
     } catch (error) {
-      logger.warn('Failed to fetch QBO tax codes', { tenantId, realmId, error });
+      logger.warn('Failed to fetch QBO tax codes', { tenantId: tenant, realmId, error });
       continue;
     }
   }
 
-  logger.warn('Unable to fetch QBO tax codes for any realm', { tenantId });
+  logger.warn('Unable to fetch QBO tax codes for any realm', { tenantId: tenant });
   return [];
-}
+});
 
 /**
  * Fetches a list of Terms from QuickBooks Online.
  * Respects the requested realm and falls back to other connected realms.
  */
-export async function getQboTerms(options: { realmId?: string | null } = {}): Promise<QboTerm[]> {
-  const { tenantId } = await ensureBillingReadAccess();
+export const getQboTerms = withAuth(async (
+  user,
+  { tenant },
+  options: { realmId?: string | null } = {}
+): Promise<QboTerm[]> => {
+  await checkBillingReadAccess(user);
   const targetRealm = options.realmId ?? null;
-  const cacheKey = buildCacheKey(tenantId, targetRealm, 'terms');
+  const cacheKey = buildCacheKey(tenant, targetRealm, 'terms');
   const cached = getCachedValue(termCache, cacheKey);
   if (cached) {
     return [...cached];
   }
 
-  const credentials = await getTenantCredentialMap(tenantId);
+  const credentials = await getTenantCredentialMap(tenant);
   const candidateRealmIds = resolveRealmPriority(credentials, targetRealm);
 
   if (candidateRealmIds.length === 0) {
-    logger.warn('Unable to load QBO terms: no credential entries found', { tenantId });
+    logger.warn('Unable to load QBO terms: no credential entries found', { tenantId: tenant });
     return [];
   }
 
   for (const realmId of candidateRealmIds) {
     try {
-      logger.debug('Fetching QBO terms', { tenantId, realmId });
-      const qboClient = await QboClientService.create(tenantId, realmId);
+      logger.debug('Fetching QBO terms', { tenantId: tenant, realmId });
+      const qboClient = await QboClientService.create(tenant, realmId);
       const qboTerms = await qboClient.query<QboTermRow>('SELECT Id, Name FROM Term');
       const mappedTerms = qboTerms.map(normalizeTermRow);
-      setCachedValue(termCache, buildCacheKey(tenantId, realmId, 'terms'), mappedTerms);
+      setCachedValue(termCache, buildCacheKey(tenant, realmId, 'terms'), mappedTerms);
       return [...mappedTerms];
     } catch (error) {
-      logger.warn('Failed to fetch QBO terms', { tenantId, realmId, error });
+      logger.warn('Failed to fetch QBO terms', { tenantId: tenant, realmId, error });
       continue;
     }
   }
 
-  logger.warn('Unable to fetch QBO terms for any realm', { tenantId });
+  logger.warn('Unable to fetch QBO terms for any realm', { tenantId: tenant });
   return [];
-}
+});

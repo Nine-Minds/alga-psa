@@ -1,17 +1,15 @@
 'use server'
 
 import { createTenantKnex } from '@alga-psa/db';
-import { getCurrentUser } from '@alga-psa/users/actions';
+import { withAuth } from '@alga-psa/auth';
 import type { TicketFieldOptions } from '@alga-psa/types';
 import { hasPermission } from '@alga-psa/auth/rbac';
 
-export async function getTicketFieldOptions(): Promise<{ options: TicketFieldOptions }> {
-  const user = await getCurrentUser();
-  if (!user) {
-    throw new Error('User not authenticated');
-  }
-
-  const { knex, tenant } = await createTenantKnex();
+export const getTicketFieldOptions = withAuth(async (
+  user,
+  { tenant }
+): Promise<{ options: TicketFieldOptions }> => {
+  const { knex } = await createTenantKnex();
   // RBAC: require ticket settings read permission
   const permitted = await hasPermission(user, 'ticket_settings', 'read', knex);
   if (!permitted) {
@@ -138,15 +136,13 @@ export async function getTicketFieldOptions(): Promise<{ options: TicketFieldOpt
       }
     };
   }
-}
+});
 
-export async function getAvailableBoards(): Promise<{ boards: TicketFieldOptions['boards'] }> {
-  const user = await getCurrentUser();
-  if (!user) {
-    throw new Error('User not authenticated');
-  }
-
-  const { knex, tenant } = await createTenantKnex();
+export const getAvailableBoards = withAuth(async (
+  user,
+  { tenant }
+): Promise<{ boards: TicketFieldOptions['boards'] }> => {
+  const { knex } = await createTenantKnex();
   const permitted = await hasPermission(user, 'ticket_settings', 'read', knex);
   if (!permitted) {
     throw new Error('Unauthorized');
@@ -168,15 +164,13 @@ export async function getAvailableBoards(): Promise<{ boards: TicketFieldOptions
     console.error('Failed to load boards:', error);
     return { boards: [] };
   }
-}
+});
 
-export async function getAvailableStatuses(): Promise<{ statuses: TicketFieldOptions['statuses'] }> {
-  const user = await getCurrentUser();
-  if (!user) {
-    throw new Error('User not authenticated');
-  }
-
-  const { knex, tenant } = await createTenantKnex();
+export const getAvailableStatuses = withAuth(async (
+  user,
+  { tenant }
+): Promise<{ statuses: TicketFieldOptions['statuses'] }> => {
+  const { knex } = await createTenantKnex();
   const permitted = await hasPermission(user, 'ticket_settings', 'read', knex);
   if (!permitted) {
     throw new Error('Unauthorized');
@@ -199,15 +193,13 @@ export async function getAvailableStatuses(): Promise<{ statuses: TicketFieldOpt
     console.error('Failed to load statuses:', error);
     return { statuses: [] };
   }
-}
+});
 
-export async function getAvailablePriorities(): Promise<{ priorities: TicketFieldOptions['priorities'] }> {
-  const user = await getCurrentUser();
-  if (!user) {
-    throw new Error('User not authenticated');
-  }
-
-  const { knex, tenant } = await createTenantKnex();
+export const getAvailablePriorities = withAuth(async (
+  user,
+  { tenant }
+): Promise<{ priorities: TicketFieldOptions['priorities'] }> => {
+  const { knex } = await createTenantKnex();
   const permitted = await hasPermission(user, 'ticket_settings', 'read', knex);
   if (!permitted) {
     throw new Error('Unauthorized');
@@ -229,15 +221,13 @@ export async function getAvailablePriorities(): Promise<{ priorities: TicketFiel
     console.error('Failed to load priorities:', error);
     return { priorities: [] };
   }
-}
+});
 
-export async function getAvailableCategories(): Promise<{ categories: TicketFieldOptions['categories'] }> {
-  const user = await getCurrentUser();
-  if (!user) {
-    throw new Error('User not authenticated');
-  }
-
-  const { knex, tenant } = await createTenantKnex();
+export const getAvailableCategories = withAuth(async (
+  user,
+  { tenant }
+): Promise<{ categories: TicketFieldOptions['categories'] }> => {
+  const { knex } = await createTenantKnex();
   const permitted = await hasPermission(user, 'ticket_settings', 'read', knex);
   if (!permitted) {
     throw new Error('Unauthorized');
@@ -261,16 +251,15 @@ export async function getAvailableCategories(): Promise<{ categories: TicketFiel
     console.error('Failed to load categories:', error);
     return { categories: [] };
   }
-}
+});
 
 // Server-side filtered categories by board
-export async function getCategoriesByBoard(boardId: string | null): Promise<{ categories: TicketFieldOptions['categories'] }> {
-  const user = await getCurrentUser();
-  if (!user) {
-    throw new Error('User not authenticated');
-  }
-
-  const { knex, tenant } = await createTenantKnex();
+export const getCategoriesByBoard = withAuth(async (
+  user,
+  { tenant },
+  boardId: string | null
+): Promise<{ categories: TicketFieldOptions['categories'] }> => {
+  const { knex } = await createTenantKnex();
   const permitted = await hasPermission(user, 'ticket_settings', 'read', knex);
   if (!permitted) {
     throw new Error('Unauthorized');
@@ -325,15 +314,13 @@ export async function getCategoriesByBoard(boardId: string | null): Promise<{ ca
     });
     return { categories: [] };
   }
-}
+});
 
-export async function getAvailableClients(): Promise<{ clients: TicketFieldOptions['clients'] }> {
-  const user = await getCurrentUser();
-  if (!user) {
-    throw new Error('User not authenticated');
-  }
-
-  const { knex, tenant } = await createTenantKnex();
+export const getAvailableClients = withAuth(async (
+  user,
+  { tenant }
+): Promise<{ clients: TicketFieldOptions['clients'] }> => {
+  const { knex } = await createTenantKnex();
   const permitted = await hasPermission(user, 'ticket_settings', 'read', knex);
   if (!permitted) {
     throw new Error('Unauthorized');
@@ -354,15 +341,13 @@ export async function getAvailableClients(): Promise<{ clients: TicketFieldOptio
     console.error('Failed to load clients:', error);
     return { clients: [] };
   }
-}
+});
 
-export async function getAvailableUsers(): Promise<{ users: TicketFieldOptions['users'] }> {
-  const user = await getCurrentUser();
-  if (!user) {
-    throw new Error('User not authenticated');
-  }
-
-  const { knex, tenant } = await createTenantKnex();
+export const getAvailableUsers = withAuth(async (
+  user,
+  { tenant }
+): Promise<{ users: TicketFieldOptions['users'] }> => {
+  const { knex } = await createTenantKnex();
   const permitted = await hasPermission(user, 'ticket_settings', 'read', knex);
   if (!permitted) {
     throw new Error('Unauthorized');
@@ -386,4 +371,4 @@ export async function getAvailableUsers(): Promise<{ users: TicketFieldOptions['
     console.error('Failed to load users:', error);
     return { users: [] };
   }
-}
+});

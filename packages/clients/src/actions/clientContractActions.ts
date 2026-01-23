@@ -10,27 +10,20 @@ import type { IClientContract } from '@alga-psa/types';
 import { createTenantKnex } from '@alga-psa/db';
 import { Temporal } from '@js-temporal/polyfill';
 import { toPlainDate } from '@alga-psa/core';
-import { getSessionAsync } from '../lib/authHelpers';
 import { cloneTemplateContractLineAsync } from '../lib/billingHelpers';
 import { v4 as uuidv4 } from 'uuid';
 import { checkAndReactivateExpiredContract } from '@alga-psa/shared/billingClients';
-import { getCurrentUserAsync } from '../lib/usersHelpers';
+import { withAuth } from '@alga-psa/auth';
 
 /**
  * Get all active contracts for a client.
  */
-export async function getClientContracts(clientId: string): Promise<IClientContract[]> {
-  const currentUser = await getCurrentUserAsync();
-  if (!currentUser) {
-    throw new Error('Unauthorized');
-  }
-
+export const getClientContracts = withAuth(async (
+  _user,
+  { tenant },
+  clientId: string
+): Promise<IClientContract[]> => {
   try {
-    const { tenant } = await createTenantKnex(currentUser.tenant);
-    if (!tenant) {
-      throw new Error("tenant context not found");
-    }
-
     const clientContracts = await ClientContract.getByClientId(clientId, tenant);
     return clientContracts;
   } catch (error) {
@@ -40,23 +33,17 @@ export async function getClientContracts(clientId: string): Promise<IClientContr
     }
     throw new Error(`Failed to fetch client contracts: ${error}`);
   }
-}
+});
 
 /**
  * Get active contracts for a list of clients.
  */
-export async function getActiveClientContractsByClientIds(clientIds: string[]): Promise<IClientContract[]> {
-  const currentUser = await getCurrentUserAsync();
-  if (!currentUser) {
-    throw new Error('Unauthorized');
-  }
-
+export const getActiveClientContractsByClientIds = withAuth(async (
+  _user,
+  { tenant },
+  clientIds: string[]
+): Promise<IClientContract[]> => {
   try {
-    const { tenant } = await createTenantKnex(currentUser.tenant);
-    if (!tenant) {
-      throw new Error("tenant context not found");
-    }
-
     return await ClientContract.getActiveByClientIds(clientIds, tenant);
   } catch (error) {
     console.error('Error fetching contracts for clients:', error);
@@ -65,23 +52,17 @@ export async function getActiveClientContractsByClientIds(clientIds: string[]): 
     }
     throw new Error(`Failed to fetch client contracts: ${error}`);
   }
-}
+});
 
 /**
  * Get a specific client contract by ID.
  */
-export async function getClientContractById(clientContractId: string): Promise<IClientContract | null> {
-  const currentUser = await getCurrentUserAsync();
-  if (!currentUser) {
-    throw new Error('Unauthorized');
-  }
-
+export const getClientContractById = withAuth(async (
+  _user,
+  { tenant },
+  clientContractId: string
+): Promise<IClientContract | null> => {
   try {
-    const { tenant } = await createTenantKnex(currentUser.tenant);
-    if (!tenant) {
-      throw new Error("tenant context not found");
-    }
-
     return await ClientContract.getById(clientContractId, tenant);
   } catch (error) {
     console.error(`Error fetching client contract ${clientContractId}:`, error);
@@ -90,23 +71,17 @@ export async function getClientContractById(clientContractId: string): Promise<I
     }
     throw new Error(`Failed to fetch client contract: ${error}`);
   }
-}
+});
 
 /**
  * Get detailed information about a client's contract assignment.
  */
-export async function getDetailedClientContract(clientContractId: string): Promise<any | null> {
-  const currentUser = await getCurrentUserAsync();
-  if (!currentUser) {
-    throw new Error('Unauthorized');
-  }
-
+export const getDetailedClientContract = withAuth(async (
+  _user,
+  { tenant },
+  clientContractId: string
+): Promise<any | null> => {
   try {
-    const { tenant } = await createTenantKnex(currentUser.tenant);
-    if (!tenant) {
-      throw new Error("tenant context not found");
-    }
-
     return await ClientContract.getDetailedClientContract(clientContractId, tenant);
   } catch (error) {
     console.error(`Error fetching detailed client contract ${clientContractId}:`, error);
@@ -115,31 +90,23 @@ export async function getDetailedClientContract(clientContractId: string): Promi
     }
     throw new Error(`Failed to fetch detailed client contract: ${error}`);
   }
-}
+});
 
 /**
  * Assign a contract to a client.
  */
-export async function assignContractToClient(
+export const assignContractToClient = withAuth(async (
+  _user,
+  { tenant },
   clientId: string,
   contractId: string,
   startDate: string,
   endDate: string | null = null
-): Promise<IClientContract> {
-  const currentUser = await getCurrentUserAsync();
-  if (!currentUser) {
-    throw new Error('Unauthorized');
-  }
-
+): Promise<IClientContract> => {
   try {
-    const { tenant } = await createTenantKnex(currentUser.tenant);
-    if (!tenant) {
-      throw new Error("tenant context not found");
-    }
-
     const clientContract = await ClientContract.assignContractToClient(
-      clientId, 
-      contractId, 
+      clientId,
+      contractId,
       startDate,
       endDate,
       tenant
@@ -152,27 +119,23 @@ export async function assignContractToClient(
     }
     throw new Error(`Failed to assign contract to client: ${error}`);
   }
-}
+});
 
-export async function createClientContract(input: {
-  client_id: string;
-  contract_id: string;
-  start_date: string;
-  end_date: string | null;
-  is_active: boolean;
-  po_required?: boolean;
-  po_number?: string | null;
-  po_amount?: number | null;
-}): Promise<IClientContract> {
-  const currentUser = await getCurrentUserAsync();
-  if (!currentUser) {
-    throw new Error('Unauthorized');
+export const createClientContract = withAuth(async (
+  _user,
+  { tenant },
+  input: {
+    client_id: string;
+    contract_id: string;
+    start_date: string;
+    end_date: string | null;
+    is_active: boolean;
+    po_required?: boolean;
+    po_number?: string | null;
+    po_amount?: number | null;
   }
-
-  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
-  if (!tenant) {
-    throw new Error("tenant context not found");
-  }
+): Promise<IClientContract> => {
+  const { knex } = await createTenantKnex();
 
   return withTransaction(knex, async (trx: Knex.Transaction) => {
     const clientExists = await trx('clients').where({ client_id: input.client_id, tenant }).first();
@@ -234,25 +197,19 @@ export async function createClientContract(input: {
     const [created] = await trx<IClientContract>('client_contracts').insert(insertPayload).returning('*');
     return created;
   });
-}
+});
 
 /**
  * Update a client's contract assignment
  */
-export async function updateClientContract(
+export const updateClientContract = withAuth(async (
+  _user,
+  { tenant },
   clientContractId: string,
   updateData: Partial<IClientContract>
-): Promise<IClientContract> {
-  const currentUser = await getCurrentUserAsync();
-  if (!currentUser) {
-    throw new Error('Unauthorized');
-  }
-
+): Promise<IClientContract> => {
   try {
-    const { knex: db, tenant } = await createTenantKnex(currentUser.tenant); // Get knex instance
-    if (!tenant) {
-      throw new Error("tenant context not found");
-    }
+    const { knex: db } = await createTenantKnex(); // Get knex instance
 
     // --- Start Validation ---
     if (updateData.start_date || updateData.end_date !== undefined) { // Check if dates are being updated (end_date can be null)
@@ -330,23 +287,17 @@ export async function updateClientContract(
     // Throw a generic error for unexpected issues
     throw new Error(`Failed to update client contract: ${error instanceof Error ? error.message : String(error)}`);
   }
-}
+});
 
 /**
  * Deactivate a client's contract assignment.
  */
-export async function deactivateClientContract(clientContractId: string): Promise<IClientContract> {
-  const currentUser = await getCurrentUserAsync();
-  if (!currentUser) {
-    throw new Error('Unauthorized');
-  }
-
+export const deactivateClientContract = withAuth(async (
+  _user,
+  { tenant },
+  clientContractId: string
+): Promise<IClientContract> => {
   try {
-    const { tenant } = await createTenantKnex(currentUser.tenant);
-    if (!tenant) {
-      throw new Error("tenant context not found");
-    }
-
     const deactivatedContract = await ClientContract.deactivateClientContract(clientContractId, tenant);
     return deactivatedContract;
   } catch (error) {
@@ -356,23 +307,17 @@ export async function deactivateClientContract(clientContractId: string): Promis
     }
     throw new Error(`Failed to deactivate client contract: ${error}`);
   }
-}
+});
 
 /**
  * Get all contract lines associated with a client's contract
  */
-export async function getClientContractLines(clientContractId: string): Promise<any[]> {
-  const currentUser = await getCurrentUserAsync();
-  if (!currentUser) {
-    throw new Error('Unauthorized');
-  }
-
+export const getClientContractLines = withAuth(async (
+  _user,
+  { tenant },
+  clientContractId: string
+): Promise<any[]> => {
   try {
-    const { tenant } = await createTenantKnex(currentUser.tenant);
-    if (!tenant) {
-      throw new Error("tenant context not found");
-    }
-
     const contractLines = await ClientContract.getContractLines(clientContractId, tenant);
     return contractLines;
   } catch (error) {
@@ -382,23 +327,19 @@ export async function getClientContractLines(clientContractId: string): Promise<
     }
     throw new Error(`Failed to fetch contract lines for client contract: ${error}`);
   }
-}
+});
 
 /**
  * Apply a client's contract lines to the client
  * This populates services and configuration for each contract_line in the contract.
  * The contract_lines already exist - this clones the template services/configuration.
  */
-export async function applyContractToClient(clientContractId: string): Promise<void> {
-  const currentUser = await getCurrentUserAsync();
-  if (!currentUser) {
-    throw new Error('Unauthorized');
-  }
-
-  const { knex: db, tenant } = await createTenantKnex(currentUser.tenant);
-  if (!tenant) {
-    throw new Error("tenant context not found");
-  }
+export const applyContractToClient = withAuth(async (
+  _user,
+  { tenant },
+  clientContractId: string
+): Promise<void> => {
+  const { knex: db } = await createTenantKnex();
 
   try {
     // Get the client contract
@@ -436,4 +377,4 @@ export async function applyContractToClient(clientContractId: string): Promise<v
     }
     throw new Error(`Failed to apply contract to client: ${error}`);
   }
-}
+});

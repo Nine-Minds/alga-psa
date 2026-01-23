@@ -1,7 +1,7 @@
 'use server';
 
 import logger from '@alga-psa/core/logger';
-import { getCurrentUser } from '@alga-psa/users/actions';
+import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { revalidatePath } from 'next/cache';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
@@ -11,41 +11,20 @@ import {
   type XeroConnectionSummary,
   XERO_CREDENTIALS_SECRET_NAME
 } from '../../lib/xero/xeroClientService';
+import type { IUserWithRoles } from '@alga-psa/types';
 
-type BillingAccess = {
-  tenantId: string;
-};
-
-async function ensureBillingReadAccess(): Promise<BillingAccess> {
-  const user = await getCurrentUser();
-  if (!user?.tenant) {
-    throw new Error('Authentication required.');
-  }
-
+async function checkBillingReadAccess(user: IUserWithRoles): Promise<void> {
   const allowed = await hasPermission(user, 'billing_settings', 'read');
   if (!allowed) {
     throw new Error('Forbidden');
   }
-
-  return {
-    tenantId: user.tenant
-  };
 }
 
-async function ensureBillingUpdateAccess(): Promise<BillingAccess> {
-  const user = await getCurrentUser();
-  if (!user?.tenant) {
-    throw new Error('Authentication required.');
-  }
-
+async function checkBillingUpdateAccess(user: IUserWithRoles): Promise<void> {
   const allowed = await hasPermission(user, 'billing_settings', 'update');
   if (!allowed) {
     throw new Error('Forbidden');
   }
-
-  return {
-    tenantId: user.tenant
-  };
 }
 
 export interface XeroAccountOption {
@@ -85,29 +64,33 @@ export interface XeroConnectionStatus {
   error?: string;
 }
 
-export async function disconnectXero(): Promise<{ success: boolean; error?: string }> {
-  let tenantId: string | null = null;
-
+export const disconnectXero = withAuth(async (
+  user,
+  { tenant }
+): Promise<{ success: boolean; error?: string }> => {
   try {
-    ({ tenantId } = await ensureBillingUpdateAccess());
+    await checkBillingUpdateAccess(user);
     const secretProvider = await getSecretProviderInstance();
 
-    logger.info('[xeroActions] Disconnecting Xero integration', { tenantId });
-    await secretProvider.deleteTenantSecret(tenantId, XERO_CREDENTIALS_SECRET_NAME);
+    logger.info('[xeroActions] Disconnecting Xero integration', { tenantId: tenant });
+    await secretProvider.deleteTenantSecret(tenant, XERO_CREDENTIALS_SECRET_NAME);
 
     revalidatePath('/settings/integrations/xero');
 
     return { success: true };
   } catch (error) {
     const message = error instanceof Error ? error.message : 'An unexpected error occurred during disconnection.';
-    logger.error('[xeroActions] Xero disconnect failed', { tenantId, error });
+    logger.error('[xeroActions] Xero disconnect failed', { tenantId: tenant, error });
     return { success: false, error: message };
   }
-}
+});
 
-export async function getXeroConnectionStatus(): Promise<XeroConnectionStatus> {
-  const { tenantId } = await ensureBillingReadAccess();
-  const summaries = await getXeroConnectionSummaries(tenantId);
+export const getXeroConnectionStatus = withAuth(async (
+  user,
+  { tenant }
+): Promise<XeroConnectionStatus> => {
+  await checkBillingReadAccess(user);
+  const summaries = await getXeroConnectionSummaries(tenant);
 
   if (summaries.length === 0) {
     return {
@@ -122,7 +105,7 @@ export async function getXeroConnectionStatus(): Promise<XeroConnectionStatus> {
 
   for (const summary of summaries) {
     try {
-      await XeroClientService.create(tenantId, summary.connectionId);
+      await XeroClientService.create(tenant, summary.connectionId);
       connected = true;
       error = undefined;
       break;
@@ -140,16 +123,20 @@ export async function getXeroConnectionStatus(): Promise<XeroConnectionStatus> {
     defaultConnectionId: summaries[0]?.connectionId,
     error
   };
-}
+});
 
 // Backwards-compatible alias used by older callers.
 export const getXeroIntegrationStatus = getXeroConnectionStatus;
 
-export async function getXeroAccounts(connectionId?: string | null): Promise<XeroAccountOption[]> {
-  const { tenantId } = await ensureBillingReadAccess();
+export const getXeroAccounts = withAuth(async (
+  user,
+  { tenant },
+  connectionId?: string | null
+): Promise<XeroAccountOption[]> => {
+  await checkBillingReadAccess(user);
 
   try {
-    const client = await XeroClientService.create(tenantId, connectionId ?? null);
+    const client = await XeroClientService.create(tenant, connectionId ?? null);
     const accounts = await client.listAccounts({ status: 'ACTIVE' });
     return accounts.map((account) => ({
       id: account.accountId,
@@ -161,13 +148,17 @@ export async function getXeroAccounts(connectionId?: string | null): Promise<Xer
     console.error('[xeroActions] Failed to load Xero accounts', error);
     return [];
   }
-}
+});
 
-export async function getXeroItems(connectionId?: string | null): Promise<XeroItemOption[]> {
-  const { tenantId } = await ensureBillingReadAccess();
+export const getXeroItems = withAuth(async (
+  user,
+  { tenant },
+  connectionId?: string | null
+): Promise<XeroItemOption[]> => {
+  await checkBillingReadAccess(user);
 
   try {
-    const client = await XeroClientService.create(tenantId, connectionId ?? null);
+    const client = await XeroClientService.create(tenant, connectionId ?? null);
     const items = await client.listItems();
     return items.map((item) => ({
       id: item.itemId,
@@ -179,13 +170,17 @@ export async function getXeroItems(connectionId?: string | null): Promise<XeroIt
     console.error('[xeroActions] Failed to load Xero items', error);
     return [];
   }
-}
+});
 
-export async function getXeroTaxRates(connectionId?: string | null): Promise<XeroTaxRateOption[]> {
-  const { tenantId } = await ensureBillingReadAccess();
+export const getXeroTaxRates = withAuth(async (
+  user,
+  { tenant },
+  connectionId?: string | null
+): Promise<XeroTaxRateOption[]> => {
+  await checkBillingReadAccess(user);
 
   try {
-    const client = await XeroClientService.create(tenantId, connectionId ?? null);
+    const client = await XeroClientService.create(tenant, connectionId ?? null);
     const rates = await client.listTaxRates();
     return rates.map((rate) => ({
       id: rate.taxRateId,
@@ -199,15 +194,17 @@ export async function getXeroTaxRates(connectionId?: string | null): Promise<Xer
     console.error('[xeroActions] Failed to load Xero tax rates', error);
     return [];
   }
-}
+});
 
-export async function getXeroTrackingCategories(
+export const getXeroTrackingCategories = withAuth(async (
+  user,
+  { tenant },
   connectionId?: string | null
-): Promise<XeroTrackingCategoryOption[]> {
-  const { tenantId } = await ensureBillingReadAccess();
+): Promise<XeroTrackingCategoryOption[]> => {
+  await checkBillingReadAccess(user);
 
   try {
-    const client = await XeroClientService.create(tenantId, connectionId ?? null);
+    const client = await XeroClientService.create(tenant, connectionId ?? null);
     const categories = await client.listTrackingCategories();
     return categories.map((category) => ({
       id: category.trackingCategoryId,
@@ -223,4 +220,4 @@ export async function getXeroTrackingCategories(
     console.error('[xeroActions] Failed to load Xero tracking categories', error);
     return [];
   }
-}
+});

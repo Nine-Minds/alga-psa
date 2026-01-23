@@ -2,7 +2,8 @@
 
 import { getConnection } from '@alga-psa/db';
 import { SupportedLocale, isSupportedLocale, LOCALE_CONFIG } from '@alga-psa/core/i18n/config';
-import { getCurrentUser } from '@alga-psa/users/actions';
+import { withOptionalAuth, type AuthContext } from '@alga-psa/auth';
+import type { IUserWithRoles } from '@alga-psa/types';
 
 /**
  * Get the user's client ID from their contact
@@ -38,21 +39,20 @@ async function getUserClientId(userId: string, tenantId: string): Promise<string
  * 3. Tenant preference
  * 4. System default
  */
-export async function getHierarchicalLocaleAction(): Promise<SupportedLocale> {
-  const user = await getCurrentUser();
-
-  if (!user) {
+export const getHierarchicalLocaleAction = withOptionalAuth(async (user: IUserWithRoles | null, ctx: AuthContext | null): Promise<SupportedLocale> => {
+  if (!user || !ctx) {
     return LOCALE_CONFIG.defaultLocale as SupportedLocale;
   }
 
-  const knex = await getConnection(user.tenant);
+  const { tenant } = ctx;
+  const knex = await getConnection(tenant);
 
   // 1. Check user preference
   const userPref = await knex('user_preferences')
     .where({
       user_id: user.user_id,
       setting_name: 'locale',
-      tenant: user.tenant
+      tenant
     })
     .first();
 
@@ -71,14 +71,14 @@ export async function getHierarchicalLocaleAction(): Promise<SupportedLocale> {
 
   // For client users, get their client
   if (user.user_type === 'client') {
-    clientId = await getUserClientId(user.user_id, user.tenant);
+    clientId = await getUserClientId(user.user_id, tenant);
   }
 
   if (clientId) {
     const client = await knex('clients')
       .where({
         client_id: clientId,
-        tenant: user.tenant
+        tenant
       })
       .first();
 
@@ -90,7 +90,7 @@ export async function getHierarchicalLocaleAction(): Promise<SupportedLocale> {
 
   // 3. Check tenant preference
   const tenantSettings = await knex('tenant_settings')
-    .where({ tenant: user.tenant })
+    .where({ tenant })
     .first();
 
   // Check client portal default first (for client users)
@@ -109,4 +109,4 @@ export async function getHierarchicalLocaleAction(): Promise<SupportedLocale> {
 
   // 4. System default
   return LOCALE_CONFIG.defaultLocale as SupportedLocale;
-}
+});

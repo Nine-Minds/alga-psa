@@ -4,14 +4,11 @@ import crypto from 'node:crypto'
 import { createTenantKnex } from '@/lib/db'
 import type { Knex } from 'knex'
 import logger from '@alga-psa/core/logger'
-import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions'
-import { hasPermission } from 'server/src/lib/auth/rbac'
+import { withAuth, hasPermission } from '@alga-psa/auth'
 import { resolveUserTimeZone } from 'server/src/lib/utils/workDate'
 
 import { getInstallConfig } from '../extensions/installConfig'
 import { getJobRunnerInstance, initializeJobRunner } from 'server/src/lib/jobs/initializeJobRunner'
-
-type ExtensionPermissionAction = 'read' | 'write'
 
 export interface ExtensionScheduleListItem {
   id: string
@@ -64,25 +61,6 @@ class ExtensionScheduleInputError extends Error {
 
 function failField(field: ExtensionScheduleInputError['field'], message: string): never {
   throw new ExtensionScheduleInputError(field, message)
-}
-
-async function ensureExtensionPermission(
-  action: ExtensionPermissionAction
-): Promise<{ knex: Knex; tenantId: string; userId?: string }> {
-  const user = await getCurrentUser()
-  if (!user) throw new Error('User not authenticated')
-  if (user.user_type === 'client') throw new Error('Insufficient permissions')
-
-  const { knex, tenant } = await createTenantKnex()
-  if (!tenant) throw new Error('Tenant not found')
-
-  const allowed = await hasPermission(user, 'extension', action, knex)
-  if (!allowed) throw new Error('Insufficient permissions')
-
-  const rawUserId = String((user as any).id ?? (user as any).user_id ?? '').trim()
-  const userId = rawUserId.length > 0 ? rawUserId : undefined
-
-  return { knex, tenantId: tenant, userId }
 }
 
 function validateCronExpression(cron: string): string {
@@ -221,8 +199,17 @@ function isNameUniqueViolation(error: unknown): boolean {
   return false
 }
 
-export async function listExtensionSchedules(extensionId: string): Promise<ExtensionScheduleListItem[]> {
-  const { knex, tenantId: tenant } = await ensureExtensionPermission('read')
+function getUserId(user: any): string | undefined {
+  const rawUserId = String((user as any).id ?? (user as any).user_id ?? '').trim()
+  return rawUserId.length > 0 ? rawUserId : undefined
+}
+
+export const listExtensionSchedules = withAuth(async (user, { tenant }, extensionId: string): Promise<ExtensionScheduleListItem[]> => {
+  if (user.user_type === 'client') throw new Error('Insufficient permissions')
+
+  const { knex } = await createTenantKnex()
+  const allowed = await hasPermission(user, 'extension', 'read', knex)
+  if (!allowed) throw new Error('Insufficient permissions')
 
   const install = await resolveInstallForTenant(knex, tenant, extensionId)
   if (!install) return []
@@ -258,24 +245,37 @@ export async function listExtensionSchedules(extensionId: string): Promise<Exten
     created_at: row.created_at ? new Date(row.created_at).toISOString() : null,
     updated_at: row.updated_at ? new Date(row.updated_at).toISOString() : null,
   }))
-}
+})
 
-export async function getDefaultScheduleTimezone(): Promise<string> {
-  const { knex, tenantId, userId } = await ensureExtensionPermission('read')
+export const getDefaultScheduleTimezone = withAuth(async (user, { tenant }): Promise<string> => {
+  if (user.user_type === 'client') throw new Error('Insufficient permissions')
+
+  const { knex } = await createTenantKnex()
+  const allowed = await hasPermission(user, 'extension', 'read', knex)
+  if (!allowed) throw new Error('Insufficient permissions')
+
+  const userId = getUserId(user)
   if (!userId) return 'UTC'
   try {
-    return await resolveUserTimeZone(knex, tenantId, userId)
+    return await resolveUserTimeZone(knex, tenant, userId)
   } catch {
     return 'UTC'
   }
-}
+})
 
-export async function createExtensionSchedule(
+export const createExtensionSchedule = withAuth(async (
+  user,
+  { tenant },
   extensionId: string,
   input: CreateExtensionScheduleInput
-): Promise<{ success: boolean; message?: string; scheduleId?: string; fieldErrors?: Record<string, string> }> {
-  const { knex, tenantId: tenant, userId } = await ensureExtensionPermission('write')
+): Promise<{ success: boolean; message?: string; scheduleId?: string; fieldErrors?: Record<string, string> }> => {
+  if (user.user_type === 'client') throw new Error('Insufficient permissions')
 
+  const { knex } = await createTenantKnex()
+  const allowed = await hasPermission(user, 'extension', 'write', knex)
+  if (!allowed) throw new Error('Insufficient permissions')
+
+  const userId = getUserId(user)
   const install = await resolveInstallForTenant(knex, tenant, extensionId)
   if (!install) return { success: false, message: 'Extension install not found' }
 
@@ -387,15 +387,22 @@ export async function createExtensionSchedule(
     }
     return { success: false, message: error?.message ?? 'Failed to create schedule' }
   }
-}
+})
 
-export async function updateExtensionSchedule(
+export const updateExtensionSchedule = withAuth(async (
+  user,
+  { tenant },
   extensionId: string,
   scheduleIdRaw: string,
   input: UpdateExtensionScheduleInput
-): Promise<{ success: boolean; message?: string; fieldErrors?: Record<string, string> }> {
-  const { knex, tenantId: tenant, userId } = await ensureExtensionPermission('write')
+): Promise<{ success: boolean; message?: string; fieldErrors?: Record<string, string> }> => {
+  if (user.user_type === 'client') throw new Error('Insufficient permissions')
 
+  const { knex } = await createTenantKnex()
+  const allowed = await hasPermission(user, 'extension', 'write', knex)
+  if (!allowed) throw new Error('Insufficient permissions')
+
+  const userId = getUserId(user)
   const install = await resolveInstallForTenant(knex, tenant, extensionId)
   if (!install) return { success: false, message: 'Extension install not found' }
 
@@ -608,13 +615,19 @@ export async function updateExtensionSchedule(
     }
     return { success: false, message: error?.message ?? 'Failed to update schedule' }
   }
-}
+})
 
-export async function deleteExtensionSchedule(
+export const deleteExtensionSchedule = withAuth(async (
+  user,
+  { tenant },
   extensionId: string,
   scheduleIdRaw: string
-): Promise<{ success: boolean; message?: string; fieldErrors?: Record<string, string> }> {
-  const { knex, tenantId: tenant } = await ensureExtensionPermission('write')
+): Promise<{ success: boolean; message?: string; fieldErrors?: Record<string, string> }> => {
+  if (user.user_type === 'client') throw new Error('Insufficient permissions')
+
+  const { knex } = await createTenantKnex()
+  const allowed = await hasPermission(user, 'extension', 'write', knex)
+  if (!allowed) throw new Error('Insufficient permissions')
 
   const install = await resolveInstallForTenant(knex, tenant, extensionId)
   if (!install) return { success: false, message: 'Extension install not found' }
@@ -658,14 +671,21 @@ export async function deleteExtensionSchedule(
     }
     return { success: false, message: error?.message ?? 'Failed to delete schedule' }
   }
-}
+})
 
-export async function runExtensionScheduleNow(
+export const runExtensionScheduleNow = withAuth(async (
+  user,
+  { tenant },
   extensionId: string,
   scheduleIdRaw: string
-): Promise<{ success: boolean; message?: string; fieldErrors?: Record<string, string> }> {
-  const { knex, tenantId: tenant, userId } = await ensureExtensionPermission('write')
+): Promise<{ success: boolean; message?: string; fieldErrors?: Record<string, string> }> => {
+  if (user.user_type === 'client') throw new Error('Insufficient permissions')
 
+  const { knex } = await createTenantKnex()
+  const allowed = await hasPermission(user, 'extension', 'write', knex)
+  if (!allowed) throw new Error('Insufficient permissions')
+
+  const userId = getUserId(user)
   const install = await resolveInstallForTenant(knex, tenant, extensionId)
   if (!install) return { success: false, message: 'Extension install not found' }
   if (!install.isEnabled) return { success: false, message: 'Extension is disabled' }
@@ -723,4 +743,4 @@ export async function runExtensionScheduleNow(
     }
     return { success: false, message: error?.message ?? 'Failed to run schedule' }
   }
-}
+})

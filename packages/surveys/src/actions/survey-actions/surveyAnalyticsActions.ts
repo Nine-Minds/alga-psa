@@ -9,71 +9,66 @@ import {
   type SurveyResponsePage,
 } from '@alga-psa/types';
 import { createTenantKnex } from '@alga-psa/db';
-import { getCurrentUser } from '@alga-psa/auth/getCurrentUser';
+import { withAuth } from '@alga-psa/auth';
 import SurveyAnalyticsService from '../../services/SurveyAnalyticsService';
 
-function ensureTenant(tenant: string | null): string {
-  if (!tenant) {
-    throw new Error('Tenant context is required to access survey analytics');
-  }
-  return tenant;
-}
-
-async function getTenantDbContext() {
-  const currentUser = await getCurrentUser();
-  if (!currentUser?.tenant) {
-    throw new Error('Tenant context is required to access survey analytics');
-  }
-
-  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
-  return { knex, tenantId: ensureTenant(tenant) };
-}
-
-export async function getSurveyResponseTrend(
+export const getSurveyResponseTrend = withAuth(async (
+  _user,
+  { tenant },
   filters?: SurveyDashboardFilters
-): Promise<SurveyTrendPoint[]> {
-  const { knex, tenantId } = await getTenantDbContext();
-  return SurveyAnalyticsService.getResponseTrend(knex, tenantId, filters);
-}
+): Promise<SurveyTrendPoint[]> => {
+  const { knex } = await createTenantKnex();
+  return SurveyAnalyticsService.getResponseTrend(knex, tenant, filters);
+});
 
-export async function getSurveyRatingDistribution(
+export const getSurveyRatingDistribution = withAuth(async (
+  _user,
+  { tenant },
   filters?: SurveyDashboardFilters
-): Promise<SurveyDistributionBucket[]> {
-  const { knex, tenantId } = await getTenantDbContext();
+): Promise<SurveyDistributionBucket[]> => {
+  const { knex } = await createTenantKnex();
   const totalResponses = await SurveyAnalyticsService.getDashboardMetrics(
     knex,
-    tenantId,
+    tenant,
     filters
   );
   return SurveyAnalyticsService.getRatingDistribution(
     knex,
-    tenantId,
+    tenant,
     totalResponses.totalResponses,
     filters
   );
-}
+});
 
-export async function getSurveyTopIssues(
+export const getSurveyTopIssues = withAuth(async (
+  _user,
+  { tenant },
   filters?: SurveyDashboardFilters,
-  limit = 5
-): Promise<SurveyIssueSummary[]> {
-  const { knex, tenantId } = await getTenantDbContext();
-  return SurveyAnalyticsService.getTopNegativeResponses(knex, tenantId, filters, limit);
-}
+  limit: number = 5
+): Promise<SurveyIssueSummary[]> => {
+  const { knex } = await createTenantKnex();
+  return SurveyAnalyticsService.getTopNegativeResponses(knex, tenant, filters, limit);
+});
 
-export async function getSurveyRecentResponses(
+export const getSurveyRecentResponses = withAuth(async (
+  _user,
+  { tenant },
   filters?: SurveyDashboardFilters,
-  limit = 10
-): Promise<SurveyResponseListItem[]> {
-  const { knex, tenantId } = await getTenantDbContext();
-  return SurveyAnalyticsService.getRecentResponses(knex, tenantId, filters, limit);
-}
+  limit: number = 10
+): Promise<SurveyResponseListItem[]> => {
+  const { knex } = await createTenantKnex();
+  return SurveyAnalyticsService.getRecentResponses(knex, tenant, filters, limit);
+});
 
-export async function getSurveyResponsesPage(params?: {
-  filters?: SurveyDashboardFilters;
-  page?: number;
-  pageSize?: number;
-}): Promise<SurveyResponsePage> {
-  const { knex, tenantId } = await getTenantDbContext();
-  return SurveyAnalyticsService.getResponsesPage(knex, tenantId, params);
-}
+export const getSurveyResponsesPage = withAuth(async (
+  _user,
+  { tenant },
+  params?: {
+    filters?: SurveyDashboardFilters;
+    page?: number;
+    pageSize?: number;
+  }
+): Promise<SurveyResponsePage> => {
+  const { knex } = await createTenantKnex();
+  return SurveyAnalyticsService.getResponsesPage(knex, tenant, params);
+});

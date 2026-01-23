@@ -140,7 +140,8 @@ export async function createTenantKnex(
 
   // Ensure downstream helpers relying on AsyncLocalStorage (e.g. requireTenantId)
   // can resolve the tenant in production when callers pass an explicit tenantId.
-  // Safe because AsyncLocalStorage is scoped to the current async execution chain.
+  // NOTE: enterWith does not reliably persist across async boundaries in Next.js turbopack.
+  // Use runWithTenant() for guaranteed context propagation.
   if (tenant && getTenantContext() !== tenant) {
     tenantContext.enterWith(tenant);
   }

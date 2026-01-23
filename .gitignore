@@ -75,7 +75,10 @@ server/logs/
 
 # Nx cache
 .nx/
-dep-graph.json
+affected.json
+deps.json
+*-deps.json
+*-graph.json
 graph.json
 
 # IDE
@@ -139,6 +142,7 @@ build_output.txt
 typescript-errors-*.md
 debug-*.sql
 check-*.sql
+check_*.sql
 update-*.sql
 server/.alga-ext-cache/
 
@@ -181,6 +185,11 @@ opencode.md
 .opencode
 shared/core/*.d.ts
 shared/core/*.js
+
+# Package build artifacts (compiled TypeScript)
+packages/*/src/**/*.js
+packages/*/src/**/*.d.ts
+packages/**/dist/
 
 # Rust build output
 /target/

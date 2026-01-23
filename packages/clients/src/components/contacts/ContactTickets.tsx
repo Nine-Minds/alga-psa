@@ -129,7 +129,7 @@ const ContactTickets: React.FC<ContactTicketsProps> = ({
         tags: selectedTags.length > 0 ? selectedTags : undefined,
       };
 
-      const result = await getTicketsForListWithCursor(currentUser, filters, cursor);
+      const result = await getTicketsForListWithCursor(filters, cursor);
       
       if (resetTickets) {
         setTickets(result.tickets);
@@ -160,7 +160,7 @@ const ContactTickets: React.FC<ContactTicketsProps> = ({
     if (!ticketToDelete || !currentUser) return;
 
     try {
-      await deleteTicket(ticketToDelete, currentUser);
+      await deleteTicket(ticketToDelete);
       setTickets(prev => prev.filter(t => t.ticket_id !== ticketToDelete));
       setTicketToDelete(null);
       setTicketToDeleteName(null);
@@ -182,7 +182,7 @@ const ContactTickets: React.FC<ContactTicketsProps> = ({
     }
 
     try {
-      const ticketData = await getConsolidatedTicketData(ticketId, currentUser);
+      const ticketData = await getConsolidatedTicketData(ticketId);
       
       if (!ticketData) {
         toast.error('Failed to load ticket');

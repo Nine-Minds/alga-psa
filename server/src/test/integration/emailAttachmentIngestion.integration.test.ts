@@ -72,7 +72,7 @@ vi.mock('@/services/email/providers/GmailAdapter', () => ({
 }));
 
 const uploads: Array<{ path: string; size: number; mime_type?: string }> = [];
-vi.mock('@/lib/storage/StorageProviderFactory', () => ({
+vi.mock('@alga-psa/documents', () => ({
   StorageProviderFactory: {
     createProvider: vi.fn(async () => ({
       upload: vi.fn(async (file: Buffer, path: string, options?: { mime_type?: string }) => {

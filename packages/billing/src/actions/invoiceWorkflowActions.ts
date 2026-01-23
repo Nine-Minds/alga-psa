@@ -9,7 +9,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { getActionRegistry, TransactionIsolationLevel } from '@alga-psa/shared/workflow/core';
 import { getWorkflowRuntime } from '@alga-psa/shared/workflow/core';
 import { submitWorkflowEventAction } from '@alga-psa/workflows/actions/workflow-event-actions';
-import { getCurrentUserAsync, hasPermissionAsync, getSessionAsync, getAnalyticsAsync } from '../lib/authHelpers';
+import { withAuth } from '@alga-psa/auth';
 
 
 
@@ -36,35 +36,35 @@ export async function processInvoiceEvent(executionId: string | undefined, event
  * Approve an invoice
  * This is a convenience method for the approve action
  */
-export async function approveInvoice(invoiceId: string, executionId?: string): Promise<any> {
-  const currentUser = await getCurrentUserAsync();
-  if (!currentUser?.tenant) {
-    throw new Error('No current user found');
-  }
+export const approveInvoice = withAuth(async (
+  user,
+  { tenant },
+  invoiceId: string,
+  executionId?: string
+): Promise<any> => {
+  const { knex } = await createTenantKnex();
 
-  const { knex } = await createTenantKnex(currentUser.tenant);  
-  
   // If execution ID is not provided, look it up
   if (!executionId) {
     const workflowExecution = await withTransaction(knex, async (trx: Knex.Transaction) => {
       return await trx('workflow_executions')
       .where('context_data->invoice.id', invoiceId)
-      .andWhere('tenant', currentUser.tenant)
+      .andWhere('tenant', tenant)
       .first('execution_id');
     });
-    
+
     if (!workflowExecution) {
       throw new Error(`No workflow found for invoice ${invoiceId}`);
     }
-    
+
     executionId = workflowExecution.execution_id;
   }
-  
-  const userId = currentUser.user_id;
+
+  const userId = user.user_id;
   if (!userId) {
     throw new Error('User ID is required');
   }
-  
+
   if (!invoiceId) {
     throw new Error('Invoice ID is required');
   }
@@ -75,41 +75,42 @@ export async function approveInvoice(invoiceId: string, executionId?: string): P
     approvedBy: userId,
     approval_date: toPlainDate(new Date()).toString()
   });
-}
+});
 
 /**
  * Reject an invoice
  * This is a convenience method for the reject action
  */
-export async function rejectInvoice(invoiceId: string, reason: string, executionId?: string): Promise<any> {
-  const currentUser = await getCurrentUserAsync();
-  if (!currentUser?.tenant) {
-    throw new Error('No current user found');
-  }
+export const rejectInvoice = withAuth(async (
+  user,
+  { tenant },
+  invoiceId: string,
+  reason: string,
+  executionId?: string
+): Promise<any> => {
+  const { knex } = await createTenantKnex();
 
-  const { knex } = await createTenantKnex(currentUser.tenant);  
-  
   // If execution ID is not provided, look it up
   if (!executionId) {
     const workflowExecution = await withTransaction(knex, async (trx: Knex.Transaction) => {
       return await trx('workflow_executions')
       .where('context_data->invoice.id', invoiceId)
-      .andWhere('tenant', currentUser.tenant)
+      .andWhere('tenant', tenant)
       .first('execution_id');
     });
-    
+
     if (!workflowExecution) {
       throw new Error(`No workflow found for invoice ${invoiceId}`);
     }
-    
+
     executionId = workflowExecution.execution_id;
   }
-  
-  const userId = currentUser.user_id;
+
+  const userId = user.user_id;
   if (!userId) {
     throw new Error('User ID is required');
   }
-  
+
   if (!invoiceId) {
     throw new Error('Invoice ID is required');
   }
@@ -121,5 +122,5 @@ export async function rejectInvoice(invoiceId: string, reason: string, execution
     rejection_date: toPlainDate(new Date()).toString(),
     reason: reason || 'No reason provided'
   });
-}
+});
 

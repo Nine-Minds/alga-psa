@@ -10,63 +10,51 @@ import {
   getContactsByClient as getContactsByClientModel,
 } from '@alga-psa/shared/ticketClients/contacts';
 import { getClientLocations as getClientLocationsModel } from '@alga-psa/shared/ticketClients/locations';
-import { getCurrentUser } from '@alga-psa/auth/getCurrentUser';
+import { withAuth } from '@alga-psa/auth';
 
-async function getTenantDbContext(): Promise<{ knex: Knex; tenant: string }> {
-  const currentUser = await getCurrentUser();
-  if (!currentUser?.tenant) {
-    throw new Error('Tenant configuration not found');
-  }
-
-  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
-  if (!tenant) {
-    throw new Error('Tenant configuration not found');
-  }
-
-  return { knex, tenant };
-}
-
-export async function getAllClients(includeInactive: boolean = true): Promise<IClient[]> {
-  const { knex, tenant } = await getTenantDbContext();
+export const getAllClients = withAuth(async (_user, { tenant }, includeInactive: boolean = true): Promise<IClient[]> => {
+  const { knex } = await createTenantKnex();
 
   return withTransaction(knex, async (trx: Knex.Transaction) => {
     return getAllClientsModel(trx, tenant, includeInactive);
   });
-}
+});
 
-export async function getClientById(clientId: string): Promise<IClient | null> {
-  const { knex, tenant } = await getTenantDbContext();
+export const getClientById = withAuth(async (_user, { tenant }, clientId: string): Promise<IClient | null> => {
+  const { knex } = await createTenantKnex();
 
   return withTransaction(knex, async (trx: Knex.Transaction) => {
     return getClientByIdModel(trx, tenant, clientId);
   });
-}
+});
 
-export async function getContactsByClient(
+export const getContactsByClient = withAuth(async (
+  _user,
+  { tenant },
   clientId: string,
   status: ContactFilterStatus = 'active',
   sortBy: 'full_name' | 'created_at' | 'email' | 'phone_number' = 'full_name',
   sortDirection: 'asc' | 'desc' = 'asc'
-): Promise<IContact[]> {
-  const { knex, tenant } = await getTenantDbContext();
+): Promise<IContact[]> => {
+  const { knex } = await createTenantKnex();
 
   return withTransaction(knex, async (trx: Knex.Transaction) => {
     return getContactsByClientModel(trx, tenant, clientId, status, sortBy, sortDirection);
   });
-}
+});
 
-export async function getContactByContactNameId(contactNameId: string): Promise<IContact | null> {
-  const { knex, tenant } = await getTenantDbContext();
+export const getContactByContactNameId = withAuth(async (_user, { tenant }, contactNameId: string): Promise<IContact | null> => {
+  const { knex } = await createTenantKnex();
 
   return withTransaction(knex, async (trx: Knex.Transaction) => {
     return getContactByContactNameIdModel(trx, tenant, contactNameId);
   });
-}
+});
 
-export async function getClientLocations(clientId: string): Promise<IClientLocation[]> {
-  const { knex, tenant } = await getTenantDbContext();
+export const getClientLocations = withAuth(async (_user, { tenant }, clientId: string): Promise<IClientLocation[]> => {
+  const { knex } = await createTenantKnex();
 
   return withTransaction(knex, async (trx: Knex.Transaction) => {
     return getClientLocationsModel(trx, tenant, clientId);
   });
-}
+});

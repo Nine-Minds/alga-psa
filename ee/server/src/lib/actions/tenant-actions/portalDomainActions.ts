@@ -3,8 +3,7 @@
 import type { Knex } from 'knex';
 
 import { createTenantKnex } from '@/lib/db';
-import { getCurrentUser } from '@alga-psa/users/actions';
-import { hasPermission } from '@alga-psa/auth';
+import { withAuth, hasPermission } from '@alga-psa/auth';
 import {
   computeCanonicalHost,
   getPortalDomain,
@@ -24,12 +23,6 @@ import type {
 import { enqueuePortalDomainWorkflow } from '@ee/lib/portal-domains/workflowClient';
 import type { IUser } from 'server/src/interfaces/auth.interfaces';
 import { analytics } from '@/lib/analytics/posthog';
-
-interface TenantContext {
-  knex: Knex;
-  tenant: string;
-  user: IUser;
-}
 
 const REQUIRED_RESOURCE = 'settings';
 const READ_ACTION = 'read';
@@ -76,17 +69,11 @@ function createStatusResponse(record: PortalDomain | null, canonicalHost: string
   };
 }
 
-async function ensurePermission(action: typeof READ_ACTION | typeof UPDATE_ACTION): Promise<TenantContext> {
-  const user = await getCurrentUser();
-  if (!user) {
-    throw new Error('User not authenticated');
-  }
-
-  const { knex, tenant } = await createTenantKnex();
-  if (!tenant) {
-    throw new Error('Tenant context is required');
-  }
-
+async function checkPermission(
+  user: IUser,
+  action: typeof READ_ACTION | typeof UPDATE_ACTION,
+  knex: Knex
+): Promise<void> {
   if (action === UPDATE_ACTION && user.user_type === 'client') {
     throw new Error('Client portal users cannot manage custom domains.');
   }
@@ -95,8 +82,6 @@ async function ensurePermission(action: typeof READ_ACTION | typeof UPDATE_ACTIO
   if (!allowed) {
     throw new Error('You do not have permission to manage client portal settings.');
   }
-
-  return { knex, tenant, user };
 }
 
 function validateRequestedDomain(rawDomain: string, canonicalHost: string): string {
@@ -135,15 +120,19 @@ async function fetchStatus(knex: Knex, tenant: string): Promise<PortalDomainStat
   return createStatusResponse(record, canonicalHost);
 }
 
-export async function getPortalDomainStatusAction(): Promise<PortalDomainStatusResponse> {
-  const { knex, tenant } = await ensurePermission(READ_ACTION);
+export const getPortalDomainStatusAction = withAuth(async (user, { tenant }): Promise<PortalDomainStatusResponse> => {
+  const { knex } = await createTenantKnex();
+  await checkPermission(user, READ_ACTION, knex);
   return fetchStatus(knex, tenant);
-}
+});
 
-export async function requestPortalDomainRegistrationAction(
+export const requestPortalDomainRegistrationAction = withAuth(async (
+  user,
+  { tenant },
   request: PortalDomainRegistrationRequest
-): Promise<PortalDomainRegistrationResult> {
-  const { knex, tenant } = await ensurePermission(UPDATE_ACTION);
+): Promise<PortalDomainRegistrationResult> => {
+  const { knex } = await createTenantKnex();
+  await checkPermission(user, UPDATE_ACTION, knex);
 
   const canonicalHost = computeCanonicalHost(tenant);
   const existing = await getPortalDomain(knex, tenant);
@@ -192,10 +181,11 @@ export async function requestPortalDomainRegistrationAction(
 
   const status = await fetchStatus(knex, tenant);
   return { status };
-}
+});
 
-export async function refreshPortalDomainStatusAction(): Promise<PortalDomainStatusResponse> {
-  const { knex, tenant } = await ensurePermission(READ_ACTION);
+export const refreshPortalDomainStatusAction = withAuth(async (user, { tenant }): Promise<PortalDomainStatusResponse> => {
+  const { knex } = await createTenantKnex();
+  await checkPermission(user, READ_ACTION, knex);
   const current = await getPortalDomain(knex, tenant);
 
   if (current && !isTerminalStatus(current.status)) {
@@ -214,12 +204,13 @@ export async function refreshPortalDomainStatusAction(): Promise<PortalDomainSta
   });
 
   return status;
-}
+});
 
 const RETRYABLE_FAILURE_STATUSES: PortalDomainStatus[] = ['dns_failed', 'certificate_failed'];
 
-export async function retryPortalDomainRegistrationAction(): Promise<PortalDomainStatusResponse> {
-  const { knex, tenant } = await ensurePermission(UPDATE_ACTION);
+export const retryPortalDomainRegistrationAction = withAuth(async (user, { tenant }): Promise<PortalDomainStatusResponse> => {
+  const { knex } = await createTenantKnex();
+  await checkPermission(user, UPDATE_ACTION, knex);
   const current = await getPortalDomain(knex, tenant);
 
   if (!current || !current.domain) {
@@ -262,10 +253,11 @@ export async function retryPortalDomainRegistrationAction(): Promise<PortalDomai
   });
 
   return status;
-}
+});
 
-export async function disablePortalDomainAction(): Promise<PortalDomainStatusResponse> {
-  const { knex, tenant } = await ensurePermission(UPDATE_ACTION);
+export const disablePortalDomainAction = withAuth(async (user, { tenant }): Promise<PortalDomainStatusResponse> => {
+  const { knex } = await createTenantKnex();
+  await checkPermission(user, UPDATE_ACTION, knex);
   const existing = await getPortalDomain(knex, tenant);
 
   if (!existing) {
@@ -296,4 +288,4 @@ export async function disablePortalDomainAction(): Promise<PortalDomainStatusRes
   });
 
   return status;
-}
+});

@@ -8,19 +8,12 @@ import { DeleteObjectCommand } from "@aws-sdk/client-s3";
 import { upsertInstallConfigRecord } from '../extensions/installConfig';
 import { isKnownCapability, normalizeCapability } from '../extensions/providers';
 import { getJobRunnerInstance, initializeJobRunner } from 'server/src/lib/jobs/initializeJobRunner';
-import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
-import { hasPermission } from 'server/src/lib/auth/rbac';
+import { withOptionalAuth, hasPermission } from '@alga-psa/auth';
 import { ExtensionUpdateBlockedError } from './extRegistryV2Errors';
 
 type ExtensionPermissionAction = 'read' | 'write';
 
-async function assertExtensionPermissionIfUserPresent(action: ExtensionPermissionAction, knex: Knex) {
-  let user: Awaited<ReturnType<typeof getCurrentUser>> | null = null;
-  try {
-    user = await getCurrentUser();
-  } catch {
-    user = null;
-  }
+async function assertExtensionPermissionIfUserPresent(action: ExtensionPermissionAction, knex: Knex, user: any) {
   // When invoked from API-key middleware flows, there may not be a session-backed "current user".
   // Those routes enforce permissions separately; skip this check in that case.
   if (!user) return;
@@ -45,10 +38,11 @@ type BundleInfo = {
   canonical_key: string; // sha256/<hex>/bundle.tar.zst
 };
 
-export async function fetchInstalledExtensionsV2(): Promise<V2ExtensionListItem[]> {
-  const { knex, tenant } = await createTenantKnex();
+export const fetchInstalledExtensionsV2 = withOptionalAuth(async (user, ctx): Promise<V2ExtensionListItem[]> => {
+  const { knex } = await createTenantKnex();
+  const tenant = ctx?.tenant;
   if (!tenant) throw new Error('Tenant not found');
-  await assertExtensionPermissionIfUserPresent('read', knex);
+  await assertExtensionPermissionIfUserPresent('read', knex, user);
 
   const rows = await knex('tenant_extension_install as ti')
     .join('extension_registry as er', 'er.id', 'ti.registry_id')
@@ -65,12 +59,13 @@ export async function fetchInstalledExtensionsV2(): Promise<V2ExtensionListItem[
     .orderBy([{ column: 'er.publisher', order: 'asc' }, { column: 'er.name', order: 'asc' }]);
 
   return rows as V2ExtensionListItem[];
-}
+})
 
-export async function toggleExtensionV2(registryId: string): Promise<{ success: boolean; message: string; is_enabled?: boolean }>{
-  const { knex, tenant } = await createTenantKnex();
+export const toggleExtensionV2 = withOptionalAuth(async (user, ctx, registryId: string): Promise<{ success: boolean; message: string; is_enabled?: boolean }> => {
+  const { knex } = await createTenantKnex();
+  const tenant = ctx?.tenant;
   if (!tenant) throw new Error('Tenant not found');
-  await assertExtensionPermissionIfUserPresent('write', knex);
+  await assertExtensionPermissionIfUserPresent('write', knex, user);
 
   return await knex.transaction(async (trx: Knex.Transaction) => {
     const row = await trx('tenant_extension_install')
@@ -135,7 +130,7 @@ export async function toggleExtensionV2(registryId: string): Promise<{ success: 
 
     return { success: true, message: next ? 'Enabled' : 'Disabled', is_enabled: next };
   });
-}
+})
 
 function normalizeMethod(method: string): string {
   return String(method || '').toUpperCase();
@@ -183,10 +178,11 @@ async function materializeEndpointsForVersion(trx: Knex.Transaction, versionId: 
     .merge({ handler: trx.raw('excluded.handler'), updated_at: now });
 }
 
-export async function updateExtensionForCurrentTenantV2(params: { registryId: string; version: string; disableMissingSchedules?: boolean }): Promise<{ success: boolean; message: string }>{
-  const { knex, tenant } = await createTenantKnex();
+export const updateExtensionForCurrentTenantV2 = withOptionalAuth(async (user, ctx, params: { registryId: string; version: string; disableMissingSchedules?: boolean }): Promise<{ success: boolean; message: string }> => {
+  const { knex } = await createTenantKnex();
+  const tenant = ctx?.tenant;
   if (!tenant) throw new Error('Tenant not found');
-  await assertExtensionPermissionIfUserPresent('write', knex);
+  await assertExtensionPermissionIfUserPresent('write', knex, user);
 
   const registryId = params.registryId;
   const targetVersion = params.version;
@@ -320,12 +316,13 @@ export async function updateExtensionForCurrentTenantV2(params: { registryId: st
 
     return { success: true, message: 'Updated' };
   });
-}
+})
 
-export async function uninstallExtensionV2(registryId: string): Promise<{ success: boolean; message: string }>{
-  const { knex, tenant } = await createTenantKnex();
+export const uninstallExtensionV2 = withOptionalAuth(async (user, ctx, registryId: string): Promise<{ success: boolean; message: string }> => {
+  const { knex } = await createTenantKnex();
+  const tenant = ctx?.tenant;
   if (!tenant) throw new Error('Tenant not found');
-  await assertExtensionPermissionIfUserPresent('write', knex);
+  await assertExtensionPermissionIfUserPresent('write', knex, user);
 
   // Lookup the installed version and current bundle content hash before deleting DB rows
   let bundleKey: string | null = null;
@@ -396,10 +393,11 @@ export async function uninstallExtensionV2(registryId: string): Promise<{ succes
   }
 
   return { success: true, message: 'Uninstalled' };
-}
+})
 
-export async function installExtensionForCurrentTenantV2(params: { registryId: string; version: string }): Promise<{ success: boolean; installId?: string }>{
-  const { knex, tenant } = await createTenantKnex();
+export const installExtensionForCurrentTenantV2 = withOptionalAuth(async (user, ctx, params: { registryId: string; version: string }): Promise<{ success: boolean; installId?: string }> => {
+  const { knex } = await createTenantKnex();
+  const tenant = ctx?.tenant;
   if (!tenant) throw new Error('Tenant not found');
 
   // Upsert install row
@@ -473,13 +471,14 @@ export async function installExtensionForCurrentTenantV2(params: { registryId: s
   await enqueueProvisioningWorkflow({ tenantId: tenant, extensionId: params.registryId, installId }).catch(() => {});
 
   return { success: true, installId };
-}
+})
 
 /**
  * Get the current bundle content hash and storage key (canonical) for the tenant's install of a registry entry.
  */
-export async function getBundleInfoForInstall(registryId: string): Promise<BundleInfo | null> {
-  const { knex, tenant } = await createTenantKnex();
+export const getBundleInfoForInstall = withOptionalAuth(async (user, ctx, registryId: string): Promise<BundleInfo | null> => {
+  const { knex } = await createTenantKnex();
+  const tenant = ctx?.tenant;
   if (!tenant) throw new Error('Tenant not found');
 
   const ti = await knex('tenant_extension_install')
@@ -497,4 +496,4 @@ export async function getBundleInfoForInstall(registryId: string): Promise<Bundl
   const hex = ch.startsWith('sha256:') ? ch.substring('sha256:'.length) : ch;
   const canonical_key = `tenants/${tenant}/extensions/${registryId}/sha256/${hex}/bundle.tar.zst`;
   return { content_hash: ch, canonical_key };
-}
+})

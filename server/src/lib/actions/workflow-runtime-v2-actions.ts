@@ -6,7 +6,7 @@ import { createHash } from 'crypto';
 import { v4 as uuidv4 } from 'uuid';
 import { RateLimiterMemory } from 'rate-limiter-flexible';
 import { createTenantKnex } from 'server/src/lib/db';
-import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
+import { withAuth, hasPermission, getCurrentUser } from '@alga-psa/auth';
 import {
   WorkflowRuntimeV2,
   getActionRegistryV2,
@@ -33,7 +33,6 @@ import WorkflowRuntimeEventModelV2 from '@shared/workflow/persistence/workflowRu
 import WorkflowRunLogModelV2 from '@shared/workflow/persistence/workflowRunLogModelV2';
 import { auditLog } from 'server/src/lib/logging/auditLog';
 import { analytics } from 'server/src/lib/analytics/server';
-import { hasPermission } from 'server/src/lib/auth/rbac';
 import { EventCatalogModel } from 'server/src/models/eventCatalog';
 import {
   CreateWorkflowDefinitionInput,
@@ -706,6 +705,8 @@ const redactSensitiveValues = (value: unknown): unknown => {
   return value;
 };
 
+type AuthUser = NonNullable<Awaited<ReturnType<typeof getCurrentUser>>>;
+
 const requireUser = async () => {
   const user = await getCurrentUser();
   if (!user) {
@@ -809,29 +810,26 @@ const requireRunTenantAccess = async (
 };
 
 const requireWorkflowPermission = async (
-  user: Awaited<ReturnType<typeof getCurrentUser>>,
+  user: AuthUser,
   action: 'read' | 'manage' | 'publish' | 'admin',
   knex?: Awaited<ReturnType<typeof createTenantKnex>>['knex']
 ) => {
-  if (!user) {
-    return throwHttpError(401, 'Unauthorized');
-  }
-  const allowed = await hasPermission(user!, 'workflow', action, knex);
+  const allowed = await hasPermission(user, 'workflow', action, knex);
   if (allowed) return;
   if (action === 'read') {
-    const viewAllowed = await hasPermission(user!, 'workflow', 'view', knex);
+    const viewAllowed = await hasPermission(user, 'workflow', 'view', knex);
     if (viewAllowed) return;
-    const manageAllowed = await hasPermission(user!, 'workflow', 'manage', knex);
+    const manageAllowed = await hasPermission(user, 'workflow', 'manage', knex);
     if (manageAllowed) return;
-    const adminAllowed = await hasPermission(user!, 'workflow', 'admin', knex);
+    const adminAllowed = await hasPermission(user, 'workflow', 'admin', knex);
     if (adminAllowed) return;
   }
   if (action === 'manage') {
-    const adminAllowed = await hasPermission(user!, 'workflow', 'admin', knex);
+    const adminAllowed = await hasPermission(user, 'workflow', 'admin', knex);
     if (adminAllowed) return;
   }
   if (action === 'publish') {
-    const adminAllowed = await hasPermission(user!, 'workflow', 'admin', knex);
+    const adminAllowed = await hasPermission(user, 'workflow', 'admin', knex);
     if (adminAllowed) return;
   }
   throwHttpError(403, 'Forbidden');
@@ -839,7 +837,7 @@ const requireWorkflowPermission = async (
 
 const auditWorkflowEvent = async (
   knex: Awaited<ReturnType<typeof createTenantKnex>>['knex'],
-  user: Awaited<ReturnType<typeof getCurrentUser>>,
+  user: AuthUser,
   params: {
     operation: string;
     tableName: 'workflow_definitions' | 'workflow_runs';
@@ -849,7 +847,6 @@ const auditWorkflowEvent = async (
     source?: string | null;
   }
 ) => {
-  if (!user) return;
   const roleNames = user.roles?.map((role) => role.role_name) ?? [];
   await auditLog(knex, {
     userId: user.user_id,
@@ -865,8 +862,7 @@ const auditWorkflowEvent = async (
   });
 };
 
-export async function listWorkflowDefinitionsAction() {
-  const user = await requireUser();
+export const listWorkflowDefinitionsAction = withAuth(async (user, { tenant }) => {
   const { knex } = await createTenantKnex();
   await requireWorkflowPermission(user, 'read', knex);
   const records = await WorkflowDefinitionModelV2.list(knex);
@@ -893,10 +889,9 @@ export async function listWorkflowDefinitionsAction() {
     return enrichedRecords;
   }
   return enrichedRecords.filter((record) => record.is_visible !== false);
-}
+});
 
-export async function listWorkflowDefinitionVersionsAction(input: unknown) {
-  const user = await requireUser();
+export const listWorkflowDefinitionVersionsAction = withAuth(async (user, { tenant }, input: unknown) => {
   const parsed = WorkflowIdInput.parse(input);
   const { knex } = await createTenantKnex();
   await requireWorkflowPermission(user, 'read', knex);
@@ -907,14 +902,13 @@ export async function listWorkflowDefinitionVersionsAction(input: unknown) {
     .orderBy('version', 'desc');
 
   return { versions: rows };
-}
+});
 
-export async function createWorkflowDefinitionAction(input: unknown) {
-  const user = await requireUser();
+export const createWorkflowDefinitionAction = withAuth(async (user, { tenant }, input: unknown) => {
   initializeWorkflowRuntimeV2();
   const parsed = CreateWorkflowDefinitionInput.parse(input);
 
-  const { knex, tenant } = await createTenantKnex();
+  const { knex } = await createTenantKnex();
   await requireWorkflowPermission(user, 'manage', knex);
   const workflowId = uuidv4();
   const definition = { ...parsed.definition, id: workflowId };
@@ -974,10 +968,9 @@ export async function createWorkflowDefinitionAction(input: unknown) {
   });
 
   return { workflowId: record.workflow_id };
-}
+});
 
-export async function getWorkflowDefinitionVersionAction(input: unknown) {
-  const user = await requireUser();
+export const getWorkflowDefinitionVersionAction = withAuth(async (user, { tenant }, input: unknown) => {
   const parsed = GetWorkflowDefinitionVersionInput.parse(input);
   const { knex } = await createTenantKnex();
   await requireWorkflowPermission(user, 'read', knex);
@@ -990,14 +983,13 @@ export async function getWorkflowDefinitionVersionAction(input: unknown) {
     return throwHttpError(404, 'Not found');
   }
   return record;
-}
+});
 
-export async function updateWorkflowDefinitionDraftAction(input: unknown) {
-  const user = await requireUser();
+export const updateWorkflowDefinitionDraftAction = withAuth(async (user, { tenant }, input: unknown) => {
   initializeWorkflowRuntimeV2();
   const parsed = UpdateWorkflowDefinitionInput.parse(input);
 
-  const { knex, tenant } = await createTenantKnex();
+  const { knex } = await createTenantKnex();
   await requireWorkflowPermission(user, 'manage', knex);
   const current = await WorkflowDefinitionModelV2.getById(knex, parsed.workflowId);
   if (current?.is_system) {
@@ -1059,10 +1051,9 @@ export async function updateWorkflowDefinitionDraftAction(input: unknown) {
   });
 
   return updated;
-}
+});
 
-export async function updateWorkflowDefinitionMetadataAction(input: unknown) {
-  const user = await requireUser();
+export const updateWorkflowDefinitionMetadataAction = withAuth(async (user, { tenant }, input: unknown) => {
   const parsed = UpdateWorkflowDefinitionMetadataInput.parse(input);
   const { knex } = await createTenantKnex();
   await requireWorkflowPermission(user, 'manage', knex);
@@ -1105,10 +1096,9 @@ export async function updateWorkflowDefinitionMetadataAction(input: unknown) {
   });
 
   return updated;
-}
+});
 
-export async function deleteWorkflowDefinitionAction(input: unknown) {
-  const user = await requireUser();
+export const deleteWorkflowDefinitionAction = withAuth(async (user, { tenant }, input: unknown) => {
   const parsed = DeleteWorkflowDefinitionInput.parse(input);
   const { knex } = await createTenantKnex();
   await requireWorkflowPermission(user, 'manage', knex);
@@ -1174,14 +1164,13 @@ export async function deleteWorkflowDefinitionAction(input: unknown) {
   });
 
   return { deleted: true, workflowId: parsed.workflowId };
-}
+});
 
-export async function publishWorkflowDefinitionAction(input: unknown) {
-  const user = await requireUser();
+export const publishWorkflowDefinitionAction = withAuth(async (user, { tenant }, input: unknown) => {
   initializeWorkflowRuntimeV2();
   const parsed = PublishWorkflowDefinitionInput.parse(input);
 
-  const { knex, tenant } = await createTenantKnex();
+  const { knex } = await createTenantKnex();
   await requireWorkflowPermission(user, 'publish', knex);
   const workflow = await WorkflowDefinitionModelV2.getById(knex, parsed.workflowId);
   if (!workflow) {
@@ -1289,14 +1278,13 @@ export async function publishWorkflowDefinitionAction(input: unknown) {
   });
 
   return { ok: true, publishedVersion: record.version, errors: [], warnings: validation.warnings };
-}
+});
 
-export async function startWorkflowRunAction(input: unknown) {
-  const user = await requireUser();
+export const startWorkflowRunAction = withAuth(async (user, { tenant }, input: unknown) => {
   initializeWorkflowRuntimeV2();
   const parsed = StartWorkflowRunInput.parse(input);
 
-  const { knex, tenant } = await createTenantKnex();
+  const { knex } = await createTenantKnex();
   await requireWorkflowPermission(user, 'manage', knex);
   if (tenant) {
     try {
@@ -1495,12 +1483,11 @@ export async function startWorkflowRunAction(input: unknown) {
     source: 'ui'
   });
   return { runId, status: run?.status };
-}
+});
 
-export async function getWorkflowRunAction(input: unknown) {
-  const user = await requireUser();
+export const getWorkflowRunAction = withAuth(async (user, { tenant }, input: unknown) => {
   const parsed = RunIdInput.parse(input);
-  const { knex, tenant } = await createTenantKnex();
+  const { knex } = await createTenantKnex();
   await requireWorkflowPermission(user, 'read', knex);
   const run = await requireRunTenantAccess(knex, parsed.runId, tenant);
   const cfg = await loadTenantRedactionConfig(knex, tenant);
@@ -1511,15 +1498,11 @@ export async function getWorkflowRunAction(input: unknown) {
     resume_error: applyRunStudioRedactions(run.resume_error ?? null, cfg) as any,
     error_json: applyRunStudioRedactions(run.error_json ?? null, cfg) as any
   };
-}
+});
 
-export async function listWorkflowRunsAction(input: unknown) {
-  const user = await getCurrentUser();
-  if (!user) {
-    return { runs: [], nextCursor: null };
-  }
+export const listWorkflowRunsAction = withAuth(async (user, { tenant }, input: unknown) => {
   const parsed = ListWorkflowRunsInput.parse(input);
-  const { knex, tenant } = await createTenantKnex();
+  const { knex } = await createTenantKnex();
   await requireWorkflowPermission(user, 'read', knex);
 
   const [sortField, sortDir] = parsed.sort.split(':') as ['started_at' | 'updated_at', 'asc' | 'desc'];
@@ -1587,7 +1570,7 @@ export async function listWorkflowRunsAction(input: unknown) {
   const nextCursor = hasMore ? parsed.cursor + parsed.limit : null;
 
   return { runs, nextCursor };
-}
+});
 
 export async function exportWorkflowRunsAction(input: unknown) {
   const rawInput = (input ?? {}) as Record<string, unknown>;
@@ -1625,10 +1608,9 @@ export async function exportWorkflowRunsAction(input: unknown) {
   return { body: csv, contentType: 'text/csv', filename: 'workflow-runs.csv' };
 }
 
-export async function listWorkflowDeadLetterRunsAction(input: unknown) {
-  const user = await requireUser();
+export const listWorkflowDeadLetterRunsAction = withAuth(async (user, { tenant }, input: unknown) => {
   const parsed = ListWorkflowDeadLetterInput.parse(input);
-  const { knex, tenant } = await createTenantKnex();
+  const { knex } = await createTenantKnex();
   await requireWorkflowPermission(user, 'admin', knex);
 
   const query = knex('workflow_runs as runs')
@@ -1676,12 +1658,11 @@ export async function listWorkflowDeadLetterRunsAction(input: unknown) {
   const nextCursor = hasMore ? parsed.cursor + parsed.limit : null;
 
   return { runs, nextCursor };
-}
+});
 
-export async function listWorkflowRunSummaryAction(input: unknown) {
-  const user = await requireUser();
+export const listWorkflowRunSummaryAction = withAuth(async (user, { tenant }, input: unknown) => {
   const parsed = ListWorkflowRunSummaryInput.parse(input);
-  const { knex, tenant } = await createTenantKnex();
+  const { knex } = await createTenantKnex();
   await requireWorkflowPermission(user, 'read', knex);
 
   const query = knex('workflow_runs').select('status').count('* as count');
@@ -1712,12 +1693,11 @@ export async function listWorkflowRunSummaryAction(input: unknown) {
   });
 
   return { total, byStatus: summary };
-}
+});
 
-export async function getWorkflowRunSummaryMetadataAction(input: unknown) {
-  const user = await requireUser();
+export const getWorkflowRunSummaryMetadataAction = withAuth(async (user, { tenant }, input: unknown) => {
   const parsed = RunIdInput.parse(input);
-  const { knex, tenant } = await createTenantKnex();
+  const { knex } = await createTenantKnex();
   await requireWorkflowPermission(user, 'read', knex);
 
   const run = await requireRunTenantAccess(knex, parsed.runId, tenant);
@@ -1745,12 +1725,11 @@ export async function getWorkflowRunSummaryMetadataAction(input: unknown) {
     logsCount: Number(logsCount?.count ?? 0),
     waitsCount: Number(waitsCount?.count ?? 0)
   };
-}
+});
 
-export async function getLatestWorkflowRunAction(input: unknown) {
-  const user = await requireUser();
+export const getLatestWorkflowRunAction = withAuth(async (user, { tenant }, input: unknown) => {
   const parsed = GetLatestWorkflowRunInput.parse(input);
-  const { knex, tenant } = await createTenantKnex();
+  const { knex } = await createTenantKnex();
   await requireWorkflowPermission(user, 'read', knex);
 
   const query = knex('workflow_runs')
@@ -1771,12 +1750,11 @@ export async function getLatestWorkflowRunAction(input: unknown) {
   }
 
   return { run: latest };
-}
+});
 
-export async function listWorkflowRunLogsAction(input: unknown) {
-  const user = await requireUser();
+export const listWorkflowRunLogsAction = withAuth(async (user, { tenant }, input: unknown) => {
   const parsed = ListWorkflowRunLogsInput.parse(input);
-  const { knex, tenant } = await createTenantKnex();
+  const { knex } = await createTenantKnex();
   await requireWorkflowPermission(user, 'read', knex);
   await requireRunTenantAccess(knex, parsed.runId, tenant);
 
@@ -1794,12 +1772,11 @@ export async function listWorkflowRunLogsAction(input: unknown) {
       context_json: log.context_json ? (applyRunStudioRedactions(log.context_json, cfg) as any) : null
     }))
   };
-}
+});
 
-export async function listWorkflowRunTimelineEventsAction(input: unknown) {
-  const user = await requireUser();
+export const listWorkflowRunTimelineEventsAction = withAuth(async (user, { tenant }, input: unknown) => {
   const parsed = RunIdInput.parse(input);
-  const { knex, tenant } = await createTenantKnex();
+  const { knex } = await createTenantKnex();
   await requireWorkflowPermission(user, 'read', knex);
   await requireRunTenantAccess(knex, parsed.runId, tenant);
 
@@ -1838,7 +1815,7 @@ export async function listWorkflowRunTimelineEventsAction(input: unknown) {
   ));
 
   return { events };
-}
+});
 
 export async function exportWorkflowRunLogsAction(input: unknown) {
   const rawInput = (input ?? {}) as Record<string, unknown>;
@@ -1867,8 +1844,7 @@ export async function exportWorkflowRunLogsAction(input: unknown) {
   };
 }
 
-export async function listWorkflowAuditLogsAction(input: unknown) {
-  const user = await requireUser();
+export const listWorkflowAuditLogsAction = withAuth(async (user, { tenant }, input: unknown) => {
   const parsed = ListWorkflowAuditLogsInput.parse(input);
   const { knex } = await createTenantKnex();
   await requireWorkflowPermission(user, 'admin', knex);
@@ -1891,7 +1867,7 @@ export async function listWorkflowAuditLogsAction(input: unknown) {
   }));
 
   return { logs: sanitized, nextCursor };
-}
+});
 
 export async function exportWorkflowAuditLogsAction(input: unknown) {
   const rawInput = (input ?? {}) as Record<string, unknown>;
@@ -1929,10 +1905,9 @@ export async function exportWorkflowAuditLogsAction(input: unknown) {
   };
 }
 
-export async function listWorkflowRunStepsAction(input: unknown) {
-  const user = await requireUser();
+export const listWorkflowRunStepsAction = withAuth(async (user, { tenant }, input: unknown) => {
   const parsed = RunIdInput.parse(input);
-  const { knex, tenant } = await createTenantKnex();
+  const { knex } = await createTenantKnex();
   await requireWorkflowPermission(user, 'read', knex);
   await requireRunTenantAccess(knex, parsed.runId, tenant);
   const steps = await WorkflowRunStepModelV2.listByRun(knex, parsed.runId);
@@ -1962,12 +1937,11 @@ export async function listWorkflowRunStepsAction(input: unknown) {
   }));
 
   return { steps, snapshots: sanitizedSnapshots, invocations: redactedInvocations, waits };
-}
+});
 
-export async function exportWorkflowRunDetailAction(input: unknown) {
-  const user = await requireUser();
+export const exportWorkflowRunDetailAction = withAuth(async (user, { tenant }, input: unknown) => {
   const parsed = RunIdInput.parse(input);
-  const { knex, tenant } = await createTenantKnex();
+  const { knex } = await createTenantKnex();
   await requireWorkflowPermission(user, 'read', knex);
 
   const run = await WorkflowRunModelV2.getById(knex, parsed.runId);
@@ -1982,8 +1956,8 @@ export async function exportWorkflowRunDetailAction(input: unknown) {
   const snapshots = await WorkflowRunSnapshotModelV2.listByRun(knex, parsed.runId);
   const invocations = await WorkflowActionInvocationModelV2.listByRun(knex, parsed.runId);
   const waits = await WorkflowRunWaitModelV2.listByRun(knex, parsed.runId);
-  const canManage = await hasPermission(user!, 'workflow', 'manage', knex);
-  const canAdmin = await hasPermission(user!, 'workflow', 'admin', knex);
+  const canManage = await hasPermission(user, 'workflow', 'manage', knex);
+  const canAdmin = await hasPermission(user, 'workflow', 'admin', knex);
   const canViewSensitive = canManage || canAdmin;
 
   const sanitizedInvocations = canViewSensitive
@@ -2014,12 +1988,11 @@ export async function exportWorkflowRunDetailAction(input: unknown) {
     invocations: sanitizedInvocations,
     waits
   };
-}
+});
 
-export async function cancelWorkflowRunAction(input: unknown) {
-  const user = await requireUser();
+export const cancelWorkflowRunAction = withAuth(async (user, { tenant }, input: unknown) => {
   const parsed = RunActionInput.parse(input);
-  const { knex, tenant } = await createTenantKnex();
+  const { knex } = await createTenantKnex();
   await requireWorkflowPermission(user, 'admin', knex);
 
   const runRecord = await requireRunTenantAccess(knex, parsed.runId, tenant);
@@ -2057,13 +2030,12 @@ export async function cancelWorkflowRunAction(input: unknown) {
   });
 
   return { ok: true };
-}
+});
 
-export async function resumeWorkflowRunAction(input: unknown) {
-  const user = await requireUser();
+export const resumeWorkflowRunAction = withAuth(async (user, { tenant }, input: unknown) => {
   initializeWorkflowRuntimeV2();
   const parsed = RunActionInput.parse(input);
-  const { knex, tenant } = await createTenantKnex();
+  const { knex } = await createTenantKnex();
   await requireWorkflowPermission(user, 'admin', knex);
   const runRecord = await requireRunTenantAccess(knex, parsed.runId, tenant);
 
@@ -2137,13 +2109,12 @@ export async function resumeWorkflowRunAction(input: unknown) {
   });
 
   return { ok: true };
-}
+});
 
-export async function retryWorkflowRunAction(input: unknown) {
-  const user = await requireUser();
+export const retryWorkflowRunAction = withAuth(async (user, { tenant }, input: unknown) => {
   initializeWorkflowRuntimeV2();
   const parsed = RunActionInput.parse(input);
-  const { knex, tenant } = await createTenantKnex();
+  const { knex } = await createTenantKnex();
   await requireWorkflowPermission(user, 'admin', knex);
 
   const run = await requireRunTenantAccess(knex, parsed.runId, tenant);
@@ -2193,13 +2164,12 @@ export async function retryWorkflowRunAction(input: unknown) {
   await runtime.executeRun(knex, parsed.runId, `admin-retry-${user.user_id}`);
 
   return { ok: true };
-}
+});
 
-export async function replayWorkflowRunAction(input: unknown) {
-  const user = await requireUser();
+export const replayWorkflowRunAction = withAuth(async (user, { tenant }, input: unknown) => {
   initializeWorkflowRuntimeV2();
   const parsed = ReplayWorkflowRunInput.parse(input);
-  const { knex, tenant } = await createTenantKnex();
+  const { knex } = await createTenantKnex();
   await requireWorkflowPermission(user, 'admin', knex);
 
   const run = await requireRunTenantAccess(knex, parsed.runId, tenant);
@@ -2243,10 +2213,9 @@ export async function replayWorkflowRunAction(input: unknown) {
   await runtime.executeRun(knex, newRunId, `admin-replay-${user.user_id}`);
 
   return { ok: true, runId: newRunId };
-}
+});
 
-export async function requeueWorkflowRunEventWaitAction(input: unknown) {
-  const user = await requireUser();
+export const requeueWorkflowRunEventWaitAction = withAuth(async (user, { tenant }, input: unknown) => {
   initializeWorkflowRuntimeV2();
   const parsed = RunActionInput.parse(input);
   const { knex } = await createTenantKnex();
@@ -2299,10 +2268,9 @@ export async function requeueWorkflowRunEventWaitAction(input: unknown) {
   });
 
   return { ok: true };
-}
+});
 
-export async function listWorkflowRegistryNodesAction() {
-  const user = await requireUser();
+export const listWorkflowRegistryNodesAction = withAuth(async (user, { tenant }) => {
   initializeWorkflowRuntimeV2();
   const { knex } = await createTenantKnex();
   await requireWorkflowPermission(user, 'read', knex);
@@ -2314,10 +2282,9 @@ export async function listWorkflowRegistryNodesAction() {
     examples: node.examples ?? null,
     defaultRetry: node.defaultRetry ?? null
   }));
-}
+});
 
-export async function listWorkflowRegistryActionsAction() {
-  const user = await requireUser();
+export const listWorkflowRegistryActionsAction = withAuth(async (user, { tenant }) => {
   initializeWorkflowRuntimeV2();
   const { knex } = await createTenantKnex();
   await requireWorkflowPermission(user, 'read', knex);
@@ -2333,10 +2300,9 @@ export async function listWorkflowRegistryActionsAction() {
     outputSchema: zodToJsonSchema(action.outputSchema, { name: `${action.id}@${action.version}.output` }),
     examples: action.examples ?? null
   }));
-}
+});
 
-export async function getWorkflowSchemaAction(input: unknown) {
-  const user = await requireUser();
+export const getWorkflowSchemaAction = withAuth(async (user, { tenant }, input: unknown) => {
   initializeWorkflowRuntimeV2();
   const parsed = SchemaRefInput.parse(input);
   const registry = getSchemaRegistry();
@@ -2346,19 +2312,17 @@ export async function getWorkflowSchemaAction(input: unknown) {
     return throwHttpError(404, 'Not found');
   }
   return { ref: parsed.schemaRef, schema: registry.toJsonSchema(parsed.schemaRef) };
-}
+});
 
-export async function listWorkflowSchemaRefsAction() {
-  const user = await requireUser();
+export const listWorkflowSchemaRefsAction = withAuth(async (user, { tenant }) => {
   initializeWorkflowRuntimeV2();
   const { knex } = await createTenantKnex();
   await requireWorkflowPermission(user, 'read', knex);
   const registry = getSchemaRegistry();
   return { refs: registry.listRefs() };
-}
+});
 
-export async function searchWorkflowSchemaRefsAction(input: unknown) {
-  const user = await requireUser();
+export const searchWorkflowSchemaRefsAction = withAuth(async (user, { tenant }, input: unknown) => {
   initializeWorkflowRuntimeV2();
   const parsed = z
     .object({ query: z.string().trim().min(1), limit: z.number().int().min(1).max(500).optional() })
@@ -2372,10 +2336,9 @@ export async function searchWorkflowSchemaRefsAction(input: unknown) {
     .filter((ref) => ref.toLowerCase().includes(queryLower))
     .slice(0, parsed.limit ?? 100);
   return { refs: matches };
-}
+});
 
-export async function listWorkflowSchemasMetaAction() {
-  const user = await requireUser();
+export const listWorkflowSchemasMetaAction = withAuth(async (user, { tenant }) => {
   initializeWorkflowRuntimeV2();
   const { knex } = await createTenantKnex();
   await requireWorkflowPermission(user, 'read', knex);
@@ -2390,14 +2353,13 @@ export async function listWorkflowSchemasMetaAction() {
     };
   });
   return { schemas: items };
-}
+});
 
-export async function submitWorkflowEventAction(input: unknown) {
-  const user = await requireUser();
+export const submitWorkflowEventAction = withAuth(async (user, { tenant }, input: unknown) => {
   initializeWorkflowRuntimeV2();
   const parsed = SubmitWorkflowEventInput.parse(input);
 
-  const { knex, tenant } = await createTenantKnex();
+  const { knex } = await createTenantKnex();
   await requireWorkflowPermission(user, 'manage', knex);
   let runId: string | null = null;
   let eventRecord: Awaited<ReturnType<typeof WorkflowRuntimeEventModelV2.create>> | null = null;
@@ -2602,12 +2564,11 @@ export async function submitWorkflowEventAction(input: unknown) {
   }
 
   return { status: runId ? 'resumed' : 'no_wait', runId, startedRuns, eventId: (eventRecord as any)?.event_id ?? null };
-}
+});
 
-export async function listWorkflowEventsAction(input: unknown) {
-  const user = await requireUser();
+export const listWorkflowEventsAction = withAuth(async (user, { tenant }, input: unknown) => {
   const parsed = ListWorkflowEventsInput.parse(input ?? {});
-  const { knex, tenant } = await createTenantKnex();
+  const { knex } = await createTenantKnex();
   await requireWorkflowPermission(user, 'read', knex);
 
   const rows = await WorkflowRuntimeEventModelV2.list(knex, {
@@ -2636,7 +2597,7 @@ export async function listWorkflowEventsAction(input: unknown) {
   }));
 
   return { events: sanitized, nextCursor };
-}
+});
 
 export async function exportWorkflowEventsAction(input: unknown) {
   const rawInput = (input ?? {}) as Record<string, unknown>;
@@ -2694,10 +2655,9 @@ export async function exportWorkflowEventsAction(input: unknown) {
   };
 }
 
-export async function listWorkflowEventSummaryAction(input: unknown) {
-  const user = await requireUser();
+export const listWorkflowEventSummaryAction = withAuth(async (user, { tenant }, input: unknown) => {
   const parsed = ListWorkflowEventsInput.parse(input);
-  const { knex, tenant } = await createTenantKnex();
+  const { knex } = await createTenantKnex();
   await requireWorkflowPermission(user, 'read', knex);
 
   const query = knex('workflow_runtime_events')
@@ -2731,12 +2691,11 @@ export async function listWorkflowEventSummaryAction(input: unknown) {
     unmatched: Number(row?.unmatched ?? 0),
     error: Number(row?.error ?? 0)
   };
-}
+});
 
-export async function getWorkflowEventAction(input: unknown) {
-  const user = await requireUser();
+export const getWorkflowEventAction = withAuth(async (user, { tenant }, input: unknown) => {
   const parsed = EventIdInput.parse(input);
-  const { knex, tenant } = await createTenantKnex();
+  const { knex } = await createTenantKnex();
   await requireWorkflowPermission(user, 'read', knex);
 
   const event = await WorkflowRuntimeEventModelV2.getById(knex, parsed.eventId);
@@ -2765,4 +2724,4 @@ export async function getWorkflowEventAction(input: unknown) {
     wait,
     run
   };
-}
+});

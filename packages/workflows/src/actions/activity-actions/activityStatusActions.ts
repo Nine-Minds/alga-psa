@@ -1,38 +1,32 @@
 'use server';
 
-import { 
+import {
   ActivityType,
   Activity
 } from "@alga-psa/types";
 import { createTenantKnex } from "@alga-psa/db";
-import { getCurrentUser } from "@alga-psa/users/actions";
+import { withAuth } from "@alga-psa/auth";
 import { revalidatePath } from "next/cache";
 import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 
 /**
  * Server action to update the status of an activity
- * 
+ *
  * @param activityId The ID of the activity to update
  * @param activityType The type of the activity
  * @param newStatus The new status to set
  * @returns Promise resolving to a boolean indicating success
  */
-export async function updateActivityStatus(
+export const updateActivityStatus = withAuth(async (
+  _user,
+  { tenant },
   activityId: string,
   activityType: ActivityType,
   newStatus: string
-): Promise<boolean> {
+): Promise<boolean> => {
   try {
-    const user = await getCurrentUser();
-    if (!user) {
-      throw new Error("User not authenticated");
-    }
-
-    const { knex: db, tenant } = await createTenantKnex();
-    if (!tenant) {
-      throw new Error("Tenant is required");
-    }
+    const { knex: db } = await createTenantKnex();
 
     // Update the status based on the activity type
     await withTransaction(db, async (trx: Knex.Transaction) => {
@@ -123,31 +117,25 @@ export async function updateActivityStatus(
     console.error(`Error updating activity status (${activityId}, ${activityType}, ${newStatus}):`, error);
     throw new Error("Failed to update activity status. Please try again later.");
   }
-}
+});
 
 /**
  * Server action to update the priority of an activity
- * 
+ *
  * @param activityId The ID of the activity to update
  * @param activityType The type of the activity
  * @param newPriority The new priority to set
  * @returns Promise resolving to a boolean indicating success
  */
-export async function updateActivityPriority(
+export const updateActivityPriority = withAuth(async (
+  _user,
+  { tenant },
   activityId: string,
   activityType: ActivityType,
   newPriority: string
-): Promise<boolean> {
+): Promise<boolean> => {
   try {
-    const user = await getCurrentUser();
-    if (!user) {
-      throw new Error("User not authenticated");
-    }
-
-    const { knex: db, tenant } = await createTenantKnex();
-    if (!tenant) {
-      throw new Error("Tenant is required");
-    }
+    const { knex: db } = await createTenantKnex();
 
     // Update the priority based on the activity type
     await withTransaction(db, async (trx: Knex.Transaction) => {
@@ -198,31 +186,25 @@ export async function updateActivityPriority(
     console.error(`Error updating activity priority (${activityId}, ${activityType}, ${newPriority}):`, error);
     throw new Error("Failed to update activity priority. Please try again later.");
   }
-}
+});
 
 /**
  * Server action to reassign an activity to a different user
- * 
+ *
  * @param activityId The ID of the activity to reassign
  * @param activityType The type of the activity
  * @param newAssigneeId The ID of the user to assign the activity to
  * @returns Promise resolving to a boolean indicating success
  */
-export async function reassignActivity(
+export const reassignActivity = withAuth(async (
+  _user,
+  { tenant },
   activityId: string,
   activityType: ActivityType,
   newAssigneeId: string
-): Promise<boolean> {
+): Promise<boolean> => {
   try {
-    const user = await getCurrentUser();
-    if (!user) {
-      throw new Error("User not authenticated");
-    }
-
-    const { knex: db, tenant } = await createTenantKnex();
-    if (!tenant) {
-      throw new Error("Tenant is required");
-    }
+    const { knex: db } = await createTenantKnex();
 
     // Update the assignee based on the activity type
     await withTransaction(db, async (trx: Knex.Transaction) => {
@@ -302,4 +284,4 @@ export async function reassignActivity(
     console.error(`Error reassigning activity (${activityId}, ${activityType}, ${newAssigneeId}):`, error);
     throw new Error("Failed to reassign activity. Please try again later.");
   }
-}
+});

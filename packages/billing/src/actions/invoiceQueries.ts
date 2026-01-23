@@ -14,7 +14,7 @@ import { createTenantKnex } from '@alga-psa/db';
 import { toPlainDate } from '@alga-psa/core';
 import Invoice from '@alga-psa/billing/models/invoice';
 import { getClientContractPurchaseOrderContext, getPurchaseOrderConsumedCents } from '@alga-psa/billing/services/purchaseOrderService';
-import { getCurrentUser } from '@alga-psa/auth/getCurrentUser';
+import { withAuth } from '@alga-psa/auth';
 
 // Types for paginated invoice fetching
 export interface FetchInvoicesOptions {
@@ -84,9 +84,11 @@ async function getBasicInvoiceViewModel(invoice: IInvoice, client: any): Promise
 /**
  * Fetch invoices with server-side pagination and search
  */
-export async function fetchInvoicesPaginated(
+export const fetchInvoicesPaginated = withAuth(async (
+  user,
+  { tenant },
   options: FetchInvoicesOptions = {}
-): Promise<PaginatedInvoicesResult> {
+): Promise<PaginatedInvoicesResult> => {
   const {
     page = 1,
     pageSize = 10,
@@ -98,12 +100,8 @@ export async function fetchInvoicesPaginated(
 
   try {
     console.log(`Fetching paginated invoices: page=${page}, pageSize=${pageSize}, status=${status}, search="${searchTerm}"`);
-    const currentUser = await getCurrentUser();
-    if (!currentUser) {
-        throw new Error('Unauthorized: No authenticated user found');
-    }
 
-    const { knex, tenant } = await createTenantKnex(currentUser.tenant);
+    const { knex } = await createTenantKnex();
 
     const result = await withTransaction(knex, async (trx: Knex.Transaction) => {
       // Build base query for counting and fetching
@@ -316,22 +314,22 @@ export async function fetchInvoicesPaginated(
     console.error('Error fetching paginated invoices:', error);
     throw new Error('Error fetching paginated invoices');
   }
-}
+});
 
 /**
  * Fetch invoices for a specific client
  * @param clientId The ID of the client to fetch invoices for
  * @returns Array of invoice view models
  */
-export async function fetchInvoicesByClient(clientId: string): Promise<InvoiceViewModel[]> {
+export const fetchInvoicesByClient = withAuth(async (
+  user,
+  { tenant },
+  clientId: string
+): Promise<InvoiceViewModel[]> => {
   try {
     console.log(`Fetching invoices for client: ${clientId}`);
-    const currentUser = await getCurrentUser();
-    if (!currentUser) {
-        throw new Error('Unauthorized: No authenticated user found');
-    }
 
-    const { knex, tenant } = await createTenantKnex(currentUser.tenant);
+    const { knex } = await createTenantKnex();
     
     // Get invoices with client info and location data in a single query, filtered by client_id
     const invoices = await withTransaction(knex, async (trx: Knex.Transaction) => {
@@ -411,27 +409,24 @@ export async function fetchInvoicesByClient(clientId: string): Promise<InvoiceVi
     console.error(`Error fetching invoices for client ${clientId}:`, error);
     throw new Error('Error fetching client invoices');
   }
-}
+});
 
-export async function getInvoiceForRendering(invoiceId: string): Promise<InvoiceViewModel> {
+export const getInvoiceForRendering = withAuth(async (
+  user,
+  { tenant },
+  invoiceId: string
+): Promise<InvoiceViewModel> => {
   try {
     console.log('Fetching full invoice details for rendering:', invoiceId);
-    const currentUser = await getCurrentUser();
-    if (!currentUser) {
-        throw new Error('Unauthorized: No authenticated user found');
-    }
 
-    const { knex, tenant } = await createTenantKnex(currentUser.tenant);
-    if (!tenant) {
-      throw new Error('Tenant not found');
-    }
+    const { knex } = await createTenantKnex();
 
     return Invoice.getFullInvoiceById(knex, invoiceId);
   } catch (error) {
     console.error('Error fetching invoice for rendering:', error);
     throw new Error('Error fetching invoice for rendering');
   }
-}
+});
 
 export type InvoicePurchaseOrderSummary = {
   invoice_id: string;
@@ -442,18 +437,12 @@ export type InvoicePurchaseOrderSummary = {
   remaining_cents: number | null;
 };
 
-export async function getInvoicePurchaseOrderSummary(
+export const getInvoicePurchaseOrderSummary = withAuth(async (
+  user,
+  { tenant },
   invoiceId: string
-): Promise<InvoicePurchaseOrderSummary | null> {
-  const currentUser = await getCurrentUser();
-  if (!currentUser) {
-      throw new Error('Unauthorized: No authenticated user found');
-  }
-
-  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
-  if (!tenant) {
-    throw new Error('Tenant not found');
-  }
+): Promise<InvoicePurchaseOrderSummary | null> => {
+  const { knex } = await createTenantKnex();
 
   const invoice = await knex('invoices')
     .where({ tenant, invoice_id: invoiceId })
@@ -493,17 +482,16 @@ export async function getInvoicePurchaseOrderSummary(
     consumed_cents: consumed,
     remaining_cents: remaining,
   };
-}
+});
 
 // New function to get invoice items on demand
-export async function getInvoiceLineItems(invoiceId: string): Promise<IInvoiceCharge[]> {
+export const getInvoiceLineItems = withAuth(async (
+  user,
+  { tenant },
+  invoiceId: string
+): Promise<IInvoiceCharge[]> => {
   try {
-    const currentUser = await getCurrentUser();
-    if (!currentUser) {
-        throw new Error('Unauthorized: No authenticated user found');
-    }
-
-    const { knex } = await createTenantKnex(currentUser.tenant);
+    const { knex } = await createTenantKnex();
     console.log('Fetching line items for invoice:', invoiceId);
     const items = await Invoice.getInvoiceItems(knex, invoiceId);
     console.log(`Got ${items.length} line items`);
@@ -512,4 +500,4 @@ export async function getInvoiceLineItems(invoiceId: string): Promise<IInvoiceCh
     console.error('Error fetching invoice items:', error);
     throw new Error('Error fetching invoice items');
   }
-}
+});

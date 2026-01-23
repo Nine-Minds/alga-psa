@@ -2,20 +2,17 @@
 
 import { createTenantKnex } from '@alga-psa/db';
 import { ICreditExpirationSettings } from '@alga-psa/types';
-import { getCurrentUser } from '@alga-psa/auth/getCurrentUser';
+import { withAuth } from '@alga-psa/auth';
 
 /**
  * Get credit expiration settings for a client.
  */
-export async function getCreditExpirationSettings(
+export const getCreditExpirationSettings = withAuth(async (
+  user,
+  { tenant },
   clientId: string
-): Promise<ICreditExpirationSettings> {
-  const currentUser = await getCurrentUser();
-  if (!currentUser) {
-    throw new Error('No authenticated user found');
-  }
-
-  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
+): Promise<ICreditExpirationSettings> => {
+  const { knex } = await createTenantKnex();
   if (!tenant) throw new Error('No tenant found');
 
   const clientSettings = await knex('client_billing_settings')
@@ -53,22 +50,19 @@ export async function getCreditExpirationSettings(
     credit_expiration_days: creditExpirationDays,
     credit_expiration_notification_days: creditExpirationNotificationDays,
   };
-}
+});
 
 /**
  * Update credit expiration settings for a client.
  */
-export async function updateCreditExpirationSettings(
+export const updateCreditExpirationSettings = withAuth(async (
+  user,
+  { tenant },
   clientId: string,
   settings: ICreditExpirationSettings
-): Promise<{ success: boolean; error?: string }> {
+): Promise<{ success: boolean; error?: string }> => {
   try {
-    const currentUser = await getCurrentUser();
-    if (!currentUser) {
-      throw new Error('No authenticated user found');
-    }
-
-    const { knex, tenant } = await createTenantKnex(currentUser.tenant);
+    const { knex } = await createTenantKnex();
     if (!tenant) throw new Error('No tenant found');
 
     await knex.transaction(async (trx) => {
@@ -116,5 +110,4 @@ export async function updateCreditExpirationSettings(
       error: error instanceof Error ? error.message : 'Unknown error occurred',
     };
   }
-}
-
+});

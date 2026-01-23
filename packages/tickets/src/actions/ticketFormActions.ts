@@ -2,7 +2,6 @@
 
 import type { IUser, IBoard, ITicketStatus, IPriority, IClient, IContact } from '@alga-psa/types';
 import { getAllUsers } from '@alga-psa/users/actions';
-import { getCurrentUser } from '@alga-psa/auth/getCurrentUser';
 import { getAllBoards } from './board-actions';
 import { getTicketStatuses } from '@alga-psa/reference-data/actions';
 import { getAllPriorities, getPrioritiesByBoardType } from '@alga-psa/reference-data/actions';
@@ -10,6 +9,7 @@ import { getAllClients, getClientById, getContactsByClient } from './clientLooku
 import { withTransaction } from '@alga-psa/db';
 import { createTenantKnex } from '@alga-psa/db';
 import { Knex } from 'knex';
+import { withAuth } from '@alga-psa/auth';
 
 export interface TicketFormData {
   users: IUser[];
@@ -25,14 +25,8 @@ export interface TicketFormData {
   };
 }
 
-export async function getTicketFormData(prefilledClientId?: string): Promise<TicketFormData> {
+export const getTicketFormData = withAuth(async (_user, _ctx, prefilledClientId?: string): Promise<TicketFormData> => {
   try {
-    // Get current user first to ensure tenant context
-    const user = await getCurrentUser();
-    if (!user) {
-      throw new Error('No active session found');
-    }
-
     // Fetch required data first
     const [users, boards, statuses, priorities, clients] = await Promise.all([
       getAllUsers(false).catch(error => {
@@ -97,16 +91,11 @@ export async function getTicketFormData(prefilledClientId?: string): Promise<Tic
       clients: [],
     };
   }
-}
+});
 
-export async function getClientTicketFormData(): Promise<Partial<TicketFormData>> {
+export const getClientTicketFormData = withAuth(async (_user, { tenant }): Promise<Partial<TicketFormData>> => {
   try {
-    const currentUser = await getCurrentUser();
-    if (!currentUser) {
-      throw new Error('No authenticated user found');
-    }
-
-    const { knex: db, tenant } = await createTenantKnex(currentUser.tenant);
+    const { knex: db } = await createTenantKnex();
 
     // Get the default board for client portal tickets
     const defaultBoard = await withTransaction(db, async (trx: Knex.Transaction) => {
@@ -146,4 +135,4 @@ export async function getClientTicketFormData(): Promise<Partial<TicketFormData>
       clients: [],
     };
   }
-}
+});

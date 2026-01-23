@@ -1,7 +1,7 @@
 'use server';
 
 import { createTenantKnex } from '@alga-psa/db';
-import { getCurrentUser } from './userActions';
+import { withAuth } from '@alga-psa/auth';
 
 export interface MentionUser {
   user_id: string;
@@ -16,14 +16,11 @@ export interface MentionUser {
  * Returns users matching the query by username, first name, or last name
  * Only returns active internal users from the same tenant
  */
-export async function searchUsersForMentions(query: string = ''): Promise<MentionUser[]> {
-  const currentUser = await getCurrentUser();
-
-  if (!currentUser) {
-    console.error('[searchUsersForMentions] Not authenticated');
-    throw new Error('Not authenticated');
-  }
-
+export const searchUsersForMentions = withAuth(async (
+  _user,
+  { tenant },
+  query: string = ''
+): Promise<MentionUser[]> => {
   const { knex } = await createTenantKnex();
 
   try {
@@ -37,7 +34,7 @@ export async function searchUsersForMentions(query: string = ''): Promise<Mentio
         knex.raw("CONCAT(first_name, ' ', last_name) as display_name"),
         'email'
       )
-      .where('tenant', currentUser.tenant)
+      .where('tenant', tenant)
       .andWhere('user_type', 'internal') // Only internal MSP users can be mentioned
       .andWhere('is_inactive', false); // Only active users
 
@@ -71,4 +68,4 @@ export async function searchUsersForMentions(query: string = ''): Promise<Mentio
     console.error('[searchUsersForMentions] Error:', error);
     throw error;
   }
-}
+});
