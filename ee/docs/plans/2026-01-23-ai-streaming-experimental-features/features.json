@@ -20,7 +20,7 @@
   {
     "id": "F004",
     "description": "Create ExperimentalFeaturesSettings React component with toggle list UI",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Experimental Features Settings Tab"]
   },
   {

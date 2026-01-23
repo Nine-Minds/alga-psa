@@ -82,4 +82,7 @@ curl -X POST localhost:3000/api/chat/stream/chat \
 - Validation: `npm -w @alga-psa/tenancy run typecheck`
 - Implemented `isExperimentalFeatureEnabled(featureKey)` server action (strict `=== true` check; unknown/unset keys return false): `packages/tenancy/src/actions/tenant-settings-actions/tenantSettingsActions.ts`
 - Validation: `npm -w @alga-psa/tenancy run typecheck`
-- Next feature item: F004 ExperimentalFeaturesSettings React component
+- Implemented `ExperimentalFeaturesSettings` client component with load-on-mount + local toggle state: `server/src/components/settings/general/ExperimentalFeaturesSettings.tsx`
+- Validation: `npx eslint server/src/components/settings/general/ExperimentalFeaturesSettings.tsx --max-warnings=0`
+- Note: `npm -w server run typecheck` currently fails due to missing `@ee/components/chat/QuickAskOverlay` module import in `server/src/components/chat/QuickAskOverlay.tsx` (unrelated to experimental features UI).
+- Next feature item: F005 Add 'Experimental Features' tab to `server/src/components/settings/SettingsPage.tsx`
