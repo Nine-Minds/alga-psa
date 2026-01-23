@@ -104,7 +104,7 @@
   {
     "id": "F018",
     "description": "Format streaming response as SSE with `data: {\"content\": \"token\", \"done\": false}` format",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Streaming Implementation"]
   },
   {

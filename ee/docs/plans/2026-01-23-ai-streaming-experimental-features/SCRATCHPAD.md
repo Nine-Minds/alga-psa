@@ -133,4 +133,9 @@ curl -X POST localhost:3000/api/chat/stream/chat \
   - Added `generateStreamingCompletion()` internal helper that calls OpenRouter with `stream: true`
   - File: `ee/server/src/services/chatCompletionsService.ts`
 - Validation: `npm -w sebastian-ee run typecheck` currently fails due to pre-existing TS2307 imports in `ee/server/src/components/chat/QuickAskOverlay.tsx` (unrelated to streaming support)
-- Next feature item: F018 Format streaming response as SSE `data: {"content":"token","done":false}`
+- Implemented SSE token chunk formatting for streaming completions endpoint:
+  - `/api/chat/v1/completions/stream` now reads request `messages` and streams tokens as `data: {"content":"...","done":false}\n\n`
+  - File: `server/src/app/api/chat/v1/completions/stream/route.ts`
+  - Note: no final `done:true` event yet (next item)
+- Validation: `npx eslint server/src/app/api/chat/v1/completions/stream/route.ts --max-warnings=0`
+- Next feature item: F019 Send final SSE message `done: true` on completion
