@@ -17,6 +17,8 @@ import {
   updateBlockContent,
 } from '@alga-psa/documents/actions/documentBlockContentActions';
 import type { IDocument } from '@alga-psa/types';
+import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
+import { buildNoteCreatedPayload } from '@alga-psa/shared/workflow/streams/domainEventBuilders/crmInteractionNoteEventBuilders';
 
 export interface ClientNoteContent {
   document: IDocument | null;
@@ -178,6 +180,22 @@ export async function saveClientNote(
           notes_document_id: document_id,
           updated_at: knex.fn.now(),
         });
+
+      const occurredAt = new Date().toISOString();
+      await publishWorkflowEvent({
+        eventType: 'NOTE_CREATED',
+        payload: buildNoteCreatedPayload({
+          noteId: document_id,
+          entityType: 'client',
+          entityId: clientId,
+          createdByUserId: currentUser.user_id,
+          createdAt: occurredAt,
+          visibility: 'internal',
+          bodyPreview: blockData,
+        }),
+        ctx: { tenantId: tenant, occurredAt, actor: { actorType: 'USER' as const, actorUserId: currentUser.user_id } },
+        idempotencyKey: `note_created:client:${clientId}:${document_id}`,
+      });
 
       return { document_id };
     }

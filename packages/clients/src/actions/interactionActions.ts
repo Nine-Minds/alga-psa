@@ -8,6 +8,8 @@ import { revalidatePath } from 'next/cache'
 import InteractionModel from '../models/interactions';
 import { IInteractionType, IInteraction } from '@alga-psa/types'
 import { getCurrentUser } from '@alga-psa/auth/getCurrentUser';
+import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
+import { buildInteractionLoggedPayload } from '@alga-psa/shared/workflow/streams/domainEventBuilders/crmInteractionNoteEventBuilders';
 
 import { createTenantKnex } from '@alga-psa/db';
 
@@ -26,6 +28,12 @@ async function getDefaultInteractionStatusId(trx: any, tenant: string): Promise<
   }
 
   return defaultStatus.status_id;
+}
+
+function maybeUserActor(currentUser: any) {
+  const userId = currentUser?.user_id;
+  if (typeof userId !== 'string' || !userId) return undefined;
+  return { actorType: 'USER' as const, actorUserId: userId };
 }
 
 export async function addInteraction(interactionData: Omit<IInteraction, 'interaction_date'>): Promise<IInteraction> {
@@ -52,9 +60,23 @@ export async function addInteraction(interactionData: Omit<IInteraction, 'intera
     const newInteraction = await withTransaction(db, async (trx: Knex.Transaction) => {
       // Set default status if none provided
       const status_id = interactionData.status_id || await getDefaultInteractionStatusId(trx, tenant);
+
+      let resolvedClientId = interactionData.client_id;
+      if (!resolvedClientId && interactionData.contact_name_id) {
+        const contact = await trx('contacts')
+          .where({ tenant, contact_name_id: interactionData.contact_name_id })
+          .select('client_id')
+          .first();
+        resolvedClientId = contact?.client_id ?? null;
+      }
+
+      if (!resolvedClientId) {
+        throw new Error('Interactions must be linked to a client');
+      }
       
       return await InteractionModel.addInteraction({
         ...interactionData,
+        client_id: resolvedClientId,
         status_id,
         tenant,
         interaction_date: new Date(),
@@ -62,6 +84,34 @@ export async function addInteraction(interactionData: Omit<IInteraction, 'intera
     });
 
     console.log('New interaction created:', newInteraction);
+
+    const occurredAt =
+      newInteraction.interaction_date instanceof Date
+        ? newInteraction.interaction_date.toISOString()
+        : new Date(newInteraction.interaction_date as any).toISOString();
+
+    const interactionType =
+      typeof (newInteraction as any).type_name === 'string' && (newInteraction as any).type_name
+        ? String((newInteraction as any).type_name)
+        : 'interaction';
+
+    await publishWorkflowEvent({
+      eventType: 'INTERACTION_LOGGED',
+      payload: buildInteractionLoggedPayload({
+        interactionId: newInteraction.interaction_id,
+        clientId: newInteraction.client_id as string,
+        ...(newInteraction.contact_name_id ? { contactId: newInteraction.contact_name_id } : {}),
+        interactionType,
+        interactionOccurredAt: occurredAt,
+        loggedByUserId: newInteraction.user_id,
+        ...(typeof newInteraction.title === 'string' && newInteraction.title ? { subject: newInteraction.title } : {}),
+        ...(typeof (newInteraction as any).status_name === 'string' && (newInteraction as any).status_name
+          ? { outcome: String((newInteraction as any).status_name) }
+          : {}),
+      }),
+      ctx: { tenantId: tenant, occurredAt, actor: maybeUserActor(currentUser) },
+      idempotencyKey: `interaction_logged:${newInteraction.interaction_id}:${occurredAt}`,
+    });
 
     revalidatePath('/msp/contacts/[id]', 'page')
     revalidatePath('/msp/clients/[id]', 'page')

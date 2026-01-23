@@ -376,9 +376,18 @@ Implication: we should standardize on `@alga-psa/event-bus/publishers` helpers f
   - Notes/constraints:
     - `CONTACT_MERGED` remains catalog-only for now (no authoritative “merge contacts” path exists in product code today).
 
+- 2026-01-23: Completed `F052` (CRM interaction/note events emission):
+  - Added shared payload builders + schema-compat unit tests:
+    - `shared/workflow/streams/domainEventBuilders/crmInteractionNoteEventBuilders.ts`
+    - `shared/workflow/streams/domainEventBuilders/__tests__/crmInteractionNoteEventBuilders.test.ts`
+  - Emitted workflow v2 domain events from real CRM activity paths:
+    - `packages/clients/src/actions/interactionActions.ts` publishes `INTERACTION_LOGGED` on interaction creation (derives `channel` from interaction type; ensures interactions are linked to a `clientId`).
+    - `packages/clients/src/actions/clientNoteActions.ts` publishes `NOTE_CREATED` when a notes document is first created/linked to a client.
+    - `packages/clients/src/actions/contact-actions/contactNoteActions.ts` publishes `NOTE_CREATED` when a notes document is first created/linked to a contact.
+
 ## Next Up
 
-- `F052`: emit CRM interaction/note events (INTERACTION_LOGGED, NOTE_CREATED).
+- `F053`: emit tag definition and tag application events (TAG_DEFINITION_CREATED, TAG_DEFINITION_UPDATED, TAG_APPLIED, TAG_REMOVED).
 
 ## Suggested Phasing (to reduce risk)
 
