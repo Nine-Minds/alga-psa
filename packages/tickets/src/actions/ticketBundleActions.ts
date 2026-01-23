@@ -5,9 +5,22 @@ import { createTenantKnex } from '@alga-psa/db';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { z } from 'zod';
 import type { IUser } from '@alga-psa/types';
+import { publishWorkflowEvent, type WorkflowEventPublishContext } from '@alga-psa/event-bus/publishers';
 
 function nowIso() {
   return new Date().toISOString();
+}
+
+function buildTicketBundleWorkflowCtx(params: {
+  tenantId: string;
+  actorUserId: string;
+  occurredAt: string;
+}): WorkflowEventPublishContext {
+  return {
+    tenantId: params.tenantId,
+    occurredAt: params.occurredAt,
+    actor: { actorType: 'USER', actorUserId: params.actorUserId },
+  };
 }
 
 async function ensureTicketsAreNotBundleMasters(
@@ -65,8 +78,10 @@ export async function bundleTicketsAction(input: z.input<typeof bundleTicketsSch
 
   const { knex: db, tenant } = await createTenantKnex(user.tenant);
   if (!tenant) throw new Error('Tenant not found');
+  const occurredAt = nowIso();
+  const workflowCtx = buildTicketBundleWorkflowCtx({ tenantId: tenant, actorUserId: user.user_id, occurredAt });
 
-  return withTransaction(db, async (trx) => {
+  const result = await withTransaction(db, async (trx) => {
     if (!await hasPermission(user, 'ticket', 'update', trx)) {
       throw new Error('Permission denied: Cannot bundle tickets');
     }
@@ -131,6 +146,22 @@ export async function bundleTicketsAction(input: z.input<typeof bundleTicketsSch
 
     return { masterTicketId: data.masterTicketId, childTicketIds: uniqueChildIds, mode: data.mode };
   });
+
+  for (const childTicketId of result.childTicketIds) {
+    await publishWorkflowEvent({
+      eventType: 'TICKET_MERGED',
+      ctx: workflowCtx,
+      eventName: 'Ticket Merged',
+      payload: {
+        sourceTicketId: childTicketId,
+        targetTicketId: result.masterTicketId,
+        mergedAt: occurredAt,
+        reason: `bundle:${result.mode}`,
+      },
+    });
+  }
+
+  return result;
 }
 
 const addChildrenSchema = z.object({
@@ -147,8 +178,10 @@ export async function addChildrenToBundleAction(input: z.input<typeof addChildre
 
   const { knex: db, tenant } = await createTenantKnex(user.tenant);
   if (!tenant) throw new Error('Tenant not found');
+  const occurredAt = nowIso();
+  const workflowCtx = buildTicketBundleWorkflowCtx({ tenantId: tenant, actorUserId: user.user_id, occurredAt });
 
-  return withTransaction(db, async (trx) => {
+  const result = await withTransaction(db, async (trx) => {
     if (!await hasPermission(user, 'ticket', 'update', trx)) {
       throw new Error('Permission denied: Cannot modify ticket bundles');
     }
@@ -185,6 +218,22 @@ export async function addChildrenToBundleAction(input: z.input<typeof addChildre
 
     return { masterTicketId: data.masterTicketId, childTicketIds: childIds };
   });
+
+  for (const childTicketId of result.childTicketIds) {
+    await publishWorkflowEvent({
+      eventType: 'TICKET_MERGED',
+      ctx: workflowCtx,
+      eventName: 'Ticket Merged',
+      payload: {
+        sourceTicketId: childTicketId,
+        targetTicketId: result.masterTicketId,
+        mergedAt: occurredAt,
+        reason: 'bundle:added_children',
+      },
+    });
+  }
+
+  return result;
 }
 
 const promoteMasterSchema = z.object({
@@ -199,8 +248,10 @@ export async function promoteBundleMasterAction(input: z.input<typeof promoteMas
   }
   const { knex: db, tenant } = await createTenantKnex(user.tenant);
   if (!tenant) throw new Error('Tenant not found');
+  const occurredAt = nowIso();
+  const workflowCtx = buildTicketBundleWorkflowCtx({ tenantId: tenant, actorUserId: user.user_id, occurredAt });
 
-  return withTransaction(db, async (trx) => {
+  const result = await withTransaction(db, async (trx) => {
     if (!await hasPermission(user, 'ticket', 'update', trx)) {
       throw new Error('Permission denied: Cannot modify ticket bundles');
     }
@@ -276,6 +327,20 @@ export async function promoteBundleMasterAction(input: z.input<typeof promoteMas
 
     return { oldMasterTicketId: data.oldMasterTicketId, newMasterTicketId: data.newMasterTicketId };
   });
+
+  await publishWorkflowEvent({
+    eventType: 'TICKET_MERGED',
+    ctx: workflowCtx,
+    eventName: 'Ticket Merged',
+    payload: {
+      sourceTicketId: result.oldMasterTicketId,
+      targetTicketId: result.newMasterTicketId,
+      mergedAt: occurredAt,
+      reason: 'bundle:promote_master',
+    },
+  });
+
+  return result;
 }
 
 const updateBundleSettingsSchema = z.object({
@@ -328,8 +393,10 @@ export async function removeChildFromBundleAction(input: z.input<typeof removeCh
   const data = removeChildSchema.parse(input);
   const { knex: db, tenant } = await createTenantKnex(user.tenant);
   if (!tenant) throw new Error('Tenant not found');
+  const occurredAt = nowIso();
+  const workflowCtx = buildTicketBundleWorkflowCtx({ tenantId: tenant, actorUserId: user.user_id, occurredAt });
 
-  return withTransaction(db, async (trx) => {
+  const result = await withTransaction(db, async (trx) => {
     if (!await hasPermission(user, 'ticket', 'update', trx)) {
       throw new Error('Permission denied: Cannot modify ticket bundles');
     }
@@ -365,6 +432,20 @@ export async function removeChildFromBundleAction(input: z.input<typeof removeCh
 
     return { masterTicketId, childTicketId: data.childTicketId, remainingChildren: remaining };
   });
+
+  await publishWorkflowEvent({
+    eventType: 'TICKET_SPLIT',
+    ctx: workflowCtx,
+    eventName: 'Ticket Split',
+    payload: {
+      originalTicketId: result.masterTicketId,
+      newTicketIds: [result.childTicketId],
+      splitAt: occurredAt,
+      reason: 'bundle:remove_child',
+    },
+  });
+
+  return result;
 }
 
 const unbundleSchema = z.object({
@@ -375,8 +456,10 @@ export async function unbundleMasterTicketAction(input: z.input<typeof unbundleS
   const data = unbundleSchema.parse(input);
   const { knex: db, tenant } = await createTenantKnex(user.tenant);
   if (!tenant) throw new Error('Tenant not found');
+  const occurredAt = nowIso();
+  const workflowCtx = buildTicketBundleWorkflowCtx({ tenantId: tenant, actorUserId: user.user_id, occurredAt });
 
-  return withTransaction(db, async (trx) => {
+  const result = await withTransaction(db, async (trx) => {
     if (!await hasPermission(user, 'ticket', 'update', trx)) {
       throw new Error('Permission denied: Cannot modify ticket bundles');
     }
@@ -388,6 +471,11 @@ export async function unbundleMasterTicketAction(input: z.input<typeof unbundleS
       .first();
     if (!master) throw new Error('Master ticket not found');
     if (master.master_ticket_id) throw new Error('Cannot unbundle from a child ticket id');
+
+    const childTicketRows = await trx('tickets')
+      .select('ticket_id')
+      .where({ tenant, master_ticket_id: data.masterTicketId });
+    const childTicketIds = childTicketRows.map((r: any) => r.ticket_id);
 
     await trx('tickets')
       .where({ tenant, master_ticket_id: data.masterTicketId })
@@ -401,6 +489,22 @@ export async function unbundleMasterTicketAction(input: z.input<typeof unbundleS
       .where({ tenant, master_ticket_id: data.masterTicketId })
       .delete();
 
-    return { masterTicketId: data.masterTicketId };
+    return { masterTicketId: data.masterTicketId, childTicketIds };
   });
+
+  if (result.childTicketIds.length > 0) {
+    await publishWorkflowEvent({
+      eventType: 'TICKET_SPLIT',
+      ctx: workflowCtx,
+      eventName: 'Ticket Split',
+      payload: {
+        originalTicketId: result.masterTicketId,
+        newTicketIds: result.childTicketIds,
+        splitAt: occurredAt,
+        reason: 'bundle:unbundle_master',
+      },
+    });
+  }
+
+  return result;
 }

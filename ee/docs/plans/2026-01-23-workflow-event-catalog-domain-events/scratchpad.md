@@ -138,9 +138,17 @@ Implication: we should standardize on `@alga-psa/event-bus/publishers` helpers f
   - Extended ticket zod schemas to include ITIL escalation fields (present in DB): `packages/tickets/src/schemas/ticket.schema.ts`.
   - Added unit coverage for transition detection: `packages/tickets/src/lib/__tests__/workflowTicketTransitionEvents.test.ts` (runs without DB).
 
+- 2026-01-23: Completed `F011` (ticket relationship/aggregation emission):
+  - Implemented `TICKET_MERGED` / `TICKET_SPLIT` emissions via ticket bundling actions:
+    - `packages/tickets/src/actions/ticketBundleActions.ts` now publishes:
+      - `TICKET_MERGED` when child tickets are attached to a master bundle (bundle/add children/promote master).
+      - `TICKET_SPLIT` when child tickets are detached (remove child/unbundle master).
+    - Semantics note: these events represent **bundle attach/detach** in today’s product (there is no true destructive “merge tickets” feature yet); payload still follows proposed schema (`sourceTicketId`/`targetTicketId`, `originalTicketId`/`newTicketIds`) and includes `reason` for workflow authors.
+  - Updated bundling integration test harness to mock `@alga-psa/event-bus/publishers` to keep DB-backed tests isolated from the event bus.
+
 ## Next Up
 
-- `F011`: emit ticket relationship/aggregation events (`TICKET_MERGED`, `TICKET_SPLIT`).
+- `F012`: emit ticket communication events (`TICKET_MESSAGE_ADDED`, `TICKET_CUSTOMER_REPLIED`, `TICKET_INTERNAL_NOTE_ADDED`).
 
 ## Suggested Phasing (to reduce risk)
 
@@ -168,7 +176,6 @@ Phase 3 (feature dependent / optional modules):
 
 ## Gotchas
 
-- In this sandbox, `git add` / `git commit` fail because the worktree’s git dir lives outside the writable root (attempts to create `.../.git/worktrees/.../index.lock` are denied). Changes are left uncommitted even though the plan process calls for per-item commits.
-- Current failure: `fatal: Unable to create '/Users/roberisaacs/alga-psa/.git/worktrees/workflow-events-catalog/index.lock': Operation not permitted`
-- 2026-01-23: Confirmed again while completing `F005` — `git commit -m "feat(F005): ..."` fails with the same `index.lock` permission error.
+- (Resolved in this worktree) Earlier sandbox runs had `git add` / `git commit` failing with `.../.git/worktrees/.../index.lock` permission errors. As of 2026-01-23 in `/Users/roberisaacs/alga-psa.worktrees/feature/workflow-events-catalog`, commits succeed normally.
+- DB-backed vitest integration tests (e.g. `server/src/test/integration/ticketBundling.integration.test.ts`) require a local Postgres instance matching `.env.localtest` (observed `ECONNREFUSED` on `localhost:5438` when not running).
 - `npm run test:nx` currently fails on `tools/nx-tests/editionSwapping.test.ts` (CE alias `ee` resolves to `packages/ee/src` instead of `server/src/empty`). This appears unrelated to workflow event changes; use targeted vitest runs for verification until fixed.
