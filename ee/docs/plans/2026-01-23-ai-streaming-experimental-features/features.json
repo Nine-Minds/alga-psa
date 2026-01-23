@@ -8,7 +8,7 @@
   {
     "id": "F002",
     "description": "Add `updateExperimentalFeatures(features)` server action to update experimental feature settings",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Server Actions"]
   },
   {

@@ -78,4 +78,6 @@ curl -X POST localhost:3000/api/chat/stream/chat \
 
 ### 2026-01-23
 - Implemented `getExperimentalFeatures()` server action returning `tenant_settings.settings.experimentalFeatures` (defaults to `{}` when unset): `packages/tenancy/src/actions/tenant-settings-actions/tenantSettingsActions.ts`
-- Next feature item: F002 `updateExperimentalFeatures(features)`
+- Implemented `updateExperimentalFeatures(features)` server action with `settings:update` permission check and merge-into-JSON behavior via `updateTenantSettings()`: `packages/tenancy/src/actions/tenant-settings-actions/tenantSettingsActions.ts`
+- Validation: `npm -w @alga-psa/tenancy run typecheck`
+- Next feature item: F003 `isExperimentalFeatureEnabled(featureKey)`

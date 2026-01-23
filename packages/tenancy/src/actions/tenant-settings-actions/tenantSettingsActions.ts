@@ -1,6 +1,6 @@
 'use server';
 
-import { getCurrentUser } from '@alga-psa/users/actions';
+import { getCurrentUser, getCurrentUserPermissions } from '@alga-psa/users/actions';
 import { getTenantForCurrentRequest } from '../../server';
 import { createTenantKnex } from '@alga-psa/db';
 import type { WizardData } from '@alga-psa/types';
@@ -52,6 +52,35 @@ export async function getExperimentalFeatures(): Promise<ExperimentalFeatures> {
   } catch (error) {
     console.error('Error getting experimental features:', error);
     return {};
+  }
+}
+
+export async function updateExperimentalFeatures(
+  features: Partial<ExperimentalFeatures>
+): Promise<void> {
+  try {
+    const user = await getCurrentUser();
+    if (!user) {
+      throw new Error('User must be authenticated');
+    }
+
+    const permissions = await getCurrentUserPermissions();
+    if (!permissions.includes('settings:update')) {
+      throw new Error('Permission denied: Cannot update settings');
+    }
+
+    const current = await getExperimentalFeatures();
+    const merged: ExperimentalFeatures = {
+      ...current,
+      ...features,
+    };
+
+    await updateTenantSettings({
+      experimentalFeatures: merged,
+    });
+  } catch (error) {
+    console.error('Error updating experimental features:', error);
+    throw error;
   }
 }
 
