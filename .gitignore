@@ -142,6 +142,7 @@ build_output.txt
 typescript-errors-*.md
 debug-*.sql
 check-*.sql
+check_*.sql
 update-*.sql
 server/.alga-ext-cache/
 
