@@ -14,7 +14,7 @@
   { "id": "F015", "description": "Tickets: approval events (TICKET_APPROVAL_REQUESTED, TICKET_APPROVAL_GRANTED, TICKET_APPROVAL_REJECTED) are catalog-only until a ticket approval subsystem exists", "implemented": true, "prdRefs": ["7.2", "7.3", "10"] },
 
   { "id": "F020", "description": "Scheduling: emit appointment/schedule events (APPOINTMENT_CREATED, APPOINTMENT_RESCHEDULED, APPOINTMENT_CANCELED, APPOINTMENT_COMPLETED, APPOINTMENT_NO_SHOW, APPOINTMENT_ASSIGNED) or map to SCHEDULE_ENTRY_* per PRD §7.3", "implemented": true, "prdRefs": ["7.2", "7.3"] },
-  { "id": "F021", "description": "Scheduling: emit availability block events (SCHEDULE_BLOCK_CREATED, SCHEDULE_BLOCK_DELETED)", "implemented": false, "prdRefs": ["7.2"] },
+  { "id": "F021", "description": "Scheduling: emit availability block events (SCHEDULE_BLOCK_CREATED, SCHEDULE_BLOCK_DELETED)", "implemented": true, "prdRefs": ["7.2"] },
   { "id": "F022", "description": "Scheduling: emit capacity alert event (CAPACITY_THRESHOLD_REACHED) when capacity thresholds are configured", "implemented": false, "prdRefs": ["7.2"] },
   { "id": "F023", "description": "Scheduling/Field Ops: emit dispatch lifecycle events (TECHNICIAN_DISPATCHED, TECHNICIAN_EN_ROUTE, TECHNICIAN_ARRIVED, TECHNICIAN_CHECKED_OUT) when supported", "implemented": false, "prdRefs": ["7.2", "7.3"] },
 

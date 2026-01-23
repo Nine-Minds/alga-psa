@@ -23,6 +23,11 @@ import {
   isAppointmentRescheduled,
   shouldEmitAppointmentEvents,
 } from '@shared/workflow/streams/domainEventBuilders/appointmentEventBuilders';
+import {
+  buildScheduleBlockCreatedPayload,
+  buildScheduleBlockDeletedPayload,
+  isScheduleBlockEntry,
+} from '@shared/workflow/streams/domainEventBuilders/scheduleBlockEventBuilders';
 
 export type ScheduleActionResult<T> =
   | { success: true; entries: T; error?: never }
@@ -214,6 +219,23 @@ export async function addScheduleEntry(
       console.error('[ScheduleActions] Failed to publish SCHEDULE_ENTRY_CREATED event', eventError);
     }
 
+    if (isScheduleBlockEntry(createdEntry)) {
+      const ctx = {
+        tenantId: currentUser.tenant,
+        actor: { actorType: 'USER' as const, actorUserId: currentUser.user_id },
+      };
+
+      try {
+        await publishWorkflowEvent({
+          eventType: 'SCHEDULE_BLOCK_CREATED',
+          ctx,
+          payload: buildScheduleBlockCreatedPayload({ entry: createdEntry, timezone: 'UTC' }),
+        });
+      } catch (eventError) {
+        console.error('[ScheduleActions] Failed to publish SCHEDULE_BLOCK_CREATED workflow event', eventError);
+      }
+    }
+
     if (shouldEmitAppointmentEvents(createdEntry)) {
       const timezone = 'UTC';
       const ticketId =
@@ -362,6 +384,43 @@ export async function updateScheduleEntry(
         });
       } catch (eventError) {
         console.error('[ScheduleActions] Failed to publish SCHEDULE_ENTRY_UPDATED event', eventError);
+      }
+
+      const wasScheduleBlock = isScheduleBlockEntry(existingEntry);
+      const isScheduleBlock = isScheduleBlockEntry(updatedEntry);
+      if (!wasScheduleBlock && isScheduleBlock) {
+        const ctx = {
+          tenantId: currentUser.tenant,
+          actor: { actorType: 'USER' as const, actorUserId: currentUser.user_id },
+        };
+
+        try {
+          await publishWorkflowEvent({
+            eventType: 'SCHEDULE_BLOCK_CREATED',
+            ctx,
+            payload: buildScheduleBlockCreatedPayload({ entry: updatedEntry, timezone: 'UTC' }),
+          });
+        } catch (eventError) {
+          console.error('[ScheduleActions] Failed to publish SCHEDULE_BLOCK_CREATED workflow event', eventError);
+        }
+      } else if (wasScheduleBlock && !isScheduleBlock) {
+        const ctx = {
+          tenantId: currentUser.tenant,
+          actor: { actorType: 'USER' as const, actorUserId: currentUser.user_id },
+        };
+
+        try {
+          await publishWorkflowEvent({
+            eventType: 'SCHEDULE_BLOCK_DELETED',
+            ctx,
+            payload: buildScheduleBlockDeletedPayload({
+              scheduleBlockId: existingEntry.entry_id,
+              reason: 'No longer private ad-hoc block',
+            }),
+          });
+        } catch (eventError) {
+          console.error('[ScheduleActions] Failed to publish SCHEDULE_BLOCK_DELETED workflow event', eventError);
+        }
       }
 
       if (shouldEmitAppointmentEvents(existingEntry) || shouldEmitAppointmentEvents(updatedEntry)) {
@@ -532,6 +591,26 @@ export async function deleteScheduleEntry(entry_id: string, deleteType: IEditSco
         });
       } catch (eventError) {
         console.error('[ScheduleActions] Failed to publish SCHEDULE_ENTRY_DELETED event', eventError);
+      }
+
+      if (isScheduleBlockEntry(existingEntry)) {
+        const ctx = {
+          tenantId: currentUser.tenant,
+          actor: { actorType: 'USER' as const, actorUserId: currentUser.user_id },
+        };
+
+        try {
+          await publishWorkflowEvent({
+            eventType: 'SCHEDULE_BLOCK_DELETED',
+            ctx,
+            payload: buildScheduleBlockDeletedPayload({
+              scheduleBlockId: existingEntry.entry_id,
+              reason: deleteType === IEditScope.ALL ? 'Deleted (all occurrences)' : 'Deleted',
+            }),
+          });
+        } catch (eventError) {
+          console.error('[ScheduleActions] Failed to publish SCHEDULE_BLOCK_DELETED workflow event', eventError);
+        }
       }
 
       if (shouldEmitAppointmentEvents(existingEntry)) {

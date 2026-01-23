@@ -195,9 +195,22 @@ Implication: we should standardize on `@alga-psa/event-bus/publishers` helpers f
     - `timezone` is emitted as `UTC` (schedule UI and storage treat times as UTC today).
     - `APPOINTMENT_NO_SHOW` is emitted only when a schedule entry status is set to a no-show variant; `party` defaults to `customer` until the product captures who no-showed explicitly.
 
+- 2026-01-23: Completed `F021` (schedule block create/delete emission):
+  - Implemented `SCHEDULE_BLOCK_CREATED` / `SCHEDULE_BLOCK_DELETED` emission for “availability blocks” represented today as **private ad-hoc schedule entries**:
+    - `is_private=true`, `work_item_type='ad_hoc'`, `work_item_id=null`, exactly one `assigned_user_ids` owner.
+  - Added shared payload builders:
+    - `shared/workflow/streams/domainEventBuilders/scheduleBlockEventBuilders.ts`
+  - Emitted events from scheduling actions:
+    - `packages/scheduling/src/actions/scheduleActions.ts` publishes on create/delete, and on update when an entry becomes/ceases a private ad-hoc block.
+  - Added schema-compat unit test coverage:
+    - `shared/workflow/streams/domainEventBuilders/__tests__/scheduleBlockEventBuilders.test.ts`
+  - Notes/constraints:
+    - `timezone` is emitted as `UTC`.
+    - No “block updated” domain event exists yet; time changes to an existing block do not emit a domain event unless the entry crosses the block/non-block boundary.
+
 ## Next Up
 
-- `F021`: emit availability block events (`SCHEDULE_BLOCK_CREATED`, `SCHEDULE_BLOCK_DELETED`).
+- `F022`: emit capacity alert event (`CAPACITY_THRESHOLD_REACHED`) when capacity thresholds are configured.
 
 ## Suggested Phasing (to reduce risk)
 
