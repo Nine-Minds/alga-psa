@@ -103,4 +103,10 @@ curl -X POST localhost:3000/api/chat/stream/chat \
 - Implemented Quick Ask overlay gating (only render `QuickAskOverlay` when `aiAssistant` is enabled): `server/src/components/layout/DefaultLayout.tsx`
 - Validation: `npx eslint server/src/components/layout/DefaultLayout.tsx --max-warnings=0`
 - Note: `npm -w server run typecheck` still fails with `TS2307` for `@ee/components/chat/QuickAskOverlay` from `server/src/components/chat/QuickAskOverlay.tsx` (pre-existing).
-- Next feature item: F012 Gate Sidebar Chat (⌘L toggle and RightSidebar) behind aiAssistant feature check
+- Implemented Sidebar Chat gating:
+  - ⌘L/Ctrl+L shortcut now ignored unless `aiAssistant` is enabled (no `preventDefault` when disabled)
+  - Right sidebar is not rendered unless `aiAssistant` is enabled; also auto-closes if disabled
+  - Updated Quick Ask “Open in Sidebar” handoff to no-op if `aiAssistant` is disabled
+  - File: `server/src/components/layout/DefaultLayout.tsx`
+- Validation: `npx eslint server/src/components/layout/DefaultLayout.tsx --max-warnings=0`
+- Next feature item: F013 Add aiAssistant feature check to `/api/chat/v1/completions` endpoint, return 403 if disabled

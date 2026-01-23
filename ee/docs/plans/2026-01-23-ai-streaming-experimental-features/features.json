@@ -68,7 +68,7 @@
   {
     "id": "F012",
     "description": "Gate Sidebar Chat (⌘L toggle and RightSidebar) behind aiAssistant feature check",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["UI Gating"]
   },
   {

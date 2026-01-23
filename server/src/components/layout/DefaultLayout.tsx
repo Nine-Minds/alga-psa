@@ -112,8 +112,18 @@ export default function DefaultLayout({ children, initialSidebarCollapsed = fals
   }, []);
 
   useEffect(() => {
+    if (!aiAssistantEnabled) {
+      setRightSidebarOpen(false);
+    }
+  }, [aiAssistantEnabled]);
+
+  useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if ((event.metaKey || event.ctrlKey) && event.key === 'l') {
+        if (!aiAssistantEnabled) {
+          return;
+        }
+
         event.preventDefault();
         setRightSidebarOpen(prev => !prev);
       }
@@ -179,6 +189,10 @@ export default function DefaultLayout({ children, initialSidebarCollapsed = fals
   };
 
   const handleOpenQuickAskInSidebar = (chatId: string) => {
+    if (!aiAssistantEnabled) {
+      return;
+    }
+
     setQuickAskOpen(false);
     setRightSidebarOpen(true);
     setSidebarHandoff({ chatId, nonce: Date.now() });
@@ -222,22 +236,24 @@ export default function DefaultLayout({ children, initialSidebarCollapsed = fals
             />
             <main className={`flex-1 overflow-hidden flex ${sidebarMode !== 'main' ? 'pt-0 pl-0 pr-3' : 'pt-2 px-3'}`}>
               <Body>{children}</Body>
-              <RightSidebar
-                isOpen={rightSidebarOpen}
-                setIsOpen={setRightSidebarOpen}
-                clientUrl={clientUrl}
-                accountId={accountId}
-                messages={messages}
-                userRole={userRole}
-                userId={userId}
-                selectedAccount={selectedAccount}
-                handleSelectAccount={handleSelectAccount}
-                auth_token={auth_token}
-                setChatTitle={setChatTitle}
-                isTitleLocked={isTitleLocked}
-                handoffChatId={sidebarHandoff.chatId}
-                handoffNonce={sidebarHandoff.nonce}
-              />
+              {aiAssistantEnabled ? (
+                <RightSidebar
+                  isOpen={rightSidebarOpen}
+                  setIsOpen={setRightSidebarOpen}
+                  clientUrl={clientUrl}
+                  accountId={accountId}
+                  messages={messages}
+                  userRole={userRole}
+                  userId={userId}
+                  selectedAccount={selectedAccount}
+                  handleSelectAccount={handleSelectAccount}
+                  auth_token={auth_token}
+                  setChatTitle={setChatTitle}
+                  isTitleLocked={isTitleLocked}
+                  handoffChatId={sidebarHandoff.chatId}
+                  handoffNonce={sidebarHandoff.nonce}
+                />
+              ) : null}
             </main>
             {aiAssistantEnabled ? (
               <QuickAskOverlay
