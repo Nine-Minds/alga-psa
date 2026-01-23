@@ -89,4 +89,6 @@ curl -X POST localhost:3000/api/chat/stream/chat \
   - Added `experimental-features` slug mapping + tab content using dynamic import: `server/src/components/settings/SettingsPage.tsx`
   - Added Settings sidebar navigation item linking to `/msp/settings?tab=experimental-features`: `server/src/config/menuConfig.ts`
   - Validation: `npx eslint server/src/components/settings/SettingsPage.tsx server/src/config/menuConfig.ts --max-warnings=0`
-- Next feature item: F006 Display AI Assistant toggle in Experimental Features with name, description, and switch
+- Implemented AI Assistant toggle display copy per PRD (name + description): `server/src/components/settings/general/ExperimentalFeaturesSettings.tsx`
+- Validation: `npx eslint server/src/components/settings/general/ExperimentalFeaturesSettings.tsx --max-warnings=0`
+- Next feature item: F007 Add warning banner to Experimental Features tab about feature stability

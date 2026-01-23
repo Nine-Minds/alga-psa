@@ -18,8 +18,8 @@ type ExperimentalFeatureDefinition = {
 const experimentalFeatureDefinitions: ExperimentalFeatureDefinition[] = [
   {
     key: 'aiAssistant',
-    name: 'AI assistant',
-    description: 'Enable AI-related features for your tenant.',
+    name: 'AI Assistant',
+    description: 'Enable AI-powered Quick Ask and Chat sidebar.',
   },
 ];
 
@@ -112,4 +112,3 @@ export default function ExperimentalFeaturesSettings(): React.JSX.Element {
     </Card>
   );
 }
-

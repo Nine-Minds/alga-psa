@@ -32,7 +32,7 @@
   {
     "id": "F006",
     "description": "Display AI Assistant toggle in Experimental Features with name, description, and switch",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Feature List (Initial)"]
   },
   {
