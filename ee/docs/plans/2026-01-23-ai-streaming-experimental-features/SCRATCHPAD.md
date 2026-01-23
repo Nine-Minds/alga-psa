@@ -100,4 +100,7 @@ curl -X POST localhost:3000/api/chat/stream/chat \
   - `initializeTenantSettings()` now seeds `settings.experimentalFeatures` with `{ aiAssistant: false }` for new tenants: `packages/tenancy/src/actions/tenant-settings-actions/tenantSettingsActions.ts`
 - Implemented Quick Ask shortcut gating (⌘↑/Ctrl↑) behind `aiAssistant` experimental feature flag in `DefaultLayout` (disabled until flag loads; no `preventDefault` when disabled): `server/src/components/layout/DefaultLayout.tsx`
 - Validation: `npx eslint server/src/components/layout/DefaultLayout.tsx --max-warnings=0`
-- Next feature item: F011 Gate QuickAskOverlay rendering behind aiAssistant feature check
+- Implemented Quick Ask overlay gating (only render `QuickAskOverlay` when `aiAssistant` is enabled): `server/src/components/layout/DefaultLayout.tsx`
+- Validation: `npx eslint server/src/components/layout/DefaultLayout.tsx --max-warnings=0`
+- Note: `npm -w server run typecheck` still fails with `TS2307` for `@ee/components/chat/QuickAskOverlay` from `server/src/components/chat/QuickAskOverlay.tsx` (pre-existing).
+- Next feature item: F012 Gate Sidebar Chat (⌘L toggle and RightSidebar) behind aiAssistant feature check

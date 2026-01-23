@@ -239,22 +239,24 @@ export default function DefaultLayout({ children, initialSidebarCollapsed = fals
                 handoffNonce={sidebarHandoff.nonce}
               />
             </main>
-            <QuickAskOverlay
-              isOpen={quickAskOpen}
-              onClose={handleQuickAskClose}
-              onOpenInSidebar={handleOpenQuickAskInSidebar}
-              clientUrl={clientUrl}
-              accountId={accountId}
-              messages={messages}
-              userRole={userRole}
-              userId={userId}
-              selectedAccount={selectedAccount}
-              handleSelectAccount={handleSelectAccount}
-              auth_token={auth_token}
-              setChatTitle={setChatTitle}
-              isTitleLocked={isTitleLocked}
-              hf={null}
-            />
+            {aiAssistantEnabled ? (
+              <QuickAskOverlay
+                isOpen={quickAskOpen}
+                onClose={handleQuickAskClose}
+                onOpenInSidebar={handleOpenQuickAskInSidebar}
+                clientUrl={clientUrl}
+                accountId={accountId}
+                messages={messages}
+                userRole={userRole}
+                userId={userId}
+                selectedAccount={selectedAccount}
+                handleSelectAccount={handleSelectAccount}
+                auth_token={auth_token}
+                setChatTitle={setChatTitle}
+                isTitleLocked={isTitleLocked}
+                hf={null}
+              />
+            ) : null}
             <Drawer isOpen={isDrawerOpen} onClose={closeDrawer}>
               {drawerContent}
             </Drawer>

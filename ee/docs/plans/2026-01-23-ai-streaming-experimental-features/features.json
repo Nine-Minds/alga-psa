@@ -62,7 +62,7 @@
   {
     "id": "F011",
     "description": "Gate QuickAskOverlay rendering behind aiAssistant feature check",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["UI Gating"]
   },
   {
