@@ -2,6 +2,7 @@
 
 import React, { useCallback, useEffect, useState } from 'react';
 import { toast } from 'react-hot-toast';
+import { Alert, AlertDescription, AlertTitle } from '@alga-psa/ui/components/Alert';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 import { Switch } from '@alga-psa/ui/components/Switch';
@@ -92,6 +93,10 @@ export default function ExperimentalFeaturesSettings(): React.JSX.Element {
         <CardDescription>Enable or disable experimental features for your tenant.</CardDescription>
       </CardHeader>
       <CardContent className="space-y-3">
+        <Alert variant="warning">
+          <AlertTitle>Experimental</AlertTitle>
+          <AlertDescription>Experimental features may change or be removed without notice.</AlertDescription>
+        </Alert>
         {experimentalFeatureDefinitions.map((feature) => (
           <div
             key={feature.key}

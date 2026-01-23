@@ -91,4 +91,6 @@ curl -X POST localhost:3000/api/chat/stream/chat \
   - Validation: `npx eslint server/src/components/settings/SettingsPage.tsx server/src/config/menuConfig.ts --max-warnings=0`
 - Implemented AI Assistant toggle display copy per PRD (name + description): `server/src/components/settings/general/ExperimentalFeaturesSettings.tsx`
 - Validation: `npx eslint server/src/components/settings/general/ExperimentalFeaturesSettings.tsx --max-warnings=0`
-- Next feature item: F007 Add warning banner to Experimental Features tab about feature stability
+- Added warning banner copy for experimental feature stability: `server/src/components/settings/general/ExperimentalFeaturesSettings.tsx`
+- Validation: `npx eslint server/src/components/settings/general/ExperimentalFeaturesSettings.tsx --max-warnings=0`
+- Next feature item: F008 Wire Save button in Experimental Features to call updateExperimentalFeatures()

@@ -38,7 +38,7 @@
   {
     "id": "F007",
     "description": "Add warning banner to Experimental Features tab about feature stability",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Experimental Features Settings Tab"]
   },
   {
