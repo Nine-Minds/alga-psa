@@ -11,6 +11,11 @@ import { generateInvoiceNumber } from './invoiceGeneration';
 import { Knex } from 'knex';
 import { validateCreditBalanceWithoutCorrection } from './creditReconciliationActions';
 import { getCurrentUserAsync, hasPermissionAsync, getSessionAsync, getAnalyticsAsync } from '../lib/authHelpers';
+import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
+import {
+    buildCreditNoteAppliedPayload,
+    buildCreditNoteCreatedPayload,
+} from '@shared/workflow/streams/domainEventBuilders/creditNoteEventBuilders';
 
 
 
@@ -221,9 +226,18 @@ export async function createPrepaymentInvoice(
     if (!client) {
         throw new Error('Client not found');
     }
-    
+
     // Create prepayment invoice
-    return await withTransaction(knex, async (trx: Knex.Transaction) => {
+    let createdCreditNote: {
+        creditNoteId: string;
+        clientId: string;
+        createdAt: string;
+        createdByUserId: string;
+        amount: number;
+        currency: string;
+    } | null = null;
+
+    const createdInvoice = await withTransaction(knex, async (trx: Knex.Transaction) => {
         // Get client's credit expiration settings or default settings
         const clientSettings = await trx('client_billing_settings')
             .where({
@@ -307,6 +321,7 @@ export async function createPrepaymentInvoice(
         await validateTransactionBalance(clientId, amount, trx, tenant, true); // Skip credit balance check for prepayment
 
         // Create transaction with expiration date if applicable
+        const now = new Date().toISOString();
         const transactionId = uuidv4();
         console.log('createPrepaymentInvoice: Creating transaction with ID:', transactionId);
         console.log('createPrepaymentInvoice: Transaction data:', {
@@ -351,7 +366,7 @@ export async function createPrepaymentInvoice(
                 type: 'credit_issuance',
                 status: 'completed',
                 description: 'Credit issued from prepayment',
-                created_at: new Date().toISOString(),
+                created_at: now,
                 balance_after: newBalance,
                 tenant,
                 expiration_date: expirationDate,
@@ -387,10 +402,10 @@ export async function createPrepaymentInvoice(
                 transaction_id: transactionId,
                 amount: amount,
                 remaining_amount: amount, // Initially, remaining amount equals the full amount
-                created_at: new Date().toISOString(),
+                created_at: now,
                 expiration_date: expirationDate,
                 is_expired: false,
-                updated_at: new Date().toISOString(),
+                updated_at: now,
                 currency_code: clientCurrency
             });
             console.log('createPrepaymentInvoice: Credit tracking entry created successfully');
@@ -416,6 +431,15 @@ export async function createPrepaymentInvoice(
             throw error;
         }
 
+        createdCreditNote = {
+            creditNoteId: creditId,
+            clientId,
+            createdAt: now,
+            createdByUserId: currentUser.user_id,
+            amount,
+            currency: clientCurrency,
+        };
+
         // Note: Credit balance will be updated when the invoice is finalized
         console.log('Prepayment invoice created for client', clientId, 'with amount', amount);
         if (expirationDate) {
@@ -425,6 +449,29 @@ export async function createPrepaymentInvoice(
 
         return createdInvoice;
     });
+
+    if (createdCreditNote) {
+        await publishWorkflowEvent({
+            eventType: 'CREDIT_NOTE_CREATED',
+            payload: buildCreditNoteCreatedPayload({
+                creditNoteId: createdCreditNote.creditNoteId,
+                clientId: createdCreditNote.clientId,
+                createdByUserId: createdCreditNote.createdByUserId,
+                createdAt: createdCreditNote.createdAt,
+                amount: createdCreditNote.amount,
+                currency: createdCreditNote.currency,
+                status: 'issued',
+            }),
+            ctx: {
+                tenantId: tenant,
+                occurredAt: createdCreditNote.createdAt,
+                actor: { actorType: 'USER', actorUserId: createdCreditNote.createdByUserId },
+            },
+            idempotencyKey: `credit_note_created:${createdCreditNote.creditNoteId}`,
+        });
+    }
+
+    return createdInvoice;
 }
 
 export async function applyCreditToInvoice(
@@ -445,6 +492,16 @@ export async function applyCreditToInvoice(
     const { knex, tenant } = await createTenantKnex(currentUser.tenant);
     if (!tenant) throw new Error('No tenant found');
     
+    let creditNoteAppliedEvents: Array<{
+        creditNoteId: string;
+        invoiceId: string;
+        amountApplied: number;
+        currency: string;
+        appliedAt: string;
+        appliedByUserId: string;
+        idempotencyKey: string;
+    }> = [];
+
     await withTransaction(knex, async (trx: Knex.Transaction) => {
         // Check if the invoice already has credit applied and get its currency
         const invoice = await trx('invoices')
@@ -664,7 +721,37 @@ export async function applyCreditToInvoice(
         // Log the credit application
         console.log(`Applied ${totalAppliedAmount} credit to invoice ${invoiceId} for client ${clientId}. Remaining credit: ${newBalance}`);
         console.log(`Applied from ${appliedCredits.length} different credit sources, prioritized by expiration date.`);
+
+        creditNoteAppliedEvents = appliedCredits.map((appliedCredit) => ({
+            creditNoteId: appliedCredit.creditId,
+            invoiceId,
+            amountApplied: appliedCredit.amount,
+            currency: invoiceCurrency,
+            appliedAt: now,
+            appliedByUserId: currentUser.user_id,
+            idempotencyKey: `credit_note_applied:${creditTransaction.transaction_id}:${appliedCredit.creditId}`,
+        }));
     });
+
+    for (const event of creditNoteAppliedEvents) {
+        await publishWorkflowEvent({
+            eventType: 'CREDIT_NOTE_APPLIED',
+            payload: buildCreditNoteAppliedPayload({
+                creditNoteId: event.creditNoteId,
+                invoiceId: event.invoiceId,
+                appliedByUserId: event.appliedByUserId,
+                appliedAt: event.appliedAt,
+                amountApplied: event.amountApplied,
+                currency: event.currency,
+            }),
+            ctx: {
+                tenantId: tenant,
+                occurredAt: event.appliedAt,
+                actor: { actorType: 'USER', actorUserId: event.appliedByUserId },
+            },
+            idempotencyKey: event.idempotencyKey,
+        });
+    }
 }
 
 export async function getCreditHistory(

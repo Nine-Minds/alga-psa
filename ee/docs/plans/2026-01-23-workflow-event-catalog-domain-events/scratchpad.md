@@ -307,9 +307,23 @@ Implication: we should standardize on `@alga-psa/event-bus/publishers` helpers f
   - Verification:
     - `npx vitest run server/src/test/unit/paymentWorkflowEvents.test.ts`
 
+- 2026-01-23: Completed `F042` (credit events emission):
+  - Added shared billing payload builders + schema-compat tests:
+    - `shared/workflow/streams/domainEventBuilders/creditNoteEventBuilders.ts`
+    - `shared/workflow/streams/domainEventBuilders/__tests__/creditNoteEventBuilders.test.ts`
+  - Emitted workflow v2 credit note domain events from real credit flows:
+    - `packages/billing/src/actions/creditActions.ts` now publishes:
+      - `CREDIT_NOTE_CREATED` when prepayment credit tracking entries are created
+      - `CREDIT_NOTE_APPLIED` per credit source used when applying credits to an invoice (supports multi-credit allocation)
+    - `packages/billing/src/actions/invoiceModification.ts` now publishes:
+      - `CREDIT_NOTE_CREATED` when finalizing a negative invoice that issues credit (`credit_issuance_from_negative_invoice`)
+      - `CREDIT_NOTE_VOIDED` when hard-deleting a negative invoice that issued unused credit (maps delete → void)
+  - Verification:
+    - `npx vitest run shared/workflow/streams/domainEventBuilders/__tests__/creditNoteEventBuilders.test.ts`
+
 ## Next Up
 
-- `F042`: emit credit events (CREDIT_NOTE_CREATED, CREDIT_NOTE_APPLIED, CREDIT_NOTE_VOIDED).
+- `F043`: emit contract events (CONTRACT_CREATED, CONTRACT_UPDATED, CONTRACT_STATUS_CHANGED, CONTRACT_RENEWAL_UPCOMING).
 
 ## Suggested Phasing (to reduce risk)
 
