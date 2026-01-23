@@ -157,9 +157,17 @@ Implication: we should standardize on `@alga-psa/event-bus/publishers` helpers f
   - Added unit coverage with schema validation via `buildWorkflowPayload(...)`:
     - `packages/tickets/src/lib/__tests__/workflowTicketCommunicationEvents.test.ts`
 
+- 2026-01-23: Completed `F013` (ticket work tracking emission):
+  - Emitted `TICKET_TIME_ENTRY_ADDED` when time entries are created for `work_item_type='ticket'`:
+    - `server/src/lib/api/services/TimeEntryService.ts` publishes on both direct create (`create`) and time-tracking completion (`stopTimeTracking`).
+  - Added a small pure builder for publish-time payload shaping:
+    - `server/src/lib/api/services/timeEntryWorkflowEvents.ts`
+  - Added unit coverage that validates the built payload against `payload.TicketTimeEntryAdded.v1` via `buildWorkflowPayload(...)`:
+    - `server/src/test/unit/timeEntryWorkflowEvents.test.ts`
+
 ## Next Up
 
-- `F013`: emit ticket work tracking event (`TICKET_TIME_ENTRY_ADDED`).
+- `F014`: emit ticket SLA stage events (`TICKET_SLA_STAGE_*`) when SLA module is enabled.
 
 ## Suggested Phasing (to reduce risk)
 
