@@ -14,8 +14,8 @@ const normalizeClientContract = (row: any): any => {
  * Data access helpers for client contract assignments.
  */
 const ClientContract = {
-  async getByClientId(clientId: string): Promise<IClientContract[]> {
-    const { knex: db, tenant } = await createTenantKnex();
+  async getByClientId(clientId: string, tenantId: string): Promise<IClientContract[]> {
+    const { knex: db, tenant } = await createTenantKnex(tenantId);
     if (!tenant) {
       throw new Error('Tenant context is required for fetching client contracts');
     }
@@ -36,12 +36,12 @@ const ClientContract = {
     }
   },
 
-  async getActiveByClientIds(clientIds: string[]): Promise<IClientContract[]> {
+  async getActiveByClientIds(clientIds: string[], tenantId: string): Promise<IClientContract[]> {
     if (clientIds.length === 0) {
       return [];
     }
 
-    const { knex: db, tenant } = await createTenantKnex();
+    const { knex: db, tenant } = await createTenantKnex(tenantId);
     if (!tenant) {
       throw new Error('Tenant context is required for fetching client contracts');
     }
@@ -66,8 +66,8 @@ const ClientContract = {
     }
   },
 
-  async getById(clientContractId: string): Promise<IClientContract | null> {
-    const { knex: db, tenant } = await createTenantKnex();
+  async getById(clientContractId: string, tenantId: string): Promise<IClientContract | null> {
+    const { knex: db, tenant } = await createTenantKnex(tenantId);
     if (!tenant) {
       throw new Error('Tenant context is required for fetching client contracts');
     }
@@ -88,8 +88,8 @@ const ClientContract = {
     }
   },
 
-  async getDetailedClientContract(clientContractId: string): Promise<any | null> {
-    const { knex: db, tenant } = await createTenantKnex();
+  async getDetailedClientContract(clientContractId: string, tenantId: string): Promise<any | null> {
+    const { knex: db, tenant } = await createTenantKnex(tenantId);
     if (!tenant) {
       throw new Error('Tenant context is required for fetching client contracts');
     }
@@ -132,9 +132,10 @@ const ClientContract = {
     clientId: string,
     contractId: string,
     startDate: string,
-    endDate: string | null = null
+    endDate: string | null = null,
+    tenantId: string
   ): Promise<IClientContract> {
-    const { knex: db, tenant } = await createTenantKnex();
+    const { knex: db, tenant } = await createTenantKnex(tenantId);
     if (!tenant) {
       throw new Error('Tenant context is required for assigning contracts');
     }
@@ -201,15 +202,16 @@ const ClientContract = {
 
   async updateClientContract(
     clientContractId: string,
-    updateData: Partial<IClientContract>
+    updateData: Partial<IClientContract>,
+    tenantId: string
   ): Promise<IClientContract> {
-    const { knex: db, tenant } = await createTenantKnex();
+    const { knex: db, tenant } = await createTenantKnex(tenantId);
     if (!tenant) {
       throw new Error('Tenant context is required for updating client contracts');
     }
 
     try {
-      const existing = await ClientContract.getById(clientContractId);
+      const existing = await ClientContract.getById(clientContractId, tenantId);
       if (!existing) {
         throw new Error(`Client contract ${clientContractId} not found`);
       }
@@ -275,8 +277,8 @@ const ClientContract = {
     }
   },
 
-  async deactivateClientContract(clientContractId: string): Promise<void> {
-    const { knex: db, tenant } = await createTenantKnex();
+  async deactivateClientContract(clientContractId: string, tenantId: string): Promise<void> {
+    const { knex: db, tenant } = await createTenantKnex(tenantId);
     if (!tenant) {
       throw new Error('Tenant context is required for deactivating client contracts');
     }
@@ -291,8 +293,8 @@ const ClientContract = {
     }
   },
 
-  async getContractLines(clientContractId: string): Promise<any[]> {
-    const { knex: db, tenant } = await createTenantKnex();
+  async getContractLines(clientContractId: string, tenantId: string): Promise<any[]> {
+    const { knex: db, tenant } = await createTenantKnex(tenantId);
     if (!tenant) {
       throw new Error('Tenant context is required for fetching contract lines');
     }
@@ -319,4 +321,3 @@ const ClientContract = {
 };
 
 export default ClientContract;
-

@@ -346,8 +346,11 @@ const ProjectTaskModel = {
   },
 
   updateChecklistItem: async (knexOrTrx: Knex | Knex.Transaction, tenant: string, checklistItemId: string, itemData: Partial<ITaskChecklistItem>): Promise<ITaskChecklistItem> => {
+    if (!tenant) {
+      throw new Error('Tenant context is required');
+    }
     const [updatedItem] = await knexOrTrx('task_checklist_items')
-      .where({ checklist_item_id: checklistItemId })
+      .where({ checklist_item_id: checklistItemId, tenant })
       .update({
         ...itemData,
         updated_at: knexOrTrx.fn.now()

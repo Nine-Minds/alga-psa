@@ -5,7 +5,7 @@
 import i18next, { TFunction } from 'i18next';
 import HttpBackend from 'i18next-http-backend';
 import { cache } from 'react';
-import { cookies, headers } from 'next/headers';
+import { cookies, headers } from 'next/headers.js';
 import {
   LOCALE_CONFIG,
   I18N_CONFIG,

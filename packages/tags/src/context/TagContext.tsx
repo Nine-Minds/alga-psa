@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback, useRef, useMemo } from 'react';
 import type { ITag, TaggedEntityType } from '@alga-psa/types';
-import { getAllTags, updateTagColor, updateTagText, deleteAllTagsByText, checkTagPermissions } from '@alga-psa/tags/actions';
+import { getAllTags, updateTagColor, updateTagText, deleteAllTagsByText, checkTagPermissions } from '../actions';
 
 interface TagPermissions {
   canAddExisting: boolean;
@@ -51,7 +51,7 @@ export const TagProvider = ({ children }: { children: ReactNode }) => {
       return;
     }
     lastFetchRef.current = now;
-    
+
     setIsLoading(true);
     try {
       const allTags = await getAllTags();
@@ -119,7 +119,7 @@ export const TagProvider = ({ children }: { children: ReactNode }) => {
 
   const handleDeleteAllTagsByText = useCallback(async (tagText: string, taggedType: TaggedEntityType) => {
     setTags(currentTags =>
-      currentTags.filter(tag => 
+      currentTags.filter(tag =>
         !(tag.tag_text === tagText && tag.tagged_type === taggedType)
       )
     );
@@ -178,7 +178,7 @@ export const TagProvider = ({ children }: { children: ReactNode }) => {
     tags,
     tagsLoaded,
     isLoading,
-    updateTagColor: handleUpdateTagColor, 
+    updateTagColor: handleUpdateTagColor,
     updateTagText: handleUpdateTagText,
     deleteAllTagsByText: handleDeleteAllTagsByText,
     addTag,
@@ -200,7 +200,7 @@ export const useTags = () => {
   if (context === undefined) {
     throw new Error('useTags must be used within a TagProvider');
   }
-  
+
   // Lazy load tags on first access
   useEffect(() => {
     // Only fetch if not already loaded and not currently loading
@@ -208,6 +208,6 @@ export const useTags = () => {
       context.refetchTags();
     }
   }, [context]);
-  
+
   return context;
 };

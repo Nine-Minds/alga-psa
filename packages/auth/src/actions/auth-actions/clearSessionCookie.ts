@@ -1,6 +1,6 @@
 'use server';
 
-import { cookies } from 'next/headers';
+import { cookies } from 'next/headers.js';
 import { getSessionCookieConfig } from '../../lib/session';
 
 export async function clearSessionCookie() {

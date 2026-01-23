@@ -8,7 +8,7 @@ import { DynamicExtensionProvider } from '@alga-psa/ui/components/providers/Dyna
 import { PostHogProvider } from '@/components/providers/PostHogProvider';
 import { Theme } from '@radix-ui/themes';
 import { ThemeProvider } from '../context/ThemeContext';
-import { TagProvider } from '../context/TagContext';
+import { TagProvider } from '@alga-psa/tags/context';
 import { ClientUIStateProvider } from '@alga-psa/ui/ui-reflection/ClientUIStateProvider';
 import { getServerLocale } from "@alga-psa/ui/lib/i18n/serverOnly";
 import { cookies, headers } from 'next/headers';

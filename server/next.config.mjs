@@ -18,6 +18,16 @@ const isEE = process.env.EDITION === 'ee' || process.env.EDITION === 'enterprise
 // Reusable path to an empty shim for optional/native modules (used by Turbopack aliases)
 const emptyShim = './src/empty/shims/empty.ts';
 
+const appVersion = (() => {
+  try {
+    const pkgPath = path.join(__dirname, '../package.json');
+    const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf8'));
+    return pkg?.version || 'dev';
+  } catch {
+    return 'dev';
+  }
+})();
+
 const aliasEeEntryVariants = (aliasMap, pairs) => {
   pairs.forEach(({ fromCandidates = [], to }) => {
     fromCandidates
@@ -138,6 +148,9 @@ class EditionBuildDiagnosticsPlugin {
 const serverActionsBodyLimit = process.env.SERVER_ACTIONS_BODY_LIMIT || '20mb';
 
 const nextConfig = {
+  env: {
+    NEXT_PUBLIC_APP_VERSION: process.env.NEXT_PUBLIC_APP_VERSION || appVersion,
+  },
   turbopack: {
     root: path.resolve(__dirname, '..'),  // Point to the actual project root
     // Alias optional DB drivers we don't use to an empty shim for Turbopack
@@ -147,10 +160,33 @@ const nextConfig = {
       // Base app alias
       '@': './src',
       'server/src': './src', // Add explicit alias for server/src imports
-      '@alga-psa/ui': '../packages/ui/src',
-      '@alga-psa/ui/': '../packages/ui/src/',
-      '@alga-psa/clients': '../packages/clients/src',
-      '@alga-psa/clients/': '../packages/clients/src/',
+	      '@alga-psa/ui': '../packages/ui/src',
+	      '@alga-psa/ui/': '../packages/ui/src/',
+	      '@alga-psa/clients': '../packages/clients/src',
+	      '@alga-psa/clients/': '../packages/clients/src/',
+	      '@alga-psa/auth': '../packages/auth/src',
+	      '@alga-psa/auth/': '../packages/auth/src/',
+	      '@alga-psa/auth/getCurrentUser': '../packages/auth/src/lib/getCurrentUser.ts',
+	      '@alga-psa/scheduling': '../packages/scheduling/src',
+	      '@alga-psa/scheduling/': '../packages/scheduling/src/',
+	      '@alga-psa/tags': '../packages/tags/src',
+	      '@alga-psa/tags/': '../packages/tags/src/',
+	      '@alga-psa/users': '../packages/users/src',
+	      '@alga-psa/users/': '../packages/users/src/',
+	      '@alga-psa/teams': '../packages/teams/src',
+	      '@alga-psa/teams/': '../packages/teams/src/',
+	      '@alga-psa/tenancy': '../packages/tenancy/src',
+	      '@alga-psa/tenancy/': '../packages/tenancy/src/',
+	      // DB package (use precompiled output so Turbopack ESM resolution works)
+	      '@alga-psa/db': '../packages/db/dist/index.js',
+	      '@alga-psa/db/admin': '../packages/db/dist/lib/admin.js',
+	      '@alga-psa/db/admin.js': '../packages/db/dist/lib/admin.js',
+      '@alga-psa/db/connection': '../packages/db/dist/lib/connection.js',
+      '@alga-psa/db/connection.js': '../packages/db/dist/lib/connection.js',
+      '@alga-psa/db/tenant': '../packages/db/dist/lib/tenant.js',
+      '@alga-psa/db/tenant.js': '../packages/db/dist/lib/tenant.js',
+      '@alga-psa/db/models': '../packages/db/dist/models/index.js',
+      '@alga-psa/db/models/': '../packages/db/dist/models/',
       '@/empty': isEE ? '../ee/server/src' : './src/empty',
       '@/empty/': isEE ? '../ee/server/src/' : './src/empty/',
       './src/empty': isEE ? '../ee/server/src' : './src/empty',
@@ -200,7 +236,7 @@ const nextConfig = {
         : '@product/settings-extensions/oss/entry',
       '@product/chat/entry': isEE
         ? '@product/chat/ee/entry'
-        : './src/services/chatStreamService',
+        : '@product/chat/oss/entry',
       '@product/ext-proxy/handler': isEE
         ? '@product/ext-proxy/ee/handler'
         : '@product/ext-proxy/oss/handler',
@@ -249,17 +285,24 @@ const nextConfig = {
     ignoreDuringBuilds: true,
   },
   reactStrictMode: false, // Disabled to prevent double rendering in development
-  transpilePackages: [
-    '@blocknote/core',
-    '@blocknote/react',
-    '@blocknote/mantine',
-    '@emoji-mart/data',
-    '@alga-psa/ui',
-    '@alga-psa/clients',
-    '@alga-psa/integrations',
-    '@alga-psa/client-portal',
-    // Product feature packages (only those needed in this app)
-    '@product/extensions',
+	  transpilePackages: [
+	    '@blocknote/core',
+	    '@blocknote/react',
+	    '@blocknote/mantine',
+	    '@emoji-mart/data',
+	    '@alga-psa/core',
+	    '@alga-psa/auth',
+	    '@alga-psa/tags',
+	    '@alga-psa/ui',
+	    '@alga-psa/clients',
+	    '@alga-psa/scheduling',
+	    '@alga-psa/users',
+	    '@alga-psa/teams',
+	    '@alga-psa/tenancy',
+	    '@alga-psa/integrations',
+	    '@alga-psa/client-portal',
+	    // Product feature packages (only those needed in this app)
+	    '@product/extensions',
     '@product/settings-extensions',
     '@product/billing',
     '@alga-psa/workflows',
@@ -320,6 +363,9 @@ const nextConfig = {
       '@alga-psa/auth': path.join(__dirname, '../packages/auth/src'),
       '@alga-psa/ui': path.join(__dirname, '../packages/ui/src'),
       '@alga-psa/clients': path.join(__dirname, '../packages/clients/src'),
+      '@alga-psa/scheduling': path.join(__dirname, '../packages/scheduling/src'),
+      '@alga-psa/users': path.join(__dirname, '../packages/users/src'),
+      '@alga-psa/teams': path.join(__dirname, '../packages/teams/src'),
       '@ee': isEE
         ? path.join(__dirname, '../ee/server/src')
         : path.join(__dirname, '../packages/ee/src'), // Point to CE stub implementations
@@ -526,6 +572,29 @@ const nextConfig = {
     // These are optional runtime dependencies that may not be installed
     config.externals.push('ffmpeg-static');
     config.externals.push('ffprobe-static');
+
+    // Externalize sharp for server builds to avoid bundling native dependencies.
+    // sharp (and its optional @img/* helpers) should be resolved at runtime by Node.
+    if (isServer) {
+      config.externals.push('sharp');
+    } else if (webpack) {
+      // For client builds, make sure any accidental sharp import is replaced with an empty shim.
+      config.resolve.alias = {
+        ...config.resolve.alias,
+        sharp: emptyShim,
+      };
+    }
+
+    // sharp conditionally requires these optional packages; webpack can't statically resolve them
+    // and we don't want missing-module failures during compilation.
+    if (webpack) {
+      config.plugins.push(
+        new webpack.IgnorePlugin({ resourceRegExp: /^@img\/sharp-libvips-dev\/(include|cplusplus)$/ })
+      );
+      config.plugins.push(
+        new webpack.IgnorePlugin({ resourceRegExp: /^@img\/sharp-wasm32\/versions$/ })
+      );
+    }
 
     // Replace Node.js-only modules with empty shims for client builds
     // These modules use Node.js built-ins like 'tls', 'net', etc. that don't exist in the browser

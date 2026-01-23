@@ -23,9 +23,9 @@ import {
     ITicketCategory
 } from "@alga-psa/types";
 import { ITag } from "@alga-psa/types";
-import { TagManager } from "@alga-psa/ui/components";
+import { TagManager } from "@alga-psa/tags/components";
 import { findTagsByEntityId } from "@alga-psa/tags/actions";
-import { useTags } from "@alga-psa/ui";
+import { useTags } from '@alga-psa/tags/context';
 import TicketInfo from "./TicketInfo";
 import TicketProperties from "./TicketProperties";
 import TicketDocumentsSection from "./TicketDocumentsSection";

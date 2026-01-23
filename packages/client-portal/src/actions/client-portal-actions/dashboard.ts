@@ -3,7 +3,7 @@
 import { createTenantKnex } from '@alga-psa/db';
 import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
-import { headers } from 'next/headers';
+import { headers } from 'next/headers.js';
 import { getCurrentUser } from '@alga-psa/users/actions';
 
 export interface DashboardMetrics {

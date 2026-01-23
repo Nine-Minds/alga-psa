@@ -105,9 +105,10 @@ export class ApiKeyService {
       metadata?: Record<string, unknown> | null;
       usageLimit?: number | null;
       usageCount?: number;
+      tenantId?: string;
     }
   ): Promise<ApiKey> {
-    const { knex, tenant } = await createTenantKnex();
+    const { knex, tenant } = await createTenantKnex(options?.tenantId);
     
     if (!tenant) {
       throw new Error('Tenant context is required for API key creation');
@@ -256,8 +257,8 @@ export class ApiKeyService {
   /**
    * Deactivate an API key
    */
-  static async deactivateApiKey(apiKeyId: string): Promise<void> {
-    const { knex, tenant } = await createTenantKnex();
+  static async deactivateApiKey(apiKeyId: string, tenantId?: string): Promise<void> {
+    const { knex, tenant } = await createTenantKnex(tenantId);
     
     if (!tenant) {
       throw new Error('Tenant context is required for deactivating API key');
@@ -286,8 +287,8 @@ export class ApiKeyService {
   /**
    * List all API keys for a user
    */
-  static async listUserApiKeys(userId: string): Promise<ApiKey[]> {
-    const { knex, tenant } = await createTenantKnex();
+  static async listUserApiKeys(userId: string, tenantId?: string): Promise<ApiKey[]> {
+    const { knex, tenant } = await createTenantKnex(tenantId);
     
     if (!tenant) {
       throw new Error('Tenant context is required for listing user API keys');
@@ -309,8 +310,8 @@ export class ApiKeyService {
   /**
    * List all API keys across users (admin only)
    */
-  static async listAllApiKeys(): Promise<(ApiKey & { username: string })[]> {
-    const { knex, tenant } = await createTenantKnex();
+  static async listAllApiKeys(tenantId?: string): Promise<(ApiKey & { username: string })[]> {
+    const { knex, tenant } = await createTenantKnex(tenantId);
     
     if (!tenant) {
       throw new Error('Tenant context is required for listing API keys');
@@ -334,8 +335,8 @@ export class ApiKeyService {
   /**
    * Admin deactivate any API key
    */
-  static async adminDeactivateApiKey(apiKeyId: string): Promise<void> {
-    const { knex, tenant } = await createTenantKnex();
+  static async adminDeactivateApiKey(apiKeyId: string, tenantId?: string): Promise<void> {
+    const { knex, tenant } = await createTenantKnex(tenantId);
     
     if (!tenant) {
       throw new Error('Tenant context is required for admin deactivating API key');

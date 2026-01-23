@@ -99,12 +99,13 @@ export async function getContractTemplates(): Promise<IContract[]> {
   }
 
   try {
-    const { tenant } = await createTenantKnex(requireTenantIdFromSession(session));
+    const tenantId = requireTenantIdFromSession(session);
+    const { tenant } = await createTenantKnex(tenantId);
     if (!tenant) {
       throw new Error('tenant context not found');
     }
 
-    const templates = await ContractTemplateModel.getAll();
+    const templates = await ContractTemplateModel.getAll(tenantId);
     return templates.map(mapTemplateToContract);
   } catch (error) {
     console.error('Error fetching contract templates:', error);
@@ -143,8 +144,9 @@ export async function getContractById(contractId: string): Promise<IContract | n
     throw new Error('Unauthorized');
   }
 
+  const tenantId = requireTenantIdFromSession(session);
   try {
-    const { knex, tenant } = await createTenantKnex(requireTenantIdFromSession(session));
+    const { knex, tenant } = await createTenantKnex(tenantId);
     if (!tenant) {
       throw new Error("tenant context not found");
     }
@@ -154,7 +156,7 @@ export async function getContractById(contractId: string): Promise<IContract | n
       return { ...contract, is_template: false };
     }
 
-    const template = await ContractTemplateModel.getById(contractId);
+    const template = await ContractTemplateModel.getById(contractId, tenantId);
     if (template) {
       return mapTemplateToContract(template);
     }
@@ -344,7 +346,8 @@ export async function updateContract(
     throw new Error('Unauthorized');
   }
 
-  const { knex, tenant } = await createTenantKnex(requireTenantIdFromSession(session));
+  const tenantId = requireTenantIdFromSession(session);
+  const { knex, tenant } = await createTenantKnex(tenantId);
   if (!tenant) {
     throw new Error("tenant context not found");
   }
@@ -353,7 +356,7 @@ export async function updateContract(
     // Attempt to load standard contract first; fall back to template
     const currentContract = await Contract.getById(knex, tenant, contractId);
     if (!currentContract) {
-      const template = await ContractTemplateModel.getById(contractId);
+      const template = await ContractTemplateModel.getById(contractId, tenantId);
       if (!template) {
         throw new Error(`Contract ${contractId} not found`);
       }
@@ -382,7 +385,7 @@ export async function updateContract(
         return mapTemplateToContract(template);
       }
 
-      const updatedTemplate = await ContractTemplateModel.update(contractId, templateUpdates);
+      const updatedTemplate = await ContractTemplateModel.update(contractId, templateUpdates, tenantId);
       return mapTemplateToContract(updatedTemplate);
     }
 
@@ -470,7 +473,8 @@ export async function deleteContract(contractId: string): Promise<void> {
     throw new Error('Unauthorized');
   }
 
-  const { knex, tenant } = await createTenantKnex(requireTenantIdFromSession(session));
+  const tenantId = requireTenantIdFromSession(session);
+  const { knex, tenant } = await createTenantKnex(tenantId);
   if (!tenant) {
     throw new Error("tenant context not found");
   }
@@ -478,7 +482,7 @@ export async function deleteContract(contractId: string): Promise<void> {
   try {
     const templateExists = await isTemplateContract(knex, tenant, contractId);
     if (templateExists) {
-      await ContractTemplateModel.delete(contractId);
+      await ContractTemplateModel.delete(contractId, tenantId);
       return;
     }
 

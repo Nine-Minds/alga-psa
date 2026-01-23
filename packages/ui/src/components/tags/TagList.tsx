@@ -5,7 +5,6 @@ import { X, ChevronDown } from 'lucide-react';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { generateEntityColor } from '../../lib/colorUtils';
 import { ITag } from '@alga-psa/types';
-import { useTags } from '../../context/TagContext';
 import { TagEditForm } from './TagEditForm';
 
 interface TagListProps {
@@ -19,19 +18,16 @@ interface TagListProps {
   onDeleteAll?: (tagText: string, taggedType: string) => Promise<void>;
 }
 
-export const TagList: React.FC<TagListProps> = ({ 
-  tags, 
-  onRemoveTag, 
-  allowColorEdit = true, 
+export const TagList: React.FC<TagListProps> = ({
+  tags,
+  onRemoveTag,
+  allowColorEdit = true,
   allowTextEdit = true,
   allowDeleteAll = true,
   maxDisplay,
   onTagUpdate,
   onDeleteAll: onDeleteAllProp
 }) => {
-  const tagContext = useTags();
-  const { updateTagColor, updateTagText, deleteAllTagsByText } = tagContext || {};
-
   const displayTags = maxDisplay && tags.length > maxDisplay
     ? tags.slice(0, maxDisplay)
     : tags;
@@ -40,35 +36,17 @@ export const TagList: React.FC<TagListProps> = ({
     : 0;
 
   const handleTagUpdate = async (tagId: string, updates: { text?: string; backgroundColor?: string | null; textColor?: string | null }) => {
-    // Use passed handler if available, otherwise fall back to TagContext
+    // Use passed handler - this component is now a pure UI component
+    // Tag context operations should be handled by the parent (e.g., TagManager from @alga-psa/tags)
     if (onTagUpdate) {
       await onTagUpdate(tagId, updates);
-    } else {
-      // Handle text update
-      if (updates.text !== undefined && updateTagText) {
-        await updateTagText(tagId, updates.text);
-      }
-      
-      // Handle color update
-      if ((updates.backgroundColor !== undefined || updates.textColor !== undefined) && updateTagColor) {
-        const tag = tags.find(t => t.tag_id === tagId);
-        if (tag) {
-          await updateTagColor(
-            tagId, 
-            updates.backgroundColor !== undefined ? updates.backgroundColor : (tag.background_color ?? null),
-            updates.textColor !== undefined ? updates.textColor : (tag.text_color ?? null)
-          );
-        }
-      }
     }
   };
 
   const handleDeleteAll = async (tagText: string, taggedType: string) => {
-    // Use passed handler if available, otherwise fall back to TagContext
+    // Use passed handler - this component is now a pure UI component
     if (onDeleteAllProp) {
       await onDeleteAllProp(tagText, taggedType);
-    } else if (deleteAllTagsByText) {
-      await deleteAllTagsByText(tagText, taggedType as any);
     }
   };
 

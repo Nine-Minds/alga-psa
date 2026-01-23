@@ -1,46 +1,17 @@
 'use server';
 
-import logger from '@alga-psa/core/logger';
-import { getAdminConnection } from '@alga-psa/db/admin';
-import { buildTenantPortalSlug, getSlugParts, isValidTenantSlug } from '@shared/utils/tenantSlug';
+import { getTenantIdBySlug as _getTenantIdBySlug, getTenantSlugForTenant as _getTenantSlugForTenant } from '@alga-psa/db';
+
+// Re-export async server actions from @alga-psa/db for backward compatibility
+// The actual implementation is in @alga-psa/db/lib/tenantSlug to avoid circular dependencies
+// Note: Utility functions (buildTenantPortalSlug, isValidTenantSlug, getSlugParts)
+// are not re-exported here since 'use server' files can only export async functions.
+// Import those directly from '@alga-psa/db' or '@alga-psa/validation'.
 
 export async function getTenantIdBySlug(slug: string): Promise<string | null> {
-  if (!isValidTenantSlug(slug)) {
-    logger.warn('[tenantSlugActions] Invalid tenant slug received', { slug });
-    return null;
-  }
-
-  const { prefix, suffix } = getSlugParts(slug);
-  try {
-    const adminDb = await getAdminConnection();
-    const matches = await adminDb<{ tenant: string }>('tenants')
-      .select('tenant')
-      .whereRaw("left(replace(tenant::text, '-', ''), 6) = ?", [prefix])
-      .andWhereRaw("right(replace(tenant::text, '-', ''), 6) = ?", [suffix]);
-
-    if (matches.length === 1) {
-      return matches[0].tenant;
-    }
-
-    if (matches.length > 1) {
-      logger.error('[tenantSlugActions] Multiple tenants matched slug', {
-        slug,
-        tenantIds: matches.map((match) => match.tenant),
-      });
-      return null;
-    }
-
-    logger.warn('[tenantSlugActions] No tenant found for slug', { slug });
-    return null;
-  } catch (error) {
-    logger.error('[tenantSlugActions] Failed to resolve tenant by slug', {
-      slug,
-      error: error instanceof Error ? error.message : error,
-    });
-    return null;
-  }
+  return _getTenantIdBySlug(slug);
 }
 
 export async function getTenantSlugForTenant(tenantId: string): Promise<string> {
-  return buildTenantPortalSlug(tenantId);
+  return _getTenantSlugForTenant(tenantId);
 }

@@ -37,6 +37,21 @@ export { resolveTenantId, requireTenantId } from './lib/tenantId';
 export { auditLog } from './lib/auditLog';
 export * from './lib/workDate';
 
+// Tenant Slug utilities
+export {
+  getTenantIdBySlug,
+  getTenantSlugForTenant,
+  buildTenantPortalSlug,
+  isValidTenantSlug,
+  getSlugParts
+} from './lib/tenantSlug';
+
+// User with Roles utilities (session-independent)
+export {
+  getUserWithRoles,
+  getUserWithRolesByEmail
+} from './lib/getUserWithRoles';
+
 // DB models (tenant-scoped data access patterns)
 export * from './models/index';
 

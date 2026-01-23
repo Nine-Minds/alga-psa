@@ -448,7 +448,7 @@ export async function createAsset(data: CreateAssetRequest): Promise<Asset> {
     }
 
     // Get tenant context from DB (should match user's tenant)
-    const { knex, tenant } = await createTenantKnex();
+    const { knex, tenant } = await createTenantKnex(currentUser.tenant);
     if (!tenant) {
         throw new Error('No tenant found in database context');
     }
@@ -559,7 +559,7 @@ export async function updateAsset(asset_id: string, data: UpdateAssetRequest): P
     }
 
     // Get tenant context from DB (should match user's tenant)
-    const { knex, tenant } = await createTenantKnex();
+    const { knex, tenant } = await createTenantKnex(currentUser.tenant);
     if (!tenant) {
         throw new Error('No tenant found in database context');
     }
@@ -676,7 +676,7 @@ export async function deleteAsset(asset_id: string): Promise<void> {
     }
 
     // Get tenant context from DB (should match user's tenant)
-    const { knex, tenant } = await createTenantKnex();
+    const { knex, tenant } = await createTenantKnex(currentUser.tenant);
     if (!tenant) {
         throw new Error('No tenant found in database context');
     }
@@ -822,7 +822,7 @@ export async function getAssetRelationships(asset_id: string): Promise<AssetRela
     }
 
     // Get tenant context from DB (should match user's tenant)
-    const { knex, tenant } = await createTenantKnex();
+    const { knex, tenant } = await createTenantKnex(currentUser.tenant);
     if (!tenant) {
         throw new Error('No tenant found in database context');
     }
@@ -888,7 +888,7 @@ export async function createAssetRelationship(data: CreateAssetRelationshipReque
     }
 
     // Get tenant context from DB (should match user's tenant)
-    const { knex, tenant } = await createTenantKnex();
+    const { knex, tenant } = await createTenantKnex(currentUser.tenant);
     if (!tenant) {
         throw new Error('No tenant found in database context');
     }
@@ -982,7 +982,7 @@ export async function deleteAssetRelationship(parent_asset_id: string, child_ass
     }
 
     // Get tenant context from DB (should match user's tenant)
-    const { knex, tenant } = await createTenantKnex();
+    const { knex, tenant } = await createTenantKnex(currentUser.tenant);
     if (!tenant) {
         throw new Error('No tenant found in database context');
     }
@@ -1157,7 +1157,7 @@ export async function createMaintenanceSchedule(data: CreateMaintenanceScheduleR
         }
 
         // Get tenant context from DB (should match user's tenant)
-        const { knex, tenant } = await createTenantKnex();
+        const { knex, tenant } = await createTenantKnex(currentUser.tenant);
         if (!tenant) {
             throw new Error('No tenant found in database context');
         }
@@ -1251,7 +1251,7 @@ export async function updateMaintenanceSchedule(
         }
 
         // Get tenant context from DB (should match user's tenant)
-        const { knex, tenant } = await createTenantKnex();
+        const { knex, tenant } = await createTenantKnex(currentUser.tenant);
         if (!tenant) {
             throw new Error('No tenant found in database context');
         }
@@ -1341,7 +1341,7 @@ export async function deleteMaintenanceSchedule(schedule_id: string): Promise<vo
         }
 
         // Get tenant context from DB (should match user's tenant)
-        const { knex, tenant } = await createTenantKnex();
+        const { knex, tenant } = await createTenantKnex(currentUser.tenant);
         if (!tenant) {
             throw new Error('No tenant found in database context');
         }
@@ -1388,7 +1388,7 @@ export async function recordMaintenanceHistory(data: CreateMaintenanceHistoryReq
         }
 
         // Get tenant context from DB (should match user's tenant)
-        const { knex, tenant } = await createTenantKnex();
+        const { knex, tenant } = await createTenantKnex(currentUser.tenant);
         if (!tenant) {
             throw new Error('No tenant found in database context');
         }
@@ -1471,7 +1471,7 @@ export async function getAssetMaintenanceSchedules(asset_id: string): Promise<As
         }
 
         // Get tenant context from DB (should match user's tenant)
-        const { knex, tenant } = await createTenantKnex();
+        const { knex, tenant } = await createTenantKnex(currentUser.tenant);
         if (!tenant) {
             throw new Error('No tenant found in database context');
         }
@@ -1529,7 +1529,7 @@ export async function getAssetMaintenanceReport(asset_id: string): Promise<Asset
         }
 
         // Get tenant context from DB (should match user's tenant)
-        const { knex, tenant } = await createTenantKnex();
+        const { knex, tenant } = await createTenantKnex(currentUser.tenant);
         if (!tenant) {
             throw new Error('No tenant found in database context');
         }
@@ -1565,7 +1565,7 @@ export async function getAssetHistory(asset_id: string): Promise<AssetHistory[]>
         }
 
         // Get tenant context from DB (should match user's tenant)
-        const { knex, tenant } = await createTenantKnex();
+        const { knex, tenant } = await createTenantKnex(currentUser.tenant);
         if (!tenant) {
             throw new Error('No tenant found in database context');
         }
@@ -1619,7 +1619,7 @@ export async function getAssetLinkedTickets(asset_id: string): Promise<AssetTick
         }
 
         // Get tenant context from DB (should match user's tenant)
-        const { knex, tenant } = await createTenantKnex();
+        const { knex, tenant } = await createTenantKnex(currentUser.tenant);
         if (!tenant) {
             throw new Error('No tenant found in database context');
         }
@@ -1662,7 +1662,7 @@ export async function getClientMaintenanceSummary(client_id: string): Promise<Cl
         }
 
         // Get tenant context from DB (should match user's tenant)
-        const { knex, tenant } = await createTenantKnex();
+        const { knex, tenant } = await createTenantKnex(currentUser.tenant);
         if (!tenant) {
             throw new Error('No tenant found in database context');
         }
@@ -2023,7 +2023,7 @@ export async function getClientMaintenanceSummaries(client_ids: string[]): Promi
         }
 
         // Get tenant context from DB (should match user's tenant)
-        const { knex, tenant } = await createTenantKnex();
+        const { knex, tenant } = await createTenantKnex(currentUser.tenant);
         if (!tenant) {
             throw new Error('No tenant found in database context');
         }
@@ -2130,7 +2130,7 @@ export async function createAssetAssociation(data: CreateAssetAssociationRequest
     }
 
     // Get tenant context from DB (should match user's tenant)
-    const { knex, tenant } = await createTenantKnex();
+    const { knex, tenant } = await createTenantKnex(currentUser.tenant);
     if (!tenant) {
         throw new Error('No tenant found in database context');
     }
@@ -2202,7 +2202,7 @@ export async function removeAssetAssociation(
     }
 
     // Get tenant context from DB (should match user's tenant)
-    const { knex, tenant } = await createTenantKnex();
+    const { knex, tenant } = await createTenantKnex(currentUser.tenant);
     if (!tenant) {
         throw new Error('No tenant found in database context');
     }
@@ -2250,7 +2250,7 @@ export async function getAssetSummaryMetrics(asset_id: string): Promise<AssetSum
     }
 
     // Get tenant context from DB (should match user's tenant)
-    const { knex, tenant } = await createTenantKnex();
+    const { knex, tenant } = await createTenantKnex(currentUser.tenant);
     if (!tenant) {
         throw new Error('No tenant found in database context');
     }

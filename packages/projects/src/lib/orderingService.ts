@@ -59,6 +59,9 @@ export class OrderingService {
     const newKey = this.generateKeyForPosition(beforeKey, afterKey);
 
     const { knex: db, tenant } = await createTenantKnex();
+    if (!tenant) {
+      throw new Error('Tenant context is required for reordering project task');
+    }
     await db('project_tasks')
       .where({ task_id: taskId, tenant })
       .update({
@@ -74,6 +77,9 @@ export class OrderingService {
     const newKey = this.generateKeyForPosition(beforeKey, afterKey);
 
     const { knex: db, tenant } = await createTenantKnex();
+    if (!tenant) {
+      throw new Error('Tenant context is required for reordering project phase');
+    }
     await db('project_phases')
       .where({ phase_id: phaseId, tenant })
       .update({

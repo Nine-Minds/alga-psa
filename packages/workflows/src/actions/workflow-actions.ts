@@ -6,6 +6,15 @@ import type { IWorkflowExecution, IWorkflowEvent, IWorkflowActionResult } from '
 import { getWorkflowRuntime, getActionRegistry } from '@alga-psa/shared/workflow/core';
 import type { WorkflowDefinition, WorkflowMetadata } from '@alga-psa/shared/workflow/core';
 import { initializeServerWorkflows } from '@alga-psa/shared/workflow/init/serverInit';
+import { getCurrentUser } from '@alga-psa/users/actions';
+
+async function createTenantKnexForCurrentUser() {
+  const currentUser = await getCurrentUser();
+  if (!currentUser?.tenant) {
+    throw new Error('Tenant not found');
+  }
+  return createTenantKnex(currentUser.tenant);
+}
 
 /**
  * Workflow metrics interface
@@ -34,7 +43,7 @@ export interface WorkflowExecutionFilter {
  * Get workflow execution metrics
  */
 export async function getWorkflowMetricsAction(): Promise<WorkflowMetrics> {
-  const { knex, tenant } = await createTenantKnex();
+  const { knex, tenant } = await createTenantKnexForCurrentUser();
   
   if (!tenant) {
     throw new Error('Tenant not found');
@@ -77,7 +86,7 @@ export async function getWorkflowExecutionsWithDetails(
 ): Promise<IWorkflowExecution[]> {
   console.log('getWorkflowExecutionsWithDetails called with filter:', JSON.stringify(filter, null, 2));
   
-  const { knex, tenant } = await createTenantKnex();
+  const { knex, tenant } = await createTenantKnexForCurrentUser();
   
   if (!tenant) {
     console.log('Tenant not found, throwing error');
@@ -142,7 +151,7 @@ export async function getWorkflowExecutionDetails(
   actionResults: IWorkflowActionResult[]
 } | null> {
   try {
-    const { knex, tenant } = await createTenantKnex();
+    const { knex, tenant } = await createTenantKnexForCurrentUser();
     
     if (!tenant) {
       throw new Error('Tenant not found');
@@ -177,7 +186,7 @@ export async function getWorkflowExecutionDetails(
  */
 export async function pauseWorkflowExecutionAction(executionId: string): Promise<boolean> {
   try {
-    const { knex, tenant } = await createTenantKnex();
+    const { knex, tenant } = await createTenantKnexForCurrentUser();
     
     if (!tenant) {
       throw new Error('Tenant not found');
@@ -207,7 +216,7 @@ export async function pauseWorkflowExecutionAction(executionId: string): Promise
  */
 export async function resumeWorkflowExecutionAction(executionId: string): Promise<boolean> {
   try {
-    const { knex, tenant } = await createTenantKnex();
+    const { knex, tenant } = await createTenantKnexForCurrentUser();
     
     if (!tenant) {
       throw new Error('Tenant not found');
@@ -237,7 +246,7 @@ export async function resumeWorkflowExecutionAction(executionId: string): Promis
  */
 export async function cancelWorkflowExecutionAction(executionId: string): Promise<boolean> {
   try {
-    const { knex, tenant } = await createTenantKnex();
+    const { knex, tenant } = await createTenantKnexForCurrentUser();
     
     if (!tenant) {
       throw new Error('Tenant not found');
@@ -271,7 +280,7 @@ export async function retryWorkflowActionAction(
 ): Promise<boolean> {
 
   try {
-    const { knex, tenant } = await createTenantKnex();
+    const { knex, tenant } = await createTenantKnexForCurrentUser();
     
     if (!tenant) {
       throw new Error('Tenant not found');

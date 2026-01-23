@@ -20,11 +20,11 @@ import { getConsolidatedTicketData } from '@alga-psa/tickets/actions/optimizedTi
 import { toast } from 'react-hot-toast';
 import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContainer';
 import { QuickAddTicket } from '@alga-psa/tickets/components/QuickAddTicket';
-import { createTicketColumns } from '@alga-psa/ui/lib/ticket-columns';
+import { createTicketColumns } from '@alga-psa/tickets/lib';
 import { getTicketingDisplaySettings, type TicketingDisplaySettings } from '@alga-psa/tickets/actions/ticketDisplaySettings';
 import { ITag } from '@alga-psa/types';
 import { findTagsByEntityIds } from '@alga-psa/tags/actions';
-import { useTagPermissions } from '@alga-psa/ui';
+import { useTagPermissions } from '@alga-psa/tags/hooks';
 import ClientDetails from '../clients/ClientDetails';
 import { getClientById } from '@alga-psa/clients/actions';
 import { TagFilter } from '@alga-psa/ui/components';

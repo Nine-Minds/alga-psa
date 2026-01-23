@@ -32,6 +32,11 @@ const Document = {
 
     get: async (knexOrTrx: Knex | Knex.Transaction, document_id: string): Promise<IDocument | undefined> => {
         try {
+            const tenant = await getCurrentTenantId();
+            if (!tenant) {
+                throw new Error('Tenant context is required for getting document');
+            }
+
             return await knexOrTrx<IDocument>('documents')
                     .select(
                         'documents.*',
@@ -51,6 +56,7 @@ const Document = {
                     })
                     .leftJoin('shared_document_types as sdt', 'documents.shared_type_id', 'sdt.type_id')
                     .where('documents.document_id', document_id)
+                    .andWhere('documents.tenant', tenant)
                     .first();
         } catch (error) {
             logger.error(`Error getting document with id ${document_id}:`, error);
@@ -72,9 +78,14 @@ const Document = {
 
     update: async (knexOrTrx: Knex | Knex.Transaction, document_id: string, document: Partial<IDocument>): Promise<void> => {
         try {
+            const tenant = await getCurrentTenantId();
+            if (!tenant) {
+                throw new Error('Tenant context is required for updating document');
+            }
             const { tenant: _, ...updateData } = document;
             await knexOrTrx<IDocument>('documents')
                 .where('document_id', document_id)
+                .andWhere('tenant', tenant)
                 .update(updateData);
         } catch (error) {
             logger.error(`Error updating document with id ${document_id}:`, error);
@@ -84,8 +95,13 @@ const Document = {
 
     delete: async (knexOrTrx: Knex | Knex.Transaction, document_id: string): Promise<void> => {
         try {
+            const tenant = await getCurrentTenantId();
+            if (!tenant) {
+                throw new Error('Tenant context is required for deleting document');
+            }
             await knexOrTrx<IDocument>('documents')
                 .where('document_id', document_id)
+                .andWhere('tenant', tenant)
                 .del();
         } catch (error) {
             logger.error(`Error deleting document with id ${document_id}:`, error);

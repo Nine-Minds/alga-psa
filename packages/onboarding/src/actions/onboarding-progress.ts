@@ -2,9 +2,8 @@
 
 import logger from '@alga-psa/core/logger';
 import { getAdminConnection } from '@alga-psa/db/admin';
-import { getPortalDomainStatusAction } from '@alga-psa/tenancy/actions';
-import { createTenantKnex } from '@alga-psa/db';
-import { getConnection } from '@alga-psa/db';
+import { getPortalDomainStatusForTenant } from '@alga-psa/tenancy/server';
+import { createTenantKnex, getConnection } from '@alga-psa/db';
 import { getSession } from '@alga-psa/auth';
 import type { CalendarProviderConfig } from '@alga-psa/types';
 import {
@@ -75,10 +74,10 @@ export async function getOnboardingProgressAction(): Promise<OnboardingProgressR
   const session = await getSession();
   const sessionTenant = (session?.user as any)?.tenant;
 
-  const { tenant: tenantId } = await createTenantKnex(sessionTenant);
-  if (!tenantId) {
+  if (!sessionTenant || typeof sessionTenant !== 'string') {
     throw new Error('Tenant context is required to load onboarding progress');
   }
+  const tenantId = sessionTenant;
 
   const [identity, customerPortal, importStep, calendar, email] = await Promise.all([
     resolveIdentityStep(tenantId),
@@ -153,7 +152,7 @@ async function resolveIdentityStep(tenantId: string): Promise<OnboardingStepServ
 async function resolveCustomerPortalStep(tenantId: string): Promise<OnboardingStepServerState> {
   try {
     const [domainSubstep, brandingSubstep, inviteSubstep] = await Promise.all([
-      resolvePortalCustomDomainSubstep(),
+      resolvePortalCustomDomainSubstep(tenantId),
       resolvePortalBrandingSubstep(tenantId),
       resolvePortalInviteSubstep(tenantId),
     ]);
@@ -178,8 +177,8 @@ async function resolveCustomerPortalStep(tenantId: string): Promise<OnboardingSt
   }
 }
 
-async function resolvePortalCustomDomainSubstep(): Promise<OnboardingSubstepServerState> {
-  const status = await getPortalDomainStatusAction();
+async function resolvePortalCustomDomainSubstep(tenantId: string): Promise<OnboardingSubstepServerState> {
+  const status = await getPortalDomainStatusForTenant(tenantId);
   const lastUpdated = dateToIso(status.updatedAt ?? status.lastCheckedAt);
 
   if (!status.domain || status.status === 'disabled') {
