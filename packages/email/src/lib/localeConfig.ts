@@ -3,7 +3,7 @@
 
 export const LOCALE_CONFIG = {
   defaultLocale: 'en',
-  supportedLocales: ['en', 'fr', 'es', 'de', 'nl', 'it', 'pl'] as const,
+  supportedLocales: ['en', 'fr', 'es', 'de', 'nl', 'it', 'pl', 'pt_BR'] as const,
   localeNames: {
     en: 'English',
     fr: 'Français',
@@ -12,6 +12,7 @@ export const LOCALE_CONFIG = {
     nl: 'Nederlands',
     it: 'Italiano',
     pl: 'Polski',
+    pt_BR: 'Português (Brasil)',
   } as const,
   rtlLocales: [] as string[],
 } as const;

@@ -1,0 +1,831 @@
+{
+  "nav": {
+    "dashboard": "Dashboard",
+    "tickets": "Tickets",
+    "clients": "Clients",
+    "projects": "Projects",
+    "billing": "Billing",
+    "reports": "Reports",
+    "settings": "Settings",
+    "profile": "Profile",
+    "logout": "Logout",
+    "help": "Help"
+  },
+  "actions": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "create": "Create",
+    "update": "Update",
+    "submit": "Submit",
+    "back": "Back",
+    "next": "Next",
+    "previous": "Previous",
+    "search": "Search",
+    "filter": "Filter",
+    "export": "Export",
+    "import": "Import",
+    "download": "Download",
+    "upload": "Upload",
+    "refresh": "Refresh",
+    "close": "Close",
+    "confirm": "Confirm",
+    "add": "Add",
+    "remove": "Remove",
+    "clear": "Clear",
+    "reset": "Reset",
+    "view": "View",
+    "copy": "Copy",
+    "duplicate": "Duplicate",
+    "openMenu": "Open menu",
+    "confirmDeletion": "Confirm Deletion",
+    "saving": "Saving..."
+  },
+  "status": {
+    "loading": "Loading...",
+    "saving": "Saving...",
+    "processing": "Processing...",
+    "success": "Success",
+    "error": "Error",
+    "warning": "Warning",
+    "info": "Information",
+    "pending": "Pending",
+    "active": "Active",
+    "inactive": "Inactive",
+    "completed": "Completed",
+    "cancelled": "Cancelled"
+  },
+  "messages": {
+    "welcome": "Welcome",
+    "confirmDelete": "Are you sure you want to delete this item?",
+    "confirmDeletion": "Confirm Deletion",
+    "saveSuccess": "Changes saved successfully",
+    "saveError": "Failed to save changes",
+    "loadError": "Failed to load data",
+    "noData": "No data available",
+    "required": "This field is required",
+    "invalidEmail": "Invalid email address",
+    "invalidPassword": "Invalid password",
+    "passwordMismatch": "Passwords do not match"
+  },
+  "errors": {
+    "auth": {
+      "notAuthenticated": "Not authenticated",
+      "accessDenied": "Access denied",
+      "clientPortalOnly": "Access denied: Client portal actions are restricted to client users",
+      "insufficientPermissions": "Insufficient permissions",
+      "userIdNotFound": "User ID not found in session",
+      "tenantNotFound": "Tenant not found in session. Please log out and log back in.",
+      "userNotFound": "User not found",
+      "contactNotFound": "User not associated with a contact",
+      "clientNotFound": "Contact not associated with a client"
+    },
+    "permissions": {
+      "tickets": {
+        "read": "Insufficient permissions to view tickets",
+        "readDetails": "Insufficient permissions to view ticket details",
+        "create": "Insufficient permissions to create tickets",
+        "update": "Insufficient permissions to update tickets",
+        "updateStatus": "Insufficient permissions to update ticket status",
+        "addComments": "Insufficient permissions to add comments",
+        "updateComments": "Insufficient permissions to update comments",
+        "deleteComments": "Insufficient permissions to delete comments"
+      }
+    }
+  },
+  "fields": {
+    "notes": "Notes"
+  },
+  "time": {
+    "today": "Today",
+    "yesterday": "Yesterday",
+    "tomorrow": "Tomorrow",
+    "thisWeek": "This Week",
+    "lastWeek": "Last Week",
+    "thisMonth": "This Month",
+    "lastMonth": "Last Month",
+    "thisYear": "This Year",
+    "lastYear": "Last Year",
+    "seconds": "seconds",
+    "minutes": "minutes",
+    "hours": "hours",
+    "days": "days",
+    "weeks": "weeks",
+    "months": "months",
+    "years": "years"
+  },
+  "language": {
+    "selectLanguage": "Select Language",
+    "changeLanguage": "Change Language",
+    "currentLanguage": "Current Language",
+    "preference": {
+      "label": "Language Preference",
+      "helper": "Select your preferred language for the interface and email notifications",
+      "placeholder": "Select a language",
+      "cleared": "Language preference cleared. Using default language...",
+      "updating": "Updating language preference...",
+      "notSet": "Not set",
+      "notSetWithSource": "Not set (Uses {{source}}: {{languageName}} - {{locale}})",
+      "source": {
+        "client": "client default",
+        "tenant": "tenant default",
+        "system": "system default"
+      }
+    }
+  },
+  "yes": "Yes",
+  "no": "No",
+  "clients": {
+    "locations": {
+      "sectionTitle": "Client Locations",
+      "manageButton": "Manage Locations",
+      "dialogTitle": "Manage Locations - {{client}}",
+      "managerLabel": "Client Locations Manager",
+      "listTitle": "Locations",
+      "buttons": {
+        "add": "Add Location",
+        "save": "Save Location"
+      },
+      "card": {
+        "unnamed": "Unnamed Location",
+        "setDefault": "Set as default",
+        "edit": "Edit location",
+        "delete": "Delete location",
+        "addressLabel": "Address",
+        "addressHelper": "Full address for this location",
+        "phoneLabel": "Phone",
+        "phoneHelper": "Phone number for this location",
+        "phoneValue": "Phone: {{phone}}",
+        "emailLabel": "Email",
+        "emailHelper": "Email address for this location",
+        "emailValue": "Email: {{email}}",
+        "billingTag": "Billing",
+        "shippingTag": "Shipping",
+        "notesLabel": "Notes",
+        "notesHelper": "Additional notes for this location"
+      },
+      "form": {
+        "locationName": "Location Name",
+        "locationNameHelper": "Name for this location (e.g., Main Office, Warehouse)",
+        "addressLine1": "Address Line 1",
+        "addressLine1Helper": "Primary address line (required)",
+        "addressLine2": "Address Line 2",
+        "addressLine2Helper": "Additional address information (optional)",
+        "addressLine3": "Address Line 3",
+        "city": "City",
+        "cityHelper": "City name (required)",
+        "stateProvince": "State/Province",
+        "stateProvinceHelper": "State or province name",
+        "postalCode": "Postal Code",
+        "postalCodeHelper": "ZIP or postal code",
+        "country": "Country",
+        "countryHelper": "Select country (required)",
+        "phone": "Phone",
+        "phoneHelper": "Phone number for this location",
+        "email": "Email",
+        "emailHelper": "Email address for this location",
+        "taxRegion": "Tax Region",
+        "taxRegionHelper": "Select the applicable tax region",
+        "notes": "Notes",
+        "notesHelper": "Additional notes about this location",
+        "defaultLocation": "Default Location",
+        "defaultLocationHelper": "Mark this as the default location for the client",
+        "billingAddress": "Billing Address",
+        "billingAddressHelper": "Use this location as the billing address",
+        "shippingAddress": "Shipping Address",
+        "shippingAddressHelper": "Use this location as the shipping address",
+        "placeholder": {
+          "locationName": "e.g., Main Office, Warehouse",
+          "addressLine1": "Enter address *",
+          "city": "Enter city *",
+          "country": "Select Country *",
+          "loadingCountries": "Loading countries...",
+          "taxRegionOption": "Select a tax region...",
+          "taxRegion": "Select a tax region..."
+        }
+      },
+      "validation": {
+        "title": "Please fill in the required fields:"
+      },
+      "errors": {
+        "loadTaxRegions": "Failed to load tax regions",
+        "loadCountries": "Failed to load countries",
+        "loadLocations": "Failed to load client locations",
+        "save": "Failed to save location",
+        "delete": "Failed to delete location",
+        "setDefault": "Failed to set default location"
+      },
+      "success": {
+        "create": "Location created successfully",
+        "update": "Location updated successfully",
+        "delete": "Location deleted successfully",
+        "setDefault": "Default location updated"
+      },
+      "dialog": {
+        "addTitle": "Add New Location",
+        "editTitle": "Edit Location",
+        "deleteTitle": "Delete Location",
+        "deleteMessage": "Are you sure you want to delete the location \"{{name}}\"? This action cannot be undone."
+      },
+      "empty": {
+        "title": "No locations added yet",
+        "description": "Click \"Add Location\" to get started"
+      }
+    }
+  },
+  "pagination": {
+    "previous": "Previous",
+    "next": "Next",
+    "pageInfo": "Page {{current}} of {{total}} ({{count}} total records)",
+    "page": "Page",
+    "of": "of",
+    "showing": "Showing {{from}} to {{to}} of {{total}} results",
+    "rowsPerPage": "Rows per page",
+    "first": "First",
+    "last": "Last",
+    "itemsLabel": "items",
+    "itemsPerPageOption": "{{count}} items/page",
+    "itemsPerPagePlaceholder": "Items per page",
+    "reflectionLabel": "Pagination",
+    "range": "{{from}} - {{to}} of {{total}} {{itemLabel}}",
+    "ariaLabel": "Pagination",
+    "totalItems": "{{count}} {{itemLabel}} total",
+    "totalRecordsInline": "({{count}} total records)",
+    "pageOf": "Page {{current}} of {{total}}"
+  },
+  "documents": {
+    "title": "Documents",
+    "noDocuments": "No documents attached",
+    "upload": "Upload Document",
+    "download": "Download",
+    "remove": "Remove",
+    "detach": "Detach",
+    "preview": "Preview",
+    "linkDocuments": "Link Documents",
+    "editDocument": "Edit Document",
+    "viewDocument": "View Document",
+    "downloadToPlay": "Download to Play",
+    "delete": "Delete",
+    "deletePermanently": "Delete Permanently",
+    "previewUnavailable": "Preview unavailable",
+    "newDocument": "New Document",
+    "uploadFile": "Upload File",
+    "deleteTitle": "Permanently Delete Document",
+    "deleteMessage": "Are you sure you want to permanently delete \"{{name}}\" from the system?\\n\\nThis will remove the file entirely and it will no longer be available anywhere. This action cannot be undone.",
+    "deleteVideoTitle": "Permanently Delete Video",
+    "deleteVideoMessage": "Are you sure you want to permanently delete the video \"{{name}}\" from the system?\\n\\nThis will remove the file entirely and it will no longer be available anywhere. This action cannot be undone.",
+    "removeTitle": "Detach Document",
+    "removeMessage": "Are you sure you want to detach \"{{name}}\" from this item?\\n\\nThis only removes the link — the document will remain in the document library and can be attached to other items.",
+    "removeVideoTitle": "Detach Video",
+    "removeVideoMessage": "Are you sure you want to detach the video \"{{name}}\" from this item?\\n\\nThis only removes the link — the file will remain in the document library and can be attached to other items.",
+    "downloadFile": "Download File",
+    "videoUnsupported": "Video format ({{mimeType}}) not supported for browser playback",
+    "videoTagUnsupported": "Your browser does not support the video tag.",
+    "unnamed": "Untitled",
+    "videoDownloadInfo": "The video will be downloaded and can be played with your system's default video player",
+    "previewUnavailableNoId": "Preview not available (no identifier)",
+    "previewLoadFailed": "Failed to load preview",
+    "videoCodecWarning": "Chrome may not support this video codec. Try downloading or use Safari/Edge.",
+    "messages": {
+      "fetchFailed": "Failed to fetch documents.",
+      "folderCreated": "Folder \"{{name}}\" created successfully",
+      "folderCreateFailed": "Failed to create folder",
+      "moveDocumentsSuccess_one": "{{count}} document moved to {{destination}}",
+      "moveDocumentsSuccess_other": "{{count}} documents moved to {{destination}}",
+      "moveDocumentsFailed": "Failed to move documents",
+      "deleteSuccess": "Document \"{{name}}\" deleted successfully",
+      "deleteFailed": "Failed to delete document",
+      "removeAssociationFailed": "Failed to remove document association",
+      "moveDocumentSuccess": "Document \"{{name}}\" moved successfully",
+      "moveDocumentFailed": "Failed to move document",
+      "createFailed": "Failed to create document",
+      "saveFailed": "Failed to save document",
+      "loadContentFailed": "Failed to load document content",
+      "downloadFailed": "Failed to download document",
+      "bulkDeleteFailed": "Failed to delete some documents",
+      "bulkDeleteSuccess_one": "{{count}} document deleted successfully",
+      "bulkDeleteSuccess_other": "{{count}} documents deleted successfully"
+    },
+    "empty": {
+      "default": "No documents found",
+      "folder": "No documents found in this folder"
+    },
+    "validation": {
+      "nameRequired": "Document name is required"
+    },
+    "bulkActions": {
+      "selected_one": "{{count}} document selected",
+      "selected_other": "{{count}} documents selected",
+      "moveToFolder": "Move to Folder",
+      "deleteSelected": "Delete Selected",
+      "clearSelection": "Clear Selection"
+    },
+    "prompts": {
+      "confirmBulkDelete_one": "Are you sure you want to delete {{count}} document?",
+      "confirmBulkDelete_other": "Are you sure you want to delete {{count}} documents?"
+    },
+    "pagination": {
+      "perPage": "{{count}} per page"
+    },
+    "folderSelector": {
+      "defaultTitle": "Select Destination Folder",
+      "defaultDescription": "Choose where to save this document",
+      "singleDescription": "Where would you like to save \"{{fileName}}\"?",
+      "multipleDescription": "Where would you like to save these {{count}} files?",
+      "newDocumentTitle": "Select Folder for New Document",
+      "newDocumentDescription": "Choose where to save this new document",
+      "moveTitle": "Move Document",
+      "moveDescriptionWithName": "Select destination folder for \"{{name}}\"",
+      "moveDescription": "Select destination folder",
+      "bulkMoveTitle": "Move Selected Documents",
+      "bulkMoveDescription_one": "Select destination folder for {{count}} document",
+      "bulkMoveDescription_other": "Select destination folder for {{count}} documents",
+      "errors": {
+        "nameRequired": "Please enter a folder name",
+        "invalidCharacters": "Folder name cannot contain \"/\"",
+        "createFailed": "Failed to create folder"
+      },
+      "creating": "Creating...",
+      "createButton": "Create Folder",
+      "newFolderButton": "New Folder",
+      "parentLabel": "Parent folder: {{folder}}",
+      "rootLabel": "/ (Root)",
+      "namePlaceholder": "Enter folder name",
+      "loading": "Loading folders...",
+      "rootOption": "Root (No folder)",
+      "empty": "No folders available. Documents will be saved to root."
+    },
+    "filters": {
+      "searchLabel": "Search Documents",
+      "searchPlaceholder": "Search by document name...",
+      "typeLabel": "Document Type",
+      "entityTypeLabel": "Associated Entity Type",
+      "uploadedByLabel": "Uploaded By",
+      "uploadedByPlaceholder": "All Users",
+      "updatedStartLabel": "Updated Date Start",
+      "updatedEndLabel": "Updated Date End",
+      "startDatePlaceholder": "Select start date",
+      "endDatePlaceholder": "Select end date",
+      "sortByLabel": "Sort By",
+      "clear": "Clear Filters",
+      "showAllDocuments": "Show All Documents",
+      "typeOptions": {
+        "all": "All Document Types",
+        "pdf": "PDF",
+        "image": "Images",
+        "text": "Documents",
+        "video": "Video",
+        "other": "Other"
+      },
+      "sortOptions": {
+        "updated_at": "Date",
+        "document_name": "Document name",
+        "file_size": "File size",
+        "created_by_full_name": "Created By"
+      },
+      "sortOrder": {
+        "default": {
+          "asc": "Show ascending order",
+          "desc": "Show descending order"
+        },
+        "document_name": {
+          "asc": "Show A-Z",
+          "desc": "Show Z-A"
+        },
+        "updated_at": {
+          "asc": "Show Oldest First",
+          "desc": "Show Newest First"
+        },
+        "file_size": {
+          "asc": "Show Smallest First",
+          "desc": "Show Largest First"
+        },
+        "created_by_full_name": {
+          "asc": "Show A-Z",
+          "desc": "Show Z-A"
+        }
+      }
+    },
+    "selector": {
+      "title": "Select Documents",
+      "reflectionLabel": "Document Selector",
+      "searchPlaceholder": "Search documents...",
+      "foldersLabel": "Folders",
+      "folderHint": "in folder \"{{folder}}\"",
+      "saving": "Saving...",
+      "selectDocument": "Select Document",
+      "associateSelected": "Associate Selected",
+      "errors": {
+        "configuration": "Configuration error: Missing entity information",
+        "invalidData": "Invalid document data received",
+        "load": "Failed to load documents",
+        "save": "Failed to save document selection"
+      },
+      "configErrorTitle": "Configuration Error",
+      "configErrorMessage": "Missing required configuration. Please contact support."
+    },
+    "uploadSection": {
+      "reflectionLabel": "Document Upload",
+      "dragDrop": "Drag and drop your files here, or",
+      "browse": "Browse Files",
+      "uploading": "Uploading...",
+      "uploadingProgress": "Uploading {{current}} of {{total}}",
+      "pending": "Pending",
+      "error": "Failed to upload document",
+      "fileError": "Failed to upload file"
+    },
+    "folders": {
+      "root": "Root",
+      "loadFailed": "Failed to load folder tree",
+      "deleteConfirm": "Are you sure you want to delete the folder \"{{name}}\"? This will only work if the folder is empty.",
+      "deleteSuccess": "Folder \"{{name}}\" deleted successfully",
+      "deleteFailed": "Failed to delete folder",
+      "deleteAction": "Delete folder",
+      "loading": "Loading folders...",
+      "title": "Folders",
+      "collapse": "Collapse folders",
+      "allDocuments": "All Documents"
+    },
+    "folderManager": {
+      "title": "Create New Folder",
+      "nameLabel": "Folder Name",
+      "namePlaceholder": "Enter folder name",
+      "willCreateIn": "Will be created in: {{folder}}"
+    },
+    "notifications": {
+      "viewAll": "View all notifications",
+      "categories": {
+        "Authentication": "Authentication",
+        "Invoices": "Invoices",
+        "Projects": "Projects",
+        "Tickets": "Tickets",
+        "Time Entries": "Time Entries"
+      }
+    }
+  },
+  "surveys": {
+    "common": {
+      "loading": "Loading..."
+    },
+    "settings": {
+      "tabLabel": "Surveys",
+      "title": "Customer Satisfaction Surveys",
+      "subtitle": "Configure templates, triggers, and delivery to collect post-ticket feedback.",
+      "tabs": {
+        "templates": "Templates",
+        "triggers": "Triggers"
+      },
+      "templateList": {
+        "title": "Survey templates",
+        "description": "Manage the prompts and rating scales sent to your clients.",
+        "createButton": "New template",
+        "emptyTitle": "No survey templates yet",
+        "emptyDescription": "Create your first template to define the survey wording and rating scale.",
+        "table": {
+          "name": "Template",
+          "rating": "Rating scale",
+          "status": "Status",
+          "updated": "Updated",
+          "actions": "Actions"
+        },
+        "defaultBadge": "Default",
+        "status": {
+          "enabled": "Enabled",
+          "disabled": "Disabled"
+        },
+        "toasts": {
+          "created": "Template created",
+          "updated": "Template updated",
+          "deleted": "Template deleted",
+          "setDefault": "Default template updated",
+          "error": "Unable to save template",
+          "deleteError": "Unable to delete template"
+        },
+        "errors": {
+          "load": "Unable to load survey templates."
+        },
+        "deleteConfirm": "Delete this template? Invitations already sent will not be affected."
+      },
+      "templateForm": {
+        "titleCreate": "Create survey template",
+        "titleEdit": "Edit survey template",
+        "labels": {
+          "name": "Template name",
+          "ratingType": "Rating type",
+          "ratingScale": "Rating scale",
+          "ratingLabels": "Rating labels",
+          "promptText": "Survey prompt",
+          "commentPrompt": "Comment prompt",
+          "thankYouText": "Thank-you message",
+          "isDefault": "Set as default template",
+          "enabled": "Template enabled"
+        },
+        "placeholders": {
+          "ratingLabels": "Example:\\n1 = Very dissatisfied\\n2 = Dissatisfied\\n3 = Neutral\\n4 = Satisfied\\n5 = Very satisfied"
+        },
+        "help": {
+          "ratingLabels": "Provide one label per score using “value = label” on separate lines."
+        },
+        "ratingTypes": {
+          "stars": "Stars",
+          "numbers": "Numbers",
+          "emojis": "Emojis"
+        },
+        "actions": {
+          "create": "Create template",
+          "save": "Save changes",
+          "delete": "Delete template"
+        }
+      },
+      "triggerList": {
+        "title": "Survey triggers",
+        "description": "Automatically send invitations when tickets or projects reach completion.",
+        "createButton": "New trigger",
+        "emptyTitle": "No survey triggers configured",
+        "emptyDescription": "Create a trigger to send surveys when tickets close or projects finish.",
+        "table": {
+          "template": "Template",
+          "type": "Trigger",
+          "conditions": "Conditions",
+          "status": "Status",
+          "updated": "Updated",
+          "actions": "Actions"
+        },
+        "conditions": {
+          "boards": "Boards",
+          "statuses": "Statuses",
+          "priorities": "Priorities",
+          "any": "Any",
+          "unrestricted": "Applies to every ticket and project"
+        },
+        "status": {
+          "enabled": "Enabled",
+          "disabled": "Disabled"
+        },
+        "toasts": {
+          "created": "Trigger created",
+          "updated": "Trigger updated",
+          "deleted": "Trigger deleted",
+          "error": "Unable to save trigger",
+          "deleteError": "Unable to delete trigger"
+        },
+        "errors": {
+          "load": "Unable to load survey triggers."
+        },
+        "deleteConfirm": "Delete this trigger? Invitations already queued will still be sent."
+      },
+      "triggerForm": {
+        "titleCreate": "Create survey trigger",
+        "titleEdit": "Edit survey trigger",
+        "labels": {
+          "template": "Survey template",
+          "triggerType": "Trigger type",
+          "boardIds": "Board IDs",
+          "statusIds": "Status IDs",
+          "priorities": "Priorities",
+          "enabled": "Trigger enabled"
+        },
+        "placeholders": {
+          "boardIds": "Select board",
+          "statusIds": "Add status",
+          "priorities": "Add priority"
+        },
+        "help": {
+          "conditions": "Leave a field blank to match any value."
+        },
+        "actions": {
+          "create": "Create trigger",
+          "save": "Save changes",
+          "delete": "Delete trigger"
+        },
+        "triggerTypes": {
+          "ticket_closed": "Ticket closed",
+          "project_completed": "Project completed"
+        },
+        "errors": {
+          "reference": "Unable to load trigger options. Please try again."
+        },
+        "noTemplates": "Create a survey template before adding triggers.",
+        "prioritiesMixed": "Selected boards use different priority types. Showing all priorities."
+      }
+    },
+    "response": {
+      "pageTitle": "Customer Satisfaction Survey",
+      "invalidTitle": "Survey unavailable",
+      "invalidMessage": "This feedback link is no longer valid or has already been used.",
+      "ratingPrompt": "How was your experience?",
+      "ratingAssistive": "Select a score from 1 to {{scale}}",
+      "commentLabel": "Additional comments (optional)",
+      "submitButton": "Submit feedback",
+      "submitting": "Submitting feedback…",
+      "submittedTitle": "Thank you for your response!",
+      "submittedMessage": "{{thankYouText}}",
+      "retryButton": "Try again",
+      "ratingSubmitted": "Feedback submitted",
+      "errorMessage": "We could not record your feedback. Please try again.",
+      "selectRatingError": "Select a rating before submitting.",
+      "supportMessage": "If you have questions, please contact your technician."
+    }
+  },
+  "availability": {
+    "settings": {
+      "title": "Availability Settings",
+      "description": "Configure appointment availability rules and schedules"
+    },
+    "tabs": {
+      "general": "General Settings",
+      "userHours": "User Hours",
+      "serviceRules": "Service Rules",
+      "exceptions": "Exceptions"
+    },
+    "general": {
+      "advanceBookingDays": "Advance Booking Days",
+      "advanceBookingDaysHelper": "How far in advance clients can book appointments",
+      "minimumNoticeHours": "Minimum Notice Hours",
+      "minimumNoticeHoursHelper": "Minimum time required before an appointment",
+      "defaultBufferBefore": "Default Buffer Before (minutes)",
+      "defaultBufferAfter": "Default Buffer After (minutes)",
+      "bufferHelper": "Time buffer between appointments"
+    },
+    "userHours": {
+      "selectUser": "Select User",
+      "dayOfWeek": "Day of Week",
+      "startTime": "Start Time",
+      "endTime": "End Time",
+      "available": "Available",
+      "cloneSettings": "Clone to Other Users",
+      "maxAppointmentsPerDay": "Max Appointments Per Day"
+    },
+    "serviceRules": {
+      "selectService": "Select Service",
+      "allowWithoutContract": "Allow Without Contract",
+      "advanceBooking": "Advance Booking Days",
+      "maxAppointments": "Max Appointments Per Day"
+    },
+    "exceptions": {
+      "addException": "Add Exception",
+      "date": "Date",
+      "reason": "Reason",
+      "userSpecific": "User Specific",
+      "companyWide": "Company Wide"
+    },
+    "messages": {
+      "saveSuccess": "Availability settings saved successfully",
+      "saveFailed": "Failed to save availability settings",
+      "loadFailed": "Failed to load availability settings"
+    }
+  },
+  "appointments": {
+    "requests": {
+      "title": "Appointment Requests",
+      "viewAll": "View All Requests",
+      "approve": "Approve & Schedule",
+      "decline": "Decline",
+      "assignTech": "Assign Technician",
+      "internalNotes": "Internal Notes",
+      "pendingCount": "{{count}} pending requests",
+      "filterByStatus": "Filter by Status",
+      "filterByService": "Filter by Service",
+      "filterByDate": "Filter by Date"
+    },
+    "panel": {
+      "title": "Appointment Requests",
+      "description": "Review and manage appointment requests from clients",
+      "noRequests": "No appointment requests found",
+      "loadingRequests": "Loading requests..."
+    },
+    "card": {
+      "requesterName": "Requester",
+      "companyName": "Company",
+      "service": "Service",
+      "requestedDateTime": "Requested Date & Time",
+      "duration": "Duration",
+      "preferredTechnician": "Preferred Technician",
+      "linkedTicket": "Linked Ticket",
+      "actions": "Actions"
+    },
+    "approvalModal": {
+      "title": "Approve Appointment Request",
+      "confirmDateTime": "Confirm Date & Time",
+      "modifyDateTime": "Modify Date & Time",
+      "assignedUser": "Assigned Technician",
+      "linkToTicket": "Link to Ticket",
+      "internalNotes": "Internal Notes",
+      "approve": "Approve & Create Schedule Entry",
+      "approving": "Approving..."
+    },
+    "declineModal": {
+      "title": "Decline Appointment Request",
+      "reason": "Reason for Declining",
+      "reasonRequired": "Please provide a reason",
+      "reasonPlaceholder": "Explain why this request is being declined...",
+      "decline": "Decline Request",
+      "declining": "Declining..."
+    },
+    "detailsModal": {
+      "title": "Request Details",
+      "requesterInfo": "Requester Information",
+      "requestInfo": "Request Information",
+      "status": "Status",
+      "createdAt": "Requested At",
+      "approvedAt": "Approved At",
+      "approvedBy": "Approved By",
+      "declinedReason": "Decline Reason"
+    },
+    "status": {
+      "pending": "Pending",
+      "approved": "Approved",
+      "declined": "Declined",
+      "cancelled": "Cancelled"
+    },
+    "messages": {
+      "approveSuccess": "Appointment request approved successfully",
+      "approveFailed": "Failed to approve appointment request",
+      "declineSuccess": "Appointment request declined",
+      "declineFailed": "Failed to decline appointment request",
+      "loadFailed": "Failed to load appointment requests",
+      "scheduleEntryCreated": "Schedule entry created successfully"
+    }
+  },
+  "common": {
+    "loading": "Loading",
+    "move_up": "Move up",
+    "move_down": "Move down"
+  },
+  "sessionManagement": {
+    "title": "Active Sessions",
+    "description": "Manage your active login sessions across all devices (max 5 sessions)",
+    "states": {
+      "loading": "Loading sessions...",
+      "noSessions": "No active sessions found"
+    },
+    "labels": {
+      "unknownDevice": "Unknown Device",
+      "currentSession": "Current Session",
+      "yourSession": "Your Session",
+      "lastActive": "Last active"
+    },
+    "loginMethods": {
+      "password": "Password",
+      "googleOAuth": "Google OAuth",
+      "microsoftOAuth": "Microsoft OAuth",
+      "keycloak": "Keycloak"
+    },
+    "userTypes": {
+      "internal": "Internal",
+      "client": "Client"
+    },
+    "actions": {
+      "logout": "Logout",
+      "revoke": "Revoke",
+      "revoking": "Revoking...",
+      "loggingOut": "Logging out...",
+      "logoutFromOther": "Logout from {{count}} other device{{count, plural, one {} other {s}}}"
+    },
+    "confirmations": {
+      "logoutCurrent": "This will log you out of your current session. Are you sure?",
+      "logoutAllOther": "This will log you out from all other devices. Are you sure?"
+    },
+    "prompts": {
+      "enter2FA": "Please enter your 2FA code:"
+    },
+    "messages": {
+      "loggingOut": "Logging out...",
+      "sessionRevoked": "Session revoked successfully"
+    },
+    "warnings": {
+      "oauthLogout": "This will log you out of Alga PSA only. You'll remain signed into {{provider}}."
+    },
+    "errors": {
+      "fetchFailed": "Failed to fetch sessions",
+      "loadFailed": "Failed to load active sessions",
+      "revokeFailed": "Failed to revoke session",
+      "revokeAllFailed": "Failed to revoke sessions",
+      "logoutAllFailed": "Failed to logout from other devices",
+      "adminAccessRequired": "Insufficient permissions to view all sessions"
+    },
+    "admin": {
+      "title": "All User Sessions",
+      "description": "{{sessionCount}} active sessions from {{userCount}} users",
+      "searchPlaceholder": "Search by user name, email, device, or IP address...",
+      "noResults": "No sessions match your search"
+    }
+  },
+  "projects": {
+    "task": {
+      "comments": {
+        "title": "Comments",
+        "internal_only": "Internal Only",
+        "placeholder": "Add a comment... Use @ to mention teammates",
+        "add_comment": "Add Comment",
+        "no_comments": "No comments yet. Be the first to comment!",
+        "edited": "Edited",
+        "error_creating": "Failed to create comment. Please try again.",
+        "error_updating": "Failed to update comment. Please try again.",
+        "error_deleting": "Failed to delete comment. Please try again.",
+        "confirm_delete": "Are you sure you want to delete this comment?"
+      }
+    }
+  }
+}

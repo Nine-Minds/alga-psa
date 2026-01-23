@@ -6,7 +6,7 @@
 
 export const LOCALE_CONFIG = {
   defaultLocale: 'en',
-  supportedLocales: ['en', 'fr', 'es', 'de', 'nl', 'it', 'pl'] as const,
+  supportedLocales: ['en', 'fr', 'es', 'de', 'nl', 'it', 'pl', 'pt_BR'] as const,
   cookie: {
     name: 'locale',
     maxAge: 60 * 60 * 24 * 365, // 1 year
