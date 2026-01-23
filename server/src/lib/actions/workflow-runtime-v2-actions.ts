@@ -240,11 +240,11 @@ const mappingSatisfiesRequiredPaths = (mapping: any, requiredPaths: string[]): b
   });
 };
 
-const listSecretNames = async (knex: Awaited<ReturnType<typeof createTenantKnex>>['knex'], tenant?: string | null) => {
+const listSecretNames = async (knex: Awaited<ReturnType<typeof createTenantKnex>>['knex'], tenant?: string | null): Promise<Set<string> | null> => {
   if (!tenant) return null;
   const provider = createTenantSecretProvider(knex, tenant);
   const secrets = await provider.list();
-  return new Set(secrets.map((secret) => secret.name));
+  return new Set(secrets.map((secret: { name: string }) => secret.name));
 };
 
 const stableJson = (value: unknown): unknown => {
