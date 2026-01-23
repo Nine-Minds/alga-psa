@@ -1,0 +1,689 @@
+[
+  {
+    "section": "Pipeline Layout Foundation Tests",
+    "tests": [
+      {
+        "id": "PLF-T001",
+        "description": "UI: Empty workflow shows pipeline placeholder with 'Add first step' prompt. Mocks: non-target dependencies.",
+        "reference": "playwright integration (mocks for non-target dependencies)",
+        "featureRef": "PLF-008",
+        "implemented": false
+      },
+      {
+        "id": "PLF-T002",
+        "description": "UI: Single step renders as card in vertical pipeline layout. Mocks: non-target dependencies.",
+        "reference": "playwright integration (mocks for non-target dependencies)",
+        "featureRef": "PLF-001",
+        "implemented": false
+      },
+      {
+        "id": "PLF-T003",
+        "description": "UI: Multiple steps render vertically with dashed connectors between them. Mocks: non-target dependencies.",
+        "reference": "playwright integration (mocks for non-target dependencies)",
+        "featureRef": "PLF-003",
+        "implemented": false
+      },
+      {
+        "id": "PLF-T004",
+        "description": "UI: Step card displays type icon, label, and config summary. Mocks: non-target dependencies.",
+        "reference": "playwright integration (mocks for non-target dependencies)",
+        "featureRef": "PLF-002",
+        "implemented": false
+      },
+      {
+        "id": "PLF-T005",
+        "description": "UI: Pipeline with many steps scrolls vertically. Mocks: non-target dependencies.",
+        "reference": "playwright integration (mocks for non-target dependencies)",
+        "featureRef": "PLF-007",
+        "implemented": false
+      },
+      {
+        "id": "PLF-T006",
+        "description": "UI: Start indicator visible at top of pipeline. Mocks: non-target dependencies.",
+        "reference": "playwright integration (mocks for non-target dependencies)",
+        "featureRef": "PLF-005",
+        "implemented": false
+      },
+      {
+        "id": "PLF-T007",
+        "description": "UI: Connector line styling matches dashed pattern specification. Mocks: non-target dependencies.",
+        "reference": "playwright integration (mocks for non-target dependencies)",
+        "featureRef": "PLF-003",
+        "implemented": false
+      }
+    ]
+  },
+  {
+    "section": "Node Type Visual Differentiation Tests",
+    "tests": [
+      {
+        "id": "NTV-T001",
+        "description": "UI: action.call step card has blue accent color. Mocks: non-target dependencies.",
+        "reference": "playwright integration (mocks for non-target dependencies)",
+        "featureRef": "NTV-001",
+        "implemented": false
+      },
+      {
+        "id": "NTV-T002",
+        "description": "UI: control.if step card has amber accent color. Mocks: non-target dependencies.",
+        "reference": "playwright integration (mocks for non-target dependencies)",
+        "featureRef": "NTV-002",
+        "implemented": false
+      },
+      {
+        "id": "NTV-T003",
+        "description": "UI: control.forEach step card has purple accent color. Mocks: non-target dependencies.",
+        "reference": "playwright integration (mocks for non-target dependencies)",
+        "featureRef": "NTV-003",
+        "implemented": false
+      },
+      {
+        "id": "NTV-T004",
+        "description": "UI: control.tryCatch step card has orange accent color. Mocks: non-target dependencies.",
+        "reference": "playwright integration (mocks for non-target dependencies)",
+        "featureRef": "NTV-004",
+        "implemented": false
+      },
+      {
+        "id": "NTV-T005",
+        "description": "UI: control.return step card has red accent color. Mocks: non-target dependencies.",
+        "reference": "playwright integration (mocks for non-target dependencies)",
+        "featureRef": "NTV-005",
+        "implemented": false
+      },
+      {
+        "id": "NTV-T006",
+        "description": "UI: state.set step card has green accent color. Mocks: non-target dependencies.",
+        "reference": "playwright integration (mocks for non-target dependencies)",
+        "featureRef": "NTV-006",
+        "implemented": false
+      },
+      {
+        "id": "NTV-T007",
+        "description": "UI: Different step types in same workflow show distinct colors. Mocks: non-target dependencies.",
+        "reference": "playwright integration (mocks for non-target dependencies)",
+        "featureRef": "NTV-010",
+        "implemented": false
+      },
+      {
+        "id": "NTV-T008",
+        "description": "UI: Step type icon color matches accent color. Mocks: non-target dependencies.",
+        "reference": "playwright integration (mocks for non-target dependencies)",
+        "featureRef": "NTV-011",
+        "implemented": false
+      }
+    ]
+  },
+  {
+    "section": "Insert-Between Functionality Tests",
+    "tests": [
+      {
+        "id": "IBF-T001",
+        "description": "UI: Hovering connector between steps shows plus button. Mocks: non-target dependencies.",
+        "reference": "playwright integration (mocks for non-target dependencies)",
+        "featureRef": "IBF-001",
+        "implemented": false
+      },
+      {
+        "id": "IBF-T002",
+        "description": "UI: Plus button at pipeline start visible. Mocks: non-target dependencies.",
+        "reference": "playwright integration (mocks for non-target dependencies)",
+        "featureRef": "IBF-002",
+        "implemented": false
+      },
+      {
+        "id": "IBF-T003",
+        "description": "UI: Plus button at pipeline end visible. Mocks: non-target dependencies.",
+        "reference": "playwright integration (mocks for non-target dependencies)",
+        "featureRef": "IBF-003",
+        "implemented": false
+      },
+      {
+        "id": "IBF-T004",
+        "description": "UI: Clicking plus button opens step type selector. Mocks: non-target dependencies.",
+        "reference": "playwright integration (mocks for non-target dependencies)",
+        "featureRef": "IBF-004",
+        "implemented": false
+      },
+      {
+        "id": "IBF-T005",
+        "description": "UI: Step type selector shows categorized options. Mocks: non-target dependencies.",
+        "reference": "playwright integration (mocks for non-target dependencies)",
+        "featureRef": "IBF-005",
+        "implemented": false
+      },
+      {
+        "id": "IBF-T006",
+        "description": "UI: Selecting step type from popover inserts step at correct position. Mocks: non-target dependencies.",
+        "reference": "playwright integration (mocks for non-target dependencies)",
+        "featureRef": "IBF-006",
+        "implemented": false
+      },
+      {
+        "id": "IBF-T007",
+        "description": "UI: Inserting step between two existing steps maintains order. Mocks: non-target dependencies.",
+        "reference": "playwright integration (mocks for non-target dependencies)",
+        "featureRef": "IBF-006",
+        "implemented": false
+      },
+      {
+        "id": "IBF-T008",
+        "description": "UI: Newly inserted step is automatically selected. Mocks: non-target dependencies.",
+        "reference": "playwright integration (mocks for non-target dependencies)",
+        "featureRef": "IBF-007",
+        "implemented": false
+      },
+      {
+        "id": "IBF-T009",
+        "description": "UI: Insert at start prepends step before all others. Mocks: non-target dependencies.",
+        "reference": "playwright integration (mocks for non-target dependencies)",
+        "featureRef": "IBF-002",
+        "implemented": false
+      },
+      {
+        "id": "IBF-T010",
+        "description": "UI: Insert at end appends step after all others. Mocks: non-target dependencies.",
+        "reference": "playwright integration (mocks for non-target dependencies)",
+        "featureRef": "IBF-003",
+        "implemented": false
+      },
+      {
+        "id": "IBF-T011",
+        "description": "UI: Insert within nested branch (if/forEach body) works correctly. Mocks: non-target dependencies.",
+        "reference": "playwright integration (mocks for non-target dependencies)",
+        "featureRef": "IBF-010",
+        "implemented": false
+      },
+      {
+        "id": "IBF-T012",
+        "description": "UI: Insert triggers auto-save of draft. Mocks: non-target dependencies.",
+        "reference": "playwright integration (mocks for non-target dependencies)",
+        "featureRef": "IBF-006",
+        "implemented": false
+      }
+    ]
+  },
+  {
+    "section": "Step Selection & Interaction Tests",
+    "tests": [
+      {
+        "id": "SSI-T001",
+        "description": "UI: Clicking step card selects it. Mocks: non-target dependencies.",
+        "reference": "playwright integration (mocks for non-target dependencies)",
+        "featureRef": "SSI-001",
+        "implemented": false
+      },
+      {
+        "id": "SSI-T002",
+        "description": "UI: Selected step shows visual indicator (ring/border). Mocks: non-target dependencies.",
+        "reference": "playwright integration (mocks for non-target dependencies)",
+        "featureRef": "SSI-002",
+        "implemented": false
+      },
+      {
+        "id": "SSI-T003",
+        "description": "UI: Clicking selected step keeps it selected. Mocks: non-target dependencies.",
+        "reference": "playwright integration (mocks for non-target dependencies)",
+        "featureRef": "SSI-001",
+        "implemented": false
+      },
+      {
+        "id": "SSI-T004",
+        "description": "UI: Clicking different step switches selection. Mocks: non-target dependencies.",
+        "reference": "playwright integration (mocks for non-target dependencies)",
+        "featureRef": "SSI-001",
+        "implemented": false
+      },
+      {
+        "id": "SSI-T005",
+        "description": "UI: Hovering step shows subtle highlight. Mocks: non-target dependencies.",
+        "reference": "playwright integration (mocks for non-target dependencies)",
+        "featureRef": "SSI-003",
+        "implemented": false
+      },
+      {
+        "id": "SSI-T006",
+        "description": "UI: Step with validation error shows error indicator. Mocks: non-target dependencies.",
+        "reference": "playwright integration (mocks for non-target dependencies)",
+        "featureRef": "SSI-004",
+        "implemented": false
+      },
+      {
+        "id": "SSI-T007",
+        "description": "UI: Delete button visible on selected step. Mocks: non-target dependencies.",
+        "reference": "playwright integration (mocks for non-target dependencies)",
+        "featureRef": "SSI-006",
+        "implemented": false
+      },
+      {
+        "id": "SSI-T008",
+        "description": "UI: Clicking delete button removes step from pipeline. Mocks: non-target dependencies.",
+        "reference": "playwright integration (mocks for non-target dependencies)",
+        "featureRef": "SSI-006",
+        "implemented": false
+      },
+      {
+        "id": "SSI-T009",
+        "description": "UI: Arrow down key moves selection to next step. Mocks: non-target dependencies.",
+        "reference": "playwright integration (mocks for non-target dependencies)",
+        "featureRef": "SSI-008",
+        "implemented": false
+      },
+      {
+        "id": "SSI-T010",
+        "description": "UI: Arrow up key moves selection to previous step. Mocks: non-target dependencies.",
+        "reference": "playwright integration (mocks for non-target dependencies)",
+        "featureRef": "SSI-008",
+        "implemented": false
+      },
+      {
+        "id": "SSI-T011",
+        "description": "UI: Escape key deselects current step. Mocks: non-target dependencies.",
+        "reference": "playwright integration (mocks for non-target dependencies)",
+        "featureRef": "SSI-010",
+        "implemented": false
+      },
+      {
+        "id": "SSI-T012",
+        "description": "UI: Delete key with step selected prompts for confirmation. Mocks: non-target dependencies.",
+        "reference": "playwright integration (mocks for non-target dependencies)",
+        "featureRef": "SSI-009",
+        "implemented": false
+      }
+    ]
+  },
+  {
+    "section": "Control Flow Branching Visualization Tests",
+    "tests": [
+      {
+        "id": "CFB-T001",
+        "description": "UI: If block renders with then/else branches visible. Mocks: non-target dependencies.",
+        "reference": "playwright integration (mocks for non-target dependencies)",
+        "featureRef": "CFB-001",
+        "implemented": false
+      },
+      {
+        "id": "CFB-T002",
+        "description": "UI: Branch labels (THEN/ELSE) are visible. Mocks: non-target dependencies.",
+        "reference": "playwright integration (mocks for non-target dependencies)",
+        "featureRef": "CFB-003",
+        "implemented": false
+      },
+      {
+        "id": "CFB-T003",
+        "description": "UI: Steps inside then branch are indented. Mocks: non-target dependencies.",
+        "reference": "playwright integration (mocks for non-target dependencies)",
+        "featureRef": "CFB-001",
+        "implemented": false
+      },
+      {
+        "id": "CFB-T004",
+        "description": "UI: Steps inside else branch are indented. Mocks: non-target dependencies.",
+        "reference": "playwright integration (mocks for non-target dependencies)",
+        "featureRef": "CFB-001",
+        "implemented": false
+      },
+      {
+        "id": "CFB-T005",
+        "description": "UI: ForEach block shows body with loop indicator. Mocks: non-target dependencies.",
+        "reference": "playwright integration (mocks for non-target dependencies)",
+        "featureRef": "CFB-004",
+        "implemented": false
+      },
+      {
+        "id": "CFB-T006",
+        "description": "UI: ForEach shows item variable name in badge. Mocks: non-target dependencies.",
+        "reference": "playwright integration (mocks for non-target dependencies)",
+        "featureRef": "CFB-005",
+        "implemented": false
+      },
+      {
+        "id": "CFB-T007",
+        "description": "UI: TryCatch block shows try/catch branches. Mocks: non-target dependencies.",
+        "reference": "playwright integration (mocks for non-target dependencies)",
+        "featureRef": "CFB-006",
+        "implemented": false
+      },
+      {
+        "id": "CFB-T008",
+        "description": "UI: Nested if inside forEach shows deeper indentation. Mocks: non-target dependencies.",
+        "reference": "playwright integration (mocks for non-target dependencies)",
+        "featureRef": "CFB-008",
+        "implemented": false
+      },
+      {
+        "id": "CFB-T009",
+        "description": "UI: Collapse button hides nested branch content. Mocks: non-target dependencies.",
+        "reference": "playwright integration (mocks for non-target dependencies)",
+        "featureRef": "CFB-009",
+        "implemented": false
+      },
+      {
+        "id": "CFB-T010",
+        "description": "UI: Collapsed block shows step count. Mocks: non-target dependencies.",
+        "reference": "playwright integration (mocks for non-target dependencies)",
+        "featureRef": "CFB-010",
+        "implemented": false
+      },
+      {
+        "id": "CFB-T011",
+        "description": "UI: Expand collapsed block shows nested content again. Mocks: non-target dependencies.",
+        "reference": "playwright integration (mocks for non-target dependencies)",
+        "featureRef": "CFB-009",
+        "implemented": false
+      }
+    ]
+  },
+  {
+    "section": "Drag & Drop Reordering Tests",
+    "tests": [
+      {
+        "id": "DDR-T001",
+        "description": "UI: Drag handle visible on step card. Mocks: non-target dependencies.",
+        "reference": "playwright integration (mocks for non-target dependencies)",
+        "featureRef": "DDR-002",
+        "implemented": false
+      },
+      {
+        "id": "DDR-T002",
+        "description": "UI: Dragging step shows ghost preview. Mocks: non-target dependencies.",
+        "reference": "playwright integration (mocks for non-target dependencies)",
+        "featureRef": "DDR-004",
+        "implemented": false
+      },
+      {
+        "id": "DDR-T003",
+        "description": "UI: Drop zones highlight during drag. Mocks: non-target dependencies.",
+        "reference": "playwright integration (mocks for non-target dependencies)",
+        "featureRef": "DDR-003",
+        "implemented": false
+      },
+      {
+        "id": "DDR-T004",
+        "description": "UI: Dropping step reorders it in pipeline. Mocks: non-target dependencies.",
+        "reference": "playwright integration (mocks for non-target dependencies)",
+        "featureRef": "DDR-006",
+        "implemented": false
+      },
+      {
+        "id": "DDR-T005",
+        "description": "UI: Drag step from position 1 to position 3 works. Mocks: non-target dependencies.",
+        "reference": "playwright integration (mocks for non-target dependencies)",
+        "featureRef": "DDR-001",
+        "implemented": false
+      },
+      {
+        "id": "DDR-T006",
+        "description": "UI: Drag step from position 3 to position 1 works. Mocks: non-target dependencies.",
+        "reference": "playwright integration (mocks for non-target dependencies)",
+        "featureRef": "DDR-001",
+        "implemented": false
+      },
+      {
+        "id": "DDR-T007",
+        "description": "UI: Cannot drop control block inside itself. Mocks: non-target dependencies.",
+        "reference": "playwright integration (mocks for non-target dependencies)",
+        "featureRef": "DDR-005",
+        "implemented": false
+      },
+      {
+        "id": "DDR-T008",
+        "description": "UI: Drag from then branch to else branch works. Mocks: non-target dependencies.",
+        "reference": "playwright integration (mocks for non-target dependencies)",
+        "featureRef": "DDR-007",
+        "implemented": false
+      },
+      {
+        "id": "DDR-T009",
+        "description": "UI: Reorder saves draft automatically. Mocks: non-target dependencies.",
+        "reference": "playwright integration (mocks for non-target dependencies)",
+        "featureRef": "DDR-006",
+        "implemented": false
+      },
+      {
+        "id": "DDR-T010",
+        "description": "UI: Dragging from palette into pipeline position works. Mocks: non-target dependencies.",
+        "reference": "playwright integration (mocks for non-target dependencies)",
+        "featureRef": "DDR-008",
+        "implemented": false
+      }
+    ]
+  },
+  {
+    "section": "Step Card Content Display Tests",
+    "tests": [
+      {
+        "id": "SCC-T001",
+        "description": "UI: action.call card shows action ID. Mocks: non-target dependencies.",
+        "reference": "playwright integration (mocks for non-target dependencies)",
+        "featureRef": "SCC-001",
+        "implemented": false
+      },
+      {
+        "id": "SCC-T002",
+        "description": "UI: action.call card shows saveAs badge when configured. Mocks: non-target dependencies.",
+        "reference": "playwright integration (mocks for non-target dependencies)",
+        "featureRef": "SCC-002",
+        "implemented": false
+      },
+      {
+        "id": "SCC-T003",
+        "description": "UI: control.if card shows condition preview. Mocks: non-target dependencies.",
+        "reference": "playwright integration (mocks for non-target dependencies)",
+        "featureRef": "SCC-003",
+        "implemented": false
+      },
+      {
+        "id": "SCC-T004",
+        "description": "UI: control.forEach card shows items expression. Mocks: non-target dependencies.",
+        "reference": "playwright integration (mocks for non-target dependencies)",
+        "featureRef": "SCC-004",
+        "implemented": false
+      },
+      {
+        "id": "SCC-T005",
+        "description": "UI: state.set card shows target state. Mocks: non-target dependencies.",
+        "reference": "playwright integration (mocks for non-target dependencies)",
+        "featureRef": "SCC-005",
+        "implemented": false
+      },
+      {
+        "id": "SCC-T006",
+        "description": "UI: Long expression text truncates with ellipsis. Mocks: non-target dependencies.",
+        "reference": "playwright integration (mocks for non-target dependencies)",
+        "featureRef": "SCC-009",
+        "implemented": false
+      },
+      {
+        "id": "SCC-T007",
+        "description": "UI: Custom step name overrides default label. Mocks: non-target dependencies.",
+        "reference": "playwright integration (mocks for non-target dependencies)",
+        "featureRef": "SCC-010",
+        "implemented": false
+      }
+    ]
+  },
+  {
+    "section": "Accessibility Tests",
+    "tests": [
+      {
+        "id": "AAP-T001",
+        "description": "UI: Tab key moves focus through pipeline steps. Mocks: non-target dependencies.",
+        "reference": "playwright integration (mocks for non-target dependencies)",
+        "featureRef": "AAP-001",
+        "implemented": false
+      },
+      {
+        "id": "AAP-T002",
+        "description": "UI: Focus ring visible on focused step. Mocks: non-target dependencies.",
+        "reference": "playwright integration (mocks for non-target dependencies)",
+        "featureRef": "AAP-005",
+        "implemented": false
+      },
+      {
+        "id": "AAP-T003",
+        "description": "UI: Step card has appropriate aria-label. Mocks: non-target dependencies.",
+        "reference": "playwright integration (mocks for non-target dependencies)",
+        "featureRef": "AAP-002",
+        "implemented": false
+      },
+      {
+        "id": "AAP-T004",
+        "description": "UI: Pipeline container has appropriate role. Mocks: non-target dependencies.",
+        "reference": "playwright integration (mocks for non-target dependencies)",
+        "featureRef": "AAP-002",
+        "implemented": false
+      }
+    ]
+  },
+  {
+    "section": "Integration & Edge Case Tests",
+    "tests": [
+      {
+        "id": "INT-T001",
+        "description": "UI: Pipeline renders correctly after page reload. Mocks: non-target dependencies.",
+        "reference": "playwright integration (mocks for non-target dependencies)",
+        "featureRef": "PLF-001",
+        "implemented": false
+      },
+      {
+        "id": "INT-T002",
+        "description": "UI: Switching workflows updates pipeline view. Mocks: non-target dependencies.",
+        "reference": "playwright integration (mocks for non-target dependencies)",
+        "featureRef": "PLF-001",
+        "implemented": false
+      },
+      {
+        "id": "INT-T003",
+        "description": "UI: Undo after delete restores step in correct position. Mocks: non-target dependencies.",
+        "reference": "playwright integration (mocks for non-target dependencies)",
+        "featureRef": "SSI-006",
+        "implemented": false
+      },
+      {
+        "id": "INT-T004",
+        "description": "UI: Pipeline with 50+ steps renders without performance issues. Mocks: non-target dependencies.",
+        "reference": "playwright integration (mocks for non-target dependencies)",
+        "featureRef": "PLF-007",
+        "implemented": false
+      },
+      {
+        "id": "INT-T005",
+        "description": "UI: Deeply nested control blocks (5+ levels) render correctly. Mocks: non-target dependencies.",
+        "reference": "playwright integration (mocks for non-target dependencies)",
+        "featureRef": "CFB-008",
+        "implemented": false
+      },
+      {
+        "id": "INT-T006",
+        "description": "UI: Read-only mode hides insert/delete/drag controls. Mocks: non-target dependencies.",
+        "reference": "playwright integration (mocks for non-target dependencies)",
+        "featureRef": "SSI-006",
+        "implemented": false
+      }
+    ]
+  },
+  {
+    "section": "Palette to Pipeline Drag & Drop Tests",
+    "tests": [
+      {
+        "id": "PPD-T001",
+        "description": "UI: Palette step items have drag cursor on hover. Mocks: non-target dependencies.",
+        "reference": "playwright integration (mocks for non-target dependencies)",
+        "featureRef": "PPD-001",
+        "implemented": false
+      },
+      {
+        "id": "PPD-T002",
+        "description": "UI: Dragging palette item shows ghost/preview at cursor. Mocks: non-target dependencies.",
+        "reference": "playwright integration (mocks for non-target dependencies)",
+        "featureRef": "PPD-010",
+        "implemented": false
+      },
+      {
+        "id": "PPD-T003",
+        "description": "UI: Drop zones appear in pipeline when dragging from palette. Mocks: non-target dependencies.",
+        "reference": "playwright integration (mocks for non-target dependencies)",
+        "featureRef": "PPD-002",
+        "implemented": false
+      },
+      {
+        "id": "PPD-T004",
+        "description": "UI: Drop zone between steps highlights on drag hover. Mocks: non-target dependencies.",
+        "reference": "playwright integration (mocks for non-target dependencies)",
+        "featureRef": "PPD-006",
+        "implemented": false
+      },
+      {
+        "id": "PPD-T005",
+        "description": "UI: Dropping palette item between steps inserts at that position. Mocks: non-target dependencies.",
+        "reference": "playwright integration (mocks for non-target dependencies)",
+        "featureRef": "PPD-007",
+        "implemented": false
+      },
+      {
+        "id": "PPD-T006",
+        "description": "UI: Dropping palette item at pipeline start inserts as first step. Mocks: non-target dependencies.",
+        "reference": "playwright integration (mocks for non-target dependencies)",
+        "featureRef": "PPD-004",
+        "implemented": false
+      },
+      {
+        "id": "PPD-T007",
+        "description": "UI: Dropping palette item at pipeline end appends as last step. Mocks: non-target dependencies.",
+        "reference": "playwright integration (mocks for non-target dependencies)",
+        "featureRef": "PPD-005",
+        "implemented": false
+      },
+      {
+        "id": "PPD-T008",
+        "description": "UI: Dropping on empty pipeline creates first step. Mocks: non-target dependencies.",
+        "reference": "playwright integration (mocks for non-target dependencies)",
+        "featureRef": "PPD-008",
+        "implemented": false
+      },
+      {
+        "id": "PPD-T009",
+        "description": "UI: Dropping palette item into THEN branch adds step to THEN. Mocks: non-target dependencies.",
+        "reference": "playwright integration (mocks for non-target dependencies)",
+        "featureRef": "PPD-009",
+        "implemented": false
+      },
+      {
+        "id": "PPD-T010",
+        "description": "UI: Dropping palette item into ELSE branch adds step to ELSE. Mocks: non-target dependencies.",
+        "reference": "playwright integration (mocks for non-target dependencies)",
+        "featureRef": "PPD-009",
+        "implemented": false
+      },
+      {
+        "id": "PPD-T011",
+        "description": "UI: Dropping palette item into forEach BODY adds step to body. Mocks: non-target dependencies.",
+        "reference": "playwright integration (mocks for non-target dependencies)",
+        "featureRef": "PPD-009",
+        "implemented": false
+      },
+      {
+        "id": "PPD-T012",
+        "description": "UI: Newly dropped step is automatically selected. Mocks: non-target dependencies.",
+        "reference": "playwright integration (mocks for non-target dependencies)",
+        "featureRef": "PPD-011",
+        "implemented": false
+      },
+      {
+        "id": "PPD-T013",
+        "description": "UI: Drag cancel (Escape key) does not create step. Mocks: non-target dependencies.",
+        "reference": "playwright integration (mocks for non-target dependencies)",
+        "featureRef": "PPD-001",
+        "implemented": false
+      },
+      {
+        "id": "PPD-T014",
+        "description": "UI: Dropping outside valid zone does not create step. Mocks: non-target dependencies.",
+        "reference": "playwright integration (mocks for non-target dependencies)",
+        "featureRef": "PPD-002",
+        "implemented": false
+      }
+    ]
+  }
+]

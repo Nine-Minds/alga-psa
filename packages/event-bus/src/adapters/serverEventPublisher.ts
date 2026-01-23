@@ -3,13 +3,10 @@
  * This adapter bridges the shared TicketModel with the server's event publishing system
  */
 
-import { getEventBus } from '../eventBus';
+import type { IEventPublisher } from '@alga-psa/shared/models/ticketModel';
+import { publishEvent } from '../publishers';
 
-// Email event channel constant - inlined to avoid circular dependency with notifications
-// Must match the value in @alga-psa/notifications/emailChannel
-const EMAIL_EVENT_CHANNEL = 'emailservice::v7';
-
-export class ServerEventPublisher {
+export class ServerEventPublisher implements IEventPublisher {
   async publishTicketCreated(data: {
     tenantId: string;
     ticketId: string;
@@ -86,23 +83,9 @@ export class ServerEventPublisher {
 
   private async safePublishEvent(eventType: string, payload: any): Promise<void> {
     try {
-      // Publish to email channel
-      await getEventBus().publish(
-        {
-          eventType,
-          payload
-        },
-        { channel: EMAIL_EVENT_CHANNEL }
-      );
-
-      // Also publish to internal notifications channel
-      await getEventBus().publish(
-        {
-          eventType,
-          payload
-        },
-        { channel: 'internal-notifications' }
-      );
+      // Prefer the shared publisher so events always hit the default channel (workflow stream),
+      // plus any channel-specific legacy consumers (email, internal notifications).
+      await publishEvent({ eventType: eventType as any, payload } as any);
     } catch (error) {
       console.error(`Failed to publish ${eventType} event:`, error);
       // Don't throw - event publishing failure shouldn't break ticket operations

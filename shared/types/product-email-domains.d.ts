@@ -19,3 +19,20 @@ declare module '@alga-psa/integrations/email/domains/entry' {
     };
   };
 }
+
+declare module '@product/email-domains/providers/ResendEmailProvider' {
+  type IEmailProvider = import('server/src/types/email.types').IEmailProvider;
+  type EmailMessage = import('server/src/types/email.types').EmailMessage;
+  type EmailProviderCapabilities = import('server/src/types/email.types').EmailProviderCapabilities;
+  type EmailSendResult = import('server/src/types/email.types').EmailSendResult;
+
+  export class ResendEmailProvider implements IEmailProvider {
+    readonly providerId: string;
+    readonly providerType: string;
+    readonly capabilities: EmailProviderCapabilities;
+    constructor(providerId: string);
+    initialize(config: Record<string, any>): Promise<void>;
+    sendEmail(message: EmailMessage, tenantId: string): Promise<EmailSendResult>;
+    healthCheck(): Promise<{ healthy: boolean; details?: string }>;
+  }
+}

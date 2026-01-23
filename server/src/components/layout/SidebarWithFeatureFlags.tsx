@@ -1,25 +1,23 @@
 'use client';
 
-import React, { useEffect, useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useFeatureFlag } from '@alga-psa/ui/hooks';
 import Sidebar from './Sidebar';
 import {
   bottomMenuItems,
   menuItems as legacyMenuItems,
   navigationSections as originalSections,
-  type MenuItem,
   type NavigationSection
 } from '@/config/menuConfig';
+import { getCurrentUserPermissions } from '@alga-psa/users/actions';
 
 type SidebarWithFeatureFlagsProps = React.ComponentProps<typeof Sidebar>;
 
 export default function SidebarWithFeatureFlags(props: SidebarWithFeatureFlagsProps) {
-  const advancedFeatureFlag = useFeatureFlag('advanced-features-enabled');
-  const isAdvancedFeaturesEnabled =
-    typeof advancedFeatureFlag === 'boolean' ? advancedFeatureFlag : advancedFeatureFlag?.enabled;
   const navigationFlag = useFeatureFlag('ui-navigation-v2', { defaultValue: true });
   const useNavigationSections =
     typeof navigationFlag === 'boolean' ? navigationFlag : navigationFlag?.enabled ?? false;
+  const [userPermissions, setUserPermissions] = useState<string[]>([]);
 
   useEffect(() => {
     if (!useNavigationSections) return;
@@ -29,31 +27,55 @@ export default function SidebarWithFeatureFlags(props: SidebarWithFeatureFlagsPr
     }
   }, [useNavigationSections]);
 
-  // Filter and modify menu items based on feature flags
+  useEffect(() => {
+    let isMounted = true;
+    const loadPermissions = async () => {
+      try {
+        const permissions = await getCurrentUserPermissions();
+        if (isMounted) {
+          setUserPermissions(permissions);
+        }
+      } catch (error) {
+        console.error('[Sidebar] Failed to load user permissions:', error);
+        if (isMounted) {
+          setUserPermissions([]);
+        }
+      }
+    };
+
+    loadPermissions();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const canWorkflowAdmin = userPermissions.includes('workflow:admin');
+
+  // Filter and modify menu items based on permissions
   const menuSections = useMemo<NavigationSection[]>(() => {
     const baseSections = useNavigationSections
       ? originalSections
       : [{ title: '', items: legacyMenuItems } satisfies NavigationSection];
 
-    if (!useNavigationSections) {
-      return baseSections;
-    }
-
     return baseSections.map((section) => ({
       ...section,
       items: section.items.map((item) => {
-        if (item.name === 'Automation Hub' && !isAdvancedFeaturesEnabled) {
-          const updated: MenuItem = {
-            ...item,
-            subItems: undefined,
-            underConstruction: true
-          };
-          return updated;
+        if (item.name !== 'Automation Hub') {
+          return item;
         }
-        return item;
+
+        const filteredSubItems = item.subItems?.filter((subItem) => {
+          if (subItem.name !== 'Dead Letter') return true;
+          return canWorkflowAdmin;
+        });
+
+        return {
+          ...item,
+          subItems: filteredSubItems
+        };
       })
     }));
-  }, [isAdvancedFeaturesEnabled, useNavigationSections]);
+  }, [canWorkflowAdmin, useNavigationSections]);
 
   return (
     <Sidebar

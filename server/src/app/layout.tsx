@@ -15,6 +15,7 @@ import { cookies, headers } from 'next/headers';
 import { generateBrandingStyles } from "@alga-psa/tenancy";
 import { MantineProvider } from '@mantine/core';
 import '@mantine/core/styles.css';
+import 'reactflow/dist/style.css';
 
 // Removed Google Fonts to avoid network fetch during build
 const inter = { className: "" } as const;

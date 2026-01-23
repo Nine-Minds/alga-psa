@@ -13,7 +13,7 @@ try {
 }
 
 // Determine if this is an EE build
-const isEE = process.env.EDITION === 'ee' || process.env.NEXT_PUBLIC_EDITION === 'enterprise';
+const isEE = process.env.EDITION === 'ee' || process.env.EDITION === 'enterprise' || process.env.NEXT_PUBLIC_EDITION === 'enterprise';
 
 // Reusable path to an empty shim for optional/native modules (used by Turbopack aliases)
 const emptyShim = './src/empty/shims/empty.ts';
@@ -403,7 +403,7 @@ const nextConfig = {
         ? path.join(__dirname, '../packages/client-portal/src/domain-settings/ee/entry.tsx')
         : path.join(__dirname, '../packages/client-portal/src/domain-settings/oss/entry.tsx'),
       '@alga-psa/workflows/entry': isEE
-        ? path.join(__dirname, '../packages/workflows/src/ee/entry.ts')
+        ? path.join(__dirname, '../packages/workflows/src/ee/entry.tsx')
         : path.join(__dirname, '../packages/workflows/src/oss/entry.tsx'),
       '@product/billing/entry': isEE
         ? path.join(__dirname, '../packages/product-billing/ee/entry.tsx')
