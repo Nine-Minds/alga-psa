@@ -28,6 +28,17 @@ import {
   buildScheduleBlockDeletedPayload,
   isScheduleBlockEntry,
 } from '@shared/workflow/streams/domainEventBuilders/scheduleBlockEventBuilders';
+import {
+  buildTechnicianArrivedPayload,
+  buildTechnicianCheckedOutPayload,
+  buildTechnicianDispatchedPayload,
+  buildTechnicianEnRoutePayload,
+  getTechnicianUserIds,
+  isTechnicianArrivedStatus,
+  isTechnicianCheckedOutStatus,
+  isTechnicianEnRouteStatus,
+  shouldEmitTechnicianDispatchEvents,
+} from '@shared/workflow/streams/domainEventBuilders/technicianDispatchEventBuilders';
 import { maybePublishCapacityThresholdReached } from '../lib/capacityThresholdWorkflowEvents';
 
 export type ScheduleActionResult<T> =
@@ -277,6 +288,26 @@ export async function addScheduleEntry(
       } catch (eventError) {
         console.error('[ScheduleActions] Failed to publish APPOINTMENT_* workflow events', eventError);
       }
+
+      if (shouldEmitTechnicianDispatchEvents(createdEntry)) {
+        try {
+          const technicianUserIds = getTechnicianUserIds({ ...createdEntry, assigned_user_ids: assignedUserIds });
+          for (const technicianUserId of technicianUserIds) {
+            await publishWorkflowEvent({
+              eventType: 'TECHNICIAN_DISPATCHED',
+              ctx,
+              payload: buildTechnicianDispatchedPayload({
+                appointmentId: createdEntry.entry_id,
+                ticketId,
+                technicianUserId,
+                dispatchedByUserId: currentUser.user_id,
+              }),
+            });
+          }
+        } catch (eventError) {
+          console.error('[ScheduleActions] Failed to publish TECHNICIAN_DISPATCHED workflow event', eventError);
+        }
+      }
     }
 
     try {
@@ -502,6 +533,90 @@ export async function updateScheduleEntry(
           }
         } catch (eventError) {
           console.error('[ScheduleActions] Failed to publish appointment workflow events', eventError);
+        }
+
+        if (shouldEmitTechnicianDispatchEvents(updatedEntry)) {
+          try {
+            const beforeTechs = new Set(getTechnicianUserIds(existingEntry));
+            const afterTechs = getTechnicianUserIds(updatedEntry);
+            const addedTechs = afterTechs.filter((id) => !beforeTechs.has(id));
+
+            for (const technicianUserId of addedTechs) {
+              await publishWorkflowEvent({
+                eventType: 'TECHNICIAN_DISPATCHED',
+                ctx,
+                payload: buildTechnicianDispatchedPayload({
+                  appointmentId: updatedEntry.entry_id,
+                  ticketId,
+                  technicianUserId,
+                  dispatchedByUserId: currentUser.user_id,
+                }),
+              });
+            }
+
+            const statusChanged = String(existingEntry.status ?? '') !== String(updatedEntry.status ?? '');
+            if (statusChanged) {
+              if (
+                !isTechnicianEnRouteStatus(existingEntry.status) &&
+                isTechnicianEnRouteStatus(updatedEntry.status)
+              ) {
+                for (const technicianUserId of afterTechs) {
+                  await publishWorkflowEvent({
+                    eventType: 'TECHNICIAN_EN_ROUTE',
+                    ctx,
+                    payload: buildTechnicianEnRoutePayload({
+                      appointmentId: updatedEntry.entry_id,
+                      ticketId,
+                      technicianUserId,
+                    }),
+                  });
+                }
+              }
+
+              if (
+                !isTechnicianArrivedStatus(existingEntry.status) &&
+                isTechnicianArrivedStatus(updatedEntry.status)
+              ) {
+                for (const technicianUserId of afterTechs) {
+                  await publishWorkflowEvent({
+                    eventType: 'TECHNICIAN_ARRIVED',
+                    ctx,
+                    payload: buildTechnicianArrivedPayload({
+                      appointmentId: updatedEntry.entry_id,
+                      ticketId,
+                      technicianUserId,
+                    }),
+                  });
+                }
+              }
+
+              const checkedOutByStatus =
+                !isTechnicianCheckedOutStatus(existingEntry.status) &&
+                isTechnicianCheckedOutStatus(updatedEntry.status);
+              const checkedOutByCompletion =
+                !isAppointmentCompletedStatus(existingEntry.status) &&
+                isAppointmentCompletedStatus(updatedEntry.status);
+
+              if (checkedOutByStatus || checkedOutByCompletion) {
+                for (const technicianUserId of afterTechs) {
+                  await publishWorkflowEvent({
+                    eventType: 'TECHNICIAN_CHECKED_OUT',
+                    ctx,
+                    payload: buildTechnicianCheckedOutPayload({
+                      appointmentId: updatedEntry.entry_id,
+                      ticketId,
+                      technicianUserId,
+                    }),
+                  });
+                }
+              }
+            }
+          } catch (eventError) {
+            console.error(
+              '[ScheduleActions] Failed to publish technician dispatch lifecycle workflow events',
+              eventError
+            );
+          }
         }
       }
     }

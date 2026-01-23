@@ -16,7 +16,7 @@
   { "id": "F020", "description": "Scheduling: emit appointment/schedule events (APPOINTMENT_CREATED, APPOINTMENT_RESCHEDULED, APPOINTMENT_CANCELED, APPOINTMENT_COMPLETED, APPOINTMENT_NO_SHOW, APPOINTMENT_ASSIGNED) or map to SCHEDULE_ENTRY_* per PRD §7.3", "implemented": true, "prdRefs": ["7.2", "7.3"] },
   { "id": "F021", "description": "Scheduling: emit availability block events (SCHEDULE_BLOCK_CREATED, SCHEDULE_BLOCK_DELETED)", "implemented": true, "prdRefs": ["7.2"] },
   { "id": "F022", "description": "Scheduling: emit capacity alert event (CAPACITY_THRESHOLD_REACHED) when capacity thresholds are configured", "implemented": true, "prdRefs": ["7.2"] },
-  { "id": "F023", "description": "Scheduling/Field Ops: emit dispatch lifecycle events (TECHNICIAN_DISPATCHED, TECHNICIAN_EN_ROUTE, TECHNICIAN_ARRIVED, TECHNICIAN_CHECKED_OUT) when supported", "implemented": false, "prdRefs": ["7.2", "7.3"] },
+  { "id": "F023", "description": "Scheduling/Field Ops: emit dispatch lifecycle events (TECHNICIAN_DISPATCHED, TECHNICIAN_EN_ROUTE, TECHNICIAN_ARRIVED, TECHNICIAN_CHECKED_OUT) when supported", "implemented": true, "prdRefs": ["7.2", "7.3"] },
 
   { "id": "F030", "description": "Projects: emit project lifecycle events (PROJECT_UPDATED, PROJECT_STATUS_CHANGED)", "implemented": false, "prdRefs": ["7.2"] },
   { "id": "F031", "description": "Projects: emit task lifecycle events (PROJECT_TASK_CREATED, PROJECT_TASK_ASSIGNED, PROJECT_TASK_STATUS_CHANGED, PROJECT_TASK_COMPLETED)", "implemented": false, "prdRefs": ["7.2"] },

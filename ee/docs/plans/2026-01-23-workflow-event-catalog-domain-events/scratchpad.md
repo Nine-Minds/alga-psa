@@ -221,9 +221,20 @@ Implication: we should standardize on `@alga-psa/event-bus/publishers` helpers f
   - Added scheduling unit coverage for threshold/date math:
     - `packages/scheduling/src/lib/__tests__/capacityThresholdWorkflowEvents.test.ts`
 
+- 2026-01-23: Completed `F023` (technician dispatch lifecycle emission):
+  - Added shared payload/status helpers:
+    - `shared/workflow/streams/domainEventBuilders/technicianDispatchEventBuilders.ts`
+  - Emitted dispatch lifecycle workflow events from real scheduling updates:
+    - `packages/scheduling/src/actions/scheduleActions.ts` now publishes:
+      - `TECHNICIAN_DISPATCHED` when technicians are newly assigned to a ticket/appointment schedule entry
+      - `TECHNICIAN_EN_ROUTE` / `TECHNICIAN_ARRIVED` when schedule entry `status` transitions to an en-route / arrived value (case-insensitive, supports common variants)
+      - `TECHNICIAN_CHECKED_OUT` when schedule entry `status` transitions to a checked-out value **or** when the appointment is marked completed
+  - Added schema-compat unit test coverage:
+    - `shared/workflow/streams/domainEventBuilders/__tests__/technicianDispatchEventBuilders.test.ts`
+
 ## Next Up
 
-- `F023`: emit dispatch lifecycle events (TECHNICIAN_DISPATCHED, TECHNICIAN_EN_ROUTE, TECHNICIAN_ARRIVED, TECHNICIAN_CHECKED_OUT) when supported.
+- `F030`: emit project lifecycle events (PROJECT_UPDATED, PROJECT_STATUS_CHANGED).
 
 ## Suggested Phasing (to reduce risk)
 
