@@ -122,6 +122,7 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - (2026-01-24) Implemented T057: confirming discard removes the draft from Drafts list (unit test via refreshed fetch).
 - (2026-01-24) Implemented T058: successful discard shows toast.success('Draft discarded') (unit test with mocked react-hot-toast).
 - (2026-01-24) Implemented T059: discard errors show toast.error(message) (unit test with deleteContract throwing).
+- (2026-01-24) Implemented T060: discard triggers fetchContracts() refresh (assert getDraftContracts called again).
 
 - (2026-01-24) Tests:
   - Added `packages/billing/tests/contractsTabs.test.ts` to assert the contracts tabs config includes Templates / Client Contracts / Drafts.
