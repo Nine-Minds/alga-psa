@@ -1,0 +1,22 @@
+{
+  "name": "@alga-samples/manual-invoice-demo",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "clean": "rimraf dist",
+    "build:js": "esbuild src/handler.ts --bundle --format=esm --platform=neutral --target=es2022 --outfile=dist/js/handler.js",
+    "build:component": "jco componentize dist/js/handler.js --wit ./wit/extension-runner.wit --world-name runner --disable all --out dist/component.wasm",
+    "build": "npm run clean && npm run build:js && npm run build:component",
+    "postbuild": "node ./scripts/postbuild.mjs"
+  },
+  "dependencies": {
+    "@alga-psa/extension-runtime": "file:../../../sdk/extension-runtime"
+  },
+  "devDependencies": {
+    "@bytecodealliance/componentize-js": "^0.19.3",
+    "esbuild": "^0.20.0",
+    "rimraf": "^5.0.0"
+  }
+}
+

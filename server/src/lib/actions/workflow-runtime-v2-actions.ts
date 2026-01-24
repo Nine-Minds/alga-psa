@@ -34,6 +34,7 @@ import WorkflowRunLogModelV2 from '@shared/workflow/persistence/workflowRunLogMo
 import { auditLog } from 'server/src/lib/logging/auditLog';
 import { analytics } from 'server/src/lib/analytics/server';
 import { EventCatalogModel } from 'server/src/models/eventCatalog';
+import { buildWorkflowPayload } from '@shared/workflow/streams/workflowEventPublishHelpers';
 import {
   CreateWorkflowDefinitionInput,
   DeleteWorkflowDefinitionInput,
@@ -2365,6 +2366,7 @@ export const submitWorkflowEventAction = withAuth(async (user, { tenant }, input
   let eventRecord: Awaited<ReturnType<typeof WorkflowRuntimeEventModelV2.create>> | null = null;
   let ingestionError: string | null = null;
   const processedAt = new Date().toISOString();
+  const schemaRegistry = getSchemaRegistry();
 
   const catalogEntry = tenant ? await EventCatalogModel.getByEventType(knex, parsed.eventName, tenant) : null;
   const catalogSchemaRef = typeof (catalogEntry as any)?.payload_schema_ref === 'string'
@@ -2376,6 +2378,68 @@ export const submitWorkflowEventAction = withAuth(async (user, { tenant }, input
     submissionSchemaRef && catalogSchemaRef && submissionSchemaRef !== catalogSchemaRef
       ? { submission: submissionSchemaRef, catalog: catalogSchemaRef }
       : null;
+
+  const resolvedPayload =
+    sourcePayloadSchemaRef && tenant
+      ? buildWorkflowPayload((parsed.payload ?? {}) as Record<string, unknown>, {
+        tenantId: tenant,
+        occurredAt: processedAt,
+        actor: { actorType: 'USER', actorUserId: user.user_id },
+      })
+      : (parsed.payload ?? {});
+
+  if (sourcePayloadSchemaRef && !schemaRegistry.has(sourcePayloadSchemaRef)) {
+    await knex.transaction(async (trx) => {
+      eventRecord = await WorkflowRuntimeEventModelV2.create(trx, {
+        tenant_id: tenant,
+        event_name: parsed.eventName,
+        correlation_key: parsed.correlationKey,
+        payload: resolvedPayload,
+        payload_schema_ref: sourcePayloadSchemaRef,
+        schema_ref_conflict: schemaRefConflict,
+        processed_at: processedAt,
+        error_message: `Unknown payload schema ref "${sourcePayloadSchemaRef}"`
+      });
+    });
+    return throwHttpError(400, 'Unknown payload schema ref', { schemaRef: sourcePayloadSchemaRef });
+  }
+
+  if (sourcePayloadSchemaRef && !tenant) {
+    await knex.transaction(async (trx) => {
+      eventRecord = await WorkflowRuntimeEventModelV2.create(trx, {
+        tenant_id: tenant,
+        event_name: parsed.eventName,
+        correlation_key: parsed.correlationKey,
+        payload: resolvedPayload,
+        payload_schema_ref: sourcePayloadSchemaRef,
+        schema_ref_conflict: schemaRefConflict,
+        processed_at: processedAt,
+        error_message: 'Missing tenant context for schema-validated event ingestion'
+      });
+    });
+    return throwHttpError(400, 'Missing tenant context', { schemaRef: sourcePayloadSchemaRef });
+  }
+
+  if (sourcePayloadSchemaRef) {
+    const validation = schemaRegistry.get(sourcePayloadSchemaRef).safeParse(resolvedPayload);
+    if (!validation.success) {
+      const issues = validation.error.issues;
+      const message = `Event payload failed schema validation (${sourcePayloadSchemaRef})`;
+      await knex.transaction(async (trx) => {
+        eventRecord = await WorkflowRuntimeEventModelV2.create(trx, {
+          tenant_id: tenant,
+          event_name: parsed.eventName,
+          correlation_key: parsed.correlationKey,
+          payload: resolvedPayload,
+          payload_schema_ref: sourcePayloadSchemaRef,
+          schema_ref_conflict: schemaRefConflict,
+          processed_at: processedAt,
+          error_message: message
+        });
+      });
+      return throwHttpError(400, 'Invalid event payload', { schemaRef: sourcePayloadSchemaRef, issues });
+    }
+  }
 
   if (schemaRefConflict) {
     try {
@@ -2394,7 +2458,7 @@ export const submitWorkflowEventAction = withAuth(async (user, { tenant }, input
       tenant_id: tenant,
       event_name: parsed.eventName,
       correlation_key: parsed.correlationKey,
-      payload: parsed.payload,
+      payload: resolvedPayload,
       payload_schema_ref: sourcePayloadSchemaRef,
       schema_ref_conflict: schemaRefConflict,
       processed_at: processedAt
@@ -2420,7 +2484,7 @@ export const submitWorkflowEventAction = withAuth(async (user, { tenant }, input
       await WorkflowRunModelV2.update(trx, wait.run_id, {
         status: 'RUNNING',
         resume_event_name: parsed.eventName,
-        resume_event_payload: parsed.payload
+        resume_event_payload: resolvedPayload
       });
 
       const stepRecord = await WorkflowRunStepModelV2.getLatestByRunAndPath(trx, wait.run_id, wait.step_path);
@@ -2472,7 +2536,6 @@ export const submitWorkflowEventAction = withAuth(async (user, { tenant }, input
     (workflow) => workflow.trigger?.eventName === parsed.eventName && workflow.status === 'published'
   );
 
-  const schemaRegistry = getSchemaRegistry();
   const startedRuns: string[] = [];
   for (const workflow of matching) {
     const versions = await WorkflowDefinitionVersionModelV2.listByWorkflow(knex, workflow.workflow_id);
@@ -2499,7 +2562,7 @@ export const submitWorkflowEventAction = withAuth(async (user, { tenant }, input
       continue;
     }
 
-    let workflowPayload: Record<string, unknown> = parsed.payload ?? {};
+    let workflowPayload: Record<string, unknown> = (resolvedPayload ?? {}) as Record<string, unknown>;
     let mappingApplied = false;
     if (mappingProvided) {
       try {
@@ -2512,7 +2575,7 @@ export const submitWorkflowEventAction = withAuth(async (user, { tenant }, input
             event: {
               name: parsed.eventName,
               correlationKey: parsed.correlationKey,
-              payload: parsed.payload ?? {},
+              payload: resolvedPayload ?? {},
               payloadSchemaRef: effectiveSourceSchemaRef
             }
           },

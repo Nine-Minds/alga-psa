@@ -214,6 +214,45 @@ export interface UserHost {
   getUser(): Promise<UserData>;
 }
 
+// Invoicing Host API types
+
+export interface ManualInvoiceItemInput {
+  serviceId: string;
+  quantity: number;
+  description: string;
+  rate: number;
+  isDiscount?: boolean;
+  discountType?: 'percentage' | 'fixed';
+  appliesToItemId?: string;
+  appliesToServiceId?: string;
+}
+
+export interface CreateManualInvoiceInput {
+  clientId: string;
+  items: ManualInvoiceItemInput[];
+  invoiceDate?: string;
+  dueDate?: string;
+  poNumber?: string | null;
+}
+
+export type CreateManualInvoiceResult =
+  | {
+      success: true;
+      invoice: {
+        invoiceId: string;
+        invoiceNumber: string;
+        status: string;
+        subtotal: number;
+        tax: number;
+        total: number;
+      };
+    }
+  | { success: false; error: string; fieldErrors?: Record<string, string> };
+
+export interface InvoicingHost {
+  createManualInvoice(input: CreateManualInvoiceInput): Promise<CreateManualInvoiceResult>;
+}
+
 export interface HostBindings {
   context: {
     get(): Promise<ContextData>;
@@ -225,6 +264,8 @@ export interface HostBindings {
   uiProxy: UiProxyHost;
   /** Scheduler API for managing scheduled tasks (requires cap:scheduler.manage) */
   scheduler: SchedulerHost;
+  /** Invoicing API for creating draft manual invoices (requires cap:invoice.manual.create) */
+  invoicing: InvoicingHost;
   /** User API for accessing current user information (requires cap:user.read) */
   user: UserHost;
 }
@@ -308,6 +349,11 @@ export function createMockHostBindings(overrides: Partial<HostBindings> = {}): H
         return [];
       },
     },
+    invoicing: {
+      async createManualInvoice() {
+        throw new Error('mock invoicing.createManualInvoice not implemented');
+      },
+    },
     user: {
       async getUser() {
         return {
@@ -326,6 +372,15 @@ export function createMockHostBindings(overrides: Partial<HostBindings> = {}): H
     ...defaultBindings.uiProxy,
     ...overrides.uiProxy,
   };
+
+  // Prefer the caller's implementation when only one legacy method is provided.
+  if (overrides.uiProxy?.call && !overrides.uiProxy?.callRoute) {
+    mergedUiProxy.callRoute = overrides.uiProxy.call.bind(mergedUiProxy);
+  }
+  if (overrides.uiProxy?.callRoute && !overrides.uiProxy?.call) {
+    mergedUiProxy.call = overrides.uiProxy.callRoute.bind(mergedUiProxy);
+  }
+
   if (!mergedUiProxy.callRoute && mergedUiProxy.call) {
     mergedUiProxy.callRoute = mergedUiProxy.call.bind(mergedUiProxy);
   }
@@ -360,6 +415,10 @@ export function createMockHostBindings(overrides: Partial<HostBindings> = {}): H
     scheduler: {
       ...defaultBindings.scheduler,
       ...overrides.scheduler,
+    },
+    invoicing: {
+      ...defaultBindings.invoicing,
+      ...overrides.invoicing,
     },
     user: {
       ...defaultBindings.user,

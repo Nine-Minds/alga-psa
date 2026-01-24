@@ -58,6 +58,15 @@ import { withAuth, hasPermission } from '@alga-psa/auth';
 import { createTenantKnex } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { withTransaction } from '@alga-psa/db';
+import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
+import {
+    buildAssetAssignedPayload,
+    buildAssetCreatedPayload,
+    buildAssetUnassignedPayload,
+    buildAssetUpdatedPayload,
+    buildAssetWarrantyExpiringPayload,
+    computeAssetWarrantyExpiring,
+} from '@shared/workflow/streams/domainEventBuilders/assetEventBuilders';
 
 type AssetExtensionType = WorkstationAsset | NetworkDeviceAsset | ServerAsset | MobileDeviceAsset | PrinterAsset;
 
@@ -140,6 +149,26 @@ function sanitizeUpdatePayload(data: UpdateAssetRequest): UpdateAssetRequest {
     };
 
     return pruneNullishValues(sanitized) as UpdateAssetRequest;
+}
+
+function collectAssetUpdatedPaths(validatedData: Record<string, unknown>): string[] {
+    const extensionKeys = new Set(['workstation', 'network_device', 'server', 'mobile_device', 'printer']);
+    const paths: string[] = [];
+
+    for (const [key, value] of Object.entries(validatedData)) {
+        if (value === undefined) continue;
+
+        if (extensionKeys.has(key) && value && typeof value === 'object' && !Array.isArray(value)) {
+            for (const nestedKey of Object.keys(value as Record<string, unknown>)) {
+                paths.push(`${key}.${nestedKey}`);
+            }
+            continue;
+        }
+
+        paths.push(key);
+    }
+
+    return paths;
 }
 
 // Helper function to get extension table data
@@ -463,7 +492,50 @@ export const createAsset = withAuth(async (user, { tenant }, data: CreateAssetRe
 
         // Validate the formatted output
         try {
-            return validateData(assetSchema, result) as Asset;
+            const created = validateData(assetSchema, result) as Asset;
+            const occurredAt = created.created_at || new Date().toISOString();
+
+            await publishWorkflowEvent({
+                eventType: 'ASSET_CREATED',
+                payload: buildAssetCreatedPayload({
+                    assetId: created.asset_id,
+                    clientId: created.client_id || undefined,
+                    createdByUserId: user.user_id,
+                    createdAt: created.created_at || occurredAt,
+                    assetType: created.asset_type,
+                    serialNumber: created.serial_number,
+                }),
+                ctx: {
+                    tenantId: tenant,
+                    occurredAt,
+                    actor: { actorType: 'USER', actorUserId: user.user_id },
+                },
+            });
+
+            const warranty = computeAssetWarrantyExpiring({
+                now: occurredAt,
+                previousExpiresAt: undefined,
+                newExpiresAt: created.warranty_end_date ?? null,
+                windowDays: 30,
+            });
+
+            if (warranty) {
+                await publishWorkflowEvent({
+                    eventType: 'ASSET_WARRANTY_EXPIRING',
+                    payload: buildAssetWarrantyExpiringPayload({
+                        assetId: created.asset_id,
+                        clientId: created.client_id || undefined,
+                        ...warranty,
+                    }),
+                    ctx: {
+                        tenantId: tenant,
+                        occurredAt,
+                        actor: { actorType: 'USER', actorUserId: user.user_id },
+                    },
+                });
+            }
+
+            return created;
         } catch (error) {
             console.error('Output validation error:', error);
             throw new Error('Server error: Invalid output data format');
@@ -498,6 +570,9 @@ export const updateAsset = withAuth(async (user, { tenant }, asset_id: string, d
                 printer,
                 ...baseCandidate
             } = validatedData;
+
+            const beforeCompleteAsset = await getAssetWithExtensions(trx, tenant, asset_id);
+            const beforeFormatted = formatAssetForOutput(beforeCompleteAsset) as unknown as Record<string, unknown>;
 
             const extensionPayloads = {
                 workstation,
@@ -561,14 +636,90 @@ export const updateAsset = withAuth(async (user, { tenant }, asset_id: string, d
 
             // Return normalized asset data for client consumption
             const completeAsset = await getAssetWithExtensions(trx, tenant, asset_id);
-            return formatAssetForOutput(completeAsset);
+            const afterFormatted = formatAssetForOutput(completeAsset) as unknown as Record<string, unknown>;
+
+            return {
+                before: beforeFormatted,
+                after: afterFormatted,
+                validatedUpdate: validatedData as unknown as Record<string, unknown>,
+            };
         });
 
         revalidatePath('/assets');
         revalidatePath(`/assets/${asset_id}`);
         revalidatePath('/msp/assets');
         revalidatePath(`/msp/assets/${asset_id}`);
-        return validateData(assetSchema, result) as Asset;
+
+        const updated = validateData(assetSchema, result.after) as Asset;
+        const occurredAt = new Date().toISOString();
+
+        const updatedPaths = collectAssetUpdatedPaths(result.validatedUpdate);
+        const updatePayload = buildAssetUpdatedPayload({
+            assetId: asset_id,
+            before: result.before,
+            after: result.after,
+            updatedPaths,
+            updatedByUserId: user.user_id,
+            updatedAt: occurredAt,
+        });
+
+        if (updatePayload.updatedFields || updatePayload.changes) {
+            await publishWorkflowEvent({
+                eventType: 'ASSET_UPDATED',
+                payload: updatePayload,
+                ctx: {
+                    tenantId: tenant,
+                    occurredAt,
+                    actor: { actorType: 'USER', actorUserId: user.user_id },
+                },
+            });
+        }
+
+        const previousClientId = (result.before as any)?.client_id as string | undefined;
+        const newClientId = (result.after as any)?.client_id as string | undefined;
+        if (previousClientId && newClientId && previousClientId !== newClientId) {
+            await publishWorkflowEvent({
+                eventType: 'ASSET_ASSIGNED',
+                payload: buildAssetAssignedPayload({
+                    assetId: asset_id,
+                    previousOwnerType: 'client',
+                    previousOwnerId: previousClientId,
+                    newOwnerType: 'client',
+                    newOwnerId: newClientId,
+                    assignedAt: occurredAt,
+                }),
+                ctx: {
+                    tenantId: tenant,
+                    occurredAt,
+                    actor: { actorType: 'USER', actorUserId: user.user_id },
+                },
+            });
+        }
+
+        const warranty = computeAssetWarrantyExpiring({
+            now: occurredAt,
+            previousExpiresAt: (result.before as any)?.warranty_end_date ?? null,
+            newExpiresAt: (result.after as any)?.warranty_end_date ?? null,
+            windowDays: 30,
+        });
+
+        if (warranty) {
+            await publishWorkflowEvent({
+                eventType: 'ASSET_WARRANTY_EXPIRING',
+                payload: buildAssetWarrantyExpiringPayload({
+                    assetId: asset_id,
+                    clientId: newClientId || previousClientId,
+                    ...warranty,
+                }),
+                ctx: {
+                    tenantId: tenant,
+                    occurredAt,
+                    actor: { actorType: 'USER', actorUserId: user.user_id },
+                },
+            });
+        }
+
+        return updated;
     } catch (error) {
         console.error('Error updating asset:', error);
         throw new Error('Failed to update asset');
@@ -1719,6 +1870,22 @@ export const createAssetAssociation = withAuth(async (user, { tenant }, data: Cr
             })
             .returning('*');
 
+        const occurredAt = new Date().toISOString();
+        await publishWorkflowEvent({
+            eventType: 'ASSET_ASSIGNED',
+            payload: buildAssetAssignedPayload({
+                assetId: validatedData.asset_id,
+                newOwnerType: validatedData.entity_type,
+                newOwnerId: validatedData.entity_id,
+                assignedAt: occurredAt,
+            }),
+            ctx: {
+                tenantId: tenant,
+                occurredAt,
+                actor: { actorType: 'USER', actorUserId: user.user_id },
+            },
+        });
+
         // Revalidate paths
         revalidatePath('/assets');
         revalidatePath(`/assets/${data.asset_id}`);
@@ -1766,6 +1933,23 @@ export const removeAssetAssociation = withAuth(async (
                 entity_type
             })
             .delete();
+
+        const occurredAt = new Date().toISOString();
+        await publishWorkflowEvent({
+            eventType: 'ASSET_UNASSIGNED',
+            payload: buildAssetUnassignedPayload({
+                assetId: asset_id,
+                previousOwnerType: entity_type,
+                previousOwnerId: entity_id,
+                unassignedAt: occurredAt,
+                reason: 'manual_detach',
+            }),
+            ctx: {
+                tenantId: tenant,
+                occurredAt,
+                actor: { actorType: 'USER', actorUserId: user.user_id },
+            },
+        });
 
         // Revalidate paths
         revalidatePath('/assets');

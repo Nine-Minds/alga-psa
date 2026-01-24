@@ -195,6 +195,7 @@ Key points:
 - Optional: use other WIT-compatible languages (`wit-bindgen` for Rust/TinyGo) as long as the output conforms to the `alga:extension/runner` world.
 - Use host APIs (capability-scoped) exposed via the generated bindings:
   - `host.http.fetch`, `host.storage.*`, `host.secrets.get`, `host.uiProxy.callRoute`, `host.logging.*`.
+  - `host.invoicing.createManualInvoice` (requires `cap:invoice.manual.create`) for creating draft manual invoices.
 
 Conceptual handler shape:
 ```ts

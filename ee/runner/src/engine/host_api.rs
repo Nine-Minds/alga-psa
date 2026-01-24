@@ -4,8 +4,8 @@ use crate::models::{
     ExecuteRequest as ModelExecuteRequest, ExecuteResponse as ModelExecuteResponse, HttpPayload,
 };
 use crate::providers::{
-    CAP_CONTEXT_READ, CAP_HTTP_FETCH, CAP_LOG_EMIT, CAP_SCHEDULER_MANAGE, CAP_SECRETS_GET,
-    CAP_STORAGE_KV, CAP_UI_PROXY, CAP_USER_READ,
+    CAP_CONTEXT_READ, CAP_HTTP_FETCH, CAP_INVOICE_MANUAL_CREATE, CAP_LOG_EMIT, CAP_SCHEDULER_MANAGE,
+    CAP_SECRETS_GET, CAP_STORAGE_KV, CAP_UI_PROXY, CAP_USER_READ,
 };
 use anyhow::{anyhow, Context};
 use base64::Engine as _;
@@ -22,6 +22,7 @@ use component::alga::extension::types;
 use component::alga::extension::{
     context,
     http::{self, HttpError, HttpRequest, HttpResponse},
+    invoicing::{self, CreateManualInvoiceInput, CreateManualInvoiceResult},
     logging,
     scheduler::{
         self, CreateScheduleInput, CreateScheduleResult, DeleteScheduleResult, EndpointInfo,
@@ -122,6 +123,13 @@ static RUNNER_STORAGE_API_TOKEN: Lazy<Option<String>> = Lazy::new(|| {
 
 // Scheduler API uses the same base URL and token as storage
 static SCHEDULER_BASE_URL: Lazy<Option<String>> = Lazy::new(|| {
+    std::env::var("STORAGE_API_BASE_URL")
+        .or_else(|_| std::env::var("REGISTRY_BASE_URL"))
+        .ok()
+});
+
+// Invoicing API uses the same base URL and token as storage/scheduler
+static INVOICING_BASE_URL: Lazy<Option<String>> = Lazy::new(|| {
     std::env::var("STORAGE_API_BASE_URL")
         .or_else(|_| std::env::var("REGISTRY_BASE_URL"))
         .ok()
@@ -228,6 +236,17 @@ fn build_request_url(http: &HttpPayload) -> String {
 
 fn has_capability(providers: &HashSet<String>, capability: &str) -> bool {
     providers.contains(&capability.to_ascii_lowercase())
+}
+
+fn require_invoicing_access(
+    providers: &HashSet<String>,
+    install_id: Option<String>,
+) -> std::result::Result<String, &'static str> {
+    if !has_capability(providers, CAP_INVOICE_MANUAL_CREATE) {
+        return Err("Permission denied: cap:invoice.manual.create not granted");
+    }
+    let install_id = install_id.ok_or("Permission denied: install_id missing")?;
+    Ok(install_id)
 }
 
 fn is_host_allowed(allowlist: &[String], url: &Url) -> bool {
@@ -1265,6 +1284,151 @@ fn map_scheduler_status(status: StatusCode) -> SchedulerError {
     }
 }
 
+async fn invoicing_request(
+    install_id: &str,
+    operation: &str,
+    mut payload: Map<String, Value>,
+) -> std::result::Result<Value, String> {
+    let base = INVOICING_BASE_URL
+        .as_ref()
+        .ok_or_else(|| "invoicing base URL not configured".to_string())?;
+    let token = RUNNER_STORAGE_API_TOKEN
+        .as_ref()
+        .ok_or_else(|| "runner auth token not configured".to_string())?;
+
+    payload.insert("operation".into(), Value::String(operation.to_string()));
+
+    let url = format!(
+        "{}/api/internal/ext-invoicing/install/{}",
+        base.trim_end_matches('/'),
+        install_id
+    );
+
+    tracing::debug!(
+        install_id=%install_id,
+        operation=%operation,
+        "invoicing request dispatch"
+    );
+
+    let response = HTTP_CLIENT
+        .post(url)
+        .header("content-type", "application/json")
+        .header("x-runner-auth", token)
+        .json(&payload)
+        .send()
+        .await
+        .map_err(|err| {
+            tracing::error!(error = %err, "invoicing_request transport failure");
+            "transport failure".to_string()
+        })?;
+
+    let status = response.status();
+    let text = response.text().await.unwrap_or_default();
+
+    if !status.is_success() {
+        tracing::warn!(status = status.as_u16(), body = %text, operation, "invoicing_request error");
+        return Err(format!("http {}: {}", status.as_u16(), text));
+    }
+
+    if text.trim().is_empty() {
+        Ok(Value::Null)
+    } else {
+        serde_json::from_str(&text).map_err(|err| {
+            tracing::error!(error = %err, "invoicing_request invalid JSON response");
+            "invalid JSON response".to_string()
+        })
+    }
+}
+
+fn parse_create_manual_invoice_result(value: &Value) -> CreateManualInvoiceResult {
+    let obj = match value.as_object() {
+        Some(o) => o,
+        None => {
+            return CreateManualInvoiceResult {
+                success: false,
+                invoice_id: None,
+                invoice_number: None,
+                status: None,
+                subtotal: None,
+                tax: None,
+                total: None,
+                error: Some("invalid response".to_string()),
+                field_errors: None,
+            };
+        }
+    };
+
+    let invoice_obj = obj.get("invoice").and_then(|v| v.as_object());
+
+    let get_str = |keys: &[&str]| -> Option<String> {
+        for key in keys {
+            if let Some(Value::String(s)) = obj.get(*key) {
+                return Some(s.clone());
+            }
+            if let Some(invoice_obj) = invoice_obj {
+                if let Some(Value::String(s)) = invoice_obj.get(*key) {
+                    return Some(s.clone());
+                }
+            }
+        }
+        None
+    };
+
+    let get_str_obj = |keys: &[&str]| -> Option<String> {
+        for key in keys {
+            if let Some(Value::String(s)) = obj.get(*key) {
+                return Some(s.clone());
+            }
+        }
+        None
+    };
+
+    let get_num = |keys: &[&str]| -> Option<f64> {
+        for key in keys {
+            if let Some(v) = obj.get(*key) {
+                if let Some(n) = v.as_f64() {
+                    return Some(n);
+                }
+                if let Some(n) = v.as_i64() {
+                    return Some(n as f64);
+                }
+            }
+            if let Some(invoice_obj) = invoice_obj {
+                if let Some(v) = invoice_obj.get(*key) {
+                    if let Some(n) = v.as_f64() {
+                        return Some(n);
+                    }
+                    if let Some(n) = v.as_i64() {
+                        return Some(n as f64);
+                    }
+                }
+            }
+        }
+        None
+    };
+
+    let field_errors = obj
+        .get("fieldErrors")
+        .or_else(|| obj.get("field_errors"))
+        .and_then(|v| match v {
+            Value::Null => None,
+            Value::String(s) => Some(s.clone()),
+            other => serde_json::to_string(other).ok(),
+        });
+
+    CreateManualInvoiceResult {
+        success: obj.get("success").and_then(|v| v.as_bool()).unwrap_or(false),
+        invoice_id: get_str(&["invoiceId", "invoice_id"]),
+        invoice_number: get_str(&["invoiceNumber", "invoice_number"]),
+        status: get_str(&["status"]),
+        subtotal: get_num(&["subtotal"]),
+        tax: get_num(&["tax"]),
+        total: get_num(&["total"]),
+        error: get_str_obj(&["error"]),
+        field_errors,
+    }
+}
+
 fn parse_schedule_info(value: &Value) -> Option<ScheduleInfo> {
     let obj = value.as_object()?;
     Some(ScheduleInfo {
@@ -1816,6 +1980,127 @@ impl scheduler::HostWithStore for HasSelf<HostState> {
     }
 }
 
+impl invoicing::HostWithStore for HasSelf<HostState> {
+    fn create_manual_invoice<T>(
+        accessor: &Accessor<T, Self>,
+        input: CreateManualInvoiceInput,
+    ) -> impl std::future::Future<Output = CreateManualInvoiceResult> + Send {
+        let (providers, install_id, ctx) = accessor.with(|mut access| {
+            let state = access.get();
+            (
+                state.context.providers.clone(),
+                state.context.install_id.clone(),
+                state.context.clone(),
+            )
+        });
+
+        async move {
+            let install_id = match require_invoicing_access(&providers, install_id) {
+                Ok(id) => id,
+                Err(msg) => {
+                    tracing::error!(
+                        tenant = ?ctx.tenant_id,
+                        extension = ?ctx.extension_id,
+                        request_id = ?ctx.request_id,
+                        error = msg,
+                        "invoicing capability denied"
+                    );
+                    return CreateManualInvoiceResult {
+                        success: false,
+                        invoice_id: None,
+                        invoice_number: None,
+                        status: None,
+                        subtotal: None,
+                        tax: None,
+                        total: None,
+                        error: Some(msg.to_string()),
+                        field_errors: None,
+                    };
+                }
+            };
+
+            let tenant = ctx.tenant_id.clone().unwrap_or_default();
+            let extension = ctx.extension_id.clone().unwrap_or_default();
+
+            tracing::info!(
+                tenant=%tenant,
+                extension=%extension,
+                client_id=%input.client_id,
+                "invoicing capability create_manual_invoice start"
+            );
+
+            let mut payload = Map::new();
+            payload.insert("clientId".into(), Value::String(input.client_id.to_string()));
+
+            let items: Vec<Value> = input
+                .items
+                .iter()
+                .map(|item| {
+                    let discount_type = item.discount_type.as_ref().map(|dt| match dt {
+                        types::DiscountType::Percentage => "percentage",
+                        types::DiscountType::Fixed => "fixed",
+                    });
+                    serde_json::json!({
+                        "serviceId": item.service_id,
+                        "quantity": item.quantity,
+                        "description": item.description,
+                        "rate": item.rate,
+                        "isDiscount": item.is_discount,
+                        "discountType": discount_type,
+                        "appliesToItemId": item.applies_to_item_id,
+                        "appliesToServiceId": item.applies_to_service_id,
+                    })
+                })
+                .collect();
+            payload.insert("items".into(), Value::Array(items));
+
+            if let Some(invoice_date) = input.invoice_date {
+                payload.insert("invoiceDate".into(), Value::String(invoice_date.to_string()));
+            }
+            if let Some(due_date) = input.due_date {
+                payload.insert("dueDate".into(), Value::String(due_date.to_string()));
+            }
+            if let Some(po_number) = input.po_number {
+                payload.insert("poNumber".into(), Value::String(po_number.to_string()));
+            }
+
+            let response = match invoicing_request(&install_id, "createManualInvoice", payload).await {
+                Ok(v) => v,
+                Err(err) => {
+                    tracing::error!(
+                        tenant=%tenant,
+                        extension=%extension,
+                        error=%err,
+                        "invoicing capability create_manual_invoice request failed"
+                    );
+                    return CreateManualInvoiceResult {
+                        success: false,
+                        invoice_id: None,
+                        invoice_number: None,
+                        status: None,
+                        subtotal: None,
+                        tax: None,
+                        total: None,
+                        error: Some(err),
+                        field_errors: None,
+                    };
+                }
+            };
+
+            let result = parse_create_manual_invoice_result(&response);
+
+            tracing::info!(
+                tenant=%tenant,
+                extension=%extension,
+                success=result.success,
+                "invoicing capability create_manual_invoice completed"
+            );
+
+            result
+        }
+    }
+}
+
 impl user::HostWithStore for HasSelf<HostState> {
     fn get_user<T>(
         accessor: &Accessor<T, Self>,
@@ -1878,6 +2163,7 @@ impl logging::Host for HostState {}
 impl ui_proxy::Host for HostState {}
 impl user::Host for HostState {}
 impl scheduler::Host for HostState {}
+impl invoicing::Host for HostState {}
 
 #[cfg(test)]
 mod tests {
@@ -1901,5 +2187,22 @@ mod tests {
         assert_eq!(redact_identifier(""), "<empty>");
         assert_eq!(redact_identifier("id"), "***");
         assert_eq!(redact_identifier("secret"), "se…et");
+    }
+
+    #[test]
+    fn t006_runner_rejects_invoicing_when_capability_missing() {
+        let providers = HashSet::<String>::new();
+        let result = require_invoicing_access(&providers, Some("install-1".to_string()));
+        assert_eq!(
+            result.unwrap_err(),
+            "Permission denied: cap:invoice.manual.create not granted"
+        );
+    }
+
+    #[test]
+    fn t007_runner_rejects_invoicing_when_install_id_missing() {
+        let providers = HashSet::from([CAP_INVOICE_MANUAL_CREATE.to_string()]);
+        let result = require_invoicing_access(&providers, None);
+        assert_eq!(result.unwrap_err(), "Permission denied: install_id missing");
     }
 }

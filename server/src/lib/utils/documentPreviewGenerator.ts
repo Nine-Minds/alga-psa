@@ -35,6 +35,12 @@ import { v4 as uuidv4 } from 'uuid';
 import fs from 'fs/promises';
 import path from 'path';
 import os from 'os';
+import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
+import { isValidUUID } from '@alga-psa/validation';
+import {
+  buildMediaProcessingFailedPayload,
+  buildMediaProcessingSucceededPayload,
+} from '@alga-psa/shared/workflow/streams/domainEventBuilders/mediaEventBuilders';
 
 /**
  * Preview size configuration
@@ -74,16 +80,26 @@ export async function generateDocumentPreviews(
 ): Promise<PreviewGenerationResult> {
   console.log(`[generateDocumentPreviews] Generating previews for document ${document.document_id} (${document.mime_type})`);
 
+  const startedAtMs = Date.now();
+
   try {
     const mimeType = document.mime_type?.toLowerCase() || '';
+    const shouldProcess =
+      mimeType.startsWith('image/') || mimeType === 'application/pdf' || mimeType.startsWith('video/');
 
     // Determine file type and generate previews accordingly
     if (mimeType.startsWith('image/')) {
-      return await generateImagePreviews(document, fileBuffer);
+      const result = await generateImagePreviews(document, fileBuffer);
+      await maybePublishProcessingSucceeded({ document, result, shouldProcess, startedAtMs });
+      return result;
     } else if (mimeType === 'application/pdf') {
-      return await generatePdfPreviews(document, fileBuffer);
+      const result = await generatePdfPreviews(document, fileBuffer);
+      await maybePublishProcessingSucceeded({ document, result, shouldProcess, startedAtMs });
+      return result;
     } else if (mimeType.startsWith('video/')) {
-      return await generateVideoPreviews(document, fileBuffer);
+      const result = await generateVideoPreviews(document, fileBuffer);
+      await maybePublishProcessingSucceeded({ document, result, shouldProcess, startedAtMs });
+      return result;
     } else {
       // Unsupported file type - return null for previews
       console.log(`[generateDocumentPreviews] Unsupported file type: ${mimeType}`);
@@ -95,12 +111,112 @@ export async function generateDocumentPreviews(
     }
   } catch (error) {
     console.error(`[generateDocumentPreviews] Error generating previews for document ${document.document_id}:`, error);
+    await maybePublishProcessingFailed({ document, error, startedAtMs });
     // Return null IDs on error - document upload should still succeed
     return {
       thumbnail_file_id: null,
       preview_file_id: null,
       preview_generated_at: new Date(),
     };
+  }
+}
+
+async function maybePublishProcessingSucceeded(params: {
+  document: IDocument;
+  result: PreviewGenerationResult;
+  shouldProcess: boolean;
+  startedAtMs: number;
+}): Promise<void> {
+  const fileId = typeof params.document.file_id === 'string' ? params.document.file_id : undefined;
+  if (!params.shouldProcess || !fileId || !isValidUUID(fileId)) {
+    return;
+  }
+
+  const { tenant } = await createTenantKnex();
+  if (!tenant) {
+    return;
+  }
+
+  const actorUserId =
+    typeof (params.document.created_by as any) === 'string' && isValidUUID(params.document.created_by as any)
+      ? (params.document.created_by as any)
+      : undefined;
+
+  const occurredAt = new Date().toISOString();
+  const outputs: unknown[] = [];
+  if (params.result.thumbnail_file_id) {
+    outputs.push({ type: 'thumbnail', fileId: params.result.thumbnail_file_id });
+  }
+  if (params.result.preview_file_id) {
+    outputs.push({ type: 'preview', fileId: params.result.preview_file_id });
+  }
+
+  try {
+    await publishWorkflowEvent({
+      eventType: 'MEDIA_PROCESSING_SUCCEEDED',
+      payload: buildMediaProcessingSucceededPayload({
+        fileId,
+        processedAt: occurredAt,
+        durationMs: Math.max(0, Date.now() - params.startedAtMs),
+        outputs: outputs.length > 0 ? outputs : undefined,
+      }),
+      ctx: {
+        tenantId: tenant,
+        occurredAt,
+        actor: actorUserId ? { actorType: 'USER', actorUserId } : { actorType: 'SYSTEM' },
+      },
+      idempotencyKey: `media_processing_succeeded:document_previews:${fileId}:${occurredAt}`,
+    });
+  } catch (eventError) {
+    console.error('[generateDocumentPreviews] Failed to publish MEDIA_PROCESSING_SUCCEEDED workflow event', eventError);
+  }
+}
+
+async function maybePublishProcessingFailed(params: {
+  document: IDocument;
+  error: unknown;
+  startedAtMs: number;
+}): Promise<void> {
+  const mimeType = params.document.mime_type?.toLowerCase() || '';
+  const shouldProcess =
+    mimeType.startsWith('image/') || mimeType === 'application/pdf' || mimeType.startsWith('video/');
+  const fileId = typeof params.document.file_id === 'string' ? params.document.file_id : undefined;
+  if (!shouldProcess || !fileId || !isValidUUID(fileId)) {
+    return;
+  }
+
+  const { tenant } = await createTenantKnex();
+  if (!tenant) {
+    return;
+  }
+
+  const actorUserId =
+    typeof (params.document.created_by as any) === 'string' && isValidUUID(params.document.created_by as any)
+      ? (params.document.created_by as any)
+      : undefined;
+
+  const occurredAt = new Date().toISOString();
+  const errorMessage = params.error instanceof Error ? params.error.message : String(params.error);
+
+  try {
+    await publishWorkflowEvent({
+      eventType: 'MEDIA_PROCESSING_FAILED',
+      payload: buildMediaProcessingFailedPayload({
+        fileId,
+        failedAt: occurredAt,
+        errorCode: 'DOCUMENT_PREVIEW_GENERATION_FAILED',
+        errorMessage,
+        retryable: true,
+      }),
+      ctx: {
+        tenantId: tenant,
+        occurredAt,
+        actor: actorUserId ? { actorType: 'USER', actorUserId } : { actorType: 'SYSTEM' },
+      },
+      idempotencyKey: `media_processing_failed:document_previews:${fileId}:${occurredAt}`,
+    });
+  } catch (eventError) {
+    console.error('[generateDocumentPreviews] Failed to publish MEDIA_PROCESSING_FAILED workflow event', eventError);
   }
 }
 

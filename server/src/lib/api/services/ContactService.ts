@@ -16,6 +16,17 @@ import {
   ContactSearchData
 } from '../schemas/contact';
 import { ListOptions } from '../controllers/types';
+import { publishWorkflowEvent } from 'server/src/lib/eventBus/publishers';
+import {
+  buildContactArchivedPayload,
+  buildContactCreatedPayload,
+  buildContactUpdatedPayload,
+} from '@alga-psa/shared/workflow/streams/domainEventBuilders/contactEventBuilders';
+
+function maybeUserActorFromContext(context: ServiceContext) {
+  if (typeof context.userId !== 'string' || !context.userId) return undefined;
+  return { actorType: 'USER' as const, actorUserId: context.userId };
+}
 
 export class ContactService extends BaseService<IContact> {
   constructor() {
@@ -144,7 +155,7 @@ export class ContactService extends BaseService<IContact> {
   async create(data: Partial<IContact>, context: ServiceContext): Promise<IContact> {
       const { knex } = await this.getKnex();
   
-      return withTransaction(knex, async (trx) => {
+      const contact = await withTransaction(knex, async (trx) => {
         // Validate client exists if provided
         if (data.client_id) {
           const client = await trx('clients')
@@ -181,6 +192,28 @@ export class ContactService extends BaseService<IContact> {
   
         return contact as IContact;
       });
+
+      const clientId = (contact as any)?.client_id;
+      if (typeof clientId === 'string' && clientId) {
+        const occurredAt = (contact as any)?.created_at ?? new Date().toISOString();
+        const actor = maybeUserActorFromContext(context);
+        await publishWorkflowEvent({
+          eventType: 'CONTACT_CREATED',
+          payload: buildContactCreatedPayload({
+            contactId: contact.contact_name_id,
+            clientId,
+            fullName: contact.full_name,
+            email: contact.email || undefined,
+            phoneNumber: (contact as any).phone_number || undefined,
+            createdByUserId: typeof context.userId === 'string' ? context.userId : undefined,
+            createdAt: occurredAt,
+          }),
+          ctx: { tenantId: context.tenant, occurredAt, actor },
+          idempotencyKey: `contact_created:${contact.contact_name_id}`,
+        });
+      }
+
+      return contact;
     }
   
     /**
@@ -197,7 +230,15 @@ export class ContactService extends BaseService<IContact> {
   async update(id: string, data: UpdateContactData, context: ServiceContext): Promise<IContact> {
     const { knex } = await this.getKnex();
 
-    return withTransaction(knex, async (trx) => {
+    const result = await withTransaction(knex, async (trx) => {
+      const before = await trx('contacts')
+        .where({ contact_name_id: id, tenant: context.tenant })
+        .first();
+
+      if (!before) {
+        throw new NotFoundError('Contact not found');
+      }
+
       // Validate client exists if provided
       if (data.client_id) {
         const client = await trx('clients')
@@ -237,8 +278,53 @@ export class ContactService extends BaseService<IContact> {
         await this.handleTags(id, data.tags, context, trx);
       }
 
-      return contact as IContact;
+      return { before, after: contact as IContact, updatedFieldKeys: Object.keys(updateData) };
     });
+
+    const occurredAt = (result.after as any)?.updated_at ?? new Date().toISOString();
+    const actor = maybeUserActorFromContext(context);
+    const clientId = (result.after as any)?.client_id ?? (result.before as any)?.client_id;
+
+    if (typeof clientId === 'string' && clientId) {
+      const wasInactive = Boolean((result.before as any)?.is_inactive);
+      const isInactive = Boolean((result.after as any)?.is_inactive);
+      if (!wasInactive && isInactive) {
+        await publishWorkflowEvent({
+          eventType: 'CONTACT_ARCHIVED',
+          payload: buildContactArchivedPayload({
+            contactId: id,
+            clientId,
+            archivedByUserId: typeof context.userId === 'string' ? context.userId : undefined,
+            archivedAt: occurredAt,
+          }),
+          ctx: { tenantId: context.tenant, occurredAt, actor },
+          idempotencyKey: `contact_archived:${id}:${occurredAt}`,
+        });
+      }
+
+      const updatedPayload = buildContactUpdatedPayload({
+        contactId: id,
+        clientId,
+        before: result.before as any,
+        after: result.after as any,
+        updatedFieldKeys: result.updatedFieldKeys ?? [],
+        updatedByUserId: typeof context.userId === 'string' ? context.userId : undefined,
+        updatedAt: occurredAt,
+      });
+
+      const updatedFields = (updatedPayload as any).updatedFields;
+      const changes = (updatedPayload as any).changes;
+      if ((Array.isArray(updatedFields) && updatedFields.length) || (changes && Object.keys(changes).length)) {
+        await publishWorkflowEvent({
+          eventType: 'CONTACT_UPDATED',
+          payload: updatedPayload,
+          ctx: { tenantId: context.tenant, occurredAt, actor },
+          idempotencyKey: `contact_updated:${id}:${occurredAt}`,
+        });
+      }
+    }
+
+    return result.after;
   }
 
   /**

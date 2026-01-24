@@ -26,6 +26,17 @@ import {
 } from '../config/storage';
 import { LocalProviderConfig, S3ProviderConfig } from '../types/storage';
 import { createTenantKnex } from '@alga-psa/db';
+import { getCurrentUser } from '@alga-psa/auth/getCurrentUser';
+import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
+import { isValidUUID } from '@alga-psa/validation';
+import {
+  buildDocumentDeletedPayload,
+  buildDocumentUploadedPayload,
+} from '@alga-psa/shared/workflow/streams/domainEventBuilders/documentStorageEventBuilders';
+import {
+  buildFileUploadedPayload,
+  buildMediaProcessingSucceededPayload,
+} from '@alga-psa/shared/workflow/streams/domainEventBuilders/mediaEventBuilders';
 
 async function streamToBuffer(stream: Readable): Promise<Buffer> {
   return new Promise((resolve, reject) => {
@@ -84,6 +95,8 @@ export class StorageService {
       if (!options.uploaded_by_id) {
         throw new Error('uploaded_by_id is required');
       }
+
+      const uploadStartedAtMs = Date.now();
 
       let fileBuffer: Buffer;
       let fileSize: number;
@@ -160,6 +173,85 @@ export class StorageService {
         metadata: options.metadata
       });
 
+      try {
+        const uploadedByUserId = isValidUUID(options.uploaded_by_id) ? options.uploaded_by_id : undefined;
+        await publishWorkflowEvent({
+          eventType: 'DOCUMENT_UPLOADED',
+          payload: buildDocumentUploadedPayload({
+            documentId: fileRecord.file_id,
+            uploadedByUserId,
+            uploadedAt: fileRecord.created_at,
+            fileName: fileRecord.original_name,
+            contentType: fileRecord.mime_type,
+            sizeBytes: fileRecord.file_size,
+            storageKey: fileRecord.storage_path,
+          }),
+          ctx: {
+            tenantId: tenant,
+            occurredAt: fileRecord.created_at,
+            actor: uploadedByUserId
+              ? { actorType: 'USER', actorUserId: uploadedByUserId }
+              : { actorType: 'SYSTEM' },
+          },
+          idempotencyKey: `document_uploaded:${fileRecord.file_id}:${fileRecord.created_at}`,
+        });
+      } catch (error) {
+        console.error('[StorageService] Failed to publish DOCUMENT_UPLOADED workflow event', error);
+      }
+
+      try {
+        const uploadedByUserId = isValidUUID(options.uploaded_by_id) ? options.uploaded_by_id : undefined;
+        await publishWorkflowEvent({
+          eventType: 'FILE_UPLOADED',
+          payload: buildFileUploadedPayload({
+            fileId: fileRecord.file_id,
+            uploadedByUserId,
+            uploadedAt: fileRecord.created_at,
+            fileName: fileRecord.original_name,
+            contentType: fileRecord.mime_type,
+            sizeBytes: fileRecord.file_size,
+            storageKey: fileRecord.storage_path,
+          }),
+          ctx: {
+            tenantId: tenant,
+            occurredAt: fileRecord.created_at,
+            actor: uploadedByUserId
+              ? { actorType: 'USER', actorUserId: uploadedByUserId }
+              : { actorType: 'SYSTEM' },
+          },
+          idempotencyKey: `file_uploaded:${fileRecord.file_id}:${fileRecord.created_at}`,
+        });
+
+        if (isEntityImage) {
+          await publishWorkflowEvent({
+            eventType: 'MEDIA_PROCESSING_SUCCEEDED',
+            payload: buildMediaProcessingSucceededPayload({
+              fileId: fileRecord.file_id,
+              processedAt: new Date().toISOString(),
+              durationMs: Math.max(0, Date.now() - uploadStartedAtMs),
+              outputs: [
+                {
+                  type: 'entity_image_normalized',
+                  contentType: fileRecord.mime_type,
+                  fileName: fileRecord.original_name,
+                  sizeBytes: fileRecord.file_size,
+                },
+              ],
+            }),
+            ctx: {
+              tenantId: tenant,
+              occurredAt: new Date().toISOString(),
+              actor: uploadedByUserId
+                ? { actorType: 'USER', actorUserId: uploadedByUserId }
+                : { actorType: 'SYSTEM' },
+            },
+            idempotencyKey: `media_processing_succeeded:entity_image:${fileRecord.file_id}:${fileRecord.created_at}`,
+          });
+        }
+      } catch (error) {
+        console.error('[StorageService] Failed to publish FILE_UPLOADED/MEDIA_PROCESSING_SUCCEEDED workflow event', error);
+      }
+
       return fileRecord;
     } catch (error) {
       console.error("Error in uploadFile:", error);
@@ -222,7 +314,7 @@ export class StorageService {
     static async deleteFile(file_id: string, deleted_by_id: string): Promise<void> {
         try {
             // Get file record
-            const { knex } = await createTenantKnex();
+            const { knex, tenant } = await createTenantKnex();
             const fileRecord = await FileStoreModel.findById(knex, file_id);
             if (!fileRecord) {
                 throw new Error('File not found');
@@ -239,6 +331,31 @@ export class StorageService {
 
             // Soft delete file record
             await FileStoreModel.softDelete(knex, file_id, deleted_by_id);
+
+            try {
+              const deletedRecord = await FileStoreModel.findById(knex, file_id);
+              const deletedAt = deletedRecord?.deleted_at ?? new Date().toISOString();
+              const deletedByUserId = isValidUUID(deleted_by_id) ? deleted_by_id : undefined;
+
+              await publishWorkflowEvent({
+                eventType: 'DOCUMENT_DELETED',
+                payload: buildDocumentDeletedPayload({
+                  documentId: fileRecord.file_id,
+                  deletedByUserId,
+                  deletedAt,
+                }),
+                ctx: {
+                  tenantId: tenant!,
+                  occurredAt: deletedAt,
+                  actor: deletedByUserId
+                    ? { actorType: 'USER', actorUserId: deletedByUserId }
+                    : { actorType: 'SYSTEM' },
+                },
+                idempotencyKey: `document_deleted:${fileRecord.file_id}:${deletedAt}`,
+              });
+            } catch (error) {
+              console.error('[StorageService] Failed to publish DOCUMENT_DELETED workflow event', error);
+            }
         } catch (error) {
             if (error instanceof StorageError) {
                 throw error;

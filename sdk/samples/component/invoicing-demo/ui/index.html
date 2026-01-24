@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Invoicing Demo</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 20px;
+      background: #f5f5f5;
+      color: #333;
+    }
+    h1 { color: #1a1a1a; margin-bottom: 8px; }
+    .subtitle { color: #666; margin-bottom: 24px; }
+    .card {
+      background: white;
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 16px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    label { display: block; font-size: 13px; color: #444; margin-bottom: 6px; }
+    input, textarea {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      font-size: 14px;
+      margin-bottom: 12px;
+    }
+    .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    button {
+      background: #0066cc;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+      margin-right: 8px;
+    }
+    button:hover { background: #0052a3; }
+    button:disabled { background: #ccc; cursor: not-allowed; }
+    .hint { font-size: 12px; color: #666; margin-top: -8px; margin-bottom: 12px; }
+    .output {
+      background: #1a1a1a;
+      color: #0f0;
+      padding: 16px;
+      border-radius: 6px;
+      font-family: 'Monaco', 'Consolas', monospace;
+      font-size: 13px;
+      white-space: pre-wrap;
+      word-break: break-word;
+      max-height: 360px;
+      overflow-y: auto;
+    }
+  </style>
+</head>
+<body>
+  <h1>Invoicing Demo</h1>
+  <p class="subtitle">Creates a draft manual invoice via <code>host.invoicing.createManualInvoice</code></p>
+
+  <div class="card">
+    <h2 style="margin-top:0;font-size:18px;">Create Manual Invoice</h2>
+
+    <label for="clientId">Client ID (UUID)</label>
+    <input id="clientId" placeholder="e.g. 41bde0b8-0088-4759-89a2-82fe2298eee6" />
+
+    <div class="row">
+      <div>
+        <label for="invoiceDate">Invoice Date (YYYY-MM-DD)</label>
+        <input id="invoiceDate" placeholder="e.g. 2026-01-14" />
+      </div>
+      <div>
+        <label for="dueDate">Due Date (YYYY-MM-DD)</label>
+        <input id="dueDate" placeholder="e.g. 2026-01-14" />
+      </div>
+    </div>
+
+    <label for="poNumber">PO Number (optional)</label>
+    <input id="poNumber" placeholder="e.g. PO-123" />
+
+    <hr style="border:none;border-top:1px solid #eee;margin:16px 0;" />
+
+    <h3 style="margin:0 0 10px 0;font-size:16px;">Line Item (single)</h3>
+
+    <label for="serviceId">Service ID (UUID)</label>
+    <input id="serviceId" placeholder="e.g. 7ac1d2c1-..." />
+
+    <div class="row">
+      <div>
+        <label for="quantity">Quantity (&gt; 0)</label>
+        <input id="quantity" type="number" min="0" step="1" value="1" />
+      </div>
+      <div>
+        <label for="rateDollars">Rate (USD, dollars)</label>
+        <input id="rateDollars" type="number" min="0" step="0.01" value="50.00" />
+        <div class="hint">Converted to minor units (cents) before calling the handler.</div>
+      </div>
+    </div>
+
+    <label for="description">Description</label>
+    <textarea id="description" rows="2" placeholder="e.g. Implementation work">Implementation work</textarea>
+
+    <button id="btn-create" onclick="createInvoice()">Create Draft Invoice</button>
+    <button onclick="checkStatus()" style="background:#666;">Status</button>
+  </div>
+
+  <div class="card">
+    <h2 style="margin-top:0;font-size:18px;">Output</h2>
+    <div id="output" class="output">Ready.</div>
+  </div>
+
+  <script>
+    const output = document.getElementById('output');
+
+    function write(obj) {
+      output.textContent = JSON.stringify(obj, null, 2);
+    }
+
+    function extensionId() {
+      try {
+        const params = new URLSearchParams(window.location.search);
+        return params.get('extensionId') || window.EXTENSION_ID || 'com.alga.sample.invoicing-demo';
+      } catch {
+        return window.EXTENSION_ID || 'com.alga.sample.invoicing-demo';
+      }
+    }
+
+    async function apiCall(method, path, body) {
+      const res = await fetch(`/api/extensions/exec/${extensionId()}${path}`, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: body ? JSON.stringify(body) : undefined,
+      });
+      const data = await res.json().catch(() => ({}));
+      return { ok: res.ok, status: res.status, data };
+    }
+
+    async function checkStatus() {
+      const result = await apiCall('GET', '/api/status');
+      write(result);
+    }
+
+    async function createInvoice() {
+      const btn = document.getElementById('btn-create');
+      btn.disabled = true;
+      btn.textContent = 'Creating...';
+
+      try {
+        const clientId = document.getElementById('clientId').value.trim();
+        const serviceId = document.getElementById('serviceId').value.trim();
+        const invoiceDate = document.getElementById('invoiceDate').value.trim();
+        const dueDate = document.getElementById('dueDate').value.trim();
+        const poNumber = document.getElementById('poNumber').value.trim();
+        const quantity = Number(document.getElementById('quantity').value);
+        const rateDollars = Number(document.getElementById('rateDollars').value);
+        const description = document.getElementById('description').value;
+
+        const rate = Number.isFinite(rateDollars) ? Math.round(rateDollars * 100) : rateDollars;
+
+        const body = {
+          clientId,
+          invoiceDate: invoiceDate || undefined,
+          dueDate: dueDate || undefined,
+          poNumber: poNumber ? poNumber : null,
+          items: [
+            { serviceId, quantity, description, rate },
+          ],
+        };
+
+        const result = await apiCall('POST', '/api/create-manual-invoice', body);
+        write(result);
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Create Draft Invoice';
+      }
+    }
+  </script>
+</body>
+</html>
+

@@ -96,6 +96,12 @@ host.scheduler.getEndpoints(): Promise<EndpointInfo[]>
 ```
 Manage scheduled tasks. Requires `cap:scheduler.manage`.
 
+### Invoicing
+```typescript
+host.invoicing.createManualInvoice(input: CreateManualInvoiceInput): Promise<CreateManualInvoiceResult>
+```
+Create draft manual invoices. Requires `cap:invoice.manual.create`.
+
 ## Helper Functions
 
 ### jsonResponse
@@ -139,7 +145,7 @@ export async function handler(request: ExecuteRequest): Promise<ExecuteResponse>
 }
 ```
 
-See [User Host API Guide](../docs/guides/user-host-api.md) for complete examples.
+See [User Host API Guide](../docs/guides/user-host-api.md), [Scheduler Host API Guide](../docs/guides/scheduler-host-api.md), and [Invoicing Host API Guide](../docs/guides/invoicing-host-api.md) for complete examples.
 
 ## Building
 

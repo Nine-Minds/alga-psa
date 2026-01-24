@@ -45,10 +45,22 @@ export async function unregisterSurveySubscriber(): Promise<void> {
   logger.info('[SurveySubscriber] Unregistered survey event handlers');
 }
 
+function extractActorUserId(payload: unknown): string | undefined {
+  if (!payload || typeof payload !== 'object') {
+    return undefined;
+  }
+
+  const record = payload as Record<string, unknown>;
+  const candidates = [record.assignedByUserId, record.actorUserId, record.userId];
+  const value = candidates.find((candidate) => typeof candidate === 'string' && candidate.length > 0);
+  return typeof value === 'string' ? value : undefined;
+}
+
 async function handleTicketClosedEvent(event: unknown): Promise<void> {
   try {
     const validated = EventSchemas.TICKET_CLOSED.parse(event) as TicketClosedEvent;
     const { tenantId, ticketId } = validated.payload;
+    const actorUserId = extractActorUserId(validated.payload);
     logger.info('[SurveySubscriber] Handling TICKET_CLOSED', { tenantId, ticketId, event });
 
     const triggers = await getSurveyTriggersForTenant(tenantId);
@@ -76,6 +88,7 @@ async function handleTicketClosedEvent(event: unknown): Promise<void> {
           templateId,
           clientId: ticket.client_id,
           contactId: ticket.contact_name_id,
+          actorUserId,
         });
         logger.info('[SurveySubscriber] sendSurveyInvitation dispatched', {
           tenantId,
@@ -102,6 +115,7 @@ async function handleProjectClosedEvent(event: unknown): Promise<void> {
   try {
     const validated = EventSchemas.PROJECT_CLOSED.parse(event) as ProjectClosedEvent;
     const { tenantId, projectId } = validated.payload;
+    const actorUserId = extractActorUserId(validated.payload);
 
     const triggers = await getSurveyTriggersForTenant(tenantId);
     if (triggers.length === 0) {
@@ -114,7 +128,7 @@ async function handleProjectClosedEvent(event: unknown): Promise<void> {
       return;
     }
 
-    const matchingTemplates = collectMatchingTemplatesForProject(triggers, project);
+    const matchingTemplates = collectMatchingTemplatesForProject(triggers);
     if (matchingTemplates.size === 0) {
       return;
     }
@@ -127,6 +141,7 @@ async function handleProjectClosedEvent(event: unknown): Promise<void> {
           templateId,
           clientId: project.client_id,
           contactId: project.contact_name_id,
+          actorUserId,
         });
       } catch (error) {
         logger.error('[SurveySubscriber] Failed to send survey invitation for project', {
@@ -208,7 +223,7 @@ async function loadTicketSnapshot(tenantId: string, ticketId: string): Promise<T
   });
 }
 
-function collectMatchingTemplatesForProject(triggers: SurveyTrigger[], project: ProjectSnapshot): Set<string> {
+function collectMatchingTemplatesForProject(triggers: SurveyTrigger[]): Set<string> {
   const templateIds = new Set<string>();
 
   for (const trigger of triggers) {

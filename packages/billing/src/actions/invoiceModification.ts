@@ -18,6 +18,11 @@ import Invoice from '@alga-psa/billing/models/invoice'; // Needed for getFullInv
 import { v4 as uuidv4 } from 'uuid';
 import { getWorkflowRuntime } from '@alga-psa/shared/workflow/core'; // Import runtime getter via package export
 // import { getRedisStreamClient } from '@alga-psa/shared/workflow/streams/redisStreamClient'; // No longer directly used here
+import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
+import {
+  buildCreditNoteCreatedPayload,
+  buildCreditNoteVoidedPayload,
+} from '@shared/workflow/streams/domainEventBuilders/creditNoteEventBuilders';
 
 import { validateInvoiceFinalization } from './taxSourceActions';
 import { withAuth } from '@alga-psa/auth';
@@ -62,6 +67,14 @@ export async function finalizeInvoiceWithKnex(
   userId: string
 ): Promise<void> {
   let invoice: any;
+  let createdCreditNote: {
+    creditNoteId: string;
+    clientId: string;
+    createdAt: string;
+    createdByUserId: string;
+    amount: number;
+    currency: string;
+  } | null = null;
 
   // Validate tax source before finalization
   const taxValidation = await validateInvoiceFinalization(invoiceId);
@@ -128,6 +141,7 @@ export async function finalizeInvoiceWithKnex(
     // Update client credit balance and record transaction in a single transaction
     // We handle this directly without using ClientContractLine.updateClientCredit to avoid validation issues
     await withTransaction(knex, async (trx: Knex.Transaction) => {
+      const now = new Date().toISOString();
       // Get current credit balance
       const client = await trx('clients')
         .where({ client_id: invoice.client_id, tenant })
@@ -189,25 +203,35 @@ export async function finalizeInvoiceWithKnex(
         type: 'credit_issuance_from_negative_invoice',
         status: 'completed',
         description: `Credit issued from negative invoice ${invoice.invoice_number}`,
-        created_at: new Date().toISOString(),
+        created_at: now,
         balance_after: newBalance,
         tenant,
         expiration_date: expirationDate
       });
 
       // Create credit tracking entry
+      const creditNoteId = uuidv4();
       await trx('credit_tracking').insert({
-        credit_id: uuidv4(),
+        credit_id: creditNoteId,
         tenant,
         client_id: invoice.client_id,
         transaction_id: transactionId,
         amount: creditAmount,
         remaining_amount: creditAmount, // Initially, remaining amount equals the full amount
-        created_at: new Date().toISOString(),
+        created_at: now,
         expiration_date: expirationDate,
         is_expired: false,
-        updated_at: new Date().toISOString()
+        updated_at: now
       });
+
+      createdCreditNote = {
+        creditNoteId,
+        clientId: invoice.client_id,
+        createdAt: now,
+        createdByUserId: userId,
+        amount: creditAmount,
+        currency: String(invoice.currency_code ?? 'USD'),
+      };
 
       // Log audit
       // await auditLog(
@@ -256,6 +280,27 @@ export async function finalizeInvoiceWithKnex(
         }
       }
     }
+  }
+
+  if (createdCreditNote) {
+    await publishWorkflowEvent({
+      eventType: 'CREDIT_NOTE_CREATED',
+      payload: buildCreditNoteCreatedPayload({
+        creditNoteId: createdCreditNote.creditNoteId,
+        clientId: createdCreditNote.clientId,
+        createdByUserId: createdCreditNote.createdByUserId,
+        createdAt: createdCreditNote.createdAt,
+        amount: createdCreditNote.amount,
+        currency: createdCreditNote.currency,
+        status: 'issued',
+      }),
+      ctx: {
+        tenantId: tenant,
+        occurredAt: createdCreditNote.createdAt,
+        actor: { actorType: 'USER', actorUserId: createdCreditNote.createdByUserId },
+      },
+      idempotencyKey: `credit_note_created:${createdCreditNote.creditNoteId}`,
+    });
   }
 }
 
@@ -675,8 +720,15 @@ export const hardDeleteInvoice = withAuth(async (
   invoiceId: string
 ) => {
   const { knex } = await createTenantKnex();
+  let voidedCreditNotes: Array<{
+    creditNoteId: string;
+    voidedAt: string;
+    voidedByUserId: string;
+    reason: string;
+  }> = [];
 
   await withTransaction(knex, async (trx: Knex.Transaction) => {
+    const now = new Date().toISOString();
     // 1. Get invoice details
     const invoice = await trx('invoices')
       .where({
@@ -785,6 +837,12 @@ export const hardDeleteInvoice = withAuth(async (
                 throw new Error(`Cannot delete invoice ${invoiceId}: Credit issued by this invoice has already been used.`);
             } else {
                 // Credit was issued but not used, safe to delete tracking and transaction
+                voidedCreditNotes.push({
+                  creditNoteId: creditTrackingEntry.credit_id,
+                  voidedAt: now,
+                  voidedByUserId: user.user_id,
+                  reason: 'invoice_deleted',
+                });
                 await trx('credit_tracking')
                     .where({ credit_id: creditTrackingEntry.credit_id })
                     .delete();
@@ -885,4 +943,22 @@ export const hardDeleteInvoice = withAuth(async (
 
      // TODO: Recalculate client balance after all deletions/reversals
   });
+
+  for (const event of voidedCreditNotes) {
+    await publishWorkflowEvent({
+      eventType: 'CREDIT_NOTE_VOIDED',
+      payload: buildCreditNoteVoidedPayload({
+        creditNoteId: event.creditNoteId,
+        voidedByUserId: event.voidedByUserId,
+        voidedAt: event.voidedAt,
+        reason: event.reason,
+      }),
+      ctx: {
+        tenantId: tenant,
+        occurredAt: event.voidedAt,
+        actor: { actorType: 'USER', actorUserId: event.voidedByUserId },
+      },
+      idempotencyKey: `credit_note_voided:${event.creditNoteId}:${invoiceId}`,
+    });
+  }
 });

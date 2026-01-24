@@ -6,6 +6,7 @@
 
 import { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
+import { buildInboundEmailReplyReceivedPayload } from '../streams/domainEventBuilders/inboundEmailReplyEventBuilders';
 
 // =============================================================================
 // INTERFACES
@@ -629,6 +630,16 @@ export async function createCommentFromEmail(
     author_type?: string;
     author_id?: string;
     metadata?: any;
+    inboundReplyEvent?: {
+      messageId: string;
+      threadId?: string;
+      from: string;
+      to: string[];
+      subject?: string;
+      receivedAt?: string;
+      provider: string;
+      matchedBy: string;
+    };
   },
   tenant: string,
   userId?: string
@@ -638,7 +649,7 @@ export async function createCommentFromEmail(
   const { WorkflowEventPublisher } = await import('../adapters/workflowEventPublisher');
   const { WorkflowAnalyticsTracker } = await import('../adapters/workflowAnalyticsTracker');
 
-  return await withAdminTransaction(async (trx: Knex.Transaction) => {
+  const commentId = await withAdminTransaction(async (trx: Knex.Transaction) => {
       // Create adapters for workflow context
       const eventPublisher = new WorkflowEventPublisher();
       const analyticsTracker = new WorkflowAnalyticsTracker();
@@ -656,6 +667,41 @@ export async function createCommentFromEmail(
 
       return result.comment_id;
     });
+
+  if (commentData.inboundReplyEvent) {
+    try {
+      const { publishWorkflowEvent } = await import('@alga-psa/event-bus/publishers');
+
+      const threadId = commentData.inboundReplyEvent.threadId || commentData.inboundReplyEvent.messageId;
+      const to = commentData.inboundReplyEvent.to?.length
+        ? commentData.inboundReplyEvent.to
+        : [commentData.inboundReplyEvent.from];
+
+      await publishWorkflowEvent({
+        eventType: 'INBOUND_EMAIL_REPLY_RECEIVED',
+        payload: buildInboundEmailReplyReceivedPayload({
+          messageId: commentData.inboundReplyEvent.messageId,
+          threadId,
+          ticketId: commentData.ticket_id,
+          from: commentData.inboundReplyEvent.from,
+          to,
+          subject: commentData.inboundReplyEvent.subject,
+          receivedAt: commentData.inboundReplyEvent.receivedAt,
+          provider: commentData.inboundReplyEvent.provider,
+          matchedBy: commentData.inboundReplyEvent.matchedBy,
+        }),
+        ctx: {
+          tenantId: tenant,
+          occurredAt: commentData.inboundReplyEvent.receivedAt ?? new Date(),
+        },
+        idempotencyKey: `inbound-email-reply:${tenant}:${commentData.ticket_id}:${commentData.inboundReplyEvent.messageId}`,
+      });
+    } catch (eventError) {
+      console.warn('Failed to publish INBOUND_EMAIL_REPLY_RECEIVED event:', eventError);
+    }
+  }
+
+  return commentId;
 }
 
 export async function parseEmailReplyBody(

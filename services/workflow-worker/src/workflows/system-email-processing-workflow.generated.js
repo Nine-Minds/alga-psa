@@ -102,7 +102,7 @@ async function execute(context) {
     /**
      * Handle email reply to existing ticket
      */
-    const handleEmailReply = async (emailData, existingTicket, actions, parsedBody) => {
+    const handleEmailReply = async (emailData, existingTicket, actions, parsedBody, replyMatchedBy) => {
         const commentContent = parsedBody.sanitizedHtml || parsedBody.sanitizedText || emailData.body.html || emailData.body.text;
         // Convert HTML to BlockNote blocks
         let blockContent = commentContent;
@@ -119,6 +119,18 @@ async function execute(context) {
                 console.warn('Failed to convert HTML to blocks for reply, falling back to raw content');
             }
         }
+        const toEmails = (emailData.to && emailData.to.length > 0)
+            ? emailData.to.map((recipient) => recipient.email).filter(Boolean)
+            : [emailData.from.email];
+        const receivedAt = (() => {
+            const value = emailData.receivedAt;
+            if (!value)
+                return undefined;
+            const parsed = Date.parse(value);
+            if (Number.isNaN(parsed))
+                return undefined;
+            return new Date(parsed).toISOString();
+        })();
         // Add email as comment to existing ticket
         await actions.create_comment_from_email({
             ticket_id: existingTicket.ticketId,
@@ -128,6 +140,16 @@ async function execute(context) {
             // Looking at blocknoteUtils, it tries to parse JSON.
             source: 'email',
             author_type: 'contact', // Reply from the client
+            inboundReplyEvent: {
+                messageId: emailData.id,
+                threadId: emailData.threadId || emailData.id,
+                from: emailData.from.email,
+                to: toEmails,
+                subject: emailData.subject,
+                receivedAt,
+                provider: emailData.providerId || 'unknown',
+                matchedBy: replyMatchedBy || 'thread_headers'
+            },
             metadata: parsedBody.metadata
         });
         // Handle attachments for reply
@@ -258,6 +280,7 @@ async function execute(context) {
         setState('CHECKING_EMAIL_THREADING');
         console.log('Checking if email is part of existing conversation thread');
         let existingTicket = null;
+        let replyMatchedBy = 'thread_headers';
         const parserTokens = parsedEmailBody.metadata?.parser?.tokens;
         if (parserTokens && parserTokens.conversationToken) {
             try {
@@ -266,6 +289,7 @@ async function execute(context) {
                     existingTicket = {
                         ticketId: tokenResult.match.ticketId,
                     };
+                    replyMatchedBy = 'reply_token';
                     parsedEmailBody.metadata.parser.matchedReplyToken = tokenResult.match;
                     console.log('Matched reply token to ticket', {
                         ticketId: tokenResult.match.ticketId,
@@ -283,7 +307,7 @@ async function execute(context) {
         if (existingTicket) {
             // This is a reply to an existing ticket - add as comment
             console.log(`Email is part of existing ticket: ${existingTicket.ticketId}`);
-            await handleEmailReply(emailData, existingTicket, actions, parsedEmailBody);
+            await handleEmailReply(emailData, existingTicket, actions, parsedEmailBody, replyMatchedBy);
             return; // Exit workflow after handling reply
         }
         // Step 2: This is a new email - find or match client

@@ -4,6 +4,8 @@ import logger from '@alga-psa/core/logger';
 import { getAdminConnection } from '@alga-psa/db/admin';
 
 import { createTenantKnex, runWithTenant } from '@alga-psa/db';
+import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
+import { buildSurveyExpiredPayload } from '@shared/workflow/streams/domainEventBuilders/surveyEventBuilders';
 
 type InvitationLookupRow = {
   tenant: string;
@@ -130,6 +132,33 @@ export async function resolveSurveyTenantFromToken(token: string): Promise<Resol
   const tokenExpiresAt = toDate(invitationRow.token_expires_at);
 
   if (Number.isNaN(tokenExpiresAt.getTime()) || tokenExpiresAt.getTime() <= Date.now()) {
+    try {
+      const expiredAt = tokenExpiresAt.toISOString();
+      const recipientId = invitationRow.contact_id ?? invitationRow.ticket_id;
+
+      await publishWorkflowEvent({
+        eventType: 'SURVEY_EXPIRED',
+        payload: buildSurveyExpiredPayload({
+          surveyId: invitationRow.invitation_id,
+          recipientId,
+          ticketId: invitationRow.ticket_id,
+          expiredAt,
+        }),
+        ctx: {
+          tenantId,
+          occurredAt: expiredAt,
+          actor: { actorType: 'SYSTEM' },
+          idempotencyKey: `survey_expired:${tenantId}:${invitationRow.invitation_id}`,
+        },
+      });
+    } catch (error) {
+      logger.warn('[surveyTokenService] Failed to publish workflow survey expired event', {
+        tenantId,
+        invitationId: invitationRow.invitation_id,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+
     throw new Error('Survey token has expired.');
   }
 
