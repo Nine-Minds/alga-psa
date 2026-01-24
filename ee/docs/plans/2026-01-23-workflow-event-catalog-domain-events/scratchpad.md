@@ -626,6 +626,10 @@ Implication: we should standardize on `@alga-psa/event-bus/publishers` helpers f
   - Existing transition builder unit test asserts `TICKET_ESCALATED` + `TICKET_QUEUE_CHANGED` payloads:
     - `packages/tickets/src/lib/__tests__/workflowTicketTransitionEvents.test.ts`
 
+- 2026-01-24: Completed `T014` (ticket merge/split coverage):
+  - Added schema-level regression coverage for relationship event payloads:
+    - `shared/workflow/streams/__tests__/ticketMergeSplitEvents.test.ts`
+
 ## Suggested Phasing (to reduce risk)
 
 Phase 1 (authoritative CRUD/state transitions; low provider dependency):
