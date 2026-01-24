@@ -44,7 +44,7 @@
   {
     "id": "T008",
     "description": "isExperimentalFeatureEnabled('aiAssistant') returns true when enabled",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F003"]
   },
   {

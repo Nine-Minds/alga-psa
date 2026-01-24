@@ -247,3 +247,10 @@ curl -X POST localhost:3000/api/chat/stream/chat \
   - File: `server/src/test/unit/tenantSettingsActions.experimentalFeatures.test.ts`
 - Validation: `npx vitest run server/src/test/unit/tenantSettingsActions.experimentalFeatures.test.ts`
 - Next test item: T008 isExperimentalFeatureEnabled('aiAssistant') returns true when enabled
+
+### 2026-01-24 (cont.)
+- Implemented T008 (unit test):
+  - Verifies `isExperimentalFeatureEnabled('aiAssistant')` resolves to `true` when `tenant_settings.settings.experimentalFeatures.aiAssistant` is set to `true`.
+  - File: `server/src/test/unit/tenantSettingsActions.experimentalFeatures.test.ts`
+- Validation: `npx vitest run server/src/test/unit/tenantSettingsActions.experimentalFeatures.test.ts`
+- Next test item: T009 ExperimentalFeaturesSettings component renders list of features with toggles
