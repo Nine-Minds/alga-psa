@@ -92,7 +92,7 @@
   {
     "id": "T016",
     "description": "Drafts DataTable renders actions dropdown for each row",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F008"]
   },
   {

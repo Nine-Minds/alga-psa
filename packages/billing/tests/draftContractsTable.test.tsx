@@ -141,4 +141,29 @@ describe('Drafts tab DataTable', () => {
 
     expect(await screen.findByText(updatedAt.toLocaleDateString())).toBeInTheDocument();
   });
+
+  it('renders actions dropdown for each row (T016)', async () => {
+    mockDraftContracts = [
+      {
+        contract_id: 'contract-1',
+        contract_name: 'Draft Alpha',
+        client_name: 'Acme Co',
+        created_at: new Date(2026, 0, 1),
+        updated_at: new Date(2026, 0, 2),
+      },
+      {
+        contract_id: 'contract-2',
+        contract_name: 'Draft Beta',
+        client_name: 'Beta LLC',
+        created_at: new Date(2026, 0, 1),
+        updated_at: new Date(2026, 0, 3),
+      },
+    ];
+
+    const Contracts = (await import('../src/components/billing-dashboard/contracts/Contracts')).default;
+    render(<Contracts />);
+
+    const actionsButtons = await screen.findAllByRole('button', { name: /open menu/i });
+    expect(actionsButtons).toHaveLength(2);
+  });
 });
