@@ -515,9 +515,19 @@ Implication: we should standardize on `@alga-psa/event-bus/publishers` helpers f
   - Added schema-compat unit tests:
     - `shared/workflow/streams/domainEventBuilders/__tests__/integrationWebhookEventBuilders.test.ts`
 
+- 2026-01-24: Completed `F082` (integration connection health emission):
+  - Added workflow v2 integration connection payload builders + schema-compat unit tests:
+    - `shared/workflow/streams/domainEventBuilders/integrationConnectionEventBuilders.ts`
+    - `shared/workflow/streams/domainEventBuilders/__tests__/integrationConnectionEventBuilders.test.ts`
+  - Emitted `INTEGRATION_CONNECTED` on successful NinjaOne OAuth connect:
+    - `ee/server/src/app/api/integrations/ninjaone/callback/route.ts`
+  - Emitted `INTEGRATION_DISCONNECTED` on manual NinjaOne disconnect:
+    - `ee/server/src/lib/actions/integrations/ninjaoneActions.ts`
+  - Note: for RMM, `connectionId` is set to the tenant integration UUID (`integrationId`) since the current data model has a single connection row per provider/tenant.
+
 ## Next Up
 
-- `F082`: emit integration connection health events (`INTEGRATION_CONNECTED`, `INTEGRATION_DISCONNECTED`).
+- `F083`: emit token lifecycle events (`INTEGRATION_TOKEN_EXPIRING`, `INTEGRATION_TOKEN_REFRESH_FAILED`).
 
 ## Suggested Phasing (to reduce risk)
 
@@ -549,3 +559,4 @@ Phase 3 (feature dependent / optional modules):
 - DB-backed vitest integration tests (e.g. `server/src/test/integration/ticketBundling.integration.test.ts`) require a local Postgres instance matching `.env.localtest` (observed `ECONNREFUSED` on `localhost:5438` when not running).
 - `npm run test:nx` currently fails on `tools/nx-tests/editionSwapping.test.ts` (CE alias `ee` resolves to `packages/ee/src` instead of `server/src/empty`). This appears unrelated to workflow event changes; use targeted vitest runs for verification until fixed.
 - Some older unit tests import deep, non-exported subpaths (e.g. `@alga-psa/projects/actions/projectActions`) and fail under Vite import-analysis with `Missing "./actions/projectActions" specifier...`; use source-relative imports in tests or prefer shared-schema-level tests until package exports are updated.
+- `npx tsc -p ee/server/tsconfig.json --noEmit` currently fails with a pre-existing type error in `shared/workflow/runtime/actions/registerEmailWorkflowActions.ts` (`messageId` required vs optional mismatch).
