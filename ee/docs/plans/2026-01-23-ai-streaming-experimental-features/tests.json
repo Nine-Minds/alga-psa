@@ -116,7 +116,7 @@
   {
     "id": "T020",
     "description": "Quick Ask shortcut (⌘↑) works when aiAssistant is enabled",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F010"]
   },
   {

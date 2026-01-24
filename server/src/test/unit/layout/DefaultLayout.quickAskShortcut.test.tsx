@@ -2,7 +2,7 @@
  * @vitest-environment jsdom
  */
 import React from 'react';
-import { render, screen, waitFor } from '@testing-library/react';
+import { act, render, screen, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -20,7 +20,9 @@ vi.mock('../../../components/layout/Body', () => ({ default: ({ children }: { ch
 vi.mock('../../../components/layout/RightSidebar', () => ({ default: () => null }));
 
 vi.mock('server/src/components/chat/QuickAskOverlay', () => ({
-  default: () => <div data-testid="quick-ask-overlay" />,
+  default: ({ isOpen }: { isOpen: boolean }) => (
+    <div data-testid="quick-ask-overlay" data-open={isOpen ? 'true' : 'false'} />
+  ),
 }));
 
 vi.mock('@alga-psa/workflows/components', () => ({
@@ -45,6 +47,7 @@ vi.mock('@alga-psa/tenancy/actions', () => ({
 
 describe('DefaultLayout AI Assistant gating', () => {
   it('ignores the Quick Ask shortcut when aiAssistant is disabled', async () => {
+    vi.mocked(isExperimentalFeatureEnabled).mockResolvedValueOnce(false);
     vi.stubGlobal(
       'fetch',
       vi.fn().mockResolvedValue({
@@ -65,10 +68,47 @@ describe('DefaultLayout AI Assistant gating', () => {
 
     const event = new KeyboardEvent('keydown', { key: 'ArrowUp', metaKey: true });
     const preventDefaultSpy = vi.spyOn(event, 'preventDefault');
-    window.dispatchEvent(event);
+    act(() => {
+      window.dispatchEvent(event);
+    });
 
     expect(preventDefaultSpy).not.toHaveBeenCalled();
     expect(screen.queryByTestId('quick-ask-overlay')).not.toBeInTheDocument();
   });
-});
 
+  it('opens Quick Ask via shortcut when aiAssistant is enabled', async () => {
+    vi.mocked(isExperimentalFeatureEnabled).mockResolvedValueOnce(true);
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: false,
+        json: async () => ({}),
+      })
+    );
+
+    render(
+      <DefaultLayout>
+        <div>content</div>
+      </DefaultLayout>
+    );
+
+    await waitFor(() => {
+      expect(isExperimentalFeatureEnabled).toHaveBeenCalledWith('aiAssistant');
+    });
+
+    await waitFor(() => {
+      expect(screen.getByTestId('quick-ask-overlay')).toHaveAttribute('data-open', 'false');
+    });
+
+    const event = new KeyboardEvent('keydown', { key: 'ArrowUp', metaKey: true });
+    const preventDefaultSpy = vi.spyOn(event, 'preventDefault');
+    act(() => {
+      window.dispatchEvent(event);
+    });
+
+    expect(preventDefaultSpy).toHaveBeenCalled();
+    await waitFor(() => {
+      expect(screen.getByTestId('quick-ask-overlay')).toHaveAttribute('data-open', 'true');
+    });
+  });
+});

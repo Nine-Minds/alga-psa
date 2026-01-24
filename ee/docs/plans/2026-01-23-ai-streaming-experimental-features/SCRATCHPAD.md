@@ -335,3 +335,10 @@ curl -X POST localhost:3000/api/chat/stream/chat \
   - File: `server/src/test/unit/layout/DefaultLayout.quickAskShortcut.test.tsx`
 - Validation: `npx vitest run server/src/test/unit/layout/DefaultLayout.quickAskShortcut.test.tsx`
 - Next test item: T020 Quick Ask shortcut (⌘↑) works when aiAssistant is enabled
+
+### 2026-01-24 (cont.)
+- Implemented T020 (unit test):
+  - Verifies ⌘↑ keydown `preventDefault()` is called and `QuickAskOverlay` opens when `aiAssistant` is enabled.
+  - File: `server/src/test/unit/layout/DefaultLayout.quickAskShortcut.test.tsx`
+- Validation: `npx vitest run server/src/test/unit/layout/DefaultLayout.quickAskShortcut.test.tsx`
+- Next test item: T021 QuickAskOverlay is not rendered when aiAssistant is disabled
