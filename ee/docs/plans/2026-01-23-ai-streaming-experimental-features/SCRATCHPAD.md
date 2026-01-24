@@ -240,3 +240,10 @@ curl -X POST localhost:3000/api/chat/stream/chat \
   - File: `server/src/test/unit/tenantSettingsActions.experimentalFeatures.test.ts`
 - Validation: `npx vitest run server/src/test/unit/tenantSettingsActions.experimentalFeatures.test.ts`
 - Next test item: T007 isExperimentalFeatureEnabled('aiAssistant') returns false when not set
+
+### 2026-01-24 (cont.)
+- Implemented T007 (unit test):
+  - Verifies `isExperimentalFeatureEnabled('aiAssistant')` resolves to `false` when `tenant_settings.settings.experimentalFeatures.aiAssistant` is unset.
+  - File: `server/src/test/unit/tenantSettingsActions.experimentalFeatures.test.ts`
+- Validation: `npx vitest run server/src/test/unit/tenantSettingsActions.experimentalFeatures.test.ts`
+- Next test item: T008 isExperimentalFeatureEnabled('aiAssistant') returns true when enabled

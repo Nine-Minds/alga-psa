@@ -318,4 +318,17 @@ describe('tenantSettingsActions.isExperimentalFeatureEnabled', () => {
     await expect(isExperimentalFeatureEnabled('notAFeature')).resolves.toBe(false);
     expect(knexWhereMock).toHaveBeenCalledWith({ tenant: 'tenant-test' });
   });
+
+  it("returns false for aiAssistant when it's not set", async () => {
+    tenantSettingsRow = {
+      settings: {},
+    };
+
+    const { isExperimentalFeatureEnabled } = await import(
+      '../../../../packages/tenancy/src/actions/tenant-settings-actions/tenantSettingsActions'
+    );
+
+    await expect(isExperimentalFeatureEnabled('aiAssistant')).resolves.toBe(false);
+    expect(knexWhereMock).toHaveBeenCalledWith({ tenant: 'tenant-test' });
+  });
 });
