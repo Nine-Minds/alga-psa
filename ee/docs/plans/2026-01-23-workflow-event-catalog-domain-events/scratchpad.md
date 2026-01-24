@@ -779,3 +779,8 @@ Phase 3 (feature dependent / optional modules):
 - 2026-01-24: Completed `T062` (document generation coverage):
   - Coverage exists via schema-compat builder tests for `DOCUMENT_GENERATED` payload shape (sourceType/sourceId):
     - `shared/workflow/streams/domainEventBuilders/__tests__/documentGeneratedEventBuilders.test.ts`
+
+- 2026-01-24: Completed `T063` (document signatures are catalog-only):
+  - Per PRD decision, `DOCUMENT_SIGNATURE_*` events are catalog-only; coverage relies on:
+    - Schema registry example validation (`T002`): `shared/workflow/runtime/__tests__/payloadSchemaExamples.test.ts`
+    - Migration coverage (`T004`): `server/src/test/unit/workflowEventCatalogMigrationCoverage.test.ts`
