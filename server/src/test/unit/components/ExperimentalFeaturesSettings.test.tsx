@@ -48,6 +48,32 @@ describe('ExperimentalFeaturesSettings', () => {
     ).toBeInTheDocument();
   });
 
+  it('defaults AI Assistant toggle to off', async () => {
+    vi.mocked(getExperimentalFeatures).mockResolvedValueOnce({} as any);
+
+    render(
+      <UIStateProvider
+        initialPageState={{
+          id: 'test-page',
+          title: 'Test Page',
+          components: [],
+        }}
+      >
+        <ExperimentalFeaturesSettings />
+      </UIStateProvider>
+    );
+
+    const toggle = await waitFor(() => {
+      const el = document.querySelector(
+        '[data-automation-id="experimental-feature-toggle-aiAssistant"]'
+      ) as HTMLElement | null;
+      expect(el).toBeTruthy();
+      return el!;
+    });
+
+    expect(toggle.getAttribute('aria-checked')).toBe('false');
+  });
+
   it('updates local state when toggled', async () => {
     vi.mocked(getExperimentalFeatures).mockResolvedValueOnce({ aiAssistant: false });
 

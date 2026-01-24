@@ -86,7 +86,7 @@
   {
     "id": "T015",
     "description": "AI Assistant toggle defaults to off",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F006", "F009"]
   },
   {

@@ -300,3 +300,10 @@ curl -X POST localhost:3000/api/chat/stream/chat \
   - File: `server/src/test/unit/components/ExperimentalFeaturesSettings.test.tsx`
 - Validation: `npx vitest run server/src/test/unit/components/ExperimentalFeaturesSettings.test.tsx`
 - Next test item: T015 AI Assistant toggle defaults to off
+
+### 2026-01-24 (cont.)
+- Implemented T015 (unit test):
+  - Verifies AI Assistant defaults to off when the server returns no saved value (unset key).
+  - File: `server/src/test/unit/components/ExperimentalFeaturesSettings.test.tsx`
+- Validation: `npx vitest run server/src/test/unit/components/ExperimentalFeaturesSettings.test.tsx`
+- Next test item: T016 Warning banner displays experimental features disclaimer
