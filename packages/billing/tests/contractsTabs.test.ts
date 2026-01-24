@@ -30,4 +30,9 @@ describe('contracts tabs config', () => {
     expect(getDraftTabBadgeCount(0)).toBeNull();
     expect(getDraftTabBadgeCount(1)).toBe(1);
   });
+
+  it('badge hides again when draft count returns to 0', () => {
+    expect(getDraftTabBadgeCount(2)).toBe(2);
+    expect(getDraftTabBadgeCount(0)).toBeNull();
+  });
 });
