@@ -41,7 +41,7 @@
   { "id": "T052", "description": "CRM: interactions/notes emit INTERACTION_LOGGED and NOTE_CREATED with entity linkage", "implemented": true, "featureIds": ["F052"] },
   { "id": "T053", "description": "Tags: tag definition/apply/remove emit TAG_DEFINITION_CREATED/UPDATED and TAG_APPLIED/TAG_REMOVED with entityType/entityId", "implemented": true, "featureIds": ["F053"] },
 
-  { "id": "T060", "description": "Documents: uploads/deletes emit DOCUMENT_UPLOADED and DOCUMENT_DELETED with storage metadata", "implemented": false, "featureIds": ["F060"] },
+  { "id": "T060", "description": "Documents: uploads/deletes emit DOCUMENT_UPLOADED and DOCUMENT_DELETED with storage metadata", "implemented": true, "featureIds": ["F060"] },
   { "id": "T061", "description": "Documents: associate/detach emit DOCUMENT_ASSOCIATED and DOCUMENT_DETACHED with entity references", "implemented": false, "featureIds": ["F061"] },
   { "id": "T062", "description": "Documents: generation emits DOCUMENT_GENERATED for supported generation paths with sourceType/sourceId", "implemented": false, "featureIds": ["F062"] },
   { "id": "T063", "description": "Documents: signature request/signed/expired emit DOCUMENT_SIGNATURE_REQUESTED/DOCUMENT_SIGNED/DOCUMENT_SIGNATURE_EXPIRED only when supported", "implemented": false, "featureIds": ["F063"] },
