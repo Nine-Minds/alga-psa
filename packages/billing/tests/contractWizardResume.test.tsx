@@ -31,7 +31,11 @@ vi.mock('@alga-psa/ui/components/onboarding/WizardNavigation', () => ({
 
 vi.mock('../src/components/billing-dashboard/contracts/wizard-steps/ContractBasicsStep', () => ({
   ContractBasicsStep: ({ data }: { data: any }) => (
-    <div data-testid="step-contract-basics" data-client-id={data.client_id ?? ''} />
+    <div
+      data-testid="step-contract-basics"
+      data-client-id={data.client_id ?? ''}
+      data-contract-name={data.contract_name ?? ''}
+    />
   ),
 }));
 
@@ -116,5 +120,32 @@ describe('ContractWizard resume behavior', () => {
 
     const step = await screen.findByTestId('step-contract-basics');
     expect(step).toHaveAttribute('data-client-id', 'client-99');
+  });
+
+  it('step 1 shows pre-populated contract name from draft (T035)', async () => {
+    const { ContractWizard } = await import('../src/components/billing-dashboard/contracts/ContractWizard');
+    render(
+      <ContractWizard
+        open={true}
+        onOpenChange={vi.fn()}
+        editingContract={{
+          contract_id: 'contract-1',
+          is_draft: true,
+          client_id: 'client-1',
+          contract_name: 'Draft Name',
+          start_date: '2026-01-01',
+          billing_frequency: 'monthly',
+          currency_code: 'USD',
+          enable_proration: false,
+          fixed_services: [],
+          product_services: [],
+          hourly_services: [],
+          usage_services: [],
+        }}
+      />,
+    );
+
+    const step = await screen.findByTestId('step-contract-basics');
+    expect(step).toHaveAttribute('data-contract-name', 'Draft Name');
   });
 });

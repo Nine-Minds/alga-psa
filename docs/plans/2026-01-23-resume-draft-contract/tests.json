@@ -206,7 +206,7 @@
   {
     "id": "T035",
     "description": "Step 1 shows pre-populated contract name from draft",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F017"]
   },
   {

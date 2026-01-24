@@ -150,6 +150,7 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
   - (2026-01-24) Extended `packages/billing/tests/draftContractsTable.test.tsx` and implemented T032 to assert the Resume flow passes draft data into the wizard (contract_id/client_id/contract_name).
   - (2026-01-24) Added `packages/billing/tests/contractWizardResume.test.tsx` and implemented T033 to assert resuming a draft starts the wizard on Step 1 (Contract Basics) without rendering later steps.
   - (2026-01-24) Extended `packages/billing/tests/contractWizardResume.test.tsx` and implemented T034 to assert Contract Basics step receives the draft client selection.
+  - (2026-01-24) Extended `packages/billing/tests/contractWizardResume.test.tsx` and implemented T035 to assert Contract Basics step receives the draft contract name.
 
 ## Links / References
 
