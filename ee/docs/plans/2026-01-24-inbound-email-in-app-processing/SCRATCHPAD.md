@@ -48,3 +48,4 @@
 - 2026-01-24: Implemented F040 by adding env-driven, tenant/provider-scoped gating in `shared/services/email/inboundEmailInAppFeatureFlag.ts` (`INBOUND_EMAIL_IN_APP_PROCESSING_ENABLED`, `INBOUND_EMAIL_IN_APP_TENANT_IDS`, `INBOUND_EMAIL_IN_APP_PROVIDER_IDS`).
 - 2026-01-24: Implemented F041 by supporting provider-level rollout via `INBOUND_EMAIL_IN_APP_PROVIDER_IDS` allowlist.
 - 2026-01-24: Implemented F050 by defaulting workflow-worker deployments to `WORKFLOW_WORKER_MODE=v2` in compose configs (`docker-compose.ce.yaml`, `docker-compose.ee.yaml`, and prebuilt variants).
+- 2026-01-24: Implemented F051 by disabling legacy system email workflow updates by default in `services/workflow-worker/src/init/updateWorkflows.ts` (requires `LEGACY_SYSTEM_EMAIL_WORKFLOW_ENABLED=true` to opt back in).
