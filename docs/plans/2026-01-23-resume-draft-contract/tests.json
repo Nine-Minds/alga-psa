@@ -362,7 +362,7 @@
   {
     "id": "T061",
     "description": "Tab badge count updates after deletion",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F023", "F002"]
   },
   {

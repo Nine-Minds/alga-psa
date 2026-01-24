@@ -37,7 +37,14 @@ vi.mock('@alga-psa/ui/components/CustomTabs', () => ({
     const tab = tabs.find((t) => t.label === defaultTab) ?? tabs[0];
     return (
       <div>
-        <div>{tabs.map((t) => t.label).join(' | ')}</div>
+        <div>
+          {tabs.map((t) => (
+            <span key={t.label}>
+              {t.label}
+              <span data-testid={`tab-icon-${t.label}`}>{(t as { icon?: React.ReactNode }).icon ?? null}</span>
+            </span>
+          ))}
+        </div>
         <div>{tab?.content}</div>
       </div>
     );
@@ -958,6 +965,46 @@ describe('Drafts tab DataTable', () => {
 
     await waitFor(() => {
       expect(getDraftContracts).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  it('tab badge count updates after deletion (T061)', async () => {
+    mockDraftContracts = [
+      {
+        contract_id: 'contract-1',
+        contract_name: 'Draft Alpha',
+        client_name: 'Acme Co',
+        created_at: new Date(2026, 0, 1),
+        updated_at: new Date(2026, 0, 2),
+      },
+    ];
+
+    const { deleteContract } = await import('@alga-psa/billing/actions/contractActions');
+    (deleteContract as unknown as { mockImplementationOnce: (fn: any) => void }).mockImplementationOnce(async () => {
+      mockDraftContracts = [];
+    });
+
+    const Contracts = (await import('../src/components/billing-dashboard/contracts/Contracts')).default;
+    render(<Contracts />);
+
+    await screen.findByText('Draft Alpha');
+
+    const badgeContainer = screen.getByTestId('tab-icon-Drafts');
+    expect(within(badgeContainer).getByText('1')).toBeInTheDocument();
+
+    const user = userEvent.setup();
+    await act(async () => {
+      await user.click(await screen.findByRole('button', { name: /open menu/i }));
+    });
+    await act(async () => {
+      await user.click(await screen.findByText('Discard'));
+    });
+    await act(async () => {
+      await user.click(screen.getByRole('button', { name: 'Discard' }));
+    });
+
+    await waitFor(() => {
+      expect(within(badgeContainer).queryByText('1')).not.toBeInTheDocument();
     });
   });
 });
