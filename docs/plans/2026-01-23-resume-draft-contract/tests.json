@@ -20,7 +20,7 @@
   {
     "id": "T004",
     "description": "Drafts tab badge updates after creating a new draft",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F002"]
   },
   {

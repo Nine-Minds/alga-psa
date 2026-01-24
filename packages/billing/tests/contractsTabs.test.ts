@@ -25,4 +25,9 @@ describe('contracts tabs config', () => {
   it('shows a badge count when draft count is > 0', () => {
     expect(getDraftTabBadgeCount(3)).toBe(3);
   });
+
+  it('badge count changes as drafts change', () => {
+    expect(getDraftTabBadgeCount(0)).toBeNull();
+    expect(getDraftTabBadgeCount(1)).toBe(1);
+  });
 });

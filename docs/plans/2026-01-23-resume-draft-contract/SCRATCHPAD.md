@@ -119,6 +119,7 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
   - Extracted tab label mapping into `packages/billing/src/components/billing-dashboard/contracts/contractsTabs.ts` for unit testing without DOM.
   - Extended `packages/billing/tests/contractsTabs.test.ts` to assert Drafts label maps to `subtab=drafts`.
   - Added `getDraftTabBadgeCount()` helper + test to assert Drafts badge appears when count > 0.
+  - Added a test asserting badge behavior as count changes (0 → 1) to represent badge updates after draft creation.
 
 ## Links / References
 
