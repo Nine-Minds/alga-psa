@@ -194,4 +194,12 @@ curl -X POST localhost:3000/api/chat/stream/chat \
 - Fixed Sidebar Chat EE component wiring so Sidebar chat renders the EE streaming `Chat` implementation (including for CE-first localhost dev):
   - Replaced `@ee/components/layout/RightSidebar` CE stub with a re-export shim to `ee/server`: `packages/ee/src/components/layout/RightSidebar.tsx`
 - Validation: `npm -w server run typecheck`
-- Next item: T001 getExperimentalFeatures() returns empty object when no settings exist
+- Next item: T001 getExperimentalFeatures() returns defaults when tenant settings are unavailable
+
+### 2026-01-24 (cont.)
+- Implemented T001 (unit test):
+  - Added Vitest unit test covering the no-tenant/no-settings path; expects `{ aiAssistant: false }` defaults (PRD goal: experimental features default disabled).
+  - File: `server/src/test/unit/tenantSettingsActions.experimentalFeatures.test.ts`
+  - Note: Updated `tests.json` wording since `getExperimentalFeatures()` intentionally normalizes to defaults rather than returning `{}`.
+- Validation: `npx vitest run server/src/test/unit/tenantSettingsActions.experimentalFeatures.test.ts` (repo-root `npm run test:local` currently fails due to `dotenv -e` CLI incompatibility)
+- Next test item: T002 getExperimentalFeatures() returns saved experimental features from tenant_settings

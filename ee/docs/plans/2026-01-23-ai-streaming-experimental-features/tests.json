@@ -1,8 +1,8 @@
 [
   {
     "id": "T001",
-    "description": "getExperimentalFeatures() returns empty object when no settings exist",
-    "implemented": false,
+    "description": "getExperimentalFeatures() returns defaults (aiAssistant:false) when tenant settings are unavailable",
+    "implemented": true,
     "featureIds": ["F001"]
   },
   {
