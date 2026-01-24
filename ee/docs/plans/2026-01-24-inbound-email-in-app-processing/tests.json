@@ -18,5 +18,5 @@
   { "id": "T041", "description": "Idempotency: replay same new-email does not create duplicate tickets", "implemented": true, "featureIds": ["F021", "F022"] },
   { "id": "T042", "description": "Feature flag: toggling flag keeps old behavior when disabled and new in-app behavior when enabled", "implemented": true, "featureIds": ["F040"] },
 
-  { "id": "T050", "description": "Worker: workflow-worker runs with `WORKFLOW_WORKER_MODE=v2` and inbound email still works", "implemented": false, "featureIds": ["F050"] }
+  { "id": "T050", "description": "Worker: workflow-worker runs with `WORKFLOW_WORKER_MODE=v2` and inbound email still works", "implemented": true, "featureIds": ["F050"] }
 ]
