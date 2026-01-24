@@ -314,7 +314,7 @@
   {
     "id": "T053",
     "description": "Confirmation dialog has Cancel button",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F021"]
   },
   {

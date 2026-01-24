@@ -115,6 +115,7 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - Run server dev: `npm run dev -w server`
 
 - (2026-01-24) Implemented T052: discard confirmation dialog message includes permanent deletion + cannot-undo warning (unit test).
+- (2026-01-24) Implemented T053: discard confirmation dialog renders a Cancel button (unit test).
 
 - (2026-01-24) Tests:
   - Added `packages/billing/tests/contractsTabs.test.ts` to assert the contracts tabs config includes Templates / Client Contracts / Drafts.
