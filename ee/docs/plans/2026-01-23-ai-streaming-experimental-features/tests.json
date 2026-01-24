@@ -302,7 +302,7 @@
   {
     "id": "T051",
     "description": "Disabling AI Assistant prevents Quick Ask usage after page reload",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F010", "F011"]
   }
 ]

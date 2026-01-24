@@ -108,5 +108,66 @@ describe('DefaultLayout AI Assistant gating (reload semantics)', () => {
       expect(screen.getByTestId('quick-ask-overlay')).toHaveAttribute('data-open', 'true');
     });
   });
-});
 
+  it('prevents Quick Ask usage after disabling AI Assistant and reloading', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: false,
+        json: async () => ({}),
+      }),
+    );
+
+    aiAssistantEnabled = true;
+
+    const first = render(
+      <DefaultLayout>
+        <div>content</div>
+      </DefaultLayout>,
+    );
+
+    await waitFor(() => {
+      expect(isExperimentalFeatureEnabled).toHaveBeenCalledWith('aiAssistant');
+    });
+
+    await waitFor(() => {
+      expect(screen.getByTestId('quick-ask-overlay')).toHaveAttribute('data-open', 'false');
+    });
+
+    const enabledEvent = new KeyboardEvent('keydown', { key: 'ArrowUp', metaKey: true });
+    const enabledPrevent = vi.spyOn(enabledEvent, 'preventDefault');
+    act(() => {
+      window.dispatchEvent(enabledEvent);
+    });
+
+    expect(enabledPrevent).toHaveBeenCalled();
+    await waitFor(() => {
+      expect(screen.getByTestId('quick-ask-overlay')).toHaveAttribute('data-open', 'true');
+    });
+
+    first.unmount();
+
+    aiAssistantEnabled = false;
+
+    render(
+      <DefaultLayout>
+        <div>content</div>
+      </DefaultLayout>,
+    );
+
+    await waitFor(() => {
+      expect(isExperimentalFeatureEnabled).toHaveBeenCalledWith('aiAssistant');
+    });
+
+    expect(screen.queryByTestId('quick-ask-overlay')).not.toBeInTheDocument();
+
+    const disabledEvent = new KeyboardEvent('keydown', { key: 'ArrowUp', metaKey: true });
+    const disabledPrevent = vi.spyOn(disabledEvent, 'preventDefault');
+    act(() => {
+      window.dispatchEvent(disabledEvent);
+    });
+
+    expect(disabledPrevent).not.toHaveBeenCalled();
+    expect(screen.queryByTestId('quick-ask-overlay')).not.toBeInTheDocument();
+  });
+});

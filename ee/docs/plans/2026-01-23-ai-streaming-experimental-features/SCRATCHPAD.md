@@ -558,3 +558,9 @@ curl -X POST localhost:3000/api/chat/stream/chat \
   - File: `server/src/test/unit/layout/DefaultLayout.aiAssistantReload.test.tsx`
 - Validation: `npx vitest run server/src/test/unit/layout/DefaultLayout.aiAssistantReload.test.tsx`
 - Next test item: T051 Disabling AI Assistant prevents Quick Ask usage after page reload
+
+### 2026-01-24 (cont.)
+- Implemented T051 (unit test):
+  - Verifies after a simulated "reload" with `aiAssistant` disabled, the Quick Ask overlay is not rendered and the ⌘↑ shortcut is ignored.
+  - File: `server/src/test/unit/layout/DefaultLayout.aiAssistantReload.test.tsx`
+- Validation: `npx vitest run server/src/test/unit/layout/DefaultLayout.aiAssistantReload.test.tsx`
