@@ -41,7 +41,7 @@
 
   { "id": "F070", "description": "Email: emit inbound reply event (INBOUND_EMAIL_REPLY_RECEIVED) when reply parsing/matching succeeds", "implemented": true, "prdRefs": ["7.2"] },
   { "id": "F071", "description": "Email: emit outbound lifecycle events (OUTBOUND_EMAIL_QUEUED, OUTBOUND_EMAIL_SENT, OUTBOUND_EMAIL_FAILED) for provider send attempts", "implemented": true, "prdRefs": ["7.2"] },
-  { "id": "F072", "description": "Email: emit delivery/feedback events (EMAIL_DELIVERED, EMAIL_BOUNCED, EMAIL_COMPLAINT_RECEIVED, EMAIL_UNSUBSCRIBED) where provider support exists", "implemented": false, "prdRefs": ["7.2", "7.3"] },
+  { "id": "F072", "description": "Email: emit delivery/feedback events (EMAIL_DELIVERED, EMAIL_BOUNCED, EMAIL_COMPLAINT_RECEIVED, EMAIL_UNSUBSCRIBED) where provider support exists", "implemented": true, "prdRefs": ["7.2", "7.3"] },
   { "id": "F073", "description": "Notifications: emit delivery lifecycle events (NOTIFICATION_SENT, NOTIFICATION_DELIVERED, NOTIFICATION_FAILED, NOTIFICATION_READ) for supported channels", "implemented": false, "prdRefs": ["7.2"] },
   { "id": "F074", "description": "Surveys/CSAT: emit survey lifecycle events (SURVEY_SENT, SURVEY_RESPONSE_RECEIVED, SURVEY_REMINDER_SENT, SURVEY_EXPIRED) and CSAT alert event (CSAT_ALERT_TRIGGERED)", "implemented": false, "prdRefs": ["7.2"] },
 

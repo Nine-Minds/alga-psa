@@ -179,7 +179,19 @@ export abstract class BaseEmailService {
         html,
         text,
         attachments: params.attachments,
-        headers: params.headers
+        headers: {
+          ...(params.headers || {}),
+          'X-Alga-Workflow-Message-Id': workflowMessageId,
+          'X-Alga-Tenant-Id': tenantId,
+          ...(params.correlationId ? { 'X-Alga-Correlation-Id': String(params.correlationId) } : {}),
+        },
+        tags: {
+          alga_workflow_message_id: workflowMessageId,
+          alga_tenant_id: tenantId,
+          ...(params.correlationId ? { alga_correlation_id: String(params.correlationId) } : {}),
+          ...(isUuid(params.threadId) ? { alga_thread_id: params.threadId } : {}),
+          ...(isUuid(params.ticketId) ? { alga_ticket_id: params.ticketId } : {}),
+        },
       };
 
       const maybeThreadId = isUuid(params.threadId) ? params.threadId : undefined;

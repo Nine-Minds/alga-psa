@@ -457,9 +457,22 @@ Implication: we should standardize on `@alga-psa/event-bus/publishers` helpers f
   - Added unit coverage:
     - `server/src/test/unit/outboundEmailWorkflowEvents.test.ts`
 
+- 2026-01-24: Completed `F072` (email delivery/feedback emission):
+  - Implemented Resend delivery/feedback webhook ingestion (Svix signature verification):
+    - `server/src/app/api/email/webhooks/resend/route.ts`
+    - `server/src/services/email/webhooks/resendWebhookEvents.ts` (signature verify + mapping)
+  - Added correlation tags/headers so provider callbacks can map back to `tenantId` + workflow `messageId`:
+    - `server/src/lib/email/BaseEmailService.ts` now sets `X-Alga-Workflow-Message-Id`/`X-Alga-Tenant-Id` headers and `alga_*` tags on provider messages.
+  - Emits workflow v2 domain events (best-effort) when Resend provider support exists:
+    - `EMAIL_DELIVERED`, `EMAIL_BOUNCED`, `EMAIL_COMPLAINT_RECEIVED`, `EMAIL_UNSUBSCRIBED`
+  - Added schema-compat unit coverage:
+    - `shared/workflow/streams/domainEventBuilders/emailFeedbackEventBuilders.ts`
+    - `shared/workflow/streams/domainEventBuilders/__tests__/emailFeedbackEventBuilders.test.ts`
+    - `server/src/test/unit/resendWebhookEvents.test.ts`
+
 ## Next Up
 
-- `F072`: emit delivery/feedback events (`EMAIL_DELIVERED`, `EMAIL_BOUNCED`, `EMAIL_COMPLAINT_RECEIVED`, `EMAIL_UNSUBSCRIBED`) where provider support exists.
+- `F073`: emit notification delivery lifecycle events (`NOTIFICATION_SENT`, `NOTIFICATION_DELIVERED`, `NOTIFICATION_FAILED`, `NOTIFICATION_READ`) for supported channels.
 
 ## Suggested Phasing (to reduce risk)
 
