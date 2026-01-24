@@ -1,0 +1,271 @@
+import { beforeAll, afterAll, afterEach, describe, expect, it, vi } from 'vitest';
+import type { Knex } from 'knex';
+import { v4 as uuidv4 } from 'uuid';
+import { NextRequest } from 'next/server';
+
+import { createTestDbConnection } from '../../../test-utils/dbConfig';
+
+let db: Knex;
+let tenantId: string;
+let clientId: string;
+let boardId: string;
+let statusId: string;
+let priorityId: string;
+let enteredByUserId: string;
+
+let gmailListMessagesSinceMock = vi.fn();
+let gmailGetMessageDetailsMock = vi.fn();
+const publishEventMock = vi.fn();
+const processInboundEmailInAppMock = vi.fn();
+
+vi.mock('@alga-psa/core/secrets', () => ({
+  getSecretProviderInstance: vi.fn(async () => ({
+    getTenantSecret: async () => null,
+  })),
+}));
+
+vi.mock('@alga-psa/db/admin', () => ({
+  getAdminConnection: vi.fn(async () => {
+    if (!db) throw new Error('Test DB not initialized');
+    return db;
+  }),
+  destroyAdminConnection: vi.fn(async () => {}),
+}));
+
+vi.mock('@alga-psa/shared/events/publisher', () => ({
+  publishEvent: (...args: any[]) => publishEventMock(...args),
+}));
+
+vi.mock('@alga-psa/shared/services/email/processInboundEmailInApp', () => ({
+  processInboundEmailInApp: (...args: any[]) => processInboundEmailInAppMock(...args),
+}));
+
+vi.mock('google-auth-library', () => {
+  class OAuth2Client {
+    async verifyIdToken(_opts: any) {
+      return {
+        getPayload: () => ({
+          email: 'pubsub-publishing@system.gserviceaccount.com',
+          aud: _opts?.audience,
+          sub: 'sub',
+        }),
+      };
+    }
+  }
+  return { OAuth2Client };
+});
+
+vi.mock('../../../../packages/integrations/src/services/email/providers/GmailAdapter', () => {
+  return {
+    GmailAdapter: class GmailAdapter {
+      async connect() {}
+      async listMessagesSince() {
+        return gmailListMessagesSinceMock();
+      }
+      async getMessageDetails(messageId: string) {
+        return gmailGetMessageDetailsMock(messageId);
+      }
+    },
+  };
+});
+
+function makeFakeJwt(payload: Record<string, any>): string {
+  const header = Buffer.from(JSON.stringify({ alg: 'none', typ: 'JWT' })).toString('base64url');
+  const body = Buffer.from(JSON.stringify(payload)).toString('base64url');
+  return `${header}.${body}.sig`;
+}
+
+async function setupProvider(params: { providerId: string; mailbox: string; subscriptionName: string }) {
+  const defaultsId = uuidv4();
+  await db('inbound_ticket_defaults').insert({
+    id: defaultsId,
+    tenant: tenantId,
+    short_name: `email-${defaultsId.slice(0, 6)}`,
+    display_name: `Email Defaults ${defaultsId.slice(0, 6)}`,
+    description: 'Test defaults',
+    board_id: boardId,
+    status_id: statusId,
+    priority_id: priorityId,
+    client_id: clientId,
+    entered_by: enteredByUserId,
+    is_active: true,
+    is_default: false,
+    created_at: db.fn.now(),
+    updated_at: db.fn.now(),
+  });
+
+  await db('email_providers').insert({
+    id: params.providerId,
+    tenant: tenantId,
+    provider_type: 'google',
+    provider_name: 'Test Gmail Provider',
+    mailbox: params.mailbox,
+    is_active: true,
+    status: 'connected',
+    vendor_config: JSON.stringify({}),
+    inbound_ticket_defaults_id: defaultsId,
+    created_at: db.fn.now(),
+    updated_at: db.fn.now(),
+  });
+
+  await db('google_email_provider_config').insert({
+    email_provider_id: params.providerId,
+    tenant: tenantId,
+    client_id: 'client-id',
+    client_secret: 'secret',
+    project_id: 'project-id',
+    redirect_uri: 'http://localhost/callback',
+    pubsub_topic_name: 'topic',
+    pubsub_subscription_name: params.subscriptionName,
+    auto_process_emails: true,
+    max_emails_per_sync: 50,
+    label_filters: JSON.stringify([]),
+    access_token: 'access',
+    refresh_token: 'refresh',
+    token_expires_at: null,
+    history_id: '1',
+    watch_expiration: null,
+    created_at: db.fn.now(),
+    updated_at: db.fn.now(),
+  });
+
+  return { defaultsId };
+}
+
+describe('Inbound email in-app processing feature flag (integration)', () => {
+  const cleanup: Array<() => Promise<void>> = [];
+
+  beforeAll(async () => {
+    process.env.NEXTAUTH_URL = 'http://localhost:3000';
+    db = await createTestDbConnection();
+
+    const tenant = await db('tenants').first<{ tenant: string }>('tenant');
+    if (!tenant?.tenant) throw new Error('Expected seeded tenant');
+    tenantId = tenant.tenant;
+
+    const client = await db('clients').where({ tenant: tenantId }).first<{ client_id: string }>('client_id');
+    if (!client?.client_id) throw new Error('Expected seeded client');
+    clientId = client.client_id;
+
+    const board = await db('boards').where({ tenant: tenantId }).first<{ board_id: string }>('board_id');
+    if (!board?.board_id) throw new Error('Expected seeded board');
+    boardId = board.board_id;
+
+    const status = await db('statuses')
+      .where({ tenant: tenantId, status_type: 'ticket' })
+      .first<{ status_id: string }>('status_id');
+    if (!status?.status_id) throw new Error('Expected seeded ticket status');
+    statusId = status.status_id;
+
+    const priority = await db('priorities').where({ tenant: tenantId }).first<{ priority_id: string }>('priority_id');
+    if (!priority?.priority_id) throw new Error('Expected seeded priority');
+    priorityId = priority.priority_id;
+
+    const user = await db('users').where({ tenant: tenantId }).first<{ user_id: string }>('user_id');
+    if (!user?.user_id) throw new Error('Expected seeded user');
+    enteredByUserId = user.user_id;
+  }, 180_000);
+
+  afterEach(async () => {
+    while (cleanup.length) {
+      const fn = cleanup.pop();
+      if (fn) await fn();
+    }
+    process.env.INBOUND_EMAIL_IN_APP_PROVIDER_IDS = '';
+    process.env.INBOUND_EMAIL_IN_APP_PROCESSING_ENABLED = '';
+    publishEventMock.mockClear();
+    processInboundEmailInAppMock.mockClear();
+  });
+
+  afterAll(async () => {
+    if (db) await db.destroy();
+  });
+
+  it('Feature flag: toggling flag keeps old behavior when disabled and new in-app behavior when enabled', async () => {
+    const providerId = uuidv4();
+    const mailbox = `support-flag-${uuidv4().slice(0, 6)}@example.com`;
+    const subscriptionName = `sub-${uuidv4().slice(0, 6)}`;
+    const { defaultsId } = await setupProvider({ providerId, mailbox, subscriptionName });
+
+    cleanup.push(async () => {
+      await db('gmail_processed_history').where({ tenant: tenantId, provider_id: providerId }).delete();
+      await db('google_email_provider_config').where({ tenant: tenantId, email_provider_id: providerId }).delete();
+      await db('email_providers').where({ tenant: tenantId, id: providerId }).delete();
+      await db('inbound_ticket_defaults').where({ tenant: tenantId, id: defaultsId }).delete();
+    });
+
+    gmailListMessagesSinceMock = vi.fn().mockResolvedValue(['gmail-msg-1']);
+    gmailGetMessageDetailsMock = vi.fn().mockResolvedValue({
+      id: 'gmail-msg-1',
+      provider: 'google',
+      providerId,
+      tenant: tenantId,
+      receivedAt: new Date().toISOString(),
+      from: { email: 'sender@example.com', name: 'Sender' },
+      to: [{ email: mailbox, name: 'Support' }],
+      subject: 'Flag subject',
+      body: { text: 'Hello', html: undefined },
+      attachments: [],
+    });
+
+    processInboundEmailInAppMock.mockResolvedValue({ outcome: 'created', ticketId: 't', commentId: 'c' });
+
+    const token = makeFakeJwt({
+      aud: 'http://localhost:3000/api/email/webhooks/google',
+      iss: 'issuer',
+      sub: 'subject',
+      email: 'pubsub-publishing@system.gserviceaccount.com',
+    });
+
+    const { POST } = await import('@alga-psa/integrations/webhooks/email/google');
+
+    // Disabled => publishEvent is used.
+    const notification1 = { emailAddress: mailbox, historyId: '100' };
+    const req1 = new NextRequest('http://localhost:3000/api/email/webhooks/google', {
+      method: 'POST',
+      headers: {
+        authorization: `Bearer ${token}`,
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({
+        message: {
+          data: Buffer.from(JSON.stringify(notification1)).toString('base64'),
+          messageId: 'pubsub-msg-1',
+          publishTime: new Date().toISOString(),
+        },
+        subscription: `projects/project/subscriptions/${subscriptionName}`,
+      }),
+    });
+    const res1 = await POST(req1);
+    expect(res1.status).toBe(200);
+    expect(publishEventMock).toHaveBeenCalled();
+    expect(processInboundEmailInAppMock).not.toHaveBeenCalled();
+
+    publishEventMock.mockClear();
+    processInboundEmailInAppMock.mockClear();
+
+    // Enabled => in-app processor is used.
+    process.env.INBOUND_EMAIL_IN_APP_PROVIDER_IDS = providerId;
+    const notification2 = { emailAddress: mailbox, historyId: '101' };
+    const req2 = new NextRequest('http://localhost:3000/api/email/webhooks/google', {
+      method: 'POST',
+      headers: {
+        authorization: `Bearer ${token}`,
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({
+        message: {
+          data: Buffer.from(JSON.stringify(notification2)).toString('base64'),
+          messageId: 'pubsub-msg-2',
+          publishTime: new Date().toISOString(),
+        },
+        subscription: `projects/project/subscriptions/${subscriptionName}`,
+      }),
+    });
+    const res2 = await POST(req2);
+    expect(res2.status).toBe(200);
+    expect(processInboundEmailInAppMock).toHaveBeenCalled();
+    expect(publishEventMock).not.toHaveBeenCalled();
+  });
+});
+
