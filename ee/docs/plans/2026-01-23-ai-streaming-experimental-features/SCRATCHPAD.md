@@ -488,3 +488,10 @@ curl -X POST localhost:3000/api/chat/stream/chat \
   - File: `server/src/test/unit/Chat.streamingIncrementalState.test.tsx`
 - Validation: `npx vitest run server/src/test/unit/Chat.streamingIncrementalState.test.tsx`
 - Next test item: T041 Aborting stream stops token display and ends generation state
+
+### 2026-01-24 (cont.)
+- Implemented T041 (unit test):
+  - Verifies clicking `STOP` ends generating state (button returns to `SEND`, input enabled) and prevents additional streamed tokens from updating the message display.
+  - File: `server/src/test/unit/Chat.streamingIncrementalState.test.tsx`
+- Validation: `npx vitest run server/src/test/unit/Chat.streamingIncrementalState.test.tsx`
+- Next test item: T042 Streaming indicator is visible while receiving tokens

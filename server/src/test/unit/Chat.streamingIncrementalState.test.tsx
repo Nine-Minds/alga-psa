@@ -58,9 +58,19 @@ const createControlledSseResponse = () => {
   return {
     response,
     send: (payload: { content: string; done: boolean }) => {
-      controller.enqueue(encoder.encode(`data: ${JSON.stringify(payload)}\n\n`));
+      try {
+        controller.enqueue(encoder.encode(`data: ${JSON.stringify(payload)}\n\n`));
+      } catch {
+        // stream already closed/canceled
+      }
     },
-    close: () => controller.close(),
+    close: () => {
+      try {
+        controller.close();
+      } catch {
+        // stream already closed/canceled
+      }
+    },
   };
 };
 
@@ -223,5 +233,72 @@ describe('EE Chat (streaming state)', () => {
     fireEvent.click(screen.getByRole('button', { name: 'STOP' }));
 
     await waitFor(() => expect(abortSpy).toHaveBeenCalledTimes(1));
+  });
+
+  it('stops updating token display and ends generation state after Stop', async () => {
+    expect(Chat).toBeDefined();
+
+    vi
+      .mocked(addMessageToChatAction)
+      .mockResolvedValueOnce({ _id: 'user-message-id' });
+
+    vi.spyOn(globalThis, 'requestAnimationFrame').mockImplementation((cb) => {
+      cb(0);
+      return 0;
+    });
+
+    Object.defineProperty(window, 'localStorage', {
+      configurable: true,
+      value: {
+        removeItem: vi.fn(),
+        getItem: vi.fn(),
+        setItem: vi.fn(),
+      },
+    });
+
+    const sse = createControlledSseResponse();
+    const fetchMock = vi.fn().mockResolvedValue(sse.response);
+    vi.stubGlobal('fetch', fetchMock);
+
+    render(
+      <Chat
+        clientUrl="https://example.invalid"
+        accountId="account-1"
+        messages={[]}
+        userRole="admin"
+        userId="user-1"
+        selectedAccount="account-1"
+        handleSelectAccount={vi.fn()}
+        auth_token="token"
+        setChatTitle={vi.fn()}
+        isTitleLocked={false}
+        onUserInput={vi.fn()}
+        hf={null}
+        initialChatId="chat-1"
+      />,
+    );
+
+    fireEvent.change(screen.getByPlaceholderText('Send a message'), {
+      target: { value: 'Ping' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'SEND' }));
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+
+    sse.send({ content: 'Hello', done: false });
+    await waitFor(() => expect(getIncomingAssistantContent()).toHaveTextContent('Hello'));
+
+    fireEvent.click(screen.getByRole('button', { name: 'STOP' }));
+
+    await waitFor(() => expect(screen.getByRole('button', { name: 'SEND' })).toBeEnabled());
+    expect(screen.getByPlaceholderText('Send a message')).toBeEnabled();
+
+    sse.send({ content: ' world', done: false });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(getIncomingAssistantContent()).toHaveTextContent('Hello');
+    expect(getIncomingAssistantContent()).not.toHaveTextContent('Hello world');
+
+    sse.close();
   });
 });

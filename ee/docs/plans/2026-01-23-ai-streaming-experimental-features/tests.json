@@ -242,7 +242,7 @@
   {
     "id": "T041",
     "description": "Aborting stream stops token display and ends generation state",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F022"]
   },
   {
