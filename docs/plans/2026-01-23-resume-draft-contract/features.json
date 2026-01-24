@@ -44,7 +44,7 @@
   {
     "id": "F008",
     "description": "Drafts DataTable displays actions dropdown column with Resume and Discard options",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR2"]
   },
   {

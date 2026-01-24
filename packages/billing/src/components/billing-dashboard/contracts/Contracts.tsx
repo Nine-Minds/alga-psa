@@ -618,6 +618,50 @@ const renderStatusBadge = (status: string) => {
                 }
               },
             },
+            {
+              title: 'Actions',
+              dataIndex: 'contract_id',
+              render: (value, record) => (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      id="draft-actions-menu"
+                      variant="ghost"
+                      className="h-8 w-8 p-0"
+                      onClick={(event) => event.stopPropagation()}
+                    >
+                      <span className="sr-only">Open menu</span>
+                      <MoreVertical className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem
+                      id="resume-draft-menu-item"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        if (record.contract_id) {
+                          alert('Resume draft not yet wired');
+                        }
+                      }}
+                    >
+                      Resume
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      id="discard-draft-menu-item"
+                      className="text-red-600 focus:text-red-600"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        if (record.contract_id) {
+                          alert('Discard draft not yet wired');
+                        }
+                      }}
+                    >
+                      Discard
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              ),
+            },
           ]}
           pagination={true}
           currentPage={draftCurrentPage}
