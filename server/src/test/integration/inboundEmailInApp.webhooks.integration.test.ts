@@ -693,4 +693,53 @@ describe('Inbound email in-app processing via webhooks (integration)', () => {
     const tickets = await db('tickets').where({ tenant: tenantId, title: 'Missing defaults subject' });
     expect(tickets).toHaveLength(0);
   });
+
+  it('Attachments: attachment failure does not prevent ticket creation', async () => {
+    const emailActions = await import('@alga-psa/shared/workflow/actions/emailWorkflowActions');
+    const spy = vi.spyOn(emailActions, 'processEmailAttachment').mockRejectedValueOnce(new Error('boom'));
+
+    const providerId = uuidv4();
+    const mailbox = `support-attach-${uuidv4().slice(0, 6)}@example.com`;
+    const { defaultsId } = await setupInboundDefaults({ providerId, mailbox });
+
+    cleanup.push(async () => {
+      spy.mockRestore();
+      await db('gmail_processed_history').where({ tenant: tenantId, provider_id: providerId }).delete();
+      await db('google_email_provider_config').where({ tenant: tenantId, email_provider_id: providerId }).delete();
+      await db('email_providers').where({ tenant: tenantId, id: providerId }).delete();
+      await db('inbound_ticket_defaults').where({ tenant: tenantId, id: defaultsId }).delete();
+    });
+
+    const result = await processInboundEmailInApp({
+      tenantId,
+      providerId,
+      emailData: {
+        id: `new-email-${uuidv4()}`,
+        provider: 'google',
+        providerId,
+        tenant: tenantId,
+        receivedAt: new Date().toISOString(),
+        from: { email: `unknown-${uuidv4().slice(0, 6)}@example.com`, name: 'Unknown' },
+        to: [{ email: mailbox, name: 'Support' }],
+        subject: 'Attachment failure subject',
+        body: { text: 'Hello', html: undefined },
+        attachments: [{ id: 'att-1', name: 'file.txt', contentType: 'text/plain', size: 10 }],
+      } as any,
+    });
+
+    expect(result.outcome).toBe('created');
+
+    const ticket = await db('tickets')
+      .where({ tenant: tenantId, title: 'Attachment failure subject' })
+      .first<any>();
+    expect(ticket).toBeDefined();
+
+    const comments = await db('comments').where({ tenant: tenantId, ticket_id: ticket.ticket_id });
+    expect(comments).toHaveLength(1);
+
+    cleanup.push(async () => {
+      await db('comments').where({ tenant: tenantId, ticket_id: ticket.ticket_id }).delete();
+      await db('tickets').where({ tenant: tenantId, ticket_id: ticket.ticket_id }).delete();
+    });
+  });
 });

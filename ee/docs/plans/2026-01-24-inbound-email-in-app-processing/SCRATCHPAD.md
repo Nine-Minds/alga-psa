@@ -58,3 +58,4 @@
 - 2026-01-24: Implemented T020 with an integration test verifying sender→contact matching overrides default client/contact on ticket creation (`server/src/test/integration/inboundEmailInApp.webhooks.integration.test.ts`).
 - 2026-01-24: Implemented T021 with an integration test verifying unmatched senders create a ticket under provider defaults without a contact and without throwing (`server/src/test/integration/inboundEmailInApp.webhooks.integration.test.ts`).
 - 2026-01-24: Implemented T022 with an integration test verifying missing inbound ticket defaults causes processing to skip without creating tickets/comments (`server/src/test/integration/inboundEmailInApp.webhooks.integration.test.ts`).
+- 2026-01-24: Implemented T030 with an integration test verifying attachment processing errors do not prevent ticket + initial comment creation (`server/src/test/integration/inboundEmailInApp.webhooks.integration.test.ts`).
