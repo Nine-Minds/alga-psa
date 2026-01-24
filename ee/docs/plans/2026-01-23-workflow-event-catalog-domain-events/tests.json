@@ -7,7 +7,7 @@
   { "id": "T006", "description": "Overlap handling: ticket message/comment and appointment/schedule-entry overlap decisions are encoded and documented (no duplicate/ambiguous triggers)", "implemented": true, "featureIds": ["F004", "F012", "F020"] },
 
   { "id": "T010", "description": "Tickets: status/priority transitions publish TICKET_STATUS_CHANGED and TICKET_PRIORITY_CHANGED with previous/new values", "implemented": true, "featureIds": ["F010"] },
-  { "id": "T011", "description": "Tickets: assignment changes publish TICKET_ASSIGNED and TICKET_UNASSIGNED with previous/new assignee context", "implemented": false, "featureIds": ["F010"] },
+  { "id": "T011", "description": "Tickets: assignment changes publish TICKET_ASSIGNED and TICKET_UNASSIGNED with previous/new assignee context", "implemented": true, "featureIds": ["F010"] },
   { "id": "T012", "description": "Tickets: reopen publishes TICKET_REOPENED with previous/new status and actor", "implemented": false, "featureIds": ["F010"] },
   { "id": "T013", "description": "Tickets: escalation/queue changes publish TICKET_ESCALATED and TICKET_QUEUE_CHANGED", "implemented": false, "featureIds": ["F010"] },
   { "id": "T014", "description": "Tickets: merge/split publish TICKET_MERGED and TICKET_SPLIT with source/target ids", "implemented": false, "featureIds": ["F011"] },

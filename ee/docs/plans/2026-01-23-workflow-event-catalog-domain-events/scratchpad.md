@@ -614,6 +614,10 @@ Implication: we should standardize on `@alga-psa/event-bus/publishers` helpers f
   - Existing transition builder unit test asserts `TICKET_STATUS_CHANGED` + `TICKET_PRIORITY_CHANGED` include `previous*`/`new*` values:
     - `packages/tickets/src/lib/__tests__/workflowTicketTransitionEvents.test.ts`
 
+- 2026-01-24: Completed `T011` (ticket assignment change coverage):
+  - Added schema-level regression coverage to ensure the event bus accepts domain-shaped assignment payloads:
+    - `shared/workflow/streams/__tests__/ticketAssignmentEvents.test.ts`
+
 ## Suggested Phasing (to reduce risk)
 
 Phase 1 (authoritative CRUD/state transitions; low provider dependency):
