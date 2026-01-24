@@ -1,6 +1,7 @@
 'use server';
 
 import { createTenantKnex, withTransaction } from '@alga-psa/db';
+import { withAuth } from '@alga-psa/auth';
 import { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 import {
@@ -20,8 +21,8 @@ import {
 /**
  * Get all business hours schedules for the current tenant
  */
-export async function getBusinessHoursSchedules(): Promise<IBusinessHoursSchedule[]> {
-  const { knex, tenant } = await createTenantKnex();
+export const getBusinessHoursSchedules = withAuth(async (_user, { tenant }): Promise<IBusinessHoursSchedule[]> => {
+  const { knex } = await createTenantKnex();
 
   return withTransaction(knex, async (trx: Knex.Transaction) => {
     const schedules = await trx('business_hours_schedules')
@@ -31,13 +32,13 @@ export async function getBusinessHoursSchedules(): Promise<IBusinessHoursSchedul
 
     return schedules;
   });
-}
+});
 
 /**
  * Get a business hours schedule by ID with its entries and holidays
  */
-export async function getBusinessHoursScheduleById(scheduleId: string): Promise<IBusinessHoursScheduleWithEntries | null> {
-  const { knex, tenant } = await createTenantKnex();
+export const getBusinessHoursScheduleById = withAuth(async (_user, { tenant }, scheduleId: string): Promise<IBusinessHoursScheduleWithEntries | null> => {
+  const { knex } = await createTenantKnex();
 
   return withTransaction(knex, async (trx: Knex.Transaction) => {
     const schedule = await trx('business_hours_schedules')
@@ -62,13 +63,13 @@ export async function getBusinessHoursScheduleById(scheduleId: string): Promise<
       holidays
     };
   });
-}
+});
 
 /**
  * Get the default business hours schedule for the current tenant
  */
-export async function getDefaultBusinessHoursSchedule(): Promise<IBusinessHoursSchedule | null> {
-  const { knex, tenant } = await createTenantKnex();
+export const getDefaultBusinessHoursSchedule = withAuth(async (_user, { tenant }): Promise<IBusinessHoursSchedule | null> => {
+  const { knex } = await createTenantKnex();
 
   return withTransaction(knex, async (trx: Knex.Transaction) => {
     const schedule = await trx('business_hours_schedules')
@@ -77,16 +78,18 @@ export async function getDefaultBusinessHoursSchedule(): Promise<IBusinessHoursS
 
     return schedule || null;
   });
-}
+});
 
 /**
  * Create a new business hours schedule with optional entries
  */
-export async function createBusinessHoursSchedule(
+export const createBusinessHoursSchedule = withAuth(async (
+  _user,
+  { tenant },
   input: IBusinessHoursScheduleInput,
   entries?: IBusinessHoursEntryInput[]
-): Promise<IBusinessHoursScheduleWithEntries> {
-  const { knex, tenant } = await createTenantKnex();
+): Promise<IBusinessHoursScheduleWithEntries> => {
+  const { knex } = await createTenantKnex();
 
   return withTransaction(knex, async (trx: Knex.Transaction) => {
     const scheduleId = uuidv4();
@@ -136,16 +139,18 @@ export async function createBusinessHoursSchedule(
       holidays: []
     };
   });
-}
+});
 
 /**
  * Update a business hours schedule
  */
-export async function updateBusinessHoursSchedule(
+export const updateBusinessHoursSchedule = withAuth(async (
+  _user,
+  { tenant },
   scheduleId: string,
   input: Partial<IBusinessHoursScheduleInput>
-): Promise<IBusinessHoursSchedule> {
-  const { knex, tenant } = await createTenantKnex();
+): Promise<IBusinessHoursSchedule> => {
+  const { knex } = await createTenantKnex();
 
   return withTransaction(knex, async (trx: Knex.Transaction) => {
     // If this schedule should be default, unset any existing default first
@@ -176,13 +181,13 @@ export async function updateBusinessHoursSchedule(
 
     return schedule;
   });
-}
+});
 
 /**
  * Delete a business hours schedule
  */
-export async function deleteBusinessHoursSchedule(scheduleId: string): Promise<void> {
-  const { knex, tenant } = await createTenantKnex();
+export const deleteBusinessHoursSchedule = withAuth(async (_user, { tenant }, scheduleId: string): Promise<void> => {
+  const { knex } = await createTenantKnex();
 
   return withTransaction(knex, async (trx: Knex.Transaction) => {
     // Check if schedule is in use by SLA policies
@@ -214,13 +219,13 @@ export async function deleteBusinessHoursSchedule(scheduleId: string): Promise<v
       throw new Error('Business hours schedule not found');
     }
   });
-}
+});
 
 /**
  * Set a schedule as the default for the tenant
  */
-export async function setDefaultBusinessHoursSchedule(scheduleId: string): Promise<void> {
-  const { knex, tenant } = await createTenantKnex();
+export const setDefaultBusinessHoursSchedule = withAuth(async (_user, { tenant }, scheduleId: string): Promise<void> => {
+  const { knex } = await createTenantKnex();
 
   return withTransaction(knex, async (trx: Knex.Transaction) => {
     // Verify schedule exists
@@ -242,7 +247,7 @@ export async function setDefaultBusinessHoursSchedule(scheduleId: string): Promi
       .where({ tenant, schedule_id: scheduleId })
       .update({ is_default: true, updated_at: trx.fn.now() });
   });
-}
+});
 
 // ============================================================================
 // Business Hours Entries (daily schedule)
@@ -251,8 +256,8 @@ export async function setDefaultBusinessHoursSchedule(scheduleId: string): Promi
 /**
  * Get all business hours entries for a schedule
  */
-export async function getBusinessHoursEntries(scheduleId: string): Promise<IBusinessHoursEntry[]> {
-  const { knex, tenant } = await createTenantKnex();
+export const getBusinessHoursEntries = withAuth(async (_user, { tenant }, scheduleId: string): Promise<IBusinessHoursEntry[]> => {
+  const { knex } = await createTenantKnex();
 
   return withTransaction(knex, async (trx: Knex.Transaction) => {
     const entries = await trx('business_hours_entries')
@@ -261,17 +266,19 @@ export async function getBusinessHoursEntries(scheduleId: string): Promise<IBusi
 
     return entries;
   });
-}
+});
 
 /**
  * Upsert business hours entries for a schedule
  * This will replace existing entries for the specified days
  */
-export async function upsertBusinessHoursEntries(
+export const upsertBusinessHoursEntries = withAuth(async (
+  _user,
+  { tenant },
   scheduleId: string,
   entries: IBusinessHoursEntryInput[]
-): Promise<IBusinessHoursEntry[]> {
-  const { knex, tenant } = await createTenantKnex();
+): Promise<IBusinessHoursEntry[]> => {
+  const { knex } = await createTenantKnex();
 
   return withTransaction(knex, async (trx: Knex.Transaction) => {
     // Verify schedule exists
@@ -312,13 +319,13 @@ export async function upsertBusinessHoursEntries(
 
     return createdEntries;
   });
-}
+});
 
 /**
  * Delete a specific business hours entry
  */
-export async function deleteBusinessHoursEntry(entryId: string): Promise<void> {
-  const { knex, tenant } = await createTenantKnex();
+export const deleteBusinessHoursEntry = withAuth(async (_user, { tenant }, entryId: string): Promise<void> => {
+  const { knex } = await createTenantKnex();
 
   return withTransaction(knex, async (trx: Knex.Transaction) => {
     const entry = await trx('business_hours_entries')
@@ -338,7 +345,7 @@ export async function deleteBusinessHoursEntry(entryId: string): Promise<void> {
       .where({ tenant, schedule_id: entry.schedule_id })
       .update({ updated_at: trx.fn.now() });
   });
-}
+});
 
 // ============================================================================
 // Holidays
@@ -347,8 +354,8 @@ export async function deleteBusinessHoursEntry(entryId: string): Promise<void> {
 /**
  * Get all holidays, optionally filtered by schedule
  */
-export async function getHolidays(scheduleId?: string): Promise<IHoliday[]> {
-  const { knex, tenant } = await createTenantKnex();
+export const getHolidays = withAuth(async (_user, { tenant }, scheduleId?: string): Promise<IHoliday[]> => {
+  const { knex } = await createTenantKnex();
 
   return withTransaction(knex, async (trx: Knex.Transaction) => {
     let query = trx('holidays').where({ tenant });
@@ -361,13 +368,13 @@ export async function getHolidays(scheduleId?: string): Promise<IHoliday[]> {
 
     return holidays;
   });
-}
+});
 
 /**
  * Create a new holiday
  */
-export async function createHoliday(input: IHolidayInput): Promise<IHoliday> {
-  const { knex, tenant } = await createTenantKnex();
+export const createHoliday = withAuth(async (_user, { tenant }, input: IHolidayInput): Promise<IHoliday> => {
+  const { knex } = await createTenantKnex();
 
   return withTransaction(knex, async (trx: Knex.Transaction) => {
     // If schedule_id provided, verify it exists
@@ -395,16 +402,18 @@ export async function createHoliday(input: IHolidayInput): Promise<IHoliday> {
 
     return holiday;
   });
-}
+});
 
 /**
  * Update an existing holiday
  */
-export async function updateHoliday(
+export const updateHoliday = withAuth(async (
+  _user,
+  { tenant },
   holidayId: string,
   input: Partial<IHolidayInput>
-): Promise<IHoliday> {
-  const { knex, tenant } = await createTenantKnex();
+): Promise<IHoliday> => {
+  const { knex } = await createTenantKnex();
 
   return withTransaction(knex, async (trx: Knex.Transaction) => {
     // If schedule_id is being updated, verify it exists
@@ -436,13 +445,13 @@ export async function updateHoliday(
 
     return holiday;
   });
-}
+});
 
 /**
  * Delete a holiday
  */
-export async function deleteHoliday(holidayId: string): Promise<void> {
-  const { knex, tenant } = await createTenantKnex();
+export const deleteHoliday = withAuth(async (_user, { tenant }, holidayId: string): Promise<void> => {
+  const { knex } = await createTenantKnex();
 
   return withTransaction(knex, async (trx: Knex.Transaction) => {
     const deletedCount = await trx('holidays')
@@ -453,13 +462,13 @@ export async function deleteHoliday(holidayId: string): Promise<void> {
       throw new Error('Holiday not found');
     }
   });
-}
+});
 
 /**
  * Bulk create holidays
  */
-export async function bulkCreateHolidays(holidays: IHolidayInput[]): Promise<IHoliday[]> {
-  const { knex, tenant } = await createTenantKnex();
+export const bulkCreateHolidays = withAuth(async (_user, { tenant }, holidays: IHolidayInput[]): Promise<IHoliday[]> => {
+  const { knex } = await createTenantKnex();
 
   return withTransaction(knex, async (trx: Knex.Transaction) => {
     // Verify all schedule_ids exist
@@ -494,7 +503,7 @@ export async function bulkCreateHolidays(holidays: IHolidayInput[]): Promise<IHo
 
     return createdHolidays;
   });
-}
+});
 
 // ============================================================================
 // Helper Functions
@@ -503,7 +512,7 @@ export async function bulkCreateHolidays(holidays: IHolidayInput[]): Promise<IHo
 /**
  * Create a default business hours schedule with standard business hours (Mon-Fri 8am-6pm)
  */
-export async function createDefaultBusinessHoursSchedule(): Promise<IBusinessHoursScheduleWithEntries> {
+export const createDefaultBusinessHoursSchedule = withAuth(async (_user, { tenant }): Promise<IBusinessHoursScheduleWithEntries> => {
   // Standard business hours entries for Mon-Fri (days 1-5)
   const standardEntries: IBusinessHoursEntryInput[] = [
     { day_of_week: 0, start_time: '08:00', end_time: '18:00', is_enabled: false }, // Sunday
@@ -515,22 +524,58 @@ export async function createDefaultBusinessHoursSchedule(): Promise<IBusinessHou
     { day_of_week: 6, start_time: '08:00', end_time: '18:00', is_enabled: false }  // Saturday
   ];
 
-  return createBusinessHoursSchedule(
-    {
-      schedule_name: 'Standard Business Hours',
-      timezone: 'America/New_York',
-      is_default: true,
-      is_24x7: false
-    },
-    standardEntries
-  );
-}
+  const { knex } = await createTenantKnex();
+
+  return withTransaction(knex, async (trx: Knex.Transaction) => {
+    const scheduleId = uuidv4();
+
+    // Unset any existing default
+    await trx('business_hours_schedules')
+      .where({ tenant, is_default: true })
+      .update({ is_default: false, updated_at: trx.fn.now() });
+
+    // Create the schedule
+    const [schedule] = await trx('business_hours_schedules')
+      .insert({
+        tenant,
+        schedule_id: scheduleId,
+        schedule_name: 'Standard Business Hours',
+        timezone: 'America/New_York',
+        is_default: true,
+        is_24x7: false,
+        created_at: trx.fn.now(),
+        updated_at: trx.fn.now()
+      })
+      .returning('*');
+
+    // Create entries
+    const entryRecords = standardEntries.map((entry) => ({
+      tenant,
+      entry_id: uuidv4(),
+      schedule_id: scheduleId,
+      day_of_week: entry.day_of_week,
+      start_time: entry.start_time,
+      end_time: entry.end_time,
+      is_enabled: entry.is_enabled
+    }));
+
+    const createdEntries = await trx('business_hours_entries')
+      .insert(entryRecords)
+      .returning('*');
+
+    return {
+      ...schedule,
+      entries: createdEntries,
+      holidays: []
+    };
+  });
+});
 
 /**
  * Check if a given datetime falls within business hours
  */
-export async function isWithinBusinessHours(scheduleId: string, datetime: Date): Promise<boolean> {
-  const { knex, tenant } = await createTenantKnex();
+export const isWithinBusinessHours = withAuth(async (_user, { tenant }, scheduleId: string, datetime: Date): Promise<boolean> => {
+  const { knex } = await createTenantKnex();
 
   return withTransaction(knex, async (trx: Knex.Transaction) => {
     // Get the schedule
@@ -600,13 +645,13 @@ export async function isWithinBusinessHours(scheduleId: string, datetime: Date):
 
     return timeString >= entry.start_time && timeString < entry.end_time;
   });
-}
+});
 
 /**
  * Get the next business hour start from a given datetime
  */
-export async function getNextBusinessHourStart(scheduleId: string, datetime: Date): Promise<Date> {
-  const { knex, tenant } = await createTenantKnex();
+export const getNextBusinessHourStart = withAuth(async (_user, { tenant }, scheduleId: string, datetime: Date): Promise<Date> => {
+  const { knex } = await createTenantKnex();
 
   return withTransaction(knex, async (trx: Knex.Transaction) => {
     // Get the schedule
@@ -714,4 +759,4 @@ export async function getNextBusinessHourStart(scheduleId: string, datetime: Dat
 
     throw new Error('Could not find next business hour within 14 days');
   });
-}
+});

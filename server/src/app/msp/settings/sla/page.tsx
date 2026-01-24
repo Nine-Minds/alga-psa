@@ -2,12 +2,12 @@
 
 import { Suspense, useState, useCallback, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { CustomTabs } from 'server/src/components/ui/CustomTabs';
+import { CustomTabs } from '@alga-psa/ui/components/CustomTabs';
 import { SlaPolicyList, SlaPolicyForm, SlaPauseSettings, BusinessHoursSettings } from '@alga-psa/sla/components';
 import { ISlaPolicy } from '@alga-psa/sla/types';
-import { Button } from 'server/src/components/ui/Button';
+import { Button } from '@alga-psa/ui/components/Button';
 import { ArrowLeft } from 'lucide-react';
-import LoadingIndicator from 'server/src/components/ui/LoadingIndicator';
+import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 
 // Map URL slugs to tab labels
 const TAB_SLUG_TO_LABEL: Record<string, string> = {
