@@ -2,7 +2,7 @@
  * @vitest-environment jsdom
  */
 import React from 'react';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
@@ -18,13 +18,24 @@ vi.mock('@alga-psa/ui/components/onboarding/WizardProgress', () => ({
 }));
 
 vi.mock('@alga-psa/ui/components/onboarding/WizardNavigation', () => ({
-  WizardNavigation: ({ onNext, onBack }: { onNext: () => void; onBack: () => void }) => (
+  WizardNavigation: ({
+    onNext,
+    onBack,
+    onSaveDraft,
+  }: {
+    onNext: () => void;
+    onBack: () => void;
+    onSaveDraft: () => void;
+  }) => (
     <div>
       <button type="button" onClick={onBack}>
         Back
       </button>
       <button type="button" onClick={onNext}>
         Next
+      </button>
+      <button type="button" onClick={onSaveDraft}>
+        Save Draft
       </button>
     </div>
   ),
@@ -86,6 +97,10 @@ vi.mock('@alga-psa/billing/actions/contractWizardActions', () => ({
 }));
 
 describe('ContractWizard resume behavior', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
   it('starts at Step 1 (Contract Basics) when opened (T033)', async () => {
     const { ContractWizard } = await import('../src/components/billing-dashboard/contracts/ContractWizard');
     render(
@@ -393,5 +408,46 @@ describe('ContractWizard resume behavior', () => {
     expect(step).toHaveAttribute('data-product-services-count', '1');
     expect(step).toHaveAttribute('data-hourly-services-count', '1');
     expect(step).toHaveAttribute('data-usage-services-count', '1');
+  });
+
+  it('clicking Save Draft in resumed wizard updates existing draft (T042)', async () => {
+    const { createClientContractFromWizard } = await import('@alga-psa/billing/actions/contractWizardActions');
+    (createClientContractFromWizard as any).mockResolvedValue({ contract_id: 'contract-1' });
+
+    const { ContractWizard } = await import('../src/components/billing-dashboard/contracts/ContractWizard');
+    render(
+      <ContractWizard
+        open={true}
+        onOpenChange={vi.fn()}
+        editingContract={{
+          contract_id: 'contract-1',
+          is_draft: true,
+          client_id: 'client-1',
+          contract_name: 'Draft Alpha',
+          start_date: '2026-01-01',
+          billing_frequency: 'monthly',
+          currency_code: 'USD',
+          enable_proration: false,
+          fixed_services: [],
+          product_services: [],
+          hourly_services: [],
+          usage_services: [],
+        }}
+      />,
+    );
+
+    await screen.findByTestId('step-contract-basics');
+    const user = userEvent.setup();
+    await act(async () => {
+      await user.click(screen.getByText('Save Draft'));
+    });
+
+    await waitFor(() => {
+      expect(createClientContractFromWizard).toHaveBeenCalled();
+    });
+
+    const [submission, options] = (createClientContractFromWizard as any).mock.calls[0];
+    expect(submission.contract_id).toBe('contract-1');
+    expect(options).toEqual({ isDraft: true });
   });
 });

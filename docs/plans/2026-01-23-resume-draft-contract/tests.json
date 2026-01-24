@@ -248,7 +248,7 @@
   {
     "id": "T042",
     "description": "Clicking Save Draft in resumed wizard updates existing draft",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F018"]
   },
   {
