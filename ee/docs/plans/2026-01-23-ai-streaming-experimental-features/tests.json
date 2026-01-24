@@ -224,7 +224,7 @@
   {
     "id": "T038",
     "description": "Tokens are appended to message display as they arrive",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F021"]
   },
   {

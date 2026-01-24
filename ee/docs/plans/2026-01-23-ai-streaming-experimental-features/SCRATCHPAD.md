@@ -465,3 +465,10 @@ curl -X POST localhost:3000/api/chat/stream/chat \
   - File: `server/src/test/unit/Chat.streamingEndpoint.test.ts`
 - Validation: `npx vitest run server/src/test/unit/Chat.streamingEndpoint.test.ts`
 - Next test item: T038 Tokens are appended to message display as they arrive
+
+### 2026-01-24 (cont.)
+- Implemented T038 (unit test):
+  - Verifies SSE token chunks are appended incrementally (per-chunk) by `readAssistantContentFromSse()` via the `onToken` callback.
+  - Files: `server/src/test/unit/readAssistantContentFromSse.test.ts`, `ee/server/src/components/chat/readAssistantContentFromSse.ts`, `ee/server/src/components/chat/Chat.tsx`
+- Validation: `npx vitest run server/src/test/unit/readAssistantContentFromSse.test.ts`
+- Next test item: T039 Message state updates incrementally during streaming
