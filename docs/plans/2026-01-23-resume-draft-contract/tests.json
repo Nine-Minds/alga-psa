@@ -140,7 +140,7 @@
   {
     "id": "T024",
     "description": "Pagination controls navigate between pages",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F012"]
   },
   {
