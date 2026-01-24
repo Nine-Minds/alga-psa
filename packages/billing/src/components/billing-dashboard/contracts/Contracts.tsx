@@ -427,6 +427,8 @@ const renderStatusBadge = (status: string) => {
     );
   });
 
+  const draftCount = clientContracts.filter((contract) => contract.status === 'draft').length;
+
   const renderTemplateTab = () => (
     <>
       <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
@@ -537,7 +539,13 @@ const renderStatusBadge = (status: string) => {
   const tabs = [
     { label: 'Templates', content: renderTemplateTab() },
     { label: 'Client Contracts', content: renderClientContractsTab() },
-    { label: 'Drafts', content: renderDraftsTab() },
+    {
+      label: 'Drafts',
+      icon: draftCount > 0 ? (
+        <Badge className="ml-2 order-last bg-gray-100 text-gray-800">{draftCount}</Badge>
+      ) : undefined,
+      content: renderDraftsTab(),
+    },
   ];
 
   return (

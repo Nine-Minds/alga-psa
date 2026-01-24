@@ -44,6 +44,10 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
   - Added URL mapping for `subtab=drafts` and a placeholder Drafts tab view in `packages/billing/src/components/billing-dashboard/contracts/Contracts.tsx`
   - Next: wire Drafts tab to real data/actions + resume/discard UX
 
+- (2026-01-24) Draft count badge added to Drafts tab:
+  - Uses existing loaded `clientContracts` and counts `status === 'draft'`
+  - Badge is hidden when count is 0 (will align with later acceptance/test expectations)
+ 
 ## Commands / Runbooks
 
 - Run billing package tests: `npm test -w packages/billing`

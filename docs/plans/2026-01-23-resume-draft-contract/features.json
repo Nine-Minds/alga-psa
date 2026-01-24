@@ -8,7 +8,7 @@
   {
     "id": "F002",
     "description": "Drafts tab shows count badge indicating number of draft contracts",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR1"]
   },
   {
