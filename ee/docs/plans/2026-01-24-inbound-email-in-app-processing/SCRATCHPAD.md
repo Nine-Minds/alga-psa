@@ -44,3 +44,4 @@
 - 2026-01-24: Implemented F021 by de-duping new-ticket creation via a DB lookup on `tickets.email_metadata.messageId+providerId` before creating a ticket.
 - 2026-01-24: Implemented F022 by re-enabling Gmail Pub/Sub historyId de-dupe (skip when `gmail_processed_history` already contains the notification historyId). Microsoft continues using `email_processed_messages` PK de-dupe.
 - 2026-01-24: Implemented F030 by wiring Gmail webhook message handling to call `processInboundEmailInApp` when the in-app flag is enabled (otherwise preserves legacy `INBOUND_EMAIL_RECEIVED` publish).
+- 2026-01-24: Implemented F031 by wiring Microsoft webhook notifications to call `processInboundEmailInApp` when enabled and to persist ticket linkage back to `email_processed_messages`.

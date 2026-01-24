@@ -18,7 +18,7 @@
   { "id": "F022", "description": "Preserve provider-level dedupe bookkeeping (Gmail historyId + Microsoft processed message records)", "implemented": true },
 
   { "id": "F030", "description": "Wire Gmail webhook handler to call `processInboundEmailInApp` instead of publishing `INBOUND_EMAIL_RECEIVED` to Redis workflow streams", "implemented": true },
-  { "id": "F031", "description": "Wire Microsoft webhook handler to call `processInboundEmailInApp` instead of publishing `INBOUND_EMAIL_RECEIVED` to Redis workflow streams", "implemented": false },
+  { "id": "F031", "description": "Wire Microsoft webhook handler to call `processInboundEmailInApp` instead of publishing `INBOUND_EMAIL_RECEIVED` to Redis workflow streams", "implemented": true },
 
   { "id": "F040", "description": "Add feature flag (tenant/provider scoped) to switch between old workflow-stream publish vs in-app processing", "implemented": false },
   { "id": "F041", "description": "Rollout: allow enabling in-app processing per providerId for staged deployment", "implemented": false },
