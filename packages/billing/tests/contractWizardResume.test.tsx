@@ -49,7 +49,9 @@ vi.mock('../src/components/billing-dashboard/contracts/wizard-steps/FixedFeeServ
 }));
 
 vi.mock('../src/components/billing-dashboard/contracts/wizard-steps/ProductsStep', () => ({
-  ProductsStep: () => <div data-testid="step-products" />,
+  ProductsStep: ({ data }: { data: any }) => (
+    <div data-testid="step-products" data-product-services-count={String((data.product_services ?? []).length)} />
+  ),
 }));
 
 vi.mock('../src/components/billing-dashboard/contracts/wizard-steps/HourlyServicesStep', () => ({
@@ -218,5 +220,44 @@ describe('ContractWizard resume behavior', () => {
 
     const step = await screen.findByTestId('step-fixed-fee');
     expect(step).toHaveAttribute('data-fixed-services-count', '2');
+  });
+
+  it('step 3 (Products) shows pre-populated products from draft (T038)', async () => {
+    const { ContractWizard } = await import('../src/components/billing-dashboard/contracts/ContractWizard');
+    render(
+      <ContractWizard
+        open={true}
+        onOpenChange={vi.fn()}
+        editingContract={{
+          contract_id: 'contract-1',
+          is_draft: true,
+          client_id: 'client-1',
+          contract_name: 'Draft Alpha',
+          start_date: '2026-01-01',
+          billing_frequency: 'monthly',
+          currency_code: 'USD',
+          enable_proration: false,
+          fixed_services: [],
+          product_services: [
+            { service_id: 'prod-1', quantity: 1 },
+            { service_id: 'prod-2', quantity: 2 },
+          ],
+          hourly_services: [],
+          usage_services: [],
+        }}
+      />,
+    );
+
+    await screen.findByTestId('step-contract-basics');
+    const user = userEvent.setup();
+    await act(async () => {
+      await user.click(screen.getByText('Next'));
+    });
+    await act(async () => {
+      await user.click(screen.getByText('Next'));
+    });
+
+    const step = await screen.findByTestId('step-products');
+    expect(step).toHaveAttribute('data-product-services-count', '2');
   });
 });

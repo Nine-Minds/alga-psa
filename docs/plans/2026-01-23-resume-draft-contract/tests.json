@@ -224,7 +224,7 @@
   {
     "id": "T038",
     "description": "Step 3 (Products) shows pre-populated products from draft",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F017"]
   },
   {
