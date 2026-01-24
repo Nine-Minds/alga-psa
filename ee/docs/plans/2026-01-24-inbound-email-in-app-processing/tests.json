@@ -1,6 +1,6 @@
 [
   { "id": "T001", "description": "Gmail: webhook processes a new inbound email and creates 1 ticket + 1 initial comment", "implemented": true, "featureIds": ["F030", "F013", "F014"] },
-  { "id": "T002", "description": "Microsoft: webhook processes a new inbound email and creates 1 ticket + 1 initial comment", "implemented": false, "featureIds": ["F031", "F013", "F014"] },
+  { "id": "T002", "description": "Microsoft: webhook processes a new inbound email and creates 1 ticket + 1 initial comment", "implemented": true, "featureIds": ["F031", "F013", "F014"] },
   { "id": "T003", "description": "Reply threading: reply token resolves ticket and creates exactly 1 new comment", "implemented": false, "featureIds": ["F004", "F005", "F020"] },
   { "id": "T004", "description": "Reply threading: In-Reply-To/References resolves ticket and creates exactly 1 new comment", "implemented": false, "featureIds": ["F004", "F005"] },
 

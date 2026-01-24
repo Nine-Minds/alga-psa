@@ -15,6 +15,7 @@ let enteredByUserId: string;
 
 let gmailListMessagesSinceMock = vi.fn();
 let gmailGetMessageDetailsMock = vi.fn();
+let microsoftGetMessageDetailsMock = vi.fn();
 
 vi.mock('@alga-psa/core/secrets', () => ({
   getSecretProviderInstance: vi.fn(async () => ({
@@ -54,6 +55,17 @@ vi.mock('../../../../packages/integrations/src/services/email/providers/GmailAda
       }
       async getMessageDetails(messageId: string) {
         return gmailGetMessageDetailsMock(messageId);
+      }
+    },
+  };
+});
+
+vi.mock('@alga-psa/shared/services/email/providers/MicrosoftGraphAdapter', () => {
+  return {
+    MicrosoftGraphAdapter: class MicrosoftGraphAdapter {
+      async connect() {}
+      async getMessageDetails(messageId: string) {
+        return microsoftGetMessageDetailsMock(messageId);
       }
     },
   };
@@ -121,6 +133,66 @@ async function setupInboundDefaults(params: { providerId: string; mailbox: strin
   });
 
   return { defaultsId, subscriptionName };
+}
+
+async function setupMicrosoftProvider(params: {
+  providerId: string;
+  mailbox: string;
+  subscriptionId: string;
+}) {
+  const defaultsId = uuidv4();
+  await db('inbound_ticket_defaults').insert({
+    id: defaultsId,
+    tenant: tenantId,
+    short_name: `ms-email-${defaultsId.slice(0, 6)}`,
+    display_name: `MS Email Defaults ${defaultsId.slice(0, 6)}`,
+    description: 'Test defaults',
+    board_id: boardId,
+    status_id: statusId,
+    priority_id: priorityId,
+    client_id: clientId,
+    entered_by: enteredByUserId,
+    is_active: true,
+    is_default: false,
+    created_at: db.fn.now(),
+    updated_at: db.fn.now(),
+  });
+
+  await db('email_providers').insert({
+    id: params.providerId,
+    tenant: tenantId,
+    provider_type: 'microsoft',
+    provider_name: 'Test Microsoft Provider',
+    mailbox: params.mailbox,
+    is_active: true,
+    status: 'connected',
+    vendor_config: JSON.stringify({}),
+    inbound_ticket_defaults_id: defaultsId,
+    created_at: db.fn.now(),
+    updated_at: db.fn.now(),
+  });
+
+  await db('microsoft_email_provider_config').insert({
+    email_provider_id: params.providerId,
+    tenant: tenantId,
+    client_id: 'client-id',
+    client_secret: 'secret',
+    tenant_id: 'ms-tenant-id',
+    redirect_uri: 'http://localhost/callback',
+    auto_process_emails: true,
+    max_emails_per_sync: 50,
+    folder_filters: JSON.stringify(['Inbox']),
+    access_token: 'access',
+    refresh_token: 'refresh',
+    token_expires_at: null,
+    webhook_subscription_id: params.subscriptionId,
+    webhook_expires_at: null,
+    webhook_verification_token: null,
+    created_at: db.fn.now(),
+    updated_at: db.fn.now(),
+  });
+
+  return { defaultsId };
 }
 
 describe('Inbound email in-app processing via webhooks (integration)', () => {
@@ -232,6 +304,81 @@ describe('Inbound email in-app processing via webhooks (integration)', () => {
     expect(res.status).toBe(200);
 
     const tickets = await db('tickets').where({ tenant: tenantId, title: 'Inbound email subject' });
+    expect(tickets).toHaveLength(1);
+
+    const ticketId = tickets[0].ticket_id;
+    cleanup.push(async () => {
+      await db('comments').where({ tenant: tenantId, ticket_id: ticketId }).delete();
+      await db('tickets').where({ tenant: tenantId, ticket_id: ticketId }).delete();
+    });
+
+    const comments = await db('comments').where({ tenant: tenantId, ticket_id: ticketId });
+    expect(comments).toHaveLength(1);
+    expect(() => JSON.parse(comments[0].note)).not.toThrow();
+  });
+
+  it('Microsoft: webhook processes a new inbound email and creates 1 ticket + 1 initial comment', async () => {
+    const providerId = uuidv4();
+    const mailbox = `support-ms-${uuidv4().slice(0, 6)}@example.com`;
+    const subscriptionId = `sub-ms-${uuidv4()}`;
+    const { defaultsId } = await setupMicrosoftProvider({ providerId, mailbox, subscriptionId });
+
+    const messageId = `ms-msg-${uuidv4()}`;
+    cleanup.push(async () => {
+      await db('email_processed_messages').where({ tenant: tenantId, provider_id: providerId, message_id: messageId }).delete();
+      await db('microsoft_email_provider_config').where({ tenant: tenantId, email_provider_id: providerId }).delete();
+      await db('email_providers').where({ tenant: tenantId, id: providerId }).delete();
+      await db('inbound_ticket_defaults').where({ tenant: tenantId, id: defaultsId }).delete();
+    });
+
+    process.env.INBOUND_EMAIL_IN_APP_PROVIDER_IDS = providerId;
+
+    microsoftGetMessageDetailsMock = vi.fn().mockResolvedValue({
+      id: messageId,
+      provider: 'microsoft',
+      providerId,
+      tenant: tenantId,
+      receivedAt: new Date().toISOString(),
+      from: { email: 'sender@example.com', name: 'Sender' },
+      to: [{ email: mailbox, name: 'Support' }],
+      subject: 'Inbound MS email subject',
+      body: { text: 'Hello from MS email', html: '<p>Hello from <strong>MS</strong></p>' },
+      attachments: [],
+      threadId: 'thread-ms-1',
+      references: [],
+    });
+
+    const payload = {
+      value: [
+        {
+          changeType: 'created',
+          clientState: 'ignored',
+          resource: `/users/${uuidv4()}/messages/${messageId}`,
+          resourceData: {
+            '@odata.type': '#microsoft.graph.message',
+            '@odata.id': 'ignored',
+            id: messageId,
+            subject: 'Inbound MS email subject',
+          },
+          subscriptionExpirationDateTime: new Date(Date.now() + 60_000).toISOString(),
+          subscriptionId,
+          tenantId: 'ignored',
+        },
+      ],
+    };
+
+    const { POST } = await import('@alga-psa/integrations/webhooks/email/microsoft');
+
+    const req = new NextRequest('http://localhost:3000/api/email/webhooks/microsoft', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+
+    const res = await POST(req);
+    expect(res.status).toBe(200);
+
+    const tickets = await db('tickets').where({ tenant: tenantId, title: 'Inbound MS email subject' });
     expect(tickets).toHaveLength(1);
 
     const ticketId = tickets[0].ticket_id;
