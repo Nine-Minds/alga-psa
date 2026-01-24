@@ -516,3 +516,10 @@ curl -X POST localhost:3000/api/chat/stream/chat \
   - File: `server/src/test/unit/Chat.streamingIncrementalState.test.tsx`
 - Validation: `npx vitest run server/src/test/unit/Chat.streamingIncrementalState.test.tsx`
 - Next test item: T045 Stream interruption shows error indicator on message
+
+### 2026-01-24 (cont.)
+- Implemented T045 (unit test):
+  - Verifies a stream that ends without a `{ done: true }` event shows the `Interrupted` badge and keeps the partial text.
+  - File: `server/src/test/unit/Chat.streamingIncrementalState.test.tsx`
+- Validation: `npx vitest run server/src/test/unit/Chat.streamingIncrementalState.test.tsx`
+- Next test item: T046 Assistant message is persisted after streaming completes successfully
