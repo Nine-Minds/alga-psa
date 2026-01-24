@@ -147,6 +147,7 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
   - (2026-01-24) Extended `packages/billing/tests/draftContractForResumeActions.test.ts` and implemented T029 to assert service configuration fields (rates, unit_of_measure, bucket overlays) map into resume payload.
   - (2026-01-24) Extended `packages/billing/tests/draftContractForResumeActions.test.ts` and implemented T030 to assert non-draft contracts cannot be resumed.
   - (2026-01-24) Extended `packages/billing/tests/draftContractsTable.test.tsx` and implemented T031 to assert clicking Resume opens the wizard dialog (via mocked `ContractWizard`).
+  - (2026-01-24) Extended `packages/billing/tests/draftContractsTable.test.tsx` and implemented T032 to assert the Resume flow passes draft data into the wizard (contract_id/client_id/contract_name).
 
 ## Links / References
 

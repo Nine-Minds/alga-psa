@@ -40,7 +40,12 @@ vi.mock('@alga-psa/ui/components/CustomTabs', () => ({
 vi.mock('../src/components/billing-dashboard/contracts/ContractWizard', () => ({
   ContractWizard: ({ open, editingContract }: { open: boolean; editingContract?: any }) =>
     open ? (
-      <div data-testid="contract-wizard" data-contract-id={editingContract?.contract_id ?? ''} />
+      <div
+        data-testid="contract-wizard"
+        data-contract-id={editingContract?.contract_id ?? ''}
+        data-client-id={editingContract?.client_id ?? ''}
+        data-contract-name={editingContract?.contract_name ?? ''}
+      />
     ) : null,
 }));
 
@@ -465,6 +470,51 @@ describe('Drafts tab DataTable', () => {
     await waitFor(() => {
       const wizard = screen.getByTestId('contract-wizard');
       expect(wizard).toHaveAttribute('data-contract-id', 'contract-1');
+    });
+  });
+
+  it('resumed wizard displays with draft data loaded (T032)', async () => {
+    mockDraftResumeData = {
+      contract_id: 'contract-1',
+      is_draft: true,
+      client_id: 'client-1',
+      contract_name: 'Draft Alpha',
+      start_date: '2026-01-01',
+      currency_code: 'USD',
+      enable_proration: false,
+      fixed_services: [],
+      product_services: [],
+      hourly_services: [],
+      usage_services: [],
+    };
+    mockDraftContracts = [
+      {
+        contract_id: 'contract-1',
+        contract_name: 'Draft Alpha',
+        client_name: 'Acme Co',
+        created_at: new Date(2026, 0, 1),
+        updated_at: new Date(2026, 0, 2),
+      },
+    ];
+
+    const Contracts = (await import('../src/components/billing-dashboard/contracts/Contracts')).default;
+    render(<Contracts />);
+
+    const user = userEvent.setup();
+    const actionsButton = await screen.findByRole('button', { name: /open menu/i });
+    await act(async () => {
+      await user.click(actionsButton);
+    });
+    const resumeItem = await screen.findByText('Resume');
+    await act(async () => {
+      await user.click(resumeItem);
+    });
+
+    await waitFor(() => {
+      const wizard = screen.getByTestId('contract-wizard');
+      expect(wizard).toHaveAttribute('data-contract-id', 'contract-1');
+      expect(wizard).toHaveAttribute('data-client-id', 'client-1');
+      expect(wizard).toHaveAttribute('data-contract-name', 'Draft Alpha');
     });
   });
 });

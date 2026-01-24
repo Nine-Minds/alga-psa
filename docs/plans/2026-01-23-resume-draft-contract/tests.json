@@ -188,7 +188,7 @@
   {
     "id": "T032",
     "description": "Resumed wizard displays with draft data loaded",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F015"]
   },
   {
