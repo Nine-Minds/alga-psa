@@ -46,7 +46,7 @@
   { "id": "T062", "description": "Documents: generation emits DOCUMENT_GENERATED for supported generation paths with sourceType/sourceId", "implemented": true, "featureIds": ["F062"] },
   { "id": "T063", "description": "Documents: signature events are catalog-only (no emission until an e-signature subsystem exists); schemas + catalog entries are still validated", "implemented": true, "featureIds": ["F063"] },
 
-  { "id": "T070", "description": "Email: inbound replies emit INBOUND_EMAIL_REPLY_RECEIVED when reply parsing/matching succeeds", "implemented": false, "featureIds": ["F070"] },
+  { "id": "T070", "description": "Email: inbound replies emit INBOUND_EMAIL_REPLY_RECEIVED when reply parsing/matching succeeds", "implemented": true, "featureIds": ["F070"] },
   { "id": "T071", "description": "Email: outbound send pipeline emits OUTBOUND_EMAIL_QUEUED/OUTBOUND_EMAIL_SENT/OUTBOUND_EMAIL_FAILED", "implemented": false, "featureIds": ["F071"] },
   { "id": "T072", "description": "Email: delivery/bounce/complaint/unsubscribe emits EMAIL_DELIVERED/EMAIL_BOUNCED/EMAIL_COMPLAINT_RECEIVED/EMAIL_UNSUBSCRIBED where supported", "implemented": false, "featureIds": ["F072"] },
   { "id": "T073", "description": "Notifications: send/deliver/fail/read emits NOTIFICATION_SENT/DELIVERED/FAILED/READ for supported channels", "implemented": false, "featureIds": ["F073"] },

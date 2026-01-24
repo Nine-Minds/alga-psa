@@ -784,3 +784,7 @@ Phase 3 (feature dependent / optional modules):
   - Per PRD decision, `DOCUMENT_SIGNATURE_*` events are catalog-only; coverage relies on:
     - Schema registry example validation (`T002`): `shared/workflow/runtime/__tests__/payloadSchemaExamples.test.ts`
     - Migration coverage (`T004`): `server/src/test/unit/workflowEventCatalogMigrationCoverage.test.ts`
+
+- 2026-01-24: Completed `T070` (inbound email reply coverage):
+  - Coverage exists via schema-compat builder tests for `INBOUND_EMAIL_REPLY_RECEIVED` payload shape:
+    - `shared/workflow/streams/domainEventBuilders/__tests__/inboundEmailReplyEventBuilders.test.ts`
