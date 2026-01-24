@@ -718,3 +718,7 @@ Phase 3 (feature dependent / optional modules):
 - 2026-01-24: Completed `T032` (project task lifecycle coverage):
   - Coverage already exists via schema-compat builder test for task create/assign/status/complete payload shapes:
     - `shared/workflow/streams/domainEventBuilders/__tests__/projectTaskEventBuilders.test.ts`
+
+- 2026-01-24: Completed `T033` (project dependency coverage):
+  - Coverage already exists via schema-compat builder test for dependency blocked/unblocked payload shapes:
+    - `shared/workflow/streams/domainEventBuilders/__tests__/projectTaskEventBuilders.test.ts`
