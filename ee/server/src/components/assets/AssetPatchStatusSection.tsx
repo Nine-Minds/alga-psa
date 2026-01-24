@@ -9,7 +9,7 @@
 
 import React, { useState } from 'react';
 import { Shield, AlertCircle, CheckCircle, Clock, ChevronDown, ChevronUp, RefreshCw } from 'lucide-react';
-import { Button } from '@/components/ui/Button';
+import { Button } from '@alga-psa/ui/components/Button';
 import type { Asset, WorkstationAsset, ServerAsset } from '@/interfaces/asset.interfaces';
 
 interface AssetPatchStatusSectionProps {

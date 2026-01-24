@@ -15,8 +15,9 @@
 import Stripe from 'stripe';
 import { Knex } from 'knex';
 import { getConnection } from '@/lib/db/db';
-import logger from '@alga-psa/shared/core/logger';
-import { getSecretProviderInstance } from '@alga-psa/shared/core';
+import logger from '@alga-psa/core/logger';
+import { getSecretProviderInstance } from '@alga-psa/core/secrets';
+import { startTenantDeletionWorkflow } from '@ee/lib/tenant-management/workflowClient';
 
 // Stripe configuration with secret provider support
 async function getStripeConfig() {
@@ -133,11 +134,7 @@ interface StripeSubscription {
 export class StripeService {
   private stripe!: Stripe;
   private config!: Awaited<ReturnType<typeof getStripeConfig>>;
-  private initPromise: Promise<void>;
-
-  constructor() {
-    this.initPromise = this.initialize();
-  }
+  private initPromise: Promise<void> | null = null;
 
   private async initialize() {
     this.config = await getStripeConfig();
@@ -148,6 +145,10 @@ export class StripeService {
   }
 
   private async ensureInitialized() {
+    if (!this.initPromise) {
+      this.initPromise = this.initialize();
+    }
+
     await this.initPromise;
   }
 
@@ -158,6 +159,19 @@ export class StripeService {
   async getStripeClient(): Promise<Stripe> {
     await this.ensureInitialized();
     return this.stripe;
+  }
+
+  /**
+   * Returns true if Stripe can be initialized in the current environment.
+   * This is useful for gating optional billing UX in dev/test stacks.
+   */
+  async isConfigured(): Promise<boolean> {
+    try {
+      await this.ensureInitialized();
+      return true;
+    } catch {
+      return false;
+    }
   }
 
   /**
@@ -983,6 +997,10 @@ export class StripeService {
 
   /**
    * Handle customer.subscription.deleted event
+   *
+   * When a subscription is canceled/deleted:
+   * 1. Mark subscription as canceled in database
+   * 2. Start tenant deletion workflow (deactivates users, collects stats, awaits confirmation)
    */
   private async handleSubscriptionDeleted(
     event: Stripe.Event,
@@ -1005,9 +1023,41 @@ export class StripeService {
         updated_at: knex.fn.now(),
       });
 
-    // Optionally update tenant licensed_user_count to 0 or minimum
-    // This depends on business logic - do we allow grace period?
     logger.warn(`[StripeService] Subscription ${subscription.id} canceled for tenant ${tenantId}`);
+
+    // Start tenant deletion workflow
+    // This will:
+    // 1. Deactivate all users
+    // 2. Tag client as 'Canceled' in master tenant
+    // 3. Collect tenant statistics
+    // 4. Wait for confirmation signal (manual or from Alga workflow)
+    // 5. Delete tenant data after confirmation (immediate/30/90 days)
+    try {
+      const workflowResult = await startTenantDeletionWorkflow({
+        tenantId,
+        triggerSource: 'stripe_webhook',
+        subscriptionExternalId: subscription.id,
+        reason: `Stripe subscription ${subscription.id} canceled`,
+      });
+
+      if (workflowResult.available && workflowResult.workflowId) {
+        logger.info(
+          `[StripeService] Started tenant deletion workflow ${workflowResult.workflowId} for tenant ${tenantId}`
+        );
+      } else {
+        logger.warn(
+          `[StripeService] Tenant deletion workflow not available: ${workflowResult.error || 'Unknown error'}. ` +
+          `Tenant ${tenantId} will need manual cleanup.`
+        );
+      }
+    } catch (error) {
+      // Don't fail the webhook if workflow fails - the subscription is already canceled
+      // The tenant can be cleaned up manually later
+      logger.error(
+        `[StripeService] Failed to start tenant deletion workflow for tenant ${tenantId}:`,
+        error
+      );
+    }
   }
 
   /**

@@ -192,8 +192,7 @@ export class ContactModel {
 
   /**
    * Create a new contact with complete validation
-   * Core logic extracted from server/src/lib/actions/contact-actions/contactActions.tsx
-   */
+   * Core logic extracted from @alga-psa/clients/actions   */
   static async createContact(
     input: CreateContactInput,
     tenant: string,

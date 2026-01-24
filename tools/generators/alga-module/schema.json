@@ -1,0 +1,37 @@
+{
+  "$schema": "https://json-schema.org/schema",
+  "$id": "AlgaModule",
+  "title": "Create an Alga PSA Module",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Module name (without @alga-psa/ prefix)",
+      "$default": {
+        "$source": "argv",
+        "index": 0
+      },
+      "x-prompt": "What name would you like to use for the module?"
+    },
+    "type": {
+      "type": "string",
+      "description": "Module type",
+      "enum": ["horizontal", "vertical"],
+      "default": "vertical",
+      "x-prompt": {
+        "message": "What type of module is this?",
+        "type": "list",
+        "items": [
+          { "value": "horizontal", "label": "Horizontal (shared infrastructure)" },
+          { "value": "vertical", "label": "Vertical (feature module)" }
+        ]
+      }
+    },
+    "directory": {
+      "type": "string",
+      "description": "Directory where the module will be created",
+      "default": "packages"
+    }
+  },
+  "required": ["name"]
+}

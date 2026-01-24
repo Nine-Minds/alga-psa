@@ -1,4 +1,4 @@
-import { UserAttributeKey, TicketAttributeKey } from '@shared/types/attributes';
+import { UserAttributeKey, TicketAttributeKey } from '@alga-psa/types';
 import { TenantEntity } from './index';
 import type {
   IUser as SharedIUser,
@@ -10,19 +10,19 @@ import type {
 
 // Consolidated type re-exports from shared with server-specific strictness where needed
 
-// Base user with stricter DB requirement for hashed_password
-export type IUser = SharedIUser & { hashed_password: string };
+// Base user. Avoid DB-only strictness here (e.g. requiring `hashed_password`),
+// since these types are used across UI and server code.
+export type IUser = SharedIUser;
 
-// Role with stricter DB requirement for description
-export type IRole = SharedIRole & { description: string };
+// DB-only helper type for call sites that truly require `hashed_password`.
+export type IUserWithHashedPassword = SharedIUser & { hashed_password: string };
+
+// Role should remain compatible with shared/types. Avoid introducing UI-breaking strictness here.
+export type IRole = SharedIRole;
 
 export type IPermission = SharedIPermission;
 
-export interface IUserWithRoles extends IUser {
-  user_id: string;
-  roles: IRole[];
-  avatarUrl?: string | null;
-}
+export type IUserWithRoles = SharedIUserWithRoles;
 
 export interface ITeam extends TenantEntity {
   team_id: string;

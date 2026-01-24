@@ -1,0 +1,64 @@
+{
+  "name": "@alga-psa/db",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./src/index.ts"
+    },
+    "./models": {
+      "import": "./dist/models/index.js",
+      "types": "./src/models/index.ts"
+    },
+    "./models/user": {
+      "import": "./dist/models/user.js",
+      "types": "./src/models/user.ts"
+    },
+    "./models/userPreferences": {
+      "import": "./dist/models/userPreferences.js",
+      "types": "./src/models/userPreferences.ts"
+    },
+    "./models/tenant": {
+      "import": "./dist/models/tenant.js",
+      "types": "./src/models/tenant.ts"
+    },
+    "./models/UserSession": {
+      "import": "./dist/models/UserSession.js",
+      "types": "./src/models/UserSession.ts"
+    },
+    "./tenant": {
+      "import": "./dist/lib/tenant.js",
+      "types": "./src/lib/tenant.ts"
+    },
+    "./admin": {
+      "import": "./dist/lib/admin.js",
+      "types": "./src/lib/admin.ts"
+    },
+    "./connection": {
+      "import": "./dist/lib/connection.js",
+      "types": "./src/lib/connection.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsc -b",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "eslint src/"
+  },
+  "dependencies": {
+    "@alga-psa/core": "*",
+    "dotenv": "^16.4.5",
+    "knex": "^3.1.0",
+    "pg": "^8.16.0",
+    "pg-types": "^4.0.2",
+    "uuid": "^9.0.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.7.3"
+  }
+}

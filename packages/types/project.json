@@ -1,0 +1,27 @@
+{
+  "name": "@alga-psa/types",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "packages/types/src",
+  "projectType": "library",
+  "tags": ["scope:types", "type:horizontal"],
+  "targets": {
+    "build": {
+      "executor": "@nx/js:tsc",
+      "outputs": ["{options.outputPath}"],
+      "options": {
+        "outputPath": "dist/packages/types",
+        "tsConfig": "packages/types/tsconfig.json",
+        "packageJson": "packages/types/package.json",
+        "main": "packages/types/src/index.ts",
+        "assets": []
+      }
+    },
+    "lint": {
+      "executor": "@nx/eslint:lint",
+      "outputs": ["{options.outputFile}"],
+      "options": {
+        "lintFilePatterns": ["packages/types/**/*.{ts,tsx}"]
+      }
+    }
+  }
+}

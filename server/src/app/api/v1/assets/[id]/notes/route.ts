@@ -12,7 +12,7 @@ import {
   getAssetNoteContent,
   saveAssetNote,
   deleteAssetNote,
-} from 'server/src/lib/actions/asset-actions/assetNoteActions';
+} from '@alga-psa/assets/actions/assetNoteActions';
 
 export async function GET(
   request: Request,

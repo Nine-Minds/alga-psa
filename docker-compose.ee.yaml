@@ -41,6 +41,8 @@ services:
       EMAIL_USERNAME: ${EMAIL_USERNAME:-noreply@example.com}
       EMAIL_PROVIDER_TYPE: ${EMAIL_PROVIDER_TYPE:-smtp}
       RESEND_API_KEY: ${RESEND_API_KEY:-}
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
+      OPENROUTER_API: ${OPENROUTER_API:-}
       NEXTAUTH_URL: ${NEXTAUTH_URL:-http://localhost:3000}
       NEXTAUTH_SECRET: ${NEXTAUTH_SECRET}
       NEXTAUTH_SESSION_EXPIRES: ${NEXTAUTH_SESSION_EXPIRES:-86400}
@@ -61,6 +63,21 @@ services:
       NINJAONE_CLIENT_ID: ${NINJAONE_CLIENT_ID:-}
       NINJAONE_CLIENT_SECRET: ${NINJAONE_CLIENT_SECRET:-}
       NINJAONE_REDIRECT_URI: ${NINJAONE_REDIRECT_URI:-}
+      # Extension runner (Docker backend) + bundle storage (MinIO dev)
+      RUNNER_BACKEND: ${RUNNER_BACKEND:-docker}
+      RUNNER_BASE_URL: ${RUNNER_BASE_URL:-http://host.docker.internal:8085}
+      RUNNER_DOCKER_HOST: ${RUNNER_DOCKER_HOST:-http://host.docker.internal:8085}
+      RUNNER_PUBLIC_BASE: ${RUNNER_PUBLIC_BASE:-/runner}
+      RUNNER_SERVICE_TOKEN: ${RUNNER_SERVICE_TOKEN:-local-runner-key}
+      RUNNER_STORAGE_API_TOKEN: ${RUNNER_STORAGE_API_TOKEN:-local-runner-key}
+      RUNNER_CONFIG_API_TOKEN: ${RUNNER_CONFIG_API_TOKEN:-local-runner-key}
+      STORAGE_S3_ENDPOINT: ${STORAGE_S3_ENDPOINT:-http://host.docker.internal:9000}
+      STORAGE_S3_REGION: ${STORAGE_S3_REGION:-us-east-1}
+      STORAGE_S3_ACCESS_KEY: ${STORAGE_S3_ACCESS_KEY:-minioadmin}
+      STORAGE_S3_SECRET_KEY: ${STORAGE_S3_SECRET_KEY:-minioadmin}
+      STORAGE_S3_BUCKET: ${STORAGE_S3_BUCKET:-extensions}
+      STORAGE_S3_BUNDLE_BUCKET: ${STORAGE_S3_BUNDLE_BUCKET:-extensions}
+      STORAGE_S3_FORCE_PATH_STYLE: ${STORAGE_S3_FORCE_PATH_STYLE:-true}
     volumes:
       - type: bind
         source: ./secrets/db_password_server
@@ -148,14 +165,24 @@ services:
         source: ./secrets/db_password_server
         target: /run/secrets/db_password_server
         read_only: true
+      # Mount migrations/seeds from the current worktree so setup stays in sync with branch changes.
+      # These are merged by /opt/setup/ee-entrypoint.sh into /app/server/migrations and /app/server/seeds.
       - type: bind
-        source: /tmp/alga-migrations
-        target: /app/server/migrations
-        read_only: false
+        source: ./server/migrations
+        target: /app/server/migrations-ce
+        read_only: true
       - type: bind
-        source: /tmp/alga-seeds
-        target: /app/server/seeds
-        read_only: false
+        source: ./ee/server/migrations
+        target: /app/server/migrations-ee
+        read_only: true
+      - type: bind
+        source: ./server/seeds
+        target: /app/server/seeds-ce
+        read_only: true
+      - type: bind
+        source: ./ee/server/seeds
+        target: /app/server/seeds-ee
+        read_only: true
     secrets:
       - postgres_password
       - db_password_server
@@ -202,9 +229,11 @@ services:
       WORKFLOW_REDIS_CONSUMER_GROUP: "workflow-workers"
       WORKFLOW_REDIS_BATCH_SIZE: "10"
       WORKFLOW_REDIS_IDLE_TIMEOUT_MS: "60000"
+      # WorkerServer listens on PORT (defaults to 4000)
+      PORT: "4000"
     ports:
       # Expose a random port for health checks/monitoring
-      - "3000"
+      - "4000"
     volumes:
       - type: bind
         source: ./secrets/db_password_server

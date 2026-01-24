@@ -25,7 +25,7 @@ import {
 } from '../schemas/automationSchemas';
 import { DatabaseService } from './DatabaseService';
 import { PaginatedResponse, SuccessResponse } from '../../types/api';
-import { validateTenantAccess } from '../../utils/validation';
+import { validateTenantAccess } from '@alga-psa/validation';
 import { EventBusService } from './EventBusService';
 import { AuditLogService } from './AuditLogService';
 

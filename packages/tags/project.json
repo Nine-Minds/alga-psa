@@ -1,0 +1,27 @@
+{
+  "name": "@alga-psa/tags",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "packages/tags/src",
+  "projectType": "library",
+  "tags": ["scope:tags", "type:vertical"],
+  "targets": {
+    "build": {
+      "executor": "nx:noop",
+      "dependsOn": []
+    },
+    "test": {
+      "executor": "@nx/vite:test",
+      "outputs": ["{workspaceRoot}/coverage/packages/tags"],
+      "options": {
+        "passWithNoTests": true
+      }
+    },
+    "lint": {
+      "executor": "@nx/eslint:lint",
+      "outputs": ["{options.outputFile}"],
+      "options": {
+        "lintFilePatterns": ["packages/tags/**/*.{ts,tsx}"]
+      }
+    }
+  }
+}

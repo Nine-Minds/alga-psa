@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { getToken, decode } from 'next-auth/jwt';
 import { ApiKeyServiceForApi } from '../../lib/services/apiKeyServiceForApi';
-import { getSecretProviderInstance } from '@alga-psa/shared/core/secretProvider';
+import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { getSessionCookieName } from 'server/src/lib/auth/sessionCookies';
 
 // Cache NM Store key to avoid fetching every request

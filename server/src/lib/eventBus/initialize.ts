@@ -1,5 +1,5 @@
 import { registerAllSubscribers } from './subscribers';
-import logger from '@shared/core/logger';
+import logger from '@alga-psa/core/logger';
 import { getEventBus } from './index';
 
 export async function initializeEventBus(): Promise<void> {

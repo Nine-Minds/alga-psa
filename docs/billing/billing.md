@@ -157,7 +157,7 @@ await assignContractToClient('client-id', contract.contract_id, '2025-01-01', nu
 The billing engine lives in `server/src/lib/billing/billingEngine.ts`. It operates per client and billing cycle and returns an `IBillingResult` consumed by invoice generation.
 
 1. **Initialize tenant context** – `createTenantKnex()` establishes the multi-tenant connection.
-2. **Load billing cycle** – `client_billing_cycles` provides effective date ranges. If no explicit period exists, the engine derives it from the client’s frequency.
+2. **Load billing cycle** – `client_billing_cycles` provides effective date ranges using **`[start, end)`** semantics (end is exclusive). If no explicit period exists, the engine derives it from the client’s frequency.
 3. **Guard rails** – `validateBillingPeriod` ensures the requested range does not span cycle changes. Existing invoices are detected via `hasExistingInvoiceForCycle`.
 4. **Collect client contract lines** – `getClientContractLinesAndCycle` joins `client_contract_lines`, `contract_lines`, `client_contract_line_pricing`, `client_contract_line_terms`, and the parent contract to build a normalized in-memory model. Template references are resolved so both template-sourced and bespoke lines participate.
 5. **Charge calculation** – for each client contract line the engine executes:

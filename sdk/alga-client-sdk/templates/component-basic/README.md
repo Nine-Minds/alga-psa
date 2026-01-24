@@ -124,8 +124,9 @@ Update `package.json` with a custom build:
 | `cap:ui.proxy` | `ui-proxy` | UI proxy routes |
 | `cap:user.read` | `user` | Current user info (default) |
 | `cap:scheduler.manage` | `scheduler` | Scheduled tasks |
+| `cap:invoice.manual.create` | `invoicing` | Create draft manual invoices |
 
-See the [User Host API Guide](../../../docs/guides/user-host-api.md) and [Scheduler Host API Guide](../../../docs/guides/scheduler-host-api.md) for detailed usage.
+See the [User Host API Guide](../../../docs/guides/user-host-api.md), [Scheduler Host API Guide](../../../docs/guides/scheduler-host-api.md), and [Invoicing Host API Guide](../../../docs/guides/invoicing-host-api.md) for detailed usage.
 
 ## Next steps
 

@@ -1,5 +1,5 @@
 import { FieldTemplateProps } from '@rjsf/utils';
-import { Label } from '../../../components/ui/Label';
+import { Label } from '@alga-psa/ui/components/Label';
 
 export const CustomFieldTemplate = (props: FieldTemplateProps) => {
   const {

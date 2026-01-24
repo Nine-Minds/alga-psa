@@ -1,10 +1,11 @@
 import React from 'react';
-import { getConsolidatedTicketData } from 'server/src/lib/actions/ticket-actions/optimizedTicketActions';
-import TicketDetailsContainer from './TicketDetailsContainer';
-import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
+import { getConsolidatedTicketData } from '@alga-psa/tickets/actions/optimizedTicketActions';
+import { getCurrentUser } from '@alga-psa/users/actions';
 import { Suspense } from 'react';
-import { TicketDetailsSkeleton } from 'server/src/components/tickets/ticket/TicketDetailsSkeleton';
-import { getSurveyTicketSummary } from 'server/src/lib/actions/survey-actions/surveyDashboardActions';
+import { TicketDetailsSkeleton } from '@alga-psa/tickets/components/ticket/TicketDetailsSkeleton';
+import { getSurveyTicketSummary } from '@alga-psa/surveys/actions/survey-actions/surveyDashboardActions';
+import TicketDetailsContainer from '@alga-psa/tickets/components/ticket/TicketDetailsContainer';
+import AssociatedAssets from '@alga-psa/assets/components/AssociatedAssets';
 
 interface TicketDetailsPageProps {
   params: Promise<{
@@ -24,17 +25,34 @@ export default async function TicketDetailsPage({ params }: TicketDetailsPagePro
 
   try {
     const [ticketData, surveySummary] = await Promise.all([
-      getConsolidatedTicketData(id, user),
+      getConsolidatedTicketData(id),
       getSurveyTicketSummary(id).catch((error) => {
         console.error('[TicketDetailsPage] Failed to load survey summary', error);
         return null;
       }),
     ]);
+
+    const associatedAssets =
+      ticketData.ticket?.client_id && ticketData.ticket?.ticket_id ? (
+        <Suspense fallback={<div id="associated-assets-skeleton" className="animate-pulse bg-gray-200 h-32 rounded-lg"></div>}>
+          <AssociatedAssets
+            id="ticket-details-associated-assets"
+            entityId={ticketData.ticket.ticket_id}
+            entityType="ticket"
+            clientId={ticketData.ticket.client_id}
+            defaultBoardId={ticketData.ticket.board_id}
+          />
+        </Suspense>
+      ) : null;
     
     return (
       <div id="ticket-details-container" className="bg-gray-100">
         <Suspense fallback={<TicketDetailsSkeleton />}>
-          <TicketDetailsContainer ticketData={ticketData} surveySummary={surveySummary ?? null} />
+          <TicketDetailsContainer
+            ticketData={ticketData}
+            surveySummary={surveySummary ?? null}
+            associatedAssets={associatedAssets}
+          />
         </Suspense>
       </div>
     );

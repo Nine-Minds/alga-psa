@@ -1,0 +1,345 @@
+'use server';
+
+import { getCurrentUser, getCurrentUserPermissions } from '@alga-psa/users/actions';
+import { withAuth, withOptionalAuth, type AuthContext } from '@alga-psa/auth';
+import type { IUserWithRoles } from '@alga-psa/types';
+import { getTenantForCurrentRequest } from '../../server';
+import { createTenantKnex } from '@alga-psa/db';
+import type { WizardData } from '@alga-psa/types';
+
+export interface TenantSettings {
+  tenant: string;
+  onboarding_completed: boolean;
+  onboarding_completed_at?: Date;
+  onboarding_skipped: boolean;
+  onboarding_data?: WizardData;
+  settings?: Record<string, any>;
+  ticket_display_settings?: Record<string, any>;
+  created_at: Date;
+  updated_at: Date;
+}
+
+export interface ExperimentalFeatures {
+  aiAssistant: boolean;
+}
+
+const DEFAULT_EXPERIMENTAL_FEATURES: ExperimentalFeatures = {
+  aiAssistant: false,
+};
+
+function normalizeExperimentalFeatures(value: unknown): ExperimentalFeatures {
+  if (!value || typeof value !== 'object') {
+    return { ...DEFAULT_EXPERIMENTAL_FEATURES };
+  }
+
+  const record = value as Record<string, unknown>;
+  return {
+    aiAssistant: record.aiAssistant === true,
+  };
+}
+
+export async function getTenantSettings(): Promise<TenantSettings | null> {
+  try {
+    const tenant = await getTenantForCurrentRequest();
+    if (!tenant) {
+      // Tenant resolution can be temporarily unavailable during SSR (e.g. before middleware
+      // applies, or in certain testing/dev flows). Callers like MspLayout already treat
+      // missing settings as "no onboarding data", so returning null is the safest behavior.
+      return null;
+    }
+
+    const { knex } = await createTenantKnex(tenant);
+    const settings = await knex
+      .select('*')
+      .from('tenant_settings')
+      .where({ tenant })
+      .first();
+
+    return settings || null;
+  } catch (error) {
+    console.error('Error getting tenant settings:', error);
+    return null;
+  }
+}
+
+export async function getExperimentalFeatures(): Promise<ExperimentalFeatures> {
+  try {
+    const settings = await getTenantSettings();
+    return normalizeExperimentalFeatures(settings?.settings?.experimentalFeatures);
+  } catch (error) {
+    console.error('Error getting experimental features:', error);
+    return { ...DEFAULT_EXPERIMENTAL_FEATURES };
+  }
+}
+
+export async function updateExperimentalFeatures(
+  features: Partial<ExperimentalFeatures>
+): Promise<void> {
+  try {
+    const user = await getCurrentUser();
+    if (!user) {
+      throw new Error('User must be authenticated');
+    }
+
+    const permissions = await getCurrentUserPermissions();
+    if (!permissions.includes('settings:update')) {
+      throw new Error('Permission denied: Cannot update settings');
+    }
+
+    const current = await getExperimentalFeatures();
+    const merged: ExperimentalFeatures = {
+      ...current,
+      ...features,
+    };
+
+    await updateTenantSettings({
+      experimentalFeatures: merged,
+    });
+  } catch (error) {
+    console.error('Error updating experimental features:', error);
+    throw error;
+  }
+}
+
+export async function isExperimentalFeatureEnabled(
+  featureKey: string
+): Promise<boolean> {
+  try {
+    const features = await getExperimentalFeatures();
+    return (features as unknown as Record<string, unknown>)[featureKey] === true;
+  } catch (error) {
+    console.error('Error checking experimental feature:', error);
+    return false;
+  }
+}
+
+export const updateTenantOnboardingStatus = withAuth(async (
+  _user: IUserWithRoles,
+  { tenant }: AuthContext,
+  completed: boolean,
+  wizardData?: WizardData,
+  skipped: boolean = false
+): Promise<void> => {
+  try {
+    const { knex } = await createTenantKnex();
+
+    // Use a literal timestamp for Citus compatibility
+    const now = new Date();
+
+    const updateData: any = {
+      onboarding_completed: completed,
+      onboarding_skipped: skipped,
+      updated_at: now,
+    };
+
+    if (completed) {
+      updateData.onboarding_completed_at = now;
+      // Clear onboarding data when completed
+      updateData.onboarding_data = null;
+    } else if (wizardData) {
+      updateData.onboarding_data = JSON.stringify(wizardData);
+    }
+
+    // Check if tenant settings already exist
+    const existingSettings = await knex('tenant_settings')
+      .where({ tenant })
+      .first();
+
+    if (existingSettings) {
+      // Update existing settings
+      await knex('tenant_settings')
+        .where({ tenant })
+        .update(updateData);
+    } else {
+      // Insert new settings
+      await knex('tenant_settings')
+        .insert({
+          tenant,
+          ...updateData,
+        });
+    }
+
+  } catch (error) {
+    console.error('Error updating tenant onboarding status:', error);
+    throw error;
+  }
+});
+
+export const saveTenantOnboardingProgress = withAuth(async (
+  _user: IUserWithRoles,
+  { tenant }: AuthContext,
+  wizardData: Partial<WizardData>
+): Promise<void> => {
+  try {
+    // Get existing data to merge with
+    const existingSettings = await getTenantSettings();
+    const existingData = existingSettings?.onboarding_data || {};
+
+    const mergedData = {
+      ...existingData,
+      ...wizardData,
+    };
+
+    const { knex } = await createTenantKnex();
+
+    // Use a literal timestamp for Citus compatibility
+    const now = new Date();
+
+    // Check if tenant settings already exist
+    const existingRecord = await knex('tenant_settings')
+      .where({ tenant })
+      .first();
+
+    if (existingRecord) {
+      // Update existing settings
+      await knex('tenant_settings')
+        .where({ tenant })
+        .update({
+          onboarding_data: JSON.stringify(mergedData),
+          updated_at: now,
+        });
+    } else {
+      // Insert new settings
+      await knex('tenant_settings')
+        .insert({
+          tenant,
+          onboarding_data: JSON.stringify(mergedData),
+          updated_at: now,
+        });
+    }
+
+  } catch (error) {
+    console.error('Error saving tenant onboarding progress:', error);
+    throw error;
+  }
+});
+
+export const clearTenantOnboardingData = withAuth(async (
+  user: IUserWithRoles,
+  { tenant }: AuthContext
+): Promise<void> => {
+  try {
+    // Check if user has admin permissions
+    if (!user.roles.some((role: any) => role.role_name === 'admin')) {
+      throw new Error('Only admin users can clear onboarding data');
+    }
+
+    const { knex } = await createTenantKnex();
+
+    // Use a literal timestamp for Citus compatibility
+    const now = new Date();
+
+    await knex('tenant_settings')
+      .where({ tenant })
+      .update({
+        onboarding_data: null,
+        updated_at: now,
+      });
+
+  } catch (error) {
+    console.error('Error clearing tenant onboarding data:', error);
+    throw error;
+  }
+});
+
+export async function updateTenantSettings(
+  settings: Record<string, any>
+): Promise<void> {
+  try {
+    const tenant = await getTenantForCurrentRequest();
+    if (!tenant) {
+      throw new Error('No tenant found');
+    }
+
+    // Get existing settings to merge
+    const existingSettings = await getTenantSettings();
+    const currentSettings = existingSettings?.settings || {};
+
+    const updatedSettings = {
+      ...currentSettings,
+      ...settings
+    };
+
+    const { knex } = await createTenantKnex(tenant);
+    
+    // Use a literal timestamp for Citus compatibility
+    const now = new Date();
+    
+    await knex('tenant_settings')
+      .insert({
+        tenant,
+        settings: JSON.stringify(updatedSettings),
+        updated_at: now,
+      })
+      .onConflict('tenant')
+      .merge({
+        settings: JSON.stringify(updatedSettings),
+        updated_at: now,
+      });
+
+  } catch (error) {
+    console.error('Error updating tenant settings:', error);
+    throw error;
+  }
+}
+
+export async function getTenantAnalyticsSettings(): Promise<any> {
+  try {
+    const settings = await getTenantSettings();
+    return settings?.settings?.analytics || null;
+  } catch (error) {
+    console.error('Error getting tenant analytics settings:', error);
+    return null;
+  }
+}
+
+export async function updateTenantAnalyticsSettings(
+  analyticsSettings: Record<string, any>
+): Promise<void> {
+  try {
+    const existingSettings = await getTenantSettings();
+    const currentSettings = existingSettings?.settings || {};
+
+    await updateTenantSettings({
+      ...currentSettings,
+      analytics: {
+        ...currentSettings.analytics,
+        ...analyticsSettings,
+        last_updated_at: new Date().toISOString()
+      }
+    });
+
+  } catch (error) {
+    console.error('Error updating tenant analytics settings:', error);
+    throw error;
+  }
+}
+
+export async function initializeTenantSettings(tenantId: string): Promise<void> {
+  try {
+    const { knex } = await createTenantKnex(tenantId);
+    
+    // Use a literal timestamp for Citus compatibility
+    const now = new Date();
+    
+    // Initialize tenant settings with both onboarding flags set to false
+    await knex('tenant_settings')
+      .insert({
+        tenant: tenantId,
+        onboarding_completed: false,
+        onboarding_skipped: false,
+        onboarding_data: null,
+        settings: JSON.stringify({
+          experimentalFeatures: DEFAULT_EXPERIMENTAL_FEATURES,
+        }),
+        created_at: now,
+        updated_at: now,
+      })
+      .onConflict('tenant')
+      .ignore(); // Don't overwrite if already exists
+
+  } catch (error) {
+    console.error('Error initializing tenant settings:', error);
+    throw error;
+  }
+}

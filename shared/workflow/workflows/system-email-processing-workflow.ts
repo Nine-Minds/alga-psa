@@ -129,11 +129,23 @@ export async function systemEmailProcessingWorkflow(context) {
   /**
    * Handle email reply to existing ticket
    */
-  const handleEmailReply = async (emailData, existingTicket, actions, parsedBody) => {
+  const handleEmailReply = async (emailData, existingTicket, actions, parsedBody, replyMatchedBy) => {
     const commentContent = parsedBody.sanitizedHtml || parsedBody.sanitizedText || emailData.body.html || emailData.body.text;
     const commentFormat = parsedBody.sanitizedHtml
       ? 'html'
       : (parsedBody.sanitizedText ? 'text' : (emailData.body.html ? 'html' : 'text'));
+
+    const toEmails = (emailData.to && emailData.to.length > 0)
+      ? emailData.to.map((recipient) => recipient.email).filter(Boolean)
+      : [emailData.from.email];
+
+    const receivedAt = (() => {
+      const value = emailData.receivedAt;
+      if (!value) return undefined;
+      const parsed = Date.parse(value);
+      if (Number.isNaN(parsed)) return undefined;
+      return new Date(parsed).toISOString();
+    })();
 
     // Add email as comment to existing ticket
     await actions.create_comment_from_email({
@@ -142,6 +154,16 @@ export async function systemEmailProcessingWorkflow(context) {
       format: commentFormat,
       source: 'email',
       author_type: 'contact', // Reply from the client
+      inboundReplyEvent: {
+        messageId: emailData.id,
+        threadId: emailData.threadId || emailData.id,
+        from: emailData.from.email,
+        to: toEmails,
+        subject: emailData.subject,
+        receivedAt,
+        provider: emailData.providerId || emailData.provider || 'unknown',
+        matchedBy: replyMatchedBy || 'thread_headers'
+      },
       metadata: parsedBody.metadata
     });
     
@@ -294,6 +316,7 @@ export async function systemEmailProcessingWorkflow(context) {
     setState('CHECKING_EMAIL_THREADING');
     console.log('Checking if email is part of existing conversation thread');
     let existingTicket = null;
+    let replyMatchedBy = 'thread_headers';
 
     const parserTokens = parsedEmailBody.metadata?.parser?.tokens;
     if (parserTokens && parserTokens.conversationToken) {
@@ -303,6 +326,7 @@ export async function systemEmailProcessingWorkflow(context) {
           existingTicket = {
             ticketId: tokenResult.match.ticketId,
           };
+          replyMatchedBy = 'reply_token';
           parsedEmailBody.metadata.parser.matchedReplyToken = tokenResult.match;
           console.log('Matched reply token to ticket', {
             ticketId: tokenResult.match.ticketId,
@@ -321,7 +345,7 @@ export async function systemEmailProcessingWorkflow(context) {
     if (existingTicket) {
       // This is a reply to an existing ticket - add as comment
       console.log(`Email is part of existing ticket: ${existingTicket.ticketId}`);
-      await handleEmailReply(emailData, existingTicket, actions, parsedEmailBody);
+      await handleEmailReply(emailData, existingTicket, actions, parsedEmailBody, replyMatchedBy);
       return; // Exit workflow after handling reply
     }
     

@@ -1,0 +1,386 @@
+[
+  {
+    "id": "T001",
+    "description": "Contracts page renders three tabs: Templates, Client Contracts, Drafts",
+    "implemented": true,
+    "featureIds": ["F001"]
+  },
+  {
+    "id": "T002",
+    "description": "Drafts tab is clickable and switches to drafts view",
+    "implemented": true,
+    "featureIds": ["F001"]
+  },
+  {
+    "id": "T003",
+    "description": "Drafts tab shows badge with count when drafts exist",
+    "implemented": true,
+    "featureIds": ["F002"]
+  },
+  {
+    "id": "T004",
+    "description": "Drafts tab badge updates after creating a new draft",
+    "implemented": true,
+    "featureIds": ["F002"]
+  },
+  {
+    "id": "T005",
+    "description": "Drafts tab badge updates after discarding a draft",
+    "implemented": true,
+    "featureIds": ["F002"]
+  },
+  {
+    "id": "T006",
+    "description": "Drafts tab shows no badge when count is zero",
+    "implemented": true,
+    "featureIds": ["F002"]
+  },
+  {
+    "id": "T007",
+    "description": "getDraftContracts returns only contracts with status='draft'",
+    "implemented": true,
+    "featureIds": ["F003"]
+  },
+  {
+    "id": "T008",
+    "description": "getDraftContracts filters by current tenant",
+    "implemented": true,
+    "featureIds": ["F003", "F024"]
+  },
+  {
+    "id": "T009",
+    "description": "getDraftContracts returns empty array when no drafts exist",
+    "implemented": true,
+    "featureIds": ["F003"]
+  },
+  {
+    "id": "T010",
+    "description": "getDraftContracts includes client_name from joined companies table",
+    "implemented": true,
+    "featureIds": ["F003", "F005"]
+  },
+  {
+    "id": "T011",
+    "description": "getDraftContracts orders by updated_at descending by default",
+    "implemented": true,
+    "featureIds": ["F003", "F009"]
+  },
+  {
+    "id": "T012",
+    "description": "Drafts DataTable renders contract name for each draft",
+    "implemented": true,
+    "featureIds": ["F004"]
+  },
+  {
+    "id": "T013",
+    "description": "Drafts DataTable renders client name for each draft",
+    "implemented": true,
+    "featureIds": ["F005"]
+  },
+  {
+    "id": "T014",
+    "description": "Drafts DataTable renders created date in localized format",
+    "implemented": true,
+    "featureIds": ["F006"]
+  },
+  {
+    "id": "T015",
+    "description": "Drafts DataTable renders last modified date in localized format",
+    "implemented": true,
+    "featureIds": ["F007"]
+  },
+  {
+    "id": "T016",
+    "description": "Drafts DataTable renders actions dropdown for each row",
+    "implemented": true,
+    "featureIds": ["F008"]
+  },
+  {
+    "id": "T017",
+    "description": "Actions dropdown contains Resume option",
+    "implemented": true,
+    "featureIds": ["F008"]
+  },
+  {
+    "id": "T018",
+    "description": "Actions dropdown contains Discard option",
+    "implemented": true,
+    "featureIds": ["F008"]
+  },
+  {
+    "id": "T019",
+    "description": "Clicking column header sorts by that column",
+    "implemented": true,
+    "featureIds": ["F009"]
+  },
+  {
+    "id": "T020",
+    "description": "Search input filters drafts by contract name",
+    "implemented": true,
+    "featureIds": ["F010"]
+  },
+  {
+    "id": "T021",
+    "description": "Search input filters drafts by client name",
+    "implemented": true,
+    "featureIds": ["F011"]
+  },
+  {
+    "id": "T022",
+    "description": "Search is case-insensitive",
+    "implemented": true,
+    "featureIds": ["F010", "F011"]
+  },
+  {
+    "id": "T023",
+    "description": "Pagination controls appear when drafts exceed page size",
+    "implemented": true,
+    "featureIds": ["F012"]
+  },
+  {
+    "id": "T024",
+    "description": "Pagination controls navigate between pages",
+    "implemented": true,
+    "featureIds": ["F012"]
+  },
+  {
+    "id": "T025",
+    "description": "Empty state displays when no drafts exist",
+    "implemented": true,
+    "featureIds": ["F013"]
+  },
+  {
+    "id": "T026",
+    "description": "Empty state shows appropriate message about saving drafts",
+    "implemented": true,
+    "featureIds": ["F013"]
+  },
+  {
+    "id": "T027",
+    "description": "getDraftContractForResume returns complete wizard data for a draft",
+    "implemented": true,
+    "featureIds": ["F014"]
+  },
+  {
+    "id": "T028",
+    "description": "getDraftContractForResume includes contract lines",
+    "implemented": true,
+    "featureIds": ["F014"]
+  },
+  {
+    "id": "T029",
+    "description": "getDraftContractForResume includes service configurations",
+    "implemented": true,
+    "featureIds": ["F014"]
+  },
+  {
+    "id": "T030",
+    "description": "getDraftContractForResume throws error if contract is not a draft",
+    "implemented": true,
+    "featureIds": ["F014"]
+  },
+  {
+    "id": "T031",
+    "description": "Clicking Resume opens ContractWizard dialog",
+    "implemented": true,
+    "featureIds": ["F015"]
+  },
+  {
+    "id": "T032",
+    "description": "Resumed wizard displays with draft data loaded",
+    "implemented": true,
+    "featureIds": ["F015"]
+  },
+  {
+    "id": "T033",
+    "description": "Resumed wizard starts at Step 1 (Contract Basics)",
+    "implemented": true,
+    "featureIds": ["F016"]
+  },
+  {
+    "id": "T034",
+    "description": "Step 1 shows pre-populated client selection from draft",
+    "implemented": true,
+    "featureIds": ["F017"]
+  },
+  {
+    "id": "T035",
+    "description": "Step 1 shows pre-populated contract name from draft",
+    "implemented": true,
+    "featureIds": ["F017"]
+  },
+  {
+    "id": "T036",
+    "description": "Step 1 shows pre-populated dates from draft",
+    "implemented": true,
+    "featureIds": ["F017"]
+  },
+  {
+    "id": "T037",
+    "description": "Step 2 (Fixed Fee) shows pre-populated services from draft",
+    "implemented": true,
+    "featureIds": ["F017"]
+  },
+  {
+    "id": "T038",
+    "description": "Step 3 (Products) shows pre-populated products from draft",
+    "implemented": true,
+    "featureIds": ["F017"]
+  },
+  {
+    "id": "T039",
+    "description": "Step 4 (Hourly) shows pre-populated hourly services from draft",
+    "implemented": true,
+    "featureIds": ["F017"]
+  },
+  {
+    "id": "T040",
+    "description": "Step 5 (Usage) shows pre-populated usage services from draft",
+    "implemented": true,
+    "featureIds": ["F017"]
+  },
+  {
+    "id": "T041",
+    "description": "Step 6 (Review) shows complete draft data for review",
+    "implemented": true,
+    "featureIds": ["F017"]
+  },
+  {
+    "id": "T042",
+    "description": "Clicking Save Draft in resumed wizard updates existing draft",
+    "implemented": true,
+    "featureIds": ["F018"]
+  },
+  {
+    "id": "T043",
+    "description": "Save Draft does not create a duplicate contract",
+    "implemented": true,
+    "featureIds": ["F018"]
+  },
+  {
+    "id": "T044",
+    "description": "Save Draft preserves the original contract_id",
+    "implemented": true,
+    "featureIds": ["F018"]
+  },
+  {
+    "id": "T045",
+    "description": "Completing resumed wizard sets contract status to 'active'",
+    "implemented": true,
+    "featureIds": ["F019"]
+  },
+  {
+    "id": "T046",
+    "description": "Completing resumed wizard sets is_active to true",
+    "implemented": true,
+    "featureIds": ["F019"]
+  },
+  {
+    "id": "T047",
+    "description": "Activated contract no longer appears in Drafts tab",
+    "implemented": true,
+    "featureIds": ["F019"]
+  },
+  {
+    "id": "T048",
+    "description": "Activated contract appears in Client Contracts tab",
+    "implemented": true,
+    "featureIds": ["F019"]
+  },
+  {
+    "id": "T049",
+    "description": "Clicking Discard opens confirmation dialog",
+    "implemented": true,
+    "featureIds": ["F020"]
+  },
+  {
+    "id": "T050",
+    "description": "Confirmation dialog displays contract name",
+    "implemented": true,
+    "featureIds": ["F020"]
+  },
+  {
+    "id": "T051",
+    "description": "Confirmation dialog displays client name",
+    "implemented": true,
+    "featureIds": ["F020"]
+  },
+  {
+    "id": "T052",
+    "description": "Confirmation dialog displays warning about permanent deletion",
+    "implemented": true,
+    "featureIds": ["F020"]
+  },
+  {
+    "id": "T053",
+    "description": "Confirmation dialog has Cancel button",
+    "implemented": true,
+    "featureIds": ["F021"]
+  },
+  {
+    "id": "T054",
+    "description": "Confirmation dialog has Discard button",
+    "implemented": true,
+    "featureIds": ["F021"]
+  },
+  {
+    "id": "T055",
+    "description": "Clicking Cancel closes dialog without deleting",
+    "implemented": true,
+    "featureIds": ["F021"]
+  },
+  {
+    "id": "T056",
+    "description": "Clicking Discard calls deleteContract action",
+    "implemented": true,
+    "featureIds": ["F022"]
+  },
+  {
+    "id": "T057",
+    "description": "Deleted draft no longer appears in list",
+    "implemented": true,
+    "featureIds": ["F022", "F023"]
+  },
+  {
+    "id": "T058",
+    "description": "Deletion shows success toast notification",
+    "implemented": true,
+    "featureIds": ["F022"]
+  },
+  {
+    "id": "T059",
+    "description": "Deletion error shows error toast notification",
+    "implemented": true,
+    "featureIds": ["F022"]
+  },
+  {
+    "id": "T060",
+    "description": "Drafts list refreshes automatically after successful deletion",
+    "implemented": true,
+    "featureIds": ["F023"]
+  },
+  {
+    "id": "T061",
+    "description": "Tab badge count updates after deletion",
+    "implemented": true,
+    "featureIds": ["F023", "F002"]
+  },
+  {
+    "id": "T062",
+    "description": "User from different tenant cannot see other tenant's drafts",
+    "implemented": true,
+    "featureIds": ["F024"]
+  },
+  {
+    "id": "T063",
+    "description": "User without contract create permission cannot resume drafts",
+    "implemented": true,
+    "featureIds": ["F025"]
+  },
+  {
+    "id": "T064",
+    "description": "User without contract delete permission cannot discard drafts",
+    "implemented": true,
+    "featureIds": ["F025"]
+  }
+]

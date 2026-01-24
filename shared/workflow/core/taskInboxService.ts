@@ -454,7 +454,7 @@ export class TaskInboxService {
   ): Promise<{ success: boolean; taskId: string | null; error?: string }> {
     try {
       // Get database connection
-      const { getAdminConnection } = await import('@alga-psa/shared/db/admin');
+      const { getAdminConnection } = await import('@alga-psa/db/admin');
       const knex = await getAdminConnection();
 
       // Create the task with inline form
@@ -518,7 +518,7 @@ export class TaskInboxService {
           const taskInboxService = new TaskInboxService();
 
           // Get database connection
-          const { getAdminConnection } = await import('@alga-psa/shared/db/admin');
+          const { getAdminConnection } = await import('@alga-psa/db/admin');
           const knex = await getAdminConnection();
 
           // Validate and normalize inputs
@@ -655,7 +655,7 @@ export class TaskInboxService {
           // Step 2: Wait for the task completion event
           try {
             // Get database connection for querying task status
-            const { getAdminConnection } = await import('@alga-psa/shared/db/admin');
+            const { getAdminConnection } = await import('@alga-psa/db/admin');
             const knex = await getAdminConnection();
 
             const taskCompletedEventName = TaskEventNames.taskCompleted(taskId);
@@ -735,7 +735,7 @@ export class TaskInboxService {
           const taskInboxService = new TaskInboxService();
 
           // Get database connection
-          const { getAdminConnection } = await import('@alga-psa/shared/db/admin');
+          const { getAdminConnection } = await import('@alga-psa/db/admin');
           const knex = await getAdminConnection();
 
           // Clean up temporary forms

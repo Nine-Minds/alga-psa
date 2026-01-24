@@ -17,7 +17,7 @@ import WorkflowEventModel from '@alga-psa/shared/workflow/persistence/workflowEv
 import WorkflowExecutionModel from '@alga-psa/shared/workflow/persistence/workflowExecutionModel';
 import WorkflowEventProcessingModel from '@alga-psa/shared/workflow/persistence/workflowEventProcessingModel';
 import WorkflowRegistrationModel from '@alga-psa/shared/workflow/persistence/workflowRegistrationModel';
-import { logger } from '@alga-psa/shared/core';
+import { logger } from '@alga-psa/core';
 
 // No configuration needed - all events are processed asynchronously
 
@@ -1007,7 +1007,7 @@ export class TypeScriptWorkflowRuntime {
       return knex;
     }
 
-    const { getAdminConnection } = await import('@alga-psa/shared/db/admin');
+    const { getAdminConnection } = await import('@alga-psa/db/admin');
     return await getAdminConnection();
   }
   

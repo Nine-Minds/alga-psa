@@ -18,7 +18,7 @@ import { BillingEngine } from 'server/src/lib/billing/billingEngine';
 
 let db: Knex;
 let tenantId: string;
-let generateInvoice: typeof import('server/src/lib/actions/invoiceGeneration').generateInvoice;
+let generateInvoice: typeof import('@alga-psa/billing/actions/invoiceGeneration').generateInvoice;
 
 vi.mock('server/src/lib/db', async () => {
   const actual = await vi.importActual<typeof import('server/src/lib/db')>('server/src/lib/db');
@@ -51,7 +51,7 @@ describe('Billing Invoice Timing Integration', () => {
     db = await createTestDbConnection();
     await runMigrationsAndSeeds(db);
     tenantId = await ensureTenant(db);
-    ({ generateInvoice } = await import('server/src/lib/actions/invoiceGeneration'));
+    ({ generateInvoice } = await import('@alga-psa/billing/actions/invoiceGeneration'));
   }, HOOK_TIMEOUT);
 
   afterAll(async () => {

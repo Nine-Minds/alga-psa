@@ -6,6 +6,7 @@
 
 import { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
+import { buildInboundEmailReplyReceivedPayload } from '../streams/domainEventBuilders/inboundEmailReplyEventBuilders';
 
 // =============================================================================
 // INTERFACES
@@ -108,7 +109,7 @@ export async function findContactByEmail(
   email: string,
   tenant: string
 ): Promise<FindContactByEmailOutput | null> {
-  const { withAdminTransaction } = await import('@alga-psa/shared/db/index');
+  const { withAdminTransaction } = await import('@alga-psa/db');
 
   const contact = await withAdminTransaction(async (trx: Knex.Transaction) => {
       return await trx('contacts')
@@ -142,7 +143,7 @@ export async function createOrFindContact(
   input: CreateOrFindContactInput,
   tenant: string
 ): Promise<CreateOrFindContactOutput> {
-  const { withAdminTransaction } = await import('@alga-psa/shared/db/index');
+  const { withAdminTransaction } = await import('@alga-psa/db');
 
   return await withAdminTransaction(async (trx: Knex.Transaction) => {
       // First try to find existing contact
@@ -207,7 +208,7 @@ export async function findTicketByEmailThread(
   input: FindTicketByEmailThreadInput,
   tenant: string
 ): Promise<FindTicketByEmailThreadOutput | null> {
-  const { withAdminTransaction } = await import('@alga-psa/shared/db/index');
+  const { withAdminTransaction } = await import('@alga-psa/db');
 
   return await withAdminTransaction(async (trx: Knex.Transaction) => {
       // Strategy 1: Search by thread ID if available
@@ -340,7 +341,7 @@ export async function processEmailAttachment(
   input: ProcessEmailAttachmentInput,
   tenant: string
 ): Promise<ProcessEmailAttachmentOutput> {
-  const { withAdminTransaction } = await import('@alga-psa/shared/db/index');
+  const { withAdminTransaction } = await import('@alga-psa/db');
 
   return await withAdminTransaction(async (trx: Knex.Transaction) => {
       const documentId = uuidv4();
@@ -394,7 +395,7 @@ export async function saveEmailClientAssociation(
   input: SaveEmailClientAssociationInput,
   tenant: string
 ): Promise<SaveEmailClientAssociationOutput> {
-  const { withAdminTransaction } = await import('@alga-psa/shared/db/index');
+  const { withAdminTransaction } = await import('@alga-psa/db');
 
   return await withAdminTransaction(async (trx: Knex.Transaction) => {
       const associationId = uuidv4();
@@ -460,7 +461,7 @@ export async function resolveInboundTicketDefaults(
   tenant: string,
   providerId?: string
 ): Promise<any> {
-  const { withAdminTransaction } = await import('@alga-psa/shared/db/index');
+  const { withAdminTransaction } = await import('@alga-psa/db');
 
   return await withAdminTransaction(async (trx: Knex.Transaction) => {
       // Require provider-specific defaults; no tenant-level fallback
@@ -554,7 +555,7 @@ export async function createTicketFromEmail(
   tenant: string,
   userId?: string
 ): Promise<{ ticket_id: string; ticket_number: string }> {
-  const { withAdminTransaction } = await import('@alga-psa/shared/db/index');
+  const { withAdminTransaction } = await import('@alga-psa/db');
   const { TicketModel } = await import('@alga-psa/shared/models/ticketModel');
   const { WorkflowEventPublisher } = await import('../adapters/workflowEventPublisher');
   const { WorkflowAnalyticsTracker } = await import('../adapters/workflowAnalyticsTracker');
@@ -629,16 +630,26 @@ export async function createCommentFromEmail(
     author_type?: string;
     author_id?: string;
     metadata?: any;
+    inboundReplyEvent?: {
+      messageId: string;
+      threadId?: string;
+      from: string;
+      to: string[];
+      subject?: string;
+      receivedAt?: string;
+      provider: string;
+      matchedBy: string;
+    };
   },
   tenant: string,
   userId?: string
 ): Promise<string> {
-  const { withAdminTransaction } = await import('@alga-psa/shared/db/index');
+  const { withAdminTransaction } = await import('@alga-psa/db');
   const { TicketModel } = await import('@alga-psa/shared/models/ticketModel');
   const { WorkflowEventPublisher } = await import('../adapters/workflowEventPublisher');
   const { WorkflowAnalyticsTracker } = await import('../adapters/workflowAnalyticsTracker');
 
-  return await withAdminTransaction(async (trx: Knex.Transaction) => {
+  const commentId = await withAdminTransaction(async (trx: Knex.Transaction) => {
       // Create adapters for workflow context
       const eventPublisher = new WorkflowEventPublisher();
       const analyticsTracker = new WorkflowAnalyticsTracker();
@@ -656,6 +667,41 @@ export async function createCommentFromEmail(
 
       return result.comment_id;
     });
+
+  if (commentData.inboundReplyEvent) {
+    try {
+      const { publishWorkflowEvent } = await import('@alga-psa/event-bus/publishers');
+
+      const threadId = commentData.inboundReplyEvent.threadId || commentData.inboundReplyEvent.messageId;
+      const to = commentData.inboundReplyEvent.to?.length
+        ? commentData.inboundReplyEvent.to
+        : [commentData.inboundReplyEvent.from];
+
+      await publishWorkflowEvent({
+        eventType: 'INBOUND_EMAIL_REPLY_RECEIVED',
+        payload: buildInboundEmailReplyReceivedPayload({
+          messageId: commentData.inboundReplyEvent.messageId,
+          threadId,
+          ticketId: commentData.ticket_id,
+          from: commentData.inboundReplyEvent.from,
+          to,
+          subject: commentData.inboundReplyEvent.subject,
+          receivedAt: commentData.inboundReplyEvent.receivedAt,
+          provider: commentData.inboundReplyEvent.provider,
+          matchedBy: commentData.inboundReplyEvent.matchedBy,
+        }),
+        ctx: {
+          tenantId: tenant,
+          occurredAt: commentData.inboundReplyEvent.receivedAt ?? new Date(),
+        },
+        idempotencyKey: `inbound-email-reply:${tenant}:${commentData.ticket_id}:${commentData.inboundReplyEvent.messageId}`,
+      });
+    } catch (eventError) {
+      console.warn('Failed to publish INBOUND_EMAIL_REPLY_RECEIVED event:', eventError);
+    }
+  }
+
+  return commentId;
 }
 
 export async function parseEmailReplyBody(
@@ -681,7 +727,7 @@ export async function findTicketByReplyToken(
     return null;
   }
 
-  const { withAdminTransaction } = await import('@shared/db/index');
+  const { withAdminTransaction } = await import('@alga-psa/db');
 
   return withAdminTransaction(async (trx: Knex.Transaction) => {
     const record = await trx('email_reply_tokens')
@@ -711,7 +757,7 @@ export async function createClientFromEmail(
   },
   tenant: string
 ): Promise<{ client_id: string; client_name: string }> {
-  const { withAdminTransaction } = await import('@alga-psa/shared/db/index');
+  const { withAdminTransaction } = await import('@alga-psa/db');
 
   return await withAdminTransaction(async (trx: Knex.Transaction) => {
       const clientId = uuidv4();
@@ -741,7 +787,7 @@ export async function getClientByIdForEmail(
   clientId: string,
   tenant: string
 ): Promise<{ client_id: string; client_name: string } | null> {
-  const { withAdminTransaction } = await import('@alga-psa/shared/db/index');
+  const { withAdminTransaction } = await import('@alga-psa/db');
 
   return await withAdminTransaction(async (trx: Knex.Transaction) => {
       const client = await trx('clients')
@@ -764,7 +810,7 @@ export async function createBoardFromEmail(
   },
   tenant: string
 ): Promise<{ board_id: string; board_name: string }> {
-  const { withAdminTransaction } = await import('@alga-psa/shared/db/index');
+  const { withAdminTransaction } = await import('@alga-psa/db');
 
   return await withAdminTransaction(async (trx: Knex.Transaction) => {
       const boardId = uuidv4();

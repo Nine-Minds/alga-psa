@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { applyTemplate } from '@/lib/actions/project-actions/projectTemplateActions';
+import { applyTemplate } from '@alga-psa/projects/actions/projectTemplateActions';
 
 export async function POST(
   request: NextRequest,

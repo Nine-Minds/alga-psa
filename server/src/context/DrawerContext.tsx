@@ -1,10 +1,10 @@
 'use client';
 
-import Drawer from "server/src/components/ui/Drawer";
+import Drawer from "@alga-psa/ui/components/Drawer";
 import React, { createContext, useContext, useEffect, useState, ReactNode, useCallback, useReducer } from 'react';
 import { Activity, ActivityType } from "server/src/interfaces/activity.interfaces";
 import { ChevronLeft, ChevronRight, X } from 'lucide-react';
-import { Button } from "server/src/components/ui/Button";
+import { Button } from "@alga-psa/ui/components/Button";
 
 // Define the drawer history entry type
 interface DrawerHistoryEntry {

@@ -4,8 +4,10 @@ import React, { useEffect } from 'react';
 import Link from 'next/link';
 import toast from 'react-hot-toast';
 import { usePostHog } from 'posthog-js/react';
-import { ReflectionContainer } from '../../types/ui-reflection/ReflectionContainer';
-import { usePerformanceTracking } from '../../lib/analytics/client';
+import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContainer';
+import { usePerformanceTracking } from '@alga-psa/analytics/client';
+
+// App shell: dashboard landing container (server-owned, uses analytics).
 import {
   Ticket,
   BarChart3,

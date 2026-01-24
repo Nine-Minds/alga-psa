@@ -5,11 +5,16 @@ import Image from 'next/image';
 
 import { Message, type FunctionCallMeta } from '../../components/message/Message';
 import { IChat } from '../../interfaces/chat.interface';
-import { createNewChatAction, addMessageToChatAction } from '../../lib/chat-actions/chatActions';
+import {
+  createNewChatAction,
+  addMessageToChatAction,
+} from '../../lib/chat-actions/chatActions';
 import { HfInference } from '@huggingface/inference';
-import { Dialog, DialogContent, DialogFooter } from 'server/src/components/ui/Dialog';
-import { Button } from 'server/src/components/ui/Button';
-import { Switch } from 'server/src/components/ui/Switch';
+import { Dialog, DialogContent, DialogFooter } from '@alga-psa/ui/components/Dialog';
+import { Button } from '@alga-psa/ui/components/Button';
+import { Switch } from '@alga-psa/ui/components/Switch';
+
+import { readAssistantContentFromSse } from './readAssistantContentFromSse';
 
 import './chat.css';
 
@@ -171,7 +176,11 @@ type ChatProps = {
   setChatTitle: any;
   isTitleLocked: boolean;
   onUserInput: () => void;
-  hf: HfInference;
+  hf: HfInference | null;
+  initialChatId?: string | null;
+  autoSendPrompt?: string | null;
+  onChatIdChange?: (chatId: string | null) => void;
+  autoApprovedHttpMethods?: string[];
 };
 
 const AUTO_APPROVED_METHODS_STORAGE_KEY = 'chat:autoApprovedHttpMethods';
@@ -184,6 +193,7 @@ const mapMessagesFromProps = (records: any[]): ChatCompletionMessage[] =>
     content: record.content ?? '',
     reasoning: record.reasoning ?? undefined,
   }));
+
 
 export const Chat: React.FC<ChatProps> = ({
   clientUrl,
@@ -198,6 +208,10 @@ export const Chat: React.FC<ChatProps> = ({
   isTitleLocked,
   onUserInput,
   hf,
+  initialChatId,
+  autoSendPrompt,
+  onChatIdChange,
+  autoApprovedHttpMethods,
 }) => {
   const textareaId = useId();
   const [messageText, setMessageText] = useState('');
@@ -211,13 +225,18 @@ export const Chat: React.FC<ChatProps> = ({
       content: string;
       reasoning?: string;
       functionCallMeta?: FunctionCallMeta;
+      status?: 'interrupted';
+      statusDetail?: string;
     }[]
   >([]);
   const [fullMessage, setFullMessage] = useState('');
   const [fullReasoning, setFullReasoning] = useState<string | null>(null);
-  const [chatId, setChatId] = useState<string | null>(null);
+  const [fullMessageStatus, setFullMessageStatus] = useState<'interrupted' | null>(null);
+  const [fullMessageStatusDetail, setFullMessageStatusDetail] = useState<string | null>(
+    null,
+  );
+  const [chatId, setChatId] = useState<string | null>(initialChatId ?? null);
   const [userMessageId, setUserMessageId] = useState<string | null>(null);
-  const [botMessageId, setBotMessageId] = useState<string | null>(null);
   const [conversation, setConversation] = useState<ChatCompletionMessage[]>(() =>
     mapMessagesFromProps(messages),
   );
@@ -232,6 +251,12 @@ export const Chat: React.FC<ChatProps> = ({
   const inputRef = useRef<HTMLTextAreaElement | null>(null);
   const [showValidationDialog, setShowValidationDialog] = useState(false);
   const [validationMessage, setValidationMessage] = useState('');
+  const autoSendRef = useRef(false);
+  const streamAbortControllerRef = useRef<AbortController | null>(null);
+  const messageOrderRef = useRef<number>(0);
+  const streamingTextRef = useRef<string | null>(null);
+  const generationIdRef = useRef<number>(0);
+  const pendingAssistantMessageIdRef = useRef<string | null>(null);
 
   const resolveMessageId = (candidate?: string | null) =>
     candidate ?? (typeof crypto !== 'undefined' && 'randomUUID' in crypto
@@ -272,7 +297,10 @@ export const Chat: React.FC<ChatProps> = ({
       inputRef.current.focus();
     }
     // Reset auto-approval preferences on component mount (new chat)
-    setAutoApprovedMethods([]);
+    const forcedMethods = (autoApprovedHttpMethods ?? [])
+      .map((method) => method.trim().toUpperCase())
+      .filter((method) => STANDARD_HTTP_METHOD_SET.has(method));
+    setAutoApprovedMethods(forcedMethods);
     if (typeof window !== 'undefined') {
       try {
         window.localStorage.removeItem(AUTO_APPROVED_METHODS_STORAGE_KEY);
@@ -281,6 +309,28 @@ export const Chat: React.FC<ChatProps> = ({
       }
     }
   }, []);
+
+  useEffect(() => {
+    return () => {
+      streamAbortControllerRef.current?.abort();
+    };
+  }, []);
+
+  useEffect(() => {
+    const maxOrderFromRecords = Array.isArray(messages)
+      ? Math.max(
+          0,
+          ...messages.map((record: any) =>
+            typeof record?.message_order === 'number' ? record.message_order : 0,
+          ),
+        )
+      : 0;
+    messageOrderRef.current = Math.max(maxOrderFromRecords, Array.isArray(messages) ? messages.length : 0);
+  }, [messages]);
+
+  useEffect(() => {
+    onChatIdChange?.(chatId);
+  }, [chatId, onChatIdChange]);
 
   useEffect(() => {
     if (!generatingResponse && inputRef.current) {
@@ -293,17 +343,28 @@ export const Chat: React.FC<ChatProps> = ({
       setNewChatMessages((prev) => [
         ...prev,
         {
-          _id: resolveMessageId(botMessageId),
+          _id: resolveMessageId(pendingAssistantMessageIdRef.current),
           role: 'bot',
           content: fullMessage,
           reasoning: fullReasoning ?? undefined,
           functionCallMeta: undefined,
+          status: fullMessageStatus ?? undefined,
+          statusDetail: fullMessageStatusDetail ?? undefined,
         },
       ]);
+      pendingAssistantMessageIdRef.current = null;
       setFullMessage('');
       setFullReasoning(null);
+      setFullMessageStatus(null);
+      setFullMessageStatusDetail(null);
     }
-  }, [generatingResponse, fullMessage, botMessageId, fullReasoning]);
+  }, [
+    generatingResponse,
+    fullMessage,
+    fullReasoning,
+    fullMessageStatus,
+    fullMessageStatusDetail,
+  ]);
 
   const autoResizeTextarea = useCallback(() => {
     if (!inputRef.current) {
@@ -342,9 +403,10 @@ export const Chat: React.FC<ChatProps> = ({
   const addAssistantMessageToPersistence = useCallback(async (
     chatIdentifier: string | null,
     content: string,
-  ) => {
+    messageOrder?: number,
+  ): Promise<string | null> => {
     if (!content || !chatIdentifier) {
-      return;
+      return null;
     }
 
     try {
@@ -354,11 +416,13 @@ export const Chat: React.FC<ChatProps> = ({
         content,
         thumb: null,
         feedback: null,
+        message_order: messageOrder,
       };
       const saved = await addMessageToChatAction(messageInfo);
-      setBotMessageId(saved._id || null);
+      return saved._id || null;
     } catch (error) {
       console.error('Failed to persist assistant message', error);
+      return null;
     }
   }, []);
 
@@ -416,15 +480,28 @@ export const Chat: React.FC<ChatProps> = ({
   };
 
   const handleStop = () => {
+    generationIdRef.current += 1;
+    streamAbortControllerRef.current?.abort();
+    streamAbortControllerRef.current = null;
+    pendingAssistantMessageIdRef.current = null;
+    if (streamingTextRef.current) {
+      setIncomingMessage('');
+      setFullMessageStatus(null);
+      setFullMessageStatusDetail(null);
+      setFullMessage(streamingTextRef.current);
+      streamingTextRef.current = null;
+    }
     setGeneratingResponse(false);
     setIsFunction(false);
-    setIncomingMessage('');
     setPendingFunction(null);
     setIsExecutingFunction(false);
   };
 
-  const handleSend = async (trimmedMessage: string) => {
+  const handleSend = useCallback(async (trimmedMessage: string) => {
     setFunctionError(null);
+    setFullMessageStatus(null);
+    setFullMessageStatusDetail(null);
+    pendingAssistantMessageIdRef.current = null;
     setGeneratingResponse(true);
     setIsFunction(true);
     setIncomingMessage('Thinking...');
@@ -462,12 +539,15 @@ export const Chat: React.FC<ChatProps> = ({
       }
 
       if (createdChatId) {
+        const order = messageOrderRef.current + 1;
+        messageOrderRef.current = order;
         const messageInfo = {
           chat_id: createdChatId,
           chat_role: 'user' as const,
           content: trimmedMessage,
           thumb: null,
           feedback: null,
+          message_order: order,
         };
         const saved = await addMessageToChatAction(messageInfo);
         setUserMessageId(saved._id || null);
@@ -494,79 +574,161 @@ export const Chat: React.FC<ChatProps> = ({
     }
 
     try {
-      const response = await fetch('/api/chat/v1/completions', {
+      const generationId = generationIdRef.current + 1;
+      generationIdRef.current = generationId;
+
+      streamAbortControllerRef.current?.abort();
+      const abortController = new AbortController();
+      streamAbortControllerRef.current = abortController;
+
+      const response = await fetch('/api/chat/v1/completions/stream', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
           messages: conversationWithUser,
-          chatId: createdChatId,
         }),
+        signal: abortController.signal,
       });
 
-      const data = await response.json();
       if (!response.ok) {
-        throw new Error(data?.error || `Request failed with status ${response.status}`);
+        let errorMessage = `Request failed with status ${response.status}`;
+        try {
+          const data = await response.json();
+          if (data?.error) {
+            errorMessage = data.error;
+          }
+        } catch {
+          // best-effort
+        }
+        throw new Error(errorMessage);
       }
 
-      if (data.type === 'assistant_message') {
-        const modelMessages = data.modelMessages ?? data.nextMessages;
-        const assistantContentRaw = (data.message?.content ?? '').trim();
-        const assistantReasoning: string | null = data.message?.reasoning ?? null;
-        const finalAssistantContent =
-          assistantContentRaw.length > 0
-            ? assistantContentRaw
-            : (assistantReasoning ?? '').trim();
+      streamingTextRef.current = '';
+      let renderScheduled = false;
+      let sawToken = false;
 
-        await addAssistantMessageToPersistence(
+      const scheduleIncomingRender = () => {
+        if (renderScheduled) {
+          return;
+        }
+        renderScheduled = true;
+        requestAnimationFrame(() => {
+          renderScheduled = false;
+          if (generationIdRef.current !== generationId) {
+            return;
+          }
+          setIncomingMessage(streamingTextRef.current ?? '');
+        });
+      };
+
+      const { content: finalAssistantContent, doneReceived } =
+        await readAssistantContentFromSse(response, {
+          shouldContinue: () => generationIdRef.current === generationId,
+          onToken: (_token, accumulated) => {
+            streamingTextRef.current = accumulated;
+            if (!sawToken) {
+              sawToken = true;
+              setIsFunction(false);
+            }
+            scheduleIncomingRender();
+          },
+        });
+
+      if (generationIdRef.current !== generationId) {
+        return;
+      }
+
+      const wasInterrupted = !doneReceived;
+      if (!wasInterrupted) {
+        const assistantOrder = messageOrderRef.current + 1;
+        messageOrderRef.current = assistantOrder;
+        const persistedMessageId = await addAssistantMessageToPersistence(
           createdChatId ?? chatId,
           finalAssistantContent,
+          assistantOrder,
         );
-        setConversation(
-          modelMessages ?? [
-            ...conversationWithUser,
-            {
-              role: 'assistant',
-              content: finalAssistantContent,
-              reasoning: assistantReasoning ?? undefined,
-            },
-          ],
-        );
-        setFullMessage(finalAssistantContent);
-        setFullReasoning(assistantReasoning);
-        setIncomingMessage('');
-        setIsFunction(false);
-        setGeneratingResponse(false);
-        setPendingFunctionStatus('idle');
-        setPendingFunctionAction('none');
-        setPendingFunction(null);
-      } else if (data.type === 'function_proposed') {
-        const modelMessages = data.modelMessages ?? data.nextMessages;
-        setPendingFunction({
-          metadata: data.function,
-          assistantPreview: data.assistantPreview,
-          assistantReasoning: data.assistantReasoning,
-          functionCall: data.functionCall,
-          nextMessages: modelMessages,
-          chatId: createdChatId ?? chatId,
-        });
-        setConversation(modelMessages);
-        setPendingFunctionStatus('awaiting');
-        setPendingFunctionAction('none');
-        setIncomingMessage('');
-        setIsFunction(true);
-        setGeneratingResponse(false);
+        pendingAssistantMessageIdRef.current = persistedMessageId;
+        setFullMessageStatus(null);
+        setFullMessageStatusDetail(null);
       } else {
-        throw new Error('Unexpected response from the assistant.');
+        setFullMessageStatus('interrupted');
+        setFullMessageStatusDetail('Connection interrupted — showing partial response.');
       }
+
+      setConversation([
+        ...conversationWithUser,
+        {
+          role: 'assistant',
+          content: finalAssistantContent,
+        },
+      ]);
+
+      setFullReasoning(null);
+      setIsFunction(false);
+      setIncomingMessage('');
+      streamingTextRef.current = null;
+      streamAbortControllerRef.current = null;
+      setFullMessage(finalAssistantContent);
+      setGeneratingResponse(false);
+      setPendingFunctionStatus('idle');
+      setPendingFunctionAction('none');
+      setPendingFunction(null);
     } catch (error) {
+      if (
+        streamAbortControllerRef.current?.signal.aborted ||
+        (typeof error === 'object' &&
+          error != null &&
+          'name' in error &&
+          (error as { name?: unknown }).name === 'AbortError')
+      ) {
+        return;
+      }
       console.error('Error generating completion', error);
-      setIncomingMessage('An error occurred while generating the response.');
+      const partial = streamingTextRef.current ?? '';
+      if (partial.trim().length > 0) {
+        pendingAssistantMessageIdRef.current = null;
+        setIncomingMessage('');
+        setFullMessageStatus('interrupted');
+        setFullMessageStatusDetail(
+          error instanceof Error
+            ? `Connection interrupted — ${error.message}`
+            : 'Connection interrupted — showing partial response.',
+        );
+        setFullMessage(partial);
+      } else {
+        setIncomingMessage('An error occurred while generating the response.');
+      }
+
+      streamingTextRef.current = null;
+      streamAbortControllerRef.current = null;
       setIsFunction(false);
       setGeneratingResponse(false);
     }
-  };
+  }, [
+    chatId,
+    conversation,
+    userId,
+    userMessageId,
+    autoResizeTextarea,
+    addAssistantMessageToPersistence,
+  ]);
+
+  useEffect(() => {
+    if (!autoSendPrompt) {
+      return;
+    }
+    if (autoSendRef.current) {
+      return;
+    }
+    const prompt = autoSendPrompt.trim();
+    if (!prompt.length) {
+      return;
+    }
+    autoSendRef.current = true;
+    void handleSend(prompt);
+  }, [autoSendPrompt, handleSend]);
 
   const handleFunctionAction = useCallback(async (action: 'approve' | 'decline') => {
     if (!pendingFunction) {
@@ -621,10 +783,14 @@ export const Chat: React.FC<ChatProps> = ({
           finalAssistantContent =
             preview.length > 0 ? preview : 'The action completed without additional details.';
         }
-        await addAssistantMessageToPersistence(
+        const assistantOrder = messageOrderRef.current + 1;
+        messageOrderRef.current = assistantOrder;
+        const persistedMessageId = await addAssistantMessageToPersistence(
           pendingFunction.chatId ?? chatId,
           finalAssistantContent,
+          assistantOrder,
         );
+        pendingAssistantMessageIdRef.current = persistedMessageId;
 
         setConversation(
           modelMessages ?? [
@@ -861,10 +1027,17 @@ export const Chat: React.FC<ChatProps> = ({
                   clientUrl={clientUrl}
                   reasoning={message.reasoning}
                   functionCallMeta={message.functionCallMeta}
+                  status={message.status}
+                  statusDetail={message.statusDetail}
                 />
               ))}
               {!!incomingMessage && (
-                <Message role="bot" isFunction={isFunction} content={incomingMessage} />
+                <Message
+                  role="bot"
+                  isFunction={isFunction}
+                  content={incomingMessage}
+                  showStreamingCursor={generatingResponse && !isFunction}
+                />
               )}
             </>
           )}
@@ -999,6 +1172,7 @@ export const Chat: React.FC<ChatProps> = ({
               disabled={generatingResponse || isFunction}
               aria-label="Message Alga"
               aria-busy={generatingResponse || isFunction}
+              data-automation-id="chat-input"
             />
             <p className="chat-input__hint">
               Press Ctrl+Enter or ⌘+Enter to send.

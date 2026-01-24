@@ -4,14 +4,14 @@
 
 'use server';
 
-import { createTenantKnex, getCurrentTenantId, getTenantContext, runWithTenant } from 'server/src/lib/db';
+import { createTenantKnex } from '@/lib/db';
 import type { Knex } from 'knex';
-import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
-import type { DnsRecord, DnsLookupResult } from '@shared/types/email';
+import type { DnsRecord, DnsLookupResult } from '@alga-psa/types';
 import { enqueueManagedEmailDomainWorkflow } from '@ee/lib/email-domains/workflowClient';
 import { isValidDomain } from '@ee/lib/email-domains/domainValidation';
-import { hasPermission } from 'server/src/lib/auth/rbac';
-import { observabilityLogger } from 'server/src/lib/observability/logging';
+import { withAuth, hasPermission } from '@alga-psa/auth';
+import { observabilityLogger } from '@/lib/observability/logging';
+import type { IUser } from 'server/src/interfaces/auth.interfaces';
 
 const DEFAULT_REGION = process.env.RESEND_DEFAULT_REGION || 'us-east-1';
 const EMAIL_SETTINGS_RESOURCE = 'ticket_settings';
@@ -66,39 +66,25 @@ export interface ManagedDomainStatus {
   updatedAt?: string | null;
 }
 
-async function ensureTenantContext(action: EmailDomainPermissionAction) {
-  const user = await getCurrentUser();
-  if (!user) {
-    throw new Error('User not authenticated');
+async function checkEmailDomainPermission(
+  user: IUser,
+  action: EmailDomainPermissionAction,
+  knex: Knex
+): Promise<void> {
+  const allowed = await hasPermission(user, EMAIL_SETTINGS_RESOURCE, action, knex);
+  if (!allowed && user.user_type === 'client') {
+    throw new Error('You do not have permission to manage managed email domains.');
   }
-
-  let tenantFromContext = await getTenantContext();
-  if (!tenantFromContext) {
-    tenantFromContext = (await getCurrentTenantId()) ?? undefined;
-  }
-
-  if (!tenantFromContext) {
-    throw new Error('Tenant context not found');
-  }
-
-  return runWithTenant(tenantFromContext, async () => {
-    const { knex } = await createTenantKnex();
-    const allowed = await hasPermission(user, EMAIL_SETTINGS_RESOURCE, action, knex);
-    if (!allowed && user.user_type === 'client') {
-      throw new Error('You do not have permission to manage managed email domains.');
-    }
-    // MSP/internal roles are temporarily allowed even if the granular permission has not been seeded yet.
-
-    return { knex, tenantId: tenantFromContext };
-  });
+  // MSP/internal roles are temporarily allowed even if the granular permission has not been seeded yet.
 }
 
-export async function getManagedEmailDomains(): Promise<ManagedDomainStatus[]> {
-  const { knex, tenantId } = await ensureTenantContext('read');
+export const getManagedEmailDomains = withAuth(async (user, { tenant }): Promise<ManagedDomainStatus[]> => {
+  const { knex } = await createTenantKnex();
+  await checkEmailDomainPermission(user, 'read', knex);
   const tenantColumn = await getEmailDomainTenantColumn(knex);
 
   const rows = await knex('email_domains')
-    .where({ [tenantColumn]: tenantId })
+    .where({ [tenantColumn]: tenant })
     .orderBy('created_at', 'desc');
 
   return rows.map((row: any) => {
@@ -126,10 +112,11 @@ export async function getManagedEmailDomains(): Promise<ManagedDomainStatus[]> {
       updatedAt: row.updated_at ? new Date(row.updated_at).toISOString() : null,
     } as ManagedDomainStatus;
   });
-}
+});
 
-export async function requestManagedEmailDomain(domainName: string) {
-  const { knex, tenantId } = await ensureTenantContext('create');
+export const requestManagedEmailDomain = withAuth(async (user, { tenant }, domainName: string) => {
+  const { knex } = await createTenantKnex();
+  await checkEmailDomainPermission(user, 'create', knex);
   const tenantColumn = await getEmailDomainTenantColumn(knex);
 
   const normalizedDomain = domainName.trim().toLowerCase();
@@ -141,7 +128,7 @@ export async function requestManagedEmailDomain(domainName: string) {
 
   await knex('email_domains')
     .insert({
-      [tenantColumn]: tenantId,
+      [tenantColumn]: tenant,
       domain_name: normalizedDomain,
       status: 'pending',
       created_at: now,
@@ -157,7 +144,7 @@ export async function requestManagedEmailDomain(domainName: string) {
   let result: Awaited<ReturnType<typeof enqueueManagedEmailDomainWorkflow>>;
   try {
     result = await enqueueManagedEmailDomainWorkflow({
-      tenantId,
+      tenantId: tenant,
       domain: normalizedDomain,
       region: DEFAULT_REGION,
       trigger: 'register',
@@ -165,7 +152,7 @@ export async function requestManagedEmailDomain(domainName: string) {
   } catch (error: any) {
     observabilityLogger.error('Error enqueueing managed email domain workflow (register)', error, {
       event_type: 'managed_email_domain_workflow_enqueue_failed',
-      tenant_id: tenantId,
+      tenant_id: tenant,
       domain: normalizedDomain,
     });
     throw new Error('Failed to start managed domain workflow');
@@ -174,7 +161,7 @@ export async function requestManagedEmailDomain(domainName: string) {
   if (!result.enqueued) {
     logWorkflowEnqueueFailure({
       operation: 'register',
-      tenantId,
+      tenantId: tenant,
       domain: normalizedDomain,
       workflowError: result.error,
     });
@@ -182,15 +169,16 @@ export async function requestManagedEmailDomain(domainName: string) {
   }
 
   return { success: true, alreadyRunning: result.alreadyRunning ?? false };
-}
+});
 
-export async function refreshManagedEmailDomain(domainName: string) {
-  const { knex, tenantId } = await ensureTenantContext('update');
+export const refreshManagedEmailDomain = withAuth(async (user, { tenant }, domainName: string) => {
+  const { knex } = await createTenantKnex();
+  await checkEmailDomainPermission(user, 'update', knex);
   const tenantColumn = await getEmailDomainTenantColumn(knex);
   const normalizedDomain = domainName.trim().toLowerCase();
 
   const existing = await knex('email_domains')
-    .where({ [tenantColumn]: tenantId, domain_name: normalizedDomain })
+    .where({ [tenantColumn]: tenant, domain_name: normalizedDomain })
     .first();
 
   if (!existing) {
@@ -200,7 +188,7 @@ export async function refreshManagedEmailDomain(domainName: string) {
   let result: Awaited<ReturnType<typeof enqueueManagedEmailDomainWorkflow>>;
   try {
     result = await enqueueManagedEmailDomainWorkflow({
-      tenantId,
+      tenantId: tenant,
       domain: normalizedDomain,
       providerDomainId: existing.provider_domain_id || undefined,
       trigger: 'refresh',
@@ -208,7 +196,7 @@ export async function refreshManagedEmailDomain(domainName: string) {
   } catch (error: any) {
     observabilityLogger.error('Error enqueueing managed email domain workflow (refresh)', error, {
       event_type: 'managed_email_domain_workflow_enqueue_failed',
-      tenant_id: tenantId,
+      tenant_id: tenant,
       domain: normalizedDomain,
       provider_domain_id: existing.provider_domain_id || undefined,
     });
@@ -218,7 +206,7 @@ export async function refreshManagedEmailDomain(domainName: string) {
   if (!result.enqueued) {
     logWorkflowEnqueueFailure({
       operation: 'refresh',
-      tenantId,
+      tenantId: tenant,
       domain: normalizedDomain,
       providerDomainId: existing.provider_domain_id || undefined,
       workflowError: result.error,
@@ -227,15 +215,16 @@ export async function refreshManagedEmailDomain(domainName: string) {
   }
 
   return { success: true, alreadyRunning: result.alreadyRunning ?? false };
-}
+});
 
-export async function deleteManagedEmailDomain(domainName: string) {
-  const { knex, tenantId } = await ensureTenantContext('delete');
+export const deleteManagedEmailDomain = withAuth(async (user, { tenant }, domainName: string) => {
+  const { knex } = await createTenantKnex();
+  await checkEmailDomainPermission(user, 'delete', knex);
   const tenantColumn = await getEmailDomainTenantColumn(knex);
   const normalizedDomain = domainName.trim().toLowerCase();
 
   const existing = await knex('email_domains')
-    .where({ [tenantColumn]: tenantId, domain_name: normalizedDomain })
+    .where({ [tenantColumn]: tenant, domain_name: normalizedDomain })
     .first();
 
   if (!existing) {
@@ -244,7 +233,7 @@ export async function deleteManagedEmailDomain(domainName: string) {
 
   const now = new Date();
   await knex('email_domains')
-    .where({ [tenantColumn]: tenantId, domain_name: normalizedDomain })
+    .where({ [tenantColumn]: tenant, domain_name: normalizedDomain })
     .update({
       status: 'deleting',
       updated_at: now,
@@ -253,7 +242,7 @@ export async function deleteManagedEmailDomain(domainName: string) {
   let result: Awaited<ReturnType<typeof enqueueManagedEmailDomainWorkflow>>;
   try {
     result = await enqueueManagedEmailDomainWorkflow({
-      tenantId,
+      tenantId: tenant,
       domain: normalizedDomain,
       providerDomainId: existing.provider_domain_id || undefined,
       trigger: 'delete',
@@ -261,7 +250,7 @@ export async function deleteManagedEmailDomain(domainName: string) {
   } catch (error: any) {
     observabilityLogger.error('Error enqueueing managed email domain workflow (delete)', error, {
       event_type: 'managed_email_domain_workflow_enqueue_failed',
-      tenant_id: tenantId,
+      tenant_id: tenant,
       domain: normalizedDomain,
       provider_domain_id: existing.provider_domain_id || undefined,
     });
@@ -271,7 +260,7 @@ export async function deleteManagedEmailDomain(domainName: string) {
   if (!result.enqueued) {
     logWorkflowEnqueueFailure({
       operation: 'delete',
-      tenantId,
+      tenantId: tenant,
       domain: normalizedDomain,
       providerDomainId: existing.provider_domain_id || undefined,
       workflowError: result.error,
@@ -280,4 +269,4 @@ export async function deleteManagedEmailDomain(domainName: string) {
   }
 
   return { success: true };
-}
+});

@@ -1,0 +1,43 @@
+[
+  { "id": "F001", "description": "Define and document billing period semantics as [start, end) (end exclusive) across billing engine, invoice generation, and validations", "implemented": true, "prdRefs": ["Requirements", "Acceptance Criteria"] },
+  { "id": "F002", "description": "Inventory current end-date semantics and identify all inclusive vs exclusive usages (billing engine, proration, overlap checks, UI previews)", "implemented": true, "prdRefs": ["Problem", "Functional Requirements"] },
+  { "id": "F003", "description": "Update billing docs to explicitly describe [start, end) semantics and how billing cycles map to invoice periods", "implemented": true, "prdRefs": ["UX / UI Notes", "Rollout / Migration"] },
+
+  { "id": "F010", "description": "Add per-client billing cycle anchor fields to client billing settings schema (migration)", "implemented": true, "prdRefs": ["Data / API / Integrations", "Rollout / Migration"] },
+  { "id": "F011", "description": "Define anchor configuration rules per BillingCycleType (weekly/bi-weekly/monthly/quarterly/semi-annually/annually)", "implemented": true, "prdRefs": ["UX / UI Notes", "Functional Requirements"] },
+  { "id": "F012", "description": "Implement server actions to read a client's billing anchor configuration", "implemented": true, "prdRefs": ["Data / API / Integrations"] },
+  { "id": "F013", "description": "Implement server actions to update a client's billing anchor configuration with validation and permissions", "implemented": true, "prdRefs": ["Security / Permissions", "Functional Requirements"] },
+  { "id": "F014", "description": "Backfill defaults for new anchor fields for existing clients (do not modify existing client_billing_cycles rows)", "implemented": true, "prdRefs": ["Rollout / Migration"] },
+
+  { "id": "F020", "description": "Update Client → Billing UI to display and edit anchor settings for the selected billing cycle type (cycle-type-aware editor + preview)", "implemented": true, "prdRefs": ["UX / UI Notes", "Users and Primary Flows"] },
+  { "id": "F021", "description": "Monthly anchor UI: allow selecting day-of-month (default 1; V1 optionally limited to 1–28)", "implemented": true, "prdRefs": ["UX / UI Notes", "Open Questions"] },
+  { "id": "F022", "description": "Weekly anchor UI: allow selecting weekday (Mon–Sun) with preview of next cycle boundary", "implemented": true, "prdRefs": ["UX / UI Notes"] },
+  { "id": "F023", "description": "Bi-weekly anchor UI: allow selecting a concrete first cycle start date (UTC date) to establish stable parity", "implemented": true, "prdRefs": ["UX / UI Notes"] },
+  { "id": "F024", "description": "Quarterly/semi-annual/annual anchor UI: allow selecting start month and day-of-month (1–28), with preview", "implemented": true, "prdRefs": ["UX / UI Notes"] },
+  { "id": "F025", "description": "UI copy/tooltips: clarify that period end is exclusive and represents the start of the next period", "implemented": true, "prdRefs": ["UX / UI Notes"] },
+  { "id": "F026", "description": "Change Billing → Billing Cycles tab to summary-only (no schedule editing); provide links into Client → Billing for edits", "implemented": true, "prdRefs": ["UX / UI Notes", "Users and Primary Flows"] },
+  { "id": "F027", "description": "Move manual “Create Next Cycle” UX to Client → Billing (remove from billing dashboard)", "implemented": true, "prdRefs": ["Users and Primary Flows", "Functional Requirements"] },
+
+  { "id": "F030", "description": "Refactor billing cycle generation to compute the current cycle start from anchor settings rather than fixed calendar starts", "implemented": true, "prdRefs": ["Functional Requirements", "Rollout / Migration"] },
+  { "id": "F031", "description": "Implement anchor-based cycle generation for monthly cycles (e.g., bill on the 10th)", "implemented": true, "prdRefs": ["Functional Requirements"] },
+  { "id": "F032", "description": "Implement anchor-based cycle generation for weekly cycles", "implemented": true, "prdRefs": ["Functional Requirements"] },
+  { "id": "F033", "description": "Implement anchor-based cycle generation for bi-weekly cycles with stable parity", "implemented": true, "prdRefs": ["Functional Requirements"] },
+  { "id": "F034", "description": "Implement anchor-based cycle generation for quarterly cycles", "implemented": true, "prdRefs": ["Functional Requirements"] },
+  { "id": "F035", "description": "Implement anchor-based cycle generation for semi-annual cycles", "implemented": true, "prdRefs": ["Functional Requirements"] },
+  { "id": "F036", "description": "Implement anchor-based cycle generation for annual cycles", "implemented": true, "prdRefs": ["Functional Requirements"] },
+  { "id": "F037", "description": "Ensure scheduled job createClientContractLineCycles uses the new anchor-based generation for all tenants/clients", "implemented": true, "prdRefs": ["Rollout / Migration"] },
+
+  { "id": "F040", "description": "Fix createNextBillingCycle server action to honor passed effectiveDate / anchor semantics (remove ignored param behavior)", "implemented": true, "prdRefs": ["Functional Requirements", "Acceptance Criteria"] },
+  { "id": "F041", "description": "Add validation to prevent creating cycles that overlap existing cycles under [start, end) semantics", "implemented": true, "prdRefs": ["Functional Requirements"] },
+  { "id": "F042", "description": "Implement anchor change cutover after last invoiced cycle: create transition period(s) to reach the next anchor boundary without gaps/overlaps", "implemented": true, "prdRefs": ["Functional Requirements", "Acceptance Criteria"] },
+  { "id": "F043", "description": "Implement fixed recurring charge proration for transition periods based on actual period length vs canonical cycle length", "implemented": true, "prdRefs": ["Functional Requirements"] },
+  { "id": "F044", "description": "Apply the same cutover behavior when billing cycle type changes (after last invoiced; deactivate future non-invoiced cycles so regeneration uses the new schedule)", "implemented": true, "prdRefs": ["Functional Requirements", "Acceptance Criteria"] },
+  { "id": "F045", "description": "Add a unified server action to update a client’s billing schedule (cycle type + anchor) in one transaction with cutover semantics", "implemented": true, "prdRefs": ["Data / API / Integrations", "Functional Requirements"] },
+
+  { "id": "F050", "description": "Update billing engine proration calculations to use exclusive end dates consistently", "implemented": true, "prdRefs": ["Functional Requirements"] },
+  { "id": "F051", "description": "Update overlap validation in client contract assignment/update flows to use [start, end) semantics", "implemented": true, "prdRefs": ["Functional Requirements"] },
+  { "id": "F052", "description": "Update any invoice/billing queries that depend on end-date boundaries to use exclusive end semantics consistently", "implemented": true, "prdRefs": ["Functional Requirements"] },
+
+  { "id": "F060", "description": "Add a preview helper (server-side or shared util) that computes next N billing periods from a cycle type + anchor settings for UI display", "implemented": true, "prdRefs": ["UX / UI Notes"] },
+  { "id": "F061", "description": "Update error messaging surfaces to provide actionable feedback when anchors are invalid or conflict with existing invoiced periods", "implemented": true, "prdRefs": ["Functional Requirements"] }
+]

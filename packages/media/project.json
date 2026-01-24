@@ -1,0 +1,22 @@
+{
+  "name": "@alga-psa/media",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "packages/media/src",
+  "projectType": "library",
+  "tags": ["scope:media", "type:horizontal"],
+  "targets": {
+    "build": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "npm -w packages/media run build"
+      }
+    },
+    "test": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "npm -w packages/media run typecheck"
+      }
+    }
+  }
+}
+

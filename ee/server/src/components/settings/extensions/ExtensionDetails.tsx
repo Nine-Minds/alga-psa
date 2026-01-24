@@ -8,9 +8,9 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionContainer';
-import { useAutomationIdAndRegister } from 'server/src/types/ui-reflection/useAutomationIdAndRegister';
-import { ContainerComponent } from 'server/src/types/ui-reflection/types';
+import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContainer';
+import { useAutomationIdAndRegister } from '@alga-psa/ui/ui-reflection/useAutomationIdAndRegister';
+import { ContainerComponent } from '@alga-psa/ui/ui-reflection/types';
 import { Extension } from '../../../lib/extensions/types';
 import { ChevronLeftIcon, InfoIcon, SettingsIcon, PackageIcon, ShieldIcon, AlertCircleIcon, CheckCircleIcon, XCircleIcon } from 'lucide-react';
 import { toast } from 'react-hot-toast';

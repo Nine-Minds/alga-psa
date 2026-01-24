@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getTemplateCategories } from '@/lib/actions/project-actions/projectTemplateActions';
+import { getTemplateCategories } from '@alga-psa/projects/actions/projectTemplateActions';
 
 export async function GET(request: NextRequest) {
   try {

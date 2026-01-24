@@ -101,7 +101,7 @@ For each candidate provider:
 
 ### Phase 1 – Renewal Service & Scheduler (1 sprint)
 1. Create `EmailWebhookMaintenanceService` (`server/src/services/email/EmailWebhookMaintenanceService.ts`) that exposes `renewMicrosoftWebhooks({ tenantId, lookAheadMinutes })`.  
-2. Implement SQL queries using the admin connection (`@alga-psa/shared/db/admin`) to fetch candidate providers with locking semantics.  
+2. Implement SQL queries using the admin connection (`@alga-psa/db/admin`) to fetch candidate providers with locking semantics.  
 3. Within the service, instantiate `MicrosoftGraphAdapter` and call `renewWebhookSubscription` or `registerWebhookSubscription` per provider, handling 404/410 gracefully.  
 4. Centralize persistence updates (webhook fields + `email_provider_health`) so both the job and manual UI reuse the same code.  
 5. Implement `ee/temporal-workflows/src/workflows/email-webhook-maintenance-workflow.ts` plus activities that call `EmailWebhookMaintenanceService`, emit telemetry, and accept signals to force immediate renewal.  

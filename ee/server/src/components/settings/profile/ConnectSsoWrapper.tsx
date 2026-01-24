@@ -4,7 +4,7 @@ import { useEffect, useState, useRef } from "react";
 import ConnectSsoClient from "./ConnectSsoClient";
 import { getSsoProviderOptionsAction } from "@ee/lib/actions/auth/getSsoProviderOptions";
 import { getLinkedSsoAccountsAction, type LinkedSsoAccount } from "@ee/lib/actions/auth/ssoPreferences";
-import Spinner from "server/src/components/ui/Spinner";
+import Spinner from "@alga-psa/ui/components/Spinner";
 
 interface ProviderOption {
   id: string;

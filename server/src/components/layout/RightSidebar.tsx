@@ -1,4 +1,3 @@
-// server/src/components/layout/RightSidebar.tsx
 'use client';
 
 import React, { useEffect, Suspense, lazy, useState } from 'react';
@@ -17,6 +16,8 @@ interface RightSidebarProps {
   auth_token: string;
   setChatTitle: any;
   isTitleLocked: boolean;
+  handoffChatId?: string | null;
+  handoffNonce?: number;
 }
 
 const resolvedEdition =

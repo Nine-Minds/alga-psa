@@ -3,4 +3,4 @@ export {
   withTransaction,
   setTenantContext,
   resetTenantConnectionPool,
-} from '@shared/db/tenant';
+} from '@alga-psa/db';

@@ -803,13 +803,13 @@ vi.mock('next/headers', () => ({
 let sendEventEmail: typeof import('../../lib/notifications/sendEventEmail').sendEventEmail;
 let registerTicketEmailSubscriber: typeof import('../../lib/eventBus/subscribers/ticketEmailSubscriber').registerTicketEmailSubscriber;
 let registerProjectEmailSubscriber: typeof import('../../lib/eventBus/subscribers/projectEmailSubscriber').registerProjectEmailSubscriber;
-let ServerEventPublisher: typeof import('../../lib/adapters/serverEventPublisher').ServerEventPublisher;
+let ServerEventPublisher: typeof import('@alga-psa/event-bus').ServerEventPublisher;
 
 beforeAll(async () => {
   ({ sendEventEmail } = await import('../../lib/notifications/sendEventEmail'));
   ({ registerTicketEmailSubscriber } = await import('../../lib/eventBus/subscribers/ticketEmailSubscriber'));
   ({ registerProjectEmailSubscriber } = await import('../../lib/eventBus/subscribers/projectEmailSubscriber'));
-  ({ ServerEventPublisher } = await import('../../lib/adapters/serverEventPublisher'));
+  ({ ServerEventPublisher } = await import('@alga-psa/event-bus'));
 });
 
 beforeEach(() => {

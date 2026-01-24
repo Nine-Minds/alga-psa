@@ -62,9 +62,7 @@ const MIN_TTL_SECONDS = 60;
 const MAX_TTL_SECONDS = 30 * 24 * 60 * 60; // 30 days
 
 const ajv = new Ajv({
-  strict: false,
   allErrors: true,
-  validateFormats: false,
 });
 
 function assertNamespace(namespace: string) {

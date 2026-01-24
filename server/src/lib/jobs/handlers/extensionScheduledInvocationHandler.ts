@@ -1,7 +1,7 @@
 import crypto from 'node:crypto';
 
-import logger from '@shared/core/logger';
-import { getAdminConnection } from '@shared/db/admin';
+import logger from '@alga-psa/core/logger';
+import { getAdminConnection } from '@alga-psa/db/admin';
 
 import type { BaseJobData } from 'server/src/lib/jobs/interfaces';
 
@@ -79,9 +79,9 @@ export async function extensionScheduledInvocationHandler(
   _jobId: string,
   data: ExtensionScheduledInvocationJobData
 ): Promise<void> {
-  const tenantId = safeString(data.tenantId);
-  const installId = safeString(data.installId);
-  const scheduleId = safeString(data.scheduleId);
+  const tenantId = safeString(data.tenantId).trim();
+  const installId = safeString(data.installId).trim();
+  const scheduleId = safeString(data.scheduleId).trim();
 
   if (!tenantId || !installId || !scheduleId) {
     throw new Error('Missing required job data (tenantId, installId, scheduleId)');

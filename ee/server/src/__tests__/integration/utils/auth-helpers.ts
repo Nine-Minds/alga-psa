@@ -1,5 +1,5 @@
 import type { Page } from '@playwright/test';
-import type { TenantTestData } from '../../lib/testing/tenant-test-factory';
+import type { TenantTestData } from '../../../lib/testing/tenant-test-factory';
 
 const DEFAULT_SESSION_MAX_AGE_SECONDS = 60 * 60 * 24;
 

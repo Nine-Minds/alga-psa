@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import { ConfirmationDialog } from '../components/ui/ConfirmationDialog';
+import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 
 interface UnsavedChangesContextType {
   /**
@@ -31,8 +31,6 @@ interface UnsavedChangesContextType {
   unregister: (componentId: string) => void;
 }
 
-// Export the context so components like BackNav can use useContext directly
-// This allows optional usage without throwing if not in provider
 export const UnsavedChangesContext = createContext<UnsavedChangesContextType | null>(null);
 
 interface UnsavedChangesProviderProps {
@@ -45,22 +43,12 @@ interface UnsavedChangesProviderProps {
    * Custom message for the confirmation dialog
    */
   dialogMessage?: string;
-  /**
-   * Custom label for the confirm button (default: "Discard changes")
-   */
-  confirmLabel?: string;
-  /**
-   * Custom label for the cancel button (default: "Continue editing")
-   */
-  cancelLabel?: string;
 }
 
 export function UnsavedChangesProvider({
   children,
   dialogTitle = 'Unsaved Changes',
   dialogMessage = 'You have unsaved changes. Are you sure you want to leave? Your changes will be lost.',
-  confirmLabel = 'Discard changes',
-  cancelLabel = 'Continue editing',
 }: UnsavedChangesProviderProps) {
   // Use ref to track unsaved components without causing re-renders
   const unsavedComponentsRef = useRef<Set<string>>(new Set());
@@ -191,7 +179,7 @@ export function UnsavedChangesProvider({
   }), [setHasUnsavedChanges, hasAnyUnsavedChanges, confirmNavigation, unregister]);
 
   return (
-    <UnsavedChangesContext.Provider value={contextValue}>
+    <UnsavedChangesContext value={contextValue}>
       {children}
       <ConfirmationDialog
         id="unsaved-changes-dialog"
@@ -200,10 +188,10 @@ export function UnsavedChangesProvider({
         onConfirm={handleConfirm}
         title={dialogTitle}
         message={dialogMessage}
-        confirmLabel={confirmLabel}
-        cancelLabel={cancelLabel}
+        confirmLabel="Leave Without Saving"
+        cancelLabel="Stay"
       />
-    </UnsavedChangesContext.Provider>
+    </UnsavedChangesContext>
   );
 }
 

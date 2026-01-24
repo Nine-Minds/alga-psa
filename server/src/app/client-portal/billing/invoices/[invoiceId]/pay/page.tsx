@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation';
-import { getClientPortalInvoicePaymentLink } from 'server/src/lib/actions/client-portal-actions/client-payment';
-import { PaymentRedirect } from './PaymentRedirect';
+import { getClientPortalInvoicePaymentLink } from '@alga-psa/client-portal/actions/clientPaymentActions';
+import { PaymentRedirect } from '@alga-psa/client-portal/components';
 
 interface PayInvoicePageProps {
   params: {

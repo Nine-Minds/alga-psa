@@ -1,4 +1,4 @@
-import { getAdminConnection } from '@alga-psa/shared/db/admin';
+import { getAdminConnection } from '@alga-psa/db/admin';
 
 export interface TenantInstallInfo {
   install_id: string;

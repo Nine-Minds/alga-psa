@@ -1,7 +1,7 @@
 import { IContract, IContractWithClient } from 'server/src/interfaces/contract.interfaces';
 import { createTenantKnex } from 'server/src/lib/db';
 import { v4 as uuidv4 } from 'uuid';
-import { withTransaction } from '@shared/db';
+import { withTransaction } from '@alga-psa/db';
 import { Knex as KnexType } from 'knex';
 
 /**

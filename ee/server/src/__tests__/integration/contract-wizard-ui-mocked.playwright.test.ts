@@ -81,13 +81,13 @@ test.describe('Contract Wizard UI (Simplified)', () => {
 
           return findInTree(state.components || []);
         },
-        tenantData!.company!.companyName,
+        tenantData!.client!.clientName,
         { timeout: 10000 }
       );
 
       // Select company
       await page.locator('[data-automation-id="company-select"]').click();
-      await page.getByRole('option', { name: tenantData!.company!.companyName }).click();
+      await page.getByRole('option', { name: tenantData!.client!.clientName }).click();
 
       // Fill contract name
       await page.locator('[data-automation-id="contract_name"]').fill('Test Managed Services Contract');

@@ -74,7 +74,7 @@ export class EmailProcessor {
   private async getProviderConfig(providerId: string, tenant: string): Promise<EmailProviderConfig> {
     try {
       // Import database connection dynamically to avoid module resolution issues
-      const { getConnection } = await import('@shared/db/connection');
+      const { getConnection } = await import('@alga-psa/db/connection');
       const db = await getConnection();
       
       // No special handling for test providers - all providers should be in the database
@@ -174,7 +174,7 @@ export class EmailProcessor {
 
     try {
       // Import database connection dynamically to avoid module resolution issues
-      const { getConnection } = await import('@shared/db/connection');
+      const { getConnection } = await import('@alga-psa/db/connection');
       const db = await getConnection();
       
       const record = {

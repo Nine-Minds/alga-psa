@@ -1,0 +1,56 @@
+[
+  { "id": "F001", "description": "Standards: confirm canonical payload field conventions (tenantId required, actor fields, previous/new for transitions, updatedFields/changes) and document them in PRD §6", "implemented": true, "prdRefs": ["6.2"] },
+  { "id": "F002", "description": "Infrastructure: add/extend shared event publishing helper(s) so domain code can publish workflow events consistently (tenantId + actor enrichment, correlation/idempotency hooks)", "implemented": true, "prdRefs": ["7.1", "7.2"] },
+  { "id": "F003", "description": "Schema registry: add payload schemas + registrations for all proposed catalog events (payload.*.v1) so simulator and trigger mapping can resolve schemas", "implemented": true, "prdRefs": ["6.1", "6.2", "6.3", "7.1"] },
+  { "id": "F004", "description": "Event bus schema/types: update shared event bus schema/types to include expanded event types + payload validation; resolve overlaps/renames explicitly (ticket message/comment, scheduling appointment/schedule entry)", "implemented": true, "prdRefs": ["6.3", "7.3"] },
+  { "id": "F005", "description": "Catalog migration: add idempotent upsert migration(s) that insert/update system_event_catalog entries for all events in event-proposals.md with category/name/description + payload_schema_ref", "implemented": true, "prdRefs": ["7.1", "9"] },
+  { "id": "F006", "description": "Simulation: verify simulator can submit every catalog event using payload_schema_ref (form mode + JSON mode), including schema validation failures", "implemented": true, "prdRefs": ["3", "5", "11"] },
+
+  { "id": "F010", "description": "Tickets: emit transition events (TICKET_STATUS_CHANGED, TICKET_PRIORITY_CHANGED, TICKET_ASSIGNED, TICKET_UNASSIGNED, TICKET_REOPENED, TICKET_ESCALATED, TICKET_QUEUE_CHANGED)", "implemented": true, "prdRefs": ["7.2"] },
+  { "id": "F011", "description": "Tickets: emit relationship/aggregation events (TICKET_MERGED, TICKET_SPLIT)", "implemented": true, "prdRefs": ["7.2"] },
+  { "id": "F012", "description": "Tickets: emit communication events (TICKET_MESSAGE_ADDED, TICKET_CUSTOMER_REPLIED, TICKET_INTERNAL_NOTE_ADDED) or map to existing comment events per PRD §7.3", "implemented": true, "prdRefs": ["7.2", "7.3"] },
+  { "id": "F013", "description": "Tickets: emit work tracking event (TICKET_TIME_ENTRY_ADDED) with consistent payload conventions", "implemented": true, "prdRefs": ["7.2"] },
+  { "id": "F014", "description": "Tickets: emit SLA stage events (TICKET_SLA_STAGE_ENTERED, TICKET_SLA_STAGE_MET, TICKET_SLA_STAGE_BREACHED) when SLA module is enabled", "implemented": true, "prdRefs": ["7.2", "7.3"] },
+  { "id": "F015", "description": "Tickets: approval events (TICKET_APPROVAL_REQUESTED, TICKET_APPROVAL_GRANTED, TICKET_APPROVAL_REJECTED) are catalog-only until a ticket approval subsystem exists", "implemented": true, "prdRefs": ["7.2", "7.3", "10"] },
+
+  { "id": "F020", "description": "Scheduling: emit appointment/schedule events (APPOINTMENT_CREATED, APPOINTMENT_RESCHEDULED, APPOINTMENT_CANCELED, APPOINTMENT_COMPLETED, APPOINTMENT_NO_SHOW, APPOINTMENT_ASSIGNED) or map to SCHEDULE_ENTRY_* per PRD §7.3", "implemented": true, "prdRefs": ["7.2", "7.3"] },
+  { "id": "F021", "description": "Scheduling: emit availability block events (SCHEDULE_BLOCK_CREATED, SCHEDULE_BLOCK_DELETED)", "implemented": true, "prdRefs": ["7.2"] },
+  { "id": "F022", "description": "Scheduling: emit capacity alert event (CAPACITY_THRESHOLD_REACHED) when capacity thresholds are configured", "implemented": true, "prdRefs": ["7.2"] },
+  { "id": "F023", "description": "Scheduling/Field Ops: emit dispatch lifecycle events (TECHNICIAN_DISPATCHED, TECHNICIAN_EN_ROUTE, TECHNICIAN_ARRIVED, TECHNICIAN_CHECKED_OUT) when supported", "implemented": true, "prdRefs": ["7.2", "7.3"] },
+
+  { "id": "F030", "description": "Projects: emit project lifecycle events (PROJECT_UPDATED, PROJECT_STATUS_CHANGED)", "implemented": true, "prdRefs": ["7.2"] },
+  { "id": "F031", "description": "Projects: emit task lifecycle events (PROJECT_TASK_CREATED, PROJECT_TASK_ASSIGNED, PROJECT_TASK_STATUS_CHANGED, PROJECT_TASK_COMPLETED)", "implemented": true, "prdRefs": ["7.2"] },
+  { "id": "F032", "description": "Projects: emit dependency events (PROJECT_TASK_DEPENDENCY_BLOCKED, PROJECT_TASK_DEPENDENCY_UNBLOCKED)", "implemented": true, "prdRefs": ["7.2"] },
+  { "id": "F033", "description": "Projects: emit approval events (PROJECT_APPROVAL_REQUESTED, PROJECT_APPROVAL_GRANTED, PROJECT_APPROVAL_REJECTED) when approvals exist/enabled", "implemented": true, "prdRefs": ["7.2", "7.3"] },
+
+  { "id": "F040", "description": "Billing: emit invoice lifecycle events (INVOICE_SENT, INVOICE_STATUS_CHANGED, INVOICE_DUE_DATE_CHANGED, INVOICE_OVERDUE, INVOICE_WRITTEN_OFF) in addition to existing invoice events", "implemented": true, "prdRefs": ["7.2"] },
+  { "id": "F041", "description": "Billing: emit payment events (PAYMENT_RECORDED, PAYMENT_APPLIED, PAYMENT_FAILED, PAYMENT_REFUNDED)", "implemented": true, "prdRefs": ["7.2"] },
+  { "id": "F042", "description": "Billing: emit credit events (CREDIT_NOTE_CREATED, CREDIT_NOTE_APPLIED, CREDIT_NOTE_VOIDED)", "implemented": true, "prdRefs": ["7.2"] },
+  { "id": "F043", "description": "Billing: emit contract events (CONTRACT_CREATED, CONTRACT_UPDATED, CONTRACT_STATUS_CHANGED, CONTRACT_RENEWAL_UPCOMING)", "implemented": true, "prdRefs": ["7.2"] },
+  { "id": "F044", "description": "Billing: emit recurring billing run events (RECURRING_BILLING_RUN_STARTED, RECURRING_BILLING_RUN_COMPLETED, RECURRING_BILLING_RUN_FAILED)", "implemented": true, "prdRefs": ["7.2"] },
+
+  { "id": "F050", "description": "CRM: emit client events (CLIENT_CREATED, CLIENT_UPDATED, CLIENT_STATUS_CHANGED, CLIENT_OWNER_ASSIGNED, CLIENT_MERGED, CLIENT_ARCHIVED)", "implemented": true, "prdRefs": ["7.2"] },
+  { "id": "F051", "description": "CRM: emit contact events (CONTACT_CREATED, CONTACT_UPDATED, CONTACT_PRIMARY_SET, CONTACT_ARCHIVED, CONTACT_MERGED)", "implemented": true, "prdRefs": ["7.2"] },
+  { "id": "F052", "description": "CRM: emit interaction/note events (INTERACTION_LOGGED, NOTE_CREATED)", "implemented": true, "prdRefs": ["7.2"] },
+  { "id": "F053", "description": "Tags: emit tag definition and tag application events (TAG_DEFINITION_CREATED, TAG_DEFINITION_UPDATED, TAG_APPLIED, TAG_REMOVED) with generic entityType/entityId payload shape", "implemented": true, "prdRefs": ["7.2"] },
+
+  { "id": "F060", "description": "Documents: emit storage lifecycle events (DOCUMENT_UPLOADED, DOCUMENT_DELETED)", "implemented": true, "prdRefs": ["7.2"] },
+  { "id": "F061", "description": "Documents: emit association events (DOCUMENT_ASSOCIATED, DOCUMENT_DETACHED)", "implemented": true, "prdRefs": ["7.2"] },
+  { "id": "F062", "description": "Documents: emit system-generation event (DOCUMENT_GENERATED) for generated docs (invoice PDFs, exports, etc.)", "implemented": true, "prdRefs": ["7.2"] },
+  { "id": "F063", "description": "Documents: emit signature events (DOCUMENT_SIGNATURE_REQUESTED, DOCUMENT_SIGNED, DOCUMENT_SIGNATURE_EXPIRED) when e-sign is supported", "implemented": true, "prdRefs": ["7.2", "7.3"] },
+
+  { "id": "F070", "description": "Email: emit inbound reply event (INBOUND_EMAIL_REPLY_RECEIVED) when reply parsing/matching succeeds", "implemented": true, "prdRefs": ["7.2"] },
+  { "id": "F071", "description": "Email: emit outbound lifecycle events (OUTBOUND_EMAIL_QUEUED, OUTBOUND_EMAIL_SENT, OUTBOUND_EMAIL_FAILED) for provider send attempts", "implemented": true, "prdRefs": ["7.2"] },
+  { "id": "F072", "description": "Email: emit delivery/feedback events (EMAIL_DELIVERED, EMAIL_BOUNCED, EMAIL_COMPLAINT_RECEIVED, EMAIL_UNSUBSCRIBED) where provider support exists", "implemented": true, "prdRefs": ["7.2", "7.3"] },
+  { "id": "F073", "description": "Notifications: emit delivery lifecycle events (NOTIFICATION_SENT, NOTIFICATION_DELIVERED, NOTIFICATION_FAILED, NOTIFICATION_READ) for supported channels", "implemented": true, "prdRefs": ["7.2"] },
+  { "id": "F074", "description": "Surveys/CSAT: emit survey lifecycle events (SURVEY_SENT, SURVEY_RESPONSE_RECEIVED, SURVEY_REMINDER_SENT, SURVEY_EXPIRED) and CSAT alert event (CSAT_ALERT_TRIGGERED)", "implemented": true, "prdRefs": ["7.2"] },
+
+  { "id": "F080", "description": "Integrations: emit sync lifecycle events (INTEGRATION_SYNC_STARTED, INTEGRATION_SYNC_COMPLETED, INTEGRATION_SYNC_FAILED)", "implemented": true, "prdRefs": ["7.2"] },
+  { "id": "F081", "description": "Integrations: emit webhook receipt event (INTEGRATION_WEBHOOK_RECEIVED) with safe raw payload handling", "implemented": true, "prdRefs": ["7.2"] },
+  { "id": "F082", "description": "Integrations: emit connection health events (INTEGRATION_CONNECTED, INTEGRATION_DISCONNECTED)", "implemented": true, "prdRefs": ["7.2"] },
+  { "id": "F083", "description": "Integrations: emit token lifecycle events (INTEGRATION_TOKEN_EXPIRING, INTEGRATION_TOKEN_REFRESH_FAILED)", "implemented": true, "prdRefs": ["7.2"] },
+  { "id": "F084", "description": "Integrations: emit mapping/config change event (EXTERNAL_MAPPING_CHANGED) for external mapping updates", "implemented": true, "prdRefs": ["7.2"] },
+
+  { "id": "F090", "description": "Assets: emit asset lifecycle events (ASSET_CREATED, ASSET_UPDATED, ASSET_ASSIGNED, ASSET_UNASSIGNED, ASSET_WARRANTY_EXPIRING)", "implemented": true, "prdRefs": ["7.2"] },
+  { "id": "F091", "description": "Media: emit file/media pipeline events (FILE_UPLOADED, MEDIA_PROCESSING_SUCCEEDED, MEDIA_PROCESSING_FAILED)", "implemented": true, "prdRefs": ["7.2"] }
+]

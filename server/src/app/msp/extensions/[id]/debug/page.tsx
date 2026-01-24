@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
-import { Checkbox } from 'server/src/components/ui/Checkbox';
+import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 
 type DebugEvent = {
   ts?: string;

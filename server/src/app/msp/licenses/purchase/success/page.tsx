@@ -2,14 +2,13 @@
 
 import React, { useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { Card, CardContent } from 'server/src/components/ui/Card';
-import { Button } from 'server/src/components/ui/Button';
-import { Badge } from 'server/src/components/ui/Badge';
+import { Card, CardContent } from '@alga-psa/ui/components/Card';
+import { Button } from '@alga-psa/ui/components/Button';
+import { Badge } from '@alga-psa/ui/components/Badge';
 import { CheckCircle, ArrowRight, Loader2, Calendar, Users } from 'lucide-react';
 import Link from 'next/link';
-import { getLicenseUsageAction } from 'server/src/lib/actions/license-actions';
-import { getSubscriptionInfoAction } from '@/empty/lib/actions/license-actions';
-import type { IGetSubscriptionInfoResponse } from 'server/src/interfaces/subscription.interfaces';
+import { getLicenseUsageAction } from '@alga-psa/licensing/actions';
+import { getSubscriptionInfoAction } from '@ee/lib/actions/license-actions';
 
 export default function LicensePurchaseSuccessPage() {
   const searchParams = useSearchParams();
@@ -31,8 +30,8 @@ export default function LicensePurchaseSuccessPage() {
 
         // If scheduled change, get subscription end date
         if (isScheduled) {
-          const subResult: IGetSubscriptionInfoResponse = await getSubscriptionInfoAction();
-          if (subResult.success && subResult.data) {
+          const subResult = await getSubscriptionInfoAction();
+          if (subResult?.success && subResult.data) {
             setScheduledDate(subResult.data.current_period_end);
           }
         }

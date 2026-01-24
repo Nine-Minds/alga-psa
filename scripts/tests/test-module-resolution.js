@@ -7,7 +7,6 @@ const packages = [
   '@product/settings-extensions',
   '@product/extensions',
   '@product/chat',
-  '@product/email-providers',
   '@product/workflows',
   '@product/billing',
   '@product/extension-actions',

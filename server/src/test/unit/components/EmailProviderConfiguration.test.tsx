@@ -6,7 +6,7 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest';
 import '@testing-library/jest-dom';
-import { EmailProviderConfiguration } from '../../../components/EmailProviderConfiguration';
+import { EmailProviderConfiguration } from '@alga-psa/integrations/components';
 
 // Mock the server actions
 vi.mock('../../../lib/actions/email-actions/emailProviderActions', () => ({

@@ -1,7 +1,7 @@
 import { runWithTenant, createTenantKnex } from '@/lib/db';
 import { ApiKeyService } from 'server/src/lib/services/apiKeyService';
-import { withAdminTransaction } from '@alga-psa/shared/db';
-import logger from '@shared/core/logger';
+import { withAdminTransaction } from '@alga-psa/db';
+import logger from '@alga-psa/core/logger';
 
 const PURPOSE_AI_SESSION = 'ai_session';
 const DEFAULT_EXPIRY_MINUTES = 30;

@@ -2,7 +2,7 @@
 import React from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
-import { Button } from 'server/src/components/ui/Button';
+import { Button } from '@alga-psa/ui/components/Button';
 
 const PasswordResetConfirmation: React.FC = () => {
   const router = useRouter();

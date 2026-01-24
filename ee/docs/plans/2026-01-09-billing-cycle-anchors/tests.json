@@ -1,0 +1,189 @@
+[
+  {
+    "id": "T001",
+    "description": "Unit: monthly anchor day=10 produces current period start/end with end exclusive (e.g., 2026-01-09 => 2025-12-10..2026-01-10)",
+    "implemented": true,
+    "featureIds": [
+      "F031",
+      "F001"
+    ]
+  },
+  {
+    "id": "T002",
+    "description": "Unit: monthly anchor day=1 matches existing calendar-aligned behavior (periods start on 1st, end on 1st of next month)",
+    "implemented": true,
+    "featureIds": [
+      "F031",
+      "F014"
+    ]
+  },
+  {
+    "id": "T003",
+    "description": "Unit: weekly anchor weekday=Mon produces correct rolling weekly boundaries with end exclusive",
+    "implemented": true,
+    "featureIds": [
+      "F032",
+      "F001"
+    ]
+  },
+  {
+    "id": "T004",
+    "description": "Unit: bi-weekly anchor with first-start date produces stable parity across month boundaries (no drift) and end exclusive",
+    "implemented": true,
+    "featureIds": [
+      "F033",
+      "F023"
+    ]
+  },
+  {
+    "id": "T005",
+    "description": "Unit: quarterly anchor logic produces correct quarter boundaries (with configured start month if supported)",
+    "implemented": true,
+    "featureIds": [
+      "F034",
+      "F024"
+    ]
+  },
+  {
+    "id": "T006",
+    "description": "Unit: semi-annual anchor logic produces correct 6-month boundaries",
+    "implemented": true,
+    "featureIds": [
+      "F035"
+    ]
+  },
+  {
+    "id": "T007",
+    "description": "Unit: annual anchor logic produces correct year boundaries (with configured month/day if supported)",
+    "implemented": true,
+    "featureIds": [
+      "F036",
+      "F024"
+    ]
+  },
+  {
+    "id": "T010",
+    "description": "Unit: proration uses exclusive end dates (period days computed as end-start, not inclusive +1) and matches expected factor",
+    "implemented": true,
+    "featureIds": [
+      "F050",
+      "F001"
+    ]
+  },
+  {
+    "id": "T011",
+    "description": "Unit: time/usage queries do not include items exactly at the period end boundary (end exclusive)",
+    "implemented": true,
+    "featureIds": [
+      "F052",
+      "F001"
+    ]
+  },
+  {
+    "id": "T012",
+    "description": "Unit: overlap/validation logic treats [start, end) correctly (touching boundaries do not overlap)",
+    "implemented": true,
+    "featureIds": [
+      "F051",
+      "F041"
+    ]
+  },
+  {
+    "id": "T020",
+    "description": "Integration: createClientContractLineCycles creates the initial cycle aligned to configured monthly anchor for a client with no existing cycles",
+    "implemented": true,
+    "featureIds": [
+      "F030",
+      "F031",
+      "F014"
+    ]
+  },
+  {
+    "id": "T021",
+    "description": "Integration: createClientContractLineCycles backfills multiple cycles up to 'now' without overlaps under end exclusive semantics",
+    "implemented": true,
+    "featureIds": [
+      "F030",
+      "F041"
+    ]
+  },
+  {
+    "id": "T022",
+    "description": "Integration: manual createNextBillingCycle respects effectiveDate/anchor inputs (no longer ignored) and returns duplicate/suggestedDate correctly",
+    "implemented": true,
+    "featureIds": [
+      "F040",
+      "F041"
+    ]
+  },
+  {
+    "id": "T023",
+    "description": "Integration: changing anchor applies after the last invoiced cycle and creates a transition period to align to the next anchor boundary without gaps/overlaps",
+    "implemented": true,
+    "featureIds": [
+      "F042",
+      "F041"
+    ]
+  },
+  {
+    "id": "T024",
+    "description": "Integration: transition period fixed charges are prorated by (actualDays / canonicalCycleDays) under end exclusive semantics",
+    "implemented": true,
+    "featureIds": [
+      "F043",
+      "F050"
+    ]
+  },
+  {
+    "id": "T030",
+    "description": "Unit/UI: Client → Billing schedule editor renders upcoming periods preview and saving schedule calls the unified update action",
+    "implemented": true,
+    "featureIds": [
+      "F020",
+      "F060"
+    ]
+  },
+  {
+    "id": "T031",
+    "description": "UI: Client → Billing “Create Next Cycle” triggers createNextBillingCycle for that client",
+    "implemented": true,
+    "featureIds": [
+      "F027"
+    ]
+  },
+  {
+    "id": "T033",
+    "description": "UI: Billing → Billing Cycles is summary-only (no schedule editing controls) and links to Client → Billing for schedule changes",
+    "implemented": true,
+    "featureIds": [
+      "F026"
+    ]
+  },
+  {
+    "id": "T034",
+    "description": "Unit: updateClientBillingSchedule applies cutover after last invoiced cycle and deactivates future non-invoiced cycles; if no invoiced cycles exist, deactivates all non-invoiced cycles",
+    "implemented": true,
+    "featureIds": [
+      "F044"
+    ]
+  },
+  {
+    "id": "T035",
+    "description": "Unit: updateClientBillingSchedule atomically updates billing cycle + anchor and uses cutover semantics identical to anchor-only changes",
+    "implemented": true,
+    "featureIds": [
+      "F045",
+      "F042",
+      "F044"
+    ]
+  },
+  {
+    "id": "T032",
+    "description": "Unit: anchor validation errors are clear (invalid day-of-month/day-of-week or non-UTC-midnight reference dates)",
+    "implemented": true,
+    "featureIds": [
+      "F013",
+      "F061"
+    ]
+  }
+]

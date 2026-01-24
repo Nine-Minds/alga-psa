@@ -1,22 +1,24 @@
 'use client';
 
+// Auth-owned admin session management UI.
+
 import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from 'server/src/components/ui/Card';
-import { Button } from 'server/src/components/ui/Button';
-import { Badge } from 'server/src/components/ui/Badge';
-import { Input } from 'server/src/components/ui/Input';
-import CustomSelect from 'server/src/components/ui/CustomSelect';
-import UserPicker from 'server/src/components/ui/UserPicker';
-import { DatePicker } from 'server/src/components/ui/DatePicker';
+import { Card, CardContent, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
+import { Button } from '@alga-psa/ui/components/Button';
+import { Badge } from '@alga-psa/ui/components/Badge';
+import { Input } from '@alga-psa/ui/components/Input';
+import CustomSelect from '@alga-psa/ui/components/CustomSelect';
+import UserPicker from '@alga-psa/ui/components/UserPicker';
+import { DatePicker } from '@alga-psa/ui/components/DatePicker';
 import { toast } from 'react-hot-toast';
 import { formatDistanceToNow } from 'date-fns';
 import {
   getAllSessionsAction,
   revokeSessionAction,
   type SessionWithUser,
-} from 'server/src/lib/actions/session-actions/sessionActions';
-import { getAllUsers } from 'server/src/lib/actions/user-actions/userActions';
-import { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
+} from '@alga-psa/auth/actions';
+import { getAllUsers } from '@alga-psa/users/actions';
+import type { IUserWithRoles } from '@alga-psa/types';
 import {
   Monitor,
   Smartphone,

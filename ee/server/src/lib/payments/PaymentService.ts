@@ -11,7 +11,7 @@
 
 import { Knex } from 'knex';
 import { getConnection } from 'server/src/lib/db/db';
-import logger from '@alga-psa/shared/core/logger';
+import logger from '@alga-psa/core/logger';
 import {
   PaymentProvider,
   PaymentLinkResult,
@@ -28,6 +28,13 @@ import {
 import { PaymentProviderRegistry, PAYMENT_PROVIDER_TYPES } from './PaymentProviderRegistry';
 import { createStripePaymentProvider } from './StripePaymentProvider';
 import { recordTransaction } from 'server/src/lib/utils/transactionUtils';
+import { publishWorkflowEvent } from 'server/src/lib/eventBus/publishers';
+import {
+  buildPaymentAppliedPayload,
+  buildPaymentFailedPayload,
+  buildPaymentRecordedPayload,
+  buildPaymentRefundedPayload,
+} from 'server/src/lib/api/services/paymentWorkflowEvents';
 
 /**
  * Invoice data needed for payment operations.
@@ -420,8 +427,30 @@ export class PaymentService {
       paymentIntentId: event.paymentIntentId,
     });
 
-    // Could trigger notification to tenant about failed payment
-    // For now, just log it
+    const occurredAt = new Date().toISOString();
+
+    if (typeof event.amount === 'number') {
+      const invoice = event.invoiceId ? await this.getInvoice(event.invoiceId) : null;
+      const currency = (event.currency || invoice?.currency_code || 'USD').toUpperCase();
+
+      await publishWorkflowEvent({
+        eventType: 'PAYMENT_FAILED',
+        payload: buildPaymentFailedPayload({
+          invoiceId: event.invoiceId,
+          clientId: invoice?.client_id,
+          failedAt: occurredAt,
+          amount: event.amount,
+          currency,
+          method: event.provider,
+        }),
+        ctx: {
+          tenantId: this.tenantId,
+          occurredAt,
+          actor: { actorType: 'SYSTEM' },
+        },
+        idempotencyKey: `payment_failed:${event.provider}:${event.eventId}`,
+      });
+    }
 
     return { success: true, paymentRecorded: false };
   }
@@ -535,6 +564,24 @@ export class PaymentService {
       });
 
       return refund.payment_id;
+    });
+
+    const occurredAt = new Date().toISOString();
+    await publishWorkflowEvent({
+      eventType: 'PAYMENT_REFUNDED',
+      payload: buildPaymentRefundedPayload({
+        paymentId: refundId,
+        refundedAt: occurredAt,
+        amount: Math.abs(event.amount),
+        currency: String(event.currency || invoice.currency_code || 'USD'),
+        reason: `Stripe refund via ${event.eventType}`,
+      }),
+      ctx: {
+        tenantId: this.tenantId,
+        occurredAt,
+        actor: { actorType: 'SYSTEM' },
+      },
+      idempotencyKey: `payment_refunded:${refundId}`,
     });
 
     return {
@@ -674,6 +721,41 @@ export class PaymentService {
       });
 
       return payment.payment_id;
+    });
+
+    const occurredAt = new Date().toISOString();
+    await publishWorkflowEvent({
+      eventType: 'PAYMENT_RECORDED',
+      payload: buildPaymentRecordedPayload({
+        paymentId,
+        clientId: invoice.client_id,
+        receivedAt: occurredAt,
+        amount: event.amount,
+        currency: String(invoice.currency_code || event.currency || 'USD'),
+        method: event.provider,
+        gatewayTransactionId: event.paymentIntentId,
+      }),
+      ctx: {
+        tenantId: this.tenantId,
+        occurredAt,
+        actor: { actorType: 'SYSTEM' },
+      },
+      idempotencyKey: `payment_recorded:${paymentId}`,
+    });
+
+    await publishWorkflowEvent({
+      eventType: 'PAYMENT_APPLIED',
+      payload: buildPaymentAppliedPayload({
+        paymentId,
+        appliedAt: occurredAt,
+        applications: [{ invoiceId: event.invoiceId, amountApplied: event.amount }],
+      }),
+      ctx: {
+        tenantId: this.tenantId,
+        occurredAt,
+        actor: { actorType: 'SYSTEM' },
+      },
+      idempotencyKey: `payment_applied:${paymentId}:${event.invoiceId}`,
     });
 
     return {

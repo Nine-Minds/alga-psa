@@ -10,7 +10,7 @@
  * - Any future extension features
  */
 
-import { getAdminConnection } from '@alga-psa/shared/db/admin';
+import { getAdminConnection } from '@alga-psa/db/admin';
 
 // Report-related events
 export type ReportEventType =

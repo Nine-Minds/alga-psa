@@ -1,9 +1,9 @@
 'use client';
 
 import { useState } from 'react';
-import { Button } from 'server/src/components/ui/Button';
-import { Card } from 'server/src/components/ui/Card';
-import { OnboardingWizard } from 'server/src/components/onboarding/OnboardingWizard';
+import { Button } from '@alga-psa/ui/components/Button';
+import { Card } from '@alga-psa/ui/components/Card';
+import { OnboardingWizard } from '@alga-psa/onboarding/components';
 
 export default function OnboardingTestPage() {
   const [showWizard, setShowWizard] = useState(false);

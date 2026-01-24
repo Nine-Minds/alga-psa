@@ -2,7 +2,7 @@
 import axios from 'axios';
 import qs from 'querystring';
 import logger from 'server/src/utils/logger';
-import { getSecretProviderInstance } from '@shared/core';
+import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 
 async function getKeycloakConfig() {
     const secretProvider = await getSecretProviderInstance();

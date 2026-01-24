@@ -1,5 +1,17 @@
 import '@testing-library/jest-dom'
+import path from 'node:path';
+import { mkdirSync } from 'node:fs';
 import { vi } from 'vitest';
+
+process.env.NEXTAUTH_SECRET ??= 'localtest-nextauth-secret';
+
+// Vitest coverage (v8) uses a temp directory under the reports directory.
+// Some runs can error if the temp directory is missing; ensure it exists.
+try {
+  mkdirSync(path.resolve(process.cwd(), 'server/coverage/.tmp'), { recursive: true });
+} catch {
+  // ignore
+}
 
 // Add ResizeObserver polyfill
 global.ResizeObserver = class ResizeObserver {
@@ -9,25 +21,22 @@ global.ResizeObserver = class ResizeObserver {
 };
 
 // Mock UI reflection hooks
-vi.mock('../types/ui-reflection/useAutomationIdAndRegister', () => ({
+vi.mock('@alga-psa/ui/ui-reflection/useAutomationIdAndRegister', () => ({
   useAutomationIdAndRegister: () => ({
     automationIdProps: {},
     updateMetadata: vi.fn(),
   }),
 }));
 
-vi.mock('../types/ui-reflection/useRegisterUIComponent', () => ({
+vi.mock('@alga-psa/ui/ui-reflection/useRegisterUIComponent', () => ({
   useRegisterUIComponent: () => vi.fn(),
 }));
 
-vi.mock('../types/ui-reflection/useRegisterChild', () => ({
-  useRegisterChild: () => ({
-    register: vi.fn(),
-    unregister: vi.fn(),
-  }),
+vi.mock('@alga-psa/ui/ui-reflection/useRegisterChild', () => ({
+  useRegisterChild: () => vi.fn(),
 }));
 
-vi.mock('../types/ui-reflection/UIStateContext', () => ({
+vi.mock('@alga-psa/ui/ui-reflection/UIStateContext', () => ({
   useUIState: () => ({
     state: {},
     dispatch: vi.fn(),
@@ -36,6 +45,17 @@ vi.mock('../types/ui-reflection/UIStateContext', () => ({
   }),
   UIStateProvider: ({ children }: { children: React.ReactNode }) => children,
 }))
+
+vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
+  useTranslation: () => ({
+    t: (_key: string, options?: string | { defaultValue?: string }) => {
+      if (typeof options === 'string') {
+        return options;
+      }
+      return options?.defaultValue ?? _key;
+    },
+  }),
+}));
 
 vi.mock('next/server', async () => {
   const mod = await import('./stubs/next-server');

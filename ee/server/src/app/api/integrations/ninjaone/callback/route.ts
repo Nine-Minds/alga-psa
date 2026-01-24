@@ -10,7 +10,7 @@ export const dynamic = 'force-dynamic';
 import { NextResponse, NextRequest } from 'next/server';
 import axios from 'axios';
 import fs from 'fs';
-import { getSecretProviderInstance } from '@alga-psa/shared/core/secretProvider';
+import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { createTenantKnex, runWithTenant } from '../../../../../lib/db';
 import {
   NINJAONE_REGIONS,
@@ -23,6 +23,8 @@ import {
   registerNinjaOneWebhook,
   generateWebhookSecret,
 } from '../../../../../lib/integrations/ninjaone/webhooks/webhookRegistration';
+import { publishWorkflowEvent } from 'server/src/lib/eventBus/publishers';
+import { buildIntegrationConnectedPayload } from '@shared/workflow/streams/domainEventBuilders/integrationConnectionEventBuilders';
 
 // Secret names
 const NINJAONE_CLIENT_ID_SECRET = 'ninjaone_client_id';
@@ -270,9 +272,11 @@ export async function GET(request: NextRequest) {
     // 6. Generate webhook secret for this integration
     const webhookSecret = generateWebhookSecret();
 
+    const connectedAt = new Date().toISOString();
+
     // 7. Create or update the rmm_integrations record
     // Use runWithTenant since this is an OAuth callback without a session
-    await runWithTenant(tenantId, async () => {
+    const integrationId = await runWithTenant(tenantId, async () => {
       const { knex } = await createTenantKnex();
 
       // Check if integration already exists
@@ -313,6 +317,7 @@ export async function GET(request: NextRequest) {
             updated_at: knex.fn.now(),
           });
         console.log(`[NinjaOne Callback] Updated existing integration for tenant ${tenantId}.`);
+        return existingIntegration.integration_id as string;
       } else {
         // Create new integration record
         await knex('rmm_integrations').insert({
@@ -325,8 +330,36 @@ export async function GET(request: NextRequest) {
           settings: JSON.stringify({ region, webhookSecret }),
         });
         console.log(`[NinjaOne Callback] Created new integration for tenant ${tenantId}.`);
+
+        const createdIntegration = await knex('rmm_integrations')
+          .where({ tenant: tenantId, provider: 'ninjaone' })
+          .first();
+        return createdIntegration?.integration_id as string | undefined;
       }
     });
+
+    // 7b. Emit workflow v2 integration connection event (best-effort)
+    if (integrationId) {
+      try {
+        await publishWorkflowEvent({
+          eventType: 'INTEGRATION_CONNECTED',
+          payload: buildIntegrationConnectedPayload({
+            integrationId,
+            provider: 'ninjaone',
+            connectionId: integrationId,
+            connectedAt,
+          }),
+          ctx: {
+            tenantId,
+            actor: { actorType: 'SYSTEM' },
+            occurredAt: connectedAt,
+          },
+          idempotencyKey: `integration_connected:${tenantId}:${integrationId}:${decodedStatePayload.timestamp}`,
+        });
+      } catch (publishError) {
+        console.warn('[NinjaOne Callback] Failed to publish workflow INTEGRATION_CONNECTED event', publishError);
+      }
+    }
 
     // 8. Register webhook with NinjaOne
     // This is done after storing credentials so the client can authenticate

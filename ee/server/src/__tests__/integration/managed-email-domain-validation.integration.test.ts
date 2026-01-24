@@ -16,7 +16,7 @@ let tenantId: string | undefined;
 
 const enqueueWorkflow = vi.fn(async () => ({ enqueued: true }));
 
-vi.mock('@/lib/actions/user-actions/userActions', () => ({
+vi.mock('@alga-psa/users/actions', () => ({
   getCurrentUser: vi.fn(async () => ({ id: 'user-test-1' })),
 }));
 
@@ -24,7 +24,7 @@ vi.mock('@/lib/email-domains/workflowClient', () => ({
   enqueueManagedEmailDomainWorkflow: vi.fn((args) => enqueueWorkflow(args)),
 }));
 
-vi.mock('@alga-psa/shared/core/secretProvider', () => ({
+vi.mock('@alga-psa/core/secrets', () => ({
   getSecretProviderInstance: vi.fn(async () => ({
     getAppSecret: async () => '',
   })),
@@ -33,7 +33,7 @@ vi.mock('@alga-psa/shared/core/secretProvider', () => ({
   },
 }));
 
-vi.mock('@alga-psa/shared/core', () => ({
+vi.mock('@alga-psa/core', () => ({
   logger: {
     info: vi.fn(),
     warn: vi.fn(),
@@ -42,7 +42,7 @@ vi.mock('@alga-psa/shared/core', () => ({
   },
 }));
 
-vi.mock('@alga-psa/shared/core/logger', () => ({
+vi.mock('@alga-psa/core/logger', () => ({
   default: {
     info: vi.fn(),
     warn: vi.fn(),

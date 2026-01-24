@@ -4,8 +4,8 @@
  */
 
 import { Knex } from 'knex';
-import { withTransaction } from '@shared/db';
-import { BaseService, ServiceContext, ListOptions, ListResult } from './BaseService';
+import { withTransaction } from '@alga-psa/db';
+import { BaseService, ServiceContext, ListOptions, ListResult } from '@alga-psa/db';
 import { 
   IProject, 
   IProjectPhase, 
@@ -30,8 +30,46 @@ import {
 import { NotFoundError } from '../middleware/apiMiddleware';
 import ProjectModel from 'server/src/lib/models/project';
 import ProjectTaskModel from 'server/src/lib/models/projectTask';
-import { publishEvent } from 'server/src/lib/eventBus/publishers';
+import { publishEvent, publishWorkflowEvent } from 'server/src/lib/eventBus/publishers';
 import { OrderingService } from 'server/src/lib/services/orderingService';
+import {
+  buildProjectStatusChangedPayload,
+  buildProjectUpdatedPayload,
+} from '@shared/workflow/streams/domainEventBuilders/projectLifecycleEventBuilders';
+import {
+  buildProjectTaskAssignedPayload,
+  buildProjectTaskCompletedPayload,
+  buildProjectTaskCreatedPayload,
+  buildProjectTaskStatusChangedPayload,
+} from '@shared/workflow/streams/domainEventBuilders/projectTaskEventBuilders';
+
+async function resolveProjectStatusInfo(
+  trx: Knex.Transaction,
+  tenant: string,
+  projectStatusMappingId: string
+): Promise<{ status: string; isClosed: boolean }> {
+  const row = await trx('project_status_mappings as psm')
+    .leftJoin('statuses as s', function joinStatuses(this: Knex.JoinClause) {
+      this.on('psm.status_id', '=', 's.status_id').andOn('psm.tenant', '=', 's.tenant');
+    })
+    .leftJoin('standard_statuses as ss', function joinStandardStatuses(this: Knex.JoinClause) {
+      this.on('psm.standard_status_id', '=', 'ss.standard_status_id').andOn('psm.tenant', '=', 'ss.tenant');
+    })
+    .where({ 'psm.project_status_mapping_id': projectStatusMappingId, 'psm.tenant': tenant })
+    .select(
+      trx.raw(
+        'COALESCE(psm.custom_name, s.name, ss.name, psm.project_status_mapping_id) as status_name'
+      ),
+      trx.raw('COALESCE(s.is_closed, ss.is_closed, false) as is_closed')
+    )
+    .first<{ status_name: string; is_closed: boolean }>();
+
+  if (!row) {
+    return { status: projectStatusMappingId, isClosed: false };
+  }
+
+  return { status: row.status_name, isClosed: Boolean(row.is_closed) };
+}
 
 export class ProjectService extends BaseService<IProject> {
   constructor() {
@@ -260,6 +298,13 @@ export class ProjectService extends BaseService<IProject> {
       const { knex } = await this.getKnex();
       
       return withTransaction(knex, async (trx) => {
+        const beforeProject = await trx(this.tableName)
+          .where({ [this.primaryKey]: id, tenant: context.tenant })
+          .first();
+        if (!beforeProject) {
+          throw new NotFoundError('Project not found');
+        }
+
         // Handle status name to UUID conversion if needed
         let statusId = data.status;
         if (data.status && !this.isUUID(data.status)) {
@@ -286,16 +331,36 @@ export class ProjectService extends BaseService<IProject> {
           project.status = data.status;
         }
   
-        // Publish event
-        await publishEvent({
+        const occurredAt = updateData.updated_at instanceof Date ? updateData.updated_at : new Date();
+        const ctx = {
+          tenantId: context.tenant,
+          occurredAt,
+          actor: { actorType: 'USER' as const, actorUserId: context.userId },
+        };
+
+        if ('status' in data && beforeProject.status !== project.status) {
+          await publishWorkflowEvent({
+            eventType: 'PROJECT_STATUS_CHANGED',
+            ctx,
+            payload: buildProjectStatusChangedPayload({
+              projectId: id,
+              previousStatus: beforeProject.status,
+              newStatus: project.status,
+              changedAt: occurredAt,
+            }),
+          });
+        }
+
+        await publishWorkflowEvent({
           eventType: 'PROJECT_UPDATED',
-          payload: {
-            tenantId: context.tenant,
+          ctx,
+          payload: buildProjectUpdatedPayload({
             projectId: id,
-            changes: data,
-            userId: context.userId,
-            timestamp: new Date().toISOString()
-          }
+            before: beforeProject as unknown as Record<string, unknown> & { project_id: string },
+            after: project as unknown as Record<string, unknown> & { project_id: string },
+            updatedFieldKeys: Object.keys(data),
+            updatedAt: occurredAt,
+          }),
         });
   
         return project;
@@ -525,6 +590,44 @@ export class ProjectService extends BaseService<IProject> {
         const [task] = await trx('project_tasks')
           .insert(taskData)
           .returning('*');
+
+        const occurredAt = task.created_at instanceof Date ? task.created_at : new Date();
+        const ctx = {
+          tenantId: context.tenant,
+          occurredAt,
+          actor: { actorType: 'USER' as const, actorUserId: context.userId },
+        };
+
+        const statusInfo = await resolveProjectStatusInfo(trx, context.tenant, task.project_status_mapping_id);
+
+        await publishWorkflowEvent({
+          eventType: 'PROJECT_TASK_CREATED',
+          ctx,
+          payload: buildProjectTaskCreatedPayload({
+            projectId: phase.project_id,
+            taskId: task.task_id,
+            title: task.task_name,
+            dueDate: task.due_date,
+            status: statusInfo.status,
+            createdByUserId: context.userId,
+            createdAt: occurredAt,
+          }),
+        });
+
+        if (task.assigned_to) {
+          await publishWorkflowEvent({
+            eventType: 'PROJECT_TASK_ASSIGNED',
+            ctx,
+            payload: buildProjectTaskAssignedPayload({
+              projectId: phase.project_id,
+              taskId: task.task_id,
+              assignedToId: task.assigned_to,
+              assignedToType: 'user',
+              assignedByUserId: context.userId,
+              assignedAt: occurredAt,
+            }),
+          });
+        }
   
         return task;
       });
@@ -535,6 +638,14 @@ export class ProjectService extends BaseService<IProject> {
       const { knex } = await this.getKnex();
       
       return withTransaction(knex, async (trx) => {
+        const beforeTask = await trx<IProjectTask>('project_tasks')
+          .where({ task_id: taskId, tenant: context.tenant })
+          .first();
+
+        if (!beforeTask) {
+          throw new NotFoundError('Project task not found');
+        }
+
         const updateData = {
           ...data,
           updated_at: new Date()
@@ -547,6 +658,67 @@ export class ProjectService extends BaseService<IProject> {
   
         if (!task) {
           throw new NotFoundError('Project task not found');
+        }
+
+        const phase = await trx('project_phases')
+          .where({ phase_id: task.phase_id, tenant: context.tenant })
+          .select('project_id')
+          .first<{ project_id: string }>();
+
+        if (phase) {
+          const occurredAt = task.updated_at instanceof Date ? task.updated_at : new Date();
+          const ctx = {
+            tenantId: context.tenant,
+            occurredAt,
+            actor: { actorType: 'USER' as const, actorUserId: context.userId },
+          };
+
+          if (beforeTask.assigned_to !== task.assigned_to && task.assigned_to) {
+            await publishWorkflowEvent({
+              eventType: 'PROJECT_TASK_ASSIGNED',
+              ctx,
+              payload: buildProjectTaskAssignedPayload({
+                projectId: phase.project_id,
+                taskId: task.task_id,
+                assignedToId: task.assigned_to,
+                assignedToType: 'user',
+                assignedByUserId: context.userId,
+                assignedAt: occurredAt,
+              }),
+            });
+          }
+
+          if (beforeTask.project_status_mapping_id !== task.project_status_mapping_id) {
+            const [beforeStatus, afterStatus] = await Promise.all([
+              resolveProjectStatusInfo(trx, context.tenant, beforeTask.project_status_mapping_id),
+              resolveProjectStatusInfo(trx, context.tenant, task.project_status_mapping_id),
+            ]);
+
+            await publishWorkflowEvent({
+              eventType: 'PROJECT_TASK_STATUS_CHANGED',
+              ctx,
+              payload: buildProjectTaskStatusChangedPayload({
+                projectId: phase.project_id,
+                taskId: task.task_id,
+                previousStatus: beforeStatus.status,
+                newStatus: afterStatus.status,
+                changedAt: occurredAt,
+              }),
+            });
+
+            if (!beforeStatus.isClosed && afterStatus.isClosed) {
+              await publishWorkflowEvent({
+                eventType: 'PROJECT_TASK_COMPLETED',
+                ctx,
+                payload: buildProjectTaskCompletedPayload({
+                  projectId: phase.project_id,
+                  taskId: task.task_id,
+                  completedByUserId: context.userId,
+                  completedAt: occurredAt,
+                }),
+              });
+            }
+          }
         }
   
         return task;

@@ -518,30 +518,56 @@ server/src/lib/actions/ticket-actions/ticketFormActions.ts
 
 ### Implementation Guidelines
 
-#### Code Pattern to Follow:
-```typescript
-export async function exampleAction(data: any): Promise<any> {
-  try {
-    const currentUser = await getCurrentUser();
-    if (!currentUser) {
-      throw new Error('No authenticated user found');
-    }
+#### Code Pattern to Follow (Updated January 2026):
 
-    const { knex } = await createTenantKnex();
-    
-    return await withTransaction(knex, async (trx) => {
-      // Check permission before any operations
-      if (!await hasPermission(currentUser, 'resource', 'action', trx)) {
-        throw new Error('Permission denied: Cannot perform action on resource');
-      }
-      
-      // Proceed with existing logic
-      return await existingFunctionLogic(data, trx);
-    });
-  } catch (error) {
-    console.error('Error in exampleAction:', error);
-    throw error;
+**Use the `withAuth` wrapper** from `@alga-psa/auth` for all server actions. This eliminates boilerplate and ensures consistent authentication handling:
+
+```typescript
+import { withAuth, hasPermission } from '@alga-psa/auth';
+import { createTenantKnex, withTransaction } from '@alga-psa/db';
+
+export const exampleAction = withAuth(async (user, { tenant }, data: any): Promise<any> => {
+  const { knex } = await createTenantKnex();
+
+  // Check permission before any operations
+  if (!await hasPermission(user, 'resource', 'action')) {
+    throw new Error('Permission denied: Cannot perform action on resource');
   }
+
+  // For multi-step operations, use transactions
+  return await withTransaction(knex, async (trx) => {
+    return await existingFunctionLogic(data, trx);
+  });
+});
+```
+
+**Benefits of `withAuth`:**
+- Handles `getCurrentUser()` internally and throws `AuthenticationError` if not authenticated
+- Sets tenant context via `runWithTenant()` (AsyncLocalStorage) for reliable propagation
+- Provides typed `user` (IUserWithRoles) and `{ tenant }` context as first two arguments
+- Works correctly with Turbopack and distributed environments
+- Reduces ~15-20 lines of repetitive code per action
+
+**Available variants:**
+- `withAuth(action)` - Standard pattern, requires authentication
+- `withOptionalAuth(action)` - For actions that work differently for auth/anon users
+- `withAuthCheck(action)` - Auth check only, no tenant context (for non-DB operations)
+
+#### Legacy Pattern (for reference only):
+```typescript
+// DO NOT USE in new code - shown for understanding existing code only
+export async function exampleAction(data: any): Promise<any> {
+  const currentUser = await getCurrentUser();
+  if (!currentUser) throw new Error('No authenticated user found');
+  if (!currentUser.tenant) throw new Error('User tenant not found');
+
+  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
+  if (tenant !== currentUser.tenant) throw new Error('Tenant mismatch');
+
+  if (!await hasPermission(currentUser, 'resource', 'action')) {
+    throw new Error('Permission denied');
+  }
+  // ... business logic
 }
 ```
 

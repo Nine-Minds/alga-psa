@@ -1,5 +1,5 @@
 // Empty module fallback for CE builds
-import { WorkflowProps } from './lib/workflow/visualization/WorkflowComponentLoader';
+import type { WorkflowProps } from '@alga-psa/workflows/components/WorkflowComponentLoader';
 
 export default function EmptyDnDFlow(props: WorkflowProps) {
   return null;

@@ -1,6 +1,18 @@
 #!/bin/sh
 set -euo pipefail
 
+# Nx project-graph caching/daemon can get into a bad state across container restarts and then fail
+# with "Cannot find configuration for task server:next:dev". Reset it on boot for stability.
+export NX_DAEMON="${NX_DAEMON:-false}"
+export NX_CACHE_DIRECTORY="${NX_CACHE_DIRECTORY:-/tmp/nx-cache}"
+export NX_WORKSPACE_DATA_DIRECTORY="${NX_WORKSPACE_DATA_DIRECTORY:-/tmp/nx-workspace-data}"
+export NX_PROJECT_GRAPH_CACHE_DIRECTORY="${NX_PROJECT_GRAPH_CACHE_DIRECTORY:-/tmp/nx-workspace-data}"
+rm -rf "$NX_CACHE_DIRECTORY" "$NX_WORKSPACE_DATA_DIRECTORY" >/dev/null 2>&1 || true
+mkdir -p "$NX_CACHE_DIRECTORY" "$NX_WORKSPACE_DATA_DIRECTORY" >/dev/null 2>&1 || true
+
+cd /app
+npx --no-install nx reset >/dev/null 2>&1 || true
+
 DB_PASSWORD=""
 SECRET_FILE="/run/secrets/db_password_server"
 if [ -f "$SECRET_FILE" ]; then
@@ -23,4 +35,10 @@ export REDIS_PORT="${REDIS_PORT:-6379}"
 export HOCUSPOCUS_URL="${HOCUSPOCUS_URL:-ws://hocuspocus:1234}"
 
 cd /app/server
-exec npm run dev -- --hostname 0.0.0.0 --port 3000
+# Avoid Nx flakiness inside long-lived containers (e.g. `docker compose restart`) by running Next directly.
+# Next 16 defaults to Turbopack; keep that default. Webpack can be forced for debugging via ALGA_NEXT_WEBPACK=1.
+NEXT_DEV_FLAGS="--hostname 0.0.0.0 --port 3000"
+if [ "${ALGA_NEXT_WEBPACK:-0}" = "1" ]; then
+  NEXT_DEV_FLAGS="--webpack ${NEXT_DEV_FLAGS}"
+fi
+exec npx --no-install next dev ${NEXT_DEV_FLAGS}

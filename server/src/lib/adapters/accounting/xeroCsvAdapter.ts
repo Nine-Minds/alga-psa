@@ -1,4 +1,4 @@
-import logger from '@shared/core/logger';
+import logger from '@alga-psa/core/logger';
 import { Knex } from 'knex';
 import {
   AccountingExportAdapter,
@@ -8,11 +8,9 @@ import {
   AccountingExportTransformResult,
   AccountingExportDocument
 } from './accountingExportAdapter';
-import { createTenantKnex } from '../../db';
-import { AccountingMappingResolver } from '../../services/accountingMappingResolver';
-import { KnexInvoiceMappingRepository } from '../../repositories/invoiceMappingRepository';
-import { AppError } from '../../errors';
-import { unparseCSV } from '../../utils/csvParser';
+import { createTenantKnex } from '@alga-psa/db';
+import { AccountingMappingResolver, KnexInvoiceMappingRepository } from '@alga-psa/billing';
+import { AppError, unparseCSV } from '@alga-psa/core';
 
 /**
  * Fixed tracking category names for Xero CSV export.

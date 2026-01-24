@@ -4,17 +4,17 @@
  */
 
 import { Knex } from 'knex';
-import { BaseService, ServiceContext, ListResult } from './BaseService';
+import { BaseService, ServiceContext, ListResult } from '@alga-psa/db';
 import { ITicket } from 'server/src/interfaces/ticket.interfaces';
-import { withTransaction } from '@shared/db';
-import { maybeReopenBundleMasterFromChildReply } from 'server/src/lib/actions/ticket-actions/ticketBundleUtils';
+import { withTransaction } from '@alga-psa/db';
+import { maybeReopenBundleMasterFromChildReply } from '@alga-psa/tickets/actions/ticketBundleUtils';
 import { NumberingService } from 'server/src/lib/services/numberingService';
 import { getEventBus } from 'server/src/lib/eventBus';
 import { getEmailEventChannel } from '../../notifications/emailChannel';
 import { NotFoundError, ValidationError } from '../middleware/apiMiddleware';
 import { TicketModel, CreateTicketInput } from '@shared/models/ticketModel';
-import { ServerEventPublisher } from '../../adapters/serverEventPublisher';
-import { ServerAnalyticsTracker } from '../../adapters/serverAnalyticsTracker';
+import { ServerEventPublisher } from '@alga-psa/event-bus';
+import { ServerAnalyticsTracker } from '@alga-psa/analytics';
 // Event types no longer needed as we create objects directly
 import { 
   CreateTicketData, 

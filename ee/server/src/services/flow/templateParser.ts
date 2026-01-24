@@ -15,7 +15,7 @@ export function parseTemplate(template: string): string {
     if (result.status) {
         return result.value;
     } else {
-        console.error('Failed to parse template:', result.expected);
+        console.error('Failed to parse template:', (result as any).expected);
         return template; // Return the original template if parsing fails
     }
 }

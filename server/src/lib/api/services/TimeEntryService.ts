@@ -4,8 +4,8 @@
  */
 
 import { Knex } from 'knex';
-import { BaseService, ServiceContext, ListOptions, ListResult } from './BaseService';
-import { 
+import { BaseService, ServiceContext, ListOptions, ListResult } from '@alga-psa/db';
+import {
   CreateTimeEntryData,
   UpdateTimeEntryData,
   TimeEntryFilterData,
@@ -20,9 +20,10 @@ import {
   ApproveTimeEntriesData,
   RequestTimeEntryChangesData
 } from '../schemas/timeEntry';
-import { publishEvent } from 'server/src/lib/eventBus/publishers';
+import { publishEvent, publishWorkflowEvent } from 'server/src/lib/eventBus/publishers';
 import { ValidationError } from '../middleware/apiMiddleware';
 import { computeWorkDateFields, resolveUserTimeZone } from 'server/src/lib/utils/workDate';
+import { buildTicketTimeEntryAddedWorkflowEvent } from './timeEntryWorkflowEvents';
 
 export class TimeEntryService extends BaseService<any> {
   constructor() {
@@ -283,6 +284,26 @@ export class TimeEntryService extends BaseService<any> {
         timestamp: new Date().toISOString()
       }
     });
+
+    const ticketTimeEntryAdded = buildTicketTimeEntryAddedWorkflowEvent({
+      workItemType: timeEntry.work_item_type,
+      workItemId: timeEntry.work_item_id,
+      timeEntryId: timeEntry.entry_id,
+      minutes: billableDuration,
+      billable: timeEntry.billable_duration > 0,
+      createdAt: timeEntry.created_at,
+    });
+    if (ticketTimeEntryAdded) {
+      await publishWorkflowEvent({
+        eventType: ticketTimeEntryAdded.eventType,
+        payload: ticketTimeEntryAdded.payload,
+        ctx: {
+          tenantId: context.tenant,
+          occurredAt: timeEntry.created_at,
+          actor: { actorType: 'USER', actorUserId: context.userId },
+        },
+      });
+    }
 
     return this.getWithDetails(timeEntry.entry_id, context);
   }
@@ -552,6 +573,26 @@ export class TimeEntryService extends BaseService<any> {
     await knex(this.tableName)
       .where({ entry_id: sessionId, tenant: context.tenant })
       .update(updateData);
+
+    const ticketTimeEntryAdded = buildTicketTimeEntryAddedWorkflowEvent({
+      workItemType: session.work_item_type,
+      workItemId: session.work_item_id,
+      timeEntryId: sessionId,
+      minutes: billableDuration,
+      billable: updateData.billable_duration > 0,
+      createdAt: session.created_at,
+    });
+    if (ticketTimeEntryAdded) {
+      await publishWorkflowEvent({
+        eventType: ticketTimeEntryAdded.eventType,
+        payload: ticketTimeEntryAdded.payload,
+        ctx: {
+          tenantId: context.tenant,
+          occurredAt: endTime,
+          actor: { actorType: 'USER', actorUserId: context.userId },
+        },
+      });
+    }
 
     return this.getById(sessionId, context);
   }

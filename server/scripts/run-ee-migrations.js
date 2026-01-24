@@ -102,7 +102,11 @@ async function main() {
 
   const knexAction = `migrate:${action}`;
   console.log(`Running knex ${knexAction}...`);
-  await run('npx', ['knex', knexAction, '--knexfile', knexfilePath, '--env', 'migration'], { env, cwd: serverDir });
+  const debugArgs = env.EE_MIGRATIONS_DEBUG ? ['--debug'] : [];
+  if (env.EE_MIGRATIONS_DEBUG) {
+    console.log('EE_MIGRATIONS_DEBUG=1 enabled: knex will print debug output.');
+  }
+  await run('npx', ['knex', knexAction, '--knexfile', knexfilePath, '--env', 'migration', ...debugArgs], { env, cwd: serverDir });
 
   console.log(`Migration ${action} completed successfully.`);
   console.log(`Temporary migrations directory preserved at: ${tmpMigrations}`);

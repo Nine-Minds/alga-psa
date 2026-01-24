@@ -14,7 +14,7 @@
 import crypto from 'node:crypto'
 import type { Knex } from 'knex'
 import { metrics } from '@opentelemetry/api'
-import logger from '@shared/core/logger'
+import logger from '@alga-psa/core/logger'
 import { getConnection } from '@/lib/db/db'
 
 import { getInstallConfigByInstallId } from './installConfig'

@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { BillingEngine } from 'server/src/lib/billing/billingEngine';
 
-vi.mock('server/src/lib/actions/billingAndTax', () => ({
+vi.mock('@alga-psa/billing/actions/billingAndTax', () => ({
   getNextBillingDate: vi.fn(async (_clientId: string, currentEndDate: string) => currentEndDate)
 }));
 

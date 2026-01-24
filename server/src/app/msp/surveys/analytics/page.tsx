@@ -1,4 +1,4 @@
-import SurveyAnalyticsPage from 'server/src/components/surveys/analytics/SurveyAnalyticsPage';
+import SurveyAnalyticsPage from '@alga-psa/surveys/components/analytics/SurveyAnalyticsPage';
 
 export default function SurveyAnalyticsRoute() {
   return <SurveyAnalyticsPage />;

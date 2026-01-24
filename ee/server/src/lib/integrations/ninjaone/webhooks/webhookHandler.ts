@@ -8,9 +8,14 @@
 import { Knex } from 'knex';
 import crypto from 'crypto';
 import { createTenantKnex } from '@/lib/db';
-import { withTransaction } from '@shared/db';
-import logger from '@shared/core/logger';
+import { withTransaction } from '@alga-psa/db';
+import logger from '@alga-psa/core/logger';
 import { publishEvent } from '@shared/events/publisher';
+import { publishWorkflowEvent } from 'server/src/lib/eventBus/publishers';
+import {
+  buildIntegrationWebhookReceivedPayload,
+  sanitizeIntegrationWebhookRawPayload,
+} from '@shared/workflow/streams/domainEventBuilders/integrationWebhookEventBuilders';
 import { NinjaOneSyncEngine } from '../sync/syncEngine';
 import {
   NinjaOneWebhookPayload,
@@ -242,6 +247,72 @@ export async function handleNinjaOneWebhook(
     });
   } catch (error) {
     logger.warn('Failed to emit webhook received event', { error });
+  }
+
+  // Emit workflow v2 integration webhook received event (safe payload reference)
+  try {
+    const payloadRef = `integration-webhook:${crypto.randomUUID()}`;
+    const snapshot = sanitizeIntegrationWebhookRawPayload(payload, { maxBytes: 10_000 });
+    logger.debug('[NinjaOne Webhook] Payload snapshot (redacted)', {
+      tenantId,
+      integrationId: integration.integration_id,
+      provider: 'ninjaone',
+      payloadRef,
+      truncated: snapshot.truncated,
+      snapshot: snapshot.snapshot,
+    });
+
+    const webhookId =
+      (payload.id != null ? String(payload.id) : null) ??
+      (payload.activityId != null ? String(payload.activityId) : null) ??
+      (() => {
+        try {
+          const hash = crypto
+            .createHash('sha256')
+            .update(JSON.stringify(payload))
+            .digest('hex')
+            .slice(0, 24);
+          return `sha256:${hash}`;
+        } catch {
+          return crypto.randomUUID();
+        }
+      })();
+
+    let receivedAt = new Date().toISOString();
+    if (payload.activityTime) {
+      try {
+        const parsed = new Date(payload.activityTime);
+        if (!Number.isNaN(parsed.getTime())) {
+          receivedAt = parsed.toISOString();
+        }
+      } catch {
+        // ignore invalid activityTime
+      }
+    }
+
+    await publishWorkflowEvent({
+      eventType: 'INTEGRATION_WEBHOOK_RECEIVED',
+      payload: buildIntegrationWebhookReceivedPayload({
+        integrationId: integration.integration_id,
+        provider: 'ninjaone',
+        webhookId,
+        eventName: payload.activityType,
+        receivedAt,
+        rawPayloadRef: payloadRef,
+      }),
+      ctx: {
+        tenantId,
+        actor: { actorType: 'SYSTEM' },
+        correlationId: payloadRef,
+        occurredAt: receivedAt,
+      },
+      idempotencyKey: `integration_webhook_received:${tenantId}:${integration.integration_id}:${webhookId}:${payload.activityType}`,
+      eventName: payload.activityType,
+    });
+  } catch (error) {
+    logger.warn('[NinjaOne Webhook] Failed to publish workflow INTEGRATION_WEBHOOK_RECEIVED event', {
+      error,
+    });
   }
 
   // Route to appropriate handler

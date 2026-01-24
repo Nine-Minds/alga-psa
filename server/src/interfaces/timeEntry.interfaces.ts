@@ -1,7 +1,7 @@
 import { IUser } from './auth.interfaces';
 import { WorkItemType, IWorkItem } from './workItem.interfaces';
 import { TenantEntity } from '.';
-import { DateValue, ISO8601String } from '@shared/types/temporal';
+import { DateValue, ISO8601String } from '@alga-psa/types';
 
 export type TimeSheetStatus = 'DRAFT' | 'SUBMITTED' | 'APPROVED' | 'CHANGES_REQUESTED';
 

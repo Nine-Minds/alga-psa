@@ -183,6 +183,12 @@ async fn execute(
         .and_then(|v| v.to_str().ok())
         .unwrap_or("");
     tracing::info!(request_id=%req_id, idempotency=%idem, tenant=%tenant, extension=%ext, "execute start");
+    tracing::info!(
+        request_id = %req_id,
+        install_id_present = %req.context.install_id.as_ref().map(|s| !s.is_empty()).unwrap_or(false),
+        install_id_len = ?req.context.install_id.as_ref().map(|s| s.len()),
+        "execute context install_id"
+    );
 
     if tenant.is_empty() || ext.is_empty() {
         tracing::error!(request_id=%req_id, "Missing tenant or extension headers for execute request");

@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach, afterEach, vi } from 'vitest';
 import { v4 as uuidv4 } from 'uuid';
 import { ITimePeriodSettings, ITimePeriod } from '../../interfaces/timeEntry.interfaces';
-import { createTimePeriod, generateAndSaveTimePeriods, generateTimePeriods, createNextTimePeriod } from '../../lib/actions/timePeriodsActions';
+import { createTimePeriod, generateAndSaveTimePeriods, generateTimePeriods, createNextTimePeriod } from '@alga-psa/scheduling/actions/timePeriodsActions';
 import { TimePeriodSettings } from '../../lib/models/timePeriodSettings';
 import { ISO8601String } from '../../types/types.d';
 import * as tenantModule from '../../lib/tenant';

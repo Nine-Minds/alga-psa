@@ -1,8 +1,8 @@
 import React from 'react';
 import Link from 'next/link';
-import { ButtonComponent } from 'server/src/types/ui-reflection/types';
-import { MenuItem } from '../../config/menuConfig';
-import { useAutomationIdAndRegister } from 'server/src/types/ui-reflection/useAutomationIdAndRegister';
+import { ButtonComponent } from '@alga-psa/ui/ui-reflection/types';
+import type { MenuItem } from '@/config/menuConfig';
+import { useAutomationIdAndRegister } from '@alga-psa/ui/ui-reflection/useAutomationIdAndRegister';
 
 interface SidebarSubMenuItemProps {
   item: MenuItem;

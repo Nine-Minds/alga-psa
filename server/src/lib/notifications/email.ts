@@ -27,13 +27,13 @@ import {
   NotificationLog,
   NotificationService
 } from '../models/notification';
-import { EmailProviderManager } from 'server/src/services/email/EmailProviderManager';
-import { TenantEmailSettings, EmailMessage } from '@shared/types/email';
-import { TenantEmailService } from '../services/TenantEmailService';
+import { EmailProviderManager } from '@alga-psa/email';
+import { TenantEmailSettings, EmailMessage } from '@alga-psa/types';
+import { TenantEmailService } from '@alga-psa/email';
 import { StaticTemplateProcessor } from '../email/tenant/templateProcessors';
 import { getConnection } from '../db/db';
 import { resolveEmailLocale } from './emailLocaleResolver';
-import { SupportedLocale } from '../i18n/config';
+import { SupportedLocale } from '@alga-psa/ui/lib/i18n/config';
 export class EmailNotificationService implements NotificationService {
   /**
    * Get tenant email settings from database

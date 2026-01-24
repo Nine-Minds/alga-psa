@@ -306,7 +306,7 @@ export function validatePortalUserInput(input: unknown): {
   errors?: z.ZodError;
 } {
   try {
-    const validated = portalUserInputSchema.parse(input);
+    const validated = portalUserInputSchema.parse(input) as CreatePortalUserInput;
     return {
       valid: true,
       data: validated

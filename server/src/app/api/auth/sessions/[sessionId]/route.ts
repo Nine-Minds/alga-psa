@@ -5,7 +5,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { revokeSessionAction } from 'server/src/lib/actions/session-actions/sessionActions';
+import { revokeSessionAction } from '@alga-psa/auth/actions';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';

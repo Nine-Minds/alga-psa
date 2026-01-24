@@ -1,8 +1,8 @@
 #!/usr/bin/env tsx
 
 import { exit } from "process";
-import logger from "@alga-psa/shared/core/logger";
-import { getAdminConnection } from "@shared/db/admin";
+import logger from "@alga-psa/core/logger";
+import { getAdminConnection } from "@alga-psa/db/admin";
 import type { Knex } from "knex";
 import type { OAuthLinkProvider } from "@ee/lib/auth/oauthAccountLinks";
 import {

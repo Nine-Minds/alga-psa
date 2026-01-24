@@ -1,22 +1,25 @@
 import { StorageService } from 'server/src/lib/storage/StorageService';
 import { Browser } from 'puppeteer';
 import { FileStore } from 'server/src/types/storage';
-import { getInvoiceForRendering } from 'server/src/lib/actions/invoiceQueries';
-import { getInvoiceTemplates, getCompiledWasm } from 'server/src/lib/actions/invoiceTemplates';
+import { getInvoiceForRendering } from '@alga-psa/billing/actions/invoiceQueries';
+import { getInvoiceTemplates, getCompiledWasm } from '@alga-psa/billing/actions/invoiceTemplates';
 import { runWithTenant, createTenantKnex } from 'server/src/lib/db';
 import { getClientLogoUrl } from 'server/src/lib/utils/avatarUtils';
 import { executeWasmTemplate } from 'server/src/lib/invoice-renderer/wasm-executor';
 import { renderLayout } from 'server/src/lib/invoice-renderer/layout-renderer';
 import type { WasmInvoiceViewModel } from 'server/src/lib/invoice-renderer/types';
 import type { InvoiceViewModel as DbInvoiceViewModel, IInvoiceCharge } from 'server/src/interfaces/invoice.interfaces';
-import { DateValue } from '@alga-psa/shared/types';
+import { DateValue } from '@alga-psa/types';
 import { browserPoolService, BrowserPoolService } from './browser-pool.service';
 import { IDocument } from 'server/src/interfaces/document.interface';
-import { getDocument } from 'server/src/lib/actions/document-actions/documentActions';
+import { getDocument } from '@alga-psa/documents/actions/documentActions';
 import { convertBlockNoteToHTML } from 'server/src/lib/utils/blocknoteUtils';
 import { v4 as uuidv4 } from 'uuid';
-import { StorageProviderFactory, generateStoragePath } from 'server/src/lib/storage/StorageProviderFactory';
+import { StorageProviderFactory, generateStoragePath } from '@alga-psa/documents';
 import { FileStoreModel } from 'server/src/models/storage';
+import logger from '@alga-psa/core/logger';
+import { publishWorkflowEvent } from 'server/src/lib/eventBus/publishers';
+import { buildDocumentGeneratedPayload } from '@shared/workflow/streams/domainEventBuilders/documentGeneratedEventBuilders';
 
 interface PDFGenerationOptions {
   invoiceId?: string;
@@ -65,6 +68,7 @@ export class PDFGenerationService {
     let htmlContent: string;
     let entityId: string;
     let fileName: string;
+    let sourceType: string;
 
     if (options.invoiceId) {
       htmlContent = await this.getInvoiceHtml(options.invoiceId);
@@ -73,9 +77,11 @@ export class PDFGenerationService {
         throw new Error('Invoice number is required for invoice PDF generation');
       }
       fileName = options.invoiceNumber;
+      sourceType = 'invoice';
     } else if (options.documentId) {
       htmlContent = await this.getDocumentHtml(options.documentId);
       entityId = options.documentId;
+      sourceType = 'document';
 
       const document = await runWithTenant(this.tenant, () => getDocument(options.documentId!));
       if (!document) {
@@ -110,6 +116,32 @@ export class PDFGenerationService {
       uploaded_by_id: options.userId,
       fileId: fileId // Add fileId since FileStore type expects it
     });
+
+    try {
+      await publishWorkflowEvent({
+        eventType: 'DOCUMENT_GENERATED',
+        ctx: {
+          tenantId: this.tenant,
+          actor: { actorType: 'USER', actorUserId: options.userId },
+        },
+        payload: buildDocumentGeneratedPayload({
+          documentId: fileRecord.file_id,
+          sourceType,
+          sourceId: entityId,
+          generatedByUserId: options.userId,
+          generatedAt: new Date().toISOString(),
+          fileName: `${fileName}.pdf`,
+        }),
+      });
+    } catch (error) {
+      logger.error('[PDFGenerationService] Failed to publish DOCUMENT_GENERATED event', {
+        error,
+        tenantId: this.tenant,
+        sourceType,
+        sourceId: entityId,
+        documentId: fileRecord.file_id,
+      });
+    }
     
     // Update metadata separately if needed
     // TODO: Re-enable when metadata column is added to external_files table

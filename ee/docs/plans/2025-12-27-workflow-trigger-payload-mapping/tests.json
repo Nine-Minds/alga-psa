@@ -1,0 +1,218 @@
+[
+  {
+    "id": "T001",
+    "description": "Unit: schemaRef resolution uses submission payloadSchemaRef when provided",
+    "implemented": true,
+    "featureIds": ["F001", "F004"]
+  },
+  {
+    "id": "T002",
+    "description": "Unit: schemaRef resolution falls back to event catalog payload_schema_ref",
+    "implemented": false,
+    "featureIds": ["F004"]
+  },
+  {
+    "id": "T003",
+    "description": "Unit: schemaRef resolution returns unknown when neither submission nor catalog provide schemaRef",
+    "implemented": false,
+    "featureIds": ["F004", "F008"]
+  },
+  {
+    "id": "T004",
+    "description": "Migration: workflow runtime events table gains payload_schema_ref column",
+    "implemented": false,
+    "featureIds": ["F002"]
+  },
+  {
+    "id": "T005",
+    "description": "API: list workflow events includes payload_schema_ref",
+    "implemented": false,
+    "featureIds": ["F003"]
+  },
+  {
+    "id": "T006",
+    "description": "Validation: event trigger with unknown source schemaRef produces validation error and invalid status",
+    "implemented": false,
+    "featureIds": ["F008", "F014"]
+  },
+  {
+    "id": "T007",
+    "description": "Validation: schemaRefs match and trigger mapping omitted is valid (identity)",
+    "implemented": false,
+    "featureIds": ["F010", "F014"]
+  },
+  {
+    "id": "T008",
+    "description": "Validation: schemaRefs mismatch and trigger mapping omitted is error",
+    "implemented": true,
+    "featureIds": ["F009", "F014"]
+  },
+  {
+    "id": "T009",
+    "description": "Validation: trigger mapping expression syntax errors are surfaced with stepPath/code details",
+    "implemented": false,
+    "featureIds": ["F012", "F014", "F031"]
+  },
+  {
+    "id": "T010",
+    "description": "Validation: trigger mapping missing required nested fields is an error (deep nested validation)",
+    "implemented": true,
+    "featureIds": ["F011", "F014"]
+  },
+  {
+    "id": "T011",
+    "description": "Validation: trigger mapping referencing missing secrets produces error",
+    "implemented": false,
+    "featureIds": ["F013", "F014"]
+  },
+  {
+    "id": "T012",
+    "description": "Runtime: when schemaRefs match and no mapping, event payload passes through unchanged",
+    "implemented": false,
+    "featureIds": ["F015"]
+  },
+  {
+    "id": "T013",
+    "description": "Runtime: when schemaRefs differ and mapping exists, mapped payload is used as workflow payload",
+    "implemented": true,
+    "featureIds": ["F016", "F031"]
+  },
+  {
+    "id": "T014",
+    "description": "Runtime: mapped payload is validated against workflow payloadSchemaRef before run start",
+    "implemented": false,
+    "featureIds": ["F017"]
+  },
+  {
+    "id": "T015",
+    "description": "Runtime: when mapping is required but missing/invalid, run is not started",
+    "implemented": false,
+    "featureIds": ["F016", "F017"]
+  },
+  {
+    "id": "T016",
+    "description": "Runtime: run/snapshot includes sourcePayloadSchemaRef and mapping-applied indicator",
+    "implemented": true,
+    "featureIds": ["F018"]
+  },
+  {
+    "id": "T017",
+    "description": "Designer UI: shows trigger source schemaRef (from event catalog) and workflow payload schemaRef",
+    "implemented": false,
+    "featureIds": ["F019"]
+  },
+  {
+    "id": "T018",
+    "description": "Designer UI: schemaRefs match shows 'Identity mapping' and mapping editor hidden by default",
+    "implemented": false,
+    "featureIds": ["F020"]
+  },
+  {
+    "id": "T019",
+    "description": "Designer UI: schemaRefs mismatch shows required mapping section and blocks publish without mapping",
+    "implemented": false,
+    "featureIds": ["F021", "F014"]
+  },
+  {
+    "id": "T020",
+    "description": "Designer UI: advanced override of trigger sourcePayloadSchemaRef updates validation state",
+    "implemented": false,
+    "featureIds": ["F022", "F014"]
+  },
+  {
+    "id": "T021",
+    "description": "Designer UI: trigger mapping editor shows source fields from source schema and target fields from workflow schema",
+    "implemented": false,
+    "featureIds": ["F023", "F032"]
+  },
+  {
+    "id": "T022",
+    "description": "Run dialog: chooses event type and renders source payload form from trigger source schemaRef",
+    "implemented": false,
+    "featureIds": ["F024"]
+  },
+  {
+    "id": "T023",
+    "description": "Run dialog: shows mismatch warning and indicates whether identity or mapping will apply",
+    "implemented": false,
+    "featureIds": ["F025"]
+  },
+  {
+    "id": "T024",
+    "description": "Run dialog: when mapping required, starting run uses mapped payload (not raw event payload)",
+    "implemented": false,
+    "featureIds": ["F024", "F016"]
+  },
+  {
+    "id": "T025",
+    "description": "Workflow events UI: event list displays payload_schema_ref and mapping-applied indicator",
+    "implemented": false,
+    "featureIds": ["F026"]
+  },
+  {
+    "id": "T026",
+    "description": "Telemetry: mismatch events are captured with workflowId/eventType context",
+    "implemented": false,
+    "featureIds": ["F027"]
+  },
+  {
+    "id": "T027",
+    "description": "Permissions: non-manage users cannot edit trigger mapping or source schema override",
+    "implemented": false,
+    "featureIds": ["F028"]
+  },
+  {
+    "id": "T028",
+    "description": "Permissions: read-only users can view source schemaRef and validation details",
+    "implemented": false,
+    "featureIds": ["F028"]
+  },
+  {
+    "id": "T029",
+    "description": "Docs: PRD/features/tests reference stable payload invariant and identity mapping behavior",
+    "implemented": false,
+    "featureIds": ["F029"]
+  },
+  {
+    "id": "T030",
+    "description": "Migration: system event catalog includes payload_schema_ref for INBOUND_EMAIL_RECEIVED and other system events",
+    "implemented": false,
+    "featureIds": ["F030"]
+  },
+  {
+    "id": "T031",
+    "description": "Runtime: trigger mapping expressions can read from `event.payload` and map to workflow payload fields",
+    "implemented": false,
+    "featureIds": ["F031", "F016"]
+  },
+  {
+    "id": "T032",
+    "description": "Validation: trigger mapping expressions that reference `payload.*` are rejected (must use `event.payload.*`)",
+    "implemented": true,
+    "featureIds": ["F033", "F012"]
+  },
+  {
+    "id": "T033",
+    "description": "Designer UI: trigger mapping expression editor autocomplete/hover works for `event.payload.<field>` based on source schemaRef",
+    "implemented": false,
+    "featureIds": ["F032"]
+  },
+  {
+    "id": "T034",
+    "description": "Ingestion: when submission schemaRef conflicts with event catalog schemaRef, event is accepted and a warning is recorded (submission wins)",
+    "implemented": true,
+    "featureIds": ["F034", "F004", "F027"]
+  },
+  {
+    "id": "T035",
+    "description": "Runtime: when schemaRefs match but trigger mapping is provided, mapping is applied and resulting payload is validated",
+    "implemented": false,
+    "featureIds": ["F010", "F016", "F017"]
+  },
+  {
+    "id": "T036",
+    "description": "Validation: when schemaRefs match but trigger mapping is present and invalid, workflow is invalid and publish is blocked",
+    "implemented": false,
+    "featureIds": ["F010", "F012", "F014"]
+  }
+]

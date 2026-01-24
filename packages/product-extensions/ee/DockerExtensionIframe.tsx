@@ -2,7 +2,7 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import { bootstrapIframe } from '@ee/lib/extensions/ui/iframeBridge';
-import LoadingIndicator from 'server/src/components/ui/LoadingIndicator';
+import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 
 type Props = {
   src: string;
@@ -94,7 +94,7 @@ export default function DockerExtensionIframe({ src, extensionId }: Props) {
             className="extension-loading-indicator"
             text="Starting extension"
             textClassName="extension-loading-text"
-            spinnerProps={{ size: 'sm', color: 'border-primary-400' }}
+            spinnerProps={{ size: 'sm' }}
           />
           <p className="extension-loading-subtext">Loading extension UI&hellip;</p>
         </div>

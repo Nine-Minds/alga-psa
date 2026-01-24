@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getSecretProviderInstance } from '@alga-psa/shared/core/secretProvider';
+import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 
 // Lightweight cache for the NM Store key to avoid repeated secret lookups
 let CACHED_NM_STORE_KEY: string | null = null;

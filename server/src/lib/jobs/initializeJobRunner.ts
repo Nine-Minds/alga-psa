@@ -1,4 +1,4 @@
-import logger from '@shared/core/logger';
+import logger from '@alga-psa/core/logger';
 import { JobRunnerFactory, getJobRunner } from './JobRunnerFactory';
 import { IJobRunner } from './interfaces';
 import { StorageService } from '../storage/StorageService';

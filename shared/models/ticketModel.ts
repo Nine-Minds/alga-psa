@@ -7,6 +7,7 @@
 import { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 import { z } from 'zod';
+import type { IEventPublisher } from '@alga-psa/types';
 
 // =============================================================================
 // VALIDATION SCHEMAS
@@ -142,14 +143,14 @@ export interface UpdateTicketInput {
   title?: string;
   url?: string;
   client_id?: string;
-  location_id?: string;
-  contact_name_id?: string;
+  location_id?: string | null;
+  contact_name_id?: string | null;
   status_id?: string;
-  category_id?: string;
-  subcategory_id?: string;
+  category_id?: string | null;
+  subcategory_id?: string | null;
   updated_by?: string;
   closed_by?: string;
-  assigned_to?: string;
+  assigned_to?: string | null;
   updated_at?: string;
   closed_at?: string;
   due_date?: string | null;
@@ -219,48 +220,7 @@ export interface CreateCommentOutput {
 // DEPENDENCY INJECTION INTERFACES
 // =============================================================================
 
-/**
- * Interface for event publishing using dependency injection pattern
- * This allows different contexts (server actions, workflows) to provide their own event publishers
- */
-export interface IEventPublisher {
-  publishTicketCreated(data: {
-    tenantId: string;
-    ticketId: string;
-    userId?: string;
-    metadata?: Record<string, any>;
-  }): Promise<void>;
-
-  publishTicketUpdated(data: {
-    tenantId: string;
-    ticketId: string;
-    userId?: string;
-    changes: Record<string, any>;
-    metadata?: Record<string, any>;
-  }): Promise<void>;
-
-  publishTicketClosed(data: {
-    tenantId: string;
-    ticketId: string;
-    userId?: string;
-    metadata?: Record<string, any>;
-  }): Promise<void>;
-
-  publishCommentCreated(data: {
-    tenantId: string;
-    ticketId: string;
-    commentId: string;
-    userId?: string;
-    metadata?: Record<string, any>;
-  }): Promise<void>;
-
-  publishTicketAssigned(data: {
-    tenantId: string;
-    ticketId: string;
-    userId: string;
-    assignedByUserId?: string;
-  }): Promise<void>;
-}
+// IEventPublisher is imported from @alga-psa/types
 
 /**
  * Interface for analytics tracking using dependency injection pattern

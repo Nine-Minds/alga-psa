@@ -3,7 +3,7 @@
 import React from 'react';
 import LicensePurchaseForm from '@ee/components/licensing/LicensePurchaseForm';
 import { ArrowLeft } from 'lucide-react';
-import { Button } from 'server/src/components/ui/Button';
+import { Button } from '@alga-psa/ui/components/Button';
 import { useRouter } from 'next/navigation';
 
 export default function LicensePurchasePage() {

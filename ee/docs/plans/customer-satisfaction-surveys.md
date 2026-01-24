@@ -402,7 +402,7 @@ Get aggregate statistics for dashboard.
 'use server';
 
 import { getCurrentUser } from '@/lib/actions/user-actions/userActions';
-import { withTransaction } from '@shared/db';
+import { withTransaction } from '@alga-psa/db';
 import { createTenantKnex } from '@/lib/db';
 
 // Template management
@@ -498,7 +498,7 @@ async function generateSurveyToken(): Promise<string> {
 
 ```typescript
 import { createTenantKnex, runWithTenant } from '@/lib/db';
-import { withTransaction } from '@shared/db';
+import { withTransaction } from '@alga-psa/db';
 import { hashSurveyToken, resolveSurveyTenantFromToken } from '@/lib/actions/surveyTokenService';
 
 // Public action - no auth required

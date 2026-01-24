@@ -1,5 +1,5 @@
 import { createClient, RedisClientType } from 'redis';
-import logger from '@alga-psa/shared/core/logger';
+import logger from '@alga-psa/core/logger';
 import { getRedisConfig } from '../../config/redisConfig';
 import { getSecret } from '../../lib/utils/getSecret';
 import type { CalendarOAuthState } from '@/interfaces/calendar.interfaces';

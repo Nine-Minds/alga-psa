@@ -257,7 +257,7 @@ describe('Extension Proxy Flow Integration', () => {
       });
       
       // Mock Runner error
-      const mockExecute = vi.fn().mockRejectedValue(new RunnerRequestError('Runner failed', 'backend', 502));
+      const mockExecute = vi.fn().mockRejectedValue(new RunnerRequestError('Runner failed', 'docker', 502));
       vi.mocked(getRunnerBackend).mockReturnValue({
         execute: mockExecute,
       } as any);

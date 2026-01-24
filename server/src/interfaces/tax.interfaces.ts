@@ -1,6 +1,6 @@
 import { TenantEntity } from ".";
 
-import { ISO8601String } from '../types/types.d';
+import { ISO8601String } from '@alga-psa/types';
 
 export interface IClientTaxSettings extends TenantEntity {
   client_id: string;

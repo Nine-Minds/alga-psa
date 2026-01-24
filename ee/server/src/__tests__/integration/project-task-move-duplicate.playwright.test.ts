@@ -70,7 +70,7 @@ test.describe('Project Task Move and Duplicate with Full Path Display', () => {
 
     // Create a test project with custom statuses
     const projectId = uuidv4();
-    const companyId = tenantData.company.companyId;
+    const companyId = tenantData.client!.clientId;
 
     await context.db('projects').insert({
       project_id: projectId,
@@ -231,7 +231,7 @@ test.describe('Project Task Move and Duplicate with Full Path Display', () => {
 
     // Create a test project
     const projectId = uuidv4();
-    const companyId = tenantData.company.companyId;
+    const companyId = tenantData.client!.clientId;
 
     await context.db('projects').insert({
       project_id: projectId,
@@ -375,7 +375,7 @@ test.describe('Project Task Move and Duplicate with Full Path Display', () => {
     await context.db('projects').insert({
       project_id: projectId,
       tenant: tenantId,
-      company_id: tenantData.company.companyId,
+      company_id: tenantData.client!.clientId,
       project_name: 'Kanban Test Project',
       wbs_code: 'KANBAN',
       is_inactive: false,
@@ -509,7 +509,7 @@ test.describe('Project Task Move and Duplicate with Full Path Display', () => {
     await context.db('projects').insert({
       project_id: projectId,
       tenant: tenantId,
-      company_id: tenantData.company.companyId,
+      company_id: tenantData.client!.clientId,
       project_name: 'Cross Phase Move',
       wbs_code: 'CROSS',
       is_inactive: false,
@@ -647,7 +647,7 @@ test.describe('Project Task Move and Duplicate with Full Path Display', () => {
     await context.db('projects').insert({
       project_id: projectId,
       tenant: tenantId,
-      company_id: tenantData.company.companyId,
+      company_id: tenantData.client!.clientId,
       project_name: 'Duplicate Status Test',
       wbs_code: 'DUP-STATUS',
       is_inactive: false,
@@ -814,7 +814,7 @@ test.describe('Project Task Move and Duplicate with Full Path Display', () => {
     await context.db('projects').insert({
       project_id: projectId,
       tenant: tenantId,
-      company_id: tenantData.company.companyId,
+      company_id: tenantData.client!.clientId,
       project_name: 'Validation Test',
       wbs_code: 'VAL',
       is_inactive: false,
@@ -929,7 +929,7 @@ test.describe('Project Task Move and Duplicate with Full Path Display', () => {
     await context.db('projects').insert({
       project_id: projectId,
       tenant: tenantId,
-      company_id: tenantData.company.companyId,
+      company_id: tenantData.client!.clientId,
       project_name: 'Tree Expand Test',
       wbs_code: 'TREE',
       is_inactive: false,

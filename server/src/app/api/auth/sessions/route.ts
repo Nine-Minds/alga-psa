@@ -10,7 +10,7 @@ import {
   getUserSessionsAction,
   revokeAllOtherSessionsAction,
   type RevokeAllSessionsParams
-} from 'server/src/lib/actions/session-actions/sessionActions';
+} from '@alga-psa/auth/actions';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';

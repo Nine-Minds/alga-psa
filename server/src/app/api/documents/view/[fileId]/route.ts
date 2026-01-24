@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createTenantKnex } from 'server/src/lib/db';
 import { getConnection } from '@/lib/db/db';
-import { StorageProviderFactory } from 'server/src/lib/storage/StorageProviderFactory';
+import { StorageProviderFactory } from '@alga-psa/documents';
 import { FileStoreModel } from 'server/src/models/storage';
-import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
+import { getCurrentUser } from '@alga-psa/users/actions';
 
 export async function GET(
   request: NextRequest,

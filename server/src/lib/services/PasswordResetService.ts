@@ -2,7 +2,7 @@ import { createTenantKnex } from '../db';
 import { checkPasswordResetLimit, formatRateLimitError } from '../security/rateLimiting';
 import crypto from 'crypto';
 import { Knex } from 'knex';
-import { withTransaction } from '@alga-psa/shared/db';
+import { withTransaction } from '@alga-psa/db';
 
 export interface PasswordResetToken {
   token_id: string;

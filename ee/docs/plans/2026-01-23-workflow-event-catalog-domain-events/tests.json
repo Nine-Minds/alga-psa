@@ -1,0 +1,63 @@
+[
+  { "id": "T001", "description": "Standards: new payload schemas follow the conventions in PRD §6 (tenantId required; transitions have previous/new; mutation events include updatedFields/changes)", "implemented": true, "featureIds": ["F001", "F003"] },
+  { "id": "T002", "description": "Schema registry: every catalog event with payload_schema_ref resolves via schema registry (no 404) and validates example payloads", "implemented": true, "featureIds": ["F003", "F006", "F005"] },
+  { "id": "T003", "description": "Event bus schema: every expanded event_type is accepted by the event bus schema/types and maps to a payload schema", "implemented": true, "featureIds": ["F004"] },
+  { "id": "T004", "description": "Catalog migration: system_event_catalog contains entries (category/name/description/payload_schema_ref) for all events listed in event-proposals.md", "implemented": true, "featureIds": ["F005"] },
+  { "id": "T005", "description": "Simulator: form-mode builder renders for each new catalog event and rejects invalid payloads with schema validation errors", "implemented": true, "featureIds": ["F006", "F003"] },
+  { "id": "T006", "description": "Overlap handling: ticket message/comment and appointment/schedule-entry overlap decisions are encoded and documented (no duplicate/ambiguous triggers)", "implemented": true, "featureIds": ["F004", "F012", "F020"] },
+
+  { "id": "T010", "description": "Tickets: status/priority transitions publish TICKET_STATUS_CHANGED and TICKET_PRIORITY_CHANGED with previous/new values", "implemented": true, "featureIds": ["F010"] },
+  { "id": "T011", "description": "Tickets: assignment changes publish TICKET_ASSIGNED and TICKET_UNASSIGNED with previous/new assignee context", "implemented": true, "featureIds": ["F010"] },
+  { "id": "T012", "description": "Tickets: reopen publishes TICKET_REOPENED with previous/new status and actor", "implemented": true, "featureIds": ["F010"] },
+  { "id": "T013", "description": "Tickets: escalation/queue changes publish TICKET_ESCALATED and TICKET_QUEUE_CHANGED", "implemented": true, "featureIds": ["F010"] },
+  { "id": "T014", "description": "Tickets: merge/split publish TICKET_MERGED and TICKET_SPLIT with source/target ids", "implemented": true, "featureIds": ["F011"] },
+  { "id": "T015", "description": "Tickets: tag changes publish TICKET_TAGS_CHANGED (or TAG_APPLIED/TAG_REMOVED as decided) with added/removed tags", "implemented": true, "featureIds": ["F010", "F053"] },
+  { "id": "T016", "description": "Tickets: communication events publish TICKET_MESSAGE_ADDED/TICKET_CUSTOMER_REPLIED/TICKET_INTERNAL_NOTE_ADDED (or map to existing comment events) with correct visibility/channel", "implemented": true, "featureIds": ["F012"] },
+  { "id": "T017", "description": "Tickets: time logging publishes TICKET_TIME_ENTRY_ADDED with billable/minutes metadata", "implemented": true, "featureIds": ["F013"] },
+  { "id": "T018", "description": "Tickets: SLA stage enter/met/breached publish events only when SLA module enabled; payload includes stage + target timestamps", "implemented": true, "featureIds": ["F014"] },
+  { "id": "T019", "description": "Tickets: approval events are catalog-only (no emission until an approvals subsystem exists); schemas + catalog entries are still validated", "implemented": true, "featureIds": ["F015"] },
+
+  { "id": "T020", "description": "Scheduling: create/reschedule/cancel/complete/no-show emit appointment/schedule events with start/end times and timezone", "implemented": true, "featureIds": ["F020"] },
+  { "id": "T021", "description": "Scheduling: assignment changes emit APPOINTMENT_ASSIGNED (or mapped schedule-entry equivalent) with previous/new assignee", "implemented": true, "featureIds": ["F020"] },
+  { "id": "T022", "description": "Scheduling: schedule blocks emit SCHEDULE_BLOCK_CREATED and SCHEDULE_BLOCK_DELETED with owner context", "implemented": true, "featureIds": ["F021"] },
+  { "id": "T023", "description": "Scheduling: capacity thresholds emit CAPACITY_THRESHOLD_REACHED only when configured, with team/date metrics", "implemented": true, "featureIds": ["F022"] },
+  { "id": "T024", "description": "Field ops: dispatch lifecycle emits TECHNICIAN_DISPATCHED/EN_ROUTE/ARRIVED/CHECKED_OUT only when supported", "implemented": true, "featureIds": ["F023"] },
+
+  { "id": "T030", "description": "Projects: updates emit PROJECT_UPDATED with updatedFields/changes", "implemented": true, "featureIds": ["F030"] },
+  { "id": "T031", "description": "Projects: status transitions emit PROJECT_STATUS_CHANGED with previous/new status", "implemented": true, "featureIds": ["F030"] },
+  { "id": "T032", "description": "Projects: task creation/assignment/status/complete emit PROJECT_TASK_CREATED/ASSIGNED/STATUS_CHANGED/COMPLETED", "implemented": true, "featureIds": ["F031"] },
+  { "id": "T033", "description": "Projects: dependency blocked/unblocked emit PROJECT_TASK_DEPENDENCY_BLOCKED/UNBLOCKED", "implemented": true, "featureIds": ["F032"] },
+  { "id": "T034", "description": "Projects: approval events are catalog-only (no emission until an approvals subsystem exists); schemas + catalog entries are still validated", "implemented": true, "featureIds": ["F033"] },
+
+  { "id": "T040", "description": "Billing: invoice send/status/due-date change emit INVOICE_SENT/INVOICE_STATUS_CHANGED/INVOICE_DUE_DATE_CHANGED", "implemented": true, "featureIds": ["F040"] },
+  { "id": "T041", "description": "Billing: overdue/write-off emit INVOICE_OVERDUE and INVOICE_WRITTEN_OFF with monetary context", "implemented": true, "featureIds": ["F040"] },
+  { "id": "T042", "description": "Billing: payments emit PAYMENT_RECORDED/APPLIED/FAILED/REFUNDED with invoice application details", "implemented": true, "featureIds": ["F041"] },
+  { "id": "T043", "description": "Billing: credits emit CREDIT_NOTE_CREATED/APPLIED/VOIDED with amounts and affected invoiceId when applicable", "implemented": true, "featureIds": ["F042"] },
+  { "id": "T044", "description": "Billing: contracts emit CONTRACT_CREATED/UPDATED/STATUS_CHANGED and CONTRACT_RENEWAL_UPCOMING with renewal timing", "implemented": true, "featureIds": ["F043"] },
+  { "id": "T045", "description": "Billing: recurring billing runs emit RECURRING_BILLING_RUN_STARTED/COMPLETED/FAILED with summary counts", "implemented": true, "featureIds": ["F044"] },
+
+  { "id": "T050", "description": "CRM: clients emit CLIENT_CREATED/UPDATED/STATUS_CHANGED/OWNER_ASSIGNED/ARCHIVED (CLIENT_MERGED is catalog-only; schemas + catalog entries validated)", "implemented": true, "featureIds": ["F050"] },
+  { "id": "T051", "description": "CRM: contacts emit CONTACT_CREATED/UPDATED/PRIMARY_SET/ARCHIVED (CONTACT_MERGED is catalog-only; schemas + catalog entries validated)", "implemented": true, "featureIds": ["F051"] },
+  { "id": "T052", "description": "CRM: interactions/notes emit INTERACTION_LOGGED and NOTE_CREATED with entity linkage", "implemented": true, "featureIds": ["F052"] },
+  { "id": "T053", "description": "Tags: tag definition/apply/remove emit TAG_DEFINITION_CREATED/UPDATED and TAG_APPLIED/TAG_REMOVED with entityType/entityId", "implemented": true, "featureIds": ["F053"] },
+
+  { "id": "T060", "description": "Documents: uploads/deletes emit DOCUMENT_UPLOADED and DOCUMENT_DELETED with storage metadata", "implemented": true, "featureIds": ["F060"] },
+  { "id": "T061", "description": "Documents: associate/detach emit DOCUMENT_ASSOCIATED and DOCUMENT_DETACHED with entity references", "implemented": true, "featureIds": ["F061"] },
+  { "id": "T062", "description": "Documents: generation emits DOCUMENT_GENERATED for supported generation paths with sourceType/sourceId", "implemented": true, "featureIds": ["F062"] },
+  { "id": "T063", "description": "Documents: signature events are catalog-only (no emission until an e-signature subsystem exists); schemas + catalog entries are still validated", "implemented": true, "featureIds": ["F063"] },
+
+  { "id": "T070", "description": "Email: inbound replies emit INBOUND_EMAIL_REPLY_RECEIVED when reply parsing/matching succeeds", "implemented": true, "featureIds": ["F070"] },
+  { "id": "T071", "description": "Email: outbound send pipeline emits OUTBOUND_EMAIL_QUEUED/OUTBOUND_EMAIL_SENT/OUTBOUND_EMAIL_FAILED", "implemented": true, "featureIds": ["F071"] },
+  { "id": "T072", "description": "Email: delivery/bounce/complaint/unsubscribe emits EMAIL_DELIVERED/EMAIL_BOUNCED/EMAIL_COMPLAINT_RECEIVED/EMAIL_UNSUBSCRIBED where supported", "implemented": true, "featureIds": ["F072"] },
+  { "id": "T073", "description": "Notifications: send/deliver/fail/read emits NOTIFICATION_SENT/DELIVERED/FAILED/READ for supported channels", "implemented": true, "featureIds": ["F073"] },
+  { "id": "T074", "description": "Surveys/CSAT: survey lifecycle emits SURVEY_SENT/RESPONSE_RECEIVED/REMINDER_SENT/EXPIRED and CSAT alerts emit CSAT_ALERT_TRIGGERED", "implemented": true, "featureIds": ["F074"] },
+
+  { "id": "T080", "description": "Integrations: sync lifecycle emits INTEGRATION_SYNC_STARTED/COMPLETED/FAILED with summary/error shape", "implemented": true, "featureIds": ["F080"] },
+  { "id": "T081", "description": "Integrations: webhook receipt emits INTEGRATION_WEBHOOK_RECEIVED with safe raw payload handling/redaction", "implemented": true, "featureIds": ["F081"] },
+  { "id": "T082", "description": "Integrations: connect/disconnect emits INTEGRATION_CONNECTED/INTEGRATION_DISCONNECTED", "implemented": true, "featureIds": ["F082"] },
+  { "id": "T083", "description": "Integrations: token expiring/refresh failed emits INTEGRATION_TOKEN_EXPIRING/INTEGRATION_TOKEN_REFRESH_FAILED", "implemented": true, "featureIds": ["F083"] },
+  { "id": "T084", "description": "Integrations: mapping/config changes emit EXTERNAL_MAPPING_CHANGED with mappingType + previous/new values", "implemented": true, "featureIds": ["F084"] },
+
+  { "id": "T090", "description": "Assets: lifecycle emits ASSET_CREATED/UPDATED/ASSIGNED/UNASSIGNED/WARRANTY_EXPIRING with consistent owner fields", "implemented": true, "featureIds": ["F090"] },
+  { "id": "T091", "description": "Media: upload + processing emits FILE_UPLOADED/MEDIA_PROCESSING_SUCCEEDED/MEDIA_PROCESSING_FAILED with stable file ids", "implemented": true, "featureIds": ["F091"] }
+]

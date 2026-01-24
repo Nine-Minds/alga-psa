@@ -54,10 +54,21 @@ const _middleware = auth((request) => {
   const requestHost = request.headers.get('host') || '';
   const requestHostname = requestHost.split(':')[0];
   const origin = request.headers.get('origin');
+  const nextAction = request.headers.get('next-action');
 
   // Handle CORS preflight requests early
   if (request.method === 'OPTIONS') {
     return corsPreflightResponse(origin);
+  }
+
+  // Dev-only guard: prevent noisy stack traces from stale Server Action IDs after refactors/restarts.
+  // If the browser is running an older bundle, it can keep POSTing an action id that no longer exists.
+  if (process.env.NODE_ENV === 'development' && nextAction === '0091be379ebfc31238a6a78b24a504906087e8813c') {
+    const errorResponse = NextResponse.json(
+      { error: 'Stale Server Action request. Hard refresh the page (or close/reopen the tab) to load the latest bundle.' },
+      { status: 409 }
+    );
+    return applyCorsHeaders(errorResponse, origin);
   }
 
   // Clone request headers so we can pass additional metadata downstream
@@ -93,9 +104,12 @@ const _middleware = auth((request) => {
       '/api/documents/download/',
       '/api/documents/view/',
       '/api/email/webhooks/',
+      '/api/calendar/webhooks/',
       '/api/email/oauth/',
       '/api/client-portal/domain-session',
       '/api/integrations/ninjaone/callback',
+      // AI chat endpoints are session-authenticated (MSP UI)
+      '/api/chat/',
       // Internal MSP UI endpoints (session-authenticated)
       '/api/accounting/csv/',
       '/api/accounting/exports/',
@@ -105,6 +119,9 @@ const _middleware = auth((request) => {
       '/api/ext-proxy/',
       '/api/ext-debug/',  // Extension debug stream uses session auth
       '/api/internal/ext-storage/',  // Runner storage API uses x-runner-auth token
+      '/api/internal/ext-runner/',   // Runner install-config/registry API uses x-runner-auth token
+      '/api/internal/ext-scheduler/', // Runner scheduler host API uses x-runner-auth token
+      '/api/internal/ext-invoicing/', // Runner invoicing host API uses x-runner-auth token
     ];
 
     // Log for debugging CORS issues

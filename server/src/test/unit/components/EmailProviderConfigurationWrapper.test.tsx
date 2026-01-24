@@ -5,7 +5,7 @@ import React from 'react';
 import { render, screen } from '@testing-library/react';
 import { vi, describe, it, expect } from 'vitest';
 import '@testing-library/jest-dom';
-import { EmailProviderConfigurationWrapper } from '../../../components/EmailProviderConfigurationWrapper';
+import { EmailProviderConfigurationWrapper } from '@alga-psa/integrations/components';
 
 // Mock the EmailProviderConfiguration component with a factory function
 vi.mock('../../../components/EmailProviderConfiguration', () => ({

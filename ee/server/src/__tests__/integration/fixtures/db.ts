@@ -18,7 +18,7 @@ export const test = base.extend<DbFixtures>({
     const db = createTestDbConnection();
     await use(db);
     await db.destroy().catch(() => undefined);
-  }, { scope: 'worker' }],
+  }, { scope: 'worker' } as any],
 
   // Create a unique tenant per worker to isolate tests without resetting DB
   tenant: [async ({ db }, use, workerInfo) => {
@@ -28,7 +28,7 @@ export const test = base.extend<DbFixtures>({
     await use(tenant);
     // Optional: do not rollback to keep artifacts for debugging; tests should clean their own data
     // If needed, you can import rollbackTenant and call it here.
-  }, { scope: 'worker' }],
+  }, { scope: 'worker' } as any],
 });
 
 export const expect = test.expect;

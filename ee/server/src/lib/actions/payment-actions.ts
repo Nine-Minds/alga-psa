@@ -8,17 +8,17 @@
  * configure settings, and manage payment integrations.
  */
 
-import { getConnection } from 'server/src/lib/db/db';
-import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
-import { getSecretProviderInstance } from '@alga-psa/shared/core';
-import logger from '@alga-psa/shared/core/logger';
+import { createTenantKnex } from '@/lib/db';
+import { withAuth } from '@alga-psa/auth';
+import { getSecretProviderInstance } from '@alga-psa/core/secrets';
+import logger from '@alga-psa/core/logger';
 import Stripe from 'stripe';
 import * as fs from 'fs';
 import {
   IPaymentProviderConfig,
   PaymentSettings,
   DEFAULT_PAYMENT_SETTINGS,
-} from 'server/src/interfaces/payment.interfaces';
+} from '@alga-psa/types';
 
 // Path to ngrok URL file (written by ngrok-sync container)
 const NGROK_URL_FILE = '/app/ngrok/url';
@@ -106,17 +106,12 @@ interface PaymentProviderDisplay {
 /**
  * Gets the current payment provider configuration for the tenant.
  */
-export async function getPaymentConfigAction(): Promise<PaymentActionResult<PaymentProviderDisplay | null>> {
+export const getPaymentConfigAction = withAuth(async (user, { tenant }): Promise<PaymentActionResult<PaymentProviderDisplay | null>> => {
   try {
-    const user = await getCurrentUser();
-    if (!user?.tenant) {
-      return { success: false, error: 'Unauthorized' };
-    }
-
-    const knex = await getConnection();
+    const { knex } = await createTenantKnex();
     const config = await knex<IPaymentProviderConfig>('payment_provider_configs')
       .where({
-        tenant: user.tenant,
+        tenant,
         provider_type: 'stripe',
       })
       .first();
@@ -139,7 +134,7 @@ export async function getPaymentConfigAction(): Promise<PaymentActionResult<Paym
       try {
         const secretProvider = await getSecretProviderInstance();
         const actualSecret = await secretProvider.getTenantSecret(
-          user.tenant,
+          tenant,
           'stripe_payment_webhook_secret'
         );
         if (actualSecret) {
@@ -148,13 +143,13 @@ export async function getPaymentConfigAction(): Promise<PaymentActionResult<Paym
         } else {
           // Path exists in DB but secret is missing (likely lost during deployment)
           logger.warn('[PaymentActions] Webhook secret path exists but secret is missing', {
-            tenantId: user.tenant,
+            tenantId: tenant,
             vaultPath: config.webhook_secret_vault_path,
           });
         }
       } catch (error) {
         logger.warn('[PaymentActions] Failed to verify webhook secret exists', {
-          tenantId: user.tenant,
+          tenantId: tenant,
           error,
         });
       }
@@ -183,21 +178,18 @@ export async function getPaymentConfigAction(): Promise<PaymentActionResult<Paym
     logger.error('[PaymentActions] Failed to get payment config', { error });
     return { success: false, error: 'Failed to get payment configuration' };
   }
-}
+});
 
 /**
  * Connects a Stripe account to the tenant.
  * Validates the credentials, creates webhook endpoint automatically, and stores configuration.
  */
-export async function connectStripeAction(
+export const connectStripeAction = withAuth(async (
+  user,
+  { tenant },
   credentials: StripeCredentials
-): Promise<PaymentActionResult<{ publishableKey: string; webhookConfigured: boolean }>> {
+): Promise<PaymentActionResult<{ publishableKey: string; webhookConfigured: boolean }>> => {
   try {
-    const user = await getCurrentUser();
-    if (!user?.tenant) {
-      return { success: false, error: 'Unauthorized' };
-    }
-
     // Validate credentials by making a test API call
     const stripe = new Stripe(credentials.secretKey, {
       apiVersion: '2024-12-18.acacia' as any,
@@ -221,7 +213,7 @@ export async function connectStripeAction(
     // Store credentials securely
     const secretProvider = await getSecretProviderInstance();
     await secretProvider.setTenantSecret(
-      user.tenant,
+      tenant,
       'stripe_payment_secret_key',
       credentials.secretKey
     );
@@ -245,7 +237,7 @@ export async function connectStripeAction(
       if (existingEndpoint) {
         // Check if we already have the secret stored in the vault
         const existingSecret = await secretProvider.getTenantSecret(
-          user.tenant,
+          tenant,
           'stripe_payment_webhook_secret'
         );
 
@@ -253,12 +245,12 @@ export async function connectStripeAction(
           // We have the secret - just update the webhook events
           logger.info('[PaymentActions] Found existing webhook endpoint with stored secret, updating events', {
             endpointId: existingEndpoint.id,
-            tenantId: user.tenant,
+            tenantId: tenant,
           });
 
           await stripe.webhookEndpoints.update(existingEndpoint.id, {
             enabled_events: STRIPE_WEBHOOK_EVENTS,
-            description: `Alga PSA payment webhook for tenant ${user.tenant}`,
+            description: `Alga PSA payment webhook for tenant ${tenant}`,
           });
 
           webhookEndpointId = existingEndpoint.id;
@@ -268,7 +260,7 @@ export async function connectStripeAction(
           // No secret stored - delete and recreate to get a fresh secret
           logger.info('[PaymentActions] Found existing webhook endpoint but no stored secret, recreating', {
             endpointId: existingEndpoint.id,
-            tenantId: user.tenant,
+            tenantId: tenant,
           });
 
           await stripe.webhookEndpoints.del(existingEndpoint.id);
@@ -276,9 +268,9 @@ export async function connectStripeAction(
           const webhookEndpoint = await stripe.webhookEndpoints.create({
             url: webhookUrl,
             enabled_events: STRIPE_WEBHOOK_EVENTS,
-            description: `Alga PSA payment webhook for tenant ${user.tenant}`,
+            description: `Alga PSA payment webhook for tenant ${tenant}`,
             metadata: {
-              tenant_id: user.tenant,
+              tenant_id: tenant,
               created_by: 'alga-psa',
             },
           });
@@ -290,7 +282,7 @@ export async function connectStripeAction(
           // Store the webhook secret
           if (webhookSecret) {
             await secretProvider.setTenantSecret(
-              user.tenant,
+              tenant,
               'stripe_payment_webhook_secret',
               webhookSecret
             );
@@ -298,22 +290,22 @@ export async function connectStripeAction(
 
           logger.info('[PaymentActions] Webhook endpoint recreated successfully', {
             endpointId: webhookEndpointId,
-            tenantId: user.tenant,
+            tenantId: tenant,
           });
         }
       } else {
         // Create new webhook endpoint
         logger.info('[PaymentActions] Creating new Stripe webhook endpoint', {
           webhookUrl,
-          tenantId: user.tenant,
+          tenantId: tenant,
         });
 
         const webhookEndpoint = await stripe.webhookEndpoints.create({
           url: webhookUrl,
           enabled_events: STRIPE_WEBHOOK_EVENTS,
-          description: `Alga PSA payment webhook for tenant ${user.tenant}`,
+          description: `Alga PSA payment webhook for tenant ${tenant}`,
           metadata: {
-            tenant_id: user.tenant,
+            tenant_id: tenant,
             created_by: 'alga-psa',
           },
         });
@@ -325,7 +317,7 @@ export async function connectStripeAction(
         // Store the webhook secret
         if (webhookSecret) {
           await secretProvider.setTenantSecret(
-            user.tenant,
+            tenant,
             'stripe_payment_webhook_secret',
             webhookSecret
           );
@@ -333,7 +325,7 @@ export async function connectStripeAction(
 
         logger.info('[PaymentActions] Webhook endpoint created successfully', {
           endpointId: webhookEndpointId,
-          tenantId: user.tenant,
+          tenantId: tenant,
         });
       }
     } catch (webhookError: any) {
@@ -341,17 +333,17 @@ export async function connectStripeAction(
       // User can still use Stripe, just without automatic webhook processing
       logger.warn('[PaymentActions] Failed to create webhook endpoint', {
         error: webhookError.message,
-        tenantId: user.tenant,
+        tenantId: tenant,
         webhookUrl,
       });
       // webhookConfigured remains false
     }
 
     // Create or update provider config
-    const knex = await getConnection();
+    const { knex } = await createTenantKnex();
     const existingConfig = await knex<IPaymentProviderConfig>('payment_provider_configs')
       .where({
-        tenant: user.tenant,
+        tenant,
         provider_type: 'stripe',
       })
       .first();
@@ -363,9 +355,9 @@ export async function connectStripeAction(
         publishable_key: credentials.publishableKey,
         webhook_endpoint_id: webhookEndpointId,
       },
-      credentials_vault_path: `tenant/${user.tenant}/stripe_payment_secret_key`,
+      credentials_vault_path: `tenant/${tenant}/stripe_payment_secret_key`,
       webhook_secret_vault_path: webhookSecret
-        ? `tenant/${user.tenant}/stripe_payment_webhook_secret`
+        ? `tenant/${tenant}/stripe_payment_webhook_secret`
         : (existingConfig?.webhook_secret_vault_path || null),
       settings: DEFAULT_PAYMENT_SETTINGS,
       updated_at: knex.fn.now(),
@@ -373,18 +365,18 @@ export async function connectStripeAction(
 
     if (existingConfig) {
       await knex('payment_provider_configs')
-        .where({ config_id: existingConfig.config_id, tenant: user.tenant })
+        .where({ config_id: existingConfig.config_id, tenant })
         .update(configData);
     } else {
       await knex('payment_provider_configs').insert({
-        tenant: user.tenant,
+        tenant,
         provider_type: 'stripe',
         ...configData,
       });
     }
 
     logger.info('[PaymentActions] Stripe connected successfully', {
-      tenantId: user.tenant,
+      tenantId: tenant,
       userId: user.user_id,
       webhookConfigured,
     });
@@ -397,26 +389,21 @@ export async function connectStripeAction(
     logger.error('[PaymentActions] Failed to connect Stripe', { error });
     return { success: false, error: 'Failed to connect Stripe account' };
   }
-}
+});
 
 /**
  * Disconnects the Stripe account from the tenant.
  * Also deletes the webhook endpoint from Stripe.
  */
-export async function disconnectStripeAction(): Promise<PaymentActionResult> {
+export const disconnectStripeAction = withAuth(async (user, { tenant }): Promise<PaymentActionResult> => {
   try {
-    const user = await getCurrentUser();
-    if (!user?.tenant) {
-      return { success: false, error: 'Unauthorized' };
-    }
-
-    const knex = await getConnection();
+    const { knex } = await createTenantKnex();
     const secretProvider = await getSecretProviderInstance();
 
     // Get current config to find webhook endpoint ID
     const config = await knex<IPaymentProviderConfig>('payment_provider_configs')
       .where({
-        tenant: user.tenant,
+        tenant,
         provider_type: 'stripe',
       })
       .first();
@@ -429,7 +416,7 @@ export async function disconnectStripeAction(): Promise<PaymentActionResult> {
       if (webhookEndpointId) {
         try {
           const secretKey = await secretProvider.getTenantSecret(
-            user.tenant,
+            tenant,
             'stripe_payment_secret_key'
           );
 
@@ -441,7 +428,7 @@ export async function disconnectStripeAction(): Promise<PaymentActionResult> {
             await stripe.webhookEndpoints.del(webhookEndpointId);
             logger.info('[PaymentActions] Deleted Stripe webhook endpoint', {
               endpointId: webhookEndpointId,
-              tenantId: user.tenant,
+              tenantId: tenant,
             });
           }
         } catch (webhookError: any) {
@@ -449,7 +436,7 @@ export async function disconnectStripeAction(): Promise<PaymentActionResult> {
           logger.warn('[PaymentActions] Failed to delete webhook endpoint', {
             error: webhookError.message,
             endpointId: webhookEndpointId,
-            tenantId: user.tenant,
+            tenantId: tenant,
           });
         }
       }
@@ -458,7 +445,7 @@ export async function disconnectStripeAction(): Promise<PaymentActionResult> {
     // Disable the provider config and clear webhook info
     await knex('payment_provider_configs')
       .where({
-        tenant: user.tenant,
+        tenant,
         provider_type: 'stripe',
       })
       .update({
@@ -470,13 +457,13 @@ export async function disconnectStripeAction(): Promise<PaymentActionResult> {
 
     // Delete the webhook secret from vault
     try {
-      await secretProvider.deleteTenantSecret(user.tenant, 'stripe_payment_webhook_secret');
+      await secretProvider.deleteTenantSecret(tenant, 'stripe_payment_webhook_secret');
     } catch {
       // Ignore if secret doesn't exist
     }
 
     logger.info('[PaymentActions] Stripe disconnected', {
-      tenantId: user.tenant,
+      tenantId: tenant,
       userId: user.user_id,
     });
 
@@ -485,26 +472,23 @@ export async function disconnectStripeAction(): Promise<PaymentActionResult> {
     logger.error('[PaymentActions] Failed to disconnect Stripe', { error });
     return { success: false, error: 'Failed to disconnect Stripe account' };
   }
-}
+});
 
 /**
  * Updates payment settings for the tenant.
  */
-export async function updatePaymentSettingsAction(
+export const updatePaymentSettingsAction = withAuth(async (
+  user,
+  { tenant },
   settings: Partial<PaymentSettings>
-): Promise<PaymentActionResult<PaymentSettings>> {
+): Promise<PaymentActionResult<PaymentSettings>> => {
   try {
-    const user = await getCurrentUser();
-    if (!user?.tenant) {
-      return { success: false, error: 'Unauthorized' };
-    }
-
-    const knex = await getConnection();
+    const { knex } = await createTenantKnex();
 
     // Get current config
     const config = await knex<IPaymentProviderConfig>('payment_provider_configs')
       .where({
-        tenant: user.tenant,
+        tenant,
         provider_type: 'stripe',
       })
       .first();
@@ -523,14 +507,14 @@ export async function updatePaymentSettingsAction(
 
     // Update config
     await knex('payment_provider_configs')
-      .where({ config_id: config.config_id, tenant: user.tenant })
+      .where({ config_id: config.config_id, tenant })
       .update({
         settings: newSettings,
         updated_at: knex.fn.now(),
       });
 
     logger.info('[PaymentActions] Payment settings updated', {
-      tenantId: user.tenant,
+      tenantId: tenant,
       userId: user.user_id,
       settings: newSettings,
     });
@@ -540,20 +524,15 @@ export async function updatePaymentSettingsAction(
     logger.error('[PaymentActions] Failed to update payment settings', { error });
     return { success: false, error: 'Failed to update payment settings' };
   }
-}
+});
 
 /**
  * Tests the Stripe connection by making a simple API call.
  */
-export async function testStripeConnectionAction(): Promise<PaymentActionResult<{ status: string }>> {
+export const testStripeConnectionAction = withAuth(async (user, { tenant }): Promise<PaymentActionResult<{ status: string }>> => {
   try {
-    const user = await getCurrentUser();
-    if (!user?.tenant) {
-      return { success: false, error: 'Unauthorized' };
-    }
-
     const secretProvider = await getSecretProviderInstance();
-    const secretKey = await secretProvider.getTenantSecret(user.tenant, 'stripe_payment_secret_key');
+    const secretKey = await secretProvider.getTenantSecret(tenant, 'stripe_payment_secret_key');
 
     if (!secretKey) {
       return { success: false, error: 'Stripe not configured' };
@@ -581,19 +560,14 @@ export async function testStripeConnectionAction(): Promise<PaymentActionResult<
 
     return { success: false, error: 'Connection test failed' };
   }
-}
+});
 
 /**
  * Gets the webhook URL for Stripe configuration.
  * Uses ngrok URL in development mode if available, with explicit override support.
  */
-export async function getStripeWebhookUrlAction(): Promise<PaymentActionResult<{ webhookUrl: string }>> {
+export const getStripeWebhookUrlAction = withAuth(async (user, { tenant }): Promise<PaymentActionResult<{ webhookUrl: string }>> => {
   try {
-    const user = await getCurrentUser();
-    if (!user?.tenant) {
-      return { success: false, error: 'Unauthorized' };
-    }
-
     const baseUrl = getStripeBaseUrl();
     const webhookUrl = `${baseUrl}/api/webhooks/stripe/payments`;
 
@@ -604,33 +578,30 @@ export async function getStripeWebhookUrlAction(): Promise<PaymentActionResult<{
     logger.error('[PaymentActions] Failed to get webhook URL', { error });
     return { success: false, error: 'Failed to get webhook URL' };
   }
-}
+});
 
 /**
  * Saves a manually configured webhook secret for Stripe.
  * Used when automatic webhook configuration fails and user sets up webhook manually in Stripe Dashboard.
  */
-export async function saveStripeWebhookSecretAction(
+export const saveStripeWebhookSecretAction = withAuth(async (
+  user,
+  { tenant },
   webhookSecret: string
-): Promise<PaymentActionResult> {
+): Promise<PaymentActionResult> => {
   try {
-    const user = await getCurrentUser();
-    if (!user?.tenant) {
-      return { success: false, error: 'Unauthorized' };
-    }
-
     // Validate webhook secret format
     if (!webhookSecret.startsWith('whsec_')) {
       return { success: false, error: 'Invalid webhook secret format (should start with whsec_)' };
     }
 
-    const knex = await getConnection();
+    const { knex } = await createTenantKnex();
     const secretProvider = await getSecretProviderInstance();
 
     // Check if Stripe is configured
     const config = await knex<IPaymentProviderConfig>('payment_provider_configs')
       .where({
-        tenant: user.tenant,
+        tenant,
         provider_type: 'stripe',
       })
       .first();
@@ -641,21 +612,21 @@ export async function saveStripeWebhookSecretAction(
 
     // Store the webhook secret
     await secretProvider.setTenantSecret(
-      user.tenant,
+      tenant,
       'stripe_payment_webhook_secret',
       webhookSecret
     );
 
     // Update the config to point to the webhook secret
     await knex('payment_provider_configs')
-      .where({ config_id: config.config_id, tenant: user.tenant })
+      .where({ config_id: config.config_id, tenant })
       .update({
-        webhook_secret_vault_path: `tenant/${user.tenant}/stripe_payment_webhook_secret`,
+        webhook_secret_vault_path: `tenant/${tenant}/stripe_payment_webhook_secret`,
         updated_at: knex.fn.now(),
       });
 
     logger.info('[PaymentActions] Webhook secret saved manually', {
-      tenantId: user.tenant,
+      tenantId: tenant,
       userId: user.user_id,
     });
 
@@ -664,26 +635,21 @@ export async function saveStripeWebhookSecretAction(
     logger.error('[PaymentActions] Failed to save webhook secret', { error });
     return { success: false, error: 'Failed to save webhook secret' };
   }
-}
+});
 
 /**
  * Retries automatic webhook configuration for Stripe.
  * Used when initial webhook configuration failed and user wants to retry.
  */
-export async function retryStripeWebhookConfigurationAction(): Promise<PaymentActionResult<{ webhookConfigured: boolean }>> {
+export const retryStripeWebhookConfigurationAction = withAuth(async (user, { tenant }): Promise<PaymentActionResult<{ webhookConfigured: boolean }>> => {
   try {
-    const user = await getCurrentUser();
-    if (!user?.tenant) {
-      return { success: false, error: 'Unauthorized' };
-    }
-
-    const knex = await getConnection();
+    const { knex } = await createTenantKnex();
     const secretProvider = await getSecretProviderInstance();
 
     // Get existing config
     const config = await knex<IPaymentProviderConfig>('payment_provider_configs')
       .where({
-        tenant: user.tenant,
+        tenant,
         provider_type: 'stripe',
       })
       .first();
@@ -693,7 +659,7 @@ export async function retryStripeWebhookConfigurationAction(): Promise<PaymentAc
     }
 
     // Get the secret key from vault
-    const secretKey = await secretProvider.getTenantSecret(user.tenant, 'stripe_payment_secret_key');
+    const secretKey = await secretProvider.getTenantSecret(tenant, 'stripe_payment_secret_key');
     if (!secretKey) {
       return { success: false, error: 'Stripe credentials not found. Please reconnect Stripe.' };
     }
@@ -719,7 +685,7 @@ export async function retryStripeWebhookConfigurationAction(): Promise<PaymentAc
       // Delete existing endpoint to get a fresh secret
       logger.info('[PaymentActions] Deleting existing webhook endpoint for retry', {
         endpointId: existingEndpoint.id,
-        tenantId: user.tenant,
+        tenantId: tenant,
       });
       await stripe.webhookEndpoints.del(existingEndpoint.id);
     }
@@ -727,15 +693,15 @@ export async function retryStripeWebhookConfigurationAction(): Promise<PaymentAc
     // Create new webhook endpoint
     logger.info('[PaymentActions] Creating Stripe webhook endpoint (retry)', {
       webhookUrl,
-      tenantId: user.tenant,
+      tenantId: tenant,
     });
 
     const webhookEndpoint = await stripe.webhookEndpoints.create({
       url: webhookUrl,
       enabled_events: STRIPE_WEBHOOK_EVENTS,
-      description: `Alga PSA payment webhook for tenant ${user.tenant}`,
+      description: `Alga PSA payment webhook for tenant ${tenant}`,
       metadata: {
-        tenant_id: user.tenant,
+        tenant_id: tenant,
         created_by: 'alga-psa',
       },
     });
@@ -749,7 +715,7 @@ export async function retryStripeWebhookConfigurationAction(): Promise<PaymentAc
 
     // Store the webhook secret
     await secretProvider.setTenantSecret(
-      user.tenant,
+      tenant,
       'stripe_payment_webhook_secret',
       webhookSecret
     );
@@ -757,19 +723,19 @@ export async function retryStripeWebhookConfigurationAction(): Promise<PaymentAc
     // Update the config with webhook info
     const configuration = config.configuration as any;
     await knex('payment_provider_configs')
-      .where({ config_id: config.config_id, tenant: user.tenant })
+      .where({ config_id: config.config_id, tenant })
       .update({
         configuration: {
           ...configuration,
           webhook_endpoint_id: webhookEndpointId,
         },
-        webhook_secret_vault_path: `tenant/${user.tenant}/stripe_payment_webhook_secret`,
+        webhook_secret_vault_path: `tenant/${tenant}/stripe_payment_webhook_secret`,
         updated_at: knex.fn.now(),
       });
 
     logger.info('[PaymentActions] Webhook configuration retry successful', {
       endpointId: webhookEndpointId,
-      tenantId: user.tenant,
+      tenantId: tenant,
     });
 
     return { success: true, data: { webhookConfigured: true } };
@@ -782,22 +748,17 @@ export async function retryStripeWebhookConfigurationAction(): Promise<PaymentAc
 
     return { success: false, error: error.message || 'Failed to configure webhook' };
   }
-}
+});
 
 /**
  * Gets the Stripe publishable key for client-side initialization.
  */
-export async function getStripePublishableKeyAction(): Promise<PaymentActionResult<{ publishableKey: string }>> {
+export const getStripePublishableKeyAction = withAuth(async (user, { tenant }): Promise<PaymentActionResult<{ publishableKey: string }>> => {
   try {
-    const user = await getCurrentUser();
-    if (!user?.tenant) {
-      return { success: false, error: 'Unauthorized' };
-    }
-
-    const knex = await getConnection();
+    const { knex } = await createTenantKnex();
     const config = await knex<IPaymentProviderConfig>('payment_provider_configs')
       .where({
-        tenant: user.tenant,
+        tenant,
         provider_type: 'stripe',
         is_enabled: true,
       })
@@ -817,4 +778,4 @@ export async function getStripePublishableKeyAction(): Promise<PaymentActionResu
     logger.error('[PaymentActions] Failed to get publishable key', { error });
     return { success: false, error: 'Failed to get publishable key' };
   }
-}
+});
