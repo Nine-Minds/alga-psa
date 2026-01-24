@@ -116,7 +116,7 @@
   {
     "id": "T020",
     "description": "Search input filters drafts by contract name",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F010"]
   },
   {
