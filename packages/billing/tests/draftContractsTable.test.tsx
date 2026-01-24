@@ -634,4 +634,33 @@ describe('Drafts tab DataTable', () => {
     const dialog = await screen.findByTestId('confirmation-dialog');
     expect(within(dialog).getByText(/Acme Co/)).toBeInTheDocument();
   });
+
+  it('confirmation dialog displays warning about permanent deletion (T052)', async () => {
+    mockDraftContracts = [
+      {
+        contract_id: 'contract-1',
+        contract_name: 'Draft Alpha',
+        client_name: 'Acme Co',
+        created_at: new Date(2026, 0, 1),
+        updated_at: new Date(2026, 0, 2),
+      },
+    ];
+
+    const Contracts = (await import('../src/components/billing-dashboard/contracts/Contracts')).default;
+    render(<Contracts />);
+
+    await screen.findByText('Draft Alpha');
+
+    const user = userEvent.setup();
+    await act(async () => {
+      await user.click(await screen.findByRole('button', { name: /open menu/i }));
+    });
+    await act(async () => {
+      await user.click(await screen.findByText('Discard'));
+    });
+
+    const dialog = await screen.findByTestId('confirmation-dialog');
+    expect(within(dialog).getByText(/permanently delete/i)).toBeInTheDocument();
+    expect(within(dialog).getByText(/cannot be undone/i)).toBeInTheDocument();
+  });
 });

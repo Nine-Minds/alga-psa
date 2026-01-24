@@ -308,7 +308,7 @@
   {
     "id": "T052",
     "description": "Confirmation dialog displays warning about permanent deletion",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F020"]
   },
   {
