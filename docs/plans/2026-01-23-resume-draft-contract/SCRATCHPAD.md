@@ -163,6 +163,7 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
   - (2026-01-24) Extended `packages/billing/tests/contractWizardResume.test.tsx` and implemented T045 to assert finishing a resumed draft calls `createClientContractFromWizard` without `{isDraft:true}` (activation path).
   - (2026-01-24) Extended `packages/billing/tests/contractWizardResume.test.tsx` and implemented T046 to assert finishing a resumed draft does not pass `{isDraft:true}` (meaning `is_active` is set true in the action).
   - (2026-01-24) Added `packages/billing/tests/contractsActivationFlow.test.tsx` and implemented T047 to assert a resumed/activated contract disappears from Drafts after wizard completion + refresh.
+  - (2026-01-24) Extended `packages/billing/tests/contractsActivationFlow.test.tsx` and implemented T048 to assert activated contracts appear in Client Contracts after switching tabs.
 
 ## Links / References
 

@@ -284,7 +284,7 @@
   {
     "id": "T048",
     "description": "Activated contract appears in Client Contracts tab",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F019"]
   },
   {

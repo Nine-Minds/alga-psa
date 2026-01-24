@@ -9,6 +9,7 @@ import userEvent from '@testing-library/user-event';
 let mockDraftContracts: any[] = [];
 let mockClientContracts: any[] = [];
 let mockDraftResumeData: any = null;
+let mockSearchParams = new URLSearchParams('tab=contracts&subtab=drafts');
 
 const mockRouter = {
   push: vi.fn(),
@@ -17,7 +18,7 @@ const mockRouter = {
 
 vi.mock('next/navigation', () => ({
   useRouter: () => mockRouter,
-  useSearchParams: () => new URLSearchParams('tab=contracts&subtab=drafts'),
+  useSearchParams: () => mockSearchParams,
 }));
 
 vi.mock('@alga-psa/ui/components/CustomTabs', () => ({
@@ -87,6 +88,7 @@ vi.mock('@alga-psa/billing/actions/contractWizardActions', () => ({
 
 describe('Contracts activation flow (draft -> active)', () => {
   beforeAll(() => {
+    (globalThis as any).IS_REACT_ACT_ENVIRONMENT = true;
     Object.defineProperty(HTMLElement.prototype, 'clientWidth', {
       configurable: true,
       get() {
@@ -96,6 +98,7 @@ describe('Contracts activation flow (draft -> active)', () => {
   });
 
   it('activated contract no longer appears in Drafts tab (T047)', async () => {
+    mockSearchParams = new URLSearchParams('tab=contracts&subtab=drafts');
     mockDraftResumeData = {
       contract_id: 'contract-1',
       is_draft: true,
@@ -132,7 +135,6 @@ describe('Contracts activation flow (draft -> active)', () => {
     await act(async () => {
       await user.click(await screen.findByText('Resume'));
     });
-
     await act(async () => {
       await user.click(await screen.findByText('Complete Wizard'));
     });
@@ -145,5 +147,54 @@ describe('Contracts activation flow (draft -> active)', () => {
       screen.getByText('No draft contracts. Start creating a new contract to save as draft.'),
     ).toBeInTheDocument();
   });
-});
 
+  it('activated contract appears in Client Contracts tab (T048)', async () => {
+    mockSearchParams = new URLSearchParams('tab=contracts&subtab=drafts');
+    mockDraftResumeData = {
+      contract_id: 'contract-1',
+      is_draft: true,
+      client_id: 'client-1',
+      contract_name: 'Draft Alpha',
+      start_date: '2026-01-01',
+      currency_code: 'USD',
+      enable_proration: false,
+      fixed_services: [],
+      product_services: [],
+      hourly_services: [],
+      usage_services: [],
+    };
+    mockDraftContracts = [
+      {
+        contract_id: 'contract-1',
+        contract_name: 'Draft Alpha',
+        client_name: 'Acme Co',
+        created_at: new Date(2026, 0, 1),
+        updated_at: new Date(2026, 0, 2),
+      },
+    ];
+    mockClientContracts = [];
+
+    const Contracts = (await import('../src/components/billing-dashboard/contracts/Contracts')).default;
+    const ui = render(<Contracts />);
+
+    const user = userEvent.setup();
+    expect(await screen.findByText('Draft Alpha')).toBeInTheDocument();
+    await act(async () => {
+      await user.click(await screen.findByRole('button', { name: /open menu/i }));
+    });
+    await act(async () => {
+      await user.click(await screen.findByText('Resume'));
+    });
+    await act(async () => {
+      await user.click(await screen.findByText('Complete Wizard'));
+    });
+
+    // Switch to the Client Contracts tab after activation + refresh.
+    mockSearchParams = new URLSearchParams('tab=contracts&subtab=client-contracts');
+    ui.rerender(<Contracts />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Draft Alpha')).toBeInTheDocument();
+    });
+  });
+});
