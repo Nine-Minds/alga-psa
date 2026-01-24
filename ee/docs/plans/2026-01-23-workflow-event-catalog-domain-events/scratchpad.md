@@ -747,3 +747,7 @@ Phase 3 (feature dependent / optional modules):
 - 2026-01-24: Completed `T044` (contracts coverage):
   - Coverage exists via schema-compat builder tests for contract lifecycle + renewal-upcoming timing:
     - `shared/workflow/streams/domainEventBuilders/__tests__/contractEventBuilders.test.ts`
+
+- 2026-01-24: Completed `T045` (recurring billing run coverage):
+  - Coverage exists via schema-compat builder tests for run started/completed/failed payload shapes:
+    - `shared/workflow/streams/domainEventBuilders/__tests__/recurringBillingRunEventBuilders.test.ts`
