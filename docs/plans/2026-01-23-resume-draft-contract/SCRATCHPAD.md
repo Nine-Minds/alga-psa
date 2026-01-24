@@ -128,6 +128,7 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
   - (2026-01-24) Extended `packages/billing/tests/draftContractsTable.test.tsx` and implemented T014 to assert created dates render via `toLocaleDateString()`.
   - (2026-01-24) Extended `packages/billing/tests/draftContractsTable.test.tsx` and implemented T015 to assert updated dates render via `toLocaleDateString()`.
   - (2026-01-24) Extended `packages/billing/tests/draftContractsTable.test.tsx` and implemented T016 to assert each draft row renders an actions menu trigger.
+  - (2026-01-24) Extended `packages/billing/tests/draftContractsTable.test.tsx` and implemented T017 to assert the actions menu includes a Resume option.
 
 ## Links / References
 

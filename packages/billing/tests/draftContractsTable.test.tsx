@@ -3,7 +3,8 @@
  */
 import React from 'react';
 import { beforeAll, describe, expect, it, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { act, render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 
 let mockDraftContracts: any[] = [];
 
@@ -165,5 +166,28 @@ describe('Drafts tab DataTable', () => {
 
     const actionsButtons = await screen.findAllByRole('button', { name: /open menu/i });
     expect(actionsButtons).toHaveLength(2);
+  });
+
+  it('actions dropdown contains Resume option (T017)', async () => {
+    mockDraftContracts = [
+      {
+        contract_id: 'contract-1',
+        contract_name: 'Draft Alpha',
+        client_name: 'Acme Co',
+        created_at: new Date(2026, 0, 1),
+        updated_at: new Date(2026, 0, 2),
+      },
+    ];
+
+    const Contracts = (await import('../src/components/billing-dashboard/contracts/Contracts')).default;
+    render(<Contracts />);
+
+    const user = userEvent.setup();
+    const actionsButton = await screen.findByRole('button', { name: /open menu/i });
+    await act(async () => {
+      await user.click(actionsButton);
+    });
+
+    expect(await screen.findByText('Resume')).toBeInTheDocument();
   });
 });

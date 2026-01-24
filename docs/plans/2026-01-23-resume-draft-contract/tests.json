@@ -98,7 +98,7 @@
   {
     "id": "T017",
     "description": "Actions dropdown contains Resume option",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F008"]
   },
   {
