@@ -86,6 +86,10 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 
 - (2026-01-24) Resumed drafts pre-populate all wizard steps using `getDraftContractForResume()` mapping (lines/services/configs).
 
+- (2026-01-24) Wizard now upserts drafts instead of creating duplicates:
+  - `ClientContractWizardSubmission` includes optional `contract_id`
+  - `createClientContractFromWizard()` updates existing draft when `contract_id` is provided (clears old lines/configs + rewrites in a transaction)
+
 ## Commands / Runbooks
 
 - Run billing package tests: `npm test -w packages/billing`

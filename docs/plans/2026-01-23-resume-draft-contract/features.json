@@ -104,7 +104,7 @@
   {
     "id": "F018",
     "description": "Save Draft in resumed wizard updates the existing draft (not creates new)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR3", "FR5"]
   },
   {

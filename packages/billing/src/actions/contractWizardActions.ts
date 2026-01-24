@@ -114,6 +114,10 @@ type ClientUsageServiceInput = {
 };
 
 export type ClientContractWizardSubmission = {
+  /**
+   * When provided, updates this existing draft contract instead of creating a new one.
+   */
+  contract_id?: string;
   contract_name: string;
   description?: string;
   client_id: string;
@@ -678,20 +682,116 @@ export const createClientContractFromWizard = withAuth(async (
     }
 
     const now = new Date();
-    const contractId = uuidv4();
-    await trx('contracts').insert({
-      tenant,
-      contract_id: contractId,
-      contract_name: submission.contract_name,
-      contract_description: submission.description ?? null,
-      billing_frequency: submission.billing_frequency ?? 'monthly',
-      currency_code: submission.currency_code,
-      is_active: !isDraft,
-      status: isDraft ? 'draft' : 'active',
-      is_template: false,
-      created_at: now.toISOString(),
-      updated_at: now.toISOString(),
-    });
+    const nowIso = now.toISOString();
+
+    const existingContractId =
+      typeof submission.contract_id === 'string' && submission.contract_id.trim().length > 0
+        ? submission.contract_id.trim()
+        : null;
+    const contractId = existingContractId ?? uuidv4();
+
+    const clearExistingContractData = async (targetContractId: string) => {
+      await trx('client_contracts')
+        .where({ tenant, contract_id: targetContractId })
+        .delete();
+
+      const contractLineIds = await trx('contract_lines')
+        .where({ tenant, contract_id: targetContractId })
+        .pluck('contract_line_id');
+
+      if (contractLineIds.length === 0) {
+        return;
+      }
+
+      await trx('time_entries')
+        .where({ tenant })
+        .whereIn('contract_line_id', contractLineIds)
+        .update({ contract_line_id: null });
+
+      const configIds = await trx('contract_line_service_configuration')
+        .where({ tenant })
+        .whereIn('contract_line_id', contractLineIds)
+        .pluck('config_id');
+
+      if (configIds.length > 0) {
+        await trx('contract_line_service_bucket_config')
+          .where({ tenant })
+          .whereIn('config_id', configIds)
+          .delete();
+
+        await trx('contract_line_service_hourly_config')
+          .where({ tenant })
+          .whereIn('config_id', configIds)
+          .delete();
+
+        await trx('contract_line_service_usage_config')
+          .where({ tenant })
+          .whereIn('config_id', configIds)
+          .delete();
+
+        await trx('contract_line_service_configuration')
+          .where({ tenant })
+          .whereIn('config_id', configIds)
+          .delete();
+      }
+
+      await trx('contract_line_service_defaults')
+        .where({ tenant })
+        .whereIn('contract_line_id', contractLineIds)
+        .delete();
+
+      await trx('contract_line_services')
+        .where({ tenant })
+        .whereIn('contract_line_id', contractLineIds)
+        .delete();
+
+      await trx('contract_lines')
+        .where({ tenant, contract_id: targetContractId })
+        .delete();
+    };
+
+    if (existingContractId) {
+      const existing = await trx('contracts')
+        .where({ tenant, contract_id: existingContractId })
+        .andWhere((builder) => builder.whereNull('is_template').orWhere('is_template', false))
+        .first('contract_id', 'status');
+
+      if (!existing) {
+        throw new Error('Draft contract not found');
+      }
+
+      if (existing.status !== 'draft') {
+        throw new Error('Only draft contracts can be updated via the wizard');
+      }
+
+      await clearExistingContractData(existingContractId);
+
+      await trx('contracts')
+        .where({ tenant, contract_id: existingContractId })
+        .update({
+          contract_name: submission.contract_name,
+          contract_description: submission.description ?? null,
+          billing_frequency: submission.billing_frequency ?? 'monthly',
+          currency_code: submission.currency_code,
+          is_active: !isDraft,
+          status: isDraft ? 'draft' : 'active',
+          updated_at: nowIso,
+        });
+    } else {
+      await trx('contracts').insert({
+        tenant,
+        contract_id: contractId,
+        contract_name: submission.contract_name,
+        contract_description: submission.description ?? null,
+        billing_frequency: submission.billing_frequency ?? 'monthly',
+        currency_code: submission.currency_code,
+        is_active: !isDraft,
+        status: isDraft ? 'draft' : 'active',
+        is_template: false,
+        created_at: nowIso,
+        updated_at: nowIso,
+      });
+    }
 
     const fixedServiceInputs = Array.isArray(submission.fixed_services) ? submission.fixed_services : [];
     const productServiceInputs = Array.isArray(submission.product_services) ? submission.product_services : [];

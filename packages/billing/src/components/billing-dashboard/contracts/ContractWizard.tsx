@@ -229,6 +229,7 @@ export function ContractWizard({
   };
 
   const buildSubmissionData = (): ClientContractWizardSubmission => ({
+    contract_id: wizardData.contract_id,
     contract_name: wizardData.contract_name.trim(),
     description: wizardData.description?.trim() || undefined,
     client_id: wizardData.client_id || '',
