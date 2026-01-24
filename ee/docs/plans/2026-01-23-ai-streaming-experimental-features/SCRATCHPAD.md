@@ -184,3 +184,9 @@ curl -X POST localhost:3000/api/chat/stream/chat \
   - File: `ee/server/src/components/chat/Chat.tsx`
 - Validation: `npx eslint ee/server/src/components/chat/Chat.tsx --max-warnings=9999` (warnings present; no errors)
 - Next feature item: F026 Ensure Quick Ask expanded state uses streaming for responses
+
+- Fixed EE Quick Ask overlay module wiring so the expanded view can use the streaming `Chat` implementation:
+  - Added `@ee/components/chat/QuickAskOverlay` shim that re-exports the real EE overlay from `ee/server`: `packages/ee/src/components/chat/QuickAskOverlay.tsx`
+  - Updated EE overlay to use shared UI components (`@alga-psa/ui`) instead of non-existent `server/src/components/ui/*` imports: `ee/server/src/components/chat/QuickAskOverlay.tsx`
+- Validation: `npm -w server run typecheck`
+- Next feature item: F027 Ensure Sidebar Chat uses streaming for responses

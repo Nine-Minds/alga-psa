@@ -152,7 +152,7 @@
   {
     "id": "F026",
     "description": "Ensure Quick Ask expanded state uses streaming for responses",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Flow B"]
   },
   {
