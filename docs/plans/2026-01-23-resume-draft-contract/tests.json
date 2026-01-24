@@ -338,7 +338,7 @@
   {
     "id": "T057",
     "description": "Deleted draft no longer appears in list",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F022", "F023"]
   },
   {

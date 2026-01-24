@@ -799,4 +799,45 @@ describe('Drafts tab DataTable', () => {
       expect(deleteContract).toHaveBeenCalledWith('contract-1');
     });
   });
+
+  it('deleted draft no longer appears in list (T057)', async () => {
+    mockDraftContracts = [
+      {
+        contract_id: 'contract-1',
+        contract_name: 'Draft Alpha',
+        client_name: 'Acme Co',
+        created_at: new Date(2026, 0, 1),
+        updated_at: new Date(2026, 0, 2),
+      },
+    ];
+
+    const { deleteContract } = await import('@alga-psa/billing/actions/contractActions');
+    (deleteContract as unknown as { mockImplementationOnce: (fn: any) => void }).mockImplementationOnce(async () => {
+      mockDraftContracts = [];
+    });
+
+    const Contracts = (await import('../src/components/billing-dashboard/contracts/Contracts')).default;
+    render(<Contracts />);
+
+    await screen.findByText('Draft Alpha');
+
+    const user = userEvent.setup();
+    await act(async () => {
+      await user.click(await screen.findByRole('button', { name: /open menu/i }));
+    });
+    await act(async () => {
+      await user.click(await screen.findByText('Discard'));
+    });
+    await act(async () => {
+      await user.click(screen.getByRole('button', { name: 'Discard' }));
+    });
+
+    await waitFor(() => {
+      expect(screen.queryByText('Draft Alpha')).not.toBeInTheDocument();
+    });
+
+    expect(
+      await screen.findByText('No draft contracts. Start creating a new contract to save as draft.'),
+    ).toBeInTheDocument();
+  });
 });
