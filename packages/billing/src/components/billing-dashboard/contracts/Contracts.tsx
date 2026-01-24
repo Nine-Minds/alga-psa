@@ -21,6 +21,7 @@ import { IContract, IContractWithClient } from '@alga-psa/types';
 import {
   checkClientHasActiveContract,
   deleteContract,
+  getDraftContracts,
   getContractTemplates,
   getContractsWithClients,
   updateContract,
@@ -59,12 +60,14 @@ const Contracts: React.FC = () => {
 
   const [templateContracts, setTemplateContracts] = useState<IContract[]>([]);
   const [clientContracts, setClientContracts] = useState<IContractWithClient[]>([]);
+  const [draftContracts, setDraftContracts] = useState<IContractWithClient[]>([]);
   const [showTemplateWizard, setShowTemplateWizard] = useState(false);
   const [showClientWizard, setShowClientWizard] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [templateSearchTerm, setTemplateSearchTerm] = useState('');
   const [clientSearchTerm, setClientSearchTerm] = useState('');
+  const [draftSearchTerm, setDraftSearchTerm] = useState('');
 
   // Pagination state for templates
   const [templateCurrentPage, setTemplateCurrentPage] = useState(1);
@@ -73,6 +76,10 @@ const Contracts: React.FC = () => {
   // Pagination state for client contracts
   const [clientCurrentPage, setClientCurrentPage] = useState(1);
   const [clientPageSize, setClientPageSize] = useState(10);
+
+  // Pagination state for draft contracts
+  const [draftCurrentPage, setDraftCurrentPage] = useState(1);
+  const [draftPageSize, setDraftPageSize] = useState(10);
 
   // Handle page size change for templates - reset to page 1
   const handleTemplatePageSizeChange = (newPageSize: number) => {
@@ -86,6 +93,12 @@ const Contracts: React.FC = () => {
     setClientCurrentPage(1);
   };
 
+  // Handle page size change for draft contracts - reset to page 1
+  const handleDraftPageSizeChange = (newPageSize: number) => {
+    setDraftPageSize(newPageSize);
+    setDraftCurrentPage(1);
+  };
+
   useEffect(() => {
     void fetchContracts();
   }, []);
@@ -93,12 +106,14 @@ const Contracts: React.FC = () => {
   const fetchContracts = async () => {
     try {
       setIsLoading(true);
-      const [fetchedTemplates, fetchedAssignments] = await Promise.all([
+      const [fetchedTemplates, fetchedAssignments, fetchedDrafts] = await Promise.all([
         getContractTemplates(),
         getContractsWithClients(),
+        getDraftContracts(),
       ]);
       setTemplateContracts(fetchedTemplates);
       setClientContracts(fetchedAssignments.filter((assignment) => Boolean(assignment.client_id)));
+      setDraftContracts(fetchedDrafts);
       setError(null);
     } catch (err) {
       console.error('Error fetching contracts:', err);
@@ -427,7 +442,7 @@ const renderStatusBadge = (status: string) => {
     );
   });
 
-  const draftCount = clientContracts.filter((contract) => contract.status === 'draft').length;
+  const draftCount = draftContracts.length;
 
   const renderTemplateTab = () => (
     <>
@@ -531,9 +546,88 @@ const renderStatusBadge = (status: string) => {
   );
 
   const renderDraftsTab = () => (
-    <div className="py-8 text-center text-gray-600">
-      Draft contracts will appear here.
-    </div>
+    <>
+      <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+        <div className="relative max-w-md w-full">
+          <Search
+            className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400"
+            aria-hidden="true"
+          />
+          <Input
+            type="text"
+            placeholder="Search drafts..."
+            value={draftSearchTerm}
+            onChange={(event) => setDraftSearchTerm(event.target.value)}
+            className="pl-10"
+            aria-label="Search draft contracts"
+          />
+        </div>
+      </div>
+
+      {draftContracts.length === 0 ? (
+        <div className="py-8 text-center text-gray-600">
+          No draft contracts. Start creating a new contract to save as draft.
+        </div>
+      ) : (
+        <DataTable
+          id="draft-contracts-table"
+          data={draftContracts.filter((contract) => {
+            if (!draftSearchTerm) return true;
+            const search = draftSearchTerm.toLowerCase();
+            return (
+              contract.contract_name?.toLowerCase().includes(search) ||
+              contract.client_name?.toLowerCase().includes(search)
+            );
+          })}
+          columns={[
+            {
+              title: 'Contract Name',
+              dataIndex: 'contract_name',
+              render: (value: string | null) =>
+                typeof value === 'string' && value.trim().length > 0 ? value : '—',
+            },
+            {
+              title: 'Client',
+              dataIndex: 'client_name',
+              render: (value: string | null) =>
+                typeof value === 'string' && value.trim().length > 0 ? value : '—',
+            },
+            {
+              title: 'Created',
+              dataIndex: 'created_at',
+              render: (value: any) => {
+                if (!value) return '—';
+                try {
+                  const date = new Date(value);
+                  return isNaN(date.getTime()) ? '—' : date.toLocaleDateString();
+                } catch {
+                  return '—';
+                }
+              },
+            },
+            {
+              title: 'Last Modified',
+              dataIndex: 'updated_at',
+              render: (value: any) => {
+                if (!value) return '—';
+                try {
+                  const date = new Date(value);
+                  return isNaN(date.getTime()) ? '—' : date.toLocaleDateString();
+                } catch {
+                  return '—';
+                }
+              },
+            },
+          ]}
+          pagination={true}
+          currentPage={draftCurrentPage}
+          onPageChange={setDraftCurrentPage}
+          pageSize={draftPageSize}
+          onItemsPerPageChange={handleDraftPageSizeChange}
+          initialSorting={[{ id: 'updated_at', desc: true }]}
+        />
+      )}
+    </>
   );
 
   const tabs = [

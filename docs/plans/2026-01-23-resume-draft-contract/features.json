@@ -20,7 +20,7 @@
   {
     "id": "F004",
     "description": "Drafts DataTable displays contract name column",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR2"]
   },
   {

@@ -52,6 +52,10 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
   - Location: `packages/billing/src/actions/contractActions.ts`
   - Query joins `contracts` + `client_contracts` + `clients` (and template name), filters by tenant + `status='draft'`, orders by `updated_at desc`
 
+- (2026-01-24) Drafts tab now renders a Drafts DataTable with Contract Name column:
+  - Draft data fetched via `getDraftContracts()` in `packages/billing/src/components/billing-dashboard/contracts/Contracts.tsx`
+  - Added search input + localized date rendering (will be broken out into checklist items as we complete them)
+
 ## Commands / Runbooks
 
 - Run billing package tests: `npm test -w packages/billing`
