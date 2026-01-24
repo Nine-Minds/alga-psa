@@ -320,7 +320,6 @@ export const Chat: React.FC<ChatProps> = ({
   );
   const [chatId, setChatId] = useState<string | null>(initialChatId ?? null);
   const [userMessageId, setUserMessageId] = useState<string | null>(null);
-  const [botMessageId, setBotMessageId] = useState<string | null>(null);
   const [conversation, setConversation] = useState<ChatCompletionMessage[]>(() =>
     mapMessagesFromProps(messages),
   );
@@ -340,6 +339,7 @@ export const Chat: React.FC<ChatProps> = ({
   const messageOrderRef = useRef<number>(0);
   const streamingTextRef = useRef<string | null>(null);
   const generationIdRef = useRef<number>(0);
+  const pendingAssistantMessageIdRef = useRef<string | null>(null);
 
   const resolveMessageId = (candidate?: string | null) =>
     candidate ?? (typeof crypto !== 'undefined' && 'randomUUID' in crypto
@@ -426,7 +426,7 @@ export const Chat: React.FC<ChatProps> = ({
       setNewChatMessages((prev) => [
         ...prev,
         {
-          _id: resolveMessageId(botMessageId),
+          _id: resolveMessageId(pendingAssistantMessageIdRef.current),
           role: 'bot',
           content: fullMessage,
           reasoning: fullReasoning ?? undefined,
@@ -435,6 +435,7 @@ export const Chat: React.FC<ChatProps> = ({
           statusDetail: fullMessageStatusDetail ?? undefined,
         },
       ]);
+      pendingAssistantMessageIdRef.current = null;
       setFullMessage('');
       setFullReasoning(null);
       setFullMessageStatus(null);
@@ -443,7 +444,6 @@ export const Chat: React.FC<ChatProps> = ({
   }, [
     generatingResponse,
     fullMessage,
-    botMessageId,
     fullReasoning,
     fullMessageStatus,
     fullMessageStatusDetail,
@@ -487,9 +487,9 @@ export const Chat: React.FC<ChatProps> = ({
     chatIdentifier: string | null,
     content: string,
     messageOrder?: number,
-  ) => {
+  ): Promise<string | null> => {
     if (!content || !chatIdentifier) {
-      return;
+      return null;
     }
 
     try {
@@ -502,9 +502,10 @@ export const Chat: React.FC<ChatProps> = ({
         message_order: messageOrder,
       };
       const saved = await addMessageToChatAction(messageInfo);
-      setBotMessageId(saved._id || null);
+      return saved._id || null;
     } catch (error) {
       console.error('Failed to persist assistant message', error);
+      return null;
     }
   }, []);
 
@@ -565,6 +566,7 @@ export const Chat: React.FC<ChatProps> = ({
     generationIdRef.current += 1;
     streamAbortControllerRef.current?.abort();
     streamAbortControllerRef.current = null;
+    pendingAssistantMessageIdRef.current = null;
     if (streamingTextRef.current) {
       setIncomingMessage('');
       setFullMessageStatus(null);
@@ -582,6 +584,7 @@ export const Chat: React.FC<ChatProps> = ({
     setFunctionError(null);
     setFullMessageStatus(null);
     setFullMessageStatusDetail(null);
+    pendingAssistantMessageIdRef.current = null;
     setGeneratingResponse(true);
     setIsFunction(true);
     setIncomingMessage('Thinking...');
@@ -724,11 +727,12 @@ export const Chat: React.FC<ChatProps> = ({
       if (!wasInterrupted) {
         const assistantOrder = messageOrderRef.current + 1;
         messageOrderRef.current = assistantOrder;
-        await addAssistantMessageToPersistence(
+        const persistedMessageId = await addAssistantMessageToPersistence(
           createdChatId ?? chatId,
           finalAssistantContent,
           assistantOrder,
         );
+        pendingAssistantMessageIdRef.current = persistedMessageId;
         setFullMessageStatus(null);
         setFullMessageStatusDetail(null);
       } else {
@@ -767,6 +771,7 @@ export const Chat: React.FC<ChatProps> = ({
       console.error('Error generating completion', error);
       const partial = streamingTextRef.current ?? '';
       if (partial.trim().length > 0) {
+        pendingAssistantMessageIdRef.current = null;
         setIncomingMessage('');
         setFullMessageStatus('interrupted');
         setFullMessageStatusDetail(
@@ -863,11 +868,12 @@ export const Chat: React.FC<ChatProps> = ({
         }
         const assistantOrder = messageOrderRef.current + 1;
         messageOrderRef.current = assistantOrder;
-        await addAssistantMessageToPersistence(
+        const persistedMessageId = await addAssistantMessageToPersistence(
           pendingFunction.chatId ?? chatId,
           finalAssistantContent,
           assistantOrder,
         );
+        pendingAssistantMessageIdRef.current = persistedMessageId;
 
         setConversation(
           modelMessages ?? [

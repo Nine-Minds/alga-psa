@@ -146,7 +146,7 @@
   {
     "id": "F025",
     "description": "Persist assistant message to database after streaming completes (final content)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Streaming Implementation"]
   },
   {

@@ -176,3 +176,11 @@ curl -X POST localhost:3000/api/chat/stream/chat \
   - Files: `ee/server/src/components/chat/Chat.tsx`, `ee/server/src/components/message/Message.tsx`, `ee/server/src/components/message/message.css`
 - Validation: `npx eslint ee/server/src/components/chat/Chat.tsx ee/server/src/components/message/Message.tsx --max-warnings=9999` (warnings present; no errors)
 - Next feature item: F025 Persist assistant message to database after streaming completes (final content)
+
+### 2026-01-24
+- Finalized assistant message persistence after streaming completes:
+  - Streaming completions now stash the persisted assistant message id per-generation (ref) so UI messages never reuse a prior assistant id when persistence is skipped (interrupts) or fails.
+  - Only completed streams (`done: true`) attempt persistence; interrupted/partial messages still render but never persist.
+  - File: `ee/server/src/components/chat/Chat.tsx`
+- Validation: `npx eslint ee/server/src/components/chat/Chat.tsx --max-warnings=9999` (warnings present; no errors)
+- Next feature item: F026 Ensure Quick Ask expanded state uses streaming for responses
