@@ -108,4 +108,50 @@ describe('DefaultLayout sidebar chat shortcut gating', () => {
 
     expect(screen.queryByTestId('right-sidebar')).not.toBeInTheDocument();
   });
+
+  it('toggles the RightSidebar via the Sidebar Chat shortcut (⌘L/Ctrl+L) when aiAssistant is enabled', async () => {
+    vi.mocked(isExperimentalFeatureEnabled).mockResolvedValueOnce(true);
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: false,
+        json: async () => ({}),
+      })
+    );
+
+    render(
+      <DefaultLayout>
+        <div>content</div>
+      </DefaultLayout>
+    );
+
+    await waitFor(() => {
+      expect(isExperimentalFeatureEnabled).toHaveBeenCalledWith('aiAssistant');
+    });
+
+    const sidebar = await screen.findByTestId('right-sidebar');
+    expect(sidebar).toHaveAttribute('data-open', 'false');
+
+    const metaEvent = new KeyboardEvent('keydown', { key: 'l', metaKey: true });
+    const metaPreventDefaultSpy = vi.spyOn(metaEvent, 'preventDefault');
+    act(() => {
+      window.dispatchEvent(metaEvent);
+    });
+    expect(metaPreventDefaultSpy).toHaveBeenCalled();
+
+    await waitFor(() => {
+      expect(screen.getByTestId('right-sidebar')).toHaveAttribute('data-open', 'true');
+    });
+
+    const ctrlEvent = new KeyboardEvent('keydown', { key: 'l', ctrlKey: true });
+    const ctrlPreventDefaultSpy = vi.spyOn(ctrlEvent, 'preventDefault');
+    act(() => {
+      window.dispatchEvent(ctrlEvent);
+    });
+    expect(ctrlPreventDefaultSpy).toHaveBeenCalled();
+
+    await waitFor(() => {
+      expect(screen.getByTestId('right-sidebar')).toHaveAttribute('data-open', 'false');
+    });
+  });
 });

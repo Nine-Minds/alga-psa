@@ -146,7 +146,7 @@
   {
     "id": "T025",
     "description": "Sidebar Chat works normally when aiAssistant is enabled",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F012"]
   },
   {
