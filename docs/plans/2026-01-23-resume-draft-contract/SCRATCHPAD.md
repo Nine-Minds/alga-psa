@@ -72,6 +72,8 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 
 - (2026-01-24) Drafts tab uses standard DataTable pagination + items-per-page controls.
 
+- (2026-01-24) Drafts tab shows empty state when there are no draft contracts.
+
 ## Commands / Runbooks
 
 - Run billing package tests: `npm test -w packages/billing`

@@ -74,7 +74,7 @@
   {
     "id": "F013",
     "description": "Drafts list shows empty state when no drafts exist",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR2"]
   },
   {
