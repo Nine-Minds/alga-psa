@@ -739,3 +739,7 @@ Phase 3 (feature dependent / optional modules):
 - 2026-01-24: Completed `T042` (payments coverage):
   - Coverage exists via billing payload builder unit tests (recorded/applied/failed/refunded + invoice applications):
     - `server/src/test/unit/paymentWorkflowEvents.test.ts`
+
+- 2026-01-24: Completed `T043` (credits coverage):
+  - Coverage exists via schema-compat builder tests for credit note created/applied/voided payload shapes:
+    - `shared/workflow/streams/domainEventBuilders/__tests__/creditNoteEventBuilders.test.ts`
