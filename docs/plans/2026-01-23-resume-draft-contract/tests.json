@@ -152,7 +152,7 @@
   {
     "id": "T026",
     "description": "Empty state shows appropriate message about saving drafts",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F013"]
   },
   {
