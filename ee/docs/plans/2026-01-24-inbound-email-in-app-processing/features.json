@@ -20,7 +20,7 @@
   { "id": "F030", "description": "Wire Gmail webhook handler to call `processInboundEmailInApp` instead of publishing `INBOUND_EMAIL_RECEIVED` to Redis workflow streams", "implemented": true },
   { "id": "F031", "description": "Wire Microsoft webhook handler to call `processInboundEmailInApp` instead of publishing `INBOUND_EMAIL_RECEIVED` to Redis workflow streams", "implemented": true },
 
-  { "id": "F040", "description": "Add feature flag (tenant/provider scoped) to switch between old workflow-stream publish vs in-app processing", "implemented": false },
+  { "id": "F040", "description": "Add feature flag (tenant/provider scoped) to switch between old workflow-stream publish vs in-app processing", "implemented": true },
   { "id": "F041", "description": "Rollout: allow enabling in-app processing per providerId for staged deployment", "implemented": false },
 
   { "id": "F050", "description": "Default workflow-worker runtime to v2-only (set `WORKFLOW_WORKER_MODE=v2` in deployment configs) after inbound email no longer depends on worker", "implemented": false },
