@@ -819,4 +819,78 @@ describe('Inbound email in-app processing via webhooks (integration)', () => {
     const comments = await db('comments').where({ tenant: tenantId, ticket_id: ticketId });
     expect(comments).toHaveLength(1);
   });
+
+  it('Idempotency: replay same reply email does not create duplicate comments', async () => {
+    const providerId = uuidv4();
+    const mailbox = `support-idem-reply-${uuidv4().slice(0, 6)}@example.com`;
+    const { defaultsId } = await setupMicrosoftProvider({
+      providerId,
+      mailbox,
+      subscriptionId: `sub-ms-${uuidv4()}`,
+    });
+
+    cleanup.push(async () => {
+      await db('microsoft_email_provider_config').where({ tenant: tenantId, email_provider_id: providerId }).delete();
+      await db('email_providers').where({ tenant: tenantId, id: providerId }).delete();
+      await db('inbound_ticket_defaults').where({ tenant: tenantId, id: defaultsId }).delete();
+    });
+
+    const ticketId = uuidv4();
+    await db('tickets').insert({
+      tenant: tenantId,
+      ticket_id: ticketId,
+      ticket_number: `IDEMR-${Math.floor(Math.random() * 1_000_000)}`,
+      title: 'Idem reply ticket',
+      client_id: clientId,
+      status_id: statusId,
+      priority_id: priorityId,
+      board_id: boardId,
+      entered_by: enteredByUserId,
+      entered_at: db.fn.now(),
+      updated_at: db.fn.now(),
+    });
+    cleanup.push(async () => {
+      await db('comments').where({ tenant: tenantId, ticket_id: ticketId }).delete();
+      await db('tickets').where({ tenant: tenantId, ticket_id: ticketId }).delete();
+    });
+
+    const replyToken = `token-${uuidv4()}`;
+    await db('email_reply_tokens').insert({
+      tenant: tenantId,
+      token: replyToken,
+      ticket_id: ticketId,
+      comment_id: null,
+      project_id: null,
+      created_at: db.fn.now(),
+    });
+    cleanup.push(async () => {
+      await db('email_reply_tokens').where({ tenant: tenantId, token: replyToken }).delete();
+    });
+
+    const emailId = `reply-email-${uuidv4()}`;
+    const emailData = {
+      id: emailId,
+      provider: 'microsoft',
+      providerId,
+      tenant: tenantId,
+      receivedAt: new Date().toISOString(),
+      from: { email: 'sender@example.com', name: 'Sender' },
+      to: [{ email: mailbox, name: 'Support' }],
+      subject: 'Re: Idem reply ticket',
+      body: {
+        text: `Customer reply\n\n[ALGA-REPLY-TOKEN ${replyToken}]\n\nOlder content`,
+        html: undefined,
+      },
+      attachments: [],
+    } as any;
+
+    const first = await processInboundEmailInApp({ tenantId, providerId, emailData });
+    expect(first.outcome).toBe('replied');
+
+    const second = await processInboundEmailInApp({ tenantId, providerId, emailData });
+    expect(second.outcome).toBe('deduped');
+
+    const comments = await db('comments').where({ tenant: tenantId, ticket_id: ticketId });
+    expect(comments).toHaveLength(1);
+  });
 });

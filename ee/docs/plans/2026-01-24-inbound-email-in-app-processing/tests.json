@@ -14,7 +14,7 @@
   { "id": "T030", "description": "Attachments: attachment failure does not prevent ticket creation", "implemented": true, "featureIds": ["F015"] },
   { "id": "T031", "description": "Attachments: attachment failure does not prevent reply comment creation", "implemented": true, "featureIds": ["F006"] },
 
-  { "id": "T040", "description": "Idempotency: replay same reply email does not create duplicate comments", "implemented": false, "featureIds": ["F020", "F022"] },
+  { "id": "T040", "description": "Idempotency: replay same reply email does not create duplicate comments", "implemented": true, "featureIds": ["F020", "F022"] },
   { "id": "T041", "description": "Idempotency: replay same new-email does not create duplicate tickets", "implemented": false, "featureIds": ["F021", "F022"] },
   { "id": "T042", "description": "Feature flag: toggling flag keeps old behavior when disabled and new in-app behavior when enabled", "implemented": false, "featureIds": ["F040"] },
 
