@@ -14,7 +14,7 @@
   { "id": "T015", "description": "Tickets: tag changes publish TICKET_TAGS_CHANGED (or TAG_APPLIED/TAG_REMOVED as decided) with added/removed tags", "implemented": true, "featureIds": ["F010", "F053"] },
   { "id": "T016", "description": "Tickets: communication events publish TICKET_MESSAGE_ADDED/TICKET_CUSTOMER_REPLIED/TICKET_INTERNAL_NOTE_ADDED (or map to existing comment events) with correct visibility/channel", "implemented": true, "featureIds": ["F012"] },
   { "id": "T017", "description": "Tickets: time logging publishes TICKET_TIME_ENTRY_ADDED with billable/minutes metadata", "implemented": true, "featureIds": ["F013"] },
-  { "id": "T018", "description": "Tickets: SLA stage enter/met/breached publish events only when SLA module enabled; payload includes stage + target timestamps", "implemented": false, "featureIds": ["F014"] },
+  { "id": "T018", "description": "Tickets: SLA stage enter/met/breached publish events only when SLA module enabled; payload includes stage + target timestamps", "implemented": true, "featureIds": ["F014"] },
   { "id": "T019", "description": "Tickets: approval requested/granted/rejected publish events only when approvals enabled; payload includes approvalRequestId and type", "implemented": false, "featureIds": ["F015"] },
 
   { "id": "T020", "description": "Scheduling: create/reschedule/cancel/complete/no-show emit appointment/schedule events with start/end times and timezone", "implemented": false, "featureIds": ["F020"] },

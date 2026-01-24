@@ -642,6 +642,10 @@ Implication: we should standardize on `@alga-psa/event-bus/publishers` helpers f
   - Existing unit coverage validates `TICKET_TIME_ENTRY_ADDED` payload building against `payload.TicketTimeEntryAdded.v1`:
     - `server/src/test/unit/timeEntryWorkflowEvents.test.ts`
 
+- 2026-01-24: Completed `T018` (ticket SLA stage coverage):
+  - Existing unit coverage validates stage enter/met/breached builders and idempotency behavior:
+    - `packages/tickets/src/lib/__tests__/workflowTicketSlaStageEvents.test.ts`
+
 ## Suggested Phasing (to reduce risk)
 
 Phase 1 (authoritative CRUD/state transitions; low provider dependency):
