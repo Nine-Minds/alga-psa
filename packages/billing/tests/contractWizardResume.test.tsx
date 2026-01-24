@@ -67,7 +67,16 @@ vi.mock('../src/components/billing-dashboard/contracts/wizard-steps/UsageBasedSe
 }));
 
 vi.mock('../src/components/billing-dashboard/contracts/wizard-steps/ReviewContractStep', () => ({
-  ReviewContractStep: () => <div data-testid="step-review" />,
+  ReviewContractStep: ({ data }: { data: any }) => (
+    <div
+      data-testid="step-review"
+      data-contract-name={data.contract_name ?? ''}
+      data-fixed-services-count={String((data.fixed_services ?? []).length)}
+      data-product-services-count={String((data.product_services ?? []).length)}
+      data-hourly-services-count={String((data.hourly_services ?? []).length)}
+      data-usage-services-count={String((data.usage_services ?? []).length)}
+    />
+  ),
 }));
 
 vi.mock('@alga-psa/billing/actions/contractWizardActions', () => ({
@@ -344,5 +353,45 @@ describe('ContractWizard resume behavior', () => {
 
     const step = await screen.findByTestId('step-usage');
     expect(step).toHaveAttribute('data-usage-services-count', '3');
+  });
+
+  it('step 6 (Review) shows complete draft data for review (T041)', async () => {
+    const { ContractWizard } = await import('../src/components/billing-dashboard/contracts/ContractWizard');
+    render(
+      <ContractWizard
+        open={true}
+        onOpenChange={vi.fn()}
+        editingContract={{
+          contract_id: 'contract-1',
+          is_draft: true,
+          client_id: 'client-1',
+          contract_name: 'Draft Alpha',
+          start_date: '2026-01-01',
+          billing_frequency: 'monthly',
+          currency_code: 'USD',
+          enable_proration: false,
+          fixed_base_rate: 10000,
+          fixed_services: [{ service_id: 'svc-1', quantity: 1 }],
+          product_services: [{ service_id: 'prod-1', quantity: 1 }],
+          hourly_services: [{ service_id: 'hr-1' }],
+          usage_services: [{ service_id: 'u-1' }],
+        }}
+      />,
+    );
+
+    await screen.findByTestId('step-contract-basics');
+    const user = userEvent.setup();
+    for (let i = 0; i < 5; i++) {
+      await act(async () => {
+        await user.click(screen.getByText('Next'));
+      });
+    }
+
+    const step = await screen.findByTestId('step-review');
+    expect(step).toHaveAttribute('data-contract-name', 'Draft Alpha');
+    expect(step).toHaveAttribute('data-fixed-services-count', '1');
+    expect(step).toHaveAttribute('data-product-services-count', '1');
+    expect(step).toHaveAttribute('data-hourly-services-count', '1');
+    expect(step).toHaveAttribute('data-usage-services-count', '1');
   });
 });

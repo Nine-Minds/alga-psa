@@ -242,7 +242,7 @@
   {
     "id": "T041",
     "description": "Step 6 (Review) shows complete draft data for review",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F017"]
   },
   {
