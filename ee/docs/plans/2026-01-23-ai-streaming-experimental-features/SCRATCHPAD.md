@@ -406,3 +406,10 @@ curl -X POST localhost:3000/api/chat/stream/chat \
   - File: `server/src/test/unit/api/chatStream.route.gating.test.ts`
 - Validation: `npx vitest run server/src/test/unit/api/chatStream.route.gating.test.ts`
 - Next test item: T030 /api/chat/v1/completions/stream endpoint exists and accepts POST
+
+### 2026-01-24 (cont.)
+- Implemented T030 (unit test):
+  - Verifies `/api/chat/v1/completions/stream` exports `POST` and returns a 200 response for a valid POST request when `aiAssistant` is enabled.
+  - File: `server/src/test/unit/api/chatCompletionsStream.route.exists.test.ts`
+- Validation: `npx vitest run server/src/test/unit/api/chatCompletionsStream.route.exists.test.ts`
+- Next test item: T031 /api/chat/v1/completions/stream returns Content-Type: text/event-stream

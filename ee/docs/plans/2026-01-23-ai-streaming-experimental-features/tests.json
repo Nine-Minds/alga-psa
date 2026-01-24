@@ -176,7 +176,7 @@
   {
     "id": "T030",
     "description": "/api/chat/v1/completions/stream endpoint exists and accepts POST",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F016"]
   },
   {
