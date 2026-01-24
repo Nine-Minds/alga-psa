@@ -277,3 +277,10 @@ curl -X POST localhost:3000/api/chat/stream/chat \
   - File: `server/src/test/unit/components/ExperimentalFeaturesSettings.test.tsx`
 - Validation: `npx vitest run server/src/test/unit/components/ExperimentalFeaturesSettings.test.tsx`
 - Next test item: T012 Experimental Features tab appears in Settings navigation
+
+### 2026-01-24 (cont.)
+- Implemented T012 (unit test):
+  - Verifies Settings navigation includes an "Experimental Features" entry pointing at `?tab=experimental-features`.
+  - File: `server/src/test/unit/menuConfig.experimentalFeatures.test.ts`
+- Validation: `npx vitest run server/src/test/unit/menuConfig.experimentalFeatures.test.ts`
+- Next test item: T013 Experimental Features tab loads lazily

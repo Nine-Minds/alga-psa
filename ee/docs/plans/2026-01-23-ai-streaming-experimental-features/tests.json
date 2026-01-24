@@ -68,7 +68,7 @@
   {
     "id": "T012",
     "description": "Experimental Features tab appears in Settings navigation",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F005"]
   },
   {
