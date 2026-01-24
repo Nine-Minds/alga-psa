@@ -420,9 +420,20 @@ Implication: we should standardize on `@alga-psa/event-bus/publishers` helpers f
   - Verification:
     - `npx vitest run shared/workflow/streams/domainEventBuilders/__tests__/documentAssociationEventBuilders.test.ts`
 
+- 2026-01-24: Completed `F062` (document generation emission):
+  - Added shared payload builder + schema-compat unit test:
+    - `shared/workflow/streams/domainEventBuilders/documentGeneratedEventBuilders.ts`
+    - `shared/workflow/streams/domainEventBuilders/__tests__/documentGeneratedEventBuilders.test.ts`
+  - Emitted `DOCUMENT_GENERATED` from the authoritative PDF generation path (covers invoice PDFs and document-to-PDF conversion):
+    - `server/src/services/pdf-generation.service.ts` publishes `DOCUMENT_GENERATED` after storing the generated PDF in `external_files`
+    - `sourceType` is `invoice` when generating an invoice PDF, otherwise `document`
+    - `sourceId` is the invoice id / source document id
+  - Notes/constraints:
+    - Publishing is best-effort (errors are logged but do not fail PDF generation/storage).
+
 ## Next Up
 
-- `F062`: emit system-generation event (DOCUMENT_GENERATED) for supported generation paths.
+- `F063`: implement document signature events if/where e-sign flows exist (otherwise mark catalog-only with rationale).
 
 ## Suggested Phasing (to reduce risk)
 
