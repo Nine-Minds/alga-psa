@@ -32,3 +32,4 @@
 - 2026-01-24: Implemented F002 by adding `processInboundEmailInApp()` in `shared/services/email/processInboundEmailInApp.ts` with in-app routing (existing ticket reply vs new-ticket creation).
 - 2026-01-24: Implemented F003 by invoking `parseEmailReplyBody()` and falling back to raw body content on parser failures (logs + continue).
 - 2026-01-24: Implemented F004 by resolving existing tickets via reply token first (if present), then falling back to thread headers via `findTicketByEmailThread`.
+- 2026-01-24: Implemented F005 by creating reply comments with BlockNote JSON content (HTML→blocks when available, text→blocks otherwise) and storing message threading metadata on the comment.
