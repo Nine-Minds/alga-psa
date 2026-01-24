@@ -266,7 +266,7 @@
   {
     "id": "T045",
     "description": "Completing resumed wizard sets contract status to 'active'",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F019"]
   },
   {

@@ -160,6 +160,7 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
   - (2026-01-24) Extended `packages/billing/tests/contractWizardResume.test.tsx` and implemented T042 to assert Save Draft submits `contract_id` + `{isDraft:true}` when resuming.
   - (2026-01-24) Extended `packages/billing/tests/contractWizardResume.test.tsx` and implemented T043 to assert Save Draft keeps the existing `contract_id` (preventing duplicate creation).
   - (2026-01-24) Extended `packages/billing/tests/contractWizardResume.test.tsx` and implemented T044 to assert Save Draft reports the same `contract_id` via `onComplete`.
+  - (2026-01-24) Extended `packages/billing/tests/contractWizardResume.test.tsx` and implemented T045 to assert finishing a resumed draft calls `createClientContractFromWizard` without `{isDraft:true}` (activation path).
 
 ## Links / References
 
