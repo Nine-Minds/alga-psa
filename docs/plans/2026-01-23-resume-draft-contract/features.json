@@ -98,7 +98,7 @@
   {
     "id": "F017",
     "description": "All wizard steps pre-populate with saved draft data when resuming",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR3"]
   },
   {
