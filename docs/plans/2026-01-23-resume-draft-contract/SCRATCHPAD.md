@@ -122,6 +122,7 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
   - Added a test asserting badge behavior as count changes (0 → 1) to represent badge updates after draft creation.
   - Added a test asserting badge hides when count returns to 0 (represents update after discard).
   - Badge hidden at 0 is asserted via `getDraftTabBadgeCount(0) === null`.
+  - Added `packages/billing/tests/draftContractsActions.test.ts` to unit test `getDraftContracts()` query constraints (status/tenant/select/order).
 
 ## Links / References
 

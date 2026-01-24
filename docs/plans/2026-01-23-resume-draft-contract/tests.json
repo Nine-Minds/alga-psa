@@ -38,7 +38,7 @@
   {
     "id": "T007",
     "description": "getDraftContracts returns only contracts with status='draft'",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F003"]
   },
   {
