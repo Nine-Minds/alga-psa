@@ -349,3 +349,9 @@ curl -X POST localhost:3000/api/chat/stream/chat \
   - File: `server/src/test/unit/layout/DefaultLayout.quickAskShortcut.test.tsx`
 - Validation: `npx vitest run server/src/test/unit/layout/DefaultLayout.quickAskShortcut.test.tsx`
 - Next test item: T022 QuickAskOverlay is rendered when aiAssistant is enabled
+
+### 2026-01-24 (cont.)
+- Implemented T022 (unit test):
+  - Verifies `DefaultLayout` renders `QuickAskOverlay` (closed) when `aiAssistant` is enabled, without needing the shortcut.
+  - File: `server/src/test/unit/layout/DefaultLayout.quickAskShortcut.test.tsx`
+- Next test item: T023 Sidebar Chat toggle (⌘L) is ignored when aiAssistant is disabled

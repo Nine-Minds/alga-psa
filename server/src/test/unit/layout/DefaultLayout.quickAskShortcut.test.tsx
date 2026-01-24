@@ -69,6 +69,31 @@ describe('DefaultLayout AI Assistant gating', () => {
     expect(screen.queryByTestId('quick-ask-overlay')).not.toBeInTheDocument();
   });
 
+  it('renders QuickAskOverlay when aiAssistant is enabled', async () => {
+    vi.mocked(isExperimentalFeatureEnabled).mockResolvedValueOnce(true);
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: false,
+        json: async () => ({}),
+      })
+    );
+
+    render(
+      <DefaultLayout>
+        <div>content</div>
+      </DefaultLayout>
+    );
+
+    await waitFor(() => {
+      expect(isExperimentalFeatureEnabled).toHaveBeenCalledWith('aiAssistant');
+    });
+
+    await waitFor(() => {
+      expect(screen.getByTestId('quick-ask-overlay')).toHaveAttribute('data-open', 'false');
+    });
+  });
+
   it('ignores the Quick Ask shortcut when aiAssistant is disabled', async () => {
     vi.mocked(isExperimentalFeatureEnabled).mockResolvedValueOnce(false);
     vi.stubGlobal(
