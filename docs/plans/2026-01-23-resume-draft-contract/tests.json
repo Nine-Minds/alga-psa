@@ -254,7 +254,7 @@
   {
     "id": "T043",
     "description": "Save Draft does not create a duplicate contract",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F018"]
   },
   {

@@ -450,4 +450,44 @@ describe('ContractWizard resume behavior', () => {
     expect(submission.contract_id).toBe('contract-1');
     expect(options).toEqual({ isDraft: true });
   });
+
+  it('save draft does not create a duplicate contract (T043)', async () => {
+    const { createClientContractFromWizard } = await import('@alga-psa/billing/actions/contractWizardActions');
+    (createClientContractFromWizard as any).mockResolvedValue({ contract_id: 'contract-99' });
+
+    const { ContractWizard } = await import('../src/components/billing-dashboard/contracts/ContractWizard');
+    render(
+      <ContractWizard
+        open={true}
+        onOpenChange={vi.fn()}
+        editingContract={{
+          contract_id: 'contract-99',
+          is_draft: true,
+          client_id: 'client-1',
+          contract_name: 'Draft Alpha',
+          start_date: '2026-01-01',
+          billing_frequency: 'monthly',
+          currency_code: 'USD',
+          enable_proration: false,
+          fixed_services: [],
+          product_services: [],
+          hourly_services: [],
+          usage_services: [],
+        }}
+      />,
+    );
+
+    await screen.findByTestId('step-contract-basics');
+    const user = userEvent.setup();
+    await act(async () => {
+      await user.click(screen.getByText('Save Draft'));
+    });
+
+    await waitFor(() => {
+      expect(createClientContractFromWizard).toHaveBeenCalledTimes(1);
+    });
+
+    const [submission] = (createClientContractFromWizard as any).mock.calls[0];
+    expect(submission.contract_id).toBe('contract-99');
+  });
 });
