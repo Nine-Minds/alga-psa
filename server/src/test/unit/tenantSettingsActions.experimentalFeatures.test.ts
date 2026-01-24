@@ -235,4 +235,25 @@ describe('tenantSettingsActions.updateExperimentalFeatures', () => {
       },
     });
   });
+
+  it('requires settings:update permission', async () => {
+    allowTenantKnex = false;
+    getCurrentUserPermissionsMock.mockResolvedValue([]);
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    const { updateExperimentalFeatures } = await import(
+      '../../../../packages/tenancy/src/actions/tenant-settings-actions/tenantSettingsActions'
+    );
+
+    try {
+      await expect(updateExperimentalFeatures({ aiAssistant: true })).rejects.toThrow(
+        'Permission denied: Cannot update settings'
+      );
+    } finally {
+      consoleErrorSpy.mockRestore();
+    }
+
+    expect(createTenantKnexMock).not.toHaveBeenCalled();
+    expect(tenantKnexTableMock).not.toHaveBeenCalled();
+  });
 });

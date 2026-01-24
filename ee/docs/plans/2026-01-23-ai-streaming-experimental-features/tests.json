@@ -26,7 +26,7 @@
   {
     "id": "T005",
     "description": "updateExperimentalFeatures() requires settings:update permission",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F002"]
   },
   {
