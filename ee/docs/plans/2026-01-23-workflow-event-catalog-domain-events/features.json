@@ -45,7 +45,7 @@
   { "id": "F073", "description": "Notifications: emit delivery lifecycle events (NOTIFICATION_SENT, NOTIFICATION_DELIVERED, NOTIFICATION_FAILED, NOTIFICATION_READ) for supported channels", "implemented": true, "prdRefs": ["7.2"] },
   { "id": "F074", "description": "Surveys/CSAT: emit survey lifecycle events (SURVEY_SENT, SURVEY_RESPONSE_RECEIVED, SURVEY_REMINDER_SENT, SURVEY_EXPIRED) and CSAT alert event (CSAT_ALERT_TRIGGERED)", "implemented": true, "prdRefs": ["7.2"] },
 
-  { "id": "F080", "description": "Integrations: emit sync lifecycle events (INTEGRATION_SYNC_STARTED, INTEGRATION_SYNC_COMPLETED, INTEGRATION_SYNC_FAILED)", "implemented": false, "prdRefs": ["7.2"] },
+  { "id": "F080", "description": "Integrations: emit sync lifecycle events (INTEGRATION_SYNC_STARTED, INTEGRATION_SYNC_COMPLETED, INTEGRATION_SYNC_FAILED)", "implemented": true, "prdRefs": ["7.2"] },
   { "id": "F081", "description": "Integrations: emit webhook receipt event (INTEGRATION_WEBHOOK_RECEIVED) with safe raw payload handling", "implemented": false, "prdRefs": ["7.2"] },
   { "id": "F082", "description": "Integrations: emit connection health events (INTEGRATION_CONNECTED, INTEGRATION_DISCONNECTED)", "implemented": false, "prdRefs": ["7.2"] },
   { "id": "F083", "description": "Integrations: emit token lifecycle events (INTEGRATION_TOKEN_EXPIRING, INTEGRATION_TOKEN_REFRESH_FAILED)", "implemented": false, "prdRefs": ["7.2"] },

@@ -491,9 +491,20 @@ Implication: we should standardize on `@alga-psa/event-bus/publishers` helpers f
     - `packages/surveys/src/actions/surveyResponseActions.ts` now publishes `SURVEY_RESPONSE_RECEIVED` when a response is persisted, and publishes `CSAT_ALERT_TRIGGERED` when the rating is <= `NEGATIVE_RATING_THRESHOLD` (scope = assigned agent when available, otherwise org).
     - `packages/surveys/src/actions/surveyTokenService.ts` now publishes `SURVEY_EXPIRED` (best-effort) when an expired token is resolved (idempotencyKey = `survey_expired:<tenant>:<invitationId>`).
 
+- 2026-01-24: Completed `F080` (integration sync lifecycle emission):
+  - Added workflow v2 integration sync domain payload builders + schema-compat unit tests:
+    - `shared/workflow/streams/domainEventBuilders/integrationSyncEventBuilders.ts`
+    - `shared/workflow/streams/domainEventBuilders/__tests__/integrationSyncEventBuilders.test.ts`
+  - Emitted `INTEGRATION_SYNC_STARTED` / `INTEGRATION_SYNC_COMPLETED` / `INTEGRATION_SYNC_FAILED` from real RMM sync paths (NinjaOne):
+    - `ee/server/src/lib/integrations/ninjaone/sync/syncEngine.ts` publishes lifecycle events for:
+      - full sync (`runFullSync`)
+      - incremental sync (`runIncrementalSync`)
+      - single-device sync (`syncDevice`)
+    - Uses `SyncOptions.performedBy` (when provided) to attribute `INTEGRATION_SYNC_STARTED.initiatedByUserId`.
+
 ## Next Up
 
-- `F080`: emit integration sync lifecycle events (`INTEGRATION_SYNC_*`).
+- `F081`: emit integration webhook receipt event (`INTEGRATION_WEBHOOK_RECEIVED`).
 
 ## Suggested Phasing (to reduce risk)
 

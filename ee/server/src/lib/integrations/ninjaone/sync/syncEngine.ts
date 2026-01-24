@@ -56,7 +56,13 @@ import {
   CreateAssetRequest,
 } from '@/interfaces/asset.interfaces';
 import { getRedisStreamClient } from '@shared/workflow/streams';
+import {
+  buildIntegrationSyncCompletedPayload,
+  buildIntegrationSyncFailedPayload,
+  buildIntegrationSyncStartedPayload,
+} from '@shared/workflow/streams/domainEventBuilders/integrationSyncEventBuilders';
 import { v4 as uuidv4 } from 'uuid';
+import { publishWorkflowEvent } from 'server/src/lib/eventBus/publishers';
 
 /**
  * Sync operation options
@@ -181,7 +187,12 @@ export class NinjaOneSyncEngine {
     this.isRunning = true;
     this.abortController = new AbortController();
 
+    if (options.performedBy) {
+      this.auditUserId = options.performedBy;
+    }
+
     const startTime = Date.now();
+    const workflowSyncId = uuidv4();
     const result: RmmSyncResult = {
       success: true,
       sync_type: 'full',
@@ -199,6 +210,12 @@ export class NinjaOneSyncEngine {
 
       // Emit sync started event
       await this.emitSyncStartedEvent('full');
+      await this.publishIntegrationSyncStartedWorkflowEvent({
+        syncId: workflowSyncId,
+        scope: 'rmm:full',
+        startedAt: result.started_at,
+        initiatedByUserId: options.performedBy,
+      });
 
       // Update integration sync status
       await this.updateSyncStatus('syncing');
@@ -322,6 +339,20 @@ export class NinjaOneSyncEngine {
 
       // Emit sync completed event
       await this.emitSyncCompletedEvent(result);
+      await this.publishIntegrationSyncCompletedWorkflowEvent({
+        syncId: workflowSyncId,
+        startedAt: result.started_at,
+        completedAt: result.completed_at,
+        durationMs: Date.now() - startTime,
+        created: result.items_created,
+        updated: result.items_updated,
+        deleted: result.items_deleted,
+        skipped: Math.max(
+          0,
+          result.items_processed - result.items_created - result.items_updated - result.items_failed
+        ),
+        warnings: result.errors?.slice(0, 10),
+      });
 
       logger.info('Full NinjaOne sync completed', {
         tenantId: this.tenantId,
@@ -340,6 +371,13 @@ export class NinjaOneSyncEngine {
 
       await this.updateSyncStatus('error', message);
       await this.emitSyncFailedEvent(message);
+      await this.publishIntegrationSyncFailedWorkflowEvent({
+        syncId: workflowSyncId,
+        startedAt: result.started_at,
+        failedAt: result.completed_at,
+        durationMs: Date.now() - startTime,
+        errorMessage: message,
+      });
 
       logger.error('Full NinjaOne sync failed', {
         tenantId: this.tenantId,
@@ -370,7 +408,12 @@ export class NinjaOneSyncEngine {
     this.isRunning = true;
     this.abortController = new AbortController();
 
+    if (options.performedBy) {
+      this.auditUserId = options.performedBy;
+    }
+
     const startTime = Date.now();
+    const workflowSyncId = uuidv4();
     const result: RmmSyncResult = {
       success: true,
       sync_type: 'incremental',
@@ -387,6 +430,12 @@ export class NinjaOneSyncEngine {
       await this.initialize();
 
       await this.emitSyncStartedEvent('incremental');
+      await this.publishIntegrationSyncStartedWorkflowEvent({
+        syncId: workflowSyncId,
+        scope: 'rmm:incremental',
+        startedAt: result.started_at,
+        initiatedByUserId: options.performedBy,
+      });
       await this.updateSyncStatus('syncing');
 
       const mappings = await this.getOrganizationMappings(options.organizationIds);
@@ -466,6 +515,20 @@ export class NinjaOneSyncEngine {
 
       await this.updateIntegrationAfterSync(result, true);
       await this.emitSyncCompletedEvent(result);
+      await this.publishIntegrationSyncCompletedWorkflowEvent({
+        syncId: workflowSyncId,
+        startedAt: result.started_at,
+        completedAt: result.completed_at,
+        durationMs: Date.now() - startTime,
+        created: result.items_created,
+        updated: result.items_updated,
+        deleted: result.items_deleted,
+        skipped: Math.max(
+          0,
+          result.items_processed - result.items_created - result.items_updated - result.items_failed
+        ),
+        warnings: result.errors?.slice(0, 10),
+      });
 
       logger.info('Incremental NinjaOne sync completed', {
         tenantId: this.tenantId,
@@ -484,6 +547,13 @@ export class NinjaOneSyncEngine {
 
       await this.updateSyncStatus('error', message);
       await this.emitSyncFailedEvent(message);
+      await this.publishIntegrationSyncFailedWorkflowEvent({
+        syncId: workflowSyncId,
+        startedAt: result.started_at,
+        failedAt: result.completed_at,
+        durationMs: Date.now() - startTime,
+        errorMessage: message,
+      });
 
       return result;
 
@@ -497,7 +567,17 @@ export class NinjaOneSyncEngine {
    * Sync a single device by ID
    */
   public async syncDevice(deviceId: number): Promise<Asset> {
+    const startTime = Date.now();
+    const workflowSyncId = uuidv4();
+    const startedAt = new Date().toISOString();
+
     await this.initialize();
+
+    await this.publishIntegrationSyncStartedWorkflowEvent({
+      syncId: workflowSyncId,
+      scope: 'rmm:single_device',
+      startedAt,
+    });
 
     logger.debug('Syncing single device', {
       tenantId: this.tenantId,
@@ -505,31 +585,51 @@ export class NinjaOneSyncEngine {
       deviceId,
     });
 
-    // Get device details from NinjaOne
-    const device = await this.client!.getDevice(deviceId);
+    try {
+      // Get device details from NinjaOne
+      const device = await this.client!.getDevice(deviceId);
 
-    // Find the organization mapping
-    const mapping = await this.knex!('rmm_organization_mappings')
-      .where({
-        tenant: this.tenantId,
-        integration_id: this.integrationId,
-        external_organization_id: String(device.organizationId),
-      })
-      .first<RmmOrganizationMapping>();
+      // Find the organization mapping
+      const mapping = await this.knex!('rmm_organization_mappings')
+        .where({
+          tenant: this.tenantId,
+          integration_id: this.integrationId,
+          external_organization_id: String(device.organizationId),
+        })
+        .first<RmmOrganizationMapping>();
 
-    if (!mapping || !mapping.client_id) {
-      throw new Error(`No client mapping found for organization ${device.organizationId}`);
-    }
+      if (!mapping || !mapping.client_id) {
+        throw new Error(`No client mapping found for organization ${device.organizationId}`);
+      }
 
-    // Check for existing asset
-    const existingMapping = await this.findAssetByDeviceId(deviceId);
+      // Check for existing asset
+      const existingMapping = await this.findAssetByDeviceId(deviceId);
 
-    if (existingMapping) {
-      // Update existing asset
-      return await this.updateExistingAsset(existingMapping.alga_entity_id, device, mapping);
-    } else {
-      // Create new asset
-      return await this.createNewAsset(device, mapping);
+      const asset = existingMapping
+        ? await this.updateExistingAsset(existingMapping.alga_entity_id, device, mapping)
+        : await this.createNewAsset(device, mapping);
+
+      await this.publishIntegrationSyncCompletedWorkflowEvent({
+        syncId: workflowSyncId,
+        startedAt,
+        completedAt: new Date().toISOString(),
+        durationMs: Date.now() - startTime,
+        created: existingMapping ? 0 : 1,
+        updated: existingMapping ? 1 : 0,
+        skipped: 0,
+      });
+
+      return asset;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      await this.publishIntegrationSyncFailedWorkflowEvent({
+        syncId: workflowSyncId,
+        startedAt,
+        failedAt: new Date().toISOString(),
+        durationMs: Date.now() - startTime,
+        errorMessage: message,
+      });
+      throw error;
     }
   }
 
@@ -1131,6 +1231,129 @@ export class NinjaOneSyncEngine {
       });
     } catch (error) {
       logger.warn('Failed to emit sync failed event', { error: extractErrorInfo(error) });
+    }
+  }
+
+  private async publishIntegrationSyncStartedWorkflowEvent(params: {
+    syncId: string;
+    scope: string;
+    startedAt: string;
+    initiatedByUserId?: string;
+  }): Promise<void> {
+    try {
+      const ctx = {
+        tenantId: this.tenantId,
+        actor: params.initiatedByUserId
+          ? ({ actorType: 'USER', actorUserId: params.initiatedByUserId } as const)
+          : ({ actorType: 'SYSTEM' } as const),
+        correlationId: params.syncId,
+      };
+
+      await publishWorkflowEvent({
+        eventType: 'INTEGRATION_SYNC_STARTED',
+        payload: buildIntegrationSyncStartedPayload({
+          integrationId: this.integrationId,
+          provider: 'ninjaone',
+          syncId: params.syncId,
+          scope: params.scope,
+          initiatedByUserId: params.initiatedByUserId,
+          startedAt: params.startedAt,
+        }),
+        ctx,
+        idempotencyKey: `integration_sync_started:${this.tenantId}:${this.integrationId}:${params.syncId}`,
+      });
+    } catch (error) {
+      logger.warn('Failed to publish workflow INTEGRATION_SYNC_STARTED event', {
+        error: extractErrorInfo(error),
+      });
+    }
+  }
+
+  private async publishIntegrationSyncCompletedWorkflowEvent(params: {
+    syncId: string;
+    startedAt: string;
+    completedAt?: string;
+    durationMs?: number;
+    created?: number;
+    updated?: number;
+    deleted?: number;
+    skipped?: number;
+    warnings?: string[];
+  }): Promise<void> {
+    try {
+      const summary =
+        params.created !== undefined ||
+        params.updated !== undefined ||
+        params.deleted !== undefined ||
+        params.skipped !== undefined
+          ? {
+              created: params.created,
+              updated: params.updated,
+              deleted: params.deleted,
+              skipped: params.skipped,
+            }
+          : undefined;
+
+      await publishWorkflowEvent({
+        eventType: 'INTEGRATION_SYNC_COMPLETED',
+        payload: buildIntegrationSyncCompletedPayload({
+          integrationId: this.integrationId,
+          provider: 'ninjaone',
+          syncId: params.syncId,
+          startedAt: params.startedAt,
+          completedAt: params.completedAt,
+          durationMs: params.durationMs,
+          summary,
+          warnings: params.warnings,
+        }),
+        ctx: {
+          tenantId: this.tenantId,
+          actor: { actorType: 'SYSTEM' },
+          correlationId: params.syncId,
+        },
+        idempotencyKey: `integration_sync_completed:${this.tenantId}:${this.integrationId}:${params.syncId}`,
+      });
+    } catch (error) {
+      logger.warn('Failed to publish workflow INTEGRATION_SYNC_COMPLETED event', {
+        error: extractErrorInfo(error),
+      });
+    }
+  }
+
+  private async publishIntegrationSyncFailedWorkflowEvent(params: {
+    syncId: string;
+    startedAt: string;
+    failedAt?: string;
+    durationMs?: number;
+    errorCode?: string;
+    errorMessage: string;
+    retryable?: boolean;
+  }): Promise<void> {
+    try {
+      await publishWorkflowEvent({
+        eventType: 'INTEGRATION_SYNC_FAILED',
+        payload: buildIntegrationSyncFailedPayload({
+          integrationId: this.integrationId,
+          provider: 'ninjaone',
+          syncId: params.syncId,
+          startedAt: params.startedAt,
+          failedAt: params.failedAt,
+          durationMs: params.durationMs,
+          errorCode: params.errorCode,
+          errorMessage: params.errorMessage,
+          retryable: params.retryable,
+        }),
+        ctx: {
+          tenantId: this.tenantId,
+          actor: { actorType: 'SYSTEM' },
+          correlationId: params.syncId,
+        },
+        idempotencyKey: `integration_sync_failed:${this.tenantId}:${this.integrationId}:${params.syncId}`,
+      });
+    } catch (error) {
+      logger.warn('Failed to publish workflow INTEGRATION_SYNC_FAILED event', {
+        error: extractErrorInfo(error),
+      });
     }
   }
 
