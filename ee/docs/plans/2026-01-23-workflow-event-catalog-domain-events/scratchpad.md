@@ -797,3 +797,7 @@ Phase 3 (feature dependent / optional modules):
   - Coverage exists via schema-compat builder tests and provider webhook mapping tests:
     - `shared/workflow/streams/domainEventBuilders/__tests__/emailFeedbackEventBuilders.test.ts`
     - `server/src/test/unit/resendWebhookEvents.test.ts`
+
+- 2026-01-24: Completed `T073` (notification lifecycle coverage):
+  - Coverage exists via schema-compat builder tests for sent/delivered/failed/read payload shapes:
+    - `shared/workflow/streams/domainEventBuilders/__tests__/notificationEventBuilders.test.ts`
