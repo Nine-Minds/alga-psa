@@ -296,7 +296,7 @@
   {
     "id": "T050",
     "description": "Confirmation dialog displays contract name",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F020"]
   },
   {
