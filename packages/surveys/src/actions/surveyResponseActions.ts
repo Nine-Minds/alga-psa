@@ -9,7 +9,12 @@ import {
   resolveSurveyTenantFromToken,
   type SurveyInvitationDetails,
 } from './surveyTokenService';
-import { publishEvent } from '@alga-psa/event-bus/publishers';
+import { publishEvent, publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
+import logger from '@alga-psa/core/logger';
+import {
+  buildCsatAlertTriggeredPayload,
+  buildSurveyResponseReceivedPayload,
+} from '@shared/workflow/streams/domainEventBuilders/surveyEventBuilders';
 
 const SURVEY_INVITATIONS_TABLE = 'survey_invitations';
 const SURVEY_RESPONSES_TABLE = 'survey_responses';
@@ -221,6 +226,62 @@ export async function submitSurveyResponse(input: SubmitSurveyResponseInput): Pr
         comment: response.comment ?? undefined,
         assignedTo: ticket?.assigned_to ?? undefined,
       },
+    });
+  }
+
+  try {
+    const respondedAt = toDate(response.submitted_at).toISOString();
+    const recipientId = invitation.contactId ?? response.contact_id ?? invitation.ticketId;
+
+    await publishWorkflowEvent({
+      eventType: 'SURVEY_RESPONSE_RECEIVED',
+      payload: buildSurveyResponseReceivedPayload({
+        surveyId: invitation.invitationId,
+        responseId: response.response_id,
+        recipientId,
+        ticketId: invitation.ticketId,
+        respondedAt,
+        score: response.rating,
+        ...(response.comment ? { comment: response.comment } : {}),
+      }),
+      ctx: {
+        tenantId: tenant,
+        occurredAt: respondedAt,
+        actor: invitation.contactId
+          ? { actorType: 'CONTACT', actorContactId: invitation.contactId }
+          : { actorType: 'SYSTEM' },
+        idempotencyKey: `survey_response_received:${tenant}:${response.response_id}`,
+      },
+    });
+
+    if (response.rating <= NEGATIVE_RATING_THRESHOLD) {
+      const assignedTo = ticket?.assigned_to ?? undefined;
+      await publishWorkflowEvent({
+        eventType: 'CSAT_ALERT_TRIGGERED',
+        payload: buildCsatAlertTriggeredPayload({
+          window: 'daily',
+          score: response.rating,
+          threshold: NEGATIVE_RATING_THRESHOLD,
+          triggeredAt: respondedAt,
+          scopeType: assignedTo ? 'agent' : 'org',
+          ...(assignedTo ? { scopeId: assignedTo } : {}),
+        }),
+        ctx: {
+          tenantId: tenant,
+          occurredAt: respondedAt,
+          actor: invitation.contactId
+            ? { actorType: 'CONTACT', actorContactId: invitation.contactId }
+            : { actorType: 'SYSTEM' },
+          idempotencyKey: `csat_alert_triggered:${tenant}:${response.response_id}`,
+        },
+      });
+    }
+  } catch (error) {
+    logger.warn('[SurveyResponseActions] Failed to publish workflow survey events', {
+      tenant,
+      invitationId: invitation.invitationId,
+      responseId: response.response_id,
+      error: error instanceof Error ? error.message : String(error),
     });
   }
 

@@ -43,7 +43,7 @@
   { "id": "F071", "description": "Email: emit outbound lifecycle events (OUTBOUND_EMAIL_QUEUED, OUTBOUND_EMAIL_SENT, OUTBOUND_EMAIL_FAILED) for provider send attempts", "implemented": true, "prdRefs": ["7.2"] },
   { "id": "F072", "description": "Email: emit delivery/feedback events (EMAIL_DELIVERED, EMAIL_BOUNCED, EMAIL_COMPLAINT_RECEIVED, EMAIL_UNSUBSCRIBED) where provider support exists", "implemented": true, "prdRefs": ["7.2", "7.3"] },
   { "id": "F073", "description": "Notifications: emit delivery lifecycle events (NOTIFICATION_SENT, NOTIFICATION_DELIVERED, NOTIFICATION_FAILED, NOTIFICATION_READ) for supported channels", "implemented": true, "prdRefs": ["7.2"] },
-  { "id": "F074", "description": "Surveys/CSAT: emit survey lifecycle events (SURVEY_SENT, SURVEY_RESPONSE_RECEIVED, SURVEY_REMINDER_SENT, SURVEY_EXPIRED) and CSAT alert event (CSAT_ALERT_TRIGGERED)", "implemented": false, "prdRefs": ["7.2"] },
+  { "id": "F074", "description": "Surveys/CSAT: emit survey lifecycle events (SURVEY_SENT, SURVEY_RESPONSE_RECEIVED, SURVEY_REMINDER_SENT, SURVEY_EXPIRED) and CSAT alert event (CSAT_ALERT_TRIGGERED)", "implemented": true, "prdRefs": ["7.2"] },
 
   { "id": "F080", "description": "Integrations: emit sync lifecycle events (INTEGRATION_SYNC_STARTED, INTEGRATION_SYNC_COMPLETED, INTEGRATION_SYNC_FAILED)", "implemented": false, "prdRefs": ["7.2"] },
   { "id": "F081", "description": "Integrations: emit webhook receipt event (INTEGRATION_WEBHOOK_RECEIVED) with safe raw payload handling", "implemented": false, "prdRefs": ["7.2"] },

@@ -482,9 +482,18 @@ Implication: we should standardize on `@alga-psa/event-bus/publishers` helpers f
     - `shared/workflow/streams/domainEventBuilders/notificationEventBuilders.ts`
     - `shared/workflow/streams/domainEventBuilders/__tests__/notificationEventBuilders.test.ts`
 
+- 2026-01-24: Completed `F074` (survey/CSAT lifecycle emission):
+  - Added shared payload builders + schema-compat unit tests:
+    - `shared/workflow/streams/domainEventBuilders/surveyEventBuilders.ts`
+    - `shared/workflow/streams/domainEventBuilders/__tests__/surveyEventBuilders.test.ts`
+  - Emitted workflow v2 survey lifecycle events from the authoritative survey flows:
+    - `server/src/services/surveyService.ts` now publishes `SURVEY_SENT` when an invitation is sent, and publishes `SURVEY_REMINDER_SENT` when a subsequent invitation is sent for the same `(ticketId, templateId, contactId)` tuple (treated as reminder #N).
+    - `packages/surveys/src/actions/surveyResponseActions.ts` now publishes `SURVEY_RESPONSE_RECEIVED` when a response is persisted, and publishes `CSAT_ALERT_TRIGGERED` when the rating is <= `NEGATIVE_RATING_THRESHOLD` (scope = assigned agent when available, otherwise org).
+    - `packages/surveys/src/actions/surveyTokenService.ts` now publishes `SURVEY_EXPIRED` (best-effort) when an expired token is resolved (idempotencyKey = `survey_expired:<tenant>:<invitationId>`).
+
 ## Next Up
 
-- `F074`: emit survey/CSAT lifecycle events (`SURVEY_*`, `CSAT_ALERT_TRIGGERED`).
+- `F080`: emit integration sync lifecycle events (`INTEGRATION_SYNC_*`).
 
 ## Suggested Phasing (to reduce risk)
 
