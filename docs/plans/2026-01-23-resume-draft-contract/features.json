@@ -80,7 +80,7 @@
   {
     "id": "F014",
     "description": "Create getDraftContractForResume action to fetch complete draft data for wizard",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR5"]
   },
   {
