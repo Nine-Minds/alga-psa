@@ -56,7 +56,7 @@
   {
     "id": "T010",
     "description": "getDraftContracts includes client_name from joined companies table",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F003", "F005"]
   },
   {
