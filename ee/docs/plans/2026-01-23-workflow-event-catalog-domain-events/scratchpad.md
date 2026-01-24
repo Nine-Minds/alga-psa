@@ -634,6 +634,10 @@ Implication: we should standardize on `@alga-psa/event-bus/publishers` helpers f
   - Existing tag action builder tests cover tag add/remove events (applies to tickets via `entityType/entityId`):
     - `shared/workflow/streams/domainEventBuilders/__tests__/tagEventBuilders.test.ts`
 
+- 2026-01-24: Completed `T016` (ticket communication coverage):
+  - Existing unit coverage validates `TICKET_MESSAGE_ADDED`, `TICKET_CUSTOMER_REPLIED`, and `TICKET_INTERNAL_NOTE_ADDED` payload construction and schema compatibility:
+    - `packages/tickets/src/lib/__tests__/workflowTicketCommunicationEvents.test.ts`
+
 ## Suggested Phasing (to reduce risk)
 
 Phase 1 (authoritative CRUD/state transitions; low provider dependency):
