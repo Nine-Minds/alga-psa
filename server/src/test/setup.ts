@@ -31,10 +31,7 @@ vi.mock('@alga-psa/ui/ui-reflection/useRegisterUIComponent', () => ({
 }));
 
 vi.mock('@alga-psa/ui/ui-reflection/useRegisterChild', () => ({
-  useRegisterChild: () => ({
-    register: vi.fn(),
-    unregister: vi.fn(),
-  }),
+  useRegisterChild: () => vi.fn(),
 }));
 
 vi.mock('@alga-psa/ui/ui-reflection/UIStateContext', () => ({
@@ -46,6 +43,12 @@ vi.mock('@alga-psa/ui/ui-reflection/UIStateContext', () => ({
   }),
   UIStateProvider: ({ children }: { children: React.ReactNode }) => children,
 }))
+
+vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
+  useTranslation: () => ({
+    t: (_key: string, options?: { defaultValue?: string }) => options?.defaultValue ?? _key,
+  }),
+}));
 
 vi.mock('next/server', async () => {
   const mod = await import('./stubs/next-server');

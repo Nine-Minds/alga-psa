@@ -68,7 +68,7 @@
   {
     "id": "T012",
     "description": "Drafts DataTable renders contract name for each draft",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F004"]
   },
   {
