@@ -50,7 +50,7 @@
   { "id": "T071", "description": "Email: outbound send pipeline emits OUTBOUND_EMAIL_QUEUED/OUTBOUND_EMAIL_SENT/OUTBOUND_EMAIL_FAILED", "implemented": true, "featureIds": ["F071"] },
   { "id": "T072", "description": "Email: delivery/bounce/complaint/unsubscribe emits EMAIL_DELIVERED/EMAIL_BOUNCED/EMAIL_COMPLAINT_RECEIVED/EMAIL_UNSUBSCRIBED where supported", "implemented": true, "featureIds": ["F072"] },
   { "id": "T073", "description": "Notifications: send/deliver/fail/read emits NOTIFICATION_SENT/DELIVERED/FAILED/READ for supported channels", "implemented": true, "featureIds": ["F073"] },
-  { "id": "T074", "description": "Surveys/CSAT: survey lifecycle emits SURVEY_SENT/RESPONSE_RECEIVED/REMINDER_SENT/EXPIRED and CSAT alerts emit CSAT_ALERT_TRIGGERED", "implemented": false, "featureIds": ["F074"] },
+  { "id": "T074", "description": "Surveys/CSAT: survey lifecycle emits SURVEY_SENT/RESPONSE_RECEIVED/REMINDER_SENT/EXPIRED and CSAT alerts emit CSAT_ALERT_TRIGGERED", "implemented": true, "featureIds": ["F074"] },
 
   { "id": "T080", "description": "Integrations: sync lifecycle emits INTEGRATION_SYNC_STARTED/COMPLETED/FAILED with summary/error shape", "implemented": false, "featureIds": ["F080"] },
   { "id": "T081", "description": "Integrations: webhook receipt emits INTEGRATION_WEBHOOK_RECEIVED with safe raw payload handling/redaction", "implemented": false, "featureIds": ["F081"] },

@@ -801,3 +801,7 @@ Phase 3 (feature dependent / optional modules):
 - 2026-01-24: Completed `T073` (notification lifecycle coverage):
   - Coverage exists via schema-compat builder tests for sent/delivered/failed/read payload shapes:
     - `shared/workflow/streams/domainEventBuilders/__tests__/notificationEventBuilders.test.ts`
+
+- 2026-01-24: Completed `T074` (survey/CSAT lifecycle coverage):
+  - Coverage exists via schema-compat builder tests for survey sent/response/reminder/expired and CSAT alert payload shapes:
+    - `shared/workflow/streams/domainEventBuilders/__tests__/surveyEventBuilders.test.ts`
