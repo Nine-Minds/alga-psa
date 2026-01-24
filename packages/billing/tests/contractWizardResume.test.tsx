@@ -35,6 +35,8 @@ vi.mock('../src/components/billing-dashboard/contracts/wizard-steps/ContractBasi
       data-testid="step-contract-basics"
       data-client-id={data.client_id ?? ''}
       data-contract-name={data.contract_name ?? ''}
+      data-start-date={data.start_date ?? ''}
+      data-end-date={data.end_date ?? ''}
     />
   ),
 }));
@@ -147,5 +149,34 @@ describe('ContractWizard resume behavior', () => {
 
     const step = await screen.findByTestId('step-contract-basics');
     expect(step).toHaveAttribute('data-contract-name', 'Draft Name');
+  });
+
+  it('step 1 shows pre-populated dates from draft (T036)', async () => {
+    const { ContractWizard } = await import('../src/components/billing-dashboard/contracts/ContractWizard');
+    render(
+      <ContractWizard
+        open={true}
+        onOpenChange={vi.fn()}
+        editingContract={{
+          contract_id: 'contract-1',
+          is_draft: true,
+          client_id: 'client-1',
+          contract_name: 'Draft Alpha',
+          start_date: '2026-01-01',
+          end_date: '2026-12-31',
+          billing_frequency: 'monthly',
+          currency_code: 'USD',
+          enable_proration: false,
+          fixed_services: [],
+          product_services: [],
+          hourly_services: [],
+          usage_services: [],
+        }}
+      />,
+    );
+
+    const step = await screen.findByTestId('step-contract-basics');
+    expect(step).toHaveAttribute('data-start-date', '2026-01-01');
+    expect(step).toHaveAttribute('data-end-date', '2026-12-31');
   });
 });

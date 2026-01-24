@@ -212,7 +212,7 @@
   {
     "id": "T036",
     "description": "Step 1 shows pre-populated dates from draft",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F017"]
   },
   {
