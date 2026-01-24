@@ -146,6 +146,7 @@ Some proposed names overlap with existing event bus types (e.g., `TICKET_COMMENT
    - **Decision (2026-01-23):** Introduce `APPOINTMENT_*` as canonical workflow triggers; keep `SCHEDULE_ENTRY_*` for lower-level schedule entry changes and existing calendar-sync integrations.
 4. **Catalog-only events:** Are SLA/approval/dispatch events expected to exist as real product behavior today, or should they be cataloged but emitted only when those modules are enabled?
    - **Decision (2026-01-23):** `TICKET_APPROVAL_*` and `PROJECT_APPROVAL_*` events are **catalog-only** for now. The product does not currently have a ticket/project approval request/decision subsystem (no authoritative create/approve/reject path to hook), so we will not emit these events until that behavior exists.
+   - **Decision (2026-01-24):** `DOCUMENT_SIGNATURE_REQUESTED`, `DOCUMENT_SIGNED`, and `DOCUMENT_SIGNATURE_EXPIRED` are **catalog-only** for now. The product does not currently have an e-signature request/fulfillment subsystem (no authoritative request/create or provider callback/webhook ingestion path to hook), so we will not emit these events until that behavior exists.
 5. **Payload field casing:** Confirm we’re standardizing on camelCase payload keys for new schemas (matches much of `shared/workflow/streams/eventBusSchema.ts` today).
    - **Decision:** use camelCase payload keys for all new `payload.*.v1` schemas and event bus payloads.
 

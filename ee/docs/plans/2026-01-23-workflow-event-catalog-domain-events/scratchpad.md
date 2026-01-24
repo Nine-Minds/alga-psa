@@ -431,9 +431,14 @@ Implication: we should standardize on `@alga-psa/event-bus/publishers` helpers f
   - Notes/constraints:
     - Publishing is best-effort (errors are logged but do not fail PDF generation/storage).
 
+- 2026-01-24: Completed `F063` (document signatures — catalog-only):
+  - Discovery: there is no authoritative “document signature request/fulfillment” subsystem today (no signature request model/service/actions and no provider callback/webhook ingestion path to hook).
+  - Decision: treat `DOCUMENT_SIGNATURE_REQUESTED`, `DOCUMENT_SIGNED`, and `DOCUMENT_SIGNATURE_EXPIRED` as **catalog-only** until an e-sign feature is implemented.
+  - Updated `ee/docs/plans/2026-01-23-workflow-event-catalog-domain-events/PRD.md` Open Questions #4 to record the decision.
+
 ## Next Up
 
-- `F063`: implement document signature events if/where e-sign flows exist (otherwise mark catalog-only with rationale).
+- `F070`: emit `INBOUND_EMAIL_REPLY_RECEIVED` when reply parsing/matching succeeds.
 
 ## Suggested Phasing (to reduce risk)
 
