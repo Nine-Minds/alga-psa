@@ -50,7 +50,7 @@
   {
     "id": "F009",
     "description": "Drafts list supports sorting by columns (default: last modified descending)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR2"]
   },
   {

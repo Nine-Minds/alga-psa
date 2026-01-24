@@ -64,6 +64,8 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 
 - (2026-01-24) Drafts table includes Actions dropdown with Resume/Discard placeholders.
 
+- (2026-01-24) Drafts table default-sorts by Last Modified (updated_at desc) and supports header sorting via DataTable.
+
 ## Commands / Runbooks
 
 - Run billing package tests: `npm test -w packages/billing`
