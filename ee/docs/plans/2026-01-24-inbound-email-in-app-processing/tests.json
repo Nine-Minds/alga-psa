@@ -1,5 +1,5 @@
 [
-  { "id": "T001", "description": "Gmail: webhook processes a new inbound email and creates 1 ticket + 1 initial comment", "implemented": false, "featureIds": ["F030", "F013", "F014"] },
+  { "id": "T001", "description": "Gmail: webhook processes a new inbound email and creates 1 ticket + 1 initial comment", "implemented": true, "featureIds": ["F030", "F013", "F014"] },
   { "id": "T002", "description": "Microsoft: webhook processes a new inbound email and creates 1 ticket + 1 initial comment", "implemented": false, "featureIds": ["F031", "F013", "F014"] },
   { "id": "T003", "description": "Reply threading: reply token resolves ticket and creates exactly 1 new comment", "implemented": false, "featureIds": ["F004", "F005", "F020"] },
   { "id": "T004", "description": "Reply threading: In-Reply-To/References resolves ticket and creates exactly 1 new comment", "implemented": false, "featureIds": ["F004", "F005"] },
@@ -20,4 +20,3 @@
 
   { "id": "T050", "description": "Worker: workflow-worker runs with `WORKFLOW_WORKER_MODE=v2` and inbound email still works", "implemented": false, "featureIds": ["F050"] }
 ]
-
