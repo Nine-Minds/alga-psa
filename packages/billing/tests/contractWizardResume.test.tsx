@@ -586,4 +586,52 @@ describe('ContractWizard resume behavior', () => {
     expect(submission.contract_id).toBe('contract-1');
     expect(options).toBeUndefined();
   });
+
+  it('completing resumed wizard sets is_active to true (T046)', async () => {
+    const { createClientContractFromWizard } = await import('@alga-psa/billing/actions/contractWizardActions');
+    (createClientContractFromWizard as any).mockResolvedValue({ contract_id: 'contract-1' });
+
+    const { ContractWizard } = await import('../src/components/billing-dashboard/contracts/ContractWizard');
+    render(
+      <ContractWizard
+        open={true}
+        onOpenChange={vi.fn()}
+        editingContract={{
+          contract_id: 'contract-1',
+          is_draft: true,
+          client_id: 'client-1',
+          contract_name: 'Draft Alpha',
+          start_date: '2026-01-01',
+          billing_frequency: 'monthly',
+          currency_code: 'USD',
+          enable_proration: false,
+          fixed_base_rate: 10000,
+          fixed_services: [{ service_id: 'svc-1', quantity: 1 }],
+          product_services: [],
+          hourly_services: [],
+          usage_services: [],
+        }}
+      />,
+    );
+
+    await screen.findByTestId('step-contract-basics');
+    const user = userEvent.setup();
+    for (let i = 0; i < 5; i++) {
+      await act(async () => {
+        await user.click(screen.getByText('Next'));
+      });
+    }
+    await screen.findByTestId('step-review');
+
+    await act(async () => {
+      await user.click(screen.getByText('Finish'));
+    });
+
+    await waitFor(() => {
+      expect(createClientContractFromWizard).toHaveBeenCalled();
+    });
+
+    const [_submission, options] = (createClientContractFromWizard as any).mock.calls[0];
+    expect(options).toBeUndefined();
+  });
 });

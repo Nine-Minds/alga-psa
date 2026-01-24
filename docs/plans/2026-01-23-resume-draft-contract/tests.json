@@ -272,7 +272,7 @@
   {
     "id": "T046",
     "description": "Completing resumed wizard sets is_active to true",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F019"]
   },
   {
