@@ -23,7 +23,7 @@
   { "id": "T023", "description": "Scheduling: capacity thresholds emit CAPACITY_THRESHOLD_REACHED only when configured, with team/date metrics", "implemented": true, "featureIds": ["F022"] },
   { "id": "T024", "description": "Field ops: dispatch lifecycle emits TECHNICIAN_DISPATCHED/EN_ROUTE/ARRIVED/CHECKED_OUT only when supported", "implemented": true, "featureIds": ["F023"] },
 
-  { "id": "T030", "description": "Projects: updates emit PROJECT_UPDATED with updatedFields/changes", "implemented": false, "featureIds": ["F030"] },
+  { "id": "T030", "description": "Projects: updates emit PROJECT_UPDATED with updatedFields/changes", "implemented": true, "featureIds": ["F030"] },
   { "id": "T031", "description": "Projects: status transitions emit PROJECT_STATUS_CHANGED with previous/new status", "implemented": false, "featureIds": ["F030"] },
   { "id": "T032", "description": "Projects: task creation/assignment/status/complete emit PROJECT_TASK_CREATED/ASSIGNED/STATUS_CHANGED/COMPLETED", "implemented": false, "featureIds": ["F031"] },
   { "id": "T033", "description": "Projects: dependency blocked/unblocked emit PROJECT_TASK_DEPENDENCY_BLOCKED/UNBLOCKED", "implemented": false, "featureIds": ["F032"] },
