@@ -374,7 +374,7 @@
   {
     "id": "T063",
     "description": "User without contract create permission cannot resume drafts",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F025"]
   },
   {

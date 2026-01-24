@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { hasPermission } from '@alga-psa/auth/rbac';
 
 const createTenantKnex = vi.fn();
 
@@ -74,6 +75,7 @@ const makeKnex = (rows: { contracts?: KnexRow; client_contracts?: KnexRow }) => 
 describe('getDraftContractForResume action', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(hasPermission).mockReturnValue(true);
   });
 
   it('returns complete wizard data for a draft (T027)', async () => {
@@ -318,5 +320,13 @@ describe('getDraftContractForResume action', () => {
 
     const { getDraftContractForResume } = await import('../src/actions/contractWizardActions');
     await expect(getDraftContractForResume('contract-1')).rejects.toThrow('Contract is not a draft');
+  });
+
+  it('user without contract create permission cannot resume drafts (T063)', async () => {
+    vi.mocked(hasPermission).mockImplementation((_user, _domain, action) => action !== 'create');
+    createTenantKnex.mockResolvedValue({ knex: makeKnex({ contracts: null, client_contracts: null }) });
+
+    const { getDraftContractForResume } = await import('../src/actions/contractWizardActions');
+    await expect(getDraftContractForResume('contract-1')).rejects.toThrow('Permission denied: Cannot resume billing contracts');
   });
 });
