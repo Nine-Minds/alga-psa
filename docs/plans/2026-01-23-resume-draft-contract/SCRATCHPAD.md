@@ -126,6 +126,7 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
   - (2026-01-24) Added `packages/billing/tests/draftContractsTable.test.tsx` and implemented T012 to assert draft contract names render in the Drafts DataTable (forces DataTable width in jsdom so non-Actions columns are visible).
   - (2026-01-24) Extended `packages/billing/tests/draftContractsTable.test.tsx` and implemented T013 to assert client names render in the Drafts DataTable.
   - (2026-01-24) Extended `packages/billing/tests/draftContractsTable.test.tsx` and implemented T014 to assert created dates render via `toLocaleDateString()`.
+  - (2026-01-24) Extended `packages/billing/tests/draftContractsTable.test.tsx` and implemented T015 to assert updated dates render via `toLocaleDateString()`.
 
 ## Links / References
 

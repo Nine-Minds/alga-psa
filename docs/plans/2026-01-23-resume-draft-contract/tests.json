@@ -86,7 +86,7 @@
   {
     "id": "T015",
     "description": "Drafts DataTable renders last modified date in localized format",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F007"]
   },
   {
