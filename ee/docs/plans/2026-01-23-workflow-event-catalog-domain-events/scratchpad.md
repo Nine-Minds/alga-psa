@@ -763,3 +763,7 @@ Phase 3 (feature dependent / optional modules):
 - 2026-01-24: Completed `T052` (CRM interaction/note coverage):
   - Coverage exists via schema-compat builder tests for interaction logged + note created payload shapes:
     - `shared/workflow/streams/domainEventBuilders/__tests__/crmInteractionNoteEventBuilders.test.ts`
+
+- 2026-01-24: Completed `T053` (tags coverage):
+  - Coverage exists via schema-compat builder tests for definition create/update and tag apply/remove payload shapes:
+    - `shared/workflow/streams/domainEventBuilders/__tests__/tagEventBuilders.test.ts`

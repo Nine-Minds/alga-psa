@@ -39,7 +39,7 @@
   { "id": "T050", "description": "CRM: clients emit CLIENT_CREATED/UPDATED/STATUS_CHANGED/OWNER_ASSIGNED/ARCHIVED (CLIENT_MERGED is catalog-only; schemas + catalog entries validated)", "implemented": true, "featureIds": ["F050"] },
   { "id": "T051", "description": "CRM: contacts emit CONTACT_CREATED/UPDATED/PRIMARY_SET/ARCHIVED (CONTACT_MERGED is catalog-only; schemas + catalog entries validated)", "implemented": true, "featureIds": ["F051"] },
   { "id": "T052", "description": "CRM: interactions/notes emit INTERACTION_LOGGED and NOTE_CREATED with entity linkage", "implemented": true, "featureIds": ["F052"] },
-  { "id": "T053", "description": "Tags: tag definition/apply/remove emit TAG_DEFINITION_CREATED/UPDATED and TAG_APPLIED/TAG_REMOVED with entityType/entityId", "implemented": false, "featureIds": ["F053"] },
+  { "id": "T053", "description": "Tags: tag definition/apply/remove emit TAG_DEFINITION_CREATED/UPDATED and TAG_APPLIED/TAG_REMOVED with entityType/entityId", "implemented": true, "featureIds": ["F053"] },
 
   { "id": "T060", "description": "Documents: uploads/deletes emit DOCUMENT_UPLOADED and DOCUMENT_DELETED with storage metadata", "implemented": false, "featureIds": ["F060"] },
   { "id": "T061", "description": "Documents: associate/detach emit DOCUMENT_ASSOCIATED and DOCUMENT_DETACHED with entity references", "implemented": false, "featureIds": ["F061"] },
