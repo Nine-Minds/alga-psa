@@ -62,7 +62,7 @@
   {
     "id": "T011",
     "description": "getDraftContracts orders by updated_at descending by default",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F003", "F009"]
   },
   {
