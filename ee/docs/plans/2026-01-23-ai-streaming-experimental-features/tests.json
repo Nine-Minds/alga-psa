@@ -56,7 +56,7 @@
   {
     "id": "T010",
     "description": "ExperimentalFeaturesSettings loads current settings on mount",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F004"]
   },
   {

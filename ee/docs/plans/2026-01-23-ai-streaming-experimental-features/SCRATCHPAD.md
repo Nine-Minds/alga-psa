@@ -263,3 +263,10 @@ curl -X POST localhost:3000/api/chat/stream/chat \
     - File: `server/vitest.config.ts`
 - Validation: `npx vitest run server/src/test/unit/components/ExperimentalFeaturesSettings.test.tsx`
 - Next test item: T010 ExperimentalFeaturesSettings loads current settings on mount
+
+### 2026-01-24 (cont.)
+- Implemented T010 (unit test):
+  - Verifies the feature toggle reflects the value loaded from `getExperimentalFeatures()` on mount (`aria-checked` state updates).
+  - File: `server/src/test/unit/components/ExperimentalFeaturesSettings.test.tsx`
+- Validation: `npx vitest run server/src/test/unit/components/ExperimentalFeaturesSettings.test.tsx`
+- Next test item: T011 ExperimentalFeaturesSettings toggle updates local state
