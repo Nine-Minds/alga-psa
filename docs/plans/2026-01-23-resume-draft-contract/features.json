@@ -128,7 +128,7 @@
   {
     "id": "F022",
     "description": "Confirming discard deletes the draft contract using existing deleteContract action",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR4"]
   },
   {

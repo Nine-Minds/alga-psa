@@ -97,6 +97,8 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 
 - (2026-01-24) Discard confirmation includes Cancel + Discard actions (ConfirmationDialog).
 
+- (2026-01-24) Discard confirmation calls `deleteContract(contractId)` and shows toast success/error.
+
 ## Commands / Runbooks
 
 - Run billing package tests: `npm test -w packages/billing`
