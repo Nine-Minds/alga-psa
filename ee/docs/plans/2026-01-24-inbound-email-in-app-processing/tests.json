@@ -4,7 +4,7 @@
   { "id": "T003", "description": "Reply threading: reply token resolves ticket and creates exactly 1 new comment", "implemented": true, "featureIds": ["F004", "F005", "F020"] },
   { "id": "T004", "description": "Reply threading: In-Reply-To/References resolves ticket and creates exactly 1 new comment", "implemented": true, "featureIds": ["F004", "F005"] },
 
-  { "id": "T010", "description": "Body parsing: sanitizer returns non-empty text for plain-text emails", "implemented": false, "featureIds": ["F003"] },
+  { "id": "T010", "description": "Body parsing: sanitizer returns non-empty text for plain-text emails", "implemented": true, "featureIds": ["F003"] },
   { "id": "T011", "description": "Body parsing: sanitizer returns HTML-derived content when HTML is present", "implemented": false, "featureIds": ["F003", "F005", "F014"] },
 
   { "id": "T020", "description": "Contact match: sender email matches existing contact and ticket uses contact's client_id/contact_id", "implemented": false, "featureIds": ["F011", "F013"] },
