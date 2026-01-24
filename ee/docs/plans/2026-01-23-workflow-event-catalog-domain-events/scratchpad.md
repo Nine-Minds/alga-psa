@@ -581,6 +581,14 @@ Implication: we should standardize on `@alga-psa/event-bus/publishers` helpers f
 
 - All features in `features.json` are now implemented; proceed to `tests.json` checklist.
 
+- 2026-01-24: Completed `T001` (schema conventions coverage):
+  - Added a schema-level regression test that parses `event-proposals.md` and asserts payload schema conventions:
+    - `shared/workflow/runtime/__tests__/payloadSchemaConventions.test.ts`
+    - Ensures `tenantId` + `occurredAt` are required, top-level keys are camelCase (no `_`), and `updatedFields`/`changes` are paired.
+    - Ensures `previous*` transition fields have corresponding `new*` fields, with explicit exceptions for documented unassignment patterns and `CONTACT_PRIMARY_SET`.
+  - Tweaked `payload.TicketUnassigned.v1` schema to include optional `newAssigneeId/newAssigneeType` fields for consistency:
+    - `shared/workflow/runtime/schemas/ticketEventSchemas.ts`
+
 ## Suggested Phasing (to reduce risk)
 
 Phase 1 (authoritative CRUD/state transitions; low provider dependency):

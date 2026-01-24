@@ -102,6 +102,8 @@ export const ticketUnassignedEventPayloadSchema = BaseDomainEventPayloadSchema.e
   ticketId: ticketIdSchema,
   previousAssigneeId: z.string().uuid().describe('Previous assignee ID'),
   previousAssigneeType: assigneeTypeSchema.describe('Previous assignee type'),
+  newAssigneeId: z.string().uuid().optional().describe('New assignee ID (typically absent after unassignment)'),
+  newAssigneeType: assigneeTypeSchema.optional().describe('New assignee type (typically absent after unassignment)'),
   unassignedAt: z.string().datetime().optional(),
   reason: z.string().optional(),
 }).describe('Payload for TICKET_UNASSIGNED');
