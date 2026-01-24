@@ -130,6 +130,7 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
   - (2026-01-24) Extended `packages/billing/tests/draftContractsTable.test.tsx` and implemented T016 to assert each draft row renders an actions menu trigger.
   - (2026-01-24) Extended `packages/billing/tests/draftContractsTable.test.tsx` and implemented T017 to assert the actions menu includes a Resume option.
   - (2026-01-24) Extended `packages/billing/tests/draftContractsTable.test.tsx` and implemented T018 to assert the actions menu includes a Discard option.
+  - (2026-01-24) Extended `packages/billing/tests/draftContractsTable.test.tsx` and implemented T019 to assert Drafts table headers trigger sorting (initial `updated_at desc` then `contract_name asc` on click).
 
 ## Links / References
 

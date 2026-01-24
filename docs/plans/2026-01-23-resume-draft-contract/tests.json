@@ -110,7 +110,7 @@
   {
     "id": "T019",
     "description": "Clicking column header sorts by that column",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F009"]
   },
   {

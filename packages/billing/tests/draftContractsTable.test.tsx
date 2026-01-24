@@ -3,7 +3,7 @@
  */
 import React from 'react';
 import { beforeAll, describe, expect, it, vi } from 'vitest';
-import { act, render, screen } from '@testing-library/react';
+import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 let mockDraftContracts: any[] = [];
@@ -212,5 +212,46 @@ describe('Drafts tab DataTable', () => {
     });
 
     expect(await screen.findByText('Discard')).toBeInTheDocument();
+  });
+
+  it('clicking column header sorts by that column (T019)', async () => {
+    mockDraftContracts = [
+      {
+        contract_id: 'contract-1',
+        contract_name: 'b draft',
+        client_name: 'Acme Co',
+        created_at: new Date(2026, 0, 1),
+        updated_at: new Date(2026, 0, 10),
+      },
+      {
+        contract_id: 'contract-2',
+        contract_name: 'A draft',
+        client_name: 'Beta LLC',
+        created_at: new Date(2026, 0, 1),
+        updated_at: new Date(2026, 0, 5),
+      },
+    ];
+
+    const Contracts = (await import('../src/components/billing-dashboard/contracts/Contracts')).default;
+    render(<Contracts />);
+
+    // Initial sorting is by updated_at desc, so "b draft" should be first.
+    await waitFor(async () => {
+      const rows = await screen.findAllByRole('row');
+      const firstDataRow = rows[1];
+      expect(within(firstDataRow).getByText('b draft')).toBeInTheDocument();
+    });
+
+    const user = userEvent.setup();
+    const contractNameHeader = screen.getByRole('columnheader', { name: /contract name/i });
+    await act(async () => {
+      await user.click(contractNameHeader);
+    });
+
+    await waitFor(() => {
+      const rows = screen.getAllByRole('row');
+      const firstDataRow = rows[1];
+      expect(within(firstDataRow).getByText('A draft')).toBeInTheDocument();
+    });
   });
 });
