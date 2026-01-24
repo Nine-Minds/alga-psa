@@ -278,7 +278,7 @@
   {
     "id": "T047",
     "description": "Persisted message content matches final streamed content",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F025"]
   },
   {

@@ -530,3 +530,10 @@ curl -X POST localhost:3000/api/chat/stream/chat \
   - File: `server/src/test/unit/Chat.streamingIncrementalState.test.tsx`
 - Validation: `npx vitest run server/src/test/unit/Chat.streamingIncrementalState.test.tsx`
 - Next test item: T047 Persisted message content matches final streamed content
+
+### 2026-01-24 (cont.)
+- Implemented T047 (unit test):
+  - Verifies the persisted assistant message content matches the concatenated streamed tokens.
+  - File: `server/src/test/unit/Chat.streamingIncrementalState.test.tsx`
+- Validation: `npx vitest run server/src/test/unit/Chat.streamingIncrementalState.test.tsx`
+- Next test item: T048 Quick Ask expanded view streams responses
