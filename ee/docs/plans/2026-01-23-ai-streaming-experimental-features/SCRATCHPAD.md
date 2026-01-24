@@ -420,3 +420,12 @@ curl -X POST localhost:3000/api/chat/stream/chat \
   - File: `server/src/test/unit/api/chatCompletionsStream.route.exists.test.ts`
 - Validation: `npx vitest run server/src/test/unit/api/chatCompletionsStream.route.exists.test.ts`
 - Next test item: T032 Streaming endpoint passes stream: true to OpenRouter API
+
+### 2026-01-24 (cont.)
+- Implemented T032 (unit test):
+  - Verifies `ChatCompletionsService.createRawCompletionStream()` passes `stream: true` into the OpenAI/OpenRouter SDK call.
+  - File: `server/src/test/unit/services/chatCompletionsService.streaming.test.ts`
+  - Note: Added Vitest path aliases for `@alga-psa/users` so EE service modules can be imported in unit tests.
+    - File: `server/vitest.config.ts`
+- Validation: `npx vitest run server/src/test/unit/services/chatCompletionsService.streaming.test.ts`
+- Next test item: T033 Streaming response chunks follow SSE format with data: prefix

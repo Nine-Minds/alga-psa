@@ -188,7 +188,7 @@
   {
     "id": "T032",
     "description": "Streaming endpoint passes stream: true to OpenRouter API",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F017"]
   },
   {
