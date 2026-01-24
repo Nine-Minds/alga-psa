@@ -31,7 +31,7 @@
 
   { "id": "T040", "description": "Billing: invoice send/status/due-date change emit INVOICE_SENT/INVOICE_STATUS_CHANGED/INVOICE_DUE_DATE_CHANGED", "implemented": true, "featureIds": ["F040"] },
   { "id": "T041", "description": "Billing: overdue/write-off emit INVOICE_OVERDUE and INVOICE_WRITTEN_OFF with monetary context", "implemented": true, "featureIds": ["F040"] },
-  { "id": "T042", "description": "Billing: payments emit PAYMENT_RECORDED/APPLIED/FAILED/REFUNDED with invoice application details", "implemented": false, "featureIds": ["F041"] },
+  { "id": "T042", "description": "Billing: payments emit PAYMENT_RECORDED/APPLIED/FAILED/REFUNDED with invoice application details", "implemented": true, "featureIds": ["F041"] },
   { "id": "T043", "description": "Billing: credits emit CREDIT_NOTE_CREATED/APPLIED/VOIDED with amounts and affected invoiceId when applicable", "implemented": false, "featureIds": ["F042"] },
   { "id": "T044", "description": "Billing: contracts emit CONTRACT_CREATED/UPDATED/STATUS_CHANGED and CONTRACT_RENEWAL_UPCOMING with renewal timing", "implemented": false, "featureIds": ["F043"] },
   { "id": "T045", "description": "Billing: recurring billing runs emit RECURRING_BILLING_RUN_STARTED/COMPLETED/FAILED with summary counts", "implemented": false, "featureIds": ["F044"] },

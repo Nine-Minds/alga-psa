@@ -735,3 +735,7 @@ Phase 3 (feature dependent / optional modules):
 - 2026-01-24: Completed `T041` (invoice overdue/write-off coverage):
   - Coverage exists via billing payload builder unit tests (days overdue + monetary context):
     - `server/src/test/unit/invoiceWorkflowEvents.test.ts`
+
+- 2026-01-24: Completed `T042` (payments coverage):
+  - Coverage exists via billing payload builder unit tests (recorded/applied/failed/refunded + invoice applications):
+    - `server/src/test/unit/paymentWorkflowEvents.test.ts`
