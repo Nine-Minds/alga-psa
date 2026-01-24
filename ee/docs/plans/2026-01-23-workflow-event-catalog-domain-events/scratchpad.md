@@ -771,3 +771,7 @@ Phase 3 (feature dependent / optional modules):
 - 2026-01-24: Completed `T060` (document upload/delete coverage):
   - Added a unit test that asserts `StorageService` publishes both `DOCUMENT_UPLOADED` and `DOCUMENT_DELETED` with storage metadata:
     - `packages/documents/tests/storageService.workflowEvents.test.ts`
+
+- 2026-01-24: Completed `T061` (document association/detach coverage):
+  - Coverage exists via schema-compat builder tests for document associated/detached payload shapes:
+    - `shared/workflow/streams/domainEventBuilders/__tests__/documentAssociationEventBuilders.test.ts`
