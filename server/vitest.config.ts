@@ -69,6 +69,8 @@ export default defineConfig({
       { find: /^@alga-psa\/auth\/getCurrentUser$/, replacement: path.resolve(__dirname, '../packages/auth/src/lib/getCurrentUser.ts') },
       { find: /^@alga-psa\/ui$/, replacement: path.resolve(__dirname, '../packages/ui/src/index.ts') },
       { find: /^@alga-psa\/ui\/(.*)$/, replacement: path.resolve(__dirname, '../packages/ui/src/$1') },
+      { find: /^@alga-psa\/billing$/, replacement: path.resolve(__dirname, '../packages/billing/src/index.ts') },
+      { find: /^@alga-psa\/billing\/(.*)$/, replacement: path.resolve(__dirname, '../packages/billing/src/$1') },
       { find: /^@alga-psa\/tickets$/, replacement: path.resolve(__dirname, '../packages/tickets/src/index.ts') },
       { find: /^@alga-psa\/tickets\/(.*)$/, replacement: path.resolve(__dirname, '../packages/tickets/src/$1') },
       { find: /^@alga-psa\/scheduling$/, replacement: path.resolve(__dirname, '../packages/scheduling/src/index.ts') },
