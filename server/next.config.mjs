@@ -177,6 +177,8 @@ const nextConfig = {
 	      '@alga-psa/teams/': '../packages/teams/src/',
 	      '@alga-psa/tenancy': '../packages/tenancy/src',
 	      '@alga-psa/tenancy/': '../packages/tenancy/src/',
+	      '@alga-psa/event-schemas': '../packages/event-schemas/src',
+	      '@alga-psa/event-schemas/': '../packages/event-schemas/src/',
 	      // DB package (use precompiled output so Turbopack ESM resolution works)
 	      '@alga-psa/db': '../packages/db/dist/index.js',
 	      '@alga-psa/db/admin': '../packages/db/dist/lib/admin.js',
@@ -367,6 +369,7 @@ const nextConfig = {
       '@alga-psa/scheduling': path.join(__dirname, '../packages/scheduling/src'),
       '@alga-psa/users': path.join(__dirname, '../packages/users/src'),
       '@alga-psa/teams': path.join(__dirname, '../packages/teams/src'),
+      '@alga-psa/event-schemas': path.join(__dirname, '../packages/event-schemas/src'),
       '@ee': isEE
         ? path.join(__dirname, '../ee/server/src')
         : path.join(__dirname, '../packages/ee/src'), // Point to CE stub implementations
