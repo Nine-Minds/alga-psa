@@ -659,6 +659,10 @@ Implication: we should standardize on `@alga-psa/event-bus/publishers` helpers f
   - Existing builder unit test validates `APPOINTMENT_ASSIGNED` payloads (previous/new assignee) against schemas:
     - `shared/workflow/streams/domainEventBuilders/__tests__/appointmentEventBuilders.test.ts`
 
+- 2026-01-24: Completed `T022` (schedule block coverage):
+  - Existing builder unit test validates `SCHEDULE_BLOCK_CREATED` and `SCHEDULE_BLOCK_DELETED` payloads against schemas:
+    - `shared/workflow/streams/domainEventBuilders/__tests__/scheduleBlockEventBuilders.test.ts`
+
 ## Suggested Phasing (to reduce risk)
 
 Phase 1 (authoritative CRUD/state transitions; low provider dependency):
