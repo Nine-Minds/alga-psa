@@ -722,3 +722,8 @@ Phase 3 (feature dependent / optional modules):
 - 2026-01-24: Completed `T033` (project dependency coverage):
   - Coverage already exists via schema-compat builder test for dependency blocked/unblocked payload shapes:
     - `shared/workflow/streams/domainEventBuilders/__tests__/projectTaskEventBuilders.test.ts`
+
+- 2026-01-24: Completed `T034` (project approvals are catalog-only):
+  - Per PRD decision, `PROJECT_APPROVAL_*` events are catalog-only; coverage relies on:
+    - Schema registry example validation (`T002`): `shared/workflow/runtime/__tests__/payloadSchemaExamples.test.ts`
+    - Migration coverage (`T004`): `server/src/test/unit/workflowEventCatalogMigrationCoverage.test.ts`

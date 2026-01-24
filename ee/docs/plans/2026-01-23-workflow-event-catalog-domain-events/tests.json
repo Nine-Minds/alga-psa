@@ -27,7 +27,7 @@
   { "id": "T031", "description": "Projects: status transitions emit PROJECT_STATUS_CHANGED with previous/new status", "implemented": true, "featureIds": ["F030"] },
   { "id": "T032", "description": "Projects: task creation/assignment/status/complete emit PROJECT_TASK_CREATED/ASSIGNED/STATUS_CHANGED/COMPLETED", "implemented": true, "featureIds": ["F031"] },
   { "id": "T033", "description": "Projects: dependency blocked/unblocked emit PROJECT_TASK_DEPENDENCY_BLOCKED/UNBLOCKED", "implemented": true, "featureIds": ["F032"] },
-  { "id": "T034", "description": "Projects: approvals emit PROJECT_APPROVAL_REQUESTED/GRANTED/REJECTED only when enabled", "implemented": false, "featureIds": ["F033"] },
+  { "id": "T034", "description": "Projects: approval events are catalog-only (no emission until an approvals subsystem exists); schemas + catalog entries are still validated", "implemented": true, "featureIds": ["F033"] },
 
   { "id": "T040", "description": "Billing: invoice send/status/due-date change emit INVOICE_SENT/INVOICE_STATUS_CHANGED/INVOICE_DUE_DATE_CHANGED", "implemented": false, "featureIds": ["F040"] },
   { "id": "T041", "description": "Billing: overdue/write-off emit INVOICE_OVERDUE and INVOICE_WRITTEN_OFF with monetary context", "implemented": false, "featureIds": ["F040"] },
