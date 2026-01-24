@@ -368,7 +368,7 @@
   {
     "id": "T062",
     "description": "User from different tenant cannot see other tenant's drafts",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F024"]
   },
   {

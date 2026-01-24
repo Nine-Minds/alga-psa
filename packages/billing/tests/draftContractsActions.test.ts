@@ -1,5 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
+let currentTenant = 'tenant-1';
+
 const mockKnexFactory = () => {
   const calls: {
     where: any[][];
@@ -47,7 +49,7 @@ vi.mock('@alga-psa/auth/withAuth', () => ({
   withAuth:
     (fn: any) =>
     (...args: any[]) =>
-      fn({ id: 'user-1' }, { tenant: 'tenant-1' }, ...args),
+      fn({ id: 'user-1' }, { tenant: currentTenant }, ...args),
 }));
 
 vi.mock('@alga-psa/auth/rbac', () => ({
@@ -57,6 +59,7 @@ vi.mock('@alga-psa/auth/rbac', () => ({
 describe('getDraftContracts action', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    currentTenant = 'tenant-1';
   });
 
   it('filters by status=draft', async () => {
@@ -108,5 +111,18 @@ describe('getDraftContracts action', () => {
     await getDraftContracts();
 
     expect(calls.orderBy.some((args) => args[0] === 'co.updated_at' && args[1] === 'desc')).toBe(true);
+  });
+
+  it("user from different tenant cannot see other tenant's drafts (T062)", async () => {
+    currentTenant = 'tenant-2';
+
+    const { knex, calls } = mockKnexFactory();
+    createTenantKnex.mockResolvedValue({ knex });
+
+    const { getDraftContracts } = await import('../src/actions/contractActions');
+    await getDraftContracts();
+
+    expect(calls.where.some((args) => args[0]?.['co.tenant'] === 'tenant-2')).toBe(true);
+    expect(calls.where.some((args) => args[0]?.['co.tenant'] === 'tenant-1')).toBe(false);
   });
 });
