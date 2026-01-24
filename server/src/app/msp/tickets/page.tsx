@@ -152,7 +152,7 @@ export default async function TicketsPage({ searchParams }: TicketsPageProps) {
 
     // Fetch consolidated data for the ticket list with initial filters and pagination
     const [consolidatedData, displaySettings] = await Promise.all([
-      getConsolidatedTicketListData(user!, fetchFilters, page, pageSize),
+      getConsolidatedTicketListData(fetchFilters, page, pageSize),
       getTicketingDisplaySettings()
     ]);
 

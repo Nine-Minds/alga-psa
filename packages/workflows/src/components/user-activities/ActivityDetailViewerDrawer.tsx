@@ -200,7 +200,7 @@ export function ActivityDetailViewerDrawer({
       switch(activityType) {
         case ActivityType.TICKET: {
           // Use the consolidated function to get all ticket data in a single call
-          const ticketData = await getConsolidatedTicketData(activityId, currentUser);
+          const ticketData = await getConsolidatedTicketData(activityId);
           
           setContent(
             <div className="h-full">
@@ -233,7 +233,7 @@ export function ActivityDetailViewerDrawer({
         }
         
         case ActivityType.PROJECT_TASK: {
-          const taskData = await getTaskWithDetails(activityId, currentUser);
+          const taskData = await getTaskWithDetails(activityId);
           // Get users for the TaskEdit component
           const users = await getAllUsersBasic();
           
@@ -590,7 +590,7 @@ export function ActivityDetailViewerDrawer({
                   // Load ticket data and render
                   try {
                     setIsLoading(true);
-                    const ticketData = await getConsolidatedTicketData(ticketId, currentUser);
+                    const ticketData = await getConsolidatedTicketData(ticketId);
 
                     setContent(
                       <div className="h-full flex flex-col">
@@ -645,7 +645,7 @@ export function ActivityDetailViewerDrawer({
                   // Load task data and render
                   try {
                     setIsLoading(true);
-                    const taskData = await getTaskWithDetails(taskId, currentUser);
+                    const taskData = await getTaskWithDetails(taskId);
                     const users = await getAllUsersBasic();
 
                     setContent(

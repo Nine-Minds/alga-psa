@@ -15,7 +15,8 @@ import {
   getInvoicePaymentStatus,
   getOrCreateInvoicePaymentLinkUrl,
 } from '@alga-psa/billing/actions/paymentActions';
-import { getCurrentUser } from '@alga-psa/auth/getCurrentUser';
+import { withAuth, type AuthContext } from '@alga-psa/auth';
+import type { IUserWithRoles } from '@alga-psa/types';
 
 /**
  * Result of a payment action.
@@ -30,22 +31,19 @@ interface PaymentActionResult<T = void> {
  * Gets a payment link for an invoice in the client portal.
  * Creates a new payment link if one doesn't exist or has expired.
  */
-export async function getClientPortalInvoicePaymentLink(
+export const getClientPortalInvoicePaymentLink = withAuth(async (
+  user: IUserWithRoles,
+  { tenant }: AuthContext,
   invoiceId: string
-): Promise<PaymentActionResult<{ paymentUrl: string }>> {
+): Promise<PaymentActionResult<{ paymentUrl: string }>> => {
   try {
-    const user = await getCurrentUser();
-    if (!user?.tenant) {
-      return { success: false, error: 'Unauthorized' };
-    }
-
     // Client portal users must have a contact_id
-    if (!(user as any).contact_id) {
+    if (!user.contact_id) {
       return { success: false, error: 'User not associated with a contact' };
     }
 
-    const tenantId = user.tenant;
-    const { knex } = await createTenantKnex(tenantId);
+    const tenantId = tenant;
+    const { knex } = await createTenantKnex();
 
     // Get the user's client_id from their contact and verify invoice access
     const { contact, invoice } = await withTransaction(knex, async (trx: Knex.Transaction) => {
@@ -120,13 +118,15 @@ export async function getClientPortalInvoicePaymentLink(
     });
     return { success: false, error: 'Failed to get payment link' };
   }
-}
+});
 
 /**
  * Verifies a payment after returning from Stripe Checkout.
  * Used on the payment success page to confirm payment status.
  */
-export async function verifyClientPortalPayment(
+export const verifyClientPortalPayment = withAuth(async (
+  user: IUserWithRoles,
+  { tenant }: AuthContext,
   invoiceId: string,
   sessionId: string
 ): Promise<
@@ -137,20 +137,15 @@ export async function verifyClientPortalPayment(
     currencyCode?: string;
     message?: string;
   }>
-> {
+> => {
   try {
-    const user = await getCurrentUser();
-    if (!user?.tenant) {
-      return { success: false, error: 'Unauthorized' };
-    }
-
     // Client portal users must have a contact_id
-    if (!(user as any).contact_id) {
+    if (!user.contact_id) {
       return { success: false, error: 'User not associated with a contact' };
     }
 
-    const tenantId = user.tenant;
-    const { knex } = await createTenantKnex(tenantId);
+    const tenantId = tenant;
+    const { knex } = await createTenantKnex();
 
     // Get the user's client_id from their contact and verify invoice access
     const { contact, invoice } = await withTransaction(knex, async (trx: Knex.Transaction) => {
@@ -300,4 +295,4 @@ export async function verifyClientPortalPayment(
     });
     return { success: false, error: 'Failed to verify payment' };
   }
-}
+});

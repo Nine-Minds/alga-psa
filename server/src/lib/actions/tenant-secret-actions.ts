@@ -7,8 +7,7 @@
 'use server';
 
 import { createTenantKnex } from 'server/src/lib/db';
-import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
-import { hasPermission } from 'server/src/lib/auth/rbac';
+import { withAuth, hasPermission } from '@alga-psa/auth';
 import {
   TenantSecretMetadata,
   CreateTenantSecretInput,
@@ -22,16 +21,13 @@ import {
  * Returns metadata only - never includes actual secret values.
  * Requires secrets.view permission.
  */
-export async function listTenantSecrets(): Promise<TenantSecretMetadata[]> {
-  const { knex, tenant } = await createTenantKnex();
+export const listTenantSecrets = withAuth(async (user, { tenant }): Promise<TenantSecretMetadata[]> => {
+  const { knex } = await createTenantKnex();
 
   // Secrets are an optional capability in some environments (e.g. local/dev stacks or older schemas).
   // If the backing tables don't exist, treat secrets as "not configured" and return no entries.
   if (!tenant) return [];
   if (!(await knex.schema.hasTable('tenant_secrets'))) return [];
-
-  const user = await getCurrentUser();
-  if (!user) return [];
 
   // Check for secrets.view permission
   const canView = await hasPermission(user, 'secrets', 'view', knex);
@@ -39,14 +35,14 @@ export async function listTenantSecrets(): Promise<TenantSecretMetadata[]> {
 
   const provider = createTenantSecretProvider(knex, tenant);
   return provider.list();
-}
+});
 
 /**
  * Get metadata for a specific secret by name.
  * Returns metadata only - never includes actual secret value.
  */
-export async function getSecretMetadata(name: string): Promise<TenantSecretMetadata | null> {
-  const { knex, tenant } = await createTenantKnex();
+export const getSecretMetadata = withAuth(async (user, { tenant }, name: string): Promise<TenantSecretMetadata | null> => {
+  const { knex } = await createTenantKnex();
 
   if (!tenant) {
     throw new Error('Tenant not found');
@@ -54,13 +50,13 @@ export async function getSecretMetadata(name: string): Promise<TenantSecretMetad
 
   const provider = createTenantSecretProvider(knex, tenant);
   return provider.getMetadata(name);
-}
+});
 
 /**
  * Check if a secret exists.
  */
-export async function secretExists(name: string): Promise<boolean> {
-  const { knex, tenant } = await createTenantKnex();
+export const secretExists = withAuth(async (user, { tenant }, name: string): Promise<boolean> => {
+  const { knex } = await createTenantKnex();
 
   if (!tenant) {
     throw new Error('Tenant not found');
@@ -68,7 +64,7 @@ export async function secretExists(name: string): Promise<boolean> {
 
   const provider = createTenantSecretProvider(knex, tenant);
   return provider.exists(name);
-}
+});
 
 /**
  * Create a new tenant secret.
@@ -77,16 +73,11 @@ export async function secretExists(name: string): Promise<boolean> {
  * @param input - Secret creation input (name, value, description)
  * @returns The created secret's metadata (never includes the value)
  */
-export async function createSecret(input: CreateTenantSecretInput): Promise<TenantSecretMetadata> {
-  const { knex, tenant } = await createTenantKnex();
+export const createSecret = withAuth(async (user, { tenant }, input: CreateTenantSecretInput): Promise<TenantSecretMetadata> => {
+  const { knex } = await createTenantKnex();
 
   if (!tenant) {
     throw new Error('Tenant not found');
-  }
-
-  const user = await getCurrentUser();
-  if (!user) {
-    throw new Error('User not authenticated');
   }
 
   // Check for secrets.manage permission
@@ -97,7 +88,7 @@ export async function createSecret(input: CreateTenantSecretInput): Promise<Tena
 
   const provider = createTenantSecretProvider(knex, tenant);
   return provider.create(input, user.user_id);
-}
+});
 
 /**
  * Update an existing tenant secret.
@@ -107,19 +98,16 @@ export async function createSecret(input: CreateTenantSecretInput): Promise<Tena
  * @param input - Update input (value and/or description)
  * @returns The updated secret's metadata (never includes the value)
  */
-export async function updateSecret(
+export const updateSecret = withAuth(async (
+  user,
+  { tenant },
   name: string,
   input: UpdateTenantSecretInput
-): Promise<TenantSecretMetadata> {
-  const { knex, tenant } = await createTenantKnex();
+): Promise<TenantSecretMetadata> => {
+  const { knex } = await createTenantKnex();
 
   if (!tenant) {
     throw new Error('Tenant not found');
-  }
-
-  const user = await getCurrentUser();
-  if (!user) {
-    throw new Error('User not authenticated');
   }
 
   // Check for secrets.manage permission
@@ -130,7 +118,7 @@ export async function updateSecret(
 
   const provider = createTenantSecretProvider(knex, tenant);
   return provider.update(name, input, user.user_id);
-}
+});
 
 /**
  * Delete a tenant secret.
@@ -138,16 +126,11 @@ export async function updateSecret(
  *
  * @param name - Name of the secret to delete
  */
-export async function deleteSecret(name: string): Promise<void> {
-  const { knex, tenant } = await createTenantKnex();
+export const deleteSecret = withAuth(async (user, { tenant }, name: string): Promise<void> => {
+  const { knex } = await createTenantKnex();
 
   if (!tenant) {
     throw new Error('Tenant not found');
-  }
-
-  const user = await getCurrentUser();
-  if (!user) {
-    throw new Error('User not authenticated');
   }
 
   // Check for secrets.manage permission
@@ -158,7 +141,7 @@ export async function deleteSecret(name: string): Promise<void> {
 
   const provider = createTenantSecretProvider(knex, tenant);
   await provider.delete(name, user.user_id);
-}
+});
 
 /**
  * Resolve a secret value for runtime use (internal only).
@@ -168,11 +151,13 @@ export async function deleteSecret(name: string): Promise<void> {
  * @param workflowRunId - Optional workflow run ID for audit logging
  * @returns The decrypted secret value
  */
-export async function resolveSecretForRuntime(
+export const resolveSecretForRuntime = withAuth(async (
+  user,
+  { tenant },
   name: string,
   workflowRunId?: string
-): Promise<string> {
-  const { knex, tenant } = await createTenantKnex();
+): Promise<string> => {
+  const { knex } = await createTenantKnex();
 
   if (!tenant) {
     throw new Error('Tenant not found');
@@ -180,14 +165,14 @@ export async function resolveSecretForRuntime(
 
   const provider = createTenantSecretProvider(knex, tenant);
   return provider.getValue(name, workflowRunId);
-}
+});
 
 /**
  * Get workflows that reference a specific secret.
  * Used to warn users before deleting a secret.
  */
-export async function getSecretUsage(): Promise<Map<string, string[]>> {
-  const { knex, tenant } = await createTenantKnex();
+export const getSecretUsage = withAuth(async (user, { tenant }): Promise<Map<string, string[]>> => {
+  const { knex } = await createTenantKnex();
 
   if (!tenant) {
     throw new Error('Tenant not found');
@@ -195,16 +180,16 @@ export async function getSecretUsage(): Promise<Map<string, string[]>> {
 
   const provider = createTenantSecretProvider(knex, tenant);
   return provider.getSecretUsage();
-}
+});
 
 /**
  * Validate that a secret name follows the required pattern.
  * Returns validation errors if any.
  */
-export async function validateSecretName(name: string): Promise<{
+export const validateSecretName = withAuth(async (user, { tenant }, name: string): Promise<{
   valid: boolean;
   errors: string[];
-}> {
+}> => {
   const errors: string[] = [];
 
   // Check pattern
@@ -219,7 +204,12 @@ export async function validateSecretName(name: string): Promise<{
 
   // Check if already exists
   if (errors.length === 0) {
-    const exists = await secretExists(name);
+    const { knex } = await createTenantKnex();
+    if (!tenant) {
+      throw new Error('Tenant not found');
+    }
+    const provider = createTenantSecretProvider(knex, tenant);
+    const exists = await provider.exists(name);
     if (exists) {
       errors.push(`Secret with name "${name}" already exists`);
     }
@@ -229,4 +219,4 @@ export async function validateSecretName(name: string): Promise<{
     valid: errors.length === 0,
     errors
   };
-}
+});

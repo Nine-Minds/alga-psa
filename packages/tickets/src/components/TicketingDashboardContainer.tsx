@@ -189,7 +189,6 @@ export default function TicketingDashboardContainer({
 
       console.log('[Container] Fetching with defaults:', currentFiltersWithDefaults);
       const result = await fetchTicketsWithPagination(
-        currentUser,
         currentFiltersWithDefaults,
         page,
         pageSize

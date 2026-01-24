@@ -4,29 +4,11 @@ import { IPriority } from '@alga-psa/types';
 import Priority from '../models/priority';
 import { withTransaction } from '@alga-psa/db';
 import { createTenantKnex } from '@alga-psa/db';
-import { getCurrentUser } from '@alga-psa/users/actions';
+import { withAuth } from '@alga-psa/auth';
 import { Knex } from 'knex';
 
-// Helper to get tenant with non-null assertion after validation
-async function getTenantKnex(): Promise<{ knex: Knex; tenant: string }> {
-  const currentUser = await getCurrentUser();
-  if (!currentUser) {
-    throw new Error('No authenticated user found');
-  }
-
-  if (!currentUser.tenant) {
-    throw new Error('Tenant is required');
-  }
-
-  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
-  if (!tenant) {
-    throw new Error('SYSTEM_ERROR: Tenant context not found');
-  }
-  return { knex, tenant };
-}
-
-export async function getAllPriorities(itemType?: 'ticket' | 'project_task') {
-  const { knex: db, tenant } = await getTenantKnex();
+export const getAllPriorities = withAuth(async (_user, { tenant }, itemType?: 'ticket' | 'project_task') => {
+  const { knex: db } = await createTenantKnex();
   return withTransaction(db, async (trx: Knex.Transaction) => {
     try {
       const priorities = await Priority.getAll(trx, tenant, itemType);
@@ -36,16 +18,16 @@ export async function getAllPriorities(itemType?: 'ticket' | 'project_task') {
       throw new Error(`Failed to fetch priorities for tenant ${tenant}`);
     }
   });
-}
+});
 
-export async function getAllPrioritiesWithStandard(itemType?: 'ticket' | 'project_task') {
+export const getAllPrioritiesWithStandard = withAuth(async (_user, ctx, itemType?: 'ticket' | 'project_task') => {
   // This function is deprecated. Use getAllPriorities instead.
   // Standard priorities should now be imported via referenceDataActions.ts
   return getAllPriorities(itemType);
-}
+});
 
-export async function findPriorityById(id: string) {
-  const { knex: db, tenant } = await getTenantKnex();
+export const findPriorityById = withAuth(async (_user, { tenant }, id: string) => {
+  const { knex: db } = await createTenantKnex();
   return withTransaction(db, async (trx: Knex.Transaction) => {
     try {
       const priority = await Priority.get(trx, tenant, id);
@@ -58,21 +40,16 @@ export async function findPriorityById(id: string) {
       throw new Error(`Failed to find priority for tenant ${tenant}`);
     }
   });
-}
+});
 
-export async function createPriority(priorityData: Omit<IPriority, 'priority_id' | 'tenant' | 'created_by' | 'created_at'>): Promise<IPriority> {
-  const { knex: db, tenant } = await getTenantKnex();
-  const currentUser = await getCurrentUser();
-
-  if (!currentUser) {
-    throw new Error('No authenticated user found');
-  }
+export const createPriority = withAuth(async (user, { tenant }, priorityData: Omit<IPriority, 'priority_id' | 'tenant' | 'created_by' | 'created_at'>): Promise<IPriority> => {
+  const { knex: db } = await createTenantKnex();
 
   return withTransaction(db, async (trx: Knex.Transaction) => {
     try {
       const newPriority = await Priority.insert(trx, tenant, {
         ...priorityData,
-        created_by: currentUser.user_id,
+        created_by: user.user_id,
         created_at: new Date()
       });
       return newPriority;
@@ -81,11 +58,11 @@ export async function createPriority(priorityData: Omit<IPriority, 'priority_id'
       throw new Error(`Failed to create priority for tenant ${tenant}`);
     }
   });
-}
+});
 
 
-export async function deletePriority(priorityId: string) {
-  const { knex: db, tenant } = await getTenantKnex();
+export const deletePriority = withAuth(async (_user, { tenant }, priorityId: string) => {
+  const { knex: db } = await createTenantKnex();
   return withTransaction(db, async (trx: Knex.Transaction) => {
     try {
       // Check if this is an ITIL standard priority (immutable)
@@ -101,10 +78,10 @@ export async function deletePriority(priorityId: string) {
       throw new Error(error instanceof Error ? error.message : `Failed to delete priority for tenant ${tenant}`);
     }
   });
-}
+});
 
-export async function updatePriority(priorityId: string, priorityData: Partial<IPriority>): Promise<IPriority> {
-  const { knex: db, tenant } = await getTenantKnex();
+export const updatePriority = withAuth(async (_user, { tenant }, priorityId: string, priorityData: Partial<IPriority>): Promise<IPriority> => {
+  const { knex: db } = await createTenantKnex();
   return withTransaction(db, async (trx: Knex.Transaction) => {
     try {
       // Check if this is an ITIL standard priority (immutable)
@@ -123,14 +100,14 @@ export async function updatePriority(priorityId: string, priorityData: Partial<I
       throw new Error(error instanceof Error ? error.message : `Failed to update priority for tenant ${tenant}`);
     }
   });
-}
+});
 
 /**
  * Get priorities filtered by board's priority type
  * Returns ITIL priorities if board uses ITIL, custom priorities otherwise
  */
-export async function getPrioritiesByBoardType(boardId: string, itemType?: 'ticket' | 'project_task'): Promise<IPriority[]> {
-  const { knex: db, tenant } = await getTenantKnex();
+export const getPrioritiesByBoardType = withAuth(async (_user, { tenant }, boardId: string, itemType?: 'ticket' | 'project_task'): Promise<IPriority[]> => {
+  const { knex: db } = await createTenantKnex();
   return withTransaction(db, async (trx: Knex.Transaction) => {
     try {
       // Get the board's priority type
@@ -169,7 +146,7 @@ export async function getPrioritiesByBoardType(boardId: string, itemType?: 'tick
       throw new Error(`Failed to fetch priorities for board ${boardId}`);
     }
   });
-}
+});
 
 export interface FindPriorityByNameOutput {
   id: string;
@@ -182,8 +159,8 @@ export interface FindPriorityByNameOutput {
  * Find priority by name
  * This action searches for existing priorities by name
  */
-export async function findPriorityByName(name: string): Promise<FindPriorityByNameOutput | null> {
-  const { knex: db, tenant } = await getTenantKnex();
+export const findPriorityByName = withAuth(async (_user, { tenant }, name: string): Promise<FindPriorityByNameOutput | null> => {
+  const { knex: db } = await createTenantKnex();
   return withTransaction(db, async (trx: Knex.Transaction) => {
     try {
       const priority = await trx('priorities')
@@ -198,4 +175,4 @@ export async function findPriorityByName(name: string): Promise<FindPriorityByNa
       return null;
     }
   });
-}
+});

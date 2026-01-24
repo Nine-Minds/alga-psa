@@ -3,7 +3,7 @@
 import { z } from 'zod';
 import { createTenantKnex } from '@alga-psa/db';
 import { withTransaction } from '@alga-psa/db';
-import { getCurrentUser } from '@alga-psa/auth/getCurrentUser';
+import { withAuth } from '@alga-psa/auth';
 import type { IService, IUsageRecord } from '@alga-psa/types';
 import { Knex } from 'knex'; // Import Knex type
 
@@ -33,9 +33,11 @@ export interface UsageMetricResult {
  * @param input - Object containing clientId, startDate, and endDate.
  * @returns A promise that resolves to an array of usage metrics.
  */
-export async function getUsageDataMetrics(
+export const getUsageDataMetrics = withAuth(async (
+  _user,
+  { tenant },
   input: z.infer<typeof InputSchema>
-): Promise<UsageMetricResult[]> {
+): Promise<UsageMetricResult[]> => {
   // Validate input
   const validationResult = InputSchema.safeParse(input);
   if (!validationResult.success) {
@@ -44,16 +46,7 @@ export async function getUsageDataMetrics(
   }
   const { clientId, startDate, endDate } = validationResult.data;
 
-  const currentUser = await getCurrentUser();
-  if (!currentUser?.tenant) {
-    throw new Error('Tenant context is required.');
-  }
-
-  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
-
-  if (!tenant) {
-    throw new Error('Tenant context is required.');
-  }
+  const { knex } = await createTenantKnex();
 
   console.log(`Fetching usage metrics for client ${clientId} in tenant ${tenant} from ${startDate} to ${endDate}`);
 
@@ -95,4 +88,4 @@ export async function getUsageDataMetrics(
     console.error(`Error fetching usage metrics for client ${clientId} in tenant ${tenant}:`, error);
     throw new Error(`Failed to fetch usage metrics: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
-}
+});

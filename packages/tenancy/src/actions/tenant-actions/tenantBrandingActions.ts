@@ -3,7 +3,8 @@
 import { getConnection } from '@alga-psa/db';
 import { revalidateTag } from 'next/cache';
 import { generateBrandingStyles } from '../../lib/generateBrandingStyles';
-import { getCurrentUser } from '@alga-psa/users/actions';
+import { withAuth, withOptionalAuth, type AuthContext } from '@alga-psa/auth';
+import type { IUserWithRoles } from '@alga-psa/types';
 
 export interface TenantBranding {
   logoUrl: string;
@@ -16,22 +17,17 @@ export interface TenantBranding {
 /**
  * Update tenant's branding settings
  */
-export async function updateTenantBrandingAction(branding: TenantBranding) {
-  const user = await getCurrentUser();
-  if (!user) {
-    throw new Error('User not found');
-  }
-
+export const updateTenantBrandingAction = withAuth(async (user: IUserWithRoles, { tenant }: AuthContext, branding: TenantBranding) => {
   // Check if user has admin permissions
   if (user.user_type !== 'internal') {
     throw new Error('Only internal users can update tenant branding');
   }
 
-  const knex = await getConnection(user.tenant);
+  const knex = await getConnection(tenant);
 
   // Get existing settings
   const existingRecord = await knex('tenant_settings')
-    .where({ tenant: user.tenant })
+    .where({ tenant })
     .first();
 
   const existingSettings = existingRecord?.settings || {};
@@ -58,14 +54,14 @@ export async function updateTenantBrandingAction(branding: TenantBranding) {
 
   if (existingRecord) {
     await knex('tenant_settings')
-      .where({ tenant: user.tenant })
+      .where({ tenant })
       .update({
         settings: updatedSettings,
         updated_at: knex.fn.now()
       });
   } else {
     await knex('tenant_settings').insert({
-      tenant: user.tenant,
+      tenant,
       settings: updatedSettings,
       created_at: knex.fn.now(),
       updated_at: knex.fn.now()
@@ -77,21 +73,21 @@ export async function updateTenantBrandingAction(branding: TenantBranding) {
   revalidateTag('tenant-portal-config', 'max');
 
   return { success: true };
-}
+});
 
 /**
  * Get tenant's branding settings
  */
-export async function getTenantBrandingAction(): Promise<TenantBranding | null> {
-  const user = await getCurrentUser();
-  if (!user) {
+export const getTenantBrandingAction = withOptionalAuth(async (user: IUserWithRoles | null, ctx: AuthContext | null): Promise<TenantBranding | null> => {
+  if (!user || !ctx) {
     return null;
   }
 
-  const knex = await getConnection(user.tenant);
+  const { tenant } = ctx;
+  const knex = await getConnection(tenant);
 
   const tenantSettings = await knex('tenant_settings')
-    .where({ tenant: user.tenant })
+    .where({ tenant })
     .first();
 
   if (!tenantSettings?.settings?.branding) {
@@ -99,7 +95,7 @@ export async function getTenantBrandingAction(): Promise<TenantBranding | null> 
   }
 
   return tenantSettings.settings.branding;
-}
+});
 
 /**
  * Get tenant's branding settings by tenant ID (for public access)

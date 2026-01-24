@@ -8,7 +8,7 @@ import Link from 'next/link';
 import { useRegisterUIComponent, withDataAutomationId } from '@alga-psa/ui/ui-reflection';
 import type { FormComponent, FormFieldComponent, ButtonComponent } from '@alga-psa/ui/ui-reflection';
 import { useTranslation } from '@alga-psa/ui/lib';
-import SsoProviderButtons from '@ee/components/auth/SsoProviderButtons';
+import SsoProviderButtons from './SsoProviderButtons';
 
 interface ClientLoginFormProps {
   callbackUrl: string;

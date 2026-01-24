@@ -13,6 +13,7 @@ import type {
   ITicket,
   ITimeEntry,
 } from '@alga-psa/types';
+import { withAuth } from '@alga-psa/auth';
 
 // Define the schema for the input parameters
 const InputSchema = z.object({
@@ -42,9 +43,11 @@ export interface HoursByServiceResult {
  * @param input - Object containing clientId, startDate, endDate, and groupByServiceType flag.
  * @returns A promise that resolves to an array of aggregated hours by service.
  */
-export async function getHoursByServiceType(
+export const getHoursByServiceType = withAuth(async (
+  _user,
+  { tenant },
   input: z.infer<typeof InputSchema>
-): Promise<HoursByServiceResult[]> {
+): Promise<HoursByServiceResult[]> => {
   // Validate input
   const validationResult = InputSchema.safeParse(input);
   if (!validationResult.success) {
@@ -53,11 +56,7 @@ export async function getHoursByServiceType(
   }
   const { clientId, startDate, endDate, groupByServiceType } = validationResult.data;
 
-  const { knex, tenant } = await createTenantKnex();
-
-  if (!tenant) {
-    throw new Error('Tenant context is required.');
-  }
+  const { knex } = await createTenantKnex();
 
   console.log(`Fetching hours by service for client ${clientId} in tenant ${tenant} from ${startDate} to ${endDate}`);
 
@@ -152,4 +151,4 @@ export async function getHoursByServiceType(
     console.error(`Error fetching hours by service for client ${clientId} in tenant ${tenant}:`, error);
     throw new Error(`Failed to fetch hours by service: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
-}
+});

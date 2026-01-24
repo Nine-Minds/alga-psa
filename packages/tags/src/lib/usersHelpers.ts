@@ -8,7 +8,7 @@
 import type { IUserWithRoles } from '@alga-psa/types';
 import { getUserWithRoles, getUserWithRolesByEmail, createTenantKnex } from '@alga-psa/db';
 import { getSession } from '@alga-psa/auth';
-import { getUserAvatarUrl } from '@alga-psa/media';
+import { getUserAvatarUrl } from '@alga-psa/documents';
 
 /**
  * Get the current user from the session.
@@ -41,7 +41,9 @@ export async function getCurrentUserAsync(): Promise<IUserWithRoles | null> {
       return null;
     }
 
-    const { tenant } = await createTenantKnex();
+    // In development, fall back to tenant from session or first tenant
+    const sessionTenant = sessionUser.tenant;
+    const { tenant } = await createTenantKnex(sessionTenant);
     if (!tenant) {
       return null;
     }

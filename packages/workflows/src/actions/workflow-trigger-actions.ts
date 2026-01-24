@@ -2,6 +2,7 @@
 
 import { createTenantKnex } from '@alga-psa/db';
 import { withTransaction } from '@alga-psa/db';
+import { withAuth } from '@alga-psa/auth';
 import { WorkflowTriggerModel } from '@alga-psa/workflows/models/workflowTrigger';
 import { WorkflowEventMappingModel } from '@alga-psa/workflows/models/workflowEventMapping';
 import { EventCatalogModel } from '@alga-psa/workflows/models/eventCatalog';
@@ -27,7 +28,7 @@ export async function getWorkflowTriggers(params: {
 }): Promise<IWorkflowTrigger[]> {
   const { tenant, eventType, limit, offset } = params;
 
-  const { knex } = await createTenantKnex();
+  const { knex } = await createTenantKnex(tenant);
 
   // Get all workflow triggers
   const triggers = await withTransaction(knex, async (trx) => {
@@ -53,7 +54,7 @@ export async function getWorkflowTriggerById(params: {
 }): Promise<IWorkflowTrigger | null> {
   const { triggerId, tenant } = params;
 
-  const { knex } = await createTenantKnex();
+  const { knex } = await createTenantKnex(tenant);
 
   // Get the workflow trigger
   const trigger = await withTransaction(knex, async (trx) => {
@@ -70,7 +71,7 @@ export async function getWorkflowTriggerById(params: {
  * @returns The created workflow trigger
  */
 export async function createWorkflowTrigger(params: ICreateWorkflowTrigger): Promise<IWorkflowTrigger> {
-  const { knex } = await createTenantKnex();
+  const { knex } = await createTenantKnex(params.tenant);
 
   // Verify that the event type exists in the event catalog
   const trigger = await withTransaction(knex, async (trx) => {
@@ -100,7 +101,7 @@ export async function updateWorkflowTrigger(params: {
 }): Promise<IWorkflowTrigger | null> {
   const { triggerId, tenant, data } = params;
 
-  const { knex } = await createTenantKnex();
+  const { knex } = await createTenantKnex(tenant);
 
   // Get the workflow trigger
   const updatedTrigger = await withTransaction(knex, async (trx) => {
@@ -138,7 +139,7 @@ export async function deleteWorkflowTrigger(params: {
 }): Promise<boolean> {
   const { triggerId, tenant } = params;
 
-  const { knex } = await createTenantKnex();
+  const { knex } = await createTenantKnex(tenant);
 
   // Get the workflow trigger
   const result = await withTransaction(knex, async (trx) => {
@@ -160,13 +161,13 @@ export async function deleteWorkflowTrigger(params: {
 
 /**
  * Get all event mappings for a trigger
- * 
+ *
  * @param params Parameters for the action
  * @returns Array of workflow event mappings
  */
-export async function getWorkflowEventMappings(params: {
+export const getWorkflowEventMappings = withAuth(async (_user, _ctx, params: {
   triggerId: string;
-}): Promise<IWorkflowEventMapping[]> {
+}): Promise<IWorkflowEventMapping[]> => {
   const { triggerId } = params;
 
   const { knex } = await createTenantKnex();
@@ -177,15 +178,15 @@ export async function getWorkflowEventMappings(params: {
   });
 
   return mappings;
-}
+});
 
 /**
  * Create a new event mapping for a trigger
- * 
+ *
  * @param params Parameters for the action
  * @returns The created workflow event mapping
  */
-export async function createWorkflowEventMapping(params: ICreateWorkflowEventMapping): Promise<IWorkflowEventMapping> {
+export const createWorkflowEventMapping = withAuth(async (_user, _ctx, params: ICreateWorkflowEventMapping): Promise<IWorkflowEventMapping> => {
   const { knex } = await createTenantKnex();
 
   // Create the workflow event mapping
@@ -194,17 +195,17 @@ export async function createWorkflowEventMapping(params: ICreateWorkflowEventMap
   });
 
   return mapping;
-}
+});
 
 /**
  * Create multiple event mappings for a trigger
- * 
+ *
  * @param params Parameters for the action
  * @returns Array of created workflow event mappings
  */
-export async function createWorkflowEventMappings(params: {
+export const createWorkflowEventMappings = withAuth(async (_user, _ctx, params: {
   mappings: ICreateWorkflowEventMapping[];
-}): Promise<IWorkflowEventMapping[]> {
+}): Promise<IWorkflowEventMapping[]> => {
   const { mappings } = params;
 
   if (mappings.length === 0) {
@@ -219,17 +220,17 @@ export async function createWorkflowEventMappings(params: {
   });
 
   return createdMappings;
-}
+});
 
 /**
  * Delete an event mapping
- * 
+ *
  * @param params Parameters for the action
  * @returns True if the mapping was deleted, false otherwise
  */
-export async function deleteWorkflowEventMapping(params: {
+export const deleteWorkflowEventMapping = withAuth(async (_user, _ctx, params: {
   mappingId: string;
-}): Promise<boolean> {
+}): Promise<boolean> => {
   const { mappingId } = params;
 
   const { knex } = await createTenantKnex();
@@ -240,17 +241,17 @@ export async function deleteWorkflowEventMapping(params: {
   });
 
   return result;
-}
+});
 
 /**
  * Delete all event mappings for a trigger
- * 
+ *
  * @param params Parameters for the action
  * @returns Number of mappings deleted
  */
-export async function deleteAllWorkflowEventMappings(params: {
+export const deleteAllWorkflowEventMappings = withAuth(async (_user, _ctx, params: {
   triggerId: string;
-}): Promise<number> {
+}): Promise<number> => {
   const { triggerId } = params;
 
   const { knex } = await createTenantKnex();
@@ -261,4 +262,4 @@ export async function deleteAllWorkflowEventMappings(params: {
   });
 
   return result;
-}
+});

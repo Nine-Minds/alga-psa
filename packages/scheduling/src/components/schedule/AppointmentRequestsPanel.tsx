@@ -193,7 +193,7 @@ export default function AppointmentRequestsPanel({
         return;
       }
 
-      const ticketData = await getTicketById(ticketId, currentUser);
+      const ticketData = await getTicketById(ticketId);
       if (ticketData) {
         setSelectedTicket(ticketData);
         setIsTicketDrawerOpen(true);

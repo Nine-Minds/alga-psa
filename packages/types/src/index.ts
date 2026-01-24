@@ -118,3 +118,46 @@ export interface AuditFields {
 export interface TenantScopedEntity extends AuditFields {
   tenant: TenantId;
 }
+
+/**
+ * Interface for event publishing using dependency injection pattern
+ * This allows different contexts (server actions, workflows) to provide their own event publishers
+ */
+export interface IEventPublisher {
+  publishTicketCreated(data: {
+    tenantId: string;
+    ticketId: string;
+    userId?: string;
+    metadata?: Record<string, any>;
+  }): Promise<void>;
+
+  publishTicketUpdated(data: {
+    tenantId: string;
+    ticketId: string;
+    userId?: string;
+    changes: Record<string, any>;
+    metadata?: Record<string, any>;
+  }): Promise<void>;
+
+  publishTicketClosed(data: {
+    tenantId: string;
+    ticketId: string;
+    userId?: string;
+    metadata?: Record<string, any>;
+  }): Promise<void>;
+
+  publishCommentCreated(data: {
+    tenantId: string;
+    ticketId: string;
+    commentId: string;
+    userId?: string;
+    metadata?: Record<string, any>;
+  }): Promise<void>;
+
+  publishTicketAssigned(data: {
+    tenantId: string;
+    ticketId: string;
+    userId: string;
+    assignedByUserId?: string;
+  }): Promise<void>;
+}

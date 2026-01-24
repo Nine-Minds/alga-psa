@@ -1,6 +1,7 @@
 'use server';
 
-import { getCurrentUserAsync, hasPermissionAsync, getSessionAsync, getAnalyticsAsync } from '../lib/authHelpers';
+import { withAuth } from '@alga-psa/auth';
+import { createTenantKnex } from '@alga-psa/db';
 import {
   getExternalTaxImportService,
   SingleImportResult,
@@ -13,95 +14,70 @@ import type { IExternalTaxImport } from '@alga-psa/types';
  * Import external tax for a single invoice.
  * POST /api/invoices/{id}/import-external-tax
  */
-export async function importExternalTaxForInvoice(
+export const importExternalTaxForInvoice = withAuth(async (
+  user,
+  { tenant },
   invoiceId: string
-): Promise<SingleImportResult> {
-  const user = await getCurrentUserAsync();
-  if (!user) {
-    return {
-      success: false,
-      invoiceId,
-      originalTax: 0,
-      importedTax: 0,
-      difference: 0,
-      chargesUpdated: 0,
-      error: 'Unauthorized: User not authenticated'
-    };
-  }
-
+): Promise<SingleImportResult> => {
   const service = getExternalTaxImportService();
   return service.importTaxForInvoice(invoiceId, user.user_id);
-}
+});
 
 /**
  * Batch import taxes for all pending invoices.
  * POST /api/invoices/batch-import-external-tax
  */
-export async function batchImportExternalTaxes(): Promise<BatchImportResult> {
-  const user = await getCurrentUserAsync();
-  if (!user) {
-    return {
-      totalProcessed: 0,
-      successCount: 0,
-      failureCount: 0,
-      skippedCount: 0,
-      results: [],
-      errors: [{ invoiceId: 'N/A', error: 'Unauthorized: User not authenticated' }]
-    };
-  }
-
+export const batchImportExternalTaxes = withAuth(async (
+  user,
+  { tenant }
+): Promise<BatchImportResult> => {
   const service = getExternalTaxImportService();
   return service.batchImportPendingTaxes(user.user_id);
-}
+});
 
 /**
  * Get import history for an invoice.
  * GET /api/invoices/{id}/external-tax-history
  */
-export async function getExternalTaxImportHistory(
+export const getExternalTaxImportHistory = withAuth(async (
+  user,
+  { tenant },
   invoiceId: string
-): Promise<IExternalTaxImport[]> {
-  const user = await getCurrentUserAsync();
-  if (!user) {
-    return [];
-  }
-
+): Promise<IExternalTaxImport[]> => {
   const service = getExternalTaxImportService();
   return service.getImportHistory(invoiceId);
-}
+});
 
 /**
  * Get tax reconciliation details for an invoice.
  */
-export async function getInvoiceTaxReconciliation(
+export const getInvoiceTaxReconciliation = withAuth(async (
+  user,
+  { tenant },
   invoiceId: string
-): Promise<ReconciliationResult | null> {
-  const user = await getCurrentUserAsync();
-  if (!user) {
-    return null;
-  }
-
+): Promise<ReconciliationResult | null> => {
   const service = getExternalTaxImportService();
   return service.reconcileTaxDifferences(invoiceId);
-}
+});
 
 /**
  * Get count of invoices pending external tax import.
  */
-export async function getPendingExternalTaxCount(): Promise<number> {
-  const user = await getCurrentUserAsync();
-  if (!user) {
-    return 0;
-  }
-
+export const getPendingExternalTaxCount = withAuth(async (
+  user,
+  { tenant }
+): Promise<number> => {
   const service = getExternalTaxImportService();
   return service.getPendingImportCount();
-}
+});
 
 /**
  * Get invoices pending external tax import with details.
  */
-export async function getInvoicesPendingExternalTax(): Promise<
+export const getInvoicesPendingExternalTax = withAuth(async (
+  user,
+  { tenant }
+): Promise<
   Array<{
     invoice_id: string;
     invoice_number: string;
@@ -110,19 +86,8 @@ export async function getInvoicesPendingExternalTax(): Promise<
     created_at: string;
     adapter_type?: string;
   }>
-> {
-  const user = await getCurrentUserAsync();
-  if (!user) {
-    return [];
-  }
-
-  // Import createTenantKnex here to avoid circular dependencies
-  const { createTenantKnex } = await import('@alga-psa/db');
-  const { knex, tenant } = await createTenantKnex(user.tenant);
-
-  if (!tenant) {
-    return [];
-  }
+> => {
+  const { knex } = await createTenantKnex();
 
   const invoices = await knex('invoices as i')
     .join('companies as c', function() {
@@ -149,4 +114,4 @@ export async function getInvoicesPendingExternalTax(): Promise<
     .orderBy('i.created_at', 'desc');
 
   return invoices;
-}
+});

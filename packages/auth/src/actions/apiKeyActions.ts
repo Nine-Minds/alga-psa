@@ -1,26 +1,19 @@
 'use server'
 
 import { ApiKeyService } from '../services/apiKeyService';
-import { getCurrentUser } from '../lib/getCurrentUser';
 import { getUserRoles } from './policyActions';
 import { IRole } from '@alga-psa/types';
-import { withTransaction } from '@alga-psa/db';
-import type { Knex } from 'knex';
+import { withAuth } from '../lib/withAuth';
 
 /**
  * Create a new API key for the current user
  */
-export async function createApiKey(description?: string, expiresAt?: string) {
-  const user = await getCurrentUser();
-  if (!user) {
-    throw new Error('Unauthorized');
-  }
-
+export const createApiKey = withAuth(async (user, { tenant }, description?: string, expiresAt?: string) => {
   const apiKey = await ApiKeyService.createApiKey(
     user.user_id,
     description,
     expiresAt ? new Date(expiresAt) : undefined,
-    { tenantId: user.tenant }
+    { tenantId: tenant }
   );
 
   // Only return the full API key value upon creation
@@ -35,19 +28,14 @@ export async function createApiKey(description?: string, expiresAt?: string) {
     usage_limit: apiKey.usage_limit,
     usage_count: apiKey.usage_count,
   };
-}
+});
 
 /**
  * List all API keys for the current user
  */
-export async function listApiKeys() {
-  const user = await getCurrentUser();
-  if (!user) {
-    throw new Error('Unauthorized');
-  }
+export const listApiKeys = withAuth(async (user, { tenant }) => {
+  const apiKeys = await ApiKeyService.listUserApiKeys(user.user_id, tenant);
 
-  const apiKeys = await ApiKeyService.listUserApiKeys(user.user_id, user.tenant);
-  
   // Remove sensitive information from the response
   return apiKeys.map(key => ({
     api_key_id: key.api_key_id,
@@ -61,47 +49,37 @@ export async function listApiKeys() {
     usage_count: key.usage_count,
     active: key.active,
   }));
-}
+});
 
 /**
  * Deactivate an API key
  */
-export async function deactivateApiKey(apiKeyId: string) {
-  const user = await getCurrentUser();
-  if (!user) {
-    throw new Error('Unauthorized');
-  }
-
+export const deactivateApiKey = withAuth(async (user, { tenant }, apiKeyId: string) => {
   // Verify the API key exists and belongs to the user
-  const apiKeys = await ApiKeyService.listUserApiKeys(user.user_id, user.tenant);
+  const apiKeys = await ApiKeyService.listUserApiKeys(user.user_id, tenant);
   const keyExists = apiKeys.some(key => key.api_key_id === apiKeyId);
 
   if (!keyExists) {
     throw new Error('API key not found');
   }
 
-  await ApiKeyService.deactivateApiKey(apiKeyId, user.tenant);
-}
+  await ApiKeyService.deactivateApiKey(apiKeyId, tenant);
+});
 
 /**
  * List all API keys across users (admin only)
  */
-export async function adminListApiKeys() {
-  const user = await getCurrentUser();
-  if (!user) {
-    throw new Error('Unauthorized');
-  }
-
+export const adminListApiKeys = withAuth(async (user, { tenant }) => {
   // Check if user has admin role
   const userRoles = await getUserRoles(user.user_id);
   const isAdmin = userRoles.some((role: IRole) => role.role_name.toLowerCase() === 'admin');
-  
+
   if (!isAdmin) {
     throw new Error('Forbidden: Admin access required');
   }
 
-  const apiKeys = await ApiKeyService.listAllApiKeys(user.tenant);
-  
+  const apiKeys = await ApiKeyService.listAllApiKeys(tenant);
+
   // Remove sensitive information from the response
   return apiKeys.map(key => ({
     api_key_id: key.api_key_id,
@@ -116,24 +94,19 @@ export async function adminListApiKeys() {
     usage_count: key.usage_count,
     active: key.active,
   }));
-}
+});
 
 /**
  * Admin deactivate any API key
  */
-export async function adminDeactivateApiKey(apiKeyId: string) {
-  const user = await getCurrentUser();
-  if (!user) {
-    throw new Error('Unauthorized');
-  }
-
+export const adminDeactivateApiKey = withAuth(async (user, { tenant }, apiKeyId: string) => {
   // Check if user has admin role
   const userRoles = await getUserRoles(user.user_id);
   const isAdmin = userRoles.some((role: IRole) => role.role_name.toLowerCase() === 'admin');
-  
+
   if (!isAdmin) {
     throw new Error('Forbidden: Admin access required');
   }
 
-  await ApiKeyService.adminDeactivateApiKey(apiKeyId, user.tenant);
-}
+  await ApiKeyService.adminDeactivateApiKey(apiKeyId, tenant);
+});

@@ -344,7 +344,7 @@ export function registerEmailAttachmentActions(actionRegistry: ActionRegistry): 
             resolvedMimeType = downloaded.contentType || resolvedMimeType;
             resolvedFileName = downloaded.fileName || resolvedFileName;
           } else if (providerRow.provider_type === 'google') {
-            const { GmailAdapter } = await import('@/services/email/providers/GmailAdapter');
+            const { GmailAdapter } = await import('@alga-psa/integrations');
             const providerConfig = await buildGoogleProviderConfig(knex, tenant, providerRow);
             const adapter = new GmailAdapter(providerConfig);
             await adapter.connect();
@@ -385,7 +385,7 @@ export function registerEmailAttachmentActions(actionRegistry: ActionRegistry): 
       }
 
       const { StorageProviderFactory, generateStoragePath } = await import(
-        '@/lib/storage/StorageProviderFactory'
+        '@alga-psa/documents'
       );
       const storageProvider = await StorageProviderFactory.createProvider();
       const storagePath = generateStoragePath(tenant, '', resolvedFileName);

@@ -1,8 +1,7 @@
 'use server'
 
 import { createTenantKnex } from '@alga-psa/db';
-import { getCurrentUser } from '@alga-psa/auth/getCurrentUser';
-import { hasPermissionAsync, getSessionAsync, getAnalyticsAsync } from '../lib/authHelpers';
+import { withAuth } from '@alga-psa/auth';
 
 
 // Type definitions for reports
@@ -52,17 +51,9 @@ export interface ContractReportSummary {
  * Get contract revenue report data
  * Shows monthly recurring revenue and year-to-date billing by contract
  */
-export async function getContractRevenueReport(): Promise<ContractRevenue[]> {
-  const currentUser = await getCurrentUser();
-  if (!currentUser) {
-    throw new Error('Unauthorized');
-  }
-
+export const getContractRevenueReport = withAuth(async (user, { tenant }): Promise<ContractRevenue[]> => {
   try {
-    const { knex, tenant } = await createTenantKnex(currentUser.tenant);
-    if (!tenant) {
-      throw new Error('tenant context not found');
-    }
+    const { knex } = await createTenantKnex();
 
     const today = new Date();
     const yearStart = new Date(today.getFullYear(), 0, 1);
@@ -173,23 +164,15 @@ export async function getContractRevenueReport(): Promise<ContractRevenue[]> {
     }
     throw new Error(`Failed to fetch contract revenue report: ${error}`);
   }
-}
+});
 
 /**
  * Get contract expiration report data
  * Track upcoming contract expirations and renewal opportunities
  */
-export async function getContractExpirationReport(): Promise<ContractExpiration[]> {
-  const currentUser = await getCurrentUser();
-  if (!currentUser) {
-    throw new Error('Unauthorized');
-  }
-
+export const getContractExpirationReport = withAuth(async (user, { tenant }): Promise<ContractExpiration[]> => {
   try {
-    const { knex, tenant } = await createTenantKnex(currentUser.tenant);
-    if (!tenant) {
-      throw new Error('tenant context not found');
-    }
+    const { knex } = await createTenantKnex();
 
     const today = new Date();
 
@@ -245,23 +228,15 @@ export async function getContractExpirationReport(): Promise<ContractExpiration[
     }
     throw new Error(`Failed to fetch contract expiration report: ${error}`);
   }
-}
+});
 
 /**
  * Get bucket usage report data
  * Monitor bucket hours usage and identify overage situations
  */
-export async function getBucketUsageReport(): Promise<BucketUsage[]> {
-  const currentUser = await getCurrentUser();
-  if (!currentUser) {
-    throw new Error('Unauthorized');
-  }
-
+export const getBucketUsageReport = withAuth(async (user, { tenant }): Promise<BucketUsage[]> => {
   try {
-    const { knex, tenant } = await createTenantKnex(currentUser.tenant);
-    if (!tenant) {
-      throw new Error('tenant context not found');
-    }
+    const { knex } = await createTenantKnex();
 
     // Query for bucket-type contract lines and their time tracking
     // Note: We're working with contracts that have bucket-type lines
@@ -319,23 +294,15 @@ export async function getBucketUsageReport(): Promise<BucketUsage[]> {
     }
     throw new Error(`Failed to fetch bucket usage report: ${error}`);
   }
-}
+});
 
 /**
  * Get profitability report data
  * Basic profit margins and revenue vs. cost analysis by contract
  */
-export async function getProfitabilityReport(): Promise<Profitability[]> {
-  const currentUser = await getCurrentUser();
-  if (!currentUser) {
-    throw new Error('Unauthorized');
-  }
-
+export const getProfitabilityReport = withAuth(async (user, { tenant }): Promise<Profitability[]> => {
   try {
-    const { knex, tenant } = await createTenantKnex(currentUser.tenant);
-    if (!tenant) {
-      throw new Error('tenant context not found');
-    }
+    const { knex } = await createTenantKnex();
 
     const yearStart = new Date(new Date().getFullYear(), 0, 1);
 
@@ -390,22 +357,14 @@ export async function getProfitabilityReport(): Promise<Profitability[]> {
     }
     throw new Error(`Failed to fetch profitability report: ${error}`);
   }
-}
+});
 
 /**
  * Get contract report summary statistics
  */
-export async function getContractReportSummary(): Promise<ContractReportSummary> {
-  const currentUser = await getCurrentUser();
-  if (!currentUser) {
-    throw new Error('Unauthorized');
-  }
-
+export const getContractReportSummary = withAuth(async (user, { tenant }): Promise<ContractReportSummary> => {
   try {
-    const { knex, tenant } = await createTenantKnex(currentUser.tenant);
-    if (!tenant) {
-      throw new Error('tenant context not found');
-    }
+    const { knex } = await createTenantKnex();
 
     const revenueData = await getContractRevenueReport();
 
@@ -432,4 +391,4 @@ export async function getContractReportSummary(): Promise<ContractReportSummary>
     }
     throw new Error(`Failed to fetch contract report summary: ${error}`);
   }
-}
+});

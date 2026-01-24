@@ -3,7 +3,7 @@
 import { z } from 'zod';
 import { createTenantKnex } from '@alga-psa/db';
 import { withTransaction } from '@alga-psa/db';
-import { getCurrentUser } from '@alga-psa/auth/getCurrentUser';
+import { withAuth } from '@alga-psa/auth';
 import type {
   IBucketUsage,
   IContractLine,
@@ -44,9 +44,11 @@ export interface RemainingBucketUnitsResult {
  * @param input - Object containing clientId and currentDate.
  * @returns A promise that resolves to an array of bucket plan usage details.
  */
-export async function getRemainingBucketUnits(
+export const getRemainingBucketUnits = withAuth(async (
+  _user,
+  { tenant },
   input: z.infer<typeof InputSchema>
-): Promise<RemainingBucketUnitsResult[]> {
+): Promise<RemainingBucketUnitsResult[]> => {
   // Validate input
   const validationResult = InputSchema.safeParse(input);
   if (!validationResult.success) {
@@ -55,16 +57,7 @@ export async function getRemainingBucketUnits(
   }
   const { clientId, currentDate } = validationResult.data;
 
-  const currentUser = await getCurrentUser();
-  if (!currentUser?.tenant) {
-    throw new Error('Tenant context is required.');
-  }
-
-  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
-
-  if (!tenant) {
-    throw new Error('Tenant context is required.');
-  }
+  const { knex } = await createTenantKnex();
 
   console.log(`Fetching remaining bucket units for client ${clientId} in tenant ${tenant} as of ${currentDate}`);
 
@@ -162,4 +155,4 @@ export async function getRemainingBucketUnits(
     console.error(`Error fetching remaining bucket units for client ${clientId} in tenant ${tenant}:`, error);
     throw new Error(`Failed to fetch remaining bucket units: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
-}
+});

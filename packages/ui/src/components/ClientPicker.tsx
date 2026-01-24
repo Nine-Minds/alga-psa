@@ -9,6 +9,7 @@ import { Input } from './Input';
 import CustomSelect from './CustomSelect';
 import { Button } from './Button';
 import ClientAvatar from './ClientAvatar';
+import type { EntityAvatarProps } from './EntityAvatar';
 
 import { ReflectionContainer } from '../ui-reflection/ReflectionContainer';
 import { useAutomationIdAndRegister } from '../ui-reflection/useAutomationIdAndRegister';
@@ -28,6 +29,7 @@ interface ClientPickerProps {
   className?: string;
   placeholder?: string;
   modal?: boolean;
+  size?: EntityAvatarProps['size'];
 }
 
 interface OptionButtonProps {
@@ -65,6 +67,7 @@ export const ClientPicker: React.FC<ClientPickerProps & AutomationProps> = ({
   className = '',
   placeholder = 'Select Client',
   modal = true,
+  size = 'sm',
   'data-automation-type': dataAutomationType = 'picker',
 }) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -246,8 +249,12 @@ export const ClientPicker: React.FC<ClientPickerProps & AutomationProps> = ({
   const dropdown = (
     <div
       ref={dropdownRef}
-      className="fixed z-[1000] bg-white border border-gray-200 rounded-md shadow-lg overflow-hidden"
+      className="fixed z-[10000] bg-white border border-gray-200 rounded-md shadow-lg overflow-hidden"
       style={{ top: dropdownCoords.top, left: dropdownCoords.left, width: dropdownCoords.width }}
+      onMouseDown={(e) => e.stopPropagation()}
+      onClick={(e) => e.stopPropagation()}
+      onPointerDown={(e) => e.stopPropagation()}
+      data-radix-popper-content-wrapper=""
     >
       <div className="p-3 border-b border-gray-100 bg-gray-50">
         <div className="flex items-center gap-2">
@@ -290,7 +297,7 @@ export const ClientPicker: React.FC<ClientPickerProps & AutomationProps> = ({
                 client.client_id === selectedClientId ? 'bg-gray-50' : ''
               }`}
             >
-              <ClientAvatar clientId={client.client_id} clientName={client.client_name} logoUrl={(client as any).logoUrl} />
+              <ClientAvatar clientId={client.client_id} clientName={client.client_name} logoUrl={(client as any).logoUrl} size={size} />
               <div className="flex-1 min-w-0">
                 <div className="text-sm font-medium text-gray-900 truncate">{client.client_name}</div>
                 <div className="text-xs text-gray-500 truncate">
@@ -328,6 +335,7 @@ export const ClientPicker: React.FC<ClientPickerProps & AutomationProps> = ({
                     clientId={selectedClient.client_id}
                     clientName={selectedClient.client_name}
                     logoUrl={(selectedClient as any).logoUrl}
+                    size={size}
                   />
                   <span className="truncate">{selectedClient.client_name}</span>
                 </>

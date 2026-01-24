@@ -2,7 +2,8 @@ import type { IUserWithRoles } from '@alga-psa/types';
 import { getUserWithRoles, getUserWithRolesByEmail, createTenantKnex } from '@alga-psa/db';
 import { getSession } from './getSession';
 import logger from '@alga-psa/core/logger';
-import { getUserAvatarUrl } from '@alga-psa/media';
+// Note: Avatar URLs are NOT fetched here to avoid circular dependency with @alga-psa/documents.
+// If avatar URL is needed, use getUserAvatarUrl from @alga-psa/documents separately.
 
 export async function getCurrentUser(): Promise<IUserWithRoles | null> {
   try {
@@ -21,8 +22,7 @@ export async function getCurrentUser(): Promise<IUserWithRoles | null> {
 
       const userWithRoles = await getUserWithRoles(
         sessionUser.id,
-        sessionUser.tenant,
-        getUserAvatarUrl
+        sessionUser.tenant
       );
 
       if (!userWithRoles) {
@@ -48,8 +48,12 @@ export async function getCurrentUser(): Promise<IUserWithRoles | null> {
 
     logger.warn(`DEVELOPMENT ONLY: Falling back to email lookup for: ${session.user.email} - this is unsafe in production`);
 
-    // Get current tenant from context
-    const { tenant } = await createTenantKnex();
+    // Get tenant from session if available, otherwise fall back to context
+    let tenant = sessionUser.tenant;
+    if (!tenant) {
+      const { tenant: contextTenant } = await createTenantKnex();
+      tenant = contextTenant;
+    }
     if (!tenant) {
       logger.error('No tenant context available for email-based lookup');
       return null;
@@ -62,8 +66,7 @@ export async function getCurrentUser(): Promise<IUserWithRoles | null> {
       const userWithRoles = await getUserWithRolesByEmail(
         session.user.email,
         tenant,
-        sessionUser.user_type,
-        getUserAvatarUrl
+        sessionUser.user_type
       );
 
       if (!userWithRoles) {
@@ -86,8 +89,7 @@ export async function getCurrentUser(): Promise<IUserWithRoles | null> {
     const userWithRoles = await getUserWithRolesByEmail(
       session.user.email,
       tenant,
-      undefined,
-      getUserAvatarUrl
+      undefined
     );
 
     if (!userWithRoles) {

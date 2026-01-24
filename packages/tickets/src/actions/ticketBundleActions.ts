@@ -4,7 +4,7 @@ import { withTransaction } from '@alga-psa/db';
 import { createTenantKnex } from '@alga-psa/db';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { z } from 'zod';
-import type { IUser } from '@alga-psa/types';
+import { withAuth } from '@alga-psa/auth';
 
 function nowIso() {
   return new Date().toISOString();
@@ -38,10 +38,9 @@ const findTicketByNumberSchema = z.object({
   ticketNumber: z.string().min(1),
 });
 
-export async function findTicketByNumberAction(input: z.input<typeof findTicketByNumberSchema>, user: IUser) {
+export const findTicketByNumberAction = withAuth(async (user, { tenant }, input: z.input<typeof findTicketByNumberSchema>) => {
   const data = findTicketByNumberSchema.parse(input);
-  const { knex: db, tenant } = await createTenantKnex(user.tenant);
-  if (!tenant) throw new Error('Tenant not found');
+  const { knex: db } = await createTenantKnex();
 
   return withTransaction(db, async (trx) => {
     if (!await hasPermission(user, 'ticket', 'read', trx)) {
@@ -54,17 +53,16 @@ export async function findTicketByNumberAction(input: z.input<typeof findTicketB
       .first();
     return ticket || null;
   });
-}
+});
 
-export async function bundleTicketsAction(input: z.input<typeof bundleTicketsSchema>, user: IUser) {
+export const bundleTicketsAction = withAuth(async (user, { tenant }, input: z.input<typeof bundleTicketsSchema>) => {
   const data = bundleTicketsSchema.parse(input);
   const uniqueChildIds = Array.from(new Set(data.childTicketIds)).filter((id) => id !== data.masterTicketId);
   if (uniqueChildIds.length === 0) {
     throw new Error('Select at least one child ticket different from the master.');
   }
 
-  const { knex: db, tenant } = await createTenantKnex(user.tenant);
-  if (!tenant) throw new Error('Tenant not found');
+  const { knex: db } = await createTenantKnex();
 
   return withTransaction(db, async (trx) => {
     if (!await hasPermission(user, 'ticket', 'update', trx)) {
@@ -131,22 +129,21 @@ export async function bundleTicketsAction(input: z.input<typeof bundleTicketsSch
 
     return { masterTicketId: data.masterTicketId, childTicketIds: uniqueChildIds, mode: data.mode };
   });
-}
+});
 
 const addChildrenSchema = z.object({
   masterTicketId: z.string().uuid(),
   childTicketIds: z.array(z.string().uuid()).min(1),
 });
 
-export async function addChildrenToBundleAction(input: z.input<typeof addChildrenSchema>, user: IUser) {
+export const addChildrenToBundleAction = withAuth(async (user, { tenant }, input: z.input<typeof addChildrenSchema>) => {
   const data = addChildrenSchema.parse(input);
   const childIds = Array.from(new Set(data.childTicketIds)).filter((id) => id !== data.masterTicketId);
   if (childIds.length === 0) {
     throw new Error('No child tickets provided');
   }
 
-  const { knex: db, tenant } = await createTenantKnex(user.tenant);
-  if (!tenant) throw new Error('Tenant not found');
+  const { knex: db } = await createTenantKnex();
 
   return withTransaction(db, async (trx) => {
     if (!await hasPermission(user, 'ticket', 'update', trx)) {
@@ -185,20 +182,19 @@ export async function addChildrenToBundleAction(input: z.input<typeof addChildre
 
     return { masterTicketId: data.masterTicketId, childTicketIds: childIds };
   });
-}
+});
 
 const promoteMasterSchema = z.object({
   oldMasterTicketId: z.string().uuid(),
   newMasterTicketId: z.string().uuid(),
 });
 
-export async function promoteBundleMasterAction(input: z.input<typeof promoteMasterSchema>, user: IUser) {
+export const promoteBundleMasterAction = withAuth(async (user, { tenant }, input: z.input<typeof promoteMasterSchema>) => {
   const data = promoteMasterSchema.parse(input);
   if (data.oldMasterTicketId === data.newMasterTicketId) {
     throw new Error('New master ticket must be different from the current master.');
   }
-  const { knex: db, tenant } = await createTenantKnex(user.tenant);
-  if (!tenant) throw new Error('Tenant not found');
+  const { knex: db } = await createTenantKnex();
 
   return withTransaction(db, async (trx) => {
     if (!await hasPermission(user, 'ticket', 'update', trx)) {
@@ -276,7 +272,7 @@ export async function promoteBundleMasterAction(input: z.input<typeof promoteMas
 
     return { oldMasterTicketId: data.oldMasterTicketId, newMasterTicketId: data.newMasterTicketId };
   });
-}
+});
 
 const updateBundleSettingsSchema = z.object({
   masterTicketId: z.string().uuid(),
@@ -284,10 +280,9 @@ const updateBundleSettingsSchema = z.object({
   reopenOnChildReply: z.boolean().optional(),
 });
 
-export async function updateBundleSettingsAction(input: z.input<typeof updateBundleSettingsSchema>, user: IUser) {
+export const updateBundleSettingsAction = withAuth(async (user, { tenant }, input: z.input<typeof updateBundleSettingsSchema>) => {
   const data = updateBundleSettingsSchema.parse(input);
-  const { knex: db, tenant } = await createTenantKnex(user.tenant);
-  if (!tenant) throw new Error('Tenant not found');
+  const { knex: db } = await createTenantKnex();
 
   return withTransaction(db, async (trx) => {
     if (!await hasPermission(user, 'ticket', 'update', trx)) {
@@ -318,16 +313,15 @@ export async function updateBundleSettingsAction(input: z.input<typeof updateBun
 
     return updated;
   });
-}
+});
 
 const removeChildSchema = z.object({
   childTicketId: z.string().uuid(),
 });
 
-export async function removeChildFromBundleAction(input: z.input<typeof removeChildSchema>, user: IUser) {
+export const removeChildFromBundleAction = withAuth(async (user, { tenant }, input: z.input<typeof removeChildSchema>) => {
   const data = removeChildSchema.parse(input);
-  const { knex: db, tenant } = await createTenantKnex(user.tenant);
-  if (!tenant) throw new Error('Tenant not found');
+  const { knex: db } = await createTenantKnex();
 
   return withTransaction(db, async (trx) => {
     if (!await hasPermission(user, 'ticket', 'update', trx)) {
@@ -365,16 +359,15 @@ export async function removeChildFromBundleAction(input: z.input<typeof removeCh
 
     return { masterTicketId, childTicketId: data.childTicketId, remainingChildren: remaining };
   });
-}
+});
 
 const unbundleSchema = z.object({
   masterTicketId: z.string().uuid(),
 });
 
-export async function unbundleMasterTicketAction(input: z.input<typeof unbundleSchema>, user: IUser) {
+export const unbundleMasterTicketAction = withAuth(async (user, { tenant }, input: z.input<typeof unbundleSchema>) => {
   const data = unbundleSchema.parse(input);
-  const { knex: db, tenant } = await createTenantKnex(user.tenant);
-  if (!tenant) throw new Error('Tenant not found');
+  const { knex: db } = await createTenantKnex();
 
   return withTransaction(db, async (trx) => {
     if (!await hasPermission(user, 'ticket', 'update', trx)) {
@@ -403,4 +396,4 @@ export async function unbundleMasterTicketAction(input: z.input<typeof unbundleS
 
     return { masterTicketId: data.masterTicketId };
   });
-}
+});

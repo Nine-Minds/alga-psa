@@ -1,8 +1,7 @@
 "use server";
 
 import { getTenantSettings, updateTenantSettings } from "@alga-psa/tenancy/actions/tenant-settings-actions/tenantSettingsActions";
-import { getCurrentUser } from "@alga-psa/users/actions";
-import { hasPermission } from "@alga-psa/auth";
+import { withAuth, hasPermission } from "@alga-psa/auth";
 import { createTenantKnex } from "@/lib/db";
 import { listOAuthAccountLinksForUser } from "@ee/lib/auth/oauthAccountLinks";
 import User from "server/src/lib/models/user";
@@ -35,23 +34,16 @@ function safeParse(raw: string): Record<string, unknown> | undefined {
   }
 }
 
-async function ensureSettingsPermission(): Promise<void> {
-  const user = await getCurrentUser();
-  if (!user) {
-    throw new Error("Authentication required");
-  }
-
+export const updateSsoPreferencesAction = withAuth(async (
+  user,
+  { tenant },
+  updates: Partial<SsoPreferences>
+): Promise<SsoPreferences> => {
   const { knex } = await createTenantKnex();
   const allowed = await hasPermission(user, "settings", "update", knex);
   if (!allowed) {
     throw new Error("You do not have permission to manage security settings.");
   }
-}
-
-export async function updateSsoPreferencesAction(
-  updates: Partial<SsoPreferences>
-): Promise<SsoPreferences> {
-  await ensureSettingsPermission();
 
   const tenantSettings = await getTenantSettings();
   const currentSettings =
@@ -76,7 +68,7 @@ export async function updateSsoPreferencesAction(
 
   await updateTenantSettings(updatedSettings);
   return nextPreferences;
-}
+});
 
 export interface LinkedSsoAccount {
   provider: string;

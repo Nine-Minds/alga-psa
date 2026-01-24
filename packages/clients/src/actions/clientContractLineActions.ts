@@ -6,9 +6,8 @@ import { Knex } from 'knex';
 import type { IClientContractLine } from '@alga-psa/types';
 import { Temporal } from '@js-temporal/polyfill';
 import { toPlainDate, toISODate } from '@alga-psa/core';
-import { getSessionAsync } from '../lib/authHelpers';
 import { cloneTemplateContractLineAsync } from '../lib/billingHelpers';
-import { getCurrentUser } from '@alga-psa/auth/getCurrentUser';
+import { withAuth } from '@alga-psa/auth';
 
 // Helper function to get the latest invoiced end date
 async function getLatestInvoicedEndDate(db: any, tenant: string, clientContractLineId: string): Promise<Date | null> {
@@ -66,14 +65,13 @@ async function getLatestInvoicedEndDate(db: any, tenant: string, clientContractL
 }
 
 
-export async function getClientContractLine(clientId: string): Promise<IClientContractLine[]> {
-  const currentUser = await getCurrentUser();
-  if (!currentUser) {
-    throw new Error('Unauthorized');
-  }
-
+export const getClientContractLine = withAuth(async (
+  _user,
+  { tenant },
+  clientId: string
+): Promise<IClientContractLine[]> => {
   try {
-    const {knex: db, tenant} = await createTenantKnex(currentUser.tenant);
+    const { knex: db } = await createTenantKnex();
     const clientContractLine = await withTransaction(db, async (trx: Knex.Transaction) => {
       return await trx('contract_lines as cl')
         .join('client_contracts as cc', function () {
@@ -88,10 +86,10 @@ export async function getClientContractLine(clientId: string): Promise<IClientCo
           this.on('sc.category_id', '=', 'cl.service_category')
             .andOn('sc.tenant', '=', 'cl.tenant');
         })
-        .where({ 
-          'cc.client_id': clientId, 
+        .where({
+          'cc.client_id': clientId,
           'cl.is_active': true,
-          'cl.tenant': tenant 
+          'cl.tenant': tenant
         })
         .select([
           'cl.*',
@@ -118,16 +116,16 @@ export async function getClientContractLine(clientId: string): Promise<IClientCo
     console.error('Error fetching client contract line:', error);
     throw new Error('Failed to fetch client contract line');
   }
-}
+});
 
-export async function updateClientContractLine(clientContractLineId: string, updates: Partial<IClientContractLine>): Promise<void> {
-  const currentUser = await getCurrentUser();
-  if (!currentUser) {
-    throw new Error('Unauthorized');
-  }
-
+export const updateClientContractLine = withAuth(async (
+  _user,
+  { tenant },
+  clientContractLineId: string,
+  updates: Partial<IClientContractLine>
+): Promise<void> => {
   try {
-    const {knex: db, tenant} = await createTenantKnex(currentUser.tenant);
+    const { knex: db } = await createTenantKnex();
     const result = await withTransaction(db, async (trx: Knex.Transaction) => {
       // Filter updates to include only columns that exist on contract_lines
       const {
@@ -143,9 +141,9 @@ export async function updateClientContractLine(clientContractLineId: string, upd
       } = updates as any;
 
       return await trx('contract_lines')
-        .where({ 
+        .where({
           contract_line_id: clientContractLineId,
-          tenant 
+          tenant
         })
         .update(validUpdates);
     });
@@ -157,19 +155,15 @@ export async function updateClientContractLine(clientContractLineId: string, upd
     console.error('Error updating client contract line:', error);
     throw new Error('Failed to update client contract line');
   }
-}
+});
 
-export async function addClientContractLine(newBilling: Omit<IClientContractLine, 'client_contract_line_id' | 'tenant'>): Promise<void> {
-  const currentUser = await getCurrentUser();
-  if (!currentUser) {
-    throw new Error('Unauthorized');
-  }
-
+export const addClientContractLine = withAuth(async (
+  _user,
+  { tenant },
+  newBilling: Omit<IClientContractLine, 'client_contract_line_id' | 'tenant'>
+): Promise<void> => {
   try {
-    const {knex: db, tenant} = await createTenantKnex(currentUser.tenant);
-    if (!tenant) {
-      throw new Error('No tenant found');
-    }
+    const { knex: db } = await createTenantKnex();
 
     await withTransaction(db, async (trx: Knex.Transaction) => {
       // Get the client contract to find the target contract_id
@@ -261,21 +255,15 @@ export async function addClientContractLine(newBilling: Omit<IClientContractLine
       throw new Error(error.message || 'Failed to add client contract line');
     }
   }
-}
+});
 
-export async function removeClientContractLine(clientContractLineId: string): Promise<void> {
-  const currentUser = await getCurrentUser();
-  if (!currentUser) {
-    throw new Error('Unauthorized');
-  }
-
+export const removeClientContractLine = withAuth(async (
+  _user,
+  { tenant },
+  clientContractLineId: string
+): Promise<void> => {
   try {
-    const {knex: db, tenant} = await createTenantKnex(currentUser.tenant);
-
-    // Ensure tenant context exists before proceeding
-    if (!tenant) {
-      throw new Error('Tenant context is missing. Cannot perform validation.');
-    }
+    const { knex: db } = await createTenantKnex();
 
     // --- Validation Start ---
     const latestInvoicedEndDate = await getLatestInvoicedEndDate(db, tenant, clientContractLineId);
@@ -311,17 +299,17 @@ export async function removeClientContractLine(clientContractLineId: string): Pr
     // Preserve the original error message if it exists
     throw new Error(error.message || 'Failed to remove client contract line');
   }
-}
+});
 
-export async function editClientContractLine(clientContractLineId: string, updates: Partial<IClientContractLine>): Promise<void> {
-  const currentUser = await getCurrentUser();
-  if (!currentUser) {
-    throw new Error('Unauthorized');
-  }
-
+export const editClientContractLine = withAuth(async (
+  _user,
+  { tenant },
+  clientContractLineId: string,
+  updates: Partial<IClientContractLine>
+): Promise<void> => {
   try {
-    const {knex: db, tenant} = await createTenantKnex(currentUser.tenant);
-    
+    const { knex: db } = await createTenantKnex();
+
     // Convert dates to proper format
     // Use 'any' type here to allow assigning Date objects, knex will handle them.
     const updateData: any = { ...updates };
@@ -339,11 +327,6 @@ export async function editClientContractLine(clientContractLineId: string, updat
     } else {
         // Keep the valid UUID string if provided
         updateData.service_category = updates.service_category;
-    }
-
-    // Ensure tenant context exists before proceeding
-    if (!tenant) {
-      throw new Error('Tenant context is missing. Cannot perform validation.');
     }
 
     // --- Validation Start ---
@@ -403,4 +386,4 @@ export async function editClientContractLine(clientContractLineId: string, updat
     // Preserve the original error message if it exists
     throw new Error(error.message || 'Failed to edit client contract line');
   }
-}
+});

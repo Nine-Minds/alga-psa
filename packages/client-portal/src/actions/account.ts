@@ -139,8 +139,8 @@ const determineServiceStatus = (startDate: string, endDate: string | null): Serv
 export async function getClientProfile(): Promise<IClientProfile> {
   const session = await getSession();
   if (!session?.user) throw new Error('Not authenticated');
-  
-  const { knex } = await createTenantKnex();
+
+  const { knex } = await createTenantKnex(session.user.tenant);
   
   if (session.user.user_type === 'client') {
     if (!session.user.contactId) throw new Error('No contact associated with user');
@@ -228,7 +228,7 @@ export async function updateClientProfile(profile: IClientProfile): Promise<{ su
   if (!session?.user) throw new Error('Not authenticated');
   if (!session.user.clientId) throw new Error('No client associated with user');
 
-  const { knex } = await createTenantKnex();
+  const { knex } = await createTenantKnex(session.user.tenant);
   
   await withTransaction(knex, async (trx: Knex.Transaction) => {
     return await trx('clients')
@@ -254,7 +254,7 @@ export async function getPaymentMethods(): Promise<PaymentMethod[]> {
   if (!session?.user) throw new Error('Not authenticated');
   if (!session.user.clientId) throw new Error('No client associated with user');
 
-  const { knex } = await createTenantKnex();
+  const { knex } = await createTenantKnex(session.user.tenant);
   
   const methods = await withTransaction(knex, async (trx: Knex.Transaction) => {
     return await trx('payment_methods')
@@ -286,7 +286,7 @@ export async function addPaymentMethod(data: {
   if (!session?.user) throw new Error('Not authenticated');
   if (!session.user.clientId) throw new Error('No client associated with user');
 
-  const { knex } = await createTenantKnex();
+  const { knex } = await createTenantKnex(session.user.tenant);
 
   // Start a transaction
   await withTransaction(knex, async (trx: Knex.Transaction) => {
@@ -326,7 +326,7 @@ export async function removePaymentMethod(id: string): Promise<{ success: boolea
   if (!session?.user) throw new Error('Not authenticated');
   if (!session.user.clientId) throw new Error('No client associated with user');
 
-  const { knex } = await createTenantKnex();
+  const { knex } = await createTenantKnex(session.user.tenant);
 
   await withTransaction(knex, async (trx: Knex.Transaction) => {
     return await trx('payment_methods')
@@ -349,7 +349,7 @@ export async function setDefaultPaymentMethod(id: string): Promise<{ success: bo
   if (!session?.user) throw new Error('Not authenticated');
   if (!session.user.clientId) throw new Error('No client associated with user');
 
-  const { knex } = await createTenantKnex();
+  const { knex } = await createTenantKnex(session.user.tenant);
 
   await withTransaction(knex, async (trx: Knex.Transaction) => {
     // Unset any existing default
@@ -398,7 +398,7 @@ export async function getInvoices(): Promise<Invoice[]> {
   if (!session?.user) throw new Error('Not authenticated');
   if (!session.user.clientId) throw new Error('No client associated with user');
 
-  const { knex } = await createTenantKnex();
+  const { knex } = await createTenantKnex(session.user.tenant);
   
   const invoices = await withTransaction(knex, async (trx: Knex.Transaction) => {
     return await trx('invoices')
@@ -442,7 +442,7 @@ export async function getBillingCycles(): Promise<BillingCycle[]> {
   if (!session?.user) throw new Error('Not authenticated');
   if (!session.user.clientId) throw new Error('No client associated with user');
 
-  const { knex } = await createTenantKnex();
+  const { knex } = await createTenantKnex(session.user.tenant);
   
   const cycles = await withTransaction(knex, async (trx: Knex.Transaction) => {
     return await trx('client_contract_lines')
@@ -473,7 +473,7 @@ export async function getActiveServices(): Promise<Service[]> {
   if (!session?.user) throw new Error('Not authenticated');
   if (!session.user.clientId) throw new Error('No client associated with user');
 
-  const { knex } = await createTenantKnex();
+  const { knex } = await createTenantKnex(session.user.tenant);
   
   const now = new Date().toISOString();
   
@@ -683,7 +683,7 @@ export async function getServiceUpgrades(serviceId: string): Promise<ServicePlan
   if (!session?.user) throw new Error('Not authenticated');
   if (!session.user.clientId) throw new Error('No client associated with user');
 
-  const { knex } = await createTenantKnex();
+  const { knex } = await createTenantKnex(session.user.tenant);
   
   // Get current service details
   const currentService = await withTransaction(knex, async (trx: Knex.Transaction) => {

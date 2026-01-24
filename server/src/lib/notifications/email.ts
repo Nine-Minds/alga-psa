@@ -27,9 +27,9 @@ import {
   NotificationLog,
   NotificationService
 } from '../models/notification';
-import { EmailProviderManager } from 'server/src/services/email/EmailProviderManager';
+import { EmailProviderManager } from '@alga-psa/email';
 import { TenantEmailSettings, EmailMessage } from '@alga-psa/types';
-import { TenantEmailService } from '../services/TenantEmailService';
+import { TenantEmailService } from '@alga-psa/email';
 import { StaticTemplateProcessor } from '../email/tenant/templateProcessors';
 import { getConnection } from '../db/db';
 import { resolveEmailLocale } from './emailLocaleResolver';

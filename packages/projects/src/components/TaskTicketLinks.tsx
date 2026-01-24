@@ -143,7 +143,7 @@ export default function TaskTicketLinks({
       const filters: ITicketListFilters = {
         boardFilterState: 'all'
       };
-      const tickets = await getTicketsForList(user, filters);
+      const tickets = await getTicketsForList(filters);
       setAvailableTickets(tickets || []);
       setTicketsLoaded(true);
     } catch (error) {
@@ -376,7 +376,7 @@ export default function TaskTicketLinks({
         return;
       }
       
-      const ticketData = await getConsolidatedTicketData(ticketId, user);
+      const ticketData = await getConsolidatedTicketData(ticketId);
       if (!ticketData) {
         toast.error('Failed to load ticket');
         return;

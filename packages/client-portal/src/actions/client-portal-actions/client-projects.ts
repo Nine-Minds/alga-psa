@@ -3,25 +3,22 @@
 import { createTenantKnex } from '@alga-psa/db';
 import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
-import { getCurrentUser, getUserClientId } from '@alga-psa/users/actions';
+import { getUserClientId } from '@alga-psa/users/actions';
 import { IProject, DEFAULT_CLIENT_PORTAL_CONFIG } from '@alga-psa/types';
 import ProjectModel from '@alga-psa/projects/models/project';
+import { withAuth, type AuthContext } from '@alga-psa/auth';
+import type { IUserWithRoles } from '@alga-psa/types';
 
 /**
  * Fetch a single project by ID for the client portal
  * Verifies client access and returns project with client_portal_config
  */
-export async function getClientProjectDetails(projectId: string): Promise<IProject | null> {
-  const { knex, tenant } = await createTenantKnex();
-  if (!tenant) {
-    throw new Error('Tenant not found');
-  }
-
-  // Get current user and verify they are a client
-  const user = await getCurrentUser();
-  if (!user) {
-    throw new Error('User not authenticated');
-  }
+export const getClientProjectDetails = withAuth(async (
+  user: IUserWithRoles,
+  { tenant }: AuthContext,
+  projectId: string
+): Promise<IProject | null> => {
+  const { knex } = await createTenantKnex();
 
   const clientId = await getUserClientId(user.user_id);
   if (!clientId) {
@@ -56,35 +53,30 @@ export async function getClientProjectDetails(projectId: string): Promise<IProje
     .first();
 
   return project || null;
-}
+});
 
 /**
  * Fetch all projects for a client client with basic details
  */
-export async function getClientProjects(options: {
-  page?: number;
-  pageSize?: number;
-  sortBy?: string;
-  sortDirection?: 'asc' | 'desc';
-  status?: string;
-  search?: string;
-} = {}): Promise<{
+export const getClientProjects = withAuth(async (
+  user: IUserWithRoles,
+  { tenant }: AuthContext,
+  options: {
+    page?: number;
+    pageSize?: number;
+    sortBy?: string;
+    sortDirection?: 'asc' | 'desc';
+    status?: string;
+    search?: string;
+  } = {}
+): Promise<{
   projects: IProject[];
   total: number;
   page: number;
   pageSize: number;
-}> {
-  const { knex, tenant } = await createTenantKnex();
-  if (!tenant) {
-    throw new Error('Tenant not found');
-  }
-  
-  // Get current user and client
-  const user = await getCurrentUser();
-  if (!user) {
-    throw new Error('User not authenticated');
-  }
-  
+}> => {
+  const { knex } = await createTenantKnex();
+
   const clientId = await getUserClientId(user.user_id);
   if (!clientId) {
     throw new Error('Client not found');
@@ -187,27 +179,22 @@ export async function getClientProjects(options: {
     page,
     pageSize
   };
-}
+});
 
 /**
  * Calculate project progress without exposing internal details
  * Respects client_portal_config.show_tasks visibility setting
  */
-export async function getProjectProgress(projectId: string): Promise<{
+export const getProjectProgress = withAuth(async (
+  user: IUserWithRoles,
+  { tenant }: AuthContext,
+  projectId: string
+): Promise<{
   completionPercentage: number;
   timelineStatus: 'on_track' | 'delayed' | 'at_risk';
   daysRemaining: number;
-} | null> {
-  const { knex, tenant } = await createTenantKnex();
-  if (!tenant) {
-    throw new Error('Tenant not found');
-  }
-
-  // Get current user and client
-  const user = await getCurrentUser();
-  if (!user) {
-    throw new Error('User not authenticated');
-  }
+} | null> => {
+  const { knex } = await createTenantKnex();
 
   // Get project to verify access and check visibility config
   const project = await withTransaction(knex, async (trx: Knex.Transaction) => {
@@ -321,27 +308,22 @@ export async function getProjectProgress(projectId: string): Promise<{
     timelineStatus,
     daysRemaining: Math.max(0, daysRemaining)
   };
-}
+});
 
 /**
  * Get project manager details for a project
  */
-export async function getProjectManager(projectId: string): Promise<{
+export const getProjectManager = withAuth(async (
+  user: IUserWithRoles,
+  { tenant }: AuthContext,
+  projectId: string
+): Promise<{
   userId: string | null;
   name: string;
   email: string | null;
   phone?: string;
-}> {
-  const { knex, tenant } = await createTenantKnex();
-  if (!tenant) {
-    throw new Error('Tenant not found');
-  }
-  
-  // Get current user
-  const user = await getCurrentUser();
-  if (!user) {
-    throw new Error('User not authenticated');
-  }
+}> => {
+  const { knex } = await createTenantKnex();
   
   // Get project to verify access
   const project = await withTransaction(knex, async (trx: Knex.Transaction) => {
@@ -393,4 +375,4 @@ export async function getProjectManager(projectId: string): Promise<{
     email: manager.email,
     phone: manager.phone
   };
-}
+});

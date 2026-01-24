@@ -548,7 +548,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
     const fetchTicketFormOptions = async () => {
       if (!currentUser) return;
       try {
-        const options = await getTicketFormOptions(currentUser as any);
+        const options = await getTicketFormOptions();
         setTicketFormOptions({
           statusOptions: options.statusOptions,
           priorityOptions: options.priorityOptions,

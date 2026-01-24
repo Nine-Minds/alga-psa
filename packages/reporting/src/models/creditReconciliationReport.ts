@@ -21,9 +21,10 @@ class CreditReconciliationReport {
    */
   static async create(
     reportData: Omit<ICreditReconciliationReport, 'report_id' | 'created_at' | 'updated_at'>,
-    trx?: Knex.Transaction
+    trx?: Knex.Transaction,
+    tenantId?: string
   ): Promise<ICreditReconciliationReport> {
-    const { knex, tenant } = await createTenantKnex();
+    const { knex, tenant } = await createTenantKnex(tenantId);
     if (!tenant) {
       throw new Error('Tenant context is required for creating reconciliation report');
     }
@@ -77,8 +78,8 @@ class CreditReconciliationReport {
    * @param reportId The ID of the report to retrieve
    * @returns The report or null if not found
    */
-  static async getById(reportId: string): Promise<ICreditReconciliationReport | null> {
-    const { knex, tenant } = await createTenantKnex();
+  static async getById(reportId: string, tenantId?: string): Promise<ICreditReconciliationReport | null> {
+    const { knex, tenant } = await createTenantKnex(tenantId);
     if (!tenant) {
       throw new Error('Tenant context is required for fetching reconciliation report');
     }
@@ -114,9 +115,10 @@ class CreditReconciliationReport {
    */
   static async getByClientId(
     clientId: string,
-    status?: ReconciliationStatus | ReconciliationStatus[]
+    status?: ReconciliationStatus | ReconciliationStatus[],
+    tenantId?: string
   ): Promise<ICreditReconciliationReport[]> {
-    const { knex, tenant } = await createTenantKnex();
+    const { knex, tenant } = await createTenantKnex(tenantId);
     if (!tenant) {
       throw new Error('Tenant context is required for fetching client reconciliation reports');
     }
@@ -166,9 +168,10 @@ class CreditReconciliationReport {
   static async update(
     reportId: string,
     updateData: Partial<ICreditReconciliationReport>,
-    trx?: Knex.Transaction
+    trx?: Knex.Transaction,
+    tenantId?: string
   ): Promise<ICreditReconciliationReport> {
-    const { knex, tenant } = await createTenantKnex();
+    const { knex, tenant } = await createTenantKnex(tenantId);
     if (!tenant) {
       throw new Error('Tenant context is required for updating reconciliation report');
     }
@@ -221,14 +224,14 @@ class CreditReconciliationReport {
    * @param options Filtering and pagination options
    * @returns Object containing reports and pagination info
    */
-  static async listReports(options: ListReportsOptions = {}): Promise<{
+  static async listReports(options: ListReportsOptions = {}, tenantId?: string): Promise<{
     reports: ICreditReconciliationReport[];
     total: number;
     page: number;
     pageSize: number;
     totalPages: number;
   }> {
-    const { knex, tenant } = await createTenantKnex();
+    const { knex, tenant } = await createTenantKnex(tenantId);
     if (!tenant) {
       throw new Error('Tenant context is required for listing reconciliation reports');
     }
@@ -319,9 +322,10 @@ class CreditReconciliationReport {
       resolution_notes?: string;
       resolution_transaction_id?: string;
     },
-    trx?: Knex.Transaction
+    trx?: Knex.Transaction,
+    tenantId?: string
   ): Promise<ICreditReconciliationReport> {
-    const { knex, tenant } = await createTenantKnex();
+    const { knex, tenant } = await createTenantKnex(tenantId);
     if (!tenant) {
       throw new Error('Tenant context is required for resolving reconciliation report');
     }
@@ -369,8 +373,8 @@ class CreditReconciliationReport {
    * @param clientId The client ID
    * @returns The number of open reports
    */
-  static async countOpenReports(clientId: string): Promise<number> {
-    const { knex, tenant } = await createTenantKnex();
+  static async countOpenReports(clientId: string, tenantId?: string): Promise<number> {
+    const { knex, tenant } = await createTenantKnex(tenantId);
     if (!tenant) {
       throw new Error('Tenant context is required for counting open reconciliation reports');
     }
@@ -396,8 +400,8 @@ class CreditReconciliationReport {
    * @param status The status to count
    * @returns The number of reports with the given status
    */
-  static async countByStatus(status: ReconciliationStatus): Promise<number> {
-    const { knex, tenant } = await createTenantKnex();
+  static async countByStatus(status: ReconciliationStatus, tenantId?: string): Promise<number> {
+    const { knex, tenant } = await createTenantKnex(tenantId);
     if (!tenant) {
       throw new Error('Tenant context is required for counting reconciliation reports by status');
     }
@@ -421,8 +425,8 @@ class CreditReconciliationReport {
    * Get the total discrepancy amount across all reports
    * @returns The total discrepancy amount
    */
-  static async getTotalDiscrepancyAmount(): Promise<number> {
-    const { knex, tenant } = await createTenantKnex();
+  static async getTotalDiscrepancyAmount(tenantId?: string): Promise<number> {
+    const { knex, tenant } = await createTenantKnex(tenantId);
     if (!tenant) {
       throw new Error('Tenant context is required for getting total discrepancy amount');
     }

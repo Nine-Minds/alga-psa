@@ -572,25 +572,16 @@ export async function deleteNotificationAction(
 /**
  * Get all categories
  */
-export async function getInternalNotificationCategoriesAction(
+import { withAuth } from '@alga-psa/auth';
+
+export const getInternalNotificationCategoriesAction = withAuth(async (
+  _user,
+  { tenant },
   forClientPortal?: boolean,
   locale?: string
-): Promise<InternalNotificationCategory[]> {
-  const { getCurrentUser } = await import('@alga-psa/users/actions');
-  const currentUser = await getCurrentUser();
-  if (!currentUser) {
-    throw new Error('User not authenticated');
-  }
-
-  if (!currentUser.tenant) {
-    throw new Error('Tenant is required');
-  }
-
+): Promise<InternalNotificationCategory[]> => {
   const { createTenantKnex } = await import('@alga-psa/db');
-  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
-  if (!tenant) {
-    throw new Error('SYSTEM_ERROR: Tenant context not found');
-  }
+  const { knex } = await createTenantKnex();
 
   return await withTransaction(knex, async (trx: Knex.Transaction) => {
     let query = trx('internal_notification_categories as inc')
@@ -619,31 +610,20 @@ export async function getInternalNotificationCategoriesAction(
 
     return await query;
   });
-}
+});
 
 /**
  * Get subtypes for a category
  */
-export async function getSubtypesAction(
+export const getSubtypesAction = withAuth(async (
+  _user,
+  { tenant },
   categoryId: number,
   forClientPortal?: boolean,
   locale?: string
-): Promise<InternalNotificationSubtype[]> {
-  const { getCurrentUser } = await import('@alga-psa/users/actions');
-  const currentUser = await getCurrentUser();
-  if (!currentUser) {
-    throw new Error('User not authenticated');
-  }
-
-  if (!currentUser.tenant) {
-    throw new Error('Tenant is required');
-  }
-
+): Promise<InternalNotificationSubtype[]> => {
   const { createTenantKnex } = await import('@alga-psa/db');
-  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
-  if (!tenant) {
-    throw new Error('SYSTEM_ERROR: Tenant context not found');
-  }
+  const { knex } = await createTenantKnex();
 
   return await withTransaction(knex, async (trx: Knex.Transaction) => {
     let query = trx('internal_notification_subtypes as ins')
@@ -677,7 +657,7 @@ export async function getSubtypesAction(
 
     return await query.orderBy('ins.name');
   });
-}
+});
 
 /**
  * Get all templates for a specific template name (all languages)
@@ -816,23 +796,13 @@ export async function isInternalNotificationEnabledAction(
  * Update internal notification category (tenant-specific)
  * Requires 'settings' 'update' permission
  */
-export async function updateInternalCategoryAction(
+export const updateInternalCategoryAction = withAuth(async (
+  currentUser,
+  { tenant },
   categoryId: number,
   updates: Partial<Pick<InternalNotificationCategory, 'is_enabled' | 'is_default_enabled'>>
-): Promise<InternalNotificationCategory> {
-  // Check permissions - requires 'settings' 'update' permission
-  const { getCurrentUser } = await import('@alga-psa/users/actions');
-  const currentUser = await getCurrentUser();
-
-  if (!currentUser) {
-    throw new Error('User not authenticated');
-  }
-
-  const { knex, tenant } = await (await import("@alga-psa/db")).createTenantKnex();
-
-  if (!tenant) {
-    throw new Error('No tenant found');
-  }
+): Promise<InternalNotificationCategory> => {
+  const { knex } = await (await import("@alga-psa/db")).createTenantKnex();
 
   return await withTransaction(knex, async (trx: Knex.Transaction) => {
     // Check permission within transaction context
@@ -882,29 +852,19 @@ export async function updateInternalCategoryAction(
       is_default_enabled
     };
   });
-}
+});
 
 /**
  * Update internal notification subtype (tenant-specific)
  * Requires 'settings' 'update' permission
  */
-export async function updateInternalSubtypeAction(
+export const updateInternalSubtypeAction = withAuth(async (
+  currentUser,
+  { tenant },
   subtypeId: number,
   updates: Partial<Pick<InternalNotificationSubtype, 'is_enabled' | 'is_default_enabled'>>
-): Promise<InternalNotificationSubtype> {
-  // Check permissions - requires 'settings' 'update' permission
-  const { getCurrentUser } = await import('@alga-psa/users/actions');
-  const currentUser = await getCurrentUser();
-
-  if (!currentUser) {
-    throw new Error('User not authenticated');
-  }
-
-  const { knex, tenant } = await (await import("@alga-psa/db")).createTenantKnex();
-
-  if (!tenant) {
-    throw new Error('No tenant found');
-  }
+): Promise<InternalNotificationSubtype> => {
+  const { knex } = await (await import("@alga-psa/db")).createTenantKnex();
 
   return await withTransaction(knex, async (trx: Knex.Transaction) => {
     // Check permission within transaction context
@@ -954,4 +914,4 @@ export async function updateInternalSubtypeAction(
       is_default_enabled
     };
   });
-}
+});

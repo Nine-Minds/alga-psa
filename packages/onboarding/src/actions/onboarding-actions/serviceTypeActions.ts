@@ -1,52 +1,49 @@
 'use server';
 
-import { getCurrentUser } from '@alga-psa/users/actions';
 import { createTenantKnex } from '@alga-psa/db';
-import { getTenantForCurrentRequest } from '@alga-psa/tenancy/server';
 import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { importReferenceData, getAvailableReferenceData } from '@alga-psa/reference-data/actions';
+import { withAuth, type AuthContext } from '@alga-psa/auth';
+import type { IUserWithRoles } from '@alga-psa/types';
 
-export async function getStandardServiceTypes(): Promise<{
+export const getStandardServiceTypes = withAuth(async (
+  _user: IUserWithRoles,
+  _ctx: AuthContext
+): Promise<{
   success: boolean;
   data?: Array<{ id: string; name: string; billing_method: string; display_order?: number }>;
   error?: string;
-}> {
+}> => {
   try {
-    const currentUser = await getCurrentUser();
-    if (!currentUser) {
-      return { success: false, error: 'No authenticated user found' };
-    }
-
     // Use getAvailableReferenceData to only get types that haven't been imported
     const availableTypes = await getAvailableReferenceData('service_types');
-    
+
     return {
       success: true,
       data: availableTypes || []
     };
   } catch (error) {
     console.error('Error getting standard service types:', error);
-    return { 
-      success: false, 
-      error: error instanceof Error ? error.message : 'Unknown error' 
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error'
     };
   }
-}
+});
 
-export async function importServiceTypes(typeIds: string[]): Promise<{
+export const importServiceTypes = withAuth(async (
+  _user: IUserWithRoles,
+  _ctx: AuthContext,
+  typeIds: string[]
+): Promise<{
   success: boolean;
   data?: { imported: number; skipped: number };
   error?: string;
-}> {
+}> => {
   try {
-    const currentUser = await getCurrentUser();
-    if (!currentUser) {
-      return { success: false, error: 'No authenticated user found' };
-    }
-
     const result = await importReferenceData('service_types', typeIds);
-    
+
     return {
       success: true,
       data: {
@@ -56,34 +53,27 @@ export async function importServiceTypes(typeIds: string[]): Promise<{
     };
   } catch (error) {
     console.error('Error importing service types:', error);
-    return { 
-      success: false, 
-      error: error instanceof Error ? error.message : 'Unknown error' 
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error'
     };
   }
-}
+});
 
-export async function getTenantServiceTypes(): Promise<{
+export const getTenantServiceTypes = withAuth(async (
+  _user: IUserWithRoles,
+  { tenant }: AuthContext
+): Promise<{
   success: boolean;
   data?: Array<{ id: string; name: string; billing_method: string; order_number?: number }>;
   error?: string;
-}> {
+}> => {
   try {
-    const currentUser = await getCurrentUser();
-    if (!currentUser) {
-      return { success: false, error: 'No authenticated user found' };
-    }
+    const { knex } = await createTenantKnex();
 
-    const tenant = await getTenantForCurrentRequest();
-    if (!tenant) {
-      return { success: false, error: 'No tenant found' };
-    }
-
-    const { knex } = await createTenantKnex(tenant);
-    
     const serviceTypes = await withTransaction(knex, async (trx: Knex.Transaction) => {
       return await trx('service_types')
-        .where({ 
+        .where({
           tenant: tenant,
           is_active: true
         })
@@ -97,32 +87,26 @@ export async function getTenantServiceTypes(): Promise<{
     };
   } catch (error) {
     console.error('Error getting tenant service types:', error);
-    return { 
-      success: false, 
-      error: error instanceof Error ? error.message : 'Unknown error' 
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error'
     };
   }
-}
+});
 
-export async function createTenantServiceType(input: {
-  name: string;
-  description: string | null;
-  billing_method: 'fixed' | 'hourly' | 'usage';
-  is_active: boolean;
-  order_number: number;
-}): Promise<{ success: boolean; data?: { id: string }; error?: string }> {
+export const createTenantServiceType = withAuth(async (
+  _user: IUserWithRoles,
+  { tenant }: AuthContext,
+  input: {
+    name: string;
+    description: string | null;
+    billing_method: 'fixed' | 'hourly' | 'usage';
+    is_active: boolean;
+    order_number: number;
+  }
+): Promise<{ success: boolean; data?: { id: string }; error?: string }> => {
   try {
-    const currentUser = await getCurrentUser();
-    if (!currentUser) {
-      return { success: false, error: 'No authenticated user found' };
-    }
-
-    const tenant = await getTenantForCurrentRequest();
-    if (!tenant) {
-      return { success: false, error: 'No tenant found' };
-    }
-
-    const { knex } = await createTenantKnex(tenant);
+    const { knex } = await createTenantKnex();
 
     const inserted = await withTransaction(knex, async (trx: Knex.Transaction) => {
       const [row] = await trx('service_types')
@@ -146,4 +130,4 @@ export async function createTenantServiceType(input: {
       error: error instanceof Error ? error.message : 'Unknown error',
     };
   }
-}
+});

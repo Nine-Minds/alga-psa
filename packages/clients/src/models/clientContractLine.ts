@@ -9,9 +9,10 @@ class ClientContractLine {
     startDate: Date,
     endDate: Date | null,
     excludeContractLineId?: string,
-    excludeContractId?: string
+    excludeContractId?: string,
+    tenantId?: string
   ): Promise<IClientContractLine[]> {
-    const { knex: db, tenant } = await createTenantKnex();
+    const { knex: db, tenant } = await createTenantKnex(tenantId);
     if (!tenant) {
       throw new Error('Tenant context is required for checking overlapping contract lines');
     }
@@ -102,8 +103,8 @@ class ClientContractLine {
     return [...directOverlappingPlans, ...formattedContractAssociations];
   }
 
-  static async create(billingData: Omit<IClientContractLine, 'client_contract_line_id'>): Promise<IClientContractLine> {
-    const { knex: db, tenant } = await createTenantKnex();
+  static async create(billingData: Omit<IClientContractLine, 'client_contract_line_id'>, tenantId?: string): Promise<IClientContractLine> {
+    const { knex: db, tenant } = await createTenantKnex(tenantId);
     if (!tenant) {
       throw new Error('Tenant context is required for creating contract line');
     }
@@ -129,8 +130,8 @@ class ClientContractLine {
     }
   }
 
-  static async update(contractLineId: string, billingData: Partial<IClientContractLine>): Promise<IClientContractLine> {
-    const { knex: db, tenant } = await createTenantKnex();
+  static async update(contractLineId: string, billingData: Partial<IClientContractLine>, tenantId?: string): Promise<IClientContractLine> {
+    const { knex: db, tenant } = await createTenantKnex(tenantId);
     if (!tenant) {
       throw new Error('Tenant context is required for updating contract line');
     }
@@ -160,8 +161,8 @@ class ClientContractLine {
     }
   }
 
-  static async getByClientId(clientId: string, includeContractPlans: boolean = true): Promise<IClientContractLine[]> {
-    const { knex: db, tenant } = await createTenantKnex();
+  static async getByClientId(clientId: string, includeContractPlans: boolean = true, tenantId?: string): Promise<IClientContractLine[]> {
+    const { knex: db, tenant } = await createTenantKnex(tenantId);
     if (!tenant) {
       throw new Error('Tenant context is required for fetching client contract lines');
     }
@@ -235,8 +236,8 @@ class ClientContractLine {
     }
   }
 
-  static async get(contractLineId: string): Promise<IClientContractLine | undefined> {
-    const { knex: db, tenant } = await createTenantKnex();
+  static async get(contractLineId: string, tenantId?: string): Promise<IClientContractLine | undefined> {
+    const { knex: db, tenant } = await createTenantKnex(tenantId);
     if (!tenant) {
       throw new Error('Tenant context is required for fetching contract line');
     }
@@ -251,8 +252,8 @@ class ClientContractLine {
     return line;
   }
 
-  static async delete(contractLineId: string): Promise<void> {
-    const { knex: db, tenant } = await createTenantKnex();
+  static async delete(contractLineId: string, tenantId?: string): Promise<void> {
+    const { knex: db, tenant } = await createTenantKnex(tenantId);
     if (!tenant) {
       throw new Error('Tenant context is required for deleting contract line');
     }
@@ -266,9 +267,10 @@ class ClientContractLine {
   }
 
   static async checkExistingTransactions(
-    contractLineId: string
+    contractLineId: string,
+    tenantId?: string
   ): Promise<ITransaction[]> {
-    const { knex: db, tenant } = await createTenantKnex();
+    const { knex: db, tenant } = await createTenantKnex(tenantId);
     if (!tenant) {
       throw new Error('Tenant context is required for checking transactions');
     }

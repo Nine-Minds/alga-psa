@@ -1,11 +1,11 @@
 'use server'
 
-import { 
-  ITimeEntry, 
-  ITimeSheetApproval, 
-  ITimeSheetComment, 
-  TimeSheetStatus, 
-  ITimePeriod, 
+import {
+  ITimeEntry,
+  ITimeSheetApproval,
+  ITimeSheetComment,
+  TimeSheetStatus,
+  ITimePeriod,
   ITimeSheet,
   ITimeSheetView,
   ITimeSheetApprovalView,
@@ -14,17 +14,16 @@ import {
 import { createTenantKnex } from '@alga-psa/db';
 import { formatISO } from 'date-fns';
 import { toPlainDate } from '@alga-psa/core';
-import { 
-  timeSheetApprovalViewSchema, 
-  timeSheetCommentSchema, 
-  timeEntrySchema, 
-  timeSheetViewSchema 
+import {
+  timeSheetApprovalViewSchema,
+  timeSheetCommentSchema,
+  timeEntrySchema,
+  timeSheetViewSchema
 } from '../schemas/timeSheet.schemas';
 import { WorkItemType } from '@alga-psa/types';
 import { validateArray, validateData } from '@alga-psa/validation';
 import { Temporal } from '@js-temporal/polyfill';
-import { getCurrentUser } from '@alga-psa/auth/getCurrentUser';
-import { hasPermission } from '@alga-psa/auth/rbac';
+import { withAuth, hasPermission } from '@alga-psa/auth';
 
 function captureAnalytics(_event: string, _properties?: Record<string, any>, _userId?: string): void {
   // Intentionally no-op: avoid pulling analytics (and its tenancy/client-portal deps) into scheduling.
@@ -107,21 +106,19 @@ function createTimePeriodView(periodId: string, tenant: string, startDate?: stri
   }
 }
 
-export async function fetchTimeSheetsForApproval(
+export const fetchTimeSheetsForApproval = withAuth(async (
+  user,
+  { tenant },
   teamIds: string[],
   includeApproved: boolean = false
-): Promise<ITimeSheetApprovalView[]> {
+): Promise<ITimeSheetApprovalView[]> => {
   try {
-    const currentUser = await getCurrentUser();
-    if (!currentUser) {
-      throw new Error('No authenticated user found');
-    }
+    const { knex: db } = await createTenantKnex();
 
-    if (!await hasPermission(currentUser, 'timesheet', 'read_all')) {
+    if (!await hasPermission(user, 'timesheet', 'read_all', db)) {
       throw new Error('Permission denied: Cannot read team timesheets');
     }
 
-    const {knex: db, tenant} = await createTenantKnex();
     const statuses = includeApproved
       ? ['SUBMITTED', 'CHANGES_REQUESTED', 'APPROVED']
       : ['SUBMITTED', 'CHANGES_REQUESTED'];
@@ -172,21 +169,18 @@ export async function fetchTimeSheetsForApproval(
     console.error('Error fetching time sheets for approval:', error);
     throw new Error('Failed to fetch time sheets for approval');
   }
-}
+});
 
-export async function addCommentToTimeSheet(
+export const addCommentToTimeSheet = withAuth(async (
+  user,
+  { tenant },
   timeSheetId: string,
   userId: string,
   comment: string,
   isApprover: boolean
-): Promise<ITimeSheetComment> {
+): Promise<ITimeSheetComment> => {
   try {
-    const currentUser = await getCurrentUser();
-    if (!currentUser) {
-      throw new Error('No authenticated user found');
-    }
-
-    const {knex: db, tenant} = await createTenantKnex();
+    const { knex: db } = await createTenantKnex();
 
     // Fetch the timesheet to check ownership
     const timeSheet = await db('time_sheets')
@@ -198,8 +192,8 @@ export async function addCommentToTimeSheet(
     }
 
     // Allow if user owns the timesheet OR has approve permission
-    const isOwner = timeSheet.user_id === currentUser.user_id;
-    const canApprove = await hasPermission(currentUser, 'timesheet', 'approve');
+    const isOwner = timeSheet.user_id === user.user_id;
+    const canApprove = await hasPermission(user, 'timesheet', 'approve', db);
 
     if (!isOwner && !canApprove) {
       throw new Error('Permission denied: Cannot add comments to timesheets');
@@ -226,20 +220,16 @@ export async function addCommentToTimeSheet(
     console.error('Failed to add comment to time sheet:', error);
     throw new Error('Failed to add comment to time sheet');
   }
-}
+});
 
-export async function bulkApproveTimeSheets(timeSheetIds: string[], managerId: string) {
+export const bulkApproveTimeSheets = withAuth(async (user, { tenant }, timeSheetIds: string[], managerId: string) => {
   try {
-    const currentUser = await getCurrentUser();
-    if (!currentUser) {
-      throw new Error('No authenticated user found');
-    }
+    const { knex: db } = await createTenantKnex();
 
-    if (!await hasPermission(currentUser, 'timesheet', 'approve')) {
+    if (!await hasPermission(user, 'timesheet', 'approve', db)) {
       throw new Error('Permission denied: Cannot approve timesheets');
     }
 
-    const {knex: db, tenant} = await createTenantKnex();
     const approvedSheets: any[] = [];
 
     await db.transaction(async (trx) => {
@@ -298,7 +288,7 @@ export async function bulkApproveTimeSheets(timeSheetIds: string[], managerId: s
 
         // Update all time entries to approved status
         await trx('time_entries')
-          .where({ 
+          .where({
             time_sheet_id: id,
             tenant
           })
@@ -329,20 +319,16 @@ export async function bulkApproveTimeSheets(timeSheetIds: string[], managerId: s
     console.error('Error bulk approving time sheets:', error);
     throw new Error('Failed to bulk approve time sheets');
   }
-}
+});
 
-export async function fetchTimeSheet(timeSheetId: string): Promise<ITimeSheetView> {
+export const fetchTimeSheet = withAuth(async (user, { tenant }, timeSheetId: string): Promise<ITimeSheetView> => {
   try {
-    const currentUser = await getCurrentUser();
-    if (!currentUser) {
-      throw new Error('No authenticated user found');
-    }
+    const { knex: db } = await createTenantKnex();
 
-    if (!await hasPermission(currentUser, 'timesheet', 'read')) {
+    if (!await hasPermission(user, 'timesheet', 'read', db)) {
       throw new Error('Permission denied: Cannot read timesheets');
     }
 
-    const {knex: db, tenant} = await createTenantKnex();
     const timeSheet = await db('time_sheets')
       .join('time_periods', function() {
         this.on('time_sheets.period_id', '=', 'time_periods.period_id')
@@ -377,20 +363,16 @@ export async function fetchTimeSheet(timeSheetId: string): Promise<ITimeSheetVie
     console.error('Error fetching time sheet:', error);
     throw new Error('Failed to fetch time sheet');
   }
-}
+});
 
-export async function fetchTimeEntriesForTimeSheet(timeSheetId: string): Promise<ITimeEntry[]> {
+export const fetchTimeEntriesForTimeSheet = withAuth(async (user, { tenant }, timeSheetId: string): Promise<ITimeEntry[]> => {
   try {
-    const currentUser = await getCurrentUser();
-    if (!currentUser) {
-      throw new Error('No authenticated user found');
-    }
+    const { knex: db } = await createTenantKnex();
 
-    if (!await hasPermission(currentUser, 'timesheet', 'read')) {
+    if (!await hasPermission(user, 'timesheet', 'read', db)) {
       throw new Error('Permission denied: Cannot read timesheet entries');
     }
 
-    const {knex: db, tenant} = await createTenantKnex();
     const timeEntries = await db<ITimeEntry>('time_entries')
       .where('time_sheet_id', timeSheetId)
       .andWhere('tenant', tenant)
@@ -433,21 +415,16 @@ export async function fetchTimeEntriesForTimeSheet(timeSheetId: string): Promise
     console.error('Error fetching time entries for time sheet:', error);
     throw new Error('Failed to fetch time entries for time sheet');
   }
-}
+});
 
-export async function fetchTimeSheetComments(timeSheetId: string): Promise<ITimeSheetComment[]> {
+export const fetchTimeSheetComments = withAuth(async (user, { tenant }, timeSheetId: string): Promise<ITimeSheetComment[]> => {
   try {
-    const currentUser = await getCurrentUser();
-    if (!currentUser) {
-      throw new Error('No authenticated user found');
-    }
+    const { knex: db } = await createTenantKnex();
 
-    if (!await hasPermission(currentUser, 'timesheet', 'read')) {
+    if (!await hasPermission(user, 'timesheet', 'read', db)) {
       throw new Error('Permission denied: Cannot read timesheet comments');
     }
 
-    const {knex: db, tenant} = await createTenantKnex();
-    
     // First get the time sheet details to get user info
     const timeSheet = await db('time_sheets')
       .join('users', function() {
@@ -503,25 +480,21 @@ export async function fetchTimeSheetComments(timeSheetId: string): Promise<ITime
     console.error('Stack trace:', error instanceof Error ? error.stack : 'No stack trace available');
     throw error;
   }
-}
+});
 
-export async function approveTimeSheet(timeSheetId: string, approverId: string): Promise<void> {
+export const approveTimeSheet = withAuth(async (user, { tenant }, timeSheetId: string, approverId: string): Promise<void> => {
   try {
-    const currentUser = await getCurrentUser();
-    if (!currentUser) {
-      throw new Error('No authenticated user found');
-    }
+    const { knex: db } = await createTenantKnex();
 
-    if (!await hasPermission(currentUser, 'timesheet', 'approve')) {
+    if (!await hasPermission(user, 'timesheet', 'approve', db)) {
       throw new Error('Permission denied: Cannot approve timesheets');
     }
 
-    const {knex: db, tenant} = await createTenantKnex();
     let analyticsData: any = {};
 
     await db.transaction(async (trx) => {
       const timeSheet = await trx('time_sheets')
-        .where({ 
+        .where({
           id: timeSheetId,
           tenant
         })
@@ -552,7 +525,7 @@ export async function approveTimeSheet(timeSheetId: string, approverId: string):
 
       // Update time sheet status
       await trx('time_sheets')
-        .where({ 
+        .where({
           id: timeSheetId,
           tenant
         })
@@ -564,7 +537,7 @@ export async function approveTimeSheet(timeSheetId: string, approverId: string):
 
       // Update all time entries to approved status
       await trx('time_entries')
-        .where({ 
+        .where({
           time_sheet_id: timeSheetId,
           tenant
         })
@@ -589,23 +562,19 @@ export async function approveTimeSheet(timeSheetId: string, approverId: string):
     console.error('Error approving time sheet:', error);
     throw new Error('Failed to approve time sheet');
   }
-}
+});
 
-export async function requestChangesForTimeSheet(timeSheetId: string, approverId: string): Promise<void> {
+export const requestChangesForTimeSheet = withAuth(async (user, { tenant }, timeSheetId: string, approverId: string): Promise<void> => {
   try {
-    const currentUser = await getCurrentUser();
-    if (!currentUser) {
-      throw new Error('No authenticated user found');
-    }
+    const { knex: db } = await createTenantKnex();
 
-    if (!await hasPermission(currentUser, 'timesheet', 'approve')) {
+    if (!await hasPermission(user, 'timesheet', 'approve', db)) {
       throw new Error('Permission denied: Cannot request changes for timesheets');
     }
 
-    const {knex: db, tenant} = await createTenantKnex();
     await db.transaction(async (trx) => {
       const timeSheet = await trx('time_sheets')
-        .where({ 
+        .where({
           id: timeSheetId,
           tenant
         })
@@ -616,7 +585,7 @@ export async function requestChangesForTimeSheet(timeSheetId: string, approverId
       }
 
       await trx('time_sheets')
-        .where({ 
+        .where({
           id: timeSheetId,
           tenant
         })
@@ -639,28 +608,26 @@ export async function requestChangesForTimeSheet(timeSheetId: string, approverId
     console.error('Error requesting changes for time sheet:', error);
     throw new Error('Failed to request changes for time sheet');
   }
-}
+});
 
-export async function reverseTimeSheetApproval(
+export const reverseTimeSheetApproval = withAuth(async (
+  user,
+  { tenant },
   timeSheetId: string,
   approverId: string,
   reason: string
-): Promise<void> {
+): Promise<void> => {
   try {
-    const currentUser = await getCurrentUser();
-    if (!currentUser) {
-      throw new Error('No authenticated user found');
-    }
+    const { knex: db } = await createTenantKnex();
 
-    if (!await hasPermission(currentUser, 'timesheet', 'reverse')) {
+    if (!await hasPermission(user, 'timesheet', 'reverse', db)) {
       throw new Error('Permission denied: Cannot reverse timesheet approvals');
     }
 
-    const {knex: db, tenant} = await createTenantKnex();
     await db.transaction(async (trx) => {
       // Check if time sheet exists and is approved
       const timeSheet = await trx('time_sheets')
-        .where({ 
+        .where({
           id: timeSheetId,
           tenant
         })
@@ -682,14 +649,14 @@ export async function reverseTimeSheetApproval(
           tenant
         })
         .first();
-        
+
       if (invoicedEntries) {
         throw new Error('Cannot reverse approval: time entries have been invoiced');
       }
 
       // Update time sheet status
       await trx('time_sheets')
-        .where({ 
+        .where({
           id: timeSheetId,
           tenant
         })
@@ -701,7 +668,7 @@ export async function reverseTimeSheetApproval(
 
       // Update time entries status
       await trx('time_entries')
-        .where({ 
+        .where({
           time_sheet_id: timeSheetId,
           tenant
         })
@@ -721,4 +688,4 @@ export async function reverseTimeSheetApproval(
     console.error('Error reversing time sheet approval:', error);
     throw error;
   }
-}
+});

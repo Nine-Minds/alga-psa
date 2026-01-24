@@ -31,7 +31,8 @@
     "@alga-psa/db": "*",
     "@alga-psa/types": "*",
     "@alga-psa/validation": "*",
-    "zod": "^3.22.4"
+    "zod": "^3.22.4",
+    "zod-to-json-schema": "^3.24.6"
   },
   "peerDependencies": {
     "react": "^18.0.0 || ^19.0.0",

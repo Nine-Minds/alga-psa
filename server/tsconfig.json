@@ -98,12 +98,6 @@
       "@alga-psa/email/*": [
         "../packages/email/src/*"
       ],
-      "@alga-psa/media": [
-        "../packages/media/src"
-      ],
-      "@alga-psa/media/*": [
-        "../packages/media/src/*"
-      ],
       "@shared/workflow": [
         "../shared/workflow"
       ],
@@ -254,6 +248,12 @@
       ],
       "@alga-psa/tags/*": [
         "../packages/tags/src/*"
+      ],
+      "@alga-psa/media": [
+        "../packages/media/src"
+      ],
+      "@alga-psa/media/*": [
+        "../packages/media/src/*"
       ],
       // CE-first: use stubs by default; EE runs are overridden by webpack
       "@ee": [

@@ -18,7 +18,7 @@ import {
   fetchOrCreateTimeSheetParamsSchema,
   FetchOrCreateTimeSheetParams
 } from './timeEntrySchemas'; // Import schemas from the new module
-import { getSession } from '@alga-psa/auth';
+import { withAuth } from '@alga-psa/auth';
 
 function captureAnalytics(_event: string, _properties?: Record<string, any>, _userId?: string): void {
   // Intentionally no-op: avoid pulling analytics (and its tenancy/client-portal deps) into scheduling.
@@ -30,16 +30,12 @@ interface TimeEntriesInfo {
   total_hours: number | string | null;
 }
 
-export async function fetchTimeSheets(): Promise<ITimeSheet[]> {
-  const session = await getSession();
-  if (!session?.user?.id) {
-    throw new Error("User not authenticated");
-  }
-  const currentUserId = session.user.id;
+export const fetchTimeSheets = withAuth(async (user, { tenant }): Promise<ITimeSheet[]> => {
+  const currentUserId = user.user_id;
 
   console.log('Fetching time sheets for user:', currentUserId);
 
-  const {knex: db, tenant} = await createTenantKnex();
+  const {knex: db} = await createTenantKnex();
   const query = db('time_sheets')
     .join('time_periods', function() {
       this.on('time_sheets.period_id', '=', 'time_periods.period_id')
@@ -69,16 +65,13 @@ export async function fetchTimeSheets(): Promise<ITimeSheet[]> {
       tenant: sheet.tenant
     }
   }));
-}
+});
 
-export async function submitTimeSheet(timeSheetId: string): Promise<ITimeSheet> {
+export const submitTimeSheet = withAuth(async (user, { tenant }, timeSheetId: string): Promise<ITimeSheet> => {
   // Validate input
   const validatedParams = validateData<SubmitTimeSheetParams>(submitTimeSheetParamsSchema, { timeSheetId });
 
-  const session = await getSession();
-  const userId = session?.user?.id;
-
-  const {knex: db, tenant} = await createTenantKnex();
+  const {knex: db} = await createTenantKnex();
 
   try {
     return await db.transaction(async (trx) => {
@@ -134,15 +127,13 @@ export async function submitTimeSheet(timeSheetId: string): Promise<ITimeSheet> 
         });
 
       // Track analytics
-      if (userId) {
-        captureAnalytics('time_sheet_submitted', {
-          time_sheet_id: validatedParams.timeSheetId,
-          entry_count: entriesInfo?.entry_count || 0,
-          total_hours: parseFloat(String(entriesInfo?.total_hours ?? '0')),
-          period_start: periodInfo?.start_date,
-          period_end: periodInfo?.end_date
-        }, userId);
-      }
+      captureAnalytics('time_sheet_submitted', {
+        time_sheet_id: validatedParams.timeSheetId,
+        entry_count: entriesInfo?.entry_count || 0,
+        total_hours: parseFloat(String(entriesInfo?.total_hours ?? '0')),
+        period_start: periodInfo?.start_date,
+        period_end: periodInfo?.end_date
+      }, user.user_id);
 
       return updatedTimeSheet;
     });
@@ -150,10 +141,10 @@ export async function submitTimeSheet(timeSheetId: string): Promise<ITimeSheet> 
     console.error('Error submitting time sheet:', error);
     throw new Error('Failed to submit time sheet');
   }
-}
+});
 
-export async function fetchAllTimeSheets(): Promise<ITimeSheet[]> {
-  const {knex: db, tenant} = await createTenantKnex();
+export const fetchAllTimeSheets = withAuth(async (_user, { tenant }): Promise<ITimeSheet[]> => {
+  const {knex: db} = await createTenantKnex();
 
   console.log('Fetching all time sheets');
 
@@ -181,13 +172,13 @@ export async function fetchAllTimeSheets(): Promise<ITimeSheet[]> {
       end_date: toPlainDate(sheet.end_date).toString()
     }
   }));
-}
+});
 
-export async function fetchTimePeriods(userId: string): Promise<ITimePeriodWithStatusView[]> {
+export const fetchTimePeriods = withAuth(async (_user, { tenant }, userId: string): Promise<ITimePeriodWithStatusView[]> => {
   // Validate input
   const validatedParams = validateData<FetchTimePeriodsParams>(fetchTimePeriodsParamsSchema, { userId });
 
-  const {knex: db, tenant} = await createTenantKnex();
+  const {knex: db} = await createTenantKnex();
 
   const periods = await db('time_periods as tp')
     .leftJoin('time_sheets as ts', function() {
@@ -211,16 +202,16 @@ export async function fetchTimePeriods(userId: string): Promise<ITimePeriodWithS
     end_date: toPlainDate(period.end_date).toString(),
     timeSheetStatus: (period.approval_status || period.timeSheetStatus || 'DRAFT') as TimeSheetStatus
   }));
-}
+});
 
-export async function fetchOrCreateTimeSheet(userId: string, periodId: string): Promise<ITimeSheetView> {
+export const fetchOrCreateTimeSheet = withAuth(async (_user, { tenant }, userId: string, periodId: string): Promise<ITimeSheetView> => {
   // Validate input
   const validatedParams = validateData<FetchOrCreateTimeSheetParams>(
     fetchOrCreateTimeSheetParamsSchema,
     { userId, periodId }
   );
 
-  const {knex: db, tenant} = await createTenantKnex();
+  const {knex: db} = await createTenantKnex();
 
   let timeSheet = await db('time_sheets')
     .where({
@@ -266,4 +257,4 @@ export async function fetchOrCreateTimeSheet(userId: string, periodId: string): 
     },
     comments: comments,
   };
-}
+});

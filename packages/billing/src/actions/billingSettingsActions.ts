@@ -3,7 +3,7 @@
 import { createTenantKnex } from "@alga-psa/db";
 import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
-import { getCurrentUserAsync, hasPermissionAsync, getSessionAsync, getAnalyticsAsync } from '../lib/authHelpers';
+import { withAuth } from '@alga-psa/auth';
 
 
 export interface BillingSettings {
@@ -14,31 +14,11 @@ export interface BillingSettings {
   creditExpirationNotificationDays?: number[];
 }
 
-async function getTenantKnex(): Promise<{ knex: Knex; tenant: string }> {
-  const currentUser = await getCurrentUserAsync();
-  if (!currentUser) {
-    throw new Error('No authenticated user found');
-  }
-
-  if (!currentUser.tenant) {
-    throw new Error('Tenant is required');
-  }
-
-  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
-  if (!tenant) {
-    throw new Error('SYSTEM_ERROR: Tenant context not found');
-  }
-
-  return { knex, tenant };
-}
-
-export async function getDefaultBillingSettings(): Promise<BillingSettings> {
-  const session = await getSessionAsync();
-  if (!session?.user?.id) {
-    throw new Error("Unauthorized");
-  }
-
-  const { knex, tenant } = await getTenantKnex();
+export const getDefaultBillingSettings = withAuth(async (
+  user,
+  { tenant }
+): Promise<BillingSettings> => {
+  const { knex } = await createTenantKnex();
 
   const settings = await withTransaction(knex, async (trx: Knex.Transaction) => {
     return await trx('default_billing_settings')
@@ -64,15 +44,14 @@ export async function getDefaultBillingSettings(): Promise<BillingSettings> {
     creditExpirationDays: settings.credit_expiration_days ?? 365,
     creditExpirationNotificationDays: settings.credit_expiration_notification_days ?? [30, 7, 1],
   };
-}
+});
 
-export async function updateDefaultBillingSettings(data: BillingSettings): Promise<{ success: boolean }> {
-  const session = await getSessionAsync();
-  if (!session?.user?.id) {
-    throw new Error("Unauthorized");
-  }
-
-  const { knex, tenant } = await getTenantKnex();
+export const updateDefaultBillingSettings = withAuth(async (
+  user,
+  { tenant },
+  data: BillingSettings
+): Promise<{ success: boolean }> => {
+  const { knex } = await createTenantKnex();
 
   await withTransaction(knex, async (trx: Knex.Transaction) => {
     const existingSettings = await trx('default_billing_settings')
@@ -104,21 +83,20 @@ export async function updateDefaultBillingSettings(data: BillingSettings): Promi
   });
 
   return { success: true };
-}
+});
 
-export async function getClientContractLineSettings(clientId: string): Promise<BillingSettings | null> {
-  const session = await getSessionAsync();
-  if (!session?.user?.id) {
-    throw new Error("Unauthorized");
-  }
-
-  const { knex, tenant } = await getTenantKnex();
+export const getClientContractLineSettings = withAuth(async (
+  user,
+  { tenant },
+  clientId: string
+): Promise<BillingSettings | null> => {
+  const { knex } = await createTenantKnex();
 
   const settings = await withTransaction(knex, async (trx: Knex.Transaction) => {
     return await trx('client_billing_settings')
-      .where({ 
+      .where({
         client_id: clientId,
-        tenant 
+        tenant
       })
       .first();
   });
@@ -134,42 +112,39 @@ export async function getClientContractLineSettings(clientId: string): Promise<B
     creditExpirationDays: settings.credit_expiration_days,
     creditExpirationNotificationDays: settings.credit_expiration_notification_days,
   };
-}
+});
 
-export async function updateClientContractLineSettings(
+export const updateClientContractLineSettings = withAuth(async (
+  user,
+  { tenant },
   clientId: string,
   data: BillingSettings | null // null to remove override
-): Promise<{ success: boolean }> {
-  const session = await getSessionAsync();
-  if (!session?.user?.id) {
-    throw new Error("Unauthorized");
-  }
-
-  const { knex, tenant } = await getTenantKnex();
+): Promise<{ success: boolean }> => {
+  const { knex } = await createTenantKnex();
 
   await withTransaction(knex, async (trx: Knex.Transaction) => {
     // If data is null, remove the client override
     if (data === null) {
       return await trx('client_billing_settings')
-        .where({ 
+        .where({
           client_id: clientId,
-          tenant 
+          tenant
         })
         .delete();
     }
 
     const existingSettings = await trx('client_billing_settings')
-      .where({ 
+      .where({
         client_id: clientId,
-        tenant 
+        tenant
       })
       .first();
 
     if (existingSettings) {
       return await trx('client_billing_settings')
-        .where({ 
+        .where({
           client_id: clientId,
-          tenant 
+          tenant
         })
         .update({
           zero_dollar_invoice_handling: data.zeroDollarInvoiceHandling,
@@ -194,4 +169,4 @@ export async function updateClientContractLineSettings(
   });
 
   return { success: true };
-}
+});

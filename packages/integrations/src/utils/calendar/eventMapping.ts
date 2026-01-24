@@ -264,7 +264,7 @@ async function fetchUserEmails(userIds: string[], tenant: string): Promise<Map<s
   }
 
   try {
-    const { knex } = await createTenantKnex();
+    const { knex } = await createTenantKnex(tenant);
     const users = await knex('users')
       .where('tenant', tenant)
       .whereIn('user_id', userIds)
@@ -293,7 +293,7 @@ async function fetchUserIdsByEmail(emails: string[], tenant: string): Promise<Ma
   }
 
   try {
-    const { knex } = await createTenantKnex();
+    const { knex } = await createTenantKnex(tenant);
     const normalizedEmails = emails
       .filter((email): email is string => typeof email === 'string' && email.trim().length > 0)
       .map(email => email.toLowerCase());
@@ -321,7 +321,7 @@ async function fetchUserIdsByEmail(emails: string[], tenant: string): Promise<Ma
 
 async function fetchFallbackUserId(tenant: string): Promise<string | null> {
   try {
-    const { knex } = await createTenantKnex();
+    const { knex } = await createTenantKnex(tenant);
     const fallbackUser = await knex('users')
       .where('tenant', tenant)
       .orderBy('created_at', 'asc')

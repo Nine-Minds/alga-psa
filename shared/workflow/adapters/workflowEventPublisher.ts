@@ -4,7 +4,7 @@
  * events to both the workflow stream and notification channels.
  */
 
-import { IEventPublisher } from '../../models/ticketModel';
+import type { IEventPublisher } from '@alga-psa/types';
 import { v4 as uuidv4 } from 'uuid';
 
 /**
