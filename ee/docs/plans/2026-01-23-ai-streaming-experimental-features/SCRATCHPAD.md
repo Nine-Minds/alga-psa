@@ -523,3 +523,10 @@ curl -X POST localhost:3000/api/chat/stream/chat \
   - File: `server/src/test/unit/Chat.streamingIncrementalState.test.tsx`
 - Validation: `npx vitest run server/src/test/unit/Chat.streamingIncrementalState.test.tsx`
 - Next test item: T046 Assistant message is persisted after streaming completes successfully
+
+### 2026-01-24 (cont.)
+- Implemented T046 (unit test):
+  - Verifies the completed stream triggers an assistant persistence write (`chat_role: 'bot'`) after `{ done: true }`.
+  - File: `server/src/test/unit/Chat.streamingIncrementalState.test.tsx`
+- Validation: `npx vitest run server/src/test/unit/Chat.streamingIncrementalState.test.tsx`
+- Next test item: T047 Persisted message content matches final streamed content

@@ -272,7 +272,7 @@
   {
     "id": "T046",
     "description": "Assistant message is persisted after streaming completes successfully",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F025"]
   },
   {
