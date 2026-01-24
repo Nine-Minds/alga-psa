@@ -116,4 +116,56 @@ describe('getDraftContractForResume action', () => {
     expect(Array.isArray(result.hourly_services)).toBe(true);
     expect(Array.isArray(result.usage_services)).toBe(true);
   });
+
+  it('includes contract lines (T028)', async () => {
+    const knex = makeKnex({
+      contracts: {
+        contract_id: 'contract-1',
+        contract_name: 'Draft Alpha',
+        contract_description: null,
+        status: 'draft',
+        billing_frequency: 'monthly',
+        currency_code: 'USD',
+      },
+      client_contracts: {
+        contract_id: 'contract-1',
+        client_id: 'client-1',
+        start_date: '2026-01-01T00:00:00.000Z',
+        end_date: null,
+        po_required: false,
+        po_number: null,
+        po_amount: null,
+        template_contract_id: null,
+      },
+    });
+    createTenantKnex.mockResolvedValue({ knex });
+    fetchDetailedContractLines.mockResolvedValue([
+      {
+        contract_line_id: 'line-1',
+        contract_line_type: 'Fixed',
+        rate: 10,
+        enable_proration: false,
+        billing_frequency: 'monthly',
+      },
+    ]);
+    getContractLineServicesWithConfigurations.mockResolvedValue([
+      {
+        service: { service_id: 'svc-1', service_name: 'Service 1', item_kind: 'service' },
+        configuration: { quantity: 2 },
+        bucketConfig: null,
+      },
+    ]);
+
+    const { getDraftContractForResume } = await import('../src/actions/contractWizardActions');
+    const result = await getDraftContractForResume('contract-1');
+
+    expect(result.fixed_services).toEqual([
+      {
+        service_id: 'svc-1',
+        service_name: 'Service 1',
+        quantity: 2,
+        bucket_overlay: undefined,
+      },
+    ]);
+  });
 });

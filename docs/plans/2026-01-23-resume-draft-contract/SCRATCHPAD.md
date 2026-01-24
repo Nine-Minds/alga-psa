@@ -143,6 +143,7 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
     - Added `@alga-psa/auth/withAuth` export + Vitest alias so billing actions can import `withAuth` without importing the full `@alga-psa/auth` entrypoint (which pulls in NextAuth/UI modules in source form).
     - Updated `packages/billing/src/actions/contractActions.ts` + `packages/billing/src/actions/contractWizardActions.ts` to import `withAuth` from `@alga-psa/auth/withAuth`.
     - In resume tests, mocked `@alga-psa/auth/getCurrentUser` to avoid NextAuth session code paths when loading billing models.
+  - (2026-01-24) Extended `packages/billing/tests/draftContractForResumeActions.test.ts` and implemented T028 to assert contract lines map into wizard service arrays.
 
 ## Links / References
 

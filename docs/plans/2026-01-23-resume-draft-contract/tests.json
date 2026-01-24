@@ -164,7 +164,7 @@
   {
     "id": "T028",
     "description": "getDraftContractForResume includes contract lines",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F014"]
   },
   {
