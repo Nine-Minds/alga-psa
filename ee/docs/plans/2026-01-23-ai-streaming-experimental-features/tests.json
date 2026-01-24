@@ -74,7 +74,7 @@
   {
     "id": "T013",
     "description": "Experimental Features tab loads lazily",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F005"]
   },
   {

@@ -284,3 +284,12 @@ curl -X POST localhost:3000/api/chat/stream/chat \
   - File: `server/src/test/unit/menuConfig.experimentalFeatures.test.ts`
 - Validation: `npx vitest run server/src/test/unit/menuConfig.experimentalFeatures.test.ts`
 - Next test item: T013 Experimental Features tab loads lazily
+
+### 2026-01-24 (cont.)
+- Implemented T013 (unit test):
+  - Verifies SettingsPage wires the Experimental Features tab via `next/dynamic` (lazy load).
+  - File: `server/src/test/unit/SettingsPage.experimentalFeatures.lazy.test.ts`
+  - Added test stubs/aliases so SettingsPage can be imported in Vitest without resolving product-only extension entrypoints.
+    - Files: `server/src/test/stubs/product-settings-extensions-entry.ts`, `server/vitest.config.ts`
+- Validation: `npx vitest run server/src/test/unit/SettingsPage.experimentalFeatures.lazy.test.ts`
+- Next test item: T014 AI Assistant feature shows name 'AI Assistant' and description

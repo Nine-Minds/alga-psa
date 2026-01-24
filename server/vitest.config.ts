@@ -92,6 +92,7 @@ export default defineConfig({
       { find: 'fs', replacement: 'node:fs' },
       { find: 'fs/promises', replacement: 'node:fs/promises' },
       { find: 'next/server', replacement: path.resolve(__dirname, './src/test/stubs/next-server.ts') },
+      { find: '@product/settings-extensions/entry', replacement: path.resolve(__dirname, './src/test/stubs/product-settings-extensions-entry.ts') },
       { find: 'pdf-lib', replacement: 'empty-module' },
     ],
   },
