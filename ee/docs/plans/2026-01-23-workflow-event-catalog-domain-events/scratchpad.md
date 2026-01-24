@@ -598,6 +598,10 @@ Implication: we should standardize on `@alga-psa/event-bus/publishers` helpers f
   - Existing test asserts `EVENT_TYPES` ↔ `EventTypeEnum` alignment and that every event type has a payload schema mapping:
     - `shared/workflow/streams/__tests__/eventBusSchema.expandedEvents.test.ts`
 
+- 2026-01-24: Completed `T004` (catalog migration coverage):
+  - Added a migration-level coverage test that parses `event-proposals.md` and asserts the system catalog upsert migration includes every proposed `event_type`:
+    - `server/src/test/unit/workflowEventCatalogMigrationCoverage.test.ts`
+
 ## Suggested Phasing (to reduce risk)
 
 Phase 1 (authoritative CRUD/state transitions; low provider dependency):
