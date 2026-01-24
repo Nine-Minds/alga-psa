@@ -24,7 +24,7 @@
   { "id": "T024", "description": "Field ops: dispatch lifecycle emits TECHNICIAN_DISPATCHED/EN_ROUTE/ARRIVED/CHECKED_OUT only when supported", "implemented": true, "featureIds": ["F023"] },
 
   { "id": "T030", "description": "Projects: updates emit PROJECT_UPDATED with updatedFields/changes", "implemented": true, "featureIds": ["F030"] },
-  { "id": "T031", "description": "Projects: status transitions emit PROJECT_STATUS_CHANGED with previous/new status", "implemented": false, "featureIds": ["F030"] },
+  { "id": "T031", "description": "Projects: status transitions emit PROJECT_STATUS_CHANGED with previous/new status", "implemented": true, "featureIds": ["F030"] },
   { "id": "T032", "description": "Projects: task creation/assignment/status/complete emit PROJECT_TASK_CREATED/ASSIGNED/STATUS_CHANGED/COMPLETED", "implemented": false, "featureIds": ["F031"] },
   { "id": "T033", "description": "Projects: dependency blocked/unblocked emit PROJECT_TASK_DEPENDENCY_BLOCKED/UNBLOCKED", "implemented": false, "featureIds": ["F032"] },
   { "id": "T034", "description": "Projects: approvals emit PROJECT_APPROVAL_REQUESTED/GRANTED/REJECTED only when enabled", "implemented": false, "featureIds": ["F033"] },
