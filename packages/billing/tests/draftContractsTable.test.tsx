@@ -399,4 +399,15 @@ describe('Drafts tab DataTable', () => {
       expect(screen.queryByText('Draft 11')).not.toBeInTheDocument();
     });
   });
+
+  it('empty state displays when no drafts exist (T025)', async () => {
+    mockDraftContracts = [];
+
+    const Contracts = (await import('../src/components/billing-dashboard/contracts/Contracts')).default;
+    render(<Contracts />);
+
+    expect(
+      await screen.findByText('No draft contracts. Start creating a new contract to save as draft.'),
+    ).toBeInTheDocument();
+  });
 });

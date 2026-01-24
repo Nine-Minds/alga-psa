@@ -146,7 +146,7 @@
   {
     "id": "T025",
     "description": "Empty state displays when no drafts exist",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F013"]
   },
   {

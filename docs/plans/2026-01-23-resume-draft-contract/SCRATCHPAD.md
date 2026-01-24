@@ -136,6 +136,7 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
   - (2026-01-24) Extended `packages/billing/tests/draftContractsTable.test.tsx` and implemented T022 to assert draft search is case-insensitive.
   - (2026-01-24) Extended `packages/billing/tests/draftContractsTable.test.tsx` and implemented T023 to assert Drafts table pagination renders (multiple pages when > page size).
   - (2026-01-24) Extended `packages/billing/tests/draftContractsTable.test.tsx` and implemented T024 to assert Drafts pagination can navigate to page 2.
+  - (2026-01-24) Extended `packages/billing/tests/draftContractsTable.test.tsx` and implemented T025 to assert Drafts empty state renders when there are no drafts.
 
 ## Links / References
 
