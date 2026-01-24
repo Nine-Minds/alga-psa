@@ -62,7 +62,7 @@
   {
     "id": "T011",
     "description": "ExperimentalFeaturesSettings toggle updates local state",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F004", "F006"]
   },
   {

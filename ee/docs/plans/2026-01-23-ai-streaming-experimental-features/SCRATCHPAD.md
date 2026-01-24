@@ -270,3 +270,10 @@ curl -X POST localhost:3000/api/chat/stream/chat \
   - File: `server/src/test/unit/components/ExperimentalFeaturesSettings.test.tsx`
 - Validation: `npx vitest run server/src/test/unit/components/ExperimentalFeaturesSettings.test.tsx`
 - Next test item: T011 ExperimentalFeaturesSettings toggle updates local state
+
+### 2026-01-24 (cont.)
+- Implemented T011 (unit test):
+  - Verifies clicking the switch updates local UI state (`aria-checked` flips without saving).
+  - File: `server/src/test/unit/components/ExperimentalFeaturesSettings.test.tsx`
+- Validation: `npx vitest run server/src/test/unit/components/ExperimentalFeaturesSettings.test.tsx`
+- Next test item: T012 Experimental Features tab appears in Settings navigation
