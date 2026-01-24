@@ -307,3 +307,10 @@ curl -X POST localhost:3000/api/chat/stream/chat \
   - File: `server/src/test/unit/components/ExperimentalFeaturesSettings.test.tsx`
 - Validation: `npx vitest run server/src/test/unit/components/ExperimentalFeaturesSettings.test.tsx`
 - Next test item: T016 Warning banner displays experimental features disclaimer
+
+### 2026-01-24 (cont.)
+- Implemented T016 (unit test):
+  - Verifies the warning banner copy renders on the Experimental Features settings screen.
+  - File: `server/src/test/unit/components/ExperimentalFeaturesSettings.test.tsx`
+- Validation: `npx vitest run server/src/test/unit/components/ExperimentalFeaturesSettings.test.tsx`
+- Next test item: T017 Save button calls updateExperimentalFeatures() with current toggle states

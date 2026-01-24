@@ -92,7 +92,7 @@
   {
     "id": "T016",
     "description": "Warning banner displays experimental features disclaimer",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F007"]
   },
   {

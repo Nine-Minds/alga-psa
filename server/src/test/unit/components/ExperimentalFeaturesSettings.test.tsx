@@ -74,6 +74,27 @@ describe('ExperimentalFeaturesSettings', () => {
     expect(toggle.getAttribute('aria-checked')).toBe('false');
   });
 
+  it('renders experimental features warning banner', async () => {
+    vi.mocked(getExperimentalFeatures).mockResolvedValueOnce({ aiAssistant: false });
+
+    render(
+      <UIStateProvider
+        initialPageState={{
+          id: 'test-page',
+          title: 'Test Page',
+          components: [],
+        }}
+      >
+        <ExperimentalFeaturesSettings />
+      </UIStateProvider>
+    );
+
+    expect(await screen.findByText('Experimental')).toBeInTheDocument();
+    expect(
+      screen.getByText('Experimental features may change or be removed without notice.')
+    ).toBeInTheDocument();
+  });
+
   it('updates local state when toggled', async () => {
     vi.mocked(getExperimentalFeatures).mockResolvedValueOnce({ aiAssistant: false });
 
