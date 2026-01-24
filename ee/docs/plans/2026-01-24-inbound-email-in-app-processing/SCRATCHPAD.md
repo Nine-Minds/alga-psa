@@ -40,3 +40,4 @@
 - 2026-01-24: Implemented F013 by creating tickets via `createTicketFromEmail` and persisting `tickets.email_metadata` (messageId/threadId/inReplyTo/references/providerId) for future threading queries.
 - 2026-01-24: Implemented F014 by creating the initial ticket comment via `createCommentFromEmail` with BlockNote JSON content derived from the inbound email body.
 - 2026-01-24: Implemented F015 by processing new-ticket attachments per item via `processEmailAttachment` with error-continue semantics.
+- 2026-01-24: Implemented F020 by de-duping reply comment creation via a DB lookup keyed on `{tenant, ticket_id, metadata.email.messageId}` before inserting.
