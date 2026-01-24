@@ -87,7 +87,6 @@ describe('email feedback domain event payload builders', () => {
   it('throws when required fields are missing', () => {
     expect(() =>
       buildEmailDeliveredPayload({
-        // @ts-expect-error intentional
         messageId: '',
         providerMessageId: 'provider-msg',
         to: 'recipient@example.com',

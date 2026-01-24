@@ -110,7 +110,6 @@ describe('surveyEventBuilders', () => {
   it('throws when required fields are missing', () => {
     expect(() =>
       buildSurveySentPayload({
-        // @ts-expect-error intentional
         surveyId: '',
         surveyType: 'csat',
         recipientId: 'x',

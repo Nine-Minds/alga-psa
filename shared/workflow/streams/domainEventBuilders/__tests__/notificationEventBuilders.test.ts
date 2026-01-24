@@ -77,7 +77,6 @@ describe('notification domain event payload builders', () => {
   it('throws when required fields are missing', () => {
     expect(() =>
       buildNotificationSentPayload({
-        // @ts-expect-error intentional
         notificationId: '',
         channel: 'in_app',
         recipientId,

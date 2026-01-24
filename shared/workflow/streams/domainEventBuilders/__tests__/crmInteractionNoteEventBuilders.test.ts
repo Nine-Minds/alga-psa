@@ -60,7 +60,7 @@ describe('crmInteractionNoteEventBuilders', () => {
 
     expect(noteCreatedEventPayloadSchema.safeParse(payload).success).toBe(true);
     expect(typeof payload.bodyPreview).toBe('string');
-    expect(payload.bodyPreview.length).toBeGreaterThan(0);
+    expect((payload.bodyPreview as string).length).toBeGreaterThan(0);
   });
 });
 

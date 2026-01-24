@@ -1,12 +1,8 @@
 import { describe, expect, it, vi } from 'vitest';
 
-vi.mock(
-  '@alga-psa/event-bus/publishers',
-  () => ({
-    publishWorkflowEvent: vi.fn(),
-  }),
-  { virtual: true }
-);
+vi.mock('@alga-psa/event-bus/publishers', () => ({
+  publishWorkflowEvent: vi.fn(),
+}));
 
 const { maybePublishCapacityThresholdReached } = await import('../capacityThresholdWorkflowEvents');
 
@@ -35,8 +31,8 @@ describe('maybePublishCapacityThresholdReached', () => {
       tenantId: 'tenant-1',
       actorUserId: 'user-1',
       after: {
-        scheduled_start: '2026-01-24T10:00:00.000Z',
-        scheduled_end: '2026-01-24T11:00:00.000Z',
+        scheduled_start: new Date('2026-01-24T10:00:00.000Z'),
+        scheduled_end: new Date('2026-01-24T11:00:00.000Z'),
         assigned_user_ids: ['user-1'],
       },
       __deps: {
@@ -60,8 +56,8 @@ describe('maybePublishCapacityThresholdReached', () => {
       tenantId: 'tenant-1',
       actorUserId: 'user-1',
       after: {
-        scheduled_start: '2026-01-24T10:00:00.000Z',
-        scheduled_end: '2026-01-24T11:00:00.000Z',
+        scheduled_start: new Date('2026-01-24T10:00:00.000Z'),
+        scheduled_end: new Date('2026-01-24T11:00:00.000Z'),
         assigned_user_ids: ['user-1'],
       },
       __deps: {
@@ -100,8 +96,8 @@ describe('maybePublishCapacityThresholdReached', () => {
       tenantId: 'tenant-1',
       actorUserId: 'user-1',
       after: {
-        scheduled_start: '2026-01-24T10:00:00.000Z',
-        scheduled_end: '2026-01-24T11:00:00.000Z',
+        scheduled_start: new Date('2026-01-24T10:00:00.000Z'),
+        scheduled_end: new Date('2026-01-24T11:00:00.000Z'),
         assigned_user_ids: ['user-1'],
       },
       __deps: {

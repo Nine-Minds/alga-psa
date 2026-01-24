@@ -227,7 +227,7 @@ export async function syncDevicePatchStatus(
       throw new Error('Patch status only available for workstations and servers');
     }
 
-    const client = await createNinjaOneClient(tenantId, undefined, { integrationId });
+    const client = await createNinjaOneClient(tenantId, undefined, {});
     const deviceId = parseInt(asset.rmm_device_id, 10);
     const patchStatus = await client.getDevicePatchStatus(deviceId);
 

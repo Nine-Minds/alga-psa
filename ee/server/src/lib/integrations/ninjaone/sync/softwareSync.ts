@@ -483,7 +483,7 @@ export async function syncDeviceSoftware(
       throw new Error('Software inventory only available for workstations and servers');
     }
 
-    const client = await createNinjaOneClient(tenantId, undefined, { integrationId });
+    const client = await createNinjaOneClient(tenantId, undefined, {});
     const deviceId = parseInt(asset.rmm_device_id, 10);
     const ninjaSoftware = await client.getDeviceSoftware(deviceId) as NinjaOneSoftware[];
     const software = transformSoftware(ninjaSoftware);

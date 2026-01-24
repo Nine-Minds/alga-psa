@@ -28,7 +28,6 @@ describe('buildInboundEmailReplyReceivedPayload', () => {
   it('throws when required fields are missing', () => {
     expect(() =>
       buildInboundEmailReplyReceivedPayload({
-        // @ts-expect-error intentional
         messageId: '',
         threadId: '18a9c9b8-12c1-4db5-8b74-9aa84ad39a07',
         from: 'customer@example.com',

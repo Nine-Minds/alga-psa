@@ -562,7 +562,17 @@ export function registerEmailWorkflowActionsV2(): void {
         source: input.source,
         author_type: input.author_type,
         author_id: input.author_id,
-        inboundReplyEvent: input.inboundReplyEvent,
+        // Cast to match createCommentFromEmail's expected type - zod validation ensures fields are present when object exists
+        inboundReplyEvent: input.inboundReplyEvent as {
+          messageId: string;
+          threadId?: string;
+          from: string;
+          to: string[];
+          subject?: string;
+          receivedAt?: string;
+          provider: string;
+          matchedBy: string;
+        } | undefined,
         metadata: input.metadata
       }, ctx.tenantId ?? '');
       return { comment_id: commentId };
