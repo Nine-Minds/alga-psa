@@ -1,6 +1,6 @@
 [
   { "id": "F001", "description": "Define normalized in-app inbound email processing contract: {tenantId, providerId, emailData}", "implemented": true },
-  { "id": "F002", "description": "Implement server-only service `processInboundEmailInApp` that routes reply vs new-ticket logic", "implemented": false },
+  { "id": "F002", "description": "Implement server-only service `processInboundEmailInApp` that routes reply vs new-ticket logic", "implemented": true },
   { "id": "F003", "description": "Parse/sanitize email body via `parseEmailReplyBody` with safe fallbacks", "implemented": false },
   { "id": "F004", "description": "Threading: resolve existing ticket by reply token (`findTicketByReplyToken`) then by headers (`findTicketByEmailThread`)", "implemented": false },
   { "id": "F005", "description": "Reply path: create ticket comment from email (including HTML→BlockNote conversion when available)", "implemented": false },
