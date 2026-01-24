@@ -385,3 +385,10 @@ curl -X POST localhost:3000/api/chat/stream/chat \
     - Files: `server/vitest.config.ts`, `server/src/test/stubs/product-chat-entry.ts`
 - Validation: `npx vitest run server/src/test/unit/api/chatCompletions.route.gating.test.ts`
 - Next test item: T027 /api/chat/v1/completions returns 200 when aiAssistant is enabled
+
+### 2026-01-24 (cont.)
+- Implemented T027 (unit test):
+  - Verifies `/api/chat/v1/completions` returns 200 when `aiAssistant` is enabled and delegates to `ChatCompletionsService.handleRequest()`.
+  - File: `server/src/test/unit/api/chatCompletions.route.gating.test.ts`
+- Validation: `npx vitest run server/src/test/unit/api/chatCompletions.route.gating.test.ts`
+- Next test item: T028 /api/chat/v1/execute returns 403 when aiAssistant is disabled

@@ -158,7 +158,7 @@
   {
     "id": "T027",
     "description": "/api/chat/v1/completions returns 200 when aiAssistant is enabled",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F013"]
   },
   {
