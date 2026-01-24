@@ -301,6 +301,7 @@ const nextConfig = {
 	    '@alga-psa/tenancy',
 	    '@alga-psa/integrations',
 	    '@alga-psa/client-portal',
+	    '@alga-psa/event-schemas',
 	    // Product feature packages (only those needed in this app)
 	    '@product/extensions',
     '@product/settings-extensions',
