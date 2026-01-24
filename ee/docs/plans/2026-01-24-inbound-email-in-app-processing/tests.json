@@ -9,7 +9,7 @@
 
   { "id": "T020", "description": "Contact match: sender email matches existing contact and ticket uses contact's client_id/contact_id", "implemented": true, "featureIds": ["F011", "F013"] },
   { "id": "T021", "description": "Unmatched sender: system follows the defined PRD behavior (defaults/triage/task) without throwing", "implemented": true, "featureIds": ["F012"] },
-  { "id": "T022", "description": "Missing defaults: inbound processing logs and returns without creating ticket/comment", "implemented": false, "featureIds": ["F010"] },
+  { "id": "T022", "description": "Missing defaults: inbound processing logs and returns without creating ticket/comment", "implemented": true, "featureIds": ["F010"] },
 
   { "id": "T030", "description": "Attachments: attachment failure does not prevent ticket creation", "implemented": false, "featureIds": ["F015"] },
   { "id": "T031", "description": "Attachments: attachment failure does not prevent reply comment creation", "implemented": false, "featureIds": ["F006"] },

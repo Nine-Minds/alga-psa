@@ -649,4 +649,48 @@ describe('Inbound email in-app processing via webhooks (integration)', () => {
       await db('tickets').where({ tenant: tenantId, ticket_id: ticket.ticket_id }).delete();
     });
   });
+
+  it('Missing defaults: inbound processing returns without creating ticket/comment', async () => {
+    const providerId = uuidv4();
+    const mailbox = `support-missing-defaults-${uuidv4().slice(0, 6)}@example.com`;
+
+    await db('email_providers').insert({
+      id: providerId,
+      tenant: tenantId,
+      provider_type: 'google',
+      provider_name: 'Missing defaults provider',
+      mailbox,
+      is_active: true,
+      status: 'connected',
+      vendor_config: JSON.stringify({}),
+      inbound_ticket_defaults_id: null,
+      created_at: db.fn.now(),
+      updated_at: db.fn.now(),
+    });
+    cleanup.push(async () => {
+      await db('email_providers').where({ tenant: tenantId, id: providerId }).delete();
+    });
+
+    const result = await processInboundEmailInApp({
+      tenantId,
+      providerId,
+      emailData: {
+        id: `new-email-${uuidv4()}`,
+        provider: 'google',
+        providerId,
+        tenant: tenantId,
+        receivedAt: new Date().toISOString(),
+        from: { email: `unknown-${uuidv4().slice(0, 6)}@example.com`, name: 'Unknown' },
+        to: [{ email: mailbox, name: 'Support' }],
+        subject: 'Missing defaults subject',
+        body: { text: 'Hello', html: undefined },
+        attachments: [],
+      } as any,
+    });
+
+    expect(result).toEqual({ outcome: 'skipped', reason: 'missing_defaults' });
+
+    const tickets = await db('tickets').where({ tenant: tenantId, title: 'Missing defaults subject' });
+    expect(tickets).toHaveLength(0);
+  });
 });
