@@ -40,6 +40,10 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 
 - (2026-01-23) Existing contract update blocks setting status to 'draft' if contract has invoices (contractActions.ts:293-299)
 
+- (2026-01-24) Contracts page now has third subtab `drafts`:
+  - Added URL mapping for `subtab=drafts` and a placeholder Drafts tab view in `packages/billing/src/components/billing-dashboard/contracts/Contracts.tsx`
+  - Next: wire Drafts tab to real data/actions + resume/discard UX
+
 ## Commands / Runbooks
 
 - Run billing package tests: `npm test -w packages/billing`

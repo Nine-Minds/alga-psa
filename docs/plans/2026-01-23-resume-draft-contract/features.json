@@ -2,7 +2,7 @@
   {
     "id": "F001",
     "description": "Add 'Drafts' tab to Contracts management page (third tab after Templates and Client Contracts)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR1"]
   },
   {
