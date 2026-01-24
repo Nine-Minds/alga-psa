@@ -535,9 +535,19 @@ Implication: we should standardize on `@alga-psa/event-bus/publishers` helpers f
   - Propagated integration context into NinjaOne client factories where available:
     - `ee/server/src/lib/integrations/ninjaone/sync/*` passes `integrationId` into `createNinjaOneClient(...)` so token events can include `integrationId`/`connectionId`.
 
+- 2026-01-24: Completed `F084` (external mapping change emission):
+  - Added shared payload builder:
+    - `shared/workflow/streams/domainEventBuilders/externalMappingEventBuilders.ts`
+  - Emitted `EXTERNAL_MAPPING_CHANGED` from the authoritative accounting mapping CRUD actions:
+    - `packages/integrations/src/actions/externalMappingActions.ts` publishes on create/update/delete for `tenant_external_entity_mappings`
+    - Payload uses `provider=integration_type`, `mappingType=alga_entity_type`, and includes `previousValue`/`newValue` snapshots (camelCase keys).
+  - Added unit coverage for payload shaping:
+    - `packages/integrations/src/lib/externalMappingWorkflowEvents.ts`
+    - `packages/integrations/src/lib/__tests__/externalMappingWorkflowEvents.test.ts`
+
 ## Next Up
 
-- `F084`: emit external mapping/config change event (`EXTERNAL_MAPPING_CHANGED`).
+- `F090`: emit asset lifecycle events (`ASSET_*`).
 
 ## Suggested Phasing (to reduce risk)
 

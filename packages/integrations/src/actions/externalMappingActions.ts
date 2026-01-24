@@ -12,6 +12,11 @@ import { getCurrentUser } from '@alga-psa/users/actions';
 import { Knex } from 'knex';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import type { IUserWithRoles } from '@alga-psa/types';
+import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
+import {
+  buildExternalMappingChangedPublishParams,
+  type TenantExternalEntityMappingRow,
+} from '../lib/externalMappingWorkflowEvents';
 
 const MAPPING_CACHE_TTL_MS = 30_000;
 
@@ -221,7 +226,7 @@ export async function getExternalEntityMappings(
 export async function createExternalEntityMapping(
   mappingData: CreateMappingData
 ): Promise<ExternalEntityMapping> {
-  const { tenantId, knex } = await ensureBillingAccess('update');
+  const { tenantId, knex, user } = await ensureBillingAccess('update');
   const {
     integration_type,
     alga_entity_type,
@@ -269,6 +274,23 @@ export async function createExternalEntityMapping(
       mappingId: newMapping.id
     });
 
+    const actor = user?.user_id
+      ? ({ actorType: 'USER', actorUserId: user.user_id } as const)
+      : ({ actorType: 'SYSTEM' } as const);
+
+    const changedAt = newMapping.updated_at ?? new Date().toISOString();
+    const { payload, idempotencyKey } = buildExternalMappingChangedPublishParams({
+      after: newMapping as unknown as TenantExternalEntityMappingRow,
+      changedAt,
+    });
+
+    await publishWorkflowEvent({
+      eventType: 'EXTERNAL_MAPPING_CHANGED',
+      payload,
+      ctx: { tenantId, occurredAt: changedAt, actor },
+      idempotencyKey,
+    });
+
     invalidateTenantMappingCache(tenantId);
     return cloneMapping(newMapping);
   } catch (error: any) {
@@ -296,7 +318,7 @@ export async function updateExternalEntityMapping(
   mappingId: string,
   updates: UpdateMappingData
 ): Promise<ExternalEntityMapping> {
-  const { tenantId, knex } = await ensureBillingAccess('update');
+  const { tenantId, knex, user } = await ensureBillingAccess('update');
 
   if (!mappingId) {
     throw new Error('Mapping ID is required for update.');
@@ -319,25 +341,21 @@ export async function updateExternalEntityMapping(
   updatePayload.updated_at = new Date().toISOString();
 
   try {
-    const [updatedMapping] = await withTransaction(knex, async (trx: Knex.Transaction) => {
-      return await trx<ExternalEntityMapping>('tenant_external_entity_mappings')
-        .where({
-          id: mappingId,
-          tenant: tenantId
-        })
+    const { before, after } = await withTransaction(knex, async (trx: Knex.Transaction) => {
+      const before = await trx<ExternalEntityMapping>('tenant_external_entity_mappings')
+        .where({ id: mappingId, tenant: tenantId })
+        .first();
+
+      const [after] = await trx<ExternalEntityMapping>('tenant_external_entity_mappings')
+        .where({ id: mappingId, tenant: tenantId })
         .update(updatePayload)
         .returning('*');
+
+      return { before: before ?? null, after: after ?? null };
     });
 
-    if (!updatedMapping) {
-      const exists = await withTransaction(knex, async (trx: Knex.Transaction) => {
-        return await trx<ExternalEntityMapping>('tenant_external_entity_mappings')
-          .select('id')
-          .where({ id: mappingId, tenant: tenantId })
-          .first();
-      });
-
-      if (!exists) {
+    if (!after) {
+      if (!before) {
         throw new Error(
           `Mapping with ID ${mappingId} not found for the current tenant (${tenantId}).`
         );
@@ -350,11 +368,29 @@ export async function updateExternalEntityMapping(
 
     logger.info('External mapping updated', {
       tenantId,
-      mappingId: updatedMapping.id
+      mappingId: after.id
+    });
+
+    const actor = user?.user_id
+      ? ({ actorType: 'USER', actorUserId: user.user_id } as const)
+      : ({ actorType: 'SYSTEM' } as const);
+
+    const changedAt = after.updated_at ?? updatePayload.updated_at;
+    const { payload, idempotencyKey } = buildExternalMappingChangedPublishParams({
+      before: before as unknown as TenantExternalEntityMappingRow | null,
+      after: after as unknown as TenantExternalEntityMappingRow,
+      changedAt,
+    });
+
+    await publishWorkflowEvent({
+      eventType: 'EXTERNAL_MAPPING_CHANGED',
+      payload,
+      ctx: { tenantId, occurredAt: changedAt, actor },
+      idempotencyKey,
     });
 
     invalidateTenantMappingCache(tenantId);
-    return cloneMapping(updatedMapping);
+    return cloneMapping(after);
   } catch (error: unknown) {
     logger.error('Failed to update external mapping', {
       tenantId,
@@ -366,7 +402,7 @@ export async function updateExternalEntityMapping(
 }
 
 export async function deleteExternalEntityMapping(mappingId: string): Promise<void> {
-  const { tenantId, knex } = await ensureBillingAccess('update');
+  const { tenantId, knex, user } = await ensureBillingAccess('update');
 
   if (!mappingId) {
     throw new Error('Mapping ID is required for deletion.');
@@ -375,37 +411,54 @@ export async function deleteExternalEntityMapping(mappingId: string): Promise<vo
   logger.info('Deleting external mapping', { tenantId, mappingId });
 
   try {
-    const deletedCount = await withTransaction(knex, async (trx: Knex.Transaction) => {
-      return await trx<ExternalEntityMapping>('tenant_external_entity_mappings')
-        .where({
-          id: mappingId,
-          tenant: tenantId
-        })
+    const { before, deletedCount } = await withTransaction(knex, async (trx: Knex.Transaction) => {
+      const before = await trx<ExternalEntityMapping>('tenant_external_entity_mappings')
+        .where({ id: mappingId, tenant: tenantId })
+        .first();
+
+      if (!before) {
+        return { before: null, deletedCount: 0 };
+      }
+
+      const deletedCount = await trx<ExternalEntityMapping>('tenant_external_entity_mappings')
+        .where({ id: mappingId, tenant: tenantId })
         .del();
+
+      return { before, deletedCount };
     });
 
-    if (deletedCount === 0) {
-      const exists = await withTransaction(knex, async (trx: Knex.Transaction) => {
-        return await trx<ExternalEntityMapping>('tenant_external_entity_mappings')
-          .select('id')
-          .where({ id: mappingId, tenant: tenantId })
-          .first();
-      });
-
-      if (!exists) {
+    if (!before) {
         logger.warn('External mapping delete requested for unknown id', {
           tenantId,
           mappingId
         });
         return;
-      }
+    }
 
-      throw new Error(
-        `Failed to delete mapping ID ${mappingId}. Record exists but deletion failed.`
-      );
+    if (deletedCount === 0) {
+      throw new Error(`Failed to delete mapping ID ${mappingId}. Record exists but deletion failed.`);
     }
 
     logger.info('External mapping deleted', { tenantId, mappingId });
+
+    const actor = user?.user_id
+      ? ({ actorType: 'USER', actorUserId: user.user_id } as const)
+      : ({ actorType: 'SYSTEM' } as const);
+
+    const changedAt = new Date().toISOString();
+    const { payload, idempotencyKey } = buildExternalMappingChangedPublishParams({
+      before: before as unknown as TenantExternalEntityMappingRow,
+      after: null,
+      changedAt,
+    });
+
+    await publishWorkflowEvent({
+      eventType: 'EXTERNAL_MAPPING_CHANGED',
+      payload,
+      ctx: { tenantId, occurredAt: changedAt, actor },
+      idempotencyKey,
+    });
+
     invalidateTenantMappingCache(tenantId);
   } catch (error: unknown) {
     logger.error('Failed to delete external entity mapping', {
