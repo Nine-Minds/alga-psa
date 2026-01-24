@@ -4,6 +4,7 @@ import { v4 as uuidv4 } from 'uuid';
 
 import { createTestDbConnection } from '../../../test-utils/dbConfig';
 import { NextRequest } from 'next/server';
+import { processInboundEmailInApp } from '@alga-psa/shared/services/email/processInboundEmailInApp';
 
 let db: Knex;
 let tenantId: string;
@@ -390,5 +391,79 @@ describe('Inbound email in-app processing via webhooks (integration)', () => {
     const comments = await db('comments').where({ tenant: tenantId, ticket_id: ticketId });
     expect(comments).toHaveLength(1);
     expect(() => JSON.parse(comments[0].note)).not.toThrow();
+  });
+
+  it('Reply threading: reply token resolves ticket and creates exactly 1 new comment', async () => {
+    const providerId = uuidv4();
+    const mailbox = `support-reply-${uuidv4().slice(0, 6)}@example.com`;
+    const { defaultsId } = await setupMicrosoftProvider({
+      providerId,
+      mailbox,
+      subscriptionId: `sub-ms-${uuidv4()}`,
+    });
+
+    cleanup.push(async () => {
+      await db('microsoft_email_provider_config').where({ tenant: tenantId, email_provider_id: providerId }).delete();
+      await db('email_providers').where({ tenant: tenantId, id: providerId }).delete();
+      await db('inbound_ticket_defaults').where({ tenant: tenantId, id: defaultsId }).delete();
+    });
+
+    const ticketId = uuidv4();
+    await db('tickets').insert({
+      tenant: tenantId,
+      ticket_id: ticketId,
+      ticket_number: `REPLY-${Math.floor(Math.random() * 1_000_000)}`,
+      title: 'Token threaded ticket',
+      client_id: clientId,
+      status_id: statusId,
+      priority_id: priorityId,
+      board_id: boardId,
+      entered_by: enteredByUserId,
+      entered_at: db.fn.now(),
+      updated_at: db.fn.now(),
+    });
+    cleanup.push(async () => {
+      await db('comments').where({ tenant: tenantId, ticket_id: ticketId }).delete();
+      await db('tickets').where({ tenant: tenantId, ticket_id: ticketId }).delete();
+    });
+
+    const replyToken = `token-${uuidv4()}`;
+    await db('email_reply_tokens').insert({
+      tenant: tenantId,
+      token: replyToken,
+      ticket_id: ticketId,
+      comment_id: null,
+      project_id: null,
+      created_at: db.fn.now(),
+    });
+    cleanup.push(async () => {
+      await db('email_reply_tokens').where({ tenant: tenantId, token: replyToken }).delete();
+    });
+
+    const result = await processInboundEmailInApp({
+      tenantId,
+      providerId,
+      emailData: {
+        id: `reply-email-${uuidv4()}`,
+        provider: 'microsoft',
+        providerId,
+        tenant: tenantId,
+        receivedAt: new Date().toISOString(),
+        from: { email: 'sender@example.com', name: 'Sender' },
+        to: [{ email: mailbox, name: 'Support' }],
+        subject: 'Re: Token threaded ticket',
+        body: {
+          text: `Customer reply\n\n[ALGA-REPLY-TOKEN ${replyToken}]\n\nOlder content`,
+          html: undefined,
+        },
+        attachments: [],
+      } as any,
+    });
+
+    expect(result.outcome).toBe('replied');
+    expect(result.outcome === 'replied' ? result.ticketId : null).toBe(ticketId);
+
+    const comments = await db('comments').where({ tenant: tenantId, ticket_id: ticketId });
+    expect(comments).toHaveLength(1);
   });
 });
