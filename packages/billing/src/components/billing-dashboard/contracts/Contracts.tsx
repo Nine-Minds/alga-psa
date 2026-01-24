@@ -26,6 +26,10 @@ import {
   getContractsWithClients,
   updateContract,
 } from '@alga-psa/billing/actions/contractActions';
+import {
+  getDraftContractForResume,
+  type DraftContractWizardData,
+} from '@alga-psa/billing/actions/contractWizardActions';
 import { ContractWizard } from './ContractWizard';
 import { TemplateWizard } from './template-wizard/TemplateWizard';
 import { ContractDialog } from './ContractDialog';
@@ -61,6 +65,7 @@ const Contracts: React.FC = () => {
   const [templateContracts, setTemplateContracts] = useState<IContract[]>([]);
   const [clientContracts, setClientContracts] = useState<IContractWithClient[]>([]);
   const [draftContracts, setDraftContracts] = useState<IContractWithClient[]>([]);
+  const [draftToResume, setDraftToResume] = useState<DraftContractWizardData | null>(null);
   const [showTemplateWizard, setShowTemplateWizard] = useState(false);
   const [showClientWizard, setShowClientWizard] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -141,6 +146,20 @@ const Contracts: React.FC = () => {
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to delete contract';
       alert(message);
+    }
+  };
+
+  const handleResumeDraft = async (contractId: string) => {
+    try {
+      setIsLoading(true);
+      const draftData = await getDraftContractForResume(contractId);
+      setDraftToResume(draftData);
+      setShowClientWizard(true);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to resume draft';
+      alert(message);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -640,7 +659,7 @@ const renderStatusBadge = (status: string) => {
                       onClick={(event) => {
                         event.stopPropagation();
                         if (record.contract_id) {
-                          alert('Resume draft not yet wired');
+                          void handleResumeDraft(record.contract_id);
                         }
                       }}
                     >
@@ -743,8 +762,10 @@ const renderStatusBadge = (status: string) => {
         onOpenChange={setShowClientWizard}
         onComplete={() => {
           setShowClientWizard(false);
+          setDraftToResume(null);
           void fetchContracts();
         }}
+        editingContract={draftToResume}
       />
     </>
   );

@@ -78,6 +78,10 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
   - Location: `packages/billing/src/actions/contractWizardActions.ts`
   - Validates `contracts.status === 'draft'`, then maps contract + client_contract + contract lines/services/configs into `DraftContractWizardData`
 
+- (2026-01-24) Resume flow wired from Drafts table:
+  - Drafts Actions → Resume calls `getDraftContractForResume()`, then opens `ContractWizard` with `editingContract` data.
+  - Updated `ContractWizard` to re-initialize state when `open`/`editingContract` change (was previously only using initial props once).
+
 ## Commands / Runbooks
 
 - Run billing package tests: `npm test -w packages/billing`

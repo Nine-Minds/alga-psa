@@ -86,7 +86,7 @@
   {
     "id": "F015",
     "description": "Resume action opens ContractWizard dialog with draft data pre-populated",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR3"]
   },
   {
