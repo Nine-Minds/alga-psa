@@ -122,7 +122,7 @@
   {
     "id": "T021",
     "description": "Search input filters drafts by client name",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F011"]
   },
   {
