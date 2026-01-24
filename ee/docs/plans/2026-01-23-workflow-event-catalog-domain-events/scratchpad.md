@@ -408,9 +408,21 @@ Implication: we should standardize on `@alga-psa/event-bus/publishers` helpers f
     - `documentId` maps to the file storage record id (`external_files.file_id`) today.
     - Publishing is best-effort (errors are logged but do not fail the upload/delete).
 
+- 2026-01-24: Completed `F061` (document association/detach emission):
+  - Added shared payload builders + schema-compat unit tests:
+    - `shared/workflow/streams/domainEventBuilders/documentAssociationEventBuilders.ts`
+    - `shared/workflow/streams/domainEventBuilders/__tests__/documentAssociationEventBuilders.test.ts`
+  - Emitted workflow v2 document association events from real document flows:
+    - `packages/documents/src/actions/documentActions.ts` publishes:
+      - `DOCUMENT_ASSOCIATED` on association creation (bulk associate and upload-time associations; also client/contract-specific helpers)
+      - `DOCUMENT_DETACHED` on manual detach and on document deletion (reason=`document_deleted`)
+    - `packages/documents/src/actions/documentBlockContentActions.ts` publishes `DOCUMENT_ASSOCIATED` when a block-document is created and linked to an entity
+  - Verification:
+    - `npx vitest run shared/workflow/streams/domainEventBuilders/__tests__/documentAssociationEventBuilders.test.ts`
+
 ## Next Up
 
-- `F061`: emit association events (DOCUMENT_ASSOCIATED, DOCUMENT_DETACHED).
+- `F062`: emit system-generation event (DOCUMENT_GENERATED) for supported generation paths.
 
 ## Suggested Phasing (to reduce risk)
 

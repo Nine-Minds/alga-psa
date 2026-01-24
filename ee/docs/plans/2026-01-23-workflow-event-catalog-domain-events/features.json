@@ -35,7 +35,7 @@
   { "id": "F053", "description": "Tags: emit tag definition and tag application events (TAG_DEFINITION_CREATED, TAG_DEFINITION_UPDATED, TAG_APPLIED, TAG_REMOVED) with generic entityType/entityId payload shape", "implemented": true, "prdRefs": ["7.2"] },
 
   { "id": "F060", "description": "Documents: emit storage lifecycle events (DOCUMENT_UPLOADED, DOCUMENT_DELETED)", "implemented": true, "prdRefs": ["7.2"] },
-  { "id": "F061", "description": "Documents: emit association events (DOCUMENT_ASSOCIATED, DOCUMENT_DETACHED)", "implemented": false, "prdRefs": ["7.2"] },
+  { "id": "F061", "description": "Documents: emit association events (DOCUMENT_ASSOCIATED, DOCUMENT_DETACHED)", "implemented": true, "prdRefs": ["7.2"] },
   { "id": "F062", "description": "Documents: emit system-generation event (DOCUMENT_GENERATED) for generated docs (invoice PDFs, exports, etc.)", "implemented": false, "prdRefs": ["7.2"] },
   { "id": "F063", "description": "Documents: emit signature events (DOCUMENT_SIGNATURE_REQUESTED, DOCUMENT_SIGNED, DOCUMENT_SIGNATURE_EXPIRED) when e-sign is supported", "implemented": false, "prdRefs": ["7.2", "7.3"] },
 

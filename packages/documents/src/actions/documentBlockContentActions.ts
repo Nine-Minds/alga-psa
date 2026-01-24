@@ -10,6 +10,8 @@ import { getCurrentUserAsync } from '../lib/authHelpers';
 import { CacheFactory } from '../cache/CacheFactory';
 import type { IDocument, IDocumentAssociationInput } from '@alga-psa/types';
 import { publishEvent } from '@alga-psa/event-bus/publishers';
+import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
+import { buildDocumentAssociatedPayload } from '@alga-psa/shared/workflow/streams/domainEventBuilders/documentAssociationEventBuilders';
 
 interface BlockContentInput {
   block_data: any; // JSON data from block editor
@@ -41,6 +43,10 @@ export async function createBlockDocument(
   }
 
   try {
+    let createdAssociation:
+      | { documentId: string; entityId: string; entityType: string; associationId: string }
+      | undefined;
+
     // Start transaction to ensure both document and block content are created atomically
     const result = await withTransaction(knex, async (trx: Knex.Transaction) => {
       const documentId = uuidv4();
@@ -80,7 +86,13 @@ export async function createBlockDocument(
           entity_type: input.entityType,
           tenant
         };
-        await DocumentAssociation.create(trx, associationData);
+        const created = await DocumentAssociation.create(trx, associationData);
+        createdAssociation = {
+          documentId: documentResult.document_id,
+          entityId: input.entityId,
+          entityType: input.entityType,
+          associationId: created.association_id,
+        };
       }
 
       return {
@@ -90,6 +102,30 @@ export async function createBlockDocument(
         block_data: input.block_data
       };
     });
+
+    if (createdAssociation) {
+      try {
+        const occurredAt = new Date().toISOString();
+        await publishWorkflowEvent({
+          eventType: 'DOCUMENT_ASSOCIATED',
+          payload: buildDocumentAssociatedPayload({
+            documentId: createdAssociation.documentId,
+            entityType: createdAssociation.entityType,
+            entityId: createdAssociation.entityId,
+            associatedByUserId: currentUser.user_id,
+            associatedAt: occurredAt,
+          }),
+          ctx: {
+            tenantId: tenant,
+            occurredAt,
+            actor: { actorType: 'USER', actorUserId: currentUser.user_id },
+          },
+          idempotencyKey: `document_associated:${createdAssociation.associationId}`,
+        });
+      } catch (eventError) {
+        console.error('[createBlockDocument] Failed to publish DOCUMENT_ASSOCIATED workflow event:', eventError);
+      }
+    }
 
     // After transaction commits successfully, publish event for mention notifications
     const user = await knex('users')
