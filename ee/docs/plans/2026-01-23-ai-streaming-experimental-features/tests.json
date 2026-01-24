@@ -290,7 +290,7 @@
   {
     "id": "T049",
     "description": "Sidebar Chat streams responses",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F027"]
   },
   {

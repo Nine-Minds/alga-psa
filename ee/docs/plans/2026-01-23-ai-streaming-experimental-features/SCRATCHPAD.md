@@ -544,3 +544,10 @@ curl -X POST localhost:3000/api/chat/stream/chat \
   - File: `server/src/test/unit/QuickAskOverlay.streaming.test.tsx`
 - Validation: `npx vitest run server/src/test/unit/QuickAskOverlay.streaming.test.tsx`
 - Next test item: T049 Sidebar Chat streams responses
+
+### 2026-01-24 (cont.)
+- Implemented T049 (unit test):
+  - Verifies the EE Right Sidebar renders the streaming `Chat` implementation and posts to `/api/chat/v1/completions/stream`.
+  - File: `server/src/test/unit/RightSidebar.streaming.test.tsx`
+- Validation: `npx vitest run server/src/test/unit/RightSidebar.streaming.test.tsx`
+- Next test item: T050 Enabling AI Assistant allows Quick Ask usage after page reload
