@@ -2,24 +2,29 @@
   "name": "@alga-psa/event-bus",
   "version": "0.0.1",
   "private": true,
+  "type": "module",
   "main": "./dist/index.js",
-  "module": "./dist/index.mjs",
-  "types": "./dist/index.d.ts",
+  "types": "./src/index.ts",
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
+      "types": "./src/index.ts",
       "import": "./dist/index.mjs",
       "require": "./dist/index.js"
     },
     "./events": {
-      "types": "./dist/events.d.ts",
+      "types": "./src/events.ts",
       "import": "./dist/events.mjs",
       "require": "./dist/events.js"
     },
     "./publishers": {
-      "types": "./dist/publishers/index.d.ts",
+      "types": "./src/publishers/index.ts",
       "import": "./dist/publishers/index.mjs",
       "require": "./dist/publishers/index.js"
+    },
+    "./publishers/*": {
+      "types": "./src/publishers/*.ts",
+      "import": "./dist/publishers/*.mjs",
+      "require": "./dist/publishers/*.js"
     }
   },
   "scripts": {

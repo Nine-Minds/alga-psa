@@ -17,7 +17,11 @@
       "@shared/*": ["./*"],
       "@shared/workflow/*": ["./workflow/*"],
       "@shared/lib/*": ["./lib/*"],
-      "@alga-psa/shared/*": ["./*"]
+      "@alga-psa/shared/*": ["./*"],
+      "next-auth": ["../node_modules/next-auth"],
+      "next-auth/*": ["../node_modules/next-auth/*"],
+      "@auth/core": ["../node_modules/@auth/core"],
+      "@auth/core/*": ["../node_modules/@auth/core/*"]
     }
   },
   "include": ["**/*.ts", "**/*.tsx", "**/*.js", "**/*.jsx", "**/*.d.ts", "lib/**/*.ts"],
