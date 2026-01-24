@@ -87,4 +87,40 @@ describe('POST /api/chat/v1/completions/stream', () => {
     expect(isExperimentalFeatureEnabledMock).toHaveBeenCalledWith('aiAssistant');
     expect(createRawCompletionStreamMock).toHaveBeenCalledTimes(1);
   });
+
+  it('returns Content-Type: text/event-stream', async () => {
+    isExperimentalFeatureEnabledMock.mockResolvedValue(true);
+    createRawCompletionStreamMock.mockResolvedValue(
+      (async function* () {
+        yield { choices: [{ delta: { content: 'Hello' } }] };
+      })(),
+    );
+
+    vi.resetModules();
+    const mod = await import('@/app/api/chat/v1/completions/stream/route');
+
+    const request = new NextRequest(
+      new Request('http://example.com/api/chat/v1/completions/stream', {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+        },
+        body: JSON.stringify({ messages: [{ role: 'user', content: 'Hello' }] }),
+      }),
+    );
+
+    const response = await mod.POST(request);
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get('content-type')).toMatch(/^text\/event-stream\b/i);
+
+    const reader = response.body?.getReader();
+    expect(reader).toBeDefined();
+    while (true) {
+      const { done } = await reader!.read();
+      if (done) {
+        break;
+      }
+    }
+  });
 });

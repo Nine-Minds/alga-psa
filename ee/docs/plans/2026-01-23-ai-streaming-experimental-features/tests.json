@@ -182,7 +182,7 @@
   {
     "id": "T031",
     "description": "/api/chat/v1/completions/stream returns Content-Type: text/event-stream",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F016"]
   },
   {

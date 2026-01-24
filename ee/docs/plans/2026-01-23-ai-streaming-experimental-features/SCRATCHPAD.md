@@ -413,3 +413,10 @@ curl -X POST localhost:3000/api/chat/stream/chat \
   - File: `server/src/test/unit/api/chatCompletionsStream.route.exists.test.ts`
 - Validation: `npx vitest run server/src/test/unit/api/chatCompletionsStream.route.exists.test.ts`
 - Next test item: T031 /api/chat/v1/completions/stream returns Content-Type: text/event-stream
+
+### 2026-01-24 (cont.)
+- Implemented T031 (unit test):
+  - Verifies `/api/chat/v1/completions/stream` responds with `Content-Type: text/event-stream` (allows charset suffix).
+  - File: `server/src/test/unit/api/chatCompletionsStream.route.exists.test.ts`
+- Validation: `npx vitest run server/src/test/unit/api/chatCompletionsStream.route.exists.test.ts`
+- Next test item: T032 Streaming endpoint passes stream: true to OpenRouter API
