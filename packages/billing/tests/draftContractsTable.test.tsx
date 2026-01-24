@@ -351,4 +351,25 @@ describe('Drafts tab DataTable', () => {
 
     expect(await screen.findByText('Draft Alpha')).toBeInTheDocument();
   });
+
+  it('pagination controls appear when drafts exceed page size (T023)', async () => {
+    mockDraftContracts = Array.from({ length: 11 }, (_v, idx) => ({
+      contract_id: `contract-${idx + 1}`,
+      contract_name: `Draft ${idx + 1}`,
+      client_name: `Client ${idx + 1}`,
+      created_at: new Date(2026, 0, 1),
+      updated_at: new Date(2026, 0, idx + 1),
+    }));
+
+    const Contracts = (await import('../src/components/billing-dashboard/contracts/Contracts')).default;
+    render(<Contracts />);
+
+    expect(await screen.findByText('Draft 11')).toBeInTheDocument();
+    expect(screen.getByLabelText('Pagination')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '2' })).toBeInTheDocument();
+
+    const nextButton = document.getElementById('draft-contracts-table-pagination-next-btn') as HTMLButtonElement | null;
+    expect(nextButton).not.toBeNull();
+    expect(nextButton?.disabled).toBe(false);
+  });
 });

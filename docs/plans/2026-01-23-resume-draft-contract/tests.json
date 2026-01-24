@@ -134,7 +134,7 @@
   {
     "id": "T023",
     "description": "Pagination controls appear when drafts exceed page size",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F012"]
   },
   {

@@ -46,7 +46,12 @@ vi.mock('@alga-psa/ui/ui-reflection/UIStateContext', () => ({
 
 vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
   useTranslation: () => ({
-    t: (_key: string, options?: { defaultValue?: string }) => options?.defaultValue ?? _key,
+    t: (_key: string, options?: string | { defaultValue?: string }) => {
+      if (typeof options === 'string') {
+        return options;
+      }
+      return options?.defaultValue ?? _key;
+    },
   }),
 }));
 

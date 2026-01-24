@@ -134,6 +134,7 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
   - (2026-01-24) Extended `packages/billing/tests/draftContractsTable.test.tsx` and implemented T020 to assert draft search filters by contract name.
   - (2026-01-24) Extended `packages/billing/tests/draftContractsTable.test.tsx` and implemented T021 to assert draft search filters by client name.
   - (2026-01-24) Extended `packages/billing/tests/draftContractsTable.test.tsx` and implemented T022 to assert draft search is case-insensitive.
+  - (2026-01-24) Extended `packages/billing/tests/draftContractsTable.test.tsx` and implemented T023 to assert Drafts table pagination renders (multiple pages when > page size).
 
 ## Links / References
 
