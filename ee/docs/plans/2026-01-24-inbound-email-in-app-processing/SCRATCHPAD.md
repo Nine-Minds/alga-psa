@@ -39,3 +39,4 @@
 - 2026-01-24: Implemented F012 decision: if sender email does not match an existing contact, create the ticket under provider defaults `client_id` with `contact_id` unset, and mark the initial comment metadata with `unmatchedSender: true` for manual triage.
 - 2026-01-24: Implemented F013 by creating tickets via `createTicketFromEmail` and persisting `tickets.email_metadata` (messageId/threadId/inReplyTo/references/providerId) for future threading queries.
 - 2026-01-24: Implemented F014 by creating the initial ticket comment via `createCommentFromEmail` with BlockNote JSON content derived from the inbound email body.
+- 2026-01-24: Implemented F015 by processing new-ticket attachments per item via `processEmailAttachment` with error-continue semantics.
