@@ -755,3 +755,7 @@ Phase 3 (feature dependent / optional modules):
 - 2026-01-24: Completed `T050` (CRM client coverage):
   - Coverage exists via schema-compat builder tests for client lifecycle payload shapes (including catalog-only `CLIENT_MERGED`):
     - `shared/workflow/streams/domainEventBuilders/__tests__/clientEventBuilders.test.ts`
+
+- 2026-01-24: Completed `T051` (CRM contact coverage):
+  - Coverage exists via schema-compat builder tests for contact lifecycle payload shapes (including catalog-only `CONTACT_MERGED`):
+    - `shared/workflow/streams/domainEventBuilders/__tests__/contactEventBuilders.test.ts`
