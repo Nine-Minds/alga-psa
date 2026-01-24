@@ -392,3 +392,10 @@ curl -X POST localhost:3000/api/chat/stream/chat \
   - File: `server/src/test/unit/api/chatCompletions.route.gating.test.ts`
 - Validation: `npx vitest run server/src/test/unit/api/chatCompletions.route.gating.test.ts`
 - Next test item: T028 /api/chat/v1/execute returns 403 when aiAssistant is disabled
+
+### 2026-01-24 (cont.)
+- Implemented T028 (unit test):
+  - Verifies `/api/chat/v1/execute` returns 403 + JSON error when `aiAssistant` is disabled.
+  - File: `server/src/test/unit/api/chatExecute.route.gating.test.ts`
+- Validation: `npx vitest run server/src/test/unit/api/chatExecute.route.gating.test.ts`
+- Next test item: T029 /api/chat/stream/* returns 403 when aiAssistant is disabled

@@ -164,7 +164,7 @@
   {
     "id": "T028",
     "description": "/api/chat/v1/execute returns 403 when aiAssistant is disabled",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F014"]
   },
   {
