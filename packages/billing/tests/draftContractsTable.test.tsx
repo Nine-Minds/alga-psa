@@ -37,6 +37,40 @@ vi.mock('@alga-psa/ui/components/CustomTabs', () => ({
   },
 }));
 
+vi.mock('@alga-psa/ui/components/ConfirmationDialog', () => ({
+  ConfirmationDialog: ({
+    isOpen,
+    title,
+    message,
+    cancelLabel,
+    confirmLabel,
+    onClose,
+    onConfirm,
+    isConfirming,
+  }: {
+    isOpen: boolean;
+    title: string;
+    message: string;
+    cancelLabel: string;
+    confirmLabel: string;
+    onClose: () => void;
+    onConfirm: () => void;
+    isConfirming?: boolean;
+  }) =>
+    isOpen ? (
+      <div data-testid="confirmation-dialog" data-confirming={isConfirming ? 'true' : 'false'}>
+        <div>{title}</div>
+        <div>{message}</div>
+        <button type="button" onClick={onClose}>
+          {cancelLabel}
+        </button>
+        <button type="button" onClick={onConfirm}>
+          {confirmLabel}
+        </button>
+      </div>
+    ) : null,
+}));
+
 vi.mock('../src/components/billing-dashboard/contracts/ContractWizard', () => ({
   ContractWizard: ({ open, editingContract }: { open: boolean; editingContract?: any }) =>
     open ? (
@@ -516,5 +550,31 @@ describe('Drafts tab DataTable', () => {
       expect(wizard).toHaveAttribute('data-client-id', 'client-1');
       expect(wizard).toHaveAttribute('data-contract-name', 'Draft Alpha');
     });
+  });
+
+  it('clicking Discard opens confirmation dialog (T049)', async () => {
+    mockDraftContracts = [
+      {
+        contract_id: 'contract-1',
+        contract_name: 'Draft Alpha',
+        client_name: 'Acme Co',
+        created_at: new Date(2026, 0, 1),
+        updated_at: new Date(2026, 0, 2),
+      },
+    ];
+
+    const Contracts = (await import('../src/components/billing-dashboard/contracts/Contracts')).default;
+    render(<Contracts />);
+
+    const user = userEvent.setup();
+    const actionsButton = await screen.findByRole('button', { name: /open menu/i });
+    await act(async () => {
+      await user.click(actionsButton);
+    });
+    await act(async () => {
+      await user.click(await screen.findByText('Discard'));
+    });
+
+    expect(await screen.findByTestId('confirmation-dialog')).toBeInTheDocument();
   });
 });

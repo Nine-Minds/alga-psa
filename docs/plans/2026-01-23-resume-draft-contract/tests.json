@@ -290,7 +290,7 @@
   {
     "id": "T049",
     "description": "Clicking Discard opens confirmation dialog",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F020"]
   },
   {
