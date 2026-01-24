@@ -46,3 +46,4 @@
 - 2026-01-24: Implemented F030 by wiring Gmail webhook message handling to call `processInboundEmailInApp` when the in-app flag is enabled (otherwise preserves legacy `INBOUND_EMAIL_RECEIVED` publish).
 - 2026-01-24: Implemented F031 by wiring Microsoft webhook notifications to call `processInboundEmailInApp` when enabled and to persist ticket linkage back to `email_processed_messages`.
 - 2026-01-24: Implemented F040 by adding env-driven, tenant/provider-scoped gating in `shared/services/email/inboundEmailInAppFeatureFlag.ts` (`INBOUND_EMAIL_IN_APP_PROCESSING_ENABLED`, `INBOUND_EMAIL_IN_APP_TENANT_IDS`, `INBOUND_EMAIL_IN_APP_PROVIDER_IDS`).
+- 2026-01-24: Implemented F041 by supporting provider-level rollout via `INBOUND_EMAIL_IN_APP_PROVIDER_IDS` allowlist.
