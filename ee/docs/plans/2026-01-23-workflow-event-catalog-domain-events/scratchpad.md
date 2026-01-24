@@ -809,3 +809,7 @@ Phase 3 (feature dependent / optional modules):
 - 2026-01-24: Completed `T080` (integration sync lifecycle coverage):
   - Coverage exists via schema-compat builder tests for sync started/completed/failed payload shapes:
     - `shared/workflow/streams/domainEventBuilders/__tests__/integrationSyncEventBuilders.test.ts`
+
+- 2026-01-24: Completed `T081` (integration webhook receipt coverage):
+  - Coverage exists via schema-compat builder tests for safe redaction and `INTEGRATION_WEBHOOK_RECEIVED` payload shape:
+    - `shared/workflow/streams/domainEventBuilders/__tests__/integrationWebhookEventBuilders.test.ts`
