@@ -14,7 +14,7 @@
   { "id": "F015", "description": "New-ticket path: process attachments best-effort via `processEmailAttachment`", "implemented": true },
 
   { "id": "F020", "description": "Idempotency: ensure reply comment creation is idempotent per {tenant, ticketId, messageId}", "implemented": true },
-  { "id": "F021", "description": "Idempotency: ensure new-ticket creation is idempotent per {tenant, providerId, messageId}", "implemented": false },
+  { "id": "F021", "description": "Idempotency: ensure new-ticket creation is idempotent per {tenant, providerId, messageId}", "implemented": true },
   { "id": "F022", "description": "Preserve provider-level dedupe bookkeeping (Gmail historyId + Microsoft processed message records)", "implemented": false },
 
   { "id": "F030", "description": "Wire Gmail webhook handler to call `processInboundEmailInApp` instead of publishing `INBOUND_EMAIL_RECEIVED` to Redis workflow streams", "implemented": false },
