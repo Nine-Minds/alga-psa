@@ -3,7 +3,7 @@
  */
 import React from 'react';
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
-import { act, render, screen, waitFor, within } from '@testing-library/react';
+import { act, cleanup, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 let mockDraftContracts: any[] = [];
@@ -129,10 +129,31 @@ describe('Drafts tab DataTable', () => {
     });
   });
 
-  beforeEach(() => {
+  beforeEach(async () => {
+    document.body.removeAttribute('data-scroll-locked');
+    document.body.removeAttribute('style');
+    cleanup();
     mockDraftContracts = [];
     mockDraftResumeData = {};
     vi.clearAllMocks();
+
+    const contractActions = await import('@alga-psa/billing/actions/contractActions');
+    vi.mocked(contractActions.checkClientHasActiveContract).mockReset();
+    vi.mocked(contractActions.checkClientHasActiveContract).mockResolvedValue(false);
+    vi.mocked(contractActions.deleteContract).mockReset();
+    vi.mocked(contractActions.deleteContract).mockResolvedValue(undefined);
+    vi.mocked(contractActions.getContractTemplates).mockReset();
+    vi.mocked(contractActions.getContractTemplates).mockResolvedValue([]);
+    vi.mocked(contractActions.getContractsWithClients).mockReset();
+    vi.mocked(contractActions.getContractsWithClients).mockResolvedValue([]);
+    vi.mocked(contractActions.getDraftContracts).mockReset();
+    vi.mocked(contractActions.getDraftContracts).mockImplementation(async () => mockDraftContracts);
+    vi.mocked(contractActions.updateContract).mockReset();
+    vi.mocked(contractActions.updateContract).mockResolvedValue(undefined);
+
+    const wizardActions = await import('@alga-psa/billing/actions/contractWizardActions');
+    vi.mocked(wizardActions.getDraftContractForResume).mockReset();
+    vi.mocked(wizardActions.getDraftContractForResume).mockImplementation(async () => mockDraftResumeData);
   });
 
   it('renders contract name for each draft (T012)', async () => {

@@ -2,8 +2,8 @@
  * @vitest-environment jsdom
  */
 import React from 'react';
-import { beforeAll, describe, expect, it, vi } from 'vitest';
-import { act, render, screen, waitFor } from '@testing-library/react';
+import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import { act, cleanup, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 let mockDraftContracts: any[] = [];
@@ -87,6 +87,13 @@ vi.mock('@alga-psa/billing/actions/contractWizardActions', () => ({
 }));
 
 describe('Contracts activation flow (draft -> active)', () => {
+  beforeEach(() => {
+    document.body.removeAttribute('data-scroll-locked');
+    document.body.removeAttribute('style');
+    cleanup();
+    vi.clearAllMocks();
+  });
+
   beforeAll(() => {
     (globalThis as any).IS_REACT_ACT_ENVIRONMENT = true;
     Object.defineProperty(HTMLElement.prototype, 'clientWidth', {

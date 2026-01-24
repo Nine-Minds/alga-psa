@@ -127,6 +127,7 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - (2026-01-24) Implemented T062: getDraftContracts tenant filter prevents cross-tenant draft visibility (unit test with configurable tenant).
 - (2026-01-24) Implemented T063: getDraftContractForResume rejects when user lacks billing:create permission.
 - (2026-01-24) Implemented T064: deleteContract rejects when user lacks billing:delete permission.
+- (2026-01-24) Stabilized jsdom test isolation: added `cleanup()` + body scroll-lock/style reset in wizard/drafts tests to prevent cross-file DOM leakage and pointer-events issues when running the full billing test suite.
 
 - (2026-01-24) Tests:
   - Added `packages/billing/tests/contractsTabs.test.ts` to assert the contracts tabs config includes Templates / Client Contracts / Drafts.
