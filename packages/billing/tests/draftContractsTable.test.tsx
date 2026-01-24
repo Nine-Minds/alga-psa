@@ -86,5 +86,21 @@ describe('Drafts tab DataTable', () => {
 
     expect(await screen.findByText('Draft Alpha')).toBeInTheDocument();
   });
-});
 
+  it('renders client name for each draft (T013)', async () => {
+    mockDraftContracts = [
+      {
+        contract_id: 'contract-1',
+        contract_name: 'Draft Alpha',
+        client_name: 'Acme Co',
+        created_at: '2026-01-01T00:00:00.000Z',
+        updated_at: '2026-01-02T00:00:00.000Z',
+      },
+    ];
+
+    const Contracts = (await import('../src/components/billing-dashboard/contracts/Contracts')).default;
+    render(<Contracts />);
+
+    expect(await screen.findByText('Acme Co')).toBeInTheDocument();
+  });
+});
