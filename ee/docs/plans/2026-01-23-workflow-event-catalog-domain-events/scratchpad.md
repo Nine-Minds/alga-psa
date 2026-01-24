@@ -792,3 +792,8 @@ Phase 3 (feature dependent / optional modules):
 - 2026-01-24: Completed `T071` (outbound email lifecycle coverage):
   - Coverage exists via unit tests for the outbound send pipeline publishing queued/sent/failed events:
     - `server/src/test/unit/outboundEmailWorkflowEvents.test.ts`
+
+- 2026-01-24: Completed `T072` (email delivery/feedback coverage):
+  - Coverage exists via schema-compat builder tests and provider webhook mapping tests:
+    - `shared/workflow/streams/domainEventBuilders/__tests__/emailFeedbackEventBuilders.test.ts`
+    - `server/src/test/unit/resendWebhookEvents.test.ts`

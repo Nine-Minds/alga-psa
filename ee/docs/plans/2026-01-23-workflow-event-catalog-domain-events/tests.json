@@ -48,7 +48,7 @@
 
   { "id": "T070", "description": "Email: inbound replies emit INBOUND_EMAIL_REPLY_RECEIVED when reply parsing/matching succeeds", "implemented": true, "featureIds": ["F070"] },
   { "id": "T071", "description": "Email: outbound send pipeline emits OUTBOUND_EMAIL_QUEUED/OUTBOUND_EMAIL_SENT/OUTBOUND_EMAIL_FAILED", "implemented": true, "featureIds": ["F071"] },
-  { "id": "T072", "description": "Email: delivery/bounce/complaint/unsubscribe emits EMAIL_DELIVERED/EMAIL_BOUNCED/EMAIL_COMPLAINT_RECEIVED/EMAIL_UNSUBSCRIBED where supported", "implemented": false, "featureIds": ["F072"] },
+  { "id": "T072", "description": "Email: delivery/bounce/complaint/unsubscribe emits EMAIL_DELIVERED/EMAIL_BOUNCED/EMAIL_COMPLAINT_RECEIVED/EMAIL_UNSUBSCRIBED where supported", "implemented": true, "featureIds": ["F072"] },
   { "id": "T073", "description": "Notifications: send/deliver/fail/read emits NOTIFICATION_SENT/DELIVERED/FAILED/READ for supported channels", "implemented": false, "featureIds": ["F073"] },
   { "id": "T074", "description": "Surveys/CSAT: survey lifecycle emits SURVEY_SENT/RESPONSE_RECEIVED/REMINDER_SENT/EXPIRED and CSAT alerts emit CSAT_ALERT_TRIGGERED", "implemented": false, "featureIds": ["F074"] },
 
