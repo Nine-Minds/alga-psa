@@ -9,9 +9,10 @@ import {
   EventType,
   EventSchemas,
   BaseEventSchema,
-  convertToWorkflowEvent
-} from './schemas/eventBusSchema';
-import { WorkflowEventBaseSchema } from './schemas/workflowEventSchema';
+  convertToWorkflowEvent,
+  type WorkflowPublishHooks
+} from '@shared/workflow/streams/eventBusSchema';
+import { WorkflowEventBaseSchema } from '@shared/workflow/streams/workflowEventSchema';
 
 type EventHandler = (event: Event) => Promise<void>;
 
@@ -604,7 +605,7 @@ export class EventBus {
 
   public async publish(
     event: Omit<Event, 'id' | 'timestamp'>,
-    options?: { channel?: string }
+    options?: { channel?: string; workflow?: WorkflowPublishHooks }
   ): Promise<void> {
     if (eventBusDisabled) {
       logger.debug('[EventBus] Skipping publish because the event bus is disabled');
@@ -646,7 +647,7 @@ export class EventBus {
         await this.ensureStreamAndGroup(globalStream);
 
         const workflowEvent = WorkflowEventBaseSchema.parse(
-          convertToWorkflowEvent(fullEvent)
+          convertToWorkflowEvent(fullEvent, options?.workflow)
         );
 
         logger.debug('[EventBus] Publishing event in workflow format:', {

@@ -7,10 +7,57 @@ import { withTransaction } from '@alga-psa/db';
 import { createTenantKnex } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { publishEvent } from '@alga-psa/event-bus/publishers';
+import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
+import {
+  buildAppointmentAssignedPayload,
+  buildAppointmentCanceledPayload,
+  buildAppointmentCompletedPayload,
+  buildAppointmentCreatedPayload,
+  buildAppointmentNoShowPayload,
+  buildAppointmentRescheduledPayload,
+  getSingleUserAssigneeId,
+  getTicketIdFromScheduleEntry,
+  isAppointmentCanceledStatus,
+  isAppointmentCompletedStatus,
+  isAppointmentNoShowStatus,
+  isAppointmentRescheduled,
+  shouldEmitAppointmentEvents,
+} from '@shared/workflow/streams/domainEventBuilders/appointmentEventBuilders';
+import {
+  buildScheduleBlockCreatedPayload,
+  buildScheduleBlockDeletedPayload,
+  isScheduleBlockEntry,
+} from '@shared/workflow/streams/domainEventBuilders/scheduleBlockEventBuilders';
+import {
+  buildTechnicianArrivedPayload,
+  buildTechnicianCheckedOutPayload,
+  buildTechnicianDispatchedPayload,
+  buildTechnicianEnRoutePayload,
+  getTechnicianUserIds,
+  isTechnicianArrivedStatus,
+  isTechnicianCheckedOutStatus,
+  isTechnicianEnRouteStatus,
+  shouldEmitTechnicianDispatchEvents,
+} from '@shared/workflow/streams/domainEventBuilders/technicianDispatchEventBuilders';
+import { maybePublishCapacityThresholdReached } from '../lib/capacityThresholdWorkflowEvents';
 
 export type ScheduleActionResult<T> =
   | { success: true; entries: T; error?: never }
   | { success: false; error: string; entries?: never }
+
+async function getTicketIdForAppointmentRequest(
+  db: Knex,
+  tenant: string,
+  appointmentRequestId: string
+): Promise<string | undefined> {
+  const row = await withTransaction(db, async (trx: Knex.Transaction) => {
+    return await trx('appointment_requests')
+      .where({ tenant, appointment_request_id: appointmentRequestId })
+      .select('ticket_id')
+      .first();
+  });
+  return row?.ticket_id || undefined;
+}
 
 /**
  * Fetches schedule entries based on date range and user permissions.
@@ -171,6 +218,96 @@ export const addScheduleEntry = withAuth(async (
       console.error('[ScheduleActions] Failed to publish SCHEDULE_ENTRY_CREATED event', eventError);
     }
 
+    if (isScheduleBlockEntry(createdEntry)) {
+      const ctx = {
+        tenantId: tenant,
+        actor: { actorType: 'USER' as const, actorUserId: user.user_id },
+      };
+
+      try {
+        await publishWorkflowEvent({
+          eventType: 'SCHEDULE_BLOCK_CREATED',
+          ctx,
+          payload: buildScheduleBlockCreatedPayload({ entry: createdEntry, timezone: 'UTC' }),
+        });
+      } catch (eventError) {
+        console.error('[ScheduleActions] Failed to publish SCHEDULE_BLOCK_CREATED workflow event', eventError);
+      }
+    }
+
+    if (shouldEmitAppointmentEvents(createdEntry)) {
+      const timezone = 'UTC';
+      const ticketId =
+        getTicketIdFromScheduleEntry(createdEntry) ||
+        (createdEntry.work_item_type === 'appointment_request' && createdEntry.work_item_id
+          ? await getTicketIdForAppointmentRequest(db, tenant, createdEntry.work_item_id)
+          : undefined);
+
+      const ctx = {
+        tenantId: tenant,
+        actor: { actorType: 'USER' as const, actorUserId: user.user_id },
+      };
+
+      try {
+        await publishWorkflowEvent({
+          eventType: 'APPOINTMENT_CREATED',
+          ctx,
+          payload: buildAppointmentCreatedPayload({
+            entry: createdEntry,
+            ticketId,
+            timezone,
+            createdByUserId: user.user_id,
+          }),
+        });
+
+        const assigneeId = getSingleUserAssigneeId(createdEntry);
+        if (assigneeId) {
+          await publishWorkflowEvent({
+            eventType: 'APPOINTMENT_ASSIGNED',
+            ctx,
+            payload: buildAppointmentAssignedPayload({
+              appointmentId: createdEntry.entry_id,
+              ticketId,
+              newAssigneeId: assigneeId,
+            }),
+          });
+        }
+      } catch (eventError) {
+        console.error('[ScheduleActions] Failed to publish APPOINTMENT_* workflow events', eventError);
+      }
+
+      if (shouldEmitTechnicianDispatchEvents(createdEntry)) {
+        try {
+          const technicianUserIds = getTechnicianUserIds({ ...createdEntry, assigned_user_ids: assignedUserIds });
+          for (const technicianUserId of technicianUserIds) {
+            await publishWorkflowEvent({
+              eventType: 'TECHNICIAN_DISPATCHED',
+              ctx,
+              payload: buildTechnicianDispatchedPayload({
+                appointmentId: createdEntry.entry_id,
+                ticketId,
+                technicianUserId,
+                dispatchedByUserId: user.user_id,
+              }),
+            });
+          }
+        } catch (eventError) {
+          console.error('[ScheduleActions] Failed to publish TECHNICIAN_DISPATCHED workflow event', eventError);
+        }
+      }
+    }
+
+    try {
+      await maybePublishCapacityThresholdReached({
+        db,
+        tenantId: tenant,
+        actorUserId: user.user_id,
+        after: createdEntry,
+      });
+    } catch (eventError) {
+      console.error('[ScheduleActions] Failed to publish CAPACITY_THRESHOLD_REACHED workflow event', eventError);
+    }
+
     return { success: true, entry: createdEntry };
   } catch (error) {
     console.error('Error creating schedule entry:', error);
@@ -272,6 +409,211 @@ export const updateScheduleEntry = withAuth(async (
       } catch (eventError) {
         console.error('[ScheduleActions] Failed to publish SCHEDULE_ENTRY_UPDATED event', eventError);
       }
+
+      const wasScheduleBlock = isScheduleBlockEntry(existingEntry);
+      const isScheduleBlock = isScheduleBlockEntry(updatedEntry);
+      if (!wasScheduleBlock && isScheduleBlock) {
+        const ctx = {
+          tenantId: tenant,
+          actor: { actorType: 'USER' as const, actorUserId: user.user_id },
+        };
+
+        try {
+          await publishWorkflowEvent({
+            eventType: 'SCHEDULE_BLOCK_CREATED',
+            ctx,
+            payload: buildScheduleBlockCreatedPayload({ entry: updatedEntry, timezone: 'UTC' }),
+          });
+        } catch (eventError) {
+          console.error('[ScheduleActions] Failed to publish SCHEDULE_BLOCK_CREATED workflow event', eventError);
+        }
+      } else if (wasScheduleBlock && !isScheduleBlock) {
+        const ctx = {
+          tenantId: tenant,
+          actor: { actorType: 'USER' as const, actorUserId: user.user_id },
+        };
+
+        try {
+          await publishWorkflowEvent({
+            eventType: 'SCHEDULE_BLOCK_DELETED',
+            ctx,
+            payload: buildScheduleBlockDeletedPayload({
+              scheduleBlockId: existingEntry.entry_id,
+              reason: 'No longer private ad-hoc block',
+            }),
+          });
+        } catch (eventError) {
+          console.error('[ScheduleActions] Failed to publish SCHEDULE_BLOCK_DELETED workflow event', eventError);
+        }
+      }
+
+      if (shouldEmitAppointmentEvents(existingEntry) || shouldEmitAppointmentEvents(updatedEntry)) {
+        const timezone = 'UTC';
+        const ticketId =
+          getTicketIdFromScheduleEntry(updatedEntry) ||
+          (updatedEntry.work_item_type === 'appointment_request' && updatedEntry.work_item_id
+            ? await getTicketIdForAppointmentRequest(db, tenant, updatedEntry.work_item_id)
+            : undefined);
+
+        const ctx = {
+          tenantId: tenant,
+          actor: { actorType: 'USER' as const, actorUserId: user.user_id },
+        };
+
+        try {
+          if (isAppointmentRescheduled(existingEntry, updatedEntry)) {
+            await publishWorkflowEvent({
+              eventType: 'APPOINTMENT_RESCHEDULED',
+              ctx,
+              payload: buildAppointmentRescheduledPayload({
+                before: existingEntry,
+                after: updatedEntry,
+                ticketId,
+                timezone,
+              }),
+            });
+          }
+
+          const previousAssigneeId = getSingleUserAssigneeId(existingEntry);
+          const newAssigneeId = getSingleUserAssigneeId(updatedEntry);
+          if (newAssigneeId && newAssigneeId !== previousAssigneeId) {
+            await publishWorkflowEvent({
+              eventType: 'APPOINTMENT_ASSIGNED',
+              ctx,
+              payload: buildAppointmentAssignedPayload({
+                appointmentId: updatedEntry.entry_id,
+                ticketId,
+                previousAssigneeId,
+                newAssigneeId,
+              }),
+            });
+          }
+
+          if (!isAppointmentCanceledStatus(existingEntry.status) && isAppointmentCanceledStatus(updatedEntry.status)) {
+            await publishWorkflowEvent({
+              eventType: 'APPOINTMENT_CANCELED',
+              ctx,
+              payload: buildAppointmentCanceledPayload({ appointmentId: updatedEntry.entry_id, ticketId }),
+            });
+          }
+
+          if (!isAppointmentCompletedStatus(existingEntry.status) && isAppointmentCompletedStatus(updatedEntry.status)) {
+            await publishWorkflowEvent({
+              eventType: 'APPOINTMENT_COMPLETED',
+              ctx,
+              payload: buildAppointmentCompletedPayload({ appointmentId: updatedEntry.entry_id, ticketId }),
+            });
+          }
+
+          if (!isAppointmentNoShowStatus(existingEntry.status) && isAppointmentNoShowStatus(updatedEntry.status)) {
+            await publishWorkflowEvent({
+              eventType: 'APPOINTMENT_NO_SHOW',
+              ctx,
+              payload: buildAppointmentNoShowPayload({ appointmentId: updatedEntry.entry_id, ticketId, party: 'customer' }),
+            });
+          }
+        } catch (eventError) {
+          console.error('[ScheduleActions] Failed to publish appointment workflow events', eventError);
+        }
+
+        if (shouldEmitTechnicianDispatchEvents(updatedEntry)) {
+          try {
+            const beforeTechs = new Set(getTechnicianUserIds(existingEntry));
+            const afterTechs = getTechnicianUserIds(updatedEntry);
+            const addedTechs = afterTechs.filter((id) => !beforeTechs.has(id));
+
+            for (const technicianUserId of addedTechs) {
+              await publishWorkflowEvent({
+                eventType: 'TECHNICIAN_DISPATCHED',
+                ctx,
+                payload: buildTechnicianDispatchedPayload({
+                  appointmentId: updatedEntry.entry_id,
+                  ticketId,
+                  technicianUserId,
+                  dispatchedByUserId: user.user_id,
+                }),
+              });
+            }
+
+            const statusChanged = String(existingEntry.status ?? '') !== String(updatedEntry.status ?? '');
+            if (statusChanged) {
+              if (
+                !isTechnicianEnRouteStatus(existingEntry.status) &&
+                isTechnicianEnRouteStatus(updatedEntry.status)
+              ) {
+                for (const technicianUserId of afterTechs) {
+                  await publishWorkflowEvent({
+                    eventType: 'TECHNICIAN_EN_ROUTE',
+                    ctx,
+                    payload: buildTechnicianEnRoutePayload({
+                      appointmentId: updatedEntry.entry_id,
+                      ticketId,
+                      technicianUserId,
+                    }),
+                  });
+                }
+              }
+
+              if (
+                !isTechnicianArrivedStatus(existingEntry.status) &&
+                isTechnicianArrivedStatus(updatedEntry.status)
+              ) {
+                for (const technicianUserId of afterTechs) {
+                  await publishWorkflowEvent({
+                    eventType: 'TECHNICIAN_ARRIVED',
+                    ctx,
+                    payload: buildTechnicianArrivedPayload({
+                      appointmentId: updatedEntry.entry_id,
+                      ticketId,
+                      technicianUserId,
+                    }),
+                  });
+                }
+              }
+
+              const checkedOutByStatus =
+                !isTechnicianCheckedOutStatus(existingEntry.status) &&
+                isTechnicianCheckedOutStatus(updatedEntry.status);
+              const checkedOutByCompletion =
+                !isAppointmentCompletedStatus(existingEntry.status) &&
+                isAppointmentCompletedStatus(updatedEntry.status);
+
+              if (checkedOutByStatus || checkedOutByCompletion) {
+                for (const technicianUserId of afterTechs) {
+                  await publishWorkflowEvent({
+                    eventType: 'TECHNICIAN_CHECKED_OUT',
+                    ctx,
+                    payload: buildTechnicianCheckedOutPayload({
+                      appointmentId: updatedEntry.entry_id,
+                      ticketId,
+                      technicianUserId,
+                    }),
+                  });
+                }
+              }
+            }
+          } catch (eventError) {
+            console.error(
+              '[ScheduleActions] Failed to publish technician dispatch lifecycle workflow events',
+              eventError
+            );
+          }
+        }
+      }
+    }
+
+    if (updatedEntry) {
+      try {
+        await maybePublishCapacityThresholdReached({
+          db,
+          tenantId: tenant,
+          actorUserId: user.user_id,
+          before: existingEntry,
+          after: updatedEntry,
+        });
+      } catch (eventError) {
+        console.error('[ScheduleActions] Failed to publish CAPACITY_THRESHOLD_REACHED workflow event', eventError);
+      }
     }
 
     return { success: true, entry: updatedEntry };
@@ -368,6 +710,64 @@ export const deleteScheduleEntry = withAuth(async (
         });
       } catch (eventError) {
         console.error('[ScheduleActions] Failed to publish SCHEDULE_ENTRY_DELETED event', eventError);
+      }
+
+      if (isScheduleBlockEntry(existingEntry)) {
+        const ctx = {
+          tenantId: tenant,
+          actor: { actorType: 'USER' as const, actorUserId: user.user_id },
+        };
+
+        try {
+          await publishWorkflowEvent({
+            eventType: 'SCHEDULE_BLOCK_DELETED',
+            ctx,
+            payload: buildScheduleBlockDeletedPayload({
+              scheduleBlockId: existingEntry.entry_id,
+              reason: deleteType === IEditScope.ALL ? 'Deleted (all occurrences)' : 'Deleted',
+            }),
+          });
+        } catch (eventError) {
+          console.error('[ScheduleActions] Failed to publish SCHEDULE_BLOCK_DELETED workflow event', eventError);
+        }
+      }
+
+      if (shouldEmitAppointmentEvents(existingEntry)) {
+        const ticketId =
+          getTicketIdFromScheduleEntry(existingEntry) ||
+          (existingEntry.work_item_type === 'appointment_request' && existingEntry.work_item_id
+            ? await getTicketIdForAppointmentRequest(db, tenant, existingEntry.work_item_id)
+            : undefined);
+
+        const ctx = {
+          tenantId: tenant,
+          actor: { actorType: 'USER' as const, actorUserId: user.user_id },
+        };
+
+        try {
+          await publishWorkflowEvent({
+            eventType: 'APPOINTMENT_CANCELED',
+            ctx,
+            payload: buildAppointmentCanceledPayload({
+              appointmentId: existingEntry.entry_id,
+              ticketId,
+              reason: deleteType === IEditScope.ALL ? 'Deleted (all occurrences)' : 'Deleted',
+            }),
+          });
+        } catch (eventError) {
+          console.error('[ScheduleActions] Failed to publish APPOINTMENT_CANCELED workflow event', eventError);
+        }
+      }
+
+      try {
+        await maybePublishCapacityThresholdReached({
+          db,
+          tenantId: tenant,
+          actorUserId: user.user_id,
+          before: existingEntry,
+        });
+      } catch (eventError) {
+        console.error('[ScheduleActions] Failed to publish CAPACITY_THRESHOLD_REACHED workflow event', eventError);
       }
     }
 

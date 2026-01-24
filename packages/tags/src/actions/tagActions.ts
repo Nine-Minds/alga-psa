@@ -9,6 +9,13 @@ import { withAuth, withOptionalAuth, type AuthContext } from '@alga-psa/auth';
 import { hasPermissionAsync, throwPermissionErrorAsync } from '../lib/authHelpers';
 import { generateEntityColorAsync } from '../lib/uiHelpers';
 import { Knex } from 'knex';
+import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
+import {
+  buildTagAppliedPayload,
+  buildTagDefinitionCreatedPayload,
+  buildTagDefinitionUpdatedPayload,
+  buildTagRemovedPayload,
+} from '@shared/workflow/streams/domainEventBuilders/tagEventBuilders';
 
 export const findTagsByEntityId = withAuth(async (_user: IUserWithRoles, { tenant }: AuthContext, entityId: string, entityType: string): Promise<ITag[]> => {
   const { knex: db } = await createTenantKnex();
@@ -95,7 +102,7 @@ export const createTag = withAuth(async (currentUser: IUserWithRoles, { tenant }
   }
 
   // Validate characters - allow letters, numbers, spaces, and common punctuation
-  if (!/^[a-zA-Z0-9\-_\s!@#$%^&*()+=\[\]{};':",./<>?]+$/.test(tagText)) {
+  if (!/^[a-zA-Z0-9\-_\s!@#$%^&*()+=\][{};':",./<>?]+$/.test(tagText)) {
     throw new Error('Tag text contains invalid characters');
   }
 
@@ -139,7 +146,7 @@ export const createTag = withAuth(async (currentUser: IUserWithRoles, { tenant }
       }
 
       // Get or create tag definition
-      const definition = await TagDefinition.getOrCreate(
+      const { definition, created: createdDefinition } = await TagDefinition.getOrCreateWithStatus(
         trx,
         tenant,
         tagText,
@@ -157,6 +164,40 @@ export const createTag = withAuth(async (currentUser: IUserWithRoles, { tenant }
         tagged_id: tagWithTenant.tagged_id,
         tagged_type: tagWithTenant.tagged_type
       }, userId);
+
+      const occurredAt = new Date().toISOString();
+      if (createdDefinition) {
+        await publishWorkflowEvent({
+          eventType: 'TAG_DEFINITION_CREATED',
+          payload: buildTagDefinitionCreatedPayload({
+            tagId: definition.tag_id,
+            tagName: definition.tag_text,
+            createdByUserId: userId,
+            createdAt: definition.created_at ?? occurredAt,
+          }),
+          ctx: {
+            tenantId: tenant,
+            occurredAt,
+            actor: { actorType: 'USER', actorUserId: userId },
+          },
+        });
+      }
+
+      await publishWorkflowEvent({
+        eventType: 'TAG_APPLIED',
+        payload: buildTagAppliedPayload({
+          tagId: definition.tag_id,
+          entityType: tagWithTenant.tagged_type,
+          entityId: tagWithTenant.tagged_id,
+          appliedByUserId: userId,
+          appliedAt: mapping.created_at ?? occurredAt,
+        }),
+        ctx: {
+          tenantId: tenant,
+          occurredAt,
+          actor: { actorType: 'USER', actorUserId: userId },
+        },
+      });
 
       const createdTag: ITag = {
         ...tagWithTenant,
@@ -218,6 +259,9 @@ export const updateTag = withAuth(async (currentUser: IUserWithRoles, { tenant }
         await throwPermissionErrorAsync('update tags');
       }
 
+      const previousTagText = String(existingTag.tag_text ?? '').trim();
+      const nextTagText = typeof tag.tag_text === 'string' ? tag.tag_text.trim() : previousTagText;
+
       // Update the definition (only certain fields can be updated)
       await TagDefinition.update(trx, tenant, existingTag.definition_tag_id, {
         tag_text: tag.tag_text,
@@ -225,6 +269,25 @@ export const updateTag = withAuth(async (currentUser: IUserWithRoles, { tenant }
         text_color: tag.text_color,
         board_id: tag.board_id
       });
+
+      if (nextTagText && nextTagText !== previousTagText) {
+        const occurredAt = new Date().toISOString();
+        await publishWorkflowEvent({
+          eventType: 'TAG_DEFINITION_UPDATED',
+          payload: buildTagDefinitionUpdatedPayload({
+            tagId: existingTag.definition_tag_id,
+            previousName: previousTagText,
+            newName: nextTagText,
+            updatedByUserId: currentUser.user_id,
+            updatedAt: occurredAt,
+          }),
+          ctx: {
+            tenantId: tenant,
+            occurredAt,
+            actor: { actorType: 'USER', actorUserId: currentUser.user_id },
+          },
+        });
+      }
     } catch (error) {
       console.error(`Error updating tag with id ${id}:`, error);
       if (error instanceof Error && error.message.includes('Permission denied')) {
@@ -257,7 +320,8 @@ export const deleteTag = withAuth(async (currentUser: IUserWithRoles, { tenant }
           'td.background_color',
           'td.text_color',
           'tm.tenant',
-          'tm.created_by'
+          'tm.created_by',
+          'tm.tag_id as definition_tag_id'
         )
         .first();
 
@@ -281,6 +345,23 @@ export const deleteTag = withAuth(async (currentUser: IUserWithRoles, { tenant }
 
       // id is actually mapping_id - just delete the mapping
       await TagMapping.delete(trx, tenant, id);
+
+      const occurredAt = new Date().toISOString();
+      await publishWorkflowEvent({
+        eventType: 'TAG_REMOVED',
+        payload: buildTagRemovedPayload({
+          tagId: existingTag.definition_tag_id,
+          entityType: existingTag.tagged_type,
+          entityId: existingTag.tagged_id,
+          removedByUserId: currentUser.user_id,
+          removedAt: occurredAt,
+        }),
+        ctx: {
+          tenantId: tenant,
+          occurredAt,
+          actor: { actorType: 'USER', actorUserId: currentUser.user_id },
+        },
+      });
     } catch (error) {
       console.error(`Error deleting tag with id ${id}:`, error);
       if (error instanceof Error && error.message.includes('Permission denied')) {
@@ -465,7 +546,7 @@ export const createTagsForEntityWithTransaction = withAuth(async (
       }
 
       // Get or create tag definition
-      const definition = await TagDefinition.getOrCreate(
+      const { definition, created: createdDefinition } = await TagDefinition.getOrCreateWithStatus(
         trx,
         tenant,
         tagText,
@@ -475,13 +556,47 @@ export const createTagsForEntityWithTransaction = withAuth(async (
           text_color: textColor
         }
       );
-
+      
       // Create mapping
       const mapping = await TagMapping.insert(trx, tenant, {
         tag_id: definition.tag_id,
         tagged_id: entityId,
         tagged_type: entityType
       }, userId);
+
+      const occurredAt = new Date().toISOString();
+      if (createdDefinition) {
+        await publishWorkflowEvent({
+          eventType: 'TAG_DEFINITION_CREATED',
+          payload: buildTagDefinitionCreatedPayload({
+            tagId: definition.tag_id,
+            tagName: definition.tag_text,
+            createdByUserId: userId,
+            createdAt: definition.created_at ?? occurredAt,
+          }),
+          ctx: {
+            tenantId: tenant,
+            occurredAt,
+            actor: { actorType: 'USER', actorUserId: userId },
+          },
+        });
+      }
+
+      await publishWorkflowEvent({
+        eventType: 'TAG_APPLIED',
+        payload: buildTagAppliedPayload({
+          tagId: definition.tag_id,
+          entityType,
+          entityId,
+          appliedByUserId: userId,
+          appliedAt: mapping.created_at ?? occurredAt,
+        }),
+        ctx: {
+          tenantId: tenant,
+          occurredAt,
+          actor: { actorType: 'USER', actorUserId: userId },
+        },
+      });
 
       createdTags.push({
         tag_id: mapping.mapping_id,
@@ -655,6 +770,24 @@ export const updateTagText = withAuth(async (currentUser: IUserWithRoles, { tena
       await TagDefinition.update(trx, tenant, oldDefinition.tag_id, {
         tag_text: trimmedNewText
       });
+
+      const occurredAt = new Date().toISOString();
+      await publishWorkflowEvent({
+        eventType: 'TAG_DEFINITION_UPDATED',
+        payload: buildTagDefinitionUpdatedPayload({
+          tagId: oldDefinition.tag_id,
+          previousName: tag.tag_text,
+          newName: trimmedNewText,
+          updatedByUserId: currentUser.user_id,
+          updatedAt: occurredAt,
+        }),
+        ctx: {
+          tenantId: tenant,
+          occurredAt,
+          actor: { actorType: 'USER', actorUserId: currentUser.user_id },
+        },
+      });
+
 
       // Return count of affected mappings
       const updatedCount = await TagMapping.getUsageCount(trx, tenant, oldDefinition.tag_id);

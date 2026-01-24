@@ -2,6 +2,7 @@
 
 import { withTransaction } from '@alga-psa/db';
 import { appendFileSync } from 'node:fs';
+import process from 'node:process';
 import type { Knex } from 'knex';
 import logger from '@alga-psa/core/logger';
 
@@ -10,7 +11,11 @@ import { issueSurveyToken } from '@alga-psa/surveys/actions/surveyTokenService';
 import { TenantEmailService } from '../lib/email';
 import { isValidEmail } from '@alga-psa/core';
 import { DatabaseTemplateProcessor } from '../lib/email/tenant/templateProcessors';
-import { publishEvent } from '../lib/eventBus/publishers';
+import { publishWorkflowEvent } from '../lib/eventBus/publishers';
+import {
+  buildSurveyReminderSentPayload,
+  buildSurveySentPayload,
+} from '@shared/workflow/streams/domainEventBuilders/surveyEventBuilders';
 
 const SURVEY_TEMPLATE_TABLE = 'survey_templates';
 const SURVEY_INVITATION_TABLE = 'survey_invitations';
@@ -81,6 +86,7 @@ export interface SendSurveyInvitationParams {
   clientId?: string | null;
   contactId?: string | null;
   locale?: string;
+  actorUserId?: string;
 }
 
 export interface SendSurveyInvitationResult {
@@ -128,6 +134,7 @@ export async function sendSurveyInvitation(params: SendSurveyInvitationParams): 
       contact,
       ticket,
       tenant,
+      reminderNumber,
     } = await withTransaction(knex, async (trx) => {
       appendDebug('transaction-begin', { tenantId: params.tenantId, ticketId: params.ticketId });
 
@@ -167,6 +174,18 @@ export async function sendSurveyInvitation(params: SendSurveyInvitationParams): 
       const tenantRow = await loadTenant(trx, params.tenantId);
       appendDebug('loaded-tenant', { tenantName: tenantRow?.name });
 
+      const [{ count: previousCountRaw } = { count: 0 }] = (await trx(SURVEY_INVITATION_TABLE)
+        .where({
+          tenant: params.tenantId,
+          ticket_id: ticketRow.ticket_id,
+          template_id: templateRow.template_id,
+          contact_id: contactRow.contact_name_id,
+        })
+        .count<{ count: string | number }[]>({ count: '*' })) as unknown as Array<{ count: string | number }>;
+      const previousCount =
+        typeof previousCountRaw === 'number' ? previousCountRaw : Number.parseInt(String(previousCountRaw), 10) || 0;
+      const nextReminderNumber = previousCount + 1;
+
       const [invitationRow] = await trx<InvitationRow>(SURVEY_INVITATION_TABLE)
         .insert({
           tenant: params.tenantId,
@@ -196,6 +215,7 @@ export async function sendSurveyInvitation(params: SendSurveyInvitationParams): 
         contact: contactRow,
         ticket: ticketRow,
         tenant: tenantRow,
+        reminderNumber: nextReminderNumber,
       };
     });
 
@@ -289,6 +309,56 @@ export async function sendSurveyInvitation(params: SendSurveyInvitationParams): 
         await removeInvitationSafe(params.tenantId, invitation.invitation_id);
         throw error;
       }
+    }
+
+    const workflowCtx = {
+      tenantId: params.tenantId,
+      occurredAt: new Date(),
+      actor: params.actorUserId ? ({ actorType: 'USER', actorUserId: params.actorUserId } as const) : ({ actorType: 'SYSTEM' } as const),
+    };
+
+    try {
+      await publishWorkflowEvent({
+        eventType: 'SURVEY_SENT',
+        payload: buildSurveySentPayload({
+          surveyId: invitation.invitation_id,
+          surveyType: 'csat',
+          recipientId: contact.contact_name_id,
+          ticketId: ticket.ticket_id,
+          sentAt: new Date().toISOString(),
+          channel: 'email',
+          templateId: template.template_id,
+        }),
+        ctx: {
+          ...workflowCtx,
+          idempotencyKey: `survey_sent:${params.tenantId}:${invitation.invitation_id}`,
+        },
+      });
+
+      if (reminderNumber > 1) {
+        await publishWorkflowEvent({
+          eventType: 'SURVEY_REMINDER_SENT',
+          payload: buildSurveyReminderSentPayload({
+            surveyId: invitation.invitation_id,
+            recipientId: contact.contact_name_id,
+            ticketId: ticket.ticket_id,
+            sentAt: new Date().toISOString(),
+            channel: 'email',
+            reminderNumber,
+          }),
+          ctx: {
+            ...workflowCtx,
+            idempotencyKey: `survey_reminder:${params.tenantId}:${invitation.invitation_id}`,
+          },
+        });
+      }
+    } catch (error) {
+      logger.warn('[SurveyService] Failed to publish workflow survey events', {
+        tenantId: params.tenantId,
+        ticketId: params.ticketId,
+        invitationId: invitation.invitation_id,
+        error: error instanceof Error ? error.message : String(error),
+      });
     }
 
     return {
@@ -450,7 +520,7 @@ function normaliseLabels(input: TemplateRow['rating_labels']): Record<string, st
     try {
       const parsed = JSON.parse(input);
       return normaliseLabels(parsed);
-    } catch (_error) {
+    } catch {
       return {};
     }
   }

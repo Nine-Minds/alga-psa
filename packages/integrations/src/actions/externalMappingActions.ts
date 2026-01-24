@@ -12,6 +12,11 @@ import { withAuth } from '@alga-psa/auth';
 import { Knex } from 'knex';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import type { IUserWithRoles } from '@alga-psa/types';
+import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
+import {
+  buildExternalMappingChangedPublishParams,
+  type TenantExternalEntityMappingRow,
+} from '../lib/externalMappingWorkflowEvents';
 
 const MAPPING_CACHE_TTL_MS = 30_000;
 
@@ -207,6 +212,7 @@ export const createExternalEntityMapping = withAuth(async (
     throw new Error('Forbidden: You do not have permission to manage accounting mappings.');
   }
 
+
   const {
     integration_type,
     alga_entity_type,
@@ -252,6 +258,23 @@ export const createExternalEntityMapping = withAuth(async (
     logger.info('External mapping created', {
       tenantId: tenant,
       mappingId: newMapping.id
+    });
+
+    const actor = user?.user_id
+      ? ({ actorType: 'USER', actorUserId: user.user_id } as const)
+      : ({ actorType: 'SYSTEM' } as const);
+
+    const changedAt = newMapping.updated_at ?? new Date().toISOString();
+    const { payload, idempotencyKey } = buildExternalMappingChangedPublishParams({
+      after: newMapping as unknown as TenantExternalEntityMappingRow,
+      changedAt,
+    });
+
+    await publishWorkflowEvent({
+      eventType: 'EXTERNAL_MAPPING_CHANGED',
+      payload,
+      ctx: { tenantId: tenant, occurredAt: changedAt, actor },
+      idempotencyKey,
     });
 
     invalidateTenantMappingCache(tenant);
@@ -310,25 +333,21 @@ export const updateExternalEntityMapping = withAuth(async (
   updatePayload.updated_at = new Date().toISOString();
 
   try {
-    const [updatedMapping] = await withTransaction(knex, async (trx: Knex.Transaction) => {
-      return await trx<ExternalEntityMapping>('tenant_external_entity_mappings')
-        .where({
-          id: mappingId,
-          tenant
-        })
+    const { before, after } = await withTransaction(knex, async (trx: Knex.Transaction) => {
+      const before = await trx<ExternalEntityMapping>('tenant_external_entity_mappings')
+        .where({ id: mappingId, tenant })
+        .first();
+
+      const [after] = await trx<ExternalEntityMapping>('tenant_external_entity_mappings')
+        .where({ id: mappingId, tenant })
         .update(updatePayload)
         .returning('*');
+
+      return { before: before ?? null, after: after ?? null };
     });
 
-    if (!updatedMapping) {
-      const exists = await withTransaction(knex, async (trx: Knex.Transaction) => {
-        return await trx<ExternalEntityMapping>('tenant_external_entity_mappings')
-          .select('id')
-          .where({ id: mappingId, tenant })
-          .first();
-      });
-
-      if (!exists) {
+    if (!after) {
+      if (!before) {
         throw new Error(
           `Mapping with ID ${mappingId} not found for the current tenant (${tenant}).`
         );
@@ -341,11 +360,29 @@ export const updateExternalEntityMapping = withAuth(async (
 
     logger.info('External mapping updated', {
       tenantId: tenant,
-      mappingId: updatedMapping.id
+      mappingId: after.id
+    });
+
+    const actor = user?.user_id
+      ? ({ actorType: 'USER', actorUserId: user.user_id } as const)
+      : ({ actorType: 'SYSTEM' } as const);
+
+    const changedAt = after.updated_at ?? updatePayload.updated_at;
+    const { payload, idempotencyKey } = buildExternalMappingChangedPublishParams({
+      before: before as unknown as TenantExternalEntityMappingRow | null,
+      after: after as unknown as TenantExternalEntityMappingRow,
+      changedAt,
+    });
+
+    await publishWorkflowEvent({
+      eventType: 'EXTERNAL_MAPPING_CHANGED',
+      payload,
+      ctx: { tenantId: tenant, occurredAt: changedAt, actor },
+      idempotencyKey,
     });
 
     invalidateTenantMappingCache(tenant);
-    return cloneMapping(updatedMapping);
+    return cloneMapping(after);
   } catch (error: unknown) {
     logger.error('Failed to update external mapping', {
       tenantId: tenant,
@@ -374,37 +411,54 @@ export const deleteExternalEntityMapping = withAuth(async (
   logger.info('Deleting external mapping', { tenantId: tenant, mappingId });
 
   try {
-    const deletedCount = await withTransaction(knex, async (trx: Knex.Transaction) => {
-      return await trx<ExternalEntityMapping>('tenant_external_entity_mappings')
-        .where({
-          id: mappingId,
-          tenant
-        })
+    const { before, deletedCount } = await withTransaction(knex, async (trx: Knex.Transaction) => {
+      const before = await trx<ExternalEntityMapping>('tenant_external_entity_mappings')
+        .where({ id: mappingId, tenant })
+        .first();
+
+      if (!before) {
+        return { before: null, deletedCount: 0 };
+      }
+
+      const deletedCount = await trx<ExternalEntityMapping>('tenant_external_entity_mappings')
+        .where({ id: mappingId, tenant })
         .del();
+
+      return { before, deletedCount };
     });
 
-    if (deletedCount === 0) {
-      const exists = await withTransaction(knex, async (trx: Knex.Transaction) => {
-        return await trx<ExternalEntityMapping>('tenant_external_entity_mappings')
-          .select('id')
-          .where({ id: mappingId, tenant })
-          .first();
-      });
-
-      if (!exists) {
+    if (!before) {
         logger.warn('External mapping delete requested for unknown id', {
           tenantId: tenant,
           mappingId
         });
         return;
-      }
+    }
 
-      throw new Error(
-        `Failed to delete mapping ID ${mappingId}. Record exists but deletion failed.`
-      );
+    if (deletedCount === 0) {
+      throw new Error(`Failed to delete mapping ID ${mappingId}. Record exists but deletion failed.`);
     }
 
     logger.info('External mapping deleted', { tenantId: tenant, mappingId });
+
+    const actor = user?.user_id
+      ? ({ actorType: 'USER', actorUserId: user.user_id } as const)
+      : ({ actorType: 'SYSTEM' } as const);
+
+    const changedAt = new Date().toISOString();
+    const { payload, idempotencyKey } = buildExternalMappingChangedPublishParams({
+      before: before as unknown as TenantExternalEntityMappingRow,
+      after: null,
+      changedAt,
+    });
+
+    await publishWorkflowEvent({
+      eventType: 'EXTERNAL_MAPPING_CHANGED',
+      payload,
+      ctx: { tenantId: tenant, occurredAt: changedAt, actor },
+      idempotencyKey,
+    });
+
     invalidateTenantMappingCache(tenant);
   } catch (error: unknown) {
     logger.error('Failed to delete external entity mapping', {

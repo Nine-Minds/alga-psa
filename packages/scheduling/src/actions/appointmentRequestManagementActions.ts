@@ -22,6 +22,11 @@ import {
 import { SystemEmailService } from '@alga-psa/email';
 import ScheduleEntry from '../models/scheduleEntry';
 import { publishEvent } from '@alga-psa/event-bus/publishers';
+import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
+import {
+  buildAppointmentAssignedPayload,
+  buildAppointmentCreatedPayload,
+} from '@shared/workflow/streams/domainEventBuilders/appointmentEventBuilders';
 import {
   getTenantSettings,
   generateICSLink,
@@ -528,6 +533,29 @@ export const approveAppointmentRequest = withAuth(async (
         } catch (eventError) {
           console.error('[AppointmentApproval] Failed to publish SCHEDULE_ENTRY_UPDATED event', eventError);
         }
+
+        try {
+          const ctx = {
+            tenantId: tenant,
+            actor: { actorType: 'USER' as const, actorUserId: user.user_id },
+          };
+          const previousAssigneeId = currentAssignee?.user_id;
+          const newAssigneeId = validatedData.assigned_user_id;
+          if (newAssigneeId && newAssigneeId !== previousAssigneeId) {
+            await publishWorkflowEvent({
+              eventType: 'APPOINTMENT_ASSIGNED',
+              ctx,
+              payload: buildAppointmentAssignedPayload({
+                appointmentId: request.schedule_entry_id,
+                ticketId: validatedData.ticket_id || request.ticket_id || undefined,
+                previousAssigneeId,
+                newAssigneeId,
+              }),
+            });
+          }
+        } catch (eventError) {
+          console.error('[AppointmentApproval] Failed to publish APPOINTMENT_ASSIGNED workflow event', eventError);
+        }
       } else {
         // Create new schedule entry (fallback for old requests)
         const scheduleEntryData = {
@@ -543,7 +571,7 @@ export const approveAppointmentRequest = withAuth(async (
           is_private: false
         };
 
-        scheduleEntry = await ScheduleEntry.create(trx, scheduleEntryData, {
+        scheduleEntry = await ScheduleEntry.create(trx, tenant, scheduleEntryData, {
           assignedUserIds: [validatedData.assigned_user_id]
         });
 
@@ -563,6 +591,36 @@ export const approveAppointmentRequest = withAuth(async (
           });
         } catch (eventError) {
           console.error('[AppointmentApproval] Failed to publish SCHEDULE_ENTRY_CREATED event', eventError);
+        }
+
+        try {
+          const ctx = {
+            tenantId: tenant,
+            actor: { actorType: 'USER' as const, actorUserId: user.user_id },
+          };
+
+          await publishWorkflowEvent({
+            eventType: 'APPOINTMENT_CREATED',
+            ctx,
+            payload: buildAppointmentCreatedPayload({
+              entry: scheduleEntry,
+              ticketId: validatedData.ticket_id || request.ticket_id || undefined,
+              timezone: 'UTC',
+              createdByUserId: user.user_id,
+            }),
+          });
+
+          await publishWorkflowEvent({
+            eventType: 'APPOINTMENT_ASSIGNED',
+            ctx,
+            payload: buildAppointmentAssignedPayload({
+              appointmentId: scheduleEntry.entry_id,
+              ticketId: validatedData.ticket_id || request.ticket_id || undefined,
+              newAssigneeId: validatedData.assigned_user_id,
+            }),
+          });
+        } catch (eventError) {
+          console.error('[AppointmentApproval] Failed to publish APPOINTMENT_CREATED/APPOINTMENT_ASSIGNED workflow events', eventError);
         }
       }
 

@@ -27,7 +27,7 @@ import {
 } from '../schemas/ticket.schema';
 import { z } from 'zod';
 import { validateData } from '@alga-psa/validation';
-import { publishEvent } from '@alga-psa/event-bus/publishers';
+import { publishEvent, publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import { getEventBus } from '@alga-psa/event-bus';
 import {
   TicketCreatedEvent,
@@ -41,6 +41,12 @@ import { TicketModelEventPublisher } from '../lib/adapters/TicketModelEventPubli
 import { TicketModelAnalyticsTracker } from '../lib/adapters/TicketModelAnalyticsTracker';
 import { calculateItilPriority } from '@alga-psa/tickets/lib/itilUtils';
 import { withAuth } from '@alga-psa/auth';
+import { buildTicketTransitionWorkflowEvents } from '../lib/workflowTicketTransitionEvents';
+import { buildTicketCommunicationWorkflowEvents } from '../lib/workflowTicketCommunicationEvents';
+import {
+  buildTicketResolutionSlaStageCompletionEvent,
+  buildTicketResolutionSlaStageEnteredEvent,
+} from '../lib/workflowTicketSlaStageEvents';
 
 // Email event channel constant - inlined to avoid circular dependency with notifications
 // Must match the value in @alga-psa/notifications/emailChannel
@@ -160,6 +166,27 @@ export const createTicketFromAsset = withAuth(async (user, { tenant }, data: Cre
 
             if (!fullTicket) {
                 throw new Error('Failed to retrieve created ticket');
+            }
+
+            const enteredSlaEvent = buildTicketResolutionSlaStageEnteredEvent({
+              tenantId: tenant,
+              ticketId: ticketResult.ticket_id,
+              itilPriorityLevel: fullTicket.itil_priority_level,
+              enteredAt: fullTicket.entered_at,
+            });
+            if (enteredSlaEvent) {
+              await publishWorkflowEvent({
+                eventType: enteredSlaEvent.eventType,
+                payload: enteredSlaEvent.payload,
+                ctx: {
+                  tenantId: tenant,
+                  actor: { actorType: 'USER' as const, actorUserId: user.user_id },
+                  occurredAt: (fullTicket.entered_at instanceof Date
+                    ? fullTicket.entered_at.toISOString()
+                    : fullTicket.entered_at) || new Date().toISOString(),
+                },
+                idempotencyKey: enteredSlaEvent.idempotencyKey,
+              });
             }
 
             return convertDates(fullTicket);
@@ -293,6 +320,27 @@ export const addTicket = withAuth(async (user, { tenant }, data: FormData): Prom
 
       if (!fullTicket) {
         throw new Error('Failed to retrieve created ticket');
+      }
+
+      const enteredSlaEvent = buildTicketResolutionSlaStageEnteredEvent({
+        tenantId: tenant,
+        ticketId: ticketResult.ticket_id,
+        itilPriorityLevel: fullTicket.itil_priority_level,
+        enteredAt: fullTicket.entered_at,
+      });
+      if (enteredSlaEvent) {
+        await publishWorkflowEvent({
+          eventType: enteredSlaEvent.eventType,
+          payload: enteredSlaEvent.payload,
+          ctx: {
+            tenantId: tenant,
+            actor: { actorType: 'USER' as const, actorUserId: user.user_id },
+            occurredAt: (fullTicket.entered_at instanceof Date
+              ? fullTicket.entered_at.toISOString()
+              : fullTicket.entered_at) || new Date().toISOString(),
+          },
+          idempotencyKey: enteredSlaEvent.idempotencyKey,
+        });
       }
 
       // Server-specific: Revalidate cache paths
@@ -513,7 +561,7 @@ export const updateTicket = withAuth(async (user, { tenant }, id: string, data: 
           });
         }
 
-        return updated;
+        updatedTicket = updated;
       } else {
         // Regular update without changing assignment
         const [updated] = await trx('tickets')
@@ -537,6 +585,51 @@ export const updateTicket = withAuth(async (user, { tenant }, id: string, data: 
           })
           .first() :
         oldStatus;
+
+      // Emit expanded domain transition events for workflow v2 triggers.
+      // These events are additive and emitted in addition to legacy TICKET_* events.
+      const occurredAt = new Date().toISOString();
+      const workflowCtx = {
+        tenantId: tenant,
+        actor: { actorType: 'USER' as const, actorUserId: user.user_id },
+        occurredAt,
+      };
+
+      const transitionEvents = buildTicketTransitionWorkflowEvents({
+        before: {
+          ticketId: id,
+          statusId: currentTicket.status_id,
+          priorityId: currentTicket.priority_id,
+          assignedTo: currentTicket.assigned_to,
+          boardId: currentTicket.board_id,
+          escalated: currentTicket.escalated,
+        },
+        after: {
+          ticketId: id,
+          statusId: updatedTicket.status_id,
+          priorityId: updatedTicket.priority_id,
+          assignedTo: updatedTicket.assigned_to,
+          boardId: updatedTicket.board_id,
+          escalated: updatedTicket.escalated,
+        },
+        ctx: {
+          occurredAt,
+          actorUserId: user.user_id,
+          previousStatusIsClosed: !!oldStatus?.is_closed,
+          newStatusIsClosed: !!newStatus?.is_closed,
+        },
+      });
+
+      for (const ev of transitionEvents) {
+        await publishWorkflowEvent({
+          eventType: ev.eventType,
+          payload: ev.payload,
+          ctx: workflowCtx,
+          eventName: ev.workflow?.eventName,
+          fromState: ev.workflow?.fromState,
+          toState: ev.workflow?.toState,
+        });
+      }
 
       // Build structured changes object with old/new values
       const structuredChanges: Record<string, any> = {};
@@ -628,15 +721,36 @@ export const updateTicket = withAuth(async (user, { tenant }, id: string, data: 
       // Publish appropriate event based on the update
       if (newStatus?.is_closed && !oldStatus?.is_closed) {
         // Ticket was closed
-        await publishEvent({
+        await publishWorkflowEvent({
           eventType: 'TICKET_CLOSED',
           payload: {
-            tenantId: tenant,
             ticketId: id,
             userId: user.user_id,
-            changes: structuredChanges
-          }
+            closedByUserId: user.user_id,
+            closedAt: occurredAt,
+            changes: structuredChanges,
+          },
+          ctx: workflowCtx,
+          eventName: 'Ticket Closed',
+          fromState: currentTicket.status_id,
+          toState: updatedTicket.status_id,
         });
+
+        const slaCompletionEvent = buildTicketResolutionSlaStageCompletionEvent({
+          tenantId: tenant,
+          ticketId: id,
+          itilPriorityLevel: currentTicket.itil_priority_level,
+          enteredAt: currentTicket.entered_at,
+          closedAt: occurredAt,
+        });
+        if (slaCompletionEvent) {
+          await publishWorkflowEvent({
+            eventType: slaCompletionEvent.eventType,
+            payload: slaCompletionEvent.payload,
+            ctx: workflowCtx,
+            idempotencyKey: slaCompletionEvent.idempotencyKey,
+          });
+        }
 
         // Track ticket resolved analytics
         captureAnalytics('ticket_resolved', {
@@ -648,15 +762,21 @@ export const updateTicket = withAuth(async (user, { tenant }, id: string, data: 
         }, user.user_id);
       } else if (updateData.assigned_to && updateData.assigned_to !== currentTicket.assigned_to) {
         // Ticket was assigned - userId should be the user being assigned, not the one making the update
-        await publishEvent({
+        await publishWorkflowEvent({
           eventType: 'TICKET_ASSIGNED',
           payload: {
-            tenantId: tenant,
             ticketId: id,
-            userId: updateData.assigned_to,  // The user being assigned to the ticket
-            assignedByUserId: user.user_id,  // The user who performed the assignment
-            changes: structuredChanges
-          }
+            userId: updateData.assigned_to, // Legacy: assigned user
+            assignedByUserId: user.user_id,
+            previousAssigneeId: currentTicket.assigned_to ?? undefined,
+            previousAssigneeType: currentTicket.assigned_to ? 'user' : undefined,
+            newAssigneeId: updateData.assigned_to,
+            newAssigneeType: 'user',
+            assignedAt: occurredAt,
+            changes: structuredChanges,
+          },
+          ctx: workflowCtx,
+          eventName: 'Ticket Assigned',
         });
 
         // Track ticket assignment analytics
@@ -667,14 +787,16 @@ export const updateTicket = withAuth(async (user, { tenant }, id: string, data: 
         }, user.user_id);
       } else {
         // Regular update
-        await publishEvent({
+        await publishWorkflowEvent({
           eventType: 'TICKET_UPDATED',
           payload: {
-            tenantId: tenant,
             ticketId: id,
             userId: user.user_id,
-            changes: structuredChanges
-          }
+            updatedByUserId: user.user_id,
+            changes: structuredChanges,
+          },
+          ctx: workflowCtx,
+          eventName: 'Ticket Updated',
         });
       }
 
@@ -975,13 +1097,42 @@ export const addTicketComment = withAuth(async (user, { tenant }, ticketId: stri
           ticketId: ticketId,
           userId: user.user_id,
           comment: {
-            id: newComment.id,
+            id: (newComment as any).comment_id ?? (newComment as any).id,
             content: comment,
             author: `${user.first_name} ${user.last_name}`,
             isInternal
           }
         }
       });
+
+      // Publish workflow v2 ticket message events (additive).
+      try {
+        const occurredAt = new Date().toISOString();
+        const workflowCtx = {
+          tenantId: tenant,
+          actor: { actorType: 'USER' as const, actorUserId: user.user_id },
+          occurredAt,
+          correlationId: (newComment as any).comment_id ?? (newComment as any).id,
+        };
+
+        const messageId = (newComment as any).comment_id ?? (newComment as any).id;
+        if (!messageId) return;
+        const createdAt = (newComment as any).created_at ?? occurredAt;
+        const events = buildTicketCommunicationWorkflowEvents({
+          ticketId,
+          messageId,
+          visibility: isInternal ? 'internal' : 'public',
+          author: { authorType: 'user', authorId: user.user_id },
+          channel: 'ui',
+          createdAt,
+        });
+
+        for (const ev of events) {
+          await publishWorkflowEvent({ eventType: ev.eventType, payload: ev.payload, ctx: workflowCtx });
+        }
+      } catch (eventError) {
+        console.error('[addTicketComment] Failed to publish workflow ticket message events:', eventError);
+      }
     });
   } catch (error) {
     console.error('Failed to add ticket comment:', error);

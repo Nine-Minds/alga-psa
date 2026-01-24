@@ -16,6 +16,7 @@ import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { withAuth, hasPermission } from '@alga-psa/auth';
 import { createTenantKnex } from '@/lib/db';
 import { auditLog } from '@/lib/logging/auditLog';
+import { publishWorkflowEvent } from 'server/src/lib/eventBus/publishers';
 import { createNinjaOneClient, disconnectNinjaOne } from '../../integrations/ninjaone';
 import { removeNinjaOneWebhook } from '../../integrations/ninjaone/webhooks/webhookRegistration';
 import type { SyncOptions } from '../../integrations/ninjaone/sync/syncEngine';
@@ -33,6 +34,7 @@ import {
   NinjaOneRegion,
   NinjaOneOAuthCredentials,
 } from '../../../interfaces/ninjaone.interfaces';
+import { buildIntegrationDisconnectedPayload } from '@shared/workflow/streams/domainEventBuilders/integrationConnectionEventBuilders';
 
 // Secret names for NinjaOne credentials
 const NINJAONE_CREDENTIALS_SECRET = 'ninjaone_credentials';
@@ -344,6 +346,35 @@ export const disconnectNinjaOneIntegration = withAuth(async (user, { tenant }): 
           settings: JSON.stringify(settings),
           updated_at: knex.fn.now(),
         });
+    }
+
+    // Emit workflow v2 integration disconnected event (best-effort)
+    if (existingIntegration?.integration_id) {
+      const disconnectedAt = new Date().toISOString();
+      try {
+        await publishWorkflowEvent({
+          eventType: 'INTEGRATION_DISCONNECTED',
+          payload: buildIntegrationDisconnectedPayload({
+            integrationId: existingIntegration.integration_id,
+            provider: 'ninjaone',
+            connectionId: existingIntegration.integration_id,
+            disconnectedAt,
+            disconnectedByUserId: user.user_id,
+            reason: 'user_requested',
+          }),
+          ctx: {
+            tenantId: tenant,
+            actor: { actorType: 'USER', actorUserId: user.user_id },
+            occurredAt: disconnectedAt,
+          },
+          idempotencyKey: `integration_disconnected:${tenant}:${existingIntegration.integration_id}:${disconnectedAt}`,
+        });
+      } catch (publishError) {
+        logger.warn('[NinjaOneActions] Failed to publish workflow INTEGRATION_DISCONNECTED event', {
+          tenant,
+          error: extractErrorInfo(publishError),
+        });
+      }
     }
 
     logger.info('[NinjaOneActions] Successfully disconnected NinjaOne', { tenant });

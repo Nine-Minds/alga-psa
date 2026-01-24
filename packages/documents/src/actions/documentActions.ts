@@ -34,6 +34,11 @@ import { deleteBlockContent } from './documentBlockContentActions';
 import { DocumentHandlerRegistry } from '@alga-psa/documents/handlers/DocumentHandlerRegistry';
 import { getEntityTypesForUser } from '../lib/documentPermissionUtils';
 import { generateDocumentPreviews } from '../lib/documentPreviewGenerator';
+import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
+import {
+  buildDocumentAssociatedPayload,
+  buildDocumentDetachedPayload,
+} from '@alga-psa/shared/workflow/streams/domainEventBuilders/documentAssociationEventBuilders';
 
 async function loadSharp() {
   try {
@@ -131,6 +136,13 @@ export const deleteDocument = withAuth(async (user, { tenant }, documentId: stri
 
     const { knex } = await createTenantKnex();
 
+    let detachedAssociations: Array<{
+      associationId: string;
+      documentId: string;
+      entityId: string;
+      entityType: string;
+    }> = [];
+
     // Use a single transaction for all database operations
     const result = await withTransaction(knex, async (trx: Knex.Transaction) => {
       // Get the document first to get the file_id
@@ -174,7 +186,18 @@ export const deleteDocument = withAuth(async (user, { tenant }, documentId: stri
           notes_document_id: null
         });
 
-      // Delete all associations
+      // Delete all associations (capture them for workflow events)
+      const existingAssociations = await trx('document_associations')
+        .where({ document_id: document.document_id, tenant })
+        .select('association_id', 'document_id', 'entity_id', 'entity_type');
+
+      detachedAssociations = existingAssociations.map((row: any) => ({
+        associationId: row.association_id,
+        documentId: row.document_id,
+        entityId: row.entity_id,
+        entityType: row.entity_type,
+      }));
+
       await DocumentAssociation.deleteByDocument(trx, document.document_id);
 
       // Delete the document record
@@ -182,6 +205,35 @@ export const deleteDocument = withAuth(async (user, { tenant }, documentId: stri
 
       return document;
     });
+
+    if (detachedAssociations.length > 0) {
+      const occurredAt = new Date().toISOString();
+      await Promise.all(
+        detachedAssociations.map(async (association) => {
+          try {
+            await publishWorkflowEvent({
+              eventType: 'DOCUMENT_DETACHED',
+              payload: buildDocumentDetachedPayload({
+                documentId: association.documentId,
+                entityType: association.entityType,
+                entityId: association.entityId,
+                detachedByUserId: user.user_id,
+                detachedAt: occurredAt,
+                reason: 'document_deleted',
+              }),
+              ctx: {
+                tenantId: tenant,
+                occurredAt,
+                actor: { actorType: 'USER', actorUserId: user.user_id },
+              },
+              idempotencyKey: `document_detached:${association.associationId}`,
+            });
+          } catch (eventError) {
+            console.error('[deleteDocument] Failed to publish DOCUMENT_DETACHED workflow event:', eventError);
+          }
+        })
+      );
+    }
 
     // Delete all associated files from storage (outside transaction)
     const filesToDelete: string[] = [];
@@ -421,7 +473,7 @@ export const associateDocumentWithClient = withAuth(async (user, { tenant }, inp
 
     const { knex } = await createTenantKnex();
 
-    return await withTransaction(knex, async (trx: Knex.Transaction) => {
+    const created = await withTransaction(knex, async (trx: Knex.Transaction) => {
       const association = await DocumentAssociation.create(trx, {
         ...input,
         entity_type: 'client',
@@ -430,6 +482,30 @@ export const associateDocumentWithClient = withAuth(async (user, { tenant }, inp
 
       return association;
     });
+
+    try {
+      const occurredAt = new Date().toISOString();
+      await publishWorkflowEvent({
+        eventType: 'DOCUMENT_ASSOCIATED',
+        payload: buildDocumentAssociatedPayload({
+          documentId: input.document_id,
+          entityType: 'client',
+          entityId: input.entity_id,
+          associatedByUserId: user.user_id,
+          associatedAt: occurredAt,
+        }),
+        ctx: {
+          tenantId: tenant,
+          occurredAt,
+          actor: { actorType: 'USER', actorUserId: user.user_id },
+        },
+        idempotencyKey: `document_associated:${created.association_id}`,
+      });
+    } catch (eventError) {
+      console.error('[associateDocumentWithClient] Failed to publish DOCUMENT_ASSOCIATED workflow event:', eventError);
+    }
+
+    return created;
   } catch (error) {
     console.error('Error associating document with client:', error);
     throw new Error('Failed to associate document with client');
@@ -537,7 +613,7 @@ export const associateDocumentWithContract = withAuth(async (user, { tenant }, i
 
     const { knex } = await createTenantKnex();
 
-    return await withTransaction(knex, async (trx: Knex.Transaction) => {
+    const created = await withTransaction(knex, async (trx: Knex.Transaction) => {
       const association = await DocumentAssociation.create(trx, {
         ...input,
         entity_type: 'contract',
@@ -546,6 +622,30 @@ export const associateDocumentWithContract = withAuth(async (user, { tenant }, i
 
       return association;
     });
+
+    try {
+      const occurredAt = new Date().toISOString();
+      await publishWorkflowEvent({
+        eventType: 'DOCUMENT_ASSOCIATED',
+        payload: buildDocumentAssociatedPayload({
+          documentId: input.document_id,
+          entityType: 'contract',
+          entityId: input.entity_id,
+          associatedByUserId: user.user_id,
+          associatedAt: occurredAt,
+        }),
+        ctx: {
+          tenantId: tenant,
+          occurredAt,
+          actor: { actorType: 'USER', actorUserId: user.user_id },
+        },
+        idempotencyKey: `document_associated:${created.association_id}`,
+      });
+    } catch (eventError) {
+      console.error('[associateDocumentWithContract] Failed to publish DOCUMENT_ASSOCIATED workflow event:', eventError);
+    }
+
+    return created;
   } catch (error) {
     console.error(error);
     throw new Error("Failed to associate document with contract");
@@ -567,7 +667,17 @@ export const removeDocumentFromContract = withAuth(async (user, { tenant }, asso
 
     const { knex } = await createTenantKnex();
 
-    return await withTransaction(knex, async (trx: Knex.Transaction) => {
+    const removed = await withTransaction(knex, async (trx: Knex.Transaction) => {
+      const existing = await trx('document_associations')
+        .where({
+          association_id: associationId,
+          tenant,
+          entity_type: 'contract'
+        })
+        .first();
+
+      if (!existing) return null;
+
       await trx('document_associations')
         .where({
           association_id: associationId,
@@ -575,7 +685,36 @@ export const removeDocumentFromContract = withAuth(async (user, { tenant }, asso
           entity_type: 'contract'
         })
         .delete();
+
+      return existing;
     });
+
+    if (removed) {
+      try {
+        const occurredAt = new Date().toISOString();
+        await publishWorkflowEvent({
+          eventType: 'DOCUMENT_DETACHED',
+          payload: buildDocumentDetachedPayload({
+            documentId: removed.document_id,
+            entityType: removed.entity_type,
+            entityId: removed.entity_id,
+            detachedByUserId: user.user_id,
+            detachedAt: occurredAt,
+            reason: 'manual_remove',
+          }),
+          ctx: {
+            tenantId: tenant,
+            occurredAt,
+            actor: { actorType: 'USER', actorUserId: user.user_id },
+          },
+          idempotencyKey: `document_detached:${associationId}`,
+        });
+      } catch (eventError) {
+        console.error('[removeDocumentFromContract] Failed to publish DOCUMENT_DETACHED workflow event:', eventError);
+      }
+    }
+
+    return;
   } catch (error) {
     console.error(error);
     throw new Error("Failed to remove document from contract");
@@ -1720,13 +1859,41 @@ export const createDocumentAssociations = withAuth(async (
       tenant
     }));
 
-    await withTransaction(db, async (trx: Knex.Transaction) => {
-      await Promise.all(
+    const created = await withTransaction(db, async (trx: Knex.Transaction) => {
+      return await Promise.all(
         associations.map((association): Promise<Pick<IDocumentAssociation, "association_id">> =>
           DocumentAssociation.create(trx, association)
         )
       );
     });
+
+    const occurredAt = new Date().toISOString();
+    await Promise.all(
+      created.map(async (row, index) => {
+        const association = associations[index];
+        if (!association) return;
+        try {
+          await publishWorkflowEvent({
+            eventType: 'DOCUMENT_ASSOCIATED',
+            payload: buildDocumentAssociatedPayload({
+              documentId: association.document_id,
+              entityType: association.entity_type,
+              entityId: association.entity_id,
+              associatedByUserId: user.user_id,
+              associatedAt: occurredAt,
+            }),
+            ctx: {
+              tenantId: tenant,
+              occurredAt,
+              actor: { actorType: 'USER', actorUserId: user.user_id },
+            },
+            idempotencyKey: `document_associated:${row.association_id}`,
+          });
+        } catch (eventError) {
+          console.error('[createDocumentAssociations] Failed to publish DOCUMENT_ASSOCIATED workflow event:', eventError);
+        }
+      })
+    );
 
     return { success: true };
   } catch (error) {
@@ -1751,7 +1918,7 @@ export const removeDocumentAssociations = withAuth(async (
 
     const { knex } = await createTenantKnex();
 
-    await withTransaction(knex, async (trx: Knex.Transaction) => {
+    const removed = await withTransaction(knex, async (trx: Knex.Transaction) => {
       let query = trx('document_associations')
         .where('entity_id', entity_id)
         .andWhere('entity_type', entity_type)
@@ -1761,8 +1928,39 @@ export const removeDocumentAssociations = withAuth(async (
         query = query.whereIn('document_id', document_ids);
       }
 
-      return await query.delete();
+      const rows = await query.clone().select('association_id', 'document_id');
+      await query.delete();
+      return rows;
     });
+
+    if (removed.length > 0) {
+      const occurredAt = new Date().toISOString();
+      await Promise.all(
+        removed.map(async (row: any) => {
+          try {
+            await publishWorkflowEvent({
+              eventType: 'DOCUMENT_DETACHED',
+              payload: buildDocumentDetachedPayload({
+                documentId: row.document_id,
+                entityType: entity_type,
+                entityId: entity_id,
+                detachedByUserId: user.user_id,
+                detachedAt: occurredAt,
+                reason: 'manual_remove',
+              }),
+              ctx: {
+                tenantId: tenant,
+                occurredAt,
+                actor: { actorType: 'USER', actorUserId: user.user_id },
+              },
+              idempotencyKey: `document_detached:${row.association_id}`,
+            });
+          } catch (eventError) {
+            console.error('[removeDocumentAssociations] Failed to publish DOCUMENT_DETACHED workflow event:', eventError);
+          }
+        })
+      );
+    }
 
     return { success: true };
   } catch (error) {
@@ -1797,6 +1995,13 @@ export const uploadDocument = withAuth(async (
     }
 
     const { knex } = await createTenantKnex();
+
+      let createdAssociations: Array<{
+        associationId: string;
+        documentId: string;
+        entityId: string;
+        entityType: string;
+      }> = [];
 
       // Extract file from FormData
       const fileData = file.get('file') as File;
@@ -1899,11 +2104,17 @@ export const uploadDocument = withAuth(async (
 
         // Create all associations
         if (associations.length > 0) {
-          await Promise.all(
+          const created = await Promise.all(
             associations.map((association): Promise<Pick<IDocumentAssociation, "association_id">> =>
               DocumentAssociation.create(trx, association)
             )
           );
+          createdAssociations = created.map((row, index) => ({
+            associationId: row.association_id,
+            documentId: associations[index]!.document_id,
+            entityId: associations[index]!.entity_id,
+            entityType: associations[index]!.entity_type,
+          }));
         }
 
         return {
@@ -1911,6 +2122,34 @@ export const uploadDocument = withAuth(async (
           document: documentWithId
         };
       });
+
+      if (createdAssociations.length > 0) {
+        const occurredAt = new Date().toISOString();
+        await Promise.all(
+          createdAssociations.map(async (association) => {
+            try {
+              await publishWorkflowEvent({
+                eventType: 'DOCUMENT_ASSOCIATED',
+                payload: buildDocumentAssociatedPayload({
+                  documentId: association.documentId,
+                  entityType: association.entityType,
+                  entityId: association.entityId,
+                  associatedByUserId: user.user_id,
+                  associatedAt: occurredAt,
+                }),
+                ctx: {
+                  tenantId: tenant,
+                  occurredAt,
+                  actor: { actorType: 'USER', actorUserId: user.user_id },
+                },
+                idempotencyKey: `document_associated:${association.associationId}`,
+              });
+            } catch (eventError) {
+              console.error('[uploadDocument] Failed to publish DOCUMENT_ASSOCIATED workflow event:', eventError);
+            }
+          })
+        );
+      }
 
       // Generate previews asynchronously (non-blocking)
       // This happens after the transaction completes and document is returned to user

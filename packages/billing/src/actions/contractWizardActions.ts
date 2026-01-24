@@ -7,6 +7,12 @@ import { v4 as uuidv4 } from 'uuid';
 import { createTenantKnex } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
+import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
+import {
+  buildContractCreatedPayload,
+  buildContractRenewalUpcomingPayload,
+  computeContractRenewalUpcoming,
+} from '@shared/workflow/streams/domainEventBuilders/contractEventBuilders';
 
 
 import ContractLine from '../models/contractLine';
@@ -638,7 +644,18 @@ export const createClientContractFromWizard = withAuth(async (
 
   const { knex } = await createTenantKnex();
 
-  return withTransaction(knex, async (trx: Knex.Transaction) => {
+  let createdForWorkflow: {
+    contractId: string;
+    clientId: string;
+    createdAt: string;
+    startDate: string;
+    endDate: string | null;
+    status: string;
+    actorUserId?: string;
+  } | null = null;
+  let renewalForWorkflow: { renewalAt: string; daysUntilRenewal: number } | null = null;
+
+  const result = await withTransaction(knex, async (trx: Knex.Transaction) => {
     if (!isBypass) {
       const canCreateBilling = hasPermission(user, 'billing', 'create');
       const canUpdateBilling = hasPermission(user, 'billing', 'update');
@@ -1087,6 +1104,20 @@ export const createClientContractFromWizard = withAuth(async (
       template_contract_id: submission.template_id ?? null,
     });
 
+    createdForWorkflow = {
+      contractId,
+      clientId: submission.client_id,
+      createdAt: now.toISOString(),
+      startDate,
+      endDate,
+      status: isDraft ? 'draft' : 'active',
+      actorUserId: typeof user?.user_id === 'string' ? user.user_id : undefined,
+    };
+
+    renewalForWorkflow = endDate
+      ? computeContractRenewalUpcoming({ renewalAt: endDate, now: now.toISOString() })
+      : null;
+
     // NOTE: The legacy replicateContractLinesToClient call has been removed.
     // The client_contract_lines, client_contract_services, and related tables are
     // redundant since contracts are already client-specific via client_contracts.
@@ -1098,6 +1129,61 @@ export const createClientContractFromWizard = withAuth(async (
       contract_line_ids: createdContractLineIds,
     };
   });
+
+  if (createdForWorkflow) {
+    const wfData: {
+      contractId: string;
+      clientId: string;
+      createdAt: string;
+      startDate: string;
+      endDate: string | null;
+      status: string;
+      actorUserId?: string;
+    } = createdForWorkflow;
+    await publishWorkflowEvent({
+      eventType: 'CONTRACT_CREATED',
+      payload: buildContractCreatedPayload({
+        contractId: wfData.contractId,
+        clientId: wfData.clientId,
+        createdByUserId: wfData.actorUserId,
+        createdAt: wfData.createdAt,
+        startDate: wfData.startDate,
+        endDate: wfData.endDate,
+        status: wfData.status,
+      }),
+      ctx: {
+        tenantId: tenant,
+        occurredAt: wfData.createdAt,
+        actor: wfData.actorUserId
+          ? { actorType: 'USER' as const, actorUserId: wfData.actorUserId }
+          : undefined,
+      },
+      idempotencyKey: `contract_created:${wfData.contractId}:${wfData.clientId}`,
+    });
+
+    if (renewalForWorkflow) {
+      const renewal: { renewalAt: string; daysUntilRenewal: number } = renewalForWorkflow;
+      await publishWorkflowEvent({
+        eventType: 'CONTRACT_RENEWAL_UPCOMING',
+        payload: buildContractRenewalUpcomingPayload({
+          contractId: wfData.contractId,
+          clientId: wfData.clientId,
+          renewalAt: renewal.renewalAt,
+          daysUntilRenewal: renewal.daysUntilRenewal,
+        }),
+        ctx: {
+          tenantId: tenant,
+          occurredAt: wfData.createdAt,
+          actor: wfData.actorUserId
+            ? { actorType: 'USER' as const, actorUserId: wfData.actorUserId }
+            : undefined,
+        },
+        idempotencyKey: `contract_renewal_upcoming:${wfData.contractId}:${wfData.clientId}:${renewal.renewalAt}`,
+      });
+    }
+  }
+
+  return result;
 });
 
 // ---------------------------------------------------------------------------
