@@ -764,4 +764,39 @@ describe('Drafts tab DataTable', () => {
 
     expect(deleteContract).not.toHaveBeenCalled();
   });
+
+  it('clicking Discard calls deleteContract action (T056)', async () => {
+    mockDraftContracts = [
+      {
+        contract_id: 'contract-1',
+        contract_name: 'Draft Alpha',
+        client_name: 'Acme Co',
+        created_at: new Date(2026, 0, 1),
+        updated_at: new Date(2026, 0, 2),
+      },
+    ];
+
+    const { deleteContract } = await import('@alga-psa/billing/actions/contractActions');
+
+    const Contracts = (await import('../src/components/billing-dashboard/contracts/Contracts')).default;
+    render(<Contracts />);
+
+    await screen.findByText('Draft Alpha');
+
+    const user = userEvent.setup();
+    await act(async () => {
+      await user.click(await screen.findByRole('button', { name: /open menu/i }));
+    });
+    await act(async () => {
+      await user.click(await screen.findByText('Discard'));
+    });
+
+    await act(async () => {
+      await user.click(screen.getByRole('button', { name: 'Discard' }));
+    });
+
+    await waitFor(() => {
+      expect(deleteContract).toHaveBeenCalledWith('contract-1');
+    });
+  });
 });

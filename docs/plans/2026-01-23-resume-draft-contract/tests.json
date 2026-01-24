@@ -332,7 +332,7 @@
   {
     "id": "T056",
     "description": "Clicking Discard calls deleteContract action",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F022"]
   },
   {
