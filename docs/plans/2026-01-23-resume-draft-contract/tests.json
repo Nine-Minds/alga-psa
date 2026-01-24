@@ -2,7 +2,7 @@
   {
     "id": "T001",
     "description": "Contracts page renders three tabs: Templates, Client Contracts, Drafts",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F001"]
   },
   {

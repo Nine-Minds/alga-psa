@@ -114,6 +114,10 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - Run billing package tests: `npm test -w packages/billing`
 - Run server dev: `npm run dev -w server`
 
+- (2026-01-24) Tests:
+  - Added `packages/billing/tests/contractsTabs.test.ts` to assert the contracts tabs config includes Templates / Client Contracts / Drafts.
+  - Extracted tab label mapping into `packages/billing/src/components/billing-dashboard/contracts/contractsTabs.ts` for unit testing without DOM.
+
 ## Links / References
 
 - PRD: [./PRD.md](./PRD.md)

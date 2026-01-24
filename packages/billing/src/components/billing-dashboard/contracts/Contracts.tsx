@@ -35,34 +35,19 @@ import {
 import { ContractWizard } from './ContractWizard';
 import { TemplateWizard } from './template-wizard/TemplateWizard';
 import { ContractDialog } from './ContractDialog';
-
-type ContractSubTab = 'templates' | 'client-contracts' | 'drafts';
+import {
+  CONTRACT_LABEL_TO_SUBTAB,
+  CONTRACT_SUBTAB_LABELS,
+  normalizeContractSubtab,
+  type ContractSubTab,
+} from './contractsTabs';
 
 const Contracts: React.FC = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
 
   // Get active sub-tab from URL or default to 'templates'
-  const activeSubTab: ContractSubTab = (() => {
-    const raw = searchParams?.get('subtab');
-    if (raw === 'client-contracts' || raw === 'drafts' || raw === 'templates') {
-      return raw;
-    }
-    return 'templates';
-  })();
-
-  // Map URL subtab values to CustomTabs label values
-  const subtabToLabel: Record<ContractSubTab, string> = {
-    templates: 'Templates',
-    'client-contracts': 'Client Contracts',
-    drafts: 'Drafts',
-  };
-
-  const labelToSubtab: Record<string, ContractSubTab> = {
-    Templates: 'templates',
-    'Client Contracts': 'client-contracts',
-    Drafts: 'drafts',
-  };
+  const activeSubTab = normalizeContractSubtab(searchParams?.get('subtab'));
 
   const [templateContracts, setTemplateContracts] = useState<IContract[]>([]);
   const [clientContracts, setClientContracts] = useState<IContractWithClient[]>([]);
@@ -760,9 +745,9 @@ const renderStatusBadge = (status: string) => {
           ) : (
             <CustomTabs
               tabs={tabs}
-              defaultTab={subtabToLabel[activeSubTab]}
+              defaultTab={CONTRACT_SUBTAB_LABELS[activeSubTab]}
               onTabChange={(tab) => {
-                const targetSubtab = labelToSubtab[tab] || tab.toLowerCase();
+                const targetSubtab = CONTRACT_LABEL_TO_SUBTAB[tab] || tab.toLowerCase();
 
                 if (targetSubtab === activeSubTab) {
                   return;
