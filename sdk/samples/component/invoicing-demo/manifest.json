@@ -1,0 +1,22 @@
+{
+  "name": "com.alga.sample.invoicing-demo",
+  "publisher": "Alga",
+  "version": "0.1.0",
+  "runtime": "wasm-js@1",
+  "capabilities": ["cap:invoice.manual.create", "cap:log.emit", "cap:context.read"],
+  "ui": {
+    "type": "iframe",
+    "entry": "ui/index.html",
+    "hooks": {
+      "appMenu": { "label": "Invoicing Demo" }
+    }
+  },
+  "api": {
+    "endpoints": [
+      { "method": "GET", "path": "/api/status", "handler": "dist/main" },
+      { "method": "POST", "path": "/api/create-manual-invoice", "handler": "dist/main" }
+    ]
+  },
+  "assets": ["ui/**/*"]
+}
+

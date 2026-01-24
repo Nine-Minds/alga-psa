@@ -1,0 +1,104 @@
+[
+  {
+    "id": "F001",
+    "description": "Define capability string cap:invoice.manual.create",
+    "implemented": true,
+    "prdRefs": ["PRD#Capability"]
+  },
+  {
+    "id": "F002",
+    "description": "Add cap:invoice.manual.create to KNOWN_PROVIDER_CAPABILITIES",
+    "implemented": true,
+    "prdRefs": ["PRD#Capability"]
+  },
+  {
+    "id": "F003",
+    "description": "Capability is not in DEFAULT_PROVIDER_CAPABILITIES (must be explicitly granted)",
+    "implemented": true,
+    "prdRefs": ["PRD#Capability"]
+  },
+  {
+    "id": "F004",
+    "description": "Manifest validation accepts cap:invoice.manual.create in capabilities",
+    "implemented": true,
+    "prdRefs": ["PRD#Capability"]
+  },
+  {
+    "id": "F005",
+    "description": "Add InvoicingHost + types to sdk/extension-runtime HostBindings",
+    "implemented": true,
+    "prdRefs": ["PRD#Host bindings (TypeScript SDK)"]
+  },
+  {
+    "id": "F006",
+    "description": "Add invoicing interface and invoicing types to WIT world (ee/runner/wit/extension-runner.wit)",
+    "implemented": true,
+    "prdRefs": ["PRD#Host bindings (TypeScript SDK)"]
+  },
+  {
+    "id": "F007",
+    "description": "Add cap constant for invoicing to ee/runner/src/providers/mod.rs",
+    "implemented": true,
+    "prdRefs": ["PRD#Capability"]
+  },
+  {
+    "id": "F008",
+    "description": "Runner blocks invoicing host calls unless cap:invoice.manual.create is granted",
+    "implemented": true,
+    "prdRefs": ["PRD#Runner ↔ Server internal API"]
+  },
+  {
+    "id": "F009",
+    "description": "Implement runner invoicing host binding that calls server internal endpoint /api/internal/ext-invoicing/install/{installId}",
+    "implemented": true,
+    "prdRefs": ["PRD#Runner ↔ Server internal API"]
+  },
+  {
+    "id": "F010",
+    "description": "Add server-side invoicing host module (ee/server/src/lib/extensions/invoicingHostApi.ts) implementing createManualInvoice scoped to install tenant",
+    "implemented": true,
+    "prdRefs": ["PRD#Data / Integration Notes"]
+  },
+  {
+    "id": "F011",
+    "description": "Add internal Next.js route ee/server/src/app/api/internal/ext-invoicing/install/[installId]/route.ts that authenticates runner and dispatches operations",
+    "implemented": true,
+    "prdRefs": ["PRD#Runner ↔ Server internal API"]
+  },
+  {
+    "id": "F012",
+    "description": "Decide and implement authorization model (capability-only vs user-required) for invoice creation",
+    "implemented": true,
+    "prdRefs": ["PRD#User attribution + permissions (decision needed)"]
+  },
+  {
+    "id": "F013",
+    "description": "Map server invoicing errors into stable, structured CreateManualInvoiceResult errors for extensions",
+    "implemented": true,
+    "prdRefs": ["PRD#Host bindings (TypeScript SDK)"]
+  },
+  {
+    "id": "F016",
+    "description": "Support manual invoice header fields (invoiceDate, dueDate, poNumber) in the host API input and persistence",
+    "implemented": true,
+    "prdRefs": ["PRD#Host bindings (TypeScript SDK)"]
+  },
+  {
+    "id": "F014",
+    "description": "Update sdk/docs with an invoicing host API guide and example usage",
+    "implemented": true,
+    "prdRefs": ["PRD#Flow: Create a manual invoice from an extension UI"]
+  },
+  {
+    "id": "F015",
+    "description": "Update ee/docs/extension-system docs to list the new invoicing capability and host namespace",
+    "implemented": true,
+    "prdRefs": ["PRD#Summary"]
+  },
+  {
+    "id": "F017",
+    "description": "Add SDK sample extension (sdk/samples/component/invoicing-demo) demonstrating creating a draft manual invoice from an extension UI",
+    "implemented": true,
+    "prdRefs": ["PRD#Flow: Create a manual invoice from an extension UI"]
+  }
+]

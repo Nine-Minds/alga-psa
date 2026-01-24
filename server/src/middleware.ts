@@ -119,6 +119,9 @@ const _middleware = auth((request) => {
       '/api/ext-proxy/',
       '/api/ext-debug/',  // Extension debug stream uses session auth
       '/api/internal/ext-storage/',  // Runner storage API uses x-runner-auth token
+      '/api/internal/ext-runner/',   // Runner install-config/registry API uses x-runner-auth token
+      '/api/internal/ext-scheduler/', // Runner scheduler host API uses x-runner-auth token
+      '/api/internal/ext-invoicing/', // Runner invoicing host API uses x-runner-auth token
     ];
 
     // Log for debugging CORS issues

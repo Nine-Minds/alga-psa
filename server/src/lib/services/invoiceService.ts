@@ -8,9 +8,9 @@ import { InvoiceViewModel, IInvoiceCharge as ManualInvoiceItem, NetAmountItem, D
 import { IBillingCharge, IFixedPriceCharge, IService, TransactionType } from 'server/src/interfaces/billing.interfaces'; // Added import
 import { IClientWithLocation } from 'server/src/interfaces/client.interfaces';
 import { Knex } from 'knex';
-import { Session } from 'next-auth';
+import type { Session } from 'next-auth';
 import { ISO8601String } from 'server/src/types/types.d';
-import { getClientDefaultTaxRegionCode } from '@alga-psa/clients/actions'; // Import the new lookup function
+import { getClientDefaultTaxRegionCode } from '@alga-psa/clients/actions';
 import { getSession } from 'server/src/lib/auth/getSession';
 
 // Helper interface for tax calculation
@@ -32,6 +32,7 @@ interface InvoiceContext {
 }
 
 export async function validateSessionAndTenant(): Promise<InvoiceContext> {
+  const { getSession } = await import('server/src/lib/auth/getSession');
   const session = await getSession();
   if (!session?.user?.id) {
     throw new Error('Unauthorized');

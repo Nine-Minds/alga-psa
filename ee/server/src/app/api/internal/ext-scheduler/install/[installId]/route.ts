@@ -173,7 +173,9 @@ export async function POST(
     ensureRunnerAuth(req);
     const installId = await resolveInstallIdFromParamsOrUrl(ctx.params, req.url);
 
-    const raw = await req.json();
+    const raw = await req.json().catch(() => {
+      throw new SchedulerApiError('VALIDATION_FAILED', 'Invalid JSON body');
+    });
     const base = baseSchema.parse(raw);
 
     // Apply rate limiting for mutating operations
