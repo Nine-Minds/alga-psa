@@ -362,3 +362,10 @@ curl -X POST localhost:3000/api/chat/stream/chat \
   - File: `server/src/test/unit/layout/DefaultLayout.sidebarChatShortcut.test.tsx`
 - Validation: `npx vitest run server/src/test/unit/layout/DefaultLayout.sidebarChatShortcut.test.tsx`
 - Next test item: T024 RightSidebar chat is hidden when aiAssistant is disabled
+
+### 2026-01-24 (cont.)
+- Implemented T024 (unit test):
+  - Verifies `DefaultLayout` does not render `RightSidebar` when `aiAssistant` is disabled.
+  - File: `server/src/test/unit/layout/DefaultLayout.sidebarChatShortcut.test.tsx`
+- Validation: `npx vitest run server/src/test/unit/layout/DefaultLayout.sidebarChatShortcut.test.tsx`
+- Next test item: T025 Sidebar Chat works normally when aiAssistant is enabled

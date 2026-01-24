@@ -140,7 +140,7 @@
   {
     "id": "T024",
     "description": "RightSidebar chat is hidden when aiAssistant is disabled",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F012"]
   },
   {

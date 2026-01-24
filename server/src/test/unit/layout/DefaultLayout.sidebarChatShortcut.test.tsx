@@ -71,8 +71,6 @@ describe('DefaultLayout sidebar chat shortcut gating', () => {
       expect(isExperimentalFeatureEnabled).toHaveBeenCalledWith('aiAssistant');
     });
 
-    expect(screen.queryByTestId('right-sidebar')).not.toBeInTheDocument();
-
     const metaEvent = new KeyboardEvent('keydown', { key: 'l', metaKey: true });
     const metaPreventDefaultSpy = vi.spyOn(metaEvent, 'preventDefault');
     act(() => {
@@ -87,5 +85,27 @@ describe('DefaultLayout sidebar chat shortcut gating', () => {
     });
     expect(ctrlPreventDefaultSpy).not.toHaveBeenCalled();
   });
-});
 
+  it('does not render the RightSidebar when aiAssistant is disabled', async () => {
+    vi.mocked(isExperimentalFeatureEnabled).mockResolvedValueOnce(false);
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: false,
+        json: async () => ({}),
+      })
+    );
+
+    render(
+      <DefaultLayout>
+        <div>content</div>
+      </DefaultLayout>
+    );
+
+    await waitFor(() => {
+      expect(isExperimentalFeatureEnabled).toHaveBeenCalledWith('aiAssistant');
+    });
+
+    expect(screen.queryByTestId('right-sidebar')).not.toBeInTheDocument();
+  });
+});
