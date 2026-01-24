@@ -140,7 +140,7 @@
   {
     "id": "F024",
     "description": "All draft queries filter by tenant for multi-tenant isolation",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR5"]
   },
   {

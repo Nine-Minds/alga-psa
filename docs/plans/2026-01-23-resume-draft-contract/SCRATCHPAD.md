@@ -101,6 +101,10 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 
 - (2026-01-24) Drafts list refreshes after discard by calling `fetchContracts()` (badge count updates too).
 
+- (2026-01-24) Draft queries are tenant-scoped:
+  - `getDraftContracts()` and `getDraftContractForResume()` filter by `{ tenant }`
+  - Draft updates via `createClientContractFromWizard()` update path are tenant-scoped
+
 ## Commands / Runbooks
 
 - Run billing package tests: `npm test -w packages/billing`
