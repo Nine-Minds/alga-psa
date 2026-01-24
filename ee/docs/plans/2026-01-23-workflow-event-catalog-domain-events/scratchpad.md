@@ -594,6 +594,10 @@ Implication: we should standardize on `@alga-psa/event-bus/publishers` helpers f
     - Parses `event-proposals.md`, derives `payload.*.v1` refs, asserts `schemaRegistry.has(ref)`, and validates an auto-generated example payload per ref.
     - `shared/workflow/runtime/__tests__/payloadSchemaExamples.test.ts`
 
+- 2026-01-24: Completed `T003` (event bus schema coverage):
+  - Existing test asserts `EVENT_TYPES` ↔ `EventTypeEnum` alignment and that every event type has a payload schema mapping:
+    - `shared/workflow/streams/__tests__/eventBusSchema.expandedEvents.test.ts`
+
 ## Suggested Phasing (to reduce risk)
 
 Phase 1 (authoritative CRUD/state transitions; low provider dependency):

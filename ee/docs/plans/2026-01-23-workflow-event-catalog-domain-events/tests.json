@@ -1,7 +1,7 @@
 [
   { "id": "T001", "description": "Standards: new payload schemas follow the conventions in PRD §6 (tenantId required; transitions have previous/new; mutation events include updatedFields/changes)", "implemented": true, "featureIds": ["F001", "F003"] },
   { "id": "T002", "description": "Schema registry: every catalog event with payload_schema_ref resolves via schema registry (no 404) and validates example payloads", "implemented": true, "featureIds": ["F003", "F006", "F005"] },
-  { "id": "T003", "description": "Event bus schema: every expanded event_type is accepted by the event bus schema/types and maps to a payload schema", "implemented": false, "featureIds": ["F004"] },
+  { "id": "T003", "description": "Event bus schema: every expanded event_type is accepted by the event bus schema/types and maps to a payload schema", "implemented": true, "featureIds": ["F004"] },
   { "id": "T004", "description": "Catalog migration: system_event_catalog contains entries (category/name/description/payload_schema_ref) for all events listed in event-proposals.md", "implemented": false, "featureIds": ["F005"] },
   { "id": "T005", "description": "Simulator: form-mode builder renders for each new catalog event and rejects invalid payloads with schema validation errors", "implemented": false, "featureIds": ["F006", "F003"] },
   { "id": "T006", "description": "Overlap handling: ticket message/comment and appointment/schedule-entry overlap decisions are encoded and documented (no duplicate/ambiguous triggers)", "implemented": false, "featureIds": ["F004", "F012", "F020"] },
