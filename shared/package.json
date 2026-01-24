@@ -71,7 +71,6 @@
     "zod-to-json-schema": "^3.24.6"
   },
   "devDependencies": {
-    "@auth/core": "^0.41.0",
     "@types/node": "^20.0.0",
     "@types/turndown": "^5.0.6",
     "@types/uuid": "^9.0.7",

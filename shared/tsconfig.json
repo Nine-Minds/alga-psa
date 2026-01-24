@@ -19,9 +19,7 @@
       "@shared/lib/*": ["./lib/*"],
       "@alga-psa/shared/*": ["./*"],
       "next-auth": ["../node_modules/next-auth"],
-      "next-auth/*": ["../node_modules/next-auth/*"],
-      "@auth/core": ["../node_modules/@auth/core"],
-      "@auth/core/*": ["../node_modules/@auth/core/*"]
+      "next-auth/*": ["../node_modules/next-auth/*"]
     }
   },
   "include": ["**/*.ts", "**/*.tsx", "**/*.js", "**/*.jsx", "**/*.d.ts", "lib/**/*.ts"],
