@@ -199,4 +199,40 @@ describe('tenantSettingsActions.updateExperimentalFeatures', () => {
     expect(knexOnConflictMock).toHaveBeenCalledWith('tenant');
     expect(knexMergeMock).toHaveBeenCalledTimes(1);
   });
+
+  it('merges with existing settings without overwriting other keys', async () => {
+    tenantSettingsRow = {
+      settings: {
+        analytics: {
+          enabled: true,
+          sampleRate: 0.5,
+        },
+        experimentalFeatures: {
+          aiAssistant: false,
+        },
+      },
+    };
+
+    const { updateExperimentalFeatures } = await import(
+      '../../../../packages/tenancy/src/actions/tenant-settings-actions/tenantSettingsActions'
+    );
+
+    await expect(
+      updateExperimentalFeatures({ aiAssistant: true })
+    ).resolves.toBeUndefined();
+
+    expect(knexInsertMock).toHaveBeenCalledTimes(1);
+    const [insertArg] = knexInsertMock.mock.calls[0] ?? [];
+    const parsedSettings = JSON.parse(insertArg.settings);
+
+    expect(parsedSettings).toEqual({
+      analytics: {
+        enabled: true,
+        sampleRate: 0.5,
+      },
+      experimentalFeatures: {
+        aiAssistant: true,
+      },
+    });
+  });
 });

@@ -20,7 +20,7 @@
   {
     "id": "T004",
     "description": "updateExperimentalFeatures() merges with existing settings without overwriting other keys",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F002"]
   },
   {

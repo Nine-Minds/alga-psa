@@ -218,3 +218,10 @@ curl -X POST localhost:3000/api/chat/stream/chat \
   - File: `server/src/test/unit/tenantSettingsActions.experimentalFeatures.test.ts`
 - Validation: `npx vitest run server/src/test/unit/tenantSettingsActions.experimentalFeatures.test.ts`
 - Next test item: T004 updateExperimentalFeatures() merges with existing settings without overwriting other keys
+
+### 2026-01-24 (cont.)
+- Implemented T004 (unit test):
+  - Verifies `updateExperimentalFeatures()` preserves unrelated `tenant_settings.settings` keys (e.g. `analytics`) while updating `experimentalFeatures`.
+  - File: `server/src/test/unit/tenantSettingsActions.experimentalFeatures.test.ts`
+- Validation: `npx vitest run server/src/test/unit/tenantSettingsActions.experimentalFeatures.test.ts`
+- Next test item: T005 updateExperimentalFeatures() requires settings:update permission
