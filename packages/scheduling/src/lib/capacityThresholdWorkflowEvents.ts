@@ -1,12 +1,21 @@
 import type { Knex } from 'knex';
 import type { IScheduleEntry } from '@alga-psa/types';
-import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
+import { publishWorkflowEvent as publishWorkflowEventDefault } from '@alga-psa/event-bus/publishers';
 import { buildCapacityThresholdReachedPayload } from '@shared/workflow/streams/domainEventBuilders/capacityThresholdEventBuilders';
 import { didCrossThreshold, getOverlapHoursForUtcDate, getUtcDatesOverlappedByInterval, utcStartOfDayIso } from './capacityThresholdMath';
 
 function round2(value: number): number {
   return Math.round(value * 100) / 100;
 }
+
+type CapacityThresholdDeps = {
+  now: () => Date;
+  publishWorkflowEvent: typeof publishWorkflowEventDefault;
+  getTeamIdsForUsers: typeof getTeamIdsForUsers;
+  getTeamMembershipForUsers: typeof getTeamMembershipForUsers;
+  getTeamDailyCapacityLimitHours: typeof getTeamDailyCapacityLimitHours;
+  getTeamDailyBookedHours: typeof getTeamDailyBookedHours;
+};
 
 async function getTeamIdsForUsers(db: Knex, tenant: string, userIds: string[]): Promise<string[]> {
   if (userIds.length === 0) return [];
@@ -104,16 +113,27 @@ export async function maybePublishCapacityThresholdReached(params: {
   actorUserId: string;
   before?: Pick<IScheduleEntry, 'scheduled_start' | 'scheduled_end' | 'assigned_user_ids'>;
   after?: Pick<IScheduleEntry, 'scheduled_start' | 'scheduled_end' | 'assigned_user_ids'>;
+  __deps?: Partial<CapacityThresholdDeps>;
 }): Promise<void> {
+  const deps: CapacityThresholdDeps = {
+    now: () => new Date(),
+    publishWorkflowEvent: publishWorkflowEventDefault,
+    getTeamIdsForUsers,
+    getTeamMembershipForUsers,
+    getTeamDailyCapacityLimitHours,
+    getTeamDailyBookedHours,
+    ...params.__deps,
+  };
+
   const beforeAssignees = params.before?.assigned_user_ids ?? [];
   const afterAssignees = params.after?.assigned_user_ids ?? [];
   const impactedUserIds = Array.from(new Set([...beforeAssignees, ...afterAssignees]));
   if (impactedUserIds.length === 0) return;
 
-  const teamIds = await getTeamIdsForUsers(params.db, params.tenantId, impactedUserIds);
+  const teamIds = await deps.getTeamIdsForUsers(params.db, params.tenantId, impactedUserIds);
   if (teamIds.length === 0) return;
 
-  const membership = await getTeamMembershipForUsers(params.db, params.tenantId, teamIds, impactedUserIds);
+  const membership = await deps.getTeamMembershipForUsers(params.db, params.tenantId, teamIds, impactedUserIds);
 
   const beforeHoursByDate = params.before ? getEntryDatesAndOverlapHours(params.before) : new Map<string, number>();
   const afterHoursByDate = params.after ? getEntryDatesAndOverlapHours(params.after) : new Map<string, number>();
@@ -124,14 +144,14 @@ export async function maybePublishCapacityThresholdReached(params: {
     const members = membership.get(teamId) ?? new Set<string>();
     if (members.size === 0) continue;
 
-    const capacityLimit = await getTeamDailyCapacityLimitHours(params.db, params.tenantId, teamId);
+    const capacityLimit = await deps.getTeamDailyCapacityLimitHours(params.db, params.tenantId, teamId);
     if (capacityLimit <= 0) continue;
 
     const beforeCount = beforeAssignees.filter((id) => members.has(id)).length;
     const afterCount = afterAssignees.filter((id) => members.has(id)).length;
 
     for (const date of impactedDates) {
-      const currentBooked = await getTeamDailyBookedHours(params.db, params.tenantId, teamId, date);
+      const currentBooked = await deps.getTeamDailyBookedHours(params.db, params.tenantId, teamId, date);
 
       const beforeEntryHours = (beforeHoursByDate.get(date) ?? 0) * beforeCount;
       const afterEntryHours = (afterHoursByDate.get(date) ?? 0) * afterCount;
@@ -151,7 +171,7 @@ export async function maybePublishCapacityThresholdReached(params: {
           idempotencyKey: `capacity-threshold-reached:${teamId}:${date}`,
         };
 
-        await publishWorkflowEvent({
+        await deps.publishWorkflowEvent({
           eventType: 'CAPACITY_THRESHOLD_REACHED',
           ctx,
           payload: buildCapacityThresholdReachedPayload({
@@ -159,7 +179,7 @@ export async function maybePublishCapacityThresholdReached(params: {
             date,
             capacityLimit: round2(capacityLimit),
             currentBooked: round2(currentBooked),
-            triggeredAt: new Date().toISOString(),
+            triggeredAt: deps.now().toISOString(),
           }),
         });
       }

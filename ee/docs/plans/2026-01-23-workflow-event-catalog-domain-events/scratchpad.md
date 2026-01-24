@@ -694,3 +694,11 @@ Phase 3 (feature dependent / optional modules):
 - `npm run test:nx` currently fails on `tools/nx-tests/editionSwapping.test.ts` (CE alias `ee` resolves to `packages/ee/src` instead of `server/src/empty`). This appears unrelated to workflow event changes; use targeted vitest runs for verification until fixed.
 - Some older unit tests import deep, non-exported subpaths (e.g. `@alga-psa/projects/actions/projectActions`) and fail under Vite import-analysis with `Missing "./actions/projectActions" specifier...`; use source-relative imports in tests or prefer shared-schema-level tests until package exports are updated.
 - `npx tsc -p ee/server/tsconfig.json --noEmit` currently fails with a pre-existing type error in `shared/workflow/runtime/actions/registerEmailWorkflowActions.ts` (`messageId` required vs optional mismatch).
+
+## Work Log (continued)
+
+- 2026-01-24: Completed `T023` (capacity thresholds coverage):
+  - Added unit coverage that asserts `CAPACITY_THRESHOLD_REACHED` publishes only on a threshold crossing and does nothing when capacity isn’t configured:
+    - `packages/scheduling/src/lib/__tests__/capacityThresholdWorkflowEvents.publisher.test.ts`
+  - Refactored `maybePublishCapacityThresholdReached(...)` to accept optional `__deps` (publisher + data access functions + clock) so it can be tested without a DB:
+    - `packages/scheduling/src/lib/capacityThresholdWorkflowEvents.ts`
