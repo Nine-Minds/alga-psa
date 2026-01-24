@@ -36,7 +36,7 @@
   { "id": "T044", "description": "Billing: contracts emit CONTRACT_CREATED/UPDATED/STATUS_CHANGED and CONTRACT_RENEWAL_UPCOMING with renewal timing", "implemented": true, "featureIds": ["F043"] },
   { "id": "T045", "description": "Billing: recurring billing runs emit RECURRING_BILLING_RUN_STARTED/COMPLETED/FAILED with summary counts", "implemented": true, "featureIds": ["F044"] },
 
-  { "id": "T050", "description": "CRM: clients emit CLIENT_CREATED/UPDATED/STATUS_CHANGED/OWNER_ASSIGNED/MERGED/ARCHIVED", "implemented": false, "featureIds": ["F050"] },
+  { "id": "T050", "description": "CRM: clients emit CLIENT_CREATED/UPDATED/STATUS_CHANGED/OWNER_ASSIGNED/ARCHIVED (CLIENT_MERGED is catalog-only; schemas + catalog entries validated)", "implemented": true, "featureIds": ["F050"] },
   { "id": "T051", "description": "CRM: contacts emit CONTACT_CREATED/UPDATED/PRIMARY_SET/ARCHIVED/MERGED", "implemented": false, "featureIds": ["F051"] },
   { "id": "T052", "description": "CRM: interactions/notes emit INTERACTION_LOGGED and NOTE_CREATED with entity linkage", "implemented": false, "featureIds": ["F052"] },
   { "id": "T053", "description": "Tags: tag definition/apply/remove emit TAG_DEFINITION_CREATED/UPDATED and TAG_APPLIED/TAG_REMOVED with entityType/entityId", "implemented": false, "featureIds": ["F053"] },
