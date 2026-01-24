@@ -27,6 +27,27 @@ describe('ExperimentalFeaturesSettings', () => {
     vi.clearAllMocks();
   });
 
+  it("shows 'AI Assistant' name and description", async () => {
+    vi.mocked(getExperimentalFeatures).mockResolvedValueOnce({ aiAssistant: false });
+
+    render(
+      <UIStateProvider
+        initialPageState={{
+          id: 'test-page',
+          title: 'Test Page',
+          components: [],
+        }}
+      >
+        <ExperimentalFeaturesSettings />
+      </UIStateProvider>
+    );
+
+    expect(await screen.findByText('AI Assistant')).toBeInTheDocument();
+    expect(
+      screen.getByText('Enable AI-powered Quick Ask and Chat sidebar.')
+    ).toBeInTheDocument();
+  });
+
   it('updates local state when toggled', async () => {
     vi.mocked(getExperimentalFeatures).mockResolvedValueOnce({ aiAssistant: false });
 

@@ -80,7 +80,7 @@
   {
     "id": "T014",
     "description": "AI Assistant feature shows name 'AI Assistant' and description",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F006"]
   },
   {

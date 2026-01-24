@@ -293,3 +293,10 @@ curl -X POST localhost:3000/api/chat/stream/chat \
     - Files: `server/src/test/stubs/product-settings-extensions-entry.ts`, `server/vitest.config.ts`
 - Validation: `npx vitest run server/src/test/unit/SettingsPage.experimentalFeatures.lazy.test.ts`
 - Next test item: T014 AI Assistant feature shows name 'AI Assistant' and description
+
+### 2026-01-24 (cont.)
+- Implemented T014 (unit test):
+  - Verifies the AI Assistant feature row renders the expected name + description text.
+  - File: `server/src/test/unit/components/ExperimentalFeaturesSettings.test.tsx`
+- Validation: `npx vitest run server/src/test/unit/components/ExperimentalFeaturesSettings.test.tsx`
+- Next test item: T015 AI Assistant toggle defaults to off
