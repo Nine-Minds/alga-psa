@@ -638,6 +638,10 @@ Implication: we should standardize on `@alga-psa/event-bus/publishers` helpers f
   - Existing unit coverage validates `TICKET_MESSAGE_ADDED`, `TICKET_CUSTOMER_REPLIED`, and `TICKET_INTERNAL_NOTE_ADDED` payload construction and schema compatibility:
     - `packages/tickets/src/lib/__tests__/workflowTicketCommunicationEvents.test.ts`
 
+- 2026-01-24: Completed `T017` (ticket time entry coverage):
+  - Existing unit coverage validates `TICKET_TIME_ENTRY_ADDED` payload building against `payload.TicketTimeEntryAdded.v1`:
+    - `server/src/test/unit/timeEntryWorkflowEvents.test.ts`
+
 ## Suggested Phasing (to reduce risk)
 
 Phase 1 (authoritative CRUD/state transitions; low provider dependency):
