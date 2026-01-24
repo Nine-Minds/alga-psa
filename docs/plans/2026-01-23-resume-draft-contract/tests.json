@@ -320,7 +320,7 @@
   {
     "id": "T054",
     "description": "Confirmation dialog has Discard button",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F021"]
   },
   {
