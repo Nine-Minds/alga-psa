@@ -829,3 +829,9 @@ Phase 3 (feature dependent / optional modules):
 - 2026-01-24: Completed `T090` (asset lifecycle coverage):
   - Coverage exists via schema-compat builder tests for asset lifecycle + warranty-expiring payload shapes:
     - `shared/workflow/streams/domainEventBuilders/__tests__/assetEventBuilders.test.ts`
+
+- 2026-01-24: Completed `T091` (media upload + processing coverage):
+  - Coverage exists via schema-compat builder tests and preview-generation publish tests:
+    - `shared/workflow/streams/domainEventBuilders/__tests__/mediaEventBuilders.test.ts`
+    - `packages/documents/tests/storageService.workflowEvents.test.ts` (FILE_UPLOADED)
+    - `server/src/test/unit/documentPreviewGenerator.test.ts` (MEDIA_PROCESSING_SUCCEEDED)
