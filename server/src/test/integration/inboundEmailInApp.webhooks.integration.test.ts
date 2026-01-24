@@ -466,4 +466,69 @@ describe('Inbound email in-app processing via webhooks (integration)', () => {
     const comments = await db('comments').where({ tenant: tenantId, ticket_id: ticketId });
     expect(comments).toHaveLength(1);
   });
+
+  it('Reply threading: In-Reply-To/References resolves ticket and creates exactly 1 new comment', async () => {
+    const providerId = uuidv4();
+    const mailbox = `support-thread-${uuidv4().slice(0, 6)}@example.com`;
+    const { defaultsId } = await setupMicrosoftProvider({
+      providerId,
+      mailbox,
+      subscriptionId: `sub-ms-${uuidv4()}`,
+    });
+
+    cleanup.push(async () => {
+      await db('microsoft_email_provider_config').where({ tenant: tenantId, email_provider_id: providerId }).delete();
+      await db('email_providers').where({ tenant: tenantId, id: providerId }).delete();
+      await db('inbound_ticket_defaults').where({ tenant: tenantId, id: defaultsId }).delete();
+    });
+
+    const ticketId = uuidv4();
+    const originalMessageId = `orig-${uuidv4()}@mail`;
+    await db('tickets').insert({
+      tenant: tenantId,
+      ticket_id: ticketId,
+      ticket_number: `THREAD-${Math.floor(Math.random() * 1_000_000)}`,
+      title: 'Header threaded ticket',
+      client_id: clientId,
+      status_id: statusId,
+      priority_id: priorityId,
+      board_id: boardId,
+      entered_by: enteredByUserId,
+      email_metadata: JSON.stringify({ messageId: originalMessageId, threadId: 'thread-x' }),
+      entered_at: db.fn.now(),
+      updated_at: db.fn.now(),
+    });
+    cleanup.push(async () => {
+      await db('comments').where({ tenant: tenantId, ticket_id: ticketId }).delete();
+      await db('tickets').where({ tenant: tenantId, ticket_id: ticketId }).delete();
+    });
+
+    const result = await processInboundEmailInApp({
+      tenantId,
+      providerId,
+      emailData: {
+        id: `reply-email-${uuidv4()}`,
+        provider: 'microsoft',
+        providerId,
+        tenant: tenantId,
+        receivedAt: new Date().toISOString(),
+        from: { email: 'sender@example.com', name: 'Sender' },
+        to: [{ email: mailbox, name: 'Support' }],
+        subject: 'Re: Header threaded ticket',
+        inReplyTo: originalMessageId,
+        references: [originalMessageId],
+        body: {
+          text: 'Customer reply without embedded markers.',
+          html: undefined,
+        },
+        attachments: [],
+      } as any,
+    });
+
+    expect(result.outcome).toBe('replied');
+    expect(result.outcome === 'replied' ? result.ticketId : null).toBe(ticketId);
+
+    const comments = await db('comments').where({ tenant: tenantId, ticket_id: ticketId });
+    expect(comments).toHaveLength(1);
+  });
 });
