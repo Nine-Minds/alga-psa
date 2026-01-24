@@ -350,7 +350,7 @@
   {
     "id": "T059",
     "description": "Deletion error shows error toast notification",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F022"]
   },
   {
