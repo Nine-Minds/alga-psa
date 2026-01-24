@@ -29,7 +29,7 @@
   { "id": "T033", "description": "Projects: dependency blocked/unblocked emit PROJECT_TASK_DEPENDENCY_BLOCKED/UNBLOCKED", "implemented": true, "featureIds": ["F032"] },
   { "id": "T034", "description": "Projects: approval events are catalog-only (no emission until an approvals subsystem exists); schemas + catalog entries are still validated", "implemented": true, "featureIds": ["F033"] },
 
-  { "id": "T040", "description": "Billing: invoice send/status/due-date change emit INVOICE_SENT/INVOICE_STATUS_CHANGED/INVOICE_DUE_DATE_CHANGED", "implemented": false, "featureIds": ["F040"] },
+  { "id": "T040", "description": "Billing: invoice send/status/due-date change emit INVOICE_SENT/INVOICE_STATUS_CHANGED/INVOICE_DUE_DATE_CHANGED", "implemented": true, "featureIds": ["F040"] },
   { "id": "T041", "description": "Billing: overdue/write-off emit INVOICE_OVERDUE and INVOICE_WRITTEN_OFF with monetary context", "implemented": false, "featureIds": ["F040"] },
   { "id": "T042", "description": "Billing: payments emit PAYMENT_RECORDED/APPLIED/FAILED/REFUNDED with invoice application details", "implemented": false, "featureIds": ["F041"] },
   { "id": "T043", "description": "Billing: credits emit CREDIT_NOTE_CREATED/APPLIED/VOIDED with amounts and affected invoiceId when applicable", "implemented": false, "featureIds": ["F042"] },

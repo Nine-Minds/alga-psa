@@ -727,3 +727,7 @@ Phase 3 (feature dependent / optional modules):
   - Per PRD decision, `PROJECT_APPROVAL_*` events are catalog-only; coverage relies on:
     - Schema registry example validation (`T002`): `shared/workflow/runtime/__tests__/payloadSchemaExamples.test.ts`
     - Migration coverage (`T004`): `server/src/test/unit/workflowEventCatalogMigrationCoverage.test.ts`
+
+- 2026-01-24: Completed `T040` (invoice send/status/due-date coverage):
+  - Coverage exists via billing payload builder unit tests:
+    - `server/src/test/unit/invoiceWorkflowEvents.test.ts`
