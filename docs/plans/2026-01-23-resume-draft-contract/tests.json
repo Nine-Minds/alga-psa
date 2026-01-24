@@ -302,7 +302,7 @@
   {
     "id": "T051",
     "description": "Confirmation dialog displays client name",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F020"]
   },
   {
