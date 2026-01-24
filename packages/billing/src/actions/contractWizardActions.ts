@@ -5,7 +5,7 @@ import { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 
 import { createTenantKnex } from '@alga-psa/db';
-import { withAuth } from '@alga-psa/auth';
+import { withAuth } from '@alga-psa/auth/withAuth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import {
@@ -26,6 +26,7 @@ import {
 import { ensureTemplateLineSnapshot, fetchDetailedContractLines } from '../repositories/contractLineRepository';
 import {
   IContractLineServiceBucketConfig,
+  IContractLineServiceFixedConfig,
   IContractLineServiceHourlyConfig,
   IContractLineServiceUsageConfig,
 } from '@alga-psa/types';
@@ -120,6 +121,10 @@ type ClientUsageServiceInput = {
 };
 
 export type ClientContractWizardSubmission = {
+  /**
+   * When provided, updates this existing draft contract instead of creating a new one.
+   */
+  contract_id?: string;
   contract_name: string;
   description?: string;
   client_id: string;
@@ -187,12 +192,12 @@ const isBucketConfig = (
   Boolean(config && 'total_minutes' in config && 'overage_rate' in config && 'allow_rollover' in config);
 
 const isHourlyConfig = (
-  config: IContractLineServiceBucketConfig | IContractLineServiceHourlyConfig | IContractLineServiceUsageConfig | null
+  config: IContractLineServiceFixedConfig | IContractLineServiceBucketConfig | IContractLineServiceHourlyConfig | IContractLineServiceUsageConfig | null
 ): config is IContractLineServiceHourlyConfig =>
   Boolean(config && 'hourly_rate' in config && 'minimum_billable_time' in config);
 
 const isUsageConfig = (
-  config: IContractLineServiceBucketConfig | IContractLineServiceHourlyConfig | IContractLineServiceUsageConfig | null
+  config: IContractLineServiceFixedConfig | IContractLineServiceBucketConfig | IContractLineServiceHourlyConfig | IContractLineServiceUsageConfig | null
 ): config is IContractLineServiceUsageConfig =>
   Boolean(config && 'unit_of_measure' in config && 'enable_tiered_pricing' in config);
 
@@ -695,20 +700,116 @@ export const createClientContractFromWizard = withAuth(async (
     }
 
     const now = new Date();
-    const contractId = uuidv4();
-    await trx('contracts').insert({
-      tenant,
-      contract_id: contractId,
-      contract_name: submission.contract_name,
-      contract_description: submission.description ?? null,
-      billing_frequency: submission.billing_frequency ?? 'monthly',
-      currency_code: submission.currency_code,
-      is_active: !isDraft,
-      status: isDraft ? 'draft' : 'active',
-      is_template: false,
-      created_at: now.toISOString(),
-      updated_at: now.toISOString(),
-    });
+    const nowIso = now.toISOString();
+
+    const existingContractId =
+      typeof submission.contract_id === 'string' && submission.contract_id.trim().length > 0
+        ? submission.contract_id.trim()
+        : null;
+    const contractId = existingContractId ?? uuidv4();
+
+    const clearExistingContractData = async (targetContractId: string) => {
+      await trx('client_contracts')
+        .where({ tenant, contract_id: targetContractId })
+        .delete();
+
+      const contractLineIds = await trx('contract_lines')
+        .where({ tenant, contract_id: targetContractId })
+        .pluck('contract_line_id');
+
+      if (contractLineIds.length === 0) {
+        return;
+      }
+
+      await trx('time_entries')
+        .where({ tenant })
+        .whereIn('contract_line_id', contractLineIds)
+        .update({ contract_line_id: null });
+
+      const configIds = await trx('contract_line_service_configuration')
+        .where({ tenant })
+        .whereIn('contract_line_id', contractLineIds)
+        .pluck('config_id');
+
+      if (configIds.length > 0) {
+        await trx('contract_line_service_bucket_config')
+          .where({ tenant })
+          .whereIn('config_id', configIds)
+          .delete();
+
+        await trx('contract_line_service_hourly_config')
+          .where({ tenant })
+          .whereIn('config_id', configIds)
+          .delete();
+
+        await trx('contract_line_service_usage_config')
+          .where({ tenant })
+          .whereIn('config_id', configIds)
+          .delete();
+
+        await trx('contract_line_service_configuration')
+          .where({ tenant })
+          .whereIn('config_id', configIds)
+          .delete();
+      }
+
+      await trx('contract_line_service_defaults')
+        .where({ tenant })
+        .whereIn('contract_line_id', contractLineIds)
+        .delete();
+
+      await trx('contract_line_services')
+        .where({ tenant })
+        .whereIn('contract_line_id', contractLineIds)
+        .delete();
+
+      await trx('contract_lines')
+        .where({ tenant, contract_id: targetContractId })
+        .delete();
+    };
+
+    if (existingContractId) {
+      const existing = await trx('contracts')
+        .where({ tenant, contract_id: existingContractId })
+        .andWhere((builder) => builder.whereNull('is_template').orWhere('is_template', false))
+        .first('contract_id', 'status');
+
+      if (!existing) {
+        throw new Error('Draft contract not found');
+      }
+
+      if (existing.status !== 'draft') {
+        throw new Error('Only draft contracts can be updated via the wizard');
+      }
+
+      await clearExistingContractData(existingContractId);
+
+      await trx('contracts')
+        .where({ tenant, contract_id: existingContractId })
+        .update({
+          contract_name: submission.contract_name,
+          contract_description: submission.description ?? null,
+          billing_frequency: submission.billing_frequency ?? 'monthly',
+          currency_code: submission.currency_code,
+          is_active: !isDraft,
+          status: isDraft ? 'draft' : 'active',
+          updated_at: nowIso,
+        });
+    } else {
+      await trx('contracts').insert({
+        tenant,
+        contract_id: contractId,
+        contract_name: submission.contract_name,
+        contract_description: submission.description ?? null,
+        billing_frequency: submission.billing_frequency ?? 'monthly',
+        currency_code: submission.currency_code,
+        is_active: !isDraft,
+        status: isDraft ? 'draft' : 'active',
+        is_template: false,
+        created_at: nowIso,
+        updated_at: nowIso,
+      });
+    }
 
     const fixedServiceInputs = Array.isArray(submission.fixed_services) ? submission.fixed_services : [];
     const productServiceInputs = Array.isArray(submission.product_services) ? submission.product_services : [];
@@ -1385,6 +1486,247 @@ export const getContractTemplateSnapshotForClientWizard = withAuth(async (
     usage_services: usageServices,
     minimum_billable_time: minimumBillableTime,
     round_up_to_nearest: roundUpToNearest,
+  };
+});
+
+export type DraftContractWizardData = {
+  client_id: string;
+  contract_name: string;
+  start_date: string;
+  end_date?: string;
+  description?: string;
+  billing_frequency: string;
+  currency_code: string;
+  po_number?: string;
+  po_amount?: number;
+  po_required?: boolean;
+  fixed_services: Array<{
+    service_id: string;
+    service_name?: string;
+    quantity: number;
+    bucket_overlay?: BucketOverlayInput | null;
+  }>;
+  product_services: Array<{
+    service_id: string;
+    service_name?: string;
+    quantity: number;
+    custom_rate?: number;
+  }>;
+  fixed_base_rate?: number;
+  fixed_billing_frequency?: string;
+  enable_proration: boolean;
+  hourly_services: Array<{
+    service_id: string;
+    service_name?: string;
+    hourly_rate?: number;
+    bucket_overlay?: BucketOverlayInput | null;
+  }>;
+  hourly_billing_frequency?: string;
+  minimum_billable_time?: number;
+  round_up_to_nearest?: number;
+  usage_services: Array<{
+    service_id: string;
+    service_name?: string;
+    unit_rate?: number;
+    unit_of_measure?: string;
+    bucket_overlay?: BucketOverlayInput | null;
+  }>;
+  usage_billing_frequency?: string;
+  contract_id: string;
+  is_draft: true;
+  template_id?: string;
+};
+
+export const getDraftContractForResume = withAuth(async (
+  user,
+  { tenant },
+  contractId: string
+): Promise<DraftContractWizardData> => {
+  const { knex } = await createTenantKnex();
+  const isBypass = process.env.E2E_AUTH_BYPASS === 'true';
+
+  if (!isBypass) {
+    const canCreateBilling = hasPermission(user, 'billing', 'create');
+    const canUpdateBilling = hasPermission(user, 'billing', 'update');
+    if (!canCreateBilling || !canUpdateBilling) {
+      throw new Error('Permission denied: Cannot resume billing contracts');
+    }
+  }
+
+  const contract = await knex('contracts')
+    .where({ tenant, contract_id: contractId })
+    .andWhere((builder) => builder.whereNull('is_template').orWhere('is_template', false))
+    .first();
+
+  if (!contract) {
+    throw new Error('Contract not found');
+  }
+
+  if (contract.status !== 'draft') {
+    throw new Error('Contract is not a draft');
+  }
+
+  const clientContract = await knex('client_contracts')
+    .where({ tenant, contract_id: contractId })
+    .first();
+
+  if (!clientContract) {
+    throw new Error('Draft contract is missing client assignment');
+  }
+
+  const detailedLines = await fetchDetailedContractLines(knex, tenant, contractId);
+
+  const fixedServices: DraftContractWizardData['fixed_services'] = [];
+  const productServices: DraftContractWizardData['product_services'] = [];
+  const hourlyServices: DraftContractWizardData['hourly_services'] = [];
+  const usageServices: DraftContractWizardData['usage_services'] = [];
+  let minimumBillableTime: number | undefined;
+  let roundUpToNearest: number | undefined;
+  let enableProration = false;
+  let fixedBaseRateCents: number | undefined;
+  let fixedBillingFrequency: string | undefined;
+  let hourlyBillingFrequency: string | undefined;
+  let usageBillingFrequency: string | undefined;
+
+  for (const line of detailedLines) {
+    const servicesWithConfig = await getContractLineServicesWithConfigurations(line.contract_line_id);
+
+    if (line.contract_line_type === 'Fixed') {
+      servicesWithConfig.forEach(({ service, configuration, bucketConfig }) => {
+        const quantity =
+          configuration?.quantity != null ? Number(configuration.quantity) : 1;
+
+        const baseEntry = {
+          service_id: service.service_id,
+          service_name: service.service_name,
+          quantity,
+        };
+
+        if (service.item_kind === 'product') {
+          productServices.push({
+            ...baseEntry,
+            custom_rate:
+              configuration?.custom_rate != null ? Math.round(Number(configuration.custom_rate)) : undefined,
+          });
+          return;
+        }
+
+        fixedServices.push({
+          ...baseEntry,
+          bucket_overlay:
+            bucketConfig && isBucketConfig(bucketConfig)
+              ? {
+                  total_minutes: bucketConfig.total_minutes ?? undefined,
+                  overage_rate:
+                    bucketConfig.overage_rate != null ? Math.round(Number(bucketConfig.overage_rate)) : undefined,
+                  allow_rollover: Boolean(bucketConfig.allow_rollover),
+                  billing_period: bucketConfig.billing_period === 'weekly' ? 'weekly' : 'monthly',
+                }
+              : undefined,
+        });
+      });
+
+      // Only treat this as the "fixed fee services" line if it has non-product items.
+      if (servicesWithConfig.some(({ service }) => service.item_kind !== 'product')) {
+        const baseRateValue = line.rate != null ? Number(line.rate) : undefined;
+        fixedBaseRateCents = baseRateValue != null ? Math.round(baseRateValue * 100) : undefined;
+        enableProration = Boolean(line.enable_proration);
+        fixedBillingFrequency = line.billing_frequency ?? fixedBillingFrequency;
+      }
+    } else if (line.contract_line_type === 'Hourly') {
+      hourlyBillingFrequency = line.billing_frequency ?? hourlyBillingFrequency;
+      servicesWithConfig.forEach(({ service, configuration, typeConfig, bucketConfig }) => {
+        const hourlyConfig = isHourlyConfig(typeConfig) ? typeConfig : null;
+        const hourlyRateSource =
+          (hourlyConfig && hourlyConfig.hourly_rate != null ? hourlyConfig.hourly_rate : configuration?.custom_rate) ??
+          null;
+        const hourlyRateCents =
+          hourlyRateSource != null ? Math.round(Number(hourlyRateSource)) : undefined;
+
+        const minimumBillable =
+          hourlyConfig && hourlyConfig.minimum_billable_time != null
+            ? Number(hourlyConfig.minimum_billable_time)
+            : minimumBillableTime;
+        const roundUp =
+          hourlyConfig && hourlyConfig.round_up_to_nearest != null
+            ? Number(hourlyConfig.round_up_to_nearest)
+            : roundUpToNearest;
+        minimumBillableTime = minimumBillable;
+        roundUpToNearest = roundUp;
+
+        hourlyServices.push({
+          service_id: service.service_id,
+          service_name: service.service_name,
+          hourly_rate: hourlyRateCents,
+          bucket_overlay:
+            bucketConfig && isBucketConfig(bucketConfig)
+              ? {
+                  total_minutes: bucketConfig.total_minutes ?? undefined,
+                  overage_rate:
+                    bucketConfig.overage_rate != null ? Math.round(Number(bucketConfig.overage_rate)) : undefined,
+                  allow_rollover: Boolean(bucketConfig.allow_rollover),
+                  billing_period: bucketConfig.billing_period === 'weekly' ? 'weekly' : 'monthly',
+                }
+              : undefined,
+        });
+      });
+    } else if (line.contract_line_type === 'Usage') {
+      usageBillingFrequency = line.billing_frequency ?? usageBillingFrequency;
+      servicesWithConfig.forEach(({ service, configuration, typeConfig, bucketConfig }) => {
+        const usageConfig = isUsageConfig(typeConfig) ? typeConfig : null;
+        const unitRateSource =
+          (usageConfig && usageConfig.base_rate != null ? usageConfig.base_rate : configuration?.custom_rate) ?? null;
+        const unitRateCents =
+          unitRateSource != null ? Math.round(Number(unitRateSource)) : undefined;
+
+        usageServices.push({
+          service_id: service.service_id,
+          service_name: service.service_name,
+          unit_rate: unitRateCents,
+          unit_of_measure:
+            usageConfig?.unit_of_measure ||
+            service.unit_of_measure ||
+            'unit',
+          bucket_overlay:
+            bucketConfig && isBucketConfig(bucketConfig)
+              ? {
+                  total_minutes: bucketConfig.total_minutes ?? undefined,
+                  overage_rate:
+                    bucketConfig.overage_rate != null ? Math.round(Number(bucketConfig.overage_rate)) : undefined,
+                  allow_rollover: Boolean(bucketConfig.allow_rollover),
+                  billing_period: bucketConfig.billing_period === 'weekly' ? 'weekly' : 'monthly',
+                }
+              : undefined,
+        });
+      });
+    }
+  }
+
+  return {
+    client_id: clientContract.client_id,
+    contract_name: contract.contract_name,
+    start_date: normalizeDateOnly(clientContract.start_date) ?? String(clientContract.start_date),
+    end_date: normalizeDateOnly(clientContract.end_date) ?? undefined,
+    description: contract.contract_description ?? undefined,
+    billing_frequency: contract.billing_frequency ?? 'monthly',
+    currency_code: contract.currency_code ?? 'USD',
+    po_number: clientContract.po_number ?? undefined,
+    po_amount: clientContract.po_amount != null ? Number(clientContract.po_amount) : undefined,
+    po_required: Boolean(clientContract.po_required),
+    fixed_services: fixedServices,
+    product_services: productServices,
+    fixed_base_rate: fixedBaseRateCents,
+    fixed_billing_frequency: fixedBillingFrequency,
+    enable_proration: enableProration,
+    hourly_services: hourlyServices,
+    hourly_billing_frequency: hourlyBillingFrequency,
+    minimum_billable_time: minimumBillableTime,
+    round_up_to_nearest: roundUpToNearest,
+    usage_services: usageServices,
+    usage_billing_frequency: usageBillingFrequency,
+    contract_id: contractId,
+    is_draft: true,
+    template_id: clientContract.template_contract_id ?? undefined,
   };
 });
 

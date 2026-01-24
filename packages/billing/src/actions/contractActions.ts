@@ -16,7 +16,7 @@ import {
 import { createTenantKnex } from '@alga-psa/db';
 
 import { Knex } from 'knex';
-import { withAuth } from '@alga-psa/auth';
+import { withAuth } from '@alga-psa/auth/withAuth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import {
   addContractLine as repoAddContractLine,
@@ -96,6 +96,45 @@ export const getContractsWithClients = withAuth(async (user, { tenant }): Promis
       throw error; // Preserve specific error messages
     }
     throw new Error(`Failed to fetch contracts with clients: ${error}`);
+  }
+});
+
+export const getDraftContracts = withAuth(async (user, { tenant }): Promise<IContractWithClient[]> => {
+  try {
+    const { knex } = await createTenantKnex();
+
+    const rows = await knex('contracts as co')
+      .leftJoin('client_contracts as cc', function () {
+        this.on('co.contract_id', '=', 'cc.contract_id').andOn('co.tenant', '=', 'cc.tenant');
+      })
+      .leftJoin('contract_templates as template', function () {
+        this.on('cc.template_contract_id', '=', 'template.template_id').andOn('cc.tenant', '=', 'template.tenant');
+      })
+      .leftJoin('clients as c', function () {
+        this.on('cc.client_id', '=', 'c.client_id').andOn('cc.tenant', '=', 'c.tenant');
+      })
+      .where({ 'co.tenant': tenant })
+      .andWhere((builder) => builder.whereNull('co.is_template').orWhere('co.is_template', false))
+      .andWhere('co.status', 'draft')
+      .select(
+        'co.*',
+        'cc.client_contract_id',
+        'cc.template_contract_id',
+        'c.client_id',
+        'c.client_name',
+        'cc.start_date',
+        'cc.end_date',
+        'template.template_name as template_contract_name'
+      )
+      .orderBy('co.updated_at', 'desc');
+
+    return rows;
+  } catch (error) {
+    console.error('Error fetching draft contracts:', error);
+    if (error instanceof Error) {
+      throw error;
+    }
+    throw new Error(`Failed to fetch draft contracts: ${error}`);
   }
 });
 
@@ -344,6 +383,14 @@ export const deleteContract = withAuth(async (user, { tenant }, contractId: stri
   const { knex } = await createTenantKnex();
 
   try {
+    const isBypass = process.env.E2E_AUTH_BYPASS === 'true';
+    if (!isBypass) {
+      const canDeleteBilling = hasPermission(user, 'billing', 'delete');
+      if (!canDeleteBilling) {
+        throw new Error('Permission denied: Cannot delete billing contracts');
+      }
+    }
+
     const templateExists = await isTemplateContract(knex, tenant, contractId);
     if (templateExists) {
       await ContractTemplateModel.delete(contractId, tenant);

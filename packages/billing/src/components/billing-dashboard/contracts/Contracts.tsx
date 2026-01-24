@@ -16,47 +16,57 @@ import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { Input } from '@alga-psa/ui/components/Input';
 import CustomTabs from '@alga-psa/ui/components/CustomTabs';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
+import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { ColumnDefinition } from '@alga-psa/types';
 import { IContract, IContractWithClient } from '@alga-psa/types';
+import { toast } from 'react-hot-toast';
 import {
   checkClientHasActiveContract,
   deleteContract,
+  getDraftContracts,
   getContractTemplates,
   getContractsWithClients,
   updateContract,
 } from '@alga-psa/billing/actions/contractActions';
+import {
+  getDraftContractForResume,
+  type DraftContractWizardData,
+} from '@alga-psa/billing/actions/contractWizardActions';
 import { ContractWizard } from './ContractWizard';
 import { TemplateWizard } from './template-wizard/TemplateWizard';
 import { ContractDialog } from './ContractDialog';
-
-type ContractSubTab = 'templates' | 'client-contracts';
+import {
+  CONTRACT_LABEL_TO_SUBTAB,
+  CONTRACT_SUBTAB_LABELS,
+  getDraftTabBadgeCount,
+  normalizeContractSubtab,
+  type ContractSubTab,
+} from './contractsTabs';
 
 const Contracts: React.FC = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
 
   // Get active sub-tab from URL or default to 'templates'
-  const activeSubTab = (searchParams?.get('subtab') as ContractSubTab) || 'templates';
-
-  // Map URL subtab values to CustomTabs label values
-  const subtabToLabel: Record<ContractSubTab, string> = {
-    'templates': 'Templates',
-    'client-contracts': 'Client Contracts'
-  };
-
-  const labelToSubtab: Record<string, ContractSubTab> = {
-    'Templates': 'templates',
-    'Client Contracts': 'client-contracts'
-  };
+  const activeSubTab = normalizeContractSubtab(searchParams?.get('subtab'));
 
   const [templateContracts, setTemplateContracts] = useState<IContract[]>([]);
   const [clientContracts, setClientContracts] = useState<IContractWithClient[]>([]);
+  const [draftContracts, setDraftContracts] = useState<IContractWithClient[]>([]);
+  const [draftToResume, setDraftToResume] = useState<DraftContractWizardData | null>(null);
+  const [draftToDiscard, setDraftToDiscard] = useState<{
+    contractId: string;
+    contractName: string;
+    clientName: string;
+  } | null>(null);
+  const [isDiscardingDraft, setIsDiscardingDraft] = useState(false);
   const [showTemplateWizard, setShowTemplateWizard] = useState(false);
   const [showClientWizard, setShowClientWizard] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [templateSearchTerm, setTemplateSearchTerm] = useState('');
   const [clientSearchTerm, setClientSearchTerm] = useState('');
+  const [draftSearchTerm, setDraftSearchTerm] = useState('');
 
   // Pagination state for templates
   const [templateCurrentPage, setTemplateCurrentPage] = useState(1);
@@ -65,6 +75,10 @@ const Contracts: React.FC = () => {
   // Pagination state for client contracts
   const [clientCurrentPage, setClientCurrentPage] = useState(1);
   const [clientPageSize, setClientPageSize] = useState(10);
+
+  // Pagination state for draft contracts
+  const [draftCurrentPage, setDraftCurrentPage] = useState(1);
+  const [draftPageSize, setDraftPageSize] = useState(10);
 
   // Handle page size change for templates - reset to page 1
   const handleTemplatePageSizeChange = (newPageSize: number) => {
@@ -78,6 +92,12 @@ const Contracts: React.FC = () => {
     setClientCurrentPage(1);
   };
 
+  // Handle page size change for draft contracts - reset to page 1
+  const handleDraftPageSizeChange = (newPageSize: number) => {
+    setDraftPageSize(newPageSize);
+    setDraftCurrentPage(1);
+  };
+
   useEffect(() => {
     void fetchContracts();
   }, []);
@@ -85,12 +105,14 @@ const Contracts: React.FC = () => {
   const fetchContracts = async () => {
     try {
       setIsLoading(true);
-      const [fetchedTemplates, fetchedAssignments] = await Promise.all([
+      const [fetchedTemplates, fetchedAssignments, fetchedDrafts] = await Promise.all([
         getContractTemplates(),
         getContractsWithClients(),
+        getDraftContracts(),
       ]);
       setTemplateContracts(fetchedTemplates);
       setClientContracts(fetchedAssignments.filter((assignment) => Boolean(assignment.client_id)));
+      setDraftContracts(fetchedDrafts);
       setError(null);
     } catch (err) {
       console.error('Error fetching contracts:', err);
@@ -118,6 +140,36 @@ const Contracts: React.FC = () => {
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to delete contract';
       alert(message);
+    }
+  };
+
+  const handleResumeDraft = async (contractId: string) => {
+    try {
+      setIsLoading(true);
+      const draftData = await getDraftContractForResume(contractId);
+      setDraftToResume(draftData);
+      setShowClientWizard(true);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to resume draft';
+      alert(message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleConfirmDiscardDraft = async () => {
+    if (!draftToDiscard) return;
+    setIsDiscardingDraft(true);
+    try {
+      await deleteContract(draftToDiscard.contractId);
+      await fetchContracts();
+      toast.success('Draft discarded');
+      setDraftToDiscard(null);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to discard draft';
+      toast.error(message);
+    } finally {
+      setIsDiscardingDraft(false);
     }
   };
 
@@ -419,6 +471,9 @@ const renderStatusBadge = (status: string) => {
     );
   });
 
+  const draftCount = draftContracts.length;
+  const draftBadgeCount = getDraftTabBadgeCount(draftCount);
+
   const renderTemplateTab = () => (
     <>
       <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
@@ -520,9 +575,149 @@ const renderStatusBadge = (status: string) => {
     </>
   );
 
+  const renderDraftsTab = () => (
+    <>
+      <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+        <div className="relative max-w-md w-full">
+          <Search
+            className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400"
+            aria-hidden="true"
+          />
+          <Input
+            type="text"
+            placeholder="Search drafts..."
+            value={draftSearchTerm}
+            onChange={(event) => setDraftSearchTerm(event.target.value)}
+            className="pl-10"
+            aria-label="Search draft contracts"
+          />
+        </div>
+      </div>
+
+      {draftContracts.length === 0 ? (
+        <div className="py-8 text-center text-gray-600">
+          No draft contracts. Start creating a new contract to save as draft.
+        </div>
+      ) : (
+        <DataTable
+          id="draft-contracts-table"
+          data={draftContracts.filter((contract) => {
+            if (!draftSearchTerm) return true;
+            const search = draftSearchTerm.toLowerCase();
+            return (
+              contract.contract_name?.toLowerCase().includes(search) ||
+              contract.client_name?.toLowerCase().includes(search)
+            );
+          })}
+          columns={[
+            {
+              title: 'Contract Name',
+              dataIndex: 'contract_name',
+              render: (value: string | null) =>
+                typeof value === 'string' && value.trim().length > 0 ? value : '—',
+            },
+            {
+              title: 'Client',
+              dataIndex: 'client_name',
+              render: (value: string | null) =>
+                typeof value === 'string' && value.trim().length > 0 ? value : '—',
+            },
+            {
+              title: 'Created',
+              dataIndex: 'created_at',
+              render: (value: any) => {
+                if (!value) return '—';
+                try {
+                  const date = new Date(value);
+                  return isNaN(date.getTime()) ? '—' : date.toLocaleDateString();
+                } catch {
+                  return '—';
+                }
+              },
+            },
+            {
+              title: 'Last Modified',
+              dataIndex: 'updated_at',
+              render: (value: any) => {
+                if (!value) return '—';
+                try {
+                  const date = new Date(value);
+                  return isNaN(date.getTime()) ? '—' : date.toLocaleDateString();
+                } catch {
+                  return '—';
+                }
+              },
+            },
+            {
+              title: 'Actions',
+              dataIndex: 'contract_id',
+              render: (value, record) => (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      id="draft-actions-menu"
+                      variant="ghost"
+                      className="h-8 w-8 p-0"
+                      onClick={(event) => event.stopPropagation()}
+                    >
+                      <span className="sr-only">Open menu</span>
+                      <MoreVertical className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem
+                      id="resume-draft-menu-item"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        if (record.contract_id) {
+                          void handleResumeDraft(record.contract_id);
+                        }
+                      }}
+                    >
+                      Resume
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      id="discard-draft-menu-item"
+                      className="text-red-600 focus:text-red-600"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        if (record.contract_id) {
+                          setDraftToDiscard({
+                            contractId: record.contract_id,
+                            contractName: record.contract_name || 'Untitled draft',
+                            clientName: record.client_name || 'Unknown client',
+                          });
+                        }
+                      }}
+                    >
+                      Discard
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              ),
+            },
+          ]}
+          pagination={true}
+          currentPage={draftCurrentPage}
+          onPageChange={setDraftCurrentPage}
+          pageSize={draftPageSize}
+          onItemsPerPageChange={handleDraftPageSizeChange}
+          initialSorting={[{ id: 'updated_at', desc: true }]}
+        />
+      )}
+    </>
+  );
+
   const tabs = [
     { label: 'Templates', content: renderTemplateTab() },
     { label: 'Client Contracts', content: renderClientContractsTab() },
+    {
+      label: 'Drafts',
+      icon: draftBadgeCount != null ? (
+        <Badge className="ml-2 order-last bg-gray-100 text-gray-800">{draftBadgeCount}</Badge>
+      ) : undefined,
+      content: renderDraftsTab(),
+    },
   ];
 
   return (
@@ -552,9 +747,9 @@ const renderStatusBadge = (status: string) => {
           ) : (
             <CustomTabs
               tabs={tabs}
-              defaultTab={subtabToLabel[activeSubTab]}
+              defaultTab={CONTRACT_SUBTAB_LABELS[activeSubTab]}
               onTabChange={(tab) => {
-                const targetSubtab = labelToSubtab[tab] || tab.toLowerCase();
+                const targetSubtab = CONTRACT_LABEL_TO_SUBTAB[tab] || tab.toLowerCase();
 
                 if (targetSubtab === activeSubTab) {
                   return;
@@ -582,8 +777,25 @@ const renderStatusBadge = (status: string) => {
         onOpenChange={setShowClientWizard}
         onComplete={() => {
           setShowClientWizard(false);
+          setDraftToResume(null);
           void fetchContracts();
         }}
+        editingContract={draftToResume}
+      />
+      <ConfirmationDialog
+        id="discard-draft-confirmation"
+        isOpen={!!draftToDiscard}
+        onClose={() => setDraftToDiscard(null)}
+        onConfirm={handleConfirmDiscardDraft}
+        title="Discard Draft Contract?"
+        message={
+          draftToDiscard
+            ? `This will permanently delete the draft "${draftToDiscard.contractName}" for ${draftToDiscard.clientName}.\nThis action cannot be undone.`
+            : ''
+        }
+        cancelLabel="Cancel"
+        confirmLabel="Discard"
+        isConfirming={isDiscardingDraft}
       />
     </>
   );

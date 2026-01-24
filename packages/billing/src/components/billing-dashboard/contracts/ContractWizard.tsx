@@ -116,7 +116,7 @@ export function ContractWizard({
   const [templateError, setTemplateError] = useState<string | null>(null);
   const [isTemplateLoading, startTemplateTransition] = useTransition();
 
-  const [wizardData, setWizardData] = useState<ContractWizardData>({
+  const defaultWizardData: ContractWizardData = {
     client_id: '',
     contract_name: '',
     start_date: '',
@@ -133,13 +133,29 @@ export function ContractWizard({
     round_up_to_nearest: undefined,
     usage_services: [],
     template_id: undefined,
-    ...editingContract,
-  });
+  };
+
+  const [wizardData, setWizardData] = useState<ContractWizardData>(() => ({
+    ...defaultWizardData,
+    ...(editingContract ?? {}),
+  }));
 
   useEffect(() => {
     if (!open) {
       resetWizard();
       return;
+    }
+
+    setErrors({});
+    setCompletedSteps(new Set());
+    setCurrentStep(0);
+
+    if (editingContract) {
+      setWizardData({ ...defaultWizardData, ...editingContract });
+      setSelectedTemplateId(editingContract.template_id ?? null);
+    } else {
+      setWizardData(defaultWizardData);
+      setSelectedTemplateId(null);
     }
 
     setIsLoadingTemplates(true);
@@ -157,27 +173,10 @@ export function ContractWizard({
       .finally(() => {
         setIsLoadingTemplates(false);
       });
-  }, [open]);
+  }, [open, editingContract]);
 
   const resetWizard = () => {
-    setWizardData({
-      client_id: '',
-      contract_name: '',
-      start_date: '',
-      end_date: undefined,
-      description: '',
-      billing_frequency: 'monthly',
-      currency_code: 'USD',
-      fixed_services: [],
-      product_services: [],
-      fixed_base_rate: undefined,
-      enable_proration: true,
-      hourly_services: [],
-      minimum_billable_time: undefined,
-      round_up_to_nearest: undefined,
-      usage_services: [],
-      template_id: undefined,
-    });
+    setWizardData(defaultWizardData);
     setSelectedTemplateId(null);
     setErrors({});
     setCompletedSteps(new Set());
@@ -230,6 +229,7 @@ export function ContractWizard({
   };
 
   const buildSubmissionData = (): ClientContractWizardSubmission => ({
+    contract_id: wizardData.contract_id,
     contract_name: wizardData.contract_name.trim(),
     description: wizardData.description?.trim() || undefined,
     client_id: wizardData.client_id || '',

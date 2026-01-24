@@ -3,6 +3,8 @@ import path from 'node:path';
 import { mkdirSync } from 'node:fs';
 import { vi } from 'vitest';
 
+process.env.NEXTAUTH_SECRET ??= 'localtest-nextauth-secret';
+
 // Vitest coverage (v8) uses a temp directory under the reports directory.
 // Some runs can error if the temp directory is missing; ensure it exists.
 try {
@@ -31,10 +33,7 @@ vi.mock('@alga-psa/ui/ui-reflection/useRegisterUIComponent', () => ({
 }));
 
 vi.mock('@alga-psa/ui/ui-reflection/useRegisterChild', () => ({
-  useRegisterChild: () => ({
-    register: vi.fn(),
-    unregister: vi.fn(),
-  }),
+  useRegisterChild: () => vi.fn(),
 }));
 
 vi.mock('@alga-psa/ui/ui-reflection/UIStateContext', () => ({
@@ -46,6 +45,17 @@ vi.mock('@alga-psa/ui/ui-reflection/UIStateContext', () => ({
   }),
   UIStateProvider: ({ children }: { children: React.ReactNode }) => children,
 }))
+
+vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
+  useTranslation: () => ({
+    t: (_key: string, options?: string | { defaultValue?: string }) => {
+      if (typeof options === 'string') {
+        return options;
+      }
+      return options?.defaultValue ?? _key;
+    },
+  }),
+}));
 
 vi.mock('next/server', async () => {
   const mod = await import('./stubs/next-server');
