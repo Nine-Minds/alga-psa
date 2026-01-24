@@ -254,7 +254,7 @@
   {
     "id": "T043",
     "description": "Streaming indicator disappears when done: true received",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F023"]
   },
   {
