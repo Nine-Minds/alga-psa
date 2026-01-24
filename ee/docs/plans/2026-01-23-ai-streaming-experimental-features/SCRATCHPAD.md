@@ -458,3 +458,10 @@ curl -X POST localhost:3000/api/chat/stream/chat \
   - File: `server/src/test/unit/Chat.streamingEndpoint.test.ts`
 - Validation: `npx vitest run server/src/test/unit/Chat.streamingEndpoint.test.ts`
 - Next test item: T037 Chat.tsx reads streaming response via getReader()
+
+### 2026-01-24 (cont.)
+- Implemented T037 (unit test):
+  - Verifies EE `Chat.tsx` reads the streaming response via `response.body.getReader()` and `await reader.read()`.
+  - File: `server/src/test/unit/Chat.streamingEndpoint.test.ts`
+- Validation: `npx vitest run server/src/test/unit/Chat.streamingEndpoint.test.ts`
+- Next test item: T038 Tokens are appended to message display as they arrive

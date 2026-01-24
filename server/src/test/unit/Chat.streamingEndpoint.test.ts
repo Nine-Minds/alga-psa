@@ -9,4 +9,9 @@ describe('EE Chat (source)', () => {
 
     expect(chatSource).not.toContain("fetch('/api/chat/v1/completions'");
   });
+
+  it('reads the streaming response via response.body.getReader()', () => {
+    expect(chatSource).toContain('response.body.getReader()');
+    expect(chatSource).toContain('await reader.read()');
+  });
 });

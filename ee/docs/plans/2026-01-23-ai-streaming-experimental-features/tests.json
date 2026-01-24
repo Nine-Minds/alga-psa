@@ -218,7 +218,7 @@
   {
     "id": "T037",
     "description": "Chat.tsx reads streaming response via getReader()",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F020"]
   },
   {
