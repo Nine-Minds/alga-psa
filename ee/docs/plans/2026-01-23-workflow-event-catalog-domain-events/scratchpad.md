@@ -589,6 +589,11 @@ Implication: we should standardize on `@alga-psa/event-bus/publishers` helpers f
   - Tweaked `payload.TicketUnassigned.v1` schema to include optional `newAssigneeId/newAssigneeType` fields for consistency:
     - `shared/workflow/runtime/schemas/ticketEventSchemas.ts`
 
+- 2026-01-24: Completed `T002` (schema registry resolves + validates examples):
+  - Added an auto-example generator test that:
+    - Parses `event-proposals.md`, derives `payload.*.v1` refs, asserts `schemaRegistry.has(ref)`, and validates an auto-generated example payload per ref.
+    - `shared/workflow/runtime/__tests__/payloadSchemaExamples.test.ts`
+
 ## Suggested Phasing (to reduce risk)
 
 Phase 1 (authoritative CRUD/state transitions; low provider dependency):
