@@ -12,7 +12,7 @@
   { "id": "T022", "description": "Missing defaults: inbound processing logs and returns without creating ticket/comment", "implemented": true, "featureIds": ["F010"] },
 
   { "id": "T030", "description": "Attachments: attachment failure does not prevent ticket creation", "implemented": true, "featureIds": ["F015"] },
-  { "id": "T031", "description": "Attachments: attachment failure does not prevent reply comment creation", "implemented": false, "featureIds": ["F006"] },
+  { "id": "T031", "description": "Attachments: attachment failure does not prevent reply comment creation", "implemented": true, "featureIds": ["F006"] },
 
   { "id": "T040", "description": "Idempotency: replay same reply email does not create duplicate comments", "implemented": false, "featureIds": ["F020", "F022"] },
   { "id": "T041", "description": "Idempotency: replay same new-email does not create duplicate tickets", "implemented": false, "featureIds": ["F021", "F022"] },
