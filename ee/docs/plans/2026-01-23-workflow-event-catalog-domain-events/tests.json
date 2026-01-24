@@ -17,7 +17,7 @@
   { "id": "T018", "description": "Tickets: SLA stage enter/met/breached publish events only when SLA module enabled; payload includes stage + target timestamps", "implemented": true, "featureIds": ["F014"] },
   { "id": "T019", "description": "Tickets: approval events are catalog-only (no emission until an approvals subsystem exists); schemas + catalog entries are still validated", "implemented": true, "featureIds": ["F015"] },
 
-  { "id": "T020", "description": "Scheduling: create/reschedule/cancel/complete/no-show emit appointment/schedule events with start/end times and timezone", "implemented": false, "featureIds": ["F020"] },
+  { "id": "T020", "description": "Scheduling: create/reschedule/cancel/complete/no-show emit appointment/schedule events with start/end times and timezone", "implemented": true, "featureIds": ["F020"] },
   { "id": "T021", "description": "Scheduling: assignment changes emit APPOINTMENT_ASSIGNED (or mapped schedule-entry equivalent) with previous/new assignee", "implemented": false, "featureIds": ["F020"] },
   { "id": "T022", "description": "Scheduling: schedule blocks emit SCHEDULE_BLOCK_CREATED and SCHEDULE_BLOCK_DELETED with owner context", "implemented": false, "featureIds": ["F021"] },
   { "id": "T023", "description": "Scheduling: capacity thresholds emit CAPACITY_THRESHOLD_REACHED only when configured, with team/date metrics", "implemented": false, "featureIds": ["F022"] },

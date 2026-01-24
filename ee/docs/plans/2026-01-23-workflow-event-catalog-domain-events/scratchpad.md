@@ -651,6 +651,10 @@ Implication: we should standardize on `@alga-psa/event-bus/publishers` helpers f
     - Schema registry example validation (`T002`): `shared/workflow/runtime/__tests__/payloadSchemaExamples.test.ts`
     - Migration coverage (`T004`): `server/src/test/unit/workflowEventCatalogMigrationCoverage.test.ts`
 
+- 2026-01-24: Completed `T020` (appointment lifecycle coverage):
+  - Existing builder unit test validates appointment lifecycle payloads (start/end time + timezone) against schemas:
+    - `shared/workflow/streams/domainEventBuilders/__tests__/appointmentEventBuilders.test.ts`
+
 ## Suggested Phasing (to reduce risk)
 
 Phase 1 (authoritative CRUD/state transitions; low provider dependency):
