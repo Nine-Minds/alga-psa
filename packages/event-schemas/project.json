@@ -1,0 +1,32 @@
+{
+  "name": "@alga-psa/event-schemas",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "packages/event-schemas/src",
+  "projectType": "library",
+  "tags": ["scope:event-schemas", "type:horizontal"],
+  "targets": {
+    "build": {
+      "executor": "nx:run-commands",
+      "outputs": ["{projectRoot}/dist"],
+      "options": {
+        "command": "tsup",
+        "cwd": "{projectRoot}"
+      },
+      "inputs": ["production", "^production"]
+    },
+    "typecheck": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "tsc --noEmit",
+        "cwd": "{projectRoot}"
+      }
+    },
+    "lint": {
+      "executor": "@nx/eslint:lint",
+      "outputs": ["{options.outputFile}"],
+      "options": {
+        "lintFilePatterns": ["packages/event-schemas/**/*.{ts,tsx}"]
+      }
+    }
+  }
+}

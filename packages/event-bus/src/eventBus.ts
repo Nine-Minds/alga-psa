@@ -10,9 +10,9 @@ import {
   EventSchemas,
   BaseEventSchema,
   convertToWorkflowEvent,
-  type WorkflowPublishHooks
-} from '@shared/workflow/streams/eventBusSchema';
-import { WorkflowEventBaseSchema } from '@shared/workflow/streams/workflowEventSchema';
+  type WorkflowPublishHooks,
+  WorkflowEventBaseSchema
+} from '@alga-psa/event-schemas';
 
 type EventHandler = (event: Event) => Promise<void>;
 

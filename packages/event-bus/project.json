@@ -6,7 +6,8 @@
   "tags": ["scope:event-bus", "type:horizontal"],
   "targets": {
     "build": {
-      "executor": "nx:noop"
+      "executor": "nx:noop",
+      "dependsOn": ["@alga-psa/event-schemas:build"]
     },
     "test": {
       "executor": "@nx/vite:test",

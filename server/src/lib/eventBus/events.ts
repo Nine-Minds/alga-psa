@@ -1,1 +1,1 @@
-export * from '@shared/workflow/streams/eventBusSchema';
+export * from '@alga-psa/event-schemas';
