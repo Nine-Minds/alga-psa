@@ -95,6 +95,8 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 
 - (2026-01-24) Discard draft flow now uses a confirmation dialog including contract + client names.
 
+- (2026-01-24) Discard confirmation includes Cancel + Discard actions (ConfirmationDialog).
+
 ## Commands / Runbooks
 
 - Run billing package tests: `npm test -w packages/billing`

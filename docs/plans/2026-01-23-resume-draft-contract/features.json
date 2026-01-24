@@ -122,7 +122,7 @@
   {
     "id": "F021",
     "description": "Confirmation dialog has Cancel and Discard buttons",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR4"]
   },
   {
