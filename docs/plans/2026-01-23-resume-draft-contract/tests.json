@@ -260,7 +260,7 @@
   {
     "id": "T044",
     "description": "Save Draft preserves the original contract_id",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F018"]
   },
   {
