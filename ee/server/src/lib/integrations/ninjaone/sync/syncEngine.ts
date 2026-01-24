@@ -124,7 +124,7 @@ export class NinjaOneSyncEngine {
    */
   private async initialize(): Promise<void> {
     if (!this.client) {
-      this.client = await createNinjaOneClient(this.tenantId);
+      this.client = await createNinjaOneClient(this.tenantId, undefined, { integrationId: this.integrationId });
     }
     if (!this.knex) {
       const { knex } = await createTenantKnex();

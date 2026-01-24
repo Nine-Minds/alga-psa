@@ -48,7 +48,7 @@
   { "id": "F080", "description": "Integrations: emit sync lifecycle events (INTEGRATION_SYNC_STARTED, INTEGRATION_SYNC_COMPLETED, INTEGRATION_SYNC_FAILED)", "implemented": true, "prdRefs": ["7.2"] },
   { "id": "F081", "description": "Integrations: emit webhook receipt event (INTEGRATION_WEBHOOK_RECEIVED) with safe raw payload handling", "implemented": true, "prdRefs": ["7.2"] },
   { "id": "F082", "description": "Integrations: emit connection health events (INTEGRATION_CONNECTED, INTEGRATION_DISCONNECTED)", "implemented": true, "prdRefs": ["7.2"] },
-  { "id": "F083", "description": "Integrations: emit token lifecycle events (INTEGRATION_TOKEN_EXPIRING, INTEGRATION_TOKEN_REFRESH_FAILED)", "implemented": false, "prdRefs": ["7.2"] },
+  { "id": "F083", "description": "Integrations: emit token lifecycle events (INTEGRATION_TOKEN_EXPIRING, INTEGRATION_TOKEN_REFRESH_FAILED)", "implemented": true, "prdRefs": ["7.2"] },
   { "id": "F084", "description": "Integrations: emit mapping/config change event (EXTERNAL_MAPPING_CHANGED) for external mapping updates", "implemented": false, "prdRefs": ["7.2"] },
 
   { "id": "F090", "description": "Assets: emit asset lifecycle events (ASSET_CREATED, ASSET_UPDATED, ASSET_ASSIGNED, ASSET_UNASSIGNED, ASSET_WARRANTY_EXPIRING)", "implemented": false, "prdRefs": ["7.2"] },

@@ -78,7 +78,7 @@ export async function syncPatchStatus(
     });
 
     const { knex, tenant } = await createTenantKnex();
-    const client = await createNinjaOneClient(tenantId);
+    const client = await createNinjaOneClient(tenantId, undefined, { integrationId });
 
     // Build query for assets to sync
     let assetsQuery = knex('assets')
@@ -227,7 +227,7 @@ export async function syncDevicePatchStatus(
       throw new Error('Patch status only available for workstations and servers');
     }
 
-    const client = await createNinjaOneClient(tenantId);
+    const client = await createNinjaOneClient(tenantId, undefined, { integrationId });
     const deviceId = parseInt(asset.rmm_device_id, 10);
     const patchStatus = await client.getDevicePatchStatus(deviceId);
 

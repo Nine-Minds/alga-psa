@@ -525,9 +525,19 @@ Implication: we should standardize on `@alga-psa/event-bus/publishers` helpers f
     - `ee/server/src/lib/actions/integrations/ninjaoneActions.ts`
   - Note: for RMM, `connectionId` is set to the tenant integration UUID (`integrationId`) since the current data model has a single connection row per provider/tenant.
 
+- 2026-01-24: Completed `F083` (integration token lifecycle emission):
+  - Added shared payload builders + schema-compat unit tests:
+    - `shared/workflow/streams/domainEventBuilders/integrationTokenEventBuilders.ts`
+    - `shared/workflow/streams/domainEventBuilders/__tests__/integrationTokenEventBuilders.test.ts`
+  - Implemented best-effort emission from the NinjaOne OAuth client:
+    - `ee/server/src/lib/integrations/ninjaone/ninjaOneClient.ts` now publishes `INTEGRATION_TOKEN_REFRESH_FAILED` when refresh attempts fail (deduped in 5-minute buckets).
+    - `ee/server/src/lib/integrations/ninjaone/ninjaOneClient.ts` now publishes `INTEGRATION_TOKEN_EXPIRING` when a token expiry timestamp indicates a long-lived token nearing expiration (default window 7 days; suppresses noisy <24h expiries).
+  - Propagated integration context into NinjaOne client factories where available:
+    - `ee/server/src/lib/integrations/ninjaone/sync/*` passes `integrationId` into `createNinjaOneClient(...)` so token events can include `integrationId`/`connectionId`.
+
 ## Next Up
 
-- `F083`: emit token lifecycle events (`INTEGRATION_TOKEN_EXPIRING`, `INTEGRATION_TOKEN_REFRESH_FAILED`).
+- `F084`: emit external mapping/config change event (`EXTERNAL_MAPPING_CHANGED`).
 
 ## Suggested Phasing (to reduce risk)
 
