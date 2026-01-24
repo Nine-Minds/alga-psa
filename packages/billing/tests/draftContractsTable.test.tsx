@@ -103,4 +103,23 @@ describe('Drafts tab DataTable', () => {
 
     expect(await screen.findByText('Acme Co')).toBeInTheDocument();
   });
+
+  it('renders created date in localized format (T014)', async () => {
+    const createdAt = new Date(2026, 0, 1);
+    const updatedAt = new Date(2026, 0, 2);
+    mockDraftContracts = [
+      {
+        contract_id: 'contract-1',
+        contract_name: 'Draft Alpha',
+        client_name: 'Acme Co',
+        created_at: createdAt,
+        updated_at: updatedAt,
+      },
+    ];
+
+    const Contracts = (await import('../src/components/billing-dashboard/contracts/Contracts')).default;
+    render(<Contracts />);
+
+    expect(await screen.findByText(createdAt.toLocaleDateString())).toBeInTheDocument();
+  });
 });

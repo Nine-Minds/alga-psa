@@ -80,7 +80,7 @@
   {
     "id": "T014",
     "description": "Drafts DataTable renders created date in localized format",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F006"]
   },
   {
