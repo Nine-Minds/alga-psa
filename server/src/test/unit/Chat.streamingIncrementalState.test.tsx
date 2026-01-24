@@ -64,6 +64,13 @@ const createControlledSseResponse = () => {
         // stream already closed/canceled
       }
     },
+    error: (error: unknown) => {
+      try {
+        controller.error(error);
+      } catch {
+        // stream already closed/canceled
+      }
+    },
     close: () => {
       try {
         controller.close();
@@ -429,5 +436,69 @@ describe('EE Chat (streaming state)', () => {
     await waitFor(() =>
       expect(document.querySelector('.message-streaming-cursor')).toBeNull(),
     );
+  });
+
+  it('shows the partial response when a network error occurs mid-stream', async () => {
+    expect(Chat).toBeDefined();
+
+    vi
+      .mocked(addMessageToChatAction)
+      .mockResolvedValueOnce({ _id: 'user-message-id' });
+
+    vi.spyOn(globalThis, 'requestAnimationFrame').mockImplementation((cb) => {
+      cb(0);
+      return 0;
+    });
+
+    Object.defineProperty(window, 'localStorage', {
+      configurable: true,
+      value: {
+        removeItem: vi.fn(),
+        getItem: vi.fn(),
+        setItem: vi.fn(),
+      },
+    });
+
+    const sse = createControlledSseResponse();
+    const fetchMock = vi.fn().mockResolvedValue(sse.response);
+    vi.stubGlobal('fetch', fetchMock);
+
+    render(
+      <Chat
+        clientUrl="https://example.invalid"
+        accountId="account-1"
+        messages={[]}
+        userRole="admin"
+        userId="user-1"
+        selectedAccount="account-1"
+        handleSelectAccount={vi.fn()}
+        auth_token="token"
+        setChatTitle={vi.fn()}
+        isTitleLocked={false}
+        onUserInput={vi.fn()}
+        hf={null}
+        initialChatId="chat-1"
+      />,
+    );
+
+    fireEvent.change(screen.getByPlaceholderText('Send a message'), {
+      target: { value: 'Ping' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'SEND' }));
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+
+    sse.send({ content: 'Hello', done: false });
+    await waitFor(() => expect(getIncomingAssistantContent()).toHaveTextContent('Hello'));
+
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    sse.error(new Error('Network down'));
+
+    await waitFor(() => expect(screen.getByText('Interrupted')).toBeInTheDocument());
+    expect(getIncomingAssistantContent()).toHaveTextContent('Hello');
+    await waitFor(() =>
+      expect(screen.getByText(/Connection interrupted/i)).toBeInTheDocument(),
+    );
+    consoleErrorSpy.mockRestore();
   });
 });

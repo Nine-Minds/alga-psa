@@ -509,3 +509,10 @@ curl -X POST localhost:3000/api/chat/stream/chat \
   - File: `server/src/test/unit/Chat.streamingIncrementalState.test.tsx`
 - Validation: `npx vitest run server/src/test/unit/Chat.streamingIncrementalState.test.tsx`
 - Next test item: T044 Network error during streaming shows partial response
+
+### 2026-01-24 (cont.)
+- Implemented T044 (unit test):
+  - Verifies a mid-stream read error results in an `Interrupted` assistant message with the partial content preserved.
+  - File: `server/src/test/unit/Chat.streamingIncrementalState.test.tsx`
+- Validation: `npx vitest run server/src/test/unit/Chat.streamingIncrementalState.test.tsx`
+- Next test item: T045 Stream interruption shows error indicator on message

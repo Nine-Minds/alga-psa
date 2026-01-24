@@ -260,7 +260,7 @@
   {
     "id": "T044",
     "description": "Network error during streaming shows partial response",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F024"]
   },
   {
