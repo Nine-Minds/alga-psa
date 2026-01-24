@@ -8,7 +8,7 @@
   {
     "id": "T002",
     "description": "Drafts tab is clickable and switches to drafts view",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F001"]
   },
   {

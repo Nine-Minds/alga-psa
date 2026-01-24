@@ -2,7 +2,9 @@ import { describe, it, expect } from 'vitest';
 
 import {
   CONTRACT_TAB_LABELS,
+  CONTRACT_LABEL_TO_SUBTAB,
   CONTRACT_SUBTAB_LABELS,
+  normalizeContractSubtab,
 } from '../src/components/billing-dashboard/contracts/contractsTabs';
 
 describe('contracts tabs config', () => {
@@ -13,5 +15,9 @@ describe('contracts tabs config', () => {
       CONTRACT_SUBTAB_LABELS.drafts,
     ]);
   });
-});
 
+  it('maps Drafts label to drafts subtab', () => {
+    expect(CONTRACT_LABEL_TO_SUBTAB[CONTRACT_SUBTAB_LABELS.drafts]).toBe('drafts');
+    expect(normalizeContractSubtab('drafts')).toBe('drafts');
+  });
+});
