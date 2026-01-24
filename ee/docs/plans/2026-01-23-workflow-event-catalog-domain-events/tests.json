@@ -43,7 +43,7 @@
 
   { "id": "T060", "description": "Documents: uploads/deletes emit DOCUMENT_UPLOADED and DOCUMENT_DELETED with storage metadata", "implemented": true, "featureIds": ["F060"] },
   { "id": "T061", "description": "Documents: associate/detach emit DOCUMENT_ASSOCIATED and DOCUMENT_DETACHED with entity references", "implemented": true, "featureIds": ["F061"] },
-  { "id": "T062", "description": "Documents: generation emits DOCUMENT_GENERATED for supported generation paths with sourceType/sourceId", "implemented": false, "featureIds": ["F062"] },
+  { "id": "T062", "description": "Documents: generation emits DOCUMENT_GENERATED for supported generation paths with sourceType/sourceId", "implemented": true, "featureIds": ["F062"] },
   { "id": "T063", "description": "Documents: signature request/signed/expired emit DOCUMENT_SIGNATURE_REQUESTED/DOCUMENT_SIGNED/DOCUMENT_SIGNATURE_EXPIRED only when supported", "implemented": false, "featureIds": ["F063"] },
 
   { "id": "T070", "description": "Email: inbound replies emit INBOUND_EMAIL_REPLY_RECEIVED when reply parsing/matching succeeds", "implemented": false, "featureIds": ["F070"] },

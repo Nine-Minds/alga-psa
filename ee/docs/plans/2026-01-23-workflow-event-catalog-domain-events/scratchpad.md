@@ -775,3 +775,7 @@ Phase 3 (feature dependent / optional modules):
 - 2026-01-24: Completed `T061` (document association/detach coverage):
   - Coverage exists via schema-compat builder tests for document associated/detached payload shapes:
     - `shared/workflow/streams/domainEventBuilders/__tests__/documentAssociationEventBuilders.test.ts`
+
+- 2026-01-24: Completed `T062` (document generation coverage):
+  - Coverage exists via schema-compat builder tests for `DOCUMENT_GENERATED` payload shape (sourceType/sourceId):
+    - `shared/workflow/streams/domainEventBuilders/__tests__/documentGeneratedEventBuilders.test.ts`
