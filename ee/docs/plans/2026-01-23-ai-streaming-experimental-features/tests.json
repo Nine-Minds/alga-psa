@@ -236,7 +236,7 @@
   {
     "id": "T040",
     "description": "Stop button triggers AbortController.abort() during streaming",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F022"]
   },
   {

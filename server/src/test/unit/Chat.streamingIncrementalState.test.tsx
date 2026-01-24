@@ -145,4 +145,83 @@ describe('EE Chat (streaming state)', () => {
 
     await waitFor(() => expect(screen.getByRole('button', { name: 'SEND' })).toBeEnabled());
   });
+
+  it('aborts the streaming request when Stop is clicked', async () => {
+    expect(Chat).toBeDefined();
+
+    const abortSpy = vi.spyOn(AbortController.prototype, 'abort');
+
+    vi
+      .mocked(addMessageToChatAction)
+      .mockResolvedValueOnce({ _id: 'user-message-id' });
+
+    vi.spyOn(globalThis, 'requestAnimationFrame').mockImplementation((cb) => {
+      cb(0);
+      return 0;
+    });
+
+    Object.defineProperty(window, 'localStorage', {
+      configurable: true,
+      value: {
+        removeItem: vi.fn(),
+        getItem: vi.fn(),
+        setItem: vi.fn(),
+      },
+    });
+
+    const encoder = new TextEncoder();
+    let controller!: ReadableStreamDefaultController<Uint8Array>;
+
+    const response = new Response(
+      new ReadableStream<Uint8Array>({
+        start(streamController) {
+          controller = streamController;
+        },
+      }),
+      {
+        status: 200,
+        headers: { 'Content-Type': 'text/event-stream; charset=utf-8' },
+      },
+    );
+
+    const fetchMock = vi.fn(async (_url: unknown, init?: RequestInit) => {
+      const signal = init?.signal as AbortSignal | undefined;
+      signal?.addEventListener('abort', () => {
+        controller.error(new DOMException('Aborted', 'AbortError'));
+      });
+      controller.enqueue(encoder.encode(`data: ${JSON.stringify({ content: 'Hi', done: false })}\n\n`));
+      return response;
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    render(
+      <Chat
+        clientUrl="https://example.invalid"
+        accountId="account-1"
+        messages={[]}
+        userRole="admin"
+        userId="user-1"
+        selectedAccount="account-1"
+        handleSelectAccount={vi.fn()}
+        auth_token="token"
+        setChatTitle={vi.fn()}
+        isTitleLocked={false}
+        onUserInput={vi.fn()}
+        hf={null}
+        initialChatId="chat-1"
+      />,
+    );
+
+    fireEvent.change(screen.getByPlaceholderText('Send a message'), {
+      target: { value: 'Ping' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'SEND' }));
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(screen.getByRole('button', { name: 'STOP' })).toBeInTheDocument());
+
+    fireEvent.click(screen.getByRole('button', { name: 'STOP' }));
+
+    await waitFor(() => expect(abortSpy).toHaveBeenCalledTimes(1));
+  });
 });
