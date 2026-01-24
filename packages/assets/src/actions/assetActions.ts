@@ -500,7 +500,7 @@ export const createAsset = withAuth(async (user, { tenant }, data: CreateAssetRe
                 payload: buildAssetCreatedPayload({
                     assetId: created.asset_id,
                     clientId: created.client_id || undefined,
-                    createdByUserId: currentUser.user_id,
+                    createdByUserId: user.user_id,
                     createdAt: created.created_at || occurredAt,
                     assetType: created.asset_type,
                     serialNumber: created.serial_number,
@@ -508,7 +508,7 @@ export const createAsset = withAuth(async (user, { tenant }, data: CreateAssetRe
                 ctx: {
                     tenantId: tenant,
                     occurredAt,
-                    actor: { actorType: 'USER', actorUserId: currentUser.user_id },
+                    actor: { actorType: 'USER', actorUserId: user.user_id },
                 },
             });
 
@@ -530,7 +530,7 @@ export const createAsset = withAuth(async (user, { tenant }, data: CreateAssetRe
                     ctx: {
                         tenantId: tenant,
                         occurredAt,
-                        actor: { actorType: 'USER', actorUserId: currentUser.user_id },
+                        actor: { actorType: 'USER', actorUserId: user.user_id },
                     },
                 });
             }
@@ -659,7 +659,7 @@ export const updateAsset = withAuth(async (user, { tenant }, asset_id: string, d
             before: result.before,
             after: result.after,
             updatedPaths,
-            updatedByUserId: currentUser.user_id,
+            updatedByUserId: user.user_id,
             updatedAt: occurredAt,
         });
 
@@ -670,7 +670,7 @@ export const updateAsset = withAuth(async (user, { tenant }, asset_id: string, d
                 ctx: {
                     tenantId: tenant,
                     occurredAt,
-                    actor: { actorType: 'USER', actorUserId: currentUser.user_id },
+                    actor: { actorType: 'USER', actorUserId: user.user_id },
                 },
             });
         }
@@ -691,7 +691,7 @@ export const updateAsset = withAuth(async (user, { tenant }, asset_id: string, d
                 ctx: {
                     tenantId: tenant,
                     occurredAt,
-                    actor: { actorType: 'USER', actorUserId: currentUser.user_id },
+                    actor: { actorType: 'USER', actorUserId: user.user_id },
                 },
             });
         }
@@ -714,7 +714,7 @@ export const updateAsset = withAuth(async (user, { tenant }, asset_id: string, d
                 ctx: {
                     tenantId: tenant,
                     occurredAt,
-                    actor: { actorType: 'USER', actorUserId: currentUser.user_id },
+                    actor: { actorType: 'USER', actorUserId: user.user_id },
                 },
             });
         }
@@ -1882,7 +1882,7 @@ export const createAssetAssociation = withAuth(async (user, { tenant }, data: Cr
             ctx: {
                 tenantId: tenant,
                 occurredAt,
-                actor: { actorType: 'USER', actorUserId: currentUser.user_id },
+                actor: { actorType: 'USER', actorUserId: user.user_id },
             },
         });
 
@@ -1947,7 +1947,7 @@ export const removeAssetAssociation = withAuth(async (
             ctx: {
                 tenantId: tenant,
                 occurredAt,
-                actor: { actorType: 'USER', actorUserId: currentUser.user_id },
+                actor: { actorType: 'USER', actorUserId: user.user_id },
             },
         });
 

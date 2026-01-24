@@ -105,13 +105,13 @@ export const createBlockDocument = withAuth(async (
             documentId: createdAssociation.documentId,
             entityType: createdAssociation.entityType,
             entityId: createdAssociation.entityId,
-            associatedByUserId: currentUser.user_id,
+            associatedByUserId: user.user_id,
             associatedAt: occurredAt,
           }),
           ctx: {
             tenantId: tenant,
             occurredAt,
-            actor: { actorType: 'USER', actorUserId: currentUser.user_id },
+            actor: { actorType: 'USER', actorUserId: user.user_id },
           },
           idempotencyKey: `document_associated:${createdAssociation.associationId}`,
         });

@@ -436,23 +436,31 @@ export const createPrepaymentInvoice = withAuth(async (
     });
 
     if (createdCreditNote) {
+        const wfData: {
+            creditNoteId: string;
+            clientId: string;
+            createdAt: string;
+            createdByUserId: string;
+            amount: number;
+            currency: string;
+        } = createdCreditNote;
         await publishWorkflowEvent({
             eventType: 'CREDIT_NOTE_CREATED',
             payload: buildCreditNoteCreatedPayload({
-                creditNoteId: createdCreditNote.creditNoteId,
-                clientId: createdCreditNote.clientId,
-                createdByUserId: createdCreditNote.createdByUserId,
-                createdAt: createdCreditNote.createdAt,
-                amount: createdCreditNote.amount,
-                currency: createdCreditNote.currency,
+                creditNoteId: wfData.creditNoteId,
+                clientId: wfData.clientId,
+                createdByUserId: wfData.createdByUserId,
+                createdAt: wfData.createdAt,
+                amount: wfData.amount,
+                currency: wfData.currency,
                 status: 'issued',
             }),
             ctx: {
                 tenantId: tenant,
-                occurredAt: createdCreditNote.createdAt,
-                actor: { actorType: 'USER', actorUserId: createdCreditNote.createdByUserId },
+                occurredAt: wfData.createdAt,
+                actor: { actorType: 'USER', actorUserId: wfData.createdByUserId },
             },
-            idempotencyKey: `credit_note_created:${createdCreditNote.creditNoteId}`,
+            idempotencyKey: `credit_note_created:${wfData.creditNoteId}`,
         });
     }
 

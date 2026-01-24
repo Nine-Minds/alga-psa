@@ -1131,46 +1131,56 @@ export const createClientContractFromWizard = withAuth(async (
   });
 
   if (createdForWorkflow) {
+    const wfData: {
+      contractId: string;
+      clientId: string;
+      createdAt: string;
+      startDate: string;
+      endDate: string | null;
+      status: string;
+      actorUserId?: string;
+    } = createdForWorkflow;
     await publishWorkflowEvent({
       eventType: 'CONTRACT_CREATED',
       payload: buildContractCreatedPayload({
-        contractId: createdForWorkflow.contractId,
-        clientId: createdForWorkflow.clientId,
-        createdByUserId: createdForWorkflow.actorUserId,
-        createdAt: createdForWorkflow.createdAt,
-        startDate: createdForWorkflow.startDate,
-        endDate: createdForWorkflow.endDate,
-        status: createdForWorkflow.status,
+        contractId: wfData.contractId,
+        clientId: wfData.clientId,
+        createdByUserId: wfData.actorUserId,
+        createdAt: wfData.createdAt,
+        startDate: wfData.startDate,
+        endDate: wfData.endDate,
+        status: wfData.status,
       }),
       ctx: {
         tenantId: tenant,
-        occurredAt: createdForWorkflow.createdAt,
-        actor: createdForWorkflow.actorUserId
-          ? { actorType: 'USER' as const, actorUserId: createdForWorkflow.actorUserId }
+        occurredAt: wfData.createdAt,
+        actor: wfData.actorUserId
+          ? { actorType: 'USER' as const, actorUserId: wfData.actorUserId }
           : undefined,
       },
-      idempotencyKey: `contract_created:${createdForWorkflow.contractId}:${createdForWorkflow.clientId}`,
+      idempotencyKey: `contract_created:${wfData.contractId}:${wfData.clientId}`,
     });
-  }
 
-  if (createdForWorkflow && renewalForWorkflow) {
-    await publishWorkflowEvent({
-      eventType: 'CONTRACT_RENEWAL_UPCOMING',
-      payload: buildContractRenewalUpcomingPayload({
-        contractId: createdForWorkflow.contractId,
-        clientId: createdForWorkflow.clientId,
-        renewalAt: renewalForWorkflow.renewalAt,
-        daysUntilRenewal: renewalForWorkflow.daysUntilRenewal,
-      }),
-      ctx: {
-        tenantId: tenant,
-        occurredAt: createdForWorkflow.createdAt,
-        actor: createdForWorkflow.actorUserId
-          ? { actorType: 'USER' as const, actorUserId: createdForWorkflow.actorUserId }
-          : undefined,
-      },
-      idempotencyKey: `contract_renewal_upcoming:${createdForWorkflow.contractId}:${createdForWorkflow.clientId}:${renewalForWorkflow.renewalAt}`,
-    });
+    if (renewalForWorkflow) {
+      const renewal: { renewalAt: string; daysUntilRenewal: number } = renewalForWorkflow;
+      await publishWorkflowEvent({
+        eventType: 'CONTRACT_RENEWAL_UPCOMING',
+        payload: buildContractRenewalUpcomingPayload({
+          contractId: wfData.contractId,
+          clientId: wfData.clientId,
+          renewalAt: renewal.renewalAt,
+          daysUntilRenewal: renewal.daysUntilRenewal,
+        }),
+        ctx: {
+          tenantId: tenant,
+          occurredAt: wfData.createdAt,
+          actor: wfData.actorUserId
+            ? { actorType: 'USER' as const, actorUserId: wfData.actorUserId }
+            : undefined,
+        },
+        idempotencyKey: `contract_renewal_upcoming:${wfData.contractId}:${wfData.clientId}:${renewal.renewalAt}`,
+      });
+    }
   }
 
   return result;

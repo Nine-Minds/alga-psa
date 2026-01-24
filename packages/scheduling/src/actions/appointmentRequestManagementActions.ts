@@ -537,7 +537,7 @@ export const approveAppointmentRequest = withAuth(async (
         try {
           const ctx = {
             tenantId: tenant,
-            actor: { actorType: 'USER' as const, actorUserId: currentUser.user_id },
+            actor: { actorType: 'USER' as const, actorUserId: user.user_id },
           };
           const previousAssigneeId = currentAssignee?.user_id;
           const newAssigneeId = validatedData.assigned_user_id;
@@ -596,7 +596,7 @@ export const approveAppointmentRequest = withAuth(async (
         try {
           const ctx = {
             tenantId: tenant,
-            actor: { actorType: 'USER' as const, actorUserId: currentUser.user_id },
+            actor: { actorType: 'USER' as const, actorUserId: user.user_id },
           };
 
           await publishWorkflowEvent({
@@ -606,7 +606,7 @@ export const approveAppointmentRequest = withAuth(async (
               entry: scheduleEntry,
               ticketId: validatedData.ticket_id || request.ticket_id || undefined,
               timezone: 'UTC',
-              createdByUserId: currentUser.user_id,
+              createdByUserId: user.user_id,
             }),
           });
 

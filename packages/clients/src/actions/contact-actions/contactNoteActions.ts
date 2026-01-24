@@ -154,12 +154,12 @@ export const saveContactNote = withAuth(async (
           noteId: document_id,
           entityType: 'contact',
           entityId: contactId,
-          createdByUserId: currentUser.user_id,
+          createdByUserId: user.user_id,
           createdAt: occurredAt,
           visibility: 'internal',
           bodyPreview: blockData,
         }),
-        ctx: { tenantId: tenant, occurredAt, actor: { actorType: 'USER' as const, actorUserId: currentUser.user_id } },
+        ctx: { tenantId: tenant, occurredAt, actor: { actorType: 'USER' as const, actorUserId: user.user_id } },
         idempotencyKey: `note_created:contact:${contactId}:${document_id}`,
       });
 

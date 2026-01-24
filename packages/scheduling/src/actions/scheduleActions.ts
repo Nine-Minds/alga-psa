@@ -220,8 +220,8 @@ export const addScheduleEntry = withAuth(async (
 
     if (isScheduleBlockEntry(createdEntry)) {
       const ctx = {
-        tenantId: currentUser.tenant,
-        actor: { actorType: 'USER' as const, actorUserId: currentUser.user_id },
+        tenantId: tenant,
+        actor: { actorType: 'USER' as const, actorUserId: user.user_id },
       };
 
       try {
@@ -244,8 +244,8 @@ export const addScheduleEntry = withAuth(async (
           : undefined);
 
       const ctx = {
-        tenantId: currentUser.tenant,
-        actor: { actorType: 'USER' as const, actorUserId: currentUser.user_id },
+        tenantId: tenant,
+        actor: { actorType: 'USER' as const, actorUserId: user.user_id },
       };
 
       try {
@@ -256,7 +256,7 @@ export const addScheduleEntry = withAuth(async (
             entry: createdEntry,
             ticketId,
             timezone,
-            createdByUserId: currentUser.user_id,
+            createdByUserId: user.user_id,
           }),
         });
 
@@ -287,7 +287,7 @@ export const addScheduleEntry = withAuth(async (
                 appointmentId: createdEntry.entry_id,
                 ticketId,
                 technicianUserId,
-                dispatchedByUserId: currentUser.user_id,
+                dispatchedByUserId: user.user_id,
               }),
             });
           }
@@ -300,8 +300,8 @@ export const addScheduleEntry = withAuth(async (
     try {
       await maybePublishCapacityThresholdReached({
         db,
-        tenantId: currentUser.tenant,
-        actorUserId: currentUser.user_id,
+        tenantId: tenant,
+        actorUserId: user.user_id,
         after: createdEntry,
       });
     } catch (eventError) {
@@ -414,8 +414,8 @@ export const updateScheduleEntry = withAuth(async (
       const isScheduleBlock = isScheduleBlockEntry(updatedEntry);
       if (!wasScheduleBlock && isScheduleBlock) {
         const ctx = {
-          tenantId: currentUser.tenant,
-          actor: { actorType: 'USER' as const, actorUserId: currentUser.user_id },
+          tenantId: tenant,
+          actor: { actorType: 'USER' as const, actorUserId: user.user_id },
         };
 
         try {
@@ -429,8 +429,8 @@ export const updateScheduleEntry = withAuth(async (
         }
       } else if (wasScheduleBlock && !isScheduleBlock) {
         const ctx = {
-          tenantId: currentUser.tenant,
-          actor: { actorType: 'USER' as const, actorUserId: currentUser.user_id },
+          tenantId: tenant,
+          actor: { actorType: 'USER' as const, actorUserId: user.user_id },
         };
 
         try {
@@ -456,8 +456,8 @@ export const updateScheduleEntry = withAuth(async (
             : undefined);
 
         const ctx = {
-          tenantId: currentUser.tenant,
-          actor: { actorType: 'USER' as const, actorUserId: currentUser.user_id },
+          tenantId: tenant,
+          actor: { actorType: 'USER' as const, actorUserId: user.user_id },
         };
 
         try {
@@ -530,7 +530,7 @@ export const updateScheduleEntry = withAuth(async (
                   appointmentId: updatedEntry.entry_id,
                   ticketId,
                   technicianUserId,
-                  dispatchedByUserId: currentUser.user_id,
+                  dispatchedByUserId: user.user_id,
                 }),
               });
             }
@@ -606,8 +606,8 @@ export const updateScheduleEntry = withAuth(async (
       try {
         await maybePublishCapacityThresholdReached({
           db,
-          tenantId: currentUser.tenant,
-          actorUserId: currentUser.user_id,
+          tenantId: tenant,
+          actorUserId: user.user_id,
           before: existingEntry,
           after: updatedEntry,
         });
@@ -714,8 +714,8 @@ export const deleteScheduleEntry = withAuth(async (
 
       if (isScheduleBlockEntry(existingEntry)) {
         const ctx = {
-          tenantId: currentUser.tenant,
-          actor: { actorType: 'USER' as const, actorUserId: currentUser.user_id },
+          tenantId: tenant,
+          actor: { actorType: 'USER' as const, actorUserId: user.user_id },
         };
 
         try {
@@ -740,8 +740,8 @@ export const deleteScheduleEntry = withAuth(async (
             : undefined);
 
         const ctx = {
-          tenantId: currentUser.tenant,
-          actor: { actorType: 'USER' as const, actorUserId: currentUser.user_id },
+          tenantId: tenant,
+          actor: { actorType: 'USER' as const, actorUserId: user.user_id },
         };
 
         try {
@@ -762,8 +762,8 @@ export const deleteScheduleEntry = withAuth(async (
       try {
         await maybePublishCapacityThresholdReached({
           db,
-          tenantId: currentUser.tenant,
-          actorUserId: currentUser.user_id,
+          tenantId: tenant,
+          actorUserId: user.user_id,
           before: existingEntry,
         });
       } catch (eventError) {

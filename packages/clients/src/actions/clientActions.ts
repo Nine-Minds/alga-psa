@@ -182,7 +182,7 @@ export const updateClient = withAuth(async (user, { tenant }, clientId: string, 
     }
 
     const occurredAt = updateResult.occurredAt ?? updatedClientWithLogo.updated_at ?? new Date().toISOString();
-    const actor = maybeUserActor(currentUser);
+    const actor = maybeUserActor(user);
 
     const previousLifecycleStatus = (updateResult.before as any)?.properties?.status;
     const newLifecycleStatus = (updateResult.after as any)?.properties?.status;
@@ -215,7 +215,7 @@ export const updateClient = withAuth(async (user, { tenant }, clientId: string, 
           clientId,
           previousOwnerUserId: typeof previousOwnerUserId === 'string' ? previousOwnerUserId : undefined,
           newOwnerUserId,
-          assignedByUserId: currentUser.user_id,
+          assignedByUserId: user.user_id,
           assignedAt: occurredAt,
         }),
         ctx: { tenantId: tenant, occurredAt, actor },
@@ -230,7 +230,7 @@ export const updateClient = withAuth(async (user, { tenant }, clientId: string, 
         eventType: 'CLIENT_ARCHIVED',
         payload: buildClientArchivedPayload({
           clientId,
-          archivedByUserId: currentUser.user_id,
+          archivedByUserId: user.user_id,
           archivedAt: occurredAt,
         }),
         ctx: { tenantId: tenant, occurredAt, actor },
@@ -271,7 +271,7 @@ export const updateClient = withAuth(async (user, { tenant }, clientId: string, 
           contactId: newBillingContactId,
           previousPrimaryContactId:
             typeof previousBillingContactId === 'string' && previousBillingContactId ? previousBillingContactId : undefined,
-          setByUserId: currentUser.user_id,
+          setByUserId: user.user_id,
           setAt: occurredAt,
         }),
         ctx: { tenantId: tenant, occurredAt, actor },
@@ -343,14 +343,14 @@ export const createClient = withAuth(async (user, { tenant }, client: Omit<IClie
       payload: buildClientCreatedPayload({
         clientId: createdClient.client_id,
         clientName: createdClient.client_name,
-        createdByUserId: currentUser.user_id,
+        createdByUserId: user.user_id,
         createdAt,
         status,
       }),
       ctx: {
         tenantId: tenant,
         occurredAt: createdAt,
-        actor: maybeUserActor(currentUser),
+        actor: maybeUserActor(user),
       },
       idempotencyKey: `client_created:${createdClient.client_id}`,
     });
@@ -1740,10 +1740,10 @@ export const markClientInactiveWithContacts = withAuth(async (
       eventType: 'CLIENT_ARCHIVED',
       payload: buildClientArchivedPayload({
         clientId,
-        archivedByUserId: currentUser.user_id,
+        archivedByUserId: user.user_id,
         archivedAt: occurredAt,
       }),
-      ctx: { tenantId: tenant, occurredAt, actor: maybeUserActor(currentUser) },
+      ctx: { tenantId: tenant, occurredAt, actor: maybeUserActor(user) },
       idempotencyKey: `client_archived:${clientId}:${occurredAt}`,
     });
 

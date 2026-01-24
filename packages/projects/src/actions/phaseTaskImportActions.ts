@@ -943,7 +943,7 @@ export const importPhasesAndTasks = withAuth(async (
             const ctx = {
               tenantId: tenant,
               occurredAt,
-              actor: { actorType: 'USER' as const, actorUserId: currentUser.user_id },
+              actor: { actorType: 'USER' as const, actorUserId: user.user_id },
             };
             const statusInfo = await resolveProjectStatusInfo(trx, tenant, newTask.project_status_mapping_id);
 
@@ -956,7 +956,7 @@ export const importPhasesAndTasks = withAuth(async (
                 title: newTask.task_name,
                 dueDate: newTask.due_date,
                 status: statusInfo.status,
-                createdByUserId: currentUser.user_id,
+                createdByUserId: user.user_id,
                 createdAt: occurredAt,
               }),
             });
@@ -970,7 +970,7 @@ export const importPhasesAndTasks = withAuth(async (
                   taskId: newTask.task_id,
                   assignedToId: newTask.assigned_to,
                   assignedToType: 'user',
-                  assignedByUserId: currentUser.user_id,
+                  assignedByUserId: user.user_id,
                   assignedAt: occurredAt,
                 }),
               });

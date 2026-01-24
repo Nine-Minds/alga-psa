@@ -154,12 +154,12 @@ export const saveClientNote = withAuth(async (
           noteId: document_id,
           entityType: 'client',
           entityId: clientId,
-          createdByUserId: currentUser.user_id,
+          createdByUserId: user.user_id,
           createdAt: occurredAt,
           visibility: 'internal',
           bodyPreview: blockData,
         }),
-        ctx: { tenantId: tenant, occurredAt, actor: { actorType: 'USER' as const, actorUserId: currentUser.user_id } },
+        ctx: { tenantId: tenant, occurredAt, actor: { actorType: 'USER' as const, actorUserId: user.user_id } },
         idempotencyKey: `note_created:client:${clientId}:${document_id}`,
       });
 
