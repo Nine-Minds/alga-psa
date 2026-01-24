@@ -630,6 +630,10 @@ Implication: we should standardize on `@alga-psa/event-bus/publishers` helpers f
   - Added schema-level regression coverage for relationship event payloads:
     - `shared/workflow/streams/__tests__/ticketMergeSplitEvents.test.ts`
 
+- 2026-01-24: Completed `T015` (ticket tag change coverage):
+  - Existing tag action builder tests cover tag add/remove events (applies to tickets via `entityType/entityId`):
+    - `shared/workflow/streams/domainEventBuilders/__tests__/tagEventBuilders.test.ts`
+
 ## Suggested Phasing (to reduce risk)
 
 Phase 1 (authoritative CRUD/state transitions; low provider dependency):

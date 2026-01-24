@@ -11,7 +11,7 @@
   { "id": "T012", "description": "Tickets: reopen publishes TICKET_REOPENED with previous/new status and actor", "implemented": true, "featureIds": ["F010"] },
   { "id": "T013", "description": "Tickets: escalation/queue changes publish TICKET_ESCALATED and TICKET_QUEUE_CHANGED", "implemented": true, "featureIds": ["F010"] },
   { "id": "T014", "description": "Tickets: merge/split publish TICKET_MERGED and TICKET_SPLIT with source/target ids", "implemented": true, "featureIds": ["F011"] },
-  { "id": "T015", "description": "Tickets: tag changes publish TICKET_TAGS_CHANGED (or TAG_APPLIED/TAG_REMOVED as decided) with added/removed tags", "implemented": false, "featureIds": ["F010", "F053"] },
+  { "id": "T015", "description": "Tickets: tag changes publish TICKET_TAGS_CHANGED (or TAG_APPLIED/TAG_REMOVED as decided) with added/removed tags", "implemented": true, "featureIds": ["F010", "F053"] },
   { "id": "T016", "description": "Tickets: communication events publish TICKET_MESSAGE_ADDED/TICKET_CUSTOMER_REPLIED/TICKET_INTERNAL_NOTE_ADDED (or map to existing comment events) with correct visibility/channel", "implemented": false, "featureIds": ["F012"] },
   { "id": "T017", "description": "Tickets: time logging publishes TICKET_TIME_ENTRY_ADDED with billable/minutes metadata", "implemented": false, "featureIds": ["F013"] },
   { "id": "T018", "description": "Tickets: SLA stage enter/met/breached publish events only when SLA module enabled; payload includes stage + target timestamps", "implemented": false, "featureIds": ["F014"] },
