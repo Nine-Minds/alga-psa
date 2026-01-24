@@ -56,6 +56,8 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
   - Draft data fetched via `getDraftContracts()` in `packages/billing/src/components/billing-dashboard/contracts/Contracts.tsx`
   - Added search input + localized date rendering (will be broken out into checklist items as we complete them)
 
+- (2026-01-24) Drafts table includes Client column (`client_name`).
+
 ## Commands / Runbooks
 
 - Run billing package tests: `npm test -w packages/billing`
