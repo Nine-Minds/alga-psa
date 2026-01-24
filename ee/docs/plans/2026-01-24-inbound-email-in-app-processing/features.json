@@ -8,7 +8,7 @@
 
   { "id": "F010", "description": "New-ticket path: resolve provider-specific inbound ticket defaults via `resolveInboundTicketDefaults(tenant, providerId)`", "implemented": true },
   { "id": "F011", "description": "New-ticket path: match sender email to existing contact via `findContactByEmail` (exact match)", "implemented": true },
-  { "id": "F012", "description": "New-ticket path: define and implement behavior when sender email is unmatched (per PRD Open Questions)", "implemented": false },
+  { "id": "F012", "description": "New-ticket path: define and implement behavior when sender email is unmatched (per PRD Open Questions)", "implemented": true },
   { "id": "F013", "description": "New-ticket path: create ticket via `createTicketFromEmail` and store `email_metadata` for threading", "implemented": false },
   { "id": "F014", "description": "New-ticket path: create initial comment via `createCommentFromEmail` containing the email body", "implemented": false },
   { "id": "F015", "description": "New-ticket path: process attachments best-effort via `processEmailAttachment`", "implemented": false },

@@ -36,3 +36,4 @@
 - 2026-01-24: Implemented F006 by processing reply attachments per item via `processEmailAttachment` with error-continue semantics.
 - 2026-01-24: Implemented F010 by requiring inbound ticket defaults per provider via `resolveInboundTicketDefaults(tenantId, providerId)` and skipping processing when missing.
 - 2026-01-24: Implemented F011 by matching sender email to an existing contact via `findContactByEmail` and using its `client_id`/`contact_id` on ticket creation.
+- 2026-01-24: Implemented F012 decision: if sender email does not match an existing contact, create the ticket under provider defaults `client_id` with `contact_id` unset, and mark the initial comment metadata with `unmatchedSender: true` for manual triage.
