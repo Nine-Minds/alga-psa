@@ -278,7 +278,7 @@
   {
     "id": "T047",
     "description": "Activated contract no longer appears in Drafts tab",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F019"]
   },
   {
