@@ -152,6 +152,7 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
   - (2026-01-24) Extended `packages/billing/tests/contractWizardResume.test.tsx` and implemented T034 to assert Contract Basics step receives the draft client selection.
   - (2026-01-24) Extended `packages/billing/tests/contractWizardResume.test.tsx` and implemented T035 to assert Contract Basics step receives the draft contract name.
   - (2026-01-24) Extended `packages/billing/tests/contractWizardResume.test.tsx` and implemented T036 to assert Contract Basics step receives the draft dates.
+  - (2026-01-24) Extended `packages/billing/tests/contractWizardResume.test.tsx` and implemented T037 to assert Fixed Fee step receives pre-populated fixed services when navigating forward from basics.
 
 ## Links / References
 

@@ -218,7 +218,7 @@
   {
     "id": "T037",
     "description": "Step 2 (Fixed Fee) shows pre-populated services from draft",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F017"]
   },
   {

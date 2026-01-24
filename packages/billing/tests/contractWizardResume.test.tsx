@@ -3,7 +3,8 @@
  */
 import React from 'react';
 import { describe, expect, it, vi } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { act, render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 
 vi.mock('@alga-psa/ui/components/Dialog', () => ({
   Dialog: ({ isOpen, children }: { isOpen: boolean; children: React.ReactNode }) =>
@@ -42,7 +43,9 @@ vi.mock('../src/components/billing-dashboard/contracts/wizard-steps/ContractBasi
 }));
 
 vi.mock('../src/components/billing-dashboard/contracts/wizard-steps/FixedFeeServicesStep', () => ({
-  FixedFeeServicesStep: () => <div data-testid="step-fixed-fee" />,
+  FixedFeeServicesStep: ({ data }: { data: any }) => (
+    <div data-testid="step-fixed-fee" data-fixed-services-count={String((data.fixed_services ?? []).length)} />
+  ),
 }));
 
 vi.mock('../src/components/billing-dashboard/contracts/wizard-steps/ProductsStep', () => ({
@@ -178,5 +181,42 @@ describe('ContractWizard resume behavior', () => {
     const step = await screen.findByTestId('step-contract-basics');
     expect(step).toHaveAttribute('data-start-date', '2026-01-01');
     expect(step).toHaveAttribute('data-end-date', '2026-12-31');
+  });
+
+  it('step 2 (Fixed Fee) shows pre-populated services from draft (T037)', async () => {
+    const { ContractWizard } = await import('../src/components/billing-dashboard/contracts/ContractWizard');
+    render(
+      <ContractWizard
+        open={true}
+        onOpenChange={vi.fn()}
+        editingContract={{
+          contract_id: 'contract-1',
+          is_draft: true,
+          client_id: 'client-1',
+          contract_name: 'Draft Alpha',
+          start_date: '2026-01-01',
+          billing_frequency: 'monthly',
+          currency_code: 'USD',
+          enable_proration: false,
+          fixed_base_rate: 10000,
+          fixed_services: [
+            { service_id: 'svc-1', quantity: 1 },
+            { service_id: 'svc-2', quantity: 2 },
+          ],
+          product_services: [],
+          hourly_services: [],
+          usage_services: [],
+        }}
+      />,
+    );
+
+    await screen.findByTestId('step-contract-basics');
+    const user = userEvent.setup();
+    await act(async () => {
+      await user.click(screen.getByText('Next'));
+    });
+
+    const step = await screen.findByTestId('step-fixed-fee');
+    expect(step).toHaveAttribute('data-fixed-services-count', '2');
   });
 });
