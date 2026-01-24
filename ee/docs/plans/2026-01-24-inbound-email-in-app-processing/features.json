@@ -1,0 +1,28 @@
+[
+  { "id": "F001", "description": "Define normalized in-app inbound email processing contract: {tenantId, providerId, emailData}", "implemented": true },
+  { "id": "F002", "description": "Implement server-only service `processInboundEmailInApp` that routes reply vs new-ticket logic", "implemented": false },
+  { "id": "F003", "description": "Parse/sanitize email body via `parseEmailReplyBody` with safe fallbacks", "implemented": false },
+  { "id": "F004", "description": "Threading: resolve existing ticket by reply token (`findTicketByReplyToken`) then by headers (`findTicketByEmailThread`)", "implemented": false },
+  { "id": "F005", "description": "Reply path: create ticket comment from email (including HTML→BlockNote conversion when available)", "implemented": false },
+  { "id": "F006", "description": "Reply path: process reply attachments best-effort via `processEmailAttachment`", "implemented": false },
+
+  { "id": "F010", "description": "New-ticket path: resolve provider-specific inbound ticket defaults via `resolveInboundTicketDefaults(tenant, providerId)`", "implemented": false },
+  { "id": "F011", "description": "New-ticket path: match sender email to existing contact via `findContactByEmail` (exact match)", "implemented": false },
+  { "id": "F012", "description": "New-ticket path: define and implement behavior when sender email is unmatched (per PRD Open Questions)", "implemented": false },
+  { "id": "F013", "description": "New-ticket path: create ticket via `createTicketFromEmail` and store `email_metadata` for threading", "implemented": false },
+  { "id": "F014", "description": "New-ticket path: create initial comment via `createCommentFromEmail` containing the email body", "implemented": false },
+  { "id": "F015", "description": "New-ticket path: process attachments best-effort via `processEmailAttachment`", "implemented": false },
+
+  { "id": "F020", "description": "Idempotency: ensure reply comment creation is idempotent per {tenant, ticketId, messageId}", "implemented": false },
+  { "id": "F021", "description": "Idempotency: ensure new-ticket creation is idempotent per {tenant, providerId, messageId}", "implemented": false },
+  { "id": "F022", "description": "Preserve provider-level dedupe bookkeeping (Gmail historyId + Microsoft processed message records)", "implemented": false },
+
+  { "id": "F030", "description": "Wire Gmail webhook handler to call `processInboundEmailInApp` instead of publishing `INBOUND_EMAIL_RECEIVED` to Redis workflow streams", "implemented": false },
+  { "id": "F031", "description": "Wire Microsoft webhook handler to call `processInboundEmailInApp` instead of publishing `INBOUND_EMAIL_RECEIVED` to Redis workflow streams", "implemented": false },
+
+  { "id": "F040", "description": "Add feature flag (tenant/provider scoped) to switch between old workflow-stream publish vs in-app processing", "implemented": false },
+  { "id": "F041", "description": "Rollout: allow enabling in-app processing per providerId for staged deployment", "implemented": false },
+
+  { "id": "F050", "description": "Default workflow-worker runtime to v2-only (set `WORKFLOW_WORKER_MODE=v2` in deployment configs) after inbound email no longer depends on worker", "implemented": false },
+  { "id": "F051", "description": "Remove/disable legacy email workflow registrations once verified unused (follow-up cleanup)", "implemented": false }
+]
