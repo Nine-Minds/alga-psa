@@ -8,7 +8,7 @@
   {
     "id": "T002",
     "description": "getExperimentalFeatures() returns saved experimental features from tenant_settings",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F001"]
   },
   {

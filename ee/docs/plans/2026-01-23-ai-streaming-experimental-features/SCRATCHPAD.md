@@ -203,3 +203,10 @@ curl -X POST localhost:3000/api/chat/stream/chat \
   - Note: Updated `tests.json` wording since `getExperimentalFeatures()` intentionally normalizes to defaults rather than returning `{}`.
 - Validation: `npx vitest run server/src/test/unit/tenantSettingsActions.experimentalFeatures.test.ts` (repo-root `npm run test:local` currently fails due to `dotenv -e` CLI incompatibility)
 - Next test item: T002 getExperimentalFeatures() returns saved experimental features from tenant_settings
+
+### 2026-01-24 (cont.)
+- Implemented T002 (unit test):
+  - Added Vitest unit test covering the saved-settings path; expects stored `experimentalFeatures.aiAssistant: true` to be returned as `{ aiAssistant: true }`.
+  - File: `server/src/test/unit/tenantSettingsActions.experimentalFeatures.test.ts`
+- Validation: `npx vitest run server/src/test/unit/tenantSettingsActions.experimentalFeatures.test.ts`
+- Next test item: T003 updateExperimentalFeatures() creates settings entry if none exists
