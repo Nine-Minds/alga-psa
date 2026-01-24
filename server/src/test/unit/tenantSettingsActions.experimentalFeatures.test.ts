@@ -9,6 +9,14 @@ const knexFromMock = vi.fn();
 const knexSelectMock = vi.fn();
 const createTenantKnexMock = vi.fn();
 
+const getCurrentUserMock = vi.fn();
+const getCurrentUserPermissionsMock = vi.fn();
+
+const tenantKnexTableMock = vi.fn();
+const knexInsertMock = vi.fn();
+const knexOnConflictMock = vi.fn();
+const knexMergeMock = vi.fn();
+
 vi.mock('next/headers.js', () => ({
   headers: async () => new Headers(),
 }));
@@ -19,8 +27,8 @@ vi.mock('@alga-psa/db', () => ({
 }));
 
 vi.mock('@alga-psa/users/actions', () => ({
-  getCurrentUser: vi.fn(),
-  getCurrentUserPermissions: vi.fn(),
+  getCurrentUser: getCurrentUserMock,
+  getCurrentUserPermissions: getCurrentUserPermissionsMock,
 }));
 
 describe('tenantSettingsActions.getExperimentalFeatures', () => {
@@ -28,6 +36,14 @@ describe('tenantSettingsActions.getExperimentalFeatures', () => {
     mockTenantContext = null;
     allowTenantKnex = false;
     tenantSettingsRow = null;
+
+    getCurrentUserMock.mockReset();
+    getCurrentUserPermissionsMock.mockReset();
+
+    tenantKnexTableMock.mockReset();
+    knexInsertMock.mockReset();
+    knexOnConflictMock.mockReset();
+    knexMergeMock.mockReset();
 
     knexWhereMock.mockReset();
     knexFromMock.mockReset();
@@ -86,5 +102,101 @@ describe('tenantSettingsActions.getExperimentalFeatures', () => {
 
     await expect(getExperimentalFeatures()).resolves.toEqual({ aiAssistant: true });
     expect(knexWhereMock).toHaveBeenCalledWith({ tenant: 'tenant-test' });
+  });
+});
+
+describe('tenantSettingsActions.updateExperimentalFeatures', () => {
+  beforeEach(() => {
+    mockTenantContext = 'tenant-test';
+    allowTenantKnex = true;
+    tenantSettingsRow = null;
+
+    getCurrentUserMock.mockReset();
+    getCurrentUserPermissionsMock.mockReset();
+
+    tenantKnexTableMock.mockReset();
+    knexInsertMock.mockReset();
+    knexOnConflictMock.mockReset();
+    knexMergeMock.mockReset();
+
+    knexWhereMock.mockReset();
+    knexFromMock.mockReset();
+    knexSelectMock.mockReset();
+    createTenantKnexMock.mockReset();
+
+    getCurrentUserMock.mockResolvedValue({
+      id: 'user-test',
+      roles: [],
+    } as any);
+    getCurrentUserPermissionsMock.mockResolvedValue(['settings:update']);
+
+    knexWhereMock.mockImplementation(() => ({
+      first: vi.fn(async () => tenantSettingsRow),
+    }));
+
+    knexFromMock.mockImplementation(() => ({
+      where: knexWhereMock,
+    }));
+
+    knexSelectMock.mockImplementation(() => ({
+      from: knexFromMock,
+    }));
+
+    knexMergeMock.mockResolvedValue(undefined);
+    knexOnConflictMock.mockImplementation(() => ({
+      merge: knexMergeMock,
+    }));
+
+    knexInsertMock.mockImplementation(() => ({
+      onConflict: knexOnConflictMock,
+    }));
+
+    tenantKnexTableMock.mockImplementation(() => ({
+      insert: knexInsertMock,
+    }));
+
+    const tenantKnex = Object.assign(tenantKnexTableMock, {
+      select: knexSelectMock,
+    });
+
+    createTenantKnexMock.mockImplementation(async () => {
+      if (!allowTenantKnex) {
+        throw new Error('createTenantKnex should not be called');
+      }
+
+      return {
+        knex: tenantKnex,
+      };
+    });
+  });
+
+  it('creates settings entry when none exists', async () => {
+    const { updateExperimentalFeatures } = await import(
+      '../../../../packages/tenancy/src/actions/tenant-settings-actions/tenantSettingsActions'
+    );
+
+    await expect(
+      updateExperimentalFeatures({ aiAssistant: true })
+    ).resolves.toBeUndefined();
+
+    expect(tenantKnexTableMock).toHaveBeenCalledWith('tenant_settings');
+    expect(knexInsertMock).toHaveBeenCalledTimes(1);
+
+    const [insertArg] = knexInsertMock.mock.calls[0] ?? [];
+    expect(insertArg).toEqual(
+      expect.objectContaining({
+        tenant: 'tenant-test',
+      })
+    );
+
+    const parsedSettings = JSON.parse(insertArg.settings);
+    expect(parsedSettings).toEqual({
+      experimentalFeatures: {
+        aiAssistant: true,
+      },
+    });
+
+    expect(knexOnConflictMock).toHaveBeenCalledWith('tenant');
+    expect(knexMergeMock).toHaveBeenCalledTimes(1);
   });
 });

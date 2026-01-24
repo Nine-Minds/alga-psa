@@ -210,3 +210,11 @@ curl -X POST localhost:3000/api/chat/stream/chat \
   - File: `server/src/test/unit/tenantSettingsActions.experimentalFeatures.test.ts`
 - Validation: `npx vitest run server/src/test/unit/tenantSettingsActions.experimentalFeatures.test.ts`
 - Next test item: T003 updateExperimentalFeatures() creates settings entry if none exists
+
+### 2026-01-24 (cont.)
+- Implemented T003 (unit test):
+  - Verifies `updateExperimentalFeatures()` upserts `tenant_settings` via `insert(...).onConflict('tenant').merge(...)` when no settings row exists.
+  - Asserts written JSON includes `experimentalFeatures.aiAssistant: true`.
+  - File: `server/src/test/unit/tenantSettingsActions.experimentalFeatures.test.ts`
+- Validation: `npx vitest run server/src/test/unit/tenantSettingsActions.experimentalFeatures.test.ts`
+- Next test item: T004 updateExperimentalFeatures() merges with existing settings without overwriting other keys

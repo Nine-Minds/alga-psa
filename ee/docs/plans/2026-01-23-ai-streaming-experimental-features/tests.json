@@ -14,7 +14,7 @@
   {
     "id": "T003",
     "description": "updateExperimentalFeatures() creates settings entry if none exists",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F002"]
   },
   {
