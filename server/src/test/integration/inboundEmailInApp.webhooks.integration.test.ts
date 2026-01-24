@@ -5,6 +5,22 @@ import { v4 as uuidv4 } from 'uuid';
 import { createTestDbConnection } from '../../../test-utils/dbConfig';
 import { NextRequest } from 'next/server';
 import { processInboundEmailInApp } from '@alga-psa/shared/services/email/processInboundEmailInApp';
+import net from 'node:net';
+
+const dbReachable: boolean = await new Promise((resolve) => {
+  const host = process.env.DB_HOST || 'localhost';
+  const port = Number(process.env.DB_PORT || '5432');
+  const socket = net.createConnection({ host, port });
+  const done = (value: boolean) => {
+    socket.removeAllListeners();
+    socket.destroy();
+    resolve(value);
+  };
+  socket.on('connect', () => done(true));
+  socket.on('error', () => done(false));
+  socket.setTimeout(500, () => done(false));
+});
+const describeDb = dbReachable ? describe : describe.skip;
 
 let db: Knex;
 let tenantId: string;
@@ -197,7 +213,7 @@ async function setupMicrosoftProvider(params: {
   return { defaultsId };
 }
 
-describe('Inbound email in-app processing via webhooks (integration)', () => {
+describeDb('Inbound email in-app processing via webhooks (integration)', () => {
   const cleanup: Array<() => Promise<void>> = [];
 
   beforeAll(async () => {

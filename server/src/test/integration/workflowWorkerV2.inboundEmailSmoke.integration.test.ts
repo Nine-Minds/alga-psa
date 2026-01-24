@@ -1,6 +1,7 @@
 import { beforeAll, afterAll, describe, expect, it } from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';
+import net from 'node:net';
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -15,7 +16,22 @@ let statusId: string;
 let priorityId: string;
 let enteredByUserId: string;
 
-describe('Workflow worker v2 + inbound email smoke', () => {
+const dbReachable: boolean = await new Promise((resolve) => {
+  const host = process.env.DB_HOST || 'localhost';
+  const port = Number(process.env.DB_PORT || '5432');
+  const socket = net.createConnection({ host, port });
+  const done = (value: boolean) => {
+    socket.removeAllListeners();
+    socket.destroy();
+    resolve(value);
+  };
+  socket.on('connect', () => done(true));
+  socket.on('error', () => done(false));
+  socket.setTimeout(500, () => done(false));
+});
+const describeDb = dbReachable ? describe : describe.skip;
+
+describeDb('Workflow worker v2 + inbound email smoke', () => {
   beforeAll(async () => {
     process.env.WORKFLOW_WORKER_MODE = 'v2';
     db = await createTestDbConnection();
@@ -129,4 +145,3 @@ describe('Workflow worker v2 + inbound email smoke', () => {
     await db('inbound_ticket_defaults').where({ tenant: tenantId, id: defaultsId }).delete();
   });
 });
-

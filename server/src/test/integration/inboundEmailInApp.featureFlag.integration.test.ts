@@ -2,8 +2,24 @@ import { beforeAll, afterAll, afterEach, describe, expect, it, vi } from 'vitest
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 import { NextRequest } from 'next/server';
+import net from 'node:net';
 
 import { createTestDbConnection } from '../../../test-utils/dbConfig';
+
+const dbReachable: boolean = await new Promise((resolve) => {
+  const host = process.env.DB_HOST || 'localhost';
+  const port = Number(process.env.DB_PORT || '5432');
+  const socket = net.createConnection({ host, port });
+  const done = (value: boolean) => {
+    socket.removeAllListeners();
+    socket.destroy();
+    resolve(value);
+  };
+  socket.on('connect', () => done(true));
+  socket.on('error', () => done(false));
+  socket.setTimeout(500, () => done(false));
+});
+const describeDb = dbReachable ? describe : describe.skip;
 
 let db: Knex;
 let tenantId: string;
@@ -133,7 +149,7 @@ async function setupProvider(params: { providerId: string; mailbox: string; subs
   return { defaultsId };
 }
 
-describe('Inbound email in-app processing feature flag (integration)', () => {
+describeDb('Inbound email in-app processing feature flag (integration)', () => {
   const cleanup: Array<() => Promise<void>> = [];
 
   beforeAll(async () => {
