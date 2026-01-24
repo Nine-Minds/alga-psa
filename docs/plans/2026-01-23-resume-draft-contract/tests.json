@@ -50,7 +50,7 @@
   {
     "id": "T009",
     "description": "getDraftContracts returns empty array when no drafts exist",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F003"]
   },
   {
