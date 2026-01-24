@@ -8,7 +8,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { UIStateProvider } from '@alga-psa/ui/ui-reflection/UIStateContext';
 
 import ExperimentalFeaturesSettings from '../../../components/settings/general/ExperimentalFeaturesSettings';
-import { getExperimentalFeatures } from '@alga-psa/tenancy/actions';
+import { getExperimentalFeatures, updateExperimentalFeatures } from '@alga-psa/tenancy/actions';
 
 vi.mock('@alga-psa/tenancy/actions', () => ({
   getExperimentalFeatures: vi.fn().mockResolvedValue({ aiAssistant: false }),
@@ -93,6 +93,43 @@ describe('ExperimentalFeaturesSettings', () => {
     expect(
       screen.getByText('Experimental features may change or be removed without notice.')
     ).toBeInTheDocument();
+  });
+
+  it('calls updateExperimentalFeatures() with current toggle states on save', async () => {
+    vi.mocked(getExperimentalFeatures).mockResolvedValueOnce({ aiAssistant: false });
+    vi.mocked(updateExperimentalFeatures).mockResolvedValueOnce(undefined);
+
+    render(
+      <UIStateProvider
+        initialPageState={{
+          id: 'test-page',
+          title: 'Test Page',
+          components: [],
+        }}
+      >
+        <ExperimentalFeaturesSettings />
+      </UIStateProvider>
+    );
+
+    const toggle = await waitFor(() => {
+      const el = document.querySelector(
+        '[data-automation-id="experimental-feature-toggle-aiAssistant"]'
+      ) as HTMLElement | null;
+      expect(el).toBeTruthy();
+      return el!;
+    });
+
+    fireEvent.click(toggle);
+
+    const saveButton = await screen.findByRole('button', { name: 'Save' });
+    await waitFor(() => {
+      expect(saveButton).not.toBeDisabled();
+    });
+    fireEvent.click(saveButton);
+
+    await waitFor(() => {
+      expect(updateExperimentalFeatures).toHaveBeenCalledWith({ aiAssistant: true });
+    });
   });
 
   it('updates local state when toggled', async () => {

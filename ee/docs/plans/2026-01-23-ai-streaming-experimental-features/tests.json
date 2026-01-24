@@ -98,7 +98,7 @@
   {
     "id": "T017",
     "description": "Save button calls updateExperimentalFeatures() with current toggle states",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F008"]
   },
   {

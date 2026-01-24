@@ -314,3 +314,10 @@ curl -X POST localhost:3000/api/chat/stream/chat \
   - File: `server/src/test/unit/components/ExperimentalFeaturesSettings.test.tsx`
 - Validation: `npx vitest run server/src/test/unit/components/ExperimentalFeaturesSettings.test.tsx`
 - Next test item: T017 Save button calls updateExperimentalFeatures() with current toggle states
+
+### 2026-01-24 (cont.)
+- Implemented T017 (unit test):
+  - Verifies Save calls `updateExperimentalFeatures()` with the current toggle state after changing it.
+  - File: `server/src/test/unit/components/ExperimentalFeaturesSettings.test.tsx`
+- Validation: `npx vitest run server/src/test/unit/components/ExperimentalFeaturesSettings.test.tsx`
+- Next test item: T018 Save button shows success feedback after saving
