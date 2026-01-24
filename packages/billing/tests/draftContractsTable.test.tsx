@@ -190,4 +190,27 @@ describe('Drafts tab DataTable', () => {
 
     expect(await screen.findByText('Resume')).toBeInTheDocument();
   });
+
+  it('actions dropdown contains Discard option (T018)', async () => {
+    mockDraftContracts = [
+      {
+        contract_id: 'contract-1',
+        contract_name: 'Draft Alpha',
+        client_name: 'Acme Co',
+        created_at: new Date(2026, 0, 1),
+        updated_at: new Date(2026, 0, 2),
+      },
+    ];
+
+    const Contracts = (await import('../src/components/billing-dashboard/contracts/Contracts')).default;
+    render(<Contracts />);
+
+    const user = userEvent.setup();
+    const actionsButton = await screen.findByRole('button', { name: /open menu/i });
+    await act(async () => {
+      await user.click(actionsButton);
+    });
+
+    expect(await screen.findByText('Discard')).toBeInTheDocument();
+  });
 });
