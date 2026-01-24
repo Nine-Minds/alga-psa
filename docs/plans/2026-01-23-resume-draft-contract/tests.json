@@ -380,7 +380,7 @@
   {
     "id": "T064",
     "description": "User without contract delete permission cannot discard drafts",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F025"]
   }
 ]
