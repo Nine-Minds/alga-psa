@@ -32,7 +32,7 @@
   {
     "id": "T006",
     "description": "Drafts tab shows no badge when count is zero",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F002"]
   },
   {
