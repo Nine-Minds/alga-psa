@@ -6,6 +6,8 @@ import { GmailAdapter } from '../../services/email/providers/GmailAdapter';
 import type { EmailProviderConfig } from '@alga-psa/shared/interfaces/inbound-email.interfaces';
 import { OAuth2Client } from 'google-auth-library';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
+import { processInboundEmailInApp } from '@alga-psa/shared/services/email/processInboundEmailInApp';
+import { isInboundEmailInAppProcessingEnabled } from '@alga-psa/shared/services/email/inboundEmailInAppFeatureFlag';
 
 interface GooglePubSubMessage {
   message: {
@@ -198,11 +200,13 @@ export async function POST(request: NextRequest) {
         .where('history_id', notification.historyId)
         .first();
 
-      // if (existingProcessed) {
-      //   console.log(`⚠️  HistoryId ${notification.historyId} already processed for provider ${provider.id}, skipping duplicate`);
-      //   processed = true; // Mark as processed to avoid error
-      //   return; // Exit early - this is a duplicate
-      // }
+      if (existingProcessed) {
+        console.log(
+          `⚠️  HistoryId ${notification.historyId} already processed for provider ${provider.id}, skipping duplicate`
+        );
+        processed = true; // Mark as processed to avoid error
+        return; // Exit early - this is a duplicate
+      }
 
       // Record this historyId as processed
       await trx('gmail_processed_history').insert({
@@ -277,17 +281,26 @@ export async function POST(request: NextRequest) {
         for (const msgId of messageIds) {
           try {
             const details = await adapter.getMessageDetails(msgId);
-            await publishEvent({
-              eventType: 'INBOUND_EMAIL_RECEIVED',
-              tenant: provider.tenant,
-              payload: {
+            if (isInboundEmailInAppProcessingEnabled({ tenantId: provider.tenant, providerId: provider.id })) {
+              const result = await processInboundEmailInApp({
                 tenantId: provider.tenant,
-                tenant: provider.tenant,
                 providerId: provider.id,
                 emailData: details,
-              },
-            });
-            console.log(`✅ Published INBOUND_EMAIL_RECEIVED with emailData for ${msgId}`);
+              });
+              console.log('✅ In-app inbound email processing completed', { msgId, result });
+            } else {
+              await publishEvent({
+                eventType: 'INBOUND_EMAIL_RECEIVED',
+                tenant: provider.tenant,
+                payload: {
+                  tenantId: provider.tenant,
+                  tenant: provider.tenant,
+                  providerId: provider.id,
+                  emailData: details,
+                },
+              });
+              console.log(`✅ Published INBOUND_EMAIL_RECEIVED with emailData for ${msgId}`);
+            }
             processed = true;
           } catch (detailErr: any) {
             console.warn(`⚠️ Failed to fetch/publish Gmail message ${msgId}: ${detailErr.message}`);

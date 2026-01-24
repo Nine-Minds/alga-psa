@@ -16,12 +16,25 @@ export async function updateSystemWorkflowsFromAssets() {
     return;
   }
 
+  const enableLegacyEmailWorkflow =
+    (process.env.LEGACY_SYSTEM_EMAIL_WORKFLOW_ENABLED || '').trim().toLowerCase() === 'true';
+
   const workflowFiles = [
-    {
-      fileName: 'system-email-processing-workflow.js',
-      registrationName: 'System Email Processing'
-    }
+    ...(enableLegacyEmailWorkflow
+      ? ([
+          {
+            fileName: 'system-email-processing-workflow.js',
+            registrationName: 'System Email Processing'
+          }
+        ] as const)
+      : ([] as const)),
   ];
+
+  if (!enableLegacyEmailWorkflow) {
+    logger.info(
+      '[WorkflowUpdater] Legacy system email workflow updates are disabled (set LEGACY_SYSTEM_EMAIL_WORKFLOW_ENABLED=true to enable).'
+    );
+  }
 
   const knex = await getAdminConnection();
 

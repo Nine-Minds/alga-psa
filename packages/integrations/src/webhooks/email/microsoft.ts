@@ -5,6 +5,8 @@ import { publishEvent } from '@alga-psa/shared/events/publisher';
 import { randomBytes } from 'crypto';
 import { MicrosoftGraphAdapter } from '@alga-psa/shared/services/email/providers/MicrosoftGraphAdapter';
 import type { EmailProviderConfig } from '@alga-psa/shared/interfaces/inbound-email.interfaces';
+import { processInboundEmailInApp } from '@alga-psa/shared/services/email/processInboundEmailInApp';
+import { isInboundEmailInAppProcessingEnabled } from '@alga-psa/shared/services/email/inboundEmailInAppFeatureFlag';
 
 interface MicrosoftNotification {
   changeType: string;
@@ -250,6 +252,8 @@ export async function POST(request: NextRequest) {
 
           let details: any | null = null;
           let detailsErrorMessage: string | null = null;
+          const useInApp = isInboundEmailInAppProcessingEnabled({ tenantId: row.tenant, providerId: row.id });
+          let inAppResult: any | null = null;
           try {
             const adapter = new MicrosoftGraphAdapter(providerConfig);
             await adapter.connect();
@@ -260,38 +264,58 @@ export async function POST(request: NextRequest) {
           }
 
           if (details) {
-            await publishEvent({
-              eventType: 'INBOUND_EMAIL_RECEIVED',
-              tenant: row.tenant,
-              payload: {
+            if (useInApp) {
+              inAppResult = await processInboundEmailInApp({
                 tenantId: row.tenant,
-                tenant: row.tenant,
                 providerId: row.id,
-                emailData: details,
-              },
-            });
+                emailData: details as any,
+              });
+              console.log('✅ In-app inbound email processing completed', { messageId, result: inAppResult });
+            } else {
+              await publishEvent({
+                eventType: 'INBOUND_EMAIL_RECEIVED',
+                tenant: row.tenant,
+                payload: {
+                  tenantId: row.tenant,
+                  tenant: row.tenant,
+                  providerId: row.id,
+                  emailData: details,
+                },
+              });
+            }
           } else {
             // Fallback: publish minimal event (acknowledge receipt; workflow may decide how to handle missing fields)
-            await publishEvent({
-              eventType: 'INBOUND_EMAIL_RECEIVED',
+            const minimal = {
+              id: messageId,
+              provider: 'microsoft',
+              providerId: row.id,
               tenant: row.tenant,
-              payload: {
+              receivedAt: new Date().toISOString(),
+              from: { email: '', name: undefined },
+              to: [],
+              subject: notification.resourceData?.subject || '',
+              body: { text: '', html: undefined },
+            } as any;
+
+            if (useInApp) {
+              inAppResult = await processInboundEmailInApp({
                 tenantId: row.tenant,
-                tenant: row.tenant,
                 providerId: row.id,
-                emailData: {
-                  id: messageId,
-                  provider: 'microsoft',
-                  providerId: row.id,
+                emailData: minimal,
+              });
+              console.log('✅ In-app inbound email processing completed (minimal payload)', { messageId, result: inAppResult });
+            } else {
+              await publishEvent({
+                eventType: 'INBOUND_EMAIL_RECEIVED',
+                tenant: row.tenant,
+                payload: {
+                  tenantId: row.tenant,
                   tenant: row.tenant,
-                  receivedAt: new Date().toISOString(),
-                  from: { email: '', name: undefined },
-                  to: [],
-                  subject: notification.resourceData?.subject || '',
-                  body: { text: '', html: undefined },
-                } as any,
-              },
-            });
+                  providerId: row.id,
+                  emailData: minimal,
+                },
+              });
+            }
           }
 
           // Best-effort bookkeeping (do not publish a second event if this fails)
@@ -308,15 +332,24 @@ export async function POST(request: NextRequest) {
           }
 
           try {
+            const processingStatus = useInApp
+              ? (inAppResult?.outcome === 'skipped' ? 'partial' : 'success')
+              : (details ? 'success' : 'partial');
+
+            const errorMessage = useInApp
+              ? (inAppResult?.outcome === 'skipped' ? `skipped:${inAppResult?.reason}` : null)
+              : (details ? null : (detailsErrorMessage || 'Failed to fetch full email details'));
+
             await trx('email_processed_messages')
               .where({ message_id: messageId, provider_id: row.id, tenant: row.tenant })
               .update({
-                processing_status: details ? 'success' : 'partial',
+                processing_status: processingStatus,
+                ticket_id: useInApp ? (inAppResult?.ticketId ?? null) : null,
                 from_email: details?.from?.email || null,
                 subject: details?.subject || notification.resourceData?.subject || null,
                 received_at: details?.receivedAt ? new Date(details.receivedAt) : null,
                 attachment_count: details?.attachments?.length || 0,
-                error_message: details ? null : (detailsErrorMessage || 'Failed to fetch full email details'),
+                error_message: errorMessage,
               });
           } catch (statusErr: any) {
             console.warn(`Failed to update processing status for ${messageId}: ${statusErr?.message || statusErr}`);
