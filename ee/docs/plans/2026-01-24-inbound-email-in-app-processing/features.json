@@ -17,7 +17,7 @@
   { "id": "F021", "description": "Idempotency: ensure new-ticket creation is idempotent per {tenant, providerId, messageId}", "implemented": true },
   { "id": "F022", "description": "Preserve provider-level dedupe bookkeeping (Gmail historyId + Microsoft processed message records)", "implemented": true },
 
-  { "id": "F030", "description": "Wire Gmail webhook handler to call `processInboundEmailInApp` instead of publishing `INBOUND_EMAIL_RECEIVED` to Redis workflow streams", "implemented": false },
+  { "id": "F030", "description": "Wire Gmail webhook handler to call `processInboundEmailInApp` instead of publishing `INBOUND_EMAIL_RECEIVED` to Redis workflow streams", "implemented": true },
   { "id": "F031", "description": "Wire Microsoft webhook handler to call `processInboundEmailInApp` instead of publishing `INBOUND_EMAIL_RECEIVED` to Redis workflow streams", "implemented": false },
 
   { "id": "F040", "description": "Add feature flag (tenant/provider scoped) to switch between old workflow-stream publish vs in-app processing", "implemented": false },
