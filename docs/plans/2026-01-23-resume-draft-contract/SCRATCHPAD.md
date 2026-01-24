@@ -60,6 +60,8 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 
 - (2026-01-24) Drafts table includes Created column (localized date).
 
+- (2026-01-24) Drafts table includes Last Modified column (localized date).
+
 ## Commands / Runbooks
 
 - Run billing package tests: `npm test -w packages/billing`

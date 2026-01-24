@@ -38,7 +38,7 @@
   {
     "id": "F007",
     "description": "Drafts DataTable displays last modified date column",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR2"]
   },
   {
