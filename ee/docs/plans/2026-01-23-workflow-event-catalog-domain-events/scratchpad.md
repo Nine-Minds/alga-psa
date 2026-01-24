@@ -702,3 +702,7 @@ Phase 3 (feature dependent / optional modules):
     - `packages/scheduling/src/lib/__tests__/capacityThresholdWorkflowEvents.publisher.test.ts`
   - Refactored `maybePublishCapacityThresholdReached(...)` to accept optional `__deps` (publisher + data access functions + clock) so it can be tested without a DB:
     - `packages/scheduling/src/lib/capacityThresholdWorkflowEvents.ts`
+
+- 2026-01-24: Completed `T024` (dispatch lifecycle “supported only” coverage):
+  - Expanded unit coverage to assert dispatch lifecycle gating and technician id normalization:
+    - `shared/workflow/streams/domainEventBuilders/__tests__/technicianDispatchEventBuilders.test.ts`

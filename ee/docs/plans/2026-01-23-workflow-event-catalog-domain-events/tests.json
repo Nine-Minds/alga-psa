@@ -21,7 +21,7 @@
   { "id": "T021", "description": "Scheduling: assignment changes emit APPOINTMENT_ASSIGNED (or mapped schedule-entry equivalent) with previous/new assignee", "implemented": true, "featureIds": ["F020"] },
   { "id": "T022", "description": "Scheduling: schedule blocks emit SCHEDULE_BLOCK_CREATED and SCHEDULE_BLOCK_DELETED with owner context", "implemented": true, "featureIds": ["F021"] },
   { "id": "T023", "description": "Scheduling: capacity thresholds emit CAPACITY_THRESHOLD_REACHED only when configured, with team/date metrics", "implemented": true, "featureIds": ["F022"] },
-  { "id": "T024", "description": "Field ops: dispatch lifecycle emits TECHNICIAN_DISPATCHED/EN_ROUTE/ARRIVED/CHECKED_OUT only when supported", "implemented": false, "featureIds": ["F023"] },
+  { "id": "T024", "description": "Field ops: dispatch lifecycle emits TECHNICIAN_DISPATCHED/EN_ROUTE/ARRIVED/CHECKED_OUT only when supported", "implemented": true, "featureIds": ["F023"] },
 
   { "id": "T030", "description": "Projects: updates emit PROJECT_UPDATED with updatedFields/changes", "implemented": false, "featureIds": ["F030"] },
   { "id": "T031", "description": "Projects: status transitions emit PROJECT_STATUS_CHANGED with previous/new status", "implemented": false, "featureIds": ["F030"] },

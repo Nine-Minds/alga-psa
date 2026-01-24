@@ -11,9 +11,11 @@ import {
   buildTechnicianCheckedOutPayload,
   buildTechnicianDispatchedPayload,
   buildTechnicianEnRoutePayload,
+  getTechnicianUserIds,
   isTechnicianArrivedStatus,
   isTechnicianCheckedOutStatus,
   isTechnicianEnRouteStatus,
+  shouldEmitTechnicianDispatchEvents,
 } from '../technicianDispatchEventBuilders';
 
 describe('technicianDispatchEventBuilders', () => {
@@ -90,5 +92,30 @@ describe('technicianDispatchEventBuilders', () => {
     expect(isTechnicianCheckedOutStatus('Checked Out')).toBe(true);
     expect(isTechnicianCheckedOutStatus('checked-out')).toBe(true);
   });
-});
 
+  it('only emits dispatch lifecycle events for supported schedule entry types', () => {
+    expect(
+      shouldEmitTechnicianDispatchEvents({ entry_id: 'e1', work_item_type: 'ticket', work_item_id: 't1' })
+    ).toBe(true);
+    expect(
+      shouldEmitTechnicianDispatchEvents({
+        entry_id: 'e1',
+        work_item_type: 'appointment_request',
+        work_item_id: 'ar1',
+      })
+    ).toBe(true);
+
+    expect(
+      shouldEmitTechnicianDispatchEvents({ entry_id: 'e1', work_item_type: 'ad_hoc', work_item_id: null })
+    ).toBe(false);
+    expect(shouldEmitTechnicianDispatchEvents({ entry_id: 'e1', work_item_type: null, work_item_id: null })).toBe(
+      false
+    );
+  });
+
+  it('dedupes and filters technician user ids', () => {
+    expect(
+      getTechnicianUserIds({ entry_id: 'e1', assigned_user_ids: ['u1', '', 'u1', 'u2', null as any] })
+    ).toEqual(['u1', 'u2']);
+  });
+});
