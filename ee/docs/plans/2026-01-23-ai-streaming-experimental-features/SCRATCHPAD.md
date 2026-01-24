@@ -472,3 +472,12 @@ curl -X POST localhost:3000/api/chat/stream/chat \
   - Files: `server/src/test/unit/readAssistantContentFromSse.test.ts`, `ee/server/src/components/chat/readAssistantContentFromSse.ts`, `ee/server/src/components/chat/Chat.tsx`
 - Validation: `npx vitest run server/src/test/unit/readAssistantContentFromSse.test.ts`
 - Next test item: T039 Message state updates incrementally during streaming
+
+### 2026-01-24 (cont.)
+- Implemented T039 (unit test):
+  - Renders EE `Chat` and drives a controlled SSE `Response` to verify the in-progress assistant message updates as tokens arrive.
+  - File: `server/src/test/unit/Chat.streamingIncrementalState.test.tsx`
+  - Added EE component entrypoint shims to re-export from the `.tsx` source so Vitest can import `@ee/components/chat/Chat` and `@ee/components/message/Message` cleanly.
+  - Files: `ee/server/src/components/chat/Chat.js`, `ee/server/src/components/message/Message.js`
+- Validation: `npx vitest run server/src/test/unit/Chat.streamingIncrementalState.test.tsx`
+- Next test item: T040 Stop button triggers AbortController.abort() during streaming

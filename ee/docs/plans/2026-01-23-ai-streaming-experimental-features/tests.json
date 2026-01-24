@@ -230,7 +230,7 @@
   {
     "id": "T039",
     "description": "Message state updates incrementally during streaming",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F021"]
   },
   {
