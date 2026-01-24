@@ -602,4 +602,51 @@ describe('Inbound email in-app processing via webhooks (integration)', () => {
       await db('tickets').where({ tenant: tenantId, ticket_id: ticket.ticket_id }).delete();
     });
   });
+
+  it('Unmatched sender: system follows the defined behavior without throwing', async () => {
+    const providerId = uuidv4();
+    const mailbox = `support-unmatched-${uuidv4().slice(0, 6)}@example.com`;
+    const { defaultsId } = await setupInboundDefaults({ providerId, mailbox });
+
+    cleanup.push(async () => {
+      await db('gmail_processed_history').where({ tenant: tenantId, provider_id: providerId }).delete();
+      await db('google_email_provider_config').where({ tenant: tenantId, email_provider_id: providerId }).delete();
+      await db('email_providers').where({ tenant: tenantId, id: providerId }).delete();
+      await db('inbound_ticket_defaults').where({ tenant: tenantId, id: defaultsId }).delete();
+    });
+
+    const result = await processInboundEmailInApp({
+      tenantId,
+      providerId,
+      emailData: {
+        id: `new-email-${uuidv4()}`,
+        provider: 'google',
+        providerId,
+        tenant: tenantId,
+        receivedAt: new Date().toISOString(),
+        from: { email: `unknown-${uuidv4().slice(0, 6)}@example.com`, name: 'Unknown' },
+        to: [{ email: mailbox, name: 'Support' }],
+        subject: 'Unmatched sender subject',
+        body: { text: 'Hello', html: undefined },
+        attachments: [],
+      } as any,
+    });
+
+    expect(result.outcome).toBe('created');
+
+    const ticket = await db('tickets')
+      .where({ tenant: tenantId, title: 'Unmatched sender subject' })
+      .first<any>();
+    expect(ticket).toBeDefined();
+    expect(ticket.client_id).toBe(clientId);
+    expect(ticket.contact_name_id ?? null).toBeNull();
+
+    const comments = await db('comments').where({ tenant: tenantId, ticket_id: ticket.ticket_id });
+    expect(comments).toHaveLength(1);
+
+    cleanup.push(async () => {
+      await db('comments').where({ tenant: tenantId, ticket_id: ticket.ticket_id }).delete();
+      await db('tickets').where({ tenant: tenantId, ticket_id: ticket.ticket_id }).delete();
+    });
+  });
 });
