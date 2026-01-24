@@ -537,3 +537,10 @@ curl -X POST localhost:3000/api/chat/stream/chat \
   - File: `server/src/test/unit/Chat.streamingIncrementalState.test.tsx`
 - Validation: `npx vitest run server/src/test/unit/Chat.streamingIncrementalState.test.tsx`
 - Next test item: T048 Quick Ask expanded view streams responses
+
+### 2026-01-24 (cont.)
+- Implemented T048 (unit test):
+  - Verifies the Quick Ask overlay expands into the EE `Chat` component and posts to `/api/chat/v1/completions/stream`.
+  - File: `server/src/test/unit/QuickAskOverlay.streaming.test.tsx`
+- Validation: `npx vitest run server/src/test/unit/QuickAskOverlay.streaming.test.tsx`
+- Next test item: T049 Sidebar Chat streams responses
