@@ -134,7 +134,7 @@
   {
     "id": "T023",
     "description": "Sidebar Chat toggle (⌘L) is ignored when aiAssistant is disabled",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F012"]
   },
   {

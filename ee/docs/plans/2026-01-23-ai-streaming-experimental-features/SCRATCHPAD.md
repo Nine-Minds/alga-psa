@@ -355,3 +355,10 @@ curl -X POST localhost:3000/api/chat/stream/chat \
   - Verifies `DefaultLayout` renders `QuickAskOverlay` (closed) when `aiAssistant` is enabled, without needing the shortcut.
   - File: `server/src/test/unit/layout/DefaultLayout.quickAskShortcut.test.tsx`
 - Next test item: T023 Sidebar Chat toggle (⌘L) is ignored when aiAssistant is disabled
+
+### 2026-01-24 (cont.)
+- Implemented T023 (unit test):
+  - Verifies ⌘L/Ctrl+L keydown is ignored (no preventDefault) when `aiAssistant` is disabled.
+  - File: `server/src/test/unit/layout/DefaultLayout.sidebarChatShortcut.test.tsx`
+- Validation: `npx vitest run server/src/test/unit/layout/DefaultLayout.sidebarChatShortcut.test.tsx`
+- Next test item: T024 RightSidebar chat is hidden when aiAssistant is disabled
