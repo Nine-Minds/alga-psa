@@ -90,5 +90,31 @@ describe('ContractWizard resume behavior', () => {
     });
     expect(screen.queryByTestId('step-fixed-fee')).not.toBeInTheDocument();
   });
-});
 
+  it('step 1 shows pre-populated client selection from draft (T034)', async () => {
+    const { ContractWizard } = await import('../src/components/billing-dashboard/contracts/ContractWizard');
+    render(
+      <ContractWizard
+        open={true}
+        onOpenChange={vi.fn()}
+        editingContract={{
+          contract_id: 'contract-1',
+          is_draft: true,
+          client_id: 'client-99',
+          contract_name: 'Draft Alpha',
+          start_date: '2026-01-01',
+          billing_frequency: 'monthly',
+          currency_code: 'USD',
+          enable_proration: false,
+          fixed_services: [],
+          product_services: [],
+          hourly_services: [],
+          usage_services: [],
+        }}
+      />,
+    );
+
+    const step = await screen.findByTestId('step-contract-basics');
+    expect(step).toHaveAttribute('data-client-id', 'client-99');
+  });
+});

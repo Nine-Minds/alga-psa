@@ -200,7 +200,7 @@
   {
     "id": "T034",
     "description": "Step 1 shows pre-populated client selection from draft",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F017"]
   },
   {
