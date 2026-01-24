@@ -60,6 +60,10 @@ x-environment: &shared-environment
   # ---- TOKEN ----
   TOKEN_EXPIRES: ${TOKEN_EXPIRES}
 
+  # ---- AI / LLM ----
+  OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
+  OPENROUTER_API: ${OPENROUTER_API:-}
+
   # ---- AUTH ----
   NEXTAUTH_URL: ${NEXTAUTH_URL:-http://localhost:3000}
   # Required for edge auth initialization (NextAuth secret must be present in env, not only as a Docker secret file)

@@ -1,5 +1,6 @@
 'use server';
 
+import { getCurrentUser, getCurrentUserPermissions } from '@alga-psa/users/actions';
 import { withAuth, withOptionalAuth, type AuthContext } from '@alga-psa/auth';
 import type { IUserWithRoles } from '@alga-psa/types';
 import { getTenantForCurrentRequest } from '../../server';
@@ -16,6 +17,25 @@ export interface TenantSettings {
   ticket_display_settings?: Record<string, any>;
   created_at: Date;
   updated_at: Date;
+}
+
+export interface ExperimentalFeatures {
+  aiAssistant: boolean;
+}
+
+const DEFAULT_EXPERIMENTAL_FEATURES: ExperimentalFeatures = {
+  aiAssistant: false,
+};
+
+function normalizeExperimentalFeatures(value: unknown): ExperimentalFeatures {
+  if (!value || typeof value !== 'object') {
+    return { ...DEFAULT_EXPERIMENTAL_FEATURES };
+  }
+
+  const record = value as Record<string, unknown>;
+  return {
+    aiAssistant: record.aiAssistant === true,
+  };
 }
 
 export async function getTenantSettings(): Promise<TenantSettings | null> {
@@ -39,6 +59,57 @@ export async function getTenantSettings(): Promise<TenantSettings | null> {
   } catch (error) {
     console.error('Error getting tenant settings:', error);
     return null;
+  }
+}
+
+export async function getExperimentalFeatures(): Promise<ExperimentalFeatures> {
+  try {
+    const settings = await getTenantSettings();
+    return normalizeExperimentalFeatures(settings?.settings?.experimentalFeatures);
+  } catch (error) {
+    console.error('Error getting experimental features:', error);
+    return { ...DEFAULT_EXPERIMENTAL_FEATURES };
+  }
+}
+
+export async function updateExperimentalFeatures(
+  features: Partial<ExperimentalFeatures>
+): Promise<void> {
+  try {
+    const user = await getCurrentUser();
+    if (!user) {
+      throw new Error('User must be authenticated');
+    }
+
+    const permissions = await getCurrentUserPermissions();
+    if (!permissions.includes('settings:update')) {
+      throw new Error('Permission denied: Cannot update settings');
+    }
+
+    const current = await getExperimentalFeatures();
+    const merged: ExperimentalFeatures = {
+      ...current,
+      ...features,
+    };
+
+    await updateTenantSettings({
+      experimentalFeatures: merged,
+    });
+  } catch (error) {
+    console.error('Error updating experimental features:', error);
+    throw error;
+  }
+}
+
+export async function isExperimentalFeatureEnabled(
+  featureKey: string
+): Promise<boolean> {
+  try {
+    const features = await getExperimentalFeatures();
+    return (features as unknown as Record<string, unknown>)[featureKey] === true;
+  } catch (error) {
+    console.error('Error checking experimental feature:', error);
+    return false;
   }
 }
 
@@ -258,7 +329,9 @@ export async function initializeTenantSettings(tenantId: string): Promise<void> 
         onboarding_completed: false,
         onboarding_skipped: false,
         onboarding_data: null,
-        settings: null,
+        settings: JSON.stringify({
+          experimentalFeatures: DEFAULT_EXPERIMENTAL_FEATURES,
+        }),
         created_at: now,
         updated_at: now,
       })

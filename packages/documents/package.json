@@ -14,13 +14,25 @@
       "import": "./src/actions/index.ts",
       "types": "./src/actions/index.ts"
     },
+    "./actions/*": {
+      "import": "./src/actions/*.ts",
+      "types": "./src/actions/*.ts"
+    },
     "./components": {
       "import": "./src/components/index.ts",
       "types": "./src/components/index.ts"
     },
+    "./components/*": {
+      "import": "./src/components/*.tsx",
+      "types": "./src/components/*.tsx"
+    },
     "./handlers": {
       "import": "./src/handlers/index.ts",
       "types": "./src/handlers/index.ts"
+    },
+    "./handlers/*": {
+      "import": "./src/handlers/*.ts",
+      "types": "./src/handlers/*.ts"
     },
     "./lib/avatarUtils": {
       "import": "./src/lib/avatarUtils.ts",
@@ -41,6 +53,14 @@
     "./storage/StorageService": {
       "import": "./src/storage/StorageService.ts",
       "types": "./src/storage/StorageService.ts"
+    },
+    "./models": {
+      "import": "./src/models/index.ts",
+      "types": "./src/models/index.ts"
+    },
+    "./models/*": {
+      "import": "./src/models/*.ts",
+      "types": "./src/models/*.ts"
     }
   },
   "scripts": {

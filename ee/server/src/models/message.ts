@@ -13,6 +13,20 @@ const Message = {
     }
   },
 
+  getByChatId: async (chatId: string): Promise<IMessage[]> => {
+    try {
+      const {knex: db} = await createTenantKnex();
+      const messages = await db<IMessage>('messages')
+        .select('*')
+        .where({ chat_id: chatId })
+        .orderBy([{ column: 'message_order', order: 'asc' }, { column: 'id', order: 'asc' }]);
+      return messages;
+    } catch (error) {
+      console.error(`Error getting messages for chat_id ${chatId}:`, error);
+      throw error;
+    }
+  },
+
   get: async (id: string): Promise<IMessage | undefined> => {
     try {
       const {knex: db} = await createTenantKnex();

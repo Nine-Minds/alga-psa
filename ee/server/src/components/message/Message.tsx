@@ -23,6 +23,9 @@ type MessageProps = {
   content: string;
   clientUrl?: string;
   isFunction?: boolean;
+  showStreamingCursor?: boolean;
+  status?: 'interrupted';
+  statusDetail?: string;
   reasoning?: string;
   functionCallMeta?: FunctionCallMeta;
 };
@@ -105,6 +108,9 @@ export const Message: React.FC<MessageProps> = ({
   content,
   clientUrl,
   isFunction,
+  showStreamingCursor,
+  status,
+  statusDetail,
   reasoning,
   functionCallMeta,
 }) => {
@@ -130,6 +136,9 @@ export const Message: React.FC<MessageProps> = ({
   const isNotice = role === 'notice';
   const authorLabel = isAssistantMessage ? 'Alga' : isUserMessage ? 'You' : 'System';
   const statusLabel = isFunction ? 'Drafting response…' : null;
+  const interruptionLabel = isAssistantMessage && status === 'interrupted' ? 'Interrupted' : null;
+  const interruptionDetail =
+    interruptionLabel && (statusDetail?.trim().length ? statusDetail : 'Connection interrupted — showing partial response.');
 
   if (isFunctionMarker && functionCallMeta) {
     const previewRaw = functionCallMeta.preview?.trim();
@@ -215,7 +224,14 @@ export const Message: React.FC<MessageProps> = ({
           <div className={bubbleClasses}>
             {(isAssistantMessage || isUserMessage) && (
               <div className="message-header">
-                <span className="message-author">{authorLabel}</span>
+                <div className="message-header__left">
+                  <span className="message-author">{authorLabel}</span>
+                  {interruptionLabel ? (
+                    <span className="message-interruption-badge" role="status">
+                      {interruptionLabel}
+                    </span>
+                  ) : null}
+                </div>
                 {statusLabel ? (
                   <span className="message-status" role="status">
                     <span className="message-status__dot" aria-hidden="true" />
@@ -235,7 +251,17 @@ export const Message: React.FC<MessageProps> = ({
               >
                 {markdownContent}
               </ReactMarkdown>
+              {showStreamingCursor ? (
+                <span className="message-streaming-cursor" aria-hidden="true">
+                  ▍
+                </span>
+              ) : null}
             </div>
+            {interruptionDetail ? (
+              <div className="message-interruption-detail" role="status">
+                {interruptionDetail}
+              </div>
+            ) : null}
 
             {reasoningContent ? (
               <details className="message-reasoning">

@@ -85,10 +85,20 @@ export default defineConfig({
       { find: /^@alga-psa\/integrations\/(.*)$/, replacement: path.resolve(__dirname, '../packages/integrations/src/$1') },
       { find: /^@alga-psa\/client-portal$/, replacement: path.resolve(__dirname, '../packages/client-portal/src/index.ts') },
       { find: /^@alga-psa\/client-portal\/(.*)$/, replacement: path.resolve(__dirname, '../packages/client-portal/src/$1') },
+      { find: /^@alga-psa\/tenancy$/, replacement: path.resolve(__dirname, '../packages/tenancy/src/index.ts') },
+      { find: /^@alga-psa\/tenancy\/actions$/, replacement: path.resolve(__dirname, '../packages/tenancy/src/actions/index.ts') },
+      { find: /^@alga-psa\/tenancy\/(.*)$/, replacement: path.resolve(__dirname, '../packages/tenancy/src/$1') },
+
+      { find: /^@alga-psa\/media$/, replacement: path.resolve(__dirname, '../packages/media/src/index.ts') },
+
+      { find: /^@alga-psa\/users$/, replacement: path.resolve(__dirname, '../packages/users/src/index.ts') },
+      { find: /^@alga-psa\/users\/actions$/, replacement: path.resolve(__dirname, '../packages/users/src/actions/index.ts') },
 
       { find: 'fs', replacement: 'node:fs' },
       { find: 'fs/promises', replacement: 'node:fs/promises' },
       { find: 'next/server', replacement: path.resolve(__dirname, './src/test/stubs/next-server.ts') },
+      { find: '@product/settings-extensions/entry', replacement: path.resolve(__dirname, './src/test/stubs/product-settings-extensions-entry.ts') },
+      { find: '@product/chat/entry', replacement: path.resolve(__dirname, './src/test/stubs/product-chat-entry.ts') },
       { find: 'pdf-lib', replacement: 'empty-module' },
     ],
   },
