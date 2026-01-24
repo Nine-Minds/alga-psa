@@ -82,6 +82,8 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
   - Drafts Actions → Resume calls `getDraftContractForResume()`, then opens `ContractWizard` with `editingContract` data.
   - Updated `ContractWizard` to re-initialize state when `open`/`editingContract` change (was previously only using initial props once).
 
+- (2026-01-24) Resume always opens wizard on Step 1 (Contract Basics) by resetting `currentStep` to 0 on open.
+
 ## Commands / Runbooks
 
 - Run billing package tests: `npm test -w packages/billing`

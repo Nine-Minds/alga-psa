@@ -92,7 +92,7 @@
   {
     "id": "F016",
     "description": "Resumed wizard starts at Step 1 (Contract Basics)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR3"]
   },
   {
