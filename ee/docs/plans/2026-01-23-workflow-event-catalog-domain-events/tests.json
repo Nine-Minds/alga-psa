@@ -52,7 +52,7 @@
   { "id": "T073", "description": "Notifications: send/deliver/fail/read emits NOTIFICATION_SENT/DELIVERED/FAILED/READ for supported channels", "implemented": true, "featureIds": ["F073"] },
   { "id": "T074", "description": "Surveys/CSAT: survey lifecycle emits SURVEY_SENT/RESPONSE_RECEIVED/REMINDER_SENT/EXPIRED and CSAT alerts emit CSAT_ALERT_TRIGGERED", "implemented": true, "featureIds": ["F074"] },
 
-  { "id": "T080", "description": "Integrations: sync lifecycle emits INTEGRATION_SYNC_STARTED/COMPLETED/FAILED with summary/error shape", "implemented": false, "featureIds": ["F080"] },
+  { "id": "T080", "description": "Integrations: sync lifecycle emits INTEGRATION_SYNC_STARTED/COMPLETED/FAILED with summary/error shape", "implemented": true, "featureIds": ["F080"] },
   { "id": "T081", "description": "Integrations: webhook receipt emits INTEGRATION_WEBHOOK_RECEIVED with safe raw payload handling/redaction", "implemented": false, "featureIds": ["F081"] },
   { "id": "T082", "description": "Integrations: connect/disconnect emits INTEGRATION_CONNECTED/INTEGRATION_DISCONNECTED", "implemented": false, "featureIds": ["F082"] },
   { "id": "T083", "description": "Integrations: token expiring/refresh failed emits INTEGRATION_TOKEN_EXPIRING/INTEGRATION_TOKEN_REFRESH_FAILED", "implemented": false, "featureIds": ["F083"] },
