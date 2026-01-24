@@ -32,7 +32,7 @@
   {
     "id": "T006",
     "description": "isExperimentalFeatureEnabled() returns false for unknown feature keys",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F003"]
   },
   {

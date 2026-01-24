@@ -257,3 +257,65 @@ describe('tenantSettingsActions.updateExperimentalFeatures', () => {
     expect(tenantKnexTableMock).not.toHaveBeenCalled();
   });
 });
+
+describe('tenantSettingsActions.isExperimentalFeatureEnabled', () => {
+  beforeEach(() => {
+    mockTenantContext = 'tenant-test';
+    allowTenantKnex = true;
+    tenantSettingsRow = null;
+
+    getCurrentUserMock.mockReset();
+    getCurrentUserPermissionsMock.mockReset();
+
+    tenantKnexTableMock.mockReset();
+    knexInsertMock.mockReset();
+    knexOnConflictMock.mockReset();
+    knexMergeMock.mockReset();
+
+    knexWhereMock.mockReset();
+    knexFromMock.mockReset();
+    knexSelectMock.mockReset();
+    createTenantKnexMock.mockReset();
+
+    knexWhereMock.mockImplementation(() => ({
+      first: vi.fn(async () => tenantSettingsRow),
+    }));
+
+    knexFromMock.mockImplementation(() => ({
+      where: knexWhereMock,
+    }));
+
+    knexSelectMock.mockImplementation(() => ({
+      from: knexFromMock,
+    }));
+
+    createTenantKnexMock.mockImplementation(async () => {
+      if (!allowTenantKnex) {
+        throw new Error('createTenantKnex should not be called');
+      }
+
+      return {
+        knex: {
+          select: knexSelectMock,
+        },
+      };
+    });
+  });
+
+  it('returns false for unknown feature keys', async () => {
+    tenantSettingsRow = {
+      settings: {
+        experimentalFeatures: {
+          aiAssistant: true,
+        },
+      },
+    };
+
+    const { isExperimentalFeatureEnabled } = await import(
+      '../../../../packages/tenancy/src/actions/tenant-settings-actions/tenantSettingsActions'
+    );
+
+    await expect(isExperimentalFeatureEnabled('notAFeature')).resolves.toBe(false);
+    expect(knexWhereMock).toHaveBeenCalledWith({ tenant: 'tenant-test' });
+  });
+});

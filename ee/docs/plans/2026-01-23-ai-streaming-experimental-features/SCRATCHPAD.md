@@ -233,3 +233,10 @@ curl -X POST localhost:3000/api/chat/stream/chat \
   - File: `server/src/test/unit/tenantSettingsActions.experimentalFeatures.test.ts`
 - Validation: `npx vitest run server/src/test/unit/tenantSettingsActions.experimentalFeatures.test.ts`
 - Next test item: T006 isExperimentalFeatureEnabled() returns false for unknown feature keys
+
+### 2026-01-24 (cont.)
+- Implemented T006 (unit test):
+  - Verifies `isExperimentalFeatureEnabled()` returns `false` for unknown keys (even when `aiAssistant` is enabled).
+  - File: `server/src/test/unit/tenantSettingsActions.experimentalFeatures.test.ts`
+- Validation: `npx vitest run server/src/test/unit/tenantSettingsActions.experimentalFeatures.test.ts`
+- Next test item: T007 isExperimentalFeatureEnabled('aiAssistant') returns false when not set
