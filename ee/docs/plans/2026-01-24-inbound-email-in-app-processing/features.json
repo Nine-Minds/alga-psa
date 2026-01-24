@@ -4,7 +4,7 @@
   { "id": "F003", "description": "Parse/sanitize email body via `parseEmailReplyBody` with safe fallbacks", "implemented": true },
   { "id": "F004", "description": "Threading: resolve existing ticket by reply token (`findTicketByReplyToken`) then by headers (`findTicketByEmailThread`)", "implemented": true },
   { "id": "F005", "description": "Reply path: create ticket comment from email (including HTML→BlockNote conversion when available)", "implemented": true },
-  { "id": "F006", "description": "Reply path: process reply attachments best-effort via `processEmailAttachment`", "implemented": false },
+  { "id": "F006", "description": "Reply path: process reply attachments best-effort via `processEmailAttachment`", "implemented": true },
 
   { "id": "F010", "description": "New-ticket path: resolve provider-specific inbound ticket defaults via `resolveInboundTicketDefaults(tenant, providerId)`", "implemented": false },
   { "id": "F011", "description": "New-ticket path: match sender email to existing contact via `findContactByEmail` (exact match)", "implemented": false },

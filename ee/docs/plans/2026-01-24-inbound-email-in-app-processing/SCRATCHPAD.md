@@ -33,3 +33,4 @@
 - 2026-01-24: Implemented F003 by invoking `parseEmailReplyBody()` and falling back to raw body content on parser failures (logs + continue).
 - 2026-01-24: Implemented F004 by resolving existing tickets via reply token first (if present), then falling back to thread headers via `findTicketByEmailThread`.
 - 2026-01-24: Implemented F005 by creating reply comments with BlockNote JSON content (HTML→blocks when available, text→blocks otherwise) and storing message threading metadata on the comment.
+- 2026-01-24: Implemented F006 by processing reply attachments per item via `processEmailAttachment` with error-continue semantics.
