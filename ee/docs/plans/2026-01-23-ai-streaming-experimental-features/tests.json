@@ -110,7 +110,7 @@
   {
     "id": "T019",
     "description": "Quick Ask shortcut (⌘↑) is ignored when aiAssistant is disabled",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F010"]
   },
   {

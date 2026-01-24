@@ -328,3 +328,10 @@ curl -X POST localhost:3000/api/chat/stream/chat \
   - File: `server/src/test/unit/components/ExperimentalFeaturesSettings.test.tsx`
 - Validation: `npx vitest run server/src/test/unit/components/ExperimentalFeaturesSettings.test.tsx`
 - Next test item: T019 Quick Ask shortcut (⌘↑) is ignored when aiAssistant is disabled
+
+### 2026-01-24 (cont.)
+- Implemented T019 (unit test):
+  - Verifies ⌘↑/Ctrl↑ keydown is ignored (no preventDefault, overlay stays unrendered) when `aiAssistant` is disabled.
+  - File: `server/src/test/unit/layout/DefaultLayout.quickAskShortcut.test.tsx`
+- Validation: `npx vitest run server/src/test/unit/layout/DefaultLayout.quickAskShortcut.test.tsx`
+- Next test item: T020 Quick Ask shortcut (⌘↑) works when aiAssistant is enabled
