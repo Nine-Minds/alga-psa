@@ -1,0 +1,57 @@
+# Scratchpad — Resume Draft Contract
+
+- Plan slug: `resume-draft-contract`
+- Created: `2026-01-23`
+
+## What This Is
+
+Keep a lightweight, continuously-updated log of discoveries and decisions made while implementing this plan.
+
+Prefer short bullets. Append new entries as you learn things, and also *update earlier notes* when a decision changes or an open question is resolved.
+
+## Decisions
+
+- (2026-01-23) Resume flow starts at Step 1 — user confirmed they want to review from the beginning when resuming a draft.
+- (2026-01-23) Drafts in separate tab — dedicated "Drafts" tab alongside Templates and Client Contracts.
+- (2026-01-23) No auto-save — manual save only via "Save Draft" button.
+- (2026-01-23) Discard with confirmation — explicit "Discard Draft" action with confirmation dialog.
+
+## Discoveries / Constraints
+
+- (2026-01-23) Draft functionality already exists at DB level:
+  - `contracts.status` has `'draft'` value
+  - `createClientContractFromWizard` accepts `isDraft` option
+  - `handleSaveDraft()` exists in ContractWizard.tsx (lines 381-420)
+  - `is_active: false` + `status: 'draft'` for draft contracts
+
+- (2026-01-23) Key files:
+  - Contract Wizard: `packages/billing/src/components/billing-dashboard/contracts/ContractWizard.tsx`
+  - Contracts List: `packages/billing/src/components/billing-dashboard/contracts/Contracts.tsx`
+  - Wizard Actions: `packages/billing/src/actions/contractWizardActions.ts`
+  - Contract Actions: `packages/billing/src/actions/contractActions.ts`
+  - Contract Model: `packages/billing/src/models/contract.ts`
+
+- (2026-01-23) Current wizard state interface `ContractWizardData` already has:
+  - `contract_id?: string` — set when draft is saved
+  - `is_draft?: boolean` — draft indicator
+  - `template_id?: string` — template reference
+
+- (2026-01-23) Contracts.tsx has two tabs: Templates and Client Contracts — we'll add a third "Drafts" tab
+
+- (2026-01-23) Existing contract update blocks setting status to 'draft' if contract has invoices (contractActions.ts:293-299)
+
+## Commands / Runbooks
+
+- Run billing package tests: `npm test -w packages/billing`
+- Run server dev: `npm run dev -w server`
+
+## Links / References
+
+- PRD: [./PRD.md](./PRD.md)
+- Contract Wizard: `packages/billing/src/components/billing-dashboard/contracts/ContractWizard.tsx`
+- Contracts List: `packages/billing/src/components/billing-dashboard/contracts/Contracts.tsx`
+- Wizard Actions: `packages/billing/src/actions/contractWizardActions.ts`
+
+## Open Questions
+
+- (None currently — key decisions made during planning)

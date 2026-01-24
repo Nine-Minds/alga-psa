@@ -1,0 +1,152 @@
+[
+  {
+    "id": "F001",
+    "description": "Add 'Drafts' tab to Contracts management page (third tab after Templates and Client Contracts)",
+    "implemented": false,
+    "prdRefs": ["FR1"]
+  },
+  {
+    "id": "F002",
+    "description": "Drafts tab shows count badge indicating number of draft contracts",
+    "implemented": false,
+    "prdRefs": ["FR1"]
+  },
+  {
+    "id": "F003",
+    "description": "Create getDraftContracts action to fetch all draft contracts for tenant",
+    "implemented": false,
+    "prdRefs": ["FR5"]
+  },
+  {
+    "id": "F004",
+    "description": "Drafts DataTable displays contract name column",
+    "implemented": false,
+    "prdRefs": ["FR2"]
+  },
+  {
+    "id": "F005",
+    "description": "Drafts DataTable displays client name column",
+    "implemented": false,
+    "prdRefs": ["FR2"]
+  },
+  {
+    "id": "F006",
+    "description": "Drafts DataTable displays created date column",
+    "implemented": false,
+    "prdRefs": ["FR2"]
+  },
+  {
+    "id": "F007",
+    "description": "Drafts DataTable displays last modified date column",
+    "implemented": false,
+    "prdRefs": ["FR2"]
+  },
+  {
+    "id": "F008",
+    "description": "Drafts DataTable displays actions dropdown column with Resume and Discard options",
+    "implemented": false,
+    "prdRefs": ["FR2"]
+  },
+  {
+    "id": "F009",
+    "description": "Drafts list supports sorting by columns (default: last modified descending)",
+    "implemented": false,
+    "prdRefs": ["FR2"]
+  },
+  {
+    "id": "F010",
+    "description": "Drafts list supports search/filter by contract name",
+    "implemented": false,
+    "prdRefs": ["FR2"]
+  },
+  {
+    "id": "F011",
+    "description": "Drafts list supports search/filter by client name",
+    "implemented": false,
+    "prdRefs": ["FR2"]
+  },
+  {
+    "id": "F012",
+    "description": "Drafts list uses existing pagination patterns",
+    "implemented": false,
+    "prdRefs": ["FR2"]
+  },
+  {
+    "id": "F013",
+    "description": "Drafts list shows empty state when no drafts exist",
+    "implemented": false,
+    "prdRefs": ["FR2"]
+  },
+  {
+    "id": "F014",
+    "description": "Create getDraftContractForResume action to fetch complete draft data for wizard",
+    "implemented": false,
+    "prdRefs": ["FR5"]
+  },
+  {
+    "id": "F015",
+    "description": "Resume action opens ContractWizard dialog with draft data pre-populated",
+    "implemented": false,
+    "prdRefs": ["FR3"]
+  },
+  {
+    "id": "F016",
+    "description": "Resumed wizard starts at Step 1 (Contract Basics)",
+    "implemented": false,
+    "prdRefs": ["FR3"]
+  },
+  {
+    "id": "F017",
+    "description": "All wizard steps pre-populate with saved draft data when resuming",
+    "implemented": false,
+    "prdRefs": ["FR3"]
+  },
+  {
+    "id": "F018",
+    "description": "Save Draft in resumed wizard updates the existing draft (not creates new)",
+    "implemented": false,
+    "prdRefs": ["FR3", "FR5"]
+  },
+  {
+    "id": "F019",
+    "description": "Completing wizard from resumed draft activates contract (status changes from draft to active)",
+    "implemented": false,
+    "prdRefs": ["FR3"]
+  },
+  {
+    "id": "F020",
+    "description": "Discard action shows confirmation dialog with contract name and client name",
+    "implemented": false,
+    "prdRefs": ["FR4"]
+  },
+  {
+    "id": "F021",
+    "description": "Confirmation dialog has Cancel and Discard buttons",
+    "implemented": false,
+    "prdRefs": ["FR4"]
+  },
+  {
+    "id": "F022",
+    "description": "Confirming discard deletes the draft contract using existing deleteContract action",
+    "implemented": false,
+    "prdRefs": ["FR4"]
+  },
+  {
+    "id": "F023",
+    "description": "Drafts list refreshes after successful deletion",
+    "implemented": false,
+    "prdRefs": ["FR4"]
+  },
+  {
+    "id": "F024",
+    "description": "All draft queries filter by tenant for multi-tenant isolation",
+    "implemented": false,
+    "prdRefs": ["FR5"]
+  },
+  {
+    "id": "F025",
+    "description": "Drafts functionality respects existing contract permissions (create, delete)",
+    "implemented": false,
+    "prdRefs": ["FR5"]
+  }
+]
