@@ -545,9 +545,24 @@ Implication: we should standardize on `@alga-psa/event-bus/publishers` helpers f
     - `packages/integrations/src/lib/externalMappingWorkflowEvents.ts`
     - `packages/integrations/src/lib/__tests__/externalMappingWorkflowEvents.test.ts`
 
+- 2026-01-24: Completed `F090` (asset lifecycle emission):
+  - Added shared payload builders + schema-compat unit tests:
+    - `shared/workflow/streams/domainEventBuilders/assetEventBuilders.ts`
+    - `shared/workflow/streams/domainEventBuilders/__tests__/assetEventBuilders.test.ts`
+  - Emitted workflow v2 asset domain events from authoritative asset and association paths:
+    - `packages/assets/src/actions/assetActions.ts` publishes:
+      - `ASSET_CREATED` on asset creation
+      - `ASSET_UPDATED` on asset updates (with `updatedFields` + `{previous,new}` `changes` derived from the update payload)
+      - `ASSET_ASSIGNED` / `ASSET_UNASSIGNED` on asset association create/remove (ownerType = `ticket`/`project`)
+      - `ASSET_ASSIGNED` on client reassignment when `client_id` changes (ownerType = `client`)
+      - `ASSET_WARRANTY_EXPIRING` on 30-day threshold crossings (create/update) via `computeAssetWarrantyExpiring(...)`
+  - Verification:
+    - `npx vitest run shared/workflow/streams/domainEventBuilders/__tests__/assetEventBuilders.test.ts`
+    - `npx tsc -p packages/assets/tsconfig.json --noEmit`
+
 ## Next Up
 
-- `F090`: emit asset lifecycle events (`ASSET_*`).
+- `F091`: emit media lifecycle events (`FILE_UPLOADED`, `MEDIA_PROCESSING_*`).
 
 ## Suggested Phasing (to reduce risk)
 
