@@ -602,6 +602,10 @@ Implication: we should standardize on `@alga-psa/event-bus/publishers` helpers f
   - Added a migration-level coverage test that parses `event-proposals.md` and asserts the system catalog upsert migration includes every proposed `event_type`:
     - `server/src/test/unit/workflowEventCatalogMigrationCoverage.test.ts`
 
+- 2026-01-24: Completed `T005` (simulator form-mode schema + validation coverage):
+  - Added a schema-driven test that asserts every proposed `payload.*.v1` ref can be converted to JSON schema (form builder input) and that representative schemas reject invalid payloads:
+    - `shared/workflow/runtime/__tests__/workflowEventFormModeBuilder.test.ts`
+
 ## Suggested Phasing (to reduce risk)
 
 Phase 1 (authoritative CRUD/state transitions; low provider dependency):
