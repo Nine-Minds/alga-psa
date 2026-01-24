@@ -16,8 +16,10 @@ import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { Input } from '@alga-psa/ui/components/Input';
 import CustomTabs from '@alga-psa/ui/components/CustomTabs';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
+import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { ColumnDefinition } from '@alga-psa/types';
 import { IContract, IContractWithClient } from '@alga-psa/types';
+import { toast } from 'react-hot-toast';
 import {
   checkClientHasActiveContract,
   deleteContract,
@@ -66,6 +68,12 @@ const Contracts: React.FC = () => {
   const [clientContracts, setClientContracts] = useState<IContractWithClient[]>([]);
   const [draftContracts, setDraftContracts] = useState<IContractWithClient[]>([]);
   const [draftToResume, setDraftToResume] = useState<DraftContractWizardData | null>(null);
+  const [draftToDiscard, setDraftToDiscard] = useState<{
+    contractId: string;
+    contractName: string;
+    clientName: string;
+  } | null>(null);
+  const [isDiscardingDraft, setIsDiscardingDraft] = useState(false);
   const [showTemplateWizard, setShowTemplateWizard] = useState(false);
   const [showClientWizard, setShowClientWizard] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -160,6 +168,22 @@ const Contracts: React.FC = () => {
       alert(message);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleConfirmDiscardDraft = async () => {
+    if (!draftToDiscard) return;
+    setIsDiscardingDraft(true);
+    try {
+      await deleteContract(draftToDiscard.contractId);
+      await fetchContracts();
+      toast.success('Draft discarded');
+      setDraftToDiscard(null);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to discard draft';
+      toast.error(message);
+    } finally {
+      setIsDiscardingDraft(false);
     }
   };
 
@@ -671,7 +695,11 @@ const renderStatusBadge = (status: string) => {
                       onClick={(event) => {
                         event.stopPropagation();
                         if (record.contract_id) {
-                          alert('Discard draft not yet wired');
+                          setDraftToDiscard({
+                            contractId: record.contract_id,
+                            contractName: record.contract_name || 'Untitled draft',
+                            clientName: record.client_name || 'Unknown client',
+                          });
                         }
                       }}
                     >
@@ -766,6 +794,21 @@ const renderStatusBadge = (status: string) => {
           void fetchContracts();
         }}
         editingContract={draftToResume}
+      />
+      <ConfirmationDialog
+        id="discard-draft-confirmation"
+        isOpen={!!draftToDiscard}
+        onClose={() => setDraftToDiscard(null)}
+        onConfirm={handleConfirmDiscardDraft}
+        title="Discard Draft Contract?"
+        message={
+          draftToDiscard
+            ? `This will permanently delete the draft "${draftToDiscard.contractName}" for ${draftToDiscard.clientName}.\nThis action cannot be undone.`
+            : ''
+        }
+        cancelLabel="Cancel"
+        confirmLabel="Discard"
+        isConfirming={isDiscardingDraft}
       />
     </>
   );

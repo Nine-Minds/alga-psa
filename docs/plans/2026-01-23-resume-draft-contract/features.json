@@ -116,7 +116,7 @@
   {
     "id": "F020",
     "description": "Discard action shows confirmation dialog with contract name and client name",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR4"]
   },
   {

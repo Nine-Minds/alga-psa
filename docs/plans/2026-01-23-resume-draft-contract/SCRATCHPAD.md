@@ -93,6 +93,8 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - (2026-01-24) Completing a resumed draft activates in-place:
   - `createClientContractFromWizard()` transitions updated draft to `status='active'` / `is_active=true` when called without `isDraft`
 
+- (2026-01-24) Discard draft flow now uses a confirmation dialog including contract + client names.
+
 ## Commands / Runbooks
 
 - Run billing package tests: `npm test -w packages/billing`
