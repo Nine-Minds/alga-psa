@@ -5,8 +5,7 @@ import { Knex } from 'knex';
 import { JobStatus } from '@alga-psa/jobs';
 import { createTenantKnex } from '@alga-psa/db';
 import { JobService } from '@alga-psa/jobs';
-import { getCurrentUser } from '@alga-psa/users/actions';
-import { runWithTenant } from '@alga-psa/db';
+import { withAuth } from '@alga-psa/auth';
 
 export interface JobMetrics {
   total: number;
@@ -37,21 +36,8 @@ export interface JobRecord {
   external_run_id?: string;
 }
 
-export async function getQueueMetricsAction(): Promise<JobMetrics> {
-  const user = await getCurrentUser();
-  const { knex, tenant } = await createTenantKnex(user?.tenant);
-
-  if (!tenant) {
-    return {
-      total: 0,
-      completed: 0,
-      failed: 0,
-      pending: 0,
-      active: 0,
-      queued: 0,
-      byRunner: { pgboss: 0, temporal: 0 },
-    };
-  }
+export const getQueueMetricsAction = withAuth(async (user, { tenant }): Promise<JobMetrics> => {
+  const { knex } = await createTenantKnex();
 
   // Get all counts in a single query using conditional aggregation
   const result = await knex('jobs')
@@ -80,9 +66,9 @@ export async function getQueueMetricsAction(): Promise<JobMetrics> {
       temporal: parseInt(String(result?.temporal || '0'), 10),
     },
   };
-}
+});
 
-export async function getJobDetailsWithHistory(filter: {
+export const getJobDetailsWithHistory = withAuth(async (user, { tenant }, filter: {
   state?: JobStatus;
   startAfter?: Date;
   beforeDate?: Date;
@@ -90,58 +76,50 @@ export async function getJobDetailsWithHistory(filter: {
   tenantId?: string;
   limit?: number;
   offset?: number;
-}): Promise<JobRecord[]> {
-  const user = await getCurrentUser();
-  const tenantId = filter.tenantId ?? user?.tenant ?? null;
-  const { knex, tenant } = await createTenantKnex(tenantId);
+}): Promise<JobRecord[]> => {
+  const { knex } = await createTenantKnex();
 
-  if (!tenant) {
-    throw new Error('Tenant not found');
-  }
+  return withTransaction(knex, async (trx: Knex.Transaction) => {
+    // Build and execute jobs query scoped explicitly to the tenant
+    let query = trx('jobs')
+      .select('*')
+      .where('tenant', tenant)
+      .orderBy('created_at', 'desc');
 
-  return runWithTenant(tenant, async () =>
-    withTransaction(knex, async (trx: Knex.Transaction) => {
-      // Build and execute jobs query scoped explicitly to the tenant
-      let query = trx('jobs')
-        .select('*')
-        .where('tenant', tenant)
-        .orderBy('created_at', 'desc');
+    if (filter.state) {
+      query = query.where('status', filter.state);
+    }
+    if (filter.startAfter) {
+      query = query.where('created_at', '>', filter.startAfter);
+    }
+    if (filter.beforeDate) {
+      query = query.where('created_at', '<', filter.beforeDate);
+    }
+    if (filter.jobName) {
+      query = query.where('type', filter.jobName);
+    }
+    if (filter.limit) {
+      query = query.limit(filter.limit);
+    }
+    if (filter.offset) {
+      query = query.offset(filter.offset);
+    }
 
-      if (filter.state) {
-        query = query.where('status', filter.state);
-      }
-      if (filter.startAfter) {
-        query = query.where('created_at', '>', filter.startAfter);
-      }
-      if (filter.beforeDate) {
-        query = query.where('created_at', '<', filter.beforeDate);
-      }
-      if (filter.jobName) {
-        query = query.where('type', filter.jobName);
-      }
-      if (filter.limit) {
-        query = query.limit(filter.limit);
-      }
-      if (filter.offset) {
-        query = query.offset(filter.offset);
-      }
+    const jobs = await query;
 
-      const jobs = await query;
+    if (jobs.length === 0) {
+      return [];
+    }
 
-      if (jobs.length === 0) {
-        return [];
-      }
+    // Get job details using the service method with the same transaction
+    const jobService = await JobService.create();
+    const jobsWithDetails = await Promise.all(
+      jobs.map(async (job) => ({
+        ...job,
+        details: await jobService.getJobDetails(job.job_id, trx),
+      }))
+    );
 
-      // Get job details using the service method with the same transaction
-      const jobService = await JobService.create();
-      const jobsWithDetails = await Promise.all(
-        jobs.map(async (job) => ({
-          ...job,
-          details: await jobService.getJobDetails(job.job_id, trx),
-        }))
-      );
-
-      return jobsWithDetails;
-    })
-  );
-}
+    return jobsWithDetails;
+  });
+});

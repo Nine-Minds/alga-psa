@@ -1,6 +1,6 @@
 'use server'
 
-import { getCurrentUser } from '@alga-psa/users/actions';
+import { withAuth } from '@alga-psa/auth';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { createTenantKnex, runWithTenant } from '@alga-psa/db';
@@ -19,15 +19,16 @@ import type { IScheduleEntry } from '@alga-psa/types';
 /**
  * Initiate OAuth flow for calendar provider
  */
-export async function initiateCalendarOAuth(params: {
-  provider: 'google' | 'microsoft';
-  calendarProviderId?: string;
-  redirectUri?: string;
-  isPopup?: boolean;
-}): Promise<{ success: true; authUrl: string; state: string } | { success: false; error: string }> {
-  const user = await getCurrentUser();
-  if (!user) return { success: false, error: 'Unauthorized' };
-
+export const initiateCalendarOAuth = withAuth(async (
+  user,
+  { tenant },
+  params: {
+    provider: 'google' | 'microsoft';
+    calendarProviderId?: string;
+    redirectUri?: string;
+    isPopup?: boolean;
+  }
+): Promise<{ success: true; authUrl: string; state: string } | { success: false; error: string }> => {
   try {
     // RBAC: validate permission
     const isUpdate = !!params.calendarProviderId;
@@ -40,7 +41,7 @@ export async function initiateCalendarOAuth(params: {
 
     // If calendarProviderId is specified, ensure it belongs to the caller's tenant
     if (params.calendarProviderId) {
-      const { knex, tenant } = await createTenantKnex();
+      const { knex } = await createTenantKnex();
       const exists = await withTransaction(knex, async (trx) => {
         return await trx('calendar_providers')
           .where({ id: params.calendarProviderId, tenant })
@@ -53,7 +54,6 @@ export async function initiateCalendarOAuth(params: {
 
     const { provider, calendarProviderId, redirectUri: requestedRedirectUri, isPopup } = params;
     const secretProvider = await getSecretProviderInstance();
-    const tenant = user.tenant;
 
     let existingRedirectUri: string | undefined;
     let existingProviderConfig: CalendarProviderConfig['provider_config'] | undefined;
@@ -138,7 +138,7 @@ export async function initiateCalendarOAuth(params: {
   } catch (err: any) {
     return { success: false, error: err?.message || 'Failed to initiate OAuth' };
   }
-}
+});
 
 // Backwards-compatible helpers.
 export async function getGoogleAuthUrl(params: {
@@ -169,20 +169,18 @@ export async function getMicrosoftAuthUrl(params: {
  * Get calendar providers for current user
  * Each user has their own calendar sync configuration
  */
-export async function getCalendarProviders(): Promise<{
+export const getCalendarProviders = withAuth(async (
+  user,
+  { tenant }
+): Promise<{
   success: boolean;
   providers?: CalendarProviderConfig[];
   error?: string;
-}> {
+}> => {
   try {
-    const user = await getCurrentUser();
-    if (!user) {
-      return { success: false, error: 'Unauthorized' };
-    }
-
     const providerService = new CalendarProviderService();
     const providers = await providerService.getProviders({
-      tenant: user.tenant,
+      tenant,
       userId: user.user_id
     });
 
@@ -190,27 +188,26 @@ export async function getCalendarProviders(): Promise<{
   } catch (error: any) {
     return { success: false, error: error.message || 'Failed to fetch calendar providers' };
   }
-}
+});
 
 /**
  * Create calendar provider
  */
-export async function createCalendarProvider(params: {
-  providerType: 'google' | 'microsoft';
-  providerName: string;
-  calendarId: string;
-  syncDirection: 'bidirectional' | 'to_external' | 'from_external';
-  vendorConfig: any;
-}): Promise<{
+export const createCalendarProvider = withAuth(async (
+  user,
+  { tenant },
+  params: {
+    providerType: 'google' | 'microsoft';
+    providerName: string;
+    calendarId: string;
+    syncDirection: 'bidirectional' | 'to_external' | 'from_external';
+    vendorConfig: any;
+  }
+): Promise<{
   success: boolean;
   provider?: CalendarProviderConfig;
   error?: string;
-}> {
-  const user = await getCurrentUser();
-  if (!user) {
-    return { success: false, error: 'Unauthorized' };
-  }
-
+}> => {
   const permitted = await hasPermission(user as any, 'system_settings', 'create');
   if (!permitted) {
     return { success: false, error: 'Forbidden: insufficient permissions' };
@@ -222,7 +219,7 @@ export async function createCalendarProvider(params: {
     // Reuse existing provider when unique constraint would be violated
     // Each user can only have one provider per type
     const existingProviders = await providerService.getProviders({
-      tenant: user.tenant,
+      tenant,
       userId: user.user_id,
       providerType: params.providerType,
       calendarId: params.calendarId
@@ -236,13 +233,13 @@ export async function createCalendarProvider(params: {
         !existing.active;
 
       if (needsUpdate) {
-        await providerService.updateProvider(existing.id, user.tenant, {
+        await providerService.updateProvider(existing.id, tenant, {
           providerName: params.providerName,
           calendarId: params.calendarId,
           syncDirection: params.syncDirection,
           isActive: true
         });
-        const updated = await providerService.getProvider(existing.id, user.tenant, { includeSecrets: false });
+        const updated = await providerService.getProvider(existing.id, tenant, { includeSecrets: false });
         return { success: true, provider: updated ?? existing };
       }
 
@@ -250,7 +247,7 @@ export async function createCalendarProvider(params: {
     }
 
     const provider = await providerService.createProvider({
-      tenant: user.tenant,
+      tenant,
       userId: user.user_id,
       providerType: params.providerType,
       providerName: params.providerName,
@@ -270,7 +267,7 @@ export async function createCalendarProvider(params: {
       try {
         const providerService = new CalendarProviderService();
         const existingProviders = await providerService.getProviders({
-          tenant: user.tenant,
+          tenant,
           userId: user.user_id,
           providerType: params.providerType
         });
@@ -284,12 +281,14 @@ export async function createCalendarProvider(params: {
     }
     return { success: false, error: error?.message || 'Failed to create calendar provider' };
   }
-}
+});
 
 /**
  * Update calendar provider
  */
-export async function updateCalendarProvider(
+export const updateCalendarProvider = withAuth(async (
+  user,
+  { tenant },
   calendarProviderId: string,
   params: {
     providerName?: string;
@@ -302,72 +301,61 @@ export async function updateCalendarProvider(
   success: boolean;
   provider?: CalendarProviderConfig;
   error?: string;
-}> {
+}> => {
   try {
-    const user = await getCurrentUser();
-    if (!user) {
-      return { success: false, error: 'Unauthorized' };
-    }
-
     const permitted = await hasPermission(user as any, 'system_settings', 'update');
     if (!permitted) {
       return { success: false, error: 'Forbidden: insufficient permissions' };
     }
 
     const providerService = new CalendarProviderService();
-    const provider = await providerService.updateProvider(calendarProviderId, user.tenant, params);
+    const provider = await providerService.updateProvider(calendarProviderId, tenant, params);
 
     return { success: true, provider };
   } catch (error: any) {
     return { success: false, error: error.message || 'Failed to update calendar provider' };
   }
-}
+});
 
 /**
  * Delete calendar provider
  */
-export async function deleteCalendarProvider(
+export const deleteCalendarProvider = withAuth(async (
+  user,
+  { tenant },
   calendarProviderId: string
 ): Promise<{
   success: boolean;
   error?: string;
-}> {
+}> => {
   try {
-    const user = await getCurrentUser();
-    if (!user) {
-      return { success: false, error: 'Unauthorized' };
-    }
-
     const permitted = await hasPermission(user as any, 'system_settings', 'delete');
     if (!permitted) {
       return { success: false, error: 'Forbidden: insufficient permissions' };
     }
 
     const providerService = new CalendarProviderService();
-    await providerService.deleteProvider(calendarProviderId, user.tenant);
+    await providerService.deleteProvider(calendarProviderId, tenant);
 
     return { success: true };
   } catch (error: any) {
     return { success: false, error: error.message || 'Failed to delete calendar provider' };
   }
-}
+});
 
 /**
  * Sync schedule entry to external calendar
  */
-export async function syncScheduleEntryToCalendar(
+export const syncScheduleEntryToCalendar = withAuth(async (
+  _user,
+  _ctx,
   entryId: string,
   calendarProviderId: string
 ): Promise<{
   success: boolean;
   error?: string;
-}> {
+}> => {
   try {
-    const user = await getCurrentUser();
-    if (!user) {
-      return { success: false, error: 'Unauthorized' };
-    }
-
     const syncService = new CalendarSyncService();
     const result = await syncService.syncScheduleEntryToExternal(entryId, calendarProviderId);
 
@@ -375,24 +363,21 @@ export async function syncScheduleEntryToCalendar(
   } catch (error: any) {
     return { success: false, error: error.message || 'Failed to sync schedule entry' };
   }
-}
+});
 
 /**
  * Sync external calendar event to schedule entry
  */
-export async function syncExternalEventToSchedule(
+export const syncExternalEventToSchedule = withAuth(async (
+  _user,
+  _ctx,
   externalEventId: string,
   calendarProviderId: string
 ): Promise<{
   success: boolean;
   error?: string;
-}> {
+}> => {
   try {
-    const user = await getCurrentUser();
-    if (!user) {
-      return { success: false, error: 'Unauthorized' };
-    }
-
     const syncService = new CalendarSyncService();
     const result = await syncService.syncExternalEventToSchedule(externalEventId, calendarProviderId);
 
@@ -400,23 +385,20 @@ export async function syncExternalEventToSchedule(
   } catch (error: any) {
     return { success: false, error: error.message || 'Failed to sync external event' };
   }
-}
+});
 
 /**
  * Resolve calendar sync conflict
  */
-export async function resolveCalendarConflict(
+export const resolveCalendarConflict = withAuth(async (
+  _user,
+  _ctx,
   resolution: CalendarConflictResolution
 ): Promise<{
   success: boolean;
   error?: string;
-}> {
+}> => {
   try {
-    const user = await getCurrentUser();
-    if (!user) {
-      return { success: false, error: 'Unauthorized' };
-    }
-
     const syncService = new CalendarSyncService();
     const result = await syncService.resolveConflict(
       resolution.mappingId,
@@ -428,28 +410,22 @@ export async function resolveCalendarConflict(
   } catch (error: any) {
     return { success: false, error: error.message || 'Failed to resolve conflict' };
   }
-}
+});
 
 /**
  * Get sync status for a schedule entry
  */
-export async function getScheduleEntrySyncStatus(
+export const getScheduleEntrySyncStatus = withAuth(async (
+  _user,
+  { tenant },
   entryId: string
 ): Promise<{
   success: boolean;
   status?: CalendarSyncStatus[];
   error?: string;
-}> {
+}> => {
   try {
-    const user = await getCurrentUser();
-    if (!user) {
-      return { success: false, error: 'Unauthorized' };
-    }
-
-    const { knex, tenant } = await createTenantKnex();
-    if (!tenant) {
-      return { success: false, error: 'Tenant context unavailable' };
-    }
+    const { knex } = await createTenantKnex();
 
     // Get all mappings for this entry
     const mappings = await withTransaction(knex, async (trx) => {
@@ -491,39 +467,36 @@ export async function getScheduleEntrySyncStatus(
   } catch (error: any) {
     return { success: false, error: error.message || 'Failed to get sync status' };
   }
-}
+});
 
 /**
  * Manual sync trigger for a calendar provider
  * Validates the request synchronously, then kicks off sync in the background
  */
-export async function syncCalendarProvider(
+export const syncCalendarProvider = withAuth(async (
+  user,
+  { tenant },
   calendarProviderId: string
 ): Promise<{
   success: boolean;
   started?: boolean;
   error?: string;
-}> {
+}> => {
   try {
-    const user = await getCurrentUser();
-    if (!user) {
-      return { success: false, error: 'Unauthorized' };
-    }
-
     const permitted = await hasPermission(user as any, 'system_settings', 'update');
     if (!permitted) {
       return { success: false, error: 'Forbidden: insufficient permissions' };
     }
 
     const providerService = new CalendarProviderService();
-    const provider = await providerService.getProvider(calendarProviderId, user.tenant);
+    const provider = await providerService.getProvider(calendarProviderId, tenant);
 
     if (!provider) {
       return { success: false, error: 'Calendar provider not found' };
     }
 
     // Capture user context for background processing
-    const tenantId = user.tenant;
+    const tenantId = tenant;
 
     // Kick off sync in background and return immediately
     setImmediate(async () => {
@@ -540,7 +513,7 @@ export async function syncCalendarProvider(
         const allowPull = provider.sync_direction === 'bidirectional' || provider.sync_direction === 'from_external';
 
         await runWithTenant(tenantId, async () => {
-          const { knex } = await createTenantKnex();
+          const { knex } = await createTenantKnex(tenantId);
 
           // Define sync window: 2 days ago to 15 days from now
           // This avoids bulk syncing historical or far-future entries
@@ -674,17 +647,16 @@ export async function syncCalendarProvider(
     const message = error?.message || 'Failed to start calendar sync';
     return { success: false, error: message };
   }
-}
+});
 
 /**
  * Manually retry Microsoft calendar subscription renewal for a specific provider
  */
-export async function retryMicrosoftCalendarSubscriptionRenewal(
+export const retryMicrosoftCalendarSubscriptionRenewal = withAuth(async (
+  user,
+  { tenant },
   providerId: string
-): Promise<{ success: boolean; message?: string; error?: string }> {
-  const user = await getCurrentUser();
-  if (!user) return { success: false, error: 'Unauthorized' };
-
+): Promise<{ success: boolean; message?: string; error?: string }> => {
   try {
     // RBAC: validate permission
     const resource = 'system_settings';
@@ -695,11 +667,11 @@ export async function retryMicrosoftCalendarSubscriptionRenewal(
     }
 
     // Verify provider belongs to user's tenant
-    const { knex, tenant } = await createTenantKnex();
+    const { knex } = await createTenantKnex();
     const provider = await knex('calendar_providers')
       .where({ id: providerId, tenant })
       .first();
-    
+
     if (!provider) {
       return { success: false, error: 'Provider not found or access denied' };
     }
@@ -710,7 +682,7 @@ export async function retryMicrosoftCalendarSubscriptionRenewal(
 
     const service = new CalendarWebhookMaintenanceService();
     const results = await service.renewMicrosoftWebhooks({
-      tenantId: tenant ?? undefined,
+      tenantId: tenant,
       providerId: providerId,
       lookAheadMinutes: 0 // Force check regardless of expiration time
     });
@@ -721,9 +693,9 @@ export async function retryMicrosoftCalendarSubscriptionRenewal(
 
     const result = results[0];
     if (result.success) {
-      return { 
-        success: true, 
-        message: `Subscription ${result.action} successfully${result.newExpiration ? ` (expires: ${new Date(result.newExpiration).toLocaleString()})` : ''}` 
+      return {
+        success: true,
+        message: `Subscription ${result.action} successfully${result.newExpiration ? ` (expires: ${new Date(result.newExpiration).toLocaleString()})` : ''}`
       };
     } else {
       return { success: false, error: result.error || 'Renewal failed' };
@@ -732,4 +704,4 @@ export async function retryMicrosoftCalendarSubscriptionRenewal(
     console.error('[calendarActions] Manual renewal failed:', error);
     return { success: false, error: error.message || 'Internal server error' };
   }
-}
+});

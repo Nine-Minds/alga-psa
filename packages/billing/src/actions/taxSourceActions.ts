@@ -3,7 +3,7 @@
 import { createTenantKnex } from '@alga-psa/db';
 import type { TaxSource } from '@alga-psa/types';
 import { getTaxImportState } from '@alga-psa/types';
-import { getCurrentUser } from '@alga-psa/auth/getCurrentUser';
+import { withAuth } from '@alga-psa/auth';
 
 /**
  * Client-specific tax source resolution result.
@@ -21,15 +21,12 @@ export interface ClientTaxSourceInfo {
  * Note: The adapter is NOT returned here - it's determined at export time
  * based on which accounting system the invoice is exported to.
  */
-export async function getEffectiveTaxSourceForClient(
+export const getEffectiveTaxSourceForClient = withAuth(async (
+  _user,
+  { tenant },
   clientId: string
-): Promise<ClientTaxSourceInfo> {
-  const currentUser = await getCurrentUser();
-  if (!currentUser) {
-    throw new Error('No authenticated user found');
-  }
-
-  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
+): Promise<ClientTaxSourceInfo> => {
+  const { knex } = await createTenantKnex();
 
   if (!tenant) {
     return {
@@ -61,22 +58,22 @@ export async function getEffectiveTaxSourceForClient(
     taxSource: (tenantSettings?.default_tax_source as TaxSource) || 'internal',
     isOverride: false
   };
-}
+});
 
 /**
  * Determine if an invoice should use external tax delegation.
  * This should be called during invoice creation to set the initial tax_source.
  */
-export async function shouldUseTaxDelegation(clientId: string): Promise<boolean> {
+export const shouldUseTaxDelegation = withAuth(async (_user, ctx, clientId: string): Promise<boolean> => {
   const { taxSource } = await getEffectiveTaxSourceForClient(clientId);
   return taxSource === 'external';
-}
+});
 
 /**
  * Get the initial tax_source value for a new invoice based on client settings.
  * Returns 'pending_external' for external delegation, 'internal' otherwise.
  */
-export async function getInitialInvoiceTaxSource(clientId: string): Promise<TaxSource> {
+export const getInitialInvoiceTaxSource = withAuth(async (_user, ctx, clientId: string): Promise<TaxSource> => {
   const { taxSource } = await getEffectiveTaxSourceForClient(clientId);
 
   // If client uses external tax, new invoices start as 'pending_external'
@@ -85,21 +82,18 @@ export async function getInitialInvoiceTaxSource(clientId: string): Promise<TaxS
   }
 
   return 'internal';
-}
+});
 
 /**
  * Validate that an invoice can be finalized based on its tax source.
  * Returns an error message if finalization should be blocked.
  */
-export async function validateInvoiceFinalization(
+export const validateInvoiceFinalization = withAuth(async (
+  _user,
+  { tenant },
   invoiceId: string
-): Promise<{ canFinalize: boolean; error?: string; warning?: string }> {
-  const currentUser = await getCurrentUser();
-  if (!currentUser) {
-    throw new Error('No authenticated user found');
-  }
-
-  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
+): Promise<{ canFinalize: boolean; error?: string; warning?: string }> => {
+  const { knex } = await createTenantKnex();
 
   if (!tenant) {
     return { canFinalize: false, error: 'No tenant context' };
@@ -128,22 +122,19 @@ export async function validateInvoiceFinalization(
   }
 
   return { canFinalize: true };
-}
+});
 
 /**
  * Update an invoice's tax source.
  * Use this when changing from internal to external or vice versa on a draft invoice.
  */
-export async function updateInvoiceTaxSource(
+export const updateInvoiceTaxSource = withAuth(async (
+  _user,
+  { tenant },
   invoiceId: string,
   newTaxSource: TaxSource
-): Promise<{ success: boolean; error?: string }> {
-  const currentUser = await getCurrentUser();
-  if (!currentUser) {
-    throw new Error('No authenticated user found');
-  }
-
-  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
+): Promise<{ success: boolean; error?: string }> => {
+  const { knex } = await createTenantKnex();
 
   if (!tenant) {
     return { success: false, error: 'No tenant context' };
@@ -185,19 +176,14 @@ export async function updateInvoiceTaxSource(
     });
 
   return { success: true };
-}
+});
 
 /**
  * Check if client is allowed to override tax source.
  * This is controlled by the tenant setting allow_external_tax_override.
  */
-export async function canClientOverrideTaxSource(): Promise<boolean> {
-  const currentUser = await getCurrentUser();
-  if (!currentUser) {
-    throw new Error('No authenticated user found');
-  }
-
-  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
+export const canClientOverrideTaxSource = withAuth(async (_user, { tenant }): Promise<boolean> => {
+  const { knex } = await createTenantKnex();
 
   if (!tenant) {
     return false;
@@ -209,4 +195,4 @@ export async function canClientOverrideTaxSource(): Promise<boolean> {
     .first();
 
   return Boolean(tenantSettings?.allow_external_tax_override);
-}
+});

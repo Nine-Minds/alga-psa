@@ -12,7 +12,7 @@
 import { createTenantKnex } from '@alga-psa/db';
 import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
-import { getCurrentUser } from '@alga-psa/users/actions';
+import { withAuth } from '@alga-psa/auth';
 import {
   createBlockDocument,
   getBlockContent,
@@ -30,29 +30,8 @@ export interface AssetNoteContent {
  * Get note content for an asset
  * Returns the BlockNote content if the asset has a linked notes document
  */
-export async function getAssetNoteContent(assetId: string): Promise<AssetNoteContent> {
-  // Get current user FIRST to ensure we have the user's tenant
-  const currentUser = await getCurrentUser();
-  if (!currentUser) {
-    throw new Error('No authenticated user found');
-  }
-
-  if (!currentUser.tenant) {
-    throw new Error('User tenant not found in session');
-  }
-
-  // Use the user's tenant explicitly (server actions don't always inherit AsyncLocalStorage context)
-  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
-  if (!tenant) {
-    throw new Error('No tenant found in database context');
-  }
-
-  // CRITICAL: Verify tenant from DB context matches user's tenant
-  // This ensures we're always using the tenant from the authenticated user
-  if (tenant !== currentUser.tenant) {
-    console.error(`Tenant mismatch detected: DB context has ${tenant}, but user has ${currentUser.tenant}`);
-    throw new Error(`Tenant mismatch: Database context tenant (${tenant}) does not match user tenant (${currentUser.tenant})`);
-  }
+export const getAssetNoteContent = withAuth(async (_user, { tenant }, assetId: string): Promise<AssetNoteContent> => {
+  const { knex } = await createTenantKnex();
 
   try {
     // Get the asset to find notes_document_id
@@ -114,38 +93,19 @@ export async function getAssetNoteContent(assetId: string): Promise<AssetNoteCon
     console.error('Error getting asset note content:', error);
     throw new Error('Failed to get asset note content');
   }
-}
+});
 
 /**
  * Save note content for an asset
  * Creates a new document if one doesn't exist, or updates the existing one
  */
-export async function saveAssetNote(
+export const saveAssetNote = withAuth(async (
+  user,
+  { tenant },
   assetId: string,
   blockData: unknown
-): Promise<{ document_id: string }> {
-  // Get current user FIRST to ensure we have the user's tenant
-  const currentUser = await getCurrentUser();
-  if (!currentUser) {
-    throw new Error('No authenticated user found');
-  }
-
-  if (!currentUser.tenant) {
-    throw new Error('User tenant not found in session');
-  }
-
-  // Use the user's tenant explicitly (server actions don't always inherit AsyncLocalStorage context)
-  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
-  if (!tenant) {
-    throw new Error('No tenant found in database context');
-  }
-
-  // CRITICAL: Verify tenant from DB context matches user's tenant
-  // This ensures we're always using the tenant from the authenticated user
-  if (tenant !== currentUser.tenant) {
-    console.error(`Tenant mismatch detected: DB context has ${tenant}, but user has ${currentUser.tenant}`);
-    throw new Error(`Tenant mismatch: Database context tenant (${tenant}) does not match user tenant (${currentUser.tenant})`);
-  }
+): Promise<{ document_id: string }> => {
+  const { knex } = await createTenantKnex();
 
   try {
     // Get the asset
@@ -162,7 +122,7 @@ export async function saveAssetNote(
       // Update existing document
       await updateBlockContent(asset.notes_document_id, {
         block_data: blockData,
-        user_id: currentUser.user_id,
+        user_id: user.user_id,
       });
 
       return { document_id: asset.notes_document_id };
@@ -170,7 +130,7 @@ export async function saveAssetNote(
       // Create new document and link to asset
       const { document_id } = await createBlockDocument({
         document_name: `${asset.name} Notes`,
-        user_id: currentUser.user_id,
+        user_id: user.user_id,
         block_data: blockData,
         entityId: assetId,
         entityType: 'asset',
@@ -190,38 +150,19 @@ export async function saveAssetNote(
     console.error('Error saving asset note:', error);
     throw new Error('Failed to save asset note');
   }
-}
+});
 
 /**
  * Delete notes for an asset
  * Removes the link and optionally deletes the document
  */
-export async function deleteAssetNote(
+export const deleteAssetNote = withAuth(async (
+  _user,
+  { tenant },
   assetId: string,
   deleteDocument: boolean = false
-): Promise<void> {
-  // Get current user FIRST to ensure we have the user's tenant
-  const currentUser = await getCurrentUser();
-  if (!currentUser) {
-    throw new Error('No authenticated user found');
-  }
-
-  if (!currentUser.tenant) {
-    throw new Error('User tenant not found in session');
-  }
-
-  // Use the user's tenant explicitly (server actions don't always inherit AsyncLocalStorage context)
-  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
-  if (!tenant) {
-    throw new Error('No tenant found in database context');
-  }
-
-  // CRITICAL: Verify tenant from DB context matches user's tenant
-  // This ensures we're always using the tenant from the authenticated user
-  if (tenant !== currentUser.tenant) {
-    console.error(`Tenant mismatch detected: DB context has ${tenant}, but user has ${currentUser.tenant}`);
-    throw new Error(`Tenant mismatch: Database context tenant (${tenant}) does not match user tenant (${currentUser.tenant})`);
-  }
+): Promise<void> => {
+  const { knex } = await createTenantKnex();
 
   try {
     // Get the asset
@@ -265,4 +206,4 @@ export async function deleteAssetNote(
     console.error('Error deleting asset note:', error);
     throw new Error('Failed to delete asset note');
   }
-}
+});

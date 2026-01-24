@@ -2,24 +2,24 @@
 
 import { getTenantForCurrentRequest } from '../../server';
 import { getPortalDomainStatusForTenant } from '../../server/portalDomainStatus';
-import { getCurrentUser } from '@alga-psa/users/actions';
+import { withOptionalAuth, type AuthContext } from '@alga-psa/auth';
+import type { IUserWithRoles } from '@alga-psa/types';
 import type {
   PortalDomainStatusResponse,
   PortalDomainRegistrationRequest,
   PortalDomainRegistrationResult,
 } from './portalDomain.types';
 
-export async function getPortalDomainStatusAction(): Promise<PortalDomainStatusResponse> {
+export const getPortalDomainStatusAction = withOptionalAuth(async (user: IUserWithRoles | null, ctx: AuthContext | null): Promise<PortalDomainStatusResponse> => {
   // First try to get tenant from user session (works in client component effects)
-  const user = await getCurrentUser();
-  if (user?.tenant) {
-    return getPortalDomainStatusActionForTenant(user.tenant);
+  if (user && ctx?.tenant) {
+    return getPortalDomainStatusActionForTenant(ctx.tenant);
   }
 
   // Fallback to request-based tenant resolution
   const requestTenant = await getTenantForCurrentRequest();
   return getPortalDomainStatusActionForTenant(requestTenant ?? undefined);
-}
+});
 
 export async function getPortalDomainStatusActionForTenant(
   tenantId?: string

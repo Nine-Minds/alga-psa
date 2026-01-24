@@ -7,26 +7,27 @@ import { USER_ATTRIBUTES, TICKET_ATTRIBUTES } from '../lib/attributes/EntityAttr
 import { withTransaction } from '@alga-psa/db';
 import { createTenantKnex } from '@alga-psa/db';
 import { Knex } from 'knex';
+import { withAuth } from '../lib/withAuth';
 
 const policyEngine = new PolicyEngine();
 
 // Role actions
-export async function createRole(roleName: string, description: string, msp: boolean = true, client: boolean = false): Promise<IRole> {
-    const { knex: db, tenant } = await createTenantKnex();
+export const createRole = withAuth(async (_user, { tenant }, roleName: string, description: string, msp: boolean = true, client: boolean = false): Promise<IRole> => {
+    const { knex: db } = await createTenantKnex();
     return withTransaction(db, async (trx: Knex.Transaction) => {
-        const [role] = await trx('roles').insert({ 
-            role_name: roleName, 
-            description, 
+        const [role] = await trx('roles').insert({
+            role_name: roleName,
+            description,
             tenant,
             msp,
             client
         }).returning('*');
         return role;
     });
-}
+});
 
-export async function updateRole(roleId: string, roleName: string): Promise<IRole> {
-    const { knex: db, tenant } = await createTenantKnex();
+export const updateRole = withAuth(async (_user, { tenant }, roleId: string, roleName: string): Promise<IRole> => {
+    const { knex: db } = await createTenantKnex();
     return withTransaction(db, async (trx: Knex.Transaction) => {
         const [updatedRole] = await trx('roles')
             .where({ role_id: roleId, tenant })
@@ -34,60 +35,60 @@ export async function updateRole(roleId: string, roleName: string): Promise<IRol
             .returning('*');
         return updatedRole;
     });
-}
+});
 
-export async function deleteRole(roleId: string): Promise<void> {
-    const { knex: db, tenant } = await createTenantKnex();
+export const deleteRole = withAuth(async (_user, { tenant }, roleId: string): Promise<void> => {
+    const { knex: db } = await createTenantKnex();
     return withTransaction(db, async (trx: Knex.Transaction) => {
         // Check if role is an Admin role (immutable)
         const role = await trx('roles')
             .where({ role_id: roleId, tenant })
             .first();
-        
+
         if (!role) {
             throw new Error('Role not found');
         }
-        
+
         // Prevent deletion of Admin roles
         if (role.role_name.toLowerCase() === 'admin') {
             throw new Error('Admin roles cannot be deleted');
         }
-        
+
         await trx('roles').where({ role_id: roleId, tenant }).del();
     });
-}
+});
 
-export async function getRoles(): Promise<IRole[]> {
-    const { knex: db, tenant } = await createTenantKnex();
+export const getRoles = withAuth(async (_user, { tenant }): Promise<IRole[]> => {
+    const { knex: db } = await createTenantKnex();
     return withTransaction(db, async (trx: Knex.Transaction) => {
         return await trx('roles')
             .where({ tenant })
             .select('role_id', 'role_name', 'description', 'tenant', 'msp', 'client');
     });
-}
+});
 
 // Role-Permission actions
-export async function assignPermissionToRole(roleId: string, permissionId: string): Promise<void> {
+export const assignPermissionToRole = withAuth(async (_user, { tenant }, roleId: string, permissionId: string): Promise<void> => {
     try {
-        const { knex: db, tenant } = await createTenantKnex();
+        const { knex: db } = await createTenantKnex();
         return withTransaction(db, async (trx: Knex.Transaction) => {
-        
+
         // First, verify both the role and permission exist for this tenant
         const [role, permission] = await Promise.all([
             trx('roles').where({ role_id: roleId, tenant }).first(),
             trx('permissions').where({ permission_id: permissionId, tenant }).first()
         ]);
-            
+
         if (!role || !permission) {
             throw new Error('Role or permission not found for this tenant');
         }
 
         // Then insert the role permission
         await trx('role_permissions')
-            .insert({ 
-                role_id: roleId, 
-                permission_id: permissionId, 
-                tenant 
+            .insert({
+                role_id: roleId,
+                permission_id: permissionId,
+                tenant
             })
             .onConflict(['role_id', 'permission_id', 'tenant'])
               .ignore();
@@ -96,17 +97,17 @@ export async function assignPermissionToRole(roleId: string, permissionId: strin
         console.error('Error assigning permission to role:', error);
         throw error;
     }
-}
+});
 
-export async function removePermissionFromRole(roleId: string, permissionId: string): Promise<void> {
+export const removePermissionFromRole = withAuth(async (_user, { tenant }, roleId: string, permissionId: string): Promise<void> => {
     try {
-        const { knex: db, tenant } = await createTenantKnex();
+        const { knex: db } = await createTenantKnex();
         return withTransaction(db, async (trx: Knex.Transaction) => {
         await trx('role_permissions')
-            .where({ 
-                role_id: roleId, 
+            .where({
+                role_id: roleId,
                 permission_id: permissionId,
-                tenant 
+                tenant
             })
               .del();
         });
@@ -114,51 +115,51 @@ export async function removePermissionFromRole(roleId: string, permissionId: str
         console.error('Error removing permission from role:', error);
         throw error;
     }
-}
+});
 
 // User-Role actions
-export async function assignRoleToUser(userId: string, roleId: string): Promise<IUserRole> {
-    const { knex: db, tenant } = await createTenantKnex();
+export const assignRoleToUser = withAuth(async (_user, { tenant }, userId: string, roleId: string): Promise<IUserRole> => {
+    const { knex: db } = await createTenantKnex();
     return withTransaction(db, async (trx: Knex.Transaction) => {
         // Validate that the role and user exist and are compatible
         const [user, role] = await Promise.all([
             trx('users').where({ user_id: userId, tenant }).first(),
             trx('roles').where({ role_id: roleId, tenant }).first()
         ]);
-        
+
         if (!user) {
             throw new Error('User not found');
         }
-        
+
         if (!role) {
             throw new Error('Role not found');
         }
-        
+
         // Validate role compatibility based on user type
         if (user.user_type === 'internal' && !role.msp) {
             throw new Error('Cannot assign client portal role to MSP user');
         }
-        
+
         if (user.user_type === 'client' && !role.client) {
             throw new Error('Cannot assign MSP role to client portal user');
         }
-        
+
         const [userRole] = await trx('user_roles')
             .insert({ user_id: userId, role_id: roleId, tenant })
             .returning('*');
         return userRole;
     });
-}
+});
 
-export async function removeRoleFromUser(userId: string, roleId: string): Promise<void> {
-    const { knex: db, tenant } = await createTenantKnex();
+export const removeRoleFromUser = withAuth(async (_user, { tenant }, userId: string, roleId: string): Promise<void> => {
+    const { knex: db } = await createTenantKnex();
     return withTransaction(db, async (trx: Knex.Transaction) => {
         await trx('user_roles').where({ user_id: userId, role_id: roleId, tenant }).del();
     });
-}
+});
 
-export async function getUserRoles(userId: string): Promise<IRole[]> {
-    const { knex: db, tenant } = await createTenantKnex();
+export const getUserRoles = withAuth(async (_user, { tenant }, userId: string): Promise<IRole[]> => {
+    const { knex: db } = await createTenantKnex();
     return withTransaction(db, async (trx: Knex.Transaction) => {
         return await trx('user_roles')
             .join('roles', function() {
@@ -171,14 +172,14 @@ export async function getUserRoles(userId: string): Promise<IRole[]> {
             })
             .select('roles.*');
     });
-}
+});
 
 // User-Attribute actions
-export async function getUserAttributes(userId: string): Promise<Partial<IUserWithRoles>> {
-    const { knex: db, tenant } = await createTenantKnex();
+export const getUserAttributes = withAuth(async (_user, { tenant }, userId: string): Promise<Partial<IUserWithRoles>> => {
+    const { knex: db } = await createTenantKnex();
     return withTransaction(db, async (trx: Knex.Transaction) => {
         const user = await trx('users').where({ user_id: userId, tenant }).first();
-    
+
     if (!user) {
         throw new Error('User not found');
     }
@@ -194,14 +195,14 @@ export async function getUserAttributes(userId: string): Promise<Partial<IUserWi
             Object.entries(USER_ATTRIBUTES).map(([key, attr]):[string, string|boolean|IRole[]] => [key, attr.getValue(user)])
         );
     });
-}
+});
 
 // Ticket-Attribute actions
-export async function getTicketAttributes(ticketId: string): Promise<Partial<ITicket>> {
-    const { knex: db, tenant } = await createTenantKnex();
+export const getTicketAttributes = withAuth(async (_user, { tenant }, ticketId: string): Promise<Partial<ITicket>> => {
+    const { knex: db } = await createTenantKnex();
     return withTransaction(db, async (trx: Knex.Transaction) => {
         const ticket = await trx('tickets').where({ ticket_id: ticketId, tenant }).first();
-    
+
     if (!ticket) {
         throw new Error('Ticket not found');
     }
@@ -210,33 +211,33 @@ export async function getTicketAttributes(ticketId: string): Promise<Partial<ITi
             Object.entries(TICKET_ATTRIBUTES).map(([key, attr]):[string, string|boolean|IRole[]] => [key, attr.getValue(ticket)])
         );
     });
-}
+});
 
 // Policy actions
-export async function createPolicy(policyName: string, resource: string, action: string, conditions: ICondition[]): Promise<IPolicy> {
-    const { knex: db, tenant } = await createTenantKnex();
+export const createPolicy = withAuth(async (_user, { tenant }, policyName: string, resource: string, action: string, conditions: ICondition[]): Promise<IPolicy> => {
+    const { knex: db } = await createTenantKnex();
     return withTransaction(db, async (trx: Knex.Transaction) => {
-        const [policy] = await trx('policies').insert({ 
+        const [policy] = await trx('policies').insert({
             tenant,
-            policy_name: policyName, 
-            resource, 
-            action, 
+            policy_name: policyName,
+            resource,
+            action,
             conditions
         }).returning('*');
         policyEngine.addPolicy(policy);
         return policy;
     });
-}
+});
 
-export async function updatePolicy(policyId: string, policyName: string, resource: string, action: string, conditions: ICondition[]): Promise<IPolicy> {
-    const { knex: db, tenant } = await createTenantKnex();
+export const updatePolicy = withAuth(async (_user, { tenant }, policyId: string, policyName: string, resource: string, action: string, conditions: ICondition[]): Promise<IPolicy> => {
+    const { knex: db } = await createTenantKnex();
     return withTransaction(db, async (trx: Knex.Transaction) => {
         const [updatedPolicy] = await trx('policies')
             .where({ policy_id: policyId, tenant })
-            .update({ 
-                policy_name: policyName, 
-                resource, 
-                action, 
+            .update({
+                policy_name: policyName,
+                resource,
+                action,
                 conditions
             })
             .returning('*');
@@ -244,19 +245,19 @@ export async function updatePolicy(policyId: string, policyName: string, resourc
         policyEngine.addPolicy(updatedPolicy);
         return updatedPolicy;
     });
-}
+});
 
-export async function deletePolicy(policyId: string): Promise<void> {
-    const { knex: db, tenant } = await createTenantKnex();
+export const deletePolicy = withAuth(async (_user, { tenant }, policyId: string): Promise<void> => {
+    const { knex: db } = await createTenantKnex();
     return withTransaction(db, async (trx: Knex.Transaction) => {
         const [deletedPolicy] = await trx('policies').where({ policy_id: policyId, tenant }).returning('*');
         await trx('policies').where({ policy_id: policyId, tenant }).del();
         policyEngine.removePolicy(deletedPolicy);
     });
-}
+});
 
-export async function getPolicies(): Promise<IPolicy[]> {
-    const { knex: db, tenant } = await createTenantKnex();
+export const getPolicies = withAuth(async (_user, { tenant }): Promise<IPolicy[]> => {
+    const { knex: db } = await createTenantKnex();
     return withTransaction(db, async (trx: Knex.Transaction) => {
         const policies = await trx('policies').where({ tenant });
         return policies.map((policy: any): IPolicy => ({
@@ -264,16 +265,16 @@ export async function getPolicies(): Promise<IPolicy[]> {
             conditions: policy.conditions
         }));
     });
-}
+});
 
 export async function evaluateAccess(user: IUserWithRoles, resource: any, action: string): Promise<boolean> {
     return policyEngine.evaluateAccess(user, resource, action);
 }
 
 // Role-permission management
-export async function getRolePermissions(roleId: string): Promise<IPermission[]> {
+export const getRolePermissions = withAuth(async (_user, { tenant }, roleId: string): Promise<IPermission[]> => {
     try {
-        const { knex: db, tenant } = await createTenantKnex();
+        const { knex: db } = await createTenantKnex();
         return withTransaction(db, async (trx: Knex.Transaction) => {
             return await trx('role_permissions')
                 .join('permissions', function() {
@@ -290,11 +291,11 @@ export async function getRolePermissions(roleId: string): Promise<IPermission[]>
         console.error('Error fetching role permissions:', error);
         throw error;
     }
-}
+});
 
-export async function getPermissions(): Promise<IPermission[]> {
+export const getPermissions = withAuth(async (_user, { tenant }): Promise<IPermission[]> => {
     try {
-        const { knex: db, tenant } = await createTenantKnex();
+        const { knex: db } = await createTenantKnex();
         return withTransaction(db, async (trx: Knex.Transaction) => {
             const permissions = await trx('permissions')
                 .where({ tenant })
@@ -305,4 +306,4 @@ export async function getPermissions(): Promise<IPermission[]> {
         console.error('Error fetching permissions:', error);
         throw error;
     }
-}
+});

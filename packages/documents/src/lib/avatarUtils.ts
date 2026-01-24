@@ -66,8 +66,8 @@ export async function getEntityImageUrl(
     }
 
     // Use the existing getImageUrl function to get the URL
-    // This function manages its own transaction internally
-    const imageUrl = await getImageUrlInternal(result.file_id);
+    // Pass tenant to avoid circular dependency (getImageUrlInternal -> getCurrentUser -> getUserWithRoles -> getUserAvatarUrl)
+    const imageUrl = await getImageUrlInternal(result.file_id, tenant);
     
     if (imageUrl) {
       // Add the document's updated_at timestamp for cache busting
@@ -177,7 +177,8 @@ export async function getEntityImageUrlsBatch(
       const docInfo = docToFileMap.get(documentId);
       if (docInfo?.file_id) {
         try {
-          const imageUrl = await getImageUrlInternal(docInfo.file_id);
+          // Pass tenant to avoid circular dependency
+          const imageUrl = await getImageUrlInternal(docInfo.file_id, tenant);
           if (imageUrl) {
             // Add the document's updated_at timestamp for cache busting
             const timestamp = docInfo.updated_at ? new Date(docInfo.updated_at).getTime() : 0;

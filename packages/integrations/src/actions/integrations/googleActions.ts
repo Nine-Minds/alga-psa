@@ -1,7 +1,7 @@
 'use server';
 
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
-import { getCurrentUser } from '@alga-psa/users/actions';
+import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { createTenantKnex } from '@alga-psa/db';
 
@@ -56,7 +56,10 @@ async function getDeploymentBaseUrl(): Promise<string> {
   return computeBaseUrl(base);
 }
 
-export async function getGoogleIntegrationStatus(): Promise<{
+export const getGoogleIntegrationStatus = withAuth(async (
+  user,
+  { tenant }
+): Promise<{
   success: boolean;
   error?: string;
   baseUrl?: string;
@@ -71,15 +74,10 @@ export async function getGoogleIntegrationStatus(): Promise<{
     hasServiceAccountKey: boolean;
     usingSharedOAuthApp: boolean;
   };
-}> {
+}> => {
   try {
-    const user = await getCurrentUser();
-    if (!user?.tenant) return { success: false, error: 'Unauthorized' };
-
     const permitted = await hasPermission(user as any, 'system_settings', 'read');
     if (!permitted) return { success: false, error: 'Forbidden' };
-
-    const tenant = user.tenant;
 
     const secretProvider = await getSecretProviderInstance();
 
@@ -134,25 +132,24 @@ export async function getGoogleIntegrationStatus(): Promise<{
   } catch (err: any) {
     return { success: false, error: err?.message || 'Failed to load Google integration status' };
   }
-}
+});
 
-export async function saveGoogleIntegrationSettings(input: {
-  projectId: string;
-  gmailClientId: string;
-  gmailClientSecret: string;
-  serviceAccountKeyJson: string;
-  useSameOAuthAppForCalendar: boolean;
-  calendarClientId?: string;
-  calendarClientSecret?: string;
-}): Promise<{ success: boolean; error?: string }> {
+export const saveGoogleIntegrationSettings = withAuth(async (
+  user,
+  { tenant },
+  input: {
+    projectId: string;
+    gmailClientId: string;
+    gmailClientSecret: string;
+    serviceAccountKeyJson: string;
+    useSameOAuthAppForCalendar: boolean;
+    calendarClientId?: string;
+    calendarClientSecret?: string;
+  }
+): Promise<{ success: boolean; error?: string }> => {
   try {
-    const user = await getCurrentUser();
-    if (!user?.tenant) return { success: false, error: 'Unauthorized' };
-
     const permitted = await hasPermission(user as any, 'system_settings', 'update');
     if (!permitted) return { success: false, error: 'Forbidden' };
-
-    const tenant = user.tenant;
 
     const projectId = input.projectId?.trim();
     if (!projectId) return { success: false, error: 'Google Cloud project ID is required' };
@@ -208,18 +205,17 @@ export async function saveGoogleIntegrationSettings(input: {
   } catch (err: any) {
     return { success: false, error: err?.message || 'Failed to save Google integration settings' };
   }
-}
+});
 
-export async function resetGoogleProvidersToDisconnected(): Promise<{ success: boolean; error?: string }> {
+export const resetGoogleProvidersToDisconnected = withAuth(async (
+  user,
+  { tenant }
+): Promise<{ success: boolean; error?: string }> => {
   try {
-    const user = await getCurrentUser();
-    if (!user?.tenant) return { success: false, error: 'Unauthorized' };
-
     const permitted = await hasPermission(user as any, 'system_settings', 'update');
     if (!permitted) return { success: false, error: 'Forbidden' };
 
-    const { knex, tenant } = await createTenantKnex(user.tenant);
-    if (!tenant) return { success: false, error: 'Tenant not found' };
+    const { knex } = await createTenantKnex();
 
     // Email providers: mark disconnected + clear tokens
     await knex('email_providers')
@@ -273,4 +269,4 @@ export async function resetGoogleProvidersToDisconnected(): Promise<{ success: b
   } catch (err: any) {
     return { success: false, error: err?.message || 'Failed to reset Google providers' };
   }
-}
+});

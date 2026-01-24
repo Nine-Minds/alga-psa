@@ -15,7 +15,7 @@ import { IDocument } from 'server/src/interfaces/document.interface';
 import { getDocument } from '@alga-psa/documents/actions/documentActions';
 import { convertBlockNoteToHTML } from 'server/src/lib/utils/blocknoteUtils';
 import { v4 as uuidv4 } from 'uuid';
-import { StorageProviderFactory, generateStoragePath } from 'server/src/lib/storage/StorageProviderFactory';
+import { StorageProviderFactory, generateStoragePath } from '@alga-psa/documents';
 import { FileStoreModel } from 'server/src/models/storage';
 import logger from '@alga-psa/core/logger';
 import { publishWorkflowEvent } from 'server/src/lib/eventBus/publishers';

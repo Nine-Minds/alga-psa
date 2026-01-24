@@ -21,7 +21,7 @@ import WorkflowRunStepModelV2 from '@shared/workflow/persistence/workflowRunStep
 import WorkflowRunWaitModelV2 from '@shared/workflow/persistence/workflowRunWaitModelV2';
 import WorkflowActionInvocationModelV2 from '@shared/workflow/persistence/workflowActionInvocationModelV2';
 import WorkflowRunSnapshotModelV2 from '@shared/workflow/persistence/workflowRunSnapshotModelV2';
-import { WorkflowRuntimeV2Worker } from '../../../../services/workflow-worker/src/v2/WorkflowRuntimeV2Worker';
+import { WorkflowRuntimeV2Worker } from '@shared/workflow/workers';
 import {
   ensureWorkflowRuntimeV2TestRegistrations,
   buildWorkflowDefinition,

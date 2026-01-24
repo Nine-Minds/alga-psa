@@ -10,7 +10,9 @@ import { v4 as uuidv4 } from 'uuid';
 import { generateInvoiceNumber } from './invoiceGeneration';
 import { Knex } from 'knex';
 import { validateCreditBalanceWithoutCorrection } from './creditReconciliationActions';
-import { getCurrentUserAsync, hasPermissionAsync, getSessionAsync, getAnalyticsAsync } from '../lib/authHelpers';
+import { withAuth } from '@alga-psa/auth';
+import { hasPermission } from '@alga-psa/auth/rbac';
+import { getAnalyticsAsync } from '../lib/authHelpers';
 import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import {
     buildCreditNoteAppliedPayload,
@@ -19,17 +21,14 @@ import {
 
 
 
-async function calculateNewBalance(
+const calculateNewBalance = withAuth(async (
+    user,
+    { tenant },
     clientId: string,
     changeAmount: number,
     trx?: Knex.Transaction
-): Promise<number> {
-    const currentUser = await getCurrentUserAsync();
-    if (!currentUser) {
-        throw new Error('No authenticated user found');
-    }
-
-    const { knex, tenant } = await createTenantKnex(currentUser.tenant);
+): Promise<number> => {
+    const { knex } = await createTenantKnex();
 
     if (trx) {
         const [client] = await trx('clients')
@@ -44,7 +43,7 @@ async function calculateNewBalance(
             return client.credit_balance + changeAmount;
         });
     }
-}
+});
 
 /**
  * Validates a client's credit balance and automatically corrects it if needed
@@ -56,35 +55,29 @@ async function calculateNewBalance(
  * @param providedTrx Optional transaction object
  * @returns Object containing validation results
  */
-export async function validateCreditBalance(
+export const validateCreditBalance = withAuth(async (
+    user,
+    { tenant },
     clientId: string,
     expectedBalance?: number,
     providedTrx?: Knex.Transaction
-): Promise<{isValid: boolean, actualBalance: number, lastTransaction?: ITransaction}> {
-    const currentUser = await getCurrentUserAsync();
-    if (!currentUser) {
-        throw new Error('No authenticated user found');
-    }
-
-    const { knex, tenant } = await createTenantKnex(currentUser.tenant);
-    if (!tenant) {
-        throw new Error('Tenant context is required for credit balance validation');
-    }
+): Promise<{isValid: boolean, actualBalance: number, lastTransaction?: ITransaction}> => {
+    const { knex } = await createTenantKnex();
 
     // Check permission for credit reading
-    if (!await hasPermissionAsync(currentUser, 'credit', 'read')) {
+    if (!hasPermission(user, 'credit', 'read')) {
         throw new Error('Permission denied: Cannot read credit balance information');
     }
-    
+
     // Use provided transaction or create a new one
     const executeWithTransaction = async (trx: Knex.Transaction) => {
         // First, validate without making corrections
         const validationResult = await validateCreditBalanceWithoutCorrection(clientId, trx);
-        
+
         // If there's a discrepancy and no expected balance is provided, apply the correction
         if (!validationResult.isValid && expectedBalance === undefined) {
             const now = new Date().toISOString();
-            
+
             // Update the client's credit balance to match the calculated balance
             await trx('clients')
                 .where({ client_id: clientId, tenant })
@@ -92,7 +85,7 @@ export async function validateCreditBalance(
                     credit_balance: validationResult.expectedBalance,
                     updated_at: now
                 });
-            
+
             // Log the automatic correction
             await auditLog(
                 trx,
@@ -112,24 +105,24 @@ export async function validateCreditBalance(
                     }
                 }
             );
-            
+
             console.log(`Credit balance for client ${clientId} automatically corrected from ${validationResult.actualBalance} to ${validationResult.expectedBalance}`);
         }
-        
+
         return {
             isValid: validationResult.isValid,
             actualBalance: validationResult.expectedBalance, // Return the expected balance as the actual balance after correction
             lastTransaction: validationResult.lastTransaction
         };
     };
-    
+
     // If a transaction is provided, use it; otherwise create a new one
     if (providedTrx) {
         return await executeWithTransaction(providedTrx);
     } else {
         return await withTransaction(knex, executeWithTransaction);
     }
-}
+});
 
 export async function validateTransactionBalance(
     clientId: string,
@@ -165,49 +158,41 @@ export async function validateTransactionBalance(
  *
  * @returns Promise that resolves when validation is complete
  */
-export async function scheduledCreditBalanceValidation(): Promise<void> {
-    const currentUser = await getCurrentUserAsync();
-    if (!currentUser) {
-        throw new Error('No authenticated user found');
-    }
-
+export const scheduledCreditBalanceValidation = withAuth(async (
+    user,
+    { tenant }
+): Promise<void> => {
     // Check permission for credit reading (required for scheduled validation)
-    if (!await hasPermissionAsync(currentUser, 'credit', 'read')) {
+    if (!hasPermission(user, 'credit', 'read')) {
         throw new Error('Permission denied: Cannot perform credit balance validation');
     }
 
     // Import and use the new function from creditReconciliationActions
     const { runScheduledCreditBalanceValidation } = await import('./creditReconciliationActions');
-    
+
     // Run the validation and get the results
     const results = await runScheduledCreditBalanceValidation();
-    
+
     // Log the results for backward compatibility
     console.log(`Scheduled credit balance validation completed.`);
     console.log(`Results: ${results.balanceValidCount} valid balances, ${results.balanceDiscrepancyCount} balance discrepancies found`);
     console.log(`Credit tracking: ${results.missingTrackingCount} missing entries, ${results.inconsistentTrackingCount} inconsistent entries`);
     console.log(`Errors: ${results.errorCount}`);
-}
+});
 
-export async function createPrepaymentInvoice(
+export const createPrepaymentInvoice = withAuth(async (
+    user,
+    { tenant },
     clientId: string,
     amount: number,
     manualExpirationDate?: string
-): Promise<IInvoice> {
-    const currentUser = await getCurrentUserAsync();
-    if (!currentUser) {
-        throw new Error('No authenticated user found');
-    }
-
+): Promise<IInvoice> => {
     // Check permission for credit creation
-    if (!await hasPermissionAsync(currentUser, 'credit', 'create')) {
+    if (!hasPermission(user, 'credit', 'create')) {
         throw new Error('Permission denied: Cannot create prepayment invoices or issue credits');
     }
 
-    const { knex, tenant } = await createTenantKnex(currentUser.tenant);
-    if (!tenant) {
-        throw new Error('No tenant found');
-    }
+    const { knex } = await createTenantKnex();
 
     if (!clientId) {
         throw new Error('Client ID is required');
@@ -435,7 +420,7 @@ export async function createPrepaymentInvoice(
             creditNoteId: creditId,
             clientId,
             createdAt: now,
-            createdByUserId: currentUser.user_id,
+            createdByUserId: user.user_id,
             amount,
             currency: clientCurrency,
         };
@@ -472,26 +457,22 @@ export async function createPrepaymentInvoice(
     }
 
     return createdInvoice;
-}
+});
 
-export async function applyCreditToInvoice(
+export const applyCreditToInvoice = withAuth(async (
+    user,
+    { tenant },
     clientId: string,
     invoiceId: string,
     requestedAmount: number
-): Promise<void> {
-    const currentUser = await getCurrentUserAsync();
-    if (!currentUser) {
-        throw new Error('No authenticated user found');
-    }
-
+): Promise<void> => {
     // Check permission for credit updates (applying credits modifies credit balances)
-    if (!await hasPermissionAsync(currentUser, 'credit', 'update')) {
+    if (!hasPermission(user, 'credit', 'update')) {
         throw new Error('Permission denied: Cannot apply credits to invoices');
     }
 
-    const { knex, tenant } = await createTenantKnex(currentUser.tenant);
-    if (!tenant) throw new Error('No tenant found');
-    
+    const { knex } = await createTenantKnex();
+
     let creditNoteAppliedEvents: Array<{
         creditNoteId: string;
         invoiceId: string;
@@ -728,7 +709,7 @@ export async function applyCreditToInvoice(
             amountApplied: appliedCredit.amount,
             currency: invoiceCurrency,
             appliedAt: now,
-            appliedByUserId: currentUser.user_id,
+            appliedByUserId: user.user_id,
             idempotencyKey: `credit_note_applied:${creditTransaction.transaction_id}:${appliedCredit.creditId}`,
         }));
     });
@@ -752,24 +733,21 @@ export async function applyCreditToInvoice(
             idempotencyKey: event.idempotencyKey,
         });
     }
-}
+});
 
-export async function getCreditHistory(
+export const getCreditHistory = withAuth(async (
+    user,
+    { tenant },
     clientId: string,
     startDate?: string,
     endDate?: string
-): Promise<ITransaction[]> {
-    const currentUser = await getCurrentUserAsync();
-    if (!currentUser) {
-        throw new Error('No authenticated user found');
-    }
-
+): Promise<ITransaction[]> => {
     // Check permission for credit reading
-    if (!await hasPermissionAsync(currentUser, 'credit', 'read')) {
+    if (!hasPermission(user, 'credit', 'read')) {
         throw new Error('Permission denied: Cannot read credit history');
     }
 
-    const { knex, tenant } = await createTenantKnex(currentUser.tenant);
+    const { knex } = await createTenantKnex();
 
     return await withTransaction(knex, async (trx: Knex.Transaction) => {
         const query = trx('transactions')
@@ -789,7 +767,7 @@ export async function getCreditHistory(
 
         return await query;
     });
-}
+});
 
 /**
  * List all credits for a client with detailed information
@@ -799,7 +777,9 @@ export async function getCreditHistory(
  * @param pageSize Number of items per page (default: 20)
  * @returns Paginated list of credits with detailed information
  */
-export async function listClientCredits(
+export const listClientCredits = withAuth(async (
+    user,
+    { tenant },
     clientId: string,
     includeExpired: boolean = false,
     page: number = 1,
@@ -810,19 +790,13 @@ export async function listClientCredits(
     page: number,
     pageSize: number,
     totalPages: number
-}> {
-    const currentUser = await getCurrentUserAsync();
-    if (!currentUser) {
-        throw new Error('No authenticated user found');
-    }
-
+}> => {
     // Check permission for credit reading
-    if (!await hasPermissionAsync(currentUser, 'credit', 'read')) {
+    if (!hasPermission(user, 'credit', 'read')) {
         throw new Error('Permission denied: Cannot read client credits');
     }
 
-    const { knex, tenant } = await createTenantKnex(currentUser.tenant);
-    if (!tenant) throw new Error('No tenant found');
+    const { knex } = await createTenantKnex();
 
     // Calculate offset for pagination
     const offset = (page - 1) * pageSize;
@@ -896,30 +870,28 @@ export async function listClientCredits(
             totalPages
         };
     });
-}
+});
 
 /**
  * Get detailed information about a specific credit
  * @param creditId The ID of the credit to retrieve
  * @returns Detailed credit information including transaction history
  */
-export async function getCreditDetails(creditId: string): Promise<{
+export const getCreditDetails = withAuth(async (
+    user,
+    { tenant },
+    creditId: string
+): Promise<{
     credit: ICreditTracking,
     transactions: ITransaction[],
     invoice?: any
-}> {
-    const currentUser = await getCurrentUserAsync();
-    if (!currentUser) {
-        throw new Error('No authenticated user found');
-    }
-
+}> => {
     // Check permission for credit reading
-    if (!await hasPermissionAsync(currentUser, 'credit', 'read')) {
+    if (!hasPermission(user, 'credit', 'read')) {
         throw new Error('Permission denied: Cannot read credit details');
     }
 
-    const { knex, tenant } = await createTenantKnex(currentUser.tenant);
-    if (!tenant) throw new Error('No tenant found');
+    const { knex } = await createTenantKnex();
 
     return await withTransaction(knex, async (trx: Knex.Transaction) => {
         // Get credit details
@@ -970,7 +942,7 @@ export async function getCreditDetails(creditId: string): Promise<{
             invoice
         };
     });
-}
+});
 
 /**
  * Update a credit's expiration date
@@ -979,23 +951,19 @@ export async function getCreditDetails(creditId: string): Promise<{
  * @param userId The ID of the user making the change (for audit)
  * @returns The updated credit
  */
-export async function updateCreditExpiration(
+export const updateCreditExpiration = withAuth(async (
+    user,
+    { tenant },
     creditId: string,
     newExpirationDate: string | null,
     userId: string
-): Promise<ICreditTracking> {
-    const currentUser = await getCurrentUserAsync();
-    if (!currentUser) {
-        throw new Error('No authenticated user found');
-    }
-
+): Promise<ICreditTracking> => {
     // Check permission for credit updates
-    if (!await hasPermissionAsync(currentUser, 'credit', 'update')) {
+    if (!hasPermission(user, 'credit', 'update')) {
         throw new Error('Permission denied: Cannot update credit expiration dates');
     }
 
-    const { knex, tenant } = await createTenantKnex(currentUser.tenant);
-    if (!tenant) throw new Error('No tenant found');
+    const { knex } = await createTenantKnex();
 
     return await withTransaction(knex, async (trx: Knex.Transaction) => {
         // Get credit details
@@ -1073,7 +1041,7 @@ export async function updateCreditExpiration(
 
         return updatedCredit;
     });
-}
+});
 
 /**
  * Manually expire a credit
@@ -1082,23 +1050,19 @@ export async function updateCreditExpiration(
  * @param reason Optional reason for manual expiration
  * @returns The expired credit
  */
-export async function manuallyExpireCredit(
+export const manuallyExpireCredit = withAuth(async (
+    user,
+    { tenant },
     creditId: string,
     userId: string,
     reason?: string
-): Promise<ICreditTracking> {
-    const currentUser = await getCurrentUserAsync();
-    if (!currentUser) {
-        throw new Error('No authenticated user found');
-    }
-
+): Promise<ICreditTracking> => {
     // Check permission for credit updates
-    if (!await hasPermissionAsync(currentUser, 'credit', 'update')) {
+    if (!hasPermission(user, 'credit', 'update')) {
         throw new Error('Permission denied: Cannot manually expire credits');
     }
 
-    const { knex, tenant } = await createTenantKnex(currentUser.tenant);
-    if (!tenant) throw new Error('No tenant found');
+    const { knex } = await createTenantKnex();
 
     return await withTransaction(knex, async (trx: Knex.Transaction) => {
         // Get credit details
@@ -1196,7 +1160,7 @@ export async function manuallyExpireCredit(
 
         return updatedCredit;
     });
-}
+});
 
 /**
  * Transfer credit from one client to another
@@ -1207,25 +1171,21 @@ export async function manuallyExpireCredit(
  * @param reason Optional reason for the transfer
  * @returns The new credit created for the target client
  */
-export async function transferCredit(
+export const transferCredit = withAuth(async (
+    user,
+    { tenant },
     sourceCreditId: string,
     targetClientId: string,
     amount: number,
     userId: string,
     reason?: string
-): Promise<ICreditTracking> {
-    const currentUser = await getCurrentUserAsync();
-    if (!currentUser) {
-        throw new Error('No authenticated user found');
-    }
-
+): Promise<ICreditTracking> => {
     // Check permission for credit transfers
-    if (!await hasPermissionAsync(currentUser, 'credit', 'transfer')) {
+    if (!hasPermission(user, 'credit', 'transfer')) {
         throw new Error('Permission denied: Cannot transfer credits between clients');
     }
 
-    const { knex, tenant } = await createTenantKnex(currentUser.tenant);
-    if (!tenant) throw new Error('No tenant found');
+    const { knex } = await createTenantKnex();
 
     if (amount <= 0) {
         throw new Error('Transfer amount must be greater than zero');
@@ -1397,4 +1357,4 @@ export async function transferCredit(
 
         return newCredit;
     });
-}
+});

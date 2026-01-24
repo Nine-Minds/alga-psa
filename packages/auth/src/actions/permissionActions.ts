@@ -1,15 +1,16 @@
 'use server';
 
-import { getCurrentUser } from '../lib/getCurrentUser';
 import { hasPermission, checkMultiplePermissions, PermissionCheck, PermissionResult } from '../lib/rbac';
 import logger from '@alga-psa/core/logger'
+import { withOptionalAuth } from '../lib/withAuth';
 
-export async function checkCurrentUserPermission(
+export const checkCurrentUserPermission = withOptionalAuth(async (
+  currentUser,
+  _ctx,
   resource: string,
   action: string
-): Promise<boolean> {
+): Promise<boolean> => {
   try {
-    const currentUser = await getCurrentUser();
     if (!currentUser) {
       logger.warn(
         `checkCurrentUserPermission: User not found for resource "${resource}", action "${action}".`
@@ -26,15 +27,16 @@ export async function checkCurrentUserPermission(
     );
     return false;
   }
-}
+});
 
 // Check multiple permissions for the current user in a single operation
 
-export async function checkCurrentUserPermissions(
+export const checkCurrentUserPermissions = withOptionalAuth(async (
+  currentUser,
+  _ctx,
   permissionChecks: PermissionCheck[]
-): Promise<PermissionResult[]> {
+): Promise<PermissionResult[]> => {
   try {
-    const currentUser = await getCurrentUser();
     if (!currentUser) {
       logger.warn(
         `checkCurrentUserPermissions: User not found for batch permission check.`
@@ -59,4 +61,4 @@ export async function checkCurrentUserPermissions(
       granted: false
     }));
   }
-}
+});

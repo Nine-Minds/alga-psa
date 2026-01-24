@@ -8,7 +8,7 @@ import {
 } from '@alga-psa/shared/workflow/core';
 import { createTenantKnex } from '@alga-psa/db';
 import { withTransaction } from '@alga-psa/db';
-import { getCurrentUser } from '@alga-psa/users/actions';
+import { withAuth } from '@alga-psa/auth';
 import { Knex } from 'knex';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import type { IUserWithRoles } from '@alga-psa/types';
@@ -124,50 +124,28 @@ function invalidateTenantMappingCache(tenantId: string): void {
   }
 }
 
-async function resolveTenantContext(): Promise<{
-  tenantId: string;
-  knex: Knex;
-  user: IUserWithRoles;
-}> {
-  const user = await getCurrentUser();
-  if (!user?.tenant) {
-    throw new Error('User or Tenant ID not found. Unable to perform tenant-scoped operation.');
-  }
-
-  const { knex } = await createTenantKnex();
-  return { tenantId: user.tenant, knex, user };
-}
-
-async function ensureBillingAccess(
-  action: 'read' | 'update'
-): Promise<{ tenantId: string; knex: Knex; user: IUserWithRoles }> {
-  const context = await resolveTenantContext();
-  const allowed = await hasPermission(context.user, 'billing_settings', action, context.knex);
-  if (!allowed) {
-    throw new Error(
-      action === 'read'
-        ? 'Forbidden: You do not have permission to view accounting mappings.'
-        : 'Forbidden: You do not have permission to manage accounting mappings.'
-    );
-  }
-  return context;
-}
-
-export async function getExternalEntityMappings(
+export const getExternalEntityMappings = withAuth(async (
+  user,
+  { tenant },
   params: GetMappingsParams
-): Promise<ExternalEntityMapping[]> {
-  const { tenantId, knex } = await ensureBillingAccess('read');
-  const cacheKey = buildCacheKey(tenantId, params);
+): Promise<ExternalEntityMapping[]> => {
+  const { knex } = await createTenantKnex();
+  const allowed = await hasPermission(user, 'billing_settings', 'read', knex);
+  if (!allowed) {
+    throw new Error('Forbidden: You do not have permission to view accounting mappings.');
+  }
+
+  const cacheKey = buildCacheKey(tenant, params);
   const cached = getCachedMappings(cacheKey);
   if (cached) {
-    logger.debug('External mapping cache hit', { tenantId, params });
+    logger.debug('External mapping cache hit', { tenantId: tenant, params });
     return cached;
   }
 
   const { integrationType, algaEntityType, externalRealmId, algaEntityId, externalEntityId } = params;
 
   logger.debug('External mapping lookup requested', {
-    tenantId,
+    tenantId: tenant,
     integrationType,
     algaEntityType,
     externalRealmId,
@@ -178,7 +156,7 @@ export async function getExternalEntityMappings(
   try {
     const mappings = await withTransaction(knex, async (trx: Knex.Transaction) => {
       const query = trx<ExternalEntityMapping>('tenant_external_entity_mappings').where({
-        tenant: tenantId
+        tenant
       });
 
       if (integrationType) {
@@ -208,7 +186,7 @@ export async function getExternalEntityMappings(
     });
 
     logger.debug('External mapping lookup completed', {
-      tenantId,
+      tenantId: tenant,
       results: mappings.length
     });
 
@@ -216,17 +194,25 @@ export async function getExternalEntityMappings(
     return mappings.map(cloneMapping);
   } catch (error: unknown) {
     logger.error('Failed to retrieve external entity mappings', {
-      tenantId,
+      tenantId: tenant,
       error
     });
     throw new Error('Unable to load mapping data. Please try again.');
   }
-}
+});
 
-export async function createExternalEntityMapping(
+export const createExternalEntityMapping = withAuth(async (
+  user,
+  { tenant },
   mappingData: CreateMappingData
-): Promise<ExternalEntityMapping> {
-  const { tenantId, knex, user } = await ensureBillingAccess('update');
+): Promise<ExternalEntityMapping> => {
+  const { knex } = await createTenantKnex();
+  const allowed = await hasPermission(user, 'billing_settings', 'update', knex);
+  if (!allowed) {
+    throw new Error('Forbidden: You do not have permission to manage accounting mappings.');
+  }
+
+
   const {
     integration_type,
     alga_entity_type,
@@ -238,7 +224,7 @@ export async function createExternalEntityMapping(
   } = mappingData;
 
   logger.info('Creating external mapping record', {
-    tenantId,
+    tenantId: tenant,
     integration_type,
     alga_entity_type,
     alga_entity_id,
@@ -251,7 +237,7 @@ export async function createExternalEntityMapping(
       return await trx<ExternalEntityMapping>('tenant_external_entity_mappings')
         .insert({
           id: trx.raw('gen_random_uuid()'),
-          tenant: tenantId,
+          tenant,
           integration_type,
           alga_entity_type,
           alga_entity_id,
@@ -270,7 +256,7 @@ export async function createExternalEntityMapping(
     }
 
     logger.info('External mapping created', {
-      tenantId,
+      tenantId: tenant,
       mappingId: newMapping.id
     });
 
@@ -287,15 +273,15 @@ export async function createExternalEntityMapping(
     await publishWorkflowEvent({
       eventType: 'EXTERNAL_MAPPING_CHANGED',
       payload,
-      ctx: { tenantId, occurredAt: changedAt, actor },
+      ctx: { tenantId: tenant, occurredAt: changedAt, actor },
       idempotencyKey,
     });
 
-    invalidateTenantMappingCache(tenantId);
+    invalidateTenantMappingCache(tenant);
     return cloneMapping(newMapping);
   } catch (error: any) {
     logger.error('Failed to create external entity mapping', {
-      tenantId,
+      tenantId: tenant,
       integration_type,
       alga_entity_type,
       alga_entity_id,
@@ -312,13 +298,19 @@ export async function createExternalEntityMapping(
 
     throw new Error('Unable to save mapping. Please try again.');
   }
-}
+});
 
-export async function updateExternalEntityMapping(
+export const updateExternalEntityMapping = withAuth(async (
+  user,
+  { tenant },
   mappingId: string,
   updates: UpdateMappingData
-): Promise<ExternalEntityMapping> {
-  const { tenantId, knex, user } = await ensureBillingAccess('update');
+): Promise<ExternalEntityMapping> => {
+  const { knex } = await createTenantKnex();
+  const allowed = await hasPermission(user, 'billing_settings', 'update', knex);
+  if (!allowed) {
+    throw new Error('Forbidden: You do not have permission to manage accounting mappings.');
+  }
 
   if (!mappingId) {
     throw new Error('Mapping ID is required for update.');
@@ -328,7 +320,7 @@ export async function updateExternalEntityMapping(
   }
 
   logger.info('Updating external mapping', {
-    tenantId,
+    tenantId: tenant,
     mappingId,
     hasMetadata: updates.metadata !== undefined,
     hasExternalEntityIdUpdate: updates.external_entity_id !== undefined
@@ -343,11 +335,11 @@ export async function updateExternalEntityMapping(
   try {
     const { before, after } = await withTransaction(knex, async (trx: Knex.Transaction) => {
       const before = await trx<ExternalEntityMapping>('tenant_external_entity_mappings')
-        .where({ id: mappingId, tenant: tenantId })
+        .where({ id: mappingId, tenant })
         .first();
 
       const [after] = await trx<ExternalEntityMapping>('tenant_external_entity_mappings')
-        .where({ id: mappingId, tenant: tenantId })
+        .where({ id: mappingId, tenant })
         .update(updatePayload)
         .returning('*');
 
@@ -357,7 +349,7 @@ export async function updateExternalEntityMapping(
     if (!after) {
       if (!before) {
         throw new Error(
-          `Mapping with ID ${mappingId} not found for the current tenant (${tenantId}).`
+          `Mapping with ID ${mappingId} not found for the current tenant (${tenant}).`
         );
       }
 
@@ -367,7 +359,7 @@ export async function updateExternalEntityMapping(
     }
 
     logger.info('External mapping updated', {
-      tenantId,
+      tenantId: tenant,
       mappingId: after.id
     });
 
@@ -385,35 +377,43 @@ export async function updateExternalEntityMapping(
     await publishWorkflowEvent({
       eventType: 'EXTERNAL_MAPPING_CHANGED',
       payload,
-      ctx: { tenantId, occurredAt: changedAt, actor },
+      ctx: { tenantId: tenant, occurredAt: changedAt, actor },
       idempotencyKey,
     });
 
-    invalidateTenantMappingCache(tenantId);
+    invalidateTenantMappingCache(tenant);
     return cloneMapping(after);
   } catch (error: unknown) {
     logger.error('Failed to update external mapping', {
-      tenantId,
+      tenantId: tenant,
       mappingId,
       error
     });
     throw new Error('Unable to update mapping. Please try again.');
   }
-}
+});
 
-export async function deleteExternalEntityMapping(mappingId: string): Promise<void> {
-  const { tenantId, knex, user } = await ensureBillingAccess('update');
+export const deleteExternalEntityMapping = withAuth(async (
+  user,
+  { tenant },
+  mappingId: string
+): Promise<void> => {
+  const { knex } = await createTenantKnex();
+  const allowed = await hasPermission(user, 'billing_settings', 'update', knex);
+  if (!allowed) {
+    throw new Error('Forbidden: You do not have permission to manage accounting mappings.');
+  }
 
   if (!mappingId) {
     throw new Error('Mapping ID is required for deletion.');
   }
 
-  logger.info('Deleting external mapping', { tenantId, mappingId });
+  logger.info('Deleting external mapping', { tenantId: tenant, mappingId });
 
   try {
     const { before, deletedCount } = await withTransaction(knex, async (trx: Knex.Transaction) => {
       const before = await trx<ExternalEntityMapping>('tenant_external_entity_mappings')
-        .where({ id: mappingId, tenant: tenantId })
+        .where({ id: mappingId, tenant })
         .first();
 
       if (!before) {
@@ -421,7 +421,7 @@ export async function deleteExternalEntityMapping(mappingId: string): Promise<vo
       }
 
       const deletedCount = await trx<ExternalEntityMapping>('tenant_external_entity_mappings')
-        .where({ id: mappingId, tenant: tenantId })
+        .where({ id: mappingId, tenant })
         .del();
 
       return { before, deletedCount };
@@ -429,7 +429,7 @@ export async function deleteExternalEntityMapping(mappingId: string): Promise<vo
 
     if (!before) {
         logger.warn('External mapping delete requested for unknown id', {
-          tenantId,
+          tenantId: tenant,
           mappingId
         });
         return;
@@ -439,7 +439,7 @@ export async function deleteExternalEntityMapping(mappingId: string): Promise<vo
       throw new Error(`Failed to delete mapping ID ${mappingId}. Record exists but deletion failed.`);
     }
 
-    logger.info('External mapping deleted', { tenantId, mappingId });
+    logger.info('External mapping deleted', { tenantId: tenant, mappingId });
 
     const actor = user?.user_id
       ? ({ actorType: 'USER', actorUserId: user.user_id } as const)
@@ -455,20 +455,20 @@ export async function deleteExternalEntityMapping(mappingId: string): Promise<vo
     await publishWorkflowEvent({
       eventType: 'EXTERNAL_MAPPING_CHANGED',
       payload,
-      ctx: { tenantId, occurredAt: changedAt, actor },
+      ctx: { tenantId: tenant, occurredAt: changedAt, actor },
       idempotencyKey,
     });
 
-    invalidateTenantMappingCache(tenantId);
+    invalidateTenantMappingCache(tenant);
   } catch (error: unknown) {
     logger.error('Failed to delete external entity mapping', {
-      tenantId,
+      tenantId: tenant,
       mappingId,
       error
     });
     throw new Error('Unable to delete mapping. Please try again.');
   }
-}
+});
 
 interface LookupExternalEntityIdParams {
   integration_type: string;
@@ -525,7 +525,7 @@ async function lookupExternalEntityIdAction(
   });
 
   try {
-    const { knex } = await createTenantKnex();
+    const { knex } = await createTenantKnex(tenant);
 
     const result = await withTransaction(knex, async (trx: Knex.Transaction) => {
       const query = trx('tenant_external_entity_mappings')

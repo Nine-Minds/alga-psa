@@ -12,7 +12,7 @@ async function loadSharp() {
 import { fileTypeFromBuffer } from 'file-type';
 import { Readable } from 'stream';
 import { v4 as uuidv4 } from 'uuid';
-import { StorageProviderFactory, generateStoragePath } from './StorageProviderFactory';
+import { StorageProviderFactory, generateStoragePath } from '@alga-psa/documents';
 import { FileStoreModel } from '../../models/storage';
 import type { FileStore } from '../../types/storage';
 import { StorageError } from './providers/StorageProvider';

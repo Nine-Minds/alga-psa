@@ -2,23 +2,24 @@
 'use server'
 
 import { ITicketResource } from '@alga-psa/types';
-import { IUserWithRoles } from '@alga-psa/types';
 import { hasPermission } from '@alga-psa/auth';
 import { withTransaction } from '@alga-psa/db';
 import { createTenantKnex } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { publishEvent } from '@alga-psa/event-bus/publishers';
+import { withAuth } from '@alga-psa/auth';
 
-export async function addTicketResource(
+export const addTicketResource = withAuth(async (
+  user,
+  { tenant },
   ticketId: string,
   additionalUserId: string,
-  role: string,
-  currentUser: IUserWithRoles
-): Promise<ITicketResource | null> {
-  const { knex: db, tenant } = await createTenantKnex(currentUser.tenant);
+  role: string
+): Promise<ITicketResource | null> => {
+  const { knex: db } = await createTenantKnex();
   return withTransaction(db, async (trx: Knex.Transaction) => {
     try {
-      if (!await hasPermission(currentUser, 'ticket', 'update', trx)) {
+      if (!await hasPermission(user, 'ticket', 'update', trx)) {
         throw new Error('Permission denied: Cannot add ticket resource');
       }
 
@@ -43,7 +44,7 @@ export async function addTicketResource(
           })
           .update({
             assigned_to: additionalUserId,
-            updated_by: currentUser.user_id,
+            updated_by: user.user_id,
             updated_at: new Date()
           })
           .returning('*');
@@ -58,7 +59,7 @@ export async function addTicketResource(
             tenantId: tenant,
             ticketId: ticketId,
             userId: additionalUserId,
-            assignedByUserId: currentUser.user_id
+            assignedByUserId: user.user_id
           }
         });
 
@@ -96,7 +97,7 @@ export async function addTicketResource(
           ticketId: ticketId,
           primaryAgentId: ticket.assigned_to,
           additionalAgentId: additionalUserId,
-          assignedByUserId: currentUser.user_id
+          assignedByUserId: user.user_id
         };
         console.log('[ticketResourceActions] Publishing TICKET_ADDITIONAL_AGENT_ASSIGNED event:', JSON.stringify(eventPayload));
         await publishEvent({
@@ -114,16 +115,17 @@ export async function addTicketResource(
       throw new Error(`Failed to add ticket resource in tenant ${tenant}: ${error}`);
     }
   });
-}
+});
 
-export async function removeTicketResource(
-  assignmentId: string,
-  currentUser: IUserWithRoles
-): Promise<void> {
-  const { knex: db, tenant } = await createTenantKnex(currentUser.tenant);
+export const removeTicketResource = withAuth(async (
+  user,
+  { tenant },
+  assignmentId: string
+): Promise<void> => {
+  const { knex: db } = await createTenantKnex();
   return withTransaction(db, async (trx: Knex.Transaction) => {
     try {
-      if (!await hasPermission(currentUser, 'ticket', 'update', trx)) {
+      if (!await hasPermission(user, 'ticket', 'update', trx)) {
         throw new Error('Permission denied: Cannot remove ticket resource');
       }
 
@@ -154,16 +156,17 @@ export async function removeTicketResource(
       throw new Error(`Failed to remove ticket resource in tenant ${tenant}: ${error}`);
     }
   });
-}
+});
 
-export async function getTicketResources(
-  ticketId: string,
-  currentUser: IUserWithRoles
-): Promise<ITicketResource[]> {
-  const { knex: db, tenant } = await createTenantKnex(currentUser.tenant);
+export const getTicketResources = withAuth(async (
+  user,
+  { tenant },
+  ticketId: string
+): Promise<ITicketResource[]> => {
+  const { knex: db } = await createTenantKnex();
   return withTransaction(db, async (trx: Knex.Transaction) => {
     try {
-      if (!await hasPermission(currentUser, 'ticket', 'read', trx)) {
+      if (!await hasPermission(user, 'ticket', 'read', trx)) {
         throw new Error('Permission denied: Cannot view ticket resources');
       }
 
@@ -197,15 +200,16 @@ export async function getTicketResources(
       throw new Error(`Failed to fetch ticket resources in tenant ${tenant}: ${error}`);
     }
   });
-}
+});
 
 // Helper function to check if a user can be added as additional agent
-export async function canAddAsAdditionalAgent(
+export const canAddAsAdditionalAgent = withAuth(async (
+  _user,
+  { tenant },
   ticketId: string,
-  userId: string,
-  currentUser: IUserWithRoles
-): Promise<boolean> {
-  const { knex: db, tenant } = await createTenantKnex(currentUser.tenant);
+  userId: string
+): Promise<boolean> => {
+  const { knex: db } = await createTenantKnex();
   return withTransaction(db, async (trx: Knex.Transaction) => {
     try {
     // First verify the ticket exists
@@ -252,4 +256,4 @@ export async function canAddAsAdditionalAgent(
       return false;
     }
   });
-}
+});

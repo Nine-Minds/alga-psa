@@ -11,7 +11,7 @@ import { convertBlockNoteToMarkdown } from '@alga-psa/documents/lib/blocknoteUti
 import { publishEvent, publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import { TicketResponseState } from '@alga-psa/types';
 import { maybeReopenBundleMasterFromChildReply } from '@alga-psa/tickets/actions/ticketBundleUtils';
-import { getCurrentUser } from '@alga-psa/auth/getCurrentUser';
+import { withAuth } from '@alga-psa/auth';
 import { buildTicketCommunicationWorkflowEvents } from '../../lib/workflowTicketCommunicationEvents';
 
 /**
@@ -83,12 +83,8 @@ async function updateTicketResponseState(
   return { previousState, newState };
 }
 
-export async function findCommentsByTicketId(ticketId: string) {
-  const currentUser = await getCurrentUser();
-  if (!currentUser) {
-    throw new Error('Unauthorized');
-  }
-  const { knex: db, tenant } = await createTenantKnex(currentUser.tenant);
+export const findCommentsByTicketId = withAuth(async (_user, { tenant }, ticketId: string) => {
+  const { knex: db } = await createTenantKnex();
   try {
     return await withTransaction(db, async (trx: Knex.Transaction) => {
       const comments = await Comment.getAllbyTicketId(trx, tenant!, ticketId);
@@ -98,14 +94,10 @@ export async function findCommentsByTicketId(ticketId: string) {
     console.error(error);
     throw new Error(`Failed to find comments for ticket id: ${ticketId}`);
   }
-}
+});
 
-export async function findCommentById(commentId: string) {
-  const currentUser = await getCurrentUser();
-  if (!currentUser) {
-    throw new Error('Unauthorized');
-  }
-  const { knex: db, tenant } = await createTenantKnex(currentUser.tenant);
+export const findCommentById = withAuth(async (_user, { tenant }, commentId: string) => {
+  const { knex: db } = await createTenantKnex();
   try {
     return await withTransaction(db, async (trx: Knex.Transaction) => {
       const comment = await Comment.get(trx, tenant!, commentId);
@@ -115,13 +107,9 @@ export async function findCommentById(commentId: string) {
     console.error(error);
     throw new Error(`Failed to find comment with id: ${commentId}`);
   }
-}
+});
 
-export async function createComment(comment: Omit<IComment, 'tenant'>): Promise<string> {
-  const currentUser = await getCurrentUser();
-  if (!currentUser) {
-    throw new Error('Unauthorized');
-  }
+export const createComment = withAuth(async (_user, { tenant }, comment: Omit<IComment, 'tenant'>): Promise<string> => {
   try {
     console.log(`[createComment] Starting with comment:`, {
       note_length: comment.note ? comment.note.length : 0,
@@ -132,7 +120,7 @@ export async function createComment(comment: Omit<IComment, 'tenant'>): Promise<
 
     // Get user's type to set author_type
     if (comment.user_id) {
-      const { knex: db, tenant } = await createTenantKnex(currentUser.tenant);
+      const { knex: db } = await createTenantKnex();
       const user = await withTransaction(db, async (trx: Knex.Transaction) => {
         return await trx('users')
           .select('user_type')
@@ -191,7 +179,8 @@ export async function createComment(comment: Omit<IComment, 'tenant'>): Promise<
     });
 
     // Use the Comment model to insert the comment
-    const { knex: db, tenant: commentTenant } = await createTenantKnex(currentUser.tenant);
+    const { knex: db } = await createTenantKnex();
+    const commentTenant = tenant;
     return await withTransaction(db, async (trx: Knex.Transaction) => {
       const commentId = await Comment.insert(trx, commentTenant!, commentToInsert);
       console.log(`[createComment] Comment inserted with ID:`, commentId);
@@ -309,13 +298,9 @@ export async function createComment(comment: Omit<IComment, 'tenant'>): Promise<
     console.error(`Failed to create comment:`, error);
     throw new Error(`Failed to create comment`);
   }
-}
+});
 
-export async function updateComment(id: string, comment: Partial<IComment>) {
-  const currentUser = await getCurrentUser();
-  if (!currentUser) {
-    throw new Error('Unauthorized');
-  }
+export const updateComment = withAuth(async (_user, { tenant }, id: string, comment: Partial<IComment>) => {
   console.log(`[updateComment] Starting update for comment ID: ${id}`, {
     commentData: {
       ...comment,
@@ -323,7 +308,8 @@ export async function updateComment(id: string, comment: Partial<IComment>) {
     }
   });
 
-  const { knex: db, tenant: commentTenant } = await createTenantKnex(currentUser.tenant);
+  const { knex: db } = await createTenantKnex();
+  const commentTenant = tenant;
   try {
     return await withTransaction(db, async (trx: Knex.Transaction) => {
       // Fetch existing comment to verify it exists
@@ -478,14 +464,10 @@ export async function updateComment(id: string, comment: Partial<IComment>) {
     console.error(`[updateComment] Stack trace:`, error instanceof Error ? error.stack : 'No stack trace available');
     throw new Error(`Failed to update comment with id ${id}`);
   }
-}
+});
 
-export async function deleteComment(id: string) {
-  const currentUser = await getCurrentUser();
-  if (!currentUser) {
-    throw new Error('Unauthorized');
-  }
-  const { knex: db, tenant } = await createTenantKnex(currentUser.tenant);
+export const deleteComment = withAuth(async (_user, _ctx, id: string) => {
+  const { knex: db } = await createTenantKnex();
   try {
     await withTransaction(db, async (trx: Knex.Transaction) => {
       const existingComment = await Comment.get(trx, id);
@@ -498,4 +480,4 @@ export async function deleteComment(id: string) {
     console.error(`Failed to delete comment with id ${id}:`, error);
     throw new Error(`Failed to delete comment with id ${id}`);
   }
-}
+});

@@ -51,10 +51,8 @@ export function registerEmailActions(): void {
       // Use the existing email permission taxonomy (email:process).
       await requirePermission(ctx, tx, { resource: 'email', action: 'process' });
 
-      const { TenantEmailService } = await import('@/lib/services/TenantEmailService');
-      const { StaticTemplateProcessor } = await import('@/lib/services/email/templateProcessors');
-      const { EmailProviderManager } = await import('@/services/email/EmailProviderManager');
-      const { StorageProviderFactory } = await import('@/lib/storage/StorageProviderFactory');
+      const { TenantEmailService, StaticTemplateProcessor, EmailProviderManager } = await import('@alga-psa/email');
+      const { StorageProviderFactory } = await import('@alga-psa/documents');
 
       const settings = await TenantEmailService.getTenantEmailSettings(tx.tenantId, tx.trx);
       if (!settings) {

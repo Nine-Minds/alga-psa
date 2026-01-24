@@ -24,7 +24,6 @@ export class FileStoreModel {
         file_size: data.file_size,
         storage_path: data.storage_path,
         uploaded_by_id: data.uploaded_by_id,
-        metadata: data.metadata,
         tenant,
       })
       .returning('*');

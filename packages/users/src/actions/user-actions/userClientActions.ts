@@ -3,7 +3,7 @@
 import { createTenantKnex } from '@alga-psa/db';
 import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
-import { getCurrentUser } from '@alga-psa/users/actions';
+import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '../../lib/permissions';
 
 export interface UserClientInfo {
@@ -16,19 +16,15 @@ export interface UserClientInfo {
  * Returns client info for a batch of users in the current tenant.
  * Joins users -> contacts -> clients using tenant-aware joins for Citus.
  */
-export async function getUsersClientInfo(userIds: string[]): Promise<UserClientInfo[]> {
-  const currentUser = await getCurrentUser();
-  if (!currentUser) {
-    throw new Error('No authenticated user found');
-  }
-
-  const { knex: db, tenant } = await createTenantKnex();
-  if (!tenant) {
-    throw new Error('Tenant not found');
-  }
+export const getUsersClientInfo = withAuth(async (
+  user,
+  { tenant },
+  userIds: string[]
+): Promise<UserClientInfo[]> => {
+  const { knex: db } = await createTenantKnex();
 
   return await withTransaction(db, async (trx: Knex.Transaction) => {
-    if (!await hasPermission(currentUser, 'user', 'read', trx)) {
+    if (!await hasPermission(user, 'user', 'read', trx)) {
       throw new Error('Permission denied: Cannot read user client info');
     }
 
@@ -55,5 +51,5 @@ export async function getUsersClientInfo(userIds: string[]): Promise<UserClientI
       client_name: r.client_name ?? null,
     }));
   });
-}
+});
 

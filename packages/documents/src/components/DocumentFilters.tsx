@@ -5,7 +5,7 @@ import { Input } from '@alga-psa/ui/components/Input';
 import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect';
 import { DatePicker } from '@alga-psa/ui/components/DatePicker';
 import UserPicker from '@alga-psa/ui/components/UserPicker';
-import { IUser } from '@shared/interfaces/user.interfaces';
+import { IUser } from '@alga-psa/types';
 import { Card } from '@alga-psa/ui/components/Card';
 import { Button } from '@alga-psa/ui/components/Button';
 import { ArrowDown, ArrowUp } from 'lucide-react';

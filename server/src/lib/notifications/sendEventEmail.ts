@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { getConnection } from '../db/db';
 // Note: Email sending is routed through TenantEmailService
 import logger from '@alga-psa/core/logger';
-import { TenantEmailService } from '../services/TenantEmailService';
+import { TenantEmailService } from '@alga-psa/email';
 import { StaticTemplateProcessor } from '../email/tenant/templateProcessors';
 import { getUserInfoForEmail, resolveEmailLocale } from './emailLocaleResolver';
 import { SupportedLocale } from '@alga-psa/ui/lib/i18n/config';

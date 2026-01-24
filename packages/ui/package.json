@@ -2,34 +2,79 @@
   "name": "@alga-psa/ui",
   "version": "0.1.0",
   "private": true,
+  "type": "module",
   "main": "./dist/index.js",
-  "module": "./dist/index.mjs",
-  "types": "./dist/index.d.ts",
+  "types": "./src/index.ts",
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
+      "types": "./src/index.ts",
       "import": "./dist/index.mjs",
       "require": "./dist/index.js"
     },
     "./components": {
-      "types": "./dist/components/index.d.ts",
+      "types": "./src/components/index.ts",
       "import": "./dist/components/index.mjs",
       "require": "./dist/components/index.js"
     },
+    "./components/*": {
+      "types": "./src/components/*.tsx",
+      "import": "./dist/components/*.mjs",
+      "require": "./dist/components/*.js"
+    },
     "./ui-reflection": {
-      "types": "./dist/ui-reflection/index.d.ts",
+      "types": "./src/ui-reflection/index.ts",
       "import": "./dist/ui-reflection/index.mjs",
       "require": "./dist/ui-reflection/index.js"
     },
+    "./ui-reflection/*": {
+      "types": "./src/ui-reflection/*.tsx",
+      "import": "./dist/ui-reflection/*.mjs",
+      "require": "./dist/ui-reflection/*.js"
+    },
     "./lib": {
-      "types": "./dist/lib/index.d.ts",
+      "types": "./src/lib/index.ts",
       "import": "./dist/lib/index.mjs",
       "require": "./dist/lib/index.js"
     },
+    "./lib/*": {
+      "types": "./src/lib/*.ts",
+      "import": "./dist/lib/*.mjs",
+      "require": "./dist/lib/*.js"
+    },
+    "./lib/i18n/config": {
+      "types": "./src/lib/i18n/config.ts",
+      "import": "./dist/lib/i18n/config.mjs",
+      "require": "./dist/lib/i18n/config.js"
+    },
+    "./lib/i18n/client": {
+      "types": "./src/lib/i18n/client.tsx",
+      "import": "./dist/lib/i18n/client.mjs",
+      "require": "./dist/lib/i18n/client.js"
+    },
+    "./lib/i18n/*": {
+      "types": "./src/lib/i18n/*.tsx",
+      "import": "./dist/lib/i18n/*.mjs",
+      "require": "./dist/lib/i18n/*.js"
+    },
     "./hooks": {
-      "types": "./dist/hooks/index.d.ts",
+      "types": "./src/hooks/index.ts",
       "import": "./dist/hooks/index.mjs",
       "require": "./dist/hooks/index.js"
+    },
+    "./hooks/*": {
+      "types": "./src/hooks/*.ts",
+      "import": "./dist/hooks/*.mjs",
+      "require": "./dist/hooks/*.js"
+    },
+    "./editor": {
+      "types": "./src/editor/index.ts",
+      "import": "./dist/editor/index.mjs",
+      "require": "./dist/editor/index.js"
+    },
+    "./editor/*": {
+      "types": "./src/editor/*.tsx",
+      "import": "./dist/editor/*.mjs",
+      "require": "./dist/editor/*.js"
     }
   },
   "scripts": {

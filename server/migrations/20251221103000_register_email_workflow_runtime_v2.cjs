@@ -3,37 +3,12 @@ const path = require('path');
 
 const WORKFLOW_ID = '00000000-0000-0000-0000-00000000e001';
 
-function resolveExistingPath(paths) {
-  for (const entry of paths) {
-    try {
-      if (entry && fs.existsSync(entry)) return entry;
-    } catch {
-      // ignore
-    }
-  }
-  return null;
-}
-
 function loadDefinition() {
-  const rel = path.join('shared', 'workflow', 'runtime', 'workflows', 'email-processing-workflow.v2.json');
-
-  // NOTE: EE migrations are executed from a temporary directory (see scripts/run-ee-migrations.js),
-  // so __dirname is not stable. Prefer resolving from process.cwd() and well-known container roots.
-  const candidates = [
-    path.resolve(process.cwd(), rel),
-    path.resolve(process.cwd(), '..', rel),
-    path.resolve(process.cwd(), '..', '..', rel),
-    path.resolve('/app', rel),
-    path.resolve(__dirname, '..', '..', rel), // legacy fallback
-  ];
-
-  const filePath = resolveExistingPath(candidates);
-  if (!filePath) {
-    throw new Error(
-      `Missing workflow definition JSON (${rel}). Looked in: ${candidates.join(', ')} (cwd=${process.cwd()}, __dirname=${__dirname})`
-    );
+  // Load from utils/ subfolder relative to this migration file
+  const filePath = path.join(__dirname, 'utils', 'email-processing-workflow.v2.json');
+  if (!fs.existsSync(filePath)) {
+    throw new Error(`Missing workflow definition JSON at ${filePath}`);
   }
-
   return JSON.parse(fs.readFileSync(filePath, 'utf8'));
 }
 

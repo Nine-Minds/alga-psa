@@ -1,0 +1,164 @@
+[
+  {
+    "id": "F001",
+    "description": "Add `getExperimentalFeatures()` server action to retrieve experimental feature settings from `tenant_settings.settings.experimentalFeatures`",
+    "implemented": true,
+    "prdRefs": ["Experimental Features Storage", "Server Actions"]
+  },
+  {
+    "id": "F002",
+    "description": "Add `updateExperimentalFeatures(features)` server action to update experimental feature settings",
+    "implemented": true,
+    "prdRefs": ["Server Actions"]
+  },
+  {
+    "id": "F003",
+    "description": "Add `isExperimentalFeatureEnabled(featureKey)` server action for single-feature checks",
+    "implemented": true,
+    "prdRefs": ["Server Actions"]
+  },
+  {
+    "id": "F004",
+    "description": "Create ExperimentalFeaturesSettings React component with toggle list UI",
+    "implemented": true,
+    "prdRefs": ["Experimental Features Settings Tab"]
+  },
+  {
+    "id": "F005",
+    "description": "Add 'Experimental Features' tab to SettingsPage.tsx with lazy loading",
+    "implemented": true,
+    "prdRefs": ["Experimental Features Settings Tab"]
+  },
+  {
+    "id": "F006",
+    "description": "Display AI Assistant toggle in Experimental Features with name, description, and switch",
+    "implemented": true,
+    "prdRefs": ["Feature List (Initial)"]
+  },
+  {
+    "id": "F007",
+    "description": "Add warning banner to Experimental Features tab about feature stability",
+    "implemented": true,
+    "prdRefs": ["Experimental Features Settings Tab"]
+  },
+  {
+    "id": "F008",
+    "description": "Wire Save button in Experimental Features to call updateExperimentalFeatures()",
+    "implemented": true,
+    "prdRefs": ["Experimental Features Settings Tab"]
+  },
+  {
+    "id": "F009",
+    "description": "Default all experimental features to disabled for new and existing tenants",
+    "implemented": true,
+    "prdRefs": ["Goals"]
+  },
+  {
+    "id": "F010",
+    "description": "Gate Quick Ask keyboard shortcut (⌘↑/Ctrl↑) behind aiAssistant feature check in DefaultLayout",
+    "implemented": true,
+    "prdRefs": ["UI Gating", "Flow C"]
+  },
+  {
+    "id": "F011",
+    "description": "Gate QuickAskOverlay rendering behind aiAssistant feature check",
+    "implemented": true,
+    "prdRefs": ["UI Gating"]
+  },
+  {
+    "id": "F012",
+    "description": "Gate Sidebar Chat (⌘L toggle and RightSidebar) behind aiAssistant feature check",
+    "implemented": true,
+    "prdRefs": ["UI Gating"]
+  },
+  {
+    "id": "F013",
+    "description": "Add aiAssistant feature check to /api/chat/v1/completions endpoint, return 403 if disabled",
+    "implemented": true,
+    "prdRefs": ["API Gating"]
+  },
+  {
+    "id": "F014",
+    "description": "Add aiAssistant feature check to /api/chat/v1/execute endpoint, return 403 if disabled",
+    "implemented": true,
+    "prdRefs": ["API Gating"]
+  },
+  {
+    "id": "F015",
+    "description": "Add aiAssistant feature check to /api/chat/stream/* endpoints, return 403 if disabled",
+    "implemented": true,
+    "prdRefs": ["API Gating"]
+  },
+  {
+    "id": "F016",
+    "description": "Create new streaming completions endpoint /api/chat/v1/completions/stream that returns SSE",
+    "implemented": true,
+    "prdRefs": ["Streaming Implementation"]
+  },
+  {
+    "id": "F017",
+    "description": "Modify ChatCompletionsService to support streaming mode with `stream: true` parameter to OpenRouter",
+    "implemented": true,
+    "prdRefs": ["Streaming Implementation"]
+  },
+  {
+    "id": "F018",
+    "description": "Format streaming response as SSE with `data: {\"content\": \"token\", \"done\": false}` format",
+    "implemented": true,
+    "prdRefs": ["Streaming Implementation"]
+  },
+  {
+    "id": "F019",
+    "description": "Send final SSE message `data: {\"content\": \"\", \"done\": true}` when streaming completes",
+    "implemented": true,
+    "prdRefs": ["Streaming Implementation"]
+  },
+  {
+    "id": "F020",
+    "description": "Update Chat.tsx to use streaming endpoint and read response via ReadableStream/getReader()",
+    "implemented": true,
+    "prdRefs": ["Streaming Implementation"]
+  },
+  {
+    "id": "F021",
+    "description": "Parse SSE chunks in Chat.tsx and append tokens to message state incrementally",
+    "implemented": true,
+    "prdRefs": ["Streaming Implementation"]
+  },
+  {
+    "id": "F022",
+    "description": "Support AbortController in streaming fetch to enable stop/cancel mid-generation",
+    "implemented": true,
+    "prdRefs": ["Streaming Implementation", "Flow B"]
+  },
+  {
+    "id": "F023",
+    "description": "Display streaming indicator/cursor while tokens are being received",
+    "implemented": true,
+    "prdRefs": ["Streaming UX"]
+  },
+  {
+    "id": "F024",
+    "description": "Handle stream interruption gracefully - show partial response with error indicator",
+    "implemented": true,
+    "prdRefs": ["Streaming UX", "Risks"]
+  },
+  {
+    "id": "F025",
+    "description": "Persist assistant message to database after streaming completes (final content)",
+    "implemented": true,
+    "prdRefs": ["Streaming Implementation"]
+  },
+  {
+    "id": "F026",
+    "description": "Ensure Quick Ask expanded state uses streaming for responses",
+    "implemented": true,
+    "prdRefs": ["Flow B"]
+  },
+  {
+    "id": "F027",
+    "description": "Ensure Sidebar Chat uses streaming for responses",
+    "implemented": true,
+    "prdRefs": ["Flow B"]
+  }
+]

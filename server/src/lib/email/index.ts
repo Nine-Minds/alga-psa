@@ -11,13 +11,13 @@
 export { SystemEmailService, getSystemEmailService } from './system/SystemEmailService';
 export * from './system/types';
 
-// Tenant email exports  
-export { TenantEmailService } from '../services/TenantEmailService';
+// Tenant email exports
+export { TenantEmailService } from '@alga-psa/email';
 export * from './tenant/templateProcessors';
-export type { 
-  SendEmailParams as TenantEmailParams,
-  EmailSettingsValidation 
-} from '../services/TenantEmailService';
+export type {
+  TenantEmailParams,
+  EmailSettingsValidation
+} from '@alga-psa/email';
 
 // Re-export common types for convenience
 export type {

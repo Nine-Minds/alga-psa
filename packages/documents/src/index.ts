@@ -6,3 +6,10 @@
  */
 
 export * from './components';
+
+// Avatar and entity image utilities
+export * from './lib/avatarUtils';
+export * from './lib/entityImageService';
+
+// Storage utilities
+export { StorageProviderFactory, generateStoragePath } from './storage/StorageProviderFactory';

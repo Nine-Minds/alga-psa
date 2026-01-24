@@ -2,10 +2,10 @@
 
 import { Knex } from 'knex';
 import { createTenantKnex, withTransaction } from '@alga-psa/db';
-import { getCurrentUser } from '@alga-psa/auth/getCurrentUser';
+import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import type { IUser } from '@alga-psa/types';
-import { OrderingService } from '../lib/orderingService';
+import { OrderingService } from '../lib/orderingUtils';
 import type {
   TemplateChecklistItem,
   TemplatePhase,
@@ -29,21 +29,16 @@ async function checkPermission(
 /**
  * Create a template from wizard data
  */
-export async function createTemplateFromWizard(data: TemplateWizardData): Promise<string> {
-  const currentUser = await getCurrentUser();
-  if (!currentUser) {
-    throw new Error('No authenticated user found');
-  }
-
+export const createTemplateFromWizard = withAuth(async (user, { tenant }, data: TemplateWizardData): Promise<string> => {
   // Validate required fields
   if (!data.template_name?.trim()) {
     throw new Error('Template name is required');
   }
 
-  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
+  const { knex } = await createTenantKnex();
 
   return await withTransaction(knex, async (trx: Knex.Transaction) => {
-    await checkPermission(currentUser, 'project', 'create', trx);
+    await checkPermission(user, 'project', 'create', trx);
 
     // 1. Create the template
     const [template] = await trx('project_templates')
@@ -52,7 +47,7 @@ export async function createTemplateFromWizard(data: TemplateWizardData): Promis
         template_name: data.template_name.trim(),
         description: data.description?.trim() || null,
         category: data.category?.trim() || null,
-        created_by: currentUser.user_id,
+        created_by: user.user_id,
         use_count: 0,
         client_portal_config: data.client_portal_config ? JSON.stringify(data.client_portal_config) : null,
       })
@@ -195,29 +190,21 @@ export async function createTemplateFromWizard(data: TemplateWizardData): Promis
 
     return template.template_id;
   });
-}
+});
 
 /**
  * Update an existing template with full wizard data (for editor save)
  */
-export async function updateTemplateFromEditor(
-  templateId: string,
-  data: TemplateWizardData
-): Promise<void> {
-  const currentUser = await getCurrentUser();
-  if (!currentUser) {
-    throw new Error('No authenticated user found');
-  }
-
+export const updateTemplateFromEditor = withAuth(async (user, { tenant }, templateId: string, data: TemplateWizardData): Promise<void> => {
   // Validate required fields
   if (!data.template_name?.trim()) {
     throw new Error('Template name is required');
   }
 
-  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
+  const { knex } = await createTenantKnex();
 
   return await withTransaction(knex, async (trx: Knex.Transaction) => {
-    await checkPermission(currentUser, 'project', 'update', trx);
+    await checkPermission(user, 'project', 'update', trx);
 
     // Verify template exists
     const template = await trx('project_templates')
@@ -377,28 +364,20 @@ export async function updateTemplateFromEditor(
     }
 
   });
-}
+});
 
 /**
  * Save a copy of a template as a new template (Save As functionality)
  */
-export async function saveTemplateAsNew(
-  sourceTemplateId: string,
-  newTemplateName: string
-): Promise<string> {
-  const currentUser = await getCurrentUser();
-  if (!currentUser) {
-    throw new Error('No authenticated user found');
-  }
-
+export const saveTemplateAsNew = withAuth(async (user, { tenant }, sourceTemplateId: string, newTemplateName: string): Promise<string> => {
   if (!newTemplateName?.trim()) {
     throw new Error('New template name is required');
   }
 
-  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
+  const { knex } = await createTenantKnex();
 
   return await withTransaction(knex, async (trx: Knex.Transaction) => {
-    await checkPermission(currentUser, 'project', 'create', trx);
+    await checkPermission(user, 'project', 'create', trx);
 
     // Get source template with all details
     const sourceTemplate = await trx('project_templates')
@@ -416,7 +395,7 @@ export async function saveTemplateAsNew(
         template_name: newTemplateName.trim(),
         description: sourceTemplate.description,
         category: sourceTemplate.category,
-        created_by: currentUser.user_id,
+        created_by: user.user_id,
         use_count: 0,
         client_portal_config: sourceTemplate.client_portal_config,
       })
@@ -544,4 +523,4 @@ export async function saveTemplateAsNew(
     // Publish event
     return newTemplate.template_id;
   });
-}
+});

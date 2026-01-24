@@ -7,7 +7,7 @@ import { Knex } from 'knex';
 import { revalidatePath } from 'next/cache'
 import InteractionModel from '../models/interactions';
 import { IInteractionType, IInteraction } from '@alga-psa/types'
-import { getCurrentUser } from '@alga-psa/auth/getCurrentUser';
+import { withAuth } from '@alga-psa/auth';
 import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import { buildInteractionLoggedPayload } from '@alga-psa/shared/workflow/streams/domainEventBuilders/crmInteractionNoteEventBuilders';
 
@@ -16,7 +16,7 @@ import { createTenantKnex } from '@alga-psa/db';
 // Helper function to get default status ID for interactions
 async function getDefaultInteractionStatusId(trx: any, tenant: string): Promise<string> {
   const defaultStatus = await trx('statuses')
-    .where({ 
+    .where({
       tenant,
       is_default: true,
       status_type: 'interaction'
@@ -30,22 +30,19 @@ async function getDefaultInteractionStatusId(trx: any, tenant: string): Promise<
   return defaultStatus.status_id;
 }
 
-function maybeUserActor(currentUser: any) {
-  const userId = currentUser?.user_id;
+function maybeUserActor(user: any) {
+  const userId = user?.user_id;
   if (typeof userId !== 'string' || !userId) return undefined;
   return { actorType: 'USER' as const, actorUserId: userId };
 }
 
-export async function addInteraction(interactionData: Omit<IInteraction, 'interaction_date'>): Promise<IInteraction> {
+export const addInteraction = withAuth(async (
+  user,
+  { tenant },
+  interactionData: Omit<IInteraction, 'interaction_date'>
+): Promise<IInteraction> => {
   try {
-    const currentUser = await getCurrentUser();
-    if (!currentUser) {
-      throw new Error('Unauthorized');
-    }
-    const { knex: db, tenant } = await createTenantKnex(currentUser.tenant);
-    if (!tenant) {
-      throw new Error('Tenant not found');
-    }
+    const { knex: db } = await createTenantKnex();
 
     console.log('Received interaction data:', interactionData);
 
@@ -73,14 +70,14 @@ export async function addInteraction(interactionData: Omit<IInteraction, 'intera
       if (!resolvedClientId) {
         throw new Error('Interactions must be linked to a client');
       }
-      
+
       return await InteractionModel.addInteraction({
         ...interactionData,
         client_id: resolvedClientId,
         status_id,
         tenant,
         interaction_date: new Date(),
-      });
+      }, tenant);
     });
 
     console.log('New interaction created:', newInteraction);
@@ -109,7 +106,7 @@ export async function addInteraction(interactionData: Omit<IInteraction, 'intera
           ? { outcome: String((newInteraction as any).status_name) }
           : {}),
       }),
-      ctx: { tenantId: tenant, occurredAt, actor: maybeUserActor(currentUser) },
+      ctx: { tenantId: tenant, occurredAt, actor: maybeUserActor(user) },
       idempotencyKey: `interaction_logged:${newInteraction.interaction_id}:${occurredAt}`,
     });
 
@@ -120,71 +117,69 @@ export async function addInteraction(interactionData: Omit<IInteraction, 'intera
     console.error('Error adding interaction:', error)
     throw new Error('Failed to add interaction')
   }
-}
+});
 
-export async function getInteractionTypes(): Promise<IInteractionType[]> {
+export const getInteractionTypes = withAuth(async (_user, { tenant }): Promise<IInteractionType[]> => {
   try {
-    const currentUser = await getCurrentUser();
-    if (!currentUser) {
-      throw new Error('Unauthorized');
-    }
-    const { knex } = await createTenantKnex(currentUser.tenant);
+    const { knex } = await createTenantKnex();
     return await withTransaction(knex, async (trx: Knex.Transaction) => {
-      return await InteractionModel.getInteractionTypes();
+      return await InteractionModel.getInteractionTypes(tenant);
     });
   } catch (error) {
     console.error('Error fetching interaction types:', error)
     throw new Error('Failed to fetch interaction types')
   }
-}
+});
 
-export async function getInteractionsForEntity(entityId: string, entityType: 'contact' | 'client'): Promise<IInteraction[]> {
+export const getInteractionsForEntity = withAuth(async (
+  _user,
+  { tenant },
+  entityId: string,
+  entityType: 'contact' | 'client'
+): Promise<IInteraction[]> => {
   try {
-    const currentUser = await getCurrentUser();
-    if (!currentUser) {
-      throw new Error('Unauthorized');
-    }
-    const { knex } = await createTenantKnex(currentUser.tenant);
+    const { knex } = await createTenantKnex();
     return await withTransaction(knex, async (trx: Knex.Transaction) => {
-      return await InteractionModel.getForEntity(entityId, entityType);
+      return await InteractionModel.getForEntity(entityId, entityType, tenant);
     });
   } catch (error) {
     console.error(`Error fetching interactions for ${entityType}:`, error);
     throw new Error(`Failed to fetch interactions for ${entityType}`);
   }
-}
+});
 
-export async function getRecentInteractions(filters: {
-  userId?: string;
-  contactId?: string;
-  dateFrom?: Date;
-  dateTo?: Date;
-  typeId?: string;
-}): Promise<IInteraction[]> {
+export const getRecentInteractions = withAuth(async (
+  _user,
+  { tenant },
+  filters: {
+    userId?: string;
+    contactId?: string;
+    dateFrom?: Date;
+    dateTo?: Date;
+    typeId?: string;
+  }
+): Promise<IInteraction[]> => {
   try {
-    const currentUser = await getCurrentUser();
-    if (!currentUser) {
-      throw new Error('Unauthorized');
-    }
-    const { knex } = await createTenantKnex(currentUser.tenant);
+    const { knex } = await createTenantKnex();
     return await withTransaction(knex, async (trx: Knex.Transaction) => {
-      return await InteractionModel.getRecentInteractions(filters);
+      return await InteractionModel.getRecentInteractions(filters, tenant);
     });
   } catch (error) {
     console.error('Error fetching recent interactions:', error);
     throw new Error('Failed to fetch recent interactions');
   }
-}
+});
 
-export async function updateInteraction(interactionId: string, updateData: Partial<IInteraction>): Promise<IInteraction> {
+export const updateInteraction = withAuth(async (
+  _user,
+  { tenant },
+  interactionId: string,
+  updateData: Partial<IInteraction>
+): Promise<IInteraction> => {
   try {
-    const currentUser = await getCurrentUser();
-    if (!currentUser) {
-      throw new Error('Unauthorized');
-    }
-    const { knex } = await createTenantKnex(currentUser.tenant);
+    const { knex } = await createTenantKnex();
     const updatedInteraction = await withTransaction(knex, async (trx: Knex.Transaction) => {
-      return await InteractionModel.updateInteraction(interactionId, updateData);
+      return await InteractionModel.updateInteraction(interactionId, updateData, tenant);
     });
     revalidatePath('/msp/interactions/[id]', 'page');
     return updatedInteraction;
@@ -192,17 +187,17 @@ export async function updateInteraction(interactionId: string, updateData: Parti
     console.error('Error updating interaction:', error);
     throw new Error('Failed to update interaction');
   }
-}
+});
 
-export async function getInteractionById(interactionId: string): Promise<IInteraction> {
+export const getInteractionById = withAuth(async (
+  _user,
+  { tenant },
+  interactionId: string
+): Promise<IInteraction> => {
   try {
-    const currentUser = await getCurrentUser();
-    if (!currentUser) {
-      throw new Error('Unauthorized');
-    }
-    const { knex } = await createTenantKnex(currentUser.tenant);
+    const { knex } = await createTenantKnex();
     const interaction = await withTransaction(knex, async (trx: Knex.Transaction) => {
-      return await InteractionModel.getById(interactionId);
+      return await InteractionModel.getById(interactionId, tenant);
     });
     if (!interaction) {
       throw new Error('Interaction not found');
@@ -212,18 +207,14 @@ export async function getInteractionById(interactionId: string): Promise<IIntera
     console.error('Error fetching interaction:', error);
     throw new Error('Failed to fetch interaction');
   }
-}
+});
 
-export async function getInteractionStatuses(): Promise<any[]> {
+export const getInteractionStatuses = withAuth(async (_user, { tenant }): Promise<any[]> => {
   try {
-    const currentUser = await getCurrentUser();
-    if (!currentUser) {
-      throw new Error('Unauthorized');
-    }
-    const { knex, tenant } = await createTenantKnex(currentUser.tenant);
+    const { knex } = await createTenantKnex();
     return await withTransaction(knex, async (trx: Knex.Transaction) => {
       return await trx('statuses')
-        .where({ 
+        .where({
           tenant,
           status_type: 'interaction'
         })
@@ -234,22 +225,18 @@ export async function getInteractionStatuses(): Promise<any[]> {
     console.error('Error fetching interaction statuses:', error);
     throw new Error('Failed to fetch interaction statuses');
   }
-}
+});
 
-export async function deleteInteraction(interactionId: string): Promise<void> {
+export const deleteInteraction = withAuth(async (_user, { tenant }, interactionId: string): Promise<void> => {
   try {
-    const currentUser = await getCurrentUser();
-    if (!currentUser) {
-      throw new Error('Unauthorized');
-    }
-    const { knex, tenant } = await createTenantKnex(currentUser.tenant);
+    const { knex } = await createTenantKnex();
 
     return await withTransaction(knex, async (trx: Knex.Transaction) => {
       // Delete the interaction
       const deletedCount = await trx('interactions')
-        .where({ 
+        .where({
           interaction_id: interactionId,
-          tenant 
+          tenant
         })
         .del();
 
@@ -263,4 +250,4 @@ export async function deleteInteraction(interactionId: string): Promise<void> {
     console.error('Error deleting interaction:', error);
     throw new Error('Failed to delete interaction');
   }
-}
+});

@@ -1,9 +1,9 @@
 'use server';
 
-import { 
-  Activity, 
-  ActivityFilters, 
-  ActivityResponse, 
+import {
+  Activity,
+  ActivityFilters,
+  ActivityResponse,
   ActivityType,
   ScheduleActivity,
   ProjectTaskActivity,
@@ -12,7 +12,7 @@ import {
   WorkflowTaskActivity,
   NotificationActivity
 } from "@alga-psa/types";
-import { 
+import {
   fetchUserActivities,
   fetchScheduleActivities as fetchScheduleActivitiesInternal,
   fetchProjectActivities as fetchProjectActivitiesInternal,
@@ -21,23 +21,25 @@ import {
   fetchWorkflowTaskActivities as fetchWorkflowTaskActivitiesInternal,
   fetchNotificationActivities as fetchNotificationActivitiesInternal
 } from "./activityAggregationActions";
-import { getCurrentUser } from "@alga-psa/users/actions";
+import { withAuth } from "@alga-psa/auth";
 import { revalidatePath } from "next/cache";
 
 /**
  * Server action to fetch all activities for the current user with optional filters
  * This is the main entry point for the activities dashboard
- * 
+ *
  * @param filters Optional filters to apply to the activities
  * @param page Optional page number for pagination (1-based)
  * @param pageSize Optional number of items per page
  * @returns Promise resolving to ActivityResponse containing activities and pagination info
  */
-export async function fetchActivities(
+export const fetchActivities = withAuth(async (
+  _user,
+  _ctx,
   filters: ActivityFilters = {},
   page: number = 1,
   pageSize: number = 10
-): Promise<ActivityResponse> {
+): Promise<ActivityResponse> => {
   try {
     // Pass pagination parameters to the aggregation function
     return await fetchUserActivities(filters, page, pageSize);
@@ -45,111 +47,87 @@ export async function fetchActivities(
     console.error(`Error fetching activities (page ${page}, size ${pageSize}):`, error);
     throw new Error("Failed to fetch activities. Please try again later.");
   }
-}
+});
 
 /**
  * Server action to fetch schedule activities for the current user
- * 
+ *
  * @param filters Optional filters to apply to the schedule activities
  * @returns Promise resolving to an array of ScheduleActivity objects
  */
-export async function fetchScheduleActivities(
+export const fetchScheduleActivities = withAuth(async (
+  user,
+  { tenant },
   filters: ActivityFilters = {}
-): Promise<ScheduleActivity[]> {
+): Promise<ScheduleActivity[]> => {
   try {
-    const user = await getCurrentUser();
-    if (!user) {
-      throw new Error("User not authenticated");
-    }
-    if (!user.tenant) {
-      throw new Error("Tenant is required");
-    }
-
     // This function already handles tenant isolation internally
-    return await fetchScheduleActivitiesInternal(user.user_id, user.tenant, filters) as ScheduleActivity[];
+    return await fetchScheduleActivitiesInternal(user.user_id, tenant, filters) as ScheduleActivity[];
   } catch (error) {
     console.error("Error fetching schedule activities:", error);
     throw new Error("Failed to fetch schedule activities. Please try again later.");
   }
-}
+});
 
 /**
  * Server action to fetch project activities for the current user
- * 
+ *
  * @param filters Optional filters to apply to the project activities
  * @returns Promise resolving to an array of ProjectTaskActivity objects
  */
-export async function fetchProjectActivities(
+export const fetchProjectActivities = withAuth(async (
+  user,
+  { tenant },
   filters: ActivityFilters = {}
-): Promise<ProjectTaskActivity[]> {
+): Promise<ProjectTaskActivity[]> => {
   try {
-    const user = await getCurrentUser();
-    if (!user) {
-      throw new Error("User not authenticated");
-    }
-    if (!user.tenant) {
-      throw new Error("Tenant is required");
-    }
-
     // This function already handles tenant isolation internally
-    return await fetchProjectActivitiesInternal(user.user_id, user.tenant, filters) as ProjectTaskActivity[];
+    return await fetchProjectActivitiesInternal(user.user_id, tenant, filters) as ProjectTaskActivity[];
   } catch (error) {
     console.error("Error fetching project activities:", error);
     throw new Error("Failed to fetch project activities. Please try again later.");
   }
-}
+});
 
 /**
  * Server action to fetch ticket activities for the current user
- * 
+ *
  * @param filters Optional filters to apply to the ticket activities
  * @returns Promise resolving to an array of TicketActivity objects
  */
-export async function fetchTicketActivities(
+export const fetchTicketActivities = withAuth(async (
+  user,
+  { tenant },
   filters: ActivityFilters = {}
-): Promise<TicketActivity[]> {
+): Promise<TicketActivity[]> => {
   try {
-    const user = await getCurrentUser();
-    if (!user) {
-      throw new Error("User not authenticated");
-    }
-    if (!user.tenant) {
-      throw new Error("Tenant is required");
-    }
-
     // This function already handles tenant isolation internally
-    return await fetchTicketActivitiesInternal(user.user_id, user.tenant, filters) as TicketActivity[];
+    return await fetchTicketActivitiesInternal(user.user_id, tenant, filters) as TicketActivity[];
   } catch (error) {
     console.error("Error fetching ticket activities:", error);
     throw new Error("Failed to fetch ticket activities. Please try again later.");
   }
-}
+});
 
 /**
  * Server action to fetch time entry activities for the current user
- * 
+ *
  * @param filters Optional filters to apply to the time entry activities
  * @returns Promise resolving to an array of TimeEntryActivity objects
  */
-export async function fetchTimeEntryActivities(
+export const fetchTimeEntryActivities = withAuth(async (
+  user,
+  { tenant },
   filters: ActivityFilters = {}
-): Promise<TimeEntryActivity[]> {
+): Promise<TimeEntryActivity[]> => {
   try {
-    const user = await getCurrentUser();
-    if (!user) {
-      throw new Error("User not authenticated");
-    }
-    if (!user.tenant) {
-      throw new Error("Tenant is required");
-    }
-
     // This function already handles tenant isolation internally
-    return await fetchTimeEntryActivitiesInternal(user.user_id, user.tenant, filters) as TimeEntryActivity[];
+    return await fetchTimeEntryActivitiesInternal(user.user_id, tenant, filters) as TimeEntryActivity[];
   } catch (error) {
     console.error("Error fetching time entry activities:", error);
     throw new Error("Failed to fetch time entry activities. Please try again later.");
   }
-}
+});
 
 /**
  * Server action to fetch workflow task activities for the current user
@@ -157,25 +135,19 @@ export async function fetchTimeEntryActivities(
  * @param filters Optional filters to apply to the workflow task activities
  * @returns Promise resolving to an array of WorkflowTaskActivity objects
  */
-export async function fetchWorkflowTaskActivities(
+export const fetchWorkflowTaskActivities = withAuth(async (
+  user,
+  { tenant },
   filters: ActivityFilters = {}
-): Promise<WorkflowTaskActivity[]> {
+): Promise<WorkflowTaskActivity[]> => {
   try {
-    const user = await getCurrentUser();
-    if (!user) {
-      throw new Error("User not authenticated");
-    }
-    if (!user.tenant) {
-      throw new Error("Tenant is required");
-    }
-
     // This function already handles tenant isolation internally
-    return await fetchWorkflowTaskActivitiesInternal(user.user_id, user.tenant, filters) as WorkflowTaskActivity[];
+    return await fetchWorkflowTaskActivitiesInternal(user.user_id, tenant, filters) as WorkflowTaskActivity[];
   } catch (error) {
     console.error("Error fetching workflow task activities:", error);
     throw new Error("Failed to fetch workflow task activities. Please try again later.");
   }
-}
+});
 
 /**
  * Server action to fetch notification activities for the current user
@@ -183,67 +155,55 @@ export async function fetchWorkflowTaskActivities(
  * @param filters Optional filters to apply to the notification activities
  * @returns Promise resolving to an array of NotificationActivity objects
  */
-export async function fetchNotificationActivities(
+export const fetchNotificationActivities = withAuth(async (
+  user,
+  { tenant },
   filters: ActivityFilters = {}
-): Promise<NotificationActivity[]> {
+): Promise<NotificationActivity[]> => {
   try {
-    const user = await getCurrentUser();
-    if (!user) {
-      throw new Error("User not authenticated");
-    }
-    if (!user.tenant) {
-      throw new Error("Tenant is required");
-    }
-
     // This function already handles tenant isolation internally
-    return await fetchNotificationActivitiesInternal(user.user_id, user.tenant, filters) as NotificationActivity[];
+    return await fetchNotificationActivitiesInternal(user.user_id, tenant, filters) as NotificationActivity[];
   } catch (error) {
     console.error("Error fetching notification activities:", error);
     throw new Error("Failed to fetch notification activities. Please try again later.");
   }
-}
+});
 
 /**
  * Server action to fetch a specific activity by ID and type
- * 
+ *
  * @param id The ID of the activity to fetch
  * @param type The type of the activity
  * @returns Promise resolving to the Activity object or null if not found
  */
-export async function fetchActivityById(
+export const fetchActivityById = withAuth(async (
+  user,
+  { tenant },
   id: string,
   type: ActivityType
-): Promise<Activity | null> {
+): Promise<Activity | null> => {
   try {
-    const user = await getCurrentUser();
-    if (!user) {
-      throw new Error("User not authenticated");
-    }
-    if (!user.tenant) {
-      throw new Error("Tenant is required");
-    }
-
     // Fetch activities of the specified type
     let activities: Activity[] = [];
-    
+
     switch (type) {
       case ActivityType.SCHEDULE:
-        activities = await fetchScheduleActivitiesInternal(user.user_id, user.tenant, {});
+        activities = await fetchScheduleActivitiesInternal(user.user_id, tenant, {});
         break;
       case ActivityType.PROJECT_TASK:
-        activities = await fetchProjectActivitiesInternal(user.user_id, user.tenant, {});
+        activities = await fetchProjectActivitiesInternal(user.user_id, tenant, {});
         break;
       case ActivityType.TICKET:
-        activities = await fetchTicketActivitiesInternal(user.user_id, user.tenant, {});
+        activities = await fetchTicketActivitiesInternal(user.user_id, tenant, {});
         break;
       case ActivityType.TIME_ENTRY:
-        activities = await fetchTimeEntryActivitiesInternal(user.user_id, user.tenant, {});
+        activities = await fetchTimeEntryActivitiesInternal(user.user_id, tenant, {});
         break;
       case ActivityType.WORKFLOW_TASK:
-        activities = await fetchWorkflowTaskActivitiesInternal(user.user_id, user.tenant, {});
+        activities = await fetchWorkflowTaskActivitiesInternal(user.user_id, tenant, {});
         break;
       case ActivityType.NOTIFICATION:
-        activities = await fetchNotificationActivitiesInternal(user.user_id, user.tenant, {});
+        activities = await fetchNotificationActivitiesInternal(user.user_id, tenant, {});
         break;
       default:
         throw new Error(`Unsupported activity type: ${type}`);
@@ -256,46 +216,45 @@ export async function fetchActivityById(
     console.error(`Error fetching activity by ID (${id}, ${type}):`, error);
     throw new Error("Failed to fetch activity. Please try again later.");
   }
-}
+});
 
 /**
  * Server action to mark an activity as viewed
  * This can be used to update the user's activity history
- * 
+ *
  * @param activityId The ID of the activity to mark as viewed
  * @param activityType The type of the activity
  */
-export async function markActivityViewed(
+export const markActivityViewed = withAuth(async (
+  user,
+  _ctx,
   activityId: string,
   activityType: ActivityType
-): Promise<void> {
+): Promise<void> => {
   try {
-    const user = await getCurrentUser();
-    if (!user) {
-      throw new Error("User not authenticated");
-    }
-
     // Implementation would depend on how you want to track viewed activities
     // This is a placeholder for future implementation
     console.log(`Activity ${activityId} of type ${activityType} viewed by user ${user.user_id}`);
-    
+
     // Revalidate the activities path to refresh the data
     revalidatePath('/activities');
   } catch (error) {
     console.error(`Error marking activity as viewed (${activityId}, ${activityType}):`, error);
     throw new Error("Failed to mark activity as viewed. Please try again later.");
   }
-}
+});
 
 /**
  * Server action to fetch activities for the dashboard
  * This is a specialized version of fetchActivities that returns a limited number of activities
  * for each type, suitable for displaying in the dashboard
- * 
+ *
  * @param limit The maximum number of activities to return for each type
  * @returns Promise resolving to an object containing activities grouped by type
  */
-export async function fetchDashboardActivities(
+export const fetchDashboardActivities = withAuth(async (
+  user,
+  { tenant },
   limit: number = 5
 ): Promise<{
   scheduleActivities: ScheduleActivity[];
@@ -303,19 +262,11 @@ export async function fetchDashboardActivities(
   ticketActivities: TicketActivity[];
   timeEntryActivities: TimeEntryActivity[];
   workflowTaskActivities: WorkflowTaskActivity[];
-}> {
+}> => {
   try {
-    const user = await getCurrentUser();
-    if (!user) {
-      throw new Error("User not authenticated");
-    }
-    if (!user.tenant) {
-      throw new Error("Tenant is required");
-    }
-
     // Fetch activities for each type with a limit
     const filters: ActivityFilters = { isClosed: false };
-    
+
     const [
       scheduleActivities,
       projectActivities,
@@ -323,24 +274,24 @@ export async function fetchDashboardActivities(
       timeEntryActivities,
       workflowTaskActivities
     ] = await Promise.all([
-      fetchScheduleActivitiesInternal(user.user_id, user.tenant, filters),
-      fetchProjectActivitiesInternal(user.user_id, user.tenant, filters),
-      fetchTicketActivitiesInternal(user.user_id, user.tenant, filters),
-      fetchTimeEntryActivitiesInternal(user.user_id, user.tenant, filters),
-      fetchWorkflowTaskActivitiesInternal(user.user_id, user.tenant, filters)
+      fetchScheduleActivitiesInternal(user.user_id, tenant, filters),
+      fetchProjectActivitiesInternal(user.user_id, tenant, filters),
+      fetchTicketActivitiesInternal(user.user_id, tenant, filters),
+      fetchTimeEntryActivitiesInternal(user.user_id, tenant, filters),
+      fetchWorkflowTaskActivitiesInternal(user.user_id, tenant, filters)
     ]);
 
     // Sort and limit each type of activity
     const sortByPriorityAndDueDate = (a: Activity, b: Activity) => {
       // First sort by priority (high to low)
-      const priorityOrder = { 
-        'high': 0, 
-        'medium': 1, 
-        'low': 2 
+      const priorityOrder = {
+        'high': 0,
+        'medium': 1,
+        'low': 2
       };
       const priorityDiff = priorityOrder[a.priority] - priorityOrder[b.priority];
       if (priorityDiff !== 0) return priorityDiff;
-      
+
       // Then sort by due date (closest first)
       if (a.dueDate && b.dueDate) {
         return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
@@ -349,7 +300,7 @@ export async function fetchDashboardActivities(
       } else if (b.dueDate) {
         return 1; // b has due date, a doesn't
       }
-      
+
       // Finally sort by creation date (newest first)
       return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
     };
@@ -365,4 +316,4 @@ export async function fetchDashboardActivities(
     console.error("Error fetching dashboard activities:", error);
     throw new Error("Failed to fetch dashboard activities. Please try again later.");
   }
-}
+});

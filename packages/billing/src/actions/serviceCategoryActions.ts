@@ -5,17 +5,11 @@ import { IServiceCategory } from '@alga-psa/types';
 import { TextNoneIcon } from '@radix-ui/react-icons';
 import { createTenantKnex } from '@alga-psa/db';
 import { Knex } from 'knex';
-import { getCurrentUser } from '@alga-psa/auth/getCurrentUser';
-import { getCurrentUserAsync, hasPermissionAsync, getSessionAsync, getAnalyticsAsync } from '../lib/authHelpers';
+import { withAuth } from '@alga-psa/auth';
 
 
-export async function getServiceCategories() {
-  const currentUser = await getCurrentUser();
-  if (!currentUser) {
-    throw new Error('Unauthorized');
-  }
-
-  const { knex: db, tenant } = await createTenantKnex(currentUser.tenant);
+export const getServiceCategories = withAuth(async (user, { tenant }) => {
+  const { knex: db } = await createTenantKnex();
   return withTransaction(db, async (trx: Knex.Transaction) => {
     try {
       const categories = await trx<IServiceCategory>('service_categories')
@@ -27,19 +21,14 @@ export async function getServiceCategories() {
       throw new Error('Failed to fetch service categories');
     }
   });
-}
+});
 
-export async function createServiceCategory(categoryName: string, description?: string) {
-  const currentUser = await getCurrentUser();
-  if (!currentUser) {
-    throw new Error('Unauthorized');
-  }
-
+export const createServiceCategory = withAuth(async (user, { tenant }, categoryName: string, description?: string) => {
   if (!categoryName || categoryName.trim() === '') {
     throw new Error('Category name is required');
   }
 
-  const { knex: db, tenant } = await createTenantKnex(currentUser.tenant);
+  const { knex: db } = await createTenantKnex();
   return withTransaction(db, async (trx: Knex.Transaction) => {
     try {
     // Check if category with same name already exists
@@ -75,19 +64,14 @@ export async function createServiceCategory(categoryName: string, description?: 
       throw new Error('Failed to create service category');
     }
   });
-}
+});
 
-export async function deleteServiceCategory(categoryId: string) {
-  const currentUser = await getCurrentUser();
-  if (!currentUser) {
-    throw new Error('Unauthorized');
-  }
-
+export const deleteServiceCategory = withAuth(async (user, { tenant }, categoryId: string) => {
   if (!categoryId) {
     throw new Error('Category ID is required');
   }
 
-  const { knex: db, tenant } = await createTenantKnex(currentUser.tenant);
+  const { knex: db } = await createTenantKnex();
   return withTransaction(db, async (trx: Knex.Transaction) => {
     try {
     // Check if category is in use
@@ -118,14 +102,9 @@ export async function deleteServiceCategory(categoryId: string) {
       throw new Error('Failed to delete service category');
     }
   });
-}
+});
 
-export async function updateServiceCategory(categoryId: string, categoryData: Partial<IServiceCategory>) {
-  const currentUser = await getCurrentUser();
-  if (!currentUser) {
-    throw new Error('Unauthorized');
-  }
-
+export const updateServiceCategory = withAuth(async (user, { tenant }, categoryId: string, categoryData: Partial<IServiceCategory>) => {
   if (!categoryId) {
     throw new Error('Category ID is required');
   }
@@ -134,7 +113,7 @@ export async function updateServiceCategory(categoryId: string, categoryData: Pa
     throw new Error('Category name cannot be empty');
   }
 
-  const { knex: db, tenant } = await createTenantKnex(currentUser.tenant);
+  const { knex: db } = await createTenantKnex();
   return withTransaction(db, async (trx: Knex.Transaction) => {
     try {
     // Check if new name conflicts with existing category
@@ -154,7 +133,7 @@ export async function updateServiceCategory(categoryId: string, categoryData: Pa
 
     if (!tenant) {
       throw new Error("user is not logged in");
-    }    
+    }
 
     const [updatedCategory] = await trx<IServiceCategory>('service_categories')
       .where({
@@ -177,4 +156,4 @@ export async function updateServiceCategory(categoryId: string, categoryData: Pa
       throw new Error('Failed to update service category');
     }
   });
-}
+});

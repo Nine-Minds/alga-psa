@@ -460,12 +460,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     if (!ticketToDelete) return;
 
     try {
-      // Use the current user from state instead of fetching it again
-      if (!currentUser) {
-        throw new Error('User not found');
-      }
-
-      await deleteTicket(ticketToDelete, currentUser);
+      await deleteTicket(ticketToDelete);
       setTickets(prev => prev.filter(t => t.ticket_id !== ticketToDelete));
       setSelectedTicketIds(prev => {
         if (!ticketToDelete || !prev.has(ticketToDelete)) {
@@ -523,11 +518,10 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     if (
       willExpand &&
       bundleView === 'bundled' &&
-      currentUser &&
       !loadedBundleChildrenMasters.has(masterTicketId)
     ) {
       try {
-        const children = await fetchBundleChildrenForMaster(currentUser, masterTicketId);
+        const children = await fetchBundleChildrenForMaster(masterTicketId);
         if (children.length > 0) {
           setTickets(prev => {
             const existing = new Set(prev.map(t => t.ticket_id).filter((id): id is string => !!id));
@@ -906,7 +900,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     setBulkDeleteErrors([]);
 
     try {
-      const result = await deleteTickets(selectedTicketIdsArray, currentUser);
+      const result = await deleteTickets(selectedTicketIdsArray);
 
       if (result.deletedIds.length > 0) {
         const deletedSet = new Set(result.deletedIds);
@@ -939,7 +933,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     } finally {
       setIsBulkDeleting(false);
     }
-  }, [selectedTicketIdsArray, currentUser, clearSelection]);
+  }, [selectedTicketIdsArray, clearSelection]);
 
   const performBundleTickets = useCallback(async () => {
     if (selectedTicketIdsArray.length < 2) {
@@ -950,21 +944,14 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
       setBundleError('Select a master ticket.');
       return;
     }
-    if (!currentUser) {
-      toast.error('You must be logged in to bundle tickets');
-      return;
-    }
 
     setBundleError(null);
     try {
-      await bundleTicketsAction(
-        {
-          masterTicketId: bundleMasterTicketId,
-          childTicketIds: selectedTicketIdsArray.filter((id) => id !== bundleMasterTicketId),
-          mode: bundleSyncUpdates ? 'sync_updates' : 'link_only',
-        },
-        currentUser
-      );
+      await bundleTicketsAction({
+        masterTicketId: bundleMasterTicketId,
+        childTicketIds: selectedTicketIdsArray.filter((id) => id !== bundleMasterTicketId),
+        mode: bundleSyncUpdates ? 'sync_updates' : 'link_only',
+      });
 
       toast.success('Tickets bundled');
       setIsBundleDialogOpen(false);

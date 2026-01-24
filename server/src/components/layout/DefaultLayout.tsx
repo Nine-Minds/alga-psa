@@ -10,6 +10,8 @@ import Drawer from '@alga-psa/ui/components/Drawer';
 import { DrawerProvider } from "@alga-psa/ui";
 import { ActivityDrawerProvider } from "@alga-psa/workflows/components";
 import { savePreference } from '@alga-psa/ui/lib';
+import QuickAskOverlay from 'server/src/components/chat/QuickAskOverlay';
+import { isExperimentalFeatureEnabled } from '@alga-psa/tenancy/actions';
 
 interface DefaultLayoutProps {
   children: React.ReactNode;
@@ -21,6 +23,7 @@ export default function DefaultLayout({ children, initialSidebarCollapsed = fals
   const [drawerContent] = useState<React.ReactNode>(null);
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const [aiAssistantEnabled, setAiAssistantEnabled] = useState(false);
 
   // Track page type for sidebar mode switching
   const isOnSettingsPage = pathname?.startsWith('/msp/settings') ?? false;
@@ -78,6 +81,11 @@ export default function DefaultLayout({ children, initialSidebarCollapsed = fals
   };
 
   const [rightSidebarOpen, setRightSidebarOpen] = useState(false);
+  const [quickAskOpen, setQuickAskOpen] = useState(false);
+  const [sidebarHandoff, setSidebarHandoff] = useState<{ chatId: string | null; nonce: number }>({
+    chatId: null,
+    nonce: 0,
+  });
 
   // Add state for Chat component props
   const [clientUrl, setClientUrl] = useState('');
@@ -90,10 +98,50 @@ export default function DefaultLayout({ children, initialSidebarCollapsed = fals
   const [isTitleLocked] = useState(false);
 
   useEffect(() => {
+    const loadAiAssistantEnabled = async () => {
+      try {
+        const enabled = await isExperimentalFeatureEnabled('aiAssistant');
+        setAiAssistantEnabled(enabled);
+      } catch (error) {
+        console.error('[DefaultLayout] Failed to check aiAssistant feature flag', error);
+        setAiAssistantEnabled(false);
+      }
+    };
+
+    void loadAiAssistantEnabled();
+  }, []);
+
+  useEffect(() => {
+    if (!aiAssistantEnabled) {
+      setRightSidebarOpen(false);
+    }
+  }, [aiAssistantEnabled]);
+
+  useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if ((event.metaKey || event.ctrlKey) && event.key === 'l') {
+        if (!aiAssistantEnabled) {
+          return;
+        }
+
         event.preventDefault();
         setRightSidebarOpen(prev => !prev);
+      }
+
+      if ((event.metaKey || event.ctrlKey) && event.key === 'ArrowUp') {
+        if (!aiAssistantEnabled) {
+          return;
+        }
+
+        event.preventDefault();
+
+        if (rightSidebarOpen) {
+          const input = document.querySelector('[data-automation-id="chat-input"]') as HTMLElement | null;
+          input?.focus();
+          return;
+        }
+
+        setQuickAskOpen(prev => !prev);
       }
     };
 
@@ -134,7 +182,25 @@ export default function DefaultLayout({ children, initialSidebarCollapsed = fals
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, []);
+  }, [aiAssistantEnabled, rightSidebarOpen]);
+
+  const handleQuickAskClose = () => {
+    setQuickAskOpen(false);
+  };
+
+  const handleOpenQuickAskInSidebar = (chatId: string) => {
+    if (!aiAssistantEnabled) {
+      return;
+    }
+
+    setQuickAskOpen(false);
+    setRightSidebarOpen(true);
+    setSidebarHandoff({ chatId, nonce: Date.now() });
+    setTimeout(() => {
+      const input = document.querySelector('[data-automation-id="chat-input"]') as HTMLElement | null;
+      input?.focus();
+    }, 0);
+  };
 
 
   const handleSelectAccount = (account: string) => {
@@ -170,9 +236,30 @@ export default function DefaultLayout({ children, initialSidebarCollapsed = fals
             />
             <main className={`flex-1 overflow-hidden flex ${sidebarMode !== 'main' ? 'pt-0 pl-0 pr-3' : 'pt-2 px-3'}`}>
               <Body>{children}</Body>
-              <RightSidebar
-                isOpen={rightSidebarOpen}
-                setIsOpen={setRightSidebarOpen}
+              {aiAssistantEnabled ? (
+                <RightSidebar
+                  isOpen={rightSidebarOpen}
+                  setIsOpen={setRightSidebarOpen}
+                  clientUrl={clientUrl}
+                  accountId={accountId}
+                  messages={messages}
+                  userRole={userRole}
+                  userId={userId}
+                  selectedAccount={selectedAccount}
+                  handleSelectAccount={handleSelectAccount}
+                  auth_token={auth_token}
+                  setChatTitle={setChatTitle}
+                  isTitleLocked={isTitleLocked}
+                  handoffChatId={sidebarHandoff.chatId}
+                  handoffNonce={sidebarHandoff.nonce}
+                />
+              ) : null}
+            </main>
+            {aiAssistantEnabled ? (
+              <QuickAskOverlay
+                isOpen={quickAskOpen}
+                onClose={handleQuickAskClose}
+                onOpenInSidebar={handleOpenQuickAskInSidebar}
                 clientUrl={clientUrl}
                 accountId={accountId}
                 messages={messages}
@@ -183,8 +270,9 @@ export default function DefaultLayout({ children, initialSidebarCollapsed = fals
                 auth_token={auth_token}
                 setChatTitle={setChatTitle}
                 isTitleLocked={isTitleLocked}
+                hf={null}
               />
-            </main>
+            ) : null}
             <Drawer isOpen={isDrawerOpen} onClose={closeDrawer}>
               {drawerContent}
             </Drawer>

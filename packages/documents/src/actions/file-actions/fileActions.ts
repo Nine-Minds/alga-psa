@@ -2,20 +2,18 @@
 
 import { createTenantKnex } from '@alga-psa/db';
 import { withTransaction } from '@alga-psa/db';
+import { withAuth } from '@alga-psa/auth';
 import { Knex } from 'knex';
 import { StorageService } from '@alga-psa/documents/storage/StorageService';
 import { FileStoreModel } from '../../models/storage';
 import { FileStore } from '../../types/storage';
 
-export async function uploadFile(
+export const uploadFile = withAuth(async (
+    _user,
+    { tenant },
     formData: FormData
-): Promise<{ success: boolean; file?: FileStore; error?: string }> {
+): Promise<{ success: boolean; file?: FileStore; error?: string }> => {
     try {
-        const { knex, tenant } = await createTenantKnex();
-        if (!tenant) {
-            throw new Error('No tenant found');
-        }
-
         const file = formData.get('file') as File;
         if (!file) {
             throw new Error('No file provided');
@@ -52,17 +50,14 @@ export async function uploadFile(
             error: error instanceof Error ? error.message : 'Failed to upload file',
         };
     }
-}
+});
 
-export async function downloadFile(
+export const downloadFile = withAuth(async (
+    _user,
+    { tenant },
     file_id: string
-): Promise<{ success: boolean; data?: { buffer: Buffer; metadata: any }; error?: string }> {
+): Promise<{ success: boolean; data?: { buffer: Buffer; metadata: any }; error?: string }> => {
     try {
-        const { tenant } = await createTenantKnex();
-        if (!tenant) {
-            throw new Error('No tenant found');
-        }
-
         const result = await StorageService.downloadFile(file_id);
         return { success: true, data: result };
     } catch (error) {
@@ -72,18 +67,15 @@ export async function downloadFile(
             error: error instanceof Error ? error.message : 'Failed to download file',
         };
     }
-}
+});
 
-export async function deleteFile(
+export const deleteFile = withAuth(async (
+    _user,
+    { tenant },
     file_id: string,
     deleted_by_id: string
-): Promise<{ success: boolean; error?: string }> {
+): Promise<{ success: boolean; error?: string }> => {
     try {
-        const { tenant, knex } = await createTenantKnex();
-        if (!tenant) {
-            throw new Error('No tenant found');
-        }
-
         // Delete file using StorageService
         // Note: StorageService doesn't currently support transactions
         await StorageService.deleteFile(file_id, deleted_by_id);
@@ -95,19 +87,16 @@ export async function deleteFile(
             error: error instanceof Error ? error.message : 'Failed to delete file',
         };
     }
-}
+});
 
-export async function validateFileUpload(
+export const validateFileUpload = withAuth(async (
+    _user,
+    { tenant },
     mime_type: string,
     file_size: number
-): Promise<{ success: boolean; error?: string }> {
+): Promise<{ success: boolean; error?: string }> => {
     console.log('Starting validateFileUpload:', { mime_type, file_size });
     try {
-        const { tenant } = await createTenantKnex();
-        if (!tenant) {
-            console.log('No tenant found');
-            throw new Error('No tenant found');
-        }
         console.log('Tenant found:', tenant);
 
         await StorageService.validateFileUpload(tenant, mime_type, file_size);
@@ -120,4 +109,4 @@ export async function validateFileUpload(
             error: error instanceof Error ? error.message : 'Failed to validate file',
         };
     }
-}
+});

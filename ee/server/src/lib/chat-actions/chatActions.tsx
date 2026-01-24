@@ -105,6 +105,30 @@ export async function addMessageToChatAction(data: Omit<IMessage, 'tenant'>) {
   }
 }
 
+export async function getChatMessagesAction(chatId: string) {
+  if (!chatId) {
+    return [];
+  }
+
+  if (!(await isChatPersistenceAvailable())) {
+    return [];
+  }
+
+  try {
+    return await Message.getByChatId(chatId);
+  } catch (error) {
+    if (isMissingRelationError(error)) {
+      markPersistenceStatus(false);
+      console.warn(
+        '[chatActions] Messages table missing during chat fetch; continuing without persistence.',
+      );
+      return [];
+    }
+    console.error(error);
+    throw new Error('Failed to fetch chat messages');
+  }
+}
+
 export async function updateMessageAction(id: string, data: Partial<IMessage>) {
   if (!(await isChatPersistenceAvailable())) {
     return 'skipped';

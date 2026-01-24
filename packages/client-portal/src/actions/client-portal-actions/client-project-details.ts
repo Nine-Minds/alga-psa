@@ -3,23 +3,28 @@
 import { createTenantKnex } from '@alga-psa/db';
 import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
-import { getCurrentUser } from '@alga-psa/users/actions';
 import { DEFAULT_CLIENT_PORTAL_CONFIG, IClientPortalConfig } from '@alga-psa/types';
 import { StorageService } from '@alga-psa/documents/storage/StorageService';
 import { v4 as uuidv4 } from 'uuid';
 import { getEntityImageUrlsBatch } from '@alga-psa/documents/lib/avatarUtils';
+import { withAuth, type AuthContext } from '@alga-psa/auth';
+import type { IUserWithRoles } from '@alga-psa/types';
 
 /**
  * Helper to verify client access and get config
+ * Note: Must be called within withAuth context
  */
-async function getProjectWithConfig(projectId: string): Promise<{
+async function getProjectWithConfigInternal(
+  user: IUserWithRoles,
+  tenant: string,
+  projectId: string
+): Promise<{
   project: any;
   config: IClientPortalConfig;
   clientId: string;
 } | null> {
-  const { knex, tenant } = await createTenantKnex();
-  const user = await getCurrentUser();
-  if (!user || user.user_type !== 'client') return null;
+  const { knex } = await createTenantKnex();
+  if (user.user_type !== 'client') return null;
   if (!user.contact_id) return null;
 
   // Get client_id from user's contact -> client relationship
@@ -40,11 +45,15 @@ async function getProjectWithConfig(projectId: string): Promise<{
 /**
  * Get phases (if config.show_phases is true)
  */
-export async function getClientProjectPhases(projectId: string) {
-  const result = await getProjectWithConfig(projectId);
+export const getClientProjectPhases = withAuth(async (
+  user: IUserWithRoles,
+  { tenant }: AuthContext,
+  projectId: string
+) => {
+  const result = await getProjectWithConfigInternal(user, tenant, projectId);
   if (!result?.config.show_phases) return null;
 
-  const { knex, tenant } = await createTenantKnex();
+  const { knex } = await createTenantKnex();
   const phases = await knex('project_phases')
     .where({ project_id: projectId, tenant })
     .orderBy('order_key');
@@ -85,7 +94,7 @@ export async function getClientProjectPhases(projectId: string) {
     }
   }
   return { phases };
-}
+});
 
 /**
  * Get tasks with filtered fields (if config.show_tasks is true)
@@ -94,14 +103,16 @@ export async function getClientProjectPhases(projectId: string) {
  * @param options - Optional parameters
  * @param options.phaseId - Filter tasks by phase (used by kanban view)
  */
-export async function getClientProjectTasks(
+export const getClientProjectTasks = withAuth(async (
+  user: IUserWithRoles,
+  { tenant }: AuthContext,
   projectId: string,
   options?: { phaseId?: string }
-) {
-  const result = await getProjectWithConfig(projectId);
+) => {
+  const result = await getProjectWithConfigInternal(user, tenant, projectId);
   if (!result?.config.show_tasks) return null;
 
-  const { knex, tenant } = await createTenantKnex();
+  const { knex } = await createTenantKnex();
   const visibleFields = result.config.visible_task_fields ?? ['task_name', 'due_date', 'status'];
 
   // Build SELECT based on visible_task_fields
@@ -368,16 +379,20 @@ export async function getClientProjectTasks(
   }
 
   return { tasks: tasksWithAvatars, phases, config: result.config, taskDependencies };
-}
+});
 
 /**
  * Get project statuses for kanban view (respects visibility settings)
  */
-export async function getClientProjectStatuses(projectId: string) {
-  const result = await getProjectWithConfig(projectId);
+export const getClientProjectStatuses = withAuth(async (
+  user: IUserWithRoles,
+  { tenant }: AuthContext,
+  projectId: string
+) => {
+  const result = await getProjectWithConfigInternal(user, tenant, projectId);
   if (!result?.config.show_tasks) return null;
 
-  const { knex, tenant } = await createTenantKnex();
+  const { knex } = await createTenantKnex();
 
   // Get visible statuses for this project
   const statuses = await knex('project_status_mappings as psm')
@@ -404,19 +419,21 @@ export async function getClientProjectStatuses(projectId: string) {
       color: s.color
     }))
   };
-}
+});
 
 /**
  * Upload document to task (if 'document_uploads' is in visible_task_fields)
  * Client-safe path - does NOT use MSP RBAC
  */
-export async function uploadClientTaskDocument(taskId: string, formData: FormData, folderPath?: string | null) {
-  const { knex, tenant } = await createTenantKnex();
-  if (!tenant) {
-    return { success: false, error: 'Tenant not found' };
-  }
-  const user = await getCurrentUser();
-  if (!user || user.user_type !== 'client') {
+export const uploadClientTaskDocument = withAuth(async (
+  user: IUserWithRoles,
+  { tenant }: AuthContext,
+  taskId: string,
+  formData: FormData,
+  folderPath?: string | null
+) => {
+  const { knex } = await createTenantKnex();
+  if (user.user_type !== 'client') {
     return { success: false, error: 'Not authorized' };
   }
 
@@ -504,15 +521,18 @@ export async function uploadClientTaskDocument(taskId: string, formData: FormDat
     console.error('Error uploading client document:', error);
     return { success: false, error: error instanceof Error ? error.message : 'Upload failed' };
   }
-}
+});
 
 /**
  * Get documents for a task (client view)
  */
-export async function getClientTaskDocuments(taskId: string) {
-  const { knex, tenant } = await createTenantKnex();
-  const user = await getCurrentUser();
-  if (!user || user.user_type !== 'client') {
+export const getClientTaskDocuments = withAuth(async (
+  user: IUserWithRoles,
+  { tenant }: AuthContext,
+  taskId: string
+) => {
+  const { knex } = await createTenantKnex();
+  if (user.user_type !== 'client') {
     return { success: false, error: 'Not authorized' };
   }
 
@@ -574,4 +594,4 @@ export async function getClientTaskDocuments(taskId: string) {
     .orderBy('d.entered_at', 'desc');
 
   return { success: true, documents };
-}
+});

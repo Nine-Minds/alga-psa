@@ -119,7 +119,7 @@ export async function requestPasswordReset(
     // Now run the reset token creation in the user's tenant context
     console.log('[PasswordReset] Running with tenant context:', userInfo.tenant);
     const result = await runWithTenant(userInfo.tenant, async () => {
-      const { knex: tenantKnex, tenant } = await createTenantKnex();
+      const { knex: tenantKnex, tenant } = await createTenantKnex(userInfo.tenant);
 
       if (!tenant) {
         console.error('[PasswordReset] Tenant context is missing!');
@@ -314,7 +314,7 @@ export async function completePasswordReset(
 
     // Run the password update in the token's tenant context
     const result = await runWithTenant(tenantFromToken, async () => {
-      const { knex, tenant } = await createTenantKnex();
+      const { knex, tenant } = await createTenantKnex(tenantFromToken);
 
       if (!tenant) {
         return { success: false, message: 'System error', error: 'Tenant context is required' } as CompleteResetResult;

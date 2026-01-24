@@ -1,4 +1,6 @@
+/* global process */
 import { NextRequest } from 'next/server';
+import { isExperimentalFeatureEnabled } from '@alga-psa/tenancy/actions';
 
 // This is needed for streaming responses
 export const dynamic = 'force-dynamic';
@@ -12,6 +14,17 @@ export async function POST(req: NextRequest) {
         'Content-Type': 'application/json',
       },
     });
+  }
+
+  const aiAssistantEnabled = await isExperimentalFeatureEnabled('aiAssistant');
+  if (!aiAssistantEnabled) {
+    return new Response(
+      JSON.stringify({ error: 'AI Assistant is not enabled for this tenant' }),
+      {
+        status: 403,
+        headers: { 'Content-Type': 'application/json' },
+      },
+    );
   }
 
   // Delegate to EE business logic

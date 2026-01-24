@@ -74,7 +74,7 @@ async function loadTabData(tab: AssetDrawerTab, asset: Asset, target: AssetDrawe
       break;
     }
     case ASSET_DRAWER_TABS.DOCUMENTS: {
-      target.documents = await safeGetAssetDocuments(asset.tenant, asset.asset_id);
+      target.documents = await safeGetAssetDocuments(asset.asset_id);
       break;
     }
     case ASSET_DRAWER_TABS.CONFIGURATION:
@@ -110,9 +110,9 @@ async function safeGetAssetLinkedTickets(assetId: string): Promise<AssetTicketSu
   }
 }
 
-async function safeGetAssetDocuments(tenant: string, assetId: string): Promise<IDocument[] | null> {
+async function safeGetAssetDocuments(assetId: string): Promise<IDocument[] | null> {
   try {
-    return await getAssetDocuments(tenant, assetId);
+    return await getAssetDocuments(assetId);
   } catch (error) {
     console.error('Failed to load asset documents', error);
     return null;

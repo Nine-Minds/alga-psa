@@ -4,28 +4,22 @@ import { createTenantKnex } from '@alga-psa/db';
 import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { SupportedLocale, isSupportedLocale } from '@alga-psa/ui/lib/i18n/config';
-import { getCurrentUserAsync } from '../lib/usersHelpers';
+import { withAuth, withOptionalAuth } from '@alga-psa/auth';
 
 /**
  * Update client's default locale for all contacts
  */
-export async function updateClientLocaleAction(
+export const updateClientLocaleAction = withAuth(async (
+  _user,
+  { tenant },
   clientId: string,
   locale: SupportedLocale
-) {
-  const user = await getCurrentUserAsync();
-  if (!user) {
-    throw new Error('User not found');
-  }
-
+) => {
   if (!isSupportedLocale(locale)) {
     throw new Error(`Unsupported locale: ${locale}`);
   }
 
-  const { knex, tenant } = await createTenantKnex(user.tenant);
-  if (!tenant) {
-    throw new Error('Tenant not found');
-  }
+  const { knex } = await createTenantKnex();
 
   await withTransaction(knex, async (trx: Knex.Transaction) => {
     // Get existing client
@@ -58,23 +52,22 @@ export async function updateClientLocaleAction(
   });
 
   return { success: true };
-}
+});
 
 /**
  * Get client's default locale
  */
-export async function getClientLocaleAction(
+export const getClientLocaleAction = withOptionalAuth(async (
+  user,
+  ctx,
   clientId: string
-): Promise<SupportedLocale | null> {
-  const user = await getCurrentUserAsync();
-  if (!user) {
+): Promise<SupportedLocale | null> => {
+  if (!user || !ctx) {
     return null;
   }
 
-  const { knex, tenant } = await createTenantKnex(user.tenant);
-  if (!tenant) {
-    return null;
-  }
+  const { tenant } = ctx;
+  const { knex } = await createTenantKnex();
 
   const client = await withTransaction(knex, async (trx: Knex.Transaction) => {
     return await trx('clients')
@@ -87,4 +80,4 @@ export async function getClientLocaleAction(
 
   const locale = client?.properties?.defaultLocale;
   return isSupportedLocale(locale) ? locale : null;
-}
+});

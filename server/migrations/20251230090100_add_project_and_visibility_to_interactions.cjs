@@ -21,6 +21,8 @@ exports.up = async function up(knex) {
   }
 
   // Add FK + constraint best-effort (older deployments may not have projects table).
+  // Note: Citus doesn't support ON DELETE SET NULL when distribution key is in FK,
+  // so we use NO ACTION (default). Application must handle cleanup before project deletion.
   const hasProjects = await knex.schema.hasTable('projects');
   if (hasProjects && !hasProjectId) {
     await knex.raw(`
@@ -28,7 +30,6 @@ exports.up = async function up(knex) {
       ADD CONSTRAINT interactions_project_fk
       FOREIGN KEY (tenant, project_id)
       REFERENCES projects (tenant, project_id)
-      ON DELETE SET NULL
     `);
   }
 

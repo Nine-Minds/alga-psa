@@ -5,7 +5,7 @@
 'use server';
 
 import { createTenantKnex } from '@alga-psa/db';
-import { getCurrentUser } from '@alga-psa/users/actions';
+import { withAuth } from '@alga-psa/auth';
 import type { TenantEmailSettings } from '@alga-psa/types';
 import { TenantEmailService } from '@alga-psa/email';
 
@@ -16,13 +16,11 @@ function extractDomain(address?: string | null): string | null {
   return parts[1]?.trim().toLowerCase() || null;
 }
 
-export async function getEmailSettings(): Promise<TenantEmailSettings | null> {
-  const user = await getCurrentUser();
-  if (!user) {
-    throw new Error('User not authenticated');
-  }
-
-  const { knex, tenant } = await createTenantKnex();
+export const getEmailSettings = withAuth(async (
+  _user,
+  { tenant }
+): Promise<TenantEmailSettings | null> => {
+  const { knex } = await createTenantKnex();
 
   try {
     // Use TenantEmailService to get email settings
@@ -76,15 +74,14 @@ export async function getEmailSettings(): Promise<TenantEmailSettings | null> {
     console.error('Error fetching email settings:', error);
     throw new Error('Failed to fetch email settings');
   }
-}
+});
 
-export async function updateEmailSettings(updates: Partial<TenantEmailSettings>): Promise<TenantEmailSettings> {
-  const user = await getCurrentUser();
-  if (!user) {
-    throw new Error('User not authenticated');
-  }
-
-  const { knex, tenant } = await createTenantKnex();
+export const updateEmailSettings = withAuth(async (
+  _user,
+  { tenant },
+  updates: Partial<TenantEmailSettings>
+): Promise<TenantEmailSettings> => {
+  const { knex } = await createTenantKnex();
 
   try {
     const now = new Date();
@@ -160,4 +157,4 @@ export async function updateEmailSettings(updates: Partial<TenantEmailSettings>)
     console.error('Error updating email settings:', error);
     throw new Error('Failed to update email settings');
   }
-}
+});

@@ -7,16 +7,13 @@ import { TaxService } from '../services/taxService';
 import { ITaxRegion } from '@alga-psa/types';
 import { createTenantKnex } from '@alga-psa/db';
 import { Knex } from 'knex';
-import { getCurrentUserAsync, hasPermissionAsync, getSessionAsync, getAnalyticsAsync } from '../lib/authHelpers';
+import { withAuth } from '@alga-psa/auth';
+import { hasPermission } from '@alga-psa/auth/rbac';
 
 
-export async function getClientTaxSettings(clientId: string): Promise<IClientTaxSettings | null> {
+export const getClientTaxSettings = withAuth(async (user, { tenant }, clientId: string): Promise<IClientTaxSettings | null> => {
   try {
-    const currentUser = await getCurrentUserAsync();
-    if (!currentUser) {
-      throw new Error('Unauthorized');
-    }
-    const { knex: db, tenant } = await createTenantKnex(currentUser.tenant);
+    const { knex: db } = await createTenantKnex();
     return withTransaction(db, async (trx: Knex.Transaction) => {
       const taxSettings = await trx<IClientTaxSettings>('client_tax_settings')
         .where({ client_id: clientId })
@@ -36,17 +33,15 @@ export async function getClientTaxSettings(clientId: string): Promise<IClientTax
       throw new Error('Failed to fetch client tax settings due to an unexpected error.');
     }
   }
-}
+});
 
-export async function updateClientTaxSettings(
+export const updateClientTaxSettings = withAuth(async (
+  user,
+  { tenant },
   clientId: string,
   taxSettings: Omit<IClientTaxSettings, 'tenant'>
-): Promise<IClientTaxSettings | null> {
-  const currentUser = await getCurrentUserAsync();
-  if (!currentUser) {
-    throw new Error('Unauthorized');
-  }
-  const { knex: db, tenant } = await createTenantKnex(currentUser.tenant);
+): Promise<IClientTaxSettings | null> => {
+  const { knex: db } = await createTenantKnex();
   return withTransaction(db, async (trx: Knex.Transaction) => {
     try {
     // Update only the fields remaining on client_tax_settings
@@ -72,7 +67,7 @@ export async function updateClientTaxSettings(
         return updatedSettings || null;
       } catch (error) {
         console.error('Error updating client tax settings:', error);
-      
+
       // Enhanced error messages with more specific information
       if (error instanceof Error) {
         if (error.message.includes('foreign key constraint')) {
@@ -89,16 +84,12 @@ export async function updateClientTaxSettings(
         }
       }
   });
-}
+});
 
 // Return the base ITaxRate type, which now includes description and region_code
-export async function getTaxRates(): Promise<ITaxRate[]> {
+export const getTaxRates = withAuth(async (user, { tenant }): Promise<ITaxRate[]> => {
   try {
-    const currentUser = await getCurrentUserAsync();
-    if (!currentUser) {
-      throw new Error('Unauthorized');
-    }
-    const { knex, tenant } = await createTenantKnex(currentUser.tenant); // Get tenant for filtering
+    const { knex } = await createTenantKnex();
     // Select all fields directly from tax_rates
     const taxRates = await withTransaction(knex, async (trx) => {
       return await trx<ITaxRate>('tax_rates')
@@ -116,19 +107,15 @@ export async function getTaxRates(): Promise<ITaxRate[]> {
       throw new Error('Failed to fetch tax rates due to an unexpected error.');
     }
   }
-}
+});
 
 /**
  * Fetches all active tax regions for the current tenant.
  * @returns A promise that resolves to an array of active tax regions.
  */
-export async function getActiveTaxRegions(): Promise<Pick<ITaxRegion, 'region_code' | 'region_name'>[]> {
+export const getActiveTaxRegions = withAuth(async (user, { tenant }): Promise<Pick<ITaxRegion, 'region_code' | 'region_name'>[]> => {
   try {
-    const currentUser = await getCurrentUserAsync();
-    if (!currentUser) {
-      throw new Error('Unauthorized');
-    }
-    const { knex, tenant } = await createTenantKnex(currentUser.tenant);
+    const { knex } = await createTenantKnex();
     const activeRegions = await knex<ITaxRegion>('tax_regions')
       .select('region_code', 'region_name')
       .where('is_active', true)
@@ -144,19 +131,15 @@ export async function getActiveTaxRegions(): Promise<Pick<ITaxRegion, 'region_co
       throw new Error('Failed to fetch active tax regions due to an unexpected error.');
     }
   }
-}
+});
 
 /**
  * Fetches all tax regions (active and inactive) for the current tenant.
  * @returns A promise that resolves to an array of all tax regions.
  */
-export async function getTaxRegions(): Promise<ITaxRegion[]> {
+export const getTaxRegions = withAuth(async (user, { tenant }): Promise<ITaxRegion[]> => {
   try {
-    const currentUser = await getCurrentUserAsync();
-    if (!currentUser) {
-      throw new Error('Unauthorized');
-    }
-    const { knex, tenant } = await createTenantKnex(currentUser.tenant);
+    const { knex } = await createTenantKnex();
     const regions = await knex<ITaxRegion>('tax_regions')
       .select('*')
       .where('tenant', tenant)
@@ -171,7 +154,7 @@ export async function getTaxRegions(): Promise<ITaxRegion[]> {
       throw new Error('Failed to fetch tax regions due to an unexpected error.');
     }
   }
-}
+});
 
 /**
  * Creates a new tax region for the current tenant.
@@ -179,16 +162,16 @@ export async function getTaxRegions(): Promise<ITaxRegion[]> {
  * @param data - The data for the new tax region.
  * @returns A promise that resolves to the newly created tax region.
  */
-export async function createTaxRegion(data: {
-  region_code: string;
-  region_name: string;
-  is_active?: boolean;
-}): Promise<ITaxRegion> {
-  const currentUser = await getCurrentUserAsync();
-  if (!currentUser) {
-    throw new Error('Unauthorized');
+export const createTaxRegion = withAuth(async (
+  user,
+  { tenant },
+  data: {
+    region_code: string;
+    region_name: string;
+    is_active?: boolean;
   }
-  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
+): Promise<ITaxRegion> => {
+  const { knex } = await createTenantKnex();
   const { region_code, region_name, is_active = true } = data; // Default is_active to true
 
   try {
@@ -224,7 +207,7 @@ export async function createTaxRegion(data: {
       throw new Error('Failed to create tax region due to an unexpected error.');
     }
   }
-}
+});
 
 /**
  * Updates an existing tax region for the current tenant.
@@ -233,21 +216,18 @@ export async function createTaxRegion(data: {
  * @param data - The data to update.
  * @returns A promise that resolves to the updated tax region.
  */
-export async function updateTaxRegion(
+export const updateTaxRegion = withAuth(async (
+  user,
+  { tenant },
   region_code: string,
   data: { region_code?: string; region_name?: string; is_active?: boolean }
-): Promise<ITaxRegion> {
+): Promise<ITaxRegion> => {
   try {
-    const currentUser = await getCurrentUserAsync();
-    if (!currentUser) {
-      throw new Error('No authenticated user found');
-    }
-
-    if (!(await hasPermissionAsync(currentUser, 'billing', 'update'))) {
+    if (!(hasPermission(user, 'billing', 'update'))) {
       throw new Error('Permission denied: Cannot update tax regions');
     }
 
-    const { knex, tenant } = await createTenantKnex(currentUser.tenant);
+    const { knex } = await createTenantKnex();
     const updateData: Partial<Pick<ITaxRegion, 'region_code' | 'region_name' | 'is_active'>> = {};
 
   if (data.region_code !== undefined) {
@@ -312,20 +292,16 @@ export async function updateTaxRegion(
       throw new Error('Failed to update tax region due to an unexpected error.');
     }
   }
-}
+});
 
 /**
  * Fetches all tax components for a specific tax rate.
  * @param taxRateId - The ID of the tax rate to get components for.
  * @returns A promise that resolves to an array of tax components.
  */
-export async function getTaxComponentsByTaxRate(taxRateId: string): Promise<ITaxComponent[]> {
+export const getTaxComponentsByTaxRate = withAuth(async (user, { tenant }, taxRateId: string): Promise<ITaxComponent[]> => {
   try {
-    const currentUser = await getCurrentUserAsync();
-    if (!currentUser) {
-      throw new Error('Unauthorized');
-    }
-    const { knex, tenant } = await createTenantKnex(currentUser.tenant);
+    const { knex } = await createTenantKnex();
     if (!tenant) {
       throw new Error('Tenant context is required');
     }
@@ -343,20 +319,16 @@ export async function getTaxComponentsByTaxRate(taxRateId: string): Promise<ITax
     }
     throw new Error('Failed to fetch tax components');
   }
-}
+});
 
 /**
  * Fetches all tax rate thresholds for a specific tax rate.
  * @param taxRateId - The ID of the tax rate to get thresholds for.
  * @returns A promise that resolves to an array of tax rate thresholds.
  */
-export async function getTaxRateThresholdsByTaxRate(taxRateId: string): Promise<ITaxRateThreshold[]> {
+export const getTaxRateThresholdsByTaxRate = withAuth(async (user, { tenant }, taxRateId: string): Promise<ITaxRateThreshold[]> => {
   try {
-    const currentUser = await getCurrentUserAsync();
-    if (!currentUser) {
-      throw new Error('Unauthorized');
-    }
-    const { knex, tenant } = await createTenantKnex(currentUser.tenant);
+    const { knex } = await createTenantKnex();
     if (!tenant) {
       throw new Error('Tenant context is required');
     }
@@ -372,20 +344,16 @@ export async function getTaxRateThresholdsByTaxRate(taxRateId: string): Promise<
     }
     throw new Error('Failed to fetch tax rate thresholds');
   }
-}
+});
 
 /**
  * Fetches all tax holidays for a specific tax rate.
  * @param taxRateId - The ID of the tax rate to get holidays for.
  * @returns A promise that resolves to an array of tax holidays.
  */
-export async function getTaxHolidaysByTaxRate(taxRateId: string): Promise<ITaxHoliday[]> {
+export const getTaxHolidaysByTaxRate = withAuth(async (user, { tenant }, taxRateId: string): Promise<ITaxHoliday[]> => {
   try {
-    const currentUser = await getCurrentUserAsync();
-    if (!currentUser) {
-      throw new Error('Unauthorized');
-    }
-    const { knex, tenant } = await createTenantKnex(currentUser.tenant);
+    const { knex } = await createTenantKnex();
     if (!tenant) {
       throw new Error('Tenant context is required');
     }
@@ -401,15 +369,15 @@ export async function getTaxHolidaysByTaxRate(taxRateId: string): Promise<ITaxHo
     }
     throw new Error('Failed to fetch tax holidays');
   }
-}
+});
 
-export async function createTaxComponent(component: Omit<ITaxComponent, 'tax_component_id' | 'tenant'>): Promise<ITaxComponent> {
+export const createTaxComponent = withAuth(async (
+  user,
+  { tenant },
+  component: Omit<ITaxComponent, 'tax_component_id' | 'tenant'>
+): Promise<ITaxComponent> => {
   try {
-    const currentUser = await getCurrentUserAsync();
-    if (!currentUser) {
-      throw new Error('Unauthorized');
-    }
-    const { knex, tenant } = await createTenantKnex(currentUser.tenant);
+    const { knex } = await createTenantKnex();
     const [createdComponent] = await knex<ITaxComponent>('tax_components')
       .insert({ ...component, tax_component_id: uuid4(), tenant: tenant! })
       .returning('*');
@@ -419,16 +387,17 @@ export async function createTaxComponent(component: Omit<ITaxComponent, 'tax_com
     console.error('Error creating tax component:', error);
     throw new Error('Failed to create tax component');
   }
-}
+});
 
 
-export async function updateTaxComponent(componentId: string, component: Partial<ITaxComponent>): Promise<ITaxComponent> {
+export const updateTaxComponent = withAuth(async (
+  user,
+  { tenant },
+  componentId: string,
+  component: Partial<ITaxComponent>
+): Promise<ITaxComponent> => {
   try {
-    const currentUser = await getCurrentUserAsync();
-    if (!currentUser) {
-      throw new Error('Unauthorized');
-    }
-    const { knex } = await createTenantKnex(currentUser.tenant);
+    const { knex } = await createTenantKnex();
     const [updatedComponent] = await knex<ITaxComponent>('tax_components')
       .where({ tax_component_id: componentId })
       .update(component)
@@ -439,15 +408,11 @@ export async function updateTaxComponent(componentId: string, component: Partial
     console.error('Error updating tax component:', error);
     throw new Error('Failed to update tax component');
   }
-}
+});
 
-export async function deleteTaxComponent(componentId: string): Promise<void> {
+export const deleteTaxComponent = withAuth(async (user, { tenant }, componentId: string): Promise<void> => {
   try {
-    const currentUser = await getCurrentUserAsync();
-    if (!currentUser) {
-      throw new Error('Unauthorized');
-    }
-    const { knex } = await createTenantKnex(currentUser.tenant);
+    const { knex } = await createTenantKnex();
     await knex('tax_components')
       .where({ tax_component_id: componentId })
       .del();
@@ -455,15 +420,15 @@ export async function deleteTaxComponent(componentId: string): Promise<void> {
     console.error('Error deleting tax component:', error);
     throw new Error('Failed to delete tax component');
   }
-}
+});
 
-export async function createTaxRateThreshold(threshold: Omit<ITaxRateThreshold, 'tax_rate_threshold_id'>): Promise<ITaxRateThreshold> {
+export const createTaxRateThreshold = withAuth(async (
+  user,
+  { tenant },
+  threshold: Omit<ITaxRateThreshold, 'tax_rate_threshold_id'>
+): Promise<ITaxRateThreshold> => {
   try {
-    const currentUser = await getCurrentUserAsync();
-    if (!currentUser) {
-      throw new Error('Unauthorized');
-    }
-    const { knex } = await createTenantKnex(currentUser.tenant);
+    const { knex } = await createTenantKnex();
     const [createdThreshold] = await knex<ITaxRateThreshold>('tax_rate_thresholds')
       .insert({ ...threshold, tax_rate_threshold_id: uuid4() })
       .returning('*');
@@ -473,15 +438,16 @@ export async function createTaxRateThreshold(threshold: Omit<ITaxRateThreshold, 
     console.error('Error creating tax rate threshold:', error);
     throw new Error('Failed to create tax rate threshold');
   }
-}
+});
 
-export async function updateTaxRateThreshold(thresholdId: string, threshold: Partial<ITaxRateThreshold>): Promise<ITaxRateThreshold> {
+export const updateTaxRateThreshold = withAuth(async (
+  user,
+  { tenant },
+  thresholdId: string,
+  threshold: Partial<ITaxRateThreshold>
+): Promise<ITaxRateThreshold> => {
   try {
-    const currentUser = await getCurrentUserAsync();
-    if (!currentUser) {
-      throw new Error('Unauthorized');
-    }
-    const { knex } = await createTenantKnex(currentUser.tenant);
+    const { knex } = await createTenantKnex();
     const [updatedThreshold] = await knex<ITaxRateThreshold>('tax_rate_thresholds')
       .where({ tax_rate_threshold_id: thresholdId })
       .update(threshold)
@@ -492,15 +458,11 @@ export async function updateTaxRateThreshold(thresholdId: string, threshold: Par
     console.error('Error updating tax rate threshold:', error);
     throw new Error('Failed to update tax rate threshold');
   }
-}
+});
 
-export async function deleteTaxRateThreshold(thresholdId: string): Promise<void> {
+export const deleteTaxRateThreshold = withAuth(async (user, { tenant }, thresholdId: string): Promise<void> => {
   try {
-    const currentUser = await getCurrentUserAsync();
-    if (!currentUser) {
-      throw new Error('Unauthorized');
-    }
-    const { knex } = await createTenantKnex(currentUser.tenant);
+    const { knex } = await createTenantKnex();
     await knex('tax_rate_thresholds')
       .where({ tax_rate_threshold_id: thresholdId })
       .del();
@@ -508,15 +470,15 @@ export async function deleteTaxRateThreshold(thresholdId: string): Promise<void>
     console.error('Error deleting tax rate threshold:', error);
     throw new Error('Failed to delete tax rate threshold');
   }
-}
+});
 
-export async function createTaxHoliday(holiday: Omit<ITaxHoliday, 'tax_holiday_id'>): Promise<ITaxHoliday> {
+export const createTaxHoliday = withAuth(async (
+  user,
+  { tenant },
+  holiday: Omit<ITaxHoliday, 'tax_holiday_id'>
+): Promise<ITaxHoliday> => {
   try {
-    const currentUser = await getCurrentUserAsync();
-    if (!currentUser) {
-      throw new Error('Unauthorized');
-    }
-    const { knex } = await createTenantKnex(currentUser.tenant);
+    const { knex } = await createTenantKnex();
     const [createdHoliday] = await knex<ITaxHoliday>('tax_holidays')
       .insert({ ...holiday, tax_holiday_id: uuid4() })
       .returning('*');
@@ -526,15 +488,16 @@ export async function createTaxHoliday(holiday: Omit<ITaxHoliday, 'tax_holiday_i
     console.error('Error creating tax holiday:', error);
     throw new Error('Failed to create tax holiday');
   }
-}
+});
 
-export async function updateTaxHoliday(holidayId: string, holiday: Partial<ITaxHoliday>): Promise<ITaxHoliday> {
+export const updateTaxHoliday = withAuth(async (
+  user,
+  { tenant },
+  holidayId: string,
+  holiday: Partial<ITaxHoliday>
+): Promise<ITaxHoliday> => {
   try {
-    const currentUser = await getCurrentUserAsync();
-    if (!currentUser) {
-      throw new Error('Unauthorized');
-    }
-    const { knex } = await createTenantKnex(currentUser.tenant);
+    const { knex } = await createTenantKnex();
     const [updatedHoliday] = await knex<ITaxHoliday>('tax_holidays')
       .where({ tax_holiday_id: holidayId })
       .update(holiday)
@@ -545,15 +508,11 @@ export async function updateTaxHoliday(holidayId: string, holiday: Partial<ITaxH
     console.error('Error updating tax holiday:', error);
     throw new Error('Failed to update tax holiday');
   }
-}
+});
 
-export async function deleteTaxHoliday(holidayId: string): Promise<void> {
+export const deleteTaxHoliday = withAuth(async (user, { tenant }, holidayId: string): Promise<void> => {
   try {
-    const currentUser = await getCurrentUserAsync();
-    if (!currentUser) {
-      throw new Error('Unauthorized');
-    }
-    const { knex } = await createTenantKnex(currentUser.tenant);
+    const { knex } = await createTenantKnex();
     await knex('tax_holidays')
       .where({ tax_holiday_id: holidayId })
       .del();
@@ -561,7 +520,7 @@ export async function deleteTaxHoliday(holidayId: string): Promise<void> {
     console.error('Error deleting tax holiday:', error);
     throw new Error('Failed to delete tax holiday');
   }
-}
+});
 
 export async function createDefaultTaxSettings(clientId: string): Promise<IClientTaxSettings> {
   const taxService = new TaxService();
@@ -575,22 +534,19 @@ export async function createDefaultTaxSettings(clientId: string): Promise<IClien
  * @param taxExemptionCertificate - Optional tax exemption certificate number.
  * @returns A promise that resolves to the updated client's tax exempt status.
  */
-export async function updateClientTaxExemptStatus(
+export const updateClientTaxExemptStatus = withAuth(async (
+  user,
+  { tenant },
   clientId: string,
   isTaxExempt: boolean,
   taxExemptionCertificate?: string
-): Promise<{ is_tax_exempt: boolean; tax_exemption_certificate?: string }> {
+): Promise<{ is_tax_exempt: boolean; tax_exemption_certificate?: string }> => {
   try {
-    const currentUser = await getCurrentUserAsync();
-    if (!currentUser) {
-      throw new Error('No authenticated user found');
-    }
-
-    if (!(await hasPermissionAsync(currentUser, 'client', 'update'))) {
+    if (!(hasPermission(user, 'client', 'update'))) {
       throw new Error('Permission denied: Cannot update client tax settings');
     }
 
-    const { knex, tenant } = await createTenantKnex(currentUser.tenant);
+    const { knex } = await createTenantKnex();
     if (!tenant) {
       throw new Error('Tenant context is required');
     }
@@ -626,7 +582,7 @@ export async function updateClientTaxExemptStatus(
       // Create audit log entry for tax exempt status change
       const { auditLog } = await import('@alga-psa/db');
       await auditLog(trx, {
-        userId: currentUser.user_id,
+        userId: user.user_id,
         operation: 'UPDATE',
         tableName: 'clients',
         recordId: clientId,
@@ -659,22 +615,20 @@ export async function updateClientTaxExemptStatus(
     }
     throw new Error('Failed to update tax exempt status');
   }
-}
+});
 
 /**
  * Fetches a client's current tax exempt status.
  * @param clientId - The ID of the client.
  * @returns A promise that resolves to the client's tax exempt info.
  */
-export async function getClientTaxExemptStatus(
+export const getClientTaxExemptStatus = withAuth(async (
+  user,
+  { tenant },
   clientId: string
-): Promise<{ is_tax_exempt: boolean; tax_exemption_certificate?: string } | null> {
+): Promise<{ is_tax_exempt: boolean; tax_exemption_certificate?: string } | null> => {
   try {
-    const currentUser = await getCurrentUserAsync();
-    if (!currentUser) {
-      throw new Error('Unauthorized');
-    }
-    const { knex, tenant } = await createTenantKnex(currentUser.tenant);
+    const { knex } = await createTenantKnex();
     if (!tenant) {
       throw new Error('Tenant context is required');
     }
@@ -699,7 +653,7 @@ export async function getClientTaxExemptStatus(
     }
     throw new Error('Failed to fetch tax exempt status');
   }
-}
+});
 
 /**
  * Fetches tenant-level tax source settings.
@@ -707,24 +661,16 @@ export async function getClientTaxExemptStatus(
  * the invoice is exported to, not configured in settings.
  * @returns A promise that resolves to the tenant tax settings.
  */
-export async function getTenantTaxSettings(): Promise<{
+export const getTenantTaxSettings = withAuth(async (user, { tenant }): Promise<{
   default_tax_source: 'internal' | 'external' | 'pending_external';
   allow_external_tax_override: boolean;
-} | null> {
+} | null> => {
   try {
-    const currentUser = await getCurrentUserAsync();
-    if (!currentUser) {
-      throw new Error('No authenticated user found');
-    }
-
-    if (!currentUser.tenant) {
-      throw new Error('Tenant is required');
-    }
-
-    const { knex, tenant } = await createTenantKnex(currentUser.tenant);
     if (!tenant) {
       throw new Error('SYSTEM_ERROR: Tenant context not found');
     }
+
+    const { knex } = await createTenantKnex();
 
     const settings = await knex('tenant_settings')
       .where({ tenant })
@@ -750,7 +696,7 @@ export async function getTenantTaxSettings(): Promise<{
     }
     throw new Error('Failed to fetch tenant tax settings');
   }
-}
+});
 
 /**
  * Updates tenant-level tax source settings.
@@ -759,28 +705,24 @@ export async function getTenantTaxSettings(): Promise<{
  * @param settings - The settings to update.
  * @returns A promise that resolves when the settings are updated.
  */
-export async function updateTenantTaxSettings(settings: {
-  default_tax_source: 'internal' | 'external' | 'pending_external';
-  allow_external_tax_override: boolean;
-}): Promise<void> {
+export const updateTenantTaxSettings = withAuth(async (
+  user,
+  { tenant },
+  settings: {
+    default_tax_source: 'internal' | 'external' | 'pending_external';
+    allow_external_tax_override: boolean;
+  }
+): Promise<void> => {
   try {
-    const currentUser = await getCurrentUserAsync();
-    if (!currentUser) {
-      throw new Error('No authenticated user found');
-    }
-
-    if (!(await hasPermissionAsync(currentUser, 'billing', 'update'))) {
+    if (!(hasPermission(user, 'billing', 'update'))) {
       throw new Error('Permission denied: Cannot update tenant tax settings');
     }
 
-    if (!currentUser.tenant) {
-      throw new Error('Tenant is required');
-    }
-
-    const { knex, tenant } = await createTenantKnex(currentUser.tenant);
     if (!tenant) {
       throw new Error('SYSTEM_ERROR: Tenant context not found');
     }
+
+    const { knex } = await createTenantKnex();
 
     const updateData = {
       default_tax_source: settings.default_tax_source,
@@ -810,4 +752,4 @@ export async function updateTenantTaxSettings(settings: {
     }
     throw new Error('Failed to update tenant tax settings');
   }
-}
+});

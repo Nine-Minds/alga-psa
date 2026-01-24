@@ -2,11 +2,11 @@
 
 import { createTenantKnex } from '@alga-psa/db';
 import { withTransaction } from '@alga-psa/db';
+import { withAuth } from '@alga-psa/auth';
 import { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 import Document from '../models/document';
 import DocumentAssociation from '@alga-psa/documents/models/documentAssociation';
-import { getCurrentUserAsync } from '../lib/authHelpers';
 import { CacheFactory } from '../cache/CacheFactory';
 import type { IDocument, IDocumentAssociationInput } from '@alga-psa/types';
 import { publishEvent } from '@alga-psa/event-bus/publishers';
@@ -28,19 +28,12 @@ interface CreateBlockDocumentInput extends BlockContentInput {
 }
 
 // Create a new document with block content
-export async function createBlockDocument(
+export const createBlockDocument = withAuth(async (
+  user,
+  { tenant },
   input: CreateBlockDocumentInput
-): Promise<{ document_id: string; content_id: string }> {
-  const { knex, tenant } = await createTenantKnex();
-  if (!tenant) {
-    throw new Error('No tenant found');
-  }
-
-  // Get current user
-  const currentUser = await getCurrentUserAsync();
-  if (!currentUser) {
-    throw new Error('No authenticated user found');
-  }
+): Promise<{ document_id: string; content_id: string }> => {
+  const { knex } = await createTenantKnex();
 
   try {
     let createdAssociation:
@@ -55,8 +48,8 @@ export async function createBlockDocument(
       const documentData: IDocument = {
         document_id: documentId,
         document_name: input.document_name,
-        user_id: input.user_id || currentUser.user_id,
-        created_by: input.user_id || currentUser.user_id,
+        user_id: input.user_id || user.user_id,
+        created_by: input.user_id || user.user_id,
         tenant,
         type_id: input.type_id || null,
         folder_path: input.folder_path === null ? undefined : input.folder_path,
@@ -128,12 +121,12 @@ export async function createBlockDocument(
     }
 
     // After transaction commits successfully, publish event for mention notifications
-    const user = await knex('users')
+    const dbUser = await knex('users')
       .select('first_name', 'last_name')
-      .where({ user_id: input.user_id || currentUser.user_id, tenant })
+      .where({ user_id: input.user_id || user.user_id, tenant })
       .first();
 
-    const authorName = user ? `${user.first_name} ${user.last_name}` : 'Unknown User';
+    const authorName = dbUser ? `${dbUser.first_name} ${dbUser.last_name}` : 'Unknown User';
 
     // Publish USER_MENTIONED_IN_DOCUMENT event
     try {
@@ -143,7 +136,7 @@ export async function createBlockDocument(
           tenantId: tenant,
           documentId: result.document_id,
           documentName: result.document_name,
-          userId: input.user_id || currentUser.user_id,
+          userId: input.user_id || user.user_id,
           content: typeof result.block_data === 'string' ? result.block_data : JSON.stringify(result.block_data)
         }
       });
@@ -161,14 +154,11 @@ export async function createBlockDocument(
     console.error('Error creating block document:', error);
     throw new Error('Failed to create block document');
   }
-}
+});
 
 // Get document block content
-export async function getBlockContent(documentId: string) {
-  const { knex, tenant } = await createTenantKnex();
-  if (!tenant) {
-    throw new Error('No tenant found');
-  }
+export const getBlockContent = withAuth(async (_user, { tenant }, documentId: string) => {
+  const { knex } = await createTenantKnex();
 
   try {
     const content = await withTransaction(knex, async (trx: Knex.Transaction) => {
@@ -186,17 +176,16 @@ export async function getBlockContent(documentId: string) {
     console.error('Error getting block content:', error);
     throw new Error('Failed to get block content');
   }
-}
+});
 
 // Update or create document block content
-export async function updateBlockContent(
+export const updateBlockContent = withAuth(async (
+  _user,
+  { tenant },
   documentId: string,
   input: BlockContentInput & { user_id: string }
-) {
-  const { knex, tenant } = await createTenantKnex();
-  if (!tenant) {
-    throw new Error('No tenant found');
-  }
+) => {
+  const { knex } = await createTenantKnex();
 
   try {
     const result = await withTransaction(knex, async (trx: Knex.Transaction) => {
@@ -274,12 +263,12 @@ export async function updateBlockContent(
 
     // After transaction commits successfully, publish event
     // Get user details for event
-    const user = await knex('users')
+    const dbUser = await knex('users')
       .select('first_name', 'last_name')
       .where({ user_id: input.user_id, tenant })
       .first();
 
-    const authorName = user ? `${user.first_name} ${user.last_name}` : 'Unknown User';
+    const authorName = dbUser ? `${dbUser.first_name} ${dbUser.last_name}` : 'Unknown User';
 
     // Publish USER_MENTIONED_IN_DOCUMENT event for mention notifications
     try {
@@ -316,14 +305,11 @@ export async function updateBlockContent(
     console.error('Error updating block content:', error);
     throw new Error('Failed to update block content');
   }
-}
+});
 
 // Delete document block content
-export async function deleteBlockContent(documentId: string): Promise<void> {
-  const { knex, tenant } = await createTenantKnex();
-  if (!tenant) {
-    throw new Error('No tenant found');
-  }
+export const deleteBlockContent = withAuth(async (_user, { tenant }, documentId: string): Promise<void> => {
+  const { knex } = await createTenantKnex();
 
   try {
     await withTransaction(knex, async (trx: Knex.Transaction) => {
@@ -338,4 +324,4 @@ export async function deleteBlockContent(documentId: string): Promise<void> {
     console.error('Error deleting block content:', error);
     throw new Error('Failed to delete block content');
   }
-}
+});

@@ -1,7 +1,7 @@
 'use server';
 
 import { createTenantKnex, withTransaction } from '@alga-psa/db';
-import { getCurrentUser } from '@alga-psa/auth/getCurrentUser';
+import { withAuth } from '@alga-psa/auth';
 import { convertBlockNoteToMarkdown } from '@alga-psa/documents/lib/blocknoteUtils';
 import { publishEvent } from '@alga-psa/event-bus/publishers';
 import type { IProjectTaskComment, IProjectTaskCommentWithUser } from '@alga-psa/types';
@@ -11,26 +11,22 @@ import { Knex } from 'knex';
 /**
  * Create a new task comment
  */
-export async function createTaskComment(
+export const createTaskComment = withAuth(async (
+  user,
+  { tenant },
   comment: Omit<IProjectTaskComment, 'taskCommentId' | 'tenant' | 'createdAt' | 'authorType' | 'markdownContent' | 'userId'>
-): Promise<string> {
-  const { knex: db, tenant } = await createTenantKnex();
+): Promise<string> => {
+  const { knex: db } = await createTenantKnex();
 
   return await withTransaction(db, async (trx: Knex.Transaction) => {
-    const currentUser = await getCurrentUser();
-
-    if (!currentUser) {
-      throw new Error('User not authenticated');
-    }
-
-    const userId = currentUser.user_id;
+    const userId = user.user_id;
 
     // Verify user is internal
-    const user = await trx('users')
+    const userRecord = await trx('users')
       .where({ user_id: userId, tenant })
       .first();
 
-    if (!user || user.user_type !== 'internal') {
+    if (!userRecord || userRecord.user_type !== 'internal') {
       throw new Error('Only internal users can comment on tasks');
     }
 
@@ -82,15 +78,17 @@ export async function createTaskComment(
 
     return newComment.task_comment_id;
   });
-}
+});
 
 /**
  * Get all comments for a task
  */
-export async function getTaskComments(
+export const getTaskComments = withAuth(async (
+  _user,
+  { tenant },
   taskId: string
-): Promise<IProjectTaskCommentWithUser[]> {
-  const { knex: db, tenant } = await createTenantKnex();
+): Promise<IProjectTaskCommentWithUser[]> => {
+  const { knex: db } = await createTenantKnex();
 
   const comments = await db('project_task_comments')
     .where({ 'project_task_comments.task_id': taskId, 'project_task_comments.tenant': tenant })
@@ -127,23 +125,19 @@ export async function getTaskComments(
     email: comment.email,
     avatarUrl: avatarUrls.get(comment.user_id) || null,
   }));
-}
+});
 
 /**
  * Update a task comment
  */
-export async function updateTaskComment(
+export const updateTaskComment = withAuth(async (
+  user,
+  { tenant },
   taskCommentId: string,
   updates: Partial<Pick<IProjectTaskComment, 'note'>>
-): Promise<void> {
-  const { knex: db, tenant } = await createTenantKnex();
-  const currentUser = await getCurrentUser();
-
-  if (!currentUser) {
-    throw new Error('User not authenticated');
-  }
-
-  const userId = currentUser.user_id;
+): Promise<void> => {
+  const { knex: db } = await createTenantKnex();
+  const userId = user.user_id;
 
   return await withTransaction(db, async (trx: Knex.Transaction) => {
     const existingComment = await trx('project_task_comments')
@@ -156,11 +150,11 @@ export async function updateTaskComment(
 
     // Permission check: own comment OR internal user
     if (existingComment.user_id !== userId) {
-      const user = await trx('users')
+      const userRecord = await trx('users')
         .where({ user_id: userId, tenant })
         .first();
 
-      if (!user || user.user_type !== 'internal') {
+      if (!userRecord || userRecord.user_type !== 'internal') {
         throw new Error('You can only edit your own comments');
       }
     }
@@ -209,22 +203,18 @@ export async function updateTaskComment(
       }
     });
   });
-}
+});
 
 /**
  * Delete a task comment
  */
-export async function deleteTaskComment(
+export const deleteTaskComment = withAuth(async (
+  user,
+  { tenant },
   taskCommentId: string
-): Promise<void> {
-  const { knex: db, tenant } = await createTenantKnex();
-  const currentUser = await getCurrentUser();
-
-  if (!currentUser) {
-    throw new Error('User not authenticated');
-  }
-
-  const userId = currentUser.user_id;
+): Promise<void> => {
+  const { knex: db } = await createTenantKnex();
+  const userId = user.user_id;
 
   return await withTransaction(db, async (trx: Knex.Transaction) => {
     const existingComment = await trx('project_task_comments')
@@ -237,11 +227,11 @@ export async function deleteTaskComment(
 
     // Permission check: own comment OR internal user
     if (existingComment.user_id !== userId) {
-      const user = await trx('users')
+      const userRecord = await trx('users')
         .where({ user_id: userId, tenant })
         .first();
 
-      if (!user || user.user_type !== 'internal') {
+      if (!userRecord || userRecord.user_type !== 'internal') {
         throw new Error('You can only delete your own comments');
       }
     }
@@ -251,13 +241,17 @@ export async function deleteTaskComment(
       .where({ task_comment_id: taskCommentId, tenant })
       .del();
   });
-}
+});
 
 /**
  * Get comment count for a task
  */
-export async function getTaskCommentCount(taskId: string): Promise<number> {
-  const { knex: db, tenant } = await createTenantKnex();
+export const getTaskCommentCount = withAuth(async (
+  _user,
+  { tenant },
+  taskId: string
+): Promise<number> => {
+  const { knex: db } = await createTenantKnex();
 
   const result = await db('project_task_comments')
     .where({ task_id: taskId, tenant })
@@ -265,4 +259,4 @@ export async function getTaskCommentCount(taskId: string): Promise<number> {
     .first();
 
   return parseInt(result?.count as string) || 0;
-}
+});

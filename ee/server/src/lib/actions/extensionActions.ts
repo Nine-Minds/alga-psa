@@ -8,8 +8,7 @@ import { ExtensionStorageService } from '../extensions/storage/storageService'
 import logger from '@alga-psa/core/logger'
 import { Extension, ExtensionManifest } from '../extensions/types'
 import { Knex } from 'knex'
-import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions'
-import { hasPermission } from 'server/src/lib/auth/rbac'
+import { withAuth, hasPermission } from '@alga-psa/auth'
 import {
   deleteInstallSecretsRecord,
   getInstallConfig,
@@ -26,15 +25,9 @@ import { toggleExtensionV2, uninstallExtensionV2 } from './extRegistryV2Actions'
 /**
  * Fetch all extensions for the current tenant
  */
-export async function fetchExtensions(): Promise<Extension[]> {
-  const { knex, tenant } = await createTenantKnex()
-  
-  if (!tenant) {
-    throw new Error('Tenant not found')
-  }
+export const fetchExtensions = withAuth(async (user, { tenant }): Promise<Extension[]> => {
+  const { knex } = await createTenantKnex()
 
-  const user = await getCurrentUser()
-  if (!user) throw new Error('User not authenticated')
   if (user.user_type === 'client') throw new Error('Insufficient permissions')
   const allowed = await hasPermission(user, 'extension', 'read', knex)
   if (!allowed) throw new Error('Insufficient permissions')
@@ -99,20 +92,14 @@ export async function fetchExtensions(): Promise<Extension[]> {
     }
     throw error
   }
-}
+})
 
 /**
  * Fetch a specific extension by ID
  */
-export async function fetchExtensionById(extensionId: string): Promise<Extension | null> {
-  const { knex, tenant } = await createTenantKnex()
-  
-  if (!tenant) {
-    throw new Error('Tenant not found')
-  }
+export const fetchExtensionById = withAuth(async (user, { tenant }, extensionId: string): Promise<Extension | null> => {
+  const { knex } = await createTenantKnex()
 
-  const user = await getCurrentUser()
-  if (!user) throw new Error('User not authenticated')
   if (user.user_type === 'client') throw new Error('Insufficient permissions')
   const allowed = await hasPermission(user, 'extension', 'read', knex)
   if (!allowed) throw new Error('Insufficient permissions')
@@ -181,7 +168,7 @@ export async function fetchExtensionById(extensionId: string): Promise<Extension
     const registry = new ExtensionRegistry(trx)
     return await registry.getExtension(extensionId, { tenant_id: tenant })
   })
-}
+})
 
 /**
  * Enable or disable an extension
@@ -211,13 +198,9 @@ export async function uninstallExtension(extensionId: string): Promise<{ success
 /**
  * Install an extension from uploaded file
  */
-export async function installExtension(formData: FormData): Promise<{ success: boolean; message: string; extensionId?: string }> {
-  const { knex, tenant } = await createTenantKnex()
-  
-  if (!tenant) {
-    throw new Error('Tenant not found')
-  }
-  
+export const installExtension = withAuth(async (user, { tenant }, formData: FormData): Promise<{ success: boolean; message: string; extensionId?: string }> => {
+  const { knex } = await createTenantKnex()
+
   try {
     const file = formData.get('extension') as File
     if (!file) {
@@ -256,27 +239,23 @@ export async function installExtension(formData: FormData): Promise<{ success: b
       // Revalidate the extensions page
       revalidatePath('/msp/settings/extensions')
       
-      return { 
-        success: true, 
+      return {
+        success: true,
         message: 'Extension installed successfully',
-        extensionId: extension.id 
+        extensionId: extension.id
       }
     })
   } catch (error) {
     logger.error('Failed to install extension', { error })
     return { success: false, message: 'Failed to install extension' }
   }
-}
+})
 
 /**
  * Get extension settings
  */
-export async function getExtensionSettings(extensionId: string): Promise<Record<string, any> | null> {
-  const { knex, tenant } = await createTenantKnex()
-  
-  if (!tenant) {
-    throw new Error('Tenant not found')
-  }
+export const getExtensionSettings = withAuth(async (user, { tenant }, extensionId: string): Promise<Record<string, any> | null> => {
+  const { knex } = await createTenantKnex()
 
   const installConfig = await lookupInstallConfig(tenant, extensionId)
   if (installConfig) {
@@ -293,20 +272,18 @@ export async function getExtensionSettings(extensionId: string): Promise<Record<
     logger.error('Failed to get extension settings', { extensionId, error })
     return null
   }
-}
+})
 
 /**
  * Update extension settings
  */
-export async function updateExtensionSettings(
-  extensionId: string, 
+export const updateExtensionSettings = withAuth(async (
+  user,
+  { tenant },
+  extensionId: string,
   settings: Record<string, any>
-): Promise<{ success: boolean; message: string }> {
-  const { knex, tenant } = await createTenantKnex()
-  
-  if (!tenant) {
-    throw new Error('Tenant not found')
-  }
+): Promise<{ success: boolean; message: string }> => {
+  const { knex } = await createTenantKnex()
 
   const installConfig = await lookupInstallConfig(tenant, extensionId)
   if (installConfig) {
@@ -348,17 +325,13 @@ export async function updateExtensionSettings(
     logger.error('Failed to update extension settings', { extensionId, error })
     return { success: false, message: 'Failed to update settings' }
   }
-}
+})
 
 /**
  * Reset extension settings to default
  */
-export async function resetExtensionSettings(extensionId: string): Promise<{ success: boolean; message: string }> {
-  const { knex, tenant } = await createTenantKnex()
-  
-  if (!tenant) {
-    throw new Error('Tenant not found')
-  }
+export const resetExtensionSettings = withAuth(async (user, { tenant }, extensionId: string): Promise<{ success: boolean; message: string }> => {
+  const { knex } = await createTenantKnex()
 
   const installConfig = await lookupInstallConfig(tenant, extensionId)
   if (installConfig) {
@@ -400,7 +373,7 @@ export async function resetExtensionSettings(extensionId: string): Promise<{ suc
     logger.error('Failed to reset extension settings', { extensionId, error })
     return { success: false, message: 'Failed to reset settings' }
   }
-}
+})
 
 export interface ExtensionSecretsMetadata {
   installId: string
@@ -408,12 +381,7 @@ export interface ExtensionSecretsMetadata {
   hasEnvelope: boolean
 }
 
-export async function getExtensionSecretsMetadata(extensionId: string): Promise<ExtensionSecretsMetadata | null> {
-  const { tenant } = await createTenantKnex()
-  if (!tenant) {
-    throw new Error('Tenant not found')
-  }
-
+export const getExtensionSecretsMetadata = withAuth(async (user, { tenant }, extensionId: string): Promise<ExtensionSecretsMetadata | null> => {
   const installConfig = await lookupInstallConfig(tenant, extensionId)
   if (!installConfig) {
     return null
@@ -424,18 +392,15 @@ export async function getExtensionSecretsMetadata(extensionId: string): Promise<
     secretsVersion: installConfig.secretsVersion ?? null,
     hasEnvelope: Boolean(installConfig.secretEnvelope),
   }
-}
+})
 
-export async function updateExtensionSecrets(
+export const updateExtensionSecrets = withAuth(async (
+  user,
+  { tenant },
   extensionId: string,
   secrets: Record<string, string>,
   options?: { clear?: boolean; expiresAt?: Date | string | null }
-): Promise<{ success: boolean; message: string }> {
-  const { tenant } = await createTenantKnex()
-  if (!tenant) {
-    throw new Error('Tenant not found')
-  }
-
+): Promise<{ success: boolean; message: string }> => {
   const installConfig = await lookupInstallConfig(tenant, extensionId)
   if (!installConfig) {
     return { success: false, message: 'Extension install not found' }
@@ -472,7 +437,7 @@ export async function updateExtensionSecrets(
     logger.error('Failed to update extension secrets', { extensionId, error })
     return { success: false, message: 'Failed to update secrets' }
   }
-}
+})
 
 export interface ExtensionApiEndpointOption {
   id: string
@@ -485,15 +450,10 @@ export interface ExtensionApiEndpointOption {
  * Returns the manifest-declared API endpoints for the currently-installed version of an extension.
  * Used for scheduled tasks endpoint selection.
  */
-export async function getExtensionApiEndpoints(extensionId: string): Promise<ExtensionApiEndpointOption[]> {
-  const user = await getCurrentUser()
-  if (!user) throw new Error('User not authenticated')
+export const getExtensionApiEndpoints = withAuth(async (user, { tenant }, extensionId: string): Promise<ExtensionApiEndpointOption[]> => {
   if (user.user_type === 'client') throw new Error('Insufficient permissions')
 
-  const { knex, tenant } = await createTenantKnex()
-  if (!tenant) {
-    throw new Error('Tenant not found')
-  }
+  const { knex } = await createTenantKnex()
   const allowed = await hasPermission(user, 'extension', 'read', knex)
   if (!allowed) throw new Error('Insufficient permissions')
 
@@ -522,7 +482,7 @@ export async function getExtensionApiEndpoints(extensionId: string): Promise<Ext
       path: row.path,
       handler: row.handler,
     }))
-}
+})
 
 async function lookupInstallConfig(tenantId: string, extensionId: string) {
   try {

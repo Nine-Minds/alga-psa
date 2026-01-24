@@ -8,28 +8,27 @@ import { ContractLineServiceConfigurationService } from '../services/contractLin
 import { IContractLineServiceFixedConfig } from '@alga-psa/types';
 import ContractLineFixedConfig from '../models/contractLineFixedConfig'; // Added import for new model
 import { withTransaction } from '@alga-psa/db';
-import { getCurrentUser } from '@alga-psa/auth/getCurrentUser';
-import { hasPermissionAsync, getSessionAsync, getAnalyticsAsync } from '../lib/authHelpers';
+import { withAuth } from '@alga-psa/auth';
+import { hasPermission } from '@alga-psa/auth/rbac';
+import { getAnalyticsAsync } from '../lib/authHelpers';
 
 
 
 
-
-export async function getContractLines(): Promise<IContractLine[]> {
+export const getContractLines = withAuth(async (
+    user,
+    { tenant }
+): Promise<IContractLine[]> => {
     try {
         const isBypass = process.env.E2E_AUTH_BYPASS === 'true';
-        const currentUser = isBypass ? ({} as any) : await getCurrentUser();
-        if (!currentUser && !isBypass) {
-            throw new Error('No authenticated user found');
-        }
 
-        const { knex, tenant } = await createTenantKnex(currentUser.tenant);
+        const { knex } = await createTenantKnex();
         if (!tenant) {
             throw new Error("tenant context not found");
         }
 
         return await withTransaction(knex, async (trx: Knex.Transaction) => {
-            if (!isBypass && !await hasPermissionAsync(currentUser, 'billing', 'read')) {
+            if (!isBypass && !hasPermission(user, 'billing', 'read')) {
                 throw new Error('Permission denied: Cannot read contract lines');
             }
 
@@ -50,26 +49,26 @@ export async function getContractLines(): Promise<IContractLine[]> {
         }
         throw new Error(`Failed to fetch client contract lines: ${error}`);
     }
-}
+});
 
 // New function to get a single contract line by ID
-export async function getContractLineById(planId: string): Promise<IContractLine | null> {
+export const getContractLineById = withAuth(async (
+    user,
+    { tenant },
+    planId: string
+): Promise<IContractLine | null> => {
     let tenant_copy: string = '';
     try {
         const isBypass = process.env.E2E_AUTH_BYPASS === 'true';
-        const currentUser = isBypass ? ({} as any) : await getCurrentUser();
-        if (!currentUser && !isBypass) {
-            throw new Error('No authenticated user found');
-        }
 
-        const { knex, tenant } = await createTenantKnex(currentUser.tenant);
+        const { knex } = await createTenantKnex();
         if (!tenant) {
             throw new Error("tenant context not found");
         }
         tenant_copy = tenant;
 
         return await withTransaction(knex, async (trx: Knex.Transaction) => {
-            if (!isBypass && !await hasPermissionAsync(currentUser, 'billing', 'read')) {
+            if (!isBypass && !hasPermission(user, 'billing', 'read')) {
                 throw new Error('Permission denied: Cannot read contract lines');
             }
 
@@ -125,24 +124,21 @@ export async function getContractLineById(planId: string): Promise<IContractLine
         }
         throw new Error(`Failed to fetch contract line ${planId} in tenant ${tenant_copy}: ${error}`);
     }
-}
+});
 
-export async function createContractLine(
+export const createContractLine = withAuth(async (
+    user,
+    { tenant },
     planData: Omit<IContractLine, 'contract_line_id'>
-): Promise<IContractLine> {
+): Promise<IContractLine> => {
     try {
-        const currentUser = await getCurrentUser();
-        if (!currentUser) {
-            throw new Error('No authenticated user found');
-        }
-
-        const { knex, tenant } = await createTenantKnex(currentUser.tenant);
+        const { knex } = await createTenantKnex();
         if (!tenant) {
             throw new Error("tenant context not found");
         }
 
         return await withTransaction(knex, async (trx: Knex.Transaction) => {
-            if (!await hasPermissionAsync(currentUser, 'billing', 'create')) {
+            if (!hasPermission(user, 'billing', 'create')) {
                 throw new Error('Permission denied: Cannot create contract lines');
             }
 
@@ -161,7 +157,7 @@ export async function createContractLine(
                 contract_line_id: enrichedPlan.contract_line_id,
                 contract_line_name: enrichedPlan.contract_line_name,
                 contract_line_type: enrichedPlan.contract_line_type
-            }, currentUser.user_id);
+            }, user.user_id);
 
             return enrichedPlan;
         });
@@ -172,25 +168,22 @@ export async function createContractLine(
         }
         throw new Error(`Failed to create contract line: ${error}`);
     }
-}
+});
 
-export async function updateContractLine(
+export const updateContractLine = withAuth(async (
+    user,
+    { tenant },
     planId: string,
     updateData: Partial<IContractLine>
-): Promise<IContractLine> {
+): Promise<IContractLine> => {
     try {
-        const currentUser = await getCurrentUser();
-        if (!currentUser) {
-            throw new Error('No authenticated user found');
-        }
-
-        const { knex, tenant } = await createTenantKnex(currentUser.tenant);
+        const { knex } = await createTenantKnex();
         if (!tenant) {
             throw new Error("tenant context not found");
         }
 
         return await withTransaction(knex, async (trx: Knex.Transaction) => {
-            if (!await hasPermissionAsync(currentUser, 'billing', 'update')) {
+            if (!hasPermission(user, 'billing', 'update')) {
                 throw new Error('Permission denied: Cannot update contract lines');
             }
 
@@ -228,7 +221,7 @@ export async function updateContractLine(
                 contract_line_name: enrichedPlan.contract_line_name,
                 contract_line_type: enrichedPlan.contract_line_type,
                 updated_fields: Object.keys(safeUpdateData)
-            }, currentUser.user_id);
+            }, user.user_id);
 
             return enrichedPlan;
         });
@@ -243,24 +236,21 @@ export async function updateContractLine(
         }
         throw new Error(`Failed to update contract line ${planId}: ${error}`);
     }
-}
+});
 
-export async function upsertContractLineTerms(
+export const upsertContractLineTerms = withAuth(async (
+    user,
+    { tenant },
     contractLineId: string,
     billingTiming: 'arrears' | 'advance'
-): Promise<void> {
-    const currentUser = await getCurrentUser();
-    if (!currentUser) {
-        throw new Error('No authenticated user found');
-    }
-
-    const { knex, tenant } = await createTenantKnex(currentUser.tenant);
+): Promise<void> => {
+    const { knex } = await createTenantKnex();
     if (!tenant) {
         throw new Error("tenant context not found");
     }
 
     await withTransaction(knex, async (trx: Knex.Transaction) => {
-        if (!await hasPermissionAsync(currentUser, 'billing', 'update')) {
+        if (!hasPermission(user, 'billing', 'update')) {
             throw new Error('Permission denied: Cannot update contract line terms');
         }
 
@@ -290,22 +280,21 @@ export async function upsertContractLineTerms(
                 updated_at: trx.fn.now(),
             });
     });
-}
+});
 
-export async function deleteContractLine(planId: string): Promise<void> {
-    const currentUser = await getCurrentUser();
-    if (!currentUser) {
-        throw new Error('No authenticated user found');
-    }
-
+export const deleteContractLine = withAuth(async (
+    user,
+    { tenant },
+    planId: string
+): Promise<void> => {
     try {
-        const { knex, tenant } = await createTenantKnex(currentUser.tenant); // Capture knex instance here
+        const { knex } = await createTenantKnex(); // Capture knex instance here
         if (!tenant) {
             throw new Error("tenant context not found");
         }
 
         await withTransaction(knex, async (trx: Knex.Transaction) => {
-            if (!await hasPermissionAsync(currentUser, 'billing', 'delete')) {
+            if (!hasPermission(user, 'billing', 'delete')) {
                 throw new Error('Permission denied: Cannot delete contract lines');
             }
 
@@ -376,7 +365,7 @@ export async function deleteContractLine(planId: string): Promise<void> {
             // We cast to 'any' to access potential driver-specific properties like 'code'
             if ((error as any).code === '23503') {
                  // Fetch client IDs associated with the plan
-                 const { knex: queryKnex, tenant: queryTenant } = await createTenantKnex(currentUser.tenant);
+                 const { knex: queryKnex, tenant: queryTenant } = await createTenantKnex();
                  const clientPlanLinks = await withTransaction(queryKnex, async (trx: Knex.Transaction) => {
                      return await trx('client_contract_lines')
                          .select('client_id')
@@ -419,13 +408,15 @@ export async function deleteContractLine(planId: string): Promise<void> {
         // Fallback for non-Error objects
         throw new Error(`Failed to delete contract line: ${error}`);
     }
-}
+});
 
 /**
  * Gets the combined fixed plan configuration (plan-level and service-level)
  * Fetches proration/alignment from contract_line_fixed_config and base_rate from contract_line_service_fixed_config.
  */
-export async function getCombinedFixedPlanConfiguration(
+export const getCombinedFixedPlanConfiguration = withAuth(async (
+    user,
+    { tenant },
     planId: string,
     serviceId: string
 ): Promise<{
@@ -433,20 +424,15 @@ export async function getCombinedFixedPlanConfiguration(
     enable_proration: boolean;
     billing_cycle_alignment: 'start' | 'end' | 'prorated';
     config_id?: string; // Service-specific config ID
-} | null> {
+} | null> => {
     try {
-        const currentUser = await getCurrentUser();
-        if (!currentUser) {
-            throw new Error('No authenticated user found');
-        }
-
-        const { knex, tenant } = await createTenantKnex(currentUser.tenant); // Get knex instance
+        const { knex } = await createTenantKnex(); // Get knex instance
         if (!tenant) {
             throw new Error("tenant context not found");
         }
 
         return await withTransaction(knex, async (trx: Knex.Transaction) => {
-            if (!await hasPermissionAsync(currentUser, 'billing', 'read')) {
+            if (!hasPermission(user, 'billing', 'read')) {
                 throw new Error('Permission denied: Cannot read contract line configurations');
             }
 
@@ -492,26 +478,26 @@ export async function getCombinedFixedPlanConfiguration(
         }
         throw new Error(`Failed to fetch combined fixed plan configuration for plan ${planId}, service ${serviceId}: ${error}`);
     }
-}
+});
 
 /**
  * Gets only the plan-level fixed configuration (proration, alignment)
  */
-export async function getContractLineFixedConfig(planId: string): Promise<IContractLineFixedConfig | null> {
+export const getContractLineFixedConfig = withAuth(async (
+    user,
+    { tenant },
+    planId: string
+): Promise<IContractLineFixedConfig | null> => {
     try {
         const isBypass = process.env.E2E_AUTH_BYPASS === 'true';
-        const currentUser = isBypass ? ({} as any) : await getCurrentUser();
-        if (!currentUser && !isBypass) {
-            throw new Error('No authenticated user found');
-        }
 
-        const { knex, tenant } = await createTenantKnex(currentUser.tenant);
+        const { knex } = await createTenantKnex();
         if (!tenant) {
             throw new Error("tenant context not found");
         }
 
         return await withTransaction(knex, async (trx: Knex.Transaction) => {
-            if (!isBypass && !await hasPermissionAsync(currentUser, 'billing', 'read')) {
+            if (!isBypass && !hasPermission(user, 'billing', 'read')) {
                 throw new Error('Permission denied: Cannot read contract line configurations');
             }
 
@@ -526,29 +512,26 @@ export async function getContractLineFixedConfig(planId: string): Promise<IContr
         }
         throw new Error(`Failed to fetch contract_line_fixed_config for plan ${planId}: ${error}`);
     }
-}
+});
 
 /**
  * Updates the plan-level fixed configuration (proration, alignment) in contract_line_fixed_config.
  * Uses upsert logic: creates if not exists, updates if exists.
  */
-export async function updateContractLineFixedConfig(
+export const updateContractLineFixedConfig = withAuth(async (
+    user,
+    { tenant },
     planId: string,
     configData: Partial<Omit<IContractLineFixedConfig, 'contract_line_id' | 'tenant' | 'created_at' | 'updated_at'>>
-): Promise<boolean> {
+): Promise<boolean> => {
     try {
-        const currentUser = await getCurrentUser();
-        if (!currentUser) {
-            throw new Error('No authenticated user found');
-        }
-
-        const { knex, tenant } = await createTenantKnex(currentUser.tenant);
+        const { knex } = await createTenantKnex();
         if (!tenant) {
             throw new Error("tenant context not found");
         }
 
         return await withTransaction(knex, async (trx: Knex.Transaction) => {
-            if (!await hasPermissionAsync(currentUser, 'billing', 'update')) {
+            if (!hasPermission(user, 'billing', 'update')) {
                 throw new Error('Permission denied: Cannot update contract line configurations');
             }
 
@@ -562,7 +545,7 @@ export async function updateContractLineFixedConfig(
             }
 
             const model = new ContractLineFixedConfig(trx, tenant);
-            
+
             // Prepare data for upsert, ensuring contract_line_id and tenant are included
             // Prepare data for upsert, ensuring contract_line_id, tenant, and base_rate are included
             const upsertData: Omit<IContractLineFixedConfig, 'created_at' | 'updated_at'> & { base_rate?: number | null } = {
@@ -583,7 +566,7 @@ export async function updateContractLineFixedConfig(
         }
         throw new Error(`Failed to upsert contract_line_fixed_config for plan ${planId}: ${error}`);
     }
-}
+});
 
 
 /**
@@ -591,24 +574,21 @@ export async function updateContractLineFixedConfig(
  * Interacts with contract_line_service_fixed_config.
  * Renamed from updateFixedPlanConfiguration.
  */
-export async function updatePlanServiceFixedConfigRate(
+export const updatePlanServiceFixedConfigRate = withAuth(async (
+    user,
+    { tenant },
     planId: string,
     serviceId: string,
     baseRate: number | null // Only accept base_rate
-): Promise<boolean> {
+): Promise<boolean> => {
     try {
-        const currentUser = await getCurrentUser();
-        if (!currentUser) {
-            throw new Error('No authenticated user found');
-        }
-
-        const { knex, tenant } = await createTenantKnex(currentUser.tenant);
+        const { knex } = await createTenantKnex();
         if (!tenant) {
             throw new Error("tenant context not found");
         }
 
         return await withTransaction(knex, async (trx: Knex.Transaction) => {
-            if (!await hasPermissionAsync(currentUser, 'billing', 'update')) {
+            if (!hasPermission(user, 'billing', 'update')) {
                 throw new Error('Permission denied: Cannot update contract line configurations');
             }
 
@@ -623,14 +603,14 @@ export async function updatePlanServiceFixedConfigRate(
 
             // Create configuration service
             const configService = new ContractLineServiceConfigurationService(trx, tenant);
-            
+
             // Get existing configuration for this plan and service
             let config = await configService.getConfigurationForService(planId, serviceId);
-            
+
             if (!config) {
                 // If no configuration exists, create a new one with the provided base_rate
                 console.log(`Creating new fixed plan service configuration for plan ${planId}, service ${serviceId}`);
-                
+
                 const configId = await configService.createConfiguration(
                     { // Base config data
                         contract_line_id: planId,
@@ -643,17 +623,17 @@ export async function updatePlanServiceFixedConfigRate(
                     }
                     // No proration/alignment data passed here anymore
                 );
-                
+
                 return !!configId;
             } else {
                 // Update existing configuration's base_rate
                 console.log(`Updating fixed plan service configuration base_rate for plan ${planId}, service ${serviceId}`);
-                
+
                 // Prepare fixed config update data (only base_rate)
                 const fixedConfigData: Partial<IContractLineServiceFixedConfig> = {
                      base_rate: baseRate
                 };
-                
+
                 // Update the configuration using the service
                 return await configService.updateConfiguration(
                     config.config_id,
@@ -669,4 +649,4 @@ export async function updatePlanServiceFixedConfigRate(
         }
         throw new Error(`Failed to update fixed plan service config rate for plan ${planId}, service ${serviceId}: ${error}`);
     }
-}
+});

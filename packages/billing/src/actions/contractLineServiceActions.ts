@@ -10,7 +10,7 @@ import { ContractLineServiceConfigurationService } from '../services/contractLin
 import * as planServiceConfigActions from './contractLineServiceConfigurationActions';
 import { createTenantKnex } from '@alga-psa/db';
 import { Knex } from 'knex';
-import { getCurrentUser } from '@alga-psa/auth/getCurrentUser';
+import { withAuth } from '@alga-psa/auth';
 
 async function findTemplateLine(
   trx: Knex.Transaction,
@@ -35,12 +35,12 @@ function mapTemplateServiceRow(row: any): IContractLineService {
 /**
  * Get all services for a plan
  */
-export async function getContractLineServices(contractLineId: string): Promise<IContractLineService[]> {
-  const currentUser = await getCurrentUser();
-  if (!currentUser) {
-    throw new Error('Unauthorized');
-  }
-  const { knex: db, tenant } = await createTenantKnex(currentUser.tenant);
+export const getContractLineServices = withAuth(async (
+  user,
+  { tenant },
+  contractLineId: string
+): Promise<IContractLineService[]> => {
+  const { knex: db } = await createTenantKnex();
   if (!tenant) {
     throw new Error('tenant context not found');
   }
@@ -66,17 +66,17 @@ export async function getContractLineServices(contractLineId: string): Promise<I
 
     return services;
   });
-}
+});
 
 /**
  * Get all services for a contract line with service names
  */
-export async function getContractLineServicesWithNames(contractLineId: string): Promise<Array<IContractLineService & { service_name?: string }>> {
-  const currentUser = await getCurrentUser();
-  if (!currentUser) {
-    throw new Error('Unauthorized');
-  }
-  const { knex: db, tenant } = await createTenantKnex(currentUser.tenant);
+export const getContractLineServicesWithNames = withAuth(async (
+  user,
+  { tenant },
+  contractLineId: string
+): Promise<Array<IContractLineService & { service_name?: string }>> => {
+  const { knex: db } = await createTenantKnex();
   return withTransaction(db, async (trx: Knex.Transaction) => {
     const services = await trx('contract_line_services as cls')
       .leftJoin('service_catalog as sc', function() {
@@ -94,17 +94,18 @@ export async function getContractLineServicesWithNames(contractLineId: string): 
 
     return services;
   });
-}
+});
 
 /**
  * Get a specific service in a plan
  */
-export async function getContractLineService(contractLineId: string, serviceId: string): Promise<IContractLineService | null> {
-  const currentUser = await getCurrentUser();
-  if (!currentUser) {
-    throw new Error('Unauthorized');
-  }
-  const { knex: db, tenant } = await createTenantKnex(currentUser.tenant);
+export const getContractLineService = withAuth(async (
+  user,
+  { tenant },
+  contractLineId: string,
+  serviceId: string
+): Promise<IContractLineService | null> => {
+  const { knex: db } = await createTenantKnex();
   if (!tenant) {
     throw new Error('tenant context not found');
   }
@@ -132,7 +133,7 @@ export async function getContractLineService(contractLineId: string, serviceId: 
 
     return service || null;
   });
-}
+});
 
 async function addServiceToTemplateLine(
   trx: Knex.Transaction,
@@ -226,19 +227,17 @@ async function addServiceToTemplateLine(
 /**
  * Add a service to a plan with configuration
  */
-export async function addServiceToContractLine(
+export const addServiceToContractLine = withAuth(async (
+  user,
+  { tenant },
   contractLineId: string,
   serviceId: string,
   quantity?: number,
   customRate?: number,
   configType?: 'Fixed' | 'Hourly' | 'Usage' | 'Bucket',
   typeConfig?: Partial<IContractLineServiceFixedConfig | IContractLineServiceHourlyConfig | IContractLineServiceUsageConfig | IContractLineServiceBucketConfig>
-): Promise<string> {
-  const currentUser = await getCurrentUser();
-  if (!currentUser) {
-    throw new Error('Unauthorized');
-  }
-  const { knex: db, tenant } = await createTenantKnex(currentUser.tenant);
+): Promise<string> => {
+  const { knex: db } = await createTenantKnex();
   if (!tenant) {
     throw new Error('tenant context not found');
   }
@@ -400,7 +399,7 @@ export async function addServiceToContractLine(
 
   // Check if the service is already in the plan
   const existingPlanService = await getContractLineService(contractLineId, serviceId);
-  
+
   // If not, add it to the contract_line_services table
   if (!existingPlanService) {
     await trx('contract_line_services').insert({
@@ -412,9 +411,9 @@ export async function addServiceToContractLine(
 
   // Check if a configuration already exists for this plan-service combination
   const existingConfig = await planServiceConfigActions.getConfigurationForService(contractLineId, serviceId);
-  
+
   let configId: string;
-  
+
   if (existingConfig) {
     // Update existing configuration instead of creating a new one
     await planServiceConfigActions.updateConfiguration(
@@ -452,12 +451,14 @@ export async function addServiceToContractLine(
 
     return configId;
   });
-}
+});
 
 /**
  * Update a service in a plan
  */
-export async function updateContractLineService(
+export const updateContractLineService = withAuth(async (
+  user,
+  { tenant },
   contractLineId: string,
   serviceId: string,
   updates: {
@@ -466,12 +467,8 @@ export async function updateContractLineService(
     typeConfig?: Partial<IContractLineServiceFixedConfig | IContractLineServiceHourlyConfig | IContractLineServiceUsageConfig | IContractLineServiceBucketConfig>;
   },
   rateTiers?: IContractLineServiceRateTier[] // Add rateTiers here
-): Promise<boolean> {
-  const currentUser = await getCurrentUser();
-  if (!currentUser) {
-    throw new Error('Unauthorized');
-  }
-  const { knex: db, tenant } = await createTenantKnex(currentUser.tenant);
+): Promise<boolean> => {
+  const { knex: db } = await createTenantKnex();
   return withTransaction(db, async (trx: Knex.Transaction) => {
 
   // Get configuration ID
@@ -518,17 +515,18 @@ export async function updateContractLineService(
 
     return true;
   });
-}
+});
 
 /**
  * Remove a service from a plan
  */
-export async function removeServiceFromContractLine(contractLineId: string, serviceId: string): Promise<boolean> {
-  const currentUser = await getCurrentUser();
-  if (!currentUser) {
-    throw new Error('Unauthorized');
-  }
-  const { knex: db, tenant } = await createTenantKnex(currentUser.tenant);
+export const removeServiceFromContractLine = withAuth(async (
+  user,
+  { tenant },
+  contractLineId: string,
+  serviceId: string
+): Promise<boolean> => {
+  const { knex: db } = await createTenantKnex();
   if (!tenant) {
     throw new Error('tenant context not found');
   }
@@ -597,24 +595,24 @@ export async function removeServiceFromContractLine(contractLineId: string, serv
 
     return true;
   });
-}
+});
 
 /**
  * Get all services in a plan with their configurations, service type name, and user type rates (for hourly).
  * Bucket configurations are merged into their parent Hourly/Usage configurations as a nested property.
  */
-export async function getContractLineServicesWithConfigurations(contractLineId: string): Promise<{
+export const getContractLineServicesWithConfigurations = withAuth(async (
+  user,
+  { tenant },
+  contractLineId: string
+): Promise<{
   service: IService & { service_type_name?: string };
   configuration: IContractLineServiceConfiguration;
   typeConfig: IContractLineServiceFixedConfig | IContractLineServiceHourlyConfig | IContractLineServiceUsageConfig | IContractLineServiceBucketConfig | null;
   userTypeRates?: IUserTypeRate[];
   bucketConfig?: IContractLineServiceBucketConfig | null; // Add bucketConfig to the return type
-}[]> {
-  const currentUser = await getCurrentUser();
-  if (!currentUser) {
-    throw new Error('Unauthorized');
-  }
-  const { knex: db, tenant } = await createTenantKnex(currentUser.tenant);
+}[]> => {
+  const { knex: db } = await createTenantKnex();
   if (!tenant) {
     throw new Error('tenant context not found');
   }
@@ -759,19 +757,19 @@ export async function getContractLineServicesWithConfigurations(contractLineId: 
 
     return result;
   });
-}
+});
 
-export async function getTemplateLineServicesWithConfigurations(templateLineId: string): Promise<{
+export const getTemplateLineServicesWithConfigurations = withAuth(async (
+  user,
+  { tenant },
+  templateLineId: string
+): Promise<{
   service: IService & { service_type_name?: string };
   configuration: IContractLineServiceConfiguration;
   typeConfig: IContractLineServiceHourlyConfig | IContractLineServiceUsageConfig | IContractLineServiceBucketConfig | null;
   bucketConfig?: IContractLineServiceBucketConfig | null; // Add bucketConfig to the return type
-}[]> {
-  const currentUser = await getCurrentUser();
-  if (!currentUser) {
-    throw new Error('Unauthorized');
-  }
-  const { knex: db, tenant } = await createTenantKnex(currentUser.tenant);
+}[]> => {
+  const { knex: db } = await createTenantKnex();
   return withTransaction(db, async (trx: Knex.Transaction) => {
     const configurations = await trx('contract_template_line_service_configuration')
       .where({
@@ -883,4 +881,4 @@ export async function getTemplateLineServicesWithConfigurations(templateLineId: 
 
     return results;
   });
-}
+});

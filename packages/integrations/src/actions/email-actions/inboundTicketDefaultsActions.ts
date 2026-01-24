@@ -1,16 +1,14 @@
 'use server'
 
 import { createTenantKnex } from '@alga-psa/db';
-import { getCurrentUser } from '@alga-psa/users/actions';
+import { withAuth } from '@alga-psa/auth';
 import type { InboundTicketDefaults } from '@alga-psa/types';
 
-export async function getInboundTicketDefaults(): Promise<{ defaults: InboundTicketDefaults[] }> {
-  const user = await getCurrentUser();
-  if (!user) {
-    throw new Error('User not authenticated');
-  }
-
-  const { knex, tenant } = await createTenantKnex();
+export const getInboundTicketDefaults = withAuth(async (
+  _user,
+  { tenant }
+): Promise<{ defaults: InboundTicketDefaults[] }> => {
+  const { knex } = await createTenantKnex();
   
   try {
     const defaults = await knex('inbound_ticket_defaults')
@@ -40,28 +38,27 @@ export async function getInboundTicketDefaults(): Promise<{ defaults: InboundTic
     console.error('Failed to load inbound ticket defaults:', error);
     return { defaults: [] };
   }
-}
+});
 
-export async function createInboundTicketDefaults(data: {
-  short_name: string;
-  display_name: string;
-  description?: string;
-  board_id?: string;
-  status_id?: string;
-  priority_id?: string;
-  client_id?: string;
-  entered_by?: string | null;
-  category_id?: string;
-  subcategory_id?: string;
-  location_id?: string;
-  is_active?: boolean;
-}): Promise<{ defaults: InboundTicketDefaults }> {
-  const user = await getCurrentUser();
-  if (!user) {
-    throw new Error('User not authenticated');
+export const createInboundTicketDefaults = withAuth(async (
+  _user,
+  { tenant },
+  data: {
+    short_name: string;
+    display_name: string;
+    description?: string;
+    board_id?: string;
+    status_id?: string;
+    priority_id?: string;
+    client_id?: string;
+    entered_by?: string | null;
+    category_id?: string;
+    subcategory_id?: string;
+    location_id?: string;
+    is_active?: boolean;
   }
-
-  const { knex, tenant } = await createTenantKnex();
+): Promise<{ defaults: InboundTicketDefaults }> => {
+  const { knex } = await createTenantKnex();
   
   try {
     // Normalize category/subcategory values to avoid sentinel strings
@@ -118,9 +115,11 @@ export async function createInboundTicketDefaults(data: {
     }
     throw new Error('Failed to create inbound ticket defaults');
   }
-}
+});
 
-export async function updateInboundTicketDefaults(
+export const updateInboundTicketDefaults = withAuth(async (
+  _user,
+  { tenant },
   id: string,
   data: {
     short_name?: string;
@@ -136,13 +135,8 @@ export async function updateInboundTicketDefaults(
     location_id?: string;
     is_active?: boolean;
   }
-): Promise<{ defaults: InboundTicketDefaults }> {
-  const user = await getCurrentUser();
-  if (!user) {
-    throw new Error('User not authenticated');
-  }
-
-  const { knex, tenant } = await createTenantKnex();
+): Promise<{ defaults: InboundTicketDefaults }> => {
+  const { knex } = await createTenantKnex();
   
   try {
     const normalizeUuid = (v?: string | null) => (v && v !== 'no-category' ? v : null);
@@ -214,15 +208,14 @@ export async function updateInboundTicketDefaults(
     }
     throw new Error('Failed to update inbound ticket defaults');
   }
-}
+});
 
-export async function deleteInboundTicketDefaults(id: string): Promise<void> {
-  const user = await getCurrentUser();
-  if (!user) {
-    throw new Error('User not authenticated');
-  }
-
-  const { knex, tenant } = await createTenantKnex();
+export const deleteInboundTicketDefaults = withAuth(async (
+  _user,
+  { tenant },
+  id: string
+): Promise<void> => {
+  const { knex } = await createTenantKnex();
   
   try {
     // Prevent delete if any email providers reference this defaults configuration
@@ -246,15 +239,14 @@ export async function deleteInboundTicketDefaults(id: string): Promise<void> {
     console.error('Failed to delete inbound ticket defaults:', error);
     throw new Error(error instanceof Error ? error.message : 'Failed to delete inbound ticket defaults');
   }
-}
+});
 
-export async function getInboundTicketDefaultsById(id: string): Promise<{ defaults: InboundTicketDefaults | null }> {
-  const user = await getCurrentUser();
-  if (!user) {
-    throw new Error('User not authenticated');
-  }
-
-  const { knex, tenant } = await createTenantKnex();
+export const getInboundTicketDefaultsById = withAuth(async (
+  _user,
+  { tenant },
+  id: string
+): Promise<{ defaults: InboundTicketDefaults | null }> => {
+  const { knex } = await createTenantKnex();
   
   try {
     const defaults = await knex('inbound_ticket_defaults')
@@ -277,4 +269,4 @@ export async function getInboundTicketDefaultsById(id: string): Promise<{ defaul
     console.error('Failed to load inbound ticket defaults:', error);
     return { defaults: null };
   }
-}
+});

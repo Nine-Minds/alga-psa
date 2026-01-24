@@ -1,10 +1,11 @@
 // server/src/components/settings/SettingsPage.tsx
 'use client'
 
+/* global process */
 
-import React, { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { Suspense, useEffect, useMemo, useState } from 'react';
 import dynamic from 'next/dynamic';
-import { Settings, Globe, UserCog, Users, MessageSquare, Layers, Handshake, Bell, Clock, CreditCard, Download, Mail, Plug, Puzzle, KeyRound } from 'lucide-react';
+import { Settings, Globe, UserCog, Users, MessageSquare, Layers, Handshake, Bell, Clock, CreditCard, Download, Mail, Plug, Puzzle, KeyRound, FlaskConical } from 'lucide-react';
 import CustomTabs, { TabContent } from "@alga-psa/ui/components/CustomTabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@alga-psa/ui/components/Card";
 import GeneralSettings from './general/GeneralSettings';
@@ -24,6 +25,11 @@ const TeamManagement = dynamic(() => import('./general/TeamManagement'), {
   loading: () => <SettingsTabSkeleton title="Team Management" description="Loading team configuration..." showTabs={false} />,
   ssr: false
 });
+
+const ExperimentalFeaturesSettings = dynamic(() => import('./general/ExperimentalFeaturesSettings'), {
+  loading: () => <SettingsTabSkeleton title="Experimental Features" description="Loading experimental feature configuration..." showTabs={false} />,
+  ssr: false
+});
 import InteractionSettings from './general/InteractionSettings';
 import { TimeEntrySettings } from '@alga-psa/scheduling/components';
 import { BillingSettings } from '@alga-psa/billing/components'; // Import the new component
@@ -34,11 +40,8 @@ import { useSearchParams } from 'next/navigation';
 import ImportExportSettings from '@/components/settings/import-export/ImportExportSettings';
 // Extensions are only available in Enterprise Edition
 import { EmailSettings } from '@alga-psa/integrations/email/settings/entry';
-import { EmailProviderConfiguration } from '@alga-psa/integrations/components';
-import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import Link from 'next/link';
 // Removed import: import { getCurrentUser } from '@alga-psa/users/actions';
-import SurveySettings from '@alga-psa/surveys/components/SurveySettings';
 import { ProjectSettings } from '@alga-psa/projects/components';
 import { SecretsManagement } from './secrets';
 
@@ -85,7 +88,7 @@ const SettingsPageContent = ({ initialTabParam }: SettingsPageProps): React.JSX.
 
   // Dynamically load the new Installer using stable package paths
   const DynamicInstallComponent = isEEAvailable ? dynamic(() =>
-    import('@product/settings-extensions/entry').then(mod => mod.DynamicInstallExtensionComponent as any),
+    import('@product/settings-extensions/entry').then(mod => mod.DynamicInstallExtensionComponent as unknown as React.ComponentType),
     {
       loading: () => (
         <div className="flex items-center justify-center py-8">
@@ -103,6 +106,7 @@ const SettingsPageContent = ({ initialTabParam }: SettingsPageProps): React.JSX.
   // Map URL slugs (kebab-case) to Tab Labels
   const slugToLabelMap = useMemo<Record<string, string>>(() => ({
     general: 'General',
+    'experimental-features': 'Experimental Features',
     'client-portal': 'Client Portal',
     users: 'Users',
     teams: 'Teams',
@@ -119,14 +123,6 @@ const SettingsPageContent = ({ initialTabParam }: SettingsPageProps): React.JSX.
     ...(isEEAvailable && { extensions: 'Extensions' }) // Only add if EE is available
   }), [isEEAvailable]);
 
-  // Map Tab Labels back to URL slugs (kebab-case)
-  const labelToSlugMap = useMemo<Record<string, string>>(() => {
-    return Object.entries(slugToLabelMap).reduce((acc, [slug, label]) => {
-      acc[label] = slug;
-      return acc;
-    }, {} as Record<string, string>);
-  }, [slugToLabelMap]);
-
   const initialTabLabel = useMemo(() => {
     const mappedLabel = tabParam
       ? slugToLabelMap[tabParam.toLowerCase()]
@@ -135,46 +131,14 @@ const SettingsPageContent = ({ initialTabParam }: SettingsPageProps): React.JSX.
     return mappedLabel ?? 'General';
   }, [tabParam, slugToLabelMap]);
 
-  // Initialize with URL-aware default so SSR and hydration stay aligned
+  // Initialize with URL-aware default so hydration stays aligned
   const [activeTab, setActiveTab] = useState<string>(initialTabLabel);
-  const hydrationReadyRef = useRef(false);
 
-  // Update URL when tab changes (after hydration)
-  const updateURL = useCallback((tabLabel: string) => {
-    if (!hydrationReadyRef.current) return;
-
-    const urlSlug = labelToSlugMap[tabLabel];
-
-    // Build new URL preserving existing parameters
-    const currentSearchParams = new URLSearchParams(window.location.search);
-
-    if (urlSlug && urlSlug !== 'general') {
-      currentSearchParams.set('tab', urlSlug);
-    } else {
-      currentSearchParams.delete('tab');
-    }
-
-    const newUrl = currentSearchParams.toString()
-      ? `/msp/settings?${currentSearchParams.toString()}`
-      : '/msp/settings';
-
-    window.history.pushState({}, '', newUrl);
-  }, [labelToSlugMap]);
-
-  // Handle client-side initialization and URL changes
   useEffect(() => {
-    hydrationReadyRef.current = true;
-
     const targetLabel = initialTabLabel;
 
     setActiveTab((prev) => (prev === targetLabel ? prev : targetLabel));
   }, [initialTabLabel]);
-
-  // Handle tab change with URL synchronization
-  const handleTabChange = useCallback((tabLabel: string) => {
-    setActiveTab(tabLabel);
-    updateURL(tabLabel);
-  }, [updateURL]);
 
   const baseTabContent: TabContent[] = [
     {
@@ -192,6 +156,23 @@ const SettingsPageContent = ({ initialTabParam }: SettingsPageProps): React.JSX.
             <GeneralSettings />
           </CardContent>
         </Card>
+      ),
+    },
+    {
+      label: "Experimental Features",
+      icon: FlaskConical,
+      content: (
+        <Suspense
+          fallback={
+            <SettingsTabSkeleton
+              title="Experimental Features"
+              description="Loading experimental feature configuration..."
+              showTabs={false}
+            />
+          }
+        >
+          <ExperimentalFeaturesSettings />
+        </Suspense>
       ),
     },
     {

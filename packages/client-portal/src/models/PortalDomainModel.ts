@@ -127,7 +127,14 @@ function mapRow(row: PortalDomainRecord): PortalDomain {
 }
 
 async function getTenantAndKnex(): Promise<{ knex: Knex; tenant: string }> {
-  const { knex, tenant } = await createTenantKnex();
+  // Dynamic import to avoid circular dependencies
+  const { getCurrentUser } = await import('@alga-psa/users/actions');
+  const currentUser = await getCurrentUser();
+  if (!currentUser?.tenant) {
+    throw new Error('Tenant context is required for portal domain operations');
+  }
+
+  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
 
   if (!tenant) {
     throw new Error('Tenant context is required for portal domain operations');

@@ -1,19 +1,15 @@
 'use server';
 
-import { uploadEntityImage, deleteEntityImage, EntityType } from '@alga-psa/media';
+import { uploadEntityImage, deleteEntityImage, EntityType } from '@alga-psa/documents';
 import { getConnection } from '@alga-psa/db';
-import { getCurrentUser } from '@alga-psa/users/actions';
+import { withAuth, type AuthContext } from '@alga-psa/auth';
+import type { IUserWithRoles } from '@alga-psa/types';
 
 /**
  * Upload a logo for the tenant
  */
-export async function uploadTenantLogo(tenantId: string, formData: FormData) {
+export const uploadTenantLogo = withAuth(async (user: IUserWithRoles, { tenant }: AuthContext, tenantId: string, formData: FormData) => {
   try {
-    const user = await getCurrentUser();
-    if (!user) {
-      return { success: false, error: 'User not found' };
-    }
-
     // Check if user has admin permissions
     if (user.user_type !== 'internal') {
       return { success: false, error: 'Only internal users can update tenant logo' };
@@ -30,17 +26,17 @@ export async function uploadTenantLogo(tenantId: string, formData: FormData) {
       tenantId,
       file,
       user.user_id,
-      user.tenant,
+      tenant,
       'tenant_logo',
       true // isLogoUpload
     );
 
     if (result.success) {
       // Update tenant settings with logo URL
-      const knex = await getConnection(user.tenant);
+      const knex = await getConnection(tenant);
 
       const existingRecord = await knex('tenant_settings')
-        .where({ tenant: user.tenant })
+        .where({ tenant })
         .first();
 
       const existingSettings = existingRecord?.settings || {};
@@ -58,14 +54,14 @@ export async function uploadTenantLogo(tenantId: string, formData: FormData) {
 
       if (existingRecord) {
         await knex('tenant_settings')
-          .where({ tenant: user.tenant })
+          .where({ tenant })
           .update({
             settings: updatedSettings,
             updated_at: knex.fn.now()
           });
       } else {
         await knex('tenant_settings').insert({
-          tenant: user.tenant,
+          tenant,
           settings: updatedSettings,
           created_at: knex.fn.now(),
           updated_at: knex.fn.now()
@@ -84,18 +80,13 @@ export async function uploadTenantLogo(tenantId: string, formData: FormData) {
     console.error('Error uploading tenant logo:', error);
     return { success: false, error: 'Failed to upload logo' };
   }
-}
+});
 
 /**
  * Delete the tenant logo
  */
-export async function deleteTenantLogo(tenantId: string) {
+export const deleteTenantLogo = withAuth(async (user: IUserWithRoles, { tenant }: AuthContext, tenantId: string) => {
   try {
-    const user = await getCurrentUser();
-    if (!user) {
-      return { success: false, error: 'User not found' };
-    }
-
     // Check if user has admin permissions
     if (user.user_type !== 'internal') {
       return { success: false, error: 'Only internal users can delete tenant logo' };
@@ -106,15 +97,15 @@ export async function deleteTenantLogo(tenantId: string) {
       'tenant' as EntityType,
       tenantId,
       user.user_id,
-      user.tenant
+      tenant
     );
 
     if (result.success) {
       // Update tenant settings to remove logo URL
-      const knex = await getConnection(user.tenant);
+      const knex = await getConnection(tenant);
 
       const existingRecord = await knex('tenant_settings')
-        .where({ tenant: user.tenant })
+        .where({ tenant })
         .first();
 
       if (existingRecord) {
@@ -132,7 +123,7 @@ export async function deleteTenantLogo(tenantId: string) {
         };
 
         await knex('tenant_settings')
-          .where({ tenant: user.tenant })
+          .where({ tenant })
           .update({
             settings: updatedSettings,
             updated_at: knex.fn.now()
@@ -150,4 +141,4 @@ export async function deleteTenantLogo(tenantId: string) {
     console.error('Error deleting tenant logo:', error);
     return { success: false, error: 'Failed to delete logo' };
   }
-}
+});
