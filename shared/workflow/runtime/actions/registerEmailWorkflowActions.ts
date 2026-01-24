@@ -529,6 +529,16 @@ export function registerEmailWorkflowActionsV2(): void {
       source: z.string().optional().describe('Source of the comment (e.g., "email")'),
       author_type: z.enum(['contact', 'internal', 'system']).optional().describe('Type of author'),
       author_id: z.string().optional().describe('Author user/contact ID'),
+      inboundReplyEvent: z.object({
+        messageId: z.string().min(1).describe('Inbound email message ID'),
+        threadId: z.string().optional().describe('Email thread ID (provider conversation id)'),
+        from: z.string().email().describe('Email from address'),
+        to: z.array(z.string().email()).min(1).describe('Email to recipients'),
+        subject: z.string().optional().describe('Email subject'),
+        receivedAt: z.string().datetime().optional().describe('When the email was received (ISO 8601)'),
+        provider: z.string().min(1).describe('Email provider identifier'),
+        matchedBy: z.string().min(1).describe('Reply matching strategy'),
+      }).optional().describe('When present, publishes INBOUND_EMAIL_REPLY_RECEIVED after comment creation'),
       metadata: z.object({
         parser: z.object({
           confidence: z.enum(['high', 'medium', 'low']).optional(),
@@ -552,6 +562,7 @@ export function registerEmailWorkflowActionsV2(): void {
         source: input.source,
         author_type: input.author_type,
         author_id: input.author_id,
+        inboundReplyEvent: input.inboundReplyEvent,
         metadata: input.metadata
       }, ctx.tenantId ?? '');
       return { comment_id: commentId };

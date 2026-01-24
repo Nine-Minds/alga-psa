@@ -436,9 +436,19 @@ Implication: we should standardize on `@alga-psa/event-bus/publishers` helpers f
   - Decision: treat `DOCUMENT_SIGNATURE_REQUESTED`, `DOCUMENT_SIGNED`, and `DOCUMENT_SIGNATURE_EXPIRED` as **catalog-only** until an e-sign feature is implemented.
   - Updated `ee/docs/plans/2026-01-23-workflow-event-catalog-domain-events/PRD.md` Open Questions #4 to record the decision.
 
+- 2026-01-24: Completed `F070` (inbound email reply emission):
+  - Emitted `INBOUND_EMAIL_REPLY_RECEIVED` when the system email processing workflow matches an inbound email to an existing ticket and successfully creates the ticket comment.
+  - Implemented best-effort publishing from `shared/workflow/actions/emailWorkflowActions.ts` (`createCommentFromEmail`) behind an optional `inboundReplyEvent` input.
+  - Updated both workflow definitions to pass `matchedBy` (`reply_token` vs `thread_headers`) and normalized `receivedAt` for action schema validation:
+    - `shared/workflow/workflows/system-email-processing-workflow.ts` (+ `.generated.js`)
+    - `services/workflow-worker/src/workflows/system-email-processing-workflow.ts` (+ `.generated.js`)
+  - Added a domain payload builder + schema-compat unit test:
+    - `shared/workflow/streams/domainEventBuilders/inboundEmailReplyEventBuilders.ts`
+    - `shared/workflow/streams/domainEventBuilders/__tests__/inboundEmailReplyEventBuilders.test.ts`
+
 ## Next Up
 
-- `F070`: emit `INBOUND_EMAIL_REPLY_RECEIVED` when reply parsing/matching succeeds.
+- `F071`: emit outbound lifecycle events (`OUTBOUND_EMAIL_QUEUED`, `OUTBOUND_EMAIL_SENT`, `OUTBOUND_EMAIL_FAILED`) for provider send attempts.
 
 ## Suggested Phasing (to reduce risk)
 
