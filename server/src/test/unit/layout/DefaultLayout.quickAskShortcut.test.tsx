@@ -46,6 +46,29 @@ vi.mock('@alga-psa/tenancy/actions', () => ({
 }));
 
 describe('DefaultLayout AI Assistant gating', () => {
+  it('does not render QuickAskOverlay when aiAssistant is disabled', async () => {
+    vi.mocked(isExperimentalFeatureEnabled).mockResolvedValueOnce(false);
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: false,
+        json: async () => ({}),
+      })
+    );
+
+    render(
+      <DefaultLayout>
+        <div>content</div>
+      </DefaultLayout>
+    );
+
+    await waitFor(() => {
+      expect(isExperimentalFeatureEnabled).toHaveBeenCalledWith('aiAssistant');
+    });
+
+    expect(screen.queryByTestId('quick-ask-overlay')).not.toBeInTheDocument();
+  });
+
   it('ignores the Quick Ask shortcut when aiAssistant is disabled', async () => {
     vi.mocked(isExperimentalFeatureEnabled).mockResolvedValueOnce(false);
     vi.stubGlobal(

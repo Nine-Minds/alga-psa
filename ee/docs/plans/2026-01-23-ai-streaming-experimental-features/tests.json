@@ -122,7 +122,7 @@
   {
     "id": "T021",
     "description": "QuickAskOverlay is not rendered when aiAssistant is disabled",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F011"]
   },
   {

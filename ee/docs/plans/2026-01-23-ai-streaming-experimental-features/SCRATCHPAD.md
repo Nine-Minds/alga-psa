@@ -342,3 +342,10 @@ curl -X POST localhost:3000/api/chat/stream/chat \
   - File: `server/src/test/unit/layout/DefaultLayout.quickAskShortcut.test.tsx`
 - Validation: `npx vitest run server/src/test/unit/layout/DefaultLayout.quickAskShortcut.test.tsx`
 - Next test item: T021 QuickAskOverlay is not rendered when aiAssistant is disabled
+
+### 2026-01-24 (cont.)
+- Implemented T021 (unit test):
+  - Verifies `DefaultLayout` does not render `QuickAskOverlay` at all when `aiAssistant` is disabled (even before any shortcut is pressed).
+  - File: `server/src/test/unit/layout/DefaultLayout.quickAskShortcut.test.tsx`
+- Validation: `npx vitest run server/src/test/unit/layout/DefaultLayout.quickAskShortcut.test.tsx`
+- Next test item: T022 QuickAskOverlay is rendered when aiAssistant is enabled
