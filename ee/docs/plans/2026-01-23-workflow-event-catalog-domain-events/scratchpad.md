@@ -813,3 +813,7 @@ Phase 3 (feature dependent / optional modules):
 - 2026-01-24: Completed `T081` (integration webhook receipt coverage):
   - Coverage exists via schema-compat builder tests for safe redaction and `INTEGRATION_WEBHOOK_RECEIVED` payload shape:
     - `shared/workflow/streams/domainEventBuilders/__tests__/integrationWebhookEventBuilders.test.ts`
+
+- 2026-01-24: Completed `T082` (integration connect/disconnect coverage):
+  - Coverage exists via schema-compat builder tests for connected/disconnected payload shapes:
+    - `shared/workflow/streams/domainEventBuilders/__tests__/integrationConnectionEventBuilders.test.ts`

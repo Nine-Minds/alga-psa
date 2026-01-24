@@ -54,7 +54,7 @@
 
   { "id": "T080", "description": "Integrations: sync lifecycle emits INTEGRATION_SYNC_STARTED/COMPLETED/FAILED with summary/error shape", "implemented": true, "featureIds": ["F080"] },
   { "id": "T081", "description": "Integrations: webhook receipt emits INTEGRATION_WEBHOOK_RECEIVED with safe raw payload handling/redaction", "implemented": true, "featureIds": ["F081"] },
-  { "id": "T082", "description": "Integrations: connect/disconnect emits INTEGRATION_CONNECTED/INTEGRATION_DISCONNECTED", "implemented": false, "featureIds": ["F082"] },
+  { "id": "T082", "description": "Integrations: connect/disconnect emits INTEGRATION_CONNECTED/INTEGRATION_DISCONNECTED", "implemented": true, "featureIds": ["F082"] },
   { "id": "T083", "description": "Integrations: token expiring/refresh failed emits INTEGRATION_TOKEN_EXPIRING/INTEGRATION_TOKEN_REFRESH_FAILED", "implemented": false, "featureIds": ["F083"] },
   { "id": "T084", "description": "Integrations: mapping/config changes emit EXTERNAL_MAPPING_CHANGED with mappingType + previous/new values", "implemented": false, "featureIds": ["F084"] },
 
