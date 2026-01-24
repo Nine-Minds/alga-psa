@@ -646,6 +646,11 @@ Implication: we should standardize on `@alga-psa/event-bus/publishers` helpers f
   - Existing unit coverage validates stage enter/met/breached builders and idempotency behavior:
     - `packages/tickets/src/lib/__tests__/workflowTicketSlaStageEvents.test.ts`
 
+- 2026-01-24: Completed `T019` (ticket approvals are catalog-only):
+  - Per PRD decision, `TICKET_APPROVAL_*` events are catalog-only; coverage relies on:
+    - Schema registry example validation (`T002`): `shared/workflow/runtime/__tests__/payloadSchemaExamples.test.ts`
+    - Migration coverage (`T004`): `server/src/test/unit/workflowEventCatalogMigrationCoverage.test.ts`
+
 ## Suggested Phasing (to reduce risk)
 
 Phase 1 (authoritative CRUD/state transitions; low provider dependency):

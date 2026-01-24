@@ -15,7 +15,7 @@
   { "id": "T016", "description": "Tickets: communication events publish TICKET_MESSAGE_ADDED/TICKET_CUSTOMER_REPLIED/TICKET_INTERNAL_NOTE_ADDED (or map to existing comment events) with correct visibility/channel", "implemented": true, "featureIds": ["F012"] },
   { "id": "T017", "description": "Tickets: time logging publishes TICKET_TIME_ENTRY_ADDED with billable/minutes metadata", "implemented": true, "featureIds": ["F013"] },
   { "id": "T018", "description": "Tickets: SLA stage enter/met/breached publish events only when SLA module enabled; payload includes stage + target timestamps", "implemented": true, "featureIds": ["F014"] },
-  { "id": "T019", "description": "Tickets: approval requested/granted/rejected publish events only when approvals enabled; payload includes approvalRequestId and type", "implemented": false, "featureIds": ["F015"] },
+  { "id": "T019", "description": "Tickets: approval events are catalog-only (no emission until an approvals subsystem exists); schemas + catalog entries are still validated", "implemented": true, "featureIds": ["F015"] },
 
   { "id": "T020", "description": "Scheduling: create/reschedule/cancel/complete/no-show emit appointment/schedule events with start/end times and timezone", "implemented": false, "featureIds": ["F020"] },
   { "id": "T021", "description": "Scheduling: assignment changes emit APPOINTMENT_ASSIGNED (or mapped schedule-entry equivalent) with previous/new assignee", "implemented": false, "featureIds": ["F020"] },
