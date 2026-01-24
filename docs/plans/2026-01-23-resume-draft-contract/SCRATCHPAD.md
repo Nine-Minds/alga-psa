@@ -138,6 +138,11 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
   - (2026-01-24) Extended `packages/billing/tests/draftContractsTable.test.tsx` and implemented T024 to assert Drafts pagination can navigate to page 2.
   - (2026-01-24) Extended `packages/billing/tests/draftContractsTable.test.tsx` and implemented T025 to assert Drafts empty state renders when there are no drafts.
   - (2026-01-24) Extended `packages/billing/tests/draftContractsTable.test.tsx` and implemented T026 to assert Drafts empty state messaging prompts saving drafts.
+  - (2026-01-24) Added `packages/billing/tests/draftContractForResumeActions.test.ts` and implemented T027 to unit test `getDraftContractForResume()` returns core wizard data for a draft contract.
+  - (2026-01-24) Refactor to keep unit tests lightweight:
+    - Added `@alga-psa/auth/withAuth` export + Vitest alias so billing actions can import `withAuth` without importing the full `@alga-psa/auth` entrypoint (which pulls in NextAuth/UI modules in source form).
+    - Updated `packages/billing/src/actions/contractActions.ts` + `packages/billing/src/actions/contractWizardActions.ts` to import `withAuth` from `@alga-psa/auth/withAuth`.
+    - In resume tests, mocked `@alga-psa/auth/getCurrentUser` to avoid NextAuth session code paths when loading billing models.
 
 ## Links / References
 

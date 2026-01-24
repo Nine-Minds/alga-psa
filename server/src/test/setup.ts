@@ -3,6 +3,8 @@ import path from 'node:path';
 import { mkdirSync } from 'node:fs';
 import { vi } from 'vitest';
 
+process.env.NEXTAUTH_SECRET ??= 'localtest-nextauth-secret';
+
 // Vitest coverage (v8) uses a temp directory under the reports directory.
 // Some runs can error if the temp directory is missing; ensure it exists.
 try {

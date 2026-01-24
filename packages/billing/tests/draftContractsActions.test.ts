@@ -43,7 +43,7 @@ const mockKnexFactory = () => {
 const createTenantKnex = vi.fn();
 vi.mock('@alga-psa/db', () => ({ createTenantKnex: (...args: any[]) => createTenantKnex(...args) }));
 
-vi.mock('@alga-psa/auth', () => ({
+vi.mock('@alga-psa/auth/withAuth', () => ({
   withAuth:
     (fn: any) =>
     (...args: any[]) =>

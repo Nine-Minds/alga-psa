@@ -5,7 +5,7 @@ import { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 
 import { createTenantKnex } from '@alga-psa/db';
-import { withAuth } from '@alga-psa/auth';
+import { withAuth } from '@alga-psa/auth/withAuth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 
 

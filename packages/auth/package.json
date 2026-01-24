@@ -22,6 +22,10 @@
       "import": "./dist/lib/rbac.js",
       "types": "./src/lib/rbac.ts"
     },
+    "./withAuth": {
+      "import": "./dist/lib/withAuth.js",
+      "types": "./src/lib/withAuth.ts"
+    },
     "./apiAuth": {
       "import": "./dist/lib/apiAuth.js",
       "types": "./src/lib/apiAuth.ts"

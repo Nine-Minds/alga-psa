@@ -16,7 +16,7 @@ import {
 import { createTenantKnex } from '@alga-psa/db';
 
 import { Knex } from 'knex';
-import { withAuth } from '@alga-psa/auth';
+import { withAuth } from '@alga-psa/auth/withAuth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import {
   addContractLine as repoAddContractLine,
