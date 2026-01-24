@@ -1,0 +1,37 @@
+{
+  "version": 1,
+  "tasks": [
+    {
+      "id": "T001",
+      "title": "Map current inbound email workflow",
+      "status": "done",
+      "dependsOn": [],
+      "owner": null,
+      "notes": "Locate the existing workflow(s) used for inbound email processing, the trigger/entrypoint, and the worker/job path that executes it."
+    },
+    {
+      "id": "T002",
+      "title": "Map v2 worker runtime architecture",
+      "status": "done",
+      "dependsOn": [],
+      "owner": null,
+      "notes": "Identify the v2 runtime entrypoints, how workflow graphs are executed, and what assumptions (queues, DB, retries) it makes."
+    },
+    {
+      "id": "T003",
+      "title": "Identify server-action/request-flow alternatives",
+      "status": "done",
+      "dependsOn": [],
+      "owner": null,
+      "notes": "Find the current request-flow patterns for similar async work and sketch how inbound email could run in normal server request flow (route handler/server action) without the worker."
+    },
+    {
+      "id": "T004",
+      "title": "Propose migration plan to in-app processing",
+      "status": "done",
+      "dependsOn": ["T001", "T002", "T003"],
+      "owner": null,
+      "notes": "Merge findings into a concrete migration plan: code touchpoints, interfaces, rollout steps, and what to delete/disable so only v2 worker runtime remains."
+    }
+  ]
+}
