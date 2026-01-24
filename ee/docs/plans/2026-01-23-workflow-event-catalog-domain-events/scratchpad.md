@@ -655,6 +655,10 @@ Implication: we should standardize on `@alga-psa/event-bus/publishers` helpers f
   - Existing builder unit test validates appointment lifecycle payloads (start/end time + timezone) against schemas:
     - `shared/workflow/streams/domainEventBuilders/__tests__/appointmentEventBuilders.test.ts`
 
+- 2026-01-24: Completed `T021` (appointment assignment coverage):
+  - Existing builder unit test validates `APPOINTMENT_ASSIGNED` payloads (previous/new assignee) against schemas:
+    - `shared/workflow/streams/domainEventBuilders/__tests__/appointmentEventBuilders.test.ts`
+
 ## Suggested Phasing (to reduce risk)
 
 Phase 1 (authoritative CRUD/state transitions; low provider dependency):
