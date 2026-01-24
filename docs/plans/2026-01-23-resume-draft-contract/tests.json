@@ -182,7 +182,7 @@
   {
     "id": "T031",
     "description": "Clicking Resume opens ContractWizard dialog",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F015"]
   },
   {
