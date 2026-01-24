@@ -44,7 +44,7 @@
   {
     "id": "T008",
     "description": "getDraftContracts filters by current tenant",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F003", "F024"]
   },
   {
