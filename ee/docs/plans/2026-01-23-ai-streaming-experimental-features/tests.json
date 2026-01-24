@@ -194,7 +194,7 @@
   {
     "id": "T033",
     "description": "Streaming response chunks follow SSE format with data: prefix",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F018"]
   },
   {

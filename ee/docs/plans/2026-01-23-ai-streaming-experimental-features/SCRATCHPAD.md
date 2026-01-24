@@ -429,3 +429,10 @@ curl -X POST localhost:3000/api/chat/stream/chat \
     - File: `server/vitest.config.ts`
 - Validation: `npx vitest run server/src/test/unit/services/chatCompletionsService.streaming.test.ts`
 - Next test item: T033 Streaming response chunks follow SSE format with data: prefix
+
+### 2026-01-24 (cont.)
+- Implemented T033 (unit test):
+  - Verifies `/api/chat/v1/completions/stream` emits SSE events that start with `data: ` (SSE framing) when tokens are streamed.
+  - File: `server/src/test/unit/api/chatCompletionsStream.route.exists.test.ts`
+- Validation: `npx vitest run server/src/test/unit/api/chatCompletionsStream.route.exists.test.ts`
+- Next test item: T034 Each SSE chunk contains JSON with content and done fields
