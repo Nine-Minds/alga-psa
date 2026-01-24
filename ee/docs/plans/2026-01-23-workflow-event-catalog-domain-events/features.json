@@ -52,5 +52,5 @@
   { "id": "F084", "description": "Integrations: emit mapping/config change event (EXTERNAL_MAPPING_CHANGED) for external mapping updates", "implemented": true, "prdRefs": ["7.2"] },
 
   { "id": "F090", "description": "Assets: emit asset lifecycle events (ASSET_CREATED, ASSET_UPDATED, ASSET_ASSIGNED, ASSET_UNASSIGNED, ASSET_WARRANTY_EXPIRING)", "implemented": true, "prdRefs": ["7.2"] },
-  { "id": "F091", "description": "Media: emit file/media pipeline events (FILE_UPLOADED, MEDIA_PROCESSING_SUCCEEDED, MEDIA_PROCESSING_FAILED)", "implemented": false, "prdRefs": ["7.2"] }
+  { "id": "F091", "description": "Media: emit file/media pipeline events (FILE_UPLOADED, MEDIA_PROCESSING_SUCCEEDED, MEDIA_PROCESSING_FAILED)", "implemented": true, "prdRefs": ["7.2"] }
 ]

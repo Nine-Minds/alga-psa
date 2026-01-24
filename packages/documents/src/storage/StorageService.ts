@@ -34,6 +34,10 @@ import {
   buildDocumentDeletedPayload,
   buildDocumentUploadedPayload,
 } from '@alga-psa/shared/workflow/streams/domainEventBuilders/documentStorageEventBuilders';
+import {
+  buildFileUploadedPayload,
+  buildMediaProcessingSucceededPayload,
+} from '@alga-psa/shared/workflow/streams/domainEventBuilders/mediaEventBuilders';
 
 async function streamToBuffer(stream: Readable): Promise<Buffer> {
   return new Promise((resolve, reject) => {
@@ -96,6 +100,8 @@ export class StorageService {
       if (!options.uploaded_by_id) {
         throw new Error('uploaded_by_id is required');
       }
+
+      const uploadStartedAtMs = Date.now();
 
       let fileBuffer: Buffer;
       let fileSize: number;
@@ -196,6 +202,59 @@ export class StorageService {
         });
       } catch (error) {
         console.error('[StorageService] Failed to publish DOCUMENT_UPLOADED workflow event', error);
+      }
+
+      try {
+        const uploadedByUserId = isValidUUID(options.uploaded_by_id) ? options.uploaded_by_id : undefined;
+        await publishWorkflowEvent({
+          eventType: 'FILE_UPLOADED',
+          payload: buildFileUploadedPayload({
+            fileId: fileRecord.file_id,
+            uploadedByUserId,
+            uploadedAt: fileRecord.created_at,
+            fileName: fileRecord.original_name,
+            contentType: fileRecord.mime_type,
+            sizeBytes: fileRecord.file_size,
+            storageKey: fileRecord.storage_path,
+          }),
+          ctx: {
+            tenantId: tenant,
+            occurredAt: fileRecord.created_at,
+            actor: uploadedByUserId
+              ? { actorType: 'USER', actorUserId: uploadedByUserId }
+              : { actorType: 'SYSTEM' },
+          },
+          idempotencyKey: `file_uploaded:${fileRecord.file_id}:${fileRecord.created_at}`,
+        });
+
+        if (isEntityImage) {
+          await publishWorkflowEvent({
+            eventType: 'MEDIA_PROCESSING_SUCCEEDED',
+            payload: buildMediaProcessingSucceededPayload({
+              fileId: fileRecord.file_id,
+              processedAt: new Date().toISOString(),
+              durationMs: Math.max(0, Date.now() - uploadStartedAtMs),
+              outputs: [
+                {
+                  type: 'entity_image_normalized',
+                  contentType: fileRecord.mime_type,
+                  fileName: fileRecord.original_name,
+                  sizeBytes: fileRecord.file_size,
+                },
+              ],
+            }),
+            ctx: {
+              tenantId: tenant,
+              occurredAt: new Date().toISOString(),
+              actor: uploadedByUserId
+                ? { actorType: 'USER', actorUserId: uploadedByUserId }
+                : { actorType: 'SYSTEM' },
+            },
+            idempotencyKey: `media_processing_succeeded:entity_image:${fileRecord.file_id}:${fileRecord.created_at}`,
+          });
+        }
+      } catch (error) {
+        console.error('[StorageService] Failed to publish FILE_UPLOADED/MEDIA_PROCESSING_SUCCEEDED workflow event', error);
       }
 
       return fileRecord;

@@ -560,9 +560,26 @@ Implication: we should standardize on `@alga-psa/event-bus/publishers` helpers f
     - `npx vitest run shared/workflow/streams/domainEventBuilders/__tests__/assetEventBuilders.test.ts`
     - `npx tsc -p packages/assets/tsconfig.json --noEmit`
 
+- 2026-01-24: Completed `F091` (media upload + processing emission):
+   - Added shared payload builders + schema-compat unit tests:
+     - `shared/workflow/streams/domainEventBuilders/mediaEventBuilders.ts`
+     - `shared/workflow/streams/domainEventBuilders/__tests__/mediaEventBuilders.test.ts`
+   - Emitted `FILE_UPLOADED` from the authoritative file storage services:
+     - `packages/documents/src/storage/StorageService.ts` (alongside existing `DOCUMENT_UPLOADED`)
+     - `server/src/lib/storage/StorageService.ts`
+   - Emitted media processing lifecycle events for document preview generation:
+     - `MEDIA_PROCESSING_SUCCEEDED` / `MEDIA_PROCESSING_FAILED` from:
+       - `packages/documents/src/lib/documentPreviewGenerator.ts`
+       - `server/src/lib/utils/documentPreviewGenerator.ts`
+     - Success outputs include `thumbnail`/`preview` file ids when generated; failures include a stable `errorCode`.
+   - Added focused unit coverage:
+     - `server/src/test/unit/documentPreviewGenerator.test.ts` asserts `MEDIA_PROCESSING_SUCCEEDED` is published for supported file types.
+     - `packages/documents/tests/storageService.workflowEvents.test.ts` asserts `FILE_UPLOADED` is published on upload.
+   - Gotcha: `packages/documents/src/storage/StorageService.ts` imports `@alga-psa/auth/getCurrentUser` (which depends on `@alga-psa/media`); tests that import this module must mock `@alga-psa/auth/getCurrentUser` to avoid Vite import-analysis failures.
+
 ## Next Up
 
-- `F091`: emit media lifecycle events (`FILE_UPLOADED`, `MEDIA_PROCESSING_*`).
+- All features in `features.json` are now implemented; proceed to `tests.json` checklist.
 
 ## Suggested Phasing (to reduce risk)
 
