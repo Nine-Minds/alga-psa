@@ -304,4 +304,19 @@ describe('getDraftContractForResume action', () => {
       },
     });
   });
+
+  it('throws error if contract is not a draft (T030)', async () => {
+    const knex = makeKnex({
+      contracts: {
+        contract_id: 'contract-1',
+        contract_name: 'Active Contract',
+        status: 'active',
+      },
+      client_contracts: null,
+    });
+    createTenantKnex.mockResolvedValue({ knex });
+
+    const { getDraftContractForResume } = await import('../src/actions/contractWizardActions');
+    await expect(getDraftContractForResume('contract-1')).rejects.toThrow('Contract is not a draft');
+  });
 });

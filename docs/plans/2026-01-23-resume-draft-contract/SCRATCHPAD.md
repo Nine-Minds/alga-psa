@@ -145,6 +145,7 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
     - In resume tests, mocked `@alga-psa/auth/getCurrentUser` to avoid NextAuth session code paths when loading billing models.
   - (2026-01-24) Extended `packages/billing/tests/draftContractForResumeActions.test.ts` and implemented T028 to assert contract lines map into wizard service arrays.
   - (2026-01-24) Extended `packages/billing/tests/draftContractForResumeActions.test.ts` and implemented T029 to assert service configuration fields (rates, unit_of_measure, bucket overlays) map into resume payload.
+  - (2026-01-24) Extended `packages/billing/tests/draftContractForResumeActions.test.ts` and implemented T030 to assert non-draft contracts cannot be resumed.
 
 ## Links / References
 

@@ -176,7 +176,7 @@
   {
     "id": "T030",
     "description": "getDraftContractForResume throws error if contract is not a draft",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F014"]
   },
   {
