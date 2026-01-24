@@ -20,6 +20,7 @@ const processInboundEmailInAppMock = vi.fn();
 
 vi.mock('@alga-psa/core/secrets', () => ({
   getSecretProviderInstance: vi.fn(async () => ({
+    getAppSecret: async () => '',
     getTenantSecret: async () => null,
   })),
 }));
@@ -268,4 +269,3 @@ describe('Inbound email in-app processing feature flag (integration)', () => {
     expect(publishEventMock).not.toHaveBeenCalled();
   });
 });
-

@@ -20,6 +20,7 @@ let microsoftGetMessageDetailsMock = vi.fn();
 
 vi.mock('@alga-psa/core/secrets', () => ({
   getSecretProviderInstance: vi.fn(async () => ({
+    getAppSecret: async () => '',
     getTenantSecret: async () => null,
   })),
 }));
