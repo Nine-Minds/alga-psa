@@ -714,3 +714,7 @@ Phase 3 (feature dependent / optional modules):
 - 2026-01-24: Completed `T031` (project status changed coverage):
   - Coverage already exists via schema-compat builder test asserting `previousStatus`/`newStatus` transition shape:
     - `shared/workflow/streams/domainEventBuilders/__tests__/projectLifecycleEventBuilders.test.ts`
+
+- 2026-01-24: Completed `T032` (project task lifecycle coverage):
+  - Coverage already exists via schema-compat builder test for task create/assign/status/complete payload shapes:
+    - `shared/workflow/streams/domainEventBuilders/__tests__/projectTaskEventBuilders.test.ts`
