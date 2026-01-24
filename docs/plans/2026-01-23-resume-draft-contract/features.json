@@ -62,7 +62,7 @@
   {
     "id": "F011",
     "description": "Drafts list supports search/filter by client name",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR2"]
   },
   {
