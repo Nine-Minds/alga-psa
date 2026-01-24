@@ -376,3 +376,12 @@ curl -X POST localhost:3000/api/chat/stream/chat \
   - File: `server/src/test/unit/layout/DefaultLayout.sidebarChatShortcut.test.tsx`
 - Validation: `npx vitest run server/src/test/unit/layout/DefaultLayout.sidebarChatShortcut.test.tsx`
 - Next test item: T026 /api/chat/v1/completions returns 403 when aiAssistant is disabled
+
+### 2026-01-24 (cont.)
+- Implemented T026 (unit test):
+  - Verifies `/api/chat/v1/completions` returns 403 + JSON error when `aiAssistant` is disabled.
+  - File: `server/src/test/unit/api/chatCompletions.route.gating.test.ts`
+  - Added Vitest alias stub for `@product/chat/entry` so Next route modules can be imported in tests.
+    - Files: `server/vitest.config.ts`, `server/src/test/stubs/product-chat-entry.ts`
+- Validation: `npx vitest run server/src/test/unit/api/chatCompletions.route.gating.test.ts`
+- Next test item: T027 /api/chat/v1/completions returns 200 when aiAssistant is enabled
