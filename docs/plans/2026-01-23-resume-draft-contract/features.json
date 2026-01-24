@@ -68,7 +68,7 @@
   {
     "id": "F012",
     "description": "Drafts list uses existing pagination patterns",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR2"]
   },
   {

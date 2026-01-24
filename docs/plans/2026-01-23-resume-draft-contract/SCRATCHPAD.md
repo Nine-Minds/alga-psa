@@ -70,6 +70,8 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 
 - (2026-01-24) Drafts tab search filters by client name.
 
+- (2026-01-24) Drafts tab uses standard DataTable pagination + items-per-page controls.
+
 ## Commands / Runbooks
 
 - Run billing package tests: `npm test -w packages/billing`
