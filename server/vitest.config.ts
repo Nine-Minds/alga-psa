@@ -85,6 +85,9 @@ export default defineConfig({
       { find: /^@alga-psa\/integrations\/(.*)$/, replacement: path.resolve(__dirname, '../packages/integrations/src/$1') },
       { find: /^@alga-psa\/client-portal$/, replacement: path.resolve(__dirname, '../packages/client-portal/src/index.ts') },
       { find: /^@alga-psa\/client-portal\/(.*)$/, replacement: path.resolve(__dirname, '../packages/client-portal/src/$1') },
+      { find: /^@alga-psa\/tenancy$/, replacement: path.resolve(__dirname, '../packages/tenancy/src/index.ts') },
+      { find: /^@alga-psa\/tenancy\/actions$/, replacement: path.resolve(__dirname, '../packages/tenancy/src/actions/index.ts') },
+      { find: /^@alga-psa\/tenancy\/(.*)$/, replacement: path.resolve(__dirname, '../packages/tenancy/src/$1') },
 
       { find: 'fs', replacement: 'node:fs' },
       { find: 'fs/promises', replacement: 'node:fs/promises' },

@@ -254,3 +254,12 @@ curl -X POST localhost:3000/api/chat/stream/chat \
   - File: `server/src/test/unit/tenantSettingsActions.experimentalFeatures.test.ts`
 - Validation: `npx vitest run server/src/test/unit/tenantSettingsActions.experimentalFeatures.test.ts`
 - Next test item: T009 ExperimentalFeaturesSettings component renders list of features with toggles
+
+### 2026-01-24 (cont.)
+- Implemented T009 (unit test):
+  - Verifies the Experimental Features settings page renders feature rows with toggles (UI reflection `data-automation-id` on switches).
+  - File: `server/src/test/unit/components/ExperimentalFeaturesSettings.test.tsx`
+  - Note: Added missing Vitest alias mapping for `@alga-psa/tenancy/actions` so client settings components can be tested under Vitest.
+    - File: `server/vitest.config.ts`
+- Validation: `npx vitest run server/src/test/unit/components/ExperimentalFeaturesSettings.test.tsx`
+- Next test item: T010 ExperimentalFeaturesSettings loads current settings on mount

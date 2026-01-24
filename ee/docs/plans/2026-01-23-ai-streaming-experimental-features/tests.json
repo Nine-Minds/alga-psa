@@ -50,7 +50,7 @@
   {
     "id": "T009",
     "description": "ExperimentalFeaturesSettings component renders list of features with toggles",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F004"]
   },
   {
