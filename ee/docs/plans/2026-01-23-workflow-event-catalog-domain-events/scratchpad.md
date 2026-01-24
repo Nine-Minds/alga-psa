@@ -502,9 +502,22 @@ Implication: we should standardize on `@alga-psa/event-bus/publishers` helpers f
       - single-device sync (`syncDevice`)
     - Uses `SyncOptions.performedBy` (when provided) to attribute `INTEGRATION_SYNC_STARTED.initiatedByUserId`.
 
+- 2026-01-24: Completed `F081` (integration webhook receipt emission):
+  - Added safe webhook payload builders:
+    - `shared/workflow/streams/domainEventBuilders/integrationWebhookEventBuilders.ts`
+      - `sanitizeIntegrationWebhookRawPayload(...)` redacts sensitive keys (token/secret/password/apiKey/authorization/signature) and enforces a size cap
+      - `buildIntegrationWebhookReceivedPayload(...)` builds schema-aligned payloads
+  - Emitted `INTEGRATION_WEBHOOK_RECEIVED` from the authoritative NinjaOne webhook handler:
+    - `ee/server/src/lib/integrations/ninjaone/webhooks/webhookHandler.ts` publishes the domain event with:
+      - `webhookId` derived from `payload.id`/`payload.activityId` (falls back to sha256-based id)
+      - `rawPayloadRef` set to a generated `integration-webhook:<uuid>` reference
+      - a structured log entry containing a **redacted** payload snapshot keyed by `rawPayloadRef`
+  - Added schema-compat unit tests:
+    - `shared/workflow/streams/domainEventBuilders/__tests__/integrationWebhookEventBuilders.test.ts`
+
 ## Next Up
 
-- `F081`: emit integration webhook receipt event (`INTEGRATION_WEBHOOK_RECEIVED`).
+- `F082`: emit integration connection health events (`INTEGRATION_CONNECTED`, `INTEGRATION_DISCONNECTED`).
 
 ## Suggested Phasing (to reduce risk)
 
