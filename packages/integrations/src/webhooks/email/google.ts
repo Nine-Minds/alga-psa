@@ -198,11 +198,13 @@ export async function POST(request: NextRequest) {
         .where('history_id', notification.historyId)
         .first();
 
-      // if (existingProcessed) {
-      //   console.log(`⚠️  HistoryId ${notification.historyId} already processed for provider ${provider.id}, skipping duplicate`);
-      //   processed = true; // Mark as processed to avoid error
-      //   return; // Exit early - this is a duplicate
-      // }
+      if (existingProcessed) {
+        console.log(
+          `⚠️  HistoryId ${notification.historyId} already processed for provider ${provider.id}, skipping duplicate`
+        );
+        processed = true; // Mark as processed to avoid error
+        return; // Exit early - this is a duplicate
+      }
 
       // Record this historyId as processed
       await trx('gmail_processed_history').insert({

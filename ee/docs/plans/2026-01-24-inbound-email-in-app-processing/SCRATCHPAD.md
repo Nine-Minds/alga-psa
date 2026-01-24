@@ -42,3 +42,4 @@
 - 2026-01-24: Implemented F015 by processing new-ticket attachments per item via `processEmailAttachment` with error-continue semantics.
 - 2026-01-24: Implemented F020 by de-duping reply comment creation via a DB lookup keyed on `{tenant, ticket_id, metadata.email.messageId}` before inserting.
 - 2026-01-24: Implemented F021 by de-duping new-ticket creation via a DB lookup on `tickets.email_metadata.messageId+providerId` before creating a ticket.
+- 2026-01-24: Implemented F022 by re-enabling Gmail Pub/Sub historyId de-dupe (skip when `gmail_processed_history` already contains the notification historyId). Microsoft continues using `email_processed_messages` PK de-dupe.
