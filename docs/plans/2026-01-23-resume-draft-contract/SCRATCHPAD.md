@@ -47,7 +47,11 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - (2026-01-24) Draft count badge added to Drafts tab:
   - Uses existing loaded `clientContracts` and counts `status === 'draft'`
   - Badge is hidden when count is 0 (will align with later acceptance/test expectations)
- 
+
+- (2026-01-24) Added server action `getDraftContracts()`:
+  - Location: `packages/billing/src/actions/contractActions.ts`
+  - Query joins `contracts` + `client_contracts` + `clients` (and template name), filters by tenant + `status='draft'`, orders by `updated_at desc`
+
 ## Commands / Runbooks
 
 - Run billing package tests: `npm test -w packages/billing`

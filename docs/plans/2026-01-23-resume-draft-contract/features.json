@@ -14,7 +14,7 @@
   {
     "id": "F003",
     "description": "Create getDraftContracts action to fetch all draft contracts for tenant",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR5"]
   },
   {
