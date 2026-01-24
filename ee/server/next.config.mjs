@@ -22,6 +22,7 @@ const nextConfig = {
   transpilePackages: [
     '@product/extensions',
     '@product/extensions-pages',
+    '@alga-psa/event-schemas',
   ],
   // Turbopack-specific aliases
   turbopack: {
@@ -45,6 +46,9 @@ const nextConfig = {
       '@product/ext-proxy/handler': isEE
         ? '../packages/product-ext-proxy/ee/handler'
         : '../packages/product-ext-proxy/oss/handler',
+      // Event schemas package
+      '@alga-psa/event-schemas': '../packages/event-schemas/src',
+      '@alga-psa/event-schemas/': '../packages/event-schemas/src/',
       // Native DB drivers not used
       'better-sqlite3': emptyShim,
       'sqlite3': emptyShim,
@@ -107,6 +111,8 @@ const nextConfig = {
         '@product/ext-proxy/handler': isEE
           ? path.join(__dirname, '../packages/product-ext-proxy/ee/handler.ts')
           : path.join(__dirname, '../packages/product-ext-proxy/oss/handler.ts'),
+        // Event schemas package
+        '@alga-psa/event-schemas': path.join(__dirname, '../packages/event-schemas/src'),
         // Stub native sharp during local dev to avoid platform build issues
         sharp: path.join(__dirname, 'src/empty/sharp.ts'),
       },
