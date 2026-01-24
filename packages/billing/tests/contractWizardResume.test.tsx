@@ -61,7 +61,9 @@ vi.mock('../src/components/billing-dashboard/contracts/wizard-steps/HourlyServic
 }));
 
 vi.mock('../src/components/billing-dashboard/contracts/wizard-steps/UsageBasedServicesStep', () => ({
-  UsageBasedServicesStep: () => <div data-testid="step-usage" />,
+  UsageBasedServicesStep: ({ data }: { data: any }) => (
+    <div data-testid="step-usage" data-usage-services-count={String((data.usage_services ?? []).length)} />
+  ),
 }));
 
 vi.mock('../src/components/billing-dashboard/contracts/wizard-steps/ReviewContractStep', () => ({
@@ -303,5 +305,44 @@ describe('ContractWizard resume behavior', () => {
 
     const step = await screen.findByTestId('step-hourly');
     expect(step).toHaveAttribute('data-hourly-services-count', '2');
+  });
+
+  it('step 5 (Usage) shows pre-populated usage services from draft (T040)', async () => {
+    const { ContractWizard } = await import('../src/components/billing-dashboard/contracts/ContractWizard');
+    render(
+      <ContractWizard
+        open={true}
+        onOpenChange={vi.fn()}
+        editingContract={{
+          contract_id: 'contract-1',
+          is_draft: true,
+          client_id: 'client-1',
+          contract_name: 'Draft Alpha',
+          start_date: '2026-01-01',
+          billing_frequency: 'monthly',
+          currency_code: 'USD',
+          enable_proration: false,
+          fixed_services: [],
+          product_services: [],
+          hourly_services: [],
+          usage_services: [
+            { service_id: 'u-1' },
+            { service_id: 'u-2' },
+            { service_id: 'u-3' },
+          ],
+        }}
+      />,
+    );
+
+    await screen.findByTestId('step-contract-basics');
+    const user = userEvent.setup();
+    for (let i = 0; i < 4; i++) {
+      await act(async () => {
+        await user.click(screen.getByText('Next'));
+      });
+    }
+
+    const step = await screen.findByTestId('step-usage');
+    expect(step).toHaveAttribute('data-usage-services-count', '3');
   });
 });

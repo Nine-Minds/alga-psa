@@ -236,7 +236,7 @@
   {
     "id": "T040",
     "description": "Step 5 (Usage) shows pre-populated usage services from draft",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F017"]
   },
   {
