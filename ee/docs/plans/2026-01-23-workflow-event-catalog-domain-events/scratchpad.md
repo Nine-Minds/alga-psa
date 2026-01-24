@@ -618,6 +618,10 @@ Implication: we should standardize on `@alga-psa/event-bus/publishers` helpers f
   - Added schema-level regression coverage to ensure the event bus accepts domain-shaped assignment payloads:
     - `shared/workflow/streams/__tests__/ticketAssignmentEvents.test.ts`
 
+- 2026-01-24: Completed `T012` (ticket reopened coverage):
+  - Existing transition builder unit test asserts `TICKET_REOPENED` includes `previousStatusId/newStatusId`:
+    - `packages/tickets/src/lib/__tests__/workflowTicketTransitionEvents.test.ts`
+
 ## Suggested Phasing (to reduce risk)
 
 Phase 1 (authoritative CRUD/state transitions; low provider dependency):
