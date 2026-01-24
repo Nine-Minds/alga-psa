@@ -158,7 +158,7 @@
   {
     "id": "F027",
     "description": "Ensure Sidebar Chat uses streaming for responses",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Flow B"]
   }
 ]

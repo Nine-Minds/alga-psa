@@ -190,3 +190,8 @@ curl -X POST localhost:3000/api/chat/stream/chat \
   - Updated EE overlay to use shared UI components (`@alga-psa/ui`) instead of non-existent `server/src/components/ui/*` imports: `ee/server/src/components/chat/QuickAskOverlay.tsx`
 - Validation: `npm -w server run typecheck`
 - Next feature item: F027 Ensure Sidebar Chat uses streaming for responses
+
+- Fixed Sidebar Chat EE component wiring so Sidebar chat renders the EE streaming `Chat` implementation (including for CE-first localhost dev):
+  - Replaced `@ee/components/layout/RightSidebar` CE stub with a re-export shim to `ee/server`: `packages/ee/src/components/layout/RightSidebar.tsx`
+- Validation: `npm -w server run typecheck`
+- Next item: T001 getExperimentalFeatures() returns empty object when no settings exist
