@@ -4,7 +4,7 @@
   { "id": "T003", "description": "Event bus schema: every expanded event_type is accepted by the event bus schema/types and maps to a payload schema", "implemented": true, "featureIds": ["F004"] },
   { "id": "T004", "description": "Catalog migration: system_event_catalog contains entries (category/name/description/payload_schema_ref) for all events listed in event-proposals.md", "implemented": true, "featureIds": ["F005"] },
   { "id": "T005", "description": "Simulator: form-mode builder renders for each new catalog event and rejects invalid payloads with schema validation errors", "implemented": true, "featureIds": ["F006", "F003"] },
-  { "id": "T006", "description": "Overlap handling: ticket message/comment and appointment/schedule-entry overlap decisions are encoded and documented (no duplicate/ambiguous triggers)", "implemented": false, "featureIds": ["F004", "F012", "F020"] },
+  { "id": "T006", "description": "Overlap handling: ticket message/comment and appointment/schedule-entry overlap decisions are encoded and documented (no duplicate/ambiguous triggers)", "implemented": true, "featureIds": ["F004", "F012", "F020"] },
 
   { "id": "T010", "description": "Tickets: status/priority transitions publish TICKET_STATUS_CHANGED and TICKET_PRIORITY_CHANGED with previous/new values", "implemented": false, "featureIds": ["F010"] },
   { "id": "T011", "description": "Tickets: assignment changes publish TICKET_ASSIGNED and TICKET_UNASSIGNED with previous/new assignee context", "implemented": false, "featureIds": ["F010"] },
