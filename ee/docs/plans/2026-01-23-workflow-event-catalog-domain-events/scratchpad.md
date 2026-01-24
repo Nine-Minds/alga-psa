@@ -788,3 +788,7 @@ Phase 3 (feature dependent / optional modules):
 - 2026-01-24: Completed `T070` (inbound email reply coverage):
   - Coverage exists via schema-compat builder tests for `INBOUND_EMAIL_REPLY_RECEIVED` payload shape:
     - `shared/workflow/streams/domainEventBuilders/__tests__/inboundEmailReplyEventBuilders.test.ts`
+
+- 2026-01-24: Completed `T071` (outbound email lifecycle coverage):
+  - Coverage exists via unit tests for the outbound send pipeline publishing queued/sent/failed events:
+    - `server/src/test/unit/outboundEmailWorkflowEvents.test.ts`
