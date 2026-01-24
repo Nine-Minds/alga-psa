@@ -817,3 +817,7 @@ Phase 3 (feature dependent / optional modules):
 - 2026-01-24: Completed `T082` (integration connect/disconnect coverage):
   - Coverage exists via schema-compat builder tests for connected/disconnected payload shapes:
     - `shared/workflow/streams/domainEventBuilders/__tests__/integrationConnectionEventBuilders.test.ts`
+
+- 2026-01-24: Completed `T083` (integration token lifecycle coverage):
+  - Coverage exists via schema-compat builder tests for token expiring and refresh-failed payload shapes:
+    - `shared/workflow/streams/domainEventBuilders/__tests__/integrationTokenEventBuilders.test.ts`
