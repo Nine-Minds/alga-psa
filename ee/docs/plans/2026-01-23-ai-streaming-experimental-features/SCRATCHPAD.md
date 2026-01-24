@@ -450,3 +450,11 @@ curl -X POST localhost:3000/api/chat/stream/chat \
   - File: `server/src/test/unit/api/chatCompletionsStream.route.exists.test.ts`
 - Validation: `npx vitest run server/src/test/unit/api/chatCompletionsStream.route.exists.test.ts`
 - Next test item: T036 Chat.tsx uses streaming endpoint for new messages
+
+### 2026-01-24 (cont.)
+- Implemented T036 (unit test):
+  - Verifies EE `Chat.tsx` targets `/api/chat/v1/completions/stream` (and not `/api/chat/v1/completions`) and posts `messages: conversationWithUser`.
+  - Uses `?raw` source import to avoid executing the Next.js client component in Vitest.
+  - File: `server/src/test/unit/Chat.streamingEndpoint.test.ts`
+- Validation: `npx vitest run server/src/test/unit/Chat.streamingEndpoint.test.ts`
+- Next test item: T037 Chat.tsx reads streaming response via getReader()

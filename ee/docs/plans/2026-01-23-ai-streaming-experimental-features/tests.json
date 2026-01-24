@@ -212,7 +212,7 @@
   {
     "id": "T036",
     "description": "Chat.tsx uses streaming endpoint for new messages",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F020"]
   },
   {
