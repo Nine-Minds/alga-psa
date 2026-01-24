@@ -8,5 +8,14 @@ describe('Inbound email body parsing', () => {
     expect(parsed.sanitizedText.trim().length).toBeGreaterThan(0);
     expect(parsed.sanitizedText).toContain('Hello');
   });
-});
 
+  it('Body parsing: sanitizer returns HTML-derived content when HTML is present', async () => {
+    const parsed = await parseEmailReplyBody({
+      text: 'Fallback text',
+      html: '<p>Hello from <strong>HTML</strong></p>',
+    });
+    expect(typeof parsed?.sanitizedHtml).toBe('string');
+    expect(parsed.sanitizedHtml?.trim().length).toBeGreaterThan(0);
+    expect(parsed.sanitizedHtml).toContain('<p>');
+  });
+});

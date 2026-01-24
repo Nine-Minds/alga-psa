@@ -54,3 +54,4 @@
 - 2026-01-24: Implemented T003 by adding an integration test for reply-token threading to ensure the in-app processor creates exactly one comment on the matched ticket (`server/src/test/integration/inboundEmailInApp.webhooks.integration.test.ts`).
 - 2026-01-24: Implemented T004 by adding an integration test for header-based threading (In-Reply-To/References) to ensure the in-app processor creates exactly one comment on the matched ticket (`server/src/test/integration/inboundEmailInApp.webhooks.integration.test.ts`).
 - 2026-01-24: Implemented T010 with a unit test ensuring `parseEmailReplyBody` produces non-empty sanitized text for plain-text emails (`server/src/test/unit/email/inboundEmailBodyParsing.test.ts`).
+- 2026-01-24: Implemented T011 with a unit test ensuring `parseEmailReplyBody` produces sanitized HTML when HTML input is present (`server/src/test/unit/email/inboundEmailBodyParsing.test.ts`).
