@@ -177,4 +177,64 @@ describe('POST /api/chat/v1/completions/stream', () => {
       expect(event.startsWith('data: ')).toBe(true);
     }
   });
+
+  it('streams SSE chunks containing JSON with content and done fields', async () => {
+    isExperimentalFeatureEnabledMock.mockResolvedValue(true);
+    createRawCompletionStreamMock.mockResolvedValue(
+      (async function* () {
+        yield { choices: [{ delta: { content: 'Hel' } }] };
+        yield { choices: [{ delta: { content: 'lo' } }] };
+      })(),
+    );
+
+    vi.resetModules();
+    const mod = await import('@/app/api/chat/v1/completions/stream/route');
+
+    const request = new NextRequest(
+      new Request('http://example.com/api/chat/v1/completions/stream', {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+        },
+        body: JSON.stringify({ messages: [{ role: 'user', content: 'Hello' }] }),
+      }),
+    );
+
+    const response = await mod.POST(request);
+
+    expect(response.status).toBe(200);
+
+    const reader = response.body?.getReader();
+    expect(reader).toBeDefined();
+
+    const decoder = new TextDecoder();
+    let output = '';
+
+    while (true) {
+      const { done, value } = await reader!.read();
+      if (done) {
+        break;
+      }
+      if (value) {
+        output += decoder.decode(value, { stream: true });
+      }
+    }
+    output += decoder.decode();
+
+    const events = output
+      .split('\n\n')
+      .map((event) => event.trim())
+      .filter(Boolean);
+
+    expect(events.length).toBeGreaterThan(0);
+
+    for (const event of events) {
+      expect(event.startsWith('data: ')).toBe(true);
+      const payload = JSON.parse(event.slice('data: '.length)) as unknown;
+      expect(payload).toMatchObject({
+        content: expect.any(String),
+        done: expect.any(Boolean),
+      });
+    }
+  });
 });

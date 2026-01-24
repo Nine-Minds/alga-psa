@@ -436,3 +436,10 @@ curl -X POST localhost:3000/api/chat/stream/chat \
   - File: `server/src/test/unit/api/chatCompletionsStream.route.exists.test.ts`
 - Validation: `npx vitest run server/src/test/unit/api/chatCompletionsStream.route.exists.test.ts`
 - Next test item: T034 Each SSE chunk contains JSON with content and done fields
+
+### 2026-01-24 (cont.)
+- Implemented T034 (unit test):
+  - Verifies each SSE `data:` event is valid JSON containing `content` (string) and `done` (boolean).
+  - File: `server/src/test/unit/api/chatCompletionsStream.route.exists.test.ts`
+- Validation: `npx vitest run server/src/test/unit/api/chatCompletionsStream.route.exists.test.ts`
+- Next test item: T035 Final SSE message has done: true

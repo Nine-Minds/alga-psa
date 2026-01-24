@@ -200,7 +200,7 @@
   {
     "id": "T034",
     "description": "Each SSE chunk contains JSON with content and done fields",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F018"]
   },
   {
