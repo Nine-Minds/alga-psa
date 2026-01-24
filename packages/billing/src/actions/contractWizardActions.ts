@@ -26,6 +26,7 @@ import {
 import { ensureTemplateLineSnapshot, fetchDetailedContractLines } from '../repositories/contractLineRepository';
 import {
   IContractLineServiceBucketConfig,
+  IContractLineServiceFixedConfig,
   IContractLineServiceHourlyConfig,
   IContractLineServiceUsageConfig,
 } from '@alga-psa/types';
@@ -191,12 +192,12 @@ const isBucketConfig = (
   Boolean(config && 'total_minutes' in config && 'overage_rate' in config && 'allow_rollover' in config);
 
 const isHourlyConfig = (
-  config: IContractLineServiceBucketConfig | IContractLineServiceHourlyConfig | IContractLineServiceUsageConfig | null
+  config: IContractLineServiceFixedConfig | IContractLineServiceBucketConfig | IContractLineServiceHourlyConfig | IContractLineServiceUsageConfig | null
 ): config is IContractLineServiceHourlyConfig =>
   Boolean(config && 'hourly_rate' in config && 'minimum_billable_time' in config);
 
 const isUsageConfig = (
-  config: IContractLineServiceBucketConfig | IContractLineServiceHourlyConfig | IContractLineServiceUsageConfig | null
+  config: IContractLineServiceFixedConfig | IContractLineServiceBucketConfig | IContractLineServiceHourlyConfig | IContractLineServiceUsageConfig | null
 ): config is IContractLineServiceUsageConfig =>
   Boolean(config && 'unit_of_measure' in config && 'enable_tiered_pricing' in config);
 
