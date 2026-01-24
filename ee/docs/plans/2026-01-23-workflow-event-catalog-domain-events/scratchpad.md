@@ -470,9 +470,21 @@ Implication: we should standardize on `@alga-psa/event-bus/publishers` helpers f
     - `shared/workflow/streams/domainEventBuilders/__tests__/emailFeedbackEventBuilders.test.ts`
     - `server/src/test/unit/resendWebhookEvents.test.ts`
 
+- 2026-01-24: Completed `F073` (notification delivery lifecycle emission):
+  - Implemented workflow v2 notification lifecycle events for **in-app internal notifications**:
+    - `NOTIFICATION_SENT` when an internal notification row is created
+    - `NOTIFICATION_DELIVERED` / `NOTIFICATION_FAILED` based on Redis Pub/Sub broadcast success/failure
+    - `NOTIFICATION_READ` when a user marks a notification as read
+  - Wired emissions into the authoritative internal notification paths:
+    - `packages/notifications/src/actions/internal-notification-actions/internalNotificationActions.ts`
+    - `packages/notifications/src/realtime/internalNotificationBroadcaster.ts`
+  - Added shared payload builders + schema-compat unit test coverage:
+    - `shared/workflow/streams/domainEventBuilders/notificationEventBuilders.ts`
+    - `shared/workflow/streams/domainEventBuilders/__tests__/notificationEventBuilders.test.ts`
+
 ## Next Up
 
-- `F073`: emit notification delivery lifecycle events (`NOTIFICATION_SENT`, `NOTIFICATION_DELIVERED`, `NOTIFICATION_FAILED`, `NOTIFICATION_READ`) for supported channels.
+- `F074`: emit survey/CSAT lifecycle events (`SURVEY_*`, `CSAT_ALERT_TRIGGERED`).
 
 ## Suggested Phasing (to reduce risk)
 

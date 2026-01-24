@@ -23,6 +23,12 @@ import {
   broadcastAllNotificationsRead,
   broadcastUnreadCount
 } from "../../realtime/internalNotificationBroadcaster";
+import logger from '@alga-psa/core/logger';
+import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
+import {
+  buildNotificationReadPayload,
+  buildNotificationSentPayload,
+} from '@shared/workflow/streams/domainEventBuilders/notificationEventBuilders';
 
 /**
  * Get user's locale preference with fallback hierarchy:
@@ -133,6 +139,21 @@ function renderTemplate(template: string, data: Record<string, any>): string {
   });
 }
 
+function normalizeDateTime(value: unknown): string {
+  if (typeof value === 'string') return value;
+  if (value instanceof Date) return value.toISOString();
+  return new Date().toISOString();
+}
+
+function safePublishNotificationWorkflowEvent(params: Parameters<typeof publishWorkflowEvent>[0]): void {
+  void publishWorkflowEvent(params).catch((error) => {
+    logger.warn('[InternalNotificationActions] Failed to publish workflow notification event', {
+      error: error instanceof Error ? error.message : String(error),
+      eventType: params.eventType,
+    });
+  });
+}
+
 /**
  * Internal helper to create a notification from a template (used by event subscribers)
  * Accepts an existing Knex connection to avoid creating a new transaction
@@ -188,6 +209,26 @@ export async function createNotificationFromTemplateInternal(
         delivery_attempts: 0
       })
       .returning('*');
+
+    const createdAt = normalizeDateTime(notification?.created_at);
+
+    safePublishNotificationWorkflowEvent({
+      eventType: 'NOTIFICATION_SENT',
+      payload: buildNotificationSentPayload({
+        notificationId: notification.internal_notification_id,
+        channel: 'in_app',
+        recipientId: request.user_id,
+        sentAt: createdAt,
+        templateId: request.template_name,
+      }),
+      ctx: {
+        tenantId: request.tenant,
+        occurredAt: createdAt,
+        actor: { actorType: 'SYSTEM' },
+        correlationId: `notification:${notification.internal_notification_id}`,
+      },
+      idempotencyKey: `notification:${notification.internal_notification_id}:sent`,
+    });
 
     // Broadcast notification to connected clients (async, don't await)
     broadcastNotification(notification).catch(err => {
@@ -253,6 +294,26 @@ export async function createNotificationFromTemplateAction(
         delivery_attempts: 0
       })
       .returning('*');
+
+    const createdAt = normalizeDateTime(notification?.created_at);
+
+    safePublishNotificationWorkflowEvent({
+      eventType: 'NOTIFICATION_SENT',
+      payload: buildNotificationSentPayload({
+        notificationId: notification.internal_notification_id,
+        channel: 'in_app',
+        recipientId: request.user_id,
+        sentAt: createdAt,
+        templateId: request.template_name,
+      }),
+      ctx: {
+        tenantId: request.tenant,
+        occurredAt: createdAt,
+        actor: { actorType: 'SYSTEM' },
+        correlationId: `notification:${notification.internal_notification_id}`,
+      },
+      idempotencyKey: `notification:${notification.internal_notification_id}:sent`,
+    });
 
     // Broadcast notification to connected clients (async, don't await)
     broadcastNotification(notification).catch(err => {
@@ -501,6 +562,25 @@ export async function markAsReadAction(
     }
 
     return notif;
+  });
+
+  const readAt = normalizeDateTime(notification.read_at);
+
+  safePublishNotificationWorkflowEvent({
+    eventType: 'NOTIFICATION_READ',
+    payload: buildNotificationReadPayload({
+      notificationId,
+      channel: 'in_app',
+      recipientId: userId,
+      readAt,
+    }),
+    ctx: {
+      tenantId: tenant,
+      occurredAt: readAt,
+      actor: { actorType: 'USER', actorUserId: userId },
+      correlationId: `notification:${notificationId}`,
+    },
+    idempotencyKey: `notification:${notificationId}:read`,
   });
 
   // Broadcast notification read (async, don't await)
