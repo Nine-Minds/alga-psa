@@ -14,7 +14,7 @@
   {
     "id": "T003",
     "description": "Drafts tab shows badge with count when drafts exist",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F002"]
   },
   {

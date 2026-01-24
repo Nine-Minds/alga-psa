@@ -38,6 +38,7 @@ import { ContractDialog } from './ContractDialog';
 import {
   CONTRACT_LABEL_TO_SUBTAB,
   CONTRACT_SUBTAB_LABELS,
+  getDraftTabBadgeCount,
   normalizeContractSubtab,
   type ContractSubTab,
 } from './contractsTabs';
@@ -471,6 +472,7 @@ const renderStatusBadge = (status: string) => {
   });
 
   const draftCount = draftContracts.length;
+  const draftBadgeCount = getDraftTabBadgeCount(draftCount);
 
   const renderTemplateTab = () => (
     <>
@@ -711,8 +713,8 @@ const renderStatusBadge = (status: string) => {
     { label: 'Client Contracts', content: renderClientContractsTab() },
     {
       label: 'Drafts',
-      icon: draftCount > 0 ? (
-        <Badge className="ml-2 order-last bg-gray-100 text-gray-800">{draftCount}</Badge>
+      icon: draftBadgeCount != null ? (
+        <Badge className="ml-2 order-last bg-gray-100 text-gray-800">{draftBadgeCount}</Badge>
       ) : undefined,
       content: renderDraftsTab(),
     },

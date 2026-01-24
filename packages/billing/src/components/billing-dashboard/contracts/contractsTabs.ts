@@ -23,3 +23,5 @@ export const normalizeContractSubtab = (raw: string | null | undefined): Contrac
   return 'templates';
 };
 
+export const getDraftTabBadgeCount = (draftCount: number): number | null =>
+  draftCount > 0 ? draftCount : null;

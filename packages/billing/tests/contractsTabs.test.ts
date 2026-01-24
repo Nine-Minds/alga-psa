@@ -4,6 +4,7 @@ import {
   CONTRACT_TAB_LABELS,
   CONTRACT_LABEL_TO_SUBTAB,
   CONTRACT_SUBTAB_LABELS,
+  getDraftTabBadgeCount,
   normalizeContractSubtab,
 } from '../src/components/billing-dashboard/contracts/contractsTabs';
 
@@ -19,5 +20,9 @@ describe('contracts tabs config', () => {
   it('maps Drafts label to drafts subtab', () => {
     expect(CONTRACT_LABEL_TO_SUBTAB[CONTRACT_SUBTAB_LABELS.drafts]).toBe('drafts');
     expect(normalizeContractSubtab('drafts')).toBe('drafts');
+  });
+
+  it('shows a badge count when draft count is > 0', () => {
+    expect(getDraftTabBadgeCount(3)).toBe(3);
   });
 });

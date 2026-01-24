@@ -118,6 +118,7 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
   - Added `packages/billing/tests/contractsTabs.test.ts` to assert the contracts tabs config includes Templates / Client Contracts / Drafts.
   - Extracted tab label mapping into `packages/billing/src/components/billing-dashboard/contracts/contractsTabs.ts` for unit testing without DOM.
   - Extended `packages/billing/tests/contractsTabs.test.ts` to assert Drafts label maps to `subtab=drafts`.
+  - Added `getDraftTabBadgeCount()` helper + test to assert Drafts badge appears when count > 0.
 
 ## Links / References
 
