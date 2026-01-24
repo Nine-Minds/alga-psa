@@ -249,6 +249,12 @@
       "@alga-psa/tags/*": [
         "../packages/tags/src/*"
       ],
+      "@alga-psa/sla": [
+        "../packages/sla/src"
+      ],
+      "@alga-psa/sla/*": [
+        "../packages/sla/src/*"
+      ],
       "@alga-psa/media": [
         "../packages/media/src"
       ],

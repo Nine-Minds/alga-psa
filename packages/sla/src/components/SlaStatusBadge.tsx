@@ -143,7 +143,7 @@ export function SlaStatusBadge({
   size = 'md',
   showIcon = true,
   className
-}: SlaStatusBadgeProps): JSX.Element | null {
+}: SlaStatusBadgeProps): React.ReactElement | null {
   // Determine which SLA type to display
   const selectedDisplayType =
     displayType === 'auto'
@@ -268,7 +268,7 @@ export function SlaIndicator({
   remainingMinutes?: number;
   isPaused?: boolean;
   className?: string;
-}): JSX.Element {
+}): React.ReactElement {
   const config = getStatusConfig(status, isPaused);
   const Icon = config.icon;
 

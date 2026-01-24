@@ -1,6 +1,7 @@
 'use server';
 
 import { createTenantKnex, withTransaction } from '@alga-psa/db';
+import { withAuth } from '@alga-psa/auth';
 import { Knex } from 'knex';
 import {
   ISlaSettings,
@@ -16,12 +17,8 @@ import {
  * Get SLA settings for the current tenant.
  * Creates default settings if none exist.
  */
-export async function getSlaSettings(): Promise<ISlaSettings> {
-  const { knex: db, tenant } = await createTenantKnex();
-
-  if (!tenant) {
-    throw new Error('No tenant found');
-  }
+export const getSlaSettings = withAuth(async (_user, { tenant }): Promise<ISlaSettings> => {
+  const { knex: db } = await createTenantKnex();
 
   return withTransaction(db, async (trx: Knex.Transaction) => {
     try {
@@ -55,18 +52,14 @@ export async function getSlaSettings(): Promise<ISlaSettings> {
       throw new Error(`Failed to fetch SLA settings for tenant ${tenant}`);
     }
   });
-}
+});
 
 /**
  * Update SLA settings for the current tenant.
  * Creates settings if they don't exist (upsert pattern).
  */
-export async function updateSlaSettings(settings: Partial<ISlaSettings>): Promise<ISlaSettings> {
-  const { knex: db, tenant } = await createTenantKnex();
-
-  if (!tenant) {
-    throw new Error('No tenant found');
-  }
+export const updateSlaSettings = withAuth(async (_user, { tenant }, settings: Partial<ISlaSettings>): Promise<ISlaSettings> => {
+  const { knex: db } = await createTenantKnex();
 
   return withTransaction(db, async (trx: Knex.Transaction) => {
     try {
@@ -111,7 +104,7 @@ export async function updateSlaSettings(settings: Partial<ISlaSettings>): Promis
       throw new Error(`Failed to update SLA settings for tenant ${tenant}`);
     }
   });
-}
+});
 
 // ============================================================================
 // Status SLA Pause Configuration
@@ -120,12 +113,8 @@ export async function updateSlaSettings(settings: Partial<ISlaSettings>): Promis
 /**
  * Get all status SLA pause configurations for the current tenant.
  */
-export async function getStatusSlaPauseConfigs(): Promise<IStatusSlaPauseConfig[]> {
-  const { knex: db, tenant } = await createTenantKnex();
-
-  if (!tenant) {
-    throw new Error('No tenant found');
-  }
+export const getStatusSlaPauseConfigs = withAuth(async (_user, { tenant }): Promise<IStatusSlaPauseConfig[]> => {
+  const { knex: db } = await createTenantKnex();
 
   return withTransaction(db, async (trx: Knex.Transaction) => {
     try {
@@ -145,17 +134,13 @@ export async function getStatusSlaPauseConfigs(): Promise<IStatusSlaPauseConfig[
       throw new Error(`Failed to fetch status SLA pause configs for tenant ${tenant}`);
     }
   });
-}
+});
 
 /**
  * Get the SLA pause configuration for a specific status.
  */
-export async function getSlaPauseConfigForStatus(statusId: string): Promise<IStatusSlaPauseConfig | null> {
-  const { knex: db, tenant } = await createTenantKnex();
-
-  if (!tenant) {
-    throw new Error('No tenant found');
-  }
+export const getSlaPauseConfigForStatus = withAuth(async (_user, { tenant }, statusId: string): Promise<IStatusSlaPauseConfig | null> => {
+  const { knex: db } = await createTenantKnex();
 
   return withTransaction(db, async (trx: Knex.Transaction) => {
     try {
@@ -179,21 +164,19 @@ export async function getSlaPauseConfigForStatus(statusId: string): Promise<ISta
       throw new Error(`Failed to fetch SLA pause config for status ${statusId}`);
     }
   });
-}
+});
 
 /**
  * Set the SLA pause configuration for a specific status.
  * Uses upsert pattern - inserts if not exists, updates if exists.
  */
-export async function setStatusSlaPauseConfig(
+export const setStatusSlaPauseConfig = withAuth(async (
+  _user,
+  { tenant },
   statusId: string,
   pausesSla: boolean
-): Promise<IStatusSlaPauseConfig> {
-  const { knex: db, tenant } = await createTenantKnex();
-
-  if (!tenant) {
-    throw new Error('No tenant found');
-  }
+): Promise<IStatusSlaPauseConfig> => {
+  const { knex: db } = await createTenantKnex();
 
   return withTransaction(db, async (trx: Knex.Transaction) => {
     try {
@@ -239,20 +222,18 @@ export async function setStatusSlaPauseConfig(
       throw new Error(`Failed to set SLA pause config for status ${statusId}`);
     }
   });
-}
+});
 
 /**
  * Bulk update status SLA pause configurations.
  * Efficiently updates multiple status configurations in a single transaction.
  */
-export async function bulkUpdateStatusSlaPauseConfigs(
+export const bulkUpdateStatusSlaPauseConfigs = withAuth(async (
+  _user,
+  { tenant },
   configs: Array<{ statusId: string; pausesSla: boolean }>
-): Promise<IStatusSlaPauseConfig[]> {
-  const { knex: db, tenant } = await createTenantKnex();
-
-  if (!tenant) {
-    throw new Error('No tenant found');
-  }
+): Promise<IStatusSlaPauseConfig[]> => {
+  const { knex: db } = await createTenantKnex();
 
   if (configs.length === 0) {
     return [];
@@ -308,7 +289,7 @@ export async function bulkUpdateStatusSlaPauseConfigs(
       throw new Error(`Failed to bulk update SLA pause configs for tenant ${tenant}`);
     }
   });
-}
+});
 
 // ============================================================================
 // Helper Functions
@@ -323,14 +304,12 @@ export async function bulkUpdateStatusSlaPauseConfigs(
  * @param ticketId - The ID of the ticket to check
  * @returns Object with paused status and reason
  */
-export async function shouldSlaBePaused(
+export const shouldSlaBePaused = withAuth(async (
+  _user,
+  { tenant },
   ticketId: string
-): Promise<{ paused: boolean; reason: SlaPauseReason | null }> {
-  const { knex: db, tenant } = await createTenantKnex();
-
-  if (!tenant) {
-    throw new Error('No tenant found');
-  }
+): Promise<{ paused: boolean; reason: SlaPauseReason | null }> => {
+  const { knex: db } = await createTenantKnex();
 
   return withTransaction(db, async (trx: Knex.Transaction) => {
     try {
@@ -386,18 +365,14 @@ export async function shouldSlaBePaused(
       throw new Error(`Failed to check SLA pause status for ticket ${ticketId}`);
     }
   });
-}
+});
 
 /**
  * Delete a status SLA pause configuration.
  * Useful when a status is deleted or when you want to remove the override.
  */
-export async function deleteStatusSlaPauseConfig(statusId: string): Promise<boolean> {
-  const { knex: db, tenant } = await createTenantKnex();
-
-  if (!tenant) {
-    throw new Error('No tenant found');
-  }
+export const deleteStatusSlaPauseConfig = withAuth(async (_user, { tenant }, statusId: string): Promise<boolean> => {
+  const { knex: db } = await createTenantKnex();
 
   return withTransaction(db, async (trx: Knex.Transaction) => {
     try {
@@ -411,4 +386,4 @@ export async function deleteStatusSlaPauseConfig(statusId: string): Promise<bool
       throw new Error(`Failed to delete SLA pause config for status ${statusId}`);
     }
   });
-}
+});
