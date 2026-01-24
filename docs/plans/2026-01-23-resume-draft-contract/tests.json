@@ -128,7 +128,7 @@
   {
     "id": "T022",
     "description": "Search is case-insensitive",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F010", "F011"]
   },
   {

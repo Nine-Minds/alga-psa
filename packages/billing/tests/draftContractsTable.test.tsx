@@ -326,4 +326,29 @@ describe('Drafts tab DataTable', () => {
       expect(screen.queryByText('Draft Alpha')).not.toBeInTheDocument();
     });
   });
+
+  it('search is case-insensitive (T022)', async () => {
+    mockDraftContracts = [
+      {
+        contract_id: 'contract-1',
+        contract_name: 'Draft Alpha',
+        client_name: 'Acme Co',
+        created_at: new Date(2026, 0, 1),
+        updated_at: new Date(2026, 0, 2),
+      },
+    ];
+
+    const Contracts = (await import('../src/components/billing-dashboard/contracts/Contracts')).default;
+    render(<Contracts />);
+
+    await screen.findByText('Draft Alpha');
+
+    const user = userEvent.setup();
+    const searchInput = screen.getByLabelText('Search draft contracts');
+    await act(async () => {
+      await user.type(searchInput, 'acme');
+    });
+
+    expect(await screen.findByText('Draft Alpha')).toBeInTheDocument();
+  });
 });
