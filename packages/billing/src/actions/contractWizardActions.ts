@@ -1456,6 +1456,15 @@ export const getDraftContractForResume = withAuth(async (
   contractId: string
 ): Promise<DraftContractWizardData> => {
   const { knex } = await createTenantKnex();
+  const isBypass = process.env.E2E_AUTH_BYPASS === 'true';
+
+  if (!isBypass) {
+    const canCreateBilling = hasPermission(user, 'billing', 'create');
+    const canUpdateBilling = hasPermission(user, 'billing', 'update');
+    if (!canCreateBilling || !canUpdateBilling) {
+      throw new Error('Permission denied: Cannot resume billing contracts');
+    }
+  }
 
   const contract = await knex('contracts')
     .where({ tenant, contract_id: contractId })

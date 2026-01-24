@@ -146,7 +146,7 @@
   {
     "id": "F025",
     "description": "Drafts functionality respects existing contract permissions (create, delete)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR5"]
   }
 ]

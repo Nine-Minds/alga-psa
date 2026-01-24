@@ -383,6 +383,14 @@ export const deleteContract = withAuth(async (user, { tenant }, contractId: stri
   const { knex } = await createTenantKnex();
 
   try {
+    const isBypass = process.env.E2E_AUTH_BYPASS === 'true';
+    if (!isBypass) {
+      const canDeleteBilling = hasPermission(user, 'billing', 'delete');
+      if (!canDeleteBilling) {
+        throw new Error('Permission denied: Cannot delete billing contracts');
+      }
+    }
+
     const templateExists = await isTemplateContract(knex, tenant, contractId);
     if (templateExists) {
       await ContractTemplateModel.delete(contractId, tenant);

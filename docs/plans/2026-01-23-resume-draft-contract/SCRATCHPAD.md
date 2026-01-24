@@ -105,6 +105,10 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
   - `getDraftContracts()` and `getDraftContractForResume()` filter by `{ tenant }`
   - Draft updates via `createClientContractFromWizard()` update path are tenant-scoped
 
+- (2026-01-24) Permissions:
+  - Resuming drafts (`getDraftContractForResume`) requires `billing:create` + `billing:update` (unless `E2E_AUTH_BYPASS=true`)
+  - Discarding drafts (`deleteContract`) requires `billing:delete` (unless `E2E_AUTH_BYPASS=true`)
+
 ## Commands / Runbooks
 
 - Run billing package tests: `npm test -w packages/billing`
