@@ -743,3 +743,7 @@ Phase 3 (feature dependent / optional modules):
 - 2026-01-24: Completed `T043` (credits coverage):
   - Coverage exists via schema-compat builder tests for credit note created/applied/voided payload shapes:
     - `shared/workflow/streams/domainEventBuilders/__tests__/creditNoteEventBuilders.test.ts`
+
+- 2026-01-24: Completed `T044` (contracts coverage):
+  - Coverage exists via schema-compat builder tests for contract lifecycle + renewal-upcoming timing:
+    - `shared/workflow/streams/domainEventBuilders/__tests__/contractEventBuilders.test.ts`
