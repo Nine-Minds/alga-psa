@@ -99,6 +99,8 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 
 - (2026-01-24) Discard confirmation calls `deleteContract(contractId)` and shows toast success/error.
 
+- (2026-01-24) Drafts list refreshes after discard by calling `fetchContracts()` (badge count updates too).
+
 ## Commands / Runbooks
 
 - Run billing package tests: `npm test -w packages/billing`

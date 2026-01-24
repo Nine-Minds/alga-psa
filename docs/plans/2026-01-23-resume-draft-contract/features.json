@@ -134,7 +134,7 @@
   {
     "id": "F023",
     "description": "Drafts list refreshes after successful deletion",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR4"]
   },
   {
