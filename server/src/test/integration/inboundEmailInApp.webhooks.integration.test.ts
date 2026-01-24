@@ -893,4 +893,48 @@ describe('Inbound email in-app processing via webhooks (integration)', () => {
     const comments = await db('comments').where({ tenant: tenantId, ticket_id: ticketId });
     expect(comments).toHaveLength(1);
   });
+
+  it('Idempotency: replay same new-email does not create duplicate tickets', async () => {
+    const providerId = uuidv4();
+    const mailbox = `support-idem-new-${uuidv4().slice(0, 6)}@example.com`;
+    const { defaultsId } = await setupInboundDefaults({ providerId, mailbox });
+
+    cleanup.push(async () => {
+      await db('gmail_processed_history').where({ tenant: tenantId, provider_id: providerId }).delete();
+      await db('google_email_provider_config').where({ tenant: tenantId, email_provider_id: providerId }).delete();
+      await db('email_providers').where({ tenant: tenantId, id: providerId }).delete();
+      await db('inbound_ticket_defaults').where({ tenant: tenantId, id: defaultsId }).delete();
+    });
+
+    const emailId = `new-email-${uuidv4()}`;
+    const emailData = {
+      id: emailId,
+      provider: 'google',
+      providerId,
+      tenant: tenantId,
+      receivedAt: new Date().toISOString(),
+      from: { email: `unknown-${uuidv4().slice(0, 6)}@example.com`, name: 'Unknown' },
+      to: [{ email: mailbox, name: 'Support' }],
+      subject: 'Idem new subject',
+      body: { text: 'Hello', html: undefined },
+      attachments: [],
+    } as any;
+
+    const first = await processInboundEmailInApp({ tenantId, providerId, emailData });
+    expect(first.outcome).toBe('created');
+
+    const second = await processInboundEmailInApp({ tenantId, providerId, emailData });
+    expect(second.outcome).toBe('deduped');
+
+    const tickets = await db('tickets').where({ tenant: tenantId, title: 'Idem new subject' });
+    expect(tickets).toHaveLength(1);
+
+    const comments = await db('comments').where({ tenant: tenantId, ticket_id: tickets[0].ticket_id });
+    expect(comments).toHaveLength(1);
+
+    cleanup.push(async () => {
+      await db('comments').where({ tenant: tenantId, ticket_id: tickets[0].ticket_id }).delete();
+      await db('tickets').where({ tenant: tenantId, ticket_id: tickets[0].ticket_id }).delete();
+    });
+  });
 });

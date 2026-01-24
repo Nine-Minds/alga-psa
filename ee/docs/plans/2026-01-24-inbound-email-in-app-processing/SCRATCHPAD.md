@@ -61,3 +61,4 @@
 - 2026-01-24: Implemented T030 with an integration test verifying attachment processing errors do not prevent ticket + initial comment creation (`server/src/test/integration/inboundEmailInApp.webhooks.integration.test.ts`).
 - 2026-01-24: Implemented T031 with an integration test verifying attachment processing errors do not prevent reply comment creation (`server/src/test/integration/inboundEmailInApp.webhooks.integration.test.ts`).
 - 2026-01-24: Implemented T040 with an integration test verifying reply idempotency (replaying the same email id does not create duplicate comments) (`server/src/test/integration/inboundEmailInApp.webhooks.integration.test.ts`).
+- 2026-01-24: Implemented T041 with an integration test verifying new-email idempotency (replaying the same email id does not create duplicate tickets/comments) (`server/src/test/integration/inboundEmailInApp.webhooks.integration.test.ts`).
