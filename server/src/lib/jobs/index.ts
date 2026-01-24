@@ -406,7 +406,7 @@ export const scheduleRenewalQueueProcessingJob = async (
  * This job monitors all active tickets for SLA warnings and breaches.
  *
  * @param tenantId The tenant ID
- * @param cronExpression Cron expression for job scheduling (e.g., '*/5 * * * *' for every 5 minutes)
+ * @param cronExpression Cron expression for job scheduling (default: every 5 minutes)
  * @returns Job ID if successful, null otherwise
  */
 export const scheduleSlaTimerJob = async (

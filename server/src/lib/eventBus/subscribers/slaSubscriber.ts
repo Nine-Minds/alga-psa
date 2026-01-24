@@ -18,7 +18,7 @@ import {
   type TicketClosedEvent,
   type TicketCommentAddedEvent
 } from '../events';
-import { createTenantKnex, runWithTenant, withTransaction } from '../../db';
+import { createTenantKnex, runWithTenant, withTransaction } from '@alga-psa/db';
 import {
   startSlaForTicket,
   recordFirstResponse,
