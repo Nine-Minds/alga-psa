@@ -344,7 +344,7 @@
   {
     "id": "T058",
     "description": "Deletion shows success toast notification",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F022"]
   },
   {

@@ -120,6 +120,7 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - (2026-01-24) Implemented T055: Cancel closes discard dialog without calling deleteContract (unit test).
 - (2026-01-24) Implemented T056: Discard confirmation calls deleteContract(contractId) (unit test).
 - (2026-01-24) Implemented T057: confirming discard removes the draft from Drafts list (unit test via refreshed fetch).
+- (2026-01-24) Implemented T058: successful discard shows toast.success('Draft discarded') (unit test with mocked react-hot-toast).
 
 - (2026-01-24) Tests:
   - Added `packages/billing/tests/contractsTabs.test.ts` to assert the contracts tabs config includes Templates / Client Contracts / Drafts.
