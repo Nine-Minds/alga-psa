@@ -321,3 +321,10 @@ curl -X POST localhost:3000/api/chat/stream/chat \
   - File: `server/src/test/unit/components/ExperimentalFeaturesSettings.test.tsx`
 - Validation: `npx vitest run server/src/test/unit/components/ExperimentalFeaturesSettings.test.tsx`
 - Next test item: T018 Save button shows success feedback after saving
+
+### 2026-01-24 (cont.)
+- Implemented T018 (unit test):
+  - Verifies save triggers a success toast (prompting the user to reload to apply changes).
+  - File: `server/src/test/unit/components/ExperimentalFeaturesSettings.test.tsx`
+- Validation: `npx vitest run server/src/test/unit/components/ExperimentalFeaturesSettings.test.tsx`
+- Next test item: T019 Quick Ask shortcut (⌘↑) is ignored when aiAssistant is disabled

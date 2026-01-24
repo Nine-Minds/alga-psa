@@ -104,7 +104,7 @@
   {
     "id": "T018",
     "description": "Save button shows success feedback after saving",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F008"]
   },
   {

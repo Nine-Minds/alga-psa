@@ -6,6 +6,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { UIStateProvider } from '@alga-psa/ui/ui-reflection/UIStateContext';
+import { toast } from 'react-hot-toast';
 
 import ExperimentalFeaturesSettings from '../../../components/settings/general/ExperimentalFeaturesSettings';
 import { getExperimentalFeatures, updateExperimentalFeatures } from '@alga-psa/tenancy/actions';
@@ -129,6 +130,45 @@ describe('ExperimentalFeaturesSettings', () => {
 
     await waitFor(() => {
       expect(updateExperimentalFeatures).toHaveBeenCalledWith({ aiAssistant: true });
+    });
+  });
+
+  it('shows success feedback after saving', async () => {
+    vi.mocked(getExperimentalFeatures).mockResolvedValueOnce({ aiAssistant: false });
+    vi.mocked(updateExperimentalFeatures).mockResolvedValueOnce(undefined);
+
+    render(
+      <UIStateProvider
+        initialPageState={{
+          id: 'test-page',
+          title: 'Test Page',
+          components: [],
+        }}
+      >
+        <ExperimentalFeaturesSettings />
+      </UIStateProvider>
+    );
+
+    const toggle = await waitFor(() => {
+      const el = document.querySelector(
+        '[data-automation-id="experimental-feature-toggle-aiAssistant"]'
+      ) as HTMLElement | null;
+      expect(el).toBeTruthy();
+      return el!;
+    });
+
+    fireEvent.click(toggle);
+
+    const saveButton = await screen.findByRole('button', { name: 'Save' });
+    await waitFor(() => {
+      expect(saveButton).not.toBeDisabled();
+    });
+    fireEvent.click(saveButton);
+
+    await waitFor(() => {
+      expect(vi.mocked(toast.success)).toHaveBeenCalledWith(
+        'Experimental feature settings saved. Reload the page to apply changes.'
+      );
     });
   });
 
