@@ -446,9 +446,20 @@ Implication: we should standardize on `@alga-psa/event-bus/publishers` helpers f
     - `shared/workflow/streams/domainEventBuilders/inboundEmailReplyEventBuilders.ts`
     - `shared/workflow/streams/domainEventBuilders/__tests__/inboundEmailReplyEventBuilders.test.ts`
 
+- 2026-01-24: Completed `F071` (outbound email lifecycle emission):
+  - Emitted workflow v2 outbound lifecycle events from the authoritative outbound send abstraction:
+    - `server/src/lib/email/BaseEmailService.ts` now publishes best-effort:
+      - `OUTBOUND_EMAIL_QUEUED` immediately before provider send attempt
+      - `OUTBOUND_EMAIL_SENT` or `OUTBOUND_EMAIL_FAILED` after provider result
+  - Notes/constraints:
+    - Uses a generated workflow `messageId` (UUID) per send attempt, and includes provider message id when available.
+    - Publishing failures do not block email delivery (events are best-effort).
+  - Added unit coverage:
+    - `server/src/test/unit/outboundEmailWorkflowEvents.test.ts`
+
 ## Next Up
 
-- `F071`: emit outbound lifecycle events (`OUTBOUND_EMAIL_QUEUED`, `OUTBOUND_EMAIL_SENT`, `OUTBOUND_EMAIL_FAILED`) for provider send attempts.
+- `F072`: emit delivery/feedback events (`EMAIL_DELIVERED`, `EMAIL_BOUNCED`, `EMAIL_COMPLAINT_RECEIVED`, `EMAIL_UNSUBSCRIBED`) where provider support exists.
 
 ## Suggested Phasing (to reduce risk)
 
