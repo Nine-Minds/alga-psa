@@ -206,7 +206,7 @@
   {
     "id": "T035",
     "description": "Final SSE message has done: true",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F019"]
   },
   {
