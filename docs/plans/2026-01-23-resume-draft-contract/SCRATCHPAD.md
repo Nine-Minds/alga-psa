@@ -90,6 +90,9 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
   - `ClientContractWizardSubmission` includes optional `contract_id`
   - `createClientContractFromWizard()` updates existing draft when `contract_id` is provided (clears old lines/configs + rewrites in a transaction)
 
+- (2026-01-24) Completing a resumed draft activates in-place:
+  - `createClientContractFromWizard()` transitions updated draft to `status='active'` / `is_active=true` when called without `isDraft`
+
 ## Commands / Runbooks
 
 - Run billing package tests: `npm test -w packages/billing`

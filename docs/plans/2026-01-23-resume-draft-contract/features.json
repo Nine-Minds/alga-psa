@@ -110,7 +110,7 @@
   {
     "id": "F019",
     "description": "Completing wizard from resumed draft activates contract (status changes from draft to active)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR3"]
   },
   {
