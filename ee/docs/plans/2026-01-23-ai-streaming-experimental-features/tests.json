@@ -248,7 +248,7 @@
   {
     "id": "T042",
     "description": "Streaming indicator is visible while receiving tokens",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F023"]
   },
   {

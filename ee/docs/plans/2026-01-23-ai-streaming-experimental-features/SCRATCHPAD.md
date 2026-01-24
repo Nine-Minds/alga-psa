@@ -495,3 +495,10 @@ curl -X POST localhost:3000/api/chat/stream/chat \
   - File: `server/src/test/unit/Chat.streamingIncrementalState.test.tsx`
 - Validation: `npx vitest run server/src/test/unit/Chat.streamingIncrementalState.test.tsx`
 - Next test item: T042 Streaming indicator is visible while receiving tokens
+
+### 2026-01-24 (cont.)
+- Implemented T042 (unit test):
+  - Verifies the assistant message shows the streaming cursor (`.message-streaming-cursor`) after the first streamed token arrives.
+  - File: `server/src/test/unit/Chat.streamingIncrementalState.test.tsx`
+- Validation: `npx vitest run server/src/test/unit/Chat.streamingIncrementalState.test.tsx`
+- Next test item: T043 Streaming indicator disappears when done: true received
