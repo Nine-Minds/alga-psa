@@ -155,7 +155,32 @@ docker compose down -v
 - Document complex logic
 - Write meaningful commit messages
 
-### 2. Testing
+### 2. Server Action Authentication
+
+All server actions that need authentication and database access should use the `withAuth` wrapper:
+
+```typescript
+import { withAuth, hasPermission } from '@alga-psa/auth';
+import { createTenantKnex } from '@alga-psa/db';
+
+export const myAction = withAuth(async (user, { tenant }, arg1: string): Promise<Result> => {
+  const { knex } = await createTenantKnex();
+
+  if (!await hasPermission(user, 'resource', 'action')) {
+    throw new Error('Permission denied');
+  }
+
+  return knex('table').where({ tenant }).select('*');
+});
+```
+
+**Key points:**
+- `withAuth` handles authentication and sets tenant context via AsyncLocalStorage
+- The wrapper provides typed `user` (IUserWithRoles) and `{ tenant }` as first two arguments
+- Additional action arguments follow after the context
+- Always check permissions using `hasPermission(user, resource, action)`
+
+### 3. Testing
 
 - Write tests for new features
 - Maintain test coverage
@@ -163,7 +188,7 @@ docker compose down -v
 - Test edge cases
 - Mock external dependencies
 
-### 3. Docker
+### 4. Docker
 
 - Keep images minimal
 - Use multi-stage builds
@@ -171,7 +196,7 @@ docker compose down -v
 - Use proper cache busting
 - Tag images appropriately
 
-### 4. Security
+### 5. Security
 
 - Never commit secrets
 - Use environment variables

@@ -1,15 +1,14 @@
 'use server';
 
-import { getCurrentUser } from './userActions';
+import { withAuth, withOptionalAuth } from '@alga-psa/auth';
 import { createTenantKnex } from '@alga-psa/db';
 import { SupportedLocale, isSupportedLocale } from '@alga-psa/ui/lib/i18n/config';
 
-export async function updateUserLocaleAction(locale: SupportedLocale | null) {
-  const user = await getCurrentUser();
-  if (!user) {
-    throw new Error('User not found');
-  }
-
+export const updateUserLocaleAction = withAuth(async (
+  user,
+  { tenant },
+  locale: SupportedLocale | null
+) => {
   // If locale is null, we're clearing the preference
   if (locale !== null && !isSupportedLocale(locale)) {
     throw new Error(`Unsupported locale: ${locale}`);
@@ -23,7 +22,7 @@ export async function updateUserLocaleAction(locale: SupportedLocale | null) {
       .where({
         user_id: user.user_id,
         setting_name: 'locale',
-        tenant: user.tenant
+        tenant: tenant
       })
       .delete();
 
@@ -35,7 +34,7 @@ export async function updateUserLocaleAction(locale: SupportedLocale | null) {
     .where({
       user_id: user.user_id,
       setting_name: 'locale',
-      tenant: user.tenant
+      tenant: tenant
     })
     .first();
 
@@ -45,7 +44,7 @@ export async function updateUserLocaleAction(locale: SupportedLocale | null) {
       .where({
         user_id: user.user_id,
         setting_name: 'locale',
-        tenant: user.tenant
+        tenant: tenant
       })
       .update({
         setting_value: JSON.stringify(locale),
@@ -55,7 +54,7 @@ export async function updateUserLocaleAction(locale: SupportedLocale | null) {
     // Insert new preference
     await knex('user_preferences').insert({
       user_id: user.user_id,
-      tenant: user.tenant,
+      tenant: tenant,
       setting_name: 'locale',
       setting_value: JSON.stringify(locale),
       updated_at: knex.fn.now()
@@ -63,11 +62,13 @@ export async function updateUserLocaleAction(locale: SupportedLocale | null) {
   }
 
   return { success: true };
-}
+});
 
-export async function getUserLocaleAction(): Promise<SupportedLocale | null> {
-  const user = await getCurrentUser();
-  if (!user) {
+export const getUserLocaleAction = withOptionalAuth(async (
+  user,
+  ctx
+): Promise<SupportedLocale | null> => {
+  if (!user || !ctx) {
     return null;
   }
 
@@ -77,7 +78,7 @@ export async function getUserLocaleAction(): Promise<SupportedLocale | null> {
     .where({
       user_id: user.user_id,
       setting_name: 'locale',
-      tenant: user.tenant
+      tenant: ctx.tenant
     })
     .first();
 
@@ -89,4 +90,4 @@ export async function getUserLocaleAction(): Promise<SupportedLocale | null> {
   }
 
   return null;
-}
+});

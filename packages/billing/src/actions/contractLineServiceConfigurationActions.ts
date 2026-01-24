@@ -10,77 +10,122 @@ import {
   IContractLineServiceRateTierInput,
   IUserTypeRate
 } from '@alga-psa/types';
-import { getCurrentUser } from '@alga-psa/auth/getCurrentUser';
+import { withAuth } from '@alga-psa/auth';
 
-async function getService() {
-  const currentUser = await getCurrentUser();
-  if (!currentUser) {
-    throw new Error('Unauthorized');
-  }
-  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
+export const getConfigurationWithDetails = withAuth(async (
+  user,
+  { tenant },
+  configId: string
+) => {
+  const { knex } = await createTenantKnex();
   if (!tenant) {
     throw new Error('tenant context not found');
   }
-  return { service: new ContractLineServiceConfigurationService(knex, tenant), tenant };
-}
-
-export async function getConfigurationWithDetails(configId: string) {
-  const { service } = await getService();
+  const service = new ContractLineServiceConfigurationService(knex, tenant);
   return service.getConfigurationWithDetails(configId);
-}
+});
 
-export async function getConfigurationsForPlan(contractLineId: string) {
-  const { service } = await getService();
+export const getConfigurationsForPlan = withAuth(async (
+  user,
+  { tenant },
+  contractLineId: string
+) => {
+  const { knex } = await createTenantKnex();
+  if (!tenant) {
+    throw new Error('tenant context not found');
+  }
+  const service = new ContractLineServiceConfigurationService(knex, tenant);
   return service.getConfigurationsForPlan(contractLineId);
-}
+});
 
-export async function getConfigurationForService(contractLineId: string, serviceId: string) {
-  const { service } = await getService();
+export const getConfigurationForService = withAuth(async (
+  user,
+  { tenant },
+  contractLineId: string,
+  serviceId: string
+) => {
+  const { knex } = await createTenantKnex();
+  if (!tenant) {
+    throw new Error('tenant context not found');
+  }
+  const service = new ContractLineServiceConfigurationService(knex, tenant);
   return service.getConfigurationForService(contractLineId, serviceId);
-}
+});
 
-export async function createConfiguration(
+export const createConfiguration = withAuth(async (
+  user,
+  { tenant },
   baseConfig: Omit<IContractLineServiceConfiguration, 'config_id' | 'created_at' | 'updated_at'>,
   typeConfig: Partial<IContractLineServiceUsageConfig | IContractLineServiceBucketConfig | Record<string, unknown>>,
   rateTiers?: IContractLineServiceRateTierInput[],
   userTypeRates?: Array<Omit<IUserTypeRate, 'created_at' | 'updated_at' | 'config_id' | 'rate_id'>>
-) {
-  const { service } = await getService();
+) => {
+  const { knex } = await createTenantKnex();
+  if (!tenant) {
+    throw new Error('tenant context not found');
+  }
+  const service = new ContractLineServiceConfigurationService(knex, tenant);
   return service.createConfiguration(baseConfig, typeConfig, rateTiers as any, userTypeRates);
-}
+});
 
-export async function updateConfiguration(
+export const updateConfiguration = withAuth(async (
+  user,
+  { tenant },
   configId: string,
   baseConfig?: Partial<IContractLineServiceConfiguration>,
   typeConfig?: Partial<IContractLineServiceUsageConfig | IContractLineServiceBucketConfig | Record<string, unknown>>,
   rateTiers?: IContractLineServiceRateTierInput[]
-) {
-  const { service } = await getService();
+) => {
+  const { knex } = await createTenantKnex();
+  if (!tenant) {
+    throw new Error('tenant context not found');
+  }
+  const service = new ContractLineServiceConfigurationService(knex, tenant);
   return service.updateConfiguration(configId, baseConfig, typeConfig, rateTiers as any);
-}
+});
 
-export async function deleteConfiguration(configId: string) {
-  const { service } = await getService();
+export const deleteConfiguration = withAuth(async (
+  user,
+  { tenant },
+  configId: string
+) => {
+  const { knex } = await createTenantKnex();
+  if (!tenant) {
+    throw new Error('tenant context not found');
+  }
+  const service = new ContractLineServiceConfigurationService(knex, tenant);
   return service.deleteConfiguration(configId);
-}
+});
 
-export async function upsertPlanServiceHourlyConfiguration(
+export const upsertPlanServiceHourlyConfiguration = withAuth(async (
+  user,
+  { tenant },
   contractLineId: string,
   serviceId: string,
   hourlyConfigData: Partial<IContractLineServiceHourlyConfig>
-) {
-  const { service } = await getService();
+) => {
+  const { knex } = await createTenantKnex();
+  if (!tenant) {
+    throw new Error('tenant context not found');
+  }
+  const service = new ContractLineServiceConfigurationService(knex, tenant);
   return service.upsertPlanServiceHourlyConfiguration(contractLineId, serviceId, hourlyConfigData);
-}
+});
 
-export async function upsertPlanServiceBucketConfigurationAction(
+export const upsertPlanServiceBucketConfigurationAction = withAuth(async (
+  user,
+  { tenant },
   contractLineId: string,
   serviceId: string,
   bucketConfigData: Partial<IContractLineServiceBucketConfig>
-) {
-  const { service } = await getService();
+) => {
+  const { knex } = await createTenantKnex();
+  if (!tenant) {
+    throw new Error('tenant context not found');
+  }
+  const service = new ContractLineServiceConfigurationService(knex, tenant);
   return service.upsertPlanServiceBucketConfiguration(contractLineId, serviceId, bucketConfigData);
-}
+});
 
 type UsageConfigPayload = {
   contractLineId: string;
@@ -92,8 +137,16 @@ type UsageConfigPayload = {
   tiers?: Array<{ min_quantity: number; max_quantity?: number; rate: number }>;
 };
 
-export async function upsertPlanServiceConfiguration(payload: UsageConfigPayload) {
-  const { service, tenant } = await getService();
+export const upsertPlanServiceConfiguration = withAuth(async (
+  user,
+  { tenant },
+  payload: UsageConfigPayload
+) => {
+  const { knex } = await createTenantKnex();
+  if (!tenant) {
+    throw new Error('tenant context not found');
+  }
+  const service = new ContractLineServiceConfigurationService(knex, tenant);
   const existing = await service.getConfigurationForService(payload.contractLineId, payload.serviceId);
 
   const usageConfig: Partial<IContractLineServiceUsageConfig> = {
@@ -127,15 +180,21 @@ export async function upsertPlanServiceConfiguration(payload: UsageConfigPayload
   };
 
   return service.createConfiguration(baseConfig, usageConfig, rateTiers as any);
-}
+});
 
-export async function upsertUserTypeRatesForConfig(
+export const upsertUserTypeRatesForConfig = withAuth(async (
+  user,
+  { tenant },
   configId: string,
   rates: Array<Omit<IUserTypeRate, 'rate_id' | 'config_id' | 'created_at' | 'updated_at' | 'tenant'>>
-) {
-  const { service } = await getService();
+) => {
+  const { knex } = await createTenantKnex();
+  if (!tenant) {
+    throw new Error('tenant context not found');
+  }
+  const service = new ContractLineServiceConfigurationService(knex, tenant);
   return service.upsertUserTypeRates(configId, rates);
-}
+});
 
 export const getConfigurationsForContractLine = getConfigurationsForPlan;
 export const getContractLineConfigurationForService = getConfigurationForService;

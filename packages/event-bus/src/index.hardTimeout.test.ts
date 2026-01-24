@@ -68,7 +68,7 @@ describe('EventBus Redis consumer hard-timeout', () => {
     });
 
     const { getEventBus } = await import('./index');
-    const { EventSchemas } = await import('@shared/workflow/streams/eventBusSchema');
+    const { EventSchemas } = await import('./schemas/eventBusSchema');
 
     const eventBus = getEventBus();
     const eventType = Object.keys(EventSchemas)[0] as any;

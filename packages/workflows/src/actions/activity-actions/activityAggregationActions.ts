@@ -15,7 +15,7 @@ import {
   workflowTaskToActivity,
 } from '@alga-psa/types';
 import ScheduleEntry from '@alga-psa/scheduling/models/scheduleEntry';
-import { getCurrentUser } from '@alga-psa/users/actions';
+import { withAuth } from '@alga-psa/auth';
 import { ISO8601String } from '@alga-psa/types';
 import { IWorkflowExecution } from '@alga-psa/shared/workflow/persistence/workflowInterfaces';
 import { IProjectTask } from '@alga-psa/types';
@@ -77,20 +77,14 @@ function toPlainDate(isoString: string): string {
 /**
  * Fetch all activities for a user with optional filters and pagination
  */
-export async function fetchUserActivities(
+export const fetchUserActivities = withAuth(async (
+  user,
+  { tenant },
   filters: ActivityFilters = {},
   page: number = 1,
   pageSize: number = 10
-): Promise<ActivityResponse> {
-  const user = await getCurrentUser();
-  if (!user) {
-    throw new Error("User not authenticated");
-  }
-  if (!user.tenant) {
-    throw new Error("Tenant is required");
-  }
-
-  const tenantId: string = user.tenant;
+): Promise<ActivityResponse> => {
+  const tenantId: string = tenant;
 
   // Fetch activities from different sources based on filters
   const activities: Activity[] = [];
@@ -165,7 +159,7 @@ export async function fetchUserActivities(
   await cache.set(cacheKey, JSON.stringify(response), ttl, tags);
 
   return response;
-}
+});
 
 /**
  * Fetch schedule activities for a user

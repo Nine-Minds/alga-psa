@@ -174,10 +174,22 @@ async function formatChanges(db: any, changes: Record<string, unknown>): Promise
   const formattedChanges = await Promise.all(
     Object.entries(changes).map(async ([field, value]) => {
       if (typeof value === 'object' && value !== null) {
-        const { from, to } = value as { from?: unknown; to?: unknown };
+        const { from, to, previous, new: newValue } = value as {
+          from?: unknown;
+          to?: unknown;
+          previous?: unknown;
+          new?: unknown;
+        };
+
         if (from !== undefined && to !== undefined) {
           const fromValue = await resolveValue(db, field, from);
           const toValue = await resolveValue(db, field, to);
+          return `${formatFieldName(field)}: ${fromValue} → ${toValue}`;
+        }
+
+        if (previous !== undefined && newValue !== undefined) {
+          const fromValue = await resolveValue(db, field, previous);
+          const toValue = await resolveValue(db, field, newValue);
           return `${formatFieldName(field)}: ${fromValue} → ${toValue}`;
         }
       }
@@ -204,6 +216,7 @@ async function resolveValue(db: any, field: string, value: unknown): Promise<str
       return status?.name || String(value);
 
     case 'assigned_to':
+    case 'assignedTo':
     case 'updated_by':
     case 'closed_by':
       const user = await db('users')
@@ -215,12 +228,14 @@ async function resolveValue(db: any, field: string, value: unknown): Promise<str
       return user ? `${user.first_name} ${user.last_name}` : String(value);
 
     case 'client_id':
+    case 'clientId':
       const client = await db('clients')
         .where('client_id', value)
         .first();
       return client ? client.client_name : String(value);
 
       case 'contact_name_id':
+      case 'contactNameId':
         const contact_name = await db('contacts')
           .where('contact_name_id', value)
           .first();
@@ -262,8 +277,30 @@ function formatFieldName(field: string): string {
     contact_name_id: 'Contact'
   };
 
-  return specialCases[field] || field
-    .split('_')
+  if (specialCases[field]) return specialCases[field];
+
+  const camelSpecialCases: Record<string, string> = {
+    clientId: 'Client',
+    projectName: 'Project Name',
+    startDate: 'Start Date',
+    endDate: 'End Date',
+    isInactive: 'Is Inactive',
+    assignedTo: 'Assigned To',
+    contactNameId: 'Contact',
+  };
+
+  if (camelSpecialCases[field]) return camelSpecialCases[field];
+
+  if (field.includes('_')) {
+    return field
+      .split('_')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(' ');
+  }
+
+  return field
+    .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
+    .split(' ')
     .map(word => word.charAt(0).toUpperCase() + word.slice(1))
     .join(' ');
 }
@@ -472,13 +509,24 @@ async function handleProjectCreated(event: ProjectCreatedEvent): Promise<void> {
  */
 async function handleProjectUpdated(event: ProjectUpdatedEvent): Promise<void> {
   const { payload } = event;
-  const { tenantId, changes } = payload;
+  const tenantId = (payload as any).tenantId as string;
+  const changes = ((payload as any).changes ?? {}) as Record<string, unknown>;
+  const updaterUserId = ((payload as any).actorUserId ?? (payload as any).userId) as string | undefined;
 
   // Check if the status change indicates the project is being closed
-  if (changes?.status) {
+  const statusValue = (() => {
+    const raw = (changes as any).status;
+    if (!raw) return undefined;
+    if (typeof raw === 'object' && raw !== null) {
+      return (raw as any).to ?? (raw as any).new;
+    }
+    return raw;
+  })();
+
+  if (statusValue) {
     const { knex: db, tenant } = await createTenantKnex();
     const status = await db('statuses')
-      .where('status_id', changes.status)
+      .where('status_id', statusValue)
       .andWhere('tenant', tenant!)
       .first();
     
@@ -641,13 +689,15 @@ async function handleProjectUpdated(event: ProjectUpdatedEvent): Promise<void> {
     });
 
     // Get updater's name
-    const updater = await db('users')
-      .where({
-        user_id: payload.userId,
-        is_inactive: false,
-        tenant: tenant!
-      })
-      .first();
+    const updater = updaterUserId
+      ? await db('users')
+          .where({
+            user_id: updaterUserId,
+            is_inactive: false,
+            tenant: tenant!
+          })
+          .first()
+      : null;
 
     const emailContext = {
       project: {
@@ -657,7 +707,7 @@ async function handleProjectUpdated(event: ProjectUpdatedEvent): Promise<void> {
         manager: project.manager_first_name && project.manager_last_name ?
           `${project.manager_first_name} ${project.manager_last_name}` : 'Unassigned',
         changes: formattedChanges,
-        updatedBy: updater ? `${updater.first_name} ${updater.last_name}` : payload.userId,
+        updatedBy: updater ? `${updater.first_name} ${updater.last_name}` : updaterUserId,
         url: `/projects/${project.project_number}`,
         client: project.client_name || 'No Client'
       }
@@ -716,6 +766,7 @@ async function handleProjectUpdated(event: ProjectUpdatedEvent): Promise<void> {
 async function handleProjectClosed(event: ProjectClosedEvent): Promise<void> {
   const { payload } = event;
   const { tenantId } = payload;
+  const closedByUserId = ((payload as any).actorUserId ?? (payload as any).userId) as string | undefined;
   
   try {
     const { knex: db, tenant } = await createTenantKnex();
@@ -853,7 +904,7 @@ async function handleProjectClosed(event: ProjectClosedEvent): Promise<void> {
         startDate: project.start_date,
         endDate: project.end_date,
         changes: await formatChanges(db, payload.changes || {}),
-        closedBy: await resolveValue(db, 'closed_by', payload.userId),
+        closedBy: await resolveValue(db, 'closed_by', closedByUserId),
         closedAt: new Date().toISOString(),
         url: `/projects/${project.project_number}`,
         client: project.client_name || 'No Client'
@@ -1029,7 +1080,10 @@ async function handleProjectAssigned(event: ProjectAssignedEvent): Promise<void>
  */
 async function handleProjectTaskAssigned(event: ProjectTaskAssignedEvent): Promise<void> {
   const { payload } = event;
-  const { tenantId, assignedTo, additionalUsers = [] } = payload;
+  const tenantId = (payload as any).tenantId;
+  const assignedToUserId =
+    (payload as any).assignedToId ?? (payload as any).assignedTo ?? (payload as any).userId;
+  const assignedByUserId = (payload as any).assignedByUserId ?? (payload as any).actorUserId;
   
   try {
     const { knex: db, tenant } = await createTenantKnex();
@@ -1064,7 +1118,7 @@ async function handleProjectTaskAssigned(event: ProjectTaskAssignedEvent): Promi
             .andOn('u.is_inactive', '=', db.raw('false'));
       })
       .leftJoin('users as au', function() {
-        this.on('au.user_id', '=', db.raw('?', [payload.userId]))
+        this.on('au.user_id', '=', db.raw('?', [assignedByUserId ?? null]))
             .andOn('au.tenant', '=', 't.tenant')
             .andOn('au.is_inactive', '=', db.raw('false'));
       })
@@ -1099,6 +1153,11 @@ async function handleProjectTaskAssigned(event: ProjectTaskAssignedEvent): Promi
       .andWhere('tr.tenant', tenantId)  // Explicit tenant filter on main table
       .whereNotNull('tr.additional_user_id');
 
+    const assignedByName =
+      task.assigner_first_name && task.assigner_last_name
+        ? `${task.assigner_first_name} ${task.assigner_last_name}`
+        : 'Someone';
+
     // Send email to primary assignee
     if (isValidEmail(task.user_email)) {
       await sendNotificationIfEnabled({
@@ -1111,7 +1170,7 @@ async function handleProjectTaskAssigned(event: ProjectTaskAssignedEvent): Promi
             name: task.task_name,
             project: task.project_name,
             dueDate: task.due_date,
-            assignedBy: `${task.assigner_first_name} ${task.assigner_last_name}`,
+            assignedBy: assignedByName,
             url: `/projects/${task.project_number}/tasks/${task.task_id}`,
             role: 'Primary Assignee'
           }
@@ -1119,7 +1178,7 @@ async function handleProjectTaskAssigned(event: ProjectTaskAssignedEvent): Promi
         replyContext: {
           projectId: task.project_id || payload.projectId
         }
-      }, 'Project Task Assigned', assignedTo);
+      }, 'Project Task Assigned', assignedToUserId);
     }
 
     // Send emails to additional users (deduplicate by user_id/email)
@@ -1148,7 +1207,7 @@ async function handleProjectTaskAssigned(event: ProjectTaskAssignedEvent): Promi
             name: task.task_name,
             project: task.project_name,
             dueDate: task.due_date,
-            assignedBy: `${task.assigner_first_name} ${task.assigner_last_name}`,
+            assignedBy: assignedByName,
             url: `/projects/${task.project_number}/tasks/${task.task_id}`,
             role: 'Additional Agent'
           }

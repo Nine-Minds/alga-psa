@@ -7,3 +7,4 @@ export * from './tenant-settings-actions';
 export * from './locale-actions';
 export * from './tenantEmailActions';
 export * from './coreTenantActions';
+export * from './tenant-secret-actions';

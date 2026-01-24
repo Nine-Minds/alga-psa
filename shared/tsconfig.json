@@ -1,18 +1,25 @@
 {
-  "extends": "../tsconfig.base.json",
   "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "esModuleInterop": true,
+    "strict": false,
+    "skipLibCheck": true,
     "outDir": "./dist",
     "rootDir": ".",
-    "baseUrl": ".",
     "declaration": true,
-    "composite": true,
     "noEmit": false,
-    "target": "es2022",
+    "baseUrl": ".",
+    "isolatedModules": true,
+    "jsx": "react-jsx",
     "paths": {
       "@shared/*": ["./*"],
       "@shared/workflow/*": ["./workflow/*"],
       "@shared/lib/*": ["./lib/*"],
-      "@alga-psa/shared/*": ["./*"]
+      "@alga-psa/shared/*": ["./*"],
+      "next-auth": ["../node_modules/next-auth"],
+      "next-auth/*": ["../node_modules/next-auth/*"]
     }
   },
   "include": ["**/*.ts", "**/*.tsx", "**/*.js", "**/*.jsx", "**/*.d.ts", "lib/**/*.ts"],

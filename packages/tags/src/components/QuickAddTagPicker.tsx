@@ -1,11 +1,11 @@
-// @ts-nocheck
-// TODO: PendingTag requires isNew property
-"use client";
+'use client';
 
-import React, { useMemo, useRef, useEffect, useState } from 'react';
-import { filterTagsByText } from '@alga-psa/ui';
-import type { ITag, PendingTag, TaggedEntityType } from '@alga-psa/types';
-import { X, Plus } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import { Input } from '@alga-psa/ui/components/Input';
+import { Button } from '@alga-psa/ui/components/Button';
+import { Plus, X } from 'lucide-react';
+import type { TaggedEntityType, ITag, PendingTag } from '@alga-psa/types';
+import { generateEntityColor } from '@alga-psa/ui/lib/colorUtils';
 import { getAllTags } from '../actions';
 import { useTags } from '../context/TagContext';
 
@@ -14,165 +14,271 @@ interface QuickAddTagPickerProps {
   entityType: TaggedEntityType;
   pendingTags: PendingTag[];
   onPendingTagsChange: (tags: PendingTag[]) => void;
-  disabled?: boolean;
   placeholder?: string;
+  className?: string;
+  disabled?: boolean;
+  label?: string;
 }
 
-export function QuickAddTagPicker({
-  id,
+/**
+ * A tag picker component for quick add forms where the entity doesn't exist yet.
+ * Collects tags as "pending" items that will be created after the entity is created.
+ * Does NOT call createTag() - parent component handles that after entity creation.
+ */
+export const QuickAddTagPicker: React.FC<QuickAddTagPickerProps> = ({
+  id = 'quick-add-tag-picker',
   entityType,
   pendingTags,
   onPendingTagsChange,
+  placeholder = 'Add tag...',
+  className = '',
   disabled = false,
-  placeholder = 'Add tags...',
-}: QuickAddTagPickerProps) {
-  const [searchQuery, setSearchQuery] = useState('');
-  const [showDropdown, setShowDropdown] = useState(false);
-  const containerRef = useRef<HTMLDivElement>(null);
-  const tagContext = useTags();
-  const [localAllTags, setLocalAllTags] = useState<ITag[]>([]);
+  label = 'Tags'
+}) => {
+  const [isEditing, setIsEditing] = useState(false);
+  const [inputValue, setInputValue] = useState('');
+  const [isLoadingTags, setIsLoadingTags] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
 
-  const allTags = tagContext?.tags ?? localAllTags;
+  // Use context if available, otherwise fetch locally
+  const tagContext = useTags();
+  const [localTags, setLocalTags] = useState<ITag[]>([]);
+  const existingTags = tagContext?.tags ?? localTags;
+
+  // Fetch existing tags for this entity type when component mounts
+  useEffect(() => {
+    // If context provides tags, don't fetch locally
+    if (tagContext?.tags) return;
+
+    const fetchTags = async () => {
+      if (isLoadingTags) return;
+      setIsLoadingTags(true);
+      try {
+        const tags = await getAllTags();
+        setLocalTags(tags);
+      } catch (error) {
+        console.error('Failed to load existing tags:', error);
+      } finally {
+        setIsLoadingTags(false);
+      }
+    };
+    fetchTags();
+  }, [entityType, tagContext?.tags]);
 
   useEffect(() => {
-    if (tagContext?.tags) {
+    if (isEditing && inputRef.current) {
+      inputRef.current.focus();
+    }
+  }, [isEditing]);
+
+  const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      handleAddTag();
+    } else if (e.key === 'Escape') {
+      setIsEditing(false);
+      setInputValue('');
+    }
+  };
+
+  const handleAddTag = (tagText?: string) => {
+    const textToAdd = (tagText || inputValue).trim();
+    if (!textToAdd) return;
+
+    // Check if this tag is already in pending list (case-insensitive)
+    const alreadyPending = pendingTags.some(
+      pt => pt.tag_text.toLowerCase() === textToAdd.toLowerCase()
+    );
+    if (alreadyPending) {
+      setInputValue('');
+      setIsEditing(false);
       return;
     }
 
-    let canceled = false;
-    (async () => {
-      try {
-        const fetchedTags = await getAllTags();
-        if (!canceled) {
-          setLocalAllTags(fetchedTags);
-        }
-      } catch {
-        if (!canceled) {
-          setLocalAllTags([]);
-        }
-      }
-    })();
-
-    return () => {
-      canceled = true;
-    };
-  }, [tagContext?.tags]);
-
-  const availableTags = useMemo(() => {
-    return allTags.filter((t) => t.tagged_type === entityType);
-  }, [allTags, entityType]);
-
-  const filteredAvailableTags = useMemo(() => {
-    return filterTagsByText(availableTags, searchQuery).filter(
-      (tag) => !pendingTags.some((st) => st.tag_text === tag.tag_text)
+    // Filter tags by entity type and find matching tag
+    const tagsForType = existingTags.filter(t => t.tagged_type === entityType);
+    const existingTag = tagsForType.find(
+      t => t.tag_text.toLowerCase() === textToAdd.toLowerCase()
     );
-  }, [availableTags, searchQuery, pendingTags]);
 
-  const handleToggleTag = (tagText: string) => {
-    const existingIndex = pendingTags.findIndex((t) => t.tag_text === tagText);
-    if (existingIndex > -1) {
-      onPendingTagsChange(pendingTags.filter((_, i) => i !== existingIndex));
+    let newPendingTag: PendingTag;
+    if (existingTag) {
+      newPendingTag = {
+        tag_text: existingTag.tag_text, // Use exact casing from existing tag
+        tag_id: existingTag.tag_id,
+        background_color: existingTag.background_color ?? undefined,
+        text_color: existingTag.text_color ?? undefined,
+        isNew: false
+      };
     } else {
-      const tagDef = availableTags.find(t => t.tag_text === tagText);
-      onPendingTagsChange([...pendingTags, {
-        tag_text: tagText,
-        background_color: tagDef?.background_color,
-        text_color: tagDef?.text_color,
-      }]);
+      const colors = generateEntityColor(textToAdd);
+      newPendingTag = {
+        tag_text: textToAdd,
+        isNew: true,
+        background_color: colors.background,
+        text_color: colors.text
+      };
     }
-    setSearchQuery('');
+
+    onPendingTagsChange([...pendingTags, newPendingTag]);
+    setInputValue('');
+    setIsEditing(false);
   };
 
-  const handleAddNewTag = () => {
-    if (searchQuery.trim() && !pendingTags.some(t => t.tag_text === searchQuery.trim())) {
-      onPendingTagsChange([...pendingTags, { tag_text: searchQuery.trim() }]);
-      setSearchQuery('');
-    }
+  const handleRemoveTag = (index: number) => {
+    const newTags = [...pendingTags];
+    newTags.splice(index, 1);
+    onPendingTagsChange(newTags);
   };
 
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
-        setShowDropdown(false);
+  const handleBlur = () => {
+    // Small delay to allow clicking on suggestions
+    setTimeout(() => {
+      if (!inputValue.trim()) {
+        setIsEditing(false);
       }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
+    }, 150);
+  };
+
+  // Get suggestions for existing tags not already pending
+  // Filter by entity type and deduplicate by tag_text
+  const tagsForType = existingTags.filter(t => t.tagged_type === entityType);
+  const uniqueTagTexts = new Set<string>();
+  const suggestions = tagsForType
+    .filter(tag => {
+      const tagTextLower = tag.tag_text.toLowerCase();
+      const inputLower = inputValue.toLowerCase();
+
+      // Check if tag matches input and isn't already pending
+      if (!tagTextLower.includes(inputLower) ||
+          pendingTags.some(pt => pt.tag_text.toLowerCase() === tagTextLower)) {
+        return false;
+      }
+
+      // Check if we've already seen this tag text
+      if (uniqueTagTexts.has(tagTextLower)) {
+        return false;
+      }
+
+      uniqueTagTexts.add(tagTextLower);
+      return true;
+    })
+    .slice(0, 5);
 
   return (
-    <div className="relative" ref={containerRef} data-automation-id={id}>
-      <div
-        className="flex flex-wrap gap-2 p-2 border rounded-md focus-within:ring-2 focus-within:ring-blue-500"
-        aria-disabled={disabled}
-      >
-        {pendingTags.map((tag) => (
-          <span
-            key={tag.tag_text}
-            className="flex items-center gap-1 px-2 py-1 rounded text-xs font-medium"
-            style={{ backgroundColor: tag.background_color || '#e5e7eb', color: tag.text_color || '#374151' }}
-          >
-            {tag.tag_text}
-            <button
-              onClick={() => handleToggleTag(tag.tag_text)}
-              className="hover:bg-black/10 rounded-full"
-              disabled={disabled}
-            >
-              <X className="h-3 w-3" />
-            </button>
-          </span>
-        ))}
-        <input
-          id={id}
-          className="flex-1 min-w-[120px] outline-none bg-transparent text-sm"
-          placeholder={pendingTags.length === 0 ? placeholder : ''}
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          onFocus={() => !disabled && setShowDropdown(true)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') {
-              e.preventDefault();
-              handleAddNewTag();
-            }
-          }}
-          disabled={disabled}
-        />
-      </div>
-
-      {showDropdown && (searchQuery || filteredAvailableTags.length > 0) && (
-        <div className="absolute top-full left-0 right-0 mt-1 p-2 bg-white border rounded-md shadow-lg z-50 max-h-[200px] overflow-y-auto">
-          {filteredAvailableTags.length > 0 && (
-            <div className="mb-2">
-              <p className="text-[10px] uppercase font-bold text-gray-400 px-2 mb-1">Existing Tags</p>
-              <div className="space-y-1">
-                {filteredAvailableTags.map(tag => (
-                  <button
-                    key={tag.tag_id}
-                    onClick={() => handleToggleTag(tag.tag_text)}
-                    className="w-full text-left px-2 py-1.5 text-sm hover:bg-gray-100 rounded flex items-center justify-between"
-                  >
-                    <span>{tag.tag_text}</span>
-                    <Plus className="h-3 w-3 text-gray-400" />
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-          {searchQuery && !availableTags.some(t => t.tag_text.toLowerCase() === searchQuery.toLowerCase().trim()) && (
-            <div>
-              <p className="text-[10px] uppercase font-bold text-gray-400 px-2 mb-1">New Tag</p>
-              <button
-                onClick={handleAddNewTag}
-                className="w-full text-left px-2 py-1.5 text-sm text-blue-600 hover:bg-blue-50 rounded flex items-center gap-2"
-                disabled={disabled}
-              >
-                <Plus className="h-3 w-3" />
-                <span>Add "{searchQuery}"</span>
-              </button>
-            </div>
-          )}
-        </div>
+    <div className={`space-y-2 ${className}`} id={id}>
+      {label && (
+        <label className="block text-sm font-medium text-gray-700">{label}</label>
       )}
+
+      {/* Display pending tags */}
+      <div className="flex flex-wrap gap-2 items-center">
+        {pendingTags.map((tag, index) => {
+          const colors = tag.background_color && tag.text_color
+            ? { background: tag.background_color, text: tag.text_color }
+            : generateEntityColor(tag.tag_text);
+
+          return (
+            <span
+              key={`${tag.tag_text}-${index}`}
+              className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-semibold"
+              style={{
+                backgroundColor: colors.background,
+                color: colors.text
+              }}
+            >
+              {tag.tag_text}
+              {!disabled && (
+                <button
+                  type="button"
+                  onClick={() => handleRemoveTag(index)}
+                  className="hover:opacity-70 focus:outline-none"
+                  aria-label={`Remove tag ${tag.tag_text}`}
+                >
+                  <X size={12} />
+                </button>
+              )}
+            </span>
+          );
+        })}
+
+        {/* Add tag button / input */}
+        {!isEditing ? (
+          <Button
+            id={`${id}-add-button`}
+            type="button"
+            onClick={() => !disabled && setIsEditing(true)}
+            className="text-gray-500 hover:text-gray-700"
+            variant="icon"
+            size="icon"
+            disabled={disabled}
+          >
+            <Plus size={16} />
+          </Button>
+        ) : (
+          <div className="inline-flex flex-col">
+            <div className="flex shadow-sm rounded-md bg-white border border-gray-200">
+              <Input
+                ref={inputRef}
+                id={`${id}-input`}
+                type="text"
+                value={inputValue}
+                onChange={(e) => setInputValue(e.target.value)}
+                onKeyDown={handleKeyPress}
+                onBlur={handleBlur}
+                className="rounded-l-md px-2 py-1 text-sm w-32 border-0"
+                placeholder={placeholder}
+                autoComplete="off"
+                containerClassName="m-0"
+                disabled={disabled}
+              />
+              <Button
+                id={`${id}-add`}
+                type="button"
+                onClick={() => handleAddTag()}
+                disabled={disabled || !inputValue.trim()}
+                className="rounded-r-md px-3 py-1 text-sm font-medium border-0"
+                variant={!inputValue.trim() ? "outline" : "default"}
+                size="sm"
+              >
+                Add
+              </Button>
+            </div>
+
+            {/* Inline suggestions dropdown */}
+            {suggestions.length > 0 && inputValue.trim() && (
+              <div className="mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-40 overflow-y-auto z-10">
+                {suggestions.map((suggestion, index) => {
+                  const colors = suggestion.background_color && suggestion.text_color
+                    ? { background: suggestion.background_color, text: suggestion.text_color }
+                    : generateEntityColor(suggestion.tag_text);
+                  return (
+                    <button
+                      key={index}
+                      type="button"
+                      className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 flex items-center"
+                      onMouseDown={(e) => {
+                        e.preventDefault();
+                        handleAddTag(suggestion.tag_text);
+                      }}
+                    >
+                      <span
+                        className="inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold"
+                        style={{
+                          backgroundColor: colors.background,
+                          color: colors.text
+                        }}
+                      >
+                        {suggestion.tag_text}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
     </div>
   );
-}
+};

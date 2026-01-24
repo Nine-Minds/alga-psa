@@ -6,7 +6,7 @@ import { createTenantKnex } from '@alga-psa/db';
 import { ISO8601String } from '@alga-psa/types';
 import { toPlainDate, toISODate } from '@alga-psa/core';
 import { withTransaction } from '@alga-psa/db';
-import { getCurrentUserAsync, hasPermissionAsync, getSessionAsync, getAnalyticsAsync } from '../lib/authHelpers';
+import { withAuth } from '@alga-psa/auth';
 import {
     IBillingCharge,
     IBucketCharge,
@@ -88,13 +88,13 @@ export async function getChargeUnitPrice(charge: IBillingCharge): Promise<number
  * This ensures that when one tax rate ends and another begins,
  * there is no overlap or gap in coverage.
  */
-export async function getClientTaxRate(taxRegion: string, date: ISO8601String): Promise<number> {
-    const currentUser = await getCurrentUserAsync();
-    if (!currentUser) {
-        throw new Error('No authenticated user found');
-    }
-
-    const { knex, tenant } = await createTenantKnex(currentUser.tenant);
+export const getClientTaxRate = withAuth(async (
+    user,
+    { tenant },
+    taxRegion: string,
+    date: ISO8601String
+): Promise<number> => {
+    const { knex } = await createTenantKnex();
     const taxRates = await withTransaction(knex, async (trx: Knex.Transaction) => {
         return await trx('tax_rates')
             .where({
@@ -112,16 +112,13 @@ export async function getClientTaxRate(taxRegion: string, date: ISO8601String): 
     // Parse the string percentage from DB and ensure numerical addition
     const totalTaxRate = taxRates.reduce((sum, rate) => sum + parseFloat(rate.tax_percentage), 0);
     return totalTaxRate;
-}
+});
 
-export async function getAvailableBillingPeriods(
+export const getAvailableBillingPeriods = withAuth(async (
+    user,
+    { tenant },
     options: FetchBillingPeriodsOptions = {}
-): Promise<PaginatedBillingPeriodsResult> {
-    const session = await getSessionAsync();
-    if (!session?.user?.id) {
-        throw new Error('Unauthorized');
-    }
-
+): Promise<PaginatedBillingPeriodsResult> => {
     const {
         page = 1,
         pageSize = 10,
@@ -131,12 +128,7 @@ export async function getAvailableBillingPeriods(
 
     console.log(`Starting getAvailableBillingPeriods: page=${page}, pageSize=${pageSize}, search="${searchTerm}", dateRange=${JSON.stringify(dateRange)}`);
 
-    const currentUser = await getCurrentUserAsync();
-    if (!currentUser) {
-        throw new Error('No authenticated user found');
-    }
-
-    const { knex, tenant } = await createTenantKnex(currentUser.tenant);
+    const { knex } = await createTenantKnex();
     const currentDate = toISODate(Temporal.Now.plainDateISO());
 
     try {
@@ -258,7 +250,7 @@ export async function getAvailableBillingPeriods(
         console.error('Error in getAvailableBillingPeriods:', _error);
         throw _error;
     }
-}
+});
 
 export async function getPaymentTermDays(paymentTerms: string): Promise<number> {
     switch (paymentTerms) {
@@ -273,13 +265,13 @@ export async function getPaymentTermDays(paymentTerms: string): Promise<number> 
     }
 }
 
-export async function getDueDate(clientId: string, billingEndDate: ISO8601String): Promise<ISO8601String> {
-    const currentUser = await getCurrentUserAsync();
-    if (!currentUser) {
-        throw new Error('No authenticated user found');
-    }
-
-    const { knex, tenant } = await createTenantKnex(currentUser.tenant);
+export const getDueDate = withAuth(async (
+    user,
+    { tenant },
+    clientId: string,
+    billingEndDate: ISO8601String
+): Promise<ISO8601String> => {
+    const { knex } = await createTenantKnex();
     const client = await withTransaction(knex, async (trx: Knex.Transaction) => {
         return await trx('clients')
             .where({
@@ -298,7 +290,7 @@ export async function getDueDate(clientId: string, billingEndDate: ISO8601String
     const plainEndDate = toPlainDate(billingEndDate);
     const dueDate = plainEndDate.add({ days });
     return toISODate(dueDate);
-}
+});
 
 
 /**
@@ -308,13 +300,13 @@ export async function getDueDate(clientId: string, billingEndDate: ISO8601String
  * 2. The inclusive start date for the next period (>= this date)
  * This ensures continuous coverage with no gaps or overlaps between billing periods.
  */
-export async function getNextBillingDate(clientId: string, currentEndDate: ISO8601String): Promise<ISO8601String> {
-    const currentUser = await getCurrentUserAsync();
-    if (!currentUser) {
-        throw new Error('No authenticated user found');
-    }
-
-    const { knex, tenant } = await createTenantKnex(currentUser.tenant);
+export const getNextBillingDate = withAuth(async (
+    user,
+    { tenant },
+    clientId: string,
+    currentEndDate: ISO8601String
+): Promise<ISO8601String> => {
+    const { knex } = await createTenantKnex();
     const client = await withTransaction(knex, async (trx: Knex.Transaction) => {
         return await trx('client_billing_cycles')
             .where({
@@ -357,7 +349,7 @@ export async function getNextBillingDate(clientId: string, currentEndDate: ISO86
     // Return a PlainDate ISO string (YYYY-MM-DD) instead of a timestamp
     // This avoids timezone issues when parsing later
     return toISODate(nextDate);
-}
+});
 
 export async function calculatePreviewTax(
     charges: IBillingCharge[],
@@ -425,19 +417,14 @@ export interface IPaymentTermOption {
  * Fetches the list of available payment terms.
  * TODO: Implement actual logic - query a table or return a predefined list.
  */
-export async function getPaymentTermsList(): Promise<IPaymentTermOption[]> {
+export const getPaymentTermsList = withAuth(async (
+  user,
+  { tenant }
+): Promise<IPaymentTermOption[]> => {
   console.log(`[Billing Action] Fetching available payment terms list.`);
 
   try {
-    const currentUser = await getCurrentUserAsync();
-    if (!currentUser) {
-        throw new Error('No authenticated user found');
-    }
-
-    // Although payment terms might be global, we use createTenantKnex
-    // as it's the standard way to get a Knex instance here.
-    // If the table IS tenant-specific, a tenant filter would be added.
-    const { knex } = await createTenantKnex(currentUser.tenant);
+    const { knex } = await createTenantKnex();
 
     const terms = await withTransaction(knex, async (trx: Knex.Transaction) => {
       return await trx('payment_terms')
@@ -456,4 +443,4 @@ export async function getPaymentTermsList(): Promise<IPaymentTermOption[]> {
     // Returning empty for now to avoid breaking UI if DB call fails
     return [];
   }
-}
+});

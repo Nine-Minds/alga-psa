@@ -13,7 +13,17 @@ import { createTenantKnex } from '../../db';
 import { getCurrentUser } from '@alga-psa/users/actions';
 import { hasPermission } from '../../auth/rbac';
 import { auditLog } from '../../logging/auditLog';
-import { publishEvent } from '../../eventBus/publishers';
+import { publishEvent, publishWorkflowEvent } from '../../eventBus/publishers';
+import {
+  buildInvoiceDueDateChangedPayload,
+  buildInvoiceOverduePayload,
+  buildInvoiceSentPayload,
+  buildInvoiceStatusChangedPayload,
+  buildInvoiceWrittenOffPayload,
+  inferInvoiceDeliveryMethod,
+  toIsoDateString,
+} from './invoiceWorkflowEvents';
+import { buildPaymentAppliedPayload, buildPaymentRecordedPayload, buildPaymentRefundedPayload } from './paymentWorkflowEvents';
 
 // Import existing service functions
 import * as invoiceService from '../../services/invoiceService';
@@ -149,6 +159,16 @@ export class InvoiceService extends BaseService<IInvoice> {
   // Helper to get PDF service for specific tenant
   private getPdfService(tenant: string): PDFGenerationService {
     return createPDFGenerationService(tenant);
+  }
+
+  private async getInvoiceAmountDue(trx: Knex.Transaction, params: { invoiceId: string; totalAmount: number; creditApplied: number; tenantId: string }) {
+    const payments = await trx('invoice_payments')
+      .where({ invoice_id: params.invoiceId, tenant: params.tenantId })
+      .sum('amount as total_paid');
+
+    const totalPayments = Number(payments[0]?.total_paid || 0);
+    const amountDue = params.totalAmount - (params.creditApplied + totalPayments);
+    return Math.max(0, amountDue);
   }
 
   // ============================================================================
@@ -458,6 +478,103 @@ export class InvoiceService extends BaseService<IInvoice> {
         details: { action: 'invoice.updated' }
       });
 
+      const occurredAt = new Date().toISOString();
+      const previousStatus = String(existing.status);
+      const newStatus = updateData.status ? String(updateData.status) : previousStatus;
+
+      const previousDueDate = toIsoDateString(existing.due_date);
+      const nextDueDate = updateData.due_date ? toIsoDateString(updateData.due_date) : previousDueDate;
+
+      if (newStatus !== previousStatus) {
+        await publishWorkflowEvent({
+          eventType: 'INVOICE_STATUS_CHANGED',
+          payload: buildInvoiceStatusChangedPayload({
+            invoiceId: id,
+            previousStatus,
+            newStatus,
+            changedAt: occurredAt,
+          }),
+          ctx: {
+            tenantId: context.tenant,
+            occurredAt,
+            actor: { actorType: 'USER', actorUserId: context.userId },
+          },
+        });
+      }
+
+      if (previousDueDate && nextDueDate && previousDueDate !== nextDueDate) {
+        await publishWorkflowEvent({
+          eventType: 'INVOICE_DUE_DATE_CHANGED',
+          payload: buildInvoiceDueDateChangedPayload({
+            invoiceId: id,
+            previousDueDate,
+            newDueDate: nextDueDate,
+            changedAt: occurredAt,
+          }),
+          ctx: {
+            tenantId: context.tenant,
+            occurredAt,
+            actor: { actorType: 'USER', actorUserId: context.userId },
+          },
+        });
+      }
+
+      if (newStatus === 'overdue' && previousStatus !== 'overdue') {
+        const totalAmount = Number(updateData.total_amount ?? existing.total_amount ?? 0);
+        const creditApplied = Number(updateData.credit_applied ?? existing.credit_applied ?? 0);
+        const amountDue = await this.getInvoiceAmountDue(trx, {
+          invoiceId: id,
+          totalAmount,
+          creditApplied,
+          tenantId: context.tenant,
+        });
+
+        await publishWorkflowEvent({
+          eventType: 'INVOICE_OVERDUE',
+          payload: buildInvoiceOverduePayload({
+            invoiceId: id,
+            clientId: existing.client_id,
+            overdueAt: occurredAt,
+            dueDate: nextDueDate || previousDueDate,
+            amountDue,
+            currency: String(updateData.currency_code ?? existing.currency_code ?? 'USD'),
+          }),
+          ctx: {
+            tenantId: context.tenant,
+            occurredAt,
+            actor: { actorType: 'USER', actorUserId: context.userId },
+          },
+        });
+      }
+
+      if (previousStatus === 'overdue' && newStatus === 'cancelled') {
+        const totalAmount = Number(updateData.total_amount ?? existing.total_amount ?? 0);
+        const creditApplied = Number(updateData.credit_applied ?? existing.credit_applied ?? 0);
+        const amountDue = await this.getInvoiceAmountDue(trx, {
+          invoiceId: id,
+          totalAmount,
+          creditApplied,
+          tenantId: context.tenant,
+        });
+
+        if (amountDue > 0) {
+          await publishWorkflowEvent({
+            eventType: 'INVOICE_WRITTEN_OFF',
+            payload: buildInvoiceWrittenOffPayload({
+              invoiceId: id,
+              writtenOffAt: occurredAt,
+              amountWrittenOff: amountDue,
+              currency: String(updateData.currency_code ?? existing.currency_code ?? 'USD'),
+            }),
+            ctx: {
+              tenantId: context.tenant,
+              occurredAt,
+              actor: { actorType: 'USER', actorUserId: context.userId },
+            },
+          });
+        }
+      }
+
       return this.getById(id, context) as Promise<IInvoice>;
     });
   }
@@ -480,20 +597,23 @@ export class InvoiceService extends BaseService<IInvoice> {
       }
 
       // Check if invoice has payments
-      const hasPayments = await trx('invoice_payments')
-        .where({ invoice_id: id, tenant: context.tenant })
-        .first();
+	      const hasPayments = await trx('invoice_payments')
+	        .where({ invoice_id: id, tenant: context.tenant })
+	        .first();
 
-      if (hasPayments || invoice.status === 'paid') {
-        // Soft delete - mark as cancelled
-        await trx('invoices')
-          .where({ invoice_id: id, tenant: context.tenant })
-          .update({
-            status: 'cancelled',
-            updated_by: context.userId,
-            updated_at: new Date()
-          });
-      } else {
+	      const occurredAt = new Date().toISOString();
+	      const softCancelled = Boolean(hasPayments || invoice.status === 'paid');
+
+	      if (hasPayments || invoice.status === 'paid') {
+	        // Soft delete - mark as cancelled
+	        await trx('invoices')
+	          .where({ invoice_id: id, tenant: context.tenant })
+	          .update({
+	            status: 'cancelled',
+	            updated_by: context.userId,
+	            updated_at: new Date()
+	          });
+	      } else {
         // Hard delete if no payments
         await trx('invoice_line_items')
           .where({ invoice_id: id, tenant: context.tenant })
@@ -505,25 +625,42 @@ export class InvoiceService extends BaseService<IInvoice> {
       }
 
       // Audit log
-      await auditLog(trx, {
-        userId: context.userId,
-        operation: 'DELETE',
-        tableName: 'invoices',
-        recordId: id,
-        changedData: {},
-        details: { action: 'invoice.deleted' }
-      });
+	      await auditLog(trx, {
+	        userId: context.userId,
+	        operation: 'DELETE',
+	        tableName: 'invoices',
+	        recordId: id,
+	        changedData: {},
+	        details: { action: 'invoice.deleted' }
+	      });
 
-      // Publish event
-      await publishEvent({
-        eventType: 'INVOICE_DELETED',
-        payload: {
-          tenantId: context.tenant,
-          invoiceId: id,
-          userId: context.userId,
-          timestamp: new Date().toISOString()
-        }
-      });
+	      if (softCancelled && String(invoice.status) !== 'cancelled') {
+	        await publishWorkflowEvent({
+	          eventType: 'INVOICE_STATUS_CHANGED',
+	          payload: buildInvoiceStatusChangedPayload({
+	            invoiceId: id,
+	            previousStatus: String(invoice.status),
+	            newStatus: 'cancelled',
+	            changedAt: occurredAt,
+	          }),
+	          ctx: {
+	            tenantId: context.tenant,
+	            occurredAt,
+	            actor: { actorType: 'USER', actorUserId: context.userId },
+	          },
+	        });
+	      }
+
+	      // Publish event
+	      await publishEvent({
+	        eventType: 'INVOICE_DELETED',
+	        payload: {
+	          tenantId: context.tenant,
+	          invoiceId: id,
+	          userId: context.userId,
+	          timestamp: occurredAt
+	        }
+	      });
     });
   }
 
@@ -600,6 +737,20 @@ export class InvoiceService extends BaseService<IInvoice> {
         }
       });
 
+      await publishWorkflowEvent({
+        eventType: 'INVOICE_STATUS_CHANGED',
+        payload: buildInvoiceStatusChangedPayload({
+          invoiceId: data.invoice_id,
+          previousStatus: String(invoice.status),
+          newStatus: 'sent',
+          changedAt: new Date().toISOString(),
+        }),
+        ctx: {
+          tenantId: context.tenant,
+          actor: { actorType: 'USER', actorUserId: context.userId },
+        },
+      });
+
       return this.getById(data.invoice_id, context) as Promise<IInvoice>;
     });
   }
@@ -664,16 +815,42 @@ export class InvoiceService extends BaseService<IInvoice> {
       });
 
       // Publish event
-      await publishEvent({
+      const sentAt = new Date().toISOString();
+      await publishWorkflowEvent({
         eventType: 'INVOICE_SENT',
-        payload: {
-          tenantId: context.tenant,
+        payload: buildInvoiceSentPayload({
           invoiceId: data.invoice_id,
-          recipients: data.email_addresses,
-          userId: context.userId,
-          timestamp: new Date().toISOString()
-        }
+          clientId: invoice.client_id,
+          sentByUserId: context.userId,
+          sentAt,
+          deliveryMethod: inferInvoiceDeliveryMethod({
+            emailRecipientCount: data.email_addresses?.length,
+            includePdf: data.include_pdf,
+          }),
+        }),
+        ctx: {
+          tenantId: context.tenant,
+          occurredAt: sentAt,
+          actor: { actorType: 'USER', actorUserId: context.userId },
+        },
       });
+
+      if (String(invoice.status) !== 'sent') {
+        await publishWorkflowEvent({
+          eventType: 'INVOICE_STATUS_CHANGED',
+          payload: buildInvoiceStatusChangedPayload({
+            invoiceId: data.invoice_id,
+            previousStatus: String(invoice.status),
+            newStatus: 'sent',
+            changedAt: sentAt,
+          }),
+          ctx: {
+            tenantId: context.tenant,
+            occurredAt: sentAt,
+            actor: { actorType: 'USER', actorUserId: context.userId },
+          },
+        });
+      }
 
       return this.getById(data.invoice_id, context) as Promise<IInvoice>;
     });
@@ -688,6 +865,8 @@ export class InvoiceService extends BaseService<IInvoice> {
     const { knex } = await this.getKnex();
     
     return withTransaction(knex, async (trx) => {
+      const occurredAt = new Date().toISOString();
+
       const invoice = await trx('invoices')
         .where({ invoice_id: data.invoice_id, tenant: context.tenant })
         .first();
@@ -716,6 +895,42 @@ export class InvoiceService extends BaseService<IInvoice> {
 
       await trx('invoice_payments').insert(paymentData);
 
+      await publishWorkflowEvent({
+        eventType: 'PAYMENT_RECORDED',
+        payload: buildPaymentRecordedPayload({
+          paymentId: paymentData.payment_id,
+          clientId: invoice.client_id,
+          receivedAt: occurredAt,
+          amount: data.payment_amount,
+          currency: String(invoice.currency_code ?? 'USD'),
+          method: String(data.payment_method ?? 'manual'),
+          receivedByUserId: context.userId,
+          gatewayTransactionId: data.reference_number,
+        }),
+        ctx: {
+          tenantId: context.tenant,
+          occurredAt,
+          actor: { actorType: 'USER', actorUserId: context.userId },
+        },
+        idempotencyKey: `payment_recorded:${paymentData.payment_id}`,
+      });
+
+      await publishWorkflowEvent({
+        eventType: 'PAYMENT_APPLIED',
+        payload: buildPaymentAppliedPayload({
+          paymentId: paymentData.payment_id,
+          appliedAt: occurredAt,
+          appliedByUserId: context.userId,
+          applications: [{ invoiceId: data.invoice_id, amountApplied: data.payment_amount }],
+        }),
+        ctx: {
+          tenantId: context.tenant,
+          occurredAt,
+          actor: { actorType: 'USER', actorUserId: context.userId },
+        },
+        idempotencyKey: `payment_applied:${paymentData.payment_id}:${data.invoice_id}`,
+      });
+
       // Calculate total payments
       const payments = await trx('invoice_payments')
         .where({ invoice_id: data.invoice_id, tenant: context.tenant })
@@ -743,29 +958,46 @@ export class InvoiceService extends BaseService<IInvoice> {
           updated_at: new Date()
         });
 
-      // Audit log
-      await auditLog(trx, {
-        userId: context.userId,
-        operation: 'UPDATE',
-        tableName: 'invoices',
-        recordId: data.invoice_id,
-        changedData: { status: newStatus, total_paid: totalPaid },
-        details: { action: 'invoice.payment_recorded', payment_amount: data.payment_amount }
-      });
+	      // Audit log
+	      await auditLog(trx, {
+	        userId: context.userId,
+	        operation: 'UPDATE',
+	        tableName: 'invoices',
+	        recordId: data.invoice_id,
+	        changedData: { status: newStatus, total_paid: totalPaid },
+	        details: { action: 'invoice.payment_recorded', payment_amount: data.payment_amount }
+	      });
 
-      // Publish event
-      await publishEvent({
-        eventType: 'INVOICE_PAYMENT_RECORDED',
-        payload: {
-          tenantId: context.tenant,
-          invoiceId: data.invoice_id,
-          paymentAmount: data.payment_amount,
-          totalPaid,
-          newStatus,
-          userId: context.userId,
-          timestamp: new Date().toISOString()
-        }
-      });
+	      if (String(newStatus) !== String(invoice.status)) {
+	        await publishWorkflowEvent({
+	          eventType: 'INVOICE_STATUS_CHANGED',
+	          payload: buildInvoiceStatusChangedPayload({
+	            invoiceId: data.invoice_id,
+	            previousStatus: String(invoice.status),
+	            newStatus: String(newStatus),
+	            changedAt: occurredAt,
+	          }),
+	          ctx: {
+	            tenantId: context.tenant,
+	            occurredAt,
+	            actor: { actorType: 'USER', actorUserId: context.userId },
+	          },
+	        });
+	      }
+
+	      // Publish event
+	      await publishEvent({
+	        eventType: 'INVOICE_PAYMENT_RECORDED',
+	        payload: {
+	          tenantId: context.tenant,
+	          invoiceId: data.invoice_id,
+	          paymentAmount: data.payment_amount,
+	          totalPaid,
+	          newStatus,
+	          userId: context.userId,
+	          timestamp: new Date().toISOString()
+	        }
+	      });
 
       return this.getById(data.invoice_id, context) as Promise<IInvoice>;
     });
@@ -843,33 +1075,51 @@ export class InvoiceService extends BaseService<IInvoice> {
       // Calculate remaining balance after credit application
       const remainingBalance = invoice.total_amount - totalPaid;
 
-      // Audit log
-      await auditLog(trx, {
-        userId: context.userId,
-        operation: 'UPDATE',
-        tableName: 'invoices',
-        recordId: data.invoice_id,
-        changedData: { 
-          credit_applied: newCreditApplied,
-          status: newStatus
-        },
-        details: { action: 'invoice.credit_applied', credit_amount: data.credit_amount }
-      });
+	      // Audit log
+	      await auditLog(trx, {
+	        userId: context.userId,
+	        operation: 'UPDATE',
+	        tableName: 'invoices',
+	        recordId: data.invoice_id,
+	        changedData: { 
+	          credit_applied: newCreditApplied,
+	          status: newStatus
+	        },
+	        details: { action: 'invoice.credit_applied', credit_amount: data.credit_amount }
+	      });
 
-      // Publish event
-      await publishEvent({
-        eventType: 'INVOICE_CREDIT_APPLIED',
-        payload: {
-          tenantId: context.tenant,
-          invoiceId: data.invoice_id,
-          creditAmount: data.credit_amount,
-          newCreditApplied,
-          remainingBalance,
-          newStatus,
-          userId: context.userId,
-          timestamp: new Date().toISOString()
-        }
-      });
+	      if (String(newStatus) !== String(invoice.status)) {
+	        const occurredAt = new Date().toISOString();
+	        await publishWorkflowEvent({
+	          eventType: 'INVOICE_STATUS_CHANGED',
+	          payload: buildInvoiceStatusChangedPayload({
+	            invoiceId: data.invoice_id,
+	            previousStatus: String(invoice.status),
+	            newStatus: String(newStatus),
+	            changedAt: occurredAt,
+	          }),
+	          ctx: {
+	            tenantId: context.tenant,
+	            occurredAt,
+	            actor: { actorType: 'USER', actorUserId: context.userId },
+	          },
+	        });
+	      }
+
+	      // Publish event
+	      await publishEvent({
+	        eventType: 'INVOICE_CREDIT_APPLIED',
+	        payload: {
+	          tenantId: context.tenant,
+	          invoiceId: data.invoice_id,
+	          creditAmount: data.credit_amount,
+	          newCreditApplied,
+	          remainingBalance,
+	          newStatus,
+	          userId: context.userId,
+	          timestamp: new Date().toISOString()
+	        }
+	      });
 
       return this.getById(data.invoice_id, context) as Promise<IInvoice>;
     });
@@ -885,6 +1135,8 @@ export class InvoiceService extends BaseService<IInvoice> {
     const { knex } = await this.getKnex();
 
     return withTransaction(knex, async (trx) => {
+      const occurredAt = new Date().toISOString();
+
       const invoice = await trx('invoices')
         .where({ invoice_id: data.invoice_id, tenant: context.tenant })
         .first();
@@ -925,6 +1177,24 @@ export class InvoiceService extends BaseService<IInvoice> {
 
       await trx('invoice_payments').insert(refundData);
 
+      await publishWorkflowEvent({
+        eventType: 'PAYMENT_REFUNDED',
+        payload: buildPaymentRefundedPayload({
+          paymentId: refundData.payment_id,
+          refundedAt: occurredAt,
+          refundedByUserId: context.userId,
+          amount: data.refund_amount,
+          currency: String(invoice.currency_code ?? 'USD'),
+          reason: data.reason,
+        }),
+        ctx: {
+          tenantId: context.tenant,
+          occurredAt,
+          actor: { actorType: 'USER', actorUserId: context.userId },
+        },
+        idempotencyKey: `payment_refunded:${refundData.payment_id}`,
+      });
+
       // Calculate net payments after refund
       const netPayments = await trx('invoice_payments')
         .where({ invoice_id: data.invoice_id, tenant: context.tenant })
@@ -953,30 +1223,47 @@ export class InvoiceService extends BaseService<IInvoice> {
           updated_at: new Date()
         });
 
-      // Audit log
-      await auditLog(trx, {
-        userId: context.userId,
-        operation: 'UPDATE',
-        tableName: 'invoices',
-        recordId: data.invoice_id,
-        changedData: { status: newStatus, refund_amount: data.refund_amount },
-        details: { action: 'invoice.refund_recorded', reason: data.reason }
-      });
+	      // Audit log
+	      await auditLog(trx, {
+	        userId: context.userId,
+	        operation: 'UPDATE',
+	        tableName: 'invoices',
+	        recordId: data.invoice_id,
+	        changedData: { status: newStatus, refund_amount: data.refund_amount },
+	        details: { action: 'invoice.refund_recorded', reason: data.reason }
+	      });
 
-      // Publish event
-      await publishEvent({
-        eventType: 'INVOICE_REFUND_RECORDED',
-        payload: {
-          tenantId: context.tenant,
-          invoiceId: data.invoice_id,
-          refundAmount: data.refund_amount,
-          reason: data.reason,
-          netPaid,
-          newStatus,
-          userId: context.userId,
-          timestamp: new Date().toISOString()
-        }
-      });
+	      if (String(newStatus) !== String(invoice.status)) {
+	        await publishWorkflowEvent({
+	          eventType: 'INVOICE_STATUS_CHANGED',
+	          payload: buildInvoiceStatusChangedPayload({
+	            invoiceId: data.invoice_id,
+	            previousStatus: String(invoice.status),
+	            newStatus: String(newStatus),
+	            changedAt: occurredAt,
+	          }),
+	          ctx: {
+	            tenantId: context.tenant,
+	            occurredAt,
+	            actor: { actorType: 'USER', actorUserId: context.userId },
+	          },
+	        });
+	      }
+
+	      // Publish event
+	      await publishEvent({
+	        eventType: 'INVOICE_REFUND_RECORDED',
+	        payload: {
+	          tenantId: context.tenant,
+	          invoiceId: data.invoice_id,
+	          refundAmount: data.refund_amount,
+	          reason: data.reason,
+	          netPaid,
+	          newStatus,
+	          userId: context.userId,
+	          timestamp: new Date().toISOString()
+	        }
+	      });
 
       return this.getById(data.invoice_id, context) as Promise<IInvoice>;
     });
@@ -1025,20 +1312,93 @@ export class InvoiceService extends BaseService<IInvoice> {
 
           results.updated_count++;
 
-          // Audit log
-          await auditLog(trx, {
-            userId: context.userId,
-            operation: 'UPDATE',
-            tableName: 'invoices',
-            recordId: invoiceId,
-            changedData: { status: data.status },
-            details: { action: 'invoice.bulk_status_update', old_status: invoice.status }
-          });
+	          // Audit log
+	          await auditLog(trx, {
+	            userId: context.userId,
+	            operation: 'UPDATE',
+	            tableName: 'invoices',
+	            recordId: invoiceId,
+	            changedData: { status: data.status },
+	            details: { action: 'invoice.bulk_status_update', old_status: invoice.status }
+	          });
 
-        } catch (error) {
-          const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-          results.errors.push(`Error updating invoice ${invoiceId}: ${errorMessage}`);
-        }
+	          const occurredAt = new Date().toISOString();
+	          const previousStatus = String(invoice.status);
+	          const newStatus = String(data.status);
+
+	          if (newStatus !== previousStatus) {
+	            await publishWorkflowEvent({
+	              eventType: 'INVOICE_STATUS_CHANGED',
+	              payload: buildInvoiceStatusChangedPayload({
+	                invoiceId,
+	                previousStatus,
+	                newStatus,
+	                changedAt: occurredAt,
+	              }),
+	              ctx: {
+	                tenantId: context.tenant,
+	                occurredAt,
+	                actor: { actorType: 'USER', actorUserId: context.userId },
+	              },
+	            });
+	          }
+
+	          if (newStatus === 'overdue' && previousStatus !== 'overdue') {
+	            const amountDue = await this.getInvoiceAmountDue(trx, {
+	              invoiceId,
+	              totalAmount: Number(invoice.total_amount ?? 0),
+	              creditApplied: Number(invoice.credit_applied ?? 0),
+	              tenantId: context.tenant,
+	            });
+
+	            await publishWorkflowEvent({
+	              eventType: 'INVOICE_OVERDUE',
+	              payload: buildInvoiceOverduePayload({
+	                invoiceId,
+	                clientId: invoice.client_id,
+	                overdueAt: occurredAt,
+	                dueDate: toIsoDateString(invoice.due_date),
+	                amountDue,
+	                currency: String(invoice.currency_code ?? 'USD'),
+	              }),
+	              ctx: {
+	                tenantId: context.tenant,
+	                occurredAt,
+	                actor: { actorType: 'USER', actorUserId: context.userId },
+	              },
+	            });
+	          }
+
+	          if (previousStatus === 'overdue' && newStatus === 'cancelled') {
+	            const amountDue = await this.getInvoiceAmountDue(trx, {
+	              invoiceId,
+	              totalAmount: Number(invoice.total_amount ?? 0),
+	              creditApplied: Number(invoice.credit_applied ?? 0),
+	              tenantId: context.tenant,
+	            });
+
+	            if (amountDue > 0) {
+	              await publishWorkflowEvent({
+	                eventType: 'INVOICE_WRITTEN_OFF',
+	                payload: buildInvoiceWrittenOffPayload({
+	                  invoiceId,
+	                  writtenOffAt: occurredAt,
+	                  amountWrittenOff: amountDue,
+	                  currency: String(invoice.currency_code ?? 'USD'),
+	                }),
+	                ctx: {
+	                  tenantId: context.tenant,
+	                  occurredAt,
+	                  actor: { actorType: 'USER', actorUserId: context.userId },
+	                },
+	              });
+	            }
+	          }
+
+	        } catch (error) {
+	          const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+	          results.errors.push(`Error updating invoice ${invoiceId}: ${errorMessage}`);
+	        }
       }
 
       // Publish bulk event

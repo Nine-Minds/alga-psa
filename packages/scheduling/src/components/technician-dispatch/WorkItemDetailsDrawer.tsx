@@ -84,7 +84,7 @@ export function WorkItemDetailsDrawer({
 
             switch(workItem.type) {
                 case 'ticket': {
-                    const ticketData = await getConsolidatedTicketData(workItem.work_item_id, currentUser);
+                    const ticketData = await getConsolidatedTicketData(workItem.work_item_id);
                     return (
                         <div className="h-full">
                             <TicketDetails
@@ -119,7 +119,7 @@ export function WorkItemDetailsDrawer({
                         isUsersLoading,
                         usersCount: users.length
                     });
-                    const taskData = await getTaskWithDetails(workItem.work_item_id, currentUser);
+                    const taskData = await getTaskWithDetails(workItem.work_item_id);
                     console.log('Task data loaded:', taskData);
                     return (
                         <div className="h-full">

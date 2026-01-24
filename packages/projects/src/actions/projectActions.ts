@@ -21,31 +21,19 @@ import type {
 } from '@alga-psa/types';
 import { getAllUsers, findUserById } from '@alga-psa/users/actions/user-actions/userActions';
 import { getContactByContactNameId } from '@alga-psa/clients/actions/contact-actions/contactActions';
-import { getCurrentUser } from '@alga-psa/auth/getCurrentUser';
+import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { validateArray, validateData } from '@alga-psa/validation';
 import { createTenantKnex, withTransaction } from '@alga-psa/db';
 import { z } from 'zod';
-import { publishEvent } from '@alga-psa/event-bus/publishers';
+import { publishEvent, publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import { createProjectSchema, updateProjectSchema, projectPhaseSchema } from '../schemas/project.schemas';
-import { OrderingService } from '../lib/orderingService';
+import { OrderingService } from '../lib/orderingUtils';
 import { SharedNumberingService } from '@shared/services/numberingService';
-
-// Helper to get tenant with non-null assertion after validation
-async function getTenantKnex(tenantId?: string | null): Promise<{ knex: Knex; tenant: string }> {
-  let tenant = tenantId ?? null;
-  if (!tenant) {
-    const currentUser = await getCurrentUser();
-    tenant = currentUser?.tenant ?? null;
-  }
-
-  const { knex, tenant: resolvedTenant } = await createTenantKnex(tenant);
-  tenant = resolvedTenant;
-  if (!tenant) {
-    throw new Error('SYSTEM_ERROR: Tenant context not found');
-  }
-  return { knex, tenant };
-}
+import {
+  buildProjectStatusChangedPayload,
+  buildProjectUpdatedPayload,
+} from '@shared/workflow/streams/domainEventBuilders/projectLifecycleEventBuilders';
 
 const extendedCreateProjectSchema = createProjectSchema.extend({
   assigned_to: z.string().nullable().optional(),
@@ -74,61 +62,60 @@ async function checkPermission(user: IUser, resource: string, action: string, kn
     }
 }
 
-export async function getAllClientsForProjects(): Promise<IClient[]> {
-  const { knex: db, tenant } = await getTenantKnex();
+async function getContactFullNameByContactNameId(params: {
+    knexOrTrx: Knex | Knex.Transaction;
+    tenant: string;
+    contactNameId: string;
+}): Promise<string | null> {
+    const row = await params.knexOrTrx('contacts')
+        .where({ tenant: params.tenant, contact_name_id: params.contactNameId })
+        .first<{ full_name: string }>('full_name');
+    return row?.full_name ?? null;
+}
+
+export const getAllClientsForProjects = withAuth(async (_user, { tenant }): Promise<IClient[]> => {
+  const { knex: db } = await createTenantKnex();
 
   const clients = await withTransaction(db, async (trx: Knex.Transaction) => {
     return trx('clients').select('*').where('tenant', tenant).orderBy('client_name', 'asc');
   });
 
   return clients as IClient[];
-}
+});
 
-export async function getProjects(): Promise<IProject[]> {
+export const getProjects = withAuth(async (user, { tenant }): Promise<IProject[]> => {
     try {
-        const currentUser = await getCurrentUser();
-        if (!currentUser) {
-            throw new Error("user not found");
-        }
-        if (!currentUser.tenant) {
-            throw new Error("tenant context not found");
-        }
-        const {knex, tenant} = await getTenantKnex(currentUser.tenant);
-        
+        const { knex } = await createTenantKnex();
+
         const projects = await withTransaction(knex, async (trx: Knex.Transaction) => {
-            await checkPermission(currentUser, 'project', 'read', trx);
+            await checkPermission(user, 'project', 'read', trx);
             return await ProjectModel.getAll(trx, tenant, true);
         });
-        
+
         // Fetch assigned user details for each project
         const projectsWithUsers = await Promise.all(projects.map(async (project): Promise<IProject> => {
             if (project.assigned_to) {
-                const user = await findUserById(project.assigned_to);
+                const assignedUser = await findUserById(project.assigned_to);
                 return {
                     ...project,
-                    assigned_user: user || null
+                    assigned_user: assignedUser || null
                 };
             }
             return project;
         }));
-        
+
         return projectsWithUsers;
     } catch (error) {
         console.error('Error fetching projects:', error);
         throw error;
     }
-}
+});
 
-export async function getProjectPhase(phaseId: string): Promise<IProjectPhase | null> {
+export const getProjectPhase = withAuth(async (user, { tenant }, phaseId: string): Promise<IProjectPhase | null> => {
     try {
-        const currentUser = await getCurrentUser();
-        if (!currentUser) {
-            throw new Error('No authenticated user found');
-        }
-
-        const {knex, tenant} = await getTenantKnex(currentUser.tenant);
+        const { knex } = await createTenantKnex();
         const phase = await withTransaction(knex, async (trx: Knex.Transaction) => {
-            if (!await hasPermission(currentUser, 'project', 'read', trx)) {
+            if (!await hasPermission(user, 'project', 'read', trx)) {
                 throw new Error('Permission denied: Cannot read project');
             }
             return await ProjectModel.getPhaseById(trx, tenant, phaseId);
@@ -138,29 +125,24 @@ export async function getProjectPhase(phaseId: string): Promise<IProjectPhase | 
         console.error('Error fetching project phase:', error);
         throw new Error('Failed to fetch project phase');
     }
-}
+});
 
-export async function getProjectTreeData(projectId?: string) {
+export const getProjectTreeData = withAuth(async (user, { tenant }, projectId?: string) => {
   try {
-    const currentUser = await getCurrentUser();
-    if (!currentUser) {
-      throw new Error("user not found");
-    }
+    const { knex } = await createTenantKnex();
 
-    const {knex, tenant} = await getTenantKnex(currentUser.tenant);
-    
     return await withTransaction(knex, async (trx: Knex.Transaction) => {
-      await checkPermission(currentUser, 'project', 'read', trx);
-      const projects = projectId ? 
-        [await ProjectModel.getById(trx, tenant, projectId)] : 
+      await checkPermission(user, 'project', 'read', trx);
+      const projects = projectId ?
+        [await ProjectModel.getById(trx, tenant, projectId)] :
         await ProjectModel.getAll(trx, tenant, true);
-      
+
       const validProjects = projects.filter((p): p is NonNullable<typeof p> => p !== null);
-      
+
       if (validProjects.length === 0) {
         throw new Error('No projects found');
       }
-      
+
       const treeData = await Promise.all(validProjects.map(async (project): Promise<{
         label: string;
         value: string;
@@ -184,7 +166,7 @@ export async function getProjectTreeData(projectId?: string) {
 
           if (!statusMappings || statusMappings.length === 0) {
             const standardStatuses = await ProjectModel.getStandardStatusesByType(trx, tenant, 'project_task');
-            await Promise.all(standardStatuses.map((status): Promise<IProjectStatusMapping> => 
+            await Promise.all(standardStatuses.map((status): Promise<IProjectStatusMapping> =>
               ProjectModel.addProjectStatusMapping(trx, tenant, project.project_id, {
                 standard_status_id: status.standard_status_id,
                 is_standard: true,
@@ -195,7 +177,7 @@ export async function getProjectTreeData(projectId?: string) {
             ));
           }
 
-          const statuses = await getProjectTaskStatuses(project.project_id);
+          const statuses = await getProjectTaskStatusesInternal(trx, tenant, project.project_id, user);
 
         return {
           label: project.project_name,
@@ -233,74 +215,59 @@ export async function getProjectTreeData(projectId?: string) {
 
       const validTreeData = treeData
         .filter((data): data is NonNullable<typeof data> =>
-          data !== null && 
-          data.children && 
+          data !== null &&
+          data.children &&
           data.children.length > 0
         );
-      
+
       if (validTreeData.length === 0) {
         throw new Error('No projects available with valid phases');
       }
-      
+
       return validTreeData;
     });
   } catch (error) {
     console.error('Error fetching project tree data:', error);
     throw new Error('Failed to fetch project tree data');
   }
-}
+});
 
-export async function updatePhase(phaseId: string, phaseData: Partial<IProjectPhase>): Promise<IProjectPhase> {
+export const updatePhase = withAuth(async (user, { tenant }, phaseId: string, phaseData: Partial<IProjectPhase>): Promise<IProjectPhase> => {
     try {
-        const currentUser = await getCurrentUser();
-        if (!currentUser) {
-            throw new Error("user not found");
-        }
-
         // Skip validation in development mode since we're handling the types correctly
-        const {knex, tenant} = await getTenantKnex();
+        const { knex } = await createTenantKnex();
         const updatedPhase = await withTransaction(knex, async (trx: Knex.Transaction) => {
-            await checkPermission(currentUser, 'project', 'update', trx);
+            await checkPermission(user, 'project', 'update', trx);
             return await ProjectModel.updatePhase(trx, tenant, phaseId, {
                 ...phaseData,
                 start_date: phaseData.start_date ? new Date(phaseData.start_date) : null,
                 end_date: phaseData.end_date ? new Date(phaseData.end_date) : null
             });
         });
-        
+
         return updatedPhase;
     } catch (error) {
         console.error('Error updating project phase:', error);
         throw error;
     }
-}
+});
 
-export async function deletePhase(phaseId: string): Promise<void> {
+export const deletePhase = withAuth(async (user, { tenant }, phaseId: string): Promise<void> => {
     try {
-        const currentUser = await getCurrentUser();
-        if (!currentUser) {
-            throw new Error("user not found");
-        }
-
-        const {knex, tenant} = await getTenantKnex();
+        const { knex } = await createTenantKnex();
         await withTransaction(knex, async (trx: Knex.Transaction) => {
-            await checkPermission(currentUser, 'project', 'delete', trx);
+            await checkPermission(user, 'project', 'delete', trx);
             await ProjectModel.deletePhase(trx, tenant, phaseId);
         });
     } catch (error) {
         console.error('Error deleting project phase:', error);
         throw error;
     }
-}
+});
 
-export async function addProjectPhase(phaseData: Omit<IProjectPhase, 'phase_id' | 'created_at' | 'updated_at' | 'tenant'>): Promise<IProjectPhase> {
+export const addProjectPhase = withAuth(async (user, { tenant }, phaseData: Omit<IProjectPhase, 'phase_id' | 'created_at' | 'updated_at' | 'tenant'>): Promise<IProjectPhase> => {
     try {
-        const currentUser = await getCurrentUser();
-        if (!currentUser) {
-            throw new Error("user not found");
-        }
-
-        const validatedData = validateData(projectPhaseSchema.omit({ 
+        const validatedData = validateData(projectPhaseSchema.omit({
             phase_id: true,
             created_at: true,
             updated_at: true,
@@ -308,10 +275,10 @@ export async function addProjectPhase(phaseData: Omit<IProjectPhase, 'phase_id' 
         }), phaseData);
 
         // Get the project first to get its WBS code
-        const {knex, tenant} = await getTenantKnex();
-        
+        const { knex } = await createTenantKnex();
+
         return await withTransaction(knex, async (trx: Knex.Transaction) => {
-            await checkPermission(currentUser, 'project', 'update', trx);
+            await checkPermission(user, 'project', 'update', trx);
             const project = await ProjectModel.getById(trx, tenant, phaseData.project_id);
             if (!project) {
                 throw new Error('Project not found');
@@ -330,11 +297,11 @@ export async function addProjectPhase(phaseData: Omit<IProjectPhase, 'phase_id' 
 
             const maxPhaseNumber = phaseNumbers.length > 0 ? Math.max(...phaseNumbers) : 0;
             const newWbsCode = `${project.wbs_code}.${maxPhaseNumber + 1}`;
-            
+
             // Generate order key for the new phase
             const { generateKeyBetween } = await import('fractional-indexing');
             let orderKey: string;
-            
+
             if (phases.length === 0) {
                 // First phase
                 orderKey = generateKeyBetween(null, null);
@@ -363,36 +330,27 @@ export async function addProjectPhase(phaseData: Omit<IProjectPhase, 'phase_id' 
         console.error('Error adding project phase:', error);
         throw error;
     }
-}
+});
 
-export async function reorderPhase(
-    phaseId: string,
-    beforePhaseId?: string | null,
-    afterPhaseId?: string | null
-): Promise<void> {
-    const currentUser = await getCurrentUser();
-    if (!currentUser) {
-        throw new Error("user not found");
-    }
+export const reorderPhase = withAuth(async (user, { tenant }, phaseId: string, beforePhaseId?: string | null, afterPhaseId?: string | null): Promise<void> => {
+    const { knex: db } = await createTenantKnex();
 
-    const {knex: db, tenant} = await getTenantKnex();
-    
     await withTransaction(db, async (trx: Knex.Transaction) => {
-        await checkPermission(currentUser, 'project', 'update', trx);
+        await checkPermission(user, 'project', 'update', trx);
         // Get the phase being moved
         const phase = await trx('project_phases')
             .where({ phase_id: phaseId, tenant })
             .select('project_id')
             .first();
-            
+
         if (!phase) {
             throw new Error('Phase not found');
         }
-        
+
         // Get order keys for positioning
         let beforeKey: string | null = null;
         let afterKey: string | null = null;
-        
+
         if (beforePhaseId) {
             const beforePhase = await trx('project_phases')
                 .where({ phase_id: beforePhaseId, tenant })
@@ -400,7 +358,7 @@ export async function reorderPhase(
                 .first();
             beforeKey = beforePhase?.order_key || null;
         }
-        
+
         if (afterPhaseId) {
             const afterPhase = await trx('project_phases')
                 .where({ phase_id: afterPhaseId, tenant })
@@ -408,18 +366,18 @@ export async function reorderPhase(
                 .first();
             afterKey = afterPhase?.order_key || null;
         }
-        
+
         try {
             // Use OrderingService for key generation
             const newOrderKey = OrderingService.generateKeyForPosition(beforeKey, afterKey);
-            
+
             await trx('project_phases')
                 .where({ phase_id: phaseId, tenant })
                 .update({
                     order_key: newOrderKey,
                     updated_at: trx.fn.now()
                 });
-                
+
             console.log('Phase reordered successfully:', {
                 phaseId,
                 newOrderKey,
@@ -428,11 +386,11 @@ export async function reorderPhase(
             });
         } catch (error) {
             console.error('Error generating order key for phase:', error);
-            
+
             // Try to recover by regenerating all order keys for the project
             const { regenerateOrderKeysForPhases } = await import('./regenerateOrderKeys');
             await regenerateOrderKeysForPhases(phase.project_id);
-            
+
             // Try again with fresh order keys
             const freshBeforePhase = beforePhaseId ? await trx('project_phases')
                 .where({ phase_id: beforePhaseId, tenant })
@@ -442,66 +400,50 @@ export async function reorderPhase(
                 .where({ phase_id: afterPhaseId, tenant })
                 .select('order_key')
                 .first() : null;
-                
+
             const freshBeforeKey = freshBeforePhase?.order_key || null;
             const freshAfterKey = freshAfterPhase?.order_key || null;
-            
+
             const newOrderKey = OrderingService.generateKeyForPosition(freshBeforeKey, freshAfterKey);
-            
+
             await trx('project_phases')
                 .where({ phase_id: phaseId, tenant })
                 .update({
                     order_key: newOrderKey,
                     updated_at: trx.fn.now()
                 });
-                
+
             console.log('Phase reordered successfully after recovery:', {
                 phaseId,
                 newOrderKey
             });
         }
     });
-}
+});
 
-export async function getProject(projectId: string): Promise<IProject | null> {
+export const getProject = withAuth(async (user, { tenant }, projectId: string): Promise<IProject | null> => {
     try {
-        const currentUser = await getCurrentUser();
-        if (!currentUser) {
-            throw new Error("user not found");
-        }
-        const {knex, tenant} = await getTenantKnex();
+        const { knex } = await createTenantKnex();
         return await withTransaction(knex, async (trx: Knex.Transaction) => {
-            await checkPermission(currentUser, 'project', 'read', trx);
+            await checkPermission(user, 'project', 'read', trx);
             return await ProjectModel.getById(trx, tenant, projectId);
         });
     } catch (error) {
         console.error('Error fetching project:', error);
         throw error;
     }
+});
+
+// Internal function for getting statuses within transaction
+async function getStandardProjectTaskStatusesInternal(trx: Knex.Transaction, tenant: string): Promise<IStandardStatus[]> {
+    return await ProjectModel.getStandardStatusesByType(trx, tenant, 'project_task');
 }
 
-async function getStandardProjectTaskStatuses(): Promise<IStandardStatus[]> {
-    try {
-        const {knex, tenant} = await getTenantKnex();
-        return await withTransaction(knex, async (trx: Knex.Transaction) => {
-            return await ProjectModel.getStandardStatusesByType(trx, tenant, 'project_task');
-        });
-    } catch (error) {
-        console.error('Error fetching standard project task statuses:', error);
-        throw new Error('Failed to fetch standard project task statuses');
-    }
-}
-
-export async function getProjectStatuses(): Promise<IStatus[]> {
+export const getProjectStatuses = withAuth(async (user, { tenant }): Promise<IStatus[]> => {
   try {
-    const currentUser = await getCurrentUser();
-    if (!currentUser) {
-        throw new Error('No authenticated user found');
-    }
-
-    const {knex, tenant} = await getTenantKnex();
+    const { knex } = await createTenantKnex();
     return await withTransaction(knex, async (trx: Knex.Transaction) => {
-        if (!await hasPermission(currentUser, 'project', 'read', trx)) {
+        if (!await hasPermission(user, 'project', 'read', trx)) {
             throw new Error('Permission denied: Cannot read project');
         }
         return await ProjectModel.getStatusesByType(trx, tenant, 'project');
@@ -510,18 +452,13 @@ export async function getProjectStatuses(): Promise<IStatus[]> {
     console.error('Error fetching project statuses:', error);
     throw new Error('Failed to fetch project statuses');
   }
-}
+});
 
-export async function generateNextWbsCode(): Promise<string> {
+export const generateNextWbsCode = withAuth(async (user, { tenant }): Promise<string> => {
     try {
-        const currentUser = await getCurrentUser();
-        if (!currentUser) {
-            throw new Error('No authenticated user found');
-        }
-
-        const {knex, tenant} = await getTenantKnex();
+        const { knex } = await createTenantKnex();
         return await withTransaction(knex, async (trx: Knex.Transaction) => {
-            if (!await hasPermission(currentUser, 'project', 'read', trx)) {
+            if (!await hasPermission(user, 'project', 'read', trx)) {
                 throw new Error('Permission denied: Cannot read project');
             }
             return await ProjectModel.generateNextWbsCode(trx, tenant, '');
@@ -530,9 +467,11 @@ export async function generateNextWbsCode(): Promise<string> {
         console.error('Error generating WBS code:', error);
         throw error;
     }
-}
+});
 
-export async function createProject(
+export const createProject = withAuth(async (
+  user,
+  { tenant },
   projectData: Omit<IProject, 'project_id' | 'created_at' | 'updated_at' | 'wbs_code' | 'project_number'> & {
     assigned_to?: string | null;
     contact_name_id?: string | null;
@@ -544,24 +483,16 @@ export async function createProject(
     /** If true, skip publishing events (useful when called within another action's transaction) */
     skipEvents?: boolean;
   }
-): Promise<IProject> {
+): Promise<IProject> => {
     try {
         // Get project statuses first
-        const projectStatuses = await getProjectStatuses();
+        const projectStatuses = await getProjectStatusesInternal(tenant, user);
 
         if (projectStatuses.length === 0) {
             throw new Error('No project statuses found');
         }
 
-        const currentUser = await getCurrentUser();
-        if (!currentUser) {
-            throw new Error("user not found");
-        }
-        if (!currentUser.tenant) {
-            throw new Error("tenant context not found");
-        }
-
-        const {knex, tenant} = await getTenantKnex();
+        const { knex } = await createTenantKnex();
         const externalTrx = options?.trx;
 
         // Try to get both standard statuses and regular statuses for backward compatibility
@@ -590,12 +521,12 @@ export async function createProject(
 
         // Helper function for the actual project creation logic
         const createProjectInTransaction = async (trx: Knex.Transaction) => {
-            await checkPermission(currentUser, 'project', 'create', trx);
+            await checkPermission(user, 'project', 'create', trx);
 
             // Generate project number
             const projectNumber = await SharedNumberingService.getNextNumber(
                 'PROJECT',
-                { knex: trx, tenant: currentUser.tenant! }
+                { knex: trx, tenant }
             );
             console.log(`[createProject] Generated project number: ${projectNumber}`);
 
@@ -692,18 +623,13 @@ export async function createProject(
 
         // Only publish events if not using an external transaction (or explicitly requested)
         if (!options?.skipEvents) {
-            // Ensure tenant exists before publishing event
-            if (!currentUser.tenant) {
-                throw new Error("tenant context required for event publishing");
-            }
-
             // Publish project created event
             await publishEvent({
                 eventType: 'PROJECT_CREATED',
                 payload: {
-                    tenantId: currentUser.tenant,
+                    tenantId: tenant,
                     projectId: fullProject.project_id,
-                    userId: currentUser.user_id,
+                    userId: user.user_id,
                     timestamp: new Date().toISOString()
                 }
             });
@@ -714,27 +640,33 @@ export async function createProject(
         console.error('Error creating project:', error);
         throw error;
     }
+});
+
+// Internal helper to get project statuses
+async function getProjectStatusesInternal(tenant: string, user: IUser): Promise<IStatus[]> {
+    const { knex } = await createTenantKnex();
+    return await withTransaction(knex, async (trx: Knex.Transaction) => {
+        if (!await hasPermission(user, 'project', 'read', trx)) {
+            throw new Error('Permission denied: Cannot read project');
+        }
+        return await ProjectModel.getStatusesByType(trx, tenant, 'project');
+    });
 }
 
-export async function updateProject(projectId: string, projectData: Partial<IProject>): Promise<IProject> {
+export const updateProject = withAuth(async (user, { tenant }, projectId: string, projectData: Partial<IProject>): Promise<IProject> => {
     try {
-        const currentUser = await getCurrentUser();
-        if (!currentUser) {
-            throw new Error("user not found");
-        }
-
-        if (!currentUser.tenant) {
-            throw new Error("tenant context not found");
-        }
-
         // Remove tenant field if present in projectData
         const { tenant: tenantField, ...safeProjectData } = projectData;
         const validatedData = validateData(updateProjectSchema, safeProjectData);
-        
-        const {knex, tenant} = await getTenantKnex();
-        
-        let updatedProject = await withTransaction(knex, async (trx: Knex.Transaction) => {
-            await checkPermission(currentUser, 'project', 'update', trx);
+
+        const { knex } = await createTenantKnex();
+
+        const { beforeProject, updatedProject } = await withTransaction(knex, async (trx: Knex.Transaction) => {
+            await checkPermission(user, 'project', 'update', trx);
+            const beforeProject = await ProjectModel.getById(trx, tenant, projectId);
+            if (!beforeProject) {
+                throw new Error(`Project ${projectId} not found`);
+            }
             let project = await ProjectModel.update(trx, tenant, projectId, validatedData);
 
             // If status was updated, fetch the status details
@@ -748,27 +680,22 @@ export async function updateProject(projectId: string, projectData: Partial<IPro
                     });
                 }
             }
-            return project;
+            return { beforeProject, updatedProject: project };
         });
 
         // If assigned_to was updated, fetch the full user details and publish event
         if ('assigned_to' in projectData && projectData.assigned_to !== updatedProject.assigned_to) {
             if (updatedProject.assigned_to) {
-                const user = await findUserById(updatedProject.assigned_to);
-                updatedProject.assigned_user = user || null;
-
-                // Ensure tenant exists before publishing event
-                if (!currentUser.tenant) {
-                    throw new Error("tenant context required for event publishing");
-                }
+                const assignedUser = await findUserById(updatedProject.assigned_to);
+                updatedProject.assigned_user = assignedUser || null;
 
                 // Publish project assigned event only if assigned_to actually changed
                 await publishEvent({
                     eventType: 'PROJECT_ASSIGNED',
                     payload: {
-                        tenantId: currentUser.tenant,
+                        tenantId: tenant,
                         projectId: projectId,
-                        userId: currentUser.user_id,
+                        userId: user.user_id,
                         assignedTo: updatedProject.assigned_to,
                         timestamp: new Date().toISOString()
                     }
@@ -781,31 +708,47 @@ export async function updateProject(projectId: string, projectData: Partial<IPro
         // If contact_name_id was updated, fetch the full contact details
         if ('contact_name_id' in projectData) {
             if (updatedProject.contact_name_id) {
-                const contact = await getContactByContactNameId(updatedProject.contact_name_id);
-                updatedProject.contact_name = contact?.full_name || null;
+                const fullName = await getContactFullNameByContactNameId({
+                    knexOrTrx: knex,
+                    tenant,
+                    contactNameId: updatedProject.contact_name_id,
+                });
+                updatedProject.contact_name = fullName;
             } else {
                 updatedProject.contact_name = null;
             }
         }
 
-        // Ensure tenant exists before publishing event
-        if (!currentUser.tenant) {
-            throw new Error("tenant context required for event publishing");
+        const occurredAt = updatedProject.updated_at instanceof Date ? updatedProject.updated_at : new Date();
+        const ctx = {
+            tenantId: tenant,
+            occurredAt,
+            actor: { actorType: 'USER' as const, actorUserId: user.user_id },
+        };
+
+        if ('status' in validatedData && beforeProject.status !== updatedProject.status) {
+            await publishWorkflowEvent({
+                eventType: 'PROJECT_STATUS_CHANGED',
+                ctx,
+                payload: buildProjectStatusChangedPayload({
+                    projectId,
+                    previousStatus: beforeProject.status,
+                    newStatus: updatedProject.status,
+                    changedAt: occurredAt,
+                }),
+            });
         }
 
-        // Remove tenant field from changes if present
-        const { tenant: omittedTenant, ...safeChanges } = validatedData;
-
-        // Publish project updated event
-        await publishEvent({
+        await publishWorkflowEvent({
             eventType: 'PROJECT_UPDATED',
-            payload: {
-                tenantId: currentUser.tenant,
-                projectId: projectId,
-                userId: currentUser.user_id,
-                changes: safeChanges,
-                timestamp: new Date().toISOString()
-            }
+            ctx,
+            payload: buildProjectUpdatedPayload({
+                projectId,
+                before: beforeProject as unknown as Record<string, unknown> & { project_id: string },
+                after: updatedProject as unknown as Record<string, unknown> & { project_id: string },
+                updatedFieldKeys: Object.keys(validatedData),
+                updatedAt: occurredAt,
+            }),
         });
 
         return updatedProject;
@@ -813,27 +756,22 @@ export async function updateProject(projectId: string, projectData: Partial<IPro
         console.error('Error updating project:', error);
         throw error;
     }
-}
+});
 
-export async function deleteProject(projectId: string): Promise<void> {
+export const deleteProject = withAuth(async (user, { tenant }, projectId: string): Promise<void> => {
     try {
-        const currentUser = await getCurrentUser();
-        if (!currentUser) {
-            throw new Error("user not found");
-        }
-
-        const {knex, tenant} = await getTenantKnex();
+        const { knex } = await createTenantKnex();
         await withTransaction(knex, async (trx: Knex.Transaction) => {
-            await checkPermission(currentUser, 'project', 'delete', trx);
+            await checkPermission(user, 'project', 'delete', trx);
             await ProjectModel.delete(trx, tenant, projectId);
         });
     } catch (error) {
         console.error('Error deleting project:', error);
         throw error;
     }
-}
+});
 
-export async function getProjectMetadata(projectId: string): Promise<{
+export const getProjectMetadata = withAuth(async (user, { tenant }, projectId: string): Promise<{
     project: IProject;
     phases: IProjectPhase[];
     statuses: ProjectStatus[];
@@ -841,44 +779,40 @@ export async function getProjectMetadata(projectId: string): Promise<{
     contact?: { full_name: string };
     assignedUser: IUserWithRoles | null;
     clients: IClient[];
-}> {
+}> => {
     try {
-        const currentUser = await getCurrentUser();
-        if (!currentUser) {
-            throw new Error("user not found");
-        }
-        const {knex, tenant} = await getTenantKnex();
-        
+        const { knex } = await createTenantKnex();
+
         // Fetch data that doesn't need to be in a transaction
         const [statuses, users, clients] = await Promise.all([
-            getProjectTaskStatuses(projectId),
+            getProjectTaskStatusesInternal2(tenant, projectId, user),
             getAllUsers(),
-            getAllClientsForProjects()
+            getAllClientsForProjectsInternal(tenant)
         ]);
-        
+
         // Fetch project-specific data within a transaction
         const projectData = await withTransaction(knex, async (trx: Knex.Transaction) => {
-            await checkPermission(currentUser, 'project', 'read', trx);
+            await checkPermission(user, 'project', 'read', trx);
             const [project, phases] = await Promise.all([
                 ProjectModel.getById(trx, tenant, projectId),
                 ProjectModel.getPhases(trx, tenant, projectId)
             ]);
-            
+
             return { project, phases };
         });
-        
+
         const { project, phases } = projectData;
         if (!project) {
             throw new Error('Project not found');
         }
-        
+
         // Fetch assigned user details if assigned_to exists
         let assignedUser: IUserWithRoles | null = null;
         if (project.assigned_to) {
-            const user = await findUserById(project.assigned_to);
-            assignedUser = user || null;
+            const foundUser = await findUserById(project.assigned_to);
+            assignedUser = foundUser || null;
         }
-        
+
         // Fetch contact details if needed
         let contact: { full_name: string } | undefined;
         if (project.contact_name_id) {
@@ -890,7 +824,7 @@ export async function getProjectMetadata(projectId: string): Promise<{
             });
             contact = contactData;
         }
-        
+
         return {
             project,
             phases,
@@ -904,9 +838,85 @@ export async function getProjectMetadata(projectId: string): Promise<{
         console.error('Error getting project metadata:', error);
         throw error;
     }
+});
+
+// Internal helper for getAllClientsForProjects
+async function getAllClientsForProjectsInternal(tenant: string): Promise<IClient[]> {
+    const { knex: db } = await createTenantKnex();
+    const clients = await withTransaction(db, async (trx: Knex.Transaction) => {
+        return trx('clients').select('*').where('tenant', tenant).orderBy('client_name', 'asc');
+    });
+    return clients as IClient[];
 }
 
-export async function getProjectDetails(projectId: string): Promise<{
+// Internal helper for getProjectTaskStatuses
+async function getProjectTaskStatusesInternal2(tenant: string, projectId: string, user: IUser): Promise<ProjectStatus[]> {
+    const { knex } = await createTenantKnex();
+    return await withTransaction(knex, async (trx: Knex.Transaction) => {
+        return await getProjectTaskStatusesInternal(trx, tenant, projectId, user);
+    });
+}
+
+// Internal function to get project task statuses within transaction
+async function getProjectTaskStatusesInternal(trx: Knex.Transaction, tenant: string, projectId: string, user: IUser): Promise<ProjectStatus[]> {
+    if (!await hasPermission(user, 'project', 'read', trx)) {
+        throw new Error('Permission denied: Cannot read project');
+    }
+    const statusMappings = await ProjectModel.getProjectStatusMappings(trx, tenant, projectId);
+    if (!statusMappings || statusMappings.length === 0) {
+        console.warn(`No status mappings found for project ${projectId}`);
+        return [];
+    }
+
+    const statuses = await Promise.all(statusMappings.map(async (mapping: IProjectStatusMapping): Promise<ProjectStatus | null> => {
+        try {
+            if (mapping.is_standard && mapping.standard_status_id) {
+                const standardStatus = await ProjectModel.getStandardStatus(trx, tenant, mapping.standard_status_id);
+                if (!standardStatus) {
+                    console.warn(`Standard status not found for mapping ${mapping.project_status_mapping_id}`);
+                    return null;
+                }
+                return {
+                    ...standardStatus,
+                    project_status_mapping_id: mapping.project_status_mapping_id,
+                    status_id: standardStatus.standard_status_id,
+                    custom_name: mapping.custom_name,
+                    display_order: mapping.display_order,
+                    is_visible: mapping.is_visible,
+                    is_standard: true,
+                    is_closed: standardStatus.is_closed
+                } as ProjectStatus;
+            } else if (mapping.status_id) {
+                const customStatus = await ProjectModel.getCustomStatus(trx, tenant, mapping.status_id);
+                if (!customStatus) {
+                    console.warn(`Custom status not found for mapping ${mapping.project_status_mapping_id}`);
+                    return null;
+                }
+                return {
+                    ...customStatus,
+                    project_status_mapping_id: mapping.project_status_mapping_id,
+                    status_id: customStatus.status_id,
+                    custom_name: mapping.custom_name,
+                    display_order: mapping.display_order,
+                    is_visible: mapping.is_visible,
+                    is_standard: false,
+                    is_closed: customStatus.is_closed,
+                    color: customStatus.color,
+                    icon: customStatus.icon
+                } as ProjectStatus;
+            }
+            console.warn(`Invalid status mapping ${mapping.project_status_mapping_id}: missing both standard_status_id and status_id`);
+            return null;
+        } catch (error) {
+            console.error(`Error processing status mapping ${mapping.project_status_mapping_id}:`, error);
+            return null;
+        }
+    }));
+
+    return statuses.filter((status): status is ProjectStatus => status !== null);
+}
+
+export const getProjectDetails = withAuth(async (user, { tenant }, projectId: string): Promise<{
     project: IProject;
     phases: IProjectPhase[];
     tasks: IProjectTask[];
@@ -916,25 +926,20 @@ export async function getProjectDetails(projectId: string): Promise<{
     contact?: { full_name: string };
     assignedUser: IUserWithRoles | null;
     clients: IClient[];
-}> {
+}> => {
     try {
-        const currentUser = await getCurrentUser();
-        if (!currentUser) {
-            throw new Error("user not found");
-        }
+        const { knex } = await createTenantKnex();
 
-        const {knex, tenant} = await getTenantKnex();
-        
         // Fetch data that doesn't need to be in a transaction
         const [statuses, users, clients] = await Promise.all([
-            getProjectTaskStatuses(projectId),
+            getProjectTaskStatusesInternal2(tenant, projectId, user),
             getAllUsers(),
-            getAllClientsForProjects()
+            getAllClientsForProjectsInternal(tenant)
         ]);
-        
+
         // Fetch project-specific data within a transaction
         const projectData = await withTransaction(knex, async (trx: Knex.Transaction) => {
-            await checkPermission(currentUser, 'project', 'read', trx);
+            await checkPermission(user, 'project', 'read', trx);
             const [project, phases, rawTasks, checklistItemsMap, ticketLinksMap, taskResourcesMap] = await Promise.all([
                 ProjectModel.getById(trx, tenant, projectId),
                 ProjectModel.getPhases(trx, tenant, projectId),
@@ -943,10 +948,10 @@ export async function getProjectDetails(projectId: string): Promise<{
                 ProjectTaskModel.getAllTaskTicketLinks(trx, tenant, projectId),
                 ProjectTaskModel.getAllTaskResources(trx, tenant, projectId)
             ]);
-            
+
             return { project, phases, rawTasks, checklistItemsMap, ticketLinksMap, taskResourcesMap };
         });
-        
+
         const { project, phases, rawTasks, checklistItemsMap, ticketLinksMap, taskResourcesMap } = projectData;
 
         if (!project) {
@@ -955,8 +960,8 @@ export async function getProjectDetails(projectId: string): Promise<{
 
         // Fetch assigned user details if assigned_to exists
         if (project.assigned_to) {
-            const user = await findUserById(project.assigned_to);
-            project.assigned_user = user || null;
+            const assignedUser = await findUserById(project.assigned_to);
+            project.assigned_user = assignedUser || null;
         }
 
         const tasks = rawTasks.map((task): IProjectTask & {
@@ -974,12 +979,12 @@ export async function getProjectDetails(projectId: string): Promise<{
             full_name: project.contact_name
         } : undefined;
 
-        return { 
-            project, 
-            phases, 
-            tasks, 
-            ticketLinks, 
-            statuses, 
+        return {
+            project,
+            phases,
+            tasks,
+            ticketLinks,
+            statuses,
             users,
             contact,
             assignedUser: project.assigned_user || null,
@@ -989,141 +994,59 @@ export async function getProjectDetails(projectId: string): Promise<{
         console.error('Error fetching project details:', error);
         throw error;
     }
-}
+});
 
-export async function updateProjectStructure(projectId: string, updates: { phases: Partial<IProjectPhase>[]; tasks: Partial<IProjectTask>[] }): Promise<void> {
+export const updateProjectStructure = withAuth(async (user, { tenant }, projectId: string, updates: { phases: Partial<IProjectPhase>[]; tasks: Partial<IProjectTask>[] }): Promise<void> => {
     try {
-        const currentUser = await getCurrentUser();
-        if (!currentUser) {
-            throw new Error("user not found");
-        }
-
-        const {knex, tenant} = await getTenantKnex();
+        const { knex } = await createTenantKnex();
         await withTransaction(knex, async (trx: Knex.Transaction) => {
-            await checkPermission(currentUser, 'project', 'update', trx);
+            await checkPermission(user, 'project', 'update', trx);
             await ProjectModel.updateStructure(trx, tenant, projectId, updates);
         });
     } catch (error) {
         console.error('Error updating project structure:', error);
         throw error;
     }
-}
+});
 
-export async function getProjectTaskStatuses(projectId: string): Promise<ProjectStatus[]> {
+export const getProjectTaskStatuses = withAuth(async (user, { tenant }, projectId: string): Promise<ProjectStatus[]> => {
     try {
-        const currentUser = await getCurrentUser();
-        if (!currentUser) {
-            throw new Error('No authenticated user found');
-        }
+        const { knex } = await createTenantKnex();
 
-        const {knex, tenant} = await getTenantKnex();
-        
         return await withTransaction(knex, async (trx: Knex.Transaction) => {
-            if (!await hasPermission(currentUser, 'project', 'read', trx)) {
-                throw new Error('Permission denied: Cannot read project');
-            }
-            const statusMappings = await ProjectModel.getProjectStatusMappings(trx, tenant, projectId);
-            if (!statusMappings || statusMappings.length === 0) {
-                console.warn(`No status mappings found for project ${projectId}`);
-                return [];
-            }
-
-            const statuses = await Promise.all(statusMappings.map(async (mapping: IProjectStatusMapping): Promise<ProjectStatus | null> => {
-                try {
-                    if (mapping.is_standard && mapping.standard_status_id) {
-                        const standardStatus = await ProjectModel.getStandardStatus(trx, tenant, mapping.standard_status_id);
-                        if (!standardStatus) {
-                            console.warn(`Standard status not found for mapping ${mapping.project_status_mapping_id}`);
-                            return null;
-                        }
-                        return {
-                            ...standardStatus,
-                            project_status_mapping_id: mapping.project_status_mapping_id,
-                            status_id: standardStatus.standard_status_id,
-                            custom_name: mapping.custom_name,
-                            display_order: mapping.display_order,
-                            is_visible: mapping.is_visible,
-                            is_standard: true,
-                            is_closed: standardStatus.is_closed
-                        } as ProjectStatus;
-                    } else if (mapping.status_id) {
-                        const customStatus = await ProjectModel.getCustomStatus(trx, tenant, mapping.status_id);
-                        if (!customStatus) {
-                            console.warn(`Custom status not found for mapping ${mapping.project_status_mapping_id}`);
-                            return null;
-                        }
-                        return {
-                            ...customStatus,
-                            project_status_mapping_id: mapping.project_status_mapping_id,
-                            status_id: customStatus.status_id,
-                            custom_name: mapping.custom_name,
-                            display_order: mapping.display_order,
-                            is_visible: mapping.is_visible,
-                            is_standard: false,
-                            is_closed: customStatus.is_closed,
-                            color: customStatus.color,
-                            icon: customStatus.icon
-                        } as ProjectStatus;
-                    }
-                console.warn(`Invalid status mapping ${mapping.project_status_mapping_id}: missing both standard_status_id and status_id`);
-                return null;
-            } catch (error) {
-                console.error(`Error processing status mapping ${mapping.project_status_mapping_id}:`, error);
-                return null;
-            }
-        }));
-
-            const validStatuses = statuses.filter((status): status is ProjectStatus => status !== null);
-            
-            if (validStatuses.length === 0) {
-                console.warn(`No valid statuses found for project ${projectId}`);
-                return [];
-            }
-
-            return validStatuses;
+            return await getProjectTaskStatusesInternal(trx, tenant, projectId, user);
         });
     } catch (error) {
         console.error('Error fetching project statuses:', error);
         return [];
     }
-}
+});
 
-export async function addStatusToProject(
-    projectId: string,
-    statusData: Omit<IStatus, 'status_id' | 'created_at' | 'updated_at'>
-): Promise<IStatus> {
+export const addStatusToProject = withAuth(async (user, { tenant }, projectId: string, statusData: Omit<IStatus, 'status_id' | 'created_at' | 'updated_at'>): Promise<IStatus> => {
     try {
-        const currentUser = await getCurrentUser();
-        if (!currentUser) {
-            throw new Error("user not found");
-        }
-
-        const {knex, tenant} = await getTenantKnex();
+        const { knex } = await createTenantKnex();
         return await withTransaction(knex, async (trx: Knex.Transaction) => {
-            await checkPermission(currentUser, 'project', 'update', trx);
+            await checkPermission(user, 'project', 'update', trx);
             return await ProjectModel.addStatusToProject(trx, tenant, projectId, statusData);
         });
     } catch (error) {
         console.error('Error adding status to task:', error);
         throw error;
     }
-}
+});
 
-export async function updateProjectStatus(
+export const updateProjectStatus = withAuth(async (
+    user,
+    { tenant },
     projectId: string,
     statusId: string,
     statusData: Partial<IStatus>,
     mappingData: Partial<IProjectStatusMapping>
-): Promise<IStatus> {
+): Promise<IStatus> => {
     try {
-        const currentUser = await getCurrentUser();
-        if (!currentUser) {
-            throw new Error("user not found");
-        }
-
-        const {knex, tenant} = await getTenantKnex();
+        const { knex } = await createTenantKnex();
         const updatedStatus = await withTransaction(knex, async (trx: Knex.Transaction) => {
-            await checkPermission(currentUser, 'project', 'update', trx);
+            await checkPermission(user, 'project', 'update', trx);
             return await ProjectModel.updateProjectStatus(trx, tenant, statusId, statusData, mappingData);
         });
 
@@ -1132,9 +1055,9 @@ export async function updateProjectStatus(
             await publishEvent({
                 eventType: 'PROJECT_CLOSED',
                 payload: {
-                    tenantId: currentUser.tenant,
+                    tenantId: tenant,
                     projectId: projectId,
-                    userId: currentUser.user_id,
+                    userId: user.user_id,
                     changes: statusData
                 }
             });
@@ -1145,22 +1068,17 @@ export async function updateProjectStatus(
         console.error('Error updating project status:', error);
         throw new Error('Failed to update project status');
     }
-}
+});
 
-export async function deleteProjectStatus(statusId: string): Promise<void> {
+export const deleteProjectStatus = withAuth(async (user, { tenant }, statusId: string): Promise<void> => {
     try {
-        const currentUser = await getCurrentUser();
-        if (!currentUser) {
-            throw new Error("user not found");
-        }
-
-        const {knex, tenant} = await getTenantKnex();
+        const { knex } = await createTenantKnex();
         await withTransaction(knex, async (trx: Knex.Transaction) => {
-            await checkPermission(currentUser, 'project', 'delete', trx);
+            await checkPermission(user, 'project', 'delete', trx);
             await ProjectModel.deleteProjectStatus(trx, tenant, statusId);
         });
     } catch (error) {
         console.error('Error deleting project status:', error);
         throw new Error('Failed to delete project status');
     }
-}
+});

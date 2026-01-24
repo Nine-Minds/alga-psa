@@ -9,21 +9,15 @@ import { hardDeleteInvoice } from './invoiceModification';
 import { ISO8601String } from '@alga-psa/types';
 import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
-import { getCurrentUserAsync, hasPermissionAsync, getSessionAsync, getAnalyticsAsync } from '../lib/authHelpers';
+import { withAuth } from '@alga-psa/auth';
 
 
-export async function getBillingCycle(clientId: string): Promise<BillingCycleType> {
-  const session = await getSessionAsync();
-  if (!session?.user?.id) {
-    throw new Error('Unauthorized');
-  }
-
-  const currentUser = await getCurrentUserAsync();
-  if (!currentUser) {
-    throw new Error('No authenticated user found');
-  }
-
-  const {knex: conn, tenant} = await createTenantKnex(currentUser.tenant);
+export const getBillingCycle = withAuth(async (
+  user,
+  { tenant },
+  clientId: string
+): Promise<BillingCycleType> => {
+  const { knex: conn } = await createTenantKnex();
 
   const result = await withTransaction(conn, async (trx: Knex.Transaction) => {
     return await trx('clients')
@@ -36,23 +30,15 @@ export async function getBillingCycle(clientId: string): Promise<BillingCycleTyp
   });
 
   return result?.billing_cycle || 'monthly';
-}
+});
 
-export async function updateBillingCycle(
+export const updateBillingCycle = withAuth(async (
+  user,
+  { tenant },
   clientId: string,
-  billingCycle: BillingCycleType,
-): Promise<void> {
-  const session = await getSessionAsync();
-  if (!session?.user?.id) {
-    throw new Error('Unauthorized');
-  }
-
-  const currentUser = await getCurrentUserAsync();
-  if (!currentUser) {
-    throw new Error('No authenticated user found');
-  }
-
-  const {knex: conn, tenant} = await createTenantKnex(currentUser.tenant);
+  billingCycle: BillingCycleType
+): Promise<void> => {
+  const { knex: conn } = await createTenantKnex();
 
   await withTransaction(conn, async (trx: Knex.Transaction) => {
     return await trx('clients')
@@ -65,24 +51,18 @@ export async function updateBillingCycle(
         updated_at: new Date().toISOString()
       });
   });
-}
+});
 
-export async function canCreateNextBillingCycle(clientId: string): Promise<{
+export const canCreateNextBillingCycle = withAuth(async (
+  user,
+  { tenant },
+  clientId: string
+): Promise<{
   canCreate: boolean;
   isEarly: boolean;
   periodEndDate?: string;
-}> {
-  const session = await getSessionAsync();
-  if (!session?.user?.id) {
-    throw new Error('Unauthorized');
-  }
-
-  const currentUser = await getCurrentUserAsync();
-  if (!currentUser) {
-    throw new Error('No authenticated user found');
-  }
-
-  const {knex: conn, tenant} = await createTenantKnex(currentUser.tenant);
+}> => {
+  const { knex: conn } = await createTenantKnex();
 
   // Get the client's current billing cycle type
   const client = await withTransaction(conn, async (trx: Knex.Transaction) => {
@@ -127,9 +107,11 @@ export async function canCreateNextBillingCycle(clientId: string): Promise<{
     isEarly,
     periodEndDate: isEarly ? lastCycle.period_end_date : undefined
   };
-}
+});
 
-export async function getNextBillingCycleStatusForClients(
+export const getNextBillingCycleStatusForClients = withAuth(async (
+  user,
+  { tenant },
   clientIds: string[]
 ): Promise<{
   [clientId: string]: {
@@ -137,22 +119,12 @@ export async function getNextBillingCycleStatusForClients(
     isEarly: boolean;
     periodEndDate?: string;
   };
-}> {
-  const session = await getSessionAsync();
-  if (!session?.user?.id) {
-    throw new Error('Unauthorized');
-  }
-
+}> => {
   if (clientIds.length === 0) {
     return {};
   }
 
-  const currentUser = await getCurrentUserAsync();
-  if (!currentUser) {
-    throw new Error('No authenticated user found');
-  }
-
-  const { knex: conn, tenant } = await createTenantKnex(currentUser.tenant);
+  const { knex: conn } = await createTenantKnex();
   const now = new Date().toISOString().split('T')[0] + 'T00:00:00Z';
 
   const lastCycles = await withTransaction(conn, async (trx: Knex.Transaction) => {
@@ -203,23 +175,15 @@ export async function getNextBillingCycleStatusForClients(
   }
 
   return statusMap;
-}
+});
 
-export async function createNextBillingCycle(
+export const createNextBillingCycle = withAuth(async (
+  user,
+  { tenant },
   clientId: string,
   effectiveDate?: string
-): Promise<BillingCycleCreationResult> {
-  const session = await getSessionAsync();
-  if (!session?.user?.id) {
-    throw new Error('Unauthorized');
-  }
-
-  const currentUser = await getCurrentUserAsync();
-  if (!currentUser) {
-    throw new Error('No authenticated user found');
-  }
-
-  const {knex: conn, tenant} = await createTenantKnex(currentUser.tenant);
+): Promise<BillingCycleCreationResult> => {
+  const { knex: conn } = await createTenantKnex();
 
   const client = await withTransaction(conn, async (trx: Knex.Transaction) => {
     return await trx('clients')
@@ -243,26 +207,15 @@ export async function createNextBillingCycle(
     manual: true,
     effectiveDate
   });
-}
+});
 
 // function for rollback (deactivate cycle, delete invoice)
-export async function removeBillingCycle(cycleId: string): Promise<void> {
-  const session = await getSessionAsync();
-  if (!session?.user?.id) {
-    throw new Error('Unauthorized');
-  }
-
-  // Only allow admins to remove billing cycles
-  // if (session.user.user_type !== 'admin') {
-  //   throw new Error('Only admins can remove billing cycles');
-  // }
-
-  const currentUser = await getCurrentUserAsync();
-  if (!currentUser) {
-    throw new Error('No authenticated user found');
-  }
-
-  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
+export const removeBillingCycle = withAuth(async (
+  user,
+  { tenant },
+  cycleId: string
+): Promise<void> => {
+  const { knex } = await createTenantKnex();
 
   // Get the billing cycle first to ensure it exists and get client_id
   const billingCycle = await withTransaction(knex, async (trx: Knex.Transaction) => {
@@ -315,26 +268,15 @@ export async function removeBillingCycle(cycleId: string): Promise<void> {
   if (!nextBillingDate) {
     throw new Error('Failed to verify future billing periods');
   }
-}
+});
 
 // function for hard delete (delete cycle and invoice)
-export async function hardDeleteBillingCycle(cycleId: string): Promise<void> {
-  const session = await getSessionAsync();
-  if (!session?.user?.id) {
-    throw new Error('Unauthorized');
-  }
-
-  // Only allow admins to remove billing cycles
-  // if (session.user.user_type !== 'admin') {
-  //   throw new Error('Only admins can remove billing cycles');
-  // }
-
-  const currentUser = await getCurrentUserAsync();
-  if (!currentUser) {
-    throw new Error('No authenticated user found');
-  }
-
-  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
+export const hardDeleteBillingCycle = withAuth(async (
+  user,
+  { tenant },
+  cycleId: string
+): Promise<void> => {
+  const { knex } = await createTenantKnex();
 
   // Get the billing cycle first to ensure it exists and get client_id
   const billingCycle = await withTransaction(knex, async (trx: Knex.Transaction) => {
@@ -382,24 +324,17 @@ export async function hardDeleteBillingCycle(cycleId: string): Promise<void> {
   } else {
     console.log(`Successfully deleted billing cycle ${cycleId}`);
   }
-}
+});
 
-export async function getInvoicedBillingCycles(): Promise<(IClientContractLineCycle & {
+export const getInvoicedBillingCycles = withAuth(async (
+  user,
+  { tenant }
+): Promise<(IClientContractLineCycle & {
   client_name: string;
   period_start_date: ISO8601String;
   period_end_date: ISO8601String;
-})[]> {
-  const session = await getSessionAsync();
-  if (!session?.user?.id) {
-    throw new Error('Unauthorized');
-  }
-
-  const currentUser = await getCurrentUserAsync();
-  if (!currentUser) {
-    throw new Error('No authenticated user found');
-  }
-
-  const {knex: conn, tenant} = await createTenantKnex(currentUser.tenant);
+})[]> => {
+  const { knex: conn } = await createTenantKnex();
 
   // Get all billing cycles that have invoices
   const invoicedCycles = await withTransaction(conn, async (trx: Knex.Transaction) => {
@@ -428,7 +363,7 @@ export async function getInvoicedBillingCycles(): Promise<(IClientContractLineCy
   });
 
   return invoicedCycles;
-}
+});
 
 // Types for paginated invoiced billing cycles
 export interface FetchInvoicedCyclesOptions {
@@ -452,26 +387,18 @@ export interface PaginatedInvoicedCyclesResult {
 /**
  * Fetch invoiced billing cycles with server-side pagination and search
  */
-export async function getInvoicedBillingCyclesPaginated(
+export const getInvoicedBillingCyclesPaginated = withAuth(async (
+  user,
+  { tenant },
   options: FetchInvoicedCyclesOptions = {}
-): Promise<PaginatedInvoicedCyclesResult> {
+): Promise<PaginatedInvoicedCyclesResult> => {
   const {
     page = 1,
     pageSize = 10,
     searchTerm = ''
   } = options;
 
-  const session = await getSessionAsync();
-  if (!session?.user?.id) {
-    throw new Error('Unauthorized');
-  }
-
-  const currentUser = await getCurrentUserAsync();
-  if (!currentUser) {
-    throw new Error('No authenticated user found');
-  }
-
-  const { knex: conn, tenant } = await createTenantKnex(currentUser.tenant);
+  const { knex: conn } = await createTenantKnex();
 
   const result = await withTransaction(conn, async (trx: Knex.Transaction) => {
     // Build base query
@@ -543,20 +470,13 @@ export async function getInvoicedBillingCyclesPaginated(
   });
 
   return result;
-}
+});
 
-export async function getAllBillingCycles(): Promise<{ [clientId: string]: BillingCycleType }> {
-  const session = await getSessionAsync();
-  if (!session?.user?.id) {
-    throw new Error('Unauthorized');
-  }
-
-  const currentUser = await getCurrentUserAsync();
-  if (!currentUser) {
-    throw new Error('No authenticated user found');
-  }
-
-  const {knex: conn, tenant} = await createTenantKnex(currentUser.tenant);
+export const getAllBillingCycles = withAuth(async (
+  user,
+  { tenant }
+): Promise<{ [clientId: string]: BillingCycleType }> => {
+  const { knex: conn } = await createTenantKnex();
 
   // Get billing cycles from clients table
   const results = await withTransaction(conn, async (trx: Knex.Transaction) => {
@@ -569,4 +489,4 @@ export async function getAllBillingCycles(): Promise<{ [clientId: string]: Billi
     acc[row.client_id] = row.billing_cycle as BillingCycleType;
     return acc;
   }, {});
-}
+});

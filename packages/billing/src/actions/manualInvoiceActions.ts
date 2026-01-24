@@ -8,7 +8,9 @@ import { TaxService } from '../services/taxService';
 import { BillingEngine } from '../lib/billing/billingEngine';
 import * as invoiceService from '../services/invoiceService';
 import { toPlainDate } from '@alga-psa/core';
-import { getCurrentUserAsync, hasPermissionAsync, getSessionAsync, getAnalyticsAsync } from '../lib/authHelpers';
+import { withAuth } from '@alga-psa/auth';
+import { getSession } from '@alga-psa/auth';
+import { getAnalyticsAsync } from '../lib/authHelpers';
 
 import { getInitialInvoiceTaxSource } from './taxSourceActions';
 
@@ -36,9 +38,13 @@ export type ManualInvoiceResult =
   | { success: true; invoice: InvoiceViewModel }
   | { success: false; error: string };
 
-export async function generateManualInvoice(request: ManualInvoiceRequest): Promise<ManualInvoiceResult> {
+export const generateManualInvoice = withAuth(async (
+  user,
+  { tenant },
+  request: ManualInvoiceRequest
+): Promise<ManualInvoiceResult> => {
   // Validate session and tenant context
-  const { session, knex, tenant } = await invoiceService.validateSessionAndTenant();
+  const { session, knex } = await invoiceService.validateSessionAndTenant();
   const { clientId, items, expirationDate, isPrepayment } = request;
 
   // Get client details
@@ -180,13 +186,15 @@ export async function generateManualInvoice(request: ManualInvoiceRequest): Prom
       }
     };
   });
-}
+});
 
-export async function updateManualInvoice(
+export const updateManualInvoice = withAuth(async (
+  user,
+  { tenant },
   invoiceId: string,
   request: ManualInvoiceRequest
-): Promise<InvoiceViewModel> {
-  const { session, knex, tenant } = await invoiceService.validateSessionAndTenant();
+): Promise<InvoiceViewModel> => {
+  const { session, knex } = await invoiceService.validateSessionAndTenant();
   const { clientId, items } = request;
 
   // Verify invoice exists and is manual
@@ -303,4 +311,4 @@ export async function updateManualInvoice(
     credit_applied: existingInvoice.credit_applied,
     is_manual: true
   };
-}
+});

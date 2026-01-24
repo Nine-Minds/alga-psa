@@ -5,7 +5,7 @@
 import { getWorkflowRuntime } from '@alga-psa/shared/workflow/core';
 import { getActionRegistry } from '@alga-psa/shared/workflow/core';
 import { workflowConfig } from '@alga-psa/workflows/config/workflowConfig';
-import { getCurrentUser } from '@alga-psa/auth/getCurrentUser';
+import { withAuth } from '@alga-psa/auth';
 import logger from '@alga-psa/core/logger';
 import { createTenantKnex } from '@alga-psa/db';
 import { getEventBus } from '@alga-psa/event-bus';
@@ -40,9 +40,11 @@ export interface SubmitWorkflowEventResult {
  * Submit an event to a workflow execution
  * Uses the "fire and forget" pattern - events are enqueued for asynchronous processing
  */
-export async function submitWorkflowEventAction(
+export const submitWorkflowEventAction = withAuth(async (
+  user,
+  ctx,
   options: SubmitWorkflowEventOptions
-): Promise<SubmitWorkflowEventResult> {
+): Promise<SubmitWorkflowEventResult> => {
   logger.info('[submitWorkflowEventAction] Starting event submission', {
     execution_id: options.execution_id,
     event_name: options.event_name,
@@ -51,23 +53,15 @@ export async function submitWorkflowEventAction(
     has_payload: options.payload ? true : false,
     tenant: options.tenant
   });
-  
-  try {
-    // Get current user
-    logger.info('[submitWorkflowEventAction] Retrieving current user');
-    const currentUser = await getCurrentUser();
-    
-    if (!currentUser?.tenant && !options.tenant) {
-      logger.error('[submitWorkflowEventAction] No tenant specified and no current user found');
-      throw new Error('No tenant specified and no current user found');
-    }
 
+  try {
     logger.info('[submitWorkflowEventAction] Initializing database connection');
     const { knex } = await createTenantKnex();
-    
+
     const { execution_id, event_name, event_type = 'USER_SUBMITTED', payload, idempotency_key } = options;
-    const tenant = options.tenant || currentUser!.tenant;
-    const user_id = currentUser?.user_id;
+    // Use options.tenant if provided, otherwise use tenant from withAuth context
+    const tenant = options.tenant || ctx.tenant;
+    const user_id = user?.user_id;
     
     logger.info('[submitWorkflowEventAction] User and tenant context', {
       tenant,
@@ -210,4 +204,4 @@ export async function submitWorkflowEventAction(
       status: 'error'
     };
   }
-}
+});

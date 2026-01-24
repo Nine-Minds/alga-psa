@@ -2,8 +2,7 @@
 
 import { getUserAvatarUrl, getContactAvatarUrl, getClientLogoUrl, getEntityImageUrlsBatch } from '../lib/avatarUtils';
 import { linkExistingDocumentAsEntityImage, EntityType } from '@alga-psa/media';
-import { getCurrentUser } from '@alga-psa/users/actions';
-import { createTenantKnex } from '@alga-psa/db';
+import { withAuth } from '@alga-psa/auth';
 
 export async function getUserAvatarUrlAction(userId: string, tenant: string): Promise<string | null> {
   return getUserAvatarUrl(userId, tenant);
@@ -33,27 +32,19 @@ export async function getContactAvatarUrlsBatchAction(contactIds: string[], tena
  * @param documentId - ID of the existing document to link
  * @returns Result with success status and image URL
  */
-export async function linkDocumentAsAvatarAction(
+export const linkDocumentAsAvatarAction = withAuth(async (
+  user,
+  { tenant },
   entityType: EntityType,
   entityId: string,
   documentId: string
-): Promise<{ success: boolean; message?: string; imageUrl?: string | null }> {
+): Promise<{ success: boolean; message?: string; imageUrl?: string | null }> => {
   try {
-    const currentUser = await getCurrentUser();
-    if (!currentUser) {
-      return { success: false, message: 'Not authenticated' };
-    }
-
-    const { tenant } = await createTenantKnex();
-    if (!tenant) {
-      return { success: false, message: 'No tenant found' };
-    }
-
     const result = await linkExistingDocumentAsEntityImage(
       entityType,
       entityId,
       documentId,
-      currentUser.user_id,
+      user.user_id,
       tenant
     );
 
@@ -65,4 +56,4 @@ export async function linkDocumentAsAvatarAction(
       message: error instanceof Error ? error.message : 'Failed to link document'
     };
   }
-}
+});

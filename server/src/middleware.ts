@@ -108,6 +108,8 @@ const _middleware = auth((request) => {
       '/api/email/oauth/',
       '/api/client-portal/domain-session',
       '/api/integrations/ninjaone/callback',
+      // AI chat endpoints are session-authenticated (MSP UI)
+      '/api/chat/',
       // Internal MSP UI endpoints (session-authenticated)
       '/api/accounting/csv/',
       '/api/accounting/exports/',

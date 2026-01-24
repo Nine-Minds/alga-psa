@@ -14,7 +14,7 @@ import { getUserAvatarUrl } from '../../lib/avatarUtils';
 import { uploadEntityImage, deleteEntityImage } from '@alga-psa/media';
 import { hasPermission, throwPermissionError } from '../../lib/permissions';
 import logger from '@alga-psa/core/logger';
-import { getCurrentUser } from '../../lib/currentUser';
+import { getCurrentUser, withAuth, withOptionalAuth } from '@alga-psa/auth';
 
 interface ActionResult {
   success: boolean;
@@ -27,55 +27,49 @@ interface ActionResult {
  * @param email The email address to check
  * @returns Promise<boolean> True if email exists, false otherwise
  */
-export async function checkEmailExistsGlobally(email: string): Promise<boolean> {
+export const checkEmailExistsGlobally = withAuth(async (
+  user,
+  _ctx,
+  email: string
+): Promise<boolean> => {
   try {
-    const currentUser = await getCurrentUser();
-    if (!currentUser) {
-      throw new Error('No authenticated user found');
-    }
-
     const db = await getAdminConnection();
-    
+
     return await withTransaction(db, async (trx: Knex.Transaction) => {
-      if (!await hasPermission(currentUser, 'user', 'read', trx)) {
+      if (!await hasPermission(user, 'user', 'read', trx)) {
         throw new Error('Permission denied: Cannot check email existence');
       }
 
       const existingUser = await trx('users')
         .where({ email: email.toLowerCase() })
         .first();
-      
+
       return !!existingUser;
     });
   } catch (error) {
     logger.error('Error checking email existence globally:', error);
     throw error; // Preserve original error
   }
-}
+});
 
-export async function addUser(userData: { 
-  firstName: string; 
-  lastName: string; 
-  email: string;
-  password: string;
-  roleId?: string;
-  userType?: 'internal' | 'client';
-  contactId?: string;
-  }): Promise<IUser> {
+export const addUser = withAuth(async (
+  user,
+  { tenant },
+  userData: {
+    firstName: string;
+    lastName: string;
+    email: string;
+    password: string;
+    roleId?: string;
+    userType?: 'internal' | 'client';
+    contactId?: string;
+  }
+): Promise<IUser> => {
   try {
-    const currentUser = await getCurrentUser();
-    if (!currentUser) {
-      throw new Error('No authenticated user found');
-    }
-
-    if (!currentUser.tenant) {
-      throw new Error('Tenant is required');
-    }
-
-    const {knex: db, tenant} = await createTenantKnex(currentUser.tenant);
+    const {knex: db} = await createTenantKnex();
 
     return await withTransaction(db, async (trx: Knex.Transaction) => {
-      if (!await hasPermission(currentUser, 'user', 'create', trx)) {
+      if (!await hasPermission(user, 'user', 'create', trx)) {
         throw new Error('Permission denied: Cannot create user');
       }
 
@@ -87,11 +81,11 @@ export async function addUser(userData: {
       const role = await trx('roles')
         .where({ role_id: userData.roleId, tenant: tenant || undefined })
         .first();
-        
+
       if (!role) {
         throw new Error("Invalid role");
       }
-      
+
       // Validate role matches user type
       const isClientUser = userData.userType === 'client';
       if (isClientUser && !role.client) {
@@ -131,10 +125,10 @@ export async function addUser(userData: {
         if (limit !== null && used >= limit) {
           throw new Error("You've reached your MSP user licence limit.");
         }
-        
+
       }
 
-      const [user] = await trx('users')
+      const [newUser] = await trx('users')
         .insert({
           first_name: userData.firstName,
           last_name: userData.lastName,
@@ -148,21 +142,21 @@ export async function addUser(userData: {
         }).returning('*');
 
       await trx('user_roles').insert({
-        user_id: user.user_id,
+        user_id: newUser.user_id,
         role_id: userData.roleId,
         tenant: tenant || undefined
       });
 
       // Mark that the user hasn't reset their initial password
       await UserPreferences.upsert(trx, {
-        user_id: user.user_id,
+        user_id: newUser.user_id,
         setting_name: 'has_reset_password',
         setting_value: false,
         updated_at: new Date()
       });
 
       revalidatePath('/settings');
-      return user;
+      return newUser;
     });
   } catch (error: any) {
     logger.error('Error adding user:', error);
@@ -180,23 +174,18 @@ export async function addUser(userData: {
     }
     throw new Error('Failed to add user');
   }
-}
+});
 
-export async function deleteUser(userId: string): Promise<void> {
+export const deleteUser = withAuth(async (
+  user,
+  { tenant },
+  userId: string
+): Promise<void> => {
   try {
-    const currentUser = await getCurrentUser();
-    if (!currentUser) {
-      throw new Error('No authenticated user found');
-    }
-
-    if (!currentUser.tenant) {
-      throw new Error('Tenant is required');
-    }
-
-    const {knex: db, tenant} = await createTenantKnex(currentUser.tenant);
+    const {knex: db} = await createTenantKnex();
 
     await withTransaction(db, async (trx: Knex.Transaction) => {
-      if (!await hasPermission(currentUser, 'user', 'delete', trx)) {
+      if (!await hasPermission(user, 'user', 'delete', trx)) {
         throw new Error('Permission denied: Cannot delete user');
       }
 
@@ -214,9 +203,6 @@ export async function deleteUser(userId: string): Promise<void> {
         .update({ completed_by: null });
 
       // Clear default_assigned_to on boards where this user is the default
-      if (!tenant) {
-        throw new Error('Tenant is required to clear board defaults');
-      }
       await trx('boards')
         .where({ default_assigned_to: userId, tenant })
         .update({ default_assigned_to: null });
@@ -236,132 +222,109 @@ export async function deleteUser(userId: string): Promise<void> {
     logger.error('Error deleting user:', error);
     throw new Error('Failed to delete user');
   }
-}
+});
 
 export { getCurrentUser };
 
-export async function findUserById(id: string): Promise<IUserWithRoles | null> {
+export const findUserById = withAuth(async (
+  currentUser,
+  _ctx,
+  id: string
+): Promise<IUserWithRoles | null> => {
   try {
-    const currentUser = await getCurrentUser();
-    if (!currentUser) {
-      throw new Error('No authenticated user found');
-    }
+    const {knex} = await createTenantKnex();
 
-    if (!currentUser.tenant) {
-      throw new Error('Tenant is required');
-    }
+    return await withTransaction(knex, async (trx: Knex.Transaction) => {
+      if (!await hasPermission(currentUser, 'user', 'read', trx)) {
+        throw new Error('Permission denied: Cannot read user');
+      }
 
-    const {knex} = await createTenantKnex(currentUser.tenant);
-
-    return await runWithTenant(currentUser.tenant, async () =>
-      withTransaction(knex, async (trx: Knex.Transaction) => {
-        if (!await hasPermission(currentUser, 'user', 'read', trx)) {
-          throw new Error('Permission denied: Cannot read user');
-        }
-
-        const user = await User.getUserWithRoles(trx, id);
-        return user || null;
-      })
-    );
+      const user = await User.getUserWithRoles(trx, id);
+      return user || null;
+    });
   } catch (error) {
     logger.error(`Failed to find user with id ${id}:`, error);
     throw new Error('Failed to find user');
   }
-}
+});
 
 /**
  * Get all users without roles - more efficient for components that only need basic user info
  * (e.g., UserPicker, dropdowns, assignments)
  */
-export async function getAllUsersBasic(includeInactive: boolean = true, userType?: string): Promise<IUser[]> {
+export const getAllUsersBasic = withAuth(async (
+  currentUser,
+  { tenant },
+  includeInactive: boolean = true,
+  userType?: string
+): Promise<IUser[]> => {
   try {
-    const currentUser = await getCurrentUser();
-    const tenant = currentUser?.tenant;
+    const {knex} = await createTenantKnex();
 
-    if (!currentUser) {
-      throw new Error('No authenticated user found');
-    }
+    return await withTransaction(knex, async (trx: Knex.Transaction) => {
+      if (!await hasPermission(currentUser, 'user', 'read', trx)) {
+        throw new Error('Permission denied: Cannot read users');
+      }
 
-    if (!tenant) {
-      throw new Error('Tenant is required');
-    }
+      const users = await User.getAll(trx, includeInactive);
 
-    return await runWithTenant(tenant, async () => {
-      const {knex} = await createTenantKnex(tenant);
-
-      return await withTransaction(knex, async (trx: Knex.Transaction) => {
-        if (!await hasPermission(currentUser, 'user', 'read', trx)) {
-          throw new Error('Permission denied: Cannot read users');
-        }
-
-        const users = await User.getAll(trx, includeInactive);
-
-        // Filter by tenant and optionally by user_type
-        return users.filter(user =>
-          user.tenant === tenant &&
-          (userType ? user.user_type === userType : true)
-        );
-      });
+      // Filter by tenant and optionally by user_type
+      return users.filter(user =>
+        user.tenant === tenant &&
+        (userType ? user.user_type === userType : true)
+      );
     });
   } catch (error) {
     logger.error('Failed to fetch users:', error);
     throw new Error('Failed to fetch users');
   }
-}
+});
 
-export async function getAllUsers(includeInactive: boolean = true, userType?: string): Promise<IUserWithRoles[]> {
+export const getAllUsers = withAuth(async (
+  currentUser,
+  { tenant },
+  includeInactive: boolean = true,
+  userType?: string
+): Promise<IUserWithRoles[]> => {
   try {
-    const currentUser = await getCurrentUser();
-    const tenant = currentUser?.tenant;
+    const {knex} = await createTenantKnex();
 
-    if (!currentUser) {
-      throw new Error('No authenticated user found');
-    }
+    return await withTransaction(knex, async (trx: Knex.Transaction) => {
+      if (!await hasPermission(currentUser, 'user', 'read', trx)) {
+        throw new Error('Permission denied: Cannot read users');
+      }
 
-    if (!tenant) {
-      throw new Error('Tenant is required');
-    }
+      const users = await User.getAll(trx, includeInactive);
 
-    return await runWithTenant(tenant, async () => {
-      const {knex} = await createTenantKnex(tenant);
+      // Filter by tenant and optionally by user_type first to reduce role fetching
+      const filteredUsers = users.filter(user =>
+        user.tenant === tenant &&
+        (userType ? user.user_type === userType : true)
+      );
 
-      return await withTransaction(knex, async (trx: Knex.Transaction) => {
-        if (!await hasPermission(currentUser, 'user', 'read', trx)) {
-          throw new Error('Permission denied: Cannot read users');
-        }
+      // Fetch all roles in a single query (avoids N+1)
+      const userIds = filteredUsers.map(u => u.user_id);
+      const rolesByUser = await User.getUserRolesBulk(trx, userIds);
 
-        const users = await User.getAll(trx, includeInactive);
-
-        // Filter by tenant and optionally by user_type first to reduce role fetching
-        const filteredUsers = users.filter(user =>
-          user.tenant === tenant &&
-          (userType ? user.user_type === userType : true)
-        );
-
-        // Fetch all roles in a single query (avoids N+1)
-        const userIds = filteredUsers.map(u => u.user_id);
-        const rolesByUser = await User.getUserRolesBulk(trx, userIds);
-
-        return filteredUsers.map((user): IUserWithRoles => ({
-          ...user,
-          roles: rolesByUser.get(user.user_id) || []
-        }));
-      });
+      return filteredUsers.map((user): IUserWithRoles => ({
+        ...user,
+        roles: rolesByUser.get(user.user_id) || []
+      }));
     });
   } catch (error) {
     logger.error('Failed to fetch users:', error);
     throw new Error('Failed to fetch users');
   }
-}
+});
 
-export async function updateUser(userId: string, userData: Partial<IUser>): Promise<IUserWithRoles | null> {
+export const updateUser = withAuth(async (
+  currentUser,
+  { tenant },
+  userId: string,
+  userData: Partial<IUser>
+): Promise<IUserWithRoles | null> => {
   try {
-    const currentUser = await getCurrentUser();
-    if (!currentUser) {
-      throw new Error('No authenticated user found');
-    }
-
-    const { knex, tenant } = await createTenantKnex();
+    const { knex } = await createTenantKnex();
     return await withTransaction(knex, async (trx) => {
       // Permission Check: User can update their own profile OR have user:update permission
       const isOwnProfile = currentUser.user_id === userId;
@@ -374,9 +337,6 @@ export async function updateUser(userId: string, userData: Partial<IUser>): Prom
 
       // If user is being deactivated, clear default_assigned_to on boards
       if (userData.is_inactive === true) {
-        if (!tenant) {
-          throw new Error('Tenant is required to clear board defaults');
-        }
         await trx('boards')
           .where({ default_assigned_to: userId, tenant })
           .update({ default_assigned_to: null });
@@ -390,20 +350,16 @@ export async function updateUser(userId: string, userData: Partial<IUser>): Prom
     logger.error(`Failed to update user with id ${userId}:`, error);
     throw new Error('Failed to update user');
   }
-}
+});
 
-export async function updateUserRoles(userId: string, roleIds: string[]): Promise<void> {
+export const updateUserRoles = withAuth(async (
+  currentUser,
+  { tenant },
+  userId: string,
+  roleIds: string[]
+): Promise<void> => {
   try {
-    const currentUser = await getCurrentUser();
-    if (!currentUser) {
-      throw new Error('No authenticated user found');
-    }
-
-    if (!currentUser.tenant) {
-      throw new Error('Tenant is required');
-    }
-
-    const {knex: db, tenant} = await createTenantKnex(currentUser.tenant);
+    const {knex: db} = await createTenantKnex();
 
     await withTransaction(db, async (trx: Knex.Transaction) => {
       if (!await hasPermission(currentUser, 'user', 'update', trx)) {
@@ -431,7 +387,7 @@ export async function updateUserRoles(userId: string, roleIds: string[]): Promis
     logger.error(`Failed to update roles for user with id ${userId}:`, error);
     throw new Error('Failed to update user roles');
   }
-}
+});
 
 export async function getUserRoles(userId: string, knexConnection?: Knex | Knex.Transaction): Promise<IRole[]> {
   try {
@@ -521,17 +477,13 @@ export async function getClientPortalRoles(): Promise<IRole[]> {
   }
 }
 
-export async function getUserRolesWithPermissions(userId: string, knexConnection?: Knex | Knex.Transaction): Promise<IRoleWithPermissions[]> {
+export const getUserRolesWithPermissions = withAuth(async (
+  currentUser,
+  _ctx,
+  userId: string,
+  knexConnection?: Knex | Knex.Transaction
+): Promise<IRoleWithPermissions[]> => {
   try {
-    const currentUser = await getCurrentUser();
-    if (!currentUser) {
-      throw new Error('No authenticated user found');
-    }
-
-    if (!currentUser.tenant) {
-      throw new Error('Tenant is required');
-    }
-
     let knex: Knex | Knex.Transaction;
     if (knexConnection) {
       knex = knexConnection;
@@ -539,22 +491,18 @@ export async function getUserRolesWithPermissions(userId: string, knexConnection
       if (!await hasPermission(currentUser, 'user', 'read', knex)) {
         throw new Error('Permission denied: Cannot read user roles with permissions');
       }
-      const rolesWithPermissions = await runWithTenant(currentUser.tenant, () =>
-        User.getUserRolesWithPermissions(knex, userId)
-      );
+      const rolesWithPermissions = await User.getUserRolesWithPermissions(knex, userId);
       return rolesWithPermissions;
     } else {
-      const result = await createTenantKnex(currentUser.tenant);
+      const result = await createTenantKnex();
       knex = result.knex;
-      
+
       return await withTransaction(knex, async (trx: Knex.Transaction) => {
         if (!await hasPermission(currentUser, 'user', 'read', trx)) {
           throw new Error('Permission denied: Cannot read user roles with permissions');
         }
-        
-        const rolesWithPermissions = await runWithTenant(currentUser.tenant, () =>
-          User.getUserRolesWithPermissions(trx, userId)
-        );
+
+        const rolesWithPermissions = await User.getUserRolesWithPermissions(trx, userId);
         return rolesWithPermissions;
       });
     }
@@ -562,15 +510,17 @@ export async function getUserRolesWithPermissions(userId: string, knexConnection
     logger.error(`Failed to fetch roles with permissions for user with id ${userId}:`, error);
     throw new Error('Failed to fetch user roles with permissions');
   }
-}
+});
 
 /**
  * Retrieves a flattened list of unique permission strings for the current user.
  * @returns Promise<string[]> A promise that resolves to an array of unique permission strings.
  */
-export async function getCurrentUserPermissions(): Promise<string[]> {
+export const getCurrentUserPermissions = withOptionalAuth(async (
+  currentUser,
+  _ctx
+): Promise<string[]> => {
   try {
-    const currentUser = await getCurrentUser();
     if (!currentUser) {
       logger.debug('No current user found, returning empty permissions.');
       return [];
@@ -597,21 +547,16 @@ export async function getCurrentUserPermissions(): Promise<string[]> {
     // Returning empty array for now to avoid breaking flows that might expect an array
     return [];
   }
-}
+});
 
-export async function getUserWithRoles(userId: string): Promise<IUserWithRoles | null> {
+export const getUserWithRoles = withAuth(async (
+  currentUser,
+  _ctx,
+  userId: string
+): Promise<IUserWithRoles | null> => {
   try {
-    const currentUser = await getCurrentUser();
-    if (!currentUser) {
-      throw new Error('No authenticated user found');
-    }
+    const {knex} = await createTenantKnex();
 
-    if (!currentUser.tenant) {
-      throw new Error('Tenant is required');
-    }
-
-    const {knex} = await createTenantKnex(currentUser.tenant);
-    
     return await withTransaction(knex, async (trx: Knex.Transaction) => {
       if (!await hasPermission(currentUser, 'user', 'read', trx)) {
         throw new Error('Permission denied: Cannot read user with roles');
@@ -624,21 +569,16 @@ export async function getUserWithRoles(userId: string): Promise<IUserWithRoles |
     logger.error(`Failed to fetch user with roles for id ${userId}:`, error);
     throw new Error('Failed to fetch user with roles');
   }
-}
+});
 
-export async function getMultipleUsersWithRoles(userIds: string[]): Promise<IUserWithRoles[]> {
+export const getMultipleUsersWithRoles = withAuth(async (
+  currentUser,
+  _ctx,
+  userIds: string[]
+): Promise<IUserWithRoles[]> => {
   try {
-    const currentUser = await getCurrentUser();
-    if (!currentUser) {
-      throw new Error('No authenticated user found');
-    }
+    const {knex} = await createTenantKnex();
 
-    if (!currentUser.tenant) {
-      throw new Error('Tenant is required');
-    }
-
-    const {knex} = await createTenantKnex(currentUser.tenant);
-    
     return await withTransaction(knex, async (trx: Knex.Transaction) => {
       if (!await hasPermission(currentUser, 'user', 'read', trx)) {
         throw new Error('Permission denied: Cannot read multiple users with roles');
@@ -651,57 +591,56 @@ export async function getMultipleUsersWithRoles(userIds: string[]): Promise<IUse
     logger.error('Failed to fetch multiple users with roles:', error);
     throw new Error('Failed to fetch multiple users with roles');
   }
-}
+});
 
 // User Preferences Actions
-export async function getUserPreference(userId: string, settingName: string): Promise<any> {
+export const getUserPreference = withAuth(async (
+  _user,
+  _ctx,
+  userId: string,
+  settingName: string
+): Promise<any> => {
   try {
-    const currentUser = await getCurrentUser();
-    const tenant = currentUser?.tenant;
-    if (!tenant) throw new Error('Tenant is required');
+    const {knex} = await createTenantKnex();
+    const preference = await UserPreferences.get(knex, userId, settingName);
+    if (!preference?.setting_value) return null;
 
-    return await runWithTenant(tenant, async () => {
-      const {knex} = await createTenantKnex(tenant);
-      const preference = await UserPreferences.get(knex, userId, settingName);
-      if (!preference?.setting_value) return null;
-
-      try {
-        // Try to parse the JSON value
-        return JSON.parse(preference.setting_value);
-      } catch (e) {
-        // If parsing fails, return the raw value
-        return preference.setting_value;
-      }
-    });
+    try {
+      // Try to parse the JSON value
+      return JSON.parse(preference.setting_value);
+    } catch (e) {
+      // If parsing fails, return the raw value
+      return preference.setting_value;
+    }
   } catch (error) {
     logger.error('Failed to get user preference:', error);
     throw new Error('Failed to get user preference');
   }
-}
+});
 
-export async function setUserPreference(userId: string, settingName: string, settingValue: any): Promise<void> {
+export const setUserPreference = withAuth(async (
+  _user,
+  _ctx,
+  userId: string,
+  settingName: string,
+  settingValue: any
+): Promise<void> => {
   try {
-    const currentUser = await getCurrentUser();
-    const tenant = currentUser?.tenant;
-    if (!tenant) throw new Error('Tenant is required');
+    // Convert the value to a JSON string
+    const jsonValue = JSON.stringify(settingValue);
 
-    await runWithTenant(tenant, async () => {
-      // Convert the value to a JSON string
-      const jsonValue = JSON.stringify(settingValue);
-
-      const {knex} = await createTenantKnex(tenant);
-      await UserPreferences.upsert(knex, {
-        user_id: userId,
-        setting_name: settingName,
-        setting_value: jsonValue,
-        updated_at: new Date()
-      });
+    const {knex} = await createTenantKnex();
+    await UserPreferences.upsert(knex, {
+      user_id: userId,
+      setting_name: settingName,
+      setting_value: jsonValue,
+      updated_at: new Date()
     });
   } catch (error) {
     logger.error('Failed to set user preference:', error);
     throw new Error('Failed to set user preference');
   }
-}
+});
 
 export async function verifyContactEmail(email: string): Promise<{ exists: boolean; isActive: boolean; clientId?: string; tenant?: string }> {
   try {
@@ -733,16 +672,13 @@ export async function verifyContactEmail(email: string): Promise<{ exists: boole
   }
 }
 
-export async function registerClientUser(
+export const registerClientUser = withAuth(async (
+  currentUser,
+  _ctx,
   email: string,
   password: string
-): Promise<{ success: boolean; error?: string }> {
+): Promise<{ success: boolean; error?: string }> => {
   try {
-    const currentUser = await getCurrentUser();
-    if (!currentUser) {
-      throw new Error('No authenticated user found');
-    }
-
     const db = await getAdminConnection();
 
     return await withTransaction(db, async (trx: Knex.Transaction) => {
@@ -790,7 +726,7 @@ export async function registerClientUser(
       const hashedPassword = await hashPassword(password);
       logger.debug('Password hashed successfully');
 
-      const [user] = await trx('users')
+      const [newUser] = await trx('users')
         .insert({
           email: email.toLowerCase(),
           username: email.toLowerCase(),
@@ -807,7 +743,7 @@ export async function registerClientUser(
 
       // Get the default client portal user role (must exist via migrations)
       const clientRole = await trx('roles')
-        .where({ 
+        .where({
           tenant: contact.tenant,
           client: true,
           msp: false
@@ -821,7 +757,7 @@ export async function registerClientUser(
 
       // Assign the role to the user
       await trx('user_roles').insert({
-        user_id: user.user_id,
+        user_id: newUser.user_id,
         role_id: clientRole.role_id,
         tenant: contact.tenant
       });
@@ -832,11 +768,13 @@ export async function registerClientUser(
     logger.error('Error registering client user:', error);
     return { success: false, error: 'Failed to register user' };
   }
-}
+});
 
-export async function checkPasswordResetStatus(): Promise<{ hasResetPassword: boolean }> {
+export const checkPasswordResetStatus = withOptionalAuth(async (
+  currentUser,
+  _ctx
+): Promise<{ hasResetPassword: boolean }> => {
   try {
-    const currentUser = await getCurrentUser();
     if (!currentUser) {
       return { hasResetPassword: true }; // Default to true if no user
     }
@@ -851,29 +789,26 @@ export async function checkPasswordResetStatus(): Promise<{ hasResetPassword: bo
 
     // UserPreferences enforces tenant scoping internally (tenant is part of its unique key)
     const preference = await UserPreferences.get(knex, currentUser.user_id, 'has_reset_password');
-    
+
     // For existing users without this preference, assume they have already reset their password
     // Only new users created after this feature will have has_reset_password = false
     const hasReset = preference ? preference.setting_value === true : true;
-    
+
     return { hasResetPassword: hasReset };
   } catch (error) {
     logger.error('Error checking password reset status:', error);
     return { hasResetPassword: true }; // Default to true on error to avoid showing warning
   }
-}
+});
 
 // New function for users to change their own password
-export async function changeOwnPassword(
+export const changeOwnPassword = withAuth(async (
+  currentUser,
+  _ctx,
   currentPassword: string,
   newPassword: string
-): Promise<{ success: boolean; error?: string }> {
+): Promise<{ success: boolean; error?: string }> => {
   try {
-    const currentUser = await getCurrentUser();
-    if (!currentUser) {
-      return { success: false, error: 'User not found' };
-    }
-
     // Verify current password
     const isValidPassword = await User.verifyPassword(currentUser.user_id, currentPassword);
     if (!isValidPassword) {
@@ -898,20 +833,16 @@ export async function changeOwnPassword(
     logger.error('Error changing password:', error);
     return { success: false, error: 'Failed to change password' };
   }
-}
+});
 
 // Function for admins to change user passwords
-export async function getUserClientId(userId: string): Promise<string | null> {
+export const getUserClientId = withAuth(async (
+  currentUser,
+  { tenant },
+  userId: string
+): Promise<string | null> => {
   try {
-    const currentUser = await getCurrentUser();
-    if (!currentUser) {
-      throw new Error('No authenticated user found');
-    }
-
-    const { knex: db, tenant } = await createTenantKnex();
-    if (!tenant) {
-      throw new Error('Tenant not found');
-    }
+    const { knex: db } = await createTenantKnex();
 
     return await withTransaction(db, async (trx: Knex.Transaction) => {
       // For client users accessing their own client ID, no permission check needed
@@ -945,24 +876,20 @@ export async function getUserClientId(userId: string): Promise<string | null> {
     logger.error('Error getting user client ID:', error);
     throw new Error('Failed to get user client ID');
   }
-}
+});
 
 /**
  * Gets the contact_id for a user, which is needed for fetching contact avatars
  * @param userId The user ID to get the contact_id for
  * @returns The contact_id if found, null otherwise
  */
-export async function getUserContactId(userId: string): Promise<string | null> {
+export const getUserContactId = withAuth(async (
+  currentUser,
+  { tenant },
+  userId: string
+): Promise<string | null> => {
   try {
-    const currentUser = await getCurrentUser();
-    if (!currentUser) {
-      throw new Error('No authenticated user found');
-    }
-
-    const { knex: db, tenant } = await createTenantKnex();
-    if (!tenant) {
-      throw new Error('Tenant not found');
-    }
+    const { knex: db } = await createTenantKnex();
 
     return await withTransaction(db, async (trx: Knex.Transaction) => {
       if (!await hasPermission(currentUser, 'user', 'read', trx)) {
@@ -983,18 +910,15 @@ export async function getUserContactId(userId: string): Promise<string | null> {
     logger.error('Error getting user contact ID:', error);
     throw new Error('Failed to get user contact ID');
   }
-}
+});
 
-export async function adminChangeUserPassword(
+export const adminChangeUserPassword = withAuth(async (
+  currentUser,
+  _ctx,
   userId: string,
   newPassword: string
-): Promise<{ success: boolean; error?: string }> {
+): Promise<{ success: boolean; error?: string }> => {
   try {
-    const currentUser = await getCurrentUser();
-    if (!currentUser) {
-      return { success: false, error: 'Admin user not found' };
-    }
-
     const {knex} = await createTenantKnex();
     // Get the user to verify they're in the same tenant
     const targetUser = await User.get(knex, userId);
@@ -1023,7 +947,7 @@ export async function adminChangeUserPassword(
     logger.error('Error changing user password:', error);
     return { success: false, error: 'Failed to change user password' };
   }
-}
+});
 
 /**
  * Uploads or replaces a user's avatar.
@@ -1032,23 +956,16 @@ export async function adminChangeUserPassword(
  * @param formData - The FormData containing the avatar file under the key 'avatar'.
  * @returns ActionResult indicating success or failure, with optional avatar URL.
  */
-export async function uploadUserAvatar(
+export const uploadUserAvatar = withAuth(async (
+  currentUser,
+  { tenant },
   userId: string,
   formData: FormData
-): Promise<ActionResult & { avatarUrl?: string | null }> {
+): Promise<ActionResult & { avatarUrl?: string | null }> => {
   try {
-    const currentUser = await getCurrentUser();
-    if (!currentUser?.user_id) {
-      return { success: false, error: 'Authentication required.' };
-    }
-
-    const { tenant } = await createTenantKnex(); // Still need tenant
-    if (!tenant) {
-        return { success: false, error: 'Tenant context is missing.' };
-    }
-
-    const {knex} = await createTenantKnex();
-    const targetUser = await User.get(knex, userId); // Use existing User model
+    // Context is already set by withAuth
+    const { knex } = await createTenantKnex();
+    const targetUser = await User.get(knex, userId);
 
     if (!targetUser) {
       return { success: false, error: 'Target user not found.' };
@@ -1062,15 +979,21 @@ export async function uploadUserAvatar(
     // Permission Check: User can update their own avatar OR have user update permission
     const isOwnAvatar = currentUser.user_id === userId;
     const isAdmin = currentUser.roles.some(role => role.role_name.toLowerCase() === 'admin');
-    
+
     // Always allow users to update their own avatar, regardless of permissions
     if (isOwnAvatar) {
         console.log(`[uploadUserAvatar] User ${currentUser.user_id} updating their own avatar`);
-    } else if (isAdmin || await hasPermission(currentUser, 'user', 'update', knex)) {
-        console.log(`[uploadUserAvatar] User ${currentUser.user_id} with admin/update permission updating avatar for user ${userId}`);
+    } else if (isAdmin) {
+        console.log(`[uploadUserAvatar] Admin user ${currentUser.user_id} updating avatar for user ${userId}`);
     } else {
-        console.log(`[uploadUserAvatar] Permission denied: User ${currentUser.user_id} trying to update avatar for user ${userId}`);
-        return { success: false, error: 'Permission denied: You can only update your own avatar.' };
+        // Check permission within tenant context
+        const hasUpdatePermission = await hasPermission(currentUser, 'user', 'update', knex);
+        if (hasUpdatePermission) {
+            console.log(`[uploadUserAvatar] User ${currentUser.user_id} with update permission updating avatar for user ${userId}`);
+        } else {
+            console.log(`[uploadUserAvatar] Permission denied: User ${currentUser.user_id} trying to update avatar for user ${userId}`);
+            return { success: false, error: 'Permission denied: You can only update your own avatar.' };
+        }
     }
 
     const file = formData.get('avatar') as File | null;
@@ -1083,7 +1006,7 @@ export async function uploadUserAvatar(
         return { success: false, error: 'Avatar file cannot be empty.' };
     }
 
-    // Call the generic service function
+    // Call the generic service function - tenant context already set by withAuth
     const uploadResult = await uploadEntityImage(
       'user',
       userId,
@@ -1123,7 +1046,7 @@ export async function uploadUserAvatar(
     });
     return { success: false, error: error.message || 'An unexpected error occurred while uploading the avatar.' };
   }
-}
+});
 
 
 /**
@@ -1132,19 +1055,13 @@ export async function uploadUserAvatar(
  * @param userId - The ID of the user whose avatar is being deleted.
  * @returns ActionResult indicating success or failure.
  */
-export async function deleteUserAvatar(userId: string): Promise<ActionResult> {
+export const deleteUserAvatar = withAuth(async (
+  currentUser,
+  { tenant },
+  userId: string
+): Promise<ActionResult> => {
   try {
-    const currentUser = await getCurrentUser();
-    if (!currentUser?.user_id) {
-      return { success: false, error: 'Authentication required.' };
-    }
-
-    const { tenant } = await createTenantKnex(); // Still need tenant
-    if (!tenant) {
-        return { success: false, error: 'Tenant context is missing.' };
-    }
-
-    const {knex} = await createTenantKnex();
+    const { knex } = await createTenantKnex();
     const targetUser = await User.get(knex, userId);
 
     if (!targetUser) {
@@ -1159,7 +1076,7 @@ export async function deleteUserAvatar(userId: string): Promise<ActionResult> {
     // Permission Check: User can delete their own avatar OR have user update permission
     const isOwnAvatar = currentUser.user_id === userId;
     const isAdmin = currentUser.roles.some(role => role.role_name.toLowerCase() === 'admin');
-    
+
     // Always allow users to delete their own avatar, regardless of permissions
     if (isOwnAvatar) {
         console.log(`[deleteUserAvatar] User ${currentUser.user_id} deleting their own avatar`);
@@ -1170,7 +1087,7 @@ export async function deleteUserAvatar(userId: string): Promise<ActionResult> {
         return { success: false, error: 'Permission denied: You can only delete your own avatar.' };
     }
 
-    // Call the generic service function
+    // Call the generic service function - tenant context already set by withAuth
     const deleteResult = await deleteEntityImage(
       'user',
       userId,
@@ -1199,19 +1116,15 @@ export async function deleteUserAvatar(userId: string): Promise<ActionResult> {
     });
     return { success: false, error: error.message || 'An unexpected error occurred while deleting the avatar.' };
   }
-}
+});
 
-export async function getClientUsersForClient(clientId: string): Promise<IUser[]> {
+export const getClientUsersForClient = withAuth(async (
+  currentUser,
+  { tenant },
+  clientId: string
+): Promise<IUser[]> => {
   try {
-    const currentUser = await getCurrentUser();
-    if (!currentUser) {
-      throw new Error('No authenticated user found');
-    }
-
-    const { knex, tenant } = await createTenantKnex();
-    if (!tenant) {
-      throw new Error('Tenant not found');
-    }
+    const { knex } = await createTenantKnex();
 
     // Get all users associated with the client
     return await withTransaction(knex, async (trx: Knex.Transaction) => {
@@ -1237,7 +1150,7 @@ export async function getClientUsersForClient(clientId: string): Promise<IUser[]
     logger.error('Error getting client users:', error);
     throw error;
   }
-}
+});
 
 // Alias for compatibility
 export const getUserById = findUserById;
@@ -1245,18 +1158,18 @@ export const getUserById = findUserById;
 /**
  * Get the current user's avatar URL (server action for client components)
  */
-export async function getCurrentUserAvatarUrl(): Promise<string | null> {
-  'use server';
-
+export const getCurrentUserAvatarUrl = withOptionalAuth(async (
+  user,
+  ctx
+): Promise<string | null> => {
   try {
-    const user = await getCurrentUser();
-    if (!user || !user.tenant) {
+    if (!user || !ctx) {
       return null;
     }
 
-    return await getUserAvatarUrl(user.user_id, user.tenant);
+    return await getUserAvatarUrl(user.user_id, ctx.tenant);
   } catch (error) {
     logger.error('Error getting current user avatar URL:', error);
     return null;
   }
-}
+});

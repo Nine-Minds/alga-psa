@@ -1,11 +1,10 @@
 'use server';
 
-import { getCurrentUser } from '../lib/getCurrentUser';
 import { hasPermission } from '../lib/rbac';
+import { withOptionalAuth } from '../lib/withAuth';
 
-export async function getContactPortalPermissions() {
+export const getContactPortalPermissions = withOptionalAuth(async (currentUser, _ctx) => {
   try {
-    const currentUser = await getCurrentUser();
     if (!currentUser) {
       return {
         canInvite: false,
@@ -34,11 +33,10 @@ export async function getContactPortalPermissions() {
       canRead: false
     };
   }
-}
+});
 
-export async function checkAccountManagementPermission() {
+export const checkAccountManagementPermission = withOptionalAuth(async (currentUser, _ctx) => {
   try {
-    const currentUser = await getCurrentUser();
     if (!currentUser) {
       return false;
     }
@@ -48,4 +46,4 @@ export async function checkAccountManagementPermission() {
     console.error('Error checking account management permission:', error);
     return false;
   }
-}
+});

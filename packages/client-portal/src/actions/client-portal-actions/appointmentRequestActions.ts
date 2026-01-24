@@ -3,8 +3,9 @@
 import { createTenantKnex } from '@alga-psa/db';
 import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
-import { getCurrentUser } from '@alga-psa/users/actions';
 import { v4 as uuidv4 } from 'uuid';
+import { withAuth, type AuthContext } from '@alga-psa/auth';
+import type { IUserWithRoles } from '@alga-psa/types';
 import {
   createAppointmentRequestSchema,
   updateAppointmentRequestSchema,
@@ -16,22 +17,23 @@ import {
   appointmentRequestFilterSchema
 } from '../../schemas/appointmentSchemas';
 import { SystemEmailService } from '@alga-psa/email';
+import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
+import {
+  buildAppointmentAssignedPayload,
+  buildAppointmentCanceledPayload,
+  buildAppointmentCreatedPayload,
+  buildAppointmentRescheduledPayload,
+} from '@shared/workflow/streams/domainEventBuilders/appointmentEventBuilders';
 import {
   getAvailableServicesForClient,
   getServicesForPublicBooking,
   getAvailableTimeSlots as getTimeSlotsFromService,
   getAvailableDates as getDatesFromService
 } from '../../services/availabilityService';
-import {
-  getTenantSettings,
-  getScheduleApprovers,
-  getClientUserIdFromContact,
-  formatDate,
-  formatTime,
-  getClientCompanyName
-} from '@alga-psa/scheduling/actions';
 import { createNotificationFromTemplateInternal } from '@alga-psa/notifications/actions';
 import { isValidEmail } from '@alga-psa/core';
+import { format, type Locale } from 'date-fns';
+import { de, es, fr, it, nl, enUS } from 'date-fns/locale';
 
 export interface IAppointmentRequest {
   appointment_request_id: string;
@@ -65,41 +67,184 @@ export interface AppointmentRequestResult<T> {
   error?: string;
 }
 
+type TenantSettings = {
+  contactEmail: string;
+  contactPhone: string;
+  tenantName: string;
+  defaultLocale: string;
+};
+
+type ScheduleApprover = {
+  user_id: string;
+  email: string;
+  first_name: string;
+  last_name: string;
+};
+
+async function getScheduleApprovers(tenant: string): Promise<ScheduleApprover[]> {
+  const { knex: db } = await createTenantKnex();
+
+  return await withTransaction(db, async (trx) => {
+    const approvers = await trx('users as u')
+      .join('user_roles as ur', function () {
+        this.on('u.user_id', 'ur.user_id').andOn('u.tenant', 'ur.tenant');
+      })
+      .join('roles as r', function () {
+        this.on('ur.role_id', 'r.role_id').andOn('ur.tenant', 'r.tenant');
+      })
+      .join('role_permissions as rp', function () {
+        this.on('r.role_id', 'rp.role_id').andOn('r.tenant', 'rp.tenant');
+      })
+      .join('permissions as p', function () {
+        this.on('rp.permission_id', 'p.permission_id').andOn('rp.tenant', 'p.tenant');
+      })
+      .where({
+        'u.tenant': tenant,
+        'u.user_type': 'internal',
+        'p.resource': 'user_schedule',
+        'p.action': 'update',
+      })
+      .where(function () {
+        this.where('u.is_inactive', false).orWhereNull('u.is_inactive');
+      })
+      .select('u.user_id', 'u.email', 'u.first_name', 'u.last_name')
+      .distinct();
+
+    return approvers;
+  });
+}
+
+async function getTenantSettings(tenant: string): Promise<TenantSettings> {
+  const { knex: db } = await createTenantKnex();
+
+  return await withTransaction(db, async (trx) => {
+    const settings = await trx('tenant_settings').where({ tenant }).first();
+    const tenantSettings = settings?.settings || {};
+
+    let tenantName = tenantSettings.branding?.clientName;
+    if (!tenantName) {
+      const tenantRecord = await trx('tenants').where({ tenant }).select('client_name').first();
+      tenantName = tenantRecord?.client_name;
+    }
+    if (!tenantName) tenantName = 'Your Service Provider';
+
+    return {
+      contactEmail: tenantSettings.supportEmail || tenantSettings.contactEmail || 'support@company.com',
+      contactPhone: tenantSettings.supportPhone || tenantSettings.contactPhone || '',
+      tenantName,
+      defaultLocale: tenantSettings.defaultLocale || 'en',
+    };
+  });
+}
+
+async function getClientUserIdFromContact(contactId: string, tenant: string): Promise<string | null> {
+  const { knex: db } = await createTenantKnex();
+
+  return await withTransaction(db, async (trx) => {
+    const user = await trx('users')
+      .where({
+        tenant,
+        contact_id: contactId,
+        user_type: 'client',
+      })
+      .where(function () {
+        this.where('is_inactive', false).orWhereNull('is_inactive');
+      })
+      .select('user_id')
+      .first();
+
+    return user?.user_id || null;
+  });
+}
+
+async function formatDate(dateString: string, locale: string = 'en'): Promise<string> {
+  try {
+    const date = new Date(dateString);
+    const localeMap: Record<string, Locale> = {
+      en: enUS,
+      de,
+      es,
+      fr,
+      it,
+      nl,
+    };
+    const dateFnsLocale = localeMap[locale] || enUS;
+    return format(date, 'PPP', { locale: dateFnsLocale });
+  } catch (error) {
+    console.error('Error formatting date:', error);
+    return dateString;
+  }
+}
+
+async function formatTime(timeString: string, locale: string = 'en'): Promise<string> {
+  try {
+    const [hours, minutes] = timeString.split(':').map(Number);
+    const date = new Date();
+    date.setHours(hours, minutes, 0, 0);
+
+    const localeMap: Record<string, Locale> = {
+      en: enUS,
+      de,
+      es,
+      fr,
+      it,
+      nl,
+    };
+    const dateFnsLocale = localeMap[locale] || enUS;
+    if (locale === 'en') {
+      return format(date, 'p', { locale: dateFnsLocale });
+    }
+    return format(date, 'HH:mm', { locale: dateFnsLocale });
+  } catch (error) {
+    console.error('Error formatting time:', error);
+    return timeString;
+  }
+}
+
+async function getClientCompanyName(clientId: string, tenant: string): Promise<string> {
+  const { knex: db } = await createTenantKnex();
+
+  return await withTransaction(db, async (trx) => {
+    const client = await trx('clients')
+      .where({
+        client_id: clientId,
+        tenant,
+      })
+      .select('client_name')
+      .first();
+
+    return client?.client_name || 'Unknown Client';
+  });
+}
+
 /**
  * Create an authenticated appointment request from the client portal
  * Validates that user is a client and has proper access
  */
-export async function createAppointmentRequest(
+export const createAppointmentRequest = withAuth(async (
+  currentUser: IUserWithRoles,
+  { tenant }: AuthContext,
   data: CreateAppointmentRequestInput
-): Promise<AppointmentRequestResult<IAppointmentRequest>> {
+): Promise<AppointmentRequestResult<IAppointmentRequest>> => {
   try {
-    const currentUser = await getCurrentUser();
-    if (!currentUser) {
-      return { success: false, error: 'User not authenticated' };
-    }
-
-    if ((currentUser as any).user_type !== 'client') {
+    if (currentUser.user_type !== 'client') {
       return { success: false, error: 'Only client users can create appointment requests' };
     }
 
-    if (!(currentUser as any).contact_id) {
+    if (!currentUser.contact_id) {
       return { success: false, error: 'Contact information not found' };
     }
 
     // Validate input
     const validatedData = createAppointmentRequestSchema.parse(data);
 
-    const { knex: db, tenant } = await createTenantKnex();
-
-    if (!tenant) {
-      return { success: false, error: 'Tenant not found' };
-    }
+    const { knex: db } = await createTenantKnex();
 
     // Get client_id from contact
     const contact = await withTransaction(db, async (trx: Knex.Transaction) => {
       return await trx('contacts')
         .where({
-          contact_name_id: (currentUser as any).contact_id,
+          contact_name_id: currentUser.contact_id,
           tenant
         })
         .select('client_id', 'full_name', 'email')
@@ -115,7 +260,7 @@ export async function createAppointmentRequest(
     console.log('[createAppointmentRequest] Creating appointment with:', {
       tenant,
       clientId,
-      contactId: (currentUser as any).contact_id,
+      contactId: currentUser.contact_id,
       serviceId: validatedData.service_id
     });
 
@@ -213,7 +358,7 @@ export async function createAppointmentRequest(
         appointment_request_id: requestId,
         tenant,
         client_id: clientId,
-        contact_id: (currentUser as any).contact_id,
+        contact_id: currentUser.contact_id,
         service_id: validatedData.service_id,
         requested_date: normalizedRequestedDate,
         requested_time: normalizedRequestedTime,
@@ -336,6 +481,51 @@ export async function createAppointmentRequest(
       });
     }
 
+    try {
+      if (scheduleEntryId) {
+        const scheduledStart = new Date(`${normalizedRequestedDate}T${normalizedRequestedTime}:00Z`);
+        const scheduledEnd = new Date(scheduledStart.getTime() + validatedData.requested_duration * 60000);
+        const ticketId = appointmentRequest.ticket_id || undefined;
+
+        const ctx = {
+          tenantId: tenant,
+          actor: { actorType: 'CONTACT' as const, actorContactId: (currentUser as any).contact_id as string },
+        };
+
+        await publishWorkflowEvent({
+          eventType: 'APPOINTMENT_CREATED',
+          ctx,
+          payload: buildAppointmentCreatedPayload({
+            entry: {
+              entry_id: scheduleEntryId,
+              work_item_type: 'appointment_request',
+              work_item_id: appointmentRequest.appointment_request_id,
+              scheduled_start: scheduledStart,
+              scheduled_end: scheduledEnd,
+              created_at: new Date(),
+              assigned_user_ids: assignedUserId ? [assignedUserId] : [],
+            },
+            ticketId,
+            timezone: 'UTC',
+          }),
+        });
+
+        if (assignedUserId) {
+          await publishWorkflowEvent({
+            eventType: 'APPOINTMENT_ASSIGNED',
+            ctx,
+            payload: buildAppointmentAssignedPayload({
+              appointmentId: scheduleEntryId,
+              ticketId,
+              newAssigneeId: assignedUserId,
+            }),
+          });
+        }
+      }
+    } catch (eventError) {
+      console.error('[createAppointmentRequest] Failed to publish appointment workflow events', eventError);
+    }
+
     // Send notification emails and internal notifications
     try {
       const emailService = SystemEmailService.getInstance();
@@ -346,7 +536,7 @@ export async function createAppointmentRequest(
       // Send confirmation email to client using template
       await emailService.sendAppointmentRequestReceived({
         requesterName: contact.full_name || 'Customer',
-        requesterEmail: contact.email || (currentUser as any).email || '',
+        requesterEmail: contact.email || currentUser.email || '',
         serviceName: service.service_name,
         requestedDate: await formatDate(validatedData.requested_date, 'en'),
         requestedTime: await formatTime(validatedData.requested_time, 'en'),
@@ -406,7 +596,7 @@ export async function createAppointmentRequest(
         if (!isValidEmail(staffUser.email)) continue;
         await emailService.sendNewAppointmentRequest(staffUser.email, {
           requesterName: contact.full_name || 'Unknown',
-          requesterEmail: contact.email || (currentUser as any).email || '',
+          requesterEmail: contact.email || currentUser.email || '',
           clientName: clientCompanyName,
           serviceName: service.service_name,
           requestedDate: await formatDate(validatedData.requested_date, 'en'),
@@ -425,8 +615,8 @@ export async function createAppointmentRequest(
       }
 
       // Send internal notification to client
-      if ((currentUser as any).contact_id) {
-        const clientUserId = await getClientUserIdFromContact((currentUser as any).contact_id, tenant);
+      if (currentUser.contact_id) {
+        const clientUserId = await getClientUserIdFromContact(currentUser.contact_id, tenant);
         if (clientUserId) {
           await createNotificationFromTemplateInternal(db, {
             tenant: tenant,
@@ -497,42 +687,35 @@ export async function createAppointmentRequest(
     const message = error instanceof Error ? error.message : 'Failed to create appointment request';
     return { success: false, error: message };
   }
-}
+});
 
 /**
  * Update a pending appointment request from the client portal
  */
-export async function updateAppointmentRequest(
+export const updateAppointmentRequest = withAuth(async (
+  currentUser: IUserWithRoles,
+  { tenant }: AuthContext,
   data: UpdateAppointmentRequestInput
-): Promise<AppointmentRequestResult<IAppointmentRequest>> {
+): Promise<AppointmentRequestResult<IAppointmentRequest>> => {
   try {
-    const currentUser = await getCurrentUser();
-    if (!currentUser) {
-      return { success: false, error: 'User not authenticated' };
-    }
-
-    if ((currentUser as any).user_type !== 'client') {
+    if (currentUser.user_type !== 'client') {
       return { success: false, error: 'Only client users can update appointment requests' };
     }
 
-    if (!(currentUser as any).contact_id) {
+    if (!currentUser.contact_id) {
       return { success: false, error: 'Contact information not found' };
     }
 
     // Validate input
     const validatedData = updateAppointmentRequestSchema.parse(data);
 
-    const { knex: db, tenant } = await createTenantKnex();
-
-    if (!tenant) {
-      return { success: false, error: 'Tenant not found' };
-    }
+    const { knex: db } = await createTenantKnex();
 
     // Get client_id from contact
     const contact = await withTransaction(db, async (trx: Knex.Transaction) => {
       return await trx('contacts')
         .where({
-          contact_name_id: (currentUser as any).contact_id,
+          contact_name_id: currentUser.contact_id,
           tenant
         })
         .select('client_id')
@@ -597,27 +780,44 @@ export async function updateAppointmentRequest(
         });
     });
 
+    let appointmentWorkflowUpdate:
+      | {
+          appointmentId: string;
+          beforeStart: Date;
+          beforeEnd: Date;
+          afterStart: Date;
+          afterEnd: Date;
+          previousAssigneeId?: string;
+          newAssigneeId?: string;
+          ticketId?: string;
+        }
+      | undefined;
+
     // Update the associated schedule entry if it exists
     if (existingRequest.schedule_entry_id) {
-      await withTransaction(db, async (trx: Knex.Transaction) => {
-        const [startHour, startMinute] = validatedData.requested_time.split(':').map(Number);
-        // Parse date and time as UTC explicitly
-        const scheduledStart = new Date(`${validatedData.requested_date}T${validatedData.requested_time}:00Z`);
+      const beforeStart = new Date(`${existingRequest.requested_date}T${existingRequest.requested_time}:00Z`);
+      const beforeEnd = new Date(beforeStart.getTime() + existingRequest.requested_duration * 60000);
 
-        const scheduledEnd = new Date(scheduledStart);
-        scheduledEnd.setMinutes(scheduledEnd.getMinutes() + validatedData.requested_duration);
+      appointmentWorkflowUpdate = await withTransaction(db, async (trx: Knex.Transaction) => {
+        const previousAssigneeRow = await trx('schedule_entry_assignees')
+          .where({ entry_id: existingRequest.schedule_entry_id, tenant })
+          .select('user_id')
+          .first();
+
+        const scheduledStart = new Date(`${validatedData.requested_date}T${validatedData.requested_time}:00Z`);
+        const scheduledEnd = new Date(scheduledStart.getTime() + validatedData.requested_duration * 60000);
 
         await trx('schedule_entries')
           .where({
             entry_id: existingRequest.schedule_entry_id,
-            tenant
+            tenant,
           })
           .update({
             title: `[Pending Request] ${service.service_name}`,
             scheduled_start: scheduledStart.toISOString(),
             scheduled_end: scheduledEnd.toISOString(),
             notes: validatedData.description || 'Appointment request from client portal',
-            updated_at: new Date()
+            updated_at: new Date(),
           });
 
         // Update assignee if changed
@@ -626,11 +826,10 @@ export async function updateAppointmentRequest(
           let newAssigneeId = validatedData.preferred_assigned_user_id;
 
           if (!newAssigneeId) {
-            // Get default approver
             const generalSetting = await trx('availability_settings')
               .where({
                 tenant,
-                setting_type: 'general_settings'
+                setting_type: 'general_settings',
               })
               .whereNotNull('config_json')
               .first();
@@ -639,24 +838,89 @@ export async function updateAppointmentRequest(
           }
 
           if (newAssigneeId) {
-            // Delete old assignee
             await trx('schedule_entry_assignees')
               .where({
                 entry_id: existingRequest.schedule_entry_id,
-                tenant
+                tenant,
               })
               .delete();
 
-            // Add new assignee
             await trx('schedule_entry_assignees').insert({
               entry_id: existingRequest.schedule_entry_id,
               user_id: newAssigneeId,
               tenant,
-              created_at: new Date()
+              created_at: new Date(),
             });
           }
         }
+
+        const newAssigneeRow = await trx('schedule_entry_assignees')
+          .where({ entry_id: existingRequest.schedule_entry_id, tenant })
+          .select('user_id')
+          .first();
+
+        return {
+          appointmentId: existingRequest.schedule_entry_id,
+          beforeStart,
+          beforeEnd,
+          afterStart: scheduledStart,
+          afterEnd: scheduledEnd,
+          previousAssigneeId: previousAssigneeRow?.user_id,
+          newAssigneeId: newAssigneeRow?.user_id,
+          ticketId: validatedData.ticket_id || undefined,
+        };
       });
+    }
+
+    if (appointmentWorkflowUpdate) {
+      try {
+        const ctx = {
+          tenantId: tenant,
+          actor: { actorType: 'CONTACT' as const, actorContactId: (currentUser as any).contact_id as string },
+        };
+
+        if (
+          appointmentWorkflowUpdate.beforeStart.toISOString() !== appointmentWorkflowUpdate.afterStart.toISOString() ||
+          appointmentWorkflowUpdate.beforeEnd.toISOString() !== appointmentWorkflowUpdate.afterEnd.toISOString()
+        ) {
+          await publishWorkflowEvent({
+            eventType: 'APPOINTMENT_RESCHEDULED',
+            ctx,
+            payload: buildAppointmentRescheduledPayload({
+              before: {
+                entry_id: appointmentWorkflowUpdate.appointmentId,
+                scheduled_start: appointmentWorkflowUpdate.beforeStart,
+                scheduled_end: appointmentWorkflowUpdate.beforeEnd,
+              },
+              after: {
+                entry_id: appointmentWorkflowUpdate.appointmentId,
+                scheduled_start: appointmentWorkflowUpdate.afterStart,
+                scheduled_end: appointmentWorkflowUpdate.afterEnd,
+              },
+              ticketId: appointmentWorkflowUpdate.ticketId,
+              timezone: 'UTC',
+            }),
+          });
+        }
+
+        if (
+          appointmentWorkflowUpdate.newAssigneeId &&
+          appointmentWorkflowUpdate.newAssigneeId !== appointmentWorkflowUpdate.previousAssigneeId
+        ) {
+          await publishWorkflowEvent({
+            eventType: 'APPOINTMENT_ASSIGNED',
+            ctx,
+            payload: buildAppointmentAssignedPayload({
+              appointmentId: appointmentWorkflowUpdate.appointmentId,
+              ticketId: appointmentWorkflowUpdate.ticketId,
+              previousAssigneeId: appointmentWorkflowUpdate.previousAssigneeId,
+              newAssigneeId: appointmentWorkflowUpdate.newAssigneeId,
+            }),
+          });
+        }
+      } catch (eventError) {
+        console.error('[updateAppointmentRequest] Failed to publish appointment workflow events', eventError);
+      }
     }
 
     // Get updated request
@@ -680,39 +944,32 @@ export async function updateAppointmentRequest(
     const message = error instanceof Error ? error.message : 'Failed to update appointment request';
     return { success: false, error: message };
   }
-}
+});
 
 /**
  * Get appointment requests for the current client user
  */
-export async function getMyAppointmentRequests(
+export const getMyAppointmentRequests = withAuth(async (
+  currentUser: IUserWithRoles,
+  { tenant }: AuthContext,
   filters?: Partial<AppointmentRequestFilters>
-): Promise<AppointmentRequestResult<IAppointmentRequest[]>> {
+): Promise<AppointmentRequestResult<IAppointmentRequest[]>> => {
   try {
-    const currentUser = await getCurrentUser();
-    if (!currentUser) {
-      return { success: false, error: 'User not authenticated' };
-    }
-
-    if ((currentUser as any).user_type !== 'client') {
+    if (currentUser.user_type !== 'client') {
       return { success: false, error: 'Only client users can access this endpoint' };
     }
 
-    if (!(currentUser as any).contact_id) {
+    if (!currentUser.contact_id) {
       return { success: false, error: 'Contact information not found' };
     }
 
-    const { knex: db, tenant } = await createTenantKnex();
-
-    if (!tenant) {
-      return { success: false, error: 'Tenant not found' };
-    }
+    const { knex: db } = await createTenantKnex();
 
     // Get client_id from contact
     const contact = await withTransaction(db, async (trx: Knex.Transaction) => {
       return await trx('contacts')
         .where({
-          contact_name_id: (currentUser as any).contact_id,
+          contact_name_id: currentUser.contact_id,
           tenant
         })
         .select('client_id')
@@ -728,7 +985,7 @@ export async function getMyAppointmentRequests(
     console.log('[getMyAppointmentRequests] Looking for appointments with:', {
       tenant,
       clientId,
-      contactId: (currentUser as any).contact_id,
+      contactId: currentUser.contact_id,
       filters
     });
 
@@ -800,39 +1057,32 @@ export async function getMyAppointmentRequests(
     const message = error instanceof Error ? error.message : 'Failed to fetch appointment requests';
     return { success: false, error: message };
   }
-}
+});
 
 /**
  * Get details of a specific appointment request
  */
-export async function getAppointmentRequestDetails(
+export const getAppointmentRequestDetails = withAuth(async (
+  currentUser: IUserWithRoles,
+  { tenant }: AuthContext,
   requestId: string
-): Promise<AppointmentRequestResult<IAppointmentRequest>> {
+): Promise<AppointmentRequestResult<IAppointmentRequest>> => {
   try {
-    const currentUser = await getCurrentUser();
-    if (!currentUser) {
-      return { success: false, error: 'User not authenticated' };
-    }
-
-    if ((currentUser as any).user_type !== 'client') {
+    if (currentUser.user_type !== 'client') {
       return { success: false, error: 'Only client users can access this endpoint' };
     }
 
-    if (!(currentUser as any).contact_id) {
+    if (!currentUser.contact_id) {
       return { success: false, error: 'Contact information not found' };
     }
 
-    const { knex: db, tenant } = await createTenantKnex();
-
-    if (!tenant) {
-      return { success: false, error: 'Tenant not found' };
-    }
+    const { knex: db } = await createTenantKnex();
 
     // Get client_id from contact
     const contact = await withTransaction(db, async (trx: Knex.Transaction) => {
       return await trx('contacts')
         .where({
-          contact_name_id: (currentUser as any).contact_id,
+          contact_name_id: currentUser.contact_id,
           tenant
         })
         .select('client_id')
@@ -891,42 +1141,35 @@ export async function getAppointmentRequestDetails(
     const message = error instanceof Error ? error.message : 'Failed to fetch appointment request details';
     return { success: false, error: message };
   }
-}
+});
 
 /**
  * Cancel a pending appointment request
  */
-export async function cancelAppointmentRequest(
+export const cancelAppointmentRequest = withAuth(async (
+  currentUser: IUserWithRoles,
+  { tenant }: AuthContext,
   data: CancelAppointmentRequestInput
-): Promise<AppointmentRequestResult<void>> {
+): Promise<AppointmentRequestResult<void>> => {
   try {
-    const currentUser = await getCurrentUser();
-    if (!currentUser) {
-      return { success: false, error: 'User not authenticated' };
-    }
-
-    if ((currentUser as any).user_type !== 'client') {
+    if (currentUser.user_type !== 'client') {
       return { success: false, error: 'Only client users can cancel appointment requests' };
     }
 
-    if (!(currentUser as any).contact_id) {
+    if (!currentUser.contact_id) {
       return { success: false, error: 'Contact information not found' };
     }
 
     // Validate input
     const validatedData = cancelAppointmentRequestSchema.parse(data);
 
-    const { knex: db, tenant } = await createTenantKnex();
-
-    if (!tenant) {
-      return { success: false, error: 'Tenant not found' };
-    }
+    const { knex: db } = await createTenantKnex();
 
     // Get client_id from contact
     const contact = await withTransaction(db, async (trx: Knex.Transaction) => {
       return await trx('contacts')
         .where({
-          contact_name_id: (currentUser as any).contact_id,
+          contact_name_id: currentUser.contact_id,
           tenant
         })
         .select('client_id', 'full_name', 'email')
@@ -972,6 +1215,26 @@ export async function cancelAppointmentRequest(
           updated_at: now
         });
 
+      try {
+        if (request.schedule_entry_id) {
+          const ctx = {
+            tenantId: tenant,
+            actor: { actorType: 'CONTACT' as const, actorContactId: (currentUser as any).contact_id as string },
+          };
+          await publishWorkflowEvent({
+            eventType: 'APPOINTMENT_CANCELED',
+            ctx,
+            payload: buildAppointmentCanceledPayload({
+              appointmentId: request.schedule_entry_id,
+              ticketId: request.ticket_id || undefined,
+              reason: validatedData.cancellation_reason || 'Cancelled by client',
+            }),
+          });
+        }
+      } catch (eventError) {
+        console.error('[cancelAppointmentRequest] Failed to publish APPOINTMENT_CANCELED workflow event', eventError);
+      }
+
       // Send notification emails and internal notifications
       try {
         const emailService = SystemEmailService.getInstance();
@@ -988,7 +1251,7 @@ export async function cancelAppointmentRequest(
         const clientUserId = await getClientUserIdFromContact(contact.contact_name_id, tenant);
 
         // Email to client confirming cancellation
-        const cancellationRecipient = contact.email || (currentUser as any).email;
+        const cancellationRecipient = contact.email || currentUser.email;
         if (isValidEmail(cancellationRecipient)) {
           await emailService.sendEmail({
             to: cancellationRecipient,
@@ -1060,12 +1323,15 @@ export async function cancelAppointmentRequest(
     const message = error instanceof Error ? error.message : 'Failed to cancel appointment request';
     return { success: false, error: message };
   }
-}
+});
 
 /**
  * Get available services and open tickets for appointment booking
  */
-export async function getAvailableServicesAndTickets(): Promise<AppointmentRequestResult<{
+export const getAvailableServicesAndTickets = withAuth(async (
+  currentUser: IUserWithRoles,
+  { tenant }: AuthContext
+): Promise<AppointmentRequestResult<{
   services: Array<{
     service_id: string;
     service_name: string;
@@ -1078,32 +1344,23 @@ export async function getAvailableServicesAndTickets(): Promise<AppointmentReque
     ticket_number: string;
     title: string;
   }>;
-}>> {
+}>> => {
   try {
-    const currentUser = await getCurrentUser();
-    if (!currentUser) {
-      return { success: false, error: 'User not authenticated' };
-    }
-
-    if ((currentUser as any).user_type !== 'client') {
+    if (currentUser.user_type !== 'client') {
       return { success: false, error: 'Only client users can access this endpoint' };
     }
 
-    if (!(currentUser as any).contact_id) {
+    if (!currentUser.contact_id) {
       return { success: false, error: 'Contact information not found' };
     }
 
-    const { knex: db, tenant } = await createTenantKnex();
-
-    if (!tenant) {
-      return { success: false, error: 'Tenant not found' };
-    }
+    const { knex: db } = await createTenantKnex();
 
     // Get client_id from contact
     const contact = await withTransaction(db, async (trx: Knex.Transaction) => {
       return await trx('contacts')
         .where({
-          contact_name_id: (currentUser as any).contact_id,
+          contact_name_id: currentUser.contact_id,
           tenant
         })
         .select('client_id')
@@ -1175,29 +1432,20 @@ export async function getAvailableServicesAndTickets(): Promise<AppointmentReque
     const message = error instanceof Error ? error.message : 'Failed to fetch data';
     return { success: false, error: message };
   }
-}
+});
 
 /**
  * Get available dates for a service (next 30 days)
  */
-export async function getAvailableDatesForService(
+export const getAvailableDatesForService = withAuth(async (
+  currentUser: IUserWithRoles,
+  { tenant }: AuthContext,
   serviceId: string,
   userTimezone?: string
-): Promise<AppointmentRequestResult<string[]>> {
+): Promise<AppointmentRequestResult<string[]>> => {
   try {
-    const currentUser = await getCurrentUser();
-    if (!currentUser) {
-      return { success: false, error: 'User not authenticated' };
-    }
-
-    if ((currentUser as any).user_type !== 'client') {
+    if (currentUser.user_type !== 'client') {
       return { success: false, error: 'Only client users can access this endpoint' };
-    }
-
-    const { tenant } = await createTenantKnex();
-
-    if (!tenant) {
-      return { success: false, error: 'Tenant not found' };
     }
 
     // Calculate date range (next 30 days)
@@ -1229,39 +1477,32 @@ export async function getAvailableDatesForService(
     const message = error instanceof Error ? error.message : 'Failed to fetch available dates';
     return { success: false, error: message };
   }
-}
+});
 
 /**
  * Get appointment requests linked to a specific ticket (client portal version)
  */
-export async function getAppointmentRequestsByTicketId(
+export const getAppointmentRequestsByTicketId = withAuth(async (
+  currentUser: IUserWithRoles,
+  { tenant }: AuthContext,
   ticketId: string
-): Promise<AppointmentRequestResult<IAppointmentRequest[]>> {
+): Promise<AppointmentRequestResult<IAppointmentRequest[]>> => {
   try {
-    const currentUser = await getCurrentUser();
-    if (!currentUser) {
-      return { success: false, error: 'User not authenticated' };
-    }
-
-    if ((currentUser as any).user_type !== 'client') {
+    if (currentUser.user_type !== 'client') {
       return { success: false, error: 'Only client users can access this endpoint' };
     }
 
-    if (!(currentUser as any).contact_id) {
+    if (!currentUser.contact_id) {
       return { success: false, error: 'Contact information not found' };
     }
 
-    const { knex: db, tenant } = await createTenantKnex();
-
-    if (!tenant) {
-      return { success: false, error: 'Tenant not found' };
-    }
+    const { knex: db } = await createTenantKnex();
 
     // Get client_id from contact
     const contact = await withTransaction(db, async (trx: Knex.Transaction) => {
       return await trx('contacts')
         .where({
-          contact_name_id: (currentUser as any).contact_id,
+          contact_name_id: currentUser.contact_id,
           tenant
         })
         .select('client_id')
@@ -1328,12 +1569,14 @@ export async function getAppointmentRequestsByTicketId(
     const message = error instanceof Error ? error.message : 'Failed to fetch appointment requests';
     return { success: false, error: message };
   }
-}
+});
 
 /**
  * Get available time slots and technicians for a specific date
  */
-export async function getAvailableTimeSlotsForDate(
+export const getAvailableTimeSlotsForDate = withAuth(async (
+  currentUser: IUserWithRoles,
+  { tenant }: AuthContext,
   serviceId: string,
   date: string,
   duration?: number,
@@ -1351,22 +1594,13 @@ export async function getAvailableTimeSlotsForDate(
     full_name: string;
     duration: number; // Technician-specific duration
   }>;
-}>> {
+}>> => {
   try {
-    const currentUser = await getCurrentUser();
-    if (!currentUser) {
-      return { success: false, error: 'User not authenticated' };
-    }
-
-    if ((currentUser as any).user_type !== 'client') {
+    if (currentUser.user_type !== 'client') {
       return { success: false, error: 'Only client users can access this endpoint' };
     }
 
-    const { knex: db, tenant } = await createTenantKnex();
-
-    if (!tenant) {
-      return { success: false, error: 'Tenant not found' };
-    }
+    const { knex: db } = await createTenantKnex();
 
     // Get service-specific default duration
     const serviceSettings = await withTransaction(db, async (trx: Knex.Transaction) => {
@@ -1488,4 +1722,4 @@ export async function getAvailableTimeSlotsForDate(
     const message = error instanceof Error ? error.message : 'Failed to fetch time slots';
     return { success: false, error: message };
   }
-}
+});

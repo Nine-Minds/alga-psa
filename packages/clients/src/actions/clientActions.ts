@@ -5,35 +5,39 @@ import { createTenantKnex } from '@alga-psa/db';
 import { unparseCSV } from '@alga-psa/core';
 import { createDefaultTaxSettingsAsync } from '../lib/billingHelpers';
 import { revalidatePath } from 'next/cache';
-import { getCurrentUserAsync } from '../lib/usersHelpers';
+import { withAuth } from '@alga-psa/auth';
 import { hasPermissionAsync } from '../lib/authHelpers';
 import { getClientLogoUrlAsync, getClientLogoUrlsBatchAsync } from '../lib/documentsHelpers';
-import { uploadEntityImage, deleteEntityImage } from '@alga-psa/media';
+import { uploadEntityImage, deleteEntityImage } from '@alga-psa/documents';
 import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { deleteEntityTags } from '@alga-psa/tags/lib/tagCleanup';
 import { createTag } from '@alga-psa/tags/actions';
 import { ClientModel } from '@alga-psa/shared/models/clientModel';
+import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
+import {
+  buildClientArchivedPayload,
+  buildClientCreatedPayload,
+  buildClientOwnerAssignedPayload,
+  buildClientStatusChangedPayload,
+  buildClientUpdatedPayload,
+} from '@alga-psa/shared/workflow/streams/domainEventBuilders/clientEventBuilders';
+import { buildContactPrimarySetPayload } from '@alga-psa/shared/workflow/streams/domainEventBuilders/contactEventBuilders';
 
-export async function getClientById(clientId: string): Promise<IClientWithLocation | null> {
-  const currentUser = await getCurrentUserAsync();
-  if (!currentUser) {
-    throw new Error('No authenticated user found');
-  }
-  if (!currentUser.tenant) {
-    throw new Error('Tenant not found');
-  }
+function maybeUserActor(currentUser: any) {
+  const userId = currentUser?.user_id;
+  if (typeof userId !== 'string' || !userId) return undefined;
+  return { actorType: 'USER' as const, actorUserId: userId };
+}
 
+export const getClientById = withAuth(async (user, { tenant }, clientId: string): Promise<IClientWithLocation | null> => {
   // Check permission for client reading (in MSP, clients are managed via 'client' resource)
-  if (!await hasPermissionAsync(currentUser, 'client', 'read')) {
+  if (!await hasPermissionAsync(user, 'client', 'read')) {
     throw new Error('Permission denied: Cannot read clients');
   }
 
-  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
-  if (!tenant) {
-    throw new Error('Tenant not found');
-  }
-  
+  const { knex } = await createTenantKnex();
+
   // Fetch client data with account manager info and location data
   const clientData = await withTransaction(knex, async (trx: Knex.Transaction) => {
     return await trx('clients as c')
@@ -68,28 +72,20 @@ export async function getClientById(clientId: string): Promise<IClientWithLocati
     ...clientData,
     logoUrl,
   } as IClientWithLocation;
-}
+});
 
-export async function updateClient(clientId: string, updateData: Partial<Omit<IClient, 'account_manager_full_name'>>): Promise<IClient> { // Omit joined field from update type
-  const currentUser = await getCurrentUserAsync();
-  if (!currentUser) {
-    throw new Error('No authenticated user found');
-  }
-
+export const updateClient = withAuth(async (user, { tenant }, clientId: string, updateData: Partial<Omit<IClient, 'account_manager_full_name'>>): Promise<IClient> => {
   // Check permission for client updating
-  if (!await hasPermissionAsync(currentUser, 'client', 'update')) {
+  if (!await hasPermissionAsync(user, 'client', 'update')) {
     throw new Error('Permission denied: Cannot update clients. Please contact your administrator if you need additional access.');
   }
 
-  const {knex: db, tenant} = await createTenantKnex(currentUser.tenant);
-  if (!tenant) {
-    throw new Error('Tenant not found');
-  }
+  const { knex: db } = await createTenantKnex();
 
   try {
     console.log('Updating client in database:', clientId, updateData);
 
-    await withTransaction(db, async (trx: Knex.Transaction) => {
+    const updateResult = await withTransaction(db, async (trx: Knex.Transaction) => {
       // Build update object with explicit null handling
       const updateObject: any = {
         updated_at: new Date().toISOString()
@@ -99,7 +95,7 @@ export async function updateClient(clientId: string, updateData: Partial<Omit<IC
       const currentClient = await trx<IClient>('clients')
         .where({ client_id: clientId, tenant })
         .first();
-      
+
       if (!currentClient) {
         throw new Error('Client not found');
       }
@@ -108,19 +104,19 @@ export async function updateClient(clientId: string, updateData: Partial<Omit<IC
       if (updateData.properties) {
         const currentProperties = currentClient.properties || {};
         const newProperties = updateData.properties;
-        
+
         updateObject.properties = { ...currentProperties, ...newProperties };
-        
+
         // Sync website field with url if website is being updated
         if ('website' in newProperties) {
           updateObject.url = newProperties.website || '';
         }
       }
-      
+
       // Handle url field to sync with properties.website
       if (updateData.url !== undefined) {
         updateObject.url = updateData.url;
-        
+
         // Update properties.website to match url
         if (!updateObject.properties) {
           updateObject.properties = {
@@ -134,7 +130,7 @@ export async function updateClient(clientId: string, updateData: Partial<Omit<IC
           };
         }
       }
-      
+
       // Handle all other fields
       Object.entries(updateData).forEach(([key, value]) => {
         // Exclude properties, url, tax_region, account_manager_id, logoUrl (computed field), location fields, and partition keys (tenant, client_id)
@@ -152,7 +148,7 @@ export async function updateClient(clientId: string, updateData: Partial<Omit<IC
       if (!updateData.hasOwnProperty('billing_email')) {
         updateObject.billing_email = null;
       }
-      
+
       if (updateData.hasOwnProperty('account_manager_id')) {
           updateObject.account_manager_id = updateData.account_manager_id === '' ? null : updateData.account_manager_id;
       }
@@ -160,9 +156,21 @@ export async function updateClient(clientId: string, updateData: Partial<Omit<IC
       console.log('Final updateObject being sent to database:', JSON.stringify(updateObject, null, 2));
       console.log('Update contains is_inactive:', 'is_inactive' in updateObject, 'value:', updateObject.is_inactive);
 
-      await trx('clients')
+      const [updatedClient] = await trx<IClient>('clients')
         .where({ client_id: clientId, tenant })
-        .update(updateObject);
+        .update(updateObject)
+        .returning('*');
+
+      if (!updatedClient) {
+        throw new Error('Failed to fetch updated client');
+      }
+
+      return {
+        before: currentClient,
+        after: updatedClient,
+        updatedFieldKeys: Object.keys(updateObject),
+        occurredAt: updateObject.updated_at,
+      };
     });
 
     // Email suffix functionality removed for security
@@ -173,39 +181,129 @@ export async function updateClient(clientId: string, updateData: Partial<Omit<IC
         throw new Error('Failed to fetch updated client data');
     }
 
+    const occurredAt = updateResult.occurredAt ?? updatedClientWithLogo.updated_at ?? new Date().toISOString();
+    const actor = maybeUserActor(user);
+
+    const previousLifecycleStatus = (updateResult.before as any)?.properties?.status;
+    const newLifecycleStatus = (updateResult.after as any)?.properties?.status;
+    if (
+      typeof previousLifecycleStatus === 'string' &&
+      typeof newLifecycleStatus === 'string' &&
+      previousLifecycleStatus &&
+      newLifecycleStatus &&
+      previousLifecycleStatus !== newLifecycleStatus
+    ) {
+      await publishWorkflowEvent({
+        eventType: 'CLIENT_STATUS_CHANGED',
+        payload: buildClientStatusChangedPayload({
+          clientId,
+          previousStatus: previousLifecycleStatus,
+          newStatus: newLifecycleStatus,
+          changedAt: occurredAt,
+        }),
+        ctx: { tenantId: tenant, occurredAt, actor },
+        idempotencyKey: `client_status_changed:${clientId}:${occurredAt}`,
+      });
+    }
+
+    const previousOwnerUserId = (updateResult.before as any)?.account_manager_id;
+    const newOwnerUserId = (updateResult.after as any)?.account_manager_id;
+    if (previousOwnerUserId !== newOwnerUserId && typeof newOwnerUserId === 'string' && newOwnerUserId) {
+      await publishWorkflowEvent({
+        eventType: 'CLIENT_OWNER_ASSIGNED',
+        payload: buildClientOwnerAssignedPayload({
+          clientId,
+          previousOwnerUserId: typeof previousOwnerUserId === 'string' ? previousOwnerUserId : undefined,
+          newOwnerUserId,
+          assignedByUserId: user.user_id,
+          assignedAt: occurredAt,
+        }),
+        ctx: { tenantId: tenant, occurredAt, actor },
+        idempotencyKey: `client_owner_assigned:${clientId}:${occurredAt}`,
+      });
+    }
+
+    const wasInactive = Boolean((updateResult.before as any)?.is_inactive);
+    const isInactive = Boolean((updateResult.after as any)?.is_inactive);
+    if (!wasInactive && isInactive) {
+      await publishWorkflowEvent({
+        eventType: 'CLIENT_ARCHIVED',
+        payload: buildClientArchivedPayload({
+          clientId,
+          archivedByUserId: user.user_id,
+          archivedAt: occurredAt,
+        }),
+        ctx: { tenantId: tenant, occurredAt, actor },
+        idempotencyKey: `client_archived:${clientId}:${occurredAt}`,
+      });
+    }
+
+    const updatedPayload = buildClientUpdatedPayload({
+      clientId,
+      before: updateResult.before as any,
+      after: updateResult.after as any,
+      updatedFieldKeys: updateResult.updatedFieldKeys ?? [],
+      updatedAt: occurredAt,
+    });
+
+    const updatedFields = (updatedPayload as any).updatedFields;
+    const changes = (updatedPayload as any).changes;
+    if ((Array.isArray(updatedFields) && updatedFields.length) || (changes && Object.keys(changes).length)) {
+      await publishWorkflowEvent({
+        eventType: 'CLIENT_UPDATED',
+        payload: updatedPayload,
+        ctx: { tenantId: tenant, occurredAt, actor },
+        idempotencyKey: `client_updated:${clientId}:${occurredAt}`,
+      });
+    }
+
+    const previousBillingContactId = (updateResult.before as any)?.billing_contact_id;
+    const newBillingContactId = (updateResult.after as any)?.billing_contact_id;
+    if (
+      previousBillingContactId !== newBillingContactId &&
+      typeof newBillingContactId === 'string' &&
+      newBillingContactId
+    ) {
+      await publishWorkflowEvent({
+        eventType: 'CONTACT_PRIMARY_SET',
+        payload: buildContactPrimarySetPayload({
+          clientId,
+          contactId: newBillingContactId,
+          previousPrimaryContactId:
+            typeof previousBillingContactId === 'string' && previousBillingContactId ? previousBillingContactId : undefined,
+          setByUserId: user.user_id,
+          setAt: occurredAt,
+        }),
+        ctx: { tenantId: tenant, occurredAt, actor },
+        idempotencyKey: `contact_primary_set:${clientId}:${newBillingContactId}:${occurredAt}`,
+      });
+    }
+
     console.log('Updated client data:', updatedClientWithLogo);
     return updatedClientWithLogo;
   } catch (error) {
     console.error('Error updating client:', error);
     throw new Error('Failed to update client');
   }
-}
+});
 
-export async function createClient(client: Omit<IClient, 'client_id' | 'created_at' | 'updated_at' | 'account_manager_full_name'>): Promise<{ success: true; data: IClient } | { success: false; error: string }> {
-  const currentUser = await getCurrentUserAsync();
-  if (!currentUser) {
-    throw new Error('No authenticated user found');
-  }
-
+export const createClient = withAuth(async (user, { tenant }, client: Omit<IClient, 'client_id' | 'created_at' | 'updated_at' | 'account_manager_full_name'>): Promise<{ success: true; data: IClient } | { success: false; error: string }> => {
   // Check permission for client creation
-  if (!await hasPermissionAsync(currentUser, 'client', 'create')) {
+  if (!await hasPermissionAsync(user, 'client', 'create')) {
     throw new Error('Permission denied: Cannot create clients');
   }
 
-  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
-  if (!tenant) {
-    throw new Error('Tenant not found');
-  }
+  const { knex } = await createTenantKnex();
 
   try {
     // Ensure website field is synchronized between properties.website and url
     const clientData = { ...client };
-    
+
     // If properties.website exists but url doesn't, sync url from properties.website
     if (clientData.properties?.website && !clientData.url) {
       clientData.url = clientData.properties.website;
     }
-    
+
     // If url exists but properties.website doesn't, sync properties.website from url
     if (clientData.url && (!clientData.properties || !clientData.properties.website)) {
       if (!clientData.properties) {
@@ -223,7 +321,7 @@ export async function createClient(client: Omit<IClient, 'client_id' | 'created_
           updated_at: new Date().toISOString()
         })
         .returning('*');
-        
+
       return created;
     });
 
@@ -236,10 +334,31 @@ export async function createClient(client: Omit<IClient, 'client_id' | 'created_
 
     // Email suffix functionality removed for security
 
+    const createdAt = createdClient.created_at ?? new Date().toISOString();
+    const status =
+      (createdClient as any)?.properties?.status ??
+      (createdClient.is_inactive ? 'inactive' : 'active');
+    await publishWorkflowEvent({
+      eventType: 'CLIENT_CREATED',
+      payload: buildClientCreatedPayload({
+        clientId: createdClient.client_id,
+        clientName: createdClient.client_name,
+        createdByUserId: user.user_id,
+        createdAt,
+        status,
+      }),
+      ctx: {
+        tenantId: tenant,
+        occurredAt: createdAt,
+        actor: maybeUserActor(user),
+      },
+      idempotencyKey: `client_created:${createdClient.client_id}`,
+    });
+
     return { success: true, data: createdClient };
   } catch (error: any) {
     console.error('Error creating client:', error);
-    
+
     // Handle specific database constraint violations
     if (error.code === '23505') { // PostgreSQL unique constraint violation
       if (error.constraint && error.constraint.includes('clients_tenant_client_name_unique')) {
@@ -248,26 +367,26 @@ export async function createClient(client: Omit<IClient, 'client_id' | 'created_
         return { success: false, error: 'A client with these details already exists. Please check the client name.' };
       }
     }
-    
+
     // Handle other database errors
     if (error.code === '23514') { // Check constraint violation
       return { success: false, error: 'Invalid data provided. Please check all fields and try again.' };
     }
-    
+
     if (error.code === '23503') { // Foreign key constraint violation
       return { success: false, error: 'Referenced data not found. Please check account manager selection.' };
     }
-    
-    
+
+
     // Re-throw system errors (these should still be 500)
     if (error.message && !error.code) {
       throw error;
     }
-    
+
     // Default fallback for system errors
     throw new Error('Failed to create client. Please try again.');
   }
-}
+});
 
 // Pagination interface
 export interface ClientPaginationParams {
@@ -302,17 +421,9 @@ export interface BillingCycleDateRange {
   to?: string;
 }
 
-export async function getAllClientsPaginated(params: ClientPaginationParams = {}): Promise<PaginatedClientsResponse> {
-  const currentUser = await getCurrentUserAsync();
-  if (!currentUser) {
-    throw new Error('No authenticated user found');
-  }
-  if (!currentUser.tenant) {
-    throw new Error('Tenant not found');
-  }
-
+export const getAllClientsPaginated = withAuth(async (user, { tenant }, params: ClientPaginationParams = {}): Promise<PaginatedClientsResponse> => {
   // Check permission for client reading (in MSP, clients are managed via 'client' resource)
-  if (!await hasPermissionAsync(currentUser, 'client', 'read')) {
+  if (!await hasPermissionAsync(user, 'client', 'read')) {
     throw new Error('Permission denied: Cannot read clients');
   }
 
@@ -329,10 +440,7 @@ export async function getAllClientsPaginated(params: ClientPaginationParams = {}
     sortDirection = 'asc'
   } = params;
 
-  const {knex: db, tenant} = await createTenantKnex(currentUser.tenant);
-  if (!tenant) {
-    throw new Error('Tenant not found');
-  }
+  const { knex: db } = await createTenantKnex();
 
   try {
     const offset = (page - 1) * pageSize;
@@ -455,11 +563,11 @@ export async function getAllClientsPaginated(params: ClientPaginationParams = {}
 
     // Process clients to add logoUrl if requested
     let clientsWithLogos = result.clients;
-    
+
     if (loadLogos && clientsWithLogos.length > 0) {
       const clientIds = clientsWithLogos.map(c => c.client_id);
       const logoUrlsMap = await getClientLogoUrlsBatchAsync(clientIds, tenant);
-      
+
       clientsWithLogos = clientsWithLogos.map((client) => ({
         ...client,
         properties: client.properties || {},
@@ -485,17 +593,14 @@ export async function getAllClientsPaginated(params: ClientPaginationParams = {}
     console.error('Error fetching paginated clients:', error);
     throw error;
   }
-}
+});
 
-export async function getClientsWithBillingCycleRangePaginated(
+export const getClientsWithBillingCycleRangePaginated = withAuth(async (
+  user,
+  { tenant },
   params: ClientPaginationParams & { dateRange?: BillingCycleDateRange }
-): Promise<PaginatedClientsResponse> {
-  const currentUser = await getCurrentUserAsync();
-  if (!currentUser) {
-    throw new Error('No authenticated user found');
-  }
-
-  if (!await hasPermissionAsync(currentUser, 'client', 'read')) {
+): Promise<PaginatedClientsResponse> => {
+  if (!await hasPermissionAsync(user, 'client', 'read')) {
     throw new Error('Permission denied: Cannot read clients');
   }
 
@@ -513,10 +618,7 @@ export async function getClientsWithBillingCycleRangePaginated(
     dateRange
   } = params;
 
-  const {knex: db, tenant} = await createTenantKnex(currentUser.tenant);
-  if (!tenant) {
-    throw new Error('Tenant not found');
-  }
+  const { knex: db } = await createTenantKnex();
 
   try {
     const offset = (page - 1) * pageSize;
@@ -673,25 +775,15 @@ export async function getClientsWithBillingCycleRangePaginated(
     console.error('Error fetching paginated clients with billing cycles:', error);
     throw error;
   }
-}
+});
 
-export async function getAllClients(includeInactive: boolean = true): Promise<IClient[]> {
-  const currentUser = await getCurrentUserAsync();
-  if (!currentUser) {
-    throw new Error('No authenticated user found');
-  }
-
+export const getAllClients = withAuth(async (user, { tenant }, includeInactive: boolean = true): Promise<IClient[]> => {
   // Check permission for client reading (in MSP, clients are managed via 'client' resource)
-  if (!await hasPermissionAsync(currentUser, 'client', 'read')) {
+  if (!await hasPermissionAsync(user, 'client', 'read')) {
     throw new Error('Permission denied: Cannot read clients');
   }
 
-  const tenant = currentUser.tenant;
-  if (!tenant) {
-    throw new Error('Tenant not found');
-  }
-
-  const { knex: db } = await createTenantKnex(tenant);
+  const { knex: db } = await createTenantKnex();
 
   const clients = await withTransaction(db, async (trx) => {
     const query = trx('clients')
@@ -720,30 +812,22 @@ export async function getAllClients(includeInactive: boolean = true): Promise<IC
   }));
 
   return clientsWithLogos as IClient[];
-}
+});
 
-export async function deleteClient(clientId: string): Promise<{
+export const deleteClient = withAuth(async (user, { tenant }, clientId: string): Promise<{
   success: boolean;
   code?: string;
   message?: string;
   dependencies?: string[];
   counts?: Record<string, number>;
-}> {
-  const currentUser = await getCurrentUserAsync();
-  if (!currentUser) {
-    throw new Error('No authenticated user found');
-  }
-
+}> => {
   // Check permission for client deletion
-  if (!await hasPermissionAsync(currentUser, 'client', 'delete')) {
+  if (!await hasPermissionAsync(user, 'client', 'delete')) {
     throw new Error('Permission denied: Cannot delete clients');
   }
 
   try {
-    const {knex: db, tenant} = await createTenantKnex(currentUser.tenant);
-    if (!tenant) {
-      throw new Error('Tenant not found');
-    }
+    const { knex: db } = await createTenantKnex();
 
     // First verify the client exists and belongs to this tenant
     const client = await withTransaction(db, async (trx: Knex.Transaction) => {
@@ -751,7 +835,7 @@ export async function deleteClient(clientId: string): Promise<{
         .where({ client_id: clientId, tenant })
         .first();
     });
-    
+
     if (!client) {
       return {
         success: false,
@@ -762,15 +846,15 @@ export async function deleteClient(clientId: string): Promise<{
     // Check if this is the tenant's default client
     const isDefaultClient = await withTransaction(db, async (trx: Knex.Transaction) => {
       const tenantClient = await trx('tenant_companies')
-        .where({ 
-          client_id: clientId, 
+        .where({
+          client_id: clientId,
           tenant,
-          is_default: true 
+          is_default: true
         })
         .first();
       return !!tenantClient;
     });
-    
+
     if (isDefaultClient) {
       return {
         success: false,
@@ -1034,23 +1118,15 @@ export async function deleteClient(clientId: string): Promise<{
       message: error instanceof Error ? error.message : 'Failed to delete client'
     };
   }
-}
+});
 
-export async function exportClientsToCSV(clients: IClient[]): Promise<string> {
-  const currentUser = await getCurrentUserAsync();
-  if (!currentUser) {
-    throw new Error('No authenticated user found');
-  }
-
+export const exportClientsToCSV = withAuth(async (user, { tenant }, clients: IClient[]): Promise<string> => {
   // Check permission for client reading (export is a read operation)
-  if (!await hasPermissionAsync(currentUser, 'client', 'read')) {
+  if (!await hasPermissionAsync(user, 'client', 'read')) {
     throw new Error('Permission denied: Cannot export clients');
   }
 
-  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
-  if (!tenant) {
-    throw new Error('Tenant not found');
-  }
+  const { knex } = await createTenantKnex();
 
   const exportData = await withTransaction(knex, async (trx: Knex.Transaction) => {
     // Fetch location data for all clients
@@ -1069,7 +1145,7 @@ export async function exportClientsToCSV(clients: IClient[]): Promise<string> {
     // Fetch tags for all clients
     const { findTagsByEntityIds } = await import('@alga-psa/tags/actions');
     const tags = await findTagsByEntityIds(clientIds, 'client');
-    
+
     // Create a map of client_id to tags
     const tagMap = new Map<string, string[]>();
     tags.forEach(tag => {
@@ -1084,7 +1160,7 @@ export async function exportClientsToCSV(clients: IClient[]): Promise<string> {
       const location = locationMap.get(client.client_id) || {};
       const clientTags = tagMap.get(client.client_id) || [];
       const tagNames = clientTags.join(', ');
-      
+
       return {
         client_name: client.client_name,
         website: client.url || '',
@@ -1125,7 +1201,7 @@ export async function exportClientsToCSV(clients: IClient[]): Promise<string> {
   ];
 
   return unparseCSV(exportData, fields);
-}
+});
 
 export async function generateClientCSVTemplate(): Promise<string> {
   // Create template with Alice in Wonderland themed sample data
@@ -1170,26 +1246,18 @@ export async function generateClientCSVTemplate(): Promise<string> {
   return unparseCSV(templateData, fields);
 }
 
-export async function getAllClientIds(params: {
+export const getAllClientIds = withAuth(async (user, { tenant }, params: {
   statusFilter?: 'all' | 'active' | 'inactive';
   searchTerm?: string;
   clientTypeFilter?: 'all' | 'company' | 'individual';
   selectedTags?: string[];
-} = {}): Promise<string[]> {
-  const currentUser = await getCurrentUserAsync();
-  if (!currentUser) {
-    throw new Error('No authenticated user found');
-  }
-
+} = {}): Promise<string[]> => {
   // Check permission for client reading (in MSP, clients are managed via 'client' resource)
-  if (!await hasPermissionAsync(currentUser, 'client', 'read')) {
+  if (!await hasPermissionAsync(user, 'client', 'read')) {
     throw new Error('Permission denied: Cannot read clients');
   }
 
-  const {knex: db, tenant} = await createTenantKnex(currentUser.tenant);
-  if (!tenant) {
-    throw new Error('Tenant not found');
-  }
+  const { knex: db } = await createTenantKnex();
 
   const {
     statusFilter = 'all',
@@ -1259,26 +1327,19 @@ export async function getAllClientIds(params: {
     console.error('Error fetching all client IDs:', error);
     throw error;
   }
-}
+});
 
-export async function checkExistingClients(
+export const checkExistingClients = withAuth(async (
+  user,
+  { tenant },
   clientNames: string[]
-): Promise<IClient[]> {
-  const currentUser = await getCurrentUserAsync();
-  if (!currentUser) {
-    throw new Error('No authenticated user found');
-  }
-
+): Promise<IClient[]> => {
   // Check permission for client reading (in MSP, clients are managed via 'client' resource)
-  if (!await hasPermissionAsync(currentUser, 'client', 'read')) {
+  if (!await hasPermissionAsync(user, 'client', 'read')) {
     throw new Error('Permission denied: Cannot read clients');
   }
 
-  const {knex: db, tenant} = await createTenantKnex(currentUser.tenant);
-
-  if (!tenant) {
-    throw new Error('Tenant not found');
-  }
+  const { knex: db } = await createTenantKnex();
 
   const existingClients = await withTransaction(db, async (trx: Knex.Transaction) => {
     return await trx('clients')
@@ -1288,7 +1349,7 @@ export async function checkExistingClients(
   });
 
   return existingClients;
-}
+});
 
 export interface ImportClientResult {
   success: boolean;
@@ -1297,30 +1358,23 @@ export interface ImportClientResult {
   originalData: Record<string, any>;
 }
 
-export async function importClientsFromCSV(
+export const importClientsFromCSV = withAuth(async (
+  user,
+  { tenant },
   clientsData: Array<Record<string, any>>,
   updateExisting: boolean = false
-): Promise<ImportClientResult[]> {
-  const currentUser = await getCurrentUserAsync();
-  if (!currentUser) {
-    throw new Error('No authenticated user found');
-  }
-
+): Promise<ImportClientResult[]> => {
   // Check permissions for both create and update operations since import can do both
-  if (!await hasPermissionAsync(currentUser, 'client', 'create')) {
+  if (!await hasPermissionAsync(user, 'client', 'create')) {
     throw new Error('Permission denied: Cannot create clients');
   }
 
-  if (updateExisting && !await hasPermissionAsync(currentUser, 'client', 'update')) {
+  if (updateExisting && !await hasPermissionAsync(user, 'client', 'update')) {
     throw new Error('Permission denied: Cannot update clients');
   }
 
   const results: ImportClientResult[] = [];
-  const {knex: db, tenant} = await createTenantKnex(currentUser.tenant);
-
-  if (!tenant) {
-    throw new Error('Tenant not found');
-  }
+  const { knex: db } = await createTenantKnex();
 
   // Start a transaction to ensure all operations succeed or fail together
   await withTransaction(db, async (trx: Knex.Transaction) => {
@@ -1371,7 +1425,7 @@ export async function importClientsFromCSV(
           // Create new client with synchronized website fields
           const properties = clientData.properties ? { ...clientData.properties } : {};
           const url = clientData.url || '';
-          
+
           // Sync website and url fields
           if (properties.website && !url) {
             // If only properties.website exists, use it for url
@@ -1380,7 +1434,7 @@ export async function importClientsFromCSV(
             // If only url exists, use it for properties.website
             properties.website = url;
           }
-          
+
           const clientToCreate = {
             client_name: clientData.client_name || clientData.client_name,
             url: clientData.website || clientData.url || '',
@@ -1409,7 +1463,7 @@ export async function importClientsFromCSV(
             .returning('*');
 
           // Create default location if any location data exists in CSV
-          if (clientData.email || clientData.phone_number || clientData.address_line1 || 
+          if (clientData.email || clientData.phone_number || clientData.address_line1 ||
               clientData.city || clientData.location_name) {
             try {
               await trx('client_locations').insert({
@@ -1448,7 +1502,7 @@ export async function importClientsFromCSV(
                   tag_text: tagText,
                   tagged_id: savedClient.client_id,
                   tagged_type: 'client',
-                  created_by: currentUser.user_id
+                  created_by: user.user_id
                 });
               }
             } catch (tagError) {
@@ -1476,30 +1530,22 @@ export async function importClientsFromCSV(
   });
 
   return results;
-}
+});
 
-export async function uploadClientLogo(
+export const uploadClientLogo = withAuth(async (
+  user,
+  { tenant },
   clientId: string,
   formData: FormData
-): Promise<{ success: boolean; message?: string; logoUrl?: string | null }> {
-  const currentUser = await getCurrentUserAsync();
-  if (!currentUser) {
-    return { success: false, message: 'User not authenticated' };
-  }
-
+): Promise<{ success: boolean; message?: string; logoUrl?: string | null }> => {
   const file = formData.get('logo') as File;
   if (!file) {
     return { success: false, message: 'No logo file provided' };
   }
 
   // Check permission for client updating (logo upload is an update operation)
-  if (!await hasPermissionAsync(currentUser, 'client', 'update')) {
+  if (!await hasPermissionAsync(user, 'client', 'update')) {
     return { success: false, message: 'Permission denied: Cannot update client logo' };
-  }
-
-  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
-  if (!tenant) {
-    return { success: false, message: 'Tenant not found' };
   }
 
   try {
@@ -1507,7 +1553,7 @@ export async function uploadClientLogo(
       'client',
       clientId,
       file,
-      currentUser.user_id,
+      user.user_id,
       tenant,
       undefined,
       true
@@ -1532,24 +1578,16 @@ export async function uploadClientLogo(
     const message = error instanceof Error ? error.message : 'Failed to upload client logo';
     return { success: false, message };
   }
-}
+});
 
-export async function deleteClientLogo(
+export const deleteClientLogo = withAuth(async (
+  user,
+  { tenant },
   clientId: string
-): Promise<{ success: boolean; message?: string }> {
-  const currentUser = await getCurrentUserAsync();
-  if (!currentUser) {
-    return { success: false, message: 'User not authenticated' };
-  }
-
+): Promise<{ success: boolean; message?: string }> => {
   // Check permission for client deletion (logo deletion is a delete operation)
-  if (!await hasPermissionAsync(currentUser, 'client', 'delete')) {
+  if (!await hasPermissionAsync(user, 'client', 'delete')) {
     return { success: false, message: 'Permission denied: Cannot delete client logo' };
-  }
-
-  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
-  if (!tenant) {
-    return { success: false, message: 'Tenant not found' };
   }
 
   try {
@@ -1557,7 +1595,7 @@ export async function deleteClientLogo(
     const result = await deleteEntityImage(
       'client',
       clientId,
-      currentUser.user_id,
+      user.user_id,
       tenant
     );
     console.log(`[deleteClientLogo] deleteEntityImage result:`, result);
@@ -1581,28 +1619,22 @@ export async function deleteClientLogo(
     const message = error instanceof Error ? error.message : 'Failed to delete client logo';
     return { success: false, message };
   }
-}
+});
 
 /**
  * Deactivate all active contacts for a client
  */
-export async function deactivateClientContacts(
+export const deactivateClientContacts = withAuth(async (
+  user,
+  { tenant },
   clientId: string
-): Promise<{ success: boolean; contactsDeactivated: number; message?: string }> {
-  const currentUser = await getCurrentUserAsync();
-  if (!currentUser) {
-    return { success: false, contactsDeactivated: 0, message: 'User not authenticated' };
-  }
-
+): Promise<{ success: boolean; contactsDeactivated: number; message?: string }> => {
   // Check permission for contact updating
-  if (!await hasPermissionAsync(currentUser, 'contact', 'update')) {
+  if (!await hasPermissionAsync(user, 'contact', 'update')) {
     return { success: false, contactsDeactivated: 0, message: 'Permission denied: Cannot update contacts. Please contact your administrator if you need additional access.' };
   }
 
-  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
-  if (!tenant) {
-    return { success: false, contactsDeactivated: 0, message: 'Tenant not found' };
-  }
+  const { knex } = await createTenantKnex();
 
   try {
     const result = await withTransaction(knex, async (trx: Knex.Transaction) => {
@@ -1640,37 +1672,32 @@ export async function deactivateClientContacts(
     const message = error instanceof Error ? error.message : 'Failed to deactivate client contacts';
     return { success: false, contactsDeactivated: 0, message };
   }
-}
+});
 
 /**
  * Mark a client as inactive and optionally deactivate all contacts atomically
  * This ensures both operations succeed or fail together
  */
-export async function markClientInactiveWithContacts(
+export const markClientInactiveWithContacts = withAuth(async (
+  user,
+  { tenant },
   clientId: string,
   deactivateContacts: boolean = true
-): Promise<{ success: boolean; contactsDeactivated: number; message?: string }> {
-  const currentUser = await getCurrentUserAsync();
-  if (!currentUser) {
-    return { success: false, contactsDeactivated: 0, message: 'User not authenticated' };
-  }
-
+): Promise<{ success: boolean; contactsDeactivated: number; message?: string }> => {
   // Check permission for client updating
-  if (!await hasPermissionAsync(currentUser, 'client', 'update')) {
+  if (!await hasPermissionAsync(user, 'client', 'update')) {
     return { success: false, contactsDeactivated: 0, message: 'Permission denied: Cannot update clients. Please contact your administrator if you need additional access.' };
   }
 
   // If deactivating contacts, also check contact permission
-  if (deactivateContacts && !await hasPermissionAsync(currentUser, 'contact', 'update')) {
+  if (deactivateContacts && !await hasPermissionAsync(user, 'contact', 'update')) {
     return { success: false, contactsDeactivated: 0, message: 'Permission denied: Cannot update contacts. Please contact your administrator if you need additional access.' };
   }
 
-  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
-  if (!tenant) {
-    return { success: false, contactsDeactivated: 0, message: 'Tenant not found' };
-  }
+  const { knex } = await createTenantKnex();
 
   try {
+    const occurredAt = new Date().toISOString();
     const result = await withTransaction(knex, async (trx: Knex.Transaction) => {
       let contactsDeactivated = 0;
 
@@ -1701,7 +1728,7 @@ export async function markClientInactiveWithContacts(
       // Mark the client as inactive
       await trx('clients')
         .where({ client_id: clientId, tenant })
-        .update({ is_inactive: true, updated_at: new Date().toISOString() });
+        .update({ is_inactive: true, updated_at: occurredAt });
 
       return { contactsDeactivated };
     });
@@ -1709,41 +1736,46 @@ export async function markClientInactiveWithContacts(
     revalidatePath(`/msp/clients/${clientId}`);
     revalidatePath(`/msp/contacts`);
 
+    await publishWorkflowEvent({
+      eventType: 'CLIENT_ARCHIVED',
+      payload: buildClientArchivedPayload({
+        clientId,
+        archivedByUserId: user.user_id,
+        archivedAt: occurredAt,
+      }),
+      ctx: { tenantId: tenant, occurredAt, actor: maybeUserActor(user) },
+      idempotencyKey: `client_archived:${clientId}:${occurredAt}`,
+    });
+
     return { success: true, contactsDeactivated: result.contactsDeactivated };
   } catch (error) {
     console.error('Error marking client and contacts as inactive:', error);
     const message = error instanceof Error ? error.message : 'Failed to mark client as inactive';
     return { success: false, contactsDeactivated: 0, message };
   }
-}
+});
 
 /**
  * Mark a client as active and optionally reactivate all contacts atomically
  * This ensures both operations succeed or fail together
  */
-export async function markClientActiveWithContacts(
+export const markClientActiveWithContacts = withAuth(async (
+  user,
+  { tenant },
   clientId: string,
   reactivateContacts: boolean = false
-): Promise<{ success: boolean; contactsReactivated: number; message?: string }> {
-  const currentUser = await getCurrentUserAsync();
-  if (!currentUser) {
-    return { success: false, contactsReactivated: 0, message: 'User not authenticated' };
-  }
-
+): Promise<{ success: boolean; contactsReactivated: number; message?: string }> => {
   // Check permission for client updating
-  if (!await hasPermissionAsync(currentUser, 'client', 'update')) {
+  if (!await hasPermissionAsync(user, 'client', 'update')) {
     return { success: false, contactsReactivated: 0, message: 'Permission denied: Cannot update clients. Please contact your administrator if you need additional access.' };
   }
 
   // If reactivating contacts, also check contact permission
-  if (reactivateContacts && !await hasPermissionAsync(currentUser, 'contact', 'update')) {
+  if (reactivateContacts && !await hasPermissionAsync(user, 'contact', 'update')) {
     return { success: false, contactsReactivated: 0, message: 'Permission denied: Cannot update contacts. Please contact your administrator if you need additional access.' };
   }
 
-  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
-  if (!tenant) {
-    return { success: false, contactsReactivated: 0, message: 'Tenant not found' };
-  }
+  const { knex } = await createTenantKnex();
 
   try {
     const result = await withTransaction(knex, async (trx: Knex.Transaction) => {
@@ -1790,28 +1822,22 @@ export async function markClientActiveWithContacts(
     const message = error instanceof Error ? error.message : 'Failed to mark client as active';
     return { success: false, contactsReactivated: 0, message };
   }
-}
+});
 
 /**
  * Reactivate all inactive contacts for a client
  */
-export async function reactivateClientContacts(
+export const reactivateClientContacts = withAuth(async (
+  user,
+  { tenant },
   clientId: string
-): Promise<{ success: boolean; contactsReactivated: number; message?: string }> {
-  const currentUser = await getCurrentUserAsync();
-  if (!currentUser) {
-    return { success: false, contactsReactivated: 0, message: 'User not authenticated' };
-  }
-
+): Promise<{ success: boolean; contactsReactivated: number; message?: string }> => {
   // Check permission for contact updating
-  if (!await hasPermissionAsync(currentUser, 'contact', 'update')) {
+  if (!await hasPermissionAsync(user, 'contact', 'update')) {
     return { success: false, contactsReactivated: 0, message: 'Permission denied: Cannot update contacts' };
   }
 
-  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
-  if (!tenant) {
-    return { success: false, contactsReactivated: 0, message: 'Tenant not found' };
-  }
+  const { knex } = await createTenantKnex();
 
   try {
     const result = await withTransaction(knex, async (trx: Knex.Transaction) => {
@@ -1849,4 +1875,4 @@ export async function reactivateClientContacts(
     const message = error instanceof Error ? error.message : 'Failed to reactivate client contacts';
     return { success: false, contactsReactivated: 0, message };
   }
-}
+});

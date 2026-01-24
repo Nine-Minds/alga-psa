@@ -12,13 +12,13 @@ dotenv.config();
 
 import { getWorkflowRuntime, getActionRegistry } from '@shared/workflow/core/index.js';
 import { initializeWorkflowRuntimeV2 } from '@shared/workflow/runtime';
-import { WorkflowRuntimeV2Worker } from './v2/WorkflowRuntimeV2Worker.js';
+import { WorkflowRuntimeV2Worker } from '@shared/workflow/workers';
 import { WorkflowRuntimeV2EventStreamWorker } from './v2/WorkflowRuntimeV2EventStreamWorker.js';
 import { WorkflowWorker } from './WorkflowWorker.js';
 import { WorkerServer } from './server.js';
 import logger from '@alga-psa/core/logger';
 import { initializeServerWorkflows } from '@shared/workflow/index.js';
-import { registerAccountingExportWorkflowActions } from 'server/src/lib/workflow/registerAccountingExportActions';
+import { registerAccountingExportWorkflowActions } from './init/registerAccountingExportActions.js';
 import { updateSystemWorkflowsFromAssets } from './init/updateWorkflows.js';
 import { registerEmailAttachmentActions } from './actions/registerEmailAttachmentActions.js';
 

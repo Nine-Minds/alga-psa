@@ -3,6 +3,7 @@
 import type { IService } from '@alga-psa/types';
 import { createTenantKnex, withTransaction } from '@alga-psa/db';
 import type { Knex } from 'knex';
+import { withAuth } from '@alga-psa/auth';
 
 export interface PaginatedServicesResponse {
   services: IService[];
@@ -11,11 +12,8 @@ export interface PaginatedServicesResponse {
   pageSize: number;
 }
 
-export async function getServices(page: number = 1, pageSize: number = 999): Promise<PaginatedServicesResponse> {
-  const { knex: db, tenant } = await createTenantKnex();
-  if (!tenant) {
-    throw new Error('Tenant not found');
-  }
+export const getServices = withAuth(async (_user, { tenant }, page: number = 1, pageSize: number = 999): Promise<PaginatedServicesResponse> => {
+  const { knex: db } = await createTenantKnex();
 
   return withTransaction(db, async (trx: Knex.Transaction) => {
     const offset = (page - 1) * pageSize;
@@ -34,5 +32,4 @@ export async function getServices(page: number = 1, pageSize: number = 999): Pro
 
     return { services, totalCount, page, pageSize };
   });
-}
-
+});

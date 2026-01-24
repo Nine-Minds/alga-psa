@@ -2,24 +2,24 @@
 
 import { createTenantKnex } from '@alga-psa/db';
 import { withTransaction } from '@alga-psa/db';
+import { withAuth } from '@alga-psa/auth';
 import { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 import type { IDocumentContent, UpdateDocumentContentInput } from '@alga-psa/types';
 import { addDocument } from './documentActions';
 
 // Create a new content document
-export async function createContentDocument(
+export const createContentDocument = withAuth(async (
+    _user,
+    { tenant },
     name: string,
     userId: string,
     initialContent: string = '',
     entityId?: string,
     entityType?: 'ticket' | 'client' | 'contact' | 'asset'
-): Promise<{ document_id: string }> {
+): Promise<{ document_id: string }> => {
     try {
-        const { knex, tenant } = await createTenantKnex();
-        if (!tenant) {
-            throw new Error('No tenant found');
-        }
+        const { knex } = await createTenantKnex();
 
         // Create the document first
         const documentResult = await addDocument({
@@ -51,15 +51,16 @@ export async function createContentDocument(
         console.error('Error creating content document:', error);
         throw new Error('Failed to create content document');
     }
-}
+});
 
 // Get document content
-export async function getDocumentContent(documentId: string): Promise<IDocumentContent | null> {
+export const getDocumentContent = withAuth(async (
+    _user,
+    { tenant },
+    documentId: string
+): Promise<IDocumentContent | null> => {
     try {
-        const { knex, tenant } = await createTenantKnex();
-        if (!tenant) {
-            throw new Error('No tenant found');
-        }
+        const { knex } = await createTenantKnex();
 
         const content = await withTransaction(knex, async (trx: Knex.Transaction) => {
             return await trx('document_content')
@@ -72,15 +73,17 @@ export async function getDocumentContent(documentId: string): Promise<IDocumentC
         console.error('Error getting document content:', error);
         throw new Error('Failed to get document content');
     }
-}
+});
 
 // Update document content
-export async function updateDocumentContent(documentId: string, data: UpdateDocumentContentInput): Promise<void> {
+export const updateDocumentContent = withAuth(async (
+    _user,
+    { tenant },
+    documentId: string,
+    data: UpdateDocumentContentInput
+): Promise<void> => {
     try {
-        const { knex, tenant } = await createTenantKnex();
-        if (!tenant) {
-            throw new Error('No tenant found');
-        }
+        const { knex } = await createTenantKnex();
 
         await withTransaction(knex, async (trx: Knex.Transaction) => {
             const existingContent = await trx('document_content')
@@ -112,15 +115,16 @@ export async function updateDocumentContent(documentId: string, data: UpdateDocu
         console.error('Error updating document content:', error);
         throw new Error('Failed to update document content');
     }
-}
+});
 
 // Delete document content
-export async function deleteDocumentContent(documentId: string): Promise<void> {
+export const deleteDocumentContent = withAuth(async (
+    _user,
+    { tenant },
+    documentId: string
+): Promise<void> => {
     try {
-        const { knex, tenant } = await createTenantKnex();
-        if (!tenant) {
-            throw new Error('No tenant found');
-        }
+        const { knex } = await createTenantKnex();
 
         await withTransaction(knex, async (trx: Knex.Transaction) => {
             return await trx('document_content')
@@ -131,4 +135,4 @@ export async function deleteDocumentContent(documentId: string): Promise<void> {
         console.error('Error deleting document content:', error);
         throw new Error('Failed to delete document content');
     }
-}
+});

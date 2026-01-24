@@ -5,9 +5,8 @@ import type { Knex } from 'knex';
 import { z } from 'zod';
 
 import { createTenantKnex, runWithTenant } from '@alga-psa/db';
-import { getCurrentUser } from '@alga-psa/auth/getCurrentUser';
-import { hasPermission } from '@alga-psa/auth/lib/rbac';
-import type { IBoard, IPriority, IStatus } from '@alga-psa/types';
+import { withAuth, hasPermission } from '@alga-psa/auth';
+import type { IBoard, IPriority, IStatus, IUserWithRoles } from '@alga-psa/types';
 import { getAllBoards } from '@alga-psa/tickets/actions';
 import { getTicketStatuses } from '@alga-psa/reference-data/actions';
 import { getAllPriorities } from '@alga-psa/reference-data/actions';
@@ -130,38 +129,38 @@ export type SurveyTrigger = {
   updatedAt: Date;
 };
 
-export async function getSurveyTemplates(): Promise<SurveyTemplate[]> {
-  const { knex, tenantId } = await requireTenantDbContext();
+export const getSurveyTemplates = withAuth(async (_user, { tenant }): Promise<SurveyTemplate[]> => {
+  const { knex } = await createTenantKnex();
 
   const rows = await knex<TemplateRow>(SURVEY_TEMPLATE_TABLE)
-    .where({ tenant: tenantId })
+    .where({ tenant })
     .orderBy('template_name', 'asc');
 
   return rows.map(mapTemplateRow);
-}
+});
 
-export async function getSurveyTemplateById(templateId: string): Promise<SurveyTemplate | null> {
-  const { knex, tenantId } = await requireTenantDbContext();
+export const getSurveyTemplateById = withAuth(async (_user, { tenant }, templateId: string): Promise<SurveyTemplate | null> => {
+  const { knex } = await createTenantKnex();
 
   const row = await knex<TemplateRow>(SURVEY_TEMPLATE_TABLE)
-    .where({ tenant: tenantId, template_id: templateId })
+    .where({ tenant, template_id: templateId })
     .first();
 
   return row ? mapTemplateRow(row) : null;
-}
+});
 
-export async function createSurveyTemplate(input: CreateTemplateInput): Promise<SurveyTemplate> {
+export const createSurveyTemplate = withAuth(async (_user, { tenant }, input: CreateTemplateInput): Promise<SurveyTemplate> => {
   const parsed = baseTemplateSchema.parse(input);
-  const { knex, tenantId } = await requireTenantDbContext();
+  const { knex } = await createTenantKnex();
 
   const inserted = await withTransaction(knex, async (trx) => {
     if (parsed.isDefault) {
       await trx(SURVEY_TEMPLATE_TABLE)
-        .where({ tenant: tenantId })
+        .where({ tenant })
         .update({ is_default: false, updated_at: trx.fn.now() });
     }
 
-    const payload = buildTemplateInsertPayload(trx, tenantId, parsed);
+    const payload = buildTemplateInsertPayload(trx, tenant, parsed);
     const [row] = await trx<TemplateRow>(SURVEY_TEMPLATE_TABLE)
       .insert(payload)
       .returning('*');
@@ -174,15 +173,15 @@ export async function createSurveyTemplate(input: CreateTemplateInput): Promise<
   });
 
   return mapTemplateRow(inserted);
-}
+});
 
-export async function updateSurveyTemplate(templateId: string, input: UpdateTemplateInput): Promise<SurveyTemplate> {
+export const updateSurveyTemplate = withAuth(async (_user, { tenant }, templateId: string, input: UpdateTemplateInput): Promise<SurveyTemplate> => {
   const parsed = updateTemplateSchema.parse(input);
-  const { knex, tenantId } = await requireTenantDbContext();
+  const { knex } = await createTenantKnex();
 
   const updated = await withTransaction(knex, async (trx) => {
     const current = await trx<TemplateRow>(SURVEY_TEMPLATE_TABLE)
-      .where({ tenant: tenantId, template_id: templateId })
+      .where({ tenant, template_id: templateId })
       .first()
       .forUpdate();
 
@@ -192,17 +191,17 @@ export async function updateSurveyTemplate(templateId: string, input: UpdateTemp
 
     if (parsed.isDefault) {
       await trx(SURVEY_TEMPLATE_TABLE)
-        .where({ tenant: tenantId })
+        .where({ tenant })
         .update({ is_default: false, updated_at: trx.fn.now() });
     }
 
     const updatePayload = buildTemplateUpdatePayload(trx, parsed);
     await trx(SURVEY_TEMPLATE_TABLE)
-      .where({ tenant: tenantId, template_id: templateId })
+      .where({ tenant, template_id: templateId })
       .update(updatePayload);
 
     const refreshed = await trx<TemplateRow>(SURVEY_TEMPLATE_TABLE)
-      .where({ tenant: tenantId, template_id: templateId })
+      .where({ tenant, template_id: templateId })
       .first();
 
     if (!refreshed) {
@@ -213,29 +212,29 @@ export async function updateSurveyTemplate(templateId: string, input: UpdateTemp
   });
 
   return mapTemplateRow(updated);
-}
+});
 
-export async function deleteSurveyTemplate(templateId: string): Promise<void> {
-  const { knex, tenantId } = await requireTenantDbContext();
+export const deleteSurveyTemplate = withAuth(async (_user, { tenant }, templateId: string): Promise<void> => {
+  const { knex } = await createTenantKnex();
 
   const deleted = await knex(SURVEY_TEMPLATE_TABLE)
-    .where({ tenant: tenantId, template_id: templateId })
+    .where({ tenant, template_id: templateId })
     .del();
 
   if (deleted === 0) {
     throw new Error('Survey template not found');
   }
-}
+});
 
-export async function getSurveyTriggers(): Promise<SurveyTrigger[]> {
-  const { knex, tenantId } = await requireTenantDbContext();
+export const getSurveyTriggers = withAuth(async (_user, { tenant }): Promise<SurveyTrigger[]> => {
+  const { knex } = await createTenantKnex();
 
   const rows = await knex<TriggerRow>(SURVEY_TRIGGER_TABLE)
-    .where({ tenant: tenantId })
+    .where({ tenant })
     .orderBy('created_at', 'asc');
 
   return rows.map(mapTriggerRow);
-}
+});
 
 export async function getSurveyTriggersForTenant(
   tenantId: string,
@@ -251,17 +250,17 @@ export async function getSurveyTriggersForTenant(
   });
 }
 
-export async function createSurveyTrigger(input: CreateTriggerInput): Promise<SurveyTrigger> {
+export const createSurveyTrigger = withAuth(async (_user, { tenant }, input: CreateTriggerInput): Promise<SurveyTrigger> => {
   const parsed = baseTriggerSchema.parse(input);
-  const { knex, tenantId } = await requireTenantDbContext();
+  const { knex } = await createTenantKnex();
   const sanitisedConditions = sanitiseTriggerConditions(parsed.triggerType, parsed.triggerConditions);
 
   const row = await withTransaction(knex, async (trx) => {
-    await assertTemplateBelongsToTenant(trx, tenantId, parsed.templateId);
+    await assertTemplateBelongsToTenant(trx, tenant, parsed.templateId);
 
     const [created] = await trx<TriggerRow>(SURVEY_TRIGGER_TABLE)
       .insert({
-        tenant: tenantId,
+        tenant,
         template_id: parsed.templateId,
         trigger_type: parsed.triggerType,
         trigger_conditions: sanitisedConditions,
@@ -277,15 +276,15 @@ export async function createSurveyTrigger(input: CreateTriggerInput): Promise<Su
   });
 
   return mapTriggerRow(row);
-}
+});
 
-export async function updateSurveyTrigger(triggerId: string, input: UpdateTriggerInput): Promise<SurveyTrigger> {
+export const updateSurveyTrigger = withAuth(async (_user, { tenant }, triggerId: string, input: UpdateTriggerInput): Promise<SurveyTrigger> => {
   const parsed = updateTriggerSchema.parse({ ...input, triggerId });
-  const { knex, tenantId } = await requireTenantDbContext();
+  const { knex } = await createTenantKnex();
 
   const updated = await withTransaction(knex, async (trx) => {
     const current = await trx<TriggerRow>(SURVEY_TRIGGER_TABLE)
-      .where({ tenant: tenantId, trigger_id: triggerId })
+      .where({ tenant, trigger_id: triggerId })
       .first()
       .forUpdate();
 
@@ -296,7 +295,7 @@ export async function updateSurveyTrigger(triggerId: string, input: UpdateTrigge
     const currentConditions = normaliseTriggerConditions(current.trigger_conditions);
 
     if (parsed.templateId) {
-      await assertTemplateBelongsToTenant(trx, tenantId, parsed.templateId);
+      await assertTemplateBelongsToTenant(trx, tenant, parsed.templateId);
     }
 
     const updatePayload: Record<string, unknown> = {
@@ -328,11 +327,11 @@ export async function updateSurveyTrigger(triggerId: string, input: UpdateTrigge
     }
 
     await trx(SURVEY_TRIGGER_TABLE)
-      .where({ tenant: tenantId, trigger_id: triggerId })
+      .where({ tenant, trigger_id: triggerId })
       .update(updatePayload);
 
     const refreshed = await trx<TriggerRow>(SURVEY_TRIGGER_TABLE)
-      .where({ tenant: tenantId, trigger_id: triggerId })
+      .where({ tenant, trigger_id: triggerId })
       .first();
 
     if (!refreshed) {
@@ -343,36 +342,19 @@ export async function updateSurveyTrigger(triggerId: string, input: UpdateTrigge
   });
 
   return mapTriggerRow(updated);
-}
+});
 
-export async function deleteSurveyTrigger(triggerId: string): Promise<void> {
-  const { knex, tenantId } = await requireTenantDbContext();
+export const deleteSurveyTrigger = withAuth(async (_user, { tenant }, triggerId: string): Promise<void> => {
+  const { knex } = await createTenantKnex();
 
   const deleted = await knex(SURVEY_TRIGGER_TABLE)
-    .where({ tenant: tenantId, trigger_id: triggerId })
+    .where({ tenant, trigger_id: triggerId })
     .del();
 
   if (deleted === 0) {
     throw new Error('Survey trigger not found');
   }
-}
-
-function ensureTenant(tenant: string | null): string {
-  if (!tenant) {
-    throw new Error('Tenant context is required');
-  }
-  return tenant;
-}
-
-async function requireTenantDbContext(): Promise<{ knex: Knex; tenantId: string }> {
-  const user = await getCurrentUser();
-  if (!user?.tenant) {
-    throw new Error('Tenant context is required');
-  }
-
-  const { knex, tenant } = await createTenantKnex(user.tenant);
-  return { knex, tenantId: ensureTenant(tenant) };
-}
+});
 
 function mapTemplateRow(row: TemplateRow): SurveyTemplate {
   return {
@@ -505,24 +487,13 @@ export interface SurveyTriggerReferenceData {
   priorities: IPriority[];
 }
 
-async function getProjectStatusesForSurveys(): Promise<IStatus[]> {
-  const currentUser = await getCurrentUser();
-  if (!currentUser) {
-    throw new Error('No authenticated user found');
-  }
-  if (!currentUser.tenant) {
-    throw new Error('Tenant not found');
-  }
-
-  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
-  if (!tenant) {
-    throw new Error('Tenant not found');
-  }
+const getProjectStatusesForSurveys = withAuth(async (user, { tenant }): Promise<IStatus[]> => {
+  const { knex } = await createTenantKnex();
 
   return withTransaction(knex, async (trx: Knex.Transaction) => {
     // Keep permission consistent with projects; surveys UI should only expose options a user can use.
     // If this becomes too restrictive, we can loosen it with a dedicated permission later.
-    if (!(await hasPermission(currentUser, 'project', 'read', trx))) {
+    if (!(await hasPermission(user, 'project', 'read', trx))) {
       return [];
     }
 
@@ -531,7 +502,7 @@ async function getProjectStatusesForSurveys(): Promise<IStatus[]> {
       .orderBy('display_order', 'asc')
       .orderBy('name', 'asc')) as unknown as IStatus[];
   });
-}
+});
 
 export async function getSurveyTriggerReferenceData(): Promise<SurveyTriggerReferenceData> {
   const [boards, ticketStatuses, projectStatuses, priorities] = await Promise.all([

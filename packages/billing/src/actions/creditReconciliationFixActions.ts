@@ -8,27 +8,24 @@ import { Knex } from 'knex';
 import CreditReconciliationReport from '../models/creditReconciliationReport';
 import { auditLog } from '@alga-psa/db';
 import { resolveReconciliationReport } from './creditReconciliationActions';
-import { getCurrentUser } from '@alga-psa/auth/getCurrentUser';
+import { withAuth } from '@alga-psa/auth';
 
 /**
  * Create a credit tracking entry for a missing entry
- * 
+ *
  * @param reportId The ID of the reconciliation report
  * @param userId The ID of the user applying the fix
  * @param notes Notes explaining the reason for the fix
  * @returns The resolved report
  */
-export async function createMissingCreditTrackingEntry(
+export const createMissingCreditTrackingEntry = withAuth(async (
+  user,
+  { tenant },
   reportId: string,
   userId: string,
   notes: string
-): Promise<ICreditReconciliationReport> {
-  const currentUser = await getCurrentUser();
-  if (!currentUser) {
-    throw new Error('No authenticated user found');
-  }
-
-  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
+): Promise<ICreditReconciliationReport> => {
+  const { knex } = await createTenantKnex();
   if (!tenant) {
     throw new Error('Tenant context is required for creating credit tracking entry');
   }
@@ -117,27 +114,24 @@ export async function createMissingCreditTrackingEntry(
       throw error;
     }
   });
-}
+});
 
 /**
  * Update the remaining amount in a credit tracking entry
- * 
+ *
  * @param reportId The ID of the reconciliation report
  * @param userId The ID of the user applying the fix
  * @param notes Notes explaining the reason for the fix
  * @returns The resolved report
  */
-export async function updateCreditTrackingRemainingAmount(
+export const updateCreditTrackingRemainingAmount = withAuth(async (
+  user,
+  { tenant },
   reportId: string,
   userId: string,
   notes: string
-): Promise<ICreditReconciliationReport> {
-  const currentUser = await getCurrentUser();
-  if (!currentUser) {
-    throw new Error('No authenticated user found');
-  }
-
-  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
+): Promise<ICreditReconciliationReport> => {
+  const { knex } = await createTenantKnex();
   if (!tenant) {
     throw new Error('Tenant context is required for updating credit tracking remaining amount');
   }
@@ -225,29 +219,26 @@ export async function updateCreditTrackingRemainingAmount(
       throw error;
     }
   });
-}
+});
 
 /**
  * Apply a custom credit adjustment
- * 
+ *
  * @param reportId The ID of the reconciliation report
  * @param userId The ID of the user applying the fix
  * @param notes Notes explaining the reason for the fix
  * @param amount The custom adjustment amount (optional, defaults to the report difference)
  * @returns The resolved report
  */
-export async function applyCustomCreditAdjustment(
+export const applyCustomCreditAdjustment = withAuth(async (
+  user,
+  { tenant },
   reportId: string,
   userId: string,
   notes: string,
   amount?: number
-): Promise<ICreditReconciliationReport> {
-  const currentUser = await getCurrentUser();
-  if (!currentUser) {
-    throw new Error('No authenticated user found');
-  }
-
-  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
+): Promise<ICreditReconciliationReport> => {
+  const { knex } = await createTenantKnex();
   if (!tenant) {
     throw new Error('Tenant context is required for applying credit adjustment');
   }
@@ -265,19 +256,19 @@ export async function applyCustomCreditAdjustment(
       }
 
       const now = new Date().toISOString();
-      
+
       // Use the provided amount or default to the report difference
       const adjustmentAmount = amount !== undefined ? amount : report.difference;
-      
+
       // Get the current client credit balance
       const [client] = await trx('clients')
         .where({ client_id: report.client_id, tenant })
         .select('credit_balance');
-      
+
       if (!client) {
         throw new Error(`Client ${report.client_id} not found`);
       }
-      
+
       const currentBalance = Number(client.credit_balance);
       const newBalance = currentBalance + adjustmentAmount;
 
@@ -363,27 +354,24 @@ export async function applyCustomCreditAdjustment(
       throw error;
     }
   });
-}
+});
 
 /**
  * Mark a reconciliation report as resolved without making any changes
- * 
+ *
  * @param reportId The ID of the reconciliation report
  * @param userId The ID of the user resolving the report
  * @param notes Notes explaining the reason for not making changes
  * @returns The resolved report
  */
-export async function markReportAsResolvedNoAction(
+export const markReportAsResolvedNoAction = withAuth(async (
+  user,
+  { tenant },
   reportId: string,
   userId: string,
   notes: string
-): Promise<ICreditReconciliationReport> {
-  const currentUser = await getCurrentUser();
-  if (!currentUser) {
-    throw new Error('No authenticated user found');
-  }
-
-  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
+): Promise<ICreditReconciliationReport> => {
+  const { knex } = await createTenantKnex();
   if (!tenant) {
     throw new Error('Tenant context is required for resolving reconciliation report');
   }
@@ -457,11 +445,11 @@ export async function markReportAsResolvedNoAction(
       throw error;
     }
   });
-}
+});
 
 /**
  * Apply the appropriate fix based on the fix type
- * 
+ *
  * @param reportId The ID of the reconciliation report
  * @param userId The ID of the user applying the fix
  * @param fixType The type of fix to apply
@@ -479,22 +467,22 @@ export async function applyReconciliationFix(
   switch (fixType) {
     case 'create_tracking_entry':
       return await createMissingCreditTrackingEntry(reportId, userId, notes);
-    
+
     case 'update_remaining_amount':
       return await updateCreditTrackingRemainingAmount(reportId, userId, notes);
-    
+
     case 'apply_adjustment':
       return await applyCustomCreditAdjustment(reportId, userId, notes);
-    
+
     case 'custom_adjustment':
       if (!customData?.amount && customData?.amount !== 0) {
         throw new Error('Custom adjustment amount is required');
       }
       return await applyCustomCreditAdjustment(reportId, userId, notes, customData.amount);
-    
+
     case 'no_action':
       return await markReportAsResolvedNoAction(reportId, userId, notes);
-    
+
     default:
       throw new Error(`Unknown fix type: ${fixType}`);
   }

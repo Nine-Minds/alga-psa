@@ -3,8 +3,8 @@
 import { Knex } from 'knex';
 import { createTenantKnex } from '@alga-psa/db';
 import { withTransaction } from '@alga-psa/shared/db';
-import { getCurrentUser } from '@alga-psa/users/actions';
-import { hasPermission } from '@alga-psa/auth';
+import { withAuth } from '@alga-psa/auth';
+import { hasPermission } from '@alga-psa/auth/rbac';
 import { unparseCSV } from '@alga-psa/core';
 import { getAllUsersBasic } from '@alga-psa/users/actions';
 import { getAllPriorities } from '@alga-psa/reference-data/actions';
@@ -12,10 +12,15 @@ import { getServices } from './serviceCatalogActions';
 import { createTagsForEntityWithTransaction } from '@alga-psa/tags/actions';
 import ProjectModel from '@alga-psa/projects/models/project';
 import ProjectTaskModel from '../models/projectTask';
+import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import { IProjectPhase } from '@alga-psa/types';
 import { IPriority } from '@alga-psa/types';
 import { IService } from '@alga-psa/types';
 import { IUser } from '@shared/interfaces/user.interfaces';
+import {
+  buildProjectTaskAssignedPayload,
+  buildProjectTaskCreatedPayload,
+} from '@shared/workflow/streams/domainEventBuilders/projectTaskEventBuilders';
 import {
   ITaskImportRow,
   ITaskImportValidationResult,
@@ -30,6 +35,34 @@ import {
   MappableTaskField,
 } from '@alga-psa/types';
 import { IProjectStatusMapping } from '@alga-psa/types';
+
+async function resolveProjectStatusInfo(
+  trx: Knex.Transaction,
+  tenant: string,
+  projectStatusMappingId: string
+): Promise<{ status: string; isClosed: boolean }> {
+  const row = await trx('project_status_mappings as psm')
+    .leftJoin('statuses as s', function joinStatuses(this: Knex.JoinClause) {
+      this.on('psm.status_id', '=', 's.status_id').andOn('psm.tenant', '=', 's.tenant');
+    })
+    .leftJoin('standard_statuses as ss', function joinStandardStatuses(this: Knex.JoinClause) {
+      this.on('psm.standard_status_id', '=', 'ss.standard_status_id').andOn('psm.tenant', '=', 'ss.tenant');
+    })
+    .where({ 'psm.project_status_mapping_id': projectStatusMappingId, 'psm.tenant': tenant })
+    .select(
+      trx.raw(
+        'COALESCE(psm.custom_name, s.name, ss.name, psm.project_status_mapping_id) as status_name'
+      ),
+      trx.raw('COALESCE(s.is_closed, ss.is_closed, false) as is_closed')
+    )
+    .first<{ status_name: string; is_closed: boolean }>();
+
+  if (!row) {
+    return { status: projectStatusMappingId, isClosed: false };
+  }
+
+  return { status: row.status_name, isClosed: Boolean(row.is_closed) };
+}
 
 /**
  * Parse a date string to Date object
@@ -277,19 +310,14 @@ export async function generatePhaseTaskCSVTemplate(): Promise<string> {
  * Returns both full objects (for dropdowns) and lookup maps (for validation).
  * This eliminates multiple connection acquisitions during import.
  */
-export async function getImportReferenceData(
+export const getImportReferenceData = withAuth(async (
+  _user,
+  { tenant },
   projectId?: string
-): Promise<IImportReferenceData> {
-  const currentUser = await getCurrentUser();
-  if (!currentUser) {
-    throw new Error('No authenticated user found');
-  }
-
-  const { knex: db, tenant } = await createTenantKnex();
+): Promise<IImportReferenceData> => {
+  const { knex: db } = await createTenantKnex();
 
   return await withTransaction(db, async (trx: Knex.Transaction) => {
-    const tenant = currentUser.tenant;
-
     // Fetch all reference data in parallel within the same transaction
     const [users, priorities, services, statusMappings] = await Promise.all([
       // Users (exclude inactive - only show active users for assignment)
@@ -372,7 +400,7 @@ export async function getImportReferenceData(
       statusLookup,
     };
   });
-}
+});
 
 /**
  * Validate phase/task import data using pre-fetched reference data.
@@ -513,16 +541,13 @@ export async function validatePhaseTaskImportDataWithReferenceData(
  * Validate phase/task import data and build lookup maps
  * @deprecated Use getImportReferenceData + validatePhaseTaskImportDataWithReferenceData for better performance
  */
-export async function validatePhaseTaskImportData(
+export const validatePhaseTaskImportData = withAuth(async (
+  _user,
+  { tenant },
   rows: ITaskImportRow[],
   projectId?: string
-): Promise<IPhaseTaskValidationResponse> {
-  const currentUser = await getCurrentUser();
-  if (!currentUser) {
-    throw new Error('No authenticated user found');
-  }
-
-  const { knex: db, tenant } = await createTenantKnex();
+): Promise<IPhaseTaskValidationResponse> => {
+  const { knex: db } = await createTenantKnex();
 
   // Fetch lookup data
   const [users, priorities, servicesResponse] = await Promise.all([
@@ -557,10 +582,10 @@ export async function validatePhaseTaskImportData(
   const statusLookup: Record<string, string> = {};
   const unmatchedStatuses: string[] = [];
 
-  if (projectId && currentUser.tenant) {
+  if (projectId && tenant) {
     // Query with joins to get actual status names
     const statusMappings = await db('project_status_mappings as psm')
-      .where({ 'psm.project_id': projectId, 'psm.tenant': currentUser.tenant })
+      .where({ 'psm.project_id': projectId, 'psm.tenant': tenant })
       .leftJoin('statuses as s', function(this: Knex.JoinClause) {
         this.on('psm.status_id', 's.status_id')
           .andOn('psm.tenant', 's.tenant');
@@ -715,7 +740,7 @@ export async function validatePhaseTaskImportData(
     unmatchedStatuses,
     unmatchedAgents,
   };
-}
+});
 
 /**
  * Default status column name for tasks without a matching status
@@ -725,26 +750,17 @@ const DEFAULT_UNSPECIFIED_STATUS_NAME = 'No Status Specified';
 /**
  * Import phases and tasks into an existing project
  */
-export async function importPhasesAndTasks(
+export const importPhasesAndTasks = withAuth(async (
+  user,
+  { tenant },
   projectId: string,
   groupedPhases: IGroupedPhaseData[],
   statusResolutions: IStatusResolution[] = []
-): Promise<IPhaseTaskImportResult> {
-  const currentUser = await getCurrentUser();
-  if (!currentUser) {
-    throw new Error('No authenticated user found');
-  }
-  if (!currentUser.tenant) {
-    throw new Error('Tenant context not found');
-  }
-
-  const { knex: db, tenant } = await createTenantKnex();
-  if (!tenant) {
-    throw new Error('Tenant context not found');
-  }
+): Promise<IPhaseTaskImportResult> => {
+  const { knex: db } = await createTenantKnex();
 
   return await withTransaction(db, async (trx: Knex.Transaction) => {
-    if (!await hasPermission(currentUser, 'project', 'update')) {
+    if (!await hasPermission(user, 'project', 'update')) {
       throw new Error('Permission denied: Cannot update projects');
     }
 
@@ -775,7 +791,7 @@ export async function importPhasesAndTasks(
     for (const resolution of statusResolutions) {
       if (resolution.action === 'create') {
         // Create a new status mapping for this status name
-        const newMapping = await createNewStatusMapping(trx, projectId, resolution.originalStatusName, statusMappings.length, currentUser.tenant);
+        const newMapping = await createNewStatusMapping(trx, projectId, resolution.originalStatusName, statusMappings.length, tenant);
         statusMappingByName[resolution.originalStatusName.toLowerCase().trim()] = newMapping.project_status_mapping_id;
         statusMappings = [...statusMappings, newMapping];
       } else if (resolution.action === 'map_to_existing' && resolution.mappedStatusId) {
@@ -791,7 +807,7 @@ export async function importPhasesAndTasks(
           if (existingDefault) {
             defaultUnspecifiedStatusId = existingDefault.project_status_mapping_id;
           } else {
-            const newMapping = await createNewStatusMapping(trx, projectId, DEFAULT_UNSPECIFIED_STATUS_NAME, statusMappings.length, currentUser.tenant);
+            const newMapping = await createNewStatusMapping(trx, projectId, DEFAULT_UNSPECIFIED_STATUS_NAME, statusMappings.length, tenant);
             defaultUnspecifiedStatusId = newMapping.project_status_mapping_id;
             statusMappings = [...statusMappings, newMapping];
           }
@@ -923,6 +939,43 @@ export async function importPhasesAndTasks(
               }
             }
 
+            const occurredAt = newTask.created_at instanceof Date ? newTask.created_at : new Date();
+            const ctx = {
+              tenantId: tenant,
+              occurredAt,
+              actor: { actorType: 'USER' as const, actorUserId: user.user_id },
+            };
+            const statusInfo = await resolveProjectStatusInfo(trx, tenant, newTask.project_status_mapping_id);
+
+            await publishWorkflowEvent({
+              eventType: 'PROJECT_TASK_CREATED',
+              ctx,
+              payload: buildProjectTaskCreatedPayload({
+                projectId,
+                taskId: newTask.task_id,
+                title: newTask.task_name,
+                dueDate: newTask.due_date,
+                status: statusInfo.status,
+                createdByUserId: user.user_id,
+                createdAt: occurredAt,
+              }),
+            });
+
+            if (newTask.assigned_to) {
+              await publishWorkflowEvent({
+                eventType: 'PROJECT_TASK_ASSIGNED',
+                ctx,
+                payload: buildProjectTaskAssignedPayload({
+                  projectId,
+                  taskId: newTask.task_id,
+                  assignedToId: newTask.assigned_to,
+                  assignedToType: 'user',
+                  assignedByUserId: user.user_id,
+                  assignedAt: occurredAt,
+                }),
+              });
+            }
+
             tasksCreated++;
           } catch (taskError) {
             const errorMessage = taskError instanceof Error ? taskError.message : 'Unknown error';
@@ -942,7 +995,7 @@ export async function importPhasesAndTasks(
       errors,
     };
   });
-}
+});
 
 /**
  * Create a new status mapping for a project by first finding or creating a tenant-level status,

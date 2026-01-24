@@ -22,7 +22,8 @@ export class ReportEngine {
   static async execute(
     definition: ReportDefinition,
     parameters: ReportParameters = {},
-    options: ReportExecutionOptions = {}
+    options: ReportExecutionOptions = {},
+    tenantId?: string
   ): Promise<ReportResult> {
     const startTime = Date.now();
     
@@ -39,7 +40,7 @@ export class ReportEngine {
       // }
       
       // Get database connection with tenant context
-      const { knex, tenant } = await createTenantKnex();
+      const { knex, tenant } = await createTenantKnex(tenantId);
       if (!tenant) {
         throw new ReportExecutionError(
           'Tenant context is required for report execution',

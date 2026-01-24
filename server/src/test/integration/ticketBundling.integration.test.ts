@@ -44,6 +44,11 @@ vi.mock('next/cache', () => ({
   revalidatePath: vi.fn(),
 }));
 
+vi.mock('@alga-psa/event-bus/publishers', () => ({
+  publishEvent: vi.fn(async () => {}),
+  publishWorkflowEvent: vi.fn(async () => {}),
+}));
+
 vi.mock('server/src/lib/eventBus/publishers', () => ({
   publishEvent: vi.fn(async () => {}),
 }));

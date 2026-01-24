@@ -1,10 +1,10 @@
 'use server'
 
 import { withTransaction } from '@alga-psa/db';
-import { getCurrentUser } from '@alga-psa/users/actions';
 import { ITicketCategory } from '@alga-psa/types';
 import { createTenantKnex } from '@alga-psa/db';
 import { Knex } from 'knex';
+import { withAuth } from '@alga-psa/auth';
 
 async function orderCategoriesHierarchically(categories: ITicketCategory[]): Promise<ITicketCategory[]> {
   // First separate parent categories and subcategories
@@ -38,14 +38,8 @@ async function orderCategoriesHierarchically(categories: ITicketCategory[]): Pro
   return orderedCategories;
 }
 
-export async function getTicketCategories() {
-  const user = await getCurrentUser();
-  if (!user) {
-    throw new Error('Unauthorized');
-  }
-
-  // Explicitly pass tenant from user to ensure tenant context is established
-  const { knex: db, tenant } = await createTenantKnex(user.tenant);
+export const getTicketCategories = withAuth(async (user, { tenant }) => {
+  const { knex: db } = await createTenantKnex();
   return withTransaction(db, async (trx: Knex.Transaction) => {
     try {
       // Get all categories ordered by name
@@ -61,14 +55,9 @@ export async function getTicketCategories() {
       throw new Error('Failed to fetch ticket categories');
     }
   });
-}
+});
 
-export async function createTicketCategory(categoryName: string, boardId: string, parentCategory?: string) {
-  const user = await getCurrentUser();
-  if (!user) {
-    throw new Error('Unauthorized');
-  }
-
+export const createTicketCategory = withAuth(async (user, { tenant }, categoryName: string, boardId: string, parentCategory?: string) => {
   if (!categoryName || categoryName.trim() === '') {
     throw new Error('Category name is required');
   }
@@ -77,8 +66,7 @@ export async function createTicketCategory(categoryName: string, boardId: string
     throw new Error('Board ID is required');
   }
 
-  // Explicitly pass tenant from user to ensure tenant context is established
-  const { knex: db, tenant } = await createTenantKnex(user.tenant);
+  const { knex: db } = await createTenantKnex();
   return withTransaction(db, async (trx: Knex.Transaction) => {
     try {
     // Check if category with same name exists in the board
@@ -117,7 +105,7 @@ export async function createTicketCategory(categoryName: string, boardId: string
       throw new Error('Failed to create ticket category');
     }
   });
-}
+});
 
 /**
  * Legacy delete function - throws errors for backward compatibility.
@@ -137,12 +125,7 @@ export async function deleteTicketCategory(categoryId: string): Promise<boolean>
   return true;
 }
 
-export async function updateTicketCategory(categoryId: string, categoryData: Partial<ITicketCategory>) {
-  const user = await getCurrentUser();
-  if (!user) {
-    throw new Error('Unauthorized');
-  }
-
+export const updateTicketCategory = withAuth(async (user, { tenant }, categoryId: string, categoryData: Partial<ITicketCategory>) => {
   if (!categoryId) {
     throw new Error('Category ID is required');
   }
@@ -151,8 +134,7 @@ export async function updateTicketCategory(categoryId: string, categoryData: Par
     throw new Error('Category name cannot be empty');
   }
 
-  // Explicitly pass tenant from user to ensure tenant context is established
-  const { knex: db, tenant } = await createTenantKnex(user.tenant);
+  const { knex: db } = await createTenantKnex();
   return withTransaction(db, async (trx: Knex.Transaction) => {
     try {
     // Check if new name conflicts with existing category in the same board
@@ -196,7 +178,7 @@ export async function updateTicketCategory(categoryId: string, categoryData: Par
       throw new Error('Failed to update ticket category');
     }
   });
-}
+});
 
 export interface BoardCategoryData {
   categories: ITicketCategory[];
@@ -208,18 +190,12 @@ export interface BoardCategoryData {
   };
 }
 
-export async function getTicketCategoriesByBoard(boardId: string): Promise<BoardCategoryData> {
-  const user = await getCurrentUser();
-  if (!user) {
-    throw new Error('Unauthorized');
-  }
-
+export const getTicketCategoriesByBoard = withAuth(async (_user, { tenant }, boardId: string): Promise<BoardCategoryData> => {
   if (!boardId) {
     throw new Error('Board ID is required');
   }
 
-  // Explicitly pass tenant from user to ensure tenant context is established
-  const { knex: db, tenant } = await createTenantKnex(user.tenant);
+  const { knex: db } = await createTenantKnex();
   return withTransaction(db, async (trx: Knex.Transaction) => {
     try {
       // Get board configuration
@@ -270,16 +246,10 @@ export async function getTicketCategoriesByBoard(boardId: string): Promise<Board
       throw new Error('Failed to fetch ticket categories');
     }
   });
-}
+});
 
-export async function getAllCategories(): Promise<ITicketCategory[]> {
-  const user = await getCurrentUser();
-  if (!user) {
-    throw new Error('Unauthorized');
-  }
-
-  // Explicitly pass tenant from user to ensure tenant context is established
-  const { knex: db, tenant } = await createTenantKnex(user.tenant);
+export const getAllCategories = withAuth(async (_user, { tenant }): Promise<ITicketCategory[]> => {
+  const { knex: db } = await createTenantKnex();
   return withTransaction(db, async (trx: Knex.Transaction) => {
     try {
       const categories = await trx<ITicketCategory>('categories')
@@ -293,25 +263,19 @@ export async function getAllCategories(): Promise<ITicketCategory[]> {
       throw new Error('Failed to fetch categories');
     }
   });
-}
+});
 
-export async function createCategory(data: { 
-  category_name: string; 
+export const createCategory = withAuth(async (user, { tenant }, data: {
+  category_name: string;
   display_order?: number;
   board_id: string;
   parent_category?: string;
-}): Promise<ITicketCategory> {
-  const user = await getCurrentUser();
-  if (!user) {
-    throw new Error('Unauthorized');
-  }
-
+}): Promise<ITicketCategory> => {
   if (!data.board_id) {
     throw new Error('Board ID is required');
   }
 
-  // Explicitly pass tenant from user to ensure tenant context is established
-  const { knex: db, tenant } = await createTenantKnex(user.tenant);
+  const { knex: db } = await createTenantKnex();
   return withTransaction(db, async (trx: Knex.Transaction) => {
     try {
       // If no display_order provided, get the next available order
@@ -345,37 +309,33 @@ export async function createCategory(data: {
           created_by: user.user_id
         })
         .returning(['category_id', 'category_name', 'display_order', 'board_id', 'parent_category']);
-      
+
       return newCategory;
     } catch (error) {
       console.error('Error creating category:', error);
       throw new Error('Failed to create category');
     }
   });
-}
+});
 
-export async function updateCategory(
+export const updateCategory = withAuth(async (
+  _user,
+  { tenant },
   categoryId: string,
   data: {
     category_name?: string;
     display_order?: number;
     board_id?: string;
   }
-): Promise<ITicketCategory> {
-  const user = await getCurrentUser();
-  if (!user) {
-    throw new Error('Unauthorized');
-  }
-
-  // Explicitly pass tenant from user to ensure tenant context is established
-  const { knex: db, tenant } = await createTenantKnex(user.tenant);
+): Promise<ITicketCategory> => {
+  const { knex: db } = await createTenantKnex();
   return withTransaction(db, async (trx: Knex.Transaction) => {
     try {
       // Check if this is a parent category and board is being changed
       const currentCategory = await trx('categories')
         .where({ category_id: categoryId, tenant })
         .first();
-      
+
       if (!currentCategory) {
         throw new Error('Category not found');
       }
@@ -385,21 +345,21 @@ export async function updateCategory(
         .where({ category_id: categoryId, tenant })
         .update(data)
         .returning(['category_id', 'category_name', 'display_order', 'board_id', 'parent_category']);
-      
+
       // If this is a parent category and board_id was changed, update all subcategories
       if (!currentCategory.parent_category && data.board_id && data.board_id !== currentCategory.board_id) {
         await trx('categories')
           .where({ parent_category: categoryId, tenant })
           .update({ board_id: data.board_id });
       }
-      
+
       return updatedCategory;
     } catch (error) {
       console.error('Error updating category:', error);
       throw new Error('Failed to update category');
     }
   });
-}
+});
 
 /**
  * Helper to recursively collect all subcategory IDs.
@@ -445,20 +405,13 @@ interface DeleteCategoryResult {
   counts?: Record<string, number>;
 }
 
-export async function deleteCategory(
+export const deleteCategory = withAuth(async (
+  _user,
+  { tenant },
   categoryId: string,
   force = false
-): Promise<DeleteCategoryResult> {
-  const user = await getCurrentUser();
-  if (!user) {
-    return { success: false, code: 'UNAUTHORIZED', message: 'Unauthorized' };
-  }
-
-  // Explicitly pass tenant from user to ensure tenant context is established
-  const { knex: db, tenant } = await createTenantKnex(user.tenant);
-  if (!tenant) {
-    return { success: false, code: 'NO_TENANT', message: 'No tenant context' };
-  }
+): Promise<DeleteCategoryResult> => {
+  const { knex: db } = await createTenantKnex();
 
   return withTransaction(db, async (trx: Knex.Transaction): Promise<DeleteCategoryResult> => {
     // 1. Get the category
@@ -546,4 +499,4 @@ export async function deleteCategory(
         : 'Category deleted'
     };
   });
-}
+});

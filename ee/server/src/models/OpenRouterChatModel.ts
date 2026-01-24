@@ -10,7 +10,7 @@ export class OpenRouterChatModel implements ChatModelInterface {
   private client: OpenAI;
   private model: string;
 
-  constructor(apiKey: string, model: string = process.env.OPENROUTER_CHAT_MODEL ?? 'minimax/minimax-m2:free') {
+  constructor(apiKey: string, model: string = process.env.OPENROUTER_CHAT_MODEL ?? 'minimax/minimax-m2') {
     this.client = new OpenAI({
       apiKey,
       baseURL: 'https://openrouter.ai/api/v1',

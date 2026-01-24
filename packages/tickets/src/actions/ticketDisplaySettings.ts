@@ -1,8 +1,8 @@
 'use server'
 
 import { createTenantKnex } from '@alga-psa/db';
-import { getCurrentUser } from '@alga-psa/auth/getCurrentUser';
 import { hasPermission } from '@alga-psa/auth/rbac';
+import { withAuth } from '@alga-psa/auth';
 
 export type TicketListColumnKey =
   | 'ticket_number'
@@ -31,14 +31,10 @@ export type TicketingDisplaySettings = {
 
 const DEFAULT_TICKETING_DATETIME_FORMAT = 'MMM d, yyyy h:mm a';
 
-export async function getTicketingDisplaySettings(): Promise<TicketingDisplaySettings> {
+export const getTicketingDisplaySettings = withAuth(async (_user, { tenant }): Promise<TicketingDisplaySettings> => {
   // Prefer dedicated column if present; fallback to nested settings for backward compatibility
   try {
-    const currentUser = await getCurrentUser();
-    if (!currentUser) throw new Error('User not authenticated');
-
-    const { knex, tenant } = await createTenantKnex(currentUser.tenant);
-    if (!tenant) throw new Error('Tenant not found');
+    const { knex } = await createTenantKnex();
     const row = await knex('tenant_settings').select('ticket_display_settings', 'settings').where({ tenant }).first();
     const fromColumn = (row?.ticket_display_settings as any) || {};
     const nested = ((row?.settings as any)?.ticketing?.display) || {};
@@ -89,23 +85,15 @@ export async function getTicketingDisplaySettings(): Promise<TicketingDisplaySet
       },
     };
   }
-}
+});
 
-export async function updateTicketingDisplaySettings(updated: TicketingDisplaySettings): Promise<{ success: boolean }>{
-  // Check permission first
-  const currentUser = await getCurrentUser();
-  if (!currentUser) {
-    throw new Error('User not authenticated');
-  }
+export const updateTicketingDisplaySettings = withAuth(async (user, { tenant }, updated: TicketingDisplaySettings): Promise<{ success: boolean }> => {
+  const { knex } = await createTenantKnex();
 
-  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
-  
   // Check if user has permission to update ticket settings
-  if (!await hasPermission(currentUser, 'ticket_settings', 'update', knex)) {
+  if (!await hasPermission(user, 'ticket_settings', 'update', knex)) {
     throw new Error('Permission denied: Cannot update ticket settings');
   }
-  
-  if (!tenant) throw new Error('Tenant not found');
 
   // Read existing values for both the dedicated column and the legacy nested settings path.
   const existingRow = await knex('tenant_settings')
@@ -151,6 +139,6 @@ export async function updateTicketingDisplaySettings(updated: TicketingDisplaySe
     });
 
   return { success: true };
-}
+});
 
 // Do not export non-async values from a "use server" module

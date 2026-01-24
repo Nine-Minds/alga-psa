@@ -18,10 +18,15 @@ import Invoice from '@alga-psa/billing/models/invoice'; // Needed for getFullInv
 import { v4 as uuidv4 } from 'uuid';
 import { getWorkflowRuntime } from '@alga-psa/shared/workflow/core'; // Import runtime getter via package export
 // import { getRedisStreamClient } from '@alga-psa/shared/workflow/streams/redisStreamClient'; // No longer directly used here
+import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
+import {
+  buildCreditNoteCreatedPayload,
+  buildCreditNoteVoidedPayload,
+} from '@shared/workflow/streams/domainEventBuilders/creditNoteEventBuilders';
 
 import { validateInvoiceFinalization } from './taxSourceActions';
-import { getCurrentUserAsync, hasPermissionAsync, getSessionAsync, getAnalyticsAsync } from '../lib/authHelpers';
-import { getCurrentUser } from '@alga-psa/auth/getCurrentUser';
+import { withAuth } from '@alga-psa/auth';
+import { getSession } from '@alga-psa/auth/session';
 
 // Interface definitions specific to manual updates (might move to interfaces file later)
 export interface ManualInvoiceUpdate {
@@ -45,20 +50,15 @@ interface ManualItemsUpdate {
 }
 
 
-export async function finalizeInvoice(invoiceId: string): Promise<void> {
-  const session = await getSessionAsync();
+export const finalizeInvoice = withAuth(async (
+  user,
+  { tenant },
+  invoiceId: string
+): Promise<void> => {
+  const { knex } = await createTenantKnex();
 
-  if (!session?.user?.id) {
-    throw new Error('Unauthorized');
-  }
-
-  const { knex, tenant } = await createTenantKnex(session.user.tenant);
-  if (!tenant) {
-    throw new Error('No tenant found');
-  }
-
-  await finalizeInvoiceWithKnex(invoiceId, knex, tenant, session.user.id);
-}
+  await finalizeInvoiceWithKnex(invoiceId, knex, tenant, user.user_id);
+});
 
 export async function finalizeInvoiceWithKnex(
   invoiceId: string,
@@ -67,6 +67,14 @@ export async function finalizeInvoiceWithKnex(
   userId: string
 ): Promise<void> {
   let invoice: any;
+  let createdCreditNote: {
+    creditNoteId: string;
+    clientId: string;
+    createdAt: string;
+    createdByUserId: string;
+    amount: number;
+    currency: string;
+  } | null = null;
 
   // Validate tax source before finalization
   const taxValidation = await validateInvoiceFinalization(invoiceId);
@@ -133,6 +141,7 @@ export async function finalizeInvoiceWithKnex(
     // Update client credit balance and record transaction in a single transaction
     // We handle this directly without using ClientContractLine.updateClientCredit to avoid validation issues
     await withTransaction(knex, async (trx: Knex.Transaction) => {
+      const now = new Date().toISOString();
       // Get current credit balance
       const client = await trx('clients')
         .where({ client_id: invoice.client_id, tenant })
@@ -194,25 +203,35 @@ export async function finalizeInvoiceWithKnex(
         type: 'credit_issuance_from_negative_invoice',
         status: 'completed',
         description: `Credit issued from negative invoice ${invoice.invoice_number}`,
-        created_at: new Date().toISOString(),
+        created_at: now,
         balance_after: newBalance,
         tenant,
         expiration_date: expirationDate
       });
 
       // Create credit tracking entry
+      const creditNoteId = uuidv4();
       await trx('credit_tracking').insert({
-        credit_id: uuidv4(),
+        credit_id: creditNoteId,
         tenant,
         client_id: invoice.client_id,
         transaction_id: transactionId,
         amount: creditAmount,
         remaining_amount: creditAmount, // Initially, remaining amount equals the full amount
-        created_at: new Date().toISOString(),
+        created_at: now,
         expiration_date: expirationDate,
         is_expired: false,
-        updated_at: new Date().toISOString()
+        updated_at: now
       });
+
+      createdCreditNote = {
+        creditNoteId,
+        clientId: invoice.client_id,
+        createdAt: now,
+        createdByUserId: userId,
+        amount: creditAmount,
+        currency: String(invoice.currency_code ?? 'USD'),
+      };
 
       // Log audit
       // await auditLog(
@@ -262,19 +281,35 @@ export async function finalizeInvoiceWithKnex(
       }
     }
   }
+
+  if (createdCreditNote) {
+    await publishWorkflowEvent({
+      eventType: 'CREDIT_NOTE_CREATED',
+      payload: buildCreditNoteCreatedPayload({
+        creditNoteId: createdCreditNote.creditNoteId,
+        clientId: createdCreditNote.clientId,
+        createdByUserId: createdCreditNote.createdByUserId,
+        createdAt: createdCreditNote.createdAt,
+        amount: createdCreditNote.amount,
+        currency: createdCreditNote.currency,
+        status: 'issued',
+      }),
+      ctx: {
+        tenantId: tenant,
+        occurredAt: createdCreditNote.createdAt,
+        actor: { actorType: 'USER', actorUserId: createdCreditNote.createdByUserId },
+      },
+      idempotencyKey: `credit_note_created:${createdCreditNote.creditNoteId}`,
+    });
+  }
 }
 
-export async function unfinalizeInvoice(invoiceId: string): Promise<void> {
-  const session = await getSessionAsync();
-
-  if (!session?.user?.id) {
-    throw new Error('Unauthorized');
-  }
-
-  const { knex, tenant } = await createTenantKnex(session.user.tenant);
-  if (!tenant) {
-    throw new Error('No tenant found');
-  }
+export const unfinalizeInvoice = withAuth(async (
+  user,
+  { tenant },
+  invoiceId: string
+): Promise<void> => {
+  const { knex } = await createTenantKnex();
 
   await withTransaction(knex, async (trx: Knex.Transaction) => {
     // Check if invoice exists and is finalized
@@ -327,13 +362,15 @@ export async function unfinalizeInvoice(invoiceId: string): Promise<void> {
     //   }
     // );
   });
-}
+});
 
-export async function updateInvoiceManualItems(
+export const updateInvoiceManualItems = withAuth(async (
+  user,
+  { tenant },
   invoiceId: string,
   changes: ManualItemsUpdate
-): Promise<InvoiceViewModel> {
-  const session = await getSessionAsync();
+): Promise<InvoiceViewModel> => {
+  const session = await getSession();
   const billingEngine = new BillingEngine();
 
   console.log('[updateInvoiceManualItems] session:', session);
@@ -342,10 +379,7 @@ export async function updateInvoiceManualItems(
     throw new Error('Unauthorized');
   }
 
-  const { knex, tenant } = await createTenantKnex(session.user.tenant);
-  if (!tenant) {
-    throw new Error('No tenant found');
-  }
+  const { knex } = await createTenantKnex();
 
   // Load and validate invoice
   const invoice = await withTransaction(knex, async (trx: Knex.Transaction) => {
@@ -374,9 +408,9 @@ export async function updateInvoiceManualItems(
 
   const currentDate = Temporal.Now.plainDateISO().toString();
 
-  await updateManualInvoiceItemsInternal(invoiceId, changes, session, tenant); // Renamed internal call
+  await updateManualInvoiceItemsInternal(invoiceId, changes, session!, tenant); // Renamed internal call
   return await Invoice.getFullInvoiceById(knex, invoiceId);
-}
+});
 
 // Internal helper function to avoid recursive export/import loop
 async function updateManualInvoiceItemsInternal(
@@ -563,20 +597,19 @@ async function updateManualInvoiceItemsInternal(
 }
 
 
-export async function addManualItemsToInvoice(
+export const addManualItemsToInvoice = withAuth(async (
+  user,
+  { tenant },
   invoiceId: string,
   items: IInvoiceCharge[]
-): Promise<InvoiceViewModel> {
-  const session = await getSessionAsync();
+): Promise<InvoiceViewModel> => {
+  const session = await getSession();
 
   if (!session?.user?.id) {
     throw new Error('Unauthorized');
   }
 
-  const { knex, tenant } = await createTenantKnex(session.user.tenant);
-  if (!tenant) {
-    throw new Error('No tenant found');
-  }
+  const { knex } = await createTenantKnex();
 
   // Load and validate invoice
   const invoice = await withTransaction(knex, async (trx: Knex.Transaction) => {
@@ -609,9 +642,9 @@ export async function addManualItemsToInvoice(
     throw new Error('Client not found');
   }
 
-  await addManualInvoiceItemsInternal(invoiceId, items, session, tenant); // Renamed internal call
+  await addManualInvoiceItemsInternal(invoiceId, items, session!, tenant); // Renamed internal call
   return await Invoice.getFullInvoiceById(knex, invoiceId);
-}
+});
 
 // Internal helper function
 async function addManualInvoiceItemsInternal(
@@ -681,15 +714,21 @@ async function addManualInvoiceItemsInternal(
 }
 
 
-export async function hardDeleteInvoice(invoiceId: string) {
-  const currentUser = await getCurrentUserAsync();
-  if (!currentUser) {
-    throw new Error('Unauthorized: No authenticated user found');
-  }
-
-  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
+export const hardDeleteInvoice = withAuth(async (
+  user,
+  { tenant },
+  invoiceId: string
+) => {
+  const { knex } = await createTenantKnex();
+  let voidedCreditNotes: Array<{
+    creditNoteId: string;
+    voidedAt: string;
+    voidedByUserId: string;
+    reason: string;
+  }> = [];
 
   await withTransaction(knex, async (trx: Knex.Transaction) => {
+    const now = new Date().toISOString();
     // 1. Get invoice details
     const invoice = await trx('invoices')
       .where({
@@ -798,6 +837,12 @@ export async function hardDeleteInvoice(invoiceId: string) {
                 throw new Error(`Cannot delete invoice ${invoiceId}: Credit issued by this invoice has already been used.`);
             } else {
                 // Credit was issued but not used, safe to delete tracking and transaction
+                voidedCreditNotes.push({
+                  creditNoteId: creditTrackingEntry.credit_id,
+                  voidedAt: now,
+                  voidedByUserId: user.user_id,
+                  reason: 'invoice_deleted',
+                });
                 await trx('credit_tracking')
                     .where({ credit_id: creditTrackingEntry.credit_id })
                     .delete();
@@ -898,4 +943,22 @@ export async function hardDeleteInvoice(invoiceId: string) {
 
      // TODO: Recalculate client balance after all deletions/reversals
   });
-}
+
+  for (const event of voidedCreditNotes) {
+    await publishWorkflowEvent({
+      eventType: 'CREDIT_NOTE_VOIDED',
+      payload: buildCreditNoteVoidedPayload({
+        creditNoteId: event.creditNoteId,
+        voidedByUserId: event.voidedByUserId,
+        voidedAt: event.voidedAt,
+        reason: event.reason,
+      }),
+      ctx: {
+        tenantId: tenant,
+        occurredAt: event.voidedAt,
+        actor: { actorType: 'USER', actorUserId: event.voidedByUserId },
+      },
+      idempotencyKey: `credit_note_voided:${event.creditNoteId}:${invoiceId}`,
+    });
+  }
+});

@@ -5,7 +5,6 @@ import type {
   ITicketListItem,
   ITicketListFilters,
   IAgentSchedule,
-  IUser,
   IComment,
   IClient,
   IContact,
@@ -21,7 +20,7 @@ import { revalidatePath } from 'next/cache';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { z } from 'zod';
 import { validateData } from '@alga-psa/validation';
-import { publishEvent } from '@alga-psa/event-bus/publishers';
+import { publishEvent, publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import { getEventBus } from '@alga-psa/event-bus';
 import { convertBlockNoteToMarkdown } from '@alga-psa/documents/lib/blocknoteUtils';
 import { getImageUrl } from '@alga-psa/documents/actions/documentActions';
@@ -37,7 +36,10 @@ import {
 import { Temporal } from '@js-temporal/polyfill';
 import { resolveUserTimeZone, normalizeIanaTimeZone } from '@alga-psa/db';
 import { calculateItilPriority } from '@alga-psa/tickets/lib/itilUtils';
-import { getCurrentUser } from '@alga-psa/auth/getCurrentUser';
+import { withAuth } from '@alga-psa/auth';
+import { buildTicketTransitionWorkflowEvents } from '../lib/workflowTicketTransitionEvents';
+import { buildTicketCommunicationWorkflowEvents } from '../lib/workflowTicketCommunicationEvents';
+import { buildTicketResolutionSlaStageCompletionEvent } from '../lib/workflowTicketSlaStageEvents';
 
 // Email event channel constant - inlined to avoid circular dependency with notifications
 // Must match the value in @alga-psa/notifications/emailChannel
@@ -77,11 +79,8 @@ async function safePublishEvent(eventType: string, payload: any) {
  * Consolidated function to get all ticket data for the ticket details page
  * This reduces multiple network calls by fetching all related data in a single server action
  */
-export async function getConsolidatedTicketData(ticketId: string, user: IUser) {
-  const {knex: db, tenant} = await createTenantKnex(user.tenant);
-  if (!tenant) {
-    throw new Error('Tenant not found');
-  }
+export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticketId: string) => {
+  const {knex: db} = await createTenantKnex();
 
   return withTransaction(db, async (trx) => {
     if (!await hasPermission(user, 'ticket', 'read', trx)) {
@@ -615,22 +614,20 @@ export async function getConsolidatedTicketData(ticketId: string, user: IUser) {
       throw new Error('Failed to fetch ticket data');
     }
   });
-}
+});
 
 /**
  * Get tickets for list with page-based pagination
  * This replaces cursor-based pagination with traditional page-based approach
  */
-export async function getTicketsForList(
-  user: IUser,
+export const getTicketsForList = withAuth(async (
+  user,
+  { tenant },
   filters: ITicketListFilters,
   page: number = 1,
   pageSize: number = 10
-): Promise<{ tickets: ITicketListItem[], totalCount: number }> {
-  const {knex: db, tenant} = await createTenantKnex(user.tenant);
-  if (!tenant) {
-    throw new Error('Tenant not found');
-  }
+): Promise<{ tickets: ITicketListItem[], totalCount: number }> => {
+  const {knex: db} = await createTenantKnex();
 
   return withTransaction(db, async (trx) => {
     if (!await hasPermission(user, 'ticket', 'read', trx)) {
@@ -1039,17 +1036,14 @@ export async function getTicketsForList(
       throw new Error('Failed to fetch tickets');
     }
   });
-}
+});
 
 /**
  * Get all options needed for ticket forms and filters
  * This consolidates multiple API calls into a single request
  */
-export async function getTicketFormOptions(user: IUser) {
-  const {knex: db, tenant} = await createTenantKnex(user.tenant);
-  if (!tenant) {
-    throw new Error('Tenant not found');
-  }
+export const getTicketFormOptions = withAuth(async (user, { tenant }) => {
+  const {knex: db} = await createTenantKnex();
 
   return withTransaction(db, async (trx) => {
     if (!await hasPermission(user, 'ticket', 'read', trx)) {
@@ -1169,16 +1163,13 @@ export async function getTicketFormOptions(user: IUser) {
       throw new Error('Failed to fetch ticket form options');
     }
   });
-}
+});
 
 /**
  * Update ticket with proper caching
  */
-export async function updateTicketWithCache(id: string, data: Partial<ITicket>, user: IUser) {
-  const {knex: db, tenant} = await createTenantKnex(user.tenant);
-  if (!tenant) {
-    throw new Error('Tenant not found');
-  }
+export const updateTicketWithCache = withAuth(async (user, { tenant }, id: string, data: Partial<ITicket>) => {
+  const {knex: db} = await createTenantKnex();
 
   return withTransaction(db, async (trx) => {
     if (!await hasPermission(user, 'ticket', 'update', trx)) {
@@ -1358,6 +1349,50 @@ export async function updateTicketWithCache(id: string, data: Partial<ITicket>, 
         .first() :
       oldStatus;
 
+    // Emit expanded domain transition events for workflow v2 triggers.
+    const occurredAt = new Date().toISOString();
+    const workflowCtx = {
+      tenantId: tenant,
+      actor: { actorType: 'USER' as const, actorUserId: user.user_id },
+      occurredAt,
+    };
+
+    const transitionEvents = buildTicketTransitionWorkflowEvents({
+      before: {
+        ticketId: id,
+        statusId: currentTicket.status_id,
+        priorityId: currentTicket.priority_id,
+        assignedTo: currentTicket.assigned_to,
+        boardId: currentTicket.board_id,
+        escalated: currentTicket.escalated,
+      },
+      after: {
+        ticketId: id,
+        statusId: updatedTicket.status_id,
+        priorityId: updatedTicket.priority_id,
+        assignedTo: updatedTicket.assigned_to,
+        boardId: updatedTicket.board_id,
+        escalated: updatedTicket.escalated,
+      },
+      ctx: {
+        occurredAt,
+        actorUserId: user.user_id,
+        previousStatusIsClosed: !!oldStatus?.is_closed,
+        newStatusIsClosed: !!newStatus?.is_closed,
+      },
+    });
+
+    for (const ev of transitionEvents) {
+      await publishWorkflowEvent({
+        eventType: ev.eventType,
+        payload: ev.payload,
+        ctx: workflowCtx,
+        eventName: ev.workflow?.eventName,
+        fromState: ev.workflow?.fromState,
+        toState: ev.workflow?.toState,
+      });
+    }
+
     // Build structured changes object with old/new values
     const structuredChanges: Record<string, any> = {};
 
@@ -1406,36 +1441,66 @@ export async function updateTicketWithCache(id: string, data: Partial<ITicket>, 
     // Publish appropriate event based on the update
     if (newStatus?.is_closed && !oldStatus?.is_closed) {
       // Ticket was closed
-      await publishEvent({
+      await publishWorkflowEvent({
         eventType: 'TICKET_CLOSED',
         payload: {
-          tenantId: tenant,
           ticketId: id,
           userId: user.user_id,
-          changes: structuredChanges
-        }
+          closedByUserId: user.user_id,
+          closedAt: occurredAt,
+          changes: structuredChanges,
+        },
+        ctx: workflowCtx,
+        eventName: 'Ticket Closed',
+        fromState: currentTicket.status_id,
+        toState: updatedTicket.status_id,
       });
+
+      const slaCompletionEvent = buildTicketResolutionSlaStageCompletionEvent({
+        tenantId: tenant,
+        ticketId: id,
+        itilPriorityLevel: currentTicket.itil_priority_level,
+        enteredAt: currentTicket.entered_at,
+        closedAt: occurredAt,
+      });
+      if (slaCompletionEvent) {
+        await publishWorkflowEvent({
+          eventType: slaCompletionEvent.eventType,
+          payload: slaCompletionEvent.payload,
+          ctx: workflowCtx,
+          idempotencyKey: slaCompletionEvent.idempotencyKey,
+        });
+      }
     } else if (updateData.assigned_to && updateData.assigned_to !== currentTicket.assigned_to) {
       // Ticket was assigned - userId should be the user being assigned, not the one making the update
-      await publishEvent({
+      await publishWorkflowEvent({
         eventType: 'TICKET_ASSIGNED',
         payload: {
-          tenantId: tenant,
           ticketId: id,
-          userId: updateData.assigned_to,  // The user being assigned to the ticket
-          changes: structuredChanges
-        }
+          userId: updateData.assigned_to, // Legacy: assigned user
+          assignedByUserId: user.user_id,
+          previousAssigneeId: currentTicket.assigned_to ?? undefined,
+          previousAssigneeType: currentTicket.assigned_to ? 'user' : undefined,
+          newAssigneeId: updateData.assigned_to,
+          newAssigneeType: 'user',
+          assignedAt: occurredAt,
+          changes: structuredChanges,
+        },
+        ctx: workflowCtx,
+        eventName: 'Ticket Assigned',
       });
     } else {
       // Regular update
-      await publishEvent({
+      await publishWorkflowEvent({
         eventType: 'TICKET_UPDATED',
         payload: {
-          tenantId: tenant,
           ticketId: id,
           userId: user.user_id,
-          changes: structuredChanges
-        }
+          updatedByUserId: user.user_id,
+          changes: structuredChanges,
+        },
+        ctx: workflowCtx,
+        eventName: 'Ticket Updated',
       });
     }
 
@@ -1471,34 +1536,29 @@ export async function updateTicketWithCache(id: string, data: Partial<ITicket>, 
       throw new Error('Failed to update ticket');
     }
   });
-}
+});
 
 /**
  * Client-safe wrapper: resolves current user on the server.
  * Use this from Client Components to avoid importing server-only auth modules into the browser bundle.
+ * @deprecated With withAuth pattern, you can call updateTicketWithCache directly - it handles auth internally
  */
 export async function updateTicketWithCacheForCurrentUser(id: string, data: Partial<ITicket>) {
-  const user = await getCurrentUser();
-  if (!user) {
-    throw new Error('User not authenticated');
-  }
-  return updateTicketWithCache(id, data, user);
+  return updateTicketWithCache(id, data);
 }
 
 /**
  * Add comment to ticket with proper caching
  */
-export async function addTicketCommentWithCache(
+export const addTicketCommentWithCache = withAuth(async (
+  user,
+  { tenant },
   ticketId: string,
   content: string,
   isInternal: boolean,
-  isResolution: boolean,
-  user: IUser
-): Promise<IComment> {
-  const {knex: db, tenant} = await createTenantKnex(user.tenant);
-  if (!tenant) {
-    throw new Error('Tenant not found');
-  }
+  isResolution: boolean
+): Promise<IComment> => {
+  const {knex: db} = await createTenantKnex();
 
   return withTransaction(db, async (trx) => {
     if (!await hasPermission(user, 'ticket', 'update', trx)) {
@@ -1613,6 +1673,32 @@ export async function addTicketCommentWithCache(
         }
       }
     });
+
+    // Publish workflow v2 ticket message events (additive).
+    try {
+      const occurredAt = newComment.created_at ?? new Date().toISOString();
+      const workflowCtx = {
+        tenantId: tenant,
+        actor: { actorType: 'USER' as const, actorUserId: user.user_id },
+        occurredAt,
+        correlationId: newComment.comment_id,
+      };
+
+      const events = buildTicketCommunicationWorkflowEvents({
+        ticketId,
+        messageId: newComment.comment_id,
+        visibility: isInternal ? 'internal' : 'public',
+        author: { authorType: 'user', authorId: user.user_id },
+        channel: 'ui',
+        createdAt: occurredAt,
+      });
+
+      for (const ev of events) {
+        await publishWorkflowEvent({ eventType: ev.eventType, payload: ev.payload, ctx: workflowCtx });
+      }
+    } catch (eventError) {
+      console.error('[addTicketCommentWithCache] Failed to publish workflow ticket message events:', eventError);
+    }
     
     // Track comment analytics
     captureAnalytics('ticket_comment_added', {
@@ -1631,11 +1717,12 @@ export async function addTicketCommentWithCache(
       throw new Error('Failed to add ticket comment');
     }
   });
-}
+});
 
 /**
  * Client-safe wrapper: resolves current user on the server.
  * Use this from Client Components to avoid importing server-only auth modules into the browser bundle.
+ * @deprecated With withAuth pattern, you can call addTicketCommentWithCache directly - it handles auth internally
  */
 export async function addTicketCommentWithCacheForCurrentUser(
   ticketId: string,
@@ -1643,27 +1730,21 @@ export async function addTicketCommentWithCacheForCurrentUser(
   isInternal: boolean,
   isResolution: boolean
 ): Promise<IComment> {
-  const user = await getCurrentUser();
-  if (!user) {
-    throw new Error('User not authenticated');
-  }
-  return addTicketCommentWithCache(ticketId, content, isInternal, isResolution, user);
+  return addTicketCommentWithCache(ticketId, content, isInternal, isResolution);
 }
 
 /**
  * Get consolidated data for the ticket list page including filter options and tickets
  * This reduces multiple network calls by fetching all related data in a single server action
  */
-export async function getConsolidatedTicketListData(
-  user: IUser,
+export const getConsolidatedTicketListData = withAuth(async (
+  user,
+  { tenant },
   filters: ITicketListFilters,
   page: number = 1,
   pageSize: number = 10
-) {
-  const {knex: db, tenant} = await createTenantKnex(user.tenant);
-  if (!tenant) {
-    throw new Error('Tenant not found');
-  }
+) => {
+  const {knex: db} = await createTenantKnex();
 
   return withTransaction(db, async (trx) => {
     if (!await hasPermission(user, 'ticket', 'read', trx)) {
@@ -1673,8 +1754,8 @@ export async function getConsolidatedTicketListData(
     try {
       // Fetch filter options and tickets in parallel
       const [formOptions, ticketsData] = await Promise.all([
-        getTicketFormOptions(user),
-        getTicketsForList(user, filters, page, pageSize)
+        getTicketFormOptions(),
+        getTicketsForList(filters, page, pageSize)
       ]);
 
       // Return consolidated data
@@ -1688,22 +1769,20 @@ export async function getConsolidatedTicketListData(
       throw new Error('Failed to fetch ticket list data');
     }
   });
-}
+});
 
 /**
  * Fetch tickets with pagination
  * This is used when changing pages or page size
  */
-export async function fetchTicketsWithPagination(
-  user: IUser,
+export const fetchTicketsWithPagination = withAuth(async (
+  user,
+  { tenant },
   filters: ITicketListFilters,
   page: number = 1,
   pageSize: number = 10
-) {
-  const {knex: db, tenant} = await createTenantKnex(user.tenant);
-  if (!tenant) {
-    throw new Error('Tenant not found');
-  }
+) => {
+  const {knex: db} = await createTenantKnex();
 
   return withTransaction(db, async (trx) => {
     if (!await hasPermission(user, 'ticket', 'read', trx)) {
@@ -1711,26 +1790,24 @@ export async function fetchTicketsWithPagination(
     }
 
     try {
-      return await getTicketsForList(user, filters, page, pageSize);
+      return await getTicketsForList(filters, page, pageSize);
     } catch (error) {
       console.error('Failed to fetch tickets:', error);
       throw new Error('Failed to fetch tickets');
     }
   });
-}
+});
 
 /**
  * Fetch bundle children for a given master ticket.
  * Used by the ticket list when in "bundled" view and expanding a master inline.
  */
-export async function fetchBundleChildrenForMaster(
-  user: IUser,
+export const fetchBundleChildrenForMaster = withAuth(async (
+  user,
+  { tenant },
   masterTicketId: string
-): Promise<ITicketListItem[]> {
-  const { knex: db, tenant } = await createTenantKnex(user.tenant);
-  if (!tenant) {
-    throw new Error('Tenant not found');
-  }
+): Promise<ITicketListItem[]> => {
+  const { knex: db } = await createTenantKnex();
 
   return withTransaction(db, async (trx) => {
     if (!await hasPermission(user, 'ticket', 'read', trx)) {
@@ -1827,24 +1904,25 @@ export async function fetchBundleChildrenForMaster(
       };
     });
   });
-}
+});
 
 /**
  * Legacy wrapper for cursor-based pagination - kept for backward compatibility
  * @deprecated Use getTicketsForList with page-based pagination instead
  */
-export async function getTicketsForListWithCursor(
-  user: IUser,
+export const getTicketsForListWithCursor = withAuth(async (
+  _user,
+  _ctx,
   filters: ITicketListFilters,
   cursor?: string,
   limit: number = 50
-): Promise<{ tickets: ITicketListItem[], nextCursor: string | null }> {
+): Promise<{ tickets: ITicketListItem[], nextCursor: string | null }> => {
   // For backward compatibility, we'll use page 1 with the specified limit
   // This doesn't support cursor pagination anymore, but prevents breaking existing code
-  const result = await getTicketsForList(user, filters, 1, limit);
+  const result = await getTicketsForList(filters, 1, limit);
 
   return {
     tickets: result.tickets,
     nextCursor: null // No more cursor-based pagination
   };
-}
+});

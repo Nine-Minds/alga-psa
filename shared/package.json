@@ -37,10 +37,16 @@
     "./*": "./dist/*"
   },
   "scripts": {
-    "build": "tsc && tsc-alias -f",
+    "build": "tsup",
+    "typecheck": "tsc --noEmit",
     "lint": "eslint ."
   },
   "dependencies": {
+    "@alga-psa/core": "*",
+    "@alga-psa/db": "*",
+    "@alga-psa/email": "*",
+    "@alga-psa/event-bus": "*",
+    "@alga-psa/types": "*",
     "@js-temporal/polyfill": "^0.4.4",
     "ajv": "^8.12.0",
     "ajv-formats": "^2.1.1",
@@ -68,7 +74,9 @@
     "@types/node": "^20.0.0",
     "@types/turndown": "^5.0.6",
     "@types/uuid": "^9.0.7",
-    "tsc-alias": "^1.8.16"
+    "next-auth": "^5.0.0-beta.30",
+    "tsc-alias": "^1.8.16",
+    "tsup": "^8.0.0"
   },
   "peerDependencies": {
     "react": "^18.0.0 || ^19.0.0"

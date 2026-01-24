@@ -19,7 +19,7 @@ import { getEmailEventChannel } from '@/lib/notifications/emailChannel';
 import type { Knex } from 'knex';
 import { getPortalDomain } from 'server/src/models/PortalDomainModel';
 import { buildTenantPortalSlug } from '@shared/utils/tenantSlug';
-import { TenantEmailService } from '../../services/TenantEmailService';
+import { TenantEmailService } from '@alga-psa/email';
 import { NotificationAccumulator, PendingNotification, AccumulatedChange } from '../../notifications/NotificationAccumulator';
 import { isValidEmail } from '@alga-psa/core';
 

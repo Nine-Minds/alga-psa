@@ -10,27 +10,38 @@ import type { IClientContract } from '@alga-psa/types';
 import { createTenantKnex } from '@alga-psa/db';
 import { Temporal } from '@js-temporal/polyfill';
 import { toPlainDate } from '@alga-psa/core';
-import { getSessionAsync } from '../lib/authHelpers';
 import { cloneTemplateContractLineAsync } from '../lib/billingHelpers';
 import { v4 as uuidv4 } from 'uuid';
 import { checkAndReactivateExpiredContract } from '@alga-psa/shared/billingClients';
-import { getCurrentUserAsync } from '../lib/usersHelpers';
+import { withAuth } from '@alga-psa/auth';
+import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
+import {
+  buildContractCreatedPayload,
+  buildContractRenewalUpcomingPayload,
+  buildContractStatusChangedPayload,
+  buildContractUpdatedPayload,
+  computeContractRenewalUpcoming,
+} from '@shared/workflow/streams/domainEventBuilders/contractEventBuilders';
+import {
+  buildClientContractUpdatedFieldsAndChanges,
+  deriveClientContractWorkflowStatus,
+} from '../lib/clientContractWorkflowEvents';
+
+function maybeUserActor(user: any) {
+  const userId = user?.user_id;
+  if (typeof userId !== 'string' || userId.length === 0) return undefined;
+  return { actorType: 'USER' as const, actorUserId: userId };
+}
 
 /**
  * Get all active contracts for a client.
  */
-export async function getClientContracts(clientId: string): Promise<IClientContract[]> {
-  const currentUser = await getCurrentUserAsync();
-  if (!currentUser) {
-    throw new Error('Unauthorized');
-  }
-
+export const getClientContracts = withAuth(async (
+  _user,
+  { tenant },
+  clientId: string
+): Promise<IClientContract[]> => {
   try {
-    const { tenant } = await createTenantKnex(currentUser.tenant);
-    if (!tenant) {
-      throw new Error("tenant context not found");
-    }
-
     const clientContracts = await ClientContract.getByClientId(clientId, tenant);
     return clientContracts;
   } catch (error) {
@@ -40,23 +51,17 @@ export async function getClientContracts(clientId: string): Promise<IClientContr
     }
     throw new Error(`Failed to fetch client contracts: ${error}`);
   }
-}
+});
 
 /**
  * Get active contracts for a list of clients.
  */
-export async function getActiveClientContractsByClientIds(clientIds: string[]): Promise<IClientContract[]> {
-  const currentUser = await getCurrentUserAsync();
-  if (!currentUser) {
-    throw new Error('Unauthorized');
-  }
-
+export const getActiveClientContractsByClientIds = withAuth(async (
+  _user,
+  { tenant },
+  clientIds: string[]
+): Promise<IClientContract[]> => {
   try {
-    const { tenant } = await createTenantKnex(currentUser.tenant);
-    if (!tenant) {
-      throw new Error("tenant context not found");
-    }
-
     return await ClientContract.getActiveByClientIds(clientIds, tenant);
   } catch (error) {
     console.error('Error fetching contracts for clients:', error);
@@ -65,23 +70,17 @@ export async function getActiveClientContractsByClientIds(clientIds: string[]): 
     }
     throw new Error(`Failed to fetch client contracts: ${error}`);
   }
-}
+});
 
 /**
  * Get a specific client contract by ID.
  */
-export async function getClientContractById(clientContractId: string): Promise<IClientContract | null> {
-  const currentUser = await getCurrentUserAsync();
-  if (!currentUser) {
-    throw new Error('Unauthorized');
-  }
-
+export const getClientContractById = withAuth(async (
+  _user,
+  { tenant },
+  clientContractId: string
+): Promise<IClientContract | null> => {
   try {
-    const { tenant } = await createTenantKnex(currentUser.tenant);
-    if (!tenant) {
-      throw new Error("tenant context not found");
-    }
-
     return await ClientContract.getById(clientContractId, tenant);
   } catch (error) {
     console.error(`Error fetching client contract ${clientContractId}:`, error);
@@ -90,23 +89,17 @@ export async function getClientContractById(clientContractId: string): Promise<I
     }
     throw new Error(`Failed to fetch client contract: ${error}`);
   }
-}
+});
 
 /**
  * Get detailed information about a client's contract assignment.
  */
-export async function getDetailedClientContract(clientContractId: string): Promise<any | null> {
-  const currentUser = await getCurrentUserAsync();
-  if (!currentUser) {
-    throw new Error('Unauthorized');
-  }
-
+export const getDetailedClientContract = withAuth(async (
+  _user,
+  { tenant },
+  clientContractId: string
+): Promise<any | null> => {
   try {
-    const { tenant } = await createTenantKnex(currentUser.tenant);
-    if (!tenant) {
-      throw new Error("tenant context not found");
-    }
-
     return await ClientContract.getDetailedClientContract(clientContractId, tenant);
   } catch (error) {
     console.error(`Error fetching detailed client contract ${clientContractId}:`, error);
@@ -115,35 +108,75 @@ export async function getDetailedClientContract(clientContractId: string): Promi
     }
     throw new Error(`Failed to fetch detailed client contract: ${error}`);
   }
-}
+});
 
 /**
  * Assign a contract to a client.
  */
-export async function assignContractToClient(
+export const assignContractToClient = withAuth(async (
+  _user,
+  { tenant },
   clientId: string,
   contractId: string,
   startDate: string,
   endDate: string | null = null
-): Promise<IClientContract> {
-  const currentUser = await getCurrentUserAsync();
-  if (!currentUser) {
-    throw new Error('Unauthorized');
-  }
-
+): Promise<IClientContract> => {
   try {
-    const { tenant } = await createTenantKnex(currentUser.tenant);
-    if (!tenant) {
-      throw new Error("tenant context not found");
-    }
-
     const clientContract = await ClientContract.assignContractToClient(
-      clientId, 
-      contractId, 
+      clientId,
+      contractId,
       startDate,
       endDate,
       tenant
     );
+
+    const createdAt = clientContract.created_at ?? new Date().toISOString();
+    const status = deriveClientContractWorkflowStatus({
+      isActive: clientContract.is_active,
+      startDate: clientContract.start_date,
+      endDate: clientContract.end_date,
+    });
+
+    await publishWorkflowEvent({
+      eventType: 'CONTRACT_CREATED',
+      payload: buildContractCreatedPayload({
+        contractId: clientContract.contract_id,
+        clientId: clientContract.client_id,
+        createdByUserId: _user.user_id,
+        createdAt,
+        startDate: clientContract.start_date,
+        endDate: clientContract.end_date,
+        status,
+      }),
+      ctx: {
+        tenantId: tenant,
+        occurredAt: createdAt,
+        actor: maybeUserActor(_user),
+      },
+      idempotencyKey: `contract_created:${clientContract.contract_id}:${clientContract.client_id}`,
+    });
+
+    const renewal = clientContract.end_date
+      ? computeContractRenewalUpcoming({ renewalAt: clientContract.end_date })
+      : null;
+    if (renewal) {
+      await publishWorkflowEvent({
+        eventType: 'CONTRACT_RENEWAL_UPCOMING',
+        payload: buildContractRenewalUpcomingPayload({
+          contractId: clientContract.contract_id,
+          clientId: clientContract.client_id,
+          renewalAt: renewal.renewalAt,
+          daysUntilRenewal: renewal.daysUntilRenewal,
+        }),
+        ctx: {
+          tenantId: tenant,
+          occurredAt: createdAt,
+          actor: maybeUserActor(_user),
+        },
+        idempotencyKey: `contract_renewal_upcoming:${clientContract.contract_id}:${clientContract.client_id}:${renewal.renewalAt}`,
+      });
+    }
+
     return clientContract;
   } catch (error) {
     console.error(`Error assigning contract ${contractId} to client ${clientId}:`, error);
@@ -152,29 +185,26 @@ export async function assignContractToClient(
     }
     throw new Error(`Failed to assign contract to client: ${error}`);
   }
-}
+});
 
-export async function createClientContract(input: {
-  client_id: string;
-  contract_id: string;
-  start_date: string;
-  end_date: string | null;
-  is_active: boolean;
-  po_required?: boolean;
-  po_number?: string | null;
-  po_amount?: number | null;
-}): Promise<IClientContract> {
-  const currentUser = await getCurrentUserAsync();
-  if (!currentUser) {
-    throw new Error('Unauthorized');
+export const createClientContract = withAuth(async (
+  _user,
+  { tenant },
+  input: {
+    client_id: string;
+    contract_id: string;
+    start_date: string;
+    end_date: string | null;
+    is_active: boolean;
+    po_required?: boolean;
+    po_number?: string | null;
+    po_amount?: number | null;
   }
+): Promise<IClientContract> => {
+  const { knex } = await createTenantKnex();
 
-  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
-  if (!tenant) {
-    throw new Error("tenant context not found");
-  }
-
-  return withTransaction(knex, async (trx: Knex.Transaction) => {
+  let createdForEvent: IClientContract | null = null;
+  const created = await withTransaction(knex, async (trx: Knex.Transaction) => {
     const clientExists = await trx('clients').where({ client_id: input.client_id, tenant }).first();
     if (!clientExists) {
       throw new Error(`Client ${input.client_id} not found or belongs to a different tenant`);
@@ -232,41 +262,88 @@ export async function createClientContract(input: {
     if (hasPoAmount) insertPayload.po_amount = input.po_amount ?? null;
 
     const [created] = await trx<IClientContract>('client_contracts').insert(insertPayload).returning('*');
+    createdForEvent = created;
     return created;
   });
-}
+
+  if (createdForEvent) {
+    const createdAt = createdForEvent.created_at ?? new Date().toISOString();
+    const status = deriveClientContractWorkflowStatus({
+      isActive: createdForEvent.is_active,
+      startDate: createdForEvent.start_date,
+      endDate: createdForEvent.end_date,
+    });
+
+    await publishWorkflowEvent({
+      eventType: 'CONTRACT_CREATED',
+      payload: buildContractCreatedPayload({
+        contractId: createdForEvent.contract_id,
+        clientId: createdForEvent.client_id,
+        createdByUserId: _user.user_id,
+        createdAt,
+        startDate: createdForEvent.start_date,
+        endDate: createdForEvent.end_date,
+        status,
+      }),
+      ctx: {
+        tenantId: tenant,
+        occurredAt: createdAt,
+        actor: maybeUserActor(_user),
+      },
+      idempotencyKey: `contract_created:${createdForEvent.contract_id}:${createdForEvent.client_id}`,
+    });
+
+    const renewal = createdForEvent.end_date
+      ? computeContractRenewalUpcoming({ renewalAt: createdForEvent.end_date })
+      : null;
+    if (renewal) {
+      await publishWorkflowEvent({
+        eventType: 'CONTRACT_RENEWAL_UPCOMING',
+        payload: buildContractRenewalUpcomingPayload({
+          contractId: createdForEvent.contract_id,
+          clientId: createdForEvent.client_id,
+          renewalAt: renewal.renewalAt,
+          daysUntilRenewal: renewal.daysUntilRenewal,
+        }),
+        ctx: {
+          tenantId: tenant,
+          occurredAt: createdAt,
+          actor: maybeUserActor(_user),
+        },
+        idempotencyKey: `contract_renewal_upcoming:${createdForEvent.contract_id}:${createdForEvent.client_id}:${renewal.renewalAt}`,
+      });
+    }
+  }
+
+  return created;
+});
 
 /**
  * Update a client's contract assignment
  */
-export async function updateClientContract(
+export const updateClientContract = withAuth(async (
+  _user,
+  { tenant },
   clientContractId: string,
   updateData: Partial<IClientContract>
-): Promise<IClientContract> {
-  const currentUser = await getCurrentUserAsync();
-  if (!currentUser) {
-    throw new Error('Unauthorized');
-  }
-
+): Promise<IClientContract> => {
   try {
-    const { knex: db, tenant } = await createTenantKnex(currentUser.tenant); // Get knex instance
-    if (!tenant) {
-      throw new Error("tenant context not found");
+    const { knex: db } = await createTenantKnex(); // Get knex instance
+
+    const beforeContract = await ClientContract.getById(clientContractId, tenant);
+    if (!beforeContract) {
+      throw new Error(`Client contract ${clientContractId} not found.`);
     }
 
     // --- Start Validation ---
     if (updateData.start_date || updateData.end_date !== undefined) { // Check if dates are being updated (end_date can be null)
       // 1. Get current client contract details
-      const currentContract = await ClientContract.getById(clientContractId, tenant);
-      if (!currentContract) {
-        throw new Error(`Client contract ${clientContractId} not found.`);
-      }
-      const clientId = currentContract.client_id;
+      const clientId = beforeContract.client_id;
 
       // 2. Determine proposed new dates
-      const proposedStartDateStr = updateData.start_date ?? currentContract.start_date;
+      const proposedStartDateStr = updateData.start_date ?? beforeContract.start_date;
       // Handle null explicitly for end_date
-      const proposedEndDateStr = updateData.end_date !== undefined ? updateData.end_date : currentContract.end_date;
+      const proposedEndDateStr = updateData.end_date !== undefined ? updateData.end_date : beforeContract.end_date;
 
       const proposedStartDate = toPlainDate(proposedStartDateStr);
       const proposedEndDate = proposedEndDateStr ? toPlainDate(proposedEndDateStr) : null;
@@ -316,6 +393,85 @@ export async function updateClientContract(
     // This handles the case where an expired contract's end dates are extended
     await checkAndReactivateExpiredContract(db, tenant, updatedClientContract.contract_id);
 
+    const updatedAt = updatedClientContract.updated_at ?? new Date().toISOString();
+    const { updatedFields, changes } = buildClientContractUpdatedFieldsAndChanges({
+      before: beforeContract,
+      after: updatedClientContract,
+    });
+
+    if (updatedFields.length > 0) {
+      await publishWorkflowEvent({
+        eventType: 'CONTRACT_UPDATED',
+        payload: buildContractUpdatedPayload({
+          contractId: updatedClientContract.contract_id,
+          clientId: updatedClientContract.client_id,
+          updatedAt,
+          updatedFields,
+          changes,
+        }),
+        ctx: {
+          tenantId: tenant,
+          occurredAt: updatedAt,
+          actor: maybeUserActor(_user),
+        },
+        idempotencyKey: `contract_updated:${updatedClientContract.contract_id}:${updatedClientContract.client_id}:${updatedAt}`,
+      });
+    }
+
+    const previousStatus = deriveClientContractWorkflowStatus({
+      isActive: beforeContract.is_active,
+      startDate: beforeContract.start_date,
+      endDate: beforeContract.end_date,
+    });
+    const newStatus = deriveClientContractWorkflowStatus({
+      isActive: updatedClientContract.is_active,
+      startDate: updatedClientContract.start_date,
+      endDate: updatedClientContract.end_date,
+    });
+
+    if (previousStatus !== newStatus) {
+      await publishWorkflowEvent({
+        eventType: 'CONTRACT_STATUS_CHANGED',
+        payload: buildContractStatusChangedPayload({
+          contractId: updatedClientContract.contract_id,
+          clientId: updatedClientContract.client_id,
+          previousStatus,
+          newStatus,
+          changedAt: updatedAt,
+        }),
+        ctx: {
+          tenantId: tenant,
+          occurredAt: updatedAt,
+          actor: maybeUserActor(_user),
+        },
+        idempotencyKey: `contract_status_changed:${updatedClientContract.contract_id}:${updatedClientContract.client_id}:${previousStatus}->${newStatus}:${updatedAt}`,
+      });
+    }
+
+    const previousRenewal = beforeContract.end_date
+      ? computeContractRenewalUpcoming({ renewalAt: beforeContract.end_date, now: updatedAt })
+      : null;
+    const nextRenewal = updatedClientContract.end_date
+      ? computeContractRenewalUpcoming({ renewalAt: updatedClientContract.end_date, now: updatedAt })
+      : null;
+    if (nextRenewal && !previousRenewal) {
+      await publishWorkflowEvent({
+        eventType: 'CONTRACT_RENEWAL_UPCOMING',
+        payload: buildContractRenewalUpcomingPayload({
+          contractId: updatedClientContract.contract_id,
+          clientId: updatedClientContract.client_id,
+          renewalAt: nextRenewal.renewalAt,
+          daysUntilRenewal: nextRenewal.daysUntilRenewal,
+        }),
+        ctx: {
+          tenantId: tenant,
+          occurredAt: updatedAt,
+          actor: maybeUserActor(_user),
+        },
+        idempotencyKey: `contract_renewal_upcoming:${updatedClientContract.contract_id}:${updatedClientContract.client_id}:${nextRenewal.renewalAt}:${updatedAt}`,
+      });
+    }
+
     return updatedClientContract;
   } catch (error) {
     console.error(`Error updating client contract ${clientContractId}:`, error);
@@ -330,24 +486,50 @@ export async function updateClientContract(
     // Throw a generic error for unexpected issues
     throw new Error(`Failed to update client contract: ${error instanceof Error ? error.message : String(error)}`);
   }
-}
+});
 
 /**
  * Deactivate a client's contract assignment.
  */
-export async function deactivateClientContract(clientContractId: string): Promise<IClientContract> {
-  const currentUser = await getCurrentUserAsync();
-  if (!currentUser) {
-    throw new Error('Unauthorized');
-  }
-
+export const deactivateClientContract = withAuth(async (
+  _user,
+  { tenant },
+  clientContractId: string
+): Promise<IClientContract> => {
   try {
-    const { tenant } = await createTenantKnex(currentUser.tenant);
-    if (!tenant) {
-      throw new Error("tenant context not found");
+    const beforeContract = await ClientContract.getById(clientContractId, tenant);
+    if (!beforeContract) {
+      throw new Error(`Client contract ${clientContractId} not found.`);
     }
 
     const deactivatedContract = await ClientContract.deactivateClientContract(clientContractId, tenant);
+
+    const changedAt = deactivatedContract.updated_at ?? new Date().toISOString();
+    const previousStatus = deriveClientContractWorkflowStatus({
+      isActive: beforeContract.is_active,
+      startDate: beforeContract.start_date,
+      endDate: beforeContract.end_date,
+    });
+    const newStatus = 'terminated';
+    if (previousStatus !== newStatus) {
+      await publishWorkflowEvent({
+        eventType: 'CONTRACT_STATUS_CHANGED',
+        payload: buildContractStatusChangedPayload({
+          contractId: deactivatedContract.contract_id,
+          clientId: deactivatedContract.client_id,
+          previousStatus,
+          newStatus,
+          changedAt,
+        }),
+        ctx: {
+          tenantId: tenant,
+          occurredAt: changedAt,
+          actor: maybeUserActor(_user),
+        },
+        idempotencyKey: `contract_status_changed:${deactivatedContract.contract_id}:${deactivatedContract.client_id}:${previousStatus}->${newStatus}:${changedAt}`,
+      });
+    }
+
     return deactivatedContract;
   } catch (error) {
     console.error(`Error deactivating client contract ${clientContractId}:`, error);
@@ -356,23 +538,17 @@ export async function deactivateClientContract(clientContractId: string): Promis
     }
     throw new Error(`Failed to deactivate client contract: ${error}`);
   }
-}
+});
 
 /**
  * Get all contract lines associated with a client's contract
  */
-export async function getClientContractLines(clientContractId: string): Promise<any[]> {
-  const currentUser = await getCurrentUserAsync();
-  if (!currentUser) {
-    throw new Error('Unauthorized');
-  }
-
+export const getClientContractLines = withAuth(async (
+  _user,
+  { tenant },
+  clientContractId: string
+): Promise<any[]> => {
   try {
-    const { tenant } = await createTenantKnex(currentUser.tenant);
-    if (!tenant) {
-      throw new Error("tenant context not found");
-    }
-
     const contractLines = await ClientContract.getContractLines(clientContractId, tenant);
     return contractLines;
   } catch (error) {
@@ -382,23 +558,19 @@ export async function getClientContractLines(clientContractId: string): Promise<
     }
     throw new Error(`Failed to fetch contract lines for client contract: ${error}`);
   }
-}
+});
 
 /**
  * Apply a client's contract lines to the client
  * This populates services and configuration for each contract_line in the contract.
  * The contract_lines already exist - this clones the template services/configuration.
  */
-export async function applyContractToClient(clientContractId: string): Promise<void> {
-  const currentUser = await getCurrentUserAsync();
-  if (!currentUser) {
-    throw new Error('Unauthorized');
-  }
-
-  const { knex: db, tenant } = await createTenantKnex(currentUser.tenant);
-  if (!tenant) {
-    throw new Error("tenant context not found");
-  }
+export const applyContractToClient = withAuth(async (
+  _user,
+  { tenant },
+  clientContractId: string
+): Promise<void> => {
+  const { knex: db } = await createTenantKnex();
 
   try {
     // Get the client contract
@@ -436,4 +608,4 @@ export async function applyContractToClient(clientContractId: string): Promise<v
     }
     throw new Error(`Failed to apply contract to client: ${error}`);
   }
-}
+});

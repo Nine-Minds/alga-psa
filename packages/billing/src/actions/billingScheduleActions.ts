@@ -2,7 +2,6 @@
 
 import type { Knex } from 'knex';
 import { withTransaction } from '@alga-psa/db';
-import { getCurrentUser } from '@alga-psa/auth/getCurrentUser';
 import { createTenantKnex } from '@alga-psa/db';
 import type { BillingCycleType } from '@alga-psa/types';
 import type { ISO8601String } from '@alga-psa/types';
@@ -14,7 +13,7 @@ import {
   type NormalizedBillingCycleAnchorSettings
 } from '../lib/billing/billingCycleAnchors';
 import { ensureClientBillingSettingsRow } from './billingCycleAnchorActions';
-import { getCurrentUserAsync, hasPermissionAsync, getSessionAsync, getAnalyticsAsync } from '../lib/authHelpers';
+import { withAuth } from '@alga-psa/auth';
 
 function isDateObject(val: unknown): val is Date {
   return Object.prototype.toString.call(val) === '[object Date]';
@@ -35,27 +34,16 @@ export type ClientBillingScheduleConfig = {
   anchor: NormalizedBillingCycleAnchorSettings;
 };
 
-export async function getClientBillingScheduleSummaries(
+export const getClientBillingScheduleSummaries = withAuth(async (
+  user,
+  { tenant },
   clientIds: string[]
-): Promise<Record<string, ClientBillingScheduleConfig>> {
-  const session = await getSessionAsync();
-  if (!session?.user?.id) {
-    throw new Error('Unauthorized');
-  }
-
+): Promise<Record<string, ClientBillingScheduleConfig>> => {
   if (clientIds.length === 0) {
     return {};
   }
 
-  const currentUser = await getCurrentUserAsync();
-  if (!currentUser) {
-    throw new Error('No authenticated user found');
-  }
-
-  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
-  if (!tenant) {
-    throw new Error('No tenant found');
-  }
+  const { knex } = await createTenantKnex();
 
   const rows = await withTransaction(knex, async (trx: Knex.Transaction) => {
     return await trx('clients as c')
@@ -91,7 +79,7 @@ export async function getClientBillingScheduleSummaries(
   }
 
   return summaries;
-}
+});
 
 export type UpdateClientBillingScheduleInput = {
   clientId: string;
@@ -99,23 +87,12 @@ export type UpdateClientBillingScheduleInput = {
   anchor: BillingCycleAnchorSettingsInput;
 };
 
-export async function updateClientBillingSchedule(
+export const updateClientBillingSchedule = withAuth(async (
+  user,
+  { tenant },
   input: UpdateClientBillingScheduleInput
-): Promise<{ success: true }> {
-  const session = await getSessionAsync();
-  if (!session?.user?.id) {
-    throw new Error('Unauthorized');
-  }
-
-  const currentUser = await getCurrentUserAsync();
-  if (!currentUser) {
-    throw new Error('No authenticated user found');
-  }
-
-  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
-  if (!tenant) {
-    throw new Error('No tenant found');
-  }
+): Promise<{ success: true }> => {
+  const { knex } = await createTenantKnex();
 
   await withTransaction(knex, async (trx: Knex.Transaction) => {
     const client = await trx('clients')
@@ -188,4 +165,4 @@ export async function updateClientBillingSchedule(
   });
 
   return { success: true };
-}
+});

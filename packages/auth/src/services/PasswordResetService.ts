@@ -3,6 +3,7 @@ import { checkPasswordResetLimit, formatRateLimitError } from '../lib/security/r
 import crypto from 'crypto';
 import { Knex } from 'knex';
 import { withTransaction } from '@alga-psa/db';
+import { getCurrentUser } from '../lib/getCurrentUser';
 
 export interface PasswordResetToken {
   token_id: string;
@@ -144,10 +145,14 @@ export class PasswordResetService {
 
   /**
    * Create a new password reset token (non-transactional version)
+   * @param email - User's email address
+   * @param userType - Type of user (internal or client)
+   * @param tenantId - Optional tenant ID. If not provided, will try to get from current user or context.
    */
   static async createResetToken(
     email: string,
-    userType: 'internal' | 'client' = 'internal'
+    userType: 'internal' | 'client' = 'internal',
+    tenantId?: string
   ): Promise<{
     success: boolean;
     tokenId?: string;
@@ -156,7 +161,7 @@ export class PasswordResetService {
     error?: string;
   }> {
     try {
-      const { knex, tenant } = await createTenantKnex();
+      const { knex, tenant } = await createTenantKnex(tenantId);
 
       if (!tenant) {
         return { success: false, error: 'Tenant context is required' };
@@ -175,10 +180,12 @@ export class PasswordResetService {
 
   /**
    * Verify a password reset token
+   * @param token - The token to verify
+   * @param tenantId - Optional tenant ID for connection context. Token lookup will find the actual tenant.
    */
-  static async verifyToken(token: string): Promise<TokenVerificationResult> {
+  static async verifyToken(token: string, tenantId?: string): Promise<TokenVerificationResult> {
     try {
-      const { knex } = await createTenantKnex();
+      const { knex } = await createTenantKnex(tenantId);
 
       // Hash the provided token to compare with stored hash
       const tokenHash = this.hashToken(token);
@@ -274,10 +281,12 @@ export class PasswordResetService {
 
   /**
    * Mark a token as used
+   * @param token - The token to mark as used
+   * @param tenantId - Optional tenant ID for connection context. Token lookup will find the actual tenant.
    */
-  static async markTokenAsUsed(token: string): Promise<boolean> {
+  static async markTokenAsUsed(token: string, tenantId?: string): Promise<boolean> {
     try {
-      const { knex } = await createTenantKnex();
+      const { knex } = await createTenantKnex(tenantId);
 
       // Hash the token for comparison
       const tokenHash = this.hashToken(token);
@@ -322,10 +331,21 @@ export class PasswordResetService {
 
   /**
    * Get reset token history for a user
+   * @param userId - The user ID to get history for
+   * @param tenantId - Optional tenant ID. If not provided, will get from current user.
    */
-  static async getResetHistory(userId: string): Promise<PasswordResetToken[]> {
+  static async getResetHistory(userId: string, tenantId?: string): Promise<PasswordResetToken[]> {
     try {
-      const { knex, tenant } = await createTenantKnex();
+      let tenant = tenantId;
+      if (!tenant) {
+        const currentUser = await getCurrentUser();
+        tenant = currentUser?.tenant;
+      }
+      if (!tenant) {
+        console.error('Tenant context is required for fetching reset history');
+        return [];
+      }
+      const { knex } = await createTenantKnex(tenant);
 
       const tokens = await knex('password_reset_tokens')
         .where({
@@ -347,10 +367,17 @@ export class PasswordResetService {
   /**
    * Clean up expired tokens
    * @param trx - Optional transaction to use for cleanup
+   * @param tenantId - Optional tenant ID. If not provided, will try to get from current user or context.
    */
-  static async cleanupExpiredTokens(trx?: Knex.Transaction): Promise<number> {
+  static async cleanupExpiredTokens(trx?: Knex.Transaction, tenantId?: string): Promise<number> {
     try {
-      const { knex, tenant } = await createTenantKnex();
+      let tenant = tenantId;
+      if (!tenant) {
+        const currentUser = await getCurrentUser();
+        tenant = currentUser?.tenant;
+      }
+      const { knex, tenant: contextTenant } = await createTenantKnex(tenant);
+      tenant = tenant || contextTenant || undefined;
 
       if (!tenant) {
         return 0;
@@ -363,9 +390,9 @@ export class PasswordResetService {
           .where('tenant', tenant)
           .where('expires_at', '<', tx.fn.now())
           .del();
-        
+
         const deletedCount = deletedRows || 0;
-        
+
         if (deletedCount > 0) {
           console.log(`Cleaned up ${deletedCount} expired password reset tokens for tenant ${tenant}`);
         }

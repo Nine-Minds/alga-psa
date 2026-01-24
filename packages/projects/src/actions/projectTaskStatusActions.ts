@@ -2,7 +2,7 @@
 
 import { Knex } from 'knex';
 import { createTenantKnex, withTransaction } from '@alga-psa/db';
-import { getCurrentUser } from '@alga-psa/auth/getCurrentUser';
+import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import type { IProjectStatusMapping, IStatus } from '@alga-psa/types';
 import { publishEvent } from '@alga-psa/event-bus/publishers';
@@ -10,7 +10,9 @@ import { publishEvent } from '@alga-psa/event-bus/publishers';
 /**
  * Add a status to a project
  */
-export async function addStatusToProject(
+export const addStatusToProject = withAuth(async (
+  user,
+  { tenant },
   projectId: string,
   statusData: {
     status_id?: string;  // From tenant library
@@ -18,15 +20,9 @@ export async function addStatusToProject(
     custom_name?: string;  // Override name
     is_visible?: boolean;
   }
-): Promise<IProjectStatusMapping> {
-  const currentUser = await getCurrentUser();
-  if (!currentUser?.tenant) {
-    throw new Error('User tenant not found');
-  }
-  const tenant = currentUser.tenant;
-
+): Promise<IProjectStatusMapping> => {
   // RBAC check
-  if (!await hasPermission(currentUser, 'project', 'update')) {
+  if (!await hasPermission(user, 'project', 'update')) {
     throw new Error('Permission denied: Cannot update project');
   }
 
@@ -66,19 +62,16 @@ export async function addStatusToProject(
 
     return mapping;
   });
-}
+});
 
 /**
  * Get all status mappings for a project
  */
-export async function getProjectStatusMappings(
+export const getProjectStatusMappings = withAuth(async (
+  _user,
+  { tenant },
   projectId: string
-): Promise<IProjectStatusMapping[]> {
-  const currentUser = await getCurrentUser();
-  if (!currentUser?.tenant) {
-    throw new Error('User tenant not found');
-  }
-  const tenant = currentUser.tenant;
+): Promise<IProjectStatusMapping[]> => {
   const { knex } = await createTenantKnex();
 
   return await withTransaction(knex, async (trx) => {
@@ -100,27 +93,23 @@ export async function getProjectStatusMappings(
       )
       .orderBy('psm.display_order');
   });
-}
+});
 
 /**
  * Update a project status mapping
  */
-export async function updateProjectStatusMapping(
+export const updateProjectStatusMapping = withAuth(async (
+  user,
+  { tenant },
   mappingId: string,
   updates: {
     custom_name?: string;
     display_order?: number;
     is_visible?: boolean;
   }
-): Promise<void> {
-  const currentUser = await getCurrentUser();
-  if (!currentUser?.tenant) {
-    throw new Error('User tenant not found');
-  }
-  const tenant = currentUser.tenant;
-
+): Promise<void> => {
   // RBAC check
-  if (!await hasPermission(currentUser, 'project', 'update')) {
+  if (!await hasPermission(user, 'project', 'update')) {
     throw new Error('Permission denied: Cannot update project');
   }
 
@@ -139,22 +128,18 @@ export async function updateProjectStatusMapping(
       updates
     }
   });
-}
+});
 
 /**
  * Delete a project status mapping
  */
-export async function deleteProjectStatusMapping(
+export const deleteProjectStatusMapping = withAuth(async (
+  user,
+  { tenant },
   mappingId: string
-): Promise<void> {
-  const currentUser = await getCurrentUser();
-  if (!currentUser?.tenant) {
-    throw new Error('User tenant not found');
-  }
-  const tenant = currentUser.tenant;
-
+): Promise<void> => {
   // RBAC check
-  if (!await hasPermission(currentUser, 'project', 'update')) {
+  if (!await hasPermission(user, 'project', 'update')) {
     throw new Error('Permission denied: Cannot update project');
   }
 
@@ -208,23 +193,19 @@ export async function deleteProjectStatusMapping(
       }
     });
   });
-}
+});
 
 /**
  * Reorder project statuses
  */
-export async function reorderProjectStatuses(
+export const reorderProjectStatuses = withAuth(async (
+  user,
+  { tenant },
   projectId: string,
   statusOrder: Array<{ mapping_id: string; display_order: number }>
-): Promise<void> {
-  const currentUser = await getCurrentUser();
-  if (!currentUser?.tenant) {
-    throw new Error('User tenant not found');
-  }
-  const tenant = currentUser.tenant;
-
+): Promise<void> => {
   // RBAC check
-  if (!await hasPermission(currentUser, 'project', 'update')) {
+  if (!await hasPermission(user, 'project', 'update')) {
     throw new Error('Permission denied: Cannot update project');
   }
 
@@ -251,19 +232,17 @@ export async function reorderProjectStatuses(
       }
     });
   });
-}
+});
 
 /**
  * Get tenant's project task status library
  * Returns statuses from the 'statuses' table (new system) if available,
  * otherwise falls back to 'standard_statuses' table (old system)
  */
-export async function getTenantProjectStatuses(): Promise<IStatus[]> {
-  const currentUser = await getCurrentUser();
-  if (!currentUser?.tenant) {
-    throw new Error('User tenant not found');
-  }
-  const tenant = currentUser.tenant;
+export const getTenantProjectStatuses = withAuth(async (
+  _user,
+  { tenant }
+): Promise<IStatus[]> => {
   const { knex } = await createTenantKnex();
 
   // First try the new statuses table
@@ -298,22 +277,18 @@ export async function getTenantProjectStatuses(): Promise<IStatus[]> {
     created_at: s.created_at,
     updated_at: s.updated_at,
   }));
-}
+});
 
 /**
  * Create a new status in tenant's library
  */
-export async function createTenantProjectStatus(
+export const createTenantProjectStatus = withAuth(async (
+  user,
+  { tenant },
   statusData: { name: string; is_closed: boolean; color?: string; icon?: string }
-): Promise<IStatus> {
-  const currentUser = await getCurrentUser();
-  if (!currentUser?.tenant) {
-    throw new Error('User tenant not found');
-  }
-  const tenant = currentUser.tenant;
-
+): Promise<IStatus> => {
   // RBAC check
-  if (!await hasPermission(currentUser, 'project', 'update')) {
+  if (!await hasPermission(user, 'project', 'update')) {
     throw new Error('Permission denied: Cannot update project');
   }
 
@@ -367,23 +342,19 @@ export async function createTenantProjectStatus(
     return status;
     // Advisory lock automatically released at transaction end
   });
-}
+});
 
 /**
  * Update a status in tenant's library
  */
-export async function updateTenantProjectStatus(
+export const updateTenantProjectStatus = withAuth(async (
+  user,
+  { tenant },
   statusId: string,
   updates: { name?: string; is_closed?: boolean; color?: string; icon?: string }
-): Promise<void> {
-  const currentUser = await getCurrentUser();
-  if (!currentUser?.tenant) {
-    throw new Error('User tenant not found');
-  }
-  const tenant = currentUser.tenant;
-
+): Promise<void> => {
   // RBAC check
-  if (!await hasPermission(currentUser, 'project', 'update')) {
+  if (!await hasPermission(user, 'project', 'update')) {
     throw new Error('Permission denied: Cannot update project');
   }
 
@@ -392,22 +363,18 @@ export async function updateTenantProjectStatus(
   await knex('statuses')
     .where({ status_id: statusId, tenant, status_type: 'project_task' })
     .update(updates);
-}
+});
 
 /**
  * Delete a status from tenant's library
  */
-export async function deleteTenantProjectStatus(
+export const deleteTenantProjectStatus = withAuth(async (
+  user,
+  { tenant },
   statusId: string
-): Promise<void> {
-  const currentUser = await getCurrentUser();
-  if (!currentUser?.tenant) {
-    throw new Error('User tenant not found');
-  }
-  const tenant = currentUser.tenant;
-
+): Promise<void> => {
   // RBAC check
-  if (!await hasPermission(currentUser, 'project', 'update')) {
+  if (!await hasPermission(user, 'project', 'update')) {
     throw new Error('Permission denied: Cannot update project');
   }
 
@@ -432,22 +399,18 @@ export async function deleteTenantProjectStatus(
       .where({ status_id: statusId, tenant, status_type: 'project_task' })
       .del();
   });
-}
+});
 
 /**
  * Reorder tenant's project task statuses
  */
-export async function reorderTenantProjectStatuses(
+export const reorderTenantProjectStatuses = withAuth(async (
+  user,
+  { tenant },
   statusOrder: Array<{ status_id: string; order_number: number }>
-): Promise<void> {
-  const currentUser = await getCurrentUser();
-  if (!currentUser?.tenant) {
-    throw new Error('User tenant not found');
-  }
-  const tenant = currentUser.tenant;
-
+): Promise<void> => {
   // RBAC check
-  if (!await hasPermission(currentUser, 'project', 'update')) {
+  if (!await hasPermission(user, 'project', 'update')) {
     throw new Error('Permission denied: Cannot update project');
   }
 
@@ -464,4 +427,4 @@ export async function reorderTenantProjectStatuses(
         .update({ order_number });
     }
   });
-}
+});

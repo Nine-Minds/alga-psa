@@ -9,8 +9,7 @@ import {
   ITimeEntryWithWorkItem,
 } from '@alga-psa/types';
 import { IWorkItem } from '@alga-psa/types';
-import { getCurrentUser } from '@alga-psa/auth/getCurrentUser';
-import { hasPermission } from '@alga-psa/auth/rbac';
+import { withAuth, hasPermission } from '@alga-psa/auth';
 import { v4 as uuidv4 } from 'uuid';
 import { formatISO } from 'date-fns';
 import { validateData } from '@alga-psa/validation';
@@ -21,28 +20,26 @@ import {
   SaveTimeEntryParams
 } from './timeEntrySchemas'; // Import schemas
 import { getClientIdForWorkItem } from './timeEntryHelpers'; // Import helper
-import { getSession } from '@alga-psa/auth';
 import { computeWorkDateFields, resolveUserTimeZone } from '@alga-psa/db';
 
 function captureAnalytics(_event: string, _properties?: Record<string, any>, _userId?: string): void {
   // Intentionally no-op: avoid pulling analytics (and its tenancy/client-portal deps) into scheduling.
 }
 
-export async function fetchTimeEntriesForTimeSheet(timeSheetId: string): Promise<ITimeEntryWithWorkItem[]> {
-  const currentUser = await getCurrentUser();
-  if (!currentUser) {
-    throw new Error('No authenticated user found');
-  }
+export const fetchTimeEntriesForTimeSheet = withAuth(async (
+  user,
+  { tenant },
+  timeSheetId: string
+): Promise<ITimeEntryWithWorkItem[]> => {
+  const {knex: db} = await createTenantKnex();
 
   // Check permission for time entry reading
-  if (!await hasPermission(currentUser, 'timeentry', 'read')) {
+  if (!await hasPermission(user, 'timeentry', 'read', db)) {
     throw new Error('Permission denied: Cannot read time entries');
   }
 
   // Validate input
   const validatedParams = validateData<FetchTimeEntriesParams>(fetchTimeEntriesParamsSchema, { timeSheetId });
-
-  const {knex: db, tenant} = await createTenantKnex();
 
   const timeEntries = await db('time_entries')
     .where({
@@ -201,23 +198,24 @@ export async function fetchTimeEntriesForTimeSheet(timeSheetId: string): Promise
       : (typeof entry.work_date === 'string' ? entry.work_date.slice(0, 10) : undefined),
     workItem: workItemMap.get(entry.work_item_id),
   }));
-}
+});
 
-export async function saveTimeEntry(timeEntry: Omit<ITimeEntry, 'tenant'>): Promise<ITimeEntryWithWorkItem> {
-  const currentUser = await getCurrentUser();
-  if (!currentUser) {
-    throw new Error('No authenticated user found');
-  }
+export const saveTimeEntry = withAuth(async (
+  user,
+  { tenant },
+  timeEntry: Omit<ITimeEntry, 'tenant'>
+): Promise<ITimeEntryWithWorkItem> => {
+  const {knex: db} = await createTenantKnex();
 
   // Check permission based on whether this is a create or update operation
   if (timeEntry.entry_id) {
     // Update operation
-    if (!await hasPermission(currentUser, 'timeentry', 'update')) {
+    if (!await hasPermission(user, 'timeentry', 'update', db)) {
       throw new Error('Permission denied: Cannot update time entries');
     }
   } else {
     // Create operation
-    if (!await hasPermission(currentUser, 'timeentry', 'create')) {
+    if (!await hasPermission(user, 'timeentry', 'create', db)) {
       throw new Error('Permission denied: Cannot create time entries');
     }
   }
@@ -225,16 +223,7 @@ export async function saveTimeEntry(timeEntry: Omit<ITimeEntry, 'tenant'>): Prom
   // Validate input
   const validatedTimeEntry = validateData<SaveTimeEntryParams>(saveTimeEntryParamsSchema, timeEntry);
 
-  const {knex: db, tenant} = await createTenantKnex();
-  const session = await getSession();
-
-  if (!tenant) {
-    throw new Error("Tenant not found");
-  }
-  // Check for session and user ID
-  if (!session?.user?.id) {
-    throw new Error("Unauthorized: Please log in to continue");
-  }
+  const userId = user.user_id;
 
   try {
     if (validatedTimeEntry.work_item_type === 'ticket') {
@@ -264,7 +253,7 @@ export async function saveTimeEntry(timeEntry: Omit<ITimeEntry, 'tenant'>): Prom
       tax_rate_id, // Extract tax_rate_id from input
     } = timeEntry;
 
-    const userTimeZone = await resolveUserTimeZone(db, tenant, session.user.id);
+    const userTimeZone = await resolveUserTimeZone(db, tenant, userId);
     const { work_date, work_timezone } = computeWorkDateFields(start_time, userTimeZone);
 
     const startDate = new Date(start_time);
@@ -299,7 +288,7 @@ export async function saveTimeEntry(timeEntry: Omit<ITimeEntry, 'tenant'>): Prom
       tax_region,
       contract_line_id,
       tax_rate_id, // Add tax_rate_id to the object being saved
-      user_id: session.user.id, // Always use session user_id
+      user_id: userId, // Always use user_id from withAuth
       tenant: tenant as string,
       updated_at: new Date().toISOString()
     };
@@ -464,19 +453,19 @@ export async function saveTimeEntry(timeEntry: Omit<ITimeEntry, 'tenant'>): Prom
                 tenant,
               })
               .where(function() {
-                this.where('assigned_to', session.user.id)
-                  .orWhere('additional_user_id', session.user.id);
+                this.where('assigned_to', userId)
+                  .orWhere('additional_user_id', userId);
               })
               .first();
 
             // If task already has an assignee and it's not the current user
-            if (task.assigned_to && task.assigned_to !== session.user.id) {
+            if (task.assigned_to && task.assigned_to !== userId) {
               // Only add as additional user if not already in resources
               if (!existingResource) {
                 await trx('task_resources').insert({
                   task_id: work_item_id,
                   assigned_to: task.assigned_to,
-                  additional_user_id: session.user.id,
+                  additional_user_id: userId,
                   assigned_at: new Date(),
                   tenant,
                 });
@@ -489,7 +478,7 @@ export async function saveTimeEntry(timeEntry: Omit<ITimeEntry, 'tenant'>): Prom
                   tenant,
                 })
                 .update({
-                  assigned_to: session.user.id,
+                  assigned_to: userId,
                   updated_at: new Date(),
                 });
               // No task_resources record is created when there's no additional user
@@ -503,8 +492,8 @@ export async function saveTimeEntry(timeEntry: Omit<ITimeEntry, 'tenant'>): Prom
               tenant,
             })
             .where(function() {
-              this.where('assigned_to', session.user.id)
-                .orWhere('additional_user_id', session.user.id);
+              this.where('assigned_to', userId)
+                .orWhere('additional_user_id', userId);
             })
             .first();
 
@@ -519,11 +508,11 @@ export async function saveTimeEntry(timeEntry: Omit<ITimeEntry, 'tenant'>): Prom
 
             if (ticket) {
               // If ticket already has an assignee, add user as additional_user_id
-              if (ticket.assigned_to && ticket.assigned_to !== session.user.id) {
+              if (ticket.assigned_to && ticket.assigned_to !== userId) {
                 await trx('ticket_resources').insert({
                   ticket_id: work_item_id,
                   assigned_to: ticket.assigned_to,
-                  additional_user_id: session.user.id,
+                  additional_user_id: userId,
                   assigned_at: new Date(),
                   tenant,
                 });
@@ -537,9 +526,9 @@ export async function saveTimeEntry(timeEntry: Omit<ITimeEntry, 'tenant'>): Prom
                     tenant,
                   })
                   .update({
-                    assigned_to: session.user.id,
+                    assigned_to: userId,
                     updated_at: new Date().toISOString(),
-                    updated_by: session.user.id,
+                    updated_by: userId,
                   });
               }
             }
@@ -749,7 +738,7 @@ export async function saveTimeEntry(timeEntry: Omit<ITimeEntry, 'tenant'>): Prom
       // Track if this was a duration adjustment
       duration_changed: isUpdate ? (entry.billable_duration !== finalBillableDuration) : false,
       duration_delta: isUpdate ? (finalBillableDuration - entry.billable_duration) : finalBillableDuration,
-    }, currentUser.user_id);
+    }, user.user_id);
 
     // Return the complete time entry with work item details
     // Format work_date properly (DATE column comes back as Date object)
@@ -769,27 +758,18 @@ export async function saveTimeEntry(timeEntry: Omit<ITimeEntry, 'tenant'>): Prom
     }
     throw new Error('Failed to save time entry');
   }
-}
+});
 
-export async function deleteTimeEntry(entryId: string): Promise<void> {
-  const currentUser = await getCurrentUser();
-  if (!currentUser) {
-    throw new Error('No authenticated user found');
-  }
+export const deleteTimeEntry = withAuth(async (
+  user,
+  { tenant },
+  entryId: string
+): Promise<void> => {
+  const {knex: db} = await createTenantKnex();
 
   // Check permission for time entry deletion
-  if (!await hasPermission(currentUser, 'timeentry', 'delete')) {
+  if (!await hasPermission(user, 'timeentry', 'delete', db)) {
     throw new Error('Permission denied: Cannot delete time entries');
-  }
-
-  const {knex: db, tenant} = await createTenantKnex();
-  const session = await getSession();
-  if (!session?.user?.id) {
-    throw new Error("User not authenticated");
-  }
-
-  if (!tenant) {
-    throw new Error("Tenant context not found");
   }
 
   try {
@@ -874,7 +854,7 @@ export async function deleteTimeEntry(entryId: string): Promise<void> {
            approval_status: timeEntry.approval_status || 'pending',
            age_in_days: timeEntry.created_at ? 
              Math.round((Date.now() - new Date(timeEntry.created_at).getTime()) / 1000 / 60 / 60 / 24) : 0,
-         }, currentUser.user_id);
+         }, user.user_id);
       }
 
       // If this was a project task, update the actual_hours in the project_tasks table
@@ -908,28 +888,24 @@ export async function deleteTimeEntry(entryId: string): Promise<void> {
     console.error('Error deleting time entry:', error);
     throw new Error('Failed to delete time entry');
   }
-}
+});
 
 /**
  * Fetches a single time entry by its ID, including work item details.
  * @param entryId The ID of the time entry.
  * @returns The time entry with work item details, or null if not found.
  */
-  export async function getTimeEntryById(entryId: string): Promise<ITimeEntryWithWorkItem | null> {
-    const currentUser = await getCurrentUser();
-    if (!currentUser) {
-      throw new Error('No authenticated user found');
-    }
+export const getTimeEntryById = withAuth(async (
+  user,
+  { tenant },
+  entryId: string
+): Promise<ITimeEntryWithWorkItem | null> => {
+  const { knex: db } = await createTenantKnex();
 
-    // Check permission for time entry reading
-    if (!await hasPermission(currentUser, 'timeentry', 'read')) {
-      throw new Error('Permission denied: Cannot read time entries');
-    }
-
-    const { knex: db, tenant } = await createTenantKnex();
-    if (!tenant) {
-      throw new Error("Tenant context not found");
-    }
+  // Check permission for time entry reading
+  if (!await hasPermission(user, 'timeentry', 'read', db)) {
+    throw new Error('Permission denied: Cannot read time entries');
+  }
 
     try {
       const entry = await db('time_entries')
@@ -1065,8 +1041,8 @@ export async function deleteTimeEntry(entryId: string): Promise<void> {
       };
       return result;
 
-    } catch (error) {
-      console.error(`Error fetching time entry by ID ${entryId}:`, error);
-      throw new Error(`Failed to fetch time entry: ${error instanceof Error ? error.message : 'Unknown error'}`);
-    }
+  } catch (error) {
+    console.error(`Error fetching time entry by ID ${entryId}:`, error);
+    throw new Error(`Failed to fetch time entry: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
+});

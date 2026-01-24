@@ -5,7 +5,14 @@ import { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 
 import { createTenantKnex } from '@alga-psa/db';
-import { getCurrentUserAsync, hasPermissionAsync, getSessionAsync, getAnalyticsAsync } from '../lib/authHelpers';
+import { withAuth } from '@alga-psa/auth';
+import { hasPermission } from '@alga-psa/auth/rbac';
+import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
+import {
+  buildContractCreatedPayload,
+  buildContractRenewalUpcomingPayload,
+  computeContractRenewalUpcoming,
+} from '@shared/workflow/streams/domainEventBuilders/contractEventBuilders';
 
 
 import ContractLine from '../models/contractLine';
@@ -193,26 +200,21 @@ const isUsageConfig = (
 // Template wizard
 // ---------------------------------------------------------------------------
 
-export async function createContractTemplateFromWizard(
+export const createContractTemplateFromWizard = withAuth(async (
+  user,
+  { tenant },
   submission: ContractTemplateWizardSubmission,
   options?: { isDraft?: boolean }
-): Promise<ContractWizardResult> {
+): Promise<ContractWizardResult> => {
   const isDraft = options?.isDraft ?? false;
   const isBypass = process.env.E2E_AUTH_BYPASS === 'true';
-  const currentUser = isBypass ? ({} as any) : await getCurrentUserAsync();
-  if (!currentUser && !isBypass) {
-    throw new Error('No authenticated user found');
-  }
 
-  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
-  if (!tenant) {
-    throw new Error('Tenant not found');
-  }
+  const { knex } = await createTenantKnex();
 
   return withTransaction(knex, async (trx: Knex.Transaction) => {
     if (!isBypass) {
-      const canCreateBilling = await hasPermissionAsync(currentUser, 'billing', 'create');
-      const canUpdateBilling = await hasPermissionAsync(currentUser, 'billing', 'update');
+      const canCreateBilling = hasPermission(user, 'billing', 'create');
+      const canUpdateBilling = hasPermission(user, 'billing', 'update');
       if (!canCreateBilling || !canUpdateBilling) {
         throw new Error('Permission denied: Cannot create billing templates');
       }
@@ -625,32 +627,38 @@ export async function createContractTemplateFromWizard(
       contract_line_ids: createdContractLineIds,
     };
   });
-}
+});
 
 // ---------------------------------------------------------------------------
 // Client wizard
 // ---------------------------------------------------------------------------
 
-export async function createClientContractFromWizard(
+export const createClientContractFromWizard = withAuth(async (
+  user,
+  { tenant },
   submission: ClientContractWizardSubmission,
   options?: { isDraft?: boolean }
-): Promise<ContractWizardResult> {
+): Promise<ContractWizardResult> => {
   const isDraft = options?.isDraft ?? false;
   const isBypass = process.env.E2E_AUTH_BYPASS === 'true';
-  const currentUser = isBypass ? ({} as any) : await getCurrentUserAsync();
-  if (!currentUser && !isBypass) {
-    throw new Error('No authenticated user found');
-  }
 
-  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
-  if (!tenant) {
-    throw new Error('Tenant not found');
-  }
+  const { knex } = await createTenantKnex();
 
-  return withTransaction(knex, async (trx: Knex.Transaction) => {
+  let createdForWorkflow: {
+    contractId: string;
+    clientId: string;
+    createdAt: string;
+    startDate: string;
+    endDate: string | null;
+    status: string;
+    actorUserId?: string;
+  } | null = null;
+  let renewalForWorkflow: { renewalAt: string; daysUntilRenewal: number } | null = null;
+
+  const result = await withTransaction(knex, async (trx: Knex.Transaction) => {
     if (!isBypass) {
-      const canCreateBilling = await hasPermissionAsync(currentUser, 'billing', 'create');
-      const canUpdateBilling = await hasPermissionAsync(currentUser, 'billing', 'update');
+      const canCreateBilling = hasPermission(user, 'billing', 'create');
+      const canUpdateBilling = hasPermission(user, 'billing', 'update');
       if (!canCreateBilling || !canUpdateBilling) {
         throw new Error('Permission denied: Cannot create billing contracts');
       }
@@ -1096,6 +1104,20 @@ export async function createClientContractFromWizard(
       template_contract_id: submission.template_id ?? null,
     });
 
+    createdForWorkflow = {
+      contractId,
+      clientId: submission.client_id,
+      createdAt: now.toISOString(),
+      startDate,
+      endDate,
+      status: isDraft ? 'draft' : 'active',
+      actorUserId: typeof user?.user_id === 'string' ? user.user_id : undefined,
+    };
+
+    renewalForWorkflow = endDate
+      ? computeContractRenewalUpcoming({ renewalAt: endDate, now: now.toISOString() })
+      : null;
+
     // NOTE: The legacy replicateContractLinesToClient call has been removed.
     // The client_contract_lines, client_contract_services, and related tables are
     // redundant since contracts are already client-specific via client_contracts.
@@ -1107,22 +1129,73 @@ export async function createClientContractFromWizard(
       contract_line_ids: createdContractLineIds,
     };
   });
-}
+
+  if (createdForWorkflow) {
+    const wfData: {
+      contractId: string;
+      clientId: string;
+      createdAt: string;
+      startDate: string;
+      endDate: string | null;
+      status: string;
+      actorUserId?: string;
+    } = createdForWorkflow;
+    await publishWorkflowEvent({
+      eventType: 'CONTRACT_CREATED',
+      payload: buildContractCreatedPayload({
+        contractId: wfData.contractId,
+        clientId: wfData.clientId,
+        createdByUserId: wfData.actorUserId,
+        createdAt: wfData.createdAt,
+        startDate: wfData.startDate,
+        endDate: wfData.endDate,
+        status: wfData.status,
+      }),
+      ctx: {
+        tenantId: tenant,
+        occurredAt: wfData.createdAt,
+        actor: wfData.actorUserId
+          ? { actorType: 'USER' as const, actorUserId: wfData.actorUserId }
+          : undefined,
+      },
+      idempotencyKey: `contract_created:${wfData.contractId}:${wfData.clientId}`,
+    });
+
+    if (renewalForWorkflow) {
+      const renewal: { renewalAt: string; daysUntilRenewal: number } = renewalForWorkflow;
+      await publishWorkflowEvent({
+        eventType: 'CONTRACT_RENEWAL_UPCOMING',
+        payload: buildContractRenewalUpcomingPayload({
+          contractId: wfData.contractId,
+          clientId: wfData.clientId,
+          renewalAt: renewal.renewalAt,
+          daysUntilRenewal: renewal.daysUntilRenewal,
+        }),
+        ctx: {
+          tenantId: tenant,
+          occurredAt: wfData.createdAt,
+          actor: wfData.actorUserId
+            ? { actorType: 'USER' as const, actorUserId: wfData.actorUserId }
+            : undefined,
+        },
+        idempotencyKey: `contract_renewal_upcoming:${wfData.contractId}:${wfData.clientId}:${renewal.renewalAt}`,
+      });
+    }
+  }
+
+  return result;
+});
 
 // ---------------------------------------------------------------------------
 // Template name validation
 // ---------------------------------------------------------------------------
 
-export async function checkTemplateNameExists(templateName: string): Promise<boolean> {
-  const currentUser = await getCurrentUserAsync();
-  if (!currentUser) {
-    throw new Error('Unauthorized');
-  }
-
-  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
-  if (!tenant) {
-    throw new Error('Tenant not found');
-  }
+export const checkTemplateNameExists = withAuth(async (
+  user,
+  { tenant },
+  templateName: string
+): Promise<boolean> => {
+  const { knex } = await createTenantKnex();
 
   const existingTemplate = await knex('contract_templates')
     .where({ tenant })
@@ -1130,22 +1203,17 @@ export async function checkTemplateNameExists(templateName: string): Promise<boo
     .first();
 
   return !!existingTemplate;
-}
+});
 
 // ---------------------------------------------------------------------------
 // Template helper queries for client wizard
 // ---------------------------------------------------------------------------
 
-export async function listContractTemplatesForWizard(): Promise<TemplateOption[]> {
-  const currentUser = await getCurrentUserAsync();
-  if (!currentUser) {
-    throw new Error('Unauthorized');
-  }
-
-  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
-  if (!tenant) {
-    throw new Error('Tenant not found');
-  }
+export const listContractTemplatesForWizard = withAuth(async (
+  user,
+  { tenant }
+): Promise<TemplateOption[]> => {
+  const { knex } = await createTenantKnex();
 
   // currency_code removed from contract_templates - templates are now currency-neutral
   // Currency is inherited from the client when a contract is created from a template
@@ -1165,20 +1233,14 @@ export async function listContractTemplatesForWizard(): Promise<TemplateOption[]
     contract_description: template.template_description,
     billing_frequency: template.default_billing_frequency,
   }));
-}
+});
 
-export async function getContractTemplateSnapshotForClientWizard(
+export const getContractTemplateSnapshotForClientWizard = withAuth(async (
+  user,
+  { tenant },
   templateId: string
-): Promise<ClientTemplateSnapshot> {
-  const currentUser = await getCurrentUserAsync();
-  if (!currentUser) {
-    throw new Error('Unauthorized');
-  }
-
-  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
-  if (!tenant) {
-    throw new Error('Tenant not found');
-  }
+): Promise<ClientTemplateSnapshot> => {
+  const { knex } = await createTenantKnex();
 
   const template = await knex('contract_templates')
     .where({ tenant, template_id: templateId })
@@ -1324,7 +1386,7 @@ export async function getContractTemplateSnapshotForClientWizard(
     minimum_billable_time: minimumBillableTime,
     round_up_to_nearest: roundUpToNearest,
   };
-}
+});
 
 interface ReplicateClientContractParams {
   tenant: string;

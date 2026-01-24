@@ -2,29 +2,44 @@
   "name": "@alga-psa/users",
   "version": "0.1.0",
   "private": true,
+  "type": "module",
   "main": "./dist/index.js",
-  "module": "./dist/index.mjs",
-  "types": "./dist/index.d.ts",
+  "types": "./src/index.ts",
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
+      "types": "./src/index.ts",
       "import": "./dist/index.mjs",
       "require": "./dist/index.js"
     },
     "./actions": {
-      "types": "./dist/actions/index.d.ts",
+      "types": "./src/actions/index.ts",
       "import": "./dist/actions/index.mjs",
       "require": "./dist/actions/index.js"
     },
+    "./actions/*": {
+      "types": "./src/actions/*.ts",
+      "import": "./dist/actions/*.mjs",
+      "require": "./dist/actions/*.js"
+    },
     "./hooks": {
-      "types": "./dist/hooks/index.d.ts",
+      "types": "./src/hooks/index.ts",
       "import": "./dist/hooks/index.mjs",
       "require": "./dist/hooks/index.js"
     },
+    "./hooks/*": {
+      "types": "./src/hooks/*.ts",
+      "import": "./dist/hooks/*.mjs",
+      "require": "./dist/hooks/*.js"
+    },
     "./components": {
-      "types": "./dist/components/index.d.ts",
+      "types": "./src/components/index.ts",
       "import": "./dist/components/index.mjs",
       "require": "./dist/components/index.js"
+    },
+    "./components/*": {
+      "types": "./src/components/*.tsx",
+      "import": "./dist/components/*.mjs",
+      "require": "./dist/components/*.js"
     }
   },
   "scripts": {

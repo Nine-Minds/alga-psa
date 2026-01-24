@@ -19,107 +19,115 @@ import {
   type ClientContractAssignmentCreateInput,
   type PaginatedClientsResponse,
 } from '@alga-psa/shared/billingClients';
+import { withAuth } from '@alga-psa/auth';
+import { hasPermission } from '@alga-psa/auth/rbac';
+import type { IUserWithRoles } from '@alga-psa/types';
 
-import { getCurrentUserAsync, hasPermissionAsync, getSessionAsync } from '../lib/authHelpers';
-
-async function requireClientRead(): Promise<{ tenant: string; knex: Knex }> {
-  const currentUser = await getCurrentUserAsync();
-  if (!currentUser) {
-    throw new Error('No authenticated user found');
-  }
-
-  if (!await hasPermissionAsync(currentUser, 'client', 'read')) {
+function requireClientReadPermission(user: IUserWithRoles): void {
+  if (!hasPermission(user, 'client', 'read')) {
     throw new Error('Permission denied: Cannot read clients');
   }
-
-  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
-  if (!tenant) {
-    throw new Error('Tenant not found');
-  }
-  return { knex, tenant };
 }
 
-export async function getAllClientsForBilling(includeInactive: boolean = true): Promise<IClient[]> {
-  const { knex, tenant } = await requireClientRead();
+export const getAllClientsForBilling = withAuth(async (
+  user,
+  { tenant },
+  includeInactive: boolean = true
+): Promise<IClient[]> => {
+  await requireClientReadPermission(user);
+  const { knex } = await createTenantKnex();
   return getAllClients(knex, tenant, includeInactive);
-}
+});
 
-export async function getAllClientsPaginatedForBilling(params: ClientPaginationParams = {}): Promise<PaginatedClientsResponse> {
-  const { knex, tenant } = await requireClientRead();
+export const getAllClientsPaginatedForBilling = withAuth(async (
+  user,
+  { tenant },
+  params: ClientPaginationParams = {}
+): Promise<PaginatedClientsResponse> => {
+  await requireClientReadPermission(user);
+  const { knex } = await createTenantKnex();
   return getAllClientsPaginated(knex, tenant, params);
-}
+});
 
-export async function getClientsWithBillingCycleRangePaginatedForBilling(
+export const getClientsWithBillingCycleRangePaginatedForBilling = withAuth(async (
+  user,
+  { tenant },
   params: ClientPaginationParams
-): Promise<PaginatedClientsResponse> {
-  const { knex, tenant } = await requireClientRead();
+): Promise<PaginatedClientsResponse> => {
+  await requireClientReadPermission(user);
+  const { knex } = await createTenantKnex();
   return getClientsWithBillingCycleRangePaginated(knex, tenant, params);
-}
+});
 
-export async function getClientByIdForBilling(clientId: string): Promise<IClient | null> {
-  const { knex, tenant } = await requireClientRead();
+export const getClientByIdForBilling = withAuth(async (
+  user,
+  { tenant },
+  clientId: string
+): Promise<IClient | null> => {
+  await requireClientReadPermission(user);
+  const { knex } = await createTenantKnex();
   return getClientById(knex, tenant, clientId);
-}
+});
 
-export async function getClientContractsForBilling(clientId: string): Promise<IClientContract[]> {
-  const { knex, tenant } = await requireClientRead();
+export const getClientContractsForBilling = withAuth(async (
+  user,
+  { tenant },
+  clientId: string
+): Promise<IClientContract[]> => {
+  await requireClientReadPermission(user);
+  const { knex } = await createTenantKnex();
   return getClientContracts(knex, tenant, clientId);
-}
+});
 
-export async function getClientContractByIdForBilling(clientContractId: string): Promise<IClientContract | null> {
-  const { knex, tenant } = await requireClientRead();
+export const getClientContractByIdForBilling = withAuth(async (
+  user,
+  { tenant },
+  clientContractId: string
+): Promise<IClientContract | null> => {
+  await requireClientReadPermission(user);
+  const { knex } = await createTenantKnex();
   return getClientContractById(knex, tenant, clientContractId);
-}
+});
 
-export async function getDetailedClientContractForBilling(clientContractId: string): Promise<any | null> {
-  const { knex, tenant } = await requireClientRead();
+export const getDetailedClientContractForBilling = withAuth(async (
+  user,
+  { tenant },
+  clientContractId: string
+): Promise<any | null> => {
+  await requireClientReadPermission(user);
+  const { knex } = await createTenantKnex();
   return getDetailedClientContract(knex, tenant, clientContractId);
-}
+});
 
-export async function getActiveClientContractsByClientIdsForBilling(clientIds: string[]): Promise<IClientContract[]> {
-  const { knex, tenant } = await requireClientRead();
+export const getActiveClientContractsByClientIdsForBilling = withAuth(async (
+  user,
+  { tenant },
+  clientIds: string[]
+): Promise<IClientContract[]> => {
+  await requireClientReadPermission(user);
+  const { knex } = await createTenantKnex();
   return getActiveClientContractsByClientIds(knex, tenant, clientIds);
-}
+});
 
-export async function createClientContractForBilling(input: ClientContractAssignmentCreateInput): Promise<IClientContract> {
-  const session = await getSessionAsync();
-  if (!session?.user?.id) {
-    throw new Error('Unauthorized');
-  }
-
-  const currentUser = await getCurrentUserAsync();
-  if (!currentUser) {
-    throw new Error('No authenticated user found');
-  }
-
-  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
-  if (!tenant) {
-    throw new Error('tenant context not found');
-  }
+export const createClientContractForBilling = withAuth(async (
+  user,
+  { tenant },
+  input: ClientContractAssignmentCreateInput
+): Promise<IClientContract> => {
+  const { knex } = await createTenantKnex();
 
   return withTransaction(knex, async (trx: Knex.Transaction) => {
     return createClientContractAssignment(trx, tenant, input);
   });
-}
+});
 
-export async function updateClientContractForBilling(
+export const updateClientContractForBilling = withAuth(async (
+  user,
+  { tenant },
   clientContractId: string,
   updateData: Partial<IClientContract>
-): Promise<IClientContract> {
-  const session = await getSessionAsync();
-  if (!session?.user?.id) {
-    throw new Error('Unauthorized');
-  }
-
-  const currentUser = await getCurrentUserAsync();
-  if (!currentUser) {
-    throw new Error('No authenticated user found');
-  }
-
-  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
-  if (!tenant) {
-    throw new Error('tenant context not found');
-  }
+): Promise<IClientContract> => {
+  const { knex } = await createTenantKnex();
 
   const updated = await withTransaction(knex, async (trx: Knex.Transaction) => {
     return updateClientContractAssignment(trx, tenant, clientContractId, updateData);
@@ -127,5 +135,5 @@ export async function updateClientContractForBilling(
 
   await checkAndReactivateExpiredContract(knex, tenant, updated.contract_id);
   return updated;
-}
+});
 

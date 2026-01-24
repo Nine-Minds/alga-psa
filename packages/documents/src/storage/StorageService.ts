@@ -1,5 +1,4 @@
 // @ts-nocheck
-// TODO: getCurrentUser and type issues
 async function loadSharp() {
   try {
     const mod = await import('sharp');
@@ -20,14 +19,24 @@ import type { FileStore } from '../types/storage';
 import { StorageError } from './providers/StorageProvider';
 import fs from 'fs';
 
-import { 
-    getProviderConfig, 
-    getStorageConfig, 
+import {
+    getProviderConfig,
+    getStorageConfig,
     validateFileUpload as validateFileConfig
 } from '../config/storage';
 import { LocalProviderConfig, S3ProviderConfig } from '../types/storage';
 import { createTenantKnex } from '@alga-psa/db';
 import { getCurrentUser } from '@alga-psa/auth/getCurrentUser';
+import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
+import { isValidUUID } from '@alga-psa/validation';
+import {
+  buildDocumentDeletedPayload,
+  buildDocumentUploadedPayload,
+} from '@alga-psa/shared/workflow/streams/domainEventBuilders/documentStorageEventBuilders';
+import {
+  buildFileUploadedPayload,
+  buildMediaProcessingSucceededPayload,
+} from '@alga-psa/shared/workflow/streams/domainEventBuilders/mediaEventBuilders';
 
 async function streamToBuffer(stream: Readable): Promise<Buffer> {
   return new Promise((resolve, reject) => {
@@ -48,11 +57,7 @@ function changeFileExtension(filename: string, newExtension: string): string {
  
 export class StorageService {
   async getFileReadStream(fileId: string, range?: { start: number; end: number }): Promise<Readable> {
-    const currentUser = await getCurrentUser();
-    if (!currentUser) {
-      throw new Error('Unauthorized');
-    }
-    const { knex } = await createTenantKnex(currentUser.tenant);
+    const { knex } = await createTenantKnex();
     const file = await FileStoreModel.findById(knex, fileId);
     if (!file) {
       throw new Error('File not found');
@@ -90,6 +95,8 @@ export class StorageService {
       if (!options.uploaded_by_id) {
         throw new Error('uploaded_by_id is required');
       }
+
+      const uploadStartedAtMs = Date.now();
 
       let fileBuffer: Buffer;
       let fileSize: number;
@@ -166,6 +173,85 @@ export class StorageService {
         metadata: options.metadata
       });
 
+      try {
+        const uploadedByUserId = isValidUUID(options.uploaded_by_id) ? options.uploaded_by_id : undefined;
+        await publishWorkflowEvent({
+          eventType: 'DOCUMENT_UPLOADED',
+          payload: buildDocumentUploadedPayload({
+            documentId: fileRecord.file_id,
+            uploadedByUserId,
+            uploadedAt: fileRecord.created_at,
+            fileName: fileRecord.original_name,
+            contentType: fileRecord.mime_type,
+            sizeBytes: fileRecord.file_size,
+            storageKey: fileRecord.storage_path,
+          }),
+          ctx: {
+            tenantId: tenant,
+            occurredAt: fileRecord.created_at,
+            actor: uploadedByUserId
+              ? { actorType: 'USER', actorUserId: uploadedByUserId }
+              : { actorType: 'SYSTEM' },
+          },
+          idempotencyKey: `document_uploaded:${fileRecord.file_id}:${fileRecord.created_at}`,
+        });
+      } catch (error) {
+        console.error('[StorageService] Failed to publish DOCUMENT_UPLOADED workflow event', error);
+      }
+
+      try {
+        const uploadedByUserId = isValidUUID(options.uploaded_by_id) ? options.uploaded_by_id : undefined;
+        await publishWorkflowEvent({
+          eventType: 'FILE_UPLOADED',
+          payload: buildFileUploadedPayload({
+            fileId: fileRecord.file_id,
+            uploadedByUserId,
+            uploadedAt: fileRecord.created_at,
+            fileName: fileRecord.original_name,
+            contentType: fileRecord.mime_type,
+            sizeBytes: fileRecord.file_size,
+            storageKey: fileRecord.storage_path,
+          }),
+          ctx: {
+            tenantId: tenant,
+            occurredAt: fileRecord.created_at,
+            actor: uploadedByUserId
+              ? { actorType: 'USER', actorUserId: uploadedByUserId }
+              : { actorType: 'SYSTEM' },
+          },
+          idempotencyKey: `file_uploaded:${fileRecord.file_id}:${fileRecord.created_at}`,
+        });
+
+        if (isEntityImage) {
+          await publishWorkflowEvent({
+            eventType: 'MEDIA_PROCESSING_SUCCEEDED',
+            payload: buildMediaProcessingSucceededPayload({
+              fileId: fileRecord.file_id,
+              processedAt: new Date().toISOString(),
+              durationMs: Math.max(0, Date.now() - uploadStartedAtMs),
+              outputs: [
+                {
+                  type: 'entity_image_normalized',
+                  contentType: fileRecord.mime_type,
+                  fileName: fileRecord.original_name,
+                  sizeBytes: fileRecord.file_size,
+                },
+              ],
+            }),
+            ctx: {
+              tenantId: tenant,
+              occurredAt: new Date().toISOString(),
+              actor: uploadedByUserId
+                ? { actorType: 'USER', actorUserId: uploadedByUserId }
+                : { actorType: 'SYSTEM' },
+            },
+            idempotencyKey: `media_processing_succeeded:entity_image:${fileRecord.file_id}:${fileRecord.created_at}`,
+          });
+        }
+      } catch (error) {
+        console.error('[StorageService] Failed to publish FILE_UPLOADED/MEDIA_PROCESSING_SUCCEEDED workflow event', error);
+      }
+
       return fileRecord;
     } catch (error) {
       console.error("Error in uploadFile:", error);
@@ -197,17 +283,13 @@ export class StorageService {
     }> {
         try {
             // Get file record
-            const currentUser = await getCurrentUser();
-            if (!currentUser) {
-              throw new Error('Unauthorized');
-            }
-            const { knex } = await createTenantKnex(currentUser.tenant);
+            const { knex } = await createTenantKnex();
             const fileRecord = await FileStoreModel.findById(knex, file_id);
             if (!fileRecord) {
                 throw new Error('File not found');
             }
 
-            // Get storage provider 
+            // Get storage provider
             const provider = await StorageProviderFactory.createProvider();
 
             // Download file from storage provider
@@ -232,11 +314,7 @@ export class StorageService {
     static async deleteFile(file_id: string, deleted_by_id: string): Promise<void> {
         try {
             // Get file record
-            const currentUser = await getCurrentUser();
-            if (!currentUser) {
-              throw new Error('Unauthorized');
-            }
-            const { knex } = await createTenantKnex(currentUser.tenant);
+            const { knex, tenant } = await createTenantKnex();
             const fileRecord = await FileStoreModel.findById(knex, file_id);
             if (!fileRecord) {
                 throw new Error('File not found');
@@ -253,6 +331,31 @@ export class StorageService {
 
             // Soft delete file record
             await FileStoreModel.softDelete(knex, file_id, deleted_by_id);
+
+            try {
+              const deletedRecord = await FileStoreModel.findById(knex, file_id);
+              const deletedAt = deletedRecord?.deleted_at ?? new Date().toISOString();
+              const deletedByUserId = isValidUUID(deleted_by_id) ? deleted_by_id : undefined;
+
+              await publishWorkflowEvent({
+                eventType: 'DOCUMENT_DELETED',
+                payload: buildDocumentDeletedPayload({
+                  documentId: fileRecord.file_id,
+                  deletedByUserId,
+                  deletedAt,
+                }),
+                ctx: {
+                  tenantId: tenant!,
+                  occurredAt: deletedAt,
+                  actor: deletedByUserId
+                    ? { actorType: 'USER', actorUserId: deletedByUserId }
+                    : { actorType: 'SYSTEM' },
+                },
+                idempotencyKey: `document_deleted:${fileRecord.file_id}:${deletedAt}`,
+              });
+            } catch (error) {
+              console.error('[StorageService] Failed to publish DOCUMENT_DELETED workflow event', error);
+            }
         } catch (error) {
             if (error instanceof StorageError) {
                 throw error;
@@ -275,24 +378,16 @@ export class StorageService {
       metadata: Record<string, unknown>;
     }): Promise<void> {
       try {
-        const currentUser = await getCurrentUser();
-        if (!currentUser) {
-          throw new Error('Unauthorized');
-        }
-        const { knex } = await createTenantKnex(currentUser.tenant);
+        const { knex } = await createTenantKnex();
         await FileStoreModel.createDocumentSystemEntry(knex, options);
       } catch (error) {
         throw new Error('Failed to create document system entry: ' + (error as Error).message);
       }
     }
-  
+
     static async getFileMetadata(fileId: string): Promise<FileStore> {
       try {
-        const currentUser = await getCurrentUser();
-        if (!currentUser) {
-          throw new Error('Unauthorized');
-        }
-        const { knex } = await createTenantKnex(currentUser.tenant);
+        const { knex } = await createTenantKnex();
         const file = await FileStoreModel.findById(knex, fileId);
         if (!file) {
           throw new Error('File not found');
@@ -302,31 +397,23 @@ export class StorageService {
         throw new Error('Failed to get file metadata: ' + (error as Error).message);
       }
     }
-  
+
     static async updateFileMetadata(fileId: string, metadata: Record<string, unknown>): Promise<void> {
       try {
-        const currentUser = await getCurrentUser();
-        if (!currentUser) {
-          throw new Error('Unauthorized');
-        }
-        const { knex } = await createTenantKnex(currentUser.tenant);
+        const { knex } = await createTenantKnex();
         await FileStoreModel.updateMetadata(knex, fileId, metadata);
       } catch (error) {
         throw new Error('Failed to update file metadata: ' + (error as Error).message);
       }
     }
-  
+
     static async storePDF(
       invoiceId: string,
       invoiceNumber: string,
       buffer: Buffer,
       metadata: Record<string, any>
     ) {
-        const currentUser = await getCurrentUser();
-        if (!currentUser) {
-            throw new Error('Unauthorized');
-        }
-        const { tenant } = await createTenantKnex(currentUser.tenant);
+        const { tenant } = await createTenantKnex();
 
         if (!tenant) {
             throw new Error('No tenant found');

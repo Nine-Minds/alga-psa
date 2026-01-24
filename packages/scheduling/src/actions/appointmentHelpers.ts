@@ -30,7 +30,7 @@ export interface ScheduleApprover {
 export async function getScheduleApprovers(
   tenant: string
 ): Promise<ScheduleApprover[]> {
-  const { knex: db } = await createTenantKnex();
+  const { knex: db } = await createTenantKnex(tenant);
 
   return await withTransaction(db, async (trx) => {
     // Get users with schedule update permission
@@ -80,7 +80,7 @@ export async function getScheduleApprovers(
 export async function getTenantSettings(
   tenant: string
 ): Promise<TenantSettings> {
-  const { knex: db } = await createTenantKnex();
+  const { knex: db } = await createTenantKnex(tenant);
 
   return await withTransaction(db, async (trx) => {
     // Get tenant settings from tenant_settings table
@@ -128,7 +128,7 @@ export async function getClientUserIdFromContact(
   contactId: string,
   tenant: string
 ): Promise<string | null> {
-  const { knex: db } = await createTenantKnex();
+  const { knex: db } = await createTenantKnex(tenant);
 
   return await withTransaction(db, async (trx) => {
     const user = await trx('users')
@@ -249,7 +249,7 @@ export async function getClientCompanyName(
   clientId: string,
   tenant: string
 ): Promise<string> {
-  const { knex: db } = await createTenantKnex();
+  const { knex: db } = await createTenantKnex(tenant);
 
   return await withTransaction(db, async (trx) => {
     const client = await trx('clients')

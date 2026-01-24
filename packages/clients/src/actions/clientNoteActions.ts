@@ -10,13 +10,15 @@
 import { createTenantKnex } from '@alga-psa/db';
 import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
-import { getCurrentUserAsync } from '../lib/usersHelpers';
+import { withAuth } from '@alga-psa/auth';
 import {
   createBlockDocument,
   getBlockContent,
   updateBlockContent,
 } from '@alga-psa/documents/actions/documentBlockContentActions';
 import type { IDocument } from '@alga-psa/types';
+import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
+import { buildNoteCreatedPayload } from '@alga-psa/shared/workflow/streams/domainEventBuilders/crmInteractionNoteEventBuilders';
 
 export interface ClientNoteContent {
   document: IDocument | null;
@@ -28,28 +30,12 @@ export interface ClientNoteContent {
  * Get note content for a client
  * Returns the BlockNote content if the client has a linked notes document
  */
-export async function getClientNoteContent(clientId: string): Promise<ClientNoteContent> {
-  // Get current user FIRST to ensure we have the user's tenant
-  const currentUser = await getCurrentUserAsync();
-  if (!currentUser) {
-    throw new Error('No authenticated user found');
-  }
-
-  if (!currentUser.tenant) {
-    throw new Error('User tenant not found in session');
-  }
-
-  // Use the user's tenant explicitly (server actions don't always inherit AsyncLocalStorage context)
-  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
-  if (!tenant) {
-    throw new Error('No tenant found in database context');
-  }
-
-  // CRITICAL: Verify tenant from DB context matches user's tenant
-  if (tenant !== currentUser.tenant) {
-    console.error(`Tenant mismatch detected: DB context has ${tenant}, but user has ${currentUser.tenant}`);
-    throw new Error(`Tenant mismatch: Database context tenant (${tenant}) does not match user tenant (${currentUser.tenant})`);
-  }
+export const getClientNoteContent = withAuth(async (
+  user,
+  { tenant },
+  clientId: string
+): Promise<ClientNoteContent> => {
+  const { knex } = await createTenantKnex();
 
   try {
     // Get the client to find notes_document_id
@@ -110,37 +96,19 @@ export async function getClientNoteContent(clientId: string): Promise<ClientNote
     console.error('Error getting client note content:', error);
     throw new Error('Failed to get client note content');
   }
-}
+});
 
 /**
  * Save note content for a client
  * Creates a new document if one doesn't exist, or updates the existing one
  */
-export async function saveClientNote(
+export const saveClientNote = withAuth(async (
+  user,
+  { tenant },
   clientId: string,
   blockData: unknown
-): Promise<{ document_id: string }> {
-  // Get current user FIRST to ensure we have the user's tenant
-  const currentUser = await getCurrentUserAsync();
-  if (!currentUser) {
-    throw new Error('No authenticated user found');
-  }
-
-  if (!currentUser.tenant) {
-    throw new Error('User tenant not found in session');
-  }
-
-  // Use the user's tenant explicitly (server actions don't always inherit AsyncLocalStorage context)
-  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
-  if (!tenant) {
-    throw new Error('No tenant found in database context');
-  }
-
-  // CRITICAL: Verify tenant from DB context matches user's tenant
-  if (tenant !== currentUser.tenant) {
-    console.error(`Tenant mismatch detected: DB context has ${tenant}, but user has ${currentUser.tenant}`);
-    throw new Error(`Tenant mismatch: Database context tenant (${tenant}) does not match user tenant (${currentUser.tenant})`);
-  }
+): Promise<{ document_id: string }> => {
+  const { knex } = await createTenantKnex();
 
   try {
     // Get the client
@@ -157,7 +125,7 @@ export async function saveClientNote(
       // Update existing document
       await updateBlockContent(client.notes_document_id, {
         block_data: blockData,
-        user_id: currentUser.user_id,
+        user_id: user.user_id,
       });
 
       return { document_id: client.notes_document_id };
@@ -165,7 +133,7 @@ export async function saveClientNote(
       // Create new document and link to client
       const { document_id } = await createBlockDocument({
         document_name: `${client.client_name} Notes`,
-        user_id: currentUser.user_id,
+        user_id: user.user_id,
         block_data: blockData,
         entityId: clientId,
         entityType: 'client',
@@ -179,43 +147,41 @@ export async function saveClientNote(
           updated_at: knex.fn.now(),
         });
 
+      const occurredAt = new Date().toISOString();
+      await publishWorkflowEvent({
+        eventType: 'NOTE_CREATED',
+        payload: buildNoteCreatedPayload({
+          noteId: document_id,
+          entityType: 'client',
+          entityId: clientId,
+          createdByUserId: user.user_id,
+          createdAt: occurredAt,
+          visibility: 'internal',
+          bodyPreview: blockData,
+        }),
+        ctx: { tenantId: tenant, occurredAt, actor: { actorType: 'USER' as const, actorUserId: user.user_id } },
+        idempotencyKey: `note_created:client:${clientId}:${document_id}`,
+      });
+
       return { document_id };
     }
   } catch (error) {
     console.error('Error saving client note:', error);
     throw new Error('Failed to save client note');
   }
-}
+});
 
 /**
  * Delete notes for a client
  * Removes the link and optionally deletes the document
  */
-export async function deleteClientNote(
+export const deleteClientNote = withAuth(async (
+  _user,
+  { tenant },
   clientId: string,
   deleteDocument: boolean = false
-): Promise<void> {
-  // Get current user FIRST to ensure we have the user's tenant
-  const currentUser = await getCurrentUserAsync();
-  if (!currentUser) {
-    throw new Error('No authenticated user found');
-  }
-
-  if (!currentUser.tenant) {
-    throw new Error('User tenant not found in session');
-  }
-
-  // Use the user's tenant explicitly (server actions don't always inherit AsyncLocalStorage context)
-  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
-  if (!tenant) {
-    throw new Error('No tenant found in database context');
-  }
-
-  // CRITICAL: Verify tenant from DB context matches user's tenant
-  if (tenant !== currentUser.tenant) {
-    console.error(`Tenant mismatch detected: DB context has ${tenant}, but user has ${currentUser.tenant}`);
-    throw new Error(`Tenant mismatch: Database context tenant (${tenant}) does not match user tenant (${currentUser.tenant})`);
-  }
+): Promise<void> => {
+  const { knex } = await createTenantKnex();
 
   try {
     // Get the client
@@ -259,4 +225,4 @@ export async function deleteClientNote(
     console.error('Error deleting client note:', error);
     throw new Error('Failed to delete client note');
   }
-}
+});

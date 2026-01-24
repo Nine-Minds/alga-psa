@@ -1,7 +1,7 @@
 'use server';
 
 import { createTenantKnex } from '@alga-psa/db';
-import { getCurrentUser } from '@alga-psa/auth/getCurrentUser';
+import { withAuth } from '@alga-psa/auth';
 import { v4 as uuidv4 } from 'uuid';
 import { getFormRegistry } from '@shared/workflow/core/formRegistry';
 import { getActionRegistry } from '@shared/workflow/core/actionRegistry';
@@ -19,19 +19,13 @@ import { revalidatePath } from "next/cache";
  * Submit a task form
  * This function handles the conversion of form submissions to workflow events
  */
-export async function submitTaskForm(params: TaskSubmissionParams): Promise<{ success: boolean }> {
+export const submitTaskForm = withAuth(async (user, { tenant }, params: TaskSubmissionParams): Promise<{ success: boolean }> => {
   const { taskId, formData, comments } = params;
-  
+
   try {
-    const { knex, tenant } = await createTenantKnex();
-    
-    if (!tenant) {
-      throw new Error('Tenant not found');
-    }
-    
-    // Get current user
-    const currentUser = await getCurrentUser();
-    const userId = currentUser?.user_id;
+    const { knex } = await createTenantKnex();
+
+    const userId = user?.user_id;
     
     // Use a transaction to ensure all operations succeed or fail together
     return await withTransaction(knex, async (trx: Knex.Transaction) => {
@@ -166,23 +160,17 @@ export async function submitTaskForm(params: TaskSubmissionParams): Promise<{ su
     console.error('Error submitting task form:', error);
     throw error;
   }
-}
+});
 
 /**
  * Get tasks for the current user
  */
-export async function getUserTasks(params?: TaskQueryParams): Promise<TaskQueryResult> {
+export const getUserTasks = withAuth(async (user, { tenant }, params?: TaskQueryParams): Promise<TaskQueryResult> => {
   try {
-    const { knex, tenant } = await createTenantKnex();
-    
-    if (!tenant) {
-      throw new Error('Tenant not found');
-    }
-    
-    // Get current user
-    const currentUser = await getCurrentUser();
-    const userId = currentUser?.user_id;
-    
+    const { knex } = await createTenantKnex();
+
+    const userId = user?.user_id;
+
     if (!userId) {
       throw new Error('User not authenticated');
     }
@@ -205,7 +193,7 @@ export async function getUserTasks(params?: TaskQueryParams): Promise<TaskQueryR
     });
     
     // Get tasks assigned to user's roles
-    const userRoles = currentUser.roles || [];
+    const userRoles = user.roles || [];
     const roleIds = userRoles.map(role => role.role_id);
     const roleTasks = await withTransaction(knex, async (trx: Knex.Transaction) => {
       return await WorkflowTaskModel.getTasksAssignedToRoles(
@@ -275,18 +263,14 @@ export async function getUserTasks(params?: TaskQueryParams): Promise<TaskQueryR
     console.error('Error getting user tasks:', error);
     throw error;
   }
-}
+});
 
 /**
  * Get task details
  */
-export async function getTaskDetails(taskId: string): Promise<TaskDetails> {
+export const getTaskDetails = withAuth(async (_user, { tenant }, taskId: string): Promise<TaskDetails> => {
   try {
-    const { knex, tenant } = await createTenantKnex();
-    
-    if (!tenant) {
-      throw new Error('Tenant not found');
-    }
+    const { knex } = await createTenantKnex();
     
     // Get task
     const task = await withTransaction(knex, async (trx: Knex.Transaction) => {
@@ -368,23 +352,17 @@ export async function getTaskDetails(taskId: string): Promise<TaskDetails> {
     console.error(`Error getting task details for ${taskId}:`, error);
     throw error;
   }
-}
+});
 
 /**
  * Claim a task
  */
-export async function claimTask(taskId: string): Promise<{ success: boolean }> {
+export const claimTask = withAuth(async (user, { tenant }, taskId: string): Promise<{ success: boolean }> => {
   try {
-    const { knex, tenant } = await createTenantKnex();
-    
-    if (!tenant) {
-      throw new Error('Tenant not found');
-    }
-    
-    // Get current user
-    const currentUser = await getCurrentUser();
-    const userId = currentUser?.user_id;
-    
+    const { knex } = await createTenantKnex();
+
+    const userId = user?.user_id;
+
     if (!userId) {
       throw new Error('User not authenticated');
     }
@@ -443,23 +421,17 @@ export async function claimTask(taskId: string): Promise<{ success: boolean }> {
     console.error(`Error claiming task ${taskId}:`, error);
     throw error;
   }
-}
+});
 
 /**
  * Unclaim a task
  */
-export async function unclaimTask(taskId: string): Promise<{ success: boolean }> {
+export const unclaimTask = withAuth(async (user, { tenant }, taskId: string): Promise<{ success: boolean }> => {
   try {
-    const { knex, tenant } = await createTenantKnex();
-    
-    if (!tenant) {
-      throw new Error('Tenant not found');
-    }
-    
-    // Get current user
-    const currentUser = await getCurrentUser();
-    const userId = currentUser?.user_id;
-    
+    const { knex } = await createTenantKnex();
+
+    const userId = user?.user_id;
+
     if (!userId) {
       throw new Error('User not authenticated');
     }
@@ -513,24 +485,18 @@ export async function unclaimTask(taskId: string): Promise<{ success: boolean }>
     console.error(`Error unclaiming task ${taskId}:`, error);
     throw error;
   }
-}
+});
 
 /**
  * Dismiss a task
  * This completes the task with resolution data indicating it was dismissed
  */
-export async function dismissTask(taskId: string): Promise<{ success: boolean }> {
+export const dismissTask = withAuth(async (user, { tenant }, taskId: string): Promise<{ success: boolean }> => {
   try {
-    const { knex, tenant } = await createTenantKnex();
-    
-    if (!tenant) {
-      throw new Error('Tenant not found');
-    }
-    
-    // Get current user
-    const currentUser = await getCurrentUser();
-    const userId = currentUser?.user_id;
-    
+    const { knex } = await createTenantKnex();
+
+    const userId = user?.user_id;
+
     if (!userId) {
       throw new Error('User not authenticated');
     }
@@ -617,23 +583,17 @@ export async function dismissTask(taskId: string): Promise<{ success: boolean }>
     // Revalidate cache to refresh UI
     revalidatePath('/msp/user-activities');
   }
-}
+});
 
 /**
  * Hide a task from the user's view
  */
-export async function hideTask(taskId: string): Promise<{ success: boolean }> {
+export const hideTask = withAuth(async (user, { tenant }, taskId: string): Promise<{ success: boolean }> => {
   try {
-    const { knex, tenant } = await createTenantKnex();
-    
-    if (!tenant) {
-      throw new Error('Tenant not found');
-    }
-    
-    // Get current user
-    const currentUser = await getCurrentUser();
-    const userId = currentUser?.user_id;
-    
+    const { knex } = await createTenantKnex();
+
+    const userId = user?.user_id;
+
     if (!userId) {
       throw new Error('User not authenticated');
     }
@@ -673,23 +633,17 @@ export async function hideTask(taskId: string): Promise<{ success: boolean }> {
     // Revalidate cache to refresh UI
     revalidatePath('/msp/user-activities');
   }
-}
+});
 
 /**
  * Unhide a task to make it visible again
  */
-export async function unhideTask(taskId: string): Promise<{ success: boolean }> {
+export const unhideTask = withAuth(async (user, { tenant }, taskId: string): Promise<{ success: boolean }> => {
   try {
-    const { knex, tenant } = await createTenantKnex();
-    
-    if (!tenant) {
-      throw new Error('Tenant not found');
-    }
-    
-    // Get current user
-    const currentUser = await getCurrentUser();
-    const userId = currentUser?.user_id;
-    
+    const { knex } = await createTenantKnex();
+
+    const userId = user?.user_id;
+
     if (!userId) {
       throw new Error('User not authenticated');
     }
@@ -729,4 +683,4 @@ export async function unhideTask(taskId: string): Promise<{ success: boolean }> 
     // Revalidate cache to refresh UI
     revalidatePath('/msp/user-activities');
   }
-}
+});

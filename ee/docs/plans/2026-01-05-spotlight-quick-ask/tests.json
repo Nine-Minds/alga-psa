@@ -1,0 +1,25 @@
+[
+  { "id": "T001", "featureIds": ["F001", "F002"], "description": "Global shortcut `⌘+ArrowUp` / `Ctrl+ArrowUp` toggles Quick Ask open and closed.", "implemented": false },
+  { "id": "T002", "featureIds": ["F003"], "description": "Quick Ask shortcut triggers even when focus is inside an input/textarea/contentEditable in the main app.", "implemented": false },
+  { "id": "T003", "featureIds": ["F004"], "description": "Quick Ask overlay renders centered with backdrop and closes on `Esc`.", "implemented": false },
+  { "id": "T004", "featureIds": ["F005"], "description": "Collapsed overlay focuses the prompt input on open; `Enter` submits; `Shift+Enter` inserts a newline.", "implemented": false },
+  { "id": "T005", "featureIds": ["F006", "F007"], "description": "Submitting a prompt transitions the overlay to expanded state and renders the user message immediately.", "implemented": false },
+
+  { "id": "T006", "featureIds": ["F008", "F011"], "description": "Shared chat session logic creates a new chat id on first send and retains it for follow-ups.", "implemented": false },
+  { "id": "T007", "featureIds": ["F012"], "description": "User messages are persisted via `addMessageToChatAction` when persistence tables exist.", "implemented": false },
+  { "id": "T008", "featureIds": ["F013"], "description": "Assistant messages are persisted via `addMessageToChatAction` when persistence tables exist.", "implemented": false },
+  { "id": "T009", "featureIds": ["F014"], "description": "Stop/cancel halts generation/streaming and leaves the session in a usable state for subsequent sends.", "implemented": false },
+
+  { "id": "T010", "featureIds": ["F009"], "description": "Sidebar chat continues to send/persist messages using shared logic without regressions in current UX.", "implemented": false },
+  { "id": "T011", "featureIds": ["F010"], "description": "Quick Ask uses the same shared logic as the sidebar (no duplicate persistence paths).", "implemented": false },
+
+  { "id": "T012", "featureIds": ["F015", "F016", "F017"], "description": "Clicking “Open in sidebar” opens the right sidebar and shows the same active session (including any partial streamed content).", "implemented": false },
+  { "id": "T012b", "featureIds": ["F003"], "description": "When the right sidebar chat is already open, the shortcut focuses the sidebar chat instead of opening Quick Ask.", "implemented": false },
+
+  { "id": "T013", "featureIds": ["F018"], "description": "When AI is disabled/unavailable, Quick Ask shows a disabled state and does not call chat endpoints.", "implemented": false },
+
+  { "id": "T014", "featureIds": ["F019", "F020"], "description": "Streaming mode incrementally updates assistant content in the expanded overlay as SSE chunks arrive.", "implemented": false },
+  { "id": "T015", "featureIds": ["F021"], "description": "Streaming mode persists the assistant output at least once (final) and does not double-save duplicate assistant messages.", "implemented": false },
+
+  { "id": "T016", "featureIds": ["F022"], "description": "Focus management: opening Quick Ask focuses input; closing returns focus to the previously focused element.", "implemented": false }
+]

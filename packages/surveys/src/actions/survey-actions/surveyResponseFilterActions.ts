@@ -1,7 +1,7 @@
 'use server';
 
 import { createTenantKnex } from '@alga-psa/db';
-import { getCurrentUser } from '@alga-psa/auth/getCurrentUser';
+import { withAuth } from '@alga-psa/auth';
 
 type FilterOption = {
   value: string;
@@ -28,25 +28,12 @@ const TICKETS_TABLE = 'tickets';
 const CLIENTS_TABLE = 'clients';
 const USERS_TABLE = 'users';
 
-function ensureTenant(tenant: string | null): string {
-  if (!tenant) {
-    throw new Error('Tenant context is required to load survey filter options');
-  }
-  return tenant;
-}
-
-export async function getSurveyFilterOptions(): Promise<SurveyFilterOptions> {
-  const currentUser = await getCurrentUser();
-  if (!currentUser?.tenant) {
-    throw new Error('Tenant context is required to load survey filter options');
-  }
-
-  const { knex, tenant } = await createTenantKnex(currentUser.tenant);
-  const tenantId = ensureTenant(tenant);
+export const getSurveyFilterOptions = withAuth(async (_user, { tenant }): Promise<SurveyFilterOptions> => {
+  const { knex } = await createTenantKnex();
 
   const [templates, technicianRows, clientRows] = await Promise.all([
     knex(TEMPLATES_TABLE)
-      .where({ tenant: tenantId, enabled: true })
+      .where({ tenant, enabled: true })
       .select(['template_id', 'template_name'])
       .orderBy('template_name', 'asc'),
     knex(`${RESPONSES_TABLE} as sr`)
@@ -56,7 +43,7 @@ export async function getSurveyFilterOptions(): Promise<SurveyFilterOptions> {
       .leftJoin(`${USERS_TABLE} as u`, function joinUsers() {
         this.on('t.assigned_to', '=', 'u.user_id').andOn('t.tenant', '=', 'u.tenant');
       })
-      .where('sr.tenant', tenantId)
+      .where('sr.tenant', tenant)
       .whereNotNull('t.assigned_to')
       .distinct('t.assigned_to as user_id')
       .select(knex.raw("COALESCE(CONCAT(u.first_name, ' ', u.last_name), '') as full_name"))
@@ -65,7 +52,7 @@ export async function getSurveyFilterOptions(): Promise<SurveyFilterOptions> {
       .leftJoin(`${CLIENTS_TABLE} as c`, function joinClients() {
         this.on('sr.client_id', '=', 'c.client_id').andOn('sr.tenant', '=', 'c.tenant');
       })
-      .where('sr.tenant', tenantId)
+      .where('sr.tenant', tenant)
       .whereNotNull('sr.client_id')
       .distinct(
         'sr.client_id as client_id',
@@ -97,4 +84,4 @@ export async function getSurveyFilterOptions(): Promise<SurveyFilterOptions> {
         logoUrl: null,
       })),
   };
-}
+});

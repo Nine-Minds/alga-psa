@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { BaseDomainEventPayloadSchema } from './commonEventPayloadSchemas';
 
 /**
  * Schema for email sender/recipient address
@@ -122,14 +123,14 @@ export type EmailWorkflowPayload = z.infer<typeof emailWorkflowPayloadSchema>;
 
 const emailProviderTypeSchema = z.enum(['microsoft', 'google']).describe('Email provider type');
 
-export const inboundEmailReceivedEventPayloadSchema = z.object({
+export const inboundEmailReceivedEventPayloadSchema = BaseDomainEventPayloadSchema.extend({
   emailData: emailDataSchema.describe('The inbound email data from the event'),
   providerId: z.string().describe('Email provider ID')
-}).describe('Payload for INBOUND_EMAIL_RECEIVED (tenant inferred from session)');
+}).describe('Payload for INBOUND_EMAIL_RECEIVED');
 
 export type InboundEmailReceivedEventPayload = z.infer<typeof inboundEmailReceivedEventPayloadSchema>;
 
-export const emailProviderConnectedEventPayloadSchema = z.object({
+export const emailProviderConnectedEventPayloadSchema = BaseDomainEventPayloadSchema.extend({
   providerId: z.string().describe('Email provider configuration ID'),
   providerType: emailProviderTypeSchema,
   providerName: z.string().describe('Human-friendly provider name'),
@@ -139,7 +140,7 @@ export const emailProviderConnectedEventPayloadSchema = z.object({
 
 export type EmailProviderConnectedEventPayload = z.infer<typeof emailProviderConnectedEventPayloadSchema>;
 
-export const emailProviderDisconnectedEventPayloadSchema = z.object({
+export const emailProviderDisconnectedEventPayloadSchema = BaseDomainEventPayloadSchema.extend({
   providerId: z.string().describe('Email provider configuration ID'),
   providerType: emailProviderTypeSchema,
   providerName: z.string().describe('Human-friendly provider name'),

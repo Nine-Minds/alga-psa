@@ -16,19 +16,18 @@ import { getTicketAttributes } from '@alga-psa/auth/actions';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { withTransaction } from '@alga-psa/db';
 import { createTenantKnex } from '@alga-psa/db';
-import { getCurrentUser } from '@alga-psa/auth/getCurrentUser';
 import { Knex } from 'knex';
 import { deleteEntityTags } from '@alga-psa/tags/lib/tagCleanup';
-import { 
-  ticketSchema, 
-  ticketUpdateSchema, 
+import {
+  ticketSchema,
+  ticketUpdateSchema,
   ticketAttributesQuerySchema,
   ticketListItemSchema,
   ticketListFiltersSchema
 } from '../schemas/ticket.schema';
 import { z } from 'zod';
 import { validateData } from '@alga-psa/validation';
-import { publishEvent } from '@alga-psa/event-bus/publishers';
+import { publishEvent, publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import { getEventBus } from '@alga-psa/event-bus';
 import {
   TicketCreatedEvent,
@@ -41,6 +40,13 @@ import { TicketModel, CreateTicketInput } from '@alga-psa/shared/models/ticketMo
 import { TicketModelEventPublisher } from '../lib/adapters/TicketModelEventPublisher';
 import { TicketModelAnalyticsTracker } from '../lib/adapters/TicketModelAnalyticsTracker';
 import { calculateItilPriority } from '@alga-psa/tickets/lib/itilUtils';
+import { withAuth } from '@alga-psa/auth';
+import { buildTicketTransitionWorkflowEvents } from '../lib/workflowTicketTransitionEvents';
+import { buildTicketCommunicationWorkflowEvents } from '../lib/workflowTicketCommunicationEvents';
+import {
+  buildTicketResolutionSlaStageCompletionEvent,
+  buildTicketResolutionSlaStageEnteredEvent,
+} from '../lib/workflowTicketSlaStageEvents';
 
 // Email event channel constant - inlined to avoid circular dependency with notifications
 // Must match the value in @alga-psa/notifications/emailChannel
@@ -118,21 +124,13 @@ interface CreateTicketFromAssetData {
     client_id: string;
 }
 
-export async function createTicketFromAsset(data: CreateTicketFromAssetData): Promise<ITicket> {
+export const createTicketFromAsset = withAuth(async (user, { tenant }, data: CreateTicketFromAssetData): Promise<ITicket> => {
     try {
-        const currentUser = await getCurrentUser();
-        if (!currentUser) {
-            throw new Error('Unauthorized');
-        }
-
-        const {knex: db, tenant} = await createTenantKnex(currentUser.tenant);
-        if (!tenant) {
-            throw new Error('Tenant not found');
-        }
+        const {knex: db} = await createTenantKnex();
 
         const result = await db.transaction(async (trx) => {
             // Server-specific: Check permissions
-            if (!await hasPermission(currentUser, 'ticket', 'create', trx)) {
+            if (!await hasPermission(user, 'ticket', 'create', trx)) {
                 throw new Error('Permission denied: Cannot create ticket');
             }
 
@@ -143,7 +141,7 @@ export async function createTicketFromAsset(data: CreateTicketFromAssetData): Pr
             // Use shared TicketModel for asset ticket creation
             const ticketResult = await TicketModel.createTicketFromAsset(
                 data,
-                currentUser.user_id,
+                user.user_id,
                 tenant,
                 trx,
                 eventPublisher,
@@ -157,7 +155,7 @@ export async function createTicketFromAsset(data: CreateTicketFromAssetData): Pr
               entity_id: ticketResult.ticket_id,
               entity_type: 'ticket',
               relationship_type: 'affected',
-              created_by: currentUser.user_id,
+              created_by: user.user_id,
               created_at: new Date().toISOString(),
             });
 
@@ -168,6 +166,27 @@ export async function createTicketFromAsset(data: CreateTicketFromAssetData): Pr
 
             if (!fullTicket) {
                 throw new Error('Failed to retrieve created ticket');
+            }
+
+            const enteredSlaEvent = buildTicketResolutionSlaStageEnteredEvent({
+              tenantId: tenant,
+              ticketId: ticketResult.ticket_id,
+              itilPriorityLevel: fullTicket.itil_priority_level,
+              enteredAt: fullTicket.entered_at,
+            });
+            if (enteredSlaEvent) {
+              await publishWorkflowEvent({
+                eventType: enteredSlaEvent.eventType,
+                payload: enteredSlaEvent.payload,
+                ctx: {
+                  tenantId: tenant,
+                  actor: { actorType: 'USER' as const, actorUserId: user.user_id },
+                  occurredAt: (fullTicket.entered_at instanceof Date
+                    ? fullTicket.entered_at.toISOString()
+                    : fullTicket.entered_at) || new Date().toISOString(),
+                },
+                idempotencyKey: enteredSlaEvent.idempotencyKey,
+              });
             }
 
             return convertDates(fullTicket);
@@ -182,15 +201,12 @@ export async function createTicketFromAsset(data: CreateTicketFromAssetData): Pr
         console.error('Error creating ticket from asset:', error);
         throw new Error('Failed to create ticket from asset');
     }
-}
+});
 
 
-export async function addTicket(data: FormData, user: IUser): Promise<ITicket|undefined> {
+export const addTicket = withAuth(async (user, { tenant }, data: FormData): Promise<ITicket|undefined> => {
   try {
-    const {knex: db, tenant} = await createTenantKnex(user.tenant);
-    if (!tenant) {
-      throw new Error('Tenant not found');
-    }
+    const {knex: db} = await createTenantKnex();
 
     return await db.transaction(async (trx) => {
       // Server-specific: Check permissions
@@ -306,18 +322,39 @@ export async function addTicket(data: FormData, user: IUser): Promise<ITicket|un
         throw new Error('Failed to retrieve created ticket');
       }
 
+      const enteredSlaEvent = buildTicketResolutionSlaStageEnteredEvent({
+        tenantId: tenant,
+        ticketId: ticketResult.ticket_id,
+        itilPriorityLevel: fullTicket.itil_priority_level,
+        enteredAt: fullTicket.entered_at,
+      });
+      if (enteredSlaEvent) {
+        await publishWorkflowEvent({
+          eventType: enteredSlaEvent.eventType,
+          payload: enteredSlaEvent.payload,
+          ctx: {
+            tenantId: tenant,
+            actor: { actorType: 'USER' as const, actorUserId: user.user_id },
+            occurredAt: (fullTicket.entered_at instanceof Date
+              ? fullTicket.entered_at.toISOString()
+              : fullTicket.entered_at) || new Date().toISOString(),
+          },
+          idempotencyKey: enteredSlaEvent.idempotencyKey,
+        });
+      }
+
       // Server-specific: Revalidate cache paths
       revalidatePath('/msp/tickets');
-      
+
       return convertDates(fullTicket);
     });
   } catch (error) {
     console.error('Error in addTicket:', error);
     throw error;
   }
-}
+});
 
-export async function fetchTicketAttributes(ticketId: string, user: IUser) {
+export const fetchTicketAttributes = withAuth(async (user, { tenant }, ticketId: string) => {
   try {
     // Validate ticket ID
     const { ticketId: validatedTicketId } = validateData(
@@ -325,10 +362,7 @@ export async function fetchTicketAttributes(ticketId: string, user: IUser) {
       { ticketId }
     );
 
-    const {knex: db, tenant} = await createTenantKnex(user.tenant);
-    if (!tenant) {
-      throw new Error('Tenant not found');
-    }
+    const {knex: db} = await createTenantKnex();
 
     const result = await withTransaction(db, async (trx: Knex.Transaction) => {
       if (!await hasPermission(user, 'ticket', 'read', trx)) {
@@ -356,17 +390,14 @@ export async function fetchTicketAttributes(ticketId: string, user: IUser) {
     console.error(error);
     return { success: false, error: 'Failed to fetch ticket attributes' };
   }
-}
+});
 
-export async function updateTicket(id: string, data: Partial<ITicket>, user: IUser) {
+export const updateTicket = withAuth(async (user, { tenant }, id: string, data: Partial<ITicket>) => {
   try {
     // Validate update data
     const validatedData = validateData(ticketUpdateSchema, data);
 
-    const {knex: db, tenant} = await createTenantKnex(user.tenant);
-    if (!tenant) {
-      throw new Error('Tenant not found');
-    }
+    const {knex: db} = await createTenantKnex();
 
     const result = await db.transaction(async (trx) => {
       if (!await hasPermission(user, 'ticket', 'update', trx)) {
@@ -425,7 +456,7 @@ export async function updateTicket(id: string, data: Partial<ITicket>, user: IUs
           }
         }
       }
-      
+
       // Validate location belongs to the client if provided
       if ('location_id' in updateData && updateData.location_id) {
         const clientId = 'client_id' in updateData ? updateData.client_id : currentTicket.client_id;
@@ -436,7 +467,7 @@ export async function updateTicket(id: string, data: Partial<ITicket>, user: IUs
             tenant: tenant
           })
           .first();
-        
+
         if (!location) {
           throw new Error('Invalid location: Location does not belong to the selected client');
         }
@@ -470,9 +501,9 @@ export async function updateTicket(id: string, data: Partial<ITicket>, user: IUs
           tenant: tenant
         })
         .first();
-      
+
       let updatedTicket;
-      
+
       // If we're changing the assigned_to field, we need to handle the ticket_resources table
       if (isChangingAssignment) {
         // Step 1: Delete any ticket_resources where the new assigned_to is an additional_user_id
@@ -484,7 +515,7 @@ export async function updateTicket(id: string, data: Partial<ITicket>, user: IUs
             additional_user_id: updateData.assigned_to
           })
           .delete();
-        
+
         // Step 2: Get existing resources with the old assigned_to value
         const existingResources = await trx('ticket_resources')
           .where({
@@ -493,7 +524,7 @@ export async function updateTicket(id: string, data: Partial<ITicket>, user: IUs
             assigned_to: currentTicket.assigned_to
           })
           .select('*');
-          
+
         // Step 3: Store resources for recreation, excluding those that would violate constraints
         const resourcesToRecreate: any[] = [];
         for (const resource of existingResources) {
@@ -504,7 +535,7 @@ export async function updateTicket(id: string, data: Partial<ITicket>, user: IUs
             resourcesToRecreate.push(resourceData);
           }
         }
-        
+
         // Step 4: Delete the existing resources with the old assigned_to
         if (existingResources.length > 0) {
           await trx('ticket_resources')
@@ -515,13 +546,13 @@ export async function updateTicket(id: string, data: Partial<ITicket>, user: IUs
             })
             .delete();
         }
-        
+
         // Step 5: Update the ticket with the new assigned_to
         const [updated] = await trx('tickets')
           .where({ ticket_id: id, tenant: tenant })
           .update(updateData)
           .returning('*');
-          
+
         // Step 6: Re-create the resources with the new assigned_to
         for (const resourceData of resourcesToRecreate) {
           await trx('ticket_resources').insert({
@@ -529,15 +560,15 @@ export async function updateTicket(id: string, data: Partial<ITicket>, user: IUs
             assigned_to: updateData.assigned_to
           });
         }
-        
-        return updated;
+
+        updatedTicket = updated;
       } else {
         // Regular update without changing assignment
         const [updated] = await trx('tickets')
           .where({ ticket_id: id, tenant: tenant })
           .update(updateData)
           .returning('*');
-        
+
         updatedTicket = updated;
       }
 
@@ -546,14 +577,59 @@ export async function updateTicket(id: string, data: Partial<ITicket>, user: IUs
     }
 
       // Get the new status if it was updated
-      const newStatus = updateData.status_id ? 
+      const newStatus = updateData.status_id ?
         await trx('statuses')
-          .where({ 
+          .where({
             status_id: updateData.status_id,
             tenant: tenant
           })
           .first() :
         oldStatus;
+
+      // Emit expanded domain transition events for workflow v2 triggers.
+      // These events are additive and emitted in addition to legacy TICKET_* events.
+      const occurredAt = new Date().toISOString();
+      const workflowCtx = {
+        tenantId: tenant,
+        actor: { actorType: 'USER' as const, actorUserId: user.user_id },
+        occurredAt,
+      };
+
+      const transitionEvents = buildTicketTransitionWorkflowEvents({
+        before: {
+          ticketId: id,
+          statusId: currentTicket.status_id,
+          priorityId: currentTicket.priority_id,
+          assignedTo: currentTicket.assigned_to,
+          boardId: currentTicket.board_id,
+          escalated: currentTicket.escalated,
+        },
+        after: {
+          ticketId: id,
+          statusId: updatedTicket.status_id,
+          priorityId: updatedTicket.priority_id,
+          assignedTo: updatedTicket.assigned_to,
+          boardId: updatedTicket.board_id,
+          escalated: updatedTicket.escalated,
+        },
+        ctx: {
+          occurredAt,
+          actorUserId: user.user_id,
+          previousStatusIsClosed: !!oldStatus?.is_closed,
+          newStatusIsClosed: !!newStatus?.is_closed,
+        },
+      });
+
+      for (const ev of transitionEvents) {
+        await publishWorkflowEvent({
+          eventType: ev.eventType,
+          payload: ev.payload,
+          ctx: workflowCtx,
+          eventName: ev.workflow?.eventName,
+          fromState: ev.workflow?.fromState,
+          toState: ev.workflow?.toState,
+        });
+      }
 
       // Build structured changes object with old/new values
       const structuredChanges: Record<string, any> = {};
@@ -645,15 +721,36 @@ export async function updateTicket(id: string, data: Partial<ITicket>, user: IUs
       // Publish appropriate event based on the update
       if (newStatus?.is_closed && !oldStatus?.is_closed) {
         // Ticket was closed
-        await publishEvent({
+        await publishWorkflowEvent({
           eventType: 'TICKET_CLOSED',
           payload: {
-            tenantId: tenant,
             ticketId: id,
             userId: user.user_id,
-            changes: structuredChanges
-          }
+            closedByUserId: user.user_id,
+            closedAt: occurredAt,
+            changes: structuredChanges,
+          },
+          ctx: workflowCtx,
+          eventName: 'Ticket Closed',
+          fromState: currentTicket.status_id,
+          toState: updatedTicket.status_id,
         });
+
+        const slaCompletionEvent = buildTicketResolutionSlaStageCompletionEvent({
+          tenantId: tenant,
+          ticketId: id,
+          itilPriorityLevel: currentTicket.itil_priority_level,
+          enteredAt: currentTicket.entered_at,
+          closedAt: occurredAt,
+        });
+        if (slaCompletionEvent) {
+          await publishWorkflowEvent({
+            eventType: slaCompletionEvent.eventType,
+            payload: slaCompletionEvent.payload,
+            ctx: workflowCtx,
+            idempotencyKey: slaCompletionEvent.idempotencyKey,
+          });
+        }
 
         // Track ticket resolved analytics
         captureAnalytics('ticket_resolved', {
@@ -665,15 +762,21 @@ export async function updateTicket(id: string, data: Partial<ITicket>, user: IUs
         }, user.user_id);
       } else if (updateData.assigned_to && updateData.assigned_to !== currentTicket.assigned_to) {
         // Ticket was assigned - userId should be the user being assigned, not the one making the update
-        await publishEvent({
+        await publishWorkflowEvent({
           eventType: 'TICKET_ASSIGNED',
           payload: {
-            tenantId: tenant,
             ticketId: id,
-            userId: updateData.assigned_to,  // The user being assigned to the ticket
-            assignedByUserId: user.user_id,  // The user who performed the assignment
-            changes: structuredChanges
-          }
+            userId: updateData.assigned_to, // Legacy: assigned user
+            assignedByUserId: user.user_id,
+            previousAssigneeId: currentTicket.assigned_to ?? undefined,
+            previousAssigneeType: currentTicket.assigned_to ? 'user' : undefined,
+            newAssigneeId: updateData.assigned_to,
+            newAssigneeType: 'user',
+            assignedAt: occurredAt,
+            changes: structuredChanges,
+          },
+          ctx: workflowCtx,
+          eventName: 'Ticket Assigned',
         });
 
         // Track ticket assignment analytics
@@ -684,17 +787,19 @@ export async function updateTicket(id: string, data: Partial<ITicket>, user: IUs
         }, user.user_id);
       } else {
         // Regular update
-        await publishEvent({
+        await publishWorkflowEvent({
           eventType: 'TICKET_UPDATED',
           payload: {
-            tenantId: tenant,
             ticketId: id,
             userId: user.user_id,
-            changes: structuredChanges
-          }
+            updatedByUserId: user.user_id,
+            changes: structuredChanges,
+          },
+          ctx: workflowCtx,
+          eventName: 'Ticket Updated',
         });
       }
-      
+
       // Track general ticket update analytics
       captureAnalytics('ticket_updated', {
         fields_updated: Object.keys(updateData),
@@ -712,15 +817,12 @@ export async function updateTicket(id: string, data: Partial<ITicket>, user: IUs
     console.error(error);
     throw new Error('Failed to update ticket');
   }
-}
+});
 
-export async function getTickets(user: IUser): Promise<ITicket[]> {
+export const getTickets = withAuth(async (user, { tenant }): Promise<ITicket[]> => {
   try {
-    const {knex, tenant} = await createTenantKnex(user.tenant);
-    if (!tenant) {
-      throw new Error('Tenant not found');
-    }
-    
+    const {knex} = await createTenantKnex();
+
     const result = await withTransaction(knex, async (trx: Knex.Transaction) => {
       if (!await hasPermission(user, 'ticket', 'read', trx)) {
         throw new Error('Permission denied: Cannot view tickets');
@@ -759,15 +861,12 @@ export async function getTickets(user: IUser): Promise<ITicket[]> {
     console.error('Failed to fetch tickets:', error);
     throw new Error('Failed to fetch tickets');
   }
-}
+});
 
-export async function getTicketsForList(user: IUser, filters: ITicketListFilters): Promise<ITicketListItem[]> {
+export const getTicketsForList = withAuth(async (user, { tenant }, filters: ITicketListFilters): Promise<ITicketListItem[]> => {
   try {
     const validatedFilters = validateData(ticketListFiltersSchema, filters) as ITicketListFilters;
-    const {knex: db, tenant} = await createTenantKnex(user.tenant);
-    if (!tenant) {
-      throw new Error('Tenant not found');
-    }
+    const {knex: db} = await createTenantKnex();
 
     const result = await withTransaction(db, async (trx: Knex.Transaction) => {
       if (!await hasPermission(user, 'ticket', 'read', trx)) {
@@ -956,14 +1055,11 @@ export async function getTicketsForList(user: IUser, filters: ITicketListFilters
     console.error('Failed to fetch tickets:', error);
     throw new Error('Failed to fetch tickets');
   }
-}
+});
 
-export async function addTicketComment(ticketId: string, comment: string, isInternal: boolean, user: IUser): Promise<void> {
+export const addTicketComment = withAuth(async (user, { tenant }, ticketId: string, comment: string, isInternal: boolean): Promise<void> => {
   try {
-    const {knex: db, tenant} = await createTenantKnex(user.tenant);
-    if (!tenant) {
-      throw new Error('Tenant not found');
-    }
+    const {knex: db} = await createTenantKnex();
 
     await withTransaction(db, async (trx: Knex.Transaction) => {
       if (!await hasPermission(user, 'ticket', 'update', trx)) {
@@ -1001,19 +1097,48 @@ export async function addTicketComment(ticketId: string, comment: string, isInte
           ticketId: ticketId,
           userId: user.user_id,
           comment: {
-            id: newComment.id,
+            id: (newComment as any).comment_id ?? (newComment as any).id,
             content: comment,
             author: `${user.first_name} ${user.last_name}`,
             isInternal
           }
         }
       });
+
+      // Publish workflow v2 ticket message events (additive).
+      try {
+        const occurredAt = new Date().toISOString();
+        const workflowCtx = {
+          tenantId: tenant,
+          actor: { actorType: 'USER' as const, actorUserId: user.user_id },
+          occurredAt,
+          correlationId: (newComment as any).comment_id ?? (newComment as any).id,
+        };
+
+        const messageId = (newComment as any).comment_id ?? (newComment as any).id;
+        if (!messageId) return;
+        const createdAt = (newComment as any).created_at ?? occurredAt;
+        const events = buildTicketCommunicationWorkflowEvents({
+          ticketId,
+          messageId,
+          visibility: isInternal ? 'internal' : 'public',
+          author: { authorType: 'user', authorId: user.user_id },
+          channel: 'ui',
+          createdAt,
+        });
+
+        for (const ev of events) {
+          await publishWorkflowEvent({ eventType: ev.eventType, payload: ev.payload, ctx: workflowCtx });
+        }
+      } catch (eventError) {
+        console.error('[addTicketComment] Failed to publish workflow ticket message events:', eventError);
+      }
     });
   } catch (error) {
     console.error('Failed to add ticket comment:', error);
     throw new Error('Failed to add ticket comment');
   }
-}
+});
 
 async function deleteTicketTransactional(
   trx: Knex.Transaction,
@@ -1037,7 +1162,7 @@ async function deleteTicketTransactional(
   }
 
   await trx('comments')
-    .where({ 
+    .where({
       ticket_id: ticketId,
       tenant: tenant
     })
@@ -1046,7 +1171,7 @@ async function deleteTicketTransactional(
   await deleteEntityTags(trx, ticketId, 'ticket');
 
   await trx('tickets')
-    .where({ 
+    .where({
       ticket_id: ticketId,
       tenant: tenant
     })
@@ -1064,7 +1189,7 @@ async function deleteTicketTransactional(
   captureAnalytics('ticket_deleted', {
     was_resolved: !!ticket.closed_at,
     had_comments: false,
-    age_in_days: ticket.entered_at ? 
+    age_in_days: ticket.entered_at ?
       Math.round((Date.now() - new Date(ticket.entered_at).getTime()) / 1000 / 60 / 60 / 24) : 0,
   }, user.user_id);
 }
@@ -1093,12 +1218,9 @@ function normalizeTicketDeleteError(error: unknown): { raw: string; userFacing: 
   };
 }
 
-export async function deleteTicket(ticketId: string, user: IUser): Promise<void> {
+export const deleteTicket = withAuth(async (user, { tenant }, ticketId: string): Promise<void> => {
   try {
-    const {knex: db, tenant} = await createTenantKnex(user.tenant);
-    if (!tenant) {
-      throw new Error('Tenant not found');
-    }
+    const {knex: db} = await createTenantKnex();
 
     await withTransaction(db, async (trx: Knex.Transaction) => {
       await deleteTicketTransactional(trx, ticketId, tenant, user);
@@ -1110,22 +1232,19 @@ export async function deleteTicket(ticketId: string, user: IUser): Promise<void>
     const { raw } = normalizeTicketDeleteError(error);
     throw new Error(raw);
   }
-}
+});
 
-export async function deleteTickets(ticketIds: string[], user: IUser): Promise<{
+export const deleteTickets = withAuth(async (user, { tenant }, ticketIds: string[]): Promise<{
   deletedIds: string[];
   failed: Array<{ ticketId: string; message: string }>;
-}> {
+}> => {
   const uniqueIds = Array.from(new Set(ticketIds.filter(id => !!id)));
 
   if (uniqueIds.length === 0) {
     return { deletedIds: [], failed: [] };
   }
 
-  const { knex: db, tenant } = await createTenantKnex(user.tenant);
-  if (!tenant) {
-    throw new Error('Tenant not found');
-  }
+  const { knex: db } = await createTenantKnex();
 
   const deletedIds: string[] = [];
   const failed: Array<{ ticketId: string; message: string }> = [];
@@ -1148,26 +1267,14 @@ export async function deleteTickets(ticketIds: string[], user: IUser): Promise<{
   }
 
   return { deletedIds, failed };
-}
+});
 
-export async function getScheduledHoursForTicket(ticketId: string): Promise<IAgentSchedule[]> {
+export const getScheduledHoursForTicket = withAuth(async (user, { tenant }, ticketId: string): Promise<IAgentSchedule[]> => {
   try {
-    // Get the current user from the session
-    const currentUser = await getCurrentUser();
-    if (!currentUser) {
-      throw new Error('No authenticated user found');
-    }
-    if (!currentUser.tenant) {
-      throw new Error('Tenant not found');
-    }
-    
-    const {knex: db, tenant} = await createTenantKnex(currentUser.tenant);
-    if (!tenant) {
-      throw new Error('Tenant not found');
-    }
+    const {knex: db} = await createTenantKnex();
 
     const result = await withTransaction(db, async (trx: Knex.Transaction) => {
-      if (!await hasPermission(currentUser, 'ticket', 'read', trx)) {
+      if (!await hasPermission(user, 'ticket', 'read', trx)) {
         throw new Error('Permission denied: Cannot view ticket schedule');
       }
 
@@ -1191,25 +1298,25 @@ export async function getScheduledHoursForTicket(ticketId: string): Promise<IAge
 
     // Calculate scheduled hours per agent
     const agentSchedules: Record<string, number> = {};
-    
+
     scheduleEntries.forEach((entry: any) => {
       const userId = entry.user_id;
       if (!userId) {
         console.log('Warning: Schedule entry has no user_id:', entry);
         return; // Skip entries with no user_id
       }
-      
+
       const startTime = new Date(entry.scheduled_start);
       const endTime = new Date(entry.scheduled_end);
       const durationMs = endTime.getTime() - startTime.getTime();
       const durationMinutes = Math.ceil(durationMs / (1000 * 60)); // Convert ms to minutes
-      
+
       console.log('Entry for user', userId, ':', startTime, 'to', endTime, '=', durationMinutes, 'minutes');
-      
+
       if (!agentSchedules[userId]) {
         agentSchedules[userId] = 0;
       }
-      
+
       agentSchedules[userId] += durationMinutes;
     });
 
@@ -1232,14 +1339,14 @@ export async function getScheduledHoursForTicket(ticketId: string): Promise<IAge
           tenant
         })
         .first();
-        
+
       if (ticketData && ticketData.assigned_to) {
         result.push({
           userId: ticketData.assigned_to,
           minutes: 180 // 3 hours
         });
       }
-      
+
       // Add dummy data for additional agents
       const additionalAgents = await trx('ticket_resources')
         .where({
@@ -1247,7 +1354,7 @@ export async function getScheduledHoursForTicket(ticketId: string): Promise<IAge
           tenant
         })
         .select('additional_user_id');
-        
+
       additionalAgents.forEach((agent: any) => {
         if (agent.additional_user_id) {
           result.push({
@@ -1270,11 +1377,11 @@ export async function getScheduledHoursForTicket(ticketId: string): Promise<IAge
     }
     throw new Error('Failed to fetch scheduled hours');
   }
-}
+});
 
-export type DetailedTicket = ITicket & { 
-  tenant: string; 
-  status_name: string; 
+export type DetailedTicket = ITicket & {
+  tenant: string;
+  status_name: string;
   is_closed: boolean;
   board_name?: string;
   assigned_to_first_name?: string;
@@ -1287,12 +1394,9 @@ export type DetailedTicket = ITicket & {
   availableAgents?: IUser[];
 };
 
-export async function getTicketById(id: string, user: IUser): Promise<DetailedTicket> {
+export const getTicketById = withAuth(async (user, { tenant }, id: string): Promise<DetailedTicket> => {
   try {
-    const {knex: db, tenant} = await createTenantKnex(user.tenant);
-    if (!tenant) {
-      throw new Error('Tenant not found');
-    }
+    const {knex: db} = await createTenantKnex();
 
     const result = await withTransaction(db, async (trx: Knex.Transaction) => {
       if (!await hasPermission(user, 'ticket', 'read', trx)) {
@@ -1407,4 +1511,4 @@ export async function getTicketById(id: string, user: IUser): Promise<DetailedTi
     console.error('Failed to fetch ticket:', error);
     throw new Error('Failed to fetch ticket');
   }
-}
+});

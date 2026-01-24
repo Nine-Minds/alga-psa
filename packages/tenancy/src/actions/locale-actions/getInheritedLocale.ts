@@ -2,7 +2,8 @@
 
 import { getConnection } from '@alga-psa/db';
 import { SupportedLocale, isSupportedLocale, LOCALE_CONFIG } from '@alga-psa/core/i18n/config';
-import { getCurrentUser } from '@alga-psa/users/actions';
+import { withOptionalAuth, type AuthContext } from '@alga-psa/auth';
+import type { IUserWithRoles } from '@alga-psa/types';
 
 /**
  * Get the user's client ID from their contact
@@ -35,34 +36,33 @@ async function getUserClientId(userId: string, tenantId: string): Promise<string
  * Get what locale would be inherited if the user had no personal preference
  * This checks client -> tenant -> system default
  */
-export async function getInheritedLocaleAction(): Promise<{
+export const getInheritedLocaleAction = withOptionalAuth(async (user: IUserWithRoles | null, ctx: AuthContext | null): Promise<{
   locale: SupportedLocale;
   source: 'client' | 'tenant' | 'system';
-}> {
-  const user = await getCurrentUser();
-
-  if (!user) {
+}> => {
+  if (!user || !ctx) {
     return {
       locale: LOCALE_CONFIG.defaultLocale as SupportedLocale,
       source: 'system'
     };
   }
 
-  const knex = await getConnection(user.tenant);
+  const { tenant } = ctx;
+  const knex = await getConnection(tenant);
 
   // 1. Check client preference
   let clientId: string | null = null;
 
   // For client users, get their client
   if (user.user_type === 'client') {
-    clientId = await getUserClientId(user.user_id, user.tenant);
+    clientId = await getUserClientId(user.user_id, tenant);
   }
 
   if (clientId) {
     const client = await knex('clients')
       .where({
         client_id: clientId,
-        tenant: user.tenant
+        tenant
       })
       .first();
 
@@ -77,7 +77,7 @@ export async function getInheritedLocaleAction(): Promise<{
 
   // 2. Check tenant preference
   const tenantSettings = await knex('tenant_settings')
-    .where({ tenant: user.tenant })
+    .where({ tenant })
     .first();
 
   // Check client portal default first (for client users)
@@ -105,4 +105,4 @@ export async function getInheritedLocaleAction(): Promise<{
     locale: LOCALE_CONFIG.defaultLocale as SupportedLocale,
     source: 'system'
   };
-}
+});
