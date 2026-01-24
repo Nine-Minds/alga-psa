@@ -326,7 +326,7 @@
   {
     "id": "T055",
     "description": "Clicking Cancel closes dialog without deleting",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F021"]
   },
   {

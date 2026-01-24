@@ -2,7 +2,7 @@
  * @vitest-environment jsdom
  */
 import React from 'react';
-import { beforeAll, describe, expect, it, vi } from 'vitest';
+import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
@@ -113,6 +113,12 @@ describe('Drafts tab DataTable', () => {
         return 1200;
       },
     });
+  });
+
+  beforeEach(() => {
+    mockDraftContracts = [];
+    mockDraftResumeData = {};
+    vi.clearAllMocks();
   });
 
   it('renders contract name for each draft (T012)', async () => {
@@ -718,5 +724,44 @@ describe('Drafts tab DataTable', () => {
 
     const dialog = await screen.findByTestId('confirmation-dialog');
     expect(within(dialog).getByRole('button', { name: 'Discard' })).toBeInTheDocument();
+  });
+
+  it('clicking Cancel closes dialog without deleting (T055)', async () => {
+    mockDraftContracts = [
+      {
+        contract_id: 'contract-1',
+        contract_name: 'Draft Alpha',
+        client_name: 'Acme Co',
+        created_at: new Date(2026, 0, 1),
+        updated_at: new Date(2026, 0, 2),
+      },
+    ];
+
+    const { deleteContract } = await import('@alga-psa/billing/actions/contractActions');
+
+    const Contracts = (await import('../src/components/billing-dashboard/contracts/Contracts')).default;
+    render(<Contracts />);
+
+    await screen.findByText('Draft Alpha');
+
+    const user = userEvent.setup();
+    await act(async () => {
+      await user.click(await screen.findByRole('button', { name: /open menu/i }));
+    });
+    await act(async () => {
+      await user.click(await screen.findByText('Discard'));
+    });
+
+    expect(await screen.findByTestId('confirmation-dialog')).toBeInTheDocument();
+
+    await act(async () => {
+      await user.click(screen.getByRole('button', { name: 'Cancel' }));
+    });
+
+    await waitFor(() => {
+      expect(screen.queryByTestId('confirmation-dialog')).not.toBeInTheDocument();
+    });
+
+    expect(deleteContract).not.toHaveBeenCalled();
   });
 });
