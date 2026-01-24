@@ -296,7 +296,7 @@
   {
     "id": "T050",
     "description": "Enabling AI Assistant allows Quick Ask usage after page reload",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F010", "F011"]
   },
   {

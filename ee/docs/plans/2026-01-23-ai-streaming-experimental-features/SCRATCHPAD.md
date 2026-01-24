@@ -551,3 +551,10 @@ curl -X POST localhost:3000/api/chat/stream/chat \
   - File: `server/src/test/unit/RightSidebar.streaming.test.tsx`
 - Validation: `npx vitest run server/src/test/unit/RightSidebar.streaming.test.tsx`
 - Next test item: T050 Enabling AI Assistant allows Quick Ask usage after page reload
+
+### 2026-01-24 (cont.)
+- Implemented T050 (unit test):
+  - Verifies DefaultLayout reads the experimental feature state on mount; after a simulated "reload" (unmount/mount) with `aiAssistant` enabled, the Quick Ask shortcut opens the overlay.
+  - File: `server/src/test/unit/layout/DefaultLayout.aiAssistantReload.test.tsx`
+- Validation: `npx vitest run server/src/test/unit/layout/DefaultLayout.aiAssistantReload.test.tsx`
+- Next test item: T051 Disabling AI Assistant prevents Quick Ask usage after page reload
