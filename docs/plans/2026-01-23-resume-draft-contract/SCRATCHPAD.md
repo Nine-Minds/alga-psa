@@ -66,6 +66,8 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 
 - (2026-01-24) Drafts table default-sorts by Last Modified (updated_at desc) and supports header sorting via DataTable.
 
+- (2026-01-24) Drafts tab search filters by contract name.
+
 ## Commands / Runbooks
 
 - Run billing package tests: `npm test -w packages/billing`

@@ -56,7 +56,7 @@
   {
     "id": "F010",
     "description": "Drafts list supports search/filter by contract name",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR2"]
   },
   {
