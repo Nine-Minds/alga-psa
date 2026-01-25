@@ -1,0 +1,32 @@
+# Scratchpad — Workflow Import/Export (2026-01-25)
+
+## Context
+- Workflow Runtime V2 stores:
+  - `workflow_definitions` (draft + metadata)
+  - `workflow_definition_versions` (published immutable versions)
+- Existing test helpers exist under `server/src/test/helpers/workflowRuntimeV2TestHelpers.ts`.
+
+## Decisions (draft)
+- Use a JSON **bundle** format with explicit `format` + `formatVersion`.
+- V1 accepts exactly one version and rejects others (no migration/back-compat).
+- “Full fidelity” targets workflow behavior + operational settings, not audit timestamps.
+- Bundle requires a stable portable `key` per workflow (distinct from DB ids).
+- Import always regenerates `workflow_id`.
+- Import is create-only by default; `--force` / `force=true` overwrites by deleting the existing workflow (matched by key) and recreating it from the bundle.
+- V1 is API-only plus a CLI wrapper in `tools/` (no UI).
+
+## Proposed docs locations
+- `ee/docs/schemas/workflow-bundle.v1.schema.json`
+- `ee/docs/guides/workflows/workflow-import-export.md`
+
+## Open Questions to resolve
+1. Do we need additional explicit validation beyond DB constraints for specific reference types (if constraints are insufficient)?
+
+## Notes / references
+- Workflow Runtime V2 PRD: `ee/docs/plans/2025-12-21-workflow-overhaul.md`
+- Persistence models:
+  - `shared/workflow/persistence/workflowDefinitionModelV2.ts`
+  - `shared/workflow/persistence/workflowDefinitionVersionModelV2.ts`
+
+## Work log
+- 2026-01-25: Added v1 bundle header constants/types in `shared/workflow/bundle/workflowBundleV1.ts` (`format`, `formatVersion`, `exportedAt`) to centralize the accepted format/version.
