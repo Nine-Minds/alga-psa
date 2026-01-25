@@ -25,7 +25,7 @@
 
   { "id": "F030", "description": "Add export HTTP endpoint for a single workflow (returns bundle JSON).", "implemented": true, "prdRefs": ["6.1"] },
   { "id": "F031", "description": "Add import HTTP endpoint for workflow bundle JSON.", "implemented": true, "prdRefs": ["6.1"] },
-  { "id": "F032", "description": "Restrict import/export endpoints to appropriate auth/role (admin-only) and/or test-only wiring as decided.", "implemented": false, "prdRefs": ["6.1"] },
+  { "id": "F032", "description": "Restrict import/export endpoints to appropriate auth/role (admin-only) and/or test-only wiring as decided.", "implemented": true, "prdRefs": ["6.1"] },
   { "id": "F033", "description": "Add CLI tool under tools/ for workflow bundle import/export (wraps the API).", "implemented": false, "prdRefs": ["6.1"] },
 
   { "id": "F040", "description": "Add test fixture bundles in-repo for at least one representative workflow (control flow + action calls).", "implemented": false, "prdRefs": ["2", "10"] },
