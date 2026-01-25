@@ -1,5 +1,5 @@
 [
-  { "id": "T001", "description": "Import rejects bundles with unsupported formatVersion and returns a clear error.", "implemented": false, "featureIds": ["F020"] },
+  { "id": "T001", "description": "Import rejects bundles with unsupported formatVersion and returns a clear error.", "implemented": true, "featureIds": ["F020"] },
   { "id": "T002", "description": "Import rejects invalid JSON that fails the workflow-bundle v1 JSON Schema with a helpful message.", "implemented": false, "featureIds": ["F021", "F005"] },
   { "id": "T003", "description": "Import fails with structured missing-dependency errors when required actions/node types/schemas are absent.", "implemented": false, "featureIds": ["F022", "F014"] },
 
