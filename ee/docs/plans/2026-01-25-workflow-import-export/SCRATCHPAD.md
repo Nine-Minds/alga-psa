@@ -39,3 +39,4 @@
 - 2026-01-25: Implemented single-workflow exporter `server/src/lib/workflow/bundle/exportWorkflowBundleV1.ts` (loads workflow_definitions + workflow_definition_versions into the v1 bundle shape).
 - 2026-01-25: Extended exporter to support multi-workflow bundles via `exportWorkflowBundleV1ForWorkflowIds` (bulk-load definitions + versions; workflows sorted by key).
 - 2026-01-25: Exporter intentionally omits instance-specific audit/actor fields (timestamps, *_by, version_id) by projecting only the portable subset into the bundle.
+- 2026-01-25: Exporter includes operational settings in `metadata` (isPaused/isVisible/concurrency/retention/auto-pause thresholds) for behavioral fidelity.

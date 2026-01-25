@@ -10,7 +10,7 @@
   { "id": "F010", "description": "Implement server-side exporter for a single workflow (metadata + draft + published versions).", "implemented": true, "prdRefs": ["5.1", "5.7"] },
   { "id": "F011", "description": "Implement server-side exporter for a bundle of selected workflows.", "implemented": true, "prdRefs": ["5.7"] },
   { "id": "F012", "description": "Exporter excludes instance-specific audit fields by default (timestamps, actor ids).", "implemented": true, "prdRefs": ["5.3", "8"] },
-  { "id": "F013", "description": "Exporter includes operational workflow settings needed for behavior fidelity (paused, visibility, concurrency, retention, auto-pause thresholds).", "implemented": false, "prdRefs": ["5.3"] },
+  { "id": "F013", "description": "Exporter includes operational workflow settings needed for behavior fidelity (paused, visibility, concurrency, retention, auto-pause thresholds).", "implemented": true, "prdRefs": ["5.3"] },
   { "id": "F014", "description": "Exporter emits dependency summary (actions, node types, schema refs) derived from definitions.", "implemented": false, "prdRefs": ["5.5"] },
 
   { "id": "F020", "description": "Implement server-side importer that validates formatVersion matches the accepted version.", "implemented": false, "prdRefs": ["5.2"] },
