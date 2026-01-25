@@ -98,6 +98,7 @@ interface TicketDetailsProps {
 
     // Optimized handlers
     onTicketUpdate?: (field: string, value: any) => Promise<void>;
+    onBatchTicketUpdate?: (changes: Record<string, unknown>) => Promise<boolean>;
     onAddComment?: (content: string, isInternal: boolean, isResolution: boolean) => Promise<void>;
     onUpdateDescription?: (content: string) => Promise<boolean>;
     isSubmitting?: boolean;
@@ -140,6 +141,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     currentUser,
     // Optimized handlers
     onTicketUpdate,
+    onBatchTicketUpdate,
     onAddComment,
     onUpdateDescription,
     isSubmitting = false,
@@ -969,6 +971,29 @@ const handleClose = () => {
         }
     };
 
+    // Handler for batch save changes from TicketInfo
+    const handleBatchSaveChanges = useCallback(async (changes: Record<string, unknown>): Promise<boolean> => {
+        // If we have a batch handler from container, use it
+        if (onBatchTicketUpdate) {
+            return await onBatchTicketUpdate(changes);
+        }
+
+        // Fallback: save each change individually
+        try {
+            for (const [field, value] of Object.entries(changes)) {
+                if (field === 'itil_impact' || field === 'itil_urgency') {
+                    await handleItilFieldChange(field, value);
+                } else {
+                    await handleSelectChange(field as keyof ITicket, value as string | null);
+                }
+            }
+            return true;
+        } catch (error) {
+            console.error('Error in batch save:', error);
+            return false;
+        }
+    }, [onBatchTicketUpdate, handleItilFieldChange]);
+
     const handleClientChange = async (newClientId: string) => {
         try {
             await updateTicket(ticket.ticket_id!, {
@@ -1397,6 +1422,7 @@ const handleClose = () => {
                                     boardOptions={boardOptions}
                                     priorityOptions={priorityOptions}
                                     onSelectChange={handleSelectChange}
+                                    onSaveChanges={handleBatchSaveChanges}
                                     onUpdateDescription={handleUpdateDescription}
                                     isSubmitting={isSubmitting}
                                     users={availableAgents}
@@ -1405,6 +1431,7 @@ const handleClose = () => {
                                     onTagsChange={handleTagsChange}
                                     isInDrawer={isInDrawer}
                                     onItilFieldChange={handleItilFieldChange}
+                                    initialCategories={initialCategories}
                                     itilImpact={itilImpact}
                                     itilUrgency={itilUrgency}
                                     isBundledChild={Boolean(bundle?.isBundleChild)}

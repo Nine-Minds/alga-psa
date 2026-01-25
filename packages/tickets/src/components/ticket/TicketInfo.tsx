@@ -2,7 +2,7 @@
 // TODO: Priority index signature issue
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo, useCallback, useRef } from 'react';
 import { RichTextViewer, TextEditor } from '@alga-psa/ui/editor';
 import { PartialBlock } from '@blocknote/core';
 import { ITicket, IComment, ITicketCategory } from '@alga-psa/types';
@@ -22,9 +22,12 @@ import { ResponseStateDisplay } from '../ResponseStateSelect';
 import styles from './TicketDetails.module.css';
 import { getTicketCategories, getTicketCategoriesByBoard, BoardCategoryData } from '@alga-psa/tickets/actions';
 import { ItilLabels, calculateItilPriority } from '@alga-psa/tickets/lib/itilUtils';
-import { Pencil, Check, HelpCircle } from 'lucide-react';
+import { Pencil, Check, X, HelpCircle, Save, AlertCircle } from 'lucide-react';
 import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContainer';
 import { Input } from '@alga-psa/ui/components/Input';
+import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
+import { useRegisterUnsavedChanges } from 'server/src/contexts/UnsavedChangesContext';
+import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 
 
 interface TicketInfoProps {
@@ -36,6 +39,7 @@ interface TicketInfoProps {
   boardOptions: { value: string; label: string }[];
   priorityOptions: { value: string; label: string }[];
   onSelectChange: (field: keyof ITicket, newValue: string | null) => void;
+  onSaveChanges?: (changes: Record<string, unknown>) => Promise<boolean>;
   onUpdateDescription?: (content: string) => Promise<boolean>;
   isSubmitting?: boolean;
   users?: IUserWithRoles[];
@@ -43,8 +47,10 @@ interface TicketInfoProps {
   allTagTexts?: string[];
   onTagsChange?: (tags: ITag[]) => void;
   isInDrawer?: boolean;
-  onItilFieldChange?: (field: string, value: any) => void;
+  onItilFieldChange?: (field: 'itil_impact' | 'itil_urgency', value: number | null) => void;
   isBundledChild?: boolean;
+  // Pre-fetched categories from server to avoid timing issues
+  initialCategories?: ITicketCategory[];
   // Local ITIL state values
   itilImpact?: number;
   itilUrgency?: number;
@@ -61,6 +67,7 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
   boardOptions,
   priorityOptions,
   onSelectChange,
+  onSaveChanges,
   onUpdateDescription,
   isSubmitting = false,
   users = [],
@@ -69,12 +76,14 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
   isInDrawer = false,
   onItilFieldChange,
   isBundledChild = false,
+  initialCategories = [],
   itilImpact,
   itilUrgency,
   itilCategory,
   itilSubcategory,
 }) => {
-  const [categories, setCategories] = useState<ITicketCategory[]>([]);
+  // Use initialCategories from server to avoid timing issues on first render
+  const [categories, setCategories] = useState<ITicketCategory[]>(initialCategories);
   const [boardConfig, setBoardConfig] = useState<BoardCategoryData['boardConfig']>({
     category_type: 'custom',
     priority_type: 'custom',
@@ -87,17 +96,162 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
   const [isEditingDescription, setIsEditingDescription] = useState(false);
   const workflowLocked = isBundledChild;
 
+  // Local state for pending changes (not saved until Save Changes is clicked)
+  const [pendingChanges, setPendingChanges] = useState<Partial<ITicket>>({});
+  const [pendingItilChanges, setPendingItilChanges] = useState<{ itil_impact?: number | null; itil_urgency?: number | null }>({});
+  const [isSaving, setIsSaving] = useState(false);
+  const [isFormInitialized, setIsFormInitialized] = useState(false);
+  const [saveSuccess, setSaveSuccess] = useState(false);
+  const [showCancelConfirm, setShowCancelConfirm] = useState(false);
+
+  // Capture original ticket values when form is initialized
+  const [originalTicketValues, setOriginalTicketValues] = useState<Partial<ITicket>>(() => ({
+    status_id: ticket.status_id,
+    assigned_to: ticket.assigned_to,
+    board_id: ticket.board_id,
+    category_id: ticket.category_id,
+    subcategory_id: ticket.subcategory_id,
+    priority_id: ticket.priority_id,
+    due_date: ticket.due_date,
+    response_state: ticket.response_state,
+    title: ticket.title,
+  }));
+
+  // Local state for board config based on selected (pending) board
+  const [pendingBoardConfig, setPendingBoardConfig] = useState<BoardCategoryData['boardConfig'] | null>(null);
+  const [pendingCategories, setPendingCategories] = useState<ITicketCategory[] | null>(null);
+
+  // Get the effective board ID (pending or current)
+  const effectiveBoardId = pendingChanges.board_id ?? ticket.board_id;
+
+  // Get the effective board config (pending or current)
+  const effectiveBoardConfig = pendingBoardConfig ?? boardConfig;
+
+  // Get the effective categories (pending or current)
+  const effectiveCategories = pendingCategories ?? categories;
+
   // Calculate ITIL priority when impact and urgency are available
-  const calculatedItilPriority = React.useMemo(() => {
-    if (itilImpact && itilUrgency) {
+  // Use pending ITIL values if available, otherwise use prop values
+  const effectiveItilImpact = pendingItilChanges.itil_impact ?? itilImpact;
+  const effectiveItilUrgency = pendingItilChanges.itil_urgency ?? itilUrgency;
+
+  const calculatedItilPriority = useMemo(() => {
+    if (effectiveItilImpact && effectiveItilUrgency) {
       try {
-        return calculateItilPriority(itilImpact, itilUrgency);
+        return calculateItilPriority(effectiveItilImpact, effectiveItilUrgency);
       } catch {
         return null;
       }
     }
     return null;
-  }, [itilImpact, itilUrgency]);
+  }, [effectiveItilImpact, effectiveItilUrgency]);
+
+  // Store original description when entering edit mode (for cancel reset)
+  const originalDescriptionRef = useRef<PartialBlock[] | null>(null);
+  // Track if description content has actually changed from original
+  const [hasDescriptionContentChanged, setHasDescriptionContentChanged] = useState(false);
+
+  // Track if there are unsaved changes
+  const hasUnsavedChanges = useMemo(() => {
+    if (!isFormInitialized) {
+      return false;
+    }
+
+    // Check if any pending changes exist
+    const hasPendingTicketChanges = Object.keys(pendingChanges).length > 0;
+    const hasPendingItilChanges = Object.keys(pendingItilChanges).length > 0;
+    const hasTitleChange = titleValue !== ticket.title;
+    const hasDescriptionChange = hasDescriptionContentChanged;
+
+    return hasPendingTicketChanges || hasPendingItilChanges || hasTitleChange || hasDescriptionChange;
+  }, [isFormInitialized, pendingChanges, pendingItilChanges, titleValue, ticket.title, hasDescriptionContentChanged]);
+
+  // Register unsaved changes with the context
+  useRegisterUnsavedChanges(`ticket-info-${id}`, hasUnsavedChanges);
+
+  // Initialize form when ticket loads
+  useEffect(() => {
+    if (ticket && !isFormInitialized) {
+      setTitleValue(ticket.title);
+      setPendingChanges({});
+      setPendingItilChanges({});
+      setPendingBoardConfig(null);
+      setPendingCategories(null);
+      setIsFormInitialized(true);
+    }
+  }, [ticket, isFormInitialized]);
+
+  // Track loading state for board config
+  const [isLoadingBoardConfig, setIsLoadingBoardConfig] = useState(false);
+  const fetchingBoardIdRef = useRef<string | null>(null);
+  const saveSuccessTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (saveSuccessTimeoutRef.current) {
+        clearTimeout(saveSuccessTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  // Track current board's priority type in a ref
+  const currentPriorityTypeRef = useRef(boardConfig.priority_type);
+  useEffect(() => {
+    currentPriorityTypeRef.current = boardConfig.priority_type;
+  }, [boardConfig.priority_type]);
+
+  // Fetch board config when pending board changes
+  useEffect(() => {
+    const boardIdToFetch = pendingChanges.board_id;
+
+    const fetchPendingBoardConfig = async () => {
+      if (boardIdToFetch && boardIdToFetch !== ticket.board_id) {
+        fetchingBoardIdRef.current = boardIdToFetch;
+        setPendingCategories([]);
+        setPendingBoardConfig(null);
+        setIsLoadingBoardConfig(true);
+
+        try {
+          const data = await getTicketCategoriesByBoard(boardIdToFetch);
+
+          if (fetchingBoardIdRef.current === boardIdToFetch) {
+            if (data && data.categories) {
+              const categoriesArray = Array.isArray(data.categories) ? data.categories : [];
+              setPendingCategories(categoriesArray);
+              if (data.boardConfig) {
+                setPendingBoardConfig(data.boardConfig);
+
+                const currentPriorityType = currentPriorityTypeRef.current;
+                const newPriorityType = data.boardConfig.priority_type;
+
+                if (currentPriorityType !== newPriorityType) {
+                  setPendingChanges(prev => ({
+                    ...prev,
+                    priority_id: null,
+                  }));
+                  setPendingItilChanges({ itil_impact: null, itil_urgency: null });
+                }
+              }
+            }
+            setIsLoadingBoardConfig(false);
+          }
+        } catch (error) {
+          if (fetchingBoardIdRef.current === boardIdToFetch) {
+            console.error('Failed to fetch pending board config:', error);
+            setIsLoadingBoardConfig(false);
+          }
+        }
+      } else if (!boardIdToFetch) {
+        fetchingBoardIdRef.current = null;
+        setPendingBoardConfig(null);
+        setPendingCategories(null);
+        setIsLoadingBoardConfig(false);
+      }
+    };
+
+    fetchPendingBoardConfig();
+  }, [pendingChanges.board_id, ticket.board_id]);
 
   // Get ITIL categories from props (now includes both custom and ITIL)
   // NOTE: Categories are now unified - no need for separate ITIL category filtering
@@ -135,7 +289,7 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
       } catch (e) {
         // If parsing fails, continue to the fallback
       }
-      
+
       // Fallback: create a default block with the text
       setDescriptionContent([{
         type: "paragraph",
@@ -152,6 +306,13 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
       }]);
     }
   }, [ticket, conversations]);
+
+  // Sync categories with initialCategories when they change
+  useEffect(() => {
+    if (initialCategories && initialCategories.length > 0) {
+      setCategories(initialCategories);
+    }
+  }, [initialCategories]);
 
   // Separate useEffect for fetching categories based on board
   useEffect(() => {
@@ -215,61 +376,217 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
     setTitleValue(ticket.title);
   }, [ticket.title]);
 
-  const handleTitleSubmit = () => {
-    if (titleValue.trim() !== '') {
+  // Handler for title save (saves immediately when checkmark is clicked)
+  const handleTitleSubmit = useCallback(() => {
+    if (titleValue.trim() !== '' && titleValue.trim() !== ticket.title) {
       onSelectChange('title', titleValue.trim());
       setIsEditingTitle(false);
+    } else {
+      setIsEditingTitle(false);
     }
-  };
+  }, [titleValue, ticket.title, onSelectChange]);
+
+  // Handler for title cancel
+  const handleTitleCancel = useCallback(() => {
+    setTitleValue(ticket.title);
+    setIsEditingTitle(false);
+  }, [ticket.title]);
 
   const handleTitleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Escape') {
-      setTitleValue(ticket.title);
-      setIsEditingTitle(false);
+      handleTitleCancel();
     } else if (e.key === 'Enter') {
       e.preventDefault();
       handleTitleSubmit();
     }
   };
 
+  // Handler for pending field changes (not saved until Save Changes is clicked)
+  const handlePendingChange = useCallback((field: keyof ITicket, value: string | null) => {
+    setPendingChanges(prev => {
+      if (value === originalTicketValues[field]) {
+        const { [field]: _, ...rest } = prev;
+        return rest;
+      }
+      return { ...prev, [field]: value };
+    });
+  }, [originalTicketValues]);
+
+  // Handler for pending ITIL field changes
+  const handlePendingItilChange = useCallback((field: 'itil_impact' | 'itil_urgency', value: number | null) => {
+    setPendingItilChanges(prev => {
+      const originalValue = field === 'itil_impact' ? itilImpact : itilUrgency;
+      if (value === originalValue) {
+        const { [field]: _, ...rest } = prev;
+        return rest;
+      }
+      return { ...prev, [field]: value };
+    });
+  }, [itilImpact, itilUrgency]);
+
+  // Handler for saving all pending changes
+  const handleSaveChanges = useCallback(async () => {
+    if (!hasUnsavedChanges) return;
+
+    setIsSaving(true);
+    try {
+      const allChanges: Record<string, unknown> = { ...pendingChanges };
+
+      if (titleValue !== ticket.title) {
+        allChanges.title = titleValue;
+      }
+
+      if (Object.keys(pendingItilChanges).length > 0) {
+        if ('itil_impact' in pendingItilChanges) {
+          allChanges.itil_impact = pendingItilChanges.itil_impact;
+        }
+        if ('itil_urgency' in pendingItilChanges) {
+          allChanges.itil_urgency = pendingItilChanges.itil_urgency;
+        }
+      }
+
+      if (isEditingDescription && onUpdateDescription) {
+        const descriptionSaved = await onUpdateDescription(JSON.stringify(descriptionContent));
+        if (!descriptionSaved) {
+          return;
+        }
+      }
+
+      if (onSaveChanges) {
+        const success = await onSaveChanges(allChanges);
+        if (success) {
+          setOriginalTicketValues(prev => ({
+            ...prev,
+            ...allChanges,
+            ...(allChanges.title ? { title: allChanges.title as string } : {}),
+          }));
+          setPendingChanges({});
+          setPendingItilChanges({});
+          setPendingBoardConfig(null);
+          setPendingCategories(null);
+          if (isEditingDescription) {
+            originalDescriptionRef.current = descriptionContent;
+          }
+          setHasDescriptionContentChanged(false);
+          setIsEditingTitle(false);
+          setIsEditingDescription(false);
+          setSaveSuccess(true);
+          if (saveSuccessTimeoutRef.current) {
+            clearTimeout(saveSuccessTimeoutRef.current);
+          }
+          saveSuccessTimeoutRef.current = setTimeout(() => setSaveSuccess(false), 3000);
+        }
+      } else {
+        for (const [field, value] of Object.entries(allChanges)) {
+          if (field === 'itil_impact' || field === 'itil_urgency') {
+            if (onItilFieldChange) {
+              onItilFieldChange(field as 'itil_impact' | 'itil_urgency', value as number | null);
+            }
+          } else {
+            onSelectChange(field as keyof ITicket, value as string | null);
+          }
+        }
+        setOriginalTicketValues(prev => ({
+          ...prev,
+          ...allChanges,
+          ...(allChanges.title ? { title: allChanges.title as string } : {}),
+        }));
+        setPendingChanges({});
+        setPendingItilChanges({});
+        setPendingBoardConfig(null);
+        setPendingCategories(null);
+        if (isEditingDescription) {
+          originalDescriptionRef.current = descriptionContent;
+        }
+        setHasDescriptionContentChanged(false);
+        setIsEditingTitle(false);
+        setIsEditingDescription(false);
+        setSaveSuccess(true);
+        if (saveSuccessTimeoutRef.current) {
+          clearTimeout(saveSuccessTimeoutRef.current);
+        }
+        saveSuccessTimeoutRef.current = setTimeout(() => setSaveSuccess(false), 3000);
+      }
+    } catch (error) {
+      console.error('Error saving changes:', error);
+    } finally {
+      setIsSaving(false);
+    }
+  }, [hasUnsavedChanges, pendingChanges, pendingItilChanges, titleValue, ticket.title, onSaveChanges, onSelectChange, onItilFieldChange, isEditingDescription, onUpdateDescription, descriptionContent]);
+
+  // Handler for discarding all pending changes
+  const handleDiscardChanges = useCallback(() => {
+    setTitleValue(ticket.title);
+    setPendingChanges({});
+    setPendingItilChanges({});
+    setPendingBoardConfig(null);
+    setPendingCategories(null);
+    if (originalDescriptionRef.current) {
+      setDescriptionContent(originalDescriptionRef.current);
+    }
+    setHasDescriptionContentChanged(false);
+    setIsEditingTitle(false);
+    setIsEditingDescription(false);
+  }, [ticket.title]);
+
+  // Handler for Cancel button click
+  const handleCancelClick = useCallback(() => {
+    if (hasUnsavedChanges) {
+      setShowCancelConfirm(true);
+    }
+  }, [hasUnsavedChanges]);
+
+  // Handler for confirming cancel
+  const handleCancelConfirm = useCallback(() => {
+    handleDiscardChanges();
+    setShowCancelConfirm(false);
+  }, [handleDiscardChanges]);
+
   const handleCategoryChange = (categoryIds: string[]) => {
-    if (categoryIds.length === 0) {
-      onSelectChange('category_id', null);
-      onSelectChange('subcategory_id', null);
+    if (categoryIds.length === 0 || categoryIds[0] === 'no-category' || categoryIds[0] === '') {
+      handlePendingChange('category_id', null);
+      handlePendingChange('subcategory_id', null);
       return;
     }
 
     const selectedCategoryId = categoryIds[0];
-    const selectedCategory = categories.find(c => c.category_id === selectedCategoryId);
-    
+    const selectedCategory = effectiveCategories.find(c => c.category_id === selectedCategoryId);
+
     if (!selectedCategory) {
-      console.error('Selected category not found');
+      handlePendingChange('category_id', selectedCategoryId);
+      handlePendingChange('subcategory_id', null);
       return;
     }
 
     if (selectedCategory.parent_category) {
-      onSelectChange('category_id', selectedCategory.parent_category);
-      onSelectChange('subcategory_id', selectedCategoryId);
+      handlePendingChange('category_id', selectedCategory.parent_category);
+      handlePendingChange('subcategory_id', selectedCategoryId);
     } else {
-      onSelectChange('category_id', selectedCategoryId);
-      onSelectChange('subcategory_id', null);
+      handlePendingChange('category_id', selectedCategoryId);
+      handlePendingChange('subcategory_id', null);
     }
-
-    // Don't automatically change the board - categories are now filtered by current board
-    // This prevents unwanted board switches when selecting categories
   };
 
   const getSelectedCategoryId = () => {
+    const pendingSubcategory = pendingChanges.subcategory_id;
+    const pendingCategory = pendingChanges.category_id;
+
+    if (pendingSubcategory !== undefined) {
+      return pendingSubcategory || '';
+    }
+    if (pendingCategory !== undefined) {
+      return pendingCategory || '';
+    }
+
     if (ticket.subcategory_id) {
       return ticket.subcategory_id;
     }
     return ticket.category_id || '';
   };
 
-  const handleItilFieldChange = (field: string, value: any) => {
-    if (onItilFieldChange) {
-      onItilFieldChange(field, value);
-    }
+  // Handler for ITIL field changes (now uses pending changes)
+  const handleLocalItilFieldChange = (field: 'itil_impact' | 'itil_urgency', value: number | null) => {
+    handlePendingItilChange(field, value);
   };
 
   const customStyles = {
@@ -303,29 +620,42 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
             {isEditingTitle ? (
               <div className="flex items-center gap-2 flex-1 min-w-0">
                 <Input
-
+                  id={`${id}-title-input`}
                   type="text"
                   value={titleValue}
                   onChange={(e) => setTitleValue(e.target.value)}
                   onKeyDown={handleTitleKeyDown}
                   autoFocus
-                  className="text-2xl font-bold flex-1 px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                  containerClassName="mb-2 flex-1"
+                  className="text-2xl font-bold flex-1 px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  containerClassName="mb-0 flex-1"
                   style={{minWidth: '300px', width: '100%'}}
                 />
-                <button
-
+                <Button
+                  id={`${id}-save-title-btn`}
+                  type="button"
+                  variant="default"
+                  size="sm"
                   onClick={handleTitleSubmit}
-                  className="p-1 hover:bg-gray-100 rounded-full transition-colors duration-200 flex-shrink-0"
+                  className="flex-shrink-0"
                   title="Save title"
                 >
-                  <Check className="w-4 h-4 text-gray-500" />
-                </button>
+                  <Check className="w-4 h-4" />
+                </Button>
+                <Button
+                  id={`${id}-cancel-title-btn`}
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={handleTitleCancel}
+                  className="flex-shrink-0"
+                  title="Cancel"
+                >
+                  <X className="w-4 h-4" />
+                </Button>
               </div>
             ) : (
               <>
-                <h1 
-
+                <h1
                   className="text-2xl font-bold break-words max-w-full min-w-0 flex-1"
                   style={{overflowWrap: 'break-word', wordBreak: 'break-word', whiteSpace: 'pre-wrap'}}
                 >
@@ -341,13 +671,32 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
               </>
             )}
           </div>
+          {/* Unsaved changes alert banner */}
+          {hasUnsavedChanges && (
+            <Alert className="bg-amber-50 border-amber-200 mb-4">
+              <AlertDescription className="text-amber-800 flex items-center gap-2">
+                <AlertCircle className="h-4 w-4" />
+                <span>You have unsaved changes. Click &quot;Save Changes&quot; to apply them.</span>
+              </AlertDescription>
+            </Alert>
+          )}
+
+          {/* Success alert after saving */}
+          {saveSuccess && (
+            <Alert className="bg-green-50 border-green-200 mb-4">
+              <AlertDescription className="text-green-800">
+                Changes saved successfully!
+              </AlertDescription>
+            </Alert>
+          )}
+
           <div className="grid grid-cols-2 gap-4 mb-4">
             <div>
               <h5 className="font-bold mb-2">Status</h5>
               <CustomSelect
-                value={ticket.status_id || ''}
+                value={pendingChanges.status_id ?? ticket.status_id ?? ''}
                 options={statusOptions}
-                onValueChange={(value) => onSelectChange('status_id', value)}
+                onValueChange={(value) => handlePendingChange('status_id', value)}
                 customStyles={customStyles}
                 className="!w-fit"
                 disabled={workflowLocked}
@@ -355,16 +704,16 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
             </div>
             <div>
               <ResponseStateDisplay
-                value={(ticket.response_state || null) as TicketResponseState}
-                onValueChange={(value) => onSelectChange('response_state', value)}
+                value={((pendingChanges.response_state ?? ticket.response_state) || null) as TicketResponseState}
+                onValueChange={(value) => handlePendingChange('response_state', value)}
                 editable={true}
               />
             </div>
             <div>
               <h5 className="font-bold mb-2">Assigned To</h5>
               <UserPicker
-                value={ticket.assigned_to || ''}
-                onValueChange={(value) => onSelectChange('assigned_to', value)}
+                value={pendingChanges.assigned_to ?? ticket.assigned_to ?? ''}
+                onValueChange={(value) => handlePendingChange('assigned_to', value)}
                 users={usersList}
                 labelStyle="none"
                 buttonWidth="fit"
@@ -377,22 +726,13 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
             <div>
               <h5 className="font-bold mb-2">Board</h5>
               <CustomSelect
-                value={ticket.board_id || ''}
+                value={effectiveBoardId || ''}
                 options={boardOptions}
                 onValueChange={(value) => {
-                  onSelectChange('board_id', value);
-                  // Clear categories when board changes
-                  onSelectChange('category_id', null);
-                  onSelectChange('subcategory_id', null);
-
-                  // Clear priority fields when board changes
-                  // This ensures that switching between custom and ITIL priority types
-                  // doesn't retain the wrong priority data
-                  onSelectChange('priority_id', null);
-                  if (onItilFieldChange) {
-                    onItilFieldChange('itil_impact', null);
-                    onItilFieldChange('itil_urgency', null);
-                  }
+                  handlePendingChange('board_id', value);
+                  // Clear pending categories when board changes
+                  handlePendingChange('category_id', null);
+                  handlePendingChange('subcategory_id', null);
                 }}
                 customStyles={customStyles}
                 className="!w-fit"
@@ -400,7 +740,7 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
             </div>
             <div>
               <h5 className="font-bold mb-2">Priority</h5>
-              {boardConfig.priority_type === 'itil' ? (
+              {effectiveBoardConfig.priority_type === 'itil' ? (
                 calculatedItilPriority ? (
                   <div className="flex items-center gap-2">
                     <div
@@ -417,7 +757,7 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
                       {ItilLabels.priority[calculatedItilPriority]}
                     </span>
                     <span className="text-xs text-gray-500">
-                      (Impact {ticket.itil_impact} × Urgency {ticket.itil_urgency})
+                      (Impact {effectiveItilImpact} × Urgency {effectiveItilUrgency})
                     </span>
                     <button
                       type="button"
@@ -435,41 +775,50 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
                 )
               ) : (
                 <PrioritySelect
-                  value={ticket.priority_id || null}
+                  value={pendingChanges.priority_id ?? ticket.priority_id ?? null}
                   options={priorityOptions}
-                  onValueChange={(value) => onSelectChange('priority_id', value)}
+                  onValueChange={(value) => handlePendingChange('priority_id', value)}
                   customStyles={customStyles}
                   className="!w-fit"
                   disabled={workflowLocked}
                 />
               )}
             </div>
-            {boardConfig.category_type && (
+            {effectiveBoardConfig.category_type && (
               <div className="col-span-2">
-                <h5 className="font-bold mb-1">{boardConfig.category_type === 'custom' ? 'Category' : 'ITIL Category'}</h5>
+                <h5 className="font-bold mb-1">{effectiveBoardConfig.category_type === 'custom' ? 'Category' : 'ITIL Category'}</h5>
                 <div className="w-fit">
-                  <CategoryPicker
-                    id={`${id}-category-picker`}
-                    categories={categories}
-                    selectedCategories={[getSelectedCategoryId()]}
-                    onSelect={handleCategoryChange}
-                    placeholder={boardConfig.category_type === 'custom' ? "Select a category..." : "Select ITIL category..."}
-                  />
+                  {isLoadingBoardConfig ? (
+                    <div className="h-10 w-48 bg-gray-100 animate-pulse rounded-md flex items-center justify-center text-sm text-gray-500">
+                      Loading categories...
+                    </div>
+                  ) : (
+                    <CategoryPicker
+                      id={`${id}-category-picker`}
+                      categories={effectiveCategories}
+                      selectedCategories={[getSelectedCategoryId()]}
+                      onSelect={handleCategoryChange}
+                      placeholder={effectiveBoardConfig.category_type === 'custom' ? "Select a category..." : "Select ITIL category..."}
+                    />
+                  )}
                 </div>
               </div>
             )}
             <div>
               <h5 className="font-bold mb-2">Due Date</h5>
               {(() => {
-                const existingDate = ticket.due_date ? new Date(ticket.due_date) : undefined;
-                const existingTime = existingDate ? format(existingDate, 'HH:mm') : undefined;
+                // Use pending due_date if available
+                const effectiveDueDate = pendingChanges.due_date !== undefined
+                  ? (pendingChanges.due_date ? new Date(pendingChanges.due_date as string) : undefined)
+                  : (ticket.due_date ? new Date(ticket.due_date) : undefined);
+                const existingTime = effectiveDueDate ? format(effectiveDueDate, 'HH:mm') : undefined;
                 const isMidnight = existingTime === '00:00';
 
                 // Determine styling based on due date status
                 let containerClass = '';
-                if (existingDate) {
+                if (effectiveDueDate) {
                   const now = new Date();
-                  const hoursUntilDue = (existingDate.getTime() - now.getTime()) / (1000 * 60 * 60);
+                  const hoursUntilDue = (effectiveDueDate.getTime() - now.getTime()) / (1000 * 60 * 60);
                   if (hoursUntilDue < 0) {
                     containerClass = '[&_button]:border-red-500 [&_button]:text-red-600 [&_button]:bg-red-50';
                   } else if (hoursUntilDue <= 24) {
@@ -479,33 +828,26 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
 
                 const handleDateChange = (newDate: Date | undefined) => {
                   if (!newDate) {
-                    onSelectChange('due_date', null);
+                    handlePendingChange('due_date', null);
                     return;
                   }
                   // Preserve existing time or use midnight
-                  if (existingDate && !isMidnight) {
-                    newDate = setHours(newDate, existingDate.getHours());
-                    newDate = setMinutes(newDate, existingDate.getMinutes());
+                  if (effectiveDueDate && !isMidnight) {
+                    newDate = setHours(newDate, effectiveDueDate.getHours());
+                    newDate = setMinutes(newDate, effectiveDueDate.getMinutes());
                   } else {
                     newDate = setHours(newDate, 0);
                     newDate = setMinutes(newDate, 0);
                   }
-                  onSelectChange('due_date', newDate.toISOString());
+                  handlePendingChange('due_date', newDate.toISOString());
                 };
 
                 const handleTimeChange = (newTime: string) => {
-                  if (!existingDate) return;
+                  if (!effectiveDueDate) return;
                   const [hours, minutes] = newTime.split(':').map(Number);
-                  let newDate = setHours(existingDate, hours);
+                  let newDate = setHours(effectiveDueDate, hours);
                   newDate = setMinutes(newDate, minutes);
-                  onSelectChange('due_date', newDate.toISOString());
-                };
-
-                const handleClearTime = () => {
-                  if (!existingDate) return;
-                  let newDate = setHours(existingDate, 0);
-                  newDate = setMinutes(newDate, 0);
-                  onSelectChange('due_date', newDate.toISOString());
+                  handlePendingChange('due_date', newDate.toISOString());
                 };
 
                 return (
@@ -514,7 +856,7 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
                       <div className="w-fit">
                         <DatePicker
                           id={`${id}-due-date-picker`}
-                          value={existingDate}
+                          value={effectiveDueDate}
                           onChange={handleDateChange}
                           placeholder="Select date"
                           label="Due Date"
@@ -523,19 +865,19 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
                       <div className="w-fit">
                         <TimePicker
                           id={`${id}-due-time-picker`}
-                          value={existingDate && !isMidnight ? existingTime : undefined}
+                          value={effectiveDueDate && !isMidnight ? existingTime : undefined}
                           onChange={handleTimeChange}
                           placeholder="Time"
-                          disabled={!existingDate}
+                          disabled={!effectiveDueDate}
                         />
                       </div>
-                      {existingDate && (
+                      {effectiveDueDate && (
                         <Button
                           id={`${id}-clear-due-date`}
                           type="button"
                           variant="ghost"
                           size="sm"
-                          onClick={() => onSelectChange('due_date', null)}
+                          onClick={() => handlePendingChange('due_date', null)}
                           className="text-gray-400 hover:text-gray-600 px-2"
                           title="Clear due date"
                         >
@@ -543,7 +885,7 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
                         </Button>
                       )}
                     </div>
-                    {existingDate && isMidnight && (
+                    {effectiveDueDate && isMidnight && (
                       <p className="text-xs text-gray-500 mt-1">No time set - defaults to 12:00 AM</p>
                     )}
                   </>
@@ -551,7 +893,7 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
               })()}
             </div>
             {/* ITIL Fields for ITIL priority boards */}
-            {boardConfig.priority_type === 'itil' && (
+            {effectiveBoardConfig.priority_type === 'itil' && (
               <>
                 <div>
                   <h5 className="font-bold mb-2">Impact</h5>
@@ -564,8 +906,8 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
                         { value: '4', label: '4 - Medium-Low (Minimal impact)' },
                         { value: '5', label: '5 - Low (No business impact)' }
                       ]}
-                      value={itilImpact?.toString() || null}
-                      onValueChange={(value) => handleItilFieldChange('itil_impact', Number(value))}
+                      value={effectiveItilImpact?.toString() || null}
+                      onValueChange={(value) => handleLocalItilFieldChange('itil_impact', Number(value))}
                       placeholder="Select Impact"
                     />
                   </div>
@@ -581,8 +923,8 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
                         { value: '4', label: '4 - Medium-Low (Minor inconvenience)' },
                         { value: '5', label: '5 - Low (Work continues normally)' }
                       ]}
-                      value={itilUrgency?.toString() || null}
-                      onValueChange={(value) => handleItilFieldChange('itil_urgency', Number(value))}
+                      value={effectiveItilUrgency?.toString() || null}
+                      onValueChange={(value) => handleLocalItilFieldChange('itil_urgency', Number(value))}
                       placeholder="Select Urgency"
                     />
                   </div>
@@ -594,7 +936,7 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
           </div>
 
           {/* ITIL Priority Matrix - Show when help icon is clicked */}
-          {showPriorityMatrix && boardConfig.priority_type === 'itil' && (
+          {showPriorityMatrix && effectiveBoardConfig.priority_type === 'itil' && (
             <div className="mt-4 p-4 bg-gray-50 border rounded-lg">
               <h4 className="text-sm font-medium text-gray-800 mb-3">ITIL Priority Matrix (Impact × Urgency)</h4>
               <div className="overflow-x-auto">
@@ -665,7 +1007,12 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
               <h2 className="text-lg font-semibold">Description</h2>
               {!isEditingDescription && (
                 <button
-                  onClick={() => setIsEditingDescription(true)}
+                  onClick={() => {
+                    // Store original content before entering edit mode
+                    originalDescriptionRef.current = descriptionContent;
+                    setHasDescriptionContentChanged(false);
+                    setIsEditingDescription(true);
+                  }}
                   className="p-1 hover:bg-gray-100 rounded-full transition-colors duration-200"
                   title="Edit description"
                 >
@@ -673,24 +1020,38 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
                 </button>
               )}
             </div>
-            
+
             {isEditingDescription ? (
               <div className="min-w-0 w-full">
                 <div className="min-w-0 w-full">
                   <TextEditor
                     id={`${id}-description-editor`}
                     initialContent={descriptionContent}
-                    onContentChange={setDescriptionContent}
+                    onContentChange={(content) => {
+                      setDescriptionContent(content);
+                      // Track if content has changed from original
+                      if (originalDescriptionRef.current) {
+                        const originalStr = JSON.stringify(originalDescriptionRef.current);
+                        const currentStr = JSON.stringify(content);
+                        setHasDescriptionContentChanged(originalStr !== currentStr);
+                      }
+                    }}
                   />
                 </div>
                 <div className="flex justify-end space-x-2 mt-2">
                   <Button
-                    id="save-description-button"
+                    id={`${id}-save-description-btn`}
                     onClick={async () => {
                       if (onUpdateDescription) {
-                        const success = await onUpdateDescription(JSON.stringify(descriptionContent));
-                        if (success) {
-                          setIsEditingDescription(false);
+                        try {
+                          const result = await onUpdateDescription(JSON.stringify(descriptionContent));
+                          if (result === true) {
+                            originalDescriptionRef.current = descriptionContent;
+                            setHasDescriptionContentChanged(false);
+                            setIsEditingDescription(false);
+                          }
+                        } catch (error) {
+                          console.error('Failed to save description:', error);
                         }
                       }
                     }}
@@ -699,11 +1060,15 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
                     {isSubmitting ? 'Saving...' : 'Save'}
                   </Button>
                   <Button
-                    id="cancel-description-button"
+                    id={`${id}-cancel-description-btn`}
                     disabled={isSubmitting}
                     variant="outline"
                     onClick={() => {
                       // Reset to original content and cancel editing
+                      if (originalDescriptionRef.current) {
+                        setDescriptionContent(originalDescriptionRef.current);
+                      }
+                      setHasDescriptionContentChanged(false);
                       setIsEditingDescription(false);
                     }}
                   >
@@ -740,6 +1105,42 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
               <p className="text-sm text-gray-500">Tags cannot be managed</p>
             )}
           </div>
+
+          {/* Save Changes Button - matching contracts behavior */}
+          <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-gray-200">
+            <Button
+              id={`${id}-cancel-btn`}
+              type="button"
+              variant="outline"
+              onClick={handleCancelClick}
+              disabled={isSaving}
+            >
+              Cancel
+            </Button>
+            <Button
+              id={`${id}-save-changes-btn`}
+              type="button"
+              onClick={handleSaveChanges}
+              disabled={isSaving}
+            >
+              <span className={hasUnsavedChanges ? 'font-bold' : ''}>
+                {isSaving ? 'Saving...' : hasUnsavedChanges ? 'Save Changes *' : 'Save Changes'}
+              </span>
+              {!isSaving && <Save className="ml-2 h-4 w-4" />}
+            </Button>
+          </div>
+
+          {/* Cancel confirmation dialog */}
+          <ConfirmationDialog
+            id={`${id}-cancel-confirm-dialog`}
+            isOpen={showCancelConfirm}
+            onClose={() => setShowCancelConfirm(false)}
+            onConfirm={handleCancelConfirm}
+            title="Discard Changes"
+            message="You have unsaved changes. Are you sure you want to discard them?"
+            confirmLabel="Discard"
+            cancelLabel="Keep Editing"
+          />
         </div>
       </div>
     </ReflectionContainer>

@@ -52,17 +52,26 @@ const CommentItem: React.FC<CommentItemProps> = ({
   const { t } = useTranslation('clientPortal');
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [editedContent, setEditedContent] = useState<PartialBlock[]>(() => {
-    try {
-      // Try to parse the note as JSON
-      const parsedContent = JSON.parse(conversation.note || '');
-      if (Array.isArray(parsedContent) && parsedContent.length > 0) {
-        return parsedContent;
+    const noteContent = conversation.note || '';
+    // Check if content looks like JSON array before parsing
+    if (noteContent.trim().startsWith('[')) {
+      try {
+        const parsedContent = JSON.parse(noteContent);
+        if (Array.isArray(parsedContent) && parsedContent.length > 0) {
+          return parsedContent;
+        }
+      } catch (e) {
+        // Log malformed JSON for debugging - shouldn't happen with valid BlockNote content
+        console.error('[CommentItem] Failed to parse initial comment note as JSON:', {
+          comment_id: conversation.comment_id,
+          noteLength: noteContent.length,
+          notePreview: noteContent.substring(0, 100),
+          error: e instanceof Error ? e.message : 'Unknown error'
+        });
       }
-    } catch (e) {
-      // If parsing fails, continue to the fallback
     }
-    
-    // Fallback: create a default block with the text
+
+    // Fallback: create a default block with the text (plain text or failed parse)
     return [{
       type: "paragraph",
       props: {
@@ -72,7 +81,7 @@ const CommentItem: React.FC<CommentItemProps> = ({
       },
       content: [{
         type: "text",
-        text: conversation.note || '',
+        text: noteContent,
         styles: {}
       }]
     }];
@@ -152,44 +161,59 @@ const CommentItem: React.FC<CommentItemProps> = ({
     commentId,
     ticketId,
     editedContent,
-    userMap,
     handleContentChange,
     handleSave,
-    onClose
+    onClose,
+    t
   ]);
 
   const authorFirstName = conversation.user_id ? userMap[conversation.user_id]?.first_name || '' : '';
   const authorLastName = conversation.user_id ? userMap[conversation.user_id]?.last_name || '' : '';
 
-  // Keep editor content in sync if this comment enters edit mode with updated data
+  // Reset editor content when entering edit mode - always use conversation.note (persisted value)
+  // NOTE: Do NOT depend on currentComment?.note - that would reload unsaved edits after cancel.
+  // We intentionally only use conversation.note (the persisted value from the database).
   useEffect(() => {
     if (isEditing && currentComment?.comment_id === conversation.comment_id) {
-      try {
-        const parsed = JSON.parse(currentComment?.note || '');
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          setEditedContent(parsed);
-        }
-      } catch {
-        setEditedContent([
-          {
-            type: "paragraph",
-            props: {
-              textAlignment: "left",
-              backgroundColor: "default",
-              textColor: "default"
-            },
-            content: [
-              {
-                type: "text",
-                text: currentComment?.note || '',
-                styles: {}
-              }
-            ]
+      const noteContent = conversation.note || '';
+      // Check if content looks like JSON array before parsing to avoid unnecessary exceptions
+      if (noteContent.trim().startsWith('[')) {
+        try {
+          const parsed = JSON.parse(noteContent);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            setEditedContent(parsed);
+            return;
           }
-        ]);
+        } catch (error) {
+          // Log malformed JSON for debugging - this shouldn't happen with valid BlockNote content
+          console.error('[CommentItem] Failed to parse comment note as JSON:', {
+            comment_id: conversation.comment_id,
+            noteLength: noteContent.length,
+            notePreview: noteContent.substring(0, 100),
+            error: error instanceof Error ? error.message : 'Unknown error'
+          });
+        }
       }
+      // Fallback: treat as plain text
+      setEditedContent([
+        {
+          type: "paragraph",
+          props: {
+            textAlignment: "left",
+            backgroundColor: "default",
+            textColor: "default"
+          },
+          content: [
+            {
+              type: "text",
+              text: noteContent,
+              styles: {}
+            }
+          ]
+        }
+      ]);
     }
-  }, [isEditing, currentComment?.comment_id, currentComment?.note, conversation.comment_id]);
+  }, [isEditing, currentComment?.comment_id, conversation.comment_id, conversation.note]);
 
 
   return (
@@ -294,11 +318,28 @@ const CommentItem: React.FC<CommentItemProps> = ({
             editorContent
           ) : (
             (() => {
-              let parsed: PartialBlock[] | string;
-              try {
-                parsed = JSON.parse(conversation.note || '[]');
-                if (!Array.isArray(parsed)) parsed = [];
-              } catch {
+              let parsed: PartialBlock[];
+              const noteContent = conversation.note || '';
+              // Check if content looks like JSON before parsing
+              if (noteContent.trim().startsWith('[')) {
+                try {
+                  const result = JSON.parse(noteContent);
+                  parsed = Array.isArray(result) ? result : [];
+                } catch (error) {
+                  // Log malformed JSON for debugging
+                  console.error('[CommentItem] Failed to parse comment note for display:', {
+                    comment_id: conversation.comment_id,
+                    noteLength: noteContent.length,
+                    notePreview: noteContent.substring(0, 100),
+                    error: error instanceof Error ? error.message : 'Unknown error'
+                  });
+                  parsed = [];
+                }
+              } else {
+                parsed = [];
+              }
+              // If no valid blocks, create fallback with plain text
+              if (parsed.length === 0) {
                 parsed = [{
                   type: "paragraph",
                   props: {
@@ -308,7 +349,7 @@ const CommentItem: React.FC<CommentItemProps> = ({
                   },
                   content: [{
                     type: "text",
-                    text: conversation.note || '',
+                    text: noteContent,
                     styles: {}
                   }]
                 }];
