@@ -64,3 +64,4 @@
 - 2026-01-25: Added import-to-empty-DB integration coverage (creates definitions + versions; rewrites workflow ids) (T020).
 - 2026-01-25: Added create-only conflict test (duplicate key without force) (T021).
 - 2026-01-25: Added force overwrite import test (delete+recreate with regenerated workflow_id) (T022).
+- 2026-01-25: Added transactional rollback coverage (unique constraint failure does not persist partial workflow rows) (T023).
