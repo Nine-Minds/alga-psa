@@ -30,3 +30,4 @@
 
 ## Work log
 - 2026-01-25: Added v1 bundle header constants/types in `shared/workflow/bundle/workflowBundleV1.ts` (`format`, `formatVersion`, `exportedAt`) to centralize the accepted format/version.
+- 2026-01-25: Defined v1 bundle TypeScript shape (workflow metadata + draft + published versions) in `shared/workflow/bundle/workflowBundleV1.ts` as the shared contract for exporter/importer/tests.
