@@ -41,4 +41,58 @@ describe('workflow bundle v1 import/export', () => {
       code: 'SCHEMA_VALIDATION_FAILED'
     });
   });
+
+  it('fails with structured missing-dependency errors when required actions/node types/schemas are absent', async () => {
+    await expect(
+      importWorkflowBundleV1(db, {
+        format: 'alga-psa.workflow-bundle',
+        formatVersion: 1,
+        exportedAt: new Date().toISOString(),
+        workflows: [
+          {
+            key: 'test.missing-deps',
+            metadata: {
+              name: 'Missing deps',
+              description: null,
+              payloadSchemaRef: 'payload.TestPayload.v1',
+              payloadSchemaMode: 'pinned',
+              pinnedPayloadSchemaRef: 'payload.TestPayload.v1',
+              trigger: null,
+              isSystem: false,
+              isVisible: true,
+              isPaused: false,
+              concurrencyLimit: null,
+              autoPauseOnFailure: false,
+              failureRateThreshold: null,
+              failureRateMinRuns: null,
+              retentionPolicyOverride: null
+            },
+            dependencies: {
+              actions: [{ actionId: 'missing.action', version: 1 }],
+              nodeTypes: ['missing.node'],
+              schemaRefs: ['missing.schemaRef']
+            },
+            draft: {
+              draftVersion: 1,
+              definition: {
+                id: '00000000-0000-0000-0000-000000000001',
+                version: 1,
+                name: 'Missing deps',
+                payloadSchemaRef: 'payload.TestPayload.v1',
+                steps: []
+              }
+            },
+            publishedVersions: []
+          }
+        ]
+      })
+    ).rejects.toMatchObject({
+      code: 'MISSING_DEPENDENCIES',
+      details: expect.objectContaining({
+        missingActions: [{ actionId: 'missing.action', version: 1 }],
+        missingNodeTypes: ['missing.node'],
+        missingSchemaRefs: ['missing.schemaRef']
+      })
+    });
+  });
 });
