@@ -3,7 +3,7 @@
   { "id": "T002", "description": "Import rejects invalid JSON that fails the workflow-bundle v1 JSON Schema with a helpful message.", "implemented": true, "featureIds": ["F021", "F005"] },
   { "id": "T003", "description": "Import fails with structured missing-dependency errors when required actions/node types/schemas are absent.", "implemented": true, "featureIds": ["F022", "F014"] },
 
-  { "id": "T010", "description": "Export a single workflow produces canonical JSON with stable formatting.", "implemented": false, "featureIds": ["F010", "F004", "F041"] },
+  { "id": "T010", "description": "Export a single workflow produces canonical JSON with stable formatting.", "implemented": true, "featureIds": ["F010", "F004", "F041"] },
   { "id": "T011", "description": "Export excludes instance-specific audit fields by default.", "implemented": false, "featureIds": ["F012"] },
 
   { "id": "T020", "description": "Import a bundle into an empty DB creates workflow_definitions and workflow_definition_versions records.", "implemented": false, "featureIds": ["F023", "F024"] },

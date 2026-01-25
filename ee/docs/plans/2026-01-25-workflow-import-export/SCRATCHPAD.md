@@ -59,3 +59,4 @@
 - 2026-01-25: Added integration test `server/src/test/integration/workflowBundleV1.importExport.integration.test.ts` covering unsupported formatVersion rejection (T001).
 - 2026-01-25: Extended bundle integration tests for schema validation failures (T002).
 - 2026-01-25: Added missing dependency validation coverage for actions/node types/schema refs (T003).
+- 2026-01-25: Added canonical export formatting test via HTTP export route (T010).

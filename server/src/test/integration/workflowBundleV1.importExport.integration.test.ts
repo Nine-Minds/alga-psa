@@ -1,14 +1,49 @@
-import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { describe, it, expect, beforeAll, beforeEach, afterAll, vi } from 'vitest';
+import { v4 as uuidv4 } from 'uuid';
 import type { Knex } from 'knex';
 import { createTestDbConnection } from '../../../test-utils/dbConfig';
-import { ensureWorkflowRuntimeV2TestRegistrations } from '../helpers/workflowRuntimeV2TestHelpers';
+import { ensureWorkflowRuntimeV2TestRegistrations, stateSetStep, buildWorkflowDefinition } from '../helpers/workflowRuntimeV2TestHelpers';
 import { importWorkflowBundleV1 } from 'server/src/lib/workflow/bundle/importWorkflowBundleV1';
+import { resetWorkflowRuntimeTables } from '../helpers/workflowRuntimeV2TestUtils';
+import { createTenantKnex, getCurrentTenantId } from 'server/src/lib/db';
+import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
+import { createWorkflowDefinitionAction, publishWorkflowDefinitionAction } from 'server/src/lib/actions/workflow-runtime-v2-actions';
+import { GET as exportBundleRoute } from 'server/src/app/api/workflow-definitions/[workflowId]/export/route';
+import { stringifyCanonicalJson } from '@shared/workflow/bundle/canonicalJson';
+
+vi.mock('server/src/lib/db', () => ({
+  createTenantKnex: vi.fn(),
+  getCurrentTenantId: vi.fn()
+}));
+
+vi.mock('server/src/lib/actions/user-actions/userActions', () => ({
+  getCurrentUser: vi.fn()
+}));
+
+vi.mock('server/src/lib/auth/rbac', () => ({
+  hasPermission: vi.fn().mockResolvedValue(true)
+}));
+
+const mockedCreateTenantKnex = vi.mocked(createTenantKnex);
+const mockedGetCurrentTenantId = vi.mocked(getCurrentTenantId);
+const mockedGetCurrentUser = vi.mocked(getCurrentUser);
 
 let db: Knex;
+let tenantId: string;
+let userId: string;
 
 beforeAll(async () => {
   ensureWorkflowRuntimeV2TestRegistrations();
   db = await createTestDbConnection();
+});
+
+beforeEach(async () => {
+  await resetWorkflowRuntimeTables(db);
+  tenantId = uuidv4();
+  userId = uuidv4();
+  mockedCreateTenantKnex.mockResolvedValue({ knex: db, tenant: tenantId });
+  mockedGetCurrentTenantId.mockReturnValue(tenantId);
+  mockedGetCurrentUser.mockResolvedValue({ user_id: userId, roles: [] } as any);
 });
 
 afterAll(async () => {
@@ -94,5 +129,24 @@ describe('workflow bundle v1 import/export', () => {
         missingSchemaRefs: ['missing.schemaRef']
       })
     });
+  });
+
+  it('exporting a single workflow produces canonical JSON with stable formatting', async () => {
+    const workflowIdInput = uuidv4();
+    const definition = {
+      id: workflowIdInput,
+      ...buildWorkflowDefinition({ steps: [stateSetStep('state-1', 'READY')] })
+    };
+
+    const created = await createWorkflowDefinitionAction({ key: 'test.export-canonical', definition });
+    await publishWorkflowDefinitionAction({ workflowId: created.workflowId, version: 1 });
+
+    const response = await exportBundleRoute(new Request('http://example.com'), { params: { workflowId: created.workflowId } });
+    expect(response.status).toBe(200);
+    const text = await response.text();
+    expect(text.endsWith('\n')).toBe(true);
+
+    const parsed = JSON.parse(text);
+    expect(text).toBe(stringifyCanonicalJson(parsed));
   });
 });
