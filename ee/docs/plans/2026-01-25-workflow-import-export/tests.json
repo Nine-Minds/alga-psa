@@ -17,5 +17,5 @@
   { "id": "T040", "description": "HTTP export endpoint returns a valid workflow bundle for an existing workflow.", "implemented": true, "featureIds": ["F030"] },
   { "id": "T041", "description": "HTTP import endpoint successfully imports a valid bundle and returns a summary.", "implemented": true, "featureIds": ["F031", "F028"] },
   { "id": "T050", "description": "CLI exports a workflow to a bundle file via the API.", "implemented": true, "featureIds": ["F033", "F030"] },
-  { "id": "T051", "description": "CLI imports a bundle file via the API (including --force behavior).", "implemented": false, "featureIds": ["F033", "F031", "F026"] }
+  { "id": "T051", "description": "CLI imports a bundle file via the API (including --force behavior).", "implemented": true, "featureIds": ["F033", "F031", "F026"] }
 ]

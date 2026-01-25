@@ -70,3 +70,4 @@
 - 2026-01-25: Added explicit HTTP export endpoint smoke test asserting bundle header + workflow key (T040).
 - 2026-01-25: Added HTTP import endpoint test (POST bundle JSON returns summary and persists workflow row) (T041).
 - 2026-01-25: Refactored `tools/workflow-bundle-cli/workflow-bundle.js` to expose `runWorkflowBundleCli` for unit testing; added CLI export test (T050).
+- 2026-01-25: Added CLI import test covering `--force` query parameter wiring (T051).
