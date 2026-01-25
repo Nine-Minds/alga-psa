@@ -1,0 +1,21 @@
+[
+  { "id": "T001", "description": "Import rejects bundles with unsupported formatVersion and returns a clear error.", "implemented": false, "featureIds": ["F020"] },
+  { "id": "T002", "description": "Import rejects invalid JSON that fails the workflow-bundle v1 JSON Schema with a helpful message.", "implemented": false, "featureIds": ["F021", "F005"] },
+  { "id": "T003", "description": "Import fails with structured missing-dependency errors when required actions/node types/schemas are absent.", "implemented": false, "featureIds": ["F022", "F014"] },
+
+  { "id": "T010", "description": "Export a single workflow produces canonical JSON with stable formatting.", "implemented": false, "featureIds": ["F010", "F004", "F041"] },
+  { "id": "T011", "description": "Export excludes instance-specific audit fields by default.", "implemented": false, "featureIds": ["F012"] },
+
+  { "id": "T020", "description": "Import a bundle into an empty DB creates workflow_definitions and workflow_definition_versions records.", "implemented": false, "featureIds": ["F023", "F024"] },
+  { "id": "T021", "description": "Import create-only policy fails when workflow key already exists (without force).", "implemented": false, "featureIds": ["F025"] },
+  { "id": "T022", "description": "Import force overwrite deletes the existing workflow by key and recreates it with a regenerated workflow_id.", "implemented": false, "featureIds": ["F026"] },
+  { "id": "T023", "description": "Import is transactional: if any DB write fails, no workflow_definitions or workflow_definition_versions are persisted.", "implemented": false, "featureIds": ["F029"] },
+
+  { "id": "T030", "description": "Round-trip: create + publish a workflow, export it, import into a fresh DB, export again, and the canonical bundle matches (for supported fields).", "implemented": false, "featureIds": ["F010", "F020", "F023", "F024", "F041"] },
+  { "id": "T031", "description": "Imported workflow can be executed end-to-end using Workflow Runtime V2 (triggered run reaches expected terminal state/output).", "implemented": false, "featureIds": ["F023", "F024"] },
+
+  { "id": "T040", "description": "HTTP export endpoint returns a valid workflow bundle for an existing workflow.", "implemented": false, "featureIds": ["F030"] },
+  { "id": "T041", "description": "HTTP import endpoint successfully imports a valid bundle and returns a summary.", "implemented": false, "featureIds": ["F031", "F028"] },
+  { "id": "T050", "description": "CLI exports a workflow to a bundle file via the API.", "implemented": false, "featureIds": ["F033", "F030"] },
+  { "id": "T051", "description": "CLI imports a bundle file via the API (including --force behavior).", "implemented": false, "featureIds": ["F033", "F031", "F026"] }
+]
