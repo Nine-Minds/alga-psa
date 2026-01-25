@@ -45,3 +45,4 @@
 - 2026-01-25: Added Ajv-based bundle schema validation using `ee/docs/schemas/workflow-bundle.v1.schema.json` via `server/src/lib/workflow/bundle/validateWorkflowBundleSchemaV1.ts`.
 - 2026-01-25: Added dependency validation helper `server/src/lib/workflow/bundle/validateWorkflowBundleDependenciesV1.ts` that checks bundle-declared actions/nodeTypes/schemaRefs against runtime registries and throws structured missing-dependency errors.
 - 2026-01-25: Implemented bundle importer core in `server/src/lib/workflow/bundle/importWorkflowBundleV1.ts` using a single `knex.transaction(...)` for all writes (rolls back on any error).
+- 2026-01-25: Importer creates `workflow_definitions` from bundle workflows (metadata + draft), regenerating `workflow_id` and rewriting workflow definition JSON `id` fields to match.
