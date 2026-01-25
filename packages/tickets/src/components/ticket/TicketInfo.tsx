@@ -26,7 +26,7 @@ import { Pencil, Check, X, HelpCircle, Save, AlertCircle } from 'lucide-react';
 import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContainer';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
-import { useRegisterUnsavedChanges } from 'server/src/contexts/UnsavedChangesContext';
+import { useRegisterUnsavedChanges } from '@alga-psa/ui/context';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 
 
