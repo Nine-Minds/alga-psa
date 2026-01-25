@@ -26,7 +26,7 @@ import {
 
 import { validateInvoiceFinalization } from './taxSourceActions';
 import { withAuth } from '@alga-psa/auth';
-import { getSession } from '@alga-psa/auth/session';
+import { getSession } from '@alga-psa/auth/session-bridge';
 
 // Interface definitions specific to manual updates (might move to interfaces file later)
 export interface ManualInvoiceUpdate {

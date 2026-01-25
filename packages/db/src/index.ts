@@ -6,12 +6,7 @@
  */
 
 // Knex Configuration
-export {
-  getKnexConfig,
-  getFullConfig,
-  getKnexConfigWithTenant,
-  getPostgresConnection
-} from './lib/knexfile';
+export { getKnexConfig, getFullConfig, getKnexConfigWithTenant, getPostgresConnection } from './lib/knexfile';
 export type { CustomKnexConfig } from './lib/knexfile';
 export { default as knexConfig } from './lib/knexfile';
 
@@ -22,15 +17,7 @@ export { default as Knex } from './lib/knex-turbopack';
 export { getAdminConnection, destroyAdminConnection } from './lib/admin';
 
 // Tenant Connection
-export {
-  getConnection,
-  withTransaction,
-  createTenantKnex,
-  runWithTenant,
-  getTenantContext,
-  setTenantContext,
-  resetTenantConnectionPool
-} from './lib/tenant';
+export { getConnection, withTransaction, createTenantKnex, runWithTenant, getTenantContext, setTenantContext, resetTenantConnectionPool } from './lib/tenant';
 export { resolveTenantId, requireTenantId } from './lib/tenantId';
 
 // Audit logging
@@ -38,19 +25,10 @@ export { auditLog } from './lib/auditLog';
 export * from './lib/workDate';
 
 // Tenant Slug utilities
-export {
-  getTenantIdBySlug,
-  getTenantSlugForTenant,
-  buildTenantPortalSlug,
-  isValidTenantSlug,
-  getSlugParts
-} from './lib/tenantSlug';
+export { getTenantIdBySlug, getTenantSlugForTenant, buildTenantPortalSlug, isValidTenantSlug, getSlugParts } from './lib/tenantSlug';
 
 // User with Roles utilities (session-independent)
-export {
-  getUserWithRoles,
-  getUserWithRolesByEmail
-} from './lib/getUserWithRoles';
+export { getUserWithRoles, getUserWithRolesByEmail } from './lib/getUserWithRoles';
 
 // DB models (tenant-scoped data access patterns)
 export * from './models/index';
@@ -60,10 +38,7 @@ export * from './services/BaseService';
 export * from './services/SystemContext';
 
 // Connection Management
-export {
-  getConnection as getDbConnection,
-  cleanupConnections
-} from './lib/connection';
+export { getConnection as getDbConnection, cleanupConnections } from './lib/connection';
 
 // Transaction Helpers
 import type { Knex as KnexType } from 'knex';

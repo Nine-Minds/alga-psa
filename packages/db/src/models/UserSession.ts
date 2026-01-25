@@ -318,4 +318,3 @@ export class UserSession {
     return Number((count as any)?.count || 0) > 0;
   }
 }
-

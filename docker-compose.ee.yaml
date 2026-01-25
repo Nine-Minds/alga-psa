@@ -353,8 +353,8 @@ services:
       service: hocuspocus
     container_name: ${APP_NAME:-sebastian}_hocuspocus_ee
     build:
-      context: .
-      dockerfile: hocuspocus/Dockerfile
+      context: ./hocuspocus
+      dockerfile: Dockerfile
     environment:
       VERSION: ${VERSION}
       APP_NAME: ${APP_NAME}

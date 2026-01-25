@@ -22,6 +22,7 @@ COPY services/workflow-worker/package.json ./services/workflow-worker/
 COPY server/package.json ./server/
 COPY packages/core/package.json ./packages/core/
 COPY packages/db/package.json ./packages/db/
+COPY packages/media/package.json ./packages/media/
 COPY packages/types/package.json ./packages/types/
 
 # Install dependencies for required workspaces (shared, worker, server, and required @alga-psa/* deps)
@@ -32,6 +33,7 @@ RUN npm config set legacy-peer-deps true && PUPPETEER_SKIP_DOWNLOAD=true npm ins
   --workspace=server \
   --workspace=@alga-psa/core \
   --workspace=@alga-psa/db \
+  --workspace=@alga-psa/media \
   --workspace=@alga-psa/types
 
 # Copy source code for shared + server workspaces
