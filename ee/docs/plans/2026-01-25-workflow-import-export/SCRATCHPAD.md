@@ -48,3 +48,4 @@
 - 2026-01-25: Importer creates `workflow_definitions` from bundle workflows (metadata + draft), regenerating `workflow_id` and rewriting workflow definition JSON `id` fields to match.
 - 2026-01-25: Importer creates `workflow_definition_versions` for each `publishedVersions[]` entry, inserting immutable definition_json + payload schema snapshots.
 - 2026-01-25: Importer default policy is create-only: conflicts on existing `workflow_definitions.key` throw `WORKFLOW_KEY_CONFLICT` unless `force` is enabled.
+- 2026-01-25: Importer supports `force` overwrite: delete existing workflow by key (cascades versions/runs) and recreate from bundle with a regenerated `workflow_id`.

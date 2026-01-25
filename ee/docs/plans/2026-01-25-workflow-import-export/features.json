@@ -20,7 +20,7 @@
   { "id": "F023", "description": "Importer creates workflow_definitions records from bundle entries (draft + metadata).", "implemented": true, "prdRefs": ["5.6"] },
   { "id": "F024", "description": "Importer creates workflow_definition_versions records for included published versions.", "implemented": true, "prdRefs": ["5.6"] },
   { "id": "F025", "description": "Importer is create-only by default and fails if a workflow with the same key exists.", "implemented": true, "prdRefs": ["5.6"] },
-  { "id": "F026", "description": "Importer supports force overwrite: delete existing workflow by key and recreate from bundle with regenerated workflow_id.", "implemented": false, "prdRefs": ["5.6"] },
+  { "id": "F026", "description": "Importer supports force overwrite: delete existing workflow by key and recreate from bundle with regenerated workflow_id.", "implemented": true, "prdRefs": ["5.6"] },
   { "id": "F028", "description": "Importer returns a clear summary of changes (created/deleted workflows and created versions).", "implemented": false, "prdRefs": ["5.6"] },
 
   { "id": "F030", "description": "Add export HTTP endpoint for a single workflow (returns bundle JSON).", "implemented": false, "prdRefs": ["6.1"] },
