@@ -55,3 +55,4 @@
 - 2026-01-25: Import/export endpoints are admin-gated via `requireWorkflowPermission(user, 'admin', knex)` in the underlying server actions.
 - 2026-01-25: Added a minimal API-wrapping CLI at `tools/workflow-bundle-cli/workflow-bundle.js` (supports `export` and `import` with optional `--cookie` + `--tenant` headers).
 - 2026-01-25: Added a representative fixture bundle `server/src/test/fixtures/workflow-bundles/email-processing.v1.json` (control flow + action.call usage) for import/export tests.
+- 2026-01-25: Canonicalization utility `shared/workflow/bundle/canonicalJson.ts` is used by the export endpoint to emit stable bundle bytes and will be used in round-trip tests.
