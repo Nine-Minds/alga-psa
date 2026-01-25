@@ -259,4 +259,59 @@ describe('workflow bundle v1 import/export', () => {
     expect(versionRow).toBeTruthy();
     expect(versionRow.definition_json?.id).toBe(createdId);
   });
+
+  it('import create-only policy fails when workflow key already exists (without force)', async () => {
+    const bundle = {
+      format: 'alga-psa.workflow-bundle',
+      formatVersion: 1,
+      exportedAt: new Date().toISOString(),
+      workflows: [
+        {
+          key: 'test.conflict',
+          metadata: {
+            name: 'Conflict',
+            description: null,
+            payloadSchemaRef: TEST_SCHEMA_REF,
+            payloadSchemaMode: 'pinned',
+            pinnedPayloadSchemaRef: TEST_SCHEMA_REF,
+            trigger: null,
+            isSystem: false,
+            isVisible: true,
+            isPaused: false,
+            concurrencyLimit: null,
+            autoPauseOnFailure: false,
+            failureRateThreshold: null,
+            failureRateMinRuns: null,
+            retentionPolicyOverride: null
+          },
+          dependencies: {
+            actions: [{ actionId: 'test.echo', version: 1 }],
+            nodeTypes: ['action.call', 'state.set'],
+            schemaRefs: [TEST_SCHEMA_REF]
+          },
+          draft: {
+            draftVersion: 1,
+            definition: {
+              id: uuidv4(),
+              ...buildWorkflowDefinition({
+                steps: [stateSetStep('state-1', 'READY'), actionCallStep({ id: 'echo-1', actionId: 'test.echo' }), returnStep('done')],
+                payloadSchemaRef: TEST_SCHEMA_REF
+              })
+            }
+          },
+          publishedVersions: []
+        }
+      ]
+    };
+
+    await importWorkflowBundleV1(db, bundle);
+
+    await expect(importWorkflowBundleV1(db, bundle)).rejects.toMatchObject({
+      code: 'WORKFLOW_KEY_CONFLICT',
+      status: 409
+    });
+
+    const rows = await db('workflow_definitions').where({ key: 'test.conflict' });
+    expect(rows).toHaveLength(1);
+  });
 });

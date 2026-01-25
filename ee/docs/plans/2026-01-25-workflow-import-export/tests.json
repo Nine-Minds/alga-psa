@@ -7,7 +7,7 @@
   { "id": "T011", "description": "Export excludes instance-specific audit fields by default.", "implemented": true, "featureIds": ["F012"] },
 
   { "id": "T020", "description": "Import a bundle into an empty DB creates workflow_definitions and workflow_definition_versions records.", "implemented": true, "featureIds": ["F023", "F024"] },
-  { "id": "T021", "description": "Import create-only policy fails when workflow key already exists (without force).", "implemented": false, "featureIds": ["F025"] },
+  { "id": "T021", "description": "Import create-only policy fails when workflow key already exists (without force).", "implemented": true, "featureIds": ["F025"] },
   { "id": "T022", "description": "Import force overwrite deletes the existing workflow by key and recreates it with a regenerated workflow_id.", "implemented": false, "featureIds": ["F026"] },
   { "id": "T023", "description": "Import is transactional: if any DB write fails, no workflow_definitions or workflow_definition_versions are persisted.", "implemented": false, "featureIds": ["F029"] },
 
