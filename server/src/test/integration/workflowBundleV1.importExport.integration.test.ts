@@ -17,6 +17,7 @@ import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions'
 import { createWorkflowDefinitionAction, publishWorkflowDefinitionAction } from 'server/src/lib/actions/workflow-runtime-v2-actions';
 import { GET as exportBundleRoute } from 'server/src/app/api/workflow-definitions/[workflowId]/export/route';
 import { stringifyCanonicalJson } from '@shared/workflow/bundle/canonicalJson';
+import { exportWorkflowBundleV1ForWorkflowId } from 'server/src/lib/workflow/bundle/exportWorkflowBundleV1';
 
 vi.mock('server/src/lib/db', () => ({
   createTenantKnex: vi.fn(),
@@ -38,6 +39,22 @@ const mockedGetCurrentUser = vi.mocked(getCurrentUser);
 let db: Knex;
 let tenantId: string;
 let userId: string;
+
+const normalizeBundleForComparison = (bundle: any) => {
+  const copy = JSON.parse(JSON.stringify(bundle));
+  copy.exportedAt = '2000-01-01T00:00:00.000Z';
+  for (const wf of copy.workflows ?? []) {
+    if (wf?.draft?.definition && typeof wf.draft.definition === 'object') {
+      wf.draft.definition.id = '__WORKFLOW_ID__';
+    }
+    for (const pv of wf?.publishedVersions ?? []) {
+      if (pv?.definition && typeof pv.definition === 'object') {
+        pv.definition.id = '__WORKFLOW_ID__';
+      }
+    }
+  }
+  return copy;
+};
 
 beforeAll(async () => {
   ensureWorkflowRuntimeV2TestRegistrations();
@@ -458,5 +475,28 @@ describe('workflow bundle v1 import/export', () => {
 
     const rows = await db('workflow_definitions').where({ key: 'test.transactional' });
     expect(rows).toHaveLength(0);
+  });
+
+  it('round-trip export -> import -> export matches after canonical normalization (supported fields)', async () => {
+    const definition = {
+      id: uuidv4(),
+      ...buildWorkflowDefinition({
+        steps: [stateSetStep('state-1', 'READY'), actionCallStep({ id: 'echo-1', actionId: 'test.echo' }), returnStep('done')],
+        payloadSchemaRef: TEST_SCHEMA_REF
+      })
+    };
+
+    const created = await createWorkflowDefinitionAction({ key: 'test.roundtrip', definition });
+    await publishWorkflowDefinitionAction({ workflowId: created.workflowId, version: 1 });
+
+    const exported1 = await exportWorkflowBundleV1ForWorkflowId(db, created.workflowId);
+
+    await resetWorkflowRuntimeTables(db);
+
+    const imported = await importWorkflowBundleV1(db, exported1);
+    const newId = imported.createdWorkflows[0].workflowId;
+    const exported2 = await exportWorkflowBundleV1ForWorkflowId(db, newId);
+
+    expect(normalizeBundleForComparison(exported2)).toEqual(normalizeBundleForComparison(exported1));
   });
 });

@@ -11,7 +11,7 @@
   { "id": "T022", "description": "Import force overwrite deletes the existing workflow by key and recreates it with a regenerated workflow_id.", "implemented": true, "featureIds": ["F026"] },
   { "id": "T023", "description": "Import is transactional: if any DB write fails, no workflow_definitions or workflow_definition_versions are persisted.", "implemented": true, "featureIds": ["F029"] },
 
-  { "id": "T030", "description": "Round-trip: create + publish a workflow, export it, import into a fresh DB, export again, and the canonical bundle matches (for supported fields).", "implemented": false, "featureIds": ["F010", "F020", "F023", "F024", "F041"] },
+  { "id": "T030", "description": "Round-trip: create + publish a workflow, export it, import into a fresh DB, export again, and the canonical bundle matches (for supported fields).", "implemented": true, "featureIds": ["F010", "F020", "F023", "F024", "F041"] },
   { "id": "T031", "description": "Imported workflow can be executed end-to-end using Workflow Runtime V2 (triggered run reaches expected terminal state/output).", "implemented": false, "featureIds": ["F023", "F024"] },
 
   { "id": "T040", "description": "HTTP export endpoint returns a valid workflow bundle for an existing workflow.", "implemented": false, "featureIds": ["F030"] },

@@ -65,3 +65,4 @@
 - 2026-01-25: Added create-only conflict test (duplicate key without force) (T021).
 - 2026-01-25: Added force overwrite import test (delete+recreate with regenerated workflow_id) (T022).
 - 2026-01-25: Added transactional rollback coverage (unique constraint failure does not persist partial workflow rows) (T023).
+- 2026-01-25: Added export→import→export round-trip test with canonical normalization (exportedAt + workflowId placeholder) (T030).
