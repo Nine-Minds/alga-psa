@@ -60,3 +60,4 @@
 - 2026-01-25: Extended bundle integration tests for schema validation failures (T002).
 - 2026-01-25: Added missing dependency validation coverage for actions/node types/schema refs (T003).
 - 2026-01-25: Added canonical export formatting test via HTTP export route (T010).
+- 2026-01-25: Added audit-field exclusion assertion for exported bundles (T011).

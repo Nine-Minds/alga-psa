@@ -149,4 +149,27 @@ describe('workflow bundle v1 import/export', () => {
     const parsed = JSON.parse(text);
     expect(text).toBe(stringifyCanonicalJson(parsed));
   });
+
+  it('export excludes instance-specific audit fields by default', async () => {
+    const definition = {
+      id: uuidv4(),
+      ...buildWorkflowDefinition({ steps: [stateSetStep('state-1', 'READY')] })
+    };
+
+    const created = await createWorkflowDefinitionAction({ key: 'test.export-no-audit', definition });
+    await publishWorkflowDefinitionAction({ workflowId: created.workflowId, version: 1 });
+
+    const response = await exportBundleRoute(new Request('http://example.com'), { params: { workflowId: created.workflowId } });
+    const bundle = await response.json();
+
+    expect(bundle.workflows[0]).not.toHaveProperty('workflow_id');
+    expect(bundle.workflows[0]).not.toHaveProperty('created_at');
+    expect(bundle.workflows[0]).not.toHaveProperty('updated_at');
+    expect(bundle.workflows[0]).not.toHaveProperty('created_by');
+    expect(bundle.workflows[0]).not.toHaveProperty('updated_by');
+
+    expect(bundle.workflows[0].publishedVersions?.[0]).not.toHaveProperty('version_id');
+    expect(bundle.workflows[0].publishedVersions?.[0]).not.toHaveProperty('published_at');
+    expect(bundle.workflows[0].publishedVersions?.[0]).not.toHaveProperty('published_by');
+  });
 });
