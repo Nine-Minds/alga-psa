@@ -41,3 +41,4 @@
 - 2026-01-25: Exporter intentionally omits instance-specific audit/actor fields (timestamps, *_by, version_id) by projecting only the portable subset into the bundle.
 - 2026-01-25: Exporter includes operational settings in `metadata` (isPaused/isVisible/concurrency/retention/auto-pause thresholds) for behavioral fidelity.
 - 2026-01-25: Added dependency summary collection (`shared/workflow/bundle/dependencySummaryV1.ts`) and included `dependencies` in bundle exports (actions/node types/schema refs) to support structured missing-dependency errors on import.
+- 2026-01-25: Added import-time header validation for v1 bundles in `server/src/lib/workflow/bundle/validateWorkflowBundleHeaderV1.ts` (rejects unsupported formatVersion with a structured error).

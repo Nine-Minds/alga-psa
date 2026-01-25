@@ -13,7 +13,7 @@
   { "id": "F013", "description": "Exporter includes operational workflow settings needed for behavior fidelity (paused, visibility, concurrency, retention, auto-pause thresholds).", "implemented": true, "prdRefs": ["5.3"] },
   { "id": "F014", "description": "Exporter emits dependency summary (actions, node types, schema refs) derived from definitions.", "implemented": true, "prdRefs": ["5.5"] },
 
-  { "id": "F020", "description": "Implement server-side importer that validates formatVersion matches the accepted version.", "implemented": false, "prdRefs": ["5.2"] },
+  { "id": "F020", "description": "Implement server-side importer that validates formatVersion matches the accepted version.", "implemented": true, "prdRefs": ["5.2"] },
   { "id": "F021", "description": "Importer validates bundle JSON against the v1 JSON Schema.", "implemented": false, "prdRefs": ["7", "5.4"] },
   { "id": "F022", "description": "Importer performs dependency validation and returns structured missing-dependency errors.", "implemented": false, "prdRefs": ["5.5"] },
   { "id": "F029", "description": "Importer runs all DB writes in a single transaction and rolls back on any error.", "implemented": false, "prdRefs": ["5.5"] },
