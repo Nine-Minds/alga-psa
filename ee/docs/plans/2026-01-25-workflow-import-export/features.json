@@ -2,7 +2,7 @@
   { "id": "F001", "description": "Define v1 workflow bundle format header fields (format, formatVersion, exportedAt).", "implemented": true, "prdRefs": ["5.1", "5.2"] },
   { "id": "F002", "description": "Define v1 workflow bundle schema for workflow metadata, draft, and published versions.", "implemented": true, "prdRefs": ["5.4", "5.3"] },
   { "id": "F003", "description": "Choose and enforce a stable workflow identifier field in the bundle (e.g. key).", "implemented": true, "prdRefs": ["5.4", "9.1"] },
-  { "id": "F004", "description": "Define canonical JSON export rules (stable key ordering, indentation, trailing newline).", "implemented": false, "prdRefs": ["5.1", "5.7"] },
+  { "id": "F004", "description": "Define canonical JSON export rules (stable key ordering, indentation, trailing newline).", "implemented": true, "prdRefs": ["5.1", "5.7"] },
   { "id": "F005", "description": "Add JSON Schema file at ee/docs/schemas/workflow-bundle.v1.schema.json.", "implemented": false, "prdRefs": ["7"] },
   { "id": "F006", "description": "Add human-readable spec at ee/docs/guides/workflows/workflow-import-export.md.", "implemented": false, "prdRefs": ["7"] },
 
