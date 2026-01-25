@@ -18,7 +18,7 @@
   { "id": "F022", "description": "Importer performs dependency validation and returns structured missing-dependency errors.", "implemented": true, "prdRefs": ["5.5"] },
   { "id": "F029", "description": "Importer runs all DB writes in a single transaction and rolls back on any error.", "implemented": true, "prdRefs": ["5.5"] },
   { "id": "F023", "description": "Importer creates workflow_definitions records from bundle entries (draft + metadata).", "implemented": true, "prdRefs": ["5.6"] },
-  { "id": "F024", "description": "Importer creates workflow_definition_versions records for included published versions.", "implemented": false, "prdRefs": ["5.6"] },
+  { "id": "F024", "description": "Importer creates workflow_definition_versions records for included published versions.", "implemented": true, "prdRefs": ["5.6"] },
   { "id": "F025", "description": "Importer is create-only by default and fails if a workflow with the same key exists.", "implemented": false, "prdRefs": ["5.6"] },
   { "id": "F026", "description": "Importer supports force overwrite: delete existing workflow by key and recreate from bundle with regenerated workflow_id.", "implemented": false, "prdRefs": ["5.6"] },
   { "id": "F028", "description": "Importer returns a clear summary of changes (created/deleted workflows and created versions).", "implemented": false, "prdRefs": ["5.6"] },
