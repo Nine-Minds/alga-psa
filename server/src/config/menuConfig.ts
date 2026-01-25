@@ -183,7 +183,6 @@ export const settingsNavigationSections: NavigationSection[] = [
     title: 'Organization & Access',
     items: [
       { name: 'General', icon: Settings, href: '/msp/settings?tab=general' },
-      { name: 'Experimental Features', icon: FlaskConical, href: '/msp/settings?tab=experimental-features' },
       { name: 'Users', icon: UserCog, href: '/msp/settings?tab=users' },
       { name: 'Teams', icon: Users, href: '/msp/settings?tab=teams' },
       { name: 'Client Portal', icon: AtSign, href: '/msp/settings?tab=client-portal' },
@@ -219,7 +218,13 @@ export const settingsNavigationSections: NavigationSection[] = [
       { name: 'Integrations', icon: Plug, href: '/msp/settings?tab=integrations' },
       { name: 'Extensions', icon: Puzzle, href: '/msp/settings?tab=extensions' },
     ]
-  }
+  },
+  {
+    title: 'Experimental',
+    items: [
+      { name: 'Experimental Features', icon: FlaskConical, href: '/msp/settings?tab=experimental-features' },
+    ]
+  },
 ];
 
 // Billing navigation sections - used when sidebar is in 'billing' mode
