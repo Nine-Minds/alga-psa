@@ -42,3 +42,4 @@
 - 2026-01-25: Exporter includes operational settings in `metadata` (isPaused/isVisible/concurrency/retention/auto-pause thresholds) for behavioral fidelity.
 - 2026-01-25: Added dependency summary collection (`shared/workflow/bundle/dependencySummaryV1.ts`) and included `dependencies` in bundle exports (actions/node types/schema refs) to support structured missing-dependency errors on import.
 - 2026-01-25: Added import-time header validation for v1 bundles in `server/src/lib/workflow/bundle/validateWorkflowBundleHeaderV1.ts` (rejects unsupported formatVersion with a structured error).
+- 2026-01-25: Added Ajv-based bundle schema validation using `ee/docs/schemas/workflow-bundle.v1.schema.json` via `server/src/lib/workflow/bundle/validateWorkflowBundleSchemaV1.ts`.
