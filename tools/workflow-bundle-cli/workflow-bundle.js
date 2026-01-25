@@ -3,8 +3,8 @@
 
 const fs = require('fs');
 
-const usage = () => {
-  console.error(`
+const usage = (consoleImpl) => {
+  consoleImpl.error(`
 Usage:
   workflow-bundle export --base-url <url> --workflow-id <uuid> --out <file> [--tenant <tenantId>] [--cookie <cookieHeader>]
   workflow-bundle import --base-url <url> --file <workflow-bundle.json> [--force] [--tenant <tenantId>] [--cookie <cookieHeader>]
@@ -40,13 +40,13 @@ const parseArgs = (argv) => {
   return { cmd, args };
 };
 
-const request = async ({ method, url, cookie, tenant, body }) => {
+const request = async ({ method, url, cookie, tenant, body, fetchImpl }) => {
   const headers = {};
   if (cookie) headers.Cookie = cookie;
   if (tenant) headers['x-alga-tenant'] = tenant;
   if (body !== undefined) headers['Content-Type'] = 'application/json';
 
-  const res = await fetch(url, {
+  const res = await fetchImpl(url, {
     method,
     headers,
     body: body !== undefined ? JSON.stringify(body) : undefined
@@ -68,11 +68,15 @@ const request = async ({ method, url, cookie, tenant, body }) => {
   return { res, text };
 };
 
-async function main() {
-  const { cmd, args } = parseArgs(process.argv.slice(2));
+async function runWorkflowBundleCli(argv, deps = {}) {
+  const fetchImpl = deps.fetchImpl ?? fetch;
+  const fsImpl = deps.fsImpl ?? fs;
+  const consoleImpl = deps.consoleImpl ?? console;
+
+  const { cmd, args } = parseArgs(argv);
   if (!cmd || cmd === 'help' || cmd === '--help' || cmd === '-h') {
-    usage();
-    process.exit(1);
+    usage(consoleImpl);
+    return { ok: false, code: 'usage' };
   }
 
   const baseUrl = args['base-url'];
@@ -87,10 +91,10 @@ async function main() {
     if (!out) throw new Error('Missing --out');
 
     const url = `${baseUrl.replace(/\\/$/, '')}/api/workflow-definitions/${workflowId}/export`;
-    const { text } = await request({ method: 'GET', url, cookie, tenant });
-    fs.writeFileSync(out, text, 'utf8');
-    console.log(`Wrote ${out}`);
-    return;
+    const { text } = await request({ method: 'GET', url, cookie, tenant, fetchImpl });
+    fsImpl.writeFileSync(out, text, 'utf8');
+    consoleImpl.log(`Wrote ${out}`);
+    return { ok: true, command: 'export', out };
   }
 
   if (cmd === 'import') {
@@ -98,20 +102,23 @@ async function main() {
     const force = !!args.force;
     if (!file) throw new Error('Missing --file');
 
-    const bundle = JSON.parse(fs.readFileSync(file, 'utf8'));
+    const bundle = JSON.parse(fsImpl.readFileSync(file, 'utf8'));
     const qs = force ? '?force=true' : '';
     const url = `${baseUrl.replace(/\\/$/, '')}/api/workflow-definitions/import${qs}`;
-    const { text } = await request({ method: 'POST', url, cookie, tenant, body: bundle });
-    console.log(text);
-    return;
+    const { text } = await request({ method: 'POST', url, cookie, tenant, body: bundle, fetchImpl });
+    consoleImpl.log(text);
+    return { ok: true, command: 'import' };
   }
 
   throw new Error(`Unknown command: ${cmd}`);
 }
 
-main().catch((err) => {
-  console.error(err.message);
-  if (err.details) console.error(JSON.stringify(err.details, null, 2));
-  process.exit(1);
-});
+if (require.main === module) {
+  runWorkflowBundleCli(process.argv.slice(2)).catch((err) => {
+    console.error(err.message);
+    if (err.details) console.error(JSON.stringify(err.details, null, 2));
+    process.exit(1);
+  });
+}
 
+module.exports = { runWorkflowBundleCli };
