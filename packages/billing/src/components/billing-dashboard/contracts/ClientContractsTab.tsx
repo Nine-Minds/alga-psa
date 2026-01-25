@@ -214,15 +214,18 @@ const ClientContractsTab: React.FC<ClientContractsTabProps> = ({ onRefreshNeeded
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             <DropdownMenuItem
-              id="edit-contract-menu-item"
+              id={record.status === 'draft' ? 'resume-contract-menu-item' : 'edit-contract-menu-item'}
               onClick={(event) => {
                 event.stopPropagation();
-                if (record.contract_id) {
-                  navigateToContract(record.contract_id, record.client_contract_id);
+                if (!record.contract_id) return;
+                if (record.status === 'draft') {
+                  void handleResumeDraft(record.contract_id);
+                  return;
                 }
+                navigateToContract(record.contract_id, record.client_contract_id);
               }}
             >
-              Edit
+              {record.status === 'draft' ? 'Resume' : 'Edit'}
             </DropdownMenuItem>
             {record.status === 'active' && (
               <DropdownMenuItem
