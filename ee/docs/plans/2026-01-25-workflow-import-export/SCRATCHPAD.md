@@ -68,3 +68,4 @@
 - 2026-01-25: Added export→import→export round-trip test with canonical normalization (exportedAt + workflowId placeholder) (T030).
 - 2026-01-25: Added end-to-end execution test for imported workflows (imports bundle then runs the published version to SUCCEEDED) (T031).
 - 2026-01-25: Added explicit HTTP export endpoint smoke test asserting bundle header + workflow key (T040).
+- 2026-01-25: Added HTTP import endpoint test (POST bundle JSON returns summary and persists workflow row) (T041).

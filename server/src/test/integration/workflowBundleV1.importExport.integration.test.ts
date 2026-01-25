@@ -20,7 +20,9 @@ import {
   startWorkflowRunAction,
   getWorkflowRunAction
 } from 'server/src/lib/actions/workflow-runtime-v2-actions';
+import { NextRequest } from 'next/server';
 import { GET as exportBundleRoute } from 'server/src/app/api/workflow-definitions/[workflowId]/export/route';
+import { POST as importBundleRoute } from 'server/src/app/api/workflow-definitions/import/route';
 import { stringifyCanonicalJson } from '@shared/workflow/bundle/canonicalJson';
 import { exportWorkflowBundleV1ForWorkflowId } from 'server/src/lib/workflow/bundle/exportWorkflowBundleV1';
 
@@ -196,6 +198,67 @@ describe('workflow bundle v1 import/export', () => {
     expect(bundle.formatVersion).toBe(1);
     expect(Array.isArray(bundle.workflows)).toBe(true);
     expect(bundle.workflows[0].key).toBe('test.http-export');
+  });
+
+  it('HTTP import endpoint successfully imports a valid bundle and returns a summary', async () => {
+    const bundle = {
+      format: 'alga-psa.workflow-bundle',
+      formatVersion: 1,
+      exportedAt: new Date().toISOString(),
+      workflows: [
+        {
+          key: 'test.http-import',
+          metadata: {
+            name: 'HTTP import',
+            description: null,
+            payloadSchemaRef: TEST_SCHEMA_REF,
+            payloadSchemaMode: 'pinned',
+            pinnedPayloadSchemaRef: TEST_SCHEMA_REF,
+            trigger: null,
+            isSystem: false,
+            isVisible: true,
+            isPaused: false,
+            concurrencyLimit: null,
+            autoPauseOnFailure: false,
+            failureRateThreshold: null,
+            failureRateMinRuns: null,
+            retentionPolicyOverride: null
+          },
+          dependencies: {
+            actions: [{ actionId: 'test.echo', version: 1 }],
+            nodeTypes: ['action.call', 'state.set'],
+            schemaRefs: [TEST_SCHEMA_REF]
+          },
+          draft: {
+            draftVersion: 1,
+            definition: {
+              id: uuidv4(),
+              ...buildWorkflowDefinition({
+                steps: [stateSetStep('state-1', 'READY'), actionCallStep({ id: 'echo-1', actionId: 'test.echo' }), returnStep('done')],
+                payloadSchemaRef: TEST_SCHEMA_REF
+              })
+            }
+          },
+          publishedVersions: []
+        }
+      ]
+    };
+
+    const request = new NextRequest(
+      new Request('http://example.com/api/workflow-definitions/import', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(bundle)
+      })
+    );
+
+    const response = await importBundleRoute(request);
+    expect(response.status).toBe(200);
+    const summary = await response.json();
+    expect(summary.createdWorkflows?.[0]?.key).toBe('test.http-import');
+
+    const rows = await db('workflow_definitions').where({ key: 'test.http-import' });
+    expect(rows).toHaveLength(1);
   });
 
   it('export excludes instance-specific audit fields by default', async () => {
