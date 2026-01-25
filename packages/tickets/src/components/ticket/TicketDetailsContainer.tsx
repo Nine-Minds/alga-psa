@@ -1,6 +1,6 @@
 'use client';
 
-import React, { Suspense, useState } from 'react';
+import React, { Suspense, useState, useRef, useCallback, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { toast } from 'react-hot-toast';
@@ -11,6 +11,7 @@ import {
 import TicketDetails from './TicketDetails';
 import { TicketDetailsSkeleton } from './TicketDetailsSkeleton';
 import type { SurveyTicketSatisfactionSummary } from '@alga-psa/types';
+import { UnsavedChangesProvider } from 'server/src/contexts/UnsavedChangesContext';
 
 interface TicketDetailsContainerProps {
   ticketData: {
@@ -61,6 +62,47 @@ export default function TicketDetailsContainer({
   const { data: session } = useSession();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Local comments state to avoid mutating ticketData directly
+  const [comments, setComments] = useState(ticketData.comments);
+
+  // Sync comments with ticketData.comments when it changes
+  useEffect(() => {
+    setComments(ticketData.comments);
+  }, [ticketData.comments]);
+
+  // Track pending requests to avoid concurrent updates
+  const pendingRequestRef = useRef<Promise<any> | null>(null);
+  const isMountedRef = useRef(true);
+
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
+
+  // Helper to queue requests
+  const withSubmitting = useCallback(async <T,>(fn: () => Promise<T>): Promise<T> => {
+    // Wait for any pending request to complete
+    if (pendingRequestRef.current) {
+      await pendingRequestRef.current.catch(() => {});
+    }
+
+    setIsSubmitting(true);
+    const promise = fn();
+    pendingRequestRef.current = promise;
+
+    try {
+      const result = await promise;
+      return result;
+    } finally {
+      if (isMountedRef.current) {
+        setIsSubmitting(false);
+      }
+      pendingRequestRef.current = null;
+    }
+  }, []);
+
   const handleTicketUpdate = async (field: string, value: any) => {
     if (!session?.user) {
       toast.error('You must be logged in to update tickets');
@@ -79,6 +121,37 @@ export default function TicketDetailsContainer({
     }
   };
 
+  // Handler for batch ticket updates (used by Save Changes button)
+  const handleBatchTicketUpdate = useCallback(async (changes: Record<string, unknown>): Promise<boolean> => {
+    if (!session?.user) {
+      toast.error('You must be logged in to update tickets');
+      return false;
+    }
+
+    return withSubmitting(async () => {
+      try {
+        // Normalize assigned_to value
+        const normalizedChanges = { ...changes };
+        if ('assigned_to' in normalizedChanges) {
+          const value = normalizedChanges.assigned_to;
+          normalizedChanges.assigned_to = value && value !== 'unassigned' ? value : null;
+        }
+
+        await updateTicketWithCacheForCurrentUser(ticketData.ticket.ticket_id, normalizedChanges);
+        toast.success('Changes saved successfully');
+
+        // Refresh the page to get updated data
+        router.refresh();
+
+        return true;
+      } catch (error) {
+        console.error('Error saving changes:', error);
+        toast.error('Failed to save changes');
+        return false;
+      }
+    });
+  }, [session?.user, ticketData.ticket.ticket_id, withSubmitting, router]);
+
   const handleAddComment = async (content: string, isInternal: boolean, isResolution: boolean) => {
     if (!session?.user) {
       toast.error('You must be logged in to add comments');
@@ -94,7 +167,7 @@ export default function TicketDetailsContainer({
         isResolution
       );
 
-      ticketData.comments.push(newComment);
+      setComments(prev => [...prev, newComment]);
       toast.success('Comment added successfully');
     } catch (error) {
       console.error('Error adding comment:', error);
@@ -135,39 +208,42 @@ export default function TicketDetailsContainer({
   };
 
   return (
-    <div className="bg-gray-100 min-h-screen p-4">
-      <Suspense fallback={<TicketDetailsSkeleton />}>
-        <TicketDetails
-          initialTicket={ticketData.ticket}
-          initialBundle={ticketData.bundle}
-          aggregatedChildClientComments={ticketData.aggregatedChildClientComments || []}
-          onClose={() => router.back()}
-          initialComments={ticketData.comments}
-          initialDocuments={ticketData.documents}
-          initialClient={ticketData.client}
-          initialContacts={ticketData.contacts}
-          initialContactInfo={ticketData.contactInfo}
-          initialCreatedByUser={ticketData.createdByUser}
-          initialBoard={ticketData.board}
-          initialAdditionalAgents={ticketData.additionalAgents}
-          initialAvailableAgents={ticketData.availableAgents}
-          initialUserMap={ticketData.userMap}
-          statusOptions={ticketData.options.status}
-          agentOptions={ticketData.options.agent}
-          boardOptions={ticketData.options.board}
-          priorityOptions={ticketData.options.priority}
-          initialCategories={ticketData.categories}
-          initialClients={ticketData.clients}
-          initialLocations={ticketData.locations}
-          initialAgentSchedules={ticketData.agentSchedules}
-          onTicketUpdate={handleTicketUpdate}
-          onAddComment={handleAddComment}
-          onUpdateDescription={handleUpdateDescription}
-          isSubmitting={isSubmitting}
-          surveySummary={surveySummary}
-          associatedAssets={associatedAssets}
-        />
-      </Suspense>
-    </div>
+    <UnsavedChangesProvider>
+      <div className="bg-gray-100 min-h-screen p-4">
+        <Suspense fallback={<TicketDetailsSkeleton />}>
+          <TicketDetails
+            initialTicket={ticketData.ticket}
+            initialBundle={ticketData.bundle}
+            aggregatedChildClientComments={ticketData.aggregatedChildClientComments || []}
+            onClose={() => router.back()}
+            initialComments={comments}
+            initialDocuments={ticketData.documents}
+            initialClient={ticketData.client}
+            initialContacts={ticketData.contacts}
+            initialContactInfo={ticketData.contactInfo}
+            initialCreatedByUser={ticketData.createdByUser}
+            initialBoard={ticketData.board}
+            initialAdditionalAgents={ticketData.additionalAgents}
+            initialAvailableAgents={ticketData.availableAgents}
+            initialUserMap={ticketData.userMap}
+            statusOptions={ticketData.options.status}
+            agentOptions={ticketData.options.agent}
+            boardOptions={ticketData.options.board}
+            priorityOptions={ticketData.options.priority}
+            initialCategories={ticketData.categories}
+            initialClients={ticketData.clients}
+            initialLocations={ticketData.locations}
+            initialAgentSchedules={ticketData.agentSchedules}
+            onTicketUpdate={handleTicketUpdate}
+            onBatchTicketUpdate={handleBatchTicketUpdate}
+            onAddComment={handleAddComment}
+            onUpdateDescription={handleUpdateDescription}
+            isSubmitting={isSubmitting}
+            surveySummary={surveySummary}
+            associatedAssets={associatedAssets}
+          />
+        </Suspense>
+      </div>
+    </UnsavedChangesProvider>
   );
 }

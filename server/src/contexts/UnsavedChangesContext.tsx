@@ -31,7 +31,7 @@ interface UnsavedChangesContextType {
   unregister: (componentId: string) => void;
 }
 
-const UnsavedChangesContext = createContext<UnsavedChangesContextType | null>(null);
+export const UnsavedChangesContext = createContext<UnsavedChangesContextType | null>(null);
 
 interface UnsavedChangesProviderProps {
   children: React.ReactNode;
