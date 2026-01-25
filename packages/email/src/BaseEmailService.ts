@@ -16,6 +16,8 @@ export interface EmailSendResult {
   success: boolean;
   messageId?: string;
   error?: string;
+  queued?: boolean;      // true if queued for later delivery due to rate limiting
+  retryCount?: number;   // current retry attempt (0 = first attempt)
 }
 
 export interface ITemplateProcessor {

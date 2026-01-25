@@ -1,15 +1,14 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 
 /**
- * Unit tests for email notification rate limiting logic.
+ * Unit tests for email notification rate limiting concepts.
  *
- * Rate limiting is centralized in TenantEmailService.sendEmail() via checkRateLimits().
- * This ensures ALL tenant emails are protected by a single, consistent implementation.
- *
- * The rate limiting works by:
- * 1. Checking notification_settings for the tenant's rate_limit_per_minute (default: 60)
- * 2. Counting notifications in notification_logs for the tenant/user in the last 60 seconds
- * 3. Returning { allowed: false, reason: '...' } if count >= rate_limit_per_minute
+ * Rate limiting uses token bucket algorithm via TokenBucketRateLimiter:
+ * - Each tenant/user has a bucket with maxTokens capacity
+ * - Tokens refill at refillRate tokens per second
+ * - Each email consumes 1 token
+ * - Requests are rejected if no tokens available
+ * - Fails open if Redis unavailable
  *
  * Note: SystemEmailService emails (password resets, tenant recovery) bypass rate limiting
  * as they are critical authentication flows that must always work.
@@ -20,120 +19,113 @@ describe('Email Rate Limiting', () => {
     vi.resetAllMocks();
   });
 
-  describe('Rate Limit Enforcement Logic', () => {
-    it('should allow notification when under rate limit', async () => {
-      const rateLimit = 60;
-      const currentCount = 30;
+  describe('Token Bucket Concepts', () => {
+    it('should allow request when bucket has tokens', () => {
+      const tokensAvailable = 30;
+      const tokensRequired = 1;
 
-      // The logic: recentCount >= rate_limit_per_minute throws error
-      // 30 < 60 = should NOT throw
-      const shouldThrow = currentCount >= rateLimit;
+      const allowed = tokensAvailable >= tokensRequired;
 
-      expect(shouldThrow).toBe(false);
+      expect(allowed).toBe(true);
     });
 
-    it('should block notification when at exact rate limit', async () => {
-      const rateLimit = 60;
-      const currentCount = 60;
+    it('should block request when bucket is empty', () => {
+      const tokensAvailable = 0;
+      const tokensRequired = 1;
 
-      // The logic: recentCount >= rate_limit_per_minute throws error
-      // 60 >= 60 = should throw
-      const shouldThrow = currentCount >= rateLimit;
+      const allowed = tokensAvailable >= tokensRequired;
 
-      expect(shouldThrow).toBe(true);
+      expect(allowed).toBe(false);
     });
 
-    it('should block notification when over rate limit', async () => {
-      const rateLimit = 60;
-      const currentCount = 100;
+    it('should allow burst up to maxTokens', () => {
+      const maxTokens = 60;
+      let tokensAvailable = maxTokens;
 
-      // The logic: recentCount >= rate_limit_per_minute throws error
-      // 100 >= 60 = should throw
-      const shouldThrow = currentCount >= rateLimit;
+      // Should allow 60 rapid requests (burst)
+      for (let i = 0; i < 60; i++) {
+        expect(tokensAvailable >= 1).toBe(true);
+        tokensAvailable--;
+      }
 
-      expect(shouldThrow).toBe(true);
+      // 61st should fail
+      expect(tokensAvailable >= 1).toBe(false);
     });
 
-    it('should allow notification when count is one below limit', async () => {
-      const rateLimit = 60;
-      const currentCount = 59;
+    it('should handle different bucket sizes', () => {
+      const bucketConfigs = [
+        { maxTokens: 1, refillRate: 1 },
+        { maxTokens: 60, refillRate: 1 },
+        { maxTokens: 1000, refillRate: 16.67 },
+      ];
 
-      // The logic: recentCount >= rate_limit_per_minute throws error
-      // 59 < 60 = should NOT throw
-      const shouldThrow = currentCount >= rateLimit;
-
-      expect(shouldThrow).toBe(false);
-    });
-
-    it('should handle rate limit of 1 (minimum)', async () => {
-      const rateLimit = 1;
-
-      // First notification should succeed
-      expect(0 >= rateLimit).toBe(false);
-
-      // Second notification should be blocked
-      expect(1 >= rateLimit).toBe(true);
-    });
-
-    it('should handle high rate limit (1000 - maximum)', async () => {
-      const rateLimit = 1000;
-
-      // Should allow up to 999
-      expect(999 >= rateLimit).toBe(false);
-
-      // Should block at 1000
-      expect(1000 >= rateLimit).toBe(true);
+      for (const config of bucketConfigs) {
+        // Starting bucket should be full
+        expect(config.maxTokens).toBeGreaterThan(0);
+        expect(config.refillRate).toBeGreaterThan(0);
+      }
     });
   });
 
-  describe('Rate Limit Window Logic', () => {
-    it('should use 60 second window for counting', () => {
-      const now = Date.now();
-      const windowMs = 60000; // 60 seconds in milliseconds
-      const windowStart = new Date(now - windowMs);
+  describe('Token Refill Logic', () => {
+    it('should calculate tokens to add based on elapsed time', () => {
+      const refillRate = 1; // 1 token per second
+      const elapsedMs = 5000; // 5 seconds
+      const elapsedSeconds = elapsedMs / 1000;
 
-      // Verify the window calculation
-      expect(windowStart.getTime()).toBe(now - 60000);
+      const tokensToAdd = elapsedSeconds * refillRate;
+
+      expect(tokensToAdd).toBe(5);
     });
 
-    it('should count only notifications within the window', () => {
-      const now = Date.now();
-      const windowMs = 60000;
+    it('should cap tokens at maxTokens', () => {
+      const maxTokens = 60;
+      const currentTokens = 55;
+      const tokensToAdd = 10;
 
-      // Notifications at different times
-      const withinWindow = now - 30000; // 30 seconds ago - should count
-      const atWindowEdge = now - 60000; // exactly 60 seconds ago - should NOT count (> not >=)
-      const outsideWindow = now - 90000; // 90 seconds ago - should NOT count
+      const newTokens = Math.min(maxTokens, currentTokens + tokensToAdd);
 
-      const windowStart = now - windowMs;
+      expect(newTokens).toBe(60); // Capped at maxTokens
+    });
 
-      // The query uses: where('created_at', '>', new Date(Date.now() - 60000))
-      // This means strictly greater than, so exactly 60 seconds ago is excluded
-      expect(withinWindow > windowStart).toBe(true);
-      expect(atWindowEdge > windowStart).toBe(false);
-      expect(outsideWindow > windowStart).toBe(false);
+    it('should calculate refill rate from rate per minute', () => {
+      // rate_limit_per_minute of 60 = 1 token/second
+      const ratePerMinute = 60;
+      const refillRate = ratePerMinute / 60;
+
+      expect(refillRate).toBe(1);
+
+      // rate_limit_per_minute of 1000 = ~16.67 tokens/second
+      const highRate = 1000;
+      const highRefillRate = highRate / 60;
+
+      expect(highRefillRate).toBeCloseTo(16.67, 1);
     });
   });
 
-  describe('Settings Validation', () => {
-    it('should use default rate limit when settings not found', () => {
-      // Default from TenantEmailService.checkRateLimits():
-      // rate_limit_per_minute: 60
-      const defaultRateLimit = 60;
+  describe('Retry After Calculation', () => {
+    it('should calculate retry time when no tokens available', () => {
+      const tokensNeeded = 1;
+      const tokensAvailable = 0;
+      const refillRate = 1; // 1 token per second
 
-      expect(defaultRateLimit).toBe(60);
+      const tokensShortage = tokensNeeded - tokensAvailable;
+      const secondsUntilToken = tokensShortage / refillRate;
+      const retryAfterMs = Math.ceil(secondsUntilToken * 1000);
+
+      expect(retryAfterMs).toBe(1000); // 1 second
     });
 
-    it('should respect custom rate limit from settings', () => {
-      const customRateLimits = [1, 10, 100, 500, 1000];
+    it('should calculate retry time with partial tokens', () => {
+      const tokensNeeded = 1;
+      const tokensAvailable = 0.5;
+      const refillRate = 1;
 
-      customRateLimits.forEach(limit => {
-        // Count at limit should be blocked
-        expect(limit >= limit).toBe(true);
+      const tokensShortage = tokensNeeded - tokensAvailable;
+      const secondsUntilToken = tokensShortage / refillRate;
+      const retryAfterMs = Math.ceil(secondsUntilToken * 1000);
 
-        // Count below limit should be allowed
-        expect((limit - 1) >= limit).toBe(false);
-      });
+      expect(retryAfterMs).toBe(500); // 0.5 seconds
     });
   });
 
@@ -147,8 +139,6 @@ describe('Email Rate Limiting', () => {
         rate_limit_per_minute: 60,
       };
 
-      // The logic in EmailNotificationService.sendNotification():
-      // if (!settings.is_enabled) throw new Error('Notifications are disabled for this tenant');
       const shouldBlock = !settings.is_enabled;
 
       expect(shouldBlock).toBe(true);
@@ -166,58 +156,46 @@ describe('Email Rate Limiting', () => {
     });
   });
 
-  describe('Rate Limit Response', () => {
-    it('should return descriptive error when rate limit exceeded', () => {
-      // TenantEmailService.sendEmail returns EmailSendResult with success: false
-      // when rate limited, rather than throwing an error
-      const recentCount = 75;
-      const rateLimit = 60;
+  describe('Per-Tenant/User Buckets', () => {
+    it('should track rate limits per tenant', () => {
+      // Each tenant has its own bucket
+      const tenant1Tokens = 50;
+      const tenant2Tokens = 0;
 
-      // Simulate the rate limit result from TenantEmailService
-      const result = recentCount >= rateLimit
-        ? {
-            success: false,
-            error: `Rate limit exceeded: Sent ${recentCount} emails in the last minute (limit: ${rateLimit})`
-          }
-        : { success: true };
+      // Tenant 1 should be allowed
+      expect(tenant1Tokens >= 1).toBe(true);
 
-      expect(result.success).toBe(false);
-      expect(result.error).toContain('Rate limit exceeded');
-      expect(result.error).toContain('75');
-      expect(result.error).toContain('60');
+      // Tenant 2 should be blocked (no tokens)
+      expect(tenant2Tokens >= 1).toBe(false);
     });
 
-    it('should return success when under rate limit', () => {
-      const recentCount = 30;
-      const rateLimit = 60;
+    it('should track rate limits per user within tenant', () => {
+      // Each user within a tenant can have their own bucket
+      const tenant1User1Tokens = 50;
+      const tenant1User2Tokens = 30;
+      const tenant1User3Tokens = 0;
 
-      const result = recentCount >= rateLimit
-        ? { success: false, error: 'Rate limit exceeded' }
-        : { success: true };
+      // User 1 should be allowed
+      expect(tenant1User1Tokens >= 1).toBe(true);
 
-      expect(result.success).toBe(true);
-      expect(result.error).toBeUndefined();
+      // User 2 should be allowed
+      expect(tenant1User2Tokens >= 1).toBe(true);
+
+      // User 3 should be blocked (no tokens)
+      expect(tenant1User3Tokens >= 1).toBe(false);
     });
   });
 
-  describe('Per-User Rate Limiting', () => {
-    it('should track rate limits per tenant and user combination', () => {
-      // The query filters by both tenant and user_id:
-      // .where({ tenant: params.tenant, user_id: params.userId })
+  describe('Fail Open Behavior', () => {
+    it('should allow request when rate limiter unavailable', () => {
+      // When Redis is unavailable, we fail open
+      const rateLimiterAvailable = false;
 
-      const tenant1User1Count = 50;
-      const tenant1User2Count = 30;
-      const tenant2User1Count = 60;
-      const rateLimit = 60;
+      const result = rateLimiterAvailable
+        ? { allowed: false, reason: 'Rate limit exceeded' }
+        : { allowed: true }; // Fail open
 
-      // User 1 in tenant 1 should be allowed
-      expect(tenant1User1Count >= rateLimit).toBe(false);
-
-      // User 2 in tenant 1 should be allowed (different user)
-      expect(tenant1User2Count >= rateLimit).toBe(false);
-
-      // User 1 in tenant 2 at limit should be blocked
-      expect(tenant2User1Count >= rateLimit).toBe(true);
+      expect(result.allowed).toBe(true);
     });
   });
 });

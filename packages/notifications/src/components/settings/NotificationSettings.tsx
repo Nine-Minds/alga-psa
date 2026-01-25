@@ -4,7 +4,6 @@
 import { useState, useEffect } from "react";
 import { Card } from "@alga-psa/ui/components/Card";
 import { Switch } from "@alga-psa/ui/components/Switch";
-import { Input } from "@alga-psa/ui/components/Input";
 import { Label } from "@alga-psa/ui/components/Label";
 import { Button } from "@alga-psa/ui/components/Button";
 import { useSession } from "next-auth/react";
@@ -97,34 +96,6 @@ function NotificationSettingsForm({
             />
           </div>
 
-          <div className="space-y-2 opacity-50">
-            <div className="flex items-center gap-2">
-              <Label htmlFor="rate-limit" className="text-base font-medium">
-                Rate Limit (per minute)
-              </Label>
-              <span className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded">
-                Coming Soon
-              </span>
-            </div>
-            <p className="text-sm text-gray-500">
-              Maximum number of notifications that can be sent per minute
-            </p>
-            <Input
-              id="rate-limit"
-              type="number"
-              min={1}
-              max={1000}
-              value={settings.rate_limit_per_minute}
-              onChange={(e) => 
-                setSettings(prev => ({ 
-                  ...prev, 
-                  rate_limit_per_minute: parseInt(e.target.value) || 1 
-                }))
-              }
-              className="max-w-xs"
-              disabled
-            />
-          </div>
         </div>
 
         <div className="mt-6 flex justify-end">
