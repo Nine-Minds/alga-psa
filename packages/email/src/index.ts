@@ -11,8 +11,24 @@
 export { SystemEmailService, getSystemEmailService } from './system/SystemEmailService';
 export * from './system/types';
 
-// Tenant email exports  
+// Tenant email exports
 export { TenantEmailService } from './TenantEmailService';
+export { DelayedEmailQueue } from './DelayedEmailQueue';
+export type {
+  DelayedEmailEntry,
+  DelayedEmailQueueConfig,
+  RedisClientLike,
+  RedisClientGetter,
+  EmailSendCallback
+} from './DelayedEmailQueue';
+export { TokenBucketRateLimiter } from './TokenBucketRateLimiter';
+export type {
+  RateLimitResult,
+  BucketConfig,
+  TokenBucketRedisClient,
+  TokenBucketRedisGetter,
+  BucketConfigGetter
+} from './TokenBucketRateLimiter';
 export * from './templateProcessors';
 export type { 
   SendEmailParams as TenantEmailParams,

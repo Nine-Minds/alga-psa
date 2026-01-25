@@ -364,19 +364,7 @@ export class EmailNotificationService implements NotificationService {
       throw new Error('Notifications are disabled for this tenant');
     }
 
-    const recentCount = await knex('notification_logs')
-      .where({
-        tenant: params.tenant,
-        user_id: params.userId
-      })
-      .where('created_at', '>', new Date(Date.now() - 60000))
-      .count('id')
-      .first()
-      .then(result => Number(result?.count));
-
-    if (recentCount >= settings.rate_limit_per_minute) {
-      throw new Error('Rate limit exceeded');
-    }
+    // Rate limiting is now centralized in TenantEmailService.sendEmail()
 
     const subtype = await knex('notification_subtypes')
       .where({ id: params.subtypeId })
@@ -434,7 +422,8 @@ export class EmailNotificationService implements NotificationService {
       const result = await service.sendEmail({
         to: params.emailAddress,
         tenantId: params.tenant,
-        templateProcessor: processor
+        templateProcessor: processor,
+        userId: params.userId
       });
       const success = result.success;
 

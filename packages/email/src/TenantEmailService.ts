@@ -15,6 +15,8 @@ import {
 import { BaseEmailService, BaseEmailParams, EmailSendResult } from './BaseEmailService';
 import { SystemEmailProviderFactory } from './system/SystemEmailProviderFactory';
 import { isEnterprise } from './features';
+import { DelayedEmailQueue } from './DelayedEmailQueue';
+import { TokenBucketRateLimiter } from './TokenBucketRateLimiter';
 
 export interface SendEmailParams {
   tenantId: string;
@@ -63,15 +65,112 @@ export class TenantEmailService extends BaseEmailService {
   }
 
   /**
-   * Override sendEmail to support provider-specific routing
+   * Override sendEmail to support provider-specific routing and rate limiting
    */
   public async sendEmail(params: BaseEmailParams): Promise<EmailSendResult> {
     // Note: We are intentionally ignoring params.providerId for routing purposes.
     // All outbound emails should go through the configured outbound provider (e.g. Resend/SMTP).
-    // The providerId from ticket metadata is used upstream (in ticketEmailSubscriber) to resolve 
+    // The providerId from ticket metadata is used upstream (in ticketEmailSubscriber) to resolve
     // the correct 'From' address, which is passed in params.from.
-    
+
+    // Check rate limits before sending
+    const rateLimitResult = await this.checkRateLimits(params);
+    if (!rateLimitResult.allowed) {
+      const retryCount = params._retryCount ?? 0;
+
+      // Check if we've exceeded max retries
+      if (retryCount >= DelayedEmailQueue.MAX_RETRIES) {
+        logger.error(`[${this.getServiceName()}] Max retries exceeded, dropping email`, {
+          tenantId: this.tenantId,
+          to: params.to,
+          retryCount
+        });
+        return {
+          success: false,
+          error: `Rate limit exceeded after ${retryCount} retries`
+        };
+      }
+
+      // Try to queue for retry if the queue is initialized
+      const queue = DelayedEmailQueue.getInstance();
+      if (queue.isReady()) {
+        try {
+          await queue.enqueue(this.tenantId, params, retryCount);
+
+          const nextDelay = DelayedEmailQueue.calculateDelay(retryCount);
+          logger.info(`[${this.getServiceName()}] Rate limited, queued for retry`, {
+            tenantId: this.tenantId,
+            to: params.to,
+            retryCount,
+            nextRetryInMs: nextDelay
+          });
+
+          return {
+            success: true,  // Queued successfully counts as success
+            queued: true,
+            retryCount
+          };
+        } catch (queueError) {
+          logger.error(`[${this.getServiceName()}] Failed to queue email for retry`, {
+            error: queueError instanceof Error ? queueError.message : 'Unknown error',
+            tenantId: this.tenantId,
+            to: params.to
+          });
+          // Fall through to return the rate limit error
+        }
+      } else {
+        logger.warn(`[${this.getServiceName()}] Rate limit exceeded, queue not available`, {
+          reason: rateLimitResult.reason,
+          tenantId: this.tenantId,
+          to: params.to,
+          userId: params.userId
+        });
+      }
+
+      return {
+        success: false,
+        error: `Rate limit exceeded: ${rateLimitResult.reason}`
+      };
+    }
+
     return super.sendEmail(params);
+  }
+
+  /**
+   * Check rate limits for the tenant/user combination using token bucket algorithm
+   *
+   * Token bucket provides smoother rate limiting:
+   * - Allows controlled bursts up to maxTokens
+   * - Tokens refill at a steady rate (default: 1/second)
+   * - No database queries needed (Redis only)
+   * - Fails open if rate limiter unavailable
+   */
+  private async checkRateLimits(params: BaseEmailParams): Promise<{ allowed: boolean; reason?: string; retryAfterMs?: number }> {
+    const rateLimiter = TokenBucketRateLimiter.getInstance();
+
+    // Fail open if rate limiter is not initialized
+    if (!rateLimiter.isReady()) {
+      logger.debug(`[${this.getServiceName()}] Rate limiter not ready, allowing request`);
+      return { allowed: true };
+    }
+
+    try {
+      const result = await rateLimiter.tryConsume(this.tenantId, params.userId);
+
+      if (!result.allowed) {
+        return {
+          allowed: false,
+          reason: result.reason ?? 'Rate limit exceeded',
+          retryAfterMs: result.retryAfterMs
+        };
+      }
+
+      return { allowed: true };
+    } catch (error) {
+      // Fail open on error
+      logger.error(`[${this.getServiceName()}] Rate limit check failed, allowing request:`, error);
+      return { allowed: true };
+    }
   }
 
   protected async getEmailProvider(): Promise<IEmailProvider | null> {
