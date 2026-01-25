@@ -37,3 +37,4 @@
 - 2026-01-25: Added human-readable format spec at `ee/docs/guides/workflows/workflow-import-export.md` (header, key semantics, canonical JSON, import policies).
 - 2026-01-25: Added `workflow_definitions.key` (nullable, unique) via `server/migrations/20260125120000_add_workflow_definition_key.cjs` to support portable bundle identity and create/overwrite semantics. Backfills the seeded email workflow to `system.email-processing`.
 - 2026-01-25: Implemented single-workflow exporter `server/src/lib/workflow/bundle/exportWorkflowBundleV1.ts` (loads workflow_definitions + workflow_definition_versions into the v1 bundle shape).
+- 2026-01-25: Extended exporter to support multi-workflow bundles via `exportWorkflowBundleV1ForWorkflowIds` (bulk-load definitions + versions; workflows sorted by key).
