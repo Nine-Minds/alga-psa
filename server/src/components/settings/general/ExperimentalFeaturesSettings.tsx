@@ -115,7 +115,7 @@ export default function ExperimentalFeaturesSettings(): React.JSX.Element {
       <CardContent className="space-y-3">
         <Alert
           variant="warning"
-          className="text-[rgb(245,158,11)] [&>svg]:text-[rgb(245,158,11)]"
+          className="text-[rgba(255,174,0,1)] [&>svg]:text-[rgba(255,174,0,1)]"
         >
           <AlertTitle>Experimental</AlertTitle>
           <AlertDescription>Experimental features may change or be removed without notice.</AlertDescription>
