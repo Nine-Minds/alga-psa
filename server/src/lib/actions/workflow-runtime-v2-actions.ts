@@ -35,6 +35,7 @@ import { auditLog } from 'server/src/lib/logging/auditLog';
 import { analytics } from 'server/src/lib/analytics/server';
 import { EventCatalogModel } from 'server/src/models/eventCatalog';
 import { buildWorkflowPayload } from '@shared/workflow/streams/workflowEventPublishHelpers';
+import { exportWorkflowBundleV1ForWorkflowId } from 'server/src/lib/workflow/bundle/exportWorkflowBundleV1';
 import {
   CreateWorkflowDefinitionInput,
   DeleteWorkflowDefinitionInput,
@@ -903,6 +904,13 @@ export const listWorkflowDefinitionVersionsAction = withAuth(async (user, { tena
     .orderBy('version', 'desc');
 
   return { versions: rows };
+});
+
+export const exportWorkflowBundleV1Action = withAuth(async (user, { tenant }, input: unknown) => {
+  const parsed = WorkflowIdInput.parse(input);
+  const { knex } = await createTenantKnex();
+  await requireWorkflowPermission(user, 'admin', knex);
+  return exportWorkflowBundleV1ForWorkflowId(knex, parsed.workflowId);
 });
 
 export const createWorkflowDefinitionAction = withAuth(async (user, { tenant }, input: unknown) => {

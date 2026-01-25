@@ -50,3 +50,4 @@
 - 2026-01-25: Importer default policy is create-only: conflicts on existing `workflow_definitions.key` throw `WORKFLOW_KEY_CONFLICT` unless `force` is enabled.
 - 2026-01-25: Importer supports `force` overwrite: delete existing workflow by key (cascades versions/runs) and recreate from bundle with a regenerated `workflow_id`.
 - 2026-01-25: Importer returns a summary object (created workflows, deleted workflows, created published versions) from `importWorkflowBundleV1`.
+- 2026-01-25: Added HTTP export endpoint `server/src/app/api/workflow-definitions/[workflowId]/export/route.ts` returning canonical bundle JSON for a single workflow.
