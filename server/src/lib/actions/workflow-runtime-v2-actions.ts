@@ -931,6 +931,7 @@ export const createWorkflowDefinitionAction = withAuth(async (user, { tenant }, 
 
   const record = await WorkflowDefinitionModelV2.create(knex, {
     workflow_id: workflowId,
+    key: parsed.key?.trim() ?? null,
     name: definition.name,
     description: definition.description ?? null,
     payload_schema_ref: definition.payloadSchemaRef,
@@ -1068,6 +1069,7 @@ export const updateWorkflowDefinitionMetadataAction = withAuth(async (user, { te
   }
 
   const updated = await WorkflowDefinitionModelV2.update(knex, parsed.workflowId, {
+    ...(parsed.key ? { key: parsed.key.trim() } : {}),
     is_visible: parsed.isVisible ?? current.is_visible ?? true,
     is_paused: parsed.isPaused ?? current.is_paused ?? false,
     concurrency_limit: parsed.concurrencyLimit ?? current.concurrency_limit ?? null,
@@ -1083,6 +1085,7 @@ export const updateWorkflowDefinitionMetadataAction = withAuth(async (user, { te
     tableName: 'workflow_definitions',
     recordId: parsed.workflowId,
     changedData: {
+      key: parsed.key,
       isVisible: parsed.isVisible,
       isPaused: parsed.isPaused,
       concurrencyLimit: parsed.concurrencyLimit,
