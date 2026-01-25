@@ -24,7 +24,7 @@
   { "id": "F028", "description": "Importer returns a clear summary of changes (created/deleted workflows and created versions).", "implemented": true, "prdRefs": ["5.6"] },
 
   { "id": "F030", "description": "Add export HTTP endpoint for a single workflow (returns bundle JSON).", "implemented": true, "prdRefs": ["6.1"] },
-  { "id": "F031", "description": "Add import HTTP endpoint for workflow bundle JSON.", "implemented": false, "prdRefs": ["6.1"] },
+  { "id": "F031", "description": "Add import HTTP endpoint for workflow bundle JSON.", "implemented": true, "prdRefs": ["6.1"] },
   { "id": "F032", "description": "Restrict import/export endpoints to appropriate auth/role (admin-only) and/or test-only wiring as decided.", "implemented": false, "prdRefs": ["6.1"] },
   { "id": "F033", "description": "Add CLI tool under tools/ for workflow bundle import/export (wraps the API).", "implemented": false, "prdRefs": ["6.1"] },
 

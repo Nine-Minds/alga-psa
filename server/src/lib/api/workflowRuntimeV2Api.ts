@@ -17,7 +17,7 @@ export function handleWorkflowV2ApiError(error: unknown) {
   const message = err instanceof Error ? err.message : 'Unexpected error';
 
   if (typeof status === 'number') {
-    return NextResponse.json({ error: message }, { status });
+    return NextResponse.json({ error: message, ...(err.details ? { details: err.details } : {}) }, { status });
   }
 
   if (message.toLowerCase().includes('unauthorized')) {
@@ -28,5 +28,5 @@ export function handleWorkflowV2ApiError(error: unknown) {
     return NextResponse.json({ error: message }, { status: 404 });
   }
 
-  return NextResponse.json({ error: message }, { status: 500 });
+  return NextResponse.json({ error: message, ...(err.details ? { details: err.details } : {}) }, { status: 500 });
 }

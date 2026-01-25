@@ -36,6 +36,7 @@ import { analytics } from 'server/src/lib/analytics/server';
 import { EventCatalogModel } from 'server/src/models/eventCatalog';
 import { buildWorkflowPayload } from '@shared/workflow/streams/workflowEventPublishHelpers';
 import { exportWorkflowBundleV1ForWorkflowId } from 'server/src/lib/workflow/bundle/exportWorkflowBundleV1';
+import { importWorkflowBundleV1 } from 'server/src/lib/workflow/bundle/importWorkflowBundleV1';
 import {
   CreateWorkflowDefinitionInput,
   DeleteWorkflowDefinitionInput,
@@ -911,6 +912,13 @@ export const exportWorkflowBundleV1Action = withAuth(async (user, { tenant }, in
   const { knex } = await createTenantKnex();
   await requireWorkflowPermission(user, 'admin', knex);
   return exportWorkflowBundleV1ForWorkflowId(knex, parsed.workflowId);
+});
+
+export const importWorkflowBundleV1Action = withAuth(async (user, { tenant }, input: unknown) => {
+  const parsed = z.object({ bundle: z.unknown(), force: z.boolean().optional() }).parse(input);
+  const { knex } = await createTenantKnex();
+  await requireWorkflowPermission(user, 'admin', knex);
+  return importWorkflowBundleV1(knex, parsed.bundle, { force: parsed.force });
 });
 
 export const createWorkflowDefinitionAction = withAuth(async (user, { tenant }, input: unknown) => {
