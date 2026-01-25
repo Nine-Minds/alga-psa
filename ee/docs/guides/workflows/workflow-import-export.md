@@ -25,6 +25,7 @@ This `key` is distinct from the database `workflow_id` and is the identity used 
 ## Workflow entry shape
 Each `workflows[]` entry contains:
 - `metadata`: name/description and operational settings required for behavioral fidelity
+- `dependencies`: derived summary of required actions/node types/schema refs
 - `draft`: draft version number + draft workflow definition JSON
 - `publishedVersions`: zero or more published versions (each includes definition JSON and a payload schema snapshot if present)
 
@@ -35,6 +36,9 @@ Exports are written using canonical JSON rules to produce stable bytes suitable 
 - Recursively sort all object keys lexicographically
 - Two-space indentation
 - Trailing newline at end of file
+
+## Dependencies
+`workflows[].dependencies` is a best-effort summary derived from included workflow definitions. Import uses this to report missing runtime registrations (actions/node types/schema refs) in a structured way.
 
 ## Import semantics (v1)
 Import runs all database writes in a single transaction and rolls back on any error.
@@ -49,4 +53,3 @@ Import/export aims to preserve functional workflow behavior and operational sett
 Not preserved:
 - Audit fields (`created_at`, `updated_at`, `published_at`, actor ids)
 - Database ids (including version ids); `workflow_id` is always regenerated on import
-

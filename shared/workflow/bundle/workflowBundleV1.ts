@@ -1,3 +1,5 @@
+import type { WorkflowBundleDependencySummaryV1 } from './dependencySummaryV1';
+
 export const WORKFLOW_BUNDLE_FORMAT = 'alga-psa.workflow-bundle' as const;
 export const WORKFLOW_BUNDLE_FORMAT_VERSION_V1 = 1 as const;
 
@@ -40,6 +42,7 @@ export type WorkflowBundlePublishedVersionV1 = {
 export type WorkflowBundleWorkflowV1 = {
   key: string;
   metadata: WorkflowBundleWorkflowMetadataV1;
+  dependencies: WorkflowBundleDependencySummaryV1;
   draft: WorkflowBundleDraftV1;
   publishedVersions: WorkflowBundlePublishedVersionV1[];
 };

@@ -6,6 +6,10 @@ import {
   type WorkflowBundleV1,
   type WorkflowBundleWorkflowV1
 } from '@shared/workflow/bundle/workflowBundleV1';
+import {
+  collectWorkflowDefinitionDependencySummaryV1,
+  mergeDependencySummariesV1
+} from '@shared/workflow/bundle/dependencySummaryV1';
 import type { Knex } from 'knex';
 
 const normalizeBoolean = (value: unknown, defaultValue: boolean): boolean =>
@@ -31,6 +35,13 @@ export const exportWorkflowBundleV1ForWorkflowId = async (knex: Knex, workflowId
     }))
     .sort((a, b) => a.version - b.version);
 
+  const dependencySummary = mergeDependencySummariesV1([
+    collectWorkflowDefinitionDependencySummaryV1(record.draft_definition),
+    ...publishedVersions.map((v) => collectWorkflowDefinitionDependencySummaryV1(v.definition))
+  ]);
+  const schemaRefs = new Set(dependencySummary.schemaRefs);
+  if (record.pinned_payload_schema_ref) schemaRefs.add(record.pinned_payload_schema_ref);
+
   const workflow: WorkflowBundleWorkflowV1 = {
     key,
     metadata: {
@@ -49,6 +60,10 @@ export const exportWorkflowBundleV1ForWorkflowId = async (knex: Knex, workflowId
       failureRateThreshold: (record.failure_rate_threshold as any) ?? null,
       failureRateMinRuns: record.failure_rate_min_runs ?? null,
       retentionPolicyOverride: (record.retention_policy_override as any) ?? null
+    },
+    dependencies: {
+      ...dependencySummary,
+      schemaRefs: Array.from(schemaRefs).sort((a, b) => a.localeCompare(b))
     },
     draft: {
       draftVersion: record.draft_version,
@@ -105,6 +120,13 @@ export const exportWorkflowBundleV1ForWorkflowIds = async (knex: Knex, workflowI
       }))
       .sort((a, b) => a.version - b.version);
 
+    const dependencySummary = mergeDependencySummariesV1([
+      collectWorkflowDefinitionDependencySummaryV1(record.draft_definition),
+      ...publishedVersions.map((v) => collectWorkflowDefinitionDependencySummaryV1(v.definition))
+    ]);
+    const schemaRefs = new Set(dependencySummary.schemaRefs);
+    if (record.pinned_payload_schema_ref) schemaRefs.add(record.pinned_payload_schema_ref);
+
     return {
       key,
       metadata: {
@@ -123,6 +145,10 @@ export const exportWorkflowBundleV1ForWorkflowIds = async (knex: Knex, workflowI
         failureRateThreshold: record.failure_rate_threshold ?? null,
         failureRateMinRuns: record.failure_rate_min_runs ?? null,
         retentionPolicyOverride: record.retention_policy_override ?? null
+      },
+      dependencies: {
+        ...dependencySummary,
+        schemaRefs: Array.from(schemaRefs).sort((a, b) => a.localeCompare(b))
       },
       draft: {
         draftVersion: record.draft_version,

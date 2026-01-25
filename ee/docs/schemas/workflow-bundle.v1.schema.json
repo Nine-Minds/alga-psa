@@ -19,7 +19,7 @@
     "workflow": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["key", "metadata", "draft", "publishedVersions"],
+      "required": ["key", "metadata", "dependencies", "draft", "publishedVersions"],
       "properties": {
         "key": {
           "type": "string",
@@ -27,11 +27,46 @@
           "pattern": "^[a-z0-9][a-z0-9._-]*$"
         },
         "metadata": { "$ref": "#/definitions/metadata" },
+        "dependencies": { "$ref": "#/definitions/dependencies" },
         "draft": { "$ref": "#/definitions/draft" },
         "publishedVersions": {
           "type": "array",
           "items": { "$ref": "#/definitions/publishedVersion" }
         }
+      }
+    },
+    "dependencies": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["actions", "nodeTypes", "schemaRefs"],
+      "properties": {
+        "actions": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/actionRef" },
+          "uniqueItems": true,
+          "default": []
+        },
+        "nodeTypes": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "uniqueItems": true,
+          "default": []
+        },
+        "schemaRefs": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "uniqueItems": true,
+          "default": []
+        }
+      }
+    },
+    "actionRef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["actionId", "version"],
+      "properties": {
+        "actionId": { "type": "string", "minLength": 1 },
+        "version": { "type": "integer", "minimum": 1 }
       }
     },
     "metadata": {
@@ -91,4 +126,3 @@
     }
   }
 }
-
