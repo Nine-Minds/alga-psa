@@ -28,5 +28,17 @@ describe('workflow bundle v1 import/export', () => {
       code: 'UNSUPPORTED_FORMAT_VERSION'
     });
   });
-});
 
+  it('rejects invalid bundle JSON that fails the v1 schema with a helpful error', async () => {
+    await expect(
+      importWorkflowBundleV1(db, {
+        format: 'alga-psa.workflow-bundle',
+        formatVersion: 1,
+        exportedAt: new Date().toISOString(),
+        workflows: []
+      })
+    ).rejects.toMatchObject({
+      code: 'SCHEMA_VALIDATION_FAILED'
+    });
+  });
+});

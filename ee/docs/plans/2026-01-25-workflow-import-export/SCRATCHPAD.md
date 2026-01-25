@@ -57,3 +57,4 @@
 - 2026-01-25: Added a representative fixture bundle `server/src/test/fixtures/workflow-bundles/email-processing.v1.json` (control flow + action.call usage) for import/export tests.
 - 2026-01-25: Canonicalization utility `shared/workflow/bundle/canonicalJson.ts` is used by the export endpoint to emit stable bundle bytes and will be used in round-trip tests.
 - 2026-01-25: Added integration test `server/src/test/integration/workflowBundleV1.importExport.integration.test.ts` covering unsupported formatVersion rejection (T001).
+- 2026-01-25: Extended bundle integration tests for schema validation failures (T002).
