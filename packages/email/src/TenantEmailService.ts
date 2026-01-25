@@ -63,15 +63,75 @@ export class TenantEmailService extends BaseEmailService {
   }
 
   /**
-   * Override sendEmail to support provider-specific routing
+   * Override sendEmail to support provider-specific routing and rate limiting
    */
   public async sendEmail(params: BaseEmailParams): Promise<EmailSendResult> {
     // Note: We are intentionally ignoring params.providerId for routing purposes.
     // All outbound emails should go through the configured outbound provider (e.g. Resend/SMTP).
-    // The providerId from ticket metadata is used upstream (in ticketEmailSubscriber) to resolve 
+    // The providerId from ticket metadata is used upstream (in ticketEmailSubscriber) to resolve
     // the correct 'From' address, which is passed in params.from.
-    
+
+    // Check rate limits before sending
+    const rateLimitResult = await this.checkRateLimits(params);
+    if (!rateLimitResult.allowed) {
+      logger.warn(`[${this.getServiceName()}] Rate limit exceeded`, {
+        reason: rateLimitResult.reason,
+        tenantId: this.tenantId,
+        to: params.to,
+        userId: params.userId
+      });
+      return {
+        success: false,
+        error: `Rate limit exceeded: ${rateLimitResult.reason}`
+      };
+    }
+
     return super.sendEmail(params);
+  }
+
+  /**
+   * Check rate limits for the tenant/user combination
+   * Rate limits are stored in notification_settings and tracked via notification_logs
+   */
+  private async checkRateLimits(params: BaseEmailParams): Promise<{ allowed: boolean; reason?: string }> {
+    try {
+      const knex = await getConnection(this.tenantId);
+      const oneMinuteAgo = new Date(Date.now() - 60000);
+
+      // Get settings from notification_settings
+      const settings = await knex('notification_settings')
+        .where({ tenant: this.tenantId })
+        .first();
+
+      // Default rate limit if no settings exist
+      const rateLimit = settings?.rate_limit_per_minute ?? 60;
+
+      // Count recent emails for this tenant/user
+      const query = knex('notification_logs')
+        .where({ tenant: this.tenantId })
+        .where('created_at', '>', oneMinuteAgo);
+
+      // If userId is provided, apply per-user rate limiting
+      if (params.userId) {
+        query.where('user_id', params.userId);
+      }
+
+      const result = await query.count('id as count').first();
+      const recentCount = Number(result?.count ?? 0);
+
+      if (recentCount >= rateLimit) {
+        return {
+          allowed: false,
+          reason: `Sent ${recentCount} emails in the last minute (limit: ${rateLimit})`
+        };
+      }
+
+      return { allowed: true };
+    } catch (error) {
+      // Log error but allow email to proceed (fail open for rate limiting)
+      logger.error(`[${this.getServiceName()}] Failed to check rate limits:`, error);
+      return { allowed: true };
+    }
   }
 
   protected async getEmailProvider(): Promise<IEmailProvider | null> {

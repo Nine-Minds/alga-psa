@@ -44,6 +44,7 @@ export interface BaseEmailParams {
   templateData?: Record<string, any>;
   headers?: Record<string, string>;
   providerId?: string;
+  userId?: string;  // For per-user rate limiting (optional)
   // Allow subclasses to add their own parameters
   [key: string]: any;
 }
