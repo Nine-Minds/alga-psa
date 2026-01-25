@@ -2,7 +2,14 @@ import { describe, it, expect, beforeAll, beforeEach, afterAll, vi } from 'vites
 import { v4 as uuidv4 } from 'uuid';
 import type { Knex } from 'knex';
 import { createTestDbConnection } from '../../../test-utils/dbConfig';
-import { ensureWorkflowRuntimeV2TestRegistrations, stateSetStep, buildWorkflowDefinition } from '../helpers/workflowRuntimeV2TestHelpers';
+import {
+  ensureWorkflowRuntimeV2TestRegistrations,
+  stateSetStep,
+  buildWorkflowDefinition,
+  actionCallStep,
+  returnStep,
+  TEST_SCHEMA_REF
+} from '../helpers/workflowRuntimeV2TestHelpers';
 import { importWorkflowBundleV1 } from 'server/src/lib/workflow/bundle/importWorkflowBundleV1';
 import { resetWorkflowRuntimeTables } from '../helpers/workflowRuntimeV2TestUtils';
 import { createTenantKnex, getCurrentTenantId } from 'server/src/lib/db';
@@ -171,5 +178,85 @@ describe('workflow bundle v1 import/export', () => {
     expect(bundle.workflows[0].publishedVersions?.[0]).not.toHaveProperty('version_id');
     expect(bundle.workflows[0].publishedVersions?.[0]).not.toHaveProperty('published_at');
     expect(bundle.workflows[0].publishedVersions?.[0]).not.toHaveProperty('published_by');
+  });
+
+  it('importing a bundle into an empty DB creates workflow_definitions and workflow_definition_versions records', async () => {
+    const bundle = {
+      format: 'alga-psa.workflow-bundle',
+      formatVersion: 1,
+      exportedAt: new Date().toISOString(),
+      workflows: [
+        {
+          key: 'test.import-basic',
+          metadata: {
+            name: 'Import basic',
+            description: null,
+            payloadSchemaRef: TEST_SCHEMA_REF,
+            payloadSchemaMode: 'pinned',
+            pinnedPayloadSchemaRef: TEST_SCHEMA_REF,
+            trigger: null,
+            isSystem: false,
+            isVisible: true,
+            isPaused: false,
+            concurrencyLimit: null,
+            autoPauseOnFailure: false,
+            failureRateThreshold: null,
+            failureRateMinRuns: null,
+            retentionPolicyOverride: null
+          },
+          dependencies: {
+            actions: [{ actionId: 'test.echo', version: 1 }],
+            nodeTypes: ['action.call', 'state.set'],
+            schemaRefs: [TEST_SCHEMA_REF]
+          },
+          draft: {
+            draftVersion: 1,
+            definition: {
+              id: '00000000-0000-0000-0000-000000000001',
+              ...buildWorkflowDefinition({
+                steps: [
+                  stateSetStep('state-1', 'READY'),
+                  actionCallStep({ id: 'echo-1', actionId: 'test.echo', inputMapping: { value: { $expr: '"ok"' } } }),
+                  returnStep('done')
+                ],
+                payloadSchemaRef: TEST_SCHEMA_REF
+              })
+            }
+          },
+          publishedVersions: [
+            {
+              version: 1,
+              definition: {
+                id: '00000000-0000-0000-0000-000000000001',
+                ...buildWorkflowDefinition({
+                  steps: [
+                    stateSetStep('state-1', 'READY'),
+                    actionCallStep({ id: 'echo-1', actionId: 'test.echo', inputMapping: { value: { $expr: '"ok"' } } }),
+                    returnStep('done')
+                  ],
+                  payloadSchemaRef: TEST_SCHEMA_REF
+                })
+              },
+              payloadSchemaJson: null
+            }
+          ]
+        }
+      ]
+    };
+
+    const result = await importWorkflowBundleV1(db, bundle);
+    expect(result.createdWorkflows).toHaveLength(1);
+    expect(result.createdWorkflows[0].key).toBe('test.import-basic');
+
+    const createdId = result.createdWorkflows[0].workflowId;
+    const definitionRow = await db('workflow_definitions').where({ workflow_id: createdId }).first();
+    expect(definitionRow).toBeTruthy();
+    expect(definitionRow.key).toBe('test.import-basic');
+    expect(definitionRow.status).toBe('published');
+    expect(definitionRow.draft_definition?.id).toBe(createdId);
+
+    const versionRow = await db('workflow_definition_versions').where({ workflow_id: createdId, version: 1 }).first();
+    expect(versionRow).toBeTruthy();
+    expect(versionRow.definition_json?.id).toBe(createdId);
   });
 });
