@@ -179,6 +179,25 @@ describe('workflow bundle v1 import/export', () => {
     expect(text).toBe(stringifyCanonicalJson(parsed));
   });
 
+  it('HTTP export endpoint returns a valid workflow bundle for an existing workflow', async () => {
+    const definition = {
+      id: uuidv4(),
+      ...buildWorkflowDefinition({ steps: [stateSetStep('state-1', 'READY')] })
+    };
+    const created = await createWorkflowDefinitionAction({ key: 'test.http-export', definition });
+    await publishWorkflowDefinitionAction({ workflowId: created.workflowId, version: 1 });
+
+    const response = await exportBundleRoute(new Request('http://example.com'), { params: { workflowId: created.workflowId } });
+    expect(response.status).toBe(200);
+    expect(response.headers.get('content-type')).toContain('application/json');
+
+    const bundle = await response.json();
+    expect(bundle.format).toBe('alga-psa.workflow-bundle');
+    expect(bundle.formatVersion).toBe(1);
+    expect(Array.isArray(bundle.workflows)).toBe(true);
+    expect(bundle.workflows[0].key).toBe('test.http-export');
+  });
+
   it('export excludes instance-specific audit fields by default', async () => {
     const definition = {
       id: uuidv4(),
