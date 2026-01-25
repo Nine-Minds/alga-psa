@@ -394,7 +394,8 @@ export async function sendEventEmail(params: SendEmailParams): Promise<void> {
       templateProcessor: processor,
       headers: params.headers,
       providerId: params.providerId,
-      from: params.from
+      from: params.from,
+      userId: params.recipientUserId  // For rate limiting
     });
 
     if (!result.success) {

@@ -16,6 +16,8 @@ export interface EmailSendResult {
   success: boolean;
   messageId?: string;
   error?: string;
+  queued?: boolean;      // true if queued for later delivery due to rate limiting
+  retryCount?: number;   // current retry attempt (0 = first attempt)
 }
 
 export interface ITemplateProcessor {
@@ -44,6 +46,7 @@ export interface BaseEmailParams {
   templateData?: Record<string, any>;
   headers?: Record<string, string>;
   providerId?: string;
+  userId?: string;  // For per-user rate limiting (optional)
   // Allow subclasses to add their own parameters
   [key: string]: any;
 }
