@@ -314,4 +314,76 @@ describe('workflow bundle v1 import/export', () => {
     const rows = await db('workflow_definitions').where({ key: 'test.conflict' });
     expect(rows).toHaveLength(1);
   });
+
+  it('import force overwrite deletes the existing workflow by key and recreates it with a regenerated workflow_id', async () => {
+    const bundle = {
+      format: 'alga-psa.workflow-bundle',
+      formatVersion: 1,
+      exportedAt: new Date().toISOString(),
+      workflows: [
+        {
+          key: 'test.force-overwrite',
+          metadata: {
+            name: 'Force overwrite',
+            description: null,
+            payloadSchemaRef: TEST_SCHEMA_REF,
+            payloadSchemaMode: 'pinned',
+            pinnedPayloadSchemaRef: TEST_SCHEMA_REF,
+            trigger: null,
+            isSystem: false,
+            isVisible: true,
+            isPaused: false,
+            concurrencyLimit: null,
+            autoPauseOnFailure: false,
+            failureRateThreshold: null,
+            failureRateMinRuns: null,
+            retentionPolicyOverride: null
+          },
+          dependencies: {
+            actions: [{ actionId: 'test.echo', version: 1 }],
+            nodeTypes: ['action.call', 'state.set'],
+            schemaRefs: [TEST_SCHEMA_REF]
+          },
+          draft: {
+            draftVersion: 1,
+            definition: {
+              id: uuidv4(),
+              ...buildWorkflowDefinition({
+                steps: [stateSetStep('state-1', 'READY'), actionCallStep({ id: 'echo-1', actionId: 'test.echo' }), returnStep('done')],
+                payloadSchemaRef: TEST_SCHEMA_REF
+              })
+            }
+          },
+          publishedVersions: [
+            {
+              version: 1,
+              definition: {
+                id: uuidv4(),
+                ...buildWorkflowDefinition({
+                  steps: [stateSetStep('state-1', 'READY'), actionCallStep({ id: 'echo-1', actionId: 'test.echo' }), returnStep('done')],
+                  payloadSchemaRef: TEST_SCHEMA_REF
+                })
+              },
+              payloadSchemaJson: null
+            }
+          ]
+        }
+      ]
+    };
+
+    const first = await importWorkflowBundleV1(db, bundle);
+    const firstId = first.createdWorkflows[0].workflowId;
+
+    const second = await importWorkflowBundleV1(db, bundle, { force: true });
+    const secondId = second.createdWorkflows[0].workflowId;
+
+    expect(secondId).not.toBe(firstId);
+
+    const oldRow = await db('workflow_definitions').where({ workflow_id: firstId }).first();
+    expect(oldRow).toBeFalsy();
+
+    const newRow = await db('workflow_definitions').where({ workflow_id: secondId }).first();
+    expect(newRow).toBeTruthy();
+    expect(newRow.key).toBe('test.force-overwrite');
+  });
 });
