@@ -14,7 +14,12 @@ import { importWorkflowBundleV1 } from 'server/src/lib/workflow/bundle/importWor
 import { resetWorkflowRuntimeTables } from '../helpers/workflowRuntimeV2TestUtils';
 import { createTenantKnex, getCurrentTenantId } from 'server/src/lib/db';
 import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
-import { createWorkflowDefinitionAction, publishWorkflowDefinitionAction } from 'server/src/lib/actions/workflow-runtime-v2-actions';
+import {
+  createWorkflowDefinitionAction,
+  publishWorkflowDefinitionAction,
+  startWorkflowRunAction,
+  getWorkflowRunAction
+} from 'server/src/lib/actions/workflow-runtime-v2-actions';
 import { GET as exportBundleRoute } from 'server/src/app/api/workflow-definitions/[workflowId]/export/route';
 import { stringifyCanonicalJson } from '@shared/workflow/bundle/canonicalJson';
 import { exportWorkflowBundleV1ForWorkflowId } from 'server/src/lib/workflow/bundle/exportWorkflowBundleV1';
@@ -498,5 +503,69 @@ describe('workflow bundle v1 import/export', () => {
     const exported2 = await exportWorkflowBundleV1ForWorkflowId(db, newId);
 
     expect(normalizeBundleForComparison(exported2)).toEqual(normalizeBundleForComparison(exported1));
+  });
+
+  it('imported workflow can be executed end-to-end using Workflow Runtime V2', async () => {
+    const bundle = {
+      format: 'alga-psa.workflow-bundle',
+      formatVersion: 1,
+      exportedAt: new Date().toISOString(),
+      workflows: [
+        {
+          key: 'test.exec',
+          metadata: {
+            name: 'Exec',
+            description: null,
+            payloadSchemaRef: TEST_SCHEMA_REF,
+            payloadSchemaMode: 'pinned',
+            pinnedPayloadSchemaRef: TEST_SCHEMA_REF,
+            trigger: null,
+            isSystem: false,
+            isVisible: true,
+            isPaused: false,
+            concurrencyLimit: null,
+            autoPauseOnFailure: false,
+            failureRateThreshold: null,
+            failureRateMinRuns: null,
+            retentionPolicyOverride: null
+          },
+          dependencies: {
+            actions: [{ actionId: 'test.echo', version: 1 }],
+            nodeTypes: ['action.call', 'state.set'],
+            schemaRefs: [TEST_SCHEMA_REF]
+          },
+          draft: {
+            draftVersion: 1,
+            definition: {
+              id: uuidv4(),
+              ...buildWorkflowDefinition({
+                steps: [stateSetStep('state-1', 'READY'), actionCallStep({ id: 'echo-1', actionId: 'test.echo' }), returnStep('done')],
+                payloadSchemaRef: TEST_SCHEMA_REF
+              })
+            }
+          },
+          publishedVersions: [
+            {
+              version: 1,
+              definition: {
+                id: uuidv4(),
+                ...buildWorkflowDefinition({
+                  steps: [stateSetStep('state-1', 'READY'), actionCallStep({ id: 'echo-1', actionId: 'test.echo' }), returnStep('done')],
+                  payloadSchemaRef: TEST_SCHEMA_REF
+                })
+              },
+              payloadSchemaJson: null
+            }
+          ]
+        }
+      ]
+    };
+
+    const imported = await importWorkflowBundleV1(db, bundle);
+    const workflowId = imported.createdWorkflows[0].workflowId;
+
+    const started = await startWorkflowRunAction({ workflowId, workflowVersion: 1, payload: {} });
+    const run = await getWorkflowRunAction({ runId: started.runId });
+    expect(run.status).toBe('SUCCEEDED');
   });
 });

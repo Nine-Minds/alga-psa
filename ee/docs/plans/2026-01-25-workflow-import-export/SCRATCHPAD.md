@@ -66,3 +66,4 @@
 - 2026-01-25: Added force overwrite import test (delete+recreate with regenerated workflow_id) (T022).
 - 2026-01-25: Added transactional rollback coverage (unique constraint failure does not persist partial workflow rows) (T023).
 - 2026-01-25: Added export→import→export round-trip test with canonical normalization (exportedAt + workflowId placeholder) (T030).
+- 2026-01-25: Added end-to-end execution test for imported workflows (imports bundle then runs the published version to SUCCEEDED) (T031).
