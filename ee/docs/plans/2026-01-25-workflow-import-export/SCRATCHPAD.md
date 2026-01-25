@@ -33,3 +33,4 @@
 - 2026-01-25: Defined v1 bundle TypeScript shape (workflow metadata + draft + published versions) in `shared/workflow/bundle/workflowBundleV1.ts` as the shared contract for exporter/importer/tests.
 - 2026-01-25: Standardized portable workflow identifier as `workflows[].key` with a basic validation pattern in `shared/workflow/bundle/workflowBundleV1.ts`.
 - 2026-01-25: Added canonical JSON rules implementation in `shared/workflow/bundle/canonicalJson.ts` (recursive key sort, 2-space indent, trailing newline) for stable bundle bytes.
+- 2026-01-25: Added JSON Schema `ee/docs/schemas/workflow-bundle.v1.schema.json` (draft-07) as the machine-checkable contract for v1 bundles.
