@@ -54,3 +54,4 @@
 - 2026-01-25: Added HTTP import endpoint `server/src/app/api/workflow-definitions/import/route.ts` (POST bundle JSON; supports `?force=true`; returns import summary). Updated API error handling to include structured `details` when present.
 - 2026-01-25: Import/export endpoints are admin-gated via `requireWorkflowPermission(user, 'admin', knex)` in the underlying server actions.
 - 2026-01-25: Added a minimal API-wrapping CLI at `tools/workflow-bundle-cli/workflow-bundle.js` (supports `export` and `import` with optional `--cookie` + `--tenant` headers).
+- 2026-01-25: Added a representative fixture bundle `server/src/test/fixtures/workflow-bundles/email-processing.v1.json` (control flow + action.call usage) for import/export tests.
