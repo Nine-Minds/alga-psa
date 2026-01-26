@@ -36,3 +36,4 @@
 - T009: Added cookie-file unit test and extracted `readCookieFromFile` into `tools/workflow-harness/lib/cookie.cjs` (trims whitespace/newlines).
 - T010: Added stubbed runner test that asserts `--debug` emits verbose logs (import summary + workflow id/key).
 - T011: Added stubbed runner test verifying cleanup hooks run on both success and failure.
+- T020: Added stubbed harness execution test for `ee/test-data/workflow-harness/ticket-created-hello` to validate bundle import, event submission call, and run success path without requiring a live server/DB.
