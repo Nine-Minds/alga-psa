@@ -53,7 +53,7 @@ export type WorkflowBundleV1 = WorkflowBundleHeaderV1 & {
 
 export const WORKFLOW_BUNDLE_WORKFLOW_KEY_PATTERN = /^[a-z0-9][a-z0-9._-]*$/;
 
-export const assertWorkflowBundleWorkflowKey = (value: unknown): asserts value is string => {
+export function assertWorkflowBundleWorkflowKey(value: unknown): asserts value is string {
   if (typeof value !== 'string' || !value.trim()) {
     throw new Error('Workflow bundle workflow.key must be a non-empty string.');
   }
@@ -63,7 +63,7 @@ export const assertWorkflowBundleWorkflowKey = (value: unknown): asserts value i
       `Invalid workflow bundle workflow.key "${value}". Expected pattern: ${WORKFLOW_BUNDLE_WORKFLOW_KEY_PATTERN}`
     );
   }
-};
+}
 
 export const createWorkflowBundleHeaderV1 = (exportedAt: Date = new Date()): WorkflowBundleHeaderV1 => ({
   format: WORKFLOW_BUNDLE_FORMAT,

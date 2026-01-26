@@ -1493,7 +1493,9 @@ export async function getAuthOptions(): Promise<NextAuthConfig> {
 // Synchronous fallback that uses environment variables
 export const options: NextAuthConfig = {
     trustHost: true,
-    secret: getNextAuthSecretSync(),
+    // Avoid throwing at module-evaluation time (e.g. during `next build`) when NEXTAUTH_SECRET is not set.
+    // NextAuth will still require a secret at runtime for JWT/session operations; keep that enforcement in runtime paths.
+    secret: process.env.NEXTAUTH_SECRET,
     providers: [
         ...(isEnterprise &&
         process.env.GOOGLE_OAUTH_CLIENT_ID &&
